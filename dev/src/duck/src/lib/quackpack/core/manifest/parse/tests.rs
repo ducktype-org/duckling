@@ -440,15 +440,7 @@ dependencies:
             .join("xd")
     );
     #[cfg(not(windows))]
-    assert_eq!(
-        path,
-        manifest_path
-            .parent()
-            .unwrap()
-            .resolve()
-            .unwrap()
-            .join("xd")
-    );
+    assert_eq!(path, manifest_path.parent().unwrap().resolve().join("xd"));
     assert!(a.versions().is_empty());
     assert_eq!(a.name(), a.effective_name());
     assert!(a.alias().is_none());
@@ -469,7 +461,6 @@ dependencies:
             .parent()
             .unwrap()
             .resolve()
-            .unwrap()
             .join("xd")
     );
     #[cfg(not(windows))]
@@ -481,7 +472,6 @@ dependencies:
             .parent()
             .unwrap()
             .resolve()
-            .unwrap()
             .join("xd")
     );
     assert!(a1.alias().is_none());
@@ -1477,7 +1467,7 @@ venv:
     assert!(!summary.venv().expose_freezefile());
     assert_eq!(
         summary.venv().storage_path(),
-        dir.path().join("storage").resolve().unwrap(),
+        dir.path().join("storage").resolve(),
     );
 }
 

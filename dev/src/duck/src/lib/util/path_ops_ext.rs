@@ -4,7 +4,7 @@ use std::fs::{
     read_to_string, remove_dir, remove_file, rename, write,
 };
 use std::io::{self, Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use tracing::warn;
 
@@ -49,11 +49,12 @@ pub trait PathOpsExt {
 
     /// Resolve `self` fully, as best as possible.
     ///
+    /// __WARNING!__: this function does __not__ care for CWD. You should firstly manually join it,
+    /// like: `ctx.cwd().join(path).resolve();`.
+    ///
     /// Unlike [`std::fs::canonicalize`], this function __doesn't__ fail, if `self` points to a
     /// non-existing file.
-    ///
-    /// This function requires the __full-resolve__ feature.
-    fn resolve(&self) -> QuackResult<PathBuf>;
+    fn resolve(&self) -> PathBuf;
 
     /// Expand `~` into the `ctx.user_home()`.
     fn expand_tilde(&self, ctx: &DuckContext) -> PathBuf;
@@ -273,9 +274,37 @@ impl PathOpsExt for Path {
             .with_context(|| format!("failed to write to `{}`", self.display()))
     }
 
-    fn resolve(&self) -> QuackResult<PathBuf> {
-        use soft_canonicalize::soft_canonicalize;
-        soft_canonicalize(self).with_context(|| format!("failed to resolve `{}`", self.display()))
+    #[track_caller]
+    fn resolve(&self) -> PathBuf {
+        let mut result = PathBuf::new();
+        let mut components = self.components().peekable();
+        if let Some(c @ Component::Prefix(..)) = components.peek().copied() {
+            result = PathBuf::from(&c);
+            components.next();
+        }
+        for component in components {
+            match component {
+                Component::Prefix(..) => unreachable!("path `{self:?}` has multiple prefixes"),
+                c @ Component::RootDir => result.push(c),
+                Component::CurDir => {}
+                c @ Component::ParentDir => {
+                    // We end in `..`, push another.
+                    if result.ends_with(Component::ParentDir) {
+                        result.push(c);
+                    } else {
+                        // We have some non-trivial part, remove it.
+                        let popped = result.pop();
+                        // ...but we were empty and we don't have anything. Assume we want to be
+                        // `/`.
+                        if !popped & !result.has_root() {
+                            result.push(Component::RootDir);
+                        }
+                    }
+                }
+                Component::Normal(os_str) => result.push(os_str),
+            }
+        }
+        result
     }
 
     fn expand_tilde(&self, ctx: &DuckContext) -> PathBuf {
@@ -318,4 +347,29 @@ fn ignore_io_kind_error<T: Default>(
 
 fn ignore_not_found<T: Default>(err: io::Result<T>) -> io::Result<T> {
     ignore_io_kind_error(err, &[io::ErrorKind::NotFound])
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::*;
+
+    #[test]
+    fn resolve_tests() {
+        let path = Path::new("/../../../cfg");
+        assert_eq!(path.resolve(), Path::new("/cfg"));
+
+        let path = Path::new("/../../..");
+        assert_eq!(path.resolve(), Path::new("/"));
+
+        let path = Path::new("/home/../.");
+        assert_eq!(path.resolve(), Path::new("/"));
+
+        let path = Path::new("/home/foo/./xd");
+        assert_eq!(path.resolve(), Path::new("/home/foo/xd"));
+
+        let path = Path::new("/home/foo/./xd/..");
+        assert_eq!(path.resolve(), Path::new("/home/foo"));
+    }
 }

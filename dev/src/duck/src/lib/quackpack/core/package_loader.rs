@@ -88,7 +88,7 @@ impl PackageLoader {
         ctx: &'duck DuckContext,
         allow_global_package: AllowGlobalPackage,
     ) -> QuackResult<PackageContext<'duck>> {
-        let start = start.expand_tilde(ctx).resolve()?;
+        let start = ctx.cwd().join(start.expand_tilde(ctx)).resolve();
         if !start.is_dir() {
             let err = qp_err!("the path `{}` is not a directory", start.display());
             return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
@@ -242,7 +242,7 @@ metadata:
             format!("{err}"),
             format!(
                 "no manifest has been found from the `{}` to the `{}`",
-                tmp_file.path().resolve().unwrap().display(),
+                tmp_file.path().resolve().display(),
                 root
             )
         );
@@ -256,10 +256,7 @@ metadata:
         let err = PackageLoader::find_from_directory(&file, &ctx, false.into()).unwrap_err();
         assert_eq!(
             format!("{err}"),
-            format!(
-                "the path `{}` is not a directory",
-                file.resolve().unwrap().display()
-            )
+            format!("the path `{}` is not a directory", file.resolve().display())
         );
     }
 
@@ -277,9 +274,8 @@ metadata:
                 .into_package()
                 .unwrap_package()
                 .root_directory()
-                .resolve()
-                .unwrap(),
-            tmp_file.path().resolve().unwrap()
+                .resolve(),
+            tmp_file.path().resolve(),
         );
     }
 
@@ -299,9 +295,8 @@ metadata:
                 .into_package()
                 .unwrap_package()
                 .root_directory()
-                .resolve()
-                .unwrap(),
-            tmp_file.path().resolve().unwrap()
+                .resolve(),
+            tmp_file.path().resolve()
         );
     }
 
@@ -318,9 +313,8 @@ metadata:
                 .into_package()
                 .unwrap_package()
                 .root_directory()
-                .resolve()
-                .unwrap(),
-            tmp_file.path().resolve().unwrap()
+                .resolve(),
+            tmp_file.path().resolve()
         );
     }
 
