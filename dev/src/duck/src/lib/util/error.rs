@@ -540,6 +540,29 @@ impl ErrorsLogger {
         self.0.is_empty()
     }
 
+    /// Check if an [`ErrorsLogger`] logged any errors.
+    pub fn has_errors(&self) -> bool {
+        !self.is_empty()
+    }
+
+    /// If `result` is `Ok(t)`, returns `Some(t)`.
+    ///
+    /// Otherwise logs [`QuackError`] from `result` and returns [`None`].
+    pub fn log_result<T>(&mut self, result: QuackResult<T>) -> Option<T> {
+        match result {
+            Ok(t) => Some(t),
+            Err(err) => {
+                self.log(err);
+                None
+            }
+        }
+    }
+
+    /// Get the number of logged [`QuackError`]s.
+    pub fn logged_errors(&self) -> usize {
+        self.0.len()
+    }
+
     /// Add an error to the [`ErrorsLogger`].
     pub fn log(&mut self, error: QuackError) {
         self.0.push(error);
