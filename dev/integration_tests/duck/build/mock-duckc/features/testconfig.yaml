@@ -18,10 +18,10 @@ Tests:
         features: "foo"
         Output:
           Run: |+
-            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
-            info: doesn't need to run the solver engine
+            info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
@@ -30,10 +30,10 @@ Tests:
         features: bar foo
         Output:
           Run: |+
-            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
-            info: doesn't need to run the solver engine
+            info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."

@@ -26,10 +26,10 @@ Tests:
         profile-name: dev
         Output:
           Run: |+
-            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
-            info: doesn't need to run the solver engine
+            info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
@@ -38,10 +38,10 @@ Tests:
         profile-name: release
         Output:
           Run: |+
-            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
-            info: doesn't need to run the solver engine
+            info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
@@ -50,10 +50,10 @@ Tests:
         test-cmd: duck -C foo build --profile=release
         Output:
           Run: |+
-            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
-            info: doesn't need to run the solver engine
+            info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
@@ -62,10 +62,10 @@ Tests:
         test-cmd: duck --color=never -C foo build --profile release
         Output:
           Run: |+
-            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
-            info: doesn't need to run the solver engine
+            info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
@@ -74,10 +74,10 @@ Tests:
         profile-name: my-profile
         Output:
           Run: |+
-            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
-            info: doesn't need to run the solver engine
+            info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
@@ -86,10 +86,10 @@ Tests:
         profile-name: bench
         Output:
           Run: |+
-            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
-            info: doesn't need to run the solver engine
+            info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
@@ -98,10 +98,10 @@ Tests:
         profile-name: my-profile2
         Output:
           Run: |+
-            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
-            info: doesn't need to run the solver engine
+            info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."

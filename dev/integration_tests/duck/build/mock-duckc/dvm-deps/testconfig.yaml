@@ -20,7 +20,7 @@ Tests:
         test-cmd: duck -C foo build --profile=dvm
         Output:
           Run: |+
-            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
             info: running gathering
