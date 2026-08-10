@@ -27,8 +27,13 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     }
     .into_package()
     .unwrap_package();
+
+    // Only necessary for diagnostic messages.
     let pkg_name = pkg.name();
     let pkg_root = pkg.root_directory().to_path_buf();
+
+    // @TODO: #1394 We would like to use a better mechanism than modify deserialized schema -> blindly serialize it,
+    // since this won't preserve comments and formatting choices in the manifest.
     let manifest_path = pkg.manifest_path().to_path_buf();
     let mut schema = pkg.into_original_schema();
     let dependencies_map = if dev_dep {
