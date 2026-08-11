@@ -53,7 +53,12 @@ namespace compiler::helios {
 						if (auto maybe_initial_pst = var_decl->getValue()) {
 							auto initial_value_pst
 								= maybe_initial_pst.value().unlock(ctx)->getExpr();
-							return getHoutOfExprWithExpectedType(ctx, initial_value_pst, symbol_type)
+							return getHoutOfExprWithExpectedType(
+									   ctx,
+									   initial_value_pst,
+									   symbol_type,
+									   var_decl->getName().unlock(ctx)->getStablePosition()
+							)
 							    .valueOrThrow();
 						}
 

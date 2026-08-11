@@ -52,7 +52,7 @@ namespace compiler::helios {
 	 */
 	[[nodiscard]] Box<code::Expr> moveReturnedLocal(query::Context& ctx, Box<code::Expr> value);
 
-	class IncompatibleTypesError: public dia_int::MessageWithCodeFragmentAndCause {
+	class IncompatibleTypesError: public dia_int::MessageWithCodeFragment {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -62,9 +62,10 @@ namespace compiler::helios {
 
 	public:
 		IncompatibleTypesError(
-			dia_int::StablePosition source_position,
-			Box<InteractiveType>    actual_type,
-			Box<InteractiveType>    expected_type
+			dia_int::StablePosition                 given_position,
+			Box<InteractiveType>                    actual_type,
+			Box<InteractiveType>                    expected_type,
+			base::Optional<dia_int::StablePosition> coercion_expects_pos
 		);
 	};
 
@@ -72,7 +73,7 @@ namespace compiler::helios {
 	 * @brief Error logged when an expression cannot be coerced to any of the several accepted
 	 * types. The error of every attempted coercion is attached to this message.
 	 */
-	class NoMatchingExpectedTypeError final: public dia_int::MessageWithCodeFragmentAndCause {
+	class NoMatchingExpectedTypeError final: public dia_int::MessageWithCodeFragment {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -82,7 +83,7 @@ namespace compiler::helios {
 
 	public:
 		NoMatchingExpectedTypeError(
-			dia_int::StablePosition source_position, Box<InteractiveType> actual_type
+			dia_int::StablePosition given_position, Box<InteractiveType> actual_type
 		);
 
 		/**
@@ -95,16 +96,6 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Type used to indicate an invalid coercion, i.e. coercion that cannot be performed.
-	 */
-	struct InvalidCoercion final {
-		InvalidCoercionReason reason;
-	};
-
-	class CoercionResult;
-	using CoercionQResult = query::QResult<CoercionResult>;
-
-	/**
 	 * @brief This struct represents a function that performs a coercion from one expression to
 	 * another. It was added to make sure that the coercion is always valid (by calling
 	 * `canCoerce` first), and it checks if the expression being coerced and desired type
@@ -112,21 +103,6 @@ namespace compiler::helios {
 	 */
 	class Coercion final {
 	public:
-		/**
-		 * Main function that creates a coerced expression from the old one.
-		 */
-		[[nodiscard]] Box<code::Expr> coerce(query::Context& ctx, Box<code::Expr> from) const;
-
-
-		/**
-		 * Same as `coerce` but accepts a reference to the expression instead of taking ownership.
-		 * This is useful when we don't know if the coercion will actually need to modify the
-		 * expression or not (e.g., in case of empty coercion), so we can avoid unnecessary cloning.
-		 */
-		[[nodiscard]] BoxOrCRef<code::Expr> coerceFromRef(
-			query::Context& ctx, CRef<code::Expr> from
-		) const;
-
 		/**
 		 * The symbol type that was validated to be coercible.
 		 */
@@ -137,53 +113,17 @@ namespace compiler::helios {
 		 */
 		const tsh::SymbolType<> to;  // target type
 
+		base::Optional<InvalidCoercionReason> invalid_reason;
+
 		/**
 		 * Whether this coercion moves the source value to the new owner implicitly. This has to be
 		 * wrapped by an implicit `MoveExpr`.
 		 */
 		const bool transfers_ownership;
 
-		/**
-		 * Check if the provided expression has the same type as the one validated.
-		 */
-		[[nodiscard]] bool isValidFor(CRef<code::Expr> expr) const noexcept {
-			return expr->expression_type.getSymbolType() == validated_from;
-		}
-
-		friend CoercionQResult canCoerce(
-			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
-		);
-
-		[[nodiscard]] bool isEmptyCoercion() const noexcept {
-			if (transfers_ownership) return false;
-			return validated_from == to
-			    || validated_from.withMutability(tsh::Mutability::Immutable) == to;
-		}
-
-		static Coercion emptyCoercion(tsh::SymbolType<> from_and_to) {
-			return { from_and_to, from_and_to, false };
-		}
-
-	private:
-		Coercion(tsh::SymbolType<> validated_from, tsh::SymbolType<> to, bool transfers_ownership):
-			  validated_from(validated_from),
-			  to(to),
-			  transfers_ownership(transfers_ownership) {}
-	};
-
-	/**
-	 * @brief The result of a coercion check, either a valid Coercion or an InvalidCoercion.
-	 * This is mostly a utility wrapper around std::variant, that helps in avoiding boilerplate code.
-	 */
-	class CoercionResult final {
-	public:
-		CoercionResult(Coercion coercion): storage(std::move(coercion)) {}
-
-		CoercionResult(InvalidCoercion invalid): storage(invalid) {}
-
 		[[nodiscard]]
 		constexpr bool isValid() const noexcept {
-			return std::holds_alternative<Coercion>(storage);
+			return invalid_reason.empty();
 		}
 
 		[[nodiscard]]
@@ -191,16 +131,18 @@ namespace compiler::helios {
 			return !isValid();
 		}
 
-		[[nodiscard]]
-		const Coercion& getCoercion() const& {
-			CORE_ASSERT(isValid(), "Attempting to get Coercion from an invalid CoercionResult.");
-			return std::get<Coercion>(storage);
+		/**
+		 * Check if the provided expression has the same type as the one validated.
+		 */
+		[[nodiscard]] bool isValidFor(CRef<code::Expr> expr) const noexcept {
+			return isValid() && expr->expression_type.getSymbolType() == validated_from;
 		}
 
-		[[nodiscard]]
-		Coercion&& getCoercion() && {
-			CORE_ASSERT(isValid(), "Attempting to get Coercion from an invalid CoercionResult.");
-			return std::move(std::get<Coercion>(storage));
+		[[nodiscard]] bool isEmptyCoercion() const noexcept {
+			// The implicit `MoveExpr` still has to be inserted, even when the types match.
+			if (transfers_ownership) return false;
+			return validated_from == to
+			    || validated_from.withMutability(tsh::Mutability::Immutable) == to;
 		}
 
 		[[nodiscard]]
@@ -208,26 +150,65 @@ namespace compiler::helios {
 			CORE_ASSERT(
 				isInvalid(), "Attempting to get the invalid reason from a valid CoercionResult."
 			);
-			return std::get<InvalidCoercion>(storage).reason;
+			return invalid_reason.value();
 		}
 
 		/**
 		 * Main function that creates a coerced expression from the old one.
 		 */
-		[[nodiscard]] Box<code::Expr> coerce(query::Context& ctx, Box<code::Expr> from) const {
-			CORE_ASSERT(isValid(), "Attempting to get Coercion from an invalid CoercionResult.");
-			return std::get<Coercion>(storage).coerce(ctx, std::move(from));
+		[[nodiscard]] Box<code::Expr> coerce(query::Context& ctx, Box<code::Expr> from) const;
+
+		/**
+		 * Same as `coerce` but accepts a reference to the expression instead of taking ownership.
+		 * This is useful when we don't know if the coercion will actually need to modify the
+		 * expression or not (e.g., in case of empty coercion), so we can avoid unnecessary cloning.
+		 */
+		[[nodiscard]] BoxOrCRef<code::Expr> coerceFromRef(
+			query::Context& ctx, CRef<code::Expr> from
+		) const;
+
+		static Coercion emptyCoercion(tsh::SymbolType<> from_and_to) {
+			return { from_and_to, from_and_to, {}, false };
 		}
 
 	private:
-		std::variant<Coercion, InvalidCoercion> storage;
+		Coercion(
+			tsh::SymbolType<>                     validated_from,
+			tsh::SymbolType<>                     to,
+			base::Optional<InvalidCoercionReason> invalid,
+			bool                                  transfers_ownership
+		):
+			  validated_from(validated_from),
+			  to(to),
+			  invalid_reason(invalid),
+			  transfers_ownership(transfers_ownership) {}
+
+		friend query::QResult<Coercion> canCoerce(
+			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
+		);
+
+		static Coercion invalid(
+			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, InvalidCoercionReason invalid
+		) {
+			return { validated_from, to, invalid, false };
+		}
+
+		static Coercion valid(
+			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, bool transfers_ownership
+		) {
+			return { validated_from, to, {}, transfers_ownership };
+		}
+
+		friend query::QResult<Coercion> canCoerce(
+			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
+		);
 	};
 
 	/**
 	 * @brief Checks if a coercion of value described by from `from` to `to` is possible and returns
 	 * a function performing the coercion if it is.
 	 */
-	CoercionQResult canCoerce(
+	query::QResult<Coercion> canCoerce(
 		query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 	);
 
@@ -236,7 +217,7 @@ namespace compiler::helios {
 	 * returns a function performing the coercion if it is.
 	 * @note This is a wrapper around `canCoerce` for the common case of coercing to the meta type.
 	 */
-	CoercionQResult canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from);
+	query::QResult<Coercion> canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from);
 
 	/**
 	 * @brief Optional overrides of the default coercion failure errors.
@@ -263,11 +244,12 @@ namespace compiler::helios {
 	 * @return The coerced expression or an empty optional on error.
 	 */
 	base::Optional<Box<code::Expr>> coerceFromBox(
-		query::Context&         ctx,
-		Box<code::Expr>         expr,
-		const tsh::SymbolType<> expected_type,
-		dia_int::StablePosition source_position,
-		CoercionErrorOverrides  error_overrides = {}
+		query::Context&                         ctx,
+		Box<code::Expr>                         expr,
+		const tsh::SymbolType<>                 expected_type,
+		dia_int::StablePosition                 source_position,
+		base::Optional<dia_int::StablePosition> coercion_expects_pos = {},
+		CoercionErrorOverrides                  error_overrides      = {}
 	);
 
 	/**
@@ -275,11 +257,10 @@ namespace compiler::helios {
 	 * `reason`.
 	 */
 	[[nodiscard]] Box<dia_int::MessageBase> getCoercionError(
-		query::Context&          ctx,
-		InvalidCoercionReason    reason,
-		const tsh::SymbolType<>& source_symbol_type,
-		const tsh::SymbolType<>& expected_type,
-		dia_int::StablePosition  source_position
+		query::Context&                         ctx,
+		const Coercion&                         failed,
+		dia_int::StablePosition                 source_position,
+		base::Optional<dia_int::StablePosition> coercion_expects_pos = {}
 	);
 
 	/**
@@ -287,12 +268,11 @@ namespace compiler::helios {
 	 * `error_overrides` if one is provided, otherwise logs the default message.
 	 */
 	void logCoercionFailure(
-		query::Context&          ctx,
-		InvalidCoercionReason    reason,
-		const tsh::SymbolType<>& source_symbol_type,
-		const tsh::SymbolType<>& expected_type,
-		dia_int::StablePosition  source_position,
-		CoercionErrorOverrides   error_overrides = {}
+		query::Context&                         ctx,
+		const Coercion&                         failed,
+		dia_int::StablePosition                 source_position,
+		base::Optional<dia_int::StablePosition> coercion_expects_pos,
+		CoercionErrorOverrides                  error_overrides = {}
 	);
 
 	/**
@@ -302,10 +282,8 @@ namespace compiler::helios {
 	 * order. Must have the same size as `expected_types`.
 	 */
 	void logNoMatchingExpectedTypeFailure(
-		query::Context&                           ctx,
-		const tsh::SymbolType<>&                  source_symbol_type,
-		const std::vector<tsh::SymbolType<>>&     expected_types,
-		const std::vector<InvalidCoercionReason>& failure_reasons,
-		dia_int::StablePosition                   source_position
+		query::Context&              ctx,
+		const std::vector<Coercion>& failed_coercions,
+		dia_int::StablePosition      source_position
 	);
 }

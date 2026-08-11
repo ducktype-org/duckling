@@ -113,7 +113,8 @@ namespace compiler::helios {
 		void visitUsing(pst::Access<pst::Using>) override {}
 
 		void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
-			auto op = assignment->getAssignmentType().unlock(ctx)->unwrap();
+			auto op_wrapped = assignment->getAssignmentType().unlock(ctx);
+			auto op         = op_wrapped->unwrap();
 			if (op != base::StrID("=")) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					base::strConcat("This assignment type: '", op.str(), "'."),
@@ -161,11 +162,13 @@ namespace compiler::helios {
 				// The new `SymbolType` of `location_expr` is the location symbol without the
 				// ref/box specifier (as it was removed in the DerefExpr constructor). We now
 				// coerce the value expr to the type without the ref/box specifier.
-				auto new_value_expr_coerced
-					= getHoutOfExprWithExpectedType(
-						  ctx, val, location_expr->expression_type.getSymbolType()
-					)
-				          .valueOrThrow();
+				auto new_value_expr_coerced = getHoutOfExprWithExpectedType(
+												  ctx,
+												  val,
+												  location_expr->expression_type.getSymbolType(),
+												  var.unlock(ctx)->getStablePosition()
+				)
+				                                  .valueOrThrow();
 
 				output(code::AssignmentStmt(
 					code::pstOrigin(assignment),
@@ -299,11 +302,14 @@ namespace compiler::helios {
 				output(code::VariableStmt(code::pstOrigin(stmt), initial_value, symbol_type, symbol)
 				);
 			} else {
-				auto initial_value_coerced
-					= getHoutOfExprWithExpectedType(
-						  ctx, stmt->getValue().value().unlock(ctx)->getExpr(), symbol_type
-					)
-				          .valueOrThrow();
+				auto initial_value_coerced = getHoutOfExprWithExpectedType(
+												 ctx,
+												 stmt->getValue().value().unlock(ctx)->getExpr(),
+												 symbol_type,
+												 stmt->getName().unlock(ctx)->getStablePosition()
+				)
+
+				                                 .valueOrThrow();
 
 
 				output(code::VariableStmt(
