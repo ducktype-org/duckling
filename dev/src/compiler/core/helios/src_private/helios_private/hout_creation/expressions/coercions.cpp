@@ -170,40 +170,45 @@ namespace compiler::helios {
 			return { from_type.getPointeeSymbolType(),
 				     tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced) };
 		}
+	}
 
-		/**
-		 * @brief How a copying coercion may hand over a value.
-		 */
-		enum class PassingMethod {
-			ByteCopy,            ///< Trivially copyable, copied by copying its bytes.
-			ImplicitMove,        ///< Owned rvalue (a temporary), moved implicitly.
-			ExplicitCopyOrMove,  ///< Non-trivial assignable value (lvalue), needs an explicit
-			                     ///< `copy`/`move`.
-			NotCopyable,  ///< Non-trivial assignable value (lvalue) value with no copy constructor.
-		};
+	PassingMethod passingMethod(query::Context& ctx, const tsh::ExpressionType<>& value) {
+		const tsh::SymbolType<> symbol_type = value.getSymbolType();
 
-		/**
-		 * @brief Decides how the given value may passed, based on its value category and the
-		 * abilities of its type.
-		 */
-		PassingMethod passingMethod(query::Context& ctx, const tsh::ExpressionType<>& value) {
-			const auto symbol_type = value.getSymbolType();
-			const bool trivial     = symbol_type.isTriviallyCopyable(ctx);
+		// If the value is being moved already, we pass it by `ByteCopy`.
+		if (value.getValueCategory().mustMove()) return PassingMethod::ByteCopy;
+		if (symbol_type.isTriviallyCopyable(ctx)) return PassingMethod::ByteCopy;
 
-			switch (value.getValueCategory().getCategory()) {
-			case tsh::PrimaryCategory::Temporary:
-				return trivial ? PassingMethod::ByteCopy : PassingMethod::ImplicitMove;
-			case tsh::PrimaryCategory::Literal:
-				return PassingMethod::ByteCopy;
-			case tsh::PrimaryCategory::Local:
-			case tsh::PrimaryCategory::Global:
-			case tsh::PrimaryCategory::Dereferenced:
-				if (trivial) return PassingMethod::ByteCopy;
-				return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
-				                                   : PassingMethod::NotCopyable;
-			}
-			CORE_UNREACHABLE();
+		switch (value.getValueCategory().getCategory()) {
+		case tsh::PrimaryCategory::Temporary:
+			return PassingMethod::ImplicitMove;
+		case tsh::PrimaryCategory::Literal:
+			return PassingMethod::ByteCopy;
+		case tsh::PrimaryCategory::Local:
+		case tsh::PrimaryCategory::Global:
+		case tsh::PrimaryCategory::Dereferenced:
+			return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
+			                                   : PassingMethod::NotCopyable;
 		}
+		CORE_UNREACHABLE();
+	}
+
+	Box<code::Expr> moveReturnedLocal(query::Context& ctx, Box<code::Expr> value) {
+		const tsh::ExpressionType<> type = value->expression_type;
+
+		// Only a local can be moved out of.
+		if (type.getValueCategory().getCategory() != tsh::PrimaryCategory::Local) return value;
+
+		// Anything the normal rule would demand a written `copy`/`move` for is what the
+		// return makes implicit.
+		const PassingMethod method = passingMethod(ctx, type);
+		if (method != PassingMethod::ExplicitCopyOrMove && method != PassingMethod::NotCopyable)
+			return value;
+
+		auto origin = value->origin.generatedFrom();
+		return makeBox<code::MoveExpr>(
+			ctx, origin, std::move(value), code::MoveExpr::MoveKind::Implicit
+		);
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
@@ -243,6 +248,12 @@ namespace compiler::helios {
 
 	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
+
+		// An owned rvalue passed to a new owner is implicitly moved.
+		if (transfers_ownership)
+			from = makeBox<code::MoveExpr>(
+				ctx, from->origin.generatedFrom(), std::move(from), code::MoveExpr::MoveKind::Implicit
+			);
 
 		auto current_expr       = handleReferenceKindCoercion(ctx, std::move(from), to);
 		auto source_symbol_type = current_expr->expression_type.getSymbolType();
@@ -310,13 +321,14 @@ namespace compiler::helios {
 
 		// A coercion that only rebinds a reference never copies, so it is always fine.
 		if (not requiresValueCopy(from_type.getRefKind(), to.getRefKind()))
-			return Coercion::valid(from_type, to);
+			return Coercion::valid(from_type, to, false);
 
 		// Otherwise a value has to be copied.
 		switch (passingMethod(ctx, valueBeingCopied(from, to))) {
 		case PassingMethod::ByteCopy:
+			return Coercion::valid(from_type, to, false);
 		case PassingMethod::ImplicitMove:
-			return Coercion::valid(from_type, to);
+			return Coercion::valid(from_type, to, true);
 		case PassingMethod::ExplicitCopyOrMove:
 			return Coercion::invalid(from_type, to, InvalidCoercionReason::RequiresExplicitCopyMove);
 		case PassingMethod::NotCopyable:
@@ -387,15 +399,31 @@ namespace compiler::helios {
 				),
 				source_position
 			);
-		case InvalidCoercionReason::RequiresExplicitCopyMove:
+		case InvalidCoercionReason::RequiresExplicitCopyMove: {
+			// Reading a value out of a `ref`/`box` copies the pointee. `move` out of ref/box isn't
+			// possible, so suggesting it here is misleading.
+			const bool reads_through
+				= readsThroughReference(failed.validated_from.getRefKind(), failed.to.getRefKind());
+
+			const std::string message
+				= reads_through
+			        ? base::strConcat(
+						  "` out of `",
+						  failed.validated_from.toString(),
+						  "`. Use `copy` to copy it out, `move` cannot move a value out of a "
+						  "reference."
+					  )
+			        : std::string("`. Use `copy` to copy it or `move` to move it.");
+
 			return makeBox<dia_int::PlaceholderError>(
 				base::strConcat(
 					"Cannot implicitly copy a value of non-trivially-copyable type `",
 					copiedValueType(failed.validated_from, failed.to).toString(),
-					"`. Use `copy` to copy it or `move` to move it."
+					message
 				),
 				source_position
 			);
+		}
 
 		default:
 			CORE_UNREACHABLE();

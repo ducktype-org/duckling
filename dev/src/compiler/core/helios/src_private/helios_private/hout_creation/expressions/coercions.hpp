@@ -29,7 +29,28 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, uint8_t, InvalidCoercionReason,
 );
 
 namespace compiler::helios {
+	/**
+	 * @brief How a coercion may hand over a value.
+	 */
+	enum class PassingMethod {
+		ByteCopy,            ///< Trivially copyable, copied by copying its bytes.
+		ImplicitMove,        ///< Owned rvalue (a temporary), moved implicitly.
+		ExplicitCopyOrMove,  ///< Non-trivial assignable value (lvalue), needs an explicit
+		                     ///< `copy`/`move`.
+		NotCopyable,  ///< Non-trivial assignable value (lvalue) value with no copy constructor.
+	};
 
+	/**
+	 * @brief Decides how the given value may passed, based on its value category and the
+	 * abilities of its type.
+	 */
+	PassingMethod passingMethod(query::Context& ctx, const tsh::ExpressionType<>& value);
+
+	/**
+	 * @brief Wraps a value in an implicit move when a `return` is about to end the life of the
+	 * owned local it returns.
+	 */
+	[[nodiscard]] Box<code::Expr> moveReturnedLocal(query::Context& ctx, Box<code::Expr> value);
 
 	class IncompatibleTypesError: public dia_int::MessageWithCodeFragment {
 		dia_int::Metadata getMetadata() const final {
@@ -94,6 +115,12 @@ namespace compiler::helios {
 
 		base::Optional<InvalidCoercionReason> invalid_reason;
 
+		/**
+		 * Whether this coercion moves the source value to the new owner implicitly. This has to be
+		 * wrapped by an implicit `MoveExpr`.
+		 */
+		const bool transfers_ownership;
+
 		[[nodiscard]]
 		constexpr bool isValid() const noexcept {
 			return invalid_reason.empty();
@@ -112,6 +139,8 @@ namespace compiler::helios {
 		}
 
 		[[nodiscard]] bool isEmptyCoercion() const noexcept {
+			// The implicit `MoveExpr` still has to be inserted, even when the types match.
+			if (transfers_ownership) return false;
 			return validated_from == to
 			    || validated_from.withMutability(tsh::Mutability::Immutable) == to;
 		}
@@ -139,18 +168,20 @@ namespace compiler::helios {
 		) const;
 
 		static Coercion emptyCoercion(tsh::SymbolType<> from_and_to) {
-			return { from_and_to, from_and_to, {} };
+			return { from_and_to, from_and_to, {}, false };
 		}
 
 	private:
 		Coercion(
 			tsh::SymbolType<>                     validated_from,
 			tsh::SymbolType<>                     to,
-			base::Optional<InvalidCoercionReason> invalid
+			base::Optional<InvalidCoercionReason> invalid,
+			bool                                  transfers_ownership
 		):
 			  validated_from(validated_from),
 			  to(to),
-			  invalid_reason(invalid) {}
+			  invalid_reason(invalid),
+			  transfers_ownership(transfers_ownership) {}
 
 		friend query::QResult<Coercion> canCoerce(
 			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
@@ -159,11 +190,13 @@ namespace compiler::helios {
 		static Coercion invalid(
 			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, InvalidCoercionReason invalid
 		) {
-			return { validated_from, to, invalid };
+			return { validated_from, to, invalid, false };
 		}
 
-		static Coercion valid(tsh::SymbolType<> validated_from, tsh::SymbolType<> to) {
-			return { validated_from, to, {} };
+		static Coercion valid(
+			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, bool transfers_ownership
+		) {
+			return { validated_from, to, {}, transfers_ownership };
 		}
 
 		friend query::QResult<Coercion> canCoerce(

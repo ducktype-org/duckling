@@ -78,11 +78,31 @@ namespace compiler::helios {
 
 		void visitReturn(pst::Access<pst::Return> stmt) override {
 			if (auto val = stmt->getValue()) {
-				auto expr_coerced = getHoutOfExprWithExpectedType(
-										ctx, val.value().unlock(ctx)->getExpr(), return_type
-				)
-				                        .valueOrThrow();
-				output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced)));
+				const auto pst_expr = val.value().unlock(ctx)->getExpr();
+
+				auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr });
+				if (expr_hout_qresult->hasFailed()) return;
+
+				const auto& expr_hout = expr_hout_qresult->valueOrThrow();
+
+				// Move before the coercion, so the coercion knows about the changed value category.
+				auto returned = moveReturnedLocal(ctx, expr_hout->clone());
+
+				auto expr_coerced = coerceFromBox(
+					ctx, std::move(returned), return_type, pst_expr.unlock(ctx)->getStablePosition()
+				);
+				if (expr_coerced.empty()) query::throwFailed();
+
+				// Report only if the compilation of the return statement actually succeeded.
+				if (expr_hout->expression_type.getValueCategory().mustMove()) {
+					ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
+						"A returned value is moved out of implicitly, `move` is not needed "
+						"here.",
+						pst_expr.unlock(ctx)->getStablePosition()
+					));
+				}
+
+				output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced.value())));
 			} else {
 				output(code::VoidReturnStmt(code::pstOrigin(stmt)));
 			}
