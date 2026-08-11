@@ -16,7 +16,7 @@ pub enum PackageType {
 }
 
 impl PackageType {
-    /// *deepen* `self`, as in „get type for my dependencies”.
+    /// *deepen* `self`, as in “get type for my dependencies”.
     ///
     /// This is mainly used for printing errors, so we can distinguish between transitive and direct
     /// dependencies.

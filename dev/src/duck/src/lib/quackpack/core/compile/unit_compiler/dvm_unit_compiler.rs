@@ -22,7 +22,8 @@ impl UnitCompiler for DvmUnitCompiler {
         assert_eq!(
             root.artifacts_type(),
             ArtifactsType::Dvm,
-            "dvm executor should only compile DVM packages"
+            "dvm executor should only compile DVM packages; got {:?}",
+            root.artifacts_type()
         );
     }
 

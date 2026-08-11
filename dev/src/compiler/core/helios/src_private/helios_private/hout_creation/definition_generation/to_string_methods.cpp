@@ -193,10 +193,9 @@ namespace compiler::helios::defgen {
 			const CRef<tsh::TypeInterface> type_interface
 		) {
 			const Shorthand s{ ctx };
-			const auto      append_sym = stringAppendMethodSym(ctx, true);
-			// Create a reusable expression of the de-reffed self (self is passed by reference)
-			auto reusable_self_expr
-				= s.reusable(s.deref(s.ident(to_string_decl.parameters.at(0).helios_symbol)));
+			const auto      append_sym  = stringAppendMethodSym(ctx, true);
+			const SymID     self_symbol = to_string_decl.parameters.at(0).helios_symbol;
+			auto            deref_self  = [&] { return s.deref(s.ident(self_symbol)); };
 
 			// Prelude: the class name and opening parenthesis
 			const auto result_sym = ctx.query<QueryGeneratedSymbol>(
@@ -219,10 +218,8 @@ namespace compiler::helios::defgen {
 				const auto  field_type          = field.getType(ctx);
 				const SymID field_to_string_sym = toStringSymForType(ctx, field_type.getType());
 
-				auto            next_reusable_self_expr = reusable_self_expr->nextUse();
 				Box<code::Expr> accessed_field
-					= s.prepToPassSelf(s.access(std::move(reusable_self_expr), field.getSymbol()));
-				reusable_self_expr = std::move(next_reusable_self_expr);
+					= s.prepToPassSelf(s.access(deref_self(), field.getSymbol()));
 
 				auto stringified_field
 					= s.call(s.ident(field_to_string_sym), std::move(accessed_field));

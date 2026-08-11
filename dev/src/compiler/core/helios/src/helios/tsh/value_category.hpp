@@ -108,6 +108,11 @@ namespace compiler::tsh {
 			ValueSemantics  force_semantic
 		);
 
+		[[nodiscard]]
+		ValueCategory withForceSemantics(const ValueSemantics new_force_semantic) const {
+			return { category, is_pure, allows_semantic, new_force_semantic };
+		}
+
 		/**
 		 * A simple getter for category.
 		 */
