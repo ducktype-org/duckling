@@ -117,7 +117,7 @@ pub enum DependencyRemoved {
 }
 
 #[skip_serializing_none]
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the `metadata:` table.
 pub struct Metadata {
