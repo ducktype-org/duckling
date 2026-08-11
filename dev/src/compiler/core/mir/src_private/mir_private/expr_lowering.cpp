@@ -11,6 +11,7 @@
 #include <mir_private/stmt_lowering.hpp>
 #include <mir_private/utils/bounds_check.hpp>
 
+#include "base/config/build_type.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -197,13 +198,34 @@ namespace compiler::mir {
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
+			IF_BUILD_TYPE_DEV({
+				const bool lhs_trivial
+					= expr.lhs->expression_type.getSymbolType().isTriviallyDestructible(
+						function.getContext()
+					);
+				const bool rhs_trivial
+					= expr.rhs->expression_type.getSymbolType().isTriviallyDestructible(
+						function.getContext()
+					);
+
+				CORE_ASSERT(
+					lhs_trivial and rhs_trivial,
+					"Operand of a builtin operator have to be trivially destructible, to opt out "
+					"an unneeded temporary. If this ever stops holding just change "
+					"`getResultAndTakeOwnership()` to `getResult()`"
+				);
+			})
+
+
 			// Construct the result of the expression in reverse.
 			auto target_construction_hole = continuation->addHole();
 
+			std::vector<OperationFlag> flags;
+
 			auto       lowered_right = lowerSubExpr(*expr.rhs, continuation);
-			const auto res_right     = lowered_right.getResult(function);
+			const auto res_right     = lowered_right.getResultAndTakeOwnership(function, flags);
 			auto       lowered_left  = lowerSubExpr(*expr.lhs, lowered_right.begin);
-			const auto res_left      = lowered_left.getResult(function);
+			const auto res_left      = lowered_left.getResultAndTakeOwnership(function, flags);
 
 			// Fill the hole with the binary operation.
 			const auto result_type           = expr.expression_type.getSymbolType();
@@ -216,7 +238,7 @@ namespace compiler::mir {
 					operation_with_params.operation,
 					{},
 					{ res_left, res_right },
-					{},
+					flags,
 					expr_scope,
 					operation_with_params.params,
 					{ expr.getPosition() }
@@ -226,10 +248,22 @@ namespace compiler::mir {
 		}
 
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
+			CORE_ASSERT(
+				expr.expr->expression_type.getSymbolType().isTriviallyDestructible(
+					function.getContext()
+				),
+				"Operand of a builtin operator have to be trivially destructible, to opt out "
+				"an unneeded temporary. If this ever stops holding just change "
+				"`getResultAndTakeOwnership()` to `getResult()`"
+			);
+
 			// Construct the result of the expression in reverse.
-			auto       target_construction_hole = continuation->addHole();
-			auto       lowered                  = lowerSubExpr(*expr.expr, continuation);
-			const auto res_lowered              = lowered.getResult(function);
+			auto target_construction_hole = continuation->addHole();
+
+			std::vector<OperationFlag> flags;
+
+			auto       lowered     = lowerSubExpr(*expr.expr, continuation);
+			const auto res_lowered = lowered.getResultAndTakeOwnership(function, flags);
 
 			const auto result_type = expr.expression_type.getSymbolType();
 
@@ -239,7 +273,7 @@ namespace compiler::mir {
 				lowered.begin,
 				target_construction_hole,
 				Instruction(
-					operation, {}, { res_lowered }, {}, expr_scope, param, { expr.getPosition() }
+					operation, {}, { res_lowered }, flags, expr_scope, param, { expr.getPosition() }
 				),
 				result_type
 			);
@@ -1246,7 +1280,7 @@ namespace compiler::mir {
 
 	[[nodiscard]]
 	MIRValue ExprLowerRes::getResult(FunctionBuilder& function) {
-		auto finalize_and_get_result = [&](auto& data) -> MIRValue {
+		auto finalize_and_get_result = [&](Finalizer& data) -> MIRValue {
 			auto result = function.addTmp(data.type, data.instr.scope);
 			data.instr.output.emplace(result);
 			data.instr.flags.push_back(flagConstruct(result));
@@ -1304,7 +1338,7 @@ namespace compiler::mir {
 		ScopeRef                          scope,
 		InstructionMetadata               metadata
 	) {
-		auto fill_and_update = [&](auto& data) {
+		auto fill_and_update = [&](Finalizer& data) {
 			CORE_ASSERT(scope == data.instr.scope, "Scope mismatch!");
 
 			hole.fillNop(scope);
