@@ -45,6 +45,7 @@ public:
 		TESTER_ADD_TEST(tupleTypeCoercionTest);
 		TESTER_ADD_TEST(livenessMapTest);
 		TESTER_ADD_TEST(sliceTest);
+		TESTER_ADD_TEST(ptrOfTest);
 	}
 
 protected:
@@ -953,6 +954,53 @@ private:
 			auto hout_unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto mir_unit  = compiler::mir::lowerToMIRUnit(ctx, &hout_unit->valueOrPanic());
 			ASSERT_TRUE(mir_unit.hasFailed());
+		});
+	}
+
+	/**
+	 * @brief `ptrof` lowers to an unconditional `Operation::AddressOf`.
+	 *
+	 * Unlike `&`, which forwards a `box`/`ref` operand unchanged and only emits an `AddressOf` for
+	 * a direct one, `ptrof` takes the address of the place itself in every case. The operand keeps
+	 * its projection chain, so `ptrof m[1]` addresses the indexed element.
+	 */
+	void ptrOfTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/ptrof")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
+			for (const auto& fn: unit.functions)
+				if (fn->declaration->original_name.strView() == "ptr_of") target = fn;
+			ASSERT_HAS_VALUE(target);
+
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ target.value() })
+			                     ->valueOrThrow();
+
+			using namespace compiler::mir;
+			usize address_of_count  = 0;
+			bool  found_indexed     = false;
+			bool  found_unprojected = false;
+			for (const auto& block_id: mir_func.block_order)
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					if (instr.operation != Operation::AddressOf) continue;
+					address_of_count++;
+
+					const auto& arg = instr.arguments[0].get<MIRPlace>();
+					// `ptrof a` and `ptrof b`: the local itself, the box is not dereferenced.
+					if (arg.projection_chain.empty()) found_unprojected = true;
+					// `ptrof m[1]`: the index projection survives into the addressed place.
+					else if (std::holds_alternative<MIRPlace::IndexProjection>(
+								 arg.projection_chain.back().storage
+							 ))
+						found_indexed = true;
+				}
+
+			ASSERT_EQUAL(usize(3), address_of_count);
+			ASSERT_TRUE(found_unprojected);
+			ASSERT_TRUE(found_indexed);
 		});
 	}
 };

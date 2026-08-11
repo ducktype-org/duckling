@@ -1,3 +1,7 @@
+fun index() -> i64 = {
+    return 0;
+}
+
 fun test_ptrof() -> i64 = {
     var a: i32 = 20;
     var box_a: box i32 = new a;
@@ -11,6 +15,9 @@ fun test_ptrof() -> i64 = {
 
     # The replacement of the old `element_ptr` builtin.
     var p_elem = ptrof m[0];
+
+    # A call below the operand: whoever walks the HOUT has to descend into `ptrof`'s child.
+    var p_called = ptrof m[index()];
 
     return 0;
 }

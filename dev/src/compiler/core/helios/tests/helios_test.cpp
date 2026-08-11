@@ -3758,20 +3758,44 @@ private:
 			ASSERT_EQUAL(ptr_i32, p_elem_type);
 		});
 
-		auto& function = hout.functions.at(0);
-		ASSERT_EQUAL(base::StrID("test_ptrof"), function->declaration->original_name);
+		// Look up the HOUT function by name so the test does not depend on emission order.
+		const compiler::helios::HOUTFunction* function = nullptr;
+		for (const auto& fun: hout.functions)
+			if (fun->declaration->original_name.strView() == "test_ptrof") function = fun.get();
+		assertTrue(function != nullptr, "test_ptrof not found in the HOUT unit");
 
-		// Every one of the four initializers is a `PtrOfExpr`, no coercion wraps it.
-		usize ptr_of_count = 0;
+		// Every one of the five initializers is a `PtrOfExpr`, no coercion wraps it.
+		const compiler::helios::code::PtrOfExpr* first_ptr_of = nullptr;
+		usize                                    ptr_of_count = 0;
 		for (const auto& statement: function->body->statements)
 			if (auto* var_stmt
 			    = dynamic_cast<const compiler::helios::code::VariableStmt*>(statement.get()))
-				if (dynamic_cast<const compiler::helios::code::PtrOfExpr*>(
+				if (auto* ptr_of = dynamic_cast<const compiler::helios::code::PtrOfExpr*>(
 						var_stmt->initial_value.get()
-					)
-				    != nullptr)
+					);
+				    ptr_of != nullptr) {
+					if (first_ptr_of == nullptr) first_ptr_of = ptr_of;
 					ptr_of_count++;
-		ASSERT_EQUAL(usize(4), ptr_of_count);
+				}
+		ASSERT_EQUAL(usize(5), ptr_of_count);
+		assertTrue(first_ptr_of != nullptr, "no PtrOfExpr found in test_ptrof");
+
+		// A clone is an independent node printing exactly like the original.
+		auto              cloned = first_ptr_of->clone();
+		std::stringstream orig_out, clone_out;
+		first_ptr_of->debugPrint(orig_out);
+		cloned->debugPrint(clone_out);
+		ASSERT_EQUAL(orig_out.str(), clone_out.str());
+		assertTrue(orig_out.str().starts_with("ptrof("), "PtrOfExpr should print as `ptrof(...)`");
+		assertTrue(&(*cloned) != first_ptr_of, "Clone should be a different object");
+
+		// `ptrof m[index()]` hides a call below the operand, so a HOUT walker only finds it if it
+		// descends into `PtrOfExpr`'s child.
+		auto       called = compiler::helios::code::collectCalledSymbolsFromHOUT(*function);
+		const bool walked_into_ptr_of = std::ranges::any_of(called, [](auto sym) {
+			return compiler::helios::name(sym) == base::StrID("index");
+		});
+		assertTrue(walked_into_ptr_of, "The HOUT walker did not descend into `ptrof`'s operand");
 	}
 
 	void testTypeLifting() {

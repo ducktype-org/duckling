@@ -42,6 +42,7 @@ public:
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testErrorLoggingTemplates);
 		TESTER_ADD_TEST(testPointerCastErrors);
+		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
@@ -1591,6 +1592,44 @@ private:
 
 			)",
 			{ "cannot be converted to type `i64`" },
+			1
+		);
+	}
+
+	/**
+	 * @brief `ptrof` rejects the same two operands `&` rejects: a temporary, which has no address,
+	 * and a type that carries no information (see issue #1956).
+	 */
+	void testPtrOfErrors() {
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var p = ptrof 10;
+				}
+			)",
+			{ "Tried to take a pointer to a temporary" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var u = ();
+					var p = ptrof u;
+				}
+			)",
+			{ "Taking a pointer to a type that does not carry information is not supported yet" },
+			1
+		);
+
+		// The tree evaluator cannot short-path a `ptrof`, and there is no DVM fallback for it
+		// either, so a `const` initialised with one fails as not-yet-implemented.
+		checkForErrorOnCompileModule(
+			R"(
+				var g: i32 = 5;
+				const A = ptrof g;
+			)",
+			{ "Feature not implemented", "Evaluation of this expression in DVM at compile time" },
 			1
 		);
 	}
