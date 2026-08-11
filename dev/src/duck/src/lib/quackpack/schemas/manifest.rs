@@ -6,12 +6,14 @@ use std::path::PathBuf;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize, de, ser};
 use serde_untagged::UntaggedEnumVisitor;
+use serde_with::skip_serializing_none;
 
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
 
 pub type Dependencies = HashMap<String, Dependency>;
 
+#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the [`quackconfig.yaml`](crate::quackpack::core::PackageLoader::MANIFEST_NAME) file.
@@ -62,17 +64,58 @@ impl Manifest {
         result
     }
 
-    /// Get mutable access to the dependencies map.
-    pub fn dependencies_mut(&mut self) -> Option<&mut Dependencies> {
-        self.dependencies.as_mut()
+    /// Remove a dependency.
+    pub fn remove_dependency(&mut self, name: &String) -> DependencyRemoved {
+        if self
+            .dependencies
+            .as_mut()
+            .and_then(|deps| deps.remove_entry(name))
+            .is_none()
+        {
+            // There is no such dependency. Check if there is a dev-dependency instead.
+            if let Some(ref dev_deps) = self.dev_dependencies
+                && dev_deps.contains_key(name)
+            {
+                return DependencyRemoved::NoDependencyButDevDepExists;
+            } else {
+                return DependencyRemoved::NoDependency;
+            }
+        }
+        if let Some(ref map) = self.dependencies
+            && map.is_empty()
+        {
+            self.dependencies = None;
+        }
+        DependencyRemoved::Yes
     }
 
-    /// Get mutable access to the dev-dependencies map.
-    pub fn dev_dependencies_mut(&mut self) -> Option<&mut Dependencies> {
-        self.dev_dependencies.as_mut()
+    /// Remove a dev-dependency.
+    pub fn remove_dev_dependency(&mut self, name: &String) -> DependencyRemoved {
+        if self
+            .dev_dependencies
+            .as_mut()
+            .and_then(|deps| deps.remove_entry(name))
+            .is_none()
+        {
+            return DependencyRemoved::NoDependency;
+        }
+        if let Some(ref map) = self.dev_dependencies
+            && map.is_empty()
+        {
+            self.dev_dependencies = None;
+        }
+        DependencyRemoved::Yes
     }
 }
 
+/// Marker struct for a  removal f a dependency.
+pub enum DependencyRemoved {
+    Yes,
+    NoDependency,
+    NoDependencyButDevDepExists,
+}
+
+#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the `metadata:` table.
@@ -89,6 +132,7 @@ pub struct Metadata {
     pub description: Option<String>,
 }
 
+#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// Single dependency of the package.
@@ -154,7 +198,8 @@ impl<'de> Deserialize<'de> for OredSemver {
 impl Serialize for OredSemver {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: ser::Serializer {
+        S: ser::Serializer,
+    {
         let semver_string = self.0.iter().map(|x| x.to_string()).join(" or ");
         serializer.serialize_str(&semver_string)
     }
@@ -218,7 +263,8 @@ impl<'de> de::Deserialize<'de> for DependencySource {
 impl Serialize for DependencySource {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: ser::Serializer {
+        S: ser::Serializer,
+    {
         match self {
             DependencySource::Simple(s) => serializer.serialize_str(s),
             DependencySource::Detailed(detailed_source) => detailed_source.serialize(serializer),
@@ -226,6 +272,7 @@ impl Serialize for DependencySource {
     }
 }
 
+#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// A detailed source of a dependency.
@@ -263,6 +310,7 @@ impl DetailedSource {
     }
 }
 
+#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// Conditions, from which any has to be true, in order to enable this dependency.
@@ -302,7 +350,8 @@ impl<'de> de::Deserialize<'de> for DependencyFeature {
 impl Serialize for DependencyFeature {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: ser::Serializer {
+        S: ser::Serializer,
+    {
         match self {
             DependencyFeature::Simple(simple) => serializer.serialize_str(simple),
             DependencyFeature::Detailed(detailed_feature) => detailed_feature.serialize(serializer),
@@ -310,6 +359,7 @@ impl Serialize for DependencyFeature {
     }
 }
 
+#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// A single compilation profile.
@@ -348,7 +398,8 @@ impl<'de> de::Deserialize<'de> for OptLevel {
 impl Serialize for OptLevel {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: ser::Serializer {
+        S: ser::Serializer,
+    {
         match self {
             OptLevel::Number(n) => serializer.serialize_u32(*n),
             OptLevel::String(s) => serializer.serialize_str(s),
@@ -356,6 +407,7 @@ impl Serialize for OptLevel {
     }
 }
 
+#[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 /// A venv's configuration.
 #[serde(rename_all = "kebab-case")]
@@ -392,12 +444,16 @@ mod tests {
 
     #[test]
     fn test_ored_semver_serialization() {
-        let x = serde_json::to_string::<OredSemver>(&OredSemver(vec![Version::new(1, 0, 0)])).unwrap();
+        let x =
+            serde_json::to_string::<OredSemver>(&OredSemver(vec![Version::new(1, 0, 0)])).unwrap();
         assert_eq!(x, "\"1.0.0\"");
 
-        
-        let x = serde_json::to_string::<OredSemver>(&OredSemver(vec![Version::new(1, 0, 0), Version::new(1, 1, 0),
-        Version::new(2, 0, 0)])).unwrap();
+        let x = serde_json::to_string::<OredSemver>(&OredSemver(vec![
+            Version::new(1, 0, 0),
+            Version::new(1, 1, 0),
+            Version::new(2, 0, 0),
+        ]))
+        .unwrap();
         assert_eq!(x, "\"1.0.0 or 1.1.0 or 2.0.0\"");
     }
 

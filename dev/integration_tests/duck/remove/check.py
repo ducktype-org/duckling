@@ -1,42 +1,38 @@
 import sys
 from pathlib import Path
 
-# Make ../../utilities.py import work
-sys.path.append(str(Path(__file__).resolve().parents[2]))
+# Make ../utilities.py import work
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from utilities import *
 
 expected_manifest_all = """metadata:
   name: foo
   version: 0.1.0
-
 dependencies:
   a:
     source:
-      path: ./a
-
+      path: ../a
 dev-dependencies:
   b:
     source:
-      path: ./b"""
+      path: ../b"""
 
 expected_manifest_only_b = """metadata:
   name: foo
   version: 0.1.0
-
 dev-dependencies:
   b:
     source:
-      path: ./b"""
+      path: ../b"""
 
 expected_manifest_only_a = """metadata:
   name: foo
   version: 0.1.0
-
 dependencies:
   a:
     source:
-      path: ./a"""
+      path: ../a"""
 
 arg = sys.argv[1]
 if arg == "all":
