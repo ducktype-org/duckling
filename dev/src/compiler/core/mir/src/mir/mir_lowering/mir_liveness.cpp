@@ -4,17 +4,12 @@
 
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
-#include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-
-#include <base/collections/dynamic_bitset.hpp>
-
 #include <logger/logger.hpp>
 #include <query_framework/query_errors.hpp>
 
 #include <algorithm>
 #include <ostream>
-#include <ranges>
 
 namespace compiler::mir {
 	/**

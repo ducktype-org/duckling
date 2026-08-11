@@ -62,7 +62,8 @@ namespace compiler::mir {
 	 * - the instruction does not initialize that place in this step (no `Construct` flag) — a fresh
 	 * initialization has no previous value to destroy. A `Reinit` (whole-local reassignment) IS an
 	 * override, so it does get a destructor;
-	 * - the place's base local is `Alive` at that point (there is a live value to destroy);
+	 * - the place's base local is `Alive` or `MaybeMoved` at that point (there is a live value to
+	 * destroy);
 	 * - the place's type has a non-trivial destructor.
 	 *
 	 * The inserted destructor shares the scope of the assignment instruction. It reuses the same

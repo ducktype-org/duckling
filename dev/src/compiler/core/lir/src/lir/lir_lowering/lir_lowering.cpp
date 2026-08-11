@@ -333,6 +333,12 @@ namespace compiler::lir {
 			}
 
 			[[nodiscard]]
+			LIRLocalRef insertNewLocal(lir::LIRLocal lir_local) {
+				locals.pushBack(lir_local);
+				return locals.last();
+			}
+
+			[[nodiscard]]
 			LIRGlobal getGlobal(const mir::MIRGlobal& mir_global) const {
 				return LIRGlobal::fromMIR(ctx, mir_global);
 			}
@@ -737,13 +743,11 @@ namespace compiler::lir {
 					const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
-					if (type.getRefKind() == tsh::ReferenceKind::Direct
-					    && not type.getType().isSimple()) {
+					if (type.getRefKind() == tsh::ReferenceKind::Direct) {
 						// The destructor takes `self: ref T`, so the address of the destructed
 						// place is materialized first.
-						locals.pushBack(LIRLocal::refLocal(ctx, type));
-						auto     addr_local = locals[locals.lastIndex()];
-						LIRPlace addr_place{ addr_local, {} };
+						LIRLocalRef addr_local = insertNewLocal(LIRLocal::refLocal(ctx, type));
+						LIRPlace    addr_place{ addr_local, {} };
 
 						auto& address_instr = curr_block->instructions.emplace_back(
 							Operation::AddressOf,
@@ -754,7 +758,6 @@ namespace compiler::lir {
 						address_instr.scope_flags.push_back(ScopeFlag{
 							.flag = ScopeFlag::Flag::ScopeStart, .local = addr_local });
 
-						// destructor(addr)
 						auto& call_instr = curr_block->instructions.emplace_back(
 							Operation::Call,
 							base::Optional<LIRPlace>{},
@@ -763,14 +766,17 @@ namespace compiler::lir {
 						);
 						call_instr.scope_flags.push_back(ScopeFlag{
 							.flag = ScopeFlag::Flag::ScopeEnd, .local = addr_local });
-					} else {
-						// Already a direct/box — call the destructor on it directly.
+					} else if (type.getRefKind() == tsh::ReferenceKind::Box) {
+						// Box — call the destructor on it directly, as the destructor should take
+						// ref T, and box T == ref T in lower representation.
 						curr_block->instructions.emplace_back(
 							Operation::Call,
 							base::Optional<LIRPlace>{},
 							std::move(args),
 							mir_instruction.metadata
 						);
+					} else {
+						CORE_PANIC("The reference types don't have destructors.");
 					}
 					break;
 				}

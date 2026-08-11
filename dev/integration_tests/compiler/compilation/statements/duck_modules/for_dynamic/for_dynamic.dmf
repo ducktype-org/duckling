@@ -62,24 +62,21 @@ fun main() -> i64 = {
     
     # ===== Nested fors =====
 
-    # @TODO: #2825 Nested `for` over copies of `List[List[i64]]` deep-copies correctly, but 
-    # the copied lists double-free at scope end because destructor insertion is
-    # still a stub. TODOP: Fix
-    # var dyn_matrix: List[List[i64]];
-    # var dyn_a: List[i64]; var dyn_b: List[i64];
-    # dyn_a.push(1); dyn_b.push(1);
-    # dyn_matrix.push(move dyn_a); dyn_matrix.push(move dyn_b);
-    #
-    # for (row in copy dyn_matrix) {
-    #     for (col in copy row) {
-    #         builtin_output_i64(col);
-    #     }
-    # }
+    var dyn_matrix: List[List[i64]];
+    var dyn_a: List[i64]; var dyn_b: List[i64];
+    dyn_a.push(1); dyn_b.push(1);
+    dyn_matrix.push(move dyn_a); dyn_matrix.push(move dyn_b);
+    
+    for (row in copy dyn_matrix) {
+        for (col in copy row) {
+            builtin_output_i64(col);
+        }
+    }
 
-    # This doesn't work since `[]` doesn't return a ref, so currently this feature is just not supported.
-    # for (x: ref i32 in dyn_arr) {
-    #     builtin_output_i64(x);
-    # }
+    This doesn't work since `[]` doesn't return a ref, so currently this feature is just not supported.
+    for (x: ref i32 in dyn_arr) {
+        builtin_output_i64(x);
+    }
 
     return 0;
 }

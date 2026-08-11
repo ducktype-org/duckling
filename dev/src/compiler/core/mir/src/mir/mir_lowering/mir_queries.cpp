@@ -330,6 +330,39 @@ namespace compiler::mir {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRCtor)
 
+	/**
+	 * @brief Creates a dtor function for a global data.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		LowerGlobalDataToMIRDtor, KeyOf_LowerGlobalData, CRef<query::QResult<Function>>, ({})
+	)
+
+	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRDtor, query::QResult<Function>) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data->value))
+				CORE_PANIC(
+					"Creating ctors for constant variables does not work, they should use CTVs "
+					"instead."
+				);
+			
+			auto function_type = ctx.query<tsh::QueryFunctionType>({
+				{},
+				tsh::SymbolType{
+					tsh::getUnitType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Immutable,
+				},
+			});
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRDtor)
+
 	struct IMPLEMENT_QUERY(LowerGlobalData, query::QResult<MIRGlobalData>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			variant_match(key.global_data->value) {
@@ -351,6 +384,7 @@ namespace compiler::mir {
 				variant_case(helios::HOUTGlobalVariable, hout_expr_initial_value) {
 					CRef mir_ctor_function
 						= &ctx.query<mir::LowerGlobalDataToMIRCtor>(key)->valueOrThrow();
+					CRef mir_dtor_function = ;
 					return MIRGlobalData{
 						.global = MIRGlobal{
 							key.global_data->helios_symbol,

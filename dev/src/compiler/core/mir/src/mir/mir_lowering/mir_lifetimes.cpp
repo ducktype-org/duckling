@@ -523,14 +523,13 @@ namespace compiler::mir {
 			for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
 				args.block_predecessors.put(succ).first->second.push_back(block_id);
 
+		args.move_states = calculateGlobalInMoveStateMap(function, args.block_predecessors);
+
 		return args;
 	}
 
 	Function runAllLifetimePasses(query::Context& ctx, Function function) {
 		auto args = constructLifetimePassArgs(function);
-
-		args.move_states = calculateGlobalInMoveStateMap(function, args.block_predecessors);
-
 		// The order here does matter. AddDestructorsPass{} performs a transformation on the CFG
 		// which adds an important invariant that all successors of a block have the same ending
 		// scopes. This assumption is then used when adding ScopeFlags.

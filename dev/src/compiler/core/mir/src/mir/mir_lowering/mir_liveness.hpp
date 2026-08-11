@@ -4,8 +4,6 @@
 #include <diagnostic_interactive/stable_position.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
-#include <base/collections/dynamic_bitset.hpp>
-
 #include <algorithm>
 #include <vector>
 

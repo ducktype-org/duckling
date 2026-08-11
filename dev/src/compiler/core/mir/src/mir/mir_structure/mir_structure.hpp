@@ -890,12 +890,17 @@ namespace compiler::mir {
 	struct MIRGlobalData final {
 		MIRGlobal global;
 
+		struct CtorDtorPair {
+			CRef<mir::Function> constructor;
+			CRef<mir::Function> destructor;
+		};
+
 		/**
 		 * @brief Initial value for the global variable.
-		 * Can be either a compile-time value or a reference to a ctor function.
+		 * Can be either a compile-time value or a reference to a ctor/dtor functions.
 		 * Should always be a CTV if kind is Const
 		 */
-		std::variant<ctv::CompileTimeValue, CRef<mir::Function>> initial_value;
+		std::variant<ctv::CompileTimeValue, CtorDtorPair> initial_value;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
