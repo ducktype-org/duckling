@@ -33,7 +33,9 @@ impl PackagesSet {
     pub fn package_mut(&mut self, name: &Identity) -> &mut CompilerPackage {
         self.inner
             .get_mut(name)
-            // !TODO: Because of borrows, we can't pass `self`.
+            // @TODO: #3318 Because of borrows, we can't pass `self`.
+            // Although this requires rust to change their borrow checker, which, at the time of
+            // writing this, has only been enabled on nightly.
             .unwrap_or_else(|| panic!("missing dependency `{name}` in the graph"))
     }
 

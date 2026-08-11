@@ -221,7 +221,7 @@ mod tests {
         assert_eq!(result.subcommand_name(), Some("build"));
     }
 
-    // !TODO: Reenable after enabling more subcommands.
+    // @TODO: #1650 Reenable after enabling more subcommands.
     // #[test]
     // fn test_multiple_targets() {
     //     let args_matches = cli().try_get_matches_from(["duck", "inaa"]).unwrap();

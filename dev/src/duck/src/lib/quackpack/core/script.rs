@@ -211,7 +211,7 @@ impl Script {
 
     /// Get a [`Display`](fmt::Display) impl.
     pub fn display(&self) -> impl fmt::Display + '_ {
-        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
         struct ScriptDisplay<'a> {
             script: &'a Script,
         }
@@ -328,7 +328,7 @@ impl PackageScript {
 
     /// Get a [`Display`](fmt::Display) impl.
     pub fn display(&self) -> impl fmt::Display + '_ {
-        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
         struct PackageScriptDisplay<'a> {
             script: &'a PackageScript,
         }
@@ -417,7 +417,7 @@ impl StandaloneScript {
 
     /// Get a [`Display`](fmt::Display) impl.
     pub fn display(&self) -> impl fmt::Display + '_ {
-        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
         struct StandaloneScriptDisplay<'a> {
             script: &'a StandaloneScript,
         }
