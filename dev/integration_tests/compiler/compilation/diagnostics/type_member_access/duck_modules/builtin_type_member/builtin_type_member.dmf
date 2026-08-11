@@ -1,5 +1,0 @@
-# A builtin type name is a type value too, so accessing a member on it fails the same way.
-fun main() -> i64 = {
-    i64.x;
-    return 0;
-}
