@@ -429,7 +429,7 @@ dependencies:
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
     assert!(a.source().is_local());
     let path = a.source().url().to_path_buf().unwrap();
-    assert_eq!(path, manifest_path.parent().unwrap().resolve().join("xd"));
+    assert_eq!(path, manifest_path.parent().unwrap().normalize().join("xd"));
     assert!(a.versions().is_empty());
     assert_eq!(a.name(), a.effective_name());
     assert!(a.alias().is_none());
@@ -448,7 +448,7 @@ dependencies:
             .unwrap()
             .parent()
             .unwrap()
-            .resolve()
+            .normalize()
             .join("xd")
     );
     assert!(a1.alias().is_none());
@@ -1445,7 +1445,7 @@ venv:
     assert!(!summary.venv().expose_freezefile());
     assert_eq!(
         summary.venv().storage_path(),
-        dir.path().join("storage").resolve(),
+        dir.path().join("storage").normalize(),
     );
 }
 

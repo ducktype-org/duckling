@@ -258,11 +258,7 @@ pub(super) fn resolve_path_maybe_relative_to_dir(
     ctx: &DuckContext,
 ) -> PathBuf {
     let expanded = path.expand_tilde(ctx);
-    if expanded.is_absolute() {
-        expanded
-    } else {
-        root.join(expanded).expand_tilde(ctx).resolve()
-    }
+    root.join(expanded).normalize()
 }
 
 /// Parse a url of a git dependency.

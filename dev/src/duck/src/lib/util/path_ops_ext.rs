@@ -47,14 +47,30 @@ pub trait PathOpsExt {
     /// [`ErrorKind::AlreadyExists`](io::ErrorKind::AlreadyExists).
     fn mkdir(&self, opts: MkdirOptions) -> QuackResult<()>;
 
-    /// Resolve `self` fully, as best as possible.
+    /// Normalize `self` fully, as best as possible.
     ///
     /// __WARNING!__: this function does __not__ care for CWD. You should firstly manually join it,
-    /// like: `ctx.cwd().join(path).resolve();`.
+    /// like: `ctx.cwd().join(path).normalize();`.
     ///
     /// Unlike [`std::fs::canonicalize`], this function __doesn't__ fail, if `self` points to a
     /// non-existing file.
-    fn resolve(&self) -> PathBuf;
+    fn normalize(&self) -> PathBuf;
+
+    /// Normalize `self` fully, against `ctx.cwd()`.
+    ///
+    /// This is equivalent to:
+    /// ```rust,ignore (illustrative)
+    /// ctx.cwd().join(self).normalize()
+    /// ```
+    fn resolve(&self, ctx: &DuckContext) -> PathBuf;
+
+    /// Normalize expanded `self` fully, against `ctx.cwd()`.
+    ///
+    /// This is equivalent to:
+    /// ```rust,ignore (illustrative)
+    /// ctx.cwd().join(self.expand_tilde(ctx)).normalize()
+    /// ```
+    fn resolve_with_tilde(&self, ctx: &DuckContext) -> PathBuf;
 
     /// Expand `~` into the `ctx.user_home()`.
     fn expand_tilde(&self, ctx: &DuckContext) -> PathBuf;
@@ -275,7 +291,7 @@ impl PathOpsExt for Path {
     }
 
     #[track_caller]
-    fn resolve(&self) -> PathBuf {
+    fn normalize(&self) -> PathBuf {
         let mut result = PathBuf::new();
         let mut components = self.components().peekable();
         if let Some(c @ Component::Prefix(..)) = components.peek().copied() {
@@ -327,6 +343,14 @@ impl PathOpsExt for Path {
             }
         }
     }
+
+    fn resolve(&self, ctx: &DuckContext) -> PathBuf {
+        ctx.cwd().join(self).normalize()
+    }
+
+    fn resolve_with_tilde(&self, ctx: &DuckContext) -> PathBuf {
+        ctx.cwd().join(self.expand_tilde(ctx)).normalize()
+    }
 }
 
 fn ignore_io_kind_error<T: Default>(
@@ -358,19 +382,19 @@ mod tests {
     #[test]
     fn resolve_tests() {
         let path = Path::new("/../../../cfg");
-        assert_eq!(path.resolve(), Path::new("/cfg"));
+        assert_eq!(path.normalize(), Path::new("/cfg"));
 
         let path = Path::new("/../../..");
-        assert_eq!(path.resolve(), Path::new("/"));
+        assert_eq!(path.normalize(), Path::new("/"));
 
         let path = Path::new("/home/../.");
-        assert_eq!(path.resolve(), Path::new("/"));
+        assert_eq!(path.normalize(), Path::new("/"));
 
         let path = Path::new("/home/duckling/./xd");
-        assert_eq!(path.resolve(), Path::new("/home/duckling/xd"));
+        assert_eq!(path.normalize(), Path::new("/home/duckling/xd"));
 
         let path = Path::new("/home/duckling/./xd/..");
-        assert_eq!(path.resolve(), Path::new("/home/duckling"));
+        assert_eq!(path.normalize(), Path::new("/home/duckling"));
     }
 
     #[test]

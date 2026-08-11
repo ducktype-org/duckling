@@ -88,7 +88,7 @@ impl PackageLoader {
         ctx: &'duck DuckContext,
         allow_global_package: AllowGlobalPackage,
     ) -> QuackResult<PackageContext<'duck>> {
-        let start = ctx.cwd().join(start.expand_tilde(ctx)).resolve();
+        let start = start.resolve(ctx);
         if !start.is_dir() {
             let err = qp_err!("the path `{}` is not a directory", start.display());
             return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
@@ -242,7 +242,7 @@ metadata:
             format!("{err}"),
             format!(
                 "no manifest has been found from the `{}` to the `{}`",
-                tmp_file.path().resolve().display(),
+                tmp_file.path().normalize().display(),
                 root
             )
         );
@@ -256,7 +256,10 @@ metadata:
         let err = PackageLoader::find_from_directory(&file, &ctx, false.into()).unwrap_err();
         assert_eq!(
             format!("{err}"),
-            format!("the path `{}` is not a directory", file.resolve().display())
+            format!(
+                "the path `{}` is not a directory",
+                file.normalize().display()
+            )
         );
     }
 
@@ -274,8 +277,8 @@ metadata:
                 .into_package()
                 .unwrap_package()
                 .root_directory()
-                .resolve(),
-            tmp_file.path().resolve(),
+                .normalize(),
+            tmp_file.path().normalize(),
         );
     }
 
@@ -295,8 +298,8 @@ metadata:
                 .into_package()
                 .unwrap_package()
                 .root_directory()
-                .resolve(),
-            tmp_file.path().resolve()
+                .normalize(),
+            tmp_file.path().normalize()
         );
     }
 
@@ -313,8 +316,8 @@ metadata:
                 .into_package()
                 .unwrap_package()
                 .root_directory()
-                .resolve(),
-            tmp_file.path().resolve()
+                .normalize(),
+            tmp_file.path().normalize()
         );
     }
 

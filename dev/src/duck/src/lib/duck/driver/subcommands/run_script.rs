@@ -55,7 +55,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let path = matches
         .get_one::<PathBuf>("path")
         .expect("guarded by the parser");
-    let path = ctx.cwd().join(path).resolve();
+    let path = path.resolve_with_tilde(ctx);
     check_is_script(&path)?;
     run_script(RunScriptOptions::from_path_and_matches(
         ctx, &path, matches,

@@ -24,5 +24,5 @@ pub fn duck_home_path(env: &Env, user_home: &Path) -> PathBuf {
             home
         })
         .expand_tilde_with(user_home)
-        .resolve()
+        .normalize()
 }
