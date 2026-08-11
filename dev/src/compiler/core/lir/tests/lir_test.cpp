@@ -709,7 +709,8 @@ private:
 					found_zero_init = true;
 					break;
 				case Operation::Call: {
-					auto name = instr.arguments.at(0).get<FunctionLiteral>().mangled_name.strView();
+					const auto& fn_lit = instr.arguments.at(0).get<FunctionLiteral>();
+					auto        name   = fn_lit.mangled_name.strView();
 					if (name.contains("push"))
 						found_push_with_params = true;
 					else if (name.contains("pop"))
@@ -717,7 +718,7 @@ private:
 					else if (name.contains("length"))
 						found_len = true;
 					// `Hdd` is the mangling of the compiler-generated destructor, which releases
-					// the list storage.
+					// the list storage with the `list_free` builtin.
 					else if (name.contains("Hdd"))
 						found_destructor = true;
 					break;

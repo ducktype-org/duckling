@@ -21,7 +21,7 @@ namespace compiler::mir {
 
 	struct LifetimePassArgs {
 		LocalsByScopeMap                             locals_by_scope;
-		LivenessData                                 liveness;
+		MoveStateData                                move_states;
 		base::HashMap<BlockID, std::vector<BlockID>> block_predecessors;
 	};
 
@@ -46,9 +46,29 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Perform a pass of MIR, that adds destructor calls
-	 * based on instruction lifetime-scopes and liveness information.
+	 * based on instruction lifetime-scopes and move-state information.
 	 */
 	class AddDestructorsPass final: public LifetimePass {
+	public:
+		void run(query::Context&, Function&, const LifetimePassArgs&) final;
+	};
+
+	/**
+	 * @brief Perform a pass of MIR that inserts a destructor call for the value being overwritten
+	 * by an assignment.
+	 *
+	 * For every instruction that writes to a place (its `output`), a `Destruct` of the old value is
+	 * inserted immediately before it, but only when all of the following hold:
+	 * - the instruction does not initialize that place in this step (no `Construct` flag) — a fresh
+	 * initialization has no previous value to destroy. A `Reinit` (whole-local reassignment) IS an
+	 * override, so it does get a destructor;
+	 * - the place's base local is `Alive` at that point (there is a live value to destroy);
+	 * - the place's type has a non-trivial destructor.
+	 *
+	 * The inserted destructor shares the scope of the assignment instruction. It reuses the same
+	 * `MIRPlace`, so its projections (field/index) are evaluated only once.
+	 */
+	class AddAssignmentDestructorsPass final: public LifetimePass {
 	public:
 		void run(query::Context&, Function&, const LifetimePassArgs&) final;
 	};

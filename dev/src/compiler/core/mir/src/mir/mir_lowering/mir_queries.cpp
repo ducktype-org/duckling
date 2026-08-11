@@ -416,7 +416,6 @@ namespace compiler::mir {
 		}
 
 		void collectUsedSymbolsFromInstruction(
-			query::Context&                    ctx,
 			const Instruction&                 instruction,
 			MIRUsedSymbols&                    out,
 			std::unordered_set<helios::SymID>& seen_functions,
@@ -427,22 +426,13 @@ namespace compiler::mir {
 					instruction.output.value(), out, seen_functions, seen_globals
 				);
 
+			// `Destruct`/`DestructIf` carry their destructor as a function-literal argument, so it
+			// is collected by the loop below like any other called function.
 			for (const auto& argument: instruction.arguments)
 				collectUsedSymbolsFromValue(argument, out, seen_functions, seen_globals);
-
-			// @TODO: #2825 Remove this once we add destruct symbols in destruct/destruct if
-			if (instruction.operation == Operation::Destruct
-			    || instruction.operation == Operation::DestructIf) {
-				const auto& to_destruct   = instruction.arguments.at(0).get<MIRPlace>();
-				const auto  destructor_op = helios::getTypeDestructor(ctx, to_destruct.type);
-
-				if (destructor_op.has_value() && seen_functions.insert(destructor_op.value()).second)
-					out.used_functions.push_back(destructor_op.value());
-			}
 		}
 
 		void usedSymbolsFromBody(
-			query::Context&                    ctx,
 			CRef<Function>                     function,
 			MIRUsedSymbols&                    result,
 			std::unordered_set<helios::SymID>& seen_functions,
@@ -452,10 +442,10 @@ namespace compiler::mir {
 				const auto& block = function->blocks[block_id];
 				for (const auto& instruction: block.instructions)
 					collectUsedSymbolsFromInstruction(
-						ctx, instruction, result, seen_functions, seen_globals
+						instruction, result, seen_functions, seen_globals
 					);
 				collectUsedSymbolsFromInstruction(
-					ctx, block.terminator, result, seen_functions, seen_globals
+					block.terminator, result, seen_functions, seen_globals
 				);
 			}
 		}
@@ -468,7 +458,7 @@ namespace compiler::mir {
 		MIRUsedSymbols                    result;
 		std::unordered_set<helios::SymID> seen_functions;
 		std::unordered_set<helios::SymID> seen_globals;
-		usedSymbolsFromBody(ctx, &mir_function, result, seen_functions, seen_globals);
+		usedSymbolsFromBody(&mir_function, result, seen_functions, seen_globals);
 
 		return result;
 	}
@@ -483,7 +473,7 @@ namespace compiler::mir {
 
 		variant_match(mir_global_data.initial_value) {
 			variant_case(CRef<mir::Function>, function) {
-				usedSymbolsFromBody(ctx, function, result, seen_functions, seen_globals);
+				usedSymbolsFromBody(function, result, seen_functions, seen_globals);
 			}
 		}
 		return result;

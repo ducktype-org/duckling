@@ -89,40 +89,40 @@ fun staticArraysTest() -> () = {
     printSeparator();
 }
 
-# @TODO: #2825 Make this test come back. When destructors are legit.
-# fun dynamicArraysTest() -> () = {
-#     var nested: List[List[i32]];
-#     var inner1: List[i32];
-#     inner1.push(1);
-#     inner1.push(2);
-#
-#     var inner2: List[i32];
-#     inner2.push(3);
-#   
-#     nested.push(inner1);
-#     nested.push(inner2);
-# 
-#     builtin_output_u64(nested[0].length()); # 2
-#     builtin_output_u64(nested[1].length()); # 1
-#    
-#     builtin_output_i64(nested[0][0]); # 1
-#     builtin_output_i64(nested[0][1]); # 2
-#     builtin_output_i64(nested[1][0]); # 3
-#    
-#     nested[1].push(4);
-#
-#     builtin_output_u64(nested[1].length()); # 2
-#     builtin_output_i64(nested[0][0]); # 1
-#     builtin_output_i64(nested[0][1]); # 2
-#     builtin_output_i64(nested[1][0]); # 3
-#     builtin_output_i64(nested[1][1]); # 4
-#    
-#     inner2.push(123); 
-#
-#     builtin_output_u64(nested[1].length()); # 2
-#
-#     printSeparator();
-# }
+fun dynamicArraysTest() -> () = {
+    var nested: List[List[i32]];
+    var inner1: List[i32];
+    inner1.push(1);
+    inner1.push(2);
+
+    var inner2: List[i32];
+    inner2.push(3);
+
+    nested.push(copy inner1);
+    nested.push(copy inner2);
+
+    builtin_output_u64(nested[0].length()); # 2
+    builtin_output_u64(nested[1].length()); # 1
+
+    builtin_output_i64(nested[0][0]); # 1
+    builtin_output_i64(nested[0][1]); # 2
+    builtin_output_i64(nested[1][0]); # 3
+
+    nested[1].push(4);
+
+    builtin_output_u64(nested[1].length()); # 2
+    builtin_output_i64(nested[0][0]); # 1
+    builtin_output_i64(nested[0][1]); # 2
+    builtin_output_i64(nested[1][0]); # 3
+    builtin_output_i64(nested[1][1]); # 4
+
+    # `nested` holds a deep copy, so adding to `inner2` does modify it.
+    inner2.push(123);
+
+    builtin_output_u64(nested[1].length()); # 2
+
+    printSeparator();
+}
 
 fun listOfRefsTest() -> () = {
     var p1 = Point(1, 2);
@@ -158,30 +158,28 @@ fun listOfRefsTest() -> () = {
 }
 
 
-# @TODO: #2825 Make this test come back when destructors are legit.
-# fun listOfBoxesTest() -> () = {
-#     var list_of_boxes: List[box Point];
-#     var p1: box Point = Point(1, 2);
-#     var p2: box Point = Point(3, 4);
-# 
-#     # @TODO: #1894 Make this work.
-#     # list_of_boxes.push(Point(1, 2));
-# 
-#     list_of_boxes.push(move p1);
-#     list_of_boxes.push(move p2);
-#     builtin_output_u64(list_of_boxes.length());
-#     printSeparator();
-# 
-#     printPoint(&list_of_boxes[0]);
-#     printPoint(&list_of_boxes[1]);
-#     printSeparator();
-#     
-#     list_of_boxes[0].x = 100;
-#     list_of_boxes[1].y = 100;
-#     printPoint(&list_of_boxes[0]);
-#     printPoint(&list_of_boxes[1]);
-#     printSeparator();
-# }
+fun listOfBoxesTest() -> () = {
+    var list_of_boxes: List[box Point];
+    var p1: box Point = new Point(1, 2);
+    var p2: box Point = new Point(3, 4);
+
+    list_of_boxes.push(new Point(1, 2));
+
+    list_of_boxes.push(move p1);
+    list_of_boxes.push(move p2);
+    builtin_output_u64(list_of_boxes.length());
+    printSeparator();
+
+    printPoint(&list_of_boxes[0]);
+    printPoint(&list_of_boxes[1]);
+    printSeparator();
+
+    list_of_boxes[0].x = 100;
+    list_of_boxes[1].y = 100;
+    printPoint(&list_of_boxes[0]);
+    printPoint(&list_of_boxes[1]);
+    printSeparator();
+}
 
 fun boxOfListTest() -> () = {
     var list: List[Point];
@@ -195,17 +193,15 @@ fun boxOfListTest() -> () = {
     printPointList(&list);
     printSeparator();
 
-    # @TODO: #2825 Copying a `List` into a `box` deep-copies correctly, but the
-    # boxed list double-frees at scope end because destructor insertion is still a stub.
-    # var box_list: box List[Point] = copy list;
-    # builtin_output_u64(list.length());
-    # printSeparator();
-    #
-    # box_list[0].x = 100;
-    # box_list[1].x = 200;
-    # box_list[2].x = 300;
-    # printPointList(&list);
-    # printSeparator();
+    var box_list: box List[Point] = new copy list;
+    builtin_output_u64(list.length());
+    printSeparator();
+
+    box_list[0].x = 100;
+    box_list[1].x = 200;
+    box_list[2].x = 300;
+    printPointList(&list);
+    printSeparator();
 }
 
 
@@ -214,10 +210,9 @@ fun main() -> i32 = {
     floatsTest();
     classesTest();
     staticArraysTest();
-    # dynamicArraysTest();
+    dynamicArraysTest();
     listOfRefsTest();
-    # listOfBoxesTest();
-    # dynamicArraysTest();
+    listOfBoxesTest();
     boxOfListTest();
 
     return 0;

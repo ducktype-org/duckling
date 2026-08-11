@@ -62,6 +62,5 @@ fun print(v: ref containers.String) -> u64 = io.writeString(v);
 
 fun print(s: containers.String) -> u64 = {
     let result = io.writeString(&s);
-    s.dispose();
     return result;
 }

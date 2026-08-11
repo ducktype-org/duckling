@@ -60,7 +60,7 @@ private:
 	}
 
 	void simpleLifetimeSequenceTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/mir_var_test")));
+		auto [module, scope] = getModule(fs::File(path("modules/simple_lifetime_sequence")));
 
 		auto goo_mir = getMIRFunctionByName(module, "goo");
 
@@ -89,9 +89,9 @@ private:
 			.expectDestruct("c")
 			.expectScopeEnd("c")
 
-			.expectScopeStart("4.tmp")  // The if condition temporary
+			.expectScopeStart("5.tmp")  // The if condition temporary
 			.expectInstruction(compiler::mir::Operation::Branch)
-			.expectScopeEnd("4.tmp")
+			.expectScopeEnd("5.tmp")
 			.expectDestruct("a")
 			.expectInstruction(compiler::mir::Operation::ReturnValue)
 			.expectScopeEnd("a")
@@ -102,16 +102,17 @@ private:
 			.expectScopeEnd("a")
 			.validate(foo_mir);
 
-		auto return_value = foo_mir->local_list[3];
-		assertTrue(
-			return_value->lifetime_flags.contains(compiler::mir::LifetimeFlag::ReturnTmpValue),
-			"Return value should have ReturnTmpValue flag"
-		);
-		auto condition_tmp = foo_mir->local_list[4];
-		assertTrue(
-			condition_tmp->lifetime_flags.contains(compiler::mir::LifetimeFlag::ConditionTmpValue),
-			"Condition temporary should have ConditionTmpValue flag"
-		);
+		auto count_with_flag = [&](compiler::mir::LifetimeFlag flag) {
+			usize count = 0;
+			for (const auto& local: foo_mir->local_list)
+				if (local.lifetime_flags.contains(flag)) count++;
+			return count;
+		};
+
+		// One per `return` statement.
+		ASSERT_EQUAL_PRINT(2, count_with_flag(compiler::mir::LifetimeFlag::ReturnTmpValue));
+		// One for the single `if` condition.
+		ASSERT_EQUAL_PRINT(1, count_with_flag(compiler::mir::LifetimeFlag::ConditionTmpValue));
 	}
 
 	void lifetimeFlagsSingleBlock() {
@@ -238,8 +239,8 @@ private:
 
 	void reinitAfterMoveTest() {
 		// Reinitialization by assignment. A bare-local store (e.g. `b = 99`) carries a `Reinit`
-		// flag that revives the local for liveness, so reading it after a prior move-out is valid.
-		// Each `getMIRFunctionByName` below panics if lowering fails, so the mere fact these
+		// flag that revives the local for move state, so reading it after a prior move-out is
+		// valid. Each `getMIRFunctionByName` below panics if lowering fails, so the mere fact these
 		// `reinit*` functions lower is the regression guard against the false use-after-move.
 		using compiler::mir::Operation;
 		auto [module, scope] = getModule(fs::File(path("modules/move_validation")));
@@ -265,7 +266,7 @@ private:
 	}
 
 	void moveDestructorTest() {
-		// Move-aware destructor insertion. With the liveness analysis in place, a local that is
+		// Move-aware destructor insertion. With the move-state analysis in place, a local that is
 		// definitely alive at its scope end gets an unconditional `Destruct`, while a local that
 		// is moved on only some control-flow paths is `MaybeMoved` and gets a conditional
 		// `DestructIf`. A definitely-moved local gets no destructor at all.
