@@ -254,7 +254,7 @@ private:
 	}
 
 	/**
-	 * @brief `move_out` and `construct_at` are implemented in LIR: their calls become a read of /
+	 * @brief `move_out` and `move_in` are implemented in LIR: their calls become a read of /
 	 * a store into `*pointer` instead of a `Call`.
 	 */
 	void builtinCallTest() {
@@ -273,7 +273,7 @@ private:
 			return function->block_order.front()->instructions.front();
 		};
 
-		// construct_at:{i64}(pointer, value) -> `(*pointer) := Assign value`
+		// move_in:{i64}(pointer, value) -> `(*pointer) := Assign value`
 		auto store = first_instruction(module.lirFunc("writeInto"));
 		ASSERT_TRUE(store.operation == Operation::Assign);
 		ASSERT_TRUE(is_deref(store.output.value()));

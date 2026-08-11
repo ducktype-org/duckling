@@ -21,13 +21,13 @@ template(T: type)
 fundecl move_out(pointer: ptr T) -> T;
 
 template(T: type)
-@builtin("construct_at")
-fundecl construct_at(pointer: ptr T, value: T) -> ();
+@builtin("move_in")
+fundecl move_in(pointer: ptr T, value: T) -> ();
 
 # `value` is stored into the storage under `pointer`, without a call and without destroying what
 # was there before.
 fun writeInto(pointer: ptr i64, value: i64) -> () = {
-    construct_at:{i64}(pointer, value);
+    move_in:{i64}(pointer, value);
 }
 
 # The value under `pointer` is read out, without a call and without touching the storage.

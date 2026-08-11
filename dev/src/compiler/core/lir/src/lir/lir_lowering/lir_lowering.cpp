@@ -522,7 +522,7 @@ namespace compiler::lir {
 			 * @brief Lowers a call to a builtin implemented in LIR into the instructions that
 			 * implement it, instead of an actual `Call`. Does nothing for any other callee.
 			 *
-			 * `move_out(pointer)` becomes a read of `*pointer` and `construct_at(pointer, value)`
+			 * `move_out(pointer)` becomes a read of `*pointer` and `move_in(pointer, value)`
 			 * a store into `*pointer`. Both are plain assignments: no copy constructor runs, and
 			 * nothing under `pointer` is destroyed. `element_ptr(pointer, index)` becomes the
 			 * address of `pointer[index]`.
@@ -555,7 +555,7 @@ namespace compiler::lir {
 						);
 					return true;
 				}
-				case helios::BuiltinKind::ConstructAt: {
+				case helios::BuiltinKind::MoveIn: {
 					const auto& pointer = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
 
 					// Storing a value that carries no information is a no-op.

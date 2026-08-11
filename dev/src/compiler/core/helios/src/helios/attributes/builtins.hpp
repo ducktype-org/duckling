@@ -60,17 +60,18 @@ namespace compiler::helios {
 		AlignmentOf,
 		/**
 		 * `move_out(pointer: ptr T) -> T`: read the value under `pointer` without an explicit
-		 * `copy`/`move` on it.
+		 * `copy`/`move` on it, performs bitwise copy.
 		 */
 		MoveOut,
 		/**
-		 * `construct_at(pointer: ptr T, value: T)`: write `value` into the storage under `pointer`
-		 * treating it as uninitialized. The previous content is never destroyed.
+		 * `move_in(pointer: ptr T, value: T)`: write `value` into the storage under `pointer`
+		 * treating it as uninitialized. The previous content is never destroyed. Performs bitwise
+		 * copy.
 		 */
-		ConstructAt,
+		MoveIn,
 		/**
 		 * `element_ptr(pointer: manyptr T, index: i64) -> ptr T`: address of the element at
-		 * `index`. 
+		 * `index`.
 		 */
 		ElementPtr,
 		/**
