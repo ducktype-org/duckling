@@ -923,7 +923,7 @@ namespace compiler::lir {
 						variant_case(mir::FunctionSymID, name) {
 							return getLIRAbi(ctx, name.id, return_type, parameter_types);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) {
+						variant_case(mir::GlobalVariableCtorDtor, name) {
 							return { LIRAbi::DefaultAbi{} };
 						}
 					}
@@ -943,7 +943,7 @@ namespace compiler::lir {
 								link_once_val, ignore_on_dvm_val, ignore_on_llvm_val
 							);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) {
+						variant_case(mir::GlobalVariableCtorDtor, name) {
 							return std::make_tuple(false, false, false);
 						}
 					}
@@ -955,7 +955,7 @@ namespace compiler::lir {
 						variant_case(mir::FunctionSymID, name) {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) {
+						variant_case(mir::GlobalVariableCtorDtor, name) {
 							return helios::mangler::getSpecialMangledName<
 								helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
 								ctx, name.global_var_id

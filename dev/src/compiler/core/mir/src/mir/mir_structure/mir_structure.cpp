@@ -21,7 +21,7 @@ namespace compiler::mir {
 		base::StableVector<const MIRLocal>              local_list,
 		LifetimeScopeTree                               lifetime_scope_tree,
 		ScopeRef                                        no_lifetime_scope,
-		std::variant<FunctionSymID, GlobalVariableCTOR> helios_id
+		std::variant<FunctionSymID, GlobalVariableCtorDtor> helios_id
 	):
 		  name(name),
 		  return_type(return_type),
@@ -38,7 +38,7 @@ namespace compiler::mir {
 		// GlobalVariableCTOR just store SymID, which has a perfect hash.
 		variant_match(this->helios_id) {
 			variant_case(FunctionSymID, fun_sym) { return fun_sym.id.queryUnstablePerfectHash(); }
-			variant_case(GlobalVariableCTOR, global_ctor) {
+			variant_case(GlobalVariableCtorDtor, global_ctor) {
 				return global_ctor.global_var_id.queryUnstablePerfectHash();
 			}
 		}

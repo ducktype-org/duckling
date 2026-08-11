@@ -784,8 +784,19 @@ namespace compiler::mir {
 	 * to the SymID
 	 * See: Function::HSymID for usage
 	 */
-	struct GlobalVariableCTOR final {
+	struct GlobalVariableCtorDtor final {
+		enum Type { Ctor, Dtor };
+
+		Type          type;
 		helios::SymID global_var_id;
+
+		static GlobalVariableCtorDtor ctor(helios::SymID global_var_id) {
+			return { .type = Ctor, .global_var_id = global_var_id };
+		}
+
+		static GlobalVariableCtorDtor dtor(helios::SymID global_var_id) {
+			return { .type = Dtor, .global_var_id = global_var_id };
+		}
 	};
 
 	/**
@@ -838,7 +849,7 @@ namespace compiler::mir {
 		 * HELIOS SymID related to the function.
 		 * Functions without a helios_id are functions created for eg. from expressions
 		 */
-		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;
+		using HSymID = std::variant<FunctionSymID, GlobalVariableCtorDtor>;
 
 		HSymID helios_id;
 
@@ -883,17 +894,17 @@ namespace compiler::mir {
 		[[nodiscard]] BlockID lastBlock() const { return block_order.back(); }
 	};
 
+	struct MIRCtorDtorPair {
+		CRef<mir::Function> constructor;
+		CRef<mir::Function> destructor;
+	};
+
 	/**
 	 * @brief Representation of a global value in MIR.
 	 * See also: MIRGlobal
 	 */
 	struct MIRGlobalData final {
 		MIRGlobal global;
-
-		struct CtorDtorPair {
-			CRef<mir::Function> constructor;
-			CRef<mir::Function> destructor;
-		};
 
 		/**
 		 * @brief Initial value for the global variable.

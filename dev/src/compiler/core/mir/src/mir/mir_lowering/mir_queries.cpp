@@ -273,9 +273,9 @@ namespace compiler::mir {
 
 			// first step: lowering to pre-mir (cfg+quad)
 			// create function builder
-			FunctionBuilder function_builder{ ctx,
-				                              GlobalVariableCTOR{ key.global_data->helios_symbol },
-				                              function_type };
+			FunctionBuilder function_builder{
+				ctx, GlobalVariableCtorDtor::ctor(key.global_data->helios_symbol), function_type
+			};
 			function_builder.setName(base::StrID(
 				base::strConcat("constructor_of_", key.global_data->original_name.strView()).c_str()
 			));
@@ -346,15 +346,26 @@ namespace compiler::mir {
 					"Creating ctors for constant variables does not work, they should use CTVs "
 					"instead."
 				);
-			
-			auto function_type = ctx.query<tsh::QueryFunctionType>({
-				{},
-				tsh::SymbolType{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable,
-				},
-			});
+
+			auto            function_type = ctx.query<tsh::QueryFunctionType>({
+                {},
+                tsh::SymbolType{
+                    tsh::getUnitType(),
+                    tsh::ReferenceKind::Direct,
+                    tsh::Mutability::Immutable,
+                },
+            });
+			FunctionBuilder function_builder{
+				ctx, GlobalVariableCtorDtor::dtor(key.global_data->helios_symbol), function_type
+			};
+			function_builder.setName(base::StrID(
+				base::strConcat("destructor_of_", key.global_data->original_name.strView()).c_str()
+			));
+
+			auto last_block = function_builder.newBlock();
+			last_block->setTerminator(
+				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
+			);
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -506,8 +517,11 @@ namespace compiler::mir {
 		std::unordered_set<helios::SymID> seen_globals;
 
 		variant_match(mir_global_data.initial_value) {
-			variant_case(CRef<mir::Function>, function) {
-				usedSymbolsFromBody(function, result, seen_functions, seen_globals);
+			variant_case(MIRCtorDtorPair, ctor_dtor_pair) {
+				usedSymbolsFromBody(
+					ctor_dtor_pair.constructor, result, seen_functions, seen_globals
+				);
+				usedSymbolsFromBody(ctor_dtor_pair.destructor, result, seen_functions, seen_globals);
 			}
 		}
 		return result;
