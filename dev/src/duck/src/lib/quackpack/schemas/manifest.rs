@@ -200,7 +200,7 @@ impl Serialize for OredSemver {
     where
         S: ser::Serializer,
     {
-        let semver_string = self.0.iter().map(|x| x.to_string()).join(" or ");
+        let semver_string = self.0.iter().map(|x| format!("'{x}'")).join(" or ");
         serializer.serialize_str(&semver_string)
     }
 }
