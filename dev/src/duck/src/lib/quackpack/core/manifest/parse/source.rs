@@ -97,7 +97,7 @@ pub(crate) fn parse(
             check_no_git(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
             debug!(path_in_manifest = %root.display(), "path specified in the manifest");
-            let dir_root = resolve_path_maybe_relative_to_dir(root, package_root, ctx)?;
+            let dir_root = resolve_path_maybe_relative_to_dir(root, package_root, ctx);
             Source::for_local(&dir_root)?
         }
         (None, None, Some(manifest_git_url)) => {
@@ -256,20 +256,9 @@ pub(super) fn resolve_path_maybe_relative_to_dir(
     path: &Path,
     root: &Path,
     ctx: &DuckContext,
-) -> QuackResult<PathBuf> {
-    let home = ctx.user_home();
-    let Some(home) = home.to_str() else {
-        qp_bail!(
-            "the user home directory `{}` is not a utf8 path, which is unsupported",
-            home.display(),
-        )
-    };
-    let expanded = path.expand_user_with(home)?;
-    if expanded.is_absolute() {
-        Ok(expanded.to_path_buf())
-    } else {
-        Ok(root.join(expanded).expand_user_with(home)?.resolve()?)
-    }
+) -> PathBuf {
+    let expanded = path.expand_tilde(ctx);
+    root.join(expanded).normalize()
 }
 
 /// Parse a url of a git dependency.
@@ -285,10 +274,8 @@ fn parse_git_url(
     };
     // We are building error messages from the bottom to the top.
     // If an original URL points to a file, mention it to the user. Also, ignore any errors.
-    if let Ok(path) =
-        resolve_path_maybe_relative_to_dir(Path::new(manifest_git_url), package_root, ctx)
-        && path.exists()
-    {
+    let path = resolve_path_maybe_relative_to_dir(Path::new(manifest_git_url), package_root, ctx);
+    if path.exists() {
         err = err.add_hint(format!(
             "either change it to a local dependency or change the URL to `file://{}`",
             path.display()
