@@ -73,10 +73,10 @@ fun main() -> i64 = {
         }
     }
 
-    This doesn't work since `[]` doesn't return a ref, so currently this feature is just not supported.
-    for (x: ref i32 in dyn_arr) {
-        builtin_output_i64(x);
-    }
+    # This doesn't work since `[]` doesn't return a ref, so currently this feature is just not supported.
+    # for (x: ref i32 in dyn_arr) {
+    #    builtin_output_i64(x);
+    # }
 
     return 0;
 }
