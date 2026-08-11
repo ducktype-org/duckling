@@ -1,10 +1,8 @@
-use crate::{
-    DuckContext, QuackResult,
-    quackpack::subcommands::remove::{RemoveOptions, remove},
-};
 use clap::{Arg, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, subcommand};
+use crate::quackpack::subcommands::remove::{RemoveOptions, remove};
+use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `remove` subcommand.
 pub fn get_parser() -> Command {
