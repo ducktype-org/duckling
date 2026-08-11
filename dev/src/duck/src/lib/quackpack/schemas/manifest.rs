@@ -4,6 +4,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use itertools::Itertools;
+use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize, de, ser};
 use serde_untagged::UntaggedEnumVisitor;
 use serde_with::skip_serializing_none;
@@ -115,8 +116,7 @@ pub enum DependencyRemoved {
     NoDependencyButDevDepExists,
 }
 
-#[skip_serializing_none]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the `metadata:` table.
 pub struct Metadata {
@@ -130,6 +130,32 @@ pub struct Metadata {
     pub name: Option<String>,
     /// Package's description.
     pub description: Option<String>,
+}
+
+// This is implemented manually to add '' around version.
+impl Serialize for Metadata {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer {
+        let mut map_serializer = serializer.serialize_map(None)?;
+        if let Some(version) = self.version {
+            map_serializer.serialize_key("version")?;
+            map_serializer.serialize_value(&format!("'{version}'"))?;
+        }
+        if let Some(ref authors) = self.authors {
+            map_serializer.serialize_entry("authors", authors)?;
+        }
+        if let Some(ref license) = self.license {
+            map_serializer.serialize_entry("license", license)?;
+        }
+        if let Some(ref name) = self.name {
+            map_serializer.serialize_entry("name", name)?;
+        }
+        if let Some(ref description) = self.description {
+            map_serializer.serialize_entry("description", description)?;
+        }
+        map_serializer.end()
+    }
 }
 
 #[skip_serializing_none]
@@ -200,8 +226,8 @@ impl Serialize for OredSemver {
     where
         S: ser::Serializer,
     {
-        let semver_string = self.0.iter().map(|x| format!("'{x}'")).join(" or ");
-        serializer.serialize_str(&semver_string)
+        let semver_string = self.0.iter().map(ToString::to_string).join(" or ");
+        serializer.serialize_str(&format!("'{semver_string}'"))
     }
 }
 
@@ -446,7 +472,7 @@ mod tests {
     fn test_ored_semver_serialization() {
         let x =
             serde_json::to_string::<OredSemver>(&OredSemver(vec![Version::new(1, 0, 0)])).unwrap();
-        assert_eq!(x, "\"1.0.0\"");
+        assert_eq!(x, "\"'1.0.0'\"");
 
         let x = serde_json::to_string::<OredSemver>(&OredSemver(vec![
             Version::new(1, 0, 0),
@@ -454,7 +480,7 @@ mod tests {
             Version::new(2, 0, 0),
         ]))
         .unwrap();
-        assert_eq!(x, "\"1.0.0 or 1.1.0 or 2.0.0\"");
+        assert_eq!(x, "\"'1.0.0 or 1.1.0 or 2.0.0'\"");
     }
 
     #[test]
