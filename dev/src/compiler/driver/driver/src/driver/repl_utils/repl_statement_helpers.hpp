@@ -126,7 +126,11 @@ namespace compiler::repl {
 
 	/**
 	 * @brief Retrieve the module HOUT for a definition statement module.
+	 * @return An error when the module failed to compile. The callers are not inside a query that
+	 * catches query failures, so the failure has to be reported instead of thrown.
 	 */
-	const helios::HOUTUnit& getDefinitionHOUTUnit(query::Context& ctx, frontend::ModuleID module_id);
+	std::expected<base::CRef<helios::HOUTUnit>, std::string> getDefinitionHOUTUnit(
+		query::Context& ctx, frontend::ModuleID module_id
+	);
 
 }  // namespace compiler::repl

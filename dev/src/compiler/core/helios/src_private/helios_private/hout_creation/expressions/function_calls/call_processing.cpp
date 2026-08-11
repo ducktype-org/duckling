@@ -126,29 +126,26 @@ namespace compiler::helios::code {
 
 		// Go over positional arguments.
 		for (usize i{ 0 }; i < positional_arguments.size(); i++) {
-			tsh::SymbolType provided_type
-				= positional_arguments[i]->expression_type.getSymbolType();
 			tsh::SymbolType expected_type = decl.parameters[i].type;
-			auto coercion = canCoerce(ctx, positional_arguments[i]->expression_type, expected_type);
+			auto coercion = canCoerce(ctx, positional_arguments[i]->expression_type, expected_type)
+			                    .valueOrThrow();
 
-			if (coercion.valueOrThrow().isInvalid()) {
+			if (coercion.isInvalid()) {
 				return NoMatch{ .function = fun,
 					            .reason   = ArgumentCoercionFailure{
-									  .reason         = coercion.valueOrThrow().getInvalidReason(),
-									  .given_type     = provided_type,
-									  .expected_type  = expected_type,
+									  .failed         = coercion,
 									  .argument_index = i,
 									  .function       = fun,
                                 } };
 			}
 
-			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
+			bool is_empty = coercion.isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
 
 			// Position in the parameter list is the same as in the positional arguments list.
 			argument_origin[i].emplace(PositionalArgumentOrigin{
 				.index_in_positional_args = i, .requires_coercion = not is_empty });
-			coercions[i].emplace(std::move(coercion).valueOrThrow().getCoercion());
+			coercions[i].emplace(std::move(coercion));
 		}
 
 
@@ -180,27 +177,24 @@ namespace compiler::helios::code {
 			usize               param_idx = param_idx_with_matching_name.value();
 			tsh::ExpressionType provided_expr_type
 				= std::get<1>(named_arguments[i])->expression_type;
-			tsh::SymbolType provided_type = provided_expr_type.getSymbolType();
 			tsh::SymbolType expected_type = decl.parameters[param_idx].type;
-			auto            coercion      = canCoerce(ctx, provided_expr_type, expected_type);
+			auto coercion = canCoerce(ctx, provided_expr_type, expected_type).valueOrThrow();
 
-			if (coercion.valueOrThrow().isInvalid()) {
+			if (coercion.isInvalid()) {
 				return NoMatch{ .function = fun,
 					            .reason   = ArgumentCoercionFailure{
-									  .reason         = coercion.valueOrThrow().getInvalidReason(),
-									  .given_type     = provided_type,
-									  .expected_type  = expected_type,
+									  .failed         = coercion,
 									  .argument_index = positional_arguments.size() + i,
 									  .function       = fun,
                                 } };
 			}
 
-			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
+			bool is_empty = coercion.isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
 
 			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i,
 				                                              .requires_coercion   = not is_empty };
-			coercions[param_idx].emplace(std::move(coercion).valueOrThrow().getCoercion());
+			coercions[param_idx].emplace(std::move(coercion));
 		}
 
 		// Go over default arguments
