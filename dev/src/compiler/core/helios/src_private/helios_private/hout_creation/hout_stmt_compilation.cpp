@@ -146,7 +146,7 @@ namespace compiler::helios {
 												  ctx,
 												  val,
 												  location_expr->expression_type.getSymbolType(),
-												  op_wrapped->getStablePosition()
+												  var.unlock(ctx)->getStablePosition()
 				)
 				                                  .valueOrThrow();
 
