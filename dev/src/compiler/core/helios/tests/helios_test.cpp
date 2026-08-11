@@ -1930,6 +1930,15 @@ private:
 		auto        called_from_first = collectCalledSymbolsFromHOUT(*first_stmt.expr);
 		ASSERT_EQUAL(1, called_from_first.size());
 		ASSERT_EQUAL(foo1_symbol, called_from_first.at(0));
+
+		// `ptrof m[index()]` hides a call below the operand, so the walker only finds it if it
+		// descends into `PtrOfExpr`'s child.
+		auto [ptr_module, ptr_scope] = getModule(fs::File(path("test_modules/pointers")));
+		auto& ptr_hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(ptr_module)->valueOrPanic();
+		auto called_from_pointers = collectCalledSymbolsFromHOUT(*ptr_hout.functions.at(0));
+		ASSERT_TRUE(std::ranges::contains(called_from_pointers, getChain("index", ptr_scope).back())
+		);
 	}
 
 	void testFunctions() {
@@ -3635,6 +3644,11 @@ private:
 		const auto deref_val_type = getSymbolTypeOf("deref_val", body_scope);
 		const auto sum_type       = getSymbolTypeOf("sum", body_scope);
 
+		const auto pof_direct_type = getSymbolTypeOf("pof_direct", body_scope);
+		const auto pof_box_type    = getSymbolTypeOf("pof_box", body_scope);
+		const auto pof_ref_type    = getSymbolTypeOf("pof_ref", body_scope);
+		const auto pof_elem_type   = getSymbolTypeOf("pof_elem", body_scope);
+
 		query::utils::withContextDo([&](query::Context& ctx) {
 			const auto ptr_i32     = ctx.query<compiler::tsh::QueryPointerType>({ i32_st });
 			const auto ptr_ptr_i32 = ctx.query<compiler::tsh::QueryPointerType>({ st(ptr_i32) });
@@ -3656,6 +3670,25 @@ private:
 			ASSERT_EQUAL(ptr_i32_st, inner_type);
 			ASSERT_EQUAL(i32_st, deref_val_type);
 			ASSERT_EQUAL(i32_st, sum_type);
+
+			// `ptrof x` is `ptr S` for the whole symbol type `S` of `x`: unlike `&x`, a `box`/`ref`
+			// operand is not collapsed, the pointer addresses the box/reference itself.
+			using compiler::tsh::ReferenceKind;
+			ASSERT_EQUAL(ptr_i32_st, pof_direct_type);
+			ASSERT_EQUAL(
+				st(ctx.query<compiler::tsh::QueryPointerType>(
+					{ i32_st.withReferenceKind(ReferenceKind::Box) }
+				)),
+				pof_box_type
+			);
+			ASSERT_EQUAL(
+				st(ctx.query<compiler::tsh::QueryPointerType>(
+					{ i32_st.withReferenceKind(ReferenceKind::Ref) }
+				)),
+				pof_ref_type
+			);
+			// Indexing a `manyptr i32` gives an `i32` place, so its address is a plain `ptr i32`.
+			ASSERT_EQUAL(ptr_i32_st, pof_elem_type);
 		});
 
 		auto& function = hout.functions.at(0);
@@ -3715,6 +3748,21 @@ private:
 				= dynamic_cast<const compiler::helios::code::DerefExpr*>(bin_ptr->lhs.get());
 			ASSERT_TRUE(deref_lhs != nullptr);
 			ASSERT_EQUAL(i32_st, deref_lhs->expression_type.getSymbolType().withMutability(Mutable));
+		}
+
+		{
+			auto  expr_ptr = get_var_init_expr(base::StrID("pof_direct"));
+			auto* ptr_of   = dynamic_cast<const compiler::helios::code::PtrOfExpr*>(expr_ptr.get());
+			ASSERT_TRUE(ptr_of != nullptr);
+
+			// A clone is an independent node printing exactly like the original.
+			auto              cloned = ptr_of->clone();
+			std::stringstream orig_out, clone_out;
+			ptr_of->debugPrint(orig_out);
+			cloned->debugPrint(clone_out);
+			ASSERT_EQUAL(orig_out.str(), clone_out.str());
+			ASSERT_TRUE(orig_out.str().starts_with("ptrof("));
+			ASSERT_TRUE(&(*cloned) != ptr_of);
 		}
 	}
 

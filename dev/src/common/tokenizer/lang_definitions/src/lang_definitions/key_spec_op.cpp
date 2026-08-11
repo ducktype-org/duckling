@@ -103,6 +103,7 @@ namespace lang_def {
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Ptrof, "ptrof", KeywordFlagsOptions::IsGenPrefixOp },
 
 			// `not` isn't a general prefix operator,
 			// it has specific handling together with the other boolean operators
