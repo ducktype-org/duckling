@@ -38,3 +38,10 @@ Tests:
           Run: |+
             echo "info: successfully removed dev-dependency \`b\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`" && 
             echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`"
+      no-dependency-error:
+        expected-manifest: all
+        test-cmd: duck -C foo remove c
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: no such dependency as \`c\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`"

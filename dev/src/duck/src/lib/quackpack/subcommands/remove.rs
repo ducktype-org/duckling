@@ -53,7 +53,9 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
         if dev_dep { "dev-" } else { "" },
         pkg_root.display(),
     ))?;
-    manifest_path.write(&deserialized_schema).context("failed to write the new manifest into file")?;
+    manifest_path
+        .write(&deserialized_schema)
+        .context("failed to write the new manifest into file")?;
     ctx.console().info(format!(
         "written new manifest to `{}`",
         manifest_path.display()
