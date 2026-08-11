@@ -11,7 +11,7 @@
 #include <mir_private/stmt_lowering.hpp>
 #include <mir_private/utils/bounds_check.hpp>
 
-#include "base/config/build_type.hpp"
+#include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -19,7 +19,6 @@
 
 #include <algorithm>
 #include <ranges>
-#include <variant>
 
 namespace compiler::mir {
 
