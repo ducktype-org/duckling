@@ -42,7 +42,7 @@ elif arg == "only-a":
 elif arg == "only-b":
     expected_manifest = expected_manifest_only_b
 
-manifest_path = project_root() / "quackconfig.yaml"
+manifest_path = project_root("foo") / "quackconfig.yaml"
 manifest = manifest_path.read_text()
 
 assert_eq(manifest, expected_manifest)

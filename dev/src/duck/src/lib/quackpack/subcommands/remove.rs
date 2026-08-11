@@ -46,13 +46,14 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     } else {
         remove_normal_dep(&mut schema, &name, pkg_name, &pkg_root)?;
     }
-    let deserialized_schema = serde_yaml_ng::to_string(&schema)?;
+    let deserialized_schema = serde_yaml_ng::to_string(&schema)
+        .with_context_internal(|| format!("failed to deserialize schema `{schema:?}`"))?;
     ctx.console().info(format!(
-        "successfully removed {}dependency `{name}` from project `{pkg_name}` at `{}`",
+        "successfully removed {}dependency `{name}` from the project `{pkg_name}` at `{}`",
         if dev_dep { "dev-" } else { "" },
         pkg_root.display(),
     ))?;
-    manifest_path.write(deserialized_schema)?;
+    manifest_path.write(&deserialized_schema).context("failed to write the new manifest into file")?;
     ctx.console().info(format!(
         "written new manifest to `{}`",
         manifest_path.display()
@@ -70,7 +71,7 @@ fn remove_dev_dep(
     match schema.remove_dev_dependency(name) {
         DependencyRemoved::Yes => Ok(()),
         DependencyRemoved::NoDependency => qp_bail!(
-            "no such dev-dependency as `{name}` in project `{pkg_name}` at `{}`",
+            "no such dev-dependency as `{name}` in the project `{pkg_name}` at `{}`",
             pkg_root.display()
         ),
         DependencyRemoved::NoDependencyButDevDepExists => {
@@ -89,7 +90,7 @@ fn remove_normal_dep(
     match schema.remove_dependency(name) {
         DependencyRemoved::Yes => Ok(()),
         DependencyRemoved::NoDependency => qp_bail!(
-            "no such dependency as `{name}` in project `{pkg_name}` at `{}`",
+            "no such dependency as `{name}` in the project `{pkg_name}` at `{}`",
             pkg_root.display()
         ),
         DependencyRemoved::NoDependencyButDevDepExists => {
@@ -98,7 +99,7 @@ fn remove_normal_dep(
             ));
             err.with_context(|| {
                 format!(
-                    "no such dependency as `{name}` in project `{pkg_name}` at `{}`",
+                    "no such dependency as `{name}` in the project `{pkg_name}` at `{}`",
                     pkg_root.display()
                 )
             })

@@ -11,7 +11,7 @@ pub fn get_parser() -> Command {
     subcommand("remove")
         .about("Remove the packages from the current venv")
         .arg(flag("global", "Remove the packages from the global venv instead").short('g'))
-        .arg(flag("dev", "Remove a dev dependency"))
+        .arg(flag("dev", "Remove a dev dependency instead"))
         .arg(
             Arg::new("name")
                 .help("Name of the dependency to remove")
