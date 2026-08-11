@@ -22,7 +22,7 @@ use url::Url;
 
 use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
 use crate::quackpack::core::fetcher::util::http::traits_extensions::ResponseExt;
-use crate::quackpack::core::fetcher::util::http::{Request, Response, defaults};
+use crate::quackpack::core::fetcher::util::http::{Request, Response};
 use crate::quackpack::util::to_url::ToUrl;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
@@ -106,10 +106,6 @@ impl<'duck> GithubApiClient<'duck> {
     /// Create a `GET` request for the specified `url`.
     async fn request(&self, url: &Url) -> QuackResult<Response> {
         let mut request = Self::create_http_request(url, http::Method::GET, vec![])?;
-        request
-            .headers_mut()
-            .entry(header::PRAGMA)
-            .or_insert(defaults::NO_VALUE);
         // Add header for the right API version.
         request.headers_mut().insert(
             HeaderName::from_static("x-github-api-version"),
