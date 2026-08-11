@@ -83,22 +83,32 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief noValueOutput() for an instruction that hands the ownership of its result over
-		 * (the `Assign` a `move` produces).
+		 * @brief valueOutput() for a value a `move` hands the ownership of over.
+		 *
+		 * The value is read from source and source_local stops owning it. Only the consumer
+		 * knows which instruction the `Move` flag belongs on, so the `Assign` built here is just
+		 * the fallback for a consumer that does not take the value over.
 		 */
-		void noValueMovedOutput(
+		void movedValueOutput(
 			BlockBuilderRef                      begin,
 			const BlockBuilder::InstructionHole& hole,
-			const Instruction&                   instr,
-			const tsh::SymbolType<>&             type,
 			const MIRValue&                      source,
-			MIRLocalRef                          source_local
+			MIRLocalRef                          source_local,
+			const tsh::SymbolType<>&             type,
+			InstructionMetadata                  metadata
 		) {
-			noValueOutput(begin, hole, instr, type);
-			out->pending_move = ExprLowerRes::PendingMove{
-				.source       = source,
-				.source_local = source_local,
-			};
+			CORE_ASSERT(out.empty(), "Output already set.");
+			const Instruction owning_assign(
+				Operation::Assign, {}, { source }, { flagMove(source_local) }, expr_scope, {}, metadata
+			);
+			out.emplace(ExprLowerRes(
+				begin,
+				ExprLowerRes::MovedValue{
+					.source        = source,
+					.source_local  = source_local,
+					.owning_assign = ExprLowerRes::Finalizer(hole, owning_assign, type),
+				}
+			));
 		}
 
 		ExprLowerRes lowerSubExpr(const hc::Expr& expr, BlockBuilderRef continuation) {
@@ -851,8 +861,8 @@ namespace compiler::mir {
 			// `move x` yields the value of `x` and marks the source local as moved-out, so any
 			// later use is flagged by the move state/use-after-move analysis. The `Move` flag has
 			// to sit on an instruction that reads the local, and which instruction that is depends
-			// on who consumes the result. The `Assign` built here is the fallback used when the
-			// value is only read, otherwise `getResultTakingOwnership()` removes it.
+			// on who consumes the result, so the hole reserved here is only a fallback if no one
+			// consumes the value.
 			auto hole          = continuation->addHole();
 			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
 
@@ -882,23 +892,13 @@ namespace compiler::mir {
 				return;
 			}
 
-			const auto moved_local = inner_val.get<MIRPlace>().getBase<MIRLocalRef>();
-
-			noValueMovedOutput(
+			movedValueOutput(
 				lowered_inner.begin,
 				hole,
-				Instruction(
-					Operation::Assign,
-					{},
-					{ inner_val },
-					{ OperationFlag{ .flag = OperationFlag::Flag::Move, .local = moved_local } },
-					expr_scope,
-					{},
-					{ expr.getPosition() }
-				),
-				expr.expression_type.getSymbolType(),
 				inner_val,
-				moved_local
+				inner_val.get<MIRPlace>().getBase<MIRLocalRef>(),
+				expr.expression_type.getSymbolType(),
+				{ expr.getPosition() }
 			);
 		}
 
@@ -1217,13 +1217,14 @@ namespace compiler::mir {
 		return visitor.out.value();
 	}
 
-	ExprLowerRes::ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, Finalizer> value):
+	ExprLowerRes::ExprLowerRes(BlockBuilderRef begin, Storage value):
 		  begin{ begin },
 		  value{ std::move(value) } {}
 
 	[[nodiscard]]
 	tsh::SymbolType<> ExprLowerRes::getResultType() {
 		variant_match(value) {
+			variant_case(MovedValue, moved) { return moved.owning_assign.type; }
 			variant_case(Finalizer, res_data) { return res_data.type; }
 			variant_default { CORE_PANIC("Function can be run only if MIRValue is not stored"); }
 		}
@@ -1234,6 +1235,10 @@ namespace compiler::mir {
 	base::Optional<MIRValue> ExprLowerRes::getResultIfStored() {
 		variant_match(value) {
 			variant_case(MIRValue, val) { return val; }
+			variant_case_novalue(MovedValue) {
+				// A moved value is stored, but handing the place out would drop the `Move` flag.
+				return std::nullopt;
+			}
 			variant_case_novalue(Finalizer) { return std::nullopt; }
 		}
 		CORE_UNREACHABLE();
@@ -1241,19 +1246,22 @@ namespace compiler::mir {
 
 	[[nodiscard]]
 	MIRValue ExprLowerRes::getResult(FunctionBuilder& function) {
-		// Nobody took the value over, so the temporary built below becomes its owner.
-		pending_move.reset();
+		auto finalize_and_get_result = [&](auto& data) -> MIRValue {
+			auto result = function.addTmp(data.type, data.instr.scope);
+			data.instr.output.emplace(result);
+			data.instr.flags.push_back(flagConstruct(result));
+			data.hole.fill(data.instr);
+			value = result;
+			return result;
+		};
 
 		variant_match(value) {
 			variant_case(MIRValue, val) { return val; }
-			variant_case(Finalizer, res_data) {
-				auto result = function.addTmp(res_data.type, res_data.instr.scope);
-				res_data.instr.output.emplace(result);
-				res_data.instr.flags.push_back(flagConstruct(result));
-				res_data.hole.fill(res_data.instr);
-				value = result;
-				return result;
+			variant_case(MovedValue, moved) {
+				// Nobody took the value over, so the temporary built below becomes its owner.
+				return finalize_and_get_result(moved.owning_assign);
 			}
+			variant_case(Finalizer, res_data) { return finalize_and_get_result(res_data); }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -1262,33 +1270,31 @@ namespace compiler::mir {
 	MIRValue ExprLowerRes::getResultAndTakeOwnership(
 		FunctionBuilder& function, std::vector<OperationFlag>& flags
 	) {
-		if (pending_move.has_value()) {
-			const PendingMove pending = pending_move.value();
-			pending_move.reset();
+		variant_match(value) {
+			variant_case(MovedValue, moved) {
+				// The `Assign` the move produced only exists to give the `Move` flag an instruction
+				// to sit on. The consumer carries the flag itself now, so the copy is not needed
+				// and the value is read straight from its source place. Thus we Nop-out the `move`
+				// assign.
+				moved.owning_assign.hole.fillNop(moved.owning_assign.instr.scope);
+				flags.push_back(flagMove(moved.source_local));
 
-			// The `Assign` the move produced only exists to give the `Move` flag an instruction to
-			// sit on. The consumer carries the flag itself now, so the copy is not needed and the
-			// value is read straight from its source place. Thus we Nop-out the `move` assign.
-			variant_match(value) {
-				variant_case(Finalizer, res_data) {
-					res_data.hole.fillNop(res_data.instr.scope);
-					value = pending.source;
-				}
-				// A pending move always comes with the `Assign` that `visitMoveExpr` built.
-				variant_default { CORE_UNREACHABLE(); }
+				const MIRValue source = moved.source;
+				value                 = source;
+				return source;
 			}
+			variant_case_novalue(MIRValue, Finalizer) {
+				// A result that is not stored anywhere yet has to go through a temporary to be
+				// passed on, and that temporary owns it.
+				const bool     needs_temporary = getResultIfStored().empty();
+				const MIRValue result          = getResult(function);
+				if (needs_temporary)
+					flags.push_back(flagMove(result.get<MIRPlace>().getBase<MIRLocalRef>()));
 
-			flags.push_back(flagMove(pending.source_local));
+				return result;
+			}
 		}
-
-		// A result that is not stored anywhere yet has to go through a temporary to be passed on,
-		// and that temporary owns it.
-		const bool     needs_temporary = getResultIfStored().empty();
-		const MIRValue result          = getResult(function);
-		if (needs_temporary)
-			flags.push_back(flagMove(result.get<MIRPlace>().getBase<MIRLocalRef>()));
-
-		return result;
+		CORE_UNREACHABLE();
 	}
 
 	void ExprLowerRes::storeResultInGivenPlace(
@@ -1298,24 +1304,26 @@ namespace compiler::mir {
 		ScopeRef                          scope,
 		InstructionMetadata               metadata
 	) {
-		// The target becomes the owner of the value.
-		pending_move.reset();
+		auto fill_and_update = [&](auto& data) {
+			CORE_ASSERT(scope == data.instr.scope, "Scope mismatch!");
 
+			hole.fillNop(scope);
+			data.instr.output.emplace(target);
+			data.instr.flags.insert(data.instr.flags.end(), flags.begin(), flags.end());
+			data.instr.metadata = metadata;
+			data.hole.fill(data.instr);
+			value = target;
+		};
 		variant_match(value) {
 			variant_case(MIRValue, val) {
 				hole.fill(Instruction{
 					Operation::Assign, target, { val }, flags, scope, {}, metadata });
 			}
-			variant_case(Finalizer, res_data) {
-				CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");
-
-				hole.fillNop(scope);
-				res_data.instr.output.emplace(target);
-				res_data.instr.flags.insert(res_data.instr.flags.end(), flags.begin(), flags.end());
-				res_data.instr.metadata = metadata;
-				res_data.hole.fill(res_data.instr);
-				value = target;
+			variant_case(MovedValue, moved) {
+				// The target becomes the owner of the value.
+				fill_and_update(moved.owning_assign);
 			}
+			variant_case(Finalizer, res_data) { fill_and_update(res_data); }
 		}
 	}
 }

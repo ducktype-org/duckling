@@ -526,9 +526,8 @@ namespace compiler::helios::code::shorthands {
 		 */
 		[[nodiscard]]
 		Box<ReturnStmt> ret(Box<Expr> value) const {
-			const auto value_type = value->expression_type.getSymbolType();
 			return makeBox<ReturnStmt>(
-				generatedOrigin(), consume(moveReturnedLocal(*ctx, std::move(value), value_type))
+				generatedOrigin(), consume(moveReturnedLocal(*ctx, std::move(value)))
 			);
 		}
 

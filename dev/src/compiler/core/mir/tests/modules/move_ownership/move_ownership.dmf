@@ -21,6 +21,11 @@ fun readThrough() -> i64 = {
     return move a;
 }
 
+fun readThroughImplicitly() -> i64 = {
+    var a: box i64 = new 4i64;
+    return a;
+}
+
 fun make() -> box i64 = { return new 5i64; }
 
 fun movedTemporary() = {

@@ -402,6 +402,9 @@ private:
 
 		// Reading the pointee out of the moved box does not hand the box over.
 		assertMovedIntoDestructedTemporary(getMIRFunctionByName(module, "readThrough"), "a");
+		assertMovedIntoDestructedTemporary(
+			getMIRFunctionByName(module, "readThroughImplicitly"), "a"
+		);
 
 		// An implicitly moved argument goes straight to the callee.
 		{

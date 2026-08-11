@@ -50,9 +50,7 @@ namespace compiler::helios {
 	 * @brief Wraps a value in an implicit move when a `return` is about to end the life of the
 	 * owned local it returns.
 	 */
-	[[nodiscard]] Box<code::Expr> moveReturnedLocal(
-		query::Context& ctx, Box<code::Expr> value, const tsh::SymbolType<>& return_type
-	);
+	[[nodiscard]] Box<code::Expr> moveReturnedLocal(query::Context& ctx, Box<code::Expr> value);
 
 	class IncompatibleTypesError: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {

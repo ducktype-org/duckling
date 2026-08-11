@@ -193,18 +193,11 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	Box<code::Expr> moveReturnedLocal(
-		query::Context& ctx, Box<code::Expr> value, const tsh::SymbolType<>& return_type
-	) {
+	Box<code::Expr> moveReturnedLocal(query::Context& ctx, Box<code::Expr> value) {
 		const tsh::ExpressionType<> type = value->expression_type;
 
 		// Only a local can be moved out of.
 		if (type.getValueCategory().getCategory() != tsh::PrimaryCategory::Local) return value;
-
-		// `return box_of_i32` where an `i32` is expected copies the pointee out, it does not hand
-		// the box over. The local keeps owning the box and still has to destroy it.
-		if (readsThroughReference(type.getSymbolType().getRefKind(), return_type.getRefKind()))
-			return value;
 
 		// Anything the normal rule would demand a written `copy`/`move` for is what the
 		// return makes implicit.

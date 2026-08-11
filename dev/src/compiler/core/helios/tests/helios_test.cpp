@@ -1588,11 +1588,11 @@ private:
 			auto* return_stmt = dynamic_cast<const ReturnStmt*>(body.statements.back().get());
 			ASSERT_TRUE(return_stmt != nullptr);
 
-			auto* deref_expr
-				= dynamic_cast<const DerefExpr*>(stripImplicitMove(return_stmt->value.get()));
+			auto* deref_expr = dynamic_cast<const DerefExpr*>(return_stmt->value.get());
 			ASSERT_TRUE(deref_expr != nullptr);
 
-			auto* ident_expr = dynamic_cast<const IdentifierExpr*>(deref_expr->inner.get());
+			auto* ident_expr
+				= dynamic_cast<const IdentifierExpr*>(stripImplicitMove(deref_expr->inner.get()));
 			ASSERT_TRUE(ident_expr != nullptr);
 		}
 	}

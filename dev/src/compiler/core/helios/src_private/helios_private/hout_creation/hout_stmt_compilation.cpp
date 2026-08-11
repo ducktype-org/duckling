@@ -93,7 +93,7 @@ namespace compiler::helios {
 				}
 
 				// Move before the coercion, so the coercion knows about the changed value category.
-				auto returned = moveReturnedLocal(ctx, expr_hout->clone(), return_type);
+				auto returned = moveReturnedLocal(ctx, expr_hout->clone());
 
 				auto expr_coerced = coerceFromBox(
 					ctx, std::move(returned), return_type, pst_expr.unlock(ctx)->getStablePosition()

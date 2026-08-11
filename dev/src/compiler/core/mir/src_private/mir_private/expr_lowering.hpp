@@ -16,6 +16,7 @@ namespace compiler::mir {
 	 * This consists of a BlockBuilderRef marking the beginning of the lowered
 	 * expression and either:
 	 *  - a MIRValue holding the result of the expression, OR
+	 *  - a MovedValue holding a result whose ownership is being handed over, OR
 	 *  - a Finalizer representing the last instruction that saves the result
 	 *    without specifying its target.
 	 *
@@ -39,31 +40,34 @@ namespace compiler::mir {
 			tsh::SymbolType<>             type;
 		};
 
-		std::variant<MIRValue, Finalizer> value;
-
 		/**
-		 * @brief An ownership transfer this result carries, set by a `move`.
+		 * @brief The result of a `move` - a value that is stored in a place, but whose
+		 * source local stops owning it.
 		 *
-		 * There are three possible consumers:
+		 * The `Move` flag has to sit on an instruction, and which instruction that is depends on
+		 * who consumes the result:
 		 * - `storeResultInGivenPlace()` writes the value into the target place, which becomes its
 		 *   owner. `var b = move a` gives `b := Assign a [Move a, Construct b]`.
-		 * - `getResultTakingOwnership()` is for a consumer that passes the value on as an operand
+		 * - `getResultAndTakeOwnership()` is for a consumer that passes the value on as an operand
 		 *   and hands it to somebody else, i.e. a call argument. `f(move a)` gives
 		 *   `Call f, a [Move a]`.
 		 * - `getResult()` is for a consumer that only reads the value, i.e. `move a` used as a
-		 *   statement. Nobody takes the value over, so it is stored into a temporary which gets
-		 * 	 destructed at the end of its scope.
+		 *   statement. Nobody takes the value over, so `owning_assign` puts it in a temporary that
+		 *   gets destructed at the end of its scope.
 		 */
-		struct PendingMove final {
+		struct MovedValue final {
 			/// The place the value is read from.
 			MIRValue source;
 			/// The local the `Move` flag moves.
 			MIRLocalRef source_local;
+			/// The `Assign` that carries the `Move` flag when no consumer takes the value over.
+			Finalizer owning_assign;
 		};
 
-		base::Optional<PendingMove> pending_move;
+		using Storage = std::variant<MIRValue, MovedValue, Finalizer>;
+		Storage value;
 
-		ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, Finalizer> value);
+		ExprLowerRes(BlockBuilderRef begin, Storage value);
 
 		/**
 		 * @brief helper function returning type of result. Can be used if MIRValue is not stored.
@@ -73,6 +77,10 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Helper function that returns MIRvalue if it is already stored in structure.
+		 *
+		 * @note A MovedValue counts as not stored, even though it holds a place. Passing the raw
+		 * place out would lose the `Move` flag that has to land on some instruction, so a moved
+		 * result always has to go through one of the three consumers below.
 		 */
 		[[nodiscard]]
 		base::Optional<MIRValue> getResultIfStored();
@@ -84,7 +92,7 @@ namespace compiler::mir {
 		 *
 		 * @warning This is the read-only path. A temporary it creates owns the value and is
 		 * destructed at the end of its scope. A consumer that hands the value over to somebody else
-		 * has to use `getResultTakingOwnership()` instead, otherwise the value ends up with two
+		 * has to use `getResultAndTakeOwnership()` instead, otherwise the value ends up with two
 		 * owners. A binary operator or a dereference only reads its operand and does not become
 		 * responsible for it, so those stay here.
 		 */
