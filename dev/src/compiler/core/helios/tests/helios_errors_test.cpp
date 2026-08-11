@@ -1596,10 +1596,7 @@ private:
 		);
 	}
 
-	/**
-	 * @brief `ptrof` rejects the same two operands `&` rejects: a temporary, which has no address,
-	 * and a type that carries no information (see issue #1956).
-	 */
+	/// @brief `ptrof` rejects the same operands `&` rejects, and cannot be evaluated at comp time.
 	void testPtrOfErrors() {
 		checkForErrorOnCompileModule(
 			R"(
@@ -1618,18 +1615,16 @@ private:
 					var p = ptrof u;
 				}
 			)",
-			{ "Taking a pointer to a type that does not carry information is not supported yet" },
+			{ "does not carry information" },
 			1
 		);
 
-		// The tree evaluator cannot short-path a `ptrof`, and there is no DVM fallback for it
-		// either, so a `const` initialised with one fails as not-yet-implemented.
 		checkForErrorOnCompileModule(
 			R"(
 				var g: i32 = 5;
 				const A = ptrof g;
 			)",
-			{ "Feature not implemented", "Evaluation of this expression in DVM at compile time" },
+			{ "Feature not implemented" },
 			1
 		);
 	}

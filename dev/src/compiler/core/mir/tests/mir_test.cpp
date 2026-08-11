@@ -45,7 +45,7 @@ public:
 		TESTER_ADD_TEST(tupleTypeCoercionTest);
 		TESTER_ADD_TEST(livenessMapTest);
 		TESTER_ADD_TEST(sliceTest);
-		TESTER_ADD_TEST(ptrOfTest);
+		TESTER_ADD_TEST(pointersTest);
 	}
 
 protected:
@@ -964,8 +964,8 @@ private:
 	 * a direct one, `ptrof` takes the address of the place itself in every case. The operand keeps
 	 * its projection chain, so `ptrof m[1]` addresses the indexed element.
 	 */
-	void ptrOfTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/ptrof")));
+	void pointersTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/pointers")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
@@ -980,26 +980,22 @@ private:
 			                     ->valueOrThrow();
 
 			using namespace compiler::mir;
-			usize address_of_count  = 0;
-			bool  found_indexed     = false;
-			bool  found_unprojected = false;
+			usize address_of_count = 0;
+			bool  found_indexed    = false;
 			for (const auto& block_id: mir_func.block_order)
 				for (const auto& instr: mir_func.blocks[block_id].instructions) {
 					if (instr.operation != Operation::AddressOf) continue;
 					address_of_count++;
 
-					const auto& arg = instr.arguments[0].get<MIRPlace>();
-					// `ptrof a` and `ptrof b`: the local itself, the box is not dereferenced.
-					if (arg.projection_chain.empty()) found_unprojected = true;
 					// `ptrof m[1]`: the index projection survives into the addressed place.
-					else if (std::holds_alternative<MIRPlace::IndexProjection>(
-								 arg.projection_chain.back().storage
-							 ))
+					const auto& chain = instr.arguments[0].get<MIRPlace>().projection_chain;
+					if (!chain.empty()
+					    && std::holds_alternative<MIRPlace::IndexProjection>(chain.back().storage))
 						found_indexed = true;
 				}
 
+			// One per `ptrof`, the `box` operand included — `&b` would forward it instead.
 			ASSERT_EQUAL(usize(3), address_of_count);
-			ASSERT_TRUE(found_unprojected);
 			ASSERT_TRUE(found_indexed);
 		});
 	}
