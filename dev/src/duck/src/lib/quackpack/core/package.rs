@@ -280,6 +280,13 @@ impl Package {
         &self.original_schema
     }
 
+    /// Transform into the original parsed manifest schema.
+    /// Should be used when we want to mutate the underlying schema (instead of mutable accessors),
+    /// to not leave the [`Package`] in an invalid state (schema incompatible with manifest).
+    pub fn into_original_schema(self) -> ManifestSchema {
+        self.original_schema
+    }
+
     /// Get the high-level abstraction over the manifest.
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
