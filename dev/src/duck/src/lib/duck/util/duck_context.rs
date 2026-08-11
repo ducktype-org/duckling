@@ -35,9 +35,7 @@ impl DuckContext {
         let console = Terminal::stdout();
         let error_console = Terminal::stderr();
         let user_home = home_dir().context("while trying to get user home directory")?;
-        let duck_home = DuckHome::new(
-            duck_home_path(&env, &user_home).context("while trying to get duck home directory")?,
-        );
+        let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
         let config = DuckCfg::new(&duck_home)?;
         let cwd = current_dir().context("while trying to get the current working directory")?;
         Ok(Self {
@@ -136,7 +134,7 @@ impl Default for DuckContext {
         );
         let env = Default::default();
         let user_home = home_dir().unwrap();
-        let duck_home = DuckHome::new(duck_home_path(&env, &user_home).unwrap());
+        let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
         let mut console = Terminal::stdout();
         let mut error_console = Terminal::stderr();
         console.set_verbosity(Verbosity::Quiet);
