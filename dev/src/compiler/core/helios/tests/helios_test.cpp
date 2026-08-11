@@ -110,6 +110,7 @@ public:
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testCastAs);
 		TESTER_ADD_TEST(testPointers);
+		TESTER_ADD_TEST(testPtrOf);
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testAliases);
@@ -3716,6 +3717,61 @@ private:
 			ASSERT_TRUE(deref_lhs != nullptr);
 			ASSERT_EQUAL(i32_st, deref_lhs->expression_type.getSymbolType().withMutability(Mutable));
 		}
+	}
+
+	/**
+	 * `ptrof x` yields `ptr S` where `S` is the whole symbol type of `x`, reference kind included.
+	 * That is what makes it different from `&x`, which collapses `box`/`ref` into `ref`.
+	 */
+	void testPtrOf() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/ptrof")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+		auto test_ptrof_sym = getChain("test_ptrof", top_scope).back();
+		auto body_scope     = getFunctionBodyScope(test_ptrof_sym);
+
+		auto i32_type = getIntegralTypeNoContext(32, Signed);
+		auto i32_st   = st(i32_type);
+
+		const auto p_direct_type = getSymbolTypeOf("p_direct", body_scope);
+		const auto p_box_type    = getSymbolTypeOf("p_box", body_scope);
+		const auto p_ref_type    = getSymbolTypeOf("p_ref", body_scope);
+		const auto p_elem_type   = getSymbolTypeOf("p_elem", body_scope);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			using compiler::tsh::QueryPointerType;
+			using compiler::tsh::ReferenceKind;
+
+			const auto ptr_i32 = st(ctx.query<QueryPointerType>({ i32_st }));
+			const auto ptr_box_i32
+				= st(ctx.query<QueryPointerType>({ i32_st.withReferenceKind(ReferenceKind::Box) }));
+			const auto ptr_ref_i32
+				= st(ctx.query<QueryPointerType>({ i32_st.withReferenceKind(ReferenceKind::Ref) }));
+
+			// `ptrof a` on a direct `i32` is the plain `ptr i32`.
+			ASSERT_EQUAL(ptr_i32, p_direct_type);
+			// `box`/`ref` are not collapsed away, the pointer addresses the box/reference itself.
+			ASSERT_EQUAL(ptr_box_i32, p_box_type);
+			ASSERT_EQUAL(ptr_ref_i32, p_ref_type);
+			// Indexing a `manyptr i32` gives an `i32` place, so its address is a `ptr i32`.
+			ASSERT_EQUAL(ptr_i32, p_elem_type);
+		});
+
+		auto& function = hout.functions.at(0);
+		ASSERT_EQUAL(base::StrID("test_ptrof"), function->declaration->original_name);
+
+		// Every one of the four initializers is a `PtrOfExpr`, no coercion wraps it.
+		usize ptr_of_count = 0;
+		for (const auto& statement: function->body->statements)
+			if (auto* var_stmt
+			    = dynamic_cast<const compiler::helios::code::VariableStmt*>(statement.get()))
+				if (dynamic_cast<const compiler::helios::code::PtrOfExpr*>(
+						var_stmt->initial_value.get()
+					)
+				    != nullptr)
+					ptr_of_count++;
+		ASSERT_EQUAL(usize(4), ptr_of_count);
 	}
 
 	void testTypeLifting() {

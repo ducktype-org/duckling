@@ -1,0 +1,16 @@
+fun test_ptrof() -> i64 = {
+    var a: i32 = 20;
+    var box_a: box i32 = new a;
+    var ref_a: ref i32 = &a;
+    var m: manyptr i32;
+
+    # `ptrof` keeps the reference kind of its operand, so none of these collapse to `ptr i32`.
+    var p_direct = ptrof a;
+    var p_box = ptrof box_a;
+    var p_ref = ptrof ref_a;
+
+    # The replacement of the old `element_ptr` builtin.
+    var p_elem = ptrof m[0];
+
+    return 0;
+}

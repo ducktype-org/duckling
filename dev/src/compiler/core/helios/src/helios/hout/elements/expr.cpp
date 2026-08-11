@@ -51,6 +51,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(SequenceExpr)
 	EXPR_VISITOR(MoveExpr)
 	EXPR_VISITOR(RefOfExpr)
+	EXPR_VISITOR(PtrOfExpr)
 	EXPR_VISITOR(DerefExpr)
 	EXPR_VISITOR(DefaultValueExpr)
 	EXPR_VISITOR(CreateAggregateExpr)
@@ -1069,6 +1070,36 @@ namespace compiler::helios::code {
 
 	Box<Expr> RefOfExpr::clone() const {
 		return makeBox<RefOfExpr>(expression_type, origin, inner->clone());
+	}
+
+	PtrOfExpr::PtrOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  // The whole symbol type of the operand becomes the pointee, so its reference kind
+	              // survives: `ptrof` on a `box T` place gives `ptr box T`.
+				  tsh::SymbolType<>::withDefaults(
+					  ctx.query<tsh::QueryPointerType>({ inner->expression_type.getSymbolType() })
+				  ),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  inner(std::move(inner)) {}
+
+	PtrOfExpr::PtrOfExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner
+	):
+		  Expr(expression_type, origin),
+		  inner(std::move(inner)) {}
+
+	void PtrOfExpr::debugPrint(std::ostream& out) const {
+		out << "ptrof(";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> PtrOfExpr::clone() const {
+		return makeBox<PtrOfExpr>(expression_type, origin, inner->clone());
 	}
 
 	MoveExpr::MoveExpr(query::Context&, ElementOrigin origin, Box<Expr> inner, const MoveKind kind):

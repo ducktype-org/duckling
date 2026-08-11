@@ -432,6 +432,10 @@ namespace lsp {
 			elem.inner->acceptVisitor(*this);
 		}
 
+		void visitPtrOfExpr(const code::PtrOfExpr& elem) override {
+			elem.inner->acceptVisitor(*this);
+		}
+
 		void visitDerefExpr(const code::DerefExpr& elem) override {
 			elem.inner->acceptVisitor(*this);
 		}

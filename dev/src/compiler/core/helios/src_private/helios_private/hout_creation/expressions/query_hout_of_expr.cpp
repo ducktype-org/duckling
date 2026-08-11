@@ -445,6 +445,30 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				// Handle taking pointers. Unlike `&`, `ptrof` keeps the reference kind of the
+				// operand, so `ptrof` of a `box T` place is a `ptr box T` addressing the box itself.
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Ptrof)) {
+					// @TODO: #1956 remove the check below.
+					// This is a temporary check to prevent us from taking the address of types that
+					// do not carry information.
+					if (not inner_type.getType().carriesInformation(ctx)) {
+						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+							"Taking a pointer to a type that does not carry information is not "
+							"supported yet.",
+							stmt->getStablePosition()
+						));
+						return;  // failed
+					}
+					if (not inner->expression_type.getValueCategory().addressable()) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"Tried to take a pointer to a temporary", stmt->getStablePosition()
+						));
+						return;
+					}
+					node = makeBox<PtrOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				}
+
 				// Handle dereferencing
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
 					if (not tsh::isPointerKind(inner_type.getType().getKind())) {

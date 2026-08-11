@@ -964,6 +964,23 @@ namespace compiler::mir {
 			}
 		}
 
+		void visitPtrOfExpr(const hc::PtrOfExpr& expr) override {
+			// `ptrof` never collapses, so the address is always taken, whatever the reference kind
+			// of the operand is.
+			auto       hole          = continuation->addHole();
+			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
+			const auto res_inner     = lowered_inner.getResult(function);
+
+			noValueOutput(
+				lowered_inner.begin,
+				hole,
+				Instruction(
+					Operation::AddressOf, {}, { res_inner }, {}, expr_scope, {}, { expr.getPosition() }
+				),
+				expr.expression_type.getSymbolType()
+			);
+		}
+
 		void visitDerefExpr(const hc::DerefExpr& expr) override {
 			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			auto value         = lowered_inner.getResult(function);
