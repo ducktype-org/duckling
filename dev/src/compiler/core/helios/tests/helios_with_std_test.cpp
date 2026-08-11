@@ -110,6 +110,15 @@ private:
 		);
 	}
 
+	static const compiler::helios::code::Expr* stripImplicitMove(
+		const compiler::helios::code::Expr* expr
+	) {
+		const auto* move = dynamic_cast<const compiler::helios::code::MoveExpr*>(expr);
+		if (move == nullptr || move->kind != compiler::helios::code::MoveExpr::MoveKind::Implicit)
+			return expr;
+		return move->inner.get();
+	}
+
 	void testDefaultInitializers() {
 		using namespace compiler::helios;
 		using namespace compiler::helios::code;
@@ -427,7 +436,8 @@ private:
 			// let ab = 'a' +: (&b);
 			const auto& prepended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(1));
 			const auto  prepended_expr
-				= dynamic_cast<const CallExpr*>(prepended_stmt.initial_value.get());
+				= dynamic_cast<const CallExpr*>(stripImplicitMove(prepended_stmt.initial_value.get()
+			    ));
 			const auto prepended_callee
 				= dynamic_cast<IdentifierExpr*>(prepended_expr->callee.get());
 			assertEqual(
@@ -441,7 +451,8 @@ private:
 			// let bcd = (&b) :+ 'c' :+ 'd';
 			const auto& appended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(2));
 			const auto  appended_expr
-				= dynamic_cast<const CallExpr*>(appended_stmt.initial_value.get());
+				= dynamic_cast<const CallExpr*>(stripImplicitMove(appended_stmt.initial_value.get())
+			    );
 			const auto appended_callee = dynamic_cast<IdentifierExpr*>(appended_expr->callee.get());
 			assertEqual(
 				compiler::helios::name(appended_callee->symbol),
@@ -452,8 +463,9 @@ private:
 
 		{
 			const auto& concatenated_stmt = dynamic_cast<const VariableStmt&>(*statements.at(5));
-			const auto  concatenated_expr
-				= dynamic_cast<const CallExpr*>(concatenated_stmt.initial_value.get());
+			const auto  concatenated_expr = dynamic_cast<const CallExpr*>(
+                stripImplicitMove(concatenated_stmt.initial_value.get())
+            );
 			const auto concatenated_callee
 				= dynamic_cast<IdentifierExpr*>(concatenated_expr->callee.get());
 			assertEqual(
@@ -468,7 +480,8 @@ private:
 			// let y = 2;
 			// let format = f"Did you know that {x} plus {y} equals ({x + y})?";
 			const auto& format_stmt = dynamic_cast<const VariableStmt&>(*statements.at(8));
-			const auto format_expr = dynamic_cast<const CallExpr*>(format_stmt.initial_value.get());
+			const auto  format_expr
+				= dynamic_cast<const CallExpr*>(stripImplicitMove(format_stmt.initial_value.get()));
 			const auto format_callee = dynamic_cast<IdentifierExpr*>(format_expr->callee.get());
 			assertEqual(
 				compiler::helios::name(format_callee->symbol),

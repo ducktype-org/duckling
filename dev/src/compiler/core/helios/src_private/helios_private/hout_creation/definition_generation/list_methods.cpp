@@ -34,10 +34,10 @@ namespace compiler::helios::defgen {
 
 			const Shorthand s{ ctx };
 
-			auto body
-				= StmtPack{ s.expr(s.listPush(s.deref(s.ident(self_symbol)), s.ident(element_symbol))
-				            ) }
-			          .toCodeBlock();
+			auto body = StmtPack{ s.expr(s.listPush(
+									  s.deref(s.ident(self_symbol)), s.move(s.ident(element_symbol))
+								  )) }
+			                .toCodeBlock();
 
 			return HOUTFunction(
 				code::generatedOrigin(),

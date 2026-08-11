@@ -1017,7 +1017,10 @@ namespace compiler::helios {
 
 					// Get the coerced HOUT expression
 					const auto hout_qresult = getHoutOfExprWithExpectedType(
-						ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
+						ctx,
+						pst->getValue().value().unlock(ctx)->getExpr(),
+						type,
+						pst->getName().unlock(ctx)->getStablePosition()
 					);
 					if (hout_qresult.hasFailed()) return query::Failed();
 
