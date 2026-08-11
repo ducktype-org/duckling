@@ -20,8 +20,8 @@ Tests:
         test-cmd: duck -C foo remove a
         Output:
           Run: |+
-            echo "info: successfully removed dependency \`a\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`" &&
-            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`"
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
+            echo "info: successfully removed dependency \`a\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
       dev-dependency-no-flag-error:
         expected-manifest: all
         test-cmd: duck -C foo remove b
@@ -36,8 +36,8 @@ Tests:
         test-cmd: duck -C foo remove b --dev
         Output:
           Run: |+
-            echo "info: successfully removed dev-dependency \`b\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`" && 
             echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`"
+            echo "info: successfully removed dev-dependency \`b\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
       no-dependency-error:
         expected-manifest: all
         test-cmd: duck -C foo remove c

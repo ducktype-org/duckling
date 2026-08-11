@@ -7,8 +7,8 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from utilities import *
 
 expected_manifest_all = """metadata:
-  version: '1.0.0'
   name: foo
+  version: '1.0.0'
 dependencies:
   a:
     source:
@@ -20,8 +20,8 @@ dev-dependencies:
 """
 
 expected_manifest_only_b = """metadata:
-  version: '1.0.0'
   name: foo
+  version: 1.0.0
 dev-dependencies:
   b:
     source:
@@ -29,8 +29,8 @@ dev-dependencies:
 """
 
 expected_manifest_only_a = """metadata:
-  version: '1.0.0'
   name: foo
+  version: 1.0.0
 dependencies:
   a:
     source:

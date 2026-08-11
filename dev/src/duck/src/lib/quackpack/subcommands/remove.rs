@@ -48,17 +48,18 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     }
     let deserialized_schema = serde_yaml_ng::to_string(&schema)
         .with_context_internal(|| format!("failed to deserialize schema `{schema:?}`"))?;
+    manifest_path.write(&deserialized_schema).context(format!(
+        "failed to write the new manifest into file at `{}`",
+        manifest_path.display()
+    ))?;
+    ctx.console().info(format!(
+        "written new manifest to `{}`",
+        manifest_path.display()
+    ))?;
     ctx.console().info(format!(
         "successfully removed {}dependency `{name}` from the project `{pkg_name}` at `{}`",
         if dev_dep { "dev-" } else { "" },
         pkg_root.display(),
-    ))?;
-    manifest_path
-        .write(&deserialized_schema)
-        .context("failed to write the new manifest into file")?;
-    ctx.console().info(format!(
-        "written new manifest to `{}`",
-        manifest_path.display()
     ))?;
     Ok(())
 }

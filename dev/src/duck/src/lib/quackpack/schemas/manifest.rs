@@ -65,7 +65,7 @@ impl Manifest {
     }
 
     /// Remove a dependency.
-    pub fn remove_dependency(&mut self, name: &String) -> DependencyRemoved {
+    pub fn remove_dependency(&mut self, name: &str) -> DependencyRemoved {
         if self
             .dependencies
             .as_mut()
@@ -90,7 +90,7 @@ impl Manifest {
     }
 
     /// Remove a dev-dependency.
-    pub fn remove_dev_dependency(&mut self, name: &String) -> DependencyRemoved {
+    pub fn remove_dev_dependency(&mut self, name: &str) -> DependencyRemoved {
         if self
             .dev_dependencies
             .as_mut()
@@ -108,7 +108,7 @@ impl Manifest {
     }
 }
 
-/// Marker struct for a  removal f a dependency.
+/// Marker struct for a removal of a dependency.
 pub enum DependencyRemoved {
     Yes,
     NoDependency,
@@ -446,7 +446,7 @@ mod tests {
     fn test_ored_semver_serialization() {
         let x =
             serde_json::to_string::<OredSemver>(&OredSemver(vec![Version::new(1, 0, 0)])).unwrap();
-        assert_eq!(x, "\"'1.0.0'\"");
+        assert_eq!(x, "\"1.0.0\"");
 
         let x = serde_json::to_string::<OredSemver>(&OredSemver(vec![
             Version::new(1, 0, 0),
