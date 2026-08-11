@@ -59,3 +59,4 @@ You can read more about Duckling's technology and goals in the [Documentation](h
 
 User documentation of the language and related tools can be found at [https://docs.duckling.pl/](https://docs.duckling.pl/).
 
+test
