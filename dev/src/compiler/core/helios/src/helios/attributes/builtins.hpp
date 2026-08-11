@@ -26,8 +26,13 @@ namespace compiler::helios::code {
  * This decides what layer implements the builtin. For example `ptr_from_slice`
  * is implemented in HOUT, but in the future some builtins will be implemented only
  * in DVM Backend or LLVM backend.
+ *
+ * A builtin with the `LIR` origin has no callable body at all: the MIR call to it is replaced by
+ * instructions while lowering to LIR, so the symbol never reaches the backends.
  */
-MAKE_FLAG_TYPE(compiler::helios, BuiltinOrigin, BuiltinOrigins, HOUT, DVMBackend, NativeBackend);
+MAKE_FLAG_TYPE(
+	compiler::helios, BuiltinOrigin, BuiltinOrigins, HOUT, LIR, DVMBackend, NativeBackend
+);
 
 namespace compiler::helios {
 	struct SymID;
@@ -53,6 +58,22 @@ namespace compiler::helios {
 		SizeOf,
 		/** `alignment_of(v: meta) -> i64`: byte alignment of a type. HOUT `AlignOf` op. */
 		AlignmentOf,
+		/**
+		 * `move_out(pointer: ptr T) -> T`: read the value under `pointer` without an explicit
+		 * `copy`/`move` on it, performs bitwise copy.
+		 */
+		MoveOut,
+		/**
+		 * `move_in(pointer: ptr T, value: T)`: write `value` into the storage under `pointer`
+		 * treating it as uninitialized. The previous content is never destroyed. Performs bitwise
+		 * copy.
+		 */
+		MoveIn,
+		/**
+		 * `element_ptr(pointer: manyptr T, index: i64) -> ptr T`: address of the element at
+		 * `index`.
+		 */
+		ElementPtr,
 		/**
 		 * Box allocation / deallocation, dynamic-array (list) freeing and the box destructor.
 		 * Unlike the other builtins these are not selected by the `@builtin("...")` attribute. They

@@ -289,14 +289,14 @@ class DuckList {
 
     fun push(value: T) -> () = {
         reserve(len + 1u64);
-        pointer[len as i64] = value;
-        len                 = len + 1u64;
+        builtins.move_in:{T}(builtins.element_ptr:{T}(pointer, len as i64), move value);
+        len = len + 1u64;
     }
 
     fun pop() -> T = {
         if (len == 0u64) panicking.panic();
         len = len - 1u64;
-        return pointer[len as i64];
+        return builtins.move_out:{T}(builtins.element_ptr:{T}(pointer, len as i64));
     }
 
     fun at(i: i64) -> ref T = {
