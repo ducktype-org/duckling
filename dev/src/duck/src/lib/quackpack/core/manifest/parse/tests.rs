@@ -9,6 +9,7 @@ use crate::quackpack::core::manifest::parse::frontmatter::parse_frontmatter;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, StrId};
 
@@ -828,8 +829,6 @@ dependencies:
 }
 
 #[test]
-#[cfg(not(windows))]
-// @TODO: #3135 Fix to_url() calls on paths on windows
 fn git_url_points_to_local_dir() {
     let root_dir = TempDir::new().unwrap();
     let (dir, manifest_path) = prepare_manifest(&format!(
@@ -848,6 +847,7 @@ dependencies:
     let ctx = DuckContext::default();
 
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    let file_url = root_dir.path().to_url().unwrap();
     assert_eq!(
         err.to_string(),
         make_errors_message(
@@ -855,8 +855,8 @@ dependencies:
             [
                 "git dependency points to a file on the disk",
                 &format!(
-                    "either change it to a local dependency or change the URL to `file://{}`",
-                    root_dir.path().display()
+                    "either change it to a local dependency or change the URL to `{}`",
+                    file_url,
                 ),
                 &format!("`{}` is not a valid url", root_dir.path().display()),
                 "relative URL without a base",
