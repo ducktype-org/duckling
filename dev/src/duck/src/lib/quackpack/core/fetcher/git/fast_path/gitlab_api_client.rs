@@ -14,7 +14,6 @@
 //! 3. Download the manifest (for a given commit): `base_api_url/repository/files/<manifest_path>/raw?ref=<commit_hash>`.
 use std::sync::Arc;
 
-use http::header;
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use serde::Deserialize;
 use tracing::debug;
@@ -22,7 +21,7 @@ use url::Url;
 
 use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
 use crate::quackpack::core::fetcher::util::http::traits_extensions::ResponseExt;
-use crate::quackpack::core::fetcher::util::http::{Request, Response, defaults};
+use crate::quackpack::core::fetcher::util::http::{Request, Response};
 use crate::quackpack::util::to_url::ToUrl;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
@@ -125,11 +124,7 @@ impl<'duck> GitlabApiClient<'duck> {
 
     /// Create a `GET` request for the specified `url`.
     async fn request(&self, url: &Url) -> QuackResult<Response> {
-        let mut request = Self::create_http_request(url, http::Method::GET, vec![])?;
-        request
-            .headers_mut()
-            .entry(header::PRAGMA)
-            .or_insert(defaults::NO_VALUE);
+        let request = Self::create_http_request(url, http::Method::GET, vec![])?;
         self.client.request(request).await
     }
 
