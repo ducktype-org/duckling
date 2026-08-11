@@ -121,14 +121,14 @@ pub enum DependencyRemoved {
 #[serde(rename_all = "kebab-case")]
 /// Schema of the `metadata:` table.
 pub struct Metadata {
+    /// Package's name.
+    pub name: Option<String>,
     /// Version of the package.
     pub version: Option<Version>,
     /// Package's authors.
     pub authors: Option<Vec<String>>,
     /// Package's license.
     pub license: Option<String>,
-    /// Package's name.
-    pub name: Option<String>,
     /// Package's description.
     pub description: Option<String>,
 }
