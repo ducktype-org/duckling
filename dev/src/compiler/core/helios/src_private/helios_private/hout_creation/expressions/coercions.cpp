@@ -399,15 +399,28 @@ namespace compiler::helios {
 				),
 				source_position
 			);
-		case InvalidCoercionReason::RequiresExplicitCopyMove:
+		case InvalidCoercionReason::RequiresExplicitCopyMove: {
+			// Reading a value out of a `ref`/`box` copies the pointee. `move` ou tof ref/box isn't
+			// possible, so suggesting `move` in the error is misleading.
+			const bool reads_through
+				= readsThroughReference(source_symbol_type.getRefKind(), expected_type.getRefKind());
+
 			return makeBox<dia_int::PlaceholderError>(
 				base::strConcat(
 					"Cannot implicitly copy a value of non-trivially-copyable type `",
 					copiedValueType(source_symbol_type, expected_type).toString(),
-					"`. Use `copy` to copy it or `move` to move it."
+					reads_through
+						? base::strConcat(
+							  "` out of `",
+							  source_symbol_type.toString(),
+							  "`. Use `copy` to copy it out, `move` cannot move a value "
+							  "out of a reference."
+						  )
+						: std::string_view("`. Use `copy` to copy it or `move` to move it.")
 				),
 				source_position
 			);
+		}
 
 		default:
 			CORE_UNREACHABLE();

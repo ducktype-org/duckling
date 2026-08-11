@@ -84,13 +84,6 @@ namespace compiler::helios {
 				if (expr_hout_qresult->hasFailed()) return;
 
 				const auto& expr_hout = expr_hout_qresult->valueOrThrow();
-				if (expr_hout->expression_type.getValueCategory().mustMove()) {
-					ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
-						"A returned value is moved out of implicitly, `move` is not needed "
-						"here.",
-						pst_expr.unlock(ctx)->getStablePosition()
-					));
-				}
 
 				// Move before the coercion, so the coercion knows about the changed value category.
 				auto returned = moveReturnedLocal(ctx, expr_hout->clone());
@@ -99,6 +92,15 @@ namespace compiler::helios {
 					ctx, std::move(returned), return_type, pst_expr.unlock(ctx)->getStablePosition()
 				);
 				if (expr_coerced.empty()) query::throwFailed();
+
+				// Report only if the compilation of the return statement actually succeeded.
+				if (expr_hout->expression_type.getValueCategory().mustMove()) {
+					ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
+						"A returned value is moved out of implicitly, `move` is not needed "
+						"here.",
+						pst_expr.unlock(ctx)->getStablePosition()
+					));
+				}
 
 				output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced.value())));
 			} else {
