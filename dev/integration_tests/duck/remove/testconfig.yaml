@@ -29,7 +29,8 @@ Tests:
         Err:
           Run: |+
             echo "error: no such dependency as \`b\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`" &&
-            echo "\nhint: if you want to remove a dev-dependency use flag \`--dev\`"
+            echo "" &&
+            echo "hint: if you want to remove a dev-dependency use flag \`--dev\`"
       dev-dependency-flag:
         expected-manifest: only-a
         test-cmd: duck -C foo remove b --dev
