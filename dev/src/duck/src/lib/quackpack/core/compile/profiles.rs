@@ -185,7 +185,7 @@ macro_rules! determine_field {
                     PREDEFINED_PROFILES
                         .get(&parent_name)
                         .map(|prof| prof.$name)
-                        .context_internal("Parent profile neither in profiles map nor predefined")
+                        .with_context_internal(|| format!("parent profile `{parent_name}` neither in profiles map nor predefined"))
                 }
             } else {
                 // None of the inheritance ancestors specified the field.

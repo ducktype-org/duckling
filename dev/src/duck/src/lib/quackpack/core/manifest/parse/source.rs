@@ -143,7 +143,7 @@ fn make_could_not_determine_error<const N: usize>(
     scope: &Scope,
     fields: [&'static str; N],
 ) -> QuackError {
-    assert!(N == 2 || N == 3, "implementation relies on it");
+    assert!(N == 2 || N == 3, "implementation relies on it, got N={N}");
     let source = fields
         .iter()
         .map(|field| format!("`source.{}`", field))

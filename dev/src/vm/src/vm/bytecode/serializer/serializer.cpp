@@ -74,6 +74,29 @@ namespace vm::code {
 		}
 	}
 
+	namespace {
+		/**
+		 * @brief Writes `{ param, ... } -> { result, ... }`, the signature form shared by
+		 * `function` and `ffi function` declarations.
+		 */
+		void serializeSignature(const FuncSignature& signature, std::ostream& out) {
+			auto identifier_list = [&out](const std::vector<Identifier>& identifiers) {
+				out << "{ ";
+				bool first = true;
+				for (const auto& identifier: identifiers) {
+					if (!first) out << ", ";
+					out << identifier.str.strView();
+					first = false;
+				}
+				out << " }";
+			};
+
+			identifier_list(signature.parameters);
+			out << " -> ";
+			identifier_list(signature.result_types);
+		}
+	}
+
 	class FunctionSerializer final {
 		std::ostream&   out;
 		const Function& function;
@@ -106,21 +129,10 @@ namespace vm::code {
 			  function(function) {}
 
 		void display() {
-			out << "function " << function.name.str.strView() << " { ";
-			bool first = true;
-			for (const auto& param: function.signature.parameters) {
-				if (!first) out << ", ";
-				out << param.str.strView();
-				first = false;
-			}
-			out << " } -> { ";
-			first = true;
-			for (const auto& param: function.signature.result_types) {
-				if (!first) out << ", ";
-				out << param.str.strView();
-				first = false;
-			}
-			out << " } {\n";
+			out << lang_def::keywordToStr(lang_def::Keyword::BCFunction).strView() << ' ';
+			out << function.name.str.strView() << ' ';
+			serializeSignature(function.signature, out);
+			out << " {\n";
 
 			indentUp();
 			displayCode();
@@ -357,10 +369,30 @@ namespace vm::code {
 		out << '\n';
 	}
 
+	void serializeFFIFunction(const FFIFunction& function, std::ostream& out) {
+		out << lang_def::keywordToStr(lang_def::Keyword::BCFfi).strView() << ' ';
+		out << lang_def::keywordToStr(lang_def::Keyword::BCFunction).strView() << ' ';
+		out << function.name.str.strView() << ' ';
+		serializeSignature(function.signature, out);
+		out << ";\n";
+	}
+
+	void serializeObjectFile(const std::string& object_file, std::ostream& out) {
+		out << lang_def::keywordToStr(lang_def::Keyword::BCFfi).strView() << ' ';
+		out << lang_def::keywordToStr(lang_def::Keyword::BCObject).strView() << ' ';
+		// The path is emitted verbatim: the lexer does not unescape string literals, so escaping
+		// here would change the path the loader hands to `dlopen`.
+		out << '"' << object_file << "\";\n";
+	}
+
 	void serializeCode(const CodeCollection& code, std::ostream& out) {
 		for (const auto& type: code.types) serializeType(type, out);
 		out << '\n';
 		for (const auto& global_data: code.global_data) serializeGlobal(global_data, out);
+		out << '\n';
+		// Objects first: an `ffi function` is only resolvable through a declared shared object.
+		for (const auto& object_file: code.object_files) serializeObjectFile(object_file, out);
+		for (const auto& ffi_function: code.ffi_functions) serializeFFIFunction(ffi_function, out);
 		out << '\n';
 		for (const auto& func: code.functions) serializeFunction(func, out);
 		out << '\n';

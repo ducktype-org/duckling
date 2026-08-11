@@ -100,12 +100,13 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
         args,
         jobs: _,
     } = rs_options;
-    let script_name = path
-        .file_name()
-        .context_internal("we assured that the path points to a file")?;
-    let folder_path = path
-        .parent()
-        .context_internal("we assured that the path points to a file")?;
+    let script_name = path.file_name().with_context_internal(|| {
+        format!("path `{path:?}` does not have a filename, but we checked that earlier?")
+    })?;
+    let folder_path = path.parent().with_context_internal(|| {
+        format!("path `{path:?}` does not have a parent folder, but we checked that earlier?")
+    })?;
+
     let package = PackageLoader::load_script(ctx, path, folder_path, global)?;
     let root_identity = package.package().as_a_local_identity()?;
     let (lock, venv, storage) = sync(

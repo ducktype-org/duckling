@@ -8,12 +8,12 @@ Tests:
           String: "1\n3\n4\n7\n"
         ExitCode: 0
 
-  boxes:
+  boxes_and_refs:
     Cases:
       all:
         backend: all
         Output:
-          String: "1\n1\n"
+          String: "1\n7\n2\n9\n2\n3\n9\n4\n5\n7\n"
         ExitCode: 0
 
   function_calls:
