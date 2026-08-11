@@ -429,17 +429,6 @@ dependencies:
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
     assert!(a.source().is_local());
     let path = a.source().url().to_path_buf().unwrap();
-    #[cfg(windows)]
-    assert_eq!(
-        PathBuf::from(format!("\\\\?\\{}", path.display())),
-        manifest_path
-            .parent()
-            .unwrap()
-            .resolve()
-            .unwrap()
-            .join("xd")
-    );
-    #[cfg(not(windows))]
     assert_eq!(path, manifest_path.parent().unwrap().resolve().join("xd"));
     assert!(a.versions().is_empty());
     assert_eq!(a.name(), a.effective_name());
@@ -452,18 +441,6 @@ dependencies:
     assert!(a1.source().is_local());
 
     let path = a1.source().url().to_path_buf().unwrap();
-    #[cfg(windows)]
-    assert_eq!(
-        PathBuf::from(format!("\\\\?\\{}", path.display())),
-        manifest_path
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .resolve()
-            .join("xd")
-    );
-    #[cfg(not(windows))]
     assert_eq!(
         path,
         manifest_path
@@ -491,11 +468,12 @@ dependencies:
         .get_by_name(StrId::new("a3"))
         .unwrap();
     assert!(a3.source().is_local());
+    let path = a3.source().url().to_path_buf().unwrap();
+    #[cfg(windows)]
+    // On Windows `/xd` is an absolute path.
+    assert_eq!(path, PathBuf::from("C:\\xd"));
     #[cfg(not(windows))]
-    {
-        let path = a3.source().url().to_path_buf().unwrap();
-        assert_eq!(path, PathBuf::from("/xd"));
-    }
+    assert_eq!(path, PathBuf::from("/xd"));
     assert!(a3.alias().is_none());
 
     let b = summary.dependencies().get_by_name(StrId::new("b")).unwrap();
@@ -1486,7 +1464,11 @@ venv:
     let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
-    assert_eq!(summary.venv().storage_path(), PathBuf::from("/storage"),);
+    #[cfg(windows)]
+    let desired_path = PathBuf::from("C:\\storage");
+    #[cfg(not(windows))]
+    let desired_path = PathBuf::from("/storage");
+    assert_eq!(summary.venv().storage_path(), desired_path,);
 }
 
 #[test]

@@ -231,7 +231,7 @@ metadata:
     #[test]
     fn no_package_from_directory() {
         #[cfg(windows)]
-        let root = "\\\\?\\C:\\";
+        let root = "C:\\";
         #[cfg(not(windows))]
         let root = "/";
         let tmp_file = tempdir().unwrap();
