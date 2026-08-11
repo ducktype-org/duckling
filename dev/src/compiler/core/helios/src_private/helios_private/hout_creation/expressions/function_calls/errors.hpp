@@ -48,12 +48,9 @@ namespace compiler::helios::code {
 	};
 
 	struct ArgumentCoercionFailure final {
-		helios::InvalidCoercionReason reason;  // The reason for the failure (i.e. type mismatch,
-		                                       // not implicitly copyable, etc.)
-		tsh::SymbolType<> given_type;
-		tsh::SymbolType<> expected_type;
-		usize             argument_index;
-		SymID             function;
+		Coercion failed;
+		usize    argument_index;
+		SymID    function;
 	};
 
 	struct MissingCallArgument final {
