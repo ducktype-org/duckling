@@ -19,4 +19,18 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryHOUTGlobalData, SymID, CRef<query::QResult<HOUTGlobalData>>, ({}));
+
+	/**
+	 * @brief Returns the expression that should be used by the MIR global variable
+	 * constructor - it in-place initializes the global.
+	 */
+	Box<code::Expr> getMIRConstructorExpr(query::Context& ctx, CRef<HOUTGlobalData> global_data);
+
+	/**
+	 * @brief Returns the expression that should be used by the MIR global variable
+	 * destructor - it takes the reference to the global and calls destructor function.
+	 */
+	base::Optional<Box<code::Expr>> getMIRDestructorExpr(
+		query::Context& ctx, CRef<HOUTGlobalData> global_data
+	);
 }

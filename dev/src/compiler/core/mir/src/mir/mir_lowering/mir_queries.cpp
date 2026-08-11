@@ -4,11 +4,13 @@
 #include "mir_validation.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
+#include <helios/hout/elements/expr.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
@@ -259,9 +261,6 @@ namespace compiler::mir {
 					"instead."
 				);
 
-			auto global_init_expr
-				= std::get<helios::HOUTGlobalVariable>(key.global_data->value).initial_value.ref();
-
 			auto function_type = ctx.query<tsh::QueryFunctionType>({
 				{},
 				tsh::SymbolType{
@@ -285,30 +284,12 @@ namespace compiler::mir {
 				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
 			);
 
-			auto assign_instr = last_block->addHole();
+			auto constructor_expr = helios::getMIRConstructorExpr(ctx, key.global_data);
+			auto expr_scope       = function_builder.newScope(function_builder.getTopLevelScope());
+			auto lowerexpr_res
+				= lowerExpr(*constructor_expr.get(), last_block, function_builder, expr_scope);
 
-			auto lowerexpr_res = lowerExpr(
-				*global_init_expr.get(),
-				last_block,
-				function_builder,
-				function_builder.getTopLevelScope()
-			);
-
-			assign_instr.fill(Instruction{
-				Operation::Assign,
-				// Note: we know its a variable here, since this query only works for variables,
-				{
-					MIRGlobal({ key.global_data->helios_symbol,
-			                    key.global_data->type,
-			                    MIRGlobal::Kind::Variable }),
-				},
-				{
-					lowerexpr_res.getResult(function_builder),
-				},
-				{},
-				function_builder.getTopLevelScope(),
-			});
-
+			std::ignore = lowerexpr_res.getResult(function_builder);
 			function_builder.setEntry(lowerexpr_res.begin);
 
 			auto function_no_lifetime = function_builder.build();
@@ -347,14 +328,17 @@ namespace compiler::mir {
 					"instead."
 				);
 
-			auto            function_type = ctx.query<tsh::QueryFunctionType>({
-                {},
-                tsh::SymbolType{
-                    tsh::getUnitType(),
-                    tsh::ReferenceKind::Direct,
-                    tsh::Mutability::Immutable,
-                },
-            });
+			auto function_type = ctx.query<tsh::QueryFunctionType>({
+				{},
+				tsh::SymbolType{
+					tsh::getUnitType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Immutable,
+				},
+			});
+
+			// first step: lowering to pre-mir (cfg+quad)
+			// create function builder
 			FunctionBuilder function_builder{
 				ctx, GlobalVariableCtorDtor::dtor(key.global_data->helios_symbol), function_type
 			};
@@ -366,6 +350,30 @@ namespace compiler::mir {
 			last_block->setTerminator(
 				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
 			);
+
+			auto destructor_expr_opt = helios::getMIRDestructorExpr(ctx, key.global_data);
+			if_opt_some(destructor_expr_opt, expr) {
+				auto expr_scope = function_builder.newScope(function_builder.getTopLevelScope());
+				auto lowerexpr_res
+					= lowerExpr(*expr.get(), last_block, function_builder, expr_scope);
+
+				std::ignore = lowerexpr_res.getResult(function_builder);
+				function_builder.setEntry(lowerexpr_res.begin);
+			}
+			if_opt_none(destructor_expr_opt) { function_builder.setEntry(last_block); }
+
+			auto function_no_lifetime = function_builder.build();
+
+			// second step: lifetime stuff
+			auto function_with_destructors
+				= runAllLifetimePasses(ctx, std::move(function_no_lifetime));
+
+			// eliminating unreachable blocks
+			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
+
+			if (validateFunction(ctx, function_reachable).isBad()) return query::Failed();
+
+			return function_reachable;
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -395,14 +403,15 @@ namespace compiler::mir {
 				variant_case(helios::HOUTGlobalVariable, hout_expr_initial_value) {
 					CRef mir_ctor_function
 						= &ctx.query<mir::LowerGlobalDataToMIRCtor>(key)->valueOrThrow();
-					CRef mir_dtor_function = ;
+					CRef mir_dtor_function
+						= &ctx.query<mir::LowerGlobalDataToMIRDtor>(key)->valueOrThrow();
 					return MIRGlobalData{
 						.global = MIRGlobal{
 							key.global_data->helios_symbol,
 							key.global_data->type,
 							MIRGlobal::Kind::Variable,
 						},
-						.initial_value = mir_ctor_function,
+						.initial_value = MIRCtorDtorPair{.constructor = mir_ctor_function, .destructor = mir_dtor_function},
 					};
 				}
 			}

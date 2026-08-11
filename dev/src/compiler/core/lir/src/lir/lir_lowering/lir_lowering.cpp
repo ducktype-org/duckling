@@ -29,6 +29,7 @@
 #include <tsl/queries.hpp>
 #include <tsl/type_layout.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>
@@ -1030,10 +1031,18 @@ namespace compiler::lir {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
 						variant_case(mir::GlobalVariableCtorDtor, name) {
-							return helios::mangler::getSpecialMangledName<
-								helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
-								ctx, name.global_var_id
-							);
+							if (name.type == mir::GlobalVariableCtorDtor::Ctor)
+								return helios::mangler::getSpecialMangledName<
+									helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
+									ctx, name.global_var_id
+								);
+							else if (name.type == mir::GlobalVariableCtorDtor::Dtor)
+								return helios::mangler::getSpecialMangledName<
+									helios::mangler::ManglingSymbolKind::GlobalVariableDestructor>(
+									ctx, name.global_var_id
+								);
+							else
+								CORE_UNREACHABLE();
 						}
 					}
 					CORE_UNREACHABLE();

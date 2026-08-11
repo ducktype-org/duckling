@@ -1,6 +1,7 @@
 #pragma once
 
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 
@@ -15,7 +16,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
 	StringifyBool,
 	StringifyI64,
 	StringifyU64,
-	StringifyF64
+	StringifyF64,
+	MoveIn
 	// List
 	// PanicOutOfBounds
 )
@@ -55,4 +57,12 @@ namespace compiler::helios {
 	 * (e.g. a no-std build without `core.containers`) simply returns false.
 	 */
 	bool isLanguagePrimitivePresent(query::Context& ctx, LanguagePrimitive primitive);
+
+	/**
+	 * @brief Helper that performs QueryLanguagePrimitiveSymID inside and QueryBakeTemplateSymID
+	 * with the given template parameters.
+	 */
+	query::QResult<SymID> getTemplatedPrimitiveSymID(
+		query::Context& ctx, LanguagePrimitive kind, std::vector<tsh::SymbolType<>> template_params
+	);
 }

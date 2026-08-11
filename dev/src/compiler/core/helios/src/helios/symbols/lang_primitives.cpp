@@ -1,9 +1,11 @@
 #include "lang_primitives.hpp"
 
+#include <ctv/ctv.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/templates/templates.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -23,22 +25,42 @@ namespace compiler::helios {
 
 		const std::unordered_map<LanguagePrimitive, PrimitivePath>& primitivePaths() {
 			static const std::unordered_map<LanguagePrimitive, PrimitivePath> paths{
-				{ LanguagePrimitive::Panic,
-				  { .package = "core", .path = { "panicking" }, .element = "panic" } },
-				{ LanguagePrimitive::String,
-				  { .package = "core", .path = { "containers" }, .element = "String" } },
-				{ LanguagePrimitive::StringifyStr,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyStr" } },
-				{ LanguagePrimitive::StringifyChar,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyChar" } },
-				{ LanguagePrimitive::StringifyBool,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyBool" } },
-				{ LanguagePrimitive::StringifyI64,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyI64" } },
-				{ LanguagePrimitive::StringifyU64,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyU64" } },
-				{ LanguagePrimitive::StringifyF64,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyF64" } },
+				{
+					LanguagePrimitive::Panic,
+					{ .package = "core", .path = { "panicking" }, .element = "panic" },
+				},
+				{
+					LanguagePrimitive::String,
+					{ .package = "core", .path = { "containers" }, .element = "String" },
+				},
+				{
+					LanguagePrimitive::StringifyStr,
+					{ .package = "core", .path = { "containers" }, .element = "stringifyStr" },
+				},
+				{
+					LanguagePrimitive::StringifyChar,
+					{ .package = "core", .path = { "containers" }, .element = "stringifyChar" },
+				},
+				{
+					LanguagePrimitive::StringifyBool,
+					{ .package = "core", .path = { "containers" }, .element = "stringifyBool" },
+				},
+				{
+					LanguagePrimitive::StringifyI64,
+					{ .package = "core", .path = { "containers" }, .element = "stringifyI64" },
+				},
+				{
+					LanguagePrimitive::StringifyU64,
+					{ .package = "core", .path = { "containers" }, .element = "stringifyU64" },
+				},
+				{
+					LanguagePrimitive::StringifyF64,
+					{ .package = "core", .path = { "containers" }, .element = "stringifyF64" },
+				},
+				{
+					LanguagePrimitive::MoveIn,
+					{ .package = "core", .path = { "builtins" }, .element = "move_in" },
+				},
 			};
 			return paths;
 		}
@@ -104,4 +126,22 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLanguagePrimitiveSymID);
+
+	query::QResult<SymID> getTemplatedPrimitiveSymID(
+		query::Context& ctx, LanguagePrimitive kind, std::vector<tsh::SymbolType<>> template_params
+	) {
+		UNPACK_QRESULT_CREF(SymID template_id =, ctx.query<QueryLanguagePrimitiveSymID>({ kind }));
+
+		std::vector<ctv::CompileTimeValue> ctv_args
+			= template_params
+		    | std::views::transform([](auto& type) { return ctv::CompileTimeValue(type); })
+		    | std::ranges::to<std::vector>();
+
+		UNPACK_QRESULT(
+			SymID instance_id =,
+			ctx.query<templates::QueryBakeTemplateSymID>(templates::TemplateBakeKey{
+				.template_sym_id = template_id, .template_arguments = ctv_args })
+		);
+		return instance_id;
+	}
 }

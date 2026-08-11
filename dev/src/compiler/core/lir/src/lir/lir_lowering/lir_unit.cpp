@@ -3,6 +3,7 @@
 #include "lir_unit.hpp"
 
 #include <lir/lir_lowering/lir_lowering.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -35,15 +36,16 @@ namespace compiler::lir {
 						.data_initialization = ctv_initial_value,
 					});
 				}
-				variant_case(CRef<mir::Function>, mir_ctor_function) {
+				variant_case(mir::MIRCtorDtorPair, pair) {
 					auto lir_ctor_function
-						= ctx.query<lir::LowerToLIRFunction>({ mir_ctor_function });
+						= ctx.query<lir::LowerToLIRFunction>({ pair.constructor });
+					auto lir_dtor_function
+						= ctx.query<lir::LowerToLIRFunction>({ pair.destructor });
 					lir_unit.lir_globals.emplace_back(LIRGlobalData{
                         .global = lir_global,
                         .data_initialization = LIRGlobalData::CTorDtorPair{
-                            // @TODO: #2825 add legit dtors when implemented 
                             .global_ctor = lir_ctor_function,
-                            .global_dtor = std::nullopt,
+                            .global_dtor = lir_dtor_function,
                         },
                     });
 				}

@@ -6,6 +6,7 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_cache_macros.hpp>
@@ -92,4 +93,37 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHOUTGlobalData);
+
+	Box<code::Expr> getMIRConstructorExpr(query::Context& ctx, CRef<HOUTGlobalData> global_data) {
+		using namespace code::shorthands;
+		Shorthand s(ctx);
+
+		CORE_ASSERT(
+			v_matches(global_data->value, HOUTGlobalVariable),
+			"Call only valid with global variable."
+		);
+
+		CRef<code::Expr> initial_value_expr
+			= v_get(global_data->value, HOUTGlobalVariable).initial_value.ref();
+
+		auto move_in_symbol = helios::getTemplatedPrimitiveSymID(
+								  ctx, helios::LanguagePrimitive::MoveIn, { global_data->type }
+		)
+		                          .valueOrThrow();
+		return s.call(
+			s.ident(move_in_symbol),
+			s.refOf(s.ident(global_data->helios_symbol)),
+			initial_value_expr->clone()
+		);
+	}
+
+	base::Optional<Box<code::Expr>> getMIRDestructorExpr(
+		query::Context& ctx, CRef<HOUTGlobalData> global_data
+	) {
+		using namespace code::shorthands;
+		Shorthand s(ctx);
+		auto      destructor = getTypeDestructor(ctx, global_data->type);
+		if (destructor.empty()) return {};
+		return s.call(s.ident(destructor.value()), s.refOf(s.ident(global_data->helios_symbol)));
+	}
 }
