@@ -4,7 +4,6 @@ use std::fmt;
 use std::path::PathBuf;
 
 use itertools::Itertools;
-use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize, de, ser};
 use serde_untagged::UntaggedEnumVisitor;
 use serde_with::skip_serializing_none;
