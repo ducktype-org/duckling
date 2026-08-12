@@ -16,12 +16,6 @@
 namespace compiler::backend_vm::internal {
 	class CTVLowering;
 
-	/**
-	 * @brief Which flavour of pointer type to synthesize: a VM-managed pointer (`ptr_X`) or a raw
-	 * C pointer crossing the FFI boundary (`cptr_X`).
-	 */
-	enum class PointerKind : uint8_t { Pointer, CPointer };
-
 	class ProgramLoweringContext final {
 		friend class CTVLowering;
 
@@ -94,10 +88,6 @@ namespace compiler::backend_vm::internal {
 		 * @return CRef<vm::code::TypeOfData>
 		 */
 		CRef<vm::code::TypeOfData> keepVMType(vm::code::TypeOfData dvm_type);
-
-		const vm::code::TypeOfData lowerPointerType(
-			const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
-		);
 
 		/**
 		 * @brief Creates and inserts a pointer type into the program lowering context.
@@ -240,6 +230,13 @@ namespace compiler::backend_vm::internal {
 	private:
 		base::Optional<vm::code::TypeOfData> lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
+		/**
+		 * @brief Actualy constructs the VM pointer type, internal.
+		 */
+		const vm::code::TypeOfData lowerPointerType(
+			const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
+		);
+
 		/// Whether we are lowering the code to be loaded by the VM for compile time evaluation,
 		/// or for the final output module. This affects how certain compile time values (e.g.
 		/// symbol types) are lowered.
@@ -264,6 +261,8 @@ namespace compiler::backend_vm::internal {
 		std::vector<base::StrID> lowered_function_order;
 		// Maintains insertion order for globals so REPL can emit only new globals.
 		std::vector<base::StrID> lowered_global_order;
+		// Maintains insertion order for FFI functions so REPL can emit only new declarations.
+		std::vector<base::StrID> lowered_ffi_function_order;
 
 		// Counter used to make synthetic static-data global names (string literals) unique.
 		usize static_data_global_counter{ 0 };
@@ -275,8 +274,6 @@ namespace compiler::backend_vm::internal {
 
 		// FFI (libffi-called, C ABI) function name to declaration.
 		base::Map<base::StrID, vm::code::FFIFunction> ffi_functions;
-		// Maintains insertion order for FFI functions so REPL can emit only new declarations.
-		std::vector<base::StrID> lowered_ffi_function_order;
 
 		// Additional, non-lir functions loaded into a module. Used in CTE.
 		std::vector<vm::code::Function> extra_bytecode_functions;

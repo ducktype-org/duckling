@@ -66,11 +66,13 @@ namespace compiler::driver {
 			return base::BAD;
 		}
 		vm::code::CodeCollection merged_code = std::move(parse_result.value());
+
+		// This is also a bit hacky here, because we don't have any other place to put this code.
+		merged_code.object_files.append_range(runtime_config.shared_libraries);
+
 		// @TODO: #2895 deal with this once weak/strong symbols are added
 		deduplicateCodeCollection(merged_code);
 
-		// This is also a bit hacky here, because we don't have any other place to put this code.
-		merged_code.object_files = runtime_config.shared_libraries;
 
 		std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
 		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");

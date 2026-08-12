@@ -51,4 +51,9 @@ namespace compiler::tsh {
 		return kind == Kind::RawPointer || kind == Kind::Pointer || kind == Kind::ManyPointer
 		    || kind == Kind::CPointer;
 	}
+
+	inline bool isIndexable(Kind kind) {
+		return kind == Kind::Slice || kind == Kind::StaticArray || kind == Kind::DynamicArray
+		    || kind == Kind::ManyPointer || kind == Kind::CPointer;
+	}
 }

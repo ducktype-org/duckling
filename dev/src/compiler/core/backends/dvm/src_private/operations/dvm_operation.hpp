@@ -24,15 +24,6 @@ namespace compiler::backend_vm::internal {
 		DVMCallable                          call_target;
 		base::Optional<vm::code::TypeOfData> return_type;
 		std::vector<vm::code::TypeOfData>    param_types;
-		bool                                 is_extern_c;
-
-		/// Abi of a function called, empty when we call an extern_c function.
-		base::Optional<lir::LIRAbi> abi;
-
-		[[nodiscard]] bool isCAbi() const {
-			if_opt_none(abi) return false;
-			return std::holds_alternative<lir::LIRAbi::CAbi>(abi.value().value);
-		}
 
 		/**
 		 * @brief Created call info for a LIR function.

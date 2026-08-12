@@ -80,14 +80,10 @@ namespace compiler::backend_vm::internal {
 		FunctionCallInfo call_info{
 			.call_target = DVMFunctionName{ .name = func_literal.mangled_name },
 			.return_type = called_result_type,
-			.param_types = param_types,
-			.is_extern_c = false,
-			.abi         = func_literal.abi,
+			.param_types = param_types
 		};
 
-		// A C-ABI function has no LIR body to lower - it is a native symbol the DVM resolves and
-		// calls through libffi, so it is called through an FFI function name.
-		if (call_info.isCAbi())
+		if (v_matches(func_literal.abi.value, lir::LIRAbi::CAbi))
 			call_info.call_target = DVMFFIFunctionName{ .name = func_literal.mangled_name };
 
 		return call_info;
@@ -118,8 +114,6 @@ namespace compiler::backend_vm::internal {
 			.call_target = DVMExternCFunctionName{ .name = ext_func_name },
 			.return_type = called_result_type,
 			.param_types = param_types,
-			.is_extern_c = true,
-			.abi         = {},
 		};
 	}
 

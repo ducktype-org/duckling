@@ -95,7 +95,7 @@ namespace compiler::backend_vm::internal {
 								return OpKind::cast;
 							} else if (pointer_layout.getPointerKind() == ManyPointer
 							           && target_pointer_layout.getPointerKind() == CPointer) {
-								// FIrst ManyPointer -> Pointer, then Pointer -> CPointer
+								// First ManyPointer -> Pointer, then Pointer -> CPointer
 								auto lea_first_element
 									= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
 									const vm::code::TypeOfData& vm_element_type
@@ -105,7 +105,7 @@ namespace compiler::backend_vm::internal {
 									const vm::code::TypeOfData& ptr_to_element_type
 										= ctx->programCtx().getOrInsertPointerType(vm_element_type);
 
-									const auto     zero_index = DVMImmediate::u64(u64(0));
+									const auto     zero_index = DVMImmediate::u64(0);
 									const DVMPlace index_tmp
 										= ctx->pushTempLocal(zero_index.type, "cast_index_tmp");
 									ctx->pushInstruction({ OpKind::mov, index_tmp, zero_index });
@@ -126,7 +126,7 @@ namespace compiler::backend_vm::internal {
 
 								// tmp = 0
 								// out = dynTableLea source, tmp
-								const auto     zero_index = DVMImmediate::u64(u64(0));
+								const auto     zero_index = DVMImmediate::u64(0);
 								const DVMPlace index_tmp
 									= ctx->pushTempLocal(zero_index.type, "cast_index_tmp");
 								ctx->pushInstruction({ OpKind::mov, index_tmp, zero_index });

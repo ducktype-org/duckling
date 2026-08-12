@@ -52,7 +52,7 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
 		}
 
-		if (op.call_info.isCAbi())
+		if (v_matches(op.call_info.call_target, DVMFFIFunctionName))
 			ctx->program_context.insertFFIFunction(ffiFunctionOf(op.call_info));
 
 		ctx->pushInstruction(
