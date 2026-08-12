@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 const gcZero: i64 = 0;
 const gcOne: i64 = 1;
 const gcMOne: i64 = -1;

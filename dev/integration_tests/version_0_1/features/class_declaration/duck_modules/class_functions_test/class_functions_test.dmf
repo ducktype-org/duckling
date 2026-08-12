@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test functions operating on classes
 # Focus: passing classes to functions, returning classes from functions
 

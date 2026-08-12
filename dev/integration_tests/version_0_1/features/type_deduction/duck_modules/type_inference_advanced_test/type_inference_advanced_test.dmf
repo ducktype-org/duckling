@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test advanced type inference scenarios
 # Focus: complex expressions, function returns, literals in different bases
 
