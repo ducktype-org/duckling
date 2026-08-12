@@ -244,89 +244,42 @@ namespace compiler::mir {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMIRFunction);
 
-	/**
-	 * @brief Creates a ctor function for a global data.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(
-		LowerGlobalDataToMIRCtor, KeyOf_LowerGlobalData, CRef<query::QResult<Function>>, ({})
-	)
+	struct KeyOf_LowerGlobalDataToMIRCtorDtor {
+		CRef<helios::HOUTGlobalData> global_data;
+		GlobalVariableCtorDtor::Type type;
 
-	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtor, query::QResult<Function>) {
-		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data->value))
-				CORE_PANIC(
-					"Creating ctors for constant variables does not work, they should use CTVs "
-					"instead."
-				);
-
-			auto function_type = ctx.query<tsh::QueryFunctionType>({
-				{},
-				tsh::SymbolType{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable,
-				},
-			});
-
-			// first step: lowering to pre-mir (cfg+quad)
-			// create function builder
-			FunctionBuilder function_builder{
-				ctx, GlobalVariableCtorDtor::ctor(key.global_data->helios_symbol), function_type
-			};
-			function_builder.setName(base::StrID(
-				base::strConcat("constructor_of_", key.global_data->original_name.strView()).c_str()
-			));
-
-			auto last_block = function_builder.newBlock();
-			last_block->setTerminator(
-				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
-			);
-
-			auto constructor_expr = helios::getMIRConstructorExpr(ctx, key.global_data);
-			auto expr_scope       = function_builder.newScope(function_builder.getTopLevelScope());
-			auto lowerexpr_res
-				= lowerExpr(*constructor_expr.get(), last_block, function_builder, expr_scope);
-
-			std::ignore = lowerexpr_res.getResult(function_builder);
-			function_builder.setEntry(lowerexpr_res.begin);
-
-			auto function_no_lifetime = function_builder.build();
-
-			// second step: lifetime stuff
-			auto function_with_destructors
-				= runAllLifetimePasses(ctx, std::move(function_no_lifetime));
-
-			// eliminating unreachable blocks
-			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
-
-			if (validateFunction(ctx, function_reachable).isBad()) return query::Failed();
-
-			return function_reachable;
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const {
+			// The highest bit distinguishes the ctor from the dtor of the same global, SymID hashes
+			// are indices, so they never reach it.
+			const u64 dtor_bit = type == GlobalVariableCtorDtor::Dtor ? u64(1) << 63 : 0;
+			return global_data->helios_symbol.queryUnstablePerfectHash() | dtor_bit;
 		}
-
-		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRCtor)
-
 	/**
-	 * @brief Creates a dtor function for a global data.
+	 * @brief Creates the ctor or the dtor function for a global data, depending on `type` in the
+	 * key. Both are a single expression (the in-place initialization / the destructor call) lowered
+	 * into a function taking and returning nothing, so they share the whole lowering.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		LowerGlobalDataToMIRDtor, KeyOf_LowerGlobalData, CRef<query::QResult<Function>>, ({})
+		LowerGlobalDataToMIRCtorDtor,
+		KeyOf_LowerGlobalDataToMIRCtorDtor,
+		CRef<query::QResult<Function>>,
+		({})
 	)
 
-	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRDtor, query::QResult<Function>) {
+	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtorDtor, query::QResult<Function>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data->value))
 				CORE_PANIC(
 					"Creating ctors for constant variables does not work, they should use CTVs "
 					"instead."
 				);
+
+			const bool is_ctor = key.type == GlobalVariableCtorDtor::Ctor;
 
 			auto function_type = ctx.query<tsh::QueryFunctionType>({
 				{},
@@ -340,19 +293,29 @@ namespace compiler::mir {
 			// first step: lowering to pre-mir (cfg+quad)
 			// create function builder
 			FunctionBuilder function_builder{
-				ctx, GlobalVariableCtorDtor::dtor(key.global_data->helios_symbol), function_type
+				ctx,
+				is_ctor ? GlobalVariableCtorDtor::ctor(key.global_data->helios_symbol)
+						: GlobalVariableCtorDtor::dtor(key.global_data->helios_symbol),
+				function_type
 			};
-			function_builder.setName(base::StrID(
-				base::strConcat("destructor_of_", key.global_data->original_name.strView()).c_str()
-			));
+			function_builder.setName(base::StrID(base::strConcat(
+				is_ctor ? "constructor_of_" : "destructor_of_",
+				key.global_data->original_name.strView()
+			)));
 
 			auto last_block = function_builder.newBlock();
 			last_block->setTerminator(
 				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
 			);
 
-			auto destructor_expr_opt = helios::getMIRDestructorExpr(ctx, key.global_data);
-			if_opt_some(destructor_expr_opt, expr) {
+			// A trivially destructible global has no destructor to call, so its dtor stays empty.
+			base::Optional<Box<hc::Expr>> body_expr;
+			if (is_ctor)
+				body_expr.emplace(helios::getMIRConstructorExpr(ctx, key.global_data));
+			else
+				body_expr = helios::getMIRDestructorExpr(ctx, key.global_data);
+
+			if_opt_some(body_expr, expr) {
 				auto expr_scope = function_builder.newScope(function_builder.getTopLevelScope());
 				auto lowerexpr_res
 					= lowerExpr(*expr.get(), last_block, function_builder, expr_scope);
@@ -360,7 +323,7 @@ namespace compiler::mir {
 				std::ignore = lowerexpr_res.getResult(function_builder);
 				function_builder.setEntry(lowerexpr_res.begin);
 			}
-			if_opt_none(destructor_expr_opt) { function_builder.setEntry(last_block); }
+			if_opt_none(body_expr) { function_builder.setEntry(last_block); }
 
 			auto function_no_lifetime = function_builder.build();
 
@@ -379,8 +342,7 @@ namespace compiler::mir {
 		QUERY_AUTO_CACHE_CREF
 	};
 
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRDtor)
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRCtorDtor)
 
 	struct IMPLEMENT_QUERY(LowerGlobalData, query::QResult<MIRGlobalData>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
@@ -402,9 +364,15 @@ namespace compiler::mir {
 				}
 				variant_case(helios::HOUTGlobalVariable, hout_expr_initial_value) {
 					CRef mir_ctor_function
-						= &ctx.query<mir::LowerGlobalDataToMIRCtor>(key)->valueOrThrow();
+						= &ctx.query<mir::LowerGlobalDataToMIRCtorDtor>(
+								  { key.global_data, GlobalVariableCtorDtor::Ctor }
+						)
+					           ->valueOrThrow();
 					CRef mir_dtor_function
-						= &ctx.query<mir::LowerGlobalDataToMIRDtor>(key)->valueOrThrow();
+						= &ctx.query<mir::LowerGlobalDataToMIRCtorDtor>(
+								  { key.global_data, GlobalVariableCtorDtor::Dtor }
+						)
+					           ->valueOrThrow();
 					return MIRGlobalData{
 						.global = MIRGlobal{
 							key.global_data->helios_symbol,

@@ -69,10 +69,6 @@ private:
 			{ "is used after it has been moved out of.", "Value moved here." },
 			1
 		);
-
-		// Note: `move` on a projection (`move a.x`) is rejected in HOUT now, since a projection is
-		// not an owned value. That diagnostic is covered by helios_errors_test's
-		// `testMoveOperandErrors`.
 	}
 
 	void testUseBeforeInit() {
