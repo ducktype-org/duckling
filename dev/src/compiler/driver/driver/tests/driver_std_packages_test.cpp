@@ -33,7 +33,6 @@ class StdPackagesTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(verifyStdConfigMatchesCanonicalIds);
 		TESTER_ADD_TEST(verifyStdPackagesAndDependencies);
 		TESTER_ADD_TEST(verifyStdLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(compileStdPackages);
@@ -90,63 +89,30 @@ protected:
 
 private:
 	/**
-	 * @brief The driver's STD_PACKAGES_CONFIG holds only std-library mechanics (subpaths, deps,
-	 * artifact names); the canonical identity lives in frontend/packages. This guards against the
-	 * two drifting apart — every config entry must be a canonical std package, and vice versa.
-	 */
-	void verifyStdConfigMatchesCanonicalIds() {
-		const auto& canonical_ids = frontend::packages::standardLibraryPackageIds();
-		assertTrue(
-			driver::STD_PACKAGES_CONFIG.size() == canonical_ids.size(),
-			"STD_PACKAGES_CONFIG size must match the canonical std package id list"
-		);
-		for (const auto& config: driver::STD_PACKAGES_CONFIG) {
-			assertTrue(
-				frontend::packages::isStandardLibraryPackage(base::StrID(config.name)),
-				base::strConcat(
-					"STD_PACKAGES_CONFIG entry '",
-					config.name,
-					"' is not a canonical standard-library package"
-				)
-			);
-		}
-	}
-
-	/**
 	 * @brief Verifies presence and dependency relationships of standard packages.
 	 */
 	void verifyStdPackagesAndDependencies() {
 		const auto& global_packages = global_state::getPackages();
 
 		// Check that standard library packages exist
-		for (const auto& std_pkg_config: driver::STD_PACKAGES_CONFIG) {
+		for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
 			if (std::ranges::none_of(global_packages, [&](const auto& pkg) {
-					return pkg.getPackageID() == base::StrID(std_pkg_config.name);
+					return pkg.getPackageID() == std_id;
 				})) {
-				assertTrue(
-					false,
-					base::strConcat("Standard library package not found: ", std_pkg_config.name)
-				);
+				assertTrue(false, base::strConcat("Standard library package not found: ", std_id));
 			}
 		}
 
 		// Check that non-std packages have standard library dependencies
 		for (const auto& pkg: global_packages) {
-			const auto pkg_id = pkg.getPackageID().strView();
-
 			// Skip checking dependencies of the std lib itself
-			bool is_std_lib
-				= std::ranges::any_of(driver::STD_PACKAGES_CONFIG, [&](const auto& std_pkg_config) {
-					  return pkg_id == std_pkg_config.name;
-				  });
-			if (is_std_lib) continue;
+			if (frontend::packages::isStandardLibraryPackage(pkg.getPackageID())) continue;
 
 			// Verify it depends on all std packages
-			for (const auto& std_pkg_config: driver::STD_PACKAGES_CONFIG) {
+			for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
 				bool depends_on_std = false;
 				for (const auto& dep: pkg.getDependencies().illegalAccess()) {
-					if (dep.illegalAccess().getPackage().illegalAccess().getID()
-					    == base::StrID(std_pkg_config.name)) {
+					if (dep.illegalAccess().getPackage().illegalAccess().getID() == std_id) {
 						depends_on_std = true;
 						break;
 					}

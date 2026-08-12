@@ -6,8 +6,21 @@
 
 namespace compiler::frontend::packages {
 
+	const std::vector<StandardLibraryPackage>& standardLibraryPackages() {
+		static const std::vector<StandardLibraryPackage> packages{
+			{ .id = base::StrID("core"), .dependencies = {} },
+			{ .id = base::StrID("std"), .dependencies = { base::StrID("core") } },
+		};
+		return packages;
+	}
+
 	const std::vector<base::StrID>& standardLibraryPackageIds() {
-		static const std::vector ids{ base::StrID("core"), base::StrID("std") };
+		static const std::vector<base::StrID> ids = [] {
+			std::vector<base::StrID> result;
+			result.reserve(standardLibraryPackages().size());
+			for (const auto& package: standardLibraryPackages()) result.push_back(package.id);
+			return result;
+		}();
 		return ids;
 	}
 

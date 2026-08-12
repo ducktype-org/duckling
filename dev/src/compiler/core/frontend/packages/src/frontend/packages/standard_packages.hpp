@@ -5,15 +5,32 @@
 #include <query_framework/context/context_fd.hpp>
 #include <string_id/string_id.hpp>
 
-#include <array>
 #include <vector>
 
 namespace compiler::frontend::packages {
 
 	/**
-	 * @brief The identifiers of the standard-library packages.
+	 * @brief A standard-library package: its id and the other standard-library packages it depends
+	 * on. On-disk layout (the package lives in a directory named after its id under the std root)
+	 * and artifact names are derived from the id by the driver.
+	 */
+	struct StandardLibraryPackage final {
+		base::StrID              id;
+		std::vector<base::StrID> dependencies;
+	};
+
+	/**
+	 * @brief The standard-library packages, in dependency order (a package's dependencies appear
+	 * before it).
 	 *
-	 * This is the single source of truth for which packages make up the standard library.
+	 * This is the single source of truth for which packages make up the
+	 * core and the standard library and how they depend on one another.
+	 */
+	const std::vector<StandardLibraryPackage>& standardLibraryPackages();
+
+	/**
+	 * @brief The identifiers of the standard-library packages, derived from
+	 * `standardLibraryPackages()`.
 	 */
 	const std::vector<base::StrID>& standardLibraryPackageIds();
 
