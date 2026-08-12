@@ -14,7 +14,9 @@ use crate::quackpack::schemas::manifest::{
 use crate::util::error::QuackResultContext;
 use crate::{DuckContext, QuackResult, StrId};
 
-/// Parse [`Dependencies`] from the [`DependenciesSchema`].
+/// Parse [`Dependency`]ies from the [`DependenciesSchema`], and append them into a vector.
+///
+/// It is a role of a caller to make sure that [`DependenciesSchema`] matches [`DependencyKind`].
 #[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
