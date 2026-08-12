@@ -22,10 +22,8 @@ fun main() -> i64 = {
     var box_box_a: box box i32 = new a;
     builtin_output_i64(box_box_a);
 
-    # @TODO: #1894 This works, but causes double free since the box is moved. 
-    # Uncomment when implemented.
-    # var box_ref_from_box: box ref i32 = box_a;
-    # builtin_output_i64(box_ref_from_box);
+    var box_ref_from_box: box ref i32 = new box_a;
+    builtin_output_i64(box_ref_from_box);
 
     var box_ref_from_ref: box ref i32 = new ref_a;
     builtin_output_i64(box_ref_from_ref);
