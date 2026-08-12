@@ -1,11 +1,11 @@
-use std::path::Path;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use crate::duck::driver::cli_ext::{multi, optional};
-use crate::quackpack::core::{FeatureName, GitReference, Source, Version, fetcher};
+use crate::quackpack::core::Version;
+use crate::quackpack::schemas::manifest::{DependencySource, DetailedSource};
 use crate::quackpack::subcommands::add::{AddOptions, add};
-use crate::quackpack::util::to_url::ToUrl;
-use crate::{DuckContext, QuackResult, StrId};
+use crate::{DuckContext, QuackResult};
 use clap::{Arg, ArgGroup, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, subcommand};
@@ -42,37 +42,39 @@ pub fn get_parser() -> Command {
 
 /// Logic for executing the `add` subcommand.
 pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
+    let alias = matches.get_one::<String>("alias").cloned();
+    let name = matches.get_one::<String>("name").expect("guarded by the parser").clone();
+    let source_name = if alias.is_some() { Some(name.clone()) } else { None };
     let source = if let Some(git_url) = matches.get_one::<String>("git-url") {
-        let url = git_url.to_url()?;
-        let reference = if let Some(branch) = matches.get_one::<StrId>("git-branch") {
-            GitReference::Branch(*branch)
-        } else if let Some(tag) = matches.get_one::<StrId>("git-tag") {
-            GitReference::Tag(*tag)
-        } else if let Some(commit) = matches.get_one::<StrId>("commit") {
-            GitReference::Rev(*commit)
-        } else {
-            GitReference::Default
-        };
-        Source::for_git(url, reference)
+        let tag = matches.get_one("git-tag").cloned();
+        let commit = matches.get_one("git-commit").cloned();
+        let branch = matches.get_one("git-branch").cloned();
+        Some(DependencySource::Detailed(DetailedSource { registry_url: None, name: source_name, path: None,
+            git_url: Some(git_url.clone()), tag, commit, branch}))
     } else if let Some(registry_url) = matches.get_one::<String>("registry-url") {
-        let url = registry_url.to_url()?;
-        Source::for_registry(url)
-    } else if let Some(path) = matches.get_one::<String>("local") {
-        Source::for_local(Path::new(path))?
+        if source_name.is_some() {
+            Some(DependencySource::Detailed(DetailedSource { registry_url: Some(registry_url.clone()), name: source_name,
+            path: None, git_url: None, tag: None, commit: None, branch: None}))
+        } else {
+            Some(DependencySource::Simple(registry_url.clone()))
+        }
+    } else if let Some(path) = matches.get_one::<PathBuf>("local") {
+        Some(DependencySource::Detailed(DetailedSource { registry_url: None, name: source_name, path: Some(path.clone()),
+        git_url: None, tag: None, commit: None, branch: None}))
     } else {
-        Source::for_registry(fetcher::Fetcher::DEFAULT_REGISTRY_URL.to_url()?)
+        None
     };
-    let versions: Vec<Version> = matches
+    let versions = matches
         .get_many::<String>("version")
         .into_iter()
         .flatten()
         .map(|v| Version::from_str(v))
         .collect::<QuackResult<Vec<Version>>>()?;
-    let features: Vec<FeatureName> = matches
+    let features = matches
         .get_many::<String>("features")
         .into_iter()
         .flatten()
-        .map(FeatureName::from)
+        .cloned()
         .collect();
     let options = AddOptions {
         name: matches

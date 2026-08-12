@@ -106,6 +106,16 @@ impl Manifest {
         }
         DependencyRemoved::Yes
     }
+
+    pub fn add_dependency(&mut self, name: String, dependency: Dependency) -> DependencyAdded {
+        let dependencies = self.dependencies.get_or_insert(Dependencies::new());
+        if dependencies.contains_key(&name) {
+            DependencyAdded::AlreadyExists
+        } else {
+            dependencies.insert(name, dependency);
+            DependencyAdded::Yes
+        }
+    }
 }
 
 /// Marker struct for a removal of a dependency.
@@ -113,6 +123,12 @@ pub enum DependencyRemoved {
     Yes,
     NoDependency,
     NoDependencyButDevDepExists,
+}
+
+/// Marker struct for an addition of a dependency.
+pub enum DependencyAdded {
+    Yes,
+    AlreadyExists,
 }
 
 #[skip_serializing_none]
