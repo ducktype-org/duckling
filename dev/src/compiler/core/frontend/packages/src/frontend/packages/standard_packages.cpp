@@ -3,6 +3,7 @@
 #include <frontend/module_tree/queries.hpp>
 
 #include <algorithm>
+#include <ranges>
 
 namespace compiler::frontend::packages {
 
@@ -15,12 +16,9 @@ namespace compiler::frontend::packages {
 	}
 
 	const std::vector<base::StrID>& standardLibraryPackageIds() {
-		static const std::vector<base::StrID> ids = [] {
-			std::vector<base::StrID> result;
-			result.reserve(standardLibraryPackages().size());
-			for (const auto& package: standardLibraryPackages()) result.push_back(package.id);
-			return result;
-		}();
+		static const std::vector<base::StrID> ids
+			= standardLibraryPackages() | std::views::transform(&StandardLibraryPackage::id)
+		    | std::ranges::to<std::vector>();
 		return ids;
 	}
 
