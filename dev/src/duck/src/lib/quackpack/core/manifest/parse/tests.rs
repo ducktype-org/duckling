@@ -9,6 +9,7 @@ use crate::quackpack::core::manifest::parse::frontmatter::parse_frontmatter;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, StrId};
 
@@ -429,26 +430,7 @@ dependencies:
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
     assert!(a.source().is_local());
     let path = a.source().url().to_path_buf().unwrap();
-    #[cfg(windows)]
-    assert_eq!(
-        PathBuf::from(format!("\\\\?\\{}", path.display())),
-        manifest_path
-            .parent()
-            .unwrap()
-            .resolve()
-            .unwrap()
-            .join("xd")
-    );
-    #[cfg(not(windows))]
-    assert_eq!(
-        path,
-        manifest_path
-            .parent()
-            .unwrap()
-            .resolve()
-            .unwrap()
-            .join("xd")
-    );
+    assert_eq!(path, manifest_path.parent().unwrap().normalize().join("xd"));
     assert!(a.versions().is_empty());
     assert_eq!(a.name(), a.effective_name());
     assert!(a.alias().is_none());
@@ -460,19 +442,6 @@ dependencies:
     assert!(a1.source().is_local());
 
     let path = a1.source().url().to_path_buf().unwrap();
-    #[cfg(windows)]
-    assert_eq!(
-        PathBuf::from(format!("\\\\?\\{}", path.display())),
-        manifest_path
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .resolve()
-            .unwrap()
-            .join("xd")
-    );
-    #[cfg(not(windows))]
     assert_eq!(
         path,
         manifest_path
@@ -480,8 +449,7 @@ dependencies:
             .unwrap()
             .parent()
             .unwrap()
-            .resolve()
-            .unwrap()
+            .normalize()
             .join("xd")
     );
     assert!(a1.alias().is_none());
@@ -501,11 +469,12 @@ dependencies:
         .get_by_name(StrId::new("a3"))
         .unwrap();
     assert!(a3.source().is_local());
+    let path = a3.source().url().to_path_buf().unwrap();
+    #[cfg(windows)]
+    // On Windows `/xd` is an absolute path.
+    assert_eq!(path, PathBuf::from("C:\\xd"));
     #[cfg(not(windows))]
-    {
-        let path = a3.source().url().to_path_buf().unwrap();
-        assert_eq!(path, PathBuf::from("/xd"));
-    }
+    assert_eq!(path, PathBuf::from("/xd"));
     assert!(a3.alias().is_none());
 
     let b = summary.dependencies().get_by_name(StrId::new("b")).unwrap();
@@ -860,8 +829,6 @@ dependencies:
 }
 
 #[test]
-#[cfg(not(windows))]
-// @TODO: #3135 Fix to_url() calls on paths on windows
 fn git_url_points_to_local_dir() {
     let root_dir = TempDir::new().unwrap();
     let (dir, manifest_path) = prepare_manifest(&format!(
@@ -880,6 +847,7 @@ dependencies:
     let ctx = DuckContext::default();
 
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    let file_url = root_dir.path().to_url().unwrap();
     assert_eq!(
         err.to_string(),
         make_errors_message(
@@ -887,8 +855,8 @@ dependencies:
             [
                 "git dependency points to a file on the disk",
                 &format!(
-                    "either change it to a local dependency or change the URL to `file://{}`",
-                    root_dir.path().display()
+                    "either change it to a local dependency or change the URL to `{}`",
+                    file_url,
                 ),
                 &format!("`{}` is not a valid url", root_dir.path().display()),
                 "relative URL without a base",
@@ -1477,7 +1445,7 @@ venv:
     assert!(!summary.venv().expose_freezefile());
     assert_eq!(
         summary.venv().storage_path(),
-        dir.path().join("storage").resolve().unwrap(),
+        dir.path().join("storage").normalize(),
     );
 }
 
@@ -1496,7 +1464,11 @@ venv:
     let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
-    assert_eq!(summary.venv().storage_path(), PathBuf::from("/storage"),);
+    #[cfg(windows)]
+    let desired_path = PathBuf::from("C:\\storage");
+    #[cfg(not(windows))]
+    let desired_path = PathBuf::from("/storage");
+    assert_eq!(summary.venv().storage_path(), desired_path,);
 }
 
 #[test]

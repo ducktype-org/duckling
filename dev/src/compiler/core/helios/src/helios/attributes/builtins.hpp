@@ -71,11 +71,6 @@ namespace compiler::helios {
 		 */
 		MoveIn,
 		/**
-		 * `element_ptr(pointer: manyptr T, index: i64) -> ptr T`: address of the element at
-		 * `index`.
-		 */
-		ElementPtr,
-		/**
 		 * Box allocation / deallocation, dynamic-array (list) freeing and the box destructor.
 		 * Unlike the other builtins these are not selected by the `@builtin("...")` attribute. They
 		 * are only called by the compiler in `box T`/`[T]` constructors and destructors.

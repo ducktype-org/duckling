@@ -714,6 +714,30 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Represents a pointer creation expression (`ptrof`).
+	 * It takes a place holding a value of symbol type `S` and produces a value of type `ptr S`.
+	 *
+	 * Unlike `RefOfExpr`, the reference kind of the operand is kept instead of being collapsed into
+	 * `Ref`: `ptrof` on a place of type `box T` yields `ptr box T`, the address of the box itself,
+	 * and not a reference to its pointee. That makes it the way to address an element of a buffer
+	 * whose element type is itself a reference or a box.
+	 */
+	struct PtrOfExpr final: public Expr {
+		Box<Expr> inner;
+
+		PtrOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		PtrOfExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
+	};
+
+	/**
 	 * @brief Represents a move expression (`move x`, or an implicit move of a temporary).
 	 *
 	 * It takes a place of type T and produces a value of the same type, but as a temporary,

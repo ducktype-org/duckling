@@ -1,0 +1,47 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "dependencies:
+    a:
+      source:
+        path: ../a
+  dev-dependencies:
+    b:
+      source:
+        path: ../b" >> foo/quackconfig.yaml
+PostCase: python3 check.py @{expected-manifest} && @{cleanup_tmp_env}
+
+Tests:
+  basic:
+    Description: properly removes dependencies from manifest
+    Cases:
+      dependency:
+        expected-manifest: only-b
+        test-cmd: duck -C foo remove a
+        Output:
+          Run: |+
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
+            echo "info: successfully removed dependency \`a\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+      dev-dependency-no-flag-error:
+        expected-manifest: all
+        test-cmd: duck -C foo remove b
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: no such dependency as \`b\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`" &&
+            echo "" &&
+            echo "hint: if you want to remove a dev-dependency use flag \`--dev\`"
+      dev-dependency-flag:
+        expected-manifest: only-a
+        test-cmd: duck -C foo remove b --dev
+        Output:
+          Run: |+
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`"
+            echo "info: successfully removed dev-dependency \`b\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+      no-dependency-error:
+        expected-manifest: all
+        test-cmd: duck -C foo remove c
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: no such dependency as \`c\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`"

@@ -129,7 +129,8 @@ fn run_subcmd(
                 .with_context(|| format!("failed to execute the external subcommand `{sub_cmd}`"))
         }
         (None, None, Some(path)) => {
-            let path = ctx.cwd().join(path);
+            let path = Path::new(path);
+            let path = path.resolve_with_tilde(ctx);
             check_is_script(&path)?;
             let args = external_cli_args(sub_args);
             run_script(RunScriptOptions::from_path_and_args_with_defaults(

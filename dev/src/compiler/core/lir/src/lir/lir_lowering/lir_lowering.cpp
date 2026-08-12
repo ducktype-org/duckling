@@ -532,8 +532,7 @@ namespace compiler::lir {
 			 *
 			 * `move_out(pointer)` becomes a read of `*pointer` and `move_in(pointer, value)`
 			 * a store into `*pointer`. Both are plain assignments: no copy constructor runs, and
-			 * nothing under `pointer` is destroyed. `element_ptr(pointer, index)` becomes the
-			 * address of `pointer[index]`.
+			 * nothing under `pointer` is destroyed.
 			 *
 			 * @return Whether the call was a builtin and got lowered here.
 			 */
@@ -575,18 +574,6 @@ namespace compiler::lir {
 							std::vector<LIRValue>{ value.value() },
 							mir_instruction.metadata
 						);
-					return true;
-				}
-				case helios::BuiltinKind::ElementPtr: {
-					const auto& buffer  = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
-					const auto  element = buffer.withIndex(mir_instruction.arguments.at(2));
-
-					curr_block->instructions.emplace_back(
-						Operation::AddressOf,
-						getOutput(mir_instruction.output),
-						std::vector<LIRValue>{ getPlace(element) },
-						mir_instruction.metadata
-					);
 					return true;
 				}
 				default:
