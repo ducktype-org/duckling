@@ -4,7 +4,7 @@ use super::{Dependency, DependencyKind};
 use crate::StrId;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-/// A selector allows to easy filter the dependencies vector.
+/// A selector allows to easily filter the dependencies vector.
 pub enum Selector {
     Name(StrId),
     Alias(StrId),
