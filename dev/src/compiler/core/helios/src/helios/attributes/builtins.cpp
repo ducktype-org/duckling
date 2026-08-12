@@ -278,7 +278,7 @@ namespace compiler::helios {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name = builtinKindToStr(BuiltinKind::BoxAlloc),
 			.generated_symbol_data
-			= defgen::BuiltinTemplatedSymbol{ pointee_type,
+			= defgen::BuiltinTemplatedSymbol{ tsh::SymbolType<>::withDefaults(pointee_type),
 		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc },
 		});
 	}
@@ -287,12 +287,21 @@ namespace compiler::helios {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name = builtinKindToStr(BuiltinKind::BoxFree),
 			.generated_symbol_data
-			= defgen::BuiltinTemplatedSymbol{ pointee_type,
+			= defgen::BuiltinTemplatedSymbol{ tsh::SymbolType<>::withDefaults(pointee_type),
 		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxFree },
 		});
 	}
 
-	SymID listFreeSymForType(query::Context& ctx, tsh::AbstractType element_type) {
+	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
+		return ctx.query<defgen::QueryGeneratedSymbol>({
+			.name = builtinKindToStr(BuiltinKind::BoxDestructor),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ tsh::SymbolType<>::withDefaults(pointee_type),
+		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor },
+		});
+	}
+
+	SymID listFreeSymForType(query::Context& ctx, tsh::SymbolType<> element_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name = builtinKindToStr(BuiltinKind::ListFree),
 			.generated_symbol_data
@@ -301,12 +310,12 @@ namespace compiler::helios {
 		});
 	}
 
-	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
+	SymID moveInSymForType(query::Context& ctx, tsh::SymbolType<> element_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = builtinKindToStr(BuiltinKind::BoxDestructor),
+			.name = builtinKindToStr(BuiltinKind::MoveIn),
 			.generated_symbol_data
-			= defgen::BuiltinTemplatedSymbol{ pointee_type,
-		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor },
+			= defgen::BuiltinTemplatedSymbol{ element_type,
+		                                      defgen::BuiltinTemplatedSymbol::Kind::MoveIn },
 		});
 	}
 
@@ -322,4 +331,5 @@ namespace compiler::helios {
 		auto callee = withOrigin(origin, s.ident(boxAllocSymForType(ctx, pointee_type)));
 		return withOrigin(origin, s.call(std::move(callee), std::move(inner)));
 	}
+
 }

@@ -11,6 +11,7 @@
 
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include "helios/attributes/builtins.hpp"
 
 namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryHOUTGlobalData, query::QResult<HOUTGlobalData>) {
@@ -106,10 +107,7 @@ namespace compiler::helios {
 		CRef<code::Expr> initial_value_expr
 			= v_get(global_data->value, HOUTGlobalVariable).initial_value.ref();
 
-		auto move_in_symbol = helios::getTemplatedPrimitiveSymID(
-								  ctx, helios::LanguagePrimitive::MoveIn, { global_data->type }
-		)
-		                          .valueOrThrow();
+		auto move_in_symbol = moveInSymForType(ctx, global_data->type);
 		return s.call(
 			s.ident(move_in_symbol),
 			s.refOf(s.ident(global_data->helios_symbol)),

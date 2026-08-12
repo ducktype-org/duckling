@@ -64,13 +64,18 @@ fun main() -> i64 = {
 
     var dyn_matrix: List[List[i64]];
     var dyn_a: List[i64]; var dyn_b: List[i64];
-    dyn_a.push(1); dyn_b.push(1);
+    dyn_a.push(1); dyn_b.push(2);
     dyn_matrix.push(move dyn_a); dyn_matrix.push(move dyn_b);
-    
-    for (row in copy dyn_matrix) {
-        for (col in copy row) {
+
+    # `for (row in copy dyn_matrix)` is rejected, since binding `row` would implicitly copy a
+    # non-trivially-copyable `List[i64]`. The copy has to be explicit, so the outer loop indexes.
+    var i: i64 = 0;
+    while (i < dyn_matrix.length() as i64) {
+        var row = copy dyn_matrix[i];
+        for (col in row) {
             builtin_output_i64(col);
         }
+        i = i + 1;
     }
 
     # This doesn't work since `[]` doesn't return a ref, so currently this feature is just not supported.

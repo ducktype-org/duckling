@@ -9,6 +9,7 @@
 #include <base/extend_cpp/flag.hpp>
 
 #include <string_id/string_id.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 namespace query {
 	struct Context;
@@ -148,7 +149,9 @@ namespace compiler::helios {
 	 *
 	 * The returned symbol is a declaration only, it's implemented in both backends.
 	 */
-	SymID listFreeSymForType(query::Context& ctx, tsh::AbstractType element_type);
+	SymID listFreeSymForType(query::Context& ctx, tsh::SymbolType<> element_type);
+
+	SymID moveInSymForType(query::Context& ctx, tsh::SymbolType<> element_type);
 
 	/**
 	 * @brief Build a HOUT expression that constructs a `box T` holding `inner`.
