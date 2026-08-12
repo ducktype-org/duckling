@@ -267,8 +267,12 @@ fn parse_git_url(
     package_root: &Path,
     ctx: &DuckContext,
 ) -> QuackResult<Url> {
+    // @TODO: #2542 Unfortunately, windows absolute paths are (often) valid URLs (like `C:\xd`
+    // => `C:/xd` => `{schema: "C", path: "/xd" }`).
+    // Therefore, we can have false positives here. Maybe in `Ok` case we should check it? (That
+    // `Path::new(manifest_git_url).exists()`?) and create a warning?
     let git_url = manifest_git_url.to_url();
-    let mut err: QuackError = match git_url {
+    let mut err = match git_url {
         Ok(parsed) => return Ok(parsed),
         Err(err) => err,
     };
@@ -276,9 +280,15 @@ fn parse_git_url(
     // If an original URL points to a file, mention it to the user. Also, ignore any errors.
     let path = resolve_path_maybe_relative_to_dir(Path::new(manifest_git_url), package_root, ctx);
     if path.exists() {
+        // If we can construct a URL from the path, use it (less likely that user will have to run
+        // `sync` again, because our manual hint was wrong).
+        // But keep it as a "best effort".
+        let path_url_hint = match path.to_url() {
+            Ok(url) => url.to_string(),
+            Err(_) => format!("file://{}", path.display()),
+        };
         err = err.add_hint(format!(
-            "either change it to a local dependency or change the URL to `file://{}`",
-            path.display()
+            "either change it to a local dependency or change the URL to `{path_url_hint}`",
         ));
         err = err.add_note("git dependency points to a file on the disk");
     }
