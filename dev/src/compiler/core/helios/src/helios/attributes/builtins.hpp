@@ -4,12 +4,12 @@
 #include <helios/hout/hout_fd.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/flag.hpp>
 
 #include <string_id/string_id.hpp>
-#include <helios/tsh/symbol_type.hpp>
 
 namespace query {
 	struct Context;

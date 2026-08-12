@@ -24,6 +24,7 @@ namespace compiler::tsh {
 	 */
 	enum class PrimaryCategory {
 		Temporary,    /**< Product of expression evaluation. An owned rvalue. */
+		Projected,    /**< Product of a projection evaluation, non-owned rvalue. */
 		Local,        /**< A local variable. An owned lvalue. */
 		Global,       /**< A global variable. A non-owned lvalue. */
 		Literal,      /**< A value written explicitly in the code. A non-owned rvalue. */
@@ -156,6 +157,7 @@ namespace compiler::tsh {
 			case PrimaryCategory::Local:
 			case PrimaryCategory::Global:
 			case PrimaryCategory::Dereferenced:
+			case PrimaryCategory::Projected:
 				return true;
 			case PrimaryCategory::Temporary:
 			case PrimaryCategory::Literal:
@@ -175,6 +177,7 @@ namespace compiler::tsh {
 			case PrimaryCategory::Local:
 			case PrimaryCategory::Global:
 			case PrimaryCategory::Dereferenced:
+			case PrimaryCategory::Projected:
 				return true;
 			case PrimaryCategory::Temporary:
 			case PrimaryCategory::Literal:
@@ -190,7 +193,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		bool isMovableFrom() const {
-			return category == PrimaryCategory::Local;
+			return category == PrimaryCategory::Local or category == PrimaryCategory::Temporary;
 		}
 
 		/**

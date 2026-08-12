@@ -49,6 +49,13 @@ namespace compiler::tsh {
 			allows_semantic = COPY | REINIT
 			                | USE;  // Same as Global (but it's not a global) - non-owned lvalue.
 			break;
+		case PrimaryCategory::Projected:
+			category = PrimaryCategory::Projected;
+			// A projection is a part of a value somebody else owns, so it cannot be moved out of
+			// or destroyed on its own. Reading and assigning it is fine.
+			is_pure         = false;
+			allows_semantic = COPY | REINIT | USE;
+			break;
 		case PrimaryCategory::Literal:
 			category        = PrimaryCategory::Literal;
 			is_pure         = true;

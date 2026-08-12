@@ -43,6 +43,7 @@ public:
 		TESTER_ADD_TEST(testErrorLoggingTemplates);
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testPtrOfErrors);
+		TESTER_ADD_TEST(testMoveOperandErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
@@ -1592,6 +1593,49 @@ private:
 
 			)",
 			{ "cannot be converted to type `i64`" },
+			1
+		);
+	}
+
+	/// @brief `move` only accepts values that own themselves, i.e. locals and temporaries.
+	void testMoveOperandErrors() {
+		const std::string_view msg = "`move` can only be applied to an owned local variable.";
+
+		// A field is a projection of a value the class owns, so it cannot be moved out of on its
+		// own.
+		checkForErrorOnCompileModule(
+			R"(
+				class Cls { x: i64; }
+				fun moveField() = {
+					let a = Cls(10);
+					move a.x;
+				}
+			)",
+			{ msg },
+			1
+		);
+
+		// The same for an element of an array.
+		checkForErrorOnCompileModule(
+			R"(
+				fun moveElement() = {
+					var arr: i64[2];
+					move arr[0];
+				}
+			)",
+			{ msg },
+			1
+		);
+
+		// A global is not owned by the moving scope.
+		checkForErrorOnCompileModule(
+			R"(
+				var g: i64 = 5;
+				fun moveGlobal() = {
+					move g;
+				}
+			)",
+			{ msg },
 			1
 		);
 	}

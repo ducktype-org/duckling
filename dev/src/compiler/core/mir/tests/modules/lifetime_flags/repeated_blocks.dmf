@@ -3,7 +3,7 @@ class R {
     R.destroy() = { var t: i32 = a; }
 }
 
-fun foo() -> R = {
+fun main() -> R = {
     var a: R;
     {
         var b: R;
@@ -18,4 +18,3 @@ fun foo() -> R = {
 
     return a;
 }
-fun main() = {return 0;}

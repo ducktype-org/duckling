@@ -149,7 +149,8 @@ private:
 		);
 	}
 
-	void globalVariablesTest() { runTestForModule("modules/global-variables", 4, 4); }
+	// Both globals get a ctor and a dtor, and the module gets a ctor and a dtor calling them.
+	void globalVariablesTest() { runTestForModule("modules/global-variables", 7, 7); }
 
 	void unitsTest() {
 		runTestForModule("modules/units/unit1", 2, 2);
@@ -161,7 +162,7 @@ private:
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 7, 8); }
+	void classTest() { runTestForModule("modules/classes/records", 10, 11); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 

@@ -853,9 +853,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType(
 				  ctx.query<QueryTypeOfSymbol>(field)->valueOrThrow(),
-				  // The accessed field inherits the base's value category. If the class is a
-	              // Local/Global, then so is the accessed field.
-				  base->expression_type.getValueCategory()
+				  tsh::ValueCategory(tsh::PrimaryCategory::Projected)
 			  ),
 			  origin
 		  ),
@@ -907,9 +905,7 @@ namespace compiler::helios::code {
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }
 				  }(),
-				  // Propagate the base category. If the array is a Local/Global, then the
-	              // indexed element is as well.
-				  base->expression_type.getValueCategory()
+				  tsh::ValueCategory(tsh::PrimaryCategory::Projected)
 			  ),
 			  origin
 
@@ -1050,7 +1046,19 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType<>(
 				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+				  tsh::ValueCategory(
+					  [](const tsh::ExpressionType<>& inner_type) -> tsh::PrimaryCategory {
+						  switch (inner_type.getSymbolType().getRefKind()) {
+						  case tsh::ReferenceKind::Direct:
+							  return tsh::PrimaryCategory::Temporary;
+						  case tsh::ReferenceKind::Ref:
+							  return inner_type.getValueCategory().getCategory();
+						  case tsh::ReferenceKind::Box:
+							  return tsh::PrimaryCategory::Dereferenced;
+						  }
+						  CORE_UNREACHABLE();
+					  }(inner->expression_type)
+				  )
 			  ),
 			  origin
 		  ),

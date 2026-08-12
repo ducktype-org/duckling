@@ -70,16 +70,9 @@ private:
 			1
 		);
 
-		// ===================== Move from a non-local place (NYI) =====================
-		compiler::mir::test_utils::checkForErrorOnCompileModule(
-			R"(class Cls { x: i64; }
-               fun moveField() = {
-                   let a = Cls(10);
-                   move a.x;
-               })",
-			{ "Moving from a non-local place is not supported yet." },
-			1
-		);
+		// Note: `move` on a projection (`move a.x`) is rejected in HOUT now, since a projection is
+		// not an owned value. That diagnostic is covered by helios_errors_test's
+		// `testMoveOperandErrors`.
 	}
 
 	void testUseBeforeInit() {

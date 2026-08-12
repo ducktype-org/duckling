@@ -76,11 +76,23 @@ namespace compiler::helios {
 			// of a materialised tuple would lose the shape of the element expressions, which some
 			// coercions still need - lifting a value to a `type` for instance only works on the
 			// original expression. It also avoids materialising the source tuple altogether.
-			// Tuple literals are wrapped in the parenthesis they are written with, so those are
-			// looked through.
+			// Tuple literals are wrapped in the parenthesis they are written with, and a literal
+			// handed to a new owner is wrapped in an implicit move, so those are looked through.
+			// The elements are consumed one by one below, which is what the move would have done
+			// for the tuple as a whole.
 			code::Expr* unwrapped = expr.get();
-			while (auto* parenthesis = dynamic_cast<code::ParenthesisExpr*>(unwrapped))
-				unwrapped = parenthesis->inner.get();
+			while (true) {
+				if (auto* parenthesis = dynamic_cast<code::ParenthesisExpr*>(unwrapped)) {
+					unwrapped = parenthesis->inner.get();
+					continue;
+				}
+				if (auto* move = dynamic_cast<code::MoveExpr*>(unwrapped);
+				    move != nullptr && move->kind == code::MoveExpr::MoveKind::Implicit) {
+					unwrapped = move->inner.get();
+					continue;
+				}
+				break;
+			}
 
 			if (auto* tuple_literal = dynamic_cast<code::TupleExpr*>(unwrapped)) {
 				std::vector<Box<code::Expr>> literal_elements;
@@ -177,16 +189,23 @@ namespace compiler::helios {
 
 		// If the value is being moved already, we pass it by `ByteCopy`.
 		if (value.getValueCategory().mustMove()) return PassingMethod::ByteCopy;
-		if (symbol_type.isTriviallyCopyable(ctx)) return PassingMethod::ByteCopy;
 
 		switch (value.getValueCategory().getCategory()) {
 		case tsh::PrimaryCategory::Temporary:
+			// So it is byte-copied instead - purely an optimization,
+			// which keeps the generated HOUT free of `implicit_move` on everything.
+			// A trivially destructible one owns nothing to hand over though,
+			// and moving it out of would produce exactly the same code as copying its bytes
+			if (symbol_type.isTriviallyDestructible(ctx) and symbol_type.isTriviallyCopyable(ctx))
+				return PassingMethod::ByteCopy;
 			return PassingMethod::ImplicitMove;
 		case tsh::PrimaryCategory::Literal:
 			return PassingMethod::ByteCopy;
 		case tsh::PrimaryCategory::Local:
 		case tsh::PrimaryCategory::Global:
 		case tsh::PrimaryCategory::Dereferenced:
+		case tsh::PrimaryCategory::Projected:
+			if (symbol_type.isTriviallyCopyable(ctx)) return PassingMethod::ByteCopy;
 			return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
 			                                   : PassingMethod::NotCopyable;
 		}

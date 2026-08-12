@@ -2,6 +2,7 @@
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
@@ -11,7 +12,6 @@
 
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
-#include "helios/attributes/builtins.hpp"
 
 namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryHOUTGlobalData, query::QResult<HOUTGlobalData>) {
@@ -110,7 +110,7 @@ namespace compiler::helios {
 		auto move_in_symbol = moveInSymForType(ctx, global_data->type);
 		return s.call(
 			s.ident(move_in_symbol),
-			s.refOf(s.ident(global_data->helios_symbol)),
+			s.ptrOf(s.ident(global_data->helios_symbol)),
 			initial_value_expr->clone()
 		);
 	}
@@ -122,6 +122,10 @@ namespace compiler::helios {
 		Shorthand s(ctx);
 		auto      destructor = getTypeDestructor(ctx, global_data->type);
 		if (destructor.empty()) return {};
+
+		// refOf here is intentional, for `box T` reference types
+		// we the type to `ref T` and the MIR will remove additional address of.
+		// And for directy types it will just add address of.
 		return s.call(s.ident(destructor.value()), s.refOf(s.ident(global_data->helios_symbol)));
 	}
 }

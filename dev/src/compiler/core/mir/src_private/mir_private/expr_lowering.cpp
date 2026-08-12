@@ -1110,6 +1110,8 @@ namespace compiler::mir {
 			} else if (const auto* reusable_expr
 			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
+			} else if (const auto* move_expr = dynamic_cast<const hc::MoveExpr*>(&expr)) {
+				return lowerAndLiftToTypeRecursively(*move_expr->inner, continuation);
 			}
 
 			// Any other expression of unit type (a tuple element, a call, ...) is still lowered
