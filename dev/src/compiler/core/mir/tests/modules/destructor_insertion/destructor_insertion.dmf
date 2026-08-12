@@ -1,56 +1,37 @@
-fun A() -> i64 = {
-    {
-        var index: i64 = 0;
-        let length: i64 = 3;
+# Destructor insertion: at the end of a scope, before an assignment that overwrites a live value,
+# and for global variables (which get a ctor that must not destruct anything and a dtor that must).
 
-        while(index < length) {
-            index = index + 1;
-        }
-    };
-
-    return 0;
+class Res {
+    id: i32 = 0;
+    Res.destroy() = { var t: i32 = id; }
 }
 
-fun B() -> i64 = {
-    {
-        var index: i64 = 0;
-        let length: i64 = 3;
+# A global of a non-trivially destructible class, so its ctor runs the class constructor.
+var g_res: Res = Res(1);
+# A global box, so its ctor allocates and its dtor frees.
+var g_box: box i32 = new 7;
+# A trivially destructible global, so its dtor stays empty.
+var g_int: i32 = 3;
 
-        while(index < length) {
-            {
-                var index_2: i64 = 0;
-                let length_2: i64 = 3;
-
-                while(index_2 < length_2) {
-                    index_2 = index_2 + 1;
-                }
-            };
-        }
-    };
-
-    return 0;
+# The value living in `a` is destructed before the assignment overwrites it, and `a` is destructed
+# again at the end of the scope.
+fun assignOverExisting() = {
+    var a: Res = Res(2);
+    a = Res(3);
 }
 
-fun C() -> i64 = {
-    var x: i64 = 1;
-    if (x == 0) {
-        var y: i64 = 1;
-        x = x + y;
-    } else {
-        {
-            var z: i64 = 2;
-            {
-                var w: i64 = 3;
-                x = x + z + w;
-            };
-        };
-    }
-    return x;
+# `a` dies at the end of the inner scope, `b` at the end of the function. `t` is trivially
+# destructible, so it is never destructed.
+fun scopeEnd() = {
+    {
+        var a: Res = Res(4);
+    };
+    var t: i64 = 5;
+    var b: Res = Res(6);
 }
 
 fun main() -> i64 = {
-    A();
-    B();
-    C();
+    assignOverExisting();
+    scopeEnd();
     return 0;
 }

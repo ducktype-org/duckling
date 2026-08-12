@@ -39,9 +39,7 @@ public:
 		TESTER_ADD_TEST(lifetimeFlagsRepeatedBlocks);
 		TESTER_ADD_TEST(lifetimeFlagsSingleBlock);
 		TESTER_ADD_TEST(lifetimeFlagsNestedBlocks);
-		TESTER_ADD_TEST(newIntermediateBlockForDifferentEndingScopesTest);
-		TESTER_ADD_TEST(multipleIntermediateBlocksTest);
-		TESTER_ADD_TEST(optimizationForSameEndingScopesTest);
+		TESTER_ADD_TEST(destructorInsertionTest);
 	}
 
 private:
@@ -440,35 +438,198 @@ private:
 		}
 	}
 
-	i32 countIntermediateDestructorBlocks(CRef<compiler::mir::Function> func) {
-		i32 intermediate_blocks_count = 0;
-		for (const auto& block_id: func->block_order) {
-			const auto& block = func->blocks.at(block_id);
-			if (!block->instructions.empty()
-			    && block->instructions[0].operation == compiler::mir::Operation::Nop) {
-				if (block->terminator.operation == compiler::mir::Operation::Jump)
-					intermediate_blocks_count++;
+	/**
+	 * @brief The ctor and the dtor MIR functions of the named global variable.
+	 */
+	struct GlobalCtorDtor final {
+		CRef<compiler::mir::Function> ctor;
+		CRef<compiler::mir::Function> dtor;
+	};
+
+	GlobalCtorDtor getGlobalCtorDtor(
+		compiler::frontend::ModuleID module_id, std::string_view global_name
+	) {
+		auto result = query::utils::withContextCompute([&](query::Context& ctx) {
+			auto& unit
+				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
+			for (const auto& global: unit.glob_data) {
+				if (global->original_name.strView() != global_name) continue;
+
+				const auto& global_data = ctx.query<compiler::mir::LowerGlobalData>(
+												 compiler::mir::KeyOf_LowerGlobalData{ global }
+				)
+				                              ->valueOrPanic();
+				const auto& pair
+					= std::get<compiler::mir::MIRCtorDtorPair>(global_data.initial_value);
+				return GlobalCtorDtor{ .ctor = pair.constructor, .dtor = pair.destructor };
 			}
+			CORE_PANIC(base::strConcat("Global with name '", global_name, "' not found in module"));
+		});
+		return std::any_cast<GlobalCtorDtor>(result);
+	}
+
+	/**
+	 * @brief How many instructions of the function use the given operation.
+	 */
+	usize countOperation(CRef<compiler::mir::Function> func, compiler::mir::Operation operation) {
+		usize count = 0;
+		for (const auto* instr: allInstructions(func))
+			if (instr->operation == operation) count++;
+		return count;
+	}
+
+	/**
+	 * @brief Whether the instruction calls a function of the given name. Both `Call` and `Destruct`
+	 * take the callee as their first argument.
+	 */
+	bool callsFunction(const compiler::mir::Instruction& instr, std::string_view function_name) {
+		if (instr.arguments.empty()) return false;
+		const auto* callee
+			= std::get_if<compiler::mir::MIRFunctionLiteral>(&instr.arguments.at(0).getVariant());
+		return callee != nullptr
+		    && compiler::helios::name(callee->helios_id).strView() == function_name;
+	}
+
+	/**
+	 * @brief Index of the only instruction matching the predicate, within `allInstructions`.
+	 */
+	usize onlyIndexOf(
+		CRef<compiler::mir::Function>                                 func,
+		const std::function<bool(const compiler::mir::Instruction&)>& matches
+	) {
+		base::Optional<usize> found;
+		const auto            instructions = allInstructions(func);
+		for (usize i = 0; i < instructions.size(); i++)
+			if (matches(*instructions.at(i))) {
+				ASSERT_TRUE(found.empty());
+				found = i;
+			}
+		ASSERT_HAS_VALUE(found);
+		return found.value();
+	}
+
+	/**
+	 * @brief Destructor insertion in all the places it happens: before an assignment overwriting a
+	 * live value, at the end of a scope, and in the dtor of a global variable. Also checks that the
+	 * ctor of a global variable never destructs anything, since it initializes raw storage.
+	 */
+	void destructorInsertionTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/destructor_insertion")));
+
+		using enum compiler::mir::Operation;
+		using Flag = compiler::mir::OperationFlag::Flag;
+
+		auto is_destruct_of = [&](std::string_view local_name) {
+			return [=](const compiler::mir::Instruction& instr) {
+				return instr.operation == Destruct && instr.arguments.size() > 1
+				    && instr.arguments.at(1).isLocal()
+				    && instr.arguments.at(1)
+				               .get<compiler::mir::MIRPlace>()
+				               .getBase<compiler::mir::MIRLocalRef>()
+				               ->getName()
+				               .strView()
+				           == local_name;
+			};
+		};
+
+		{  // The overwritten value is destructed before the assignment, and once more at the end of
+		   // the scope. Both destructors call the class' `__destruct`.
+			auto func = getMIRFunctionByName(module, "assignOverExisting");
+
+			ASSERT_EQUAL_PRINT(2, countOperation(func, Destruct));
+			for (const auto* instr: allInstructions(func))
+				if (instr->operation == Destruct) ASSERT_TRUE(callsFunction(*instr, "__destruct"));
+
+			// Only the destructor at the end of the scope ends `a`'s lifetime, the one before the
+			// assignment is followed by the value being reinitialized.
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Reinit, "a"));
+
+			const auto reinit_index
+				= onlyIndexOf(func, [&](const compiler::mir::Instruction& instr) {
+					  return hasFlagFor(instr, Flag::Reinit, "a");
+				  });
+			const auto scope_end_destruct_index
+				= onlyIndexOf(func, [&](const compiler::mir::Instruction& instr) {
+					  return hasFlagFor(instr, Flag::Destruct, "a");
+				  });
+
+			// destruct the old value -> assign the new one -> destruct it at the scope end
+			const auto instructions         = allInstructions(func);
+			usize      first_destruct_index = 0;
+			while (!is_destruct_of("a")(*instructions.at(first_destruct_index)))
+				first_destruct_index++;
+
+			ASSERT_TRUE(first_destruct_index < reinit_index);
+			ASSERT_TRUE(reinit_index < scope_end_destruct_index);
 		}
-		return intermediate_blocks_count;
-	}
 
-	void newIntermediateBlockForDifferentEndingScopesTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/destructor_insertion")));
-		auto a_mir           = getMIRFunctionByName(module, "A");
-		ASSERT_EQUAL_PRINT(2, countIntermediateDestructorBlocks(a_mir));
-	}
+		{  // A local of a non-trivially destructible type is destructed at the end of its scope,
+		   // the inner one before the rest of the function runs. A trivially destructible local is
+		   // never destructed.
+			auto func = getMIRFunctionByName(module, "scopeEnd");
 
-	void multipleIntermediateBlocksTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/destructor_insertion")));
-		auto b_mir           = getMIRFunctionByName(module, "B");
-		ASSERT_EQUAL_PRINT(4, countIntermediateDestructorBlocks(b_mir));
-	}
+			ASSERT_EQUAL_PRINT(2, countOperation(func, Destruct));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "b"));
+			ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Destruct, "t"));
 
-	void optimizationForSameEndingScopesTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/destructor_insertion")));
-		auto c_mir           = getMIRFunctionByName(module, "C");
-		ASSERT_EQUAL_PRINT(0, countIntermediateDestructorBlocks(c_mir));
+			// `a` dies at the end of the inner scope, i.e. before `b` is even constructed.
+			const auto a_destruct_index = onlyIndexOf(func, is_destruct_of("a"));
+			const auto b_construct_index
+				= onlyIndexOf(func, [&](const compiler::mir::Instruction& instr) {
+					  return hasFlagFor(instr, Flag::Construct, "b");
+				  });
+			const auto b_destruct_index = onlyIndexOf(func, is_destruct_of("b"));
+
+			ASSERT_TRUE(a_destruct_index < b_construct_index);
+			ASSERT_TRUE(b_construct_index < b_destruct_index);
+		}
+
+		{  // A global of a class type: the ctor runs the class constructor and moves the result
+		   // into the global's storage, without destructing anything - the storage starts
+		   // uninitialized. The dtor destructs the global.
+			auto global = getGlobalCtorDtor(module, "g_res");
+
+			ASSERT_EQUAL_PRINT(0, countOperation(global.ctor, Destruct));
+			ASSERT_EQUAL_PRINT(0, countFlag(global.ctor, Flag::Destruct, "g_res"));
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(global.ctor), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "Res");
+			}));
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(global.ctor), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "move_in");
+			}));
+
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(global.dtor), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "__destruct");
+			}));
+		}
+
+		{  // A global box: allocated by the ctor, freed by the dtor.
+			auto global = getGlobalCtorDtor(module, "g_box");
+
+			ASSERT_EQUAL_PRINT(0, countOperation(global.ctor, Destruct));
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(global.ctor), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "box_alloc");
+			}));
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(global.dtor), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "box_destructor");
+			}));
+		}
+
+		{  // A trivially destructible global has nothing to destroy, so its dtor is empty.
+			auto global = getGlobalCtorDtor(module, "g_int");
+
+			ASSERT_EQUAL_PRINT(0, countOperation(global.ctor, Destruct));
+			ASSERT_EQUAL_PRINT(1, global.dtor->block_order.size());
+			ASSERT_EQUAL_PRINT(
+				0, global.dtor->blocks.at(global.dtor->block_order.at(0))->instructions.size()
+			);
+			ASSERT_TRUE(
+				global.dtor->blocks.at(global.dtor->block_order.at(0))->terminator.operation
+				== ReturnVoid
+			);
+		}
 	}
 };
 

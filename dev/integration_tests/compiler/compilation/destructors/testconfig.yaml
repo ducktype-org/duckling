@@ -1,0 +1,15 @@
+# Tests for destructor insertion: at the end of a scope, before an assignment overwriting a live
+# value, for the members of a class (including a box and a nested non-trivial member), for values
+# returned by value and passed to a by-value parameter, and for global variables.
+Tests:
+  destructors:
+    Cases:
+      # LLVM only: on the DVM a global destructor runs from a static destructor
+      # (`Supervisor::~Supervisor` -> `execGlobalDestructors`), by which time the builtin-function
+      # table (a function-local static built on the first builtin call) is already destroyed, so
+      # printing from a global destructor aborts the VM.
+      llvm:
+        backend: llvm
+        Output:
+          String: "2\n3\n1\n4\n6\n5\n7\n8\n11\n10\n9\n14\n13\n100\n101\n102\n999\n103\n101\n"
+        ExitCode: 0
