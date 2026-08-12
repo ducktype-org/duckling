@@ -82,10 +82,4 @@ namespace compiler::driver {
 	 * @TODO: #3158 A generic dependency no-recompile solution may replace this.
 	 */
 	bool allStdlibArtifactsPresent();
-
-	/**
-	 * @brief Returns the root module IDs of the registered standard library packages.
-	 * @note This is only for REPL usage.
-	 */
-	std::vector<frontend::ModuleID> getStandardLibraryRootModules();
 }

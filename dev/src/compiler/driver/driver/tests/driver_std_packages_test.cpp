@@ -7,6 +7,7 @@
 #include <driver/standard_library/standard_library.hpp>
 #include <driver/task/task.hpp>
 #include <driver_private/standard_library/standard_library.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
@@ -32,6 +33,7 @@ class StdPackagesTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(verifyStdConfigMatchesCanonicalIds);
 		TESTER_ADD_TEST(verifyStdPackagesAndDependencies);
 		TESTER_ADD_TEST(verifyStdLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(compileStdPackages);
@@ -87,6 +89,29 @@ protected:
 	}
 
 private:
+	/**
+	 * @brief The driver's STD_PACKAGES_CONFIG holds only std-library mechanics (subpaths, deps,
+	 * artifact names); the canonical identity lives in frontend/packages. This guards against the
+	 * two drifting apart — every config entry must be a canonical std package, and vice versa.
+	 */
+	void verifyStdConfigMatchesCanonicalIds() {
+		const auto& canonical_ids = frontend::packages::standardLibraryPackageIds();
+		assertTrue(
+			driver::STD_PACKAGES_CONFIG.size() == canonical_ids.size(),
+			"STD_PACKAGES_CONFIG size must match the canonical std package id list"
+		);
+		for (const auto& config: driver::STD_PACKAGES_CONFIG) {
+			assertTrue(
+				frontend::packages::isStandardLibraryPackage(base::StrID(config.name)),
+				base::strConcat(
+					"STD_PACKAGES_CONFIG entry '",
+					config.name,
+					"' is not a canonical standard-library package"
+				)
+			);
+		}
+	}
+
 	/**
 	 * @brief Verifies presence and dependency relationships of standard packages.
 	 */

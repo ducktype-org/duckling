@@ -1,10 +1,10 @@
 #include "scopes.hpp"
 
-#include <driver/driver/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/packages/access.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -740,7 +740,7 @@ namespace compiler::helios {
 		 */
 		bool isStandardLibraryModule(query::Context& ctx, frontend::ModuleID module_id) {
 			auto package_id = frontend::getModuleRef(module_id)->getPackage().unlock(ctx).getID();
-			return package_id == base::StrID("core") || driver::isPackageSTL(package_id);
+			return frontend::packages::isStandardLibraryPackage(package_id);
 		}
 
 		/**

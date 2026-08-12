@@ -1,6 +1,7 @@
 #include "standard_library.hpp"
 
 #include <driver/task/task.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
 
@@ -88,9 +89,7 @@ namespace compiler::driver {
 		}
 
 		bool isPackageSTL(const base::StrID package_id) {
-			return std::ranges::any_of(STD_PACKAGES_CONFIG, [&](const auto& config) {
-				return base::StrID(config.name) == package_id;
-			});
+			return frontend::packages::isStandardLibraryPackage(package_id);
 		}
 
 		bool isPackageSTL(const frontend::packages::RawPackageInfo& package_info) {
@@ -270,23 +269,6 @@ namespace compiler::driver {
 			return result;
 		}
 		return {};
-	}
-
-	std::vector<frontend::ModuleID> getStandardLibraryRootModules() {
-		std::vector<frontend::ModuleID> root_modules;
-		for (const auto& config: STD_PACKAGES_CONFIG) {
-			auto pkg = std::find_if(
-				global_state::getPackages().begin(),
-				global_state::getPackages().end(),
-				[&](const auto& pkg_info) {
-					return pkg_info.getPackageID() == base::StrID(config.name);
-				}
-			);
-			// Unlike getStandardLibraryCompilationTasks(), missing packages are skipped.
-			if (pkg == global_state::getPackages().end()) continue;
-			root_modules.push_back(pkg->getRootModule().illegalAccess().getID());
-		}
-		return root_modules;
 	}
 
 	namespace {
