@@ -14,7 +14,7 @@ fun printPoint(p: ref Point) -> () = {
 
 fun printPointList(list: ref List[Point]) -> () = {
     var i = 0;
-    while(i < i64(list.length())) {
+    while(i < list.length() as i64) {
         printPoint(&list[i]);
         i = i + 1; 
     }
@@ -22,7 +22,7 @@ fun printPointList(list: ref List[Point]) -> () = {
 
 fun printMatrix(list: ref List[i32[3]]) -> () = {
     var i = 0;
-    while(i < i64(list.length())) {
+    while(i < list.length() as i64) {
         var j = 0;
         while (j < 3) {
             builtin_output_i64(list[i][j]);
@@ -115,11 +115,6 @@ fun staticArraysTest() -> () = {
 #     builtin_output_i64(nested[1][0]); # 3
 #     builtin_output_i64(nested[1][1]); # 4
 #    
-#     # @TODO: #2000 Since we don't have any copy semantics implemented, 
-#     # this line will modify `nested` data. 
-#     # The proper way to do that would be to invoke a copy constructor in this line:
-#     # `nested.push(inner2)`
-#     # which would perform a deep copy instead of just the bit-wise copy.
 #     inner2.push(123); 
 #
 #     builtin_output_u64(nested[1].length()); # 2

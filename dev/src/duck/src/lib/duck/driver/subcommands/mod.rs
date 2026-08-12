@@ -10,6 +10,7 @@ mod generate;
 mod info;
 mod init;
 mod list;
+mod remove;
 mod repl;
 mod run;
 pub mod run_script;
@@ -20,6 +21,7 @@ pub fn subcommands() -> Vec<Command> {
     vec![
         build::get_parser(),
         run::get_parser(),
+        remove::get_parser(),
         #[cfg(feature = "shell-completion")]
         generate::get_parser(),
         init::get_parser(),
@@ -47,6 +49,7 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         "info" => info::execute,
         "init" => init::execute,
         "list" => list::execute,
+        "remove" => remove::execute,
         "repl" => repl::execute,
         "run" => run::execute,
         "run-script" => run_script::execute,

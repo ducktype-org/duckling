@@ -1,16 +1,16 @@
-use tracing::debug;
+use tracing::trace;
 
 use crate::duck::driver::subcommands::exec_for;
 
 // All builtin aliases should be set here.
-// Format is `(alias, command)`. Current code assumes only „simple” aliases,
+// Format is `(alias, command)`. Current code assumes only “simple” aliases,
 // f.e. `("t", "test")` is fine, but not `("foo", "build --help")`.
 // It's guarded by `driver::no_aliases_in_parser()` test.
 const BUILTIN_ALIASES: [(&str, &str); 3] = [("b", "build"), ("r", "run"), ("rs", "run-script")];
 
 /// Get expanded command for the alias `name`.
 pub fn get_builtin_alias_expansion(name: &str) -> Option<&'static str> {
-    debug!("getting the builtin alias for `{name}`");
+    trace!(?name, "getting the builtin alias");
     BUILTIN_ALIASES.iter().find_map(|(alias, expansion)| {
         if *alias == name {
             Some(*expansion)

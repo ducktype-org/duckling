@@ -85,6 +85,25 @@ namespace compiler::backend_vm::internal {
 			ProgramLoweringContext& program_context, base::StrID name
 		);
 
+		void pushInstruction(const vm::code::Instruction& instruction);
+
+		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
+
+		/**
+		 * @brief Pushes a temporary local and based on the @p tracked parameter saves it in the
+		 * `current_temp_count`. This temporary local will be automatically deinitialized after
+		 * `pushInstruction` is executed.
+		 *
+		 * @p tracked Used in special cases when we don't want the temporaries to be automatically
+		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
+		 * These temporaries have to be deinitialized manually.
+		 */
+		DVMPlace pushTempLocal(
+			const vm::code::TypeOfData&      type,
+			base::Optional<std::string_view> name_hint = {},
+			bool                             tracked   = true
+		);
+
 	private:
 		/**
 		 * @brief Constructs a parameterless, void-returning context. Used to synthesize small
@@ -156,11 +175,6 @@ namespace compiler::backend_vm::internal {
 			const std::vector<lir::ScopeFlag>& scope_flags, bool& deinits_pushed
 		);
 
-
-		void pushInstruction(const vm::code::Instruction& instruction);
-
-		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
-
 		/// Push single init instruction
 		void pushInit(lir::LIRLocalRef lir_local);
 
@@ -173,21 +187,6 @@ namespace compiler::backend_vm::internal {
 		 * lowering LIRPlace, temps created for comparison operations, etc.
 		 */
 		void cleanUpRegisteredTemps();
-
-		/**
-		 * @brief Pushes a temporary local and based on the @p tracked parameter saves it in the
-		 * `current_temp_count`. This temporary local will be automatically deinitialized after
-		 * `pushInstruction` is executed.
-		 *
-		 * @p tracked Used in special cases when we don't want the temporaries to be automatically
-		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
-		 * These temporaries have to be deinitialized manually.
-		 */
-		DVMPlace pushTempLocal(
-			const vm::code::TypeOfData&      type,
-			base::Optional<std::string_view> name_hint = {},
-			bool                             tracked   = true
-		);
 
 		[[nodiscard]] usize instructionsCount() const;
 

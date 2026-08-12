@@ -1,7 +1,6 @@
 #include "query_hout_of_expr.hpp"
 
 #include "coercions.hpp"
-#include "errors.hpp"
 #include "function_calls/call_processing.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
@@ -13,6 +12,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_expression.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_string.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
@@ -23,6 +23,7 @@
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
+#include <helios_private/hout_creation/expressions/casts.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -37,8 +38,6 @@
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
-
-#include <unordered_set>
 
 namespace compiler::helios::code {
 
@@ -446,6 +445,30 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				// Handle taking pointers. Unlike `&`, `ptrof` keeps the reference kind of the
+				// operand, so `ptrof` of a `box T` place is a `ptr box T` addressing the box itself.
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Ptrof)) {
+					// @TODO: #1956 remove the check below.
+					// This is a temporary check to prevent us from taking the address of types that
+					// do not carry information.
+					if (not inner_type.getType().carriesInformation(ctx)) {
+						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+							"Taking a pointer to a type that does not carry information is not "
+							"supported yet.",
+							stmt->getStablePosition()
+						));
+						return;  // failed
+					}
+					if (not inner->expression_type.getValueCategory().addressable()) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"Tried to take a pointer to a temporary", stmt->getStablePosition()
+						));
+						return;
+					}
+					node = makeBox<PtrOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				}
+
 				// Handle dereferencing
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
 					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
@@ -471,27 +494,75 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				// Box creation
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::New)) {
+					const auto origin = inner->origin.generatedFrom();
+					const auto direct_type
+						= inner->expression_type.getSymbolType().withReferenceKind(
+							tsh::ReferenceKind::Direct
+						);
+
+					auto value = coerceFromBox(
+						ctx, std::move(inner), direct_type, stmt->getStablePosition(), {}
+					);
+
+					if (value.has_value())
+						node = makeBoxAllocCall(ctx, origin, std::move(value.value()));
+					return;
+				}
+
 				// `copy x` produces an explicit copy of `x` via its copy constructor.
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copy)) {
-					if (inner_type.isTriviallyCopyable(ctx)) {
+					const Shorthand s{ ctx };
+
+					// `copy` always creates a direct value.
+					// copy: T -> T
+					// copy: ref T -> T
+					// copy: box T -> T
+					const bool is_indirect = inner_type.getRefKind() != tsh::ReferenceKind::Direct;
+					const tsh::SymbolType<> copied_type
+						= is_indirect ? inner_type.getPointeeSymbolType() : inner_type;
+
+					if (copied_type.isTriviallyCopyable(ctx)) {
 						ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
 							base::strConcat(
 								"Type `",
-								inner_type.toString(),
+								copied_type.toString(),
 								"` is trivially copyable. No need to use the explicit `copy` "
 								"keyword."
 							),
 							stmt->getStablePosition()
 						));
+						// Trivially copyable, so we just deref.
+						if (is_indirect)
+							node = s.deref(std::move(inner));
+						else
+							node = std::move(inner);
+						return;
 					}
-					if (not inner_type.getType().isCopyable(ctx)) {
+					if (not copied_type.getType().isCopyable(ctx)) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
-							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
+							base::strConcat("Type `", copied_type.toString(), "` cannot be copied."),
 							stmt->getStablePosition()
 						));
 						return;
 					}
-					node = Shorthand{ ctx }.copy(std::move(inner));
+
+					const auto abstract_type = copied_type.getType();
+					const auto kind          = abstract_type.getKind();
+					CORE_ASSERT(
+						kind == tsh::Kind::Class or kind == tsh::Kind::StaticArray
+							or kind == tsh::Kind::Tuple or kind == tsh::Kind::DynamicArray,
+						"Tried to call a copy constructor of a type which shouldn't need one"
+					);
+
+					// The copy constructor takes a `const ref` and returns a direct value. `refOf`
+					// turns every type into a reference (including ref/box because of reference
+					// kind collapsing).
+					node = s.call(
+						s.ident(defgen::copyConstructorSymForType(ctx, abstract_type)),
+						s.refOf(std::move(inner))
+					);
 					return;
 				}
 
@@ -596,20 +667,11 @@ namespace compiler::helios::code {
 				// Handle explicit type conversions
 				const auto op = stmt->getOperator().unlock(ctx);
 				if (op->unwrap() == lang_def::NamedOperator::As) {
-					const auto meta_type = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
-
-					auto value_expr = subExprFromPST(ctx, stmt->getLeftOperand()).valueOrThrow();
-					auto type_expr = subExprFromPSTWithType(ctx, stmt->getRightOperand(), meta_type)
-					                     .valueOrThrow();
-					auto type_ctv    = ctx.query<QueryEvaluateHOUTExpression>({ type_expr.ref() });
+					auto value_expr  = subExprFromPST(ctx, stmt->getLeftOperand()).valueOrThrow();
+					auto type_ctv    = getTypeCTVFromPST(ctx, stmt->getRightOperand());
 					auto symbol_type = type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
 
-					assertCastIsValid(
-						stmt, value_expr->expression_type.getSymbolType(), symbol_type
-					);
-					node = makeBox<CastExpr>(
-						ctx, pstOrigin(stmt), std::move(value_expr), symbol_type
-					);
+					node = castAs(ctx, std::move(value_expr), symbol_type, stmt);
 					return;
 				}
 
@@ -627,7 +689,9 @@ namespace compiler::helios::code {
 					};
 
 					for (auto sub_expr: sub_exprs) {
-						auto sub_expr_hout = subExprFromPSTWithType(ctx, sub_expr, meta_type);
+						auto sub_expr_hout = subExprFromPSTWithType(
+							ctx, sub_expr, meta_type, op->getStablePosition()
+						);
 						if (sub_expr_hout.hasFailed()) {
 							// Error has occurred.
 							return;
@@ -650,154 +714,6 @@ namespace compiler::helios::code {
 				node = resolveBinaryOperator(
 					op, std::move(lhs), std::move(rhs), ctx.query<QueryPrimaryCodeScopeFor>({ stmt })
 				);
-			}
-
-			void assertCastIsValid(
-				pst::Access<pst::expr::BinaryOperator> stmt,
-				const tsh::SymbolType<>&               from,
-				const tsh::SymbolType<>&               to
-			) {
-				if (from == to) return;  // trivial cast, always valid
-
-				using tsh::Kind;
-				using tsh::Mutability;
-				using tsh::ReferenceKind;
-
-				// For now we allow casts between numeric types
-				if (isNumericType(from.getType()) && isNumericType(to.getType())
-				    && from.getRefKind() == ReferenceKind::Direct
-				    && to.getRefKind() == ReferenceKind::Direct)
-					return;
-
-				struct CastPattern {
-					/// If specified, the cast must have this reference kind on the source side. If
-					/// not specified, any reference kind matches.
-					base::Optional<tsh::ReferenceKind> from_ref_kind;
-					/// If specified, the cast must have this kind on the source side. If not
-					/// specified, any kind matches.
-					base::Optional<tsh::Kind> from_kind;
-					/// If specified, the cast must have this reference kind on the target side. If
-					/// not specified, any reference kind matches.
-					base::Optional<tsh::ReferenceKind> to_ref_kind;
-					/// If specified, the cast must have this kind on the target side. If not
-					/// specified, any kind matches.
-					base::Optional<tsh::Kind> to_kind;
-					/// If true, the cast is only valid if the symbol pointee types are the same.
-					bool same_pointee_type;
-				};
-
-				static const std::vector<CastPattern> valid_pointer_casts = {
-					{
-						.from_ref_kind     = ReferenceKind::Ref,
-						.from_kind         = {},
-						.to_ref_kind       = ReferenceKind::Direct,
-						.to_kind           = tsh::Kind::Pointer,
-						.same_pointee_type = true,
-					},
-					{
-						.from_ref_kind     = ReferenceKind::Ref,
-						.from_kind         = {},
-						.to_ref_kind       = ReferenceKind::Direct,
-						.to_kind           = tsh::Kind::CPointer,
-						.same_pointee_type = false,
-					},
-					{
-						.from_ref_kind     = ReferenceKind::Box,
-						.from_kind         = {},
-						.to_ref_kind       = ReferenceKind::Direct,
-						.to_kind           = tsh::Kind::Pointer,
-						.same_pointee_type = true,
-					},
-					{
-						.from_ref_kind     = ReferenceKind::Direct,
-						.from_kind         = Kind::Pointer,
-						.to_ref_kind       = ReferenceKind::Direct,
-						.to_kind           = Kind::CPointer,
-						.same_pointee_type = false,
-					},
-					{
-						.from_ref_kind     = ReferenceKind::Direct,
-						.from_kind         = Kind::ManyPointer,
-						.to_ref_kind       = ReferenceKind::Direct,
-						.to_kind           = Kind::CPointer,
-						.same_pointee_type = false,
-					},
-					// From CPointer to Pointer is temporary
-					{
-						.from_ref_kind     = ReferenceKind::Direct,
-						.from_kind         = Kind::CPointer,
-						.to_ref_kind       = ReferenceKind::Direct,
-						.to_kind           = Kind::Pointer,
-						.same_pointee_type = false,
-					},
-					// From CPointer to ManypPointer is temporary
-					{
-						.from_ref_kind     = ReferenceKind::Direct,
-						.from_kind         = Kind::CPointer,
-						.to_ref_kind       = ReferenceKind::Direct,
-						.to_kind           = Kind::ManyPointer,
-						.same_pointee_type = false,
-					},
-					// From CPointer to CPointer
-					{
-						.from_ref_kind     = ReferenceKind::Direct,
-						.from_kind         = Kind::CPointer,
-						.to_ref_kind       = ReferenceKind::Direct,
-						.to_kind           = Kind::CPointer,
-						.same_pointee_type = false,
-					},
-				};
-
-				bool found_match = false;
-				for (auto& pattern: valid_pointer_casts) {
-					auto equals = [](auto value) {
-						return [v = std::move(value)](auto other) { return other == v; };
-					};
-					bool from_ref_match
-						= pattern.from_ref_kind.map(equals(from.getRefKind())).copyValueOr(true);
-					bool from_kind_match
-						= pattern.from_kind.map(equals(from.getType().getKind())).copyValueOr(true);
-					bool to_ref_match
-						= pattern.to_ref_kind.map(equals(to.getRefKind())).copyValueOr(true);
-					bool to_kind_match
-						= pattern.to_kind.map(equals(to.getType().getKind())).copyValueOr(true);
-					if (!from_ref_match || !from_kind_match || !to_ref_match || !to_kind_match)
-						continue;
-					// To check the pointee we have to be sure that we have ref or pointer.
-					bool pointee_match
-						= pattern.same_pointee_type
-					        ? from.getPointeeSymbolType() == to.getPointeeSymbolType()
-					        : true;
-					if (from_ref_match && from_kind_match && to_ref_match && to_kind_match
-					    && pointee_match) {
-						found_match = true;
-						break;
-					}
-				}
-				// Temporarily allow casts from CPointer to Pointer and ManyPointer, with a warning.
-				if (found_match && from.getRefKind() == ReferenceKind::Direct
-				    && from.getType().getKind() == tsh::Kind::CPointer) {
-					ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
-						"Casts from CPointer will be disabled in the future and only work on "
-						"native targets.",
-						stmt->getStablePosition(),
-						"There will be a different syntax for such casts in the future."
-					));
-					// I do not like this syntax "as" to work on some targets and not work on
-					// others. I would like to have some syntax, so that the user has to write
-					// `native_cptr_cast<ptr T>(original_ctype)` or `@native v as ptr T`
-					// to make it explicit that this cast is only supported on native target.
-					return;
-				}
-				if (found_match) return;
-
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					base::strConcat(
-						"Invalid cast from type ", from.toString(), " to type ", to.toString()
-					),
-					stmt->getStablePosition()
-				));
-				query::throwFailed();
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
@@ -1096,44 +1012,76 @@ namespace compiler::helios {
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
 		const tsh::SymbolType<>                          expected_type,
+		base::Optional<dia_int::StablePosition>          coercion_expects_pos,
 		CoercionErrorOverrides                           error_overrides
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
 		UNPACK_QRESULT_CREF_TO_BOX(CRef<code::Expr> expr_hout =, expr_hout_qresult);
 
-		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
-		const auto source_position    = pst_expr.element.unlock(ctx)->getStablePosition();
-		const auto coercion_qresult   = canCoerce(ctx, expr_hout->expression_type, expected_type);
-		if (coercion_qresult.hasFailed()) return query::Failed();
+		const auto source_position = pst_expr.element.unlock(ctx)->getStablePosition();
+		UNPACK_QRESULT(
+			auto coercion_result =, canCoerce(ctx, expr_hout->expression_type, expected_type)
+		);
 
-		const auto& coercion_result = coercion_qresult.valueOrThrow();
-		if (coercion_result.isValid())
-			return coercion_result.getCoercion().coerceFromRef(ctx, expr_hout);
+		if (coercion_result.isValid()) return coercion_result.coerceFromRef(ctx, expr_hout);
 
 		logCoercionFailure(
-			ctx,
-			coercion_result.getInvalidReason(),
-			source_symbol_type,
-			expected_type,
-			source_position,
-			std::move(error_overrides)
+			ctx, coercion_result, source_position, coercion_expects_pos, std::move(error_overrides)
+		);
+		return query::Failed();
+	}
+
+	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedTypes(
+		query::Context&                                  ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
+		const std::vector<tsh::SymbolType<>>&            expected_types
+	) {
+		CORE_ASSERT(!expected_types.empty(), "At least one expected type has to be provided.");
+		if (expected_types.size() == 1)
+			return getHoutOfExprWithExpectedType(ctx, pst_expr, expected_types.front());
+
+		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
+
+		UNPACK_QRESULT_CREF_TO_BOX(CRef<code::Expr> expr_hout =, expr_hout_qresult);
+
+		std::vector<Coercion> failures;
+		failures.reserve(expected_types.size());
+
+		for (const tsh::SymbolType<>& expected_type: expected_types) {
+			const auto coercion_qresult = canCoerce(ctx, expr_hout->expression_type, expected_type);
+			if (coercion_qresult.hasFailed()) return query::Failed();
+
+			const auto& coercion_result = coercion_qresult.valueOrThrow();
+			if (coercion_result.isValid()) return coercion_result.coerceFromRef(ctx, expr_hout);
+
+			failures.push_back(coercion_result);
+		}
+
+		logNoMatchingExpectedTypeFailure(
+			ctx, failures, pst_expr.element.unlock(ctx)->getStablePosition()
 		);
 		return query::Failed();
 	}
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
-		query::Context&                     ctx,
-		pst::AccessLocked<pst::ExprElement> element,
-		tsh::SymbolType<>                   expected_type,
-		helios::CoercionErrorOverrides      error_overrides
+		query::Context&                         ctx,
+		pst::AccessLocked<pst::ExprElement>     element,
+		tsh::SymbolType<>                       expected_type,
+		base::Optional<dia_int::StablePosition> coercion_expects_pos,
+		helios::CoercionErrorOverrides          error_overrides
 	) {
 		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
 		const auto source_position = element.unlock(ctx)->getStablePosition();
 
 		auto maybe_coerced = coerceFromBox(
-			ctx, std::move(expr_hout), expected_type, source_position, std::move(error_overrides)
+			ctx,
+			std::move(expr_hout),
+			expected_type,
+			source_position,
+			coercion_expects_pos,
+			std::move(error_overrides)
 		);
 		if (maybe_coerced.has_value()) return std::move(maybe_coerced.value());
 		return query::Failed();

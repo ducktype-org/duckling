@@ -176,6 +176,7 @@ namespace compiler::helios::desugaring {
                 std::move(raw_element),
                 iter_type,
                 iter_pst_pos,
+                {},
                 CoercionErrorOverrides{
 						.incompatible_types =
                         [&](query::Context& error_ctx) {
@@ -248,6 +249,7 @@ namespace compiler::helios::desugaring {
 			});
 		};
 
+		// @TODO: #3290 generated variables names
 		return {
 			.iterator
 			= ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow(),

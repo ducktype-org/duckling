@@ -3,11 +3,11 @@ import sys
 import threading
 from dataclasses import astuple, dataclass
 
-from ..helpers import click_log, log_info
+from ..helpers import click_log, log_good, log_info
 
 
 def print_success(msg, file=sys.stdout):
-    click_log("GOOD", msg, fg="green", file=file)
+    log_good(msg, file=file)
 
 
 def print_failure(msg, file=sys.stdout):

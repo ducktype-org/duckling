@@ -5,10 +5,10 @@ use clap::ArgMatches;
 use tracing::debug;
 
 use crate::duck::driver::cli_ext::jobs_from_matches;
+use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Profile};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
-use crate::quackpack::core::{AllowGlobalPackage, PackageContext, PackageLoader, PackageNotFound};
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 pub struct RunScriptOptions<'duck> {
     /// Current [`DuckContext`].
@@ -100,13 +100,14 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
         args,
         jobs: _,
     } = rs_options;
-    let script_name = path
-        .file_name()
-        .context_internal("we assured that the path points to a file")?;
-    let folder_path = path
-        .parent()
-        .context_internal("we assured that the path points to a file")?;
-    let package = get_package(ctx, path, folder_path, global)?;
+    let script_name = path.file_name().with_context_internal(|| {
+        format!("path `{path:?}` does not have a filename, but we checked that earlier?")
+    })?;
+    let folder_path = path.parent().with_context_internal(|| {
+        format!("path `{path:?}` does not have a parent folder, but we checked that earlier?")
+    })?;
+
+    let package = PackageLoader::load_script(ctx, path, folder_path, global)?;
     let root_identity = package.package().as_a_local_identity()?;
     let (lock, venv, storage) = sync(
         &package,
@@ -118,40 +119,4 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
     )?;
     let compile_lock = lock.into_compile_lock();
     let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
-}
-
-/// Loads the appropriate venv of the script.
-fn get_package<'duck>(
-    ctx: &'duck DuckContext,
-    path: &Path,
-    folder_path: &Path,
-    global: bool,
-) -> QuackResult<PackageContext<'duck>> {
-    // If this is `Some(_)` then the script has a frontmatter.
-    let possible_frontmatter = PackageContext::try_new_from_frontmatter(path.to_path_buf(), ctx)?;
-    // If this is `Ok(_)` then the script lies inside a package.
-    let possible_package =
-        PackageLoader::find_from_directory(folder_path, ctx, AllowGlobalPackage::No);
-    // If possible_package is `Err` but it does steem from `PackageNotFound` then return the error.
-    // After this, possible_package is `Err` if and only if script does not belong to a package.
-    if let Err(ref err) = possible_package
-        && !err.has_in_chain::<PackageNotFound>()
-    {
-        return possible_package;
-    }
-    match (possible_frontmatter, possible_package, global) {
-        // Scripts with frontmatters cannot be inside packages nor be run with `global` flag.
-        (Some(_), Ok(_), _) => qp_bail!("scripts inside packages cannot have frontmatters"),
-        (Some(_), _, true) => {
-            qp_bail!("script with a frontmatter cannot be run with `global` flag")
-        }
-        (Some(frontmatter), Err(_), false) => Ok(frontmatter),
-
-        // `global` forces the script to be run in the global venv, even if it is inside a package.
-        (None, _, true) => PackageLoader::global_package(ctx),
-        // If script does not belong to a package, default to global venv.
-        (None, Err(_), false) => PackageLoader::global_package(ctx),
-
-        (None, Ok(pcx), false) => Ok(pcx),
-    }
 }

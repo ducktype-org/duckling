@@ -21,7 +21,7 @@ fun main() -> i64 = {
 
     # Test type deduction for char
     var ch = 'X';                       # deduced as char
-    builtin_output_i64(i64(ch));        # 88
+    builtin_output_i64(ch as i64);      # 88
 
     # Test type deduction from function return (class)
     let p = makePoint(3, 4);            # deduced as Point

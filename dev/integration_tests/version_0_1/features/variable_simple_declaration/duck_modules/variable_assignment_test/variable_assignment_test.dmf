@@ -14,7 +14,7 @@ fun main() -> u64 = {
     b = b+1;
     if (b != 1)
         return 4;
-    b = u16(30);
+    b = 30 as u16;
     if (b != 30)
         return 5;
 

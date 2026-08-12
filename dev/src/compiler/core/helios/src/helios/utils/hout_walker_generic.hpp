@@ -5,6 +5,8 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
+#include <base/collections/optional.hpp>
+
 #include <vector>
 
 /**
@@ -152,6 +154,12 @@ namespace compiler::helios::code {
 			for (const auto& element: e.elements) walk(*element);
 		}
 
+		void visitCreateAggregateExpr(const CreateAggregateExpr& e) override {
+			handler(e);
+			for (const auto& value: e.values) walk(*value);
+			if_opt_some(e.per_element_body, body) walkBlock(*body);
+		}
+
 		void visitVariantTypeConstructorExpr(const VariantTypeConstructorExpr& e) override {
 			handler(e);
 			for (const auto& subtype: e.subtypes) walk(*subtype);
@@ -184,6 +192,11 @@ namespace compiler::helios::code {
 			walk(*e.inner);
 		}
 
+		void visitPtrOfExpr(const PtrOfExpr& e) override {
+			handler(e);
+			walk(*e.inner);
+		}
+
 		void visitDerefExpr(const DerefExpr& e) override {
 			handler(e);
 			walk(*e.inner);
@@ -197,6 +210,11 @@ namespace compiler::helios::code {
 		void visitLiftToTypeExpr(const LiftToTypeExpr& e) override {
 			handler(e);
 			walk(*e.value_expr);
+		}
+
+		void visitBlockExpr(const BlockExpr& e) override {
+			handler(e);
+			walk(*e.block);
 		}
 
 		void visitListPushExpr(const ListPushExpr& e) override {

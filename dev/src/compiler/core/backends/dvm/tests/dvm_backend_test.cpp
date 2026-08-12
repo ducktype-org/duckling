@@ -38,7 +38,7 @@ public:
 		TESTER_ADD_TEST(initsDeinitsTest);
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(backendDependentTest);
-		TESTER_ADD_TEST(charAllocTest);
+		TESTER_ADD_TEST(allocTest);
 	}
 
 protected:
@@ -65,7 +65,7 @@ protected:
 			{ fs::FilePath(path("modules/inits_deinits/")), "inits_deinits" },
 			{ fs::FilePath(path("modules/pointers/")), "pointers" },
 			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
-			{ fs::FilePath(path("modules/char_alloc/")), "char_alloc" },
+			{ fs::FilePath(path("modules/alloc/")), "alloc" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -136,13 +136,14 @@ private:
 
 	void runFailTest(
 		const std::string&                 module_path,
-		const std::string&                 fail_msg = "",
-		const base::Optional<std::string>& input    = {},
-		const base::Optional<std::string>& output   = {},
-		const std::vector<std::string>&    args     = {}
+		const std::string&                 fail_msg             = "",
+		const base::Optional<std::string>& input                = {},
+		const base::Optional<std::string>& output               = {},
+		const std::vector<std::string>&    args                 = {},
+		const std::vector<std::string>&    module_paths_to_load = {}
 	) {
 		using namespace compiler;
-		auto code = getModuleFromPath(module_path);
+		auto code = getModuleFromPath(module_path, module_paths_to_load);
 		// for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
 		// for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		auto result = runTestOnVmGetResult(code, input, output, args);
@@ -202,7 +203,11 @@ private:
 
 	void unitsTest() { runTest("units", {}, {}, {}, 0); }
 
-	void pointersTest() { runFailTest("pointers", "Accessing null pointer", {}, {}, {}); }
+	// The pointer casts (including the `manyptr T` -> `ptr T` narrowing) run first and print their
+	// results; the module then dereferences a null many-pointer, which must fail the process.
+	void pointersTest() {
+		runFailTest("pointers", "Accessing null pointer", {}, "11\n44\n22\n", {}, ALL_CORE_MODULES);
+	}
 
 	void initsDeinitsTest() { runTest("inits_deinits", {}, { "100\n" }, {}, 0); }
 
@@ -210,10 +215,9 @@ private:
 	// `getValue` (returning 10), not the `@native_only_impl` one (returning 20).
 	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
 
-	// Allocating, reallocating and freeing a dynamic char table exercises the DVM-backend
-	// `dvm_char_alloc`/`dvm_char_realloc`/`dvm_char_free` builtins lowered to `dynTableReAlloc`
-	// and `free`. Returns 42 when the written chars survive the round-trip.
-	void charAllocTest() { runMultimoduleTest("char_alloc", ALL_CORE_MODULES, {}, {}, {}, 42); }
+	void allocTest() {
+		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n", {}, 42);
+	}
 };
 
 

@@ -480,6 +480,9 @@ namespace compiler::helios {
 
 		/**
 		 * @brief Gets symbols for scopes of various statements.
+		 *
+		 * A visit that reports the statement as erroneous / not-yet-implemented leaves `out`
+		 * unset, which the caller turns into a query failure.
 		 */
 		struct SymbolGrabVisitor final: pst::PstVisitorPanicky {
 			SymbolGrabVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
@@ -544,6 +547,18 @@ namespace compiler::helios {
 				}));
 
 				output(std::move(out));
+			}
+
+			void visitConstructor(pst::Access<pst::Constructor> ctor) override {
+				// Scope of "T →()← = {}" / "T.name →()← = {}". User-defined constructors are
+				// parsed but nothing compiles them yet, so report it instead of falling through
+				// to the panicky visitor default. Leaving `out` unset fails the query.
+				// @TODO: #1290 grab the parameter symbols here once constructors are supported.
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"User-defined constructors are not yet supported",
+					ctor->getStablePosition(),
+					"`T(...)` and `T.name(...)` declare a constructor.\n"
+				));
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
@@ -655,6 +670,8 @@ namespace compiler::helios {
 				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = base_element.dynamicCast<pst::Stmt>().value();
 				as_stmt->acceptVisitor(symbol_grab);
+
+				if (symbol_grab.out.empty()) return query::Failed();
 				return std::move(symbol_grab.out.value());
 			} else if (base_element->getElementKind() == pst::ElementKind::ExprHolder) {
 				return std::vector<SymID>{};

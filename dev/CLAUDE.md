@@ -116,6 +116,7 @@ Categories (from `src/common/logger/src/logger/logger.hpp`): `Lexer`, `Printer`,
 
 ## Conventions
 
+- Do not add unnecessary comments, it's often our convention to write the code like this and it is pretty visible to someone who has seen the code before the change, in such cases do not add additional comments explainin why the new lines there when added
 - **C++23.** clang-tidy enforces naming (warnings are errors): functions/methods `camelCase`, variables/members `snake_case`, constants `UPPER_CASE`, enums `PascalCase`.
 - Column limit 100. Indentation is tabs aligned with spaces (TabWidth 4) per `.clang-format`.
 - TODOs must be `@TODO: #<issue_number> description` (todo-validate gates PRs). Open an issue via `gh` and link it if needed.

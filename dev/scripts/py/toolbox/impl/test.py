@@ -6,6 +6,7 @@ from .helpers import (
     bash_command,
     bash_command_get_output,
     exit_with_error,
+    log_good,
 )
 
 
@@ -118,4 +119,7 @@ def test_impl(
         ctest_cmd += " --force-new-ctest-process --test-action memcheck"
 
     # Execute in build directory
+    # `bash_command` raises on a non-zero exit code, so getting past it means
+    # every selected test has passed.
     bash_command(ctest_cmd, cwd=build_dir)
+    log_good("All unit tests have passed")

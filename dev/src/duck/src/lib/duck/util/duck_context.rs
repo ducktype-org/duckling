@@ -1,6 +1,8 @@
 use std::env::{current_dir, home_dir};
 use std::path::{Path, PathBuf};
 
+use tracing::trace;
+
 use crate::duck::util::duck_cfg::DuckCfg;
 use crate::duck::util::duck_home::DuckHome;
 use crate::duck::util::terminal::Terminal;
@@ -24,13 +26,16 @@ pub struct DuckContext {
 impl DuckContext {
     /// Create a new [`DuckContext`].
     pub fn new() -> QuackResult<Self> {
+        trace!(
+            target = "curl",
+            "linked against `{:#?}`",
+            curl::Version::get()
+        );
         let env = Env::default();
         let console = Terminal::stdout();
         let error_console = Terminal::stderr();
         let user_home = home_dir().context("while trying to get user home directory")?;
-        let duck_home = DuckHome::new(
-            duck_home_path(&env, &user_home).context("while trying to get duck home directory")?,
-        );
+        let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
         let config = DuckCfg::new(&duck_home)?;
         let cwd = current_dir().context("while trying to get the current working directory")?;
         Ok(Self {
@@ -122,9 +127,14 @@ impl Default for DuckContext {
     fn default() -> Self {
         use crate::duck::util::terminal::Verbosity;
 
+        trace!(
+            target = "curl",
+            "linked against `{:#?}`",
+            curl::Version::get()
+        );
         let env = Default::default();
         let user_home = home_dir().unwrap();
-        let duck_home = DuckHome::new(duck_home_path(&env, &user_home).unwrap());
+        let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
         let mut console = Terminal::stdout();
         let mut error_console = Terminal::stderr();
         console.set_verbosity(Verbosity::Quiet);
@@ -132,7 +142,7 @@ impl Default for DuckContext {
         Self {
             console,
             error_console,
-            duck_cfg: Default::default(),
+            duck_cfg: DuckCfg::new(&duck_home).unwrap(),
             env,
             cwd: current_dir().unwrap(),
             duck_home,

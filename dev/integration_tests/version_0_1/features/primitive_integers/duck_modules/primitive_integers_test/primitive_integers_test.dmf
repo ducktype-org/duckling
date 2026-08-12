@@ -1,36 +1,36 @@
 fun main() -> i64 = {
     # Testing various signed integer types
-    var i8_val: i8 = i8(127);
-    var i16_val: i16 = i16(32767);
-    var i32_val: i32 = i32(2147483647);
+    var i8_val: i8 = 127 as i8;
+    var i16_val: i16 = 32767 as i16;
+    var i32_val: i32 = 2147483647 as i32;
     var i64_val: i64 = 100i64;
 
     # Testing various unsigned integer types
-    var u8_val: u8 = u8(255);
-    var u16_val: u16 = u16(65535);
-    var u32_val: u32 = u32(100);
+    var u8_val: u8 = 255 as u8;
+    var u16_val: u16 = 65535 as u16;
+    var u32_val: u32 = 100 as u32;
     var u64_val: u64 = 200u64;
 
     # Output test values
-    builtin_output_i64(i64(i8_val));     # 127
-    builtin_output_i64(i64(i16_val));    # 32767
-    builtin_output_i64(i64(i32_val));    # 2147483647
+    builtin_output_i64(i8_val as i64);     # 127
+    builtin_output_i64(i16_val as i64);    # 32767
+    builtin_output_i64(i32_val as i64);    # 2147483647
     builtin_output_i64(i64_val);          # 100
 
-    builtin_output_i64(i64(u8_val));     # 255
-    builtin_output_i64(i64(u16_val));    # 65535
-    builtin_output_i64(i64(u32_val));    # 100
-    builtin_output_i64(i64(u64_val));    # 200
+    builtin_output_i64(u8_val as i64);   # 255
+    builtin_output_i64(u16_val as i64);  # 65535
+    builtin_output_i64(u32_val as i64);  # 100
+    builtin_output_i64(u64_val as i64);  # 200
 
     # Test negative numbers
-    var neg_i8: i8 = i8(-128);
-    var neg_i16: i16 = i16(-32768);
-    var neg_i32: i32 = i32(-100);
+    var neg_i8: i8 = (-128) as i8;
+    var neg_i16: i16 = (-32768) as i16;
+    var neg_i32: i32 = (-100) as i32;
     var neg_i64: i64 = -50i64;
 
-    builtin_output_i64(i64(neg_i8));     # -128
-    builtin_output_i64(i64(neg_i16));    # -32768
-    builtin_output_i64(i64(neg_i32));    # -100
+    builtin_output_i64(neg_i8 as i64);     # -128
+    builtin_output_i64(neg_i16 as i64);    # -32768
+    builtin_output_i64(neg_i32 as i64);    # -100
     builtin_output_i64(neg_i64);          # -50
 
     # Test literal suffixes
@@ -38,9 +38,9 @@ fun main() -> i64 = {
     var with_suffix_i32 = 42i32;
     var with_suffix_u64 = 42u64;
 
-    builtin_output_i64(with_suffix_i64);       # 42
-    builtin_output_i64(i64(with_suffix_i32));  # 42
-    builtin_output_i64(i64(with_suffix_u64));  # 42
+    builtin_output_i64(with_suffix_i64);        # 42
+    builtin_output_i64(with_suffix_i32 as i64); # 42
+    builtin_output_i64(with_suffix_u64 as i64); # 42
 
     # Test hex, octal, and binary literals
     var hex_val = 0xA;    # 10

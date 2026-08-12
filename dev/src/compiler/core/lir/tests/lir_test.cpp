@@ -8,6 +8,7 @@
 #include <driver/test_utils.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -39,6 +40,7 @@ public:
 		TESTER_ADD_TEST(noTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(functionCallTest);
+		TESTER_ADD_TEST(builtinCallTest);
 		TESTER_ADD_TEST(functionCallMetadataTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(testGlobals);
@@ -50,6 +52,7 @@ public:
 		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
+		TESTER_ADD_TEST(cVariadicAbiTest);
 	}
 
 protected:
@@ -248,6 +251,37 @@ private:
 		auto module  = getLIROfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
 		withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(ctx, std::cerr); });
+	}
+
+	/**
+	 * @brief `move_out` and `move_in` are implemented in LIR: their calls become a read of /
+	 * a store into `*pointer` instead of a `Call`.
+	 */
+	void builtinCallTest() {
+		using namespace compiler::lir;
+
+		auto module = getLIROfModule(path("modules/function_calls"));
+
+		auto is_deref = [](const LIRPlace& place) {
+			return place.projection_chain.size() == 1
+			    && std::holds_alternative<LIRPlace::DerefProjection>(
+					   place.projection_chain.front().storage
+				);
+		};
+
+		auto first_instruction = [](CRef<Function> function) {
+			return function->block_order.front()->instructions.front();
+		};
+
+		// move_in:{i64}(pointer, value) -> `(*pointer) := Assign value`
+		auto store = first_instruction(module.lirFunc("writeInto"));
+		ASSERT_TRUE(store.operation == Operation::Assign);
+		ASSERT_TRUE(is_deref(store.output.value()));
+
+		// move_out:{i64}(pointer) -> `<result> := Assign (*pointer)`
+		auto read = first_instruction(module.lirFunc("readOut"));
+		ASSERT_TRUE(read.operation == Operation::Assign);
+		ASSERT_TRUE(is_deref(read.arguments.at(0).get<LIRPlace>()));
 	}
 
 /**
@@ -510,9 +544,9 @@ private:
 		auto my_float = module.houtGlobal("my_float");
 
 		withContextDo([&](query::Context& ctx) {
-			ASSERT_TRUE(my_int->type.hasNoOpDestructor(ctx));
-			ASSERT_TRUE(my_bool->type.hasNoOpDestructor(ctx));
-			ASSERT_TRUE(my_float->type.hasNoOpDestructor(ctx));
+			ASSERT_TRUE(my_int->type.isTriviallyDestructible(ctx));
+			ASSERT_TRUE(my_bool->type.isTriviallyDestructible(ctx));
+			ASSERT_TRUE(my_float->type.isTriviallyDestructible(ctx));
 		});
 	}
 
@@ -698,7 +732,7 @@ private:
 		bool found_push_with_params = false;
 		bool found_pop_with_params  = false;
 		bool found_len              = false;
-		bool found_free             = false;
+		bool found_destructor       = false;
 
 		for (const auto& block: lir_func->block_order) {
 			for (const auto& instr: block->instructions) {
@@ -714,11 +748,12 @@ private:
 						found_pop_with_params = true;
 					else if (name.contains("length"))
 						found_len = true;
+					// `Hdd` is the mangling of the compiler-generated destructor, which releases
+					// the list storage.
+					else if (name.contains("Hdd"))
+						found_destructor = true;
 					break;
 				}
-				case Operation::ListFree:
-					found_free = true;
-					break;
 				default:
 					break;
 				}
@@ -729,7 +764,7 @@ private:
 		ASSERT_TRUE(found_push_with_params);
 		ASSERT_TRUE(found_pop_with_params);
 		ASSERT_TRUE(found_len);
-		ASSERT_TRUE(found_free);
+		ASSERT_TRUE(found_destructor);
 	}
 
 	void metaFunctionsTest() {
@@ -854,6 +889,48 @@ private:
 			assertTrue(found_ugt, "LIR instruction 'IntegerUGt' was not found");
 			assertTrue(found_fadd, "LIR instruction 'FloatAdd' was not found");
 			assertTrue(found_sub, "LIR instruction 'IntegerSub' was not found");
+		});
+	}
+
+	/**
+	 * @brief Tests `@cffi_variadic_fixed_params(n)` on `extern("C")` declarations.
+	 */
+	void cVariadicAbiTest() {
+		auto module     = getLIROfModule(path("modules/c_variadic"));
+		auto caller_lir = module.lirFunc("caller");
+
+		using namespace compiler::lir;
+
+		bool found_variadic_call = false;
+		for (const auto& block: caller_lir->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+
+				const auto& literal = instr.arguments.at(0).get<FunctionLiteral>();
+				const auto* c_abi   = std::get_if<lir::LIRAbi::CAbi>(&literal.abi.value);
+				assertTrue(c_abi != nullptr, "Expected the call to use the C ABI");
+
+				const auto& info = c_abi->function_info;
+				ASSERT_EQUAL_PRINT(literal.mangled_name, base::StrID("sum_varargs"));
+				ASSERT_EQUAL_PRINT(info.num_fixed_params.value(), 1);
+				found_variadic_call = true;
+			}
+		}
+		assertTrue(found_variadic_call, "No call to `sum_varargs` was found in `caller`");
+
+		std::vector<std::pair<std::string_view, helios::SymID>> invalid_declarations;
+		for (auto name: { "variadicZeroFixed",
+		                  "variadicNoVarArgs",
+		                  "variadicUnpromotedFloat",
+		                  "variadicUnpromotedInt" })
+			invalid_declarations.emplace_back(name, getChain(name, module.scope).back());
+
+		withContextDo([&](query::Context& ctx) {
+			for (const auto& [name, symbol]: invalid_declarations)
+				assertTrue(
+					ctx.query<helios::QuerySymbolABI>(symbol)->hasFailed(),
+					base::strConcat("Expected the ABI query to fail for `", name, "`")
+				);
 		});
 	}
 };

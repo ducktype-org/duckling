@@ -9,7 +9,7 @@ fun main() -> i64 = {
     var a = 123;
     &a; 
     1 < 2; 
-    f32(1);
+    1 as f32;
 
     return 0;
 }

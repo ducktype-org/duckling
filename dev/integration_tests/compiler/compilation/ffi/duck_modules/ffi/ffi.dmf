@@ -1,6 +1,7 @@
 import core.builtins.*;
 
 extern("C") {
+    # In this file SSE register is floating-point register.
     # Small (8 bytes)  -> x86-64: single INTEGER reg, coerced to `{ i64 }`.
     class Small { x: i32 = 0; y: i32 = 0; }
 
@@ -27,8 +28,18 @@ extern("C") {
     fundecl make_big(seed: i64) -> Big;
 
     # Sub-word integer args -> x86-64: passed sign-extended to 32 bits by the caller.
-    fundecl add_shorts(a: i16, b: i16) -> i32;
-    fundecl add_bytes(a: i8, b: i8) -> i32;
+    # Declared in a namespace nested inside the extern("C") block: the C ABI (and therefore the
+    # unmangled symbol name) has to propagate through the namespace, otherwise linking fails.
+    namespace narrow_ints {
+        fundecl add_shorts(a: i16, b: i16) -> i32;
+        fundecl add_bytes(a: i8, b: i8) -> i32;
+    }
+
+    namespace variadic {
+        @cffi_variadic_fixed_params(1) fundecl sum_varargs_mixed(count: i64, a: i64, b: f64) -> i64;
+
+        @cffi_variadic_fixed_params(1) fundecl sum_varargs_struct(count: i64, a: Small, b: Small) -> i64;
+    }
 }
 
 fun main() -> i64 = {
@@ -38,19 +49,19 @@ fun main() -> i64 = {
     builtin_output_i64(take_big(Big(100i64, 200i64, 300i64)));         # 600
 
     let s = make_small(1i64);
-    builtin_output_i64(i64(s.x));                                      # 1
-    builtin_output_i64(i64(s.y));                                      # 2
+    builtin_output_i64(s.x);                                           # 1
+    builtin_output_i64(s.y);                                           # 2
 
     let m = make_mid(5i64);
-    builtin_output_i64(i64(m.inner.i));                                # 5
-    builtin_output_i64(i64(m.inner.f));                                # 10
-    builtin_output_i64(i64(m.g));                                      # 15
+    builtin_output_i64(m.inner.i);                                     # 5
+    builtin_output_i64(m.inner.f as i64);                              # 10
+    builtin_output_i64(m.g as i64);                                    # 15
 
     let m2 = make_mid2(7i64);
-    builtin_output_i64(i64(m2.a));                                     # 7
-    builtin_output_i64(i64(m2.b));                                     # 14
-    builtin_output_i64(i64(m2.c));                                     # 21
-    builtin_output_i64(i64(m2.d));                                     # 28
+    builtin_output_i64(m2.a as i64);                                   # 7
+    builtin_output_i64(m2.b as i64);                                   # 14
+    builtin_output_i64(m2.c as i64);                                   # 21
+    builtin_output_i64(m2.d as i64);                                   # 28
 
     let b = make_big(7i64);
     builtin_output_i64(b.a);                                           # 7
@@ -59,11 +70,18 @@ fun main() -> i64 = {
 
     # 0x0000ABCD: positive as i32, but -21555 once truncated to i16 (clean-zero upper bits).
     let raw_s: i32 = 43981i32;
-    builtin_output_i64(add_shorts(raw_s as i16, 1i16));             # -21554
+    builtin_output_i64(narrow_ints::add_shorts(raw_s as i16, 1i16));  # -21554
 
     # 0x000000C8: -56 as i8; without signext the clang callee reads 200 and prints 201.
     let raw_b: i32 = 200i32;
-    builtin_output_i64(add_bytes(raw_b as i8, 1i8));                # -55
+    builtin_output_i64(narrow_ints::add_bytes(raw_b as i8, 1i8));     # -55
+
+    # Variadic calls
+    # One INTEGER and one SSE variadic argument.
+    builtin_output_i64(variadic::sum_varargs_mixed(1i64, 4i64, 2.5));          # 6
+
+    # Structs passed by value through `...`.
+    builtin_output_i64(variadic::sum_varargs_struct(2i64, Small(1, 2), Small(3, 4)));  # 10
 
     return 0i64;
 }

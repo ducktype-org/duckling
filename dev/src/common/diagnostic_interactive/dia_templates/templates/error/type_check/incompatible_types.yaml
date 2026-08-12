@@ -7,7 +7,6 @@ metadata:
   active_until: "now"
   template_type: "message"
 
-
 params:
   given_type:
     description: "The given type."
@@ -17,7 +16,6 @@ params:
     description: "The code snippet where the error occurred."
   code_location:
     description: "The location of the code snippet."
-
 
 header_message:
   - "Type `"
@@ -33,12 +31,18 @@ description:
       param: "code_location"
 
 
-
-
-
 pointer_messages:
-  cause:
+  given:
     priority: 1
     type: "error"
     content: 
-      - "here"
+      - "Given `"
+      - param: "given_type"
+      - '`'
+  expected:
+    priority: 1
+    type: "error"
+    content: 
+      - "Expects `"
+      - param: "expected_type"
+      - '`'

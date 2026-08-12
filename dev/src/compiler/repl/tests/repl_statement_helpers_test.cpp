@@ -243,9 +243,10 @@ private:
 		auto module_id = createModule("fun foo() = {}");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto& hout = repl::getDefinitionHOUTUnit(ctx, module_id);
+			auto hout = repl::getDefinitionHOUTUnit(ctx, module_id);
+			assertTrue(hout.has_value(), "Definition HOUT should compile");
 			assertTrue(
-				!hout.functions.empty() || !hout.glob_data.empty(),
+				!hout.value()->functions.empty() || !hout.value()->glob_data.empty(),
 				"Definition HOUT should contain emitted elements"
 			);
 		});

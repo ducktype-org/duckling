@@ -1,6 +1,6 @@
 //! `build` subcommand execution logic.
-use crate::quackpack::core::compile::executor::ExecutorOutput;
 use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::compile::unit_compiler::CompilationOutput;
 use crate::quackpack::core::compile::{self, BuildContext};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
 use crate::quackpack::core::{FeatureName, PackageContext};
@@ -15,6 +15,8 @@ pub struct BuildOptions<'duck> {
     pub used_features: Vec<FeatureName>,
     /// Selected build profile.
     pub profile: StrId,
+    /// Whether to compile all dependencies into single folder (`false`) or compile each one where its code is located (`true`).
+    pub shared: bool,
     /// Artefact from [`StorageSyncOptions`].
     pub overwrite: bool,
     /// Artefact from [`StorageSyncOptions`].
@@ -26,11 +28,12 @@ pub struct BuildOptions<'duck> {
 }
 
 /// Compile given options.
-pub fn compile(options: BuildOptions<'_>) -> QuackResult<ExecutorOutput> {
+pub fn compile(options: BuildOptions<'_>) -> QuackResult<CompilationOutput> {
     let BuildOptions {
         pcx,
         used_features,
         profile,
+        shared,
         overwrite,
         frozen,
         strict_errors,
@@ -54,6 +57,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<ExecutorOutput> {
         storage,
         used_features,
         profile,
+        shared,
         jobs,
     };
     compile::compile(bcx)

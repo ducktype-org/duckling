@@ -43,14 +43,14 @@ fun readCharCode() -> i32 = {
     Reads one character. At end of input the code is negative; the resulting `char` is then not
     meaningful, so use `readCharCode` directly when end of input must be detected.
 #}
-fun readChar() -> char = char(readCharCode());
+fun readChar() -> char = readCharCode() as char;
 
 @backend_dependent
 fundecl writeChar(c: char) -> u64;
 
 @native_only_impl
 fun writeChar(c: char) -> u64 = {
-    return clib.putchar(i32(c)) as u64;
+    return clib.putchar(c as i32) as u64;
 }
 
 @dvm_only_impl
@@ -141,7 +141,7 @@ fun readI64() -> i64 = {
 
     var value = 0i64;
     while (c >= '0' and c <= '9') {
-        value = value * 10i64 + (i64(c) - i64('0'));
+        value = value * 10i64 + (c as i64 - '0' as i64);
         c     = readChar();
     }
 
@@ -153,7 +153,7 @@ fun readU64() -> u64 = {
     var c     = skipBlanks();
     var value = 0u64;
     while (c >= '0' and c <= '9') {
-        value = value * 10u64 + u64(i64(c) - i64('0'));
+        value = value * 10u64 + (c as i64 - '0' as i64) as u64;
         c     = readChar();
     }
     return value;
@@ -162,14 +162,14 @@ fun readU64() -> u64 = {
 fun readF64() -> f64 = {
     var buffer: containers.String;
     var c = readCharCode();
-    while (c == i32(' ') or c == i32('\t') or c == i32('\n')) c = readCharCode();
-    while (c >= 0 and c != i32(' ') and c != i32('\t') and c != i32('\n')) {
-        buffer.append(char(c));
+    while (c == ' ' as i32 or c == '\t' as i32 or c == '\n' as i32) c = readCharCode();
+    while (c >= 0 and c != ' ' as i32 and c != '\t' as i32 and c != '\n' as i32) {
+        buffer.append(c as char);
         c = readCharCode();
     }
     buffer.append('\0');
 
-    let value = strtod(builtins.char_ptr_from_slice(buffer.asSlice()));
+    let value = strtod(builtins.ptr_from_slice:{char}(buffer.asSlice()));
     buffer.dispose();
     return value;
 }
@@ -177,9 +177,9 @@ fun readF64() -> f64 = {
 fun readString() -> containers.String = {
     var result: containers.String;
     var c = readCharCode();
-    while (c >= 0 and c != i32('\n')) {
-        result.append(char(c));
+    while (c >= 0 and c != '\n' as i32) {
+        result.append(c as char);
         c = readCharCode();
     }
-    return move result;
+    return result;
 }

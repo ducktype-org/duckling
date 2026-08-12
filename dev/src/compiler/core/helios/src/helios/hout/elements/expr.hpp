@@ -1,20 +1,30 @@
 #pragma once
 
 #include <ctv/numeric_value.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/expression_type.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
 
 #include <token_parser_core/common_elements.hpp>
 
+#include <optional>
 #include <vector>
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
+	struct Stmt;
+
+	/**
+	 * @brief A block of statements, defined together with the statements in `stmt.hpp`, which
+	 * cannot be included here, as it includes this header itself.
+	 */
+	struct CodeBlock;
 
 #define FRIEND_MAKEBOX                              \
 	template<class T, class Deleter, class... Args> \
@@ -234,6 +244,9 @@ namespace compiler::helios::code {
 	 * @note One should be very careful not to create a "next use" ReusableExpr which does not
 	 * semantically see the result of the corresponding "first use" ReusableExpr, for example
 	 * if they are in different branches of an if expression.
+	 *
+	 * @warning The inner expression must be either trivially copyable or a `Temporary`. For more
+	 * info look in the `ReusableExpr` constructor.
 	 */
 	struct ReusableExpr final: public Expr {
 		SharedBox<Expr> inner;
@@ -701,16 +714,18 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents an explicit move expression (`move x`).
+	 * @brief Represents a pointer creation expression (`ptrof`).
+	 * It takes a place holding a value of symbol type `S` and produces a value of type `ptr S`.
 	 *
-	 * It takes a place of type T and produces a value of the same type, but as a temporary,
-	 * signalling that ownership of the operand is transferred out of it. The source local is
-	 * marked as moved during MIR lowering, so using it afterwards is a use-after-move.
+	 * Unlike `RefOfExpr`, the reference kind of the operand is kept instead of being collapsed into
+	 * `Ref`: `ptrof` on a place of type `box T` yields `ptr box T`, the address of the box itself,
+	 * and not a reference to its pointee. That makes it the way to address an element of a buffer
+	 * whose element type is itself a reference or a box.
 	 */
-	struct MoveExpr final: public Expr {
+	struct PtrOfExpr final: public Expr {
 		Box<Expr> inner;
 
-		MoveExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
+		PtrOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
@@ -719,7 +734,52 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		MoveExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
+		PtrOfExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
+	};
+
+	/**
+	 * @brief Represents a move expression (`move x`, or an implicit move of a temporary).
+	 *
+	 * It takes a place of type T and produces a value of the same type, but as a temporary,
+	 * signalling that ownership of the operand is transferred out of it. The source local is
+	 * marked as moved during MIR lowering, so using it afterwards is a use-after-move.
+	 */
+	struct MoveExpr final: public Expr {
+		/**
+		 * @brief Why a `MoveExpr` was created.
+		 *
+		 * - `Explicit` comes from the `move` keyword written in the code.
+		 * - `Implicit` is inserted by a coercion consuming an owned rvalue (a temporary) or when
+		 * moving the return value out of the function.
+		 *
+		 * @note: This is only used for testing and easier debugging purposes. The semantics between
+		 * the two don't differ.
+		 */
+		enum class MoveKind : std::uint8_t { Explicit, Implicit };
+
+		Box<Expr> inner;
+		MoveKind  kind;
+
+		MoveExpr(
+			query::Context& ctx,
+			ElementOrigin   origin,
+			Box<Expr>       inner,
+			MoveKind        kind = MoveKind::Explicit
+		);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		MoveExpr(
+			tsh::ExpressionType<> expression_type,
+			ElementOrigin         origin,
+			Box<Expr>             inner,
+			MoveKind              kind
+		);
 	};
 
 	/**
@@ -778,6 +838,49 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Constructs an aggregate value element-by-element, in place.
+	 *
+	 * Covers both record-like aggregates (struct/class/tuple), where the elements are the fields in
+	 * declaration order, and statically-sized arrays, where the elements are the array items in
+	 * index order, or a single value that fills all of the elements of the array.
+	 *
+	 * It stores the into uninitialized storage, with only the last store flagged as constructing
+	 * the destination, to avoid destructor insertion on assignment.
+	 */
+	struct CreateAggregateExpr final: public Expr {
+		tsh::AbstractType            type;
+		std::vector<base::Box<Expr>> values;
+
+		/// This is only used when we fill the array elements with a loop,
+		/// this statements will be lowered in a loop body.
+		base::Optional<base::CSharedBox<CodeBlock>> per_element_body;
+
+		CreateAggregateExpr(
+			query::Context&                             ctx,
+			ElementOrigin                               origin,
+			tsh::AbstractType                           type,
+			std::vector<base::Box<Expr>>                values,
+			base::Optional<base::CSharedBox<CodeBlock>> per_element_body = std::nullopt
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		CreateAggregateExpr(
+			tsh::ExpressionType<>                       expression_type,
+			ElementOrigin                               origin,
+			tsh::AbstractType                           type,
+			std::vector<base::Box<Expr>>                values,
+			base::Optional<base::CSharedBox<CodeBlock>> per_element_body
+		);
+	};
+
+	/**
 	 * @brief Represents a compile-time cast of a value to a type.
 	 *
 	 * This is meant to be added by coercions when a value of type `type` is expected,
@@ -799,6 +902,27 @@ namespace compiler::helios::code {
 		LiftToTypeExpr(
 			tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_expr
 		);
+	};
+
+	/**
+	 * @brief Represents a block of statements that evaluates to a single value.
+	 */
+	struct BlockExpr final: public Expr {
+		// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
+		// expressions.
+		Box<Stmt> block;
+
+		BlockExpr(query::Context& ctx, ElementOrigin origin, Box<Stmt> block);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		BlockExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Stmt> block);
 	};
 
 	/**

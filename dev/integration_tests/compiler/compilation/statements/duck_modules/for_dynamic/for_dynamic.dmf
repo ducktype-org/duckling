@@ -43,7 +43,7 @@ fun main() -> i64 = {
     }
 
     printSeparator(); 
-    builtin_output_i64(i64(dyn_ref_arr.length())); # 4
+    builtin_output_i64(dyn_ref_arr.length() as i64); # 4
 
     printSeparator(); 
     builtin_output_i64(look(&dyn_arr, 1)); # 1

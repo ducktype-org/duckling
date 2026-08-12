@@ -1,11 +1,11 @@
 fun init_array(arr: ref i64[100]) -> () = {
     var i = 0;
-    while (i < i64(arr.length())) {
+    while (i < arr.length() as i64) {
         arr[i] = 1;
         i = i + 1;
     }
-    if (i64(arr.length()) > 0) { arr[0] = 0; }
-    if (i64(arr.length()) > 1) { arr[1] = 0; }
+    if (arr.length() as i64 > 0) { arr[0] = 0; }
+    if (arr.length() as i64 > 1) { arr[1] = 0; }
 }
 
 fun sieve(n: i64, is_prime: ref i64[100]) -> () = {

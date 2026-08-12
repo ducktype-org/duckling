@@ -29,7 +29,7 @@ var x = (1+2, 3-4, 1+2-3*4, 2.5/5.*100.-1.333);
 # @TODO: #2510 Uncomment when done
 # var y = (3*4 > 4*3, 1<2<3<4, 1 == 1 != 1, 1 < 2 and not 2 < 3 or 3 > 4);
 var z = (
-    i16(12345),
+    12345 as i16,
     if true then 67 else 76,
     if true then (
         if false then
@@ -93,6 +93,17 @@ fun main() = {
     var tup3: (i64, i64) = unwrap(w1);
     var tup4: (i64, i64) = w2.a;
 
+    # Coercion of a tuple literal, element by element.
+    var widened: (i64, i64, f64) = (1, 2 as i16, 3.5);
+    builtin_output_i64(widened._1 + widened._2);
+    builtin_output_f64(widened._3);
+
+    # Elements lifted to a type. Both a literal and an already built tuple are coerced.
+    var lifted: (type, i64) = ((), 1);
+    var lifted_nested: (type, type) = ((i32, i64), ());
+    var plain: ((), i64) = ((), 2);
+    var lifted_from_value: (type, i64) = plain;
+    builtin_output_i64(lifted._2 + lifted_from_value._2);
 
     builtin_output_i64(zz._1);
     builtin_output_i64(zz._2);

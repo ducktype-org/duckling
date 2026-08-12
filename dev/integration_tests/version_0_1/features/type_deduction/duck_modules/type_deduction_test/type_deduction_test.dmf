@@ -7,8 +7,8 @@ fun main() -> i64 = {
 
     builtin_output_i64(a);              # 42
     builtin_output_i64(b);              # 42
-    builtin_output_i64(i64(c));         # 42
-    builtin_output_i64(i64(d));         # 100
+    builtin_output_i64(c as i64);       # 42
+    builtin_output_i64(d as i64);       # 100
 
     # Test type deduction for booleans
     var t = true;

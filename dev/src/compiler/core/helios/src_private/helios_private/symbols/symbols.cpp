@@ -14,9 +14,11 @@
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/utils/hout_walkers.hpp>
 #include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -86,10 +88,13 @@ namespace compiler::helios {
 				         ? EmissionPolicy::Replicated
 				         : EmissionPolicy::OwnerOnly;
 			}
-			variant_case_novalue(
-				defgen::BuiltinOperator, defgen::BoxBuiltin, defgen::ScriptMainWrapper
-			) {
+			variant_case_novalue(defgen::BuiltinOperator, defgen::ScriptMainWrapper) {
 				return EmissionPolicy::OwnerOnly;
+			}
+			variant_case(defgen::BuiltinTemplatedSymbol, data) {
+				return getBuiltinOrigins(data.getBuiltinKind()).contains(BuiltinOrigin::HOUT)
+				         ? EmissionPolicy::Replicated
+				         : EmissionPolicy::OwnerOnly;
 			}
 			variant_case_novalue(
 				defgen::Constructor,
@@ -208,10 +213,9 @@ namespace compiler::helios {
 	base::Optional<BuiltinKind> isBuiltin(SymID id) {
 		if (const auto builtin = getSymRef(id)->getDataOpt<BuiltinSemantics>())
 			return builtin.value()->builtin;
-		// Box alloc/free functions are backend-implemented builtins too.
-		if (const auto box = getSymRef(id)->getDataOpt<defgen::BoxBuiltin>())
-			return box.value()->kind == defgen::BoxBuiltin::Kind::Alloc ? BuiltinKind::BoxAlloc
-			                                                            : BuiltinKind::BoxFree;
+
+		if (const auto templated = getSymRef(id)->getDataOpt<defgen::BuiltinTemplatedSymbol>())
+			return templated.value()->getBuiltinKind();
 		return {};
 	}
 
@@ -238,6 +242,15 @@ namespace compiler::helios {
 
 #define MAKE_ATTR_INSTANCE(attr) template bool hasAttribute<attr>(SymID id);
 	FOR_EACH(MAKE_ATTR_INSTANCE, ATTRIBUTES_LIST)
+
+	template<typename Attribute>
+	base::Optional<CRef<Attribute>> getAttribute(SymID id) {
+		return getAttrInVector<Attribute>(getSymRef(id)->common.attributes);
+	}
+
+#define MAKE_GET_ATTR_INSTANCE(attr) \
+	template base::Optional<CRef<attr>> getAttribute<attr>(SymID id);
+	FOR_EACH(MAKE_GET_ATTR_INSTANCE, ATTRIBUTES_LIST)
 
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
@@ -648,7 +661,8 @@ namespace compiler::helios {
 			    && inner_statement_kind != pst::StmtKind::Namespace
 			    && inner_statement_kind != pst::StmtKind::Const) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Templates are only supported for functions, classes, namespaces and consts",
+					"Templates are only supported for functions, classes, namespaces and "
+					"consts",
 					template_decl->getStablePosition()
 				));
 				return query::Failed();
@@ -800,6 +814,11 @@ namespace compiler::helios {
 			}
 
 			// @note: here case for variables will be calling TS
+			case SymbolKind::Template:
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Lookup in template requires an explicit template parameter."
+				));
+				return query::Failed();
 			default:
 				throw base::NotYetImplemented(
 					base::strConcat("Lookup in symbol: ", key.symbol.ref->common.name)
@@ -998,7 +1017,10 @@ namespace compiler::helios {
 
 					// Get the coerced HOUT expression
 					const auto hout_qresult = getHoutOfExprWithExpectedType(
-						ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
+						ctx,
+						pst->getValue().value().unlock(ctx)->getExpr(),
+						type,
+						pst->getName().unlock(ctx)->getStablePosition()
 					);
 					if (hout_qresult.hasFailed()) return query::Failed();
 
@@ -1086,11 +1108,14 @@ namespace compiler::helios {
 				}
 				if (auto result_stmt = getAncestor(
 						ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::SpecifierBlock
-					)) {
+					))
 					pst_element = *std::move(result_stmt);
-				} else {
+				else if (auto second_result_stmt = getAncestor(
+							 ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::Namespace
+						 ))
+					pst_element = *std::move(second_result_stmt);
+				else
 					break;
-				}
 			}
 
 			return specifiers;

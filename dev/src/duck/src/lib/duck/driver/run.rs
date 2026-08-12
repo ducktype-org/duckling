@@ -22,8 +22,8 @@ use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 pub(crate) fn run(ctx: &mut DuckContext) -> QuackResult<()> {
     let external = gather_external_subcmds(ctx);
     debug!(
-        "found the external subcommands `{}`",
-        external.keys().cloned().collect::<Vec<_>>().join(", ")
+        external = ?external.keys(),
+        "found the external subcommands"
     );
     let cli = cli();
 
@@ -44,8 +44,8 @@ pub(crate) fn run(ctx: &mut DuckContext) -> QuackResult<()> {
     global_opts.update_with_subcommand_matches(&args);
     global_opts.update_context(ctx)?;
     debug!(
-        "after expanding everything we have the subcommand: `{:#?}`",
-        args.subcommand_name()
+        subcommand = ?args.subcommand_name(),
+        "after expanding everything"
     );
     run_subcmd(ctx, args, &external)
 }
@@ -129,7 +129,8 @@ fn run_subcmd(
                 .with_context(|| format!("failed to execute the external subcommand `{sub_cmd}`"))
         }
         (None, None, Some(path)) => {
-            let path = ctx.cwd().join(path);
+            let path = Path::new(path);
+            let path = path.resolve_with_tilde(ctx);
             check_is_script(&path)?;
             let args = external_cli_args(sub_args);
             run_script(RunScriptOptions::from_path_and_args_with_defaults(
@@ -152,8 +153,9 @@ fn external_cli_args(sub_args: &ArgMatches) -> Vec<OsString> {
 /// Execute the external subcommand.
 fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackResult<()> {
     debug!(
-        "executing the external command `{}`, arguments are `{cli_args:?}`",
-        exec_path.display()
+        path = %exec_path.display(),
+        ?cli_args,
+        "executing external command"
     );
     let mut command = std::process::Command::new(exec_path);
     command.args(cli_args);

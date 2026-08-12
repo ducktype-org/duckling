@@ -5,7 +5,7 @@ class Point {
 
 fun printPointList(l: ref List[Point]) -> () = {
     var i = 0;
-    while (i < i64(l.length())) {
+    while (i < l.length() as i64) {
         builtin_output_i64(l[i].x);
         builtin_output_i64(l[i].y);
         i = i + 1;
@@ -37,7 +37,7 @@ fun arrayOfListsTest() -> () = {
 
     var i = 0;
     while (i < 2) {
-        builtin_output_i64(i64(i));
+        builtin_output_i64(i as i64);
         printPointList(&arrayOfLists[i]);
         i = i + 1;
     }

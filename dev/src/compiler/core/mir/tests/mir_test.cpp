@@ -42,8 +42,10 @@ public:
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(tupleTest);
+		TESTER_ADD_TEST(tupleTypeCoercionTest);
 		TESTER_ADD_TEST(livenessMapTest);
 		TESTER_ADD_TEST(sliceTest);
+		TESTER_ADD_TEST(pointersTest);
 	}
 
 protected:
@@ -859,6 +861,91 @@ private:
 		});
 	}
 
+	/**
+	 * @brief Lowering of tuples coerced to a tuple type with `type` components.
+	 *
+	 * Every element that is not a type yet has to be lifted to one. An element of unit type has no
+	 * runtime representation to lift, so it lowers to the unit type itself - the lowering must
+	 * still produce a well formed `MetaTypeOperation`/`CreateTuple` instruction for the whole
+	 * tuple instead of falling through to a plain value lowering.
+	 */
+	void tupleTypeCoercionTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/tuple_type_coercion")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& hout_func = unit.functions.at(0);
+
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
+			                     ->valueOrThrow();
+
+			ASSERT_TRUE(mir_func.validateBlockIDs().isOk());
+
+			using enum compiler::mir::Operation;
+			using MK = compiler::mir::MetaKind;
+
+			auto meta_kind = [](const auto& instr) {
+				return std::get<compiler::mir::MetaParameters>(instr.extra_params).kind;
+			};
+
+			// Whether the argument is the unit type, i.e. a unit-typed element lifted to a type.
+			auto is_unit_type_constant = [](const compiler::mir::MIRValue& argument) {
+				if (!argument.isConstant()) return false;
+				auto stored = argument.get<compiler::mir::MIRConstant>()
+				                  .value.get<compiler::tsh::SymbolType<>>();
+				return stored.has_value()
+				    && stored->getType().getKind() == compiler::tsh::Kind::Unit;
+			};
+
+			usize create_tuple_count       = 0;
+			usize lifted_unit_elements     = 0;
+			usize lifted_from_materialised = 0;
+
+			for (const auto& block_id: mir_func.block_order) {
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					if (instr.operation == MetaTypeOperation
+					    && meta_kind(instr) == MK::CreateTuple) {
+						create_tuple_count++;
+						continue;
+					}
+					// A tuple constructor call: the function, followed by one argument per element.
+					if (instr.operation != Call) continue;
+
+					bool lifts_unit       = false;
+					bool reads_from_tuple = false;
+					for (usize i = 1; i < instr.arguments.size(); i++) {
+						if (is_unit_type_constant(instr.arguments[i])) {
+							lifts_unit = true;
+							lifted_unit_elements++;
+						}
+						// A field read, so the source tuple had to be materialised first.
+						if (instr.arguments[i].isLocal()
+						    && instr.arguments[i].get<compiler::mir::MIRPlace>().hasProjections())
+							reads_from_tuple = true;
+					}
+
+					if (lifts_unit && reads_from_tuple) lifted_from_materialised++;
+				}
+			}
+
+			// `nested` builds its inner `(i32, i64)` type before the outer tuple.
+			assertEqual(1u, create_tuple_count, "Expected one nested tuple type to be created.");
+
+			// One in each of `literal`, `lifted` and `nested`. The unit element of `value` keeps
+			// its unit type, so it is not lifted.
+			assertEqual(
+				3u, lifted_unit_elements, "Expected every unit element to be lifted to a type."
+			);
+			// `lifted` reads its unit element back out of the materialised `value` tuple.
+			assertEqual(
+				1u,
+				lifted_from_materialised,
+				"Expected the unit element of a materialised tuple to be lifted to a type."
+			);
+		});
+	}
+
 	void sliceTest() {
 		// Test that without STD library, slice type access will not work.
 		auto [module, scope] = getModule(fs::File(path("modules/slices")));
@@ -867,6 +954,49 @@ private:
 			auto hout_unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto mir_unit  = compiler::mir::lowerToMIRUnit(ctx, &hout_unit->valueOrPanic());
 			ASSERT_TRUE(mir_unit.hasFailed());
+		});
+	}
+
+	/**
+	 * @brief `ptrof` lowers to an unconditional `Operation::AddressOf`.
+	 *
+	 * Unlike `&`, which forwards a `box`/`ref` operand unchanged and only emits an `AddressOf` for
+	 * a direct one, `ptrof` takes the address of the place itself in every case. The operand keeps
+	 * its projection chain, so `ptrof m[1]` addresses the indexed element.
+	 */
+	void pointersTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/pointers")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
+			for (const auto& fn: unit.functions)
+				if (fn->declaration->original_name.strView() == "ptr_of") target = fn;
+			ASSERT_HAS_VALUE(target);
+
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ target.value() })
+			                     ->valueOrThrow();
+
+			using namespace compiler::mir;
+			usize address_of_count = 0;
+			bool  found_indexed    = false;
+			for (const auto& block_id: mir_func.block_order)
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					if (instr.operation != Operation::AddressOf) continue;
+					address_of_count++;
+
+					// `ptrof m[1]`: the index projection survives into the addressed place.
+					const auto& chain = instr.arguments[0].get<MIRPlace>().projection_chain;
+					if (!chain.empty()
+					    && std::holds_alternative<MIRPlace::IndexProjection>(chain.back().storage))
+						found_indexed = true;
+				}
+
+			// One per `ptrof`, the `box` operand included — `&b` would forward it instead.
+			ASSERT_EQUAL(usize(3), address_of_count);
+			ASSERT_TRUE(found_indexed);
 		});
 	}
 };
