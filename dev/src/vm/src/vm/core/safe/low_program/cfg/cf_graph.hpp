@@ -198,7 +198,9 @@ namespace vm::low {
 			 * @param bc Micro-bytecode of lowered function.
 			 * @param block_beginnings Sorted block start instruction offsets.
 			 */
-			void createFuncCFG(const low::MicroBytecode& bc, const std::vector<usize>& block_beginnings);
+			void createFuncCFG(
+				const low::MicroBytecode& bc, const std::vector<usize>& block_beginnings
+			);
 
 		public:
 			ControlFlowGraph() = default;
@@ -236,9 +238,9 @@ namespace vm::low {
 			 * @return A standalone CFG representing the created induced subgraph.
 			 */
 			[[nodiscard]] ControlFlowGraph inducedSubgraph(
-				BasicBlockID entry_block_id,
+				BasicBlockID                     entry_block_id,
 				const std::vector<BasicBlockID>& other_block_ids,
-				bool dummy_exit_blocks
+				bool                             dummy_exit_blocks
 			) const;
 
 			/**

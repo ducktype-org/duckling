@@ -174,8 +174,8 @@ namespace vm::low::cf {
 
 		// Remove unreachable blocks
 		std::vector<BasicBlockID> reachable{ 0 };
-		std::vector<bool> visited(blocks.size(), false);
-		visited[0] = true;
+		std::vector<bool>         visited(blocks.size(), false);
+		visited[0]      = true;
 		usize stack_ptr = 0;
 
 		while (stack_ptr < reachable.size()) {
@@ -194,9 +194,9 @@ namespace vm::low::cf {
 	}
 
 	ControlFlowGraph ControlFlowGraph::inducedSubgraph(
-		BasicBlockID entry_block_id,
+		BasicBlockID                     entry_block_id,
 		const std::vector<BasicBlockID>& other_block_ids,
-		bool dummy_exit_blocks
+		bool                             dummy_exit_blocks
 	) const {
 		ControlFlowGraph subgraph;
 		subgraph.blocks.emplace_back(0, blocks[entry_block_id].start, blocks[entry_block_id].end);
