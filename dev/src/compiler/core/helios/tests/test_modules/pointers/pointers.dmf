@@ -18,5 +18,17 @@ fun test_pointers() -> i64 = {
     var sum: i32 = *from_ref + 1;
     var c_elem: i32 = c[0];
 
+    # `ptrof` keeps the reference kind of its operand, so none of these collapse to `ptr i32`.
+    var pof_direct = ptrof a;
+    var pof_box = ptrof box_a;
+    var pof_ref = ptrof ref_a;
+
+    # Replacement of the old `element_ptr` builtin, with a call hidden below the operand.
+    var pof_elem = ptrof m[index()];
+
+    return 0;
+}
+
+fun index() -> i64 = {
     return 0;
 }

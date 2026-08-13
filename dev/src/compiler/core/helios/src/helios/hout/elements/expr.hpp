@@ -244,6 +244,9 @@ namespace compiler::helios::code {
 	 * @note One should be very careful not to create a "next use" ReusableExpr which does not
 	 * semantically see the result of the corresponding "first use" ReusableExpr, for example
 	 * if they are in different branches of an if expression.
+	 *
+	 * @warning The inner expression must be either trivially copyable or a `Temporary`. For more
+	 * info look in the `ReusableExpr` constructor.
 	 */
 	struct ReusableExpr final: public Expr {
 		SharedBox<Expr> inner;
@@ -711,16 +714,18 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents an explicit move expression (`move x`).
+	 * @brief Represents a pointer creation expression (`ptrof`).
+	 * It takes a place holding a value of symbol type `S` and produces a value of type `ptr S`.
 	 *
-	 * It takes a place of type T and produces a value of the same type, but as a temporary,
-	 * signalling that ownership of the operand is transferred out of it. The source local is
-	 * marked as moved during MIR lowering, so using it afterwards is a use-after-move.
+	 * Unlike `RefOfExpr`, the reference kind of the operand is kept instead of being collapsed into
+	 * `Ref`: `ptrof` on a place of type `box T` yields `ptr box T`, the address of the box itself,
+	 * and not a reference to its pointee. That makes it the way to address an element of a buffer
+	 * whose element type is itself a reference or a box.
 	 */
-	struct MoveExpr final: public Expr {
+	struct PtrOfExpr final: public Expr {
 		Box<Expr> inner;
 
-		MoveExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
+		PtrOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
@@ -729,7 +734,52 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		MoveExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
+		PtrOfExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
+	};
+
+	/**
+	 * @brief Represents a move expression (`move x`, or an implicit move of a temporary).
+	 *
+	 * It takes a place of type T and produces a value of the same type, but as a temporary,
+	 * signalling that ownership of the operand is transferred out of it. The source local is
+	 * marked as moved during MIR lowering, so using it afterwards is a use-after-move.
+	 */
+	struct MoveExpr final: public Expr {
+		/**
+		 * @brief Why a `MoveExpr` was created.
+		 *
+		 * - `Explicit` comes from the `move` keyword written in the code.
+		 * - `Implicit` is inserted by a coercion consuming an owned rvalue (a temporary) or when
+		 * moving the return value out of the function.
+		 *
+		 * @note: This is only used for testing and easier debugging purposes. The semantics between
+		 * the two don't differ.
+		 */
+		enum class MoveKind : std::uint8_t { Explicit, Implicit };
+
+		Box<Expr> inner;
+		MoveKind  kind;
+
+		MoveExpr(
+			query::Context& ctx,
+			ElementOrigin   origin,
+			Box<Expr>       inner,
+			MoveKind        kind = MoveKind::Explicit
+		);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		MoveExpr(
+			tsh::ExpressionType<> expression_type,
+			ElementOrigin         origin,
+			Box<Expr>             inner,
+			MoveKind              kind
+		);
 	};
 
 	/**

@@ -111,6 +111,9 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         fetcher: &Fetcher<'_>,
         git_access: &Access,
     ) -> QuackResult<ShouldRunSolverEngine> {
+        let ctx = fetcher.ctx();
+        ctx.console()
+            .info("starting gathering the dependency graph")?;
         let gatherer = Gatherer::new(fetcher, git_access);
 
         let root_manifest = self.root_pcx.package().manifest().clone();
@@ -145,6 +148,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         }
 
         let root_path = self.root_pcx.package().root().into();
+        ctx.console().info("running gathering")?;
         let gathered_info = Self::run_solver_gatherer(
             &gatherer,
             root_manifest,

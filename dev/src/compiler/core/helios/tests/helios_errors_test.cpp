@@ -42,6 +42,7 @@ public:
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testErrorLoggingTemplates);
 		TESTER_ADD_TEST(testPointerCastErrors);
+		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
@@ -992,24 +993,6 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun foo() -> List[i32] = {
-				    var a: List[i32];
-				    return a;
-				}
-				fun main() -> i64 = {
-				    var list = foo();
-				    return 0;
-				}
-			)",
-				// `return a` implicitly copies the owned local `a`; `var list = foo()` moves the
-			    // temporary and is fine. @TODO: #858 `return` should implicitly move owned locals.
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`",
-			      "return a" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
 				fun foo(list: List[i32]) -> i32 = {
 				    return 1;
 				}
@@ -1609,6 +1592,39 @@ private:
 
 			)",
 			{ "cannot be converted to type `i64`" },
+			1
+		);
+	}
+
+	/// @brief `ptrof` rejects the same operands `&` rejects, and cannot be evaluated at comp time.
+	void testPtrOfErrors() {
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var p = ptrof 10;
+				}
+			)",
+			{ "Tried to take a pointer to a temporary" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var u = ();
+					var p = ptrof u;
+				}
+			)",
+			{ "does not carry information" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				var g: i32 = 5;
+				const A = ptrof g;
+			)",
+			{ "Feature not implemented" },
 			1
 		);
 	}

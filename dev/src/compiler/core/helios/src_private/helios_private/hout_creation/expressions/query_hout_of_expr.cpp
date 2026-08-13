@@ -445,6 +445,30 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				// Handle taking pointers. Unlike `&`, `ptrof` keeps the reference kind of the
+				// operand, so `ptrof` of a `box T` place is a `ptr box T` addressing the box itself.
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Ptrof)) {
+					// @TODO: #1956 remove the check below.
+					// This is a temporary check to prevent us from taking the address of types that
+					// do not carry information.
+					if (not inner_type.getType().carriesInformation(ctx)) {
+						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+							"Taking a pointer to a type that does not carry information is not "
+							"supported yet.",
+							stmt->getStablePosition()
+						));
+						return;  // failed
+					}
+					if (not inner->expression_type.getValueCategory().addressable()) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"Tried to take a pointer to a temporary", stmt->getStablePosition()
+						));
+						return;
+					}
+					node = makeBox<PtrOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				}
+
 				// Handle dereferencing
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
 					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
@@ -665,7 +689,9 @@ namespace compiler::helios::code {
 					};
 
 					for (auto sub_expr: sub_exprs) {
-						auto sub_expr_hout = subExprFromPSTWithType(ctx, sub_expr, meta_type);
+						auto sub_expr_hout = subExprFromPSTWithType(
+							ctx, sub_expr, meta_type, op->getStablePosition()
+						);
 						if (sub_expr_hout.hasFailed()) {
 							// Error has occurred.
 							return;
@@ -986,28 +1012,22 @@ namespace compiler::helios {
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
 		const tsh::SymbolType<>                          expected_type,
+		base::Optional<dia_int::StablePosition>          coercion_expects_pos,
 		CoercionErrorOverrides                           error_overrides
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
 		UNPACK_QRESULT_CREF_TO_BOX(CRef<code::Expr> expr_hout =, expr_hout_qresult);
 
-		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
-		const auto source_position    = pst_expr.element.unlock(ctx)->getStablePosition();
-		const auto coercion_qresult   = canCoerce(ctx, expr_hout->expression_type, expected_type);
-		if (coercion_qresult.hasFailed()) return query::Failed();
+		const auto source_position = pst_expr.element.unlock(ctx)->getStablePosition();
+		UNPACK_QRESULT(
+			auto coercion_result =, canCoerce(ctx, expr_hout->expression_type, expected_type)
+		);
 
-		const auto& coercion_result = coercion_qresult.valueOrThrow();
-		if (coercion_result.isValid())
-			return coercion_result.getCoercion().coerceFromRef(ctx, expr_hout);
+		if (coercion_result.isValid()) return coercion_result.coerceFromRef(ctx, expr_hout);
 
 		logCoercionFailure(
-			ctx,
-			coercion_result.getInvalidReason(),
-			source_symbol_type,
-			expected_type,
-			source_position,
-			std::move(error_overrides)
+			ctx, coercion_result, source_position, coercion_expects_pos, std::move(error_overrides)
 		);
 		return query::Failed();
 	}
@@ -1025,42 +1045,43 @@ namespace compiler::helios {
 
 		UNPACK_QRESULT_CREF_TO_BOX(CRef<code::Expr> expr_hout =, expr_hout_qresult);
 
-		std::vector<InvalidCoercionReason> failure_reasons;
-		failure_reasons.reserve(expected_types.size());
+		std::vector<Coercion> failures;
+		failures.reserve(expected_types.size());
 
 		for (const tsh::SymbolType<>& expected_type: expected_types) {
 			const auto coercion_qresult = canCoerce(ctx, expr_hout->expression_type, expected_type);
 			if (coercion_qresult.hasFailed()) return query::Failed();
 
 			const auto& coercion_result = coercion_qresult.valueOrThrow();
-			if (coercion_result.isValid())
-				return coercion_result.getCoercion().coerceFromRef(ctx, expr_hout);
+			if (coercion_result.isValid()) return coercion_result.coerceFromRef(ctx, expr_hout);
 
-			failure_reasons.push_back(coercion_result.getInvalidReason());
+			failures.push_back(coercion_result);
 		}
 
 		logNoMatchingExpectedTypeFailure(
-			ctx,
-			expr_hout->expression_type.getSymbolType(),
-			expected_types,
-			failure_reasons,
-			pst_expr.element.unlock(ctx)->getStablePosition()
+			ctx, failures, pst_expr.element.unlock(ctx)->getStablePosition()
 		);
 		return query::Failed();
 	}
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
-		query::Context&                     ctx,
-		pst::AccessLocked<pst::ExprElement> element,
-		tsh::SymbolType<>                   expected_type,
-		helios::CoercionErrorOverrides      error_overrides
+		query::Context&                         ctx,
+		pst::AccessLocked<pst::ExprElement>     element,
+		tsh::SymbolType<>                       expected_type,
+		base::Optional<dia_int::StablePosition> coercion_expects_pos,
+		helios::CoercionErrorOverrides          error_overrides
 	) {
 		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
 		const auto source_position = element.unlock(ctx)->getStablePosition();
 
 		auto maybe_coerced = coerceFromBox(
-			ctx, std::move(expr_hout), expected_type, source_position, std::move(error_overrides)
+			ctx,
+			std::move(expr_hout),
+			expected_type,
+			source_position,
+			coercion_expects_pos,
+			std::move(error_overrides)
 		);
 		if (maybe_coerced.has_value()) return std::move(maybe_coerced.value());
 		return query::Failed();

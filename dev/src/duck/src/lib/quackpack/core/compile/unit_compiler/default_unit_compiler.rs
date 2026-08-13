@@ -21,7 +21,8 @@ impl UnitCompiler for DefaultUnitCompiler {
         assert_eq!(
             root.artifacts_type(),
             ArtifactsType::Binary,
-            "debug executor supports only compiling to the binary"
+            "debug executor supports only compiling to the binary; got {:?}",
+            root.artifacts_type(),
         );
     }
 

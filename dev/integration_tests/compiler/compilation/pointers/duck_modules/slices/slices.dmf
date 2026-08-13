@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun longer_str(a: str, b: str) = {
     if (a.length() > b.length())
         return a;

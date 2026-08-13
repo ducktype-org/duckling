@@ -771,9 +771,20 @@ namespace compiler::helios {
 				result = CompileTimeValue{ maybe_new_numeric.value() };
 			}
 
-			void visitMoveExpr(const code::MoveExpr&) final { result = CouldNotShortPath{}; }
+			void visitMoveExpr(const code::MoveExpr& expr) final {
+				// @TODO: #3106 Once move constructors exist. Moves in TreeEval should only be
+				// allowed on trivially movable types, other should CouldNotShortPath.
+				auto sub_result = evalHoutExpr(ctx, expr.inner.ref());
+				if (sub_result.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				result = sub_result.valueOrThrow();
+			}
 
 			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
+
+			void visitPtrOfExpr(const code::PtrOfExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 

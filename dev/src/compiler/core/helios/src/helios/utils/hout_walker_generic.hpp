@@ -192,6 +192,11 @@ namespace compiler::helios::code {
 			walk(*e.inner);
 		}
 
+		void visitPtrOfExpr(const PtrOfExpr& e) override {
+			handler(e);
+			walk(*e.inner);
+		}
+
 		void visitDerefExpr(const DerefExpr& e) override {
 			handler(e);
 			walk(*e.inner);

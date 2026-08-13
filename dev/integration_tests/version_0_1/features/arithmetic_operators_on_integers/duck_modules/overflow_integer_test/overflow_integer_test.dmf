@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test unsigned integer overflow (wraparound)
 
 fun main() -> i64 = {

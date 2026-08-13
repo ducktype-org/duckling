@@ -208,6 +208,25 @@ impl Script {
             Self::Associated(package_script) => package_script.into_manifest(),
         }
     }
+
+    /// Get a [`Display`](fmt::Display) impl.
+    pub fn display(&self) -> impl fmt::Display + '_ {
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
+        struct ScriptDisplay<'a> {
+            script: &'a Script,
+        }
+        impl fmt::Display for ScriptDisplay<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self.script {
+                    Script::Standalone(standalone_script) => {
+                        write!(f, "{}", standalone_script.display())
+                    }
+                    Script::Associated(package_script) => write!(f, "{}", package_script.display()),
+                }
+            }
+        }
+        ScriptDisplay { script: self }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -306,6 +325,25 @@ impl PackageScript {
     pub fn package_version(&self) -> Version {
         self.package.version()
     }
+
+    /// Get a [`Display`](fmt::Display) impl.
+    pub fn display(&self) -> impl fmt::Display + '_ {
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
+        struct PackageScriptDisplay<'a> {
+            script: &'a PackageScript,
+        }
+        impl fmt::Display for PackageScriptDisplay<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(
+                    f,
+                    "script `{}` of a {}",
+                    self.script.script_name,
+                    self.script.package.display()
+                )
+            }
+        }
+        PackageScriptDisplay { script: self }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -375,6 +413,20 @@ impl StandaloneScript {
     /// Transform into the underlying frontmatter.
     pub fn into_frontmatter(self) -> FrontMatter {
         self.frontmatter
+    }
+
+    /// Get a [`Display`](fmt::Display) impl.
+    pub fn display(&self) -> impl fmt::Display + '_ {
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
+        struct StandaloneScriptDisplay<'a> {
+            script: &'a StandaloneScript,
+        }
+        impl fmt::Display for StandaloneScriptDisplay<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "script at `{}`", self.script.frontmatter.path.display())
+            }
+        }
+        StandaloneScriptDisplay { script: self }
     }
 }
 

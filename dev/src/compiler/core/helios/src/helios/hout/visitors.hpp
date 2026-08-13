@@ -37,6 +37,7 @@ namespace compiler::helios::code {
 		SequenceExpr,
 		MoveExpr,
 		RefOfExpr,
+		PtrOfExpr,
 		DerefExpr,
 		DefaultValueExpr,
 		CreateAggregateExpr,

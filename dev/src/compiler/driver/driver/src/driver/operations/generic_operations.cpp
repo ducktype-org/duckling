@@ -425,9 +425,10 @@ namespace compiler::driver {
 						statement_info_result.value()
 					)) {
 					CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
-					const auto& hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
-					auto        lir_result
-						= compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
+					auto hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
+					if (not hout_unit.has_value()) return std::unexpected(hout_unit.error());
+					auto lir_result
+						= compileHOUTUnitToLIRModuleData(ctx, *hout_unit.value(), module_name_id);
 					if (lir_result.hasFailed())
 						return std::unexpected("Failed to compile definition statement to LIR");
 					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());

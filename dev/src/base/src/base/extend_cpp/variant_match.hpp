@@ -148,7 +148,7 @@ namespace base {
 /**
  * @brief An `if` clause called when `v` holds `type`. The inner type is accessible through `name`.
  */
-#define v_if_matches(v, type, name) if (const auto* name = std::get_if<type>(&v))
+#define v_if_matches(v, type, name) if (auto* name = std::get_if<type>(&v))
 
 /**
  * @brief Use instead of `std::visit` with multiple choices.

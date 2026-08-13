@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     var first = 10;
     var x: ptr i32 = &first as ptr i32;

@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 class Person {
 	name: str;
 	age: i32;

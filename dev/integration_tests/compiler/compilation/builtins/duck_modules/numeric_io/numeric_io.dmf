@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     let i64_1 = builtin_input_i64();
     builtin_output_i64(i64_1);

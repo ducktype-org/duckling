@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun foo(a: ref i64) -> () = {
     builtin_output_i64(1);
 }

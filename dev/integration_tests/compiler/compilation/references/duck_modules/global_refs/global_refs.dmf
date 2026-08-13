@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 var glob: i64 = 100;
 var blob: i64 = 200;
 

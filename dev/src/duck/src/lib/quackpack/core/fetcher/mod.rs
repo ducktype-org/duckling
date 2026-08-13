@@ -152,10 +152,7 @@ impl<'duck> Fetcher<'duck> {
 
     /// Fetch a source of a `package`. Returns a path to the file where the blob has been saved.
     #[tracing::instrument(skip(self))]
-    pub async fn fetch_package_blob(
-        &self,
-        package: &types::PackageWithUrl,
-    ) -> QuackResult<PathBuf> {
+    async fn fetch_package_blob(&self, package: &types::PackageWithUrl) -> QuackResult<PathBuf> {
         let destination = self
             .download_cache_path
             .join(package.name)
@@ -237,6 +234,10 @@ impl<'duck> Fetcher<'duck> {
         retries: u32,
     ) -> QuackResult<PathBuf> {
         debug!("fetching with retries");
+        self.ctx.console().info(format!(
+            "starting a download of {} version {} from `{}`",
+            pkg.name, pkg.version, pkg.url
+        ))?;
         let calls = retries + 1;
         for attempt in 1..=calls {
             match self.fetch_package_blob(pkg).await {
@@ -246,13 +247,23 @@ impl<'duck> Fetcher<'duck> {
                 }
                 Err(e) => {
                     error!(error = %e, "failed to fetch");
-                    if attempt != retries {
+                    let will_retry = attempt != calls;
+                    if will_retry {
                         debug!(%attempt, "retrying fetch");
                     }
+                    self.ctx.console().warning(format!(
+                        "failed to download {} version {} from `{}`: {e}",
+                        pkg.name, pkg.version, pkg.url
+                    ))?;
                 }
             }
         }
 
-        qp_bail!("failed to fetch a package {} {}", pkg.name, pkg.version)
+        let retries_string = if retries == 1 { "retry" } else { "retries" };
+        qp_bail!(
+            "failed to fetch a package {} {} after {retries} {retries_string}",
+            pkg.name,
+            pkg.version
+        )
     }
 }
