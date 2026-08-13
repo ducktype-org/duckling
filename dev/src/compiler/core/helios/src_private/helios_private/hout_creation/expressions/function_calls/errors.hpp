@@ -5,13 +5,13 @@
  */
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 
+#include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 
 namespace compiler::helios::code {
@@ -73,8 +73,8 @@ namespace compiler::helios::code {
 	using CallFailure
 		= std::variant<PositionalAfterNamedArgument, RepeatedNamedArgument, FunctionMatchFailure>;
 
-	class AmbiguousMatchesError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class AmbiguousMatchesError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -82,20 +82,16 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		AmbiguousMatchesError(dia_int::StablePosition source_position):
+		AmbiguousMatchesError(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 
 		// void addExplore
 
-		void addExploreCoercibleCandidates(
-			usize no_candidates, Box<dia_int::MessageBase> candidate_list
-		);
+		void addExploreCoercibleCandidates(usize no_candidates, Box<dia::MessageBase> candidate_list);
 
-		void addExploreFailedCandidates(
-			usize no_candidates, Box<dia_int::MessageBase> candidate_list
-		);
+		void addExploreFailedCandidates(usize no_candidates, Box<dia::MessageBase> candidate_list);
 
-		void addExploreExactCandidates(usize no_candidates, Box<dia_int::MessageBase> candidate_list);
+		void addExploreExactCandidates(usize no_candidates, Box<dia::MessageBase> candidate_list);
 	};
 
 	/**
@@ -108,7 +104,7 @@ namespace compiler::helios::code {
 	 * (used in ambiguous matches) or for the main call error.
 	 * @return A detailed error message describing the call failure.
 	 */
-	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
+	Box<dia::MessageBase> createDetailedCallErrorMessage(
 		query::Context&            ctx,
 		ElementOrigin              whole_call_origin,
 		std::vector<ElementOrigin> arguments_origin,
@@ -116,8 +112,8 @@ namespace compiler::helios::code {
 		bool                       is_for_candidate_function
 	);
 
-	class CoercibleCandidateCoercionPointerMessage final: public dia_int::MessageBase {
-		dia_int::Metadata getMetadata() const final {
+	class CoercibleCandidateCoercionPointerMessage final: public dia::MessageBase {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "pointer_message",
 				     .type          = "note",
 				     .family        = "type_check",
@@ -129,13 +125,13 @@ namespace compiler::helios::code {
 			std::string parameter_type, std::string argument_type
 		):
 			  MessageBase() {
-			addArgument<dia_int::TextArgument>("parameter_type", std::move(parameter_type));
-			addArgument<dia_int::TextArgument>("argument_type", std::move(argument_type));
+			addArgument<dia::TextArgument>("parameter_type", std::move(parameter_type));
+			addArgument<dia::TextArgument>("argument_type", std::move(argument_type));
 		}
 	};
 
-	class CoercibleCandidateNote final: public dia_int::MessageWithCodeFragment {
-		dia_int::Metadata getMetadata() const final {
+	class CoercibleCandidateNote final: public dia::MessageWithCodeFragment {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "note",
 				     .family        = "type_check",
@@ -143,12 +139,12 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		CoercibleCandidateNote(dia_int::StablePosition source_position):
+		CoercibleCandidateNote(dia::StablePosition source_position):
 			  MessageWithCodeFragment(source_position) {}
 	};
 
-	class ExactCandidateNote final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class ExactCandidateNote final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "note",
 				     .family        = "type_check",
@@ -156,12 +152,12 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		ExactCandidateNote(dia_int::StablePosition source_position):
+		ExactCandidateNote(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class FailedCandidateNote final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class FailedCandidateNote final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "note",
 				     .family        = "type_check",
@@ -169,12 +165,12 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		FailedCandidateNote(dia_int::StablePosition source_position):
+		FailedCandidateNote(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class NoCandidatesFoundError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NoCandidatesFoundError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -182,7 +178,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		NoCandidatesFoundError(dia_int::StablePosition source_position):
+		NoCandidatesFoundError(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

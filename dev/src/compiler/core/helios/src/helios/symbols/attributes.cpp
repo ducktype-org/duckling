@@ -1,6 +1,5 @@
 #include "attributes.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/attribute_arg_list.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/elements/expr.hpp>
@@ -10,6 +9,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_errors.hpp>
 
@@ -32,7 +32,7 @@ namespace compiler::helios {
 		 */
 		Attribute expectNoArgs(query::Context& ctx, Attribute attr, AttrArgs args) {
 			if (args.has_value() && args.value().unlock(ctx)->size() > 0) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"Attribute '", attrNameStr(attr).str(), "' does not take arguments."
 					),
@@ -49,8 +49,8 @@ namespace compiler::helios {
 		 */
 		u64 parseU64(query::Context& ctx, AttrArgs args, std::string_view error_msg) {
 			if_opt_none(args) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					std::string(error_msg), base::Optional<dia_int::StablePosition>{}
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					std::string(error_msg), base::Optional<dia::StablePosition>{}
 				));
 				query::throwFailed();
 			}
@@ -60,7 +60,7 @@ namespace compiler::helios {
 				                                                              arg_list->end() };
 
 			if (holders.size() != 1) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					std::string(error_msg), arg_list->getStablePosition()
 				));
 				query::throwFailed();
@@ -74,7 +74,7 @@ namespace compiler::helios {
 			if (numeric_opt != nullptr) value = numeric_opt->value.coerceTo<i64>();
 
 			if (not value.has_value() or value.value() < 0) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					std::string(error_msg), arg_list->getStablePosition()
 				));
 				query::throwFailed();

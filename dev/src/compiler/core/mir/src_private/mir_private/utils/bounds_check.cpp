@@ -6,10 +6,10 @@
 
 namespace compiler::mir {
 	void boundsCheck(
-		BoundsCheckBuilderContext                      context,
-		const MIRValue&                                index,
-		const MIRValue&                                length,
-		const base::Optional<dia_int::StablePosition>& pos
+		BoundsCheckBuilderContext                  context,
+		const MIRValue&                            index,
+		const MIRValue&                            length,
+		const base::Optional<dia::StablePosition>& pos
 	) {
 		auto& function        = context.function;
 		auto& condition_block = context.condition_block;

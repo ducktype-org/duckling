@@ -74,7 +74,7 @@ namespace compiler::helios::code {
 			return id;
 		}
 
-		[[nodiscard]] base::Optional<dia_int::StablePosition> getPosition() const {
+		[[nodiscard]] base::Optional<dia::StablePosition> getPosition() const {
 			return origin.getStablePosition();
 		}
 

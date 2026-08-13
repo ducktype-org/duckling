@@ -8,10 +8,10 @@
 
 #include "utils/lir_test_utils.hpp"
 
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -53,7 +53,7 @@ public:
 protected:
 	// No standard library: the fixture declares its LIR builtins locally, and loading the std would
 	// inject `core.builtins` via the implicit prelude, clashing with those declarations.
-	void beforeAll() override { dia_int::configureImmediatePrint(&std::cerr); }
+	void beforeAll() override { dia::configureImmediatePrint(&std::cerr); }
 
 private:
 	void functionCallTest() {
@@ -102,7 +102,7 @@ private:
 		auto foo_lir = module.lirFunc("foo");
 
 		auto print_stable_position
-			= [&](const base::Optional<dia_int::StablePosition>& stable, std::string_view label) {
+			= [&](const base::Optional<dia::StablePosition>& stable, std::string_view label) {
 				  if (!stable.has_value()) {
 					  std::cerr << "[LIR metadata] " << label << ": <none>\n";
 					  return;

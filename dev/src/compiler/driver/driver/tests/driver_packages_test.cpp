@@ -1,6 +1,4 @@
 #include <archiver/archive.hpp>
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -18,6 +16,8 @@
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file_path.hpp>
 #include <tester/tester.hpp>
 
@@ -66,8 +66,8 @@ public:
 
 protected:
 	void beforeAll() override {
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
-		dia_int::configureImmediatePrint(&std::cerr);
+		global_state::setters::setGlobalLogger(makeBox<dia::Logger>());
+		dia::configureImmediatePrint(&std::cerr);
 
 		manifest = loadManifest();
 

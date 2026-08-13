@@ -1,7 +1,6 @@
 #include "example.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
+#include <diagnostic/message.hpp>
 #include <init/init.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -22,8 +21,8 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 	 * Search in editor for the `docs/example/example.yaml` to see how the message is defined in the
 	 * `yaml` template file.
 	 */
-	class ExampleDocs final: public dia_int::MessageBase {
-		dia_int::Metadata getMetadata() const final {
+	class ExampleDocs final: public dia::MessageBase {
+		dia::Metadata getMetadata() const final {
 			return {
 				.template_type = "message", .type = "docs", .family = "example", .name = "example"
 			};
@@ -31,8 +30,8 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 
 	public:
 		ExampleDocs(std::string language_name) {
-			addArgument<dia_int::TextArgument>("language_name", std::move(language_name));
-			addArgument<dia_int::TextArgument>("country_name", "Poland");
+			addArgument<dia::TextArgument>("language_name", std::move(language_name));
+			addArgument<dia::TextArgument>("country_name", "Poland");
 		}
 	};
 
@@ -42,8 +41,8 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 	 * Search in editor for the `error/misc/example.yaml` to see how the message is defined in the
 	 * `yaml` template file.
 	 */
-	class ExampleError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class ExampleError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return {
 				.template_type = "message", .type = "error", .family = "misc", .name = "example"
 			};
@@ -52,7 +51,7 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 	public:
 		ExampleError(dia::SourcePosition source_pos, std::string argument):
 			  MessageWithCodeFragmentAndCause(source_pos) {
-			addArgument<dia_int::TextArgument>("argument", std::move(argument));
+			addArgument<dia::TextArgument>("argument", std::move(argument));
 		}
 	};
 
