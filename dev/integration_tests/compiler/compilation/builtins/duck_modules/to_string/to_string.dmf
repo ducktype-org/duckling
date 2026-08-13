@@ -23,5 +23,15 @@ fun main() -> i32 = {
 	var p = Person("John Smith", 42, 1.69);
 	print(p.toString());
 
+	# A pointer renders as an address here and as a block plus an offset on the DVM, so only
+	# the wrapping around it is the same on both backends.
+	var pointer_text = (&p as ptr Person).toString();
+	print(pointer_text.at(0i64).toString());
+	print(pointer_text.at(1i64).toString());
+	print(pointer_text.at(2i64).toString());
+	print(pointer_text.at(3i64).toString());
+	print(pointer_text.at((pointer_text.length() - 1u64) as i64).toString());
+	pointer_text.dispose();
+
 	return 0;
 }

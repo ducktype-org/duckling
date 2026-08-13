@@ -7,7 +7,7 @@ Tests:
         backend: dvm
         ExitCode: 0
         Output:
-          String: "HELLO\nH"
+          String: "HELLO\nH0falsetruetrueptr(null)"
   numeric_io:
     Cases: 
       llvm:
@@ -22,7 +22,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "123.14dtrue()(John Smith,42,1.69)Person(John Smith,42,1.69)"
+          String: "123.14dtrue()(John Smith,42,1.69)Person(John Smith,42,1.69)ptr()"
   format_strings:
     Cases:
       llvm:
