@@ -1,10 +1,10 @@
 #include "lang_primitives.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <unordered_map>
@@ -76,13 +76,13 @@ namespace compiler::helios {
 		query::QResult<SymID> lookupPrimitiveThrow(query::Context& ctx, LanguagePrimitive primitive) {
 			const auto leaves = lookupPrimitiveSymbols(ctx, primitive);
 			if (leaves.empty()) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					base::strConcat("Can't find symbol for language primitive '", primitive, "'")
 				));
 				return query::Failed();
 			}
 			if (leaves.size() > 1) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(base::strConcat(
+				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
 					"Found multiple primitives with the symbol name '", primitive, "'"
 				)));
 				return query::Failed();

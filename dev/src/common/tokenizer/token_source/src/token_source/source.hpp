@@ -1,11 +1,10 @@
 #pragma once
 
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
-
 #include <base/misc/shared_view.hpp>
 
 #include <diagnostic/location.hpp>
+#include <diagnostic/logger.hpp>
+#include <diagnostic/stable_position.hpp>
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
 #include <lang_definitions/key_spec_op.hpp>
@@ -25,7 +24,7 @@ namespace tokenizer {
 	 */
 	class TokenSource final {
 	private:
-		dia_int::Logger                        int_log;
+		dia::Logger                            int_log;
 		base::Box<dia::Location>               location;
 		base::Optional<const base::SharedView> content;
 		base::Optional<const lexer::CharArray> decoded;
@@ -51,7 +50,7 @@ namespace tokenizer {
 		/**
 		 * @brief Construct a new TokenSource as a macro with parent position.
 		 */
-		explicit TokenSource(dia_int::StablePosition parent, std::string_view contents);
+		explicit TokenSource(dia::StablePosition parent, std::string_view contents);
 
 		template<class... Ts>
 		friend Box<TokenSource> makeTokenSource(Ts&&... args);
@@ -105,7 +104,7 @@ namespace tokenizer {
 		[[nodiscard]]
 		CRef<dia::Location> getLocation() const;
 
-		Ref<dia_int::Logger> getIntLogger() { return &int_log; }
+		Ref<dia::Logger> getIntLogger() { return &int_log; }
 
 		[[nodiscard]]
 		fs::File getFile() const;

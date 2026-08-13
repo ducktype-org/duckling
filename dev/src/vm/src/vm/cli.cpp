@@ -1,9 +1,9 @@
 #include "cli.hpp"
 
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
-
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+
+#include <diagnostic/module_flags/module_flags.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
@@ -27,7 +27,7 @@ int cli(
 	const std::vector<std::string>& ffi_libs
 ) {
 	vm::PID pid{};
-	dia_int::configureTerminalPrinterColors(true);
+	dia::configureTerminalPrinterColors(true);
 
 
 	std::expected<i64, std::string> result

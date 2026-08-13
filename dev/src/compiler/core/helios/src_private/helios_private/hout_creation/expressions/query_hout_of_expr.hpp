@@ -41,7 +41,7 @@ namespace compiler::helios {
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
 		tsh::SymbolType<>                                expected_type,
-		base::Optional<dia_int::StablePosition>          coercion_expects_pos = {},
+		base::Optional<dia::StablePosition>              coercion_expects_pos = {},
 		CoercionErrorOverrides                           error_overrides      = {}
 	);
 

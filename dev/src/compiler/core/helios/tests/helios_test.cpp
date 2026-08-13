@@ -1,4 +1,3 @@
-#include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -46,6 +45,7 @@
 #include <base/pointers/box.hpp>
 
 #include <diagnostic/highlight_positions.hpp>
+#include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>

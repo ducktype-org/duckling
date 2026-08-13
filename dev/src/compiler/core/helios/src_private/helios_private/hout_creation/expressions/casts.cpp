@@ -1,11 +1,12 @@
 #include "casts.hpp"
 
-#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 
 #include <base/except/exceptions.hpp>
+
+#include <diagnostic/stable_position.hpp>
 
 namespace compiler::helios::code {
 
@@ -165,7 +166,7 @@ namespace compiler::helios::code {
 		// Temporarily allow casts from CPointer to Pointer and ManyPointer, with a warning.
 		if (found_match && from.getRefKind() == ReferenceKind::Direct
 		    && from.getType().getKind() == tsh::Kind::CPointer) {
-			ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
+			ctx.logInt(makeBox<dia::PlaceholderWarning>(
 				"Casts from CPointer will be disabled in the future and only work on "
 				"native targets.",
 				stmt->getStablePosition(),
@@ -179,7 +180,7 @@ namespace compiler::helios::code {
 		}
 		if (found_match) return cast_expr(std::move(value));
 
-		ctx.logInt(makeBox<dia_int::PlaceholderError>(
+		ctx.logInt(makeBox<dia::PlaceholderError>(
 			base::strConcat("Invalid cast from type ", from.toString(), " to type ", to.toString()),
 			stmt->getStablePosition()
 		));

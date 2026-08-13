@@ -1,6 +1,5 @@
 #include "queries.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
@@ -28,6 +27,7 @@
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
@@ -206,11 +206,11 @@ namespace compiler::helios {
 		 * @return `true` if `sym_id` duplicates an earlier definition.
 		 */
 		static bool reportIfDuplicate(
-			query::Context&                                      ctx,
-			base::HashMap<base::StrID, dia_int::StablePosition>& seen_declarations,
-			SymID                                                sym_id,
-			base::StrID                                          original_name,
-			dia_int::StablePosition                              stable_pos
+			query::Context&                                  ctx,
+			base::HashMap<base::StrID, dia::StablePosition>& seen_declarations,
+			SymID                                            sym_id,
+			base::StrID                                      original_name,
+			dia::StablePosition                              stable_pos
 		) {
 			base::StrID mangled_name = compiler::helios::mangler::getSimpleMangledName(ctx, sym_id);
 			if (mangled_name.isBad()) return false;
@@ -239,21 +239,20 @@ namespace compiler::helios {
 		 * @return `true` if an earlier definition already used @p key_name.
 		 */
 		static bool reportIfNameTaken(
-			query::Context&                                      ctx,
-			base::HashMap<base::StrID, dia_int::StablePosition>& seen_declarations,
-			base::StrID                                          key_name,
-			base::StrID                                          original_name,
-			dia_int::StablePosition                              stable_pos
+			query::Context&                                  ctx,
+			base::HashMap<base::StrID, dia::StablePosition>& seen_declarations,
+			base::StrID                                      key_name,
+			base::StrID                                      original_name,
+			dia::StablePosition                              stable_pos
 		) {
 			auto [entry, inserted] = seen_declarations.try_emplace(key_name, stable_pos);
 			if (inserted) return false;
 
-			auto error
-				= makeBox<dia_int::DuplicatedDefinitionError>(original_name.str(), stable_pos);
+			auto error = makeBox<dia::DuplicatedDefinitionError>(original_name.str(), stable_pos);
 
 			// Point the user at the previous declaration.
 			error->addAttachedMessage(
-				makeBox<dia_int::PlaceholderNote>("Previous declaration here.", entry->second)
+				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->second)
 			);
 
 			ctx.logInt(std::move(error));
@@ -279,7 +278,7 @@ namespace compiler::helios {
 				// A class we could not resolve is already diagnosed elsewhere.
 				if (class_data->hasFailed()) continue;
 
-				base::HashMap<base::StrID, dia_int::StablePosition> seen_fields;
+				base::HashMap<base::StrID, dia::StablePosition> seen_fields;
 
 				for (SymID field_sym: class_data->valueOrPanic().members) {
 					if_opt_some(maybeSymbolPst(field_sym), pst) {
@@ -309,8 +308,8 @@ namespace compiler::helios {
 		static base::OkBad duplicatesCheck(
 			query::Context& ctx, const HOUTUnit& unit, const std::vector<SymID>& class_symbols
 		) {
-			base::HashMap<base::StrID, dia_int::StablePosition> seen_declarations;
-			bool                                                found_duplicate = false;
+			base::HashMap<base::StrID, dia::StablePosition> seen_declarations;
+			bool                                            found_duplicate = false;
 
 			for (const auto& func: unit.functions) {
 				if_opt_some(func->origin.getStablePosition(), stable_pos) {
@@ -380,7 +379,7 @@ namespace compiler::helios {
 				// llvm panics. This check is put inside the for, to only check it if the methods
 				// are actually present, and to provide a more specific error location.
 				if (not class_type.carriesInformation(ctx)) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 						"Methods of zero-sized classes are not yet implemented due to ZST not "
 						"being properly supported yet.",
 						maybeSymbolPst(method.getSymbol()).map([&](auto pst) {
