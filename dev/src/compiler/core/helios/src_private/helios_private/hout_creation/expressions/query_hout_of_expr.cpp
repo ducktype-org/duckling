@@ -721,8 +721,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> round_expr) override {
-				PstExprToHoutExprVisitor vis(ctx);
-				round_expr->getInner().unlock(ctx)->acceptExprVisitor(vis);
+				round_expr->getInner().unlock(ctx)->acceptExprVisitor(*this);
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
