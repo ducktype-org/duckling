@@ -10,7 +10,8 @@ class T {}
 class U {}
 
 # A class with a non-trivial layout: i8 at offset 0, i64 (align 8) at offset 8,
-# i16 at offset 16 -> size 18 bytes, alignment 8 bytes.
+# i16 at offset 16 -> 18 bytes of payload rounded up to the 8-byte alignment,
+# so size 24 bytes, alignment 8 bytes.
 class Mixed { a: i8; b: i64; c: i16; }
 
 fun createUnit() -> type = ();
@@ -118,7 +119,7 @@ const CMP33 = typesNotEqual(PTR_I32, MANYPTR_I32);
 const CMP34 = typesNotEqual(PTR_I32, CPTR_I32);
 
 # size_of / alignment_of of a class with a non-trivial layout.
-const CMP35 = MIXED_SIZE == 18;
+const CMP35 = MIXED_SIZE == 24;
 const CMP36 = MIXED_ALIGN == 8;
 const CMP37 = size_of(i32) == 4;
 const CMP38 = alignment_of(i64) == 8;

@@ -1,10 +1,12 @@
 import core.builtins.*;
 
-class Inner { a: i32 = 0; b: i32 = 0; }
-
-class Vec { tag: i64 = 0; nums: i32[4]; inner: Inner = Inner(); }
-
 extern("C") {
+    # A `cptr` pointee is laid out by the C ABI, so every class one points at - including the
+    # nested ones - has to be declared here.
+    class Inner { a: i32 = 0; b: i32 = 0; }
+
+    class Vec { tag: i64 = 0; nums: i32[4]; inner: Inner = Inner(); }
+
     # `div_t` of <stdlib.h>: two ints, returned by value. A type crossing the boundary by value
     # has to be declared here, so it is laid out and passed by the C ABI.
     class DivT { quot: i32 = 0; rem: i32 = 0; }
@@ -102,6 +104,31 @@ fun cPointerToCTest() = {
     builtin_output_i64(np[2] as i64);                   # 3
 }
 
+# A cast to a `cptr` may change the pointee: the source is taken as a native address and then
+# reinterpreted, the way a C cast would.
+fun cPointerRepointingTest() = {
+    var v: Vec;
+    v.tag = 5i64;
+
+    # `ptr Vec` -> `cptr i64`: the address of `v`, read as its first field.
+    let vp = &v as ptr Vec;
+    let tag_p = vp as cptr i64;
+    builtin_output_i64(*tag_p);                         # 5
+
+    # `manyptr i32` -> `cptr Inner`: a many-pointer is a dynamic table handle, so it first has
+    # to become the address of element 0, and only then change pointee. `Inner` is two i32s,
+    # so it reads the first two elements of the table.
+    var table = dvm_alloc_arr:{i32}(2u64);
+    table[0] = 6i32;
+    table[1] = 7i32;
+
+    let head_p = table as cptr Inner;
+    builtin_output_i64((*head_p).a as i64);             # 6
+    builtin_output_i64((*head_p).b as i64);             # 7
+
+    dvm_free_arr:{i32}(table);
+}
+
 # libm, and a `cptr` used as an out parameter.
 fun mathTest() = {
     builtin_output_i64(sqrt(16.0) as i64);              # 4
@@ -116,6 +143,7 @@ fun main() -> i64 = {
     stringsTest();
     cPointerProjectionsTest();
     cPointerToCTest();
+    cPointerRepointingTest();
     mathTest();
     return 0;
 }

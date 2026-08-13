@@ -77,11 +77,10 @@ namespace compiler::backend_vm::internal {
 			  })
 		    | std::ranges::to<std::vector>();
 
-		FunctionCallInfo call_info{
-			.call_target = DVMFunctionName{ .name = func_literal.mangled_name },
-			.return_type = called_result_type,
-			.param_types = param_types
-		};
+		FunctionCallInfo call_info{ .call_target
+			                        = DVMFunctionName{ .name = func_literal.mangled_name },
+			                        .return_type = called_result_type,
+			                        .param_types = param_types };
 
 		if (v_matches(func_literal.abi.value, lir::LIRAbi::CAbi))
 			call_info.call_target = DVMFFIFunctionName{ .name = func_literal.mangled_name };

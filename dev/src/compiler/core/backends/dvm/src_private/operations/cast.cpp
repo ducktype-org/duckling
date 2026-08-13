@@ -1,3 +1,4 @@
+#include "../dvm_value.hpp"
 #include "../function_lowering_context.hpp"
 #include "../program_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
@@ -86,36 +87,73 @@ namespace compiler::backend_vm::internal {
 					variant_case(tsl::PointerTypeLayout, target_pointer_layout) {
 						using enum tsl::PointerTypeLayout::PointerKind;
 
+						const bool same_pointee
+							= pointer_layout.getPointee()->getSourceType()
+						   == target_pointer_layout.getPointee()->getSourceType();
+
+						/**
+						 * @brief Takes the native address of `source` (a `ptr T`) into a fresh
+						 * `cptr T` temporary, keeping the source pointee.
+						 *
+						 * Emitted when the target pointee differs.
+						 */
+						auto cptr_source_type_tmp
+							= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
+							const vm::code::TypeOfData& source_pointee_type
+								= *ctx->programCtx()
+							           .lowerAndKeepTslType(pointer_layout.getPointee())
+							           .value();
+							const vm::code::TypeOfData& source_pointer_type
+								= ctx->programCtx().getOrInsertPointerType(
+									source_pointee_type, CPointer
+								);
+							const DVMPlace cptr_source_elem_tmp
+								= ctx->pushTempLocal(source_pointer_type, "to_cptr_tmp");
+							ctx->pushInstruction({ OpKind::cast, cptr_source_elem_tmp, source });
+							return cptr_source_elem_tmp;
+						};
+
+						/**
+						 * @brief Turns `source` (a `manyptr T`, a handle to a dynamic table) into
+						 * a `ptr T` temporary pointing at element 0.
+						 */
+						auto lea_first_element
+							= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
+							const vm::code::TypeOfData& vm_element_type
+								= *ctx->programCtx()
+							           .lowerAndKeepTslType(pointer_layout.getPointee())
+							           .value();
+							const vm::code::TypeOfData& ptr_to_element_type
+								= ctx->programCtx().getOrInsertPointerType(vm_element_type);
+
+							auto index_tmp
+								= ctx->forceToPlace(DVMValue(DVMImmediate::u64(0)), "index_tmp");
+
+							const DVMPlace element_ptr_tmp
+								= ctx->pushTempLocal(ptr_to_element_type, "cast_elem_ptr_tmp");
+							ctx->pushInstruction(
+								{ OpKind::dynTableLea, element_ptr_tmp, source, index_tmp }
+							);
+							return element_ptr_tmp;
+						};
+
 						if (pointer_layout.getPointerKind() == CPointer
 						    && target_pointer_layout.getPointerKind() == CPointer) {
 							return OpKind::movCast;
 						} else if (pointer_layout.getPointerKind() == SinglePointer
 						           && target_pointer_layout.getPointerKind() == CPointer) {
-							return OpKind::cast;
+							if (same_pointee) return OpKind::cast;
+
+							out_arguments[0] = cptr_source_type_tmp(out_arguments[0]);
+							return OpKind::movCast;
 						} else if (pointer_layout.getPointerKind() == ManyPointer
 						           && target_pointer_layout.getPointerKind() == CPointer) {
 							// First ManyPointer -> Pointer, then Pointer -> CPointer
-							auto lea_first_element
-								= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
-								const vm::code::TypeOfData& vm_element_type
-									= *ctx->programCtx()
-								           .lowerAndKeepTslType(pointer_layout.getPointee())
-								           .value();
-								const vm::code::TypeOfData& ptr_to_element_type
-									= ctx->programCtx().getOrInsertPointerType(vm_element_type);
-
-								auto index_tmp
-									= ctx->forceToPlace(DVMValue(DVMImmediate::u64(0)), "index_tmp");
-
-								const DVMPlace element_ptr_tmp
-									= ctx->pushTempLocal(ptr_to_element_type, "cast_elem_ptr_tmp");
-								ctx->pushInstruction(
-									{ OpKind::dynTableLea, element_ptr_tmp, source, index_tmp }
-								);
-								return element_ptr_tmp;
-							};
 							out_arguments[0] = lea_first_element(out_arguments[0]);
-							return OpKind::cast;
+							if (same_pointee) return OpKind::cast;
+
+							out_arguments[0] = cptr_source_type_tmp(out_arguments[0]);
+							return OpKind::movCast;
 						} else if (pointer_layout.getPointerKind() == ManyPointer
 						           && target_pointer_layout.getPointerKind() == SinglePointer) {
 							// ManyPointer -> SinglePointer

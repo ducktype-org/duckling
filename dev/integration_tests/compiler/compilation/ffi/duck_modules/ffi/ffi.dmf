@@ -14,6 +14,11 @@ extern("C") {
     # memory (`byval`) / returned via `sret`. (AArch64: HFA in 4 SSE regs.)
     class Mid2 { a: f64 = 0.0; b: f64 = 0.0; c: f64 = 0.0; d: f64 = 0.0; }
 
+    # Padded {{i64, i8}, i8}: `PadInner` is 9 bytes of payload rounded up to 16 (align 8), so
+    # `Pad.tail` sits at offset 16, after `inner`'s tail padding - not at offset 9.
+    class PadInner { a: i64 = 0i64; b: i8 = 0i8; }
+    class Pad { inner: PadInner = PadInner(); tail: i8 = 0i8; }
+
     # Big (24 bytes) -> x86-64: memory, `byval` argument / `sret` return.
     class Big { a: i64 = 0i64; b: i64 = 0i64; c: i64 = 0i64; }
 
@@ -52,6 +57,20 @@ fun main() -> i64 = {
     builtin_output_i64(sp[1]);                                         # 2
     sp[0] = 9;
     builtin_output_i64(s.x);                                           # 9
+
+    # Field access through a `cptr` to a struct must use the same offsets as a direct field
+    # access on the value: `tail` is at offset 16, so a read through the pointer that reused
+    # the unpadded offset 9 would come back as a byte of `inner`'s padding.
+    var pad: Pad;
+    pad.inner.a = 5i64;
+    pad.inner.b = 6i8;
+    pad.tail = 77i8;
+    let pad_p = &pad as cptr Pad;
+    builtin_output_i64((*pad_p).inner.a);                              # 5
+    builtin_output_i64((*pad_p).inner.b as i64);                       # 6
+    builtin_output_i64((*pad_p).tail as i64);                          # 77
+    (*pad_p).tail = 78i8;
+    builtin_output_i64(pad.tail as i64);                               # 78
 
     let m = make_mid(5i64);
     builtin_output_i64(m.inner.i);                                     # 5

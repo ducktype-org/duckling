@@ -98,7 +98,7 @@ namespace compiler::backend_vm::internal {
 			tsl::PointerTypeLayout::PointerKind kind
 			= tsl::PointerTypeLayout::PointerKind::SinglePointer
 		);
-		
+
 		/**
 		 * @brief Returns the builtin `cptr` type - a cpointer with an unknown pointee, the DVM
 		 * counterpart of C's `void*`. Inserts it into the module on first use.

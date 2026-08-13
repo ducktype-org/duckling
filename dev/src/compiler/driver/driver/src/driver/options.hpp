@@ -112,7 +112,7 @@ namespace compiler::driver {
 			/**
 			 * Options only supported on DVM backend.
 			 */
-			
+
 			/**
 			 * @brief The libraries that needs to be loaded by the VM to run the code.
 			 */
