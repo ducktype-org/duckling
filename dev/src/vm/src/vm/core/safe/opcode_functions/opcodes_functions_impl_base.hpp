@@ -963,9 +963,9 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ptrParts_p64_pptr)(FUNCTION_ARGS) {
 		{
-			const auto src = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			const u64 id     = thread.process_memory.requestBlockID(src.getBlock()).asInt();
-			const u64 offset = src.getOffset();
+			const auto src    = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			const u64  id     = thread.process_memory.requestBlockID(src.getBlock()).asInt();
+			const u64  offset = src.getOffset();
 			WRITE_TO_PLACE_ARG(u64, instr->arg0, id);
 			WRITE_TO_PLACE_ARG(u64, instr[1].arg0, offset);
 		}
