@@ -6,7 +6,7 @@
 
 #include "stencil_holder.hpp"
 
-#define UNDER_LINTER __has_include(<stencils-nm>)
+#define NOT_UNDER_LINTER __has_include(<stencils-nm>)
 
 namespace vm::jit::cnp {
 	[[nodiscard]] auto& getLoadedStencils() {
@@ -14,8 +14,11 @@ namespace vm::jit::cnp {
 		PUSH_DIAGNOSTIC
 		ALLOW_EXTENSIONS
 		static constexpr char binary[] = {
-#if UNDER_LINTER
+// Linter doesn't actually build stencils-so so it would be unavailable.
+#if NOT_UNDER_LINTER
 	#embed "stencils-so"
+#else
+			0
 #endif
 		};
 		POP_DIAGNOSTIC
@@ -23,7 +26,7 @@ namespace vm::jit::cnp {
 
 		static auto stencils = Stencils{
 // Linter doesn't actually build stencils-nm so it would be unavailable.
-#if UNDER_LINTER
+#if NOT_UNDER_LINTER
 			.stencils_binary = std::bit_cast<std::array<std::byte, sizeof(binary)>>(binary),
 			.stencils_data =
 	#include <stencils-nm>
@@ -44,7 +47,7 @@ namespace vm::jit::cnp {
 
 	[[nodiscard]] const std::array<StencilData, STENCIL_COUNT>& stencilsData() {
 // Linter doesn't actually build stencils-nm so the array is empty.
-#if UNDER_LINTER
+#if NOT_UNDER_LINTER
 		return getLoadedStencils().stencilsData();
 #else
 		CORE_UNREACHABLE();
@@ -52,4 +55,4 @@ namespace vm::jit::cnp {
 	}
 }
 
-#undef UNDER_LINTER
+#undef NOT_UNDER_LINTER
