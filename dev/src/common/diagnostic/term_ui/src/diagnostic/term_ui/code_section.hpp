@@ -11,5 +11,4 @@ namespace term_ui {
 	 * @param out The output stream.
 	 */
 	void print(const dia::term_ui_view::CodeSection& section, std::ostream& out);
-
 }
