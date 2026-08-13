@@ -145,14 +145,8 @@ namespace compiler::helios::defgen {
 				pointee
 			);
 
-			// `self` is not always passed directly - a `manyptr` comes in by reference - and the
-			// primitive takes the pointer itself.
-			const auto direct_self_type = tsh::SymbolType<>::withDefaults(self_type);
-
 			const Shorthand s{ ctx };
-			body.emplace_back(
-				s.ret(s.call(s.ident(builtin_sym), s.coerce(s.ident(self_param), direct_self_type)))
-			);
+			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
 		}
 
 		static void stringifyFloat(
