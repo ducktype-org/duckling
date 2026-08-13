@@ -827,15 +827,11 @@ private:
 				ctx,
 				generatedOrigin(),
 				BuiltinBinary::IntegerAdd,
-				makeBox<ParenthesisExpr>(
+				makeBox<UnaryOperatorExpr>(
 					ctx,
 					generatedOrigin(),
-					makeBox<UnaryOperatorExpr>(
-						ctx,
-						generatedOrigin(),
-						BuiltinUnary::IntegerNegation,
-						makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
-					)
+					BuiltinUnary::IntegerNegation,
+					makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
 				),
 				makeBox<CallExpr>(
 					ctx,
@@ -1049,8 +1045,6 @@ private:
 			void visitIdentifierExpr(const IdentifierExpr&) override { ident_count++; }
 
 			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override { ident_count++; }
-
-			void visitParenthesisExpr(const ParenthesisExpr&) override { ident_count++; }
 		};
 
 		struct ExprVisitorRunner: public HoutStmtVisitorPanicky {

@@ -666,15 +666,6 @@ namespace compiler::helios {
 				result = CompileTimeValue{ true };
 			}
 
-			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
-				auto sub_result = evalHoutExpr(ctx, expr.inner.ref());
-				if (sub_result.hasFailed()) {
-					result = query::Failed();
-					return;
-				}
-				result = sub_result.valueOrThrow();
-			}
-
 			void visitTupleExpr(const code::TupleExpr& expr) final {
 				std::vector<CompileTimeValue> ctv_elements;
 

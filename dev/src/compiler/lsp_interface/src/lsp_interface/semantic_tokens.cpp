@@ -394,10 +394,6 @@ namespace lsp {
 			for (const auto& comparison: elem.comparisons) comparison->acceptVisitor(*this);
 		}
 
-		void visitParenthesisExpr(const code::ParenthesisExpr& elem) override {
-			elem.inner->acceptVisitor(*this);
-		}
-
 		void visitTupleExpr(const code::TupleExpr& elem) override {
 			for (const auto& item: elem.elements) item->acceptVisitor(*this);
 		}
