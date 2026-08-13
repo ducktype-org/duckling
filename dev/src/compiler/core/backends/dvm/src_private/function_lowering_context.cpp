@@ -140,7 +140,7 @@ void FunctionLoweringContext::maybeStoreResult(
 			break;
 		}
 		default:
-			break;
+			CORE_UNREACHABLE();
 		}
 	}
 }
@@ -181,10 +181,10 @@ void FunctionLoweringContext::cPointerStructLea(
 }
 
 void FunctionLoweringContext::cPointerArrayLea(
-	const DVMPlace&             base_place,
-	const DVMPlace&             dest,
-	const CRef<tsl::TypeLayout> element_layout,
-	const DVMValue&             index
+	const DVMPlace&       base_place,
+	const DVMPlace&       dest,
+	CRef<tsl::TypeLayout> element_layout,
+	const DVMValue&       index
 ) {
 	pushInstruction({ vm::code::builders::OpKind::movCast, dest, base_place });
 	const auto element_stride
@@ -312,9 +312,6 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				CRef<tsl::TypeLayout> field_layout
 					= class_layout.getFieldLayoutOfLayoutIndex(field_index);
 
-				const vm::code::TypeOfData& vm_class_type
-					= **program_context.lowerAndKeepTslType(current_layout);
-
 				// Prepare the pointer to field type.
 				const vm::code::TypeOfData vm_field_type
 					= **program_context.lowerAndKeepTslType(field_layout);
@@ -337,13 +334,16 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					cPointerStructLea(current_place, field_ptr_tmp, class_layout, field.field_id);
 					break;
 				case DVMPlace::AccessKind::Direct:
-				case DVMPlace::AccessKind::Pointer:
+				case DVMPlace::AccessKind::Pointer: {
+					const vm::code::TypeOfData& vm_class_type
+						= **program_context.lowerAndKeepTslType(current_layout);
 					pushInstruction({ vm::code::builders::OpKind::structLea,
 					                  field_ptr_tmp,
 					                  current_place,
 					                  vm::opargs::Field{ typeName(vm_class_type),
 					                                     base::StrID(vm_field_name) } });
 					break;
+				}
 				default:
 					CORE_PANIC("Not expected access kind.");
 				}

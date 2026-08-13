@@ -659,7 +659,16 @@ namespace compiler::tsl {
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
 		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
-		  pointer_kind(PointerKind::CPointer) {}
+		  pointer_kind(PointerKind::CPointer) {
+		auto& pointee_cabi_type
+			= ctx.query<QueryCAbiTypeOf>(pointer_type.getPointee())->valueOrThrow();
+		if (not pointee_cabi_type.has_value()) {
+			ctx.logInt(
+				makeBox<dia_int::PlaceholderError>("Invalid cptr type.", pointee_cabi_type.error())
+			);
+			query::throwFailed();
+		}
+	}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),

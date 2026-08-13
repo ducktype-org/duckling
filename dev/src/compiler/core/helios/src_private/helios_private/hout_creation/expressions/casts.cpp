@@ -97,14 +97,14 @@ namespace compiler::helios::code {
 				.from_kind         = Kind::Pointer,
 				.to_ref_kind       = ReferenceKind::Direct,
 				.to_kind           = Kind::CPointer,
-				.same_pointee_type = false,
+				.same_pointee_type = true,
 			},
 			{
 				.from_ref_kind     = ReferenceKind::Direct,
 				.from_kind         = Kind::ManyPointer,
 				.to_ref_kind       = ReferenceKind::Direct,
 				.to_kind           = Kind::CPointer,
-				.same_pointee_type = false,
+				.same_pointee_type = true,
 			},
 			{
 				.from_ref_kind     = ReferenceKind::Direct,

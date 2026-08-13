@@ -98,17 +98,7 @@ namespace compiler::backend_vm::internal {
 			tsl::PointerTypeLayout::PointerKind kind
 			= tsl::PointerTypeLayout::PointerKind::SinglePointer
 		);
-
-		/**
-		 * @brief Creates and inserts a pointer type based on the type name.
-		 * It caches the result, so inserts the type into the program only if needed.
-		 */
-		const vm::code::TypeOfData& getOrInsertPointerType(
-			base::StrID                         pointee_type_name,
-			tsl::PointerTypeLayout::PointerKind kind
-			= tsl::PointerTypeLayout::PointerKind::SinglePointer
-		);
-
+		
 		/**
 		 * @brief Returns the builtin `cptr` type - a cpointer with an unknown pointee, the DVM
 		 * counterpart of C's `void*`. Inserts it into the module on first use.

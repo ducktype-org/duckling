@@ -30,7 +30,7 @@ namespace allocation {
 
     @native_only_impl
     fun free(p: manyptr T) -> () = {
-        clib.free(p as cptr u8);
+        clib.free((p as cptr T) as cptr u8);
     }
 
     @backend_dependent
@@ -48,7 +48,7 @@ namespace allocation {
 
     @native_only_impl
     fun realloc(p: manyptr T, new_size: u64) -> manyptr T = {
-        return clib.realloc(p as cptr u8, new_size * LLVM_ELEM_SIZE) as manyptr T;
+        return clib.realloc((p as cptr T) as cptr u8, new_size * LLVM_ELEM_SIZE) as manyptr T;
     }
 }
 
