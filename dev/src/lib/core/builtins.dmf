@@ -49,6 +49,44 @@ template(T: type)
 @builtin("move_in")
 fundecl move_in(pointer: ptr T, value: T) -> ();
 
+#{
+    Decomposes a pointer into the id of the block it points into and the byte offset within
+    that block.
+
+    Fails on a null pointer, which points into no block, so guard with `dvm_is_nullptr`.
+#}
+template(T: type)
+@builtin("dvm_ptr_parts")
+fundecl dvm_ptr_parts(pointer: ptr T) -> u64[2];
+
+#{
+    Whether `pointer` points into no block. DVM only.
+#}
+template(T: type)
+@builtin("dvm_is_nullptr")
+fundecl dvm_is_nullptr(pointer: ptr T) -> bool;
+
+#{
+    A pointer into no block. DVM only.
+#}
+template(T: type)
+@builtin("dvm_nullptr")
+fundecl dvm_nullptr() -> ptr T;
+
+#{
+    The `manyptr` counterpart of `dvm_is_nullptr`.
+#}
+template(T: type)
+@builtin("dvm_is_nullptr")
+fundecl dvm_is_nullmanyptr(pointer: manyptr T) -> bool;
+
+#{
+    The `manyptr` counterpart of `dvm_nullptr`.
+#}
+template(T: type)
+@builtin("dvm_nullptr")
+fundecl dvm_nullmanyptr() -> manyptr T;
+
 @builtin("alignment_of")
 fundecl alignment_of(v: type) -> i64;
 

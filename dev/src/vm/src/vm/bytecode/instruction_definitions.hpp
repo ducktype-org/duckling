@@ -599,6 +599,21 @@ DEF_INSTR(add_pcptr_p64, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Place64, off
 /// arithmetic).`
 DEF_INSTR(add_pcptr_imm, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Immediate, offset))
 
+// ========= POINTER DECOMPOSITION ========
+
+/**
+ * @brief Decomposes a pointer into the id of the block it points into and the byte offset
+ * within that block. Throws on a null pointer, which points into no block.
+ * @note The id is the identity used by the memory diagnostics, not a native address. It is
+ * reproducible across runs of the same program.
+ */
+DEF_INSTR(
+	cast_p64_p64_pptr,
+	(vm::opargs::Place64, dst_id),
+	(vm::opargs::Place64, dst_offset),
+	(vm::opargs::PlacePtr, src_ptr)
+)
+
 // ========= TYPE OPERATIONS ========
 // Casts a primitive type in-place. This does nothing at runtime, but is needed
 // for type checking.

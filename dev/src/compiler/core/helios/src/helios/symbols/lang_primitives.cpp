@@ -4,6 +4,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/templates/templates.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -39,6 +40,10 @@ namespace compiler::helios {
 				  { .package = "core", .path = { "containers" }, .element = "stringifyU64" } },
 				{ LanguagePrimitive::StringifyF64,
 				  { .package = "core", .path = { "containers" }, .element = "stringifyF64" } },
+				{ LanguagePrimitive::StringifyPtr,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyPtr" } },
+				{ LanguagePrimitive::StringifyManyPtr,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyManyPtr" } },
 			};
 			return paths;
 		}
@@ -104,4 +109,17 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLanguagePrimitiveSymID);
+
+	SymID bakeLanguagePrimitive(
+		query::Context& ctx, LanguagePrimitive primitive, tsh::SymbolType<> type_argument
+	) {
+		const SymID template_sym
+			= ctx.query<QueryLanguagePrimitiveSymID>({ primitive })->valueOrThrow();
+
+		const templates::TemplateBakeKey key{
+			.template_sym_id    = template_sym,
+			.template_arguments = { ctv::CompileTimeValue(type_argument) },
+		};
+		return ctx.query<templates::QueryBakeTemplateSymID>(key).valueOrThrow();
+	}
 }

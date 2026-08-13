@@ -252,6 +252,12 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_cast_pcptr_pptr, i) {
 				addLow<Op_cptrCast_p64_pptr>(i.dst, i.src_ptr);
 			}
+			instr_case(high::Op_cast_p64_p64_pptr, i) {
+				// The offset destination does not fit in the two micro arguments, so it
+				// rides an `ext_p64`.
+				addLow<Op_ptrParts_p64_pptr>(i.dst_id, i.src_ptr);
+				addLow<Op_ext_p64>(i.dst_offset);
+			}
 			instr_case(high::Op_movCast_pcptr_pcptr, i) {
 				// A reinterpreting cast is a plain 8-byte move.
 				addLow<Op_mov_p64_p64>(i.dst, i.src);

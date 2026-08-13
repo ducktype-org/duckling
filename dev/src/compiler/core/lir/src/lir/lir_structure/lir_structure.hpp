@@ -178,7 +178,10 @@ namespace compiler::lir {
 		DvmFree,
 		BoxAlloc,
 		BoxFree,
-		ListFree
+		ListFree,
+		DvmPtrParts,
+		DvmIsNullptr,
+		DvmNullptr
 	};
 
 	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);

@@ -110,6 +110,8 @@ namespace compiler::tsh {
 		case Integral:
 		case Float:
 		case Pointer:
+		case ManyPointer:
+		case CPointer:
 		case RawPointer:
 		case Slice:
 			return true;

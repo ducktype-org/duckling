@@ -673,6 +673,12 @@ DEF_MICRO_INSTR(cptrWrite_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::P
 
 DEF_MICRO_INSTR(cptrCast_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
 
+// ========= POINTER DECOMPOSITION ========
+
+// Writes the block id of the pointer into arg0 and its offset into the place carried by the
+// following `ext_p64`. Requires `ext_p64`.
+DEF_MICRO_INSTR(ptrParts_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
+
 // ========= EXT DEFINITIONS ========
 
 // passes additional argument to preceding instruction

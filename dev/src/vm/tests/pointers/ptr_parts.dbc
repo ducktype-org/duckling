@@ -1,0 +1,47 @@
+type data: Pair { a: i64, b: i64 } assert_size 16
+type pointer: PairPtr Pair
+
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
+	# arg0 -> argc
+	# arg1 -> *argv
+
+	init_pany_type s, Pair;
+	init_pany_type sp, PairPtr;
+	ref_pptr_pany sp, s;            # sp := &s
+
+	init_pany_type fp, ptr_i64;
+	structLea_pptr_pptr_field fp, sp, Pair.b;   # fp := &s.b
+
+	init_pany_type id, i64;
+	init_pany_type off, i64;
+	init_pany_type id2, i64;
+	init_pany_type off2, i64;
+
+	cast_p64_p64_pptr id, off, sp;
+	output_p64 off;                 # 0, the struct starts at the block's beginning
+
+	cast_p64_p64_pptr id2, off2, fp;
+	output_p64 off2;                # 8, the second field
+
+	# Both pointers address the same block, so their ids are equal.
+	sub_p64_p64 id2, id;
+	output_p64 id2;                 # 0
+
+	# A null pointer points into no block, so decomposing it fails. Last, it ends the program.
+	init_pany_type np, ptr_i64;
+	setNull_pptr np;
+	cast_p64_p64_pptr id, off, np;
+
+	deinit; # np
+	deinit; # off2
+	deinit; # id2
+	deinit; # off
+	deinit; # id
+	deinit; # fp
+	deinit; # sp
+	deinit; # s
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}

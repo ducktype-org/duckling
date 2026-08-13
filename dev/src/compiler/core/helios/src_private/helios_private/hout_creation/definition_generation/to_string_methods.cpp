@@ -125,6 +125,36 @@ namespace compiler::helios::defgen {
 			);
 		}
 
+		static void stringifyPointer(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body,
+			const bool                     is_many_pointer
+		) {
+			const auto  self_param = to_string_decl.parameters.at(0).helios_symbol;
+			const auto& self_type  = to_string_decl.parameters.at(0).type.getType();
+			const auto  pointee    = is_many_pointer
+			                           ? tsh::ManyPointerAbstractType(self_type).getPointee()
+			                           : tsh::PointerAbstractType(self_type).getPointee();
+			// Both primitives are templated on the pointee, so they have to be baked before
+			// they can be called.
+			const auto builtin_sym = bakeLanguagePrimitive(
+				ctx,
+				is_many_pointer ? LanguagePrimitive::StringifyManyPtr
+								: LanguagePrimitive::StringifyPtr,
+				pointee
+			);
+
+			// `self` is not always passed directly - a `manyptr` comes in by reference - and the
+			// primitive takes the pointer itself.
+			const auto direct_self_type = tsh::SymbolType<>::withDefaults(self_type);
+
+			const Shorthand s{ ctx };
+			body.emplace_back(
+				s.ret(s.call(s.ident(builtin_sym), s.coerce(s.ident(self_param), direct_self_type)))
+			);
+		}
+
 		static void stringifyFloat(
 			Context&                       ctx,
 			const HOUTFunctionDeclaration& to_string_decl,
@@ -283,6 +313,14 @@ namespace compiler::helios::defgen {
 			}
 			case tsh::Kind::Float: {
 				stringifyFloat(ctx, to_string_decl, body);
+				break;
+			}
+			case tsh::Kind::Pointer: {
+				stringifyPointer(ctx, to_string_decl, body, false);
+				break;
+			}
+			case tsh::Kind::ManyPointer: {
+				stringifyPointer(ctx, to_string_decl, body, true);
 				break;
 			}
 			case tsh::Kind::Char: {

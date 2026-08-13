@@ -448,6 +448,12 @@ namespace compiler::lir {
 			return BuiltinFunctionKind::BoxFree;
 		case helios::BuiltinKind::ListFree:
 			return BuiltinFunctionKind::ListFree;
+		case helios::BuiltinKind::DvmPtrParts:
+			return BuiltinFunctionKind::DvmPtrParts;
+		case helios::BuiltinKind::DvmIsNullptr:
+			return BuiltinFunctionKind::DvmIsNullptr;
+		case helios::BuiltinKind::DvmNullptr:
+			return BuiltinFunctionKind::DvmNullptr;
 		default:
 			return {};
 		}
