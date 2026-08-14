@@ -824,11 +824,12 @@ namespace compiler::mir {
 			args.emplace_back(MIRFunctionLiteral{ function_symid.value() });
 
 			std::vector<OperationFlag> flags;
-			for (const auto& arg: expr.arguments) {
+			for (const auto& arg: expr.arguments | std::views::reverse) {
 				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
 				args.push_back(arg_lowered.getResultAndTakeOwnership(function, flags));
 				sub_continuation = arg_lowered.begin;
 			}
+			std::reverse(args.begin() + 1, args.end());
 
 			return noValueOutput(
 				sub_continuation,
