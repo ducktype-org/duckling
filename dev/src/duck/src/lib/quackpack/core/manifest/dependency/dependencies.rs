@@ -39,7 +39,7 @@ impl Dependencies {
 
     /// Get a dependency by a name.
     pub fn get_by_name(&self, name: StrId) -> Option<&Dependency> {
-        self.get_by_selector(Selector::Name(name))
+        self.get_by_selector(&Selector::Name(name)).next()
     }
 
     /// Check if a dependency exists by an alias.
@@ -49,7 +49,7 @@ impl Dependencies {
 
     /// Get a dependency by an alias.
     pub fn get_by_alias(&self, name: StrId) -> Option<&Dependency> {
-        self.get_by_selector(Selector::Alias(name))
+        self.get_by_selector(&Selector::Alias(name)).next()
     }
 
     /// Check if a dependency exists by an effective name.
@@ -59,17 +59,17 @@ impl Dependencies {
 
     /// Get a dependency by a compilation name.
     pub fn get_by_effective_name(&self, name: StrId) -> Option<&Dependency> {
-        self.get_by_selector(Selector::EffectiveName(name))
+        self.get_by_selector(&Selector::EffectiveName(name)).next()
     }
 
     /// Get a dependency by a given [`Selector`].
-    pub fn get_by_selector(&self, selector: Selector) -> Option<&Dependency> {
-        self.0.iter().find(|dep| selector.selects(dep))
+    pub fn get_by_selector(&self, selector: &Selector) -> impl Iterator<Item = &Dependency> {
+        self.0.iter().filter(|dep| selector.selects(dep))
     }
 
     /// Get a dependency by a given [`Selector`].
-    pub fn has_by_selector(&self, selector: Selector) -> bool {
-        self.get_by_selector(selector).is_some()
+    pub fn has_by_selector(&self, selector: &Selector) -> bool {
+        self.get_by_selector(selector).next().is_some()
     }
 
     /// Filter by [`DependencyKind`].
