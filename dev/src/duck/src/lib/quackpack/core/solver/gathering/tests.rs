@@ -79,6 +79,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -96,7 +97,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: vec![foo_bar_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -110,7 +110,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -124,7 +123,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -138,7 +136,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -152,6 +149,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![DependencyFeature::Detailed(OneEntryMap {
             key: "dx".into(),
             value: DependencyCondition {
@@ -174,7 +172,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: [("dx".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -188,7 +185,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: vec![dx_xd_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [("root".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -202,6 +198,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![DependencyFeature::Simple("f".into())],
         pinned: true,
         conditions: registry::DependencyCondition {
@@ -218,6 +215,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -235,7 +233,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: vec![a_c_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [("f".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -249,7 +246,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: [].into(),
         profiles: HashMap::new(),
     };
@@ -263,7 +259,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: vec![b_a_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [].into(),
         profiles: HashMap::new(),
     };
@@ -277,7 +272,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: [].into(),
         profiles: HashMap::new(),
     };
@@ -291,6 +285,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![DependencyFeature::Simple("u".into())],
         pinned: true,
         conditions: registry::DependencyCondition {
@@ -307,6 +302,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![DependencyFeature::Simple("v".into())],
         pinned: true,
         conditions: registry::DependencyCondition {
@@ -324,7 +320,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: vec![u_v_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [("v".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -338,7 +333,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: vec![v_u_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [("u".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -352,6 +346,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: true,
         conditions: registry::DependencyCondition {
@@ -369,7 +364,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: vec![n_m_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [
             ("expandable".into(), vec!["expanded".into()]),
             ("expanded".into(), vec![]),
@@ -387,7 +381,6 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
         },
         dependencies: vec![],
-        dev_dependencies: registry::Dependencies::new(),
         features: [].into(),
         profiles: HashMap::new(),
     };
