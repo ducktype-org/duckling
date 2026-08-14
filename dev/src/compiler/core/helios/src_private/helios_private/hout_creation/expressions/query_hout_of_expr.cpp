@@ -5,8 +5,6 @@
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
 
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_expression.hpp>
@@ -35,6 +33,8 @@
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/core/diagnostic_arguments.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -48,16 +48,16 @@ namespace compiler::helios::code {
 		 * @brief This error message is used when there is a string literal with escape sequences
 		 * that failed to parse.
 		 */
-		class UnknownEscapeSequenceError final: public dia_int::MessageWithCodeFragmentAndCause {
-			dia_int::Metadata getMetadata() const final {
+		class UnknownEscapeSequenceError final: public dia::MessageWithCodeFragmentAndCause {
+			dia::Metadata getMetadata() const final {
 				return { .template_type = "message",
 					     .type          = "error",
 					     .family        = "parser",
 					     .name          = "unknown_escape_sequence" };
 			}
 
-			class SupportedEscapeSequencesDocs final: public dia_int::MessageBase {
-				dia_int::Metadata getMetadata() const final {
+			class SupportedEscapeSequencesDocs final: public dia::MessageBase {
+				dia::Metadata getMetadata() const final {
 					return { .template_type = "message",
 						     .type          = "docs",
 						     .family        = "expressions",
@@ -69,9 +69,9 @@ namespace compiler::helios::code {
 			};
 
 		public:
-			UnknownEscapeSequenceError(dia_int::StablePosition source_position, std::string sequence):
+			UnknownEscapeSequenceError(dia::StablePosition source_position, std::string sequence):
 				  MessageWithCodeFragmentAndCause(source_position) {
-				addArgument<dia_int::TextArgument>("sequence", std::move(sequence));
+				addArgument<dia::TextArgument>("sequence", std::move(sequence));
 				addAttachedMessage(makeBox<SupportedEscapeSequencesDocs>());
 			}
 		};
@@ -80,8 +80,8 @@ namespace compiler::helios::code {
 		 * @brief This error message is used when a character literal contains more than one
 		 * character.
 		 */
-		class InvalidCharacterLiteralError final: public dia_int::MessageWithCodeFragment {
-			dia_int::Metadata getMetadata() const final {
+		class InvalidCharacterLiteralError final: public dia::MessageWithCodeFragment {
+			dia::Metadata getMetadata() const final {
 				return { .template_type = "message",
 					     .type          = "error",
 					     .family        = "parser",
@@ -89,7 +89,7 @@ namespace compiler::helios::code {
 			}
 
 		public:
-			explicit InvalidCharacterLiteralError(dia_int::StablePosition source_position):
+			explicit InvalidCharacterLiteralError(dia::StablePosition source_position):
 				  MessageWithCodeFragment(source_position) {}
 		};
 
@@ -427,7 +427,7 @@ namespace compiler::helios::code {
 					// This is a temporary check to prevent us from taking reference of types that
 					// do not carry information.
 					if (not inner_type.getType().carriesInformation(ctx)) {
-						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 							"Taking reference of type that does not carry information is not "
 							"supported yet.",
 							stmt->getStablePosition()
@@ -436,7 +436,7 @@ namespace compiler::helios::code {
 					}
 					// @TODO: #3109 Take `unique`/`leaking` specifiers into consideration.
 					if (not inner->expression_type.getValueCategory().addressable()) {
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						ctx.logInt(makeBox<dia::PlaceholderError>(
 							"Tried to reference a temporary", stmt->getStablePosition()
 						));
 						return;
@@ -452,7 +452,7 @@ namespace compiler::helios::code {
 					// This is a temporary check to prevent us from taking the address of types that
 					// do not carry information.
 					if (not inner_type.getType().carriesInformation(ctx)) {
-						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 							"Taking a pointer to a type that does not carry information is not "
 							"supported yet.",
 							stmt->getStablePosition()
@@ -460,7 +460,7 @@ namespace compiler::helios::code {
 						return;  // failed
 					}
 					if (not inner->expression_type.getValueCategory().addressable()) {
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						ctx.logInt(makeBox<dia::PlaceholderError>(
 							"Tried to take a pointer to a temporary", stmt->getStablePosition()
 						));
 						return;
@@ -472,7 +472,7 @@ namespace compiler::helios::code {
 				// Handle dereferencing
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
 					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						ctx.logInt(makeBox<dia::PlaceholderError>(
 							"Tried to dereference a non-pointer type", stmt->getStablePosition()
 						));
 						return;
@@ -484,7 +484,7 @@ namespace compiler::helios::code {
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move)) {
 					// `move x` is only valid on an owned lvalue (a local variable).
 					if (not inner->expression_type.getValueCategory().isMovableFrom()) {
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						ctx.logInt(makeBox<dia::PlaceholderError>(
 							"`move` can only be applied to an owned local variable.",
 							stmt->getStablePosition()
 						));
@@ -524,7 +524,7 @@ namespace compiler::helios::code {
 						= is_indirect ? inner_type.getPointeeSymbolType() : inner_type;
 
 					if (copied_type.isTriviallyCopyable(ctx)) {
-						ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
+						ctx.logInt(makeBox<dia::PlaceholderWarning>(
 							base::strConcat(
 								"Type `",
 								copied_type.toString(),
@@ -541,7 +541,7 @@ namespace compiler::helios::code {
 						return;
 					}
 					if (not copied_type.getType().isCopyable(ctx)) {
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						ctx.logInt(makeBox<dia::PlaceholderError>(
 							base::strConcat("Type `", copied_type.toString(), "` cannot be copied."),
 							stmt->getStablePosition()
 						));
@@ -720,11 +720,8 @@ namespace compiler::helios::code {
 				node = fromChainExpr(ctx, chain_expr).valueOrThrow();
 			}
 
-			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
-				PstExprToHoutExprVisitor vis(ctx);
-				stmt->getInner().unlock(ctx)->acceptExprVisitor(vis);
-				if (vis.node)
-					node = makeBox<ParenthesisExpr>(ctx, pstOrigin(stmt), std::move(*vis.node));
+			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> round_expr) override {
+				round_expr->getInner().unlock(ctx)->acceptExprVisitor(*this);
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
@@ -857,7 +854,7 @@ namespace compiler::helios::code {
 					break;
 				}
 				default:
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 						"Keyword not yet handled.", stmt->getStablePosition()
 					));
 					return;  // failed
@@ -963,13 +960,13 @@ namespace compiler::helios::code {
 
 				auto location_mutability = location_type.getMutability();
 				if (location_mutability == tsh::Mutability::Immutable) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						"Left side of assignment can't be immutable.", stmt->getStablePosition()
 					));
 					return;
 				}
 
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
 					),
@@ -1012,7 +1009,7 @@ namespace compiler::helios {
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
 		const tsh::SymbolType<>                          expected_type,
-		base::Optional<dia_int::StablePosition>          coercion_expects_pos,
+		base::Optional<dia::StablePosition>              coercion_expects_pos,
 		CoercionErrorOverrides                           error_overrides
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
@@ -1065,11 +1062,11 @@ namespace compiler::helios {
 	}
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
-		query::Context&                         ctx,
-		pst::AccessLocked<pst::ExprElement>     element,
-		tsh::SymbolType<>                       expected_type,
-		base::Optional<dia_int::StablePosition> coercion_expects_pos,
-		helios::CoercionErrorOverrides          error_overrides
+		query::Context&                     ctx,
+		pst::AccessLocked<pst::ExprElement> element,
+		tsh::SymbolType<>                   expected_type,
+		base::Optional<dia::StablePosition> coercion_expects_pos,
+		helios::CoercionErrorOverrides      error_overrides
 	) {
 		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);

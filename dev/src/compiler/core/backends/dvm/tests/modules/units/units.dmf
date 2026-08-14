@@ -1,4 +1,3 @@
-import core.builtins.*;
 import core.runtime;
 
 # Simple self-contained test for units as values and types.

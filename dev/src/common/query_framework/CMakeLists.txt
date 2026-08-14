@@ -25,7 +25,7 @@ add_library(QueryFramework
 	src/query_framework/internal/query_metadata/metadata_registry.cpp
 )
 
-make_module(QueryFramework USES Base Diagnostic DiagnosticInteractive Timer Logger CompilerTimeStats Concurrent)
+make_module(QueryFramework USES Base Diagnostic Timer Logger CompilerTimeStats Concurrent)
 
 add_example(query_example examples/example.cpp USES QueryFramework)
 

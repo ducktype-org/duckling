@@ -209,7 +209,7 @@ namespace compiler::tsl {
 		 * @brief Source position of the class declaration, used to anchor
 		 * diagnostics about the class itself.
 		 */
-		dia_int::StablePosition classDiagnosticPosition(
+		dia::StablePosition classDiagnosticPosition(
 			compiler::helios::SymID class_sym, query::Context& ctx
 		) {
 			auto class_pst = compiler::helios::maybeSymbolPst(class_sym);
@@ -223,7 +223,7 @@ namespace compiler::tsl {
 		 * diagnostics about its type. Falls back to the class declaration when
 		 * the field has no PST node.
 		 */
-		dia_int::StablePosition fieldDiagnosticPosition(
+		dia::StablePosition fieldDiagnosticPosition(
 			compiler::helios::SymID field_sym, compiler::helios::SymID class_sym, query::Context& ctx
 		) {
 			auto field_pst = compiler::helios::maybeSymbolPst(field_sym);

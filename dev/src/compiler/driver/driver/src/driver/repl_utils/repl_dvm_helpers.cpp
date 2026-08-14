@@ -4,9 +4,9 @@
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/lir_unit_with_name.hpp>
 #include <driver_private/operations.hpp>
-#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -126,7 +126,7 @@ namespace compiler::repl {
 	std::expected<void, std::string> preloadStandardLibrary(
 		query::Context& ctx, vm::PID pid, backend_vm::ReplDVMCodeBuilder& lowering_context
 	) {
-		const auto root_modules = driver::getStandardLibraryRootModules();
+		const auto root_modules = frontend::packages::standardLibraryRootModules(ctx);
 		if (root_modules.empty()) return {};  // No standard library registered: nothing to load.
 
 		// Collect every module reachable from the standard library package roots.

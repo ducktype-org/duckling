@@ -481,7 +481,7 @@ class PSTErrorTests: public tester::TestSuite {
 	}
 
 	void diagnosticTests() {
-		using dia_int::testDiagnosticMessage;
+		using dia::testDiagnosticMessage;
 		std::stringstream ss;
 
 		testDiagnosticMessage<pst::error::BlockStartError>(ss, dia::SourcePosition::fakePosition());

@@ -67,7 +67,7 @@ namespace compiler::helios::desugaring {
 				= not iterable_hout->expression_type.getValueCategory().canBeAssignedTo();
 
 			if (kind != tsh::Kind::DynamicArray && kind != tsh::Kind::StaticArray) {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"`for` statements for non-array type: ", iterable_type.toString()
 					),
@@ -180,7 +180,7 @@ namespace compiler::helios::desugaring {
                 CoercionErrorOverrides{
 						.incompatible_types =
                         [&](query::Context& error_ctx) {
-                            error_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+                            error_ctx.logInt(makeBox<dia::PlaceholderError>(
                                 base::strConcat(
                                     "Cannot coerce collection element type '",
                                     element_sym_type.toString(),

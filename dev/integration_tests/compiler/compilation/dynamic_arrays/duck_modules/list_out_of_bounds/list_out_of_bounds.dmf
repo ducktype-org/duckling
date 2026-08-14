@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     var lst: List[i64];
     lst.push(1);

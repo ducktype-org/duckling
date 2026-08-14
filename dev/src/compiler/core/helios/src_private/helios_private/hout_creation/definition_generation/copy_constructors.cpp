@@ -1,6 +1,5 @@
 #include "copy_constructors.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <helios/attributes/builtins.hpp>
@@ -16,6 +15,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <ranges>
@@ -236,7 +236,7 @@ namespace compiler::helios::defgen {
 				);
 				break;
 			default:
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"Default copy constructor for type `", owner_type.toString(), "`."
 					),

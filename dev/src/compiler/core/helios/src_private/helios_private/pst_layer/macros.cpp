@@ -1,7 +1,6 @@
 
 #include "macros.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
@@ -14,6 +13,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
@@ -78,7 +78,7 @@ namespace compiler::helios {
 
 				return pst;
 			} else {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"The expression in expand statements did not evaluate to a string value.",
 					expand->getValue().unlock(ctx)->getExpr().unlock(ctx)->getStablePosition()
 				));

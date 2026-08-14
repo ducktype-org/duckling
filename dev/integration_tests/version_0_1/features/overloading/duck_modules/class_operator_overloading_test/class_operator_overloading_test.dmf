@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Class-based operator overloading test for Point comparison
 # Point a < Point b is true when a is closer to (0, 0) than b.
 

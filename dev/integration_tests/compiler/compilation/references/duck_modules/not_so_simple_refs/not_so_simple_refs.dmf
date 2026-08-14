@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun simple_auto_deref() -> () = {
     var x = 10i64;
     let r = &x;

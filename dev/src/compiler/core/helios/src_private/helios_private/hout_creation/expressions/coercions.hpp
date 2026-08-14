@@ -1,6 +1,5 @@
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
@@ -8,6 +7,7 @@
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/pointers/box_or_ref.hpp>
 
+#include <diagnostic/message.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 
@@ -52,8 +52,8 @@ namespace compiler::helios {
 	 */
 	[[nodiscard]] Box<code::Expr> moveReturnedLocal(query::Context& ctx, Box<code::Expr> value);
 
-	class IncompatibleTypesError: public dia_int::MessageWithCodeFragment {
-		dia_int::Metadata getMetadata() const final {
+	class IncompatibleTypesError: public dia::MessageWithCodeFragment {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -62,10 +62,10 @@ namespace compiler::helios {
 
 	public:
 		IncompatibleTypesError(
-			dia_int::StablePosition                 given_position,
-			Box<InteractiveType>                    actual_type,
-			Box<InteractiveType>                    expected_type,
-			base::Optional<dia_int::StablePosition> coercion_expects_pos
+			dia::StablePosition                 given_position,
+			Box<InteractiveType>                actual_type,
+			Box<InteractiveType>                expected_type,
+			base::Optional<dia::StablePosition> coercion_expects_pos
 		);
 	};
 
@@ -73,8 +73,8 @@ namespace compiler::helios {
 	 * @brief Error logged when an expression cannot be coerced to any of the several accepted
 	 * types. The error of every attempted coercion is attached to this message.
 	 */
-	class NoMatchingExpectedTypeError final: public dia_int::MessageWithCodeFragment {
-		dia_int::Metadata getMetadata() const final {
+	class NoMatchingExpectedTypeError final: public dia::MessageWithCodeFragment {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -83,16 +83,14 @@ namespace compiler::helios {
 
 	public:
 		NoMatchingExpectedTypeError(
-			dia_int::StablePosition given_position, Box<InteractiveType> actual_type
+			dia::StablePosition given_position, Box<InteractiveType> actual_type
 		);
 
 		/**
 		 * @brief Adds an explore link for a single accepted type, pointing to the error of the
 		 * coercion that was attempted to this type.
 		 */
-		void addExploreAcceptedType(
-			std::string accepted_type, Box<dia_int::MessageBase> coercion_error
-		);
+		void addExploreAcceptedType(std::string accepted_type, Box<dia::MessageBase> coercion_error);
 	};
 
 	/**
@@ -244,23 +242,23 @@ namespace compiler::helios {
 	 * @return The coerced expression or an empty optional on error.
 	 */
 	base::Optional<Box<code::Expr>> coerceFromBox(
-		query::Context&                         ctx,
-		Box<code::Expr>                         expr,
-		const tsh::SymbolType<>                 expected_type,
-		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> coercion_expects_pos = {},
-		CoercionErrorOverrides                  error_overrides      = {}
+		query::Context&                     ctx,
+		Box<code::Expr>                     expr,
+		const tsh::SymbolType<>             expected_type,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos = {},
+		CoercionErrorOverrides              error_overrides      = {}
 	);
 
 	/**
 	 * @brief Builds the default diagnostic message describing why a coercion failed, based on the
 	 * `reason`.
 	 */
-	[[nodiscard]] Box<dia_int::MessageBase> getCoercionError(
-		query::Context&                         ctx,
-		const Coercion&                         failed,
-		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> coercion_expects_pos = {}
+	[[nodiscard]] Box<dia::MessageBase> getCoercionError(
+		query::Context&                     ctx,
+		const Coercion&                     failed,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos = {}
 	);
 
 	/**
@@ -268,11 +266,11 @@ namespace compiler::helios {
 	 * `error_overrides` if one is provided, otherwise logs the default message.
 	 */
 	void logCoercionFailure(
-		query::Context&                         ctx,
-		const Coercion&                         failed,
-		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> coercion_expects_pos,
-		CoercionErrorOverrides                  error_overrides = {}
+		query::Context&                     ctx,
+		const Coercion&                     failed,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos,
+		CoercionErrorOverrides              error_overrides = {}
 	);
 
 	/**
@@ -284,6 +282,6 @@ namespace compiler::helios {
 	void logNoMatchingExpectedTypeFailure(
 		query::Context&              ctx,
 		const std::vector<Coercion>& failed_coercions,
-		dia_int::StablePosition      source_position
+		dia::StablePosition          source_position
 	);
 }

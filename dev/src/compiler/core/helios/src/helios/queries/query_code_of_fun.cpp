@@ -161,7 +161,7 @@ namespace compiler::helios {
 				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
 
 				if (decl.parameters.size() != 1) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						"A copy constructor must declare exactly one parameter: a reference to "
 						"the object being copied.",
 						params_source
@@ -178,7 +178,7 @@ namespace compiler::helios {
 				// @TODO: #2104 Require the reference to be `const` once `const ref T` actually
 				// resolves to an immutable reference.
 				if (!is_reference || !is_matching_class) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"A copy constructor's parameter must be a reference to its own "
 							"class `",

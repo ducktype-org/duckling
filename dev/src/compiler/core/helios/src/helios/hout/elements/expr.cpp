@@ -44,7 +44,6 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(ChainComparisonExpr)
 	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
-	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(IndexExpr)
@@ -514,26 +513,6 @@ namespace compiler::helios::code {
 		return makeBox<BinaryOperatorExpr>(
 			expression_type, origin, operation, lhs->clone(), rhs->clone()
 		);
-	}
-
-	ParenthesisExpr::ParenthesisExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(inner->expression_type, origin),
-		  inner(std::move(inner)) {}
-
-	ParenthesisExpr::ParenthesisExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, base::Box<Expr> inner
-	):
-		  Expr(expression_type, origin),
-		  inner(std::move(inner)) {}
-
-	void ParenthesisExpr::debugPrint(std::ostream& out) const {
-		out << "(";
-		inner->debugPrint(out);
-		out << ")";
-	}
-
-	Box<Expr> ParenthesisExpr::clone() const {
-		return makeBox<ParenthesisExpr>(expression_type, origin, inner->clone());
 	}
 
 	TernaryOperatorExpr::TernaryOperatorExpr(

@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 const UnitType: type = ();
 const globalUnit: UnitType = ();
 
