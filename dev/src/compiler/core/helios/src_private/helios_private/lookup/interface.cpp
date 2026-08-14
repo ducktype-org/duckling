@@ -1,6 +1,5 @@
 #include "interface.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/lookup/errors.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -9,6 +8,7 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -80,7 +80,7 @@ namespace compiler::helios {
 				return ctx.query<QueryLookupInTypeInstance>({ type.type, name });
 			}
 			variant_case(TypeMetaInterface, type) {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Type meta lookups are not implemented yet", ""
 				));
 				static query::QResult<LookupResult> failed_result = query::Failed();
@@ -128,7 +128,7 @@ namespace compiler::helios {
 				return query::Failed();
 			}
 			variant_case(errors::SymbolNotFound, _) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					base::strConcat("Symbol '", name, "' not found in lookup"),
 					error_position.resolve(ctx),
 					"",

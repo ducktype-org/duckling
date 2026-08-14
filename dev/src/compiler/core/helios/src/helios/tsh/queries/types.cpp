@@ -1,10 +1,10 @@
 #include "types.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios_private/tsh/abstract_type_impl.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::tsh {
@@ -48,7 +48,7 @@ namespace compiler::tsh {
 		};
 
 		if (!cache.contains({ size, signedness })) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat("Invalid size of integral type: ", size, "."),
 				"The only allowed sizes are 8, 16, 32, 64 and 128."
 			));
@@ -71,7 +71,7 @@ namespace compiler::tsh {
 		};
 
 		if (!cache.contains(size)) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat("Invalid size of float type: ", size, "."),
 				"The only allowed sizes are 16, 32, 64, 80, and 128."
 			));

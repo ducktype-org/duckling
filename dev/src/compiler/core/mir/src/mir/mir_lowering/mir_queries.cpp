@@ -3,7 +3,6 @@
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -19,6 +18,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -203,7 +203,7 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"The function `",
 					function.name,

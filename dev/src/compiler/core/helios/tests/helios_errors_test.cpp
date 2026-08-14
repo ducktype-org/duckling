@@ -1,5 +1,4 @@
 
-#include <diagnostic_interactive/stable_position.hpp>
 #include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -15,6 +14,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -1912,7 +1912,7 @@ private:
 	void testDiagnosticErrorsCorrectness() {
 		using namespace helios::code;
 		using namespace helios;
-		using dia_int::testDiagnosticMessage;
+		using dia::testDiagnosticMessage;
 
 		std::stringstream ss;
 
@@ -1929,7 +1929,7 @@ private:
 			// UndefinedBinaryOperatorError
 			testDiagnosticMessage<UndefinedBinaryOperatorError>(
 				ss,
-				dia_int::StablePosition::fakePosition(),
+				dia::StablePosition::fakePosition(),
 				"+",
 				makeBox<InteractiveType>(ctx, st),
 				makeBox<InteractiveType>(ctx, st)
@@ -1937,32 +1937,32 @@ private:
 
 			// UndefinedUnaryOperatorError
 			testDiagnosticMessage<UndefinedUnaryOperatorError>(
-				ss, dia_int::StablePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
+				ss, dia::StablePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
 			);
 
 			// InvalidNumericLiteralError
 			testDiagnosticMessage<InvalidNumericLiteralError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 
 			// NumericLiteralTooLargeError
 			testDiagnosticMessage<NumericLiteralTooLargeError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 
 			// LiteralDoesNotFitError
 			testDiagnosticMessage<LiteralDoesNotFitError>(
-				ss, dia_int::StablePosition::fakePosition(), "signed integer"
+				ss, dia::StablePosition::fakePosition(), "signed integer"
 			);
 
 			// SingleStmtFunctionMustBeExprError
 			testDiagnosticMessage<SingleStmtFunctionMustBeExprError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 
 			// ImmutableVariableNoInitError
 			testDiagnosticMessage<ImmutableVariableNoInitError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 		});
 	}

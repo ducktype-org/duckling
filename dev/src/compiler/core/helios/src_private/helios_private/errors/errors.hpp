@@ -1,11 +1,11 @@
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
+#include <diagnostic/message.hpp>
+#include <diagnostic/stable_position.hpp>
 
 namespace compiler::helios {
-	class SingleStmtFunctionMustBeExprError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class SingleStmtFunctionMustBeExprError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -13,12 +13,12 @@ namespace compiler::helios {
 		}
 
 	public:
-		SingleStmtFunctionMustBeExprError(dia_int::StablePosition source_position):
+		SingleStmtFunctionMustBeExprError(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class ImmutableVariableNoInitError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class ImmutableVariableNoInitError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -26,7 +26,7 @@ namespace compiler::helios {
 		}
 
 	public:
-		ImmutableVariableNoInitError(dia_int::StablePosition source_position):
+		ImmutableVariableNoInitError(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

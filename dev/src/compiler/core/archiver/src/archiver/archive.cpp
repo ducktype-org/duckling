@@ -1,10 +1,10 @@
 #include "archive.hpp"
 
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <global_state/global_logger.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <system_command/system_command.hpp>
@@ -24,7 +24,7 @@ namespace compiler::archiver {
 			auto deleted = fs::FileManager::deleteFile(output.file);
 			if (!deleted && output.file.exists()) {
 				if ((not query::Context::areWeInsideQuery()) and global_state::hasGlobalLogger()) {
-					global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+					global_state::getGlobalLogger()->log(makeBox<dia::PlaceholderError>(
 						"Archiving of the static library failed.",
 						"Could not remove existing output file before invoking the archiver. "
 						"Check filesystem permissions for the artifacts directory."
@@ -56,7 +56,7 @@ namespace compiler::archiver {
 
 		if (result.isBad()) {
 			if ((not query::Context::areWeInsideQuery()) and global_state::hasGlobalLogger()) {
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+				global_state::getGlobalLogger()->log(makeBox<dia::PlaceholderError>(
 					"Archiving of the static library failed. See the archiver output above.",
 					"Check that the selected archiver is installed and accessible via PATH."
 				));

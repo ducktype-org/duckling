@@ -4,7 +4,6 @@
 
 #include <abi/calling_conv/calling_conv.hpp>
 #include <ctv/ctv.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -19,6 +18,7 @@
 #include <base/pointers/shared_box.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <query_framework/context/context_fd.hpp>
 
 #include <memory>
@@ -210,8 +210,8 @@ namespace compiler::lir {
 	 * Used by the backends for the DebugInfo.
 	 */
 	struct LIRLocalMetadata {
-		base::Optional<base::StrID>             source_code_name;
-		base::Optional<dia_int::StablePosition> position;
+		base::Optional<base::StrID>         source_code_name;
+		base::Optional<dia::StablePosition> position;
 	};
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local);
@@ -569,7 +569,7 @@ namespace compiler::lir {
 		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters, MetaParameters>;
 
 	struct InstructionMetadata {
-		base::Optional<dia_int::StablePosition> position;
+		base::Optional<dia::StablePosition> position;
 
 		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
 
@@ -640,8 +640,8 @@ namespace compiler::lir {
 	};
 
 	struct FunctionMetadata {
-		base::Optional<dia_int::StablePosition> position;
-		base::Optional<base::StrID>             source_code_name;
+		base::Optional<dia::StablePosition> position;
+		base::Optional<base::StrID>         source_code_name;
 	};
 
 	/**

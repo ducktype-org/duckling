@@ -1,6 +1,5 @@
 #include "to_string_methods.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
@@ -21,6 +20,7 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -74,7 +74,7 @@ namespace compiler::helios::defgen {
 			const auto& params = fn_type.getParameterTypes();
 			if (params.size() == 2 && params.at(1) == expected_arg_type) return candidate;
 		}
-		ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+		ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 			base::strConcat(
 				"The String class language primitive doesn't have the `append(",
 				arg_by_reference ? "ref " : "",
@@ -194,7 +194,7 @@ namespace compiler::helios::defgen {
 					s.ret(s.call(s.ident(callee_sym), s.ident(self_param.helios_symbol)))
 				);
 			} else {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"toString for non-string slices not yet implemented."
 				));
 			}
