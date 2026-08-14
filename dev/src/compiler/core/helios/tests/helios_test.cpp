@@ -827,15 +827,11 @@ private:
 				ctx,
 				generatedOrigin(),
 				BuiltinBinary::IntegerAdd,
-				makeBox<ParenthesisExpr>(
+				makeBox<UnaryOperatorExpr>(
 					ctx,
 					generatedOrigin(),
-					makeBox<UnaryOperatorExpr>(
-						ctx,
-						generatedOrigin(),
-						BuiltinUnary::IntegerNegation,
-						makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
-					)
+					BuiltinUnary::IntegerNegation,
+					makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
 				),
 				makeBox<CallExpr>(
 					ctx,
@@ -1049,8 +1045,6 @@ private:
 			void visitIdentifierExpr(const IdentifierExpr&) override { ident_count++; }
 
 			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override { ident_count++; }
-
-			void visitParenthesisExpr(const ParenthesisExpr&) override { ident_count++; }
 		};
 
 		struct ExprVisitorRunner: public HoutStmtVisitorPanicky {
@@ -1139,7 +1133,7 @@ private:
 		std::stringstream out_v256;
 		auto              tree_v256 = getExprOfConst(sym_v256);
 		tree_v256->debugPrint(out_v256);
-		ASSERT_EQUAL("(3 + 4 - 4 * 16 / 5 % 7) ** 8", out_v256.str());
+		ASSERT_EQUAL("3 + 4 - 4 * 16 / 5 % 7 ** 8", out_v256.str());
 
 		ASSERT_EQUAL(12, getConstValueAs<i64>("V12", root_scope));
 		auto              sym_v12  = getChain("V12", root_scope).back();

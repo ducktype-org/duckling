@@ -327,10 +327,6 @@ namespace compiler::mir {
 			valueOutput(lowered_condition.begin, target_location);
 		}
 
-		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
-			output(lowerSubExpr(*expr.inner, continuation));
-		}
-
 		void visitTupleExpr(const hc::TupleExpr& expr) override {
 			// Tuple packing is a call to implicit tuple constructor
 			auto call = continuation->addHole();
@@ -1105,8 +1101,6 @@ namespace compiler::mir {
 						.type = result_type,
 					}
 				);
-			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr)) {
-				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
 			} else if (const auto* reusable_expr
 			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);

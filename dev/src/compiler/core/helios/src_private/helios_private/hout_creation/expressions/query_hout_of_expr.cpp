@@ -720,11 +720,8 @@ namespace compiler::helios::code {
 				node = fromChainExpr(ctx, chain_expr).valueOrThrow();
 			}
 
-			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
-				PstExprToHoutExprVisitor vis(ctx);
-				stmt->getInner().unlock(ctx)->acceptExprVisitor(vis);
-				if (vis.node)
-					node = makeBox<ParenthesisExpr>(ctx, pstOrigin(stmt), std::move(*vis.node));
+			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> round_expr) override {
+				round_expr->getInner().unlock(ctx)->acceptExprVisitor(*this);
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
