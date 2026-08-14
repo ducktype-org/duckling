@@ -7,8 +7,8 @@ use crate::{
     DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal,
 };
 
-#[derive(Debug, Default, Clone)]
-/// All options that can be passed to sync.
+#[derive(Debug, Clone)]
+/// All options that can be passed to remove.
 pub struct RemoveOptions {
     /// Name of the dependency
     pub name: String,

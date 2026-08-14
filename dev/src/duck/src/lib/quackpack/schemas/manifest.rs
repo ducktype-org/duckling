@@ -1,5 +1,6 @@
 //! Local manifest schemas.
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::fmt;
 use std::path::PathBuf;
 
@@ -107,13 +108,27 @@ impl Manifest {
         DependencyRemoved::Yes
     }
 
+    /// Add a dependency.
     pub fn add_dependency(&mut self, name: String, dependency: Dependency) -> DependencyAdded {
         let dependencies = self.dependencies.get_or_insert(Dependencies::new());
-        if dependencies.contains_key(&name) {
-            DependencyAdded::AlreadyExists
-        } else {
-            dependencies.insert(name, dependency);
-            DependencyAdded::Yes
+        match dependencies.entry(name) {
+            Entry::Occupied(_) => DependencyAdded::AlreadyExists,
+            Entry::Vacant(entry) => {
+                entry.insert(dependency);
+                DependencyAdded::Yes
+            }
+        }
+    }
+
+    /// Add a dev-dependency.
+    pub fn add_dev_dependency(&mut self, name: String, dependency: Dependency) -> DependencyAdded {
+        let dev_dependencies = self.dev_dependencies.get_or_insert(Dependencies::new());
+        match dev_dependencies.entry(name) {
+            Entry::Occupied(_) => DependencyAdded::AlreadyExists,
+            Entry::Vacant(entry) => {
+                entry.insert(dependency);
+                DependencyAdded::Yes
+            }
         }
     }
 }
