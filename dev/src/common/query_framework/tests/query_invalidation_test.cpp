@@ -1,5 +1,4 @@
-#include <diagnostic_interactive/placeholder.hpp>
-
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/external/api.hpp>
 #include <query_framework/input_query/query_input.hpp>
@@ -36,7 +35,7 @@ DECLARE_QUERY_SIDE_INPUT(SideInput, KeyOf_SideInput);
 
 struct IMPLEMENT_QUERY(DummyQuery1, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
-		ctx.logInt(makeBox<dia_int::PlaceholderError>("...", ""));
+		ctx.logInt(makeBox<dia::PlaceholderError>("...", ""));
 
 		if (key.value == 1) {
 			ctx.query<DummyQuery2>({ 1 });

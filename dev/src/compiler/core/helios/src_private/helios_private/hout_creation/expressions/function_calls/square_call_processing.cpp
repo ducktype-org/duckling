@@ -1,6 +1,5 @@
 #include "square_call_processing.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
@@ -10,6 +9,8 @@
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+
+#include <diagnostic/placeholder.hpp>
 
 namespace compiler::helios::code {
 	namespace {
@@ -35,7 +36,7 @@ namespace compiler::helios::code {
 				auto error_pos = current_expr->origin.getStablePosition().copyValueOr(
 					index_pst.unlock(ctx)->getStablePosition()
 				);
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Index operator base must be indexable.", error_pos
 				));
 				return query::Failed();
@@ -128,7 +129,7 @@ namespace compiler::helios::code {
 		// @TODO: #1532 This check should be handled by the `[]` operator.
 		auto args = call_expr->getArgs().unlock(ctx);
 		if (args->size() != 1) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				"Array index/size must be exactly one expression.", call_expr->getStablePosition()
 			));
 			return query::Failed();

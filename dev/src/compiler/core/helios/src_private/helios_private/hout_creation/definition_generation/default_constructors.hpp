@@ -90,6 +90,6 @@ namespace compiler::helios::defgen {
 	 * default constructible.
 	 */
 	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
-		query::Context& ctx, const tsh::SymbolType<>& type, dia_int::StablePosition pos
+		query::Context& ctx, const tsh::SymbolType<>& type, dia::StablePosition pos
 	);
 }

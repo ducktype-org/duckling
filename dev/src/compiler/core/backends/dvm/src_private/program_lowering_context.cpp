@@ -479,7 +479,7 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			CORE_ASSERT(
 				query_ctx_for_errors.has_value(), "Query context must be set for error reporting"
 			);
-			query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+			query_ctx_for_errors.value()->logInt(makeBox<dia::NotYetImplementedCodeError>(
 				base::strConcat(
 					"During TypeLayout lowering in DVM code generation - type not handled "
 					"yet: ",

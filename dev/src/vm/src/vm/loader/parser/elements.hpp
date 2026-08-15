@@ -1,9 +1,8 @@
 #pragma once
 
-#include <diagnostic_interactive/logger.hpp>
-
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
 #include <string_id/string_id.hpp>
@@ -20,7 +19,7 @@ namespace vm::loader::parser {
 
 	class F8ParserState final: public tpc::ParserState {
 	public:
-		F8ParserState(tpc::TokenStream&& stream, Ref<dia_int::Logger> err_int):
+		F8ParserState(tpc::TokenStream&& stream, Ref<dia::Logger> err_int):
 			  tpc::ParserState(std::move(stream), err_int) {}
 
 		tpc::GenericAutomatic<F8ParserState> parse();

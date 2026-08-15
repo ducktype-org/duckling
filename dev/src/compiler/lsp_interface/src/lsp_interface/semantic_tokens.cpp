@@ -39,7 +39,7 @@ namespace lsp {
 		base::Optional<dia::SourcePosition> getOriginPosition(
 			const compiler::helios::code::ElementOrigin& origin
 		) {
-			return origin.getStablePosition().map([](const dia_int::StablePosition& stable_pos) {
+			return origin.getStablePosition().map([](const dia::StablePosition& stable_pos) {
 				return stable_pos.getActiveSourcePositionIllegalAccess();
 			});
 		}
@@ -392,10 +392,6 @@ namespace lsp {
 
 		void visitChainComparisonExpr(const code::ChainComparisonExpr& elem) override {
 			for (const auto& comparison: elem.comparisons) comparison->acceptVisitor(*this);
-		}
-
-		void visitParenthesisExpr(const code::ParenthesisExpr& elem) override {
-			elem.inner->acceptVisitor(*this);
 		}
 
 		void visitTupleExpr(const code::TupleExpr& elem) override {

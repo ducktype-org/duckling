@@ -1,6 +1,5 @@
 #include "expr_lowering.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
@@ -15,6 +14,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <algorithm>
@@ -327,10 +327,6 @@ namespace compiler::mir {
 			valueOutput(lowered_condition.begin, target_location);
 		}
 
-		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
-			output(lowerSubExpr(*expr.inner, continuation));
-		}
-
 		void visitTupleExpr(const hc::TupleExpr& expr) override {
 			// Tuple packing is a call to implicit tuple constructor
 			auto call = continuation->addHole();
@@ -364,7 +360,7 @@ namespace compiler::mir {
 			const tsh::SymbolType<>&                dest_type,
 			const std::vector<base::Box<hc::Expr>>& values,
 			ProjectionFor                           projection_for,
-			base::Optional<dia_int::StablePosition> position
+			base::Optional<dia::StablePosition>     position
 		) {
 			// We create a tmp, but we don't check use before init, as the value is never inited.
 			auto dest = function.addTmp(dest_type, expr_scope);
@@ -418,7 +414,7 @@ namespace compiler::mir {
 			const hc::Expr&                                        value,
 			usize                                                  size,
 			const base::Optional<base::CSharedBox<hc::CodeBlock>>& per_element_body,
-			base::Optional<dia_int::StablePosition>                position
+			base::Optional<dia::StablePosition>                    position
 		) {
 			auto& ctx = function.getContext();
 
@@ -829,11 +825,12 @@ namespace compiler::mir {
 			args.emplace_back(MIRFunctionLiteral{ function_symid.value() });
 
 			std::vector<OperationFlag> flags;
-			for (const auto& arg: expr.arguments) {
+			for (const auto& arg: expr.arguments | std::views::reverse) {
 				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
 				args.push_back(arg_lowered.getResultAndTakeOwnership(function, flags));
 				sub_continuation = arg_lowered.begin;
 			}
+			std::reverse(args.begin() + 1, args.end());
 
 			return noValueOutput(
 				sub_continuation,
@@ -919,7 +916,7 @@ namespace compiler::mir {
 			// Moving anything that is not a plain local place (e.g. a temporary) has no source to
 			// mark, so just forward the value unchanged.
 			if (not inner_val.isLocal() or inner_val.get<mir::MIRPlace>().hasProjections()) {
-				function.getContext().logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				function.getContext().logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Moving from a non-local place is not supported yet.", expr.inner->getPosition()
 				));
 				query::throwFailed();
@@ -1106,8 +1103,6 @@ namespace compiler::mir {
 						.type = result_type,
 					}
 				);
-			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr)) {
-				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
 			} else if (const auto* reusable_expr
 			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);

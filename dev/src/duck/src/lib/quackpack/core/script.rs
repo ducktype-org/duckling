@@ -90,11 +90,6 @@ impl Script {
         self.manifest().dependencies()
     }
 
-    /// Get the dev-dependencies.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
-    }
-
     /// Get the profiles.
     pub fn profiles(&self) -> &Profiles {
         self.manifest().profiles()
@@ -280,11 +275,6 @@ impl PackageScript {
         self.manifest().dependencies()
     }
 
-    /// Get the package's dev-dependencies.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
-    }
-
     /// Get the package's profiles.
     pub fn profiles(&self) -> &Profiles {
         self.manifest().profiles()
@@ -386,11 +376,6 @@ impl StandaloneScript {
     /// Get the dependencies specified in the frontmatter.
     pub fn dependencies(&self) -> &Dependencies {
         self.manifest().dependencies()
-    }
-
-    /// Get the dev-dependencies specified in the frontmatter.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
     }
 
     /// Get the profiles specified in the frontmatter.
@@ -512,11 +497,6 @@ impl FrontMatter {
     /// Get the dependencies specified in the frontmatter.
     pub fn dependencies(&self) -> &Dependencies {
         self.manifest().dependencies()
-    }
-
-    /// Get the dev-dependencies specified in the frontmatter.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
     }
 
     /// Get the profiles specified in the frontmatter.
