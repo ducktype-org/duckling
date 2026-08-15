@@ -33,6 +33,7 @@ namespace compiler::helios {
 	 * @param ctx The query context.
 	 * @param pst_expr The PST expression.
 	 * @param expected_type The expected type of the expression.
+	 * @param coercion_expects_pos If not empty, it adds an underline with 'expects' message.
 	 * @param error_overrides Optional overrides of the default coercion error logging.
 	 * @return A HOUT Expression of the expected type, or an error if coercion is not possible.
 	 */
@@ -40,7 +41,8 @@ namespace compiler::helios {
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
 		tsh::SymbolType<>                                expected_type,
-		CoercionErrorOverrides                           error_overrides = {}
+		base::Optional<dia::StablePosition>              coercion_expects_pos = {},
+		CoercionErrorOverrides                           error_overrides      = {}
 	);
 
 	/**

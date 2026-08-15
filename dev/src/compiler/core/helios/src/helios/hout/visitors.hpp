@@ -28,7 +28,6 @@ namespace compiler::helios::code {
 		UnaryOperatorExpr,
 		TernaryOperatorExpr,
 		ChainComparisonExpr,
-		ParenthesisExpr,
 		TupleExpr,
 		VariantTypeConstructorExpr,
 		CallExpr,
@@ -37,10 +36,13 @@ namespace compiler::helios::code {
 		SequenceExpr,
 		MoveExpr,
 		RefOfExpr,
+		PtrOfExpr,
 		DerefExpr,
 		DefaultValueExpr,
+		CreateAggregateExpr,
 		CastExpr,
 		LiftToTypeExpr,
+		BlockExpr,
 		ListPushExpr,
 		ListPopExpr
 	);

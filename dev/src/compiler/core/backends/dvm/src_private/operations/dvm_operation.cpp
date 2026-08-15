@@ -77,12 +77,15 @@ namespace compiler::backend_vm::internal {
 			  })
 		    | std::ranges::to<std::vector>();
 
-		return FunctionCallInfo{
-			.call_target = DVMFunctionName{ .name = func_literal.mangled_name },
-			.return_type = called_result_type,
-			.param_types = param_types,
-			.is_extern_c = false,
-		};
+		FunctionCallInfo call_info{ .call_target
+			                        = DVMFunctionName{ .name = func_literal.mangled_name },
+			                        .return_type = called_result_type,
+			                        .param_types = param_types };
+
+		if (v_matches(func_literal.abi.value, lir::LIRAbi::CAbi))
+			call_info.call_target = DVMFFIFunctionName{ .name = func_literal.mangled_name };
+
+		return call_info;
 	}
 
 	FunctionCallInfo FunctionCallInfo::fromExternCFunction(
@@ -110,7 +113,6 @@ namespace compiler::backend_vm::internal {
 			.call_target = DVMExternCFunctionName{ .name = ext_func_name },
 			.return_type = called_result_type,
 			.param_types = param_types,
-			.is_extern_c = true,
 		};
 	}
 
@@ -354,7 +356,7 @@ namespace compiler::backend_vm::internal {
 		case ListPush:
 		case ListPop: {
 			ctx.program_context.getActiveContext().value()->logInt(
-				makeBox<dia_int::NotYetImplementedCodeError>(
+				makeBox<dia::NotYetImplementedCodeError>(
 					"Lists are not supported in DVM code generation yet."
 				)
 			);

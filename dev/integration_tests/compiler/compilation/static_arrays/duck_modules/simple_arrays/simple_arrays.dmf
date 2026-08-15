@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun simple_array_test() -> i32 = {
     var arr: i32[5];
     arr[0] = 42;

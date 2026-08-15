@@ -155,9 +155,6 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 	/// Used by the return value temporary, as it's destructor would have to be after the return.
 	NoDestructor,
 
-	/// Do not validate use-after-free for this local. Currently not used.
-	NoUseAfterFreeValidation,
-
 	/// We do not add the `ScopeStart` and `ScopeEnd` flags for this local.
 	/// Used for return value and parameters, as their scope is always valid in the function.
 	NoScopeFlags,
@@ -168,7 +165,11 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 	
 	/// Mark this local as a condition temporary, which can be used by the pipeline to handle it differently.
 	/// Not used.
-	ConditionTmpValue
+	ConditionTmpValue,
+
+	/// Do not run the use-before-initialization check 
+	// and use-after-free check for this local.
+	NoMoveStatusValidation
 )
 
 namespace compiler::mir {
@@ -299,6 +300,11 @@ namespace compiler::mir {
 		[[nodiscard]]
 		bool carriesInformation(query::Context& ctx) const {
 			return type.getType().carriesInformation(ctx);
+		}
+
+		[[nodiscard]]
+		bool isTemporary() const {
+			return helios_id.empty();
 		}
 	};
 
@@ -617,7 +623,7 @@ namespace compiler::mir {
 	 *
 	 * Emitted when an assignment stores a value into a whole local (no projections), as opposed to
 	 * a declaration. Like @ref flagConstruct it marks the local as alive from this point on for
-	 * liveness analysis.
+	 * move-state analysis.
 	 */
 	constexpr OperationFlag flagReinit(MIRLocalRef local) {
 		return { .flag = OperationFlag::Flag::Reinit, .local = local };
@@ -873,6 +879,8 @@ namespace compiler::mir {
 		 */
 		[[nodiscard]]
 		base::OkBad validateBlockIDs() const;
+
+		[[nodiscard]] BlockID lastBlock() const { return block_order.back(); }
 	};
 
 	/**

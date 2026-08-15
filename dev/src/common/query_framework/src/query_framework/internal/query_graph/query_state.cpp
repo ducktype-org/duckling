@@ -1,7 +1,6 @@
 #include "query_state.hpp"
 
 #include <concurrent/base/locks/assert_lock.hpp>
-#include <diagnostic_interactive/logger.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
@@ -13,6 +12,7 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
+#include <diagnostic/logger.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/internal/query_data/query_data.hpp>
@@ -1027,21 +1027,21 @@ namespace query::internal {
 
 	Ref<MetadataStorage> QueryState::getMetadataStorageMutable() { return &metadata_storage; }
 
-	void QueryState::logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic) {
+	void QueryState::logDiagnosticForNode(NodeID node_id, Box<dia::MessageBase> diagnostic) {
 		diagnostic_loggers.maybePutAndUpdate(
 			node_id,
-			makeBox<dia_int::Logger>(),
-			[&](Ref<Box<dia_int::Logger>> logger) mutable {
+			makeBox<dia::Logger>(),
+			[&](Ref<Box<dia::Logger>> logger) mutable {
 				logger->refMut()->log(std::move(diagnostic));
 			}
 		);
 	}
 
-	void QueryState::logDiagnosticFromLoggerForNode(NodeID node_id, dia_int::Logger& src_logger) {
+	void QueryState::logDiagnosticFromLoggerForNode(NodeID node_id, dia::Logger& src_logger) {
 		diagnostic_loggers.maybePutAndUpdate(
 			node_id,
-			makeBox<dia_int::Logger>(),
-			[&](Ref<Box<dia_int::Logger>> dst_logger) {
+			makeBox<dia::Logger>(),
+			[&](Ref<Box<dia::Logger>> dst_logger) {
 				dst_logger->refMut()->logFromLogger(src_logger);
 			}
 		);
@@ -1049,12 +1049,11 @@ namespace query::internal {
 
 	void QueryState::clearDiagnosticForNode(NodeID node_id) { diagnostic_loggers.erase(node_id); }
 
-	CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> QueryState::getDiagnosticLoggers(
-	) const {
+	CRef<concurrent::ConHashMap<NodeID, Box<dia::Logger>>> QueryState::getDiagnosticLoggers() const {
 		return &diagnostic_loggers;
 	}
 
-	base::Optional<CRef<dia_int::Logger>> QueryState::getDiagnosticForNode(NodeID node_id) const {
+	base::Optional<CRef<dia::Logger>> QueryState::getDiagnosticForNode(NodeID node_id) const {
 		if (auto it = diagnostic_loggers.atMaybe(node_id); it.has_value()) return it.value()->ref();
 		return {};
 	}

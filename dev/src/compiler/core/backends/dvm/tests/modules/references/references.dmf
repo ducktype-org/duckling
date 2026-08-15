@@ -1,4 +1,3 @@
-import core.builtins.*;
 import core.runtime;
 
 fun valueSwap(a: ref i32, b: ref i32) -> () = {

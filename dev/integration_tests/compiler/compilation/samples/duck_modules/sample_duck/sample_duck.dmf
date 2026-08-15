@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
 	return add(1i64, 2i64);
 }

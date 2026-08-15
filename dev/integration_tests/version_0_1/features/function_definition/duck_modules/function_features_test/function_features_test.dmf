@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test advanced function features
 # Focus: static variables, default parameters, return type inference
 

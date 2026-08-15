@@ -78,6 +78,8 @@ namespace compiler::lir {
 			return { LIRAbi::DefaultAbi{} };
 
 		CORE_ASSERT(v_matches(sym_abi, helios::CAbi), "There are more than 3 abis.");
+		const auto& c_abi_info = v_get(sym_abi, helios::CAbi);
+
 		auto abi_type_or_panic = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
 			auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
 			                   ->valueOrPanicMsg("Query failure.");
@@ -102,6 +104,7 @@ namespace compiler::lir {
 			.return_type = return_abi_or_empty(return_type),
 			.param_types = parameter_types | std::views::transform(abi_type_or_panic)
 			             | std::ranges::to<std::vector>(),
+			.num_fixed_params = c_abi_info.fixed_params,
 		};
 		return { LIRAbi::CAbi{
 			.function_info
@@ -516,6 +519,65 @@ namespace compiler::lir {
 			}
 
 			/**
+			 * @brief Lowers a call to a builtin implemented in LIR into the instructions that
+			 * implement it, instead of an actual `Call`. Does nothing for any other callee.
+			 *
+			 * `move_out(pointer)` becomes a read of `*pointer` and `move_in(pointer, value)`
+			 * a store into `*pointer`. Both are plain assignments: no copy constructor runs, and
+			 * nothing under `pointer` is destroyed.
+			 *
+			 * @return Whether the call was a builtin and got lowered here.
+			 */
+			[[nodiscard]] bool lowerLIRBuiltinCall(
+				const mir::Instruction& mir_instruction, MutBlockRef curr_block
+			) const {
+				const auto& callee = mir_instruction.arguments.at(0).get<mir::MIRFunctionLiteral>();
+				const auto  builtin = helios::isBuiltin(callee.helios_id);
+				if (not builtin.has_value()
+				    or not helios::getBuiltinOrigins(builtin.value())
+				               .contains(helios::BuiltinOrigin::LIR))
+					return false;
+
+				// The first argument is the callee, the arguments of the builtin follow it.
+				switch (builtin.value()) {
+				case helios::BuiltinKind::MoveOut: {
+					const auto& pointer = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+					// Reading a value that carries no information is a no-op.
+					auto output = getOutput(mir_instruction.output);
+					if (output.has_value())
+						curr_block->instructions.emplace_back(
+							Operation::Assign,
+							output,
+							std::vector<LIRValue>{ getPlace(pointer.withDeref()) },
+							mir_instruction.metadata
+						);
+					return true;
+				}
+				case helios::BuiltinKind::MoveIn: {
+					const auto& pointer = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+					// Storing a value that carries no information is a no-op.
+					auto value = getLocation(mir_instruction.arguments.at(2));
+					if (value.has_value())
+						curr_block->instructions.emplace_back(
+							Operation::Assign,
+							getPlace(pointer.withDeref()),
+							std::vector<LIRValue>{ value.value() },
+							mir_instruction.metadata
+						);
+					return true;
+				}
+				default:
+					CORE_PANIC(base::strConcat(
+						"Builtin `",
+						helios::builtinKindToStr(builtin.value()),
+						"` is not implemented in LIR"
+					));
+				}
+			}
+
+			/**
 			 * @brief Lowers flags of the given operation into
 			 * LIR instruction flags.
 			 *
@@ -799,6 +861,8 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::Call: {
+					if (lowerLIRBuiltinCall(mir_instruction, curr_block)) break;
+
 					auto output = getOutput(mir_instruction.output);
 					auto args   = getLocations(mir_instruction.arguments);
 					curr_block->instructions.emplace_back(

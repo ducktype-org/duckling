@@ -12,3 +12,14 @@ fun usesOps() -> i32 = {
     var c: W = move a;
     return c.x;
 }
+
+fun returnsLocal() -> W = {
+    var w: W = W(2);
+    return w; # Should implicitly move.
+}
+
+fun copiesThroughRef(r: ref W, bx: box W) -> i32 = {
+    var b: W = copy r;
+    var c: W = copy bx;
+    return b.x;
+}

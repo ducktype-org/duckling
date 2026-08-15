@@ -10,7 +10,7 @@ use tracing::debug;
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solving::scip_ext::BinModelExt;
 use crate::quackpack::core::{FeatureName, PackageId, Version};
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 type PresentFeature = Option<FeatureName>;
 
@@ -90,12 +90,20 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         feature: PresentFeature,
     ) -> QuackResult<Rc<Variable>> {
         match feature {
-            None => self.package_vars.get(&pkg).cloned().context_internal(
-                "Package variable was not added to the model before retrieval attempt",
-            ),
+            None => self
+                .package_vars
+                .get(&pkg)
+                .cloned()
+                .with_context_internal(|| {
+                    format!("package variable `{pkg:?}` was not added to the model before retrieval attempt; {self:#?}")
+                }),
             Some(feature) => {
-                let feature_to_var_map = self.package_to_feature_vars.get(&pkg).context_internal("package and feature variable was not added to the model before retrieval attempt")?;
-                feature_to_var_map.get(&feature).cloned().context_internal("package with feature variable was not added to the model before retrieval attempt")
+                let feature_to_var_map = self.package_to_feature_vars.get(&pkg).with_context_internal(|| {
+                    format!("package `{pkg:?}` and feature variable `{feature:?}` was not added to the model before retrieval attempt; {self:#?}")
+                })?;
+                feature_to_var_map.get(&feature).cloned().with_context_internal(|| {
+                    format!("package `{pkg:?}` and feature variable `{feature:?}` was not added to the model before retrieval attempt; {self:#?}")
+                })
             }
         }
     }
@@ -112,8 +120,8 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         feature: FeatureName,
     ) -> QuackResult<Rc<Variable>> {
         let feature_to_var_map = self.get_feature_to_var_map_for_dep(dep);
-        feature_to_var_map.get(&feature).cloned().context_internal(
-            "dependency with feature variable not added to the model before retrieval of variable attempt",
+        feature_to_var_map.get(&feature).cloned().with_context_internal(|| format!(
+            "dependency `{dep:?}` with feature variable `{feature:?}` not added to the model before retrieval of variable attempt {self:#?}")
         )
     }
 
@@ -129,8 +137,8 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         version: Version,
     ) -> QuackResult<Rc<Variable>> {
         let version_to_var_map = self.get_version_to_var_map_for_dep(dep);
-        version_to_var_map.get(&version).cloned().context_internal(
-            "dependency with version variable not added to the model before retrieval attempt",
+        version_to_var_map.get(&version).cloned().with_context_internal(|| format!(
+            "dependency `{dep:?}` with version {version} variable not added to the model before retrieval attempt {self:#?}")
         )
     }
 
@@ -303,11 +311,12 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             for (feature, feature_realization_var) in
                 self.get_feature_to_var_map_for_dep(dep).clone()
             {
-                if !possible_features
-                    .get(pkg)
-                    .context_internal("Possible features map does not contain looked up package")?
-                    .contains(&feature)
-                {
+                let Some(pkg_features) = possible_features.get(pkg) else {
+                    qp_bail_internal!(
+                        "possible_features does not containt package `{pkg:?}`, {possible_features:#?}"
+                    )
+                };
+                if !pkg_features.contains(&feature) {
                     self.model.all_implies_any(
                         vec![
                             version_realization_var.clone(),

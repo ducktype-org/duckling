@@ -1,11 +1,11 @@
 #pragma once
 
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/message.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+
+#include <diagnostic/logger.hpp>
+#include <diagnostic/message.hpp>
+#include <diagnostic/placeholder.hpp>
 
 #include <vm/bytecode/element_base.hpp>
 
@@ -19,14 +19,14 @@ namespace vm::loader {
 	 * @brief Logger that meets loader's requirements for optional source positions.
 	 */
 	class LoaderLogger final {
-		dia_int::Logger          logger;
+		dia::Logger              logger;
 		std::vector<std::string> errors;
 
 
 	public:
 		LoaderLogger() = default;
 
-		LoaderLogger(dia_int::Logger&& logger): logger(std::move(logger)) {}
+		LoaderLogger(dia::Logger&& logger): logger(std::move(logger)) {}
 
 		LoaderLogger(const LoaderLogger&)            = delete;
 		LoaderLogger& operator=(const LoaderLogger&) = delete;
@@ -48,7 +48,7 @@ namespace vm::loader {
 			match_optional(elem.bytecode_pos) {
 				opt_none errors.emplace_back(header_message);
 				opt_some(pos) {
-					auto t = makeBox<dia_int::PlaceholderError>(
+					auto t = makeBox<dia::PlaceholderError>(
 						std::string(header_message),
 						pos,
 						std::string(description),
@@ -65,16 +65,16 @@ namespace vm::loader {
 		 * position.
 		 */
 		void addNote(
-			Box<dia_int::PlaceholderError>& error,
-			const code::ElementBase&        elem,
-			std::string_view                header_message,
-			std::string_view                description             = "",
-			base::Optional<std::string>     pointer_message_content = "here"
+			Box<dia::PlaceholderError>& error,
+			const code::ElementBase&    elem,
+			std::string_view            header_message,
+			std::string_view            description             = "",
+			base::Optional<std::string> pointer_message_content = "here"
 		) {
 			match_optional(elem.bytecode_pos) {
 				opt_none errors.emplace_back(header_message);
 				opt_some(pos) {
-					error->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
+					error->addAttachedMessage(makeBox<dia::PlaceholderNote>(
 						std::string(header_message),
 						pos,
 						std::string(description),
@@ -85,11 +85,11 @@ namespace vm::loader {
 		}
 
 		void addNote(
-			Box<dia_int::PlaceholderError>& error,
-			const IsElementVariant auto&    elem,
-			std::string_view                header_message,
-			std::string_view                description             = "",
-			base::Optional<std::string>     pointer_message_content = "here"
+			Box<dia::PlaceholderError>&  error,
+			const IsElementVariant auto& elem,
+			std::string_view             header_message,
+			std::string_view             description             = "",
+			base::Optional<std::string>  pointer_message_content = "here"
 		) {
 			addNote(
 				error,
@@ -113,7 +113,7 @@ namespace vm::loader {
 		) {
 			logMap(
 				elem,
-				[](const Box<dia_int::PlaceholderError>&) {},
+				[](const Box<dia::PlaceholderError>&) {},
 				header_message,
 				description,
 				std::move(pointer_message_content)

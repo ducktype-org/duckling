@@ -81,6 +81,18 @@ pub fn configure_easy2<H>(
 }
 
 /// Convert an [`http::header::HeaderMap`] into a [`curl::easy::List`] headers.
+///
+/// It's important to note that cURL has [three different syntaxes][curl-docs] for representing headers:
+/// * normal `Header: Value` (with _non empty_ value) is the same as `headers.set(header, value);`.
+/// * special empty `Header;` (note the semicolon) is the same as `headers.set(header, "");` (sets an
+///   empty string as a value)
+/// * special “disable internal header” `Header:` (note the colon) is the same as
+///   `headers.remove(header)`.
+///
+/// As we can't express the third one (and we don't need) it's currently ignored and impossible to
+/// use.
+///
+/// [curl-docs]: https://docs.rs/curl/latest/curl/easy/struct.Easy2.html#method.http_headers
 fn http_headers_to_curl_list(headers: &header::HeaderMap) -> Result<easy::List, curl::Error> {
     let mut list = easy::List::new();
     for (header, value) in headers.iter() {
@@ -96,18 +108,19 @@ fn http_headers_to_curl_list(headers: &header::HeaderMap) -> Result<easy::List, 
                 continue;
             }
         };
-        if !value.trim().is_empty() {
+        let value = value.trim();
+        if !value.is_empty() {
             try_curl!(
                 list.append(&format!("{header}: {value}")),
                 %header,
                 %value,
-                "failed to append header",
+                "failed to append a header",
             );
         } else {
             try_curl!(
                 list.append(&format!("{header};")),
                 %header,
-                "failed to marked header as removed"
+                "failed to marked a header as having no value"
             );
         }
     }

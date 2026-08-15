@@ -1,7 +1,6 @@
 #include "coercions.hpp"
 
 #include <ctv/numeric_value.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
@@ -14,6 +13,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 
 namespace compiler::helios {
@@ -48,12 +48,47 @@ namespace compiler::helios {
 			));
 		}
 
+		// Coerces a single tuple element to the i-th component of the target tuple type.
+		Box<code::Expr> coerceTupleElement(
+			query::Context&               ctx,
+			Box<code::Expr>               element,
+			const tsh::TupleAbstractType& to_type,
+			usize                         index
+		) {
+			auto element_coercion
+				= canCoerce(ctx, element->expression_type, to_type.getComponents()[index])
+			          .valueOrThrow();
+			CORE_ASSERT(
+				element_coercion.isValid(), "Coercion should always be valid at this point."
+			);
+
+			return element_coercion.coerce(ctx, std::move(element));
+		}
+
 		// Performs element by element coercion.
 		Box<code::Expr> handleTupleCoercion(
 			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
 		) {
 			auto source_type = expr->expression_type.getType().as<tsh::TupleAbstractType>();
 			auto to_type     = to.getType().as<tsh::TupleAbstractType>();
+
+			// A tuple literal is coerced element by element in place. Reading the elements back out
+			// of a materialised tuple would lose the shape of the element expressions, which some
+			// coercions still need - lifting a value to a `type` for instance only works on the
+			// original expression. It also avoids materialising the source tuple altogether.
+			if (auto* tuple_literal = dynamic_cast<code::TupleExpr*>(expr.get())) {
+				std::vector<Box<code::Expr>> literal_elements;
+				literal_elements.reserve(tuple_literal->elements.size());
+
+				for (usize i = 0; i < tuple_literal->elements.size(); i++)
+					literal_elements.emplace_back(
+						coerceTupleElement(ctx, std::move(tuple_literal->elements[i]), to_type, i)
+					);
+
+				return makeBox<code::TupleExpr>(
+					ctx, expr->origin.generatedFrom(), std::move(literal_elements)
+				);
+			}
 
 			auto tuple = makeBox<code::ReusableExpr>(ctx, std::move(expr));
 
@@ -74,15 +109,7 @@ namespace compiler::helios {
 					)
 				);
 
-				const auto& to_element_type = to_type.getComponents()[i];
-
-				auto element_coercion
-					= canCoerce(ctx, element->expression_type, to_element_type).valueOrThrow();
-				CORE_ASSERT(
-					element_coercion.isValid(), "Coercion should always be valid at this point."
-				);
-
-				elements.emplace_back(element_coercion.getCoercion().coerce(ctx, element->clone()));
+				elements.emplace_back(coerceTupleElement(ctx, std::move(element), to_type, i));
 			}
 
 			return makeBox<code::TupleExpr>(ctx, tuple->origin.generatedFrom(), std::move(elements));
@@ -137,73 +164,90 @@ namespace compiler::helios {
 			return { from_type.getPointeeSymbolType(),
 				     tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced) };
 		}
+	}
 
-		/**
-		 * @brief How a copying coercion may hand over a value.
-		 */
-		enum class PassingMethod {
-			ByteCopy,            ///< Trivially copyable, copied by copying its bytes.
-			ImplicitMove,        ///< Owned rvalue (a temporary), moved implicitly.
-			ExplicitCopyOrMove,  ///< Non-trivial assignable value (lvalue), needs an explicit
-			                     ///< `copy`/`move`.
-			NotCopyable,  ///< Non-trivial assignable value (lvalue) value with no copy constructor.
-		};
+	PassingMethod passingMethod(query::Context& ctx, const tsh::ExpressionType<>& value) {
+		const tsh::SymbolType<> symbol_type = value.getSymbolType();
 
-		/**
-		 * @brief Decides how the given value may passed, based on its value category and the
-		 * abilities of its type.
-		 */
-		PassingMethod passingMethod(query::Context& ctx, const tsh::ExpressionType<>& value) {
-			const auto symbol_type = value.getSymbolType();
-			const bool trivial     = symbol_type.isTriviallyCopyable(ctx);
+		// If the value is being moved already, we pass it by `ByteCopy`.
+		if (value.getValueCategory().mustMove()) return PassingMethod::ByteCopy;
+		if (symbol_type.isTriviallyCopyable(ctx)) return PassingMethod::ByteCopy;
 
-			switch (value.getValueCategory().getCategory()) {
-			case tsh::PrimaryCategory::Temporary:
-				return trivial ? PassingMethod::ByteCopy : PassingMethod::ImplicitMove;
-			case tsh::PrimaryCategory::Literal:
-				return PassingMethod::ByteCopy;
-			case tsh::PrimaryCategory::Local:
-			case tsh::PrimaryCategory::Global:
-			case tsh::PrimaryCategory::Dereferenced:
-				if (trivial) return PassingMethod::ByteCopy;
-				return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
-				                                   : PassingMethod::NotCopyable;
-			}
-			CORE_UNREACHABLE();
+		switch (value.getValueCategory().getCategory()) {
+		case tsh::PrimaryCategory::Temporary:
+			return PassingMethod::ImplicitMove;
+		case tsh::PrimaryCategory::Literal:
+			return PassingMethod::ByteCopy;
+		case tsh::PrimaryCategory::Local:
+		case tsh::PrimaryCategory::Global:
+		case tsh::PrimaryCategory::Dereferenced:
+			return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
+			                                   : PassingMethod::NotCopyable;
 		}
+		CORE_UNREACHABLE();
+	}
+
+	Box<code::Expr> moveReturnedLocal(query::Context& ctx, Box<code::Expr> value) {
+		const tsh::ExpressionType<> type = value->expression_type;
+
+		// Only a local can be moved out of.
+		if (type.getValueCategory().getCategory() != tsh::PrimaryCategory::Local) return value;
+
+		// Anything the normal rule would demand a written `copy`/`move` for is what the
+		// return makes implicit.
+		const PassingMethod method = passingMethod(ctx, type);
+		if (method != PassingMethod::ExplicitCopyOrMove && method != PassingMethod::NotCopyable)
+			return value;
+
+		auto origin = value->origin.generatedFrom();
+		return makeBox<code::MoveExpr>(
+			ctx, origin, std::move(value), code::MoveExpr::MoveKind::Implicit
+		);
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
-		dia_int::StablePosition source_position,
-		Box<InteractiveType>    actual_type,
-		Box<InteractiveType>    expected_type
+		dia::StablePosition                 given_position,
+		Box<InteractiveType>                actual_type,
+		Box<InteractiveType>                expected_type,
+		base::Optional<dia::StablePosition> coercion_expects_pos
 	):
-		  MessageWithCodeFragmentAndCause(source_position) {
-		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
-		addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type));
+		  MessageWithCodeFragment(given_position) {
+		addArgument<dia::InteractiveArgument>("given_type", std::move(actual_type));
+		addArgument<dia::InteractiveArgument>("expected_type", std::move(expected_type));
+		addPointerMessage("given", given_position);
+		if_opt_some(coercion_expects_pos, expected_pos) {
+			addPointerMessage("expected", expected_pos);
+		}
 	}
 
 	NoMatchingExpectedTypeError::NoMatchingExpectedTypeError(
-		dia_int::StablePosition source_position, Box<InteractiveType> actual_type
+		dia::StablePosition given_position, Box<InteractiveType> actual_type
 	):
-		  MessageWithCodeFragmentAndCause(source_position) {
-		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
+		  MessageWithCodeFragment(given_position) {
+		addArgument<dia::InteractiveArgument>("given_type", std::move(actual_type));
+		addPointerMessage("given", given_position);
 	}
 
 	void NoMatchingExpectedTypeError::addExploreAcceptedType(
-		std::string accepted_type, Box<dia_int::MessageBase> coercion_error
+		std::string accepted_type, Box<dia::MessageBase> coercion_error
 	) {
-		auto id = dia_int::MessageBase::getUniqueID();
+		auto id = dia::MessageBase::getUniqueID();
 		this->addLinkedMessage(id, std::move(coercion_error));
 
-		std::vector<Box<dia_int::Argument>> args;
-		args.emplace_back(makeBox<dia_int::TextArgument>("accepted_type", std::move(accepted_type)));
-		args.emplace_back(makeBox<dia_int::TextArgument>("message_id", id));
+		std::vector<Box<dia::Argument>> args;
+		args.emplace_back(makeBox<dia::TextArgument>("accepted_type", std::move(accepted_type)));
+		args.emplace_back(makeBox<dia::TextArgument>("message_id", id));
 		this->addExploreLink("accepted_type", std::move(args));
 	}
 
 	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
+
+		// An owned rvalue passed to a new owner is implicitly moved.
+		if (transfers_ownership)
+			from = makeBox<code::MoveExpr>(
+				ctx, from->origin.generatedFrom(), std::move(from), code::MoveExpr::MoveKind::Implicit
+			);
 
 		auto current_expr       = handleReferenceKindCoercion(ctx, std::move(from), to);
 		auto source_symbol_type = current_expr->expression_type.getSymbolType();
@@ -258,7 +302,7 @@ namespace compiler::helios {
 		}
 	}
 
-	CoercionQResult canCoerce(
+	query::QResult<Coercion> canCoerce(
 		query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 	) {
 		const tsh::SymbolType<> from_type = from.getSymbolType();
@@ -266,26 +310,28 @@ namespace compiler::helios {
 		// First check that the type is even coercible to provide a invalid coercion error first.
 		const bool coercible
 			= ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from_type, to });
-		if (!coercible) return InvalidCoercion{ InvalidCoercionReason::IncompatibleTypes };
+		if (!coercible)
+			return Coercion::invalid(from_type, to, InvalidCoercionReason::IncompatibleTypes);
 
 		// A coercion that only rebinds a reference never copies, so it is always fine.
 		if (not requiresValueCopy(from_type.getRefKind(), to.getRefKind()))
-			return Coercion(from_type, to);
+			return Coercion::valid(from_type, to, false);
 
 		// Otherwise a value has to be copied.
 		switch (passingMethod(ctx, valueBeingCopied(from, to))) {
 		case PassingMethod::ByteCopy:
+			return Coercion::valid(from_type, to, false);
 		case PassingMethod::ImplicitMove:
-			return Coercion(from_type, to);
+			return Coercion::valid(from_type, to, true);
 		case PassingMethod::ExplicitCopyOrMove:
-			return InvalidCoercion{ InvalidCoercionReason::RequiresExplicitCopyMove };
+			return Coercion::invalid(from_type, to, InvalidCoercionReason::RequiresExplicitCopyMove);
 		case PassingMethod::NotCopyable:
-			return InvalidCoercion{ InvalidCoercionReason::TypeNotCopyable };
+			return Coercion::invalid(from_type, to, InvalidCoercionReason::TypeNotCopyable);
 		}
 		CORE_UNREACHABLE();
 	}
 
-	CoercionQResult canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from) {
+	query::QResult<Coercion> canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from) {
 		return canCoerce(
 			ctx,
 			from,
@@ -306,63 +352,72 @@ namespace compiler::helios {
 	}
 
 	base::Optional<Box<code::Expr>> coerceFromBox(
-		query::Context&         ctx,
-		Box<code::Expr>         expr,
-		const tsh::SymbolType<> expected_type,
-		dia_int::StablePosition source_position,
-		CoercionErrorOverrides  error_overrides
+		query::Context&                     ctx,
+		Box<code::Expr>                     expr,
+		const tsh::SymbolType<>             expected_type,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos,
+		CoercionErrorOverrides              error_overrides
 	) {
-		const tsh::SymbolType<> source_symbol_type = expr->expression_type.getSymbolType();
 		const auto coercion_qresult = canCoerce(ctx, expr->expression_type, expected_type);
 		if (coercion_qresult.hasFailed()) return {};
-
-		const CoercionResult& coercion_result = coercion_qresult.valueOrThrow();
-		if (coercion_result.isValid())
-			return coercion_result.getCoercion().coerce(ctx, std::move(expr));
+		const Coercion& coercion_result = coercion_qresult.valueOrPanic();
+		if (coercion_result.isValid()) return coercion_result.coerce(ctx, std::move(expr));
 
 		logCoercionFailure(
-			ctx,
-			coercion_result.getInvalidReason(),
-			source_symbol_type,
-			expected_type,
-			source_position,
-			std::move(error_overrides)
+			ctx, coercion_result, source_position, coercion_expects_pos, std::move(error_overrides)
 		);
 		return {};
 	}
 
-	Box<dia_int::MessageBase> getCoercionError(
-		query::Context&          ctx,
-		InvalidCoercionReason    reason,
-		const tsh::SymbolType<>& source_symbol_type,
-		const tsh::SymbolType<>& expected_type,
-		dia_int::StablePosition  source_position
+	Box<dia::MessageBase> getCoercionError(
+		query::Context&                     ctx,
+		const Coercion&                     failed,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos
 	) {
-		switch (reason) {
+		switch (failed.getInvalidReason()) {
 		case InvalidCoercionReason::IncompatibleTypes:
 			return makeBox<IncompatibleTypesError>(
 				source_position,
-				makeBox<InteractiveType>(ctx, source_symbol_type),
-				makeBox<InteractiveType>(ctx, expected_type)
+				makeBox<InteractiveType>(ctx, failed.validated_from),
+				makeBox<InteractiveType>(ctx, failed.to),
+				coercion_expects_pos
 			);
 		case InvalidCoercionReason::TypeNotCopyable:
-			return makeBox<dia_int::PlaceholderError>(
+			return makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"Type `",
-					copiedValueType(source_symbol_type, expected_type).toString(),
+					copiedValueType(failed.validated_from, failed.to).toString(),
 					"` cannot be copied."
 				),
 				source_position
 			);
-		case InvalidCoercionReason::RequiresExplicitCopyMove:
-			return makeBox<dia_int::PlaceholderError>(
+		case InvalidCoercionReason::RequiresExplicitCopyMove: {
+			// Reading a value out of a `ref`/`box` copies the pointee. `move` out of ref/box isn't
+			// possible, so suggesting it here is misleading.
+			const bool reads_through
+				= readsThroughReference(failed.validated_from.getRefKind(), failed.to.getRefKind());
+
+			const std::string message
+				= reads_through
+			        ? base::strConcat(
+						  "` out of `",
+						  failed.validated_from.toString(),
+						  "`. Use `copy` to copy it out, `move` cannot move a value out of a "
+						  "reference."
+					  )
+			        : std::string("`. Use `copy` to copy it or `move` to move it.");
+
+			return makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"Cannot implicitly copy a value of non-trivially-copyable type `",
-					copiedValueType(source_symbol_type, expected_type).toString(),
-					"`. Use `copy` to copy it or `move` to move it."
+					copiedValueType(failed.validated_from, failed.to).toString(),
+					message
 				),
 				source_position
 			);
+		}
 
 		default:
 			CORE_UNREACHABLE();
@@ -370,16 +425,15 @@ namespace compiler::helios {
 	}
 
 	void logCoercionFailure(
-		query::Context&          ctx,
-		InvalidCoercionReason    reason,
-		const tsh::SymbolType<>& source_symbol_type,
-		const tsh::SymbolType<>& expected_type,
-		dia_int::StablePosition  source_position,
-		CoercionErrorOverrides   error_overrides
+		query::Context&                     ctx,
+		const Coercion&                     failed,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos,
+		CoercionErrorOverrides              error_overrides
 	) {
 		// Use the caller's override if one is set, otherwise the default message.
 		const base::Optional<CoercionErrorOverrides::Logger>& override = [&]() -> const auto& {
-			switch (reason) {
+			switch (failed.getInvalidReason()) {
 			case InvalidCoercionReason::IncompatibleTypes:
 				return error_overrides.incompatible_types;
 			case InvalidCoercionReason::TypeNotCopyable:
@@ -395,34 +449,25 @@ namespace compiler::helios {
 			(*override)(ctx);
 			return;
 		}
-		ctx.logInt(getCoercionError(ctx, reason, source_symbol_type, expected_type, source_position)
-		);
+		ctx.logInt(getCoercionError(ctx, failed, source_position, coercion_expects_pos));
 	}
 
 	void logNoMatchingExpectedTypeFailure(
-		query::Context&                           ctx,
-		const tsh::SymbolType<>&                  source_symbol_type,
-		const std::vector<tsh::SymbolType<>>&     expected_types,
-		const std::vector<InvalidCoercionReason>& failure_reasons,
-		dia_int::StablePosition                   source_position
+		query::Context&              ctx,
+		const std::vector<Coercion>& failed_coercions,
+		dia::StablePosition          source_position
 	) {
-		CORE_ASSERT(
-			expected_types.size() == failure_reasons.size(),
-			"Every expected type needs its own coercion failure reason."
-		);
+		CORE_ASSERT(not failed_coercions.empty(), "Called with empty failed coercions.");
 
 		auto error = makeBox<NoMatchingExpectedTypeError>(
-			source_position, makeBox<InteractiveType>(ctx, source_symbol_type)
+			source_position, makeBox<InteractiveType>(ctx, failed_coercions.at(0).validated_from)
 		);
 
 		// Every accepted type was tried, so each of them gets an explore link pointing to the error
 		// explaining why the coercion to it failed.
-		for (usize i = 0; i < expected_types.size(); i++)
+		for (auto& coercion: failed_coercions)
 			error->addExploreAcceptedType(
-				expected_types[i].toString(),
-				getCoercionError(
-					ctx, failure_reasons[i], source_symbol_type, expected_types[i], source_position
-				)
+				coercion.to.toString(), getCoercionError(ctx, coercion, source_position)
 			);
 
 		ctx.logInt(std::move(error));

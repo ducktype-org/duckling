@@ -36,11 +36,16 @@ namespace compiler::driver {
 		base::deduplicateBy(code.types, [](const vm::code::TypeOfData& f) {
 			return vm::code::typeName(f);
 		});
+		base::deduplicateBy(code.ffi_functions, [](const vm::code::FFIFunction& func) {
+			return func.name.str.strView();
+		});
+		base::deduplicateBy(code.object_files, [](const std::string& file) { return file; });
 	}
 
 	base::OkBad linkDVMPackage(
 		const std::vector<artifacts::FileArtifact>& objects,
 		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
+		const DVMRuntimeConfig&                     runtime_config,
 		artifacts::FileArtifact&                    output_file
 	) {
 		vm::loader::Loader dvm_linker;
@@ -61,8 +66,13 @@ namespace compiler::driver {
 			return base::BAD;
 		}
 		vm::code::CodeCollection merged_code = std::move(parse_result.value());
+
+		// This is also a bit hacky here, because we don't have any other place to put this code.
+		base::appendToVector(merged_code.object_files, runtime_config.shared_libraries);
+
 		// @TODO: #2895 deal with this once weak/strong symbols are added
 		deduplicateCodeCollection(merged_code);
+
 
 		std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
 		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");

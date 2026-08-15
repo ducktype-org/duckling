@@ -260,7 +260,7 @@ fn create_mock_package_with_dependencies<'duck>(
         full: false,
     };
     init::init(opts).unwrap();
-    // !TODO: Use `duck add`.
+    // @TODO: #3316 Use `duck add`.
     let mut file = {
         let mut opts = OpenOptions::new();
         opts.append(true)

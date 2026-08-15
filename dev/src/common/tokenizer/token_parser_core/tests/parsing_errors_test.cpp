@@ -1,5 +1,4 @@
-#include <diagnostic_interactive/logger.hpp>
-
+#include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
 #include <tester/tester.hpp>
 #include <token_parser_core/automatic.hpp>
@@ -12,7 +11,7 @@ class ParsingErrorsTest: public tester::TestSuite {
 #define TESTER_CLASS ParsingErrorsTest
 
 	void diagnosticTests() {
-		using dia_int::testDiagnosticMessage;
+		using dia::testDiagnosticMessage;
 		std::stringstream ss;
 
 		testDiagnosticMessage<tpc::NoIdentifierError>(

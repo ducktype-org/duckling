@@ -7,8 +7,11 @@ use tempfile::{TempDir, tempdir};
 use super::parse_manifest;
 use crate::quackpack::core::manifest::parse::frontmatter::parse_frontmatter;
 use crate::quackpack::core::script::Script;
-use crate::quackpack::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
+use crate::quackpack::core::{
+    DependencyKind, GitReference, OptLevel, Profile, Version, capture_frontmatter,
+};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, StrId};
 
@@ -66,7 +69,6 @@ metadata:
     let summary = manifest.manifest();
     assert_eq!(summary.name(), "xd");
     assert!(summary.dependencies().all_dependencies().is_empty());
-    assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
     assert!(!summary.venv().ephemeral());
     assert!(summary.venv().expose_freezefile());
@@ -99,7 +101,6 @@ dependencies:
     assert_eq!(a.versions()[0].to_string(), "0.1.0");
     assert!(a.source().is_registry());
     assert!(a.features().is_empty());
-    assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
 }
 
@@ -126,7 +127,6 @@ dependencies:
     assert_eq!(a.versions()[0].to_string(), "1.0.0");
     assert!(a.source().is_registry());
     assert!(a.features().is_empty());
-    assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
 }
 
@@ -178,7 +178,6 @@ dependencies:
     assert_eq!(a.versions()[1].to_string(), "2.0.0");
     assert!(a.source().is_registry());
     assert!(a.features().is_empty());
-    assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
 }
 
@@ -207,7 +206,6 @@ dependencies:
     assert_eq!(a.versions()[1].to_string(), "2.0.0");
     assert!(a.source().is_git());
     assert_eq!(a.source().url().as_str(), "https://google.com/");
-    assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
 }
 
@@ -429,26 +427,7 @@ dependencies:
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
     assert!(a.source().is_local());
     let path = a.source().url().to_path_buf().unwrap();
-    #[cfg(windows)]
-    assert_eq!(
-        PathBuf::from(format!("\\\\?\\{}", path.display())),
-        manifest_path
-            .parent()
-            .unwrap()
-            .resolve()
-            .unwrap()
-            .join("xd")
-    );
-    #[cfg(not(windows))]
-    assert_eq!(
-        path,
-        manifest_path
-            .parent()
-            .unwrap()
-            .resolve()
-            .unwrap()
-            .join("xd")
-    );
+    assert_eq!(path, manifest_path.parent().unwrap().normalize().join("xd"));
     assert!(a.versions().is_empty());
     assert_eq!(a.name(), a.effective_name());
     assert!(a.alias().is_none());
@@ -460,19 +439,6 @@ dependencies:
     assert!(a1.source().is_local());
 
     let path = a1.source().url().to_path_buf().unwrap();
-    #[cfg(windows)]
-    assert_eq!(
-        PathBuf::from(format!("\\\\?\\{}", path.display())),
-        manifest_path
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .resolve()
-            .unwrap()
-            .join("xd")
-    );
-    #[cfg(not(windows))]
     assert_eq!(
         path,
         manifest_path
@@ -480,8 +446,7 @@ dependencies:
             .unwrap()
             .parent()
             .unwrap()
-            .resolve()
-            .unwrap()
+            .normalize()
             .join("xd")
     );
     assert!(a1.alias().is_none());
@@ -501,11 +466,12 @@ dependencies:
         .get_by_name(StrId::new("a3"))
         .unwrap();
     assert!(a3.source().is_local());
+    let path = a3.source().url().to_path_buf().unwrap();
+    #[cfg(windows)]
+    // On Windows `/xd` is an absolute path.
+    assert_eq!(path, PathBuf::from("C:\\xd"));
     #[cfg(not(windows))]
-    {
-        let path = a3.source().url().to_path_buf().unwrap();
-        assert_eq!(path, PathBuf::from("/xd"));
-    }
+    assert_eq!(path, PathBuf::from("/xd"));
     assert!(a3.alias().is_none());
 
     let b = summary.dependencies().get_by_name(StrId::new("b")).unwrap();
@@ -860,8 +826,6 @@ dependencies:
 }
 
 #[test]
-#[cfg(not(windows))]
-// @TODO: #3135 Fix to_url() calls on paths on windows
 fn git_url_points_to_local_dir() {
     let root_dir = TempDir::new().unwrap();
     let (dir, manifest_path) = prepare_manifest(&format!(
@@ -879,22 +843,28 @@ dependencies:
     ));
     let ctx = DuckContext::default();
 
-    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        make_errors_message(
-            &dir,
-            [
-                "git dependency points to a file on the disk",
-                &format!(
-                    "either change it to a local dependency or change the URL to `file://{}`",
-                    root_dir.path().display()
-                ),
-                &format!("`{}` is not a valid url", root_dir.path().display()),
-                "relative URL without a base",
-            ]
-        )
-    );
+    // Unfortunately, `C:\xd` is a valid URL, so on Windows `parse_manifest returns `Ok`.
+    if cfg!(windows) {
+        let _manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    } else {
+        let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+        let file_url = root_dir.path().to_url().unwrap();
+        assert_eq!(
+            err.to_string(),
+            make_errors_message(
+                &dir,
+                [
+                    "git dependency points to a file on the disk",
+                    &format!(
+                        "either change it to a local dependency or change the URL to `{}`",
+                        file_url,
+                    ),
+                    &format!("`{}` is not a valid url", root_dir.path().display()),
+                    "relative URL without a base",
+                ]
+            )
+        );
+    }
 }
 
 #[test]
@@ -1087,10 +1057,7 @@ dependencies:
         err.to_string(),
         make_errors_message(
             &dir,
-            [
-                "when parsing the field `dependencies`",
-                "multiple dependencies specify the same name `a`"
-            ]
+            ["multiple normal dependencies specify the same name `a`"]
         )
     );
 }
@@ -1120,10 +1087,7 @@ dependencies:
         err.to_string(),
         make_errors_message(
             &dir,
-            [
-                "when parsing the field `dependencies`",
-                "multiple dependencies specify the same name `c`"
-            ]
+            ["multiple normal dependencies specify the same name `c`"]
         )
     );
 }
@@ -1153,10 +1117,7 @@ dependencies:
         err.to_string(),
         make_errors_message(
             &dir,
-            [
-                "when parsing the field `dependencies`",
-                "multiple dependencies specify the same name `c`"
-            ]
+            ["multiple normal dependencies specify the same name `c`"]
         )
     );
 }
@@ -1291,7 +1252,6 @@ dependencies:
     let frontmatter = parse_frontmatter(&frontmatter_path, &ctx).unwrap();
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
-    assert_eq!(frontmatter.dev_dependencies().all_dependencies().len(), 0);
     assert_eq!(frontmatter.profiles().get_profiles().len(), 0);
 }
 
@@ -1352,7 +1312,6 @@ dependencies:
     let frontmatter = parse_frontmatter(&importing, &ctx).unwrap();
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
-    assert_eq!(frontmatter.dev_dependencies().all_dependencies().len(), 0);
     assert_eq!(frontmatter.profiles().get_profiles().len(), 0);
 }
 
@@ -1402,7 +1361,6 @@ import: y
     // ...but parsing returns a default.
     let frontmatter = parse_frontmatter(&script, &ctx).unwrap();
     assert!(frontmatter.dependencies().all_dependencies().is_empty());
-    assert!(frontmatter.dev_dependencies().all_dependencies().is_empty());
 }
 
 #[test]
@@ -1477,7 +1435,7 @@ venv:
     assert!(!summary.venv().expose_freezefile());
     assert_eq!(
         summary.venv().storage_path(),
-        dir.path().join("storage").resolve().unwrap(),
+        dir.path().join("storage").normalize(),
     );
 }
 
@@ -1496,7 +1454,11 @@ venv:
     let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
-    assert_eq!(summary.venv().storage_path(), PathBuf::from("/storage"),);
+    #[cfg(windows)]
+    let desired_path = PathBuf::from("C:\\storage");
+    #[cfg(not(windows))]
+    let desired_path = PathBuf::from("/storage");
+    assert_eq!(summary.venv().storage_path(), desired_path,);
 }
 
 #[test]
@@ -1822,4 +1784,31 @@ dependencies:
             ]
         )
     );
+}
+
+#[test]
+fn dep_and_dev_dep_can_share_name() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  a:
+    version: '1'
+dev-dependencies:
+  a:
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let package = parse_manifest(&manifest_path, &ctx).unwrap();
+    let deps = package.manifest().dependencies();
+    assert_eq!(deps.all_dependencies().len(), 2);
+    let a = deps.filter_by_kind(DependencyKind::Normal).next().unwrap();
+    let a_dev = deps.filter_by_kind(DependencyKind::Dev).next().unwrap();
+    assert_eq!(a.name(), a_dev.name());
+    assert_eq!(a.alias(), a_dev.alias());
+    assert_eq!(a.effective_name(), a_dev.effective_name());
 }

@@ -1,4 +1,2 @@
-import core.builtins.*;
-
 fun f() -> i64 = {return 42}
 builtin_output_i64(f());
