@@ -81,9 +81,6 @@ namespace compiler::helios {
 			// Tuple literals are wrapped in the parenthesis they are written with, so those are
 			// looked through.
 			code::Expr* unwrapped = expr.get();
-			while (auto* parenthesis = dynamic_cast<code::ParenthesisExpr*>(unwrapped))
-				unwrapped = parenthesis->inner.get();
-
 			if (auto* tuple_literal = dynamic_cast<code::TupleExpr*>(unwrapped)) {
 				std::vector<Box<code::Expr>> literal_elements;
 				literal_elements.reserve(tuple_literal->elements.size());

@@ -3,7 +3,6 @@
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
