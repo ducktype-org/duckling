@@ -42,8 +42,8 @@ namespace pst {
 	}
 
 	dia::SourcePosition ResolvesToPosition::resolve(query::Context& ctx) const {
-		if (std::holds_alternative<dia_int::StablePosition>(data))
-			return std::get<dia_int::StablePosition>(data).getActiveSourcePosition(ctx);
+		if (std::holds_alternative<dia::StablePosition>(data))
+			return std::get<dia::StablePosition>(data).getActiveSourcePosition(ctx);
 		else
 			return std::get<std::function<dia::SourcePosition(query::Context&)>>(data)(ctx);
 	}

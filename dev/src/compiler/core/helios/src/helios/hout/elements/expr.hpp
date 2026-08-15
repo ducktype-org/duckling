@@ -74,7 +74,7 @@ namespace compiler::helios::code {
 			return id;
 		}
 
-		[[nodiscard]] base::Optional<dia_int::StablePosition> getPosition() const {
+		[[nodiscard]] base::Optional<dia::StablePosition> getPosition() const {
 			return origin.getStablePosition();
 		}
 
@@ -270,36 +270,6 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		ReusableExpr(const SharedBox<Expr>& inner, bool first_use);
-	};
-
-	/**
-	 * @brief Represents an expression inside "(" and ")".
-	 * @TODO: Decide if this class is needed.
-	 * For:
-	 * - nice dprints, because with this class we know what was in "()"
-	 * Against:
-	 * - We have/will have TupleTypeConstructorExpr and VariantConstructor Expr.
-	 *
-	 * @TODO HOUT 2.0: once variants are chained in PST we can delete it
-	 * For now it will be kept for simplicity of creating VariantTypeConstructorExpr.
-	 * Also we should print all "()" from hout structure anyway.
-	 */
-	struct ParenthesisExpr final: public Expr {
-		base::Box<Expr> inner;
-
-		ParenthesisExpr(query::Context& ctx, ElementOrigin origin, base::Box<Expr> inner);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		ParenthesisExpr(
-			tsh::ExpressionType<> expression_type, ElementOrigin origin, base::Box<Expr> inner
-		);
 	};
 
 	/**

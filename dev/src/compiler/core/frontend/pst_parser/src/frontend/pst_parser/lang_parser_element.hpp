@@ -26,7 +26,7 @@
 #include <ranges>
 #include <variant>
 
-namespace dia_int {
+namespace dia {
 	class StablePosition;
 }
 
@@ -160,21 +160,20 @@ namespace pst {
 		 * @brief The stable position of an element.
 		 */
 		[[nodiscard]]
-		dia_int::StablePosition getStablePosition() const;
+		dia::StablePosition getStablePosition() const;
 
 		/**
 		 * @brief Given a StablePosition of an element, returns the source position of the element.
 		 */
 		static dia::SourcePosition getActiveSourcePosition(
-			query::Context& ctx, const dia_int::StablePosition& pos
+			query::Context& ctx, const dia::StablePosition& pos
 		);
 
 		/**
 		 * @brief Given a StablePosition of an element, returns the source position of the element,
 		 * bypasses the query graph.
 		 */
-		static dia::SourcePosition getActiveSourcePositionIllegalAccess(
-			const dia_int::StablePosition& pos
+		static dia::SourcePosition getActiveSourcePositionIllegalAccess(const dia::StablePosition& pos
 		);
 
 		/**

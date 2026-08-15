@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 var copies: i64 = 0;
 
 class Counter {

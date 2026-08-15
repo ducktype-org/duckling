@@ -3,7 +3,6 @@
 #include "helios/tsh/value_category.hpp"
 
 #include <ctv/numeric_value.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
@@ -16,6 +15,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 
 namespace compiler::helios {
@@ -78,23 +78,11 @@ namespace compiler::helios {
 			// of a materialised tuple would lose the shape of the element expressions, which some
 			// coercions still need - lifting a value to a `type` for instance only works on the
 			// original expression. It also avoids materialising the source tuple altogether.
-			// Tuple literals are wrapped in the parenthesis they are written with, and a literal
-			// handed to a new owner is wrapped in an implicit move, so those are looked through.
-			// The elements are consumed one by one below, which is what the move would have done
-			// for the tuple as a whole.
+			// Tuple literals are wrapped in the parenthesis they are written with, so those are
+			// looked through.
 			code::Expr* unwrapped = expr.get();
-			while (true) {
-				if (auto* parenthesis = dynamic_cast<code::ParenthesisExpr*>(unwrapped)) {
-					unwrapped = parenthesis->inner.get();
-					continue;
-				}
-				if (auto* move = dynamic_cast<code::MoveExpr*>(unwrapped);
-				    move != nullptr && move->kind == code::MoveExpr::MoveKind::Implicit) {
-					unwrapped = move->inner.get();
-					continue;
-				}
-				break;
-			}
+			while (auto* parenthesis = dynamic_cast<code::ParenthesisExpr*>(unwrapped))
+				unwrapped = parenthesis->inner.get();
 
 			if (auto* tuple_literal = dynamic_cast<code::TupleExpr*>(unwrapped)) {
 				std::vector<Box<code::Expr>> literal_elements;
@@ -229,14 +217,14 @@ namespace compiler::helios {
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
-		dia_int::StablePosition                 given_position,
-		Box<InteractiveType>                    actual_type,
-		Box<InteractiveType>                    expected_type,
-		base::Optional<dia_int::StablePosition> coercion_expects_pos
+		dia::StablePosition                 given_position,
+		Box<InteractiveType>                actual_type,
+		Box<InteractiveType>                expected_type,
+		base::Optional<dia::StablePosition> coercion_expects_pos
 	):
 		  MessageWithCodeFragment(given_position) {
-		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
-		addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type));
+		addArgument<dia::InteractiveArgument>("given_type", std::move(actual_type));
+		addArgument<dia::InteractiveArgument>("expected_type", std::move(expected_type));
 		addPointerMessage("given", given_position);
 		if_opt_some(coercion_expects_pos, expected_pos) {
 			addPointerMessage("expected", expected_pos);
@@ -244,22 +232,22 @@ namespace compiler::helios {
 	}
 
 	NoMatchingExpectedTypeError::NoMatchingExpectedTypeError(
-		dia_int::StablePosition given_position, Box<InteractiveType> actual_type
+		dia::StablePosition given_position, Box<InteractiveType> actual_type
 	):
 		  MessageWithCodeFragment(given_position) {
-		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
+		addArgument<dia::InteractiveArgument>("given_type", std::move(actual_type));
 		addPointerMessage("given", given_position);
 	}
 
 	void NoMatchingExpectedTypeError::addExploreAcceptedType(
-		std::string accepted_type, Box<dia_int::MessageBase> coercion_error
+		std::string accepted_type, Box<dia::MessageBase> coercion_error
 	) {
-		auto id = dia_int::MessageBase::getUniqueID();
+		auto id = dia::MessageBase::getUniqueID();
 		this->addLinkedMessage(id, std::move(coercion_error));
 
-		std::vector<Box<dia_int::Argument>> args;
-		args.emplace_back(makeBox<dia_int::TextArgument>("accepted_type", std::move(accepted_type)));
-		args.emplace_back(makeBox<dia_int::TextArgument>("message_id", id));
+		std::vector<Box<dia::Argument>> args;
+		args.emplace_back(makeBox<dia::TextArgument>("accepted_type", std::move(accepted_type)));
+		args.emplace_back(makeBox<dia::TextArgument>("message_id", id));
 		this->addExploreLink("accepted_type", std::move(args));
 	}
 
@@ -375,12 +363,12 @@ namespace compiler::helios {
 	}
 
 	base::Optional<Box<code::Expr>> coerceFromBox(
-		query::Context&                         ctx,
-		Box<code::Expr>                         expr,
-		const tsh::SymbolType<>                 expected_type,
-		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> coercion_expects_pos,
-		CoercionErrorOverrides                  error_overrides
+		query::Context&                     ctx,
+		Box<code::Expr>                     expr,
+		const tsh::SymbolType<>             expected_type,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos,
+		CoercionErrorOverrides              error_overrides
 	) {
 		const auto coercion_qresult = canCoerce(ctx, expr->expression_type, expected_type);
 		if (coercion_qresult.hasFailed()) return {};
@@ -393,11 +381,11 @@ namespace compiler::helios {
 		return {};
 	}
 
-	Box<dia_int::MessageBase> getCoercionError(
-		query::Context&                         ctx,
-		const Coercion&                         failed,
-		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> coercion_expects_pos
+	Box<dia::MessageBase> getCoercionError(
+		query::Context&                     ctx,
+		const Coercion&                     failed,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos
 	) {
 		switch (failed.getInvalidReason()) {
 		case InvalidCoercionReason::IncompatibleTypes:
@@ -408,7 +396,7 @@ namespace compiler::helios {
 				coercion_expects_pos
 			);
 		case InvalidCoercionReason::TypeNotCopyable:
-			return makeBox<dia_int::PlaceholderError>(
+			return makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"Type `",
 					copiedValueType(failed.validated_from, failed.to).toString(),
@@ -432,7 +420,7 @@ namespace compiler::helios {
 					  )
 			        : std::string("`. Use `copy` to copy it or `move` to move it.");
 
-			return makeBox<dia_int::PlaceholderError>(
+			return makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"Cannot implicitly copy a value of non-trivially-copyable type `",
 					copiedValueType(failed.validated_from, failed.to).toString(),
@@ -448,11 +436,11 @@ namespace compiler::helios {
 	}
 
 	void logCoercionFailure(
-		query::Context&                         ctx,
-		const Coercion&                         failed,
-		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> coercion_expects_pos,
-		CoercionErrorOverrides                  error_overrides
+		query::Context&                     ctx,
+		const Coercion&                     failed,
+		dia::StablePosition                 source_position,
+		base::Optional<dia::StablePosition> coercion_expects_pos,
+		CoercionErrorOverrides              error_overrides
 	) {
 		// Use the caller's override if one is set, otherwise the default message.
 		const base::Optional<CoercionErrorOverrides::Logger>& override = [&]() -> const auto& {
@@ -478,7 +466,7 @@ namespace compiler::helios {
 	void logNoMatchingExpectedTypeFailure(
 		query::Context&              ctx,
 		const std::vector<Coercion>& failed_coercions,
-		dia_int::StablePosition      source_position
+		dia::StablePosition          source_position
 	) {
 		CORE_ASSERT(not failed_coercions.empty(), "Called with empty failed coercions.");
 

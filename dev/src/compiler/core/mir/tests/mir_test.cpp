@@ -3,7 +3,6 @@
  */
 
 #include <ctv/ctv.hpp>
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -14,6 +13,7 @@
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -49,7 +49,7 @@ public:
 	}
 
 protected:
-	void beforeAll() override { dia_int::configureImmediatePrint(&std::cerr); }
+	void beforeAll() override { dia::configureImmediatePrint(&std::cerr); }
 
 private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;

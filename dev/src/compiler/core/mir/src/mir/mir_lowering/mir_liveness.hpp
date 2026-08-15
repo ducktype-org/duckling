@@ -1,8 +1,9 @@
 
 #pragma once
 
-#include <diagnostic_interactive/stable_position.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+
+#include <diagnostic/stable_position.hpp>
 
 #include <algorithm>
 #include <vector>
@@ -37,7 +38,7 @@ namespace compiler::mir {
 		 * It is meaningful only for  @ref Status::Moved and @ref Status::MaybeMoved.
 		 * Positions may be missing for compiler-generated instructions.
 		 */
-		std::vector<dia_int::StablePosition> move_sites;
+		std::vector<dia::StablePosition> move_sites;
 
 		/**
 		 * @brief Two states are equal when they have the same status and the same set of move

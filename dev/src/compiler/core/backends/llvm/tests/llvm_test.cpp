@@ -1,5 +1,4 @@
 #include <backends/llvm/llvm_backend.hpp>
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -11,6 +10,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -61,7 +61,7 @@ protected:
         );
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 
-		dia_int::configureImmediatePrint(&std::cerr);
+		dia::configureImmediatePrint(&std::cerr);
 	}
 
 private:

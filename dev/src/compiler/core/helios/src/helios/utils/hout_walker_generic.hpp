@@ -144,11 +144,6 @@ namespace compiler::helios::code {
 			for (const auto& comparison: e.comparisons) walk(*comparison);
 		}
 
-		void visitParenthesisExpr(const ParenthesisExpr& e) override {
-			handler(e);
-			walk(*e.inner);
-		}
-
 		void visitTupleExpr(const TupleExpr& e) override {
 			handler(e);
 			for (const auto& element: e.elements) walk(*element);

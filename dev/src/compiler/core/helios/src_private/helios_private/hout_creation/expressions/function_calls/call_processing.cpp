@@ -1,5 +1,3 @@
-#include <diagnostic_interactive/message.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -24,6 +22,8 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
+#include <diagnostic/message.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 
@@ -363,15 +363,15 @@ namespace compiler::helios::code {
 		if (exact_matches.empty()) return;
 		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
-		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
+		base::Optional<Box<dia::MessageBase>> first_candidate_msg{};
 		for (const auto& match: exact_matches) {
-			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+			auto candidate_note = [&] -> Box<dia::MessageBase> {
 				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
 				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderError>(
+					return makeBox<dia::PlaceholderError>(
 						"Found exact candidate.",
 						base::strConcat(
 							"Candidate is compiler-generated, with type " + type.toString() + "."
@@ -404,15 +404,15 @@ namespace compiler::helios::code {
 		if (coercible_matches.empty()) return;
 		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
-		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
+		base::Optional<Box<dia::MessageBase>> first_candidate_msg{};
 		for (const auto& match: coercible_matches) {
-			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+			auto candidate_note = [&] -> Box<dia::MessageBase> {
 				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
 				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderNote>(
+					return makeBox<dia::PlaceholderNote>(
 						"Found coercible candidate.",
 						"Candidate is compiler-generated, with type " + type.toString() + "."
 					);
@@ -430,7 +430,7 @@ namespace compiler::helios::code {
 						auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
 							coercion.to.toString(), coercion.validated_from.toString()
 						);
-						auto pm_message_id = dia_int::MessageBase::getUniqueID();
+						auto pm_message_id = dia::MessageBase::getUniqueID();
 						result->addLinkedMessage(pm_message_id, std::move(pm));
 
 						result->addPointerMessage("coercion", param_pos, pm_message_id);
@@ -463,15 +463,15 @@ namespace compiler::helios::code {
 		if (failed_matches.empty()) return;
 		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
-		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
+		base::Optional<Box<dia::MessageBase>> first_candidate_msg{};
 		for (const auto& [function, reason]: failed_matches) {
-			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+			auto candidate_note = [&] -> Box<dia::MessageBase> {
 				auto& decl = ctx.query<QueryDeclOfFun>(function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
 				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderNote>(
+					return makeBox<dia::PlaceholderNote>(
 						"Candidate failed to match.",
 						"Candidate is compiler-generated, with type " + type.toString() + "."
 					);

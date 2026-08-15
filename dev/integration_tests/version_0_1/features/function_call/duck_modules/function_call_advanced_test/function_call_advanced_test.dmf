@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test advanced function call features
 # Focus: default parameters and named arguments
 

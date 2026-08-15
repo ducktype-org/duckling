@@ -83,7 +83,7 @@ namespace pst {
 
 	public:
 		LangParserState(
-			tpc::TokenStream&& tokens, Box<LangParserContext>&& ctx, Ref<dia_int::Logger> int_err
+			tpc::TokenStream&& tokens, Box<LangParserContext>&& ctx, Ref<dia::Logger> int_err
 		):
 			  tpc::ParserState(std::move(tokens), std::move(ctx), int_err) {}
 
@@ -159,7 +159,7 @@ namespace pst {
 		/**
 		 * @brief Logs an error.
 		 */
-		void logInt(Box<dia_int::MessageBase> message) override {
+		void logInt(Box<dia::MessageBase> message) override {
 			if (isSkipping()) {
 				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
 				return;
@@ -177,7 +177,7 @@ namespace pst {
 		 * @note This is for very specific usecases where behaviour is reliable.
 		 * Care needs to be taken so that each element has all the data needed for hashing.
 		 */
-		void logSafeError(Box<dia_int::MessageBase> message) {
+		void logSafeError(Box<dia::MessageBase> message) {
 			if (isSkipping()) {
 				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
 				return;
