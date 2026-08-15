@@ -23,7 +23,6 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/c_abi_converter.hpp>
 #include <tsl/queries.hpp>
@@ -589,11 +588,6 @@ namespace compiler::lir {
 			 * @brief Lowers flags of the given operation into
 			 * LIR instruction flags.
 			 *
-			 * @note This function will not work correctly when one MIR instruction translates into
-			 * multiple LIR instructions, since the `ScopeStart` flags should only be applied to the
-			 * first of the LIR instructions and the `ScopeEnd` flags should only be applied to the
-			 * last of the LIR instructions.
-			 *
 			 * @param mir_instruction
 			 */
 			std::vector<ScopeFlag> lowerFlags(const mir::Instruction& mir_instruction) {
@@ -901,7 +895,7 @@ namespace compiler::lir {
 					auto& last_instruction  = curr_block->instructions.back();
 
 					// Otherwise insert `ScopeStart` to the first instr, `ScopeEnd` to the last
-					// instr. In case of one instr, the first and last one are he same instruction.
+					// instr. In case of one instr, the first and last one are the same instruction.
 					for (const auto& flag: flags) {
 						auto& target = flag.flag == ScopeFlag::Flag::ScopeStart ? first_instruction
 						                                                        : last_instruction;
@@ -1018,18 +1012,19 @@ namespace compiler::lir {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
 						variant_case(mir::GlobalVariableCtorDtor, name) {
-							if (name.type == mir::GlobalVariableCtorDtor::Type::Ctor)
+							switch (name.type) {
+							case mir::GlobalVariableCtorDtor::Type::Ctor:
 								return helios::mangler::getSpecialMangledName<
 									helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
 									ctx, name.global_var_id
 								);
-							else if (name.type == mir::GlobalVariableCtorDtor::Type::Dtor)
+							case mir::GlobalVariableCtorDtor::Type::Dtor:
 								return helios::mangler::getSpecialMangledName<
 									helios::mangler::ManglingSymbolKind::GlobalVariableDestructor>(
 									ctx, name.global_var_id
 								);
-							else
-								CORE_UNREACHABLE();
+							}
+							CORE_UNREACHABLE();
 						}
 					}
 					CORE_UNREACHABLE();

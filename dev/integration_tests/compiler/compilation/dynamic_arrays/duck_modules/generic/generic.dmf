@@ -116,7 +116,7 @@ fun dynamicArraysTest() -> () = {
     builtin_output_i64(nested[1][0]); # 3
     builtin_output_i64(nested[1][1]); # 4
 
-    # `nested` holds a deep copy, so adding to `inner2` does modify it.
+    # `nested` holds a deep copy, so adding to `inner2` does not modify it.
     inner2.push(123);
 
     builtin_output_u64(nested[1].length()); # 2

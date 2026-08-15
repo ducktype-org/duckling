@@ -28,40 +28,89 @@ namespace compiler::mir {
 		return a;
 	}
 
-	/**
-	 * @brief Returns list of scopes that lifetime ends between two consecutive instruction,
-	 * first from @p begin scope, second from @p end scope.
-	 * In general its the list of scopes between @p begin and lca(begin, end).
-	 *
-	 * @todo this is a general implementation that always works.
-	 * In the future we should find some invariant about two consecutive scopes
-	 * that we validate.
-	 *
-	 * @param begin
-	 * @param end
-	 * @return std::vector<ScopeRef>
-	 */
-	std::vector<ScopeRef> getEndingScopes(ScopeRef begin, ScopeRef end) {
-		std::vector<ScopeRef> result;
+	namespace {
+		/**
+		 * @brief Returns list of scopes that lifetime ends between two consecutive instruction,
+		 * first from @p begin scope, second from @p end scope.
+		 * In general its the list of scopes between @p begin and lca(begin, end).
+		 *
+		 * @todo this is a general implementation that always works.
+		 * In the future we should find some invariant about two consecutive scopes
+		 * that we validate.
+		 *
+		 * @param begin
+		 * @param end
+		 * @return std::vector<ScopeRef>
+		 */
+		std::vector<ScopeRef> getEndingScopes(ScopeRef begin, ScopeRef end) {
+			std::vector<ScopeRef> result;
 
-		auto ancestor = lca(begin, end);
-		while (begin != ancestor) {
-			result.push_back(begin);
-			begin = begin->parent.toOpt().value();
+			auto ancestor = lca(begin, end);
+			while (begin != ancestor) {
+				result.push_back(begin);
+				begin = begin->parent.toOpt().value();
+			}
+
+			return result;
 		}
 
-		return result;
-	}
+		/**
+		 * @brief Get the starting scopes between two consecutive instructions.
+		 *
+		 * The order of scopes is the same as the the order of variables they
+		 * would create (i.e. the first scope in the list is the one that creates variables that are
+		 * created first).
+		 */
+		std::vector<ScopeRef> getStartingScopes(ScopeRef begin, ScopeRef end) {
+			return getEndingScopes(end, begin) | std::views::reverse
+			     | std::ranges::to<std::vector>();
+		}
 
-	/**
-	 * @brief Get the starting scopes between two consecutive instructions.
-	 *
-	 * The order of scopes is the same as the the order of variables they
-	 * would create (i.e. the first scope in the list is the one that creates variables that are
-	 * created first).
-	 */
-	std::vector<ScopeRef> getStartingScopes(ScopeRef begin, ScopeRef end) {
-		return getEndingScopes(end, begin) | std::views::reverse | std::ranges::to<std::vector>();
+		/**
+		 * @brief If @p instr overwrites a live, non-trivially-destructible place that it does not
+		 * initialize, build the `Destruct` of the old value to run before it. Otherwise returns none.
+		 */
+		base::Optional<Instruction> assignmentDestructorFor(
+			query::Context& ctx, const Instruction& instr, const LocalMoveStateMap& move_states
+		) {
+			// The instruction must write to a place.
+			if_opt_none(instr.output) return {};
+			const MIRPlace& target = instr.output.value();
+
+			base::Optional<CRef<MoveState>> local_move_state;
+
+			if (target.isLocal()) {
+				const MIRLocalRef base = target.getBase<MIRLocalRef>();
+
+				if (base->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return {};
+
+				local_move_state = move_states.atMaybe(base->id);
+				// If variable is uninitialized or moved we don't insert destructor.
+				if (local_move_state.empty()
+				    || local_move_state.value()->status == MoveStatus::Moved)
+					return {};
+
+				for (const auto& flag: instr.flags) {
+					if (flag.flag == OperationFlag::Flag::Construct) return {};
+					// If we move this value in this instruction, and at the same time we override
+					// it, we don't have to call destructor `a = call f(c, b, move a)`
+					if (flag.flag == OperationFlag::Flag::Move && flag.local->id == base->id)
+						return {};
+				}
+			}
+
+			// The place's type must have a non-trivial destructor.
+			auto destruct_sym_opt = helios::getTypeDestructor(ctx, target.type);
+			if_opt_none(destruct_sym_opt) return {};
+
+			Operation op = Operation::Destruct;
+			if (local_move_state && local_move_state.value()->status == MoveStatus::MaybeMoved)
+				op = Operation::DestructIf;
+
+			return Instruction{
+				op, {}, { MIRFunctionLiteral{ destruct_sym_opt.value() }, target }, {}, instr.scope,
+			};
+		}
 	}
 
 	void AddDestructorsPass::run(
@@ -306,54 +355,6 @@ namespace compiler::mir {
 
 		// Block order might have changed if new blocks where added.
 		function.block_order = std::move(new_blocks_order);
-	}
-
-	namespace {
-		/**
-		 * @brief If @p instr overwrites a live, non-trivially-destructible place that it does not
-		 * initialize, build the `Destruct` of the old value to run before it. Otherwise returns none.
-		 */
-		base::Optional<Instruction> assignmentDestructorFor(
-			query::Context& ctx, const Instruction& instr, const LocalMoveStateMap& move_states
-		) {
-			// The instruction must write to a place.
-			if_opt_none(instr.output) return {};
-			const MIRPlace& target = instr.output.value();
-
-			base::Optional<CRef<MoveState>> local_move_state;
-
-			if (target.isLocal()) {
-				const MIRLocalRef base = target.getBase<MIRLocalRef>();
-
-				if (base->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return {};
-
-				local_move_state = move_states.atMaybe(base->id);
-				// If variable is uninitialized or moved we don't insert destructor.
-				if (local_move_state.empty()
-				    || local_move_state.value()->status == MoveStatus::Moved)
-					return {};
-
-				for (const auto& flag: instr.flags) {
-					if (flag.flag == OperationFlag::Flag::Construct) return {};
-					// If we move this value in this instruction, and at the same time we override
-					// it, we don't have to call destructor `a = call f(c, b, move a)`
-					if (flag.flag == OperationFlag::Flag::Move && flag.local->id == base->id)
-						return {};
-				}
-			}
-
-			// The place's type must have a non-trivial destructor.
-			auto destruct_sym_opt = helios::getTypeDestructor(ctx, target.type);
-			if_opt_none(destruct_sym_opt) return {};
-
-			Operation op = Operation::Destruct;
-			if (local_move_state && local_move_state.value()->status == MoveStatus::MaybeMoved)
-				op = Operation::DestructIf;
-
-			return Instruction{
-				op, {}, { MIRFunctionLiteral{ destruct_sym_opt.value() }, target }, {}, instr.scope,
-			};
-		}
 	}
 
 	void AddAssignmentDestructorsPass::run(

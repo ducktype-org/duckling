@@ -95,7 +95,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHOUTGlobalData);
 
-	Box<code::Expr> getMIRConstructorExpr(query::Context& ctx, CRef<HOUTGlobalData> global_data) {
+	Box<code::Expr> getGlobalConstructorExpr(query::Context& ctx, CRef<HOUTGlobalData> global_data) {
 		using namespace code::shorthands;
 		Shorthand s(ctx);
 
@@ -115,7 +115,7 @@ namespace compiler::helios {
 		);
 	}
 
-	base::Optional<Box<code::Expr>> getMIRDestructorExpr(
+	base::Optional<Box<code::Expr>> getGlobalDestructorExpr(
 		query::Context& ctx, CRef<HOUTGlobalData> global_data
 	) {
 		using namespace code::shorthands;
@@ -124,8 +124,8 @@ namespace compiler::helios {
 		if (destructor.empty()) return {};
 
 		// refOf here is intentional, for `box T` reference types
-		// we the type to `ref T` and the MIR will remove additional address of.
-		// And for directy types it will just add address of.
+		// we change the type to `ref T` and the MIR will remove the additional address of.
+		// And for direct types it will just add the address of.
 		return s.call(s.ident(destructor.value()), s.refOf(s.ident(global_data->helios_symbol)));
 	}
 }

@@ -307,19 +307,22 @@ namespace compiler::mir {
 			// A trivially destructible global has no destructor to call, so its dtor stays empty.
 			base::Optional<Box<hc::Expr>> body_expr;
 			if (is_ctor)
-				body_expr.emplace(helios::getMIRConstructorExpr(ctx, global_data));
+				body_expr.emplace(helios::getGlobalConstructorExpr(ctx, global_data));
 			else
-				body_expr = helios::getMIRDestructorExpr(ctx, global_data);
+				body_expr = helios::getGlobalDestructorExpr(ctx, global_data);
 
-			if_opt_some(body_expr, expr) {
-				auto expr_scope = function_builder.newScope(function_builder.getTopLevelScope());
-				auto lowerexpr_res
-					= lowerExpr(*expr.get(), last_block, function_builder, expr_scope);
+			match_optional(body_expr) {
+				opt_some(expr) {
+					auto expr_scope
+						= function_builder.newScope(function_builder.getTopLevelScope());
+					auto lowerexpr_res
+						= lowerExpr(*expr.get(), last_block, function_builder, expr_scope);
 
-				std::ignore = lowerexpr_res.getResult(function_builder);
-				function_builder.setEntry(lowerexpr_res.begin);
+					std::ignore = lowerexpr_res.getResult(function_builder);
+					function_builder.setEntry(lowerexpr_res.begin);
+				}
+				opt_none { function_builder.setEntry(last_block); }
 			}
-			if_opt_none(body_expr) { function_builder.setEntry(last_block); }
 
 			auto function_no_lifetime = function_builder.build();
 
