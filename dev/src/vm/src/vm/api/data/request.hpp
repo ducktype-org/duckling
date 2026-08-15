@@ -60,7 +60,9 @@ namespace vm::api {
 
 		struct WaitForBreakpoint {};
 
-		struct ExecutionPosition {};
+		struct ExecutionPosition {
+			base::Optional<usize> opt_frame_idx;
+		};
 
 		struct TypeMetadata {
 			std::string type_name;

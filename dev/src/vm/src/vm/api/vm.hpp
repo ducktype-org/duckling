@@ -160,7 +160,9 @@ namespace vm::api {
 	 * process of the DVM.
 	 * @return The response containing code position or an API error.
 	 */
-	std::expected<response::CodePosition, ApiError> getCurrentPosition(PID pid);
+	std::expected<response::CodePosition, ApiError> getCurrentPosition(
+		PID pid, base::Optional<usize> opt_frame_idx
+	);
 
 	/// IO REQUESTS ///
 	/**

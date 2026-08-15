@@ -164,10 +164,11 @@ namespace vm::debugger {
 		    .and_then([&] { return api::resume(pid); });
 	}
 
-	std::expected<CodePosition, api::ApiError> Debugger::getCurrentPosition() {
-		return api::getCurrentPosition(pid).transform(
-			std::bind_front(&Debugger::mapCodePosition, this)
-		);
+	std::expected<CodePosition, api::ApiError> Debugger::getCurrentPosition(
+		base::Optional<usize> opt_frame_idx
+	) {
+		return api::getCurrentPosition(pid, opt_frame_idx)
+		    .transform(std::bind_front(&Debugger::mapCodePosition, this));
 	}
 
 	std::expected<void, api::ApiError> Debugger::setBreakpoint(

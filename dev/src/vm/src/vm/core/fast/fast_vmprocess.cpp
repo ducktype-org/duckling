@@ -165,7 +165,8 @@ namespace vm::fast {
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::getVMThreadCurrentPosition(
-		[[maybe_unused]] api::ThreadID thread_id
+		[[maybe_unused]] api::ThreadID         thread_id,
+		[[maybe_unused]] base::Optional<usize> opt_frame_idx = std::nullopt
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `getVMThreadCurrentPosition` is not implemented.");

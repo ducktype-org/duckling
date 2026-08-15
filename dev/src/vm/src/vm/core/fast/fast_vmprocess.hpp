@@ -65,7 +65,8 @@ namespace vm::fast {
 
 		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
-		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
+		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
+			api::ThreadID thread_id, base::Optional<usize> opt_frame_idx
 		) override;
 
 		std::expected<api::Response, api::ApiError> getNumberOfCurrentStackFrames(

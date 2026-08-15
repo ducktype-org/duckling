@@ -5,6 +5,8 @@
 #include <vm/api/vm.hpp>
 #include <vm/debugger/mapper.hpp>
 
+#include <optional>
+
 namespace vm::debugger {
 	struct CodePosition: public api::response::CodePosition {
 		base::Optional<dia::SourcePosition> mapped_position;
@@ -121,7 +123,9 @@ namespace vm::debugger {
 		/**
 		 * @brief Returns current position
 		 */
-		std::expected<CodePosition, api::ApiError> getCurrentPosition();
+		std::expected<CodePosition, api::ApiError> getCurrentPosition(
+			base::Optional<usize> opt_frame_idx = std::nullopt
+		);
 
 		/**
 		 * @brief Sets breakpoint

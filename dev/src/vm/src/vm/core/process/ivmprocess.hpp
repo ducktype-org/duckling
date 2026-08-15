@@ -148,7 +148,7 @@ namespace vm {
 		virtual base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) = 0;
 
 		virtual std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
-			api::ThreadID thread_id
+			api::ThreadID thread_id, base::Optional<usize> opt_frame_idx = std::nullopt
 		) = 0;
 
 		virtual std::expected<api::Response, api::ApiError> getNumberOfCurrentStackFrames(
