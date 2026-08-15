@@ -1,7 +1,5 @@
 #include "coercions.hpp"
 
-#include "helios/tsh/value_category.hpp"
-
 #include <ctv/numeric_value.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>

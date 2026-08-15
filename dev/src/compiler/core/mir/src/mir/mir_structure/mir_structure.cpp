@@ -1,7 +1,5 @@
 #include "mir_structure.hpp"
 
-#include "mir/mir_structure/mir_local_ref.hpp"
-
 #include <helios/symbols/query_type_of_symbol.hpp>
 
 #include <base/collections/optional.hpp>
