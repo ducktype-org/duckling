@@ -664,7 +664,7 @@ namespace compiler::tsl {
 			= ctx.query<QueryCAbiTypeOf>(pointer_type.getPointee())->valueOrThrow();
 		if (not pointee_cabi_type.has_value()) {
 			ctx.logInt(
-				makeBox<dia_int::PlaceholderError>("Invalid cptr type.", pointee_cabi_type.error())
+				makeBox<dia::PlaceholderError>("Invalid cptr type.", pointee_cabi_type.error())
 			);
 			query::throwFailed();
 		}

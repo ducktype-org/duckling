@@ -160,11 +160,10 @@ namespace compiler::backend_vm::internal {
 
 							// tmp = 0
 							// out = dynTableLea source, tmp
-							const auto     zero_index = DVMImmediate::u64(0);
-							const DVMPlace index_tmp
-								= ctx->pushTempLocal(zero_index.type, "cast_index_tmp");
-							ctx->pushInstruction({ OpKind::mov, index_tmp, zero_index });
-							out_arguments.push_back(index_tmp);
+							const auto zero_index = ctx->forceToPlace(
+								DVMValue(DVMImmediate::u64(0)), "cast_index_tmp"
+							);
+							out_arguments.push_back(zero_index);
 							return OpKind::dynTableLea;
 						} else {
 							CORE_PANIC("Unsupported cast between different pointer kinds");

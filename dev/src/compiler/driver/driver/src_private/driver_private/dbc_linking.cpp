@@ -68,7 +68,7 @@ namespace compiler::driver {
 		vm::code::CodeCollection merged_code = std::move(parse_result.value());
 
 		// This is also a bit hacky here, because we don't have any other place to put this code.
-		merged_code.object_files.append_range(runtime_config.shared_libraries);
+		base::appendToVector(merged_code.object_files, runtime_config.shared_libraries);
 
 		// @TODO: #2895 deal with this once weak/strong symbols are added
 		deduplicateCodeCollection(merged_code);
