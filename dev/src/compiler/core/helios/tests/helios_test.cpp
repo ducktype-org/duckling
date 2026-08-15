@@ -3637,6 +3637,7 @@ private:
 		const auto inner_type     = getSymbolTypeOf("inner", body_scope);
 		const auto deref_val_type = getSymbolTypeOf("deref_val", body_scope);
 		const auto sum_type       = getSymbolTypeOf("sum", body_scope);
+		const auto c_elem_type    = getSymbolTypeOf("c_elem", body_scope);
 
 		const auto pof_direct_type = getSymbolTypeOf("pof_direct", body_scope);
 		const auto pof_box_type    = getSymbolTypeOf("pof_box", body_scope);
@@ -3664,6 +3665,7 @@ private:
 			ASSERT_EQUAL(ptr_i32_st, inner_type);
 			ASSERT_EQUAL(i32_st, deref_val_type);
 			ASSERT_EQUAL(i32_st, sum_type);
+			ASSERT_EQUAL(i32_st, c_elem_type);
 
 			// `ptrof x` is `ptr S` for the whole symbol type `S` of `x`: unlike `&x`, a `box`/`ref`
 			// operand is not collapsed, the pointer addresses the box/reference itself.
@@ -3724,6 +3726,16 @@ private:
 			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
 			ASSERT_EQUAL(compiler::tsh::Kind::CPointer, cast_ptr->target_type.getType().getKind());
+		}
+
+		{
+			auto expr_ptr  = get_var_init_expr(base::StrID("c_elem"));
+			auto index_ptr = dynamic_cast<const compiler::helios::code::IndexExpr*>(expr_ptr.get());
+			ASSERT_TRUE(index_ptr != nullptr);
+			ASSERT_EQUAL(
+				compiler::tsh::Kind::CPointer, index_ptr->base->expression_type.getType().getKind()
+			);
+			ASSERT_EQUAL(i32_st, index_ptr->expression_type.getSymbolType().withMutability(Mutable));
 		}
 
 		{

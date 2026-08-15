@@ -43,5 +43,11 @@ namespace compiler::backend_vm::internal {
 
 	private:
 		Ref<FunctionLoweringContext> ctx;
+
+		static vm::code::builders::OpKind getOpKindFromLIRLayouts(
+			Ref<FunctionLoweringContext>        ctx,
+			const lir::CastParameters&          cast_params,
+			std::vector<vm::opargs::OpCodeArg>& out_arguments
+		);
 	};
 }

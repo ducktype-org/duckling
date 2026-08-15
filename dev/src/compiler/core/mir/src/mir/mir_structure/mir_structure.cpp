@@ -245,6 +245,8 @@ namespace compiler::mir {
 				return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 			case tsh::Kind::ManyPointer:
 				return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
+			case tsh::Kind::CPointer:
+				return base_type.as<tsh::CPointerAbstractType>().getPointee();
 			default:
 				CORE_PANIC("Cannot index into type: ", type.toString());
 			}
