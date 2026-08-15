@@ -1756,8 +1756,13 @@ private:
 				assertTrue(ret_stmt_casted != nullptr, "Return statement expected");
 
 				auto ret_expr = ret_stmt_casted->value.ref();
-				auto ret_expr_casted
-					= dynamic_cast<const compiler::helios::code::IdentifierExpr*>(&*ret_expr);
+				auto move_expr_casted
+					= dynamic_cast<const compiler::helios::code::MoveExpr*>(&*ret_expr);
+				assertTrue(move_expr_casted != nullptr, "Implicit move expression expected");
+
+				auto ret_expr_casted = dynamic_cast<const compiler::helios::code::IdentifierExpr*>(
+					move_expr_casted->inner.get()
+				);
 				assertTrue(ret_expr_casted != nullptr, "Identifier expression expected");
 
 				auto a_sym  = ret_expr_casted->symbol;

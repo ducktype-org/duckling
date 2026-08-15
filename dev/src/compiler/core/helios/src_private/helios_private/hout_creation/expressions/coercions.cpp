@@ -15,6 +15,7 @@
 #include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
+#include "helios/tsh/value_category.hpp"
 
 namespace compiler::helios {
 	namespace {
@@ -192,19 +193,19 @@ namespace compiler::helios {
 
 		switch (value.getValueCategory().getCategory()) {
 		case tsh::PrimaryCategory::Temporary:
-			// So it is byte-copied instead - purely an optimization,
+			// This is a purely an optimization,
 			// which keeps the generated HOUT free of `implicit_move` on everything.
-			// A trivially destructible one owns nothing to hand over though,
-			// and moving it out of would produce exactly the same code as copying its bytes
+			// A trivially destructible one owns nothing to hand over,
+			// and moving it out of would produce exactly the same code as copying its bytes.
 			if (symbol_type.isTriviallyDestructible(ctx) and symbol_type.isTriviallyCopyable(ctx))
 				return PassingMethod::ByteCopy;
-			return PassingMethod::ImplicitMove;
+			if (value.getValueCategory().isMovableFrom()) return PassingMethod::ImplicitMove;
+			return PassingMethod::ExplicitCopyOrMove;
 		case tsh::PrimaryCategory::Literal:
 			return PassingMethod::ByteCopy;
 		case tsh::PrimaryCategory::Local:
 		case tsh::PrimaryCategory::Global:
 		case tsh::PrimaryCategory::Dereferenced:
-		case tsh::PrimaryCategory::Projected:
 			if (symbol_type.isTriviallyCopyable(ctx)) return PassingMethod::ByteCopy;
 			return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
 			                                   : PassingMethod::NotCopyable;
@@ -215,19 +216,15 @@ namespace compiler::helios {
 	Box<code::Expr> moveReturnedLocal(query::Context& ctx, Box<code::Expr> value) {
 		const tsh::ExpressionType<> type = value->expression_type;
 
-		// Only a local can be moved out of.
-		if (type.getValueCategory().getCategory() != tsh::PrimaryCategory::Local) return value;
-
-		// Anything the normal rule would demand a written `copy`/`move` for is what the
-		// return makes implicit.
-		const PassingMethod method = passingMethod(ctx, type);
-		if (method != PassingMethod::ExplicitCopyOrMove && method != PassingMethod::NotCopyable)
-			return value;
-
-		auto origin = value->origin.generatedFrom();
-		return makeBox<code::MoveExpr>(
-			ctx, origin, std::move(value), code::MoveExpr::MoveKind::Implicit
-		);
+		if (type.getValueCategory().getCategory() == tsh::PrimaryCategory::Local) {
+			// A projection of a local is not movable from, for example.
+			if (not type.getValueCategory().isMovableFrom()) return value;
+			auto origin = value->origin.generatedFrom();
+			return makeBox<code::MoveExpr>(
+				ctx, origin, std::move(value), code::MoveExpr::MoveKind::Implicit
+			);
+		}
+		return value;
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(

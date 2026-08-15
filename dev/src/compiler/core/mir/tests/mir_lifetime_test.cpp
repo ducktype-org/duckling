@@ -93,9 +93,7 @@ private:
 			.expectDestruct("a")
 			.expectInstruction(compiler::mir::Operation::ReturnValue)
 			.expectScopeEnd("a")
-			// Second return: `a` is a trivially copyable `i64`, so `return a` reads it without
-		    // moving it and the local is destructed.
-			.expectDestruct("a")
+			.expectMove("a")
 			.expectInstruction(compiler::mir::Operation::ReturnValue)
 			.expectScopeEnd("a")
 			.validate(foo_mir);
@@ -441,12 +439,7 @@ private:
 	/**
 	 * @brief The ctor and the dtor MIR functions of the named global variable.
 	 */
-	struct GlobalCtorDtor final {
-		CRef<compiler::mir::Function> ctor;
-		CRef<compiler::mir::Function> dtor;
-	};
-
-	GlobalCtorDtor getGlobalCtorDtor(
+	compiler::mir::MIRCtorDtorPair getGlobalCtorDtor(
 		compiler::frontend::ModuleID module_id, std::string_view global_name
 	) {
 		auto result = query::utils::withContextCompute([&](query::Context& ctx) {
@@ -459,13 +452,11 @@ private:
 												 compiler::mir::KeyOf_LowerGlobalData{ global }
 				)
 				                              ->valueOrPanic();
-				const auto& pair
-					= std::get<compiler::mir::MIRCtorDtorPair>(global_data.initial_value);
-				return GlobalCtorDtor{ .ctor = pair.constructor, .dtor = pair.destructor };
+				return std::get<compiler::mir::MIRCtorDtorPair>(global_data.initial_value);
 			}
 			CORE_PANIC(base::strConcat("Global with name '", global_name, "' not found in module"));
 		});
-		return std::any_cast<GlobalCtorDtor>(result);
+		return std::any_cast<compiler::mir::MIRCtorDtorPair>(result);
 	}
 
 	/**
@@ -589,46 +580,45 @@ private:
 		{  // A global of a class type: the ctor runs the class constructor and moves the result
 		   // into the global's storage, without destructing anything - the storage starts
 		   // uninitialized. The dtor destructs the global.
-			auto global = getGlobalCtorDtor(module, "g_res");
+			auto [ctor, dtor] = getGlobalCtorDtor(module, "g_res");
+			ASSERT_HAS_VALUE(dtor);
 
-			ASSERT_EQUAL_PRINT(0, countOperation(global.ctor, Destruct));
-			ASSERT_EQUAL_PRINT(0, countFlag(global.ctor, Flag::Destruct, "g_res"));
-			ASSERT_TRUE(std::ranges::any_of(allInstructions(global.ctor), [&](const auto* instr) {
+			ASSERT_EQUAL_PRINT(0, countOperation(ctor, Destruct));
+			ASSERT_EQUAL_PRINT(0, countFlag(ctor, Flag::Destruct, "g_res"));
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(ctor), [&](const auto* instr) {
 				return instr->operation == Call && callsFunction(*instr, "Res");
 			}));
-			ASSERT_TRUE(std::ranges::any_of(allInstructions(global.ctor), [&](const auto* instr) {
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(ctor), [&](const auto* instr) {
 				return instr->operation == Call && callsFunction(*instr, "move_in");
 			}));
 
-			ASSERT_TRUE(std::ranges::any_of(allInstructions(global.dtor), [&](const auto* instr) {
-				return instr->operation == Call && callsFunction(*instr, "__destruct");
-			}));
+			ASSERT_TRUE(
+				std::ranges::any_of(allInstructions(dtor.value()), [&](const auto* instr) {
+					return instr->operation == Call && callsFunction(*instr, "__destruct");
+				})
+			);
 		}
 
 		{  // A global box: allocated by the ctor, freed by the dtor.
-			auto global = getGlobalCtorDtor(module, "g_box");
+			auto [ctor, dtor] = getGlobalCtorDtor(module, "g_box");
+			ASSERT_HAS_VALUE(dtor);
 
-			ASSERT_EQUAL_PRINT(0, countOperation(global.ctor, Destruct));
-			ASSERT_TRUE(std::ranges::any_of(allInstructions(global.ctor), [&](const auto* instr) {
+			ASSERT_EQUAL_PRINT(0, countOperation(ctor, Destruct));
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(ctor), [&](const auto* instr) {
 				return instr->operation == Call && callsFunction(*instr, "box_alloc");
 			}));
-			ASSERT_TRUE(std::ranges::any_of(allInstructions(global.dtor), [&](const auto* instr) {
-				return instr->operation == Call && callsFunction(*instr, "box_destructor");
-			}));
+			ASSERT_TRUE(
+				std::ranges::any_of(allInstructions(dtor.value()), [&](const auto* instr) {
+					return instr->operation == Call && callsFunction(*instr, "box_destructor");
+				})
+			);
 		}
 
-		{  // A trivially destructible global has nothing to destroy, so its dtor is empty.
-			auto global = getGlobalCtorDtor(module, "g_int");
+		{  // A trivially destructible global has nothing to destroy, so it gets no dtor at all.
+			auto [ctor, dtor] = getGlobalCtorDtor(module, "g_int");
 
-			ASSERT_EQUAL_PRINT(0, countOperation(global.ctor, Destruct));
-			ASSERT_EQUAL_PRINT(1, global.dtor->block_order.size());
-			ASSERT_EQUAL_PRINT(
-				0, global.dtor->blocks.at(global.dtor->block_order.at(0))->instructions.size()
-			);
-			ASSERT_TRUE(
-				global.dtor->blocks.at(global.dtor->block_order.at(0))->terminator.operation
-				== ReturnVoid
-			);
+			ASSERT_EQUAL_PRINT(0, countOperation(ctor, Destruct));
+			ASSERT_TRUE(dtor.empty());
 		}
 	}
 };

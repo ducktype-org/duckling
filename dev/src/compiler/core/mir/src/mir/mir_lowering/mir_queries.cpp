@@ -246,15 +246,16 @@ namespace compiler::mir {
 
 	struct KeyOf_LowerGlobalDataToMIRCtorDtor {
 		CRef<helios::HOUTGlobalData> global_data;
-		GlobalVariableCtorDtor::Type type;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
-			// The highest bit distinguishes the ctor from the dtor of the same global, SymID hashes
-			// are indices, so they never reach it.
-			const u64 dtor_bit = type == GlobalVariableCtorDtor::Dtor ? u64(1) << 63 : 0;
-			return global_data->helios_symbol.queryUnstablePerfectHash() | dtor_bit;
+			return global_data->helios_symbol.queryUnstablePerfectHash();
 		}
+	};
+
+	struct CtorDtorResult {
+		Function                 ctor;
+		base::Optional<Function> dtor;
 	};
 
 	/**
@@ -267,19 +268,15 @@ namespace compiler::mir {
 	DECLARE_QUERY(
 		LowerGlobalDataToMIRCtorDtor,
 		KeyOf_LowerGlobalDataToMIRCtorDtor,
-		CRef<query::QResult<Function>>,
+		CRef<query::QResult<CtorDtorResult>>,
 		({})
 	)
 
-	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtorDtor, query::QResult<Function>) {
-		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data->value))
-				CORE_PANIC(
-					"Creating ctors for constant variables does not work, they should use CTVs "
-					"instead."
-				);
-
-			const bool is_ctor = key.type == GlobalVariableCtorDtor::Ctor;
+	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtorDtor, query::QResult<CtorDtorResult>) {
+		static auto lowerFunction(
+			Context& ctx, CRef<helios::HOUTGlobalData> global_data, GlobalVariableCtorDtor::Type type
+		) -> query::QResult<Function> {
+			const bool is_ctor = type == GlobalVariableCtorDtor::Type::Ctor;
 
 			auto function_type = ctx.query<tsh::QueryFunctionType>({
 				{},
@@ -294,13 +291,12 @@ namespace compiler::mir {
 			// create function builder
 			FunctionBuilder function_builder{
 				ctx,
-				is_ctor ? GlobalVariableCtorDtor::ctor(key.global_data->helios_symbol)
-						: GlobalVariableCtorDtor::dtor(key.global_data->helios_symbol),
+				is_ctor ? GlobalVariableCtorDtor::ctor(global_data->helios_symbol)
+						: GlobalVariableCtorDtor::dtor(global_data->helios_symbol),
 				function_type
 			};
 			function_builder.setName(base::StrID(base::strConcat(
-				is_ctor ? "constructor_of_" : "destructor_of_",
-				key.global_data->original_name.strView()
+				is_ctor ? "constructor_of_" : "destructor_of_", global_data->original_name.strView()
 			)));
 
 			auto last_block = function_builder.newBlock();
@@ -311,9 +307,9 @@ namespace compiler::mir {
 			// A trivially destructible global has no destructor to call, so its dtor stays empty.
 			base::Optional<Box<hc::Expr>> body_expr;
 			if (is_ctor)
-				body_expr.emplace(helios::getMIRConstructorExpr(ctx, key.global_data));
+				body_expr.emplace(helios::getMIRConstructorExpr(ctx, global_data));
 			else
-				body_expr = helios::getMIRDestructorExpr(ctx, key.global_data);
+				body_expr = helios::getMIRDestructorExpr(ctx, global_data);
 
 			if_opt_some(body_expr, expr) {
 				auto expr_scope = function_builder.newScope(function_builder.getTopLevelScope());
@@ -337,6 +333,29 @@ namespace compiler::mir {
 			if (validateFunction(ctx, function_reachable).isBad()) return query::Failed();
 
 			return function_reachable;
+		}
+
+		static auto provide(Context& ctx, QKey key) -> query::QResult<CtorDtorResult> {
+			if (v_matches(key.global_data->value, helios::HOUTGlobalConst))
+				CORE_PANIC(
+					"Creating ctors for constant variables does not work, they should use CTVs "
+					"instead."
+				);
+
+			UNPACK_QRESULT_MOVE(
+				auto ctor_fun =,
+				lowerFunction(ctx, key.global_data, GlobalVariableCtorDtor::Type::Ctor)
+			);
+			base::Optional<Function> dtor_fun_opt{};
+			if (not key.global_data->type.isTriviallyDestructible(ctx)) {
+				UNPACK_QRESULT_MOVE(
+					auto dtor_fun =,
+					lowerFunction(ctx, key.global_data, GlobalVariableCtorDtor::Type::Dtor)
+				);
+				return CtorDtorResult{ .ctor = std::move(ctor_fun), .dtor = std::move(dtor_fun) };
+			} else {
+				return CtorDtorResult{ .ctor = std::move(ctor_fun), .dtor = {} };
+			}
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -363,15 +382,8 @@ namespace compiler::mir {
 					};
 				}
 				variant_case(helios::HOUTGlobalVariable, hout_expr_initial_value) {
-					CRef mir_ctor_function
-						= &ctx.query<mir::LowerGlobalDataToMIRCtorDtor>(
-								  { key.global_data, GlobalVariableCtorDtor::Ctor }
-						)
-					           ->valueOrThrow();
-					CRef mir_dtor_function
-						= &ctx.query<mir::LowerGlobalDataToMIRCtorDtor>(
-								  { key.global_data, GlobalVariableCtorDtor::Dtor }
-						)
+					CRef ctor_dtor
+						= &ctx.query<mir::LowerGlobalDataToMIRCtorDtor>({ key.global_data })
 					           ->valueOrThrow();
 					return MIRGlobalData{
 						.global = MIRGlobal{
@@ -379,7 +391,10 @@ namespace compiler::mir {
 							key.global_data->type,
 							MIRGlobal::Kind::Variable,
 						},
-						.initial_value = MIRCtorDtorPair{.constructor = mir_ctor_function, .destructor = mir_dtor_function},
+						.initial_value = MIRCtorDtorPair{
+							.constructor = &ctor_dtor->ctor, 
+							.destructor = ctor_dtor->dtor.map([] (auto& fun) { return CRef(&fun);}),
+						},
 					};
 				}
 			}
@@ -498,7 +513,8 @@ namespace compiler::mir {
 				usedSymbolsFromBody(
 					ctor_dtor_pair.constructor, result, seen_functions, seen_globals
 				);
-				usedSymbolsFromBody(ctor_dtor_pair.destructor, result, seen_functions, seen_globals);
+				if_opt_some(ctor_dtor_pair.destructor, dtor)
+					usedSymbolsFromBody(dtor, result, seen_functions, seen_globals);
 			}
 		}
 		return result;

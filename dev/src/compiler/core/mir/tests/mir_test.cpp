@@ -172,13 +172,8 @@ private:
 				= ctx.query<compiler::mir::LowerGlobalData>({ globals.at(0) })->valueOrThrow();
 			auto c_ctor_dtor = std::get<compiler::mir::MIRCtorDtorPair>(c_data.initial_value);
 			ASSERT_TRUE(c_ctor_dtor.constructor->name.strView() == "constructor_of_c");
-			ASSERT_TRUE(c_ctor_dtor.destructor->name.strView() == "destructor_of_c");
-			// The ctor and the dtor are separate functions, they must not share the query key hash.
-			ASSERT_TRUE(c_ctor_dtor.constructor.get() != c_ctor_dtor.destructor.get());
-			ASSERT_TRUE(
-				c_ctor_dtor.constructor->queryUnstablePerfectHash()
-				!= c_ctor_dtor.destructor->queryUnstablePerfectHash()
-			);
+			// `c` is an i64, it is trivially destructible, so it gets no destructor.
+			ASSERT_TRUE(c_ctor_dtor.destructor.empty());
 
 			auto foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));

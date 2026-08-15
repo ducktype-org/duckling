@@ -24,7 +24,6 @@ namespace compiler::tsh {
 	 */
 	enum class PrimaryCategory {
 		Temporary,    /**< Product of expression evaluation. An owned rvalue. */
-		Projected,    /**< Product of a projection evaluation, non-owned rvalue. */
 		Local,        /**< A local variable. An owned lvalue. */
 		Global,       /**< A global variable. A non-owned lvalue. */
 		Literal,      /**< A value written explicitly in the code. A non-owned rvalue. */
@@ -63,6 +62,7 @@ MAKE_FLAG_TYPE(compiler::tsh, ValueSemanticsOptions, ValueSemantics,
 	COPY,
 	REINIT,
 	USE,
+	REFERENCE,
 	DESTROY
 )
 
@@ -114,6 +114,15 @@ namespace compiler::tsh {
 			return { category, is_pure, allows_semantic, new_force_semantic };
 		}
 
+		[[nodiscard]]
+		ValueCategory withDisabled(ValueSemantics disabled) const {
+			auto allows_semantic_copy = allows_semantic;
+			allows_semantic_copy -= disabled;
+			auto force_semantic_copy = force_semantic;
+			force_semantic_copy -= disabled;
+			return { category, is_pure, allows_semantic_copy, force_semantic_copy };
+		}
+
 		/**
 		 * A simple getter for category.
 		 */
@@ -153,17 +162,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		bool canBeAssignedTo() const {
-			switch (category) {
-			case PrimaryCategory::Local:
-			case PrimaryCategory::Global:
-			case PrimaryCategory::Dereferenced:
-			case PrimaryCategory::Projected:
-				return true;
-			case PrimaryCategory::Temporary:
-			case PrimaryCategory::Literal:
-				return false;
-			}
-			CORE_UNREACHABLE();
+			return allows_semantic.contains(REINIT);
 		}
 
 		/**
@@ -173,17 +172,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		bool addressable() const {
-			switch (category) {
-			case PrimaryCategory::Local:
-			case PrimaryCategory::Global:
-			case PrimaryCategory::Dereferenced:
-			case PrimaryCategory::Projected:
-				return true;
-			case PrimaryCategory::Temporary:
-			case PrimaryCategory::Literal:
-				return false;
-			}
-			CORE_UNREACHABLE();
+			return allows_semantic.contains(REFERENCE);
 		}
 
 		/**
@@ -193,7 +182,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		bool isMovableFrom() const {
-			return category == PrimaryCategory::Local or category == PrimaryCategory::Temporary;
+			return allows_semantic.contains(MOVE);
 		}
 
 		/**

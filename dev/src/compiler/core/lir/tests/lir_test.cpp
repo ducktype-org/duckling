@@ -444,7 +444,6 @@ private:
 
 		auto foo_lir = module.lirFunc("foo");
 		auto g_ctor  = module.lirGlobalData("g").getCtorDtorPair().global_ctor.value();
-		auto g_dtor  = module.lirGlobalData("g").getCtorDtorPair().global_dtor.value();
 
 		withContextDo([&](query::Context& ctx) {
 			// This might change in the future:
@@ -453,9 +452,6 @@ private:
 			// The ctor writes the initial value through a pointer to the global, so it holds that
 			// pointer in a local.
 			ASSERT_EQUAL(g_ctor->local_list.size(), 1);
-			// `g` is trivially destructible, so its dtor is empty.
-			ASSERT_EQUAL(g_dtor->local_list.size(), 0);
-			ASSERT_EQUAL(g_dtor->blocks[0]->instructions.size(), 0);
 
 			// Check local variable 'a'
 			bool found_a = false;
@@ -544,17 +540,10 @@ private:
 		ASSERT_HAS_VALUE(some_global.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(global_tuple.getCtorDtorPair().global_ctor);
 
-		// Every global variable gets a dtor as well, even a trivially destructible one (its dtor
-		// body is then empty).
-		ASSERT_HAS_VALUE(g.getCtorDtorPair().global_dtor);
-		ASSERT_HAS_VALUE(some_global.getCtorDtorPair().global_dtor);
-		ASSERT_HAS_VALUE(global_tuple.getCtorDtorPair().global_dtor);
-
-		// The ctor and the dtor of a global are distinct functions with distinct mangled names.
-		auto g_ctor = g.getCtorDtorPair().global_ctor.value();
-		auto g_dtor = g.getCtorDtorPair().global_dtor.value();
-		ASSERT_TRUE(g_ctor.get() != g_dtor.get());
-		ASSERT_TRUE(g_ctor->mangled_name != g_dtor->mangled_name);
+		// All the globals here are trivially destructible, so none of them gets a dtor.
+		ASSERT_TRUE(g.getCtorDtorPair().global_dtor.empty());
+		ASSERT_TRUE(some_global.getCtorDtorPair().global_dtor.empty());
+		ASSERT_TRUE(global_tuple.getCtorDtorPair().global_dtor.empty());
 	}
 
 	void testLifetimeFlags() {

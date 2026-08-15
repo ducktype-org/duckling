@@ -785,17 +785,17 @@ namespace compiler::mir {
 	 * See: Function::HSymID for usage
 	 */
 	struct GlobalVariableCtorDtor final {
-		enum Type { Ctor, Dtor };
+		enum class Type { Ctor, Dtor };
 
 		Type          type;
 		helios::SymID global_var_id;
 
 		static GlobalVariableCtorDtor ctor(helios::SymID global_var_id) {
-			return { .type = Ctor, .global_var_id = global_var_id };
+			return { .type = Type::Ctor, .global_var_id = global_var_id };
 		}
 
 		static GlobalVariableCtorDtor dtor(helios::SymID global_var_id) {
-			return { .type = Dtor, .global_var_id = global_var_id };
+			return { .type = Type::Dtor, .global_var_id = global_var_id };
 		}
 	};
 
@@ -896,7 +896,7 @@ namespace compiler::mir {
 
 	struct MIRCtorDtorPair {
 		CRef<mir::Function> constructor;
-		CRef<mir::Function> destructor;
+		base::Optional<CRef<mir::Function>> destructor;
 	};
 
 	/**

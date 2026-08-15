@@ -853,7 +853,9 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType(
 				  ctx.query<QueryTypeOfSymbol>(field)->valueOrThrow(),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Projected)
+				  tsh::ValueCategory(base->expression_type.getValueCategory().withDisabled(
+					  tsh::ValueSemanticsOptions::MOVE
+				  ))
 			  ),
 			  origin
 		  ),
@@ -905,7 +907,9 @@ namespace compiler::helios::code {
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }
 				  }(),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Projected)
+				  tsh::ValueCategory(base->expression_type.getValueCategory().withDisabled(
+					  tsh::ValueSemanticsOptions::MOVE
+				  ))
 			  ),
 			  origin
 

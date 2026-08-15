@@ -1018,12 +1018,12 @@ namespace compiler::lir {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
 						variant_case(mir::GlobalVariableCtorDtor, name) {
-							if (name.type == mir::GlobalVariableCtorDtor::Ctor)
+							if (name.type == mir::GlobalVariableCtorDtor::Type::Ctor)
 								return helios::mangler::getSpecialMangledName<
 									helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
 									ctx, name.global_var_id
 								);
-							else if (name.type == mir::GlobalVariableCtorDtor::Dtor)
+							else if (name.type == mir::GlobalVariableCtorDtor::Type::Dtor)
 								return helios::mangler::getSpecialMangledName<
 									helios::mangler::ManglingSymbolKind::GlobalVariableDestructor>(
 									ctx, name.global_var_id

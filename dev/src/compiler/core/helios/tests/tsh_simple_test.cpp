@@ -1005,12 +1005,10 @@ private:
 		const auto global       = ValueCategory(PrimaryCategory::Global);
 		const auto literal      = ValueCategory(PrimaryCategory::Literal);
 		const auto dereferenced = ValueCategory(PrimaryCategory::Dereferenced);
-		const auto projected    = ValueCategory(PrimaryCategory::Projected);
 
 		// Local, Global, Dereferenced and Projected are assignable, Temporary and Literal are not.
 		assertTrue(
-			local.canBeAssignedTo() && global.canBeAssignedTo() && dereferenced.canBeAssignedTo()
-				&& projected.canBeAssignedTo(),
+			local.canBeAssignedTo() && global.canBeAssignedTo() && dereferenced.canBeAssignedTo(),
 			"Local, Global, Dereferenced and Projected should be assignable."
 		);
 		assertTrue(
@@ -1020,8 +1018,7 @@ private:
 
 		// Local, Global, Dereferenced and Projected are addressable, Temporary and Literal are not.
 		assertTrue(
-			local.addressable() && global.addressable() && dereferenced.addressable()
-				&& projected.addressable(),
+			local.addressable() && global.addressable() && dereferenced.addressable(),
 			"Local, Global, Dereferenced and Projected should be addressable."
 		);
 		assertTrue(
@@ -1033,8 +1030,7 @@ private:
 		assertTrue(local.isMovableFrom(), "Local should be a valid `move` operand.");
 		assertTrue(temporary.isMovableFrom(), "Temporary should be a valid `move` operand.");
 		assertTrue(
-			!global.isMovableFrom() && !literal.isMovableFrom() && !dereferenced.isMovableFrom()
-				&& !projected.isMovableFrom(),
+			!global.isMovableFrom() && !literal.isMovableFrom() && !dereferenced.isMovableFrom(),
 			"A non-owned value should not be a valid `move` operand."
 		);
 

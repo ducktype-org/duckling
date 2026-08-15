@@ -42,7 +42,7 @@ namespace compiler::mir {
 				// The highest bit distinguishes the ctor from the dtor of the same global,
 				// SymID hashes are indices, so they never reach it.
 				const u64 dtor_bit
-					= global_ctor_dtor.type == GlobalVariableCtorDtor::Dtor ? u64(1) << 63 : 0;
+					= global_ctor_dtor.type == GlobalVariableCtorDtor::Type::Dtor ? u64(1) << 63 : 0;
 				return global_ctor_dtor.global_var_id.queryUnstablePerfectHash() | dtor_bit;
 			}
 		}
@@ -330,8 +330,10 @@ namespace compiler::mir {
 			variant_case(MIRCtorDtorPair, pair) {
 				os << "constructor: " << pair.constructor->name.strView() << "\n";
 				pair.constructor->debugPrint(os);
-				os << "destructor: " << pair.destructor->name.strView() << "\n";
-				pair.destructor->debugPrint(os);
+				if_opt_some(pair.destructor, dtor) {
+					os << "destructor: " << dtor->name.strView() << "\n";
+					dtor->debugPrint(os);
+				}
 			}
 		}
 	}

@@ -39,8 +39,9 @@ namespace compiler::lir {
 				variant_case(mir::MIRCtorDtorPair, pair) {
 					auto lir_ctor_function
 						= ctx.query<lir::LowerToLIRFunction>({ pair.constructor });
-					auto lir_dtor_function
-						= ctx.query<lir::LowerToLIRFunction>({ pair.destructor });
+					base::Optional<CRef<lir::Function>> lir_dtor_function;
+					if_opt_some(pair.destructor, mir_dtor)
+						lir_dtor_function = ctx.query<lir::LowerToLIRFunction>({ mir_dtor });
 					lir_unit.lir_globals.emplace_back(LIRGlobalData{
                         .global = lir_global,
                         .data_initialization = LIRGlobalData::CTorDtorPair{
