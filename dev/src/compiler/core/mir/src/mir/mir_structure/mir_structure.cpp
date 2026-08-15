@@ -1,5 +1,7 @@
 #include "mir_structure.hpp"
 
+#include "mir/mir_structure/mir_local_ref.hpp"
+
 #include <helios/symbols/query_type_of_symbol.hpp>
 
 #include <base/collections/optional.hpp>
@@ -41,8 +43,9 @@ namespace compiler::mir {
 			variant_case(GlobalVariableCtorDtor, global_ctor_dtor) {
 				// The highest bit distinguishes the ctor from the dtor of the same global,
 				// SymID hashes are indices, so they never reach it.
-				const u64 dtor_bit
-					= global_ctor_dtor.type == GlobalVariableCtorDtor::Type::Dtor ? u64(1) << 63 : 0;
+				const u64 dtor_bit = global_ctor_dtor.type == GlobalVariableCtorDtor::Type::Dtor
+				                       ? u64(1) << 63
+				                       : 0;
 				return global_ctor_dtor.global_var_id.queryUnstablePerfectHash() | dtor_bit;
 			}
 		}
@@ -257,6 +260,19 @@ namespace compiler::mir {
 		result.projection_chain.push_back(Projection::index(index));
 		result.type = element_type;
 		return result;
+	}
+
+	bool MIRPlace::sameBaseAs(const MIRPlace& other) const {
+		if (isLocal() != other.isLocal()) return false;
+		if (isLocal()) {
+			auto local       = getBase<MIRLocalRef>();
+			auto other_local = other.getBase<MIRLocalRef>();
+			return local->id == other_local->id;
+		} else {
+			auto global       = getBase<MIRGlobal>();
+			auto other_global = getBase<MIRGlobal>();
+			return global.helios_id == other_global.helios_id;
+		}
 	}
 
 	void MIRPlace::debugPrint(std::ostream& os, bool detailed) const {

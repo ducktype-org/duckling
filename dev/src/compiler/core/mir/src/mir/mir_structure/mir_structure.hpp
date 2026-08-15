@@ -518,6 +518,9 @@ namespace compiler::mir {
 		}
 
 		void debugPrint(std::ostream& os, bool detailed = false) const;
+
+		[[nodiscard]]
+		bool sameBaseAs(const MIRPlace& other) const;
 	};
 
 	/**
@@ -895,7 +898,7 @@ namespace compiler::mir {
 	};
 
 	struct MIRCtorDtorPair {
-		CRef<mir::Function> constructor;
+		CRef<mir::Function>                 constructor;
 		base::Optional<CRef<mir::Function>> destructor;
 	};
 

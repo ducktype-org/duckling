@@ -555,6 +555,43 @@ private:
 			ASSERT_TRUE(reinit_index < scope_end_destruct_index);
 		}
 
+		{  // The new value is computed by a call reading `a` through a reference, so the call must
+		   // not write into `a`: its result goes into a temporary, `a` is destructed only after the
+		   // call returns, and the assignment overwrites it afterwards.
+			auto func = getMIRFunctionByName(module, "assignFromCallTakingRef");
+
+			// The destructor of the overwritten value and the one at the end of the scope.
+			ASSERT_EQUAL_PRINT(2, countOperation(func, Destruct));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Reinit, "a"));
+
+			// take the address of `a` -> call -> destruct the old value -> overwrite `a`
+			LifetimeChecker{}
+				.expectConstruct("a")
+				.expectInstruction(AddressOf)
+				.expectInstruction(Call)
+				.expectInstruction(Destruct)
+				.expectReinit("a")
+				.validate(func);
+		}
+
+		{  // Self-assignment reads the value it overwrites, so the copy into the temporary has to
+		   // happen before the destructor of the old value runs.
+			auto func = getMIRFunctionByName(module, "assignItself");
+
+			ASSERT_EQUAL_PRINT(2, countOperation(func, Destruct));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Reinit, "a"));
+
+			// copy `a` into a temporary -> destruct the old value -> assign the temporary back
+			LifetimeChecker{}
+				.expectConstruct("a")
+				.expectInstruction(Assign)
+				.expectInstruction(Destruct)
+				.expectReinit("a")
+				.validate(func);
+		}
+
 		{  // A local of a non-trivially destructible type is destructed at the end of its scope,
 		   // the inner one before the rest of the function runs. A trivially destructible local is
 		   // never destructed.
@@ -592,11 +629,9 @@ private:
 				return instr->operation == Call && callsFunction(*instr, "move_in");
 			}));
 
-			ASSERT_TRUE(
-				std::ranges::any_of(allInstructions(dtor.value()), [&](const auto* instr) {
-					return instr->operation == Call && callsFunction(*instr, "__destruct");
-				})
-			);
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(dtor.value()), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "__destruct");
+			}));
 		}
 
 		{  // A global box: allocated by the ctor, freed by the dtor.
@@ -607,11 +642,9 @@ private:
 			ASSERT_TRUE(std::ranges::any_of(allInstructions(ctor), [&](const auto* instr) {
 				return instr->operation == Call && callsFunction(*instr, "box_alloc");
 			}));
-			ASSERT_TRUE(
-				std::ranges::any_of(allInstructions(dtor.value()), [&](const auto* instr) {
-					return instr->operation == Call && callsFunction(*instr, "box_destructor");
-				})
-			);
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(dtor.value()), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "box_destructor");
+			}));
 		}
 
 		{  // A trivially destructible global has nothing to destroy, so it gets no dtor at all.

@@ -1,5 +1,7 @@
 #include "coercions.hpp"
 
+#include "helios/tsh/value_category.hpp"
+
 #include <ctv/numeric_value.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <helios/attributes/builtins.hpp>
@@ -15,7 +17,6 @@
 #include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
-#include "helios/tsh/value_category.hpp"
 
 namespace compiler::helios {
 	namespace {

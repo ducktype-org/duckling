@@ -30,8 +30,27 @@ fun scopeEnd() = {
     var b: Res = Res(6);
 }
 
+fun bump(r: ref Res) -> Res = { return Res(r.id + 1); }
+
+# The new value is computed by a call that reads `a` through a reference, so the old value has to
+# stay alive until the call returns: the result goes into a temporary, the destructor of the old
+# value runs after the call, and only then is `a` overwritten.
+fun assignFromCallTakingRef() = {
+    var a: Res = Res(7);
+    a = bump(&a);
+}
+
+# Self-assignment reads the very value it overwrites, so the copy has to be made before the
+# destructor of the old value runs.
+fun assignItself() = {
+    var a: Res = Res(8);
+    a = a;
+}
+
 fun main() -> i64 = {
     assignOverExisting();
     scopeEnd();
+    assignFromCallTakingRef();
+    assignItself();
     return 0;
 }

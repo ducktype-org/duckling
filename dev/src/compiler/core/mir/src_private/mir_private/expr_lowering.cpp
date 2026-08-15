@@ -7,6 +7,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <mir/mir_lowering/mir_liveness.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/stmt_lowering.hpp>
 #include <mir_private/utils/bounds_check.hpp>
@@ -1377,5 +1378,19 @@ namespace compiler::mir {
 			}
 			variant_case(Finalizer, res_data) { fill_and_update(res_data); }
 		}
+	}
+
+	[[nodiscard]]
+	std::vector<CRef<MIRPlace>> ExprLowerRes::placesUsed() const {
+		std::vector<CRef<MIRPlace>> places;
+		variant_match(value) {
+			variant_case(MIRValue, val) { collectValuePlaceReads(val, places); }
+			variant_case(MovedValue, moved) { collectValuePlaceReads(moved.source, places); }
+			variant_case(Finalizer, res_data) {
+				// The finalizer instruction has no output yet, so all of its places are reads.
+				places = instructionPlaceReads(res_data.instr);
+			}
+		}
+		return places;
 	}
 }

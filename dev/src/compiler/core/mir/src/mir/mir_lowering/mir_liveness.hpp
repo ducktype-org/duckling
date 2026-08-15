@@ -77,4 +77,15 @@ namespace compiler::mir {
 	 * new state for the variable is moved.
 	 */
 	void updateMoveStateMapByInstr(LocalMoveStateMap& map, const Instruction& instr);
+
+	/**
+	 * @brief Given instruction, return a list of Local the instruction reads from.
+	 */
+	std::vector<CRef<MIRPlace>> instructionPlaceReads(const Instruction& instr);
+
+	/**
+	 * @brief Append every place the value reads from to @p out. For a place value that is the
+	 * place itself together with the places used by its index projections.
+	 */
+	void collectValuePlaceReads(const MIRValue& value, std::vector<CRef<MIRPlace>>& out);
 }
