@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     var s: str = "hello from vm!";
     builtin_output_i64(s.length() as i64); # 14

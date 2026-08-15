@@ -291,6 +291,18 @@ namespace vm {
 			}
 			CORE_UNREACHABLE();
 		}
+
+		/**
+		 * @brief A null cpointer (e.g. a default-initialized local) must not be dereferenced.
+		 */
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			void
+			assertCPtrNotNull(void* cptr) {
+			if (cptr == nullptr) throw vm::exceptions::VMFFIError("Accessed null CPointer");
+		}
 	};
 
 }  // namespace vm

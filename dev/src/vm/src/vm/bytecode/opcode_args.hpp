@@ -63,7 +63,7 @@ namespace vm::opargs {
 	/**
 	 * @brief Represents place of a C pointer (a raw 8-byte native address).
 	 */
-	DEFINE_PLACE(Cptr, "pcpt");
+	DEFINE_PLACE(CPtr, "pcptr");
 
 	/**
 	 * @brief Represents place variant argument.
@@ -72,7 +72,7 @@ namespace vm::opargs {
 
 #define VM_OPARG_PLACE_TYPES                                                                   \
 	Place8, Place16, Place32, Place64, PlaceAny, PlacePtr, PlaceVnt, PlaceOpq, PlaceStructure, \
-		PlaceFSTable, PlaceCptr
+		PlaceFSTable, PlaceCPtr
 
 	/**
 	 * @brief Represents type name argument.

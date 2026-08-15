@@ -11,7 +11,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 namespace vm::api {
 	/**
@@ -85,10 +85,10 @@ namespace vm::api {
 	);
 
 	/**
-	 * @brief Get a VmValue containing the return value of the last ran function on DVM.
-	 * @note The returned VmValue is owned by the process and shouldn't be freed by the caller. It
+	 * @brief Get a VMValue containing the return value of the last ran function on DVM.
+	 * @note The returned VMValue is owned by the process and shouldn't be freed by the caller. It
 	 * will be automatically freed when the process is destroyed.
-	 * @return The VmValue containing the return value of the last called function or an API error
+	 * @return The VMValue containing the return value of the last called function or an API error
 	 * if no function was run or the execution didn't complete yet.
 	 */
 	std::expected<ExitValue, ApiError> getExitValue(PID pid);
@@ -195,13 +195,13 @@ namespace vm::api {
 	std::expected<response::Type, ApiError> getType(PID pid, const std::string& type_name);
 
 	/**
-	 * @brief Get an empty VmValue (initialized by zero bytes) of the given type.
-	 * @note This endpoint returns a VmValue which is owned by the caller. It's the callers
-	 * responsibility to call `VmValue::freeData()` on the VmValue. For more information
-	 * on why this is necessary, see documentation of `vm::VmValue::freeData()`.
-	 * @return Response containing a Box containing the newly allocated VmValue of the specified type.
+	 * @brief Get an empty VMValue (initialized by zero bytes) of the given type.
+	 * @note This endpoint returns a VMValue which is owned by the caller. It's the callers
+	 * responsibility to call `VMValue::freeData()` on the VMValue. For more information
+	 * on why this is necessary, see documentation of `vm::IVMValue::freeData()`.
+	 * @return Response containing a Box containing the newly allocated VMValue of the specified type.
 	 */
-	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
+	std::expected<response::VMValue, ApiError> getVMValue(PID pid, const std::string& type_name);
 
 	/**
 	 * @brief Get the number of current stack frames.

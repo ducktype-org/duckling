@@ -1,5 +1,5 @@
-
 // NOLINTBEGIN
+#include <stdarg.h>
 #include <stdint.h>
 
 // <= 8 bytes: one INTEGER register, coerced to `{ i64 }`.
@@ -72,5 +72,33 @@ Big make_big(int64_t k) {
 
 int32_t add_shorts(int16_t a, int16_t b) { return (int32_t) a + (int32_t) b; }
 int32_t add_bytes(int8_t a, int8_t b) { return (int32_t) a + (int32_t) b; }
+
+// --- Variadic functions. ---
+
+// Mixes integer and floating point variadic arguments.
+int64_t sum_varargs_mixed(int64_t count, ...) {
+	va_list ap;
+	double  total = 0.0;
+	va_start(ap, count);
+	for (int64_t i = 0; i < count; i++) {
+		total += (double) va_arg(ap, int64_t);
+		total += va_arg(ap, double);
+	}
+	va_end(ap);
+	return (int64_t) total;
+}
+
+// A struct passed by value through `...`.
+int64_t sum_varargs_struct(int64_t count, ...) {
+	va_list ap;
+	int64_t total = 0;
+	va_start(ap, count);
+	for (int64_t i = 0; i < count; i++) {
+		Small s = va_arg(ap, Small);
+		total += (int64_t) s.x + s.y;
+	}
+	va_end(ap);
+	return total;
+}
 
 //NOLINTEND

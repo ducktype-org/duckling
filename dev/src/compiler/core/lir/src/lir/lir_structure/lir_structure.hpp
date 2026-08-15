@@ -4,7 +4,6 @@
 
 #include <abi/calling_conv/calling_conv.hpp>
 #include <ctv/ctv.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -19,6 +18,7 @@
 #include <base/pointers/shared_box.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <query_framework/context/context_fd.hpp>
 
 #include <memory>
@@ -32,10 +32,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 	/** Simple byte by byte assignment. */
 	Assign,
-	AddressOf, 
+	AddressOf,
 	// @TODO: #1894 Remove the `List*` when Lists are implemented in STD.
-	ListFree,
-
 	ListPush,
 	ListPop,
 
@@ -172,7 +170,16 @@ namespace compiler::lir {
 	 * @brief Function which call will be replaced
 	 * manually in the backend.
 	 */
-	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree, BoxAlloc, BoxFree };
+	enum class BuiltinFunctionKind {
+		DvmAllocArr,
+		DvmReallocArr,
+		DvmFreeArr,
+		DvmAlloc,
+		DvmFree,
+		BoxAlloc,
+		BoxFree,
+		ListFree
+	};
 
 	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
 
@@ -200,8 +207,8 @@ namespace compiler::lir {
 	 * Used by the backends for the DebugInfo.
 	 */
 	struct LIRLocalMetadata {
-		base::Optional<base::StrID>             source_code_name;
-		base::Optional<dia_int::StablePosition> position;
+		base::Optional<base::StrID>         source_code_name;
+		base::Optional<dia::StablePosition> position;
 	};
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local);
@@ -278,6 +285,17 @@ namespace compiler::lir {
 		 * @return LIRLocal
 		 */
 		static LIRLocal boolLocal(query::Context& ctx);
+
+		/**
+		 * @brief Creates unique local holding a reference to @p pointee_type, and without
+		 * helios_id.
+		 * @note It's used to materialize addresses of places passed to functions taking
+		 * references.
+		 * @param ctx
+		 * @param pointee_type Type of the referenced value.
+		 * @return LIRLocal
+		 */
+		static LIRLocal refLocal(query::Context& ctx, tsh::SymbolType<> pointee_type);
 	};
 
 	enum class LIRGlobalType { Variable, Constant };
@@ -548,7 +566,7 @@ namespace compiler::lir {
 		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters, MetaParameters>;
 
 	struct InstructionMetadata {
-		base::Optional<dia_int::StablePosition> position;
+		base::Optional<dia::StablePosition> position;
 
 		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
 
@@ -619,8 +637,8 @@ namespace compiler::lir {
 	};
 
 	struct FunctionMetadata {
-		base::Optional<dia_int::StablePosition> position;
-		base::Optional<base::StrID>             source_code_name;
+		base::Optional<dia::StablePosition> position;
+		base::Optional<base::StrID>         source_code_name;
 	};
 
 	/**

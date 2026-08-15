@@ -21,15 +21,16 @@
 //!
 //! builtin_output_i64(0)
 //! ```
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::LazyLock;
 
-use regex::Regex;
+use regex::{Captures, Regex};
 use serde::Deserialize;
-use tracing::debug;
+use tracing::{debug, trace};
 
+use crate::quackpack::core::ParseMode;
 use crate::quackpack::core::manifest::parse::manifest::parse;
-use crate::quackpack::core::{FrontMatterScript, ParseMode};
+use crate::quackpack::core::script::FrontMatter;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err};
@@ -40,13 +41,11 @@ pub static UNCLOSED_FRONTMATTER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*<frontmatter>").unwrap());
 
 /// Parse a frontmatter of a script at a given `path`.
-/// If the script does not contain a frontmatter, returns `Ok(None)`.
-pub fn try_parse_frontmatter(
-    path: PathBuf,
-    ctx: &DuckContext,
-) -> QuackResult<Option<FrontMatterScript>> {
-    debug!("starting parsing...");
-    try_parse_inner(path.clone(), ctx).with_context(|| {
+///
+/// Script doesn't have to have a frontmatter; in that case, a default will be returned.
+pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<FrontMatter> {
+    trace!("starting parsing");
+    parse_inner(path, ctx).with_context(|| {
         format!(
             "when trying to parse the frontmatter of the script at `{}`",
             path.display()
@@ -54,43 +53,53 @@ pub fn try_parse_frontmatter(
     })
 }
 
-/// Helper for [`_try_parse_frontmatter`].
-/// First generates the appropriate [`ManifestSchema`] and then parses it into [`FrontMatterScript`].
-/// If the script does not contain a frontmatter, returns `Ok(None)`.
-fn try_parse_inner(path: PathBuf, ctx: &DuckContext) -> QuackResult<Option<FrontMatterScript>> {
-    let Some(schema) = generate_schema(&path)? else {
-        return Ok(None);
-    };
-    let frontmatter = parse(&schema, &path, ParseMode::FrontMatterScript, ctx)?;
-    Ok(Some(FrontMatterScript::new(path, schema, frontmatter)?))
+/// Helper for [`parse_frontmatter`].
+/// First generates the appropriate [`ManifestSchema`] and then parses it into [`FrontMatter`].
+fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<FrontMatter> {
+    let schema = generate_schema(path)?;
+    let frontmatter = parse(&schema, path, ParseMode::FrontMatter, ctx)?;
+    FrontMatter::new(path.to_path_buf(), schema, frontmatter)
 }
 
-/// Helper for [`_try_parse_frontmatter`].
-/// Generate a [`ManifestSchema`] from the script's contents.
-/// This includes resolving import, meaning that if the frontmatter has the `import` field,
-/// the schema is generated based on the path specified in the import.
-/// If the script does not contain a frontmatter, returns `Ok(None)`.
-fn generate_schema(path: &Path) -> QuackResult<Option<ManifestSchema>> {
-    let content = path.read_to_string()?;
-    // @TODO: #2860 Finalize frontmatters syntax
-    // This has a bug when `</frontmatter>` is in a yaml comment (maybe don't care / make it a feature).
-    // Moreover the syntax is not yet finalized.
-    let Some(captures) = FRONTMATTER_REGEX.captures(&content) else {
-        if UNCLOSED_FRONTMATTER_REGEX.captures(&content).is_some() {
+/// Try to capture a frontmatter from the given contents.
+pub fn capture_frontmatter(contents: &str) -> QuackResult<Option<Captures<'_>>> {
+    let Some(captures) = FRONTMATTER_REGEX.captures(contents) else {
+        debug!("no frontmatter");
+        if UNCLOSED_FRONTMATTER_REGEX.captures(contents).is_some() {
             qp_bail!("frontmatter begins but does not end")
         }
         return Ok(None);
     };
-    let frontmatter_content = captures.get(1).unwrap().as_str();
-    Some(generate_schema_from_content(
-        path,
-        frontmatter_content,
-        true,
-    ))
-    .transpose()
+    debug!("has frontmatter");
+    Ok(Some(captures))
 }
 
-/// Helper for [`_generate_schema`].
+/// Helper for [`parse_frontmatter`].
+/// Generate a [`ManifestSchema`] from the script's contents.
+/// This includes resolving import, meaning that if the frontmatter has the `import` field,
+/// the schema is generated based on the path specified in the import.
+/// If the script does not contain a frontmatter, returns [`ManifestSchema`] with `None`s.
+fn generate_schema(path: &Path) -> QuackResult<ManifestSchema> {
+    let content = path.read_to_string()?;
+    // @TODO: #2860 Finalize frontmatters syntax
+    // This has a bug when `</frontmatter>` is in a yaml comment (maybe don't care / make it a feature).
+    // Moreover the syntax is not yet finalized.
+    let Some(captures) = capture_frontmatter(&content)? else {
+        return Ok(ManifestSchema {
+            metadata: None,
+            dependencies: None,
+            dev_dependencies: None,
+            features: None,
+            profiles: None,
+            import: None,
+            venv: None,
+        });
+    };
+    let frontmatter_content = captures.get(1).unwrap().as_str();
+    generate_schema_from_content(path, frontmatter_content, /* resolve_imports */ true)
+}
+
+/// Helper for [`generate_schema`].
 /// Given the raw string generates the corresponding [`ManifestSchema`].
 /// With `resolve_imports` set to true, resolves the potential import,
 /// otherwise checks that there is no import.
@@ -110,9 +119,9 @@ fn generate_schema_from_content(
     }
 }
 
-/// Helper for [`_generate_schema_from_content`].
+/// Helper for [`generate_schema_from_content`].
 /// Given a [`ManifestSchema`], if it contains an import,
-/// checks that other fields are empty and generates a schema from the fiel specified in the import.
+/// checks that other fields are empty and generates a schema from the file specified in the import.
 /// Import path is treated as relative to the folder where the importing script is contained,
 /// but absolute paths work as well.
 fn resolve_import_in_schema(
@@ -121,9 +130,9 @@ fn resolve_import_in_schema(
 ) -> QuackResult<ManifestSchema> {
     if let Some(ref import) = schema.import {
         debug!(
-            "script at `{}` imports frontmatter at `{}`",
-            script_path.display(),
-            import.display()
+            script = %script_path.display(),
+            import = %import.display(),
+            "imports a frontmatter",
         );
         if !schema.is_just_import_or_empty() {
             let mut err = qp_err!(
@@ -144,14 +153,18 @@ fn resolve_import_in_schema(
                 imported_path.display(),
             )
         })?;
-        let imported_schema = generate_schema_from_content(&imported_path, &content, false)
-            .with_context(|| {
-                format!(
-                    "while generating schema from the file imported by `{}` at `{}`",
-                    script_path.display(),
-                    imported_path.display(),
-                )
-            })?;
+        let imported_schema = generate_schema_from_content(
+            &imported_path,
+            &content,
+            /* resolve_imports */ false,
+        )
+        .with_context(|| {
+            format!(
+                "while generating schema from the file imported by `{}` at `{}`",
+                script_path.display(),
+                imported_path.display(),
+            )
+        })?;
         return Ok(imported_schema);
     }
     Ok(schema)

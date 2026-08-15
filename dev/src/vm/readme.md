@@ -48,5 +48,5 @@ and retrieving their return values.
 *   [VMThread](./src/vm/core/thread/readme.md)
 *   [Memory Module](./src/vm/core/process/memory/readme.md)
 *   [Concurrency](./src/vm/core/process/concurrency/readme.md)
-*   [VmValue](./src/vm/core/thread/readme.md#vmvalue)
+*   [VMValue](./src/vm/core/thread/readme.md#vmvalue)
 *   [Tests](./tests/readme.md)

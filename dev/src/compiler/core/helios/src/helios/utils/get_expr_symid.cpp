@@ -11,10 +11,6 @@ namespace compiler::helios {
 		base::Optional<SymID> symbol;
 
 		void visitIdentifierExpr(const code::IdentifierExpr& val) override { symbol = val.symbol; }
-
-		void visitParenthesisExpr(const code::ParenthesisExpr& val) override {
-			val.inner->acceptVisitor(*this);
-		}
 	};
 
 	/**

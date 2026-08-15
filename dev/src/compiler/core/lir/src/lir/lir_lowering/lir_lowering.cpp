@@ -78,6 +78,8 @@ namespace compiler::lir {
 			return { LIRAbi::DefaultAbi{} };
 
 		CORE_ASSERT(v_matches(sym_abi, helios::CAbi), "There are more than 3 abis.");
+		const auto& c_abi_info = v_get(sym_abi, helios::CAbi);
+
 		auto abi_type_or_panic = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
 			auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
 			                   ->valueOrPanicMsg("Query failure.");
@@ -102,6 +104,7 @@ namespace compiler::lir {
 			.return_type = return_abi_or_empty(return_type),
 			.param_types = parameter_types | std::views::transform(abi_type_or_panic)
 			             | std::ranges::to<std::vector>(),
+			.num_fixed_params = c_abi_info.fixed_params,
 		};
 		return { LIRAbi::CAbi{
 			.function_info
@@ -460,7 +463,7 @@ namespace compiler::lir {
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
 
 					// Only create lifetime flag if needed
-					if (!mir_local.type.hasNoOpDestructor(ctx)) {
+					if (!mir_local.type.isTriviallyDestructible(ctx)) {
 						auto lifetime_flag = LIRLocal::boolLocal(ctx);
 						locals.pushBack(lifetime_flag);
 						auto flag_index = locals.lastIndex();
@@ -513,6 +516,65 @@ namespace compiler::lir {
 					if (auto lir_loc = getLocation(loc); lir_loc.has_value())
 						result.push_back(lir_loc.value());
 				return result;
+			}
+
+			/**
+			 * @brief Lowers a call to a builtin implemented in LIR into the instructions that
+			 * implement it, instead of an actual `Call`. Does nothing for any other callee.
+			 *
+			 * `move_out(pointer)` becomes a read of `*pointer` and `move_in(pointer, value)`
+			 * a store into `*pointer`. Both are plain assignments: no copy constructor runs, and
+			 * nothing under `pointer` is destroyed.
+			 *
+			 * @return Whether the call was a builtin and got lowered here.
+			 */
+			[[nodiscard]] bool lowerLIRBuiltinCall(
+				const mir::Instruction& mir_instruction, MutBlockRef curr_block
+			) const {
+				const auto& callee = mir_instruction.arguments.at(0).get<mir::MIRFunctionLiteral>();
+				const auto  builtin = helios::isBuiltin(callee.helios_id);
+				if (not builtin.has_value()
+				    or not helios::getBuiltinOrigins(builtin.value())
+				               .contains(helios::BuiltinOrigin::LIR))
+					return false;
+
+				// The first argument is the callee, the arguments of the builtin follow it.
+				switch (builtin.value()) {
+				case helios::BuiltinKind::MoveOut: {
+					const auto& pointer = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+					// Reading a value that carries no information is a no-op.
+					auto output = getOutput(mir_instruction.output);
+					if (output.has_value())
+						curr_block->instructions.emplace_back(
+							Operation::Assign,
+							output,
+							std::vector<LIRValue>{ getPlace(pointer.withDeref()) },
+							mir_instruction.metadata
+						);
+					return true;
+				}
+				case helios::BuiltinKind::MoveIn: {
+					const auto& pointer = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+					// Storing a value that carries no information is a no-op.
+					auto value = getLocation(mir_instruction.arguments.at(2));
+					if (value.has_value())
+						curr_block->instructions.emplace_back(
+							Operation::Assign,
+							getPlace(pointer.withDeref()),
+							std::vector<LIRValue>{ value.value() },
+							mir_instruction.metadata
+						);
+					return true;
+				}
+				default:
+					CORE_PANIC(base::strConcat(
+						"Builtin `",
+						helios::builtinKindToStr(builtin.value()),
+						"` is not implemented in LIR"
+					));
+				}
 			}
 
 			/**
@@ -724,40 +786,59 @@ namespace compiler::lir {
 					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
-					// @TODO: #2825 The whole DestructIf implementation is a stub. Implement it once
-					// we know how to call destructors.
+					// @TODO: #2825 Destruct the remaining non-trivially-destructible types. It
+					// requires the standard library to stop destroying its values by hand, as it
+					// would double free them otherwise.
 
+					// A dynamic array is destructed by its destructor, which takes `self: ref [T]`,
+					// so the address of the destructed place is materialized first. The destructor
+					// releases the backing buffer with the `list_free` builtin.
 					if (type.getRefKind() == tsh::ReferenceKind::Direct
 					    && type.getType().getKind() == tsh::Kind::DynamicArray) {
 						auto lir_place = getLocation(to_destruct);
 
 						if (lir_place.has_value()) {
+							locals.pushBack(LIRLocal::refLocal(ctx, type));
+							const LIRPlace place_ref{ locals[locals.lastIndex()], {} };
+
 							curr_block->instructions.emplace_back(
-								Operation::ListFree,
-								base::Optional<LIRPlace>{},
+								Operation::AddressOf,
+								place_ref,
 								std::vector{ lir_place.value() },
 								InstructionMetadata{}
+							);
+
+							const helios::SymID dtor_sym
+								= helios::getTypeDestructor(ctx, type).value();
+							std::vector<LIRValue> call_args;
+							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, dtor_sym));
+							call_args.emplace_back(place_ref);
+
+							curr_block->instructions.emplace_back(
+								Operation::Call,
+								base::Optional<LIRPlace>{},
+								std::move(call_args),
+								mir_instruction.metadata
 							);
 							break;
 						}
 					}
 
-					// @TODO: #1894 This is a stub just to test the overall box free'ing logic.
-					// Currently this approach generates a free on every DestructIf if it operates
-					// on a box type (even if the box was moved). This will cause double free's if
-					// the box was moved around between other box variables. In the future we should
-					// insert a proper destructor call here before the free.
+					// @TODO: #1894 The destructor is called on every DestructIf operating on a box
+					// type (even if the box was moved). This will cause double free's if the box
+					// was moved around between other box variables.
 					if (type.getRefKind() == tsh::ReferenceKind::Box) {
 						auto lir_place = getLocation(to_destruct);
 
-						// The free is discarded if it operates on no information (ex. Unit).
+						// The destruction is discarded if it operates on no information (ex. Unit).
 						if (lir_place.has_value()) {
-							// Emit a call to the `box_free(b: box T)` builtin, which will be
-							// lowered to deallocation by the backend.
-							const helios::SymID free_sym
-								= helios::boxFreeSymForType(ctx, type.getType());
+							// The box destructor destroys the pointee and releases the storage with
+							// the `box_free` builtin. It takes the box itself, which already is a
+							// pointer to the destructed value.
+							const helios::SymID dtor_sym
+								= helios::getTypeDestructor(ctx, type).value();
 							std::vector<LIRValue> call_args;
-							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, free_sym));
+							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, dtor_sym));
 							call_args.emplace_back(lir_place.value());
 
 							curr_block->instructions.emplace_back(
@@ -780,6 +861,8 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::Call: {
+					if (lowerLIRBuiltinCall(mir_instruction, curr_block)) break;
+
 					auto output = getOutput(mir_instruction.output);
 					auto args   = getLocations(mir_instruction.arguments);
 					curr_block->instructions.emplace_back(

@@ -10,28 +10,17 @@ namespace vm::fast {
 		vm_threads.add(*this, compiler.getProgramBase(), &functions);
 	}
 
-	Ref<VmValue> FastVMProcess::createVmValue([[maybe_unused]] vm::TypeCRef type) {
-		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `createVmValue` is not implemented.");
-	}
-
-	Ref<VmValue> FastVMProcess::createVmValue(
-		[[maybe_unused]] vm::TypeCRef type, [[maybe_unused]] Pointer src
+	Ref<IVMValue> FastVMProcess::createVMValue([[maybe_unused]] code::valid_type::ValidTypeID type_id
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `createVmValue` is not implemented.");
+		throw vm::VMNotImplemented("Method `createVMValue` is not implemented.");
 	}
 
-	Box<VmValue> FastVMProcess::createOwnedVmValue([[maybe_unused]] vm::TypeCRef type) {
-		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `createOwnedVmValue` is not implemented.");
-	}
-
-	Box<VmValue> FastVMProcess::createOwnedVmValue(
-		[[maybe_unused]] vm::TypeCRef type, [[maybe_unused]] Pointer src
+	Box<IVMValue> FastVMProcess::createOwnedVMValue(
+		[[maybe_unused]] code::valid_type::ValidTypeID type_id
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `createOwnedVmValue` is not implemented.");
+		throw vm::VMNotImplemented("Method `createOwnedVMValue` is not implemented.");
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::doRequest(

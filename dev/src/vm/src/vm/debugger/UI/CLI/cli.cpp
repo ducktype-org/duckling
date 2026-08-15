@@ -28,8 +28,8 @@ namespace {
 		variant_match(status) {
 			variant_case(vm::api::ExecutionCompleted, completed) {
 				const auto& exit_value = completed.exit_value;
-				if (v_matches(exit_value, std::vector<Ref<vm::VmValue>>)) {
-					for (auto val: std::get<std::vector<Ref<vm::VmValue>>>(exit_value)) {
+				if (v_matches(exit_value, std::vector<Ref<vm::IVmValue>>)) {
+					for (auto val: std::get<std::vector<Ref<vm::IVmValue>>>(exit_value)) {
 						if_opt_some(val->readData(), data) {
 							variant_match(data) {
 								variant_case(vm::interpreted_data_variant::Primitive, primitive) {

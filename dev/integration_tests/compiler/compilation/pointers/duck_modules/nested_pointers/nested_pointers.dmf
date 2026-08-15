@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 var global_val = 10;
 
 fun pointer_to_pointer() = {

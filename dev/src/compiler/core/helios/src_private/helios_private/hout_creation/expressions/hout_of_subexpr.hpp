@@ -38,6 +38,7 @@ namespace compiler::helios::code {
 		query::Context&                     ctx,
 		pst::AccessLocked<pst::ExprElement> element,
 		tsh::SymbolType<>                   expected_type,
-		CoercionErrorOverrides              error_overrides = {}
+		base::Optional<dia::StablePosition> coercion_expects_pos = {},
+		CoercionErrorOverrides              error_overrides      = {}
 	);
 }

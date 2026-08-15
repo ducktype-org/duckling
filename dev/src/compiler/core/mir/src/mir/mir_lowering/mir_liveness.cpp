@@ -2,10 +2,10 @@
 
 #include "mir_lifetimes.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/query_errors.hpp>
 
@@ -45,7 +45,7 @@ namespace compiler::mir {
 	 * @brief Append @p src move sites to @p dst, skipping positions already present.
 	 */
 	void mergeMoveSites(
-		std::vector<dia_int::StablePosition>& dst, const std::vector<dia_int::StablePosition>& src
+		std::vector<dia::StablePosition>& dst, const std::vector<dia::StablePosition>& src
 	) {
 		for (const auto& pos: src)
 			if (not std::ranges::contains(dst, pos)) dst.push_back(pos);
@@ -109,7 +109,7 @@ namespace compiler::mir {
 				break;
 			case OperationFlag::Flag::Move: {
 				// This instruction becomes the sole move reaching the value from here on.
-				std::vector<dia_int::StablePosition> sites;
+				std::vector<dia::StablePosition> sites;
 				if (instr.metadata.position.has_value())
 					sites.push_back(instr.metadata.position.value());
 				map.insertOrAssign(
@@ -142,7 +142,7 @@ namespace compiler::mir {
 
 		auto is_tracked = [&](MIRLocalRef local) {
 			return local->scope.has_value() && local->scope.value() != fun.no_lifetime_scope
-			    && not local->lifetime_flags.contains(LifetimeFlag::NoUseAfterFreeValidation);
+			    && not local->lifetime_flags.contains(LifetimeFlag::NoMoveStatusValidation);
 		};
 
 		// Parameters are alive on function entry.
@@ -261,7 +261,7 @@ namespace compiler::mir {
 		// never present in the status maps and must not be flagged as "uninitialized".
 		auto is_tracked = [&](MIRLocalRef local) {
 			return local->scope.has_value() && local->scope.value() != fun.no_lifetime_scope
-			    && not local->lifetime_flags.contains(LifetimeFlag::NoUseAfterFreeValidation);
+			    && not local->lifetime_flags.contains(LifetimeFlag::NoMoveStatusValidation);
 		};
 
 		const auto& block_in = args.liveness.block_in_liveness;
@@ -289,19 +289,19 @@ namespace compiler::mir {
 				);
 
 				// Anchor the error at the use site (placeholder until a real template exists).
-				auto msg = makeBox<dia_int::PlaceholderError>(title, instr.metadata.position);
+				auto msg = makeBox<dia::PlaceholderError>(title, instr.metadata.position);
 
 				// Point a note at every move instruction that reaches this use. If both
 				// branches of an if/else move the value, both move sites are reported here.
 				if (not uninitialized)
 					for (const auto& site: state->move_sites)
 						msg->addAttachedMessage(
-							makeBox<dia_int::PlaceholderNote>("Value moved here.", site)
+							makeBox<dia::PlaceholderNote>("Value moved here.", site)
 						);
 				if (uninitialized) {
 					if_opt_some(local->helios_id, sym_id) {
 						if_opt_some(helios::maybeSymbolPst(sym_id), pst_elem) {
-							msg->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
+							msg->addAttachedMessage(makeBox<dia::PlaceholderNote>(
 								"Variable declared here.", pst_elem.unlock(ctx)->getStablePosition()
 							));
 						}
@@ -316,7 +316,7 @@ namespace compiler::mir {
 				auto state = map.atMaybeCopy(local->id);
 				if (state.has_value()) continue;
 				// State is uninitialized
-				auto msg = makeBox<dia_int::PlaceholderError>(
+				auto msg = makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"The variable `", local->getName(), "` is used before it is initialized."
 					),
@@ -324,7 +324,7 @@ namespace compiler::mir {
 				);
 				if_opt_some(local->helios_id, sym_id) {
 					if_opt_some(helios::maybeSymbolPst(sym_id), pst_elem) {
-						msg->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
+						msg->addAttachedMessage(makeBox<dia::PlaceholderNote>(
 							"Variable declared here.", pst_elem.unlock(ctx)->getStablePosition()
 						));
 					}

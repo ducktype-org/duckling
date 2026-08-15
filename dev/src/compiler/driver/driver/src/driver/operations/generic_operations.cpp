@@ -35,7 +35,9 @@
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/ok_bad.hpp>
 
@@ -52,10 +54,11 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <algorithm>
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <string_view>
@@ -145,6 +148,26 @@ namespace compiler::driver {
 			}
 		}
 
+		// Every real backend type; the set allPossibleArtifactNames() enumerates when building the
+		// deletable artifact names. Keep in sync with typeExtension() when adding a backend.
+		static constexpr std::array ALL_BACKEND_TYPES{ BackendType::LLVM, BackendType::DVM };
+
+		/**
+		 * @brief Every on-disk artifact name a CompileModule can produce for a given stable hash.
+		 *
+		 * Single source of truth for artifact naming: getModuleOutputName() may only ever produce
+		 * names contained here (enforced by assert), and deleteFromDisk() removes exactly this set.
+		 * Adding a backend or artifact kind here keeps write, load and delete in sync automatically.
+		 */
+		static std::vector<std::string> allPossibleArtifactNames(query::QueryStableHash hash) {
+			const auto               stem = hash.toStringHex();
+			std::vector<std::string> names;
+			names.reserve(ALL_BACKEND_TYPES.size() + 1);
+			for (auto backend: ALL_BACKEND_TYPES) names.push_back(stem + typeExtension(backend));
+			names.push_back(stem + std::string(DEBUG_INFO_STABLE_EXTENSION));
+			return names;
+		}
+
 		struct ModuleOutputNames {
 			std::string                 object_file;
 			base::Optional<std::string> debug_info_file;
@@ -152,10 +175,27 @@ namespace compiler::driver {
 
 		static ModuleOutputNames getModuleOutputName(const QKey& key) {
 			ModuleOutputNames names;
-			const auto        stem = key.queryStablePerfectHash().toStringHex();
+			const auto        hash = key.queryStablePerfectHash();
+			const auto        stem = hash.toStringHex();
 			names.object_file      = stem + typeExtension(key.backend_type);
 			if (key.build_debug_info && key.backend_type == BackendType::DVM)
 				names.debug_info_file = stem + std::string(DEBUG_INFO_STABLE_EXTENSION);
+
+			// Enforce that every name we write is one deleteFromDisk() knows how to remove: a written
+			// artifact whose name is not in the single source of truth would silently leak on disk.
+			IF_BUILD_TYPE_DEV({
+				const auto possible = allPossibleArtifactNames(hash);
+				CORE_ASSERT(
+					std::ranges::find(possible, names.object_file) != possible.end(),
+					"CompileModule object artifact name is not in the deletable set"
+				);
+				if (names.debug_info_file.has_value())
+					CORE_ASSERT(
+						std::ranges::find(possible, names.debug_info_file.value()) != possible.end(),
+						"CompileModule debug-info artifact name is not in the deletable set"
+					);
+			});
+
 			return names;
 		}
 
@@ -256,7 +296,7 @@ namespace compiler::driver {
 		 * Load precompiled artifact from disk without performing any compilation.
 		 * Returns Optional empty if the underlying file does not exist anymore.
 		 */
-		static auto loadFromDisc(const QKey& key) -> base::Optional<PResult> {
+		static auto loadFromDisk(const QKey& key) -> base::Optional<PResult> {
 			auto output_name = getModuleOutputName(key);
 
 			auto collection = getQueryArtifactsCollection();
@@ -302,18 +342,22 @@ namespace compiler::driver {
 			return result;
 		}
 
-		static auto deleteFromDisc(const QKey& key) -> bool {
-			auto output_name = getModuleOutputName(key);
-
+		/**
+		 * Deletes all on-disk artifacts of a module identified by its stable key hash.
+		 * The full key is not available here (invalidation and orphan cleanup only know the hash),
+		 * so every possible artifact name is attempted. deleteFileArtifact() is a no-op for files
+		 * that do not exist, so speculative deletes are safe.
+		 */
+		static auto deleteFromDisk(query::QueryStableHash hash) -> bool {
 			auto collection = getQueryArtifactsCollection();
-			moduleLog(key, "Deleting artifact from disk");
-			bool deleted
-				= collection->deleteFileArtifact(base::StrID(output_name.object_file.c_str()));
-			if_opt_some(output_name.debug_info_file, di_file) {
-				bool artifact_deleted
-					= collection->deleteFileArtifact(base::StrID(di_file.c_str()));
-				deleted = deleted && artifact_deleted;
-			}
+
+			CORE_DEV_LOG(
+				Artifacts, "Deleting module artifacts from disk for hash: ", hash.toStringHex(), "\n"
+			);
+
+			bool deleted = false;
+			for (const auto& name: allPossibleArtifactNames(hash))
+				deleted |= collection->deleteFileArtifact(base::StrID(name.c_str()));
 			return deleted;
 		}
 	};
@@ -382,9 +426,10 @@ namespace compiler::driver {
 						statement_info_result.value()
 					)) {
 					CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
-					const auto& hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
-					auto        lir_result
-						= compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
+					auto hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
+					if (not hout_unit.has_value()) return std::unexpected(hout_unit.error());
+					auto lir_result
+						= compileHOUTUnitToLIRModuleData(ctx, *hout_unit.value(), module_name_id);
 					if (lir_result.hasFailed())
 						return std::unexpected("Failed to compile definition statement to LIR");
 					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
@@ -552,7 +597,9 @@ namespace compiler::driver {
 						dvm_objs.emplace_back(std::move(dvm_std_obj));
 
 
-				if (linkDVMPackage(dvm_objs, {}, output_file).isBad()) {
+				// Compiling a bare script has no build target, so there are no shared libraries
+				// to declare for the runtime.
+				if (linkDVMPackage(dvm_objs, {}, {}, output_file).isBad()) {
 					error_message = "Linking of the DVM objects failed.";
 					return;
 				}
@@ -618,31 +665,39 @@ namespace compiler::driver {
 				deduplicateCodeCollection(dvm_module.code);
 			}
 
-			vm::PID pid{};
-			auto    run_result
+			auto run_result
 				= vm::api::spawn()
-			          .and_then([&](vm::api::ProcessInfo process) {
-						  pid = process.pid;
-						  return std::expected<void, vm::api::ApiError>{};
-					  })
-			          .and_then([&] { return vm::api::loadCode(pid, dvm_module.code); })
-			          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
-			          .and_then([&] { return vm::api::run(pid); })
-			          .and_then([&] { return vm::api::join(pid); })
-			          .and_then([&] { return vm::api::getExitValue(pid); })
-			          .transform_error(vm::api::errorToString)
-			          .transform([](vm::api::ExitValue exit_values) {
-						  CORE_ASSERT(
-							  v_matches(exit_values, std::vector<Ref<vm::VmValue>>),
-							  "Expected exit value to be vector"
-						  );
-						  const auto& exit_values_vec
-							  = std::get<std::vector<Ref<vm::VmValue>>>(exit_values);
-						  CORE_ASSERT(exit_values_vec.size() == 1, "Expected single exit value");
-						  return RunOutput{ .exit_code = base::safeIntConv<int>(
-												exit_values_vec.at(0)->readBytes<i64>()
-											) };
-					  });
+			          .and_then(
+						  [&](vm::api::ProcessInfo process
+			              ) -> std::expected<RunOutput, vm::api::ApiError> {
+							  const vm::PID pid = process.pid;
+							  // Deinitialize the process and execute global destructors.
+							  defer((void) vm::api::deinitAndValidate(pid));
+
+							  return vm::api::loadCode(pid, dvm_module.code)
+				                  .and_then([&] {
+									  return vm::api::attach(pid, std::cin, std::cout);
+								  })
+				                  .and_then([&] { return vm::api::run(pid); })
+				                  .and_then([&] { return vm::api::join(pid); })
+				                  .and_then([&] { return vm::api::getExitValue(pid); })
+				                  .transform([](vm::api::ExitValue exit_values) {
+									  CORE_ASSERT(
+										  v_matches(exit_values, std::vector<Ref<vm::IVMValue>>),
+										  "Expected exit value to be vector"
+									  );
+									  const auto& exit_values_vec
+										  = std::get<std::vector<Ref<vm::IVMValue>>>(exit_values);
+									  CORE_ASSERT(
+										  exit_values_vec.size() == 1, "Expected single exit value"
+									  );
+									  return RunOutput{ .exit_code = base::safeIntConv<int>(
+															exit_values_vec.at(0)->readBytes<i64>()
+														) };
+								  });
+						  }
+					  )
+			          .transform_error(vm::api::errorToString);
 
 			if (run_result.has_value())
 				output = run_result.value();
@@ -871,6 +926,7 @@ namespace compiler::driver {
 							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
+							target_dvm.runtime_config,
 							output_file
 						)
 					        .isBad())
@@ -899,7 +955,10 @@ namespace compiler::driver {
 					);
 					// We may mix artifacts from different collections here (std
 					// artifacts can come from a separate collection).
-					if (linkDVMPackage(dbc_arts, debug_info_arts, output_file).isBad())
+					if (linkDVMPackage(
+							dbc_arts, debug_info_arts, target_dvm.runtime_config, output_file
+						)
+					        .isBad())
 						result = base::BAD;
 				}
 			}

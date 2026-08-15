@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 class Test {var test = 21;}
 var t = Test();
 alias x = t.test;

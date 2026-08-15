@@ -27,6 +27,7 @@ fn create_sample_metadata() -> registry::Manifest {
                     "registry-url": "xd"
                 }
             },
+            "kind": "normal",
             "features": [],
             "pinned": false,
             "conditions": {
@@ -34,7 +35,6 @@ fn create_sample_metadata() -> registry::Manifest {
             }
         }
     ],
-    "dev-dependencies": [],
     "features": {},
     "profiles": {}
 }

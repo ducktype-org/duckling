@@ -1,9 +1,7 @@
-import core.builtins.*;
-
 fun printList(list: ref List[i64]) -> () = {
     print("8888888888888888888\n");
     var i = 0;
-    while (i < i64(list.length())) {
+    while (i < list.length() as i64) {
         builtin_output_i64(list[i]);
         i = i + 1;
     }
@@ -14,7 +12,7 @@ fun listByRef(list: ref List[i64]) -> () = {
     printList(list);
 
     var i = 0;
-    while (i < i64(list.length())) {
+    while (i < list.length() as i64) {
         list[i] = list[i] + 1; 
         i = i + 1;
     }

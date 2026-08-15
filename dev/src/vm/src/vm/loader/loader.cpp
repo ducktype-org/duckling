@@ -144,7 +144,7 @@ std::expected<void, LoaderLogger> Loader::loadAndValidate(
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
 			e.label,
-			[&](Box<dia_int::PlaceholderError>& err) {
+			[&](Box<dia::PlaceholderError>& err) {
 				for (const auto& instruction: e.jumps)
 					instruction.visit([&](auto&& i) {
 						log.addNote(

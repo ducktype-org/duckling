@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test function with no arguments
 fun noArgs() -> i64 = {
     return 42;
