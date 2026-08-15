@@ -34,7 +34,7 @@ namespace compiler::mir {
 		 * first from @p begin scope, second from @p end scope.
 		 * In general its the list of scopes between @p begin and lca(begin, end).
 		 *
-		 * @todo this is a general implementation that always works.
+		 * This is a general implementation that always works.
 		 * In the future we should find some invariant about two consecutive scopes
 		 * that we validate.
 		 *
