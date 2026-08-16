@@ -8,13 +8,13 @@
 
 namespace compiler::tsh {
 	/*
-		* The current coercion logic regarding reference kinds is:
-		* 						  FROM
-		* 			    | Direct | Ref | Box
-		*	 	Direct 	|  Yes	 | Yes | Yes
-		* TO 	Ref		|   No   | Yes | No
-		*	 	Box		|   No   | No  | Yes
-		*/
+	 * The current coercion logic regarding reference kinds is:
+	 * 						  FROM
+	 * 			    | Direct | Ref | Box
+	 *	 	Direct 	|  Yes	 | Yes | Yes
+	 * TO 	Ref		|   No   | Yes | No
+	 *	 	Box		|   No   | No  | Yes
+	 */
 	bool isRefKindCoercible(ReferenceKind from, ReferenceKind to) {
 		if (to == ReferenceKind::Ref) return from == ReferenceKind::Ref;
 		if (to == ReferenceKind::Box) return from == ReferenceKind::Box;

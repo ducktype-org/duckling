@@ -7,3 +7,23 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+      llvm_valgrind:
+        backend: llvm
+        valgrind: "true"
+        TimeOut: 3 # 1 second is often not enough on runners
+        Output:
+          String: ""
+        ExitCode: 0
+
+  # @TODO: #3225 run this on the DVM too. `Memory::iterateOverDataAndExecute` treats a variant as
+  # a leaf, so copying one never adjusts the refcount of a `ref`/`box` payload and the VM reports
+  # a leak.
+  variant_owning_reassign:
+    Cases:
+      llvm_valgrind:
+        backend: llvm
+        valgrind: "true"
+        TimeOut: 3 # 1 second is often not enough on runners
+        Output:
+          String: ""
+        ExitCode: 0

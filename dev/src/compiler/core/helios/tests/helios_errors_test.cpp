@@ -817,7 +817,8 @@ private:
 				}
 			)",
 				{ "Alternative `Class Holder` cannot be bound by value because it is not "
-			      "trivially copyable. Bind it by reference instead: `case x : ref Class Holder`." },
+			      "trivially copyable. Bind it by reference instead: `case x : ref Class "
+			      "Holder`." },
 				1
 			);
 		}

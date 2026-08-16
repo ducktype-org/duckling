@@ -1,0 +1,51 @@
+import core.builtins.*;
+import core.containers.*;
+
+#{
+	Assigning an owning alternative into a variant that is already live: the previous alternative
+	is destroyed and the new payload is moved in, so exactly one free happens per allocation.
+
+	This is a separate module because of a DVM bug: the VM treats a variant as a leaf when it
+	walks a value to adjust block refcounts, so copying one never accounts for a `ref`/`box`
+	payload and the VM reports a leak. The destructors themselves do run. Hence it only runs on
+	the LLVM backend, under valgrind.
+
+	@TODO: #3225 run this on the DVM too.
+#}
+
+fun check(actual: i64, expected: i64, id: i64) -> () = {
+	if (actual != expected) builtin_output_i64(id);
+}
+
+fun boxAltRead(v: ref (box i32 | f32)) -> i64 = {
+	return match (v) {
+		case x : ref i32 = x as i64;
+		case _ = -1i64;
+	};
+}
+
+fun stringAltLength(v: ref (String | i32)) -> i64 = {
+	return match (v) {
+		case s : ref String = s.length() as i64;
+		case n : i32 = n as i64;
+	};
+}
+
+fun main() -> i64 = {
+	# A box assigned over the trivial alternative, and then over another box.
+	var b: box i32 | f32 = (2.5 as f32);
+	b = new 3i32;
+	check(boxAltRead(&b), 3i64, 1i64);
+	b = new 4i32;
+	check(boxAltRead(&b), 4i64, 2i64);
+
+	# The same for a string, whose destructor frees its buffer.
+	var s: String | i32 = 7i32;
+	s = "hello".toString();
+	check(stringAltLength(&s), 5i64, 3i64);
+	s = "abc".toString();
+	check(stringAltLength(&s), 3i64, 4i64);
+
+	# Both variants still own a payload here, so leaving `main` has to free them.
+	return 0i64;
+}

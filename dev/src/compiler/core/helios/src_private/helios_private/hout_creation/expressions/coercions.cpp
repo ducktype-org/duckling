@@ -178,7 +178,8 @@ namespace compiler::helios {
 			if (to.getType().getKind() != tsh::Kind::Variant) return {};
 			if (from.getType().getKind() == tsh::Kind::Variant) return {};
 
-			const auto& alternatives = to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
+			const auto& alternatives
+				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
 			for (usize i = 0; i < alternatives.size(); i++)
 				if (tsh::isRefKindCoercible(from.getRefKind(), alternatives[i].getRefKind())
 				    && alternatives[i].getType() == from.getType())
@@ -353,9 +354,9 @@ namespace compiler::helios {
 
 		// Wrapping into a variant copies the value into one alternative, so that alternative is
 		// what the copy is analysed against.
-		const tsh::SymbolType<> copy_target
-			= variantAlternativeFor(from_type, to).map([](const auto& alt) { return alt.second; }
-			  ).copyValueOr(to);
+		const tsh::SymbolType<> copy_target = variantAlternativeFor(from_type, to)
+		                                          .map([](const auto& alt) { return alt.second; })
+		                                          .copyValueOr(to);
 
 		// A coercion that only rebinds a reference never copies, so it is always fine.
 		if (not requiresValueCopy(from_type.getRefKind(), copy_target.getRefKind()))
