@@ -174,13 +174,15 @@ namespace compiler::tsl {
 			const std::vector<CRef<TypeLayout>>&      layouts
 		) {
 			Bytes total_size{ 0 };
+			Bytes max_alignment{ 1 };
 			for (usize component_idx = 0; component_idx < offsets.size(); component_idx++)
 				if (auto offset = offsets[component_idx]; offset.has_value()) {
 					const auto layout_size = layouts[component_idx]->getSize();
 					const auto layout_end  = offset.value() + base::bits2bytesRoundUp(layout_size);
 					total_size             = std::max(total_size, layout_end);
+					max_alignment = std::max(max_alignment, layouts[component_idx]->getAlignment());
 				}
-			return bytes2bits(total_size);
+			return bytes2bits(base::bytesRoundTo(total_size, max_alignment));
 		}
 
 		/**
@@ -657,7 +659,16 @@ namespace compiler::tsl {
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
 		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
-		  pointer_kind(PointerKind::CPointer) {}
+		  pointer_kind(PointerKind::CPointer) {
+		auto& pointee_cabi_type
+			= ctx.query<QueryCAbiTypeOf>(pointer_type.getPointee())->valueOrThrow();
+		if (not pointee_cabi_type.has_value()) {
+			ctx.logInt(
+				makeBox<dia::PlaceholderError>("Invalid cptr type.", pointee_cabi_type.error())
+			);
+			query::throwFailed();
+		}
+	}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),

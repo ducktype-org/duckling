@@ -248,6 +248,11 @@ auto getClahLinkingOptions() {
 		                   .addLongName("additional-link-options")
 		                   .addShortDesc("Additional options to pass to the linker.")
 		                   .optional()
+		                   .build(),
+		               clah::ParamBuilder::ofValue(clah::StringListParser::make("shared libs"))
+		                   .addLongName("dvm-shared-libs")
+		                   .addShortDesc("Shared libraries that will be loaded by the VM.")
+		                   .optional()
 		                   .build() };
 }
 
@@ -263,6 +268,9 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 
 	if (auto lib_path = parsing_result.getValue<std::string>("additional-link-options"))
 		linking_options.native_additional_link_options = lib_path.value();
+
+	if (auto lib_paths = parsing_result.getValue<std::vector<std::string>>("dvm-shared-libs"))
+		linking_options.dvm_shared_libraries = lib_paths.value();
 
 	linking_options.native_link_c_standard_lib = not parsing_result.isFlag("no-c-standard-library");
 
@@ -636,15 +644,19 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("dvm-backend")) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_dvm.dbc");
-
+						auto runtime_config = compiler::driver::constructDVMRuntimeConfig(
+							getLinkingOptionsFromClah(options)
+						);
 						if (options.isFlag("emit-static-lib")) {
 							build_target = compiler::driver::BuildTargetDVMLibrary{
 								.output_file_name = base::StrID(output_file_name),
+								.runtime_config   = std::move(runtime_config)
 							};
 						} else {
 							build_target = compiler::driver::BuildTargetDVMExecutable{
 								.output_file_name  = base::StrID(output_file_name),
 								.link_std_packages = stdlib_options.stdActive(),
+								.runtime_config    = std::move(runtime_config)
 							};
 						}
 

@@ -597,7 +597,9 @@ namespace compiler::driver {
 						dvm_objs.emplace_back(std::move(dvm_std_obj));
 
 
-				if (linkDVMPackage(dvm_objs, {}, output_file).isBad()) {
+				// Compiling a bare script has no build target, so there are no shared libraries
+				// to declare for the runtime.
+				if (linkDVMPackage(dvm_objs, {}, {}, output_file).isBad()) {
 					error_message = "Linking of the DVM objects failed.";
 					return;
 				}
@@ -924,6 +926,7 @@ namespace compiler::driver {
 							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
+							target_dvm.runtime_config,
 							output_file
 						)
 					        .isBad())
@@ -952,7 +955,10 @@ namespace compiler::driver {
 					);
 					// We may mix artifacts from different collections here (std
 					// artifacts can come from a separate collection).
-					if (linkDVMPackage(dbc_arts, debug_info_arts, output_file).isBad())
+					if (linkDVMPackage(
+							dbc_arts, debug_info_arts, target_dvm.runtime_config, output_file
+						)
+					        .isBad())
 						result = base::BAD;
 				}
 			}

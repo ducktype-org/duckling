@@ -656,15 +656,16 @@ namespace compiler::mir {
 				}
 				case tsh::Kind::StaticArray:
 				case tsh::Kind::ManyPointer:
+				case tsh::Kind::CPointer:
 					return place.withIndex(index_val);
 				default:
 					CORE_PANIC("IndexExpr base must be an indexable type");
 				}
 			};
 
-			// Many-pointers have no length, so they cannot be bounds-checked and are lowered
-			// directly.
-			if (base_kind == tsh::Kind::ManyPointer) {
+			// Many-pointers and c-pointers have no length, so they cannot be bounds-checked and
+			// are lowered directly.
+			if (base_kind == tsh::Kind::ManyPointer or base_kind == tsh::Kind::CPointer) {
 				auto lowered_index = lowerSubExpr(*expr.index, continuation);
 				auto index_val     = lowered_index.getResult(function);
 

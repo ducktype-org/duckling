@@ -19,6 +19,7 @@ namespace dvm {
         fundecl float_to_string(value: f64, p: manyptr char, buffer_cap: u64) -> u64;
         fundecl u64_to_string(value: u64, p: manyptr char, buffer_cap: u64) -> u64;
         fundecl i64_to_string(value: i64, p: manyptr char, buffer_cap: u64) -> u64;
+        fundecl abort() -> ();
 
         #{
             Test utils. Do not use outside of the tests.
