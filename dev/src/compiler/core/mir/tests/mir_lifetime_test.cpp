@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(lifetimeFlagsSingleBlock);
 		TESTER_ADD_TEST(lifetimeFlagsNestedBlocks);
 		TESTER_ADD_TEST(destructorInsertionTest);
+		TESTER_ADD_TEST(intermediateDestructorBlocksTest);
 	}
 
 private:
@@ -653,6 +654,38 @@ private:
 			ASSERT_EQUAL_PRINT(0, countOperation(ctor, Destruct));
 			ASSERT_TRUE(dtor.empty());
 		}
+	}
+
+	/**
+	 * @brief Blocks the destructor insertion added for a single outgoing edge - they hold only
+	 * destructors and jump to the original destination.
+	 */
+	usize countIntermediateDestructorBlocks(CRef<compiler::mir::Function> func) {
+		usize intermediate_blocks_count = 0;
+		for (const auto& block_id: func->block_order) {
+			const auto& block = func->blocks.at(block_id);
+			if (!block->instructions.empty()
+			    && block->instructions[0].operation == compiler::mir::Operation::Nop
+			    && block->terminator.operation == compiler::mir::Operation::Jump)
+				intermediate_blocks_count++;
+		}
+		return intermediate_blocks_count;
+	}
+
+	/**
+	 * @brief When the successors of a terminator end different scopes, the path-specific
+	 * destructors go into intermediate blocks. When all the outgoing edges need the same
+	 * destructors, they are appended to the current block instead.
+	 */
+	void intermediateDestructorBlocksTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/intermediate_destructor_blocks")));
+
+		// A single loop, so its back edge and its exit edge need different destructors.
+		ASSERT_EQUAL_PRINT(2, countIntermediateDestructorBlocks(getMIRFunctionByName(module, "A")));
+		// Two nested loops, so both of them need their own intermediate blocks.
+		ASSERT_EQUAL_PRINT(4, countIntermediateDestructorBlocks(getMIRFunctionByName(module, "B")));
+		// Both `if` branches end the same scope, so no intermediate block is needed.
+		ASSERT_EQUAL_PRINT(0, countIntermediateDestructorBlocks(getMIRFunctionByName(module, "C")));
 	}
 };
 

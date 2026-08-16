@@ -56,6 +56,7 @@ namespace compiler::tsh {
  * - **USE**     The value may be read. Currently set for every category.
  * - **DESTROY** The value's destructor runs at the end of the current scope. Currently set for
  * owned values and literals.
+ * - **REFERENCE** The value can be taken address of (MIR), meaning reference of or pointer of (HOUT).
  */
 MAKE_FLAG_TYPE(compiler::tsh, ValueSemanticsOptions, ValueSemantics,
 	MOVE,

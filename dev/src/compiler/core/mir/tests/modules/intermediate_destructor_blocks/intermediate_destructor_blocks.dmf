@@ -1,0 +1,71 @@
+# Destructor insertion when a terminator's successors leave different scopes: the pass has to put
+# the path-specific destructors into intermediate blocks. When every outgoing edge needs the exact
+# same destructors, no intermediate block is created.
+
+class R {
+    id: i32 = 0;
+    R.destroy() = { var t: i32 = id; }
+}
+
+# A loop inside a block. The back edge stays in the loop body scope while the exit edge leaves the
+# body and the surrounding block, so the two edges need different destructors.
+fun A() -> i64 = {
+    {
+        var index: i64 = 0;
+        let length: i64 = 3;
+        var outer: R = R(1);
+
+        while(index < length) {
+            var body: R = R(2);
+            index = index + 1;
+        }
+    };
+
+    return 0;
+}
+
+# Two nested loops, so both the inner and the outer loop need their own intermediate blocks.
+fun B() -> i64 = {
+    {
+        var index: i64 = 0;
+        let length: i64 = 3;
+        var outer: R = R(3);
+
+        while(index < length) {
+            var body: R = R(4);
+            {
+                var index_2: i64 = 0;
+                let length_2: i64 = 3;
+                var inner: R = R(5);
+
+                while(index_2 < length_2) {
+                    var inner_body: R = R(6);
+                    index_2 = index_2 + 1;
+                }
+            };
+            index = index + 1;
+        }
+    };
+
+    return 0;
+}
+
+# Both branches of the `if` end the very same scope, so the destructors are appended to the current
+# block instead of new intermediate ones.
+fun C() -> i64 = {
+    var x: i64 = 1;
+    var r: R = R(7);
+    if (x == 0) {
+        x = x + 1;
+    } else {
+        x = x + 2;
+    }
+    return x;
+}
+
+fun main() -> i64 = {
+    A();
+    B();
+    C();
+    return 0;
+}
