@@ -408,19 +408,17 @@ namespace compiler::helios::code::shorthands {
 		 */
 		[[nodiscard]]
 		static MatchExpr::Case matchCase(
-			base::Optional<usize> alternative_index,
-			base::Optional<SymID> binding,
-			Box<Expr>             result
+			base::Optional<usize> alternative_index, base::Optional<SymID> binding, Box<Expr> result
 		) {
-			return MatchExpr::Case{ .alternative_index=alternative_index, .binding=binding, .result=std::move(result) };
+			return MatchExpr::Case{ .alternative_index = alternative_index,
+				                    .binding           = binding,
+				                    .result            = std::move(result) };
 		}
 
 		/** @brief A `match (subject) { cases }`. Cases are tried in order. */
 		[[nodiscard]]
 		Box<MatchExpr> matchExpr(Box<Expr> subject, std::vector<MatchExpr::Case> cases) const {
-			return makeBox<MatchExpr>(
-				*ctx, generatedOrigin(), std::move(subject), std::move(cases)
-			);
+			return makeBox<MatchExpr>(*ctx, generatedOrigin(), std::move(subject), std::move(cases));
 		}
 
 		/** @brief A reference creation `refof inner`. */

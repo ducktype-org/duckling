@@ -204,8 +204,7 @@ namespace compiler::helios::desugaring {
 				return query::Failed();
 			}
 
-			cases.emplace_back(
-				Shorthand::matchCase(alternative_index, binding_sym, result->clone())
+			cases.emplace_back(Shorthand::matchCase(alternative_index, binding_sym, result->clone())
 			);
 		}
 

@@ -256,6 +256,8 @@ namespace compiler::mir {
 	void InvalidUseCheck::run(query::Context& ctx, Function& fun, const LifetimePassArgs& args) {
 		if (fun.block_order.empty()) return;
 
+		fun.debugPrint(std::cerr);
+
 		// Same tracking predicate as the liveness fixpoint: only locals that participate in
 		// lifetime analysis are validated. Untracked temporaries / `no_lifetime_scope` locals are
 		// never present in the status maps and must not be flagged as "uninitialized".

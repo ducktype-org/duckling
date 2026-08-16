@@ -4,8 +4,8 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
-#include <query_framework/query_result.hpp>
 #include <query_framework/context/context.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::helios::desugaring {
 	/**

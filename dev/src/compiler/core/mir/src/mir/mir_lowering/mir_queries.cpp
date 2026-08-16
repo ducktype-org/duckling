@@ -5,12 +5,12 @@
 
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
-#include <helios/utils/hout_walker_generic.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/utils/hout_walker_generic.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>

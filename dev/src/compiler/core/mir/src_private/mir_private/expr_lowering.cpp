@@ -646,31 +646,31 @@ namespace compiler::mir {
 		}
 
 		void visitMatchExpr(const hc::MatchExpr& expr) override {
-			const auto variant_type
-				= expr.subject->expression_type.getSymbolType().getType().as<tsh::VariantAbstractType>(
-				);
+			const auto variant_type = expr.subject->expression_type.getSymbolType()
+			                              .getType()
+			                              .as<tsh::VariantAbstractType>();
 
 			// Every case writes its value here, so the match has one result whichever arm ran.
 			const auto result_type     = expr.expression_type.getSymbolType();
 			const auto target_location = function.addTmp(result_type, expr_scope);
 
-			// Every alternative test reads the same subject, so it is lowered once into the
-			// first test block and each test is left as a hole to fill in afterwards. Lowering
-			// it per test would re-evaluate the subject expression once per case.
-			struct PendingTest final {
-				BlockBuilderRef               block;
+			struct PendingProjection final {
 				BlockBuilder::InstructionHole hole;
 				usize                         alternative_index;
 				MIRLocalMutRef                payload_ptr;
 			};
-			std::vector<PendingTest> pending_tests;
 
-			// Cases are tried in order; the chain is built backwards. `next_entry` is where a
-			// failed alternative test jumps to: the next case, or the continuation.
+			std::vector<PendingProjection> pending_projections;
+
+			// Cases are tried in order, but the chain is built backwards, so that a case can name
+			// the one it falls through to. `next_entry` is where a failed test goes.
 			BlockID                         next_entry = continuation->getID();
 			base::Optional<BlockBuilderRef> first_entry;
 
 			for (const auto& match_case: expr.cases | std::views::reverse) {
+				// Nothing recorded yet means this is the last case in source order.
+				const bool is_last_case = !first_entry.has_value();
+
 				// Result block: evaluate the case's value into the shared result, then join.
 				auto case_scope = function.newScope(expr_scope);
 				auto body_end   = function.newBlock();
@@ -689,124 +689,116 @@ namespace compiler::mir {
 					case_scope,
 					{ expr.getPosition() }
 				);
-				auto body_begin = lowered_result.begin;
+				auto case_entry = lowered_result.begin;
 
-				if (!match_case.alternative_index.has_value()) {
-					// Wildcard: unconditional entry, no test needed.
-					next_entry  = body_begin->getID();
-					first_entry = body_begin;
-					continue;
+				// A match covers its subject exhaustively, so the last case is bound to match and
+				// needs no test.
+				bool tests_alternative = match_case.alternative_index.has_value() && !is_last_case;
+
+				bool projects_payload = tests_alternative || match_case.binding.has_value();
+
+				auto test_block = function.newBlock();
+
+				base::Optional<MIRLocalMutRef> payload_ptr;
+
+				if (projects_payload) {
+					const auto alternative_type
+						= variant_type.getMember(match_case.alternative_index.value());
+					const auto pointer_type = tsh::SymbolType<>::withDefaults(
+						function.getContext().query<tsh::QueryPointerType>({ alternative_type })
+					);
+					payload_ptr = function.addTmp(pointer_type, expr_scope);
+
+					pending_projections.emplace_back(PendingProjection{
+						.hole              = test_block->addHole(),
+						.alternative_index = match_case.alternative_index.value(),
+						.payload_ptr       = payload_ptr.value(),
+					});
 				}
 
-				// Test block: try to project the alternative, branch on the null-ness of the
-				// resulting payload pointer.
-				auto test_block   = function.newBlock();
-				auto project_hole = test_block->addHole();
-
-				const usize alternative_index = match_case.alternative_index.value();
-				const auto  alternative_type  = variant_type.getMember(alternative_index);
-				const auto  pointer_type      = tsh::SymbolType<>::withDefaults(
-                    function.getContext().query<tsh::QueryPointerType>({ alternative_type })
-                );
-				auto payload_ptr = function.addTmp(pointer_type, expr_scope);
-
-				// The test already produced a pointer to the payload, so the binding reuses it
-				// instead of projecting the same alternative a second time. A `ref` binding
-				// takes the pointer itself, a direct one copies the payload it points to.
-				auto case_entry = body_begin;
 				if (match_case.binding.has_value()) {
-					auto binding_local = function.findLocal(match_case.binding.value());
-					CORE_ASSERT(
-						binding_local.has_value(),
-						"Match case binding refers to a local that is not defined in the function."
-					);
-					binding_local.value()->setLifetimeScope(case_scope);
+					auto binding_local = function.findLocal(match_case.binding.value()).value();
+					binding_local->setLifetimeScope(case_scope);
 
 					const bool binds_by_reference
-						= binding_local.value()->type.getRefKind() == tsh::ReferenceKind::Ref;
+						= binding_local->type.getRefKind() == tsh::ReferenceKind::Ref;
 					auto bound_value = binds_by_reference
-					                     ? MIRValue{ payload_ptr }
-					                     : MIRValue{ MIRPlace(payload_ptr).withDeref() };
+					                     ? MIRValue{ payload_ptr.value() }
+					                     : MIRValue{ MIRPlace(payload_ptr.value()).withDeref() };
 
-					auto binding_block = function.newBlock();
-					binding_block->addInstruction(Instruction(
+					case_entry->addInstruction(Instruction(
 						Operation::Assign,
-						MIRPlace(binding_local.value()),
-						std::vector<MIRValue>{ std::move(bound_value) },
-						{ flagConstruct(binding_local.value()) },
+						MIRPlace(binding_local),
+						{ std::move(bound_value) },
+						{ flagConstruct(binding_local) },
 						case_scope,
 						{},
 						{ expr.getPosition() }
 					));
-					binding_block->setTerminator(
-						{ Operation::Jump, {}, { body_begin->getID() }, {}, case_scope }
-					);
-					case_entry = binding_block;
 				}
 
-				test_block->setTerminator(Instruction(
-					Operation::BranchIfNull,
-					{},
-					std::vector<MIRValue>{ MIRValue{ payload_ptr },
-				                           MIRValue{ next_entry },
-				                           MIRValue{ case_entry->getID() } },
-					{},
-					expr_scope,
-					{},
-					{ expr.getPosition() }
-				));
-
-				pending_tests.emplace_back(
-					PendingTest{ test_block, project_hole, alternative_index, payload_ptr }
-				);
+				// Every case gets a test block, even when there is nothing to test. It keeps the
+				// chain uniform, and an empty block folds away later.
+				if (tests_alternative)
+					test_block->setTerminator(Instruction(
+						Operation::BranchIfNull,
+						{},
+						{
+							MIRValue{ payload_ptr.value() },
+							MIRValue{ next_entry },
+							MIRValue{ case_entry->getID() },
+						},
+						{},
+						expr_scope,
+						{},
+						{ expr.getPosition() }
+					));
+				else
+					test_block->setTerminator(
+						{ Operation::Jump, {}, { case_entry->getID() }, {}, expr_scope }
+					);
 
 				next_entry  = test_block->getID();
 				first_entry = test_block;
 			}
 
-			CORE_ASSERT(first_entry.has_value(), "MatchExpr with no cases");
+			CORE_ASSERT(first_entry.has_value(), "A match has to have at least one case.");
 
-			// A match made of nothing but a wildcard never tests the subject, so there is
-			// nothing to lower it for.
-			if (pending_tests.empty()) {
+			// With nothing to project the subject is never read, so it is not evaluated either.
+			if (pending_projections.empty()) {
 				valueOutput(first_entry.value(), MIRValue{ MIRPlace(target_location) });
 				return;
 			}
 
-			// The subject goes into the first test block, in front of the projection whose hole
-			// was reserved before it: instructions are added last-to-first, so the subject ends
-			// up preceding the projection. It is a reference to the variant, which is what the
-			// projections take, so it is passed on without dereferencing.
-			auto& first_test = pending_tests.back();
-			auto lowered_subject = lowerExpr(*expr.subject, first_test.block, function, expr_scope);
-			auto subject_val     = lowered_subject.getResult(function);
+			// The subject goes into the block the chain starts at, which dominates every
+			// projection. Its instructions are added after the holes were reserved, so they end
+			// up ahead of them. It is a reference to the variant, which is what the projections
+			// take, so it is passed on without dereferencing.
+			auto lowered_subject
+				= lowerExpr(*expr.subject, first_entry.value(), function, expr_scope);
+			auto subject_val = lowered_subject.getResult(function);
 			CORE_ASSERT(
 				std::holds_alternative<MIRPlace>(subject_val.getVariant())
 					&& subject_val.get<MIRPlace>().type.getRefKind() != tsh::ReferenceKind::Direct,
 				"A match subject must lower to a place holding a reference to the variant."
 			);
 
-			for (auto& test: pending_tests) {
-				const auto  alternative_type = variant_type.getMember(test.alternative_index);
+			for (auto& projection: pending_projections) {
+				const auto  alternative_type = variant_type.getMember(projection.alternative_index);
 				Instruction project_instr{ Operation::VariantTryProject,
 					                       {},
 					                       { subject_val },
-					                       { flagConstruct(test.payload_ptr) },
+					                       { flagConstruct(projection.payload_ptr) },
 					                       expr_scope,
 					                       VariantParameters{
-											   .alternative_index = test.alternative_index,
+											   .alternative_index = projection.alternative_index,
 											   .alternative_type  = alternative_type },
 					                       { expr.getPosition() } };
-				project_instr.output.emplace(test.payload_ptr);
-				test.hole.fill(std::move(project_instr));
+				project_instr.output.emplace(projection.payload_ptr);
+				projection.hole.fill(std::move(project_instr));
 			}
 
-			// Lowering the subject may have prepended blocks, so the chain starts there - unless
-			// a leading wildcard means the first test is not the entry at all.
-			if (first_entry.value()->getID() == first_test.block->getID())
-				first_entry = lowered_subject.begin;
-
-			valueOutput(first_entry.value(), MIRValue{ MIRPlace(target_location) });
+			valueOutput(lowered_subject.begin, MIRValue{ MIRPlace(target_location) });
 		}
 
 		void visitAccessExpr(const hc::AccessExpr& expr) override {

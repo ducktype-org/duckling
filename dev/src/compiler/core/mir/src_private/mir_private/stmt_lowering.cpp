@@ -312,9 +312,7 @@ namespace compiler::mir {
 
 			output({ block_body.begin });
 		}
-
 	};
-
 
 	StmtLowerRes lowerStmt(
 		const hc::Stmt&  stmt,
