@@ -1009,17 +1009,17 @@ private:
 		// Local, Global, Dereferenced are assignable, Temporary and Literal are not.
 		assertTrue(
 			local.canBeAssignedTo() && global.canBeAssignedTo() && dereferenced.canBeAssignedTo(),
-			"Local, Global, Dereferenced and Projected should be assignable."
+			"Local, Global, Dereferenced should be assignable."
 		);
 		assertTrue(
 			!temporary.canBeAssignedTo() && !literal.canBeAssignedTo(),
 			"Temporary and Literal should be not assignable."
 		);
 
-		// Local, Global, Dereferenced and Projected are addressable, Temporary and Literal are not.
+		// Local, Global, Dereferenced are addressable, Temporary and Literal are not.
 		assertTrue(
 			local.addressable() && global.addressable() && dereferenced.addressable(),
-			"Local, Global, Dereferenced and Projected should be addressable."
+			"Local, Global, Dereferenced should be addressable."
 		);
 		assertTrue(
 			!temporary.addressable() && !literal.addressable(),

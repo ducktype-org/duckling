@@ -313,7 +313,7 @@ namespace compiler::mir {
 							second_hole.value(),
 							{ flagConstruct(tmp) },
 							assignment_scope,
-							{}
+							{ stmt.getPosition() }
 						);
 						auto tmp_result = ExprLowerRes(right_result.begin, tmp);
 						flags.push_back(flagMove(tmp));
