@@ -45,6 +45,34 @@ namespace vm {
 
 #undef HANDLE_MICRO_INSTR
 
+		static RETURN_TYPE breakpoint(OPFUN_ARGS) {
+			{
+				save_execution_state(instr, local_stack, frame, thread);
+
+				thread.handleBreakpoint();
+				thread.executeOneStep();
+
+				// Restore current flow.
+				// They can be changed when doing "step by step" execution.
+				frame       = thread.runtime_data.frame_stack_current;
+				instr       = frame->instr;
+				local_stack = frame->local_stack;
+			}
+
+			OPFUN_CONT(0);
+		}
+
+		// we give every "normal" bytecode instruction it's breakpoint counterpart (evil twin)
+#define HANDLE_MICRO_INSTR(opcode)                                      \
+	static RETURN_TYPE op_break_##opcode(OPFUN_ARGS) {                  \
+		MUST_TAIL return breakpoint(instr, local_stack, frame, thread); \
+	}
+#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+
+
+#undef HANDLE_MICRO_INSTR
+
+
 #define HANDLE_MICRO_INSTR(opcode) static DebugOpFun op_debug_##opcode;
 #include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 
@@ -62,8 +90,14 @@ namespace vm {
 		 *
 		 * @warning Ordering of elements must stay the same as in vm::OpcodeFix8
 		 */
-		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
+		static constexpr std::array<OpFun*, low::OP_CASES_COUNT> OPFUNS{
 #define HANDLE_MICRO_INSTR(opcode) op_##opcode,
+#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+
+
+#undef HANDLE_MICRO_INSTR
+
+#define HANDLE_MICRO_INSTR(opcode) op_break_##opcode,
 #include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 
 
@@ -73,7 +107,7 @@ namespace vm {
 		/**
 		 * @brief A mapping between opcode ids and debug function pointers.
 		 */
-		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
+		static constexpr std::array<DebugOpFun*, low::OP_CASES_COUNT> DEBUG_OPFUNS{
 #define HANDLE_MICRO_INSTR(opcode) \
 	low::MicroOpcode::opcode == low::MicroOpcode::check_strategy ? op_debug_nop : op_debug_##opcode,
 #include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
@@ -90,6 +124,12 @@ namespace vm {
 #define HANDLE_MICRO_INSTR(instr) { op_##instr, low::instruction_tags::Op_##instr::OPCODE },
 #include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 #undef HANDLE_MICRO_INSTR
+
+#define HANDLE_MICRO_INSTR(instr) \
+	{ op_break_##instr, low::instruction_tags::Op_break_##instr::OPCODE },
+#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+#undef HANDLE_MICRO_INSTR
+
 			};
 			return map.at(fun);
 		}

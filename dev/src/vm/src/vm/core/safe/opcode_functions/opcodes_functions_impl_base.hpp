@@ -1309,23 +1309,6 @@ namespace vm {
 	DEFINE_STATIC_CAST_CONVERSION_OP(fptrunc, 32, 64, FLOAT_32_TYPE, FLOAT_64_TYPE)
 	DEFINE_STATIC_CAST_CONVERSION_OP(fpext, 64, 32, FLOAT_64_TYPE, FLOAT_32_TYPE)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
-		{
-			save_execution_state(instr, local_stack, frame, thread);
-
-			thread.handleBreakpoint();
-			thread.executeOneStep();
-
-			// Restore current flow.
-			// They can be changed when doing "step by step" execution.
-			frame       = thread.runtime_data.frame_stack_current;
-			instr       = frame->instr;
-			local_stack = frame->local_stack;
-		}
-
-		FUNCTION_CONT(0);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(stepGil)(FUNCTION_ARGS) {
 		{ thread.stepGil(); }
 		FUNCTION_CONT(1);

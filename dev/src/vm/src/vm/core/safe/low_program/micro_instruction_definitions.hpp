@@ -693,11 +693,6 @@ DEF_MICRO_INSTR(nop)
 // terminates execution
 DEF_MICRO_INSTR(exit)
 
-/**
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
- */
-DEF_MICRO_INSTR(breakpoint)
-
 DEF_MICRO_INSTR(stepGil)
 
 /**

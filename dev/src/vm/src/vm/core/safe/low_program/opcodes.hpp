@@ -30,18 +30,67 @@ namespace vm::low {
 #define HANDLE_MICRO_INSTR(opcode) opcode,
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
+
+#define HANDLE_MICRO_INSTR(opcode) break_##opcode,
+#include "micro_instruction_definitions.hpp"
+#undef HANDLE_MICRO_INSTR
 	};
+
+	constexpr bool isBreakpoint(MicroOpcode opcode) {
+		switch (opcode) {
+#define HANDLE_MICRO_INSTR(opcode)    \
+	case MicroOpcode::opcode:         \
+		return false;                 \
+	case MicroOpcode::break_##opcode: \
+		return true;
+#include "micro_instruction_definitions.hpp"
+#undef HANDLE_MICRO_INSTR
+		}
+		CORE_UNREACHABLE();
+	}
+
+	constexpr MicroOpcode breakpointVersion(MicroOpcode opcode) {
+		switch (opcode) {
+#define HANDLE_MICRO_INSTR(opcode)          \
+	case MicroOpcode::opcode:               \
+		return MicroOpcode::break_##opcode; \
+	case MicroOpcode::break_##opcode:       \
+		return MicroOpcode::break_##opcode;
+#include "micro_instruction_definitions.hpp"
+#undef HANDLE_MICRO_INSTR
+		}
+		CORE_UNREACHABLE();
+	}
+
+	constexpr MicroOpcode getUnderlying(MicroOpcode opcode) {
+		switch (opcode) {
+#define HANDLE_MICRO_INSTR(opcode)    \
+	case MicroOpcode::opcode:         \
+		return MicroOpcode::opcode;   \
+	case MicroOpcode::break_##opcode: \
+		return MicroOpcode::opcode;
+#include "micro_instruction_definitions.hpp"
+#undef HANDLE_MICRO_INSTR
+		}
+		CORE_UNREACHABLE();
+	}
 
 	constexpr usize microInstrCount() {
 		usize count = 0;
 #define HANDLE_MICRO_INSTR(instr) ++count;
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
-		return count;
+		return count * 2;
 	}
 
-	constexpr std::array<std::string_view, microInstrCount()> OPCODE_NAMES = {
+	constexpr u64 OP_CASES_COUNT = microInstrCount();
+
+	constexpr std::array<std::string_view, OP_CASES_COUNT> OPCODE_NAMES = {
 #define HANDLE_MICRO_INSTR(opcode) #opcode,
+#include "micro_instruction_definitions.hpp"
+#undef HANDLE_MICRO_INSTR
+
+#define HANDLE_MICRO_INSTR(opcode) "break_##opcode",
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
 	};

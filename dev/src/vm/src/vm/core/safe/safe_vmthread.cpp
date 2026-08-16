@@ -91,7 +91,7 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
-		if (opcode == low::MicroOpcode::breakpoint) {
+		if (vm::low::isBreakpoint(opcode)) {
 			const auto* program_copy
 				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
 			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");

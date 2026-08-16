@@ -32,22 +32,6 @@
 #define RETURN_TYPE_OPFUN_REF void
 #define RETURN_TYPE_OPFUN_TC  void
 
-namespace internal {
-	/**
-	 * @brief Returns number of opcodes recognized by Executor in a compile-time.
-	 * Used for `vm::OP_CASES_COUNT`.
-	 *
-	 * @return constexpr u64
-	 */
-	constexpr u64 countOpCases() {
-		u64 count = 0;
-#define HANDLE_MICRO_INSTR(opcode) count++;
-#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
-#undef HANDLE_MICRO_INSTR
-		return count;
-	}
-}
-
 namespace vm {
 
 	class SafeVMThread;
@@ -60,10 +44,6 @@ namespace vm {
 	struct MicroInstruction;
 
 	using OpFunTC = void(OPFUN_TC_ARGS);
-
-	// Describes number of DuckBC opcodes + meta-opcodes recognized by Executor.
-	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
-	constexpr u64 OP_CASES_COUNT = ::internal::countOpCases();
 
 	struct MicroInstruction final {
 #ifdef USE_TAIL_CALLS

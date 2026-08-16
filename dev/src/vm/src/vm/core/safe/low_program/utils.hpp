@@ -38,6 +38,30 @@ namespace vm::low::instruction_tags {
 #undef HANDLE_MICRO_INSTR_1ARGS
 #undef HANDLE_MICRO_INSTR_2ARGS
 
+
+#define HANDLE_MICRO_INSTR_0ARGS(INSTR)                                   \
+	struct Op_break_##INSTR {                                             \
+		using ArgTypes                      = std::tuple<>;               \
+		static constexpr MicroOpcode OPCODE = MicroOpcode::break_##INSTR; \
+	};
+
+#define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0)                             \
+	struct Op_break_##INSTR {                                             \
+		using ArgTypes                      = std::tuple<ARG0>;           \
+		static constexpr MicroOpcode OPCODE = MicroOpcode::break_##INSTR; \
+	};
+
+#define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1)                       \
+	struct Op_break_##INSTR {                                             \
+		using ArgTypes                      = std::tuple<ARG0, ARG1>;     \
+		static constexpr MicroOpcode OPCODE = MicroOpcode::break_##INSTR; \
+	};
+
+#include "micro_instruction_definitions.hpp"
+#undef HANDLE_MICRO_INSTR_0ARGS
+#undef HANDLE_MICRO_INSTR_1ARGS
+#undef HANDLE_MICRO_INSTR_2ARGS
+
 	namespace detail {
 		template<typename T>
 		inline constexpr bool IS_MICRO_TAG = false;

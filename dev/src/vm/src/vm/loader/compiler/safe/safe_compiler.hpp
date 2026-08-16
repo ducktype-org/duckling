@@ -55,6 +55,26 @@ namespace vm::loader::compiler::safe {
 		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
 			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
 
+		bool putBreakpoint(const base::StrID& func_name, usize idx, bool enable) {
+			auto& original_function = *low_program.functions.at(func_name);
+
+			// Try to obtain micro index
+			if (original_function.instruction_mapping.size() <= idx) return false;
+
+			usize micro_instruction_index = original_function.instruction_mapping[idx].begin;
+
+			if (original_function.bc.size() <= micro_instruction_index) return false;
+
+			auto& instruction = original_function.bc.at(micro_instruction_index);
+			auto  prev_opcode = getInstructionOpcode(original_function.bc[micro_instruction_index]);
+			auto  new_opcode
+				= enable ? low::breakpointVersion(prev_opcode) : low::getUnderlying(prev_opcode);
+
+			instruction = makeLowInstruction(new_opcode, instruction.arg0, instruction.arg1);
+
+			return true;
+		}
+
 	protected:
 		[[nodiscard]] ProgramSize getCurrentProgramSize() const override;
 
