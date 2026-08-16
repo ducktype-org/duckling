@@ -172,9 +172,7 @@ namespace compiler::mir {
 				op,
 				{},
 				{ MIRFunctionLiteral{ destructor_symbol }, local },
-				{
-					OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
-				},
+				{ flagDestruct(local) },
 				instr_scope,
 			});
 		};

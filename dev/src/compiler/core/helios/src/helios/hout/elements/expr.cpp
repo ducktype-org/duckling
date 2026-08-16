@@ -6,6 +6,7 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
+#include "helios/tsh/value_category.hpp"
 #include "stmt.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
@@ -1029,19 +1030,18 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType<>(
 				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
-				  tsh::ValueCategory(
-					  [](const tsh::ExpressionType<>& inner_type) -> tsh::PrimaryCategory {
-						  switch (inner_type.getSymbolType().getRefKind()) {
-						  case tsh::ReferenceKind::Direct:
-							  return tsh::PrimaryCategory::Temporary;
-						  case tsh::ReferenceKind::Ref:
-							  return inner_type.getValueCategory().getCategory();
-						  case tsh::ReferenceKind::Box:
-							  return tsh::PrimaryCategory::Dereferenced;
-						  }
-						  CORE_UNREACHABLE();
-					  }(inner->expression_type)
-				  )
+				  [](const tsh::ExpressionType<>& inner_type) -> tsh::ValueCategory {
+					  switch (inner_type.getSymbolType().getRefKind()) {
+					  case tsh::ReferenceKind::Direct:
+						  return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
+					  case tsh::ReferenceKind::Ref:
+						  return inner_type.getValueCategory();
+					  case tsh::ReferenceKind::Box:
+						  return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
+					  }
+					  CORE_UNREACHABLE();
+				  }(inner->expression_type)
+
 			  ),
 			  origin
 		  ),

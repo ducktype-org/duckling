@@ -267,10 +267,10 @@ namespace compiler::mir {
 
 			// This is for cases like
 			// a = foo(&a)
-			// Where the a destructor will be inserted, but we know if the foo uses the a.
-			// In that case we should make a temprary result and then assign to the output.
+			// Where the a destructor will be inserted, but we don't know if `foo` uses `a`.
+			// In that case we should make a temporary result and then assign to the output.
 			// tmp = foo(&a)
-			// desturct(a) <- added in the later pass
+			// destruct(a) <- added in the later pass
 			// a = tmp
 			bool destructor_in_between
 				= not stmt.location_expr->expression_type.getSymbolType().isTriviallyDestructible(

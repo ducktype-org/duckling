@@ -518,9 +518,6 @@ namespace compiler::mir {
 		}
 
 		void debugPrint(std::ostream& os, bool detailed = false) const;
-
-		[[nodiscard]]
-		bool sameBaseAs(const MIRPlace& other) const;
 	};
 
 	/**

@@ -126,8 +126,6 @@ namespace compiler::mir {
 			ScopeRef                          scope,
 			InstructionMetadata               metadata
 		);
-
-		[[nodiscard]] std::vector<CRef<MIRPlace>> placesUsed() const;
 	};
 
 	/**

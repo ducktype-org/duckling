@@ -1006,7 +1006,7 @@ private:
 		const auto literal      = ValueCategory(PrimaryCategory::Literal);
 		const auto dereferenced = ValueCategory(PrimaryCategory::Dereferenced);
 
-		// Local, Global, Dereferenced and Projected are assignable, Temporary and Literal are not.
+		// Local, Global, Dereferenced are assignable, Temporary and Literal are not.
 		assertTrue(
 			local.canBeAssignedTo() && global.canBeAssignedTo() && dereferenced.canBeAssignedTo(),
 			"Local, Global, Dereferenced and Projected should be assignable."

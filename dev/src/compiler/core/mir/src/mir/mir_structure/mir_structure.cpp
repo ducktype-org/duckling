@@ -260,19 +260,6 @@ namespace compiler::mir {
 		return result;
 	}
 
-	bool MIRPlace::sameBaseAs(const MIRPlace& other) const {
-		if (isLocal() != other.isLocal()) return false;
-		if (isLocal()) {
-			auto local       = getBase<MIRLocalRef>();
-			auto other_local = other.getBase<MIRLocalRef>();
-			return local->id == other_local->id;
-		} else {
-			auto global       = getBase<MIRGlobal>();
-			auto other_global = getBase<MIRGlobal>();
-			return global.helios_id == other_global.helios_id;
-		}
-	}
-
 	void MIRPlace::debugPrint(std::ostream& os, bool detailed) const {
 		variant_match(base) {
 			variant_case(MIRLocalRef, local) { local->debugPrint(os, detailed); }

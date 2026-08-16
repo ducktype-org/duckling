@@ -371,35 +371,4 @@ namespace compiler::mir {
 			}
 		}
 	}
-
-	void collectValuePlaceReads(const MIRValue& value, std::vector<CRef<MIRPlace>>& out);
-
-	void collectPlacePlaceReads(
-		const MIRPlace& place, bool include_self, std::vector<CRef<MIRPlace>>& out
-	) {
-		if (include_self) out.emplace_back(&place);
-		for (const auto& proj: place.projection_chain) {
-			variant_match(proj.storage) {
-				variant_case(MIRPlace::IndexProjection, index) {
-					collectValuePlaceReads(*index.index, out);
-				}
-				variant_default {}
-			}
-		}
-	}
-
-	void collectValuePlaceReads(const MIRValue& value, std::vector<CRef<MIRPlace>>& out) {
-		variant_match(value.getVariant()) {
-			variant_case(MIRPlace, place) { collectPlacePlaceReads(place, true, out); }
-			variant_default {}
-		}
-	}
-
-	std::vector<CRef<MIRPlace>> instructionPlaceReads(const Instruction& instr) {
-		std::vector<CRef<MIRPlace>> reads;
-		for (const auto& arg: instr.arguments) collectValuePlaceReads(arg, reads);
-		if (instr.output && instr.output->hasProjections())
-			collectPlacePlaceReads(*instr.output, false, reads);
-		return reads;
-	}
 }
