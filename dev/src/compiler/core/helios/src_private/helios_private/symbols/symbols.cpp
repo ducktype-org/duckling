@@ -184,6 +184,9 @@ namespace compiler::helios {
 				case pst::ElementKind::ExprElement:
 				case pst::ElementKind::ExprHolder:
 				case pst::ElementKind::ExprStmt:
+				case pst::ElementKind::RoundGroupExpr:
+				case pst::ElementKind::CallList:
+				case pst::ElementKind::CallArgument:
 				case pst::ElementKind::Action:
 				case pst::ElementKind::Match:
 				case pst::ElementKind::MatchCase:

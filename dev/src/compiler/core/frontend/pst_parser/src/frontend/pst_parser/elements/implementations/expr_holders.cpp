@@ -24,11 +24,11 @@ namespace pst {
 	namespace {
 		/**
 		 * A block group normally ends a no-block expression, but a `match` expression
-		 * carries its case block with it. When the held expression starts with `match`,
-		 * the block belongs to the expression.
+		 * carries its case block with it, so such a block belongs to the expression.
 		 */
 		bool blockEndsExpression(const TokenStream& state, i64 fwd) {
-			return internal::Conditions::isBlockGroup(state, fwd) && !state[0].is(Keyword::Match);
+			return internal::Conditions::isBlockGroup(state, fwd)
+			    && !internal::Conditions::isMatchBodyBlock(state, fwd);
 		}
 	}
 
