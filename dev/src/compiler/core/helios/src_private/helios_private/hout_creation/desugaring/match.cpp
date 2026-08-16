@@ -1,6 +1,5 @@
 #include "match.hpp"
 
-#include <diagnostic/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/match_case.hpp>
@@ -11,37 +10,62 @@
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
 
+#include <diagnostic/placeholder.hpp>
+
 #include <set>
 
 namespace compiler::helios::desugaring {
+	using code::shorthands::Shorthand;
+	using code::shorthands::StmtPack;
+	using code::shorthands::withOrigin;
+
 	namespace {
 		void logMatchNYI(query::Context& ctx, std::string what, dia::StablePosition position) {
 			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(std::move(what), position));
 		}
 
 		/**
-		 * @brief Finds the alternative index of @p alternative_type in @p variant_type.
+		 * @brief Finds the alternative index matched by a case's type constraint.
+		 *
+		 * An exact match wins, so a variant that really does list `ref T` among its
+		 * alternatives is still reachable. Only when that fails is a `ref T` constraint
+		 * treated as "bind the `T` alternative by reference".
 		 */
 		base::Optional<usize> findAlternativeIndex(
-			const tsh::VariantAbstractType& variant_type, const tsh::SymbolType<>& alternative_type
+			const tsh::VariantAbstractType& variant_type, const tsh::SymbolType<>& constraint
 		) {
 			const auto& alternatives = variant_type.getUnderlyingTypes();
+
+			for (usize i = 0; i < alternatives.size(); i++)
+				if (alternatives[i].getRefKind() == constraint.getRefKind()
+				    && alternatives[i].getType() == constraint.getType())
+					return i;
+
 			for (usize i = 0; i < alternatives.size(); i++)
 				if (alternatives[i].getRefKind() == tsh::ReferenceKind::Direct
-				    && alternatives[i].getType() == alternative_type.getType())
+				    && alternatives[i].getType() == constraint.getType())
 					return i;
+
 			return {};
 		}
 	}
 
 	namespace {
 		/**
-		 * @brief Compiles the match subject and normalizes it to a direct value.
+		 * @brief Compiles the match subject.
+		 *
+		 * The subject is left exactly as it was written. The match wants a reference to it, and
+		 * `refof` already produces one from any reference kind: it collapses to the pointer that
+		 * is already there for a `ref` or `box` subject, and takes the address of a direct one.
+		 * Normalizing to a direct value here would only mean dereferencing a subject that the
+		 * caller has to take the address of again.
+		 *
 		 * @return An empty optional when the subject fails to compile.
 		 */
 		base::Optional<Box<code::Expr>> getSubjectHout(
@@ -51,38 +75,9 @@ namespace compiler::helios::desugaring {
 				{ match_expr->getValueToMatch().unlock(ctx)->getExpr() }
 			);
 			if (subject_res->hasFailed()) return {};
-			Box<code::Expr> subject_hout = subject_res->valueOrThrow()->clone();
-
-			if (subject_hout->expression_type.getSymbolType().getRefKind()
-			    != tsh::ReferenceKind::Direct)
-				subject_hout = makeBox<code::DerefExpr>(
-					ctx, code::generatedOrigin(), std::move(subject_hout)
-				);
-			return subject_hout;
+			return subject_res->valueOrThrow()->clone();
 		}
-	}
 
-	base::Optional<SymID> getMatchSubjectSymbol(
-		query::Context& ctx, pst::Access<pst::expr::MatchExpr> match_expr
-	) {
-		auto subject_hout = getSubjectHout(ctx, match_expr);
-		if (!subject_hout.has_value()) return {};
-
-		const auto subject_local_type
-			= subject_hout.value()->expression_type.getSymbolType().withMutability(
-				tsh::Mutability::Immutable
-			);
-		const ScopeID match_scope = ctx.query<QueryPrimaryCodeScopeFor>({ match_expr });
-
-		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = base::StrID(base::strConcat("__match_subject_", match_expr->getID().asInt())),
-			.generated_symbol_data
-			= defgen::ControlFlowLocal{
-				.owning_scope = match_scope,
-				.role         = base::StrID("__match_subject"),
-				.type         = subject_local_type,
-			},
-		});
 	}
 
 	base::Optional<code::BlockStmt> desugarMatch(
@@ -91,8 +86,8 @@ namespace compiler::helios::desugaring {
 		tsh::SymbolType<>                 expected_type,
 		const MatchResultSink&            sink
 	) {
-		const auto gen            = code::generatedOrigin();
-		const auto match_position = match_expr->getStablePosition();
+		const Shorthand s{ ctx };
+		const auto      match_position = match_expr->getStablePosition();
 
 		auto subject_hout_opt = getSubjectHout(ctx, match_expr);
 		if (!subject_hout_opt.has_value()) return {};
@@ -109,13 +104,6 @@ namespace compiler::helios::desugaring {
 		}
 		const tsh::VariantAbstractType variant_type     = subject_type.getType();
 		const usize                    num_alternatives = variant_type.getUnderlyingTypes().size();
-
-		// Generated local holding the subject for the duration of the match.
-		const auto subject_local_type = subject_type.withMutability(tsh::Mutability::Immutable);
-		const auto subject_sym_opt    = getMatchSubjectSymbol(ctx, match_expr);
-		if (!subject_sym_opt.has_value()) return {};
-		const SymID subject_sym = subject_sym_opt.value();
-		auto subject_ident = [&] { return makeBox<code::IdentifierExpr>(ctx, gen, subject_sym); };
 
 		// Lower all cases.
 		std::vector<code::MatchStmt::Case> cases;
@@ -200,19 +188,32 @@ namespace compiler::helios::desugaring {
 				has_wildcard = true;
 			}
 
-			// Build the case body: the optional binding followed by the sunk result.
-			code::CodeBlock body{};
+			// The binding is filled in from the pointer the alternative test already
+			// produced. A `ref T` binding aliases the payload, a direct one copies it.
 			if (binding_sym.has_value()) {
 				const auto binding_type
 					= ctx.query<QueryTypeOfSymbol>(binding_sym.value())->valueOrThrow();
-				body.statements.emplace_back(makeBox<code::VariableStmt>(
-					gen,
-					makeBox<code::VariantProjectExpr>(
-						ctx, gen, subject_ident(), alternative_index.value()
-					),
-					binding_type,
-					binding_sym.value()
-				));
+
+				// Copying a payload that owns something would leave the subject owning it
+				// too, so both would destroy it. Such alternatives have to be bound by
+				// reference instead.
+				if (binding_type.getRefKind() != tsh::ReferenceKind::Ref
+				    && !binding_type.isTriviallyCopyable(ctx)) {
+					ctx.logInt(makeBox<dia::PlaceholderError>(
+						base::strConcat(
+							"Alternative `",
+							binding_type.toString(),
+							"` cannot be bound by value because it is not trivially copyable. "
+							"Bind it by reference instead: `case ",
+							name(binding_sym.value()).strView(),
+							" : ref ",
+							binding_type.getType().toString(),
+							"`."
+						),
+						case_position
+					));
+					return {};
+				}
 			}
 
 			auto result_holder = branches.front().result.unlock(ctx);
@@ -220,12 +221,9 @@ namespace compiler::helios::desugaring {
 				= getHoutOfExprWithExpectedType(ctx, result_holder->getExpr(), expected_type);
 			if (result_coerced.hasFailed()) return {};
 
-			body.statements.emplace_back(sink(std::move(result_coerced).valueOrThrow()));
-
-			cases.emplace_back(code::MatchStmt::Case{
-				.alternative_index = alternative_index,
-				.body              = std::move(body),
-			});
+			cases.emplace_back(Shorthand::matchCase(
+				alternative_index, binding_sym, sink(std::move(result_coerced).valueOrThrow())
+			));
 		}
 
 		if (!has_wildcard && covered.size() < num_alternatives) {
@@ -242,15 +240,18 @@ namespace compiler::helios::desugaring {
 			return {};
 		}
 
-		// { var __match_subject = <subject>; match(__match_subject) { ... } }
-		code::CodeBlock outer{};
-		outer.statements.emplace_back(makeBox<code::VariableStmt>(
-			code::pstOrigin(match_expr), std::move(subject_hout), subject_local_type, subject_sym
-		));
-		outer.statements.emplace_back(
-			makeBox<code::MatchStmt>(code::pstOrigin(match_expr), subject_ident(), std::move(cases))
-		);
+		// The subject is handed over as a reference and evaluated once by the MIR lowering, so
+		// no generated local is needed here. Referencing a temporary is not expressible in the
+		// surface language yet, but it is well defined and is what a match over a temporary
+		// needs, so the desugaring builds it directly.
+		const auto match_origin = code::pstOrigin(match_expr);
+		StmtPack   outer{
+            withOrigin(
+                match_origin,
+                Shorthand::matchStmt(s.refOf(std::move(subject_hout)), std::move(cases))
+            ),
+		};
 
-		return code::BlockStmt(code::pstOrigin(match_expr), std::move(outer));
+		return code::BlockStmt(match_origin, std::move(outer).toCodeBlock());
 	}
 }

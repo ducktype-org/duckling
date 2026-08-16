@@ -98,7 +98,10 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 	/** Creates a variant value from a payload value (see mir::Operation::VariantConstruct). */
 	VariantConstruct,
-	/** Pointer to the variant's payload, null on alternative mismatch. */
+	/**
+	 * Pointer to the variant's payload, null on alternative mismatch. Its single argument is a
+	 * reference to the variant, not the variant place itself.
+	 */
 	VariantTryProject,
 
 	Call,
@@ -580,13 +583,12 @@ namespace compiler::lir {
 	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
-	using InstrParameters
-		= std::variant<
-			NoInstrParameters,
-			CastParameters,
-			ListOperationParameters,
-			VariantParameters,
-			MetaParameters>;
+	using InstrParameters = std::variant<
+		NoInstrParameters,
+		CastParameters,
+		ListOperationParameters,
+		VariantParameters,
+		MetaParameters>;
 
 	struct InstructionMetadata {
 		base::Optional<dia::StablePosition> position;

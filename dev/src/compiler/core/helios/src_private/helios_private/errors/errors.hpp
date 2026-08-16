@@ -1,8 +1,9 @@
 #pragma once
 
+#include <helios_private/errors/dia_interactive_elements.hpp>
+
 #include <diagnostic/message.hpp>
 #include <diagnostic/stable_position.hpp>
-#include <helios_private/errors/dia_interactive_elements.hpp>
 
 namespace compiler::helios {
 	class SingleStmtFunctionMustBeExprError final: public dia::MessageWithCodeFragmentAndCause {

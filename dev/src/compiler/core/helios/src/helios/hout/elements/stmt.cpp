@@ -2,6 +2,8 @@
 
 #include "../visitors.hpp"
 
+#include <base/except/exceptions.hpp>
+
 namespace compiler::helios::code {
 #define STMT_VISITOR(type) \
 	void type::acceptVisitor(HoutStmtVisitor& visitor) const { visitor.visit##type(*this); }
@@ -138,7 +140,21 @@ namespace compiler::helios::code {
 		out << "}\n";
 	}
 
-	Box<Stmt> BlockStmt::clone() const { return makeBox<BlockStmt>(origin, std::move(*body.clone())); }
+	Box<Stmt> BlockStmt::clone() const {
+		return makeBox<BlockStmt>(origin, std::move(*body.clone()));
+	}
+
+	MatchStmt::MatchStmt(ElementOrigin origin, Box<Expr> subject, std::vector<Case> cases):
+		  Stmt(origin),
+		  subject(std::move(subject)),
+		  cases(std::move(cases)) {
+		CORE_ASSERT(
+			this->subject->expression_type.getSymbolType().getRefKind()
+				!= tsh::ReferenceKind::Direct,
+			"A match subject has to be a reference to the matched variant, got: ",
+			this->subject->expression_type.getSymbolType().toString()
+		);
+	}
 
 	void MatchStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);
@@ -148,9 +164,12 @@ namespace compiler::helios::code {
 		for (const auto& match_case: cases) {
 			addIndent(out, indent + 1);
 			if (match_case.alternative_index.has_value())
-				out << "case [alt=" << match_case.alternative_index.value() << "] {\n";
+				out << "case [alt=" << match_case.alternative_index.value() << "]";
 			else
-				out << "case [wildcard] {\n";
+				out << "case [wildcard]";
+			if (match_case.binding.has_value())
+				out << " [bind " << name(match_case.binding.value()).strView() << "]";
+			out << " {\n";
 			for (const auto& stmt: match_case.body.statements) stmt->debugPrint(out, indent + 2);
 			addIndent(out, indent + 1);
 			out << "}\n";
@@ -163,9 +182,9 @@ namespace compiler::helios::code {
 		std::vector<Case> cloned_cases;
 		cloned_cases.reserve(cases.size());
 		for (const auto& match_case: cases)
-			cloned_cases.emplace_back(
-				Case{ match_case.alternative_index, std::move(*match_case.body.clone()) }
-			);
+			cloned_cases.emplace_back(Case{ match_case.alternative_index,
+			                                match_case.binding,
+			                                std::move(*match_case.body.clone()) });
 		return makeBox<MatchStmt>(origin, subject->clone(), std::move(cloned_cases));
 	}
 }

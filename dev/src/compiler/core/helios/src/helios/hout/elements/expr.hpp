@@ -517,37 +517,6 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Reads the payload of a variant's alternative.
-	 *
-	 * Only valid when the variant's active alternative is known to be `alternative_index`
-	 * (i.e. inside the matching case of a MatchStmt). The expression type is the
-	 * alternative's type.
-	 */
-	struct VariantProjectExpr final: public Expr {
-		Box<Expr> subject;
-		usize     alternative_index;
-
-		VariantProjectExpr(
-			query::Context& ctx, ElementOrigin origin, Box<Expr> subject, usize alternative_index
-		);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		VariantProjectExpr(
-			tsh::ExpressionType<> expression_type,
-			ElementOrigin         origin,
-			Box<Expr>             subject,
-			usize                 alternative_index
-		);
-	};
-
-	/**
 	 * @brief Represents a field access to an expression, like "some_struct.field".
 	 * @note This does not represent namespace-like access, like "some_namespace.some_symbol". It
 	 * is reserved for field access, with the field name dealiased, etc., in its most direct form.

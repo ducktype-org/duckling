@@ -573,6 +573,23 @@ namespace compiler::helios::code::shorthands {
 			);
 		}
 
+		/**
+		 * @brief A match case, optionally binding the tested alternative's payload.
+		 * An empty `alternative_index` makes it a wildcard case.
+		 */
+		[[nodiscard]]
+		static MatchStmt::Case matchCase(
+			base::Optional<usize> alternative_index, base::Optional<SymID> binding, StmtPack body
+		) {
+			return MatchStmt::Case{ alternative_index, binding, std::move(body).toCodeBlock() };
+		}
+
+		/** @brief A `match (subject) { cases }`. Cases are tried in order. */
+		[[nodiscard]]
+		static Box<MatchStmt> matchStmt(Box<Expr> subject, std::vector<MatchStmt::Case> cases) {
+			return makeBox<MatchStmt>(generatedOrigin(), std::move(subject), std::move(cases));
+		}
+
 		/*****************
 		 *   AUXILIARY   *
 		 *****************/

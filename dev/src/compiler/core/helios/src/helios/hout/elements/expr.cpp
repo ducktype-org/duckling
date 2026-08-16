@@ -45,7 +45,6 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(VariantConstructExpr)
-	EXPR_VISITOR(VariantProjectExpr)
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(IndexExpr)
@@ -694,43 +693,6 @@ namespace compiler::helios::code {
 	Box<Expr> VariantConstructExpr::clone() const {
 		return makeBox<VariantConstructExpr>(
 			expression_type, origin, inner->clone(), alternative_index
-		);
-	}
-
-	VariantProjectExpr::VariantProjectExpr(
-		query::Context&, ElementOrigin origin, Box<Expr> subject, usize alternative_index
-	):
-		  Expr(
-			  tsh::ExpressionType<>(
-				  subject->expression_type.getType().as<tsh::VariantAbstractType>().getMember(
-					  alternative_index
-				  ),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
-			  origin
-		  ),
-		  subject(std::move(subject)),
-		  alternative_index(alternative_index) {}
-
-	VariantProjectExpr::VariantProjectExpr(
-		tsh::ExpressionType<> expression_type,
-		ElementOrigin         origin,
-		Box<Expr>             subject,
-		usize                 alternative_index
-	):
-		  Expr(expression_type, origin),
-		  subject(std::move(subject)),
-		  alternative_index(alternative_index) {}
-
-	void VariantProjectExpr::debugPrint(std::ostream& out) const {
-		out << "variant_project[alt=" << alternative_index << "](";
-		subject->debugPrint(out);
-		out << ")";
-	}
-
-	Box<Expr> VariantProjectExpr::clone() const {
-		return makeBox<VariantProjectExpr>(
-			expression_type, origin, subject->clone(), alternative_index
 		);
 	}
 

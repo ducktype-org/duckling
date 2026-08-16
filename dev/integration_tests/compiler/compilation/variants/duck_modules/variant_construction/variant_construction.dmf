@@ -2,22 +2,22 @@ import core.builtins.*;
 
 fun main() -> i64 = {
 	# Construction via implicit coercion.
-	var a: i32 = i32(7);
+	var a: i32 = (7 as i32);
 	var v: i32 | f32 = a;
-	builtin_output_i64(i64(1));
+	builtin_output_i64((1 as i64));
 
 	# Reassignment with a different alternative.
-	v = f32(2.5);
-	builtin_output_i64(i64(2));
+	v = (2.5 as f32);
+	builtin_output_i64((2 as i64));
 
 	# Reassignment back to the first alternative.
-	v = i32(42);
-	builtin_output_i64(i64(3));
+	v = (42 as i32);
+	builtin_output_i64((3 as i64));
 
 	# Variant-to-variant assignment (same type, no coercion).
 	var w: i32 | f32 = v;
 	w = v;
-	builtin_output_i64(i64(4));
+	builtin_output_i64((4 as i64));
 
-	return i64(0);
+	return (0 as i64);
 }

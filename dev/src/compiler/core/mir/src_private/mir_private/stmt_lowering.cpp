@@ -319,6 +319,18 @@ namespace compiler::mir {
 			const auto subject_type = stmt.subject->expression_type.getSymbolType();
 			const auto variant_type = subject_type.getType().as<tsh::VariantAbstractType>();
 
+			// The alternative tests all read the same subject, so it is lowered once, ahead of
+			// the chain, and each test is left as a hole to fill in afterwards. Lowering it per
+			// test would re-evaluate the subject expression once per case.
+			struct PendingTest final {
+				BlockBuilderRef               block;
+				BlockBuilder::InstructionHole hole;
+				usize                         alternative_index;
+				MIRLocalMutRef                payload_ptr;
+			};
+
+			std::vector<PendingTest> pending_tests;
+
 			// Cases are tried in order; the chain is built backwards. `next_entry` is
 			// where a failed alternative test jumps to: the next case, or (for the very
 			// last case, when the match has no wildcard) the continuation.
@@ -344,47 +356,113 @@ namespace compiler::mir {
 
 				// Test block: try to project the alternative, branch on the null-ness of
 				// the resulting payload pointer.
-				auto test_block      = function.newBlock();
-				auto project_hole    = test_block->addHole();
-				auto lowered_subject = lowerExpr(*stmt.subject, test_block, function, match_scope);
-				auto subject_val     = lowered_subject.getResult(function);
+				auto test_block   = function.newBlock();
+				auto project_hole = test_block->addHole();
 
 				const usize alternative_index = match_case.alternative_index.value();
 				const auto  alternative_type  = variant_type.getMember(alternative_index);
 				const auto  pointer_type      = tsh::SymbolType<>::withDefaults(
                     function.getContext().query<tsh::QueryPointerType>({ alternative_type })
                 );
+				auto payload_ptr = function.addTmp(pointer_type, match_scope);
 
-				auto        payload_ptr = function.addTmp(pointer_type, match_scope);
-				Instruction project_instr{ Operation::VariantTryProject,
-					                       {},
-					                       { subject_val },
-					                       { flagConstruct(payload_ptr) },
-					                       match_scope,
-					                       VariantParameters{
-											   .alternative_index = alternative_index,
-											   .alternative_type  = alternative_type },
-					                       { stmt.getPosition() } };
-				project_instr.output.emplace(payload_ptr);
-				project_hole.fill(project_instr);
+				// The test already produced a pointer to the payload, so the binding reuses it
+				// instead of projecting the same alternative a second time. A `ref` binding
+				// takes the pointer itself, a direct one copies the payload it points to.
+				auto case_entry = body_begin;
+				if (match_case.binding.has_value()) {
+					auto binding_local = function.findLocal(match_case.binding.value());
+					CORE_ASSERT(
+						binding_local.has_value(),
+						"Match case binding refers to a local that is not defined in the function."
+					);
+					binding_local.value()->setLifetimeScope(case_scope);
+
+					const bool binds_by_reference
+						= binding_local.value()->type.getRefKind() == tsh::ReferenceKind::Ref;
+					auto bound_value = binds_by_reference
+					                     ? MIRValue{ payload_ptr }
+					                     : MIRValue{ MIRPlace(payload_ptr).withDeref() };
+
+					auto binding_block = function.newBlock();
+					binding_block->addInstruction(Instruction(
+						Operation::Assign,
+						MIRPlace(binding_local.value()),
+						std::vector<MIRValue>{ std::move(bound_value) },
+						{ flagConstruct(binding_local.value()) },
+						case_scope,
+						{},
+						{ stmt.getPosition() }
+					));
+					binding_block->setTerminator(
+						{ Operation::Jump, {}, { body_begin->getID() }, {}, case_scope }
+					);
+					case_entry = binding_block;
+				}
 
 				test_block->setTerminator(Instruction(
 					Operation::BranchIfNull,
 					{},
 					std::vector<MIRValue>{ MIRValue{ payload_ptr },
 				                           MIRValue{ next_entry },
-				                           MIRValue{ body_begin->getID() } },
+				                           MIRValue{ case_entry->getID() } },
 					{},
 					match_scope,
 					{},
 					{ stmt.getPosition() }
 				));
 
-				next_entry  = lowered_subject.begin->getID();
-				first_entry = lowered_subject.begin;
+				pending_tests.emplace_back(PendingTest{
+					test_block, project_hole, alternative_index, payload_ptr });
+
+				next_entry  = test_block->getID();
+				first_entry = test_block;
 			}
 
 			CORE_ASSERT(first_entry.has_value(), "MatchStmt with no cases");
+
+			// A match made of nothing but a wildcard never tests the subject, so there is
+			// nothing to lower it for.
+			if (pending_tests.empty()) {
+				output({ first_entry.value() });
+				return;
+			}
+
+			// The subject goes into the first test block, in front of the projection whose hole
+			// was reserved before it: instructions are added last-to-first, so the subject ends
+			// up preceding the projection. It is a reference to the variant, which is what the
+			// projections take, so it is passed on without dereferencing, and `getResult` only
+			// materializes a temporary when the reference is not already stored somewhere.
+			auto& first_test = pending_tests.back();
+			auto  lowered_subject
+				= lowerExpr(*stmt.subject, first_test.block, function, match_scope);
+			auto subject_val = lowered_subject.getResult(function);
+			CORE_ASSERT(
+				std::holds_alternative<MIRPlace>(subject_val.getVariant())
+					&& subject_val.get<MIRPlace>().type.getRefKind() != tsh::ReferenceKind::Direct,
+				"MatchStmt subject must lower to a place holding a reference to the variant."
+			);
+
+			for (auto& test: pending_tests) {
+				const auto  alternative_type = variant_type.getMember(test.alternative_index);
+				Instruction project_instr{ Operation::VariantTryProject,
+					                       {},
+					                       { subject_val },
+					                       { flagConstruct(test.payload_ptr) },
+					                       match_scope,
+					                       VariantParameters{
+											   .alternative_index = test.alternative_index,
+											   .alternative_type  = alternative_type },
+					                       { stmt.getPosition() } };
+				project_instr.output.emplace(test.payload_ptr);
+				test.hole.fill(std::move(project_instr));
+			}
+
+			// Lowering the subject may have prepended blocks, so the chain starts there - unless
+			// a leading wildcard means the first test is not the entry at all.
+			if (first_entry.value()->getID() == first_test.block->getID())
+				first_entry = lowered_subject.begin;
+
 			output({ first_entry.value() });
 		}
 	};

@@ -910,10 +910,14 @@ namespace compiler::lir {
 					if (not variant_parameters)
 						CORE_PANIC("Variant instruction without VariantParameters");
 
+					// `VariantConstruct` writes into the variant, while `VariantTryProject`
+					// reads through a reference to it.
 					const auto variant_type
 						= mir_instruction.operation == mir::Operation::VariantConstruct
 					        ? mir_instruction.output.value().type
-					        : mir_instruction.arguments.at(0).get<mir::MIRPlace>().type;
+					        : mir_instruction.arguments.at(0)
+					              .get<mir::MIRPlace>()
+					              .type.getPointeeSymbolType();
 
 					auto args   = getLocations(mir_instruction.arguments);
 					auto output = getOutput(mir_instruction.output);

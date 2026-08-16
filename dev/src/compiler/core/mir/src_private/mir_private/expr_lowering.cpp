@@ -645,39 +645,6 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitVariantProjectExpr(const hc::VariantProjectExpr& expr) override {
-			// Emit a VariantTryProject producing a pointer to the payload, then read
-			// through it. Only valid when the active alternative is known to match.
-			auto hole    = continuation->addHole();
-			auto lowered = lowerSubExpr(*expr.subject, continuation);
-
-			const auto subject_val = lowered.getResult(function);
-			CORE_ASSERT(
-				std::holds_alternative<MIRPlace>(subject_val.getVariant()),
-				"VariantProjectExpr subject must be a place"
-			);
-
-			const auto payload_type = expr.expression_type.getSymbolType();
-			const auto pointer_type = tsh::SymbolType<>::withDefaults(
-				function.getContext().query<tsh::QueryPointerType>({ payload_type })
-			);
-
-			auto        payload_ptr = function.addTmp(pointer_type, expr_scope);
-			Instruction project_instr{ Operation::VariantTryProject,
-				                       {},
-				                       { subject_val },
-				                       { flagConstruct(payload_ptr) },
-				                       expr_scope,
-				                       VariantParameters{ .alternative_index
-				                                          = expr.alternative_index,
-				                                          .alternative_type = payload_type },
-				                       { expr.getPosition() } };
-			project_instr.output.emplace(payload_ptr);
-			hole.fill(project_instr);
-
-			valueOutput(lowered.begin, MIRValue{ MIRPlace(payload_ptr).withDeref() });
-		}
-
 		void visitAccessExpr(const hc::AccessExpr& expr) override {
 			auto       sub_result = lowerSubExpr(*expr.base, continuation);
 			const auto sub_begin  = sub_result.begin;

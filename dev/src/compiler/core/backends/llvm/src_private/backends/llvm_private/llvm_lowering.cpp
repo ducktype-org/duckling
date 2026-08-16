@@ -1283,7 +1283,8 @@ namespace compiler::backend_llvm {
 
 				// The tag lives at offset 0.
 				builder.CreateStore(
-					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)), variant_ptr
+					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
+					variant_ptr
 				);
 
 				llvm::Value* payload  = loadLIRValue(lir_instruction.arguments.at(0), builder);
@@ -1301,9 +1302,9 @@ namespace compiler::backend_llvm {
 				const auto& variant_layout
 					= std::get<tsl::VariantTypeLayout>(params.variant_layout->getVariant());
 
-				const auto& variant_place
-					= std::get<lir::LIRPlace>(lir_instruction.arguments.at(0).getVariant());
-				llvm::Value* variant_ptr = gepPointerFromLIRPlace(variant_place, builder);
+				// The argument is a reference to the variant, so the pointer is the value held
+				// in the place rather than the place's own address.
+				llvm::Value* variant_ptr = loadLIRValue(lir_instruction.arguments.at(0), builder);
 
 				llvm::Value* tag
 					= builder.CreateLoad(builder.getInt8Ty(), variant_ptr, "variant_tag");

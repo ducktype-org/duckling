@@ -97,7 +97,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	/**
 		Produces a pointer to the variant's payload if its active alternative matches the
 		one in VariantParameters, a null pointer otherwise.
-		1 argument (the variant place).
+		1 argument: a reference to the variant, not the variant place itself.
 	*/
 	VariantTryProject,
 

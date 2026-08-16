@@ -743,12 +743,6 @@ namespace compiler::helios {
 				));
 			}
 
-			void visitVariantProjectExpr(const code::VariantProjectExpr& expr) final {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Evaluating variant projection at compile time.", expr.origin.getStablePosition()
-				));
-			}
-
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
 				auto sub_result = evalHoutExpr(ctx, seq.expressions.back().ref());
 				if (sub_result.hasFailed()) {

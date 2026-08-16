@@ -30,6 +30,9 @@ namespace compiler::backend_vm::internal {
 		const TypeOfData& alternative_type
 			= **ctx->program_context.lowerAndKeepTslType(op.variant_params.alternative_layout);
 
+		// `op.variant` is a reference to the variant, so `asArgument` yields a pointer place and
+		// the loader picks the `variantGetInner_pptr_pptr_type` form, which recovers the variant
+		// type from the pointer's inner type.
 		// The VM writes the payload address into `dest`, or null on alternative mismatch.
 		ctx->pushInstruction({ OpKind::variantGetInner,
 		                       op.dest.asArgument(),

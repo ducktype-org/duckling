@@ -171,11 +171,6 @@ namespace compiler::helios::code {
 			walk(*e.inner);
 		}
 
-		void visitVariantProjectExpr(const VariantProjectExpr& e) override {
-			handler(e);
-			walk(*e.subject);
-		}
-
 		void visitCallExpr(const CallExpr& e) override {
 			handler(e);
 			walk(*e.callee);

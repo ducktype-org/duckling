@@ -152,8 +152,8 @@ namespace compiler::backend_vm::internal {
 	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): always aggregate-initialized
 	struct VariantTryProjectOperation {
 		lir::VariantParameters variant_params;
-		DVMPlace               variant;
-		DVMPlace               dest;  ///< The pointer place; always present.
+		DVMPlace               variant;  ///< A reference to the variant, not the variant itself.
+		DVMPlace               dest;     ///< The pointer place; always present.
 	};
 
 	/**

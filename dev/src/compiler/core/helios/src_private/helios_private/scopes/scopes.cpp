@@ -678,14 +678,9 @@ namespace compiler::helios {
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
 			} else if (base_element->getElementKind() == pst::ElementKind::Match) {
-				// The match's scope owns the generated local holding the subject.
-				auto match_expr = base_element.dynamicCast<pst::expr::MatchExpr>().value();
-
-				std::vector<SymID> out;
-				if (auto subject_sym = desugaring::getMatchSubjectSymbol(ctx, match_expr);
-				    subject_sym.has_value())
-					out.emplace_back(subject_sym.value());
-				return out;
+				// A match introduces no symbols of its own; its subject is lowered straight to
+				// MIR without a generated local.
+				return {};
 			} else if (base_element->getElementKind() == pst::ElementKind::MatchCase) {
 				// The only symbol a match case may introduce is its pattern binding.
 				auto match_case = base_element.dynamicCast<pst::MatchCase>().value();

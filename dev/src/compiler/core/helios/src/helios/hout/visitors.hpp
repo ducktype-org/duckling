@@ -32,7 +32,6 @@ namespace compiler::helios::code {
 		TupleExpr,
 		VariantTypeConstructorExpr,
 		VariantConstructExpr,
-		VariantProjectExpr,
 		CallExpr,
 		AccessExpr,
 		IndexExpr,

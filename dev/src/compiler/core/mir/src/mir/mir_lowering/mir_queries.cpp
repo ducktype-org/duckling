@@ -103,7 +103,10 @@ namespace compiler::mir {
 		void visitBlockStmt(const hc::BlockStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
 		void visitMatchStmt(const hc::MatchStmt& stmt) override {
-			for (const auto& match_case: stmt.cases) goOverCodeBlock(match_case.body);
+			for (const auto& match_case: stmt.cases) {
+				if (match_case.binding.has_value()) function.addLocal(match_case.binding.value());
+				goOverCodeBlock(match_case.body);
+			}
 		}
 
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
