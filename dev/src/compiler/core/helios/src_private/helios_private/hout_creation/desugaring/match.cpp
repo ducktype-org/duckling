@@ -32,9 +32,9 @@ namespace compiler::helios::desugaring {
 		/**
 		 * @brief Finds the alternative index matched by a case's type constraint.
 		 *
-		 * An exact match wins, so a variant that really does list `ref T` among its
-		 * alternatives is still reachable. Only when that fails is a `ref T` constraint
-		 * treated as "bind the `T` alternative by reference".
+		 * Only the underlying type decides which alternative is meant; the constraint's
+		 * reference kind picks how the payload is bound, not what is matched. A variant may
+		 * not list one type twice, so this stays unambiguous.
 		 */
 		base::Optional<usize> findAlternativeIndex(
 			const tsh::VariantAbstractType& variant_type, const tsh::SymbolType<>& constraint

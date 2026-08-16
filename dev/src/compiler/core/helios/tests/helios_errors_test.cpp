@@ -774,6 +774,33 @@ private:
 			);
 		}
 
+		// ============================ Variant errors ============================
+		{
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var v: i32 | i32 = 1;
+					return 0i64;
+				}
+			)",
+				{ "Variant type lists type `i32` more than once." },
+				1
+			);
+
+			// Alternatives are told apart by their underlying type alone, so differing only in
+			// the reference kind is a duplicate too.
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var v: i32 | ref i32 = 1;
+					return 0i64;
+				}
+			)",
+				{ "Variant type lists type `i32` more than once." },
+				1
+			);
+		}
+
 		// ============================ Static Arrays ============================
 		{
 			checkForErrorOnCompileModule(
@@ -1898,11 +1925,6 @@ private:
 		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
-
-		ASSERT_TRUE(query::entryPoint<QueryConstValueOf>(
-						test_utils::getChain("DUP_VARIANT", root_scope).back()
-		)
-		                .hasFailed());
 
 		// Unlike the chains above, this one is well-typed, so it only fails during the
 		// compile-time evaluation of the chain itself.

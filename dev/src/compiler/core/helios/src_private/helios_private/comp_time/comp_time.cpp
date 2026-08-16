@@ -713,15 +713,20 @@ namespace compiler::helios {
 
 				for (usize i = 0; i < subtypes.size(); i++) {
 					for (usize j = 0; j < i; j++) {
-						if (subtypes[i].getType() == subtypes[j].getType()
-						    && subtypes[i].getRefKind() == subtypes[j].getRefKind()) {
+						if (subtypes[i].getType() == subtypes[j].getType()) {
 							const auto position = expr.origin.getStablePosition();
 							CORE_ASSERT(
 								position.has_value(),
 								"Variant type constructor without a source position"
 							);
+							// The duplicate is of the underlying type, so that is what gets named:
+							// in `i32 | ref i32` neither alternative is written twice, but they
+							// still describe the same one.
 							ctx.logInt(makeBox<DuplicateVariantAlternativeError>(
-								position.value(), makeBox<InteractiveType>(ctx, subtypes[i])
+								position.value(),
+								makeBox<InteractiveType>(
+									ctx, tsh::SymbolType<>::withDefaults(subtypes[i].getType())
+								)
 							));
 							result = query::Failed();
 							return;

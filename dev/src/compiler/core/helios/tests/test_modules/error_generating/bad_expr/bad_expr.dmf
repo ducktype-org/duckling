@@ -16,9 +16,6 @@ const C: i32 = B * 2;
 const INVALID_ADD = 10 + 0.125;                         # i32 x f32
 const CHAIN_MIXED_TYPES_TRUE = 3.0 < 3.125 < 3.5 < 42;  # f32 x f32 x f32 x i32
 
-# A variant type must not list the same alternative twice.
-const DUP_VARIANT: type = i32 | i32;
-
 # This one is well-typed and so it survives HOUT creation.
 # It only fails later, during the compile-time evaluation of its first comparison.
 const CHAIN_EVAL_FAILURE: bool = 1 < 2 / 0 < 3;
