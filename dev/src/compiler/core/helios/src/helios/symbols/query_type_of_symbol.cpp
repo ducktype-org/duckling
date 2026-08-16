@@ -395,28 +395,22 @@ namespace compiler::helios {
 				variant_case(defgen::BuiltinTemplatedSymbol, builtin) {
 					// `box_alloc(value: T) -> box T`, `box_free(b: box T) -> ()` and
 					// `list_free(l: ref [T]) -> ()`.
-					const auto box_type = tsh::SymbolType<>{
-						builtin.type,
-						tsh::ReferenceKind::Box,
-						tsh::Mutability::Mutable,
-					};
+					const auto box_type = builtin.type.withReferenceKind(tsh::ReferenceKind::Box);
 
 					auto [arg_types, return_type]
 						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
 						switch (builtin.kind) {
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
-							return { { tsh::SymbolType<>::withDefaults(builtin.type) }, box_type };
+							return { { builtin.type }, box_type };
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
-							// @TODO: #2825 change this back to Box
-							return { { box_type.withReferenceKind(tsh::ReferenceKind::Ref) },
+							return { { builtin.type.withReferenceKind(tsh::ReferenceKind::Ref) },
 								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
-							return { { box_type },
+							return { { builtin.type.withReferenceKind(tsh::ReferenceKind::Ref) },
 								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
 						case defgen::BuiltinTemplatedSymbol::Kind::ListFree: {
-							const auto array_type = ctx.query<tsh::QueryDynamicArrayType>(
-								{ tsh::SymbolType<>::withDefaults(builtin.type) }
-							);
+							const auto array_type
+								= ctx.query<tsh::QueryDynamicArrayType>({ builtin.type });
 							const auto ref_array = tsh::SymbolType<>{
 								array_type,
 								tsh::ReferenceKind::Ref,
@@ -427,7 +421,17 @@ namespace compiler::helios {
 								tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
 							};
 						}
+						case defgen::BuiltinTemplatedSymbol::Kind::MoveIn: {
+							const auto ptr_type = tsh::SymbolType<>::withDefaults(
+								ctx.query<tsh::QueryPointerType>({ builtin.type })
+							);
+							return {
+								{ ptr_type, builtin.type },
+								tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
+							};
 						}
+						}
+
 						CORE_UNREACHABLE();
 					}();
 

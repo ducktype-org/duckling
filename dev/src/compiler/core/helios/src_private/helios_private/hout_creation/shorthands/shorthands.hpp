@@ -427,6 +427,12 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<RefOfExpr>(*ctx, generatedOrigin(), std::move(inner));
 		}
 
+		/** @brief A pointer creation `ptrof inner`. */
+		[[nodiscard]]
+		Box<PtrOfExpr> ptrOf(Box<Expr> inner) const {
+			return makeBox<PtrOfExpr>(*ctx, generatedOrigin(), std::move(inner));
+		}
+
 		/** @brief An explicit move `move inner`. Named `move` to avoid clashing with `std::move`. */
 		[[nodiscard]]
 		Box<MoveExpr> move(Box<Expr> inner) const {

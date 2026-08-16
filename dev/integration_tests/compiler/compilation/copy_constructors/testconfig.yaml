@@ -30,5 +30,5 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "3\n"
+          String: "3\n6\n"
         ExitCode: 0

@@ -809,8 +809,19 @@ namespace compiler::mir {
 	 * to the SymID
 	 * See: Function::HSymID for usage
 	 */
-	struct GlobalVariableCTOR final {
+	struct GlobalVariableCtorDtor final {
+		enum class Type { Ctor, Dtor };
+
+		Type          type;
 		helios::SymID global_var_id;
+
+		static GlobalVariableCtorDtor ctor(helios::SymID global_var_id) {
+			return { .type = Type::Ctor, .global_var_id = global_var_id };
+		}
+
+		static GlobalVariableCtorDtor dtor(helios::SymID global_var_id) {
+			return { .type = Type::Dtor, .global_var_id = global_var_id };
+		}
 	};
 
 	/**
@@ -863,7 +874,7 @@ namespace compiler::mir {
 		 * HELIOS SymID related to the function.
 		 * Functions without a helios_id are functions created for eg. from expressions
 		 */
-		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;
+		using HSymID = std::variant<FunctionSymID, GlobalVariableCtorDtor>;
 
 		HSymID helios_id;
 
@@ -908,6 +919,11 @@ namespace compiler::mir {
 		[[nodiscard]] BlockID lastBlock() const { return block_order.back(); }
 	};
 
+	struct MIRCtorDtorPair {
+		CRef<mir::Function>                 constructor;
+		base::Optional<CRef<mir::Function>> destructor;
+	};
+
 	/**
 	 * @brief Representation of a global value in MIR.
 	 * See also: MIRGlobal
@@ -917,10 +933,10 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Initial value for the global variable.
-		 * Can be either a compile-time value or a reference to a ctor function.
+		 * Can be either a compile-time value or a reference to a ctor/dtor functions.
 		 * Should always be a CTV if kind is Const
 		 */
-		std::variant<ctv::CompileTimeValue, CRef<mir::Function>> initial_value;
+		std::variant<ctv::CompileTimeValue, MIRCtorDtorPair> initial_value;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};

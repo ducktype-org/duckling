@@ -1,9 +1,14 @@
+class R {
+    a: i32 = 0;
+    R.destroy() = { var t: i32 = a; }
+}
+
 fun main()  = {
-    var x = 0;
+    var x: R;
     {
-        var y = 0;
+        var y: R;
         {
-            var z = 0;
+            var z: R;
         }
     }
 }

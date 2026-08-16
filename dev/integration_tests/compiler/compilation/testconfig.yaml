@@ -113,6 +113,7 @@ SubDirs:
   - comp_time
   - builtins
   - copy_constructors
+  - destructors
   - samples
   - statements
   - functions

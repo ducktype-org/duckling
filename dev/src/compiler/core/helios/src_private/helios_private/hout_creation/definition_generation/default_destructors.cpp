@@ -313,7 +313,7 @@ namespace compiler::helios::defgen {
 			}
 
 			body.emplace_back(s.expr(s.call(
-				s.ident(listFreeSymForType(ctx, array_type.getElementType().getType())),
+				s.ident(listFreeSymForType(ctx, array_type.getElementType())),
 				s.move(s.ident(self_symbol))
 			)));
 

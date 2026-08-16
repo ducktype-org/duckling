@@ -28,6 +28,7 @@
 #include <tsl/queries.hpp>
 #include <tsl/type_layout.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>
@@ -340,6 +341,12 @@ namespace compiler::lir {
 			}
 
 			[[nodiscard]]
+			LIRLocalRef insertNewLocal(lir::LIRLocal lir_local) {
+				locals.pushBack(lir_local);
+				return locals.last();
+			}
+
+			[[nodiscard]]
 			LIRGlobal getGlobal(const mir::MIRGlobal& mir_global) const {
 				return LIRGlobal::fromMIR(ctx, mir_global);
 			}
@@ -589,11 +596,6 @@ namespace compiler::lir {
 			 * @brief Lowers flags of the given operation into
 			 * LIR instruction flags.
 			 *
-			 * @note This function will not work correctly when one MIR instruction translates into
-			 * multiple LIR instructions, since the `ScopeStart` flags should only be applied to the
-			 * first of the LIR instructions and the `ScopeEnd` flags should only be applied to the
-			 * last of the LIR instructions.
-			 *
 			 * @param mir_instruction
 			 */
 			std::vector<ScopeFlag> lowerFlags(const mir::Instruction& mir_instruction) {
@@ -791,81 +793,53 @@ namespace compiler::lir {
 				}
 				case mir::Operation::DestructIf:
 				case mir::Operation::Destruct: {
-					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
+					// @TODO: #1894 The destructor is called on every `DestructIf` (even if the
+					// value was moved). This will cause double free's if the value was moved
+					// around between other variables.
+					auto args = getLocations(mir_instruction.arguments);
+
+					// The destruction is discarded if the place carries no information (ex. Unit),
+					// in which case only the destructor literal is left.
+					if (args.size() < 2) break;
+
+					const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
-					// @TODO: #2825 Destruct the remaining non-trivially-destructible types. It
-					// requires the standard library to stop destroying its values by hand, as it
-					// would double free them otherwise.
+					if (type.getRefKind() == tsh::ReferenceKind::Direct) {
+						// The destructor takes `self: ref T`, so the address of the destructed
+						// place is materialized first.
+						LIRLocalRef addr_local = insertNewLocal(LIRLocal::refLocal(ctx, type));
+						LIRPlace    addr_place{ addr_local, {} };
 
-					// A dynamic array is destructed by its destructor, which takes `self: ref [T]`,
-					// so the address of the destructed place is materialized first. The destructor
-					// releases the backing buffer with the `list_free` builtin.
-					if (type.getRefKind() == tsh::ReferenceKind::Direct
-					    && type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto lir_place = getLocation(to_destruct);
+						auto& address_instr = curr_block->instructions.emplace_back(
+							Operation::AddressOf,
+							addr_place,
+							std::vector<LIRValue>{ args.at(1) },
+							mir_instruction.metadata
+						);
+						address_instr.scope_flags.push_back(ScopeFlag{
+							.flag = ScopeFlag::Flag::ScopeStart, .local = addr_local });
 
-						if (lir_place.has_value()) {
-							locals.pushBack(LIRLocal::refLocal(ctx, type));
-							const LIRPlace place_ref{ locals[locals.lastIndex()], {} };
-
-							curr_block->instructions.emplace_back(
-								Operation::AddressOf,
-								place_ref,
-								std::vector{ lir_place.value() },
-								InstructionMetadata{}
-							);
-
-							const helios::SymID dtor_sym
-								= helios::getTypeDestructor(ctx, type).value();
-							std::vector<LIRValue> call_args;
-							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, dtor_sym));
-							call_args.emplace_back(place_ref);
-
-							curr_block->instructions.emplace_back(
-								Operation::Call,
-								base::Optional<LIRPlace>{},
-								std::move(call_args),
-								mir_instruction.metadata
-							);
-							break;
-						}
+						auto& call_instr = curr_block->instructions.emplace_back(
+							Operation::Call,
+							base::Optional<LIRPlace>{},
+							std::vector<LIRValue>{ args.at(0), LIRValue{ addr_place } },
+							mir_instruction.metadata
+						);
+						call_instr.scope_flags.push_back(ScopeFlag{
+							.flag = ScopeFlag::Flag::ScopeEnd, .local = addr_local });
+					} else if (type.getRefKind() == tsh::ReferenceKind::Box) {
+						// Box — call the destructor on it directly, as the destructor should take
+						// ref T, and box T == ref T in lower representation.
+						curr_block->instructions.emplace_back(
+							Operation::Call,
+							base::Optional<LIRPlace>{},
+							std::move(args),
+							mir_instruction.metadata
+						);
+					} else {
+						CORE_PANIC("The reference types don't have destructors.");
 					}
-
-					// @TODO: #1894 The destructor is called on every DestructIf operating on a box
-					// type (even if the box was moved). This will cause double free's if the box
-					// was moved around between other box variables.
-					if (type.getRefKind() == tsh::ReferenceKind::Box) {
-						auto lir_place = getLocation(to_destruct);
-
-						// The destruction is discarded if it operates on no information (ex. Unit).
-						if (lir_place.has_value()) {
-							// The box destructor destroys the pointee and releases the storage with
-							// the `box_free` builtin. It takes the box itself, which already is a
-							// pointer to the destructed value.
-							const helios::SymID dtor_sym
-								= helios::getTypeDestructor(ctx, type).value();
-							std::vector<LIRValue> call_args;
-							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, dtor_sym));
-							call_args.emplace_back(lir_place.value());
-
-							curr_block->instructions.emplace_back(
-								Operation::Call,
-								base::Optional<LIRPlace>{},
-								std::move(call_args),
-								mir_instruction.metadata
-							);
-							break;
-						}
-					}
-
-					CORE_DEV_LOG(
-						Compiler,
-						"DestructIf not implemented for types with non-trivial "
-						"destructors, skipping",
-						"\n"
-					);
-
 					break;
 				}
 				case mir::Operation::Call: {
@@ -951,29 +925,28 @@ namespace compiler::lir {
 				usize after_instruction_count = curr_block->instructions.size();
 				auto  flags                   = lowerFlags(mir_instruction);
 				if (!flags.empty()) {
-					usize instructions_added = after_instruction_count - before_instruction_count;
-					// If this fails, then it's no problem, we just have to adjust the code.
-					// The `ScopeStart` flags should be added to the first of the LIR instructions
-					// and the `ScopeEnd` flags should be added to the last of the LIR instructions.
-					// Now they are added to both in one place.
-					CORE_ASSERT(
-						instructions_added <= 1,
-						base::strConcat(
-							"lowerFlags expected the increase to be less equal to 1, but it was ",
-							after_instruction_count - before_instruction_count
-						)
-					);
-					if (instructions_added == 0) {
+					// A `Destruct` of a direct value takes the address of the destructed
+					// place first and then calls the destructor on it.
+
+					// No instructions inserted means a Nop with two flags added.
+					if (after_instruction_count == before_instruction_count)
 						curr_block->instructions.emplace_back(
 							Operation::Nop,
 							base::Optional<LIRPlace>{},
 							std::vector<LIRValue>{},
 							mir_instruction.metadata
 						);
+
+					auto& first_instruction = curr_block->instructions.at(before_instruction_count);
+					auto& last_instruction  = curr_block->instructions.back();
+
+					// Otherwise insert `ScopeStart` to the first instr, `ScopeEnd` to the last
+					// instr. In case of one instr, the first and last one are the same instruction.
+					for (const auto& flag: flags) {
+						auto& target = flag.flag == ScopeFlag::Flag::ScopeStart ? first_instruction
+						                                                        : last_instruction;
+						target.scope_flags.push_back(flag);
 					}
-					curr_block->instructions.back().scope_flags.insert(
-						curr_block->instructions.back().scope_flags.end(), flags.begin(), flags.end()
-					);
 				}
 				return curr_block;
 			}
@@ -1053,7 +1026,7 @@ namespace compiler::lir {
 						variant_case(mir::FunctionSymID, name) {
 							return getLIRAbi(ctx, name.id, return_type, parameter_types);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) {
+						variant_case(mir::GlobalVariableCtorDtor, name) {
 							return { LIRAbi::DefaultAbi{} };
 						}
 					}
@@ -1073,7 +1046,7 @@ namespace compiler::lir {
 								link_once_val, ignore_on_dvm_val, ignore_on_llvm_val
 							);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) {
+						variant_case(mir::GlobalVariableCtorDtor, name) {
 							return std::make_tuple(false, false, false);
 						}
 					}
@@ -1085,11 +1058,20 @@ namespace compiler::lir {
 						variant_case(mir::FunctionSymID, name) {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) {
-							return helios::mangler::getSpecialMangledName<
-								helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
-								ctx, name.global_var_id
-							);
+						variant_case(mir::GlobalVariableCtorDtor, name) {
+							switch (name.type) {
+							case mir::GlobalVariableCtorDtor::Type::Ctor:
+								return helios::mangler::getSpecialMangledName<
+									helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
+									ctx, name.global_var_id
+								);
+							case mir::GlobalVariableCtorDtor::Type::Dtor:
+								return helios::mangler::getSpecialMangledName<
+									helios::mangler::ManglingSymbolKind::GlobalVariableDestructor>(
+									ctx, name.global_var_id
+								);
+							}
+							CORE_UNREACHABLE();
 						}
 					}
 					CORE_UNREACHABLE();

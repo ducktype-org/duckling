@@ -69,17 +69,6 @@ private:
 			{ "is used after it has been moved out of.", "Value moved here." },
 			1
 		);
-
-		// ===================== Move from a non-local place (NYI) =====================
-		compiler::mir::test_utils::checkForErrorOnCompileModule(
-			R"(class Cls { x: i64; }
-               fun moveField() = {
-                   let a = Cls(10);
-                   move a.x;
-               })",
-			{ "Moving from a non-local place is not supported yet." },
-			1
-		);
 	}
 
 	void testUseBeforeInit() {
