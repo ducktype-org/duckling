@@ -45,6 +45,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(VariantConstructExpr)
+	EXPR_VISITOR(MatchExpr)
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(IndexExpr)
@@ -694,6 +695,82 @@ namespace compiler::helios::code {
 		return makeBox<VariantConstructExpr>(
 			expression_type, origin, inner->clone(), alternative_index
 		);
+	}
+
+	namespace {
+		/**
+		 * @brief The type of a match: the type its cases agree on.
+		 *
+		 * Cases carrying different types is a user error, and it is reported where the cases
+		 * are built, so by the time the expression exists they have to match.
+		 */
+		tsh::ExpressionType<> matchExpressionType(const std::vector<MatchExpr::Case>& cases) {
+			CORE_ASSERT(!cases.empty(), "A match has to have at least one case.");
+
+			const auto type = cases.front().result->expression_type.getSymbolType();
+			for (const auto& match_case: cases)
+				CORE_ASSERT(
+					match_case.result->expression_type.getSymbolType() == type,
+					"All match cases have to be of the same type, got: ",
+					type.toString(),
+					" and ",
+					match_case.result->expression_type.getSymbolType().toString()
+				);
+
+			// The value lives in a temporary the lowering fills in from whichever case ran.
+			return tsh::ExpressionType<>(type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary));
+		}
+	}
+
+	MatchExpr::MatchExpr(
+		query::Context&, ElementOrigin origin, Box<Expr> subject, std::vector<Case> cases
+	):
+		  Expr(matchExpressionType(cases), origin),
+		  subject(std::move(subject)),
+		  cases(std::move(cases)) {
+		CORE_ASSERT(
+			this->subject->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Direct,
+			"A match subject has to be a reference to the matched variant, got: ",
+			this->subject->expression_type.getSymbolType().toString()
+		);
+	}
+
+	MatchExpr::MatchExpr(
+		tsh::ExpressionType<> expression_type,
+		ElementOrigin         origin,
+		Box<Expr>             subject,
+		std::vector<Case>     cases
+	):
+		  Expr(expression_type, origin),
+		  subject(std::move(subject)),
+		  cases(std::move(cases)) {}
+
+	void MatchExpr::debugPrint(std::ostream& out) const {
+		out << "match (";
+		subject->debugPrint(out);
+		out << ") { ";
+		for (const auto& match_case: cases) {
+			if (match_case.alternative_index.has_value())
+				out << "case [alt=" << match_case.alternative_index.value() << "]";
+			else
+				out << "case [wildcard]";
+			if (match_case.binding.has_value())
+				out << " [bind " << name(match_case.binding.value()).strView() << "]";
+			out << " = ";
+			match_case.result->debugPrint(out);
+			out << "; ";
+		}
+		out << "}";
+	}
+
+	Box<Expr> MatchExpr::clone() const {
+		std::vector<Case> cloned_cases;
+		cloned_cases.reserve(cases.size());
+		for (const auto& match_case: cases)
+			cloned_cases.emplace_back(
+				Case{ match_case.alternative_index, match_case.binding, match_case.result->clone() }
+			);
+		return makeBox<MatchExpr>(expression_type, origin, subject->clone(), std::move(cloned_cases));
 	}
 
 	tsh::AbstractType builtinUnaryOperationToReturnType(

@@ -289,6 +289,11 @@ namespace compiler::mir {
 		 */
 		MIRLocal(LocalID id, tsh::SymbolType<> type): id(id), helios_id({}), type(type) {}
 
+		friend struct Function;
+		friend struct FunctionBuilder;
+		friend MIRLocalRef;
+
+	public:
 		/**
 		 * Setter of lifetime scope of this local.
 		 * MIR lowering uses it to set the lifetime scope of the local
@@ -296,14 +301,6 @@ namespace compiler::mir {
 		 */
 		void setLifetimeScope(ScopeRef scope);
 
-		friend struct Function;
-		friend struct FunctionBuilder;
-		friend struct ExprBlockVisitor;
-		friend struct StmtBlockVisitor;
-		friend struct LocalVarCollectionVisitor;
-		friend MIRLocalRef;
-
-	public:
 		void debugPrint(std::ostream& os, bool detailed = false) const;
 
 		[[nodiscard]]

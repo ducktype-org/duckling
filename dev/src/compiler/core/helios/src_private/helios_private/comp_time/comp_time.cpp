@@ -736,6 +736,12 @@ namespace compiler::helios {
 				} };
 			}
 
+			void visitMatchExpr(const code::MatchExpr& expr) final {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"Evaluating a `match` at compile time.", expr.origin.getStablePosition()
+				));
+			}
+
 			void visitVariantConstructExpr(const code::VariantConstructExpr& expr) final {
 				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Evaluating variant construction at compile time.",

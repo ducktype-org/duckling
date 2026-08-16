@@ -5,6 +5,7 @@
 
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/utils/hout_walker_generic.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
@@ -38,87 +39,61 @@ namespace compiler::mir {
 	}
 
 	/**
-	 * @brief Visitor that collects all local variables in the function and adds them directly
-	 * to the FunctionBuilder. It sets variable scopes for parameters, but doesn't set it for
-	 * other local variables. Scope of other local variables is set when visiting VariableStmt
-	 * in StmtBlockVisitor, since only then is the scope of the variable known.
+	 * @brief Collects every local variable in the function and adds it to the FunctionBuilder.
+	 *
+	 * Scopes are only set for parameters here; a local's scope is only known once the statement
+	 * declaring it is lowered, so `StmtBlockVisitor` sets it then.
+	 *
+	 * Locals come from two places: `VariableStmt` declarations, and the bindings of a match's
+	 * cases. The latter sit inside an expression, which is why the whole tree is walked rather
+	 * than just the statements.
 	 */
-	struct LocalVarCollectionVisitor: public hc::HoutStmtVisitorPanicky {
+	struct LocalVarCollectionVisitor final {
 		FunctionBuilder& function;
 
-		LocalVarCollectionVisitor(FunctionBuilder& function): function(function) {}
+		void operator()(const hc::VariableStmt& stmt) { function.addLocal(stmt.helios_symbol); }
 
-		/**
-		 * Helper function that recursively goes over the code block and collects all local
-		 * variables.
-		 */
-		void goOverCodeBlock(const hc::CodeBlock& code_block) {
-			// This order is important for the correct order of the destructors and
-			// scoping flags.
-			for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
-		}
-
-		/**
-		 * @brief Collects all local variables in the function and adds them directly to the
-		 * FunctionBuilder.
-		 */
-		void collect(CRef<helios::HOUTFunction> hout_function) {
-			auto function_helios_symbol = function.getHeliosSymbol();
-			variant_match(function_helios_symbol) {
-				variant_case(FunctionSymID, function_sym) {
-					CORE_ASSERT(
-						function_sym.id == hout_function->declaration->original_symbol,
-						"Bad function passed to LocalVarCollectionVisitor"
-					);
-				}
-
-				variant_default {
-					CORE_PANIC(
-						"The Function wasn't created from HOUTFunction, so you should not use "
-						"collect."
-					);
-				}
-			}
-
-			u64 parameter_index = 0;
-			for (const auto& parameter: hout_function->declaration->parameters) {
-				auto local = function.addParameter(parameter.helios_symbol, parameter_index);
-				local->setLifetimeScope(function.getTopLevelScope());
-				parameter_index++;
-			}
-			goOverCodeBlock(*hout_function->body);
-		}
-
-		void visitVariableStmt(const hc::VariableStmt& stmt) override {
-			function.addLocal(stmt.helios_symbol);
-		}
-
-		void visitIfStmt(const hc::IfStmt& stmt) override {
-			goOverCodeBlock(stmt.then_body);
-			goOverCodeBlock(stmt.else_body);
-		}
-
-		void visitWhileStmt(const hc::WhileStmt& stmt) override { goOverCodeBlock(stmt.body); }
-
-		void visitBlockStmt(const hc::BlockStmt& stmt) override { goOverCodeBlock(stmt.body); }
-
-		void visitMatchStmt(const hc::MatchStmt& stmt) override {
-			for (const auto& match_case: stmt.cases) {
+		void operator()(const hc::MatchExpr& expr) {
+			for (const auto& match_case: expr.cases)
 				if (match_case.binding.has_value()) function.addLocal(match_case.binding.value());
-				goOverCodeBlock(match_case.body);
+		}
+
+		/** Everything else introduces no locals. */
+		template<typename T>
+		void operator()(const T&) {}
+
+		void collect(CRef<helios::HOUTFunction> hout_function);
+	};
+
+	void LocalVarCollectionVisitor::collect(CRef<helios::HOUTFunction> hout_function) {
+		auto function_helios_symbol = function.getHeliosSymbol();
+		variant_match(function_helios_symbol) {
+			variant_case(FunctionSymID, function_sym) {
+				CORE_ASSERT(
+					function_sym.id == hout_function->declaration->original_symbol,
+					"Bad function passed to LocalVarCollectionVisitor"
+				);
+			}
+
+			variant_default {
+				CORE_PANIC(
+					"The Function wasn't created from HOUTFunction, so you should not use collect."
+				);
 			}
 		}
 
-		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
+		u64 parameter_index = 0;
+		for (const auto& parameter: hout_function->declaration->parameters) {
+			auto local = function.addParameter(parameter.helios_symbol, parameter_index);
+			local->setLifetimeScope(function.getTopLevelScope());
+			parameter_index++;
+		}
 
-		void visitReturnStmt(const hc::ReturnStmt&) override {}
-
-		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override {}
-
-		void visitExprStmt(const hc::ExprStmt&) override {}
-
-		void visitAssignmentStmt(const hc::AssignmentStmt&) override {}
-	};
+		// The walk order matches declaration order, which the destructor ordering and the
+		// scoping flags rely on.
+		hc::HoutTreeWalker<LocalVarCollectionVisitor> walker{ *this };
+		walker.walkBlock(*hout_function->body);
+	}
 
 	Function lowerToPreMIRFunction(query::Context& ctx, CRef<helios::HOUTFunction> function) {
 		FunctionBuilder function_builder{

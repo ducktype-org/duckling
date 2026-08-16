@@ -17,6 +17,7 @@
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
@@ -664,13 +665,9 @@ namespace compiler::helios::code {
 			}
 
 			void visitMatchExpr(pst::Access<pst::expr::MatchExpr> stmt) override {
-				// Match is desugared at the statement surface (variable initializers,
-				// assignments and returns); as a nested sub-expression it is not supported.
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"`match` used as a nested sub-expression. It is only supported as a "
-					"variable initializer, assignment right-hand side or return value.",
-					stmt->getStablePosition()
-				));
+				auto desugared = desugaring::desugarMatch(ctx, stmt);
+				if (desugared.hasFailed()) return;
+				node = std::move(desugared).valueOrThrow();
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {

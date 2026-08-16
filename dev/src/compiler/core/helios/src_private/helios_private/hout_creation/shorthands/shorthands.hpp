@@ -402,6 +402,27 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<CastExpr>(*ctx, generatedOrigin(), std::move(source), target_type);
 		}
 
+		/**
+		 * @brief A match case, optionally binding the tested alternative's payload.
+		 * An empty `alternative_index` makes it a wildcard case.
+		 */
+		[[nodiscard]]
+		static MatchExpr::Case matchCase(
+			base::Optional<usize> alternative_index,
+			base::Optional<SymID> binding,
+			Box<Expr>             result
+		) {
+			return MatchExpr::Case{ .alternative_index=alternative_index, .binding=binding, .result=std::move(result) };
+		}
+
+		/** @brief A `match (subject) { cases }`. Cases are tried in order. */
+		[[nodiscard]]
+		Box<MatchExpr> matchExpr(Box<Expr> subject, std::vector<MatchExpr::Case> cases) const {
+			return makeBox<MatchExpr>(
+				*ctx, generatedOrigin(), std::move(subject), std::move(cases)
+			);
+		}
+
 		/** @brief A reference creation `refof inner`. */
 		[[nodiscard]]
 		Box<RefOfExpr> refOf(Box<Expr> inner) const {
@@ -571,23 +592,6 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<WhileStmt>(
 				generatedOrigin(), std::move(condition), std::move(body).toCodeBlock()
 			);
-		}
-
-		/**
-		 * @brief A match case, optionally binding the tested alternative's payload.
-		 * An empty `alternative_index` makes it a wildcard case.
-		 */
-		[[nodiscard]]
-		static MatchStmt::Case matchCase(
-			base::Optional<usize> alternative_index, base::Optional<SymID> binding, StmtPack body
-		) {
-			return MatchStmt::Case{ alternative_index, binding, std::move(body).toCodeBlock() };
-		}
-
-		/** @brief A `match (subject) { cases }`. Cases are tried in order. */
-		[[nodiscard]]
-		static Box<MatchStmt> matchStmt(Box<Expr> subject, std::vector<MatchStmt::Case> cases) {
-			return makeBox<MatchStmt>(generatedOrigin(), std::move(subject), std::move(cases));
 		}
 
 		/*****************

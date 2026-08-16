@@ -517,6 +517,57 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Lowered `match` over a variant value.
+	 *
+	 * Cases are tried in order. A case either tests one concrete alternative of the
+	 * subject's variant type or is a wildcard (empty alternative index) that always
+	 * matches. Every case yields a value, and they all have to be of the same type, which
+	 * becomes the type of the whole expression.
+	 *
+	 * A case may bind the tested alternative's payload. The binding is a `ref` to the
+	 * payload inside the subject, so it never copies: testing an alternative already
+	 * produces a pointer to it, and the binding reuses that pointer.
+	 */
+	struct MatchExpr final: public Expr {
+		struct Case final {
+			/** Alternative index in the subject's variant type; empty for wildcards. */
+			base::Optional<usize> alternative_index;
+			/** Bound to a `ref` to the alternative's payload; empty when nothing is bound. */
+			base::Optional<SymID> binding;
+			/** The value this case evaluates to. */
+			Box<Expr> result;
+		};
+
+		/**
+		 * @brief A `ref` to the matched variant.
+		 *
+		 * The lowering evaluates it once for the whole case chain, so a subject with side
+		 * effects runs exactly once no matter how many alternatives are tested.
+		 */
+		Box<Expr>         subject;
+		std::vector<Case> cases;
+
+		MatchExpr(
+			query::Context& ctx, ElementOrigin origin, Box<Expr> subject, std::vector<Case> cases
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		MatchExpr(
+			tsh::ExpressionType<> expression_type,
+			ElementOrigin         origin,
+			Box<Expr>             subject,
+			std::vector<Case>     cases
+		);
+	};
+
+	/**
 	 * @brief Represents a field access to an expression, like "some_struct.field".
 	 * @note This does not represent namespace-like access, like "some_namespace.some_symbol". It
 	 * is reserved for field access, with the field name dealiased, etc., in its most direct form.

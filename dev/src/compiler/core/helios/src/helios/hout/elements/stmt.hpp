@@ -205,41 +205,4 @@ namespace compiler::helios::code {
 		[[nodiscard]] Box<Stmt> clone() const final;
 	};
 
-	/**
-	 * @brief Lowered `match` over a variant value.
-	 *
-	 * Cases are tried in order. A case either tests one concrete alternative of the
-	 * subject's variant type or is a wildcard (empty alternative index) that always
-	 * matches.
-	 *
-	 * A case may bind the tested alternative's payload. The binding is a `ref` to the
-	 * payload inside the subject, so it never copies. Testing an alternative already
-	 * produces a pointer to it, and the binding reuses that pointer instead of
-	 * projecting a second time.
-	 */
-	struct MatchStmt final: public Stmt {
-		struct Case final {
-			/** Alternative index in the subject's variant type; empty for wildcards. */
-			base::Optional<usize> alternative_index;
-			/** Bound to a `ref` to the alternative's payload; empty when nothing is bound. */
-			base::Optional<SymID> binding;
-			CodeBlock             body;
-		};
-
-		/**
-		 * @brief A `ref` to the matched variant.
-		 *
-		 * The lowering evaluates it once for the whole case chain, so a subject with side
-		 * effects runs exactly once no matter how many alternatives are tested.
-		 */
-		Box<Expr>         subject;
-		std::vector<Case> cases;
-
-		MatchStmt(ElementOrigin origin, Box<Expr> subject, std::vector<Case> cases);
-
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
-		void acceptVisitor(HoutStmtVisitor&) const override;
-
-		[[nodiscard]] Box<Stmt> clone() const override;
-	};
 }

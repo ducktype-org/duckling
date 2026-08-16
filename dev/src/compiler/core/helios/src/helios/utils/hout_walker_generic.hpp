@@ -96,12 +96,6 @@ namespace compiler::helios::code {
 			walkBlock(s.body);
 		}
 
-		void visitMatchStmt(const MatchStmt& s) override {
-			handler(s);
-			walk(*s.subject);
-			for (const auto& match_case: s.cases) walkBlock(match_case.body);
-		}
-
 		// --- Leaf expressions: hand to the handler, nothing to descend into. ---
 
 		void visitLiteralUnitExpr(const LiteralUnitExpr& e) override { handler(e); }
@@ -169,6 +163,12 @@ namespace compiler::helios::code {
 		void visitVariantConstructExpr(const VariantConstructExpr& e) override {
 			handler(e);
 			walk(*e.inner);
+		}
+
+		void visitMatchExpr(const MatchExpr& e) override {
+			handler(e);
+			walk(*e.subject);
+			for (const auto& match_case: e.cases) walk(*match_case.result);
 		}
 
 		void visitCallExpr(const CallExpr& e) override {

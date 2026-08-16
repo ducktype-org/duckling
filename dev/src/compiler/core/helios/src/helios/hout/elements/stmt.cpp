@@ -16,7 +16,6 @@ namespace compiler::helios::code {
 	STMT_VISITOR(VariableStmt)
 	STMT_VISITOR(AssignmentStmt)
 	STMT_VISITOR(BlockStmt)
-	STMT_VISITOR(MatchStmt)
 
 	namespace {
 		constexpr usize INDENT_SIZE = 4;
@@ -144,47 +143,4 @@ namespace compiler::helios::code {
 		return makeBox<BlockStmt>(origin, std::move(*body.clone()));
 	}
 
-	MatchStmt::MatchStmt(ElementOrigin origin, Box<Expr> subject, std::vector<Case> cases):
-		  Stmt(origin),
-		  subject(std::move(subject)),
-		  cases(std::move(cases)) {
-		CORE_ASSERT(
-			this->subject->expression_type.getSymbolType().getRefKind()
-				!= tsh::ReferenceKind::Direct,
-			"A match subject has to be a reference to the matched variant, got: ",
-			this->subject->expression_type.getSymbolType().toString()
-		);
-	}
-
-	void MatchStmt::debugPrint(std::ostream& out, usize indent) const {
-		addIndent(out, indent);
-		out << "match (";
-		subject->debugPrint(out);
-		out << ") {\n";
-		for (const auto& match_case: cases) {
-			addIndent(out, indent + 1);
-			if (match_case.alternative_index.has_value())
-				out << "case [alt=" << match_case.alternative_index.value() << "]";
-			else
-				out << "case [wildcard]";
-			if (match_case.binding.has_value())
-				out << " [bind " << name(match_case.binding.value()).strView() << "]";
-			out << " {\n";
-			for (const auto& stmt: match_case.body.statements) stmt->debugPrint(out, indent + 2);
-			addIndent(out, indent + 1);
-			out << "}\n";
-		}
-		addIndent(out, indent);
-		out << "}\n";
-	}
-
-	Box<Stmt> MatchStmt::clone() const {
-		std::vector<Case> cloned_cases;
-		cloned_cases.reserve(cases.size());
-		for (const auto& match_case: cases)
-			cloned_cases.emplace_back(Case{ match_case.alternative_index,
-			                                match_case.binding,
-			                                std::move(*match_case.body.clone()) });
-		return makeBox<MatchStmt>(origin, subject->clone(), std::move(cloned_cases));
-	}
 }

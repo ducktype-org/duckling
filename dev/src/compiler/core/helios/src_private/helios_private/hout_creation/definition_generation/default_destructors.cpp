@@ -162,7 +162,7 @@ namespace compiler::helios::defgen {
 			const Shorthand s{ ctx };
 			const auto&     alternatives = variant_type.getUnderlyingTypes();
 
-			std::vector<code::MatchStmt::Case> cases;
+			std::vector<code::MatchExpr::Case> cases;
 			for (usize i = 0; i < alternatives.size(); i++) {
 				if (alternatives[i].isTriviallyDestructible(ctx)) continue;
 
@@ -189,20 +189,19 @@ namespace compiler::helios::defgen {
 				// `appendDestruction` would dereference it only to take its address again, and
 				// it would also skip the work entirely, since a `ref` is trivially destructible.
 				const SymID alternative_dtor = destructSymForType(ctx, alternatives[i].getType());
-				std::vector<Box<code::Stmt>> case_body;
-				case_body.emplace_back(
-					s.expr(s.call(s.ident(alternative_dtor), s.ident(payload_sym)))
-				);
 
-				cases.emplace_back(Shorthand::matchCase(i, payload_sym, std::move(case_body)));
+				cases.emplace_back(Shorthand::matchCase(
+					i, payload_sym, s.call(s.ident(alternative_dtor), s.ident(payload_sym))
+				));
 			}
 
 			// Nothing owns anything, so there is nothing to match on. An empty match would
 			// also be invalid, as the lowering requires at least one case.
 			if (cases.empty()) return body;
 
-			// `self` is already a reference to the variant, which is what the match wants.
-			body.emplace_back(Shorthand::matchStmt(s.ident(self_symbol), std::move(cases)));
+			// `self` is already a reference to the variant, which is what the match wants. The
+			// destructor calls are unit-valued, so the match is used as a plain statement.
+			body.emplace_back(s.expr(s.matchExpr(s.ident(self_symbol), std::move(cases))));
 			return body;
 		}
 
