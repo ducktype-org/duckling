@@ -3,54 +3,193 @@
 #include <tester/tester.hpp>
 
 #include <vm/api/vm.hpp>
+#include <vm/debugger/debugger.hpp>
 
 class VmRuntimeExprTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmRuntimeExprTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(pausesOnBreakpointAndResumes); }
-
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(test1RuntimeExpr);
+		TESTER_ADD_TEST(test2RuntimeExpr);
+	}
 
 private:
-	vm::PID loadProgram(std::string_view path_name) {
+	void test1RuntimeExpr() {
+		auto pid = spawnAndLoad("runtime_expr_dbc/test_1/main.dbc");
+		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 5, true));
+		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 9, true));
+
+		ASSERT_HAS_VALUE(vm::api::run(pid));
+
+		// First breakpoint at instruction 5 (after init a, b, c; mov a, 0; mov b, 0)
+		auto execution_position = vm::api::waitForBreakpoint(pid);
+		ASSERT_HAS_VALUE(execution_position);
+		ASSERT_EQUAL_PRINT(5, execution_position->instr_number);
+
+		auto tid = vm::api::ThreadID(0);
+
+		// eval sum_a_b.dbc (a=0, b=0 -> 0)
+		{
+			fs::File expr_file(path("runtime_expr_dbc/test_1/sum_a_b.dbc"));
+			auto     resp = vm::api::executeRuntimeExprFromFile(pid, tid, expr_file);
+			ASSERT_HAS_VALUE(resp);
+			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(resp.value());
+			ASSERT_EQUAL(ret_vals.size(), 1);
+			ASSERT_EQUAL_PRINT(ret_vals[0]->readBytes<i64>(), 0);
+		}
+
+		// eval print_ret.dbc (ret0 uninitialized/0)
+		{
+			fs::File expr_file(path("runtime_expr_dbc/test_1/print_ret.dbc"));
+			auto     resp = vm::api::executeRuntimeExprFromFile(pid, tid, expr_file);
+			ASSERT_HAS_VALUE(resp);
+			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(resp.value());
+			ASSERT_EQUAL(ret_vals.size(), 1);
+			ASSERT_EQUAL_PRINT(ret_vals[0]->readBytes<i64>(), 0);
+		}
+
+		// eval modify_ret.dbc (sets ret0 to 2137)
+		{
+			fs::File expr_file(path("runtime_expr_dbc/test_1/modify_ret.dbc"));
+			auto     resp = vm::api::executeRuntimeExprFromFile(pid, tid, expr_file);
+			ASSERT_HAS_VALUE(resp);
+			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(resp.value());
+			ASSERT_EQUAL(ret_vals.size(), 1);
+			ASSERT_EQUAL_PRINT(ret_vals[0]->readBytes<i64>(), 0);
+		}
+
+		// Resume to next breakpoint
+		ASSERT_HAS_VALUE(vm::api::resume(pid));
+
+		// Second breakpoint at instruction 9 (after a=4, b=2, c=0, ret0=69)
+		execution_position = vm::api::waitForBreakpoint(pid);
+		ASSERT_HAS_VALUE(execution_position);
+		ASSERT_EQUAL_PRINT(9, execution_position->instr_number);
+
+		// eval sum_a_b.dbc (a=4, b=2 -> 6)
+		{
+			fs::File expr_file(path("runtime_expr_dbc/test_1/sum_a_b.dbc"));
+			auto     resp = vm::api::executeRuntimeExprFromFile(pid, tid, expr_file);
+			ASSERT_HAS_VALUE(resp);
+			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(resp.value());
+			ASSERT_EQUAL(ret_vals.size(), 1);
+			ASSERT_EQUAL_PRINT(ret_vals[0]->readBytes<i64>(), 6);
+		}
+
+		// eval print_ret.dbc (ret0 was set to 69)
+		{
+			fs::File expr_file(path("runtime_expr_dbc/test_1/print_ret.dbc"));
+			auto     resp = vm::api::executeRuntimeExprFromFile(pid, tid, expr_file);
+			ASSERT_HAS_VALUE(resp);
+			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(resp.value());
+			ASSERT_EQUAL(ret_vals.size(), 1);
+			ASSERT_EQUAL_PRINT(ret_vals[0]->readBytes<i64>(), 69);
+		}
+
+		// eval modify_ret.dbc (reads 69, sets ret0 to 2137)
+		{
+			fs::File expr_file(path("runtime_expr_dbc/test_1/modify_ret.dbc"));
+			auto     resp = vm::api::executeRuntimeExprFromFile(pid, tid, expr_file);
+			ASSERT_HAS_VALUE(resp);
+			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(resp.value());
+			ASSERT_EQUAL(ret_vals.size(), 1);
+			ASSERT_EQUAL_PRINT(ret_vals[0]->readBytes<i64>(), 69);
+		}
+
+		// Resume and finish
+		ASSERT_HAS_VALUE(vm::api::resume(pid));
+		ASSERT_HAS_VALUE(vm::api::join(pid));
+
+		// Exit value should be 2137 since modify_ret modified ret0 of main
+		auto exit_code_response = vm::api::getExitValue(pid);
+		ASSERT_HAS_VALUE(exit_code_response);
+		auto& exit_value_vec
+			= std::get<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value());
+		ASSERT_EQUAL(exit_value_vec.size(), 1);
+		ASSERT_EQUAL_PRINT(exit_value_vec.at(0)->readBytes<i64>(), 2137);
+	}
+
+	void test2RuntimeExpr() {
+		auto pid = spawnAndLoad("runtime_expr_dbc/test_2/main.dbc");
+		// Breakpoint before first call foo (at instruction 7: mov foo_arg0, 1)
+		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 7, true));
+		// Breakpoint after first call foo (at instruction 10: add acc, foo_ret0)
+		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 10, true));
+
+		ASSERT_HAS_VALUE(vm::api::run(pid));
+
+		auto tid = vm::api::ThreadID(0);
+
+		// First breakpoint at instruction 7 (unused_arg0=67, unused_arg1=42)
+		auto execution_position = vm::api::waitForBreakpoint(pid);
+		ASSERT_HAS_VALUE(execution_position);
+		ASSERT_EQUAL_PRINT(7, execution_position->instr_number);
+
+		// eval call_foo_unused_args.dbc (calls foo with unused_arg0=67 and unused_arg1=42 -> returns 67+42=109)
+		{
+			fs::File expr_file(path("runtime_expr_dbc/test_2/expr/call_foo_unused_args.dbc"));
+			auto     resp = vm::api::executeRuntimeExprFromFile(pid, tid, expr_file);
+			ASSERT_HAS_VALUE(resp);
+			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(resp.value());
+			ASSERT_EQUAL(ret_vals.size(), 1);
+			ASSERT_EQUAL_PRINT(ret_vals[0]->readBytes<i64>(), 109);
+		}
+
+		// eval modify_unused_arg_1.dbc (reads 42, sets unused_arg1 = 42 * 2 = 84)
+		{
+			fs::File expr_file(path("runtime_expr_dbc/test_2/expr/modify_unused_arg_1.dbc"));
+			auto     resp = vm::api::executeRuntimeExprFromFile(pid, tid, expr_file);
+			ASSERT_HAS_VALUE(resp);
+			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(resp.value());
+			ASSERT_EQUAL(ret_vals.size(), 1);
+			ASSERT_EQUAL_PRINT(ret_vals[0]->readBytes<i64>(), 42);
+		}
+
+		// eval call_foo_unused_args.dbc again (calls foo with unused_arg0=67 and unused_arg1=84 -> returns 67+84=151)
+		{
+			fs::File expr_file(path("runtime_expr_dbc/test_2/expr/call_foo_unused_args.dbc"));
+			auto     resp = vm::api::executeRuntimeExprFromFile(pid, tid, expr_file);
+			ASSERT_HAS_VALUE(resp);
+			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(resp.value());
+			ASSERT_EQUAL(ret_vals.size(), 1);
+			ASSERT_EQUAL_PRINT(ret_vals[0]->readBytes<i64>(), 151);
+		}
+
+		// Resume to second breakpoint (instruction 10)
+		ASSERT_HAS_VALUE(vm::api::resume(pid));
+
+		execution_position = vm::api::waitForBreakpoint(pid);
+		ASSERT_HAS_VALUE(execution_position);
+		ASSERT_EQUAL_PRINT(10, execution_position->instr_number);
+
+		// eval print_foo_ret0.dbc (reads acc, which is currently 0 before add acc, foo_ret0)
+		{
+			fs::File expr_file(path("runtime_expr_dbc/test_2/expr/print_foo_ret0.dbc"));
+			auto     resp = vm::api::executeRuntimeExprFromFile(pid, tid, expr_file);
+			ASSERT_HAS_VALUE(resp);
+			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(resp.value());
+			ASSERT_EQUAL(ret_vals.size(), 1);
+			ASSERT_EQUAL_PRINT(ret_vals[0]->readBytes<i64>(), 0);
+		}
+
+		// Resume to completion
+		ASSERT_HAS_VALUE(vm::api::resume(pid));
+		ASSERT_HAS_VALUE(vm::api::join(pid));
+	}
+
+	vm::PID spawnAndLoad(std::string_view path_name) {
 		auto process_pid_response = vm::api::spawn();
-		assertTrue(process_pid_response.has_value(), "Spawn failed (loadProgram)");
+		assertTrue(process_pid_response.has_value(), "Spawn failed (spawnAndLoad)");
 		auto pid = process_pid_response.value().pid;
 
 		fs::File file(path(std::string(path_name)));
 		auto     loaded_file_response = vm::api::loadFiles(pid, { file });
-		assertTrue(loaded_file_response.has_value(), "Load failed (loadProgram)");
+		assertTrue(loaded_file_response.has_value(), "Load failed (spawnAndLoad)");
 		return pid;
-	}
-
-	/**
-	 * @brief Checks if the program will pause on breakpoint.
-	 * Checks if `api::waitForPause` and `api::resume` functions work correctly.
-	 */
-	void pausesOnBreakpointAndResumes() {
-		auto pid = loadProgram("breakpoint.dbc");
-		for (auto breakpoint: { 5ULL, 8ULL })
-			ASSERT_TRUE(
-				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
-			);
-
-		vm::api::run(pid).value();  // "Run failed (1)"
-
-		auto execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		ASSERT_EQUAL_PRINT(5, execution_position.instr_number);
-
-		vm::api::resume(pid).value();  // "Resume failed (1)"
-
-		execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		ASSERT_EQUAL_PRINT(8, execution_position.instr_number);
-
-		vm::api::resume(pid).value();  // "Resume failed (2)"
-
-		vm::api::stop(pid).value();    // "Stop failed (1)"
 	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/debugger/");
+

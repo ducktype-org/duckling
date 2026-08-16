@@ -1,4 +1,3 @@
-# Tests if call_func effectively deinit's it's parameters
 # input = "a b c d"
 # output = a + b + c + d
 

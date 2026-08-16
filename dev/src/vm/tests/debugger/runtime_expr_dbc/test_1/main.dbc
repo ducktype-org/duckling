@@ -9,13 +9,20 @@ function main { i64, ptr_argv } -> { i64 } {
 	mov_p64_imm  	a, 0;
 	mov_p64_imm  	b, 0;
 
-	# breakpoint 5;
+	# breakpoint;
+	# eval print_ret.dbc
+	# eval sum_a_b.dbc
+	# eval modify_ret.dbc
+
 	mov_p64_imm  	a, 4;
 	mov_p64_imm  	b, 2;
 	mov_p64_imm 	c, 0;
 	mov_p64_imm  	ret0, 69;
 
-	# breakpoint 8;
+	# breakpoint;
+	# eval print_ret.dbc
+	# eval sum_a_b.dbc
+	# eval modify_ret.dbc
 	deinit; # c
 	deinit; # b
 	deinit; # a
