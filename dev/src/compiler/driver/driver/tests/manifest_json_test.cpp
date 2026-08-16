@@ -1,5 +1,3 @@
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/logger.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/manifest/manifest.hpp>
 #include <driver/task/task.hpp>
@@ -9,6 +7,8 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <diagnostic/core/diagnostic_arguments.hpp>
+#include <diagnostic/logger.hpp>
 #include <tester/tester.hpp>
 
 #include <json/json.hpp>
@@ -38,12 +38,10 @@ public:
 	}
 
 protected:
-	void beforeAll() override {
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
-	}
+	void beforeAll() override { global_state::setters::setGlobalLogger(makeBox<dia::Logger>()); }
 
 private:
-	dia_int::Logger& logger() { return *global_state::getGlobalLogger(); }
+	dia::Logger& logger() { return *global_state::getGlobalLogger(); }
 
 	void clearLogger() { logger().clear(); }
 

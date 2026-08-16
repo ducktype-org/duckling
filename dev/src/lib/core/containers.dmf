@@ -150,14 +150,14 @@ class String {
     }
 
     fun toString() -> String = {
-        return copy *(self as ptr String);
+        return copy self;
     }
 
     String.copy(other: const ref String) = {
         var result = stringReserve(other.length());
         copyChars(other.pointer, result.pointer, other.length());
         result.len = other.length();
-        return move result;
+        return result;
     }
 
     String.destroy() = {
@@ -168,7 +168,7 @@ class String {
 fun stringReserve(cap: u64) -> String = {
     var result: String;
     result.reserve(cap);
-    return move result;
+    return result;
 }
 
 fun copyCharsAt(source: manyptr char, dest: manyptr char, dest_offset: u64, count: u64) -> () = {
@@ -190,14 +190,14 @@ fun ++(a: String, b: String) -> String = {
     result.append(&b);
     a.dispose();
     b.dispose();
-    return move result;
+    return result;
 }
 
 fun ++(a: ref String, b: ref String) -> String = {
     var result = stringReserve(a.length() + b.length());
     result.append(&a);
     result.append(&b);
-    return move result;
+    return result;
 }
 
 fun +:(c: char, s: String) -> String = {
@@ -205,14 +205,14 @@ fun +:(c: char, s: String) -> String = {
     result.append(c);
     result.append(&s);
     s.dispose();
-    return move result;
+    return result;
 }
 
 fun +:(c: char, s: ref String) -> String = {
     var result = stringReserve(s.length() + 1u64);
     result.append(c);
     result.append(&s);
-    return move result;
+    return result;
 }
 
 fun :+(s: String, c: char) -> String = {
@@ -220,14 +220,14 @@ fun :+(s: String, c: char) -> String = {
     result.append(&s);
     result.append(c);
     s.dispose();
-    return move result;
+    return result;
 }
 
 fun :+(s: ref String, c: char) -> String = {
     var result = stringReserve(s.length() + 1u64);
     result.append(&s);
     result.append(c);
-    return move result;
+    return result;
 }
 
 fun stringifyStr(x: str) -> String = {
@@ -235,14 +235,14 @@ fun stringifyStr(x: str) -> String = {
     var result = stringReserve(size);
     copyChars(builtins.ptr_from_slice:{char}(x), result.pointer, size);
     result.len = size;
-    return move result;
+    return result;
 }
 
 fun stringifyChar(x: char) -> String = {
     var result        = stringReserve(1u64);
     result.pointer[0] = x;
     result.len        = 1u64;
-    return move result;
+    return result;
 }
 
 fun stringifyBool(x: bool) -> String = {
@@ -258,21 +258,21 @@ fun stringifyI64(x: i64) -> String = {
     let buffer_cap = 21u64;
     var result     = stringReserve(buffer_cap);
     result.len     = runtime.i64_to_string(x, result.pointer, buffer_cap);
-    return move result;
+    return result;
 }
 
 fun stringifyU64(x: u64) -> String = {
     let buffer_cap = 21u64;
     var result     = stringReserve(buffer_cap);
     result.len     = runtime.u64_to_string(x, result.pointer, buffer_cap);
-    return move result;
+    return result;
 }
 
 fun stringifyF64(x: f64) -> String = {
     let buffer_cap = 21u64;
     var result     = stringReserve(buffer_cap);
     result.len     = runtime.float_to_string(x, result.pointer, buffer_cap);
-    return move result;
+    return result;
 }
 
 #{
@@ -302,14 +302,14 @@ class DuckList {
 
     fun push(value: T) -> () = {
         reserve(len + 1u64);
-        pointer[len as i64] = value;
-        len                 = len + 1u64;
+        builtins.move_in:{T}(ptrof pointer[len as i64], move value);
+        len = len + 1u64;
     }
 
     fun pop() -> T = {
         if (len == 0u64) panicking.panic();
         len = len - 1u64;
-        return pointer[len as i64];
+        return builtins.move_out:{T}(ptrof pointer[len as i64]);
     }
 
     fun at(i: i64) -> ref T = {

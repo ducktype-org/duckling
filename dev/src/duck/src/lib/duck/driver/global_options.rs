@@ -4,7 +4,7 @@ use clap::ArgMatches;
 
 use crate::duck::driver::cli_ext::ArgMatchesExt;
 use crate::duck::util::terminal::Verbosity;
-use crate::{DuckContext, QuackResult, qp_bail, qp_internal};
+use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
 
 /// Struct containing all global duck options, adjustable from cli.
 #[derive(Debug)]
@@ -89,10 +89,10 @@ impl FromStr for Color {
             "always" => Ok(Self::Always),
             "never" => Ok(Self::Never),
             "auto" => Ok(Self::Auto),
-            _ => Err(qp_internal!(
+            _ => qp_bail_internal!(
                 "`{}` is not a valid color. This should be guarded by a parser",
                 s,
-            )),
+            ),
         }
     }
 }

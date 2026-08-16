@@ -9,27 +9,13 @@
 #pragma once
 
 #include <driver/options.hpp>
-#include <frontend/module_tree/module_id.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
 
-#include <array>
 #include <vector>
 
 namespace compiler::driver {
-	/**
-	 * @brief Configuration for the standard library packages.
-	 */
-	struct STDPackageConfig final {
-		std::string              name;
-		std::string              subpath;
-		std::vector<std::string> dependencies;
-	};
-
-	/// This is in header for the tests only
-	extern const std::array<STDPackageConfig, 2> STD_PACKAGES_CONFIG;
-
 	/**
 	 * @brief Based on the `StdLibOptions` returns the path to the standard library, if it is
 	 * used. If `DefaultStd` is used, it resolves the path to the standard library based on the
@@ -82,10 +68,4 @@ namespace compiler::driver {
 	 * @TODO: #3158 A generic dependency no-recompile solution may replace this.
 	 */
 	bool allStdlibArtifactsPresent();
-
-	/**
-	 * @brief Returns the root module IDs of the registered standard library packages.
-	 * @note This is only for REPL usage.
-	 */
-	std::vector<frontend::ModuleID> getStandardLibraryRootModules();
 }

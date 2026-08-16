@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test using declaration - imports symbols into current scope
 # Per docs: using N.x; is equivalent to: alias x = N.x;
 # using N.*; imports all symbols from N

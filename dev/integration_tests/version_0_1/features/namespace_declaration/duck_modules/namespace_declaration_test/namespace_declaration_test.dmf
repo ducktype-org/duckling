@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test namespace declaration
 # Per docs: namespace is a construct to group code elements into a common scope
 

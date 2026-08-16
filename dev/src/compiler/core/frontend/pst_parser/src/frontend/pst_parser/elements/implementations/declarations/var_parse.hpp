@@ -2,15 +2,15 @@
 
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
+#include <diagnostic/message.hpp>
 
 namespace pst {
 
 	/**
 	 * @brief Every variable needs to have either a type or value.
 	 */
-	class VariableNoTypeAndValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class VariableNoTypeAndValueError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -19,7 +19,7 @@ namespace pst {
 
 	public:
 		VariableNoTypeAndValueError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	/**

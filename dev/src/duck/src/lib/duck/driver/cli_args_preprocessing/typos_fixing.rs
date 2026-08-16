@@ -35,8 +35,9 @@ pub fn fix_typos(
 
     let targets = possible_targets(ctx, external_cmds)?;
     debug!(
-        "Testing levenshtein of `{name}` against `{}`",
-        targets.join(", ")
+        %name,
+        ?targets,
+        "Testing levenshtein",
     );
     let closest_targets = find_closest_targets(name, &targets, ctx.duck_cfg().max_fix_dist()?);
 
@@ -152,7 +153,7 @@ fn make_levenshtein_nofix_msg(bad_cmd: &str, closest_targets: &[&str]) -> String
 ///
 /// Replace it and re-parse the arguments.
 fn fix(bad_cmd: &str, new_subcmd: &str, subcmd_args: &ArgMatches) -> QuackResult<ArgMatches> {
-    debug!("changing `{bad_cmd}` to `{new_subcmd}`");
+    debug!(%bad_cmd, %new_subcmd, "changed subcommand");
     let new_cli_args = make_cli_args(new_subcmd, subcmd_args);
     parse_fixed_args(new_cli_args)
 }
@@ -220,22 +221,21 @@ mod tests {
         assert_eq!(result.subcommand_name(), Some("build"));
     }
 
-    // !TODO: Reenable after enabling more subcommands.
-    // #[test]
-    // fn test_multiple_targets() {
-    //     let args_matches = cli().try_get_matches_from(["duck", "inaa"]).unwrap();
-    //     let mut ctx = DuckContext::new().unwrap();
-    //     ctx.duck_cfg_mut().set_fixes_enabled(true);
-    //     ctx.duck_cfg_mut().set_max_fix_dist(100);
-    //     let external_cmds = HashMap::new();
-    //     let result = fix_typos(args_matches, &ctx, &external_cmds).expect_err(
-    //         "There are two equally distant targets (`info` and `init`), so fixing should fail.",
-    //     );
-    //     assert_eq!(
-    //         result.to_string(),
-    //         "No such command as `inaa`. Did you mean:\n- `info`\n- `init`?"
-    //     );
-    // }
+    #[test]
+    fn test_multiple_targets() {
+        let args_matches = cli().try_get_matches_from(["duck", "inaa"]).unwrap();
+        let (ctx, _dir) = setup_test(|| setup_duck_home_with_a_given_max_fix_distance(100));
+        let external_cmds = HashMap::new();
+        let result = fix_typos(args_matches, &ctx, &external_cmds).expect_err(
+            "There are two equally distant targets (`info` and `init`), so fixing should fail.",
+        );
+        assert_eq!(
+            result.to_string(),
+            "No such command as `inaa`. Did you mean:\n\
+            - `init`\n\
+            - `info`?"
+        );
+    }
 
     #[test]
     fn test_single_closest_target() {

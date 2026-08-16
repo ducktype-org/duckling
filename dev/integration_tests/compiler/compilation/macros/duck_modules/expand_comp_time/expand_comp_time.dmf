@@ -1,4 +1,3 @@
-import core.builtins.*;
 import core.containers.*;
 
 
@@ -28,7 +27,7 @@ fun Pair(left_type: str, right_type: str) -> String = {
     result.append(right_type);
     result.append(";\n");
     result.append("}\n");
-    return move result;
+    return result;
 }
 
 fun buildMinMax(arg_type: str, is_min: bool) = {
@@ -58,7 +57,7 @@ fun buildMinMax(arg_type: str, is_min: bool) = {
     result.append("    return b;\n");
     result.append("}\n");
 
-    return move result;
+    return result;
 }
 
 namespace utils {

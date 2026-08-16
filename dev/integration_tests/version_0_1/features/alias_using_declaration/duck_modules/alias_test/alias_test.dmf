@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test alias declaration - creates an alternative name for a symbol
 # Per docs: alias can be used on any symbol including functions, variables, class members
 

@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     # Test char type declaration
     var ch: char = 'A';

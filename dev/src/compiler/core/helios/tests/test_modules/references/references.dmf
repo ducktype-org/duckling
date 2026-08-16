@@ -1,4 +1,4 @@
-class RefPoint { x: ref i64; y: ref i64; }
+class RefPoint { x: ref i32; y: ref i32; }
 
 fun test_simple_ref() -> i32 = {
     var x: i32 = 10;
@@ -14,8 +14,7 @@ fun test_simple_ref() -> i32 = {
 
     var point = RefPoint(&x, &y);
     var ref_point = &point;
-    # var val: i32 = ref_point.x; # Two derefs should appear. One for `ref_point`, one for `x`.
-    var val: i64 = ref_point.x; # Two derefs should appear. One for `ref_point`, one for `x`.
+    var val: i32 = ref_point.x; # Two derefs should appear. One for `ref_point`, one for `x`.
     
     return r;                   # Deref in return.
 }

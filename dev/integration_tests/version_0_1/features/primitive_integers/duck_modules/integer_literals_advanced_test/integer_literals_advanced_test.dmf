@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test advanced integer literals
 # Focus: hex/octal/binary bases, floating point, byte type
 

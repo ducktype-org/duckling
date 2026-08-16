@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 namespace Deep {
     fun bump(v: i32) = {
         return v;

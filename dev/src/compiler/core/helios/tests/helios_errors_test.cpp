@@ -1,5 +1,4 @@
 
-#include <diagnostic_interactive/stable_position.hpp>
 #include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -15,6 +14,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -42,6 +42,7 @@ public:
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testErrorLoggingTemplates);
 		TESTER_ADD_TEST(testPointerCastErrors);
+		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
@@ -544,6 +545,29 @@ private:
 				{ "Type `i64` cannot be converted to type `u64`." },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					var a: i32 = 42;
+					var b: box i32 = a; # `new` should be here
+				}
+			)",
+				{ "Type `i32` cannot be converted to type `box i32`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					var a: i32 = 42;
+					var r: ref i32 = &a;
+					var b: box i32 = r; # `new` should be here
+				}
+			)",
+				{ "Type `ref i32` cannot be converted to type `box i32`." },
+				1
+			);
 		}
 
 		// ========================== Lexer errors ==========================
@@ -969,24 +993,6 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun foo() -> List[i32] = {
-				    var a: List[i32];
-				    return a;
-				}
-				fun main() -> i64 = {
-				    var list = foo();
-				    return 0;
-				}
-			)",
-				// `return a` implicitly copies the owned local `a`; `var list = foo()` moves the
-			    // temporary and is fine. @TODO: #858 `return` should implicitly move owned locals.
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`",
-			      "return a" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
 				fun foo(list: List[i32]) -> i32 = {
 				    return 1;
 				}
@@ -1250,7 +1256,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun main() -> i64 = {
 				var a: List[i32];
-				var b: box List[i32] = a;
+				var b: box List[i32] = new a;
 				return 0;
 			} )",
 			{ msg },
@@ -1590,6 +1596,39 @@ private:
 		);
 	}
 
+	/// @brief `ptrof` rejects the same operands `&` rejects, and cannot be evaluated at comp time.
+	void testPtrOfErrors() {
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var p = ptrof 10;
+				}
+			)",
+			{ "Tried to take a pointer to a temporary" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var u = ();
+					var p = ptrof u;
+				}
+			)",
+			{ "does not carry information" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				var g: i32 = 5;
+				const A = ptrof g;
+			)",
+			{ "Feature not implemented" },
+			1
+		);
+	}
+
 	void testPointerCastErrors() {
 		checkForErrorOnCompileModule(
 			R"(
@@ -1617,7 +1656,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() = {
-					var b: box i32 = 10;
+					var b: box i32 = new 10;
 					var m = b as manyptr i32;
 				}
 			)",
@@ -1662,7 +1701,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() = {
-					var x: box i32 = 10;
+					var x: box i32 = new 10;
 					var p = x as ptr i64;
 				}
 			)",
@@ -1677,6 +1716,29 @@ private:
 				}
 			)",
 			{ "Tried to dereference a non-pointer type" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var a: i32 = 1;
+					var r: ref i32 = &a;
+					var r2: ref i64 = r;
+				}
+			)",
+			{ "Type `ref i32` cannot be converted to type `ref i64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var b: box i32 = new 1;
+					var b2: box i64 = b;
+				}
+			)",
+			{ "Type `box i32` cannot be converted to type `box i64`." },
 			1
 		);
 	}
@@ -1850,7 +1912,7 @@ private:
 	void testDiagnosticErrorsCorrectness() {
 		using namespace helios::code;
 		using namespace helios;
-		using dia_int::testDiagnosticMessage;
+		using dia::testDiagnosticMessage;
 
 		std::stringstream ss;
 
@@ -1867,7 +1929,7 @@ private:
 			// UndefinedBinaryOperatorError
 			testDiagnosticMessage<UndefinedBinaryOperatorError>(
 				ss,
-				dia_int::StablePosition::fakePosition(),
+				dia::StablePosition::fakePosition(),
 				"+",
 				makeBox<InteractiveType>(ctx, st),
 				makeBox<InteractiveType>(ctx, st)
@@ -1875,32 +1937,32 @@ private:
 
 			// UndefinedUnaryOperatorError
 			testDiagnosticMessage<UndefinedUnaryOperatorError>(
-				ss, dia_int::StablePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
+				ss, dia::StablePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
 			);
 
 			// InvalidNumericLiteralError
 			testDiagnosticMessage<InvalidNumericLiteralError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 
 			// NumericLiteralTooLargeError
 			testDiagnosticMessage<NumericLiteralTooLargeError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 
 			// LiteralDoesNotFitError
 			testDiagnosticMessage<LiteralDoesNotFitError>(
-				ss, dia_int::StablePosition::fakePosition(), "signed integer"
+				ss, dia::StablePosition::fakePosition(), "signed integer"
 			);
 
 			// SingleStmtFunctionMustBeExprError
 			testDiagnosticMessage<SingleStmtFunctionMustBeExprError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 
 			// ImmutableVariableNoInitError
 			testDiagnosticMessage<ImmutableVariableNoInitError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 		});
 	}
@@ -1934,6 +1996,32 @@ private:
             )",
 			{ "Symbol 'a' is already defined.", "Previous declaration here." },
 			1
+		);
+
+		// Duplicated class field.
+		checkForErrorOnCompileModule(
+			R"(
+                class T {
+                    y: i64 = 0;
+                    y: i64 = 0;
+                }
+            )",
+			{ "Symbol 'y' is already defined.", "Previous declaration here." },
+			1
+		);
+
+		// Every redefinition of a field is reported, not only the first one.
+		checkForErrorOnCompileModule(
+			R"(
+                class T {
+                    y: i64 = 0;
+                    y: i64 = 0;
+                    x: i64 = 0;
+                    x: i64 = 0;
+                }
+            )",
+			{ "Symbol 'y' is already defined.", "Symbol 'x' is already defined." },
+			2
 		);
 	}
 

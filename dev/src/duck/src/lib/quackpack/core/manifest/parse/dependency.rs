@@ -1,11 +1,11 @@
 //! Parsing of the {dev-,}dependencies fields in a manifest.
 use std::path::Path;
 
-use tracing::{debug, trace};
+use tracing::debug;
 
 use super::{ScopeGuard, source};
 use crate::quackpack::core::valid_package_name::validate_package_name;
-use crate::quackpack::core::{Conditions, Dependencies, Dependency, DependencyFeature};
+use crate::quackpack::core::{Conditions, Dependency, DependencyFeature, DependencyKind};
 use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::manifest::{
     Dependencies as DependenciesSchema, Dependency as DependencySchema,
@@ -14,29 +14,33 @@ use crate::quackpack::schemas::manifest::{
 use crate::util::error::QuackResultContext;
 use crate::{DuckContext, QuackResult, StrId};
 
-/// Parse [`Dependencies`] from the [`DependenciesSchema`].
+/// Parse [`Dependency`]ies from the [`DependenciesSchema`], and append them into a vector.
+///
+/// It is a role of a caller to make sure that [`DependenciesSchema`] matches [`DependencyKind`].
 #[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
     package_root: &Path,
+    kind: DependencyKind,
+    dependencies: &mut Vec<Dependency>,
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
-) -> QuackResult<Dependencies> {
+) -> QuackResult<()> {
     let Some(schema) = schema else {
-        return Dependencies::new(Vec::new());
+        return Ok(());
     };
-    let mut dependencies = Vec::new();
     for (name, dep_schema) in schema {
         let guard = scope.push(name.into());
         dependencies.push(parse_single_dependency(
             name.into(),
             dep_schema,
             package_root,
+            kind,
             ctx,
             guard,
         )?);
     }
-    Dependencies::new(dependencies).with_context(|| scope.make_context_string())
+    Ok(())
 }
 
 /// Parse single [`Dependency`] from its [`DependencySchema`].
@@ -45,10 +49,11 @@ fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
     package_root: &Path,
+    kind: DependencyKind,
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Dependency> {
-    trace!(?schema, "parsing a dependency");
+    debug!(?schema, "parsing a dependency");
     let name = parse_name(schema).unwrap_or(manifest_name);
     let alias = if name == manifest_name {
         None
@@ -89,8 +94,10 @@ fn parse_single_dependency(
         .as_ref()
         .map(|conditions| parse_conditions(conditions, guard))
         .transpose()?;
-    Dependency::new(name, versions, source, features, pinned, conditions, alias)
-        .with_context(|| scope.make_context_string())
+    Dependency::new(
+        name, versions, source, features, pinned, conditions, alias, kind,
+    )
+    .with_context(|| scope.make_context_string())
 }
 
 /// Parse dependency's features
@@ -105,7 +112,7 @@ fn parse_features(
     debug!(?schema);
     let mut result = vec![];
     for feature in schema {
-        debug!("parsing {feature:?}");
+        debug!(?feature, "parsing feature");
         match feature {
             FeatureSchema::Simple(name) => {
                 result.push(DependencyFeature::new(name.into(), None));

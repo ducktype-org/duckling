@@ -18,6 +18,8 @@
 #include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -40,6 +42,7 @@ class HeliosWithStdTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(testImplicitPrelude);
 		TESTER_ADD_TEST(testBuiltinDefinitionInModuleHOUT);
 		TESTER_ADD_TEST(testTemplatedBuiltinDefinitionsInModuleHOUT);
 		TESTER_ADD_TEST(testStrings);
@@ -108,6 +111,15 @@ private:
 				return ctx.query<compiler::tsh::QuerySliceType>(element_type);
 			})
 		);
+	}
+
+	static const compiler::helios::code::Expr* stripImplicitMove(
+		const compiler::helios::code::Expr* expr
+	) {
+		const auto* move = dynamic_cast<const compiler::helios::code::MoveExpr*>(expr);
+		if (move == nullptr || move->kind != compiler::helios::code::MoveExpr::MoveKind::Implicit)
+			return expr;
+		return move->inner.get();
 	}
 
 	void testDefaultInitializers() {
@@ -217,13 +229,7 @@ private:
 				auto deps
 					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
-				// Ctor(ArrayHolder) (the root, excluded) -> Ctor(WithInit[5]) (`__init_array`) ->
-				// Ctor(WithInit), plus the bounds-check chain emitted by the static-array init loop
-				// (`panic`, `builtin_output_str`, `length`) and its own transitive callees: `abort`
-				// from `panic`, and the string-printing chain of `builtin_output_str`
-				// (`writeStr` -> `writeChar` overloads -> `putchar`) together with
-				// `builtin_output_char`, which the MIR-level used-symbol collection sees.
-				ASSERT_EQUAL_PRINT(12, deps.size());
+				ASSERT_EQUAL_PRINT(2, deps.size());
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
@@ -296,6 +302,22 @@ private:
 				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
 			}
 		});
+	}
+
+	// The implicit prelude brings `core.builtins` symbols into scope of every non-stdlib module
+	// without an explicit import. The `builtins` module has no import statements at all, yet an
+	// unqualified `builtin_output_i64` must resolve — that resolution is the prelude at work.
+	void testImplicitPrelude() {
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
+		auto scope     = getModuleScope(module_id);
+
+		auto result = query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
+			{ scope, base::StrID("builtin_output_i64"), true }
+		);
+		assertFalse(
+			result->valueOrThrow().isEmpty(),
+			"builtin_output_i64 should resolve via the implicit prelude with no explicit import"
+		);
 	}
 
 	// A `@builtin(...)` fundecl (here `ptr_from_slice` from core.builtins) has no body in
@@ -433,7 +455,8 @@ private:
 			// let ab = 'a' +: (&b);
 			const auto& prepended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(1));
 			const auto  prepended_expr
-				= dynamic_cast<const CallExpr*>(prepended_stmt.initial_value.get());
+				= dynamic_cast<const CallExpr*>(stripImplicitMove(prepended_stmt.initial_value.get()
+			    ));
 			const auto prepended_callee
 				= dynamic_cast<IdentifierExpr*>(prepended_expr->callee.get());
 			assertEqual(
@@ -447,7 +470,8 @@ private:
 			// let bcd = (&b) :+ 'c' :+ 'd';
 			const auto& appended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(2));
 			const auto  appended_expr
-				= dynamic_cast<const CallExpr*>(appended_stmt.initial_value.get());
+				= dynamic_cast<const CallExpr*>(stripImplicitMove(appended_stmt.initial_value.get())
+			    );
 			const auto appended_callee = dynamic_cast<IdentifierExpr*>(appended_expr->callee.get());
 			assertEqual(
 				compiler::helios::name(appended_callee->symbol),
@@ -458,8 +482,9 @@ private:
 
 		{
 			const auto& concatenated_stmt = dynamic_cast<const VariableStmt&>(*statements.at(5));
-			const auto  concatenated_expr
-				= dynamic_cast<const CallExpr*>(concatenated_stmt.initial_value.get());
+			const auto  concatenated_expr = dynamic_cast<const CallExpr*>(
+                stripImplicitMove(concatenated_stmt.initial_value.get())
+            );
 			const auto concatenated_callee
 				= dynamic_cast<IdentifierExpr*>(concatenated_expr->callee.get());
 			assertEqual(
@@ -474,7 +499,8 @@ private:
 			// let y = 2;
 			// let format = f"Did you know that {x} plus {y} equals ({x + y})?";
 			const auto& format_stmt = dynamic_cast<const VariableStmt&>(*statements.at(8));
-			const auto format_expr = dynamic_cast<const CallExpr*>(format_stmt.initial_value.get());
+			const auto  format_expr
+				= dynamic_cast<const CallExpr*>(stripImplicitMove(format_stmt.initial_value.get()));
 			const auto format_callee = dynamic_cast<IdentifierExpr*>(format_expr->callee.get());
 			assertEqual(
 				compiler::helios::name(format_callee->symbol),
