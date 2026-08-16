@@ -13,15 +13,15 @@
 
 namespace compiler::mir {
 	Function::Function(
-		base::StrID                                     name,
-		tsh::SymbolType<>                               return_type,
-		std::vector<tsh::SymbolType<>>                  parameter_types,
-		base::StableHashMap<BlockID, Block>             blocks,
-		std::vector<BlockID>                            block_order,
-		base::StableVector<const MIRLocal>              local_list,
-		LifetimeScopeTree                               lifetime_scope_tree,
-		ScopeRef                                        no_lifetime_scope,
-		std::variant<FunctionSymID, GlobalVariableCTOR> helios_id
+		base::StrID                                         name,
+		tsh::SymbolType<>                                   return_type,
+		std::vector<tsh::SymbolType<>>                      parameter_types,
+		base::StableHashMap<BlockID, Block>                 blocks,
+		std::vector<BlockID>                                block_order,
+		base::StableVector<const MIRLocal>                  local_list,
+		LifetimeScopeTree                                   lifetime_scope_tree,
+		ScopeRef                                            no_lifetime_scope,
+		std::variant<FunctionSymID, GlobalVariableCtorDtor> helios_id
 	):
 		  name(name),
 		  return_type(return_type),
@@ -35,11 +35,16 @@ namespace compiler::mir {
 
 	u64 Function::queryUnstablePerfectHash() const {
 		// There should be no collisions possible here, since both FunctionSymID and
-		// GlobalVariableCTOR just store SymID, which has a perfect hash.
+		// GlobalVariableCtorDtor just store SymID, which has a perfect hash.
 		variant_match(this->helios_id) {
 			variant_case(FunctionSymID, fun_sym) { return fun_sym.id.queryUnstablePerfectHash(); }
-			variant_case(GlobalVariableCTOR, global_ctor) {
-				return global_ctor.global_var_id.queryUnstablePerfectHash();
+			variant_case(GlobalVariableCtorDtor, global_ctor_dtor) {
+				// The highest bit distinguishes the ctor from the dtor of the same global,
+				// SymID hashes are indices, so they never reach it.
+				const u64 dtor_bit = global_ctor_dtor.type == GlobalVariableCtorDtor::Type::Dtor
+				                       ? u64(1) << 63
+				                       : 0;
+				return global_ctor_dtor.global_var_id.queryUnstablePerfectHash() | dtor_bit;
 			}
 		}
 		CORE_UNREACHABLE();
@@ -325,9 +330,13 @@ namespace compiler::mir {
 		os << "  Initial Value (CTV or Function): ";
 		variant_match(initial_value) {
 			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
-			variant_case(CRef<mir::Function>, func_ref) {
-				os << "constructor: " << func_ref->name.strView() << "\n";
-				func_ref->debugPrint(os);
+			variant_case(MIRCtorDtorPair, pair) {
+				os << "constructor: " << pair.constructor->name.strView() << "\n";
+				pair.constructor->debugPrint(os);
+				if_opt_some(pair.destructor, dtor) {
+					os << "destructor: " << dtor->name.strView() << "\n";
+					dtor->debugPrint(os);
+				}
 			}
 		}
 	}

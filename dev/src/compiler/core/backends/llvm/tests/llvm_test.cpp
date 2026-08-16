@@ -149,6 +149,8 @@ private:
 		);
 	}
 
+	// Both globals are trivially destructible, so they only get a ctor each, and the module gets a
+	// ctor calling them.
 	void globalVariablesTest() { runTestForModule("modules/global-variables", 4, 4); }
 
 	void unitsTest() {

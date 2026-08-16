@@ -6,6 +6,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <mir/mir_lowering/mir_liveness.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/stmt_lowering.hpp>
 #include <mir_private/utils/bounds_check.hpp>
@@ -1106,6 +1107,8 @@ namespace compiler::mir {
 			} else if (const auto* reusable_expr
 			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
+			} else if (const auto* move_expr = dynamic_cast<const hc::MoveExpr*>(&expr)) {
+				return lowerAndLiftToTypeRecursively(*move_expr->inner, continuation);
 			}
 
 			// Any other expression of unit type (a tuple element, a call, ...) is still lowered

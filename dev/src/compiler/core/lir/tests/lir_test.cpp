@@ -189,7 +189,9 @@ private:
 			// This might change in the future:
 
 			ASSERT_EQUAL(foo_lir->local_list.size(), 3);
-			ASSERT_EQUAL(g_ctor->local_list.size(), 0);
+			// The ctor writes the initial value through a pointer to the global, so it holds that
+			// pointer in a local.
+			ASSERT_EQUAL(g_ctor->local_list.size(), 1);
 
 			// Check local variable 'a'
 			bool found_a = false;
@@ -217,16 +219,23 @@ private:
 			}
 			ASSERT_TRUE(found_global_assign);
 
-			// Check that there is an assignment to a LIRGlobal in the instructions in g_ctor
-			bool found_global_assign_ctor = false;
+			// The ctor takes the address of the global and writes the initial value through it, so
+			// it holds an `AddressOf` on the global and an `Assign` storing through that pointer.
+			bool found_global_address_of = false;
+			bool found_store_through_ptr = false;
 			for (const auto& block: g_ctor->blocks) {
 				for (const auto& instr: block.instructions) {
-					if (instr.operation == lir::Operation::Assign && instr.output.has_value()) {
-						if (instr.output.value().isGlobal()) found_global_assign_ctor = true;
-					}
+					if (instr.operation == lir::Operation::AddressOf && !instr.arguments.empty()
+					    && instr.arguments.at(0).isGlobal())
+						found_global_address_of = true;
+
+					if (instr.operation == lir::Operation::Assign && instr.output.has_value()
+					    && instr.output.value().hasProjections())
+						found_store_through_ptr = true;
 				}
 			}
-			ASSERT_TRUE(found_global_assign_ctor);
+			ASSERT_TRUE(found_global_address_of);
+			ASSERT_TRUE(found_store_through_ptr);
 
 			// Test debug print:
 			std::stringstream foo_str;
@@ -270,6 +279,11 @@ private:
 		ASSERT_HAS_VALUE(g.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(some_global.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(global_tuple.getCtorDtorPair().global_ctor);
+
+		// All the globals here are trivially destructible, so none of them gets a dtor.
+		ASSERT_TRUE(g.getCtorDtorPair().global_dtor.empty());
+		ASSERT_TRUE(some_global.getCtorDtorPair().global_dtor.empty());
+		ASSERT_TRUE(global_tuple.getCtorDtorPair().global_dtor.empty());
 	}
 
 	void testLifetimeFlags() {
@@ -481,7 +495,8 @@ private:
 					found_zero_init = true;
 					break;
 				case Operation::Call: {
-					auto name = instr.arguments.at(0).get<FunctionLiteral>().mangled_name.strView();
+					const auto& fn_lit = instr.arguments.at(0).get<FunctionLiteral>();
+					auto        name   = fn_lit.mangled_name.strView();
 					if (name.contains("push"))
 						found_push_with_params = true;
 					else if (name.contains("pop"))
@@ -489,7 +504,7 @@ private:
 					else if (name.contains("length"))
 						found_len = true;
 					// `Hdd` is the mangling of the compiler-generated destructor, which releases
-					// the list storage.
+					// the list storage with the `list_free` builtin.
 					else if (name.contains("Hdd"))
 						found_destructor = true;
 					break;

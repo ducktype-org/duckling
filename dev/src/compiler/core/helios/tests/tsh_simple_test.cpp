@@ -1006,31 +1006,32 @@ private:
 		const auto literal      = ValueCategory(PrimaryCategory::Literal);
 		const auto dereferenced = ValueCategory(PrimaryCategory::Dereferenced);
 
-		// Local and Global are assignable, Temporary and Literal are not assignable.
+		// Local, Global, Dereferenced are assignable, Temporary and Literal are not.
 		assertTrue(
-			local.canBeAssignedTo() && global.canBeAssignedTo(),
-			"Local and Global should be assignable."
+			local.canBeAssignedTo() && global.canBeAssignedTo() && dereferenced.canBeAssignedTo(),
+			"Local, Global, Dereferenced should be assignable."
 		);
 		assertTrue(
 			!temporary.canBeAssignedTo() && !literal.canBeAssignedTo(),
 			"Temporary and Literal should be not assignable."
 		);
 
-		// Local, Global and Dereferenced are addressable, Temporary and Literal are not.
+		// Local, Global, Dereferenced are addressable, Temporary and Literal are not.
 		assertTrue(
 			local.addressable() && global.addressable() && dereferenced.addressable(),
-			"Local, Global and Dereferenced should be addressable."
+			"Local, Global, Dereferenced should be addressable."
 		);
 		assertTrue(
 			!temporary.addressable() && !literal.addressable(),
 			"Temporary and Literal should not be addressable."
 		);
 
-		// Only a Local is a valid operand of the explicit `move` operator.
+		// Only values that own themselves - a Local and a Temporary - may be moved out of.
 		assertTrue(local.isMovableFrom(), "Local should be a valid `move` operand.");
+		assertTrue(temporary.isMovableFrom(), "Temporary should be a valid `move` operand.");
 		assertTrue(
-			!temporary.isMovableFrom() && !global.isMovableFrom() && !literal.isMovableFrom(),
-			"Only a Local should be a valid `move` operand."
+			!global.isMovableFrom() && !literal.isMovableFrom() && !dereferenced.isMovableFrom(),
+			"A non-owned value should not be a valid `move` operand."
 		);
 
 		// `move` is not forced unless it's requested.
