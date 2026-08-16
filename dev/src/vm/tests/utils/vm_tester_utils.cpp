@@ -253,3 +253,36 @@ auto VmTestSuite::runFunctionExpectPanic(
 	auto join_result = vm::api::join(pid);
 	return { .pid = pid, .run_result = std::unexpected(join_result.error()) };
 }
+
+void VmTestSuite::executeRuntimeExprAndAssertResult(
+	vm::PID                 pid,
+	vm::api::ThreadID       thread_id,
+	std::string_view        expr_filename,
+	const std::vector<u64>& expected
+) {
+	fs::File file(path(std::string(expr_filename)));
+	auto     response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+	assertTrue(response.has_value(), "Execution of runtime expression failed");
+
+	auto& ret_vals_variant = response.value();
+	assertTrue(
+		std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(ret_vals_variant),
+		"Expected vector of IVMValue from runtime expression"
+	);
+	auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(ret_vals_variant);
+	assertEqual(ret_vals.size(), expected.size(), "Runtime expression return value count mismatch");
+
+	for (usize i = 0; i < expected.size(); ++i) {
+		auto opt_data = ret_vals[i]->readData();
+		assertTrue(opt_data.has_value(), "Failed to read data from runtime expression return value");
+		// @TODO: Support other InterpretedDataVariant alternatives (Pointer, Table, Data, Variant,
+		// Function, Opaque).
+		auto* primitive = std::get_if<vm::interpreted_data_variant::Primitive>(&opt_data.value());
+		assertTrue(primitive != nullptr, "Expected Primitive return value from runtime expression");
+		assertEqual(
+			primitive->value,
+			expected[i],
+			"Runtime expression return value mismatch at index " + std::to_string(i)
+		);
+	}
+}

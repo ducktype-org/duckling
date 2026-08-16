@@ -579,9 +579,7 @@ namespace vm {
 					api::OtherError{ "Couldn't execute the expression - either failed to resume or "
 				                     "got an unexpected status during evaluation!" } });
 			std::vector<Ref<IVMValue>> transformed;
-			for (auto safe_ref : *returned_value) {
-				transformed.emplace_back(safe_ref.get());
-			}
+			for (auto safe_ref: *returned_value) transformed.emplace_back(safe_ref.get());
 			return api::Response(vm::api::ExitValue(transformed));
 		} else {
 			std::stringstream ss;
