@@ -1,5 +1,5 @@
 # This test is meant to be hard to perform init/deinit analysis on
-import core.builtins.*;
+import core.runtime;
 
 fun foo(arg : i32) -> i32 = {
     var a = 0;
@@ -24,6 +24,6 @@ fun foo(arg : i32) -> i32 = {
 }
 
 fun main() -> i64 = {
-    builtin_output_i64(foo(7));
+    runtime.dvm.builtin_output_i64(foo(7));
     return 0;
 }

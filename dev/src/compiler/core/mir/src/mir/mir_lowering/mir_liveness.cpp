@@ -2,8 +2,10 @@
 
 #include "mir_lifetimes.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/query_errors.hpp>
 
@@ -43,7 +45,7 @@ namespace compiler::mir {
 	 * @brief Append @p src move sites to @p dst, skipping positions already present.
 	 */
 	void mergeMoveSites(
-		std::vector<dia_int::StablePosition>& dst, const std::vector<dia_int::StablePosition>& src
+		std::vector<dia::StablePosition>& dst, const std::vector<dia::StablePosition>& src
 	) {
 		for (const auto& pos: src)
 			if (not std::ranges::contains(dst, pos)) dst.push_back(pos);
@@ -107,7 +109,7 @@ namespace compiler::mir {
 				break;
 			case OperationFlag::Flag::Move: {
 				// This instruction becomes the sole move reaching the value from here on.
-				std::vector<dia_int::StablePosition> sites;
+				std::vector<dia::StablePosition> sites;
 				if (instr.metadata.position.has_value())
 					sites.push_back(instr.metadata.position.value());
 				map.insertOrAssign(
@@ -140,7 +142,7 @@ namespace compiler::mir {
 
 		auto is_tracked = [&](MIRLocalRef local) {
 			return local->scope.has_value() && local->scope.value() != fun.no_lifetime_scope
-			    && not local->lifetime_flags.contains(LifetimeFlag::NoUseAfterFreeValidation);
+			    && not local->lifetime_flags.contains(LifetimeFlag::NoMoveStatusValidation);
 		};
 
 		// Parameters are alive on function entry.
@@ -226,11 +228,29 @@ namespace compiler::mir {
 	std::vector<MIRLocalRef> instructionReads(const Instruction& instr) {
 		std::vector<MIRLocalRef> reads;
 		for (const auto& arg: instr.arguments) collectValueReads(arg, reads);
-		// An assignment to a whole local (no projections) defines it; only projected writes read
-		// the base (e.g. `a.b = x` reads `a`).
 		if (instr.output && instr.output->hasProjections())
 			collectPlaceReads(*instr.output, true, reads);
 		return reads;
+	}
+
+	/**
+	 * Get the vector of locals, to which the instruction writes (excluding those which are
+	 * constructed by this instruction). Don't return locals, where the instruction also read in
+	 * instructionReads. For example `a[1] = ...` both reads and writes to `a`, so it won't be
+	 * returned. we only return direct writes, like `a = ...`.
+	 *
+	 * @note We don't return values with Construct flag in this instruction, as we want to catch the
+	 * values used before construction.
+	 */
+	std::vector<MIRLocalRef> instructionReinitDirectWrites(const Instruction& instr) {
+		// If we construct a result, then this is not a write
+		for (auto& flag: instr.flags)
+			if (flag.flag == OperationFlag::Flag::Construct) return {};
+		// The output->hasProjections() doesn't matter, but if there were projections,
+		// then the base would also be read and we would also detect
+		if (instr.output && instr.output->isLocal() && not instr.output->hasProjections())
+			return { instr.output->getBase<MIRLocalRef>() };
+		return {};
 	}
 
 	void InvalidUseCheck::run(query::Context& ctx, Function& fun, const LifetimePassArgs& args) {
@@ -241,7 +261,7 @@ namespace compiler::mir {
 		// never present in the status maps and must not be flagged as "uninitialized".
 		auto is_tracked = [&](MIRLocalRef local) {
 			return local->scope.has_value() && local->scope.value() != fun.no_lifetime_scope
-			    && not local->lifetime_flags.contains(LifetimeFlag::NoUseAfterFreeValidation);
+			    && not local->lifetime_flags.contains(LifetimeFlag::NoMoveStatusValidation);
 		};
 
 		const auto& block_in = args.liveness.block_in_liveness;
@@ -256,13 +276,9 @@ namespace compiler::mir {
 				auto state = map.atMaybeCopy(local->id);
 				if (state.has_value() && state->kind == LivenessStatus::Alive) continue;
 
-				const bool       uninitialized = not state.has_value();
-				std::string_view title         = uninitialized ? "Use of an uninitialized value."
-				                               : state->kind == LivenessStatus::Moved
-				                                   ? "Use of a moved value."
-				                                   : "Use of a possibly-moved value.";
+				const bool uninitialized = not state.has_value();
 
-				auto description = base::strConcat(
+				auto title = base::strConcat(
 					"The variable `",
 					local->getName(),
 					uninitialized ? "` is used before it is initialized."
@@ -273,18 +289,46 @@ namespace compiler::mir {
 				);
 
 				// Anchor the error at the use site (placeholder until a real template exists).
-				auto msg = makeBox<dia_int::PlaceholderError>(
-					std::string(title), instr.metadata.position, std::move(description)
-				);
+				auto msg = makeBox<dia::PlaceholderError>(title, instr.metadata.position);
 
-				// Point a note at every move instruction that reaches this use. If both branches of
-				// an if/else move the value, both move sites are reported here.
-				if (state.has_value())
+				// Point a note at every move instruction that reaches this use. If both
+				// branches of an if/else move the value, both move sites are reported here.
+				if (not uninitialized)
 					for (const auto& site: state->move_sites)
 						msg->addAttachedMessage(
-							makeBox<dia_int::PlaceholderNote>(std::string("value moved here"), site)
+							makeBox<dia::PlaceholderNote>("Value moved here.", site)
 						);
+				if (uninitialized) {
+					if_opt_some(local->helios_id, sym_id) {
+						if_opt_some(helios::maybeSymbolPst(sym_id), pst_elem) {
+							msg->addAttachedMessage(makeBox<dia::PlaceholderNote>(
+								"Variable declared here.", pst_elem.unlock(ctx)->getStablePosition()
+							));
+						}
+					}
+				}
 
+				ctx.logInt(std::move(msg));
+				failed = true;
+			}
+			for (auto& local: instructionReinitDirectWrites(instr)) {
+				if (not is_tracked(local)) continue;
+				auto state = map.atMaybeCopy(local->id);
+				if (state.has_value()) continue;
+				// State is uninitialized
+				auto msg = makeBox<dia::PlaceholderError>(
+					base::strConcat(
+						"The variable `", local->getName(), "` is used before it is initialized."
+					),
+					instr.metadata.position
+				);
+				if_opt_some(local->helios_id, sym_id) {
+					if_opt_some(helios::maybeSymbolPst(sym_id), pst_elem) {
+						msg->addAttachedMessage(makeBox<dia::PlaceholderNote>(
+							"Variable declared here.", pst_elem.unlock(ctx)->getStablePosition()
+						));
+					}
+				}
 				ctx.logInt(std::move(msg));
 				failed = true;
 			}

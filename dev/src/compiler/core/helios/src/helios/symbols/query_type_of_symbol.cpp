@@ -14,8 +14,10 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -39,11 +41,7 @@ namespace compiler::helios {
 			void setTypeOfSymbolByAbstractType(const tsh::AbstractType& type) {
 				if (symbol_type_qresult.hasValue())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
-				symbol_type_qresult = tsh::SymbolType{
-					type,
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				symbol_type_qresult = tsh::SymbolType<>::withDefaults(type);
 			}
 
 			void setSymbolTypeByTypeExpr(
@@ -142,6 +140,15 @@ namespace compiler::helios {
 				);
 			}
 
+			void visitTemplateStmt(pst::Access<pst::TemplateStmt> stmt) final {
+				// @TODO: #3177 this now always uses QueryTypeTemplateType,
+				// we should probably introduce different kind of types for non-type templtes.
+
+				auto symbol  = ctx.query<QuerySymbolOfSTMT>({ stmt }).valueOrThrow();
+				auto ab_type = ctx.query<tsh::QueryTypeTemplateType>({ .source = symbol });
+				setTypeOfSymbolByAbstractType(ab_type);
+			}
+
 			void visitIdentifierWrapper(pst::Access<pst::IdentifierWrapper> ident) final {
 				// @TODO: #2782 Remove this function.
 				auto parent_opt = ident->getParent();
@@ -166,7 +173,7 @@ namespace compiler::helios {
 				CORE_ASSERT(flow_parent.has_value(), "BindingPattern without parent");
 				auto flow_opt = flow_parent.value().unlock(ctx).dynamicCast<pst::FlowPattern>();
 				if (!flow_opt.has_value()) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 						"Pattern bindings outside of a flow pattern.", binding->getStablePosition()
 					));
 					setFailed();
@@ -175,7 +182,7 @@ namespace compiler::helios {
 
 				auto constraint = flow_opt.value()->getTypeConstraint();
 				if (!constraint.has_value()) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 						"Match pattern bindings without a type constraint (`case x : T`).",
 						binding->getStablePosition()
 					));
@@ -332,7 +339,7 @@ namespace compiler::helios {
 						switch (method.kind) {
 						case defgen::Method::Kind::ToString:
 							return { { immmut_self },
-								     tsh::SymbolType<>::withDefaults(tsh::getStringType()) };
+								     tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx)) };
 						case defgen::Method::Kind::LengthMethod:
 							return { { immmut_self },
 								     tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
@@ -384,6 +391,53 @@ namespace compiler::helios {
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};
+				}
+				variant_case(defgen::BuiltinTemplatedSymbol, builtin) {
+					// `box_alloc(value: T) -> box T`, `box_free(b: box T) -> ()` and
+					// `list_free(l: ref [T]) -> ()`.
+					const auto box_type = tsh::SymbolType<>{
+						builtin.type,
+						tsh::ReferenceKind::Box,
+						tsh::Mutability::Mutable,
+					};
+
+					auto [arg_types, return_type]
+						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
+						switch (builtin.kind) {
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
+							return { { tsh::SymbolType<>::withDefaults(builtin.type) }, box_type };
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
+							// @TODO: #2825 change this back to Box
+							return { { box_type.withReferenceKind(tsh::ReferenceKind::Ref) },
+								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
+							return { { box_type },
+								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
+						case defgen::BuiltinTemplatedSymbol::Kind::ListFree: {
+							const auto array_type = ctx.query<tsh::QueryDynamicArrayType>(
+								{ tsh::SymbolType<>::withDefaults(builtin.type) }
+							);
+							const auto ref_array = tsh::SymbolType<>{
+								array_type,
+								tsh::ReferenceKind::Ref,
+								tsh::Mutability::Mutable,
+							};
+							return {
+								{ ref_array },
+								tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
+							};
+						}
+						}
+						CORE_UNREACHABLE();
+					}();
+
+					const auto fn_type = ctx.query<tsh::QueryFunctionType>(
+						{ .parameter_types = std::move(arg_types), .result_type = return_type }
+					);
+					return tsh::SymbolType<>::withDefaults(fn_type);
+				}
+				variant_case(defgen::GeneratedConstant, gen_const) {
+					return gen_const.value.getTypeOfStoredValue(ctx);
 				}
 				variant_case(defgen::Parameter, param) {
 					const auto function_type
@@ -502,4 +556,8 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
+
+	base::Optional<SymID> getTypeDestructor(query::Context& ctx, tsh::SymbolType<> symbol_type) {
+		return defgen::destructSymForSymbolType(ctx, symbol_type);
+	}
 }

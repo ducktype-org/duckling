@@ -18,12 +18,7 @@
 namespace {
 	using namespace compiler;
 
-	bool isMetaTypeOperation(lir::Operation op) {
-		return op == lir::Operation::MetaCreateBox || op == lir::Operation::MetaCreateRef
-		    || op == lir::Operation::MetaCreateConst || op == lir::Operation::MetaCreateTuple
-		    || op == lir::Operation::MetaCreateVariant || op == lir::Operation::MetaEq
-		    || op == lir::Operation::MetaNeq;
-	}
+	bool isMetaTypeOperation(lir::Operation op) { return op == lir::Operation::MetaTypeOperation; }
 
 	vm::code::builders::OpKind lirOperationToDVMOpKind(const lir::Operation& op) {
 		using enum lir::Operation;
@@ -82,12 +77,15 @@ namespace compiler::backend_vm::internal {
 			  })
 		    | std::ranges::to<std::vector>();
 
-		return FunctionCallInfo{
-			.call_target = DVMFunctionName{ .name = func_literal.mangled_name },
-			.return_type = called_result_type,
-			.param_types = param_types,
-			.is_extern_c = false,
-		};
+		FunctionCallInfo call_info{ .call_target
+			                        = DVMFunctionName{ .name = func_literal.mangled_name },
+			                        .return_type = called_result_type,
+			                        .param_types = param_types };
+
+		if (v_matches(func_literal.abi.value, lir::LIRAbi::CAbi))
+			call_info.call_target = DVMFFIFunctionName{ .name = func_literal.mangled_name };
+
+		return call_info;
 	}
 
 	FunctionCallInfo FunctionCallInfo::fromExternCFunction(
@@ -115,7 +113,6 @@ namespace compiler::backend_vm::internal {
 			.call_target = DVMExternCFunctionName{ .name = ext_func_name },
 			.return_type = called_result_type,
 			.param_types = param_types,
-			.is_extern_c = true,
 		};
 	}
 
@@ -149,12 +146,15 @@ namespace compiler::backend_vm::internal {
 			return {};
 		};
 
-		if (isMetaTypeOperation(operation))
+		if (isMetaTypeOperation(operation)) {
+			const auto* meta_params = std::get_if<lir::MetaParameters>(&instr.extra_params);
+			CORE_ASSERT(meta_params, "Meta operation without MetaParameters");
 			return MetaOperation{
-				.meta_op = operation,
-				.args    = lower_all_args(),
-				.dest    = lower_opt_dest(),
+				.meta_kind = meta_params->kind,
+				.args      = lower_all_args(),
+				.dest      = lower_opt_dest(),
 			};
+		}
 
 
 		switch (operation) {
@@ -179,19 +179,29 @@ namespace compiler::backend_vm::internal {
 		case Call: {
 			CORE_ASSERT(!instr.arguments.empty(), "Call expects at least 1 argument (the callable)");
 			auto func_literal = instr.arguments[0].get<lir::FunctionLiteral>();
-			auto dvm_call_info
-				= FunctionCallInfo::fromLirFunction(func_literal, ctx.program_context);
 
 			auto call_args = instr.arguments | std::views::drop(1)  // Drop the FunctionLiteral
 			               | std::views::transform([&](const auto& lir_arg) {
 								 return ctx.lowerLirValue(lir_arg);
 							 })
 			               | std::ranges::to<std::deque>();
+			auto dest = lower_opt_dest();
 
+
+			if_opt_some(func_literal.builtin_kind_opt, builtin) {
+				return BuiltinCallOperation{
+					.kind = builtin,
+					.args = std::move(call_args),
+					.dest = std::move(dest),
+				};
+			}
+
+			auto dvm_call_info
+				= FunctionCallInfo::fromLirFunction(func_literal, ctx.program_context);
 			return CallOperation{
 				.call_info = dvm_call_info,
 				.args      = std::move(call_args),
-				.dest      = lower_opt_dest(),
+				.dest      = std::move(dest),
 			};
 		}
 		case AddressOf: {
@@ -386,36 +396,14 @@ namespace compiler::backend_vm::internal {
 				.scope_flags = instr.scope_flags,
 			};
 		}
-		case BoxAlloc: {
-			CORE_ASSERT(
-				instr.arguments.size() == 1,
-				"BoxAlloc operation expects 1 argument, got: ",
-				instr.arguments.size()
-			);
-			return BoxAllocOperation{
-				.src  = lower_arg(instr.arguments[0]),
-				.dest = lower_opt_dest(),
-			};
-		}
-		case BoxFree: {
-			CORE_ASSERT(
-				instr.arguments.size() == 1,
-				"BoxFree operation expects 1 argument, got: ",
-				instr.arguments.size()
-			);
-			return BoxFreeOperation{
-				.src = lower_arg(instr.arguments[0]),
-			};
-		}
 		case Nop: {
 			// No instruction to generate, just skip.
 			return NoOperation{};
 		}
 		case ListPush:
-		case ListPop:
-		case ListFree: {
+		case ListPop: {
 			ctx.program_context.getActiveContext().value()->logInt(
-				makeBox<dia_int::NotYetImplementedCodeError>(
+				makeBox<dia::NotYetImplementedCodeError>(
 					"Lists are not supported in DVM code generation yet."
 				)
 			);

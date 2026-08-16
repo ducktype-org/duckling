@@ -1,5 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from pathlib import Path
+import os
+import platform
+import subprocess
 import sys
 import tempfile
 
@@ -9,6 +13,7 @@ from .helpers import (
     bash_command_get_output,
     exit_with_error,
     get_input,
+    log_good,
     log_info,
     log_new_line,
     log_warning,
@@ -83,6 +88,18 @@ def cpp_linter_impl(
             bash_command(f"./scripts/formatting/format_repo_cpp.sh {clang_format_path}")
             clang_format_failed = False
 
+    # `run_linter_on` skips everything that is not a C++ source, so a diff without any
+    # would otherwise report a pass over zero files.
+    checked_count = sum(1 for f in file_diffs if is_cpp_source(f))
+    if not checked_count:
+        log_info("No C++ files to lint. Nothing to check.")
+        return clang_tidy_failed, clang_format_failed
+
+    if clang_tidy_path and not clang_tidy_failed:
+        log_good(f"clang-tidy found no issues in the {checked_count} checked file(s)")
+    if clang_format_path and not clang_format_failed:
+        log_good(f"clang-format found no issues in the {checked_count} checked file(s)")
+
     return clang_tidy_failed, clang_format_failed
 
 
@@ -120,6 +137,74 @@ def get_files_for_linter(
     }
 
 
+@lru_cache(maxsize=None)
+def gcc_clang_tidy_extra_args(build_folder: Path) -> str:
+    """
+    clang-tidy parses translation units with clang. On macOS a build configured with GCC
+    (g++/libstdc++) leaves clang unable to find libstdc++ or the macOS SDK headers on its own,
+    so every file fails with e.g. `'type_traits' file not found`. Return the --extra-arg flags
+    that point clang at the GCC libstdc++ headers and the SDK. Empty on non-macOS or non-GCC
+    builds (Apple/Homebrew clang builds use libc++ and need no help).
+    """
+    if platform.system() != "Darwin":
+        return ""
+
+    compiler = ""
+    try:
+        for line in (build_folder / "CMakeCache.txt").read_text().splitlines():
+            if line.startswith("CMAKE_CXX_COMPILER:"):
+                compiler = line.split("=", 1)[1].strip()
+                break
+    except OSError:
+        return ""
+
+    if not compiler:
+        return ""
+    name = Path(compiler).name.lower()
+    # Rule out clang first: "clang++" contains "g++" as a substring.
+    if "clang" in name:
+        return ""
+    if "g++" not in name and "gcc" not in name:
+        return ""
+
+    # Ask the GCC driver for its libstdc++ header search paths.
+    include_dirs: list[str] = []
+    try:
+        search = subprocess.run(
+            [compiler, "-std=c++23", "-E", "-x", "c++", "-v", "/dev/null"],
+            capture_output=True,
+            text=True,
+        ).stderr
+    except OSError:
+        return ""
+    in_search = False
+    for line in search.splitlines():
+        if "#include <...> search starts here:" in line:
+            in_search = True
+        elif "End of search list." in line:
+            break
+        elif in_search and "/c++/" in line:
+            include_dirs.append(os.path.realpath(line.strip()))
+
+    if not include_dirs:
+        return ""
+
+    # -nostdinc++ drops clang's own C++ stdlib search (which would resolve to libc++ and warn that
+    # libstdc++ wasn't found); the -isystem paths below supply libstdc++ instead.
+    args = ["--extra-arg=-nostdinc++"]
+    try:
+        sdk = subprocess.run(
+            ["xcrun", "--show-sdk-path"], capture_output=True, text=True
+        ).stdout.strip()
+        if sdk:
+            args += ["--extra-arg=-isysroot", f"--extra-arg={sdk}"]
+    except OSError:
+        pass
+    for include_dir in include_dirs:
+        args += ["--extra-arg=-isystem", f"--extra-arg={include_dir}"]
+    return " ".join(args)
+
+
 def clang_tidy_on(
     clang_tidy_path: str,
     build_folder: Path,
@@ -138,7 +223,7 @@ def clang_tidy_on(
         tidy_out, _ = bash_command_get_output(
             f"{clang_tidy_path} -p {build_folder} --format-style file --config-file .clang-tidy"
             f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
-            f" --extra-arg=-std=c++23 {file}",
+            f" --extra-arg=-std=c++23 {gcc_clang_tidy_extra_args(build_folder)} {file}",
             log_file=log_file,
         )
         if tidy_out:
@@ -174,6 +259,14 @@ def clang_format_on(
     return False
 
 
+def is_cpp_source(file: str) -> bool:
+    """
+    Whether the linters have anything to say about `file`. Everything else is
+    skipped by `run_linter_on`.
+    """
+    return file.endswith(".hpp") or file.endswith(".cpp")
+
+
 def run_linter_on(
     clang_tidy_path: str | None,
     clang_format_path: str | None,
@@ -184,7 +277,7 @@ def run_linter_on(
     clang_format_failed = False
     clang_tidy_failed = False
     logs = ""
-    if file.endswith(".hpp") or file.endswith(".cpp"):
+    if is_cpp_source(file):
         log_file = tempfile.TemporaryFile("w+")
         log_info(f"Linting: {file}", file=log_file)
 

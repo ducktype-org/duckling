@@ -5,6 +5,8 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
+#include <base/collections/optional.hpp>
+
 #include <vector>
 
 /**
@@ -148,14 +150,15 @@ namespace compiler::helios::code {
 			for (const auto& comparison: e.comparisons) walk(*comparison);
 		}
 
-		void visitParenthesisExpr(const ParenthesisExpr& e) override {
-			handler(e);
-			walk(*e.inner);
-		}
-
 		void visitTupleExpr(const TupleExpr& e) override {
 			handler(e);
 			for (const auto& element: e.elements) walk(*element);
+		}
+
+		void visitCreateAggregateExpr(const CreateAggregateExpr& e) override {
+			handler(e);
+			for (const auto& value: e.values) walk(*value);
+			if_opt_some(e.per_element_body, body) walkBlock(*body);
 		}
 
 		void visitVariantTypeConstructorExpr(const VariantTypeConstructorExpr& e) override {
@@ -195,12 +198,12 @@ namespace compiler::helios::code {
 			for (const auto& expression: e.expressions) walk(*expression);
 		}
 
-		void visitBoxOfExpr(const BoxOfExpr& e) override {
+		void visitRefOfExpr(const RefOfExpr& e) override {
 			handler(e);
 			walk(*e.inner);
 		}
 
-		void visitRefOfExpr(const RefOfExpr& e) override {
+		void visitPtrOfExpr(const PtrOfExpr& e) override {
 			handler(e);
 			walk(*e.inner);
 		}
@@ -218,6 +221,11 @@ namespace compiler::helios::code {
 		void visitLiftToTypeExpr(const LiftToTypeExpr& e) override {
 			handler(e);
 			walk(*e.value_expr);
+		}
+
+		void visitBlockExpr(const BlockExpr& e) override {
+			handler(e);
+			walk(*e.block);
 		}
 
 		void visitListPushExpr(const ListPushExpr& e) override {

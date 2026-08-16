@@ -2,16 +2,18 @@
 
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
@@ -20,19 +22,49 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
+#include <tsl/queries.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/str/str_utils.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <cmath>
+#include <concepts>
+#include <optional>
 #include <ranges>
 #include <type_traits>
 #include <unordered_set>
 
 namespace compiler::helios {
 	using namespace ctv;
+
+	// Integer exponentiation with deterministic two's-complement wraparound.
+	// std::pow routes through double and the out-of-range float->int cast is UB:
+	// x86 wraps, arm64 saturates. Comptime relies on wrapping (e.g. `2 ** 31 - 1`),
+	// so compute it via modular unsigned arithmetic instead.
+	template<std::integral IntT>
+	IntT comptimeIntPow(IntT base, IntT exp) {
+		// A negative exponent truncates toward zero: only |base| == 1 survives.
+		if constexpr (std::is_signed_v<IntT>) {
+			if (exp < 0) {
+				if (base != 1 && base != -1) return 0;
+				return exp % 2 == 0 ? IntT{ 1 } : base;
+			}
+		}
+		// Square-and-multiply mod 2^64. Signed values sign-extend, which preserves
+		// congruence mod 2^N, so the final truncation is the exact wrapped result.
+		u64  result = 1;
+		auto b      = static_cast<u64>(base);
+		for (auto e = static_cast<u64>(exp); e != 0; e /= 2) {
+			if (e % 2 == 1) result *= b;
+			b *= b;
+		}
+		return static_cast<IntT>(result);
+	}
 
 	struct IMPLEMENT_QUERY(QueryEvaluateHOUTExpression, CompTimeEvalResult) {
 		/**
@@ -74,18 +106,64 @@ namespace compiler::helios {
 			}
 
 			void visitLiteralStringExpr(const code::LiteralStringExpr& expr) final {
-				result = CompileTimeValue{ expr.value };
+				result = CompileTimeValue{ CompileTimeValue::CharSliceValue{ expr.value } };
 			}
 
 			void visitLiteralTypeExpr(const code::LiteralTypeExpr& expr) final {
 				result = CompileTimeValue{ expr.value_type };
 			}
 
-			void visitCallExpr(const code::CallExpr&) final { result = CouldNotShortPath{}; }
+			void visitBlockExpr(const code::BlockExpr&) final {
+				// @TODO: #3291 Blocks are not evaluated at compile time by this visitor.
+				result = CouldNotShortPath{};
+			}
+
+			/**
+			 * @brief Short path for the `size_of` / `alignment_of` builtins: evaluate the (single)
+			 * type argument and read its layout directly, instead of falling back to VM evaluation.
+			 * @return The evaluated result (or a `Failed` error) when the call matched a short-path
+			 * builtin, or `std::nullopt` when the call should fall back to VM evaluation.
+			 */
+			std::optional<TreeEvalResult> tryShortPathCall(const code::CallExpr& expr) {
+				const auto callee_sym = getIdentifierExprSymID(expr.callee.ref());
+				if (!callee_sym.has_value()) return std::nullopt;
+
+				const auto builtin = isBuiltin(callee_sym.value());
+				if (!builtin.has_value()
+				    || (builtin.value() != BuiltinKind::SizeOf
+				        && builtin.value() != BuiltinKind::AlignmentOf))
+					return std::nullopt;
+
+				CORE_ASSERT(
+					expr.arguments.size() == 1, "size_of / alignment_of expect exactly one argument"
+				);
+
+				auto arg_res = evalHoutExpr(ctx, expr.arguments.at(0).ref());
+				if (arg_res.hasFailed()) return TreeEvalResult{ query::Failed() };
+
+				const auto  type   = arg_res.valueOrThrow().get<tsh::SymbolType<>>().value();
+				const auto& layout = ctx.query<tsl::QuerySymbolTypeLayout>(type)->valueOrThrow();
+
+				const i64 value
+					= (builtin.value() == BuiltinKind::SizeOf)
+				        ? base::safeIntConv<i64>(base::bits2bytesRoundUp(layout.getSize()).asInt())
+				        : base::safeIntConv<i64>(layout.getAlignment().asInt());
+
+				return TreeEvalResult{ CompileTimeValue{ NumericValue{ value } } };
+			}
+
+			void visitCallExpr(const code::CallExpr& expr) final {
+				if (auto short_path = tryShortPathCall(expr)) {
+					result = std::move(*short_path);
+					return;
+				}
+
+				result = CouldNotShortPath{};
+			}
 
 			void visitAccessExpr(const code::AccessExpr& expr) final {
 				// @TODO: #1922 Implement that.
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Evaluating access expressions at compile time.", expr.origin.getStablePosition()
 				));
 				result = query::Failed();
@@ -167,7 +245,7 @@ namespace compiler::helios {
 					auto maybe_u64_size = maybe_size.coerceTo<u64>();
 					// @TODO: #2754 With flexible literals it should work
 					if (!maybe_u64_size.has_value()) {
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						ctx.logInt(makeBox<dia::PlaceholderError>(
 							"Static array size must be a non-negative integral value.", ""
 						));
 						return query::Failed();
@@ -201,7 +279,7 @@ namespace compiler::helios {
 
 				// @TODO: #1922 If base is not meta and not a type template, this is a normal index
 				// expression. Implement that.
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Evaluating index expressions with non-meta and non-type-template base at "
 					"compile time.",
 					expr.origin.getStablePosition()
@@ -221,12 +299,12 @@ namespace compiler::helios {
 				} else {
 					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {
-							ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							ctx.logInt(makeBox<dia::PlaceholderError>(
 								"Expression cannot be evaluated at compile-time.", pos
 							));
 						}
 						opt_none {
-							ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							ctx.logInt(makeBox<dia::PlaceholderError>(
 								"Expression cannot be evaluated at compile-time.",
 								base::strConcat(
 									"The code is unavailable because the expression is at "
@@ -278,7 +356,8 @@ namespace compiler::helios {
 									auto maybe_rhs_val = rhs.template get<LhsNumT>();
 									if (!maybe_rhs_val.has_value()) {
 										CORE_PANIC(base::strConcat(
-											"Operands on binary expression evaluated at compile "
+											"Operands on binary expression evaluated at "
+											"compile "
 											"time are of different type. This should be "
 											"prevented by casts.\nLeft side is:",
 											lhs.getTypeOfStoredValue(ctx).getType().toString(),
@@ -338,7 +417,7 @@ namespace compiler::helios {
 									case IntegerDiv:
 									case FloatDiv:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia_int::PlaceholderError>(
+											ctx.logInt(makeBox<dia::PlaceholderError>(
 												"Division by zero in compile-time expression "
 												"evaluation.",
 												expr.origin.getStablePosition().value()
@@ -350,7 +429,7 @@ namespace compiler::helios {
 									case IntegerMod:
 									case FloatMod:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia_int::PlaceholderError>(
+											ctx.logInt(makeBox<dia::PlaceholderError>(
 												"Modulo by zero in compile-time expression "
 												"evaluation.",
 												expr.origin.getStablePosition().value()
@@ -364,12 +443,16 @@ namespace compiler::helios {
 										break;
 									case IntegerPow:
 									case FloatPow:
-										set_num_result(
-											static_cast<ResultT>(std::pow(lhs_val, rhs_val))
-										);
+										if constexpr (std::is_integral_v<ResultT>)
+											set_num_result(comptimeIntPow<ResultT>(lhs_val, rhs_val)
+									        );
+										else
+											set_num_result(
+												static_cast<ResultT>(std::pow(lhs_val, rhs_val))
+											);
 										break;
 									default:
-										ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+										ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 											"Evaluation of this binary operator at compile "
 											"time",
 											expr.origin.getStablePosition()
@@ -394,7 +477,7 @@ namespace compiler::helios {
 							case IntegerNeq:
 								return CompileTimeValue{ lhs != rhs };
 							default:
-								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+								ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 									"Evaluation of this binary operator at compile "
 									"time",
 									expr.origin.getStablePosition()
@@ -458,7 +541,7 @@ namespace compiler::helios {
 								);
 
 							default:
-								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+								ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 									"Evaluation of this unary operator at compile "
 									"time",
 									expr.origin.getStablePosition()
@@ -504,7 +587,7 @@ namespace compiler::helios {
 									ctx.query<tsh::QuerySliceType>({ val })
 								) };
 							default:
-								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+								ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 									"Evaluation of this unary operator at compile "
 									"time",
 									expr.origin.getStablePosition()
@@ -512,7 +595,7 @@ namespace compiler::helios {
 								return query::Failed();
 							}
 						} else {
-							ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+							ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 								"Evaluation of this unary operator at compile "
 								"time",
 								expr.origin.getStablePosition()
@@ -584,15 +667,6 @@ namespace compiler::helios {
 				result = CompileTimeValue{ true };
 			}
 
-			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
-				auto sub_result = evalHoutExpr(ctx, expr.inner.ref());
-				if (sub_result.hasFailed()) {
-					result = query::Failed();
-					return;
-				}
-				result = sub_result.valueOrThrow();
-			}
-
 			void visitTupleExpr(const code::TupleExpr& expr) final {
 				std::vector<CompileTimeValue> ctv_elements;
 
@@ -606,6 +680,14 @@ namespace compiler::helios {
 				}
 
 				result = CompileTimeValue{ CompileTimeValue::TupleCTV{ std::move(ctv_elements) } };
+			}
+
+			void visitCreateAggregateExpr(const code::CreateAggregateExpr& expr) final {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"Comp time aggregate lowering is not implemented.",
+					expr.origin.getStablePosition()
+				));
+				result = query::Failed();
 			}
 
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
@@ -655,14 +737,14 @@ namespace compiler::helios {
 			}
 
 			void visitVariantConstructExpr(const code::VariantConstructExpr& expr) final {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Evaluating variant construction at compile time.",
 					expr.origin.getStablePosition()
 				));
 			}
 
 			void visitVariantProjectExpr(const code::VariantProjectExpr& expr) final {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Evaluating variant projection at compile time.", expr.origin.getStablePosition()
 				));
 			}
@@ -685,7 +767,7 @@ namespace compiler::helios {
 				const auto& ctv     = expr_to_cast.valueOrThrow();
 				const auto& numeric = ctv.get<NumericValue>();
 				if (!numeric) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 						"Casts of non-numeric compile-time values are not yet implemented.",
 						cast.origin.getStablePosition()
 					));
@@ -697,7 +779,7 @@ namespace compiler::helios {
 				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
 
 				if (!maybe_new_numeric.has_value()) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Value cannot be converted to type `",
 							cast.target_type.toString(),
@@ -712,11 +794,20 @@ namespace compiler::helios {
 				result = CompileTimeValue{ maybe_new_numeric.value() };
 			}
 
-			void visitMoveExpr(const code::MoveExpr&) final { result = CouldNotShortPath{}; }
+			void visitMoveExpr(const code::MoveExpr& expr) final {
+				// @TODO: #3106 Once move constructors exist. Moves in TreeEval should only be
+				// allowed on trivially movable types, other should CouldNotShortPath.
+				auto sub_result = evalHoutExpr(ctx, expr.inner.ref());
+				if (sub_result.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				result = sub_result.valueOrThrow();
+			}
 
 			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
 
-			void visitBoxOfExpr(const code::BoxOfExpr&) final { result = CouldNotShortPath{}; }
+			void visitPtrOfExpr(const code::PtrOfExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 
@@ -735,12 +826,8 @@ namespace compiler::helios {
 					result = ctv::CompileTimeValue(false);
 					break;
 				}
-				case tsh::Kind::String: {
-					result = ctv::CompileTimeValue(base::StrID(""));
-					break;
-				}
 				default:
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 						base::strConcat(
 							"Default value evaluation at compile time for type: '",
 							expr.type.toString(),
@@ -802,14 +889,14 @@ namespace compiler::helios {
 			}
 
 			void visitListPushExpr(const code::ListPushExpr& expr) final {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Evaluating list push expression at compile time.",
 					expr.origin.getStablePosition()
 				));
 			}
 
 			void visitListPopExpr(const code::ListPopExpr& expr) final {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Evaluating list pop expression at compile time.",
 					expr.origin.getStablePosition()
 				));
@@ -848,54 +935,47 @@ namespace compiler::helios {
 		) {
 			// Collect all function dependencies for this function. All functions needed in
 			// order to evaluate this one.
-			Ref dependencies
-				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
+			auto& all_dependencies
+				= ctx.query<QueryTransitiveUsedSymbols>(function_sym_id)->valueOrThrow();
 
 			auto mangled_name_function_to_call
 				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
 
-			std::vector<SymID>        all_dependencies;
-			std::unordered_set<SymID> seen_dependencies;
-			auto                      add_dependencies = [&](const std::vector<SymID>& deps) {
-                for (const SymID& func_id: deps)
-                    if (seen_dependencies.insert(func_id).second)
-                        all_dependencies.push_back(func_id);
-			};
-			add_dependencies(*dependencies);
-
-			// Some dependencies are injected by MIR lowering rather than being present in the HOUT,
-			// so they are invisible to the HOUT-level transitive call collection. In particular
-			// array/slice bounds checks emit a call to `panic`, thus we must load it into the VM as
-			// well.
-			if (frontend::getModuleByAbsolutePath(
-					ctx, base::StrID("core"), { base::StrID("panicking") }
-				)) {
-				auto panic_sym
-					= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::Panic })
-				          ->valueOrThrow();
-				Ref panic_dependencies
-					= &ctx.query<QueryTransitiveFunctionCalls>(panic_sym)->valueOrThrow();
-				add_dependencies(*panic_dependencies);
-			}
-
-			// temporary hout unit used to lower functions to LIR
+			// Temporary hout unit used to lower functions to LIR. `all_dependencies` excludes the
+			// target function itself, so we lower it explicitly alongside its transitive callees.
 			HOUTUnit hout_unit;
-			for (const SymID& func_id: all_dependencies) {
+			if (implementsQueryCodeOfFun(function_sym_id))
+				hout_unit.functions.emplace_back(
+					&ctx.query<QueryCodeOfFun>(function_sym_id)->valueOrThrow()
+				);
+			for (const SymID& func_id: all_dependencies.used_functions) {
+				if (not implementsQueryCodeOfFun(func_id)) continue;
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				hout_unit.functions.emplace_back(&hout_func);
+				CORE_DEV_LOG(
+					Compiler,
+					"Lowered function `",
+					hout_func.declaration->original_name,
+					"` for comp-time."
+				);
+			}
+			for (const SymID& glob_id: all_dependencies.used_globals) {
+				auto& hout_glob = ctx.query<QueryHOUTGlobalData>(glob_id)->valueOrThrow();
+				hout_unit.glob_data.emplace_back(&hout_glob);
+				CORE_DEV_LOG(
+					Compiler, "Lowered global `", hout_glob.original_name, "` for comp-time."
+				);
 			}
 			auto lir_unit
 				= lir::lowerToLIRUnit(ctx, mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow());
 
 			// Note: the assumptions bellow might change,
 			// for example when we will add consts to comp time.
+			// Bare declarations (no lowerable body) are filtered out above, so we compare against
+			// the functions actually lowered, not every collected dependency.
 			CORE_ASSERT(
-				lir_unit.lir_functions.size() == all_dependencies.size(),
-				"Number of lir functions should be the same as number of dependencies collected."
-			);
-			CORE_ASSERT(
-				lir_unit.lir_globals.empty(),
-				"LIR global variables are not supported in compile time evaluation."
+				lir_unit.lir_functions.size() == hout_unit.functions.size(),
+				"Number of lir functions should be the same as number of lowered dependencies."
 			);
 
 			return LIRBuildResult{
@@ -922,6 +1002,41 @@ namespace compiler::helios {
 		}
 
 		/**
+		 * @brief Checks that the signature of the function we are about to evaluate is supported
+		 * by comp-time evaluation.
+		 *
+		 * A parameter that is not trivially copyable owns memory, and a mutable one may have that
+		 * memory rewritten by the callee. The comp-time DVM cannot transfer such memory back to
+		 * the compiler, so these signatures are rejected.
+		 *
+		 * @TODO: #2990 Support memory owning parameters in comp-time evaluation.
+		 *
+		 * @throws A query failure (after logging an error) on the first unsupported parameter.
+		 */
+		static void validateSignatureSupported(query::Context& ctx, SymID function_sym_id) {
+			auto& declaration = ctx.query<QueryDeclOfFun>(function_sym_id)->valueOrThrow();
+
+			for (const auto& parameter: declaration.parameters) {
+				if (parameter.type.getMutability() == tsh::Mutability::Immutable) continue;
+				if (parameter.type.isTriviallyCopyable(ctx)) continue;
+
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					base::strConcat(
+						"Call to `",
+						declaration.original_name,
+						"` cannot be evaluated at compile time, because its parameter `",
+						parameter.name,
+						"` of type `",
+						parameter.type.toString(),
+						"` is mutable and not trivially copyable."
+					),
+					parameter.origin.getStablePosition()
+				));
+				query::throwFailed();
+			}
+		}
+
+		/**
 		 * @brief Evaluates a HOUT call expression using DVM Eval.
 		 * @return The calculated result represented by CompileTimeValue or a Failed error.
 		 */
@@ -933,6 +1048,8 @@ namespace compiler::helios {
 			if (!callee_ident) return query::Failed();
 
 			const SymID function_sym_id = callee_ident->symbol;
+
+			validateSignatureSupported(ctx, function_sym_id);
 
 			auto args_result = evaluateArguments(ctx, call_expr->arguments);
 			if (args_result.hasFailed()) return query::Failed();
@@ -956,7 +1073,7 @@ namespace compiler::helios {
 			);
 
 			if (!vm_eval_result) {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Compile time evaluation of this function call failed or "
 					"returned unsupported result.",
 					call_expr->origin.getStablePosition(),
@@ -1003,7 +1120,7 @@ namespace compiler::helios {
 					}
 
 					// Otherwise, log an error.
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 						"Evaluation of this expression in DVM at compile time",
 						expr->origin.getStablePosition()
 					));

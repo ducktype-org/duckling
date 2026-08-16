@@ -1,5 +1,4 @@
 #include <backends/llvm/llvm_backend.hpp>
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -11,6 +10,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -43,7 +43,6 @@ public:
 		TESTER_ADD_TEST(dynamicArraysTest);
 		TESTER_ADD_TEST(defaultInitialization);
 		TESTER_ADD_TEST(classTest);
-		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(tuplesTest);
 		TESTER_ADD_TEST(pointersTest);
@@ -62,7 +61,7 @@ protected:
         );
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 
-		dia_int::configureImmediatePrint(&std::cerr);
+		dia::configureImmediatePrint(&std::cerr);
 	}
 
 private:
@@ -162,9 +161,7 @@ private:
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 16, 21); }
-
-	void stringsTest() { runTestForModule("modules/strings", 3, 5); }
+	void classTest() { runTestForModule("modules/classes/records", 7, 8); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 

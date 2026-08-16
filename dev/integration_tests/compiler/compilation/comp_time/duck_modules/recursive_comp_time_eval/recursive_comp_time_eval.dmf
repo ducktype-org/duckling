@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun getTypeFromCondition(b: bool) = {
     if (b) return i64;
     else return f64;

@@ -1,6 +1,6 @@
 #include "match.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/match_case.hpp>
@@ -20,8 +20,8 @@
 
 namespace compiler::helios::desugaring {
 	namespace {
-		void logMatchNYI(query::Context& ctx, std::string what, dia_int::StablePosition position) {
-			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(std::move(what), position));
+		void logMatchNYI(query::Context& ctx, std::string what, dia::StablePosition position) {
+			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(std::move(what), position));
 		}
 
 		/**
@@ -173,7 +173,7 @@ namespace compiler::helios::desugaring {
 
 				alternative_index = findAlternativeIndex(variant_type, constraint_type);
 				if (!alternative_index.has_value()) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Type `",
 							constraint_type.toString(),
@@ -186,7 +186,7 @@ namespace compiler::helios::desugaring {
 					return {};
 				}
 				if (!covered.insert(alternative_index.value()).second) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Alternative `",
 							constraint_type.toString(),
@@ -229,7 +229,7 @@ namespace compiler::helios::desugaring {
 		}
 
 		if (!has_wildcard && covered.size() < num_alternatives) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"`match` is not exhaustive: it covers ",
 					covered.size(),

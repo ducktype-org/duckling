@@ -4,6 +4,7 @@
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
 
+#include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 
@@ -96,8 +97,16 @@ namespace compiler::backend_vm::internal {
 					type_val_u64, std::get<vm::code::OpaqueType>(type).size
 				);
 			}
-			variant_case(base::StrID, str) {
-				auto ctor = lowerStringLiteral(pctx, global_name, inserted_global_place, str);
+			variant_case(ctv::CompileTimeValue::CharSliceValue, str) {
+				auto ctor
+					= lowerStringLiteral(pctx, global_name, inserted_global_place, str.value, false);
+				global_data.ctor_name = ctor.ctor.name;
+				pctx.extra_bytecode_functions.push_back(std::move(ctor.ctor));
+			}
+			variant_case(ctv::CompileTimeValue::StringClassValue, value) {
+				auto ctor = lowerStringLiteral(
+					pctx, global_name, inserted_global_place, value.value, true
+				);
 				global_data.ctor_name = ctor.ctor.name;
 				pctx.extra_bytecode_functions.push_back(std::move(ctor.ctor));
 			}
@@ -111,13 +120,16 @@ namespace compiler::backend_vm::internal {
 		ProgramLoweringContext& pctx,
 		base::StrID             global_name,
 		const DVMPlace&         inserted_global_place,
-		base::StrID             content
+		base::StrID             content,
+		bool                    is_string_class
 	) {
-		// A char slice is a class `{ _0: ptr-to-dynamic-table, _1: i64 length }`. We derive
-		// every type we need from the slice's `_0` field, so the static byte array, the
-		// dynamic-table pointer and the `fstToDynTable` cast all agree on the element type.
-		const auto& slice_data    = std::get<vm::code::DataType>(inserted_global_place.getType());
-		base::StrID ptr_type_name = slice_data.fields.at(0).type;
+		// Both char-backed types start with a pointer to the characters followed by their length:
+		// a char slice is `{ _0: ptr-to-dynamic-table, _1: i64 length }` and a `String` is
+		// `{ pointer, len, cap, offset }`. We derive every type we need from the first field, so
+		// the static byte array, the dynamic-table pointer and the `fstToDynTable` cast all agree
+		// on the element type.
+		const auto& struct_data   = std::get<vm::code::DataType>(inserted_global_place.getType());
+		base::StrID ptr_type_name = struct_data.fields.at(0).type;
 		const auto& dyn_ptr_type  = pctx.type_storage.dvm_types.at(ptr_type_name);
 
 		// ================ Part 1: insert fixed-size table with string bytes =================
@@ -164,12 +176,27 @@ namespace compiler::backend_vm::internal {
 			{ OpKind::fstToDynTable, dyn_ptr.asArgument(), fst_ptr.asArgument() }
 		);
 
-		constructStructureFromValues(
-			ctor_ctx,
-			inserted_global_place,
-			slice_data,
-			{ DVMValue{ dyn_ptr }, DVMValue{ DVMImmediate::i64(static_cast<i64>(length)) } }
-		);
+		if (not is_string_class) {
+			// `str` is `{ pointer, len }`.
+			constructStructureFromValues(
+				ctor_ctx,
+				inserted_global_place,
+				struct_data,
+				{ DVMValue{ dyn_ptr }, DVMValue{ DVMImmediate::u64(length) } }
+			);
+		} else {
+			// `String` is `{ pointer, len, cap, offset }`. The buffer is a static global exactly
+			// as long as its content, so the capacity is the length and the offset is zero.
+			constructStructureFromValues(
+				ctor_ctx,
+				inserted_global_place,
+				struct_data,
+				{ DVMValue{ dyn_ptr },
+			      DVMValue{ DVMImmediate::u64(length) },
+			      DVMValue{ DVMImmediate::u64(length) },
+			      DVMValue{ DVMImmediate::u64(0) } }
+			);
+		}
 
 		ctor_ctx.cleanUpRegisteredTemps();
 		ctor_ctx.pushInstruction(vm::code::builders::InstructionBuilder(OpKind::ret).build());
@@ -191,8 +218,10 @@ namespace compiler::backend_vm::internal {
 			auto& field       = structure_type.fields[i];
 			auto& field_value = values[i];
 
-			auto ptr_to_field_type = ctor_ctx.program_context.getOrInsertPointerType(field.type);
-			DVMPlace field_ptr     = ctor_ctx.pushTempLocal(ptr_to_field_type, "str_slice_field");
+			auto ptr_to_field_type = ctor_ctx.program_context.getOrInsertPointerType(
+				ctor_ctx.program_context.type_storage.dvm_types.at(field.type)
+			);
+			DVMPlace field_ptr = ctor_ctx.pushTempLocal(ptr_to_field_type, "str_slice_field");
 			ctor_ctx.pushInstruction({ OpKind::structLea,
 			                           field_ptr,
 			                           destination,

@@ -68,15 +68,8 @@ namespace compiler::mir {
 
 				auto return_value = function.addReturnTmp(res_type);
 
-				// Set move flag only if value exists.
-				std::vector<OperationFlag> flags = {};
-				if (possible_result.has_value())
-					flags.push_back(flagMove(possible_result->get<MIRPlace>().getBase<MIRLocalRef>()
-					));
-
-
 				expr_res.storeResultInGivenPlace(
-					MIRPlace(return_value), retrieve_value, flags, return_scope, {}
+					MIRPlace(return_value), retrieve_value, {}, return_scope, {}
 				);
 
 				possible_result = return_value;

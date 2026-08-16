@@ -14,7 +14,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::{fmt, io};
 
-use tracing::debug;
+use tracing::{debug, error};
 
 use crate::quackpack::core::PackageLoader;
 use crate::util::file_locks::{FileLockManager, LockedFile};
@@ -37,7 +37,7 @@ impl fmt::Debug for DuckHome {
 impl DuckHome {
     /// Create a new [`DuckHome`] rooted at `root`.
     pub fn new(root: PathBuf) -> Self {
-        debug!(?root, "duck home root");
+        debug!(?root, "duck home");
         Self {
             root: FileLockManager::new(root),
         }
@@ -110,7 +110,7 @@ metadata:
         impl Drop for UnlockOnDrop {
             fn drop(&mut self) {
                 if let Err(e) = self.file.unlock() {
-                    debug!("failed to unlock the global manifest file: {e} ({e:})");
+                    error!(error = %e, "failed to unlock the global manifest file");
                 }
             }
         }

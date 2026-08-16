@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test boolean operators with explicit literals
 # Per docs: and, or, not, xor operators
 

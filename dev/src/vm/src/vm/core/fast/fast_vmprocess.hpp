@@ -17,13 +17,9 @@ namespace vm::fast {
 		explicit FastVMProcess(PID pid);
 		~FastVMProcess() override = default;
 
-		Ref<VmValue> createVmValue(vm::TypeCRef type) override;
+		Ref<IVMValue> createVMValue(code::valid_type::ValidTypeID type_id) override;
 
-		Ref<VmValue> createVmValue(vm::TypeCRef type, Pointer src) override;
-
-		Box<VmValue> createOwnedVmValue(vm::TypeCRef type) override;
-
-		Box<VmValue> createOwnedVmValue(vm::TypeCRef type, Pointer src) override;
+		Box<IVMValue> createOwnedVMValue(code::valid_type::ValidTypeID type_id) override;
 
 		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request
 		) override;
@@ -83,6 +79,10 @@ namespace vm::fast {
 		void notifyPausedVMThread(api::ThreadID thread_id) override;
 
 		void waitForBreakpoint() override;
+
+		std::expected<api::Response, api::ApiError> setExecutionConfig(
+			const api::ExecutionConfig& config
+		) override;
 
 		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
 		) override;

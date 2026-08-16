@@ -41,13 +41,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	ListPop,
 
 	/**
-		FreeBox doesn't exist in MIR. It will get created from DestructIf in LIR
-		@TODO: #1894 This approach may be temporary and depends on how we handle
-		destructors in the future. Remove the comment if the approach changes.
-	 */
-	BoxAlloc,
-
-	/**
 		@brief Placeholder.
 		@todo  Some decisions here to be made about operations like that.
 	*//**
@@ -86,14 +79,12 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	BooleanNot,
 
 
-	/** Operations on meta types for compile time function evaluation */
-	MetaCreateBox,
-	MetaCreateRef,
-	MetaCreateConst,
-	MetaCreateTuple, // N arguments, types to create the tuple type from
-	MetaCreateVariant, // N arguments, types to create the variant type from
-	MetaEq,
-	MetaNeq,
+	/**
+	 * @brief Operation on meta types for compile time function evaluation.
+	 * The specific meta operation is parametrized by `MetaParameters` (a `MetaKind`) stored in the
+	 * instruction's `extra_params`.
+	 */
+	MetaTypeOperation,
 
 	/** Cast is also parametrized by the source type and the target type */
 	Cast,
@@ -137,6 +128,27 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	FunctionEnd
 )
 
+/**
+    @brief The specific kind of a `Operation::MetaTypeOperation` instruction.
+    Stored in the instruction's `extra_params` as `MetaParameters`. Each kind maps to a compile-time
+    type operation lowered by the DVM backend to extern-C `comptime_*` calls.
+*/
+MAKE_STRINGIFYABLE_ENUM(compiler::mir, u32, MetaKind,
+	CreateBox,
+	CreateRef,
+	CreateConst,
+	CreatePtr,
+	CreateManyPtr,
+	CreateCPtr,
+	CreateSlice,
+	CreateTuple,
+	CreateVariant,
+	Eq,
+	Neq,
+	SizeOf,
+	AlignOf
+)
+
 namespace compiler::mir {
 	/**
 	 * @brief BlockID is a temporary solution that should be replaced by
@@ -160,9 +172,6 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 	/// Used by the return value temporary, as it's destructor would have to be after the return.
 	NoDestructor,
 
-	/// Do not validate use-after-free for this local. Currently not used.
-	NoUseAfterFreeValidation,
-
 	/// We do not add the `ScopeStart` and `ScopeEnd` flags for this local.
 	/// Used for return value and parameters, as their scope is always valid in the function.
 	NoScopeFlags,
@@ -173,7 +182,11 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 	
 	/// Mark this local as a condition temporary, which can be used by the pipeline to handle it differently.
 	/// Not used.
-	ConditionTmpValue
+	ConditionTmpValue,
+
+	/// Do not run the use-before-initialization check 
+	// and use-after-free check for this local.
+	NoMoveStatusValidation
 )
 
 namespace compiler::mir {
@@ -304,6 +317,11 @@ namespace compiler::mir {
 		[[nodiscard]]
 		bool carriesInformation(query::Context& ctx) const {
 			return type.getType().carriesInformation(ctx);
+		}
+
+		[[nodiscard]]
+		bool isTemporary() const {
+			return helios_id.empty();
 		}
 	};
 
@@ -622,7 +640,7 @@ namespace compiler::mir {
 	 *
 	 * Emitted when an assignment stores a value into a whole local (no projections), as opposed to
 	 * a declaration. Like @ref flagConstruct it marks the local as alive from this point on for
-	 * liveness analysis.
+	 * move-state analysis.
 	 */
 	constexpr OperationFlag flagReinit(MIRLocalRef local) {
 		return { .flag = OperationFlag::Flag::Reinit, .local = local };
@@ -669,11 +687,20 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Additional parameters for a `Operation::MetaTypeOperation` instruction, selecting
+	 * which meta operation it is.
+	 */
+	struct MetaParameters final {
+		MetaKind kind;
+	};
+
+	/**
 	 * @brief Additional parameters for MIR instructions that depend on the operation type.
 	 * For example, cast instruction needs to know
 	 * from which type to which type it is casting.
 	 */
-	using InstrParameters = std::variant<NoInstrParameters, CastParameters, VariantParameters>;
+	using InstrParameters
+		= std::variant<NoInstrParameters, CastParameters, VariantParameters, MetaParameters>;
 
 	/**
 	 * @brief Single instruction of MIR code.
@@ -880,6 +907,8 @@ namespace compiler::mir {
 		 */
 		[[nodiscard]]
 		base::OkBad validateBlockIDs() const;
+
+		[[nodiscard]] BlockID lastBlock() const { return block_order.back(); }
 	};
 
 	/**
@@ -909,7 +938,7 @@ namespace compiler::mir {
 	 */
 	struct MIRUnit final {
 		std::vector<CRef<mir::Function>> mir_functions;
-		std::vector<MIRGlobalData>       mir_globals;
+		std::vector<CRef<MIRGlobalData>> mir_globals;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
+#include <diagnostic/message.hpp>
 
 namespace pst {
-	class UnrecognizedPatternInCaseError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class UnrecognizedPatternInCaseError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -13,11 +13,11 @@ namespace pst {
 
 	public:
 		UnrecognizedPatternInCaseError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class RoundExprStartError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class RoundExprStartError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -25,12 +25,11 @@ namespace pst {
 		}
 
 	public:
-		RoundExprStartError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		RoundExprStartError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MatchCaseWithNoBodyError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class MatchCaseWithNoBodyError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -39,11 +38,11 @@ namespace pst {
 
 	public:
 		MatchCaseWithNoBodyError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class DoubleDefaultBranchError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class DoubleDefaultBranchError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -52,12 +51,12 @@ namespace pst {
 
 	public:
 		DoubleDefaultBranchError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	class UnconditionedBranchAfterConditionedError final:
-		  public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+		  public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -66,11 +65,11 @@ namespace pst {
 
 	public:
 		UnconditionedBranchAfterConditionedError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class AttrStarError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class AttrStarError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -78,11 +77,11 @@ namespace pst {
 		}
 
 	public:
-		AttrStarError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		AttrStarError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class EmptyExprError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class EmptyExprError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -90,11 +89,11 @@ namespace pst {
 		}
 
 	public:
-		EmptyExprError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		EmptyExprError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class BadImportChainError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadImportChainError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -102,12 +101,11 @@ namespace pst {
 		}
 
 	public:
-		BadImportChainError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadImportChainError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class NoExternArgumentError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NoExternArgumentError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -115,15 +113,14 @@ namespace pst {
 		}
 
 	public:
-		NoExternArgumentError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		NoExternArgumentError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	/**
 	 * @brief Error for when a template statement is missing a parameter list.
 	 */
-	class TemplateNoListError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class TemplateNoListError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -131,7 +128,42 @@ namespace pst {
 		}
 
 	public:
-		TemplateNoListError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		TemplateNoListError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	/**
+	 * @brief Error for operators that cannot be used as function names.
+	 */
+	class ReservedOperatorFunNameError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "reserved_operator_fun_name" };
+		}
+
+	public:
+		ReservedOperatorFunNameError(dia::SourcePosition pos, std::string op):
+			  dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("operator", std::move(op));
+		}
+	};
+
+	/**
+	 * @brief Error for custom assignment operators, which are not supported yet.
+	 */
+	class AssignmentOperatorFunNameError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "assignment_operator_fun_name" };
+		}
+
+	public:
+		AssignmentOperatorFunNameError(dia::SourcePosition pos, std::string op):
+			  dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("operator", std::move(op));
+		}
 	};
 }

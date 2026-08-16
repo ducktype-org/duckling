@@ -26,9 +26,8 @@ namespace compiler::backend_vm::internal {
 		void lower(ComparisonOperation& op);
 
 		void lower(const CallOperation& op);
+		void lower(const BuiltinCallOperation& op);
 		void lower(const AddressOfOperation& op);
-		void lower(const BoxAllocOperation& op);
-		void lower(const BoxFreeOperation& op);
 		void lower(const CastOperation& op);
 		void lower(const MetaOperation& op);
 		void lower(const VariantConstructOperation& op);
@@ -47,5 +46,11 @@ namespace compiler::backend_vm::internal {
 
 	private:
 		Ref<FunctionLoweringContext> ctx;
+
+		static vm::code::builders::OpKind getOpKindFromLIRLayouts(
+			Ref<FunctionLoweringContext>        ctx,
+			const lir::CastParameters&          cast_params,
+			std::vector<vm::opargs::OpCodeArg>& out_arguments
+		);
 	};
 }

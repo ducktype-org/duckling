@@ -12,21 +12,19 @@ class FirstClassEver {
         a = new_a;
     }
 
-    # @TODO: #2000 Re-enable once copy constructors are called in coercions. 
-    # User defined copy constructor causes this class to be not trivially copyable. 
-    # private {
-    #     FirstClassEver.copy(other: const ref FirstClassEver) = {
-    #         return FirstClassEver(other.a, other.b);
-    #     }
-    # }
+    private {
+        FirstClassEver.copy(other: const ref FirstClassEver) = {
+            return FirstClassEver(other.a, other.b);
+        }
+    }
 
     FirstClassEver.destroy() = {}
 }
 
 class SecondClass extends FirstClassEver {}
 
-let first_class_ever: FirstClassEver = FirstClassEver(1, f32(2.0));
-let first_class_ever_copy = first_class_ever;
+let first_class_ever: FirstClassEver = FirstClassEver(1, 2.0 as f32);
+let first_class_ever_copy = copy first_class_ever;
 
 class ClassWithMember {
     member: FirstClassEver = FirstClassEver(3, 4.0);

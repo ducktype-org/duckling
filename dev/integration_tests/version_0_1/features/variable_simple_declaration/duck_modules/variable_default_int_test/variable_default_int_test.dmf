@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     var a: i128;
     if (a != 0i128)

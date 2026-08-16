@@ -1,32 +1,30 @@
-import core.builtins.*;
-
 # Test char escape sequences
 # Focus: escape characters per docs: \n, \t, \r, \\, \', \"
 
 fun main() -> i64 = {
     # Test newline escape
     var newline: char = '\n';
-    builtin_output_i64(i64(newline)); # 10 (ASCII for newline)
+    builtin_output_i64(newline as i64); # 10 (ASCII for newline)
 
     # Test tab escape
     var tab: char = '\t';
-    builtin_output_i64(i64(tab));     # 9 (ASCII for tab)
+    builtin_output_i64(tab as i64);     # 9 (ASCII for tab)
 
     # Test carriage return escape
     var carriage: char = '\r';
-    builtin_output_i64(i64(carriage));# 13 (ASCII for carriage return)
+    builtin_output_i64(carriage as i64);# 13 (ASCII for carriage return)
 
     # Test backslash escape
     var backslash: char = '\\';
-    builtin_output_i64(i64(backslash)); # 92 (ASCII for backslash)
+    builtin_output_i64(backslash as i64); # 92 (ASCII for backslash)
 
     # Test single quote escape
     var singleQuote: char = '\'';
-    builtin_output_i64(i64(singleQuote)); # 39 (ASCII for single quote)
+    builtin_output_i64(singleQuote as i64); # 39 (ASCII for single quote)
 
     # Test double quote escape (in char)
     var doubleQuote: char = '\"';
-    builtin_output_i64(i64(doubleQuote)); # 34 (ASCII for double quote)
+    builtin_output_i64(doubleQuote as i64); # 34 (ASCII for double quote)
 
     # Test escape sequence comparisons
     if (tab < newline) {
@@ -38,7 +36,7 @@ fun main() -> i64 = {
     }
 
     # Test escape chars in array-like usage
-    var escapes_sum: i64 = i64(newline) + i64(tab) + i64(carriage);
+    var escapes_sum: i64 = newline as i64 + tab as i64 + carriage as i64;
     builtin_output_i64(escapes_sum);  # 32 (10 + 9 + 13)
 
     # Test escape equality

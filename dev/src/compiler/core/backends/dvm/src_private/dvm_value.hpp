@@ -58,7 +58,18 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
 
-	using DVMCallable = std::variant<DVMFunctionName, DVMExternCFunctionName>;
+	/**
+	 * @brief Name of a native function declared with the C ABI and resolved through libffi by the
+	 * DVM. Calls to it are lowered to `call_ffifunc`.
+	 */
+	struct DVMFFIFunctionName {
+		base::StrID name;
+		bool        operator==(const DVMFFIFunctionName& other) const = default;
+
+		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
+	};
+
+	using DVMCallable = std::variant<DVMFunctionName, DVMExternCFunctionName, DVMFFIFunctionName>;
 
 	/**
 	 * @brief Structure representing a place (L-value) in the generated DVM bytecode (which includes
@@ -85,7 +96,7 @@ namespace compiler::backend_vm::internal {
 	 * If the access kind is set to `DynTablePointer`, a load into the place will be performed by
 	 * `dynTableStore_pptr_pany_p64`.
 	 * If the access kind is set to `CPointer`, a load into the place will be performed by
-	 * new instruction that is not yet added @TODO: #2745 finish here.
+	 * `store_pcptr_pany`.
 	 */
 	class DVMPlace {
 	public:

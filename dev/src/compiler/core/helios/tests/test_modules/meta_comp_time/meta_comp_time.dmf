@@ -81,15 +81,15 @@ const VARIANTS_DO_NOT_FLATTEN = variantOf(i32 | f32, i64) == ((i32 | f32) | i64)
 
 fun matchValue(v: i32 | f32) -> i64 = {
     var r: i64 = match (v) {
-        case x : i32 = i64(x);
-        case _ = i64(0) - i64(1);
+        case x : i32 = x as i64;
+        case _ = (0 as i64) - (1 as i64);
     };
     return r;
 }
 fun buildAndMatch(use_int: bool) -> i64 = {
-    var v: i32 | f32 = f32(0.5);
+    var v: i32 | f32 = 0.5 as f32;
     if (use_int) {
-        v = i32(17);
+        v = 17 as i32;
     }
     return matchValue(v);
 }

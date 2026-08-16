@@ -5,7 +5,7 @@ interface down to the core execution engine.
 
 The primary components in this flow are:
 
-1.  **User (API / REPL / CLI):** The entry point for all interactions. A user submits requests to run programs,
+1.  **User (API / CLI):** The entry point for all interactions. A user submits requests to run programs,
     send input, or retrieve output through either a API or a CLI.
 
 2.  **[`Supervisor`](./src/vm/core/supervisor/readme.md):** The top-level manager and request router. The Supervisor
@@ -48,5 +48,5 @@ and retrieving their return values.
 *   [VMThread](./src/vm/core/thread/readme.md)
 *   [Memory Module](./src/vm/core/process/memory/readme.md)
 *   [Concurrency](./src/vm/core/process/concurrency/readme.md)
-*   [VmValue](./src/vm/core/thread/readme.md#vmvalue)
+*   [VMValue](./src/vm/core/thread/readme.md#vmvalue)
 *   [Tests](./tests/readme.md)

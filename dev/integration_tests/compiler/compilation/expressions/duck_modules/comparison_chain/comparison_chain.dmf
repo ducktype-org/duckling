@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun numeric() -> i64 = {
     let c = 3;
 

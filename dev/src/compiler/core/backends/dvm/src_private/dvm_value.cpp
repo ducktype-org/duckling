@@ -17,6 +17,7 @@ using namespace compiler::backend_vm::internal;
 			if (primitive.size == Bytes{ 1 }) return vm::opargs::Place8{ name };
 		}
 		variant_case(vm::code::PointerType, pointer) { return vm::opargs::PlacePtr(name); }
+		variant_case(vm::code::CPointerType, cpointer) { return vm::opargs::PlaceCPtr(name); }
 		variant_case(vm::code::FixedSizeTableType, array) { return vm::opargs::PlaceFSTable(name); }
 		variant_case(vm::code::DataType, data) { return vm::opargs::PlaceStructure(name); }
 		variant_case(vm::code::VariantType, variant) { return vm::opargs::PlaceVnt(name); }
@@ -118,6 +119,10 @@ DVMImmediate::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMExternCFunctionName::asArgument() const {
 	return vm::opargs::ExtCFunctionName{ name };
+}
+
+[[nodiscard]] vm::opargs::OpCodeArg DVMFFIFunctionName::asArgument() const {
+	return vm::opargs::FFIFunctionName{ name };
 }
 
 DVMValue::operator vm::opargs::OpCodeArg() const { return asArgument(); }

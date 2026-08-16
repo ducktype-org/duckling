@@ -32,9 +32,13 @@ namespace compiler::helios::code {
 
 		virtual void acceptVisitor(HoutStmtVisitor&) const = 0;
 
-		[[nodiscard]] base::Optional<dia_int::StablePosition> getPosition() const {
+		[[nodiscard]] base::Optional<dia::StablePosition> getPosition() const {
 			return origin.getStablePosition();
 		}
+
+		[[nodiscard]]
+		virtual Box<Stmt> clone() const
+			= 0;
 	};
 
 	/**
@@ -42,6 +46,8 @@ namespace compiler::helios::code {
 	 */
 	struct CodeBlock final {
 		std::vector<Box<Stmt>> statements;
+
+		[[nodiscard]] Box<CodeBlock> clone() const;
 	};
 
 	/**
@@ -53,6 +59,8 @@ namespace compiler::helios::code {
 		base::Optional<BoxOrCRef<Expr>> initial_value;
 		SymID                           helios_symbol;
 		ElementOrigin                   origin;
+
+		[[nodiscard]] Box<Parameter> clone() const;
 	};
 
 	/***********************\
@@ -80,8 +88,9 @@ namespace compiler::helios::code {
 			  type(type),
 			  helios_symbol(helios_symbol) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
-		void acceptVisitor(HoutStmtVisitor&) const override;
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
 	};
 
 	/**
@@ -98,8 +107,9 @@ namespace compiler::helios::code {
 			  location_expr(std::move(location_expr)),
 			  new_value_expr(std::move(new_value)) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
-		void acceptVisitor(HoutStmtVisitor&) const override;
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
 	};
 
 	/**
@@ -112,8 +122,9 @@ namespace compiler::helios::code {
 			  Stmt(origin),
 			  value(std::move(value)) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
-		void acceptVisitor(HoutStmtVisitor&) const override;
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
 	};
 
 	/**
@@ -122,8 +133,9 @@ namespace compiler::helios::code {
 	struct VoidReturnStmt final: public Stmt {
 		VoidReturnStmt(ElementOrigin origin): Stmt(origin) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
-		void acceptVisitor(HoutStmtVisitor&) const override;
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
 	};
 
 	/**
@@ -134,8 +146,9 @@ namespace compiler::helios::code {
 
 		ExprStmt(ElementOrigin origin, BoxOrCRef<Expr> expr): Stmt(origin), expr(std::move(expr)) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
-		void acceptVisitor(HoutStmtVisitor&) const override;
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
 	};
 
 	/**
@@ -160,8 +173,9 @@ namespace compiler::helios::code {
 			  then_body(std::move(then_body)),
 			  else_body({}) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
-		void acceptVisitor(HoutStmtVisitor&) const override;
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
 	};
 
 	/**
@@ -176,8 +190,9 @@ namespace compiler::helios::code {
 			  condition(std::move(condition)),
 			  body(std::move(body)) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
-		void acceptVisitor(HoutStmtVisitor&) const override;
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
 	};
 
 	struct BlockStmt final: public Stmt {
@@ -185,8 +200,9 @@ namespace compiler::helios::code {
 
 		BlockStmt(ElementOrigin origin, CodeBlock body): Stmt(origin), body(std::move(body)) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
-		void acceptVisitor(HoutStmtVisitor&) const override;
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
 	};
 
 	/**
@@ -214,5 +230,7 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
+
+		[[nodiscard]] Box<Stmt> clone() const override;
 	};
 }

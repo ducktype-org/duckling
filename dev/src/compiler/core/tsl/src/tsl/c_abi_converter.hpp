@@ -2,7 +2,7 @@
  * @file c_abi_converter.hpp
  *
  * @brief Query that converts Duckling field types into the minimal
- * `abi::type_system::AbiType` representation used by
+ * `abi::types::AbiType` representation used by
  * `abi::layout::computeCLayout`. Rejects every type that has no
  * representation in the C ABI.
  *
@@ -29,7 +29,7 @@ namespace compiler::tsl {
 	 * C-ABI representation: either the converted type or a short rejection
 	 * reason suitable for a diagnostic.
 	 */
-	using CAbiConversionResult = std::expected<abi::type_system::AbiType, std::string>;
+	using CAbiConversionResult = std::expected<abi::types::AbiType, std::string>;
 
 	/**
 	 * @brief Converts a Duckling field type to its C-ABI representation.

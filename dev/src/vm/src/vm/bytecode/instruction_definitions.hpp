@@ -366,6 +366,7 @@ DEF_INSTR(jmpIfNot_label, (vm::opargs::Label, label))
 DEF_INSTR(call_func, (vm::opargs::FunctionName, function))
 DEF_INSTR(call_builtinfunc, (vm::opargs::BuiltinFunctionName, function))
 DEF_INSTR(call_cfunc, (vm::opargs::ExtCFunctionName, function))
+DEF_INSTR(call_ffifunc, (vm::opargs::FFIFunctionName, function))
 
 DEF_INSTR(set_threadctx, (vm::opargs::FunctionName, function))
 
@@ -413,15 +414,14 @@ DEF_INSTR(alloc_pptr_type, (vm::opargs::PlacePtr, ptr), (vm::opargs::Type, type)
 DEF_INSTR(free_pptr, (vm::opargs::PlacePtr, ptr))
 
 
-// stores local data at pointer
+// stores variable at pointer
 DEF_INSTR(store_pptr_pany, (vm::opargs::PlacePtr, dst_ptr), (vm::opargs::PlaceAny, src))
-// dereferences pointer and stores into local
+// dereferences pointer and stores into a variable
 DEF_INSTR(load_pany_pptr, (vm::opargs::PlaceAny, dst), (vm::opargs::PlacePtr, src_ptr))
 
-// stores reference to local object of any type T in pointer<T>
+// stores a pointer to a variable of any type
 DEF_INSTR(ref_pptr_pany, (vm::opargs::PlacePtr, dst_ptr), (vm::opargs::PlaceAny, src))
-// stores reference to global object of any type T in pointer<T>
-// stores reference to global variant object in pointer<Variant>
+// stores a pointer to a variant variable
 DEF_INSTR(ref_pptr_pvnt, (vm::opargs::PlacePtr, dst_ptr), (vm::opargs::PlaceVnt, src))
 
 // ========= STRUCTURE OPERATIONS ========
@@ -552,6 +552,54 @@ DEF_INSTR(
  */
 DEF_INSTR(strOutput_pptr, (vm::opargs::PlacePtr, string_ptr))
 
+// ========= CPOINTER OPERATIONS ========
+// Operations on raw C pointers (native addresses obtained via FFI). The native side of these
+// copies is unchecked by design - the program is trusted for the native address.
+
+/**
+ * @brief Copies `sizeof(pointee)` bytes from the native memory addressed by `src_ptr` into
+ * `dst`.
+ */
+DEF_INSTR(load_pany_pcptr, (vm::opargs::PlaceAny, dst), (vm::opargs::PlaceCPtr, src_ptr))
+
+/**
+ * @brief Copies `sizeof(pointee)` bytes from `src` to the native memory addressed by
+ * `dst_ptr`.
+ */
+DEF_INSTR(store_pcptr_pany, (vm::opargs::PlaceCPtr, dst_ptr), (vm::opargs::PlaceAny, src))
+
+/**
+ * @brief Copies `sizeof(dst_ptr's pointee)` bytes from the native memory addressed by
+ * `src_ptr` to the VM memory pointed to by `dst_ptr`.
+ */
+DEF_INSTR(read_pptr_pcptr, (vm::opargs::PlacePtr, dst_ptr), (vm::opargs::PlaceCPtr, src_ptr))
+
+/**
+ * @brief Copies `sizeof(src_ptr's pointee)` raw bytes from the VM memory pointed to by
+ * `src_ptr` to the native memory addressed by `dst_ptr`.
+ */
+DEF_INSTR(write_pcptr_pptr, (vm::opargs::PlaceCPtr, dst_ptr), (vm::opargs::PlacePtr, src_ptr))
+
+
+/// Copies a C pointer value; source and destination must have the identical cpointer type
+DEF_INSTR(mov_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr, src))
+
+/// Reinterprets any cpointer type to any other cpointer type (the analogue of a C cast).
+DEF_INSTR(movCast_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr, src))
+
+DEF_INSTR(cast_pcptr_pptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlacePtr, src_ptr))
+
+/// Sets the flag if the C pointer is null (the native address 0). Works with any cpointer type.
+DEF_INSTR(cmpNull_pcptr, (vm::opargs::PlaceCPtr, ptr))
+
+/// Performs `dst += offset`, where `offset` is in **bytes** (not pointee elements, unlike C pointer
+/// arithmetic).`
+DEF_INSTR(add_pcptr_p64, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Place64, offset))
+
+/// Performs `dst += offset`, where `offset` is in **bytes** (not pointee elements, unlike C pointer
+/// arithmetic).`
+DEF_INSTR(add_pcptr_imm, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Immediate, offset))
+
 // ========= TYPE OPERATIONS ========
 // Casts a primitive type in-place. This does nothing at runtime, but is needed
 // for type checking.
@@ -650,10 +698,10 @@ DEF_INSTR(exit)
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
  * It is a helper for start functions.
- * @arg0 - pointer to a VmValue.
+ * @arg0 - pointer to a VMValue.
  * @arg1 - n/a.
  */
-DEF_INSTR(initFromVmValue)
+DEF_INSTR(initFromVMValue)
 
 #ifdef DEFAULT_HANDLE_INSTR
 #undef DEFAULT_HANDLE_INSTR

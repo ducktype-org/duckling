@@ -1,20 +1,24 @@
 #include "mir_queries.hpp"
 
-#include "../mir_structure/mir_structure.hpp"
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/global_data_queries.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
 #include <mir_private/stmt_lowering.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -29,7 +33,7 @@ namespace compiler::mir {
 		return function->queryUnstablePerfectHash();
 	}
 
-	u64 KeyOf_LowerGlobalDataToMIRFunction::queryUnstablePerfectHash() const {
+	u64 KeyOf_LowerGlobalData::queryUnstablePerfectHash() const {
 		return global_data->helios_symbol.queryUnstablePerfectHash();
 	}
 
@@ -203,7 +207,7 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"The function `",
 					function.name,
@@ -215,7 +219,43 @@ namespace compiler::mir {
 		}
 	}
 
-	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtor, LowerGlobalDataToMIRFunctionResult) {
+	struct IMPLEMENT_QUERY(LowerToMIRFunction, LowerToMIRFunctionResult) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			// first step: lowering to pre-mir (cfg+quad)
+			auto function_no_lifetime = lowerToPreMIRFunction(ctx, key.function);
+
+			// second step: lifetime stuff
+			auto function_with_destructors
+				= runAllLifetimePasses(ctx, std::move(function_no_lifetime));
+
+			// eliminating unreachable blocks
+			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
+
+			// change FunctionEnd to proper return
+			UNPACK_QRESULT_MOVE(
+				auto function_no_func_end =, finalizeFunctionEnd(ctx, std::move(function_reachable))
+			);
+
+			if (validateFunction(ctx, function_no_func_end).isBad()) return query::Failed();
+
+			return function_no_func_end;
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMIRFunction);
+
+	/**
+	 * @brief Creates a ctor function for a global data.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		LowerGlobalDataToMIRCtor, KeyOf_LowerGlobalData, CRef<query::QResult<Function>>, ({})
+	)
+
+	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtor, query::QResult<Function>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data->value))
 				CORE_PANIC(
@@ -294,30 +334,162 @@ namespace compiler::mir {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRCtor)
 
-	struct IMPLEMENT_QUERY(LowerToMIRFunction, LowerToMIRFunctionResult) {
+	struct IMPLEMENT_QUERY(LowerGlobalData, query::QResult<MIRGlobalData>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			// first step: lowering to pre-mir (cfg+quad)
-			auto function_no_lifetime = lowerToPreMIRFunction(ctx, key.function);
-
-			// second step: lifetime stuff
-			auto function_with_destructors
-				= runAllLifetimePasses(ctx, std::move(function_no_lifetime));
-
-			// eliminating unreachable blocks
-			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
-
-			// change FunctionEnd to proper return
-			UNPACK_QRESULT_MOVE(
-				auto function_no_func_end =, finalizeFunctionEnd(ctx, std::move(function_reachable))
-			);
-
-			if (validateFunction(ctx, function_no_func_end).isBad()) return query::Failed();
-
-			return function_no_func_end;
+			variant_match(key.global_data->value) {
+				variant_case(helios::HOUTGlobalConst, ctv_initial_value) {
+					CORE_ASSERT(
+						key.global_data->data_type == helios::HOUTGlobalDataType::Constant,
+						"We assume currently HOUTGlobalConst <-> CTV initial value, change the "
+						"code here if this ever changes"
+					);
+					return MIRGlobalData{
+						.global = MIRGlobal{
+							key.global_data->helios_symbol,
+							key.global_data->type,
+							MIRGlobal::Kind::Constant,
+						},
+						.initial_value = ctv_initial_value.value,
+					};
+				}
+				variant_case(helios::HOUTGlobalVariable, hout_expr_initial_value) {
+					CRef mir_ctor_function
+						= &ctx.query<mir::LowerGlobalDataToMIRCtor>(key)->valueOrThrow();
+					return MIRGlobalData{
+						.global = MIRGlobal{
+							key.global_data->helios_symbol,
+							key.global_data->type,
+							MIRGlobal::Kind::Variable,
+						},
+						.initial_value = mir_ctor_function,
+					};
+				}
+			}
+			CORE_UNREACHABLE();
 		}
 
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMIRFunction);
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalData)
+
+	namespace {
+		void collectUsedSymbolsFromValue(
+			const MIRValue&                    value,
+			MIRUsedSymbols&                    out,
+			std::unordered_set<helios::SymID>& seen_functions,
+			std::unordered_set<helios::SymID>& seen_globals
+		);
+
+		void collectUsedSymbolsFromPlace(
+			const MIRPlace&                    place,
+			MIRUsedSymbols&                    out,
+			std::unordered_set<helios::SymID>& seen_functions,
+			std::unordered_set<helios::SymID>& seen_globals
+		) {
+			if (place.isGlobal()) {
+				auto global_id = place.getBase<MIRGlobal>().helios_id;
+				if (seen_globals.insert(global_id).second) out.used_globals.push_back(global_id);
+			}
+
+			// Index projections carry a nested MIRValue that may itself reference symbols.
+			for (const auto& projection: place.projection_chain)
+				v_if_matches(projection.storage, MIRPlace::IndexProjection, index_proj)
+					collectUsedSymbolsFromValue(
+						*index_proj->index, out, seen_functions, seen_globals
+					);
+		}
+
+		void collectUsedSymbolsFromValue(
+			const MIRValue&                    value,
+			MIRUsedSymbols&                    out,
+			std::unordered_set<helios::SymID>& seen_functions,
+			std::unordered_set<helios::SymID>& seen_globals
+		) {
+			variant_match(value.getVariant()) {
+				variant_case(MIRPlace, place) {
+					collectUsedSymbolsFromPlace(place, out, seen_functions, seen_globals);
+				}
+				variant_case(MIRFunctionLiteral, function_literal) {
+					if (seen_functions.insert(function_literal.helios_id).second)
+						out.used_functions.push_back(function_literal.helios_id);
+				}
+				// MIRConstant and BlockID do not reference functions or globals.
+				variant_default {}
+			}
+		}
+
+		void collectUsedSymbolsFromInstruction(
+			query::Context&                    ctx,
+			const Instruction&                 instruction,
+			MIRUsedSymbols&                    out,
+			std::unordered_set<helios::SymID>& seen_functions,
+			std::unordered_set<helios::SymID>& seen_globals
+		) {
+			if (instruction.output.has_value())
+				collectUsedSymbolsFromPlace(
+					instruction.output.value(), out, seen_functions, seen_globals
+				);
+
+			for (const auto& argument: instruction.arguments)
+				collectUsedSymbolsFromValue(argument, out, seen_functions, seen_globals);
+
+			// @TODO: #2825 Remove this once we add destruct symbols in destruct/destruct if
+			if (instruction.operation == Operation::Destruct
+			    || instruction.operation == Operation::DestructIf) {
+				const auto& to_destruct   = instruction.arguments.at(0).get<MIRPlace>();
+				const auto  destructor_op = helios::getTypeDestructor(ctx, to_destruct.type);
+
+				if (destructor_op.has_value() && seen_functions.insert(destructor_op.value()).second)
+					out.used_functions.push_back(destructor_op.value());
+			}
+		}
+
+		void usedSymbolsFromBody(
+			query::Context&                    ctx,
+			CRef<Function>                     function,
+			MIRUsedSymbols&                    result,
+			std::unordered_set<helios::SymID>& seen_functions,
+			std::unordered_set<helios::SymID>& seen_globals
+		) {
+			for (const auto& block_id: function->block_order) {
+				const auto& block = function->blocks[block_id];
+				for (const auto& instruction: block.instructions)
+					collectUsedSymbolsFromInstruction(
+						ctx, instruction, result, seen_functions, seen_globals
+					);
+				collectUsedSymbolsFromInstruction(
+					ctx, block.terminator, result, seen_functions, seen_globals
+				);
+			}
+		}
+	}
+
+	MIRUsedSymbols getMIRUsedSymbolsByFunction(query::Context& ctx, helios::SymID function_id) {
+		auto& hout_function = ctx.query<helios::QueryCodeOfFun>(function_id)->valueOrThrow();
+		auto& mir_function = ctx.query<mir::LowerToMIRFunction>({ &hout_function })->valueOrThrow();
+
+		MIRUsedSymbols                    result;
+		std::unordered_set<helios::SymID> seen_functions;
+		std::unordered_set<helios::SymID> seen_globals;
+		usedSymbolsFromBody(ctx, &mir_function, result, seen_functions, seen_globals);
+
+		return result;
+	}
+
+	MIRUsedSymbols getMIRUsedSymbolsByGlobal(query::Context& ctx, helios::SymID global_id) {
+		auto& hout_global_data = ctx.query<helios::QueryHOUTGlobalData>(global_id)->valueOrThrow();
+		auto& mir_global_data  = ctx.query<LowerGlobalData>({ &hout_global_data })->valueOrThrow();
+
+		MIRUsedSymbols                    result;
+		std::unordered_set<helios::SymID> seen_functions;
+		std::unordered_set<helios::SymID> seen_globals;
+
+		variant_match(mir_global_data.initial_value) {
+			variant_case(CRef<mir::Function>, function) {
+				usedSymbolsFromBody(ctx, function, result, seen_functions, seen_globals);
+			}
+		}
+		return result;
+	}
 }

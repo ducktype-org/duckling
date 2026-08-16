@@ -2,8 +2,9 @@
 
 #include "lir_structure_fd.hpp"  // IWYU pragma: keep
 
+#include <abi/calling_conv/calling_conv.hpp>
 #include <ctv/ctv.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>  // @TODO: #2796 untable this if possible (LIR structure should not depend on symbols if possible)
@@ -17,6 +18,7 @@
 #include <base/pointers/shared_box.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <query_framework/context/context_fd.hpp>
 
 #include <memory>
@@ -30,13 +32,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 	/** Simple byte by byte assignment. */
 	Assign,
-	AddressOf, 
-	BoxAlloc,
-	// @TODO: #1894 This approach (for both `BoxFree` and `ListFree`) may be temporary and 
-	// depends on how we handle destructors in the future.
-	BoxFree,
-	ListFree,
-
+	AddressOf,
+	// @TODO: #1894 Remove the `List*` when Lists are implemented in STD.
 	ListPush,
 	ListPop,
 
@@ -86,14 +83,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	FloatEq,
 	FloatNeq,
 
-	/** Meta type operations. */
-	MetaCreateBox,
-	MetaCreateRef,
-	MetaCreateConst,
-	MetaCreateTuple, // N arguments, types to create the tuple type from
-	MetaCreateVariant, // N arguments, types to create the variant type from
-	MetaEq,
-	MetaNeq,
+	/**
+	 * Meta type operation. The specific operation is parametrized by `MetaParameters` (a
+	 * `MetaKind`) stored in the instruction's `extra_params`.
+	 */
+	MetaTypeOperation,
 
 	BooleanAnd,
 	BooleanOr,
@@ -119,6 +113,26 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	// Nop can be useful when lowering the instruction flags and MIR instr translates
 	// to zero instructions in LIR, but we want to have the flags in correct place.
 	Nop
+)
+
+/**
+ *   @brief The specific kind of a `Operation::MetaTypeOperation` instruction.
+ *   Stored in the instruction's `extra_params` as `MetaParameters`. Mirrors `mir::MetaKind`.
+ */
+MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, MetaKind,
+	CreateBox,
+	CreateRef,
+	CreateConst,
+	CreatePtr,
+	CreateManyPtr,
+	CreateCPtr,
+	CreateSlice,
+	CreateTuple,
+	CreateVariant,
+	Eq,
+	Neq,
+	SizeOf,
+	AlignOf
 )
 
 /// A helper tag that indicates that a value has some special meaning
@@ -148,15 +162,49 @@ namespace compiler::lir {
 	 */
 	using BlockRef = CRef<Block>;
 
+	struct LIRAbi final {
+		struct CAbi final {
+			abi::calling_conv::FunctionInfo function_info;
+		};
+
+		struct DefaultAbi final {};
+
+		using ValueType = std::variant<CAbi, DefaultAbi>;
+		ValueType value;
+	};
+
+	/**
+	 * @brief Function which call will be replaced
+	 * manually in the backend.
+	 */
+	enum class BuiltinFunctionKind {
+		DvmAllocArr,
+		DvmReallocArr,
+		DvmFreeArr,
+		DvmAlloc,
+		DvmFree,
+		BoxAlloc,
+		BoxFree,
+		ListFree
+	};
+
+	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
+
 	/**
 	 * @brief Reference to a function in LIR.
 	 */
-	struct FunctionLiteral {
+	struct FunctionLiteral final {
 		base::StrID                                         mangled_name;
-		helios::SymbolABI                                   abi;
+		LIRAbi                                              abi;
 		bool                                                link_once;
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
+
+		/**
+		 * Optional indicates if a function literal is a builtin function.
+		 * Empty value indicates that a function is not a builtin.
+		 */
+		base::Optional<BuiltinFunctionKind> builtin_kind_opt;
 
 		static FunctionLiteral fromFunction(const Function&);
 	};
@@ -166,8 +214,8 @@ namespace compiler::lir {
 	 * Used by the backends for the DebugInfo.
 	 */
 	struct LIRLocalMetadata {
-		base::Optional<base::StrID>             source_code_name;
-		base::Optional<dia_int::StablePosition> position;
+		base::Optional<base::StrID>         source_code_name;
+		base::Optional<dia::StablePosition> position;
 	};
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local);
@@ -244,6 +292,17 @@ namespace compiler::lir {
 		 * @return LIRLocal
 		 */
 		static LIRLocal boolLocal(query::Context& ctx);
+
+		/**
+		 * @brief Creates unique local holding a reference to @p pointee_type, and without
+		 * helios_id.
+		 * @note It's used to materialize addresses of places passed to functions taking
+		 * references.
+		 * @param ctx
+		 * @param pointee_type Type of the referenced value.
+		 * @return LIRLocal
+		 */
+		static LIRLocal refLocal(query::Context& ctx, tsh::SymbolType<> pointee_type);
 	};
 
 	enum class LIRGlobalType { Variable, Constant };
@@ -430,7 +489,7 @@ namespace compiler::lir {
 
 		LIRValue(BlockRef value): value(value) {}
 
-		LIRValue(FunctionLiteral value): value(value) {}
+		LIRValue(FunctionLiteral value): value(std::move(value)) {}
 
 		[[nodiscard]]
 		const ValueType& getVariant() const {
@@ -511,13 +570,26 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Additional parameters for a `Operation::MetaTypeOperation` instruction, selecting
+	 * which meta operation it is.
+	 */
+	struct MetaParameters final {
+		MetaKind kind;
+	};
+
+	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
 	using InstrParameters
-		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters, VariantParameters>;
+		= std::variant<
+			NoInstrParameters,
+			CastParameters,
+			ListOperationParameters,
+			VariantParameters,
+			MetaParameters>;
 
 	struct InstructionMetadata {
-		base::Optional<dia_int::StablePosition> position;
+		base::Optional<dia::StablePosition> position;
 
 		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
 
@@ -588,16 +660,16 @@ namespace compiler::lir {
 	};
 
 	struct FunctionMetadata {
-		base::Optional<dia_int::StablePosition> position;
-		base::Optional<base::StrID>             source_code_name;
+		base::Optional<dia::StablePosition> position;
+		base::Optional<base::StrID>         source_code_name;
 	};
 
 	/**
 	 * @brief Function in LIR.
 	 */
 	struct Function final {
-		base::StrID       mangled_name;
-		helios::SymbolABI abi;
+		base::StrID mangled_name;
+		LIRAbi      abi;
 
 		/**
 		 * If true, this function can have repeated definitions

@@ -1,4 +1,4 @@
-import core.builtins.*;
+import core.containers.*;
 
 import sub as sub;
 
@@ -17,7 +17,7 @@ fun printPrimitives(a: ref Primitives) -> () = {
     builtin_output_f64(a.b);                    # 0.0
     builtin_output_i64(if a.c then 1 else 0);   # 0
     builtin_output_char(a.d - '\0' + 'A');      # 'A'
-    print(a.e);                 # ""
+    print(&a.e);                 # ""
     builtin_output_u64(a.f.length());                # empty list -> 0
 }
 
@@ -26,7 +26,7 @@ fun printPrimitives(a: ref Primitives2) -> () = {
     builtin_output_f64(a.b);                    # 0.0
     builtin_output_i64(if a.c then 1 else 0);   # 0
     builtin_output_char(a.d - '\0' + 'A');      # 'A'
-    print(a.e);                 # ""
+    print(&a.e);                 # ""
     builtin_output_u64(a.f.length());                # empty list -> 0
 }
 
@@ -36,7 +36,7 @@ fun printPrimitives(a: ref InitializedPrimitives) -> () = {
     builtin_output_i64(if a.c then 1 else 0);   # 0
     builtin_output_char(a.d);                   # 'A'
     builtin_output_char(a.d + 2u8);             # 'C'
-    print(a.e);                 # "kajak"
+    print(&a.e);                 # "kajak"
 }
 
 class Primitives {
@@ -133,16 +133,16 @@ fun testTuples() -> () = {
         bool,        # false
         char,        # '\0'
         String,      # ""
-        # @TODO: #2988 uncomment when fixed
-        # List[i32],   # empty list
-        # type
+        List[i32],   # empty list
+        type
     );
     
     builtin_output_i64(primitiveTuple._1);                    # 0
     builtin_output_f64(primitiveTuple._2);                    # 0.0
     builtin_output_i64(if primitiveTuple._3 then 1 else 0);   # 0
     builtin_output_char(primitiveTuple._4 - '\0' + 'A');      # 'A'
-    print(primitiveTuple._5);                                 # ""
+    print(&primitiveTuple._5);                                 # ""
+    builtin_output_u64(primitiveTuple._6.length());           # empty list -> 0
 }
 
 # ==================================== NESTED CLASSES ====================================

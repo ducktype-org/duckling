@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 const INT = i32;
 const ARR = INT[2];
 const ARR2 = ARR[2];

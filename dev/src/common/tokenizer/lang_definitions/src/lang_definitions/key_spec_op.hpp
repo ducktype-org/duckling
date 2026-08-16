@@ -114,7 +114,6 @@ namespace lang_def {
 		Char,
 		Bool,
 		Str,
-		BigStr,
 		Type,  // ...
 
 		// @TODO: do we need all of them?
@@ -140,6 +139,7 @@ namespace lang_def {
 		// General text prefix operators (Not doesn't count)
 		Ref,
 		Box,
+		New,
 		Ptr,
 		CPtr,
 		ManyPtr,
@@ -147,6 +147,7 @@ namespace lang_def {
 		Copy,
 		Move,
 		Refof,
+		Ptrof,
 
 		Destroy,
 
@@ -168,6 +169,9 @@ namespace lang_def {
 
 		// BC:
 		BCFunction,
+		BCFfi,
+		BCObject,
+		BCAssertSize,
 		BCType,
 		BCPrimitive,
 		BCPointer,
@@ -192,6 +196,8 @@ namespace lang_def {
 		BCFalse,
 		BCIsConstant,
 		BCInitialValue,
+		BCPacked,
+		BCCPointer,
 		COUNT,
 	};
 
