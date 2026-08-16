@@ -553,7 +553,8 @@ namespace compiler::helios::code {
 					const auto kind          = abstract_type.getKind();
 					CORE_ASSERT(
 						kind == tsh::Kind::Class or kind == tsh::Kind::StaticArray
-							or kind == tsh::Kind::Tuple or kind == tsh::Kind::DynamicArray,
+							or kind == tsh::Kind::Tuple or kind == tsh::Kind::DynamicArray
+							or kind == tsh::Kind::Variant,
 						"Tried to call a copy constructor of a type which shouldn't need one"
 					);
 

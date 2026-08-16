@@ -3230,6 +3230,64 @@ private:
 				ASSERT_TRUE(push != nullptr);
 				assert_generated_copy(stripImplicitMove(push->element.get()));
 			}
+
+			// A variant is copied by matching the source and rebuilding the variant around a copy
+			// of the active alternative, so every alternative gets a case and every case result is
+			// a variant construction of that same alternative.
+			{
+				auto i32_type = compiler::tsh::getIntegralType(
+					ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
+				);
+				auto variant_type = ctx.query<compiler::tsh::QueryVariantType>({
+					{ st(i32_type), st(get_class_type(has_box_sym)) },
+				});
+
+				const auto& cctor = dump_cctor("i32 | HasBox", variant_type);
+
+				// `(const ref V) -> V`.
+				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
+				const auto param_type = cctor.declaration->parameters.at(0).type;
+				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Immutable, param_type.getMutability());
+				ASSERT_EQUAL(variant_type, param_type.getType());
+				ASSERT_EQUAL(variant_type, cctor.declaration->return_type.getType());
+
+				// return match (source) { <one case per alternative> };
+				ASSERT_EQUAL_PRINT(1, cctor.body->statements.size());
+				auto ret = dynamic_cast<const ReturnStmt*>(cctor.body->statements.back().get());
+				ASSERT_TRUE(ret != nullptr);
+				auto match = dynamic_cast<const MatchExpr*>(stripImplicitMove(ret->value.get()));
+				ASSERT_TRUE(match != nullptr);
+
+				const auto& alternatives = variant_type.getUnderlyingTypes();
+				ASSERT_EQUAL_PRINT(alternatives.size(), match->cases.size());
+
+				// Every case tests its own alternative, binds the payload, and rebuilds the
+				// variant with that same alternative index - no wildcard is needed.
+				for (usize i = 0; i < match->cases.size(); i++) {
+					const auto& match_case = match->cases.at(i);
+					ASSERT_TRUE(match_case.alternative_index.has_value());
+					ASSERT_EQUAL_PRINT(i, match_case.alternative_index.value());
+					ASSERT_TRUE(match_case.binding.has_value());
+
+					auto construct = dynamic_cast<const VariantConstructExpr*>(
+						stripImplicitMove(match_case.result.get())
+					);
+					ASSERT_TRUE(construct != nullptr);
+					ASSERT_EQUAL_PRINT(i, construct->alternative_index);
+
+					// The alternatives are ordered by their name, so `HasBox` comes before `i32`.
+					// The non-trivially-copyable one is copied with its copy constructor, the
+					// trivially-copyable one is byte-copied from the dereferenced binding.
+					if (alternatives.at(i).isTriviallyCopyable(ctx))
+						ASSERT_TRUE(
+							dynamic_cast<const DerefExpr*>(stripImplicitMove(construct->inner.get()))
+							!= nullptr
+						);
+					else
+						assert_generated_copy(stripImplicitMove(construct->inner.get()));
+				}
+			}
 		});
 	}
 

@@ -168,6 +168,13 @@ fun matchPositions() -> () = {
 	check(bumpInPlace(&w), 10i64, 7i64);
 	check(classify(w), 10i64, 8i64);
 	check(bumpInPlace(&v), -1i64, 9i64);
+
+	# Every alternative here is trivially copyable, so the variant is too and an explicit `copy`
+	# is a byte copy of the tag and the payload. The two are independent afterwards.
+	var c: i32 | f32 = copy w;
+	check(classify(c), 10i64, 10i64);
+	check(bumpInPlace(&c), 11i64, 11i64);
+	check(classify(w), 10i64, 12i64);
 }
 
 fun refAlternative() -> () = {

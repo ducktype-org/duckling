@@ -1,6 +1,5 @@
 #include "match.hpp"
 
-#include "helios/tsh/symbol_type.hpp"
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>

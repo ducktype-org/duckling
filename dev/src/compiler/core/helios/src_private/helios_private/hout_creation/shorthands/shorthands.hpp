@@ -668,7 +668,8 @@ namespace compiler::helios::code::shorthands {
 				abstract_type.getKind() == tsh::Kind::Class
 					or abstract_type.getKind() == tsh::Kind::StaticArray
 					or abstract_type.getKind() == tsh::Kind::Tuple
-					or abstract_type.getKind() == tsh::Kind::DynamicArray,
+					or abstract_type.getKind() == tsh::Kind::DynamicArray
+					or abstract_type.getKind() == tsh::Kind::Variant,
 				"Tried to generate a copy constructor for a type which shouldn't need it"
 			);
 
