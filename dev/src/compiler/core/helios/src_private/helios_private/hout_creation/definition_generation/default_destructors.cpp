@@ -166,14 +166,6 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				if (alternatives[i].isTriviallyDestructible(ctx)) continue;
 
-				// A binding refers to the payload, and `SymbolType` carries a single reference
-				// kind, so an alternative that is itself reference-like has no representable
-				// binding type. Nothing can construct such a variant today.
-				CORE_ASSERT(
-					alternatives[i].getRefKind() == tsh::ReferenceKind::Direct,
-					"Destroying a variant alternative that is not a direct value is not supported."
-				);
-
 				const auto payload_type = alternatives[i]
 				                              .withReferenceKind(tsh::ReferenceKind::Ref)
 				                              .withMutability(tsh::Mutability::Mutable);
@@ -188,7 +180,11 @@ namespace compiler::helios::defgen {
 				// The binding already is the reference the destructor wants. Going through
 				// `appendDestruction` would dereference it only to take its address again, and
 				// it would also skip the work entirely, since a `ref` is trivially destructible.
-				const SymID alternative_dtor = destructSymForType(ctx, alternatives[i].getType());
+				//
+				// A `box T` alternative stores the box itself, so the binding holds that box and
+				// the box destructor - which takes it as a `ref T` - is the one to call.
+				const SymID alternative_dtor
+					= destructSymForSymbolType(ctx, alternatives[i]).value();
 
 				cases.emplace_back(Shorthand::matchCase(
 					i, payload_sym, s.call(s.ident(alternative_dtor), s.ident(payload_sym))

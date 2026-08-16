@@ -799,6 +799,26 @@ private:
 				{ "Variant type lists type `i32` more than once." },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Holder {
+					p: box i32;
+				}
+
+				fun main() -> i64 = {
+					var v: Holder | f32 = Holder(new 1i32);
+					var r: i64 = match (v) {
+						case x : Holder = 1i64;
+						case _ = -1i64;
+					};
+					return 0i64;
+				}
+			)",
+				{ "Alternative `Class Holder` cannot be bound by value because it is not "
+			      "trivially copyable. Bind it by reference instead: `case x : ref Class Holder`." },
+				1
+			);
 		}
 
 		// ============================ Static Arrays ============================

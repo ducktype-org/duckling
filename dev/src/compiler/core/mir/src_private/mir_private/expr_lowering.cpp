@@ -1,5 +1,7 @@
 #include "expr_lowering.hpp"
 
+#include "helios/tsh/symbol_type.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
@@ -629,14 +631,15 @@ namespace compiler::mir {
 			auto hole    = continuation->addHole();
 			auto lowered = lowerSubExpr(*expr.inner, continuation);
 
-			const auto payload = lowered.getResult(function);
+			std::vector<OperationFlag> flags;
+			const auto                 payload = lowered.getResultAndTakeOwnership(function, flags);
 			return noValueOutput(
 				lowered.begin,
 				hole,
 				Instruction{ Operation::VariantConstruct,
 			                 {},
 			                 { payload },
-			                 {},
+			                 std::move(flags),
 			                 expr_scope,
 			                 VariantParameters{ .alternative_index = expr.alternative_index,
 			                                    .alternative_type  = alternative_type },
@@ -699,13 +702,17 @@ namespace compiler::mir {
 
 				auto test_block = function.newBlock();
 
-				base::Optional<MIRLocalMutRef> payload_ptr;
+				base::Optional<MIRLocalMutRef>    payload_ptr;
+				base::Optional<tsh::SymbolType<>> alternative_type;
+
+				if_opt_some(match_case.alternative_index, index) {
+					alternative_type = variant_type.getMember(index);
+				}
 
 				if (projects_payload) {
-					const auto alternative_type
-						= variant_type.getMember(match_case.alternative_index.value());
 					const auto pointer_type = tsh::SymbolType<>::withDefaults(
-						function.getContext().query<tsh::QueryPointerType>({ alternative_type })
+						function.getContext().query<tsh::QueryPointerType>({ alternative_type.value(
+						) })
 					);
 					payload_ptr = function.addTmp(pointer_type, expr_scope);
 
@@ -720,11 +727,21 @@ namespace compiler::mir {
 					auto binding_local = function.findLocal(match_case.binding.value()).value();
 					binding_local->setLifetimeScope(case_scope);
 
-					const bool binds_by_reference
-						= binding_local->type.getRefKind() == tsh::ReferenceKind::Ref;
-					auto bound_value = binds_by_reference
-					                     ? MIRValue{ payload_ptr.value() }
-					                     : MIRValue{ MIRPlace(payload_ptr.value()).withDeref() };
+					MIRValue bound_value = [&](tsh::ReferenceKind binding_ref,
+					                           tsh::ReferenceKind alternative_ref) -> MIRValue {
+						using tsh::ReferenceKind::Direct;
+						using tsh::ReferenceKind::Ref;
+						using tsh::ReferenceKind::Box;
+						if (binding_ref == Direct && alternative_ref == Direct)
+							return { MIRPlace(payload_ptr.value()).withDeref() };
+						if (binding_ref == Direct && alternative_ref != Direct)
+							return { MIRPlace(payload_ptr.value()).withDeref().withDeref() };
+						if (binding_ref == Ref && alternative_ref == Direct)
+							return MIRValue{ payload_ptr.value() };
+						if (binding_ref == Ref && alternative_ref != Direct)
+							return { MIRPlace(payload_ptr.value()).withDeref() };
+						CORE_PANIC("Binding match case to box unsupported.");
+					}(binding_local->type.getRefKind(), alternative_type.value().getRefKind());
 
 					case_entry->addInstruction(Instruction(
 						Operation::Assign,
