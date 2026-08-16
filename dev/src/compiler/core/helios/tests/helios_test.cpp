@@ -1,4 +1,3 @@
-#include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -46,6 +45,7 @@
 #include <base/pointers/box.hpp>
 
 #include <diagnostic/highlight_positions.hpp>
+#include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
@@ -827,15 +827,11 @@ private:
 				ctx,
 				generatedOrigin(),
 				BuiltinBinary::IntegerAdd,
-				makeBox<ParenthesisExpr>(
+				makeBox<UnaryOperatorExpr>(
 					ctx,
 					generatedOrigin(),
-					makeBox<UnaryOperatorExpr>(
-						ctx,
-						generatedOrigin(),
-						BuiltinUnary::IntegerNegation,
-						makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
-					)
+					BuiltinUnary::IntegerNegation,
+					makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
 				),
 				makeBox<CallExpr>(
 					ctx,
@@ -1049,8 +1045,6 @@ private:
 			void visitIdentifierExpr(const IdentifierExpr&) override { ident_count++; }
 
 			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override { ident_count++; }
-
-			void visitParenthesisExpr(const ParenthesisExpr&) override { ident_count++; }
 		};
 
 		struct ExprVisitorRunner: public HoutStmtVisitorPanicky {
@@ -1139,7 +1133,7 @@ private:
 		std::stringstream out_v256;
 		auto              tree_v256 = getExprOfConst(sym_v256);
 		tree_v256->debugPrint(out_v256);
-		ASSERT_EQUAL("(3 + 4 - 4 * 16 / 5 % 7) ** 8", out_v256.str());
+		ASSERT_EQUAL("3 + 4 - 4 * 16 / 5 % 7 ** 8", out_v256.str());
 
 		ASSERT_EQUAL(12, getConstValueAs<i64>("V12", root_scope));
 		auto              sym_v12  = getChain("V12", root_scope).back();
@@ -3643,6 +3637,7 @@ private:
 		const auto inner_type     = getSymbolTypeOf("inner", body_scope);
 		const auto deref_val_type = getSymbolTypeOf("deref_val", body_scope);
 		const auto sum_type       = getSymbolTypeOf("sum", body_scope);
+		const auto c_elem_type    = getSymbolTypeOf("c_elem", body_scope);
 
 		const auto pof_direct_type = getSymbolTypeOf("pof_direct", body_scope);
 		const auto pof_box_type    = getSymbolTypeOf("pof_box", body_scope);
@@ -3670,6 +3665,7 @@ private:
 			ASSERT_EQUAL(ptr_i32_st, inner_type);
 			ASSERT_EQUAL(i32_st, deref_val_type);
 			ASSERT_EQUAL(i32_st, sum_type);
+			ASSERT_EQUAL(i32_st, c_elem_type);
 
 			// `ptrof x` is `ptr S` for the whole symbol type `S` of `x`: unlike `&x`, a `box`/`ref`
 			// operand is not collapsed, the pointer addresses the box/reference itself.
@@ -3730,6 +3726,16 @@ private:
 			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
 			ASSERT_EQUAL(compiler::tsh::Kind::CPointer, cast_ptr->target_type.getType().getKind());
+		}
+
+		{
+			auto expr_ptr  = get_var_init_expr(base::StrID("c_elem"));
+			auto index_ptr = dynamic_cast<const compiler::helios::code::IndexExpr*>(expr_ptr.get());
+			ASSERT_TRUE(index_ptr != nullptr);
+			ASSERT_EQUAL(
+				compiler::tsh::Kind::CPointer, index_ptr->base->expression_type.getType().getKind()
+			);
+			ASSERT_EQUAL(i32_st, index_ptr->expression_type.getSymbolType().withMutability(Mutable));
 		}
 
 		{

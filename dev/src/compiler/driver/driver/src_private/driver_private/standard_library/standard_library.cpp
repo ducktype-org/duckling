@@ -1,6 +1,7 @@
 #include "standard_library.hpp"
 
 #include <driver/task/task.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
 
@@ -13,26 +14,6 @@
 #include <algorithm>
 
 namespace compiler::driver {
-
-	/**
-	 * @brief Configuration for the standard library packages.
-	 * It acts as a single source of truth for the standard library packages,
-	 * but should not be used directly outside the standard library handling code.
-	 */
-	const std::array<STDPackageConfig, 2> STD_PACKAGES_CONFIG = {
-		{
-			{
-				.name         = "std",
-				.subpath      = "std",
-				.dependencies = { "core" },
-			},
-			{
-				.name         = "core",
-				.subpath      = "core",
-				.dependencies = {},
-			},
-		},
-	};
 
 	namespace {
 		fs::FilePath resolveDefaultStdPath() {
@@ -91,22 +72,17 @@ namespace compiler::driver {
 			compiler::frontend::packages::RawPackageInfo& package_info,
 			frontend::packages::DiagnosticReporter&       report
 		) {
-			// If the package is one of the STD_PACKAGES_CONFIG, we do nothing
-			if (std::ranges::any_of(STD_PACKAGES_CONFIG, [&](const auto& config) {
-					return base::StrID(config.name) == package_info.package_id;
-				})) {
+			// If the package is one of the standard library packages, we do nothing
+			if (frontend::packages::isStandardLibraryPackage(package_info.package_id))
 				return base::OK;
-			}
 
 			// Otherwise, we add dependencies on all standard library packages
-			for (auto& config: STD_PACKAGES_CONFIG) {
-				auto std_name = base::StrID(config.name);
-				auto std_id   = base::StrID(config.name);
-				if (hasDependencyOrAlias(package_info.dependencies, std_name, std_id)) {
+			for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
+				if (hasDependencyOrAlias(package_info.dependencies, std_id, std_id)) {
 					report(
 						"Standard library package name is already used as an external dependency.",
 						base::strConcat(
-							"Package '", package_info.package_name, "' depends on '", std_name
+							"Package '", package_info.package_name, "' depends on '", std_id
 						),
 						true
 					);
@@ -151,21 +127,19 @@ namespace compiler::driver {
 			using compiler::frontend::packages::RawDependencyInfo;
 			using compiler::frontend::packages::RawPackageInfo;
 
-			for (auto& config: STD_PACKAGES_CONFIG) {
-				if (hasPackageNameOrID(
-						packages_info, base::StrID(config.name), base::StrID(config.name)
-					)) {
+			for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
+				if (hasPackageNameOrID(packages_info, std_id, std_id)) {
 					report(
-						base::strConcat("Package with name `", config.name, "` already exist."),
-						"",
-						true
+						base::strConcat("Package with name `", std_id, "` already exist."), "", true
 					);
 					return base::BAD;
 				}
 			}
 
-			for (auto& config: STD_PACKAGES_CONFIG) {
-				auto package_path = std_path.join(fs::FilePath(config.subpath));
+			for (const auto& std_package: frontend::packages::standardLibraryPackages()) {
+				// A standard library package lives in a directory named after its id.
+				auto package_path
+					= std_path.join(fs::FilePath(std::string(std_package.id.strView())));
 				if (not package_path.exists()) {
 					report(
 						"Standard library package path does not exist.",
@@ -177,17 +151,17 @@ namespace compiler::driver {
 					return base::BAD;
 				}
 				RawPackageInfo raw_package_info{
-					.package_id   = base::StrID(config.name),
-					.package_name = base::StrID(config.name),
+					.package_id   = std_package.id,
+					.package_name = std_package.id,
 					.version      = base::StrID("not_supported"),
 					.package_path = package_path,
 					.features     = {},
 					.dependencies = {},
 				};
 
-				for (const auto& dep_name: config.dependencies) {
+				for (const auto& dependency_id: std_package.dependencies) {
 					raw_package_info.dependencies.push_back(RawDependencyInfo{
-						.package_id = base::StrID(dep_name),
+						.package_id = dependency_id,
 						.alias      = {},
 					});
 				}
@@ -226,13 +200,11 @@ namespace compiler::driver {
 		}
 
 		std::vector<PackageCompilationTask> tasks;
-		for (const auto& config: STD_PACKAGES_CONFIG) {
+		for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
 			auto pkg = std::find_if(
 				global_state::getPackages().begin(),
 				global_state::getPackages().end(),
-				[&](const auto& pkg_info) {
-					return pkg_info.getPackageID() == base::StrID(config.name);
-				}
+				[&](const auto& pkg_info) { return pkg_info.getPackageID() == std_id; }
 			);
 			// If pkg is not loaded then we skip it.
 			if (pkg == global_state::getPackages().end()) continue;
@@ -241,13 +213,14 @@ namespace compiler::driver {
 				tasks.emplace_back(
 					pkg->getRootModule().illegalAccess().getID(),
 					BuildTargetLLVMStaticLibrary{ .output_file_name
-				                                  = base::StrID(config.name + ".a"),
+				                                  = base::StrID(base::strConcat(std_id, ".a")),
 				                                  .archiving_options     = {},
 				                                  .custom_art_collection = art_collection }
 				);
 			tasks.emplace_back(
 				pkg->getRootModule().illegalAccess().getID(),
-				BuildTargetDVMLibrary{ .output_file_name      = base::StrID(config.name + ".dbc"),
+				BuildTargetDVMLibrary{ .output_file_name
+			                           = base::StrID(base::strConcat(std_id, ".dbc")),
 			                           .custom_art_collection = art_collection }
 			);
 		}
@@ -264,23 +237,6 @@ namespace compiler::driver {
 			return result;
 		}
 		return {};
-	}
-
-	std::vector<frontend::ModuleID> getStandardLibraryRootModules() {
-		std::vector<frontend::ModuleID> root_modules;
-		for (const auto& config: STD_PACKAGES_CONFIG) {
-			auto pkg = std::find_if(
-				global_state::getPackages().begin(),
-				global_state::getPackages().end(),
-				[&](const auto& pkg_info) {
-					return pkg_info.getPackageID() == base::StrID(config.name);
-				}
-			);
-			// Unlike getStandardLibraryCompilationTasks(), missing packages are skipped.
-			if (pkg == global_state::getPackages().end()) continue;
-			root_modules.push_back(pkg->getRootModule().illegalAccess().getID());
-		}
-		return root_modules;
 	}
 
 	namespace {
@@ -306,9 +262,9 @@ namespace compiler::driver {
 			}
 			bool all_present = true;
 
-			for (const auto& config: STD_PACKAGES_CONFIG) {
+			for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
 				auto opt_artifact = root_collection->fileArtifactAtMaybe(
-					base::StrID(base::strConcat(config.name, extension))
+					base::StrID(base::strConcat(std_id, extension))
 				);
 				if_opt_some(opt_artifact, art) { artifacts.push_back(*art); }
 				if_opt_none(opt_artifact) { all_present = false; }

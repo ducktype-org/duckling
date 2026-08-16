@@ -37,6 +37,7 @@
 #include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/ok_bad.hpp>
 
@@ -596,7 +597,9 @@ namespace compiler::driver {
 						dvm_objs.emplace_back(std::move(dvm_std_obj));
 
 
-				if (linkDVMPackage(dvm_objs, {}, output_file).isBad()) {
+				// Compiling a bare script has no build target, so there are no shared libraries
+				// to declare for the runtime.
+				if (linkDVMPackage(dvm_objs, {}, {}, output_file).isBad()) {
 					error_message = "Linking of the DVM objects failed.";
 					return;
 				}
@@ -662,31 +665,39 @@ namespace compiler::driver {
 				deduplicateCodeCollection(dvm_module.code);
 			}
 
-			vm::PID pid{};
-			auto    run_result
+			auto run_result
 				= vm::api::spawn()
-			          .and_then([&](vm::api::ProcessInfo process) {
-						  pid = process.pid;
-						  return std::expected<void, vm::api::ApiError>{};
-					  })
-			          .and_then([&] { return vm::api::loadCode(pid, dvm_module.code); })
-			          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
-			          .and_then([&] { return vm::api::run(pid); })
-			          .and_then([&] { return vm::api::join(pid); })
-			          .and_then([&] { return vm::api::getExitValue(pid); })
-			          .transform_error(vm::api::errorToString)
-			          .transform([](vm::api::ExitValue exit_values) {
-						  CORE_ASSERT(
-							  v_matches(exit_values, std::vector<Ref<vm::IVMValue>>),
-							  "Expected exit value to be vector"
-						  );
-						  const auto& exit_values_vec
-							  = std::get<std::vector<Ref<vm::IVMValue>>>(exit_values);
-						  CORE_ASSERT(exit_values_vec.size() == 1, "Expected single exit value");
-						  return RunOutput{ .exit_code = base::safeIntConv<int>(
-												exit_values_vec.at(0)->readBytes<i64>()
-											) };
-					  });
+			          .and_then(
+						  [&](vm::api::ProcessInfo process
+			              ) -> std::expected<RunOutput, vm::api::ApiError> {
+							  const vm::PID pid = process.pid;
+							  // Deinitialize the process and execute global destructors.
+							  defer((void) vm::api::deinitAndValidate(pid));
+
+							  return vm::api::loadCode(pid, dvm_module.code)
+				                  .and_then([&] {
+									  return vm::api::attach(pid, std::cin, std::cout);
+								  })
+				                  .and_then([&] { return vm::api::run(pid); })
+				                  .and_then([&] { return vm::api::join(pid); })
+				                  .and_then([&] { return vm::api::getExitValue(pid); })
+				                  .transform([](vm::api::ExitValue exit_values) {
+									  CORE_ASSERT(
+										  v_matches(exit_values, std::vector<Ref<vm::IVMValue>>),
+										  "Expected exit value to be vector"
+									  );
+									  const auto& exit_values_vec
+										  = std::get<std::vector<Ref<vm::IVMValue>>>(exit_values);
+									  CORE_ASSERT(
+										  exit_values_vec.size() == 1, "Expected single exit value"
+									  );
+									  return RunOutput{ .exit_code = base::safeIntConv<int>(
+															exit_values_vec.at(0)->readBytes<i64>()
+														) };
+								  });
+						  }
+					  )
+			          .transform_error(vm::api::errorToString);
 
 			if (run_result.has_value())
 				output = run_result.value();
@@ -915,6 +926,7 @@ namespace compiler::driver {
 							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
+							target_dvm.runtime_config,
 							output_file
 						)
 					        .isBad())
@@ -943,7 +955,10 @@ namespace compiler::driver {
 					);
 					// We may mix artifacts from different collections here (std
 					// artifacts can come from a separate collection).
-					if (linkDVMPackage(dbc_arts, debug_info_arts, output_file).isBad())
+					if (linkDVMPackage(
+							dbc_arts, debug_info_arts, target_dvm.runtime_config, output_file
+						)
+					        .isBad())
 						result = base::BAD;
 				}
 			}

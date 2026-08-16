@@ -323,4 +323,9 @@ namespace compiler::driver {
 			.stdlib_link_options     = getNativeStdLibLinkingArgs(stdlib_options),
 		};
 	}
+
+	DVMRuntimeConfig constructDVMRuntimeConfig(const options_types::LinkingOptions& linking_options
+	) {
+		return { .shared_libraries = linking_options.dvm_shared_libraries };
+	}
 }  // namespace compiler::driver

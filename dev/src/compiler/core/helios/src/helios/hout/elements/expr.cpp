@@ -44,7 +44,6 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(ChainComparisonExpr)
 	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
-	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(IndexExpr)
@@ -516,26 +515,6 @@ namespace compiler::helios::code {
 		);
 	}
 
-	ParenthesisExpr::ParenthesisExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(inner->expression_type, origin),
-		  inner(std::move(inner)) {}
-
-	ParenthesisExpr::ParenthesisExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, base::Box<Expr> inner
-	):
-		  Expr(expression_type, origin),
-		  inner(std::move(inner)) {}
-
-	void ParenthesisExpr::debugPrint(std::ostream& out) const {
-		out << "(";
-		inner->debugPrint(out);
-		out << ")";
-	}
-
-	Box<Expr> ParenthesisExpr::clone() const {
-		return makeBox<ParenthesisExpr>(expression_type, origin, inner->clone());
-	}
-
 	TernaryOperatorExpr::TernaryOperatorExpr(
 		query::Context&,
 		ElementOrigin origin,
@@ -901,6 +880,8 @@ namespace compiler::helios::code {
 						  return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 					  case tsh::Kind::ManyPointer:
 						  return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
+					  case tsh::Kind::CPointer:
+						  return base_type.as<tsh::CPointerAbstractType>().getPointee();
 					  case tsh::Kind::Slice:
 						  return base_type.as<tsh::SliceAbstractType>().getElementType();
 					  default:

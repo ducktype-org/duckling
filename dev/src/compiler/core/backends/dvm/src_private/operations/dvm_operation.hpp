@@ -24,7 +24,6 @@ namespace compiler::backend_vm::internal {
 		DVMCallable                          call_target;
 		base::Optional<vm::code::TypeOfData> return_type;
 		std::vector<vm::code::TypeOfData>    param_types;
-		bool                                 is_extern_c;
 
 		/**
 		 * @brief Created call info for a LIR function.

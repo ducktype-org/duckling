@@ -21,6 +21,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -37,6 +38,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -53,6 +55,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -70,7 +73,6 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
         },
         dependencies: vec![pkg1],
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -84,7 +86,6 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
         },
         dependencies: vec![pkg2, pkg3],
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -98,7 +99,6 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
         },
         dependencies: registry::Dependencies::new(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };

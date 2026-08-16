@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test exponentiation operator (**) for various integer types
 
 fun main() -> i64 = {

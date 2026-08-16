@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # alloc -> slice_from_ptr_len -> ptr_from_slice -> free, baked for `str` (i.e. slices of slices).
 fun strChain() -> i64 = {
     var p = dvm_alloc_arr:{str}(2u64);

@@ -23,9 +23,9 @@ namespace compiler::mir {
 	 * @param pos    Source position of the indexing expression.
 	 */
 	void boundsCheck(
-		BoundsCheckBuilderContext                      context,
-		const MIRValue&                                index,
-		const MIRValue&                                length,
-		const base::Optional<dia_int::StablePosition>& pos
+		BoundsCheckBuilderContext                  context,
+		const MIRValue&                            index,
+		const MIRValue&                            length,
+		const base::Optional<dia::StablePosition>& pos
 	);
 }
