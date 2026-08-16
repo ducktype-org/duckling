@@ -373,18 +373,21 @@ impl PathOpsExt for Path {
                     common_prefix = false;
                     result_components.push_front(Component::ParentDir);
                     result_components.push_back(tgt_comp);
-                },
+                }
                 (Some(_), None) => {
                     common_prefix = false;
                     result_components.push_front(Component::ParentDir)
-                },
+                }
                 (None, Some(tgt_comp)) => {
                     common_prefix = false;
                     result_components.push_back(tgt_comp)
-                },
+                }
             }
         }
-        result_components.into_iter().map(|c| c.as_os_str()).collect()
+        result_components
+            .into_iter()
+            .map(|c| c.as_os_str())
+            .collect()
     }
 }
 

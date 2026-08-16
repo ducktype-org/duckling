@@ -2,11 +2,28 @@ use std::path::{Path, PathBuf};
 
 use crate::DuckContext;
 use crate::quackpack::core::Version;
-use crate::quackpack::schemas::manifest::{Dependency, DependencyFeature, DependencySource, DetailedSource, OredSemver};
+use crate::quackpack::schemas::manifest::{
+    Dependency, DependencyFeature, DependencySource, DetailedSource, OredSemver,
+};
 use crate::util::path_ops_ext::PathOpsExt;
 
 #[derive(Debug, Clone)]
-/// Raw specification of a [`DependencySource`].
+/// Raw specification from which [`Dependency`] can be constructed.
+pub struct DependencySpecification {
+    /// Specification of the name of the dependency.
+    pub name_spec: NameSpecification,
+    /// Specification of the source of the dependency.
+    pub source_spec: SourceSpecification,
+    /// Required versions of this dependency.
+    pub versions: Vec<Version>,
+    /// Features of the dependency.
+    pub features: Vec<String>,
+    /// Whether the dependency should be pinned.
+    pub pinned: bool,
+}
+
+#[derive(Debug, Clone)]
+/// Raw specification from which [`DependencySource`] can be constructed.
 pub struct SourceSpecification {
     pub local_path: Option<PathBuf>,
     pub git_url: Option<String>,
@@ -17,16 +34,19 @@ pub struct SourceSpecification {
 }
 
 #[derive(Debug, Clone)]
+/// Specification of the name of the dependency.
 pub struct NameSpecification {
     pub name: String,
     pub alias: Option<String>,
 }
 
 impl NameSpecification {
+    /// How this dependency will be referenced in manifest and in code.
     fn effective_name(self) -> String {
         self.alias.unwrap_or(self.name)
     }
 
+    /// Whether and how [`DependencySource`] should specify a name.
     fn source_name(&self) -> Option<String> {
         if self.alias.is_some() {
             Some(self.name.to_string())
@@ -36,20 +56,22 @@ impl NameSpecification {
     }
 }
 
-
 /// Construct the appropriate [`Dependency`] object, specified by input.
 /// Returns a pair of [`String`] and [`Dependency`], which can be treated as an entry in `dependencies` or `dev-dependencies` maps.
 pub fn construct_dependency(
+    dep_spec: DependencySpecification,
     pkg_root: &Path,
-    name_spec: NameSpecification,
-    versions: Vec<Version>,
-    source_spec: SourceSpecification,
-    features: Vec<String>,
-    pinned: bool,
     ctx: &DuckContext,
 ) -> (String, Dependency) {
+    let DependencySpecification {
+        name_spec,
+        source_spec,
+        versions,
+        features,
+        pinned,
+    } = dep_spec;
     // Dependency's source.
-    let source = source_from_specification(&name_spec, source_spec, pkg_root, ctx);
+    let source = construct_source(&name_spec, source_spec, pkg_root, ctx);
     // For now it is not possible to specify feature conditions through `add` interface.
     let features: Vec<DependencyFeature> = features
         .into_iter()
@@ -76,7 +98,7 @@ pub fn construct_dependency(
 }
 
 /// Construct [`DependencySource`] from the given [`SourceSpecification`].
-fn source_from_specification(
+fn construct_source(
     name_spec: &NameSpecification,
     spec: SourceSpecification,
     pkg_root: &Path,

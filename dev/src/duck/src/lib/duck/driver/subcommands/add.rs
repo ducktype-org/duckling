@@ -2,7 +2,9 @@ use std::str::FromStr;
 
 use crate::duck::driver::cli_ext::{multi, optional};
 use crate::quackpack::core::Version;
-use crate::quackpack::subcommands::add::{AddOptions, NameSpecification, SourceSpecification, add};
+use crate::quackpack::subcommands::add::{
+    AddOptions, DependencySpecification, NameSpecification, SourceSpecification, add,
+};
 use crate::{DuckContext, QuackResult};
 use clap::{Arg, ArgGroup, ArgMatches, Command};
 
@@ -18,14 +20,14 @@ pub fn get_parser() -> Command {
         .arg(flag("pinned", "Pin the dependency's version"))
         .arg(optional("alias", "How to alias the dependency"))
         .arg(optional("local", "Add a local dependency, specified by path"))
-        .arg(optional("git-url", "Add a git dependency, on a repository under a URL"))
-        .arg(optional("git-branch", "Specify a git branch of the dependency"))
-        .arg(optional("git-tag", "Specify a git tag of the dependency"))
-        .arg(optional("git-commit", "Specify a git commit of the dependency. Can be either short or long commit id"))
-        .arg(optional("registry-url", "Specify a registry from which this dependency should be taken"))
-        .group(ArgGroup::new("dependency-source").args(["local", "git-url", "registry-url"]))
-        .group(ArgGroup::new("git-references").args(["git-branch", "git-tag", "git-commit"]).requires("git-url"))
-        .group(ArgGroup::new("not-pinned-sources").args(["local", "git-url"]).conflicts_with("pinned"))
+        .arg(optional("git", "Add a git dependency, on a repository under a URL"))
+        .arg(optional("branch", "Specify a git branch of the dependency"))
+        .arg(optional("tag", "Specify a git tag of the dependency"))
+        .arg(optional("commit", "Specify a git commit of the dependency. Can be either short or long commit id"))
+        .arg(optional("registry", "Specify a registry from which this dependency should be taken"))
+        .group(ArgGroup::new("dependency-source").args(["local", "git", "registry"]))
+        .group(ArgGroup::new("git-references").args(["branch", "tag", "commit"]).requires("git"))
+        .group(ArgGroup::new("not-pinned-sources").args(["local", "git"]).conflicts_with("pinned"))
         .arg(multi("version", "List of versions with which the dependency should be compatible or a single version if `pinned` is set"))
         .arg(multi("features", "Features of the dependency to add"))
         .arg(
@@ -42,10 +44,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         .get_one::<String>("name")
         .expect("guarded by the parser")
         .clone();
-    let name_spec = NameSpecification {
-        name,
-        alias,
-    };
+    let name_spec = NameSpecification { name, alias };
     let source_spec = get_source_specification(matches);
     let versions = matches
         .get_many::<String>("version")
@@ -59,14 +58,17 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         .flatten()
         .cloned()
         .collect();
-    let options = AddOptions {
+    let dep_spec = DependencySpecification {
         name_spec,
-        global: matches.get_flag("global"),
-        dev_dep: matches.get_flag("dev"),
-        pinned: matches.get_flag("pinned"),
         source_spec,
         versions,
         features,
+        pinned: matches.get_flag("pinned"),
+    };
+    let options = AddOptions {
+        dep_spec,
+        global: matches.get_flag("global"),
+        dev_dep: matches.get_flag("dev"),
     };
     add(ctx, options)
 }

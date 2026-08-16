@@ -1,45 +1,35 @@
 use std::path::Path;
 
-use crate::quackpack::core::{AllowGlobalPackage, PackageLoader, Version};
+use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
 use crate::quackpack::schemas::manifest::{
-    Dependency, DependencyAdded, Manifest as ManifestSchema
+    Dependency, DependencyAdded, Manifest as ManifestSchema,
 };
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId};
 
 mod dependency_construction;
-pub use dependency_construction::{NameSpecification, SourceSpecification};
 use dependency_construction::construct_dependency;
+pub use dependency_construction::{
+    DependencySpecification, NameSpecification, SourceSpecification,
+};
 
 #[derive(Debug, Clone)]
 /// All options that can be passed to `add`.
 pub struct AddOptions {
-    /// How the dependency should be named.
-    pub name_spec: NameSpecification,
+    /// Specification of the dependency.
+    pub dep_spec: DependencySpecification,
     /// Use a global package instead of a local one.
     pub global: bool,
     /// Add a dev-dependency.
     pub dev_dep: bool,
-    /// Source of the dependency.
-    pub source_spec: SourceSpecification,
-    /// Required versions of this dependency.
-    pub versions: Vec<Version>,
-    /// Features of the dependency.
-    pub features: Vec<String>,
-    /// Whether the dependency should be pinned.
-    pub pinned: bool,
 }
 
 /// Logic for executing the `add` subcommand.
 pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
     let AddOptions {
-        name_spec,
+        dep_spec,
         global,
         dev_dep,
-        source_spec,
-        versions,
-        features,
-        pinned,
     } = options;
     let pkg = if global {
         PackageLoader::global_package(ctx)?
@@ -48,8 +38,7 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
     }
     .into_package()
     .unwrap_package();
-    let (effective_name, dep) =
-        construct_dependency(pkg.root_directory(), name_spec, versions, source_spec, features, pinned, ctx);
+    let (effective_name, dep) = construct_dependency(dep_spec, pkg.root_directory(), ctx);
 
     // Only necessary for diagnostic messages.
     let pkg_name = pkg.name();
