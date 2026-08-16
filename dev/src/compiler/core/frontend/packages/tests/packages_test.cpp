@@ -198,6 +198,7 @@ private:
 	void packageDependenciesAccessUnlock() {
 		TestReporter reporter;
 		auto         main_file = fs::FileManager::createRandomVirtualFile("fn main() {}", ".dm");
+
 		RawPackageInfo raw{
 			.package_id   = base::StrID("pkg"),
 			.package_name = base::StrID("pkg"),
