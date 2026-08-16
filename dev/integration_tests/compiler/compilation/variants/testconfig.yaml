@@ -5,5 +5,5 @@ Tests:
       all:
         backend: all
         Output:
-          String: "1\n2\n3\n4\n41\n-1\n10\n2\n42\n-5\n99\n11\n5\n5\n22\n-2\n-3\n11\n30\n100\n21\n40\n140\n"
+          String: ""
         ExitCode: 0

@@ -1,50 +1,56 @@
 import core.builtins.*;
 
+# Every check is silent while it holds, so a passing run prints nothing at all and a failing
+# one prints only the ids of the checks that broke.
+fun check(actual: i64, expected: i64, id: i64) -> () = {
+	if (actual != expected) builtin_output_i64(id);
+}
+
 # ===== Construction =====
 
 fun construction() -> () = {
 	# Construction via implicit coercion.
-	var a: i32 = (7 as i32);
+	var a: i32 = 7i32;
 	var v: i32 | f32 = a;
-	builtin_output_i64((1 as i64));
+	check(describe(v), 7i64, 1i64);
 
 	# Reassignment with a different alternative.
 	v = (2.5 as f32);
-	builtin_output_i64((2 as i64));
+	check(describe(v), -1i64, 2i64);
 
 	# Reassignment back to the first alternative.
-	v = (42 as i32);
-	builtin_output_i64((3 as i64));
+	v = 42i32;
+	check(describe(v), 42i64, 3i64);
 
 	# Variant-to-variant assignment (same type, no coercion).
 	var w: i32 | f32 = v;
 	w = v;
-	builtin_output_i64((4 as i64));
+	check(describe(w), 42i64, 4i64);
 }
 
 # ===== Match in each statement position =====
 
 fun describe(v: i32 | f32) -> i64 = {
-	var r: i64 = (0 as i64);
+	var r: i64 = 0i64;
 	r = match (v) {
-		case x : i32 = (x as i64);
-		case _ = (-1 as i64);
+		case x : i32 = x as i64;
+		case _ = -1i64;
 	};
 	return r;
 }
 
 fun pickExhaustive(v: i32 | f32) -> i64 = {
 	var r: i64 = match (v) {
-		case x : i32 = (x as i64) + (1 as i64);
-		case y : f32 = (2 as i64);
+		case x : i32 = (x as i64) + 1i64;
+		case y : f32 = 2i64;
 	};
 	return r;
 }
 
 fun viaReturn(v: i32 | f32) -> i64 = {
 	return match (v) {
-		case x : i32 = (x as i64) * (2 as i64);
-		case _ = (-5 as i64);
+		case x : i32 = (x as i64) * 2i64;
+		case _ = -5i64;
 	};
 }
 
@@ -53,32 +59,37 @@ fun viaReturn(v: i32 | f32) -> i64 = {
 # A single wildcard case: no alternative is ever tested.
 fun onlyWildcard(v: i32 | f32) -> i64 = {
 	return match (v) {
-		case _ = (99 as i64);
+		case _ = 99i64;
 	};
 }
 
 # A constrained wildcard binds nothing, so no payload is projected for it.
 fun constrainedWildcard(v: i32 | f32) -> i64 = {
 	return match (v) {
-		case _ : i32 = (11 as i64);
-		case _ : f32 = (22 as i64);
+		case _ : i32 = 11i64;
+		case _ : f32 = 22i64;
 	};
 }
 
 # A `ref` binding aliases the payload in place instead of copying it out.
 fun viaRefBinding(v: i32 | f32) -> i64 = {
 	return match (v) {
-		case x : ref i32 = (x as i64);
-		case _ = (-2 as i64);
+		case x : ref i32 = x as i64;
+		case _ = -2i64;
 	};
 }
 
 # Nothing follows the match, so its continuation is the end of the function.
-fun nothingAfter(v: i32 | f32) -> () = {
+fun nothingAfter(v: i32 | f32, out: ref i64) -> () = {
 	match (v) {
-		case x : i32 = builtin_output_i64(x as i64);
-		case _ = builtin_output_i64(-3 as i64);
+		case x : i32 = assign(out, x as i64);
+		case _ = assign(out, -3i64);
 	};
+}
+
+fun assign(out: ref i64, value: i64) -> i64 = {
+	out = value;
+	return 0i64;
 }
 
 # ===== Match nested inside a bigger expression =====
@@ -89,17 +100,17 @@ fun identity(x: i64) -> i64 = {
 
 # A match on the right of a binary operator.
 fun inBinary(v: i32 | f32) -> i64 = {
-	return (1 as i64) + match (v) {
-		case x : i32 = (10 as i64);
-		case _ = (20 as i64);
+	return 1i64 + match (v) {
+		case x : i32 = 10i64;
+		case _ = 20i64;
 	};
 }
 
 # A match as a call argument.
 fun inCall(v: i32 | f32) -> i64 = {
 	return identity(match (v) {
-		case x : i32 = (30 as i64);
-		case _ = (40 as i64);
+		case x : i32 = 30i64;
+		case _ = 40i64;
 	});
 }
 
@@ -107,52 +118,133 @@ fun inCall(v: i32 | f32) -> i64 = {
 fun inNested(v: i32 | f32) -> i64 = {
 	return match (v) {
 		case x : i32 = match (v) {
-			case y : i32 = (50 as i64);
-			case _ = (60 as i64);
+			case y : i32 = 50i64;
+			case _ = 60i64;
 		};
-		case _ = (70 as i64);
-	} * (2 as i64);
+		case _ = 70i64;
+	} * 2i64;
+}
+
+# ===== A `ref` alternative =====
+#
+# The variant stores the reference itself, so the payload is a reference and not a value.
+
+# The variant is taken by reference throughout: copying a variant whose active alternative is
+# a `ref` is not handled by the DVM backend yet.
+#
+# The case constraint repeats the alternative's reference kind: the binding is the stored
+# reference, which still aliases whatever the variant was built from.
+fun refAltByRef(v: ref (ref i32 | f32)) -> i64 = {
+	return match (v) {
+		case x : ref i32 = x as i64;
+		case _ = -1i64;
+	};
+}
+
+# Only the underlying type picks the alternative, so a direct constraint selects the same
+# `ref i32` alternative and reads the referenced value out of it.
+fun refAltDirect(v: ref (ref i32 | f32)) -> i64 = {
+	return match (v) {
+		case x : i32 = x as i64;
+		case _ = -1i64;
+	};
+}
+
+# A wildcard covers a `ref` alternative without projecting anything.
+fun refAltWildcard(v: ref (ref i32 | f32)) -> i64 = {
+	return match (v) {
+		case _ = 5i64;
+	};
+}
+
+# Writing through the binding writes through the stored reference, into the original variable.
+fun refAltWrite(v: ref (ref i32 | f32), value: i32) -> i64 = {
+	return match (v) {
+		case x : ref i32 = assignI32(x, value);
+		case _ = -1i64;
+	};
+}
+
+fun assignI32(out: ref i32, value: i32) -> i64 = {
+	out = value;
+	return 0i64;
+}
+
+fun refAltChecks() -> () = {
+	var a: i32 = 7i32;
+	var v: ref i32 | f32 = &a;
+
+	check(refAltByRef(&v), 7i64, 30i64);
+	check(refAltDirect(&v), 7i64, 31i64);
+	check(refAltWildcard(&v), 5i64, 32i64);
+
+	# The variant holds a reference, so a later write to `a` is visible through it.
+	a = 9i32;
+	check(refAltByRef(&v), 9i64, 33i64);
+	check(refAltDirect(&v), 9i64, 34i64);
+
+	# And a write through the binding lands in `a`.
+	check(refAltWrite(&v, 11i32), 0i64, 35i64);
+	check(a as i64, 11i64, 36i64);
+
+	# The other alternative is a plain value and is unaffected by all of the above.
+	v = (2.5 as f32);
+	check(refAltByRef(&v), -1i64, 37i64);
+	check(refAltDirect(&v), -1i64, 38i64);
+	check(refAltWildcard(&v), 5i64, 39i64);
+
+	# Rebinding the reference alternative points the variant at another variable.
+	var b: i32 = 21i32;
+	v = &b;
+	check(refAltByRef(&v), 21i64, 40i64);
+	check(a as i64, 11i64, 41i64);
 }
 
 fun main() -> i64 = {
 	construction();
 
-	var a: i32 | f32 = (41 as i32);
-	builtin_output_i64(describe(a));
+	var a: i32 | f32 = 41i32;
+	check(describe(a), 41i64, 5i64);
 
 	a = (3.5 as f32);
-	builtin_output_i64(describe(a));
+	check(describe(a), -1i64, 6i64);
 
-	a = (9 as i32);
-	builtin_output_i64(pickExhaustive(a));
+	a = 9i32;
+	check(pickExhaustive(a), 10i64, 7i64);
 	a = (0.5 as f32);
-	builtin_output_i64(pickExhaustive(a));
+	check(pickExhaustive(a), 2i64, 8i64);
 
-	a = (21 as i32);
-	builtin_output_i64(viaReturn(a));
+	a = 21i32;
+	check(viaReturn(a), 42i64, 9i64);
 	a = (1.5 as f32);
-	builtin_output_i64(viaReturn(a));
+	check(viaReturn(a), -5i64, 10i64);
 
-	a = (5 as i32);
-	builtin_output_i64(onlyWildcard(a));
-	builtin_output_i64(constrainedWildcard(a));
-	builtin_output_i64(viaRefBinding(a));
-	nothingAfter(a);
+	a = 5i32;
+	check(onlyWildcard(a), 99i64, 11i64);
+	check(constrainedWildcard(a), 11i64, 12i64);
+	check(viaRefBinding(a), 5i64, 13i64);
+
+	var out: i64 = 0i64;
+	nothingAfter(a, &out);
+	check(out, 5i64, 14i64);
 
 	a = (2.5 as f32);
-	builtin_output_i64(constrainedWildcard(a));
-	builtin_output_i64(viaRefBinding(a));
-	nothingAfter(a);
+	check(constrainedWildcard(a), 22i64, 15i64);
+	check(viaRefBinding(a), -2i64, 16i64);
+	nothingAfter(a, &out);
+	check(out, -3i64, 17i64);
 
-	a = (7 as i32);
-	builtin_output_i64(inBinary(a));
-	builtin_output_i64(inCall(a));
-	builtin_output_i64(inNested(a));
+	a = 7i32;
+	check(inBinary(a), 11i64, 18i64);
+	check(inCall(a), 30i64, 19i64);
+	check(inNested(a), 100i64, 20i64);
 
 	a = (7.5 as f32);
-	builtin_output_i64(inBinary(a));
-	builtin_output_i64(inCall(a));
-	builtin_output_i64(inNested(a));
+	check(inBinary(a), 21i64, 21i64);
+	check(inCall(a), 40i64, 22i64);
+	check(inNested(a), 140i64, 23i64);
 
-	return (0 as i64);
+	refAltChecks();
+
+	return 0i64;
 }
