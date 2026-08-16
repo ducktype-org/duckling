@@ -327,7 +327,7 @@ std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::val
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
 			e.label,
-			[&](Box<dia_int::PlaceholderError>& err) {
+			[&](Box<dia::PlaceholderError>& err) {
 				for (const auto& instruction: e.jumps)
 					instruction.visit([&](auto&& i) {
 						log.addNote(

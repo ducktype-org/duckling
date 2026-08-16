@@ -93,7 +93,7 @@ namespace vm {
 		std::deque<code::valid_function::ValidFunction> runtime_expr_high;
 		std::deque<low::LowFuncData>                    runtime_expr_low;
 
-		std::deque<std::vector<Ref<VmValue>>> runtime_ret_value_storage;
+		std::deque<std::vector<Ref<SafeVMValue>>> runtime_ret_value_storage;
 
 		RuntimeData runtime_data;
 
@@ -256,7 +256,7 @@ namespace vm {
 		base::Optional<CRef<code::valid_function::ValidFunction>> getFatBytecodeFunction(u64 frame_idx
 		) const;
 
-		base::Optional<std::vector<Ref<VmValue>>> loadAndExecRuntimeExpr(
+		base::Optional<std::vector<Ref<SafeVMValue>>> loadAndExecRuntimeExpr(
 			code::valid_function::ValidFunction&& expr
 		);
 

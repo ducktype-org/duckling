@@ -578,7 +578,11 @@ namespace vm {
 				return std::unexpected(api::ApiError{
 					api::OtherError{ "Couldn't execute the expression - either failed to resume or "
 				                     "got an unexpected status during evaluation!" } });
-			return api::Response(vm::api::ExitValue(*returned_value));
+			std::vector<Ref<IVMValue>> transformed;
+			for (auto safe_ref : *returned_value) {
+				transformed.emplace_back(safe_ref.get());
+			}
+			return api::Response(vm::api::ExitValue(transformed));
 		} else {
 			std::stringstream ss;
 			valid_expr.error().dump(ss);

@@ -633,7 +633,7 @@ namespace vm {
 			frame--;
 			auto* caller_block_ref_stack_end = frame->local_block_ref_stack_end;
 
-			std::vector<Ref<VmValue>> exit_value = {};
+			std::vector<Ref<SafeVMValue>> exit_value = {};
 
 			while (callee_frame->local_block_ref_stack_end > caller_block_ref_stack_end) {
 				auto block = Ref(callee_frame->local_block_ref_stack_end[-1]);
@@ -641,7 +641,7 @@ namespace vm {
 					= u64(callee_frame->local_block_ref_stack_end - 1 - caller_block_ref_stack_end);
 
 				if (block_ref_relative_idx < ret_count) {
-					exit_value.emplace_back(thread.safe_process.createVmValue(
+					exit_value.emplace_back(thread.safe_process.createVMValue(
 						expr.result_types[block_ref_relative_idx], Pointer(block, 0)
 					));
 				}

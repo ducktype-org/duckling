@@ -792,7 +792,7 @@ class FunctionValidator {
 			instr_case_novalue(Op_movCast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr) {}
 
 			instr_case(Op_add_pcptr_p64, instr) {
-				if (current_stack.at(instr.offset.var_name)->getName() != "i64")
+				if (current_stack.at(instr.offset)->getName() != "i64")
 					throw ArgumentMismatchError(instruction);
 			}
 
@@ -1925,7 +1925,7 @@ class FunctionValidator {
 		if (is_expr)
 			throwOnForbiddenOpcodes<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(body);
 		else
-			throwOnForbiddenOpcodes<OpCode::Op_ret_from_expr, OpCode::Op_initFromVmValue>(body);
+			throwOnForbiddenOpcodes<OpCode::Op_ret_from_expr, OpCode::Op_initFromVMValue>(body);
 	}
 
 public:

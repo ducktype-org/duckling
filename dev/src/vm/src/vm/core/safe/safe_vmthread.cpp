@@ -747,7 +747,7 @@ namespace vm {
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
 	}
 
-	base::Optional<std::vector<Ref<VmValue>>> SafeVMThread::loadAndExecRuntimeExpr(
+	base::Optional<std::vector<Ref<SafeVMValue>>> SafeVMThread::loadAndExecRuntimeExpr(
 		code::valid_function::ValidFunction&& high_expr
 	) {
 		CORE_ASSERT(
