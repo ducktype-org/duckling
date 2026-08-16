@@ -29,14 +29,14 @@ import tempfile
 # a meaningful class of threading issues.
 #
 # High-level flow:
-# 1) duplicate every .dmf module file in every package under test (default x3),
+# 1) duplicate every .dm module file in every package under test (default x3),
 #    so there is enough work to exercise concurrent modification paths
 #    and force parallel processing of identical function bodies,
 # 2) rewrite duplicated files so they can coexist in one package:
 #    - rename `fun main(...)` to `fun main_copyN(...)` because the linker
 #      requires exactly one main function per package,
 #    - rewrite imports in copied main-module files from `import child...`
-#      to `import main.child...` because copied .dmf files become
+#      to `import main.child...` because copied .dm files become
 #      sub-modules of the original, so their import paths must be adjusted,
 # 3) compile the same package(s) twice into a local `build` dir:
 #    - first with 1 worker to get a deterministic baseline,
@@ -66,12 +66,12 @@ def std_artifacts_path_args() -> list[str]:
 
 # Returns True when file is a generated temporary copy.
 def is_copy_file(path: Path) -> bool:
-    return path.suffix == ".dmf" and GENERATED_COPY_STEM_RE.match(path.stem) is not None
+    return path.suffix == ".dm" and GENERATED_COPY_STEM_RE.match(path.stem) is not None
 
 
-# Lists original .dmf files that should be duplicated.
-def iter_original_dmf_files(package_dir: Path) -> list[Path]:
-    return sorted([file for file in package_dir.rglob("*.dmf") if not is_copy_file(file)])
+# Lists original .dm files that should be duplicated.
+def iter_original_dm_files(package_dir: Path) -> list[Path]:
+    return sorted([file for file in package_dir.rglob("*.dm") if not is_copy_file(file)])
 
 
 # Detects child module names for import rewriting in copied main modules.
@@ -81,13 +81,13 @@ def get_child_module_names(main_module_file: Path) -> set[str]:
     child_names = set()
 
     for child in parent_dir.iterdir():
-        if child.is_file() and child.suffix == ".dmf" and not is_copy_file(child):
+        if child.is_file() and child.suffix == ".dm" and not is_copy_file(child):
             if child.stem != main_name:
                 child_names.add(child.stem)
             continue
 
         if child.is_dir() and any(
-            nested.suffix == ".dmf" and not is_copy_file(nested) for nested in child.rglob("*.dmf")
+            nested.suffix == ".dm" and not is_copy_file(nested) for nested in child.rglob("*.dm")
         ):
             child_names.add(child.name)
 
@@ -143,12 +143,12 @@ def rewrite_for_copy(source_text: str, source_file: Path, copy_index: int) -> st
 def duplicate_package_modules(package_dir: Path, copy_count: int) -> list[Path]:
     created_files: list[Path] = []
 
-    originals = iter_original_dmf_files(package_dir)
+    originals = iter_original_dm_files(package_dir)
     for source_file in originals:
         source_text = source_file.read_text(encoding="utf-8")
         sanitized_source_stem = source_file.stem.replace("-", "_")
         for copy_index in range(1, copy_count + 1):
-            target = source_file.with_name(f"concurrent_copy{copy_index}_{sanitized_source_stem}.dmf")
+            target = source_file.with_name(f"concurrent_copy{copy_index}_{sanitized_source_stem}.dm")
             rewritten = rewrite_for_copy(source_text, source_file, copy_index)
             target.write_text(rewritten, encoding="utf-8")
             created_files.append(target)

@@ -73,7 +73,7 @@ private:
 
 	void lifetimeFlagsRepeatedBlocks() {
 		auto [module, scope]
-			= getModule(fs::File(path("modules/lifetime_flags/repeated_blocks.dmf")));
+			= getModule(fs::File(path("modules/lifetime_flags/repeated_blocks.dm")));
 		auto            foo_mir = getMIRFunctionByName(module, "main");
 		LifetimeChecker checker;
 		checker.expectConstruct("a")
@@ -115,7 +115,7 @@ private:
 	}
 
 	void lifetimeFlagsSingleBlock() {
-		auto [module, scope] = getModule(fs::File(path("modules/lifetime_flags/single_block.dmf")));
+		auto [module, scope] = getModule(fs::File(path("modules/lifetime_flags/single_block.dm")));
 		auto            main = getMIRFunctionByName(module, "main");
 		LifetimeChecker checker;
 		checker.expectConstruct("x")
@@ -137,8 +137,7 @@ private:
 	}
 
 	void lifetimeFlagsNestedBlocks() {
-		auto [module, scope]
-			= getModule(fs::File(path("modules/lifetime_flags/nested_blocks.dmf")));
+		auto [module, scope] = getModule(fs::File(path("modules/lifetime_flags/nested_blocks.dm")));
 		auto            main = getMIRFunctionByName(module, "main");
 		LifetimeChecker checker;
 		checker.expectConstruct("x")

@@ -55,7 +55,7 @@ export async function getWorkspaceFiles(connection: Connection): Promise<FileEnt
  * Returns a list of Duckling file paths and their contents.
  */
 export async function filterDucklingFiles(files: FileEntry[]): Promise<FileEntry[]> {
-  const extensions = new Set(["rift", "dl", "duckling", "dmf"]);
+  const extensions = new Set(["rift", "dl", "duckling", "dm"]);
   const results: FileEntry[] = [];
 
   for (const file of files) {

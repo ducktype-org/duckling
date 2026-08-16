@@ -22,7 +22,7 @@ namespace lsp {
 	 *
 	 * Walks up the real filesystem from the file, stopping at the nearest
 	 * registered workspace root. The topmost directory with a matching
-	 * dir/dir.dmf is treated as the package root and loaded into the VFS +
+	 * dir/dir.dm is treated as the package root and loaded into the VFS +
 	 * module tree if not already present.
 	 * If the package is already loaded, the `addFile` is called.
 	 *

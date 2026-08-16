@@ -50,10 +50,10 @@ PreCase: |+
   @{duck-exe} init root2
   @{duck-exe} init tmp1
   @{duck-exe} init tmp2
-  echo "@{src_root}" > root1/src/src.dmf
-  echo "@{src_root}" > root2/src/src.dmf
-  echo "@{src_tmp1}" > tmp1/src/src.dmf
-  echo "@{src_tmp2}" > tmp2/src/src.dmf
+  echo "@{src_root}" > root1/src/src.dm
+  echo "@{src_root}" > root2/src/src.dm
+  echo "@{src_tmp1}" > tmp1/src/src.dm
+  echo "@{src_tmp2}" > tmp2/src/src.dm
   echo "@{root_deps}" >> root1/quackconfig.yaml
   echo "@{root_deps}" >> root2/quackconfig.yaml
 PostCase: python3 check.py @{expected-subfolders}
@@ -76,9 +76,9 @@ Tests:
         # Thus the first and second compilation should have different subfolders.
         expected-subfolders: 2
         test-cmd: |+
-          echo "@{src_tmp1_new}" > tmp1/src/src.dmf &&
+          echo "@{src_tmp1_new}" > tmp1/src/src.dm &&
           duck -C root1 build --shared-artifacts &&
           echo "@{tmp1_deps}" >> tmp1/quackconfig.yaml &&
-          echo "@{src_tmp1}" > tmp1/src/src.dmf &&
+          echo "@{src_tmp1}" > tmp1/src/src.dm &&
           duck -C root1 build --shared-artifacts
         

@@ -229,7 +229,7 @@ documents.onDidChangeContent(async change => {
 connection.onDidChangeWatchedFiles(async change => {
 	await initPromise;
 	let isDucklingFile = (uri: string) => {
-		return uri.endsWith(".duck") || uri.endsWith(".dmf")|| uri.endsWith(".ds") || uri.endsWith(".🦆");
+		return uri.endsWith(".duck") || uri.endsWith(".dm")|| uri.endsWith(".ds") || uri.endsWith(".🦆");
 	}
 	for (const fileEvent of change.changes) {
 		console.log("File change event received:", fileEvent.type);

@@ -190,7 +190,7 @@ private:
 
 		// Valid JSON but missing required field "target"
 		{
-			std::istringstream iss(R"({"module_path": "x.dmf", "source_positions_type": "DBC",
+			std::istringstream iss(R"({"module_path": "x.dm", "source_positions_type": "DBC",
                 "functions": {}, "types": {}})");
 			auto               result = debug_info::loadFromStream(iss);
 			assertFalse(result.has_value(), "JSON missing 'target' field should fail");
@@ -199,7 +199,7 @@ private:
 		// Valid JSON but wrong type for a field
 		{
 			std::istringstream iss(
-				R"({"target": 42, "module_path": "x.dmf", "source_positions_type": "LineColumn",
+				R"({"target": 42, "module_path": "x.dm", "source_positions_type": "LineColumn",
                 "functions": {}, "types": {}})"
 			);
 
@@ -219,7 +219,7 @@ private:
 		{
 			std::istringstream iss(R"({
     "target": "DBC",
-    "module_path": "x.dmf",
+    "module_path": "x.dm",
     "source_positions_type": "LineColumn",
     "functions": {
         "_Zx": {
@@ -241,7 +241,7 @@ private:
 		{
 			std::istringstream iss(R"({
 	"target": "DBC",
-	"module_path": "x.dmf",
+	"module_path": "x.dm",
 	"source_positions_type": "LineColumn",
 	"functions": {
 		"_Zx": {

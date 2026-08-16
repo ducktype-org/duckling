@@ -137,7 +137,7 @@ to your advantage.
 >
 > ~~~~~rs
 > error[E5555]: use of a moved value `my_val`
-> main.dmf:15:9
+> main.dm:15:9
 >    |
 >  7 |   let result = f(my_val);
 >    |                  ------ value of `my_val` moved here
@@ -148,7 +148,7 @@ to your advantage.
 >
 >
 > error[E5555]: use of a moved value `my_val`
-> main.dmf:15:9
+> main.dm:15:9
 >    |
 >  7 |   let result = f(my_val);
 >                       ------ value moved here

@@ -1445,15 +1445,15 @@ private:
 			{
 				"Call failed",
 				"Found exact candidate.",
-				".dmf:5:6",
+				".dm:5:6",
 				"Code expanded from here.",
-				".dmf:5:6",
+				".dm:5:6",
 				"Code expanded from here.",
-				".dmf:5:6",
+				".dm:5:6",
 				"Found exact candidate.",
-				".dmf:6:6",
+				".dm:6:6",
 				"Code expanded from here.",
-				".dmf:6:6",
+				".dm:6:6",
 			},
 			1
 		);

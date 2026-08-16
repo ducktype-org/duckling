@@ -24,7 +24,7 @@ Duckling
     filter remove_matches ^\s*#
     filter remove_inline #.*$
     extension dl
-    extension dmf
+    extension dm
     extension ds
     extension duck
     extension duckling

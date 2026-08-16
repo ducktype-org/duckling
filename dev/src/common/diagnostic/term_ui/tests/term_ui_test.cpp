@@ -8,7 +8,7 @@ using namespace dia::term_ui_view;
 // NOLINTBEGIN(missing-field-initializers)
 
 constexpr dia::CodeLocation SAMPLE_LOCATION{
-	.file = "main.dmf", .line = 15, .column = 16, .end_line = {}, .end_column = {}
+	.file = "main.dm", .line = 15, .column = 16, .end_line = {}, .end_column = {}
 };
 
 Message sample1() {

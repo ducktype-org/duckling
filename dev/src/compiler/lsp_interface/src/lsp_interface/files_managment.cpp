@@ -26,7 +26,7 @@ namespace lsp {
 
 		/**
 		 * @brief For a given directory path, checks if it contains a main module file
-		 * (dir/dir.dmf). If the directory does not exist, it throws an exception.
+		 * (dir/dir.dm). If the directory does not exist, it throws an exception.
 		 */
 		bool hasDirectoryMainModuleFile(const fs::FilePath& dir_path) {
 			auto dir         = fs::File(dir_path);
@@ -35,7 +35,7 @@ namespace lsp {
 		}
 
 		/**
-		 * @brief For a given directory path, returns the path to the main module file (dir/dir.dmf)
+		 * @brief For a given directory path, returns the path to the main module file (dir/dir.dm)
 		 * if it exists.
 		 */
 		base::Optional<fs::File> getDirectoryMainModuleFile(const fs::FilePath& dir_path) {
@@ -143,11 +143,11 @@ namespace lsp {
 				base::Optional<base::Ref<ModuleTree>> parent_module_ref_opt;
 				base::StrID                           stem_id(file.stem().c_str());
 				if (file.stem() == parent_dir.name()) {
-					// Case when we have a/a.dmf submodule structure.
+					// Case when we have a/a.dm submodule structure.
 					auto parent_dir_parent = fs::File(parent_dir.getFilePath().parentPath());
 					parent_module_ref_opt  = findModuleForDirectoryPath(parent_dir_parent);
 				} else {
-					// Case when we have b/a.dmf
+					// Case when we have b/a.dm
 					parent_module_ref_opt = findModuleForDirectoryPath(parent_dir);
 				}
 
@@ -168,9 +168,9 @@ namespace lsp {
 		 * @brief Scans for the children of the newly added module
 		 * and adds them as submodules if needed.
 		 *
-		 * This is for a situation, where we add a file like /a/a.dmf
-		 * and there are other files in the /a directory, like /a/b.dmf or /a/c/c.dmf,
-		 * that should become submodules of /a/a.dmf.
+		 * This is for a situation, where we add a file like /a/a.dm
+		 * and there are other files in the /a directory, like /a/b.dm or /a/c/c.dm,
+		 * that should become submodules of /a/a.dm.
 		 */
 		void checkForNewSubmodules(const fs::File& file) {
 			auto parent_dir = fs::File(file.getFilePath().parentPath());

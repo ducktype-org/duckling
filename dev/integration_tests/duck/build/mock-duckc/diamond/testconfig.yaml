@@ -6,7 +6,7 @@
 PreCase: |+
   cd $DIT_TMP_DIR
   mkdir -p root/src foo/src bar/src baz/src
-  echo @{default-src} | tee root/src/src.dmf | tee foo/src/src.dmf | tee bar/src/src.dmf | tee baz/src/src.dmf
+  echo @{default-src} | tee root/src/src.dm | tee foo/src/src.dm | tee bar/src/src.dm | tee baz/src/src.dm
 
   echo "metadata:
     name: root

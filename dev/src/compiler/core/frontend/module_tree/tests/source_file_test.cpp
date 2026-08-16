@@ -353,14 +353,14 @@ private:
 		// Build first module (named "modA")
 		auto mod_a_builder = ModuleTreeBuilder::createWithRandomPackageID();
 		mod_a_builder->setName(base::StrID("modA"));
-		auto mod_a_main = root.createSubFile("mainA", "modA.dmf");
+		auto mod_a_main = root.createSubFile("mainA", "modA.dm");
 		mod_a_builder->setMainSourceFile(mod_a_main);
 		auto mod_a = mod_a_builder->finalize();
 
 		// Build second module (named "modB")
 		auto mod_b_builder = ModuleTreeBuilder::createWithRandomPackageID();
 		mod_b_builder->setName(base::StrID("modB"));
-		auto mod_b_main = root.createSubFile("mainB", "modB.dmf");
+		auto mod_b_main = root.createSubFile("mainB", "modB.dm");
 		mod_b_builder->setMainSourceFile(mod_b_main);
 		auto mod_b = mod_b_builder->finalize();
 
