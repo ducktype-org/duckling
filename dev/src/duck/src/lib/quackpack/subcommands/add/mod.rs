@@ -1,0 +1,145 @@
+use std::path::Path;
+
+use crate::quackpack::core::{AllowGlobalPackage, PackageLoader, Version};
+use crate::quackpack::schemas::manifest::{
+    Dependency, DependencyAdded, Manifest as ManifestSchema
+};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId};
+
+mod dependency_construction;
+pub use dependency_construction::{NameSpecification, SourceSpecification};
+use dependency_construction::construct_dependency;
+
+#[derive(Debug, Clone)]
+/// All options that can be passed to `add`.
+pub struct AddOptions {
+    /// How the dependency should be named.
+    pub name_spec: NameSpecification,
+    /// Use a global package instead of a local one.
+    pub global: bool,
+    /// Add a dev-dependency.
+    pub dev_dep: bool,
+    /// Source of the dependency.
+    pub source_spec: SourceSpecification,
+    /// Required versions of this dependency.
+    pub versions: Vec<Version>,
+    /// Features of the dependency.
+    pub features: Vec<String>,
+    /// Whether the dependency should be pinned.
+    pub pinned: bool,
+}
+
+/// Logic for executing the `add` subcommand.
+pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
+    let AddOptions {
+        name_spec,
+        global,
+        dev_dep,
+        source_spec,
+        versions,
+        features,
+        pinned,
+    } = options;
+    let pkg = if global {
+        PackageLoader::global_package(ctx)?
+    } else {
+        PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
+    }
+    .into_package()
+    .unwrap_package();
+    let (effective_name, dep) =
+        construct_dependency(pkg.root_directory(), name_spec, versions, source_spec, features, pinned, ctx);
+
+    // Only necessary for diagnostic messages.
+    let pkg_name = pkg.name();
+    let pkg_root = pkg.root_directory().to_path_buf();
+
+    // @TODO: #1394 We would like to use a better mechanism than modify deserialized schema -> blindly serialize it,
+    // since this won't preserve comments and formatting choices in the manifest.
+    let manifest_path = pkg.manifest_path().to_path_buf();
+    let mut schema = pkg.into_original_schema();
+    if dev_dep {
+        add_dev_dep(
+            &mut schema,
+            effective_name.clone(),
+            dep,
+            pkg_name,
+            &pkg_root,
+        )?;
+    } else {
+        add_normal_dep(
+            &mut schema,
+            effective_name.clone(),
+            dep,
+            pkg_name,
+            &pkg_root,
+        )?;
+    }
+    let deserialized_schema = serde_yaml_ng::to_string(&schema)
+        .with_context_internal(|| format!("failed to deserialize schema `{schema:?}`"))?;
+    manifest_path.write(&deserialized_schema).with_context(|| {
+        format!(
+            "failed to write the new manifest into file at `{}`",
+            manifest_path.display()
+        )
+    })?;
+    ctx.console().info(format!(
+        "written new manifest to `{}`",
+        manifest_path.display()
+    ))?;
+    ctx.console().info(format!(
+        "successfully added {}dependency `{effective_name}` to the project `{pkg_name}` at `{}`",
+        if dev_dep { "dev-" } else { "" },
+        pkg_root.display(),
+    ))?;
+    Ok(())
+}
+
+/// Add a dev-dependency or provide a meaningful error.
+fn add_dev_dep(
+    schema: &mut ManifestSchema,
+    name: String,
+    dep: Dependency,
+    pkg_name: StrId,
+    pkg_root: &Path,
+) -> QuackResult<()> {
+    match schema.add_dev_dependency(name.clone(), dep) {
+        DependencyAdded::Yes => Ok(()),
+        DependencyAdded::AlreadyExists => {
+            let err = Err(QuackError::hint(
+                "use aliases to have multiple dev-dependencies with the same name",
+            ));
+            err.with_context(|| {
+                format!(
+                    "dev-dependency `{name}` already exists in the project `{pkg_name}` at `{}`",
+                    pkg_root.display()
+                )
+            })
+        }
+    }
+}
+
+/// Add a dependency or provide a meaningful error.
+fn add_normal_dep(
+    schema: &mut ManifestSchema,
+    name: String,
+    dep: Dependency,
+    pkg_name: StrId,
+    pkg_root: &Path,
+) -> QuackResult<()> {
+    match schema.add_dependency(name.clone(), dep) {
+        DependencyAdded::Yes => Ok(()),
+        DependencyAdded::AlreadyExists => {
+            let err = Err(QuackError::hint(
+                "use aliases to have multiple dependencies with the same name",
+            ));
+            err.with_context(|| {
+                format!(
+                    "dependency `{name}` already exists in the project `{pkg_name}` at `{}`",
+                    pkg_root.display()
+                )
+            })
+        }
+    }
+}

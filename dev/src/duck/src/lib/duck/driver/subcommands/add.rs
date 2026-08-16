@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::duck::driver::cli_ext::{multi, optional};
 use crate::quackpack::core::Version;
-use crate::quackpack::subcommands::add::{AddOptions, SourceSpecification, add};
+use crate::quackpack::subcommands::add::{AddOptions, NameSpecification, SourceSpecification, add};
 use crate::{DuckContext, QuackResult};
 use clap::{Arg, ArgGroup, ArgMatches, Command};
 
@@ -42,6 +42,10 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         .get_one::<String>("name")
         .expect("guarded by the parser")
         .clone();
+    let name_spec = NameSpecification {
+        name,
+        alias,
+    };
     let source_spec = get_source_specification(matches);
     let versions = matches
         .get_many::<String>("version")
@@ -56,8 +60,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         .cloned()
         .collect();
     let options = AddOptions {
-        name,
-        alias,
+        name_spec,
         global: matches.get_flag("global"),
         dev_dep: matches.get_flag("dev"),
         pinned: matches.get_flag("pinned"),
