@@ -1,6 +1,7 @@
 #include "query_hout_of_expr.hpp"
 
-#include "coercions.hpp"
+#include "coercions/coercions.hpp"
+#include "coercions/errors.hpp"
 #include "function_calls/call_processing.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
