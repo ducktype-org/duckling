@@ -16,7 +16,7 @@
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/errors/errors.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>

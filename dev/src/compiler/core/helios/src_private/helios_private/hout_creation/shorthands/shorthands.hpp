@@ -26,7 +26,8 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/passing.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
