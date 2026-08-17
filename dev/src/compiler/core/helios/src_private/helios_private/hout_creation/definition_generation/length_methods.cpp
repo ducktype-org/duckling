@@ -35,15 +35,6 @@ namespace compiler::helios::defgen {
 			);
 		}
 
-		Box<code::Expr> buildDynamicArrayTypeLengthExpr(
-			query::Context&                      ctx,
-			const tsh::DynamicArrayAbstractType& dynamic_array_type,
-			const SymID                          source_symbol
-		) {
-			const Shorthand s{ ctx };
-			const auto      dyn_fields = ctx.query<QueryDynamicArrayTypeData>(dynamic_array_type);
-			return s.access(s.deref(s.ident(source_symbol)), dyn_fields->len);
-		}
 	}
 
 	SymID lengthMethodForType(query::Context& ctx, const tsh::AbstractType type) {
@@ -67,10 +58,6 @@ namespace compiler::helios::defgen {
 				case tsh::Kind::Slice:
 					return buildSliceTypeLengthExpr(
 						ctx, key.as<tsh::SliceAbstractType>(), source_symbol
-					);
-				case tsh::Kind::DynamicArray:
-					return buildDynamicArrayTypeLengthExpr(
-						ctx, key.as<tsh::DynamicArrayAbstractType>(), source_symbol
 					);
 				case tsh::Kind::StaticArray:
 					return buildStaticArrayTypeLengthExpr(

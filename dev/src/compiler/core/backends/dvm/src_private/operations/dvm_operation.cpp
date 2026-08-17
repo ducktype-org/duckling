@@ -400,16 +400,6 @@ namespace compiler::backend_vm::internal {
 			// No instruction to generate, just skip.
 			return NoOperation{};
 		}
-		case ListPush:
-		case ListPop: {
-			ctx.program_context.getActiveContext().value()->logInt(
-				makeBox<dia::NotYetImplementedCodeError>(
-					"Lists are not supported in DVM code generation yet."
-				)
-			);
-			query::throwFailed();
-			CORE_UNREACHABLE();
-		}
 		default:
 			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
 		}

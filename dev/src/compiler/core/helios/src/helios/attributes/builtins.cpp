@@ -71,8 +71,6 @@ namespace compiler::helios {
 			return base::StrID("box_alloc");
 		case BuiltinKind::BoxFree:
 			return base::StrID("box_free");
-		case BuiltinKind::ListFree:
-			return base::StrID("list_free");
 		case BuiltinKind::BoxDestructor:
 			return base::StrID("box_destructor");
 		}
@@ -261,7 +259,6 @@ namespace compiler::helios {
 			return BuiltinOrigin::LIR;
 		case BuiltinKind::BoxAlloc:
 		case BuiltinKind::BoxFree:
-		case BuiltinKind::ListFree:
 			return BuiltinOrigin::DVMBackend | BuiltinOrigin::NativeBackend;
 		case BuiltinKind::BoxDestructor:
 			return BuiltinOrigin::HOUT;
@@ -294,15 +291,6 @@ namespace compiler::helios {
 			.generated_symbol_data
 			= defgen::BuiltinTemplatedSymbol{ tsh::SymbolType<>::withDefaults(pointee_type),
 		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor },
-		});
-	}
-
-	SymID listFreeSymForType(query::Context& ctx, tsh::SymbolType<> element_type) {
-		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = builtinKindToStr(BuiltinKind::ListFree),
-			.generated_symbol_data
-			= defgen::BuiltinTemplatedSymbol{ element_type,
-		                                      defgen::BuiltinTemplatedSymbol::Kind::ListFree },
 		});
 	}
 
