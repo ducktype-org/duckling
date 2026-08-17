@@ -331,7 +331,7 @@ private:
 		auto module   = getLIROfModule(path("modules/conditional_destruct"));
 		auto lir_func = module.lirFunc("maybeMove");
 
-		MRef<Instruction> branch_on_flag = nullptr;
+		const Instruction* branch_on_flag = nullptr;
 		for (const auto& block: lir_func->block_order) {
 			const auto& terminator = block->terminator;
 			if (terminator.operation != Operation::Branch) continue;
@@ -339,7 +339,7 @@ private:
 			// The condition of the `if` is a condition temporary, the flag is a plain bool local.
 			const auto& condition = terminator.arguments.at(0).get<LIRPlace>();
 			if (condition.getBase<LIRLocalRef>()->special_kind == LIRLocalSpecialKind::Normal)
-				branch_on_flag = MRef(&terminator);
+				branch_on_flag = &terminator;
 		}
 		ASSERT_TRUE(branch_on_flag != nullptr);
 

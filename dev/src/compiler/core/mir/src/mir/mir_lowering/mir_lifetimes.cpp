@@ -117,20 +117,6 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief The local whose lifetime flag decides whether @p instr destructs, or none when
-		 * @p instr is not a conditional destruction of a local.
-		 * // TODOP: Make it a local lambda.
-		 */
-		base::Optional<MIRLocalRef> conditionallyDestructedLocal(const Instruction& instr) {
-			if (instr.operation != Operation::DestructIf) return {};
-			if (instr.arguments.size() < 2) return {};
-
-			const auto& place = instr.arguments.at(1).get<MIRPlace>();
-			if (not place.isLocal()) return {};
-			return place.getBase<MIRLocalRef>();
-		}
-
-		/**
 		 * @brief The new state of every tracked local that @p instr changes the lifetime flag of.
 		 * `true` means the local owns a value from here on, `false` that it was moved out of.
 		 * If multiple flags regarding the same local appear, the last one wins.
@@ -444,11 +430,22 @@ namespace compiler::mir {
 	}
 
 	void AddLifetimeFlagsPass::run(query::Context&, Function& function, const LifetimePassArgs&) {
+		// Get the local that is destructed by a DestructIf.
+		auto conditionally_destructed_local
+			= [](const Instruction& instr) -> base::Optional<MIRLocalRef> {
+			if (instr.operation != Operation::DestructIf) return {};
+			if (instr.arguments.size() < 2) return {};
+
+			const auto& place = instr.arguments.at(1).get<MIRPlace>();
+			if (not place.isLocal()) return {};
+			return place.getBase<MIRLocalRef>();
+		};
+
 		// Only locals that are destructed conditionally need a flag.
 		std::unordered_set<LocalID> conditionally_destructed;
 		for (auto block_id: function.block_order)
 			for (const auto& instr: function.blocks.at(block_id)->instructions)
-				if_opt_some(conditionallyDestructedLocal(instr), local)
+				if_opt_some(conditionally_destructed_local(instr), local)
 					conditionally_destructed.insert(local->id);
 
 		if (conditionally_destructed.empty()) return;
@@ -507,7 +504,7 @@ namespace compiler::mir {
 				new_instructions.push_back(instr);
 
 				// The flag the LIR lowering branches on becomes the last argument of the drop.
-				if_opt_some(conditionallyDestructedLocal(instr), local) new_instructions.back()
+				if_opt_some(conditionally_destructed_local(instr), local) new_instructions.back()
 					.arguments.emplace_back(MIRPlace(flag_of.at(local->id)));
 
 				append_flag_writes(instr);
