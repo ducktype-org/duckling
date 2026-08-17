@@ -117,8 +117,12 @@ private:
 		assertTrue(unit_3.getKind() == Unit, "Unit should survive casting.");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(void_1.hasNoOpDestructor(ctx), "Void should have no op destructor.");
-			assertTrue(unit_1.hasNoOpDestructor(ctx), "Unit should have no op destructor.");
+			assertTrue(
+				void_1.isTriviallyDestructible(ctx), "Void should be trivially destructible."
+			);
+			assertTrue(
+				unit_1.isTriviallyDestructible(ctx), "Unit should be trivially destructible."
+			);
 
 			const auto unit_st = st(unit_1);
 			assertTrue(unit_st.isDefaultConstructible(ctx), "Unit should be default constructible.");
@@ -248,8 +252,8 @@ private:
 
 			query::utils::withContextDo([&](query::Context& ctx) {
 				assertTrue(
-					int_1.hasNoOpDestructor(ctx) && int_u.hasNoOpDestructor(ctx),
-					"Ints should have no op destructor."
+					int_1.isTriviallyDestructible(ctx) && int_u.isTriviallyDestructible(ctx),
+					"Ints should be trivially destructible."
 				);
 			});
 		}
@@ -320,7 +324,9 @@ private:
 			assertTrue(float_3.getKind() == Float, "Float should survive casting.");
 
 			query::utils::withContextDo([&](query::Context& ctx) {
-				assertTrue(float_1.hasNoOpDestructor(ctx), "Floats should have no op destructor.");
+				assertTrue(
+					float_1.isTriviallyDestructible(ctx), "Floats should be trivially destructible."
+				);
 			});
 		}
 
@@ -444,8 +450,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertFalse(
-				arr_1.hasNoOpDestructor(ctx) && arr_4.hasNoOpDestructor(ctx),
-				"DynamicArrays should not have no op destructors."
+				arr_1.isTriviallyDestructible(ctx) && arr_4.isTriviallyDestructible(ctx),
+				"DynamicArrays should not be trivially destructible."
 			);
 
 			const auto arr_st = st(arr_1);
@@ -523,11 +529,12 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
-				arr_1.hasNoOpDestructor(ctx), "StaticArray of Ints should have a no-op destructor."
+				arr_1.isTriviallyDestructible(ctx),
+				"StaticArray of Ints should be trivially destructible."
 			);
 			assertFalse(
-				arr_list.hasNoOpDestructor(ctx),
-				"StaticArray of Lists should not have a no-op destructor."
+				arr_list.isTriviallyDestructible(ctx),
+				"StaticArray of Lists should not be trivially destructible."
 			);
 
 			assertTrue(arr_1.carriesInformation(ctx), "Array of ints should carry information");
@@ -623,12 +630,13 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
-				tup_1.hasNoOpDestructor(ctx) && tup_4.hasNoOpDestructor(ctx)
-					&& tup_5.hasNoOpDestructor(ctx),
-				"Tuples of Ints should have no op destructors."
+				tup_1.isTriviallyDestructible(ctx) && tup_4.isTriviallyDestructible(ctx)
+					&& tup_5.isTriviallyDestructible(ctx),
+				"Tuples of Ints should be trivially destructible."
 			);
 			assertFalse(
-				tup_6.hasNoOpDestructor(ctx), "Tuple with List should not have no op destructor."
+				tup_6.isTriviallyDestructible(ctx),
+				"Tuple with List should not be trivially destructible."
 			);
 
 			const auto tup_st_trivial = st(tup_1);
@@ -708,11 +716,12 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
-				var_1.hasNoOpDestructor(ctx) && var_4.hasNoOpDestructor(ctx),
-				"Variants of Ints should have no op destructors."
+				var_1.isTriviallyDestructible(ctx) && var_4.isTriviallyDestructible(ctx),
+				"Variants of Ints should be trivially destructible."
 			);
 			assertFalse(
-				var_5.hasNoOpDestructor(ctx), "Variant with List should not have no op destructor."
+				var_5.isTriviallyDestructible(ctx),
+				"Variant with List should not be trivially destructible."
 			);
 
 			const auto var_st = st(var_1);
@@ -822,9 +831,13 @@ private:
 		assertTrue(module_3.getKind() == Module, "ModuleType should survive casting.");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(nspace.hasNoOpDestructor(ctx), "NamespaceType should have no op destructor.");
+			assertTrue(
+				nspace.isTriviallyDestructible(ctx),
+				"NamespaceType should be trivially destructible."
+			);
 			assertFalse(
-				module.hasNoOpDestructor(ctx), "ModuleType should not have no op destructor."
+				module.isTriviallyDestructible(ctx),
+				"ModuleType should not be trivially destructible."
 			);
 
 			assertFalse(st(nspace).isCopyable(ctx), "Namespace should not be copyable.");
@@ -853,7 +866,9 @@ private:
 		assertTrue(met_3.getKind() == Meta, "MetaType should survive casting.");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(meta.hasNoOpDestructor(ctx), "MetaType should have no op destructor.");
+			assertTrue(
+				meta.isTriviallyDestructible(ctx), "MetaType should be trivially destructible."
+			);
 			assertTrue(
 				st(meta).isDefaultConstructible(ctx),
 				"Meta type should be default constructible (e.g. to void)."
@@ -883,8 +898,8 @@ private:
 			);
 
 			assertTrue(
-				list_template_type.hasNoOpDestructor(ctx),
-				"Type templates should have a no-op destructor."
+				list_template_type.isTriviallyDestructible(ctx),
+				"Type templates should be trivially destructible."
 			);
 
 			assertFalse(
