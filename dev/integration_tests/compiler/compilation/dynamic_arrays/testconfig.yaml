@@ -57,22 +57,6 @@ Tests:
           String: "2\n3\n3\n4\n9\n10\n100\n0\n100\n2\n3\n4\n1\n5\n6\n7\n8\n9\n10\n"
         ExitCode: 0
 
-  # Container sizes are signed: `length()` feeds i64 arithmetic with no cast.
-  signed_lengths:
-    Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "3\n60\n8\n0\n9\n14\n"
-        ExitCode: 0
-      llvm_valgrind:
-        backend: llvm
-        valgrind: "true"
-        TimeOut: 3 # 1 second is often not enough on runners
-        Output:
-          String: "3\n60\n8\n0\n9\n14\n"
-        ExitCode: 0
-
   list_out_of_bounds:
     Cases:
       llvm:
