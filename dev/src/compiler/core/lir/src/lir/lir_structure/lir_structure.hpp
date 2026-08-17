@@ -33,9 +33,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Simple byte by byte assignment. */
 	Assign,
 	AddressOf,
-	// @TODO: #1894 Remove the `List*` when Lists are implemented in STD.
-	ListPush,
-	ListPop,
 
 	/**
 		@brief Placeholder.
@@ -177,8 +174,7 @@ namespace compiler::lir {
 		DvmAlloc,
 		DvmFree,
 		BoxAlloc,
-		BoxFree,
-		ListFree
+		BoxFree
 	};
 
 	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
@@ -318,15 +314,23 @@ namespace compiler::lir {
 
 		LIRGlobalType type;
 
+		/**
+		 * @brief Whether the global is replicated into every module that uses it (e.g. a constant
+		 * belonging to a template instance), so its definition must be merged at link time.
+		 */
+		bool link_once;
+
 	private:
 		LIRGlobal(
 			const CRef<tsl::TypeLayout> layout,
 			const base::StrID&          mangled_name,
-			const LIRGlobalType         type
+			const LIRGlobalType         type,
+			const bool                  link_once
 		):
 			  layout(layout),
 			  mangled_name(mangled_name),
-			  type(type) {}
+			  type(type),
+			  link_once(link_once) {}
 
 		friend Function;
 
@@ -544,13 +548,6 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout> target_layout;
 	};
 
-	struct ListOperationParameters final {
-		/**
-		 * @brief The element layout for generic `ListPush` and `ListPop` operations.
-		 */
-		CRef<tsl::TypeLayout> element_layout;
-	};
-
 	/**
 	 * @brief Additional parameters for a `Operation::MetaTypeOperation` instruction, selecting
 	 * which meta operation it is.
@@ -563,7 +560,7 @@ namespace compiler::lir {
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
 	using InstrParameters
-		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters, MetaParameters>;
+		= std::variant<NoInstrParameters, CastParameters, MetaParameters>;
 
 	struct InstructionMetadata {
 		base::Optional<dia::StablePosition> position;

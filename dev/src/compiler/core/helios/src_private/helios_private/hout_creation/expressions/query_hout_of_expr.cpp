@@ -552,7 +552,7 @@ namespace compiler::helios::code {
 					const auto kind          = abstract_type.getKind();
 					CORE_ASSERT(
 						kind == tsh::Kind::Class or kind == tsh::Kind::StaticArray
-							or kind == tsh::Kind::Tuple or kind == tsh::Kind::DynamicArray,
+							or kind == tsh::Kind::Tuple,
 						"Tried to call a copy constructor of a type which shouldn't need one"
 					);
 
@@ -831,16 +831,6 @@ namespace compiler::helios::code {
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
-				case pst::Keyword::List: {
-					node = makeBox<LiteralTypeExpr>(
-						ctx,
-						pstOrigin(stmt),
-						ctx.query<tsh::QueryTypeTemplateType>(
-							{ tsh::TypeTemplateAbstractType::BuiltinKind::List }
-						)
-					);
-					break;
-				}
 				case pst::Keyword::Self: {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 

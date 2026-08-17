@@ -138,74 +138,6 @@ namespace compiler::helios::defgen {
 
 			return body;
 		}
-
-		std::vector<Box<code::Stmt>> buildDynamicArrayCopyBody(
-			query::Context&                      ctx,
-			const tsh::DynamicArrayAbstractType& array_type,
-			const SymID                          copy_sym,
-			const SymID                          source_symbol,
-			const tsh::SymbolType<>&             result_symbol_type
-		) {
-			using Variable = GeneratedFunctionVariable;
-
-			std::vector<Box<code::Stmt>> body;
-
-			const Shorthand s{ ctx };
-
-			// var __result: List[T] = <zero>;
-			const SymID res_sym = ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID("__result"),
-				.generated_symbol_data = Variable{ .function_symbol = copy_sym,
-			                                       .variable_index  = 0,
-			                                       .type            = result_symbol_type },
-			});
-			body.emplace_back(
-				s.var(res_sym, result_symbol_type, s.defaultValue(result_symbol_type.getType()))
-			);
-
-			using enum code::BuiltinBinary;
-
-			const auto u64_abs_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-			const auto u64_type = tsh::SymbolType<>{ u64_abs_type,
-				                                     tsh::ReferenceKind::Direct,
-				                                     tsh::Mutability::Mutable };
-
-			// var __i: u64 = 0;
-			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
-				   .name = base::StrID("__i"),
-				   .generated_symbol_data
-                = Variable{ .function_symbol = copy_sym, .variable_index = 1, .type = u64_type },
-            });
-			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-			                    .expect("u64 creation failed");
-			body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
-
-			const SymID length_method_sym = defgen::lengthMethodForType(ctx, array_type);
-			auto        one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
-			                   .expect("u64 creation failed");
-
-			// while (__i < source.length()) { __result += <copy of (*source)[__i]>; __i = __i + 1; }
-			body.emplace_back(s.whileStmt(
-				s.binOp(
-					s.ident(i_sym),
-					IntegerLt,
-					s.call(s.ident(length_method_sym), s.ident(source_symbol))
-				),
-				{
-					s.expr(s.listPush(
-						s.ident(res_sym),
-						s.copyValue(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
-					)),
-					s.assign(s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))),
-				}
-			));
-
-			// return __result;
-			body.emplace_back(s.ret(s.ident(res_sym)));
-
-			return body;
-		}
 	}
 
 	struct IMPLEMENT_QUERY(QueryDefaultCopyConstructor, query::QResult<HOUTFunction>) {
@@ -224,15 +156,6 @@ namespace compiler::helios::defgen {
 			case tsh::Kind::StaticArray:
 				body = buildStaticArrayCopyBody(
 					ctx, owner_type.as<tsh::StaticArrayAbstractType>(), copy_sym, source_symbol
-				);
-				break;
-			case tsh::Kind::DynamicArray:
-				body = buildDynamicArrayCopyBody(
-					ctx,
-					owner_type.as<tsh::DynamicArrayAbstractType>(),
-					copy_sym,
-					source_symbol,
-					result_symbol_type
 				);
 				break;
 			default:

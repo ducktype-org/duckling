@@ -559,7 +559,6 @@ namespace compiler::helios::code {
 		 * chain.
 		 * It is when we have keyword literal followed by a call expression. This currently includes:
 		 * - `i64[42]` - used for static array type creation.
-		 * - `List[i64]` - for dynamic array type creation.
 		 *
 		 * Note that `i64(42)` is no longer a type cast - the `as` operator (`42 as i64`) is the
 		 * only supported explicit conversion syntax.

@@ -125,7 +125,7 @@ private:
 			const auto my_class = get_type(my_class_sym);
 			assert_flags(my_class, true, false, true, true, "MyClass");
 
-			// Has a List[i32] field, so it's not trivially copyable cause deep copy is required.
+			// Has a field with a user copy constructor, so it's not trivially copyable.
 			const auto complex_class = get_type(complex_class_sym);
 			assert_flags(complex_class, true, true, true, false, "ComplexClass");
 
@@ -133,8 +133,8 @@ private:
 			const auto non_def_const_class = get_type(non_def_const_class_sym);
 			assert_flags(non_def_const_class, false, false, true, true, "NonDefaultConstructible");
 
-			// Has List[i32] field deeper in the hierarchy, so it's not trivially copyable cause
-			// deep copy is required.
+			// Has a field with a user copy constructor deeper in the hierarchy, so it's not
+			// trivially copyable.
 			const auto complex_complex_class = get_type(complex_complex_class_sym);
 			assert_flags(complex_complex_class, true, true, true, false, "MoreComplexComplexClass");
 

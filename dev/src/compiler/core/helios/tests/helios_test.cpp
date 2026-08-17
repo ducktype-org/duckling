@@ -91,7 +91,6 @@ public:
 		TESTER_ADD_TEST(testHoutWalkers);
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testStaticArrays);
-		TESTER_ADD_TEST(testDynamicArrays);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
 		TESTER_ADD_TEST(testTupleCoercion);
@@ -2014,69 +2013,6 @@ private:
 		}
 	}
 
-	void testDynamicArrays() {
-		auto [module, top_scope] = getModule(fs::File(path("test_modules/dynamic_arrays")));
-		auto& hout
-			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-		auto& function   = hout.functions.at(0);
-		auto& statements = function->body->statements;
-
-		using namespace compiler::helios::code;
-		using namespace compiler::tsh;
-
-		{
-			// var l: List[i64];
-			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(0));
-			ASSERT_EQUAL(compiler::helios::name(var_decl.helios_symbol), "l");
-
-			auto type = var_decl.type.getType();
-			ASSERT_EQUAL(type.getKind(), Kind::DynamicArray);
-
-			auto dyn_array_type = type.as<DynamicArrayAbstractType>();
-			auto i64_type       = getIntegralTypeNoContext(
-                64, compiler::tsh::IntegralAbstractType::Signedness::Signed
-            );
-			ASSERT_EQUAL(dyn_array_type.getElementType().getType(), i64_type);
-
-			auto* default_val = dynamic_cast<const DefaultValueExpr*>(
-				stripImplicitMove(var_decl.initial_value.get())
-			);
-			ASSERT_TRUE(default_val != nullptr);
-		}
-		{
-			// l.push(1);
-			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(1));
-			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(call_expr != nullptr);
-		}
-		{
-			// l.pop(1);
-			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(2));
-			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(call_expr != nullptr);
-		}
-		{
-			// let l_len = l.length();
-			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(3));
-			auto* call_expr
-				= dynamic_cast<const CallExpr*>(stripImplicitMove(var_decl.initial_value.get()));
-			ASSERT_TRUE(call_expr != nullptr);
-		}
-		{
-			// l[0] = 42;
-			auto& assign_stmt = dynamic_cast<const AssignmentStmt&>(*statements.at(4));
-			auto* index_expr  = dynamic_cast<const IndexExpr*>(assign_stmt.location_expr.get());
-			ASSERT_TRUE(index_expr != nullptr);
-		}
-		{
-			// let x = l[0];
-			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(5));
-			auto* index_expr
-				= dynamic_cast<const IndexExpr*>(stripImplicitMove(var_decl.initial_value.get()));
-			ASSERT_TRUE(index_expr != nullptr);
-		}
-	}
-
 	void testFunctionReturnTypeDeduction() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/return_deduction")));
 		auto& hout
@@ -3106,7 +3042,7 @@ private:
 
 			// Non-trivial aggregates call a copy constructor.
 			for (std::string_view aggregate_field:
-			     { "nontrivial_arr", "nontrivial_tup", "prim_list", "class_list", "nested_default" })
+			     { "nontrivial_arr", "nontrivial_tup", "nested_default" })
 				assert_generated_copy(rhs_of(aggregate_field));
 
 			// A field whose class defines a user copy constructor calls the user code, not a
@@ -3182,29 +3118,6 @@ private:
 				assert_generated_copy(stripImplicitMove(values.at(1).get()));
 			}
 
-			// List of a trivial element.
-			{
-				const auto& cctor = dump_cctor("List[i32]", field_abstract_type("prim_list"));
-				const auto& stmts = cctor.body->statements;
-				ASSERT_EQUAL_PRINT(4, stmts.size());
-				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(2).get()) != nullptr);
-			}
-
-			// List of a non-trivial element - each pushed element is a copy-ctor call.
-			{
-				const auto& cctor = dump_cctor("List[HasBox]", field_abstract_type("class_list"));
-				const auto& stmts = cctor.body->statements;
-				ASSERT_EQUAL_PRINT(4, stmts.size());
-				auto while_stmt = dynamic_cast<const WhileStmt*>(stmts.at(2).get());
-				ASSERT_TRUE(while_stmt != nullptr);
-				ASSERT_TRUE(!while_stmt->body.statements.empty());
-				auto push_stmt
-					= dynamic_cast<const ExprStmt*>(while_stmt->body.statements.at(0).get());
-				ASSERT_TRUE(push_stmt != nullptr);
-				auto push = dynamic_cast<const ListPushExpr*>(push_stmt->expr.get());
-				ASSERT_TRUE(push != nullptr);
-				assert_generated_copy(stripImplicitMove(push->element.get()));
-			}
 		});
 	}
 
@@ -3462,19 +3375,6 @@ private:
 				const auto  arr_type = field_abstract_type("trivial_arr");
 				const auto& dtor     = ctx.query<QueryDefaultDestructor>(arr_type)->valueOrThrow();
 				ASSERT_TRUE(dtor.body->statements.empty());
-			}
-
-			// List of a non-trivial element - a destruction loop over the elements, then the
-			// backing buffer is released with a `list_free` builtin call.
-			{
-				const auto  list_type = field_abstract_type("class_list");
-				const auto& dtor  = ctx.query<QueryDefaultDestructor>(list_type)->valueOrThrow();
-				const auto& stmts = dtor.body->statements;
-				ASSERT_EQUAL_PRINT(3, stmts.size());
-				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(1).get()) != nullptr);
-				ASSERT_TRUE(is_templated_builtin_call(
-					stmts.at(2).get(), BuiltinTemplatedSymbol::Kind::ListFree
-				));
 			}
 
 			// Tuple with a non-trivial element - destroys that element via its destructor.

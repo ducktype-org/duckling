@@ -894,63 +894,6 @@ namespace compiler::helios::code {
 
 		BlockExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Stmt> block);
 	};
-
-	/**
-	 * @brief Represents a push operation to a dynamic array.
-	 *
-	 * Assumes the `list` argument is a dynamic array and `element` argument is the same as the
-	 * lists element type.
-	 * @TODO: #1959 This should probably be unified with '+=', '*=' etc.
-	 */
-	struct ListPushExpr final: public Expr {
-		Box<Expr> list;
-		Box<Expr> element;
-
-		ListPushExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> element);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		ListPushExpr(
-			tsh::ExpressionType<> expression_type,
-			ElementOrigin         origin,
-			Box<Expr>             list,
-			Box<Expr>             element
-		);
-	};
-
-	/**
-	 * @brief Represents a pop operation from the dynamic array.
-	 *
-	 * Assumes the `list` argument is a dynamic array and `count` argument is an integer.
-	 * @TODO: #1959 This should probably be unified with '+=', '*=' etc.
-	 */
-	struct ListPopExpr final: public Expr {
-		Box<Expr> list;
-		Box<Expr> count;
-
-		ListPopExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> count);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		ListPopExpr(
-			tsh::ExpressionType<> expression_type,
-			ElementOrigin         origin,
-			Box<Expr>             list,
-			Box<Expr>             count
-		);
-	};
 }
 
 ID_STD_HASH(compiler::helios::code::HOUTExprID);

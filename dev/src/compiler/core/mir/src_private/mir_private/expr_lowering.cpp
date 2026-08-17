@@ -641,7 +641,7 @@ namespace compiler::mir {
 				throw base::NotYetImplemented("Lowering of IndexExpr operating on Meta");
 			}
 
-			// Slices and dynamic arrays store their data behind a `ptr` field, so indexing them is
+			// Slices store their data behind a `ptr` field, so indexing them is
 			// `Field(ptr) -> Index`. Static arrays and many-pointers index directly.
 			auto element_place = [&](const MIRPlace& place, const MIRValue& index_val) -> MIRPlace {
 				auto& ctx = function.getContext();
@@ -649,10 +649,6 @@ namespace compiler::mir {
 				case tsh::Kind::Slice: {
 					auto slice_data = ctx.query<helios::QuerySliceTypeData>(base_type);
 					return place.withField(ctx, slice_data->ptr).withIndex(index_val);
-				}
-				case tsh::Kind::DynamicArray: {
-					auto dyn_data = ctx.query<helios::QueryDynamicArrayTypeData>(base_type);
-					return place.withField(ctx, dyn_data->ptr).withIndex(index_val);
 				}
 				case tsh::Kind::StaticArray:
 				case tsh::Kind::ManyPointer:
@@ -681,18 +677,14 @@ namespace compiler::mir {
 				return;
 			}
 
-			// The length of the indexed array - slices and dynamic arrays read their `len` field,
-			// static arrays use their compile-time size.
+			// The length of the indexed array - slices read their `len` field, static arrays use
+			// their compile-time size.
 			auto array_length = [&](const MIRPlace& place) -> MIRValue {
 				auto& ctx = function.getContext();
 				switch (base_kind) {
 				case tsh::Kind::Slice: {
 					auto slice_data = ctx.query<helios::QuerySliceTypeData>(base_type);
 					return place.withField(ctx, slice_data->len);
-				}
-				case tsh::Kind::DynamicArray: {
-					auto dyn_data = ctx.query<helios::QueryDynamicArrayTypeData>(base_type);
-					return place.withField(ctx, dyn_data->len);
 				}
 				case tsh::Kind::StaticArray: {
 					const auto size = base_type.as<tsh::StaticArrayAbstractType>().getSize();
@@ -1016,39 +1008,6 @@ namespace compiler::mir {
 			auto lowered_block = lowerStmt(*expr.block, continuation, function, expr_scope);
 			valueOutput(
 				lowered_block.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } }
-			);
-		}
-
-		void visitListPushExpr(const hc::ListPushExpr& expr) override {
-			auto hole         = continuation->addHole();
-			auto lowered_elem = lowerSubExpr(*expr.element, continuation);
-
-			// The list owns the pushed element, so the push marks a moved element as moved-out.
-			std::vector<OperationFlag> flags;
-			auto elem_val     = lowered_elem.getResultAndTakeOwnership(function, flags);
-			auto lowered_list = lowerSubExpr(*expr.list, lowered_elem.begin);
-			auto list_val     = lowered_list.getResult(function);
-
-			noValueOutput(
-				lowered_list.begin,
-				hole,
-				Instruction(Operation::ListPush, {}, { list_val, elem_val }, flags, expr_scope),
-				expr.expression_type.getSymbolType()
-			);
-		}
-
-		void visitListPopExpr(const hc::ListPopExpr& expr) override {
-			auto hole          = continuation->addHole();
-			auto lowered_count = lowerSubExpr(*expr.count, continuation);
-			auto count_val     = lowered_count.getResult(function);
-			auto lowered_list  = lowerSubExpr(*expr.list, lowered_count.begin);
-			auto list_val      = lowered_list.getResult(function);
-
-			noValueOutput(
-				lowered_list.begin,
-				hole,
-				Instruction(Operation::ListPop, {}, { list_val, count_val }, {}, expr_scope),
-				expr.expression_type.getSymbolType()
 			);
 		}
 

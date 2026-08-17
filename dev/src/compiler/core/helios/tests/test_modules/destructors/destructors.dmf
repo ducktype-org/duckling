@@ -51,10 +51,6 @@ class FinalBoss {
     trivial_tup: (i32, bool);           # Trivial       -> no work
     nontrivial_tup: (i32, HasBox);      # Non-trivial   -> tuple destructor
 
-    # Lists
-    prim_list: List[i32];               # Trivial element   -> free buffer
-    class_list: List[HasBox];           # Non-trivial element -> destroy loop
-
     # Classes
     nested_default: HasBox;             # Generated destructor
     nested_user: UserDestroyed;         # Runs the user destructor

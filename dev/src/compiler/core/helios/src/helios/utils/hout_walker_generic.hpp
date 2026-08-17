@@ -212,18 +212,6 @@ namespace compiler::helios::code {
 			walk(*e.block);
 		}
 
-		void visitListPushExpr(const ListPushExpr& e) override {
-			handler(e);
-			walk(*e.list);
-			walk(*e.element);
-		}
-
-		void visitListPopExpr(const ListPopExpr& e) override {
-			handler(e);
-			walk(*e.list);
-			walk(*e.count);
-		}
-
 		void visitMoveExpr(const MoveExpr& e) override {
 			handler(e);
 			walk(*e.inner);

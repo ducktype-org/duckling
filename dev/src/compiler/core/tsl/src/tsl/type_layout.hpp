@@ -396,8 +396,6 @@ namespace compiler::tsl {
 
 		ClassTypeLayout(tsh::SliceAbstractType slice_type, query::Context& ctx);
 
-		ClassTypeLayout(tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx);
-
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
 	public:

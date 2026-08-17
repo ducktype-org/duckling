@@ -10,7 +10,6 @@
 #include <helios/tsh/types.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
-#include <helios_private/hout_creation/definition_generation/list_methods.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
@@ -130,66 +129,6 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfTuple)
-
-	struct IMPLEMENT_QUERY(QueryInterfaceOfDynamicArray, query::QResult<TypeInterface>) {
-		static auto provide(Context& ctx, const QKey key) -> PResult {
-			// A dynamic array exposes the `list` struct fields (ptr, len,
-			// off_start_reserved, off_end_reserved) and a `length`, `push` and `pop` method.
-			const auto& fields = ctx.query<compiler::helios::QueryDynamicArrayTypeData>(key);
-
-			std::vector<InterfaceElement> elements;
-			elements.reserve(7);
-
-			u32 declaration_order = 0;
-			for (const compiler::helios::SymID field_sym:
-			     { fields->ptr, fields->len, fields->off_start_reserved, fields->off_end_reserved }) {
-				elements.emplace_back(
-					field_sym,
-					key,
-					declaration_order,
-					InterfaceElement::InterfaceElementKind::Field,
-					ClassMemberVisibility::Private
-				);
-				declaration_order++;
-			}
-
-			const auto length_sym = helios::defgen::lengthMethodForType(ctx, key);
-			elements.emplace_back(
-				length_sym,
-				key,
-				declaration_order,
-				InterfaceElement::InterfaceElementKind::Method,
-				ClassMemberVisibility::Public
-			);
-			declaration_order++;
-
-			const auto push_sym = helios::defgen::pushMethodForType(ctx, key);
-			elements.emplace_back(
-				push_sym,
-				key,
-				declaration_order,
-				InterfaceElement::InterfaceElementKind::Method,
-				ClassMemberVisibility::Public
-			);
-			declaration_order++;
-
-			const auto pop_sym = helios::defgen::popMethodForType(ctx, key);
-			elements.emplace_back(
-				pop_sym,
-				key,
-				declaration_order,
-				InterfaceElement::InterfaceElementKind::Method,
-				ClassMemberVisibility::Public
-			);
-			declaration_order++;
-
-			return TypeInterface(elements);
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfDynamicArray)
 
 	struct IMPLEMENT_QUERY(QueryInterfaceOfStaticArray, query::QResult<TypeInterface>) {
 		static auto provide(Context& ctx, const QKey key) -> PResult {

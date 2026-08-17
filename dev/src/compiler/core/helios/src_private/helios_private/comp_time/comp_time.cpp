@@ -201,8 +201,6 @@ namespace compiler::helios {
 			 * @brief Evaluates indexing operations performed on meta types
 			 *
 			 * This includes:
-			 * - For type templates: specializing a TypeTemplate with a type when the index provided
-			 * is a meta type. Currently only implemented for the builtin List type.
 			 * - For static arrays: constructs a static array type with a fixed size `Int[10]` when
 			 * the index is a integral constant.
 			 *
@@ -217,21 +215,9 @@ namespace compiler::helios {
 				auto base_abs = base_type.getType();
 
 				if (base_abs.getKind() == tsh::Kind::TypeTemplate) {
-					// If base is a TypeTemplate type, we expect a meta in the index expression. It
-					// instantiates the type template.
-					auto template_type = base_abs.as<tsh::TypeTemplateAbstractType>();
-					// We just call `.value()` here since the type correctness should be verified
-					// earlier.
-					auto elem_type = index_ctv.get<tsh::SymbolType<>>().value();
-
-					// Instantiate the type template.
-					auto instantiated_abs_type = template_type.instantiate(ctx, elem_type);
-
-					return CompileTimeValue{ tsh::SymbolType<>{
-						instantiated_abs_type,
-						base_type.getRefKind(),
-						base_type.getMutability(),
-					} };
+					throw base::NotYetImplemented(
+						"Instantiating a type template with the `[]` operator"
+					);
 				} else {
 					// If base is meta and not a type template, then the index should be an integral
 					// constant. This expression creates a new static array type.
@@ -856,19 +842,6 @@ namespace compiler::helios {
 				evaluateSubExpr(reusable.inner.ref());
 			}
 
-			void visitListPushExpr(const code::ListPushExpr& expr) final {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Evaluating list push expression at compile time.",
-					expr.origin.getStablePosition()
-				));
-			}
-
-			void visitListPopExpr(const code::ListPopExpr& expr) final {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Evaluating list pop expression at compile time.",
-					expr.origin.getStablePosition()
-				));
-			}
 		};
 
 		/**

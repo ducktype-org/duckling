@@ -544,17 +544,6 @@ namespace compiler::tsl {
 			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
 			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
 
-		ClassTypeLayoutConstructionHelper(
-			const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
-		):
-			  type(dynamic_array_type),
-			  field_elements(getFieldsOfInterface(dynamic_array_type.getInterface(ctx))),
-			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
-			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
-			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
-			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
-			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
-			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
 	};
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::ClassAbstractType class_type, query::Context& ctx):
@@ -565,11 +554,6 @@ namespace compiler::tsl {
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::SliceAbstractType slice_type, query::Context& ctx):
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(slice_type, ctx), ctx) {}
-
-	ClassTypeLayout::ClassTypeLayout(
-		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
-	):
-		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(dynamic_array_type, ctx), ctx) {}
 
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
 		  TypeLayoutABC(

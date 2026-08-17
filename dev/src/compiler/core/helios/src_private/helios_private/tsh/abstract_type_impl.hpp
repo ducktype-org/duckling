@@ -667,67 +667,6 @@ namespace compiler::tsh {
 		CRef<TypeInterface> getDeclaredInterface(query::Context&) const override;
 	};
 
-	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
-		SymbolType<> element_type;
-
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return STATIC_KIND;
-		}
-
-		/**
-		 * @brief The Kind of types described by objects of this class.
-		 */
-		static constexpr Kind STATIC_KIND = Kind::DynamicArray;
-
-		DynamicArrayAbstractTypeImpl(const SymbolType<> element): element_type(element) {
-			representation = base::strConcat("List[", element.toString(), "]");
-		}
-
-		[[nodiscard]]
-		SymbolType<> getElementType() const {
-			return element_type;
-		}
-
-		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType, query::Context&) const override {
-			return false;
-		}
-
-		/**
-		 * @brief Dynamic arrays have nontrivial destructors because destruction of an dynamic array
-		 * requires to free memory.
-		 */
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return false; }
-
-		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
-
-		/**
-		 * @brief Dynamic arrays are trivially zero initializable and initialized with an empty
-		 * array with a the data field equal to null. The memory is allocated on the first
-		 * insertion.
-		 */
-		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
-			return true;
-		}
-
-		/**
-		 * @brief Dynamic array is copyable if it's element_type is.
-		 */
-		[[nodiscard]] bool isCopyable(query::Context& ctx) const override {
-			return element_type.isCopyable(ctx);
-		}
-
-		/**
-		 * @brief Dynamic arrays are not trivially copyable because the require a deep copy of memory.
-		 */
-		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
-
-		[[nodiscard]]
-		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
-	};
-
 	class StaticArrayAbstractTypeImpl final: public AbstractTypeImpl {
 		SymbolType<> element_type;
 		usize        size;  // Number of elements in the array.
@@ -1125,8 +1064,7 @@ namespace compiler::tsh {
 	};
 
 	class TypeTemplateAbstractTypeImpl final: public AbstractTypeImpl {
-		using Source      = TypeTemplateAbstractType::Source;
-		using BuiltinKind = TypeTemplateAbstractType::BuiltinKind;
+		using Source = TypeTemplateAbstractType::Source;
 
 		Source source;
 
@@ -1136,28 +1074,10 @@ namespace compiler::tsh {
 		[[nodiscard]] Kind getKind() const override { return STATIC_KIND; }
 
 		TypeTemplateAbstractTypeImpl(Source source): source(source) {
-			variant_match(source) {
-				variant_case(BuiltinKind, builtin) {
-					switch (builtin) {
-					case BuiltinKind::List: {
-						representation = "List";
-						break;
-					}
-					default:
-						CORE_UNREACHABLE();
-					}
-				}
-				variant_case(helios::SymID, sym) {
-					representation = base::strConcat("Type template: ", name(sym).str());
-				}
-			}
+			representation = base::strConcat("Type template: ", name(source).str());
 		}
 
 		[[nodiscard]] Source getSource() const { return source; }
-
-		[[nodiscard]] AbstractType instantiate(
-			query::Context& ctx, const SymbolType<>& element_type
-		) const;
 
 		[[nodiscard]] bool carriesInformation(query::Context&) const override { return true; }
 

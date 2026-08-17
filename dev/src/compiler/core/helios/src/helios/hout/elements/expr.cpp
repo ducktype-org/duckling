@@ -57,8 +57,6 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
 	EXPR_VISITOR(BlockExpr)
-	EXPR_VISITOR(ListPushExpr)
-	EXPR_VISITOR(ListPopExpr)
 
 	LiteralUnitExpr::LiteralUnitExpr(query::Context&, ElementOrigin origin):
 		  Expr(
@@ -874,8 +872,6 @@ namespace compiler::helios::code {
 			                                   // expression on meta is meta as well.
 						  return base->expression_type.getSymbolType();
 					  }
-					  case tsh::Kind::DynamicArray:
-						  return base_type.as<tsh::DynamicArrayAbstractType>().getElementType();
 					  case tsh::Kind::StaticArray:
 						  return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 					  case tsh::Kind::ManyPointer:
@@ -1294,69 +1290,4 @@ namespace compiler::helios::code {
 	Box<Expr> BlockExpr::clone() const {
 		return makeBox<BlockExpr>(expression_type, origin, block->clone());
 	}
-
-	ListPushExpr::ListPushExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> element):
-		  Expr(
-			  tsh::ExpressionType(
-				  tsh::SymbolType<>(
-					  tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
-				  ),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
-			  origin
-		  ),
-		  list(std::move(list)),
-		  element(std::move(element)) {}
-
-	ListPushExpr::ListPushExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> list, Box<Expr> element
-	):
-		  Expr(expression_type, origin),
-		  list(std::move(list)),
-		  element(std::move(element)) {}
-
-	void ListPushExpr::debugPrint(std::ostream& out) const {
-		out << "list_push(";
-		list->debugPrint(out);
-		out << ", ";
-		element->debugPrint(out);
-		out << ")";
-	}
-
-	Box<Expr> ListPushExpr::clone() const {
-		return makeBox<ListPushExpr>(expression_type, origin, list->clone(), element->clone());
-	}
-
-	ListPopExpr::ListPopExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> count):
-		  Expr(
-			  tsh::ExpressionType(
-				  tsh::SymbolType<>(
-					  tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
-				  ),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
-			  origin
-		  ),
-		  list(std::move(list)),
-		  count(std::move(count)) {}
-
-	ListPopExpr::ListPopExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> list, Box<Expr> count
-	):
-		  Expr(expression_type, origin),
-		  list(std::move(list)),
-		  count(std::move(count)) {}
-
-	void ListPopExpr::debugPrint(std::ostream& out) const {
-		out << "list_pop(";
-		list->debugPrint(out);
-		out << ", ";
-		count->debugPrint(out);
-		out << ")";
-	}
-
-	Box<Expr> ListPopExpr::clone() const {
-		return makeBox<ListPopExpr>(expression_type, origin, list->clone(), count->clone());
-	}
-
 }

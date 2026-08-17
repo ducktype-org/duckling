@@ -176,10 +176,6 @@ namespace compiler::helios {
 				auto iterable_kind = iterable_type.getType().getKind();
 				auto element_type  = [&]() -> base::Optional<tsh::SymbolType<>> {
                     switch (iterable_kind) {
-                    case tsh::Kind::DynamicArray:
-                        return iterable_type.getType()
-                            .as<tsh::DynamicArrayAbstractType>()
-                            .getElementType();
                     case tsh::Kind::StaticArray:
                         return iterable_type.getType()
                             .as<tsh::StaticArrayAbstractType>()
@@ -317,27 +313,6 @@ namespace compiler::helios {
 								     tsh::SymbolType<>{ tsh::getUnitType(),
 								                        tsh::ReferenceKind::Direct,
 								                        tsh::Mutability::Immutable } };
-						case defgen::Method::Kind::Push: {
-							// `(ref mut T self, Element element) -> ()`.
-							const auto element_type
-								= method.owner_type.as<tsh::DynamicArrayAbstractType>()
-							          .getElementType();
-							return { { mut_self, element_type },
-								     tsh::SymbolType<>{ tsh::getUnitType(),
-								                        tsh::ReferenceKind::Direct,
-								                        tsh::Mutability::Immutable } };
-						}
-						case defgen::Method::Kind::Pop: {
-							// `(ref mut T self, u64 count) -> ()`.
-							const auto count_type
-								= tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
-									ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
-								));
-							return { { mut_self, count_type },
-								     tsh::SymbolType<>{ tsh::getUnitType(),
-								                        tsh::ReferenceKind::Direct,
-								                        tsh::Mutability::Immutable } };
-						}
 						}
 						CORE_UNREACHABLE();
 					}();
@@ -360,8 +335,7 @@ namespace compiler::helios {
 					};
 				}
 				variant_case(defgen::BuiltinTemplatedSymbol, builtin) {
-					// `box_alloc(value: T) -> box T`, `box_free(b: box T) -> ()` and
-					// `list_free(l: ref [T]) -> ()`.
+					// `box_alloc(value: T) -> box T` and `box_free(b: box T) -> ()`.
 					const auto box_type = builtin.type.withReferenceKind(tsh::ReferenceKind::Box);
 
 					auto [arg_types, return_type]
@@ -375,19 +349,6 @@ namespace compiler::helios {
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
 							return { { builtin.type.withReferenceKind(tsh::ReferenceKind::Ref) },
 								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
-						case defgen::BuiltinTemplatedSymbol::Kind::ListFree: {
-							const auto array_type
-								= ctx.query<tsh::QueryDynamicArrayType>({ builtin.type });
-							const auto ref_array = tsh::SymbolType<>{
-								array_type,
-								tsh::ReferenceKind::Ref,
-								tsh::Mutability::Mutable,
-							};
-							return {
-								{ ref_array },
-								tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
-							};
-						}
 						case defgen::BuiltinTemplatedSymbol::Kind::MoveIn: {
 							const auto ptr_type = tsh::SymbolType<>::withDefaults(
 								ctx.query<tsh::QueryPointerType>({ builtin.type })
@@ -451,29 +412,6 @@ namespace compiler::helios {
 							));
 						}
 						CORE_PANIC("Slice only has fields 0 (element) and 1 (length)");
-					}
-					case tsh::Kind::DynamicArray: {
-						switch (field.index) {
-						case 0: {
-							auto element_type
-								= field.parent_type.as<tsh::DynamicArrayAbstractType>()
-							          .getElementType();
-							auto many_pointer_type
-								= ctx.query<tsh::QueryManyPointerType>({ element_type });
-							return tsh::SymbolType<>::withDefaults(many_pointer_type);
-						}
-						case 1:
-						case 2:
-						case 3:
-							return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
-								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
-							));
-						default:
-							CORE_PANIC(
-								"Dynamic Array only has fields 0 (ptr), 1 (length), 2 "
-								"(off_start_reserved), 3 (off_end_reserved)"
-							);
-						}
 					}
 					default:
 						CORE_UNREACHABLE();

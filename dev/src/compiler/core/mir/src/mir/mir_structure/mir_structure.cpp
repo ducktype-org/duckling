@@ -244,8 +244,6 @@ namespace compiler::mir {
 
 		auto element_type = [&]() -> tsh::SymbolType<> {
 			switch (base_type.getKind()) {
-			case tsh::Kind::DynamicArray:
-				return base_type.as<tsh::DynamicArrayAbstractType>().getElementType();
 			case tsh::Kind::StaticArray:
 				return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 			case tsh::Kind::ManyPointer:

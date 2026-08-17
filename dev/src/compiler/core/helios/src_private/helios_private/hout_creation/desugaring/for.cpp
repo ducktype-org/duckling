@@ -66,7 +66,7 @@ namespace compiler::helios::desugaring {
 			bool              iterable_is_r_value
 				= not iterable_hout->expression_type.getValueCategory().canBeAssignedTo();
 
-			if (kind != tsh::Kind::DynamicArray && kind != tsh::Kind::StaticArray) {
+			if (kind != tsh::Kind::StaticArray) {
 				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"`for` statements for non-array type: ", iterable_type.toString()

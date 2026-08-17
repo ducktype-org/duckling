@@ -267,7 +267,7 @@ fun stringifyF64(x: f64) -> String = {
     `push`es is amortized O(1).
 #}
 template(T: type)
-class DuckList {
+class List {
     pointer: manyptr T;
     len: u64;
     cap: u64;
@@ -323,7 +323,7 @@ class DuckList {
         cap = 0u64;
     }
 
-    DuckList.destroy() = {
+    List.destroy() = {
         allocation:{T}.free(pointer);
     }
 }

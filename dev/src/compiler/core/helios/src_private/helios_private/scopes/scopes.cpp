@@ -746,6 +746,7 @@ namespace compiler::helios {
 		const std::vector<PreludeImport>& preludeImports() {
 			static const std::vector<PreludeImport> imports{
 				{ .package = base::StrID("core"), .path = { base::StrID("builtins") } },
+				{ .package = base::StrID("core"), .path = { base::StrID("containers") } },
 			};
 			return imports;
 		}
@@ -782,7 +783,15 @@ namespace compiler::helios {
 				auto prelude_qresult = HInterface::ofScope(prelude_scope)
 				                           .lookup(ctx, name, { .with_wildcards = with_wildcards });
 				UNPACK_QRESULT_CREF(CRef<LookupResult> prelude_result = &, prelude_qresult);
-				result.merge(*prelude_result);
+
+				// The prelude re-exports the contents of the module, but not the modules it
+				// imports itself - otherwise every `import` written in a prelude module would
+				// collide with the same import written by the user.
+				LookupResult exported{ .leaves = {}, .children = prelude_result->children };
+				for (const SymID sym: prelude_result->leaves)
+					if (kind(sym) != SymbolKind::Import) exported.leaves.push_back(sym);
+
+				result.merge(exported);
 			}
 			return result;
 		}
