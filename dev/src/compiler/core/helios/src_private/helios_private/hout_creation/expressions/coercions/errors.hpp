@@ -34,7 +34,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, uint8_t, InvalidCoercionReason,
 namespace compiler::helios {
 	class Coercion;
 
-	class IncompatibleTypesError: public dia::MessageWithCodeFragment {
+	class IncompatibleTypesError final: public dia::MessageWithCodeFragment {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",

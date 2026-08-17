@@ -130,7 +130,7 @@ namespace compiler::helios {
 			if (to.getType().getKind() != tsh::Kind::Variant) return {};
 			if (from.getType().getKind() == tsh::Kind::Variant) return {};
 
-			const auto& alternatives
+			const auto alternatives
 				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
 			for (usize i = 0; i < alternatives.size(); i++)
 				if (tsh::isRefKindCoercible(from.getRefKind(), alternatives[i].getRefKind())
