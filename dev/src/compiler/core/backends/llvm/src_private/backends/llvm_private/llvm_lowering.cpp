@@ -441,7 +441,10 @@ namespace compiler::backend_llvm {
 
 		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
 
-		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
+		global->setLinkage(
+			lir_global.global.link_once ? llvm::GlobalValue::LinkOnceODRLinkage
+										: llvm::GlobalValue::ExternalLinkage
+		);
 		global->setConstant(lir_global.global.type == lir::LIRGlobalType::Constant);
 
 		// We set null initialization for all globals by default to keep potential uninitialized
@@ -1180,13 +1183,6 @@ namespace compiler::backend_llvm {
                     );
 					builder.CreateCall(free_func, { ptr_to_free });
 					return nullptr;
-				} else if (builtin_kind == lir::BuiltinFunctionKind::ListFree) {
-					llvm::Value* list_ptr  = loadLIRValue(lir_instruction.arguments.at(1), builder);
-					auto         free_func = loadBuiltin(
-                        "builtin_list_free", builder.getVoidTy(), { builder.getPtrTy() }
-                    );
-					builder.CreateCall(free_func, { list_ptr });
-					return nullptr;
 				}
 			}
 
@@ -1339,52 +1335,6 @@ namespace compiler::backend_llvm {
 					pointer, llvm::ConstantPointerNull::get(builder.getPtrTy()), "is_null"
 				);
 				builder.CreateCondBr(is_null, null_block.get(), not_null_block.get());
-				break;
-			}
-			case ListPush:
-			case ListPop: {
-				llvm::Value* list_ptr
-					= loadLIRValueToPointer(lir_instruction.arguments.at(0), builder);
-
-				// Get the size of the List element. Needed to pass to the generic
-				// `builtin_list_push`/'builtin_list_pop' builtins.
-				auto get_elem_size = [&]() {
-					const auto& params
-						= std::get<lir::ListOperationParameters>(lir_instruction.extra_params);
-					return builder.getInt64(
-						static_cast<u64>(base::bits2bytes(params.element_layout->getSize()))
-					);
-				};
-
-				switch (lir_instruction.operation) {
-				case ListPush: {
-					llvm::Value* element_ptr
-						= loadLIRValueToPointer(lir_instruction.arguments.at(1), builder);
-
-					auto push_func = loadBuiltin(
-						"builtin_list_push",
-						builder.getVoidTy(),
-						{ builder.getPtrTy(), builder.getPtrTy(), builder.getInt64Ty() }
-					);
-
-					builder.CreateCall(push_func, { list_ptr, element_ptr, get_elem_size() });
-					break;
-				}
-				case ListPop: {
-					llvm::Value* count_val = loadLIRValue(lir_instruction.arguments.at(1), builder);
-
-					auto pop_func = loadBuiltin(
-						"builtin_list_pop",
-						builder.getVoidTy(),
-						{ builder.getPtrTy(), builder.getInt64Ty(), builder.getInt64Ty() }
-					);
-
-					builder.CreateCall(pop_func, { list_ptr, count_val, get_elem_size() });
-					break;
-				}
-				default:
-					CORE_UNREACHABLE();
-				}
 				break;
 			}
 			/// Integer arithmetic ///

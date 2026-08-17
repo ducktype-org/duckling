@@ -77,7 +77,7 @@ const T_TYPE = T;
 const U_TYPE = U;
 const T2_TYPE = getT();
 const T_ARRAY = getT()[5];      # T[5]
-const T_LIST = List[getT()];    # List[T]
+const T_LIST = List:{getT()};   # List:{T}
 const T_IN_TUPLE: type = (i32, T, T, U);
 const T_IN_TUPLE_MANUAL: type = (i32, getT(), getT(), getU());
 
@@ -98,7 +98,7 @@ const CMP13 = typesEqual(T_TYPE, T2_TYPE);
 const CMP14 = typesNotEqual(T, U);
 const CMP15 = typesNotEqual(T, i32);
 const CMP16 = typesEqual(T_ARRAY, T[5]);
-const CMP17 = typesEqual(T_LIST, List[T]);
+const CMP17 = typesEqual(T_LIST, List:{T});
 const CMP18 = typesEqual(T_IN_TUPLE, T_IN_TUPLE_MANUAL);
 const CMP19 = typesEqual(T_IN_TUPLE, createTuple(i32, T, T, U));
 const CMP20 = typesEqual((T, U, ref T), getTuple(1, T, U));

@@ -50,8 +50,8 @@ namespace compiler::helios::defgen {
 		 * - Trivially-destructible values do nothing.
 		 * - A `box T` is destroyed by calling its `box_destructor` builtin (which destroys the
 		 *   pointee and then frees the heap storage).
-		 * - Non-trivially-destructible class, static-array, tuple and dynamic-array members are
-		 *   destroyed by calling their own destructor with a reference to `location`.
+		 * - Non-trivially-destructible class, static-array and tuple members are destroyed by
+		 *   calling their own destructor with a reference to `location`.
 		 */
 		void appendDestruction(
 			query::Context& ctx, std::vector<Box<code::Stmt>>& body, Box<code::Expr> location
@@ -91,7 +91,6 @@ namespace compiler::helios::defgen {
 				abstract_type.getKind() == tsh::Kind::Class
 					or abstract_type.getKind() == tsh::Kind::StaticArray
 					or abstract_type.getKind() == tsh::Kind::Tuple
-					or abstract_type.getKind() == tsh::Kind::DynamicArray
 					or abstract_type.getKind() == tsh::Kind::Variant,
 				"Tried to generate a destructor call for a type which shouldn't need one"
 			);
@@ -281,44 +280,6 @@ namespace compiler::helios::defgen {
 
 			return body;
 		}
-
-		std::vector<Box<code::Stmt>> buildDynamicArrayDestructBody(
-			query::Context&                      ctx,
-			const tsh::DynamicArrayAbstractType& array_type,
-			const SymID                          dtor_sym,
-			const SymID                          self_symbol
-		) {
-			std::vector<Box<code::Stmt>> body;
-
-			const Shorthand s{ ctx };
-
-			// Destroy each element only if the element type is not trivially destructible.
-			// while (__i < self.length()) { (*self)[__i].__destruct(...); __i = __i + 1; }
-			if (not array_type.getElementType().isTriviallyDestructible(ctx)) {
-				// var __i: u64 = 0;
-				const SymID i_sym             = buildLoopCounter(ctx, body, dtor_sym);
-				const SymID length_method_sym = defgen::lengthMethodForType(ctx, array_type);
-
-				Box<code::Expr> len_expr = s.call(s.ident(length_method_sym), s.ident(self_symbol));
-				auto            condition
-					= s.binOp(s.ident(i_sym), code::BuiltinBinary::IntegerLt, std::move(len_expr));
-
-				std::vector<Box<code::Stmt>> loop_body;
-				appendDestruction(
-					ctx, loop_body, s.index(s.deref(s.ident(self_symbol)), s.ident(i_sym))
-				);
-				loop_body.emplace_back(buildLoopIncrement(ctx, i_sym));
-
-				body.emplace_back(s.whileStmt(std::move(condition), std::move(loop_body)));
-			}
-
-			body.emplace_back(s.expr(s.call(
-				s.ident(listFreeSymForType(ctx, array_type.getElementType())),
-				s.move(s.ident(self_symbol))
-			)));
-
-			return body;
-		}
 	}
 
 	struct IMPLEMENT_QUERY(QueryDefaultDestructor, query::QResult<HOUTFunction>) {
@@ -336,11 +297,6 @@ namespace compiler::helios::defgen {
 			case tsh::Kind::StaticArray:
 				body = buildStaticArrayDestructBody(
 					ctx, owner_type.as<tsh::StaticArrayAbstractType>(), dtor_sym, self_symbol
-				);
-				break;
-			case tsh::Kind::DynamicArray:
-				body = buildDynamicArrayDestructBody(
-					ctx, owner_type.as<tsh::DynamicArrayAbstractType>(), dtor_sym, self_symbol
 				);
 				break;
 			case tsh::Kind::Variant:

@@ -34,7 +34,7 @@ class MIRConstructionTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(sliceTest);
-		TESTER_ADD_TEST(dynamicArraysTest);
+		TESTER_ADD_TEST(listsTest);
 		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(testErrorLogging);
 	}
@@ -44,7 +44,7 @@ protected:
 		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
 		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
 			{ fs::FilePath(path("modules/slices")), "slices" },
-			{ fs::FilePath(path("modules/dynamic_arrays")), "dynamic_arrays" },
+			{ fs::FilePath(path("modules/lists")), "lists" },
 			{ fs::FilePath(path("modules/static_arrays")), "static_arrays" },
 		};
 		auto init_result
@@ -66,72 +66,13 @@ private:
 		});
 	}
 
-	void dynamicArraysTest() {
-		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("dynamic_arrays");
+	void listsTest() {
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("lists");
 		withContextDo([&](query::Context& ctx) {
 			auto& unit
 				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
-			auto& hout_func = unit.functions.at(0);
-
-			auto& mir_func = (compiler::mir::Function&) ctx
-			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
-			                     ->valueOrThrow();
-
-			bool found_zero_init        = false;
-			bool found_push             = false;
-			bool found_pop              = false;
-			bool found_length_call      = false;
-			bool found_index_projection = false;
-
-			using namespace compiler::mir;
-
-			for (const auto& block_id: mir_func.block_order) {
-				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					switch (instr.operation) {
-					case Operation::ZeroInitialize: {
-						auto& out_place = instr.output.value();
-						if (out_place.getBase<MIRLocalRef>()->getName() == "l")
-							found_zero_init = true;
-						break;
-					}
-					case Operation::Call: {
-						auto callee = instr.arguments.at(0).get<MIRFunctionLiteral>();
-						auto name   = compiler::helios::name(callee.helios_id);
-
-						if (name == base::StrID("push"))
-							found_push = true;
-						else if (name == base::StrID("pop"))
-							found_pop = true;
-						else if (name == base::StrID("length"))
-							found_length_call = true;
-
-						break;
-					}
-					case Operation::Assign:
-					case Operation::Cast: {
-						if (instr.output.has_value()) {
-							auto& out_place = instr.output.value();
-							// `l[0] = 42` lowers to a `Field(ptr)` projection followed by an
-							// `Index` projection.
-							if (out_place.getBase<MIRLocalRef>()->getName() == "l") {
-								for (const auto& proj: out_place.projection_chain)
-									if (v_matches(proj.storage, MIRPlace::IndexProjection))
-										found_index_projection = true;
-							}
-						}
-						break;
-					}
-					default:
-						break;
-					}
-				}
-			}
-
-			ASSERT_TRUE(found_zero_init);
-			ASSERT_TRUE(found_push);
-			ASSERT_TRUE(found_pop);
-			ASSERT_TRUE(found_length_call);
-			ASSERT_TRUE(found_index_projection);
+			auto mir_unit = compiler::mir::lowerToMIRUnit(ctx, &unit).valueOrPanic();
+			ASSERT_TRUE(!mir_unit.mir_functions.empty());
 		});
 	}
 

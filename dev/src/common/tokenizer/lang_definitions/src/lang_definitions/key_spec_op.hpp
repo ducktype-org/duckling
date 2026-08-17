@@ -117,7 +117,6 @@ namespace lang_def {
 		Type,  // ...
 
 		// @TODO: do we need all of them?
-		List,
 		Set,
 		Dict,
 		Array,

@@ -472,27 +472,6 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<BlockExpr>(*ctx, generatedOrigin(), block(std::move(body)));
 		}
 
-		/************
-		 *   LIST   *
-		 ************/
-
-
-		/** @brief A push `list += element`. The element is consumed into the list. */
-		[[nodiscard]]
-		Box<ListPushExpr> listPush(Box<Expr> list, Box<Expr> element) const {
-			return makeBox<ListPushExpr>(
-				generatedOrigin(), std::move(list), consume(std::move(element))
-			);
-		}
-
-		// @note ListPopExpr is the only HOUT node which doesn't need the query::Context, thus it's
-		// static. ListPushExpr still needs it to determine how to pass the value into the list.
-		/** @brief A pop of `count` elements from `list`. */
-		[[nodiscard]]
-		static Box<ListPopExpr> listPop(Box<Expr> list, Box<Expr> count) {
-			return makeBox<ListPopExpr>(generatedOrigin(), std::move(list), std::move(count));
-		}
-
 		/******************
 		 *   STATEMENTS   *
 		 ******************/
@@ -668,7 +647,6 @@ namespace compiler::helios::code::shorthands {
 				abstract_type.getKind() == tsh::Kind::Class
 					or abstract_type.getKind() == tsh::Kind::StaticArray
 					or abstract_type.getKind() == tsh::Kind::Tuple
-					or abstract_type.getKind() == tsh::Kind::DynamicArray
 					or abstract_type.getKind() == tsh::Kind::Variant,
 				"Tried to generate a copy constructor for a type which shouldn't need it"
 			);
