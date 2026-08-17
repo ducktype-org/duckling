@@ -6,6 +6,8 @@
 	#include <windows.h>
 #endif
 
+#include <expected>
+#include <string>
 #include <string_view>
 
 namespace os_utils {
@@ -20,13 +22,26 @@ namespace os_utils {
 	 *
 	 * In raw mode, input is read character-by-character without line buffering or echo.
 	 * The original terminal settings are restored when the guard goes out of scope.
+	 *
+	 * Create one via RawTerminalMode::create(). The type is move-only.
 	 */
 	class RawTerminalMode {
 	public:
-		RawTerminalMode();
+		/**
+		 * @brief Switches the terminal to raw mode.
+		 * @return A guard that restores the previous settings on destruction, or an
+		 *         error message.
+		 */
+		static std::expected<RawTerminalMode, std::string> create();
+
+		RawTerminalMode(RawTerminalMode&& other) noexcept;
+		RawTerminalMode(const RawTerminalMode&)            = delete;
+		RawTerminalMode& operator=(const RawTerminalMode&) = delete;
 		~RawTerminalMode();
 
 	private:
+		RawTerminalMode() = default;
+
 #ifndef _WIN32
 		struct termios m_orig_term{};
 #else

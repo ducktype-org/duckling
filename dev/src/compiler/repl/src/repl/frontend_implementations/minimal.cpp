@@ -11,6 +11,7 @@
 #include <format>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -131,8 +132,9 @@ namespace compiler::repl {
 
 		if (m_bracketed_paste_enabled) os_utils::writeStr(ENABLE_BRACKETED_PASTE_SEQ);
 
-		os_utils::RawTerminalMode terminal_guard;
-		auto                      line = internalReadLine();
+		auto terminal_guard = os_utils::RawTerminalMode::create();
+		if (!terminal_guard) throw std::runtime_error(terminal_guard.error());
+		auto line = internalReadLine();
 
 		if (m_bracketed_paste_enabled) os_utils::writeStr(DISABLE_BRACKETED_PASTE_SEQ);
 
