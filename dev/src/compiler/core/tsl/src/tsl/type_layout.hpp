@@ -348,6 +348,14 @@ namespace compiler::tsl {
 			return index_to_layout.at(index);
 		}
 
+		/**
+		 * @return The number of alternatives of this variant.
+		 */
+		[[nodiscard]]
+		usize getNumAlternatives() const {
+			return index_to_layout.size();
+		}
+
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
 			const override;

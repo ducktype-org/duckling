@@ -80,6 +80,82 @@ namespace compiler::helios::defgen {
 			return body;
 		}
 
+		/**
+		 * @brief Builds the copy-constructor body for a variant: copies the active alternative.
+		 *
+		 * Every alternative gets a case, so the match is exhaustive without a wildcard. Each case
+		 * binds the payload and rebuilds the variant around a copy of it, which keeps the tag of
+		 * the source.
+		 */
+		std::vector<Box<code::Stmt>> buildVariantCopyBody(
+			query::Context&                 ctx,
+			const tsh::VariantAbstractType& variant_type,
+			const SymID                     copy_sym,
+			const SymID                     source_symbol,
+			const tsh::SymbolType<>&        result_symbol_type
+		) {
+			using Variable = GeneratedFunctionVariable;
+
+			const Shorthand s{ ctx };
+			const auto&     alternatives = variant_type.getUnderlyingTypes();
+
+			std::vector<code::MatchExpr::Case> cases;
+			for (usize i = 0; i < alternatives.size(); i++) {
+				// A binding is always a reference to the payload, which for a reference-like
+				// alternative is the stored reference itself.
+				const auto payload_type = alternatives[i]
+				                              .withReferenceKind(tsh::ReferenceKind::Ref)
+				                              .withMutability(tsh::Mutability::Mutable);
+
+				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
+					.name                  = base::StrID(base::strConcat("__alternative_", i)),
+					.generated_symbol_data = Variable{ .function_symbol = copy_sym,
+				                                       .variable_index  = i,
+				                                       .type            = payload_type },
+				});
+
+				auto copy_through = [&](const tsh::SymbolType<>& value_type) -> Box<code::Expr> {
+					if (value_type.isTriviallyCopyable(ctx)) return s.deref(s.ident(payload_sym));
+					return s.call(
+						s.ident(copyConstructorSymForType(ctx, value_type.getType())),
+						s.ident(payload_sym)
+					);
+				};
+
+				auto payload_value = [&]() -> Box<code::Expr> {
+					switch (alternatives[i].getRefKind()) {
+					case tsh::ReferenceKind::Direct:
+						return copy_through(alternatives[i]);
+					case tsh::ReferenceKind::Ref:
+						// Copying a reference copies the reference, and the binding already is it.
+						return s.ident(payload_sym);
+					case tsh::ReferenceKind::Box:
+						// A box is deep-copied into a fresh allocation holding a copy of the
+						// pointee.
+						return makeBoxAllocCall(
+							ctx,
+							code::generatedOrigin(),
+							copy_through(alternatives[i].getPointeeSymbolType())
+						);
+					}
+					CORE_UNREACHABLE();
+				}();
+
+				cases.emplace_back(Shorthand::matchCase(
+					i,
+					payload_sym,
+					makeBox<code::VariantConstructExpr>(
+						ctx, code::generatedOrigin(), std::move(payload_value), result_symbol_type, i
+					)
+				));
+			}
+
+			// `source` is already a reference to the variant, which is what the match wants.
+			std::vector<Box<code::Stmt>> body;
+			body.emplace_back(s.ret(s.matchExpr(s.ident(source_symbol), std::move(cases))));
+			return body;
+		}
+
 		std::vector<Box<code::Stmt>> buildStaticArrayCopyBody(
 			query::Context&                     ctx,
 			const tsh::StaticArrayAbstractType& array_type,
@@ -230,6 +306,15 @@ namespace compiler::helios::defgen {
 				body = buildDynamicArrayCopyBody(
 					ctx,
 					owner_type.as<tsh::DynamicArrayAbstractType>(),
+					copy_sym,
+					source_symbol,
+					result_symbol_type
+				);
+				break;
+			case tsh::Kind::Variant:
+				body = buildVariantCopyBody(
+					ctx,
+					owner_type.as<tsh::VariantAbstractType>(),
 					copy_sym,
 					source_symbol,
 					result_symbol_type

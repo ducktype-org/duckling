@@ -1,5 +1,7 @@
 #pragma once
 
+#include <helios_private/errors/dia_interactive_elements.hpp>
+
 #include <diagnostic/message.hpp>
 #include <diagnostic/stable_position.hpp>
 
@@ -28,5 +30,22 @@ namespace compiler::helios {
 	public:
 		ImmutableVariableNoInitError(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	class DuplicateVariantAlternativeError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "duplicate_variant_alternative" };
+		}
+
+	public:
+		DuplicateVariantAlternativeError(
+			dia::StablePosition source_position, Box<InteractiveType> duplicated_type
+		):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			addArgument<dia::InteractiveArgument>("duplicated_type", std::move(duplicated_type));
+		}
 	};
 }

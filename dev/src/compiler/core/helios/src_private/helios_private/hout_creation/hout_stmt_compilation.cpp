@@ -60,6 +60,12 @@ namespace compiler::helios {
 		 */
 		base::Optional<Box<code::Stmt>> out;
 
+		/**
+		 * Statements to emit before `out`, used by desugarings that need more than one
+		 * statement (e.g. a `match` initializer declares the target variable first).
+		 */
+		std::vector<Box<code::Stmt>> prefix_stmts;
+
 		HoutStmtMaker(query::Context& ctx, tsh::SymbolType<> return_type):
 			  ctx(ctx),
 			  return_type(return_type) {}
@@ -421,6 +427,9 @@ namespace compiler::helios {
 				query::throwFailed();
 			}
 
+			for (auto& prefix_stmt: stmt_maker.prefix_stmts)
+				block.statements.emplace_back(std::move(prefix_stmt));
+
 			if (stmt_maker.out.has_value())
 				block.statements.emplace_back(std::move(stmt_maker.out.value()));
 		}
@@ -455,6 +464,9 @@ namespace compiler::helios {
 		unlocked.value()->acceptVisitor(stmt_maker);
 
 		if (stmt_maker.is_failed) query::throwFailed();
+
+		for (auto& prefix_stmt: stmt_maker.prefix_stmts)
+			block.statements.emplace_back(std::move(prefix_stmt));
 
 		if (stmt_maker.out.has_value())
 			block.statements.emplace_back(std::move(stmt_maker.out.value()));

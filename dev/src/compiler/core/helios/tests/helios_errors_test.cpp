@@ -775,6 +775,54 @@ private:
 			);
 		}
 
+		// ============================ Variant errors ============================
+		{
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var v: i32 | i32 = 1;
+					return 0i64;
+				}
+			)",
+				{ "Variant type lists type `i32` more than once." },
+				1
+			);
+
+			// Alternatives are told apart by their underlying type alone, so differing only in
+			// the reference kind is a duplicate too.
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var v: i32 | ref i32 = 1;
+					return 0i64;
+				}
+			)",
+				{ "Variant type lists type `i32` more than once." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Holder {
+					p: box i32;
+				}
+
+				fun main() -> i64 = {
+					var v: Holder | f32 = Holder(new 1i32);
+					var r: i64 = match (v) {
+						case x : Holder = 1i64;
+						case _ = -1i64;
+					};
+					return 0i64;
+				}
+			)",
+				{ "Alternative `Class Holder` cannot be bound by value because it is not "
+			      "trivially copyable. Bind it by reference instead: `case x : ref Class "
+			      "Holder`." },
+				1
+			);
+		}
+
 		// ============================ Static Arrays ============================
 		{
 			checkForErrorOnCompileModule(

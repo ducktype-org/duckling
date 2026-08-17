@@ -159,7 +159,40 @@ namespace compiler::helios {
 					handleForIterator(for_stmt_opt.value());
 					return;
 				}
+				if (auto binding_opt = parent_elem.dynamicCast<pst::BindingPattern>()) {
+					handleMatchBinding(binding_opt.value());
+					return;
+				}
 				CORE_PANIC("IdentifierWrapper with unsupported parent in QueryTypeOfSymbol");
+			}
+
+			void handleMatchBinding(pst::Access<pst::BindingPattern> binding) {
+				// The binding's type is the type constraint of the enclosing flow pattern
+				// (`case x : T`). Bindings without a constraint are not supported yet.
+				auto flow_parent = binding->getParent();
+				CORE_ASSERT(flow_parent.has_value(), "BindingPattern without parent");
+				auto flow_opt = flow_parent.value().unlock(ctx).dynamicCast<pst::FlowPattern>();
+				if (!flow_opt.has_value()) {
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+						"Pattern bindings outside of a flow pattern.", binding->getStablePosition()
+					));
+					setFailed();
+					return;
+				}
+
+				auto constraint = flow_opt.value()->getTypeConstraint();
+				if (!constraint.has_value()) {
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+						"Match pattern bindings without a type constraint (`case x : T`).",
+						binding->getStablePosition()
+					));
+					setFailed();
+					return;
+				}
+
+				setSymbolTypeByTypeExpr(
+					constraint.value().unlock(ctx)->getExpr().unlock(ctx), tsh::Mutability::Immutable
+				);
 			}
 
 			void handleForIterator(pst::Access<pst::For> stmt) {

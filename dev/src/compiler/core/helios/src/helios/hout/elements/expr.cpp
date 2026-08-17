@@ -21,8 +21,11 @@
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/config/build_type.hpp>
+
 #include <query_framework/context/context.hpp>
 
+#include <set>
 #include <utility>
 
 namespace compiler::helios::code {
@@ -44,6 +47,8 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(ChainComparisonExpr)
 	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
+	EXPR_VISITOR(VariantConstructExpr)
+	EXPR_VISITOR(MatchExpr)
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(IndexExpr)
@@ -653,6 +658,167 @@ namespace compiler::helios::code {
 		for (const auto& subtype: subtypes) cloned_subtypes.push_back(subtype->clone());
 		return makeBox<VariantTypeConstructorExpr>(
 			expression_type, origin, std::move(cloned_subtypes)
+		);
+	}
+
+	VariantConstructExpr::VariantConstructExpr(
+		query::Context&,
+		ElementOrigin     origin,
+		Box<Expr>         inner,
+		tsh::SymbolType<> variant_type,
+		usize             alternative_index
+	):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  variant_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  inner(std::move(inner)),
+		  alternative_index(alternative_index) {}
+
+	VariantConstructExpr::VariantConstructExpr(
+		tsh::ExpressionType<> expression_type,
+		ElementOrigin         origin,
+		Box<Expr>             inner,
+		usize                 alternative_index
+	):
+		  Expr(expression_type, origin),
+		  inner(std::move(inner)),
+		  alternative_index(alternative_index) {}
+
+	void VariantConstructExpr::debugPrint(std::ostream& out) const {
+		out << "variant_construct[alt=" << alternative_index
+			<< ", to=" << expression_type.getSymbolType().toString() << "](";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> VariantConstructExpr::clone() const {
+		return makeBox<VariantConstructExpr>(
+			expression_type, origin, inner->clone(), alternative_index
+		);
+	}
+
+	namespace {
+		/**
+		 * @brief Whether two case results can share one result location.
+		 *
+		 * Mutability is left out on purpose: it is not enforced anywhere else either (see
+		 * @TODO: #1488 in the coercion rules), and a bound payload comes out `const` while a
+		 * freshly computed value does not, so comparing it would reject reasonable matches.
+		 */
+		bool sameResultType(const tsh::SymbolType<>& a, const tsh::SymbolType<>& b) {
+			return a.getType() == b.getType() && a.getRefKind() == b.getRefKind();
+		}
+
+		/**
+		 * @brief The type of a match: the type its cases agree on.
+		 *
+		 * Cases carrying different types is a user error, and it is reported where the cases
+		 * are built, so by the time the expression exists they have to match.
+		 */
+		tsh::ExpressionType<> matchExpressionType(const std::vector<MatchExpr::Case>& cases) {
+			CORE_ASSERT(!cases.empty(), "A match has to have at least one case.");
+
+			const auto type = cases.front().result->expression_type.getSymbolType();
+			for (const auto& match_case: cases)
+				CORE_ASSERT(
+					sameResultType(match_case.result->expression_type.getSymbolType(), type),
+					"All match cases have to be of the same type, got: ",
+					type.toString(),
+					" and ",
+					match_case.result->expression_type.getSymbolType().toString()
+				);
+
+			// The value lives in a temporary the lowering fills in from whichever case ran.
+			return { type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary) };
+		}
+	}
+
+	MatchExpr::MatchExpr(
+		query::Context&, ElementOrigin origin, Box<Expr> subject, std::vector<Case> cases
+	):
+		  Expr(matchExpressionType(cases), origin),
+		  subject(std::move(subject)),
+		  cases(std::move(cases)) {
+		CORE_ASSERT(
+			this->subject->expression_type.getSymbolType().getRefKind()
+				!= tsh::ReferenceKind::Direct,
+			"A match subject has to be a reference to the matched variant, got: ",
+			this->subject->expression_type.getSymbolType().toString()
+		);
+
+		for (const auto& match_case: this->cases)
+			CORE_ASSERT(
+				!match_case.binding.has_value() || match_case.alternative_index.has_value(),
+				"A match case can only bind the payload of an alternative it names."
+			);
+
+		// The lowering relies on this: it enters the last case without testing it, so a match
+		// that does not cover its subject would run the wrong case instead of falling through.
+		IF_BUILD_TYPE_DEV({
+			const auto variant = this->subject->expression_type.getSymbolType()
+			                         .getType()
+			                         .as<tsh::VariantAbstractType>();
+
+			std::set<usize> covered;
+			bool            has_wildcard = false;
+			for (const auto& match_case: this->cases)
+				if (match_case.alternative_index.has_value())
+					covered.insert(match_case.alternative_index.value());
+				else
+					has_wildcard = true;
+
+			CORE_ASSERT(
+				has_wildcard || covered.size() == variant.getUnderlyingTypes().size(),
+				"A match has to cover every alternative of its subject or have a wildcard case. "
+				"Covered ",
+				covered.size(),
+				" of ",
+				variant.getUnderlyingTypes().size(),
+				"."
+			);
+		})
+	}
+
+	MatchExpr::MatchExpr(
+		tsh::ExpressionType<> expression_type,
+		ElementOrigin         origin,
+		Box<Expr>             subject,
+		std::vector<Case>     cases
+	):
+		  Expr(expression_type, origin),
+		  subject(std::move(subject)),
+		  cases(std::move(cases)) {}
+
+	void MatchExpr::debugPrint(std::ostream& out) const {
+		out << "match (";
+		subject->debugPrint(out);
+		out << ") { ";
+		for (const auto& match_case: cases) {
+			if (match_case.alternative_index.has_value())
+				out << "case [alt=" << match_case.alternative_index.value() << "]";
+			else
+				out << "case [wildcard]";
+			if (match_case.binding.has_value())
+				out << " [bind " << name(match_case.binding.value()).strView() << "]";
+			out << " = ";
+			match_case.result->debugPrint(out);
+			out << "; ";
+		}
+		out << "}";
+	}
+
+	Box<Expr> MatchExpr::clone() const {
+		std::vector<Case> cloned_cases;
+		cloned_cases.reserve(cases.size());
+		for (const auto& match_case: cases)
+			cloned_cases.emplace_back(Case{ .alternative_index = match_case.alternative_index,
+			                                .binding           = match_case.binding,
+			                                .result            = match_case.result->clone() });
+		return makeBox<MatchExpr>(
+			expression_type, origin, subject->clone(), std::move(cloned_cases)
 		);
 	}
 

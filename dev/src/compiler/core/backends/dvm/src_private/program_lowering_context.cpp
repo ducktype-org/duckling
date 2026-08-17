@@ -462,6 +462,26 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 				std::move(fields),
 			};
 		}
+		variant_case(tsl::VariantTypeLayout, variant_layout) {
+			const usize num_alternatives = variant_layout.getNumAlternatives();
+
+			std::vector<base::StrID> alternatives;
+			alternatives.reserve(num_alternatives);
+			std::string variant_type_name = "vnt";
+			for (usize i{ 0 }; i < num_alternatives; i++) {
+				const auto                  alternative_layout = variant_layout.getLayoutOfIndex(i);
+				const vm::code::TypeOfData& vm_alternative_type
+					= **lowerAndKeepTslType(alternative_layout);
+				alternatives.emplace_back(typeName(vm_alternative_type));
+				variant_type_name
+					= base::strConcat(variant_type_name, "_", typeName(vm_alternative_type));
+			}
+
+			return vm::code::VariantType{
+				base::StrID(variant_type_name),
+				std::move(alternatives),
+			};
+		}
 		variant_case(tsl::StaticArrayTypeLayout, array_layout) {
 			const auto                  element_layout  = array_layout.getElementLayout();
 			const vm::code::TypeOfData& vm_element_type = **lowerAndKeepTslType(element_layout);

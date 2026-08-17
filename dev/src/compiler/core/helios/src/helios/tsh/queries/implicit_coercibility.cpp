@@ -1,10 +1,26 @@
 #include "implicit_coercibility.hpp"
 
+#include <helios/tsh/types.hpp>
+
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <set>
 
 namespace compiler::tsh {
+	/*
+	 * The current coercion logic regarding reference kinds is:
+	 * 						  FROM
+	 * 			    | Direct | Ref | Box
+	 *	 	Direct 	|  Yes	 | Yes | Yes
+	 * TO 	Ref		|   No   | Yes | No
+	 *	 	Box		|   No   | No  | Yes
+	 */
+	bool isRefKindCoercible(ReferenceKind from, ReferenceKind to) {
+		if (to == ReferenceKind::Ref) return from == ReferenceKind::Ref;
+		if (to == ReferenceKind::Box) return from == ReferenceKind::Box;
+		return true;
+	}
+
 	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnAbstractType, bool) {
 		static auto provide(Context& context, const QKey key) -> PResult {
 			return key.source == key.target
@@ -40,26 +56,22 @@ namespace compiler::tsh {
 			const auto from_ref_kind = key.source.getRefKind();
 			const auto to_ref_kind   = key.target.getRefKind();
 
-			/*
-			 * The current coercion logic regarding reference kinds is:
-			 * 						  FROM
-			 * 			    | Direct | Ref | Box
-			 *	 	Direct 	|  Yes	 | Yes | Yes
-			 * TO 	Ref		|   No   | Yes | No
-			 *	 	Box		|   No   | No  | Yes
-			 */
-			if (from_ref_kind == ReferenceKind::Direct && to_ref_kind == ReferenceKind::Ref)
-				return false;
-
-			if (from_ref_kind == ReferenceKind::Box && to_ref_kind == ReferenceKind::Ref)
-				return false;
-
-			if (to_ref_kind == ReferenceKind::Box && from_ref_kind != ReferenceKind::Box)
-				return false;
+			if (!isRefKindCoercible(from_ref_kind, to_ref_kind)) return false;
 
 			// For pointer-like symbol types (ex. ref/box) the element types must match exactly.
 			if (to_ref_kind != ReferenceKind::Direct)
 				return key.source.getType() == key.target.getType();
+
+			// A value coerces into a variant only when its type is exactly equal to one of the
+			// variant's alternatives (no chained coercions).
+			if (key.target.getType().getKind() == Kind::Variant
+			    && key.source.getType().getKind() != Kind::Variant) {
+				const VariantAbstractType target_variant = key.target.getType();
+				for (const auto& alternative: target_variant.getUnderlyingTypes())
+					if (isRefKindCoercible(from_ref_kind, alternative.getRefKind())
+					    && alternative.getType() == key.source.getType())
+						return true;
+			}
 
 			// @TODO: #584
 			return context.query<QueryImplicitCoercibilityOnAbstractType>({

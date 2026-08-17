@@ -310,6 +310,40 @@ namespace compiler::backend_vm::internal {
 			};
 		}
 
+		/// Variant operations ///
+		case VariantConstruct: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"VariantConstruct expects 1 argument, got: ",
+				instr.arguments.size()
+			);
+			const auto variant_params = std::get_if<lir::VariantParameters>(&instr.extra_params);
+			CORE_ASSERT(variant_params != nullptr, "VariantConstruct without parameters");
+			return VariantConstructOperation{
+				.variant_params = *variant_params,
+				.payload        = lower_arg(instr.arguments[0]),
+				.dest           = lower_dest(),
+			};
+		}
+		case VariantTryProject: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"VariantTryProject expects 1 argument, got: ",
+				instr.arguments.size()
+			);
+			CORE_ASSERT(
+				instr.arguments[0].is<lir::LIRPlace>(),
+				"VariantTryProject argument must be a LIRPlace"
+			);
+			const auto variant_params = std::get_if<lir::VariantParameters>(&instr.extra_params);
+			CORE_ASSERT(variant_params != nullptr, "VariantTryProject without parameters");
+			return VariantTryProjectOperation{
+				.variant_params = *variant_params,
+				.variant        = ctx.resolveLirPlace(instr.arguments[0].get<lir::LIRPlace>()),
+				.dest           = lower_dest(),
+			};
+		}
+
 		/// Terminator operations ///
 		case Jump: {
 			CORE_ASSERT(
@@ -333,6 +367,19 @@ namespace compiler::backend_vm::internal {
 				.true_target  = lower_arg(instr.arguments[1]).get<DVMLabel>(),
 				.false_target = lower_arg(instr.arguments[2]).get<DVMLabel>(),
 				.scope_flags  = instr.scope_flags,
+			};
+		}
+		case BranchIfNull: {
+			CORE_ASSERT(
+				instr.arguments.size() == 3,
+				"BranchIfNull operation expects 3 arguments, got: ",
+				instr.arguments.size()
+			);
+			return BranchIfNullOperation{
+				.pointer         = lower_arg(instr.arguments[0]),
+				.null_target     = lower_arg(instr.arguments[1]).get<DVMLabel>(),
+				.not_null_target = lower_arg(instr.arguments[2]).get<DVMLabel>(),
+				.scope_flags     = instr.scope_flags,
 			};
 		}
 		case ReturnValue:
