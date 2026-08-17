@@ -7,6 +7,8 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/utility.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
 
@@ -48,10 +50,13 @@ namespace compiler::repl {
 	}
 
 	std::expected<helios::HOUTUnit, std::string> makeExecutableHOUTUnit(
-		query::Context& ctx, const helios::HOUTFunction& wrapper_function
+		query::Context&                              ctx,
+		const helios::HOUTFunction&                  wrapper_function,
+		base::Optional<CRef<helios::HOUTGlobalData>> additional_global_var
 	) {
 		helios::HOUTUnit hout_unit;
 		hout_unit.functions.emplace_back(&wrapper_function);
+		if_opt_some(additional_global_var, var) { hout_unit.glob_data.emplace_back(var); }
 		auto result = helios::collectReplicatedSymbols(ctx, hout_unit);
 		if (result.isBad()) return std::unexpected("Failed");
 		return hout_unit;
@@ -94,20 +99,24 @@ namespace compiler::repl {
 		}
 
 		auto definition_stmt_opt = pst::extractSingleDefinition(ctx, root);
-		if (definition_stmt_opt.has_value())
-			return DefinitionSingleStatementInfo{ .definition_stmt = definition_stmt_opt.value() };
+		if (definition_stmt_opt.has_value()) {
+			auto definition_stmt = definition_stmt_opt.value();
+
+			if (auto as_variable = definition_stmt.unlock(ctx).dynamicCast<pst::Variable>())
+				return VariableSingleStatementInfo{ .variable_stmt = as_variable.value() };
+
+			return DefinitionSingleStatementInfo{ .definition_stmt = definition_stmt };
+		}
 
 		auto single_stmt_opt = pst::extractSingleStatement(ctx, root);
 		if (single_stmt_opt.has_value()) {
 			auto stmt = single_stmt_opt.value().unlock(ctx);
-			return std::unexpected(
-				base::strConcat(
-					"Unsupported single statement kind for REPL classification: ",
-					stmt->elementType(),
-					". Expected expression, instruction (if/while/for/block), or "
-					"definition/declaration."
-				)
-			);
+			return std::unexpected(base::strConcat(
+				"Unsupported single statement kind for REPL classification: ",
+				stmt->elementType(),
+				". Expected expression, instruction (if/while/for/block), or "
+				"definition/declaration."
+			));
 		}
 
 		return std::unexpected(
@@ -119,28 +128,29 @@ namespace compiler::repl {
 	std::expected<StatementWrapperBuildResult, std::string> buildStatementWrapper(
 		query::Context& ctx, const SingleStatementInfo& statement_info, u64 counter
 	) {
-		auto function_result = [&] -> query::QResult<helios::HOUTFunction> {
+		auto symbol_result = [&] -> query::QResult<helios::SymID> {
 			variant_match(statement_info) {
 				variant_case(repl::ExpressionSingleStatementInfo, val) {
-					return ctx.query<QueryReplExpressionWrapper>({
-						.expr_stmt = val.expr_stmt,
-						.counter   = counter,
-					});
+					return queryReplExpressionWrapperSymbol(ctx, val.expr_stmt, counter);
 				}
 				variant_case(repl::InstructionSingleStatementInfo, val) {
-					return ctx.query<QueryReplInstructionWrapper>({
-						.stmt    = val.instruction_stmt,
-						.counter = counter,
-					});
+					return queryReplInstructionWrapperSymbol(ctx, val.instruction_stmt, counter);
 				}
 				variant_default { CORE_PANIC("Invalid usage."); }
 			}
 		}();
-		if (function_result.hasFailed())
+		if (symbol_result.hasFailed())
 			return std::unexpected(
 				"Failed to build REPL expression wrapper (see diagnostics above)."
 			);
-		auto function = std::move(function_result.valueOrPanic());
+
+		const auto& function_result
+			= ctx.query<helios::QueryCodeOfFun>(symbol_result.valueOrPanic());
+		if (function_result->hasFailed())
+			return std::unexpected(
+				"Failed to build REPL expression wrapper (see diagnostics above)."
+			);
+		auto function = function_result->valueOrPanic();
 
 		auto mangled_name
 			= helios::mangler::getSimpleMangledName(ctx, function.declaration->original_symbol);
@@ -150,8 +160,33 @@ namespace compiler::repl {
 		};
 	}
 
-	std::expected<StatementWrapperBuildResult, std::string> buildStatementWrapper(
+	std::expected<VariableBuildResult, std::string> buildVariableWrapper(
 		query::Context& ctx, const VariableSingleStatementInfo& statement_info, u64 counter
 	) {
+		auto initializer_symbol
+			= queryReplGlobalInitializerWrapperSymbol(ctx, statement_info.variable_stmt, counter);
+		const auto& function_result = ctx.query<helios::QueryCodeOfFun>(initializer_symbol);
+		if (function_result->hasFailed())
+			return std::unexpected("Failed to build REPL variable wrapper.");
+
+		// The declared initial value is constructed by the initializer function, so what the
+		// declaration itself contributes is the storage holding an empty (zero) value.
+		auto empty_variable_symbol
+			= queryReplEmptyVariableSymbol(ctx, getVariableSymID(ctx, statement_info.variable_stmt));
+
+		const auto& global_data_result
+			= ctx.query<helios::QueryHOUTGlobalData>(empty_variable_symbol);
+		if (global_data_result->hasFailed())
+			return std::unexpected("Failed to build REPL variable wrapper.");
+
+		helios::HOUTUnit result;
+		result.glob_data.emplace_back(&global_data_result->valueOrPanic());
+		result.functions.emplace_back(&function_result->valueOrPanic());
+
+		if (helios::collectReplicatedSymbols(ctx, result).isBad())
+			return std::unexpected("Failed to build REPL variable wrapper.");
+
+		return VariableBuildResult{ .hout_unit            = std::move(result),
+			                        .initializer_function = initializer_symbol };
 	}
 }

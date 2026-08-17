@@ -5,6 +5,7 @@
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/repl_utils/repl_queries.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
@@ -102,6 +103,32 @@ namespace compiler::repl {
 		query::Context& ctx, const SingleStatementInfo& statement_info, u64 counter
 	);
 
+	struct VariableBuildResult final {
+		/**
+		 * @brief The empty storage of the variable together with the function initializing it.
+		 */
+		helios::HOUTUnit hout_unit;
+
+		/**
+		 * @brief Symbol of the initializing function, to be called in statement order.
+		 */
+		helios::SymID initializer_function;
+	};
+
+	/**
+	 * @brief Build the empty storage and the initializing function of a global variable
+	 * declaration.
+	 *
+	 * A top-level `var` is split in two, so that its initial value is constructed in statement
+	 * order instead of before the entry point runs together with every other global.
+	 *
+	 * @param statement_info Classified variable statement.
+	 * @param counter Unique wrapper counter used in generated symbol names.
+	 */
+	std::expected<VariableBuildResult, std::string> buildVariableWrapper(
+		query::Context& ctx, const VariableSingleStatementInfo& statement_info, u64 counter
+	);
+
 	/**
 	 * @brief Create an ephemeral REPL/script-style statement module with optional parent linkage.
 	 *
@@ -127,7 +154,11 @@ namespace compiler::repl {
 	/**
 	 * @brief Create a temporary HOUT unit that exposes a single executable wrapper function.
 	 */
-	std::expected<helios::HOUTUnit, std::string> makeExecutableHOUTUnit(query::Context& ctx, const helios::HOUTFunction& wrapper_function);
+	std::expected<helios::HOUTUnit, std::string> makeExecutableHOUTUnit(
+		query::Context&                              ctx,
+		const helios::HOUTFunction&                  wrapper_function,
+		base::Optional<CRef<helios::HOUTGlobalData>> additional_global_var = {}
+	);
 
 	/**
 	 * @brief Retrieve the module HOUT for a definition statement module.

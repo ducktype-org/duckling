@@ -106,9 +106,9 @@ namespace compiler::repl {
 					}
 				}
 
-				replay_count = static_cast<usize>(
-					std::stoul(std::string(value.substr(number_abs_val_start)))
-				);
+				replay_count
+					= static_cast<usize>(std::stoul(std::string(value.substr(number_abs_val_start)))
+				    );
 				has_replay_count = true;
 			}
 
@@ -389,12 +389,10 @@ namespace compiler::repl {
 				for (auto& symbol: symbols) {
 					if (symbol.name == trimmed_name) {
 						auto details = formatReplSymbolDetails(ctx, symbol.symbol);
-						matches.emplace_back(
-							SymbolDetailsOutput{
-								.symbol  = std::move(symbol),
-								.details = std::move(details),
-							}
-						);
+						matches.emplace_back(SymbolDetailsOutput{
+							.symbol  = std::move(symbol),
+							.details = std::move(details),
+						});
 					}
 				}
 			},
@@ -535,6 +533,16 @@ namespace compiler::repl {
 			auto instruction_info = std::get<InstructionSingleStatementInfo>(stmt_info.value());
 			CORE_DEV_LOG(REPL, "Processing statement as instruction\n");
 			return handleInstruction(instruction_info.instruction_stmt);
+		}
+
+		// A REPL statement is executed the moment it is entered, so a global variable is already
+		// constructed in statement order by the module it was declared in. Only scripts, where
+		// every statement is merged into one program, need the initializer split out of the
+		// declaration.
+		if (std::holds_alternative<VariableSingleStatementInfo>(stmt_info.value())) {
+			auto variable_info = std::get<VariableSingleStatementInfo>(stmt_info.value());
+			CORE_DEV_LOG(REPL, "Processing statement as variable declaration\n");
+			return handleDefinition(variable_info.variable_stmt);
 		}
 
 		CORE_DEV_LOG(REPL, "Processing statement as definition\n");
@@ -724,8 +732,8 @@ namespace compiler::repl {
 				auto eval_module_id = getCurrentModuleID();
 				auto module_name    = getStatementModuleName(eval_module_id);
 				auto load_result    = compileAndLoad(
-					ctx, *hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
-				);
+                    ctx, *hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
+                );
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();
 					return;
@@ -817,8 +825,8 @@ namespace compiler::repl {
 				auto eval_module_id = getCurrentModuleID();
 				auto module_name    = getStatementModuleName(eval_module_id);
 				auto load_result    = compileAndLoad(
-					ctx, *hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
-				);
+                    ctx, *hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
+                );
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();
 					return;

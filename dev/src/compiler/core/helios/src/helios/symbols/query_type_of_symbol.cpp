@@ -452,24 +452,15 @@ namespace compiler::helios {
 				}
 				variant_case(defgen::GeneratedFunctionVariable, var) { return var.type; }
 				variant_case(defgen::ControlFlowLocal, local) { return local.type; }
-				variant_case(defgen::ReplExpressionWrapper, repl) {
+				variant_case(defgen::ReplEmptyVariable, empty_variable) {
+					return ctx.query<QueryTypeOfSymbol>(empty_variable.original_variable)
+					    ->valueOrThrow();
+				}
+				variant_case(defgen::ReplInputWrapper, repl) {
 					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = {},
 						.result_type     = repl.return_type,
 					});
-					return tsh::SymbolType<>{
-						function_abstract_type,
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
-				}
-				variant_case_novalue(defgen::ReplInstructionWrapper) {
-					// Unit (not Void) is the correct return type for procedures.
-					// Per the language spec: "void ... cannot be returned from a function".
-					const auto void_type = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
-					const auto function_abstract_type
-						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
-					                                          .result_type     = void_type });
 					return tsh::SymbolType<>{
 						function_abstract_type,
 						tsh::ReferenceKind::Direct,

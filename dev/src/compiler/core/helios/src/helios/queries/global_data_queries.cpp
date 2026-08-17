@@ -8,6 +8,7 @@
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_cache_macros.hpp>
@@ -17,6 +18,34 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryHOUTGlobalData, query::QResult<HOUTGlobalData>) {
 		static auto provide(Context& ctx, QKey symbol) -> PResult {
 			auto symbol_kind = kind(symbol);
+
+			// The empty storage of a REPL global variable shares everything with the variable it
+			// stands for, except for the initial value: it is constructed by a separate
+			// initializer function instead, so that the construction runs in statement order.
+			if (auto empty_variable
+			    = std::get_if<defgen::ReplEmptyVariable>(&getSymRef(symbol)->other)) {
+				const auto& original
+					= ctx.query<QueryHOUTGlobalData>(empty_variable->original_variable)
+				          ->valueOrThrow();
+				CORE_ASSERT(
+					original.data_type == HOUTGlobalDataType::Variable,
+					"An empty REPL variable expects a variable declaration"
+				);
+
+				Box<code::Expr> empty_value = base::makeBox<code::DefaultValueExpr>(
+					ctx, code::generatedOrigin(), original.type.getType()
+				);
+
+				return HOUTGlobalData{
+					.helios_symbol = symbol,
+					.origin        = original.origin,
+					.original_name = original.original_name,
+					.data_type     = original.data_type,
+					.value         = HOUTGlobalVariable{ std::move(empty_value) },
+					.type          = original.type,
+				};
+			}
+
 			CORE_ASSERT(
 				symbol_kind == SymbolKind::Const
 					|| (symbol_kind == SymbolKind::Variable && isGlobalVar(ctx, symbol)),

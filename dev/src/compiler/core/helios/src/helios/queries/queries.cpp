@@ -134,8 +134,7 @@ namespace compiler::helios {
 					const auto sym_kind = kind(sym);
 					switch (sym_kind) {
 					case SymbolKind::Function:
-						scheduled_function_code_tasks.emplace_back(
-							ctx.schedule<QueryCodeOfFun>(sym)
+						scheduled_function_code_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym)
 						);
 						break;
 					case SymbolKind::Const:
@@ -380,15 +379,13 @@ namespace compiler::helios {
 				// llvm panics. This check is put inside the for, to only check it if the methods
 				// are actually present, and to provide a more specific error location.
 				if (not class_type.carriesInformation(ctx)) {
-					ctx.logInt(
-						makeBox<dia::NotYetImplementedCodeError>(
-							"Methods of zero-sized classes are not yet implemented due to ZST not "
-							"being properly supported yet.",
-							maybeSymbolPst(method.getSymbol()).map([&](auto pst) {
-								return pst.unlock(ctx)->getStablePosition();
-							})
-						)
-					);
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+						"Methods of zero-sized classes are not yet implemented due to ZST not "
+						"being properly supported yet.",
+						maybeSymbolPst(method.getSymbol()).map([&](auto pst) {
+							return pst.unlock(ctx)->getStablePosition();
+						})
+					));
 					return base::BAD;
 				}
 				// We only here add the methods that are owner only.

@@ -2,106 +2,59 @@
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
+namespace compiler::helios::defgen {
+	struct ReplInputWrapper;
+}
+
 namespace compiler::repl {
-
 	/**
-	 * @brief Key for QueryReplExpressionWrapper
-	 */
-	struct QueryReplExpressionWrapper_Key {
-		pst::AccessLocked<pst::ExprStmt> expr_stmt;
-		u64                              counter;
-
-		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const;
-	};
-
-	/**
-	 * @brief Query to build a HOUT function that wraps a REPL expression
+	 * @brief Build the HOUT function wrapping a single REPL/script input statement.
 	 *
-	 * Takes an ExprStmt directly and builds a complete HOUTFunction with the
-	 * expression wrapped in a return statement.
+	 * The wrapped PST element is recovered from `input.pst_element_hash`, and `input.type` decides
+	 * how it is turned into the function body:
+	 * - `Expression`: a single return statement of the expression (an expression statement, if the
+	 *   expression is of type void),
+	 * - `Instruction`: the statement compiled into a unit-returning body.
+	 * - `GlobalInitializer`: the constructor expression of the declared global variable, in a
+	 *   unit-returning body.
+	 *
+	 * @note This is the implementation of QueryCodeOfFun for `ReplInputWrapper` symbols, it is not
+	 * meant to be called directly.
 	 */
-	DECLARE_QUERY(
-		QueryReplExpressionWrapper,
-		QueryReplExpressionWrapper_Key,
-		query::QResult<helios::HOUTFunction>,
-		({})
+	helios::HOUTFunction getReplInputFunction(
+		query::Context& ctx, const helios::defgen::ReplInputWrapper& input
 	);
 
-	/**
-	 * @brief Key for QueryReplInstructionWrapper
-	 */
-	struct QueryReplInstructionWrapper_Key {
-		pst::AccessLocked<pst::Stmt> stmt;
-		u64                          counter;
-
-		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const;
-	};
-
-	/**
-	 * @brief Query to build a HOUT function that wraps a REPL instruction.
-	 *
-	 * Takes a single instruction statement (if/while/for/block) and builds a complete
-	 * HOUTFunction that executes the instruction inside a synthetic void function body.
-	 * This allows the DVM to execute bare instructions via runFunction.
-	 */
-	DECLARE_QUERY(
-		QueryReplInstructionWrapper,
-		QueryReplInstructionWrapper_Key,
-		query::QResult<helios::HOUTFunction>,
-		({})
+	query::QResult<helios::SymID> queryReplExpressionWrapperSymbol(
+		query::Context& ctx, pst::AccessLocked<pst::ExprStmt> expr_stmt, u64 counter
 	);
 
-	/**
-	 * @brief Key for QueryReplVariableWrapper
-	 */
-	struct QueryReplVariableWrapper_Key {
-		pst::AccessLocked<pst::Variable> var_stmt;
-		u64                              counter;
-
-		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const;
-	};
-
-	/**
-	 * @brief Result of QueryReplVariableWrapper: the storage of a REPL global variable and the
-	 * function that initializes it.
-	 */
-	struct QueryReplVariableWrapper_Result final {
-		/**
-		 * @brief Global data for the variable, always holding an empty (zero) initializer, so that
-		 * no initialization happens at global data creation time.
-		 */
-		helios::HOUTGlobalData global_data;
-
-		/**
-		 * @brief Synthetic void function constructing the variable from its declared initial value.
-		 */
-		helios::HOUTFunction initializer_function;
-	};
-
-	/**
-	 * @brief Query to build the global data and the initializing HOUT function for a REPL variable
-	 * declaration.
-	 *
-	 * Takes a variable declaration statement and splits it into two parts:
-	 * - global data whose initial value is an empty (zero) value for every type, so that declaring
-	 *   the variable never runs any initialization on its own,
-	 * - a synthetic void function that performs the actual construction from the declared initial
-	 *   value, which the DVM can execute via runFunction.
-	 */
-	DECLARE_QUERY(
-		QueryReplVariableWrapper,
-		QueryReplVariableWrapper_Key,
-		CRef<query::QResult<QueryReplVariableWrapper_Result>>,
-		({})
+	helios::SymID queryReplInstructionWrapperSymbol(
+		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, u64 counter
 	);
+
+	helios::SymID queryReplGlobalInitializerWrapperSymbol(
+		query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt, u64 counter
+	);
+
+	helios::SymID getVariableSymID(query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt);
+
+	/**
+	 * @brief Get the symbol standing for the storage of a REPL/script global variable, holding an
+	 * empty (zero) value instead of the declared initial one.
+	 *
+	 * It mangles to the name of `variable_symbol`, so it is the same storage as far as everything
+	 * referring to the variable is concerned. The declared initial value is constructed by the
+	 * wrapper of @ref queryReplGlobalInitializerWrapperSymbol instead.
+	 */
+	helios::SymID queryReplEmptyVariableSymbol(query::Context& ctx, helios::SymID variable_symbol);
 
 }  // namespace compiler::repl

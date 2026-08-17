@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ctv/ctv.hpp>
+#include <frontend/pst_parser/pst_config.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout.hpp>  // @TODO: #404 try to relax it, it's just for Operatoriness, we could move it elsewhere
 #include <helios/scope_id.hpp>
@@ -215,8 +216,6 @@ namespace compiler::helios::defgen {
 	/**
 	 * Represents a compiler-generated function wrapper for REPL expressions.
 	 * This is used to wrap single REPL expressions in a synthetic function.
-	 * @note this does not store any function data, since this symbol is created when
-	 * programmatically generating the function HOUT via QueryReplExpressionWrapper.
 	 *
 	 * @warning counter must never be reused with a different return_type.
 	 * The mangled name is based only on counter, so reusing counter with different return_type
@@ -224,21 +223,50 @@ namespace compiler::helios::defgen {
 	 * enforces this by incrementing m_line_counter per statement, but any manual wrapper
 	 * construction must preserve this rule.
 	 */
-	struct ReplExpressionWrapper final {
-		u64 counter;  // A unique counter to distinguish different REPL expression wrappers.
+	struct ReplInputWrapper final {
+		/**
+		 * @brief Which kind of REPL input the wrapper was generated for.
+		 */
+		enum class Type { Instruction, Expression, GlobalInitializer };
+		Type type;
+
+		/**
+		 * @brief A unique counter to distinguish different REPL expression wrappers.
+		 */
+		u64 counter;
+
+		/**
+		 * @brief Return type of the wrapper function.
+		 */
 		tsh::SymbolType<> return_type;
+
+		/**
+		 * @brief Hash of the PST element (expression statement or instruction statement) that the
+		 * wrapper executes.
+		 */
+		pst::HashType pst_element_hash;
+
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
 	/**
-	 * Represents a compiler-generated function wrapper for REPL instructions.
-	 * This is used to wrap a single REPL instruction (if/while/for/block) in a
-	 * synthetic void function so the DVM can execute it via runFunction.
+	 * @brief Represents the storage of a REPL/script global variable, stripped of its initial
+	 * value.
+	 *
+	 * A top-level `var` must be constructed in statement order, not before the entry point runs
+	 * together with every other global. The declaration therefore contributes two entities: this
+	 * symbol, whose global data holds an empty (zero) value so that declaring it runs nothing, and
+	 * a `ReplInputWrapper` of type `GlobalInitializer` that performs the real construction.
+	 *
+	 * @note It is a symbol of its own (instead of a substituted `HOUTGlobalData` of
+	 * `original_variable`) because global data lowering is keyed by the symbol, so two global data
+	 * of the same symbol would be indistinguishable to the query framework. It mangles to the name
+	 * of `original_variable`, so that everything referring to the variable refers to this storage.
 	 */
-	struct ReplInstructionWrapper final {
-		u64 counter;
+	struct ReplEmptyVariable final {
+		SymID original_variable;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -280,9 +308,8 @@ namespace compiler::helios::defgen {
 #define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
 	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::BuiltinTemplatedSymbol, \
 		defgen::Parameter, defgen::SelfParameter, defgen::Field,                                  \
-		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal,                              \
-		defgen::ReplExpressionWrapper, defgen::ReplInstructionWrapper, defgen::ScriptMainWrapper, \
-		defgen::GeneratedConstant
+		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal, defgen::ReplInputWrapper,    \
+		defgen::ReplEmptyVariable, defgen::ScriptMainWrapper, defgen::GeneratedConstant
 
 	using GeneratedSymbolDataVariant = std::variant<GENERATED_SYMBOL_SEMANTICS_LIST>;
 

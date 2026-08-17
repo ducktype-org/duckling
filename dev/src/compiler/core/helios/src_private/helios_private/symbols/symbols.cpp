@@ -88,7 +88,9 @@ namespace compiler::helios {
 				         ? EmissionPolicy::Replicated
 				         : EmissionPolicy::OwnerOnly;
 			}
-			variant_case_novalue(defgen::BuiltinOperator, defgen::ScriptMainWrapper) {
+			variant_case_novalue(
+				defgen::BuiltinOperator, defgen::ScriptMainWrapper, defgen::ReplEmptyVariable
+			) {
 				return EmissionPolicy::OwnerOnly;
 			}
 			variant_case(defgen::BuiltinTemplatedSymbol, data) {
@@ -104,8 +106,7 @@ namespace compiler::helios {
 				defgen::Field,
 				defgen::GeneratedFunctionVariable,
 				defgen::ControlFlowLocal,
-				defgen::ReplExpressionWrapper,
-				defgen::ReplInstructionWrapper,
+				defgen::ReplInputWrapper,
 				defgen::GeneratedConstant
 			) {
 				return EmissionPolicy::Replicated;
