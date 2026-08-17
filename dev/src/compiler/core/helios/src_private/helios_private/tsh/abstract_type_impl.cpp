@@ -553,8 +553,8 @@ namespace compiler::tsh {
 	}
 
 	bool StaticArrayAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
-		// Static arrays have trivial destructors if the inner type has a noOpDestructor or they
-		// are zero sized.
+		// Static arrays have trivial destructors if the inner type is trivially destructible or
+		// they are zero sized.
 		return size == 0 || element_type.getType().isTriviallyDestructible(ctx);
 	}
 
