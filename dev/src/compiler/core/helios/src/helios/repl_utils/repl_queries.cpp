@@ -140,6 +140,10 @@ namespace compiler::repl {
 		});
 	}
 
+	helios::SymID getVariableSymID(query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt) {
+		return ctx.query<helios::QuerySymbolOfSTMT>({ var_stmt }).valueOrThrow();
+	}
+
 	helios::SymID queryReplInstructionWrapperSymbol(
 		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, u64 counter
 	) {
@@ -166,10 +170,6 @@ namespace compiler::repl {
 				.pst_element_hash = var_stmt.unlock(ctx)->getHash(),
 			},
 		});
-	}
-
-	helios::SymID getVariableSymID(query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt) {
-		return ctx.query<helios::QuerySymbolOfSTMT>({ var_stmt }).valueOrThrow();
 	}
 
 	helios::SymID queryReplEmptyVariableSymbol(query::Context& ctx, helios::SymID variable_symbol) {

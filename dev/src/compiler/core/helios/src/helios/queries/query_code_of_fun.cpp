@@ -1,5 +1,4 @@
 #include "function_queries.hpp"
-#include "helios_private/symbols/generated_symbol_data.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>

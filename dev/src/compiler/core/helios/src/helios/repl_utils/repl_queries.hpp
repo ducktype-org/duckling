@@ -33,27 +33,35 @@ namespace compiler::repl {
 		query::Context& ctx, const helios::defgen::ReplInputWrapper& input
 	);
 
-	query::QResult<helios::SymID> queryReplExpressionWrapperSymbol(
-		query::Context& ctx, pst::AccessLocked<pst::ExprStmt> expr_stmt, u64 counter
-	);
 
+	helios::SymID getVariableSymID(query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt);
+
+	// ========================== Helios Symbols Factories ==========================
+
+	/**
+	 * @brief Get the symbol standing for the wrapper function of the instruction.
+	 */
 	helios::SymID queryReplInstructionWrapperSymbol(
 		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, u64 counter
 	);
 
+	/**
+	 * @brief Get the symbol standing for the wrapper function of the expression.
+	 */
+	query::QResult<helios::SymID> queryReplExpressionWrapperSymbol(
+		query::Context& ctx, pst::AccessLocked<pst::ExprStmt> expr_stmt, u64 counter
+	);
+
+	/**
+	 * @brief Get the symbol standing for the wrapper function of the variable initializer expression.
+	 */
 	helios::SymID queryReplGlobalInitializerWrapperSymbol(
 		query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt, u64 counter
 	);
 
-	helios::SymID getVariableSymID(query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt);
-
 	/**
 	 * @brief Get the symbol standing for the storage of a REPL/script global variable, holding an
 	 * empty (zero) value instead of the declared initial one.
-	 *
-	 * It mangles to the name of `variable_symbol`, so it is the same storage as far as everything
-	 * referring to the variable is concerned. The declared initial value is constructed by the
-	 * wrapper of @ref queryReplGlobalInitializerWrapperSymbol instead.
 	 */
 	helios::SymID queryReplEmptyVariableSymbol(query::Context& ctx, helios::SymID variable_symbol);
 

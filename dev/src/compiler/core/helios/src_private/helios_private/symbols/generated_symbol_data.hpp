@@ -254,16 +254,6 @@ namespace compiler::helios::defgen {
 	/**
 	 * @brief Represents the storage of a REPL/script global variable, stripped of its initial
 	 * value.
-	 *
-	 * A top-level `var` must be constructed in statement order, not before the entry point runs
-	 * together with every other global. The declaration therefore contributes two entities: this
-	 * symbol, whose global data holds an empty (zero) value so that declaring it runs nothing, and
-	 * a `ReplInputWrapper` of type `GlobalInitializer` that performs the real construction.
-	 *
-	 * @note It is a symbol of its own (instead of a substituted `HOUTGlobalData` of
-	 * `original_variable`) because global data lowering is keyed by the symbol, so two global data
-	 * of the same symbol would be indistinguishable to the query framework. It mangles to the name
-	 * of `original_variable`, so that everything referring to the variable refers to this storage.
 	 */
 	struct ReplEmptyVariable final {
 		SymID original_variable;

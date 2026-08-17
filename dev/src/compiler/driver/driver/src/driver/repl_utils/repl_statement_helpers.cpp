@@ -1,7 +1,5 @@
 #include "repl_statement_helpers.hpp"
 
-#include "helios/hout/hout.hpp"
-
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
