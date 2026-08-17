@@ -14,6 +14,12 @@ contains a Windows drive-letter check, putting it in OSUtils would create a cycl
 - OS syscall wrappers, those go in OSUtils
 - Anything not related to path formatting
 
+## Platform coverage
+
+The Windows branch of `formatFileUri` is only compiled on Windows, so unit
+tests on Linux and macOS never run it. A Windows CI runner is planned to
+cover it (@TODO: #3343 Add Windows CI coverage for os_utils/filepath_utils platform branches).
+
 ## Adding a new file
 
 1. Add the source to `CMakeLists.txt`
