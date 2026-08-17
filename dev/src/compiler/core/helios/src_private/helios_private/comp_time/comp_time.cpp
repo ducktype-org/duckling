@@ -841,7 +841,6 @@ namespace compiler::helios {
 			void visitReusableExpr(const code::ReusableExpr& reusable) override {
 				evaluateSubExpr(reusable.inner.ref());
 			}
-
 		};
 
 		/**

@@ -3117,7 +3117,6 @@ private:
 				);
 				assert_generated_copy(stripImplicitMove(values.at(1).get()));
 			}
-
 		});
 	}
 

@@ -132,7 +132,6 @@ namespace compiler::tsh {
 	 */
 	DECLARE_QUERY(QuerySliceType, SymbolType<>, SliceAbstractType, ({ .uses_qresult = false }))
 
-
 	/**
 	 * @brief Key for QueryStaticArrayType.
 	 */

@@ -323,7 +323,37 @@ class List {
         cap = 0u64;
     }
 
+    #{
+        A list owns its buffer, so a copy has to allocate its own and copy the elements one by
+        one with `T`'s copy constructor.
+    #}
+    List.copy(other: const ref listType:{T}()) = {
+        var result: listType:{T}();
+        result.reserve(other.length());
+
+        var i = 0i64;
+        while (i < other.length() as i64) {
+            result.push(copy other.pointer[i]);
+            i = i + 1i64;
+        }
+        return result;
+    }
+
     List.destroy() = {
+        # Moving an element out and dropping the result on the floor runs `T`'s destructor;
+        # freeing the buffer alone would leak everything the elements own.
+        var i = 0i64;
+        while (i < len as i64) {
+            builtins.move_out:{T}(ptrof pointer[i]);
+            i = i + 1i64;
+        }
         allocation:{T}.free(pointer);
     }
 }
+
+#{
+    Spells out `List:{T}`, which the class body cannot name directly.
+    @TODO: #3350 Use `List:{T}` inside the class body once it resolves unambiguously.
+#}
+template(T: type)
+fun listType() -> type = List:{T};

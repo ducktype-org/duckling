@@ -64,8 +64,8 @@ namespace compiler::lir {
 		                       ? LIRGlobalType::Constant
 		                       : LIRGlobalType::Variable;
 
-		const bool link_once
-			= helios::emissionPolicy(ctx, mir_global.helios_id) == helios::EmissionPolicy::Replicated;
+		const bool link_once = helios::emissionPolicy(ctx, mir_global.helios_id)
+		                    == helios::EmissionPolicy::Replicated;
 
 		return LIRGlobal{
 			type_layout,

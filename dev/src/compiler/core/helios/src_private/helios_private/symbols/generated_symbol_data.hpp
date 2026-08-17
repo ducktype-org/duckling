@@ -88,8 +88,8 @@ namespace compiler::helios::defgen {
 	class BuiltinTemplatedSymbol final {
 	public:
 		enum class Kind {
-			BoxAlloc,  //< `box_alloc(value: T) -> box T` - allocates memory for the Box.
-			BoxFree,   //< `box_free(b: ref T)` - release the storage owned by the box.
+			BoxAlloc,       //< `box_alloc(value: T) -> box T` - allocates memory for the Box.
+			BoxFree,        //< `box_free(b: ref T)` - release the storage owned by the box.
 			BoxDestructor,  //< `box_destructor(b: ref T)` - destroys the pointee, then calls BoxFree.
 			MoveIn          //< `move_in(ptr T, T)` - in place construct T by bytecopy
 		};

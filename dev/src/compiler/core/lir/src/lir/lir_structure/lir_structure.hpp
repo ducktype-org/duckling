@@ -559,8 +559,7 @@ namespace compiler::lir {
 	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
-	using InstrParameters
-		= std::variant<NoInstrParameters, CastParameters, MetaParameters>;
+	using InstrParameters = std::variant<NoInstrParameters, CastParameters, MetaParameters>;
 
 	struct InstructionMetadata {
 		base::Optional<dia::StablePosition> position;

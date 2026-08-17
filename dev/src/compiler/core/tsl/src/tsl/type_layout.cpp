@@ -543,7 +543,6 @@ namespace compiler::tsl {
 			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
 			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
 			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
-
 	};
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::ClassAbstractType class_type, query::Context& ctx):
