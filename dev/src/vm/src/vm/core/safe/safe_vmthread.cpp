@@ -90,20 +90,7 @@ namespace vm {
 		auto*      instr       = frame->instr;
 		std::byte* local_stack = frame->local_stack;
 
-		low::MicroOpcode opcode = getInstructionOpcode(*instr);
-		if (vm::low::isBreakpoint(opcode)) {
-			const auto* program_copy
-				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
-			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
-
-			auto original_instr
-				= program_copy->getOriginalProgram()
-			          ->getFunctions()
-			          .at(frame->current_function->name)
-			          ->bc[static_cast<size_t>(frame->instr - &frame->current_function->bc[0])];
-
-			opcode = getInstructionOpcode(original_instr);
-		}
+		low::MicroOpcode opcode = low::getUnderlying(getInstructionOpcode(*instr));
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
@@ -470,6 +457,14 @@ namespace vm {
 		} else {                                                                                    \
 			break;                                                                                  \
 		}                                                                                           \
+	}
+	#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+	#undef HANDLE_MICRO_INSTR
+
+	#define HANDLE_MICRO_INSTR(opcode_name)                                    \
+	case low::MicroOpcode::break_##opcode_name: {                              \
+		vm::OpFuns::op_break_##opcode_name(instr, local_stack, frame, thread); \
+		break;                                                                 \
 	}
 	#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 	#undef HANDLE_MICRO_INSTR

@@ -52,8 +52,6 @@ namespace vm {
 		 */
 		CRef<low::ILowVMProgram> loaded_program;
 
-		low::LowVMProgramCopy loaded_program_copy;
-
 		Memory memory;
 
 		base::Optional<DeadlockDetector> deadlock_detector;

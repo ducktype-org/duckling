@@ -46,8 +46,7 @@ namespace vm {
 
 		if (code_result.has_value()) {
 			compiler.recompile();
-			loaded_program_copy.selfUpdate();
-			updateGlobalDataMemory(&loaded_program_copy);
+			updateGlobalDataMemory(loaded_program);
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -191,8 +190,7 @@ namespace vm {
 
 	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
 		  IVMProcess(my_pid),
-		  loaded_program(&loaded_program_copy),
-		  loaded_program_copy(compiler.getLowProgram()) {
+		  loaded_program(compiler.getLowProgram()) {
 		if (enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
 	}
