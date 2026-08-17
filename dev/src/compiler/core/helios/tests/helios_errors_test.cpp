@@ -743,9 +743,6 @@ private:
 				{ "Left side of assignment can't be immutable." },
 				1
 			);
-
-			// @TODO: #3357 Re-add the `for`-over-list variants of these checks once `for` works
-			// over the standard library `List`.
 		}
 
 		// ============================ Static Arrays ============================
