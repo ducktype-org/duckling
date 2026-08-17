@@ -8,7 +8,6 @@
 
 #include <ctv/ctv.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -33,13 +32,15 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(lifetimeAnalysisTest);
 		TESTER_ADD_TEST(moveValidationTest);
+		TESTER_ADD_TEST(reinitAfterMoveTest);
+		TESTER_ADD_TEST(moveDestructorTest);
+		TESTER_ADD_TEST(moveOwnershipTest);
 		TESTER_ADD_TEST(simpleLifetimeSequenceTest);
 		TESTER_ADD_TEST(lifetimeFlagsRepeatedBlocks);
 		TESTER_ADD_TEST(lifetimeFlagsSingleBlock);
 		TESTER_ADD_TEST(lifetimeFlagsNestedBlocks);
-		TESTER_ADD_TEST(newIntermediateBlockForDifferentEndingScopesTest);
-		TESTER_ADD_TEST(multipleIntermediateBlocksTest);
-		TESTER_ADD_TEST(optimizationForSameEndingScopesTest);
+		TESTER_ADD_TEST(destructorInsertionTest);
+		TESTER_ADD_TEST(intermediateDestructorBlocksTest);
 	}
 
 private:
@@ -58,7 +59,7 @@ private:
 	}
 
 	void simpleLifetimeSequenceTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/mir_var_test")));
+		auto [module, scope] = getModule(fs::File(path("modules/simple_lifetime_sequence")));
 
 		auto goo_mir = getMIRFunctionByName(module, "goo");
 
@@ -87,28 +88,28 @@ private:
 			.expectDestruct("c")
 			.expectScopeEnd("c")
 
-			.expectScopeStart("4.tmp")  // The if condition temporary
+			.expectScopeStart("5.tmp")  // The if condition temporary
 			.expectInstruction(compiler::mir::Operation::Branch)
-			.expectScopeEnd("4.tmp")
+			.expectScopeEnd("5.tmp")
 			.expectDestruct("a")
 			.expectInstruction(compiler::mir::Operation::ReturnValue)
 			.expectScopeEnd("a")
-			// Second return
-			.expectDestruct("a")
+			.expectMove("a")
 			.expectInstruction(compiler::mir::Operation::ReturnValue)
 			.expectScopeEnd("a")
 			.validate(foo_mir);
 
-		auto return_value = foo_mir->local_list[3];
-		assertTrue(
-			return_value->lifetime_flags.contains(compiler::mir::LifetimeFlag::ReturnTmpValue),
-			"Return value should have ReturnTmpValue flag"
-		);
-		auto condition_tmp = foo_mir->local_list[4];
-		assertTrue(
-			condition_tmp->lifetime_flags.contains(compiler::mir::LifetimeFlag::ConditionTmpValue),
-			"Condition temporary should have ConditionTmpValue flag"
-		);
+		auto count_with_flag = [&](compiler::mir::LifetimeFlag flag) {
+			usize count = 0;
+			for (const auto& local: foo_mir->local_list)
+				if (local.lifetime_flags.contains(flag)) count++;
+			return count;
+		};
+
+		// One per `return` statement.
+		ASSERT_EQUAL_PRINT(2, count_with_flag(compiler::mir::LifetimeFlag::ReturnTmpValue));
+		// One for the single `if` condition.
+		ASSERT_EQUAL_PRINT(1, count_with_flag(compiler::mir::LifetimeFlag::ConditionTmpValue));
 	}
 
 	void lifetimeFlagsSingleBlock() {
@@ -159,156 +160,532 @@ private:
 	}
 
 	void moveValidationTest() {
-		// @note This test is very fragile and may require hotfixes even after unrelated changes.
-		// Proper tests can be written once 'move' is implemented. It should contain usage of 'if',
-		// 'else', 'break', 'continue', 'switch' etc..
+		// Use-after-move validation, driven by real `move` expressions. `good*` functions lower
+		// successfully (and we check the move/destructor shape they produce), while `bad*`
+		// functions fail to lower because a moved (or possibly-moved) value is read.
+		using compiler::mir::Operation;
 		auto [module, scope] = getModule(fs::File(path("modules/move_validation")));
 
+		// In all `good*` functions: Local(0) = param `c`, Local(1) = `a`, Local(2) = `b`.
+
+		// good1: straight-line move. `b` is moved (so it has no destructor), while `a` stays alive
+		// to its scope end and gets an unconditional `Destruct`.
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectConstruct("b")
+			.expectMove("b")
+			.expectInstruction(Operation::Destruct)
+			.expectDestruct("a")
+			.validate(getMIRFunctionByName(module, "good1"));
+
+		// good2: `b` is moved only on the `if` branch, so at the merge it is `MaybeMoved` and gets
+		// a conditional `DestructIf`; `a` still gets an unconditional `Destruct`.
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectConstruct("b")
+			.expectMove("b")
+			.expectInstruction(Operation::DestructIf)
+			.expectDestruct("b")
+			.expectInstruction(Operation::Destruct)
+			.expectDestruct("a")
+			.validate(getMIRFunctionByName(module, "good2"));
+
+		// good3: `b` is loop-local and moved on a conditional path inside the loop body, so it is
+		// `MaybeMoved` at the end of the body -> `DestructIf`.
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectConstruct("b")
+			.expectMove("b")
+			.expectInstruction(Operation::DestructIf)
+			.expectDestruct("b")
+			.expectInstruction(Operation::Destruct)
+			.expectDestruct("a")
+			.validate(getMIRFunctionByName(module, "good3"));
+
+		// good4: `b` is loop-local and moved unconditionally in the body, so it is `Moved` at the
+		// end of the body and gets no destructor at all; only `a` is destructed.
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectConstruct("b")
+			.expectMove("b")
+			.expectInstruction(Operation::Destruct)
+			.expectDestruct("a")
+			.validate(getMIRFunctionByName(module, "good4"));
+
+		// `bad*` functions read a moved / possibly-moved value, so lowering must fail.
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-			auto& functions = unit.functions;
 
-			for (CRef<compiler::helios::HOUTFunction> fun: functions) {
-				if (fun->declaration->original_name.str() == "good1") {
-					auto& mir_rep_good1 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
-
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good1.local_list[2]);
-
-					mir_rep_good1.blocks[mir_rep_good1.block_order[0]]
-						.instructions[4]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good1).isOk());
-				}
-
-				if (fun->declaration->original_name.str() == "good2") {
-					auto& mir_rep_good2 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> var_b(mir_rep_good2.local_list[2]);
-					compiler::mir::Instruction&   assignment
-						= mir_rep_good2.blocks[mir_rep_good2.block_order[1]].instructions[0];
-
-					// If this test fails use the following to find the correct Instruction.
-					// mir_rep_good2.debugPrint(std::cerr);
-					// assignment.debugPrint(std::cerr);
-					assertEqual(
-						compiler::mir::Operation::Assign,
-						assignment.operation,
-						"Fragile test, please fix (good2, assignment)"
-					);
+			auto check_fails = [&](std::string_view name) {
+				for (CRef<compiler::helios::HOUTFunction> fun: unit.functions) {
+					if (fun->declaration->original_name.strView() != name) continue;
 					assertTrue(
-						assignment.arguments[0].isLocal(), "Fragile test, please fix (good2, local)"
+						ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->hasFailed(),
+						base::strConcat(name, " should fail to lower")
 					);
-					assignment.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, var_b);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good2).isOk());
+					return;
 				}
+				CORE_PANIC(base::strConcat("Function '", name, "' not found in module"));
+			};
 
-				if (fun->declaration->original_name.str() == "good3") {
-					auto& mir_rep_good3 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good3.local_list[2]);
-
-					mir_rep_good3.blocks[mir_rep_good3.block_order[2]]
-						.instructions[2]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good3).isOk());
-				}
-
-				if (fun->declaration->original_name.str() == "good4") {
-					auto& mir_rep_good4 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good4.local_list[2]);
-
-					mir_rep_good4.blocks[mir_rep_good4.block_order[1]]
-						.instructions[2]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good4).isOk());
-				}
-
-				if (fun->declaration->original_name.str() == "bad1") {
-					auto& mir_rep_bad1 = (compiler::mir::Function&) ctx
-					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad1.local_list[2]);
-
-					mir_rep_bad1.blocks[mir_rep_bad1.block_order[0]]
-						.instructions[2]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad1).isBad());
-				}
-
-				if (fun->declaration->original_name.str() == "bad2") {
-					auto& mir_rep_bad2 = (compiler::mir::Function&) ctx
-					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad2.local_list[2]);
-					mir_rep_bad2.blocks[mir_rep_bad2.block_order[1]]
-						.instructions[0]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad2).isBad());
-				}
-
-				if (fun->declaration->original_name.str() == "bad3") {
-					auto& mir_rep_bad3 = (compiler::mir::Function&) ctx
-					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad3.local_list[2]);
-					mir_rep_bad3.blocks[mir_rep_bad3.block_order[1]]
-						.instructions[0]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad3).isBad());
-				}
-			}
+			check_fails("bad1");
+			check_fails("bad2");
+			check_fails("bad3");
 		});
 	}
 
-	i32 countIntermediateDestructorBlocks(CRef<compiler::mir::Function> func) {
-		i32 intermediate_blocks_count = 0;
+	void reinitAfterMoveTest() {
+		// Reinitialization by assignment. A bare-local store (e.g. `b = 99`) carries a `Reinit`
+		// flag that revives the local for move state, so reading it after a prior move-out is
+		// valid. Each `getMIRFunctionByName` below panics if lowering fails, so the mere fact these
+		// `reinit*` functions lower is the regression guard against the false use-after-move.
+		using compiler::mir::Operation;
+		auto [module, scope] = getModule(fs::File(path("modules/move_validation")));
+
+		// reinit1: `b` moved out (`a = move b`), reinitialized (`b = 99`), then read (`eat(b)`).
+		// The `a = move b` store also reinitializes `a`.
+		auto reinit1 = getMIRFunctionByName(module, "reinit1");
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectConstruct("b")
+			.expectMove("b")                                    // a = move b
+			.expectReinit("b")                                  // b = 99
+			.validate(reinit1);
+		LifetimeChecker{}.expectReinit("a").validate(reinit1);  // a = move b
+
+		// reinit2: `a` is moved and reinitialized on both branches, alive at the merge read.
+		auto reinit2 = getMIRFunctionByName(module, "reinit2");
+		LifetimeChecker{}.expectMove("a").expectReinit("a").validate(reinit2);
+
+		// reinit3: `a` is moved then reinitialized inside the loop body.
+		auto reinit3 = getMIRFunctionByName(module, "reinit3");
+		LifetimeChecker{}.expectMove("a").expectReinit("a").validate(reinit3);
+	}
+
+	void moveDestructorTest() {
+		// Move-aware destructor insertion. With the move-state analysis in place, a local that is
+		// definitely alive at its scope end gets an unconditional `Destruct`, while a local that
+		// is moved on only some control-flow paths is `MaybeMoved` and gets a conditional
+		// `DestructIf`. A definitely-moved local gets no destructor at all.
+		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
+
+		// `a` is never moved -> alive at scope end -> unconditional `Destruct`.
+		auto no_move = getMIRFunctionByName(module, "noMove");
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectInstruction(compiler::mir::Operation::Destruct)
+			.expectDestruct("a")
+			.validate(no_move);
+
+		// `a` is moved on the `if` branch only -> `MaybeMoved` at the merge -> `DestructIf`.
+		auto maybe_move = getMIRFunctionByName(module, "maybeMove");
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectMove("a")
+			.expectInstruction(compiler::mir::Operation::DestructIf)
+			.expectDestruct("a")
+			.validate(maybe_move);
+	}
+
+	/**
+	 * @brief Every instruction of the function in block order.
+	 */
+	std::vector<const compiler::mir::Instruction*> allInstructions(CRef<compiler::mir::Function> func
+	) {
+		std::vector<const compiler::mir::Instruction*> instructions;
+		for (const auto& block_id: func->block_order) {
+			const auto& block = func->blocks.at(block_id);
+			for (const auto& instr: block->instructions) instructions.push_back(&instr);
+			instructions.push_back(&block->terminator);
+		}
+		return instructions;
+	}
+
+	/**
+	 * @brief How many times a given flag is set for the local.
+	 */
+	usize countFlag(
+		CRef<compiler::mir::Function>      func,
+		compiler::mir::OperationFlag::Flag flag,
+		std::string_view                   var_name
+	) {
+		usize count = 0;
+		for (const auto* instr: allInstructions(func))
+			for (const auto& set: instr->flags)
+				if (set.flag == flag && set.local->getName().strView() == var_name) count++;
+		return count;
+	}
+
+	/**
+	 * @brief The single instruction setting a given flag for the local.
+	 */
+	const compiler::mir::Instruction* onlyInstructionWithFlag(
+		CRef<compiler::mir::Function>      func,
+		compiler::mir::OperationFlag::Flag flag,
+		std::string_view                   var_name
+	) {
+		const compiler::mir::Instruction* found = nullptr;
+		for (const auto* instr: allInstructions(func))
+			for (const auto& set: instr->flags)
+				if (set.flag == flag && set.local->getName().strView() == var_name) {
+					ASSERT_TRUE(found == nullptr);
+					found = instr;
+				}
+		ASSERT_TRUE(found != nullptr);
+		return found;
+	}
+
+	bool hasFlagFor(
+		const compiler::mir::Instruction&  instr,
+		compiler::mir::OperationFlag::Flag flag,
+		std::string_view                   var_name
+	) {
+		return std::ranges::any_of(instr.flags, [&](const auto& set) {
+			return set.flag == flag && set.local->getName().strView() == var_name;
+		});
+	}
+
+	/**
+	 * @brief Asserts that the value moved out of `var_name` ends up in a temporary that owns it
+	 * and destructs it.
+	 */
+	void assertMovedIntoDestructedTemporary(
+		CRef<compiler::mir::Function> func, std::string_view var_name
+	) {
+		using Flag = compiler::mir::OperationFlag::Flag;
+
+		const auto* move_instr = onlyInstructionWithFlag(func, Flag::Move, var_name);
+		ASSERT_TRUE(move_instr->operation == compiler::mir::Operation::Assign);
+
+		// The source is moved out, so it must not be destructed.
+		ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Destruct, var_name));
+
+		usize owners = 0;
+		for (const auto& set: move_instr->flags) {
+			if (set.flag != Flag::Construct) continue;
+			owners++;
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, set.local->getName().strView()));
+		}
+		ASSERT_EQUAL_PRINT(1, owners);
+	}
+
+	void moveOwnershipTest() {
+		using Flag = compiler::mir::OperationFlag::Flag;
+
+		auto [module, scope] = getModule(fs::File(path("modules/move_ownership")));
+
+
+		// The `Call` reading `a` marks it as moved out. No `Assign` into a temporary is built for
+		// the move, `a` is not destructed here any more.
+		{
+			auto        func       = getMIRFunctionByName(module, "handedToCall");
+			const auto* move_instr = onlyInstructionWithFlag(func, Flag::Move, "a");
+			ASSERT_TRUE(move_instr->operation == compiler::mir::Operation::Call);
+			ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Destruct, "a"));
+		}
+
+		// The initialised variable becomes the owner, so the store into it carries the move and
+		// `b` is the one that gets destructed.
+		{
+			auto        func       = getMIRFunctionByName(module, "storedInPlace");
+			const auto* move_instr = onlyInstructionWithFlag(func, Flag::Move, "a");
+			ASSERT_TRUE(move_instr->operation == compiler::mir::Operation::Assign);
+			ASSERT_TRUE(hasFlagFor(*move_instr, Flag::Construct, "b"));
+			ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Destruct, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "b"));
+		}
+
+		// `move a;` hands the value to nobody, so a temporary owns it and destructs it.
+		assertMovedIntoDestructedTemporary(getMIRFunctionByName(module, "discarded"), "a");
+
+		// Reading the pointee out of the moved box does not hand the box over.
+		assertMovedIntoDestructedTemporary(getMIRFunctionByName(module, "readThrough"), "a");
+		assertMovedIntoDestructedTemporary(
+			getMIRFunctionByName(module, "readThroughImplicitly"), "a"
+		);
+
+		// An implicitly moved argument goes straight to the callee.
+		{
+			auto                              func = getMIRFunctionByName(module, "movedTemporary");
+			usize                             moves      = 0;
+			const compiler::mir::Instruction* move_instr = nullptr;
+			std::string                       moved_name;
+			for (const auto* instr: allInstructions(func))
+				for (const auto& set: instr->flags)
+					if (set.flag == Flag::Move) {
+						moves++;
+						move_instr = instr;
+						moved_name = std::string(set.local->getName().strView());
+					}
+			ASSERT_EQUAL_PRINT(1, moves);
+			ASSERT_TRUE(move_instr->operation == compiler::mir::Operation::Call);
+			ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Destruct, moved_name));
+		}
+
+		// A moved rvalue has no place to be moved out of, so the call writes its result straight
+		// into `b`.
+		{
+			auto func = getMIRFunctionByName(module, "initFromCall");
+			ASSERT_EQUAL_PRINT(1, func->local_list.size());
+
+			const auto* construct = onlyInstructionWithFlag(func, Flag::Construct, "b");
+			ASSERT_TRUE(construct->operation == compiler::mir::Operation::Call);
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "b"));
+
+			for (const auto* instr: allInstructions(func))
+				for (const auto& set: instr->flags) ASSERT_TRUE(set.flag != Flag::Move);
+		}
+	}
+
+	/**
+	 * @brief The ctor and the dtor MIR functions of the named global variable.
+	 */
+	compiler::mir::MIRCtorDtorPair getGlobalCtorDtor(
+		compiler::frontend::ModuleID module_id, std::string_view global_name
+	) {
+		auto result = query::utils::withContextCompute([&](query::Context& ctx) {
+			auto& unit
+				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
+			for (const auto& global: unit.glob_data) {
+				if (global->original_name.strView() != global_name) continue;
+
+				const auto& global_data = ctx.query<compiler::mir::LowerGlobalData>(
+												 compiler::mir::KeyOf_LowerGlobalData{ global }
+				)
+				                              ->valueOrPanic();
+				return std::get<compiler::mir::MIRCtorDtorPair>(global_data.initial_value);
+			}
+			CORE_PANIC(base::strConcat("Global with name '", global_name, "' not found in module"));
+		});
+		return std::any_cast<compiler::mir::MIRCtorDtorPair>(result);
+	}
+
+	/**
+	 * @brief How many instructions of the function use the given operation.
+	 */
+	usize countOperation(CRef<compiler::mir::Function> func, compiler::mir::Operation operation) {
+		usize count = 0;
+		for (const auto* instr: allInstructions(func))
+			if (instr->operation == operation) count++;
+		return count;
+	}
+
+	/**
+	 * @brief Whether the instruction calls a function of the given name. Both `Call` and `Destruct`
+	 * take the callee as their first argument.
+	 */
+	bool callsFunction(const compiler::mir::Instruction& instr, std::string_view function_name) {
+		if (instr.arguments.empty()) return false;
+		const auto* callee
+			= std::get_if<compiler::mir::MIRFunctionLiteral>(&instr.arguments.at(0).getVariant());
+		return callee != nullptr
+		    && compiler::helios::name(callee->helios_id).strView() == function_name;
+	}
+
+	/**
+	 * @brief Index of the only instruction matching the predicate, within `allInstructions`.
+	 */
+	usize onlyIndexOf(
+		CRef<compiler::mir::Function>                                 func,
+		const std::function<bool(const compiler::mir::Instruction&)>& matches
+	) {
+		base::Optional<usize> found;
+		const auto            instructions = allInstructions(func);
+		for (usize i = 0; i < instructions.size(); i++)
+			if (matches(*instructions.at(i))) {
+				ASSERT_TRUE(found.empty());
+				found = i;
+			}
+		ASSERT_HAS_VALUE(found);
+		return found.value();
+	}
+
+	/**
+	 * @brief Destructor insertion in all the places it happens: before an assignment overwriting a
+	 * live value, at the end of a scope, and in the dtor of a global variable. Also checks that the
+	 * ctor of a global variable never destructs anything, since it initializes raw storage.
+	 */
+	void destructorInsertionTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/destructor_insertion")));
+
+		using enum compiler::mir::Operation;
+		using Flag = compiler::mir::OperationFlag::Flag;
+
+		auto is_destruct_of = [&](std::string_view local_name) {
+			return [=](const compiler::mir::Instruction& instr) {
+				return instr.operation == Destruct && instr.arguments.size() > 1
+				    && instr.arguments.at(1).isLocal()
+				    && instr.arguments.at(1)
+				               .get<compiler::mir::MIRPlace>()
+				               .getBase<compiler::mir::MIRLocalRef>()
+				               ->getName()
+				               .strView()
+				           == local_name;
+			};
+		};
+
+		{  // The overwritten value is destructed before the assignment, and once more at the end of
+		   // the scope. Both destructors call the class' `__destruct`.
+			auto func = getMIRFunctionByName(module, "assignOverExisting");
+
+			ASSERT_EQUAL_PRINT(2, countOperation(func, Destruct));
+			for (const auto* instr: allInstructions(func))
+				if (instr->operation == Destruct) ASSERT_TRUE(callsFunction(*instr, "__destruct"));
+
+			// Only the destructor at the end of the scope ends `a`'s lifetime, the one before the
+			// assignment is followed by the value being reinitialized.
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Reinit, "a"));
+
+			const auto reinit_index
+				= onlyIndexOf(func, [&](const compiler::mir::Instruction& instr) {
+					  return hasFlagFor(instr, Flag::Reinit, "a");
+				  });
+			const auto scope_end_destruct_index
+				= onlyIndexOf(func, [&](const compiler::mir::Instruction& instr) {
+					  return hasFlagFor(instr, Flag::Destruct, "a");
+				  });
+
+			// destruct the old value -> assign the new one -> destruct it at the scope end
+			const auto instructions         = allInstructions(func);
+			usize      first_destruct_index = 0;
+			while (!is_destruct_of("a")(*instructions.at(first_destruct_index)))
+				first_destruct_index++;
+
+			ASSERT_TRUE(first_destruct_index < reinit_index);
+			ASSERT_TRUE(reinit_index < scope_end_destruct_index);
+		}
+
+		{  // The new value is computed by a call reading `a` through a reference, so the call must
+		   // not write into `a`: its result goes into a temporary, `a` is destructed only after the
+		   // call returns, and the assignment overwrites it afterwards.
+			auto func = getMIRFunctionByName(module, "assignFromCallTakingRef");
+
+			// The destructor of the overwritten value and the one at the end of the scope.
+			ASSERT_EQUAL_PRINT(2, countOperation(func, Destruct));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Reinit, "a"));
+
+			// take the address of `a` -> call -> destruct the old value -> overwrite `a`
+			LifetimeChecker{}
+				.expectConstruct("a")
+				.expectInstruction(AddressOf)
+				.expectInstruction(Call)
+				.expectInstruction(Destruct)
+				.expectReinit("a")
+				.validate(func);
+		}
+
+		{  // Self-assignment reads the value it overwrites, so the copy into the temporary has to
+		   // happen before the destructor of the old value runs.
+			auto func = getMIRFunctionByName(module, "assignItself");
+
+			ASSERT_EQUAL_PRINT(2, countOperation(func, Destruct));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Reinit, "a"));
+
+			// copy `a` into a temporary -> destruct the old value -> assign the temporary back
+			LifetimeChecker{}
+				.expectConstruct("a")
+				.expectInstruction(Assign)
+				.expectInstruction(Destruct)
+				.expectReinit("a")
+				.validate(func);
+		}
+
+		{  // A local of a non-trivially destructible type is destructed at the end of its scope,
+		   // the inner one before the rest of the function runs. A trivially destructible local is
+		   // never destructed.
+			auto func = getMIRFunctionByName(module, "scopeEnd");
+
+			ASSERT_EQUAL_PRINT(2, countOperation(func, Destruct));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "b"));
+			ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Destruct, "t"));
+
+			// `a` dies at the end of the inner scope, i.e. before `b` is even constructed.
+			const auto a_destruct_index = onlyIndexOf(func, is_destruct_of("a"));
+			const auto b_construct_index
+				= onlyIndexOf(func, [&](const compiler::mir::Instruction& instr) {
+					  return hasFlagFor(instr, Flag::Construct, "b");
+				  });
+			const auto b_destruct_index = onlyIndexOf(func, is_destruct_of("b"));
+
+			ASSERT_TRUE(a_destruct_index < b_construct_index);
+			ASSERT_TRUE(b_construct_index < b_destruct_index);
+		}
+
+		{  // A global of a class type: the ctor runs the class constructor and moves the result
+		   // into the global's storage, without destructing anything - the storage starts
+		   // uninitialized. The dtor destructs the global.
+			auto [ctor, dtor] = getGlobalCtorDtor(module, "g_res");
+			ASSERT_HAS_VALUE(dtor);
+
+			ASSERT_EQUAL_PRINT(0, countOperation(ctor, Destruct));
+			ASSERT_EQUAL_PRINT(0, countFlag(ctor, Flag::Destruct, "g_res"));
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(ctor), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "Res");
+			}));
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(ctor), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "move_in");
+			}));
+
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(dtor.value()), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "__destruct");
+			}));
+		}
+
+		{  // A global box: allocated by the ctor, freed by the dtor.
+			auto [ctor, dtor] = getGlobalCtorDtor(module, "g_box");
+			ASSERT_HAS_VALUE(dtor);
+
+			ASSERT_EQUAL_PRINT(0, countOperation(ctor, Destruct));
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(ctor), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "box_alloc");
+			}));
+			ASSERT_TRUE(std::ranges::any_of(allInstructions(dtor.value()), [&](const auto* instr) {
+				return instr->operation == Call && callsFunction(*instr, "box_destructor");
+			}));
+		}
+
+		{  // A trivially destructible global has nothing to destroy, so it gets no dtor at all.
+			auto [ctor, dtor] = getGlobalCtorDtor(module, "g_int");
+
+			ASSERT_EQUAL_PRINT(0, countOperation(ctor, Destruct));
+			ASSERT_TRUE(dtor.empty());
+		}
+	}
+
+	/**
+	 * @brief Blocks the destructor insertion added for a single outgoing edge - they hold only
+	 * destructors and jump to the original destination.
+	 */
+	usize countIntermediateDestructorBlocks(CRef<compiler::mir::Function> func) {
+		usize intermediate_blocks_count = 0;
 		for (const auto& block_id: func->block_order) {
 			const auto& block = func->blocks.at(block_id);
 			if (!block->instructions.empty()
-			    && block->instructions[0].operation == compiler::mir::Operation::Nop) {
-				if (block->terminator.operation == compiler::mir::Operation::Jump)
-					intermediate_blocks_count++;
-			}
+			    && block->instructions[0].operation == compiler::mir::Operation::Nop
+			    && block->terminator.operation == compiler::mir::Operation::Jump)
+				intermediate_blocks_count++;
 		}
 		return intermediate_blocks_count;
 	}
 
-	void newIntermediateBlockForDifferentEndingScopesTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/destructor_insertion")));
-		auto a_mir           = getMIRFunctionByName(module, "A");
-		ASSERT_EQUAL_PRINT(2, countIntermediateDestructorBlocks(a_mir));
-	}
+	/**
+	 * @brief When the successors of a terminator end different scopes, the path-specific
+	 * destructors go into intermediate blocks. When all the outgoing edges need the same
+	 * destructors, they are appended to the current block instead.
+	 */
+	void intermediateDestructorBlocksTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/intermediate_destructor_blocks")));
 
-	void multipleIntermediateBlocksTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/destructor_insertion")));
-		auto b_mir           = getMIRFunctionByName(module, "B");
-		ASSERT_EQUAL_PRINT(4, countIntermediateDestructorBlocks(b_mir));
-	}
-
-	void optimizationForSameEndingScopesTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/destructor_insertion")));
-		auto c_mir           = getMIRFunctionByName(module, "C");
-		ASSERT_EQUAL_PRINT(0, countIntermediateDestructorBlocks(c_mir));
+		// A single loop, so its back edge and its exit edge need different destructors.
+		ASSERT_EQUAL_PRINT(2, countIntermediateDestructorBlocks(getMIRFunctionByName(module, "A")));
+		// Two nested loops, so both of them need their own intermediate blocks.
+		ASSERT_EQUAL_PRINT(4, countIntermediateDestructorBlocks(getMIRFunctionByName(module, "B")));
+		// Both `if` branches end the same scope, so no intermediate block is needed.
+		ASSERT_EQUAL_PRINT(0, countIntermediateDestructorBlocks(getMIRFunctionByName(module, "C")));
 	}
 };
 

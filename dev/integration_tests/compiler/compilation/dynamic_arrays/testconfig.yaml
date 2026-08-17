@@ -19,14 +19,14 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "111\n222\n333\n3\n888888888888888\n1.1\n1.2\n1.3\n3\n888888888888888\n10\n20\n30\n40\n888888888888888\n100\n200\n300\n101\n201\n301\n101\n201\n301\n888888888888888\n2\n888888888888888\n1\n2\n3\n4\n888888888888888\n100\n2\n3\n300\n888888888888888\n3\n300\n999\n999\n888888888888888\n2\n888888888888888\n1\n2\n3\n4\n888888888888888\n100\n2\n3\n100\n888888888888888\n"
+          String: "111\n222\n333\n3\n888888888888888\n1.1\n1.2\n1.3\n3\n888888888888888\n10\n20\n30\n40\n888888888888888\n100\n200\n300\n101\n201\n301\n101\n201\n301\n888888888888888\n2\n1\n1\n2\n3\n2\n1\n2\n3\n4\n2\n888888888888888\n2\n888888888888888\n1\n2\n3\n4\n888888888888888\n100\n2\n3\n300\n888888888888888\n3\n300\n999\n999\n888888888888888\n3\n888888888888888\n1\n2\n1\n2\n888888888888888\n100\n2\n1\n100\n888888888888888\n0\n3\n888888888888888\n1\n2\n3\n4\n5\n6\n888888888888888\n3\n888888888888888\n1\n2\n3\n4\n5\n6\n888888888888888\n"
           ExitCode: 0
       llvm_valgrind:
         backend: llvm
         valgrind: "true"
         TimeOut: 3 # 1 second is often not enough on runners
         Output:
-          String: "111\n222\n333\n3\n888888888888888\n1.1\n1.2\n1.3\n3\n888888888888888\n10\n20\n30\n40\n888888888888888\n100\n200\n300\n101\n201\n301\n101\n201\n301\n888888888888888\n2\n888888888888888\n1\n2\n3\n4\n888888888888888\n100\n2\n3\n300\n888888888888888\n3\n300\n999\n999\n888888888888888\n2\n888888888888888\n1\n2\n3\n4\n888888888888888\n100\n2\n3\n100\n888888888888888\n"
+          String: "111\n222\n333\n3\n888888888888888\n1.1\n1.2\n1.3\n3\n888888888888888\n10\n20\n30\n40\n888888888888888\n100\n200\n300\n101\n201\n301\n101\n201\n301\n888888888888888\n2\n1\n1\n2\n3\n2\n1\n2\n3\n4\n2\n888888888888888\n2\n888888888888888\n1\n2\n3\n4\n888888888888888\n100\n2\n3\n300\n888888888888888\n3\n300\n999\n999\n888888888888888\n3\n888888888888888\n1\n2\n1\n2\n888888888888888\n100\n2\n1\n100\n888888888888888\n0\n3\n888888888888888\n1\n2\n3\n4\n5\n6\n888888888888888\n3\n888888888888888\n1\n2\n3\n4\n5\n6\n888888888888888\n"
         ExitCode: 0
   functionality:
     Cases:
@@ -43,11 +43,28 @@ Tests:
           String: "100\n0\n49\n99\n5\n25\n0\n4\n100\n119\n0\n555\n"
         ExitCode: 0
   array_of_lists:
-    # @TODO: #2825 This test currently leaks memory since we don't have array destructors.
-    # Add a valgrind case when it's implemented.
     Cases:
       llvm:
         backend: llvm
         Output:
           String: "2\n3\n3\n4\n9\n10\n100\n0\n100\n2\n3\n4\n1\n5\n6\n7\n8\n9\n10\n"
         ExitCode: 0
+      llvm_valgrind:
+        backend: llvm
+        valgrind: "true"
+        TimeOut: 3 # 1 second is often not enough on runners
+        Output:
+          String: "2\n3\n3\n4\n9\n10\n100\n0\n100\n2\n3\n4\n1\n5\n6\n7\n8\n9\n10\n"
+        ExitCode: 0
+
+  list_out_of_bounds:
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134
+
+  list_negative_index:
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134

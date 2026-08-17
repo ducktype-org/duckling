@@ -46,7 +46,8 @@ namespace pst {
 				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
-				    || Conditions::isBlockGroup(state, fwd - 1);
+				    || (Conditions::isBlockGroup(state, fwd - 1)
+				        && !Conditions::isMatchBodyBlock(state, fwd - 1));
 			}
 		};
 
@@ -317,8 +318,11 @@ namespace pst {
 
 		MBox<Stmt> out;
 
-		// Specifier block handling
-		if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+		if (state[0].is(Keyword::Template)) {
+			// Template statement handling
+			out = TemplateStmt::parse(state);
+		} else if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+			// Specifier block handling
 			out = internal::parseStmt<SpecifierBlock>(state);
 		} else {
 			// Parse Statement based on context

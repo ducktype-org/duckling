@@ -1,7 +1,5 @@
 #include "dia_interactive_elements.hpp"
 
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
@@ -9,18 +7,19 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/alias.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
+#include <diagnostic/core/diagnostic_arguments.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <diagnostic/source_position.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
 namespace compiler::helios {
-	using namespace dia_int;
+	using namespace dia;
 
 	class IsAliasNote: public MessageBase {
 		Metadata getMetadata() const final {
@@ -45,9 +44,7 @@ namespace compiler::helios {
 		}
 
 	public:
-		IsAliasCodeNote(
-			dia_int::StablePosition pos, std::string alias_name, std::string underlying_name
-		):
+		IsAliasCodeNote(dia::StablePosition pos, std::string alias_name, std::string underlying_name):
 			  MessageWithCodeFragmentAndCause(pos) {
 			addArgument<TextArgument>("alias_name", std::move(alias_name));
 			addArgument<TextArgument>("underlying_name", std::move(underlying_name));
@@ -61,9 +58,9 @@ namespace compiler::helios {
 	 * @param elem PST element of the original type identifier in the parse tree.
 	 */
 	void checkForAliases(
-		query::Context&                                        ctx,
-		base::HashMap<std::string, Box<dia_int::MessageBase>>& linked_messages,
-		pst::Access<pst::LangElement>                          elem
+		query::Context&                                    ctx,
+		base::HashMap<std::string, Box<dia::MessageBase>>& linked_messages,
+		pst::Access<pst::LangElement>                      elem
 	) {
 		auto ident_opt = elem.dynamicCast<pst::expr::IdentifierLiteral>();
 		if (!ident_opt.has_value()) return;
@@ -82,8 +79,8 @@ namespace compiler::helios {
 				  auto nested = current.children[0];
 				  if (kind(nested.node) == SymbolKind::Alias) {
 					  auto alias_stmt = getSymRef(nested.node)
-				                            ->getPSTData()
-				                            ->getElement()
+				                            ->maybePstElement()
+				                            .value()
 				                            .unlock(ctx)
 				                            .dynamicCast<pst::Alias>()
 				                            .value();
@@ -143,8 +140,8 @@ namespace compiler::helios {
 		return link;
 	}
 
-	class FunctionDeclaredHereNote final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class FunctionDeclaredHereNote final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "note",
 				     .family        = "type_check",
@@ -152,7 +149,7 @@ namespace compiler::helios {
 		}
 
 	public:
-		FunctionDeclaredHereNote(dia_int::StablePosition source_position):
+		FunctionDeclaredHereNote(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
@@ -161,7 +158,7 @@ namespace compiler::helios {
 	 * (pst of a function, function declaration or class method). We want only the
 	 * name and parameters to be included in the source position. @TODO: #2521 fix this
 	 */
-	dia_int::StablePosition getFunctionLikeSourcePosition(
+	dia::StablePosition getFunctionLikeSourcePosition(
 		query::Context& ctx, pst::Access<pst::LangElement> function_like
 	) {
 		switch (function_like->getElementKind()) {
@@ -192,7 +189,7 @@ namespace compiler::helios {
 	):
 		  function_symbol(function_symbol),
 		  pst_expr(std::move(pst_expr)) {
-		if_opt_some(getSymRef(function_symbol)->getDataOpt<PstSymbolData>(), pst_data) {
+		if_opt_some(getSymRef(function_symbol)->getDataOpt<PstImplementedSemantics>(), pst_data) {
 			auto position = getFunctionLikeSourcePosition(ctx, pst_data->getElement().unlock(ctx));
 			auto id       = MessageBase::getUniqueID();
 			this->linked_messages.put(std::move(id), makeBox<FunctionDeclaredHereNote>(position));

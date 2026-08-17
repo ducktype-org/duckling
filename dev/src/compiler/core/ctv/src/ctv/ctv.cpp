@@ -3,6 +3,8 @@
 #include <ctv/numeric_value.hpp>
 #include <helios/tsh/queries/types.hpp>
 
+#include <hashing/add_to_hash.hpp>
+#include <hashing/hashing_algorithms.hpp>
 #include <query_framework/context/context.hpp>
 #include <string_id/string_id.hpp>
 
@@ -10,16 +12,49 @@
 #include <string>
 
 namespace compiler::ctv {
-	CompileTimeValue::CompileTimeValue() = default;
-
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
+
+	base::Bit256 CompileTimeValue::queryUnstablePerfectHash() const {
+		hashing::SHA256 hasher;
+		hashing::addToHash(hasher, value.index());
+
+		variant_match(value) {
+			variant_case(bool, val) { hashing::addToHash(hasher, val); }
+			variant_case(NumericValue, val) {
+				hashing::addToHash(hasher, val.getStorage().index());
+				VISIT(val.getStorage(), inner_value, hashing::addToHash(hasher, inner_value););
+			}
+			variant_case(char, c) { hashing::addToHash(hasher, c); }
+			variant_case(CharSliceValue, val) { hashing::addToHash(hasher, val.value); }
+			variant_case(StringClassValue, val) { hashing::addToHash(hasher, val.value); }
+			variant_case_novalue(UnitCTV) {
+				// nothing to add to hash
+			}
+			variant_case(TupleCTV, tuple) {
+				throw base::NotYetImplemented(
+					"Tuples are not supported yet in CTV::queryUnstablePerfectHash"
+				);
+			}
+			variant_case(tsh::SymbolType<>, val) {
+				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
+			}
+			variant_default { CORE_PANIC("Unhandled CTV type in CTV::queryUnstablePerfectHash"); }
+		}
+
+		return hasher.finalize();
+	}
 
 	std::string CompileTimeValue::toString() const {
 		variant_match(value) {
 			variant_case(bool, val) { return val ? "true" : "false"; }
 			variant_case(NumericValue, val) { return val.toString(); }
 			variant_case(char, c) { return "'" + base::escapeString(std::string{ c }) + "'"; }
-			variant_case(base::StrID, val) { return "\"" + base::escapeString(val.str()) + "\""; }
+			variant_case(CharSliceValue, val) {
+				return "\"" + base::escapeString(val.value.str()) + "\"";
+			}
+			variant_case(StringClassValue, val) {
+				return "\"" + base::escapeString(val.value.str()) + "\".toString()";
+			}
 			variant_case_novalue(UnitCTV) { return "()"; }
 			variant_case(TupleCTV, tuple) {
 				std::stringstream ss;
@@ -54,9 +89,20 @@ namespace compiler::ctv {
 					tsh::Mutability::Mutable,
 				};
 			}
-			variant_case_novalue(base::StrID) {
+			variant_case_novalue(CharSliceValue) {
 				return tsh::SymbolType<>{
 					tsh::getCharSliceType(ctx),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Immutable,
+				};
+			}
+			variant_case_novalue(StringClassValue) {
+				CORE_ASSERT(
+					tsh::isStringTypePresent(ctx),
+					"A String CTV cannot exist without the String type."
+				);
+				return tsh::SymbolType<>{
+					tsh::getStringType(ctx),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Immutable,
 				};

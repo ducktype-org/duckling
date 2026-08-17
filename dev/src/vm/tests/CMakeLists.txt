@@ -50,6 +50,9 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("debugger_infinite_test" ${test_set})
 
+        duck_add_test_custom(vm ${test_set}_mapper_test debugger/mapper_tests.cpp
+                USES ${libvm} Tester ${vmtester})
+
         duck_add_test_custom(vm ${test_set}_LowVMProgramCopy_test debugger/LowVMProgramCopy_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
@@ -78,6 +81,12 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("threads_test" ${test_set})
 
+        # @TODO: #761 re-enable on gcc >= 15
+        if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15))
+                duck_add_test_custom(vm ${test_set}_fast_mode_test fast_mode/fast_mode_test.cpp
+                        USES ${libvm} Tester ${vmtester})
+        endif()
+
         duck_add_test_custom(vm ${test_set}_deadlock_detection_test deadlock_detection/deadlock_detection_tests.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("deadlock_detection_test" ${test_set})
@@ -105,3 +114,5 @@ duck_add_test_custom(vm vm_bc_verification loader/verification/bc_verification.c
 duck_add_test_custom(vm vm_bc_building loader/assembly/bc_building.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_bc_parsing loader/assembly/bc_parsing.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_bc_serializer loader/serializer/bc_serializer.cpp USES LibVM_sc Tester VmTester_sc)
+
+add_subdirectory(ffi)

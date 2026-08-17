@@ -24,8 +24,8 @@ namespace compiler::tsh {
 	}
 
 	[[nodiscard]]
-	bool AbstractType::hasNoOpDestructor() const {
-		return pimpl->hasNoOpDestructor();
+	bool AbstractType::isTriviallyDestructible(query::Context& ctx) const {
+		return pimpl->isTriviallyDestructible(ctx);
 	}
 
 	[[nodiscard]]

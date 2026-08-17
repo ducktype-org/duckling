@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun print_error(arg: bool) -> bool = {
     builtin_output_i64(99);
     return arg;

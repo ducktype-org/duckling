@@ -1,69 +1,103 @@
 #include "lang_primitives.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
-namespace compiler::helios {
-	struct IMPLEMENT_QUERY(QueryLanguagePrimitiveSymID, query::QResult<SymID>) {
-		static query::QResult<SymID> lookupPrimitive(
-			query::Context&          ctx,
-			LanguagePrimitive        primitive,
-			const std::string&       package_name,
-			std::vector<std::string> path,
-			const std::string&       element_name
-		) {
-			std::vector<base::StrID> path_str_ids
-				= path | std::views::transform([](const std::string& s) { return base::StrID(s); })
-			    | std::ranges::to<std::vector>();
-			auto module_opt
-				= frontend::getModuleByAbsolutePath(ctx, base::StrID(package_name), path_str_ids);
-			if_opt_none(module_opt) {
-				std::string module_path_str = package_name + "." + base::strJoin(path, ".");
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(base::strConcat(
-					"Module lookup failed for language primitive '",
-					primitive,
-					"' with module path '",
-					module_path_str,
-					"'"
-				)));
-				return query::Failed();
-			}
-			auto module       = module_opt.value();
-			auto linked_scope = queryRootScopeOfMainModuleFile(ctx, module);
+#include <unordered_map>
 
-			auto sym_list = HInterface::ofScope(linked_scope)
-			                    .lookup(ctx, base::StrID(element_name), { .with_wildcards = false })
-			                    ->valueOrThrow();
-			if (sym_list.leaves.size() == 0) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+namespace compiler::helios {
+	namespace {
+		/**
+		 * @brief The standard-library location of a language primitive: the package, the module
+		 * path within it, and the name of the element to look up.
+		 */
+		struct PrimitivePath {
+			std::string              package;
+			std::vector<std::string> path;
+			std::string              element;
+		};
+
+		const std::unordered_map<LanguagePrimitive, PrimitivePath>& primitivePaths() {
+			static const std::unordered_map<LanguagePrimitive, PrimitivePath> paths{
+				{ LanguagePrimitive::Panic,
+				  { .package = "core", .path = { "panicking" }, .element = "panic" } },
+				{ LanguagePrimitive::String,
+				  { .package = "core", .path = { "containers" }, .element = "String" } },
+				{ LanguagePrimitive::StringifyStr,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyStr" } },
+				{ LanguagePrimitive::StringifyChar,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyChar" } },
+				{ LanguagePrimitive::StringifyBool,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyBool" } },
+				{ LanguagePrimitive::StringifyI64,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyI64" } },
+				{ LanguagePrimitive::StringifyU64,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyU64" } },
+				{ LanguagePrimitive::StringifyF64,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyF64" } },
+			};
+			return paths;
+		}
+
+		/**
+		 * @brief Resolves the symbols a language primitive refers to. Returns an empty list when
+		 * the module or the element is absent (e.g. a no-std build). Never logs an error.
+		 */
+		std::vector<SymID> lookupPrimitiveSymbols(query::Context& ctx, LanguagePrimitive primitive) {
+			const auto it = primitivePaths().find(primitive);
+			if (it == primitivePaths().end()) CORE_PANIC("Unknown language primitive: ", primitive);
+			const PrimitivePath& location = it->second;
+
+			std::vector<base::StrID> path_str_ids
+				= location.path
+			    | std::views::transform([](const std::string& s) { return base::StrID(s); })
+			    | std::ranges::to<std::vector>();
+
+			auto module_opt = frontend::getModuleByAbsolutePath(
+				ctx, base::StrID(location.package), path_str_ids
+			);
+			if_opt_none(module_opt) return {};
+
+			auto linked_scope = queryRootScopeOfMainModuleFile(ctx, module_opt.value());
+			return HInterface::ofScope(linked_scope)
+			    .lookup(ctx, base::StrID(location.element), { .with_wildcards = false })
+			    ->valueOrThrow()
+			    .leaves;
+		}
+
+		/**
+		 * @brief Resolves a language primitive to its single symbol, logging an error and failing
+		 * when it is missing or ambiguous.
+		 */
+		query::QResult<SymID> lookupPrimitiveThrow(query::Context& ctx, LanguagePrimitive primitive) {
+			const auto leaves = lookupPrimitiveSymbols(ctx, primitive);
+			if (leaves.empty()) {
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					base::strConcat("Can't find symbol for language primitive '", primitive, "'")
 				));
 				return query::Failed();
-			} else if (sym_list.leaves.size() > 1) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(base::strConcat(
+			}
+			if (leaves.size() > 1) {
+				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
 					"Found multiple primitives with the symbol name '", primitive, "'"
 				)));
 				return query::Failed();
-			} else {
-				return sym_list.leaves.back();
 			}
+			return leaves.back();
 		}
+	}
 
+	bool isLanguagePrimitivePresent(query::Context& ctx, LanguagePrimitive primitive) {
+		return not lookupPrimitiveSymbols(ctx, primitive).empty();
+	}
+
+	struct IMPLEMENT_QUERY(QueryLanguagePrimitiveSymID, query::QResult<SymID>) {
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			switch (key.primitive) {
-			case LanguagePrimitive::Panic: {
-				return lookupPrimitive(
-					ctx, LanguagePrimitive::Panic, "core", { "panicking" }, "panic"
-				);
-			}
-			default:
-				CORE_PANIC("Unknown language primitive: ", key.primitive);
-			}
+			return lookupPrimitiveThrow(ctx, key.primitive);
 		}
 
 		QUERY_AUTO_CACHE_CREF

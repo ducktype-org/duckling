@@ -1,0 +1,27 @@
+PostCase: python3 check.py && @{cleanup_tmp_env}
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar" >> foo/quackconfig.yaml
+Tests:
+  basic-deps:
+    Description: can build a project with dependencies
+    Cases:
+      build:
+        test-cmd: duck -C foo build
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: running gathering
+            info: starting the solver engine
+            info: starting fetching 2 packages
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`bar\`...
+            info: compiling \`foo\`..."

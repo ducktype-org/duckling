@@ -3,6 +3,8 @@
 #include "queries.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/tsh/type_interface.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 
 // @TODO: #2331 Remove these includes
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -11,6 +13,7 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
@@ -22,6 +25,7 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <unordered_set>
 #include <utility>
 
 namespace compiler::tsh {
@@ -33,35 +37,44 @@ namespace compiler::tsh {
 	 * @return The default interface for the given type.
 	 */
 	TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
+		using helios::defgen::destructSymForType;
+		using helios::defgen::generatedToStringSymForType;
+
+		// The generated `toString` returns a `String`, which lives in `core.containers`. It only
+		// exists when a standard library is available, so skip it otherwise (e.g. no-std builds) —
+		// resolving its type would fail to find the `String` language primitive.
+		const bool has_to_string = isStringTypePresent(ctx);
+
 		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
 		if (not type.carriesInformation(ctx)) {
-			if (type.getKind() == Kind::Unit) {
+			if (type.getKind() == Kind::Unit && has_to_string) {
 				// The unit type has a `toString` method, even though it doesn't carry information,
 				// because it is a simple type and it's passed by value.
 				return TypeInterface{ std::vector{ InterfaceElement{
-					helios::defgen::toStringSymForType(ctx, type),
+					generatedToStringSymForType(ctx, type),
 					type,
 					0,
 					InterfaceElement::InterfaceElementKind::Method,
 					ClassMemberVisibility::Public,
+					InterfaceElement::SpecialKind::ToString,
 				} } };
 			}
 			return {};
 		}
 
-		using helios::defgen::destructSymForType;
-		using helios::defgen::toStringSymForType;
-
 		std::vector<InterfaceElement> elements;
 
-		// Every type has a `toString` method.
-		elements.emplace_back(
-			toStringSymForType(ctx, type),
-			type,
-			0,
-			InterfaceElement::InterfaceElementKind::Method,
-			ClassMemberVisibility::Public
-		);
+		// Every type has a `toString` method (when a standard library provides `String`).
+		if (has_to_string) {
+			elements.emplace_back(
+				generatedToStringSymForType(ctx, type),
+				type,
+				0,
+				InterfaceElement::InterfaceElementKind::Method,
+				ClassMemberVisibility::Public,
+				InterfaceElement::SpecialKind::ToString
+			);
+		}
 
 		// Only classes have destructors (for now)
 		if (type.getKind() == Kind::Class) {
@@ -106,10 +119,33 @@ namespace compiler::tsh {
 	}
 
 	struct IMPLEMENT_QUERY(QueryTypeInterface, TypeInterface) {
+		/**
+		 * Combines the default interface with the declared one (by the user).
+		 * It doesn't add the elements with special kind already existing.
+		 */
+		static TypeInterface addDefaultInterface(
+			Context& ctx, CRef<TypeInterface> declared, const QKey key
+		) {
+			std::vector<InterfaceElement>                     new_elements;
+			std::unordered_set<InterfaceElement::SpecialKind> declared_specials;
+			for (auto& elem: declared->getElements()) {
+				new_elements.push_back(elem);
+				if (elem.specialKind() != InterfaceElement::SpecialKind::None)
+					declared_specials.insert(elem.specialKind());
+			}
+
+			const TypeInterface default_interface = getDefaultTypeInterfaceForType(ctx, key);
+			for (auto& elem: default_interface.getElements()) {
+				if (elem.specialKind() != InterfaceElement::SpecialKind::None
+				    && declared_specials.contains(elem.specialKind()))
+					continue;
+				new_elements.push_back(elem);
+			}
+			return TypeInterface(new_elements);
+		}
+
 		static auto provide(Context& ctx, const QKey key) -> PResult {
-			return getDefaultTypeInterfaceForType(ctx, key).combine(
-				key.getPimpl()->getDeclaredInterface(ctx)
-			);
+			return addDefaultInterface(ctx, key.getPimpl()->getDeclaredInterface(ctx), key);
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -246,12 +282,19 @@ namespace compiler::tsh {
 
 	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
 		  underlying_types(variant_types) {
+		// Variants are unordered; canonicalize the alternative order so that the runtime tag
+		// (= index into getUnderlyingTypes()) does not depend on construction order.
+		// Sorting must not use queryUnstablePerfectHash: it differs between compiler
+		// processes, which would make the emitted code non-deterministic.
+		std::ranges::stable_sort(underlying_types, [](const SymbolType<>& a, const SymbolType<>& b) {
+			return a.toString() < b.toString();
+		});
 		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}
 
-	bool VariantAbstractTypeImpl::hasNoOpDestructor() const {
+	bool VariantAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
 		for (const auto& type: underlying_types)
-			if (!type.hasNoOpDestructor()) return false;
+			if (!type.isTriviallyDestructible(ctx)) return false;
 		return true;
 	}
 
@@ -324,52 +367,20 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> SliceAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
-		auto compute_interface = [&]() -> TypeInterface {
-			std::vector<InterfaceElement> elements;
-			elements.reserve(3);
-
-			auto components = ctx.query<helios::QuerySliceTypeData>(toAbstractType());
-			elements.emplace_back(
-				components->ptr,
-				ctx.query<helios::QueryTypeOfSymbol>(components->ptr)->valueOrThrow().getType(),
-				0,
-				InterfaceElement::InterfaceElementKind::Field,
-				ClassMemberVisibility::Private
-			);
-			elements.emplace_back(
-				components->len,
-				ctx.query<helios::QueryTypeOfSymbol>(components->len)->valueOrThrow().getType(),
-				1,
-				InterfaceElement::InterfaceElementKind::Field,
-				ClassMemberVisibility::Private
-			);
-
-			auto length_sym = helios::defgen::lengthMethodForType(ctx, toAbstractType());
-			elements.emplace_back(
-				length_sym,
-				ctx.query<helios::QueryTypeOfSymbol>(length_sym)->valueOrThrow().getType(),
-				2,
-				InterfaceElement::InterfaceElementKind::Method,
-				ClassMemberVisibility::Public
-			);
-
-			auto interface = TypeInterface(elements);
-			return interface;
-		};
-		static const TypeInterface cached_interface = compute_interface();
-		return &cached_interface;
+		const auto type = toAbstractType().as<SliceAbstractType>();
+		return &ctx.query<QueryInterfaceOfSlice>(type)->valueOrThrow();
 	}
 
-	CRef<TypeInterface> StringAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("String type interface not yet implemented");
+	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
+	) const {
+		const auto type = toAbstractType().as<DynamicArrayAbstractType>();
+		return &ctx.query<QueryInterfaceOfDynamicArray>(type)->valueOrThrow();
 	}
 
-	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("Dynamic array type interface not yet implemented");
-	}
-
-	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("Static array type interface not yet implemented");
+	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
+	) const {
+		const auto type = toAbstractType().as<StaticArrayAbstractType>();
+		return &ctx.query<QueryInterfaceOfStaticArray>(type)->valueOrThrow();
 	}
 
 	CRef<TypeInterface> TupleAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
@@ -393,7 +404,7 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> MetaAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("Meta type interface not yet implemented");
+		CORE_PANIC("Meta type interface does not exist yet.");
 	}
 
 	CRef<TypeInterface> ImportAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
@@ -434,6 +445,10 @@ namespace compiler::tsh {
 		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().base;
 		if (base.has_value()) return { ClassAbstractType(base.value()) };
 		return {};
+	}
+
+	compiler::helios::SymbolABI ClassAbstractTypeImpl::getABI(query::Context& ctx) const {
+		return ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
 	}
 
 	std::vector<ClassAbstractType> ClassAbstractTypeImpl::getImplementedInterfaceTypes(
@@ -493,6 +508,9 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isCopyable(query::Context& ctx) const {
+		// A user-defined copy constructor makes the class copyable regardless of its fields.
+		if (compiler::helios::defgen::userCopyConstructorOf(ctx, symbol).has_value()) return true;
+
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be copyable.
 		return std::ranges::all_of(fields, [&](const auto& field) {
@@ -501,10 +519,28 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
+		// A user-defined copy constructor means copies must run user code, so the class is never
+		// trivially copyable.
+		if (compiler::helios::defgen::userCopyConstructorOf(ctx, symbol).has_value()) return false;
+
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be trivially copyable.
 		return std::ranges::all_of(fields, [&](const auto& field) {
 			return field.getType(ctx).isTriviallyCopyable(ctx);
+		});
+	}
+
+	bool ClassAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
+		// A user-defined destructor code, means the class is not trivially destructible.
+		if (ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
+		        ->valueOrThrow()
+		        .destructor.has_value())
+			return false;
+
+		auto fields = getDeclaredInterface(ctx)->getFieldsView();
+		// Otherwise the destructor is a no-op only if every field is trivially destructible.
+		return std::ranges::all_of(fields, [&](const auto& field) {
+			return field.getType(ctx).isTriviallyDestructible(ctx);
 		});
 	}
 
@@ -523,10 +559,10 @@ namespace compiler::tsh {
 		return false;
 	}
 
-	bool StaticArrayAbstractTypeImpl::hasNoOpDestructor() const {
-		// Static arrays have trivial destructors if the inner type has a noOpDestructor or they
-		// are zero sized.
-		return size == 0 || element_type.getType().hasNoOpDestructor();
+	bool StaticArrayAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
+		// Static arrays have trivial destructors if the inner type is trivially destructible or
+		// they are zero sized.
+		return size == 0 || element_type.getType().isTriviallyDestructible(ctx);
 	}
 
 	bool StaticArrayAbstractTypeImpl::isDefaultConstructible(query::Context& ctx) const {
@@ -551,9 +587,9 @@ namespace compiler::tsh {
 		return element_type.getType().carriesInformation(ctx) && size > 0;
 	}
 
-	bool TupleAbstractTypeImpl::hasNoOpDestructor() const {
+	bool TupleAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
 		return std::ranges::all_of(components, [&](const auto& component) {
-			return component.hasNoOpDestructor();
+			return component.isTriviallyDestructible(ctx);
 		});
 	}
 

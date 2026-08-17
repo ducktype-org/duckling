@@ -1,15 +1,27 @@
 #include "type_layout.hpp"
 
+#include "c_abi_converter.hpp"
+#include "c_abi_target.hpp"
 #include "queries.hpp"
 
+#include <abi/layout/compute_c_layout.hpp>
+#include <abi/type_system/type.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <helios/errors/extern_c_class_empty.hpp>
+#include <helios/errors/field_not_c_compatible.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_abi.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/box.hpp>
 
 #include <query_framework/context/context.hpp>
+#include <query_framework/query_errors.hpp>
 
 #include <sstream>
 
@@ -28,7 +40,8 @@ namespace compiler::tsl {
 		) {
 			std::vector<CRef<TypeLayout>> layouts;
 			layouts.reserve(types.size());
-			for (const auto& type: types) layouts.push_back(ctx.query<QuerySymbolTypeLayout>(type));
+			for (const auto& type: types)
+				layouts.emplace_back(&ctx.query<QuerySymbolTypeLayout>(type)->valueOrThrow());
 			return layouts;
 		}
 
@@ -161,13 +174,15 @@ namespace compiler::tsl {
 			const std::vector<CRef<TypeLayout>>&      layouts
 		) {
 			Bytes total_size{ 0 };
+			Bytes max_alignment{ 1 };
 			for (usize component_idx = 0; component_idx < offsets.size(); component_idx++)
 				if (auto offset = offsets[component_idx]; offset.has_value()) {
 					const auto layout_size = layouts[component_idx]->getSize();
 					const auto layout_end  = offset.value() + base::bits2bytesRoundUp(layout_size);
 					total_size             = std::max(total_size, layout_end);
+					max_alignment = std::max(max_alignment, layouts[component_idx]->getAlignment());
 				}
-			return bytes2bits(total_size);
+			return bytes2bits(base::bytesRoundTo(total_size, max_alignment));
 		}
 
 		/**
@@ -191,6 +206,135 @@ namespace compiler::tsl {
 
 			return result;
 		}
+
+		/**
+		 * @brief Source position of the class declaration, used to anchor
+		 * diagnostics about the class itself.
+		 */
+		dia::StablePosition classDiagnosticPosition(
+			compiler::helios::SymID class_sym, query::Context& ctx
+		) {
+			auto class_pst = compiler::helios::maybeSymbolPst(class_sym);
+			if (class_pst.has_value()) return class_pst.value().unlock(ctx)->getStablePosition();
+			// Class should always have a PST node, even generated one (for now)
+			CORE_UNREACHABLE();
+		}
+
+		/**
+		 * @brief Source position of the field's declaration, used to anchor
+		 * diagnostics about its type. Falls back to the class declaration when
+		 * the field has no PST node.
+		 */
+		dia::StablePosition fieldDiagnosticPosition(
+			compiler::helios::SymID field_sym, compiler::helios::SymID class_sym, query::Context& ctx
+		) {
+			auto field_pst = compiler::helios::maybeSymbolPst(field_sym);
+			if (field_pst.has_value()) return field_pst.value().unlock(ctx)->getStablePosition();
+			return classDiagnosticPosition(class_sym, ctx);
+		}
+
+		/**
+		 * @brief Result of picking a class layout: offsets in declaration order
+		 * plus the overall size and alignment.
+		 */
+		struct PickedClassLayout final {
+			std::vector<base::Optional<Bytes>> offsets;
+			Bits                               size;
+			Bytes                              alignment;
+		};
+
+		PickedClassLayout ducklingPickedLayout(const std::vector<CRef<TypeLayout>>& field_layouts) {
+			auto  offsets = alignOffsetsForLayoutVector(field_layouts);
+			Bits  total   = offsetsToTotalSize(offsets, field_layouts);
+			Bytes align   = maxTypeLayoutAlignmentInVector(field_layouts);
+			return PickedClassLayout{
+				.offsets   = std::move(offsets),
+				.size      = total,
+				.alignment = align,
+			};
+		}
+
+		/**
+		 * @brief Computes the C-ABI layout for an `extern("C")` class.
+		 *
+		 * On any conversion failure the function reports a diagnostic per
+		 * offending field and fails the layout query, which aborts compilation
+		 * of the offending module.
+		 */
+		PickedClassLayout cAbiPickedLayout(
+			tsh::ClassAbstractType                    class_type,
+			const std::vector<tsh::InterfaceElement>& field_elements,
+			query::Context&                           ctx
+		) {
+			if (field_elements.empty()) {
+				ctx.logInt(makeBox<compiler::helios::ExternCClassEmptyError>(
+					classDiagnosticPosition(class_type.getSymbol(), ctx),
+					std::string(compiler::helios::name(class_type.getSymbol()).strView())
+				));
+				query::throwFailed();
+			}
+
+			std::vector<abi::types::AbiTypePtr> abi_fields;
+			abi_fields.reserve(field_elements.size());
+			bool any_failed = false;
+
+			for (const auto& element: field_elements) {
+				const auto& conversion
+					= ctx.query<QueryCAbiTypeOf>(element.getType(ctx))->valueOrThrow();
+
+				if (!conversion.has_value()) {
+					any_failed = true;
+					ctx.logInt(makeBox<compiler::helios::FieldNotCCompatibleError>(
+						ctx,
+						fieldDiagnosticPosition(element.getSymbol(), class_type.getSymbol(), ctx),
+						std::string(compiler::helios::name(element.getSymbol()).strView()),
+						element.getType(ctx),
+						conversion.error()
+					));
+					continue;
+				}
+				abi_fields.emplace_back(base::CRef<abi::types::AbiType>(&conversion.value()));
+			}
+
+			if (any_failed) query::throwFailed();
+
+			const abi::layout::ComputedLayout computed
+				= abi::layout::computeCLayout(compilerTargetABI(), abi_fields);
+
+			std::vector<base::Optional<Bytes>> result_offsets;
+			result_offsets.reserve(field_elements.size());
+			for (usize i = 0; i < field_elements.size(); ++i)
+				result_offsets.emplace_back(computed.field_offsets[i]);
+
+			return PickedClassLayout{
+				.offsets   = std::move(result_offsets),
+				.size      = base::bytes2bits(computed.size),
+				.alignment = computed.alignment,
+			};
+		}
+
+		/**
+		 * @brief Picks the proper layout for a class: the C-ABI computation
+		 * for classes annotated `extern("C")`, otherwise the natural-alignment
+		 * layout used everywhere else. Panics on an unknown ABI kind.
+		 */
+		PickedClassLayout pickClassLayout(
+			tsh::ClassAbstractType                    class_type,
+			const std::vector<tsh::InterfaceElement>& field_elements,
+			const std::vector<CRef<TypeLayout>>&      field_layouts,
+			query::Context&                           ctx
+		) {
+			const compiler::helios::SymbolABI abi = class_type.getABI(ctx);
+			variant_match(abi) {
+				variant_case_novalue(compiler::helios::DefaultAbi) {
+					return ducklingPickedLayout(field_layouts);
+				}
+				variant_case_novalue(compiler::helios::CAbi) {
+					return cAbiPickedLayout(class_type, field_elements, ctx);
+				}
+			}
+			CORE_PANIC("unknown symbol ABI kind");
+		}
 	}
 
 	TypeLayoutABC::TypeLayoutABC(
@@ -209,45 +353,23 @@ namespace compiler::tsl {
 		  source_type(source_type),
 		  mangled_name(ctx.query<helios::mangler::QueryMangledType>(source_type)->valueOrThrow()) {}
 
-	DynamicArrayTypeLayout::DynamicArrayTypeLayout(
-		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
-	):
-		  TypeLayoutABC(
-			  POINTER_SIZE + bytes2bits(METADATA_SIZE) * 3,
-			  /*alignment=*/POINTER_SIZE_BYTES,
-			  tsh::SymbolType<>::withDefaults(dynamic_array_type),
-			  ctx
-		  ),
-		  element_layout(ctx.query<QuerySymbolTypeLayout>(dynamic_array_type.getElementType())) {}
-
-	std::string DynamicArrayTypeLayout::toStringDefinition(
-		query::Context& ctx, bool recursive, const u32 indent
-	) const {
-		std::stringstream ss{};
-		ss << getIndent(indent) << "dynamic_array {\n";
-
-		// Display the element layout
-		if (recursive)
-			ss << element_layout->toStringDefinition(ctx, recursive, indent + 1) << "\n";
-		else
-			ss << getIndent(indent + 1) << element_layout->toStringIdentification() << "\n";
-
-		// Display the total size
-		ss << getIndent(indent) << "} : " << base::toString(getSize());
-		return ss.str();
-	}
-
 	StaticArrayTypeLayout::StaticArrayTypeLayout(
 		const tsh::StaticArrayAbstractType static_array_type, query::Context& ctx
 	):
 		  TypeLayoutABC(
-			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getSize()
+			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
+					  ->valueOrThrow()
+					  .getSize()
 				  * static_array_type.getSize(),
-			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getAlignment(),
+			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
+				  ->valueOrThrow()
+				  .getAlignment(),
 			  tsh::SymbolType<>::withDefaults(static_array_type),
 			  ctx
 		  ),
-		  element_layout(ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())),
+		  element_layout(
+			  &ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->valueOrThrow()
+		  ),
 		  element_count(static_array_type.getSize()) {}
 
 	std::string StaticArrayTypeLayout::toStringDefinition(
@@ -298,7 +420,7 @@ namespace compiler::tsl {
 		u32 i = 0;
 		for (auto type: helper.variant_type.getUnderlyingTypes()) {
 			type_to_index.put(type, i);
-			index_to_layout.push_back(ctx.query<QuerySymbolTypeLayout>(type));
+			index_to_layout.emplace_back(&ctx.query<QuerySymbolTypeLayout>(type)->valueOrThrow());
 			i++;
 		}
 	}
@@ -384,6 +506,50 @@ namespace compiler::tsl {
 			  type(class_type),
 			  field_elements(getFieldsOfInterface(class_type.getInterface(ctx))),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
+			  total_size(0),
+			  max_alignment(1) {
+			// For class types honor their ABI (C vs natural); pickClassLayout will compute
+			// proper offsets/size/alignment. For other aggregate-like types the
+			// corresponding constructor (e.g. tuple) will handle layout differently.
+			PickedClassLayout picked
+				= pickClassLayout(class_type, field_elements, field_layouts, ctx);
+			field_offsets           = std::move(picked.offsets);
+			layout_idx_to_field_idx = offsetsToPermutation(field_offsets);
+			layout_idx_to_sym_id    = getLayoutIndicesToSymIDs(field_elements, field_offsets);
+			total_size              = picked.size;
+			max_alignment           = picked.alignment;
+		}
+
+		ClassTypeLayoutConstructionHelper(
+			const tsh::TupleAbstractType tuple_type, query::Context& ctx
+		):
+			  type(tuple_type),
+			  field_elements(getFieldsOfInterface(tuple_type.getInterface(ctx))),
+			  field_layouts(getLayoutVector(tuple_type.getComponents(), ctx)),
+			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
+			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
+			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
+			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
+			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
+
+		ClassTypeLayoutConstructionHelper(
+			const tsh::SliceAbstractType slice_type, query::Context& ctx
+		):
+			  type(slice_type),
+			  field_elements(getFieldsOfInterface(slice_type.getInterface(ctx))),
+			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
+			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
+			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
+			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
+			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
+			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
+
+		ClassTypeLayoutConstructionHelper(
+			const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
+		):
+			  type(dynamic_array_type),
+			  field_elements(getFieldsOfInterface(dynamic_array_type.getInterface(ctx))),
+			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
 			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
@@ -399,6 +565,11 @@ namespace compiler::tsl {
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::SliceAbstractType slice_type, query::Context& ctx):
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(slice_type, ctx), ctx) {}
+
+	ClassTypeLayout::ClassTypeLayout(
+		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
+	):
+		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(dynamic_array_type, ctx), ctx) {}
 
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
 		  TypeLayoutABC(
@@ -452,7 +623,8 @@ namespace compiler::tsl {
 			const base::Optional<Bytes> field_offset = getOffsetOfFieldSymbol(field_sym_id);
 			const tsh::SymbolType<>     field_type
 				= ctx.query<helios::QueryTypeOfSymbol>(field_sym_id)->valueOrThrow();
-			const auto field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
+			const auto field_layout
+				= CRef<TypeLayout>(&ctx.query<QuerySymbolTypeLayout>(field_type)->valueOrThrow());
 			if (recursive)
 				ss << field_layout->toStringDefinition(ctx, recursive, indent + 1);
 			else
@@ -472,26 +644,35 @@ namespace compiler::tsl {
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())),
+		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
 		  pointer_kind(PointerKind::SinglePointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())),
+		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
 		  pointer_kind(PointerKind::ManyPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())),
-		  pointer_kind(PointerKind::CPointer) {}
+		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
+		  pointer_kind(PointerKind::CPointer) {
+		auto& pointee_cabi_type
+			= ctx.query<QueryCAbiTypeOf>(pointer_type.getPointee())->valueOrThrow();
+		if (not pointee_cabi_type.has_value()) {
+			ctx.logInt(
+				makeBox<dia::PlaceholderError>("Invalid cptr type.", pointee_cabi_type.error())
+			);
+			query::throwFailed();
+		}
+	}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
-		  pointee(ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())),
+		  pointee(&ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())->valueOrThrow()),
 		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,

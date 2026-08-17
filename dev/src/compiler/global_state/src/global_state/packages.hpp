@@ -6,6 +6,7 @@
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <artifacts/artifacts_fd.hpp>
 #include <string_id/string_id.hpp>
 
 #include <vector>
@@ -32,6 +33,11 @@ namespace global_state {
 	 */
 	base::CRef<compiler::frontend::packages::PackageInfo> getPackageRef(base::StrID package_id);
 
+	/**
+	 * @brief Returns the custom artifact collection used for the stdlib binaries, if one is set.
+	 */
+	base::Optional<base::Ref<artifacts::ArtifactCollection>> getStdArtifactsCollection();
+
 	namespace setters {
 		/** @brief Adds a package to the global state. */
 		void addPackage(const compiler::frontend::packages::PackageInfo& package_info);
@@ -43,6 +49,11 @@ namespace global_state {
 
 		/** @brief Removes a package by its root module ID. */
 		void removePackage(compiler::frontend::ModuleID root_module);
+
+		/** @brief Sets the custom artifact collection for the stdlib binaries. */
+		void setCustomStdArtifactsCollection(
+			base::Box<artifacts::ArtifactCollection> custom_art_collection
+		);
 	}
 
 }  // namespace global_state

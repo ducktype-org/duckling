@@ -4,9 +4,9 @@
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/lir_unit_with_name.hpp>
 #include <driver_private/operations.hpp>
-#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -21,6 +21,7 @@
 #include <vm/bytecode/bytecode.hpp>
 
 #include <functional>
+#include <variant>
 #include <vector>
 
 namespace compiler::repl {
@@ -125,7 +126,7 @@ namespace compiler::repl {
 	std::expected<void, std::string> preloadStandardLibrary(
 		query::Context& ctx, vm::PID pid, backend_vm::ReplDVMCodeBuilder& lowering_context
 	) {
-		const auto root_modules = driver::getStandardLibraryRootModules();
+		const auto root_modules = frontend::packages::standardLibraryRootModules(ctx);
 		if (root_modules.empty()) return {};  // No standard library registered: nothing to load.
 
 		// Collect every module reachable from the standard library package roots.
@@ -174,17 +175,24 @@ namespace compiler::repl {
 		    .and_then(
 				[type_view](vm::api::ExitValue exit_values
 		        ) -> std::expected<std::string, std::string> {
+					CORE_ASSERT(
+						std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_values),
+						"Expecting exit values to be a vector of VMValue references"
+					);
+					const auto& exit_values_vec
+						= std::get<std::vector<Ref<vm::IVMValue>>>(exit_values);
 					if (type_view == "()") {
 						CORE_ASSERT(
-							exit_values.empty(), "Expecting no return values for unit return type"
+							exit_values_vec.empty(),
+							"Expecting no return values for unit return type"
 						);
 						return { "" };
 					}
 
 					CORE_ASSERT(
-						exit_values.size() == 1, "Expecting only one return value from the DVM"
+						exit_values_vec.size() == 1, "Expecting only one return value from the DVM"
 					);
-					auto& exit_value = exit_values.at(0);
+					auto& exit_value = exit_values_vec.at(0);
 					if (type_view == "i32")
 						return std::to_string(exit_value->readBytes<i32>());
 					else if (type_view == "i64")

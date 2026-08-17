@@ -6,27 +6,39 @@
 
 
 #include <vm/api/api.hpp>
+#include <vm/api/data/execution_config.hpp>
+#include <vm/api/data/process_options.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 namespace vm::api {
 	/**
 	 * @brief Create new process in DVM.
-	 * @param enable_deadlock_detection When true (defaults to false), the process will detect
+	 * @param options Process configuration. `options.mode` selects the execution mode (Safe/Fast);
+	 * `options.enable_deadlock_detection`, when true (defaults to false), makes the process detect
 	 * circular mutex wait chains at runtime and throw VMDeadlockException. When false, deadlock
 	 * detection is skipped and circular waits will block indefinitely until the process is stopped.
 	 * @return The response containing the PID of the newly created process or an API error if the
 	 * process wasn't created.
 	 */
-	std::expected<ProcessInfo, ApiError> spawn(bool enable_deadlock_detection = false);
+	std::expected<ProcessInfo, ApiError> spawn(const ProcessConfig& options = {});
 
 	/**
 	 * @brief Get the execution status of the process run on DVM.
 	 * @return The execution status of the specified process or an API error.
 	 */
 	std::expected<ProcStatus, ApiError> getExecutionStatus(PID pid);
+
+	/**
+	 * @brief Set the execution config of a VMProcess.
+	 * @note This affects static checks performed when *loading new code*. While data computed for
+	 * already loaded code does not need to be recomputed, compliance of old code wrt. the config
+	 * is *not* checked.
+	 * @return Nothing if the config was set successfully or an API error otherwise.
+	 */
+	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config);
 
 	/**
 	 * @brief Load the code from given files into a specified process on DVM.
@@ -73,10 +85,10 @@ namespace vm::api {
 	);
 
 	/**
-	 * @brief Get a VmValue containing the return value of the last ran function on DVM.
-	 * @note The returned VmValue is owned by the process and shouldn't be freed by the caller. It
+	 * @brief Get a VMValue containing the return value of the last ran function on DVM.
+	 * @note The returned VMValue is owned by the process and shouldn't be freed by the caller. It
 	 * will be automatically freed when the process is destroyed.
-	 * @return The VmValue containing the return value of the last called function or an API error
+	 * @return The VMValue containing the return value of the last called function or an API error
 	 * if no function was run or the execution didn't complete yet.
 	 */
 	std::expected<ExitValue, ApiError> getExitValue(PID pid);
@@ -183,13 +195,13 @@ namespace vm::api {
 	std::expected<response::Type, ApiError> getType(PID pid, const std::string& type_name);
 
 	/**
-	 * @brief Get an empty VmValue (initialized by zero bytes) of the given type.
-	 * @note This endpoint returns a VmValue which is owned by the caller. It's the callers
-	 * responsibility to call `VmValue::freeData()` on the VmValue. For more information
-	 * on why this is necessary, see documentation of `vm::VmValue::freeData()`.
-	 * @return Response containing a Box containing the newly allocated VmValue of the specified type.
+	 * @brief Get an empty VMValue (initialized by zero bytes) of the given type.
+	 * @note This endpoint returns a VMValue which is owned by the caller. It's the callers
+	 * responsibility to call `VMValue::freeData()` on the VMValue. For more information
+	 * on why this is necessary, see documentation of `vm::IVMValue::freeData()`.
+	 * @return Response containing a Box containing the newly allocated VMValue of the specified type.
 	 */
-	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
+	std::expected<response::VMValue, ApiError> getVMValue(PID pid, const std::string& type_name);
 
 	/**
 	 * @brief Get the number of current stack frames.

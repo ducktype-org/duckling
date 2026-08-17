@@ -1,7 +1,8 @@
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{
-    CommandExt, features_from_matches, flag, multi, profile_from_matches, subcommand,
+    CommandExt, features_from_matches, flag, jobs_from_matches, multi, profile_from_matches,
+    subcommand,
 };
 use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
 use crate::quackpack::subcommands::build::{BuildOptions, compile};
@@ -35,6 +36,10 @@ pub fn get_parser() -> Command {
             "external-errors",
             "Halt computation after encountering errors in foreign manifests",
         ))
+        .arg(flag(
+            "shared-artifacts",
+            "Compile dependencies where their code is located",
+        ))
 }
 
 /// Logic for executing the `build` subcommand.
@@ -48,9 +53,11 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         pcx,
         used_features: features,
         profile,
+        shared: matches.get_flag("shared-artifacts"),
         overwrite: matches.get_flag("overwrite"),
         frozen: matches.get_flag("frozen"),
         strict_errors: matches.get_flag("external-errors"),
+        jobs: jobs_from_matches(matches),
     };
     compile(opts)?;
     Ok(())

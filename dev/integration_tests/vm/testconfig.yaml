@@ -1,0 +1,6 @@
+# Tests for the VM CLI.
+
+PreNode: "@{compile_dvm}"
+
+SubDirs:
+  - ffi

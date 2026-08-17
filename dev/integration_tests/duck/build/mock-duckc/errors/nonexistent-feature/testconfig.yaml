@@ -1,0 +1,24 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+Tests:
+  nonexistent-features:
+    Description: errors with a nonexistent feature
+    Cases:
+      nonexistent-feature:
+        test-cmd: duck -C foo build --features aaa
+        ExitCode: 1
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
+            info: successfully synchronized venv \`foo\`"
+        Err:
+          String: |+
+            error: while expanding features of the root package \`foo\`
+
+              Caused by:
+                there is no such feature as \`aaa\`

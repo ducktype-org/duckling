@@ -50,6 +50,10 @@ namespace lang_def {
 			{ Keyword::Block, "block", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Expand, "expand", KeywordFlagsOptions::IsStmtStart },
 
+			// @note: Template is a bit special, it acts more as a specifier so it being a stmt
+			// start might not always be what we want.
+			{ Keyword::Template, "template", KeywordFlagsOptions::IsStmtStart },
+
 			// These Keywords also indicate start of a statement.
 			{ Keyword::Return,
 	          "return",
@@ -89,9 +93,9 @@ namespace lang_def {
 
 			// This is the list of keywords that are general prefix operators
 			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
-			{ Keyword::Len, "len", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::New, "new", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ptr, "ptr", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::CPtr, "cptr", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::ManyPtr, "manyptr", KeywordFlagsOptions::IsGenPrefixOp },
@@ -99,6 +103,7 @@ namespace lang_def {
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Ptrof, "ptrof", KeywordFlagsOptions::IsGenPrefixOp },
 
 			// `not` isn't a general prefix operator,
 			// it has specific handling together with the other boolean operators
@@ -143,7 +148,6 @@ namespace lang_def {
 			{ Keyword::Char, "char", KeywordFlags() },
 			{ Keyword::Bool, "bool", KeywordFlags() },
 			{ Keyword::Str, "str", KeywordFlags() },
-			{ Keyword::BigStr, "String", KeywordFlags() },
 			{ Keyword::Type, "type", KeywordFlags() },
 
 			{ Keyword::List, "List", KeywordFlags() },
@@ -167,6 +171,9 @@ namespace lang_def {
 	constexpr auto BC_KEYWORDS_ARRAY
 		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			{ Keyword::BCFunction, "function", KeywordFlags() },
+			{ Keyword::BCFfi, "ffi", KeywordFlags() },
+			{ Keyword::BCObject, "object", KeywordFlags() },
+			{ Keyword::BCAssertSize, "assert_size", KeywordFlags() },
 			{ Keyword::BCType, "type", KeywordFlags() },
 			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
 			{ Keyword::BCPointer, "pointer", KeywordFlags() },
@@ -191,6 +198,8 @@ namespace lang_def {
 			{ Keyword::BCFalse, "false", KeywordFlags() },
 			{ Keyword::BCIsConstant, "is_constant", KeywordFlags() },
 			{ Keyword::BCInitialValue, "initial_value", KeywordFlags() },
+			{ Keyword::BCPacked, "packed", KeywordFlags() },
+			{ Keyword::BCCPointer, "cpointer", KeywordFlags() },
 		});
 
 	// `- 1` because of `Keyword::NotAKeyword`

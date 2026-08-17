@@ -1,14 +1,20 @@
-before_cmd: export PATH="@{duckc_dir}:$PATH" && export DUCK_HOME=$(pwd)/duck_home
+before-cmd: export PATH="@{duckc_dir}:$PATH"
 
-PostTest: rm -rf $(pwd)/duck_home
+# These build real packages with duckc, which competes with every other
+# concurrently compiling case.
+timeout_default: 20
 
-# @TODO: #2907 Add more tests with many packages (it'll be easier to write them, once we have determinism)
-# @TODO: #2907 Add Output to the tests; this requires duckc output, too...
 # @TODO: #2920 Some tests have explicit `fun main() -> i64` instead of `fun main()`; it is a temporary workaround, but it should be reverted.
+# @TODO: #3023 Enable output in all tests; we don't check it, because it contains not-portable hashes
 SubDirs:
-  - basic_project
-  - basic_project_with_deps
-  - basic_project_with_deps_and_conds
-  - deps_with_dvm
+  - basic
+  - basic-deps
+  - basic-deps-and-conds
+  - basic-deps-but-with-normalisation
+  - diamond
+  - dvm-deps
+  - errors
   - features
-  - with_a_local_cycle
+  - local-cycle
+  - shared-artifacts
+  - workers-count

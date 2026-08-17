@@ -2,7 +2,7 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <json/json.hpp>
 
@@ -17,7 +17,8 @@ namespace vm::api {
 
 	struct NotStarted {};
 
-	using ExitValue = std::vector<Ref<VmValue>>;
+	// @TODO: #2720 Change it back to std::vector
+	using ExitValue = std::variant<i64, std::vector<Ref<IVMValue>>>;
 
 	struct ExecutionCompleted {
 		ExitValue exit_value;

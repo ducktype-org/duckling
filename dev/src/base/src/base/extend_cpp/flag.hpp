@@ -69,6 +69,8 @@
 			constexpr bool operator==(const flag_name& oth) const { return data == oth.data; }       \
                                                                                                      \
 			constexpr auto operator<=>(const flag_name& oth) const = default;                        \
+			constexpr void operator-=(const flag_name& oth) { data &= ~oth.data; }                   \
+			constexpr void operator-=(const enum_name& oth) { operator-=(flag_name(oth)); }          \
                                                                                                      \
 			[[nodiscard]]                                                                            \
 			std::string toString(bool in_brackets = false) const {                                   \

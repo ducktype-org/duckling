@@ -1,6 +1,7 @@
 use std::any::Any;
 
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
+use tracing::{error, info};
 
 use crate::StrId;
 use crate::quackpack::core::Package;
@@ -31,7 +32,7 @@ pub trait CommandExt: Sized {
             )
             .short('j')
             .value_name("N")
-            .value_parser(1..),
+            .value_parser(value_parser!(usize)),
         )
     }
 }
@@ -99,6 +100,29 @@ pub fn features_from_matches(args: &ArgMatches, pkg: &Package) -> Vec<StrId> {
     }
 }
 
+/// Get the number of `jobs` from `args`.
+pub fn jobs_from_matches(args: &ArgMatches) -> usize {
+    let jobs = args.get_one("jobs");
+    match jobs {
+        None => 1,
+        Some(0) => get_available_parallelism(),
+        Some(n) => *n,
+    }
+}
+
+/// Get the number of available threads in the system.
+/// This will return 1 in case of an error.
+fn get_available_parallelism() -> usize {
+    match std::thread::available_parallelism() {
+        Ok(value) => value.get(),
+        Err(e) => {
+            error!(error = %e, "failed to determine number of available threads");
+            info!("falling back to 1 available thread");
+            1
+        }
+    }
+}
+
 pub trait ArgMatchesExt {
     /// Safe wrapper around [`get_flag`](ArgMatches::get_flag), with a fallback.
     fn safe_get_flag(&self, name: &str) -> bool;
@@ -127,6 +151,6 @@ fn ignore_clap_errors<T: Default>(result: Result<T, clap::parser::MatchesError>)
     match result {
         Ok(val) => val,
         Err(clap::parser::MatchesError::UnknownArgument { .. }) => T::default(),
-        Err(e) => panic!("cli flag used incorrectly: {}", e),
+        Err(e) => panic!("cli flag used incorrectly: {e}"),
     }
 }

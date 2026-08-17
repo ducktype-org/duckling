@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test advanced let features
 # Focus: global let, block scopes, and let with function returns
 

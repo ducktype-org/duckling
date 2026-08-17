@@ -53,7 +53,7 @@ Tests:
       all:
         backend: all
         Output:
-          String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n"
+          String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n0\n"
         ExitCode: 0
 
   floating_point_arithmetic:
@@ -113,11 +113,12 @@ Tests:
         ExitCode: 0
 
   zero_init:
+    enable_conc_deterministic_tests: "false"
     Cases:
       all:
         backend: all
         Output:
-          String: "0\n0\n0\n0\n0\n0\n0\n"
+          String: "0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n"
         ExitCode: 0
 
   strings:

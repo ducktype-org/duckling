@@ -1,7 +1,6 @@
 #include "mir_structure.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -14,15 +13,15 @@
 
 namespace compiler::mir {
 	Function::Function(
-		base::StrID                                     name,
-		tsh::SymbolType<>                               return_type,
-		std::vector<tsh::SymbolType<>>                  parameter_types,
-		base::StableHashMap<BlockID, Block>             blocks,
-		std::vector<BlockID>                            block_order,
-		base::StableVector<const MIRLocal>              local_list,
-		LifetimeScopeTree                               lifetime_scope_tree,
-		ScopeRef                                        no_lifetime_scope,
-		std::variant<FunctionSymID, GlobalVariableCTOR> helios_id
+		base::StrID                                         name,
+		tsh::SymbolType<>                                   return_type,
+		std::vector<tsh::SymbolType<>>                      parameter_types,
+		base::StableHashMap<BlockID, Block>                 blocks,
+		std::vector<BlockID>                                block_order,
+		base::StableVector<const MIRLocal>                  local_list,
+		LifetimeScopeTree                                   lifetime_scope_tree,
+		ScopeRef                                            no_lifetime_scope,
+		std::variant<FunctionSymID, GlobalVariableCtorDtor> helios_id
 	):
 		  name(name),
 		  return_type(return_type),
@@ -36,11 +35,16 @@ namespace compiler::mir {
 
 	u64 Function::queryUnstablePerfectHash() const {
 		// There should be no collisions possible here, since both FunctionSymID and
-		// GlobalVariableCTOR just store SymID, which has a perfect hash.
+		// GlobalVariableCtorDtor just store SymID, which has a perfect hash.
 		variant_match(this->helios_id) {
 			variant_case(FunctionSymID, fun_sym) { return fun_sym.id.queryUnstablePerfectHash(); }
-			variant_case(GlobalVariableCTOR, global_ctor) {
-				return global_ctor.global_var_id.queryUnstablePerfectHash();
+			variant_case(GlobalVariableCtorDtor, global_ctor_dtor) {
+				// The highest bit distinguishes the ctor from the dtor of the same global,
+				// SymID hashes are indices, so they never reach it.
+				const u64 dtor_bit = global_ctor_dtor.type == GlobalVariableCtorDtor::Type::Dtor
+				                       ? u64(1) << 63
+				                       : 0;
+				return global_ctor_dtor.global_var_id.queryUnstablePerfectHash() | dtor_bit;
 			}
 		}
 		CORE_UNREACHABLE();
@@ -52,6 +56,7 @@ namespace compiler::mir {
 		case Operation::ReturnValue:
 		case Operation::Jump:
 		case Operation::Branch:
+		case Operation::BranchIfNull:
 		case Operation::FunctionEnd:
 			return true;
 		default:
@@ -66,6 +71,7 @@ namespace compiler::mir {
 			return { terminator.arguments.at(0).get<BlockID>() };
 
 		case Branch:
+		case BranchIfNull:
 			return { terminator.arguments.at(1).get<BlockID>(),
 				     terminator.arguments.at(2).get<BlockID>() };
 
@@ -131,6 +137,10 @@ namespace compiler::mir {
 				os << "from:" << params.source_type.toString()
 				   << ", to:" << params.target_type.toString();
 			}
+			variant_case(VariantParameters, params) {
+				os << "alt:" << params.alternative_index << " ("
+				   << params.alternative_type.toString() << ")";
+			}
 		}
 		os << "}";
 	}
@@ -146,8 +156,12 @@ namespace compiler::mir {
 		}
 		os << " ";
 
+		std::string op_name{ base::enumToStr(operation) };
+		if (operation == Operation::MetaTypeOperation)
+			if (const auto* meta_params = std::get_if<MetaParameters>(&extra_params))
+				op_name += ":" + std::string{ base::enumToStr(meta_params->kind) };
 		os << std::left << std::setw(15);
-		os << base::enumToStr(operation) << "  ";
+		os << op_name << "  ";
 
 		std::stringstream args;
 
@@ -242,6 +256,8 @@ namespace compiler::mir {
 				return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 			case tsh::Kind::ManyPointer:
 				return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
+			case tsh::Kind::CPointer:
+				return base_type.as<tsh::CPointerAbstractType>().getPointee();
 			default:
 				CORE_PANIC("Cannot index into type: ", type.toString());
 			}
@@ -295,6 +311,9 @@ namespace compiler::mir {
 		case Flag::Construct:
 			os << "Construct";
 			break;
+		case Flag::Reinit:
+			os << "Reinit";
+			break;
 		case Flag::Destruct:
 			os << "Destruct";
 			break;
@@ -317,9 +336,13 @@ namespace compiler::mir {
 		os << "  Initial Value (CTV or Function): ";
 		variant_match(initial_value) {
 			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
-			variant_case(CRef<mir::Function>, func_ref) {
-				os << "constructor: " << func_ref->name.strView() << "\n";
-				func_ref->debugPrint(os);
+			variant_case(MIRCtorDtorPair, pair) {
+				os << "constructor: " << pair.constructor->name.strView() << "\n";
+				pair.constructor->debugPrint(os);
+				if_opt_some(pair.destructor, dtor) {
+					os << "destructor: " << dtor->name.strView() << "\n";
+					dtor->debugPrint(os);
+				}
 			}
 		}
 	}
@@ -328,7 +351,7 @@ namespace compiler::mir {
 		os << "MIRUnit:\n";
 		os << "Globals:\n";
 		for (const auto& global: mir_globals) {
-			global.debugPrint(ctx, os);
+			global->debugPrint(ctx, os);
 			os << "\n";
 		}
 		os << "Functions:\n";

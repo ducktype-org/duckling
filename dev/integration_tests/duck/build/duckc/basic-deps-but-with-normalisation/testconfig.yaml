@@ -1,0 +1,21 @@
+PostCase: python3 check.py && @{cleanup_tmp_env}
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init my-cool-root
+  @{duck-exe} init my-cool-dep
+  @{duck-exe} init my-cool-dep2
+  echo "dependencies:
+    my-cool-dep:
+      source:
+        path: ../my-cool-dep
+    my-cool-dep-but-aliased:
+      source:
+        path: ../my-cool-dep2
+        name: my-cool-dep2" >> my-cool-root/quackconfig.yaml
+Tests:
+  normalises-names-and-aliases:
+    Description: can build a project with aliases and normalised names
+    Cases:
+      build:
+        test-cmd: duck -C my-cool-root build

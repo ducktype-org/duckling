@@ -7,20 +7,20 @@ use russcip::prelude::{cons, var};
 use russcip::{Model, ProblemCreated, Solution, Variable, WithSolutions};
 use tracing::debug;
 
+use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solving::scip_ext::BinModelExt;
-use crate::quackpack::core::solver::types_common::{DependencyEdge, ExpandedPackage};
-use crate::quackpack::core::{FeatureName, Version};
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::quackpack::core::{FeatureName, PackageId, Version};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
-type PresentFeature<'a> = Option<&'a FeatureName>;
+type PresentFeature = Option<FeatureName>;
 
 /// Creates a unique mapping of packages to their variable names.
-fn package_var_name(pkg: &ExpandedPackage) -> StrId {
-    StrId::new(format!("{:?}@{:?}", pkg.location(), pkg.version()))
+fn package_var_name(pkg: PackageId) -> StrId {
+    StrId::new(format!("{:?}@{:?}", pkg.identity(), pkg.version()))
 }
 
 /// Creates a unique mapping of pairs of form (package, feature) to its variable name.
-fn package_with_feature_var_name(pkg: &ExpandedPackage, feature: FeatureName) -> StrId {
+fn package_with_feature_var_name(pkg: PackageId, feature: FeatureName) -> StrId {
     StrId::new(format!("{}@{}", package_var_name(pkg), feature))
 }
 
@@ -28,24 +28,24 @@ fn package_with_feature_var_name(pkg: &ExpandedPackage, feature: FeatureName) ->
 fn dependency_feature_var_name(dep: &DependencyEdge, feature: FeatureName) -> StrId {
     StrId::new(format!(
         "{}->{:?}@_@{}",
-        package_var_name(&dep.parent),
-        dep.dependency_loc,
+        package_var_name(dep.parent),
+        dep.dep_identity,
         feature
     ))
 }
 
 /// Creates a unique mapping of a pair of form (dependency relation, child version) to its variable name.
-fn dependency_version_var_name(dep: &DependencyEdge, version: Option<Version>) -> StrId {
+fn dependency_version_var_name(dep: &DependencyEdge, version: Version) -> StrId {
     StrId::new(format!(
         "{}->{:?}@{:?}@_",
-        package_var_name(&dep.parent),
-        dep.dependency_loc,
+        package_var_name(dep.parent),
+        dep.dep_identity,
         version
     ))
 }
 
 type FeaturesToVars = HashMap<FeatureName, Rc<Variable>>;
-type ChildVersionsToVars = HashMap<Option<Version>, Rc<Variable>>;
+type ChildVersionsToVars = HashMap<Version, Rc<Variable>>;
 type ChildFeaturesToVars = HashMap<FeatureName, Rc<Variable>>;
 
 #[derive(Debug)]
@@ -54,12 +54,12 @@ pub struct SolverModel<'a, State> {
     model: Model<State>,
 
     // Packages already placed in the previous freeze.
-    preexisting_packages: &'a HashSet<ExpandedPackage>,
+    preexisting_packages: &'a HashSet<PackageId>,
     // With what features they were placed there.
-    preexisting_features: &'a HashMap<ExpandedPackage, HashSet<FeatureName>>,
+    preexisting_features: &'a HashMap<PackageId, HashSet<FeatureName>>,
 
-    package_vars: HashMap<ExpandedPackage, Rc<Variable>>,
-    package_to_feature_vars: HashMap<ExpandedPackage, FeaturesToVars>,
+    package_vars: HashMap<PackageId, Rc<Variable>>,
+    package_to_feature_vars: HashMap<PackageId, FeaturesToVars>,
     dependency_to_feature_vars: HashMap<DependencyEdge, ChildFeaturesToVars>,
     dependency_to_version_vars: HashMap<DependencyEdge, ChildVersionsToVars>,
 }
@@ -67,8 +67,8 @@ pub struct SolverModel<'a, State> {
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Creates an empty model, given packages already placed in the previous freeze and their features.
     pub fn new(
-        preexisting_packages: &'a HashSet<ExpandedPackage>,
-        preexisting_features: &'a HashMap<ExpandedPackage, HashSet<FeatureName>>,
+        preexisting_packages: &'a HashSet<PackageId>,
+        preexisting_features: &'a HashMap<PackageId, HashSet<FeatureName>>,
     ) -> Self {
         SolverModel {
             model: Model::default().hide_output(),
@@ -86,66 +86,70 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// otherwise returns the variable associated with the pair (package, feature).
     fn get_package_variable(
         &self,
-        pkg: &ExpandedPackage,
-        feature: PresentFeature<'_>,
+        pkg: PackageId,
+        feature: PresentFeature,
     ) -> QuackResult<Rc<Variable>> {
         match feature {
-            None => self.package_vars.get(pkg).cloned().context_internal(
-                "Package variable was not added to the model before retrieval attempt",
-            ),
+            None => self
+                .package_vars
+                .get(&pkg)
+                .cloned()
+                .with_context_internal(|| {
+                    format!("package variable `{pkg:?}` was not added to the model before retrieval attempt; {self:#?}")
+                }),
             Some(feature) => {
-                let feature_to_var_map = self.package_to_feature_vars.get(pkg).context_internal("Package and feature variable was not added to the model before retrieval attempt")?;
-                feature_to_var_map.get(feature).cloned().context_internal("Package with feature variable was not added to the model before retrieval attempt")
+                let feature_to_var_map = self.package_to_feature_vars.get(&pkg).with_context_internal(|| {
+                    format!("package `{pkg:?}` and feature variable `{feature:?}` was not added to the model before retrieval attempt; {self:#?}")
+                })?;
+                feature_to_var_map.get(&feature).cloned().with_context_internal(|| {
+                    format!("package `{pkg:?}` and feature variable `{feature:?}` was not added to the model before retrieval attempt; {self:#?}")
+                })
             }
         }
     }
 
     /// Returns the mapping from child features to variables, associated with the given dependency.
-    fn get_feature_to_var_map_for_dep(&mut self, dep: &DependencyEdge) -> &ChildFeaturesToVars {
-        self.dependency_to_feature_vars
-            .entry(dep.clone())
-            .or_default()
+    fn get_feature_to_var_map_for_dep(&mut self, dep: DependencyEdge) -> &ChildFeaturesToVars {
+        self.dependency_to_feature_vars.entry(dep).or_default()
     }
 
     /// Returns the variable associated with the given (dependency, child feature) pair.
     fn get_dependency_feature_variable(
         &mut self,
-        dep: &DependencyEdge,
-        feature: &FeatureName,
+        dep: DependencyEdge,
+        feature: FeatureName,
     ) -> QuackResult<Rc<Variable>> {
         let feature_to_var_map = self.get_feature_to_var_map_for_dep(dep);
-        feature_to_var_map.get(feature).cloned().context_internal(
-            "Dependency with feature variable not added to the model before retrieval of variable attempt",
+        feature_to_var_map.get(&feature).cloned().with_context_internal(|| format!(
+            "dependency `{dep:?}` with feature variable `{feature:?}` not added to the model before retrieval of variable attempt {self:#?}")
         )
     }
 
     /// Returns the mapping from child versions to variables, associated with the given dependency.
-    fn get_version_to_var_map_for_dep(&mut self, dep: &DependencyEdge) -> &ChildVersionsToVars {
-        self.dependency_to_version_vars
-            .entry(dep.clone())
-            .or_default()
+    fn get_version_to_var_map_for_dep(&mut self, dep: DependencyEdge) -> &ChildVersionsToVars {
+        self.dependency_to_version_vars.entry(dep).or_default()
     }
 
     /// Returns the variable associated with the given (dependency, child version) pair.
     fn get_dependency_version_variable(
         &mut self,
-        dep: &DependencyEdge,
-        version: &Option<Version>,
+        dep: DependencyEdge,
+        version: Version,
     ) -> QuackResult<Rc<Variable>> {
         let version_to_var_map = self.get_version_to_var_map_for_dep(dep);
-        version_to_var_map.get(version).cloned().context_internal(
-            "Dependency with version variable not added to the model before retrieval attempt",
+        version_to_var_map.get(&version).cloned().with_context_internal(|| format!(
+            "dependency `{dep:?}` with version {version} variable not added to the model before retrieval attempt {self:#?}")
         )
     }
 
     /// Creates the variable associated with the package and adds it to the model.
-    pub fn add_package_var(&mut self, pkg: ExpandedPackage) {
+    pub fn add_package_var(&mut self, pkg: PackageId) {
         let objective_coef = if self.preexisting_packages.contains(&pkg) {
             0.0
         } else {
             1.0
         };
-        let var_name = package_var_name(&pkg);
+        let var_name = package_var_name(pkg);
         self.package_vars.entry(pkg).or_insert_with(|| {
             Rc::new(
                 self.model
@@ -155,8 +159,8 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Creates the variable associated with the (package, feature) pair and adds it to the model.
-    pub fn add_package_with_feature_var(&mut self, pkg: ExpandedPackage, feature: FeatureName) {
-        let var_name = package_with_feature_var_name(&pkg, feature);
+    pub fn add_package_with_feature_var(&mut self, pkg: PackageId, feature: FeatureName) {
+        let var_name = package_with_feature_var_name(pkg, feature);
         self.package_to_feature_vars
             .entry(pkg)
             .or_default()
@@ -182,7 +186,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     pub fn add_dependency_version_realisation_var(
         &mut self,
         dep: DependencyEdge,
-        version: Option<Version>,
+        version: Version,
     ) {
         let var_name = dependency_version_var_name(&dep, version);
         self.dependency_to_version_vars
@@ -193,7 +197,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Adds a constraint that forces the package to be present in the solution to the model.
-    pub fn require_package(&mut self, pkg: &ExpandedPackage) -> QuackResult<()> {
+    pub fn require_package(&mut self, pkg: PackageId) -> QuackResult<()> {
         let var = self.get_package_variable(pkg, None)?;
         self.model.add(cons().coef(&var, 1.0).eq(1.0));
         Ok(())
@@ -202,25 +206,41 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Adds a constraint that forces the package to be present with a feature.
     pub fn require_package_with_feature(
         &mut self,
-        pkg: &ExpandedPackage,
-        feature: &FeatureName,
+        pkg: PackageId,
+        feature: FeatureName,
     ) -> QuackResult<()> {
         let var = self.get_package_variable(pkg, Some(feature))?;
         self.model.add(cons().coef(&var, 1.0).eq(1.0));
         Ok(())
     }
 
+    pub fn forbid_package(&mut self, pkg: PackageId) -> QuackResult<()> {
+        let var = self.get_package_variable(pkg, None)?;
+        self.model.add(cons().coef(&var, 1.0).eq(0.0));
+        Ok(())
+    }
+
+    pub fn forbid_package_with_feature(
+        &mut self,
+        pkg: PackageId,
+        feature: FeatureName,
+    ) -> QuackResult<()> {
+        let var = self.get_package_variable(pkg, Some(feature))?;
+        self.model.add(cons().coef(&var, 1.0).eq(0.0));
+        Ok(())
+    }
+
     /// Adds a constraint that forces the child to be present with all of the required features.
     pub fn require_satisfying_dep_feature(
         &mut self,
-        edge: &DependencyEdge,
-        parent_feature: PresentFeature<'_>,
+        edge: DependencyEdge,
+        parent_feature: PresentFeature,
         child_features: &HashSet<FeatureName>,
     ) -> QuackResult<()> {
-        let parent_var = self.get_package_variable(&edge.parent, parent_feature)?;
+        let parent_var = self.get_package_variable(edge.parent, parent_feature)?;
         let feature_vars = child_features
             .iter()
-            .map(|feature| self.get_dependency_feature_variable(edge, feature))
+            .map(|feature| self.get_dependency_feature_variable(edge, *feature))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
         self.model.one_implies_all(parent_var, feature_vars);
         Ok(())
@@ -231,15 +251,15 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Note: Use only for scenarios where both parent and child have belonged to the previous freeze.
     pub fn require_satisfying_dep_feature_for_preexisting(
         &mut self,
-        parent: &ExpandedPackage,
-        child: &ExpandedPackage,
+        parent: PackageId,
+        child: PackageId,
         forcing: Vec<(FeatureName, Vec<FeatureName>)>,
     ) -> QuackResult<()> {
         for (parent_feature, forced_child_features) in forcing {
-            let parent_var = self.get_package_variable(parent, Some(&parent_feature))?;
+            let parent_var = self.get_package_variable(parent, Some(parent_feature))?;
             let child_vars = forced_child_features
                 .into_iter()
-                .map(|feature| self.get_package_variable(child, Some(&feature)))
+                .map(|feature| self.get_package_variable(child, Some(feature)))
                 .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
             self.model.one_implies_all(parent_var, child_vars);
         }
@@ -249,10 +269,10 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Adds a constraint that forces the child to be present in at least one of the required versions.
     pub fn require_satisfying_dep_version(
         &mut self,
-        edge: &DependencyEdge,
-        parent_feature: PresentFeature<'_>,
+        edge: DependencyEdge,
+        parent_feature: PresentFeature,
     ) -> QuackResult<()> {
-        let parent_var = self.get_package_variable(&edge.parent, parent_feature)?;
+        let parent_var = self.get_package_variable(edge.parent, parent_feature)?;
         let version_vars = self
             .get_version_to_var_map_for_dep(edge)
             .values()
@@ -265,17 +285,12 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Adds a constraint that if the variable associated with a pair (dependency, child version)
     /// was chosen by the model to be present, the underlying package variable of the child in that version
     /// has to be present.
-    pub fn require_substantiate_dep(&mut self, edge: &DependencyEdge) -> QuackResult<()> {
+    pub fn require_substantiate_dep(&mut self, edge: DependencyEdge) -> QuackResult<()> {
         for (pkg_version, version_realization_var) in
             self.get_version_to_var_map_for_dep(edge).clone()
         {
-            let pkg_var = self.get_package_variable(
-                &ExpandedPackage {
-                    location: edge.dependency_loc,
-                    version: pkg_version,
-                },
-                None,
-            )?;
+            let pkg_var =
+                self.get_package_variable(PackageId::new(edge.dep_identity, pkg_version), None)?;
             self.model.implies(&version_realization_var, &pkg_var);
         }
         Ok(())
@@ -286,21 +301,22 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// then the underlying package variable of the child in that version with that feature has to be present.
     pub fn require_substantiate_dep_features(
         &mut self,
-        dep: &DependencyEdge,
-        possible_features: &HashMap<ExpandedPackage, HashSet<FeatureName>>,
-        possible_dep_realisations: &[ExpandedPackage],
+        dep: DependencyEdge,
+        possible_features: &HashMap<PackageId, HashSet<FeatureName>>,
+        possible_dep_realisations: &[PackageId],
     ) -> QuackResult<()> {
         for pkg in possible_dep_realisations {
             let version_realization_var =
-                self.get_dependency_version_variable(dep, &pkg.version())?;
+                self.get_dependency_version_variable(dep, pkg.version())?;
             for (feature, feature_realization_var) in
                 self.get_feature_to_var_map_for_dep(dep).clone()
             {
-                if !possible_features
-                    .get(pkg)
-                    .context_internal("Possible features map does not contain looked up package")?
-                    .contains(&feature)
-                {
+                let Some(pkg_features) = possible_features.get(pkg) else {
+                    qp_bail_internal!(
+                        "possible_features does not containt package `{pkg:?}`, {possible_features:#?}"
+                    )
+                };
+                if !pkg_features.contains(&feature) {
                     self.model.all_implies_any(
                         vec![
                             version_realization_var.clone(),
@@ -314,7 +330,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
                             version_realization_var.clone(),
                             feature_realization_var.clone(),
                         ],
-                        vec![self.get_package_variable(pkg, Some(&feature))?],
+                        vec![self.get_package_variable(*pkg, Some(feature))?],
                     );
                 }
             }
@@ -325,16 +341,16 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Adds a constraint the pair (pkg, feature) implies the presence of pairs (pkg, F) for any feature F to which `feature` expands.
     pub fn require_features_expansion(
         &mut self,
-        pkg: ExpandedPackage,
+        pkg: PackageId,
         feature: FeatureName,
         expanded_features: impl IntoIterator<Item = FeatureName>,
     ) -> QuackResult<()> {
         let expanded_features_vars: QuackResult<Vec<Rc<Variable>>> = expanded_features
             .into_iter()
-            .map(|f| self.get_package_variable(&pkg, Some(&f)))
+            .map(|f| self.get_package_variable(pkg, Some(f)))
             .collect();
         let expanded_features_vars = expanded_features_vars?;
-        let forcing_feature_var = self.get_package_variable(&pkg, Some(&feature))?;
+        let forcing_feature_var = self.get_package_variable(pkg, Some(feature))?;
         self.model
             .one_implies_all(forcing_feature_var, expanded_features_vars);
         Ok(())
@@ -344,9 +360,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 /// Output of the solver model, contains new packages to be put into the freeze, with their features.
 #[derive(Debug)]
 pub struct FoundSolution {
-    pub new_packages: HashSet<ExpandedPackage>,
-    pub new_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
-    pub new_edges: HashMap<DependencyEdge, Option<Version>>,
+    pub new_packages: HashSet<PackageId>,
+    pub new_features: HashMap<PackageId, HashSet<FeatureName>>,
+    pub new_edges: HashMap<DependencyEdge, Version>,
 }
 
 impl<'a> SolverModel<'a, ProblemCreated> {
@@ -354,12 +370,8 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// constructs the output and returns it.
     #[tracing::instrument(skip_all)]
     pub fn solve(self) -> QuackResult<FoundSolution> {
-        let solution = self
-            .model
-            .minimize()
-            .solve()
-            .best_sol()
-            .context("Failed to find a solution")?;
+        let solve = self.model.minimize().solve();
+        let solution = solve.best_sol().context("Failed to find a solution")?;
         debug!(?solution);
         let new_packages = new_packages(self.package_vars, self.preexisting_packages, &solution);
         let new_features = new_features(
@@ -381,10 +393,10 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 /// Helper for determining which new packages have been chosen by the model.
 #[tracing::instrument(skip_all)]
 fn new_packages(
-    package_vars: HashMap<ExpandedPackage, Rc<Variable>>,
-    preexisting_packages: &HashSet<ExpandedPackage>,
+    package_vars: HashMap<PackageId, Rc<Variable>>,
+    preexisting_packages: &HashSet<PackageId>,
     solution: &Solution,
-) -> HashSet<ExpandedPackage> {
+) -> HashSet<PackageId> {
     debug!(?preexisting_packages, ?package_vars);
     let new_packages = package_vars
         .into_iter()
@@ -395,10 +407,10 @@ fn new_packages(
                 None
             }
         })
-        .collect::<HashSet<ExpandedPackage>>()
+        .collect::<HashSet<PackageId>>()
         .difference(preexisting_packages)
         .cloned()
-        .collect::<HashSet<ExpandedPackage>>();
+        .collect::<HashSet<PackageId>>();
     debug!(?new_packages);
     new_packages
 }
@@ -406,12 +418,12 @@ fn new_packages(
 /// Helper for determining which new features of all the packages have been chosen by the model.
 #[tracing::instrument(skip_all)]
 fn new_features(
-    package_to_feature_vars: &HashMap<ExpandedPackage, FeaturesToVars>,
-    new_packages: &HashSet<ExpandedPackage>,
-    preexisting_packages: &HashSet<ExpandedPackage>,
-    preexisting_features: &HashMap<ExpandedPackage, HashSet<FeatureName>>,
+    package_to_feature_vars: &HashMap<PackageId, FeaturesToVars>,
+    new_packages: &HashSet<PackageId>,
+    preexisting_packages: &HashSet<PackageId>,
+    preexisting_features: &HashMap<PackageId, HashSet<FeatureName>>,
     solution: &Solution,
-) -> HashMap<ExpandedPackage, HashSet<FeatureName>> {
+) -> HashMap<PackageId, HashSet<FeatureName>> {
     let mut new_features = HashMap::new();
     for pkg in preexisting_packages.iter().chain(new_packages.iter()) {
         let mut pkg_features = HashSet::new();
@@ -443,7 +455,7 @@ fn new_features(
 fn new_edges(
     dependency_to_version_vars: HashMap<DependencyEdge, ChildVersionsToVars>,
     solution: &Solution,
-) -> HashMap<DependencyEdge, Option<Version>> {
+) -> HashMap<DependencyEdge, Version> {
     let mut new_edges = HashMap::new();
     for (edge, version_to_var_map) in dependency_to_version_vars {
         if let Some(chosen_realisation) = version_to_var_map

@@ -5,7 +5,6 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -76,13 +75,9 @@ private:
 			ASSERT_EQUAL(counter.while_count, 1u);
 			ASSERT_EQUAL(counter.void_return_count, 1u);
 
-			auto sym_ref  = helios::getSymRef(wrapper.declaration->original_symbol);
-			auto gen_data = std::get_if<helios::defgen::GeneratedSymbolData>(&sym_ref->other);
-			assertTrue(gen_data != nullptr, "Expected generated symbol data");
+			auto sym_ref = helios::getSymRef(wrapper.declaration->original_symbol);
 			assertTrue(
-				std::holds_alternative<helios::defgen::GeneratedSymbolData::ReplInstructionWrapper>(
-					gen_data->data
-				),
+				std::holds_alternative<helios::defgen::ReplInstructionWrapper>(sym_ref->other),
 				"Expected ReplInstructionWrapper generated symbol kind"
 			);
 
@@ -154,14 +149,9 @@ private:
 			auto sym = wrapper.declaration->original_symbol;
 			ASSERT_EQUAL(helios::kind(sym), helios::SymbolKind::Function);
 
-			auto sym_ref  = helios::getSymRef(sym);
-			auto gen_data = std::get_if<helios::defgen::GeneratedSymbolData>(&sym_ref->other);
-			assertTrue(gen_data != nullptr, "Expected generated symbol data");
+			auto sym_ref = helios::getSymRef(sym);
 
-			auto repl_data
-				= std::get_if<helios::defgen::GeneratedSymbolData::ReplInstructionWrapper>(
-					&gen_data->data
-				);
+			auto repl_data = std::get_if<helios::defgen::ReplInstructionWrapper>(&sym_ref->other);
 			assertTrue(repl_data != nullptr, "Expected ReplInstructionWrapper generated symbol");
 			ASSERT_EQUAL(repl_data->counter, 31u);
 		});

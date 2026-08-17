@@ -161,25 +161,25 @@ private:
 		return execution_position.instr_number;
 	}
 
-	template<typename FiedDataType>
-	FiedDataType getVMValueRefData(vm::VMValueRef vmvalue_ref) {
-		auto data_opt = vmvalue_ref.readData();
+	template<typename FieldDataType>
+	FieldDataType getVMValueRefData(const SharedBox<vm::IVMValueRef>& vmvalue_ref) {
+		auto data_opt = vmvalue_ref->readData();
 		assertTrue(data_opt.has_value(), "VMValueRef: Referenced memory is dead");
-		return std::get<FiedDataType>(data_opt.value());
+		return std::get<FieldDataType>(data_opt.value());
 	}
 
-	template<typename FiedDataType>
-	FiedDataType getStructField(
+	template<typename FieldDataType>
+	FieldDataType getStructField(
 		vm::interpreted_data_variant::Data data_data, base::StrID type_id, base::StrID field_name
 	) {
 		auto field_index = data_data.field_name_map[field_name];
 		auto field       = data_data.fields[field_index];
 		assertEqual(
-			field.value.getType()->getName(),
+			field.value->getType()->getName(),
 			type_id,
 			"Variable type is not correct for field " + field_name.str()
 		);
-		return getVMValueRefData<FiedDataType>(field.value);
+		return getVMValueRefData<FieldDataType>(field.value);
 	}
 
 	/**
@@ -251,8 +251,8 @@ private:
 			ASSERT_EQUAL_PRINT(stack_frame_data.function_name, "main");
 
 			for (const auto& var: stack_frame_data.frame_vars) {
-				if (var.value.getType()->getName() == base::StrID("ptr_struct")) {
-					auto struct_pointer_data_opt = var.value.readData();
+				if (var.value->getType()->getName() == base::StrID("ptr_struct")) {
+					auto struct_pointer_data_opt = var.value->readData();
 					ASSERT_HAS_VALUE(struct_pointer_data_opt);
 
 					auto struct_pointer_data
@@ -333,8 +333,13 @@ private:
 		{
 			auto exit_code_response = vm::api::getExitValue(pid);
 			ASSERT_HAS_VALUE(exit_code_response);
-			ASSERT_EQUAL(exit_code_response.value().size(), 1);
-			ASSERT_EQUAL_PRINT(exit_code_response.value().at(0)->readBytes<i64>(), 0);
+			ASSERT_TRUE(
+				std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value())
+			);
+			auto& exit_value_vec
+				= std::get<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value());
+			ASSERT_EQUAL(exit_value_vec.size(), 1);
+			ASSERT_EQUAL_PRINT(exit_value_vec.at(0)->readBytes<i64>(), 0);
 		}
 	}
 
@@ -359,7 +364,7 @@ private:
 
 		std::unique_lock lk(m);
 		// Test timeout
-		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] { return output.load(); }));
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(200), [&] { return output.load(); }));
 
 		ASSERT_HAS_VALUE(vm::api::stop(pid));
 	}

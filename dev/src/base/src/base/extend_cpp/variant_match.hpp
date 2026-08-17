@@ -41,6 +41,7 @@
  */
 #pragma once
 
+#include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/preproc/diagnostics.hpp>
 #include <base/preproc/for_each.hpp>
@@ -75,10 +76,17 @@ namespace base {
 
 	/**
 	 * @brief Helper function for extracting from variants
+	 * @TODO: #3073 change to ref
 	 */
 	template<typename T, typename U>
 	static T choose(const U& el) {
 		return std::get<T>(el);
+	}
+
+	template<typename T, typename U>
+	inline base::Optional<CRef<T>> maybeChoose(const U& el) {
+		auto el_ptr = std::get_if<T>(&el);
+		return el_ptr == nullptr ? base::Optional<CRef<T>>{} : el_ptr;
 	}
 }
 
@@ -101,9 +109,11 @@ namespace base {
  *
  * Braces are IMPORTANT for the code to work properly
  */
-#define variant_match(value) \
-	PUSH_DIAGNOSTIC          \
-	NO_SHADOW switch (auto&& internal_value = (value); internal_value.index()) POP_DIAGNOSTIC
+#define variant_match(value)                                                                      \
+	PUSH_DIAGNOSTIC NO_SHADOW switch (auto&& internal_value = (value); [&] {                      \
+		CORE_ASSERT(not value.valueless_by_exception(), "Variant in variant_match is valueless"); \
+		return internal_value.index();                                                            \
+	}()) POP_DIAGNOSTIC
 
 #define variant_case(type, name)                                       \
 	PUSH_DIAGNOSTIC NO_SHADOW break;                                   \
@@ -138,7 +148,7 @@ namespace base {
 /**
  * @brief An `if` clause called when `v` holds `type`. The inner type is accessible through `name`.
  */
-#define v_if_matches(v, type, name) if (const auto* name = std::get_if<type>(&v))
+#define v_if_matches(v, type, name) if (auto* name = std::get_if<type>(&v))
 
 /**
  * @brief Use instead of `std::visit` with multiple choices.

@@ -5,11 +5,17 @@
 #include <base/collections/optional.hpp>
 
 #include <string_id/string_id.hpp>
+// Its okay to export this, this is intended
+#include <helios/attributes/builtins.hpp>
+
+#include <expected>
+#include <vector>
 
 namespace compiler::helios {
 
-#define ATTRIBUTES_LIST \
-	attributes::BackendDependent, attributes::DVMOnlyImpl, attributes::NativeOnlyImpl
+#define ATTRIBUTES_LIST                                                                \
+	attributes::BackendDependent, attributes::DVMOnlyImpl, attributes::NativeOnlyImpl, \
+		attributes::Builtin, attributes::CFFIVariadicFunction
 
 	namespace attributes {
 		struct BackendDependent {
@@ -23,9 +29,28 @@ namespace compiler::helios {
 		struct NativeOnlyImpl {
 			bool operator==(const NativeOnlyImpl&) const = default;
 		};
+
+		struct Builtin {
+			BuiltinKind builtin;
+			bool        operator==(const Builtin&) const = default;
+		};
+
+		/**
+		 * @brief Marks an `extern("C")` `fundecl` as a variadic C function.
+		 */
+		struct CFFIVariadicFunction {
+			/**
+			 * @brief Number of fixed parameters preceding the variadic ones.
+			 */
+			u64  fixed_params;
+			bool operator==(const CFFIVariadicFunction&) const = default;
+		};
 	}
 
 	using Attribute = std::variant<ATTRIBUTES_LIST>;
+
+	template<typename Attr>
+	base::Optional<CRef<Attr>> getAttrInVector(const std::vector<Attribute>& attrs);
 
 	/**
 	 * @brief Check if the given attribute can be applied to given stmt.
@@ -47,12 +72,21 @@ namespace compiler::helios {
 	);
 
 	/**
-	 * @brief Convert a single identifier into an attribute.
-	 * @return Empty optional when no attributes can be parsed or the parsed attribute.
+	 * @brief Convert an attribute name and its arguments into an Attribute.
 	 *
-	 * @warning Does not work on attributes in the form `@something(a,b,c)`
+	 * Dispatches on the name to a per-attribute parser that validates the argument list, e.g.
+	 * `@builtin("ptr_from_slice")`. When the arguments are invalid the parser logs a diagnostic and
+	 * fails the current query (never returns).
+	 *
+	 * @return The parsed attribute, or an empty optional when the name is not a recognized attribute.
+	 *
+	 * @param args The attribute argument list, empty when the attribute is written without `(...)`.
 	 */
-	base::Optional<Attribute> attrFromStr(base::StrID str);
+	base::Optional<Attribute> attrFromStr(
+		query::Context&                                    ctx,
+		base::StrID                                        name,
+		base::Optional<pst::AccessLocked<pst::AtrArgList>> args
+	);
 
 	/**
 	 * @brief Get the attribute name.

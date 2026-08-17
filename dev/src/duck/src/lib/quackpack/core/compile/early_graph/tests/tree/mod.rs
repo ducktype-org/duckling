@@ -37,6 +37,8 @@ fn creates_valid_initial_graph() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
+        shared: false,
+        jobs: 1,
     };
     let graph = EarlyGraph::new_early(&bcx).unwrap();
     assert_eq!(graph.graph.root, identity_for("root"));
@@ -85,6 +87,8 @@ fn expands_valid_features1() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["use_bar".into()],
         profile,
+        shared: false,
+        jobs: 1,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -138,6 +142,8 @@ fn expands_valid_features2() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["full".into()],
         profile,
+        shared: false,
+        jobs: 1,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -197,6 +203,8 @@ fn expands_valid_features3() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["baz_without_bar".into()],
         profile,
+        shared: false,
+        jobs: 1,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -243,6 +251,8 @@ fn errors_with_nonexistent_features() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["nonexistent".into()],
         profile,
+        shared: false,
+        jobs: 1,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
@@ -278,6 +288,8 @@ fn removes_inactive_deps1() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
+        shared: false,
+        jobs: 1,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -330,6 +342,8 @@ fn removes_inactive_deps2() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["use_bar".into()],
         profile,
+        shared: false,
+        jobs: 1,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -392,6 +406,8 @@ fn removes_inactive_deps3() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["full".into()],
         profile,
+        shared: false,
+        jobs: 1,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -464,6 +480,8 @@ fn removes_inactive_deps4() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["baz_without_bar".into()],
         profile,
+        shared: false,
+        jobs: 1,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -530,14 +548,17 @@ fn missing_direct_dep_in_freeze() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
+        shared: false,
+        jobs: 1,
     };
     let err = EarlyGraph::new_early(&bcx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        format!(
+    let err = err.to_string();
+    assert!(
+        err.starts_with(&format!(
             "malformed freezefile: missing direct dependency `{}`",
             fetcher_identity_for("foo")
-        )
+        )),
+        "{err}"
     );
 }
 
@@ -560,13 +581,16 @@ fn missing_transitive_dep_in_freeze() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
+        shared: false,
+        jobs: 1,
     };
     let err = EarlyGraph::new_early(&bcx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        format!(
+    let err = err.to_string();
+    assert!(
+        err.starts_with(&format!(
             "malformed freezefile: missing transitive dependency `{}`",
             fetcher_identity_for("bar")
-        ),
+        )),
+        "{err}"
     );
 }

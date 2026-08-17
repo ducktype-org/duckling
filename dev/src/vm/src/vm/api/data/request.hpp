@@ -1,5 +1,6 @@
 #pragma once
 
+#include "execution_config.hpp"
 #include "process_info.hpp"
 
 #include <events/emitter.hpp>
@@ -9,8 +10,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/safe/memory/pointer.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <json/json.hpp>
 
@@ -66,7 +66,7 @@ namespace vm::api {
 			std::string type_name;
 		};
 
-		struct VmValue {
+		struct VMValue {
 			std::string type_name;
 		};
 
@@ -102,6 +102,10 @@ namespace vm::api {
 			Ref<events::Listener<ProcStatus>> listener;
 		};
 
+		struct SetExecutionConfig {
+			api::ExecutionConfig config;
+		};
+
 		struct AttachOutputListener {
 			Ref<events::Listener<std::string>> listener;
 		};
@@ -132,7 +136,7 @@ namespace vm::api {
 		request::WaitForBreakpoint,
 		request::ExecutionPosition,
 		request::TypeMetadata,
-		request::VmValue,
+		request::VMValue,
 		request::StatusRequest,
 		request::DebuggerGetNumberOfCurrentStackFrames,
 		request::DebuggerGetStackFrameData,
@@ -143,6 +147,7 @@ namespace vm::api {
 		request::ExitCodeRequest,
 		request::DeinitAndValidate,
 		request::AttachStatusListener,
+		request::SetExecutionConfig,
 		request::AttachOutputListener,
 		request::SetBreakpoint,
 		request::MapFileLineToCodeCollectionPosition>;

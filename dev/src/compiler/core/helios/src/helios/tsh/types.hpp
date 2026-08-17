@@ -10,6 +10,7 @@
 #include "abstract_type.hpp"
 #include "symbol_type.hpp"
 
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
 #include <base/collections/optional.hpp>
@@ -28,7 +29,6 @@ namespace compiler::tsh {
 	class ManyPointerAbstractTypeImpl;
 	class CPointerAbstractTypeImpl;
 	class SliceAbstractTypeImpl;
-	class StringAbstractTypeImpl;
 	class TupleAbstractTypeImpl;
 	class FunctionAbstractTypeImpl;
 	class DynamicArrayAbstractTypeImpl;
@@ -496,6 +496,15 @@ namespace compiler::tsh {
 		compiler::helios::SymID getSymbol() const;
 
 		/**
+		 * @brief Returns the ABI of this class, derived from its `extern` specifiers.
+		 *
+		 * Returns `DefaultAbi` for plain classes and `CAbi` for classes annotated
+		 * with `extern("C")`.
+		 */
+		[[nodiscard]]
+		compiler::helios::SymbolABI getABI(query::Context& ctx) const;
+
+		/**
 		 * Gets the type of the base class.
 		 * @param ctx The Query Context necessary to refer to the definition of the class.
 		 * @return The type of the base class.
@@ -541,15 +550,6 @@ namespace compiler::tsh {
 	/***********************\
 	|  MISCELLANEOUS TYPES  |
 	\***********************/
-
-	class StringAbstractType: public AbstractType {
-	public:
-		SETUP_TYPE_WITH_BASE(StringAbstractType, AbstractType)
-
-		CONSTRUCT_WITH_CHECKED_CAST(StringAbstractType)
-
-		CONSTRUCT_FROM_IMPLEMENTATION(StringAbstractType)
-	};
 
 	class NamespaceAbstractType: public AbstractType {
 	public:

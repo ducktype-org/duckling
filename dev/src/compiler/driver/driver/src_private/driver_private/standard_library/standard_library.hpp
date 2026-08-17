@@ -9,27 +9,13 @@
 #pragma once
 
 #include <driver/options.hpp>
-#include <frontend/module_tree/module_id.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
 
-#include <array>
 #include <vector>
 
 namespace compiler::driver {
-	/**
-	 * @brief Configuration for the standard library packages.
-	 */
-	struct STDPackageConfig final {
-		std::string              name;
-		std::string              subpath;
-		std::vector<std::string> dependencies;
-	};
-
-	/// This is in header for the tests only
-	extern const std::array<STDPackageConfig, 2> STD_PACKAGES_CONFIG;
-
 	/**
 	 * @brief Based on the `StdLibOptions` returns the path to the standard library, if it is
 	 * used. If `DefaultStd` is used, it resolves the path to the standard library based on the
@@ -57,28 +43,29 @@ namespace compiler::driver {
 	 * @brief Based on the `StdLibOptions` returns the string with the arguments needed to
 	 * link the standard library. Can be empty if the standard library is not used.
 	 */
-	base::Optional<std::string> getStdLibLinkingArgs(
+	base::Optional<std::string> getNativeStdLibLinkingArgs(
 		const options_types::StdLibOptions& linking_options
 	);
 
 	/**
-	 * @brief The place where the compiled standard library binaries for native targets are placed.
+	 * @brief The existing compiled standard library binaries for native targets.
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts();
 
 	/**
-	 * @brief The place where the compiled standard library DVM artifacts are placed.
+	 * @brief The existing compiled standard library DVM artifacts.
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts();
 
 	/**
-	 * @brief The place where the compiled standard library DVM debug info artifacts are placed.
+	 * @brief The existing compiled standard library DVM debug info artifacts.
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts();
 
 	/**
-	 * @brief Returns the root module IDs of the registered standard library packages.
-	 * @note This is only for REPL usage.
+	 * @brief Returns whether all the standard library artifact files are present.
+	 * @note It is used to determine if we can skip std compilation.
+	 * @TODO: #3158 A generic dependency no-recompile solution may replace this.
 	 */
-	std::vector<frontend::ModuleID> getStandardLibraryRootModules();
+	bool allStdlibArtifactsPresent();
 }

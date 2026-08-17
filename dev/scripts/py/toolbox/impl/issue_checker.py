@@ -2,6 +2,7 @@ import re
 import json
 from .helpers import (
     BashCommandError,
+    log_good,
     log_info,
     log_warning,
     log_new_line,
@@ -29,6 +30,7 @@ def issue_checker_impl(
     if not issues:
         issues = get_issues_from_github()
         if not issues:
+            log_info("No issue numbers to look for in the code. Nothing to check.")
             return True
 
     valid_issue_numbers: list[str] = []
@@ -74,7 +76,12 @@ def issue_checker_impl(
     log_info("Summary:")
     for num in valid_issue_numbers:
         log_info(f"#{num}: {summary[num]} occurrence(s)")
-    return not found_any
+
+    if found_any:
+        return False
+
+    log_good("No references to the checked issue(s) were found in the code")
+    return True
 
 
 def get_issues_from_github() -> list[str]:

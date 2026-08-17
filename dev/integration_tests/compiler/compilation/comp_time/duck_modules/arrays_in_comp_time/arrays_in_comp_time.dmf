@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 class T { a: i64; }
 
 fun useArray() -> i64 = {

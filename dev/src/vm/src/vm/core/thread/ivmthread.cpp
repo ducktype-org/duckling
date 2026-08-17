@@ -1,6 +1,7 @@
 #include "ivmthread.hpp"
 
 #include <vm/core/process/ivmprocess.hpp>
+#include <vm/core/safe/exceptions.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
 
 namespace vm {

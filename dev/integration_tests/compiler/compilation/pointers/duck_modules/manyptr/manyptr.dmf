@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 extern("C") fundecl malloc(siae: i64) -> cptr i8;
 extern("C") fundecl free(p: cptr i8);
 

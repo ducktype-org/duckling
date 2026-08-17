@@ -260,23 +260,22 @@ namespace compiler::driver {
 	 * @brief Helper function that merges global linking options with task-specific linking options
 	 * for a given`BuildTarget`.
 	 */
-	BuildTarget convertBuildTargetForTask(
+	BuildTarget mergeBuildTargetWithGlobalOptions(
 		const BuildTarget& raw_target, const options_types::StdLibOptions& stdlib_options
 	) {
 		variant_match(raw_target) {
 			variant_case(BuildTargetLLVMExecutable, llvm_exec_target) {
+				auto linking_options                = llvm_exec_target.linking_options;
+				linking_options.stdlib_link_options = getNativeStdLibLinkingArgs(stdlib_options);
 				return BuildTargetLLVMExecutable{
 					.output_file_name = llvm_exec_target.output_file_name,
-					.linking_options
-					= constructLinkerOptions(llvm_exec_target.linking_options, stdlib_options),
+					.linking_options  = std::move(linking_options),
 				};
 			}
 			variant_case(BuildTargetDVMExecutable, dvm_exec_target) {
 				return BuildTargetDVMExecutable{
 					.output_file_name  = dvm_exec_target.output_file_name,
-					.link_std_packages = not base::holds<options_types::StdLibOptions::NoStd>(
-						stdlib_options.std_lib_type
-					),
+					.link_std_packages = stdlib_options.stdActive(),
 				};
 			}
 			variant_default { return raw_target; }
@@ -295,8 +294,9 @@ namespace compiler::driver {
 
 				if (!root_module_opt.has_value()) return {};
 
-				auto build_target
-					= convertBuildTargetForTask(raw_package_task.build_target, stdlib_options);
+				auto build_target = mergeBuildTargetWithGlobalOptions(
+					raw_package_task.build_target, stdlib_options
+				);
 
 				return Task{
 					.type      = TaskType::PackageCompilation,
@@ -311,12 +311,21 @@ namespace compiler::driver {
 		CORE_UNREACHABLE();
 	}
 
-	linker::LinkingOptions constructLinkerOptions(
-		const linker::LinkingOptions&       local_options,
-		const options_types::StdLibOptions& stdlib_options
+	linker::LinkingOptions constructNativeLinkerOptions(
+		const options_types::LinkingOptions& linking_options,
+		const options_types::StdLibOptions&  stdlib_options
 	) {
-		linker::LinkingOptions options = local_options;
-		options.stdlib_link_options    = getStdLibLinkingArgs(stdlib_options);
-		return options;
+		return {
+			.linker_path = linking_options.native_linker_path,
+			.additional_link_options
+			= linking_options.native_additional_link_options.copyValueOr(""),
+			.link_c_standard_library = linking_options.native_link_c_standard_lib,
+			.stdlib_link_options     = getNativeStdLibLinkingArgs(stdlib_options),
+		};
+	}
+
+	DVMRuntimeConfig constructDVMRuntimeConfig(const options_types::LinkingOptions& linking_options
+	) {
+		return { .shared_libraries = linking_options.dvm_shared_libraries };
 	}
 }  // namespace compiler::driver

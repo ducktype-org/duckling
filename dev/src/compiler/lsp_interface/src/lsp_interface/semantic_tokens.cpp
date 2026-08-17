@@ -21,7 +21,6 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/ls_utils/ls_utils.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -40,7 +39,7 @@ namespace lsp {
 		base::Optional<dia::SourcePosition> getOriginPosition(
 			const compiler::helios::code::ElementOrigin& origin
 		) {
-			return origin.getStablePosition().map([](const dia_int::StablePosition& stable_pos) {
+			return origin.getStablePosition().map([](const dia::StablePosition& stable_pos) {
 				return stable_pos.getActiveSourcePositionIllegalAccess();
 			});
 		}
@@ -395,10 +394,6 @@ namespace lsp {
 			for (const auto& comparison: elem.comparisons) comparison->acceptVisitor(*this);
 		}
 
-		void visitParenthesisExpr(const code::ParenthesisExpr& elem) override {
-			elem.inner->acceptVisitor(*this);
-		}
-
 		void visitTupleExpr(const code::TupleExpr& elem) override {
 			for (const auto& item: elem.elements) item->acceptVisitor(*this);
 		}
@@ -429,11 +424,11 @@ namespace lsp {
 			for (const auto& item: elem.expressions) item->acceptVisitor(*this);
 		}
 
-		void visitBoxOfExpr(const code::BoxOfExpr& elem) override {
+		void visitRefOfExpr(const code::RefOfExpr& elem) override {
 			elem.inner->acceptVisitor(*this);
 		}
 
-		void visitRefOfExpr(const code::RefOfExpr& elem) override {
+		void visitPtrOfExpr(const code::PtrOfExpr& elem) override {
 			elem.inner->acceptVisitor(*this);
 		}
 

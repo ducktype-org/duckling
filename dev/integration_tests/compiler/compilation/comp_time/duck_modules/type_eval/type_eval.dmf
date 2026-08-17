@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # This test tests the compile time evaluation of meta types. 
 # Note that for more complex types we create bool constants which 
 # we check at runtime to assert their correctness, since some of 
@@ -9,9 +7,18 @@ import core.builtins.*;
 class T {}
 class U {}
 
+# A class with a non-trivial layout: i8 at offset 0, i64 (align 8) at offset 8,
+# i16 at offset 16 -> 18 bytes of payload rounded up to the 8-byte alignment,
+# so size 24 bytes, alignment 8 bytes.
+class Mixed { a: i8; b: i64; c: i16; }
+
 fun createUnit() -> type = ();
 fun createBox(t: type) -> type = box t;
 fun createRef(t: type) -> type = ref t;
+fun createPtr(t: type) -> type = ptr t;
+fun createCPtr(t: type) -> type = cptr t;
+fun createManyPtr(t: type) -> type = manyptr t;
+fun createSlice(t: type) -> type = slice t;
 fun createVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
 fun createTuple(a: type, b: type, c: type, d: type) -> type = (a, b, c, d);
 fun createShortTuple(a: type, b: type) -> type = (a, b);
@@ -32,11 +39,13 @@ fun getTuple(order: i32, a: type, b: type) -> type = {
     }
 }
 
+# A variant tells its alternatives apart by their underlying type alone, so the branches
+# differ in which type is referenced rather than in the reference kind of `a` or `b`.
 fun getVariant(order: i32, a: type, b: type) -> type = {
     if (order == 1) {
-        return a | b | createRef(a);
+        return a | b | createRef(Mixed);
     } else {
-        return a | b | createRef(b);
+        return a | b | createRef(i32);
     }
 }
 
@@ -52,6 +61,16 @@ const TUPLE_A = createShortTuple(i32, f32);
 const TUPLE_B: type = (i32, f32);
 const A = createInt();
 const B: A = 123;
+
+# ========== Pointer / slice constructors ==========
+const PTR_I32 = createPtr(i32);
+const CPTR_I32 = createCPtr(i32);
+const MANYPTR_I32 = createManyPtr(i32);
+const SLICE_I32 = createSlice(i32);
+
+# ========== size_of / alignment_of ==========
+const MIXED_SIZE: i64 = size_of(Mixed);
+const MIXED_ALIGN: i64 = alignment_of(Mixed);
 
 # ========== Complex Types ==========
 const T_TYPE = T;
@@ -85,8 +104,25 @@ const CMP19 = typesEqual(T_IN_TUPLE, createTuple(i32, T, T, U));
 const CMP20 = typesEqual((T, U, ref T), getTuple(1, T, U));
 const CMP21 = typesEqual((T, U, ref U), getTuple(0, T, U));
 const CMP22 = typesEqual((T, U, ref U), getTuple(0, T, U));
-const CMP23 = typesEqual(T | U | ref U, getVariant(0, T, U));
-const CMP24 = typesEqual(T | U | ref T, getVariant(1, T, U));
+const CMP23 = typesEqual(T | U | ref i32, getVariant(0, T, U));
+const CMP24 = typesEqual(T | U | ref Mixed, getVariant(1, T, U));
+
+# Pointer / slice constructors produce the same type as the literal operators.
+const CMP27 = typesEqual(PTR_I32, ptr i32);
+const CMP28 = typesNotEqual(createPtr(i32), ptr i64);
+const CMP29 = typesEqual(CPTR_I32, cptr i32);
+const CMP30 = typesEqual(MANYPTR_I32, manyptr i32);
+const CMP31 = typesEqual(SLICE_I32, slice i32);
+const CMP32 = typesNotEqual(SLICE_I32, slice i64);
+# ptr, cptr and manyptr of the same pointee are all distinct types.
+const CMP33 = typesNotEqual(PTR_I32, MANYPTR_I32);
+const CMP34 = typesNotEqual(PTR_I32, CPTR_I32);
+
+# size_of / alignment_of of a class with a non-trivial layout.
+const CMP35 = MIXED_SIZE == 24;
+const CMP36 = MIXED_ALIGN == 8;
+const CMP37 = size_of(i32) == 4;
+const CMP38 = alignment_of(i64) == 8;
 
 fun main() -> i64 = {
     if (not CMP1) { builtin_output_i64(1); }
@@ -118,9 +154,22 @@ fun main() -> i64 = {
     let sum2: A = 2147483647;
 
     # If a correct type was evaluated this should be an overflow. So the result should be < 0.
-    if (not (sum + 1 < 0)) { builtin_output_i64(25); } 
-    if (not (sum2 + 1 < 0)) { builtin_output_i64(26); } 
- 
+    if (not (sum + 1 < 0)) { builtin_output_i64(25); }
+    if (not (sum2 + 1 < 0)) { builtin_output_i64(26); }
+
+    if (not CMP27) { builtin_output_i64(27); }
+    if (not CMP28) { builtin_output_i64(28); }
+    if (not CMP29) { builtin_output_i64(29); }
+    if (not CMP30) { builtin_output_i64(30); }
+    if (not CMP31) { builtin_output_i64(31); }
+    if (not CMP32) { builtin_output_i64(32); }
+    if (not CMP33) { builtin_output_i64(33); }
+    if (not CMP34) { builtin_output_i64(34); }
+    if (not CMP35) { builtin_output_i64(35); }
+    if (not CMP36) { builtin_output_i64(36); }
+    if (not CMP37) { builtin_output_i64(37); }
+    if (not CMP38) { builtin_output_i64(38); }
+
     return 0;
 }
 

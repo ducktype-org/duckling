@@ -4,10 +4,13 @@
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
+#include <expected>
+#include <string>
+
 namespace vm::jit::cnp {
 	using JitOpFun = void(const vm::MicroInstruction**, byte**, vm::Frame**, vm::SafeVMThread*);
 
-	JitOpFun* compileCP(const vm::low::LowFuncData& func_data) {
+	std::expected<JitOpFun*, std::string> compileCP(const vm::low::LowFuncData& func_data) {
 		PUSH_DIAGNOSTIC
 		ALLOW_EXTENSIONS
 		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
@@ -34,7 +37,9 @@ namespace vm::jit::cnp {
 		static constinit auto stencils
 			= Stencils{ .stencils_binary = std::bit_cast<std::array<byte, sizeof(BIN)>>(BIN),
 			            .stencils_data   = std::to_array(DATA) };
-		auto loaded_stencils = std::move(stencils).load();
+		auto loaded = std::move(stencils).load();
+		if (!loaded) return std::unexpected(std::move(loaded).error());
+		auto& loaded_stencils = loaded.value();
 
 		auto opcodes         = func_data.bc | std::views::transform(getInstructionOpcode);
 		auto get_opfunc_size = [&](low::MicroOpcode opcode) {
@@ -44,8 +49,11 @@ namespace vm::jit::cnp {
 			opcodes | std::views::transform(get_opfunc_size), 0, std::plus{}
 		);
 
-		auto  memory = JitFuncMemory::allocate(size);
-		byte* next   = memory.addr;
+		auto memory_result = JitFuncMemory::allocate(size);
+		if (!memory_result) return std::unexpected(std::move(memory_result).error());
+		auto& memory = memory_result.value();
+
+		byte* next = memory.addr;
 		for (low::MicroOpcode opcode: opcodes) {
 			auto stencil_data = loaded_stencils.stencilsData().at(static_cast<u64>(opcode));
 			next              = loaded_stencils.relocate(stencil_data, next);

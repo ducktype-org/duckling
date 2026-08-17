@@ -3,9 +3,6 @@
 #include "options.hpp"
 
 #include <concurrent/module_flags/worker_count.hpp>
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
 #include <driver/module_flags/module_flags.hpp>
@@ -23,6 +20,9 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
+#include <diagnostic/logger.hpp>
+#include <diagnostic/module_flags/module_flags.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
@@ -102,6 +102,31 @@ namespace compiler::driver {
 				else
 					had_failure = true;
 			}
+
+			if_opt_some(stdlib_options.std_artifacts_path, path) {
+				if (not path.exists()) {
+					if (path.isPhysical() || path.isRelative()) {
+						auto file = fs::FileManager::createPhysicalFolder(path.absolute());
+						CORE_ASSERT(
+							file.exists(), "Failed to create artifacts folder: " + path.string()
+						);
+					} else if (path.isTemporary()) {
+						auto file = fs::FileManager::createTempFolder(path);
+						CORE_ASSERT(
+							file.exists(), "Failed to create artifacts folder: " + path.string()
+						);
+					} else {
+						throw base::LogicError(
+							"Artifacts path must be either physical or temporary, but got: "
+							+ path.string()
+						);
+					}
+				}
+				global_state::setters::setCustomStdArtifactsCollection(
+					makeBox<artifacts::ArtifactCollection>(path)
+				);
+			}
+
 			return had_failure ? base::BAD : base::OK;
 		}
 
@@ -251,31 +276,23 @@ namespace compiler::driver {
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
-				auto                         repl_packages_info = getScriptStubPackage();
-				options_types::StdLibOptions repl_linking_options{
-					.std_lib_type = options_types::StdLibOptions::DefaultStd{},
-				};
+				auto repl_packages_info = getScriptStubPackage();
 
 				auto package_success
-					= handlePackageOptions(repl_packages_info, repl_linking_options);
+					= handlePackageOptions(repl_packages_info, repl_options.stdlib_options);
 				if (package_success.isBad()) return base::BAD;
-
 
 				handleDebugOptions(repl_options.debug_options);
 				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ScriptMode, script_options) {
-				auto                         repl_packages_info = getScriptStubPackage();
-				options_types::StdLibOptions repl_linking_options{
-					.std_lib_type = options_types::StdLibOptions::DefaultStd{},
-				};
-
+				auto repl_packages_info = getScriptStubPackage();
 
 				handleDebugOptions(script_options.debug_options);
 				handleExecutionOptions(script_options.execution_options);
 				handleArtifactsOptions(script_options.compilation_artifacts);
 				auto package_success
-					= handlePackageOptions(repl_packages_info, repl_linking_options);
+					= handlePackageOptions(repl_packages_info, script_options.stdlib_options);
 				if (package_success.isBad()) return base::BAD;
 				handleBackendOptions(script_options.backend_options);
 				handleScriptContext(script_options.script_file);
@@ -287,9 +304,9 @@ namespace compiler::driver {
 
 	void initializeGlobalLogger() {
 		// We might want to configure it differently in the future:
-		dia_int::configureImmediatePrint(&std::cerr);
-		dia_int::configureTerminalPrinterColors(true);
+		dia::configureImmediatePrint(&std::cerr);
+		dia::configureTerminalPrinterColors(true);
 
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
+		global_state::setters::setGlobalLogger(makeBox<dia::Logger>());
 	}
 }

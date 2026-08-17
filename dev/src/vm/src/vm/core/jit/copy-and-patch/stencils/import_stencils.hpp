@@ -1,17 +1,21 @@
 #pragma once
 
-#include "dynamic_library.hpp"
 #include "relocations.hpp"
+
+#include <vm/core/native/dynamic_library.hpp>
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstring>
+#include <expected>
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
 namespace vm::jit::cnp {
+	using vm::native::DynamicLibrary;
 
 	/**
 	 * @brief All informations used for future patching of the copied stencil.
@@ -41,7 +45,7 @@ namespace vm::jit::cnp {
 		/**
 		 * @brief Dynamically link the stored stencils, resolving their dependencies.
 		 */
-		[[nodiscard]] LoadedStencilsT load() &&;
+		[[nodiscard]] std::expected<LoadedStencilsT, std::string> load() &&;
 	};
 
 	template<usize BinarySize, usize NumFunctions>
@@ -59,9 +63,11 @@ namespace vm::jit::cnp {
 		/**
 		 * @brief Dynamically link the stored stencils, resolving their dependencies.
 		 */
-		[[nodiscard]] static LoadedStencils load(StencilsT&& stencils) {
-			auto loaded_library = DynamicLibrary::fromMemory(stencils.stencils_binary);
-			return LoadedStencils{ std::move(stencils), std::move(loaded_library) };
+		[[nodiscard]] static std::expected<LoadedStencils, std::string> load(StencilsT&& stencils) {
+			return DynamicLibrary::fromMemory(stencils.stencils_binary)
+			    .transform([&](DynamicLibrary loaded_library) {
+					return LoadedStencils{ std::move(stencils), std::move(loaded_library) };
+				});
 		}
 
 		/**
@@ -96,7 +102,9 @@ namespace vm::jit::cnp {
 	};
 
 	template<usize BinarySize, usize NumFunctions>
-	inline LoadedStencils<BinarySize, NumFunctions> Stencils<BinarySize, NumFunctions>::load() && {
+	inline std::expected<LoadedStencils<BinarySize, NumFunctions>, std::string> Stencils<
+		BinarySize,
+		NumFunctions>::load() && {
 		return LoadedStencilsT::load(std::move(*this));
 	}
 }

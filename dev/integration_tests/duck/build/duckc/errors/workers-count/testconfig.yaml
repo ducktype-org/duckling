@@ -1,0 +1,27 @@
+workers: ''
+test-cmd: duck -C foo build --jobs @{workers}
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+Tests:
+  workers:
+    Description: test errors with different values for `--jobs`
+    Cases:
+      string:
+        workers: a
+        ExitCode: 1
+        Err:
+          String: |+
+            error: invalid value 'a' for '--jobs <N>': invalid digit found in string
+
+            For more information, try '--help'.
+
+              Caused by:
+                invalid digit found in string
+        empty-value:
+          ExitCode: 1
+          Err:
+            String: |+
+              error: a value is required for '--jobs <N>' but none was supplied
+
+              For more information, try '--help'.

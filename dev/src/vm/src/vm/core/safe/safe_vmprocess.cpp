@@ -13,7 +13,8 @@
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalueref.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
@@ -33,8 +34,12 @@ namespace vm {
 		std::unique_lock                          lock(rw_global);
 		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(std::vector<fs::File>, files) { return loader.loadAndValidate(files); }
-				variant_case(code::CodeCollection, code) { return loader.loadAndValidate(code); }
+				variant_case(std::vector<fs::File>, files) {
+					return loader.loadAndValidate(files, execution_config);
+				}
+				variant_case(code::CodeCollection, code) {
+					return loader.loadAndValidate(code, execution_config);
+				}
 			}
 			CORE_UNREACHABLE();
 		}();
@@ -75,6 +80,9 @@ namespace vm {
 		getMainVMThread().runNoSpawn(func_name, run_arguments);
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
+			variant_case(api::ExecutionPanicked, panicked) {
+				return std::unexpected(api::StateError(panicked.error_message));
+			}
 			variant_default return std::unexpected(api::StateError(
 				hasExecutionStarted(getStatus()) ? "Execution did not complete"
 												 : "Execution did not start"
@@ -152,24 +160,33 @@ namespace vm {
 		return {};
 	}
 
-	Ref<VmValue> SafeVMProcess::createVmValue(TypeCRef type) {
-		auto value = Box<VmValue>::fromPointer(new VmValue(*this, type));
-		owned_vm_values.push_back(std::move(value));
+	Ref<IVMValue> SafeVMProcess::createVMValue(code::valid_type::ValidTypeID type_id) {
+		// Safe TypeIDs are asserted (in the type builder) to be numerically equal to ValidTypeIDs.
+		return createVMValue(loaded_program->getTypes().at(TypeID(type_id.asInt())));
+	}
+
+	Box<IVMValue> SafeVMProcess::createOwnedVMValue(code::valid_type::ValidTypeID type_id) {
+		return createOwnedVMValue(loaded_program->getTypes().at(TypeID(type_id.asInt())));
+	}
+
+	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type) {
+		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
+		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
-	Ref<VmValue> SafeVMProcess::createVmValue(TypeCRef type, Pointer src) {
-		auto value = Box<VmValue>::fromPointer(new VmValue(*this, type, src));
-		owned_vm_values.push_back(std::move(value));
+	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type, Pointer src) {
+		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
+		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
-	Box<VmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type) {
-		return Box<VmValue>::fromPointer(new VmValue(*this, type));
+	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(TypeCRef type) {
+		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
 	}
 
-	Box<VmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type, Pointer src) {
-		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
+	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(TypeCRef type, Pointer src) {
+		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
 	}
 
 	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
@@ -334,6 +351,14 @@ namespace vm {
 		});
 	}
 
+	std::expected<api::Response, api::ApiError> SafeVMProcess::setExecutionConfig(
+		const api::ExecutionConfig& config
+	) {
+		std::unique_lock lock(rw_global);
+		this->execution_config = config;
+		return api::Response(api::response::Empty());
+	}
+
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getNumberOfCurrentStackFrames(
 		api::ThreadID thread_id
 	) {
@@ -381,7 +406,9 @@ namespace vm {
 						.offset = offset,
 						.name   = std::nullopt,
 						.type   = std::nullopt,
-						.value  = VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
+						.value  = SafeVMValueRef::makeShared(
+                            *this, memory.getBlockType(block), Pointer(block, 0)
+                        ),
 					});
 				}
 
@@ -445,8 +472,8 @@ namespace vm {
 					= loaded_program->getTypes().atMaybe(base::StrID(type_name.c_str()));
 				match_optional(maybe_type) {
 					opt_some(type) {
-						auto vm_value = createOwnedVmValue(type);
-						return api::response::VmValue{ std::move(vm_value) };
+						auto vm_value = createOwnedVMValue(type);
+						return api::response::VMValue{ std::move(vm_value) };
 					}
 					opt_none {
 						return std::unexpected(api::ApiError{ api::OtherError{ "Type not found" } });

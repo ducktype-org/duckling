@@ -10,7 +10,7 @@ namespace dia {
 	fs::File FileLocation::getSourceFile() const { return path; }
 
 	MacroLocation::MacroLocation(
-		const dia_int::StablePosition& parent, Ref<tokenizer::TokenSource> source
+		const dia::StablePosition& parent, Ref<tokenizer::TokenSource> source
 	):
 		  parent(parent),
 		  source(source),
@@ -20,7 +20,7 @@ namespace dia {
 
 	fs::File MacroLocation::getSourceFile() const { return path; }
 
-	dia_int::StablePosition MacroLocation::getMacroParentNode() const { return parent; }
+	dia::StablePosition MacroLocation::getMacroParentNode() const { return parent; }
 
 	Ref<tokenizer::TokenSource> FakeLocation::getSource() const { return source.refMut(); }
 

@@ -1,0 +1,26 @@
+features: ""
+PostCase: python3 check.py @{features} && @{cleanup_tmp_env}
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar
+      conditions:
+        package-features: [use-bar]
+
+  features:
+    use-bar: []" >> foo/quackconfig.yaml
+
+Tests:
+  basic-deps-and-conds:
+    Description: can build a project with conditional dependencies
+    Cases:
+      without-bar:
+        test-cmd: duck -C foo build
+      with-bar:
+        test-cmd: duck -C foo build --features use-bar
+        features: use-bar

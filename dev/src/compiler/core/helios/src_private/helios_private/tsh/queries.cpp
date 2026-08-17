@@ -4,11 +4,37 @@
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
+#include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
+#include <helios/tsh/types.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/length_methods.hpp>
+#include <helios_private/hout_creation/definition_generation/list_methods.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <unordered_set>
+
 namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, query::QResult<TypeInterface>) {
+		static InterfaceElement::SpecialKind getMethodSpecialKind(Context& ctx, helios::SymID sym) {
+			auto name = helios::name(sym);
+			if (name == base::StrID("toString")) {
+				const auto method_type
+					= ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
+				if (method_type.getKind() == tsh::Kind::Function) {
+					const auto fn_type = method_type.as<tsh::FunctionAbstractType>();
+					// parameterTypes.size() == 1 means method has not params except self.
+					if (fn_type.getParameterTypes().size() == 1
+					    && fn_type.getResultType() == SymbolType<>::withDefaults(getStringType(ctx)))
+						return InterfaceElement::SpecialKind::ToString;
+				}
+			}
+			return InterfaceElement::SpecialKind::None;
+		}
+
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			const compiler::helios::SymID symbol = key.value->getSymbol();
 
@@ -33,6 +59,32 @@ namespace compiler::tsh {
 			for (const compiler::helios::SymID method_sym: class_data.methods) {
 				elements.push_back(InterfaceElement(
 					method_sym,
+					key.value->toAbstractType(),
+					declaration_order,
+					InterfaceElement::InterfaceElementKind::Method,
+					{},
+					getMethodSpecialKind(ctx, method_sym)
+				));
+				declaration_order++;
+			}
+
+			if_opt_some(class_data.destructor, destructor) {
+				elements.push_back(InterfaceElement(
+					destructor,
+					key.value->toAbstractType(),
+					declaration_order,
+					InterfaceElement::InterfaceElementKind::Method,
+					{}
+				));
+				declaration_order++;
+			}
+
+			for (const compiler::helios::SymID ctor_sym: class_data.constructors) {
+				// For now we just handle copy constructors.
+				if (!compiler::helios::defgen::isUserDefinedCopyConstructor(ctx, ctor_sym))
+					continue;
+				elements.push_back(InterfaceElement(
+					ctor_sym,
 					key.value->toAbstractType(),
 					declaration_order,
 					InterfaceElement::InterfaceElementKind::Method,
@@ -78,4 +130,123 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfTuple)
+
+	struct IMPLEMENT_QUERY(QueryInterfaceOfDynamicArray, query::QResult<TypeInterface>) {
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			// A dynamic array exposes the `list` struct fields (ptr, len,
+			// off_start_reserved, off_end_reserved) and a `length`, `push` and `pop` method.
+			const auto& fields = ctx.query<compiler::helios::QueryDynamicArrayTypeData>(key);
+
+			std::vector<InterfaceElement> elements;
+			elements.reserve(7);
+
+			u32 declaration_order = 0;
+			for (const compiler::helios::SymID field_sym:
+			     { fields->ptr, fields->len, fields->off_start_reserved, fields->off_end_reserved }) {
+				elements.emplace_back(
+					field_sym,
+					key,
+					declaration_order,
+					InterfaceElement::InterfaceElementKind::Field,
+					ClassMemberVisibility::Private
+				);
+				declaration_order++;
+			}
+
+			const auto length_sym = helios::defgen::lengthMethodForType(ctx, key);
+			elements.emplace_back(
+				length_sym,
+				key,
+				declaration_order,
+				InterfaceElement::InterfaceElementKind::Method,
+				ClassMemberVisibility::Public
+			);
+			declaration_order++;
+
+			const auto push_sym = helios::defgen::pushMethodForType(ctx, key);
+			elements.emplace_back(
+				push_sym,
+				key,
+				declaration_order,
+				InterfaceElement::InterfaceElementKind::Method,
+				ClassMemberVisibility::Public
+			);
+			declaration_order++;
+
+			const auto pop_sym = helios::defgen::popMethodForType(ctx, key);
+			elements.emplace_back(
+				pop_sym,
+				key,
+				declaration_order,
+				InterfaceElement::InterfaceElementKind::Method,
+				ClassMemberVisibility::Public
+			);
+			declaration_order++;
+
+			return TypeInterface(elements);
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfDynamicArray)
+
+	struct IMPLEMENT_QUERY(QueryInterfaceOfStaticArray, query::QResult<TypeInterface>) {
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			// A static array exposes no fields, only a `length` method.
+			const auto length_sym = helios::defgen::lengthMethodForType(ctx, key);
+
+			std::vector<InterfaceElement> elements;
+			elements.emplace_back(
+				length_sym,
+				key,
+				0,
+				InterfaceElement::InterfaceElementKind::Method,
+				ClassMemberVisibility::Public
+			);
+
+			return TypeInterface(elements);
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfStaticArray)
+
+	struct IMPLEMENT_QUERY(QueryInterfaceOfSlice, query::QResult<TypeInterface>) {
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			// A slice exposes the `ptr` and `len` fields, in that order, and a `length` method.
+			const auto& fields = ctx.query<compiler::helios::QuerySliceTypeData>(key);
+
+			std::vector<InterfaceElement> elements;
+			elements.reserve(3);
+
+			u32 declaration_order = 0;
+			for (const compiler::helios::SymID field_sym: { fields->ptr, fields->len }) {
+				elements.emplace_back(
+					field_sym,
+					key,
+					declaration_order,
+					InterfaceElement::InterfaceElementKind::Field,
+					ClassMemberVisibility::Private
+				);
+				declaration_order++;
+			}
+
+			const auto length_sym = helios::defgen::lengthMethodForType(ctx, key);
+			elements.emplace_back(
+				length_sym,
+				key,
+				declaration_order,
+				InterfaceElement::InterfaceElementKind::Method,
+				ClassMemberVisibility::Public
+			);
+
+			return TypeInterface(elements);
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfSlice)
 }

@@ -25,14 +25,14 @@
 //! - the [`CompileLock`] can be created from the [`TrySyncLock`] by dismissing the SYNC_LOCK[venv_id],
 //!   and keeping only a shared CLEAN_LOCK.
 
-use std::fs::ReadDir;
 use std::io;
 
+use crate::quackpack::core::storage::DirContents;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
-#[cfg(not(windows))]
-use crate::util::file_locks::FileLockManager;
-use crate::util::file_locks::LockedFile;
+use crate::util::file_locks::{FileLockManager, LockedFile};
+#[cfg(windows)]
+use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -116,7 +116,7 @@ pub fn cleanup_locks(storage: &Storage) -> QuackResult<()> {
 /// Removes all venv locks from the given iterator.
 fn cleanup_locks_impl(
     storage: &Storage,
-    dir_iterator: ReadDir,
+    dir_iterator: DirContents,
     root: FileLockManager,
 ) -> QuackResult<()> {
     for lockfile in dir_iterator {
@@ -136,16 +136,21 @@ fn cleanup_locks_impl(
 #[cfg(windows)]
 fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
     let path = root.not_locked_path().join(name);
-    match path.not_locked_path().rm() {
+    match path.rm() {
         Ok(()) => Ok(()),
-        Err(e)
-            if e.kind() == io::ErrorKind::NotFound
+        Err(e) => {
+            let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() else {
+                return Err(e);
+            };
+            if io_error.kind() == io::ErrorKind::NotFound
                 // ERROR_SHARING_VIOLATION is presumably mapped to PermissionDenied.
-                || e.kind() == io::ErrorKind::PermissionDenied =>
-        {
-            Ok(())
+                || io_error.kind() == io::ErrorKind::PermissionDenied
+            {
+                Ok(())
+            } else {
+                Err(e)
+            }
         }
-        Err(e) => Err(e.into()),
     }
 }
 

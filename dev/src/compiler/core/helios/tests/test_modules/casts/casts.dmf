@@ -1,6 +1,6 @@
 fun test_casts() -> i64 = {
 	# explicit cast from i64 literal -> f64
-	var explicit: f64 = f64(1);
+	var explicit: f64 = 1 as f64;
 
 	# implicit widening: i32 -> i64
 	var widen: i64 = get_i32();
@@ -16,5 +16,5 @@ fun test_casts() -> i64 = {
 
 
 fun get_i32() -> i32 = {
-    return i32(42);
+    return 42 as i32;
 }

@@ -1,0 +1,39 @@
+features: ""
+PostCase: |+
+  python3 check.py @{features}
+  @{cleanup_tmp_env}
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "features:
+    foo: []
+    bar: [foo]" >> foo/quackconfig.yaml
+Tests:
+  features:
+    Description: can build a project with features
+    Cases:
+      basic:
+        test-cmd: duck -C foo build --features foo
+        features: "foo"
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`..."
+      pulling-feature:
+        test-cmd: duck -C foo build --features bar
+        features: bar foo
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`..."

@@ -9,6 +9,7 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type_id.hpp>
 #include <vm/core/process/proc_io.hpp>
 
 #include <expected>
@@ -17,7 +18,7 @@
 
 namespace vm {
 
-	class VmValue;
+	class IVMValue;
 
 	/**
 	 * @brief The API for using the virtual process of the VM.
@@ -45,6 +46,8 @@ namespace vm {
 		api::ProcStatus             status;
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
+
+		api::ExecutionConfig execution_config;
 
 		/**
 		 * @brief Emits after the process status has changed.
@@ -160,6 +163,10 @@ namespace vm {
 
 		virtual void waitForBreakpoint() = 0;
 
+		virtual std::expected<api::Response, api::ApiError> setExecutionConfig(
+			const api::ExecutionConfig& config
+		) = 0;
+
 		/**
 		 * @brief Gets type metadata for a given type name. Type must be defined in the loaded
 		 * program.
@@ -200,6 +207,11 @@ namespace vm {
 		) = 0;
 
 	public:
+		IVMProcess(const IVMProcess&)            = delete;
+		IVMProcess(IVMProcess&&)                 = delete;
+		IVMProcess& operator=(const IVMProcess&) = delete;
+		IVMProcess& operator=(IVMProcess&&)      = delete;
+
 		ProcIO& getIO();
 
 		[[nodiscard]] bool isExecutionPanicked();
@@ -207,7 +219,9 @@ namespace vm {
 		/**
 		 * @brief Entry point to perform requests on the process.
 		 */
-		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
+		virtual std::expected<api::Response, api::ApiError> doRequest(
+			const api::RequestVariant& request
+		);
 
 		/**
 		 * @brief Get the PID of the process.
@@ -225,29 +239,23 @@ namespace vm {
 		) noexcept;
 
 		/**
-		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
-		 * The VmValue is owned by the VMProcess. VmValues created with this function are freed when
+		 * @brief Creates an empty VMValue of a given type and registers it in this VMProcess.
+		 * The VMValue is owned by the VMProcess. VMValues created with this function are freed when
 		 * the process is deinitialized.
 		 *
-		 * @param type The type of the data stored in the newly created VmValue.
-		 * @param src The pointer to the data used to fill the newly created VmValue. If not
-		 * specified, created VmValue will be empty.
-		 * @return A non-owning, modifiable reference to the new VmValue.
+		 * @param type_id ID of the type of the data stored in the new VMValue.
+		 * @return A non-owning, modifiable reference to the new VMValue.
 		 */
-		virtual Ref<VmValue> createVmValue(TypeCRef type)              = 0;
-		virtual Ref<VmValue> createVmValue(TypeCRef type, Pointer src) = 0;
+		virtual Ref<IVMValue> createVMValue(code::valid_type::ValidTypeID type_id) = 0;
 
 		/**
-		 * @brief Creates a VmValue of a given type and transfers ownership to the caller.
-		 * The caller is expected to free the VmValue.
+		 * @brief Creates an empty VMValue of a given type and transfers ownership to the caller.
+		 * The caller is expected to free the VMValue.
 		 *
-		 * @param type The type of the data stored in the newly created VmValue.
-		 * @param src The pointer to the data used to fill the newly created VmValue. If not
-		 * specified, created VmValue will be empty.
-		 * @return A Box referencing the newly created VmValue.
+		 * @param type_id ID of the type of the data stored in the new VMValue.
+		 * @return A Box referencing the newly created VMValue.
 		 */
-		virtual Box<VmValue> createOwnedVmValue(TypeCRef type)              = 0;
-		virtual Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) = 0;
+		virtual Box<IVMValue> createOwnedVMValue(code::valid_type::ValidTypeID type_id) = 0;
 
 		virtual ~IVMProcess() = default;
 	};

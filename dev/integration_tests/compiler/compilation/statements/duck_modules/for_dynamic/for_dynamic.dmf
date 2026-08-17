@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 class T {
     a: i32 = 1;
     b: i32 = 2;
@@ -20,11 +18,11 @@ fun look(list: ref List[i32], target: i64) -> bool = {
 
 fun main() -> i64 = {
     var dyn_arr: List[i32];
-    dyn_arr += 1; dyn_arr += 2;
+    dyn_arr.push(1); dyn_arr.push(2);
     
     var a = 1;
     var dyn_ref_arr: List[ref i32];
-    dyn_ref_arr += &a; dyn_ref_arr += &a;
+    dyn_ref_arr.push(&a); dyn_ref_arr.push(&a);
 
     # ===== Dynamic Arrays =====
     printSeparator(); 
@@ -41,17 +39,11 @@ fun main() -> i64 = {
     printSeparator(); 
     for (x in dyn_ref_arr) {
         builtin_output_i64(x);  # 21, 21
-        dyn_ref_arr += &a;      # This won't cause an infinite loop since we calculate len once.
+        dyn_ref_arr.push(&a);      # This won't cause an infinite loop since we calculate len once.
     }
 
     printSeparator(); 
-    for (x in dyn_ref_arr) {
-        builtin_output_i64(x);  # 21, 21, 21, 21
-        dyn_ref_arr -= 3u64;       # This works by accident, since our lists don't shrink.
-    }
-
-    printSeparator(); 
-    builtin_output_i64(i64(len dyn_ref_arr)); # 0
+    builtin_output_i64(dyn_ref_arr.length() as i64); # 4
 
     printSeparator(); 
     builtin_output_i64(look(&dyn_arr, 1)); # 1
@@ -59,25 +51,29 @@ fun main() -> i64 = {
 
     printSeparator(); 
     var t_list: List[T];
-    t_list += T(1, 3);
-    t_list += T();
+    t_list.push(T(1, 3));
+    t_list.push(T());
     for(t in t_list) {
         builtin_output_i64(t.a);
         builtin_output_i64(t.b);
     }
     
     # ===== Nested fors =====
-    
-    # @TODO: #2000 This should work but we don't have copies. Enable once implemented.
+
+    # @TODO: #2097 Nested `for` over copies of `List[List[i64]]` is rejected, since binding the
+    # outer loop variable would implicitly copy a non-trivially-copyable `List[i64]`, and the
+    # `copy` cannot be written on it.
     # var dyn_matrix: List[List[i64]];
     # var dyn_a: List[i64]; var dyn_b: List[i64];
-    # dyn_a += 1; dyn_b += 1;
-    # dyn_matrix += dyn_a; dyn_matrix += dyn_b;
-    # for (row in dyn_matrix) {
-    #     for (col in row) {
+    # dyn_a.push(1); dyn_b.push(1);
+    # dyn_matrix.push(move dyn_a); dyn_matrix.push(move dyn_b);
+    #
+    # for (row in copy dyn_matrix) {
+    #     for (col in copy row) {
     #         builtin_output_i64(col);
     #     }
     # }
+
     # This doesn't work since `[]` doesn't return a ref, so currently this feature is just not supported.
     # for (x: ref i32 in dyn_arr) {
     #     builtin_output_i64(x);

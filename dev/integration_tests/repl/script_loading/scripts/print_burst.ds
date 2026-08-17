@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 builtin_output_i64(2 + 2);
 builtin_output_i64(2 * 3);
 builtin_output_i64(10 - 4);
