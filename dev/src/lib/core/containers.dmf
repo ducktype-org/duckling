@@ -311,16 +311,13 @@ class List {
         allocating again.
     #}
     fun clear() -> () = {
+        # Moving an element out and dropping the result on the floor runs `T`'s destructor.
+        var i = 0i64;
+        while (i < len as i64) {
+            builtins.move_out:{T}(ptrof pointer[i]);
+            i = i + 1i64;
+        }
         len = 0u64;
-    }
-
-    #{
-        Releases the buffer. The list is left empty and reusable.
-    #}
-    fun dispose() -> () = {
-        if (cap > 0u64) allocation:{T}.free(pointer);
-        len = 0u64;
-        cap = 0u64;
     }
 
     #{
@@ -340,14 +337,8 @@ class List {
     }
 
     List.destroy() = {
-        # Moving an element out and dropping the result on the floor runs `T`'s destructor;
-        # freeing the buffer alone would leak everything the elements own.
-        var i = 0i64;
-        while (i < len as i64) {
-            builtins.move_out:{T}(ptrof pointer[i]);
-            i = i + 1i64;
-        }
-        allocation:{T}.free(pointer);
+        clear();
+        if (cap > 0u64) allocation:{T}.free(pointer);
     }
 }
 

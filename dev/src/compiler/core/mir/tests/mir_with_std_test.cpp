@@ -34,6 +34,7 @@ class MIRConstructionTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(sliceTest);
+		TESTER_ADD_TEST(listsTest);
 		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(testErrorLogging);
 	}
@@ -43,6 +44,7 @@ protected:
 		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
 		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
 			{ fs::FilePath(path("modules/slices")), "slices" },
+			{ fs::FilePath(path("modules/lists")), "lists" },
 			{ fs::FilePath(path("modules/static_arrays")), "static_arrays" },
 		};
 		auto init_result
@@ -61,6 +63,16 @@ private:
 			auto mir_unit = compiler::mir::lowerToMIRUnit(ctx, &unit).valueOrPanic();
 			// This 4 blocks are from the conditions for the slice access bounds check
 			ASSERT_EQUAL_PRINT(mir_unit.mir_functions[0]->block_order.size(), 5);
+		});
+	}
+
+	void listsTest() {
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("lists");
+		withContextDo([&](query::Context& ctx) {
+			auto& unit
+				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
+			auto mir_unit = compiler::mir::lowerToMIRUnit(ctx, &unit).valueOrPanic();
+			ASSERT_TRUE(!mir_unit.mir_functions.empty());
 		});
 	}
 

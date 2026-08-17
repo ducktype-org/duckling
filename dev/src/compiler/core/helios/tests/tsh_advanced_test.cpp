@@ -1,6 +1,8 @@
 #include <helios/symbols/query_type_from_definition.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -19,6 +21,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(classInterfaceTest);
 		TESTER_ADD_TEST(classConstructabilityTest);
+		TESTER_ADD_TEST(typeTemplateTest);
 	}
 
 private:
@@ -143,6 +146,28 @@ private:
 			const auto complex_non_defaultable = get_type(complex_non_defaultable_sym);
 			assert_flags(
 				complex_non_defaultable, false, false, true, true, "MoreComplexNonDefaultable"
+			);
+		});
+	}
+
+	void typeTemplateTest() {
+		auto [_, root_scope]    = getModule(fs::File(path("test_modules/tsh/class_definitions")));
+		const auto template_sym = getChain("TemplateClass", root_scope).back();
+
+		withContextDo([&](query::Context& ctx) {
+			const AbstractType type = ctx.query<compiler::helios::QueryTypeOfSymbol>(template_sym)
+			                              ->valueOrPanicMsg("Not expecting an ERROR here...")
+			                              .getType();
+
+			assertTrue(
+				type.getKind() == Kind::TypeTemplate,
+				"A template class symbol should have a TypeTemplate type."
+			);
+
+			const TypeTemplateAbstractType template_type = type;
+			assertTrue(
+				template_type.getSource() == template_sym,
+				"The source of the type template should be the template symbol."
 			);
 		});
 	}

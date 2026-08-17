@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(staticArraysTest);
+		TESTER_ADD_TEST(listsTest);
 		TESTER_ADD_TEST(defaultInitialization);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(ffiTest);
@@ -258,6 +259,16 @@ private:
 				ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+%\w+,\s+i32\s+1)" }
 			),
 			"Expected GEP for struct field access in array: points[1].y"
+		);
+	}
+
+	void listsTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/lists");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(call\s+.*push)" }),
+			"Expected a call to List's push method"
 		);
 	}
 
