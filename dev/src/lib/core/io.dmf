@@ -46,16 +46,16 @@ fun readCharCode() -> i32 = {
 fun readChar() -> char = readCharCode() as char;
 
 @backend_dependent
-fundecl writeChar(c: char) -> u64;
+fundecl writeChar(c: char) -> i64;
 
 @native_only_impl
-fun writeChar(c: char) -> u64 = {
-    return clib.putchar(c as i32) as u64;
+fun writeChar(c: char) -> i64 = {
+    return clib.putchar(c as i32) as i64;
 }
 
 @dvm_only_impl
-fun writeChar(c: char) -> u64 = {
-    return dvm.builtin_output_char(c) as u64;
+fun writeChar(c: char) -> i64 = {
+    return dvm.builtin_output_char(c);
 }
 
 #{
@@ -83,41 +83,38 @@ fun strtod(p: manyptr char) -> f64 = {
 #{
     Writes every character of `s` through `writeChar`.
 #}
-fun writeStr(s: str) -> u64 = {
-    var i = 0u64;
+fun writeStr(s: str) -> i64 = {
+    var i = 0i64;
     while (i < s.length()) {
-        writeChar(s[i as i64]);
-        i = i + 1u64;
+        writeChar(s[i]);
+        i = i + 1i64;
     }
     return i;
 }
 
-fun writeString(v: ref containers.String) -> u64 = {
+fun writeString(v: ref containers.String) -> i64 = {
     return writeStr(v.asSlice());
 }
 
-fun writeI64(x: i64) -> u64 = {
+fun writeI64(x: i64) -> i64 = {
     var s = x.toString();
     let result = writeString(&s);
     writeChar('\n');
-    s.dispose();
-    return result + 1u64;
+    return result + 1i64;
 }
 
-fun writeU64(x: u64) -> u64 = {
+fun writeU64(x: u64) -> i64 = {
     var s = x.toString();
     let result = writeString(&s);
     writeChar('\n');
-    s.dispose();
-    return result + 1u64;
+    return result + 1i64;
 }
 
-fun writeF64(x: f64) -> u64 = {
+fun writeF64(x: f64) -> i64 = {
     var s = x.toString();
     let result = writeString(&s);
     writeChar('\n');
-    s.dispose();
-    return result + 1u64;
+    return result + 1i64;
 }
 
 # ------------------------------------------------------------------- readers ---
@@ -170,7 +167,6 @@ fun readF64() -> f64 = {
     buffer.append('\0');
 
     let value = strtod(builtins.ptr_from_slice:{char}(buffer.asSlice()));
-    buffer.dispose();
     return value;
 }
 

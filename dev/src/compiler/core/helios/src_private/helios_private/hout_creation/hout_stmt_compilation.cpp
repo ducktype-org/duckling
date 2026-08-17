@@ -20,6 +20,8 @@
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/passing.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -59,6 +61,12 @@ namespace compiler::helios {
 		 * did not produce any HOUT statement (e.g., alias or using).
 		 */
 		base::Optional<Box<code::Stmt>> out;
+
+		/**
+		 * Statements to emit before `out`, used by desugarings that need more than one
+		 * statement (e.g. a `match` initializer declares the target variable first).
+		 */
+		std::vector<Box<code::Stmt>> prefix_stmts;
 
 		HoutStmtMaker(query::Context& ctx, tsh::SymbolType<> return_type):
 			  ctx(ctx),
@@ -421,6 +429,9 @@ namespace compiler::helios {
 				query::throwFailed();
 			}
 
+			for (auto& prefix_stmt: stmt_maker.prefix_stmts)
+				block.statements.emplace_back(std::move(prefix_stmt));
+
 			if (stmt_maker.out.has_value())
 				block.statements.emplace_back(std::move(stmt_maker.out.value()));
 		}
@@ -455,6 +466,9 @@ namespace compiler::helios {
 		unlocked.value()->acceptVisitor(stmt_maker);
 
 		if (stmt_maker.is_failed) query::throwFailed();
+
+		for (auto& prefix_stmt: stmt_maker.prefix_stmts)
+			block.statements.emplace_back(std::move(prefix_stmt));
 
 		if (stmt_maker.out.has_value())
 			block.statements.emplace_back(std::move(stmt_maker.out.value()));

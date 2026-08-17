@@ -19,7 +19,7 @@
 #include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
@@ -184,6 +184,14 @@ namespace compiler::helios {
 				case pst::ElementKind::ExprElement:
 				case pst::ElementKind::ExprHolder:
 				case pst::ElementKind::ExprStmt:
+				case pst::ElementKind::RoundGroupExpr:
+				case pst::ElementKind::CallList:
+				case pst::ElementKind::CallArgument:
+				case pst::ElementKind::Action:
+				case pst::ElementKind::Match:
+				case pst::ElementKind::MatchCase:
+				case pst::ElementKind::FlowPattern:
+				case pst::ElementKind::BindingPattern:
 				case pst::ElementKind::IdentifierWrapper: {
 					auto pst_parent = getPSTElementParent(ctx, el);
 
@@ -713,7 +721,8 @@ namespace compiler::helios {
 			CORE_ASSERT(parent_opt.has_value(), "IdentifierWrapper without parent");
 
 			auto parent_elem = parent_opt.value().unlock(ctx);
-			if (auto for_parent_opt = parent_elem.dynamicCast<pst::For>()) {
+			if (parent_elem.dynamicCast<pst::For>().has_value()
+			    || parent_elem.dynamicCast<pst::BindingPattern>().has_value()) {
 				return SymbolData::makePSTSymbolData(
 					{
 						.name = ident_wrapper->unwrap(),

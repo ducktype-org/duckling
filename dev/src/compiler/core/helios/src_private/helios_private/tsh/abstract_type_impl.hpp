@@ -63,13 +63,13 @@ namespace compiler::tsh {
 		bool isSimple() const;
 
 		/**
-		 * @brief Determines weather the type has a no-op destructor,
+		 * @brief Determines weather the type has a trivial destructor.
 		 * For more details look in `symbol_type.hpp`.
 		 *
 		 * @return true if the type has a trivial destructor, false otherwise.
 		 */
 		[[nodiscard]]
-		virtual bool hasNoOpDestructor(query::Context& ctx) const
+		virtual bool isTriviallyDestructible(query::Context& ctx) const
 			= 0;
 
 		/**
@@ -214,7 +214,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isImplicitlyCoercible(AbstractType target, query::Context& context)
 			const override;
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
 
@@ -246,7 +246,7 @@ namespace compiler::tsh {
 
 		VoidAbstractTypeImpl() { representation = "void"; }
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
 
@@ -283,7 +283,7 @@ namespace compiler::tsh {
 			return target.getKind() == Kind::Bool;
 		}
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
 
@@ -319,7 +319,7 @@ namespace compiler::tsh {
 			return target.getKind() == Kind::Integral;
 		}
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
 
@@ -355,7 +355,7 @@ namespace compiler::tsh {
 			return target.getKind() == Kind::Bool;
 		}
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
 
@@ -424,7 +424,7 @@ namespace compiler::tsh {
 			return bool_coercion || (upsize_coercion && !drop_sign_coercion);
 		}
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
 
@@ -469,7 +469,7 @@ namespace compiler::tsh {
 			return target.getKind() == Kind::Float && FloatAbstractType(target).getSize() > size;
 		}
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
 
@@ -517,7 +517,7 @@ namespace compiler::tsh {
 			            || !RawPointerAbstractType(target).isMutable()));
 		}
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
 
@@ -567,7 +567,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
 
@@ -651,7 +651,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
 
@@ -665,67 +665,6 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		CRef<TypeInterface> getDeclaredInterface(query::Context&) const override;
-	};
-
-	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
-		SymbolType<> element_type;
-
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return STATIC_KIND;
-		}
-
-		/**
-		 * @brief The Kind of types described by objects of this class.
-		 */
-		static constexpr Kind STATIC_KIND = Kind::DynamicArray;
-
-		DynamicArrayAbstractTypeImpl(const SymbolType<> element): element_type(element) {
-			representation = base::strConcat("List[", element.toString(), "]");
-		}
-
-		[[nodiscard]]
-		SymbolType<> getElementType() const {
-			return element_type;
-		}
-
-		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType, query::Context&) const override {
-			return false;
-		}
-
-		/**
-		 * @brief Dynamic arrays have nontrivial destructors because destruction of an dynamic array
-		 * requires to free memory.
-		 */
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return false; }
-
-		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
-
-		/**
-		 * @brief Dynamic arrays are trivially zero initializable and initialized with an empty
-		 * array with a the data field equal to null. The memory is allocated on the first
-		 * insertion.
-		 */
-		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
-			return true;
-		}
-
-		/**
-		 * @brief Dynamic array is copyable if it's element_type is.
-		 */
-		[[nodiscard]] bool isCopyable(query::Context& ctx) const override {
-			return element_type.isCopyable(ctx);
-		}
-
-		/**
-		 * @brief Dynamic arrays are not trivially copyable because the require a deep copy of memory.
-		 */
-		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
-
-		[[nodiscard]]
-		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class StaticArrayAbstractTypeImpl final: public AbstractTypeImpl {
@@ -765,7 +704,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(AbstractType target, query::Context&) const override;
-		[[nodiscard]] bool hasNoOpDestructor(query::Context& ctx) const override;
+		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
 		[[nodiscard]] bool isDefaultConstructible(query::Context& ctx) const override;
 		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context& ctx) const override;
 		[[nodiscard]] bool isCopyable(query::Context& ctx) const override;
@@ -800,7 +739,7 @@ namespace compiler::tsh {
 
 		TupleAbstractTypeImpl(std::vector<SymbolType<>> components);
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context& ctx) const override;
+		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
 		[[nodiscard]] bool isDefaultConstructible(query::Context& ctx) const override;
 		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context& ctx) const override;
 		[[nodiscard]] bool isCopyable(query::Context& ctx) const override;
@@ -856,7 +795,7 @@ namespace compiler::tsh {
 			bool                      free = false
 		);
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override {
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override {
 			// @TODO: #1273 this is a placeholder, implement proper logic
 			return false;
 		}
@@ -918,7 +857,7 @@ namespace compiler::tsh {
 			return underlying_types[idx];
 		}
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context& ctx) const override;
+		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override;
 		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override;
 		[[nodiscard]] bool isCopyable(query::Context& ctx) const override;
@@ -982,7 +921,7 @@ namespace compiler::tsh {
 			CORE_PANIC("Element not found.");
 		}
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context& ctx) const override;
+		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override;
 		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override;
@@ -1012,7 +951,7 @@ namespace compiler::tsh {
 
 		NamespaceAbstractTypeImpl() = default;
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
 
@@ -1042,7 +981,7 @@ namespace compiler::tsh {
 
 		ModuleAbstractTypeImpl() = default;
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override {
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override {
 			// @TODO: #1275 this is a placeholder, implement proper logic
 			return false;
 		}
@@ -1075,7 +1014,7 @@ namespace compiler::tsh {
 
 		explicit MetaAbstractTypeImpl() { representation = "type"; }
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		/**
 		 * @brief Meta type is default constructible with a `void` type.
@@ -1108,7 +1047,7 @@ namespace compiler::tsh {
 
 		explicit ImportAbstractTypeImpl() = default;
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
 
@@ -1125,8 +1064,7 @@ namespace compiler::tsh {
 	};
 
 	class TypeTemplateAbstractTypeImpl final: public AbstractTypeImpl {
-		using Source      = TypeTemplateAbstractType::Source;
-		using BuiltinKind = TypeTemplateAbstractType::BuiltinKind;
+		using Source = TypeTemplateAbstractType::Source;
 
 		Source source;
 
@@ -1136,32 +1074,14 @@ namespace compiler::tsh {
 		[[nodiscard]] Kind getKind() const override { return STATIC_KIND; }
 
 		TypeTemplateAbstractTypeImpl(Source source): source(source) {
-			variant_match(source) {
-				variant_case(BuiltinKind, builtin) {
-					switch (builtin) {
-					case BuiltinKind::List: {
-						representation = "List";
-						break;
-					}
-					default:
-						CORE_UNREACHABLE();
-					}
-				}
-				variant_case(helios::SymID, sym) {
-					representation = base::strConcat("Type template: ", name(sym).str());
-				}
-			}
+			representation = base::strConcat("Type template: ", name(source).str());
 		}
 
 		[[nodiscard]] Source getSource() const { return source; }
 
-		[[nodiscard]] AbstractType instantiate(
-			query::Context& ctx, const SymbolType<>& element_type
-		) const;
-
 		[[nodiscard]] bool carriesInformation(query::Context&) const override { return true; }
 
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return true; }
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
 
