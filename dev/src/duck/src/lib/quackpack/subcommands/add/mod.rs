@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
+use crate::quackpack::core::{AllowGlobalPackage, DependencyKind, PackageLoader};
 use crate::quackpack::schemas::manifest::{
     Dependency, DependencyAdded, Manifest as ManifestSchema,
 };
@@ -21,7 +21,7 @@ pub struct AddOptions {
     /// Use a global package instead of a local one.
     pub global: bool,
     /// Add a dev-dependency.
-    pub dev_dep: bool,
+    pub kind: DependencyKind,
 }
 
 /// Logic for executing the `add` subcommand.
@@ -29,16 +29,16 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
     let AddOptions {
         dep_spec,
         global,
-        dev_dep,
+        kind,
     } = options;
-    let pkg = if global {
+    let pcx = if global {
         PackageLoader::global_package(ctx)?
     } else {
         PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
-    }
-    .into_package()
-    .unwrap_package();
-    let (effective_name, dep) = construct_dependency(dep_spec, pkg.root_directory(), ctx);
+    };
+    let (effective_name, dep) = construct_dependency(dep_spec, &pcx)?;
+
+    let pkg = pcx.into_package().unwrap_package();
 
     // Only necessary for diagnostic messages.
     let pkg_name = pkg.name();
@@ -48,23 +48,14 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
     // since this won't preserve comments and formatting choices in the manifest.
     let manifest_path = pkg.manifest_path().to_path_buf();
     let mut schema = pkg.into_original_schema();
-    if dev_dep {
-        add_dev_dep(
-            &mut schema,
-            effective_name.clone(),
-            dep,
-            pkg_name,
-            &pkg_root,
-        )?;
-    } else {
-        add_normal_dep(
-            &mut schema,
-            effective_name.clone(),
-            dep,
-            pkg_name,
-            &pkg_root,
-        )?;
-    }
+    add_dep(
+        &mut schema,
+        effective_name.clone(),
+        dep,
+        kind,
+        pkg_name,
+        &pkg_root,
+    )?;
     let deserialized_schema = serde_yaml_ng::to_string(&schema)
         .with_context_internal(|| format!("failed to deserialize schema `{schema:?}`"))?;
     manifest_path.write(&deserialized_schema).with_context(|| {
@@ -78,46 +69,22 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
         manifest_path.display()
     ))?;
     ctx.console().info(format!(
-        "successfully added {}dependency `{effective_name}` to the project `{pkg_name}` at `{}`",
-        if dev_dep { "dev-" } else { "" },
+        "successfully added {kind} dependency `{effective_name}` to the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;
     Ok(())
 }
 
-/// Add a dev-dependency or provide a meaningful error.
-fn add_dev_dep(
-    schema: &mut ManifestSchema,
-    name: String,
-    dep: Dependency,
-    pkg_name: StrId,
-    pkg_root: &Path,
-) -> QuackResult<()> {
-    match schema.add_dev_dependency(name.clone(), dep) {
-        DependencyAdded::Yes => Ok(()),
-        DependencyAdded::AlreadyExists => {
-            let err = Err(QuackError::hint(
-                "use aliases to have multiple dev-dependencies with the same name",
-            ));
-            err.with_context(|| {
-                format!(
-                    "dev-dependency `{name}` already exists in the project `{pkg_name}` at `{}`",
-                    pkg_root.display()
-                )
-            })
-        }
-    }
-}
-
 /// Add a dependency or provide a meaningful error.
-fn add_normal_dep(
+fn add_dep(
     schema: &mut ManifestSchema,
     name: String,
     dep: Dependency,
+    kind: DependencyKind,
     pkg_name: StrId,
     pkg_root: &Path,
 ) -> QuackResult<()> {
-    match schema.add_dependency(name.clone(), dep) {
+    match schema.add_dependency(name.clone(), dep, kind) {
         DependencyAdded::Yes => Ok(()),
         DependencyAdded::AlreadyExists => {
             let err = Err(QuackError::hint(
@@ -125,7 +92,7 @@ fn add_normal_dep(
             ));
             err.with_context(|| {
                 format!(
-                    "dependency `{name}` already exists in the project `{pkg_name}` at `{}`",
+                    "{kind} dependency `{name}` already exists in the project `{pkg_name}` at `{}`",
                     pkg_root.display()
                 )
             })

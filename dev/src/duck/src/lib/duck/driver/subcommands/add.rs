@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use crate::duck::driver::cli_ext::{multi, optional};
-use crate::quackpack::core::Version;
+use crate::quackpack::core::{DependencyKind, Version};
 use crate::quackpack::subcommands::add::{
     AddOptions, DependencySpecification, NameSpecification, SourceSpecification, add,
 };
@@ -65,10 +65,11 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         features,
         pinned: matches.get_flag("pinned"),
     };
+    let kind = determine_kind(matches);
     let options = AddOptions {
         dep_spec,
         global: matches.get_flag("global"),
-        dev_dep: matches.get_flag("dev"),
+        kind,
     };
     add(ctx, options)
 }
@@ -88,5 +89,14 @@ fn get_source_specification(matches: &ArgMatches) -> SourceSpecification {
         git_tag,
         git_commit,
         registry_url,
+    }
+}
+
+/// Determine the kind of the dependency to add.
+fn determine_kind(matches: &ArgMatches) -> DependencyKind {
+    if matches.get_flag("dev") {
+        DependencyKind::Dev
+    } else {
+        DependencyKind::Normal
     }
 }

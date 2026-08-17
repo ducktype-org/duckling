@@ -1,6 +1,7 @@
 use clap::{Arg, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, subcommand};
+use crate::quackpack::core::DependencyKind;
 use crate::quackpack::subcommands::remove::{RemoveOptions, remove};
 use crate::{DuckContext, QuackResult};
 
@@ -24,11 +25,16 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         .expect("required by clap")
         .clone();
     let global = matches.get_flag("global");
-    let dev_dep = matches.get_flag("dev");
-    let options = RemoveOptions {
-        name,
-        global,
-        dev_dep,
-    };
+    let kind = determine_kind(matches);
+    let options = RemoveOptions { name, global, kind };
     remove(ctx, options)
+}
+
+/// Determine the kind of the dependency to remove.
+fn determine_kind(matches: &ArgMatches) -> DependencyKind {
+    if matches.get_flag("dev") {
+        DependencyKind::Dev
+    } else {
+        DependencyKind::Normal
+    }
 }

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
-use crate::{QuackResult, StrId, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 /// Type representing a request to get manifests for a single/multiple packages.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -89,6 +89,20 @@ impl FetchResponse {
 pub enum FetchSuccess {
     Pinned(PinnedSuccess),
     NotPinned(NotPinnedSuccess),
+}
+
+impl FetchSuccess {
+    pub fn latest_version(&self) -> QuackResult<Version> {
+        match self {
+            Self::NotPinned(not_pinned) => not_pinned
+                .fetched_manifests
+                .iter()
+                .map(|m| m.0.version())
+                .max()
+                .context_internal("response to fetch without any manifests"),
+            Self::Pinned(pinned) => Ok(pinned.fetched_manifest.version()),
+        }
+    }
 }
 
 /// Result of a successful fetch of a single package's manifest.

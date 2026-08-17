@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize, de, ser};
 use serde_untagged::UntaggedEnumVisitor;
 use serde_with::skip_serializing_none;
 
-use crate::quackpack::core::Version;
+use crate::quackpack::core::{DependencyKind, Version};
 use crate::quackpack::schemas::OneEntryMap;
 
 pub type Dependencies = HashMap<String, Dependency>;
@@ -66,64 +66,43 @@ impl Manifest {
     }
 
     /// Remove a dependency.
-    pub fn remove_dependency(&mut self, name: &str) -> DependencyRemoved {
-        if self
-            .dependencies
-            .as_mut()
-            .and_then(|deps| deps.remove_entry(name))
-            .is_none()
-        {
-            // There is no such dependency. Check if there is a dev-dependency instead.
-            if let Some(ref dev_deps) = self.dev_dependencies
-                && dev_deps.contains_key(name)
+    pub fn remove_dependency(&mut self, name: &str, kind: DependencyKind) -> DependencyRemoved {
+        let dependencies_maps = [
+            (DependencyKind::Normal, self.dependencies.as_mut()),
+            (DependencyKind::Dev, self.dev_dependencies.as_mut()),
+        ];
+        let mut other_kind = None;
+        let mut removed = false;
+        for (dep_kind, dep_map) in dependencies_maps {
+            if dep_kind == kind {
+                removed = dep_map.and_then(|map| map.remove(name)).is_some();
+            } else if let Some(ref map) = dep_map
+                && map.contains_key(name)
             {
-                return DependencyRemoved::NoDependencyButDevDepExists;
-            } else {
-                return DependencyRemoved::NoDependency;
+                other_kind = Some(dep_kind);
             }
         }
-        if let Some(ref map) = self.dependencies
-            && map.is_empty()
-        {
-            self.dependencies = None;
+        if removed {
+            DependencyRemoved::Yes
+        } else if let Some(other_kind) = other_kind {
+            DependencyRemoved::NoDependencyButKindExists(other_kind)
+        } else {
+            DependencyRemoved::NoDependency
         }
-        DependencyRemoved::Yes
-    }
-
-    /// Remove a dev-dependency.
-    pub fn remove_dev_dependency(&mut self, name: &str) -> DependencyRemoved {
-        if self
-            .dev_dependencies
-            .as_mut()
-            .and_then(|deps| deps.remove_entry(name))
-            .is_none()
-        {
-            return DependencyRemoved::NoDependency;
-        }
-        if let Some(ref map) = self.dev_dependencies
-            && map.is_empty()
-        {
-            self.dev_dependencies = None;
-        }
-        DependencyRemoved::Yes
     }
 
     /// Add a dependency.
-    pub fn add_dependency(&mut self, name: String, dependency: Dependency) -> DependencyAdded {
-        let dependencies = self.dependencies.get_or_insert(Dependencies::new());
+    pub fn add_dependency(
+        &mut self,
+        name: String,
+        dependency: Dependency,
+        kind: DependencyKind,
+    ) -> DependencyAdded {
+        let dependencies = match kind {
+            DependencyKind::Normal => self.dependencies.get_or_insert(Dependencies::new()),
+            DependencyKind::Dev => self.dev_dependencies.get_or_insert(Dependencies::new()),
+        };
         match dependencies.entry(name) {
-            Entry::Occupied(_) => DependencyAdded::AlreadyExists,
-            Entry::Vacant(entry) => {
-                entry.insert(dependency);
-                DependencyAdded::Yes
-            }
-        }
-    }
-
-    /// Add a dev-dependency.
-    pub fn add_dev_dependency(&mut self, name: String, dependency: Dependency) -> DependencyAdded {
-        let dev_dependencies = self.dev_dependencies.get_or_insert(Dependencies::new());
-        match dev_dependencies.entry(name) {
             Entry::Occupied(_) => DependencyAdded::AlreadyExists,
             Entry::Vacant(entry) => {
                 entry.insert(dependency);
@@ -135,14 +114,20 @@ impl Manifest {
 
 /// Marker struct for a removal of a dependency.
 pub enum DependencyRemoved {
+    /// Dependency successfully removed.
     Yes,
+    /// No such dependency found.
     NoDependency,
-    NoDependencyButDevDepExists,
+    /// No such dependency found for the given kind.
+    /// However there is a dependency with this name but of different kind.
+    NoDependencyButKindExists(DependencyKind),
 }
 
 /// Marker struct for an addition of a dependency.
 pub enum DependencyAdded {
+    /// Dependency successfully added.
     Yes,
+    /// Dependency with such name and kind already exists.
     AlreadyExists,
 }
 
