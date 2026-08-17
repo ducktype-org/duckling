@@ -12,6 +12,8 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include "base/except/exceptions.hpp"
+
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <ranges>
@@ -277,10 +279,7 @@ namespace compiler::helios::defgen {
 				);
 				break;
 			default:
-				// Other types (e.g. strings and variants) are either trivially destructible or
-				// their destruction is not yet implemented. This stub just provides an empty
-				// destructor.
-				break;
+				CORE_UNREACHABLE();
 			}
 
 			return HOUTFunction(
