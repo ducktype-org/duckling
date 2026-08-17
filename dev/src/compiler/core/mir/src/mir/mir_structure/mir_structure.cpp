@@ -50,6 +50,21 @@ namespace compiler::mir {
 		CORE_UNREACHABLE();
 	}
 
+	MIRLocalRef Function::addGeneratedLocal(
+		tsh::SymbolType<> type, ScopeRef scope, LifetimeFlags flags
+	) {
+		u64 next_id = 0;
+		for (const auto& local: local_list)
+			if (local.id.asInt() >= next_id) next_id = local.id.asInt() + 1;
+
+		MIRLocal local{ LocalID(next_id), type };
+		local.scope          = scope;
+		local.lifetime_flags = flags;
+
+		local_list.pushBack(local);
+		return local_list.last();
+	}
+
 	bool isTerminating(Operation op) {
 		switch (op) {
 		case Operation::ReturnVoid:

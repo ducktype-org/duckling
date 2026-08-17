@@ -278,15 +278,6 @@ namespace compiler::lir {
 		);
 
 		/**
-		 * @brief Crates unique local with bool-type, and without
-		 * helios_id.
-		 * @note it's used to create lifetime-flags
-		 * @param ctx
-		 * @return LIRLocal
-		 */
-		static LIRLocal boolLocal(query::Context& ctx);
-
-		/**
 		 * @brief Creates unique local holding a reference to @p pointee_type, and without
 		 * helios_id.
 		 * @note It's used to materialize addresses of places passed to functions taking

@@ -877,6 +877,12 @@ namespace compiler::mir {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
+		/**
+		 * @brief Adds a compiler generated local to an already built function and returns it. Used
+		 * when adding lifetime flags in `AddLifetimeFlagsPass`.
+		 */
+		MIRLocalRef addGeneratedLocal(tsh::SymbolType<> type, ScopeRef scope, LifetimeFlags flags);
+
 		void debugPrint(std::ostream& os) const;
 
 		/**

@@ -75,6 +75,30 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Turns the implicit lifetime flag of every conditionally destructed local into a real
+	 * `bool` local, so that the destructor of a value moved on only some paths can be skipped in
+	 * runtime.
+	 *
+	 * `AddDestructorsPass` emits a `DestructIf` when the value is `MaybeMoved`. Whether such a
+	 * value still owns anything is not known until runtime, so it is tracked in a flag, which this
+	 * pass adds.
+	 * General idea:
+	 * - one `bool` local per conditionally destructed local. The flag shares its lifetime scope
+	 * with the local.
+	 * - the flag is set to true after every instruction that constructs or reinitializes the local
+	 * and set to false after every instruction that moves out of it.
+	 * - parameters are alive on entry without a `Construct` to hang the write on, so their flag is
+	 * set to true at the beginning of the entry block;
+	 * - every `DestructIf` gets the flag place appended as its last argument. LIR then uses this
+	 * flag to create appropriate conditional destructor calls.
+	 * - locals that are never conditionally destructed get no flag
+	 */
+	class AddLifetimeFlagsPass final: public LifetimePass {
+	public:
+		void run(query::Context&, Function&, const LifetimePassArgs&) final;
+	};
+
+	/**
 	 * @brief Performs a pass of MIR, that adds `ScopeStart` and `ScopeEnd` flags to
 	 * instructions based on scopes of variables. These are not lifetimes, but the places
 	 * where we should allocate and de-allocate memory for variables,
