@@ -30,6 +30,8 @@ namespace compiler::helios::code {
 		ChainComparisonExpr,
 		TupleExpr,
 		VariantTypeConstructorExpr,
+		VariantConstructExpr,
+		MatchExpr,
 		CallExpr,
 		AccessExpr,
 		IndexExpr,
@@ -42,8 +44,6 @@ namespace compiler::helios::code {
 		CreateAggregateExpr,
 		CastExpr,
 		LiftToTypeExpr,
-		BlockExpr,
-		ListPushExpr,
-		ListPopExpr
+		BlockExpr
 	);
 }

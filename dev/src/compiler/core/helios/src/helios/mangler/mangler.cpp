@@ -544,10 +544,6 @@ namespace compiler::helios::mangler {
 							return "HtoString" + func(ctx, symbol_id) + "E";
 						case defgen::Method::Kind::LengthMethod:
 							return "Hlength" + func(ctx, symbol_id) + "E";
-						case defgen::Method::Kind::Push:
-							return "Hpush" + func(ctx, symbol_id) + "E";
-						case defgen::Method::Kind::Pop:
-							return "Hpop" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}
@@ -560,10 +556,10 @@ namespace compiler::helios::mangler {
 							return "Hba" + func(ctx, symbol_id) + "E";
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
 							return "Hbf" + func(ctx, symbol_id) + "E";
-						case defgen::BuiltinTemplatedSymbol::Kind::ListFree:
-							return "Hlf" + func(ctx, symbol_id) + "E";
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
 							return "Hbd" + func(ctx, symbol_id) + "E";
+						case defgen::BuiltinTemplatedSymbol::Kind::MoveIn:
+							return "Hmin" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}
@@ -774,14 +770,6 @@ namespace compiler::helios::mangler {
 			return res.str();
 		}
 
-		static std::string mangle(query::Context& ctx, tsh::DynamicArrayAbstractType type) {
-			return base::strConcat(
-				"D",
-				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
-				"E"
-			);
-		}
-
 		static std::string mangle(query::Context& ctx, tsh::StaticArrayAbstractType type) {
 			return base::strConcat(
 				"A",
@@ -846,8 +834,6 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::SliceAbstractType>());
 			case Function:
 				return mangle(ctx, type.as<tsh::FunctionAbstractType>());
-			case DynamicArray:
-				return mangle(ctx, type.as<tsh::DynamicArrayAbstractType>());
 			case StaticArray:
 				return mangle(ctx, type.as<tsh::StaticArrayAbstractType>());
 			case Tuple:

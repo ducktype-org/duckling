@@ -1,6 +1,7 @@
 #include "query_hout_of_expr.hpp"
 
-#include "coercions.hpp"
+#include "coercions/coercions.hpp"
+#include "coercions/errors.hpp"
 #include "function_calls/call_processing.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
@@ -20,6 +21,7 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
+#include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/casts.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
@@ -552,7 +554,7 @@ namespace compiler::helios::code {
 					const auto kind          = abstract_type.getKind();
 					CORE_ASSERT(
 						kind == tsh::Kind::Class or kind == tsh::Kind::StaticArray
-							or kind == tsh::Kind::Tuple or kind == tsh::Kind::DynamicArray,
+							or kind == tsh::Kind::Tuple or kind == tsh::Kind::Variant,
 						"Tried to call a copy constructor of a type which shouldn't need one"
 					);
 
@@ -661,6 +663,12 @@ namespace compiler::helios::code {
 						   ctx, all_candidates, std::move(lhs), std::move(rhs), pstOrigin(op)
 				)
 				    .valueOrThrow();
+			}
+
+			void visitMatchExpr(pst::Access<pst::expr::MatchExpr> stmt) override {
+				auto desugared = desugaring::desugarMatch(ctx, stmt);
+				if (desugared.hasFailed()) return;
+				node = std::move(desugared).valueOrThrow();
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
@@ -831,16 +839,6 @@ namespace compiler::helios::code {
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
-				case pst::Keyword::List: {
-					node = makeBox<LiteralTypeExpr>(
-						ctx,
-						pstOrigin(stmt),
-						ctx.query<tsh::QueryTypeTemplateType>(
-							{ tsh::TypeTemplateAbstractType::BuiltinKind::List }
-						)
-					);
-					break;
-				}
 				case pst::Keyword::Self: {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
