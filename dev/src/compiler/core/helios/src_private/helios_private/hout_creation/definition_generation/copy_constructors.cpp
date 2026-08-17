@@ -176,27 +176,27 @@ namespace compiler::helios::defgen {
 				return body;
 			}
 
-			const auto u64_abs_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-			const auto u64_type = tsh::SymbolType<>{ u64_abs_type,
+			const auto i64_abs_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			const auto i64_type = tsh::SymbolType<>{ i64_abs_type,
 				                                     tsh::ReferenceKind::Direct,
 				                                     tsh::Mutability::Mutable };
 
 			// The elements of the aggregate differ only in the index they copy, so the whole array
 			// is built by a single value that reads the index off a variable, advanced once per
 			// element by the per-element statements.
-			// var __i: u64 = 0;
+			// var __i: i64 = 0;
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
 				   .name = base::StrID("__i"),
 				   .generated_symbol_data
-                = Variable{ .function_symbol = copy_sym, .variable_index = 0, .type = u64_type },
+                = Variable{ .function_symbol = copy_sym, .variable_index = 0, .type = i64_type },
             });
-			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-			                    .expect("u64 creation failed");
-			body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
+			auto        zero_val = numeric_value::NumericValue::createOfType(i64_abs_type)
+			                    .expect("i64 creation failed");
+			body.emplace_back(s.var(i_sym, i64_type, s.litNum(zero_val)));
 
-			auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
-			                   .expect("u64 creation failed");
+			auto one_val = numeric_value::NumericValue::createOfType(i64_abs_type, 1)
+			                   .expect("i64 creation failed");
 
 			std::vector<Box<code::Expr>> element_values;
 			element_values.emplace_back(

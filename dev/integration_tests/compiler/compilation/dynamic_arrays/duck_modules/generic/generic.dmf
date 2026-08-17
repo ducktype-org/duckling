@@ -14,7 +14,7 @@ fun printPoint(p: ref Point) -> () = {
 
 fun printPointList(list: ref List:{Point}) -> () = {
     var i = 0;
-    while(i < list.length() as i64) {
+    while(i < list.length()) {
         printPoint(list.at(i));
         i = i + 1;
     }
@@ -22,7 +22,7 @@ fun printPointList(list: ref List:{Point}) -> () = {
 
 fun printMatrix(list: ref List:{i32[3]}) -> () = {
     var i = 0;
-    while(i < list.length() as i64) {
+    while(i < list.length()) {
         var j = 0;
         while (j < 3) {
             builtin_output_i64(list.at(i)[j]);
@@ -41,7 +41,7 @@ fun integersTest() -> () = {
     builtin_output_i64(integers.at(0)); # 111
     builtin_output_i64(integers.at(1)); # 222
     builtin_output_i64(integers.at(2)); # 333
-    builtin_output_u64(integers.length()); # 3
+    builtin_output_i64(integers.length()); # 3
     printSeparator();
 }
 
@@ -54,7 +54,7 @@ fun floatsTest() -> () = {
     builtin_output_f64(floats.at(0));
     builtin_output_f64(floats.at(1));
     builtin_output_f64(floats.at(2));
-    builtin_output_u64(floats.length()); # 3
+    builtin_output_i64(floats.length()); # 3
     printSeparator();
 }
 
@@ -99,8 +99,8 @@ fun dynamicArraysTest() -> () = {
     nested.push(copy inner1);
     nested.push(copy inner2);
 
-    builtin_output_u64(nested.at(0).length()); # 2
-    builtin_output_u64(nested.at(1).length()); # 1
+    builtin_output_i64(nested.at(0).length()); # 2
+    builtin_output_i64(nested.at(1).length()); # 1
 
     builtin_output_i64(nested.at(0).at(0)); # 1
     builtin_output_i64(nested.at(0).at(1)); # 2
@@ -108,7 +108,7 @@ fun dynamicArraysTest() -> () = {
 
     nested.at(1).push(4);
 
-    builtin_output_u64(nested.at(1).length()); # 2
+    builtin_output_i64(nested.at(1).length()); # 2
     builtin_output_i64(nested.at(0).at(0)); # 1
     builtin_output_i64(nested.at(0).at(1)); # 2
     builtin_output_i64(nested.at(1).at(0)); # 3
@@ -117,7 +117,7 @@ fun dynamicArraysTest() -> () = {
     # `nested` holds a deep copy, so adding to `inner2` does not modify it.
     inner2.push(123);
 
-    builtin_output_u64(nested.at(1).length()); # 2
+    builtin_output_i64(nested.at(1).length()); # 2
 
     printSeparator();
 }
@@ -129,7 +129,7 @@ fun listOfRefsTest() -> () = {
     var list_of_refs: List:{ref Point};
     list_of_refs.push(&p1);
     list_of_refs.push(&p2);
-    builtin_output_u64(list_of_refs.length());
+    builtin_output_i64(list_of_refs.length());
     printSeparator();
 
     printPoint(list_of_refs.at(0));
@@ -165,7 +165,7 @@ fun listOfBoxesTest() -> () = {
 
     list_of_boxes.push(move p1);
     list_of_boxes.push(move p2);
-    builtin_output_u64(list_of_boxes.length());
+    builtin_output_i64(list_of_boxes.length());
     printSeparator();
 
     printPoint(list_of_boxes.at(0));
@@ -181,18 +181,18 @@ fun listOfBoxesTest() -> () = {
 
 fun boxOfListTest() -> () = {
     var list: List:{Point};
-    builtin_output_u64(list.length());
+    builtin_output_i64(list.length());
     list.push(Point(1, 2));
     list.push(Point(3, 4));
     list.push(Point(5, 6));
-    builtin_output_u64(list.length());
+    builtin_output_i64(list.length());
     printSeparator();
 
     printPointList(&list);
     printSeparator();
 
     var box_list: box List:{Point} = new copy list;
-    builtin_output_u64(list.length());
+    builtin_output_i64(list.length());
     printSeparator();
 
     box_list.at(0).x = 100;
