@@ -285,7 +285,7 @@ namespace compiler::tsh {
 		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}
 
-	bool VariantAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
+	bool VariantAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
 		for (const auto& type: underlying_types)
 			if (!type.isTriviallyDestructible(ctx)) return false;
 		return true;
@@ -492,7 +492,7 @@ namespace compiler::tsh {
 		});
 	}
 
-	bool ClassAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
+	bool ClassAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
 		// A user-defined destructor code, means the class is not trivially destructible.
 		if (ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
 		        ->valueOrThrow()
@@ -514,10 +514,10 @@ namespace compiler::tsh {
 		return false;
 	}
 
-	bool StaticArrayAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
-		// Static arrays have trivial destructors if the inner type has a noOpDestructor or they
-		// are zero sized.
-		return size == 0 || element_type.getType().hasNoOpDestructor(ctx);
+	bool StaticArrayAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
+		// Static arrays have trivial destructors if the inner type is trivially destructible or
+		// they are zero sized.
+		return size == 0 || element_type.getType().isTriviallyDestructible(ctx);
 	}
 
 	bool StaticArrayAbstractTypeImpl::isDefaultConstructible(query::Context& ctx) const {
@@ -542,7 +542,7 @@ namespace compiler::tsh {
 		return element_type.getType().carriesInformation(ctx) && size > 0;
 	}
 
-	bool TupleAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
+	bool TupleAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
 		return std::ranges::all_of(components, [&](const auto& component) {
 			return component.isTriviallyDestructible(ctx);
 		});
