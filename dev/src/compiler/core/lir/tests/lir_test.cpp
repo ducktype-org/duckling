@@ -48,7 +48,6 @@ public:
 		TESTER_ADD_TEST(conditionalDestructTest);
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(staticArrayTest);
-		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 		TESTER_ADD_TEST(cVariadicAbiTest);
@@ -549,52 +548,6 @@ private:
 		ASSERT_TRUE(found_zero_init_b);
 		ASSERT_TRUE(found_index_proj);
 		ASSERT_TRUE(found_nested_proj);
-	}
-
-	void dynamicArrayTest() {
-		auto module   = getLIROfModule(path("modules/dynamic_arrays"));
-		auto lir_func = module.lirFunc("dynamic_array_test");
-
-		using namespace compiler::lir;
-
-		bool found_zero_init        = false;
-		bool found_push_with_params = false;
-		bool found_pop_with_params  = false;
-		bool found_len              = false;
-		bool found_destructor       = false;
-
-		for (const auto& block: lir_func->block_order) {
-			for (const auto& instr: block->instructions) {
-				switch (instr.operation) {
-				case Operation::ZeroInitialize:
-					found_zero_init = true;
-					break;
-				case Operation::Call: {
-					const auto& fn_lit = instr.arguments.at(0).get<FunctionLiteral>();
-					auto        name   = fn_lit.mangled_name.strView();
-					if (name.contains("push"))
-						found_push_with_params = true;
-					else if (name.contains("pop"))
-						found_pop_with_params = true;
-					else if (name.contains("length"))
-						found_len = true;
-					// `Hdd` is the mangling of the compiler-generated destructor, which releases
-					// the list storage with the `list_free` builtin.
-					else if (name.contains("Hdd"))
-						found_destructor = true;
-					break;
-				}
-				default:
-					break;
-				}
-			}
-		}
-
-		ASSERT_TRUE(found_zero_init);
-		ASSERT_TRUE(found_push_with_params);
-		ASSERT_TRUE(found_pop_with_params);
-		ASSERT_TRUE(found_len);
-		ASSERT_TRUE(found_destructor);
 	}
 
 	void metaFunctionsTest() {

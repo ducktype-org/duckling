@@ -91,7 +91,6 @@ public:
 		TESTER_ADD_TEST(testHoutWalkers);
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testStaticArrays);
-		TESTER_ADD_TEST(testDynamicArrays);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
 		TESTER_ADD_TEST(testTupleCoercion);
@@ -257,6 +256,7 @@ private:
 		auto i128_type = getIntegralTypeNoContext(128, Signed);
 
 		auto f16_type  = getFloatTypeNoContext(16);
+		auto f32_type  = getFloatTypeNoContext(32);
 		auto f64_type  = getFloatTypeNoContext(64);
 		auto f128_type = getFloatTypeNoContext(128);
 
@@ -386,6 +386,29 @@ private:
 				auto not_mega_type = getConstValueAs<bool>("NOT_IS_MEGA", root_scope);
 				ASSERT_EQUAL(not_mega_type, false);
 			}
+		}
+
+		// Variant comp-time logic.
+		{
+			auto i32_or_f32
+				= st(query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type),
+			                                                                st(f32_type) } }));
+
+			auto picked_variant
+				= getConstValueAs<compiler::tsh::SymbolType<>>("PICKED_VARIANT", root_scope);
+			ASSERT_EQUAL(i32_or_f32, picked_variant);
+
+			auto picked_plain
+				= getConstValueAs<compiler::tsh::SymbolType<>>("PICKED_PLAIN", root_scope);
+			ASSERT_EQUAL(st(i32_type), picked_plain);
+
+			ASSERT_EQUAL(true, getConstValueAs<bool>("PICKED_IS_VARIANT", root_scope));
+			ASSERT_EQUAL(true, getConstValueAs<bool>("PICKED_ORDER_INSENSITIVE", root_scope));
+			ASSERT_EQUAL(true, getConstValueAs<bool>("VARIANTS_DO_NOT_FLATTEN", root_scope));
+
+			// Comp-time pattern matching over variant values (evaluated via the VM path).
+			ASSERT_EQUAL(17, getConstValueAs<i64>("MATCHED_INT", root_scope));
+			ASSERT_EQUAL(-1, getConstValueAs<i64>("MATCHED_OTHER", root_scope));
 		}
 	}
 
@@ -1238,7 +1261,7 @@ private:
 		ASSERT_EQUAL(function->declaration->original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function->body->statements.size(), 7);
+		ASSERT_EQUAL(function->body->statements.size(), 8);
 
 		auto& statements = function->body->statements;
 
@@ -1271,30 +1294,27 @@ private:
 		}
 
 		{
-			// @TODO: #803 support variant types
-			// auto& var = get_var_ref(2);
-			// ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
-			// ASSERT_EQUAL(var.type, st(i32_or_f32));
-			std::ignore = i32_or_f32;  // < remove
+			auto& var = get_var_ref(2);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
+			ASSERT_EQUAL(var.type, st(i32_or_f32));
 		}
 
 		{
-			auto& var = get_var_ref(2);
+			auto& var = get_var_ref(3);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "d");
 			ASSERT_EQUAL(var.type.getType().getKind(), compiler::tsh::Kind::Class);
 		}
 
 		{
-			auto& if_stmt = dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(3));
+			auto& if_stmt = dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(4));
 			{
 				auto& var1 = get_var_block(0, if_stmt.then_body);
 				ASSERT_EQUAL(compiler::helios::name(var1.helios_symbol), "x");
 				ASSERT_EQUAL(var1.type, st(i32_type));
 
-				// @TODO: #803 support variant types
-				// auto& var2 = get_var_block(1, if_stmt.then_body);
-				// ASSERT_EQUAL(compiler::helios::name(var2.helios_symbol), "y");
-				// ASSERT_EQUAL(var2.type, st(i32_or_f32));
+				auto& var2 = get_var_block(1, if_stmt.then_body);
+				ASSERT_EQUAL(compiler::helios::name(var2.helios_symbol), "y");
+				ASSERT_EQUAL(var2.type, st(i32_or_f32));
 			}
 			{
 				auto& var = get_var_block(0, if_stmt.else_body);
@@ -1305,10 +1325,14 @@ private:
 
 		{
 			auto& while_stmt
-				= dynamic_cast<const compiler::helios::code::WhileStmt&>(*statements.at(4));
+				= dynamic_cast<const compiler::helios::code::WhileStmt&>(*statements.at(5));
 			auto& var = get_var_block(0, while_stmt.body);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
 			ASSERT_EQUAL(var.type, st(i32_type));
+
+			auto& var_y = get_var_block(2, while_stmt.body);
+			ASSERT_EQUAL(compiler::helios::name(var_y.helios_symbol), "y");
+			ASSERT_EQUAL(var_y.type, st(i32_or_f32));
 		}
 
 		{
@@ -2011,69 +2035,6 @@ private:
 			auto static_arr_inner
 				= static_arr.getElementType().getType().as<compiler::tsh::StaticArrayAbstractType>();
 			ASSERT_EQUAL(static_arr_inner.getSize(), 2);
-		}
-	}
-
-	void testDynamicArrays() {
-		auto [module, top_scope] = getModule(fs::File(path("test_modules/dynamic_arrays")));
-		auto& hout
-			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-		auto& function   = hout.functions.at(0);
-		auto& statements = function->body->statements;
-
-		using namespace compiler::helios::code;
-		using namespace compiler::tsh;
-
-		{
-			// var l: List[i64];
-			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(0));
-			ASSERT_EQUAL(compiler::helios::name(var_decl.helios_symbol), "l");
-
-			auto type = var_decl.type.getType();
-			ASSERT_EQUAL(type.getKind(), Kind::DynamicArray);
-
-			auto dyn_array_type = type.as<DynamicArrayAbstractType>();
-			auto i64_type       = getIntegralTypeNoContext(
-                64, compiler::tsh::IntegralAbstractType::Signedness::Signed
-            );
-			ASSERT_EQUAL(dyn_array_type.getElementType().getType(), i64_type);
-
-			auto* default_val = dynamic_cast<const DefaultValueExpr*>(
-				stripImplicitMove(var_decl.initial_value.get())
-			);
-			ASSERT_TRUE(default_val != nullptr);
-		}
-		{
-			// l.push(1);
-			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(1));
-			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(call_expr != nullptr);
-		}
-		{
-			// l.pop(1);
-			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(2));
-			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(call_expr != nullptr);
-		}
-		{
-			// let l_len = l.length();
-			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(3));
-			auto* call_expr
-				= dynamic_cast<const CallExpr*>(stripImplicitMove(var_decl.initial_value.get()));
-			ASSERT_TRUE(call_expr != nullptr);
-		}
-		{
-			// l[0] = 42;
-			auto& assign_stmt = dynamic_cast<const AssignmentStmt&>(*statements.at(4));
-			auto* index_expr  = dynamic_cast<const IndexExpr*>(assign_stmt.location_expr.get());
-			ASSERT_TRUE(index_expr != nullptr);
-		}
-		{
-			// let x = l[0];
-			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(5));
-			auto* index_expr
-				= dynamic_cast<const IndexExpr*>(stripImplicitMove(var_decl.initial_value.get()));
-			ASSERT_TRUE(index_expr != nullptr);
 		}
 	}
 
@@ -3106,7 +3067,7 @@ private:
 
 			// Non-trivial aggregates call a copy constructor.
 			for (std::string_view aggregate_field:
-			     { "nontrivial_arr", "nontrivial_tup", "prim_list", "class_list", "nested_default" })
+			     { "nontrivial_arr", "nontrivial_tup", "nested_default" })
 				assert_generated_copy(rhs_of(aggregate_field));
 
 			// A field whose class defines a user copy constructor calls the user code, not a
@@ -3182,28 +3143,62 @@ private:
 				assert_generated_copy(stripImplicitMove(values.at(1).get()));
 			}
 
-			// List of a trivial element.
+			// A variant is copied by matching the source and rebuilding the variant around a copy
+			// of the active alternative, so every alternative gets a case and every case result is
+			// a variant construction of that same alternative.
 			{
-				const auto& cctor = dump_cctor("List[i32]", field_abstract_type("prim_list"));
-				const auto& stmts = cctor.body->statements;
-				ASSERT_EQUAL_PRINT(4, stmts.size());
-				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(2).get()) != nullptr);
-			}
+				auto i32_type = compiler::tsh::getIntegralType(
+					ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
+				);
+				auto variant_type = ctx.query<compiler::tsh::QueryVariantType>({
+					{ st(i32_type), st(get_class_type(has_box_sym)) },
+				});
 
-			// List of a non-trivial element - each pushed element is a copy-ctor call.
-			{
-				const auto& cctor = dump_cctor("List[HasBox]", field_abstract_type("class_list"));
-				const auto& stmts = cctor.body->statements;
-				ASSERT_EQUAL_PRINT(4, stmts.size());
-				auto while_stmt = dynamic_cast<const WhileStmt*>(stmts.at(2).get());
-				ASSERT_TRUE(while_stmt != nullptr);
-				ASSERT_TRUE(!while_stmt->body.statements.empty());
-				auto push_stmt
-					= dynamic_cast<const ExprStmt*>(while_stmt->body.statements.at(0).get());
-				ASSERT_TRUE(push_stmt != nullptr);
-				auto push = dynamic_cast<const ListPushExpr*>(push_stmt->expr.get());
-				ASSERT_TRUE(push != nullptr);
-				assert_generated_copy(stripImplicitMove(push->element.get()));
+				const auto& cctor = dump_cctor("i32 | HasBox", variant_type);
+
+				// `(const ref V) -> V`.
+				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
+				const auto param_type = cctor.declaration->parameters.at(0).type;
+				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Immutable, param_type.getMutability());
+				ASSERT_EQUAL(variant_type, param_type.getType());
+				ASSERT_EQUAL(variant_type, cctor.declaration->return_type.getType());
+
+				// return match (source) { <one case per alternative> };
+				ASSERT_EQUAL_PRINT(1, cctor.body->statements.size());
+				auto ret = dynamic_cast<const ReturnStmt*>(cctor.body->statements.back().get());
+				ASSERT_TRUE(ret != nullptr);
+				auto match = dynamic_cast<const MatchExpr*>(stripImplicitMove(ret->value.get()));
+				ASSERT_TRUE(match != nullptr);
+
+				const auto& alternatives = variant_type.getUnderlyingTypes();
+				ASSERT_EQUAL_PRINT(alternatives.size(), match->cases.size());
+
+				// Every case tests its own alternative, binds the payload, and rebuilds the
+				// variant with that same alternative index - no wildcard is needed.
+				for (usize i = 0; i < match->cases.size(); i++) {
+					const auto& match_case = match->cases.at(i);
+					ASSERT_TRUE(match_case.alternative_index.has_value());
+					ASSERT_EQUAL_PRINT(i, match_case.alternative_index.value());
+					ASSERT_TRUE(match_case.binding.has_value());
+
+					auto construct = dynamic_cast<const VariantConstructExpr*>(
+						stripImplicitMove(match_case.result.get())
+					);
+					ASSERT_TRUE(construct != nullptr);
+					ASSERT_EQUAL_PRINT(i, construct->alternative_index);
+
+					// The alternatives are ordered by their name, so `HasBox` comes before `i32`.
+					// The non-trivially-copyable one is copied with its copy constructor, the
+					// trivially-copyable one is byte-copied from the dereferenced binding.
+					if (alternatives.at(i).isTriviallyCopyable(ctx))
+						ASSERT_TRUE(
+							dynamic_cast<const DerefExpr*>(stripImplicitMove(construct->inner.get()))
+							!= nullptr
+						);
+					else
+						assert_generated_copy(stripImplicitMove(construct->inner.get()));
+				}
 			}
 		});
 	}
@@ -3339,7 +3334,7 @@ private:
 				return templated != nullptr && templated->kind == kind;
 			};
 
-			// A trivially-destructible class has an empty destructor and a no-op destructor.
+			// A trivially-destructible class has an empty destructor body.
 			{
 				const auto  type = get_class_type(trivial_sym);
 				const auto& dtor = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
@@ -3355,7 +3350,7 @@ private:
 				);
 
 				ASSERT_TRUE(dtor.body->statements.empty());
-				ASSERT_TRUE(type.hasNoOpDestructor(ctx));
+				ASSERT_TRUE(type.isTriviallyDestructible(ctx));
 			}
 
 			// A class owning a `box i32` destroys the box by calling its `box_destructor`. That
@@ -3363,7 +3358,7 @@ private:
 			// there is no pointee destruction, only the free.
 			{
 				const auto type = get_class_type(has_box_sym);
-				ASSERT_TRUE(!type.hasNoOpDestructor(ctx));
+				ASSERT_TRUE(!type.isTriviallyDestructible(ctx));
 
 				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
 				const auto& stmts = dtor.body->statements;
@@ -3396,7 +3391,7 @@ private:
 			// A class that declares a user destructor should call the user code first.
 			{
 				const auto type = get_class_type(user_sym);
-				ASSERT_TRUE(!type.hasNoOpDestructor(ctx));
+				ASSERT_TRUE(!type.isTriviallyDestructible(ctx));
 
 				const auto user_dtor = userDestructorOf(ctx, user_sym);
 				ASSERT_HAS_VALUE(user_dtor);
@@ -3462,19 +3457,6 @@ private:
 				const auto  arr_type = field_abstract_type("trivial_arr");
 				const auto& dtor     = ctx.query<QueryDefaultDestructor>(arr_type)->valueOrThrow();
 				ASSERT_TRUE(dtor.body->statements.empty());
-			}
-
-			// List of a non-trivial element - a destruction loop over the elements, then the
-			// backing buffer is released with a `list_free` builtin call.
-			{
-				const auto  list_type = field_abstract_type("class_list");
-				const auto& dtor  = ctx.query<QueryDefaultDestructor>(list_type)->valueOrThrow();
-				const auto& stmts = dtor.body->statements;
-				ASSERT_EQUAL_PRINT(3, stmts.size());
-				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(1).get()) != nullptr);
-				ASSERT_TRUE(is_templated_builtin_call(
-					stmts.at(2).get(), BuiltinTemplatedSymbol::Kind::ListFree
-				));
 			}
 
 			// Tuple with a non-trivial element - destroys that element via its destructor.

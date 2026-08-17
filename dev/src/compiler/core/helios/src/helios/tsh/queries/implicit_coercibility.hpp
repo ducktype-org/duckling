@@ -43,6 +43,20 @@
 
 namespace compiler::tsh {
 	/**
+	 * @brief Whether a value of reference kind @p from may be coerced into one of kind @p to.
+	 *
+	 * The current coercion logic regarding reference kinds is:
+	 * ```
+	 * 						  FROM
+	 * 			    | Direct | Ref | Box
+	 *	 	Direct 	|  Yes	 | Yes | Yes
+	 * TO 	Ref		|   No   | Yes | No
+	 *	 	Box		|   No   | No  | Yes
+	 * ```
+	 */
+	bool isRefKindCoercible(ReferenceKind from, ReferenceKind to);
+
+	/**
 	 * @brief Key for QueryImplicitCoercibilityOnInfo.
 	 */
 	struct KeyFor_QueryImplicitCoercibilityOnAbstractType final {

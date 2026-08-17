@@ -348,6 +348,14 @@ namespace compiler::tsl {
 			return index_to_layout.at(index);
 		}
 
+		/**
+		 * @return The number of alternatives of this variant.
+		 */
+		[[nodiscard]]
+		usize getNumAlternatives() const {
+			return index_to_layout.size();
+		}
+
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
 			const override;
@@ -395,8 +403,6 @@ namespace compiler::tsl {
 		ClassTypeLayout(tsh::TupleAbstractType tuple_type, query::Context& ctx);
 
 		ClassTypeLayout(tsh::SliceAbstractType slice_type, query::Context& ctx);
-
-		ClassTypeLayout(tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx);
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 

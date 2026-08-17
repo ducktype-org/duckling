@@ -80,6 +80,82 @@ namespace compiler::helios::defgen {
 			return body;
 		}
 
+		/**
+		 * @brief Builds the copy-constructor body for a variant: copies the active alternative.
+		 *
+		 * Every alternative gets a case, so the match is exhaustive without a wildcard. Each case
+		 * binds the payload and rebuilds the variant around a copy of it, which keeps the tag of
+		 * the source.
+		 */
+		std::vector<Box<code::Stmt>> buildVariantCopyBody(
+			query::Context&                 ctx,
+			const tsh::VariantAbstractType& variant_type,
+			const SymID                     copy_sym,
+			const SymID                     source_symbol,
+			const tsh::SymbolType<>&        result_symbol_type
+		) {
+			using Variable = GeneratedFunctionVariable;
+
+			const Shorthand s{ ctx };
+			const auto&     alternatives = variant_type.getUnderlyingTypes();
+
+			std::vector<code::MatchExpr::Case> cases;
+			for (usize i = 0; i < alternatives.size(); i++) {
+				// A binding is always a reference to the payload, which for a reference-like
+				// alternative is the stored reference itself.
+				const auto payload_type = alternatives[i]
+				                              .withReferenceKind(tsh::ReferenceKind::Ref)
+				                              .withMutability(tsh::Mutability::Mutable);
+
+				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
+					.name                  = base::StrID(base::strConcat("__alternative_", i)),
+					.generated_symbol_data = Variable{ .function_symbol = copy_sym,
+				                                       .variable_index  = i,
+				                                       .type            = payload_type },
+				});
+
+				auto copy_through = [&](const tsh::SymbolType<>& value_type) -> Box<code::Expr> {
+					if (value_type.isTriviallyCopyable(ctx)) return s.deref(s.ident(payload_sym));
+					return s.call(
+						s.ident(copyConstructorSymForType(ctx, value_type.getType())),
+						s.ident(payload_sym)
+					);
+				};
+
+				auto payload_value = [&]() -> Box<code::Expr> {
+					switch (alternatives[i].getRefKind()) {
+					case tsh::ReferenceKind::Direct:
+						return copy_through(alternatives[i]);
+					case tsh::ReferenceKind::Ref:
+						// Copying a reference copies the reference, and the binding already is it.
+						return s.ident(payload_sym);
+					case tsh::ReferenceKind::Box:
+						// A box is deep-copied into a fresh allocation holding a copy of the
+						// pointee.
+						return makeBoxAllocCall(
+							ctx,
+							code::generatedOrigin(),
+							copy_through(alternatives[i].getPointeeSymbolType())
+						);
+					}
+					CORE_UNREACHABLE();
+				}();
+
+				cases.emplace_back(Shorthand::matchCase(
+					i,
+					payload_sym,
+					makeBox<code::VariantConstructExpr>(
+						ctx, code::generatedOrigin(), std::move(payload_value), result_symbol_type, i
+					)
+				));
+			}
+
+			// `source` is already a reference to the variant, which is what the match wants.
+			std::vector<Box<code::Stmt>> body;
+			body.emplace_back(s.ret(s.matchExpr(s.ident(source_symbol), std::move(cases))));
+			return body;
+		}
+
 		std::vector<Box<code::Stmt>> buildStaticArrayCopyBody(
 			query::Context&                     ctx,
 			const tsh::StaticArrayAbstractType& array_type,
@@ -138,74 +214,6 @@ namespace compiler::helios::defgen {
 
 			return body;
 		}
-
-		std::vector<Box<code::Stmt>> buildDynamicArrayCopyBody(
-			query::Context&                      ctx,
-			const tsh::DynamicArrayAbstractType& array_type,
-			const SymID                          copy_sym,
-			const SymID                          source_symbol,
-			const tsh::SymbolType<>&             result_symbol_type
-		) {
-			using Variable = GeneratedFunctionVariable;
-
-			std::vector<Box<code::Stmt>> body;
-
-			const Shorthand s{ ctx };
-
-			// var __result: List[T] = <zero>;
-			const SymID res_sym = ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID("__result"),
-				.generated_symbol_data = Variable{ .function_symbol = copy_sym,
-			                                       .variable_index  = 0,
-			                                       .type            = result_symbol_type },
-			});
-			body.emplace_back(
-				s.var(res_sym, result_symbol_type, s.defaultValue(result_symbol_type.getType()))
-			);
-
-			using enum code::BuiltinBinary;
-
-			const auto u64_abs_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-			const auto u64_type = tsh::SymbolType<>{ u64_abs_type,
-				                                     tsh::ReferenceKind::Direct,
-				                                     tsh::Mutability::Mutable };
-
-			// var __i: u64 = 0;
-			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
-				   .name = base::StrID("__i"),
-				   .generated_symbol_data
-                = Variable{ .function_symbol = copy_sym, .variable_index = 1, .type = u64_type },
-            });
-			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-			                    .expect("u64 creation failed");
-			body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
-
-			const SymID length_method_sym = defgen::lengthMethodForType(ctx, array_type);
-			auto        one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
-			                   .expect("u64 creation failed");
-
-			// while (__i < source.length()) { __result += <copy of (*source)[__i]>; __i = __i + 1; }
-			body.emplace_back(s.whileStmt(
-				s.binOp(
-					s.ident(i_sym),
-					IntegerLt,
-					s.call(s.ident(length_method_sym), s.ident(source_symbol))
-				),
-				{
-					s.expr(s.listPush(
-						s.ident(res_sym),
-						s.copyValue(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
-					)),
-					s.assign(s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))),
-				}
-			));
-
-			// return __result;
-			body.emplace_back(s.ret(s.ident(res_sym)));
-
-			return body;
-		}
 	}
 
 	struct IMPLEMENT_QUERY(QueryDefaultCopyConstructor, query::QResult<HOUTFunction>) {
@@ -226,10 +234,10 @@ namespace compiler::helios::defgen {
 					ctx, owner_type.as<tsh::StaticArrayAbstractType>(), copy_sym, source_symbol
 				);
 				break;
-			case tsh::Kind::DynamicArray:
-				body = buildDynamicArrayCopyBody(
+			case tsh::Kind::Variant:
+				body = buildVariantCopyBody(
 					ctx,
-					owner_type.as<tsh::DynamicArrayAbstractType>(),
+					owner_type.as<tsh::VariantAbstractType>(),
 					copy_sym,
 					source_symbol,
 					result_symbol_type

@@ -114,6 +114,7 @@ namespace compiler::backend_llvm {
 		[[nodiscard]]
 		base::OkBad verify() const;
 
+
 		/**
 		 * @brief Compile the module to binary object file or assembly file.
 		 *

@@ -55,10 +55,14 @@ namespace compiler::lir {
 		                       ? LIRGlobalType::Constant
 		                       : LIRGlobalType::Variable;
 
+		const bool link_once = helios::emissionPolicy(ctx, mir_global.helios_id)
+		                    == helios::EmissionPolicy::Replicated;
+
 		return LIRGlobal{
 			type_layout,
 			mangled_name,
 			type,
+			link_once,
 		};
 	}
 
@@ -242,9 +246,9 @@ namespace compiler::lir {
 					output << "{ from:" << params.source_type.toString()
 						   << ", to:" << params.target_type.toString() << " }";
 				}
-				variant_case(ListOperationParameters, params) {
-					output << "{ element_layout:" << params.element_layout->toStringIdentification()
-						   << " }";
+				variant_case(VariantParameters, params) {
+					output << "{ alt:" << params.alternative_index << " ("
+						   << params.alternative_type.toString() << ") }";
 				}
 			}
 			output << " ";
@@ -437,8 +441,6 @@ namespace compiler::lir {
 			return BuiltinFunctionKind::BoxAlloc;
 		case helios::BuiltinKind::BoxFree:
 			return BuiltinFunctionKind::BoxFree;
-		case helios::BuiltinKind::ListFree:
-			return BuiltinFunctionKind::ListFree;
 		default:
 			return {};
 		}
@@ -459,6 +461,7 @@ namespace compiler::lir {
 		case Operation::ReturnValue:
 		case Operation::Jump:
 		case Operation::Branch:
+		case Operation::BranchIfNull:
 			return true;
 		default:
 			return false;

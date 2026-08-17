@@ -33,9 +33,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Simple byte by byte assignment. */
 	Assign,
 	AddressOf,
-	// @TODO: #1894 Remove the `List*` when Lists are implemented in STD.
-	ListPush,
-	ListPop,
 
 	/**
 		@brief Placeholder.
@@ -96,13 +93,23 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	Cast,
 	ZeroInitialize,
 
+	/** Creates a variant value from a payload value (see mir::Operation::VariantConstruct). */
+	VariantConstruct,
+	/**
+	 * Pointer to the variant's payload, null on alternative mismatch. Its single argument is a
+	 * reference to the variant, not the variant place itself.
+	 */
+	VariantTryProject,
+
 	Call,
 
 	ReturnVoid,
 	ReturnValue,
 	Jump,
 	Branch,
-	
+	/** Terminator: [pointer, null_target, not_null_target]. */
+	BranchIfNull,
+
 	// Nop can be useful when lowering the instruction flags and MIR instr translates
 	// to zero instructions in LIR, but we want to have the flags in correct place.
 	Nop
@@ -177,8 +184,7 @@ namespace compiler::lir {
 		DvmAlloc,
 		DvmFree,
 		BoxAlloc,
-		BoxFree,
-		ListFree
+		BoxFree
 	};
 
 	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
@@ -309,15 +315,23 @@ namespace compiler::lir {
 
 		LIRGlobalType type;
 
+		/**
+		 * @brief Whether the global is replicated into every module that uses it (e.g. a constant
+		 * belonging to a template instance), so its definition must be merged at link time.
+		 */
+		bool link_once;
+
 	private:
 		LIRGlobal(
 			const CRef<tsl::TypeLayout> layout,
 			const base::StrID&          mangled_name,
-			const LIRGlobalType         type
+			const LIRGlobalType         type,
+			const bool                  link_once
 		):
 			  layout(layout),
 			  mangled_name(mangled_name),
-			  type(type) {}
+			  type(type),
+			  link_once(link_once) {}
 
 		friend Function;
 
@@ -535,11 +549,15 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout> target_layout;
 	};
 
-	struct ListOperationParameters final {
-		/**
-		 * @brief The element layout for generic `ListPush` and `ListPop` operations.
-		 */
-		CRef<tsl::TypeLayout> element_layout;
+	/**
+	 * @brief Parameters of VariantConstruct/VariantTryProject: the variant alternative
+	 * (index in the canonical order of the interned variant type) and its layout.
+	 */
+	struct VariantParameters final {
+		usize                 alternative_index;
+		tsh::SymbolType<>     alternative_type;
+		CRef<tsl::TypeLayout> alternative_layout;
+		CRef<tsl::TypeLayout> variant_layout;
 	};
 
 	/**
@@ -554,7 +572,7 @@ namespace compiler::lir {
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
 	using InstrParameters
-		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters, MetaParameters>;
+		= std::variant<NoInstrParameters, CastParameters, VariantParameters, MetaParameters>;
 
 	struct InstructionMetadata {
 		base::Optional<dia::StablePosition> position;

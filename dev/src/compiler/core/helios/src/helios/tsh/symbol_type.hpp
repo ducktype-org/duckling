@@ -219,7 +219,7 @@ namespace compiler::tsh {
 				// memory.
 				return false;
 			}
-			if (abstract_type.hasNoOpDestructor(ctx)) return true;
+			if (abstract_type.isTriviallyDestructible(ctx)) return true;
 			return false;
 		}
 

@@ -45,7 +45,7 @@ class Primitives {
     c: bool;        # false
     d: char;        # '\0'
     e: String;      # ""
-    f: List[i32];   # empty list
+    f: List:{i32};   # empty list
     g: type;        # Unit
 }
 
@@ -55,7 +55,7 @@ class Primitives2 {
     c: bool;        # false
     d: char;        # '\0'
     e: String;      # ""
-    f: List[i32];   # empty list
+    f: List:{i32};   # empty list
     g: type;        # Unit
 }
 
@@ -133,7 +133,7 @@ fun testTuples() -> () = {
         bool,        # false
         char,        # '\0'
         String,      # ""
-        List[i32],   # empty list
+        List:{i32},   # empty list
         type
     );
     
