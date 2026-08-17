@@ -401,8 +401,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertFalse(
-				string_type.hasNoOpDestructor(ctx),
-				"String should not have a no-op destructor: it defines one to free its buffer."
+				string_type.isTriviallyDestructible(ctx),
+				"String should not be trivially destructible: it defines one to free its buffer."
 			);
 
 			const auto string_st = st(string_type);
