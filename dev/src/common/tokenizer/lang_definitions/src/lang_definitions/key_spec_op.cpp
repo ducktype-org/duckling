@@ -150,7 +150,6 @@ namespace lang_def {
 			{ Keyword::Str, "str", KeywordFlags() },
 			{ Keyword::Type, "type", KeywordFlags() },
 
-			{ Keyword::List, "List", KeywordFlags() },
 			{ Keyword::Set, "Set", KeywordFlags() },
 			{ Keyword::Dict, "Dict", KeywordFlags() },
 			{ Keyword::Array, "Array", KeywordFlags() },

@@ -52,6 +52,10 @@ public:
 
 		ASSERT_TRUE(flag_23.contains(Opt2 | Opt3));
 		ASSERT_TRUE((flag_23 & (Opt1 | Opt4 | Opt5)) == TestFlag());
+
+		flag_23 -= Opt2 | Opt3;
+		ASSERT_TRUE(not flag_23.contains(Opt2));
+		ASSERT_TRUE(not flag_23.contains(Opt3));
 	}
 };
 

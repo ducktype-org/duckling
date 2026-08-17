@@ -43,7 +43,7 @@ public:
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(tupleTypeCoercionTest);
-		TESTER_ADD_TEST(livenessMapTest);
+		TESTER_ADD_TEST(moveStateMapTest);
 		TESTER_ADD_TEST(sliceTest);
 		TESTER_ADD_TEST(pointersTest);
 	}
@@ -55,7 +55,7 @@ private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
 
 	/**
-	 * @brief Unit test for the global in-liveness map produced by `calculateGlobalInLivenessMap`.
+	 * @brief Unit test for the global in-move-state map produced by `calculateGlobalInMoveStateMap`.
 	 *
 	 * Uses `moveParamThenBlock(a, c)`, which moves the parameter `a` in the entry block and then
 	 * branches. The map is computed on the pre-lifetime MIR (so the move flag is present but no
@@ -63,7 +63,7 @@ private:
 	 *  - `a` is alive on entry (it is a parameter),
 	 *  - some successor block sees `a` as `Moved` with exactly one reaching move site.
 	 */
-	void livenessMapTest() {
+	void moveStateMapTest() {
 		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
 
 		withContextDo([&](query::Context& ctx) {
@@ -90,22 +90,22 @@ private:
 				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
 					preds.put(succ).first->second.push_back(block_id);
 
-			auto liveness = compiler::mir::calculateGlobalInLivenessMap(pre_mir, preds);
+			auto move_states = compiler::mir::calculateGlobalInMoveStateMap(pre_mir, preds);
 
 			// `a` is a parameter, so it is alive at the entry block.
 			auto entry     = pre_mir.block_order.front();
-			auto entry_map = liveness.block_in_liveness.atMaybe(entry);
+			auto entry_map = move_states.block_in_move_state.atMaybe(entry);
 			ASSERT_TRUE(entry_map.has_value());
 			auto a_at_entry = entry_map.value()->atMaybe(a_id.value());
 			ASSERT_TRUE(a_at_entry.has_value());
-			ASSERT_TRUE(a_at_entry.value()->kind == compiler::mir::LivenessStatus::Alive);
+			ASSERT_TRUE(a_at_entry.value()->status == compiler::mir::MoveStatus::Alive);
 
 			// After the unconditional move in the entry block, at least one successor block must
 			// observe `a` as `Moved` with exactly one reaching move site.
 			bool found_moved = false;
-			for (const auto& [block_id, map]: liveness.block_in_liveness) {
+			for (const auto& [block_id, map]: move_states.block_in_move_state) {
 				auto state = map.atMaybe(a_id.value());
-				if (state.has_value() && state.value()->kind == compiler::mir::LivenessStatus::Moved
+				if (state.has_value() && state.value()->status == compiler::mir::MoveStatus::Moved
 				    && state.value()->move_sites.size() == 1)
 					found_moved = true;
 			}
@@ -170,8 +170,10 @@ private:
 
 			auto& c_data
 				= ctx.query<compiler::mir::LowerGlobalData>({ globals.at(0) })->valueOrThrow();
-			auto c_ctor = std::get<CRef<compiler::mir::Function>>(c_data.initial_value);
-			ASSERT_TRUE(c_ctor->name.strView() == "constructor_of_c");
+			auto c_ctor_dtor = std::get<compiler::mir::MIRCtorDtorPair>(c_data.initial_value);
+			ASSERT_TRUE(c_ctor_dtor.constructor->name.strView() == "constructor_of_c");
+			// `c` is an i64, it is trivially destructible, so it gets no destructor.
+			ASSERT_TRUE(c_ctor_dtor.destructor.empty());
 
 			auto foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));

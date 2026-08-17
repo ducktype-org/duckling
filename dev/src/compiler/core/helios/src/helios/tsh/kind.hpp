@@ -30,7 +30,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 	CPointer,
 	Slice,
 	Function,
-	DynamicArray,
 	StaticArray,
 	Tuple,
 	Variant,
@@ -53,7 +52,7 @@ namespace compiler::tsh {
 	}
 
 	inline bool isIndexable(Kind kind) {
-		return kind == Kind::Slice || kind == Kind::StaticArray || kind == Kind::DynamicArray
-		    || kind == Kind::ManyPointer || kind == Kind::CPointer;
+		return kind == Kind::Slice || kind == Kind::StaticArray || kind == Kind::ManyPointer
+		    || kind == Kind::CPointer;
 	}
 }

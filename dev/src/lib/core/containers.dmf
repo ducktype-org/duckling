@@ -95,7 +95,6 @@ class String {
 
     fun append(other: String) -> ref String = {
         append(&other);
-        other.dispose();
         return self;
     }
 
@@ -129,14 +128,6 @@ class String {
         len = 0u64;
     }
 
-    #{
-        Releases the buffer. The string is left empty and reusable.
-    #}
-    fun dispose() -> () = {
-        if (cap > 0u64) allocation:{char}.free(pointer);
-        len = 0u64;
-        cap = 0u64;
-    }
 
     fun length() -> u64 = len;
     
@@ -188,8 +179,6 @@ fun ++(a: String, b: String) -> String = {
     var result = stringReserve(a.length() + b.length());
     result.append(&a);
     result.append(&b);
-    a.dispose();
-    b.dispose();
     return result;
 }
 
@@ -204,7 +193,6 @@ fun +:(c: char, s: String) -> String = {
     var result = stringReserve(s.length() + 1u64);
     result.append(c);
     result.append(&s);
-    s.dispose();
     return result;
 }
 
@@ -219,7 +207,6 @@ fun :+(s: String, c: char) -> String = {
     var result = stringReserve(s.length() + 1u64);
     result.append(&s);
     result.append(c);
-    s.dispose();
     return result;
 }
 
@@ -280,7 +267,7 @@ fun stringifyF64(x: f64) -> String = {
     `push`es is amortized O(1).
 #}
 template(T: type)
-class DuckList {
+class List {
     pointer: manyptr T;
     len: u64;
     cap: u64;
@@ -324,19 +311,40 @@ class DuckList {
         allocating again.
     #}
     fun clear() -> () = {
+        # Moving an element out and dropping the result on the floor runs `T`'s destructor.
+        var i = 0i64;
+        while (i < len as i64) {
+            builtins.move_out:{T}(ptrof pointer[i]);
+            i = i + 1i64;
+        }
         len = 0u64;
     }
 
     #{
-        Releases the buffer. The list is left empty and reusable.
+        A list owns its buffer, so a copy has to allocate its own and copy the elements one by
+        one with `T`'s copy constructor.
     #}
-    fun dispose() -> () = {
-        if (cap > 0u64) allocation:{T}.free(pointer);
-        len = 0u64;
-        cap = 0u64;
+    List.copy(other: const ref listType:{T}()) = {
+        var result: listType:{T}();
+        result.reserve(other.length());
+
+        var i = 0i64;
+        while (i < other.length() as i64) {
+            result.push(copy other.pointer[i]);
+            i = i + 1i64;
+        }
+        return result;
     }
 
-    DuckList.destroy() = {
-        allocation:{T}.free(pointer);
+    List.destroy() = {
+        clear();
+        if (cap > 0u64) allocation:{T}.free(pointer);
     }
 }
+
+#{
+    Spells out `List:{T}`, which the class body cannot name directly.
+    @TODO: #3350 Use `List:{T}` inside the class body once it resolves unambiguously.
+#}
+template(T: type)
+fun listType() -> type = List:{T};

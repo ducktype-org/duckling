@@ -164,6 +164,29 @@ namespace compiler::helios {
 			return { from_type.getPointeeSymbolType(),
 				     tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced) };
 		}
+
+		/**
+		 * @brief The variant alternative a value of type @p from is wrapped into, with its index.
+		 *
+		 * Wrapping a value into a variant copies it into the chosen alternative, so it is that
+		 * alternative - and not the variant itself - that decides how the value is passed. A
+		 * variant may not list one underlying type twice, so at most one alternative matches.
+		 */
+		base::Optional<std::pair<usize, tsh::SymbolType<>>> variantAlternativeFor(
+			const tsh::SymbolType<>& from, const tsh::SymbolType<>& to
+		) {
+			if (to.getType().getKind() != tsh::Kind::Variant) return {};
+			if (from.getType().getKind() == tsh::Kind::Variant) return {};
+
+			const auto& alternatives
+				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
+			for (usize i = 0; i < alternatives.size(); i++)
+				if (tsh::isRefKindCoercible(from.getRefKind(), alternatives[i].getRefKind())
+				    && alternatives[i].getType() == from.getType())
+					return std::pair{ i, alternatives[i] };
+
+			return {};
+		}
 	}
 
 	PassingMethod passingMethod(query::Context& ctx, const tsh::ExpressionType<>& value) {
@@ -171,16 +194,23 @@ namespace compiler::helios {
 
 		// If the value is being moved already, we pass it by `ByteCopy`.
 		if (value.getValueCategory().mustMove()) return PassingMethod::ByteCopy;
-		if (symbol_type.isTriviallyCopyable(ctx)) return PassingMethod::ByteCopy;
 
 		switch (value.getValueCategory().getCategory()) {
 		case tsh::PrimaryCategory::Temporary:
-			return PassingMethod::ImplicitMove;
+			// This is a purely an optimization,
+			// which keeps the generated HOUT free of `implicit_move` on everything.
+			// A trivially destructible one owns nothing to hand over,
+			// and moving it out of would produce exactly the same code as copying its bytes.
+			if (symbol_type.isTriviallyDestructible(ctx) and symbol_type.isTriviallyCopyable(ctx))
+				return PassingMethod::ByteCopy;
+			if (value.getValueCategory().isMovableFrom()) return PassingMethod::ImplicitMove;
+			return PassingMethod::ExplicitCopyOrMove;
 		case tsh::PrimaryCategory::Literal:
 			return PassingMethod::ByteCopy;
 		case tsh::PrimaryCategory::Local:
 		case tsh::PrimaryCategory::Global:
 		case tsh::PrimaryCategory::Dereferenced:
+			if (symbol_type.isTriviallyCopyable(ctx)) return PassingMethod::ByteCopy;
 			return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
 			                                   : PassingMethod::NotCopyable;
 		}
@@ -190,19 +220,15 @@ namespace compiler::helios {
 	Box<code::Expr> moveReturnedLocal(query::Context& ctx, Box<code::Expr> value) {
 		const tsh::ExpressionType<> type = value->expression_type;
 
-		// Only a local can be moved out of.
-		if (type.getValueCategory().getCategory() != tsh::PrimaryCategory::Local) return value;
-
-		// Anything the normal rule would demand a written `copy`/`move` for is what the
-		// return makes implicit.
-		const PassingMethod method = passingMethod(ctx, type);
-		if (method != PassingMethod::ExplicitCopyOrMove && method != PassingMethod::NotCopyable)
-			return value;
-
-		auto origin = value->origin.generatedFrom();
-		return makeBox<code::MoveExpr>(
-			ctx, origin, std::move(value), code::MoveExpr::MoveKind::Implicit
-		);
+		if (type.getValueCategory().getCategory() == tsh::PrimaryCategory::Local) {
+			// A projection of a local is not movable from, for example.
+			if (not type.getValueCategory().isMovableFrom()) return value;
+			auto origin = value->origin.generatedFrom();
+			return makeBox<code::MoveExpr>(
+				ctx, origin, std::move(value), code::MoveExpr::MoveKind::Implicit
+			);
+		}
+		return value;
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
@@ -248,6 +274,19 @@ namespace compiler::helios {
 			from = makeBox<code::MoveExpr>(
 				ctx, from->origin.generatedFrom(), std::move(from), code::MoveExpr::MoveKind::Implicit
 			);
+
+		// Wrapping into a variant happens before the reference kind is adjusted, as the chosen
+		// alternative (and not the variant itself) decides whether the value is dereferenced.
+		if (const auto alternative
+		    = variantAlternativeFor(from->expression_type.getSymbolType(), to)) {
+			const auto& [index, alternative_type] = alternative.value();
+
+			auto alternative_expr
+				= handleReferenceKindCoercion(ctx, std::move(from), alternative_type);
+			return makeBox<code::VariantConstructExpr>(
+				ctx, alternative_expr->origin.generatedFrom(), std::move(alternative_expr), to, index
+			);
+		}
 
 		auto current_expr       = handleReferenceKindCoercion(ctx, std::move(from), to);
 		auto source_symbol_type = current_expr->expression_type.getSymbolType();
@@ -313,12 +352,18 @@ namespace compiler::helios {
 		if (!coercible)
 			return Coercion::invalid(from_type, to, InvalidCoercionReason::IncompatibleTypes);
 
+		// Wrapping into a variant copies the value into one alternative, so that alternative is
+		// what the copy is analysed against.
+		const tsh::SymbolType<> copy_target = variantAlternativeFor(from_type, to)
+		                                          .map([](const auto& alt) { return alt.second; })
+		                                          .copyValueOr(to);
+
 		// A coercion that only rebinds a reference never copies, so it is always fine.
-		if (not requiresValueCopy(from_type.getRefKind(), to.getRefKind()))
+		if (not requiresValueCopy(from_type.getRefKind(), copy_target.getRefKind()))
 			return Coercion::valid(from_type, to, false);
 
 		// Otherwise a value has to be copied.
-		switch (passingMethod(ctx, valueBeingCopied(from, to))) {
+		switch (passingMethod(ctx, valueBeingCopied(from, copy_target))) {
 		case PassingMethod::ByteCopy:
 			return Coercion::valid(from_type, to, false);
 		case PassingMethod::ImplicitMove:

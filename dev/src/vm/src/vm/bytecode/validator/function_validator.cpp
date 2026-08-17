@@ -803,6 +803,9 @@ class FunctionValidator {
 			instr_case(Op_mov_pfst_pfst, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
+			instr_case(Op_mov_pvnt_pvnt, instr) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
 
 			instr_case_novalue(Op_setNull_pptr) {}
 
