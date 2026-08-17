@@ -732,7 +732,7 @@ namespace compiler::helios::code {
 				);
 
 			// The value lives in a temporary the lowering fills in from whichever case ran.
-			return tsh::ExpressionType<>(type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary));
+			return { type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary) };
 		}
 	}
 
@@ -814,8 +814,9 @@ namespace compiler::helios::code {
 		std::vector<Case> cloned_cases;
 		cloned_cases.reserve(cases.size());
 		for (const auto& match_case: cases)
-			cloned_cases.emplace_back(Case{
-				match_case.alternative_index, match_case.binding, match_case.result->clone() });
+			cloned_cases.emplace_back(Case{ .alternative_index = match_case.alternative_index,
+			                                .binding           = match_case.binding,
+			                                .result            = match_case.result->clone() });
 		return makeBox<MatchExpr>(
 			expression_type, origin, subject->clone(), std::move(cloned_cases)
 		);
