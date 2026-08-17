@@ -27,6 +27,8 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void InstructionLowerer::lower(const VariantTryProjectOperation& op) {
+		CORE_ASSERT(op.dest.isDirect(), "Non direct dest is not supported.");
+
 		const TypeOfData& alternative_type
 			= **ctx->program_context.lowerAndKeepTslType(op.variant_params.alternative_layout);
 

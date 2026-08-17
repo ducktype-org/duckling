@@ -532,7 +532,8 @@ namespace compiler::helios::code {
 		struct Case final {
 			/** Alternative index in the subject's variant type; empty for wildcards. */
 			base::Optional<usize> alternative_index;
-			/** Bound to a `ref` to the alternative's payload; empty when nothing is bound. */
+			/** This is a variable that is used by the expression,
+			  where the alternative value of the same type as constraint should land.*/
 			base::Optional<SymID> binding;
 			/** The value this case evaluates to. */
 			Box<Expr> result;
