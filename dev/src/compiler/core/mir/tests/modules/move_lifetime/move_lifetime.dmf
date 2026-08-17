@@ -24,6 +24,14 @@ fun maybeMove(c: i64) = {
     }
 }
 
+# A parameter moved on one branch only. Its lifetime flag is set at the top of the entry block,
+# because a parameter owns its value on entry, without a `Construct` to set the flag on.
+fun maybeMoveParam(a: R, c: i64) = {
+    if (c == 0) {
+        eat(move a);
+    }
+}
+
 # Unconditional move in the entry block followed by another block. Used by the liveness-map
 # unit test to observe a `Moved` reaching state in successor blocks.
 fun moveParamThenBlock(a: i64, c: i64) = {
