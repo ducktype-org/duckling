@@ -384,6 +384,23 @@ namespace compiler::backend_llvm {
 					llvm_context, base::safeIntConv<unsigned>(static_cast<usize>(layout->getSize()))
 				);
 			}
+			variant_case(tsl::VariantTypeLayout, variant_layout) {
+				// Variants lower to a packed literal struct (structurally uniqued by LLVM):
+				// { i8 tag, [pad x i8], [payload x i8] }, mirroring the TSL layout.
+				const usize data_offset = variant_layout.getDataOffset().asInt();
+				const usize total_bytes = base::bits2bytes(layout->getSize()).asInt();
+				const usize data_bytes  = total_bytes - data_offset;
+
+				llvm::Type* i8_type = llvm::Type::getInt8Ty(llvm_context);
+
+				std::vector<llvm::Type*> members;
+				members.push_back(i8_type);  // The tag.
+				if (data_offset > 1)
+					members.push_back(llvm::ArrayType::get(i8_type, data_offset - 1));
+				members.push_back(llvm::ArrayType::get(i8_type, data_bytes));
+
+				return llvm::StructType::get(llvm_context, members, /*isPacked=*/true);
+			}
 			variant_default {
 				CORE_PANIC(
 					base::strConcat("Type not handled yet: ", layout->toStringIdentification())
@@ -1250,6 +1267,74 @@ namespace compiler::backend_llvm {
 				llvm::Type*  type   = typeFromLayout(module, output.layout);
 
 				builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
+				break;
+			}
+			case VariantConstruct: {
+				const auto& params = std::get<lir::VariantParameters>(lir_instruction.extra_params);
+				const auto& variant_layout
+					= std::get<tsl::VariantTypeLayout>(params.variant_layout->getVariant());
+
+				llvm::Value* variant_ptr
+					= gepPointerFromLIRPlace(lir_instruction.output.value(), builder);
+
+				// The tag lives at offset 0.
+				builder.CreateStore(
+					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
+					variant_ptr
+				);
+
+				llvm::Value* payload  = loadLIRValue(lir_instruction.arguments.at(0), builder);
+				llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
+					builder.getInt8Ty(),
+					variant_ptr,
+					variant_layout.getDataOffset().asInt(),
+					"variant_data"
+				);
+				builder.CreateStore(payload, data_ptr);
+				break;
+			}
+			case VariantTryProject: {
+				const auto& params = std::get<lir::VariantParameters>(lir_instruction.extra_params);
+				const auto& variant_layout
+					= std::get<tsl::VariantTypeLayout>(params.variant_layout->getVariant());
+
+				// The argument is a reference to the variant, so the pointer is the value held
+				// in the place rather than the place's own address.
+				llvm::Value* variant_ptr = loadLIRValue(lir_instruction.arguments.at(0), builder);
+
+				llvm::Value* tag
+					= builder.CreateLoad(builder.getInt8Ty(), variant_ptr, "variant_tag");
+				llvm::Value* tag_matches = builder.CreateICmpEQ(
+					tag,
+					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
+					"tag_matches"
+				);
+				llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
+					builder.getInt8Ty(),
+					variant_ptr,
+					variant_layout.getDataOffset().asInt(),
+					"variant_data"
+				);
+				llvm::Value* result = builder.CreateSelect(
+					tag_matches,
+					data_ptr,
+					llvm::ConstantPointerNull::get(builder.getPtrTy()),
+					"variant_proj"
+				);
+				storeOutput(lir_instruction.output.value(), result, builder);
+				break;
+			}
+			case BranchIfNull: {
+				const auto pointer = loadLIRValue(lir_instruction.arguments.at(0), builder);
+				const auto null_block
+					= block_mapping[lir_instruction.arguments.at(1).get<lir::BlockRef>()];
+				const auto not_null_block
+					= block_mapping[lir_instruction.arguments.at(2).get<lir::BlockRef>()];
+
+				llvm::Value* is_null = builder.CreateICmpEQ(
+					pointer, llvm::ConstantPointerNull::get(builder.getPtrTy()), "is_null"
+				);
+				builder.CreateCondBr(is_null, null_block.get(), not_null_block.get());
 				break;
 			}
 			/// Integer arithmetic ///

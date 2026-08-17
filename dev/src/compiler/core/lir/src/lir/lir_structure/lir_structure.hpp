@@ -93,13 +93,23 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	Cast,
 	ZeroInitialize,
 
+	/** Creates a variant value from a payload value (see mir::Operation::VariantConstruct). */
+	VariantConstruct,
+	/**
+	 * Pointer to the variant's payload, null on alternative mismatch. Its single argument is a
+	 * reference to the variant, not the variant place itself.
+	 */
+	VariantTryProject,
+
 	Call,
 
 	ReturnVoid,
 	ReturnValue,
 	Jump,
 	Branch,
-	
+	/** Terminator: [pointer, null_target, not_null_target]. */
+	BranchIfNull,
+
 	// Nop can be useful when lowering the instruction flags and MIR instr translates
 	// to zero instructions in LIR, but we want to have the flags in correct place.
 	Nop
@@ -549,6 +559,17 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Parameters of VariantConstruct/VariantTryProject: the variant alternative
+	 * (index in the canonical order of the interned variant type) and its layout.
+	 */
+	struct VariantParameters final {
+		usize                 alternative_index;
+		tsh::SymbolType<>     alternative_type;
+		CRef<tsl::TypeLayout> alternative_layout;
+		CRef<tsl::TypeLayout> variant_layout;
+	};
+
+	/**
 	 * @brief Additional parameters for a `Operation::MetaTypeOperation` instruction, selecting
 	 * which meta operation it is.
 	 */
@@ -559,7 +580,8 @@ namespace compiler::lir {
 	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
-	using InstrParameters = std::variant<NoInstrParameters, CastParameters, MetaParameters>;
+	using InstrParameters
+		= std::variant<NoInstrParameters, CastParameters, VariantParameters, MetaParameters>;
 
 	struct InstructionMetadata {
 		base::Optional<dia::StablePosition> position;

@@ -138,6 +138,73 @@ namespace compiler::helios::defgen {
 			return body;
 		}
 
+		/**
+		 * @brief Builds the destructor body for a variant: destroys the active alternative.
+		 *
+		 * Only the alternatives that actually need destroying get a case. The trivially
+		 * destructible ones are left out entirely and fall through the case chain, which is
+		 * also why no wildcard case is needed.
+		 *
+		 * Each case binds a reference to the payload, so the alternative is destroyed in
+		 * place, through the very pointer the alternative test produced.
+		 */
+		std::vector<Box<code::Stmt>> buildVariantDestructBody(
+			query::Context&                 ctx,
+			const tsh::VariantAbstractType& variant_type,
+			const SymID                     dtor_sym,
+			const SymID                     self_symbol
+		) {
+			using Variable = GeneratedFunctionVariable;
+
+			std::vector<Box<code::Stmt>> body;
+
+			const Shorthand s{ ctx };
+			const auto&     alternatives = variant_type.getUnderlyingTypes();
+
+			std::vector<code::MatchExpr::Case> cases;
+			for (usize i = 0; i < alternatives.size(); i++) {
+				if (alternatives[i].isTriviallyDestructible(ctx)) continue;
+
+				const auto payload_type = alternatives[i]
+				                              .withReferenceKind(tsh::ReferenceKind::Ref)
+				                              .withMutability(tsh::Mutability::Mutable);
+
+				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
+					.name                  = base::StrID(base::strConcat("__alternative_", i)),
+					.generated_symbol_data = Variable{ .function_symbol = dtor_sym,
+				                                       .variable_index  = i,
+				                                       .type            = payload_type },
+				});
+
+				// The binding already is the reference the destructor wants. Going through
+				// `appendDestruction` would dereference it only to take its address again, and
+				// it would also skip the work entirely, since a `ref` is trivially destructible.
+				//
+				// A `box T` alternative stores the box itself, so the binding holds that box and
+				// the box destructor - which takes it as a `ref T` - is the one to call.
+				const SymID alternative_dtor
+					= destructSymForSymbolType(ctx, alternatives[i]).value();
+
+				cases.emplace_back(Shorthand::matchCase(
+					i, payload_sym, s.call(s.ident(alternative_dtor), s.ident(payload_sym))
+				));
+			}
+
+			// Nothing owns anything, so there is nothing to match on. An empty match would
+			// also be invalid, as the lowering requires at least one case.
+			if (cases.empty()) return body;
+
+			// Only the alternatives that own something are listed, so the match needs a wildcard
+			// to stay exhaustive. Without it the lowering would enter the last case
+			// unconditionally and destroy a payload that is not there.
+			cases.emplace_back(Shorthand::matchCase({}, {}, s.litUnit()));
+
+			// `self` is already a reference to the variant, which is what the match wants. The
+			// destructor calls are unit-valued, so the match is used as a plain statement.
+			body.emplace_back(s.expr(s.matchExpr(s.ident(self_symbol), std::move(cases))));
+			return body;
+		}
+
 		// `var __i: u64 = 0;`
 		SymID buildLoopCounter(
 			query::Context& ctx, std::vector<Box<code::Stmt>>& body, SymID dtor_sym
@@ -230,6 +297,11 @@ namespace compiler::helios::defgen {
 			case tsh::Kind::StaticArray:
 				body = buildStaticArrayDestructBody(
 					ctx, owner_type.as<tsh::StaticArrayAbstractType>(), dtor_sym, self_symbol
+				);
+				break;
+			case tsh::Kind::Variant:
+				body = buildVariantDestructBody(
+					ctx, owner_type.as<tsh::VariantAbstractType>(), dtor_sym, self_symbol
 				);
 				break;
 			default:

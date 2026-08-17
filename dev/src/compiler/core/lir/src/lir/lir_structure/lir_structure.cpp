@@ -255,6 +255,10 @@ namespace compiler::lir {
 					output << "{ from:" << params.source_type.toString()
 						   << ", to:" << params.target_type.toString() << " }";
 				}
+				variant_case(VariantParameters, params) {
+					output << "{ alt:" << params.alternative_index << " ("
+						   << params.alternative_type.toString() << ") }";
+				}
 			}
 			output << " ";
 		}
@@ -466,6 +470,7 @@ namespace compiler::lir {
 		case Operation::ReturnValue:
 		case Operation::Jump:
 		case Operation::Branch:
+		case Operation::BranchIfNull:
 			return true;
 		default:
 			return false;

@@ -256,6 +256,7 @@ private:
 		auto i128_type = getIntegralTypeNoContext(128, Signed);
 
 		auto f16_type  = getFloatTypeNoContext(16);
+		auto f32_type  = getFloatTypeNoContext(32);
 		auto f64_type  = getFloatTypeNoContext(64);
 		auto f128_type = getFloatTypeNoContext(128);
 
@@ -385,6 +386,29 @@ private:
 				auto not_mega_type = getConstValueAs<bool>("NOT_IS_MEGA", root_scope);
 				ASSERT_EQUAL(not_mega_type, false);
 			}
+		}
+
+		// Variant comp-time logic.
+		{
+			auto i32_or_f32
+				= st(query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type),
+			                                                                st(f32_type) } }));
+
+			auto picked_variant
+				= getConstValueAs<compiler::tsh::SymbolType<>>("PICKED_VARIANT", root_scope);
+			ASSERT_EQUAL(i32_or_f32, picked_variant);
+
+			auto picked_plain
+				= getConstValueAs<compiler::tsh::SymbolType<>>("PICKED_PLAIN", root_scope);
+			ASSERT_EQUAL(st(i32_type), picked_plain);
+
+			ASSERT_EQUAL(true, getConstValueAs<bool>("PICKED_IS_VARIANT", root_scope));
+			ASSERT_EQUAL(true, getConstValueAs<bool>("PICKED_ORDER_INSENSITIVE", root_scope));
+			ASSERT_EQUAL(true, getConstValueAs<bool>("VARIANTS_DO_NOT_FLATTEN", root_scope));
+
+			// Comp-time pattern matching over variant values (evaluated via the VM path).
+			ASSERT_EQUAL(17, getConstValueAs<i64>("MATCHED_INT", root_scope));
+			ASSERT_EQUAL(-1, getConstValueAs<i64>("MATCHED_OTHER", root_scope));
 		}
 	}
 
@@ -1237,7 +1261,7 @@ private:
 		ASSERT_EQUAL(function->declaration->original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function->body->statements.size(), 7);
+		ASSERT_EQUAL(function->body->statements.size(), 8);
 
 		auto& statements = function->body->statements;
 
@@ -1270,30 +1294,27 @@ private:
 		}
 
 		{
-			// @TODO: #803 support variant types
-			// auto& var = get_var_ref(2);
-			// ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
-			// ASSERT_EQUAL(var.type, st(i32_or_f32));
-			std::ignore = i32_or_f32;  // < remove
+			auto& var = get_var_ref(2);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
+			ASSERT_EQUAL(var.type, st(i32_or_f32));
 		}
 
 		{
-			auto& var = get_var_ref(2);
+			auto& var = get_var_ref(3);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "d");
 			ASSERT_EQUAL(var.type.getType().getKind(), compiler::tsh::Kind::Class);
 		}
 
 		{
-			auto& if_stmt = dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(3));
+			auto& if_stmt = dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(4));
 			{
 				auto& var1 = get_var_block(0, if_stmt.then_body);
 				ASSERT_EQUAL(compiler::helios::name(var1.helios_symbol), "x");
 				ASSERT_EQUAL(var1.type, st(i32_type));
 
-				// @TODO: #803 support variant types
-				// auto& var2 = get_var_block(1, if_stmt.then_body);
-				// ASSERT_EQUAL(compiler::helios::name(var2.helios_symbol), "y");
-				// ASSERT_EQUAL(var2.type, st(i32_or_f32));
+				auto& var2 = get_var_block(1, if_stmt.then_body);
+				ASSERT_EQUAL(compiler::helios::name(var2.helios_symbol), "y");
+				ASSERT_EQUAL(var2.type, st(i32_or_f32));
 			}
 			{
 				auto& var = get_var_block(0, if_stmt.else_body);
@@ -1304,10 +1325,14 @@ private:
 
 		{
 			auto& while_stmt
-				= dynamic_cast<const compiler::helios::code::WhileStmt&>(*statements.at(4));
+				= dynamic_cast<const compiler::helios::code::WhileStmt&>(*statements.at(5));
 			auto& var = get_var_block(0, while_stmt.body);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
 			ASSERT_EQUAL(var.type, st(i32_type));
+
+			auto& var_y = get_var_block(2, while_stmt.body);
+			ASSERT_EQUAL(compiler::helios::name(var_y.helios_symbol), "y");
+			ASSERT_EQUAL(var_y.type, st(i32_or_f32));
 		}
 
 		{
@@ -3116,6 +3141,64 @@ private:
 					dynamic_cast<const AccessExpr*>(stripImplicitMove(values.at(0).get())) != nullptr
 				);
 				assert_generated_copy(stripImplicitMove(values.at(1).get()));
+			}
+
+			// A variant is copied by matching the source and rebuilding the variant around a copy
+			// of the active alternative, so every alternative gets a case and every case result is
+			// a variant construction of that same alternative.
+			{
+				auto i32_type = compiler::tsh::getIntegralType(
+					ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
+				);
+				auto variant_type = ctx.query<compiler::tsh::QueryVariantType>({
+					{ st(i32_type), st(get_class_type(has_box_sym)) },
+				});
+
+				const auto& cctor = dump_cctor("i32 | HasBox", variant_type);
+
+				// `(const ref V) -> V`.
+				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
+				const auto param_type = cctor.declaration->parameters.at(0).type;
+				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Immutable, param_type.getMutability());
+				ASSERT_EQUAL(variant_type, param_type.getType());
+				ASSERT_EQUAL(variant_type, cctor.declaration->return_type.getType());
+
+				// return match (source) { <one case per alternative> };
+				ASSERT_EQUAL_PRINT(1, cctor.body->statements.size());
+				auto ret = dynamic_cast<const ReturnStmt*>(cctor.body->statements.back().get());
+				ASSERT_TRUE(ret != nullptr);
+				auto match = dynamic_cast<const MatchExpr*>(stripImplicitMove(ret->value.get()));
+				ASSERT_TRUE(match != nullptr);
+
+				const auto& alternatives = variant_type.getUnderlyingTypes();
+				ASSERT_EQUAL_PRINT(alternatives.size(), match->cases.size());
+
+				// Every case tests its own alternative, binds the payload, and rebuilds the
+				// variant with that same alternative index - no wildcard is needed.
+				for (usize i = 0; i < match->cases.size(); i++) {
+					const auto& match_case = match->cases.at(i);
+					ASSERT_TRUE(match_case.alternative_index.has_value());
+					ASSERT_EQUAL_PRINT(i, match_case.alternative_index.value());
+					ASSERT_TRUE(match_case.binding.has_value());
+
+					auto construct = dynamic_cast<const VariantConstructExpr*>(
+						stripImplicitMove(match_case.result.get())
+					);
+					ASSERT_TRUE(construct != nullptr);
+					ASSERT_EQUAL_PRINT(i, construct->alternative_index);
+
+					// The alternatives are ordered by their name, so `HasBox` comes before `i32`.
+					// The non-trivially-copyable one is copied with its copy constructor, the
+					// trivially-copyable one is byte-copied from the dereferenced binding.
+					if (alternatives.at(i).isTriviallyCopyable(ctx))
+						ASSERT_TRUE(
+							dynamic_cast<const DerefExpr*>(stripImplicitMove(construct->inner.get()))
+							!= nullptr
+						);
+					else
+						assert_generated_copy(stripImplicitMove(construct->inner.get()));
+				}
 			}
 		});
 	}

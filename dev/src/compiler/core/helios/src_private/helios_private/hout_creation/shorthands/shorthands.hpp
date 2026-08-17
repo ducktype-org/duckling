@@ -402,6 +402,25 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<CastExpr>(*ctx, generatedOrigin(), std::move(source), target_type);
 		}
 
+		/**
+		 * @brief A match case, optionally binding the tested alternative's payload.
+		 * An empty `alternative_index` makes it a wildcard case.
+		 */
+		[[nodiscard]]
+		static MatchExpr::Case matchCase(
+			base::Optional<usize> alternative_index, base::Optional<SymID> binding, Box<Expr> result
+		) {
+			return MatchExpr::Case{ .alternative_index = alternative_index,
+				                    .binding           = binding,
+				                    .result            = std::move(result) };
+		}
+
+		/** @brief A `match (subject) { cases }`. Cases are tried in order. */
+		[[nodiscard]]
+		Box<MatchExpr> matchExpr(Box<Expr> subject, std::vector<MatchExpr::Case> cases) const {
+			return makeBox<MatchExpr>(*ctx, generatedOrigin(), std::move(subject), std::move(cases));
+		}
+
 		/** @brief A reference creation `refof inner`. */
 		[[nodiscard]]
 		Box<RefOfExpr> refOf(Box<Expr> inner) const {
@@ -627,7 +646,8 @@ namespace compiler::helios::code::shorthands {
 			CORE_ASSERT(
 				abstract_type.getKind() == tsh::Kind::Class
 					or abstract_type.getKind() == tsh::Kind::StaticArray
-					or abstract_type.getKind() == tsh::Kind::Tuple,
+					or abstract_type.getKind() == tsh::Kind::Tuple
+					or abstract_type.getKind() == tsh::Kind::Variant,
 				"Tried to generate a copy constructor for a type which shouldn't need it"
 			);
 

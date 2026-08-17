@@ -164,6 +164,29 @@ namespace compiler::helios {
 			return { from_type.getPointeeSymbolType(),
 				     tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced) };
 		}
+
+		/**
+		 * @brief The variant alternative a value of type @p from is wrapped into, with its index.
+		 *
+		 * Wrapping a value into a variant copies it into the chosen alternative, so it is that
+		 * alternative - and not the variant itself - that decides how the value is passed. A
+		 * variant may not list one underlying type twice, so at most one alternative matches.
+		 */
+		base::Optional<std::pair<usize, tsh::SymbolType<>>> variantAlternativeFor(
+			const tsh::SymbolType<>& from, const tsh::SymbolType<>& to
+		) {
+			if (to.getType().getKind() != tsh::Kind::Variant) return {};
+			if (from.getType().getKind() == tsh::Kind::Variant) return {};
+
+			const auto& alternatives
+				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
+			for (usize i = 0; i < alternatives.size(); i++)
+				if (tsh::isRefKindCoercible(from.getRefKind(), alternatives[i].getRefKind())
+				    && alternatives[i].getType() == from.getType())
+					return std::pair{ i, alternatives[i] };
+
+			return {};
+		}
 	}
 
 	PassingMethod passingMethod(query::Context& ctx, const tsh::ExpressionType<>& value) {
@@ -252,6 +275,19 @@ namespace compiler::helios {
 				ctx, from->origin.generatedFrom(), std::move(from), code::MoveExpr::MoveKind::Implicit
 			);
 
+		// Wrapping into a variant happens before the reference kind is adjusted, as the chosen
+		// alternative (and not the variant itself) decides whether the value is dereferenced.
+		if (const auto alternative
+		    = variantAlternativeFor(from->expression_type.getSymbolType(), to)) {
+			const auto& [index, alternative_type] = alternative.value();
+
+			auto alternative_expr
+				= handleReferenceKindCoercion(ctx, std::move(from), alternative_type);
+			return makeBox<code::VariantConstructExpr>(
+				ctx, alternative_expr->origin.generatedFrom(), std::move(alternative_expr), to, index
+			);
+		}
+
 		auto current_expr       = handleReferenceKindCoercion(ctx, std::move(from), to);
 		auto source_symbol_type = current_expr->expression_type.getSymbolType();
 
@@ -316,12 +352,18 @@ namespace compiler::helios {
 		if (!coercible)
 			return Coercion::invalid(from_type, to, InvalidCoercionReason::IncompatibleTypes);
 
+		// Wrapping into a variant copies the value into one alternative, so that alternative is
+		// what the copy is analysed against.
+		const tsh::SymbolType<> copy_target = variantAlternativeFor(from_type, to)
+		                                          .map([](const auto& alt) { return alt.second; })
+		                                          .copyValueOr(to);
+
 		// A coercion that only rebinds a reference never copies, so it is always fine.
-		if (not requiresValueCopy(from_type.getRefKind(), to.getRefKind()))
+		if (not requiresValueCopy(from_type.getRefKind(), copy_target.getRefKind()))
 			return Coercion::valid(from_type, to, false);
 
 		// Otherwise a value has to be copied.
-		switch (passingMethod(ctx, valueBeingCopied(from, to))) {
+		switch (passingMethod(ctx, valueBeingCopied(from, copy_target))) {
 		case PassingMethod::ByteCopy:
 			return Coercion::valid(from_type, to, false);
 		case PassingMethod::ImplicitMove:

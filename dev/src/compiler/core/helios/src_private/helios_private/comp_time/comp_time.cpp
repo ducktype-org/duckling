@@ -15,6 +15,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -696,11 +697,47 @@ namespace compiler::helios {
 					);
 				}
 
+				for (usize i = 0; i < subtypes.size(); i++) {
+					for (usize j = 0; j < i; j++) {
+						if (subtypes[i].getType() == subtypes[j].getType()) {
+							const auto position = expr.origin.getStablePosition();
+							CORE_ASSERT(
+								position.has_value(),
+								"Variant type constructor without a source position"
+							);
+							// The duplicate is of the underlying type, so that is what gets named:
+							// in `i32 | ref i32` neither alternative is written twice, but they
+							// still describe the same one.
+							ctx.logInt(makeBox<DuplicateVariantAlternativeError>(
+								position.value(),
+								makeBox<InteractiveType>(
+									ctx, tsh::SymbolType<>::withDefaults(subtypes[i].getType())
+								)
+							));
+							result = query::Failed();
+							return;
+						}
+					}
+				}
+
 				result = CompileTimeValue{ tsh::SymbolType<>{
 					ctx.query<tsh::QueryVariantType>({ subtypes }),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				} };
+			}
+
+			void visitMatchExpr(const code::MatchExpr& expr) final {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"Evaluating a `match` at compile time.", expr.origin.getStablePosition()
+				));
+			}
+
+			void visitVariantConstructExpr(const code::VariantConstructExpr& expr) final {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"Evaluating variant construction at compile time.",
+					expr.origin.getStablePosition()
+				));
 			}
 
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
