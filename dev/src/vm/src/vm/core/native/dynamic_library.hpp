@@ -34,7 +34,7 @@ namespace vm::native {
 	private:
 		explicit DynamicLibrary(os_utils::NativeLibrary native_lib): lib{ native_lib } {}
 
-		DynamicLibrary(): lib{ .handle = nullptr, .fd = -1 } {}
+		DynamicLibrary(): lib{ .handle = nullptr } {}
 
 		os_utils::NativeLibrary lib;
 	};

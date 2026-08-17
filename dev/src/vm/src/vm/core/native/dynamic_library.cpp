@@ -22,12 +22,12 @@ namespace vm::native {
 	}
 
 	DynamicLibrary::DynamicLibrary(DynamicLibrary&& dynlib) noexcept: lib{ dynlib.lib } {
-		dynlib.lib = { .handle = nullptr, .fd = -1 };
+		dynlib.lib = { .handle = nullptr };
 	}
 
 	DynamicLibrary& DynamicLibrary::operator=(DynamicLibrary&& dynlib) noexcept {
 		lib        = dynlib.lib;
-		dynlib.lib = { .handle = nullptr, .fd = -1 };
+		dynlib.lib = { .handle = nullptr };
 		return *this;
 	}
 
