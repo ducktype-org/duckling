@@ -7,6 +7,7 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -133,4 +134,76 @@ namespace compiler::repl {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplInstructionWrapper)
+
+	base::Bit256 QueryReplVariableWrapper_Key::queryUnstablePerfectHash() const {
+		auto stmt_hash = var_stmt.illegalAccess().value()->getHash();
+		return hashing::justHash<hashing::SHA256>(stmt_hash, counter);
+	}
+
+	struct IMPLEMENT_QUERY(QueryReplVariableWrapper, query::QResult<QueryReplVariableWrapper_Result>) {
+		static auto provide(query::Context& ctx, QKey key) -> PResult {
+			CORE_DEV_LOG(REPL, "QueryReplVariableWrapper: Starting\n");
+
+			auto symbol_result = ctx.query<helios::QuerySymbolOfSTMT>({ key.var_stmt });
+			if (symbol_result.hasFailed()) return query::Failed();
+			auto symbol = symbol_result.valueOrPanic();
+
+			const auto& original_result = ctx.query<helios::QueryHOUTGlobalData>(symbol);
+			if (original_result->hasFailed()) return query::Failed();
+			CRef<helios::HOUTGlobalData> original = &original_result->valueOrPanic();
+
+			CORE_ASSERT(
+				original->data_type == helios::HOUTGlobalDataType::Variable,
+				"QueryReplVariableWrapper expects a variable declaration"
+			);
+
+			CORE_DEV_LOG(REPL, "Lowering the initial value into a constructor expression\n");
+			auto constructor_expr = helios::getGlobalConstructorExpr(ctx, original);
+
+			auto code_block = std::make_shared<helios::code::CodeBlock>();
+			code_block->statements.emplace_back(base::makeBox<helios::code::ExprStmt>(
+				helios::code::generatedOrigin(), std::move(constructor_expr)
+			));
+			code_block->statements.emplace_back(
+				base::makeBox<helios::code::VoidReturnStmt>(helios::code::generatedOrigin())
+			);
+
+			CORE_DEV_LOG(REPL, "Creating synthetic symbol for variable wrapper\n");
+			// The initializer is a counter-identified, parameterless unit-returning REPL wrapper,
+			// which is exactly what ReplInstructionWrapper describes.
+			auto synthetic_symbol = ctx.query<helios::defgen::QueryGeneratedSymbol>(
+				{ .name = base::StrID("__repl_var_wrapper__"),
+			      .generated_symbol_data
+			      = helios::defgen::ReplInstructionWrapper{ .counter = key.counter } }
+			);
+
+			CORE_DEV_LOG(REPL, "Creating function declaration\n");
+			auto& decl = ctx.query<helios::QueryDeclOfFun>(synthetic_symbol)->valueOrThrow();
+
+			// The variable is only ever constructed by the initializer function, so its storage
+			// starts as an empty value, regardless of the type.
+			Box<helios::code::Expr> empty_value = base::makeBox<helios::code::DefaultValueExpr>(
+				ctx, helios::code::generatedOrigin(), original->type.getType()
+			);
+
+			CORE_DEV_LOG(REPL, "QueryReplVariableWrapper completed successfully\n");
+			return QueryReplVariableWrapper_Result{
+				.global_data = helios::HOUTGlobalData{
+					.helios_symbol = original->helios_symbol,
+					.origin        = original->origin,
+					.original_name = original->original_name,
+					.data_type     = original->data_type,
+					.value         = helios::HOUTGlobalVariable{ std::move(empty_value) },
+					.type          = original->type,
+				},
+				.initializer_function = helios::HOUTFunction{
+					helios::code::generatedOrigin(), &decl, code_block
+				},
+			};
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplVariableWrapper)
 }  // namespace compiler::repl

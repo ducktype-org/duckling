@@ -50,6 +50,10 @@ namespace compiler::repl {
 		pst::AccessLocked<pst::Stmt> definition_stmt;
 	};
 
+	struct VariableSingleStatementInfo final {
+		pst::AccessLocked<pst::Variable> variable_stmt;
+	};
+
 	/**
 	 * @brief A tagged payload representing exactly one classified REPL/script statement.
 	 *
@@ -61,7 +65,8 @@ namespace compiler::repl {
 	using SingleStatementInfo = std::variant<
 		ExpressionSingleStatementInfo,
 		InstructionSingleStatementInfo,
-		DefinitionSingleStatementInfo>;
+		DefinitionSingleStatementInfo,
+		VariableSingleStatementInfo>;
 
 	/**
 	 * @brief Result of building an executable wrapper around a single statement (expression or
@@ -122,7 +127,7 @@ namespace compiler::repl {
 	/**
 	 * @brief Create a temporary HOUT unit that exposes a single executable wrapper function.
 	 */
-	helios::HOUTUnit makeExecutableHOUTUnit(const helios::HOUTFunction& wrapper_function);
+	std::expected<helios::HOUTUnit, std::string> makeExecutableHOUTUnit(query::Context& ctx, const helios::HOUTFunction& wrapper_function);
 
 	/**
 	 * @brief Retrieve the module HOUT for a definition statement module.

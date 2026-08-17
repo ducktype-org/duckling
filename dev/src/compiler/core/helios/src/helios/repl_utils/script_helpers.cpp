@@ -5,12 +5,9 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
-#include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-
-#include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>
 
@@ -22,10 +19,10 @@ namespace compiler::repl {
 	 */
 	struct ScriptMainWrapperBuilder final {
 		static auto build(
-			query::Context&                      ctx,
-			base::StrID                          script_id,
-			helios::ScopeID                      main_scope,
-			const std::vector<ScriptMainAction>& actions
+			query::Context&                   ctx,
+			base::StrID                       script_id,
+			helios::ScopeID                   main_scope,
+			const std::vector<helios::SymID>& wrapper_symbols
 		) -> helios::HOUTFunction {
 			CORE_DEV_LOG(REPL, "Creating synthetic symbol for script main wrapper\n");
 
@@ -42,37 +39,19 @@ namespace compiler::repl {
 			auto& decl = ctx.query<helios::QueryDeclOfFun>(synthetic_symbol)->valueOrThrow();
 
 			auto code_block = std::make_shared<helios::code::CodeBlock>();
-			// Sequence wrapper calls and global-variable initializations in source order.
-			for (const auto& action: actions) {
-				variant_match(action) {
-					variant_case(ScriptMainWrapperCall, call) {
-						auto callee = base::makeBox<helios::code::IdentifierExpr>(
-							ctx, helios::code::generatedOrigin(), call.wrapper_symbol
-						);
-						std::vector<base::Box<helios::code::Expr>> args;
-						auto call_expr = base::makeBox<helios::code::CallExpr>(
-							ctx, helios::code::generatedOrigin(), std::move(callee), std::move(args)
-						);
-						code_block->statements.emplace_back(base::makeBox<helios::code::ExprStmt>(
-							helios::code::generatedOrigin(), std::move(call_expr)
-						));
-					}
-					variant_case(ScriptMainGlobalInit, global_init) {
-						// Initialize the global by assigning its initial value, mirroring the
-						// normal global constructor lowering (LowerGlobalDataToMIRCtor in
-						// mir_queries.cpp). Keep in sync if global init/ctor emission changes.
-						auto location = base::makeBox<helios::code::IdentifierExpr>(
-							ctx, helios::code::generatedOrigin(), global_init.global_symbol
-						);
-						code_block->statements.emplace_back(
-							base::makeBox<helios::code::AssignmentStmt>(
-								helios::code::generatedOrigin(),
-								std::move(location),
-								global_init.value
-							)
-						);
-					}
-				}
+			// Script main only sequences wrapper calls; results are intentionally discarded.
+			// Side effects (prints, mutations) are preserved because wrappers are executed.
+			for (const auto& wrapper_symbol: wrapper_symbols) {
+				auto callee = base::makeBox<helios::code::IdentifierExpr>(
+					ctx, helios::code::generatedOrigin(), wrapper_symbol
+				);
+				std::vector<base::Box<helios::code::Expr>> args;
+				auto call_expr = base::makeBox<helios::code::CallExpr>(
+					ctx, helios::code::generatedOrigin(), std::move(callee), std::move(args)
+				);
+				code_block->statements.emplace_back(base::makeBox<helios::code::ExprStmt>(
+					helios::code::generatedOrigin(), std::move(call_expr)
+				));
 			}
 
 			// Return i64 zero to satisfy the VM/LLVM main contract used by the toolchain.
@@ -107,55 +86,12 @@ namespace compiler::repl {
 	}
 
 	helios::HOUTFunction buildScriptMainWrapper(
-		query::Context&                      ctx,
-		base::StrID                          script_id,
-		helios::ScopeID                      main_scope,
-		const std::vector<ScriptMainAction>& actions
+		query::Context&                   ctx,
+		base::StrID                       script_id,
+		helios::ScopeID                   main_scope,
+		const std::vector<helios::SymID>& wrapper_symbols
 	) {
-		return ScriptMainWrapperBuilder::build(ctx, script_id, main_scope, actions);
-	}
-
-	NeutralizedScriptModule neutralizeScriptGlobalInits(
-		query::Context& ctx, const helios::HOUTUnit& module_hout
-	) {
-		NeutralizedScriptModule result;
-		// Copying the unit only duplicates the CRef vectors, not the underlying cached data.
-		result.unit = module_hout;
-
-		for (auto& global_ref: result.unit.glob_data) {
-			const auto& global = *global_ref;
-
-			if (global.data_type != helios::HOUTGlobalDataType::Variable) continue;
-			if (!std::holds_alternative<helios::HOUTGlobalVariable>(global.value)) continue;
-			// Only mutable globals can be deferred: deferral default-initializes the global
-			// eagerly and reassigns the real value from `main`, which immutable globals reject.
-			if (global.type.getMutability() != tsh::Mutability::Mutable) continue;
-
-			const auto& real_initializer = std::get<helios::HOUTGlobalVariable>(global.value);
-
-			auto default_init = helios::defgen::getDefaultInitializerExpr(
-									ctx, global.type, global.origin.getStablePosition().value()
-			)
-			                        .valueOrThrow();
-
-			result.deferred_inits.emplace_back(ScriptMainGlobalInit{
-				.global_symbol = global.helios_symbol,
-				.value         = real_initializer.initial_value.ref(),
-			});
-
-			// HOUTGlobalVariable is move-only, so rebuild the entry rather than copying *global_ref.
-			result.default_init_storage.push_back(helios::HOUTGlobalData{
-				.helios_symbol = global.helios_symbol,
-				.origin        = global.origin,
-				.original_name = global.original_name,
-				.data_type     = global.data_type,
-				.value         = helios::HOUTGlobalVariable{ default_init },
-				.type          = global.type,
-			});
-			global_ref = CRef(&result.default_init_storage.back());
-		}
-
-		return result;
+		return ScriptMainWrapperBuilder::build(ctx, script_id, main_scope, wrapper_symbols);
 	}
 
 }  // namespace compiler::repl

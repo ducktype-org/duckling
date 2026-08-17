@@ -387,10 +387,11 @@ namespace compiler::driver {
 				.lir_unit  = lir::LIRUnit{},
 			};
 
-			// Ordered actions (wrapper calls and global-variable inits) run by the synthetic main.
-			std::vector<repl::ScriptMainAction> main_actions;
-			base::Optional<frontend::ModuleID>  parent_module_id;
-			u64                                 statement_counter = 0;
+			// Track wrapper symbols to build the synthetic main that runs them in order.
+			// We preserve the original statement order to match script semantics.
+			std::vector<helios::SymID>         wrapper_symbols;
+			base::Optional<frontend::ModuleID> parent_module_id;
+			u64                                statement_counter = 0;
 
 			if (split_result->empty()) {
 				// Empty input should still produce a valid synthetic script main wrapper with
@@ -419,50 +420,52 @@ namespace compiler::driver {
 				auto statement_info_result = repl::classifySingleStatement(ctx, module_id);
 				if (!statement_info_result.has_value())
 					return std::unexpected(statement_info_result.error());
-
+				auto statement_info = statement_info_result.value();
 				auto module_name    = repl::getStatementModuleName(module_id, "script_module_");
 				auto module_name_id = base::StrID(module_name.c_str());
 
-				if (std::holds_alternative<repl::DefinitionSingleStatementInfo>(
-						statement_info_result.value()
-					)) {
-					CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
-					const auto& hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
-					if (not hout_unit.has_value()) return std::unexpected(hout_unit.error());
-					// Defer mutable global initializers so they run from main in source order.
-					auto neutralized = repl::neutralizeScriptGlobalInits(ctx, *hout_unit.value());
-					main_actions.insert(
-						main_actions.end(),
-						neutralized.deferred_inits.begin(),
-						neutralized.deferred_inits.end()
-					);
-					auto lir_result
-						= compileHOUTUnitToLIRModuleData(ctx, neutralized.unit, module_name_id);
-					if (lir_result.hasFailed())
-						return std::unexpected("Failed to compile definition statement to LIR");
-					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
-				} else {
-					// Executable statements are wrapped into functions so we can sequence them
-					// under a synthetic main while still lowering via the normal pipeline.
-					CORE_DEV_LOG(REPL, "compile_script: classified as executable statement\n");
-					auto wrapper_result = repl::buildStatementWrapper(
-						ctx, statement_info_result.value(), statement_counter
-					);
-					if (!wrapper_result.has_value()) return std::unexpected(wrapper_result.error());
+				variant_match(statement_info) {
+					variant_case_novalue(repl::DefinitionSingleStatementInfo) {
+						CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
+						auto hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
 
-					main_actions.emplace_back(
-						repl::ScriptMainWrapperCall{
-							.wrapper_symbol
-							= wrapper_result->wrapper_function.declaration->original_symbol,
-						}
-					);
+						if (not hout_unit.has_value()) return std::unexpected(hout_unit.error());
+						auto lir_result = compileHOUTUnitToLIRModuleData(
+							ctx, *hout_unit.value(), module_name_id
+						);
+						if (lir_result.hasFailed())
+							return std::unexpected("Failed to compile definition statement to LIR");
+						repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
+					}
+					variant_case_novalue(
+						repl::ExpressionSingleStatementInfo, repl::InstructionSingleStatementInfo
+					) {
+						CORE_DEV_LOG(REPL, "compile_script: classified as executable statement\n");
+						auto wrapper_result = repl::buildStatementWrapper(
+							ctx, statement_info_result.value(), statement_counter
+						);
+						if (!wrapper_result.has_value())
+							return std::unexpected(wrapper_result.error());
 
-					auto hout_unit = repl::makeExecutableHOUTUnit(wrapper_result->wrapper_function);
-					auto lir_result
-						= compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
-					if (lir_result.hasFailed())
-						return std::unexpected("Failed to compile executable statement to LIR");
-					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
+						wrapper_symbols.push_back(
+							wrapper_result->wrapper_function.declaration->original_symbol
+						);
+
+						auto hout_unit_result
+							= repl::makeExecutableHOUTUnit(ctx, wrapper_result->wrapper_function);
+						if (not hout_unit_result.has_value())
+							return std::unexpected(hout_unit_result.error());
+
+						auto lir_result = compileHOUTUnitToLIRModuleData(
+							ctx, std::move(hout_unit_result).value(), module_name_id
+						);
+						if (lir_result.hasFailed())
+							return std::unexpected("Failed to compile executable statement to LIR");
+						
+						repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
+					}
+					variant_case_novalue(repl::VariableSingleStatementInfo) {}
+					variant_default { CORE_UNREACHABLE(); }
 				}
 
 				++statement_counter;
@@ -476,7 +479,7 @@ namespace compiler::driver {
 			// main-file root scope that represents the full script context.
 			auto main_scope = repl::queryScriptMainRootScope(ctx, parent_module_id.value());
 			auto main_fun
-				= repl::buildScriptMainWrapper(ctx, merged.module_id, main_scope, main_actions);
+				= repl::buildScriptMainWrapper(ctx, merged.module_id, main_scope, wrapper_symbols);
 			helios::HOUTUnit main_unit;
 			main_unit.functions.emplace_back(&main_fun);
 			auto main_lir = compileHOUTUnitToLIRModuleData(ctx, main_unit, merged.module_id);

@@ -1,5 +1,7 @@
 #include "repl_statement_helpers.hpp"
 
+#include "helios/hout/hout.hpp"
+
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
@@ -45,9 +47,13 @@ namespace compiler::repl {
 		);
 	}
 
-	helios::HOUTUnit makeExecutableHOUTUnit(const helios::HOUTFunction& wrapper_function) {
+	std::expected<helios::HOUTUnit, std::string> makeExecutableHOUTUnit(
+		query::Context& ctx, const helios::HOUTFunction& wrapper_function
+	) {
 		helios::HOUTUnit hout_unit;
 		hout_unit.functions.emplace_back(&wrapper_function);
+		auto result = helios::collectReplicatedSymbols(ctx, hout_unit);
+		if (result.isBad()) return std::unexpected("Failed");
 		return hout_unit;
 	}
 
@@ -94,12 +100,14 @@ namespace compiler::repl {
 		auto single_stmt_opt = pst::extractSingleStatement(ctx, root);
 		if (single_stmt_opt.has_value()) {
 			auto stmt = single_stmt_opt.value().unlock(ctx);
-			return std::unexpected(base::strConcat(
-				"Unsupported single statement kind for REPL classification: ",
-				stmt->elementType(),
-				". Expected expression, instruction (if/while/for/block), or "
-				"definition/declaration."
-			));
+			return std::unexpected(
+				base::strConcat(
+					"Unsupported single statement kind for REPL classification: ",
+					stmt->elementType(),
+					". Expected expression, instruction (if/while/for/block), or "
+					"definition/declaration."
+				)
+			);
 		}
 
 		return std::unexpected(
@@ -111,51 +119,39 @@ namespace compiler::repl {
 	std::expected<StatementWrapperBuildResult, std::string> buildStatementWrapper(
 		query::Context& ctx, const SingleStatementInfo& statement_info, u64 counter
 	) {
-		return std::visit(
-			[&](const auto& statement_payload
-		    ) -> std::expected<StatementWrapperBuildResult, std::string> {
-				using PayloadT = std::decay_t<decltype(statement_payload)>;
-
-				if constexpr (std::is_same_v<PayloadT, ExpressionSingleStatementInfo>) {
-					auto wrapper_result = ctx.query<QueryReplExpressionWrapper>({
-						.expr_stmt = statement_payload.expr_stmt,
+		auto function_result = [&] -> query::QResult<helios::HOUTFunction> {
+			variant_match(statement_info) {
+				variant_case(repl::ExpressionSingleStatementInfo, val) {
+					return ctx.query<QueryReplExpressionWrapper>({
+						.expr_stmt = val.expr_stmt,
 						.counter   = counter,
 					});
-					if (wrapper_result.hasFailed())
-						return std::unexpected(
-							"Failed to build REPL expression wrapper (see diagnostics above)."
-						);
-					auto wrapper      = wrapper_result.valueOrPanic();
-					auto mangled_name = helios::mangler::getSimpleMangledName(
-						ctx, wrapper.declaration->original_symbol
-					);
-					return StatementWrapperBuildResult{
-						.wrapper_function  = std::move(wrapper),
-						.wrapper_func_name = std::string(mangled_name.strView()),
-					};
-				} else if constexpr (std::is_same_v<PayloadT, InstructionSingleStatementInfo>) {
-					auto wrapper_result = ctx.query<QueryReplInstructionWrapper>({
-						.stmt    = statement_payload.instruction_stmt,
+				}
+				variant_case(repl::InstructionSingleStatementInfo, val) {
+					return ctx.query<QueryReplInstructionWrapper>({
+						.stmt    = val.instruction_stmt,
 						.counter = counter,
 					});
-					if (wrapper_result.hasFailed())
-						return std::unexpected(
-							"Failed to build REPL instruction wrapper (see diagnostics above)."
-						);
-					auto wrapper      = wrapper_result.valueOrPanic();
-					auto mangled_name = helios::mangler::getSimpleMangledName(
-						ctx, wrapper.declaration->original_symbol
-					);
-					return StatementWrapperBuildResult{
-						.wrapper_function  = std::move(wrapper),
-						.wrapper_func_name = std::string(mangled_name.strView()),
-					};
-				} else {
-					return std::unexpected("Definitions do not have executable wrappers");
 				}
-			},
-			statement_info
-		);
+				variant_default { CORE_PANIC("Invalid usage."); }
+			}
+		}();
+		if (function_result.hasFailed())
+			return std::unexpected(
+				"Failed to build REPL expression wrapper (see diagnostics above)."
+			);
+		auto function = std::move(function_result.valueOrPanic());
+
+		auto mangled_name
+			= helios::mangler::getSimpleMangledName(ctx, function.declaration->original_symbol);
+		return StatementWrapperBuildResult{
+			.wrapper_function  = std::move(function),
+			.wrapper_func_name = std::string(mangled_name.strView()),
+		};
 	}
 
-}  // namespace compiler::repl
+	std::expected<StatementWrapperBuildResult, std::string> buildStatementWrapper(
+		query::Context& ctx, const VariableSingleStatementInfo& statement_info, u64 counter
+	) {
+	}
+}

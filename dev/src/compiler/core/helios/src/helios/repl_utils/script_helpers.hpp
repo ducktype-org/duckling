@@ -6,64 +6,9 @@
 
 #include <string_id/string_id.hpp>
 
-#include <deque>
-#include <variant>
 #include <vector>
 
 namespace compiler::repl {
-	/**
-	 * @brief Synthetic-main action that calls an executable-statement wrapper function.
-	 */
-	struct ScriptMainWrapperCall final {
-		helios::SymID wrapper_symbol;
-	};
-
-	/**
-	 * @brief Synthetic-main action that assigns a global variable its initializer in source order.
-	 *
-	 * @note `value` references the lowered HOUT initializer expression owned by the module HOUT
-	 * (kept alive by the query cache for the whole compilation).
-	 */
-	struct ScriptMainGlobalInit final {
-		helios::SymID            global_symbol;
-		CRef<helios::code::Expr> value;
-	};
-
-	/**
-	 * @brief One sequenced action in the synthetic script `main`, preserving source order.
-	 */
-	using ScriptMainAction = std::variant<ScriptMainWrapperCall, ScriptMainGlobalInit>;
-
-	/**
-	 * @brief Result of deferring a definition module's mutable global initializers.
-	 */
-	struct NeutralizedScriptModule final {
-		/// HOUT unit with mutable global initializers replaced by harmless default initializers.
-		helios::HOUTUnit unit;
-		/// Real initializers to run from the synthetic `main`, in source order.
-		std::vector<ScriptMainAction> deferred_inits;
-		/// Backing storage for the default-init globals that `unit` references by CRef; must stay
-		/// alive as long as `unit` is used (e.g. while lowering it).
-		std::deque<helios::HOUTGlobalData> default_init_storage;
-	};
-
-	/**
-	 * @brief Defer mutable global variable initialization in a definition module's HOUT.
-	 *
-	 * Replaces each mutable global variable's eager initializer with the type's default initializer
-	 * and records a ScriptMainGlobalInit carrying the real initializer, so it runs from the
-	 * synthetic `main` in source order instead of eagerly before it. Compile-time constants and
-	 * immutable globals are left untouched: they cannot be reassigned, so the
-	 * default-init-then-assign trick does not apply to them.
-	 *
-	 * @param ctx Active query context, used to build default initializer expressions.
-	 * @param module_hout Definition module HOUT to neutralize; not mutated.
-	 * @return Neutralized unit, the deferred initializers, and their backing storage.
-	 */
-	NeutralizedScriptModule neutralizeScriptGlobalInits(
-		query::Context& ctx, const helios::HOUTUnit& module_hout
-	);
-
 	/**
 	 * @brief Resolve the canonical root scope used for generated script `main`.
 	 *
@@ -112,14 +57,13 @@ namespace compiler::repl {
 	 *        It contributes one component of generated-symbol key/hash identity,
 	 *        not for choosing the emitted entrypoint name.
 	 * @param main_scope Root scope where generated `main` should be placed.
-	 * @param actions Ordered actions (wrapper calls and global-variable inits) to run from `main`,
-	 *        in source order.
+	 * @param wrapper_symbols Ordered wrapper call list to execute from generated `main`.
 	 */
 	helios::HOUTFunction buildScriptMainWrapper(
-		query::Context&                      ctx,
-		base::StrID                          script_id,
-		helios::ScopeID                      main_scope,
-		const std::vector<ScriptMainAction>& actions
+		query::Context&                   ctx,
+		base::StrID                       script_id,
+		helios::ScopeID                   main_scope,
+		const std::vector<helios::SymID>& wrapper_symbols
 	);
 
 }  // namespace compiler::repl
