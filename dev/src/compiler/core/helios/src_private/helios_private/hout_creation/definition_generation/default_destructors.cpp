@@ -277,8 +277,9 @@ namespace compiler::helios::defgen {
 				);
 				break;
 			default:
-				// Other types (e.g. strings and variants) either have a no-op destructor or their
-				// destruction is not yet implemented. This stub just provides an empty destructor.
+				// Other types (e.g. strings and variants) are either trivially destructible or
+				// their destruction is not yet implemented. This stub just provides an empty
+				// destructor.
 				break;
 			}
 

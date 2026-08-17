@@ -1,4 +1,4 @@
-# Trivially destructible -  all fields have no-op destructors.
+# Trivially destructible -  all fields are trivially destructible.
 class Trivial {
     a: i32;
     b: i32;
