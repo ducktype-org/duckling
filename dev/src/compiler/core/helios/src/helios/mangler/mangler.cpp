@@ -564,6 +564,8 @@ namespace compiler::helios::mangler {
 							return "Hlf" + func(ctx, symbol_id) + "E";
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
 							return "Hbd" + func(ctx, symbol_id) + "E";
+						case defgen::BuiltinTemplatedSymbol::Kind::MoveIn:
+							return "Hmin" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}

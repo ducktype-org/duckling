@@ -100,7 +100,6 @@ fun writeI64(x: i64) -> u64 = {
     var s = x.toString();
     let result = writeString(&s);
     writeChar('\n');
-    s.dispose();
     return result + 1u64;
 }
 
@@ -108,7 +107,6 @@ fun writeU64(x: u64) -> u64 = {
     var s = x.toString();
     let result = writeString(&s);
     writeChar('\n');
-    s.dispose();
     return result + 1u64;
 }
 
@@ -116,7 +114,6 @@ fun writeF64(x: f64) -> u64 = {
     var s = x.toString();
     let result = writeString(&s);
     writeChar('\n');
-    s.dispose();
     return result + 1u64;
 }
 
@@ -170,7 +167,6 @@ fun readF64() -> f64 = {
     buffer.append('\0');
 
     let value = strtod(builtins.ptr_from_slice:{char}(buffer.asSlice()));
-    buffer.dispose();
     return value;
 }
 

@@ -1749,9 +1749,10 @@ private:
 					= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
 				assertTrue(ret_stmt_casted != nullptr, "Return statement expected");
 
-				auto ret_expr = ret_stmt_casted->value.ref();
-				auto ret_expr_casted
-					= dynamic_cast<const compiler::helios::code::IdentifierExpr*>(&*ret_expr);
+				auto ret_expr        = ret_stmt_casted->value.ref();
+				auto ret_expr_casted = dynamic_cast<const compiler::helios::code::IdentifierExpr*>(
+					stripImplicitMove(ret_expr.get())
+				);
 				assertTrue(ret_expr_casted != nullptr, "Identifier expression expected");
 
 				auto a_sym  = ret_expr_casted->symbol;
@@ -3338,7 +3339,7 @@ private:
 				return templated != nullptr && templated->kind == kind;
 			};
 
-			// A trivially-destructible class has an empty destructor and a no-op destructor.
+			// A trivially-destructible class has an empty destructor body.
 			{
 				const auto  type = get_class_type(trivial_sym);
 				const auto& dtor = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
@@ -3354,7 +3355,7 @@ private:
 				);
 
 				ASSERT_TRUE(dtor.body->statements.empty());
-				ASSERT_TRUE(type.hasNoOpDestructor(ctx));
+				ASSERT_TRUE(type.isTriviallyDestructible(ctx));
 			}
 
 			// A class owning a `box i32` destroys the box by calling its `box_destructor`. That
@@ -3362,7 +3363,7 @@ private:
 			// there is no pointee destruction, only the free.
 			{
 				const auto type = get_class_type(has_box_sym);
-				ASSERT_TRUE(!type.hasNoOpDestructor(ctx));
+				ASSERT_TRUE(!type.isTriviallyDestructible(ctx));
 
 				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
 				const auto& stmts = dtor.body->statements;
@@ -3395,7 +3396,7 @@ private:
 			// A class that declares a user destructor should call the user code first.
 			{
 				const auto type = get_class_type(user_sym);
-				ASSERT_TRUE(!type.hasNoOpDestructor(ctx));
+				ASSERT_TRUE(!type.isTriviallyDestructible(ctx));
 
 				const auto user_dtor = userDestructorOf(ctx, user_sym);
 				ASSERT_HAS_VALUE(user_dtor);

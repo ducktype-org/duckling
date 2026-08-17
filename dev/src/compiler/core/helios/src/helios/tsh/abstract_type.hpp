@@ -120,7 +120,7 @@ namespace compiler::tsh {
 		 * @return true if the type has a trivial destructor, false otherwise.
 		 */
 		[[nodiscard]]
-		bool hasNoOpDestructor(query::Context& ctx) const;
+		bool isTriviallyDestructible(query::Context& ctx) const;
 
 		/**
 		 * @brief Determines weather the type has a default constructor.
@@ -149,9 +149,6 @@ namespace compiler::tsh {
 		 * @brief Checks if a value of this type can be copied trivially by just copying the values
 		 * bytes. This is not true for types like Lists, Strings or aggregate types storing them.
 		 * For more information look in `symbol_type.hpp`
-		 *
-		 * @note A type without a no-op destructor is never trivially copyable, regardless of its
-		 * fields.
 		 *
 		 * @return True if the symbol is trivially copyable, false otherwise.
 		 */
