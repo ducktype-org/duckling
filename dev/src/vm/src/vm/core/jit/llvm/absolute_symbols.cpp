@@ -25,7 +25,6 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 		std::pair{ "call_builtinfunc", &vm::OpFuns::op_debug_call_builtinfunc },
 		std::pair{ "virtual_call_pptr_method", &vm::OpFuns::op_debug_virtual_call_pptr_method },
 		std::pair{ "ret_tailcall_func", &vm::OpFuns::op_debug_ret_tailcall_func },
-		std::pair{ "breakpoint", &vm::OpFuns::op_debug_breakpoint },
 		std::pair{ "trampoline", &vm::jit::helpers::trampoline },
 	};
 
