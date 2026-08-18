@@ -1,5 +1,6 @@
 import os
 import shlex
+import sys
 
 from .helpers import (
     bash_command_get_output,
@@ -13,6 +14,7 @@ def list_files_impl(
     only_modified: bool = False,
     no_merge_base: bool = False,
     lines: bool = False,
+    include_untracked: bool = False,
 ) -> list[str] | dict[str, list[tuple[int, int]]]:
     """
     List files in the repository based on the specified criteria.
@@ -24,33 +26,31 @@ def list_files_impl(
         only_modified: If True, list only modified files; if False, list all tracked files
         no_merge_base: If True, compare against latest commit on branch instead of merge base
         lines: If True and only_modified=True, return dict with file->line_ranges mapping
+        include_untracked: If True, also list untracked files (counted as fully modified
+                   when lines=True); if False, only warn that they were left out
 
     Returns:
         List of file paths relative to the current working directory when lines=False,
         or Dict mapping file paths to list of (start_line, end_line) tuples when lines=True
     """
     if not only_modified:
+        files = _get_all_tracked_files(extensions)
+        if include_untracked:
+            files += _get_untracked_files(extensions)
         if lines:
             # For all files with lines, we return all lines in each file
-            files = _get_all_tracked_files(extensions)
-            result: dict[str, list[tuple[int, int]]] = {}
-            for file in files:
-                # Skip directories (e.g., git submodules)
-                if os.path.isdir(file):
-                    continue
-                line_count_str, _ = bash_command_get_output(
-                    f"wc -l < {shlex.quote(file)}"
-                )
-                line_count = int(line_count_str.strip())
-                result[file] = [(1, line_count)]
-            return result
+            return _get_full_line_ranges(files)
         else:
-            return _get_all_tracked_files(extensions)
+            return files
     else:
         if lines:
-            return _get_modified_files_and_lines(extensions, branch, no_merge_base)
+            return _get_modified_files_and_lines(
+                extensions, branch, no_merge_base, include_untracked
+            )
         else:
-            return _get_modified_files(extensions, branch, no_merge_base)
+            return _get_modified_files(
+                extensions, branch, no_merge_base, include_untracked
+            )
 
 
 def _get_all_tracked_files(extensions: list[str] | None = None) -> list[str]:
@@ -65,47 +65,80 @@ def _get_modified_files(
     extensions: list[str] | None = None,
     branch: str = "origin/main",
     no_merge_base: bool = False,
+    include_untracked: bool = False,
 ) -> list[str]:
     """Get modified files compared to the specified branch."""
-    # Check for unstaged new files and warn about them
-    unstaged_files = _get_unstaged_new_files()
-    if unstaged_files:
-        log_warning(
-            f"Files not in working tree, so not included in diff: [{', '.join(unstaged_files)}]"
-        )
-
     # Get the diff
     diff_out, _ = bash_command_get_output(
         f"git diff {'' if no_merge_base else '--merge-base'} {branch} --name-only --relative"
     )
     files = [f.strip() for f in diff_out.strip().split("\n") if f.strip()]
 
+    return _filter_by_extensions(files, extensions) + _get_untracked_files_to_list(
+        extensions, include_untracked
+    )
+
+
+def _get_untracked_files(extensions: list[str] | None = None) -> list[str]:
+    """
+    Get the untracked files below the current directory, gitignored ones excluded.
+
+    The paths are relative to the current working directory, just like the ones
+    `git diff --relative` reports, so both listings can be concatenated.
+    """
+    files_str, _ = bash_command_get_output("git ls-files --others --exclude-standard")
+    files = [f.strip() for f in files_str.strip().split("\n") if f.strip()]
+
     return _filter_by_extensions(files, extensions)
 
 
-def _get_unstaged_new_files() -> list[str]:
-    """Get list of files that are new but not staged."""
-    status_out, _ = bash_command_get_output("git status --porcelain")
-    new_unstaged_files = []
-    for file in status_out.splitlines():
-        if file.startswith("??"):
-            new_unstaged_files.append(file[3:])
-    return new_unstaged_files
+def _get_untracked_files_to_list(
+    extensions: list[str] | None, include_untracked: bool
+) -> list[str]:
+    """
+    Get the untracked files to append to a modified files listing.
+
+    `git diff` never reports untracked files, so they are opt-in through
+    `include_untracked`. When they are left out we warn about them instead, so that
+    it is clear why a brand new file was skipped. That warning goes to stderr: the
+    stdout of `list-files` is a machine readable file list, and a warning mixed into
+    it ends up being consumed as a file name (see the formatting scripts).
+    """
+    untracked_files = _get_untracked_files(extensions)
+    if not untracked_files:
+        return []
+
+    if not include_untracked:
+        log_warning(
+            "Untracked files are not part of the diff, so they were skipped: "
+            f"[{', '.join(untracked_files)}]",
+            file=sys.stderr,
+        )
+        return []
+
+    return untracked_files
+
+
+def _get_full_line_ranges(files: list[str]) -> dict[str, list[tuple[int, int]]]:
+    """Map each of the files to a single range covering all of its lines."""
+    result: dict[str, list[tuple[int, int]]] = {}
+    for file in files:
+        # Skip directories (e.g., git submodules)
+        if os.path.isdir(file):
+            continue
+        line_count_str, _ = bash_command_get_output(f"wc -l < {shlex.quote(file)}")
+        line_count = int(line_count_str.strip())
+        result[file] = [(1, line_count)]
+    return result
 
 
 def _get_modified_files_and_lines(
     extensions: list[str] | None = None,
     branch: str = "origin/main",
     no_merge_base: bool = False,
+    include_untracked: bool = False,
 ) -> dict[str, list[tuple[int, int]]]:
     """Get modified files and their line ranges compared to the specified branch."""
-    # Check for unstaged new files and warn about them
-    unstaged_files = _get_unstaged_new_files()
-    if unstaged_files:
-        log_warning(
-            f"Files not in working tree, so not included in diff: [{', '.join(unstaged_files)}]"
-        )
-
     # Get the diff with line ranges
     diff_out, _ = bash_command_get_output(
         f"git diff {'' if no_merge_base else '--merge-base'} {branch} -U0 --relative"
@@ -169,7 +202,14 @@ def _get_modified_files_and_lines(
         for file, line_ranges in changes.items():
             if _file_matches_extensions(file, extensions):
                 filtered_changes[file] = line_ranges
-        return filtered_changes
+        changes = filtered_changes
+
+    # An untracked file has no diff to parse, so all of its lines count as changed
+    changes.update(
+        _get_full_line_ranges(
+            _get_untracked_files_to_list(extensions, include_untracked)
+        )
+    )
 
     return changes
 

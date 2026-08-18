@@ -29,6 +29,12 @@ from ..impl.list_files import list_files_impl
     is_flag=True,
     help="Return line ranges for each file",
 )
+@option(
+    "--include-untracked",
+    is_flag=True,
+    help="Also list untracked files (gitignored ones excluded). Without it, untracked "
+    "files are only reported as a warning on stderr, as git does not diff them.",
+)
 @no_merge_base(
     help="Compare against the latest commit on branch instead of the merge base. "
     "This feature allows running on a shallow clone.",
@@ -37,6 +43,7 @@ def list_files(
     extensions: Tuple[str, ...],
     only_modified: bool,
     lines: bool,
+    include_untracked: bool,
     branch: str,
     no_merge_base: bool,
 ) -> None:
@@ -45,6 +52,7 @@ def list_files(
     By default, lists all tracked files. Use --modified to list only modified files compared to origin/main.
     Use --extensions to filter by file type (e.g., --extensions .cpp --extensions .hpp).
     Use --lines to get line ranges for each file (full ranges for all files, or specific ranges for modified files).
+    Use --include-untracked to list untracked files as well, e.g. to format a brand new file.
     """
     # Convert extensions tuple to list, or None if empty
     ext_list = list(extensions) if extensions else None
@@ -55,6 +63,7 @@ def list_files(
         only_modified=only_modified,
         no_merge_base=no_merge_base,
         lines=lines,
+        include_untracked=include_untracked,
     )
 
     # Output files or files with line ranges
