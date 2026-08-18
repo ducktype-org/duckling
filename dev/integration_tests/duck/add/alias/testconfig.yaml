@@ -1,0 +1,25 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init a
+
+Tests:
+  alias:
+    Cases:
+      alias:
+        test-cmd: duck -C foo add --local ../a a --alias b
+        Output:
+          Run: |+
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
+            echo "info: successfully added normal dependency \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+      multiple-with-alias:
+        test-cmd: |+
+          duck -C foo add --local ../a a &&
+          duck -C foo add --local ../a a --alias b
+        Output:
+          Run: |+
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
+            echo "info: successfully added normal dependency \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`" &&
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
+            echo "info: successfully added normal dependency \`b\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+        

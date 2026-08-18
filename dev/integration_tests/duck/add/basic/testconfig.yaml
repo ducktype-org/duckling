@@ -2,10 +2,19 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init a
-  @{duck-exe} init b
 
 Tests:
   basic:
     Cases:
       normal:
-        test-cmd: duck -C foo add --local
+        test-cmd: duck -C foo add --local ../a a
+        Output:
+          Run: |+
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
+            echo "info: successfully added normal dependency \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+      dev:
+        test-cmd: duck -C foo add --dev --local ../a a
+        Output:
+          Run: |+
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
+            echo "info: successfully added dev dependency \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"

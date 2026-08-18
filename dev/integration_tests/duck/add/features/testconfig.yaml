@@ -1,0 +1,14 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init a
+
+Tests:
+  features:
+    Cases:
+      single:
+        test-cmd: duck -C foo add --features f --local ../a a
+        Output:
+          Run: |+
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
+            echo "info: successfully added normal dependency \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"

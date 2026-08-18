@@ -1,2 +1,4 @@
 SubDirs:
+- alias
 - basic
+- features
