@@ -68,15 +68,21 @@ impl Manifest {
     /// Remove a dependency.
     pub fn remove_dependency(&mut self, name: &str, kind: DependencyKind) -> DependencyRemoved {
         let dependencies_maps = [
-            (DependencyKind::Normal, self.dependencies.as_mut()),
-            (DependencyKind::Dev, self.dev_dependencies.as_mut()),
+            (DependencyKind::Normal, &mut self.dependencies),
+            (DependencyKind::Dev, &mut self.dev_dependencies),
         ];
         let mut other_kind = None;
         let mut removed = false;
         for (dep_kind, dep_map) in dependencies_maps {
             if dep_kind == kind {
-                removed = dep_map.and_then(|map| map.remove(name)).is_some();
-            } else if let Some(ref map) = dep_map
+                if let Some(dep_map_inner) = dep_map {
+                    removed = dep_map_inner.remove(name).is_some();
+                    // If the map becomes empty after removal, change it to `None`.
+                    if dep_map_inner.is_empty() {
+                        *dep_map = None;
+                    }
+                }
+            } else if let Some(map) = dep_map
                 && map.contains_key(name)
             {
                 other_kind = Some(dep_kind);

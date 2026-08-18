@@ -2,11 +2,8 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
-  echo "dependencies:
-    bar:
-      source:
-        path: ../bar/
-      features: [b]" >> foo/quackconfig.yaml
+  @{duck-exe} -C foo add --features b --local ../bar bar
+
 Tests:
   nonexistent-dep-feature:
     Description: cannot sync a project with a nonexistent dependency feature

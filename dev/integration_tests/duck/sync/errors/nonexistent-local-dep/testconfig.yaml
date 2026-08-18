@@ -1,10 +1,8 @@
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
-  echo "dependencies:
-    bar:
-      source:
-        path: ../bar" >> foo/quackconfig.yaml
+  @{duck-exe} -C foo --local ../bar bar
+
 Tests:
   nonexistent-local-dep:
     Description: cannot sync a project with a nonexistent dependency

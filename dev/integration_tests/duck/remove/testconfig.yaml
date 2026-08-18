@@ -1,14 +1,11 @@
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
-  echo "dependencies:
-    a:
-      source:
-        path: ../a
-  dev-dependencies:
-    b:
-      source:
-        path: ../b" >> foo/quackconfig.yaml
+  @{duck-exe} init a
+  @{duck-exe} init b
+  @{duck-exe} -C foo add --local ../a a
+  @{duck-exe} -C foo add --dev --local ../b b
+
 PostCase: python3 check.py @{expected-manifest} && @{cleanup_tmp_env}
 
 Tests:
@@ -37,7 +34,7 @@ Tests:
         Output:
           Run: |+
             echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`"
-            echo "info: successfully removed dev-dependency \`b\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: successfully removed dev dependency \`b\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
       no-dependency-error:
         expected-manifest: all
         test-cmd: duck -C foo remove c
