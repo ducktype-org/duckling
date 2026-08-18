@@ -92,6 +92,7 @@ pub enum FetchSuccess {
 }
 
 impl FetchSuccess {
+    /// Returns the latest version found in the response.
     pub fn latest_version(&self) -> QuackResult<Version> {
         match self {
             Self::NotPinned(not_pinned) => not_pinned

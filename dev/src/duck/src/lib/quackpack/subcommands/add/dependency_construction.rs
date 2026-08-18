@@ -1,3 +1,22 @@
+//! The goal of module is to turn CLI-specified description of the dependency to add,
+//! into a pair that can be directly inserted into the manifest schema.
+//! 
+//! This is done in three steps.
+//! 1. First, counterintuively, we construct a [`Source`] from the CLI-specification.
+//! 2. Then we use that source and the rest of the specification to fetch the dependency, to check that it exists.
+//!     Using [`Source`] allows us to use the already implemented [`Gatherer`] machinery instead of duplicating it.
+//! 3. Lastly we downcast [`Source`] into [`SourceSchema`].
+//! 
+//! Note that this is different from parsing, when the general workflow is `raw string -> schema -> full type`.
+//! 
+//! Important
+//! ---------
+//! 1. If the dependency is a registry dependency and the user did not specify any versions,
+//!     we interpret it as a request for the latest version / something compatible with it.
+//! 2. If the user specifies a local dependency by a relative path,
+//!     the path is relative to the folder in which `duck add` was called,
+//!     not to the folder in which the project was found.
+//!     This is taken into account, as we modify such path to be relative to the right folder.
 use std::cell::RefCell;
 use std::debug_assert;
 use std::path::{Path, PathBuf};
@@ -124,6 +143,9 @@ pub fn construct_dependency(
 }
 
 /// Construct [`Source`] from the given [`SourceSpecification`].
+/// Since [`Source`] has absolute paths but if the user provided a relative path,
+/// we should insert a relative path to the manifest,
+/// this function also returns the path that should be inserted given the dependency is a local one.
 fn construct_source(
     spec: SourceSpecification,
     pkg_root: &Path,
@@ -145,7 +167,7 @@ fn construct_source(
         );
         // We take into account that `local_path` is relative to `cwd`, not to `pkg_root`.
         let from_project_to_cwd = pkg_root.resolve_both_and_get_relative(ctx.cwd(), ctx);
-        let from_project_to_dep = from_project_to_cwd.join(path);
+        let from_project_to_dep = from_project_to_cwd.join(path).normalize();
         Ok((
             Source::for_local(&from_project_to_dep)?,
             Some(from_project_to_dep),
@@ -193,6 +215,7 @@ fn construct_git_ref(
 
 /// Check that the dependency exists as specified by the user.
 /// This is done by asking [`Gatherer`] to fetch the dependency.
+/// Returns the newest found version satisfying the requirements.
 fn verify_and_get_version(
     name: StrId,
     source: Source,
@@ -273,6 +296,7 @@ fn construct_request(
     }
 }
 
+/// Downcast [`Source`] to [`SourceSchema`].
 fn construct_source_schema(
     source: Source,
     local_path: Option<PathBuf>,
