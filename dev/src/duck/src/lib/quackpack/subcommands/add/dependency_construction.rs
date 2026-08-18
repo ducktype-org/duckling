@@ -1,22 +1,22 @@
 //! The goal of module is to turn CLI-specified description of the dependency to add,
 //! into a pair that can be directly inserted into the manifest schema.
-//! 
+//!
 //! This is done in three steps.
 //! 1. First, counterintuively, we construct a [`Source`] from the CLI-specification.
 //! 2. Then we use that source and the rest of the specification to fetch the dependency, to check that it exists.
-//!     Using [`Source`] allows us to use the already implemented [`Gatherer`] machinery instead of duplicating it.
+//!    Using [`Source`] allows us to use the already implemented [`Gatherer`] machinery instead of duplicating it.
 //! 3. Lastly we downcast [`Source`] into [`SourceSchema`].
-//! 
+//!
 //! Note that this is different from parsing, when the general workflow is `raw string -> schema -> full type`.
-//! 
+//!
 //! Important
 //! ---------
 //! 1. If the dependency is a registry dependency and the user did not specify any versions,
-//!     we interpret it as a request for the latest version / something compatible with it.
+//!    we interpret it as a request for the latest version / something compatible with it.
 //! 2. If the user specifies a local dependency by a relative path,
-//!     the path is relative to the folder in which `duck add` was called,
-//!     not to the folder in which the project was found.
-//!     This is taken into account, as we modify such path to be relative to the right folder.
+//!    the path is relative to the folder in which `duck add` was called,
+//!    not to the folder in which the project was found.
+//!    This is taken into account, as we modify such path to be relative to the right folder.
 use std::cell::RefCell;
 use std::debug_assert;
 use std::path::{Path, PathBuf};
@@ -167,11 +167,9 @@ fn construct_source(
         );
         // We take into account that `local_path` is relative to `cwd`, not to `pkg_root`.
         let from_project_to_cwd = pkg_root.resolve_both_and_get_relative(ctx.cwd(), ctx);
-        let from_project_to_dep = from_project_to_cwd.join(path).normalize();
-        Ok((
-            Source::for_local(&from_project_to_dep)?,
-            Some(from_project_to_dep),
-        ))
+        let from_project_to_dep = from_project_to_cwd.join(path);
+        let dep_resolved = from_project_to_dep.resolve(ctx);
+        Ok((Source::for_local(&dep_resolved)?, Some(from_project_to_dep)))
     } else if let Some(git_url) = git_url {
         // Git dependency.
         debug_assert!(registry_url.is_none(), "guarded by the parser");

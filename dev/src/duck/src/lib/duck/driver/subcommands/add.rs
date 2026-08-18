@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use crate::duck::driver::cli_ext::{multi, optional};
@@ -76,12 +77,12 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
 
 /// Construct the [`SourceSpecification`] from the matches.
 fn get_source_specification(matches: &ArgMatches) -> SourceSpecification {
-    let local_path = matches.get_one("local").cloned();
-    let git_url = matches.get_one("git-url").cloned();
-    let git_tag = matches.get_one("git-tag").cloned();
-    let git_branch = matches.get_one("git-branch").cloned();
-    let git_commit = matches.get_one("git-commit").cloned();
-    let registry_url = matches.get_one("registry-url").cloned();
+    let local_path = matches.get_one::<String>("local").map(PathBuf::from);
+    let git_url = matches.get_one("git").cloned();
+    let git_tag = matches.get_one("tag").cloned();
+    let git_branch = matches.get_one("branch").cloned();
+    let git_commit = matches.get_one("commit").cloned();
+    let registry_url = matches.get_one("registry").cloned();
     SourceSpecification {
         local_path,
         git_url,

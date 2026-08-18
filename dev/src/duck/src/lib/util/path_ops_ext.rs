@@ -384,6 +384,9 @@ impl PathOpsExt for Path {
                 }
             }
         }
+        if result_components.is_empty() {
+            result_components.push_front(Component::CurDir);
+        };
         result_components
             .into_iter()
             .map(|c| c.as_os_str())
