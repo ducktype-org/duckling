@@ -68,7 +68,7 @@ fn remove_dep(
     match schema.remove_dependency(name, kind) {
         DependencyRemoved::Yes => Ok(()),
         DependencyRemoved::NoDependency => qp_bail!(
-            "no such dependency as `{name}` in the project `{pkg_name}` at `{}`",
+            "no such {kind} dependency as `{name}` in the project `{pkg_name}` at `{}`",
             pkg_root.display()
         ),
         DependencyRemoved::NoDependencyButKindExists(other_kind) => {
@@ -83,7 +83,7 @@ fn remove_dep(
             };
             err.with_context(|| {
                 format!(
-                    "no such dependency as `{name}` in the project `{pkg_name}` at `{}`",
+                    "no such {kind} dependency as `{name}` in the project `{pkg_name}` at `{}`",
                     pkg_root.display()
                 )
             })

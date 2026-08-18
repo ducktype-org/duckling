@@ -263,7 +263,8 @@ fn create_mock_package_with_dependencies<'duck>(
         full: false,
     };
     init::init(init_opts).unwrap();
-    std::env::set_current_dir(Path::new("root")).unwrap();
+    let prev_cwd = ctx.cwd().to_path_buf();
+    std::env::set_current_dir(root.join("root")).unwrap();
     ctx.reload_cwd().unwrap();
     let add_opts = AddOptions {
         dep_spec: DependencySpecification {
@@ -287,7 +288,7 @@ fn create_mock_package_with_dependencies<'duck>(
         kind: DependencyKind::Normal,
     };
     add::add(ctx, add_opts).unwrap();
-    std::env::set_current_dir(Path::new("..")).unwrap();
+    std::env::set_current_dir(prev_cwd).unwrap();
     ctx.reload_cwd().unwrap();
     PackageLoader::find_at_exact_directory(&root.join("root"), ctx).unwrap()
 }

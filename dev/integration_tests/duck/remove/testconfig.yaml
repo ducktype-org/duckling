@@ -21,16 +21,16 @@ Tests:
         Output:
           Run: |+
             echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
-            echo "info: successfully removed dependency \`a\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: successfully removed normal dependency \`a\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
       dev-dependency-no-flag-error:
         expected-manifest: all
         test-cmd: duck -C foo remove b
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: no such dependency as \`b\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`" &&
+            echo "error: no such normal dependency as \`b\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`" &&
             echo "" &&
-            echo "hint: if you want to remove a dev-dependency use flag \`--dev\`"
+            echo "hint: if you want to remove a dev dependency use flag \`--dev\`"
       dev-dependency-flag:
         expected-manifest: only-a
         test-cmd: duck -C foo remove b --dev
@@ -44,4 +44,4 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: no such dependency as \`c\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "error: no such normal dependency as \`c\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`"

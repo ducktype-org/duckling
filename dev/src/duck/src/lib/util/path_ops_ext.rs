@@ -79,6 +79,7 @@ pub trait PathOpsExt {
     /// Expand `~` into a `home`.
     fn expand_tilde_with(&self, home: &Path) -> PathBuf;
 
+    /// Resolves both `self` and `other` and returns the relative path from `self` to `other`.
     fn resolve_both_and_get_relative(&self, other: &Path, ctx: &DuckContext) -> PathBuf;
 
     /// Returns `true` if path exists on a disk and points to an executable file.
@@ -384,9 +385,6 @@ impl PathOpsExt for Path {
                 }
             }
         }
-        if result_components.is_empty() {
-            result_components.push_front(Component::CurDir);
-        };
         result_components
             .into_iter()
             .map(|c| c.as_os_str())
