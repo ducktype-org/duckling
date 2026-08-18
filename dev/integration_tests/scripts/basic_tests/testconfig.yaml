@@ -65,12 +65,12 @@ Tests:
       direct:
         mode: direct
         Output:
-          String: "2\n1\n"
+          String: "2\n1\n3\n"
       vm:
         mode: vm
         Output:
-          String: "2\n1\n"
+          String: "2\n1\n3\n"
       exe:
         mode: exe
         Output:
-          String: "2\n1\n"
+          String: "2\n1\n3\n"

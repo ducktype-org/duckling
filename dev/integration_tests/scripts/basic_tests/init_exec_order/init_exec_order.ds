@@ -3,9 +3,9 @@ import core.builtins.*;
 # A top-level `var` initializer must run in source order, interleaved with the
 # surrounding top-level statements, not eagerly before them.
 
-fun first() -> i64 = {
+fun first() -> String = {
 	builtin_output_i64(1);
-	return 0;
+	return "3\n".toString();
 }
 
 fun second() = {
@@ -14,3 +14,4 @@ fun second() = {
 
 second();
 var b = first();
+print(&b);
