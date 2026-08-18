@@ -1,0 +1,11 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init a
+  @{duck-exe} init b
+
+Tests:
+  basic:
+    Cases:
+      normal:
+        test-cmd: duck -C foo add --local

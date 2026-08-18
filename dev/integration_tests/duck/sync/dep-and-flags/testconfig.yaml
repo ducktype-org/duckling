@@ -4,7 +4,7 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
-  @{duck-exe} -C foo --local ../bar bar
+  @{duck-exe} -C foo add --local ../bar bar
   echo "features:
     f: []" >> foo/quackconfig.yaml
 
