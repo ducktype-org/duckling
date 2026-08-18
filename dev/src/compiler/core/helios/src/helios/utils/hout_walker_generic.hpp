@@ -160,6 +160,17 @@ namespace compiler::helios::code {
 			for (const auto& subtype: e.subtypes) walk(*subtype);
 		}
 
+		void visitVariantConstructExpr(const VariantConstructExpr& e) override {
+			handler(e);
+			walk(*e.inner);
+		}
+
+		void visitMatchExpr(const MatchExpr& e) override {
+			handler(e);
+			walk(*e.subject);
+			for (const auto& match_case: e.cases) walk(*match_case.result);
+		}
+
 		void visitCallExpr(const CallExpr& e) override {
 			handler(e);
 			walk(*e.callee);
@@ -210,18 +221,6 @@ namespace compiler::helios::code {
 		void visitBlockExpr(const BlockExpr& e) override {
 			handler(e);
 			walk(*e.block);
-		}
-
-		void visitListPushExpr(const ListPushExpr& e) override {
-			handler(e);
-			walk(*e.list);
-			walk(*e.element);
-		}
-
-		void visitListPopExpr(const ListPopExpr& e) override {
-			handler(e);
-			walk(*e.list);
-			walk(*e.count);
 		}
 
 		void visitMoveExpr(const MoveExpr& e) override {

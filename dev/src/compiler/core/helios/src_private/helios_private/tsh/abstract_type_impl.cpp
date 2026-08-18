@@ -282,6 +282,13 @@ namespace compiler::tsh {
 
 	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
 		  underlying_types(variant_types) {
+		// Variants are unordered; canonicalize the alternative order so that the runtime tag
+		// (= index into getUnderlyingTypes()) does not depend on construction order.
+		// Sorting must not use queryUnstablePerfectHash: it differs between compiler
+		// processes, which would make the emitted code non-deterministic.
+		std::ranges::stable_sort(underlying_types, [](const SymbolType<>& a, const SymbolType<>& b) {
+			return a.toString() < b.toString();
+		});
 		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}
 
@@ -364,12 +371,6 @@ namespace compiler::tsh {
 		return &ctx.query<QueryInterfaceOfSlice>(type)->valueOrThrow();
 	}
 
-	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
-	) const {
-		const auto type = toAbstractType().as<DynamicArrayAbstractType>();
-		return &ctx.query<QueryInterfaceOfDynamicArray>(type)->valueOrThrow();
-	}
-
 	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
 	) const {
 		const auto type = toAbstractType().as<StaticArrayAbstractType>();
@@ -406,31 +407,6 @@ namespace compiler::tsh {
 
 	CRef<TypeInterface> TypeTemplateAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("Type template interface not yet implemented");
-	}
-
-	AbstractType TypeTemplateAbstractTypeImpl::instantiate(
-		query::Context& ctx, const SymbolType<>& element_type
-	) const {
-		variant_match(source) {
-			variant_case(BuiltinKind, builtin) {
-				switch (builtin) {
-				case TypeTemplateAbstractType::BuiltinKind::List: {
-					return ctx.query<tsh::QueryDynamicArrayType>({ element_type });
-				}
-				default: {
-					throw base::NotYetImplemented(base::strConcat(
-						"Instantiation of a builtin type template type: ", representation
-					));
-				}
-				}
-			}
-			variant_default {
-				throw base::NotYetImplemented(base::strConcat(
-					"Instantiation of a non-builtin type template type: ", representation
-				));
-			}
-		}
-		CORE_UNREACHABLE();
 	}
 
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
@@ -537,14 +513,7 @@ namespace compiler::tsh {
 		});
 	}
 
-	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(AbstractType target, query::Context&)
-		const {
-		// Static arrays are implicitly coercible to dynamic arrays storing the same type.
-		if (target.getKind() == Kind::DynamicArray) {
-			auto dynamic_array_type = DynamicArrayAbstractType(target);
-			return dynamic_array_type.getElementType() == element_type;
-		}
-
+	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(AbstractType, query::Context&) const {
 		return false;
 	}
 

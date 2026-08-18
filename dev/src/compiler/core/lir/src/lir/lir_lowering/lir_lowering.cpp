@@ -163,10 +163,6 @@ namespace compiler::lir {
 			return Operation::Assign;
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
-		case mir::Operation::ListPush:
-			return Operation::ListPush;
-		case mir::Operation::ListPop:
-			return Operation::ListPop;
 		case mir::Operation::ZeroInitialize:
 			return Operation::ZeroInitialize;
 
@@ -245,6 +241,14 @@ namespace compiler::lir {
 			return Operation::BooleanOr;
 		case mir::Operation::BooleanNot:
 			return Operation::BooleanNot;
+
+		/// Variants ///
+		case mir::Operation::VariantConstruct:
+			return Operation::VariantConstruct;
+		case mir::Operation::VariantTryProject:
+			return Operation::VariantTryProject;
+		case mir::Operation::BranchIfNull:
+			return Operation::BranchIfNull;
 		// @TODO: add more cases
 		default:
 			CORE_PANIC(base::strConcat(
@@ -701,29 +705,6 @@ namespace compiler::lir {
 					}
 					break;
 				}
-				case mir::Operation::ListPush:
-				case mir::Operation::ListPop: {
-					auto output = getOutput(mir_instruction.output);
-					auto args   = getLocations(mir_instruction.arguments);
-
-					const auto& list_place = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
-
-					auto dynamic_array_type
-						= list_place.type.getType().as<tsh::DynamicArrayAbstractType>();
-					auto element_layout = CRef<tsl::TypeLayout>(
-						&ctx.query<tsl::QuerySymbolTypeLayout>(dynamic_array_type.getElementType())
-							 ->valueOrPanicMsg("layout query failed at LIR stage")
-					);
-
-					curr_block->instructions.emplace_back(
-						mir2lirOperation(mir_instruction.operation, false),
-						output,
-						std::move(args),
-						InstructionMetadata{},
-						ListOperationParameters{ .element_layout = element_layout }
-					);
-					break;
-				}
 				case mir::Operation::AddressOf:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
@@ -869,6 +850,44 @@ namespace compiler::lir {
 					);
 					break;
 				}
+				case mir::Operation::VariantConstruct:
+				case mir::Operation::VariantTryProject: {
+					auto variant_parameters
+						= std::get_if<mir::VariantParameters>(&mir_instruction.extra_params);
+					if (not variant_parameters)
+						CORE_PANIC("Variant instruction without VariantParameters");
+
+					// `VariantConstruct` writes into the variant, while `VariantTryProject`
+					// reads through a reference to it.
+					const auto variant_type
+						= mir_instruction.operation == mir::Operation::VariantConstruct
+					        ? mir_instruction.output.value().type
+					        : mir_instruction.arguments.at(0)
+					              .get<mir::MIRPlace>()
+					              .type.getPointeeSymbolType();
+
+					auto args   = getLocations(mir_instruction.arguments);
+					auto output = getOutput(mir_instruction.output);
+					curr_block->instructions.emplace_back(
+						mir2lirOperation(mir_instruction.operation, false),
+						output,
+						std::move(args),
+						mir_instruction.metadata,
+						VariantParameters{
+							.alternative_index = variant_parameters->alternative_index,
+							.alternative_type  = variant_parameters->alternative_type,
+							.alternative_layout
+							= &ctx.query<tsl::QuerySymbolTypeLayout>(
+									  variant_parameters->alternative_type
+							)
+					               ->valueOrPanicMsg("layout query failed at LIR stage"),
+							.variant_layout
+							= &ctx.query<tsl::QuerySymbolTypeLayout>(variant_type)
+					               ->valueOrPanicMsg("layout query failed at LIR stage"),
+						}
+					);
+					break;
+				}
 				default:
 					throw base::NotYetImplemented(base::strConcat(
 						"instruction ",
@@ -934,7 +953,8 @@ namespace compiler::lir {
 				}
 				case mir::Operation::ReturnVoid:
 				case mir::Operation::Jump:
-				case mir::Operation::Branch: {
+				case mir::Operation::Branch:
+				case mir::Operation::BranchIfNull: {
 					auto args = getLocations(mir_terminator.arguments);
 					curr_block->terminator
 						= Instruction{ mir2lirOperation(mir_terminator.operation, false),
