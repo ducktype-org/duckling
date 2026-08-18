@@ -1,7 +1,9 @@
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
+  @{duck-exe} init bar
   @{duck-exe} -C foo add --local ../bar bar
+  rm -rf bar
 
 Tests:
   nonexistent-local-dep:
