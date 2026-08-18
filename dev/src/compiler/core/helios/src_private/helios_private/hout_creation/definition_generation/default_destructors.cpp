@@ -205,35 +205,35 @@ namespace compiler::helios::defgen {
 			return body;
 		}
 
-		// `var __i: u64 = 0;`
+		// `var __i: i64 = 0;`
 		SymID buildLoopCounter(
 			query::Context& ctx, std::vector<Box<code::Stmt>>& body, SymID dtor_sym
 		) {
 			using Variable = GeneratedFunctionVariable;
 
-			const auto u64_abs_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-			const auto u64_type = tsh::SymbolType<>::withDefaults(u64_abs_type);
+			const auto i64_abs_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			const auto i64_type = tsh::SymbolType<>::withDefaults(i64_abs_type);
 
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
 				   .name = base::StrID("__i"),
 				   .generated_symbol_data
-                = Variable{ .function_symbol = dtor_sym, .variable_index = 0, .type = u64_type },
+                = Variable{ .function_symbol = dtor_sym, .variable_index = 0, .type = i64_type },
             });
-			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-			                    .expect("u64 creation failed");
+			auto        zero_val = numeric_value::NumericValue::createOfType(i64_abs_type)
+			                    .expect("i64 creation failed");
 
 			const Shorthand s{ ctx };
-			body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
+			body.emplace_back(s.var(i_sym, i64_type, s.litNum(zero_val)));
 			return i_sym;
 		}
 
 		// `__i = __i + 1;`.
 		Box<code::Stmt> buildLoopIncrement(query::Context& ctx, SymID i_sym) {
-			const auto u64_abs_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-			auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
-			                   .expect("u64 creation failed");
+			const auto i64_abs_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			auto one_val = numeric_value::NumericValue::createOfType(i64_abs_type, 1)
+			                   .expect("i64 creation failed");
 			const Shorthand s{ ctx };
 			return s.assign(
 				s.ident(i_sym),
@@ -254,17 +254,17 @@ namespace compiler::helios::defgen {
 			// Nothing to destroy for empty or trivially-destructible arrays.
 			if (size == 0 || array_type.getElementType().isTriviallyDestructible(ctx)) return body;
 
-			// var __i: u64 = 0;
+			// var __i: i64 = 0;
 			const SymID i_sym = buildLoopCounter(ctx, body, dtor_sym);
 
 			// while (__i < size) {
 			// 		(*self)[__i].__destruct(...);
 			// 		__i = __i + 1;
 			// }
-			const auto u64_abs_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-			auto size_val = numeric_value::NumericValue::createOfType(u64_abs_type, size)
-			                    .expect("u64 creation failed");
+			const auto i64_abs_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			auto size_val = numeric_value::NumericValue::createOfType(i64_abs_type, size)
+			                    .expect("i64 creation failed");
 
 			const Shorthand s{ ctx };
 			auto            condition

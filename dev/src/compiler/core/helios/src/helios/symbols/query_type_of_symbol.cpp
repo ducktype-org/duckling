@@ -339,7 +339,7 @@ namespace compiler::helios {
 						case defgen::Method::Kind::LengthMethod:
 							return { { immmut_self },
 								     tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
-										 ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+										 ctx, 64, tsh::IntegralAbstractType::Signedness::Signed
 									 )) };
 						case defgen::Method::Kind::DefaultDestructor:
 							return { { mut_self },
@@ -440,8 +440,10 @@ namespace compiler::helios {
 							return tsh::SymbolType<>::withDefaults(many_pointer_type);
 						}
 						if (field.index == 1) {
+							// The length is signed, so it mixes with the (signed) index type
+							// without a cast.
 							return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
-								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Signed
 							));
 						}
 						CORE_PANIC("Slice only has fields 0 (element) and 1 (length)");

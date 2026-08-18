@@ -39,7 +39,7 @@ fun assignI32(out: ref i32, value: i32) -> i64 = {
 
 fun stringAltLength(v: ref (String | i32)) -> i64 = {
 	return match (v) {
-		case s : ref String = s.length() as i64;
+		case s : ref String = s.length();
 		case n : i32 = n as i64;
 	};
 }
@@ -53,7 +53,7 @@ fun stringAltAppend(v: ref (String | i32), c: char) -> i64 = {
 
 fun appendChar(s: ref String, c: char) -> i64 = {
 	s.append(c);
-	return s.length() as i64;
+	return s.length();
 }
 
 # ===== Assigning an owning alternative into a live variant =====

@@ -6,7 +6,7 @@ fun testBigRealloc() -> () = {
         i = i + 1;
     }
 
-    builtin_output_u64(l.length()); # 100
+    builtin_output_i64(l.length()); # 100
 
     builtin_output_i64(l.at(0));   # 0
     builtin_output_i64(l.at(49));  # 49
@@ -21,12 +21,12 @@ fun testPushPopPushPopPushPop() -> () = {
 
     i = 0;
     while (i < 5) { l.pop(); i = i + 1; }
-    builtin_output_u64(l.length()); # 5
+    builtin_output_i64(l.length()); # 5
 
     i = 0;
     while (i < 20) { l.push(i + 100); i = i + 1; }
 
-    builtin_output_u64(l.length()); # 25
+    builtin_output_i64(l.length()); # 25
     builtin_output_i64(l.at(0));       # 0
     builtin_output_i64(l.at(4));       # 4
     builtin_output_i64(l.at(5));       # 100
@@ -37,8 +37,8 @@ fun testPopUntilEmpty() -> () = {
     var l: List:{i64};
     l.push(1); l.push(2);
 
-    while (l.length() > 0u64) { l.pop(); }
-    builtin_output_u64(l.length()); # 0
+    while (l.length() > 0i64) { l.pop(); }
+    builtin_output_i64(l.length()); # 0
 
     l.push(555);
     builtin_output_i64(l.at(0)); # 555
