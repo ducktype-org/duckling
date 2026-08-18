@@ -247,9 +247,7 @@ private:
 			auto original_name = helios::mangler::getSimpleMangledName(
 				ctx, repl::getVariableSymID(ctx, variable_info.variable_stmt)
 			);
-			ASSERT_EQUAL(
-				std::string(variable_name.strView()), std::string(original_name.strView())
-			);
+			ASSERT_EQUAL(std::string(variable_name.strView()), std::string(original_name.strView()));
 		});
 	}
 

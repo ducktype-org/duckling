@@ -34,6 +34,9 @@ namespace compiler::repl {
 	);
 
 
+	/**
+	 * @brief Helpr to get the SymID of a global variable given the PST element.
+	 */
 	helios::SymID getVariableSymID(query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt);
 
 	// ========================== Helios Symbols Factories ==========================

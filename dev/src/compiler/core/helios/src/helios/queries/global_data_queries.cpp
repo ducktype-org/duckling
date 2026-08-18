@@ -20,8 +20,8 @@ namespace compiler::helios {
 			auto symbol_kind = kind(symbol);
 
 			// The empty storage of a REPL global variable shares everything with the variable it
-			// stands for, except for the initial value: it is constructed by a separate
-			// initializer function instead, so that the construction runs in statement order.
+			// stands for, except for the initial value. It shares the same symbol as for the
+			// original variable, to have the same mangling.
 			if (auto empty_variable
 			    = std::get_if<defgen::ReplEmptyVariable>(&getSymRef(symbol)->other)) {
 				const auto& original

@@ -214,10 +214,10 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated function wrapper for REPL expressions.
-	 * This is used to wrap single REPL expressions in a synthetic function.
+	 * Represents a compiler-generated function wrapper for REPL expressions,
+	 * instructions and global initializers. It's a synthetic function wrapper around them.
 	 *
-	 * @warning counter must never be reused with a different return_type.
+	 * @warning counter must never be reused with a different return_type and type.
 	 * The mangled name is based only on counter, so reusing counter with different return_type
 	 * will produce linker symbol collisions. The REPL code path (ReplSession::executeInput)
 	 * enforces this by incrementing m_line_counter per statement, but any manual wrapper

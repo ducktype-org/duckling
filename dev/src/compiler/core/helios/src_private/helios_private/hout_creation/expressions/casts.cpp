@@ -163,7 +163,7 @@ namespace compiler::helios::code {
 				break;
 			}
 		}
-		// Temporarily allow casts from CPointer to Pointer and ManyPointer, with a warning.
+		// Temporarily allow casts from CPointer to Pointer and ManyPointer.
 		if (found_match && from.getRefKind() == ReferenceKind::Direct
 		    && from.getType().getKind() == tsh::Kind::CPointer) {
 			// I do not like this syntax "as" to work on some targets and not work on

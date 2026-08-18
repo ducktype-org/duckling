@@ -707,7 +707,10 @@ namespace compiler::repl {
 			[&](query::Context& ctx) {
 				CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
 				auto hout_unit_opt = makeExecutableHOUTUnit(ctx, expr_wrapper.value());
-				if (!hout_unit_opt.has_value()) error_message = hout_unit_opt.error();
+				if (!hout_unit_opt.has_value()) {
+					error_message = hout_unit_opt.error();
+					return;
+				}
 				hout_unit = std::move(hout_unit_opt).value();
 			},
 			error_message
@@ -802,7 +805,10 @@ namespace compiler::repl {
 			[&](query::Context& ctx) {
 				CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
 				auto hout_unit_opt = makeExecutableHOUTUnit(ctx, instr_wrapper.value());
-				if (!hout_unit_opt.has_value()) error_message = hout_unit_opt.error();
+				if (!hout_unit_opt.has_value()) {
+					error_message = hout_unit_opt.error();
+					return;
+				}
 				hout_unit = std::move(hout_unit_opt).value();
 			},
 			error_message

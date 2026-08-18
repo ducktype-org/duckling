@@ -56,7 +56,7 @@ namespace compiler::repl {
 		hout_unit.functions.emplace_back(&wrapper_function);
 		if_opt_some(additional_global_var, var) { hout_unit.glob_data.emplace_back(var); }
 		auto result = helios::collectReplicatedSymbols(ctx, hout_unit);
-		if (result.isBad()) return std::unexpected("Failed");
+		if (result.isBad()) return std::unexpected("Failed to collect replicated symbols.");
 		return hout_unit;
 	}
 
