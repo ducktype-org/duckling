@@ -91,7 +91,7 @@ private:
 				= helios::mangler::getSimpleMangledName(ctx, wrapper.declaration->original_symbol);
 			auto mangled_str = std::string(mangled.strView());
 			assertTrue(
-				mangled_str.find("__repl_expr_wrapper_17") != std::string::npos,
+				mangled_str.find("__repl_input_wrapper_17") != std::string::npos,
 				"Mangled name should include instruction-wrapper counter"
 			);
 		});
@@ -119,11 +119,11 @@ private:
 				mangled_a != mangled_b, "Different counters should produce different symbols"
 			);
 			assertTrue(
-				std::string(mangled_a).find("__repl_expr_wrapper_21") != std::string::npos,
+				std::string(mangled_a).find("__repl_input_wrapper_21") != std::string::npos,
 				"First wrapper mangled name should include its counter"
 			);
 			assertTrue(
-				std::string(mangled_b).find("__repl_expr_wrapper_22") != std::string::npos,
+				std::string(mangled_b).find("__repl_input_wrapper_22") != std::string::npos,
 				"Second wrapper mangled name should include its counter"
 			);
 		});

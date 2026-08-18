@@ -126,6 +126,13 @@ namespace compiler::repl {
 	std::expected<StatementWrapperBuildResult, std::string> buildStatementWrapper(
 		query::Context& ctx, const SingleStatementInfo& statement_info, u64 counter
 	) {
+		if (not v_matches(
+				statement_info,
+				repl::ExpressionSingleStatementInfo,
+				repl::InstructionSingleStatementInfo
+			))
+			return std::unexpected("Definitions do not have executable wrappers.");
+
 		auto symbol_result = [&] -> query::QResult<helios::SymID> {
 			variant_match(statement_info) {
 				variant_case(repl::ExpressionSingleStatementInfo, val) {

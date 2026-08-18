@@ -570,7 +570,7 @@ namespace compiler::helios::mangler {
 						CORE_UNREACHABLE();
 					}
 					variant_case(defgen::ReplInputWrapper, repl_wrapper) {
-						return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
+						return base::strConcat("__repl_input_wrapper_", repl_wrapper.counter);
 					}
 					// Other cases of generated symbols cannot be functions.
 				}

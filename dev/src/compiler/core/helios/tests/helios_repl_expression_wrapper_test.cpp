@@ -120,11 +120,11 @@ private:
 
 			assertTrue(mangled_a != mangled_b, "Different counters should produce different names");
 			assertTrue(
-				std::string(mangled_a).find("__repl_expr_wrapper_101") != std::string::npos,
+				std::string(mangled_a).find("__repl_input_wrapper_101") != std::string::npos,
 				"First mangled name should include its counter"
 			);
 			assertTrue(
-				std::string(mangled_b).find("__repl_expr_wrapper_102") != std::string::npos,
+				std::string(mangled_b).find("__repl_input_wrapper_102") != std::string::npos,
 				"Second mangled name should include its counter"
 			);
 		});
