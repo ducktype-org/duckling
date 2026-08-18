@@ -130,13 +130,13 @@ namespace compiler::repl {
 		// The wrappers are told apart by their ReplInputWrapper data, the name only has to be
 		// stable, so that the symbol can be looked up again from the data alone.
 		return ctx.query<helios::defgen::QueryGeneratedSymbol>({
-			.name = base::StrID("__repl_input_wrapper__"),
-			.generated_symbol_data = helios::defgen::ReplInputWrapper{
-				.type             = helios::defgen::ReplInputWrapper::Type::Expression,
-				.counter          = counter,
-				.return_type      = return_type,
-				.pst_element_hash = unlocked->getHash(),
-			},
+			.name                  = base::StrID("__repl_input_wrapper__"),
+			.generated_symbol_data = helios::defgen::ReplInputWrapper(
+				helios::defgen::ReplInputWrapper::Type::Expression,
+				counter,
+				return_type,
+				unlocked->getHash()
+			),
 		});
 	}
 
@@ -148,13 +148,13 @@ namespace compiler::repl {
 		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, u64 counter
 	) {
 		return ctx.query<helios::defgen::QueryGeneratedSymbol>({
-			.name = base::StrID("__repl_input_wrapper__"),
-			.generated_symbol_data = helios::defgen::ReplInputWrapper{
-				.type             = helios::defgen::ReplInputWrapper::Type::Instruction,
-				.counter          = counter,
-				.return_type      = tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
-				.pst_element_hash = stmt.unlock(ctx)->getHash(),
-			},
+			.name                  = base::StrID("__repl_input_wrapper__"),
+			.generated_symbol_data = helios::defgen::ReplInputWrapper(
+				helios::defgen::ReplInputWrapper::Type::Instruction,
+				counter,
+				tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
+				stmt.unlock(ctx)->getHash()
+			),
 		});
 	}
 
@@ -162,13 +162,13 @@ namespace compiler::repl {
 		query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt, u64 counter
 	) {
 		return ctx.query<helios::defgen::QueryGeneratedSymbol>({
-			.name = base::StrID("__repl_input_wrapper__"),
-			.generated_symbol_data = helios::defgen::ReplInputWrapper{
-				.type             = helios::defgen::ReplInputWrapper::Type::GlobalInitializer,
-				.counter          = counter,
-				.return_type      = tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
-				.pst_element_hash = var_stmt.unlock(ctx)->getHash(),
-			},
+			.name                  = base::StrID("__repl_input_wrapper__"),
+			.generated_symbol_data = helios::defgen::ReplInputWrapper(
+				helios::defgen::ReplInputWrapper::Type::GlobalInitializer,
+				counter,
+				tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
+				var_stmt.unlock(ctx)->getHash()
+			),
 		});
 	}
 

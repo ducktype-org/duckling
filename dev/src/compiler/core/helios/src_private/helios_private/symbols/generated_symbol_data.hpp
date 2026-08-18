@@ -246,6 +246,13 @@ namespace compiler::helios::defgen {
 		 */
 		pst::HashType pst_element_hash;
 
+		ReplInputWrapper(
+			Type type, u64 counter, tsh::SymbolType<> return_type, pst::HashType pst_element_hash
+		):
+			  type(type),
+			  counter(counter),
+			  return_type(return_type),
+			  pst_element_hash(pst_element_hash) {}
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
