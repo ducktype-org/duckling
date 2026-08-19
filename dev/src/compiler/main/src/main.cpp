@@ -17,6 +17,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
@@ -46,6 +47,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <cstdio>
 #include <iostream>
 #include <ranges>
@@ -525,10 +527,22 @@ clah::Clah getClahForMain() {
 				.add(debug_options::getClahDebugParameters())
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)
+				.add(getClahLinkingOptions())
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
 	                     .addShortName('n')
 	                     .addLongName("name")
 	                     .addShortDesc("Name of the package the first given module belongs to.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("output-file-name"))
+	                     .addShortName('o')
+	                     .addLongName("output-file-name")
+	                     .addShortDesc("Output artifact file name of the first given module.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("archiver"))
+	                     .addLongName("archiver")
+	                     .addShortDesc("Path to the archiver executable.")
 	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
@@ -588,8 +602,15 @@ clah::Clah getClahForMain() {
 							);
 						}
 
-					auto init_result = compiler::driver::initializeTheCompiler(
-						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+					// Package ids of the modules given in the command line, in the same order.
+					std::vector<base::StrID> package_ids;
+					package_ids.reserve(packages_info.size());
+					for (const auto& package_info: packages_info)
+						package_ids.push_back(package_info.package_id);
+
+					auto stdlib_options = getStdLibOptionsFromClah(options);
+					auto init_result    = compiler::driver::initializeTheCompiler(
+                        compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info         = std::move(packages_info),
 							.compilation_artifacts = {
 								.artifacts_path = fs::FilePath("./duck_build/"),
@@ -600,9 +621,9 @@ clah::Clah getClahForMain() {
 							.execution_options = {
 								.worker_count = 1,
 							},
-							.stdlib_options = getStdLibOptionsFromClah(options),
-						}
-					);
+							.stdlib_options = stdlib_options,
+                        }
+                    );
 
 					if (init_result.status().isBad()) {
 						compiler::driver::exit();
@@ -612,18 +633,109 @@ clah::Clah getClahForMain() {
 					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
 
-					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
-		                                                              : driver::BackendType::LLVM;
+					// For now we always compile the standard library on demand,
+		            // note that it will be always cached.
+					auto std_compilation_result = compiler::driver::compilePackages(
+						compiler::driver::getRequiredStdLibCompilationTasks()
+					);
+					if (std_compilation_result.isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					const bool dvm_backend = options.isFlag("dvm-backend");
+
+					// Every module but the first one is built into a library, which is then linked
+		            // into the artifact of the first module. The first module is the last task, so
+		            // that all the libraries it links are already built.
+					std::vector<driver::PackageCompilationTask> compilation_tasks;
+					base::Optional<frontend::ModuleID>          main_root_module;
+					std::string                                 libraries_to_link;
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
 					for (const auto& package: global_state::getPackages()) {
-						auto root = package.getRootModule().illegalAccess().getID();
-						query::entryPoint<driver::CompileModule>({ root, backend_type, false });
+						auto package_id = package.getPackageID();
+						// Skip the packages that were not given in the command line, like the
+			            // standard library ones.
+						if (std::ranges::find(package_ids, package_id) == package_ids.end())
+							continue;
+
+						auto root_module = package.getRootModule().illegalAccess().getID();
+						if (package_id == package_ids.front()) {
+							main_root_module = root_module;
+							continue;
+						}
+
+						auto library_name = base::StrID(
+							base::strConcat(package_id.strView(), dvm_backend ? ".dbc" : ".a")
+						);
+						if (dvm_backend) {
+							compilation_tasks.push_back(driver::PackageCompilationTask{
+								.root_module  = root_module,
+								.build_target = driver::BuildTargetDVMLibrary{
+									.output_file_name = library_name,
+									.runtime_config   = driver::constructDVMRuntimeConfig(
+										getLinkingOptionsFromClah(options)
+									),
+								},
+							});
+						} else {
+							compilation_tasks.push_back(driver::PackageCompilationTask{
+								.root_module  = root_module,
+								.build_target = driver::BuildTargetLLVMStaticLibrary{
+									.output_file_name  = library_name,
+									.archiving_options = getArchivingOptionsFromClah(options),
+								},
+							});
+							libraries_to_link += base::strConcat(
+								" ",
+								global_state::getRootCollection()
+									->fileArtifactAtOrNew(library_name)
+									.file.getFilePath()
+									.native()
+							);
+						}
 					}
+
+					CORE_ASSERT(main_root_module.has_value(), "First package is not registered");
+
+					if (dvm_backend) {
+						auto output_file_name = options.getValue<std::string>("output-file-name")
+			                                        .copyValueOr("package_dvm.dbc");
+						compilation_tasks.push_back(driver::PackageCompilationTask{
+							.root_module  = main_root_module.value(),
+							.build_target = driver::BuildTargetDVMExecutable{
+								.output_file_name  = base::StrID(output_file_name),
+								.link_std_packages = stdlib_options.stdActive(),
+								.runtime_config    = driver::constructDVMRuntimeConfig(
+									getLinkingOptionsFromClah(options)
+								),
+							},
+						});
+					} else {
+						auto output_file_name = options.getValue<std::string>("output-file-name")
+			                                        .copyValueOr("package_llvm.exe");
+						auto linking_options = getLinkingOptionsFromClah(options);
+						linking_options.native_additional_link_options = base::strConcat(
+							linking_options.native_additional_link_options.copyValueOr(""),
+							libraries_to_link
+						);
+						compilation_tasks.push_back(driver::PackageCompilationTask{
+							.root_module  = main_root_module.value(),
+							.build_target = driver::BuildTargetLLVMExecutable{
+								.output_file_name = base::StrID(output_file_name),
+								.linking_options  = driver::constructNativeLinkerOptions(
+									linking_options, stdlib_options
+								),
+							},
+						});
+					}
+
+					base::OkBad result = driver::compilePackages(compilation_tasks);
 
 					compiler::driver::exit();
 
-					return 0;
+					return result.isOk() ? 0 : 1;
 				})
 		)
 	    .addSubcommand(
