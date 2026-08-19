@@ -198,6 +198,7 @@ namespace lang_def {
 			{ Keyword::BCIsConstant, "is_constant", KeywordFlags() },
 			{ Keyword::BCInitialValue, "initial_value", KeywordFlags() },
 			{ Keyword::BCFrameSpecifier, "frame", KeywordFlags() },
+			{ Keyword::BCVMValueIdentifier, "$", KeywordFlags() },
 			{ Keyword::BCPacked, "packed", KeywordFlags() },
 			{ Keyword::BCCPointer, "cpointer", KeywordFlags() },
 		});

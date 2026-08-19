@@ -155,6 +155,12 @@ namespace vm::loader::compiler::safe {
 				label_id_map.put(opcode_arg.label_name, label_id_map.size());
 			return label_id_map.at(opcode_arg.label_name);
 		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::VMValPtr,
+			opargs::VMValueIdentifier,
+			return std::bit_cast<u64>((**stack_ctx.thread_evaluating_expr).getVMValue(opcode_arg.id).get());
+		);
 		// clang-format on
 
 #undef DEFINE_LOWER_ARGUMENT_IMPL

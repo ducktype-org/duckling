@@ -347,6 +347,12 @@ namespace vm::loader::parser {
 			return field;
 		}
 
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::VMValueIdentifier {
+			state.parse().one(lang_def::Keyword::BCVMValueIdentifier);
+			return parseNumericLiteral<u64>(state).first;
+		}
+
 #define HANDLE_STR_ARG(TYPE)                                     \
 	template<>                                                   \
 	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {    \

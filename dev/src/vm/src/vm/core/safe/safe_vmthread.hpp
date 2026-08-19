@@ -13,8 +13,8 @@
 #include <vm/core/safe/memory/thread_stack.hpp>
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
-#include <vm/loader/bytecode_pos.hpp>
 #include <vm/core/vmvalue/ivmvalue.hpp>
+#include <vm/loader/bytecode_pos.hpp>
 
 #include <limits>
 
@@ -259,6 +259,10 @@ namespace vm {
 		base::Optional<std::vector<Ref<SafeVMValue>>> loadAndExecRuntimeExpr(
 			code::valid_function::ValidFunction&& expr
 		);
+
+		Ref<SafeVMValue> getVMValue(u64 id) const;
+
+		bool isValidVMValueID(u64 id) const;
 
 		RuntimeData getRuntimeData() const { return runtime_data; }
 

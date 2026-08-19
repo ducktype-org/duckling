@@ -50,6 +50,20 @@ namespace vm::opargs {
 		}
 	};
 
+	struct VMValueIdentifier final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "vm_val";
+
+		VMValueIdentifier() = default;
+
+		VMValueIdentifier(const u64 id): id(id) {}
+
+		u64 id = 0;
+
+		constexpr bool operator==(const VMValueIdentifier& other) const noexcept {
+			return id == other.id;
+		}
+	};
+
 	DEFINE_PLACE(8, "p8");
 	DEFINE_PLACE(16, "p16");
 	DEFINE_PLACE(32, "p32");
@@ -213,6 +227,7 @@ namespace vm::opargs {
 	using OpCodeArg = std::variant<
 		VM_OPARG_PLACE_TYPES,
 		Immediate,
+		VMValueIdentifier,
 		Type,
 		Field,
 		FunctionName,

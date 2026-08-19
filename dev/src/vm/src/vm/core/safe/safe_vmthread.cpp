@@ -738,6 +738,14 @@ namespace vm {
 		return u64(frame->local_block_ref_stack_end - runtime_data.block_ref_stack_base);
 	}
 
+	Ref<SafeVMValue> SafeVMThread::getVMValue(u64 id) const {
+		return safe_process.accessVMValue(id);
+	}
+
+	bool SafeVMThread::isValidVMValueID(u64 id) const {
+		return id < safe_process.numberOfOwnedVMValues();
+	}
+
 	const Frame& SafeVMThread::getStackFrame(u64 frame_index) const {
 		return runtime_data.frame_stack_base[frame_index];
 	}

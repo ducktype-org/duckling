@@ -44,6 +44,7 @@ namespace vm {
 		std::vector<byte>  data;        /// data.size() == type.getSize()
 		Ref<SafeVMProcess> my_process;  /// The process for which the SafeVMValue exists.
 		Ref<Memory>        memory;
+		u64                id;
 
 	public:
 		SafeVMValue(const SafeVMValue&)            = delete;
@@ -84,6 +85,8 @@ namespace vm {
 		[[nodiscard]] base::Optional<InterpretedDataVariant> readData() const override;
 
 		[[nodiscard]] PID getPID() const override;
+
+		[[nodiscard]] u64 getValueID() const;
 
 		/// Safe VM runtime type metadata of the stored value.
 		TypeCRef type;

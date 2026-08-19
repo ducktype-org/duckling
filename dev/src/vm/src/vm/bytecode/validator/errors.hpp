@@ -508,6 +508,8 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitialized.");
 	DEFINE_INSTRUCTION_ERROR(CastSizeMismatchError, "Cannot cast to type of different size.");
 	DEFINE_ARGUMENT_ERROR(UnknownTypeError, "Unknown type: ");
+	DEFINE_ARGUMENT_ERROR(UnknownTypeOfVMValueError, "Unknown type for VM value: ");
+	DEFINE_ARGUMENT_ERROR(InvalidVMValueIDError, "Given id for vm value isn't valid: ");
 	DEFINE_ARGUMENT_ERROR(UnknownLocalNameError, "Unknown local name: ");
 	DEFINE_ARGUMENT_ERROR(DuplicatedLocalNameError, "Duplicated local name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownLabelError, "Unknown label: ");

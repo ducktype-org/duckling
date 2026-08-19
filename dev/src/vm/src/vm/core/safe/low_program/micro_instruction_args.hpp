@@ -112,6 +112,8 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(MethodName, "method", vm::opargs::MethodName);
 	/** @brief Stores relative instruction jump offset after label linking. */
 	DEFINE_MICRO_ARG_TYPE(Label, "label", vm::opargs::Label);
+	/** @brief Stores relative instruction jump offset after label linking. */
+	DEFINE_MICRO_ARG_TYPE(VMValPtr, "vm_val_ptr", vm::opargs::VMValueIdentifier);
 
 	/**
 	 * @brief Storage class for any kind of micro instruction argument.
@@ -120,6 +122,7 @@ namespace vm::low::opargs {
 		VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES,
 		VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES,
 		Immediate,
+		VMValPtr,
 		Type,
 		Field,
 		FunctionID,

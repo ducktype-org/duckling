@@ -19,6 +19,7 @@
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/builtin_functions.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <ranges>
@@ -630,6 +631,15 @@ class FunctionValidator {
 						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::FixedSizeTable>())
 						throw InvalidArgumentTypeError(*place);
+				}
+
+				variant_case(CRef<opargs::VMValueIdentifier>, vm_val) {
+					auto& thr = *thread;
+
+					if (!thr->isValidVMValueID(vm_val->id)) throw InvalidVMValueIDError(*vm_val);
+					CRef<valid_type::ValidType> type = thr->getVMValue(vm_val->id)->getType();
+					if (!types_ctx.contains(type->getName()))
+						throw UnknownTypeOfVMValueError(*vm_val);
 				}
 
 				// All possible opargs must be handled. Unhandled opargs panic.
@@ -1760,6 +1770,8 @@ class FunctionValidator {
 		auto& instructions = function.body;
 
 		while (index != function.body.size()) {
+			validateIllegalInstructions(instructions[index]);
+
 			validateArgTypes(instructions[index], local_stack);
 
 			validateArgTypesNonTrivially(instructions[index], local_stack);
@@ -1770,6 +1782,13 @@ class FunctionValidator {
 					// it is needed to properly lower the name of the variable for the compilation
 					local_stack.push(instr.var, instr.type);
 					stack_before_instr[index] = local_stack.getStateID();
+					index++;
+				}
+				instr_case(Op_initFromVMValue, instr) {
+					stack_before_instr[index] = local_stack.getStateID();
+					auto& thr                 = **thread;
+					auto  name = thr.getVMValue(instr.vm_val.id)->getType()->getName();
+					local_stack.push(instr.var, opargs::Type(name));
 					index++;
 				}
 				instr_case(Op_deinit, instr) {
@@ -1875,12 +1894,10 @@ class FunctionValidator {
 	}
 
 	template<OpCode... ops>
-	void throwOnForbiddenOpcodes(const std::vector<Instruction>& body) {
+	void throwOnForbiddenOpcode(const Instruction& instr) {
 		constexpr std::array FORBIDDEN = { ops... };
 
-		for (auto instr: body)
-			if (std::ranges::contains(FORBIDDEN, instr.opcode()))
-				throw ForbiddenOpcodePresent(instr);
+		if (std::ranges::contains(FORBIDDEN, instr.opcode())) throw ForbiddenOpcodePresent(instr);
 	}
 
 	void validateSignature() {
@@ -1922,13 +1939,13 @@ class FunctionValidator {
 			throw EvaluatingExprOnRunningThreadError();
 	}
 
-	void validateIllegalInstructions(const std::vector<Instruction>& body) {
+	void validateIllegalInstructions(const Instruction& instr) {
 		bool is_expr = thread.has_value();
 
 		if (is_expr)
-			throwOnForbiddenOpcodes<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(body);
+			throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(instr);
 		else
-			throwOnForbiddenOpcodes<OpCode::Op_ret_from_expr, OpCode::Op_initFromVMValue>(body);
+			throwOnForbiddenOpcode<OpCode::Op_ret_from_expr, OpCode::Op_initFromVMValue>(instr);
 	}
 
 public:
@@ -1957,7 +1974,6 @@ public:
 		LocalStackDb db = traverseControlFlowGraph();
 		validateFunctionEnd();
 		auto [body, stack_states] = getBody();
-		validateIllegalInstructions(body);
 
 		return { body, stack_states, db };
 	}

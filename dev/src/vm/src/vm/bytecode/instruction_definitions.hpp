@@ -702,7 +702,7 @@ DEF_INSTR(exit)
  * @arg0 - pointer to a VMValue.
  * @arg1 - n/a.
  */
-DEF_INSTR(initFromVMValue, (vm::opargs::Immediate, ptr))
+DEF_INSTR(initFromVMValue, (vm::opargs::PlaceAny, var), (vm::opargs::VMValueIdentifier, vm_val))
 
 #ifdef DEFAULT_HANDLE_INSTR
 #undef DEFAULT_HANDLE_INSTR

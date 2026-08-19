@@ -29,6 +29,8 @@ namespace vm::code {
 	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_PLACE_TYPES);
 #undef LOCAL_TO_STRING
 
+	std::string toString(opargs::VMValueIdentifier arg) { return base::strConcat("$", arg.id); }
+
 	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
 	std::string toString(opargs::Field arg) {

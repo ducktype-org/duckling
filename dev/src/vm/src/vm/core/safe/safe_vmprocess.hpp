@@ -186,6 +186,10 @@ namespace vm {
 
 		Box<IVMValue> createOwnedVMValue(code::valid_type::ValidTypeID type_id) override;
 
+		u64 numberOfOwnedVMValues() const;
+
+		Ref<SafeVMValue> accessVMValue(u64 id);
+
 		/**
 		 * @brief Creates an empty, process-owned SafeVMValue from safe type metadata.
 		 * Safe-VM-internal counterpart of the interface factory.
