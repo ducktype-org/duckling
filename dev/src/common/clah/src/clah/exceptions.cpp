@@ -106,8 +106,11 @@ namespace clah::exceptions {
 	FileDoesNotExist::FileDoesNotExist(const std::filesystem::path& path):
 		  ClahException("File at \"" + absolute(path).string() + "\" does not exist.") {}
 
-	NotARegularFile::NotARegularFile(const std::filesystem::path& path):
-		  ClahException("Path at \"" + absolute(path).string() + "\" is not a regular file.") {}
+	NotARegularFile::NotARegularFile(const std::filesystem::path& path, bool directory_accepted):
+		  ClahException(
+			  "Path at \"" + absolute(path).string() + "\" is not a regular file"
+			  + (directory_accepted ? " nor a directory." : ".")
+		  ) {}
 
 	NoDefaultValueParser::NoDefaultValueParser(u64 at, std::string_view values):
 		  ClahException(base::strConcat(
