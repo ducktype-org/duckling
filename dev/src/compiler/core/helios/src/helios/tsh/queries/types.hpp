@@ -132,17 +132,6 @@ namespace compiler::tsh {
 	 */
 	DECLARE_QUERY(QuerySliceType, SymbolType<>, SliceAbstractType, ({ .uses_qresult = false }))
 
-
-	/**
-	 * @brief Query to get the DynamicArray type.
-	 * The AbstractType of the elements of the array is given as a key.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(
-		QueryDynamicArrayType, SymbolType<>, DynamicArrayAbstractType, ({ .uses_qresult = false })
-	)
-
 	/**
 	 * @brief Key for QueryStaticArrayType.
 	 */
@@ -317,8 +306,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher{};
-			addToHash(hasher, source.index());
-			VISIT(source, value, addToHash(hasher, value));
+			addToHash(hasher, source);
 			return hasher.finalize();
 		}
 	};

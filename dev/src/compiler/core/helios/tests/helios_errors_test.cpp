@@ -694,12 +694,15 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
+				template(T: type)
+				class L { v: T; }
+
 				fun main() = {
-					var l: List;
-					l[0] = 123;
+					var l: L;
+					l.v = 123;
 				}
 			)",
-				{ "Type `List` cannot be default initialized" },
+				{ "cannot be converted to type `type`" },
 				1
 			);
 
@@ -740,37 +743,52 @@ private:
 				{ "Left side of assignment can't be immutable." },
 				1
 			);
+		}
 
+		// ============================ Variant errors ============================
+		{
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
-    				var dyn_const_arr: List[const i32];
-    				for (x in dyn_const_arr) { x = 2; }
+					var v: i32 | i32 = 1;
+					return 0i64;
 				}
 			)",
-				{ "Left side of assignment can't be immutable." },
+				{ "Variant type lists type `i32` more than once." },
+				1
+			);
+
+			// Alternatives are told apart by their underlying type alone, so differing only in
+			// the reference kind is a duplicate too.
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var v: i32 | ref i32 = 1;
+					return 0i64;
+				}
+			)",
+				{ "Variant type lists type `i32` more than once." },
 				1
 			);
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun main() -> i64 = {
-    				var dyn_arr: List[i32];
-    				for (x: const i32 in dyn_arr) { x = 2; }
+				class Holder {
+					p: box i32;
 				}
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
 
-			checkForErrorOnCompileModule(
-				R"(
 				fun main() -> i64 = {
-    				var dyn_arr: List[i32];
-					for (let x in dyn_arr) { x = 123; }
+					var v: Holder | f32 = Holder(new 1i32);
+					var r: i64 = match (v) {
+						case x : Holder = 1i64;
+						case _ = -1i64;
+					};
+					return 0i64;
 				}
 			)",
-				{ "Left side of assignment can't be immutable." },
+				{ "Alternative `Class Holder` cannot be bound by value because it is not "
+			      "trivially copyable. Bind it by reference instead: `case x : ref Class "
+			      "Holder`." },
 				1
 			);
 		}
@@ -831,20 +849,6 @@ private:
 				const ARR = NOT_A_TYPE[5];
 			)",
 				{ "Index operator base must be indexable." },
-				1
-			);
-		}
-
-		// ============================ Dynamic Arrays ============================
-		{
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
-					var l1: List[i64];
-					var l2: List[f64] = l1;
-				}
-			)",
-				{ "Type `List[i64]` cannot be converted to type `List[f64]`" },
 				1
 			);
 		}
@@ -956,30 +960,21 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
 				fun main() -> i64 = {
-					var a: List[i32];
+					var a: L;
 					var b = a;
 					return 0;
 				};
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
 				1
 			);
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun main() -> i64 = {
-					var dyn_matrix: List[List[i64]];
-					for (row in dyn_matrix) {} # `row` creates a copy.
-				}
-			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i64]`" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class U { list: List[i32]; }
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class U { list: L; }
 				class T { u: U; }
 
 				fun main() -> i64 = {
@@ -994,38 +989,41 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun foo(list: List[i32]) -> i32 = {
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				fun foo(list: L) -> i32 = {
 				    return 1;
 				}
 				fun main() -> i64 = {
-					var list: List[i32];
+					var list: L;
 				    foo(list);
 				    return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
 				1
 			);
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun foo(list: ref List[i32]) -> i32 = {
-				    var list_copy: List[i32] = list;
-				    return list[0];
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				fun foo(list: ref L) -> i32 = {
+				    var list_copy: L = list;
+				    return 0;
 				}
 				fun main() -> i64 = {
-				    var list: List[i32];
+				    var list: L;
 				    foo(&list);
 				    return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
 				1
 			);
 
 			checkForErrorOnCompileModule(
 				R"(
-				class U { list: List[i32]; }
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class U { list: L; }
 				class T { u: U }
 				fun main() -> i64 = {
 					var a: T;
@@ -1033,34 +1031,22 @@ private:
 					return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
 				1
 			);
 
 			checkForErrorOnCompileModule(
 				R"(
-				class U { list: List[i32]; }
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class U { list: L; }
 				class T { u: U }
 				fun main() -> i64 = {
-					var list: List[i32];
+					var list: L;
 					var a: T = T(U(&list));
 					return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-    				var nested: List[List[i32]];
-    				var inner: List[i32];
-    				nested.push(inner);    
-    				return 0;
-				}
-			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
 				1
 			);
 
@@ -1211,12 +1197,13 @@ private:
 
 	void testCopyabilityErrors() {
 		const std::string_view msg
-			= "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`";
+			= "Cannot implicitly copy a value of non-trivially-copyable type `Class L`";
 
 		checkForErrorOnCompileModule(
-			R"( fun main() -> i64 = {
-				var a: List[i32];
-				var b: List[i32] = a;
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var a: L;
+				var b: L = a;
 				return 0;
 			} )",
 			{ msg },
@@ -1224,8 +1211,9 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( fun main() -> i64 = {
-				var a: List[i32];
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var a: L;
 				var b = a;
 				return 0;
 			} )",
@@ -1234,10 +1222,11 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class H { l: List[i32]; }
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			class H { l: L; }
 			fun main() -> i64 = {
 				var h: H;
-				var b: List[i32] = h.l;
+				var b: L = h.l;
 				return 0;
 			} )",
 			{ msg },
@@ -1245,47 +1234,52 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( fun main() -> i64 = {
-				var arr: List[i32][2];
-				var b: List[i32] = arr[0];
-				return 0;
-			} )",
-			{ msg },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"( fun main() -> i64 = {
-				var a: List[i32];
-				var b: box List[i32] = new a;
-				return 0;
-			} )",
-			{ msg },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"( fun f(r: ref List[i32]) -> i32 = {
-				var b: List[i32] = r;
-				return 0;
-			})",
-			{ msg },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"( fun f(bl: box List[i32]) -> i32 = {
-				var x: List[i32] = bl;
-				return 0;
-			})",
-			{ msg },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"( fun foo(x: List[i32]) -> i32 = 0;
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
-				var a: List[i32];
+				var arr: L[2];
+				var b: L = arr[0];
+				return 0;
+			} )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var a: L;
+				var b: box L = new a;
+				return 0;
+			} )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun f(r: ref L) -> i32 = {
+				var b: L = r;
+				return 0;
+			})",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun f(bl: box L) -> i32 = {
+				var x: L = bl;
+				return 0;
+			})",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun foo(x: L) -> i32 = 0;
+			fun main() -> i64 = {
+				var a: L;
 				foo(a);
 				return 0;
 			} )",
@@ -1294,13 +1288,14 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( fun main() -> i64 = {
-				var t: (i32, List[i32]);
-				var b: (i32, List[i32]) = t;
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var t: (i32, L);
+				var b: (i32, L) = t;
 				return 0;
 			} )",
 			{ "Cannot implicitly copy a value of non-trivially-copyable type "
-		      "`Tuple(i32, List[i32])`" },
+		      "`Tuple(i32, Class L)`" },
 			1
 		);
 	}

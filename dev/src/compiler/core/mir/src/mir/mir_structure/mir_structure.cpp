@@ -56,6 +56,7 @@ namespace compiler::mir {
 		case Operation::ReturnValue:
 		case Operation::Jump:
 		case Operation::Branch:
+		case Operation::BranchIfNull:
 		case Operation::FunctionEnd:
 			return true;
 		default:
@@ -70,6 +71,7 @@ namespace compiler::mir {
 			return { terminator.arguments.at(0).get<BlockID>() };
 
 		case Branch:
+		case BranchIfNull:
 			return { terminator.arguments.at(1).get<BlockID>(),
 				     terminator.arguments.at(2).get<BlockID>() };
 
@@ -134,6 +136,10 @@ namespace compiler::mir {
 			variant_case(CastParameters, params) {
 				os << "from:" << params.source_type.toString()
 				   << ", to:" << params.target_type.toString();
+			}
+			variant_case(VariantParameters, params) {
+				os << "alt:" << params.alternative_index << " ("
+				   << params.alternative_type.toString() << ")";
 			}
 		}
 		os << "}";
@@ -244,8 +250,6 @@ namespace compiler::mir {
 
 		auto element_type = [&]() -> tsh::SymbolType<> {
 			switch (base_type.getKind()) {
-			case tsh::Kind::DynamicArray:
-				return base_type.as<tsh::DynamicArrayAbstractType>().getElementType();
 			case tsh::Kind::StaticArray:
 				return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 			case tsh::Kind::ManyPointer:

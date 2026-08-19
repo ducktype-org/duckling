@@ -21,7 +21,7 @@
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/square_call_processing.hpp>
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
@@ -559,7 +559,6 @@ namespace compiler::helios::code {
 		 * chain.
 		 * It is when we have keyword literal followed by a call expression. This currently includes:
 		 * - `i64[42]` - used for static array type creation.
-		 * - `List[i64]` - for dynamic array type creation.
 		 *
 		 * Note that `i64(42)` is no longer a type cast - the `as` operator (`42 as i64`) is the
 		 * only supported explicit conversion syntax.

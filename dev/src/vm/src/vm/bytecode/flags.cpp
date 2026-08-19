@@ -151,6 +151,7 @@ namespace vm::code {
 			FLAGS_W_R(mov_pste_pste)
 			FLAGS_W_R(mov_pfst_pfst)
 			FLAGS_W_R(mov_popq_popq)
+			FLAGS_W_R(mov_pvnt_pvnt)
 
 			// ===== Conditional moves: dst is read (kept conditionally) and written =====
 			FLAGS_RW_R(cmov_p8_p8)

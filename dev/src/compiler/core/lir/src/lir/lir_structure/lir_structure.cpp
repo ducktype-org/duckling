@@ -64,10 +64,14 @@ namespace compiler::lir {
 		                       ? LIRGlobalType::Constant
 		                       : LIRGlobalType::Variable;
 
+		const bool link_once = helios::emissionPolicy(ctx, mir_global.helios_id)
+		                    == helios::EmissionPolicy::Replicated;
+
 		return LIRGlobal{
 			type_layout,
 			mangled_name,
 			type,
+			link_once,
 		};
 	}
 
@@ -273,9 +277,9 @@ namespace compiler::lir {
 					output << "{ from:" << params.source_type.toString()
 						   << ", to:" << params.target_type.toString() << " }";
 				}
-				variant_case(ListOperationParameters, params) {
-					output << "{ element_layout:" << params.element_layout->toStringIdentification()
-						   << " }";
+				variant_case(VariantParameters, params) {
+					output << "{ alt:" << params.alternative_index << " ("
+						   << params.alternative_type.toString() << ") }";
 				}
 			}
 			output << " ";
@@ -438,16 +442,16 @@ namespace compiler::lir {
 			return global_data.global.mangled_name;
 		});
 
-		std::unordered_set<base::StrID> seen;
+		std::unordered_set<base::StrID> seen_on_dvm;
+		std::unordered_set<base::StrID> seen_on_llvm;
 		std::vector<CRef<Function>>     result_functions;
 		for (auto lir_func: lir_functions) {
-			if (seen.insert(lir_func->mangled_name).second)
-				result_functions.push_back(lir_func);
-			else if (lir_func->ignore_on_dvm or lir_func->ignore_on_llvm) {
-				// If we ignore it on some backend then we don't want to deduplicate
-				// it based on mangled name.
-				result_functions.push_back(lir_func);
-			}
+			const bool needed_on_dvm
+				= not lir_func->ignore_on_dvm and seen_on_dvm.insert(lir_func->mangled_name).second;
+			const bool needed_on_llvm = not lir_func->ignore_on_llvm
+			                        and seen_on_llvm.insert(lir_func->mangled_name).second;
+
+			if (needed_on_dvm or needed_on_llvm) result_functions.push_back(lir_func);
 		}
 		lir_functions = std::move(result_functions);
 	}
@@ -468,8 +472,6 @@ namespace compiler::lir {
 			return BuiltinFunctionKind::BoxAlloc;
 		case helios::BuiltinKind::BoxFree:
 			return BuiltinFunctionKind::BoxFree;
-		case helios::BuiltinKind::ListFree:
-			return BuiltinFunctionKind::ListFree;
 		default:
 			return {};
 		}
@@ -490,6 +492,7 @@ namespace compiler::lir {
 		case Operation::ReturnValue:
 		case Operation::Jump:
 		case Operation::Branch:
+		case Operation::BranchIfNull:
 			return true;
 		default:
 			return false;
