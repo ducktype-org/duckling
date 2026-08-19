@@ -21,8 +21,8 @@ namespace compiler::driver {
 #ifdef STD_FIXED_PATH
 			return { STD_FIXED_PATH };
 #else
-			#error "STD_FIXED_PATH is not defined. Please define it in the build system."
-			return os_utils::getExecutablePath().parentPath().join(fs::FilePath("lib/"));
+			// #error "STD_FIXED_PATH is not defined. Please define it in the build system."
+			return os_utils::getExecutablePath().parentPath().join(fs::FilePath("duck_lib/"));
 #endif
 		}
 	}

@@ -34,9 +34,9 @@ add_library(Driver
 	${BUILTINS_EMBEDS}
 )
 
-#if(USE_FIXED_STD_PATH)
+if(USE_FIXED_STD_PATH)
 	target_compile_definitions(Driver PRIVATE STD_FIXED_PATH="/duck_std_lib")
-#endif()
+endif()
 
 add_dependencies(Driver builtins_embeds)
 
