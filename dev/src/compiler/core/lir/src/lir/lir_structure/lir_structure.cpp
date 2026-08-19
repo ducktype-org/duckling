@@ -169,9 +169,9 @@ namespace compiler::lir {
 	/**
 	 * @brief This struct encapsulates the logic and shared state for printing LIR code.
 	 * This state is needed because the LIR lacks any kind of "ids" or names for locals, blocks, etc
-	 * The ids/names are given arbitrarily.
-	 *
-	 * @note It should be used only used in lir::Function::debugPrint method
+	 * When a function is provided, their printed IDs match the IDs assigned by that function.
+	 * Otherwise IDs are assigned in encounter order and are meaningful only within a single print
+	 * operation.
 	 */
 	struct LIRPrinter final {
 		query::Context& ctx;
@@ -180,10 +180,32 @@ namespace compiler::lir {
 		base::Map<LIRLocalRef, usize> local_id;
 		base::Map<BlockRef, usize>    block_id;
 
+		usize getLocalID(LIRLocalRef local) {
+			if (local_id.contains(local)) return local_id[local];
+
+			const usize id = local_id.size();
+			local_id.put(local, id);
+			return id;
+		}
+
+		usize getBlockID(BlockRef block) {
+			if (block_id.contains(block)) return block_id[block];
+
+			const usize id = block_id.size();
+			block_id.put(block, id);
+			return id;
+		}
+
 		LIRPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
 
+		LIRPrinter(query::Context& ctx, std::ostream& output, const Function& function):
+			  ctx(ctx),
+			  output(output),
+			  local_id(function.getLocalVariableIDs()),
+			  block_id(function.getBlockIDs()) {}
+
 		void printLocalDesc(LIRLocalRef local) {
-			output << "  Local(" << local_id[local] << ")";
+			output << "  Local(" << getLocalID(local) << ")";
 			if (local->helios_id.has_value())
 				output << ", helios_name: " << name(local->helios_id.value()).strView();
 			if (local->parameter_index.has_value())
@@ -197,8 +219,8 @@ namespace compiler::lir {
 		/**
 		 * @note Custom output, so we can align when printing instruction
 		 */
-		void printLocal(LIRLocalRef local, std::ostream& loc_output) const {
-			loc_output << "Local(" << local_id[local] << ")";
+		void printLocal(LIRLocalRef local, std::ostream& loc_output) {
+			loc_output << "Local(" << getLocalID(local) << ")";
 		}
 
 		void printGlobal(const LIRGlobal& global, std::ostream& loc_output) const {
@@ -211,33 +233,33 @@ namespace compiler::lir {
 					variant_case(LIRPlace::FieldProjection, field) {
 						loc_output << "." << name(field.field_id).strView();
 					}
+					variant_case(LIRPlace::IndexProjection, index) {
+						loc_output << "[";
+						printValue(*index.index, loc_output);
+						loc_output << "]";
+					}
 					variant_case_novalue(LIRPlace::DerefProjection) { loc_output << ".*"; }
 				}
 			}
 		}
 
-		void printOutput(const LIRPlace& output, std::ostream& loc_output) {
-			variant_match(output.base) {
+		void printPlace(const LIRPlace& place, std::ostream& loc_output) {
+			variant_match(place.base) {
 				variant_case(LIRLocalRef, local) { printLocal(local, loc_output); }
 				variant_case(LIRGlobal, global) { printGlobal(global, loc_output); }
 			}
-			printChain(output.projection_chain, loc_output);
+			printChain(place.projection_chain, loc_output);
 		}
 
-		void printValue(const LIRValue& location) {
-			variant_match(location.getVariant()) {
-				variant_case(LIRConstant, constant) { output << constant.value.toString(); }
-				variant_case(LIRPlace, place) {
-					variant_match(place.base) {
-						variant_case(LIRLocalRef, local) { printLocal(local, output); }
-						variant_case(LIRGlobal, global) { printGlobal(global, output); }
-					}
-
-					printChain(place.projection_chain, output);
+		void printValue(const LIRValue& value, std::ostream& loc_output) {
+			variant_match(value.getVariant()) {
+				variant_case(LIRConstant, constant) { loc_output << constant.value.toString(); }
+				variant_case(LIRPlace, place) { printPlace(place, loc_output); }
+				variant_case(BlockRef, block) {
+					loc_output << "Block(" << getBlockID(block) << ")";
 				}
-				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }
 				variant_case(FunctionLiteral, func) {
-					output << "Func(" << func.mangled_name.strView() << ")";
+					loc_output << "Func(" << func.mangled_name.strView() << ")";
 				}
 				variant_default { CORE_PANIC("Unhandled variant in printValue"); }
 			}
@@ -280,7 +302,7 @@ namespace compiler::lir {
 			output << std::left << std::setw(3);
 			std::stringstream output_value;
 			if (instruction.output.has_value()) {
-				printOutput(instruction.output.value(), output_value);
+				printPlace(instruction.output.value(), output_value);
 				output_value << " :=";
 			}
 			output << output_value.str() << ' ';
@@ -296,7 +318,7 @@ namespace compiler::lir {
 			for (const auto& arg: instruction.arguments) {
 				output << sep;
 				sep = ", ";
-				printValue(arg);
+				printValue(arg, output);
 			}
 
 			// restore flags
@@ -472,5 +494,33 @@ namespace compiler::lir {
 		default:
 			return false;
 		}
+	}
+
+	void LIRPlace::debugPrint(query::Context& ctx, std::ostream& output) const {
+		LIRPrinter{ ctx, output }.printPlace(*this, output);
+	}
+
+	void LIRPlace::debugPrint(query::Context& ctx, std::ostream& output, const Function& function)
+		const {
+		LIRPrinter{ ctx, output, function }.printPlace(*this, output);
+	}
+
+	void LIRValue::debugPrint(query::Context& ctx, std::ostream& output) const {
+		LIRPrinter{ ctx, output }.printValue(*this, output);
+	}
+
+	void LIRValue::debugPrint(query::Context& ctx, std::ostream& output, const Function& function)
+		const {
+		LIRPrinter{ ctx, output, function }.printValue(*this, output);
+	}
+
+	void Instruction::debugPrint(query::Context& ctx, std::ostream& output) const {
+		LIRPrinter{ ctx, output }.printInstruction(*this);
+	}
+
+	void Instruction::debugPrint(
+		query::Context& ctx, std::ostream& output, const Function& function
+	) const {
+		LIRPrinter{ ctx, output, function }.printInstruction(*this);
 	}
 }

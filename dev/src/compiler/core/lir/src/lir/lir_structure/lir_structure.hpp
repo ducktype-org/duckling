@@ -457,6 +457,16 @@ namespace compiler::lir {
 		bool hasProjections() const {
 			return !projection_chain.empty();
 		}
+
+		/**
+		 * Prints this place, assigning IDs to referenced locals in encounter order.
+		 */
+		void debugPrint(query::Context&, std::ostream&) const;
+
+		/**
+		 * Prints this place using local and block IDs from the function.
+		 */
+		void debugPrint(query::Context&, std::ostream&, const Function& function) const;
 	};
 
 	/**
@@ -518,6 +528,16 @@ namespace compiler::lir {
 		[[nodiscard]] bool is() const {
 			return std::holds_alternative<T>(value);
 		}
+
+		/**
+		 * Prints this value, assigning IDs to referenced locals and blocks in encounter order.
+		 */
+		void debugPrint(query::Context&, std::ostream&) const;
+
+		/**
+		 * Prints this value using local and block IDs from the function.
+		 */
+		void debugPrint(query::Context&, std::ostream&, const Function& function) const;
 	};
 
 	/**
@@ -624,6 +644,16 @@ namespace compiler::lir {
 		 * Whether the instruction can be the last instruction in the block (i.e. be a terminator).
 		 */
 		[[nodiscard]] bool isTerminating() const;
+
+		/**
+		 * Prints this instruction, assigning IDs to referenced locals and blocks in encounter order.
+		 */
+		void debugPrint(query::Context&, std::ostream&) const;
+
+		/**
+		 * Prints this instruction using local and block IDs from the function.
+		 */
+		void debugPrint(query::Context&, std::ostream&, const Function& function) const;
 	};
 
 	/**
