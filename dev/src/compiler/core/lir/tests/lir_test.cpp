@@ -50,6 +50,11 @@ public:
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 		TESTER_ADD_TEST(cVariadicAbiTest);
+		TESTER_ADD_TEST(debugPrintPlaceAndValue);
+		TESTER_ADD_TEST(debugPrintInstructionUsesConsistentLocalIDs);
+		TESTER_ADD_TEST(debugPrintBlockAndFunctionValues);
+		TESTER_ADD_TEST(debugPrintIndexProjection);
+		TESTER_ADD_TEST(debugPrintWithFunctionContext);
 	}
 
 protected:
@@ -136,13 +141,11 @@ private:
 				ASSERT_TRUE(not was_x);
 				ASSERT_EQUAL(local.parameter_index.value(), 0);
 				was_x = true;
-			} else if (local.helios_id.has_value()
-			           and helios::name(local.helios_id.value()) == "y") {
+			} else if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "y") {
 				ASSERT_TRUE(not was_y);
 				ASSERT_EQUAL(local.parameter_index.value(), 1);
 				was_y = true;
-			} else if (local.helios_id.has_value()
-			           and helios::name(local.helios_id.value()) == "z") {
+			} else if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "z") {
 				ASSERT_TRUE(not was_z);
 				ASSERT_EQUAL(local.parameter_index.value(), 2);
 				was_z = true;
@@ -481,8 +484,8 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto meta_type_entity = tsh::getMetaType();
 			auto meta_layout      = CRef<tsl::TypeLayout>(
-                &ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity)->valueOrThrow()
-            );
+				&ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity)->valueOrThrow()
+			);
 
 			auto assert_is_meta_local
 				= [&](const lir::LIRLocal& local) { ASSERT_EQUAL(*local.layout, *meta_layout); };
@@ -525,8 +528,7 @@ private:
 				for (const auto& instr: mega_type->block_order[0]->instructions)
 					if (instr.operation == MetaTypeOperation && meta_kind(instr) == MK::CreateTuple)
 						create_tuple_count++;
-					else if (instr.operation == MetaTypeOperation
-					         && meta_kind(instr) == MK::CreateVariant)
+					else if (instr.operation == MetaTypeOperation && meta_kind(instr) == MK::CreateVariant)
 						create_variant_count++;
 					else if (instr.operation == Call)
 						call_found = true;
@@ -639,6 +641,133 @@ private:
 					ctx.query<helios::QuerySymbolABI>(symbol)->hasFailed(),
 					base::strConcat("Expected the ABI query to fail for `", name, "`")
 				);
+		});
+	}
+
+	void debugPrintPlaceAndValue() {
+		auto module  = getLIROfModule(path("modules/simple"));
+		auto foo_lir = module.lirFunc("foo");
+
+		withContextDo([&](query::Context& ctx) {
+			lir::LIRPlace place{ foo_lir->local_list[0], {} };
+
+			std::stringstream place_output;
+			place.debugPrint(ctx, place_output);
+			ASSERT_EQUAL(std::string("Local(0)"), place_output.str());
+
+			std::stringstream value_output;
+			lir::LIRValue{ place }.debugPrint(ctx, value_output);
+			ASSERT_EQUAL(std::string("Local(0)"), value_output.str());
+		});
+	}
+
+	void debugPrintInstructionUsesConsistentLocalIDs() {
+		auto module  = getLIROfModule(path("modules/simple"));
+		auto foo_lir = module.lirFunc("foo");
+
+		withContextDo([&](query::Context& ctx) {
+			lir::LIRPlace    output{ foo_lir->local_list[0], {} };
+			lir::LIRPlace    first_argument{ foo_lir->local_list[1], {} };
+			lir::Instruction instruction{ lir::Operation::Assign,
+				                          output,
+				                          { lir::LIRValue{ first_argument },
+				                            lir::LIRValue{ output } },
+				                          {} };
+
+			std::stringstream instruction_output;
+			instruction.debugPrint(ctx, instruction_output);
+			const auto printed = instruction_output.str();
+
+			ASSERT_TRUE(printed.find("Local(0) :=") != std::string::npos);
+			ASSERT_TRUE(printed.find("Assign") != std::string::npos);
+			ASSERT_TRUE(printed.find("Local(1), Local(0)") != std::string::npos);
+		});
+	}
+
+	void debugPrintBlockAndFunctionValues() {
+		auto module  = getLIROfModule(path("modules/simple"));
+		auto foo_lir = module.lirFunc("foo");
+
+		withContextDo([&](query::Context& ctx) {
+			std::stringstream block_output;
+			lir::LIRValue{ foo_lir->block_order.at(0) }.debugPrint(ctx, block_output);
+			ASSERT_EQUAL(std::string("Block(0)"), block_output.str());
+
+			std::stringstream function_output;
+			lir::LIRValue{ lir::FunctionLiteral::fromFunction(*foo_lir) }.debugPrint(
+				ctx, function_output
+			);
+			ASSERT_TRUE(function_output.str().find("Func(") == 0);
+			ASSERT_TRUE(
+				function_output.str().find(foo_lir->mangled_name.strView()) != std::string::npos
+			);
+		});
+	}
+
+	void debugPrintIndexProjection() {
+		auto module  = getLIROfModule(path("modules/static_arrays"));
+		auto foo_lir = module.lirFunc("static_array_test");
+
+		withContextDo([&](query::Context& ctx) {
+			base::Optional<lir::LIRPlace> indexed_place;
+			for (const auto block: foo_lir->block_order) {
+				for (const auto& instruction: block->instructions) {
+					for (const auto& argument: instruction.arguments) {
+						if (!argument.is<lir::LIRPlace>()) continue;
+						const auto& place = argument.get<lir::LIRPlace>();
+						for (usize i = 0; i < place.projection_chain.size(); ++i) {
+							const auto& projection = place.projection_chain[i];
+							if (i == 0
+							    && std::holds_alternative<lir::LIRPlace::IndexProjection>(
+									projection.storage
+								)) {
+								lir::LIRPlace index{ foo_lir->local_list[0], {} };
+								indexed_place.emplace(place);
+								indexed_place->projection_chain.resize(i + 1);
+								indexed_place->projection_chain[i]
+									= lir::LIRPlace::Projection::index(lir::LIRValue{ index });
+							}
+						}
+					}
+				}
+			}
+
+			ASSERT_HAS_VALUE(indexed_place);
+			std::stringstream place_output;
+			indexed_place.value().debugPrint(ctx, place_output);
+			ASSERT_TRUE(place_output.str().find('[') != std::string::npos);
+			ASSERT_TRUE(place_output.str().find(']') != std::string::npos);
+		});
+	}
+
+	void debugPrintWithFunctionContext() {
+		auto module  = getLIROfModule(path("modules/simple"));
+		auto foo_lir = module.lirFunc("foo");
+
+		withContextDo([&](query::Context& ctx) {
+			// Standalone printing would assign Local(0) to this place because it is the first
+			// encountered local. Function context preserves its actual index in local_list.
+			lir::LIRPlace place{ foo_lir->local_list[1], {} };
+
+			std::stringstream place_output;
+			place.debugPrint(ctx, place_output, *foo_lir);
+			ASSERT_EQUAL(std::string("Local(1)"), place_output.str());
+
+			std::stringstream value_output;
+			lir::LIRValue{ place }.debugPrint(ctx, value_output, *foo_lir);
+			ASSERT_EQUAL(std::string("Local(1)"), value_output.str());
+
+			lir::Instruction  instruction{ lir::Operation::Assign,
+				                           place,
+				                           { lir::LIRValue{
+											   lir::LIRPlace{ foo_lir->local_list[0], {} } } },
+				                           {} };
+			std::stringstream instruction_output;
+			instruction.debugPrint(ctx, instruction_output, *foo_lir);
+			const auto printed = instruction_output.str();
+
+			ASSERT_TRUE(printed.find("Local(1) :=") != std::string::npos);
+			ASSERT_TRUE(printed.find("Local(0)") != std::string::npos);
 		});
 	}
 };
