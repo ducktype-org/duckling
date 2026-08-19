@@ -16,14 +16,11 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <encoding> ::= <path>                                       // variables and constants
              | <path> <function>                            // functions
-             | <repl-expression-wrapper>                    // REPL expressions
+             | <repl-input-wrapper>                         // REPL/script input statements
 
-// REPL expression wrappers use simplified mangling for now. @TODO: #1768 decide
-// if it's correct.
-<repl-expression-wrapper> ::= "__repl_expr_wrapper_" <base-10-number>
-
-// Same with REPL instruction wrappers.
-<repl-instruction-wrapper> ::= "__repl_instr_wrapper_" <base-10-number>
+// Wrappers of REPL/script input statements (expressions, instructions and global variable
+// initializers) use simplified mangling for now. @TODO: #1768 decide if it's correct.
+<repl-input-wrapper> ::= "__repl_input_wrapper_" <base-10-number>
 
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>

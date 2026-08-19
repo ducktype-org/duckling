@@ -423,16 +423,16 @@ namespace compiler::mir {
 			auto dest = function.addTmp(dest_type, expr_scope);
 			dest->lifetime_flags |= LifetimeFlag::NoMoveStatusValidation;
 
-			// The counter only ever goes from zero up to the size of the array, so it is unsigned.
+			// Container sizes and indices are signed, so the counter is too.
 			const auto counter_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
 			auto counter
 				= function.addTmp(tsh::SymbolType<>::withDefaults(counter_type), expr_scope);
 
 			auto counter_constant = [&](usize constant) {
 				return MIRValue{ MIRConstant{
 					ctv::CompileTimeValue{ ctv::NumericValue::createOfType(counter_type, constant)
-					                           .expect("u64 numeric value creation failed") } } };
+					                           .expect("i64 numeric value creation failed") } } };
 			};
 
 			auto cond_block = function.newBlock();

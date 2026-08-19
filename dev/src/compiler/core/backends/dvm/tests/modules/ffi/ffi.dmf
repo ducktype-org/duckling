@@ -118,7 +118,7 @@ fun cPointerRepointingTest() = {
     # `manyptr i32` -> `cptr Inner`: a many-pointer is a dynamic table handle, so it first has
     # to become the address of element 0, and only then change pointee. `Inner` is two i32s,
     # so it reads the first two elements of the table.
-    var table = dvm_alloc_arr:{i32}(2u64);
+    var table = dvm_alloc_arr:{i32}(2i64);
     table[0] = 6i32;
     table[1] = 7i32;
 

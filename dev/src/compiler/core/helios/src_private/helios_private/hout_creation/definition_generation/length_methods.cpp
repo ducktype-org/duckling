@@ -28,7 +28,7 @@ namespace compiler::helios::defgen {
 			const Shorthand s{ ctx };
 			return s.litNum(
 				numeric_value::NumericValue::createOfType(
-					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned),
+					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
 					static_array_type.getSize()
 				)
 					.value()  // This will always succeed.
