@@ -3,6 +3,8 @@ PreCase: |+
   @{duck-exe} init foo
   @{duck-exe} init a
 
+PostCase: python3 check.py && @{cleanup_tmp_env}
+
 Tests:
   features:
     Cases:
