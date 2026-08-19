@@ -289,8 +289,8 @@ private:
 	}
 
 	/**
-	 * @brief The conditional destruction of @p var_name, which is the `DestructIf` reading its
-	 * lifetime flag.
+	 * @brief Finds in @p func the single conditional destruction of the local named @p var_name,
+	 * which is the `DestructIf` reading the lifetime flag of that local.
 	 */
 	const compiler::mir::Instruction* conditionalDropOf(
 		CRef<compiler::mir::Function> func, std::string_view var_name
@@ -380,11 +380,13 @@ private:
 			ASSERT_EQUAL_PRINT(
 				std::string("TF"), lifetimeFlagWrites(param, param_flag.getBase<MIRLocalRef>())
 			);
-
+		}
+		{
 			// A local that is never destructed conditionally doesn't have a lifetime flag.
 			auto no_move = getMIRFunctionByName(module, "noMove");
-			for (const auto& local: no_move->local_list)
-				ASSERT_TRUE(local.type.getType().getKind() != compiler::tsh::Kind::Bool);
+			for (const auto* instr: allInstructions(no_move))
+				ASSERT_TRUE(instr->operation != Operation::DestructIf);
+			ASSERT_EQUAL_PRINT(no_move->next_local_id, static_cast<u64>(no_move->local_list.size()));
 		}
 	}
 

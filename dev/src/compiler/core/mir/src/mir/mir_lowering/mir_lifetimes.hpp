@@ -93,7 +93,7 @@ namespace compiler::mir {
 	 * flag to create appropriate conditional destructor calls.
 	 * - locals that are never conditionally destructed get no flag
 	 */
-	class AddLifetimeFlagsPass final: public LifetimePass {
+	class AddLifetimeFlagsLocalsPass final: public LifetimePass {
 	public:
 		void run(query::Context&, Function&, const LifetimePassArgs&) final;
 	};

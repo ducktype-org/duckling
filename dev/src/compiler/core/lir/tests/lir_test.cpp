@@ -337,8 +337,10 @@ private:
 
 			// The condition of the `if` is a condition temporary, the flag is a plain bool local.
 			const auto& condition = terminator.arguments.at(0).get<LIRPlace>();
-			if (condition.getBase<LIRLocalRef>()->special_kind == LIRLocalSpecialKind::Normal)
+			if (condition.getBase<LIRLocalRef>()->special_kind == LIRLocalSpecialKind::Normal) {
+				ASSERT_TRUE(branch_on_flag == nullptr);
 				branch_on_flag = &terminator;
+			}
 		}
 		ASSERT_TRUE(branch_on_flag != nullptr);
 

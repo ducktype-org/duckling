@@ -341,6 +341,17 @@ namespace compiler::lir {
 				return locals.last();
 			}
 
+			/**
+			 * @brief Adds an empty block to the function and puts it at the end of the block order.
+			 */
+			[[nodiscard]]
+			MutBlockRef insertNewBlock() {
+				blocks.pushBack({});
+				auto new_block = blocks.last();
+				block_order.emplace_back(new_block);
+				return new_block;
+			}
+
 			[[nodiscard]]
 			LIRGlobal getGlobal(const mir::MIRGlobal& mir_global) const {
 				return LIRGlobal::fromMIR(ctx, mir_global);
@@ -648,8 +659,19 @@ namespace compiler::lir {
 			 * Emits nothing for a place that carries no information (ex. Unit).
 			 */
 			void emitDestructorCall(MutBlockRef block, const mir::Instruction& mir_instruction) {
+				CORE_ASSERT(
+					mir_instruction.operation == mir::Operation::Destruct
+						or mir_instruction.operation == mir::Operation::DestructIf,
+					"Expected a `Destruct` or a `DestructIf`"
+				);
+
 				const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
-				if (not to_destruct.carriesInformation(ctx)) return;
+
+				CORE_ASSERT(
+					to_destruct.carriesInformation(ctx),
+					"The destructred place does not carry information. This probably means a "
+					"Destruct of a ZST class got here. Adjust this code accordingly."
+				);
 
 				const auto  destructor = getLocation(mir_instruction.arguments.at(0)).value();
 				const auto  destructed = getPlace(to_destruct);
@@ -707,14 +729,15 @@ namespace compiler::lir {
 			 * scope may not end inside the conditional block. `ScopeStart` flags are put before the
 			 * branch for the same reason.
 			 *
-			 * @return the block that the instructions after the conditional destruct the drop
-			 * belong to
+			 * @return the block the instructions following the conditional destruct belong to
 			 */
 			MutBlockRef lowerConditionalDestruct(
 				MutBlockRef curr_block, const mir::Instruction& mir_instruction
 			) {
 				auto flags = lowerFlags(mir_instruction);
 
+				// Creates a `Nop` instruction at the end of @p instructions and moves @p held scope
+				// flags there.
 				auto hold_flags
 					= [&](std::vector<Instruction>& instructions, std::vector<ScopeFlag>&& held) {
 						  if (held.empty()) return;
@@ -752,12 +775,8 @@ namespace compiler::lir {
 				const auto lifetime_flag
 					= getPlace(mir_instruction.arguments.at(2).get<mir::MIRPlace>());
 
-				blocks.pushBack({});
-				auto destruct_block = blocks.last();
-				blocks.pushBack({});
-				auto continuation_block = blocks.last();
-				block_order.emplace_back(destruct_block);
-				block_order.emplace_back(continuation_block);
+				auto destruct_block     = insertNewBlock();
+				auto continuation_block = insertNewBlock();
 
 				hold_flags(curr_block->instructions, flags_of_kind(ScopeFlag::Flag::ScopeStart));
 				curr_block->terminator = Instruction{

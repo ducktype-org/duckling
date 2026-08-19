@@ -181,9 +181,6 @@ namespace compiler::mir {
 			auto new_in   = compute_in(block_id);
 			auto new_out  = transferBlock(*fun.blocks.at(block_id), new_in);
 
-			auto       prev_out     = out_status.atMaybe(block_id);
-			const bool out_is_stale = not prev_out or not sameMap(*prev_out.value(), new_out);
-
 			// The in-state is recorded even when the out-state did not change, because a block can
 			// hide a changed in-state from its successors.
 			// A block that reinitializes a local ends with it alive no matter what it
@@ -194,10 +191,6 @@ namespace compiler::mir {
 			// if (a.id == 13) {
 			//     eat(move a);
 			// }
-			// # This has to get a `DestructIf` inserted, after the first iteration the `Reinit`
-			// # flag will mark it as Alive, then in the second iteration when `a` is marked as
-			// # `MaybeMoved` the `Reinit` will mark it as Alive again and the outputs will not
-			// # change, but the `in_status` had changed.
 			// a = Res(14);
 			// ```
 			// `a = Res(14)` should get a `DestructIf` inserted, after the first iteration the
@@ -207,7 +200,8 @@ namespace compiler::mir {
 			// before ending the fixpoint loop.
 			in_status.insertOrAssign(block_id, std::move(new_in));
 
-			if (not out_is_stale) continue;
+			auto prev_out = out_status.atMaybe(block_id);
+			if (prev_out && sameMap(*prev_out.value(), new_out)) continue;
 			out_status.insertOrAssign(block_id, std::move(new_out));
 
 			for (auto succ: getTerminatorSuccessors(fun.blocks.at(block_id)->terminator))

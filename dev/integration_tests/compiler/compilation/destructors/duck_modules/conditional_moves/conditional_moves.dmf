@@ -70,6 +70,17 @@ fun reassigned() = {
     builtin_output_i64(15);     # 15
 }                               # 14
 
+fun condReinit(c: bool, d: bool) = {
+    var a: Res = Res(16);
+    if (c) {
+        eat(move a);
+    }
+    if (d) {
+        a = Res(17);
+    }
+    builtin_output_i64(18);
+}
+
 fun loops() = {
     var i = 0;
     while (i < 3) {
@@ -90,6 +101,10 @@ fun main() -> i64 = {
     boxed();
     params();
     reassigned();
+    condReinit(true, true);
+    condReinit(false, true);
+    condReinit(true, false);
+    condReinit(false, false);
     loops();
     return 0;
 }
