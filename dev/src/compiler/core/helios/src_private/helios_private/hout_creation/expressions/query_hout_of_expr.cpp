@@ -473,9 +473,10 @@ namespace compiler::helios::code {
 
 				// Handle dereferencing
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
-					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
+					if (not tsh::isPointerKind(inner_type.getType().getKind())
+					    and (inner_type.getRefKind() == tsh::ReferenceKind::Direct)) {
 						ctx.logInt(makeBox<dia::PlaceholderError>(
-							"Tried to dereference a non-pointer type", stmt->getStablePosition()
+							"Tried to dereference an invalid type", stmt->getStablePosition()
 						));
 						return;
 					}

@@ -4,6 +4,8 @@
 
 #include <base/collections/optional.hpp>
 
+#include <vm/core/builtin_functions.hpp>
+
 namespace compiler::backend_vm::internal {
 	using namespace vm::code;
 

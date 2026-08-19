@@ -179,9 +179,11 @@ namespace compiler::helios {
 			// No coercion
 			return current_expr;
 		} else if (source_type.getKind() == tsh::Kind::Void) {
-			// Void has no values: the coercion is unreachable, so the expression is passed
-			// through unchanged.
-			return current_expr;
+			// We have to wrap the expression in CastExpr to change the inner type,
+			// the cast itself is lowered to no-op.
+			return makeBox<code::CastExpr>(
+				ctx, current_expr->origin.generatedFrom(), std::move(current_expr), to
+			);
 		} else if ((is_source_numeric and is_target_numeric)
 		           or (is_source_bool and is_target_numeric)) {
 			// Numeric type promotion

@@ -171,6 +171,8 @@ namespace compiler::lir {
 			return Operation::ReturnValue;
 		case mir::Operation::ReturnVoid:
 			return Operation::ReturnVoid;
+		case mir::Operation::Unreachable:
+			return Operation::Unreachable;
 		case mir::Operation::Jump:
 			return Operation::Jump;
 		case mir::Operation::Branch:
@@ -818,8 +820,10 @@ namespace compiler::lir {
 				case mir::Operation::Call: {
 					if (lowerLIRBuiltinCall(mir_instruction, curr_block)) break;
 
+
 					auto output = getOutput(mir_instruction.output);
 					auto args   = getLocations(mir_instruction.arguments);
+
 					curr_block->instructions.emplace_back(
 						Operation::Call, output, std::move(args), mir_instruction.metadata
 					);
@@ -943,16 +947,8 @@ namespace compiler::lir {
 				case mir::Operation::ReturnValue: {
 					// The returned value may have been discarded due to being information-less.
 					if (auto args = getLocations(mir_terminator.arguments); args.size() == 0)
-						// A value-returning function reaching a valueless return returned a `void`
-						// expression, which can never happen at runtime.
-						curr_block->terminator = Instruction{
-							key.function->return_type.getType().carriesInformation(ctx)
-								? Operation::Unreachable
-								: Operation::ReturnVoid,
-							{},
-							{},
-							mir_terminator.metadata
-						};
+						curr_block->terminator
+							= Instruction{ Operation::ReturnVoid, {}, {}, mir_terminator.metadata };
 					else
 						curr_block->terminator = Instruction{
 							Operation::ReturnValue, {}, std::move(args), mir_terminator.metadata
@@ -960,6 +956,7 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::ReturnVoid:
+				case mir::Operation::Unreachable:
 				case mir::Operation::Jump:
 				case mir::Operation::Branch:
 				case mir::Operation::BranchIfNull: {

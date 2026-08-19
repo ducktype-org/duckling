@@ -1004,6 +1004,16 @@ namespace compiler::mir {
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {
+			bool never_returns
+				= expr.expression_type.getSymbolType().getType().getKind() == tsh::Kind::Void;
+
+			if (never_returns) {
+				auto call_block = function.newBlock();
+				call_block->setTerminator({ Operation::Unreachable, {}, {}, {}, expr_scope, {}, {} }
+				);
+				continuation = call_block;
+			}
+
 			auto call = continuation->addHole();
 
 			auto                  sub_continuation = continuation;
@@ -1026,13 +1036,23 @@ namespace compiler::mir {
 			}
 			std::reverse(args.begin() + 1, args.end());
 
-			return noValueOutput(
+			auto result = ExprLowerRes(
 				sub_continuation,
-				call,
-				Instruction{
-					Operation::Call, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
-				expr.expression_type.getSymbolType()
+				ExprLowerRes::Finalizer(
+					call,
+					Instruction{
+						Operation::Call, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
+					expr.expression_type.getSymbolType()
+				)
 			);
+
+			if (never_returns)
+				// This is needed, because the consumer may assign the result (void) to a value
+				// (non-void) But if we create a value, then the consumer is after the panic,
+				// unreachable.
+				valueOutput(sub_continuation, result.getResult(function));
+			else
+				output(std::move(result));
 		}
 
 		bool isEmptyCast(const hc::CastExpr& expr) {
@@ -1051,6 +1071,9 @@ namespace compiler::mir {
 			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
 				return true;
 			}
+
+			if (expr.source_expr->expression_type.getType().getKind() == tsh::Kind::Void)
+				return true;
 
 			return false;
 		}
