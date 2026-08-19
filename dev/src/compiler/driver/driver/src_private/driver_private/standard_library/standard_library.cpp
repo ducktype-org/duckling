@@ -10,6 +10,7 @@
 
 #include <artifacts/artifacts.hpp>
 #include <logger/logger.hpp>
+#include <os_utils/executable_path.hpp>
 
 #include <algorithm>
 
@@ -20,7 +21,7 @@ namespace compiler::driver {
 #ifdef STD_FIXED_PATH
 			return { STD_FIXED_PATH };
 #else
-			return getExecutablePath().parentPath().parentPath().join(fs::FilePath("lib/core/std"));
+			return os_utils::getExecutablePath().parentPath().join(fs::FilePath("lib/"));
 #endif
 		}
 	}
