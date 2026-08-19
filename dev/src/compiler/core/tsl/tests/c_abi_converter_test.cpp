@@ -177,8 +177,6 @@ private:
 				= ctx.query<QueryPointerType>({ directOf(i32_type) });
 			const ManyPointerAbstractType many_pointer
 				= ctx.query<QueryManyPointerType>({ directOf(i32_type) });
-			const DynamicArrayAbstractType dynamic_array
-				= ctx.query<QueryDynamicArrayType>(directOf(i32_type));
 			const TupleAbstractType tuple
 				= ctx.query<QueryTupleType>({ { directOf(i32_type), directOf(i32_type) } });
 			const FunctionAbstractType function
@@ -192,7 +190,6 @@ private:
 				{ refOf(i32_type), "ref" },
 				{ boxOf(i32_type), "box" },
 				{ directOf(getUnitType()), "unit" },
-				{ directOf(dynamic_array), "dynamic array" },
 				{ directOf(tuple), "tuple" },
 				{ directOf(function), "function" },
 			};

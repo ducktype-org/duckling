@@ -437,7 +437,7 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(
 			clah::Clah("compile_module", "Compile given module into a binary.")
-				.addPositional(clah::FileParser::make("module"))
+				.addPositional(clah::FileParser::make("module", true))
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
 				.add(getClahStdLibOptions())
@@ -515,7 +515,7 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
-				.addPositional(clah::FileParser::make("module"))
+				.addPositional(clah::FileParser::make("module", true))
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
 				.add(getClahStdLibOptions())

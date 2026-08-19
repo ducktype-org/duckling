@@ -401,8 +401,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertFalse(
-				string_type.hasNoOpDestructor(ctx),
-				"String should not have a no-op destructor: it defines one to free its buffer."
+				string_type.isTriviallyDestructible(ctx),
+				"String should not be trivially destructible: it defines one to free its buffer."
 			);
 
 			const auto string_st = st(string_type);
@@ -512,7 +512,7 @@ private:
 		{
 			const auto char_type       = compiler::tsh::getCharType();
 			const auto str_type        = getStringTypeNoContext();
-			const auto u64_type        = getIntegralTypeNoContext(64, Unsigned);
+			const auto i64_type        = getIntegralTypeNoContext(64, Signed);
 			const auto char_slice_type = getSliceTypeNoContext(st(char_type));
 
 			auto fun_body_scope = getFunctionBodyScope(fun_sym);
@@ -520,7 +520,7 @@ private:
 			// Vars
 			ASSERT_EQUAL(char_slice_type, getTypeOf("should_char_slice", fun_body_scope));
 			ASSERT_EQUAL(char_type, getTypeOf("should_char", fun_body_scope));
-			ASSERT_EQUAL(u64_type, getTypeOf("should_u64", fun_body_scope));
+			ASSERT_EQUAL(i64_type, getTypeOf("should_i64", fun_body_scope));
 			ASSERT_EQUAL(str_type, getTypeOf("should_string", fun_body_scope));
 		}
 	}

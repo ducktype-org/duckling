@@ -443,16 +443,6 @@ namespace lsp {
 		void visitLiftToTypeExpr(const code::LiftToTypeExpr& elem) override {
 			elem.value_expr->acceptVisitor(*this);
 		}
-
-		void visitListPushExpr(const code::ListPushExpr& elem) override {
-			elem.list->acceptVisitor(*this);
-			elem.element->acceptVisitor(*this);
-		}
-
-		void visitListPopExpr(const code::ListPopExpr& elem) override {
-			elem.list->acceptVisitor(*this);
-			elem.count->acceptVisitor(*this);
-		}
 	};
 
 	/**

@@ -1,0 +1,112 @@
+import core.builtins.*;
+import core.containers.*;
+
+#{
+	A variant whose alternative owns something: assigning one into a live variant destroys the
+	previous payload, and copying one deep-copies the active alternative. Exactly one free happens
+	per allocation, which is what the valgrind case checks.
+
+	This is a separate module because of a DVM bug: the VM treats a variant as a leaf when it walks
+	a value to adjust block refcounts, so a copy never accounts for a `ref` / `box` payload and the
+	VM panics with a leak. The destructors and the generated copy constructor themselves do run.
+	Hence it only runs on the LLVM backend, under valgrind.
+
+	@TODO: #3225 run this on the DVM too.
+#}
+
+fun check(actual: i64, expected: i64, id: i64) -> () = {
+	if (actual != expected) builtin_output_i64(id);
+}
+
+fun boxAltRead(v: ref (box i32 | f32)) -> i64 = {
+	return match (v) {
+		case x : ref i32 = x as i64;
+		case _ = -1i64;
+	};
+}
+
+fun boxAltWrite(v: ref (box i32 | f32), value: i32) -> i64 = {
+	return match (v) {
+		case x : ref i32 = assignI32(x, value);
+		case _ = -1i64;
+	};
+}
+
+fun assignI32(out: ref i32, value: i32) -> i64 = {
+	out = value;
+	return 0i64;
+}
+
+fun stringAltLength(v: ref (String | i32)) -> i64 = {
+	return match (v) {
+		case s : ref String = s.length();
+		case n : i32 = n as i64;
+	};
+}
+
+fun stringAltAppend(v: ref (String | i32), c: char) -> i64 = {
+	return match (v) {
+		case s : ref String = appendChar(s, c);
+		case n : i32 = -1i64;
+	};
+}
+
+fun appendChar(s: ref String, c: char) -> i64 = {
+	s.append(c);
+	return s.length();
+}
+
+# ===== Assigning an owning alternative into a live variant =====
+
+fun reassignment() -> () = {
+	# A box assigned over the trivial alternative, and then over another box.
+	var b: box i32 | f32 = (2.5 as f32);
+	b = new 3i32;
+	check(boxAltRead(&b), 3i64, 1i64);
+	b = new 4i32;
+	check(boxAltRead(&b), 4i64, 2i64);
+
+	# The same for a string, whose destructor frees its buffer.
+	var s: String | i32 = 7i32;
+	s = "hello".toString();
+	check(stringAltLength(&s), 5i64, 3i64);
+	s = "abc".toString();
+	check(stringAltLength(&s), 3i64, 4i64);
+
+	# Both variants still own a payload here, so leaving this function has to free them.
+}
+
+# ===== Copying a variant whose alternative owns something =====
+#
+# An owning alternative makes the variant non-trivially copyable, so the copy is explicit and runs
+# the generated copy constructor, which deep-copies the active alternative.
+
+fun copying() -> () = {
+	var b: box i32 | f32 = new 5i32;
+	var b_copy: box i32 | f32 = copy b;
+
+	# The copy owns its own box: writing through one is invisible to the other.
+	check(boxAltWrite(&b_copy, 9i32), 0i64, 20i64);
+	check(boxAltRead(&b), 5i64, 21i64);
+	check(boxAltRead(&b_copy), 9i64, 22i64);
+
+	var s: String | i32 = "hello".toString();
+	var s_copy: String | i32 = copy s;
+
+	# Likewise for the string buffer.
+	check(stringAltAppend(&s_copy, '!'), 6i64, 23i64);
+	check(stringAltLength(&s), 5i64, 24i64);
+	check(stringAltLength(&s_copy), 6i64, 25i64);
+
+	# Copying the trivial alternative of the same variant copies no payload at all.
+	b = (2.5 as f32);
+	var trivial_copy: box i32 | f32 = copy b;
+	check(boxAltRead(&trivial_copy), -1i64, 26i64);
+}
+
+fun main() -> i64 = {
+	reassignment();
+	copying();
+
+	return 0i64;
+}
