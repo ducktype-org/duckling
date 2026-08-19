@@ -24,7 +24,8 @@ namespace {
 	}
 
 	void requirePhysicalPath(const fs::FilePath& path) {
-		if (!path.isPhysical()) CORE_PANIC("Path is not a physical file: " + path.string());
+		// Quick Hotfix for sio2:
+		// if (!path.isPhysical()) CORE_PANIC("Path is not a physical file: " + path.string());
 	}
 
 	void requireVirtualPath(const fs::FilePath& path) {
