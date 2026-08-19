@@ -12,8 +12,8 @@ expected_manifest_1 = """metadata:
 dependencies:
   b:
     source:
-      path: ../a
       name: a
+      path: ../a
 """
 
 expected_manifest_2 = """metadata:
@@ -25,8 +25,8 @@ dependencies:
       path: ../a
   b:
     source:
-      path: ../a
       name: a
+      path: ../a
 """
 
 arg = sys.argv[1]
