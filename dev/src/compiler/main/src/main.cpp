@@ -514,6 +514,119 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
+			clah::Clah(
+				"compile_modules",
+				"Compile given modules into binaries. Every module is placed in its own package "
+				"and every package depends on all the other ones."
+			)
+				.addPositional(clah::FileParser::make("module"))
+				.setDefaultValueParser(clah::FileParser::make("module"))
+				.add(getLlvmOptLevelParam())
+				.add(debug_options::getClahDebugParameters())
+				.add(getClahStdLibOptions())
+				.addCustomVerification(verifyStdLibOptions)
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
+	                     .addShortName('n')
+	                     .addLongName("name")
+	                     .addShortDesc("Name of the package the first given module belongs to.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("dvm-backend")
+	                     .addShortDesc("Compile to DVM bytecode.")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-incremental")
+	                     .addShortDesc(
+							 "Disable incremental compilation (do not load previous query graph)."
+						 )
+	                     .build())
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					std::vector<fs::File> modules_to_compile{ options.getPositional<fs::File>(0) };
+					for (usize i = 0; i < options.getExtraParameterCount(); ++i)
+						modules_to_compile.push_back(options.getExtra<fs::File>(i).value());
+
+					// The first given module gets its package name from --name, the rest get
+		            // random ones.
+					auto first_package_name = options.getValue<std::string>("name");
+
+					// Package names other than the first one are random, so the dependency alias
+		            // is set to the module's file name to keep those packages importable.
+					std::vector<base::StrID>                                  aliases;
+					std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
+					aliases.reserve(modules_to_compile.size());
+					packages_info.reserve(modules_to_compile.size());
+					for (usize i = 0; i < modules_to_compile.size(); ++i) {
+						bool named        = i == 0 && first_package_name;
+						auto package_name = base::StrID(
+							named ? first_package_name.value() : base::generateRandomString(32)
+						);
+						aliases.push_back(
+							named ? package_name
+								  : base::StrID(modules_to_compile[i].getFilePath().stem())
+						);
+						packages_info.push_back(compiler::frontend::packages::RawPackageInfo{
+							.package_id   = package_name,
+							.package_name = package_name,
+							.version      = base::StrID("not_supported"),
+							.package_path = modules_to_compile[i].getFilePath(),
+							.features     = {},
+							.dependencies = {},
+						});
+					}
+
+					// Every package depends on every other one.
+					const usize package_count = packages_info.size();
+					for (usize dependent = 0; dependent < package_count; ++dependent)
+						for (usize dependency = 0; dependency < package_count; ++dependency) {
+							if (dependent == dependency) continue;
+							packages_info[dependent].dependencies.push_back(
+								compiler::frontend::packages::RawDependencyInfo{
+									.package_id = packages_info[dependency].package_id,
+									.alias      = aliases[dependency],
+								}
+							);
+						}
+
+					auto init_result = compiler::driver::initializeTheCompiler(
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.packages_info         = std::move(packages_info),
+							.compilation_artifacts = {
+								.artifacts_path = fs::FilePath("./duck_build/"),
+							},
+							.backend_options   = getBackendOptionsFromClah(options),
+							.debug_options     = debug_options::getDebugOptionsFromClah(options),
+							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = 1,
+							},
+							.stdlib_options = getStdLibOptionsFromClah(options),
+						}
+					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					// @TODO: error handling. This should change in #1112.
+					using namespace compiler;
+
+					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
+		                                                              : driver::BackendType::LLVM;
+
+					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
+					for (const auto& package: global_state::getPackages()) {
+						auto root = package.getRootModule().illegalAccess().getID();
+						query::entryPoint<driver::CompileModule>({ root, backend_type, false });
+					}
+
+					compiler::driver::exit();
+
+					return 0;
+				})
+		)
+	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
 				.addPositional(clah::FileParser::make("module"))
 				.add(getLlvmOptLevelParam())
