@@ -396,6 +396,13 @@ namespace compiler::backend_vm::internal {
 				.scope_flags = instr.scope_flags,
 			};
 		}
+		case Unreachable: {
+			// The DVM has no trap instruction: an unreachable point returns without a value.
+			return ReturnOperation{
+				.value       = base::Optional<DVMValue>(),
+				.scope_flags = instr.scope_flags,
+			};
+		}
 		case Nop: {
 			// No instruction to generate, just skip.
 			return NoOperation{};

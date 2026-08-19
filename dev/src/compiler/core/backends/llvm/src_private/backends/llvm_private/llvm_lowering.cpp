@@ -1233,6 +1233,10 @@ namespace compiler::backend_llvm {
 				builder.CreateRet(loadLIRValue(lir_instruction.arguments.at(0), builder));
 				break;
 			}
+			case Unreachable: {
+				builder.CreateUnreachable();
+				break;
+			}
 			case Jump: {
 				builder.CreateBr(
 					block_mapping[lir_instruction.arguments.at(0).get<lir::BlockRef>()].get()

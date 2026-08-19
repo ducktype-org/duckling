@@ -471,6 +471,7 @@ namespace compiler::lir {
 		case Operation::Jump:
 		case Operation::Branch:
 		case Operation::BranchIfNull:
+		case Operation::Unreachable:
 			return true;
 		default:
 			return false;

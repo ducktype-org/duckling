@@ -766,6 +766,10 @@ namespace compiler::helios::code {
 					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getMetaType());
 					break;
 
+				case pst::Keyword::Void:
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getVoidType());
+					break;
+
 				case pst::Keyword::i128:
 					node = makeBox<LiteralTypeExpr>(
 						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 128, Signed)

@@ -178,6 +178,10 @@ namespace compiler::helios {
 		if (source_type == to.getType()) {
 			// No coercion
 			return current_expr;
+		} else if (source_type.getKind() == tsh::Kind::Void) {
+			// Void has no values: the coercion is unreachable, so the expression is passed
+			// through unchanged.
+			return current_expr;
 		} else if ((is_source_numeric and is_target_numeric)
 		           or (is_source_bool and is_target_numeric)) {
 			// Numeric type promotion

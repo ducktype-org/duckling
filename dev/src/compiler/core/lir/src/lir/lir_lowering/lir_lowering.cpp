@@ -943,8 +943,16 @@ namespace compiler::lir {
 				case mir::Operation::ReturnValue: {
 					// The returned value may have been discarded due to being information-less.
 					if (auto args = getLocations(mir_terminator.arguments); args.size() == 0)
-						curr_block->terminator
-							= Instruction{ Operation::ReturnVoid, {}, {}, mir_terminator.metadata };
+						// A value-returning function reaching a valueless return returned a `void`
+						// expression, which can never happen at runtime.
+						curr_block->terminator = Instruction{
+							key.function->return_type.getType().carriesInformation(ctx)
+								? Operation::Unreachable
+								: Operation::ReturnVoid,
+							{},
+							{},
+							mir_terminator.metadata
+						};
 					else
 						curr_block->terminator = Instruction{
 							Operation::ReturnValue, {}, std::move(args), mir_terminator.metadata

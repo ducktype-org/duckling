@@ -22,5 +22,5 @@ extern("C") {
     @cffi_variadic_fixed_params(3)
     fundecl snprintf(s: cptr char, n: u64, format: cptr char, value: u64) -> i32;
 
-    fundecl abort() -> ();
+    fundecl abort() -> void;
 }

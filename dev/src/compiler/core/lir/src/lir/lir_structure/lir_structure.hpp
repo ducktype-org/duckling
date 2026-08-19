@@ -110,6 +110,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Terminator: [pointer, null_target, not_null_target]. */
 	BranchIfNull,
 
+	/** Terminator: marks control flow that can never be reached (e.g. after a diverging call). */
+	Unreachable,
+
 	// Nop can be useful when lowering the instruction flags and MIR instr translates
 	// to zero instructions in LIR, but we want to have the flags in correct place.
 	Nop

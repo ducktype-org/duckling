@@ -115,6 +115,7 @@ namespace lang_def {
 		Bool,
 		Str,
 		Type,  // ...
+		Void,
 
 		// @TODO: do we need all of them?
 		Set,
