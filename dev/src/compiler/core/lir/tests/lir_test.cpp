@@ -141,11 +141,13 @@ private:
 				ASSERT_TRUE(not was_x);
 				ASSERT_EQUAL(local.parameter_index.value(), 0);
 				was_x = true;
-			} else if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "y") {
+			} else if (local.helios_id.has_value()
+			           and helios::name(local.helios_id.value()) == "y") {
 				ASSERT_TRUE(not was_y);
 				ASSERT_EQUAL(local.parameter_index.value(), 1);
 				was_y = true;
-			} else if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "z") {
+			} else if (local.helios_id.has_value()
+			           and helios::name(local.helios_id.value()) == "z") {
 				ASSERT_TRUE(not was_z);
 				ASSERT_EQUAL(local.parameter_index.value(), 2);
 				was_z = true;
@@ -484,8 +486,8 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto meta_type_entity = tsh::getMetaType();
 			auto meta_layout      = CRef<tsl::TypeLayout>(
-				&ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity)->valueOrThrow()
-			);
+                &ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity)->valueOrThrow()
+            );
 
 			auto assert_is_meta_local
 				= [&](const lir::LIRLocal& local) { ASSERT_EQUAL(*local.layout, *meta_layout); };
@@ -528,7 +530,8 @@ private:
 				for (const auto& instr: mega_type->block_order[0]->instructions)
 					if (instr.operation == MetaTypeOperation && meta_kind(instr) == MK::CreateTuple)
 						create_tuple_count++;
-					else if (instr.operation == MetaTypeOperation && meta_kind(instr) == MK::CreateVariant)
+					else if (instr.operation == MetaTypeOperation
+					         && meta_kind(instr) == MK::CreateVariant)
 						create_variant_count++;
 					else if (instr.operation == Call)
 						call_found = true;
@@ -758,9 +761,9 @@ private:
 			ASSERT_EQUAL(std::string("Local(1)"), value_output.str());
 
 			lir::Instruction  instruction{ lir::Operation::Assign,
-				                           place,
+                                          place,
 				                           { lir::LIRValue{
-											   lir::LIRPlace{ foo_lir->local_list[0], {} } } },
+                                              lir::LIRPlace{ foo_lir->local_list[0], {} } } },
 				                           {} };
 			std::stringstream instruction_output;
 			instruction.debugPrint(ctx, instruction_output, *foo_lir);
