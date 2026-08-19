@@ -108,6 +108,7 @@ namespace clah {
 		std::filesystem::path path = argument;
 
 		if (!std::filesystem::exists(path)) throw clah::exceptions::FileDoesNotExist(path);
+		if (!std::filesystem::is_regular_file(path)) throw clah::exceptions::NotARegularFile(path);
 
 		fs::File file(path);
 
