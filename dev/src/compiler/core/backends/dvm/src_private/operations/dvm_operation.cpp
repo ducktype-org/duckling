@@ -19,8 +19,6 @@
 namespace {
 	using namespace compiler;
 
-	bool isMetaTypeOperation(lir::Operation op) { return op == lir::Operation::MetaTypeOperation; }
-
 	vm::code::builders::OpKind lirOperationToDVMOpKind(const lir::Operation& op) {
 		using enum lir::Operation;
 		using namespace vm::code::builders;
@@ -147,7 +145,10 @@ namespace compiler::backend_vm::internal {
 			return {};
 		};
 
-		if (isMetaTypeOperation(operation)) {
+		switch (operation) {
+		/// Special operations ///
+		case MetaTypeOperation: {
+			if (not ctx.program_context.isCompTimeLowering()) return NoOperation{};
 			const auto* meta_params = std::get_if<lir::MetaParameters>(&instr.extra_params);
 			CORE_ASSERT(meta_params, "Meta operation without MetaParameters");
 			return MetaOperation{
@@ -156,10 +157,6 @@ namespace compiler::backend_vm::internal {
 				.dest      = lower_opt_dest(),
 			};
 		}
-
-
-		switch (operation) {
-		/// Special operations ///
 		case ZeroInitialize:
 			// Data in DVM is zeroinitialized by default, so this is a NoOp.
 			return NoOperation{};
@@ -313,16 +310,20 @@ namespace compiler::backend_vm::internal {
 
 		/// Variant operations ///
 		case VariantConstruct: {
+			// An alternative carrying no information (e.g. `()`) has its payload argument
+			// discarded in LIR, so there is nothing left to store.
 			CORE_ASSERT(
-				instr.arguments.size() == 1,
-				"VariantConstruct expects 1 argument, got: ",
+				instr.arguments.size() <= 1,
+				"VariantConstruct expects at most 1 argument, got: ",
 				instr.arguments.size()
 			);
 			const auto variant_params = std::get_if<lir::VariantParameters>(&instr.extra_params);
 			CORE_ASSERT(variant_params != nullptr, "VariantConstruct without parameters");
 			return VariantConstructOperation{
 				.variant_params = *variant_params,
-				.payload        = lower_arg(instr.arguments[0]),
+				.payload        = instr.arguments.empty()
+				                    ? base::Optional<DVMValue>()
+				                    : base::Optional<DVMValue>(lower_arg(instr.arguments[0])),
 				.dest           = lower_dest(),
 			};
 		}

@@ -227,11 +227,39 @@ fun stringAlternative() -> () = {
 	check(stringAltAppend(&v, '!'), -1i64, 64i64);
 }
 
+namespace maybe {
+	fun Maybe(t: type) -> type = t | ();
+
+	template(T: type)
+	fun hasValue(m: Maybe(T)) -> bool = {
+		return match (m) {
+			case v: T = true;
+			case _: () = false;
+		}
+	}
+
+	template(T: type)
+	fun value(m: Maybe(T)) -> T = {
+		return match(m) {
+			case _: () = panicking.panic() as T;
+			case v: ref T = builtins.move_out:{T}(ptrof(*v));
+		}
+	}
+}
+
+fun maybeExample() -> () = {
+    var a : maybe.Maybe(i32) = ();
+    a = 20;
+	if (not maybe.hasValue:{i32}(a)) print("1");
+	if (maybe.value:{i32}(a) != 20) print("1");
+}
+
 fun main() -> i64 = {
 	matchPositions();
 	refAlternative();
 	boxAlternative();
 	stringAlternative();
+	maybeExample();
 
 	return 0i64;
 }

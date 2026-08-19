@@ -6,31 +6,51 @@
 namespace compiler::backend_vm::internal {
 	using namespace vm::code;
 
+	namespace {
+		/**
+		 * @brief The DVM type naming the chosen alternative.
+		 *
+		 * The DVM identifies alternatives by type name, so an alternative carrying no information
+		 * (e.g. `()`), which has no DVM type of its own, is named by the stand-in unit type.
+		 */
+		const TypeOfData& alternativeTypeOf(
+			Ref<FunctionLoweringContext> ctx, const lir::VariantParameters& params
+		) {
+			return *ctx->programCtx()
+			            .lowerAndKeepTslType(params.alternative_layout)
+			            .copyValueOr(&ctx->programCtx().getUnitType());
+		}
+	}
+
 	void InstructionLowerer::lower(const VariantConstructOperation& op) {
-		const TypeOfData& alternative_type
-			= **ctx->program_context.lowerAndKeepTslType(op.variant_params.alternative_layout);
-		const auto alternative_type_arg = vm::opargs::Type(typeName(alternative_type));
+		const TypeOfData& alternative_type     = alternativeTypeOf(ctx, op.variant_params);
+		const auto        alternative_type_arg = vm::opargs::Type(typeName(alternative_type));
 
 		// Activate the alternative, then store the payload through a pointer to the
 		// variant's data.
 		ctx->pushInstruction({ OpKind::variantSetInner, op.dest.asArgument(), alternative_type_arg }
 		);
 
-		const TypeOfData& ptr_type = ctx->program_context.getOrInsertPointerType(alternative_type);
+		// An alternative carrying no information (e.g. `()`) is fully described by being active,
+		// so there is no payload to write.
+		if (op.payload.empty()) return;
+
+		const TypeOfData& ptr_type    = ctx->programCtx().getOrInsertPointerType(alternative_type);
 		DVMPlace          payload_ptr = ctx->pushTempLocal(ptr_type, "variant_data_ptr");
 		ctx->pushInstruction({ OpKind::variantGetInner,
 		                       payload_ptr.asArgument(),
 		                       op.dest.asArgument(),
 		                       alternative_type_arg });
 
-		ctx->maybeStoreResult(payload_ptr.withAccessKind(DVMPlace::AccessKind::Pointer), op.payload);
+		ctx->maybeStoreResult(
+			payload_ptr.withAccessKind(DVMPlace::AccessKind::Pointer), op.payload.value()
+		);
 	}
 
 	void InstructionLowerer::lower(const VariantTryProjectOperation& op) {
 		CORE_ASSERT(op.dest.isDirect(), "Non direct dest is not supported.");
 
-		const TypeOfData& alternative_type
-			= **ctx->program_context.lowerAndKeepTslType(op.variant_params.alternative_layout);
+		const TypeOfData& alternative_type = alternativeTypeOf(ctx, op.variant_params);
 
 		// `op.variant` is a reference to the variant, so `asArgument` yields a pointer place and
 		// the loader picks the `variantGetInner_pptr_pptr_type` form, which recovers the variant

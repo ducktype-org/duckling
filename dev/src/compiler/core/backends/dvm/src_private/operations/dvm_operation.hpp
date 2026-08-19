@@ -142,8 +142,10 @@ namespace compiler::backend_vm::internal {
 	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): always aggregate-initialized
 	struct VariantConstructOperation {
 		lir::VariantParameters variant_params;
-		DVMValue               payload;
-		DVMPlace               dest;  ///< The variant place; always present.
+		/// Empty when the chosen alternative carries no information (e.g. `()`), as then only
+		/// the alternative itself has to be activated.
+		base::Optional<DVMValue> payload;
+		DVMPlace                 dest;  ///< The variant place; always present.
 	};
 
 	/**

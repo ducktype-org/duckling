@@ -1287,14 +1287,18 @@ namespace compiler::backend_llvm {
 					variant_ptr
 				);
 
-				llvm::Value* payload  = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
-					builder.getInt8Ty(),
-					variant_ptr,
-					variant_layout.getDataOffset().asInt(),
-					"variant_data"
-				);
-				builder.CreateStore(payload, data_ptr);
+				// An alternative whose payload carries no information (e.g. `()`) has no value to
+				// store, so the tag alone identifies it.
+				if (not lir_instruction.arguments.empty()) {
+					llvm::Value* payload  = loadLIRValue(lir_instruction.arguments.at(0), builder);
+					llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
+						builder.getInt8Ty(),
+						variant_ptr,
+						variant_layout.getDataOffset().asInt(),
+						"variant_data"
+					);
+					builder.CreateStore(payload, data_ptr);
+				}
 				break;
 			}
 			case VariantTryProject: {
