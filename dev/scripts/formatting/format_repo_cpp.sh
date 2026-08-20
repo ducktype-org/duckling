@@ -1,12 +1,25 @@
 #!/bin/bash
 
+# Formats C++ sources in place with clang-format.
+#
+# Usage: format_repo_cpp.sh [--all] [clang-format-binary]
+#   default  only the files this branch changed (`list-files --modified`), plus untracked ones
+#   --all    every C++ file in the repository — what format_repo_cpp_all.sh calls
+
+# Pick the scope of the listing
+scope=(--modified)
+if [[ $1 == "--all" ]]; then
+    scope=()
+    shift
+fi
+
 # Go to dev/ directory
 original_location=$(pwd)
 cd "$(dirname "$0")"/../../ || exit 1
 
 # Gather C++ files into an array, one file per element, so that neither a path
 # containing spaces nor an empty listing turns into the wrong argument list
-readarray -t files < <(python3 toolbox.py list-files --modified --include-untracked --extensions .cpp --extensions .hpp --extensions .cc --extensions .cxx --extensions .h)
+readarray -t files < <(python3 toolbox.py list-files "${scope[@]}" --include-untracked --extensions .cpp --extensions .hpp --extensions .cc --extensions .cxx --extensions .h)
 
 # Check if there is anything to format
 if [[ ${#files[@]} -eq 0 ]]; then
