@@ -270,67 +270,66 @@ namespace vm {
 	) {
 		// The algorithm used to iterate over data works as follows:
 		// Invariants:
-		// * `data` can represent a range of objects
+		// * `data` is a range of one or more objects of `type` laying next to each other.
+		//   A dynamic table is the exception: its type carries no size, so such a range is always
+		//   a single table spanning the whole `data`.
 		//
-		// Algorithm:
-		// 1. If given `data` is empty, then return.
-		// 2. Run the `callback` on the first object.
-		//    (This is not possible on DynamicTable, because size of DynamicTable
-		//    type is undefined.)
+		// Algorithm, for every object of the range:
+		// 1. Run the `callback` on the object.
+		//    (This is not possible on DynamicTable, see above.)
 		//    This is the crucial step, the only place where `callback` is used.
-		//    We only run the `callback` on a single, first top-level element.
-		//    This means `callback` is run top-down, not bottom-up in terms of type-composition.
-		// 3. If type is aggregate, then step into each member and call `iterateOverDataAndExecute`.
-		// 4. Run `iterateOverDataAndExecute` with one fewer element.
+		//    The `callback` therefore runs top-down, not bottom-up in terms of type-composition.
+		// 2. If the type is an aggregate, then step into each member and recurse. Recursion depth
+		//    is bounded by the type's nesting depth - ranges are walked by the loop, not by
+		//    recursing on the tail.
 
-		if (data.size() == 0) return;
+		const bool  is_dynamic_table = type->getKind() == Type::Kind::DynamicTable;
+		const usize object_size      = is_dynamic_table ? data.size() : type->getSize().asInt();
 
-		if (type->getKind() != Type::Kind::DynamicTable) {
-			// Only types other than dynamic_table can be next to each other.
-			// Callback on the first object
-			(this->*callback)(base::ModRawView{ data.getBegin(), type->getSize().asInt() }, type);
-		}
+		// Nothing to walk in an empty range, and a zero-sized object would never advance the loop.
+		// Such a type cannot hold a pointer either, so there is nothing for a callback to do.
+		if (object_size == 0) return;
 
-		switch (type->getKind()) {
-		case Type::Kind::Primitive:
-		case Type::Kind::Function:
-		case Type::Kind::Opaque:
-		case Type::Kind::CPointer:
-		case Type::Kind::Variant:
-		case Type::Kind::Pointer:
-			break;
-		case Type::Kind::DynamicTable:
-		case Type::Kind::FixedSizeTable: {
-			const auto inner_type = type->getInnerType().value();
-			const auto inner_size = inner_type->getSize().asInt();
-			for (usize begin = 0; begin < data.size(); begin += inner_size)
-				iterateOverDataAndExecute(
-					base::ModRawView{ data.getBegin() + begin, inner_size }, inner_type, callback
-				);
-			break;
-		}
-		case Type::Kind::Data: {
-			// Iterate over data's fields
-			for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
-				iterateOverDataAndExecute(
-					base::ModRawView{ data.getBegin() + offset.asInt(), tp->getSize().asInt() },
-					tp,
-					callback
-				);
-			break;
-		}
-		default:
-			CORE_PANIC("Handling default");
-		}
+		CORE_ASSERT(data.size() % object_size == 0, "The data must hold a whole number of objects");
 
-		if (type->getKind() != Type::Kind::DynamicTable) {
-			usize tp_size = type->getSize().asInt();
-			CORE_ASSERT(
-				data.size() >= type->getSize().asInt(), "Should work with at least 1 element..."
-			);
-			iterateOverDataAndExecute(
-				base::ModRawView{ data.getBegin() + tp_size, data.size() - tp_size }, type, callback
-			);
+		for (usize object_begin = 0; object_begin + object_size <= data.size();
+		     object_begin += object_size) {
+			const base::ModRawView object{ data.getBegin() + object_begin, object_size };
+
+			if (!is_dynamic_table) (this->*callback)(object, type);
+
+			switch (type->getKind()) {
+			case Type::Kind::Variant:
+				// @TODO: #3225 a variant is still a leaf here. Descending needs the type tag: read
+				// it at offset 0, pick the alternative from `getVariantAlternatives()` and recurse
+				// on the payload at `getTypeTagSizeBytes()`, the way `setVariantType` decodes it.
+				break;
+			case Type::Kind::Primitive:
+			case Type::Kind::Function:
+			case Type::Kind::Opaque:
+			case Type::Kind::CPointer:
+			case Type::Kind::Pointer:
+				break;
+			case Type::Kind::DynamicTable:
+			case Type::Kind::FixedSizeTable:
+				// The elements lay next to each other, so a single call walks all of them. Note
+				// that the range is `object`, not `data`: a fixed size table only owns its own
+				// elements, even when several such tables are next to each other.
+				iterateOverDataAndExecute(object, type->getInnerType().value(), callback);
+				break;
+			case Type::Kind::Data:
+				// Iterate over data's fields
+				for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
+					iterateOverDataAndExecute(
+						base::ModRawView{ object.getBegin() + offset.asInt(),
+					                      tp->getSize().asInt() },
+						tp,
+						callback
+					);
+				break;
+			default:
+				CORE_PANIC("Handling default");
+			}
 		}
 	}
 

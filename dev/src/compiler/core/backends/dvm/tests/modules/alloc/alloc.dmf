@@ -4,8 +4,7 @@ import core.builtins.*;
 # the compiler (see the DVM `BuiltinCallOperation` lowering): `dvm_alloc_arr`, `dvm_realloc_arr`,
 # `dvm_free_arr`, `dvm_alloc`, `dvm_free`, `slice_from_ptr_len` and `ptr_from_slice`, baked for more
 # than one element type. Both the array builtins (`manyptr T`) and the single-object ones (`ptr T`)
-# are covered.
-# Element types that hold a pointer (e.g. `str`) are not covered here yet, see #3225.
+# are covered, as well as element types that hold a pointer inside an aggregate.
 fun charChain() -> i64 = {
     # Allocate a dynamic char table with 8 elements.
     var p = dvm_alloc_arr:{char}(8i64);
@@ -69,9 +68,37 @@ fun singleObjectChain() -> i64 = {
     return value + (letter as i64);
 }
 
+# The element type is an aggregate that *holds* a pointer (`str` is a `slice char`), so the pointed
+# to blocks are one level below the table's elements. Storing into the table copies the slice and
+# takes a reference, so freeing the table has to walk into the element's fields to give it back -
+# a walk that stops at the element leaks those refcounts silently.
+class Labelled {
+    name: str = "";
+    tag: i64 = 0;
+}
+
+fun strChain() -> i64 = {
+    var p = dvm_alloc_arr:{str}(2i64);
+    p[0] = "ab";
+    p[1] = "cde";
+    let table_total = p[0].length() + p[1].length();
+    dvm_free_arr:{str}(p);
+
+    # One level deeper: the pointer now sits three levels below the table, as
+    # table -> Labelled -> str -> ptr char, so the walk has to keep descending through aggregates.
+    var q = dvm_alloc_arr:{Labelled}(2i64);
+    q[0] = Labelled("wxyz", 1i64);
+    q[1] = Labelled("v", 2i64);
+    let nested_total = q[0].name.length() + q[1].name.length();
+    dvm_free_arr:{Labelled}(q);
+
+    return table_total + nested_total;
+}
+
 fun main() -> i64 = {
     builtin_output_i64(i32Chain() as i64);
     builtin_output_i64(i64ReallocChain());
     builtin_output_i64(singleObjectChain());
+    builtin_output_i64(strChain());
     return charChain();
 }
