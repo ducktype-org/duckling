@@ -167,7 +167,7 @@ fn construct_source(
         );
         // We take into account that `local_path` is relative to `cwd`, not to `pkg_root`.
         let from_project_to_cwd = pkg_root.resolve_both_and_get_relative(ctx.cwd(), ctx);
-        let from_project_to_dep = from_project_to_cwd.join(path);
+        let from_project_to_dep = from_project_to_cwd.join(path).normalize();
         let dep_resolved = from_project_to_dep.resolve(ctx);
         Ok((Source::for_local(&dep_resolved)?, Some(from_project_to_dep)))
     } else if let Some(git_url) = git_url {
