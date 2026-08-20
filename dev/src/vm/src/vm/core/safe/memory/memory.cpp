@@ -268,6 +268,23 @@ namespace vm {
 		const TypeCRef         type,
 		void (Memory::*callback)(base::ModRawView data, TypeCRef type)
 	) {
+		// The algorithm used to iterate over data works as follows:
+		// Invariants:
+		// * `data` can represent a range of objects
+		//
+		// Algorithm:
+		// 1. If given `data` is empty, then return.
+		// 2. Run the `callback` on the first object.
+		//    (This is not possible on DynamicTable, because size of DynamicTable
+		//    type is undefined.)
+		//    This is the crucial step, the only place where `callback` is used.
+		//    We only run the `callback` on a single, first top-level element.
+		//    This means `callback` is run top-down, not bottom-up in terms of type-composition.
+		// 3. If type is aggregate, then step into each member and call `iterateOverDataAndExecute`.
+		// 4. Run `iterateOverDataAndExecute` with one fewer element.
+
+		if (data.size() == 0) return;
+
 		if (type->getKind() != Type::Kind::DynamicTable) {
 			// Only types other than dynamic_table can be next to each other.
 			// Callback on the first object
@@ -284,22 +301,21 @@ namespace vm {
 			break;
 		case Type::Kind::DynamicTable:
 		case Type::Kind::FixedSizeTable: {
-			// @TODO: #3225 this walk is one level deep - the callback is invoked on the element
-			// itself, so pointers nested inside an aggregate element (e.g. a table of slices) are
-			// never visited and their refcounts are neither increased nor decreased.
 			const auto inner_type = type->getInnerType().value();
 			const auto inner_size = inner_type->getSize().asInt();
 			for (usize begin = 0; begin < data.size(); begin += inner_size)
-				(this->*callback)(
-					base::ModRawView{ data.getBegin() + begin, inner_size }, inner_type
+				iterateOverDataAndExecute(
+					base::ModRawView{ data.getBegin() + begin, inner_size }, inner_type, callback
 				);
 			break;
 		}
 		case Type::Kind::Data: {
 			// Iterate over data's fields
 			for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
-				(this->*callback)(
-					base::ModRawView{ data.getBegin() + offset.asInt(), tp->getSize().asInt() }, tp
+				iterateOverDataAndExecute(
+					base::ModRawView{ data.getBegin() + offset.asInt(), tp->getSize().asInt() },
+					tp,
+					callback
 				);
 			break;
 		}
@@ -308,17 +324,13 @@ namespace vm {
 		}
 
 		if (type->getKind() != Type::Kind::DynamicTable) {
-			// In case we were given a slice of a table with multiple objects of the same type laying
-			// next to each other, then iterate over those as well.
-			// Here we start from the second, since the first one was handled above
-			for (auto next_item = type->getSize().asInt(); next_item < data.size();
-			     next_item += type->getSize().asInt()) {
-				iterateOverDataAndExecute(
-					base::ModRawView{ data.getBegin() + next_item, type->getSize().asInt() },
-					type,
-					callback
-				);
-			}
+			usize tp_size = type->getSize().asInt();
+			CORE_ASSERT(
+				data.size() >= type->getSize().asInt(), "Should work with at least 1 element..."
+			);
+			iterateOverDataAndExecute(
+				base::ModRawView{ data.getBegin() + tp_size, data.size() - tp_size }, type, callback
+			);
 		}
 	}
 
