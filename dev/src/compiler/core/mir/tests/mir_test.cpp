@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(numericLiteralsTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(functionEndTest);
+		TESTER_ADD_TEST(voidCallTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(boxesTest);
@@ -339,7 +340,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
-			ASSERT_EQUAL(3, functions.size());
+			ASSERT_EQUAL(4, functions.size());
 
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
@@ -532,6 +533,38 @@ private:
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->valueOrThrow();
 			ASSERT_EQUAL(empty.block_order.size(), 1);
+		});
+	}
+
+	/**
+	 * @brief A call to a `-> void` function never returns, so its block ends with `Unreachable`
+	 * and everything the source wrote after the call (here `return 42`) is unreachable and gets
+	 * eliminated.
+	 */
+	void voidCallTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/function_calls")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
+			for (const auto& fn: unit.functions)
+				if (fn->declaration->original_name.strView() == "callDiverges") target = fn;
+			ASSERT_HAS_VALUE(target);
+
+			auto& function
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ target.value() })->valueOrThrow();
+
+			auto& last_block = function.blocks[function.block_order.back()];
+			ASSERT_EQUAL_PRINT(
+				last_block.terminator.operation, compiler::mir::Operation::Unreachable
+			);
+
+			for (auto block_id: function.block_order)
+				ASSERT_TRUE(
+					function.blocks[block_id].terminator.operation
+					!= compiler::mir::Operation::ReturnValue
+				);
 		});
 	}
 

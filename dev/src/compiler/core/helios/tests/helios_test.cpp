@@ -90,6 +90,7 @@ public:
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testHoutWalkers);
 		TESTER_ADD_TEST(testFunctions);
+		TESTER_ADD_TEST(testVoidReturnType);
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
@@ -1980,6 +1981,21 @@ private:
 				ASSERT_EQUAL(1, ctv.get<compiler::numeric_value::NumericValue>()->get<i64>());
 			}
 		}
+	}
+
+	// A `-> void` declaration must give the function symbol a result type of the Void type,
+	// which is the marker that the function never returns.
+	void testVoidReturnType() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/functions")));
+
+		const auto diverges_symbol = getChain("diverges", scope).back();
+		const auto function_type
+			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(diverges_symbol)
+		          ->valueOrThrow()
+		          .getType()
+		          .as<compiler::tsh::FunctionAbstractType>();
+
+		ASSERT_EQUAL(compiler::tsh::getVoidType(), function_type.getResultType().getType());
 	}
 
 	void testStaticArrays() {
