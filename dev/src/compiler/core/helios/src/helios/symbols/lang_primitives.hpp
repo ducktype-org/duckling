@@ -11,8 +11,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
     Panic,
 
 	// Power `**` operator
-	// PowI32,
-	// PowI64,
+	PowI32,
+	PowI64,
 	PowF32,
 	PowF64,
 	
