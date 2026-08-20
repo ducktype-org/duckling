@@ -68,33 +68,147 @@ namespace {
 
 	/*
 	 * @brief A helper for language primitives.
-	 * Primitives work on specific types (ex `i64`), but the partial result might operate in terms of `Integer`, `Float`, etc.
+	 * Primitives work on specific types (ex `i64`), but the partial result might operate in terms of broader type category`Integer`, `Float`, etc.
 	 */
-	enum class PartialLangPrimitive {
+	enum class PreLangPrimitive {
 		IntegerPow,
 		FloatPow,
 	};
 
-	base::Optional<LanguagePrimitive> getLanguagePrimitive(query::Context& ctx, PartialLangPrimitive wrap, tsh::AbstractType specific_type) {
+	LanguagePrimitive getLanguagePrimitive(query::Context& ctx, PreLangPrimitive wrap, tsh::AbstractType specific_type) {
 		using tsh::IntegralAbstractType::Signedness::Signed, tsh::IntegralAbstractType::Signedness::Unsigned;
+		using enum PreLangPrimitive;
+		using enum LanguagePrimitive;
+
 		auto i32 = tsh::getIntegralType(ctx, 32,Signed);
 		auto i64 = tsh::getIntegralType(ctx, 64,Signed);
 		auto u32 = tsh::getIntegralType(ctx, 32,Unsigned);
 		auto u64 = tsh::getIntegralType(ctx, 32,Unsigned);
-
 		auto f32 = tsh::getFloatType(ctx, 32);
 		auto f64 = tsh::getFloatType(ctx, 64);
 		
-		 base::Map<std::pair<PartialLangPrimitive, tsh::AbstractType>, LanguagePrimitive> lang_primitive_map = {
-			// { { PartialLangPrimitive::IntegerPow, tsh::i32 }, LanguagePrimitive:: },
-			{ { PartialLangPrimitive::FloatPow, f32 }, LanguagePrimitive::PowF32 },
-			{ { PartialLangPrimitive::FloatPow, f64 }, LanguagePrimitive::PowF64 },
+		 base::Map<std::pair<PreLangPrimitive, tsh::AbstractType>, LanguagePrimitive> lang_primitive_map = {
+			{ { IntegerPow, i32 }, PowI32 },
+			{ { IntegerPow, i64 }, PowI64 },
+			{ { FloatPow, f32 }, PowF32 },
+			{ { FloatPow, f64 }, PowF64 },
 		};
 
-		if (lang_primitive_map.contains({ wrap, specific_type })) {
-			return lang_primitive_map.at({ wrap, specific_type });
+		CORE_ASSERT(lang_primitive_map.contains({ wrap, specific_type }), "Language primitive not found for the given parameters.");
+		return lang_primitive_map.at({ wrap, specific_type });
+	}
+
+	enum class PreDesugaringOperator {
+		IntegerPlusEq,
+		IntegerMinusEq,
+		IntegerMultiplyEq,
+		IntegerDivideEq,
+
+		FloatPlusEq,
+		FloatMinusEq,
+		FloatMultiplyEq,
+		FloatDivideEq,
+	};
+
+	Box<code::Expr> desugarOperatorToExpr(query::Context& ctx, PreDesugaringOperator op, Box<code::Expr> lhs, Box<code::Expr> rhs) {
+		using enum PreDesugaringOperator;
+		using namespace compiler::helios::code::shorthands;
+		Shorthand s{ctx};
+
+		auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
+
+		switch (op) {
+			case IntegerPlusEq: {
+				return withOrigin(
+					new_origin,
+					s.blockExpr(StmtPack{
+						s.assign(
+							lhs->clone(),
+							s.binOp(lhs->clone(), BuiltinBinary::IntegerAdd, std::move(rhs))
+						)
+					})
+				);
+			}
+			case IntegerMinusEq: {
+				return withOrigin(
+					new_origin,
+					s.blockExpr(StmtPack{
+						s.assign(
+							lhs->clone(),
+							s.binOp(lhs->clone(), BuiltinBinary::IntegerSub, std::move(rhs))
+						)
+					})
+				);
+			}
+			case IntegerMultiplyEq: {
+				return withOrigin(
+					new_origin,
+					s.blockExpr(StmtPack{
+						s.assign(
+							lhs->clone(),
+							s.binOp(lhs->clone(), BuiltinBinary::IntegerMul, std::move(rhs))
+						)
+					})
+				);
+			}
+			case IntegerDivideEq: {
+				return withOrigin(
+					new_origin,
+					s.blockExpr(StmtPack{
+						s.assign(
+							lhs->clone(),
+							s.binOp(lhs->clone(), BuiltinBinary::IntegerDiv, std::move(rhs))
+						)
+					})
+				);
+			}
+			case FloatPlusEq: {
+				return withOrigin(
+					new_origin,
+					s.blockExpr(StmtPack{
+						s.assign(
+							lhs->clone(),
+							s.binOp(lhs->clone(), BuiltinBinary::FloatAdd, std::move(rhs))
+						)
+					})
+				);
+			}
+			case FloatMinusEq: {
+				return withOrigin(
+					new_origin,
+					s.blockExpr(StmtPack{
+						s.assign(
+							lhs->clone(),
+							s.binOp(lhs->clone(), BuiltinBinary::FloatSub, std::move(rhs))
+						)
+					})
+				);
+			}
+			case FloatMultiplyEq: {
+				return withOrigin(
+					new_origin,
+					s.blockExpr(StmtPack{
+						s.assign(
+							lhs->clone(),
+							s.binOp(lhs->clone(), BuiltinBinary::FloatMul, std::move(rhs))
+						)
+					})
+				);
+			}
+			case FloatDivideEq: {
+				return withOrigin(
+					new_origin,
+					s.blockExpr(StmtPack{
+						s.assign(
+							lhs->clone(),
+							s.binOp(lhs->clone(), BuiltinBinary::FloatDiv, std::move(rhs))
+						)
+					})
+				);
+			}
+			default:
+				CORE_PANIC("Unsupported desugaring operator");
 		}
-		return {};
 	}
 }
 
@@ -126,9 +240,9 @@ namespace compiler::helios::code {
 	base::Optional<Box<Expr>> resolveNumericBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 	) {
-		using BuiltinOperation = std::variant<BuiltinBinary, PartialLangPrimitive>;
-		// using namespace compiler::helios::code::shorthands;
-		// Shorthand s{ctx};
+		using BuiltinOperation = std::variant<BuiltinBinary, PreLangPrimitive, PreDesugaringOperator>;
+		using namespace compiler::helios::code::shorthands;
+		Shorthand s{ctx};
 
 		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs.ref(), rhs.ref());
 		if (!common_type_res.has_value()) return {};
@@ -145,11 +259,11 @@ namespace compiler::helios::code {
 				  { { base::StrID("*"), tsh::Kind::Integral }, BuiltinBinary::IntegerMul },
 				  { { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
 				  { { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
-				//   { { base::StrID("**"), tsh::Kind::Integral }, },
-				//   { { base::StrID("+="), tsh::Kind::Integral }, },
-				//   { { base::StrID("-="), tsh::Kind::Integral }, },
-				//   { { base::StrID("*="), tsh::Kind::Integral }, },
-				//   { { base::StrID("/="), tsh::Kind::Integral }, },
+				  { { base::StrID("**"), tsh::Kind::Integral }, PreLangPrimitive::IntegerPow},
+				  { { base::StrID("+="), tsh::Kind::Integral }, PreDesugaringOperator::IntegerPlusEq },
+				  { { base::StrID("-="), tsh::Kind::Integral }, PreDesugaringOperator::IntegerMinusEq },
+				  { { base::StrID("*="), tsh::Kind::Integral }, PreDesugaringOperator::IntegerMultiplyEq },
+				  { { base::StrID("/="), tsh::Kind::Integral }, PreDesugaringOperator::IntegerDivideEq },
 
 				  /// Integer comparisons ///
 				  { { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },
@@ -165,11 +279,11 @@ namespace compiler::helios::code {
 				  { { base::StrID("*"), tsh::Kind::Float }, BuiltinBinary::FloatMul },
 				  { { base::StrID("/"), tsh::Kind::Float }, BuiltinBinary::FloatDiv },
 				  { { base::StrID("%"), tsh::Kind::Float }, BuiltinBinary::FloatMod },
-				  { { base::StrID("**"), tsh::Kind::Float }, PartialLangPrimitive::FloatPow },
-				//   { { base::StrID("+="), tsh::Kind::Float }, BuiltinBinary::FloatEqAdd },
-				//   { { base::StrID("-="), tsh::Kind::Float }, BuiltinBinary::FloatEqSub },
-				//   { { base::StrID("*="), tsh::Kind::Float }, BuiltinBinary::FloatEqMul },
-				//   { { base::StrID("/="), tsh::Kind::Float }, BuiltinBinary::FloatEqDiv },
+				  { { base::StrID("**"), tsh::Kind::Float }, PreLangPrimitive::FloatPow },
+				  { { base::StrID("+="), tsh::Kind::Float }, PreDesugaringOperator::FloatPlusEq },
+				  { { base::StrID("-="), tsh::Kind::Float }, PreDesugaringOperator::FloatMinusEq },
+				  { { base::StrID("*="), tsh::Kind::Float }, PreDesugaringOperator::FloatMultiplyEq },
+				  { { base::StrID("/="), tsh::Kind::Float }, PreDesugaringOperator::FloatDivideEq },
 
 				  /// Floating point comparisons ///
 				  { { base::StrID("<"), tsh::Kind::Float }, BuiltinBinary::FloatLt },
@@ -189,17 +303,26 @@ namespace compiler::helios::code {
 			
 			variant_match(operation) {
 				variant_case(BuiltinBinary, op) {
-					return makeBox<BinaryOperatorExpr>(
-						ctx, new_origin, op, std::move(coerced_lhs), std::move(coerced_rhs)
+					return withOrigin(
+						new_origin,
+						s.binOp(std::move(coerced_lhs), op, std::move(coerced_rhs))
 					);
 				}
-				variant_case(PartialLangPrimitive, op) {
+				variant_case(PreLangPrimitive, op) {
 					auto lang_primitive = getLanguagePrimitive(ctx, op, common_type.getType());
-					auto callee = makeBox<IdentifierExpr>(ctx, new_origin, op);
-					auto args = std::vector<Box<Expr>>{std::move(coerced_lhs), std::move(coerced_rhs)};
-					return makeBox<CallExpr>(
-						ctx, new_origin, callee, args
+					auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive })->valueOrThrow();
+
+					return withOrigin(
+						new_origin,
+						s.call(
+							s.ident(callee),
+							std::move(coerced_lhs),
+							std::move(coerced_rhs)
+						)
 					);
+				}
+				variant_case(PreDesugaringOperator, op) {
+					return desugarOperatorToExpr(ctx, op, std::move(coerced_lhs), std::move(coerced_rhs));
 				}
 			}
 		}
