@@ -341,7 +341,8 @@ namespace compiler::lir {
 		 */
 		static LIRGlobal fromMIR(query::Context& ctx, mir::MIRGlobal mir_global);
 
-		void debugPrint(query::Context& ctx, std::ostream& os) const;
+		void debugPrint(std::ostream& output) const;
+		void debugPrint(query::Context& ctx, std::ostream& output) const;
 	};
 
 	/**
@@ -466,12 +467,12 @@ namespace compiler::lir {
 		/**
 		 * Prints this place, assigning IDs to referenced locals in encounter order.
 		 */
-		void debugPrint(query::Context&, std::ostream&) const;
+		void debugPrint(std::ostream&) const;
 
 		/**
 		 * Prints this place using local and block IDs from the function.
 		 */
-		void debugPrint(query::Context&, std::ostream&, const Function& function) const;
+		void debugPrint(std::ostream&, const Function& function) const;
 	};
 
 	/**
@@ -537,12 +538,12 @@ namespace compiler::lir {
 		/**
 		 * Prints this value, assigning IDs to referenced locals and blocks in encounter order.
 		 */
-		void debugPrint(query::Context&, std::ostream&) const;
+		void debugPrint(std::ostream&) const;
 
 		/**
 		 * Prints this value using local and block IDs from the function.
 		 */
-		void debugPrint(query::Context&, std::ostream&, const Function& function) const;
+		void debugPrint(std::ostream&, const Function& function) const;
 	};
 
 	/**
@@ -657,12 +658,12 @@ namespace compiler::lir {
 		/**
 		 * Prints this instruction, assigning IDs to referenced locals and blocks in encounter order.
 		 */
-		void debugPrint(query::Context&, std::ostream&) const;
+		void debugPrint(std::ostream&) const;
 
 		/**
 		 * Prints this instruction using local and block IDs from the function.
 		 */
-		void debugPrint(query::Context&, std::ostream&, const Function& function) const;
+		void debugPrint(std::ostream&, const Function& function) const;
 	};
 
 	/**
@@ -732,7 +733,8 @@ namespace compiler::lir {
 		[[nodiscard]]
 		base::OkBad validateParameters() const;
 
-		void debugPrint(query::Context&, std::ostream& output) const;
+		void debugPrint(std::ostream& output) const;
+		void debugPrint(query::Context& ctx, std::ostream& output) const;
 
 		/**
 		 * @brief Returns a map from all blocks to unique ids.
@@ -790,7 +792,8 @@ namespace compiler::lir {
 		[[nodiscard]]
 		ctv::CompileTimeValue getConstValue() const;
 
-		void debugPrint(query::Context& ctx, std::ostream& out) const;
+		void debugPrint(std::ostream& output) const;
+		void debugPrint(query::Context& ctx, std::ostream& output) const;
 	};
 
 	/**
@@ -805,7 +808,8 @@ namespace compiler::lir {
 		std::vector<CRef<Function>> lir_functions;
 		std::vector<LIRGlobalData>  lir_globals;
 
-		void debugPrint(query::Context& ctx, std::ostream& out) const;
+		void debugPrint(std::ostream& output) const;
+		void debugPrint(query::Context& ctx, std::ostream& output) const;
 
 		/**
 		 * @brief Removes duplicate functions and globals from the LIR unit.

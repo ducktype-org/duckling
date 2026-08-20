@@ -169,8 +169,8 @@ namespace compiler::lir {
 	 * operation.
 	 */
 	struct LIRPrinter final {
-		query::Context& ctx;
-		std::ostream&   output;
+		base::Optional<Ref<query::Context>> ctx;
+		std::ostream&                       output;
 
 		base::Map<LIRLocalRef, usize> local_id;
 		base::Map<BlockRef, usize>    block_id;
@@ -191,13 +191,15 @@ namespace compiler::lir {
 			return id;
 		}
 
-		LIRPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
+		LIRPrinter(std::ostream& output): ctx(), output(output) {}
 
-		LIRPrinter(query::Context& ctx, std::ostream& output, const Function& function):
-			  ctx(ctx),
+		LIRPrinter(std::ostream& output, const Function& function):
+			  ctx(),
 			  output(output),
 			  local_id(function.getLocalVariableIDs()),
 			  block_id(function.getBlockIDs()) {}
+
+		LIRPrinter(query::Context& ctx, std::ostream& output): ctx(Ref{ &ctx }), output(output) {}
 
 		void printLocalDesc(LIRLocalRef local) {
 			output << "  Local(" << getLocalID(local) << ")";
@@ -208,7 +210,12 @@ namespace compiler::lir {
 			if (local->special_kind != LIRLocalSpecialKind::Normal)
 				output << ", kind: " << base::enumToStr(local->special_kind);
 			output << "\n";
-			output << "    LAYOUT:" << local->layout->toStringDefinition(ctx, true, 1) << "\n";
+			output << "    LAYOUT:";
+			if (ctx.has_value())
+				output << local->layout->toStringDefinition(*ctx.value(), true, 1);
+			else
+				output << local->layout->toStringIdentification();
+			output << '\n';
 		}
 
 		/**
@@ -355,6 +362,10 @@ namespace compiler::lir {
 		}
 	};
 
+	void Function::debugPrint(std::ostream& output) const {
+		LIRPrinter{ output }.debugPrint(*this);
+	}
+
 	void Function::debugPrint(query::Context& ctx, std::ostream& output) const {
 		LIRPrinter{ ctx, output }.debugPrint(*this);
 	}
@@ -378,6 +389,13 @@ namespace compiler::lir {
 		os << "Type: " << layout->toStringDefinition(ctx) << "\n";
 	}
 
+	void LIRGlobal::debugPrint(std::ostream& os) const {
+		os << "[LIR] Global ";
+		os << (type == LIRGlobalType::Constant ? "constant" : "variable") << ": ";
+		os << mangled_name.strView() << '\n';
+		os << "Type: " << layout->toStringIdentification() << '\n';
+	}
+
 	void LIRGlobalData::debugPrint(query::Context& ctx, std::ostream& os) const {
 		global.debugPrint(ctx, os);
 		os << "  Data Initialization: ";
@@ -391,6 +409,24 @@ namespace compiler::lir {
 				if_opt_some(ctor_dtor_pair.global_dtor, dtor) {
 					os << "  Global destructor:\n";
 					dtor->debugPrint(ctx, os);
+				}
+			}
+		}
+	}
+
+	void LIRGlobalData::debugPrint(std::ostream& os) const {
+		global.debugPrint(os);
+		os << "  Data Initialization: ";
+		variant_match(data_initialization) {
+			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
+			variant_case(CTorDtorPair, ctor_dtor_pair) {
+				if_opt_some(ctor_dtor_pair.global_ctor, ctor) {
+					os << "  Global constructor:\n";
+					ctor->debugPrint(os);
+				}
+				if_opt_some(ctor_dtor_pair.global_dtor, dtor) {
+					os << "  Global destructor:\n";
+					dtor->debugPrint(os);
 				}
 			}
 		}
@@ -424,6 +460,20 @@ namespace compiler::lir {
 		os << "Functions:\n";
 		for (const auto& func: lir_functions) {
 			func->debugPrint(ctx, os);
+			os << "\n";
+		}
+	}
+
+	void LIRUnit::debugPrint(std::ostream& os) const {
+		os << "LIRUnit: \n";
+		os << "Globals:\n";
+		for (const auto& global: lir_globals) {
+			global.debugPrint(os);
+			os << "\n";
+		}
+		os << "Functions:\n";
+		for (const auto& func: lir_functions) {
+			func->debugPrint(os);
 			os << "\n";
 		}
 	}
@@ -490,31 +540,27 @@ namespace compiler::lir {
 		}
 	}
 
-	void LIRPlace::debugPrint(query::Context& ctx, std::ostream& output) const {
-		LIRPrinter{ ctx, output }.printPlace(*this, output);
+	void LIRPlace::debugPrint(std::ostream& output) const {
+		LIRPrinter{ output }.printPlace(*this, output);
 	}
 
-	void LIRPlace::debugPrint(query::Context& ctx, std::ostream& output, const Function& function)
-		const {
-		LIRPrinter{ ctx, output, function }.printPlace(*this, output);
+	void LIRPlace::debugPrint(std::ostream& output, const Function& function) const {
+		LIRPrinter{ output, function }.printPlace(*this, output);
 	}
 
-	void LIRValue::debugPrint(query::Context& ctx, std::ostream& output) const {
-		LIRPrinter{ ctx, output }.printValue(*this, output);
+	void LIRValue::debugPrint(std::ostream& output) const {
+		LIRPrinter{ output }.printValue(*this, output);
 	}
 
-	void LIRValue::debugPrint(query::Context& ctx, std::ostream& output, const Function& function)
-		const {
-		LIRPrinter{ ctx, output, function }.printValue(*this, output);
+	void LIRValue::debugPrint(std::ostream& output, const Function& function) const {
+		LIRPrinter{ output, function }.printValue(*this, output);
 	}
 
-	void Instruction::debugPrint(query::Context& ctx, std::ostream& output) const {
-		LIRPrinter{ ctx, output }.printInstruction(*this);
+	void Instruction::debugPrint(std::ostream& output) const {
+		LIRPrinter{ output }.printInstruction(*this);
 	}
 
-	void Instruction::debugPrint(
-		query::Context& ctx, std::ostream& output, const Function& function
-	) const {
-		LIRPrinter{ ctx, output, function }.printInstruction(*this);
+	void Instruction::debugPrint(std::ostream& output, const Function& function) const {
+		LIRPrinter{ output, function }.printInstruction(*this);
 	}
 }
