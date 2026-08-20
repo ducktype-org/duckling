@@ -312,7 +312,7 @@ impl PathOpsExt for Path {
                         unreachable!("we removed all curdirs but the current path is `{result:?}`");
                     }
                 },
-                Component::CurDir => {},
+                Component::CurDir => {}
             }
         }
         if result.is_empty() {
