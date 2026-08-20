@@ -19,6 +19,7 @@ namespace compiler::mir {
 		base::StableHashMap<BlockID, Block>                 blocks,
 		std::vector<BlockID>                                block_order,
 		base::StableVector<const MIRLocal>                  local_list,
+		u64                                                 next_local_id,
 		LifetimeScopeTree                                   lifetime_scope_tree,
 		ScopeRef                                            no_lifetime_scope,
 		std::variant<FunctionSymID, GlobalVariableCtorDtor> helios_id
@@ -29,6 +30,7 @@ namespace compiler::mir {
 		  blocks(std::move(blocks)),
 		  block_order(std::move(block_order)),
 		  local_list(std::move(local_list)),
+		  next_local_id(next_local_id),
 		  lifetime_scope_tree(std::move(lifetime_scope_tree)),
 		  no_lifetime_scope(no_lifetime_scope),
 		  helios_id(helios_id) {}
@@ -48,6 +50,17 @@ namespace compiler::mir {
 			}
 		}
 		CORE_UNREACHABLE();
+	}
+
+	MIRLocalRef Function::addGeneratedLocal(
+		tsh::SymbolType<> type, ScopeRef scope, LifetimeFlags flags
+	) {
+		MIRLocal local{ LocalID(next_local_id++), type };
+		local.scope          = scope;
+		local.lifetime_flags = flags;
+
+		local_list.pushBack(local);
+		return local_list.last();
 	}
 
 	bool isTerminating(Operation op) {

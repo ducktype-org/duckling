@@ -861,6 +861,11 @@ namespace compiler::mir {
 		base::StableVector<const MIRLocal> local_list;
 
 		/**
+		 * @brief The `LocalID` the next local added to this function gets.
+		 */
+		u64 next_local_id;
+
+		/**
 		 * Lifetimes scope-tree of this function.
 		 */
 		LifetimeScopeTree lifetime_scope_tree;
@@ -896,6 +901,7 @@ namespace compiler::mir {
 			base::StableHashMap<BlockID, Block> blocks,
 			std::vector<BlockID>                block_order,
 			base::StableVector<const MIRLocal>  local_list,
+			u64                                 next_local_id,
 			LifetimeScopeTree                   lifetime_scope_tree,
 			ScopeRef                            no_lifetime_scope,
 			HSymID                              helios_id
@@ -903,6 +909,12 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
+
+		/**
+		 * @brief Adds a compiler generated local to an already built function and returns it. Used
+		 * when adding lifetime flags in `AddLifetimeFlagsLocalsPass`.
+		 */
+		MIRLocalRef addGeneratedLocal(tsh::SymbolType<> type, ScopeRef scope, LifetimeFlags flags);
 
 		void debugPrint(std::ostream& os) const;
 
