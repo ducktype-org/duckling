@@ -1,5 +1,4 @@
 import os
-import shlex
 import sys
 
 from .helpers import (
@@ -27,7 +26,8 @@ def list_files_impl(
         no_merge_base: If True, compare against latest commit on branch instead of merge base
         lines: If True and only_modified=True, return dict with file->line_ranges mapping
         include_untracked: If True, also list untracked files (counted as fully modified
-                   when lines=True); if False, only warn that they were left out
+                   when lines=True); if False, and with only_modified=True, only warn
+                   that they were left out
 
     Returns:
         List of file paths relative to the current working directory when lines=False,
@@ -54,8 +54,14 @@ def list_files_impl(
 
 
 def _get_all_tracked_files(extensions: list[str] | None = None) -> list[str]:
-    """Get all tracked files in the repository."""
-    files_str, _ = bash_command_get_output("git ls-tree -r --name-only HEAD")
+    """
+    Get all tracked files below the current directory.
+
+    The index, not HEAD: a file that is staged but not committed yet is tracked, and a
+    "format/lint everything" caller wants it. Both listings are relative to the current
+    working directory, so they can be concatenated with the untracked ones.
+    """
+    files_str, _ = bash_command_get_output("git ls-files --cached --exclude-standard")
     files = [f.strip() for f in files_str.strip().split("\n") if f.strip()]
 
     return _filter_by_extensions(files, extensions)
@@ -120,14 +126,26 @@ def _get_untracked_files_to_list(
 
 
 def _get_full_line_ranges(files: list[str]) -> dict[str, list[tuple[int, int]]]:
-    """Map each of the files to a single range covering all of its lines."""
+    """
+    Map each of the files to a single range covering all of its lines.
+
+    Lines are counted in Python rather than with `wc -l`, which counts *newlines*: a file
+    whose last line has no trailing newline (a brand new one, typically) would be
+    under-counted by one, and a one-line file would come out as the inverted range `1-0`.
+    Consumers pass these ranges on verbatim — `clang-format --lines=1:0` errors out with
+    "start line should not exceed end line" — so a file with no lines at all is left out
+    instead of being given an empty range.
+    """
     result: dict[str, list[tuple[int, int]]] = {}
     for file in files:
-        # Skip directories (e.g., git submodules)
-        if os.path.isdir(file):
+        # Skip anything that is not a readable file: directories (e.g. git submodules),
+        # and index entries whose working-tree copy is gone (deleted, not staged yet).
+        if not os.path.isfile(file):
             continue
-        line_count_str, _ = bash_command_get_output(f"wc -l < {shlex.quote(file)}")
-        line_count = int(line_count_str.strip())
+        with open(file, "rb") as f:
+            line_count = len(f.read().splitlines())
+        if not line_count:
+            continue
         result[file] = [(1, line_count)]
     return result
 

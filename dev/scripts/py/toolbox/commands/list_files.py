@@ -32,8 +32,9 @@ from ..impl.list_files import list_files_impl
 @option(
     "--include-untracked",
     is_flag=True,
-    help="Also list untracked files (gitignored ones excluded). Without it, untracked "
-    "files are only reported as a warning on stderr, as git does not diff them.",
+    help="Also list untracked files (gitignored ones excluded). Without it, and with "
+    "--modified, untracked files are only reported as a warning on stderr, as git does "
+    "not diff them.",
 )
 @no_merge_base(
     help="Compare against the latest commit on branch instead of the merge base. "
