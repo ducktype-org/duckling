@@ -36,15 +36,6 @@ namespace compiler::lir {
 		};
 	}
 
-	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
-		auto  bool_type   = tsh::getBoolType();
-		auto& bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type)->valueOrPanicMsg(
-			"layout query failed at LIR stage"
-		);
-
-		return LIRLocal{ CRef<tsl::TypeLayout>(&bool_layout) };
-	}
-
 	LIRLocal LIRLocal::refLocal(query::Context& ctx, const tsh::SymbolType<> pointee_type) {
 		const auto ref_type   = pointee_type.withReferenceKind(tsh::ReferenceKind::Ref);
 		auto&      ref_layout = ctx.query<tsl::QuerySymbolTypeLayout>(ref_type)->valueOrPanicMsg(
