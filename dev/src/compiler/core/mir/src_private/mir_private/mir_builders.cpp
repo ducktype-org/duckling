@@ -160,6 +160,7 @@ namespace compiler::mir {
 			std::move(function_blocks),
 			std::move(block_order),
 			std::move(local_list).toConstData(),
+			next_local_id,
 			std::move(lifetime_scope_tree),
 			no_lifetime_scope,
 			helios_symbol,
