@@ -304,10 +304,14 @@ impl PathOpsExt for Path {
                     Some(Component::Prefix(_)) => {},
                     Some(Component::RootDir) => {},
                     Some(Component::ParentDir) => result.push(parent),
-                    Some(Component::Normal(_)) => { result.pop(); },
+                    Some(Component::Normal(_)) => {
+                        result.pop();
+                    },
                     None => result.push(parent),
-                    Some(Component::CurDir) => unreachable!("we removed all curdirs but the current path is `{result:?}`"),
-                }
+                    Some(Component::CurDir) => {
+                        unreachable!("we removed all curdirs but the current path is `{result:?}`");
+                    },
+                },
                 Component::CurDir => {},
             }
         }
