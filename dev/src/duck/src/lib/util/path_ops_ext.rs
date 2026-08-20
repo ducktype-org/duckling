@@ -301,16 +301,16 @@ impl PathOpsExt for Path {
                 root @ Component::RootDir => result.push(root),
                 normal @ Component::Normal(..) => result.push(normal),
                 parent @ Component::ParentDir => match result.last() {
-                    Some(Component::Prefix(_)) => {},
-                    Some(Component::RootDir) => {},
+                    Some(Component::Prefix(_)) => {}
+                    Some(Component::RootDir) => {}
                     Some(Component::ParentDir) => result.push(parent),
                     Some(Component::Normal(_)) => {
                         result.pop();
-                    },
+                    }
                     None => result.push(parent),
                     Some(Component::CurDir) => {
                         unreachable!("we removed all curdirs but the current path is `{result:?}`");
-                    },
+                    }
                 },
                 Component::CurDir => {},
             }
