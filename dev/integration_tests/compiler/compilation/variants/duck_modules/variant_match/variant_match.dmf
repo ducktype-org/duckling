@@ -227,11 +227,62 @@ fun stringAlternative() -> () = {
 	check(stringAltAppend(&v, '!'), -1i64, 64i64);
 }
 
+# ===== An owning alternative is destroyed on assignment and deep-copied on `copy` =====
+#
+# Assigning into a live variant destroys the previous payload, and copying one deep-copies the
+# active alternative. Exactly one free happens per allocation, which is what the valgrind case
+# checks.
+
+fun owningReassignment() -> () = {
+	# A box assigned over the trivial alternative, and then over another box.
+	var b: box i32 | f32 = (2.5 as f32);
+	b = new 3i32;
+	check(boxAltRead(&b), 3i64, 80i64);
+	b = new 4i32;
+	check(boxAltRead(&b), 4i64, 81i64);
+
+	# The same for a string, whose destructor frees its buffer.
+	var s: String | i32 = 7i32;
+	s = "hello".toString();
+	check(stringAltLength(&s), 5i64, 82i64);
+	s = "abc".toString();
+	check(stringAltLength(&s), 3i64, 83i64);
+
+	# Both variants still own a payload here, so leaving this function has to free them.
+}
+
+# An owning alternative makes the variant non-trivially copyable, so the copy is explicit and runs
+# the generated copy constructor, which deep-copies the active alternative.
+fun owningCopy() -> () = {
+	var b: box i32 | f32 = new 5i32;
+	var b_copy: box i32 | f32 = copy b;
+
+	# The copy owns its own box: writing through one is invisible to the other.
+	check(boxAltWrite(&b_copy, 9i32), 0i64, 100i64);
+	check(boxAltRead(&b), 5i64, 101i64);
+	check(boxAltRead(&b_copy), 9i64, 102i64);
+
+	var s: String | i32 = "hello".toString();
+	var s_copy: String | i32 = copy s;
+
+	# Likewise for the string buffer.
+	check(stringAltAppend(&s_copy, '!'), 6i64, 103i64);
+	check(stringAltLength(&s), 5i64, 104i64);
+	check(stringAltLength(&s_copy), 6i64, 105i64);
+
+	# Copying the trivial alternative of the same variant copies no payload at all.
+	b = (2.5 as f32);
+	var trivial_copy: box i32 | f32 = copy b;
+	check(boxAltRead(&trivial_copy), -1i64, 106i64);
+}
+
 fun main() -> i64 = {
 	matchPositions();
 	refAlternative();
 	boxAlternative();
 	stringAlternative();
+	owningReassignment();
+	owningCopy();
 
 	return 0i64;
 }

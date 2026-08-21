@@ -242,7 +242,7 @@ private:
 	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
 
 	void allocTest() {
-		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n", {}, 42);
+		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n10\n", {}, 42);
 	}
 
 	// Calls into libc/libm through libffi: scalars, a struct returned by value, `cptr char`
