@@ -1,14 +1,19 @@
-fun main() -> i64 = {
-    let a = 20i64;
+class R {
+    a: i32 = 0;
+    R.destroy() = { var t: i32 = a; }
+}
+
+fun main() -> R = {
+    var a: R;
     {
-        let b = 30i64;
+        var b: R;
     };
     block {
-        let c = 40i64;
+        var c: R;
     }
-    
-    if (a > 30i64) {
-        return 30i64;
+
+    if (a.a > 30) {
+        return R();
     }
 
     return a;

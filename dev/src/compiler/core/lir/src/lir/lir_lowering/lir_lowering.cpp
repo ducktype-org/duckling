@@ -28,6 +28,7 @@
 #include <tsl/queries.hpp>
 #include <tsl/type_layout.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>
@@ -162,10 +163,6 @@ namespace compiler::lir {
 			return Operation::Assign;
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
-		case mir::Operation::ListPush:
-			return Operation::ListPush;
-		case mir::Operation::ListPop:
-			return Operation::ListPop;
 		case mir::Operation::ZeroInitialize:
 			return Operation::ZeroInitialize;
 
@@ -244,6 +241,14 @@ namespace compiler::lir {
 			return Operation::BooleanOr;
 		case mir::Operation::BooleanNot:
 			return Operation::BooleanNot;
+
+		/// Variants ///
+		case mir::Operation::VariantConstruct:
+			return Operation::VariantConstruct;
+		case mir::Operation::VariantTryProject:
+			return Operation::VariantTryProject;
+		case mir::Operation::BranchIfNull:
+			return Operation::BranchIfNull;
 		// @TODO: add more cases
 		default:
 			CORE_PANIC(base::strConcat(
@@ -309,7 +314,6 @@ namespace compiler::lir {
 
 			// locals mapping:
 			base::Map<mir::MIRLocalRef, LIRLocalRef> mir_to_lir_local;
-			base::Map<mir::MIRLocalRef, LIRLocalRef> mir_to_lifetime_flag;
 
 			base::StableVector<Block> blocks;
 
@@ -329,6 +333,23 @@ namespace compiler::lir {
 			[[nodiscard]]
 			LIRLocalRef getLocal(const mir::MIRLocalRef mir_local) const {
 				return mir_to_lir_local.at(mir_local);
+			}
+
+			[[nodiscard]]
+			LIRLocalRef insertNewLocal(lir::LIRLocal lir_local) {
+				locals.pushBack(lir_local);
+				return locals.last();
+			}
+
+			/**
+			 * @brief Adds an empty block to the function and puts it at the end of the block order.
+			 */
+			[[nodiscard]]
+			MutBlockRef insertNewBlock() {
+				blocks.pushBack({});
+				auto new_block = blocks.last();
+				block_order.emplace_back(new_block);
+				return new_block;
 			}
 
 			[[nodiscard]]
@@ -461,14 +482,6 @@ namespace compiler::lir {
 					locals.pushBack(lir_local);
 					auto local_index = locals.lastIndex();
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
-
-					// Only create lifetime flag if needed
-					if (!mir_local.type.isTriviallyDestructible(ctx)) {
-						auto lifetime_flag = LIRLocal::boolLocal(ctx);
-						locals.pushBack(lifetime_flag);
-						auto flag_index = locals.lastIndex();
-						mir_to_lifetime_flag.put(&mir_local, locals[flag_index]);
-					}
 				}
 			}
 
@@ -581,11 +594,6 @@ namespace compiler::lir {
 			 * @brief Lowers flags of the given operation into
 			 * LIR instruction flags.
 			 *
-			 * @note This function will not work correctly when one MIR instruction translates into
-			 * multiple LIR instructions, since the `ScopeStart` flags should only be applied to the
-			 * first of the LIR instructions and the `ScopeEnd` flags should only be applied to the
-			 * last of the LIR instructions.
-			 *
 			 * @param mir_instruction
 			 */
 			std::vector<ScopeFlag> lowerFlags(const mir::Instruction& mir_instruction) {
@@ -647,6 +655,164 @@ namespace compiler::lir {
 			}
 
 			/**
+			 * @brief Emits the destructor call of a `Destruct` / `DestructIf` into @p block.
+			 * Emits nothing for a place that carries no information (ex. Unit).
+			 */
+			void emitDestructorCall(MutBlockRef block, const mir::Instruction& mir_instruction) {
+				CORE_ASSERT(
+					mir_instruction.operation == mir::Operation::Destruct
+						or mir_instruction.operation == mir::Operation::DestructIf,
+					"Expected a `Destruct` or a `DestructIf`"
+				);
+
+				const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+				CORE_ASSERT(
+					to_destruct.carriesInformation(ctx),
+					"The destructred place does not carry information. This probably means a "
+					"Destruct of a ZST class got here. Adjust this code accordingly."
+				);
+
+				const auto  destructor = getLocation(mir_instruction.arguments.at(0)).value();
+				const auto  destructed = getPlace(to_destruct);
+				const auto& type       = to_destruct.type;
+
+				if (type.getRefKind() == tsh::ReferenceKind::Direct) {
+					// The destructor takes `self: ref T`, so the address of the destructed
+					// place is materialized first.
+					LIRLocalRef addr_local = insertNewLocal(LIRLocal::refLocal(ctx, type));
+					LIRPlace    addr_place{ addr_local, {} };
+
+					auto& address_instr = block->instructions.emplace_back(
+						Operation::AddressOf,
+						addr_place,
+						std::vector<LIRValue>{ LIRValue{ destructed } },
+						mir_instruction.metadata
+					);
+					address_instr.scope_flags.push_back(ScopeFlag{
+						.flag = ScopeFlag::Flag::ScopeStart, .local = addr_local });
+
+					auto& call_instr = block->instructions.emplace_back(
+						Operation::Call,
+						base::Optional<LIRPlace>{},
+						std::vector<LIRValue>{ destructor, LIRValue{ addr_place } },
+						mir_instruction.metadata
+					);
+					call_instr.scope_flags.push_back(ScopeFlag{ .flag  = ScopeFlag::Flag::ScopeEnd,
+					                                            .local = addr_local });
+				} else if (type.getRefKind() == tsh::ReferenceKind::Box) {
+					// Box — call the destructor on it directly, as the destructor should take
+					// ref T, and box T == ref T in lower representation.
+					block->instructions.emplace_back(
+						Operation::Call,
+						base::Optional<LIRPlace>{},
+						std::vector<LIRValue>{ destructor, LIRValue{ destructed } },
+						mir_instruction.metadata
+					);
+				} else {
+					CORE_PANIC("The reference types don't have destructors.");
+				}
+			}
+
+			/**
+			 * @brief Lowers a `DestructIf` into a branch on the lifetime flag (added by
+			 * `AddLifetimeFlags` pass in MIR) of the destructed local.
+			 *
+			 * ```
+			 * <curr>:          branch flag, <destruct>, <continuation>
+			 * <destruct>:      destructor(place); flag = false; jump <continuation>
+			 * <continuation>:  whatever followed the destruction
+			 * ```
+			 *
+			 * `ScopeEnd` flags of the destruction point are moved to the continuation block. They
+			 * have to be reached on every path, because DVM pairs `init`/`deinit` on a stack, so a
+			 * scope may not end inside the conditional block. `ScopeStart` flags are put before the
+			 * branch for the same reason.
+			 *
+			 * @return the block the instructions following the conditional destruct belong to
+			 */
+			MutBlockRef lowerConditionalDestruct(
+				MutBlockRef curr_block, const mir::Instruction& mir_instruction
+			) {
+				auto flags = lowerFlags(mir_instruction);
+
+				// Creates a `Nop` instruction at the end of @p instructions and moves @p held scope
+				// flags there.
+				auto hold_flags
+					= [&](std::vector<Instruction>& instructions, std::vector<ScopeFlag>&& held) {
+						  if (held.empty()) return;
+
+						  instructions
+							  .emplace_back(
+								  Operation::Nop,
+								  base::Optional<LIRPlace>{},
+								  std::vector<LIRValue>{},
+								  mir_instruction.metadata
+							  )
+							  .scope_flags
+							  = std::move(held);
+					  };
+
+				auto flags_of_kind = [&](ScopeFlag::Flag kind) -> std::vector<ScopeFlag> {
+					std::vector<ScopeFlag> result;
+					for (const auto& flag: flags)
+						if (flag.flag == kind) result.push_back(flag);
+					return result;
+				};
+
+				const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+				// With nothing to destroy there is nothing to branch over either.
+				if (not to_destruct.carriesInformation(ctx)) {
+					hold_flags(curr_block->instructions, std::move(flags));
+					return curr_block;
+				}
+
+				CORE_ASSERT(
+					mir_instruction.arguments.size() == 3,
+					"A `DestructIf` needs the lifetime flag of the destructed local"
+				);
+				const auto lifetime_flag
+					= getPlace(mir_instruction.arguments.at(2).get<mir::MIRPlace>());
+
+				auto destruct_block     = insertNewBlock();
+				auto continuation_block = insertNewBlock();
+
+				hold_flags(curr_block->instructions, flags_of_kind(ScopeFlag::Flag::ScopeStart));
+				curr_block->terminator = Instruction{
+					Operation::Branch,
+					{},
+					std::vector<LIRValue>{ LIRValue{ lifetime_flag },
+					                       LIRValue{ BlockRef(destruct_block) },
+					                       LIRValue{ BlockRef(continuation_block) } },
+					mir_instruction.metadata,
+				};
+
+				emitDestructorCall(destruct_block, mir_instruction);
+				// Set the lifetime flag to false, after the destructor call.
+				destruct_block->instructions.emplace_back(
+					Operation::Assign,
+					lifetime_flag,
+					std::vector<LIRValue>{
+						getLocation(mir::MIRValue(mir::MIRConstant{ ctv::CompileTimeValue(false) }))
+							.value() },
+					mir_instruction.metadata
+				);
+				destruct_block->terminator = Instruction{
+					Operation::Jump,
+					{},
+					std::vector<LIRValue>{ LIRValue{ BlockRef(continuation_block) } },
+					mir_instruction.metadata,
+				};
+
+				hold_flags(
+					continuation_block->instructions, flags_of_kind(ScopeFlag::Flag::ScopeEnd)
+				);
+
+				return continuation_block;
+			}
+
+			/**
 			 * @brief Lowers instruction from MIR to LIR.
 			 * * Fills @p curr_block.
 			 * Legal to use only in lowerBlocks
@@ -697,29 +863,6 @@ namespace compiler::lir {
 							mir_instruction.metadata
 						);
 					}
-					break;
-				}
-				case mir::Operation::ListPush:
-				case mir::Operation::ListPop: {
-					auto output = getOutput(mir_instruction.output);
-					auto args   = getLocations(mir_instruction.arguments);
-
-					const auto& list_place = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
-
-					auto dynamic_array_type
-						= list_place.type.getType().as<tsh::DynamicArrayAbstractType>();
-					auto element_layout = CRef<tsl::TypeLayout>(
-						&ctx.query<tsl::QuerySymbolTypeLayout>(dynamic_array_type.getElementType())
-							 ->valueOrPanicMsg("layout query failed at LIR stage")
-					);
-
-					curr_block->instructions.emplace_back(
-						mir2lirOperation(mir_instruction.operation, false),
-						output,
-						std::move(args),
-						InstructionMetadata{},
-						ListOperationParameters{ .element_layout = element_layout }
-					);
 					break;
 				}
 				case mir::Operation::AddressOf:
@@ -781,85 +924,12 @@ namespace compiler::lir {
 					);
 					break;
 				}
-				case mir::Operation::DestructIf:
 				case mir::Operation::Destruct: {
-					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
-					const auto& type        = to_destruct.type;
-
-					// @TODO: #2825 Destruct the remaining non-trivially-destructible types. It
-					// requires the standard library to stop destroying its values by hand, as it
-					// would double free them otherwise.
-
-					// A dynamic array is destructed by its destructor, which takes `self: ref [T]`,
-					// so the address of the destructed place is materialized first. The destructor
-					// releases the backing buffer with the `list_free` builtin.
-					if (type.getRefKind() == tsh::ReferenceKind::Direct
-					    && type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto lir_place = getLocation(to_destruct);
-
-						if (lir_place.has_value()) {
-							locals.pushBack(LIRLocal::refLocal(ctx, type));
-							const LIRPlace place_ref{ locals[locals.lastIndex()], {} };
-
-							curr_block->instructions.emplace_back(
-								Operation::AddressOf,
-								place_ref,
-								std::vector{ lir_place.value() },
-								InstructionMetadata{}
-							);
-
-							const helios::SymID dtor_sym
-								= helios::getTypeDestructor(ctx, type).value();
-							std::vector<LIRValue> call_args;
-							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, dtor_sym));
-							call_args.emplace_back(place_ref);
-
-							curr_block->instructions.emplace_back(
-								Operation::Call,
-								base::Optional<LIRPlace>{},
-								std::move(call_args),
-								mir_instruction.metadata
-							);
-							break;
-						}
-					}
-
-					// @TODO: #1894 The destructor is called on every DestructIf operating on a box
-					// type (even if the box was moved). This will cause double free's if the box
-					// was moved around between other box variables.
-					if (type.getRefKind() == tsh::ReferenceKind::Box) {
-						auto lir_place = getLocation(to_destruct);
-
-						// The destruction is discarded if it operates on no information (ex. Unit).
-						if (lir_place.has_value()) {
-							// The box destructor destroys the pointee and releases the storage with
-							// the `box_free` builtin. It takes the box itself, which already is a
-							// pointer to the destructed value.
-							const helios::SymID dtor_sym
-								= helios::getTypeDestructor(ctx, type).value();
-							std::vector<LIRValue> call_args;
-							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, dtor_sym));
-							call_args.emplace_back(lir_place.value());
-
-							curr_block->instructions.emplace_back(
-								Operation::Call,
-								base::Optional<LIRPlace>{},
-								std::move(call_args),
-								mir_instruction.metadata
-							);
-							break;
-						}
-					}
-
-					CORE_DEV_LOG(
-						Compiler,
-						"DestructIf not implemented for types with non-trivial "
-						"destructors, skipping",
-						"\n"
-					);
-
+					emitDestructorCall(curr_block, mir_instruction);
 					break;
 				}
+				case mir::Operation::DestructIf:
+					return lowerConditionalDestruct(curr_block, mir_instruction);
 				case mir::Operation::Call: {
 					if (lowerLIRBuiltinCall(mir_instruction, curr_block)) break;
 
@@ -895,6 +965,44 @@ namespace compiler::lir {
 					);
 					break;
 				}
+				case mir::Operation::VariantConstruct:
+				case mir::Operation::VariantTryProject: {
+					auto variant_parameters
+						= std::get_if<mir::VariantParameters>(&mir_instruction.extra_params);
+					if (not variant_parameters)
+						CORE_PANIC("Variant instruction without VariantParameters");
+
+					// `VariantConstruct` writes into the variant, while `VariantTryProject`
+					// reads through a reference to it.
+					const auto variant_type
+						= mir_instruction.operation == mir::Operation::VariantConstruct
+					        ? mir_instruction.output.value().type
+					        : mir_instruction.arguments.at(0)
+					              .get<mir::MIRPlace>()
+					              .type.getPointeeSymbolType();
+
+					auto args   = getLocations(mir_instruction.arguments);
+					auto output = getOutput(mir_instruction.output);
+					curr_block->instructions.emplace_back(
+						mir2lirOperation(mir_instruction.operation, false),
+						output,
+						std::move(args),
+						mir_instruction.metadata,
+						VariantParameters{
+							.alternative_index = variant_parameters->alternative_index,
+							.alternative_type  = variant_parameters->alternative_type,
+							.alternative_layout
+							= &ctx.query<tsl::QuerySymbolTypeLayout>(
+									  variant_parameters->alternative_type
+							)
+					               ->valueOrPanicMsg("layout query failed at LIR stage"),
+							.variant_layout
+							= &ctx.query<tsl::QuerySymbolTypeLayout>(variant_type)
+					               ->valueOrPanicMsg("layout query failed at LIR stage"),
+						}
+					);
+					break;
+				}
 				default:
 					throw base::NotYetImplemented(base::strConcat(
 						"instruction ",
@@ -905,29 +1013,28 @@ namespace compiler::lir {
 				usize after_instruction_count = curr_block->instructions.size();
 				auto  flags                   = lowerFlags(mir_instruction);
 				if (!flags.empty()) {
-					usize instructions_added = after_instruction_count - before_instruction_count;
-					// If this fails, then it's no problem, we just have to adjust the code.
-					// The `ScopeStart` flags should be added to the first of the LIR instructions
-					// and the `ScopeEnd` flags should be added to the last of the LIR instructions.
-					// Now they are added to both in one place.
-					CORE_ASSERT(
-						instructions_added <= 1,
-						base::strConcat(
-							"lowerFlags expected the increase to be less equal to 1, but it was ",
-							after_instruction_count - before_instruction_count
-						)
-					);
-					if (instructions_added == 0) {
+					// A `Destruct` of a direct value takes the address of the destructed
+					// place first and then calls the destructor on it.
+
+					// No instructions inserted means a Nop with two flags added.
+					if (after_instruction_count == before_instruction_count)
 						curr_block->instructions.emplace_back(
 							Operation::Nop,
 							base::Optional<LIRPlace>{},
 							std::vector<LIRValue>{},
 							mir_instruction.metadata
 						);
+
+					auto& first_instruction = curr_block->instructions.at(before_instruction_count);
+					auto& last_instruction  = curr_block->instructions.back();
+
+					// Otherwise insert `ScopeStart` to the first instr, `ScopeEnd` to the last
+					// instr. In case of one instr, the first and last one are the same instruction.
+					for (const auto& flag: flags) {
+						auto& target = flag.flag == ScopeFlag::Flag::ScopeStart ? first_instruction
+						                                                        : last_instruction;
+						target.scope_flags.push_back(flag);
 					}
-					curr_block->instructions.back().scope_flags.insert(
-						curr_block->instructions.back().scope_flags.end(), flags.begin(), flags.end()
-					);
 				}
 				return curr_block;
 			}
@@ -961,7 +1068,8 @@ namespace compiler::lir {
 				}
 				case mir::Operation::ReturnVoid:
 				case mir::Operation::Jump:
-				case mir::Operation::Branch: {
+				case mir::Operation::Branch:
+				case mir::Operation::BranchIfNull: {
 					auto args = getLocations(mir_terminator.arguments);
 					curr_block->terminator
 						= Instruction{ mir2lirOperation(mir_terminator.operation, false),
@@ -1006,7 +1114,7 @@ namespace compiler::lir {
 						variant_case(mir::FunctionSymID, name) {
 							return getLIRAbi(ctx, name.id, return_type, parameter_types);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) {
+						variant_case(mir::GlobalVariableCtorDtor, name) {
 							return { LIRAbi::DefaultAbi{} };
 						}
 					}
@@ -1026,7 +1134,7 @@ namespace compiler::lir {
 								link_once_val, ignore_on_dvm_val, ignore_on_llvm_val
 							);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) {
+						variant_case(mir::GlobalVariableCtorDtor, name) {
 							return std::make_tuple(false, false, false);
 						}
 					}
@@ -1038,11 +1146,20 @@ namespace compiler::lir {
 						variant_case(mir::FunctionSymID, name) {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) {
-							return helios::mangler::getSpecialMangledName<
-								helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
-								ctx, name.global_var_id
-							);
+						variant_case(mir::GlobalVariableCtorDtor, name) {
+							switch (name.type) {
+							case mir::GlobalVariableCtorDtor::Type::Ctor:
+								return helios::mangler::getSpecialMangledName<
+									helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
+									ctx, name.global_var_id
+								);
+							case mir::GlobalVariableCtorDtor::Type::Dtor:
+								return helios::mangler::getSpecialMangledName<
+									helios::mangler::ManglingSymbolKind::GlobalVariableDestructor>(
+									ctx, name.global_var_id
+								);
+							}
+							CORE_UNREACHABLE();
 						}
 					}
 					CORE_UNREACHABLE();

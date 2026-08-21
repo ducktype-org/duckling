@@ -6,6 +6,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <mir/mir_lowering/mir_liveness.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/stmt_lowering.hpp>
 #include <mir_private/utils/bounds_check.hpp>
@@ -422,16 +423,16 @@ namespace compiler::mir {
 			auto dest = function.addTmp(dest_type, expr_scope);
 			dest->lifetime_flags |= LifetimeFlag::NoMoveStatusValidation;
 
-			// The counter only ever goes from zero up to the size of the array, so it is unsigned.
+			// Container sizes and indices are signed, so the counter is too.
 			const auto counter_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
 			auto counter
 				= function.addTmp(tsh::SymbolType<>::withDefaults(counter_type), expr_scope);
 
 			auto counter_constant = [&](usize constant) {
 				return MIRValue{ MIRConstant{
 					ctv::CompileTimeValue{ ctv::NumericValue::createOfType(counter_type, constant)
-					                           .expect("u64 numeric value creation failed") } } };
+					                           .expect("i64 numeric value creation failed") } } };
 			};
 
 			auto cond_block = function.newBlock();
@@ -615,6 +616,207 @@ namespace compiler::mir {
 			return;
 		}
 
+		void visitVariantConstructExpr(const hc::VariantConstructExpr& expr) override {
+			auto result_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				result_type.getType().getKind() == tsh::Kind::Variant,
+				"VariantConstructExpr must produce a variant"
+			);
+			const auto alternative_type
+				= result_type.getType().as<tsh::VariantAbstractType>().getMember(
+					expr.alternative_index
+				);
+
+			auto hole    = continuation->addHole();
+			auto lowered = lowerSubExpr(*expr.inner, continuation);
+
+			std::vector<OperationFlag> flags;
+			const auto                 payload = lowered.getResultAndTakeOwnership(function, flags);
+			return noValueOutput(
+				lowered.begin,
+				hole,
+				Instruction{ Operation::VariantConstruct,
+			                 {},
+			                 { payload },
+			                 std::move(flags),
+			                 expr_scope,
+			                 VariantParameters{ .alternative_index = expr.alternative_index,
+			                                    .alternative_type  = alternative_type },
+			                 { expr.getPosition() } },
+				result_type
+			);
+		}
+
+		void visitMatchExpr(const hc::MatchExpr& expr) override {
+			const auto variant_type = expr.subject->expression_type.getSymbolType()
+			                              .getType()
+			                              .as<tsh::VariantAbstractType>();
+
+			// Every case writes its value here, so the match has one result whichever arm ran.
+			const auto result_type     = expr.expression_type.getSymbolType();
+			const auto target_location = function.addTmp(result_type, expr_scope);
+
+			struct PendingProjection final {
+				BlockBuilder::InstructionHole hole;
+				usize                         alternative_index;
+				MIRLocalMutRef                payload_ptr;
+			};
+
+			std::vector<PendingProjection> pending_projections;
+
+			// Cases are tried in order, but the chain is built backwards, so that a case can name
+			// the one it falls through to. `next_entry` is where a failed test goes.
+			BlockID                         next_entry = continuation->getID();
+			base::Optional<BlockBuilderRef> first_entry;
+
+			for (const auto& match_case: expr.cases | std::views::reverse) {
+				// Nothing recorded yet means this is the last case in source order.
+				const bool is_last_case = !first_entry.has_value();
+
+				// Result block: evaluate the case's value into the shared result, then join.
+				auto case_scope = function.newScope(expr_scope);
+				auto body_end   = function.newBlock();
+				body_end->setTerminator(
+					{ Operation::Jump, {}, { continuation->getID() }, {}, case_scope }
+				);
+				auto assign_hole    = body_end->addHole();
+				auto lowered_result = lowerExpr(*match_case.result, body_end, function, case_scope);
+
+				// The cases are mutually exclusive, so each one initializes the result rather
+				// than overwriting a live value - which is what the construct flag records.
+				lowered_result.storeResultInGivenPlace(
+					MIRPlace(target_location),
+					assign_hole,
+					{ flagConstruct(target_location) },
+					case_scope,
+					{ expr.getPosition() }
+				);
+				auto case_entry = lowered_result.begin;
+
+				// A match covers its subject exhaustively, so the last case is bound to match and
+				// needs no test.
+				bool tests_alternative = match_case.alternative_index.has_value() && !is_last_case;
+
+				bool projects_payload = tests_alternative || match_case.binding.has_value();
+
+				auto test_block = function.newBlock();
+
+				base::Optional<MIRLocalMutRef>    payload_ptr;
+				base::Optional<tsh::SymbolType<>> alternative_type;
+
+				if_opt_some(match_case.alternative_index, index) {
+					alternative_type = variant_type.getMember(index);
+				}
+
+				if (projects_payload) {
+					const auto pointer_type = tsh::SymbolType<>::withDefaults(
+						function.getContext().query<tsh::QueryPointerType>({ alternative_type.value(
+						) })
+					);
+					payload_ptr = function.addTmp(pointer_type, expr_scope);
+
+					pending_projections.emplace_back(PendingProjection{
+						.hole              = test_block->addHole(),
+						.alternative_index = match_case.alternative_index.value(),
+						.payload_ptr       = payload_ptr.value(),
+					});
+				}
+
+				if (match_case.binding.has_value()) {
+					auto binding_local = function.findLocal(match_case.binding.value()).value();
+					binding_local->setLifetimeScope(case_scope);
+
+					MIRValue bound_value = [&](tsh::ReferenceKind binding_ref,
+					                           tsh::ReferenceKind alternative_ref) -> MIRValue {
+						using tsh::ReferenceKind::Direct;
+						using tsh::ReferenceKind::Ref;
+						using tsh::ReferenceKind::Box;
+						if (binding_ref == Direct && alternative_ref == Direct)
+							return { MIRPlace(payload_ptr.value()).withDeref() };
+						if (binding_ref == Direct && alternative_ref != Direct)
+							return { MIRPlace(payload_ptr.value()).withDeref().withDeref() };
+						if (binding_ref == Ref && alternative_ref == Direct)
+							return MIRValue{ payload_ptr.value() };
+						if (binding_ref == Ref && alternative_ref != Direct)
+							return { MIRPlace(payload_ptr.value()).withDeref() };
+						CORE_PANIC("Binding match case to box unsupported.");
+					}(binding_local->type.getRefKind(), alternative_type.value().getRefKind());
+
+					case_entry->addInstruction(Instruction(
+						Operation::Assign,
+						MIRPlace(binding_local),
+						{ std::move(bound_value) },
+						{ flagConstruct(binding_local) },
+						case_scope,
+						{},
+						{ expr.getPosition() }
+					));
+				}
+
+				// Every case gets a test block, even when there is nothing to test. It keeps the
+				// chain uniform, and an empty block folds away later.
+				if (tests_alternative)
+					test_block->setTerminator(Instruction(
+						Operation::BranchIfNull,
+						{},
+						{
+							MIRValue{ payload_ptr.value() },
+							MIRValue{ next_entry },
+							MIRValue{ case_entry->getID() },
+						},
+						{},
+						expr_scope,
+						{},
+						{ expr.getPosition() }
+					));
+				else
+					test_block->setTerminator(
+						{ Operation::Jump, {}, { case_entry->getID() }, {}, expr_scope }
+					);
+
+				next_entry  = test_block->getID();
+				first_entry = test_block;
+			}
+
+			CORE_ASSERT(first_entry.has_value(), "A match has to have at least one case.");
+
+			// With nothing to project the subject is never read, so it is not evaluated either.
+			if (pending_projections.empty()) {
+				valueOutput(first_entry.value(), MIRValue{ MIRPlace(target_location) });
+				return;
+			}
+
+			// The subject goes into the block the chain starts at, which dominates every
+			// projection. Its instructions are added after the holes were reserved, so they end
+			// up ahead of them. It is a reference to the variant, which is what the projections
+			// take, so it is passed on without dereferencing.
+			auto lowered_subject
+				= lowerExpr(*expr.subject, first_entry.value(), function, expr_scope);
+			auto subject_val = lowered_subject.getResult(function);
+			CORE_ASSERT(
+				std::holds_alternative<MIRPlace>(subject_val.getVariant())
+					&& subject_val.get<MIRPlace>().type.getRefKind() != tsh::ReferenceKind::Direct,
+				"A match subject must lower to a place holding a reference to the variant."
+			);
+
+			for (auto& projection: pending_projections) {
+				const auto  alternative_type = variant_type.getMember(projection.alternative_index);
+				Instruction project_instr{ Operation::VariantTryProject,
+					                       {},
+					                       { subject_val },
+					                       { flagConstruct(projection.payload_ptr) },
+					                       expr_scope,
+					                       VariantParameters{
+											   .alternative_index = projection.alternative_index,
+											   .alternative_type  = alternative_type },
+					                       { expr.getPosition() } };
+				project_instr.output.emplace(projection.payload_ptr);
+				projection.hole.fill(std::move(project_instr));
+			}
+
+			valueOutput(lowered_subject.begin, MIRValue{ MIRPlace(target_location) });
+		}
+
 		void visitAccessExpr(const hc::AccessExpr& expr) override {
 			auto       sub_result = lowerSubExpr(*expr.base, continuation);
 			const auto sub_begin  = sub_result.begin;
@@ -640,7 +842,7 @@ namespace compiler::mir {
 				throw base::NotYetImplemented("Lowering of IndexExpr operating on Meta");
 			}
 
-			// Slices and dynamic arrays store their data behind a `ptr` field, so indexing them is
+			// Slices store their data behind a `ptr` field, so indexing them is
 			// `Field(ptr) -> Index`. Static arrays and many-pointers index directly.
 			auto element_place = [&](const MIRPlace& place, const MIRValue& index_val) -> MIRPlace {
 				auto& ctx = function.getContext();
@@ -648,10 +850,6 @@ namespace compiler::mir {
 				case tsh::Kind::Slice: {
 					auto slice_data = ctx.query<helios::QuerySliceTypeData>(base_type);
 					return place.withField(ctx, slice_data->ptr).withIndex(index_val);
-				}
-				case tsh::Kind::DynamicArray: {
-					auto dyn_data = ctx.query<helios::QueryDynamicArrayTypeData>(base_type);
-					return place.withField(ctx, dyn_data->ptr).withIndex(index_val);
 				}
 				case tsh::Kind::StaticArray:
 				case tsh::Kind::ManyPointer:
@@ -680,18 +878,14 @@ namespace compiler::mir {
 				return;
 			}
 
-			// The length of the indexed array - slices and dynamic arrays read their `len` field,
-			// static arrays use their compile-time size.
+			// The length of the indexed array - slices read their `len` field, static arrays use
+			// their compile-time size.
 			auto array_length = [&](const MIRPlace& place) -> MIRValue {
 				auto& ctx = function.getContext();
 				switch (base_kind) {
 				case tsh::Kind::Slice: {
 					auto slice_data = ctx.query<helios::QuerySliceTypeData>(base_type);
 					return place.withField(ctx, slice_data->len);
-				}
-				case tsh::Kind::DynamicArray: {
-					auto dyn_data = ctx.query<helios::QueryDynamicArrayTypeData>(base_type);
-					return place.withField(ctx, dyn_data->len);
 				}
 				case tsh::Kind::StaticArray: {
 					const auto size = base_type.as<tsh::StaticArrayAbstractType>().getSize();
@@ -1018,39 +1212,6 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitListPushExpr(const hc::ListPushExpr& expr) override {
-			auto hole         = continuation->addHole();
-			auto lowered_elem = lowerSubExpr(*expr.element, continuation);
-
-			// The list owns the pushed element, so the push marks a moved element as moved-out.
-			std::vector<OperationFlag> flags;
-			auto elem_val     = lowered_elem.getResultAndTakeOwnership(function, flags);
-			auto lowered_list = lowerSubExpr(*expr.list, lowered_elem.begin);
-			auto list_val     = lowered_list.getResult(function);
-
-			noValueOutput(
-				lowered_list.begin,
-				hole,
-				Instruction(Operation::ListPush, {}, { list_val, elem_val }, flags, expr_scope),
-				expr.expression_type.getSymbolType()
-			);
-		}
-
-		void visitListPopExpr(const hc::ListPopExpr& expr) override {
-			auto hole          = continuation->addHole();
-			auto lowered_count = lowerSubExpr(*expr.count, continuation);
-			auto count_val     = lowered_count.getResult(function);
-			auto lowered_list  = lowerSubExpr(*expr.list, lowered_count.begin);
-			auto list_val      = lowered_list.getResult(function);
-
-			noValueOutput(
-				lowered_list.begin,
-				hole,
-				Instruction(Operation::ListPop, {}, { list_val, count_val }, {}, expr_scope),
-				expr.expression_type.getSymbolType()
-			);
-		}
-
 
 	private:
 		/**
@@ -1106,6 +1267,8 @@ namespace compiler::mir {
 			} else if (const auto* reusable_expr
 			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
+			} else if (const auto* move_expr = dynamic_cast<const hc::MoveExpr*>(&expr)) {
+				return lowerAndLiftToTypeRecursively(*move_expr->inner, continuation);
 			}
 
 			// Any other expression of unit type (a tuple element, a call, ...) is still lowered

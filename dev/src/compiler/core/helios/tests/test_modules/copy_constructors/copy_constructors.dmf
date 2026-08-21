@@ -48,10 +48,6 @@ class FinalBoss {
     trivial_tup: (i32, f64);        # Trivial       -> byte-copied
     nontrivial_tup: (i32, HasBox);  # Non-trivial   -> tuple copy constructor
 
-    # Lists, always deep-copied
-    prim_list: List[i32];       # Trivial element     -> list copy constructor
-    class_list: List[HasBox];   # Non-trivial element -> list copy constructor
-
     # Classes
     nested_default: HasBox;     # Generated copy constructor
     nested_user: UserCopied;    # User-defined copy constructor

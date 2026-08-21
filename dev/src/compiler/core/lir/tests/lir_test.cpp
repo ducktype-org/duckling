@@ -45,9 +45,9 @@ public:
 		TESTER_ADD_TEST(testFromFunctionLiterals);
 		TESTER_ADD_TEST(testLIRGlobal);
 		TESTER_ADD_TEST(testLifetimeFlags);
+		TESTER_ADD_TEST(conditionalDestructTest);
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(staticArrayTest);
-		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 		TESTER_ADD_TEST(cVariadicAbiTest);
@@ -189,7 +189,9 @@ private:
 			// This might change in the future:
 
 			ASSERT_EQUAL(foo_lir->local_list.size(), 3);
-			ASSERT_EQUAL(g_ctor->local_list.size(), 0);
+			// The ctor writes the initial value through a pointer to the global, so it holds that
+			// pointer in a local.
+			ASSERT_EQUAL(g_ctor->local_list.size(), 1);
 
 			// Check local variable 'a'
 			bool found_a = false;
@@ -217,16 +219,23 @@ private:
 			}
 			ASSERT_TRUE(found_global_assign);
 
-			// Check that there is an assignment to a LIRGlobal in the instructions in g_ctor
-			bool found_global_assign_ctor = false;
+			// The ctor takes the address of the global and writes the initial value through it, so
+			// it holds an `AddressOf` on the global and an `Assign` storing through that pointer.
+			bool found_global_address_of = false;
+			bool found_store_through_ptr = false;
 			for (const auto& block: g_ctor->blocks) {
 				for (const auto& instr: block.instructions) {
-					if (instr.operation == lir::Operation::Assign && instr.output.has_value()) {
-						if (instr.output.value().isGlobal()) found_global_assign_ctor = true;
-					}
+					if (instr.operation == lir::Operation::AddressOf && !instr.arguments.empty()
+					    && instr.arguments.at(0).isGlobal())
+						found_global_address_of = true;
+
+					if (instr.operation == lir::Operation::Assign && instr.output.has_value()
+					    && instr.output.value().hasProjections())
+						found_store_through_ptr = true;
 				}
 			}
-			ASSERT_TRUE(found_global_assign_ctor);
+			ASSERT_TRUE(found_global_address_of);
+			ASSERT_TRUE(found_store_through_ptr);
 
 			// Test debug print:
 			std::stringstream foo_str;
@@ -270,6 +279,11 @@ private:
 		ASSERT_HAS_VALUE(g.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(some_global.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(global_tuple.getCtorDtorPair().global_ctor);
+
+		// All the globals here are trivially destructible, so none of them gets a dtor.
+		ASSERT_TRUE(g.getCtorDtorPair().global_dtor.empty());
+		ASSERT_TRUE(some_global.getCtorDtorPair().global_dtor.empty());
+		ASSERT_TRUE(global_tuple.getCtorDtorPair().global_dtor.empty());
 	}
 
 	void testLifetimeFlags() {
@@ -309,6 +323,82 @@ private:
 		auto const_numeric = lir_global.getConstValue().get<numeric_value::NumericValue>();
 		auto const_value   = const_numeric->get<i64>();
 		ASSERT_EQUAL(const_value, 55);
+	}
+
+	void conditionalDestructTest() {
+		using namespace compiler::lir;
+		auto module   = getLIROfModule(path("modules/conditional_destruct"));
+		auto lir_func = module.lirFunc("maybeMove");
+
+		const Instruction* branch_on_flag = nullptr;
+		for (const auto& block: lir_func->block_order) {
+			const auto& terminator = block->terminator;
+			if (terminator.operation != Operation::Branch) continue;
+
+			// The condition of the `if` is a condition temporary, the flag is a plain bool local.
+			const auto& condition = terminator.arguments.at(0).get<LIRPlace>();
+			if (condition.getBase<LIRLocalRef>()->special_kind == LIRLocalSpecialKind::Normal) {
+				ASSERT_TRUE(branch_on_flag == nullptr);
+				branch_on_flag = &terminator;
+			}
+		}
+		ASSERT_TRUE(branch_on_flag != nullptr);
+
+		const auto flag         = branch_on_flag->arguments.at(0).get<LIRPlace>();
+		const auto flag_local   = flag.getBase<LIRLocalRef>();
+		const auto destruct     = branch_on_flag->arguments.at(1).get<BlockRef>();
+		const auto continuation = branch_on_flag->arguments.at(2).get<BlockRef>();
+
+		withContextDo([&](query::Context& ctx) {
+			ASSERT_TRUE(flag.getBaseLayout()->getSourceType().getType().getKind() == Kind::Bool);
+			ASSERT_TRUE(flag.getBaseLayout()->getSourceType().isTriviallyDestructible(ctx));
+		});
+
+		// The taken side calls the destructor, gives the value up by clearing the flag, and merges
+		// back into the continuation.
+		bool calls_destructor = false;
+		bool clears_flag      = false;
+		for (const auto& instr: destruct->instructions) {
+			if (instr.operation == Operation::Call) calls_destructor = true;
+
+			if (instr.operation != Operation::Assign or not instr.output.has_value()) continue;
+			if (not instr.output->isLocal() or instr.output->getBase<LIRLocalRef>() != flag_local)
+				continue;
+
+			auto value = instr.arguments.at(0).get<LIRConstant>().value.get<bool>();
+			ASSERT_HAS_VALUE(value);
+			ASSERT_TRUE(not value.value());
+			clears_flag = true;
+		}
+		ASSERT_TRUE(calls_destructor);
+		ASSERT_TRUE(clears_flag);
+
+		ASSERT_EQUAL(Operation::Jump, destruct->terminator.operation);
+		ASSERT_TRUE(destruct->terminator.arguments.at(0).get<BlockRef>() == continuation);
+
+		// A scope may not end inside the conditional block, because the DVM pairs its `init` and
+		// `deinit` on a stack. The only scopes ending there are of the locals the destructor call
+		// needs itself, and they start there as well.
+		auto scope_flags_of = [](const Instruction& instr, ScopeFlag::Flag kind) {
+			std::vector<LIRLocalRef> locals;
+			for (const auto& scope_flag: instr.scope_flags)
+				if (scope_flag.flag == kind) locals.push_back(scope_flag.local);
+			return locals;
+		};
+
+		std::vector<LIRLocalRef> started;
+		std::vector<LIRLocalRef> ended;
+		for (const auto& instr: destruct->instructions) {
+			for (auto local: scope_flags_of(instr, ScopeFlag::Flag::ScopeStart))
+				started.push_back(local);
+			for (auto local: scope_flags_of(instr, ScopeFlag::Flag::ScopeEnd))
+				ended.push_back(local);
+		}
+		for (auto local: scope_flags_of(destruct->terminator, ScopeFlag::Flag::ScopeEnd))
+			ended.push_back(local);
+
+		ASSERT_EQUAL_PRINT(started.size(), ended.size());
+		for (auto local: ended) ASSERT_TRUE(std::ranges::contains(started, local));
 	}
 
 	void referencesTest() {
@@ -460,51 +550,6 @@ private:
 		ASSERT_TRUE(found_zero_init_b);
 		ASSERT_TRUE(found_index_proj);
 		ASSERT_TRUE(found_nested_proj);
-	}
-
-	void dynamicArrayTest() {
-		auto module   = getLIROfModule(path("modules/dynamic_arrays"));
-		auto lir_func = module.lirFunc("dynamic_array_test");
-
-		using namespace compiler::lir;
-
-		bool found_zero_init        = false;
-		bool found_push_with_params = false;
-		bool found_pop_with_params  = false;
-		bool found_len              = false;
-		bool found_destructor       = false;
-
-		for (const auto& block: lir_func->block_order) {
-			for (const auto& instr: block->instructions) {
-				switch (instr.operation) {
-				case Operation::ZeroInitialize:
-					found_zero_init = true;
-					break;
-				case Operation::Call: {
-					auto name = instr.arguments.at(0).get<FunctionLiteral>().mangled_name.strView();
-					if (name.contains("push"))
-						found_push_with_params = true;
-					else if (name.contains("pop"))
-						found_pop_with_params = true;
-					else if (name.contains("length"))
-						found_len = true;
-					// `Hdd` is the mangling of the compiler-generated destructor, which releases
-					// the list storage.
-					else if (name.contains("Hdd"))
-						found_destructor = true;
-					break;
-				}
-				default:
-					break;
-				}
-			}
-		}
-
-		ASSERT_TRUE(found_zero_init);
-		ASSERT_TRUE(found_push_with_params);
-		ASSERT_TRUE(found_pop_with_params);
-		ASSERT_TRUE(found_len);
-		ASSERT_TRUE(found_destructor);
 	}
 
 	void metaFunctionsTest() {

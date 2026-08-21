@@ -292,35 +292,33 @@ impl PathOpsExt for Path {
 
     #[track_caller]
     fn normalize(&self) -> PathBuf {
-        let mut result = PathBuf::new();
-        let mut components = self.components().peekable();
-        if let Some(c @ Component::Prefix(..)) = components.peek().copied() {
-            result = PathBuf::from(&c);
-            components.next();
-        }
+        let mut result: Vec<Component> = vec![];
+        let components = self.components().peekable();
+
         for component in components {
             match component {
-                Component::Prefix(..) => unreachable!("path `{self:?}` has multiple prefixes"),
-                c @ Component::RootDir => result.push(c),
-                Component::CurDir => {}
-                c @ Component::ParentDir => {
-                    // We end in `..`, push another.
-                    if result.ends_with(Component::ParentDir) {
-                        result.push(c);
-                    } else {
-                        // We have some non-trivial part, remove it.
-                        let popped = result.pop();
-                        // ...but we were empty and we don't have anything. Assume we want to be
-                        // `/`.
-                        if !popped & !result.has_root() {
-                            result.push(Component::RootDir);
-                        }
+                pref @ Component::Prefix(..) => result.push(pref),
+                root @ Component::RootDir => result.push(root),
+                normal @ Component::Normal(..) => result.push(normal),
+                parent @ Component::ParentDir => match result.last() {
+                    Some(Component::Prefix(_)) => {}
+                    Some(Component::RootDir) => {}
+                    Some(Component::ParentDir) => result.push(parent),
+                    Some(Component::Normal(_)) => {
+                        result.pop();
                     }
-                }
-                Component::Normal(os_str) => result.push(os_str),
+                    None => result.push(parent),
+                    Some(Component::CurDir) => {
+                        unreachable!("we removed all curdirs but the current path is `{result:?}`");
+                    }
+                },
+                Component::CurDir => {}
             }
         }
-        result
+        if result.is_empty() {
+            result.push(Component::CurDir);
+        }
+        PathBuf::from_iter(result)
     }
 
     fn expand_tilde(&self, ctx: &DuckContext) -> PathBuf {
@@ -395,6 +393,9 @@ mod tests {
 
         let path = Path::new("/home/duckling/./xd/..");
         assert_eq!(path.normalize(), Path::new("/home/duckling"));
+
+        let path = Path::new("../a/b/c/../../../../d");
+        assert_eq!(path.normalize(), Path::new("../../d"));
     }
 
     #[test]
