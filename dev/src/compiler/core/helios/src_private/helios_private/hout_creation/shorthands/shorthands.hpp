@@ -623,12 +623,15 @@ namespace compiler::helios::code::shorthands {
 		 * - `ref T` is byte-copied, meaning the reference is copied
 		 * - `box T` is deep-copied into a fresh allocation holding a copy of the pointee
 		 *
-		 * @warning This does not match the semantics of the language `copy` operator. The operator
-		 * always creates a direct value (`ref T -> T` and `box T -> T`), while this just copies the
-		 * value directly.
+		 * These are the semantics of the language `copyof` operator, which lowers to this. The
+		 * `copy` operator differs: it always creates a direct value (`ref T -> T` and
+		 * `box T -> T`), while this keeps the reference kind of `source`.
+		 *
+		 * `origin` is used for the nodes this builds. The trivially-copyable case builds no node
+		 * and keeps the origin of `source`.
 		 */
 		[[nodiscard]]
-		Box<Expr> copyValue(Box<Expr> source) const {
+		Box<Expr> copyValue(Box<Expr> source, ElementOrigin origin = generatedOrigin()) const {
 			const tsh::SymbolType<> type = source->expression_type.getSymbolType();
 			if (type.isTriviallyCopyable(*ctx)) return source;
 
@@ -637,9 +640,9 @@ namespace compiler::helios::code::shorthands {
 			// `box(*source)`.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
 				// Produce a copy of the underlying type.
-				auto pointee_copy = copyValue(deref(std::move(source)));
+				auto pointee_copy = copyValue(withOrigin(origin, deref(std::move(source))), origin);
 				// Now wrap it in a heap allocation.
-				return makeBoxAllocCall(*ctx, generatedOrigin(), std::move(pointee_copy));
+				return makeBoxAllocCall(*ctx, origin, std::move(pointee_copy));
 			}
 
 			// Now we have a direct value which should be copied.
@@ -653,7 +656,12 @@ namespace compiler::helios::code::shorthands {
 			);
 
 			const SymID copy_sym = defgen::copyConstructorSymForType(*ctx, abstract_type);
-			return call(ident(copy_sym), refOf(std::move(source)));
+			return withOrigin(
+				origin,
+				call(
+					withOrigin(origin, ident(copy_sym)), withOrigin(origin, refOf(std::move(source)))
+				)
+			);
 		}
 	};
 }

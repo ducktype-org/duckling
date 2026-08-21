@@ -329,7 +329,7 @@ class List {
 
         var i = 0i64;
         while (i < other.length()) {
-            result.push(copy other.pointer[i]);
+            result.push(copyof other.pointer[i]);
             i = i + 1i64;
         }
         return result;

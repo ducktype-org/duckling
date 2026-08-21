@@ -144,6 +144,7 @@ namespace lang_def {
 		ManyPtr,
 		Slice,
 		Copy,
+		Copyof,
 		Move,
 		Refof,
 		Ptrof,
