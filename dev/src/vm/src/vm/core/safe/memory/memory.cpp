@@ -299,7 +299,7 @@ namespace vm {
 		     object_begin += object_size) {
 			const base::ModRawView object{ data.getBegin() + object_begin, object_size };
 
-			if (!is_dynamic_table) (this->*callback)(object, type);
+			(this->*callback)(object, type);
 
 			switch (type->getKind()) {
 			case Type::Kind::Variant:
