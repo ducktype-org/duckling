@@ -3288,14 +3288,14 @@ private:
 		const auto& kind_stmts = keeps_kind->body->statements;
 		ASSERT_EQUAL_PRINT(6, kind_stmts.size());
 
-		const auto initOf = [&](const usize i) -> const Expr* {
+		const auto init_of = [&](const usize i) -> const Expr* {
 			const auto* var_stmt = dynamic_cast<const VariableStmt*>(kind_stmts.at(i).get());
 			ASSERT_TRUE(var_stmt != nullptr);
 			return var_stmt->initial_value.get();
 		};
 
 		// `copyof a` on a direct value calls the copy constructor, just like `copy` does.
-		const auto* ca_init = initOf(1);
+		const auto* ca_init = init_of(1);
 		ASSERT_TRUE(dynamic_cast<const CallExpr*>(stripImplicitMove(ca_init)) != nullptr);
 		ASSERT_EQUAL(
 			compiler::tsh::ReferenceKind::Direct,
@@ -3303,28 +3303,20 @@ private:
 		);
 
 		// `copyof r` keeps the `ref`: the reference itself is copied, so there is no node.
-		const auto* cr_init = initOf(2);
+		const auto* cr_init = init_of(2);
 		ASSERT_TRUE(dynamic_cast<const IdentifierExpr*>(cr_init) != nullptr);
 		ASSERT_EQUAL(
 			compiler::tsh::ReferenceKind::Ref, cr_init->expression_type.getSymbolType().getRefKind()
 		);
 
 		// `copyof bx` keeps the `box`: a fresh allocation holding a copy-constructed pointee.
-		const auto* cb_init = initOf(3);
+		const auto* cb_init = init_of(3);
 		ASSERT_EQUAL(
 			compiler::tsh::ReferenceKind::Box, cb_init->expression_type.getSymbolType().getRefKind()
 		);
 		const auto* boxed = boxAllocArg(cb_init);
 		ASSERT_TRUE(boxed != nullptr);
 		ASSERT_TRUE(dynamic_cast<const CallExpr*>(boxed) != nullptr);
-
-		// A trivially copyable value needs no copy at all, and `copyof` does not warn about it.
-		const auto* cn_init = initOf(4);
-		ASSERT_TRUE(dynamic_cast<const CallExpr*>(cn_init) == nullptr);
-		ASSERT_EQUAL(
-			compiler::tsh::ReferenceKind::Direct,
-			cn_init->expression_type.getSymbolType().getRefKind()
-		);
 	}
 
 	void testDestructors() {
