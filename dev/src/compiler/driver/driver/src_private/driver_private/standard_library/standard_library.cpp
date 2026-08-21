@@ -19,7 +19,7 @@ namespace compiler::driver {
 	namespace {
 		fs::FilePath resolveDefaultStdPath() {
 #ifdef STD_FIXED_PATH
-			#error "aaa"
+			// #error "aaa"
 			return { STD_FIXED_PATH };
 #else
 			#warning "STD_FIXED_PATH is not defined"

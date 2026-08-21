@@ -220,16 +220,6 @@ namespace compiler::driver {
 			switch (key.backend_type) {
 			case BackendType::LLVM: {
 				auto llvm_module = compileLIRModuleToLLVM(ctx, &lir_data);
-				{
-					// compileLIRModuleToLLVM time is added on its own,
-					// but tracking time of the actual compilation to object file is done here
-					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
-
-					llvm_module.compile(
-						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
-					);
-				}
-
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(lir_data.module_id.str() + ".ll")
@@ -247,6 +237,17 @@ namespace compiler::driver {
 						backend_llvm::CompilationOutputType::Assembly
 					);
 				}
+				{
+					// compileLIRModuleToLLVM time is added on its own,
+					// but tracking time of the actual compilation to object file is done here
+					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
+
+					llvm_module.compile(
+						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
+					);
+				}
+
+				
 				break;
 			}
 			case BackendType::DVM: {

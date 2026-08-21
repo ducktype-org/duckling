@@ -35,7 +35,8 @@ add_library(Driver
 )
 
 if(USE_FIXED_STD_PATH)
-	target_compile_definitions(Driver PRIVATE STD_FIXED_PATH="/duck_std_lib")
+	target_compile_definitions(Driver PRIVATE STD_FIXED_PATH="${CMAKE_SOURCE_DIR}/src/lib")
+	#target_compile_definitions(Driver PRIVATE STD_FIXED_PATH="/duck_std_lib")
 endif()
 
 add_dependencies(Driver builtins_embeds)
