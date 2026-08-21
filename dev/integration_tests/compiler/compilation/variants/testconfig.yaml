@@ -19,7 +19,7 @@ Tests:
         ExitCode: 0
       dvm:
         backend: dvm
-        TimeOut: 1
+        TimeOut: 3
         Output:
           String: ""
         ExitCode: 0

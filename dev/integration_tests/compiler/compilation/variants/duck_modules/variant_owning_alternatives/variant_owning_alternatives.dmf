@@ -5,11 +5,6 @@ import core.containers.*;
 	A variant whose alternative owns something: assigning one into a live variant destroys the
 	previous payload, and copying one deep-copies the active alternative. Exactly one free happens
 	per allocation, which is what the valgrind case checks.
-
-	This is a separate module because of a DVM bug: the VM treats a variant as a leaf when it walks
-	a value to adjust block refcounts, so a copy never accounts for a `ref` / `box` payload and the
-	VM panics with a leak. The destructors and the generated copy constructor themselves do run.
-	Hence it only runs on the LLVM backend, under valgrind.
 #}
 
 fun check(actual: i64, expected: i64, id: i64) -> () = {

@@ -305,8 +305,7 @@ namespace vm {
 			case Type::Kind::Variant:
 				// @note We are not touching the variant here,
 				// because variant's nested blocks perform needed `callback`s
-				// on their own, e.g. in `freeBlockData`. This means, that at this point data way
-				// already visited and had `callback` called on it.
+				// on their own, e.g. in `freeBlockData`.
 			case Type::Kind::Primitive:
 			case Type::Kind::Function:
 			case Type::Kind::Opaque:

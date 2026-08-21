@@ -1,0 +1,56 @@
+# This test asserts we are not calling
+# destructors on nested blocks more than necessary.
+
+
+# struct MyStruct {
+#     field0: i64
+#     field1: ptr_i64 | i64
+# }
+# table = MyStruct[3];
+# table[0].field1 = &ret0;
+
+type variant: MyVariant { ptr_i64, i64 }
+
+type data: MyStruct {
+    field0: i64,
+    field1: MyVariant
+}
+
+type fixed_size_table: MyTable MyStruct 3
+type pointer: MyTablePtr MyTable
+type pointer: MyStructPtr MyStruct
+type pointer: MyVariantPtr MyVariant
+type pointer: ptr_ptr_i64 ptr_i64
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type int_ptr, ptr_i64;
+    ref_pptr_pany int_ptr, ret0;
+    # int_ptr = &ret0;
+
+    init_pany_type int_ptr_ptr, ptr_ptr_i64;
+    init_pany_type table, MyTable;
+    # table = MyStruct[3];
+
+    init_pany_type table_ptr, MyTablePtr;
+    ref_pptr_pany table_ptr, table;
+    # table_ptr = &MyStruct[0];
+
+    init_pany_type struct_ptr, MyStructPtr;
+    fixedSizeTableLea_pptr_pptr_p64 struct_ptr, table_ptr, ret0;  # ret0 == 0
+    # struct_ptr = &MyStruct[0];
+
+    init_pany_type variant_ptr, MyVariantPtr;
+    structLea_pptr_pptr_field variant_ptr, struct_ptr, MyStruct.field1;
+    # variant_ptr = &struct_ptr->field1;
+
+    variantSetInner_pptr_type variant_ptr, ptr_i64;
+    # (*variant_ptr).setType<ptr_i64>();
+
+    variantGetInner_pptr_pptr_type int_ptr_ptr, variant_ptr, ptr_i64;
+    # int_ptr_ptr = variant_ptr->asPtr<ptr_i64>();
+
+    store_pptr_pany int_ptr_ptr, int_ptr;
+    # *int_ptr_ptr = int_ptr;
+
+	ret;
+}
