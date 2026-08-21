@@ -10,8 +10,6 @@ import core.containers.*;
 	a value to adjust block refcounts, so a copy never accounts for a `ref` / `box` payload and the
 	VM panics with a leak. The destructors and the generated copy constructor themselves do run.
 	Hence it only runs on the LLVM backend, under valgrind.
-
-	@TODO: #3225 run this on the DVM too.
 #}
 
 fun check(actual: i64, expected: i64, id: i64) -> () = {

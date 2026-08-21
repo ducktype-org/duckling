@@ -300,10 +300,10 @@ namespace vm {
 
 			switch (type->getKind()) {
 			case Type::Kind::Variant:
-				// @TODO: #3225 a variant is still a leaf here. Descending needs the type tag: read
-				// it at offset 0, pick the alternative from `getVariantAlternatives()` and recurse
-				// on the payload at `getTypeTagSizeBytes()`, the way `setVariantType` decodes it.
-				break;
+				// @note We are not touching the variant here,
+				// because variant's nested blocks perform needed `callback`s
+				// on their own, e.g. in `freeBlockData`. This means, that at this point data way
+				// already visited and had `callback` called on it.
 			case Type::Kind::Primitive:
 			case Type::Kind::Function:
 			case Type::Kind::Opaque:
@@ -373,8 +373,8 @@ namespace vm {
 		case Type::Kind::Data:
 		case Type::Kind::Variant:
 			// There is nothing to do with variant, data and tables, because the data should be
-			// already copied thanks to the nested blocks structure, that deletes the nested block's
-			// data first.
+			// already copied thanks to the nested blocks structure, that deletes the nested
+			// block's data first.
 			break;
 		default:
 			CORE_PANIC("Handling default");
@@ -405,9 +405,9 @@ namespace vm {
 
 			for (const auto& block_ptr: global_data_blocks) decreaseBlockRefcount(Ref(block_ptr));
 		} catch (exceptions::VMFoundMemoryLeakException&) {
-			std::cerr
-				<< "Leak during global data deinitialization - e.g. there was a global pointer to "
-				   "data, that was not freed.\n";
+			std::cerr << "Leak during global data deinitialization - e.g. there was a global "
+						 "pointer to "
+						 "data, that was not freed.\n";
 			throw;
 		}
 	}
@@ -440,7 +440,8 @@ namespace vm {
 				CORE_ASSERT(
 					off + type_size <= global_data_buffer.size(),
 					std::format(
-						"Trying to insert global data of size {}, at offset {}, but buffer size is "
+						"Trying to insert global data of size {}, at offset {}, but buffer "
+						"size is "
 						"only {}",
 						type_size,
 						off,

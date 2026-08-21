@@ -8,9 +8,6 @@ Tests:
           String: ""
         ExitCode: 0
 
-  # @TODO: #3225 run this on the DVM too. `Memory::iterateOverDataAndExecute` treats a variant as
-  # a leaf, so copying one never adjusts the refcount of a `ref`/`box` payload and the VM reports
-  # a leak.
   variant_owning_alternatives:
     Cases:
       llvm_valgrind:
@@ -20,3 +17,11 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+      dvm:
+        backend: dvm
+        TimeOut: 1
+        Output:
+          String: ""
+        ExitCode: 0
+        # @TODO: #3381 Reenable after fixing destructor
+        Enabled: false

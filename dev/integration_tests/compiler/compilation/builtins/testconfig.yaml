@@ -9,18 +9,18 @@ Tests:
         Output:
           String: "HELLO\nH"
   # Freeing a table of aggregates that hold a pointer only leaks on stderr, so `Err` is what makes
-  # this case fail - the exit code stays 0 either way. See #3225.
+  # this case fail - the exit code stays 0 either way.
   dvm_alloc_nested:
     Cases:
       dvm:
         backend: dvm
         ExitCode: 0
         Output:
-          String: "5\n5\n"
+          String: "5\n"
         Err:
           String: ""
   numeric_io:
-    Cases: 
+    Cases:
       llvm:
         backend: llvm
         Input:

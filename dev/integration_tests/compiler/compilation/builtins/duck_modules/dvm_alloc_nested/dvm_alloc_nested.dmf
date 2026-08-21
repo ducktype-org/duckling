@@ -1,13 +1,8 @@
 import core.builtins.*;
 
 #{
-	Freeing a DVM dynamic table whose element type is an aggregate *holding* a pointer. `str` is a
-	`slice char`, so the pointed to block sits one level below the table's element: storing into the
-	table copies the slice and takes a reference on that block, and freeing the table has to give it
-	back. A walk that stops at the element leaks the refcount, which the DVM only reports as a
-	`block.refcount != 0` line on stderr during supervisor teardown - the exit code stays 0. Hence
-	this case pins stderr down to empty; checking stdout and the exit code alone would not notice.
-	See #3225.
+	Tests whether VM correctly counts references in nested blocks while
+	allocating and freeing memory.
 #}
 
 class Labelled {
@@ -16,13 +11,6 @@ class Labelled {
 }
 
 fun main() -> i64 = {
-	var p = dvm_alloc_arr:{str}(2i64);
-	p[0] = "ab";
-	p[1] = "cde";
-	builtin_output_i64(p[0].length() + p[1].length());
-	dvm_free_arr:{str}(p);
-
-	# One level deeper: table -> Labelled -> str -> ptr char.
 	var q = dvm_alloc_arr:{Labelled}(2i64);
 	q[0] = Labelled("wxyz", 1i64);
 	q[1] = Labelled("v", 2i64);

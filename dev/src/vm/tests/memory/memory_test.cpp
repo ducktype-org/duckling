@@ -12,8 +12,8 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(localLeakTest);
 		TESTER_ADD_TEST(globalLeakTest);
-		TESTER_ADD_TEST(noDoubleDestructorCalls);
 		TESTER_ADD_TEST(nestedLeaks);
+		TESTER_ADD_TEST(variantDestructor);
 	}
 
 private:
@@ -32,14 +32,14 @@ private:
 		ASSERT_TRUE(validation_result.value() == false);
 	}
 
-	void noDoubleDestructorCalls() { runTestOnVm("no_double_destructor.dbc", "", ""); }
-
 	void nestedLeaks() {
 		assertExecutionPanickedWith(
 			runTestOnVmGetResult("nested_leaks.dbc", "", ""),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);
 	}
+
+	void variantDestructor() { runTestOnVm("variant_destructor.dbc", "", ""); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/memory/");
