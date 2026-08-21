@@ -656,12 +656,7 @@ namespace compiler::helios::code::shorthands {
 			);
 
 			const SymID copy_sym = defgen::copyConstructorSymForType(*ctx, abstract_type);
-			return withOrigin(
-				origin,
-				call(
-					withOrigin(origin, ident(copy_sym)), withOrigin(origin, refOf(std::move(source)))
-				)
-			);
+			return withOrigin(origin, call(ident(copy_sym), refOf(std::move(source))));
 		}
 	};
 }
