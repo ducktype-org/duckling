@@ -11,7 +11,7 @@
 //     };
 //
 // That replaces the derived hash for that type - see the note on schema_hash. It is the
-// answer for a type whose format the library cannot see (a hand-written ser_write), and
+// answer for a type whose format the library cannot see (a hand-written serWrite), and
 // the only way to make such a type's hash stable across standard libraries.
 //
 // The primary is EMPTY rather than a set of defaults, and that matters for what comes
@@ -22,7 +22,7 @@
 
 namespace ser {
 
-    template <class T>
-    struct config {};
+	template<class T>
+	struct config {};
 
-} // namespace ser
+}  // namespace ser

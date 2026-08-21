@@ -4,19 +4,155 @@
 // 64 named parameters: with k arguments the (k+1)-th number lands on N. It needs a
 // conforming preprocessor, which on MSVC means /Zc:preprocessor (CMakeLists sets it).
 
-#define SER_DETAIL_NARG_PICK(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, _40, _41, _42, _43, _44, _45, _46, _47, _48, _49, _50, _51, _52, _53, _54, _55, _56, _57, _58, _59, _60, _61, _62, _63, _64, N, ...) N
-#define SER_DETAIL_NARG(...) SER_DETAIL_NARG_PICK(__VA_ARGS__, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#define SER_DETAIL_NARG_PICK( \
+	_1,                       \
+	_2,                       \
+	_3,                       \
+	_4,                       \
+	_5,                       \
+	_6,                       \
+	_7,                       \
+	_8,                       \
+	_9,                       \
+	_10,                      \
+	_11,                      \
+	_12,                      \
+	_13,                      \
+	_14,                      \
+	_15,                      \
+	_16,                      \
+	_17,                      \
+	_18,                      \
+	_19,                      \
+	_20,                      \
+	_21,                      \
+	_22,                      \
+	_23,                      \
+	_24,                      \
+	_25,                      \
+	_26,                      \
+	_27,                      \
+	_28,                      \
+	_29,                      \
+	_30,                      \
+	_31,                      \
+	_32,                      \
+	_33,                      \
+	_34,                      \
+	_35,                      \
+	_36,                      \
+	_37,                      \
+	_38,                      \
+	_39,                      \
+	_40,                      \
+	_41,                      \
+	_42,                      \
+	_43,                      \
+	_44,                      \
+	_45,                      \
+	_46,                      \
+	_47,                      \
+	_48,                      \
+	_49,                      \
+	_50,                      \
+	_51,                      \
+	_52,                      \
+	_53,                      \
+	_54,                      \
+	_55,                      \
+	_56,                      \
+	_57,                      \
+	_58,                      \
+	_59,                      \
+	_60,                      \
+	_61,                      \
+	_62,                      \
+	_63,                      \
+	_64,                      \
+	N,                        \
+	...                       \
+)                             \
+	N
+#define SER_DETAIL_NARG(...) \
+	SER_DETAIL_NARG_PICK(    \
+		__VA_ARGS__,         \
+		64,                  \
+		63,                  \
+		62,                  \
+		61,                  \
+		60,                  \
+		59,                  \
+		58,                  \
+		57,                  \
+		56,                  \
+		55,                  \
+		54,                  \
+		53,                  \
+		52,                  \
+		51,                  \
+		50,                  \
+		49,                  \
+		48,                  \
+		47,                  \
+		46,                  \
+		45,                  \
+		44,                  \
+		43,                  \
+		42,                  \
+		41,                  \
+		40,                  \
+		39,                  \
+		38,                  \
+		37,                  \
+		36,                  \
+		35,                  \
+		34,                  \
+		33,                  \
+		32,                  \
+		31,                  \
+		30,                  \
+		29,                  \
+		28,                  \
+		27,                  \
+		26,                  \
+		25,                  \
+		24,                  \
+		23,                  \
+		22,                  \
+		21,                  \
+		20,                  \
+		19,                  \
+		18,                  \
+		17,                  \
+		16,                  \
+		15,                  \
+		14,                  \
+		13,                  \
+		12,                  \
+		11,                  \
+		10,                  \
+		9,                   \
+		8,                   \
+		7,                   \
+		6,                   \
+		5,                   \
+		4,                   \
+		3,                   \
+		2,                   \
+		1,                   \
+		0                    \
+	)
 
 // ── m(a), m(b), m(c) ──────────────────────────────────────────────────────────
-#define SER_DETAIL_FE_C_1(m, x) m(x)
-#define SER_DETAIL_FE_C_2(m, x, ...) m(x), SER_DETAIL_FE_C_1(m, __VA_ARGS__)
-#define SER_DETAIL_FE_C_3(m, x, ...) m(x), SER_DETAIL_FE_C_2(m, __VA_ARGS__)
-#define SER_DETAIL_FE_C_4(m, x, ...) m(x), SER_DETAIL_FE_C_3(m, __VA_ARGS__)
-#define SER_DETAIL_FE_C_5(m, x, ...) m(x), SER_DETAIL_FE_C_4(m, __VA_ARGS__)
-#define SER_DETAIL_FE_C_6(m, x, ...) m(x), SER_DETAIL_FE_C_5(m, __VA_ARGS__)
-#define SER_DETAIL_FE_C_7(m, x, ...) m(x), SER_DETAIL_FE_C_6(m, __VA_ARGS__)
-#define SER_DETAIL_FE_C_8(m, x, ...) m(x), SER_DETAIL_FE_C_7(m, __VA_ARGS__)
-#define SER_DETAIL_FE_C_9(m, x, ...) m(x), SER_DETAIL_FE_C_8(m, __VA_ARGS__)
+#define SER_DETAIL_FE_C_1(m, x)       m(x)
+#define SER_DETAIL_FE_C_2(m, x, ...)  m(x), SER_DETAIL_FE_C_1(m, __VA_ARGS__)
+#define SER_DETAIL_FE_C_3(m, x, ...)  m(x), SER_DETAIL_FE_C_2(m, __VA_ARGS__)
+#define SER_DETAIL_FE_C_4(m, x, ...)  m(x), SER_DETAIL_FE_C_3(m, __VA_ARGS__)
+#define SER_DETAIL_FE_C_5(m, x, ...)  m(x), SER_DETAIL_FE_C_4(m, __VA_ARGS__)
+#define SER_DETAIL_FE_C_6(m, x, ...)  m(x), SER_DETAIL_FE_C_5(m, __VA_ARGS__)
+#define SER_DETAIL_FE_C_7(m, x, ...)  m(x), SER_DETAIL_FE_C_6(m, __VA_ARGS__)
+#define SER_DETAIL_FE_C_8(m, x, ...)  m(x), SER_DETAIL_FE_C_7(m, __VA_ARGS__)
+#define SER_DETAIL_FE_C_9(m, x, ...)  m(x), SER_DETAIL_FE_C_8(m, __VA_ARGS__)
 #define SER_DETAIL_FE_C_10(m, x, ...) m(x), SER_DETAIL_FE_C_9(m, __VA_ARGS__)
 #define SER_DETAIL_FE_C_11(m, x, ...) m(x), SER_DETAIL_FE_C_10(m, __VA_ARGS__)
 #define SER_DETAIL_FE_C_12(m, x, ...) m(x), SER_DETAIL_FE_C_11(m, __VA_ARGS__)
@@ -74,18 +210,18 @@
 #define SER_DETAIL_FE_C_64(m, x, ...) m(x), SER_DETAIL_FE_C_63(m, __VA_ARGS__)
 
 #define SER_DETAIL_FOR_EACH(m, ...) \
-    SER_DETAIL_CAT(SER_DETAIL_FE_C_, SER_DETAIL_NARG(__VA_ARGS__))(m, __VA_ARGS__)
+	SER_DETAIL_CAT(SER_DETAIL_FE_C_, SER_DETAIL_NARG(__VA_ARGS__))(m, __VA_ARGS__)
 
 // ── m(a) m(b) m(c) - m supplies its own semicolon ─────────────────────────────
-#define SER_DETAIL_FE_S_1(m, x) m(x)
-#define SER_DETAIL_FE_S_2(m, x, ...) m(x) SER_DETAIL_FE_S_1(m, __VA_ARGS__)
-#define SER_DETAIL_FE_S_3(m, x, ...) m(x) SER_DETAIL_FE_S_2(m, __VA_ARGS__)
-#define SER_DETAIL_FE_S_4(m, x, ...) m(x) SER_DETAIL_FE_S_3(m, __VA_ARGS__)
-#define SER_DETAIL_FE_S_5(m, x, ...) m(x) SER_DETAIL_FE_S_4(m, __VA_ARGS__)
-#define SER_DETAIL_FE_S_6(m, x, ...) m(x) SER_DETAIL_FE_S_5(m, __VA_ARGS__)
-#define SER_DETAIL_FE_S_7(m, x, ...) m(x) SER_DETAIL_FE_S_6(m, __VA_ARGS__)
-#define SER_DETAIL_FE_S_8(m, x, ...) m(x) SER_DETAIL_FE_S_7(m, __VA_ARGS__)
-#define SER_DETAIL_FE_S_9(m, x, ...) m(x) SER_DETAIL_FE_S_8(m, __VA_ARGS__)
+#define SER_DETAIL_FE_S_1(m, x)       m(x)
+#define SER_DETAIL_FE_S_2(m, x, ...)  m(x) SER_DETAIL_FE_S_1(m, __VA_ARGS__)
+#define SER_DETAIL_FE_S_3(m, x, ...)  m(x) SER_DETAIL_FE_S_2(m, __VA_ARGS__)
+#define SER_DETAIL_FE_S_4(m, x, ...)  m(x) SER_DETAIL_FE_S_3(m, __VA_ARGS__)
+#define SER_DETAIL_FE_S_5(m, x, ...)  m(x) SER_DETAIL_FE_S_4(m, __VA_ARGS__)
+#define SER_DETAIL_FE_S_6(m, x, ...)  m(x) SER_DETAIL_FE_S_5(m, __VA_ARGS__)
+#define SER_DETAIL_FE_S_7(m, x, ...)  m(x) SER_DETAIL_FE_S_6(m, __VA_ARGS__)
+#define SER_DETAIL_FE_S_8(m, x, ...)  m(x) SER_DETAIL_FE_S_7(m, __VA_ARGS__)
+#define SER_DETAIL_FE_S_9(m, x, ...)  m(x) SER_DETAIL_FE_S_8(m, __VA_ARGS__)
 #define SER_DETAIL_FE_S_10(m, x, ...) m(x) SER_DETAIL_FE_S_9(m, __VA_ARGS__)
 #define SER_DETAIL_FE_S_11(m, x, ...) m(x) SER_DETAIL_FE_S_10(m, __VA_ARGS__)
 #define SER_DETAIL_FE_S_12(m, x, ...) m(x) SER_DETAIL_FE_S_11(m, __VA_ARGS__)
@@ -143,4 +279,4 @@
 #define SER_DETAIL_FE_S_64(m, x, ...) m(x) SER_DETAIL_FE_S_63(m, __VA_ARGS__)
 
 #define SER_DETAIL_FOR_EACH_STMT(m, ...) \
-    SER_DETAIL_CAT(SER_DETAIL_FE_S_, SER_DETAIL_NARG(__VA_ARGS__))(m, __VA_ARGS__)
+	SER_DETAIL_CAT(SER_DETAIL_FE_S_, SER_DETAIL_NARG(__VA_ARGS__))(m, __VA_ARGS__)

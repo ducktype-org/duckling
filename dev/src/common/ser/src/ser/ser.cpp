@@ -1,6 +1,6 @@
-#include <ser/ser.hpp>       // IWYU pragma: keep
-#include <ser/std/all.hpp>   // IWYU pragma: keep
-#include <ser/test.hpp>      // IWYU pragma: keep
+#include <ser/ser.hpp>      // IWYU pragma: keep
+#include <ser/std/all.hpp>  // IWYU pragma: keep
+#include <ser/test.hpp>     // IWYU pragma: keep
 
 namespace ser::duckling {
 

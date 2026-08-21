@@ -64,11 +64,12 @@ enum Shape { ROUND = 0, SQUARE = 3 };  // unscoped, and the compiler picks its u
  * compile error inside the bindings ladder, never wrong bytes.
  */
 struct Leaf {
-	i32    a      = 0;
-	double b      = 0;
-	bool   c      = false;
-	Color  d      = Color::Red;
-	char   tag[4] = {};
+	i32    a = 0;
+	double b = 0;
+	bool   c = false;
+	Color  d = Color::Red;
+	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+	char tag[4] = {};
 
 	using ser_members = ser::members<5>;
 
@@ -128,13 +129,13 @@ namespace ser {
 	 */
 	template<>
 	struct serializer<u8> {
-		static errc write(writer auto& ar, const u8& x) { return ar(x.asInt()); }
+		static Errc write(writer auto& ar, const u8& x) { return ar(x.asInt()); }
 
-		static errc read(reader auto& ar, u8& x) {
+		static Errc read(reader auto& ar, u8& x) {
 			uchar raw = 0;
-			if (const auto e = ar(raw); e != errc::ok) return e;
+			if (const auto e = ar(raw); e != Errc::Ok) return e;
 			x = u8(raw);
-			return errc::ok;
+			return Errc::Ok;
 		}
 	};
 
@@ -196,16 +197,16 @@ constexpr uchar ADL_STAMP    = 0x44;
 
 /** @brief One spelling for both directions: writes the stamp, or reads and checks it. */
 template<uchar M>
-constexpr ser::errc stamp(auto& ar) {
+constexpr ser::Errc stamp(auto& ar) {
 	uchar m = M;
-	if (const auto e = ar(m); e != ser::errc::ok) return e;
-	return m == M ? ser::errc::ok : ser::errc::invalid_value;
+	if (const auto e = ar(m); e != ser::Errc::Ok) return e;
+	return m == M ? ser::Errc::Ok : ser::Errc::InvalidValue;
 }
 
 /** @brief The same for the make path, which has no room for a code next to the value. */
 template<uchar M>
 void expectStamp(ser::reader auto& ar) {
-	if (ser::read_field<uchar>(ar) != M) ser::throw_error(ser::errc::invalid_value, ar.position());
+	if (ser::readField<uchar>(ar) != M) ser::throwError(ser::Errc::InvalidValue, ar.position());
 }
 
 /** @brief Level 1: ser::serializer<T>, in its symmetric `visit` form. */
@@ -220,8 +221,8 @@ namespace ser {
 
 	template<>
 	struct serializer<TraitVisit> {
-		static constexpr errc visit(auto& ar, auto& self) {
-			if (const auto e = stamp<TRAIT_STAMP>(ar); e != errc::ok) return e;
+		static constexpr Errc visit(auto& ar, auto& self) {
+			if (const auto e = stamp<TRAIT_STAMP>(ar); e != Errc::Ok) return e;
 			return ar(self.a, self.b);
 		}
 	};
@@ -233,13 +234,13 @@ struct MemberPair {
 	u32 a = 0;
 	u32 b = 0;
 
-	static constexpr ser::errc ser_write(ser::writer auto& ar, const MemberPair& x) {
-		if (const auto e = stamp<MEMBER_STAMP>(ar); e != ser::errc::ok) return e;
+	static constexpr ser::Errc serWrite(ser::writer auto& ar, const MemberPair& x) {
+		if (const auto e = stamp<MEMBER_STAMP>(ar); e != ser::Errc::Ok) return e;
 		return ar(x.a, x.b);
 	}
 
-	static constexpr ser::errc ser_read(ser::reader auto& ar, MemberPair& x) {
-		if (const auto e = stamp<MEMBER_STAMP>(ar); e != ser::errc::ok) return e;
+	static constexpr ser::Errc serRead(ser::reader auto& ar, MemberPair& x) {
+		if (const auto e = stamp<MEMBER_STAMP>(ar); e != ser::Errc::Ok) return e;
 		return ar(x.a, x.b);
 	}
 
@@ -250,7 +251,7 @@ struct MemberPair {
  * @brief Level 2 again, private and built rather than filled.
  *
  * `const` fields and no default constructor, so there is nothing to fill in after the
- * fact: `ser_make` returns a prvalue that initializes the caller's object where it
+ * fact: `serMake` returns a prvalue that initializes the caller's object where it
  * belongs. Private is the case every hook detector has to get right - written outside
  * `ser::access` they would all report false here and this type would silently take the
  * automatic path.
@@ -277,14 +278,14 @@ private:
 	const u32 a;
 	const u32 b;
 
-	static ser::errc ser_write(ser::writer auto& ar, const PrivMake& x) {
-		if (const auto e = stamp<PRIV_STAMP>(ar); e != ser::errc::ok) return e;
+	static ser::Errc serWrite(ser::writer auto& ar, const PrivMake& x) {
+		if (const auto e = stamp<PRIV_STAMP>(ar); e != ser::Errc::Ok) return e;
 		return ar(x.a, x.b);
 	}
 
-	static PrivMake ser_make(ser::reader auto& ar) {
+	static PrivMake serMake(ser::reader auto& ar) {
 		expectStamp<PRIV_STAMP>(ar);
-		return PrivMake{ ser::read_field<u32>(ar), ser::read_field<u32>(ar) };
+		return PrivMake{ ser::readField<u32>(ar), ser::readField<u32>(ar) };
 	}
 };
 
@@ -302,14 +303,14 @@ namespace geom {
 	// leaving it out is the asymmetry the library refuses - a hook found when reading and
 	// missed when writing means the two directions disagree about the format.
 	template<class Ar>
-	ser::errc ser_visit(Ar& ar, Point& p) {
-		if (const auto e = stamp<ADL_STAMP>(ar); e != ser::errc::ok) return e;
+	ser::Errc serVisit(Ar& ar, Point& p) {
+		if (const auto e = stamp<ADL_STAMP>(ar); e != ser::Errc::Ok) return e;
 		return ar(p.x, p.y);
 	}
 
 	template<class Ar>
-	ser::errc ser_visit(Ar& ar, const Point& p) {
-		if (const auto e = stamp<ADL_STAMP>(ar); e != ser::errc::ok) return e;
+	ser::Errc serVisit(Ar& ar, const Point& p) {
+		if (const auto e = stamp<ADL_STAMP>(ar); e != ser::Errc::Ok) return e;
 		return ar(p.x, p.y);
 	}
 
@@ -349,7 +350,7 @@ struct Renamed {
 /**
  * @brief SER_DESCRIBE_MAKE: one field list, and a read side that BUILDS.
  *
- * `SER_DESCRIBE` would not do here. It generates `ser_visit`, which reads by writing
+ * `SER_DESCRIBE` would not do here. It generates `serVisit`, which reads by writing
  * through a reference to each field, and `const u64 id` cannot be written through.
  */
 class Built {
@@ -395,11 +396,11 @@ struct Hooked {
 };
 
 static_assert(!std::is_default_constructible_v<Hooked>, "Hooked must be BUILT on read, not filled");
-static_assert(ser::can_enumerate_members_v<Branch>, "the field probe has to count Branch on its own");
+static_assert(ser::CAN_ENUMERATE_MEMBERS_V<Branch>, "the field probe has to count Branch on its own");
 
 // A described aggregate and the same aggregate walked automatically are the same format,
 // so adding SER_DESCRIBE to a type invalidates no stream that was already written.
-static_assert(ser::schema_hash<Described>() == ser::schema_hash<Twin>());
+static_assert(ser::schemaHash<Described>() == ser::schemaHash<Twin>());
 
 /** @brief The nested array the depth guard is measured against. */
 template<usize Depth>
@@ -441,23 +442,23 @@ private:
 		const Tree tree = sampleTree();
 
 		ByteBuf buf;
-		ASSERT_TRUE(ser::write(buf, tree).has_value());
+		ASSERT_TRUE(ser::write(buf, tree).hasValue());
 		assertTrue(!buf.empty(), "an object of this size cannot serialize to nothing");
 
 		const auto back = ser::read<Tree>(view(buf));
-		ASSERT_TRUE(back.has_value());
+		ASSERT_TRUE(back.hasValue());
 		assertTrue(back->value == tree, "the tree did not survive the round trip");
 
 		// Appending, not overwriting: the second message lands after the first, and one
 		// archive reads both back in order.
 		const usize first = buf.size();
-		ASSERT_TRUE(ser::write(buf, tree).has_value());
+		ASSERT_TRUE(ser::write(buf, tree).hasValue());
 		ASSERT_EQUAL(2 * first, buf.size());
 
 		ser::in ar{ view(buf) };
 		Tree    one;
 		Tree    two;
-		ASSERT_EQUAL(ser::errc::ok, ar(one, two));
+		ASSERT_EQUAL(ser::Errc::Ok, ar(one, two));
 		assertTrue(one == tree && two == tree, "two appended messages did not read back");
 		ASSERT_EQUAL(buf.size(), ar.position());
 
@@ -477,19 +478,19 @@ private:
 			TraitVisit{ .a = 1u, .b = 2u }, 1 + 4 + 4, "ser::serializer<T>::visit"
 		);
 		expectRung<MEMBER_STAMP>(
-			MemberPair{ .a = 3u, .b = 4u }, 1 + 4 + 4, "in-class ser_write/ser_read"
+			MemberPair{ .a = 3u, .b = 4u }, 1 + 4 + 4, "in-class serWrite/serRead"
 		);
-		expectRung<PRIV_STAMP>(PrivMake{ 5u, 6u }, 1 + 4 + 4, "private ser_write/ser_make");
-		expectRung<ADL_STAMP>(geom::Point{ .x = 1.5, .y = -2.5 }, 1 + 8 + 8, "ADL ser_visit");
+		expectRung<PRIV_STAMP>(PrivMake{ 5u, 6u }, 1 + 4 + 4, "private serWrite/serMake");
+		expectRung<ADL_STAMP>(geom::Point{ .x = 1.5, .y = -2.5 }, 1 + 8 + 8, "ADL serVisit");
 
 		// SER_DESCRIBE has no stamp of its own - it IS the field list - so what it has to
 		// prove is the other half: the described fields survive and the skipped one does
 		// not come back.
 		ByteBuf described;
-		ASSERT_TRUE(ser::write(described, Described{ .x = 9, .s = "nine", .skipped = 7 }).has_value()
+		ASSERT_TRUE(ser::write(described, Described{ .x = 9, .s = "nine", .skipped = 7 }).hasValue()
 		);
 		const auto described_back = ser::read<Described>(view(described));
-		ASSERT_TRUE(described_back.has_value());
+		ASSERT_TRUE(described_back.hasValue());
 		ASSERT_EQUAL(9, described_back->value.x);
 		ASSERT_EQUAL(std::string{ "nine" }, described_back->value.s);
 		ASSERT_EQUAL(0, described_back->value.skipped);
@@ -507,9 +508,9 @@ private:
 		};
 
 		ByteBuf composite;
-		ASSERT_TRUE(ser::write(composite, hooked).has_value());
+		ASSERT_TRUE(ser::write(composite, hooked).hasValue());
 		const auto hooked_back = ser::read<Hooked>(view(composite));
-		ASSERT_TRUE(hooked_back.has_value());
+		ASSERT_TRUE(hooked_back.hasValue());
 		assertTrue(hooked_back->value == hooked, "the composite did not survive the round trip");
 	}
 
@@ -527,37 +528,37 @@ private:
 
 		ByteBuf plain;
 		ByteBuf framed;
-		ASSERT_TRUE(ser::write(plain, tree).has_value());
-		ASSERT_TRUE(ser::write(framed, tree, { .header = true, .user_magic = MAGIC }).has_value());
-		ASSERT_EQUAL(plain.size() + ser::stream_header::wire_size, framed.size());
+		ASSERT_TRUE(ser::write(plain, tree).hasValue());
+		ASSERT_TRUE(ser::write(framed, tree, { .header = true, .user_magic = MAGIC }).hasValue());
+		ASSERT_EQUAL(plain.size() + ser::stream_header::WIRE_SIZE, framed.size());
 
-		const auto peeked = ser::peek_header(view(framed), MAGIC);
-		ASSERT_TRUE(peeked.has_value());
-		ASSERT_EQUAL(framed.size(), usize(peeked->total_size()));
-		ASSERT_EQUAL(MAGIC, peeked->user_magic());
+		const auto peeked = ser::peekHeader(view(framed), MAGIC);
+		ASSERT_TRUE(peeked.hasValue());
+		ASSERT_EQUAL(framed.size(), usize(peeked->totalSize()));
+		ASSERT_EQUAL(MAGIC, peeked->userMagic());
 
-		constexpr u64 TREE_SCHEMA = ser::schema_hash<Tree>();
+		constexpr u64 TREE_SCHEMA = ser::schemaHash<Tree>();
 		ASSERT_EQUAL(TREE_SCHEMA, peeked->schema_hash);
 
 		const ser::options opts{ .header = true, .user_magic = MAGIC };
-		ASSERT_TRUE(ser::read<Tree>(view(framed), opts).has_value());
+		ASSERT_TRUE(ser::read<Tree>(view(framed), opts).hasValue());
 
 		// 1. the envelope has to be there at all
-		ASSERT_EQUAL(ser::errc::truncated, ser::read<Tree>(view(framed, 16), opts).code());
+		ASSERT_EQUAL(ser::Errc::Truncated, ser::read<Tree>(view(framed, 16), opts).code());
 
 		// 2. then the magic - somebody else's ser stream, and a damaged one
-		ASSERT_EQUAL(ser::errc::bad_magic, ser::read<Tree>(view(framed), { .header = true }).code());
+		ASSERT_EQUAL(ser::Errc::BadMagic, ser::read<Tree>(view(framed), { .header = true }).code());
 		ByteBuf damaged = framed;
 		damaged[1]      = std::byte{ 'X' };
-		ASSERT_EQUAL(ser::errc::bad_magic, ser::read<Tree>(view(damaged), opts).code());
+		ASSERT_EQUAL(ser::Errc::BadMagic, ser::read<Tree>(view(damaged), opts).code());
 
 		// 3. then the platform, which is checked before anything in the stream is believed
 		damaged     = framed;
 		damaged[28] = std::byte{ 0xFF };  // the low byte of `flags`
-		ASSERT_EQUAL(ser::errc::platform_mismatch, ser::read<Tree>(view(damaged), opts).code());
+		ASSERT_EQUAL(ser::Errc::PlatformMismatch, ser::read<Tree>(view(damaged), opts).code());
 
 		// 4. and only then the schema, which is the one step that needs the type
-		ASSERT_EQUAL(ser::errc::schema_mismatch, ser::read<Leaf>(view(framed), opts).code());
+		ASSERT_EQUAL(ser::Errc::SchemaMismatch, ser::read<Leaf>(view(framed), opts).code());
 	}
 
 	/**
@@ -569,20 +570,20 @@ private:
 	void errorPaths() {
 		const Tree tree = sampleTree();
 		ByteBuf    buf;
-		ASSERT_TRUE(ser::write(buf, tree).has_value());
+		ASSERT_TRUE(ser::write(buf, tree).hasValue());
 
 		for (usize n = 0; n < buf.size(); ++n) {
 			const auto cut = ser::read<Tree>(view(buf, n));
-			assertTrue(!cut.has_value(), base::strConcat("a prefix of ", n, " bytes was accepted"));
+			assertTrue(!cut.hasValue(), base::strConcat("a prefix of ", n, " bytes was accepted"));
 		}
 
 		// A bool holding anything but 0 or 1 is undefined behaviour, so the object
 		// representation never reaches the wire and what comes back is validated.
 		ByteBuf flag;
-		ASSERT_TRUE(ser::write(flag, true).has_value());
+		ASSERT_TRUE(ser::write(flag, true).hasValue());
 		ASSERT_EQUAL(usize{ 1 }, flag.size());
 		flag[0] = std::byte{ 2 };
-		ASSERT_EQUAL(ser::errc::invalid_value, ser::read<bool>(view(flag)).code());
+		ASSERT_EQUAL(ser::Errc::InvalidValue, ser::read<bool>(view(flag)).code());
 
 		// The same key twice is a damaged stream, not a merge: keeping the first would
 		// turn it into a map smaller than the one that was written.
@@ -593,7 +594,7 @@ private:
 		(void) ser::write(duplicate, u32{ 1 });
 		(void) ser::write(duplicate, u32{ 20 });
 		using Table = std::map<u32, u32>;
-		ASSERT_EQUAL(ser::errc::invalid_value, ser::read<Table>(view(duplicate)).code());
+		ASSERT_EQUAL(ser::Errc::InvalidValue, ser::read<Table>(view(duplicate)).code());
 
 		// A length prefix is the first thing an attacker reaches for: it arrives before
 		// the elements it counts, so it is checked against what the stream can hold and
@@ -601,20 +602,20 @@ private:
 		ByteBuf lying;
 		(void) ser::write(lying, u64{ 1'000 });
 		using Numbers = std::vector<u32>;
-		ASSERT_EQUAL(ser::errc::truncated, ser::read<Numbers>(view(lying)).code());
-		ASSERT_EQUAL(ser::errc::truncated, ser::read<std::string>(view(lying)).code());
+		ASSERT_EQUAL(ser::Errc::Truncated, ser::read<Numbers>(view(lying)).code());
+		ASSERT_EQUAL(ser::Errc::Truncated, ser::read<std::string>(view(lying)).code());
 
 		ByteBuf absurd;
-		(void) ser::write(absurd, u64{ ser::config_global::max_container_elements } + 1);
-		ASSERT_EQUAL(ser::errc::message_size, ser::read<Numbers>(view(absurd)).code());
+		(void) ser::write(absurd, u64{ ser::config_global::MAX_CONTAINER_ELEMENTS } + 1);
+		ASSERT_EQUAL(ser::Errc::MessageSize, ser::read<Numbers>(view(absurd)).code());
 
 		// The depth counter, checked against the configured limit rather than an
 		// accidental one. No braces on `deep`: Clang materializes the whole initializer
 		// tree and overflows its own frontend stack somewhere past 200 levels.
-		static NestT<ser::config_global::max_depth + 8> deep;
+		static NestT<ser::config_global::MAX_DEPTH + 8> deep;
 		ByteBuf                                         nested;
 		ser::out                                        ar{ nested };
-		ASSERT_EQUAL(ser::errc::depth_exceeded, ar(deep));
+		ASSERT_EQUAL(ser::Errc::DepthExceeded, ar(deep));
 		ASSERT_EQUAL(usize{ 0 }, ar.depth());  // the guard unwound cleanly
 	}
 
@@ -629,7 +630,7 @@ private:
 	void mutatedStreams() {
 		const Tree tree = sampleTree();
 		ByteBuf    buf;
-		ASSERT_TRUE(ser::write(buf, tree).has_value());
+		ASSERT_TRUE(ser::write(buf, tree).hasValue());
 
 		u64        state = 0x9E'37'79'B9'7F'4A'7C'15ull;
 		const auto next  = [&state] {
@@ -649,7 +650,7 @@ private:
 			for (usize flips = next() % 4 + 1; flips > 0; --flips)
 				mutated[next() % mutated.size()] = static_cast<std::byte>(next() & 0xFFu);
 
-			if (ser::read<Tree>(view(mutated)).has_value())
+			if (ser::read<Tree>(view(mutated)).hasValue())
 				++accepted;
 			else
 				++refused;
@@ -666,33 +667,33 @@ private:
 	void formatContract() {
 		// The bytes are the same and a stream really does read back from one into the
 		// other, so the format is the same.
-		constexpr u64 ORDERED   = ser::schema_hash<std::map<u32, Leaf>>();
-		constexpr u64 UNORDERED = ser::schema_hash<std::unordered_map<u32, Leaf>>();
+		constexpr u64 ORDERED   = ser::schemaHash<std::map<u32, Leaf>>();
+		constexpr u64 UNORDERED = ser::schemaHash<std::unordered_map<u32, Leaf>>();
 		ASSERT_EQUAL(ORDERED, UNORDERED);
 
 		// The element type is part of the format, and no sizeof of anybody's std::vector
 		// enters into it.
-		constexpr u64 OF_U32   = ser::schema_hash<std::vector<u32>>();
-		constexpr u64 OF_FLOAT = ser::schema_hash<std::vector<float>>();
+		constexpr u64 OF_U32   = ser::schemaHash<std::vector<u32>>();
+		constexpr u64 OF_FLOAT = ser::schemaHash<std::vector<float>>();
 		assertTrue(OF_U32 != OF_FLOAT, "vector<u32> and vector<float> are not the same format");
 
 		// A rename is not a format change, and that is the whole reason field names stay
 		// out of the wire hash: the C++23 and C++26 backends must agree on it, and only
-		// one of them knows the names. debug_hash is where they go.
-		constexpr u64 DESCRIBED_SCHEMA = ser::schema_hash<Described>();
-		constexpr u64 RENAMED_SCHEMA   = ser::schema_hash<Renamed>();
+		// one of them knows the names. debugHash is where they go.
+		constexpr u64 DESCRIBED_SCHEMA = ser::schemaHash<Described>();
+		constexpr u64 RENAMED_SCHEMA   = ser::schemaHash<Renamed>();
 		ASSERT_EQUAL(DESCRIBED_SCHEMA, RENAMED_SCHEMA);
 
-		constexpr u64 DESCRIBED_DEBUG = ser::debug_hash<Described>();
-		constexpr u64 RENAMED_DEBUG   = ser::debug_hash<Renamed>();
-		assertTrue(DESCRIBED_DEBUG != RENAMED_DEBUG, "debug_hash has to see the rename");
+		constexpr u64 DESCRIBED_DEBUG = ser::debugHash<Described>();
+		constexpr u64 RENAMED_DEBUG   = ser::debugHash<Renamed>();
+		assertTrue(DESCRIBED_DEBUG != RENAMED_DEBUG, "debugHash has to see the rename");
 
 		// A lower bound and nothing else, but it has to be a truthful one: it is what
 		// stands between a corrupt length prefix and an allocation.
 		static_assert(
-			ser::min_wire_size_v<Leaf> >= sizeof(i32) + sizeof(double) + 1 + sizeof(u16) + 4
+			ser::MIN_WIRE_SIZE_V<Leaf> >= sizeof(i32) + sizeof(double) + 1 + sizeof(u16) + 4
 		);
-		static_assert(ser::min_wire_size_v<std::vector<Leaf>> >= sizeof(u64));
+		static_assert(ser::MIN_WIRE_SIZE_V<std::vector<Leaf>> >= sizeof(u64));
 	}
 
 	// ── helpers ─────────────────────────────────────────────────────────────────────
@@ -701,7 +702,7 @@ private:
 	template<uchar M, class T>
 	void expectRung(const T& sample, usize wire_size, std::string_view what) {
 		ByteBuf buf;
-		assertTrue(ser::write(buf, sample).has_value(), base::strConcat("write failed: ", what));
+		assertTrue(ser::write(buf, sample).hasValue(), base::strConcat("write failed: ", what));
 		assertTrue(
 			buf.size() == wire_size,
 			base::strConcat("wrong wire size for ", what, ": ", buf.size(), " != ", wire_size)
@@ -709,7 +710,7 @@ private:
 		assertTrue(buf[0] == std::byte{ M }, base::strConcat("a different rung handled ", what));
 
 		const auto back = ser::read<T>(view(buf));
-		assertTrue(back.has_value(), base::strConcat("read failed: ", what));
+		assertTrue(back.hasValue(), base::strConcat("read failed: ", what));
 		assertTrue(back->value == sample, base::strConcat("value changed: ", what));
 	}
 };

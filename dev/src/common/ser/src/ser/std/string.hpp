@@ -22,59 +22,58 @@
 // format you can write and never read back is a bug with a use case.
 
 #include <ser/concepts.hpp>
-#include <ser/errc.hpp>
-#include <ser/serializer.hpp>
-#include <ser/hash.hpp>
-#include <ser/traits.hpp>
-
 #include <ser/detail/container.hpp>
 #include <ser/detail/dispatch_fwd.hpp>
+#include <ser/errc.hpp>
+#include <ser/hash.hpp>
+#include <ser/serializer.hpp>
+#include <ser/traits.hpp>
 
 #include <cstddef>
 #include <string>
 
 namespace ser {
 
-    template <class Ch, class Tr, class Al>
-    struct min_wire_size<::std::basic_string<Ch, Tr, Al>> {
-        static constexpr ::std::size_t value = sizeof(detail::wire_size_type);
-    };
+	template<class Ch, class Tr, class Al>
+	struct min_wire_size<::std::basic_string<Ch, Tr, Al>> {
+		static constexpr ::std::size_t VALUE = sizeof(detail::wire_size_type);
+	};
 
-    // The character type is the format; the traits and the allocator are not on the wire
-    // and are not hashed. See the note on ser::schema in hash.hpp for why an adapter says
-    // this itself instead of letting a sizeof stand in for it.
-    template <class Ch, class Tr, class Al>
-    struct schema<::std::basic_string<Ch, Tr, Al>> {
-        template <class Mode, class Seen>
-        static consteval ::std::uint64_t mix(::std::uint64_t h) {
-            return detail::schema_of<Ch, Mode, Seen>(detail::schema_text(h, "string"));
-        }
-    };
+	// The character type is the format; the traits and the allocator are not on the wire
+	// and are not hashed. See the note on ser::schema in hash.hpp for why an adapter says
+	// this itself instead of letting a sizeof stand in for it.
+	template<class Ch, class Tr, class Al>
+	struct schema<::std::basic_string<Ch, Tr, Al>> {
+		template<class Mode, class Seen>
+		static consteval ::std::uint64_t mix(::std::uint64_t h) {
+			return detail::schemaOf<Ch, Mode, Seen>(detail::schemaText(h, "string"));
+		}
+	};
 
-    template <class Ch, class Tr, class Al>
-    struct serializer<::std::basic_string<Ch, Tr, Al>> {
-        using string_type = ::std::basic_string<Ch, Tr, Al>;
+	template<class Ch, class Tr, class Al>
+	struct serializer<::std::basic_string<Ch, Tr, Al>> {
+		using string_type = ::std::basic_string<Ch, Tr, Al>;
 
-        static constexpr errc write(writer auto& ar, const string_type& s) {
-            if (const auto c = detail::write_length(ar, s.size()); c != errc::ok) return c;
-            for (const Ch ch : s)
-                if (const auto c = detail::dispatch_write<Ch>(ar, ch); c != errc::ok) return c;
-            return errc::ok;
-        }
+		static constexpr Errc write(writer auto& ar, const string_type& s) {
+			if (const auto c = detail::writeLength(ar, s.size()); c != Errc::Ok) return c;
+			for (const Ch ch: s)
+				if (const auto c = detail::dispatchWrite<Ch>(ar, ch); c != Errc::Ok) return c;
+			return Errc::Ok;
+		}
 
-        static constexpr errc read(reader auto& ar, string_type& s) {
-            ::std::size_t n = 0;
-            if (const auto c = detail::read_length<Ch>(ar, n); c != errc::ok) return c;
+		static constexpr Errc read(reader auto& ar, string_type& s) {
+			::std::size_t n = 0;
+			if (const auto c = detail::readLength<Ch>(ar, n); c != Errc::Ok) return c;
 
-            // resize AFTER the checks in read_length, never before - that is the whole
-            // point of them. Cleared first so a partial read cannot leave the tail of a
-            // previous value behind.
-            s.clear();
-            s.resize(n);
-            for (::std::size_t i = 0; i < n; ++i)
-                if (const auto c = detail::dispatch_read<Ch>(ar, s[i]); c != errc::ok) return c;
-            return errc::ok;
-        }
-    };
+			// resize AFTER the checks in readLength, never before - that is the whole
+			// point of them. Cleared first so a partial read cannot leave the tail of a
+			// previous value behind.
+			s.clear();
+			s.resize(n);
+			for (::std::size_t i = 0; i < n; ++i)
+				if (const auto c = detail::dispatchRead<Ch>(ar, s[i]); c != Errc::Ok) return c;
+			return Errc::Ok;
+		}
+	};
 
-} // namespace ser
+}  // namespace ser
