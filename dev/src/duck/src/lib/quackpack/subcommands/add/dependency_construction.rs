@@ -42,41 +42,41 @@ use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug, Clone)]
 /// Raw specification from which [`Dependency`] can be constructed.
-pub struct DependencySpecification {
+pub struct DependencySpecification<'matches> {
     /// Specification of the name of the dependency.
-    pub name_spec: NameSpecification,
+    pub name_spec: NameSpecification<'matches>,
     /// Specification of the source of the dependency.
-    pub source_spec: SourceSpecification,
+    pub source_spec: SourceSpecification<'matches>,
     /// Required versions of this dependency.
     pub versions: Vec<Version>,
     /// Features of the dependency.
-    pub features: Vec<String>,
+    pub features: Vec<&'matches str>,
     /// Whether the dependency should be pinned.
     pub pinned: bool,
 }
 
 #[derive(Debug, Clone)]
 /// Raw specification from which [`DependencySource`] can be constructed.
-pub struct SourceSpecification {
-    pub local_path: Option<PathBuf>,
-    pub git_url: Option<String>,
-    pub git_branch: Option<String>,
-    pub git_tag: Option<String>,
-    pub git_commit: Option<String>,
-    pub registry_url: Option<String>,
+pub struct SourceSpecification<'matches> {
+    pub local_path: Option<&'matches Path>,
+    pub git_url: Option<&'matches str>,
+    pub git_branch: Option<&'matches str>,
+    pub git_tag: Option<&'matches str>,
+    pub git_commit: Option<&'matches str>,
+    pub registry_url: Option<&'matches str>,
 }
 
 #[derive(Debug, Clone)]
 /// Specification of the name of the dependency.
-pub struct NameSpecification {
-    pub name: String,
-    pub alias: Option<String>,
+pub struct NameSpecification<'matches> {
+    pub name: &'matches str,
+    pub alias: Option<&'matches str>,
 }
 
-impl NameSpecification {
+impl NameSpecification<'_> {
     /// How this dependency will be referenced in manifest and in code.
-    fn effective_name(self) -> String {
-        self.alias.unwrap_or(self.name)
+    fn effective_name(&self) -> String {
+        self.alias.unwrap_or(self.name).to_string()
     }
 
     /// Whether and how [`DependencySource`] should specify a name.
@@ -107,10 +107,10 @@ pub fn construct_dependency(
     // For now it is not possible to specify feature conditions through `add` interface.
     let features: Vec<DependencyFeature> = features
         .into_iter()
-        .map(DependencyFeature::Simple)
+        .map(|f| DependencyFeature::Simple(f.to_string()))
         .collect();
     let latest_version = verify_and_get_version(
-        (&name_spec.name).into(),
+        name_spec.name.into(),
         source,
         &versions,
         &features,
@@ -191,9 +191,9 @@ fn construct_source(
 
 /// Construct a [`GitReference`] from the given specification.
 fn construct_git_ref(
-    tag: Option<String>,
-    branch: Option<String>,
-    commit: Option<String>,
+    tag: Option<&str>,
+    branch: Option<&str>,
+    commit: Option<&str>,
 ) -> GitReference {
     if let Some(tag) = tag {
         debug_assert!(

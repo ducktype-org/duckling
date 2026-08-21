@@ -100,7 +100,9 @@ impl FetchSuccess {
                 .iter()
                 .map(|m| m.0.version())
                 .max()
-                .context_internal("response to fetch without any manifests"),
+                .with_context_internal(|| {
+                    format!("response `{not_pinned:?}` to fetch without any manifests")
+                }),
             Self::Pinned(pinned) => Ok(pinned.fetched_manifest.version()),
         }
     }

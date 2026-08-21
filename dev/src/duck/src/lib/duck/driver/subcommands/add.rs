@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 use std::str::FromStr;
 
 use crate::duck::driver::cli_ext::{multi, optional};
@@ -40,11 +40,10 @@ pub fn get_parser() -> Command {
 
 /// Logic for executing the `add` subcommand.
 pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
-    let alias = matches.get_one::<String>("alias").cloned();
+    let alias = matches.get_one::<String>("alias").map(String::as_str);
     let name = matches
         .get_one::<String>("name")
-        .expect("guarded by the parser")
-        .clone();
+        .expect("guarded by the parser");
     let name_spec = NameSpecification { name, alias };
     let source_spec = get_source_specification(matches);
     let versions = matches
@@ -57,7 +56,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         .get_many::<String>("features")
         .into_iter()
         .flatten()
-        .cloned()
+        .map(String::as_str)
         .collect();
     let dep_spec = DependencySpecification {
         name_spec,
@@ -76,13 +75,13 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
 }
 
 /// Construct the [`SourceSpecification`] from the matches.
-fn get_source_specification(matches: &ArgMatches) -> SourceSpecification {
-    let local_path = matches.get_one::<String>("local").map(PathBuf::from);
-    let git_url = matches.get_one("git").cloned();
-    let git_tag = matches.get_one("tag").cloned();
-    let git_branch = matches.get_one("branch").cloned();
-    let git_commit = matches.get_one("commit").cloned();
-    let registry_url = matches.get_one("registry").cloned();
+fn get_source_specification(matches: &ArgMatches) -> SourceSpecification<'_> {
+    let local_path = matches.get_one::<String>("local").map(Path::new);
+    let git_url = matches.get_one::<String>("git").map(String::as_str);
+    let git_tag = matches.get_one::<String>("tag").map(String::as_ref);
+    let git_branch = matches.get_one::<String>("branch").map(String::as_ref);
+    let git_commit = matches.get_one::<String>("commit").map(String::as_ref);
+    let registry_url = matches.get_one::<String>("registry").map(String::as_ref);
     SourceSpecification {
         local_path,
         git_url,

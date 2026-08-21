@@ -7,9 +7,9 @@ use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_
 
 #[derive(Debug, Clone)]
 /// All options that can be passed to remove.
-pub struct RemoveOptions {
+pub struct RemoveOptions<'matches> {
     /// Name of the dependency
-    pub name: String,
+    pub name: &'matches str,
     /// Use a global package instead of a local one.
     pub global: bool,
     /// Kind of the dependency to remove.
@@ -36,7 +36,7 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     let manifest_path = pkg.manifest_path().to_path_buf();
     let mut schema = pkg.into_original_schema();
 
-    remove_dep(&mut schema, &name, kind, pkg_name, &pkg_root)?;
+    remove_dep(&mut schema, name, kind, pkg_name, &pkg_root)?;
 
     let deserialized_schema = serde_yaml_ng::to_string(&schema)
         .with_context_internal(|| format!("failed to deserialize schema `{schema:?}`"))?;
@@ -60,7 +60,7 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
 /// Remove a dependency or provide a meaningful error.
 fn remove_dep(
     schema: &mut ManifestSchema,
-    name: &String,
+    name: &str,
     kind: DependencyKind,
     pkg_name: StrId,
     pkg_root: &Path,

@@ -357,8 +357,8 @@ impl PathOpsExt for Path {
     fn resolve_both_and_get_relative(&self, other: &Path, ctx: &DuckContext) -> PathBuf {
         let source = self.resolve_with_tilde(ctx);
         let target = other.resolve_with_tilde(ctx);
-        let mut src_components = source.components();
-        let mut tgt_components = target.components();
+        let mut src_components = source.components().fuse();
+        let mut tgt_components = target.components().fuse();
 
         let mut result_components = VecDeque::new();
         let mut common_prefix = true;

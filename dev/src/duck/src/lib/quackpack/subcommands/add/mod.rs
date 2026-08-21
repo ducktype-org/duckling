@@ -15,9 +15,9 @@ pub use dependency_construction::{
 
 #[derive(Debug, Clone)]
 /// All options that can be passed to `add`.
-pub struct AddOptions {
+pub struct AddOptions<'matches> {
     /// Specification of the dependency.
-    pub dep_spec: DependencySpecification,
+    pub dep_spec: DependencySpecification<'matches>,
     /// Use a global package instead of a local one.
     pub global: bool,
     /// Add a dev-dependency.

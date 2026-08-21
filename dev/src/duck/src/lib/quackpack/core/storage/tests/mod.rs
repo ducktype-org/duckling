@@ -273,7 +273,7 @@ fn create_mock_package_with_dependencies<'duck>(
                 alias: None,
             },
             source_spec: SourceSpecification {
-                local_path: Some(PathBuf::from("../dep")),
+                local_path: Some(Path::new("../dep")),
                 git_url: None,
                 git_branch: None,
                 git_tag: None,
