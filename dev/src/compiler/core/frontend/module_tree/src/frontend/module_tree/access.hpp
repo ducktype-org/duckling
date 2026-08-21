@@ -65,9 +65,9 @@ namespace compiler::frontend {
 	 * It stores the parent module hash, child name and whether the child was found.
 	 * This is needed to be in the key to store the metadata, and recreate this input during driver
 	 * initialization. For more info see QueryModuleChildSideInput query.
-	 * @note This key is used as MetadataType and it's stored in metadata during the provide call.
-	 * That's why it implements the serialize/deserialize methods.
-	 * These methods are called during metadata serialization/deserialization.
+	 * @note This key is used as MetadataType and it is stored in metadata during the provide
+	 * call, which is what puts it on the wire. It needs no serialization code of its own for
+	 * that: it is an aggregate, so the `ser` module walks its three fields.
 	 */
 	struct KeyOf_ModuleChildSideInput final {
 		hashing::ComponentHash::HashType parent_hash;  // hash of the parent module
@@ -79,9 +79,6 @@ namespace compiler::frontend {
 
 		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
 		bool operator==(const KeyOf_ModuleChildSideInput&) const = default;
-
-		[[nodiscard]] std::vector<std::byte> serialize() const;
-		static KeyOf_ModuleChildSideInput    deserialize(std::span<const std::byte> data);
 
 		void prettyPrint(std::ostream& os) const;
 	};

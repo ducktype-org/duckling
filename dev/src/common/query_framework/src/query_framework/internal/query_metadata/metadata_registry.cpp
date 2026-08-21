@@ -6,7 +6,7 @@ namespace query::internal {
 		return inst;
 	}
 
-	bool MetadataRegistry::registerType(TypeID type_id, BytesDeserializeFunc deserialize_func) {
+	bool MetadataRegistry::registerType(TypeID type_id, ArchiveDeserializeFunc deserialize_func) {
 		CORE_ASSERT(
 			!registry.contains(type_id), "Metadata type already registered:", type_id.strView()
 		);

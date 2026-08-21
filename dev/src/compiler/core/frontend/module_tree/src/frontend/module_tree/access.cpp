@@ -83,59 +83,6 @@ namespace compiler::frontend {
 		return hasher.finalize();
 	}
 
-	std::vector<std::byte> KeyOf_ModuleChildSideInput::serialize() const {
-		std::vector<std::byte> data;
-		auto                   hash_ptr = reinterpret_cast<const std::byte*>(&parent_hash);
-		data.insert(data.end(), hash_ptr, hash_ptr + sizeof(hashing::ComponentHash::HashType));
-		auto size     = child_name.size();
-		auto size_ptr = reinterpret_cast<const std::byte*>(&size);
-		data.insert(data.end(), size_ptr, size_ptr + sizeof(size));
-		auto searched_ptr = reinterpret_cast<const std::byte*>(child_name.data());
-		data.insert(data.end(), searched_ptr, searched_ptr + child_name.size());
-		data.emplace_back(std::byte(found));
-		return data;
-	}
-
-	KeyOf_ModuleChildSideInput KeyOf_ModuleChildSideInput::deserialize(std::span<const std::byte> data
-	) {
-		constexpr usize MIN_SIZE = sizeof(hashing::ComponentHash::HashType) + sizeof(usize);
-		CORE_ASSERT(
-			data.size() >= MIN_SIZE,
-			"KeyOf_ModuleChildSideInput::deserialize: data buffer too small for header"
-		);
-
-		KeyOf_ModuleChildSideInput lookup_data;
-		usize                      offset = 0;
-
-		// @TODO: #1942 fix this
-		// ...
-		// It would be better to have this be done in more controlled manner,
-		// such that, if the HashType changes it will still work or produce a compilation error.
-		// I would assume this could just call some kind of deser::deserialize(...)
-		// which would propagate the call to appropriate case or give a compilation error that the
-		// given type is not deserializable. This applies in more general way to this whole function.
-
-		std::memcpy(&lookup_data.parent_hash, data.data(), sizeof(hashing::ComponentHash::HashType));
-		offset += sizeof(hashing::ComponentHash::HashType);
-		usize len = 0;
-		std::memcpy(&len, data.data() + offset, sizeof(usize));
-		offset += sizeof(usize);
-
-		CORE_ASSERT(
-			data.size() >= offset + len + sizeof(std::byte),
-			"KeyOf_ModuleChildSideInput::deserialize: data buffer",
-			" too small for child_name and found flag"
-		);
-
-		auto* ptr = data.data() + offset;
-		offset += len;
-		lookup_data.child_name = base::StrID(base::RawView{ ptr, len });  // this makes a copy
-		auto was_found         = std::byte(0);
-		std::memcpy(&was_found, data.data() + offset, sizeof(std::byte));
-		lookup_data.found = bool(was_found);
-		return lookup_data;
-	}
-
 	void KeyOf_ModuleChildSideInput::prettyPrint(std::ostream& os) const {
 		os << "KeyOf_ModuleChildSideInput {\n";
 		os << "  parent_hash: " << parent_hash.toStringHex() << "\n";

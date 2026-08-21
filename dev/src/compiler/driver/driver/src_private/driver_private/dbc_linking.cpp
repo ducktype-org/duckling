@@ -116,7 +116,7 @@ namespace compiler::driver {
 
 
 				auto di_output = output_file.parent->fileArtifactAtOrNew(
-					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
+					base::StrID(base::strConcat(output_file_stem, ".di").c_str())
 				);
 				std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
 				if (!di_out.is_open())

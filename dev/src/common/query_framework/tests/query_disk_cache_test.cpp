@@ -9,9 +9,12 @@
 #include <query_framework/module_flags/module_flags.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include <ser/ser.hpp>
 #include <tester/tester.hpp>
 
+#include <cstddef>
 #include <set>
+#include <vector>
 
 // A side input the disk-cached query depends on, so it can be invalidated.
 struct KeyOf_DiskSideInput {
@@ -164,14 +167,20 @@ private:
 		ImplementationOf_DiskQuery::fake_disk.insert(orphan_hash);
 		ImplementationOf_DiskQuery::fake_disk.insert(live_hash);
 
-		// Build a previous graph holding all three nodes and install it.
-		auto prev_bytes = query::internal::QueryGraph::serializeReducedGraph(
+		// Build a previous graph holding all three nodes and install it. The wire form is
+		// plain data, so it goes through `ser` and comes back as itself.
+		std::vector<std::byte> prev_bytes;
+		ser::write(
+			prev_bytes,
 			query::internal::QueryGraph::ReducedGraphData{
 				.nodes     = { orphan_node, live_node, plain_node },
 				.adjacency = { {}, {}, {} },
 			}
-		);
-		state->setPreviousGraph(query::internal::QueryGraph::deserialize(prev_bytes));
+		)
+			.orThrow();
+		state->setPreviousGraph(query::internal::QueryGraph::fromReducedGraphData(
+			ser::readOrThrowForce<query::internal::QueryGraph::ReducedGraphData>(prev_bytes)
+		));
 
 		state->cleanupOrphanedDiskCaches();
 

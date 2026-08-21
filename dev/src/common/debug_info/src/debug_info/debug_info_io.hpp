@@ -9,22 +9,23 @@
 namespace debug_info {
 
 	/**
-	 * @brief Deserializes a DebugInfo object from a JSON stream.
+	 * @brief Reads a DebugInfo object back from a binary stream.
 	 *
-	 * On success returns the deserialized DebugInfo.
-	 * On failure (malformed JSON, missing fields, wrong types, …) returns an
-	 * error string describing the problem — no exception is thrown.
+	 * On success returns the DebugInfo. On failure (truncated, not debug info at all, or
+	 * entries out of order) returns an error string describing the problem - no exception is
+	 * thrown, so a damaged file is something the caller can carry on without.
 	 *
-	 * @param in Any std::istream containing a JSON-encoded DebugInfo.
+	 * @param in Any std::istream containing what saveToStream wrote.
 	 */
 	std::expected<DebugInfo, std::string> loadFromStream(std::istream& in);
 
 	/**
-	 * @brief Serializes a DebugInfo object to a JSON stream.
+	 * @brief Writes a DebugInfo object to a binary stream.
 	 *
-	 * The output is indented JSON (4-space indent) for human readability.
-	 * Instruction entries within each function are sorted by offset before
-	 * being written.
+	 * The bytes are the ones the `ser` module produces: the whole structure is aggregates,
+	 * and the single choice in it (SourcePosition) carries its own hook. Instruction entries
+	 * within each function are sorted by offset before being written, so the same DebugInfo
+	 * always produces the same file.
 	 *
 	 * @param info The DebugInfo to serialize.
 	 * @param out  Any std::ostream to write to (e.g. a file stream).

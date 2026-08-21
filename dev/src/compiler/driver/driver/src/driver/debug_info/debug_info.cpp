@@ -16,7 +16,7 @@
 #include <fstream>
 
 namespace compiler::driver {
-	constexpr std::string_view DEBUG_INFO_FINAL_EXTENSION = ".di.json";
+	constexpr std::string_view DEBUG_INFO_FINAL_EXTENSION = ".di";
 
 	namespace {
 		debug_info::FilePosition calculateSourcePosition(

@@ -282,13 +282,13 @@ namespace compiler::driver {
 	}
 
 	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts() {
-		return getStdLibArtifacts(".di.json").artifacts;
+		return getStdLibArtifacts(".di").artifacts;
 	}
 
 	bool allStdlibArtifactsPresent() {
 		bool native = getStdLibArtifacts(".a").all_present;
 		bool dvm    = getStdLibArtifacts(".dbc").all_present;
-		bool di     = getStdLibArtifacts(".di.json").all_present;
+		bool di     = getStdLibArtifacts(".di").all_present;
 		return native && dvm && di;
 	}
 }

@@ -7,9 +7,15 @@
 #include <hashing/add_to_hash.hpp>
 #include <hashing/component_hash.hpp>
 #include <query_framework/entry/with_context_do.hpp>
+#include <ser/base/all.hpp>
+#include <ser/ser.hpp>
+#include <ser/std/all.hpp>
 #include <tester/tester.hpp>
 
 #include <json/json.hpp>
+
+#include <cstddef>
+#include <vector>
 
 using namespace compiler::frontend::packages;
 
@@ -176,9 +182,12 @@ private:
 		};
 		std::ignore = alias_key.queryStablePerfectHash();
 
-		auto bytes   = alias_key.serialize();
-		auto decoded = KeyOf_PackageDependencyAliasSideInput::deserialize(bytes);
-		ASSERT_TRUE(decoded == alias_key);
+		// The key is an aggregate, so `ser` needs nothing from it to put it on the wire
+		std::vector<std::byte> bytes;
+		ASSERT_TRUE(ser::write(bytes, alias_key).hasValue());
+		auto decoded = ser::read<KeyOf_PackageDependencyAliasSideInput>(bytes);
+		ASSERT_TRUE(decoded.hasValue());
+		ASSERT_TRUE(decoded->value == alias_key);
 
 		std::ostringstream os;
 		alias_key.prettyPrint(os);
@@ -190,9 +199,11 @@ private:
 			.found             = false,
 			.target_package_id = {},
 		};
-		auto missing_bytes   = missing_key.serialize();
-		auto missing_decoded = KeyOf_PackageDependencyAliasSideInput::deserialize(missing_bytes);
-		ASSERT_TRUE(missing_decoded == missing_key);
+		std::vector<std::byte> missing_bytes;
+		ASSERT_TRUE(ser::write(missing_bytes, missing_key).hasValue());
+		auto missing_decoded = ser::read<KeyOf_PackageDependencyAliasSideInput>(missing_bytes);
+		ASSERT_TRUE(missing_decoded.hasValue());
+		ASSERT_TRUE(missing_decoded->value == missing_key);
 	}
 
 	void packageDependenciesAccessUnlock() {

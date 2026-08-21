@@ -2,9 +2,16 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <debug_info/debug_info_io.hpp>
 
+#include <ser/ser.hpp>
 #include <tester/tester.hpp>
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
 #include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace debug_info;
 
@@ -16,7 +23,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(builderTest);
 		TESTER_ADD_TEST(serializationRoundTripTest);
-		TESTER_ADD_TEST(invalidJsonTest);
+		TESTER_ADD_TEST(invalidStreamTest);
 		TESTER_ADD_TEST(resolvePositionsTest);
 	}
 
@@ -127,21 +134,21 @@ private:
 		// Serialize
 		std::ostringstream oss;
 		debug_info::saveToStream(info, oss);
-		const std::string first_json = oss.str();
+		const std::string first_bytes = oss.str();
 
-		assertTrue(!first_json.empty(), "Serialized JSON should not be empty");
+		assertTrue(!first_bytes.empty(), "Serialized debug info should not be empty");
 
 		// Deserialize
-		std::istringstream iss(first_json);
+		std::istringstream iss(first_bytes);
 		auto               result = debug_info::loadFromStream(iss);
-		assertTrue(result.has_value(), "Deserialization of valid JSON should succeed");
+		assertTrue(result.has_value(), "Deserialization of a valid stream should succeed");
 
-		// Serialize again and compare
+		// Serialize again and compare - the same object has to produce the same bytes
 		std::ostringstream oss2;
 		debug_info::saveToStream(*result, oss2);
-		const std::string second_json = oss2.str();
+		const std::string second_bytes = oss2.str();
 
-		assertTrue(first_json == second_json, "Round-trip JSON should be identical");
+		assertTrue(first_bytes == second_bytes, "Round-trip bytes should be identical");
 
 		// Spot-check deserialized values
 		assertTrue(result->target == debug_info::Target::DBC, "Round-trip: target incorrect");
@@ -180,84 +187,52 @@ private:
 		);
 	}
 
-	void invalidJsonTest() {
-		// Completely malformed JSON
+	/** @brief What loadFromStream does with something that is not debug info. */
+	void invalidStreamTest() {
+		// Not a stream this module wrote at all
 		{
-			std::istringstream iss("not valid json at all {{{");
+			std::istringstream iss("not debug info at all, just text");
 			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "Malformed JSON should fail to parse");
-		}
-
-		// Valid JSON but missing required field "target"
-		{
-			std::istringstream iss(R"({"module_path": "x.dmf", "source_positions_type": "DBC",
-                "functions": {}, "types": {}})");
-			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "JSON missing 'target' field should fail");
-		}
-
-		// Valid JSON but wrong type for a field
-		{
-			std::istringstream iss(
-				R"({"target": 42, "module_path": "x.dmf", "source_positions_type": "LineColumn",
-                "functions": {}, "types": {}})"
-			);
-
-			auto _ = debug_info::loadFromStream(iss);
-			// nlohmann enum deserialization may not throw for unknown integers, but
-			// at minimum we verify the function returns without crashing
+			assertFalse(result.has_value(), "Garbage bytes should fail to load");
 		}
 
 		// Empty input
 		{
 			std::istringstream iss("");
 			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "Empty input should fail to parse");
+			assertFalse(result.has_value(), "Empty input should fail to load");
 		}
 
-		// Instructions not sorted by offset should fail
+		// A valid stream cut short
 		{
-			std::istringstream iss(R"({
-    "target": "DBC",
-    "module_path": "x.dmf",
-    "source_positions_type": "LineColumn",
-    "functions": {
-        "_Zx": {
-            "function_name": "x",
-            "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 1, "start_column": 0, "end_line": 2, "end_column": 0 } },
-            "instr_offsets_to_metadata": [
-                [8, { "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 2, "start_column": 0, "end_line": 2, "end_column": 1 } } }],
-                [4, { "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 3, "start_column": 0, "end_line": 3, "end_column": 1 } } }]
-            ]
-        }
-    },
-    "types": {}
-})");
+			std::ostringstream oss;
+			debug_info::saveToStream(makeTestDebugInfo(), oss);
+			const std::string whole = oss.str();
+
+			std::istringstream iss(whole.substr(0, whole.size() / 2));
 			auto               result = debug_info::loadFromStream(iss);
+			assertFalse(result.has_value(), "A truncated stream should fail to load");
+		}
+
+		// Entries out of order: written straight through `ser`, so the sorting saveToStream
+		// does is bypassed and the read side is what has to catch it.
+		{
+			auto  info     = makeTestDebugInfo();
+			auto& function = info.functions.at("_Zfoo");
+			std::ranges::sort(
+				function.instr_offsets_to_metadata,
+				std::greater<>{},
+				&std::pair<u64, InstructionMetadata>::first
+			);
+
+			std::vector<std::byte> bytes;
+			assertTrue(ser::write(bytes, info).hasValue(), "Writing unsorted debug info");
+
+			std::istringstream iss(
+				std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size())
+			);
+			auto result = debug_info::loadFromStream(iss);
 			assertFalse(result.has_value(), "Unsorted instr_offsets_to_metadata should fail");
-		}
-
-		// Variable initializations not sorted by offset should fail
-		{
-			std::istringstream iss(R"({
-	"target": "DBC",
-	"module_path": "x.dmf",
-	"source_positions_type": "LineColumn",
-	"functions": {
-		"_Zx": {
-			"function_name": "x",
-			"position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 1, "start_column": 0, "end_line": 2, "end_column": 0 } },
-			"instr_offsets_to_metadata": [],
-			"instr_offsets_to_variable_init": [
-				[8, { "name": "a", "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 2, "start_column": 0, "end_line": 2, "end_column": 1 } } }],
-				[4, { "name": "b", "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 3, "start_column": 0, "end_line": 3, "end_column": 1 } } }]
-			]
-		}
-	},
-	"types": {}
-})");
-			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "Unsorted instr_offsets_to_variable_init should fail");
 		}
 	}
 

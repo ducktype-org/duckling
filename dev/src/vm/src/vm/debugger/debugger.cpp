@@ -112,7 +112,7 @@ namespace vm::debugger {
 			return std::unexpected(api::OtherError{
 				"No compiled program in the current directory." });
 
-		fs::FilePath fp_map = "duck_build/package_dvm.di.json";
+		fs::FilePath fp_map = "duck_build/package_dvm.di";
 		if (!fp_map.exists())
 			return std::unexpected(api::OtherError{
 				"No compiled program mapping in the current directory." });

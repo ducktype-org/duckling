@@ -11,7 +11,7 @@
 #include <tester/tester.hpp>
 
 
-DECLARE_METADATA_SIMPLE(SimpleMeta, u64);
+DECLARE_METADATA(SimpleMeta, u64);
 
 // Those queries are used just to get dummy QueryIDs for NodeID generation.
 DECLARE_QUERY(DummyQuery1, query::U64Key, CRef<u64>, ({ .uses_qresult = false }));

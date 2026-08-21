@@ -120,12 +120,13 @@ struct Tree {
 namespace ser {
 
 	/**
-	 * @brief Level 1 of the hook ladder, on a type nobody can edit.
+	 * @brief Level 1 of the hook ladder, and what it beats.
 	 *
-	 * `u8` is `STRONG_TYPEDEF_INT(u8, uint8_t)`: a class with a private member and
-	 * constructors of its own, so the automatic walk cannot see inside it. A
-	 * `ser::serializer<T>` specialization is the answer for exactly that, and this is the
-	 * pattern for every other strong typedef in the codebase.
+	 * `u8` is `STRONG_TYPEDEF_INT(u8, uint8_t)`: a class with a private member, so the
+	 * automatic walk cannot see inside it - which is why that macro declares a `serVisit` of
+	 * its own, and every strong typedef in the codebase round-trips with no code at all. This
+	 * specialization is therefore not what makes `u8` serializable; it is what makes level 1
+	 * OUTRANK that in-class hook, and the two produce the same byte either way.
 	 */
 	template<>
 	struct serializer<u8> {

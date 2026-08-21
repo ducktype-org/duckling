@@ -10,6 +10,7 @@
 #include <ser/detail/meta.hpp>
 #include <ser/errc.hpp>
 
+#include <array>
 #include <cstddef>
 #include <initializer_list>
 #include <tuple>
@@ -141,12 +142,16 @@ namespace ser::detail {
 
 // The half that only DESCRIBES: the count, the names, and the fields as a tuple. It says
 // nothing about the format, so it sits under either of the two hook forms below.
-#define SER_DETAIL_DESCRIBE_FIELDS(...)                                                   \
-	static constexpr ::std::size_t ser_field_count = SER_DETAIL_FIELD_COUNT(__VA_ARGS__); \
-	static constexpr const char*   ser_field_names[SER_DETAIL_FIELD_COUNT(__VA_ARGS__)]   \
-		= { FOR_EACH_COMMA(STRINGIFY_2, __VA_ARGS__) };                                   \
-	static constexpr auto ser_described(auto& self) {                                     \
-		return ::std::tie(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, __VA_ARGS__));               \
+//
+// std::array rather than a C array, and that is about the CALLER rather than about this
+// file: clang-tidy reports cppcoreguidelines-avoid-c-arrays at the line that uses the
+// macro, so a C array here would make every type that says SER_DESCRIBE carry a NOLINT.
+#define SER_DETAIL_DESCRIBE_FIELDS(...)                                                             \
+	static constexpr ::std::size_t ser_field_count = SER_DETAIL_FIELD_COUNT(__VA_ARGS__);           \
+	static constexpr ::std::array<const char*, SER_DETAIL_FIELD_COUNT(__VA_ARGS__)> ser_field_names \
+		= { FOR_EACH_COMMA(STRINGIFY_2, __VA_ARGS__) };                                             \
+	static constexpr auto ser_described(auto& self) {                                               \
+		return ::std::tie(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, __VA_ARGS__));                         \
 	}
 
 #define SER_DESCRIBE(...)                                           \

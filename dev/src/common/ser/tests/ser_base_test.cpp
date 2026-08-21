@@ -59,7 +59,6 @@ ByteBuf bytesOf(const T& x) {
 	return buf;
 }
 
-
 struct Mixed {
 	base::Optional<i32>    maybe;
 	base::Box<std::string> boxed;

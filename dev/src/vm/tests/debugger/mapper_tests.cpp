@@ -34,7 +34,7 @@ private:
 		ASSERT_NO_VALUE(mapper.mainFile());
 		ASSERT_FALSE(mapper.containsFile("abc"));
 
-		ASSERT_HAS_VALUE(mapper.loadMapping(fs::File(path("package_dvm.di.json"))));
+		ASSERT_HAS_VALUE(mapper.loadMapping(fs::File(path("package_dvm.di"))));
 
 		auto simple = fs::FilePath("simple.dmf");
 		ASSERT_TRUE(mapper.containsFile(simple));

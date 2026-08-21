@@ -186,10 +186,33 @@ namespace query::internal {
 	public:
 		/**
 		 * @brief Reduced graph representation used for compact serialization.
+		 *
+		 * This is the graph's wire form, and it needs no serialization code at all: two
+		 * vectors and a NodeID, which the `ser` module walks field by field. A graph
+		 * therefore travels through the library's own entry points, with no
+		 * serialize()/deserialize() of its own in between:
+		 * @code
+		 * ser::write(bytes, graph.toReducedGraphData()).orThrow();
+		 * auto restored = QueryGraph::fromReducedGraphData(
+		 *     ser::readOrThrowForce<QueryGraph::ReducedGraphData>(bytes)
+		 * );
+		 * @endcode
+		 *
+		 * Each adjacency entry holds indices into @c nodes, so the two vectors are a graph
+		 * only together - see isConsistent().
 		 */
 		struct ReducedGraphData final {
 			std::vector<NodeID>             nodes;
 			std::vector<std::vector<usize>> adjacency;
+
+			/**
+			 * @brief Whether the two vectors describe one graph: one adjacency list per node,
+			 * and every index in range.
+			 * @note Asked on both sides of the wire, and the answer means different things.
+			 * On the way out a `false` is a bug, so the caller asserts; on the way back in it
+			 * is a damaged cache, so the caller drops it and compiles without one.
+			 */
+			[[nodiscard]] bool isConsistent() const;
 		};
 
 		QueryGraph();
@@ -246,32 +269,30 @@ namespace query::internal {
 		}
 
 		/**
-		 * @brief Serializes the QueryGraph into a vector of bytes.
-		 * @note This DOES NOT optimize anything, it just serializes.
-		 * @return A vector of bytes representing the serialized QueryGraph.
+		 * @brief The graph as the plain data that goes on the wire.
+		 * @note This DOES NOT optimize anything, it just flattens: every node in the graph
+		 * becomes an entry, and every dependency an index into it. Hand the result to
+		 * `ser::write` - see ReducedGraphData.
+		 * @return The nodes and their adjacency lists.
 		 */
-		[[nodiscard]] std::vector<byte> serialize() const;
+		[[nodiscard]] ReducedGraphData toReducedGraphData() const;
 
 		/**
-		 * @brief Serializes an already reduced graph description.
-		 * @details The provided mapping must mirror the exact structure we intend to persist, i.e.
-		 * each adjacency index references the precomputed NodeID at the same position. This helper
-		 * is meant for scenarios where another algorithm (e.g. QueryState::reduceOptimizeGraph) has
-		 * already produced a compacted graph representation and we only need to emit bytes without
-		 * rebuilding the mapping.
-		 */
-		[[nodiscard]] static std::vector<byte> serializeReducedGraph(ReducedGraphData reduced_graph);
-
-		/**
-		 * @brief Deserializes a QueryGraph from a vector of bytes.
-		 * @param data The vector of bytes to deserialize from.
+		 * @brief Rebuilds a graph from its wire form.
+		 * @details The mapping must mirror the exact structure that was persisted, i.e. each
+		 * adjacency index references the NodeID at the same position. Takes data from
+		 * `ser::read`, or from another algorithm that produced it directly (e.g.
+		 * QueryState::reduceOptimizeGraph).
+		 * @param reduced_graph The nodes and their adjacency lists.
 		 * @param node_mapper Optional mapper that can transform NodeIDs read from disk into the
 		 *        NodeIDs that should be stored inside the graph. By default it is an identity
 		 *        function, but callers can override it to keep the query framework state consistent.
-		 * @return A deserialized QueryGraph object.
+		 * @return The graph those nodes describe.
+		 * @note Requires isConsistent() - data that came off the wire has to be checked by the
+		 * caller first, so that a damaged cache is a dropped cache rather than a panic.
 		 */
-		static QueryGraph deserialize(
-			std::span<const byte> data, std::function<NodeID(NodeID)> node_mapper = {}
+		[[nodiscard]] static QueryGraph fromReducedGraphData(
+			ReducedGraphData reduced_graph, std::function<NodeID(NodeID)> node_mapper = {}
 		);
 
 		/**

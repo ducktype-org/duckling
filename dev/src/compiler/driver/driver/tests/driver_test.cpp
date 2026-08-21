@@ -19,15 +19,28 @@
 #include <query_framework/external/api.hpp>
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
+#include <ser/ser.hpp>
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
 #include <algorithm>
+#include <cstddef>
 #include <filesystem>
 #include <iostream>
+#include <span>
 
 namespace {
 	std::string package_name = "driver_test_package";
+
+	/**
+	 * @brief A graph out of the bytes the framework produced: `ser::read`, then the graph
+	 * rebuilt from what it read.
+	 */
+	query::internal::QueryGraph readGraph(std::span<const std::byte> bytes) {
+		auto reduced = ser::readOrThrowForce<query::internal::QueryGraph::ReducedGraphData>(bytes);
+		CORE_ASSERT(reduced.isConsistent(), "A graph the framework wrote has to read back");
+		return query::internal::QueryGraph::fromReducedGraphData(std::move(reduced));
+	}
 }
 
 class DriverTest final: public tester::TestSuite {
@@ -155,9 +168,8 @@ private:
 		);
 
 		// run the serialization before any compilation to see if it works on empty graph
-		auto serialized_empty_graph = query::external::optAndSerializeQueryGraph();
-		auto deserialized_empty_graph
-			= query::internal::QueryGraph::deserialize(serialized_empty_graph);
+		auto serialized_empty_graph   = query::external::optAndSerializeQueryGraph();
+		auto deserialized_empty_graph = readGraph(serialized_empty_graph);
 		assertTrue(
 			deserialized_empty_graph.getAllNodes().empty(), "Deserialized empty graph must be empty"
 		);
@@ -258,8 +270,7 @@ private:
 				  << " edges=" << edges_before_opt << '\n';
 
 		// Call optAndSerializeQueryGraph() and then deserialize to get opt_graph
-		auto opt_graph
-			= query::internal::QueryGraph::deserialize(query::external::optAndSerializeQueryGraph());
+		auto       opt_graph       = readGraph(query::external::optAndSerializeQueryGraph());
 		const auto nodes_after_opt = opt_graph.getAllNodes().size();
 		const auto edges_after_opt = count_edges(opt_graph);
 		std::cout << "[DriverTest] Graph after optimization: nodes=" << nodes_after_opt
@@ -388,8 +399,7 @@ private:
 		// ================================================================================
 		// CHECK 6: Re-running serialization/optimization must be idempotent
 		// ================================================================================
-		auto second_opt_graph
-			= query::internal::QueryGraph::deserialize(query::external::optAndSerializeQueryGraph());
+		auto second_opt_graph = readGraph(query::external::optAndSerializeQueryGraph());
 
 		auto compare_graphs = [&](const query::internal::QueryGraph& lhs_graph,
 		                          const query::internal::QueryGraph& rhs_graph,
@@ -567,8 +577,7 @@ private:
 		});
 
 		// Serialize current graph
-		auto original
-			= query::internal::QueryGraph::deserialize(query::external::optAndSerializeQueryGraph());
+		auto original = readGraph(query::external::optAndSerializeQueryGraph());
 
 		// Call the driver saveArtifacts implementation
 		driver::exit();
@@ -584,9 +593,8 @@ private:
 		const auto&                   blob = query_col->blobArtifactAt(base::StrID("query_graph"));
 		auto                          view = query_col->getBlobDataView(blob);
 
-		// Deserialize the blob into a QueryGraph and compare with the in-memory graph
-		std::span<const byte> span(view.getBegin(), view.size());
-		auto                  reloaded = query::internal::QueryGraph::deserialize(span);
+		// Read the blob back into a QueryGraph and compare with the in-memory graph
+		auto reloaded = readGraph(std::span<const byte>(view.getBegin(), view.size()));
 
 		ASSERT_TRUE(original.compare(reloaded));
 		ASSERT_TRUE(reloaded.compare(original));

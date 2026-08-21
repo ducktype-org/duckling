@@ -65,8 +65,9 @@ Point back = std::move(*p).take();
 
 Four ways, in the order the library consults them:
 
-1. A `ser::serializer<T>` specialization - the hook for a type you cannot edit. This is
-   what a `STRONG_TYPEDEF_INT` needs, and `ser_test.cpp` has the one for `u8`.
+1. A `ser::serializer<T>` specialization - the hook for a type you cannot edit, and the one
+   that outranks everything below. `base::StrID` is one (in `string_id.hpp`), and every
+   adapter under `base/` and `std/` is another.
 2. In-class hooks: `serVisit`, or `serWrite` + `serRead`, or `serWrite` + `serMake`.
    They may be private behind `SER_FRIEND`.
 3. The same three shapes found by ADL, for a type in someone else's namespace.
@@ -82,6 +83,28 @@ one clause per element, so the count comes out too high) or with **private** fie
 `using ser_members = ser::members<N>;` there. Getting it wrong is a compile error inside
 the bindings ladder, never wrong bytes. A **base class** and a **reference field** are
 refused outright.
+
+A `STRONG_TYPEDEF_INT` and a `STRONG_TYPEDEF_INT_DIMENSIONAL` need none of this: the macro
+declares a `serVisit` over the wrapped integer, so a strong typedef - and any struct with a
+field of one - round-trips with no code at all.
+
+# Who uses it
+
+* **Query framework.** `QueryGraph::ReducedGraphData` is the graph's wire form and needs no
+  code at all; `MetadataStorage` has the one hand-written `serWrite`/`serRead` pair in the
+  repository, because its format is a type table plus whatever each metadata instance writes
+  through `BaseMetadata::serWrite` - a virtual, which is why the archive is pinned to
+  `MetadataOut`/`MetadataIn` there. `DECLARE_METADATA` needs nothing from the wrapped type.
+* **Side-input keys** (`KeyOf_ModuleChildSideInput`, `KeyOf_PackageDependencyAliasSideInput`)
+  are plain aggregates that travel as metadata.
+* **`artifacts`** blobs: `setData<T>` / `getData<T>` are `ser::write` / `ser::read` with the
+  `RawView` plumbing around them.
+* **`debug_info`**: the whole structure is aggregates plus one `serWrite`/`serMake` pair for
+  the `std::variant` in `SourcePosition`, which `ser` cannot walk by itself.
+
+Two conventions came out of those: a stream that fails to READ is information, so the caller
+logs it and carries on without the cache, while a failure to WRITE what we are already
+holding is `CORE_PANIC` - and nothing lets a `ser::exception` escape into the compiler.
 
 # Notes
 

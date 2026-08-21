@@ -13,32 +13,40 @@
 #include <string_id/string_id.hpp>
 
 #include <span>
+#include <type_traits>
 #include <vector>
 
 namespace artifacts {
 	/**
-	 * @brief Turns `T` into the bytes of a blob.
-	 * @note The whole `ser` module is the definition of what a blob may hold: an aggregate
-	 * needs no code at all, and anything else declares one of the `ser` hooks. A raw
-	 * pointer is refused rather than copied, which is what the old trivially-copyable
-	 * requirement could not say.
+	 * @brief What a blob may hold is whatever the `ser` module can put on the wire: an
+	 * aggregate needs no code at all, and anything else declares one of the `ser` hooks. A
+	 * raw pointer is refused rather than copied, which is what the trivially-copyable
+	 * requirement this replaced could not say.
+	 *
+	 * These two are the byte plumbing around ser::write / ser::read - the buffer on the way
+	 * out, the RawView on the way in - and nothing else. Neither lets a `ser` error out as an
+	 * exception: a blob is written from an object we are holding and read back from a file we
+	 * wrote, so either one failing is a bug rather than a state to recover from.
 	 */
 	template<class T>
-	std::vector<byte> serialize(const T& data) {
+	std::vector<byte> toBytes(const T& data) {
 		std::vector<byte> bytes;
-		::ser::write(bytes, data).orThrow();
+		if (const auto r = ::ser::write(bytes, data); !r)
+			CORE_PANIC("Failed to serialize an artifact: ", r.err().message());
 		return bytes;
 	}
 
 	/**
-	 * @brief Constructs type `T` from bytes.
-	 * @throws ser::exception when the bytes are not a `T` - truncated, or written from a
-	 * different type.
+	 * @brief Constructs type `T` from the bytes of a blob.
+	 * @note Read as the unqualified `T`: a caller asking for `getData<decltype(SOME_CONST)>()`
+	 * names a `const` type, and an object is built before it can be const.
 	 */
 	template<class T>
-	T deserialize(base::RawView view) {
-		return ::ser::readOrThrowForce<T>(std::span<const std::byte>{ view.getBegin(), view.size() }
-		);
+	T fromBytes(base::RawView view) {
+		auto value = ::ser::read<std::remove_cv_t<T>>(std::span<const std::byte>{ view.getBegin(),
+		                                                                          view.size() });
+		if (!value) CORE_PANIC("Failed to deserialize an artifact: ", value.err().message());
+		return std::move(*value).take();
 	}
 
 	/**
@@ -101,7 +109,7 @@ namespace artifacts {
 		 */
 		template<class T>
 		void setData(const T& data) {
-			const std::vector<byte> bytes = serialize(data);
+			const std::vector<byte> bytes = toBytes(data);
 			setData(bytes.data(), bytes.size());
 		}
 
@@ -117,7 +125,7 @@ namespace artifacts {
 		 */
 		template<class T>
 		const T getData() const {
-			return deserialize<T>(getDataView());
+			return fromBytes<T>(getDataView());
 		}
 	};
 
@@ -191,18 +199,19 @@ namespace artifacts {
 
 		void setBlobData(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
 
-		template<SerdeType T>
+		template<class T>
 		void setBlobData(const BlobArtifact& blob, const T& data) {
 			// lock will happen in the call bellow:
-			setBlobData(blob, reinterpret_cast<const byte*>(&data), sizeof(data));
+			const std::vector<byte> bytes = toBytes(data);
+			setBlobData(blob, bytes.data(), bytes.size());
 		}
 
 		base::RawView getBlobDataView(const BlobArtifact& blob) const;
 
-		template<SerdeType T>
+		template<class T>
 		const T getBlobData(const BlobArtifact& blob) const {
 			// lock will happen in the call bellow:
-			return deserialize<T>(getBlobDataView(blob));
+			return fromBytes<T>(getBlobDataView(blob));
 		}
 
 		/////////////////////////// PRIVATE /////////////////////////
@@ -246,16 +255,17 @@ namespace artifacts {
 
 		void setBlobDataNoLock(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
 
-		template<SerdeType T>
+		template<class T>
 		void setBlobDataNoLock(const BlobArtifact& blob, const T& data) {
-			setBlobDataNoLock(blob, reinterpret_cast<const byte*>(&data), sizeof(data));
+			const std::vector<byte> bytes = toBytes(data);
+			setBlobDataNoLock(blob, bytes.data(), bytes.size());
 		}
 
 		base::RawView getBlobDataViewNoLock(const BlobArtifact& blob) const;
 
-		template<SerdeType T>
+		template<class T>
 		const T getBlobDataNoLock(const BlobArtifact& blob) const {
-			return deserialize<T>(getBlobDataViewNoLock(blob));
+			return fromBytes<T>(getBlobDataViewNoLock(blob));
 		}
 
 		///////////////////////// OBJECT STATE //////////////////////
