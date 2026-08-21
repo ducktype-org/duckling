@@ -1,30 +1,25 @@
 #pragma once
 
 // ── the envelope ──────────────────────────────────────────────────────────────
-// Thirty-two bytes in front of the payload, and what they buy is the difference between
-// a library and a toy: a stream from another version of the program, another byte order
-// or another schema is refused with an error code instead of being interpreted as data.
+// Thirty-two bytes in front of the payload: a stream from another version of the program,
+// another byte order or another schema is refused with an error code instead of being
+// interpreted as data.
 //
 //     [header 32 B]?  [payload]
 //
-// It is OPT-IN in M1 - ser::options{}.header is false - so a plain ser::write is still
-// exactly the payload and not one byte more. That default flips when pools arrive:
-// without a header there is no schema_hash, and without a schema_hash there is nothing
-// that can notice the reader is using a different Ctx than the writer (CLAUDE.md, the
-// M2 completeness check).
+// It is OPT-IN - ser::options{}.header is false - so a plain ser::write is exactly the
+// payload and not one byte more. Thirty-two is a multiple of sixteen on purpose: the
+// payload starts at a 16-byte boundary whenever the buffer does, so the envelope will not
+// be in the way of zero-copy spans of types with alignof <= 16.
 //
-// Thirty-two is a multiple of sixteen on purpose. The payload therefore starts at a
-// 16-byte boundary whenever the buffer does, which is what makes zero-copy spans of
-// types with alignof <= 16 possible later without the envelope being in the way.
-//
-// The layout is frozen, has no padding (both asserted below) and every field is written
-// in native byte order - `flags` is what makes that safe, because it is checked before
+// The layout is frozen, has no padding (both asserted below) and every field is written in
+// native byte order - `flags` is what makes that safe, because it is checked before
 // anything else is believed.
 //
 //   char     magic[8]      "SER\0" + four bytes of user_magic, little-endian
 //   u64      schema_hash   ser::schemaHash<T, Ctx>()
 //   u64      payload_size  bytes after the header that belong to this message
-//   u32      payload_crc   0 in M1 - CRC32C arrives with options.checksum in M2
+//   u32      payload_crc   reserved, written as 0 - there is no checksum yet
 //   u16      flags         ser::nativeFlags()
 //   u16      header_size   32, and a reader trusts it rather than assuming
 //
@@ -62,10 +57,10 @@ namespace ser {
 		static constexpr ::std::size_t WIRE_SIZE = 32;
 
 		// ── the magic ─────────────────────────────────────────────────────────
-		// Four bytes that say "ser", four that say whose stream it is. user_magic is the
-		// caller's, and it is written byte by byte, least significant first, rather than
-		// as a u32 - a reader has to be able to reject a foreign stream BEFORE it trusts
-		// `flags`, and that means the magic cannot depend on the byte order.
+		// Four bytes that say "ser", four that say whose stream it is. user_magic is written
+		// byte by byte, least significant first, rather than as a u32: a reader has to be
+		// able to reject a foreign stream BEFORE it trusts `flags`, so the magic cannot
+		// depend on the byte order.
 		[[nodiscard]] constexpr bool magicOk() const noexcept {
 			return magic[0] == 'S' && magic[1] == 'E' && magic[2] == 'R' && magic[3] == '\0';
 		}
@@ -117,20 +112,18 @@ namespace ser {
 	);
 	static_assert(::std::is_trivially_copyable_v<stream_header>);
 
-	// ── writing it ────────────────────────────────────────────────────────────
-	// One store of 32 bytes, which is exactly what the layout above promises. It writes
-	// wherever the archive currently is, so a caller can put an envelope in front of each
-	// of several messages in one buffer.
+	// One store of 32 bytes, wherever the archive currently is - so a caller can put an
+	// envelope in front of each of several messages in one buffer.
 	template<writer Ar>
 	constexpr Errc writeHeader(Ar& ar, const stream_header& h) {
 		return ar.writeRaw(h);
 	}
 
 	// ── reading it ────────────────────────────────────────────────────────────
-	// Everything that does not need the type, in the order the design fixes, because the
-	// order is the diagnosis: a stream from the other byte order is not a stream with a
-	// different schema, and saying "SchemaMismatch" for it would send the reader looking
-	// in the wrong place.
+	// Everything that does not need the type, in a fixed order, because the order is the
+	// diagnosis: a stream from the other byte order is not a stream with a different
+	// schema, and saying "SchemaMismatch" for it would send the reader looking in the
+	// wrong place.
 	//
 	//   1. 32 bytes are there                      -> Truncated
 	//   2. magic, user_magic, header_size >= 32    -> BadMagic
@@ -171,7 +164,6 @@ namespace ser {
 		return h.schema_hash == ::ser::schemaHash<T, Ctx>() ? Errc::Ok : Errc::SchemaMismatch;
 	}
 
-	// ── looking without reading ───────────────────────────────────────────────
 	// What is in front of this buffer, whatever type it turns out to describe. The
 	// schema_hash comes back as data, so a caller holding several possible types can
 	// compare it against ser::schemaHash<T>() for each of them and pick.

@@ -34,13 +34,13 @@ namespace ser::detail {
 			--nesting;
 		}
 
-		// ── pools (M2) ────────────────────────────────────────────────────────
+		// ── pools ─────────────────────────────────────────────────────────────
 		template<class P>
 		P& pool() {
 			static_assert(
 				DEPENDENT_FALSE<P>,
-				"ser: this archive has no pools. Pools arrive in M2; until then "
-				"leave the context parameter at its default, ser::no_context."
+				"ser: this archive has no pools. Pools are not implemented yet; leave the "
+				"context parameter at its default, ser::no_context."
 			);
 		}
 

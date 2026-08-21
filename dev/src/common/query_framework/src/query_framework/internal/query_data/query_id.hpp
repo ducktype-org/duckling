@@ -8,6 +8,8 @@
 
 #include <base/types/ints.hpp>
 
+#include <ser/ser.hpp>
+
 #include <vector>
 
 namespace query::external {
@@ -72,6 +74,22 @@ namespace query::internal {
 		[[nodiscard]]
 		explicit constexpr operator usize() const {
 			return static_cast<usize>(val);
+		}
+
+		/**
+		 * @brief Writes the query id as its underlying integer.
+		 */
+		static ::ser::Errc serWrite(::ser::writer auto& ar, const QueryID& self) {
+			return ar(self.val);
+		}
+
+		/**
+		 * @brief Builds a query id from the underlying integer on the wire.
+		 * @note A `serMake` rather than a `serRead` because the constructor is private:
+		 * the object has to be built here and returned by value.
+		 */
+		static QueryID serMake(::ser::reader auto& ar) {
+			return QueryID{ ::ser::readField<u64>(ar) };
 		}
 	};
 

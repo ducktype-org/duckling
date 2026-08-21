@@ -66,6 +66,8 @@
 #include <string>
 #include <type_traits>
 
+#include <ser/traits.hpp>
+
 namespace base {
 
 	namespace internal {
@@ -216,3 +218,29 @@ namespace std {
 		usize operator()(const base::StrID& x) const { return x.id.asInt(); }
 	};
 }
+
+namespace ser {
+
+	template<>
+	struct min_wire_size<::base::StrID> {
+		static constexpr ::std::size_t VALUE = min_wire_size<::std::string>::VALUE;
+	};
+
+	template<>
+	struct serializer<::base::StrID> {
+		using StrId = ::base::StrID;
+
+		static constexpr Errc write(writer auto& ar, const StrId& s) {
+			if (const auto c = ar(s.str()); c != Errc::Ok) return c;
+			return Errc::Ok;
+		}
+
+		static constexpr Errc read(reader auto& ar, StrId& s) {
+			::std::string str;
+			if (const auto c = ar(str); c != Errc::Ok) return c;
+			s = StrId{ str };
+			return Errc::Ok;
+		}
+	};
+
+}  // namespace ser

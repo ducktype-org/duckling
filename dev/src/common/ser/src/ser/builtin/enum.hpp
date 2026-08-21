@@ -13,7 +13,7 @@ namespace ser::builtin {
 	concept enum_like = ::std::is_enum_v<::std::remove_cv_t<T>>;
 
 	// The underlying type is what goes on the wire, so changing it changes the format -
-	// schema_hash (block F) is what catches that.
+	// ser::schemaHash is what catches that.
 	//
 	// No enumerator validation on read: without reflection there is no list to check
 	// against, and a scoped enum holding an unlisted value is well-defined as long as

@@ -8,7 +8,7 @@
 // Declarations only, to break the cycle between dispatch.hpp and the adapters:
 // dispatch.hpp needs builtin::writeArray defined, and array.hpp calls dispatchWrite
 // for every element. The call is a qualified name, looked up at definition time, so
-// no include order fixes it. Every container adapter in block E lands in the same spot.
+// no include order fixes it. Every container adapter lands in the same spot.
 //
 // The archives include this file as well, but for decoupling, not for a cycle - every
 // dispatch function is a template on Ar, so nothing here names an archive type.

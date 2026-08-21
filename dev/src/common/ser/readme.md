@@ -1,7 +1,8 @@
 # Ser module
 
 Header-only binary serialization for C++23. Scope: **bytes <-> object**. The module has no
-concept of a file, no dependencies, and does not use anything from `base/`.
+concept of a file and no dependencies beyond `base/`, from which it uses the preprocessor
+helpers (`FOR_EACH`, `FOR_EACH_COMMA`, `CAT`, `STRINGIFY_2`) and nothing else.
 
 Imported from the standalone `ser` repository and then adapted to this repository's
 formatting and naming, so the two copies have diverged on purpose - see
@@ -16,6 +17,12 @@ formatting and naming, so the two copies have diverged on purpose - see
   `map`, `set`, `unordered_map`, `unordered_set`. An **opt-in** include: without it
   `ser/ser.hpp` never learns those types exist and never pays for `<map>` to serialize
   something else.
+* `ser/base/all.hpp` - adapters for the `base` types, opt-in the same way. `Optional`,
+  `Map`, `HashMap`, `VectorMap`, `StableHashMap`, `StableVector`, `Box`, `MBox`,
+  `OwningView`, `SharedView`, `DynamicBitset`, `Bit256` serialize; `Ref`/`CRef`/`MRef`,
+  `SharedBox`, `BoxOrCRef`, `RawView`/`ModRawView` and `CheckedOkBad` are **refused** with
+  a message naming what to write instead, which is only visible if the header is included.
+  `OkBad` and `Monostate` need nothing - they are aggregates.
 * `ser/macros.hpp` - `SER_DESCRIBE`, `SER_DESCRIBE_MAKE`, `SER_MAKE_FROM`, `SER_FRIEND`.
 * `ser/test.hpp` - `SER_TEST_ROUNDTRIP(sample)`, which writes, reads back and names the
   field that came back different.
@@ -106,6 +113,9 @@ names a type dispatches on:
 
 `ser_members` keeps its name: it is a type alias, and the convention leaves those alone.
 
+The module also uses `base/preproc` where upstream generates code with Python, and folds
+the repeated hook detectors into the macros in `src/ser/detail/hooks.hpp`.
+
 The two copies are therefore no longer mergeable by `git`. Porting a change from upstream
 means applying it by hand and running `clang-format` plus
 `toolbox.py cpp-linter --all` over the module afterwards.
@@ -117,20 +127,17 @@ with a reason: the C-array partial specializations in `builtin/array.hpp` and
 `debug.hpp` (neither may drag `<print>` into every translation unit), and the version
 macros in `config.hpp` (they have to work in an `#if`).
 
-# Regenerating the tables
+# The structured-bindings ladder
 
-`src/ser/detail/ladder.inc`, `ladder_decls.inc` and `for_each.inc` are generated and
-committed. Regenerate rather than hand-edit, and re-format afterwards - the generators
-emit upstream's layout, and the committed files are the formatted ones:
-
-~~~~~bash
-cd src/common/ser
-python3 tools/gen_ladder.py     # ladder.inc and ladder_decls.inc
-python3 tools/gen_for_each.py   # for_each.inc
-for f in src/ser/detail/*.inc; do
-	clang-format-19 -assume-filename=x.cpp "$f" > "$f.tmp" && mv "$f.tmp" "$f"
-done
-~~~~~
+A structured binding declaration spells its arity out, so "hand me every member" needs one
+branch per member count. `src/ser/detail/ladder.hpp` holds that table as macros:
+`SER_DETAIL_LADDER(RUNG)` expands `RUNG(n)` for every count up to
+`ser::detail::LADDER_MAX`, and `SER_DETAIL_LADDER_NAMES(n)` hands a rung its `n` binding
+names. `ser::access` uses it twice - once to walk the members, once to report their
+declared types - and `detail::MAX_MEMBERS` is taken from `LADDER_MAX`, so nothing can
+drift apart. Upstream generates the same table with a Python script; here it is
+plain preprocessor, and a typo in it is a duplicate or a missing binding, which is a
+compile error either way.
 
 # Tests
 
@@ -138,6 +145,12 @@ done
 shapes (four levels of aggregate, every std adapter, both enum kinds, a C array field, a
 strong typedef), one for the dispatch ladder (all four hook levels plus the macros, each
 stamping a distinct byte so the test proves *which* rung ran). It runs in about 0.13 s.
+
+`tests/ser_base_test.cpp` is ten tests over `ser/base/all.hpp`: what each base type does on
+the wire, which streams are interchangeable with their std form, and what a damaged one
+gets back. The refusals cannot be tested from here - a `static_assert` that fires is a
+build failure, not a failing case - so what it pins instead is that the types next to a
+refused one still work.
 
 Upstream's own suite is 205 cases over ten files plus 33 compile-failure targets; those
 are not ported, and this repository has no harness for compile-failure tests.

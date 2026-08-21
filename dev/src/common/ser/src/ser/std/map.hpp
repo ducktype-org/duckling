@@ -7,13 +7,12 @@
 // reads back on another.
 //
 // THE KEY AND THE VALUE ARE READ AS TWO STATEMENTS, never as two arguments of one call.
-// `m.emplace(dispatchMake<K>(ar), dispatchMake<V>(ar))` looks obvious and is invariant 3
-// all over again: those are function arguments, their evaluation order is unspecified, and
-// MSVC evaluates right to left - a stream that is key-first on one compiler and value-first
-// on another, passing every round-trip test on both while agreeing with neither. Two
-// declarations are ordered by the language, so that is what this uses. The cost is one move
-// per element into the node, and value_type being pair<const K, V> means the node has to be
-// constructed rather than assigned anyway.
+// `m.emplace(dispatchMake<K>(ar), dispatchMake<V>(ar))` looks obvious and is wrong: those
+// are function arguments, so their evaluation order is unspecified and the stream would be
+// key-first on one compiler and value-first on another, passing every round-trip test on
+// both while agreeing with neither. Two declarations are ordered by the language. The cost
+// is one move per element into the node, and value_type being pair<const K, V> means the
+// node has to be constructed rather than assigned anyway.
 //
 // A repeated key is corrupt input, not a merge: insert reports it and the read fails with
 // Errc::InvalidValue. Silently keeping the first one would turn a damaged stream into a

@@ -7,30 +7,38 @@
 #include <base/pointers/box.hpp>
 
 #include <filesystem/file.hpp>
+#include <ser/base/all.hpp>
+#include <ser/ser.hpp>
+#include <ser/std/all.hpp>
 #include <string_id/string_id.hpp>
 
-#include <cstring>
-#include <type_traits>
+#include <span>
+#include <vector>
 
 namespace artifacts {
 	/**
-	 * @brief Represents a type, that is trivially interpretable as simple bytes.
-	 * @note In the future this might be improved to feature custom serialization and
-	 * deserialization as well.
+	 * @brief Turns `T` into the bytes of a blob.
+	 * @note The whole `ser` module is the definition of what a blob may hold: an aggregate
+	 * needs no code at all, and anything else declares one of the `ser` hooks. A raw
+	 * pointer is refused rather than copied, which is what the old trivially-copyable
+	 * requirement could not say.
 	 */
 	template<class T>
-	concept SerdeType
-		= std::is_standard_layout_v<T> && std::is_trivial_v<T> && std::is_trivially_copyable_v<T>;
+	std::vector<byte> serialize(const T& data) {
+		std::vector<byte> bytes;
+		::ser::write(bytes, data).orThrow();
+		return bytes;
+	}
 
 	/**
 	 * @brief Constructs type `T` from bytes.
+	 * @throws ser::exception when the bytes are not a `T` - truncated, or written from a
+	 * different type.
 	 */
-	template<SerdeType T>
+	template<class T>
 	T deserialize(base::RawView view) {
-		CORE_ASSERT(view.size() == sizeof(T), "View\'s size does not match T\'s size");
-		alignas(T) std::array<std::byte, sizeof(T)> buffer;
-		std::memcpy(buffer.data(), view.getBegin(), sizeof(T));
-		return *std::launder(reinterpret_cast<T*>(buffer.data()));
+		return ::ser::readOrThrowForce<T>(std::span<const std::byte>{ view.getBegin(), view.size() }
+		);
 	}
 
 	/**
@@ -91,9 +99,10 @@ namespace artifacts {
 		 * @brief Sets blob's data from serializable type `T`.
 		 * @note Invalidates current blob's data pointers.
 		 */
-		template<SerdeType T>
+		template<class T>
 		void setData(const T& data) {
-			setData(reinterpret_cast<const byte*>(&data), sizeof(data));
+			const std::vector<byte> bytes = serialize(data);
+			setData(bytes.data(), bytes.size());
 		}
 
 		/**
@@ -106,7 +115,7 @@ namespace artifacts {
 		 * @brief Gets blob's data and interprets them as a `T` object.
 		 * @note Data pointers can be invalidated by calls to `setData`.
 		 */
-		template<SerdeType T>
+		template<class T>
 		const T getData() const {
 			return deserialize<T>(getDataView());
 		}

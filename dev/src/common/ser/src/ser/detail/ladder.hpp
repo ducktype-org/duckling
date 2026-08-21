@@ -1,0 +1,127 @@
+#pragma once
+
+#include <base/preproc/cat.hpp>
+#include <base/preproc/for_each.hpp>
+
+#include <cstddef>
+
+// The structured-bindings table, expanded inside ser::access.
+//
+// A binding declaration spells its arity out, so "hand me every member" needs one branch
+// per member count. SER_DETAIL_LADDER(RUNG) expands RUNG(n) for every count the library
+// supports, and SER_DETAIL_LADDER_NAMES(n) hands that rung its n binding names - each entry
+// of the table below is the previous one plus one name, so a typo is a duplicate or a
+// missing binding and both are compile errors. LADDER_MAX has to agree with the last entry
+// of both tables; a count above it has no rung, and visitMembersN says so.
+//
+// The arity of a structured binding is CHECKED against the type and never deduced, so a
+// member count that does not match cannot write the wrong bytes - it fails to compile.
+
+namespace ser::detail {
+
+	/** @brief The largest member count the table below covers. */
+	inline constexpr ::std::size_t LADDER_MAX = 64;
+
+}  // namespace ser::detail
+
+/** @brief The binding names of rung `n`: m0, m1, ... m(n-1). */
+#define SER_DETAIL_LADDER_NAMES(n) CAT(SER_DETAIL_LADDER_NAMES_, n)
+
+// clang-format off
+#define SER_DETAIL_LADDER_NAMES_1  m0
+#define SER_DETAIL_LADDER_NAMES_2  SER_DETAIL_LADDER_NAMES_1, m1
+#define SER_DETAIL_LADDER_NAMES_3  SER_DETAIL_LADDER_NAMES_2, m2
+#define SER_DETAIL_LADDER_NAMES_4  SER_DETAIL_LADDER_NAMES_3, m3
+#define SER_DETAIL_LADDER_NAMES_5  SER_DETAIL_LADDER_NAMES_4, m4
+#define SER_DETAIL_LADDER_NAMES_6  SER_DETAIL_LADDER_NAMES_5, m5
+#define SER_DETAIL_LADDER_NAMES_7  SER_DETAIL_LADDER_NAMES_6, m6
+#define SER_DETAIL_LADDER_NAMES_8  SER_DETAIL_LADDER_NAMES_7, m7
+#define SER_DETAIL_LADDER_NAMES_9  SER_DETAIL_LADDER_NAMES_8, m8
+#define SER_DETAIL_LADDER_NAMES_10 SER_DETAIL_LADDER_NAMES_9, m9
+#define SER_DETAIL_LADDER_NAMES_11 SER_DETAIL_LADDER_NAMES_10, m10
+#define SER_DETAIL_LADDER_NAMES_12 SER_DETAIL_LADDER_NAMES_11, m11
+#define SER_DETAIL_LADDER_NAMES_13 SER_DETAIL_LADDER_NAMES_12, m12
+#define SER_DETAIL_LADDER_NAMES_14 SER_DETAIL_LADDER_NAMES_13, m13
+#define SER_DETAIL_LADDER_NAMES_15 SER_DETAIL_LADDER_NAMES_14, m14
+#define SER_DETAIL_LADDER_NAMES_16 SER_DETAIL_LADDER_NAMES_15, m15
+#define SER_DETAIL_LADDER_NAMES_17 SER_DETAIL_LADDER_NAMES_16, m16
+#define SER_DETAIL_LADDER_NAMES_18 SER_DETAIL_LADDER_NAMES_17, m17
+#define SER_DETAIL_LADDER_NAMES_19 SER_DETAIL_LADDER_NAMES_18, m18
+#define SER_DETAIL_LADDER_NAMES_20 SER_DETAIL_LADDER_NAMES_19, m19
+#define SER_DETAIL_LADDER_NAMES_21 SER_DETAIL_LADDER_NAMES_20, m20
+#define SER_DETAIL_LADDER_NAMES_22 SER_DETAIL_LADDER_NAMES_21, m21
+#define SER_DETAIL_LADDER_NAMES_23 SER_DETAIL_LADDER_NAMES_22, m22
+#define SER_DETAIL_LADDER_NAMES_24 SER_DETAIL_LADDER_NAMES_23, m23
+#define SER_DETAIL_LADDER_NAMES_25 SER_DETAIL_LADDER_NAMES_24, m24
+#define SER_DETAIL_LADDER_NAMES_26 SER_DETAIL_LADDER_NAMES_25, m25
+#define SER_DETAIL_LADDER_NAMES_27 SER_DETAIL_LADDER_NAMES_26, m26
+#define SER_DETAIL_LADDER_NAMES_28 SER_DETAIL_LADDER_NAMES_27, m27
+#define SER_DETAIL_LADDER_NAMES_29 SER_DETAIL_LADDER_NAMES_28, m28
+#define SER_DETAIL_LADDER_NAMES_30 SER_DETAIL_LADDER_NAMES_29, m29
+#define SER_DETAIL_LADDER_NAMES_31 SER_DETAIL_LADDER_NAMES_30, m30
+#define SER_DETAIL_LADDER_NAMES_32 SER_DETAIL_LADDER_NAMES_31, m31
+#define SER_DETAIL_LADDER_NAMES_33 SER_DETAIL_LADDER_NAMES_32, m32
+#define SER_DETAIL_LADDER_NAMES_34 SER_DETAIL_LADDER_NAMES_33, m33
+#define SER_DETAIL_LADDER_NAMES_35 SER_DETAIL_LADDER_NAMES_34, m34
+#define SER_DETAIL_LADDER_NAMES_36 SER_DETAIL_LADDER_NAMES_35, m35
+#define SER_DETAIL_LADDER_NAMES_37 SER_DETAIL_LADDER_NAMES_36, m36
+#define SER_DETAIL_LADDER_NAMES_38 SER_DETAIL_LADDER_NAMES_37, m37
+#define SER_DETAIL_LADDER_NAMES_39 SER_DETAIL_LADDER_NAMES_38, m38
+#define SER_DETAIL_LADDER_NAMES_40 SER_DETAIL_LADDER_NAMES_39, m39
+#define SER_DETAIL_LADDER_NAMES_41 SER_DETAIL_LADDER_NAMES_40, m40
+#define SER_DETAIL_LADDER_NAMES_42 SER_DETAIL_LADDER_NAMES_41, m41
+#define SER_DETAIL_LADDER_NAMES_43 SER_DETAIL_LADDER_NAMES_42, m42
+#define SER_DETAIL_LADDER_NAMES_44 SER_DETAIL_LADDER_NAMES_43, m43
+#define SER_DETAIL_LADDER_NAMES_45 SER_DETAIL_LADDER_NAMES_44, m44
+#define SER_DETAIL_LADDER_NAMES_46 SER_DETAIL_LADDER_NAMES_45, m45
+#define SER_DETAIL_LADDER_NAMES_47 SER_DETAIL_LADDER_NAMES_46, m46
+#define SER_DETAIL_LADDER_NAMES_48 SER_DETAIL_LADDER_NAMES_47, m47
+#define SER_DETAIL_LADDER_NAMES_49 SER_DETAIL_LADDER_NAMES_48, m48
+#define SER_DETAIL_LADDER_NAMES_50 SER_DETAIL_LADDER_NAMES_49, m49
+#define SER_DETAIL_LADDER_NAMES_51 SER_DETAIL_LADDER_NAMES_50, m50
+#define SER_DETAIL_LADDER_NAMES_52 SER_DETAIL_LADDER_NAMES_51, m51
+#define SER_DETAIL_LADDER_NAMES_53 SER_DETAIL_LADDER_NAMES_52, m52
+#define SER_DETAIL_LADDER_NAMES_54 SER_DETAIL_LADDER_NAMES_53, m53
+#define SER_DETAIL_LADDER_NAMES_55 SER_DETAIL_LADDER_NAMES_54, m54
+#define SER_DETAIL_LADDER_NAMES_56 SER_DETAIL_LADDER_NAMES_55, m55
+#define SER_DETAIL_LADDER_NAMES_57 SER_DETAIL_LADDER_NAMES_56, m56
+#define SER_DETAIL_LADDER_NAMES_58 SER_DETAIL_LADDER_NAMES_57, m57
+#define SER_DETAIL_LADDER_NAMES_59 SER_DETAIL_LADDER_NAMES_58, m58
+#define SER_DETAIL_LADDER_NAMES_60 SER_DETAIL_LADDER_NAMES_59, m59
+#define SER_DETAIL_LADDER_NAMES_61 SER_DETAIL_LADDER_NAMES_60, m60
+#define SER_DETAIL_LADDER_NAMES_62 SER_DETAIL_LADDER_NAMES_61, m61
+#define SER_DETAIL_LADDER_NAMES_63 SER_DETAIL_LADDER_NAMES_62, m62
+#define SER_DETAIL_LADDER_NAMES_64 SER_DETAIL_LADDER_NAMES_63, m63
+
+/** @brief Expands `RUNG(n)` for every member count from 1 to ser::detail::LADDER_MAX. */
+#define SER_DETAIL_LADDER(RUNG) \
+	RUNG(1) RUNG(2) RUNG(3) RUNG(4) RUNG(5) RUNG(6) RUNG(7) RUNG(8) \
+	RUNG(9) RUNG(10) RUNG(11) RUNG(12) RUNG(13) RUNG(14) RUNG(15) RUNG(16) \
+	RUNG(17) RUNG(18) RUNG(19) RUNG(20) RUNG(21) RUNG(22) RUNG(23) RUNG(24) \
+	RUNG(25) RUNG(26) RUNG(27) RUNG(28) RUNG(29) RUNG(30) RUNG(31) RUNG(32) \
+	RUNG(33) RUNG(34) RUNG(35) RUNG(36) RUNG(37) RUNG(38) RUNG(39) RUNG(40) \
+	RUNG(41) RUNG(42) RUNG(43) RUNG(44) RUNG(45) RUNG(46) RUNG(47) RUNG(48) \
+	RUNG(49) RUNG(50) RUNG(51) RUNG(52) RUNG(53) RUNG(54) RUNG(55) RUNG(56) \
+	RUNG(57) RUNG(58) RUNG(59) RUNG(60) RUNG(61) RUNG(62) RUNG(63) RUNG(64)
+// clang-format on
+
+/** @brief One rung of the walk: bind every member of `obj` and hand them to `f`. */
+#define SER_DETAIL_LADDER_WALK(n)                  \
+	else if constexpr (N == (n)) {                 \
+		auto&& [SER_DETAIL_LADDER_NAMES(n)] = obj; \
+		return f(SER_DETAIL_LADDER_NAMES(n));      \
+	}
+
+/**
+ * @brief One rung of the declared-type table: the type of each member exactly as declared,
+ * plus whether a non-const lvalue reference binds to it.
+ */
+#define SER_DETAIL_LADDER_FIELD_DECL(m) \
+	::ser::detail::field_decl<decltype(m), (requires { bindProbe(m); })>
+
+#define SER_DETAIL_LADDER_DECLS(n)                                                       \
+	else if constexpr (N == (n)) {                                                       \
+		auto&& [SER_DETAIL_LADDER_NAMES(n)] = obj;                                       \
+		return ::ser::detail::type_list<                                                 \
+			FOR_EACH_COMMA(SER_DETAIL_LADDER_FIELD_DECL, SER_DETAIL_LADDER_NAMES(n))>{}; \
+	}

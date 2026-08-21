@@ -41,9 +41,8 @@ namespace ser {
 
 		template<class T>
 		[[nodiscard]] consteval ::std::size_t minWireCompute() {
-			// bool is one byte on the wire whatever sizeof(bool) is on this platform -
-			// the object representation never reaches the stream, and block F hashes the
-			// wire size for exactly this reason.
+			// bool is one byte on the wire whatever sizeof(bool) is on this platform:
+			// the object representation never reaches the stream.
 			if constexpr (::std::is_same_v<T, bool>)
 				return 1;
 			else if constexpr (builtin::scalar_like<T> || builtin::enum_like<T>)

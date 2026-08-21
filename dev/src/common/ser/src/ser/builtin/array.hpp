@@ -59,8 +59,7 @@ namespace ser::builtin {
 	inline constexpr ::std::size_t ARRAY_LENGTH_V = array_length<::std::remove_cv_t<A>>::value;
 
 	// Elements go through full dispatch, not a bulk copy: an element may have its own
-	// hook, and in M2/M3 it may be remapped through a pool. The flat bulk-memcpy path
-	// is a later optimization gated by is_flat_v, and it produces the same bytes.
+	// hook, and the wire has neither padding nor the platform's alignment.
 	template<class T, writer Ar>
 	constexpr Errc writeArray(Ar& ar, const T& a) {
 		using E = array_element_t<T>;

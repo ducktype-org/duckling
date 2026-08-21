@@ -7,16 +7,16 @@
 
 namespace ser {
 
-	// The empty context. Archives take Ctx as a template parameter from day one so that
-	// adding pools in M2 is additive - no call site changes shape. `POOL_COUNT == 0` is
-	// the compile-time switch that removes every pool branch from the generated code.
+	// The empty context. Archives take Ctx as a template parameter so that adding pools
+	// is additive - no call site changes shape. `POOL_COUNT == 0` is the compile-time
+	// switch that removes every pool branch from the generated code.
 	struct no_context {
 		static constexpr ::std::size_t POOL_COUNT = 0;
 
 		constexpr Errc finish() noexcept { return Errc::Ok; }
 	};
 
-	// Real contexts arrive in M2. Declared here so that `context<...>` names a type today.
+	// Not implemented yet. Declared so that `context<...>` names a type.
 	template<class... Pools>
 	struct context;
 

@@ -7,11 +7,11 @@
 //
 // Both a read and a make, and they answer different questions. `read` fills an existing
 // tuple element by element and is constrained on the elements being assignable, so a
-// tuple with a const element simply does not have it and the ladder moves on to `make`.
+// tuple with a const element simply does not have it and dispatch moves on to `make`.
 // `make` builds one - IN BRACES, because that is the only way to order the reads: a
-// braced-init-list is evaluated left to right by [dcl.init.list]/4, while the arguments
-// of a constructor call are not ordered at all and MSVC evaluates them right to left.
-// That is invariant 3, and it is the difference between a format and a coin flip.
+// braced-init-list is evaluated left to right by [dcl.init.list]/4, while the arguments of
+// a constructor call are not ordered at all. Anything else would make the byte order
+// compiler-dependent.
 
 #include <ser/concepts.hpp>
 #include <ser/detail/dispatch_fwd.hpp>

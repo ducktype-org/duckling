@@ -7,6 +7,8 @@
 #include <base/types/bit256.hpp>
 
 #include <query_framework/internal/query_data/query_id.hpp>  // IWYU pragma: export
+#include <ser/base/types.hpp>  // IWYU pragma: keep - the base::Bit256 adapter KeyHash needs
+#include <ser/macros.hpp>
 
 #include <functional>
 
@@ -39,6 +41,13 @@ namespace query::internal {
 			if (this->q_id.asInt() == r.q_id.asInt()) return this->hash.val < r.hash.val;
 			return this->q_id.asInt() < r.q_id.asInt();
 		}
+
+		/**
+		 * @brief `ser` hooks: the query id followed by the key hash.
+		 * @note The pair rather than a plain `serVisit` because the default constructor is
+		 * deleted, so a `NodeID` can only be read by building one.
+		 */
+		SER_DESCRIBE_MAKE(NodeID, q_id, hash)
 	};
 }
 

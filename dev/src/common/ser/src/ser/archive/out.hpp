@@ -48,8 +48,7 @@ namespace ser {
 		//
 		// The consequence worth knowing: position() is an offset into the BUFFER, not
 		// into the message, so an error position points at the byte that failed. reset()
-		// takes buffer offsets too - capture position() before writing a header and
-		// hand that same value back (M2).
+		// takes buffer offsets too.
 		constexpr explicit out(Buf& b) noexcept requires(::std::is_empty_v<Ctx>): buf(b) {
 			pos = detail::bufferOrigin(b);
 		}
@@ -104,8 +103,8 @@ namespace ser {
 		}
 
 		// ── position ──────────────────────────────────────────────────────────
-		// M2 rewinds to patch the header after the payload size is known. The bound is
-		// the buffer, which is why reset() is not shared with ser::in.
+		// Rewinding is how the header gets patched once the payload size is known. The
+		// bound is the buffer, which is why reset() is not shared with ser::in.
 		constexpr void reset(::std::size_t p = 0) noexcept {
 			SER_ASSERT(
 				p <= detail::bufferSize(buf), "ser::out::reset: position past the end of the buffer"
@@ -113,8 +112,7 @@ namespace ser {
 			pos = p;
 		}
 
-		// Always call it. Without pools it folds away to nothing; with pools (M2) it is
-		// what actually emits them.
+		// Always call it. Without pools it folds away to nothing.
 		constexpr Errc finish() { return context().finish(); }
 	};
 

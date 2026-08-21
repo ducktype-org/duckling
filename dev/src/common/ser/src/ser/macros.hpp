@@ -1,5 +1,8 @@
 #pragma once
 
+#include <base/preproc/for_each.hpp>
+#include <base/preproc/stringify.hpp>
+
 #include <ser/access.hpp>
 #include <ser/concepts.hpp>
 #include <ser/detail/describe.hpp>
@@ -14,14 +17,13 @@
 #include <utility>
 
 // ── the preprocessor plumbing ─────────────────────────────────────────────────
-#define SER_DETAIL_CAT_IMPL(a, b) a##b
-#define SER_DETAIL_CAT(a, b)      SER_DETAIL_CAT_IMPL(a, b)
+// FOR_EACH and FOR_EACH_COMMA come from base: statements and an argument list
+// respectively. The field count is an EXPRESSION rather than a token, which is all any
+// caller here needs it to be.
+#define SER_DETAIL_PLUS_ONE(x)      +1
+#define SER_DETAIL_FIELD_COUNT(...) (::std::size_t{ 0 } FOR_EACH(SER_DETAIL_PLUS_ONE, __VA_ARGS__))
 
-#include <ser/detail/for_each.inc>  // SER_DETAIL_NARG, FOR_EACH, FOR_EACH_STMT
-
-#define SER_DETAIL_STRINGIZE_IMPL(x) #x
-#define SER_DETAIL_STRINGIZE(x)      SER_DETAIL_STRINGIZE_IMPL(x)
-#define SER_DETAIL_QUALIFY(x)        self.x
+#define SER_DETAIL_QUALIFY(x) self.x
 
 namespace ser::detail {
 
@@ -35,11 +37,10 @@ namespace ser::detail {
 	// SER_TEST_ROUNDTRIP is the only thing left that can catch a mistake.
 	template<class T, ::std::size_t N>
 	consteval bool makeFromArityOk() {
-		// A base class makes the two numbers mean different things: the declared count
-		// is about this class's own members - the only ones a structured binding could
-		// ever see - while the macro lists every field that goes on the wire, inherited
-		// ones included. Comparing them would refuse code that works. Same reason the
-		// declared-count check in describe_bind.hpp skips a type with a base.
+		// A base class makes the two numbers mean different things: the declared count is
+		// about this class's own members - the only ones a structured binding could ever
+		// see - while the macro lists every field that goes on the wire, inherited ones
+		// included. Comparing them would refuse code that works.
 		if constexpr (HAS_BASE_V<T>)
 			return true;
 		else if constexpr (CAN_ENUMERATE_MEMBERS_V<T>)
@@ -51,14 +52,10 @@ namespace ser::detail {
 	// Can the constructor be called with these fields, the way the macro will call it?
 	//
 	// std::is_constructible_v is the obvious tool and answers a different question twice
-	// over. It asks about PARENTHESES, and the macro expands to BRACES: a field wider
-	// than the parameter it feeds - std::size_t into an int - is an implicit conversion
-	// to the one and a narrowing error to the other, so the check passes and the braces
-	// below fail with the compiler's own message instead of ours. And it asks with an
-	// XVALUE, while every argument the macro passes is a PRVALUE straight out of
-	// dispatchMake: a field whose type cannot be moved is constructible in the code and
-	// reported not constructible by the trait, which is the wrong answer about exactly
-	// the types SER_MAKE_FROM exists for.
+	// over. It asks about PARENTHESES while the macro expands to BRACES, so a narrowing
+	// conversion passes the check and fails the code; and it asks with an XVALUE while
+	// every argument the macro passes is a PRVALUE out of dispatchMake, so a field that
+	// cannot be moved is reported unusable although it works.
 	//
 	// So the question is asked in the shape it will be answered in. asPrvalue<F>() is a
 	// call expression, so it IS a prvalue - unlike declval, which is an xvalue - and the
@@ -73,25 +70,13 @@ namespace ser::detail {
 	// a two-element container instead of calling the two-argument constructor. Such a
 	// type needs SER_MAKE_FROM_PAREN, and this is what tells it apart.
 	//
-	// Two routes, because neither is enough on its own.
-	//
-	// The direct question - is T constructible from initializer_list<E> - cannot be asked
-	// without naming E, and C++ has no way to quantify over types. The only conventional
-	// source for E is T::value_type, which every standard container declares. That is a
-	// convention, not a language rule, and a hand-written type with an initializer_list
-	// constructor and no such typedef is invisible to it.
-	//
-	// So the second route asks the question that actually matters: does a BRACED list of
-	// ANY length construct this type? A normal type stops at its field count; one whose
-	// braces are a list runs past the ladder's limit, and the probe reports it. That
-	// needs no convention and no element type.
-	//
-	// Braced, and that word is load-bearing. A variadic constructor template also takes
-	// any number of arguments, but parentheses reach it identically - so it is not this
-	// trap, and telling its author to use SER_MAKE_FROM_PAREN would change nothing. What
-	// keeps the two apart for free is that a braced-init-list is a non-deduced context:
-	// Args... cannot be deduced from {p}, so the braced probe stops at 0 for a variadic
-	// constructor and runs to the limit for a list.
+	// Two routes, because neither is enough on its own. Asking directly needs the element
+	// type, and the only conventional source for it is T::value_type - which a
+	// hand-written type with an initializer_list constructor need not have. So the second
+	// route asks whether a BRACED list of ANY length constructs the type: a normal type
+	// stops at its field count, a list never stops. Braced is load-bearing - a variadic
+	// constructor template also takes any number of arguments, but a braced-init-list is
+	// a non-deduced context, so the probe stops at 0 for it.
 	template<class T>
 	consteval bool hasInitializerListCtor() {
 		if constexpr (requires { typename T::value_type; })
@@ -105,21 +90,15 @@ namespace ser::detail {
 
 }  // namespace ser::detail
 
-// -- the two field shapes a hook has to refuse for itself ----------------------
-// The walk asks detail::checkWalkableFields, but a type with a hook never reaches the
-// walk - the hook IS the format. A hand-written serVisit can therefore serialize a
-// reference or a bit-field with nothing to stop it, and there is no way to catch that:
-// by the time `ar(x, y)` runs the arguments are expressions, and an expression carries
-// neither property.
+// ── the two field shapes a hook has to refuse for itself ──────────────────────
+// A type with a hook never reaches the automatic walk, so the walk's own field checks
+// never run for it - and by the time `ar(x, y)` runs the arguments are expressions, which
+// carry neither of these properties. A MACRO can still see the field NAMES, and that is
+// what makes the question askable: decltype of a member access is the DECLARED type, and
+// a bit-field is the one thing no non-const lvalue reference binds to.
 //
-// A MACRO can, because it still has the field NAMES. decltype of a member access is the
-// DECLARED type, so a reference is visible; a bit-field is visible by asking whether a
-// non-const lvalue reference binds to it. Both go through declval<Self&>() rather than
-// `self`, because the write side takes self by const reference and a const reference
-// binds to a bit-field perfectly well.
-//
-// So the macros check and a hand-written hook does not, which is the honest asymmetry:
-// naming a field is what makes the question askable at all.
+// Both go through declval<Self&>() rather than `self`, because the write side takes self
+// by const reference and a const reference binds to a bit-field perfectly well.
 #define SER_DETAIL_FIELD_REF_OK(x)                                                      \
 	static_assert(                                                                      \
 		!::std::is_reference_v<decltype(::std::declval<ser_detail_field_self_t&>().x)>, \
@@ -144,42 +123,37 @@ namespace ser::detail {
 	SER_DETAIL_FIELD_REF_OK(x) \
 	SER_DETAIL_FIELD_BITS_OK(x)
 
-
 // The write side of SER_DESCRIBE_MAKE needs only the reference half: its read side is
-// serMake, which BUILDS, and braces initialize a bit-field by value - so a bit-field is
-// perfectly serializable through that pair. serVisit is the one that cannot, because it
-// reads by writing through a reference and no reference binds to a bit-field.
+// serMake, which BUILDS, and braces initialize a bit-field by value.
 #define SER_DETAIL_FIELD_CHECKS_BUILT(...)                                 \
 	using ser_detail_field_self_t = ::std::remove_cvref_t<decltype(self)>; \
-	SER_DETAIL_FOR_EACH_STMT(SER_DETAIL_FIELD_REF_OK, __VA_ARGS__)
+	FOR_EACH(SER_DETAIL_FIELD_REF_OK, __VA_ARGS__)
 
 #define SER_DETAIL_FIELD_CHECKS(...)                                       \
 	using ser_detail_field_self_t = ::std::remove_cvref_t<decltype(self)>; \
-	SER_DETAIL_FOR_EACH_STMT(SER_DETAIL_FIELD_OK, __VA_ARGS__)
+	FOR_EACH(SER_DETAIL_FIELD_OK, __VA_ARGS__)
 
 // ── SER_DESCRIBE ──────────────────────────────────────────────────────────────
 // Lists the fields that go on the wire, in order, and skips the rest. It expands to an
-// in-class serVisit, so the ladder finds it at level 2 and nothing else has to know
-// about it - and to the field names, which is what lets SER_TEST_ROUNDTRIP say which
-// field came back wrong instead of just "not equal".
-//
-// Needs at least one field; a type with nothing to serialize needs no description.
-// The half that only DESCRIBES: the count, the names, and the fields as a tuple. It
-// says nothing about the format, so it can sit under either of the two hook forms
-// below - the symmetric serVisit, or serWrite together with serMake.
-#define SER_DETAIL_DESCRIBE_FIELDS(...)                                            \
-	static constexpr ::std::size_t ser_field_count = SER_DETAIL_NARG(__VA_ARGS__); \
-	static constexpr const char*   ser_field_names[SER_DETAIL_NARG(__VA_ARGS__)]   \
-		= { SER_DETAIL_FOR_EACH(SER_DETAIL_STRINGIZE, __VA_ARGS__) };              \
-	static constexpr auto ser_described(auto& self) {                              \
-		return ::std::tie(SER_DETAIL_FOR_EACH(SER_DETAIL_QUALIFY, __VA_ARGS__));   \
+// in-class serVisit, so dispatch finds it at level 2 and nothing else has to know about
+// it - and to the field names, which is what lets SER_TEST_ROUNDTRIP say which field came
+// back wrong instead of just "not equal". Needs at least one field.
+
+// The half that only DESCRIBES: the count, the names, and the fields as a tuple. It says
+// nothing about the format, so it sits under either of the two hook forms below.
+#define SER_DETAIL_DESCRIBE_FIELDS(...)                                                   \
+	static constexpr ::std::size_t ser_field_count = SER_DETAIL_FIELD_COUNT(__VA_ARGS__); \
+	static constexpr const char*   ser_field_names[SER_DETAIL_FIELD_COUNT(__VA_ARGS__)]   \
+		= { FOR_EACH_COMMA(STRINGIFY_2, __VA_ARGS__) };                                   \
+	static constexpr auto ser_described(auto& self) {                                     \
+		return ::std::tie(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, __VA_ARGS__));               \
 	}
 
-#define SER_DESCRIBE(...)                                                \
-	SER_DETAIL_DESCRIBE_FIELDS(__VA_ARGS__)                              \
-	static constexpr ::ser::Errc serVisit(auto& ar, auto& self) {        \
-		SER_DETAIL_FIELD_CHECKS(__VA_ARGS__)                             \
-		return ar(SER_DETAIL_FOR_EACH(SER_DETAIL_QUALIFY, __VA_ARGS__)); \
+#define SER_DESCRIBE(...)                                           \
+	SER_DETAIL_DESCRIBE_FIELDS(__VA_ARGS__)                         \
+	static constexpr ::ser::Errc serVisit(auto& ar, auto& self) {   \
+		SER_DETAIL_FIELD_CHECKS(__VA_ARGS__)                        \
+		return ar(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, __VA_ARGS__)); \
 	}
 
 // ── SER_MAKE_FROM ─────────────────────────────────────────────────────────────
@@ -199,35 +173,33 @@ namespace ser::detail {
 #define SER_DETAIL_MAKE_TYPE(x) ::std::remove_cv_t<decltype(ser_detail_self_t::x)>
 #define SER_DETAIL_MAKE_ARG(x)  ::ser::readField<SER_DETAIL_MAKE_TYPE(x)>(ar)
 
-#define SER_DETAIL_MAKE_FROM_CHECKS(Self, ...)                                          \
-	using ser_detail_self_t = Self;                                                     \
-	static_assert(                                                                      \
-		::ser::detail::makeFromArityOk<Self, SER_DETAIL_NARG(__VA_ARGS__)>(),           \
-		"ser: SER_MAKE_FROM lists a different number of fields than this type has. "    \
-		"List every field that goes on the wire, in declaration order."                 \
-	);                                                                                  \
-	static_assert(                                                                      \
-		!::ser::detail::HAS_INITIALIZER_LIST_CTOR_V<Self>,                              \
-		"ser: this type accepts a BRACED list of any length - a std::initializer_list " \
-		"constructor - so the braces SER_MAKE_FROM expands to would be swallowed as a " \
-		"list instead of calling the constructor with the fields as arguments. Use "    \
-		"SER_MAKE_FROM_PAREN(Type, a, b) - it uses parentheses."                        \
-	);                                                                                  \
-	static_assert(                                                                      \
-		::ser::detail::braced_from_fields<                                              \
-			Self,                                                                       \
-			SER_DETAIL_FOR_EACH(SER_DETAIL_MAKE_TYPE, __VA_ARGS__)>,                    \
-		"ser: this type cannot be built from its fields, in braces, in the order "      \
-		"given. Check the order against the constructor - two fields of different "     \
-		"types swapped is exactly what this catches. If the order is right, the other " \
-		"cause is a narrowing conversion, which braces refuse and parentheses allow: "  \
-		"SER_MAKE_FROM_PAREN(Type, a, b) accepts it, or widen the parameter."           \
+#define SER_DETAIL_MAKE_FROM_CHECKS(Self, ...)                                                      \
+	using ser_detail_self_t = Self;                                                                 \
+	static_assert(                                                                                  \
+		::ser::detail::makeFromArityOk<Self, SER_DETAIL_FIELD_COUNT(__VA_ARGS__)>(),                \
+		"ser: SER_MAKE_FROM lists a different number of fields than this type has. "                \
+		"List every field that goes on the wire, in declaration order."                             \
+	);                                                                                              \
+	static_assert(                                                                                  \
+		!::ser::detail::HAS_INITIALIZER_LIST_CTOR_V<Self>,                                          \
+		"ser: this type accepts a BRACED list of any length - a std::initializer_list "             \
+		"constructor - so the braces SER_MAKE_FROM expands to would be swallowed as a "             \
+		"list instead of calling the constructor with the fields as arguments. Use "                \
+		"SER_MAKE_FROM_PAREN(Type, a, b) - it uses parentheses."                                    \
+	);                                                                                              \
+	static_assert(                                                                                  \
+		::ser::detail::braced_from_fields<Self, FOR_EACH_COMMA(SER_DETAIL_MAKE_TYPE, __VA_ARGS__)>, \
+		"ser: this type cannot be built from its fields, in braces, in the order "                  \
+		"given. Check the order against the constructor - two fields of different "                 \
+		"types swapped is exactly what this catches. If the order is right, the other "             \
+		"cause is a narrowing conversion, which braces refuse and parentheses allow: "              \
+		"SER_MAKE_FROM_PAREN(Type, a, b) accepts it, or widen the parameter."                       \
 	);
 
-#define SER_MAKE_FROM(Self, ...)                                              \
-	static Self serMake(::ser::reader auto& ar) {                             \
-		SER_DETAIL_MAKE_FROM_CHECKS(Self, __VA_ARGS__)                        \
-		return Self{ SER_DETAIL_FOR_EACH(SER_DETAIL_MAKE_ARG, __VA_ARGS__) }; \
+#define SER_MAKE_FROM(Self, ...)                                         \
+	static Self serMake(::ser::reader auto& ar) {                        \
+		SER_DETAIL_MAKE_FROM_CHECKS(Self, __VA_ARGS__)                   \
+		return Self{ FOR_EACH_COMMA(SER_DETAIL_MAKE_ARG, __VA_ARGS__) }; \
 	}
 
 // Same, without the field list: the fields come from the structured-bindings walk, so
@@ -266,18 +238,13 @@ namespace ser::detail {
 	}
 
 // ── SER_DESCRIBE_MAKE ─────────────────────────────────────────────────────────
-// The third of the three hook forms, which was the only one without a macro.
+// The third of the three hook forms.
 //
 //   SER_DESCRIBE      - serVisit:            one function, both directions, and the
 //                       object has to exist before it can be filled in.
 //   SER_DESCRIBE_MAKE - serWrite + serMake: same field list, both directions, and the
 //                       object is BUILT on the way in - const fields, no default
 //                       constructor, no move constructor.
-//
-// One line, and it needs no ser_members: the field list is the type's own answer to
-// "which fields, in what order", so nothing has to be counted. That is also why
-// SER_TEST_ROUNDTRIP can name the field that came back wrong here without any further
-// declaration.
 //
 //     class Reading {
 //         const std::uint32_t sensor;
@@ -290,16 +257,14 @@ namespace ser::detail {
 //     };
 //
 // Not to be combined with SER_DESCRIBE on one type: both define ser_field_names and
-// ser_described, so the compiler reports a redefinition. That is the right answer for
-// the wrong-looking reason, and the two are alternatives anyway - a type whose serVisit
-// can fill it in does not need a serMake, and one that needs a serMake cannot be
-// filled in. The library refuses the pair on its own merits as well: serVisit together
-// with serWrite is a format that disagrees with itself, and checkHooks says so.
+// ser_described, so the compiler reports a redefinition. The two are alternatives anyway
+// - a type whose serVisit can fill it in does not need a serMake - and checkHooks refuses
+// the pair on its own merits.
 #define SER_DESCRIBE_MAKE(Self, ...)                                                  \
 	SER_DETAIL_DESCRIBE_FIELDS(__VA_ARGS__)                                           \
 	static constexpr ::ser::Errc serWrite(::ser::writer auto& ar, const Self& self) { \
 		SER_DETAIL_FIELD_CHECKS_BUILT(__VA_ARGS__)                                    \
-		return ar(SER_DETAIL_FOR_EACH(SER_DETAIL_QUALIFY, __VA_ARGS__));              \
+		return ar(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, __VA_ARGS__));                   \
 	}                                                                                 \
 	SER_MAKE_FROM(Self, __VA_ARGS__)
 
@@ -309,7 +274,7 @@ namespace ser::detail {
 	SER_DETAIL_DESCRIBE_FIELDS(__VA_ARGS__)                                           \
 	static constexpr ::ser::Errc serWrite(::ser::writer auto& ar, const Self& self) { \
 		SER_DETAIL_FIELD_CHECKS_BUILT(__VA_ARGS__)                                    \
-		return ar(SER_DETAIL_FOR_EACH(SER_DETAIL_QUALIFY, __VA_ARGS__));              \
+		return ar(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, __VA_ARGS__));                   \
 	}                                                                                 \
 	SER_MAKE_FROM_PAREN(Self, __VA_ARGS__)
 
@@ -320,14 +285,14 @@ namespace ser::detail {
 #define SER_DETAIL_MAKE_LOCAL(x) auto ser_local_##x = ::ser::readField<SER_DETAIL_MAKE_TYPE(x)>(ar);
 #define SER_DETAIL_MOVE_LOCAL(x) ::std::move(ser_local_##x)
 
-#define SER_MAKE_FROM_PAREN(Self, ...)                                                \
-	static Self serMake(::ser::reader auto& ar) {                                     \
-		using ser_detail_self_t = Self;                                               \
-		static_assert(                                                                \
-			::ser::detail::makeFromArityOk<Self, SER_DETAIL_NARG(__VA_ARGS__)>(),     \
-			"ser: SER_MAKE_FROM_PAREN lists a different number of fields than this "  \
-			"type has. List every field that goes on the wire, in declaration order." \
-		);                                                                            \
-		SER_DETAIL_FOR_EACH_STMT(SER_DETAIL_MAKE_LOCAL, __VA_ARGS__)                  \
-		return Self(SER_DETAIL_FOR_EACH(SER_DETAIL_MOVE_LOCAL, __VA_ARGS__));         \
+#define SER_MAKE_FROM_PAREN(Self, ...)                                                   \
+	static Self serMake(::ser::reader auto& ar) {                                        \
+		using ser_detail_self_t = Self;                                                  \
+		static_assert(                                                                   \
+			::ser::detail::makeFromArityOk<Self, SER_DETAIL_FIELD_COUNT(__VA_ARGS__)>(), \
+			"ser: SER_MAKE_FROM_PAREN lists a different number of fields than this "     \
+			"type has. List every field that goes on the wire, in declaration order."    \
+		);                                                                               \
+		FOR_EACH(SER_DETAIL_MAKE_LOCAL, __VA_ARGS__)                                     \
+		return Self(FOR_EACH_COMMA(SER_DETAIL_MOVE_LOCAL, __VA_ARGS__));                 \
 	}

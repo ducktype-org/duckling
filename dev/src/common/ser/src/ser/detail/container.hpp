@@ -9,7 +9,7 @@
 //   2. n * MIN_WIRE_SIZE_V<E> overflows      -> SizeOverflow   (the multiply itself)
 //   3. that many bytes are not there         -> Truncated       (what the stream can hold)
 //
-// Only then may a caller reserve or resize. Invariant 9 in CLAUDE.md is this function.
+// Only then may a caller reserve or resize.
 //
 // An element whose minimum is zero - an empty type - skips steps 2 and 3, because no
 // number of them implies any bytes at all. The policy ceiling is what bounds that case,

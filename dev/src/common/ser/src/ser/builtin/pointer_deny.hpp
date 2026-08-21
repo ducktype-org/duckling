@@ -40,8 +40,7 @@ namespace ser::builtin {
 				detail::DEPENDENT_FALSE<T>,
 				"ser: cannot serialize a raw string pointer - the length is not part of "
 				"the type and the bytes are not owned.\n"
-				"  Owning text?      std::string (block E, <ser/std/string.hpp>)\n"
-				"  Interned handle?  base::StrID (M2)\n"
+				"  Owning text?      std::string (<ser/std/string.hpp>)\n"
 				"  Fixed buffer?     char[N] - a C array of known extent serializes as itself"
 			);
 
@@ -67,9 +66,7 @@ namespace ser::builtin {
 				detail::DEPENDENT_FALSE<T>,
 				"ser: cannot serialize a raw pointer - an address means nothing in another "
 				"process, and nothing in the type says whether it owns what it points at.\n"
-				"  Owns the object?     base::Box<T> (M3)\n"
-				"  Points at one?       base::Ref<T> (M3)\n"
-				"  May be absent?       std::optional<T> (block E)\n"
+				"  May be absent?       std::optional<T> (<ser/std/optional.hpp>)\n"
 				"  Index into a table?  store the index as a plain integer"
 			);
 
@@ -102,8 +99,8 @@ namespace ser::builtin {
 				detail::DEPENDENT_FALSE<T>,
 				"ser: cannot serialize a union - nothing in the bytes says which member is "
 				"alive, so reading one back would be undefined behaviour rather than a "
-				"wrong value. Use std::variant (M2), or write a tag next to the payload and "
-				"a serVisit that switches on it."
+				"wrong value. Write a tag next to the payload and a serVisit that switches "
+				"on it."
 			);
 
 		else
@@ -115,9 +112,9 @@ namespace ser::builtin {
 	}
 
 	// ── the unregistered smart pointer ────────────────────────────────────────
-	// A heuristic, and used only as one: it runs at the very bottom of the ladder, where
-	// the answer is already "no way to serialize this" and the only question left is
-	// which sentence to print.
+	// A heuristic, and used only as one: it runs at the very bottom of dispatch, where the
+	// answer is already "no way to serialize this" and the only question left is which
+	// sentence to print.
 	template<class T>
 	consteval bool looksPointerLike() {
 		return requires(T& t) { *t; } || requires(T& t) { t.operator->(); };
@@ -131,7 +128,8 @@ namespace ser::builtin {
 			"looks like a smart pointer or a handle.\n"
 			"  std::optional?          #include <ser/std/optional.hpp>\n"
 			"  unique_ptr/shared_ptr?  not supported yet\n"
-			"  base::Box / base::Ref?  not supported yet\n"
+			"  base::Box / base::Ref?  #include <ser/base/all.hpp> - Box and MBox serialize, "
+			"Ref and SharedBox are refused there with a message of their own\n"
 			"  your own handle type?   specialize ser::serializer<T>"
 		);
 	}

@@ -22,25 +22,17 @@ namespace ser {
 	// What goes around the payload. The envelope is described in stream/header.hpp; this
 	// is the switch that puts one there.
 	//
-	// header DEFAULTS TO FALSE IN M1, and that is a deliberate deviation from the design,
-	// which has it true. The reason is that M1 has no pools: without them a headerless
-	// stream loses version, platform and schema validation and nothing else, and
-	// ser::write is documented to produce exactly the payload - buf.size() is the bytes
-	// the object needed, which is what makes the wire testable byte for byte.
+	// header DEFAULTS TO FALSE: without it a stream loses version, platform and schema
+	// validation and nothing else, and ser::write then produces exactly the payload -
+	// buf.size() is the bytes the object needed, which is what makes the wire testable
+	// byte for byte.
 	//
-	// It flips with pools. A headerless stream carrying pools cannot detect that the
-	// reader registered a different Ctx than the writer: the trailing pool_offset is read
-	// as payload, silently. That is what the M2 completeness check and the schema_hash of
-	// the context are for, and neither can run without a header - so M2 turns this on by
-	// default and refuses `header = false` together with pools.
+	// user_magic brands the stream as yours: four bytes after "SER\0" that a reader passes
+	// back in, so somebody else's ser stream is rejected as BadMagic rather than reaching
+	// your schema check.
 	//
-	// user_magic brands the stream as yours: four bytes after "SER\0" that a reader
-	// passes back in, so somebody else's ser stream is rejected as BadMagic rather than
-	// reaching your schema check.
-	//
-	// checksum is not here yet. The header carries payload_crc and M1 writes 0 into it;
-	// the flag arrives with crc32c.hpp in M2, because a flag that quietly does nothing is
-	// worse than an absent one.
+	// There is no checksum flag: the header carries payload_crc and writes 0 into it, and
+	// a flag that quietly does nothing is worse than an absent one.
 	struct options {
 		bool            header     = false;
 		::std::uint32_t user_magic = 0;
@@ -65,12 +57,12 @@ namespace ser {
 	// ── owned<T, Ctx> ─────────────────────────────────────────────────────────
 	// An AGGREGATE on purpose. ser::read builds it as
 	//     owned<T, Ctx>{ dispatchMake<T>(ar), std::move(ctx) }
-	// where the prvalue initializes `value` directly - no move, and it compiles for
-	// types with const fields. Building it as `owned r; r.value = ...` would throw
-	// away the copy elision the whole make path exists for.
+	// where the prvalue initializes `value` directly - no move, and it compiles for types
+	// with const fields. `owned r; r.value = ...` would throw away the copy elision the
+	// whole make path exists for.
 	//
-	// Field order matters: `value` is declared first, so it is destroyed first. In
-	// M2/M3 the object refers into the pools held by `ctx`, and it must die before them.
+	// Field order matters: `value` is declared first, so it is destroyed first. Once the
+	// object can refer into the pools held by `ctx`, it must die before them.
 	template<class T, class Ctx>
 	struct owned {
 		T                         value;
@@ -89,10 +81,9 @@ namespace ser {
 			return ctx.template pool<P>();
 		}
 
-		// Taking the object out is safe exactly when dropping the context is safe: always
-		// for an empty one, and for a pooled one only once every pool entry has been
-		// claimed - which is the M2 consumed() check, and where this requires clause
-		// widens. The && forces std::move(r).take(), so the call site says it consumes.
+		// Taking the object out is safe exactly when dropping the context is safe, which
+		// for now means an empty one. The && forces std::move(r).take(), so the call site
+		// says it consumes.
 		[[nodiscard]] constexpr T take() && requires(::std::is_empty_v<Ctx>) {
 			static_assert(
 				::std::move_constructible<T>,
@@ -105,9 +96,8 @@ namespace ser {
 	};
 
 	// ── read ──────────────────────────────────────────────────────────────────
-	// Both entry points return owned<T, Ctx>, never a bare T - even when Ctx is empty.
-	// Pools in M2 add r.pool<P>() without touching a single call site, because *r and
-	// r-> already work.
+	// Both entry points return owned<T, Ctx>, never a bare T - even when Ctx is empty, so
+	// that pools can be added without touching a single call site.
 
 	// Errors travel as an exception, which buys the one thing ser::read cannot have:
 	// the return type equals the type of the returned prvalue, so copy elision is
@@ -128,24 +118,17 @@ namespace ser {
 	}
 
 	// ── readOrThrowForce ───────────────────────────────────────────────────
-	// The bare object, with no bundle around it. Same guarantee as readOrThrow about
-	// construction - the prvalue out of dispatchMake initializes the caller's object
+	// The bare object, with no bundle around it. Same construction guarantee as
+	// readOrThrow - the prvalue out of dispatchMake initializes the caller's object
 	// directly, so a type that cannot be moved works here too - and none of the ceremony:
 	//
 	//     const Config cfg = ser::readOrThrowForce<Config>(bytes);
 	//
-	// What it drops is the context, and that is the whole reason the other two do not.
-	// The context is created here and destroyed on the way out, so anything in the object
-	// that points into it is dangling before the caller sees it - not an error code, not
-	// an exception, undefined behaviour. Hence the constraint: an EMPTY context has
-	// nothing to point into, and there is nothing to lose by dropping it.
-	//
-	// That covers most calls today, and will keep covering the ones that use no pools -
-	// which is why this is worth having rather than making everyone spell out
-	// std::move(r).take(). The constraint is the same one on owned::take(), and it widens
-	// the same way in M2: once every pool entry is claimed the context is scaffolding,
-	// and dropping it is safe by the same argument. Until then, a stateful context means
-	// readOrThrow, and the object stays bundled with the pools it may point into.
+	// What it drops is the context, which is created here and destroyed on the way out: so
+	// anything in the object that points into it would be dangling before the caller sees
+	// it, and that is undefined behaviour rather than an error code. Hence the constraint -
+	// an EMPTY context has nothing to point into. A stateful one means readOrThrow, and the
+	// object stays bundled with the pools it may point into.
 	template<class T, class Ctx = no_context>
 	requires(::std::is_empty_v<Ctx>)
 	[[nodiscard]] T readOrThrowForce(::std::span<const ::std::byte> bytes, options opt = {}) {
@@ -160,10 +143,10 @@ namespace ser {
 		return detail::dispatchMake<T>(ar);
 	}
 
+	// The bundle reaches std::expected through a constructor parameter, and elision never
+	// crosses one - so this path costs exactly one move of owned<T, Ctx>.
 	template<class T, class Ctx = no_context>
 	[[nodiscard]] result<owned<T, Ctx>> read(::std::span<const ::std::byte> bytes, options opt = {}) {
-		// The bundle reaches the expected through a constructor parameter, and elision
-		// never crosses one - so this path costs exactly one move of owned<T, Ctx>.
 		static_assert(
 			::std::move_constructible<T>,
 			"ser::read: T must be movable, because result<owned<T, Ctx>> has to "
@@ -193,9 +176,9 @@ namespace ser {
 	//     ser::in ar{bytes};
 	//     ar(header, payload);
 	//
-	// One write is one call to finish(), which in M2 flushes that message's pools - so
-	// appending several messages means several self-contained messages, not one message
-	// in several pieces.
+	// One write is one call to finish(), which is what flushes that message's pools - so
+	// appending several messages means several self-contained messages, not one message in
+	// several pieces.
 	template<class Buf, class T>
 	[[nodiscard]] result<> write(Buf& buf, const T& x, options opt = {}) {
 		out<Buf>            ar{ buf };
@@ -203,7 +186,7 @@ namespace ser {
 
 		// Written twice when there is one, and that is what payload_size costs: the size
 		// is not known until the payload is out, so the first copy reserves the 32 bytes
-		// and the second one - after finish(), so that M2's pool data counts as payload -
+		// and the second one - after finish(), so that pool data counts as payload -
 		// patches them. ser::out::reset exists for exactly this.
 		stream_header h{};
 		if (opt.header) {

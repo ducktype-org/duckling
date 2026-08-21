@@ -14,7 +14,7 @@
 // Never `opt = dispatchMake<T>(ar)`. Assignment demands that T be move-ASSIGNABLE, which
 // is strictly more than move-constructible, and the difference is exactly the shapes
 // serMake exists for: a type with a const field is move-constructible and not
-// move-assignable, so `=` does not compile and emplace does. Measured, not assumed.
+// move-assignable, so `=` does not compile and emplace does.
 //
 // The limit worth knowing: a type whose move constructor is DELETED cannot go inside an
 // optional at all - emplace fails on it inside std::construct_at, as a hard error rather

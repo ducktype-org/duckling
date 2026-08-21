@@ -3,35 +3,23 @@
 // ── schemaHash<T, Ctx>() ─────────────────────────────────────────────────────
 // One 64-bit number that says "this is the format I write". It goes into the envelope
 // (stream/header.hpp) and is checked before a single payload byte is interpreted, so a
-// stream from before a field was added comes back as Errc::SchemaMismatch instead of
-// plausible garbage. Its real value is during development rather than in production:
-// change a struct, rebuild, and the cache written twenty minutes ago is stale - without
-// the hash you read nonsense, with it you get an error code and rebuild the cache.
+// stream written before a field was added comes back as Errc::SchemaMismatch instead of
+// plausible garbage. It takes Ctx because the pools registered in a context are part of
+// the format; without pools there is one context and it mixes as POOL_COUNT 0.
 //
-// It takes Ctx from the first version, exactly like is_flat_v takes Ar, and for the same
-// reason: in M2 the set of pools registered in the context is part of the format, so
-// "which schema" and "which context" cannot be allowed to disagree. Mixing the context
-// is also what makes a Ctx mismatch detectable at all - see CLAUDE.md on the read-side
-// completeness check. In M1 there is one context and it mixes as POOL_COUNT 0.
-//
-// ── it hashes the WIRE, and falls back to the OBJECT only where it must ───────
-// This is the one design decision in the file and it is deliberate. sizeof and alignof
-// are NOT mixed for a type whose fields are walked, because the wire has neither padding
-// nor alignment: `struct { std::uint8_t a; std::uint32_t b; }` is seven bytes on every
-// platform, and hashing sizeof would make two platforms that agree on the format
-// disagree on the hash. That is the rule CLAUDE.md states for bool - the wire size is 1,
-// never sizeof(bool) - applied to composites.
+// It hashes the WIRE. sizeof and alignof are NOT mixed for a type whose fields are walked,
+// because the wire has neither padding nor alignment: two platforms that agree on the
+// format have to agree on the number. Same rule as bool, whose wire size is 1 and never
+// sizeof(bool).
 //
 // A type whose hook the library cannot look inside is the exception, and there sizeof and
-// alignof are all there is. The cost is real and worth naming: sizeof of a type holding a
-// std::string differs between standard libraries, so such a type's hash is stable per
-// toolchain rather than per format. ser::config<T>::schema_id is the fix, and the only
-// way to make a hooked type's hash portable.
+// alignof are all there is - so such a type's hash is stable per toolchain rather than per
+// format, and ser::config<T>::schema_id is the only way to make it portable.
 //
 // What is visible, and how much:
 //
 //   scalar / enum / fixed array   the wire kind and width, recursively
-//   aggregate walked by step 8    the field count and every field's schema
+//   a walked aggregate            the field count and every field's schema
 //   SER_DESCRIBE / _MAKE          the DESCRIBED field list - which is the format those
 //                                 macros emit, so a described aggregate and the same
 //                                 aggregate walked automatically hash IDENTICALLY
@@ -39,10 +27,9 @@
 //   a hand-written hook           "hook", sizeof, alignof
 //   ser::config<T>::schema_id     that number, and nothing else
 //
-// NO FIELD NAMES. The structured-bindings ladder does not know them, so hashing them
-// would make the C++23 and C++26 backends disagree - and byte identity between the two
-// outranks a stronger hash. Names go into debugHash(), which is diagnostics only and
-// never reaches a stream.
+// NO FIELD NAMES: the structured-bindings ladder does not know them, and byte identity
+// with a reflection-based implementation outranks a stronger hash. Names go into
+// debugHash(), which is diagnostics only and never reaches a stream.
 //
 // Two same-typed fields swapped is the one change no hash of this kind can see. That is
 // what SER_TEST_ROUNDTRIP in <ser/test.hpp> is for.
@@ -71,10 +58,10 @@ namespace ser {
 
 	// ── ser::schema<T> ────────────────────────────────────────────────────────
 	// The extension point for "I know what this type's format is, hash THAT". Same shape
-	// and same job as ser::serializer<T>: an empty primary, and a specialization that
-	// wins. Every std adapter has one, which is what keeps a container's hash structural
-	// (vector<int> and vector<float> differ) instead of a sizeof of somebody's
-	// std::vector implementation.
+	// and same job as ser::serializer<T>: an empty primary, and a specialization that wins.
+	// Every std adapter has one, which is what keeps a container's hash structural
+	// (vector<int> and vector<float> differ) rather than a sizeof of somebody's
+	// std::vector.
 	//
 	//     template <class T, class Al>
 	//     struct ser::schema<std::vector<T, Al>> {
@@ -90,25 +77,21 @@ namespace ser {
 	// self-referential type terminate. Bundling them into Mode is what lets a later knob
 	// arrive without touching a single adapter.
 	//
-	// No token is injected before the call, on purpose: a serializer that writes exactly
-	// a std::uint32_t can say so with `return detail::schemaOf<std::uint32_t, Mode,
-	// Seen>(h);` and hash identically to the scalar it is.
+	// No token is injected before the call, on purpose: a serializer that writes exactly a
+	// std::uint32_t can say so with `return detail::schemaOf<std::uint32_t, Mode, Seen>(h);`
+	// and hash identically to the scalar it is.
 	//
-	// Same include rule as min_wire_size, and for the same reason: a specialization has to
-	// be visible before the first schema_hash of a type that needs it. <ser/std/all.hpp>
-	// before the first ser::write of such a type already satisfies it - a type whose
-	// adapter is missing cannot be serialized at all, so there is no way to end up with a
-	// stream whose hash was computed without one.
+	// Same include rule as min_wire_size: a specialization has to be visible before the
+	// first schema_hash of a type that needs it.
 	template<class T>
 	struct schema {};
 
 	namespace detail {
 
 		// ── FNV-1a, 64-bit ────────────────────────────────────────────────────
-		// Not a cryptographic hash and does not need to be: the question is "is this the
-		// same format", and the answer only has to be wrong less often than the machine
-		// is. Chosen because it is four lines, needs no tables, and is byte-for-byte
-		// reproducible in any constant evaluation on any compiler.
+		// Not a cryptographic hash and does not need to be: the question is only "is this
+		// the same format". Chosen because it is four lines, needs no tables, and is
+		// byte-for-byte reproducible in any constant evaluation on any compiler.
 		inline constexpr ::std::uint64_t FNV_BASIS = 0xcb'f2'9c'e4'84'22'23'25ull;
 		inline constexpr ::std::uint64_t FNV_PRIME = 0x00'00'01'00'00'00'01'b3ull;
 
@@ -143,19 +126,19 @@ namespace ser {
 	}  // namespace detail
 
 	// ── nativeFlags() ────────────────────────────────────────────────────────
-	// The platform facts a stream cannot survive a change in, in sixteen bits. The
-	// envelope carries them and refuses a mismatch with Errc::PlatformMismatch before
-	// the schema is even looked at, because a stream from the other byte order is not a
-	// stream with a different schema - every scalar in it is reversed.
+	// The platform facts a stream cannot survive a change in, in sixteen bits. The envelope
+	// carries them and refuses a mismatch with Errc::PlatformMismatch before the schema is
+	// even looked at: a stream from the other byte order is not a stream with a different
+	// schema, every scalar in it is reversed.
 	//
 	// Layout, frozen:  bits 0-1  byte order (1 little, 2 big, 3 neither)
 	//                  bits 2-5  sizeof(void*)
 	//                  bits 6-9  sizeof(config_global::size_type)
 	//
-	// It lives here rather than in stream/header.hpp because schema_hash mixes it and
-	// this header cannot include that one. The pointer size is in for a reason that only
-	// pays off later: nothing writes a pointer, but pool offsets and zero-copy alignment
-	// are sized by it, so a 32-bit reader must not accept a 64-bit writer's stream.
+	// It lives here rather than in stream/header.hpp because schema_hash mixes it and this
+	// header cannot include that one. Nothing writes a pointer, but pool offsets and
+	// zero-copy alignment are sized by one, so a 32-bit reader must not accept a 64-bit
+	// writer's stream.
 	[[nodiscard]] consteval ::std::uint16_t nativeFlags() noexcept {
 		constexpr unsigned ORDER = (::std::endian::native == ::std::endian::little) ? 1u
 		                         : (::std::endian::native == ::std::endian::big)    ? 2u
@@ -185,20 +168,16 @@ namespace ser {
 		[[nodiscard]] consteval ::std::uint64_t schemaOf(::std::uint64_t h);
 
 		// ── the leaves ────────────────────────────────────────────────────────
-		// The token is the wire KIND and the wire WIDTH, never the C++ type's name. Two
-		// consequences, both wanted:
-		//   - int64_t hashes the same whether it spells itself `long` (Linux) or
-		//     `long long` (Windows), so one struct hashes the same on both;
-		//   - long double does NOT hash the same, because it really is a different number
-		//     of bytes, and that is a format difference rather than a spelling.
-		// char, wchar_t and the char*_t family share the "char" kind: whether plain char
-		// is signed is a platform property that never reaches the wire, so hashing
-		// signedness there would break agreement between platforms that agree.
+		// The token is the wire KIND and the wire WIDTH, never the C++ type's name. So
+		// int64_t hashes the same whether it spells itself `long` or `long long`, while
+		// long double does not hash as double - that really is a different number of bytes.
+		// char, wchar_t and the char*_t family share the "char" kind, because whether plain
+		// char is signed is a platform property that never reaches the wire.
 		static_assert(
 			builtin::SCALAR_WIRE_SIZE<bool> == 1,
 			"ser: bool is one byte on the wire and schema_hash must hash that 1, "
 			"not sizeof(bool) - otherwise two platforms agreeing on the format "
-			"disagree on the hash. See CLAUDE.md."
+			"disagree on the hash."
 		);
 
 		template<class T>
@@ -312,9 +291,7 @@ namespace ser {
 
 				// The hook question needs an archive and a hash cannot have one, so it is
 				// asked with the canonical writer for this context - the same shape
-				// detail::writer_for builds. A hook visible only to some other concrete
-				// archive is what nongeneric_*_hook_v reports; it is not a format this
-				// can describe.
+				// detail::writer_for builds.
 				using Ar = out<::std::span<::std::byte>, typename Mode::context>;
 
 				if constexpr (HAS_SCHEMA_ID_V<U>)
@@ -349,8 +326,7 @@ namespace ser {
 		// ── the preamble ──────────────────────────────────────────────────────
 		// Mixed once, at the root, so the recursion stays a pure description of the type.
 		// The library version is in deliberately: while the format is pre-1.0 a version
-		// bump is a format break, and pretending otherwise would hand somebody a stream
-		// that validates and misreads.
+		// bump is a format break.
 		template<class T, class Mode>
 		[[nodiscard]] consteval ::std::uint64_t schemaRoot() {
 			::std::uint64_t h = FNV_BASIS;
@@ -358,9 +334,9 @@ namespace ser {
 			h                 = schemaNumber(h, static_cast<::std::uint64_t>(SER_VERSION));
 			h                 = schemaNumber(h, sizeof(config_global::size_type));
 			h                 = schemaNumber(h, nativeFlags());
-			// M2 mixes each registered pool TYPE here. Until then the count is the whole
-			// of it, and it is what makes context<str_pool> and context<> different
-			// formats for free - no bytes in the stream, no runtime check.
+			// The pool count is the whole of it for now, and it is what makes
+			// context<str_pool> and context<> different formats for free - no bytes in
+			// the stream, no runtime check.
 			h = schemaText(h, "ctx");
 			h = schemaNumber(h, static_cast<::std::uint64_t>(Mode::context::POOL_COUNT));
 			return schemaOf<T, Mode, type_list<>>(h);
@@ -376,10 +352,8 @@ namespace ser {
 	}
 
 	// The same walk with field names mixed in. DIAGNOSTICS ONLY - it never goes into a
-	// stream and nothing validates against it. Two builds of one program agree on it; the
-	// C++23 and C++26 backends need not, which is precisely why the wire hash cannot have
-	// names. Use it to tell "the struct changed" from "only a name changed": schema_hash
-	// equal and debugHash different means a rename.
+	// stream and nothing validates against it. Use it to tell "the struct changed" from
+	// "only a name changed": schema_hash equal and debugHash different means a rename.
 	template<class T, class Ctx = no_context>
 	[[nodiscard]] consteval ::std::uint64_t debugHash() {
 		return detail::schemaRoot<T, detail::schema_mode<Ctx, true>>();

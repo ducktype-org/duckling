@@ -45,6 +45,12 @@ namespace base {
 			 */
 			BaseStableVector(const BaseStableVector&) = delete;
 
+			/**
+			 * @brief Destroys all stored elements, leaving the container empty.
+			 * @note Every Ref/CRef handed out earlier is dangling afterwards.
+			 */
+			void clear() { data.clear(); }
+
 			[[nodiscard]]
 			usize size() const noexcept {
 				return data.size();
@@ -147,7 +153,7 @@ namespace base {
 		StableVector<const Data> toConstData() && { return std::move(*this); }
 
 		using Base::size, Base::empty, Base::notEmpty, Base::pushBack, Base::lastIndex,
-			Base::emplaceBack;
+			Base::emplaceBack, Base::clear;
 		using RefT          = Base::CRefT;
 		using CRefT         = Base::CRefT;
 		using Iterator      = Base::ConstIterator;
@@ -195,7 +201,7 @@ namespace base {
 		StableVector(const StableVector&) = delete;
 
 		using Base::size, Base::empty, Base::notEmpty, Base::operator[], Base::pushBack, Base::last,
-			Base::lastIndex, Base::emplaceBack, Base::begin, Base::end;
+			Base::lastIndex, Base::emplaceBack, Base::begin, Base::end, Base::clear;
 		using RefT          = Base::RefT;
 		using CRefT         = Base::CRefT;
 		using Iterator      = Base::Iterator;
