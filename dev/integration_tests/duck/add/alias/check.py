@@ -33,12 +33,12 @@ expected_manifest_22 = """metadata:
   name: foo
   version: 1.0.0
 dependencies:
-  a:
-    source:
-      path: ../a
   b:
     source:
       name: a
+      path: ../a
+  a:
+    source:
       path: ../a
 """
 
