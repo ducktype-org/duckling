@@ -206,7 +206,7 @@ IncludeCategories:
     Priority:        4
     SortPriority:    3
   # our common, add here new libraries:
-  - Regex:          '^("|<)(artifacts/|clah/|diagnostic/|filesystem/|hashing/|init/|json/|listener/|llvm/|printer/|query_framework/|system_command/|tester/|tokenizer/|lang_definitions/|lexer/|token_parser_core/|token_source/|unicode_classification/|string_id/|logger/)'
+  - Regex:          '^("|<)(artifacts/|clah/|diagnostic/|filesystem/|hashing/|init/|json/|listener/|llvm/|printer/|query_framework/|system_command/|tester/|tokenizer/|lang_definitions/|lexer/|token_parser_core/|token_source/|unicode_classification/|string_id/|logger/|ser/)'
     Priority:        5
     SortPriority:    4
   # VM:

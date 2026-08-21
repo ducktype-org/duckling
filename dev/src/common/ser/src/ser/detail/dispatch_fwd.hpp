@@ -1,0 +1,27 @@
+#pragma once
+
+#include <ser/concepts.hpp>
+#include <ser/errc.hpp>
+
+#include <type_traits>
+
+// Declarations only, to break the cycle between dispatch.hpp and the adapters:
+// dispatch.hpp needs builtin::write_array defined, and array.hpp calls dispatch_write
+// for every element. The call is a qualified name, looked up at definition time, so
+// no include order fixes it. Every container adapter in block E lands in the same spot.
+//
+// The archives include this file as well, but for decoupling, not for a cycle - every
+// dispatch function is a template on Ar, so nothing here names an archive type.
+
+namespace ser::detail {
+
+    template <class T, writer Ar> constexpr errc dispatch_write(Ar& ar, const T& x);
+    template <class T, reader Ar> constexpr errc dispatch_read (Ar& ar,       T& x);
+
+    // A function cannot return a C array, so `make` is not available for T[N].
+    // Such a field is still readable in place through dispatch_read.
+    template <class T, reader Ar>
+        requires (!::std::is_array_v<T>)
+    constexpr T dispatch_make(Ar& ar);
+
+} // namespace ser::detail

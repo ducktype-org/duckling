@@ -1,0 +1,47 @@
+#pragma once
+ 
+#include <ser/config.hpp>
+#include <ser/errc.hpp>
+ 
+#include <concepts>
+#include <cstddef>
+#include <span>
+#include <type_traits>
+ 
+namespace ser {
+ 
+    template <class A>
+    concept archive = requires(A& a) {
+        { a.position() } -> ::std::convertible_to<::std::size_t>;
+    };
+    
+    template <class A>
+    concept writer = archive<A> && A::is_writing;
+    
+    template <class A>
+    concept reader = archive<A> && A::is_reading;
+    
+    template <class B>
+    concept byte_buffer = requires(B& b, const B& cb) {
+        { cb.size() } -> ::std::convertible_to<::std::size_t>;
+        { b.data()  } -> ::std::convertible_to<::std::byte*>;
+    };
+    
+    template <class B>
+    concept resizable_buffer = byte_buffer<B> && requires(B& b, ::std::size_t n) {
+        b.resize(n);
+    };
+    
+    template <class B>
+    concept fixed_buffer = byte_buffer<B> && !resizable_buffer<B>;
+
+    template <class T>
+    concept byte_like = ::std::same_as<::std::remove_cv_t<T>, ::std::byte>;
+
+    // NOT is_flat_v: lets through padding, remapped fields (StrID, Ref, Box) and
+    // types with a custom serializer. Cheap local guard only, never a bulk-copy gate.
+    template <class T>
+    concept trivially_serializable =
+        ::std::is_trivially_copyable_v<T> && !::std::is_pointer_v<T>;
+ 
+}  // namespace ser
