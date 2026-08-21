@@ -132,7 +132,8 @@ namespace vm {
 	}
 
 	void Memory::copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src) {
-		runDataCopyConstructors(block_dst);
+		// @note using SRC, because setNestedViewBlock zeroes the bytes
+		runDataCopyConstructors(block_src);
 		for (auto nested: block_src->children_blocks) {
 			Pointer new_pointer{ block_dst, nested.first };
 			setNestedViewBlock(new_pointer, nested.second->data.element_type);
@@ -207,8 +208,10 @@ namespace vm {
 			copyBlocksRecursively(new_pointer.getBlock()->children_blocks[offset], iter->second);
 		}
 
-		// Copy the data itself
+		// Copying the data itself.
+		// It is done here, because setNestedViewBlock creates a block, which zeros the bytes.
 		std::memcpy(dst_view.getBegin(), src_view.getBegin(), type->getSize().asInt());
+
 		runDataCopyConstructors(dst_view, type);
 	}
 

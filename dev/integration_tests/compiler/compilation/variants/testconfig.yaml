@@ -23,5 +23,3 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-        # @TODO: #3381 Reenable after fixing destructor
-        Enabled: false
