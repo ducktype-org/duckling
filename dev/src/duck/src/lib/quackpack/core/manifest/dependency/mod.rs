@@ -191,8 +191,8 @@ impl Dependency {
     }
 
     /// Get the source of this package.
-    pub fn source(&self) -> &Source {
-        &self.source
+    pub fn source(&self) -> Source {
+        self.source
     }
 
     /// Get the effective name of this dependency.
