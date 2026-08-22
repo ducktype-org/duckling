@@ -11,11 +11,13 @@ Tests:
     Cases:
       nonexistent-local:
         test-cmd: duck -C foo add --local ../not_package not_package
+        ExitCode: 1
         Err:
           Run: |+
             echo "the directory \`$DIT_TMP_DIR/not_package\` has no manifest"
       already-such-dep:
         test-cmd: duck -C foo add --local ../dep2 dep
+        ExitCode: 1
         Err:
           Run: |+
             echo "error: normal dependency `dep` already exists in the project `foo` at \`$DIT_TMP_DIR/foo\`
