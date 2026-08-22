@@ -1,0 +1,25 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  mkdir not_package
+  @{duck-exe} init --name dep dep1
+  @{duck-exe} init --name dep dep2
+  @{duck-exe} -C foo add --local ../dep1 dep
+
+Tests:
+  errors:
+    Cases:
+      nonexistent-local:
+        test-cmd: duck -C foo add --local ../not_package not_package
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: the directory \`$DIT_TMP_DIR/not_package\` has no manifest"
+      already-such-dep:
+        test-cmd: duck -C foo add --local ../dep2 dep
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: normal dependency \`dep\` already exists in the project \`foo\` at \`$DIT_TMP_DIR/foo\`
+
+            hint: use aliases to have multiple dependencies with the same name"

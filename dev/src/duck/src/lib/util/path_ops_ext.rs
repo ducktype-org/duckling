@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::ffi::OsStr;
 use std::fs::{
     File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
@@ -77,6 +78,9 @@ pub trait PathOpsExt {
 
     /// Expand `~` into a `home`.
     fn expand_tilde_with(&self, home: &Path) -> PathBuf;
+
+    /// Resolves both `self` and `other` and returns the relative path from `self` to `other`.
+    fn resolve_both_and_get_relative(&self, other: &Path, ctx: &DuckContext) -> PathBuf;
 
     /// Returns `true` if path exists on a disk and points to an executable file.
     ///
@@ -349,6 +353,41 @@ impl PathOpsExt for Path {
     fn resolve_with_tilde(&self, ctx: &DuckContext) -> PathBuf {
         ctx.cwd().join(self.expand_tilde(ctx)).normalize()
     }
+
+    fn resolve_both_and_get_relative(&self, other: &Path, ctx: &DuckContext) -> PathBuf {
+        let source = self.resolve_with_tilde(ctx);
+        let target = other.resolve_with_tilde(ctx);
+        let mut src_components = source.components().fuse();
+        let mut tgt_components = target.components().fuse();
+
+        let mut result_components = VecDeque::new();
+        let mut common_prefix = true;
+        loop {
+            match (src_components.next(), tgt_components.next()) {
+                (None, None) => break,
+                (Some(src_comp), Some(tgt_comp)) => {
+                    if src_comp == tgt_comp && common_prefix {
+                        continue;
+                    }
+                    common_prefix = false;
+                    result_components.push_front(Component::ParentDir);
+                    result_components.push_back(tgt_comp);
+                }
+                (Some(_), None) => {
+                    common_prefix = false;
+                    result_components.push_front(Component::ParentDir)
+                }
+                (None, Some(tgt_comp)) => {
+                    common_prefix = false;
+                    result_components.push_back(tgt_comp)
+                }
+            }
+        }
+        result_components
+            .into_iter()
+            .map(|c| c.as_os_str())
+            .collect()
+    }
 }
 
 fn ignore_io_kind_error<T: Default>(
@@ -431,5 +470,30 @@ mod tests {
 
         let path = Path::new("~duck");
         assert_eq!(path.expand_tilde_with(home), path,);
+    }
+
+    #[test]
+    fn relative_tests() {
+        let ctx = DuckContext::default();
+
+        let source = Path::new("foo/bar");
+        let target = Path::new("x/y/z");
+        let expected = Path::new("../../x/y/z");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
+
+        let source = Path::new("");
+        let target = Path::new("x/y/z");
+        let expected = Path::new("x/y/z");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
+
+        let source = Path::new("foo/x");
+        let target = Path::new("foo/y");
+        let expected = Path::new("../y");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
+
+        let source = Path::new("foo/bar");
+        let target = Path::new("../x/../y/z");
+        let expected = Path::new("../../../y/z");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
     }
 }
