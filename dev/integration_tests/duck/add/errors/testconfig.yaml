@@ -14,12 +14,12 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "the directory \`$DIT_TMP_DIR/not_package\` has no manifest"
+            echo "error: the directory \`$DIT_TMP_DIR/not_package\` has no manifest"
       already-such-dep:
         test-cmd: duck -C foo add --local ../dep2 dep
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: normal dependency `dep` already exists in the project `foo` at \`$DIT_TMP_DIR/foo\`
+            echo "error: normal dependency \`dep\` already exists in the project \`foo\` at \`$DIT_TMP_DIR/foo\`
 
             hint: use aliases to have multiple dependencies with the same name"
