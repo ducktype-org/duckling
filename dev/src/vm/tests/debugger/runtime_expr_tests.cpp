@@ -41,14 +41,14 @@ private:
 			.putBreakpoint(base::StrID("main"), 9)
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 5)
-			.evalExpr(sum_a_b_expr, { 0 })
-			.evalExpr(print_ret_expr, { 0 })
-			.evalExpr(modify_ret_expr, { 0 })
+			.evalExprNormal(sum_a_b_expr, { 0 })
+			.evalExprNormal(print_ret_expr, { 0 })
+			.evalExprNormal(modify_ret_expr, { 0 })
 			.resume()
 			.awaitBreakpoint(base::StrID("main"), 9)
-			.evalExpr(sum_a_b_expr, { 6 })
-			.evalExpr(print_ret_expr, { 69 })
-			.evalExpr(modify_ret_expr, { 69 })
+			.evalExprNormal(sum_a_b_expr, { 6 })
+			.evalExprNormal(print_ret_expr, { 69 })
+			.evalExprNormal(modify_ret_expr, { 69 })
 			.finishAndAssertExitValue(2'137);
 	}
 
@@ -67,12 +67,12 @@ private:
 			.putBreakpoint(base::StrID("main"), 10)
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 7)
-			.evalExpr(call_foo_unused_args_expr, { 109 })
-			.evalExpr(modify_unused_arg_1_expr, { 42 })
-			.evalExpr(call_foo_unused_args_expr, { 151 })
+			.evalExprNormal(call_foo_unused_args_expr, { 109 })
+			.evalExprNormal(modify_unused_arg_1_expr, { 42 })
+			.evalExprNormal(call_foo_unused_args_expr, { 151 })
 			.resume()
 			.awaitBreakpoint(base::StrID("main"), 10)
-			.evalExpr(print_foo_ret0_expr, { 0 })
+			.evalExprNormal(print_foo_ret0_expr, { 0 })
 			.finishAndAssertExitValue(0);
 	}
 };
