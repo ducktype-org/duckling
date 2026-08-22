@@ -20,27 +20,23 @@ public:
 	}
 
 private:
-	vm::test::FlowSimulator createSimulator(std::string_view path_name) {
+	vm::test::FlowSimulator createSimulator(const fs::File& file) {
 		auto process_pid_response = vm::api::spawn();
 		assertTrue(process_pid_response.has_value(), "Spawn failed");
 		auto pid = process_pid_response.value().pid;
 
-		fs::File file(path(std::string(path_name)));
-		auto     loaded_file_response = vm::api::loadFiles(pid, { file });
+		auto loaded_file_response = vm::api::loadFiles(pid, { file });
 		assertTrue(loaded_file_response.has_value(), "Load failed");
-		return vm::test::FlowSimulator(
-			[this](bool cond, std::string_view err) { assertTrue(cond, err); },
-			[this](std::string_view p) { return fs::FilePath(path(std::string(p))); },
-			pid
-		);
+		return { [this](bool cond, std::string_view err) { assertTrue(cond, err); }, pid };
 	}
 
 	void test1RuntimeExpr() {
-		constexpr std::string_view sum_a_b_expr    = "runtime_expr_dbc/test_1/sum_a_b.dbc";
-		constexpr std::string_view print_ret_expr  = "runtime_expr_dbc/test_1/print_ret.dbc";
-		constexpr std::string_view modify_ret_expr = "runtime_expr_dbc/test_1/modify_ret.dbc";
+		const fs::File main_file(path("runtime_expr_dbc/test_1/main.dbc"));
+		const fs::File sum_a_b_expr(path("runtime_expr_dbc/test_1/sum_a_b.dbc"));
+		const fs::File print_ret_expr(path("runtime_expr_dbc/test_1/print_ret.dbc"));
+		const fs::File modify_ret_expr(path("runtime_expr_dbc/test_1/modify_ret.dbc"));
 
-		createSimulator("runtime_expr_dbc/test_1/main.dbc")
+		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 5)
 			.putBreakpoint(base::StrID("main"), 9)
 			.runMain()
@@ -57,14 +53,16 @@ private:
 	}
 
 	void test2RuntimeExpr() {
-		constexpr std::string_view call_foo_unused_args_expr
-			= "runtime_expr_dbc/test_2/expr/call_foo_unused_args.dbc";
-		constexpr std::string_view modify_unused_arg_1_expr
-			= "runtime_expr_dbc/test_2/expr/modify_unused_arg_1.dbc";
-		constexpr std::string_view print_foo_ret0_expr
-			= "runtime_expr_dbc/test_2/expr/print_foo_ret0.dbc";
+		const fs::File main_file(path("runtime_expr_dbc/test_2/main.dbc"));
+		const fs::File call_foo_unused_args_expr(
+			path("runtime_expr_dbc/test_2/expr/call_foo_unused_args.dbc")
+		);
+		const fs::File modify_unused_arg_1_expr(
+			path("runtime_expr_dbc/test_2/expr/modify_unused_arg_1.dbc")
+		);
+		const fs::File print_foo_ret0_expr(path("runtime_expr_dbc/test_2/expr/print_foo_ret0.dbc"));
 
-		createSimulator("runtime_expr_dbc/test_2/main.dbc")
+		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 7)
 			.putBreakpoint(base::StrID("main"), 10)
 			.runMain()

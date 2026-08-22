@@ -17,18 +17,16 @@ namespace vm::test {
 	class FlowSimulator {
 	public:
 		struct ExprExpectation {
-			std::string      expr_filename;
+			fs::File         expr_file;
 			std::vector<u64> expected_result;
 		};
 
 		FlowSimulator(
-			std::function<void(bool, std::string_view)>   assert_true_fn,
-			std::function<fs::FilePath(std::string_view)> resolve_path_fn,
-			vm::PID                                       pid,
-			vm::api::ThreadID                             thread_id = vm::api::ThreadID(0)
+			std::function<void(bool, std::string_view)> assert_true_fn,
+			vm::PID                                     pid,
+			vm::api::ThreadID                           thread_id = vm::api::ThreadID(0)
 		):
 			  assert_true_fn(std::move(assert_true_fn)),
-			  resolve_path_fn(std::move(resolve_path_fn)),
 			  pid(pid),
 			  thread_id(thread_id),
 			  status_listener([this](const vm::api::ProcStatus& status) {
@@ -70,11 +68,8 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& evalExpr(
-			std::string_view expr_filename, const std::vector<u64>& expected_result
-		) {
-			fs::File file(resolve_path_fn(expr_filename));
-			auto     response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+		FlowSimulator& evalExpr(const fs::File& file, const std::vector<u64>& expected_result) {
+			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
 			assertTrue(response.has_value(), "Execution of runtime expression failed");
 
 			auto& ret_vals_variant = response.value();
@@ -103,20 +98,19 @@ namespace vm::test {
 		}
 
 		FlowSimulator& evalExprExpectBreakpoint(
-			std::string_view        expr_filename,
+			const fs::File&         file,
 			const std::vector<u64>& expected_result,
 			base::StrID             expected_func,
 			u64                     expected_instr
 		) {
-			fs::File file(resolve_path_fn(expr_filename));
-			auto     response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
 			assertTrue(
 				!response.has_value(),
 				"Expected expression evaluation to pause on breakpoint, but it completed"
 			);
 
 			pending_expr_stack.push_back(ExprExpectation{
-				.expr_filename   = std::string(expr_filename),
+				.expr_file       = file,
 				.expected_result = expected_result,
 			});
 
@@ -139,9 +133,8 @@ namespace vm::test {
 
 			std::unique_lock lk(mutex);
 			bool             found = cv.wait_for(lk, std::chrono::seconds(2), [this] {
-                for (auto& s: received_statuses) {
+                for (auto& s: received_statuses)
                     if (std::holds_alternative<vm::api::ExprExecutionCompleted>(s)) return true;
-                }
                 return false;
             });
 			assertTrue(found, "Timed out waiting for ExprExecutionCompleted");
@@ -167,9 +160,7 @@ namespace vm::test {
 			assertTrue(exit_val_res.has_value(), "Failed to get exit value");
 			auto& exit_vec = std::get<std::vector<Ref<vm::IVMValue>>>(exit_val_res.value());
 			assertEqual(1ULL, exit_vec.size(), "Expected single exit value");
-			assertEqual(
-				expected_exit_val, exit_vec[0]->readBytes<i64>(), "Exit value mismatch"
-			);
+			assertEqual(expected_exit_val, exit_vec[0]->readBytes<i64>(), "Exit value mismatch");
 			return *this;
 		}
 
@@ -192,14 +183,13 @@ namespace vm::test {
 			);
 		}
 
-		std::function<void(bool, std::string_view)>   assert_true_fn;
-		std::function<fs::FilePath(std::string_view)> resolve_path_fn;
-		vm::PID                                       pid;
-		vm::api::ThreadID                             thread_id;
-		std::deque<ExprExpectation>                   pending_expr_stack;
-		events::Listener<vm::api::ProcStatus>         status_listener;
-		std::deque<vm::api::ProcStatus>               received_statuses;
-		std::mutex                                    mutex;
-		std::condition_variable                       cv;
+		std::function<void(bool, std::string_view)> assert_true_fn;
+		vm::PID                                     pid;
+		vm::api::ThreadID                           thread_id;
+		std::deque<ExprExpectation>                 pending_expr_stack;
+		events::Listener<vm::api::ProcStatus>       status_listener;
+		std::deque<vm::api::ProcStatus>             received_statuses;
+		std::mutex                                  mutex;
+		std::condition_variable                     cv;
 	};
 }
