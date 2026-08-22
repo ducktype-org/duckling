@@ -6,6 +6,8 @@
 
 #include <vm/api/vm.hpp>
 
+#include <array>
+#include <ranges>
 #include <string_view>
 #include <vector>
 
@@ -32,48 +34,51 @@ private:
 
 	void test1RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_1/main.dbc"));
-		const fs::File sum_a_b_expr(path("runtime_expr_dbc/test_1/sum_a_b.dbc"));
-		const fs::File print_ret_expr(path("runtime_expr_dbc/test_1/print_ret.dbc"));
-		const fs::File modify_ret_expr(path("runtime_expr_dbc/test_1/modify_ret.dbc"));
+		const fs::File get_values_expr(path("runtime_expr_dbc/test_1/get_values.dbc"));
 
 		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 4)
 			.putBreakpoint(base::StrID("main"), 5)
-			.putBreakpoint(base::StrID("main"), 9)
+			.putBreakpoint(base::StrID("main"), 7)
 			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 5)
-			.evalExprNormal(sum_a_b_expr, { 0 })
-			.evalExprNormal(print_ret_expr, { 0 })
-			.evalExprNormal(modify_ret_expr, { 0 })
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.evalExprNormal(get_values_expr, { 0, 0 })
 			.resume()
-			.awaitBreakpoint(base::StrID("main"), 9)
-			.evalExprNormal(sum_a_b_expr, { 6 })
-			.evalExprNormal(print_ret_expr, { 69 })
-			.evalExprNormal(modify_ret_expr, { 69 })
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.evalExprNormal(get_values_expr, { 0, 4 })
+			.resume()
+			.awaitBreakpoint(base::StrID("main"), 7)
+			.evalExprNormal(get_values_expr, { 2, 4 })
 			.finishAndAssertExitValue(2'137);
 	}
 
 	void test2RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_2/main.dbc"));
-		const fs::File call_foo_unused_args_expr(
-			path("runtime_expr_dbc/test_2/expr/call_foo_unused_args.dbc")
-		);
-		const fs::File modify_unused_arg_1_expr(
-			path("runtime_expr_dbc/test_2/expr/modify_unused_arg_1.dbc")
-		);
-		const fs::File print_foo_ret0_expr(path("runtime_expr_dbc/test_2/expr/print_foo_ret0.dbc"));
+		const fs::File   main_file(path("runtime_expr_dbc/test_2/main.dbc"));
+		const std::array expressions = {
+			fs::File(path("runtime_expr_dbc/test_2/expr/multiply.dbc")),
+			fs::File(path("runtime_expr_dbc/test_2/expr/add.dbc")),
+			fs::File(path("runtime_expr_dbc/test_2/expr/subtract.dbc")),
+			fs::File(path("runtime_expr_dbc/test_2/expr/divide.dbc")),
+		};
+		const std::array expected_results = {
+			std::vector<u64>{ 128, 64, 32, 16 },
+			std::vector<u64>{ 66, 34, 18, 10 },
+			std::vector<u64>{ 62, 30, 14, 6 },
+			std::vector<u64>{ 32, 16, 8, 4 },
+		};
 
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 7)
-			.putBreakpoint(base::StrID("main"), 10)
+		static_assert(expected_results.size() == expressions.size(), "match those");
+
+		auto simulator = createSimulator(main_file);
+		simulator.putBreakpoint(base::StrID("main"), 16)
 			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 7)
-			.evalExprNormal(call_foo_unused_args_expr, { 109 })
-			.evalExprNormal(modify_unused_arg_1_expr, { 42 })
-			.evalExprNormal(call_foo_unused_args_expr, { 151 })
-			.resume()
-			.awaitBreakpoint(base::StrID("main"), 10)
-			.evalExprNormal(print_foo_ret0_expr, { 0 })
-			.finishAndAssertExitValue(0);
+			.awaitBreakpoint(base::StrID("main"), 16);
+
+		using namespace std::views;
+		for (const auto& [expr, res]: zip(expressions, expected_results))
+			simulator.evalExprNormal(expr, res);
+
+		simulator.finishAndAssertExitValue(0);
 	}
 };
 

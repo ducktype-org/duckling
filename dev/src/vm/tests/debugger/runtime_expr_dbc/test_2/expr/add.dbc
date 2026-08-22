@@ -1,0 +1,11 @@
+function add { } -> { byte, i16, i32, i64 } {
+	mov_p8_p8 ret0, frame 1 a8;
+	mov_p16_p16 ret1, frame 1 a16;
+	mov_p32_p32 ret2, frame 1 a32;
+	mov_p64_p64 ret3, frame 1 a64;
+	add_p8_p8 ret0, frame 1 b8;
+	add_p16_p16 ret1, frame 1 b16;
+	add_p32_p32 ret2, frame 1 b32;
+	add_p64_p64 ret3, frame 1 b64;
+	ret_from_expr;
+}

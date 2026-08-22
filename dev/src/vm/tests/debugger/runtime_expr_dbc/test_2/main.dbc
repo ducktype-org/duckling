@@ -1,0 +1,20 @@
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type a8, byte;
+	init_pany_type a16, i16;
+	init_pany_type a32, i32;
+	init_pany_type a64, i64;
+	init_pany_type b8, byte;
+	init_pany_type b16, i16;
+	init_pany_type b32, i32;
+	init_pany_type b64, i64;
+	mov_p8_imm a8, 8;
+	mov_p16_imm a16, 16;
+	mov_p32_imm a32, 32;
+	mov_p64_imm a64, 64;
+	mov_p8_imm b8, 2;
+	mov_p16_imm b16, 2;
+	mov_p32_imm b32, 2;
+	mov_p64_imm b64, 2;
+	mov_p64_imm ret0, 0;
+	ret;
+}
