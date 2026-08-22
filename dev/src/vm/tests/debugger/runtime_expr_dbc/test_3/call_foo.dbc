@@ -1,0 +1,8 @@
+function call_foo { } -> { i64 } {
+	init_pany_type arg0, i64;
+	init_pany_type arg1, i64;
+	mov_p64_p64 arg0, frame 1 a;
+	mov_p64_p64 arg1, frame 1 b;
+	call_func foo;
+	ret_from_expr;
+}

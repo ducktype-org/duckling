@@ -19,6 +19,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(test1RuntimeExpr);
 		TESTER_ADD_TEST(test2RuntimeExpr);
+		TESTER_ADD_TEST(test3RuntimeExpr);
 	}
 
 private:
@@ -79,6 +80,18 @@ private:
 			simulator.evalExprNormal(expr, res);
 
 		simulator.finishAndAssertExitValue(0);
+	}
+
+	void test3RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_3/main.dbc"));
+		const fs::File call_foo_expr(path("runtime_expr_dbc/test_3/call_foo.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 5)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.evalExprNormal(call_foo_expr, { 7 })
+			.finishAndAssertExitValue(0);
 	}
 };
 
