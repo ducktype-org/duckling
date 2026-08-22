@@ -144,7 +144,7 @@ fn run_subcmd(
 /// Get all arguments passed to the external subcommand.
 fn external_cli_args(sub_args: &ArgMatches) -> Vec<&OsStr> {
     sub_args
-        .get_many::<OsString>("args")
+        .get_many::<OsString>("")
         .unwrap_or_default()
         .map(OsString::as_os_str)
         .collect()
