@@ -55,24 +55,29 @@ namespace vm::loader::compiler::safe {
 		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
 			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
 
-		bool putBreakpoint(const base::StrID& func_name, usize idx, bool enable) {
+		/**
+		 * @brief Sets breakpoint at given FatBytecode instruction
+		 * @note this has to be in compiler. Otherwise we couldn't modify the low program
+		 * @returns a single number for different kind of errors
+		 */
+		std::expected<void, std::string> setBreakpoint(
+			const base::StrID& func_name, usize idx, bool enable
+		) {
 			auto& original_function = *low_program.functions.at(func_name);
 
 			// Try to obtain micro index
-			if (original_function.instruction_mapping.size() <= idx) return false;
+			if (original_function.instruction_mapping.size() <= idx)
+				return std::unexpected{ "setBreakpoint: Function too short" };
 
 			usize micro_instruction_index = original_function.instruction_mapping[idx].begin;
 
-			if (original_function.bc.size() <= micro_instruction_index) return false;
+			if (original_function.bc.size() <= micro_instruction_index)
+				return std::unexpected("setBreakpoint: No code after breakpoint");
 
 			auto& instruction = original_function.bc.at(micro_instruction_index);
-			auto  prev_opcode = getInstructionOpcode(original_function.bc[micro_instruction_index]);
-			auto  new_opcode
-				= enable ? low::breakpointVersion(prev_opcode) : low::getUnderlying(prev_opcode);
 
-			instruction = makeLowInstruction(new_opcode, instruction.arg0, instruction.arg1);
-
-			return true;
+			vm::setBreakpoint(instruction, enable);
+			return {};
 		}
 
 	protected:

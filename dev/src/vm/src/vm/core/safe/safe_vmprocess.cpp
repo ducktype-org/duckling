@@ -498,8 +498,8 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::setBreakpoint(
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
-		auto response = compiler.putBreakpoint(function_name, instruction_index, enable);
-		if (!response) return std::unexpected(api::OtherError{ "setBreakpoint: failure" });
+		auto response = compiler.setBreakpoint(function_name, instruction_index, enable);
+		if (!response) return std::unexpected(api::OtherError{ response.error() });
 
 		return api::response::Empty{};
 	}

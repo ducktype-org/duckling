@@ -21,6 +21,14 @@ namespace vm {
 #endif
 	}
 
+	void setBreakpoint(MicroInstruction& instruction, bool enable) {
+		auto prev_opcode = getInstructionOpcode(instruction);
+		auto new_opcode
+			= enable ? low::breakpointVersion(prev_opcode) : low::getUnderlying(prev_opcode);
+
+		instruction = makeLowInstruction(new_opcode, instruction.arg0, instruction.arg1);
+	}
+
 	low::MicroOpcode getInstructionOpcode(const MicroInstruction& instruction) {
 #ifdef USE_TAIL_CALLS
 		return OpFuns::getOpcodeFromOpFun(instruction.tc_opfun);

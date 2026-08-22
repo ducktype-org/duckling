@@ -69,6 +69,13 @@ namespace vm {
 	};
 
 	/**
+	 * @brief Sets the breakpoint on given instruction
+	 * @param instruction - instruction to modify
+	 * @param enable - true when activate breakpoint, false to deactivate
+	 */
+	void setBreakpoint(MicroInstruction& instruction, bool enable);
+
+	/**
 	 * @brief Creates a low-level instruction with correct "union" type depending on the config.
 	 * @return MicroInstruction
 	 */
