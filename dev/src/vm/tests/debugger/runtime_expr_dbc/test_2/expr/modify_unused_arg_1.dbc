@@ -1,6 +1,0 @@
-function hahahhaha { } -> { i64 } {
-    mov_p64_p64     ret0, frame 1 unused_arg1;
-	mul_p64_imm  	frame 1 unused_arg1, 2;
-    
-	ret_from_expr;
-}
