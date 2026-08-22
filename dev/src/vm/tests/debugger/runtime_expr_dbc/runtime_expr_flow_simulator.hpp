@@ -70,7 +70,7 @@ namespace vm::test {
 
 		FlowSimulator& evalExprNormal(const fs::File& file, const std::vector<u64>& expected_result) {
 			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
-			assertTrue(response.has_value(), "Execution of runtime expression failed");
+			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
 
 			auto& ret_vals_variant = response.value();
 			assertTrue(
