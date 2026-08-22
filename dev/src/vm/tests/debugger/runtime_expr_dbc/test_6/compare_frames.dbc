@@ -1,0 +1,9 @@
+function compare_frames { } -> { i64 } {
+	cmpEq_p64_p64 frame 1 arg0, frame 2 bar_ret0;
+	jmpIfNot_label not_equal;
+	mov_p64_imm ret0, 1;
+	ret_from_expr;
+label not_equal;
+	mov_p64_imm ret0, 0;
+	ret_from_expr;
+}

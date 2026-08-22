@@ -22,6 +22,7 @@ public:
 		TESTER_ADD_TEST(test3RuntimeExpr);
 		TESTER_ADD_TEST(test4RuntimeExpr);
 		TESTER_ADD_TEST(test5RuntimeExpr);
+		TESTER_ADD_TEST(test6RuntimeExpr);
 	}
 
 private:
@@ -117,6 +118,18 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("foo"), 4)
 			.evalExprNormal(access_frame_2_expr, { 10 })
+			.finishAndAssertExitValue(7);
+	}
+
+	void test6RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_6/main.dbc"));
+		const fs::File compare_frames_expr(path("runtime_expr_dbc/test_6/compare_frames.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("foo"), 4)
+			.runMain()
+			.awaitBreakpoint(base::StrID("foo"), 4)
+			.evalExprNormal(compare_frames_expr, { 0 })
 			.finishAndAssertExitValue(7);
 	}
 };
