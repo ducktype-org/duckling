@@ -87,7 +87,9 @@ impl<'duck, 'matches> RunScriptOptions<'duck, 'matches> {
 
 /// Run script given options.
 #[expect(unreachable_code, unused_variables)]
-pub fn run_script<'duck, 'matches>(rs_options: RunScriptOptions<'duck, 'matches>) -> QuackResult<()> {
+pub fn run_script<'duck, 'matches>(
+    rs_options: RunScriptOptions<'duck, 'matches>,
+) -> QuackResult<()> {
     // @TODO: #2900 Unmock this.
     qp_bail_internal!("@TODO: #2900 Pass scripts through `Unit`s");
     let RunScriptOptions {
