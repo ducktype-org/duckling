@@ -106,11 +106,9 @@ pub fn gather_external_libraries(unit: &Unit, graph: &UnitGraph) -> Vec<StrId> {
                 .links
                 .as_ref()
                 .copied();
-            // No external libs.
-            let Some(links) = links else {
-                return ControlFlow::Continue(());
+            if let Some(links) = links {
+                self.0.push(links);
             };
-            self.0.push(links);
             ControlFlow::Continue(())
         }
     }
