@@ -152,6 +152,8 @@ pub struct Metadata {
     pub license: Option<String>,
     /// Package's description.
     pub description: Option<String>,
+    /// External library to link against.
+    pub links: Option<String>,
 }
 
 #[skip_serializing_none]
