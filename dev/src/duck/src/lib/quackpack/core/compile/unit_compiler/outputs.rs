@@ -6,12 +6,12 @@ use itertools::Itertools;
 use tracing::{debug, instrument, trace};
 
 use super::CompilationOutput;
+use super::external_libs::gather_external_libraries;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::unit_visitor::TryUnitVisitor;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
-use crate::quackpack::core::compile::unit_compiler::external_libs::gather_external_libraries;
 use crate::{QuackError, QuackResult};
 
 #[instrument(skip_all)]
