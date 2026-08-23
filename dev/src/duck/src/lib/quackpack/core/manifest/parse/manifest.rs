@@ -242,6 +242,6 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
 
 /// Parse a [`BuildOptions`] from the schema.
 fn parse_build_options(input: &MetadataSchema) -> BuildOptions {
-    let links = input.links.clone();
+    let links = input.links.as_ref().map(StrId::from);
     BuildOptions { links }
 }

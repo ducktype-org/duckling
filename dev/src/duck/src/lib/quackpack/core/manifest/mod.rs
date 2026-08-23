@@ -163,7 +163,9 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             dependencies.try_into()?,
             profiles.into(),
             VenvConfig::default_for_package(ctx),
-            BuildOptions { links },
+            BuildOptions {
+                links: links.map(Into::into),
+            },
         ))
     }
 }
@@ -191,7 +193,7 @@ impl TryFrom<Manifest> for registry::Manifest {
             license,
             name: name.into(),
             description,
-            links: build_options.links,
+            links: build_options.links.map(Into::into),
         };
         Ok(Self {
             metadata,
