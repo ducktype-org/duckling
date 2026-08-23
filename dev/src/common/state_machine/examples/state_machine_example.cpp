@@ -147,7 +147,7 @@ private:
 	 * `std::nullopt` (no transition registered) is reported as an error
 	 * so that callers cannot silently miss an unhandled event.
 	 */
-	static ErrorT toError(Machine::ResultT res) {
+	static ErrorT toError(Machine::HandleResult res) {
 		if (res.has_value()) return res.value();
 		return std::unexpected("No transition available for current state/event");
 	}

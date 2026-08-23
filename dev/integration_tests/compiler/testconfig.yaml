@@ -1,7 +1,5 @@
-compile_duckc: "cmake --build @{build_dir} -j -- duckc"
-compile_dvm: "cmake --build @{build_dir} -j -- VM"
-
-PreNode: "@{compile_duckc} && @{compile_dvm}"
+# Toolchain is built by the root PreNode.
+PreNode: ""
 
 SubDirs:
   - cli

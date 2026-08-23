@@ -1,7 +1,7 @@
-global_data lock mutex {};
-global_data cv condition_variable {};
-global_data started i64 {};
-global_data counter i64 {};
+global_data lock mutex {}
+global_data cv condition_variable {}
+global_data started i64 {}
+global_data counter i64 {}
 
 function worker {} -> {} {
     init_pany_type lock1, mutex;

@@ -3,6 +3,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Field, name, type, init);
+
 	MBox<Field> Field::parse(LangParserState& state) {
 		auto out = makeBox<Field>(state);
 

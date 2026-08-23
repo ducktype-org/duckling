@@ -12,6 +12,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/value_category.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -59,16 +60,14 @@ namespace compiler::helios::desugaring {
 			auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst->getExpr() });
 			if (iterable_hout_res->hasFailed()) return {};
 
-			Box<code::Expr>      iterable_hout = iterable_hout_res->valueOrThrow()->clone();
-			tsh::SymbolType<>    iterable_type = iterable_hout->expression_type.getSymbolType();
-			tsh::Kind            kind          = iterable_type.getType().getKind();
-			tsh::PrimaryCategory value_category
-				= iterable_hout->expression_type.getValueCategory().getCategory();
-			bool iterable_is_r_value = value_category == tsh::PrimaryCategory::Literal
-			                        || value_category == tsh::PrimaryCategory::Temporary;
+			Box<code::Expr>   iterable_hout = iterable_hout_res->valueOrThrow()->clone();
+			tsh::SymbolType<> iterable_type = iterable_hout->expression_type.getSymbolType();
+			tsh::Kind         kind          = iterable_type.getType().getKind();
+			bool              iterable_is_r_value
+				= not iterable_hout->expression_type.getValueCategory().canBeAssignedTo();
 
-			if (kind != tsh::Kind::DynamicArray && kind != tsh::Kind::StaticArray) {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+			if (kind != tsh::Kind::StaticArray) {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"`for` statements for non-array type: ", iterable_type.toString()
 					),
@@ -104,48 +103,26 @@ namespace compiler::helios::desugaring {
 		// Length is calculated once before the loop.
 		// let __len: u64 = <len __collection> / <constant>
 		Box<code::Stmt> buildLengthVar(
-			const ForDesugarCtx&            ctx,
-			SymID                           len_sym,
-			base::Optional<Box<code::Expr>> iterable_reusable_opt
+			const ForDesugarCtx& ctx, SymID len_sym, Box<code::Expr> iterable_reusable_opt
 		) {
 			const auto gen = code::generatedOrigin();
 
-			auto len_expr = [&]() -> Box<code::Expr> {
-				switch (ctx.iterable_type.getType().getKind()) {
-				case tsh::Kind::DynamicArray: {
-					auto collection_expr = [&]() -> Box<code::Expr> {
-						// If the iterable is not direct, dereference it.
-						bool needs_deref
-							= ctx.iterable_type.getRefKind() != tsh::ReferenceKind::Direct
-						   || ctx.collection_is_l_value;
-						if (needs_deref) {
-							return makeBox<code::DerefExpr>(
-								ctx.ctx, gen, std::move(*iterable_reusable_opt)
-							);
-						}
-						return std::move(*iterable_reusable_opt);
-					}();
+			SymID length_method_sym
+				= defgen::lengthMethodForType(ctx.ctx, ctx.iterable_type.getType());
 
-					return makeBox<code::UnaryOperatorExpr>(
-						ctx.ctx, gen, code::BuiltinUnary::Len, std::move(collection_expr)
-					);
-				}
-				case tsh::Kind::StaticArray: {
-					auto size
-						= ctx.iterable_type.getType().as<tsh::StaticArrayAbstractType>().getSize();
-					return makeBox<code::LiteralNumericExpr>(
-						ctx.ctx,
-						gen,
-						compiler::numeric_value::NumericValue::createOfType<u64>(
-							getConstU64(ctx.ctx).getType(), size
-						)
-							.value()
-					);
-				}
-				default:
-					CORE_UNREACHABLE();
-				}
-			}();
+			Box<code::Expr> length_arg = std::move(iterable_reusable_opt);
+			if (not ctx.collection_is_l_value)
+				length_arg = makeBox<code::RefOfExpr>(ctx.ctx, gen, std::move(length_arg));
+
+			std::vector<Box<code::Expr>> length_args;
+			length_args.emplace_back(std::move(length_arg));
+
+			Box<code::Expr> len_expr = makeBox<code::CallExpr>(
+				ctx.ctx,
+				code::generatedOrigin(),
+				makeBox<code::IdentifierExpr>(ctx.ctx, code::generatedOrigin(), length_method_sym),
+				std::move(length_args)
+			);
 
 			return makeBox<code::VariableStmt>(
 				gen, std::move(len_expr), getConstU64(ctx.ctx), len_sym
@@ -199,17 +176,21 @@ namespace compiler::helios::desugaring {
                 std::move(raw_element),
                 iter_type,
                 iter_pst_pos,
-                [&](query::Context& error_ctx) {
-                    error_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-                        base::strConcat(
-                            "Cannot coerce collection element type '",
-                            element_sym_type.toString(),
-                            "' to iterator type '",
-                            iter_type.toString(),
-                            "'."
-                        ),
-                        iter_pst_pos
-                    ));
+                {},
+                CoercionErrorOverrides{
+						.incompatible_types =
+                        [&](query::Context& error_ctx) {
+                            error_ctx.logInt(makeBox<dia::PlaceholderError>(
+                                base::strConcat(
+                                    "Cannot coerce collection element type '",
+                                    element_sym_type.toString(),
+                                    "' to iterator type '",
+                                    iter_type.toString(),
+                                    "'."
+                                ),
+                                iter_pst_pos
+                            ));
+                        },
                 }
             );
 			if (!element_expr.has_value()) return {};
@@ -260,14 +241,15 @@ namespace compiler::helios::desugaring {
 			return ctx.query<defgen::QueryGeneratedSymbol>({
 				.name = name,
 				.generated_symbol_data
-				= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
+				= defgen::ControlFlowLocal{
 					.owning_scope = for_scope,
 					.role         = role,
 					.type         = type,
-				} },
+				},
 			});
 		};
 
+		// @TODO: #3290 generated variables names
 		return {
 			.iterator
 			= ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow(),
@@ -321,18 +303,9 @@ namespace compiler::helios::desugaring {
 		// }
 		code::CodeBlock outer{};
 		outer.statements.emplace_back(buildIndexVar(for_ctx, symbols.index));
-		if (for_ctx.iterable_type.getType().getKind() == tsh::Kind::StaticArray) {
-			// For StaticArray, __len evaluates to a compile-time constant, so it does not evaluate
-			// the collection itself. We execute `iterable_reusable` here in an ExprStmt
-			// to ensure `first_use` is evaluated before get in the loop.
-			outer.statements.emplace_back(makeBox<code::ExprStmt>(gen, std::move(iterable_reusable))
-			);
-			outer.statements.emplace_back(buildLengthVar(for_ctx, symbols.length, {}));
-		} else {
-			outer.statements.emplace_back(
-				buildLengthVar(for_ctx, symbols.length, std::move(iterable_reusable))
-			);
-		}
+		outer.statements.emplace_back(
+			buildLengthVar(for_ctx, symbols.length, std::move(iterable_reusable))
+		);
 
 
 		outer.statements.emplace_back(makeBox<code::WhileStmt>(

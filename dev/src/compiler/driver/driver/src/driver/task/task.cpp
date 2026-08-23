@@ -70,13 +70,23 @@ namespace compiler::driver {
 
 		BuildTarget build_target;
 
-		if (strategy && strategy->view() == "dvm") {
-			auto output
-				= js::getString(json, "output_file", "DVM task requires an output file!", report);
+		if (strategy && strategy->view() == "dvm_lib") {
+			auto output = js::getString(
+				json, "output_file", "DVM library task requires an output file!", report
+			);
 			if (!output) had_error = true;
 
-			build_target = BuildTargetDVM{
-				.output_file_stem = output.copyValueOr(base::StrID("package_dvm")),
+			build_target = BuildTargetDVMLibrary{
+				.output_file_name = output.copyValueOr(base::StrID("package_dvm.dbc")),
+			};
+		} else if (strategy && strategy->view() == "dvm_exe") {
+			auto output = js::getString(
+				json, "output_file", "DVM executable task requires an output file!", report
+			);
+			if (!output) had_error = true;
+
+			build_target = BuildTargetDVMExecutable{
+				.output_file_name = output.copyValueOr(base::StrID("package_dvm.dbc")),
 			};
 		} else if (strategy && strategy->view() == "native") {
 			auto output
@@ -160,7 +170,7 @@ namespace compiler::driver {
 			}
 
 			build_target = BuildTargetLLVMExecutable{
-				.output_file_stem = output ? *output : base::StrID(),
+				.output_file_name = output ? *output : base::StrID(),
 				.linking_options  = std::move(linking_options),
 			};
 		} else if (strategy && strategy->view() == "obj") {
@@ -214,13 +224,13 @@ namespace compiler::driver {
 			}
 
 			build_target = BuildTargetLLVMStaticLibrary{
-				.output_file_stem  = output ? *output : base::StrID(),
+				.output_file_name  = output ? *output : base::StrID(),
 				.archiving_options = std::move(archiving_options),
 			};
 		} else if (strategy) {
 			report(
 				base::strConcat("Unknown task strategy: \"", strategy->str(), "\""),
-				R"(Expected "dvm", "native", "obj", or "lib".)",
+				R"(Expected "dvm_exe", "dvm_lib", "native", "obj", or "lib".)",
 				true
 			);
 			had_error = true;
@@ -250,15 +260,22 @@ namespace compiler::driver {
 	 * @brief Helper function that merges global linking options with task-specific linking options
 	 * for a given`BuildTarget`.
 	 */
-	BuildTarget convertBuildTargetForTask(
+	BuildTarget mergeBuildTargetWithGlobalOptions(
 		const BuildTarget& raw_target, const options_types::StdLibOptions& stdlib_options
 	) {
 		variant_match(raw_target) {
 			variant_case(BuildTargetLLVMExecutable, llvm_exec_target) {
+				auto linking_options                = llvm_exec_target.linking_options;
+				linking_options.stdlib_link_options = getNativeStdLibLinkingArgs(stdlib_options);
 				return BuildTargetLLVMExecutable{
-					.output_file_stem = llvm_exec_target.output_file_stem,
-					.linking_options
-					= constructLinkerOptions(llvm_exec_target.linking_options, stdlib_options),
+					.output_file_name = llvm_exec_target.output_file_name,
+					.linking_options  = std::move(linking_options),
+				};
+			}
+			variant_case(BuildTargetDVMExecutable, dvm_exec_target) {
+				return BuildTargetDVMExecutable{
+					.output_file_name  = dvm_exec_target.output_file_name,
+					.link_std_packages = stdlib_options.stdActive(),
 				};
 			}
 			variant_default { return raw_target; }
@@ -277,8 +294,9 @@ namespace compiler::driver {
 
 				if (!root_module_opt.has_value()) return {};
 
-				auto build_target
-					= convertBuildTargetForTask(raw_package_task.build_target, stdlib_options);
+				auto build_target = mergeBuildTargetWithGlobalOptions(
+					raw_package_task.build_target, stdlib_options
+				);
 
 				return Task{
 					.type      = TaskType::PackageCompilation,
@@ -293,12 +311,21 @@ namespace compiler::driver {
 		CORE_UNREACHABLE();
 	}
 
-	linker::LinkingOptions constructLinkerOptions(
-		const linker::LinkingOptions&       local_options,
-		const options_types::StdLibOptions& stdlib_options
+	linker::LinkingOptions constructNativeLinkerOptions(
+		const options_types::LinkingOptions& linking_options,
+		const options_types::StdLibOptions&  stdlib_options
 	) {
-		linker::LinkingOptions options = local_options;
-		options.stdlib_link_options    = getStdLibLinkingArgs(stdlib_options);
-		return options;
+		return {
+			.linker_path = linking_options.native_linker_path,
+			.additional_link_options
+			= linking_options.native_additional_link_options.copyValueOr(""),
+			.link_c_standard_library = linking_options.native_link_c_standard_lib,
+			.stdlib_link_options     = getNativeStdLibLinkingArgs(stdlib_options),
+		};
+	}
+
+	DVMRuntimeConfig constructDVMRuntimeConfig(const options_types::LinkingOptions& linking_options
+	) {
+		return { .shared_libraries = linking_options.dvm_shared_libraries };
 	}
 }  // namespace compiler::driver

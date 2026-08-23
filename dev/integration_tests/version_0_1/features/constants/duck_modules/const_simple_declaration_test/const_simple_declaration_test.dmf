@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test constant declarations at module level
 const CONST_I64: i64 = 100;
 const CONST_I32: i32 = 50i32;
@@ -13,7 +11,7 @@ const CONST_EXPR = 5 * 10 + 7;
 fun main() -> i64 = {
     # Output constant values
     builtin_output_i64(CONST_I64);           # 100
-    builtin_output_i64(i64(CONST_I32));      # 50
+    builtin_output_i64(CONST_I32);           # 50
     builtin_output_i64(CONST_NO_TYPE);       # 42
     builtin_output_i64(CONST_COMPUTED);      # 110
     builtin_output_i64(CONST_EXPR);          # 57

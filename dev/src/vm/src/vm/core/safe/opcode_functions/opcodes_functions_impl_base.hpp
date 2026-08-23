@@ -47,7 +47,8 @@
 #include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <cmath>
@@ -308,7 +309,14 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
-		{ performFunctionCall(instr, local_stack, frame, thread, instr->arg0); }
+		{
+			auto function_id = static_cast<usize>(instr->arg0);
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
+			performFunctionCall(instr, local_stack, frame, thread, function_id);
+		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
 		// would mean that we skipped the first instruction. That's why we move forward zero
@@ -318,38 +326,33 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 #ifdef ENABLE_JIT
-	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jitEntrypoint)(FUNCTION_ARGS) {
 		{
-			auto& jit_data = thread.jit_data;
-			auto  func_id  = instr->arg0;
-			auto& func_obj = thread.process_program->getFunctions()[func_id];
+			auto& jit_data         = thread.jit_data;
+			auto& current_func_obj = *frame->current_function;
+			auto  current_func_id  = current_func_obj.id;
 
-			// @TODO: #2126 manage the size when inserting new code
-			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id + 2);
+			// @TODO: #2858 manage the size when inserting new code
+			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
 
-			jit::JitFuncData& my_data = jit_data[func_id];
-
-			auto run_compiled = [&]() {
-				performFunctionCall(instr, local_stack, frame, thread, func_id);
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
-			};
+			jit::JitFuncData& my_data = jit_data[current_func_id];
 
 			if (my_data.func_ptr) {
 				// is already compiled
-				run_compiled();
+				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
 			} else if (0 < my_data.until_compilation) {
 				// should be compiled later
 				--my_data.until_compilation;
-				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
 				// should be compiled now
-				MRef<jit::JitOpFun> compiled
-					= jit::compileLLVM(func_obj.cfg, func_obj.bc, func_obj.name);
+				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
+					current_func_obj.cfg, current_func_obj.bc, current_func_obj.name
+				);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;
 
-				run_compiled();
+				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
 			}
 		}
 		FUNCTION_CONT(0);
@@ -362,17 +365,17 @@ namespace vm {
 			auto function_signature = builtins::getBuiltinFunctionSignature(builtin_id);
 			auto arg_count          = function_signature->parameters.size();
 
-			std::vector<Box<VmValue>> args;
-			auto                      block_ref_stack_count
+			std::vector<Box<SafeVMValue>> args;
+			auto                          block_ref_stack_count
 				= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 			u64 first_arg_idx = block_ref_stack_count - arg_count;
 
-			// Create VmValue objects from local arguments.
+			// Create VMValue objects from local arguments. The argument's actual block type is
+			// used (verification guarantees it matches what the builtin expects).
 			for (u64 i = 0; i < arg_count; i++) {
-				const base::StrID arg_type  = function_signature->parameters[i];
-				TypeCRef          real_type = thread.process_program->getTypes().at(arg_type);
-				auto              block = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
-				args.push_back(thread.safe_process.createOwnedVmValue(real_type, Pointer(block, 0)));
+				auto     block     = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
+				TypeCRef real_type = Memory::getBlockType(block);
+				args.push_back(thread.safe_process.createOwnedVMValue(real_type, Pointer(block, 0)));
 			}
 
 			std::vector<TypeCRef> result_types = {};
@@ -384,7 +387,7 @@ namespace vm {
 				);
 			}
 
-			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
+			base::Optional<Box<SafeVMValue>> return_value = builtins::callBuiltinFunction(
 				builtin_id, result_types, thread.safe_process, thread, args
 			);
 
@@ -454,6 +457,56 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_ffifunc)(FUNCTION_ARGS) {
+		{
+			auto ffi_func = READ_FROM_DIRECT_ARG(CRef<low::LowFFIFunction>, instr->arg0);
+
+			auto arg_count = ffi_func->parameters.size();
+			bool is_void   = ffi_func->result_types.size() == 0;
+			CORE_ASSERT(
+				ffi_func->result_types.size() <= 1, "FFI function cannot return more than 1 type"
+			);
+
+			// Local stack layout is the same as for call_cfunc:
+			// [..., result_value (if any), arg0, ..., argN], each in its own block.
+			u64 block_ref_stack_count
+				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+			u64 first_block_idx = block_ref_stack_count - arg_count - (is_void ? 0 : 1);
+			u64 first_arg_idx   = first_block_idx + (is_void ? 0 : 1);
+
+			std::vector<void*> arg_values(arg_count);
+			for (u64 i = 0; i < arg_count; i++) {
+				auto block    = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
+				arg_values[i] = thread.process_memory.getBlockViewUnsafe(block).getBegin();
+			}
+
+			auto* cif = &ffi_func->cif;
+
+			if (is_void) {
+				ffi_call(cif, ffi_func->symbol, nullptr, arg_values.data());
+			} else {
+				auto  result_block = Ref(frame->local_block_ref_stack_base[first_block_idx]);
+				byte* result_pointer
+					= thread.process_memory.getBlockViewUnsafe(result_block).getBegin();
+				usize result_size = ffi_func->result_types.at(0)->getSize().asInt();
+
+				if (result_size >= sizeof(ffi_arg)) {
+					ffi_call(cif, ffi_func->symbol, result_pointer, arg_values.data());
+				} else {
+					// libffi requires the return buffer to be at least sizeof(ffi_arg) big -
+					// call into a temporary and copy the low bytes (little-endian).
+					ffi_arg tmp_result = 0;
+					ffi_call(cif, ffi_func->symbol, &tmp_result, arg_values.data());
+					std::memcpy(result_pointer, &tmp_result, result_size);
+				}
+			}
+
+			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+		}
+
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
 		{
 			auto& called_func = thread.process_program->getFunctions()[instr->arg0];
@@ -481,6 +534,11 @@ namespace vm {
 			const usize function_id
 				= *thread.process_program->getFunctions().idOf(implementation_name);
 
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
+
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
 		FUNCTION_CONT(0);
@@ -488,7 +546,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
-			auto  function_id       = static_cast<usize>(instr->arg0);
+			auto function_id = static_cast<usize>(instr->arg0);
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
 			auto& function          = thread.process_program->getFunctions()[function_id];
 			instr                   = function.bc.data();
 			frame->current_function = &function;
@@ -515,15 +577,15 @@ namespace vm {
 
 			while (callee_frame->local_block_ref_stack_end
 			       > callee_frame->local_block_ref_stack_base) {
-				auto block           = Ref(callee_frame->local_block_ref_stack_end[-1]);
-				u64  block_ref_count = u64(
+				auto block       = Ref(callee_frame->local_block_ref_stack_end[-1]);
+				u64  block_count = u64(
                     callee_frame->local_block_ref_stack_end
                     - callee_frame->local_block_ref_stack_base
                 );
 
 				// We're returning from a non-void function, so the last `ret_count` blocks on the
 				// stack are the return values. They are being used by the caller so we don't free them.
-				if (block_ref_count > ret_count) {
+				if (block_count > ret_count) {
 					thread.process_memory.freeBlockData(block);
 					thread.process_memory.decreaseBlockRefcount(block);
 				}
@@ -684,15 +746,6 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_imm)(FUNCTION_ARGS) {
-		{
-			// @TODO: #1728 remove this evil instruction
-			void* value = READ_FROM_DIRECT_ARG(void*, instr->arg1);
-			WRITE_TO_PLACE_ARG(void*, instr->arg0, value);
-		}
-		FUNCTION_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bste_bste)(FUNCTION_ARGS) {
 		{
 			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
@@ -705,6 +758,17 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bfst_bfst)(FUNCTION_ARGS) {
+		{
+			Ref<vm::Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Ref<vm::Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bvnt_bvnt)(FUNCTION_ARGS) {
 		{
 			Ref<vm::Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			Ref<vm::Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
@@ -798,17 +862,6 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_pptr_pptr)(FUNCTION_ARGS) {
-		{
-			// Same as move_pptr_pptr, treated differently by static analysis.
-			const auto    dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			const auto    src     = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-		}
-		FUNCTION_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_pptr_pptr)(FUNCTION_ARGS) {
 		{
 			const auto dst = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
@@ -852,6 +905,69 @@ namespace vm {
 			auto type = Memory::getBlockType(dst_block);
 
 			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrLoad_bany_p64)(FUNCTION_ARGS) {
+		{
+			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			// This access is the only way to do this, because we need to move raw bytes.
+			// Also, ffi types are by definition trivially copyable, so a simply memcpy
+			// is fine.
+			// It is safe, because the block is guaranteed to exist - it is a variable's block.
+			auto       view = thread.process_memory.getBlockViewUnsafe(dst_block);
+			const auto src  = READ_FROM_PLACE_ARG(void*, instr->arg1);
+			assertCPtrNotNull(src);
+			std::memcpy(view.getBegin(), src, view.size());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrStore_p64_bany)(FUNCTION_ARGS) {
+		{
+			const auto dst       = READ_FROM_PLACE_ARG(void*, instr->arg0);
+			auto       src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			// This access is the only way to do this, because we need to move raw bytes.
+			// Also, ffi types are by definition trivially copyable, so a simply memcpy
+			// is fine.
+			// It is safe, because the block is guaranteed to exist - it is a variable's block.
+			auto view = thread.process_memory.getBlockViewUnsafe(src_block);
+			assertCPtrNotNull(dst);
+			std::memcpy(dst, view.getBegin(), view.size());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrRead_pptr_p64)(FUNCTION_ARGS) {
+		{
+			const auto size = instr[1].arg0;
+			const auto dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto src  = READ_FROM_PLACE_ARG(void*, instr->arg1);
+			assertCPtrNotNull(src);
+			auto view = Memory::getPointerData(dst, size);
+			std::memcpy(view.getBegin(), src, size);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrWrite_p64_pptr)(FUNCTION_ARGS) {
+		{
+			const auto size = instr[1].arg0;
+			const auto dst  = READ_FROM_PLACE_ARG(void*, instr->arg0);
+			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			assertCPtrNotNull(dst);
+			auto view = Memory::getPointerData(src, size);
+			std::memcpy(dst, view.getBegin(), size);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrCast_p64_pptr)(FUNCTION_ARGS) {
+		{
+			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto       view = Memory::getRemainingPointerData(src);
+			WRITE_TO_PLACE_ARG(void*, instr->arg0, static_cast<void*>(view.getBegin()));
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1066,7 +1182,10 @@ namespace vm {
 				// It might be desired to switch to second approach in the future, depending on the
 				// semantics of Duckling arrays.
 				if (!tbl_pointer.isNull()) {
-					thread.process_memory.freeBlockData(tbl_pointer.getBlock());
+					auto tbl_block = tbl_pointer.getBlock();
+					if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
+						throw exceptions::VMDynTableReAllocTypeMismatch();
+					thread.process_memory.freeBlockData(tbl_block);
 					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 						tbl_pointer, Pointer::null()
 					);
@@ -1080,6 +1199,8 @@ namespace vm {
 				WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 			} else {
 				auto tbl_block = tbl_pointer.getBlock();
+				if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
+					throw exceptions::VMDynTableReAllocTypeMismatch();
 				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
 			}
 		}
@@ -1221,11 +1342,11 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVMValue)(FUNCTION_ARGS) {
 		{
-			const VmValue& vm_value = *std::bit_cast<const VmValue*>(instr->arg0);
-			performInit(instr, local_stack, frame, thread, vm_value.type);
-			vm_value.exportData({ Ref(frame->local_block_ref_stack_end[-1]), 0 });
+			const auto& safe_vm_value = *std::bit_cast<const SafeVMValue*>(instr->arg0);
+			performInit(instr, local_stack, frame, thread, safe_vm_value.type);
+			safe_vm_value.exportData({ Ref(frame->local_block_ref_stack_end[-1]), 0 });
 		}
 		FUNCTION_CONT(1);
 	}

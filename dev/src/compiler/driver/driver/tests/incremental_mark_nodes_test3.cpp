@@ -57,7 +57,7 @@ private:
 		ASSERT_TRUE(init_result.status().isOk());
 
 		auto prev_graph_opt = query::internal::ContextAccess::getState()->getPreviousGraph();
-		ASSERT_TRUE(prev_graph_opt.has_value());
+		ASSERT_HAS_VALUE(prev_graph_opt);
 		auto prev = prev_graph_opt.value();
 
 		auto prev_colors = query::internal::ContextAccess::getState()->getPreviousNodeColors();
@@ -95,9 +95,9 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ .module_id        = module,
-			                                          .backend_type     = driver::BackendType::LLVM,
-			                                          .build_debug_info = false });
+			ctx.query<driver::CompileModule>({ .module_id        = module,
+			                                   .backend_type     = driver::BackendType::LLVM,
+			                                   .build_debug_info = false });
 		});
 
 		// Build a NodeID for the CompileModule query with the exact key we used

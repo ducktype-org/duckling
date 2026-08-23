@@ -142,8 +142,16 @@ namespace pst {
 			= type;
 	}
 
-	class NotAllParsedError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	void LangParserState::setContextStmt(StmtContext type) {
+		if (type == getContext()->stmt_context) return;
+		copyOwnContext();
+		dynamic_cast<LangParserContext*>(&*std::get<Box<tpc::ParserContext>>(current_context))
+			->stmt_context
+			= type;
+	}
+
+	class NotAllParsedError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -151,7 +159,7 @@ namespace pst {
 		}
 
 	public:
-		NotAllParsedError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		NotAllParsedError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 }

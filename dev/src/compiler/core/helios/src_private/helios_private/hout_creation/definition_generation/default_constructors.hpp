@@ -34,6 +34,21 @@ namespace compiler::helios::defgen {
 	);
 
 	/**
+	 * @brief Get the compiler-generated HOUT representation of the default constructor for a tuple.
+	 *
+	 * The default constructor initializes each element of the tuple to its default value calling
+	 * other default constructors if needed.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryDefaultTupleConstructor,
+		tsh::TupleAbstractType,
+		CRef<query::QResult<HOUTFunction>>,
+		({})
+	);
+
+	/**
 	 * @brief Get the compiler-generated HOUT representation of the default constructor for a static
 	 * array.
 	 *
@@ -75,6 +90,6 @@ namespace compiler::helios::defgen {
 	 * default constructible.
 	 */
 	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
-		query::Context& ctx, const tsh::SymbolType<>& type, dia_int::StablePosition pos
+		query::Context& ctx, const tsh::SymbolType<>& type, dia::StablePosition pos
 	);
 }

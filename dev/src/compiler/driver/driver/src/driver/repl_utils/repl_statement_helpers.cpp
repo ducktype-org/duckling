@@ -12,6 +12,8 @@
 
 #include <filesystem/file.hpp>
 
+#include <expected>
+
 namespace compiler::repl {
 
 	base::Ref<frontend::ModuleTree> createEphemeralChainedStatementModule(
@@ -49,9 +51,12 @@ namespace compiler::repl {
 		return hout_unit;
 	}
 
-	const helios::HOUTUnit& getDefinitionHOUTUnit(query::Context& ctx, frontend::ModuleID module_id) {
-		// @TODO: #2246 validate usage of QueryModuleHOUT here after any other changes
-		return ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+	std::expected<base::CRef<helios::HOUTUnit>, std::string> getDefinitionHOUTUnit(
+		query::Context& ctx, frontend::ModuleID module_id
+	) {
+		const auto& hout_qresult = ctx.query<helios::QueryModuleHOUT>(module_id);
+		if (hout_qresult->hasFailed()) return std::unexpected("Failed to compile a module.");
+		return &hout_qresult->valueOrPanic();
 	}
 
 	std::expected<SingleStatementInfo, std::string> classifySingleStatement(

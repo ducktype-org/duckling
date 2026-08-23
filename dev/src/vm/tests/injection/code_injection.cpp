@@ -2,6 +2,7 @@
 
 #include <base/collections/optional.hpp>
 
+#include <array>
 #include <ranges>
 #include <string>
 #include <vector>
@@ -30,7 +31,51 @@ public:
 	}
 
 private:
-	using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
+	using OwnedArgumentList = std::vector<Box<vm::IVMValue>>;
+
+	/**
+	 * @brief An IVMValue implementation which does not come from the safe VM. Used to check that
+	 * the safe VM rejects values it did not create, even when their PID matches.
+	 */
+	class ForeignVMValue final: public vm::IVMValue {
+	public:
+		explicit ForeignVMValue(vm::PID pid): pid(pid) {}
+
+		void freeData() override {}
+
+		[[nodiscard]] base::CRef<vm::code::valid_type::ValidType> getType() const override {
+			CORE_PANIC("ForeignVMValue has no type");
+		}
+
+		[[nodiscard]] vm::code::valid_type::ValidTypeID getTypeID() const override {
+			CORE_PANIC("ForeignVMValue has no type");
+		}
+
+		[[nodiscard]] Bytes getDataSize() const override { return Bytes(sizeof(data)); }
+
+		[[nodiscard]] base::Optional<vm::InterpretedDataVariant> readData() const override {
+			return {};
+		}
+
+		void importDataFrom(const IVMValue&) override {
+			CORE_PANIC("ForeignVMValue cannot import data");
+		}
+
+		[[nodiscard]] vm::PID getPID() const override { return pid; }
+
+		[[nodiscard]] byte* getBytes() override { return data.data(); }
+
+		[[nodiscard]] const byte* getBytes() const override { return data.data(); }
+
+		void dprint(std::ostream& out, const std::string& indent) const override {
+			out << indent << "ForeignVMValue\n";
+		}
+
+	private:
+		vm::PID pid;
+
+		std::array<byte, sizeof(i64)> data{};
+	};
 
 	/**
 	 * @brief Executes a function or a program within a VM process and verifies the results.
@@ -60,39 +105,41 @@ private:
 			opt_some(func_name) {
 				ASSERT_TRUE(std::holds_alternative<vm::FunctionRunArguments>(args));
 				const auto& function_args = std::get<vm::FunctionRunArguments>(args);
-				ASSERT_TRUE(vm::api::runFunction(pid, func_name, function_args).has_value());
+				ASSERT_HAS_VALUE(vm::api::runFunction(pid, func_name, function_args));
 			}
 			opt_none {
 				ASSERT_TRUE(std::holds_alternative<std::vector<std::string>>(args));
 				auto program_args = std::get<std::vector<std::string>>(args);
-				ASSERT_TRUE(vm::api::run(pid, program_args).has_value());
+				ASSERT_HAS_VALUE(vm::api::run(pid, program_args));
 			}
 		}
 
-		if_opt_some(optional_input, input) { ASSERT_TRUE(vm::api::input(pid, input).has_value()); }
+		if_opt_some(optional_input, input) { ASSERT_HAS_VALUE(vm::api::input(pid, input)); }
 
-		ASSERT_TRUE(vm::api::join(pid).has_value());
+		ASSERT_HAS_VALUE(vm::api::join(pid));
 
 		if_opt_some(optional_output, output) {
 			auto output_response = vm::api::output(pid);
-			ASSERT_TRUE(output_response.has_value());
+			ASSERT_HAS_VALUE(output_response);
 			ASSERT_EQUAL(output, output_response->output);
 		}
 
 		auto exit_code_response = vm::api::getExitValue(pid);
-		ASSERT_TRUE(exit_code_response.has_value());
+		ASSERT_HAS_VALUE(exit_code_response);
 		const auto& exit_value = exit_code_response.value();
+		ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_value));
+		auto& exit_value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value);
 
 		match_optional(expected_return_values) {
 			opt_some(exp) {
-				ASSERT_EQUAL_PRINT(exp.size(), exit_value.size());
+				ASSERT_EQUAL_PRINT(exp.size(), exit_value_vec.size());
 				for (usize i{ 0 }; i < exp.size(); i++)
-					ASSERT_EQUAL_PRINT(exp.at(i), exit_value.at(i)->readBytes<i64>());
+					ASSERT_EQUAL_PRINT(exp.at(i), exit_value_vec.at(i)->readBytes<i64>());
 			}
 			opt_none {
 				// @note: If expected_exit_code is an empty optional, it's expected that a called
 				// function is void.
-				ASSERT_TRUE(exit_value.size() == 0);
+				ASSERT_TRUE(exit_value_vec.size() == 0);
 			}
 		}
 	}
@@ -121,27 +168,27 @@ private:
 	}
 
 	/**
-	 * @brief Create an owned VmValue containing a specified value.
+	 * @brief Create an owned VMValue containing a specified value.
 	 */
-	Box<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
-		auto response = vm::api::getVmValue(pid, "i64");
-		ASSERT_TRUE(response.has_value());
+	Box<vm::IVMValue> getIntVMValue(vm::PID pid, i64 value) {
+		auto response = vm::api::getVMValue(pid, "i64");
+		ASSERT_HAS_VALUE(response);
 		auto vm_value = std::move(response->vm_value);
 		vm_value->writeBytes<i64>(value);
 		return vm_value;
 	}
 
 	/**
-	 * @brief Create a list of owned VmValues containing a specified values.
+	 * @brief Create a list of owned VMValues containing a specified values.
 	 */
 	OwnedArgumentList getOwnedArgumentList(vm::PID pid, std::vector<i64> values) {
 		return values
-		     | std::views::transform([this, pid](i64 value) { return getIntVmValue(pid, value); })
+		     | std::views::transform([this, pid](i64 value) { return getIntVMValue(pid, value); })
 		     | std::ranges::to<OwnedArgumentList>();
 	}
 
 	/**
-	 * @brief Create a list of references to owned VmValues which can be passed to the VM.
+	 * @brief Create a list of references to owned VMValues which can be passed to the VM.
 	 */
 	vm::FunctionRunArguments createArgumentList(OwnedArgumentList& arguments) {
 		return arguments | std::views::transform([](auto& value) { return value.refMut(); })
@@ -156,7 +203,7 @@ private:
 		vm::PID  pid = initProcess();
 		fs::File file1(path("multiple_files_1.dbc"));
 		fs::File file2(path("multiple_files_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1, file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1, file2 }));
 
 		runAndCheckReturnValue(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
 		vm::api::deinitAndValidate(pid);
@@ -166,8 +213,8 @@ private:
 		vm::PID  pid = initProcess();
 		fs::File file1(path("inject_code_1.dbc"));
 		fs::File file2(path("inject_code_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 
 		runAndCheckReturnValue(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
 		vm::api::deinitAndValidate(pid);
@@ -176,7 +223,7 @@ private:
 	void runNoArgFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("call_no_arg_function.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		runAndCheckReturnValue(pid, "summer", vm::FunctionRunArguments{}, {}, "735", {});
 		vm::api::deinitAndValidate(pid);
@@ -185,7 +232,7 @@ private:
 	void runVoidFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("call_void_function.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, "3", {});
@@ -196,7 +243,7 @@ private:
 	void runNonVoidFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("call_non_void_function.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 695, 40 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, {}, 735);
@@ -207,7 +254,7 @@ private:
 	void runMultipleReturnValuesFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("multiple_retvals.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 40, 695 });
 		runAndCheckReturnValues(
@@ -235,7 +282,7 @@ private:
 	void doubleRunFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("repl_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments), {}, {}, 32);
@@ -249,7 +296,7 @@ private:
 	void manyRunFunctions() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("repl_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		for (i32 i = 0; i < 100; i++) {
 			OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { i, i });
@@ -265,13 +312,13 @@ private:
 		vm::PID pid = initProcess();
 
 		fs::File file1(path("repl_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments), {}, {}, 32);
 		freeArguments(owned_arguments);
 
 		fs::File file2(path("repl_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments2), {}, {}, 3);
 		freeArguments(owned_arguments2);
@@ -281,11 +328,11 @@ private:
 	void replWithGlobals() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("repl_with_globals_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 		runAndCheckReturnValue(pid, "globaler_setter", vm::FunctionRunArguments{}, "1 2", {}, {});
 
 		fs::File file2(path("repl_with_globals_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		runAndCheckReturnValue(pid, "globaler_reader", vm::FunctionRunArguments{}, {}, "12", {});
 		vm::api::deinitAndValidate(pid);
 	}
@@ -293,14 +340,14 @@ private:
 	void incrementalGlobalVariantPersistsValue() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("incremental_global_variant_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 
 		runAndCheckReturnValue(
 			pid, "set_global_variant_value", vm::FunctionRunArguments{}, {}, {}, {}
 		);
 
 		fs::File file2(path("incremental_global_variant_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 
 		runAndCheckReturnValue(
 			pid, "read_global_variant_value", vm::FunctionRunArguments{}, {}, "735", {}
@@ -312,13 +359,13 @@ private:
 		vm::PID pid = initProcess();
 
 		fs::File file1(path("loaded_func_call_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, {}, 12);
 		freeArguments(owned_arguments);
 
 		fs::File file2(path("loaded_func_call_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 2, 3 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 10);
 		freeArguments(owned_arguments2);
@@ -328,10 +375,10 @@ private:
 	void separateGlobals() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("separate_globals_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 
 		fs::File file2(path("separate_globals_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		runAndCheckReturnValue(pid, "globaler_setter", vm::FunctionRunArguments{}, "12", "12", {});
 		vm::api::deinitAndValidate(pid);
 	}
@@ -339,19 +386,19 @@ private:
 	void injectExistingFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("inject_code_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
-		ASSERT_TRUE(!vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		ASSERT_NO_VALUE(vm::api::loadFiles(pid, { file }));
 		vm::api::deinitAndValidate(pid);
 	}
 
 	void runFunctionArgumentValidation() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("call_non_void_function.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 		{
 			// Not enough arguments.
 			OwnedArgumentList arguments;
-			arguments.push_back(getIntVmValue(pid, 10));
+			arguments.push_back(getIntVMValue(pid, 10));
 			auto func_args = createArgumentList(arguments);
 
 			assertExecutionPanickedWith(
@@ -364,9 +411,9 @@ private:
 		{
 			// Too many arguments.
 			OwnedArgumentList arguments;
-			arguments.push_back(getIntVmValue(pid, 10));
-			arguments.push_back(getIntVmValue(pid, 20));
-			arguments.push_back(getIntVmValue(pid, 30));
+			arguments.push_back(getIntVMValue(pid, 10));
+			arguments.push_back(getIntVMValue(pid, 20));
+			arguments.push_back(getIntVMValue(pid, 30));
 			auto func_args = createArgumentList(arguments);
 
 			assertExecutionPanickedWith(
@@ -380,10 +427,10 @@ private:
 		{
 			// Argument type mismatch.
 			OwnedArgumentList arguments;
-			arguments.push_back(getIntVmValue(pid, 10));
+			arguments.push_back(getIntVMValue(pid, 10));
 
-			auto i32_value = vm::api::getVmValue(pid, "i32");
-			ASSERT_TRUE(i32_value.has_value());
+			auto i32_value = vm::api::getVMValue(pid, "i32");
+			ASSERT_HAS_VALUE(i32_value);
 			arguments.push_back(std::move(i32_value->vm_value));
 
 			auto func_args = createArgumentList(arguments);
@@ -397,12 +444,28 @@ private:
 		}
 
 		{
+			// VMValue with a matching PID, but not created by the safe VM implementation.
+			OwnedArgumentList arguments;
+			arguments.push_back(getIntVMValue(pid, 5));
+			arguments.push_back(Box<vm::IVMValue>::fromPointer(new ForeignVMValue(pid)));
+			auto func_args = createArgumentList(arguments);
+
+			assertExecutionPanickedWith(
+				runFunctionExpectPanic(pid, "summer", func_args),
+				"VMValue for argument 1 is invalid: it does not belong to the safe VM "
+				"implementation"
+			);
+
+			freeArguments(arguments);
+		}
+
+		{
 			// VMValue from different process.
 			vm::PID other_pid = initProcess();
 
 			OwnedArgumentList arguments;
-			arguments.push_back(getIntVmValue(pid, 5));
-			arguments.push_back(getIntVmValue(other_pid, 99));
+			arguments.push_back(getIntVMValue(pid, 5));
+			arguments.push_back(getIntVMValue(other_pid, 99));
 			auto func_args = createArgumentList(arguments);
 
 			assertExecutionPanickedWith(

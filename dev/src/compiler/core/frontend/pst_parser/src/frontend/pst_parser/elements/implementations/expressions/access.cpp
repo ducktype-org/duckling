@@ -6,6 +6,8 @@
 
 namespace pst::expr {
 
+	CLONE_SUB_ELEMENTS_DEF(Access, type, name, template_specifier);
+
 	MBox<ExprElement> Access::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 

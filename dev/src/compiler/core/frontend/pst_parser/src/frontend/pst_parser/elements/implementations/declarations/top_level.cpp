@@ -3,6 +3,12 @@
 #include "preamble.hpp"
 
 namespace pst {
+	void TopLevel::cloneSubElements(const TopLevel& other) {
+		ELEMENT_CLONE_SUB_ELEMENT(statements);
+		fillSymbols();
+		ParentClass::cloneSubElements(other);
+	}
+
 	MBox<TopLevel> TopLevel::parse(LangParserState& state) {
 		auto order_type = state.getContext()->block_order;
 

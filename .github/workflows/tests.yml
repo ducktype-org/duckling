@@ -109,13 +109,9 @@ jobs:
       - name: Set number of threads
         id: set-jobs
         run: |
-          if [[ "${{ matrix.build-type }}" == "Dev" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
-            echo "jobs=6" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.build-type }}" == "DevOpt" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
-            echo "jobs=6" >> $GITHUB_OUTPUT
-          else
-            echo "jobs=2" >> $GITHUB_OUTPUT
-          fi
+          read -r quota period < /sys/fs/cgroup/cpu.max
+          cpus=$((quota / period + 1))
+          echo "jobs=$cpus" >> $GITHUB_OUTPUT
 
       - name: Clean workspace
         if: ${{ steps.set-self-hosted.outputs.is-self-hosted == 'true' }}
@@ -168,6 +164,9 @@ jobs:
 
       - name: Install Valgrind
         run: sudo apt -y install valgrind
+
+      - name: Install pkg-config + libffi
+        run: sudo apt -y install pkg-config libffi-dev
 
       - name: Setup duck dependencies
         uses: ./.github/actions/setup-duck-dependencies/
@@ -376,7 +375,9 @@ jobs:
       - name: Integration Tests
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
+        # Coverage-instrumented binaries are much slower, and concurrent duckc
+        # processes serialize on .gcda profile writes.
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }}
 
       # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
       # so we have to save sccache after that, otherwise we'd have nothing to save.

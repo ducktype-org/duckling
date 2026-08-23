@@ -1,0 +1,21 @@
+PostCase: python3 check.py && @{cleanup_tmp_env}
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo --expose-freezefile
+
+Tests:
+  exposed-freezefile:
+    Description: can sync a new project which exposes a freezefile
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
+            info: successfully synchronized venv \`foo\`"
+        

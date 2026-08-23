@@ -10,7 +10,11 @@ namespace pst::expr {
 	 * expression doesn't cause problems with other parsing.
 	 */
 	class Comma final: public ExprElement {
-		using Lower = MatchExpr;
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Comma, ExprElement);
+		CLONE_SUBELEMENTS();
+
+	protected:
+		using Lower = Ternary;
 
 		std::vector<AccessInternalAnonymous<ExprElement>> expressions;
 

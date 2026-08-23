@@ -1,6 +1,7 @@
 #include "supervisor.hpp"
 
-#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/fast/fast_vmprocess.hpp>
+#include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 
 #include <mutex>
@@ -17,10 +18,22 @@ namespace vm {
 		return process_table.at(pid).refMut();
 	}
 
-	std::expected<PID, api::ApiError> Supervisor::newProcess() {
+	std::expected<PID, api::ApiError> Supervisor::newProcess(const api::ProcessConfig& options) {
 		std::unique_lock lock(rw_process_table);
-		PID              pid = next++;
-		process_table.emplace(pid, Box<IVMProcess>::fromPointer(new SafeVMProcess(pid)));
+		PID              pid = PID::fromU64(next_pid++);
+		switch (options.mode) {
+		case api::ProcessMode::Safe:
+			process_table.emplace(
+				pid,
+				Box<IVMProcess>::fromPointer(
+					new SafeVMProcess(pid, options.enable_deadlock_detection)
+				)
+			);
+			break;
+		case api::ProcessMode::Fast:
+			process_table.emplace(pid, Box<IVMProcess>::fromPointer(new fast::FastVMProcess(pid)));
+			break;
+		}
 		return pid;
 	}
 
@@ -58,6 +71,6 @@ namespace vm {
 	Supervisor::~Supervisor() {
 		// @TODO: #1354 add asserts here, that the processes are stopped and if not then cerr the
 		// warnings about it.
-		for (auto& [pid, proc]: process_table) proc->doRequest(api::request::DeinitAndValidate{});
+		for (auto& [_, proc]: process_table) proc->doRequest(api::request::DeinitAndValidate{});
 	}
 }

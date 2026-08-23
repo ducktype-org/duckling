@@ -1,7 +1,6 @@
 //! A storage management of gits.
 use std::path::{Path, PathBuf};
 
-use super::package_id::GitId;
 use super::paths::Storage;
 use crate::QuackResult;
 use crate::quackpack::core::solver::git_access::GitAccess;
@@ -22,17 +21,15 @@ impl<'paths> StorageGitAccess<'paths> {
 
 impl GitAccess for StorageGitAccess<'_> {
     fn git_path(&self, url: InternedUrl, commit: &str) -> PathBuf {
-        self.paths.pkg_dir(&GitId::new(url, commit.into()).into())
+        self.paths.git_dir(url, commit)
     }
 
     fn is_stored(&self, url: InternedUrl, commit: &str) -> bool {
-        self.paths
-            .is_package_stored(&GitId::new(url, commit.into()).into())
+        self.paths.is_stored_git(url, commit)
     }
 
-    fn store(&mut self, url: InternedUrl, commit: &str, source_path: &Path) -> QuackResult<()> {
-        let id = GitId::new(url, commit.into()).into();
-        let dir = self.paths.pkg_dir(&id);
+    fn store(&self, url: InternedUrl, commit: &str, source_path: &Path) -> QuackResult<()> {
+        let dir = self.paths.git_dir(url, commit);
         if dir.exists() {
             dir.rmtree()?;
         }
@@ -40,6 +37,7 @@ impl GitAccess for StorageGitAccess<'_> {
             parent.mkdir(MkdirOptions::WithParents)?;
         }
         source_path.rename_to(&dir)?;
+        self.paths.mark_git_stored(url, commit)?;
         Ok(())
     }
 }

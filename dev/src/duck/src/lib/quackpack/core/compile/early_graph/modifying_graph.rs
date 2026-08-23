@@ -4,9 +4,9 @@ use std::collections::VecDeque;
 
 use tracing::debug;
 
-use super::*;
+use super::{DependencyGraph, EarlyGraph, HashMap, HashSet, Identity, PackagesSet, QuackResult};
 use crate::quackpack::core::FeatureName;
-use crate::quackpack::core::compile::missing_depenendcy_in_manifest_message;
+use crate::quackpack::core::compile::missing_depenendcy_in_manifest;
 use crate::util::extend::QpExtend;
 
 impl DependencyGraph {
@@ -24,19 +24,14 @@ impl DependencyGraph {
                     .dependencies()
                     .get_by_name(dep.name())
                     .unwrap_or_else(|| {
-                        panic!(
-                            "{}",
-                            missing_depenendcy_in_manifest_message(
-                                &this.package().manifest().name(),
-                                &dep.name()
-                            )
-                        )
+                        missing_depenendcy_in_manifest(&this.package().name(), &dep.name(), this)
                     })
                     .is_enabled_for(this.enabled_features().iter().copied());
                 debug!(
-                    "package `{k}` has features `{}` and dependency `{dep}` is {}",
-                    this.enabled_features().iter().join(" "),
-                    if is_enabled { "enabled" } else { "not enabled" }
+                    %k,
+                    features = ?this.enabled_features(),
+                    %dep,
+                    dep_enabled = %is_enabled,
                 );
                 if !is_enabled {
                     to_remove.insert(*dep);
@@ -58,10 +53,7 @@ impl EarlyGraph {
         let root_package = self.package_mut(&self.graph.root());
         let root_features =
             root_package.features_that_would_be_added(root_features.iter().copied())?;
-        debug!(
-            "starting features of root are: `{}`",
-            root_features.iter().join(" ")
-        );
+        debug!(?root_features, "starting to expand features");
         let mut added_features = HashMap::from([(self.graph.root, root_features)]);
         let mut stack = VecDeque::from([self.graph().root]);
 
@@ -85,12 +77,10 @@ impl EarlyGraph {
                         .dependencies()
                         .get_by_name(dep.name())
                         .unwrap_or_else(|| {
-                            panic!(
-                                "{}",
-                                missing_depenendcy_in_manifest_message(
-                                    &this.package().manifest().name(),
-                                    &dep.name()
-                                )
+                            missing_depenendcy_in_manifest(
+                                &this.package().name(),
+                                &dep.name(),
+                                this,
                             )
                         });
                     entry_in_dep_manifest.enabled_features(this_features.iter().copied())

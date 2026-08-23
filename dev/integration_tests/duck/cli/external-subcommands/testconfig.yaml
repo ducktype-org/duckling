@@ -1,0 +1,46 @@
+before-cmd: export PATH="${DIT_TMP_DIR}/bin:$PATH"
+
+PreCase: |+
+  @{cd-tmp-dir}
+  mkdir -p $DUCK_HOME
+  mkdir -p bin
+  echo "security:
+    typos:
+      max-distance: 1
+      enabled: true
+
+  aliases:
+    abababa: echo" > $DUCK_HOME/config.yaml
+
+  cat <<'EOF' > bin/duck-echo
+  #!/bin/sh
+  echo "$@"
+  EOF
+  chmod +x bin/duck-echo
+
+Tests:
+  run-external-subcmd:
+    Description: Finds external subcommands
+    test-cmd: duck echo External subcmd
+
+    Cases:
+      echo:
+        Output:
+          String: External subcmd\n
+
+  can-autofix-external:
+    Description: Can fix typo in external subcommand
+    test-cmd: duck ecjo External subcmd
+
+    Cases:
+      echo:
+        Output:
+          String: External subcmd\n
+  can-autofix-alias-to-external:
+    Description: Aliases can expand to external subcommands
+    test-cmd: duck abababq External subcmd
+
+    Cases:
+      echo:
+        Output:
+          String: External subcmd\n

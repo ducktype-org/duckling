@@ -1,5 +1,6 @@
 #include "program_lowering_context.hpp"
 
+#include "ctv_lowering.hpp"
 #include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
@@ -23,10 +24,14 @@
 using namespace compiler::backend_vm::internal;
 
 compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
-	query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering
+	query::Context& query_ctx,
+	base::StrID     module_id,
+	bool            build_debug_info,
+	bool            is_comp_time_lowering
 ):
 	  query_ctx_for_errors(&query_ctx),
 	  is_comp_time_lowering(is_comp_time_lowering),
+	  module_id(module_id),
 	  debug_info_builder(
 		  (build_debug_info ? debug_info::DebugInfoBuilder(
 								  debug_info::Target::DBC, debug_info::SourcePositionsType::PstHash
@@ -35,7 +40,10 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
 	  ) {}
 
 CRef<vm::code::TypeOfData> ProgramLoweringContext::keepVMType(vm::code::TypeOfData dvm_type) {
-	return &type_storage.dvm_types.put(typeName(dvm_type), std::move(dvm_type)).first->second;
+	auto type_name      = typeName(dvm_type);
+	auto [it, inserted] = type_storage.dvm_types.put(type_name, std::move(dvm_type));
+	if (inserted) lowered_type_order.push_back(type_name);
+	return &it->second;
 }
 
 base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::lowerAndKeepTslType(
@@ -78,21 +86,54 @@ compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLow
 	return { lowered_type_order.size(),
 		     lowered_global_order.size(),
 		     lowered_function_order.size(),
-		     extra_bytecode_functions.size() };
+		     extra_bytecode_functions.size(),
+		     lowered_ffi_function_order.size() };
+}
+
+const vm::code::TypeOfData ProgramLoweringContext::lowerPointerType(
+	const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
+) {
+	auto pointee_name = typeName(pointee_type);
+	switch (kind) {
+	case tsl::PointerTypeLayout::PointerKind::SinglePointer: {
+		auto pointer_type_name = base::strConcat("ptr_", pointee_name);
+		return vm::code::PointerType(base::StrID(pointer_type_name), pointee_name);
+	}
+	case tsl::PointerTypeLayout::PointerKind::ManyPointer: {
+		// Many pointer is a pointer to a dynamic table of the pointee type.
+		auto                       dyntable_type_name = base::strConcat("dyntable_", pointee_name);
+		vm::code::DynamicTableType dyntable_type(base::StrID(dyntable_type_name), pointee_name);
+		// Ensure the dynamic table type is stored in the context.
+		keepVMType(dyntable_type);
+		auto pointer_type_name = base::strConcat("ptr_", dyntable_type_name);
+		return vm::code::PointerType(base::StrID(pointer_type_name), typeName(dyntable_type));
+	}
+	case tsl::PointerTypeLayout::PointerKind::CPointer:
+		auto pointer_type_name = base::strConcat("cptr_", pointee_name);
+		return vm::code::CPointerType(base::StrID(pointer_type_name), pointee_name);
+	}
+	CORE_UNREACHABLE();
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
-	const vm::code::TypeOfData& pointee_type
+	const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
 ) {
-	base::StrID pointee_name = vm::code::typeName(pointee_type);
-	auto        pointer_name = base::StrID(base::strConcat("ptr_", pointee_name));
+	auto lowered_pointer = lowerPointerType(pointee_type, kind);
+	auto name            = typeName(lowered_pointer);
 
-	if (auto maybe_type = type_storage.dvm_types.atMaybe(pointer_name)) return **maybe_type;
+	auto result = type_storage.dvm_types.put(name, std::move(lowered_pointer));
+	if (result.second) lowered_type_order.push_back(name);
+	return result.first->second;
+}
 
-	vm::code::PointerType pointer_type(pointer_name, pointee_name);
-	type_storage.dvm_types.put(pointer_name, pointer_type);
-	lowered_type_order.push_back(pointer_name);
-	return type_storage.dvm_types.at(pointer_name);
+const vm::code::TypeOfData& ProgramLoweringContext::getVoidCPointerType() {
+	static const base::StrID void_cpointer_name{ "cptr" };
+
+	if (auto maybe_type = type_storage.dvm_types.atMaybe(void_cpointer_name)) return **maybe_type;
+
+	// `cptr` is a DVM builtin, so it is taken from the builtin table rather than synthesized, to
+	// keep the definition emitted here identical to the one the VM already knows.
+	return *keepVMType(vm::code::getBuiltinTypeByName(void_cpointer_name).value());
 }
 
 const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> lir_global) {
@@ -110,6 +151,42 @@ const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> lir_gl
 	}
 }
 
+base::StrID ProgramLoweringContext::getAnonymousGlobalName(base::StrID name_hint) {
+	return base::StrID(
+		base::strConcat(name_hint.strView(), "_", module_id, "_", static_data_global_counter++)
+	);
+}
+
+const DVMPlace& ProgramLoweringContext::declareGlobal(
+	base::StrID name, const vm::code::TypeOfData& type
+) {
+	auto [it, _] = global_name_to_dvm.put(name, DVMPlace(name, type, DVMPlace::AccessKind::Direct));
+	return it->second;
+}
+
+const vm::code::GlobalData& ProgramLoweringContext::defineGlobal(vm::code::GlobalData global_data) {
+	auto name           = global_data.name;
+	auto [it, inserted] = global_name_to_dvm_data.put(name, std::move(global_data));
+	if (inserted) lowered_global_order.push_back(name);
+	return it->second;
+}
+
+const DVMPlace& ProgramLoweringContext::insertStaticDataGlobal(
+	base::StrID name_hint, const vm::code::TypeOfData& type, vm::code::ConstantValue init
+) {
+	auto            global_name = getAnonymousGlobalName(name_hint);
+	const DVMPlace& place       = declareGlobal(global_name, type);
+
+	vm::code::GlobalData global_data{};
+	global_data.name          = global_name;
+	global_data.type          = typeName(type);
+	global_data.is_constant   = true;
+	global_data.initial_value = std::move(init);
+	defineGlobal(std::move(global_data));
+
+	return place;
+}
+
 const vm::code::ExternalCFunction& ProgramLoweringContext::getExternCFunction(
 	const base::StrID& func_name
 ) const {
@@ -117,6 +194,22 @@ const vm::code::ExternalCFunction& ProgramLoweringContext::getExternCFunction(
 		return **maybe_ext_func;
 	else
 		CORE_PANIC("Extern C function not found: ", func_name);
+}
+
+void ProgramLoweringContext::insertFFIFunction(vm::code::FFIFunction ffi_function) {
+	auto name = ffi_function.name.str;
+
+	IF_BUILD_TYPE_DEV({
+		auto maybe_existing = ffi_functions.atMaybe(name);
+		CORE_ASSERT(
+			!maybe_existing.has_value() || (*maybe_existing)->signature == ffi_function.signature,
+			"Conflicting signatures declared for the FFI function: ",
+			name
+		);
+	});
+
+	auto [_, inserted] = ffi_functions.put(name, std::move(ffi_function));
+	if (inserted) lowered_ffi_function_order.push_back(name);
 }
 
 void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {
@@ -128,6 +221,8 @@ void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCo
 
 	for (const auto& ext_func: bytecode.external_c_functions)
 		extern_c_functions.put(ext_func.name.str, ext_func);
+
+	for (const auto& ffi_func: bytecode.ffi_functions) insertFFIFunction(ffi_func);
 
 	extra_bytecode_functions.insert(
 		extra_bytecode_functions.end(), bytecode.functions.begin(), bytecode.functions.end()
@@ -179,6 +274,18 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 		return result;
 	};
 
+	auto collect_ffi_functions_since = [&](usize start_index) {
+		CORE_ASSERT(
+			start_index <= lowered_ffi_function_order.size(),
+			"Requested lowered FFI functions from an out-of-range start index"
+		);
+		std::vector<vm::code::FFIFunction> result;
+		result.reserve(lowered_ffi_function_order.size() - start_index);
+		for (usize i = start_index; i < lowered_ffi_function_order.size(); ++i)
+			result.push_back(ffi_functions.at(lowered_ffi_function_order[i]));
+		return result;
+	};
+
 	auto collect_extra_functions_since = [&](usize start_index) {
 		CORE_ASSERT(
 			start_index <= extra_bytecode_functions.size(),
@@ -190,10 +297,11 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 	};
 
 	vm::code::CodeCollection collection;
-	collection.types       = collect_types_since(snapshot.lowered_type_count);
-	collection.global_data = collect_globals_since(snapshot.lowered_global_count);
-	collection.functions   = collect_functions_since(snapshot.lowered_function_count);
-	auto extra             = collect_extra_functions_since(snapshot.extra_bytecode_function_count);
+	collection.types         = collect_types_since(snapshot.lowered_type_count);
+	collection.global_data   = collect_globals_since(snapshot.lowered_global_count);
+	collection.functions     = collect_functions_since(snapshot.lowered_function_count);
+	collection.ffi_functions = collect_ffi_functions_since(snapshot.lowered_ffi_function_count);
+	auto extra = collect_extra_functions_since(snapshot.extra_bytecode_function_count);
 	collection.functions.insert(collection.functions.end(), extra.begin(), extra.end());
 	return collection;
 }
@@ -205,69 +313,52 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 		return **maybe_global;
 
 	auto& global_type = **lowerAndKeepTslType(lir_global.global.layout);
-	auto& dvm_global_place
-		= getLirGlobal(&lir_global.global);  // Ensure the global is added to the map.
 
 	using vm::code::Identifier;
 
-	base::Optional<Identifier> ctor_name;
-	base::Optional<Identifier> dtor_name;
+	// @TODO: #1553 add source position to GlobalVariables
 
 	variant_match(lir_global.data_initialization) {
 		variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
+			vm::code::GlobalData global_data{};
+			global_data.name        = lir_global.global.mangled_name;
+			global_data.type        = typeName(global_type);
+			global_data.is_constant = false;
+
 			if (ctor_dtor_pair.global_ctor.has_value()) {
 				lowerAndKeepLirFunction(ctor_dtor_pair.global_ctor.value());
-				ctor_name = Identifier(ctor_dtor_pair.global_ctor.value()->mangled_name);
+				global_data.ctor_name
+					= Identifier(ctor_dtor_pair.global_ctor.value()->mangled_name);
 			}
 
 			if (ctor_dtor_pair.global_dtor.has_value()) {
 				lowerAndKeepLirFunction(ctor_dtor_pair.global_dtor.value());
-				dtor_name = Identifier(ctor_dtor_pair.global_dtor.value()->mangled_name);
+				global_data.dtor_name
+					= Identifier(ctor_dtor_pair.global_dtor.value()->mangled_name);
 			}
+
+			defineGlobal(std::move(global_data));
 		}
 		variant_case(ctv::CompileTimeValue, ctv_initial_value) {
-			// @TODO: #1553 we create mini-ctors for global variables with CTV initializers for now.
-			// Ideally, we should add proper support for immediate value initializers in the DVM and
-			// avoid this workaround.
-
-			auto mini_ctor_name
-				= base::StrID(base::strConcat(lir_global.global.mangled_name.strView(), "_ctv_ctor")
-			    );
-
-			auto mini_ctor = createMiniGlobalCtorFromCTV(
-				*this,
-				lir_global.global.layout,
-				global_type,
-				ctv_initial_value,
-				mini_ctor_name,
-				dvm_global_place
+			CTVLowering::lowerCTVToNewGlobal(
+				*this, ctv_initial_value, global_type, false, lir_global.global.mangled_name
 			);
-			extra_bytecode_functions.push_back(std::move(mini_ctor));
-			ctor_name = Identifier(mini_ctor_name);
 		}
 		variant_default {
 			CORE_PANIC("Unhandled LIRGlobalData initial value type in lowerAndKeepLirGlobal");
 		}
 	}
 
-	// @TODO: #1553 add a isConst to DVM and initial values, add source position to
-	// GlobalVariables
-	vm::code::GlobalData global_data{};
-	global_data.name      = lir_global.global.mangled_name;
-	global_data.type      = typeName(global_type);
-	global_data.ctor_name = ctor_name;
-	global_data.dtor_name = dtor_name;
-
-	global_name_to_dvm_data.put(lir_global.global.mangled_name, global_data);
-	lowered_global_order.push_back(lir_global.global.mangled_name);
 	return global_name_to_dvm_data.at(lir_global.global.mangled_name);
 }
 
 const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	CRef<lir::Function> lir_function
 ) {
-	if (auto maybe_name = lir_function_to_name.atMaybe(lir_function))
-		return dvm_functions_by_name.at(**maybe_name);
+	CORE_ASSERT(not lir_function->ignore_on_dvm, "Lowering a function that should not be lowered.");
+
+	if (auto maybe_function = dvm_functions_by_name.atMaybe(lir_function->mangled_name))
+		return **maybe_function;
 
 	base::Optional<debug_info::FunctionBuilder> function_di_builder_opt;
 	if_opt_some(debug_info_builder, builder) {
@@ -302,7 +393,6 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	auto       dvm_function  = std::move(func_ctx).finish();
 	const auto function_name = dvm_function.name.str;
 	dvm_functions_by_name.put(function_name, std::move(dvm_function));
-	lir_function_to_name.put(lir_function, function_name);
 	const auto& desired_function = dvm_functions_by_name.at(function_name);
 	lowered_function_order.push_back(function_name);
 
@@ -339,40 +429,13 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			return vm::code::OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 });
 		}
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
+			if (pointer_layout.getPointerKind() == tsl::PointerTypeLayout::PointerKind::CPointer
+			    and not pointer_layout.hasPointee())
+				return getVoidCPointerType();
+
 			const vm::code::TypeOfData& pointee_type
 				= **lowerAndKeepTslType(pointer_layout.getPointee());
-			switch (pointer_layout.getPointerKind()) {
-			case tsl::PointerTypeLayout::PointerKind::SinglePointer: {
-				auto pointer_type_name = base::strConcat("ptr_", typeName(pointee_type));
-				return vm::code::PointerType(base::StrID(pointer_type_name), typeName(pointee_type));
-			}
-			case tsl::PointerTypeLayout::PointerKind::ManyPointer: {
-				// Many pointer is a pointer to a dynamic table of the pointee type.
-				auto dyntable_type_name = base::strConcat("dyntable_", typeName(pointee_type));
-				vm::code::DynamicTableType dyntable_type(
-					base::StrID(dyntable_type_name), typeName(pointee_type)
-				);
-				keepVMType(dyntable_type
-				);  // Ensure the dynamic table type is stored in the context.
-				auto pointer_type_name = base::strConcat("ptr_", dyntable_type_name);
-				return vm::code::PointerType(
-					base::StrID(pointer_type_name), typeName(dyntable_type)
-				);
-			}
-			case tsl::PointerTypeLayout::PointerKind::CPointer: {
-				query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat(
-						"CPointer types are not supported in DVM code generation yet: ",
-						layout->toStringDefinition(*query_ctx_for_errors.value())
-					),
-					""
-				));
-				query::throwFailed();
-				break;
-			}
-			default:
-				CORE_PANIC("All cases should be covered.");
-			}
+			return lowerPointerType(pointee_type, pointer_layout.getPointerKind());
 		}
 		variant_case(tsl::ClassTypeLayout, class_layout) {
 			std::vector<vm::code::Field> fields;
@@ -399,6 +462,26 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 				std::move(fields),
 			};
 		}
+		variant_case(tsl::VariantTypeLayout, variant_layout) {
+			const usize num_alternatives = variant_layout.getNumAlternatives();
+
+			std::vector<base::StrID> alternatives;
+			alternatives.reserve(num_alternatives);
+			std::string variant_type_name = "vnt";
+			for (usize i{ 0 }; i < num_alternatives; i++) {
+				const auto                  alternative_layout = variant_layout.getLayoutOfIndex(i);
+				const vm::code::TypeOfData& vm_alternative_type
+					= **lowerAndKeepTslType(alternative_layout);
+				alternatives.emplace_back(typeName(vm_alternative_type));
+				variant_type_name
+					= base::strConcat(variant_type_name, "_", typeName(vm_alternative_type));
+			}
+
+			return vm::code::VariantType{
+				base::StrID(variant_type_name),
+				std::move(alternatives),
+			};
+		}
 		variant_case(tsl::StaticArrayTypeLayout, array_layout) {
 			const auto                  element_layout  = array_layout.getElementLayout();
 			const vm::code::TypeOfData& vm_element_type = **lowerAndKeepTslType(element_layout);
@@ -416,7 +499,7 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			CORE_ASSERT(
 				query_ctx_for_errors.has_value(), "Query context must be set for error reporting"
 			);
-			query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+			query_ctx_for_errors.value()->logInt(makeBox<dia::NotYetImplementedCodeError>(
 				base::strConcat(
 					"During TypeLayout lowering in DVM code generation - type not handled "
 					"yet: ",
@@ -444,25 +527,12 @@ vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection() {
 	std::ranges::sort(
 		collection.functions,
 		[](const vm::code::Function& lhs, const vm::code::Function& rhs) {
-			return lhs.name.str < rhs.name.str;
+			return lhs.name.str.strView() < rhs.name.str.strView();
 		}
 	);
-	collection.global_data
-		= std::ranges::to<std::vector>(global_name_to_dvm_data | std::views::values);
-	// Note, that this not only makes the output deterministic,
-	// but also ensures that globals are ordered as they are declared in the source code
-	// This is because they are sorted by mangled names base::StrID ids
-	// This ids are incrementally generated during lirLowering, so the order of declaration is
-	// preserved. This is true as long as the LIR globals are generated in the same order as the
-	// source globals, which is currently the case. This is desirable behavior because we want to
-	// generate globals in the order they appear in the file to prevent order initialization fiasco.
-	// @TODO: #1431 Think about this and make it better if needed
-	std::ranges::sort(
-		collection.global_data,
-		[](const vm::code::GlobalData& lhs, const vm::code::GlobalData& rhs) {
-			return lhs.name.str.getInnerID() < rhs.name.str.getInnerID();
-		}
-	);
+	collection.global_data.reserve(lowered_global_order.size());
+	for (const auto& global_name: lowered_global_order)
+		collection.global_data.push_back(global_name_to_dvm_data.at(global_name));
 
 	// Sorting types by their string identification to ensure deterministic output
 	collection.types = std::ranges::to<std::vector>(type_storage.dvm_types | std::views::values);
@@ -475,6 +545,14 @@ vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection() {
 
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
+
+	collection.ffi_functions = std::ranges::to<std::vector>(ffi_functions | std::views::values);
+	std::ranges::sort(
+		collection.ffi_functions,
+		[](const vm::code::FFIFunction& lhs, const vm::code::FFIFunction& rhs) {
+			return lhs.name.str.strView() < rhs.name.str.strView();
+		}
+	);
 
 	return collection;
 }

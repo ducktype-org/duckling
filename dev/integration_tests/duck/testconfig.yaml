@@ -1,8 +1,8 @@
-load_cargo: . ${CARGO_HOME:-$HOME/.cargo}/env
-cwd_duck_root: cd `git rev-parse --show-toplevel`/dev/src/duck/
+load-cargo: . ${CARGO_HOME:-$HOME/.cargo}/env
+cd-duck-root: cd @{dev_dir}/src/duck/
 # NOTE: Changes made here should also be reflected in `workflows/tests.yml`
 # Changes means changes to compiling duck itself.
-build_duck: |
+build-duck: |
   timeout 3m cargo --locked build
   exit_code=$?
   # 124 is `timeout`'s standard exit code for command timeout.
@@ -13,9 +13,19 @@ build_duck: |
   if [ "$exit_code" -ne 0 ]; then
     exit "$exit_code"
   fi
-duck_exe_dir: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/'
-prepare: ""
-before_cmd: "true"
+duck-exe-dir: '@{dev_dir}/src/duck/target/debug/'
+duck-exe: '@{duck-exe-dir}/duck'
+before-cmd: "true"
+
+# Every case gets a private DUCK_HOME under its tmp dir, so cases can
+# run concurrently and never write caches into the source tree.
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+    DUCK_HOME: "echo $DIT_TMP_DIR/duck_home"
+
+PostCase: "@{cleanup_tmp_env}"
+
+cd-tmp-dir: cd ${DIT_TMP_DIR}
 
 # Sometimes we hit a test timeout in itests, but only in CI.
 # It's because when we create a fetcher cache (an SQLite database), we execute a statement to create a basic table.
@@ -25,18 +35,29 @@ before_cmd: "true"
 timeout_default: 5
 
 PreNode: |
-  @{load_cargo}
-  @{cwd_duck_root}
-  @{build_duck}
+  @{load-cargo}
+  @{cd-duck-root}
+  @{build-duck}
   cd -
 
-PreTest: |
-  @{prepare}
-
-Run: '@{before_cmd} && export PATH="@{duck_exe_dir}:$PATH" && @{test_cmd}'
+Run: 'export PATH="@{duck-exe-dir}:$PATH" && @{cd-tmp-dir} && @{before-cmd} && @{test-cmd}'
 
 SubDirs:
+  - clean_storage
   - cli
   - sync
+  - info
   - init
+  - list
   - build
+  - run
+  - remove
+
+# @TODO: #2920 This shouldn't need ` -> i64`.
+# NOTE: This needs to be quoted like this, so `echo` receives `'<string>'` as an argument.
+# (It must be in single quotes!)
+default-src: "'import core.builtins.*;\n\nfun main() -> i64 = {\n    return @{default-src-rc};\n}'"
+default-src-rc: 0
+
+# Regex for dates in YYYY-MM-DD HH:MM:SS format
+date-regex: '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'

@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Basic function
 fun foo() -> i64 = {
     return 5i64 + 7i64;

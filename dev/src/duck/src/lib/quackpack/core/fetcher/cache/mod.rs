@@ -116,7 +116,7 @@ impl ManifestCache {
     /// Create a new [ManifestCache] at location pointed by [CacheLocation].
     /// Note that this is a blocking operation.
     pub fn new(location: CacheLocation<'_>) -> QuackResult<Self> {
-        debug!("initializing fetcher cache at `{location:?}`");
+        debug!(?location, "initializing fetcher cache");
         let connection = match location {
             CacheLocation::Memory => rusqlite::Connection::open_in_memory()?,
             CacheLocation::Path(path) => rusqlite::Connection::open(path)?,
@@ -142,8 +142,9 @@ impl ManifestCache {
             .context(SQL_ERROR_MESSAGE)?;
         maybe_json
             .map(|json| {
-                serde_json::from_str(&json)
-                    .context_internal("failed to deserialize previously serialized manifest json")
+                serde_json::from_str(&json).with_context_internal(|| {
+                    format!("failed to deserialize previously serialized manifest json: `{json}`")
+                })
             })
             .transpose()
     }
@@ -165,9 +166,12 @@ impl ManifestCache {
             .context(SQL_ERROR_MESSAGE)?;
         jsons
             .into_iter()
-            .map(|json| serde_json::from_str(&json))
-            .collect::<Result<_, _>>()
-            .context_internal("failed to deserialize previously serialized manifest json")
+            .map(|json| {
+                serde_json::from_str(&json).with_context_internal(|| {
+                    format!("failed to deserialize previously serialized manifest json: `{json}`")
+                })
+            })
+            .collect()
     }
 
     /// Add or replace manifest for package `package`.
@@ -179,8 +183,9 @@ impl ManifestCache {
         package: &types::PackageWithUrl,
         manifest: registry::Manifest,
     ) -> QuackResult<()> {
-        let json = serde_json::to_string(&manifest)
-            .context_internal("failed to serialize registry schema to JSON")?;
+        let json = serde_json::to_string(&manifest).with_context_internal(|| {
+            format!("failed to serialize registry schema to JSON: {manifest:#?}")
+        })?;
         self.connection
             .add_or_replace_manifest_json(package, json)
             .context(SQL_ERROR_MESSAGE)?;
@@ -203,10 +208,11 @@ impl ManifestCache {
         let package_manifest_pairs = multi_manifest
             .into_iter()
             .map(|manifest| {
-                let json = serde_json::to_string(&manifest)
-                    .context_internal("failed to serialize registry schema to JSON")?;
+                let json = serde_json::to_string(&manifest).with_context_internal(|| {
+                    format!("failed to serialize registry schema to JSON: {manifest:#?}")
+                })?;
                 let package = types::PackageWithUrl {
-                    id: manifest.metadata.name.into(),
+                    name: manifest.metadata.name.into(),
                     version: manifest.metadata.version,
                     url: registry_url,
                 };
@@ -285,7 +291,7 @@ impl ConnectionExt for rusqlite::Connection {
                 url = Columns::Url.name(),
             ),
             rusqlite::named_params![
-                ":package_name": package.id.as_str(),
+                ":package_name": package.name.as_str(),
                 ":package_version": package.version.to_string(),
                 ":package_url": package.url.as_str(),
             ],
@@ -331,7 +337,7 @@ impl ConnectionExt for rusqlite::Connection {
         ))?;
         stmt.query_map(
             rusqlite::named_params![
-                ":package_name": package.id.as_str(),
+                ":package_name": package.name.as_str(),
                 ":package_url": package.url.as_str(),
             ],
             |row| row.get(0),
@@ -355,7 +361,7 @@ impl ConnectionExt for rusqlite::Connection {
                 manifest_json_column = Columns::ManifestJson.name(),
             ),
             rusqlite::named_params![
-                ":package_name": package.id.as_str(),
+                ":package_name": package.name.as_str(),
                 ":package_version": package.version.to_string(),
                 ":package_url": package.url.as_str(),
                 ":package_manifest": manifest_json,
@@ -380,7 +386,7 @@ impl ConnectionExt for rusqlite::Connection {
         ))?;
         for (package, manifest) in multi_manifests {
             stmt.execute(rusqlite::named_params![
-                ":package_name": package.id.as_str(),
+                ":package_name": package.name.as_str(),
                 ":package_version": package.version.to_string(),
                 ":package_url": package.url.as_str(),
                 ":package_manifest": manifest,

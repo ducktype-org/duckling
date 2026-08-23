@@ -1,12 +1,12 @@
 #include "elements.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/preproc/for_each.hpp>
 #include <base/types/floats.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <diagnostic/source_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <token_parser_core/automatic.hpp>
@@ -14,8 +14,12 @@
 #include <token_parser_core/token_stream.hpp>
 #include <token_source/source.hpp>
 
+#include <vm/bytecode/const_value.hpp>
+#include <vm/bytecode/const_value_visitor.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+
+#include <cstring>
 
 namespace vm::loader::parser {
 	namespace opargs_parsers {
@@ -46,7 +50,7 @@ namespace vm::loader::parser {
 			) {
 				if (sign == 1) {
 					if (raw_val > static_cast<u64>(std::numeric_limits<SignedInt>::max())) {
-						state.logInt(makeBox<dia_int::PlaceholderError>(
+						state.logInt(makeBox<dia::PlaceholderError>(
 							base::strConcat(
 								"Numeric literal overflows a ",
 								base::toString(sizeof(SignedInt) * 8),
@@ -58,7 +62,7 @@ namespace vm::loader::parser {
 					}
 				} else if (raw_val
 				           > (static_cast<u64>(std::numeric_limits<SignedInt>::max()) + 1ULL)) {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
+					state.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Numeric literal underflows a ",
 							base::toString(sizeof(SignedInt) * 8),
@@ -80,13 +84,13 @@ namespace vm::loader::parser {
 				F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
 			) {
 				if (sign == -1) {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
+					state.logInt(makeBox<dia::PlaceholderError>(
 						"Unsigned integer literal cannot be negative.", token.getPosition()
 					));
 					return false;
 				}
 				if (raw_val > std::numeric_limits<UnsignedInt>::max()) {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
+					state.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Numeric literal overflows a ",
 							base::toString(sizeof(UnsignedInt) * 8),
@@ -126,7 +130,7 @@ namespace vm::loader::parser {
 
 			const auto& token = state.tokens().peek();
 			if (!token.isNumLiteralGroup()) {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected a numeric literal.", token.getPosition()
 				));
 				return { T{ 0 }, 0 };
@@ -160,7 +164,7 @@ namespace vm::loader::parser {
 			try {
 				if (!suffix.empty()) {  // Type specifier exists.
 					if (suffix.starts_with("f") && base != 10) {
-						state.logInt(makeBox<dia_int::PlaceholderError>(
+						state.logInt(makeBox<dia::PlaceholderError>(
 							"Floating-point literals must be in decimal base "
 							"for: ",
 							token.getPosition()
@@ -197,7 +201,7 @@ namespace vm::loader::parser {
 						if (detail::checkUnsignedBoundsAndLog<u64>(state, token, raw_val, sign))
 							result = detail::packValue<T>(raw_val);
 					} else {
-						state.logInt(makeBox<dia_int::PlaceholderError>(
+						state.logInt(makeBox<dia::PlaceholderError>(
 							base::strConcat(
 								"Unknown type specifier `",
 								suffix,
@@ -224,7 +228,7 @@ namespace vm::loader::parser {
 				if (pos == str.length())
 					return std::make_pair(result, literal_length);
 				else {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
+					state.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Number not read fully for `",
 							base::typeName<vm::opargs::Immediate>(),
@@ -236,7 +240,7 @@ namespace vm::loader::parser {
 				}
 			} catch (std::logic_error&) {}
 
-			state.logInt(makeBox<dia_int::PlaceholderError>(
+			state.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
 				),
@@ -245,10 +249,66 @@ namespace vm::loader::parser {
 			return { T{ 0 }, 0 };
 		}
 
-		base::StrID parseStr(F8ParserState& state) {
+		std::pair<std::array<std::byte, 8>, Bits> parseHexLiteral(F8ParserState& state) {
+			const auto& token = state.tokens().peek();
+
+			if (!token.isNumLiteralGroup()) {
+				state.logInt(makeBox<dia::PlaceholderError>(
+					"Expected a hex numeric literal.", token.getPosition()
+				));
+				return { {}, Bits(0) };
+			}
+			state.tokens().next();
+
+			std::string_view raw = token.getValue().strView();
+
+			// -----------------------------
+			// 1. Validate prefix
+			// -----------------------------
+			if (!raw.starts_with("0x") && !raw.starts_with("0X")) {
+				state.logInt(makeBox<dia::PlaceholderError>(
+					"Hex literal must start with 0x.", token.getPosition()
+				));
+				return { {}, Bits(0) };
+			}
+
+			raw.remove_prefix(2);
+
+			// -----------------------------
+			// 2. Parse via std::stoull
+			// -----------------------------
+			std::string str(raw);
+			std::size_t pos = 0;
+
+			u64 value = 0;
+
+			try {
+				value = std::stoull(str, &pos, 16);
+
+				if (pos != str.size()) {
+					state.logInt(makeBox<dia::PlaceholderError>(
+						"Hex literal not fully consumed.", token.getPosition()
+					));
+					return { {}, Bits(0) };
+				}
+			} catch (...) {
+				state.logInt(
+					makeBox<dia::PlaceholderError>("Invalid hex literal.", token.getPosition())
+				);
+				return { {}, Bits(0) };
+			}
+
+			usize                    bit_length = str.size() * 4;
+			std::array<std::byte, 8> bytes{};
+			std::memcpy(bytes.data(), &value, 8);
+
+			return { bytes, Bits(bit_length) };
+		}
+
+		tpc::Identifier parseIdentifier(F8ParserState& state) {
 			tpc::Identifier identifier;
 			state.parse().one(&identifier);
-			return identifier.value;
+			return identifier;
 		}
 
 		template<class T>
@@ -265,10 +325,12 @@ namespace vm::loader::parser {
 			auto pos            = state.getPosition();
 			auto parsed_literal = parseNumericLiteral<u64>(state);
 			auto value          = parsed_literal.first;
-			auto arg            = opargs::Immediate{ value };
-			arg.bytecode_pos    = dia::SourcePosition(
-                pos.getLocation(), pos.getStart(), pos.getStart() + parsed_literal.second
-            );
+			// SourcePosition ends are inclusive; a literal of length N ends at start + N - 1.
+			auto length      = std::max<usize>(parsed_literal.second, 1);
+			auto arg         = opargs::Immediate{ value };
+			arg.bytecode_pos = dia::SourcePosition(
+				pos.getLocation(), pos.getStart(), pos.getStart() + length - 1
+			);
 			return arg;
 		}
 
@@ -285,16 +347,13 @@ namespace vm::loader::parser {
 			return field;
 		}
 
-#define HANDLE_STR_ARG(TYPE)                                                        \
-	template<>                                                                      \
-	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {                       \
-		auto pos         = state.getPosition();                                     \
-		auto value       = parseStr(state);                                         \
-		auto arg         = vm::opargs::TYPE{ value };                               \
-		arg.bytecode_pos = dia::SourcePosition(                                     \
-			pos.getLocation(), pos.getStart(), pos.getStart() + value.view().size() \
-		);                                                                          \
-		return { arg };                                                             \
+#define HANDLE_STR_ARG(TYPE)                                     \
+	template<>                                                   \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {    \
+		auto identifier  = parseIdentifier(state);               \
+		auto arg         = vm::opargs::TYPE{ identifier.value }; \
+		arg.bytecode_pos = identifier.position;                  \
+		return { arg };                                          \
 	}
 
 		FOR_EACH(
@@ -303,6 +362,7 @@ namespace vm::loader::parser {
 			FunctionName,
 			BuiltinFunctionName,
 			ExtCFunctionName,
+			FFIFunctionName,
 			MethodName,
 			Label,
 			VM_OPARG_PLACE_TYPES
@@ -335,6 +395,93 @@ namespace vm::loader::parser {
 		};
 	}
 
+#define ERROR_CHECK() \
+	if (state.int_err->hasErrors()) return {};
+#define PARSE_ONE_CHECK(VALUE) \
+	state.parse().one(VALUE);  \
+	ERROR_CHECK()
+
+	namespace {
+		base::Optional<Box<code::ConstantBase>> parseConstantValue(F8ParserState& state) {
+			using namespace vm::code;
+
+			if (state[0].isNumLiteralGroup()) {
+				auto parsed = opargs_parsers::parseHexLiteral(state);
+				ERROR_CHECK();
+				ConstantImmediate immediate;
+				immediate.size = base::bits2bytes(parsed.second);
+				std::memcpy(immediate.content.data(), &parsed.first, 8);
+				return makeBox<ConstantImmediate>(std::move(immediate));
+			}
+
+			if (state[0].isKeyword()) {
+				auto kw = state[0].asKeyword();
+				state.tokens().next();
+
+				switch (kw) {
+				case lang_def::Keyword::BCClass: {
+					if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+						state.logInt(makeBox<dia::PlaceholderError>(
+							"Expected `{` after `class`.", state.getPosition()
+						));
+						return {};
+					}
+
+					state.goDown();
+					auto struct_val = makeBox<ConstantClass>();
+					while (state.notEmpty()) {
+						tpc::Identifier field_name;
+						PARSE_ONE_CHECK(&field_name);
+						PARSE_ONE_CHECK(lang_def::NamedOperator::Colon);
+
+						auto field_value = parseConstantValue(state);
+						if (!field_value) return {};
+						struct_val->fields.emplace_back(
+							field_name.value, std::move(field_value.value())
+						);
+
+						if (state.empty()) break;
+						PARSE_ONE_CHECK(lang_def::Special::Comma);
+					}
+					state.goUpAndSkip();
+					return std::move(struct_val);
+				}
+				case lang_def::Keyword::BCFixedSizeTable: {
+					if (!state[0].isBracketGroup(lexer::Token::BracketType::Square)) {
+						state.logInt(makeBox<dia::PlaceholderError>(
+							"Expected `[` after `fixed_size_table`.", state.getPosition()
+						));
+						return {};
+					}
+
+					state.goDown();
+					auto array_val = makeBox<ConstantFixedSizeTable>();
+					while (state.notEmpty()) {
+						auto element = parseConstantValue(state);
+						if (!element) return {};
+
+						array_val->elements.push_back(std::move(element.value()));
+						if (state.empty()) break;
+						PARSE_ONE_CHECK(lang_def::Special::Comma);
+					}
+					state.goUpAndSkip();
+
+					return std::move(array_val);
+				}
+				default:
+					state.logInt(makeBox<dia::PlaceholderError>(
+						"Unexpected keyword in constant value.", state.getPosition()
+					));
+					return {};
+				}
+			}
+			state.logInt(makeBox<dia::PlaceholderError>(
+				"Expected a constant value here.", state.getPosition()
+			));
+			return {};
+		}
+	}  // namespace
+
 	Box<GlobalData> GlobalData::parse(F8ParserState& state) {
 		using namespace vm::code;
 		auto out = makeBox<GlobalData>(state.getPosition());
@@ -345,35 +492,58 @@ namespace vm::loader::parser {
 		state.parse().one(&out->type);
 
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.logInt(makeBox<dia_int::PlaceholderError>(
-				"Expected `{` after here.", state.getPosition(-1)
-			));
+			state.logInt(
+				makeBox<dia::PlaceholderError>("Expected `{` after here.", state.getPosition(-1))
+			);
 			return out;
 		}
 
 		state.goDown();
 		while (state.notEmpty()) {
-			tpc::Identifier value;
 			if (state[0].is(lang_def::Keyword::BCGlobalConstructor)) {
+				tpc::Identifier value;
 				state.parse().all(
 					lang_def::Keyword::BCGlobalConstructor, lang_def::NamedOperator::Colon, &value
 				);
 				out->ctor_name = value;
 			} else if (state[0].is(lang_def::Keyword::BCGlobalDestructor)) {
+				tpc::Identifier value;
 				state.parse().all(
 					lang_def::Keyword::BCGlobalDestructor, lang_def::NamedOperator::Colon, &value
 				);
 				out->dtor_name = value;
-				// } else if (key.value.str() == "initial_value") {
-				// 	// @TODO more general than unsigned long
-				// 	out->initial_value = opargs_parsers::parseInt<i64, int>(state);
+			} else if (state[0].is(lang_def::Keyword::BCIsConstant)) {
+				state.parse().one(lang_def::Keyword::BCIsConstant);
+				state.parse().one(lang_def::NamedOperator::Colon);
+				if (state[0].is(lang_def::Keyword::BCTrue)) {
+					out->is_constant = true;
+					state.tokens().next();
+				} else if (state[0].is(lang_def::Keyword::BCFalse)) {
+					out->is_constant = false;
+					state.tokens().next();
+				} else {
+					state.logInt(makeBox<dia::PlaceholderError>(
+						"Expected `true` or `false` after `is_constant:`.", state.getPosition()
+					));
+				}
+			} else if (state[0].is(lang_def::Keyword::BCInitialValue)) {
+				auto start_pos = state.getPosition().getStart();
+				state.parse().one(lang_def::Keyword::BCInitialValue);
+				state.parse().one(lang_def::NamedOperator::Colon);
+				auto value_opt = parseConstantValue(state);
+				auto end_pos   = state.getPosition(-1).getEnd();
+				if (value_opt) {
+					out->initial_value = ConstantValue(std::move(value_opt.value()));
+					out->initial_value->bytecode_pos
+						= dia::SourcePosition(out->position.getLocation(), start_pos, end_pos);
+				}
 			}
 
 			if (state.empty()) break;
 			if (state[0].is(lang_def::Special::Comma)) {
 				state.parse().one(lang_def::Special::Comma);
 			} else {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected comma or } after here.", state.getPosition()
 				));
 				state.tokens().skip();
@@ -381,12 +551,10 @@ namespace vm::loader::parser {
 		}
 		state.goUpAndSkip();
 
-		auto end_position = state.getPosition().getEnd();
+		auto end_position = state.getPosition(-1).getEnd();
 		out->position     = dia::SourcePosition(
             out->position.getLocation(), out->position.getStart(), end_position
         );
-
-		state.parse().one(lang_def::Special::Semicolon);
 		return out;
 	}
 
@@ -402,7 +570,7 @@ namespace vm::loader::parser {
 					out->args
 						= opargs_parsers::OP_CODE_TO_ARGS_PARSER.at(out->opcode_name.str())(state);
 					if (!state.tryEat(lang_def::Special::Semicolon)) {
-						state.logInt(makeBox<dia_int::PlaceholderError>(
+						state.logInt(makeBox<dia::PlaceholderError>(
 							"Expected `;` after here.", state.getPosition(-1)
 						));
 						logged = true;
@@ -419,7 +587,7 @@ namespace vm::loader::parser {
 
 					return out;
 				} else if (!logged) {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
+					state.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat("OpCode '", identifier1.value, "' does not exist."),
 						state.getPosition(-1)
 					));
@@ -427,7 +595,7 @@ namespace vm::loader::parser {
 				}
 			} else {
 				if (!logged) {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
+					state.logInt(makeBox<dia::PlaceholderError>(
 						"Expected an identifier here.", state.getPosition()
 					));
 					logged = true;
@@ -452,74 +620,65 @@ namespace vm::loader::parser {
 		return out;
 	}
 
+	namespace {
+		base::Optional<std::vector<tpc::Identifier>> parseTypeList(F8ParserState& state) {
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.logInt(makeBox<dia::PlaceholderError>(
+					"Expected `{` after here.", state.getPosition(-1)
+				));
+				return {};
+			}
+
+			std::vector<tpc::Identifier> result;
+			state.goDown();
+			while (state.notEmpty()) {
+				tpc::Identifier field_type;
+				state.parse().one(&field_type);
+				result.emplace_back(field_type);
+
+				if (state.empty()) break;
+				if (state[0].is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
+				} else {
+					state.logInt(makeBox<dia::PlaceholderError>(
+						"Expected comma or `}` after here.", state.getPosition()
+					));
+					state.tokens().skip();
+				}
+			}
+			state.goUpAndSkip();
+			return result;
+		}
+	}
+
 	MBox<Func> Func::parse(F8ParserState& state) {
 		auto out = makeBox<Func>(state.getPosition());
 
 		state.parse().all(lang_def::Keyword::BCFunction, &out->name);
 
-		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.logInt(makeBox<dia_int::PlaceholderError>(
-				"Expected `{` after here.", state.getPosition(-1)
-			));
-			return nullptr;
+		match_optional(parseTypeList(state)) {
+			opt_some(params) out->parameters = std::move(params);
+			opt_none return nullptr;
 		}
-
-		state.goDown();
-		while (state.notEmpty()) {
-			tpc::Identifier field_type;
-			state.parse().one(&field_type);
-			out->parameters.emplace_back(field_type);
-
-			if (state.empty()) break;
-			if (state[0].is(lang_def::Special::Comma)) {
-				state.parse().one(lang_def::Special::Comma);
-			} else {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
-					"Expected comma or `}` after here.", state.getPosition()
-				));
-				state.tokens().skip();
-			}
-		}
-		state.goUpAndSkip();
 
 		if (state[0].is(lang_def::NamedOperator::SingleArrow)) {
 			state.parse().one(lang_def::NamedOperator::SingleArrow);
 		} else {
-			state.logInt(makeBox<dia_int::PlaceholderError>(
+			state.logInt(makeBox<dia::PlaceholderError>(
 				"Expected `->` after function parameters.", state.getPosition(-1)
 			));
 			return nullptr;
 		}
 
-		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.logInt(makeBox<dia_int::PlaceholderError>(
-				"Expected `{` after here `->`.", state.getPosition(-1)
-			));
-			return nullptr;
+		match_optional(parseTypeList(state)) {
+			opt_some(res_types) out->result_types = std::move(res_types);
+			opt_none return nullptr;
 		}
 
-		state.goDown();
-		while (state.notEmpty()) {
-			tpc::Identifier field_type;
-			state.parse().one(&field_type);
-			out->result_types.emplace_back(field_type);
-
-			if (state.empty()) break;
-			if (state[0].is(lang_def::Special::Comma)) {
-				state.parse().one(lang_def::Special::Comma);
-			} else {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
-					"Expected comma or `}` after here.", state.getPosition()
-				));
-				state.tokens().skip();
-			}
-		}
-		state.goUpAndSkip();
-
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.logInt(makeBox<dia_int::PlaceholderError>(
-				"Expected `{` after here.", state.getPosition(-1)
-			));
+			state.logInt(
+				makeBox<dia::PlaceholderError>("Expected `{` after here.", state.getPosition(-1))
+			);
 			return nullptr;
 		}
 
@@ -530,12 +689,70 @@ namespace vm::loader::parser {
 		return out;
 	}
 
+	MBox<FFIFunc> FFIFunc::parse(F8ParserState& state) {
+		auto out = makeBox<FFIFunc>(state.getPosition());
+
+		state.parse().all(lang_def::Keyword::BCFfi, lang_def::Keyword::BCFunction, &out->name);
+
+		match_optional(parseTypeList(state)) {
+			opt_some(params) out->parameters = std::move(params);
+			opt_none return nullptr;
+		}
+
+		if (state[0].is(lang_def::NamedOperator::SingleArrow)) {
+			state.parse().one(lang_def::NamedOperator::SingleArrow);
+		} else {
+			state.logInt(makeBox<dia::PlaceholderError>(
+				"Expected `->` after function parameters.", state.getPosition(-1)
+			));
+			return nullptr;
+		}
+
+		match_optional(parseTypeList(state)) {
+			opt_some(res_types) out->result_types = std::move(res_types);
+			opt_none return nullptr;
+		}
+
+		if (!state.tryEat(lang_def::Special::Semicolon)) {
+			state.logInt(makeBox<dia::PlaceholderError>(
+				"Expected `;` after FFI function declaration.", state.getPosition(-1)
+			));
+			return nullptr;
+		}
+
+		return out;
+	}
+
+	MBox<FFIObject> FFIObject::parse(F8ParserState& state) {
+		auto out = makeBox<FFIObject>(state.getPosition());
+
+		state.parse().all(lang_def::Keyword::BCFfi, lang_def::Keyword::BCObject);
+
+		if (!state[0].isString()) {
+			state.logInt(makeBox<dia::PlaceholderError>(
+				"Expected a string literal with an object file path after `ffi object`.",
+				state.getPosition()
+			));
+			return nullptr;
+		}
+		out->path = state.tokens().next().getValue();
+
+		if (!state.tryEat(lang_def::Special::Semicolon)) {
+			state.logInt(makeBox<dia::PlaceholderError>(
+				"Expected `;` after `ffi object` declaration.", state.getPosition(-1)
+			));
+			return nullptr;
+		}
+
+		return out;
+	}
+
 	namespace {
 		std::vector<code::Field> parseFields(F8ParserState& state) {
 			std::vector<code::Field> out;
 
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected `{` after here.", state.getPosition(-1)
 				));
 				return {};
@@ -553,7 +770,7 @@ namespace vm::loader::parser {
 				if (state[0].is(lang_def::Special::Comma)) {
 					state.parse().one(lang_def::Special::Comma);
 				} else {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
+					state.logInt(makeBox<dia::PlaceholderError>(
 						"Expected comma or } after here.", state.getPosition()
 					));
 					state.tokens().skip();
@@ -582,7 +799,7 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCPrimitive: {
 			lexer::Token value = state.tokens().next();
 			if (!value.isNumLiteralGroup()) {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected a numeric literal after here.", state.getPosition()
 				));
 			} else {
@@ -595,7 +812,7 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCPointer: {
 			auto pointed_type = state.tokens().next();
 			if (!pointed_type.isIdentifier())
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected an identifier after here.", state.getPosition()
 				));
 			else {
@@ -605,16 +822,34 @@ namespace vm::loader::parser {
 			}
 			break;
 		}
+		case lang_def::Keyword::BCCPointer: {
+			// The pointee is optional: `type cpointer: Name [Inner]`. No inner means a pointer
+			// to an unknown pointee (C's `void*`).
+			base::Optional<base::StrID> inner;
+			if (state.notEmpty() && state[0].isIdentifier())
+				inner = state.tokens().next().getValue();
+			if (state.notEmpty() && (state[0].isNumLiteralGroup() || state[0].isString())) {
+				state.logInt(makeBox<dia::PlaceholderError>(
+					"Expected an identifier (pointee type) or end of declaration.",
+					state.getPosition()
+				));
+				state.tokens().skip();
+			}
+			auto tp         = CPointerType{ name, inner };
+			tp.bytecode_pos = out->position;
+			out->datatype   = tp;
+			break;
+		}
 		case lang_def::Keyword::BCFixedSizeTable: {
 			auto type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected an identifier after here.", state.getPosition()
 				));
 			} else {
 				auto size = state.tokens().next();
 				if (!size.isNumLiteralGroup()) {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
+					state.logInt(makeBox<dia::PlaceholderError>(
 						"Expected a numeric literal after here.", state.getPosition()
 					));
 				} else {
@@ -630,7 +865,7 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCDynamicTable: {
 			const lexer::Token& type_name = state.tokens().next();
 			if (!type_name.isIdentifier())
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected an identifier after here.", state.getPosition()
 				));
 			else {
@@ -641,14 +876,33 @@ namespace vm::loader::parser {
 			break;
 		}
 		case lang_def::Keyword::BCData: {
-			auto tp         = DataType{ name, parseFields(state) };
+			auto tp = DataType{ name, parseFields(state) };
+			// Trailing modifiers, accepted in any order: `packed`, `assert_size N`.
+			while (state.notEmpty()) {
+				if (state[0].is(lang_def::Keyword::BCPacked)) {
+					state.tokens().next();
+					tp.packed = true;
+				} else if (state[0].is(lang_def::Keyword::BCAssertSize)) {
+					state.tokens().next();
+					auto size_token = state.tokens().next();
+					if (!size_token.isNumLiteralGroup()) {
+						state.logInt(makeBox<dia::PlaceholderError>(
+							"Expected a numeric literal after `assert_size`.", state.getPosition()
+						));
+					} else {
+						tp.assert_size = static_cast<usize>(strIDToNum(size_token.getValue()));
+					}
+				} else {
+					break;
+				}
+			}
 			tp.bytecode_pos = out->position;
 			out->datatype   = std::move(tp);
 			break;
 		}
 		case lang_def::Keyword::BCVariant: {
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected `{` after here.", state.getPosition(-1)
 				));
 				return nullptr;
@@ -665,7 +919,7 @@ namespace vm::loader::parser {
 				if (state[0].is(lang_def::Special::Comma)) {
 					state.parse().one(lang_def::Special::Comma);
 				} else {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
+					state.logInt(makeBox<dia::PlaceholderError>(
 						"Expected comma or `}` after here.", state.getPosition()
 					));
 					state.tokens().skip();
@@ -679,7 +933,7 @@ namespace vm::loader::parser {
 		}
 		case lang_def::Keyword::BCFunType: {
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected `{` after here.", state.getPosition(-1)
 				));
 				return nullptr;
@@ -696,7 +950,7 @@ namespace vm::loader::parser {
 				if (state[0].is(lang_def::Special::Comma)) {
 					state.parse().one(lang_def::Special::Comma);
 				} else {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
+					state.logInt(makeBox<dia::PlaceholderError>(
 						"Expected comma or `}` after here.", state.getPosition()
 					));
 					state.tokens().skip();
@@ -705,7 +959,7 @@ namespace vm::loader::parser {
 			state.goUpAndSkip();
 
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected `{` after here.", state.getPosition(-1)
 				));
 				return nullptr;
@@ -722,7 +976,7 @@ namespace vm::loader::parser {
 				if (state[0].is(lang_def::Special::Comma)) {
 					state.parse().one(lang_def::Special::Comma);
 				} else {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
+					state.logInt(makeBox<dia::PlaceholderError>(
 						"Expected comma or `}` after here.", state.getPosition()
 					));
 					state.tokens().skip();
@@ -738,7 +992,7 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCOpaque: {
 			lexer::Token value = state.tokens().next();
 			if (!value.isNumLiteralGroup()) {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected a numeric literal after here.", state.getPosition()
 				));
 			} else {
@@ -759,7 +1013,7 @@ namespace vm::loader::parser {
 			base::Optional<base::StrID> extends;
 
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Expected `{` after here.", state.getPosition(-1)
 				));
 				return nullptr;
@@ -772,7 +1026,7 @@ namespace vm::loader::parser {
 				switch (next.asKeyword()) {
 				case lang_def::Keyword::BCExtends: {
 					if (is_interface) {
-						state.logInt(makeBox<dia_int::PlaceholderError>(
+						state.logInt(makeBox<dia::PlaceholderError>(
 							"Interfaces cannot extend classes.", state.getPosition()
 						));
 					} else {
@@ -786,7 +1040,7 @@ namespace vm::loader::parser {
 				}
 				case lang_def::Keyword::BCAbstract: {
 					if (is_interface) {
-						state.logInt(makeBox<dia_int::PlaceholderError>(
+						state.logInt(makeBox<dia::PlaceholderError>(
 							"Interfaces cannot be abstract.", state.getPosition()
 						));
 					} else {
@@ -799,7 +1053,7 @@ namespace vm::loader::parser {
 							is_abstract = false;
 							break;
 						default:
-							state.logInt(makeBox<dia_int::PlaceholderError>(
+							state.logInt(makeBox<dia::PlaceholderError>(
 								"Unexpected keyword.", state.getPosition()
 							));
 							break;
@@ -811,7 +1065,7 @@ namespace vm::loader::parser {
 				case lang_def::Keyword::BCImplements: {
 					state.parse().one(lang_def::NamedOperator::Colon);
 					if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-						state.logInt(makeBox<dia_int::PlaceholderError>(
+						state.logInt(makeBox<dia::PlaceholderError>(
 							"Expected `{` after here.", state.getPosition(-1)
 						));
 						return nullptr;
@@ -827,7 +1081,7 @@ namespace vm::loader::parser {
 						if (state[0].is(lang_def::Special::Comma)) {
 							state.parse().one(lang_def::Special::Comma);
 						} else {
-							state.logInt(makeBox<dia_int::PlaceholderError>(
+							state.logInt(makeBox<dia::PlaceholderError>(
 								"Expected comma or `}` after here.", state.getPosition()
 							));
 							state.tokens().skip();
@@ -856,16 +1110,16 @@ namespace vm::loader::parser {
 					break;
 				}
 				default: {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
-						"Unexpected keyword.", state.getPosition()
-					));
+					state.logInt(
+						makeBox<dia::PlaceholderError>("Unexpected keyword.", state.getPosition())
+					);
 					return nullptr;
 				}
 				}
 			}
 
 			if (state.notEmpty()) {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
+				state.logInt(makeBox<dia::PlaceholderError>(
 					"Unexpected class/interface content.", state.getPosition(-1)
 				));
 
@@ -895,8 +1149,7 @@ namespace vm::loader::parser {
 			break;
 		}
 		default: {
-			state.logInt(makeBox<dia_int::PlaceholderError>("Expected a type.", state.getPosition())
-			);
+			state.logInt(makeBox<dia::PlaceholderError>("Expected a type.", state.getPosition()));
 			break;
 		}
 		}
@@ -916,9 +1169,17 @@ namespace vm::loader::parser {
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state).toOptBox();
 				if (func) out->functions.emplace_back(std::move(*func));
+			} else if (state[0].is(lang_def::Keyword::BCFfi)) {
+				if (state[1].is(lang_def::Keyword::BCObject)) {
+					auto ffi_object = FFIObject::parse(state).toOptBox();
+					if (ffi_object) out->ffi_objects.emplace_back(std::move(*ffi_object));
+				} else {
+					auto ffi_func = FFIFunc::parse(state).toOptBox();
+					if (ffi_func) out->ffi_functions.emplace_back(std::move(*ffi_func));
+				}
 			} else {
 				state.logInt(
-					makeBox<dia_int::PlaceholderError>("Unexpected keyword.", state.getPosition())
+					makeBox<dia::PlaceholderError>("Unexpected keyword.", state.getPosition())
 				);
 				break;
 			}
@@ -969,9 +1230,24 @@ namespace vm::loader::parser {
 	}
 
 	void GlobalData::dprint(std::ostream& out) const {
-		out << "global_data ";
-		out << name.value.strView() << " " << type.value.strView();
-		out << ";";
+		out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << " ";
+		out << name.value.strView() << " " << type.value.strView() << " {";
+		if (is_constant) {
+			out << "\n    " << lang_def::keywordToStr(lang_def::Keyword::BCIsConstant).strView()
+				<< ": " << lang_def::keywordToStr(lang_def::Keyword::BCTrue).strView() << ",";
+		}
+		if (initial_value.has_value()) code::serializeConstValue(initial_value.value(), out);
+		if (ctor_name.has_value()) {
+			out << "\n    "
+				<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView() << ": "
+				<< ctor_name->value.strView() << ",";
+		}
+		if (dtor_name.has_value()) {
+			out << "\n    "
+				<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView() << ": "
+				<< dtor_name->value.strView() << ",";
+		}
+		out << "\n};";
 	}
 
 	void Func::dprint(std::ostream& out) const {
@@ -995,9 +1271,47 @@ namespace vm::loader::parser {
 		out << "}\n";
 	}
 
+	void FFIFunc::dprint(std::ostream& out) const {
+		out << "ffi function ";
+		out << name.value.strView() << " { ";
+		bool first = true;
+		for (const auto& param: parameters) {
+			if (!first) out << ", ";
+			out << param.value.strView();
+			first = false;
+		}
+		out << " } -> { ";
+		first = true;
+		for (const auto& param: result_types) {
+			if (!first) out << ", ";
+			out << param.value.strView();
+			first = false;
+		}
+		out << " }";
+	}
+
+	void FFIObject::dprint(std::ostream& out) const {
+		out << "ffi object \"" << path.strView() << "\"";
+	}
+
 	void ParsedFile::dprint(std::ostream& out) const {
 		for (auto& type: types) {
 			type->dprint(out);
+			out << "\n";
+		}
+
+		for (auto& global: global_data) {
+			global->dprint(out);
+			out << "\n";
+		}
+
+		for (auto& ffi_object: ffi_objects) {
+			ffi_object->dprint(out);
+			out << "\n";
+		}
+
+		for (auto& ffi_func: ffi_functions) {
+			ffi_func->dprint(out);
 			out << "\n";
 		}
 

@@ -3,6 +3,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(ExprStmt, expr);
+
 	MBox<ExprStmt> ExprStmt::parse(LangParserState& state) {
 		auto out = makeBox<ExprStmt>(state);
 		PARSE().one(&out->expr);

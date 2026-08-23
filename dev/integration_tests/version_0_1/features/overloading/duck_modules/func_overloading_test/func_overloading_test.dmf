@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 
 # Function overloading test
 # This test checks if function overloading works as expected for i64, f64, bool, and string
@@ -17,7 +15,7 @@ fun foo(x: i64) -> i64 = {
 }
 
 fun foo(x: f64) -> i64 = {
-    return 100 + i64(x);
+    return 100 + x as i64;
 }
 
 fun foo(x: bool) -> i64 = {
@@ -25,7 +23,7 @@ fun foo(x: bool) -> i64 = {
     else return 0;
 }
 
-fun foo(x: str) -> i64 = {
+fun foo(x: String) -> i64 = {
     if (x == "duckling") return 999;
     return 0;
 }
@@ -35,7 +33,7 @@ fun foo(x: i64, y: i64) -> i64 = {
     return x * y + 20000;
 }
 
-fun foo(x: str, y: i64) -> i64 = {
+fun foo(x: String, y: i64) -> i64 = {
     if (x == "duckling" and y == 42) return 4242;
     return -1;
 }

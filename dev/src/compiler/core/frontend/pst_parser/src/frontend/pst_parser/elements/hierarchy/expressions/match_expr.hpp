@@ -9,12 +9,14 @@ namespace pst::expr {
 	/**
 	 * @brief Represents the full match expression.
 	 *
-	 * For now it needs to be at the surface of the expression (it needs to either be the whole
-	 * expression, be on the right of assignment or be surrounded by parenthesis)
+	 * It is self delimited (`match ( ... ) { ... }`), so it is parsed as an atom and can appear
+	 * anywhere a primary expression can.
 	 */
 	class MatchExpr final: public ExprElement {
-		using Lower = Ternary;
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(MatchExpr, ExprElement);
+		CLONE_SUBELEMENTS();
 
+	protected:
 		NAMED_CHILD(value_to_match, CommaExprHolder);
 		std::vector<AccessInternalAnonymous<MatchCase>> cases;
 
@@ -22,7 +24,7 @@ namespace pst::expr {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit MatchExpr(const LangParserState& state): ExprElement(state, 810) {
+		explicit MatchExpr(const LangParserState& state): ExprElement(state, 200) {
 			this->element_kind = ElementKind::Match;
 		}
 

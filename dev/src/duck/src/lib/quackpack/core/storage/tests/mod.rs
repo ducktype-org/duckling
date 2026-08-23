@@ -1,8 +1,9 @@
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
+use chrono::Utc;
 use tempfile::TempDir;
 
 use crate::DuckContext;
@@ -10,11 +11,10 @@ use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
-use crate::quackpack::core::storage::package_id::{PackageId, RegistryId};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::ToVenvId;
-use crate::quackpack::core::{PackageContext, PackageLoader, Version};
+use crate::quackpack::core::{PackageContext, PackageLoader, Version, storage_name_for_registry};
 use crate::quackpack::subcommands::init;
 use crate::quackpack::subcommands::init::InitOptions;
 use crate::quackpack::util::to_url::ToUrl;
@@ -67,13 +67,12 @@ fn setup_mock_storage() -> (DuckContext, TempDir, PathBuf) {
 fn setup_mock_packages(root: &Path) {
     let names = ["foo", "bar", "baz"];
     for name in names {
-        let name = PackageId::Registry(RegistryId::new(
-            name.into(),
-            Version::new(1, 0, 0),
-            Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-        ));
         root.join("pkg")
-            .join(name.storage_name())
+            .join(storage_name_for_registry(
+                name,
+                Version::new(1, 0, 0),
+                Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap().into(),
+            ))
             .join("src")
             .join("main.duck")
             .touch()
@@ -98,8 +97,8 @@ fn setup_mock_venv(
         basic_freeze,
         false,
         PathBuf::default(),
-        SystemTime::now(),
-        SystemTime::now(),
+        Utc::now(),
+        Utc::now(),
     );
     data_mutator(&mut basic_data);
     let venv = Venv::new(name.to_venv_id(), basic_data);
@@ -138,7 +137,7 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
         },
         |data| {
             data.set_ephemeral(true);
-            data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
+            data.set_last_synchronization(Utc::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
         ctx,
     );
@@ -159,7 +158,7 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
             freeze.dependencies_mut().push(package);
         },
         |data| {
-            data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
+            data.set_last_synchronization(Utc::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
         ctx,
     );
@@ -261,7 +260,7 @@ fn create_mock_package_with_dependencies<'duck>(
         full: false,
     };
     init::init(opts).unwrap();
-    // !TODO: Use `duck add`.
+    // @TODO: #3316 Use `duck add`.
     let mut file = {
         let mut opts = OpenOptions::new();
         opts.append(true)

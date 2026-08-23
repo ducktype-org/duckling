@@ -2,6 +2,7 @@
 
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/hout/hout.hpp>
 
 #include <base/pointers/box.hpp>
 
@@ -50,7 +51,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Determines the correct function to call (i.e. performs the overload resolution) from
-	 * the given argument expressions and creates callexpr from it. The function is selected based
+	 * the given argument expressions and creates a callexpr from it. The function is selected based
 	 * on argument types only, not the name, so all provided candidates must have the expected name.
 	 * If no function or multiple functions match the call, an error is returned.
 	 *
@@ -59,14 +60,35 @@ namespace compiler::helios::code {
 	 * @param candidates Contains all candidate functions that could be called.
 	 * @param lhs The preprocessed left-hand side argument of the operator call.
 	 * @param rhs The preprocessed right-hand side argument of the operator call.
-	 * @param op_origin Operator origin used for calle origin.
+	 * @param op_origin Operator origin used for callee origin.
 	 */
 	query::QResult<Box<Expr>> processBinaryOperatorCall(
 		query::Context&           ctx,
 		const std::vector<SymID>& candidates,
 		Box<Expr>                 lhs,
-		Box<Expr>                 rh,
+		Box<Expr>                 rhs,
 		ElementOrigin             op_origin
+	);
+
+	/**
+	 * @brief Determines the correct function to call (i.e. performs the overload resolution) from
+	 * the given argument expression and creates a callexpr from it. The function is selected based
+	 * on the argument type only, not the name, so all provided candidates must have the expected
+	 * name. If no function or multiple functions match the call, an error is returned.
+	 *
+	 * @note takes actual symbols that might be called, does not perform any lookup.
+	 *
+	 * @param candidates Contains all candidate functions that could be called.
+	 * @param inner The preprocessed argument of the operator call.
+	 * @param op_origin Operator origin used for callee origin.
+	 * @param operatoriness Whether we're dealing with a prefix or suffix operator.
+	 */
+	query::QResult<Box<Expr>> processUnaryOperatorCall(
+		query::Context&                        ctx,
+		const std::vector<SymID>&              candidates,
+		Box<Expr>                              inner,
+		ElementOrigin                          op_origin,
+		HOUTFunctionDeclaration::Operatoriness operatoriness
 	);
 
 	/**

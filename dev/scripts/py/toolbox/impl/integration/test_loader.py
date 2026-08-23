@@ -5,6 +5,7 @@ from .utils import ExpressionFillError, VariableNotFound, check_resembles_builti
 from .io_data import IOData, make_data_from_dict
 from .config import (
     GENERAL_VARIABLES,
+    config_collect_env,
     config_eval_variables,
     config_find_and_eval,
     config_find_value,
@@ -17,7 +18,7 @@ from .keys import *
 """
 Builtin keys allowed inside a Test.
 """
-TEST_ALLOWED_KEYS = {*GENERAL_VARIABLES, NAME, DESCRIPTION, CASES, PARENT}
+TEST_ALLOWED_KEYS = {*GENERAL_VARIABLES, NAME, DESCRIPTION, CASES, PARENT, NO_PARALLEL}
 
 
 """
@@ -28,6 +29,7 @@ CASE_ALLOWED_KEYS = {
     RUN,
     PRE_CASE,
     POST_CASE,
+    ENV,
     INPUT,
     OUTPUT,
     ERR,
@@ -73,6 +75,10 @@ def _make_case(test_dict: dict, case_name: str) -> Case:
             enabled=config_find_and_eval(case_dict, ENABLED, default=""),
             pre_case=config_find_and_eval(case_dict, PRE_CASE, default=""),
             post_case=config_find_and_eval(case_dict, POST_CASE, default=""),
+            env={
+                name: config_eval_variables(case_dict, command)
+                for name, command in config_collect_env(case_dict).items()
+            },
             input=io_data[0],
             expected_output=io_data[1],
             expected_err=io_data[2],
@@ -109,6 +115,7 @@ def _make_test(config: dict, test_name) -> Test:
             cases=[_make_case(test_dict, case) for case in test_dict[CASES]],
             clean=config_find_and_eval(test_dict, CLEAN),
             fail_fast=config_find_value(test_dict, FAIL_FAST, default=False),
+            no_parallel=config_find_value(test_dict, NO_PARALLEL, default=False),
         )
     except (VariableNotFound, ExpressionFillError) as e:
         exit_with_error(

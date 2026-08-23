@@ -1,4 +1,3 @@
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -7,6 +6,7 @@
 
 #include <base/types/ints.hpp>
 
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -38,6 +38,18 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplCommandAliasesThroughProcessLine);
 			TESTER_ADD_TEST(testReplExitCommandAliasesThroughProcessLine);
 			TESTER_ADD_TEST(testReplHistoryCommandThroughProcessLine);
+			TESTER_ADD_TEST(testReplSymbolsCommandEmpty);
+			TESTER_ADD_TEST(testReplSymbolsCommandListsDeclarations);
+			TESTER_ADD_TEST(testReplSymbolsCommandListsConstAliasAndClass);
+			TESTER_ADD_TEST(testReplVariablesCommandListsOnlyVariables);
+			TESTER_ADD_TEST(testReplVariablesAndFunctionsCommandsReportEmptyAfterOtherSymbols);
+			TESTER_ADD_TEST(testReplFunctionsCommandListsOnlyFunctions);
+			TESTER_ADD_TEST(testReplDetailsCommandShowsVariableDetails);
+			TESTER_ADD_TEST(testReplDetailsCommandShowsFunctionDetails);
+			TESTER_ADD_TEST(testReplDetailsCommandShowsClassMembers);
+			TESTER_ADD_TEST(testReplDetailsCommandShowsNamespaceMembers);
+			TESTER_ADD_TEST(testReplDetailsCommandDoesNotResolveMemberPaths);
+			TESTER_ADD_TEST(testReplDetailsCommandHandlesMissingName);
 			TESTER_ADD_TEST(testReplUnknownCommandThroughHandleCommand);
 			TESTER_ADD_TEST(testReplClearCommandDoesNotResetSessionState);
 			TESTER_ADD_TEST(testReplProcessLineWithCode);
@@ -63,7 +75,7 @@ namespace compiler::repl {
 		}
 
 		void beforeAll() override {
-			dia_int::configureImmediatePrint(&std::cerr);
+			dia::configureImmediatePrint(&std::cerr);
 			// enable if needed
 			// logger::enable_dev_logs = true;
 			// logger::enableDevCategoryByStringName("REPL");
@@ -170,6 +182,459 @@ namespace compiler::repl {
 				"/history should be processed as a successful command"
 			);
 			assertFalse(session.m_should_exit, "/history should not mark session for exit");
+		}
+
+		void testReplSymbolsCommandEmpty() {
+			ReplSession session;
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/symbols");
+
+			assertTrue(
+				result.status == ReplResult::Status::Success,
+				"/symbols should be processed as a successful command"
+			);
+			assertTrue(
+				capture.str().find("No symbols declared yet.") != std::string::npos,
+				"/symbols should report an empty declaration list for a fresh session"
+			);
+		}
+
+		void testReplSymbolsCommandListsDeclarations() {
+			ReplSession session;
+
+			auto var_result = session.processLine("var sym_x: i32 = 10;");
+			auto fun_result
+				= session.processLine("fun sym_add(a: i32, b: i32) -> i32 = { return a + b; }");
+			auto ns_result = session.processLine("namespace SymNs {}");
+
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before /symbols"
+			);
+			assertTrue(
+				fun_result.status == ReplResult::Status::Success,
+				"Function declaration should succeed before /symbols"
+			);
+			assertTrue(
+				ns_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before /symbols"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/syms");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/syms should succeed");
+			assertTrue(
+				output.find("Visible Symbols") != std::string::npos,
+				"/symbols output should include a header"
+			);
+			assertTrue(
+				output.find("[history #1] variable sym_x : i32") != std::string::npos,
+				"/symbols should list the variable with its type"
+			);
+			assertTrue(
+				output.find("[history #2] function sym_add(a: i32, b: i32) -> i32")
+					!= std::string::npos,
+				"/symbols should list the function with its signature"
+			);
+			assertTrue(
+				output.find("[history #3] namespace SymNs") != std::string::npos,
+				"/symbols should list the namespace"
+			);
+		}
+
+		void testReplSymbolsCommandListsConstAliasAndClass() {
+			ReplSession session;
+
+			auto var_result   = session.processLine("var symbol_source: i32 = 3;");
+			auto alias_result = session.processLine("alias symbol_alias = symbol_source;");
+			auto const_result = session.processLine("const symbol_const: i64 = 42;");
+			auto class_result = session.processLine("class SymbolClass{}");
+
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before richer /symbols test"
+			);
+			assertTrue(
+				alias_result.status == ReplResult::Status::Success,
+				"Alias declaration should succeed before /symbols"
+			);
+			assertTrue(
+				const_result.status == ReplResult::Status::Success,
+				"Const declaration should succeed before /symbols"
+			);
+			assertTrue(
+				class_result.status == ReplResult::Status::Success,
+				"Class declaration should succeed before /symbols"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/symbols");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/symbols should succeed");
+			assertTrue(
+				output.find("[history #1] variable symbol_source : i32") != std::string::npos,
+				"/symbols should list regular variables"
+			);
+			assertTrue(
+				output.find("[history #2] alias symbol_alias") != std::string::npos,
+				"/symbols should list aliases"
+			);
+			assertTrue(
+				output.find("[history #3] const symbol_const : const i64") != std::string::npos,
+				"/symbols should list const declarations with their type"
+			);
+			assertTrue(
+				output.find("[history #4] class SymbolClass") != std::string::npos,
+				"/symbols should list classes"
+			);
+		}
+
+		void testReplVariablesCommandListsOnlyVariables() {
+			ReplSession session;
+
+			auto var_result = session.processLine("var only_var_x: i32 = 10;");
+			auto fun_result
+				= session.processLine("fun only_fun_add(a: i32, b: i32) -> i32 = { return a + b; }");
+			auto ns_result = session.processLine("namespace OnlyVarNs {}");
+
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before /vars"
+			);
+			assertTrue(
+				fun_result.status == ReplResult::Status::Success,
+				"Function declaration should succeed before /vars"
+			);
+			assertTrue(
+				ns_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before /vars"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/vars");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/vars should succeed");
+			assertTrue(
+				output.find("Visible Variables") != std::string::npos,
+				"/vars output should include a variables header"
+			);
+			assertTrue(
+				output.find("[history #1] variable only_var_x : i32") != std::string::npos,
+				"/vars should list the variable with its type"
+			);
+			assertTrue(
+				output.find("only_fun_add") == std::string::npos, "/vars should not list functions"
+			);
+			assertTrue(
+				output.find("OnlyVarNs") == std::string::npos, "/vars should not list namespaces"
+			);
+		}
+
+		void testReplVariablesAndFunctionsCommandsReportEmptyAfterOtherSymbols() {
+			ReplSession session;
+
+			auto ns_result    = session.processLine("namespace EmptyFilterNs {}");
+			auto class_result = session.processLine("class EmptyFilterClass{}");
+			auto const_result = session.processLine("const empty_filter_const: i64 = 1;");
+
+			assertTrue(
+				ns_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before empty filter checks"
+			);
+			assertTrue(
+				class_result.status == ReplResult::Status::Success,
+				"Class declaration should succeed before empty filter checks"
+			);
+			assertTrue(
+				const_result.status == ReplResult::Status::Success,
+				"Const declaration should succeed before empty filter checks"
+			);
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/vars");
+				assertTrue(result.status == ReplResult::Status::Success, "/vars should succeed");
+				assertTrue(
+					capture.str().find("No variables declared yet.") != std::string::npos,
+					"/vars should report no top-level variables when only other symbols exist"
+				);
+			}
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/functions");
+				assertTrue(
+					result.status == ReplResult::Status::Success, "/functions should succeed"
+				);
+				assertTrue(
+					capture.str().find("No functions declared yet.") != std::string::npos,
+					"/functions should report no top-level functions when only other symbols exist"
+				);
+			}
+		}
+
+		void testReplFunctionsCommandListsOnlyFunctions() {
+			ReplSession session;
+
+			auto var_result = session.processLine("var only_func_x: i32 = 10;");
+			auto fun_result
+				= session.processLine("fun only_func_add(a: i32, b: i32) -> i32 = { return a + b; }"
+			    );
+			auto ns_result = session.processLine("namespace OnlyFuncNs {}");
+
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before /functions"
+			);
+			assertTrue(
+				fun_result.status == ReplResult::Status::Success,
+				"Function declaration should succeed before /functions"
+			);
+			assertTrue(
+				ns_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before /functions"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/fns");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/fns should succeed");
+			assertTrue(
+				output.find("Visible Functions") != std::string::npos,
+				"/functions output should include a functions header"
+			);
+			assertTrue(
+				output.find("[history #2] function only_func_add(a: i32, b: i32) -> i32")
+					!= std::string::npos,
+				"/functions should list the function with its signature"
+			);
+			assertTrue(
+				output.find("only_func_x") == std::string::npos,
+				"/functions should not list variables"
+			);
+			assertTrue(
+				output.find("OnlyFuncNs") == std::string::npos,
+				"/functions should not list namespaces"
+			);
+		}
+
+		void testReplDetailsCommandShowsVariableDetails() {
+			ReplSession session;
+
+			auto var_result = session.processLine("var detail_value: i64 = 99;");
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before /details"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/details detail_value");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+			assertTrue(
+				output.find("Details for `detail_value`") != std::string::npos,
+				"/details should include a variable details header"
+			);
+			assertTrue(
+				output.find("defined in: history #1") != std::string::npos,
+				"/details should include the defining history entry"
+			);
+			assertTrue(
+				output.find("variable detail_value : i64") != std::string::npos,
+				"/details should include the variable type summary"
+			);
+			assertTrue(
+				output.find("kind: variable") != std::string::npos,
+				"/details should include the variable kind"
+			);
+			assertTrue(
+				output.find("qualified name:") != std::string::npos,
+				"/details should include the compiler qualified name"
+			);
+		}
+
+		void testReplDetailsCommandShowsFunctionDetails() {
+			ReplSession session;
+
+			auto fun_result
+				= session.processLine("fun detail_mul(a: i64, b: i64) -> i64 = { return a * b; }");
+			assertTrue(
+				fun_result.status == ReplResult::Status::Success,
+				"Function declaration should succeed before /details"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/details detail_mul");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+			assertTrue(
+				output.find("Details for `detail_mul`") != std::string::npos,
+				"/details should include a function details header"
+			);
+			assertTrue(
+				output.find("function detail_mul(a: i64, b: i64) -> i64") != std::string::npos,
+				"/details should include the function signature"
+			);
+			assertTrue(
+				output.find("kind: function") != std::string::npos,
+				"/details should include the function kind"
+			);
+		}
+
+		void testReplDetailsCommandShowsClassMembers() {
+			ReplSession session;
+
+			auto class_result = session.processLine(
+				"class DetailClass{ field_a : i64; field_b : i64; "
+				"fun detail_sum(t : DetailClass) -> i64 = t.field_a + t.field_b;}"
+			);
+			assertTrue(
+				class_result.status == ReplResult::Status::Success,
+				"Class declaration should succeed before /details"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/details DetailClass");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+			assertTrue(
+				output.find("Details for `DetailClass`") != std::string::npos,
+				"/details should include a class details header"
+			);
+			assertTrue(
+				output.find("class DetailClass") != std::string::npos,
+				"/details should include the class summary"
+			);
+			assertTrue(
+				output.find("fields:") != std::string::npos, "/details should include class fields"
+			);
+			assertTrue(
+				output.find("field field_a : i64") != std::string::npos,
+				"/details should list the first field"
+			);
+			assertTrue(
+				output.find("field field_b : i64") != std::string::npos,
+				"/details should list the second field"
+			);
+			assertTrue(
+				output.find("declared constructors:") != std::string::npos,
+				"/details should label source constructors as declared"
+			);
+			assertTrue(
+				output.find("implicit constructors:") != std::string::npos,
+				"/details should mention generated implicit constructors"
+			);
+			assertTrue(
+				output.find("DetailClass(field_a: i64, field_b: i64)") != std::string::npos,
+				"/details should show the implicit field constructor"
+			);
+			assertTrue(
+				output.find("methods:") != std::string::npos, "/details should include class methods"
+			);
+			assertTrue(
+				output.find("method detail_sum(t: Class DetailClass) -> i64") != std::string::npos,
+				"/details should list the method signature"
+			);
+		}
+
+		void testReplDetailsCommandShowsNamespaceMembers() {
+			ReplSession session;
+
+			auto namespace_result = session.processLine(
+				"namespace DetailNs { var ns_value: i32 = 1; "
+				"fun ns_fun() -> i32 = { return ns_value; } }"
+			);
+			assertTrue(
+				namespace_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before /details"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/details DetailNs");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+			assertTrue(
+				output.find("Details for `DetailNs`") != std::string::npos,
+				"/details should include a namespace details header"
+			);
+			assertTrue(
+				output.find("namespace DetailNs") != std::string::npos,
+				"/details should include the namespace summary"
+			);
+			assertTrue(
+				output.find("members:") != std::string::npos,
+				"/details should include namespace members"
+			);
+			assertTrue(
+				output.find("variable ns_value : i32") != std::string::npos,
+				"/details should list namespace variables"
+			);
+			assertTrue(
+				output.find("function ns_fun() -> i32") != std::string::npos,
+				"/details should list namespace functions"
+			);
+		}
+
+		void testReplDetailsCommandDoesNotResolveMemberPaths() {
+			ReplSession session;
+
+			auto namespace_result
+				= session.processLine("namespace MemberPathNs { var inner: i32 = 1; }");
+			assertTrue(
+				namespace_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before member-path /details check"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/details MemberPathNs.inner");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+			assertTrue(
+				output.find("No visible symbol named `MemberPathNs.inner`.") != std::string::npos,
+				"/details should intentionally reject member paths for now"
+			);
+		}
+
+		void testReplDetailsCommandHandlesMissingName() {
+			ReplSession session;
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/details");
+				assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+				assertTrue(
+					capture.str().find("Usage: /details <visible-symbol-name>") != std::string::npos,
+					"/details without a name should print usage"
+				);
+			}
+
+			auto var_result = session.processLine("var present_detail_symbol: i32 = 1;");
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before missing /details lookup"
+			);
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/details missing_detail_symbol");
+				assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+				assertTrue(
+					capture.str().find("No visible symbol named `missing_detail_symbol`.")
+						!= std::string::npos,
+					"/details should report an unknown symbol"
+				);
+			}
 		}
 
 		void testReplUnknownCommandThroughHandleCommand() {
@@ -539,7 +1004,9 @@ namespace compiler::repl {
 
 			// Test various inputs to verify command detection
 			std::vector<std::string_view> commands
-				= { "/exit", "/help", "/h", "/history", "/hist", "/clear", "/c" };
+				= { "/exit",    "/help",    "/h",         "/history", "/hist",
+				    "/symbols", "/syms",    "/variables", "/vars",    "/functions",
+				    "/fns",     "/details", "/clear",     "/c" };
 
 			std::vector<std::string_view> code_snippets = { "var x = 4;", "x;", "" };
 

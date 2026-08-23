@@ -20,7 +20,7 @@ pub trait UrlExt: Sized {
 
     /// Get the URL for querying exact metadata of the package `package`.
     fn for_exact_metadata(&self, package: &types::Package) -> QuackResult<Self> {
-        self._join(&format!("/packages/{}/{}", package.id, package.version))
+        self._join(&format!("/packages/{}/{}", package.name, package.version))
     }
 
     /// Get the URL for downloading a blob of the package `package`.
@@ -29,7 +29,7 @@ pub trait UrlExt: Sized {
     fn for_blob(&self, package: &types::Package) -> QuackResult<Self> {
         self._join(&format!(
             "/packages/{}/{}/download",
-            package.id, package.version
+            package.name, package.version
         ))
     }
 
@@ -50,7 +50,7 @@ pub trait UrlExt: Sized {
     #[allow(dead_code)]
     /// Get the URL for uploading a package's blob.
     fn for_new_blob(&self, package: &types::Package) -> QuackResult<Self> {
-        self._join(&format!("/packages/{}/{}", package.id, package.version))
+        self._join(&format!("/packages/{}/{}", package.name, package.version))
     }
 }
 
@@ -76,11 +76,11 @@ mod tests {
         let package_version = "1.0.0";
         let url = base.to_url().unwrap();
         let package = types::Package {
-            id: package_name.into(),
+            name: package_name.into(),
             version: package_version.parse().unwrap(),
         };
         assert_eq!(
-            url.for_multi_metadata(package.id.as_str())
+            url.for_multi_metadata(package.name.as_str())
                 .unwrap()
                 .as_str(),
             format!("{base}/packages/{package_name}")

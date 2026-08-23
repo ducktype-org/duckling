@@ -34,10 +34,16 @@ namespace compiler::backend_llvm {
 		std::vector<CRef<lir::Function>> dtors;
 
 		for (const auto& global: lir_unit.lir_globals) {
-			mod.addGlobalToModule(global);
+			mod.addGlobalDeclarationToModule(global);
 
 			variant_match(global.data_initialization) {
 				variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
+					CORE_ASSERT(
+						global.global.type == lir::LIRGlobalType::Variable,
+						"Only variable globals can have ctor/dtor pair as initial value (constants "
+						"should always have CTV initial value)"
+					);
+
 					// Add global constructors and destructors if they exist
 					if (ctor_dtor_pair.global_ctor.has_value()) {
 						mod.addFunctionToModule(ctx, ctor_dtor_pair.global_ctor.value());
@@ -49,10 +55,7 @@ namespace compiler::backend_llvm {
 					}
 				}
 				variant_case(ctv::CompileTimeValue, ctv_initial_value) {
-					// @TODO: #2246 this is a little random, think about it more.
-					// Maybe we will be able to keep all initialization logic for LLVM in one place
-
-					// NOTE: This case is handled inside addGlobalToModule
+					mod.setGlobalConstantInitializer(global.global.mangled_name, ctv_initial_value);
 				}
 				variant_default { CORE_UNREACHABLE(); }
 			}
@@ -99,8 +102,14 @@ namespace compiler::backend_llvm {
 		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
 	}
 
-	void Module::addGlobalToModule(const lir::LIRGlobalData& lir_global) {
-		addGlobalToModuleImpl(impl.refMut(), lir_global);
+	void Module::addGlobalDeclarationToModule(const lir::LIRGlobalData& lir_global) {
+		addGlobalDeclarationToModuleImpl(impl.refMut(), lir_global);
+	}
+
+	void Module::setGlobalConstantInitializer(
+		base::StrID global_name, const ctv::CompileTimeValue& constant_value
+	) {
+		setGlobalConstantInitializerImpl(impl.refMut(), global_name, constant_value);
 	}
 
 	void Module::addFunctionToModuleCtors(query::Context& ctx, CRef<lir::Function> lir_function) {

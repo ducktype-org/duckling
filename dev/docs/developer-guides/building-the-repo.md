@@ -12,6 +12,7 @@
 - [alternatively to g++] **clang++** with version 19 or higher is required for building the project.
 - **lcov** is used for generating coverage reports.
 - **LLVM** with version 19 is required for building the project.
+- **pkg-config** and **libffi** (development headers) are required for the dynamic foreign function interface.
 
 
 #### Debian/Ubuntu
@@ -21,14 +22,14 @@ Note that the dependencies listed below are listed without versions. Update the 
 
 ```bash
 sudo apt update -y && \
-sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev -y
+sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev pkg-config libffi-dev -y
 ```
 
 
 #### Arch linux
 
 ```bash
-sudo pacman -S python python-pip python-click doxygen graphviz lcov --noconfirm
+sudo pacman -S python python-pip python-click doxygen graphviz lcov pkgconf libffi --noconfirm
 ```
 
 > **Note**  
@@ -37,37 +38,34 @@ sudo pacman -S python python-pip python-click doxygen graphviz lcov --noconfirm
 
 #### MacOS
 
-First of all, the toolbox requires at least Python3.12, while macOS default Python is Python3.9.
-Secondly, there are two ways of installing clang on MacOS:
-1. using official Apple clang provided by Xcode,
-2. installing it from the Homebrew.
+The project is designed around **libstdc++** (for example it links `-lstdc++exp` for `<stacktrace>`),
+so on macOS it is built with **Homebrew GCC**, not Apple clang or Homebrew's clang (those use
+libc++, whose ABI is incompatible). The supported toolchain is `g++-15` + libstdc++ together with a
+copy of LLVM 19 built from source with the same compiler (see the [install-llvm](#optional-but-recommended-installing-custom-llvm-library)
+step below), so its libraries share the libstdc++ ABI. Xcode's command line tools are still needed
+for the macOS SDK and the system linker (`ld64`).
 
-You need to have at least Xcode 16.3 (clang version string `17.0.0`, run `clang --version` to check), so that it corresponds to the upstream clang 19.
-You can check the mapping between Apple and LLVM versions [on the English Xcode Wikipedia page](https://en.wikipedia.org/wiki/Xcode#Toolchain_versions).
 ```bash
-# For macOS clang
 xcode-select --install
 
-# For LLVM clang
+# GCC (provides g++-15 / gcc-15), the build tools, ICU and libffi.
+brew install gcc@15 cmake ninja graphviz lcov doxygen python pkg-config libffi icu4c
+
+# clang-format / clang-tidy 19 are only used for linting (pr-validate / cpp-linter).
 brew install llvm@19
 ```
 
-```bash
-# Install remaining dependencies
-brew install cmake ninja graphviz lcov doxygen python@3.12 clang-format
-```
+Pass GCC explicitly to the toolbox commands that build — `-x g++-15 -c gcc-15` on `install-llvm` and
+`setup-build` — otherwise the toolbox picks up Apple clang.
 
-Also, unlike many Linuxes, Homebrew doesn't provide a lot of Python packages in their repositories.
-Therefore, you have to create a local virtual environment and use it when running the toolbox.
+The toolbox requires at least Python 3.12 (the macOS system Python is older; any newer Homebrew
+Python works), and Homebrew doesn't package most of the Python dependencies. Create a local virtual
+environment, activate it, and run the toolbox from it:
 ```bash
 cd dev/
-# Verify you are running at least Python3.12
-python3 --version
 python3 -m venv .venv
 source .venv/bin/activate
-# Manually install Python dependencies
-pip3 install click
-pip3 install -r requirements.txt
+pip3 install click -r requirements.txt
 ```
 
 ## Toolbox
@@ -149,27 +147,22 @@ Advanced options like unity compilation, LTO, and symbol stripping are available
 
 #### MacOS caveats
 
-CMake may not found LLVM installed from the Homebrew.
-To prevent that set the LLVM directory **before** executing the above command.
+On macOS the `install-llvm` step above is **required** (Homebrew's `llvm@19` is built against libc++,
+which is ABI-incompatible with the libstdc++ this project uses). Run it — and `setup-build` — with GCC:
 
 ```bash
-export LLVM_DIR=${HOMEBREW_PREFIX}/opt/llvm@19
+./toolbox.py install-llvm -x g++-15 -c gcc-15
 ```
 
-It's also possible to add it to the `$CMAKE_PREFIX_PATH` variable, but this can resolve in compiling with the upstream clang instead of the Apple one.
-
-Also, ICU bundled with Apple Xcode doesn't provide the `<unicode/unistr.h>` header, therefore you are advised to install it with the Homebrew too.
-
-```bash
-brew install icu4c
-```
-
-As is the case with LLVM, CMake doesn't find ICU either.
-Set the `$ICU_ROOT` variable **before** executing the `setup-build` toolbox command.
+The ICU bundled with the macOS SDK is a C-only subset, so CMake must be pointed at the Homebrew ICU
+(installed above) with `$ICU_ROOT` **before** running `setup-build`:
 
 ```bash
 export ICU_ROOT=${HOMEBREW_PREFIX}/opt/icu4c
 ```
+
+`setup-build` auto-selects the system linker (`ld64`) on macOS; mold and lld only handle ELF, not the
+Mach-O format macOS uses.
 
 
 ## Compiling the project

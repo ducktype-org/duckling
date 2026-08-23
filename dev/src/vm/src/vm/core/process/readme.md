@@ -1,5 +1,5 @@
 # DVM — VMProcess module
-## [`VMProcess`](./vmprocess.hpp)
+## [`VMProcess`](./ivmprocess.hpp)
 The `VMProcess` is the core component that represents a single, isolated execution environment for a program
 running within the virtual machine. While the `Supervisor` manages multiple processes, the `VMProcess` is
 concerned with everything needed to run *one* specific program from start to finish. It does not execute
@@ -32,6 +32,6 @@ actual execution units that interpret and run the bytecode. Its responsibilities
 send input to the running program, retrieve its output, and can "attach" its I/O to external streams (like
 the system's standard input/output) for interactive sessions.
 
-5.  **VmValue Lifetime Management:** `VMProcess` acts as a factory and owner for [`VmValue`](../thread/vmvalue.hpp)
+5.  **VMValue Lifetime Management:** `VMProcess` acts as a factory and owner for [`VMValue`](../thread/vmvalue.hpp)
 objects which are used to pass values to DVM from the outside world. More on [`VMValue`](../thread/vmvalue.hpp)
 can be found in [here](../thread/readme.md#vmvalue).

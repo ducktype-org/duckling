@@ -1,23 +1,23 @@
-import core.builtins.*;
+import core.containers.*;
 
 fun helloWorld() = {
     let myString = builtin_input_string();
-    print(myString);
+    print(&myString);
     print("\nHello, world!\n");
 }
 
 fun prependAppend() = {
-    let b = "b";
-    print('a' +: b);
+    let b = "b".toString();
+    print('a' +: (&b));
     print("\n");
-    print(b :+ 'c' :+ 'd');
+    print(&b :+ 'c' :+ 'd');
     print("\n");
 }
 
 fun concat() = {
-    let hello = "Hello, ";
-    let world = "world!\n";
-    print(hello ++ world);
+    let hello = "Hello, ".toString();
+    let world = "world!\n".toString();
+    print(&hello ++ (&world));
 }
 
 fun main() -> i64 = {

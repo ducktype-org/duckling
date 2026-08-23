@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
+use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::tempdir;
 
 use super::*;
+use crate::DuckContext;
 use crate::quackpack::core::Version;
 use crate::quackpack::core::fetcher::types;
 use crate::quackpack::schemas::registry;
+use crate::util::file_locks::FileLockManager;
 use crate::util::path_ops_ext::PathOpsExt;
 
 fn create_mock_server() -> (MockServer, DuckContext) {
@@ -18,6 +21,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -34,6 +38,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -50,6 +55,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -67,7 +73,6 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
         },
         dependencies: vec![pkg1],
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -81,7 +86,6 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
         },
         dependencies: vec![pkg2, pkg3],
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -95,7 +99,6 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
         },
         dependencies: registry::Dependencies::new(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -157,69 +160,73 @@ fn create_mock_server() -> (MockServer, DuckContext) {
 #[test]
 fn single_metadata() {
     let (server, ctx) = create_mock_server();
-    let client = DucknestClient::new(&ctx);
-    let response = client
-        .get_exact_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
-            version: Version::new(1, 2, 3),
-            url: server.base_url().parse().unwrap(),
-        })
-        .unwrap();
+    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let client = DucknestClient::new(http_client);
+    let response = block_on(client.get_exact_metadata(&types::PackageWithUrl {
+        name: "foo".into(),
+        version: Version::new(1, 2, 3),
+        url: server.base_url().parse().unwrap(),
+    }))
+    .unwrap();
     assert_eq!(response.metadata.name, "foo");
     assert_eq!(response.metadata.version, Version::new(1, 2, 3));
     assert_eq!(response.dependencies.len(), 2);
 
     assert!(
-        client
-            .get_exact_metadata(&types::PackageWithUrl {
-                id: "foo".into(),
-                version: Version::new(1, 2, 4),
-                url: server.base_url().parse().unwrap(),
-            })
-            .is_err()
+        block_on(client.get_exact_metadata(&types::PackageWithUrl {
+            name: "foo".into(),
+            version: Version::new(1, 2, 4),
+            url: server.base_url().parse().unwrap(),
+        }))
+        .is_err()
     );
 }
 
 #[test]
 fn multi_metadata() {
     let (server, ctx) = create_mock_server();
-    let client = DucknestClient::new(&ctx);
-    let response = client
-        .get_multi_metadata(&(server.base_url().parse().unwrap()), "foo".into())
-        .unwrap();
+    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let client = DucknestClient::new(http_client);
+    let response =
+        block_on(client.get_multi_metadata(&(server.base_url().parse().unwrap()), "foo".into()))
+            .unwrap();
     assert_eq!(response.packages_metadata.len(), 2);
 }
 
 #[test]
 fn download_blob() {
     let dir = tempdir().unwrap();
-    let path = dir.path().join("target");
     let (server, ctx) = create_mock_server();
-    let client = DucknestClient::new(&ctx);
-    client
-        .fetch_blob(
-            &types::PackageWithUrl {
-                id: "foo".into(),
-                version: Version::new(1, 2, 3),
-                url: server.base_url().parse().unwrap(),
-            },
-            &path,
-        )
-        .unwrap();
-    assert_eq!(path.read_to_string().unwrap(), "foo-1.2.3");
+    let manager = FileLockManager::new(dir.path().to_path_buf());
+    let path = manager.open_exclusive("target", &ctx).unwrap();
+    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let client = DucknestClient::new(http_client);
+    block_on(client.fetch_blob(
+        &types::PackageWithUrl {
+            name: "foo".into(),
+            version: Version::new(1, 2, 3),
+            url: server.base_url().parse().unwrap(),
+        },
+        path,
+    ))
+    .unwrap();
+    assert_eq!(
+        dir.path().join("target").read_to_string().unwrap(),
+        "foo-1.2.3"
+    );
 }
 
 #[test]
 fn not_found_in_response() {
     let (server, ctx) = create_mock_server();
-    let client = DucknestClient::new(&ctx);
-    let err = client
-        .get_exact_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
-            version: Version::new(2137, 6, 7),
-            url: server.base_url().parse().unwrap(),
-        })
-        .unwrap_err();
+    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let client = DucknestClient::new(http_client);
+    let err = block_on(client.get_exact_metadata(&types::PackageWithUrl {
+        name: "foo".into(),
+        version: Version::new(2137, 6, 7),
+        url: server.base_url().parse().unwrap(),
+    }))
+    .unwrap_err();
     assert_eq!(
         err.to_string(),
         format!(

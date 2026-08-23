@@ -117,7 +117,8 @@ namespace compiler::tsh {
 			  leakage(leakage),
 			  uniqueness(uniqueness) {}
 
-		// @TODO: #2348 Use this whenever abstract type is promoted to symbol type.
+		// @TODO: #2348 Use this whenever abstract type is promoted to symbol type and change the
+		// mutability defaults
 		/**
 		 * @brief Creates a SymbolType from an AbstractType with a set of default symbol properties.
 		 *
@@ -136,6 +137,20 @@ namespace compiler::tsh {
 				abstract_type,
 				ReferenceKind::Direct,
 				Mutability::Mutable,
+				Leakage::NonLeaking,
+				Uniqueness::NonUnique
+			);
+		}
+
+		/**
+		 * @brief Same as above, but with immutability.
+		 * @TODO: #2348 change the names to withDefaultsMut and withDefaults, rustlike
+		 */
+		static SymbolType<ABSTRACT_TYPE> withDefaultsConst(const ABSTRACT_TYPE abstract_type) {
+			return SymbolType<ABSTRACT_TYPE>(
+				abstract_type,
+				ReferenceKind::Direct,
+				Mutability::Immutable,
 				Leakage::NonLeaking,
 				Uniqueness::NonUnique
 			);
@@ -194,7 +209,7 @@ namespace compiler::tsh {
 		 * @return true if the symbol has a trivial destructor, false otherwise.
 		 */
 		[[nodiscard]]
-		bool hasNoOpDestructor() const {
+		bool isTriviallyDestructible(query::Context& ctx) const {
 			if (reference_kind == ReferenceKind::Ref) {
 				// Ref types have trivial destructors, because it do not own its contents.
 				return true;
@@ -204,9 +219,7 @@ namespace compiler::tsh {
 				// memory.
 				return false;
 			}
-			if (abstract_type.hasNoOpDestructor()) return true;
-			// @TODO #1271: add more cases where destructor is trivial
-			// NOTE: abstract_type check should probably be the last one as it may be expensive
+			if (abstract_type.isTriviallyDestructible(ctx)) return true;
 			return false;
 		}
 

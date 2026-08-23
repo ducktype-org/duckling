@@ -17,6 +17,7 @@ class Case:
     run: str
     pre_case: str
     post_case: str
+    env: dict[str, str]
     input: Optional[IOData]
     expected_exitcode: int
     expected_output: Optional[IOData]
@@ -41,6 +42,9 @@ class Test:
     post_test: str
     fail_fast: bool
     clean: str
+    # Run this test's cases with nothing else executing concurrently
+    # (for cases sensitive to machine load, e.g. tight timeouts).
+    no_parallel: bool
 
     def __str__(self) -> str:
         return f"{self.name}: {self.description if self.description else ''}"

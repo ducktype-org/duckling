@@ -1,9 +1,11 @@
 #include "../../hierarchy/expressions/comma.hpp"
 
-#include "../../hierarchy/expressions/match_expr.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/expressions/ternary.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(Comma, expressions);
+
 	MBox<ExprElement> Comma::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 

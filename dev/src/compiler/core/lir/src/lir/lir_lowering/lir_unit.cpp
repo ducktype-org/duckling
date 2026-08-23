@@ -3,6 +3,7 @@
 #include "lir_unit.hpp"
 
 #include <lir/lir_lowering/lir_lowering.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -19,13 +20,13 @@ namespace compiler::lir {
 		// Globals:
 		for (const auto& mir_global: mir_unit.mir_globals) {
 			CORE_ASSERT(
-				mir_global.global.type.getType().carriesInformation(ctx),
+				mir_global->global.type.getType().carriesInformation(ctx),
 				"Information-less global should have been discarded in MIR lowering"
 			);
 
-			auto lir_global = LIRGlobal::fromMIR(ctx, mir_global.global);
+			auto lir_global = LIRGlobal::fromMIR(ctx, mir_global->global);
 
-			variant_match(mir_global.initial_value) {
+			variant_match(mir_global->initial_value) {
 				variant_case(ctv::CompileTimeValue, ctv_initial_value) {
 					// @future #1554 -- const ctors will probably be added here (or in backends), if
 					// we decide to add them. See #1554 for more details.
@@ -35,15 +36,17 @@ namespace compiler::lir {
 						.data_initialization = ctv_initial_value,
 					});
 				}
-				variant_case(CRef<mir::Function>, mir_ctor_function) {
+				variant_case(mir::MIRCtorDtorPair, pair) {
 					auto lir_ctor_function
-						= ctx.query<lir::LowerToLIRFunction>({ mir_ctor_function });
+						= ctx.query<lir::LowerToLIRFunction>({ pair.constructor });
+					base::Optional<CRef<lir::Function>> lir_dtor_function;
+					if_opt_some(pair.destructor, mir_dtor) lir_dtor_function
+						= ctx.query<lir::LowerToLIRFunction>({ mir_dtor });
 					lir_unit.lir_globals.emplace_back(LIRGlobalData{
                         .global = lir_global,
                         .data_initialization = LIRGlobalData::CTorDtorPair{
-                            // @TODO: #2825 add legit dtors when implemented 
                             .global_ctor = lir_ctor_function,
-                            .global_dtor = std::nullopt,
+                            .global_dtor = lir_dtor_function,
                         },
                     });
 				}

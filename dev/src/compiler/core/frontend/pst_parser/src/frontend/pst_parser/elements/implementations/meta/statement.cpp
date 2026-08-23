@@ -1,3 +1,4 @@
+#include "../../hierarchy/class_elements/all_class_elements.hpp"
 #include "../../hierarchy/declarations/all_declarations.hpp"
 #include "../../hierarchy/lists/all_lists.hpp"                    // IWYU pragma: keep
 #include "../../hierarchy/not_statements/all_not_statements.hpp"  // IWYU pragma: keep
@@ -6,6 +7,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+
+	CLONE_SUB_ELEMENTS_DEF(Stmt, prefixes.attributes, prefixes.specifiers);
 
 	bool Stmt::trailingSemicolon() { return true; }
 
@@ -43,7 +46,8 @@ namespace pst {
 				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
-				    || Conditions::isBlockGroup(state, fwd - 1);
+				    || (Conditions::isBlockGroup(state, fwd - 1)
+				        && !Conditions::isMatchBodyBlock(state, fwd - 1));
 			}
 		};
 
@@ -242,6 +246,44 @@ namespace pst {
 			// Expr as stmt have semicolon at the end:
 			return internal::parseStmt<ExprStmt>(state);
 		}
+
+		MBox<Stmt> chooseClassStmt(LangParserState& state) {
+			if (state[0].is(Special::Semicolon)
+			    && (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
+				state.tokens().skip();
+				return nullptr;
+			}
+
+			if (state[0].is(Special::Semicolon) || isSentinel(state, 0)) {
+				state.logInt(base::makeBox<EmptyStatementError>(state.getPosition()));
+				return nullptr;
+			}
+
+			Keyword as_keyword = state[0].asKeyword();
+
+			switch (as_keyword) {
+			case Keyword::Fun:
+				return parseStmt<Method>(state);
+			case Keyword::Let:
+			case Keyword::Var:
+				return parseStmt<Field>(state);
+			// These are statements that are not class-specific when adding new ones be careful
+			// about the fact that ContextStmt is set to Class here.
+			case Keyword::Alias:
+				return parseStmt<Alias>(state);
+			case Keyword::Using:
+				return parseStmt<Using>(state);
+			case Keyword::Class:
+				return parseStmt<Class>(state);
+			default:
+				break;
+			}
+
+			if (state[0].isStr(state.getContext()->class_name))
+				return parseStmt<ClassSpecial>(state);
+
+			return parseStmt<Field>(state);
+		}
 	}
 
 	Stmt::PrefixBoxes Stmt::collectPrefixes(LangParserState& state) {
@@ -276,15 +318,27 @@ namespace pst {
 
 		MBox<Stmt> out;
 
-		// Specifier block handling
-		if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+		if (state[0].is(Keyword::Template)) {
+			// Template statement handling
+			out = TemplateStmt::parse(state);
+		} else if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+			// Specifier block handling
 			out = internal::parseStmt<SpecifierBlock>(state);
 		} else {
-			// Parse Statement
-			out = internal::chooseStmt(state);
+			// Parse Statement based on context
+			switch (state.getContext()->stmt_context) {
+			case pst::StmtContext::Normal:
+				out = internal::chooseStmt(state);
+				break;
+			case pst::StmtContext::Class:
+				out = internal::chooseClassStmt(state);
+				break;
+			default:
+				CORE_PANIC("Undefined Stmt parsing context");
+			}
 		}
 
-		// Add Attributes
+		// Add Attributes and Specifiers
 		if (out) out->addPrefixes(state, std::move(prefixes));
 
 		PST_RETURN out;

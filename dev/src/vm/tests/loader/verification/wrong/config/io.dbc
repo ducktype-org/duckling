@@ -1,0 +1,5 @@
+function main {  } -> { i64 } {
+    init_pany_type         call_arg0,        i64;
+    call_builtinfunc       builtin_output_i64;
+    ret                   ;
+}

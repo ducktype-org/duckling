@@ -1,11 +1,9 @@
 
 #include "query_type_symbol_data.hpp"
 
-#include "symbol_id_utils.hpp"
 #include "symbol_kind.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -108,10 +106,8 @@ namespace compiler::helios {
 				tuple_info.members.push_back(ctx.query<defgen::QueryGeneratedSymbol>(
 					{ // Tuple field names are _1, _2, ...
 				      // Starting from 1, not 0!
-				      .name = base::StrID{ base::strConcat("_", order + 1) },
-				      .generated_symbol_data
-				      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-						  .parent_type = key, .index = order } } }
+				      .name                  = base::StrID{ base::strConcat("_", order + 1) },
+				      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = order } }
 				));
 			}
 
@@ -122,4 +118,24 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleTypeData);
+
+	struct IMPLEMENT_QUERY(QuerySliceTypeData, SliceTypeData) {
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			// The fields of a slice type are always `ptr` and `len`, in that order.
+			SymID ptr = ctx.query<defgen::QueryGeneratedSymbol>(
+				{ .name                  = base::StrID{ "ptr" },
+			      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = 0 } }
+			);
+			SymID len = ctx.query<defgen::QueryGeneratedSymbol>(
+				{ .name                  = base::StrID{ "len" },
+			      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = 1 } }
+			);
+
+			return SliceTypeData{ .ptr = ptr, .len = len };
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySliceTypeData);
 }

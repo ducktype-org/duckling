@@ -1,9 +1,10 @@
 #include "log_helpers.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <global_state/global_logger.hpp>
 
 #include <base/pointers/box.hpp>
+
+#include <diagnostic/placeholder.hpp>
 
 #include <string>
 
@@ -14,11 +15,11 @@ namespace compiler::driver::diagnostics {
 			if (!global_state::hasGlobalLogger()) return;
 			auto& logger = *global_state::getGlobalLogger();
 			if (is_error) {
-				logger.log(makeBox<dia_int::PlaceholderError>(
+				logger.log(makeBox<dia::PlaceholderError>(
 					std::string{ header }, std::string{ description }
 				));
 			} else {
-				logger.log(makeBox<dia_int::PlaceholderWarning>(
+				logger.log(makeBox<dia::PlaceholderWarning>(
 					std::string{ header }, std::string{ description }
 				));
 			}

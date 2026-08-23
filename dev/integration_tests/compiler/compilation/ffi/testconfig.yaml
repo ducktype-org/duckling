@@ -1,0 +1,87 @@
+# C ABI FFI tests. A C source file is compiled separately with clang and handed to the package
+# being tested: as an object file linked in with --additional-link-options for the native
+# backend, and as a shared object the DVM `dlopen`s for the DVM backend. The C artifacts are
+# built in their own directory so the duckc artifact-cache clean (which wipes @{case_build})
+# cannot delete them.
+#
+# clang (not gcc) is required for the sub-word integer cases: gcc defensively re-extends
+# narrow parameters in the callee, masking a missing caller-side signext, whereas clang
+# trusts the caller's extension and would compute the wrong result if it were absent.
+#
+# `c_lib.c` holds the callees of every test here; each test's module forward declares only
+# the ones it calls.
+
+case_build_c: "$DIT_TMP_DIR/build_c"
+c_compiler: "$(command -v clang-19 || command -v clang)"
+# Compile both sides at -O3: the C callee then trusts the caller's sub-word extension
+# (no defensive re-extend), and duckc's optimized codegen is the path under test.
+compile_c_object: "@{c_compiler} -O3 -c -o @{case_build_c}/c_lib.o c_lib.c"
+compile_c_shared: "@{c_compiler} -O3 -shared -fPIC -o @{case_build_c}/libc_lib.so c_lib.c"
+create_dirs: "mkdir -p @{case_build} && mkdir -p @{case_build_c}"
+
+ffi_module: "@{Name}"
+compile_package_cmd: "@{duckc_path} compile_package duck_modules/@{ffi_module} -a @{case_build} -n duck_modules/package_@{ffi_module} @{std_artifacts_path_flag}"
+
+PreCase: "@{create_dirs} &&
+  case '@{backend}' in
+    llvm) @{compile_c_object} && @{compile_package_cmd} -O 3 --additional-link-options @{case_build_c}/c_lib.o ;;
+    dvm)  @{compile_c_shared} && @{compile_package_cmd} --dvm-backend --dvm-shared-libs @{case_build_c}/libc_lib.so ;;
+    *)    echo 'Unknown backend'; exit 1 ;;
+  esac;"
+
+Run: "
+  case '@{backend}' in
+    llvm) @{compiled_to_llvm} ;;
+    dvm)  @{dvm_path} run @{compiled_to_dvm} ;;
+    *)    echo 'Unknown backend'; exit 1 ;;
+  esac;"
+
+Tests:
+  ffi:
+    expected_output: |
+      7
+      12
+      100
+      600
+      1
+      2
+      2
+      9
+      5
+      6
+      77
+      78
+      5
+      10
+      15
+      7
+      14
+      21
+      28
+      7
+      14
+      21
+      -21554
+      -55
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "@{expected_output}"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "@{expected_output}"
+        ExitCode: 0
+  # Variadic calls go through `ffi_prep_cif_var`, which the DVM does not use, so this test is
+  # native only.
+  ffi_variadic:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: |
+            6
+            10
+        ExitCode: 0

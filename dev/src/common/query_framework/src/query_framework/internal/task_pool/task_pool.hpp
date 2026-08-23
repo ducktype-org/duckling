@@ -69,8 +69,9 @@ namespace query::internal {
 	public:
 		/**
 		 * @brief Constructs a TaskPool.
-		 * It uses the WorkerManager singleton to get the workers
-		 * and set the no_tasks_callback for each worker to its onWorkerNoTasks method.
+		 * It uses the WorkerManager singleton to get the workers.
+		 * @note No no_tasks_callback is registered here. Worker liveness relies on the
+		 * invariant that every closure scheduled by the pool tail-calls onWorkerNoTasks.
 		 */
 		explicit TaskPool();
 

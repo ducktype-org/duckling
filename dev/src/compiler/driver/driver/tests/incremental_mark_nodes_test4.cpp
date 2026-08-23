@@ -56,7 +56,7 @@ private:
 		ASSERT_TRUE(init_result.status().isOk());
 
 		auto prev_graph_opt = query::internal::ContextAccess::getState()->getPreviousGraph();
-		ASSERT_TRUE(prev_graph_opt.has_value());
+		ASSERT_HAS_VALUE(prev_graph_opt);
 		auto prev = prev_graph_opt.value();
 
 		auto prev_colors = query::internal::ContextAccess::getState()->getPreviousNodeColors();
@@ -119,7 +119,7 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>(key);
+			ctx.query<driver::CompileModule>(key);
 		});
 
 		query::internal::NodeID root_node{
@@ -147,7 +147,7 @@ private:
 
 		// Save artifacts (writes previous graph blob to artifacts)
 		// Because the compilation should fail, the .o from prev compilation should be deleted from
-		// disc Check that there is no .o file in artifacts after compilation
+		// disk Check that there is no .o file in artifacts after compilation
 		auto output_maybe2 = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
 
 		// Validate that .o file from previous compilation is present before we run the compilation

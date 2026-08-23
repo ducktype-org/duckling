@@ -1,6 +1,8 @@
 #pragma once
 
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <json/json.hpp>
 
@@ -15,7 +17,8 @@ namespace vm::api {
 
 	struct NotStarted {};
 
-	using ExitValue = std::vector<Ref<VmValue>>;
+	// @TODO: #2720 Change it back to std::vector
+	using ExitValue = std::variant<i64, std::vector<Ref<IVMValue>>>;
 
 	struct ExecutionCompleted {
 		ExitValue exit_value;
@@ -39,25 +42,21 @@ namespace vm::api {
 		ExecutionPanicked>;
 
 	constexpr bool isStatusTerminal(const ProcStatus& status) {
-		return std::holds_alternative<ExecutionCompleted>(status)
-		    || std::holds_alternative<ExecutionStopped>(status)
-		    || std::holds_alternative<ExecutionPanicked>(status);
+		return v_matches(status, ExecutionCompleted, ExecutionStopped, ExecutionPanicked);
 	}
 
 	constexpr bool hasExecutionStarted(const ProcStatus& status) {
-		return !(std::holds_alternative<NotStarted>(status));
+		return !v_matches(status, NotStarted);
 	}
 
 	constexpr bool isExecuting(const ProcStatus& status) {
 		// @note This function is equivalent to the following:
 		// return !isStatusTerminal(status) && hasExecutionStarted(status);
-		return std::holds_alternative<Running>(status) || std::holds_alternative<Paused>(status)
-		    || std::holds_alternative<Sleeping>(status);
+		return v_matches(status, Running, Paused, Sleeping);
 	}
 
 	constexpr bool canRespond(const ProcStatus& status) {
-		return std::holds_alternative<NotStarted>(status) || std::holds_alternative<Paused>(status)
-		    || isStatusTerminal(status);
+		return v_matches(status, NotStarted, Paused) || isStatusTerminal(status);
 	}
 }
 

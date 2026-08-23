@@ -3,6 +3,7 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(DottedName, names)
 
 	bool DottedName::getStar() const { return star; }
 

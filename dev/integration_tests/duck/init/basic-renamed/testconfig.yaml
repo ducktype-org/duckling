@@ -1,0 +1,11 @@
+PostCase: python3 check.py && @{cleanup_tmp_env}
+
+Tests:
+  basic-renamed:
+    Description: can initialise a new project
+    Cases:
+      init:
+        test-cmd: duck init foo --name bar
+        Output:
+          Run: |+
+            echo "info: successfully created a new project \`bar\` at \`$DIT_TMP_DIR/foo\`"

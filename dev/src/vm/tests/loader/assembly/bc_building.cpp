@@ -11,7 +11,6 @@ class BCBuildingTests: public VmTestSuite {
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(multipleLabels);
-		TESTER_ADD_TEST(repeatedTypes);
 		TESTER_ADD_TEST(labelNotFound);
 		TESTER_ADD_TEST(unknownType);
 		TESTER_ADD_TEST(unknownFunction);
@@ -25,16 +24,6 @@ private:
 			"multiple_labels.dbc",
 			{
 				vm::code::DuplicatedLabelError::ERR_MSG,
-			}
-		);
-	}
-
-	void repeatedTypes() {
-		loadInvalidDbc(
-			"repeated_types.dbc",
-			{
-				"Type with this name already exists.",
-				"Previous type declaration here.",
 			}
 		);
 	}

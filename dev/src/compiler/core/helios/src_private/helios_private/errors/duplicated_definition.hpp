@@ -1,13 +1,9 @@
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
+#include <diagnostic/message.hpp>
+#include <diagnostic/stable_position.hpp>
 
-#include <base/collections/optional.hpp>
-
-#include <string>
-
-namespace dia_int {
+namespace dia {
 
 	/**
 	 * @brief Error indicating that a symbol has been defined more than once.
@@ -22,9 +18,9 @@ namespace dia_int {
 
 	public:
 		DuplicatedDefinitionError(
-			std::string_view                        symbol_name,
-			base::Optional<dia_int::StablePosition> source_position,
-			std::string_view                        pointer_message_content = "here"
+			std::string_view    symbol_name,
+			dia::StablePosition source_position,
+			std::string_view    pointer_message_content = "here"
 		);
 	};
 

@@ -1,8 +1,10 @@
 #include "types.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios_private/tsh/abstract_type_impl.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::tsh {
@@ -46,7 +48,7 @@ namespace compiler::tsh {
 		};
 
 		if (!cache.contains({ size, signedness })) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat("Invalid size of integral type: ", size, "."),
 				"The only allowed sizes are 8, 16, 32, 64 and 128."
 			));
@@ -69,7 +71,7 @@ namespace compiler::tsh {
 		};
 
 		if (!cache.contains(size)) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat("Invalid size of float type: ", size, "."),
 				"The only allowed sizes are 16, 32, 64, 80, and 128."
 			));
@@ -87,9 +89,22 @@ namespace compiler::tsh {
 		return RawPointerAbstractType{ &raw_pointer_impl.at(mutable_pointer) };
 	}
 
-	StringAbstractType getStringType() {
-		static auto string_impl = StringAbstractTypeImpl{};
-		return StringAbstractType{ &string_impl };
+	ClassAbstractType getStringType(query::Context& ctx) {
+		// The `String` type is the `String` class from `core.containers`, looked up as a
+		// language primitive rather than being a compiler-builtin abstract type.
+		const auto sym = ctx.query<compiler::helios::QueryLanguagePrimitiveSymID>(
+								{ compiler::helios::LanguagePrimitive::String }
+		)
+		                     ->valueOrThrow();
+		return ctx.query<QueryClassType>(sym);
+	}
+
+	bool isStringTypePresent(query::Context& ctx) {
+		return helios::isLanguagePrimitivePresent(ctx, helios::LanguagePrimitive::String);
+	}
+
+	SliceAbstractType getCharSliceType(query::Context& ctx) {
+		return ctx.query<QuerySliceType>(tsh::SymbolType<>::withDefaults(tsh::getCharType()));
 	}
 
 	NamespaceAbstractType getNamespaceType() {
@@ -142,13 +157,15 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCPointerType)
 
-	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Impl) {
-		static auto provide(Context&, const QKey key) -> PResult { return { key }; }
+	struct IMPLEMENT_QUERY(QuerySliceType, SliceAbstractType::Impl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			return SliceAbstractTypeImpl(key);
+		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDynamicArrayType)
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySliceType)
 
 	struct IMPLEMENT_QUERY(QueryStaticArrayType, StaticArrayAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {

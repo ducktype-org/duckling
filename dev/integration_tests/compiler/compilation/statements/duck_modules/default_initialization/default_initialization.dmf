@@ -1,4 +1,4 @@
-import core.builtins.*;
+import core.containers.*;
 
 import sub as sub;
 
@@ -17,8 +17,8 @@ fun printPrimitives(a: ref Primitives) -> () = {
     builtin_output_f64(a.b);                    # 0.0
     builtin_output_i64(if a.c then 1 else 0);   # 0
     builtin_output_char(a.d - '\0' + 'A');      # 'A'
-    print(a.e);                 # ""
-    builtin_output_u64(len a.f);                # empty list -> 0
+    print(&a.e);                 # ""
+    builtin_output_u64(a.f.length());                # empty list -> 0
 }
 
 fun printPrimitives(a: ref Primitives2) -> () = {
@@ -26,8 +26,8 @@ fun printPrimitives(a: ref Primitives2) -> () = {
     builtin_output_f64(a.b);                    # 0.0
     builtin_output_i64(if a.c then 1 else 0);   # 0
     builtin_output_char(a.d - '\0' + 'A');      # 'A'
-    print(a.e);                 # ""
-    builtin_output_u64(len a.f);                # empty list -> 0
+    print(&a.e);                 # ""
+    builtin_output_u64(a.f.length());                # empty list -> 0
 }
 
 fun printPrimitives(a: ref InitializedPrimitives) -> () = {
@@ -36,7 +36,7 @@ fun printPrimitives(a: ref InitializedPrimitives) -> () = {
     builtin_output_i64(if a.c then 1 else 0);   # 0
     builtin_output_char(a.d);                   # 'A'
     builtin_output_char(a.d + 2u8);             # 'C'
-    print(a.e);                 # "kajak"
+    print(&a.e);                 # "kajak"
 }
 
 class Primitives {
@@ -44,8 +44,8 @@ class Primitives {
     b: f64;         # 0.0
     c: bool;        # false
     d: char;        # '\0'
-    e: str;         # ""
-    f: List[i32];   # empty list
+    e: String;      # ""
+    f: List:{i32};   # empty list
     g: type;        # Unit
 }
 
@@ -54,8 +54,8 @@ class Primitives2 {
     b: f64;         # 0.0
     c: bool;        # false
     d: char;        # '\0'
-    e: str;         # ""
-    f: List[i32];   # empty list
+    e: String;      # ""
+    f: List:{i32};   # empty list
     g: type;        # Unit
 }
 
@@ -64,7 +64,7 @@ class InitializedPrimitives {
     b: f64 = 1.0;
     c: bool = true;
     d: char = 'A';
-    e: str = "kajak\n";
+    e: String = "kajak\n".toString();
     f: type = i32;
 }
 
@@ -77,18 +77,18 @@ fun testPrimitives() -> () = {
     var a: Primitives; 
     printPrimitives(&a);
     # Check that the list is usable after default init.
-    a.f += 1;
-    a.f += 2;
-    a.f += 3;
-    builtin_output_u64(len a.f);
+    a.f.push(1);
+    a.f.push(2);
+    a.f.push(3);
+    builtin_output_u64(a.f.length());
     printSmallSeparator(); 
    
     printPrimitives(&g_a);
     # Check that the list is usable after default init.
-    g_a.f += 1;
-    g_a.f += 2;
-    g_a.f += 3;
-    builtin_output_u64(len g_a.f);
+    g_a.f.push(1);
+    g_a.f.push(2);
+    g_a.f.push(3);
+    builtin_output_u64(g_a.f.length());
     printSmallSeparator(); 
 
     var b: InitializedPrimitives;
@@ -123,6 +123,26 @@ fun testMultiDimArrays() -> () = {
     builtin_output_i64(m.matrix[0][0][0].x); # 1
     builtin_output_i64(m.matrix[1][2][0].x); # 1
     builtin_output_i64(m.matrix[1][2][0].y); # 0
+}
+
+# ==================================== TUPLES ====================================
+fun testTuples() -> () = {
+    var primitiveTuple: (
+        i32,         # 0
+        f64,         # 0.0
+        bool,        # false
+        char,        # '\0'
+        String,      # ""
+        List:{i32},   # empty list
+        type
+    );
+    
+    builtin_output_i64(primitiveTuple._1);                    # 0
+    builtin_output_f64(primitiveTuple._2);                    # 0.0
+    builtin_output_i64(if primitiveTuple._3 then 1 else 0);   # 0
+    builtin_output_char(primitiveTuple._4 - '\0' + 'A');      # 'A'
+    print(&primitiveTuple._5);                                 # ""
+    builtin_output_u64(primitiveTuple._6.length());           # empty list -> 0
 }
 
 # ==================================== NESTED CLASSES ====================================
@@ -165,6 +185,9 @@ fun main() -> i64 = {
     
     printSeparator();
     testMultiDimArrays();
+
+    printSeparator();
+    testTuples();
     
     printSeparator();
     testDeepNesting();

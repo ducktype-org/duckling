@@ -7,7 +7,7 @@
 
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/safe/exceptions.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <limits>
@@ -74,18 +74,20 @@ private:
 
 	void variantTypeTagTest() {
 		/**
-		 * @brief Create an owned VmValue containing a specified value.
+		 * @brief Create an owned VMValue containing a specified value.
 		 */
-		const auto get_int_vm_value = [&](vm::PID pid, u64 value) -> Box<vm::VmValue> {
-			auto response = vm::api::getVmValue(pid, "i64");
-			ASSERT_TRUE(response.has_value());
+		const auto get_int_vm_value = [&](vm::PID pid, u64 value) -> Box<vm::IVMValue> {
+			auto response = vm::api::getVMValue(pid, "i64");
+			ASSERT_HAS_VALUE(response);
 			auto vm_value = std::move(response->vm_value);
 			vm_value->writeBytes<u64>(value);
 			return vm_value;
 		};
 
 		auto pid = initProcess();
-		vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) });
+		ASSERT_TRUE(
+			vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) }).has_value()
+		);
 
 		auto wanted_value   = std::numeric_limits<u64>::max();
 		auto vm_value_max64 = get_int_vm_value(pid, wanted_value);
@@ -98,16 +100,18 @@ private:
 			ASSERT_TRUE(
 				vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }).has_value()
 			);
-			ASSERT_TRUE(vm::api::join(pid).has_value());
+			ASSERT_HAS_VALUE(vm::api::join(pid));
 			auto value = vm::api::getExitValue(pid);
 			if (!value.has_value()) {
 				fail(
-					"Could not load VmValue for: " + function_name
+					"Could not load VMValue for: " + function_name
 					+ ", reason: " + vm::api::errorToString(value.error())
 				);
 			}
-			ASSERT_EQUAL(value.value().size(), 1);
-			const auto vm_value = value.value().at(0);
+			ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(value.value()));
+			auto& value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(value.value());
+			ASSERT_EQUAL(value_vec.size(), 1);
+			const auto vm_value = value_vec.at(0);
 			switch (type_tag_bits) {
 			case 8:
 				// Using uint8_t, because u8 is not integral

@@ -1,0 +1,36 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} init baz
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar" >> foo/quackconfig.yaml
+  echo "dependencies:
+    baz:
+      source:
+        path: ../baz" >> bar/quackconfig.yaml
+
+  echo "dependencies:
+    foo:
+      source:
+        path: ../foo" >> baz/quackconfig.yaml
+Tests:
+  local-cycle:
+    Description: can build a project with dependencies
+    Cases:
+      build:
+        test-cmd: duck -C foo build
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: running gathering
+            info: starting the solver engine
+            info: starting fetching 3 packages
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`baz\`...
+            info: compiling \`bar\`...
+            info: compiling \`foo\`..."

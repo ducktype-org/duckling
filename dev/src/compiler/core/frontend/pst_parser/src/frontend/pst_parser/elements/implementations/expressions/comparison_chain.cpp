@@ -4,6 +4,8 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(ComparisonChain, sub_expr, operators);
+
 	i64 ComparisonChain::skipToOp(const LangParserState& state, i64 base) {
 		i64 fwd = base;
 		PST_WHILE(

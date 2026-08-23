@@ -12,33 +12,40 @@ path = "src/lib/lib.rs"
 name = "duck"
 
 [dependencies]
-clap = { version = "4.6.0", features = ["cargo"] }
-clap_complete = { version = "4.6.0", optional = true }
-console = "0.16.3"
-curl = "0.4.49"
-dialoguer = "0.12.0"
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "serde"] }
+clap = { version = "4.6.4", features = ["cargo"] }
+clap_complete = { version = "4.6.7", optional = true }
+console = { version = "0.16.4", default-features = false, features = ["std"] }
+curl = "0.4.50"
+dialoguer = { version = "0.12.0", default-features = false, features = ["password"] }
 flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] }
-git2 = "0.20.4"
-indicatif = "0.18.4"
-itertools = "0.14.0"
-libc = "0.2.183"
-libgit2-sys = "0.18.3"
-libssh2-sys = "0.3.1"
-openssl = "0.10.76"
-openssl-sys = "0.9.112"
-regex = "1.12.3"
-rusqlite = "0.39.0"
-russcip = "0.9.1"
-scip-sys = "0.1.26"
-serde = { version = "1.0.228", features = ["derive"] }
+futures = "0.3.33"
+git2 = { version = "0.21.0", features = ["cred", "https", "ssh"] }
+http = "1.4.2"
+itertools = "0.15.0"
+libc = "0.2.189"
+libgit2-sys = "0.18.7"
+libssh2-sys = "0.3.2"
+openssl = "0.10.81"
+openssl-sys = "0.9.117"
+percent-encoding = { version = "2.3.2", default-features = false }
+regex = { version = "1.13.1", default-features = false, features = ["perf", "std"] }
+rusqlite = { version = "0.39.0", default-features = false, features = ["cache", "bundled"] }
+# Disable `default-features`, so we don't enable the default `bindgen` feature,
+# which uses `bindgen` dependency, which requires `libclang` DLL, which is sometimes missing in CI...
+# Our default SCiP (bundled) has pinned release, so bindings are deterministic and are downloaded.
+# NOTE: `from-source` pulls-in `bindgen`.
+russcip = { version = "0.10.0", default-features = false }
+scip-sys = { version = "0.1.28", default-features = false }
+serde = { version = "1.0.229", features = ["derive"] }
 serde-untagged = "0.1.9"
-serde_json = "1.0.149"
+serde_json = "1.0.151"
+serde_with = { version = "3.22.0", default-features = false, features = ["macros"] }
 serde_yaml_ng = "0.10.0"
 sha2 = "0.11.0"
-shellexpand = "3.1.2"
-soft-canonicalize = "0.5.4"
-tar = { version = "0.4.45", default-features = false }
+tar = { version = "0.4.46", default-features = false }
 tempfile = "3.27.0"
+thiserror = "2.0.19"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 url = { version = "2.5.8", features = ["serde"] }

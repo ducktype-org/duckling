@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../lists/initializer_list.hpp"
 #include "../lists/parameter_list.hpp"
 #include "class_special.hpp"
 #include "preamble.hpp"
@@ -10,14 +9,17 @@ namespace pst {
 	 * @brief Class constructor element.
 	 */
 	class Constructor final: public ClassSpecial {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Constructor, ClassSpecial);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD_OPT(ident, IdentifierWrapper);  ///< If no value it's "create" is implied
 		NAMED_CHILD(params, ParamList);
-		NAMED_CHILD(inits, InitList);
 		NAMED_CHILD(body, CodeBlock);
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Constructor);
-		CLASS_STMT_PARSE(Constructor);
+		PARSE_DECL();
 
 		~Constructor() override = default;
 		void dprint(std::ostream& out) const final;
