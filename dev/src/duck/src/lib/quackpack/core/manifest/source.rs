@@ -1,4 +1,5 @@
 //! Dependencies' sources and interning.
+use std::fmt;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -211,5 +212,26 @@ impl TryFrom<Source> for registry::DependencySource {
             }
         };
         Ok(Self { inner })
+    }
+}
+
+impl fmt::Display for Source {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let url = self.url;
+        match self.kind {
+            SourceKind::Registry => write!(f, "registry+{url}"),
+            SourceKind::Local => write!(f, "local+{url}"),
+            SourceKind::Git(git_reference) => match git_reference {
+                GitReference::Default => write!(f, "git+{url}"),
+                GitReference::Tag(str_id)
+                | GitReference::Branch(str_id)
+                | GitReference::Rev(str_id) => {
+                    let mut url = url.as_url().clone();
+                    // Make sure we render it as `https://github.com/foo/bar#text`.
+                    url.set_fragment(Some(&str_id));
+                    write!(f, "git+{url}")
+                }
+            },
+        }
     }
 }

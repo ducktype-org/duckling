@@ -300,6 +300,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
 
     /// Helper for [`Gatherer::explore()`], performs a git fetch
     /// (fetch from an external git repository).
+    #[tracing::instrument(skip_all, fields(?request, %url, ?reference))]
     async fn fetch_git(
         &self,
         request: &NotPinnedRequest,
@@ -325,9 +326,20 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         }
         match self.try_git_fastpath(request, url, reference).await {
             Err(e) => {
+                error!(error = %e, "fast path failed");
                 // We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
                 // as it is well ... a fast path.
-                self.fetcher.ctx().console().warning(e)?;
+                let identifier = &request.id;
+                let name = identifier.name;
+                let source = identifier.source;
+                self.fetcher
+                    .ctx()
+                    .console()
+                    .warning(format!("git fast path for `{name} {source}` failed: {e}"))?;
+                self.fetcher
+                    .ctx()
+                    .console()
+                    .info("switching to cloning git repository")?;
             }
             Ok(Some(fast_path_git)) => {
                 debug!("git fast path worked");
