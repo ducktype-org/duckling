@@ -1,15 +1,14 @@
 use std::path::Path;
 use std::str::FromStr;
 
-use crate::duck::driver::cli_ext::{multi, optional};
+use clap::{Arg, ArgGroup, ArgMatches, Command};
+
+use crate::duck::driver::cli_ext::{flag, multi, optional, subcommand};
 use crate::quackpack::core::{DependencyKind, Version};
 use crate::quackpack::subcommands::add::{
     AddOptions, DependencySpecification, NameSpecification, SourceSpecification, add,
 };
 use crate::{DuckContext, QuackResult};
-use clap::{Arg, ArgGroup, ArgMatches, Command};
-
-use crate::duck::driver::cli_ext::{flag, subcommand};
 
 /// Creates parser for the `add` subcommand.
 pub fn get_parser() -> Command {
