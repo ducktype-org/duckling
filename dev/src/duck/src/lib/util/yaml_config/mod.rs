@@ -11,6 +11,7 @@ use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 mod de;
+mod editable;
 
 impl DescriptionWithAnArticle for Value {
     fn desc_with_article(&self) -> &'static str {
