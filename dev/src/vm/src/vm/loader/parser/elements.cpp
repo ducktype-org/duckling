@@ -347,18 +347,17 @@ namespace vm::loader::parser {
 			return field;
 		}
 
-	template<>
-	auto parseArg(F8ParserState& state) -> vm::opargs::VMValueIdentifier {
-		auto pos = state.getPosition();
-		state.parse().one(lang_def::Keyword::BCVMValueIdentifier);
-		auto parsed_literal = parseNumericLiteral<u64>(state);
-		auto value = vm::opargs::VMValueIdentifier{ parsed_literal.first };
-		auto length = std::max<usize>(parsed_literal.second, 1);
-		value.bytecode_pos = dia::SourcePosition(
-			pos.getLocation(), pos.getStart(), pos.getStart() + length
-		);
-		return value;
-	}
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::VMValueIdentifier {
+			auto pos = state.getPosition();
+			state.parse().one(lang_def::Keyword::BCVMValueIdentifier);
+			auto parsed_literal = parseNumericLiteral<u64>(state);
+			auto value          = vm::opargs::VMValueIdentifier{ parsed_literal.first };
+			auto length         = std::max<usize>(parsed_literal.second, 1);
+			value.bytecode_pos
+				= dia::SourcePosition(pos.getLocation(), pos.getStart(), pos.getStart() + length);
+			return value;
+		}
 
 #define HANDLE_STR_ARG(TYPE)                                     \
 	template<>                                                   \
