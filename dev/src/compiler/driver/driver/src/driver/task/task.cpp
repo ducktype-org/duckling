@@ -57,7 +57,7 @@ namespace compiler::driver {
 				js::checkForUnknownFields(
 					*options_obj,
 					{},
-					{ "shared_libraries", "dependency_libraries" },
+					{ "shared_libraries", "link_libraries" },
 					"dvm_linking_options",
 					report
 				);
@@ -89,7 +89,7 @@ namespace compiler::driver {
 				};
 
 				parseStringArray("shared_libraries", dvm_linking_options.shared_libraries);
-				parseStringArray("dependency_libraries", dvm_linking_options.dependencies_libraries);
+				parseStringArray("link_libraries", dvm_linking_options.link_libraries);
 
 				return dvm_linking_options;
 			}
@@ -337,7 +337,7 @@ namespace compiler::driver {
 			variant_case(BuildTargetDVMExecutable, dvm_exec_target) {
 				auto dvm_linking_options = dvm_exec_target.dvm_linking_options;
 				base::appendToVector(
-					dvm_linking_options.dependencies_libraries,
+					dvm_linking_options.link_libraries,
 					getStdLibDVMLinkingDependencies(stdlib_options)
 				);
 				return BuildTargetDVMExecutable{
@@ -396,15 +396,15 @@ namespace compiler::driver {
 		const options_types::StdLibOptions&  stdlib_options,
 		bool                                 is_static_lib
 	) {
-		auto dependencies
-			= linking_options.dvm_dependencies
+		auto link_libraries
+			= linking_options.dvm_link_libraries
 		    | std::views::transform([](const fs::FilePath& fs_path) { return fs_path.string(); })
 		    | std::ranges::to<std::vector>();
 
 		if (not is_static_lib)
-			base::appendToVector(dependencies, getStdLibDVMLinkingDependencies(stdlib_options));
+			base::appendToVector(link_libraries, getStdLibDVMLinkingDependencies(stdlib_options));
 
-		return { .shared_libraries       = linking_options.dvm_shared_libraries,
-			     .dependencies_libraries = std::move(dependencies) };
+		return { .shared_libraries = linking_options.dvm_shared_libraries,
+			     .link_libraries   = std::move(link_libraries) };
 	}
 }  // namespace compiler::driver

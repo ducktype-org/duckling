@@ -66,11 +66,10 @@ Remaining fields depend on `strategy`:
 `dvm_linking_options` (both DVM strategies) — config baked into the generated
 DBC so the DVM can run it:
 - `shared_libraries` (string[], optional) — shared libraries the VM has to load
-  to run the code. A bare name (e.g.
-  `"libm.so.6"`) is searched in the system library paths, a path is loaded as
-  given.
-- `dependency_libraries` (string[], optional) — paths of `.dbc` libraries to
-  link into the final output.
+  to run the code. A bare name (e.g. `"libm.so.6"`) is searched in the system
+  library paths, a path is loaded as given.
+- `link_libraries` (string[], optional) — paths of `.dbc` libraries to link into
+  the final output.
 
 Unlike `linking_options` / `archive_options`, there is no short (string) form —
 both fields are lists, so the object form is always required.
@@ -78,8 +77,7 @@ both fields are lists, so the object form is always required.
 > **IMPORTANT — linking against other DVM packages.** As with the `native`
 > strategy, listing a package in `dependencies` is **not enough**. You must
 > pass the path to the `.dbc` file produced by its `dvm_lib` task inside
-> `dependency_libraries`. The driver does not resolve those paths
-> automatically.
+> `link_libraries`. The driver does not resolve those paths automatically.
 
 ### `strategy: "native"` — native executable (LLVM)
 | field             | required | description |
@@ -156,7 +154,7 @@ links the resulting `.dbc` and loads a shared library at runtime.
       "output_file": "bin/app",
       "dvm_linking_options": {
         "shared_libraries": [ "libm.so.6" ],
-        "dependency_libraries": [ "bin/mathlib_dvm.dbc" ]
+        "link_libraries": [ "bin/mathlib_dvm.dbc" ]
       }
     }
   ]

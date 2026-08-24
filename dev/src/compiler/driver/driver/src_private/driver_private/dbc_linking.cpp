@@ -44,16 +44,16 @@ namespace compiler::driver {
 
 	namespace {
 		/**
-		 * @brief The debug info file of a linked dependency is assumed to sit next to it, with
+		 * @brief The debug info file of a linked library is assumed to sit next to it, with
 		 * the DVM bytecode extension swapped for the debug info one.
 		 * @return the path, if such a file exists.
 		 */
-		base::Optional<fs::FilePath> findDependencyDebugInfoPath(const std::string& dependency_path
+		base::Optional<fs::FilePath> findLinkLibraryDebugInfoPath(const std::string& link_library_path
 		) {
 			constexpr std::string_view DBC_EXTENSION = ".dbc";
 			constexpr std::string_view DI_EXTENSION  = ".di.json";
 
-			std::string stem = dependency_path;
+			std::string stem = link_library_path;
 			if (stem.ends_with(DBC_EXTENSION)) stem.resize(stem.size() - DBC_EXTENSION.size());
 
 			fs::FilePath debug_info_path = stem + std::string(DI_EXTENSION);
@@ -75,10 +75,10 @@ namespace compiler::driver {
 		using std::ranges::views::transform;
 
 		auto object_files = objects | transform(&artifacts::FileArtifact::file) | to<std::vector>();
-		auto dep_object_files = dvm_linking_options.dependencies_libraries
-		                      | transform([](const std::string& val) { return fs::File(val); })
-		                      | to<std::vector>();
-		base::appendToVector(object_files, dep_object_files);
+		auto link_library_files = dvm_linking_options.link_libraries
+		                        | transform([](const std::string& val) { return fs::File(val); })
+		                        | to<std::vector>();
+		base::appendToVector(object_files, link_library_files);
 
 		auto parse_result = dvm_linker.parseCodeCollectionFromFiles(object_files);
 
@@ -107,8 +107,8 @@ namespace compiler::driver {
 		std::vector<fs::FilePath> debug_info_paths;
 		debug_info_paths.reserve(debug_info_artifacts.size());
 		for (auto& art: debug_info_artifacts) debug_info_paths.push_back(art.file.getFilePath());
-		for (const auto& dependency: dvm_linking_options.dependencies_libraries)
-			if_opt_some(findDependencyDebugInfoPath(dependency), debug_info_path) {
+		for (const auto& link_library: dvm_linking_options.link_libraries)
+			if_opt_some(findLinkLibraryDebugInfoPath(link_library), debug_info_path) {
 				debug_info_paths.push_back(debug_info_path);
 			}
 

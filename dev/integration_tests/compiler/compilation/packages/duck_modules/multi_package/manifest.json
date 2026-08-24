@@ -116,7 +116,7 @@
             "output_file": "app2_dvm_linked.dbc",
             "dvm_linking_options": {
                 "shared_libraries": [ "libm.so.6" ],
-                "dependency_libraries": [ "build/lib_a_dvm.dbc" ]
+                "link_libraries": [ "build/lib_a_dvm.dbc" ]
             }
         },
         {

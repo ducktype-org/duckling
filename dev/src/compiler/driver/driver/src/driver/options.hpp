@@ -119,9 +119,9 @@ namespace compiler::driver {
 			std::vector<std::string> dvm_shared_libraries;
 
 			/**
-			 * @brief The paths of the dependency libraries.
+			 * @brief The paths of the DBC libraries to link into the output.
 			 */
-			std::vector<fs::FilePath> dvm_dependencies;
+			std::vector<fs::FilePath> dvm_link_libraries;
 		};
 	}
 

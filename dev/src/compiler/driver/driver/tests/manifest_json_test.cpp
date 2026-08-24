@@ -273,7 +273,7 @@ private:
             "output_file": "bin/app",
             "dvm_linking_options": {
                 "shared_libraries": [ "libm.so.6", "libfoo.so" ],
-                "dependency_libraries": [ "bin/mylib_dvm.dbc" ]
+                "link_libraries": [ "bin/mylib_dvm.dbc" ]
             }
         })");
 		auto result    = RawPackageCompilationTask::fromJson(
@@ -290,7 +290,7 @@ private:
 		);
 		ASSERT_EQUAL(
 			(std::vector<std::string>{ "bin/mylib_dvm.dbc" }),
-			target.dvm_linking_options.dependencies_libraries
+			target.dvm_linking_options.link_libraries
 		);
 	}
 
@@ -314,7 +314,7 @@ private:
 		ASSERT_EQUAL(
 			(std::vector<std::string>{ "libm.so.6" }), target.dvm_linking_options.shared_libraries
 		);
-		ASSERT_TRUE(target.dvm_linking_options.dependencies_libraries.empty());
+		ASSERT_TRUE(target.dvm_linking_options.link_libraries.empty());
 	}
 
 	void dvmStrategyBadLinkingOptionsFails() {

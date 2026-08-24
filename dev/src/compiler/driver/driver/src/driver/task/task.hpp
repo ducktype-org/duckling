@@ -55,7 +55,7 @@ namespace compiler::driver {
 		/**
 		 * @brief DBC libraries paths to link to final executable.
 		 */
-		std::vector<std::string> dependencies_libraries{};
+		std::vector<std::string> link_libraries{};
 	};
 
 	/**
@@ -91,7 +91,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Runtime config of the DVM.
 		 * @note The standard library packages the executable depends on are added to
-		 * `dependencies_libraries` by `mergeBuildTargetWithGlobalOptions`.
+		 * `link_libraries` by `mergeBuildTargetWithGlobalOptions`.
 		 */
 		DVMLinkingOptions dvm_linking_options = {};
 	};

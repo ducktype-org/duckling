@@ -962,7 +962,7 @@ namespace compiler::driver {
 				}
 				variant_case(BuildTargetDVMExecutable, target_dvm) {
 					// The standard library (and any other dependency) is linked in through
-					// `dvm_linking_options.dependencies_libraries`.
+					// `dvm_linking_options.link_libraries`.
 					const std::vector<artifacts::FileArtifact>& dbc_arts
 						= *dvm_objects_by_root_module.atMaybe(task.root_module).value();
 
