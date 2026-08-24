@@ -549,7 +549,7 @@ fn display_git_fast_path_failure_warning(
     request: &NotPinnedRequest,
     ctx: &DuckContext,
 ) -> QuackResult<()> {
-    let identifier = &request.id;
+    let identifier = request.id;
     let name = identifier.name;
     let source = identifier.source;
     ctx.console().warning(format!(
