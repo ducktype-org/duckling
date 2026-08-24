@@ -289,7 +289,7 @@ namespace {
 			}
 			variant_default {
 				throw base::NotYetImplemented(
-					"Conversion from ctv to VMValue for this type is not implemented yet"
+					"Conversion from ctv to VMValue for this type is not implemented yet: " + ctv.getTypeOfStoredValue(ctx).toString() + " " + ctv.toString()
 				);
 			}
 		}

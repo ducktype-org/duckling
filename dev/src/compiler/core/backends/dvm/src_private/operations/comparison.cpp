@@ -59,7 +59,7 @@ namespace {
                 case OpKind::ucmpLe:
                     return lhs_num <= rhs_num;
                 default:
-                    CORE_PANIC("Unhandled comparison operation");
+                    CORE_PANIC("Unhandled comparison operation (1)");
                 }
             },
             lhs_numeric.getStorage()
@@ -87,7 +87,7 @@ namespace {
 		case OpKind::fcmpGe: 	return OpKind::fcmpLe;
 		case OpKind::fcmpLt: 	return OpKind::fcmpGt;
 		case OpKind::fcmpLe: 	return OpKind::fcmpGe;
-		default: 				CORE_PANIC("Unhandled comparison operation");
+		default: 				CORE_PANIC("Unhandled comparison operation (2)");
 		}
 		// clang-format on
 	}
