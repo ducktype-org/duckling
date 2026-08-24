@@ -518,7 +518,8 @@ clah::Clah getClahForMain() {
 			clah::Clah(
 				"compile_modules",
 				"Compile given modules into binaries. Every module is placed in its own package "
-				"and every package depends on all the other ones."
+				"and every package depends on all the other ones. "
+				"This mimics the simple case of multi file compilation with GCC/clang which is sometimes useful. Note that the package based entry points should be preferred when possible."
 			)
 				.addPositional(clah::FileParser::make("module"))
 				.setDefaultValueParser(clah::FileParser::make("module"))
