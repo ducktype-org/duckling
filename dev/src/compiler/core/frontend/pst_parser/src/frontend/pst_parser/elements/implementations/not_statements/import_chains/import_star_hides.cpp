@@ -63,9 +63,9 @@ namespace pst {
 	}
 
 	HashAlg& ImportStarHides::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, names.size());
-		addToHash(partial_hash, hides.has_value());
-		if (hides) addToHash(partial_hash, hides->size());
+		hashing::addToHash(partial_hash, names.size());
+		hashing::addToHash(partial_hash, hides.has_value());
+		if (hides) hashing::addToHash(partial_hash, hides->size());
 		return partial_hash;
 	}
 

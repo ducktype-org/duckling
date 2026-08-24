@@ -260,7 +260,7 @@ namespace compiler::tsh {
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const AbstractType& t
 		) noexcept {
-			addToHash(h, t.queryUnstablePerfectHash());
+			hashing::addToHash(h, t.queryUnstablePerfectHash());
 		}
 
 	protected:

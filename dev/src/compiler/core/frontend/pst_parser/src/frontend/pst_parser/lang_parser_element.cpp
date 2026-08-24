@@ -90,7 +90,7 @@ namespace pst {
 
 	void LangElement::calcHash() {
 		auto partial_hash = calcStableHash();
-		addToHash(partial_hash, context_hash);
+		hashing::addToHash(partial_hash, context_hash);
 		hash = partial_hash.finalize();
 
 		// Can be used to turn on unstable hashing for testing purposes.
@@ -113,7 +113,7 @@ namespace pst {
 
 	HashAlg LangElement::calcStableHash() const {
 		HashAlg partial_hash = getElementPathHash().partial;
-		addToHash(partial_hash, elementType());
+		hashing::addToHash(partial_hash, elementType());
 		addGenericDataToHash(partial_hash);
 		addElementDataToStableHash(partial_hash);
 		return partial_hash;
@@ -122,7 +122,7 @@ namespace pst {
 	HashAlg& LangElement::addGenericDataToHash(HashAlg& partial_hash) const { return partial_hash; }
 
 	void LangElement::calcSignature(HashAlg& partial_hash) const {
-		addToHash(partial_hash, hash->data);
+		hashing::addToHash(partial_hash, hash->data);
 		for (auto& sub_el: sub_elements) {
 			variant_match(sub_el) {
 				variant_case(InternalChild, el) { el->calcSignature(partial_hash); }
@@ -131,13 +131,13 @@ namespace pst {
 				variant_default { CORE_PANIC("Unhandled variant case"); }
 			}
 		}
-		addToHash(partial_hash, "hash_end");
+		hashing::addToHash(partial_hash, "hash_end");
 	}
 
 	void LangElement::signGenerated(const HashType& signature) {
 		HashAlg new_hash;
-		addToHash(new_hash, hash->data);
-		addToHash(new_hash, signature.data);
+		hashing::addToHash(new_hash, hash->data);
+		hashing::addToHash(new_hash, signature.data);
 		hash = new_hash.finalize();
 		for (auto& sub_el: sub_elements) {
 			variant_match(sub_el) {

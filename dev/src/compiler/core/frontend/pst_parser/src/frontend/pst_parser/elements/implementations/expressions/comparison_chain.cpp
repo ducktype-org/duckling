@@ -83,8 +83,8 @@ namespace pst::expr {
 	}
 
 	HashAlg& ComparisonChain::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, sub_expr.size());
-		addToHash(partial_hash, operators.size());
+		hashing::addToHash(partial_hash, sub_expr.size());
+		hashing::addToHash(partial_hash, operators.size());
 		return partial_hash;
 	}
 

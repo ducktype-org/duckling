@@ -51,7 +51,7 @@ namespace pst {
 		}
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override {
-			addToHash(partial_hash, elements.size());
+			hashing::addToHash(partial_hash, elements.size());
 			return partial_hash;
 		}
 

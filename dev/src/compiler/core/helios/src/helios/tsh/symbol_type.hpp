@@ -355,7 +355,7 @@ namespace compiler::tsh {
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const SymbolType& t
 		) noexcept {
-			addToHash(h, t.queryUnstablePerfectHash());
+			hashing::addToHash(h, t.queryUnstablePerfectHash());
 		}
 
 		[[nodiscard]]

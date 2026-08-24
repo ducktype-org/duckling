@@ -21,6 +21,7 @@
 #pragma once
 
 #include <base/preproc/macro_base.hpp>
+#include <base/types/monostate.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 
@@ -116,6 +117,10 @@
 		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(-, SELF_T)                                           \
 		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(+=, +)                                       \
 		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(-=, -)                                       \
+		/* The wrapped integer is the whole object, so its bytes are a padding-free image of    */ \
+		/* the value. Spelled out because the macro makes a class - std::is_integral_v is then  */ \
+		/* false and the hashing library would refuse the type outright.                        */ \
+		static constexpr ::base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};                \
 		IF(DIMENSIONAL)(                                                                           \
 			STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(*, SELF_T)                                \
 				STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(/, SELF_T)                            \

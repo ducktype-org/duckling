@@ -4,6 +4,7 @@
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
+#include <hashing/add_to_hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>

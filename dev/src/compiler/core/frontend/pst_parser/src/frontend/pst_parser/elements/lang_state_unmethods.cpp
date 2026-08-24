@@ -10,7 +10,7 @@ namespace pst::internal {
 
 	HashType getContextHash(const LangParserState& state) {
 		HashAlg partial_hash;
-		addToHash(partial_hash, *state.getContext());
+		hashing::addToHash(partial_hash, *state.getContext());
 		return partial_hash.finalize();
 	}
 

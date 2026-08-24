@@ -49,8 +49,8 @@ namespace pst {
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const LangParserContext& ctx
 		) noexcept {
-			addToHash(h, ctx.class_name);
-			addToHash(h, ctx.block_order);
+			hashing::addToHash(h, ctx.class_name);
+			hashing::addToHash(h, ctx.block_order);
 		}
 	};
 }

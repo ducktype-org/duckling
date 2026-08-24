@@ -33,7 +33,7 @@ namespace pst {
 	}
 
 	HashAlg& TemplateStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, inner_decl_symbol.has_value());
+		hashing::addToHash(partial_hash, inner_decl_symbol.has_value());
 		return partial_hash;
 	}
 

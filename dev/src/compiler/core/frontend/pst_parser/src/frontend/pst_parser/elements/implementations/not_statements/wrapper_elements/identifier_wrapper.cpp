@@ -48,7 +48,7 @@ namespace pst {
 	}
 
 	HashAlg& IdentifierWrapper::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, name);
+		hashing::addToHash(partial_hash, name);
 		return partial_hash;
 	}
 

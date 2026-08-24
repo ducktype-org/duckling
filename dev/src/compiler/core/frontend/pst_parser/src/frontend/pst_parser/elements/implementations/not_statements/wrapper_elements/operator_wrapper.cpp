@@ -24,7 +24,7 @@ namespace pst {
 	}
 
 	HashAlg& OperatorWrapper::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, op);
+		hashing::addToHash(partial_hash, op);
 		return partial_hash;
 	}
 

@@ -27,7 +27,7 @@ namespace pst {
 			friend constexpr void addToHash(
 				hashing::hash_algorithm auto& h, const CaseBranch& t
 			) noexcept {
-				addToHash(h, t.condition.has_value());
+				hashing::addToHash(h, t.condition.has_value());
 			}
 		};
 

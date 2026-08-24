@@ -38,7 +38,7 @@ namespace pst {
 	}
 
 	HashAlg& ImportNested::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, names.size());
+		hashing::addToHash(partial_hash, names.size());
 		return partial_hash;
 	}
 

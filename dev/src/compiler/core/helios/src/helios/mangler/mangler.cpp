@@ -74,18 +74,18 @@ namespace compiler::helios::mangler {
 	}
 
 	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
-		addToHash(h, k.symbol_key.index());
+		hashing::addToHash(h, k.symbol_key.index());
 		if (k.symbol_key.index() == 0)
-			addToHash(h, std::get<0>(k.symbol_key));
+			hashing::addToHash(h, std::get<0>(k.symbol_key));
 		else if (k.symbol_key.index() == 1)
-			addToHash(h, std::get<1>(k.symbol_key));
+			hashing::addToHash(h, std::get<1>(k.symbol_key));
 		else
 			CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
 
-		addToHash(h, k.kind);
-		addToHash(h, k.mangling_scheme_version);
-		addToHash(h, k.additional_metadata.has_value());
-		if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
+		hashing::addToHash(h, k.kind);
+		hashing::addToHash(h, k.mangling_scheme_version);
+		hashing::addToHash(h, k.additional_metadata.has_value());
+		if (k.additional_metadata) hashing::addToHash(h, k.additional_metadata.value());
 	}
 
 	base::Bit256 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {

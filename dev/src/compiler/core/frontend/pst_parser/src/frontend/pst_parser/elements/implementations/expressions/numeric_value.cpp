@@ -36,7 +36,7 @@ namespace pst::expr {
 	}
 
 	HashAlg& ExprNumericValue::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, value);
+		hashing::addToHash(partial_hash, value);
 		return partial_hash;
 	}
 

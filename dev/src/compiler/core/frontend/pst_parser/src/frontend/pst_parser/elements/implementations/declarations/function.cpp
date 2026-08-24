@@ -47,7 +47,7 @@ namespace pst {
 	}
 
 	HashAlg& Fun::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, ret.has_value());
+		hashing::addToHash(partial_hash, ret.has_value());
 		return partial_hash;
 	}
 

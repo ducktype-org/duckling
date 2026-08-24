@@ -81,7 +81,7 @@ namespace pst {
 	}
 
 	HashAlg& MatchCase::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, branches);
+		hashing::addToHash(partial_hash, branches);
 		return partial_hash;
 	}
 }

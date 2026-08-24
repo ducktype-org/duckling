@@ -3,6 +3,7 @@
 #include <base/collections/optional.hpp>
 
 #include <diagnostic/source_position.hpp>
+#include <hashing/add_to_hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <lexer/token.hpp>
 #include <string_id/string_id.hpp>
@@ -19,7 +20,7 @@ namespace tpc {
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const Identifier& t
 		) noexcept {
-			addToHash(h, t.value.strView());
+			hashing::addToHash(h, t.value.strView());
 		}
 
 		operator base::StrID() { return value; }
@@ -47,7 +48,7 @@ namespace tpc {
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const StringValue& t
 		) noexcept {
-			addToHash(h, t.value.str());
+			hashing::addToHash(h, t.value.str());
 		}
 	};
 
@@ -87,7 +88,7 @@ namespace tpc {
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const CharValue& t
 		) noexcept {
-			addToHash(h, t.value.strView());
+			hashing::addToHash(h, t.value.strView());
 		}
 	};
 
@@ -124,8 +125,8 @@ namespace tpc {
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const NumericValue& t
 		) noexcept {
-			addToHash(h, t.value);
-			if (t.type_specifier.has_value()) addToHash(h, t.type_specifier.value());
+			hashing::addToHash(h, t.value);
+			if (t.type_specifier.has_value()) hashing::addToHash(h, t.type_specifier.value());
 		}
 	};
 }

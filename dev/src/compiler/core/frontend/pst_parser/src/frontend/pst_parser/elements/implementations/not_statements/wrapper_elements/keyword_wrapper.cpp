@@ -22,7 +22,7 @@ namespace pst {
 	}
 
 	HashAlg& KeywordWrapper::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, key);
+		hashing::addToHash(partial_hash, key);
 		return partial_hash;
 	}
 

@@ -132,6 +132,43 @@ namespace hashing {
 		   && requires(const R& r) { std::ranges::size(r); };
 
 		/**
+		 * @brief Adds a composite's member count to the hash.
+		 *
+		 * The range prefix below makes a variable-length field self-delimiting, but a
+		 * composite still is not: {int, int, float} and {float, std::string} both flatten to
+		 * twelve zero bytes when default-constructed, so two unrelated types would share a
+		 * hash. The member count in front separates them. It is a compile-time constant, so
+		 * within one type it contributes nothing but a fixed offset.
+		 *
+		 * It does not make the hash type-aware - u32(1) and i32(1) still agree, and so do two
+		 * structs with the same arity and the same field widths. Only a real type tag fixes
+		 * that.
+		 */
+		template<std::size_t MEMBERS, hash_algorithm HashAlgorithm>
+		constexpr void hashCompositeArity(HashAlgorithm& h) {
+			// One byte, not eight: the count is known at compile time and tiny, while a small
+			// object like {int, int, float} is only twelve bytes of payload - an eight byte
+			// prefix there would be most of what the algorithm ever sees.
+			static_assert(MEMBERS <= 0xFF, "a composite with more than 255 hashed members");
+			hashAsBytes(h, static_cast<unsigned char>(MEMBERS));
+		}
+
+		/**
+		 * @brief Adds a range's element count to the hash.
+		 *
+		 * Without it the byte stream is not self-delimiting: two variable-length fields
+		 * hashed one after another cannot be told from the same bytes split differently, so
+		 * ("ab", "c") and ("a", "bc") collide. A fixed-width count in front removes the
+		 * ambiguity.
+		 */
+		template<hash_algorithm HashAlgorithm>
+		constexpr void hashRangeLengthPrefix(HashAlgorithm& h, std::size_t size) {
+			// u64 on purpose, not std::size_t - the hash must not depend on the platform's
+			// pointer width.
+			hashAsBytes(h, static_cast<u64>(size));
+		}
+
+		/**
 		 * Hashes a range as a contiguous sequence of memory
 		 * (requires that its elements are in a contiguous memory block, have unique object
 		 * representations and size is known)
@@ -139,36 +176,40 @@ namespace hashing {
 		template<hash_algorithm HashAlgorithm, std::ranges::contiguous_range R>
 		requires can_hash_range_as_bytes<HashAlgorithm, R>
 		constexpr void hashRangeAsBytes(HashAlgorithm& h, const R& r) {
-			// In C++23 the only way to get the memory representation of an object
-			// as a sequence of bytes is to use std::bit_cast. Since the range may be large,
-			// we don't want to copy it to a local buffer as it could cause stack overflow,
-			// so instead we allocate a buffer on the heap and copy the elements one by one
-			// using std::bit_cast
-			// Note: since C++20 if an allocation is freed in the same expression it was allocated
-			// in it is allowed to be a constant expression The buffer is then passed to the hash
-			// algorithm. The memory is freed in the same scope and compiler should also see that
-			// the buffer is a memcopy of the range's data. This should allow for copy elision and
-			// no overhead.
-
 			constexpr std::size_t ELEM_SIZE   = sizeof(std::ranges::range_value_t<R>);
 			const std::size_t     r_size      = std::ranges::size(r);
 			const std::size_t     buffer_size = r_size * ELEM_SIZE;
-			auto* const           buffer      = ::new std::byte[buffer_size];
 
-			for (u64 i = 0, j = 0; i < r_size; ++i, j += ELEM_SIZE) {
-				// Ranges may have both singed and unsigned index types and there is not good trait
-				// that can always tell which one the range expects. To suppress warnings we get the
-				// elements using std::next with range's difference_type
-				const auto& elem = *std::next(
-					std::ranges::begin(r), static_cast<std::ranges::range_difference_t<R>>(i)
-				);
-				const auto arr = std::bit_cast<std::array<const std::byte, ELEM_SIZE>>(elem);
-				std::copy(arr.begin(), arr.end(), buffer + j);
+			hashRangeLengthPrefix(h, r_size);
+
+			if consteval {
+				// In a constant expression the only way to get at an object's memory
+				// representation is std::bit_cast, so the elements are copied one by one into
+				// a buffer. Since C++20 an allocation freed in the same expression it was
+				// allocated in is allowed in a constant expression.
+				auto* const buffer = ::new std::byte[buffer_size];
+
+				for (u64 i = 0, j = 0; i < r_size; ++i, j += ELEM_SIZE) {
+					// Ranges may have both singed and unsigned index types and there is not
+					// good trait that can always tell which one the range expects. To suppress
+					// warnings we get the elements using std::next with range's difference_type
+					const auto& elem = *std::next(
+						std::ranges::begin(r), static_cast<std::ranges::range_difference_t<R>>(i)
+					);
+					const auto arr = std::bit_cast<std::array<const std::byte, ELEM_SIZE>>(elem);
+					std::copy(arr.begin(), arr.end(), buffer + j);
+				}
+
+				h(std::span<const std::byte>{ buffer, buffer_size });
+
+				delete[] buffer;
+			} else {
+				// At run time the buffer is pure overhead - the concept above already requires
+				// a contiguous range, so the bytes can be handed over in place. Measured: the
+				// buffer cost one heap allocation and one full copy per call, at -O0 and -O2
+				// alike, despite the copy elision the old comment here hoped for.
+				h(std::as_bytes(std::span{ std::ranges::data(r), r_size }));
 			}
-
-			h(std::span<const std::byte>{ buffer, buffer_size });
-
-			delete[] buffer;
 		}
 
 		/**

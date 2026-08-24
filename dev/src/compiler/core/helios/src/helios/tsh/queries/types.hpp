@@ -184,7 +184,7 @@ namespace compiler::tsh {
 		base::Bit256 queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher{};
 			// Note that tuple components are ordered.
-			for (const auto& component: components) addToHash(hasher, component);
+			for (const auto& component: components) hashing::addToHash(hasher, component);
 			return hasher.finalize();
 		}
 	};
@@ -217,7 +217,7 @@ namespace compiler::tsh {
 			std::ranges::sort(hashes, [](const auto& a, const auto& b) { return a < b; });
 
 			hashing::SHA256 hasher{};
-			for (const auto& hash: hashes) addToHash(hasher, hash);
+			for (const auto& hash: hashes) hashing::addToHash(hasher, hash);
 			return hasher.finalize();
 		}
 	};
@@ -264,10 +264,10 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher{};
-			for (const auto& param_type: parameter_types) addToHash(hasher, param_type);
-			addToHash(hasher, result_type);
-			addToHash(hasher, pure);
-			addToHash(hasher, free);
+			for (const auto& param_type: parameter_types) hashing::addToHash(hasher, param_type);
+			hashing::addToHash(hasher, result_type);
+			hashing::addToHash(hasher, pure);
+			hashing::addToHash(hasher, free);
 			return hasher.finalize();
 		}
 	};
@@ -306,7 +306,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher{};
-			addToHash(hasher, source);
+			hashing::addToHash(hasher, source);
 			return hasher.finalize();
 		}
 	};

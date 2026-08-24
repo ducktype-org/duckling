@@ -36,12 +36,13 @@ namespace hashing {
 		 * @brief Adds the held address to the hash
 		 *
 		 * @param hash_alg - hashing algorithm to use
-		 * @param by_address - proxy holding the address to hash
+		 *
+		 * @note A member and not a friend on purpose: this class lives in namespace
+		 * `hashing`, and a hidden friend would inject the name `addToHash` there, clashing
+		 * with the `hashing::addToHash` dispatcher object.
 		 */
-		friend constexpr void addToHash(
-			hash_algorithm auto& hash_alg, const HashByAddress& by_address
-		) {
-			internal::hashAsBytes(hash_alg, by_address.pointer);
+		constexpr void addToHash(hash_algorithm auto& hash_alg) const {
+			internal::hashAsBytes(hash_alg, pointer);
 		}
 	};
 }

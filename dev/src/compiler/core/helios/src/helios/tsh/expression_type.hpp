@@ -129,7 +129,7 @@ namespace compiler::tsh {
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const ExpressionType& t
 		) noexcept {
-			addToHash(h, t.queryUnstablePerfectHash());
+			hashing::addToHash(h, t.queryUnstablePerfectHash());
 		}
 
 	private:

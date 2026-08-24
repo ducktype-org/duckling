@@ -57,7 +57,7 @@ namespace pst::expr {
 	}
 
 	HashAlg& ExprFormatStrValue::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, sub_elements.size());
+		hashing::addToHash(partial_hash, sub_elements.size());
 		return partial_hash;
 	}
 

@@ -34,7 +34,7 @@ namespace pst::expr {
 	}
 
 	HashAlg& KeywordLiteral::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, template_specifier.has_value());
+		hashing::addToHash(partial_hash, template_specifier.has_value());
 		return partial_hash;
 	}
 

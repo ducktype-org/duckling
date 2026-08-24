@@ -178,8 +178,14 @@ namespace base {
 			return this->id;
 		}
 
+		/**
+		 * @brief Hashes the string this id stands for, never the interned id itself.
+		 *
+		 * The id depends on interning order, so hashing it would make the hash differ
+		 * between runs over the same input. The length prefix comes from the range path in
+		 * `hashing`, so it is not repeated here.
+		 */
 		void addToHash(hashing::hash_algorithm auto& hash_alg) const {
-			hashing::addToHash(hash_alg, strView().size());
 			hashing::addToHash(hash_alg, strView());
 		}
 

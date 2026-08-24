@@ -218,7 +218,7 @@ namespace compiler::tsh {
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const ValueCategory& vc
 		) noexcept {
-			addToHash(h, vc.queryUnstablePerfectHash());
+			hashing::addToHash(h, vc.queryUnstablePerfectHash());
 		}
 	};
 }

@@ -7,9 +7,10 @@
 #pragma once
 
 #include <base/types/ints.hpp>  // IWYU pragma: export
+#include <base/types/monostate.hpp>
 
-#include <atomic>               // IWYU pragma: export
-#include <compare>              // IWYU pragma: export
+#include <atomic>   // IWYU pragma: export
+#include <compare>  // IWYU pragma: export
 #include <ostream>
 
 /**
@@ -28,42 +29,46 @@
  *
  * @note it creates normal class, it can be used in namespace
  */
-#define STRONG_TYPEDEF_ID(NAME)                                              \
-	class NAME final {                                                       \
-	private:                                                                 \
-		inline static std::atomic<u64> NEXT_ID = 0;                          \
-		constexpr static u64           BAD_ID  = u64(-1);                    \
-		u64                            id      = BAD_ID;                     \
-		inline constexpr NAME(u64 id): id{ id } {}                           \
-                                                                             \
-	public:                                                                  \
-		inline constexpr NAME()                               = default;     \
-		inline constexpr NAME(const NAME& mX)                 = default;     \
-		inline constexpr NAME(NAME&& mX) noexcept             = default;     \
-		inline constexpr NAME& operator=(const NAME& rhs)     = default;     \
-		inline constexpr NAME& operator=(NAME&& rhs) noexcept = default;     \
-		[[nodiscard]]                                                        \
-		static NAME next() {                                                 \
-			NAME out;                                                        \
-			out.id = NAME::NEXT_ID.fetch_add(1, std::memory_order_relaxed);  \
-			return out;                                                      \
-		}                                                                    \
-		static NAME bad() { return NAME{ BAD_ID }; }                         \
-		[[nodiscard]]                                                        \
-		inline constexpr explicit operator u64() const noexcept {            \
-			return id;                                                       \
-		}                                                                    \
-		[[nodiscard]]                                                        \
-		inline constexpr u64 asInt() const noexcept {                        \
-			return id;                                                       \
-		}                                                                    \
-		inline constexpr u64 queryUnstablePerfectHash() const { return id; } \
-		auto                 operator<=>(const NAME&) const = default;       \
-		inline bool          isBad() const { return id == BAD_ID; }          \
-		inline bool          isGood() const { return id != BAD_ID; }         \
-	};                                                                       \
-	inline std::ostream& operator<<(std::ostream& os, const NAME& id) {      \
-		return os << #NAME << "(" << id.asInt() << ")";                      \
+#define STRONG_TYPEDEF_ID(NAME)                                                          \
+	class NAME final {                                                                   \
+	private:                                                                             \
+		inline static std::atomic<u64> NEXT_ID = 0;                                      \
+		constexpr static u64           BAD_ID  = u64(-1);                                \
+		u64                            id      = BAD_ID;                                 \
+		inline constexpr NAME(u64 id): id{ id } {}                                       \
+                                                                                         \
+	public:                                                                              \
+		/* The u64 id is the whole object - padding-free. Spelled out because the */     \
+		/* macro makes a class, so std::is_integral_v is false and the hashing   */      \
+		/* library would refuse the type outright.                              */       \
+		static constexpr ::base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};      \
+		inline constexpr NAME()                                               = default; \
+		inline constexpr NAME(const NAME& mX)                                 = default; \
+		inline constexpr NAME(NAME&& mX) noexcept                             = default; \
+		inline constexpr NAME& operator=(const NAME& rhs)                     = default; \
+		inline constexpr NAME& operator=(NAME&& rhs) noexcept                 = default; \
+		[[nodiscard]]                                                                    \
+		static NAME next() {                                                             \
+			NAME out;                                                                    \
+			out.id = NAME::NEXT_ID.fetch_add(1, std::memory_order_relaxed);              \
+			return out;                                                                  \
+		}                                                                                \
+		static NAME bad() { return NAME{ BAD_ID }; }                                     \
+		[[nodiscard]]                                                                    \
+		inline constexpr explicit operator u64() const noexcept {                        \
+			return id;                                                                   \
+		}                                                                                \
+		[[nodiscard]]                                                                    \
+		inline constexpr u64 asInt() const noexcept {                                    \
+			return id;                                                                   \
+		}                                                                                \
+		inline constexpr u64 queryUnstablePerfectHash() const { return id; }             \
+		auto                 operator<=>(const NAME&) const = default;                   \
+		inline bool          isBad() const { return id == BAD_ID; }                      \
+		inline bool          isGood() const { return id != BAD_ID; }                     \
+	};                                                                                   \
+	inline std::ostream& operator<<(std::ostream& os, const NAME& id) {                  \
+		return os << #NAME << "(" << id.asInt() << ")";                                  \
 	}
 
 /**
@@ -84,35 +89,39 @@
  *
  * @note it creates normal class, it can be used in namespace
  */
-#define STRONG_TYPEDEF_ID_DIRECT_CREATION(NAME)                          \
-	class NAME final {                                                   \
-	private:                                                             \
-		constexpr static u64 BAD_ID = u64(-1);                           \
-		u64                  id     = BAD_ID;                            \
-                                                                         \
-	public:                                                              \
-		inline constexpr explicit NAME(u64 id): id{ id } {}              \
-		inline constexpr NAME()                               = default; \
-		inline constexpr NAME(const NAME& mX)                 = default; \
-		inline constexpr NAME(NAME&& mX) noexcept             = default; \
-		inline constexpr NAME& operator=(const NAME& rhs)     = default; \
-		inline constexpr NAME& operator=(NAME&& rhs) noexcept = default; \
-		static NAME            bad() { return NAME{ BAD_ID }; }          \
-		static NAME            fromU64(u64 v) { return NAME{ v }; }      \
-		[[nodiscard]]                                                    \
-		inline constexpr explicit operator u64() const noexcept {        \
-			return id;                                                   \
-		}                                                                \
-		[[nodiscard]]                                                    \
-		inline constexpr u64 asInt() const noexcept {                    \
-			return id;                                                   \
-		}                                                                \
-		auto        operator<=>(const NAME&) const = default;            \
-		inline bool isBad() const { return id == BAD_ID; }               \
-		inline bool isGood() const { return id != BAD_ID; }              \
-	};                                                                   \
-	inline std::ostream& operator<<(std::ostream& os, const NAME& id) {  \
-		return os << #NAME << "(" << id.asInt() << ")";                  \
+#define STRONG_TYPEDEF_ID_DIRECT_CREATION(NAME)                                      \
+	class NAME final {                                                               \
+	private:                                                                         \
+		constexpr static u64 BAD_ID = u64(-1);                                       \
+		u64                  id     = BAD_ID;                                        \
+                                                                                     \
+	public:                                                                          \
+		/* The u64 id is the whole object - padding-free. Spelled out because the */ \
+		/* macro makes a class, so std::is_integral_v is false and the hashing   */  \
+		/* library would refuse the type outright.                              */   \
+		static constexpr ::base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};  \
+		inline constexpr explicit NAME(u64 id): id{ id } {}                          \
+		inline constexpr NAME()                               = default;             \
+		inline constexpr NAME(const NAME& mX)                 = default;             \
+		inline constexpr NAME(NAME&& mX) noexcept             = default;             \
+		inline constexpr NAME& operator=(const NAME& rhs)     = default;             \
+		inline constexpr NAME& operator=(NAME&& rhs) noexcept = default;             \
+		static NAME            bad() { return NAME{ BAD_ID }; }                      \
+		static NAME            fromU64(u64 v) { return NAME{ v }; }                  \
+		[[nodiscard]]                                                                \
+		inline constexpr explicit operator u64() const noexcept {                    \
+			return id;                                                               \
+		}                                                                            \
+		[[nodiscard]]                                                                \
+		inline constexpr u64 asInt() const noexcept {                                \
+			return id;                                                               \
+		}                                                                            \
+		auto        operator<=>(const NAME&) const = default;                        \
+		inline bool isBad() const { return id == BAD_ID; }                           \
+		inline bool isGood() const { return id != BAD_ID; }                          \
+	};                                                                               \
+	inline std::ostream& operator<<(std::ostream& os, const NAME& id) {              \
+		return os << #NAME << "(" << id.asInt() << ")";                              \
 	}
 
 
