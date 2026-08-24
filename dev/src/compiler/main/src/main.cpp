@@ -496,7 +496,6 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
 
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
@@ -630,7 +629,6 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
 
 					// For now we always compile the standard library on demand,
