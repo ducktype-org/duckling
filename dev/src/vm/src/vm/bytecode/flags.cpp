@@ -536,7 +536,7 @@ namespace vm::code {
 				rd(i.src_ptr);
 				deref_read();
 			}
-			instr_case(ins::Op_movCast_pcptr_pcptr, i) {
+			instr_case(ins::Op_cast_pcptr_pcptr, i) {
 				wr(i.dst);
 				rd(i.src);
 			}

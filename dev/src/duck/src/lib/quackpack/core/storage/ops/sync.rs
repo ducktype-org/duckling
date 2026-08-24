@@ -88,7 +88,7 @@ pub fn sync(
     let solver_answer = get_solver_answer(
         pcx,
         &fetcher,
-        &git_access,
+        git_access,
         input_freeze,
         SolverMode::from(options),
     )?;
@@ -100,7 +100,7 @@ pub fn sync(
         .collect();
     let new_freeze = solver_answer.new_freeze.generate_storage_freeze()?;
 
-    let _fetched_count = fetch_source_codes(&storage, &fetcher, &git_access, pkgs)?;
+    let _fetched_count = fetch_source_codes(&storage, &fetcher, git_access, pkgs)?;
 
     let now = Utc::now();
     let venv = if let Some(mut venv) = venv {
@@ -237,7 +237,7 @@ fn load_external_freezefile(
 fn get_solver_answer(
     pcx: &PackageContext<'_>,
     fetcher: &Fetcher<'_>,
-    git_access: &StorageGitAccess<'_>,
+    git_access: StorageGitAccess<'_>,
     input_freeze: Option<&VenvFreeze>,
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
@@ -255,7 +255,7 @@ fn get_solver_answer(
     let solver = SolverGathererData::new(pcx, solver_freeze, mode)
         .context("failed to start gathering packages")?;
     let fetcher_lock = pcx.ctx().duck_home().open_fetcher_lockfile(pcx.ctx())?;
-    let should_run_engine = block_on(solver.prepare_solving(fetcher, git_access))?;
+    let should_run_engine = block_on(solver.prepare_solving(fetcher, &git_access))?;
     drop(fetcher_lock);
     debug!(%should_run_engine);
     match should_run_engine {
@@ -280,7 +280,7 @@ fn get_solver_answer(
 fn fetch_source_codes(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
-    git_access: &StorageGitAccess<'_>,
+    git_access: StorageGitAccess<'_>,
     pkgs: Vec<PackageId>,
 ) -> QuackResult<usize> {
     if pkgs.is_empty() {
@@ -326,7 +326,7 @@ fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResu
 async fn fetch_source_code(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
-    git_access: &StorageGitAccess<'_>,
+    git_access: StorageGitAccess<'_>,
     pkg: PackageId,
     logger: &RefCell<ErrorsLogger>,
 ) -> Option<SuccessfullyFetchedPackage> {
@@ -375,7 +375,7 @@ async fn fetch_source_code(
                 url: pkg.url(),
             };
             let maybe_blob_path = fetcher
-                .fetch_package_blob_with_retries(&fetcher_package, MAX_BLOB_RETRY_COUNT)
+                .fetch_package_blob_with_retries(fetcher_package, MAX_BLOB_RETRY_COUNT)
                 .await;
             let blob_path = log!(maybe_blob_path);
             log!(

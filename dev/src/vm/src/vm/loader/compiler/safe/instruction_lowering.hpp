@@ -252,7 +252,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_cast_pcptr_pptr, i) {
 				addLow<Op_cptrCast_p64_pptr>(i.dst, i.src_ptr);
 			}
-			instr_case(high::Op_movCast_pcptr_pcptr, i) {
+			instr_case(high::Op_cast_pcptr_pcptr, i) {
 				// A reinterpreting cast is a plain 8-byte move.
 				addLow<Op_mov_p64_p64>(i.dst, i.src);
 			}

@@ -15,12 +15,12 @@ use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Options for initializing a new project.
-pub struct InitOptions<'duck, 'a> {
+pub struct InitOptions<'duck, 'matches> {
     pub ctx: &'duck DuckContext,
     /// Root of the project.
     pub at: PathBuf,
     /// Name of the project.
-    pub explicit_name: Option<&'a str>,
+    pub explicit_name: Option<&'matches str>,
     /// Initialize a venv instead of a project (do not create the `src` folder).
     pub as_venv: bool,
     /// Make the project expose freezefile.
