@@ -568,7 +568,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				// `copyof x` copies `x` while keeping its reference kind.
+				// `copyof x` copies `x` while keeping its full symbol type (including reference kind).
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copyof)) {
 					const Shorthand s{ ctx };
 

@@ -24,7 +24,7 @@ Tests:
           String: "0\n1\n1\n"
         ExitCode: 0
 
-  # @TODO: #3225 Merge this test with `aggregates` once Lists are supported in DVM.
+  # @TODO: #3387 Merge this test with `aggregates` once refcount bug is fixed on DVM.
   list_copies:
     Cases:
       llvm:
