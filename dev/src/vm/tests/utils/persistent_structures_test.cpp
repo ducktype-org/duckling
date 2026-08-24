@@ -103,28 +103,6 @@ class PersistentStlTester: public tester::TestSuite {
 		}
 	};
 
-	void testConstCrossingDiff() {
-		using namespace vm::persistent;
-		Memory mem{};
-
-		// two states sharing a small entry but differing on widely-separated indices so the
-		// lowest common ancestor is near the root and the const-mode rebuild must cross
-		// between subtrees (swapSibling).
-		auto base = mem.setMultiple(
-			Memory::EMPTY, { { 1, 100 }, { 2, 200 }, { 3, 300 }, { 4, 400 } }
-		);
-
-		auto a = mem.set(base, 1'000'000, 1'000);
-		auto b = mem.set(base, 2'000'000, 2'000);
-
-		// getDiff drives the const-mode rebuild (RECONSTRUCT == false): the tracked node
-		// climbs to the LCA, swaps to its sibling, then descends to the other side.
-		auto diff = mem.getDiff(a, b);
-
-		decltype(diff) expected = { { 1'000'000, 1'000, std::nullopt }, { 2'000'000, std::nullopt, 2'000 } };
-		ASSERT_EQUAL(expected, diff);
-	}
-
 #undef TESTER_CLASS
 #define TESTER_CLASS PersistentStlTester
 
@@ -134,7 +112,6 @@ public:
 		TESTER_ADD_TEST(testMemory);
 		TESTER_ADD_TEST(testVector);
 		TESTER_ADD_TEST(testHashMap);
-		TESTER_ADD_TEST(testConstCrossingDiff);
 	}
 
 	void testBijective() {
@@ -221,30 +198,8 @@ public:
 		auto op08 = mem.eraseRange(op07, 1'000, 2'138);
 		checker(op08, { { 1, 5 }, { 2, 7 }, { 8'008'135, 69 } });
 
-		auto           diff = mem.getDiff(op07, op08);
-		decltype(diff) exp  = { { 1'410, 512, std::nullopt }, { 2'137, 67, std::nullopt } };
-		CORE_ASSERT(diff == exp, "Expecting two elements missing");
-
 		auto op09 = mem.set(empt, 8'484, 173);
 		checker(op09, { { 8'484, 173 } });
-
-		auto op10 = mem.merge(op09, op08, [](usize, usize l, usize) -> base::Optional<usize> {
-			return l;
-		});
-		checker(op10, { { 1, 5 }, { 2, 7 }, { 8'484, 173 }, { 8'008'135, 69 } });
-
-		auto op11 = mem.merge(op10, empt, [](usize, usize l, usize) -> base::Optional<usize> {
-			return l;
-		});
-		checker(op11, { { 1, 5 }, { 2, 7 }, { 8'484, 173 }, { 8'008'135, 69 } });
-
-		auto op12 = mem.merge(op10, empt, [](usize, usize l, usize) -> base::Optional<usize> {
-			return l;
-		});
-		checker(op12, { { 1, 5 }, { 2, 7 }, { 8'484, 173 }, { 8'008'135, 69 } });
-
-		ASSERT_EQUAL(op10, op11);
-		ASSERT_EQUAL(op11, op12);
 	}
 
 	void testVector() {

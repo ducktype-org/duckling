@@ -6,10 +6,8 @@
 #include <vm/utils/persistent/tree.hpp>
 
 #include <deque>
-#include <functional>
 #include <optional>
 #include <stdexcept>
-#include <tuple>
 #include <vector>
 
 namespace vm::persistent {
@@ -120,12 +118,6 @@ namespace vm::persistent {
 		constexpr static auto          IDX_END = detail::SegmentTree::IDX_END;
 		using Dir                              = detail::SegmentTree::Dir;
 
-		using ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;
-		inline const static ConflictPolicy DEFAULT_CONFLICT_POLICY
-			= ConflictPolicy{ [](usize, usize, usize) -> base::Optional<usize> {
-				  throw std::invalid_argument("no conflicts allowed");
-			  } };
-
 		/**
 		 * @brief sets multiple values at certain idxs
 		 */
@@ -150,29 +142,11 @@ namespace vm::persistent {
 		[[nodiscard]]
 		MemoryStateID set(MemoryStateID root, usize idx, usize val);
 
-		using diffResT
-			= std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>>;
-
 		/**
 		 * @brief transforms memory to list of pair [idx, value]
 		 */
 		[[nodiscard]]
 		std::vector<std::pair<usize, usize>> toVec(MemoryStateID root) const;
-
-		/**
-		 * @brief gets a difference of as the list of tuples [idx, value_1, value_2]
-		 */
-		[[nodiscard]]
-		diffResT getDiff(MemoryStateID root_1, MemoryStateID root_2) const;
-
-		/**
-		 * @brief merge two instances of memory, accoring to conflict policy
-		 */
-		MemoryStateID merge(
-			MemoryStateID  root_1,
-			MemoryStateID  root_2,
-			ConflictPolicy policy = DEFAULT_CONFLICT_POLICY
-		);
 
 		/**
 		 * @brief erase all the active idx which are outside of given interval
@@ -239,8 +213,6 @@ namespace vm::persistent {
 		usize size() const;
 		[[nodiscard]]
 		std::vector<std::pair<usize, usize>> toVec() const;
-		[[nodiscard]]
-		auto diff(const MemoryStateView& oth) const;
 		[[nodiscard]]
 		bool contains(usize idx) const;
 	};

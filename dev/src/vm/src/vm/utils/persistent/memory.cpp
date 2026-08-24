@@ -12,9 +12,7 @@
 
 #include <algorithm>
 #include <deque>
-#include <functional>
 #include <optional>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -37,63 +35,6 @@ namespace vm::persistent {
 		} while (path.moveToValid(Dir::Right, 0));
 
 		return ans;
-	}
-
-	Memory::diffResT Memory::getDiff(MemoryStateID state_1, MemoryStateID state_2) const {
-		auto [root_1, root_2] = validateInput(state_1, state_2);
-
-		using helper = std::function<void(ID, usize)>;
-
-		std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>> ans = {};
-
-		helper add_left = [&, mem = this](ID node, usize) {
-			auto vec = mem->toVec(toState(node));
-			for (auto [idx, val]: vec) ans.emplace_back(idx, val, std::nullopt);
-		};
-
-		helper add_right = [&, mem = this](ID node, usize) {
-			auto vec = mem->toVec(toState(node));
-			for (auto [idx, val]: vec) ans.emplace_back(idx, std::nullopt, val);
-		};
-
-		inner.rebuildFromTwo(
-			root_1,
-			root_2,
-			detail::SegmentTree::MergeBuilder<void>{
-				.only_1   = add_left,
-				.only_2   = add_right,
-				.the_same = [](ID, usize) {},
-				.confilicts
-				= [&](usize idx, usize val_1, usize val_2) { ans.emplace_back(idx, val_1, val_2); },
-			}
-		);
-
-		return ans;
-	}
-
-	MemoryStateID Memory::merge(MemoryStateID state_1, MemoryStateID state_2, ConflictPolicy policy) {
-		auto [root_1, root_2] = validateInput(state_1, state_2);
-
-		std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>> ans = {};
-
-		auto new_root = inner.rebuildFromTwo(
-			root_1,
-			root_2,
-			detail::SegmentTree::MergeBuilder<ID>{
-				.only_1     = [](ID id, usize) { return id; },
-				.only_2     = [](ID id, usize) { return id; },
-				.the_same   = [](ID id, usize) { return id; },
-				.confilicts = [&](usize idx, usize val_1, usize val_2) -> ID {
-					match_optional(policy(idx, val_1, val_2)) {
-						opt_some(val) { return inner.emplaceLeaf(idx, val); }
-						opt_none { return detail::SegmentTree::EMPTY; }
-					}
-					CORE_UNREACHABLE();
-				},
-			}
-		);
-
-		return toState(new_root);
 	}
 
 	MemoryStateID Memory::slice(MemoryStateID state, usize left_idx, usize right_idx) {
@@ -235,11 +176,6 @@ namespace vm::persistent {
 	[[nodiscard]]
 	std::vector<std::pair<usize, usize>> MemoryStateView::toVec() const {
 		return mem.toVec(id);
-	}
-
-	[[nodiscard]]
-	auto MemoryStateView::diff(const MemoryStateView& oth) const {
-		return mem.getDiff(id, oth.id);
 	}
 
 	usize MemoryStateView::operator[](usize idx) const { return *atMaybe(idx); }
