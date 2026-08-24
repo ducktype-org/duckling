@@ -794,10 +794,24 @@ namespace vm {
 		bool completed_execution = waitForExprEvaluation();
 		if (!completed_execution) return std::nullopt;
 
-		auto response = runtime_ret_value_storage.front();
+		std::unique_lock lock(runtime_ret_value_storage_mutex);
+		auto             response = runtime_ret_value_storage.front();
 		runtime_ret_value_storage.pop_front();
 
 		return response;
+	}
+
+	std::expected<api::Response, api::ApiError> SafeVMThread::getRuntimeExprResult() {
+		std::unique_lock lock(runtime_ret_value_storage_mutex);
+		if (runtime_ret_value_storage.empty())
+			return std::unexpected(api::ApiError{
+				api::OtherError{ "No runtime expression result" } });
+
+		std::vector<Ref<IVMValue>> transformed;
+		for (auto safe_ref: runtime_ret_value_storage.front())
+			transformed.emplace_back(safe_ref.get());
+		runtime_ret_value_storage.pop_front();
+		return api::Response(vm::api::ExitValue(std::move(transformed)));
 	}
 
 	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getCurrentHighPosition(u64 frame_index

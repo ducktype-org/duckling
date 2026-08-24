@@ -17,6 +17,7 @@
 #include <vm/loader/bytecode_pos.hpp>
 
 #include <limits>
+#include <mutex>
 
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
@@ -94,6 +95,7 @@ namespace vm {
 		std::deque<low::LowFuncData>                    runtime_expr_low;
 
 		std::deque<std::vector<Ref<SafeVMValue>>> runtime_ret_value_storage;
+		std::mutex                                runtime_ret_value_storage_mutex;
 
 		RuntimeData runtime_data;
 
@@ -259,6 +261,8 @@ namespace vm {
 		base::Optional<std::vector<Ref<SafeVMValue>>> loadAndExecRuntimeExpr(
 			code::valid_function::ValidFunction&& expr
 		);
+
+		std::expected<api::Response, api::ApiError> getRuntimeExprResult() override;
 
 		Ref<SafeVMValue> getVMValue(u64 id) const;
 

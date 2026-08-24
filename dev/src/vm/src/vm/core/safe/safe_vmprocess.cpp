@@ -560,6 +560,15 @@ namespace vm {
 		};
 	}
 
+	std::expected<api::Response, api::ApiError> SafeVMProcess::getRuntimeExprResult(
+		api::ThreadID thread_id
+	) {
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+		return (*opt_thread)->getRuntimeExprResult();
+	}
+
 	std::expected<api::Response, api::ApiError> SafeVMProcess::evalRuntimeExpr(
 		api::ThreadID thread_id, const std::variant<fs::File, code::Function>& source
 	) {
