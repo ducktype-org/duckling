@@ -179,7 +179,7 @@ private:
 		)
 			.orThrow();
 		state->setPreviousGraph(query::internal::QueryGraph::fromReducedGraphData(
-			ser::readOrThrowForce<query::internal::QueryGraph::ReducedGraphData>(prev_bytes)
+			ser::readOrPanicForce<query::internal::QueryGraph::ReducedGraphData>(prev_bytes)
 		));
 
 		state->cleanupOrphanedDiskCaches();

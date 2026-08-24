@@ -13,10 +13,15 @@
 //
 // The fill path is not just faster: for a large vector it is the difference between one
 // allocation and one allocation plus n constructions of a temporary.
+//
+// `read` is constrained on the element having one of the two paths, so an element with
+// neither - no default constructor and no move - takes the vector out of the read
+// direction rather than failing somewhere inside emplace_back. See detail/fillable.hpp.
 
 #include <ser/concepts.hpp>
 #include <ser/detail/container.hpp>
 #include <ser/detail/dispatch_fwd.hpp>
+#include <ser/detail/fillable.hpp>
 #include <ser/detail/meta.hpp>
 #include <ser/errc.hpp>
 #include <ser/hash.hpp>
@@ -55,8 +60,7 @@ namespace ser {
 
 		// "Can this element be filled in rather than built?" Asked of the element type
 		// alone, because that is what decides it.
-		static constexpr bool FILLABLE
-			= ::std::default_initializable<T> && ::std::is_move_assignable_v<T>;
+		static constexpr bool FILLABLE = detail::FILL_IN_PLACE_V<T>;
 
 		static constexpr Errc write(writer auto& ar, const vector_type& v) {
 			if (const auto c = detail::writeLength(ar, v.size()); c != Errc::Ok) return c;
@@ -65,7 +69,8 @@ namespace ser {
 			return Errc::Ok;
 		}
 
-		static constexpr Errc read(reader auto& ar, vector_type& v) {
+		static constexpr Errc read(reader auto& ar, vector_type& v)
+			requires(detail::READABLE_ELEMENT_V<T>) {
 			::std::size_t n = 0;
 			if (const auto c = detail::readLength<T>(ar, n); c != Errc::Ok) return c;
 

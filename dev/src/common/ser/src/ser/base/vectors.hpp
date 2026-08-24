@@ -26,6 +26,7 @@
 #include <ser/concepts.hpp>
 #include <ser/detail/container.hpp>
 #include <ser/detail/dispatch_fwd.hpp>
+#include <ser/detail/fillable.hpp>
 #include <ser/errc.hpp>
 #include <ser/hash.hpp>
 #include <ser/serializer.hpp>
@@ -60,9 +61,8 @@ namespace ser {
 		using vector_type  = ::base::StableVector<Data>;
 		using element_type = ::std::remove_const_t<Data>;
 
-		static constexpr bool FILLABLE = !::std::is_const_v<Data>
-		                              && ::std::default_initializable<element_type>
-		                              && ::std::is_move_assignable_v<element_type>;
+		static constexpr bool FILLABLE
+			= !::std::is_const_v<Data> && detail::FILL_IN_PLACE_V<element_type>;
 
 		static constexpr Errc write(writer auto& ar, const vector_type& v) {
 			if (const auto c = detail::writeLength(ar, v.size()); c != Errc::Ok) return c;
@@ -74,7 +74,8 @@ namespace ser {
 			return Errc::Ok;
 		}
 
-		static constexpr Errc read(reader auto& ar, vector_type& v) {
+		static constexpr Errc read(reader auto& ar, vector_type& v)
+			requires(FILLABLE || detail::BUILDABLE_V<element_type>) {
 			::std::size_t n = 0;
 			// Before clear(), and before any element exists: readLength is what refuses a
 			// prefix claiming more elements than the stream could possibly hold.

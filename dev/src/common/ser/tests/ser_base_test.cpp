@@ -143,17 +143,17 @@ private:
 	void owningPointers() {
 		const auto boxed = bytesOf(base::makeBox<i32>(42));
 		ASSERT_EQUAL(sizeof(i32), boxed.size());
-		ASSERT_EQUAL(i32{ 42 }, *ser::readOrThrowForce<base::Box<i32>>(view(boxed)));
+		ASSERT_EQUAL(i32{ 42 }, *ser::readOrPanicForce<base::Box<i32>>(view(boxed)));
 
 		base::MBox<std::string> full  = base::makeBox<std::string>("text");
 		const auto              bytes = bytesOf(full);
-		const auto              back  = ser::readOrThrowForce<base::MBox<std::string>>(view(bytes));
+		const auto              back  = ser::readOrPanicForce<base::MBox<std::string>>(view(bytes));
 		ASSERT_TRUE(static_cast<bool>(back));
 		ASSERT_EQUAL(std::string("text"), *back);
 
 		const auto null_bytes = bytesOf(base::MBox<std::string>{});
 		ASSERT_EQUAL(usize{ 1 }, null_bytes.size());
-		const auto null_back = ser::readOrThrowForce<base::MBox<std::string>>(view(null_bytes));
+		const auto null_back = ser::readOrPanicForce<base::MBox<std::string>>(view(null_bytes));
 		ASSERT_TRUE(!static_cast<bool>(null_back));
 
 		// Reading a null over an engaged MBox releases what it held.
@@ -167,18 +167,18 @@ private:
 	void byteViews() {
 		const auto owning = bytesOf(base::OwningView::copy(base::RawView("hello")));
 		ASSERT_EQUAL(sizeof(u64) + 5, owning.size());
-		const auto owning_back = ser::readOrThrowForce<base::OwningView>(view(owning));
+		const auto owning_back = ser::readOrPanicForce<base::OwningView>(view(owning));
 		ASSERT_EQUAL(std::string_view("hello", 5), owning_back.view().stringView());
 
 		const auto shared      = bytesOf(base::SharedView::copy(base::RawView("shared")));
-		const auto shared_back = ser::readOrThrowForce<base::SharedView>(view(shared));
+		const auto shared_back = ser::readOrPanicForce<base::SharedView>(view(shared));
 		ASSERT_EQUAL(std::string_view("shared", 6), shared_back.view().stringView());
 
 		// Empty is a length and nothing else, and it has to survive as empty rather than
 		// as a view onto one byte.
 		const auto empty = bytesOf(base::OwningView{});
 		ASSERT_EQUAL(sizeof(u64), empty.size());
-		ASSERT_EQUAL(usize{ 0 }, ser::readOrThrowForce<base::OwningView>(view(empty)).view().size());
+		ASSERT_EQUAL(usize{ 0 }, ser::readOrPanicForce<base::OwningView>(view(empty)).view().size());
 	}
 
 	/**
@@ -276,7 +276,7 @@ private:
 		const auto bytes = bytesOf(bits);
 		ASSERT_EQUAL(sizeof(u64) + 2 * sizeof(u64), bytes.size());
 
-		const auto back = ser::readOrThrowForce<base::DynamicBitset>(view(bytes));
+		const auto back = ser::readOrPanicForce<base::DynamicBitset>(view(bytes));
 		ASSERT_EQUAL(usize{ 70 }, back.size());
 		ASSERT_EQUAL(usize{ 2 }, back.count());
 		ASSERT_TRUE(back.test(0));
@@ -286,7 +286,7 @@ private:
 		// An empty one is a capacity of zero and no words - not one word of zeroes.
 		const auto empty = bytesOf(base::DynamicBitset{});
 		ASSERT_EQUAL(sizeof(u64), empty.size());
-		ASSERT_EQUAL(usize{ 0 }, ser::readOrThrowForce<base::DynamicBitset>(view(empty)).size());
+		ASSERT_EQUAL(usize{ 0 }, ser::readOrPanicForce<base::DynamicBitset>(view(empty)).size());
 	}
 
 	/** @brief One aggregate holding three base types with three different read paths. */
@@ -300,7 +300,7 @@ private:
 			                .blob  = base::OwningView::copy(base::RawView("bytes")) };
 
 		const auto bytes = bytesOf(sample);
-		const auto back  = ser::readOrThrowForce<Mixed>(view(bytes));
+		const auto back  = ser::readOrPanicForce<Mixed>(view(bytes));
 		assertTrue(back == sample, "the mixed aggregate did not survive the round trip");
 	}
 
@@ -347,7 +347,7 @@ private:
 		base::Map<std::string, i32> ordered;
 		ordered.put("k", 5);
 		const auto as_std
-			= ser::readOrThrowForce<std::map<std::string, i32>>(view(bytesOf(ordered)));
+			= ser::readOrPanicForce<std::map<std::string, i32>>(view(bytesOf(ordered)));
 		ASSERT_EQUAL(usize{ 1 }, as_std.size());
 		ASSERT_EQUAL(i32{ 5 }, as_std.at("k"));
 
@@ -425,7 +425,7 @@ private:
 	template<class T>
 	static T roundTrip(const T& sample) {
 		const auto bytes = bytesOf(sample);
-		return ser::readOrThrowForce<T>(view(bytes));
+		return ser::readOrPanicForce<T>(view(bytes));
 	}
 
 	/** @brief Reads into an existing object, for the types that cannot be returned. */

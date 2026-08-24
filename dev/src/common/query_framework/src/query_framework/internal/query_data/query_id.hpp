@@ -79,9 +79,6 @@ namespace query::internal {
 
 		/**
 		 * @brief `ser` hooks: the query id as its underlying integer.
-		 * @note The write/make pair rather than a plain `serVisit` because the constructor
-		 * is private, so there is no default constructor to fill in after the fact - a
-		 * `QueryID` can only be read by building one.
 		 */
 		SER_DESCRIBE_MAKE(QueryID, val)
 	};

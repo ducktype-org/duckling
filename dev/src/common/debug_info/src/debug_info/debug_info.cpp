@@ -58,13 +58,27 @@ namespace debug_info {
 
 	namespace {
 
-		/// Position, name of an optional/empty field, count - the placeholders a dump needs.
+		/**
+		 * @brief The placeholders a dump needs: a position, an empty count and an invalid
+		 * enumerator each print as a word rather than as nothing.
+		 * @param position The position to print, if there is one.
+		 * @return The position as text, or "<unknown>" when the Optional is empty.
+		 */
 		std::string orElse(const base::Optional<SourcePosition>& position) {
 			return position.has_value() ? position.value().toString() : "<unknown>";
 		}
 
+		/**
+		 * @brief Renders a count for a dump.
+		 * @param count The number of entries.
+		 * @return The count as text, or "none" when it is zero.
+		 */
 		std::string countOf(usize count) { return count == 0 ? "none" : std::to_string(count); }
 
+		/**
+		 * @brief Renders a Target for a dump.
+		 * @return The enumerator's name, or "<invalid>" for a value outside the enum.
+		 */
 		std::string_view nameOf(Target target) {
 			switch (target) {
 			case Target::DBC:
@@ -73,6 +87,10 @@ namespace debug_info {
 			return "<invalid>";
 		}
 
+		/**
+		 * @brief Renders a SourcePositionsType for a dump.
+		 * @return The enumerator's name, or "<invalid>" for a value outside the enum.
+		 */
 		std::string_view nameOf(SourcePositionsType type) {
 			switch (type) {
 			case SourcePositionsType::PstHash:

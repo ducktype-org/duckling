@@ -420,20 +420,9 @@ namespace query::internal {
 		/**
 		 * @brief `ser` hook: writes the type table, the StrID table, and then every node.
 		 *
-		 * This pair IS the serialization of a metadata storage - there is no serialize() or
-		 * deserialize() method beside it. A storage travels through the library's own entry
-		 * points:
-		 * @code
-		 * std::vector<std::byte> bytes;
-		 * ser::write(bytes, storage).orThrow();
-		 * auto restored = ser::readOrThrowForce<MetadataStorage>(bytes);
-		 * @endcode
 		 *
 		 * A hand-written pair rather than the automatic field walk, because the format is not
-		 * this class's fields: what an instance writes is known only to the instance, and what
-		 * to read it back with only to the MetadataRegistry. Everything else - both tables,
-		 * the counts, every NodeID - goes through the same archive, so the storage is one
-		 * stream and no instance is a blob inside it.
+		 * this class's fields
 		 *
 		 * The two tables are what keeps the format compact: a type name and a repeated StrID
 		 * value are written once and referenced by index afterwards.
@@ -478,9 +467,8 @@ namespace query::internal {
 	private:
 		/**
 		 * @brief The body of the serWrite hook, with the archive at its concrete type.
-		 * @note Out of line so that the format lives in the .cpp next to the registry it
-		 * needs; the hook above is a template only so that `ser` can see it from both
-		 * directions.
+		 * @note The hook above is a template only so that `ser` can see it from both
+		 * directions
 		 */
 		static ::ser::Errc writeInto(MetadataOut& ar, const MetadataStorage& self);
 

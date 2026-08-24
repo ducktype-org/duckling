@@ -29,6 +29,7 @@
 #include <ser/concepts.hpp>
 #include <ser/detail/container.hpp>
 #include <ser/detail/dispatch_fwd.hpp>
+#include <ser/detail/fillable.hpp>
 #include <ser/errc.hpp>
 #include <ser/hash.hpp>
 #include <ser/serializer.hpp>
@@ -153,7 +154,10 @@ namespace ser {
 			return Errc::Ok;
 		}
 
-		static constexpr Errc read(reader auto& ar, Shm& m) {
+		// maybePut takes both by value, so there is no fill path and the key and the
+		// value have to be movable - the same constraint the std map adapter carries.
+		static constexpr Errc read(reader auto& ar, Shm& m)
+			requires(detail::BUILDABLE_V<KEY_T> && detail::BUILDABLE_V<DATA_T>) {
 			::std::size_t n = 0;
 			if (const auto c = detail::readLength<::std::pair<KEY_T, DATA_T>>(ar, n); c != Errc::Ok)
 				return c;

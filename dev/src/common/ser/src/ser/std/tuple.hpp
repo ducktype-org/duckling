@@ -11,10 +11,13 @@
 // `make` builds one - IN BRACES, because that is the only way to order the reads: a
 // braced-init-list is evaluated left to right by [dcl.init.list]/4, while the arguments of
 // a constructor call are not ordered at all. Anything else would make the byte order
-// compiler-dependent.
+// compiler-dependent. Those braces reach a constructor taking the elements by rvalue, so
+// `make` is constrained on the elements being movable, the same way every other build path
+// in the library is - see detail/fillable.hpp.
 
 #include <ser/concepts.hpp>
 #include <ser/detail/dispatch_fwd.hpp>
+#include <ser/detail/fillable.hpp>
 #include <ser/errc.hpp>
 #include <ser/hash.hpp>
 #include <ser/serializer.hpp>
@@ -112,7 +115,8 @@ namespace ser {
 			return detail::readElements<pair_type, first, second>(ar, p);
 		}
 
-		static constexpr pair_type make(reader auto& ar) {
+		static constexpr pair_type make(reader auto& ar)
+			requires(detail::BUILDABLE_V<first> && detail::BUILDABLE_V<second>) {
 			return pair_type{ detail::dispatchMake<first>(ar), detail::dispatchMake<second>(ar) };
 		}
 	};
@@ -130,7 +134,8 @@ namespace ser {
 			return detail::readElements<tuple_type, ::std::remove_cv_t<Es>...>(ar, t);
 		}
 
-		static constexpr tuple_type make(reader auto& ar) {
+		static constexpr tuple_type make(reader auto& ar)
+			requires((detail::BUILDABLE_V<::std::remove_cv_t<Es>> && ... && true)) {
 			return tuple_type{ detail::dispatchMake<::std::remove_cv_t<Es>>(ar)... };
 		}
 	};

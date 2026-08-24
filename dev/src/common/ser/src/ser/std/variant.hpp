@@ -51,6 +51,7 @@
 
 #include <ser/concepts.hpp>
 #include <ser/detail/dispatch_fwd.hpp>
+#include <ser/detail/fillable.hpp>
 #include <ser/errc.hpp>
 #include <ser/hash.hpp>
 #include <ser/serializer.hpp>
@@ -136,11 +137,9 @@ namespace ser {
 		static constexpr ::std::size_t ALTERNATIVE_COUNT = sizeof...(Ts);
 
 		template<class T>
-		static constexpr bool FILLS_IN_PLACE
-			= ::std::default_initializable<T> && ::std::is_move_assignable_v<T>;
+		static constexpr bool FILLS_IN_PLACE = detail::FILL_IN_PLACE_V<T>;
 
-		static constexpr bool FILLABLE
-			= ((FILLS_IN_PLACE<Ts> || ::std::is_move_constructible_v<Ts>) && ...);
+		static constexpr bool FILLABLE = (detail::READABLE_ELEMENT_V<Ts> && ...);
 
 		static constexpr Errc write(writer auto& ar, const variant_type& o) {
 			// variant_npos is the only index a valueless variant has, and it names no
@@ -181,7 +180,7 @@ namespace ser {
 		}
 
 		static constexpr variant_type make(reader auto& ar)
-			requires((::std::is_move_constructible_v<Ts> && ...)) {
+			requires((detail::BUILDABLE_V<Ts> && ...)) {
 			::std::size_t index = 0;
 			if (const auto c = readTag(ar, index); c != Errc::Ok) throwError(c, ar.position());
 

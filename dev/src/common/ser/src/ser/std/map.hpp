@@ -27,6 +27,7 @@
 #include <ser/concepts.hpp>
 #include <ser/detail/container.hpp>
 #include <ser/detail/dispatch_fwd.hpp>
+#include <ser/detail/fillable.hpp>
 #include <ser/errc.hpp>
 #include <ser/hash.hpp>
 #include <ser/serializer.hpp>
@@ -63,7 +64,8 @@ namespace ser {
 				return Errc::Ok;
 			}
 
-			static constexpr Errc read(reader auto& ar, M& m) {
+			static constexpr Errc read(reader auto& ar, M& m)
+				requires(BUILDABLE_V<K> && BUILDABLE_V<V>) {
 				::std::size_t n = 0;
 				if (const auto c = readLength<::std::pair<K, V>>(ar, n); c != Errc::Ok) return c;
 
@@ -88,7 +90,7 @@ namespace ser {
 				return Errc::Ok;
 			}
 
-			static constexpr Errc read(reader auto& ar, S& s) {
+			static constexpr Errc read(reader auto& ar, S& s) requires(BUILDABLE_V<K>) {
 				::std::size_t n = 0;
 				if (const auto c = readLength<K>(ar, n); c != Errc::Ok) return c;
 

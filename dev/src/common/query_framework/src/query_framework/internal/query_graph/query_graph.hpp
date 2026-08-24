@@ -186,20 +186,7 @@ namespace query::internal {
 	public:
 		/**
 		 * @brief Reduced graph representation used for compact serialization.
-		 *
-		 * This is the graph's wire form, and it needs no serialization code at all: two
-		 * vectors and a NodeID, which the `ser` module walks field by field. A graph
-		 * therefore travels through the library's own entry points, with no
-		 * serialize()/deserialize() of its own in between:
-		 * @code
-		 * ser::write(bytes, graph.toReducedGraphData()).orThrow();
-		 * auto restored = QueryGraph::fromReducedGraphData(
-		 *     ser::readOrThrowForce<QueryGraph::ReducedGraphData>(bytes)
-		 * );
-		 * @endcode
-		 *
-		 * Each adjacency entry holds indices into @c nodes, so the two vectors are a graph
-		 * only together - see isConsistent().
+		 * Each adjacency entry holds indices into @c nodes
 		 */
 		struct ReducedGraphData final {
 			std::vector<NodeID>             nodes;
@@ -207,10 +194,10 @@ namespace query::internal {
 
 			/**
 			 * @brief Whether the two vectors describe one graph: one adjacency list per node,
-			 * and every index in range.
-			 * @note Asked on both sides of the wire, and the answer means different things.
-			 * On the way out a `false` is a bug, so the caller asserts; on the way back in it
-			 * is a damaged cache, so the caller drops it and compiles without one.
+			 * and every index in range. This is used to check that a graph read from disk is consistent before rebuilding it.
+			 * @return True if the graph is consistent, false otherwise.
+			 * @note This does not check for cycles or other graph properties, only that the two
+			 * vectors are consistent with each other.
 			 */
 			[[nodiscard]] bool isConsistent() const;
 		};
@@ -269,10 +256,10 @@ namespace query::internal {
 		}
 
 		/**
-		 * @brief The graph as the plain data that goes on the wire.
+		 * @brief The graph as the plain data that goes on the wire. This is used for testing only.
 		 * @note This DOES NOT optimize anything, it just flattens: every node in the graph
-		 * becomes an entry, and every dependency an index into it. Hand the result to
-		 * `ser::write` - see ReducedGraphData.
+		 * becomes an entry, and every dependency an index into it.
+		 * In the production flow, the graph is optimized before being serialized, so this is not the form that goes on the wire.
 		 * @return The nodes and their adjacency lists.
 		 */
 		[[nodiscard]] ReducedGraphData toReducedGraphData() const;
@@ -280,13 +267,12 @@ namespace query::internal {
 		/**
 		 * @brief Rebuilds a graph from its wire form.
 		 * @details The mapping must mirror the exact structure that was persisted, i.e. each
-		 * adjacency index references the NodeID at the same position. Takes data from
-		 * `ser::read`, or from another algorithm that produced it directly (e.g.
-		 * QueryState::reduceOptimizeGraph).
+		 * adjacency index references the NodeID at the same position.
 		 * @param reduced_graph The nodes and their adjacency lists.
 		 * @param node_mapper Optional mapper that can transform NodeIDs read from disk into the
 		 *        NodeIDs that should be stored inside the graph. By default it is an identity
 		 *        function, but callers can override it to keep the query framework state consistent.
+		 *        In production the maping should never be indentity, but in testing it can be used.
 		 * @return The graph those nodes describe.
 		 * @note Requires isConsistent() - data that came off the wire has to be checked by the
 		 * caller first, so that a damaged cache is a dropped cache rather than a panic.

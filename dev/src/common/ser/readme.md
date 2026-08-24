@@ -13,10 +13,10 @@ formatting and naming, so the two copies have diverged on purpose - see
 ## Files
 
 * `ser/ser.hpp` - the umbrella: archives, dispatch, the envelope. Include this.
-* `ser/std/all.hpp` - adapters for `string`, `vector`, `optional`, `pair`, `tuple`,
-  `map`, `set`, `unordered_map`, `unordered_set`. An **opt-in** include: without it
-  `ser/ser.hpp` never learns those types exist and never pays for `<map>` to serialize
-  something else.
+* `ser/std/all.hpp` - adapters for the std types, one header per standard header they
+  wrap: whatever `src/ser/std/` contains is what is supported, and `variant` includes
+  `std::monostate`. An **opt-in** include: without it `ser/ser.hpp` never learns those
+  types exist and never pays for `<map>` to serialize something else.
 * `ser/base/all.hpp` - adapters for the `base` types, opt-in the same way. `Optional`,
   `Map`, `HashMap`, `VectorMap`, `StableHashMap`, `StableVector`, `Box`, `MBox`,
   `OwningView`, `SharedView`, `DynamicBitset`, `Bit256` serialize; `Ref`/`CRef`/`MRef`,
@@ -42,7 +42,7 @@ struct Point {
 };  // no serialization code at all
 
 std::vector<std::byte> buf;
-ser::write(buf, Point{ 1, 2, "origin" }).orThrow();
+ser::writeOrPanic(buf, Point{ 1, 2, "origin" });
 
 auto p = ser::read<Point>(std::span<const std::byte>{ buf });
 if (!p) { /* p.code() is a ser::Errc */ }
@@ -54,12 +54,20 @@ Point back = std::move(*p).take();
 * `ser::read<T>(bytes, opts = {})` -> `ser::result<ser::owned<T, Ctx>>`. Never a bare `T`:
   `owned` is what will carry the pools in a later version. `*r` is the bundle, `r->value`
   the object, `std::move(*r).take()` moves it out.
-* `ser::readOrThrow<T>` for a type that cannot be moved (the return type equals the
-  returned prvalue, so the object is built once, at its final address), and
-  `ser::readOrThrowForce<T>` when the bare object is all you want.
-* `ser::Errc` / `ser::error` / `ser::result<T>` - errors are codes, and the position of
-  the byte that failed comes with them. Only the `*OrThrow` entry points throw
-  (`ser::exception`).
+* `ser::readOrPanic<T>(bytes)` / `ser::writeOrPanic(buf, x)` - the same two, for bytes
+  whose validity is an invariant of the program rather than input: a bad stream is
+  `CORE_PANIC` instead of a code nobody was going to recover from. `readOrPanic` is also
+  what reads a type that cannot be MOVED, because its return type equals the returned
+  prvalue and the object is built once, at its final address; `ser::readOrPanicForce<T>`
+  is the same thing returning a bare `T`.
+* `ser::Errc` / `ser::error` / `ser::result<T>` - errors are codes, and the position of the
+  byte that failed comes with them. **No entry point throws**: an exception is how the
+  by-value read path reports inside the library (`ser::detail::readThrowing`), and every
+  public entry point turns it into a `result` or a panic before it can escape. The panic is
+  real in every build type - `CORE_PANIC` alone is `std::unreachable()` in Release, so the
+  panicking forms do not rely on it and abort loudly there instead. It is still a stop, so
+  the choice between the two is whether the caller has anything to do afterwards: bytes off
+  a disk that is allowed to be damaged want `ser::read`.
 
 ## Serializing your own type
 
@@ -104,7 +112,9 @@ field of one - round-trips with no code at all.
 
 Two conventions came out of those: a stream that fails to READ is information, so the caller
 logs it and carries on without the cache, while a failure to WRITE what we are already
-holding is `CORE_PANIC` - and nothing lets a `ser::exception` escape into the compiler.
+holding is `CORE_PANIC`. Both are now spelled in the library rather than at each call site -
+`ser::read` for the first, `ser::writeOrPanic` / `ser::readOrPanic` for the second - and no
+`ser::exception` can escape into the compiler because no public entry point throws one.
 
 # Notes
 
@@ -115,7 +125,7 @@ holding is `CORE_PANIC` - and nothing lets a `ser::exception` escape into the co
   platforms that agree on the format agree on the number. Field names are deliberately
   absent from it; they go into `ser::debugHash<T>()`, which is diagnostics only. Equal
   `schema_hash` with different `debug_hash` is exactly "somebody renamed a field".
-* Not here yet: pools (`Box`/`Ref`/`StrID`), `variant`, `chrono`, CRC32C, zero-copy views.
+* Not here yet: pools (`Box`/`Ref`/`StrID`), `chrono`, CRC32C, zero-copy views.
 
 # Relation to the upstream library
 

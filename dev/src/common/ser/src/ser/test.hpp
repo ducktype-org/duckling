@@ -120,9 +120,9 @@ namespace ser {
 
 	}  // namespace detail
 
-	// Writes the sample, reads it back and compares. readOrThrow rather than read, so
-	// that a type which cannot be moved is testable too - that is exactly the kind of
-	// type SER_MAKE_FROM exists for.
+	// Writes the sample, reads it back and compares. The throwing read rather than
+	// ser::read, so that a type which cannot be moved is testable too - that is exactly
+	// the kind of type SER_MAKE_FROM exists for.
 	template<class T>
 	[[nodiscard]] roundtrip_report testRoundtrip(const T& sample) {
 		::std::vector<::std::byte> buf;
@@ -130,8 +130,9 @@ namespace ser {
 			return roundtrip_report{ .code = w.code() };
 
 		try {
-			const auto back
-				= readOrThrow<T>(::std::span<const ::std::byte>{ buf.data(), buf.size() });
+			const auto back = detail::readThrowing<T, no_context>(
+				::std::span<const ::std::byte>{ buf.data(), buf.size() }, options{}
+			);
 			const auto bad = detail::compareFields(sample, *back);
 			return roundtrip_report{ .code  = Errc::Ok,
 				                     .field = bad,

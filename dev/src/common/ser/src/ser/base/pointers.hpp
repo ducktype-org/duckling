@@ -29,6 +29,7 @@
 
 #include <ser/concepts.hpp>
 #include <ser/detail/dispatch_fwd.hpp>
+#include <ser/detail/fillable.hpp>
 #include <ser/detail/meta.hpp>
 #include <ser/errc.hpp>
 #include <ser/hash.hpp>
@@ -45,14 +46,6 @@
 namespace ser {
 
 	namespace detail {
-
-		// "Can dispatchRead fill an existing T in place?" - the same question the optional
-		// adapter asks, and asked for the same reason: filling the object a Box already
-		// owns costs no allocation and no move, and only a T that cannot be filled needs
-		// to be built and moved into a fresh one.
-		template<class T>
-		inline constexpr bool BOX_FILLABLE_V
-			= ::std::default_initializable<T> && ::std::is_move_assignable_v<T>;
 
 		// Keyed to the archive, not to T: see the note on denyNonOwningRef in refs.hpp for
 		// why the difference decides whether the refusal waits for a real call.
@@ -112,10 +105,11 @@ namespace ser {
 			return detail::dispatchWrite<T>(ar, *b);
 		}
 
-		static constexpr Errc read(reader auto& ar, box_type& b) {
+		static constexpr Errc read(reader auto& ar, box_type& b)
+			requires(detail::READABLE_ELEMENT_V<T>) {
 			// The Box already owns an object, so reading fills THAT object rather than
 			// allocating a second one and throwing the first away.
-			if constexpr (detail::BOX_FILLABLE_V<T>)
+			if constexpr (detail::FILL_IN_PLACE_V<T>)
 				return detail::dispatchRead<T>(ar, *b);
 			else {
 				b = ::base::makeBox<T, D>(detail::dispatchMake<T>(ar));
@@ -123,11 +117,8 @@ namespace ser {
 			}
 		}
 
-		// Box has no default constructor, so dispatchMake cannot build one by reading into
-		// a fresh T{} - without this hook a Box<T> could not be a top-level ser::read, nor
-		// live inside a container, nor be a field of a type that has to be built.
-		static box_type make(reader auto& ar) {
-			if constexpr (detail::BOX_FILLABLE_V<T>) {
+		static box_type make(reader auto& ar) requires(detail::READABLE_ELEMENT_V<T>) {
+			if constexpr (detail::FILL_IN_PLACE_V<T>) {
 				box_type b = ::base::makeBox<T, D>();
 				if (const auto c = detail::dispatchRead<T>(ar, *b); c != Errc::Ok)
 					throwError(c, ar.position());
@@ -166,7 +157,8 @@ namespace ser {
 			return detail::dispatchWrite<T>(ar, *b);
 		}
 
-		static constexpr Errc read(reader auto& ar, box_type& b) {
+		static constexpr Errc read(reader auto& ar, box_type& b)
+			requires(detail::READABLE_ELEMENT_V<T>) {
 			::std::uint8_t present = 0;
 			if (const auto c = detail::dispatchRead<::std::uint8_t>(ar, present); c != Errc::Ok)
 				return c;
@@ -179,7 +171,7 @@ namespace ser {
 				return Errc::Ok;
 			}
 
-			if constexpr (detail::BOX_FILLABLE_V<T>) {
+			if constexpr (detail::FILL_IN_PLACE_V<T>) {
 				// Reuse the allocation when there is one; allocate only for a null MBox.
 				if (!b) b = ::base::makeBox<T, D>();
 				return detail::dispatchRead<T>(ar, *b);

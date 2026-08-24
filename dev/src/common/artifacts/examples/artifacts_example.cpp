@@ -29,7 +29,7 @@ int main() {
 		// Create a simple blob artifact
 		auto blob0 = collection.blobArtifactNew(b0);
 		blob0.setData<decltype(VALUE)>(VALUE);
-		assert(blob0.getData<decltype(VALUE)>() == VALUE);
+		assert(blob0.getData<decltype(VALUE)>().value() == VALUE);
 
 		// Save struct
 		auto blob1 = collection.blobArtifactNew(b1);
@@ -52,9 +52,9 @@ int main() {
 		// Restore a collection
 		artifacts::ArtifactCollection collection(root);
 
-		assert(collection.blobArtifactAt(b0).getData<decltype(VALUE)>() == VALUE);
+		assert(collection.blobArtifactAt(b0).getData<decltype(VALUE)>().value() == VALUE);
 
-		assert(collection.blobArtifactAt(b1).getData<SimpleStruct>() == simple_struct);
+		assert(collection.blobArtifactAt(b1).getData<SimpleStruct>().value() == simple_struct);
 
 		auto          file0 = collection.fileArtifactAt(f0);
 		std::ifstream file(file0.file.getFilePath().getPath());
@@ -64,7 +64,7 @@ int main() {
 		assert(data == "Hello!");
 
 		auto sub = collection.subCollectionAt(s0);
-		assert(sub->blobArtifactAt(b0).getData<decltype(VALUE)>() == VALUE + 1);
+		assert(sub->blobArtifactAt(b0).getData<decltype(VALUE)>().value() == VALUE + 1);
 	}
 
 	return 0;

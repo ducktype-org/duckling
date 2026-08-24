@@ -23,29 +23,37 @@ namespace artifacts {
 	 * raw pointer is refused rather than copied, which is what the trivially-copyable
 	 * requirement this replaced could not say.
 	 *
-	 * These two are the byte plumbing around ser::write / ser::read - the buffer on the way
-	 * out, the RawView on the way in - and nothing else. Neither lets a `ser` error out as an
-	 * exception: a blob is written from an object we are holding and read back from a file we
-	 * wrote, so either one failing is a bug rather than a state to recover from.
+	 * These two are the byte plumbing around `ser` - the buffer on the way out, the RawView
+	 * on the way in - and nothing else.
+	 *
+	 *   out  a blob is written from an object we are already holding, so a failure is a bug
+	 *        rather than a state to recover from - `ser::writeOrPanic` says so itself.
+	 *   in   a blob is read back from a `.artc` file on disk, which is allowed to be
+	 *        truncated, stale or damaged..
 	 */
 	template<class T>
 	std::vector<byte> toBytes(const T& data) {
 		std::vector<byte> bytes;
-		if (const auto r = ::ser::write(bytes, data); !r)
-			CORE_PANIC("Failed to serialize an artifact: ", r.err().message());
+		::ser::writeOrPanic(bytes, data);
 		return bytes;
 	}
 
 	/**
-	 * @brief Constructs type `T` from the bytes of a blob.
+	 * @brief Constructs type `T` from the bytes of a blob, or nothing if they are not a `T`.
 	 * @note Read as the unqualified `T`: a caller asking for `getData<decltype(SOME_CONST)>()`
-	 * names a `const` type, and an object is built before it can be const.
+	 * names a `const` type, and an object is built before it can be const - so the Optional
+	 * carries the unqualified type too.
+	 * @note The Optional costs one move of `T` and requires `T` to be movable, which the
+	 * by-value read did not. That is the price of a damaged blob being an answer instead of a
+	 * crash; a type that cannot be moved has to read through `ser` directly.
+	 * @param view The blob's bytes.
+	 * @return The object, or an empty Optional when the bytes do not decode.
 	 */
 	template<class T>
-	T fromBytes(base::RawView view) {
+	base::Optional<std::remove_cv_t<T>> fromBytes(base::RawView view) {
 		auto value = ::ser::read<std::remove_cv_t<T>>(std::span<const std::byte>{ view.getBegin(),
 		                                                                          view.size() });
-		if (!value) CORE_PANIC("Failed to deserialize an artifact: ", value.err().message());
+		if (!value) return {};
 		return std::move(*value).take();
 	}
 
@@ -122,9 +130,11 @@ namespace artifacts {
 		/**
 		 * @brief Gets blob's data and interprets them as a `T` object.
 		 * @note Data pointers can be invalidated by calls to `setData`.
+		 * @return The object, or an empty Optional when the blob does not decode as a `T` -
+		 * a damaged or stale `.artc` on disk, which is a cache to drop rather than a crash.
 		 */
 		template<class T>
-		const T getData() const {
+		base::Optional<std::remove_cv_t<T>> getData() const {
 			return fromBytes<T>(getDataView());
 		}
 	};
@@ -208,8 +218,9 @@ namespace artifacts {
 
 		base::RawView getBlobDataView(const BlobArtifact& blob) const;
 
+		/** @brief As BlobArtifact::getData, and empty for the same reasons. */
 		template<class T>
-		const T getBlobData(const BlobArtifact& blob) const {
+		base::Optional<std::remove_cv_t<T>> getBlobData(const BlobArtifact& blob) const {
 			// lock will happen in the call bellow:
 			return fromBytes<T>(getBlobDataView(blob));
 		}
@@ -263,8 +274,9 @@ namespace artifacts {
 
 		base::RawView getBlobDataViewNoLock(const BlobArtifact& blob) const;
 
+		/** @brief As getBlobData, without taking the lock. */
 		template<class T>
-		const T getBlobDataNoLock(const BlobArtifact& blob) const {
+		base::Optional<std::remove_cv_t<T>> getBlobDataNoLock(const BlobArtifact& blob) const {
 			return fromBytes<T>(getBlobDataViewNoLock(blob));
 		}
 

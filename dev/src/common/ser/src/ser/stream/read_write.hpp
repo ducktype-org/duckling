@@ -1,5 +1,7 @@
 #pragma once
 
+#include <base/except/exceptions.hpp>
+
 #include <ser/archive/in.hpp>
 #include <ser/archive/out.hpp>
 #include <ser/concepts.hpp>
@@ -40,7 +42,7 @@ namespace ser {
 
 	namespace detail {
 
-		// The envelope on the throwing path. Every read funnels through readOrThrow, and
+		// The envelope on the throwing path. Every read funnels through readThrowing, and
 		// there a bad header is an exception rather than a code - the code paths get it
 		// back from the catch in ser::read. Reading it also POSITIONS the archive at the
 		// payload, so the caller just carries on.
@@ -95,53 +97,90 @@ namespace ser {
 		}
 	};
 
+	namespace detail {
+
+		// ── how a panicking entry point stops ──────────────────────────────────
+		// Plain CORE_PANIC, which is this repository's convention for "the program is
+		// already broken": a catchable base::Panic with a stacktrace in a Dev build, and
+		// std::unreachable() in a Release one.
+		//
+		// That second half is why the choice of entry point matters. These forms are for
+		// bytes whose validity is an INVARIANT - an object we are holding on the way out, a
+		// buffer we grew ourselves - never for input. Anything that came off a disk, out of
+		// a socket, or from an older build of this compiler is allowed to be wrong and must
+		// go through ser::read, which hands back an Errc. Reaching a panicking form with
+		// input is undefined behaviour in Release, and no diagnostic will say so.
+		[[noreturn]] inline void panicOnStreamError(const char* what, const error& e) {
+			CORE_PANIC(what, e.message());
+		}
+
+		// ── the throwing read, which never leaves this namespace ───────────────
+		// An exception is the only way a read can both return the object BY VALUE and
+		// report an error: the return type then equals the type of the returned prvalue,
+		// so copy elision is guaranteed end to end and T never has to be movable. There
+		// is no room for a return code next to a value built that way.
+		//
+		// It is `detail` because that convention stops at the library's edge. Every public
+		// entry point below turns the exception into the thing its caller asked for - a
+		// ser::result, or a CORE_PANIC - so no ser::exception ever escapes into calling
+		// code.
+		template<class T, class Ctx>
+		[[nodiscard]] owned<T, Ctx> readThrowing(::std::span<const ::std::byte> bytes, options opt) {
+			static_assert(
+				!::std::is_array_v<T>,
+				"ser: cannot return a C array by value. Read it in "
+				"place: T arr; ser::in{bytes}(arr)."
+			);
+			Ctx     ctx{};
+			in<Ctx> ar{ bytes, ctx };
+			if (opt.header) readEnvelope<T, Ctx>(ar, opt);
+			// Left-to-right evaluation is guaranteed for braced init, so `ar` is done being
+			// used before `ctx` is moved out from under it.
+			return owned<T, Ctx>{ dispatchMake<T>(ar), ::std::move(ctx) };
+		}
+
+		// The bare object, with no bundle around it - same construction guarantee, none of
+		// the ceremony. It drops the context, which is created here and destroyed on the
+		// way out, so anything in the object that pointed into it would be dangling before
+		// the caller saw it: undefined behaviour rather than an error code. Hence the
+		// constraint - an EMPTY context has nothing to point into.
+		template<class T, class Ctx>
+		requires(::std::is_empty_v<Ctx>)
+		[[nodiscard]] T readThrowingForce(::std::span<const ::std::byte> bytes, options opt) {
+			static_assert(
+				!::std::is_array_v<T>,
+				"ser: cannot return a C array by value. Read it "
+				"in place: T arr; ser::in{bytes}(arr)."
+			);
+			Ctx     ctx{};
+			in<Ctx> ar{ bytes, ctx };
+			if (opt.header) readEnvelope<T, Ctx>(ar, opt);
+			return dispatchMake<T>(ar);
+		}
+
+	}  // namespace detail
+
 	// ── read ──────────────────────────────────────────────────────────────────
-	// Both entry points return owned<T, Ctx>, never a bare T - even when Ctx is empty, so
-	// that pools can be added without touching a single call site.
-
-	// Errors travel as an exception, which buys the one thing ser::read cannot have:
-	// the return type equals the type of the returned prvalue, so copy elision is
-	// guaranteed end to end and T never has to be movable.
-	template<class T, class Ctx = no_context>
-	[[nodiscard]] owned<T, Ctx> readOrThrow(::std::span<const ::std::byte> bytes, options opt = {}) {
-		static_assert(
-			!::std::is_array_v<T>,
-			"ser::readOrThrow: cannot return a C array by value. Read it in "
-			"place: T arr; ser::in{bytes}(arr)."
-		);
-		Ctx     ctx{};
-		in<Ctx> ar{ bytes, ctx };
-		if (opt.header) detail::readEnvelope<T, Ctx>(ar, opt);
-		// Left-to-right evaluation is guaranteed for braced init, so `ar` is done being
-		// used before `ctx` is moved out from under it.
-		return owned<T, Ctx>{ detail::dispatchMake<T>(ar), ::std::move(ctx) };
-	}
-
-	// ── readOrThrowForce ───────────────────────────────────────────────────
-	// The bare object, with no bundle around it. Same construction guarantee as
-	// readOrThrow - the prvalue out of dispatchMake initializes the caller's object
-	// directly, so a type that cannot be moved works here too - and none of the ceremony:
+	// Two ways to be told a stream is bad, and which one to reach for is a property of
+	// where the bytes came from:
 	//
-	//     const Config cfg = ser::readOrThrowForce<Config>(bytes);
+	//   read          -> result<owned<T, Ctx>>. The stream is INPUT: a file somebody else
+	//                    wrote, a cache from an older build, anything that is allowed to
+	//                    be wrong. A bad stream is information - log it and carry on
+	//                    without whatever it was going to give you.
+	//   readOrPanic   -> owned<T, Ctx>, and CORE_PANIC on a bad stream. The bytes are OURS
+	//                    - a blob this program wrote - so reading them back cannot fail
+	//                    unless the program is already broken, and there is no state to
+	//                    recover to. readOrPanicForce is the same thing returning a bare T.
 	//
-	// What it drops is the context, which is created here and destroyed on the way out: so
-	// anything in the object that points into it would be dangling before the caller sees
-	// it, and that is undefined behaviour rather than an error code. Hence the constraint -
-	// an EMPTY context has nothing to point into. A stateful one means readOrThrow, and the
-	// object stays bundled with the pools it may point into.
-	template<class T, class Ctx = no_context>
-	requires(::std::is_empty_v<Ctx>)
-	[[nodiscard]] T readOrThrowForce(::std::span<const ::std::byte> bytes, options opt = {}) {
-		static_assert(
-			!::std::is_array_v<T>,
-			"ser::readOrThrowForce: cannot return a C array by value. Read it "
-			"in place: T arr; ser::in{bytes}(arr)."
-		);
-		Ctx     ctx{};
-		in<Ctx> ar{ bytes, ctx };
-		if (opt.header) detail::readEnvelope<T, Ctx>(ar, opt);
-		return detail::dispatchMake<T>(ar);
-	}
+	// The line between them is NOT a matter of taste, and detail::panicOnStreamError spells
+	// out why: CORE_PANIC is std::unreachable() in a Release build, so a panicking form
+	// handed bytes that are allowed to be wrong is undefined behaviour there. Input goes
+	// through ser::read. Always.
+	//
+	// Both return owned<T, Ctx> rather than a bare T - even when Ctx is empty - so that
+	// pools can be added later without touching a single call site. readOrPanicForce is
+	// the exception, and it says so in its name.
 
 	// The bundle reaches std::expected through a constructor parameter, and elision never
 	// crosses one - so this path costs exactly one move of owned<T, Ctx>.
@@ -151,12 +190,40 @@ namespace ser {
 			::std::move_constructible<T>,
 			"ser::read: T must be movable, because result<owned<T, Ctx>> has to "
 			"move the bundle into std::expected. For a type that cannot be moved "
-			"use ser::readOrThrow<T>(bytes) - it returns owned<T, Ctx> by value "
+			"use ser::readOrPanic<T>(bytes) - it returns owned<T, Ctx> by value "
 			"and elides everything."
 		);
 		try {
-			return readOrThrow<T, Ctx>(bytes, opt);
+			return detail::readThrowing<T, Ctx>(bytes, opt);
 		} catch (const exception& e) { return result<owned<T, Ctx>>{ e.err() }; }
+	}
+
+	// `return f();` where f returns exactly this function's return type is still guaranteed
+	// copy elision inside a try block, so the object is built once, at its final address,
+	// and a T that cannot be moved reads fine here.
+	template<class T, class Ctx = no_context>
+	[[nodiscard]] owned<T, Ctx> readOrPanic(::std::span<const ::std::byte> bytes, options opt = {}) {
+		try {
+			return detail::readThrowing<T, Ctx>(bytes, opt);
+		} catch (const exception& e) {
+			detail::panicOnStreamError("failed to deserialize: ", e.err());
+		}
+	}
+
+	// The bare object:
+	//
+	//     const Config cfg = ser::readOrPanicForce<Config>(bytes);
+	//
+	// A stateful context means readOrPanic instead, and the object stays bundled with the
+	// pools it may point into - see the note on detail::readThrowingForce.
+	template<class T, class Ctx = no_context>
+	requires(::std::is_empty_v<Ctx>)
+	[[nodiscard]] T readOrPanicForce(::std::span<const ::std::byte> bytes, options opt = {}) {
+		try {
+			return detail::readThrowingForce<T, Ctx>(bytes, opt);
+		} catch (const exception& e) {
+			detail::panicOnStreamError("failed to deserialize: ", e.err());
+		}
 	}
 
 	// ── write ─────────────────────────────────────────────────────────────────
@@ -208,6 +275,15 @@ namespace ser {
 			ar.reset(end);
 		}
 		return result<>{};
+	}
+
+	// The mirror of readOrPanic, and the asymmetry in the pair is real rather than
+	// cosmetic: a read can legitimately fail because its input is somebody else's bytes,
+	// while a write is handed an object the caller is already holding
+	template<class Buf, class T>
+	void writeOrPanic(Buf& buf, const T& x, options opt = {}) {
+		if (const auto r = write(buf, x, opt); !r)
+			detail::panicOnStreamError("failed to serialize: ", r.err());
 	}
 
 }  // namespace ser

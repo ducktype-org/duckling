@@ -22,6 +22,7 @@
 
 #include <ser/concepts.hpp>
 #include <ser/detail/dispatch_fwd.hpp>
+#include <ser/detail/fillable.hpp>
 #include <ser/errc.hpp>
 #include <ser/hash.hpp>
 #include <ser/serializer.hpp>
@@ -50,8 +51,7 @@ namespace ser {
 
 	template<class T>
 	struct serializer<::std::optional<T>> {
-		static constexpr bool FILLABLE
-			= ::std::default_initializable<T> && ::std::is_move_assignable_v<T>;
+		static constexpr bool FILLABLE = detail::FILL_IN_PLACE_V<T>;
 
 		static constexpr Errc write(writer auto& ar, const ::std::optional<T>& o) {
 			const ::std::uint8_t present = o.has_value() ? 1u : 0u;
@@ -62,7 +62,7 @@ namespace ser {
 		}
 
 		static constexpr Errc read(reader auto& ar, ::std::optional<T>& o)
-			requires(FILLABLE || ::std::is_move_constructible_v<T>) {
+			requires(detail::READABLE_ELEMENT_V<T>) {
 			::std::uint8_t present = 0;
 			if (const auto c = detail::dispatchRead<::std::uint8_t>(ar, present); c != Errc::Ok)
 				return c;

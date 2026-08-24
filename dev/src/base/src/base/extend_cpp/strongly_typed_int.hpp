@@ -13,14 +13,6 @@
  * - STRONG_TYPEDEF_INT_DIMENSIONAL
  * - STRONG_TYPEDEF_INT
  *
- * ### Serialization
- *
- * Both variants define a `serVisit` hook, so a strongly typed int - and any struct with a
- * field of one - round-trips through the `ser` module with no extra code. The wrapped
- * integer is the whole wire format. The hook names no `ser` type on purpose: its return
- * type is deduced from the archive call, which keeps this header free of any dependency on
- * `ser` while still matching the `ser::Errc` return `ser` looks for.
- *
  * ### Usage
  * @include strongly_typed_int_example.cpp
  *

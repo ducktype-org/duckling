@@ -44,8 +44,6 @@ namespace query::internal {
 
 		/**
 		 * @brief `ser` hooks: the query id followed by the key hash.
-		 * @note The pair rather than a plain `serVisit` because the default constructor is
-		 * deleted, so a `NodeID` can only be read by building one.
 		 */
 		SER_DESCRIBE_MAKE(NodeID, q_id, hash)
 	};
