@@ -139,21 +139,21 @@ namespace compiler::backend_vm::internal {
 
 						if (pointer_layout.getPointerKind() == CPointer
 						    && target_pointer_layout.getPointerKind() == CPointer) {
-							return OpKind::movCast;
+							return OpKind::cast;
 						} else if (pointer_layout.getPointerKind() == SinglePointer
 						           && target_pointer_layout.getPointerKind() == CPointer) {
-							if (same_pointee) return OpKind::cast;
-
-							out_arguments[0] = cptr_source_type_tmp(out_arguments[0]);
-							return OpKind::movCast;
+							// A differing pointee needs the extra hop through a `cptr` of the
+							// source pointee, so that the cast stays cptr-to-cptr.
+							if (!same_pointee)
+								out_arguments[0] = cptr_source_type_tmp(out_arguments[0]);
+							return OpKind::cast;
 						} else if (pointer_layout.getPointerKind() == ManyPointer
 						           && target_pointer_layout.getPointerKind() == CPointer) {
 							// First ManyPointer -> Pointer, then Pointer -> CPointer
 							out_arguments[0] = lea_first_element(out_arguments[0]);
-							if (same_pointee) return OpKind::cast;
-
-							out_arguments[0] = cptr_source_type_tmp(out_arguments[0]);
-							return OpKind::movCast;
+							if (!same_pointee)
+								out_arguments[0] = cptr_source_type_tmp(out_arguments[0]);
+							return OpKind::cast;
 						} else if (pointer_layout.getPointerKind() == ManyPointer
 						           && target_pointer_layout.getPointerKind() == SinglePointer) {
 							// ManyPointer -> SinglePointer
