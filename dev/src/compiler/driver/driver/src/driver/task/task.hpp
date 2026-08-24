@@ -89,13 +89,9 @@ namespace compiler::driver {
 		base::StrID output_file_name;
 
 		/**
-		 * @brief Whether to include in the final output the standard
-		 * library packages that the executable depends on.
-		 */
-		bool link_std_packages = false;
-
-		/**
 		 * @brief Runtime config of the DVM.
+		 * @note The standard library packages the executable depends on are added to
+		 * `dependencies_libraries` by `mergeBuildTargetWithGlobalOptions`.
 		 */
 		DVMLinkingOptions dvm_linking_options = {};
 	};
@@ -209,6 +205,15 @@ namespace compiler::driver {
 		const options_types::StdLibOptions&  stdlib_options
 	);
 
-	DVMLinkingOptions constructDVMLinkingOptions(const options_types::LinkingOptions& linking_options
+	/**
+	 * @brief Construct DVM linking options for a given task, based on the task's build target and
+	 * the standard library options.
+	 * @param is_static_lib a static library does not link the standard library - that is left to
+	 * the executable depending on it.
+	 */
+	DVMLinkingOptions constructDVMLinkingOptions(
+		const options_types::LinkingOptions& linking_options,
+		const options_types::StdLibOptions&  stdlib_options,
+		bool                                 is_static_lib
 	);
 }

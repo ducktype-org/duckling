@@ -207,6 +207,13 @@ namespace fs {
 		 */
 		[[nodiscard]] bool exists() const;
 
+		/**
+		 * @brief Checks if the path points to an existing regular file.
+		 * @return True if the path is a regular file, false otherwise (a directory, a special
+		 * file, or a path that does not exist).
+		 */
+		[[nodiscard]] bool isRegularFile() const;
+
 		[[nodiscard]] std::string uri() const;
 
 		/**

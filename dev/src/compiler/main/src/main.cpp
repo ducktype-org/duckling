@@ -662,10 +662,11 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("dvm-backend")) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_dvm.dbc");
+						auto is_lib              = options.isFlag("emit-static-lib");
 						auto dvm_linking_options = compiler::driver::constructDVMLinkingOptions(
-							getLinkingOptionsFromClah(options)
+							getLinkingOptionsFromClah(options), stdlib_options, is_lib
 						);
-						if (options.isFlag("emit-static-lib")) {
+						if (is_lib) {
 							build_target = compiler::driver::BuildTargetDVMLibrary{
 								.output_file_name    = base::StrID(output_file_name),
 								.dvm_linking_options = std::move(dvm_linking_options)
@@ -673,7 +674,6 @@ clah::Clah getClahForMain() {
 						} else {
 							build_target = compiler::driver::BuildTargetDVMExecutable{
 								.output_file_name    = base::StrID(output_file_name),
-								.link_std_packages   = stdlib_options.stdActive(),
 								.dvm_linking_options = std::move(dvm_linking_options)
 							};
 						}

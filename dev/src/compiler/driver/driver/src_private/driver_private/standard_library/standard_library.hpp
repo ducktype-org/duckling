@@ -53,14 +53,17 @@ namespace compiler::driver {
 	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts();
 
 	/**
+	 * @brief Based on the `StdLibOptions` returns the paths of the standard library DVM
+	 * artifacts, to be linked as dependencies. Empty if the standard library is not used.
+	 */
+	std::vector<std::string> getStdLibDVMLinkingDependencies(
+		const options_types::StdLibOptions& standard_library_options
+	);
+
+	/**
 	 * @brief The existing compiled standard library DVM artifacts.
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts();
-
-	/**
-	 * @brief The existing compiled standard library DVM debug info artifacts.
-	 */
-	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts();
 
 	/**
 	 * @brief Returns whether all the standard library artifact files are present.

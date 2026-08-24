@@ -42,6 +42,27 @@ namespace compiler::driver {
 		base::deduplicateBy(code.object_files, [](const std::string& file) { return file; });
 	}
 
+	namespace {
+		/**
+		 * @brief The debug info file of a linked dependency is assumed to sit next to it, with
+		 * the DVM bytecode extension swapped for the debug info one.
+		 * @return the path, if such a file exists.
+		 */
+		base::Optional<fs::FilePath> findDependencyDebugInfoPath(const std::string& dependency_path
+		) {
+			constexpr std::string_view DBC_EXTENSION = ".dbc";
+			constexpr std::string_view DI_EXTENSION  = ".di.json";
+
+			std::string stem = dependency_path;
+			if (stem.ends_with(DBC_EXTENSION)) stem.resize(stem.size() - DBC_EXTENSION.size());
+
+			fs::FilePath debug_info_path = stem + std::string(DI_EXTENSION);
+			if (!debug_info_path.isRegularFile()) return {};
+
+			return debug_info_path;
+		}
+	}
+
 	base::OkBad linkDVMPackage(
 		const std::vector<artifacts::FileArtifact>& objects,
 		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
@@ -83,12 +104,19 @@ namespace compiler::driver {
 		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");
 		vm::code::serializeCode(merged_code, out);
 
-		// Merge per-module debug info files into a single package debug info file.
-		if (!debug_info_artifacts.empty()) {
+		std::vector<fs::FilePath> debug_info_paths;
+		debug_info_paths.reserve(debug_info_artifacts.size());
+		for (auto& art: debug_info_artifacts) debug_info_paths.push_back(art.file.getFilePath());
+		for (const auto& dependency: dvm_linking_options.dependencies_libraries)
+			if_opt_some(findDependencyDebugInfoPath(dependency), debug_info_path) {
+				debug_info_paths.push_back(debug_info_path);
+			}
+
+		if (!debug_info_paths.empty()) {
 			base::Optional<debug_info::DebugInfo> merged_debug_info;
 
-			for (const auto& di_art: debug_info_artifacts) {
-				std::ifstream in(di_art.file.getFilePath().getPath(), std::ios::binary);
+			for (const auto& debug_info_path: debug_info_paths) {
+				std::ifstream in(debug_info_path.getPath(), std::ios::binary);
 				if (!in.is_open()) {
 					CORE_USER_LOG("DVM: failed to open debug info artifact for merging\n");
 					return base::BAD;
@@ -97,7 +125,7 @@ namespace compiler::driver {
 				if (!di_or_error.has_value()) {
 					CORE_USER_LOG(
 						"DVM: failed to parse debug info file: ",
-						di_art.file.getFilePath().string(),
+						debug_info_path.string(),
 						"\n"
 						"Reason: ",
 						di_or_error.error(),

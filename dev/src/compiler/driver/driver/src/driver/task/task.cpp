@@ -10,6 +10,7 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <json/diagnostics.hpp>
@@ -334,10 +335,14 @@ namespace compiler::driver {
 				};
 			}
 			variant_case(BuildTargetDVMExecutable, dvm_exec_target) {
+				auto dvm_linking_options = dvm_exec_target.dvm_linking_options;
+				base::appendToVector(
+					dvm_linking_options.dependencies_libraries,
+					getStdLibDVMLinkingDependencies(stdlib_options)
+				);
 				return BuildTargetDVMExecutable{
 					.output_file_name    = dvm_exec_target.output_file_name,
-					.link_std_packages   = stdlib_options.stdActive(),
-					.dvm_linking_options = dvm_exec_target.dvm_linking_options,
+					.dvm_linking_options = std::move(dvm_linking_options),
 				};
 			}
 			variant_default { return raw_target; }
@@ -386,12 +391,18 @@ namespace compiler::driver {
 		};
 	}
 
-	DVMLinkingOptions constructDVMLinkingOptions(const options_types::LinkingOptions& linking_options
+	DVMLinkingOptions constructDVMLinkingOptions(
+		const options_types::LinkingOptions& linking_options,
+		const options_types::StdLibOptions&  stdlib_options,
+		bool                                 is_static_lib
 	) {
 		auto dependencies
 			= linking_options.dvm_dependencies
 		    | std::views::transform([](const fs::FilePath& fs_path) { return fs_path.string(); })
 		    | std::ranges::to<std::vector>();
+
+		if (not is_static_lib)
+			base::appendToVector(dependencies, getStdLibDVMLinkingDependencies(stdlib_options));
 
 		return { .shared_libraries       = linking_options.dvm_shared_libraries,
 			     .dependencies_libraries = std::move(dependencies) };

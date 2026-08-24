@@ -4,7 +4,7 @@
  */
 
 namespace fs {
-    class File;
-    class FileManager;
-    class FilePath;
+	class File;
+	class FileManager;
+	class FilePath;
 }
