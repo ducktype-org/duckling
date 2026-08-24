@@ -19,11 +19,8 @@ namespace compiler::driver {
 	namespace {
 		fs::FilePath resolveDefaultStdPath() {
 #ifdef STD_FIXED_PATH
-			// #error "aaa"
 			return { STD_FIXED_PATH };
 #else
-			#warning "STD_FIXED_PATH is not defined"
-			// #error "STD_FIXED_PATH is not defined. Please define it in the build system."
 			return os_utils::getExecutablePath().parentPath().join(fs::FilePath("duck_lib/"));
 #endif
 		}

@@ -7,7 +7,6 @@
 #include <string>
 
 namespace os_utils {
-	
 
 #if defined(_WIN32)
 	#include <windows.h>
