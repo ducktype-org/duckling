@@ -33,8 +33,14 @@ namespace vm::test {
 			assertTrue(attach_res.has_value(), "Attach status listener failed");
 		}
 
-		FlowSimulator& putBreakpoint(base::StrID func_name, u64 instr_index, bool enable = true) {
-			auto bp_res = vm::api::setBreakpoint(pid, func_name, instr_index, enable);
+		FlowSimulator& putBreakpoint(base::StrID func_name, u64 instr_index) {
+			auto bp_res = vm::api::setBreakpoint(pid, func_name, instr_index, true);
+			if (!bp_res) assertTrue(false, vm::api::errorToString(bp_res.error()));
+			return *this;
+		}
+
+		FlowSimulator& disableBreakpoint(base::StrID func_name, u64 instr_index) {
+			auto bp_res = vm::api::setBreakpoint(pid, func_name, instr_index, false);
 			if (!bp_res) assertTrue(false, vm::api::errorToString(bp_res.error()));
 			return *this;
 		}
