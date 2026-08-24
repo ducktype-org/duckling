@@ -1,5 +1,7 @@
 import core.containers.*;
 
+class Point { x: i32; y: i32 }
+
 fun main() = {
     let b = "b".toString();
     let ab = 'a' +: (&b);
@@ -21,4 +23,35 @@ fun main() = {
     var c = 1;
     let ptr_c = &c as ptr i32;
     let works = ptr_c.toString();
+
+    # Smoke test: every kind of type stringifies. The results are all `String`.
+    let unit_string = ().toString();
+    let bool_string = true.toString();
+    let char_string = 'x'.toString();
+    let integral_string = (42).toString();
+    let unsigned_string = 42u64.toString();
+    let float_string = 3.5.toString();
+    let slice_string = "abc".toString();
+
+    var point = Point(1, 2);
+    let class_string = point.toString();
+    let point_ptr = &point as ptr Point;
+    let cptr_string = (point_ptr as cptr Point).toString();
+
+    var buffer = allocation:{i32}.alloc(2);
+    let manyptr_string = buffer.toString();
+    let int_slice_string = builtins.slice_from_ptr_len:{i32}(buffer, 2).toString();
+
+    var array: i32[3];
+    let array_string = array.toString();
+    var nested_array: i32[3][2];
+    let nested_array_string = nested_array.toString();
+
+    let tuple_string = (1, 'b', 2.5).toString();
+
+    var variant: (i32 | bool) = 1;
+    let variant_string = variant.toString();
+
+    var int_list: List:{i32};
+    let list_string = int_list.toString();
 }

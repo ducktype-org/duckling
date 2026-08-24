@@ -522,6 +522,30 @@ private:
 			ASSERT_EQUAL(char_type, getTypeOf("should_char", fun_body_scope));
 			ASSERT_EQUAL(i64_type, getTypeOf("should_i64", fun_body_scope));
 			ASSERT_EQUAL(str_type, getTypeOf("should_string", fun_body_scope));
+
+			// Every kind of type stringifies, and always into a `String`. Compiling the module
+			// at all is the bulk of the check: it is what generates the `toString` bodies.
+			for (const char* stringified: { "unit_string",
+			                                "bool_string",
+			                                "char_string",
+			                                "integral_string",
+			                                "unsigned_string",
+			                                "float_string",
+			                                "slice_string",
+			                                "class_string",
+			                                "cptr_string",
+			                                "manyptr_string",
+			                                "int_slice_string",
+			                                "array_string",
+			                                "nested_array_string",
+			                                "tuple_string",
+			                                "variant_string",
+			                                "list_string" })
+				assertEqual(
+					str_type,
+					getTypeOf(stringified, fun_body_scope),
+					base::strConcat("`", stringified, "` should be a `String`")
+				);
 		}
 	}
 };

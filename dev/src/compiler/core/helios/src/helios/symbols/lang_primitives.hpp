@@ -19,7 +19,10 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
 	StringifyU64,
 	StringifyF64,
 	StringifyPtr,
-	StringifyManyPtr
+	StringifyManyPtr,
+	StringifyCPtr,
+	StringifySlice,
+	StringifyStaticArray
 	// List
 	// PanicOutOfBounds
 )

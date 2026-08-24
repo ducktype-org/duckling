@@ -299,6 +299,37 @@ namespace pointer_stringification {
 
 }
 
+#{
+    A `cptr` is a bare address. The native backend can print it directly, while the DVM has no
+    cast from `cptr` to an integer, so the address is not observable there.
+#}
+template(T: type)
+namespace cptr_stringification {
+    @backend_dependent
+    fundecl stringifyCPtr(pointer: cptr T) -> String;
+
+    @dvm_only_impl
+    fun stringifyCPtr(pointer: cptr T) -> String = {
+        return stringifyStr("cptr(?)");
+    }
+
+    @native_only_impl
+    fun stringifyCPtr(pointer: cptr T) -> String = {
+        if (pointer as u64 == 0) return stringifyStr("cptr(null)");
+        let buffer_cap = 21;
+        var address    = stringReserve(buffer_cap);
+        let format     = builtins.ptr_from_slice:{char}("%p\0") as cptr char;
+        let written
+            = clib.snprintf(address.pointer as cptr char, buffer_cap as u64, format, pointer as cptr u8);
+        address.len = runtime.native.writtenLength(written, buffer_cap);
+
+        var result = stringifyStr("cptr(");
+        result.append(&address);
+        result.append(')');
+        return result;
+    }
+}
+
 template(T: type)
 namespace manyptr_stringification {
     # The distinction between manyptr and ptr is not supported on the DVM,
@@ -321,6 +352,11 @@ namespace manyptr_stringification {
 template(T: type)
 fun stringifyPtr(pointer: ptr T) -> String = {
     return pointer_stringification:{T}.stringifyPtr(pointer);
+}
+
+template(T: type)
+fun stringifyCPtr(pointer: cptr T) -> String = {
+    return cptr_stringification:{T}.stringifyCPtr(pointer);
 }
 
 template(T: type)
@@ -350,6 +386,50 @@ fun stringifyF64(x: f64) -> String = {
     let buffer_cap = 21i64;
     var result     = stringReserve(buffer_cap);
     result.len     = runtime.float_to_string(x, result.pointer, buffer_cap);
+    return result;
+}
+
+#{
+    Appends the `,` that joins the elements of a sequence.
+    A `,` literal cannot be written inside a call argument list yet, so the separator is built
+    from its character code instead.
+#}
+fun appendSequenceSeparator(s: ref String) -> () = {
+    s.append(44u64 as char);
+}
+
+#{
+    Element-by-element stringification of a sequence, rendered as `[a,b,c]`.
+    A `str` is not stringified this way; it is its own text (see `stringifyStr`).
+#}
+template(T: type)
+fun stringifySlice(x: slice T) -> String = {
+    var result = stringifyStr("[");
+    var i      = 0;
+    while (i < x.length()) {
+        if (i > 0) appendSequenceSeparator(&result);
+        result.append(x[i].toString());
+        i = i + 1;
+    }
+    result.append(']');
+    return result;
+}
+
+#{
+    `A` is the whole array type and `N` its length. The array type cannot be spelled as `T[N]`
+    from an element type `T`: as in C, `T[N]` appends the new dimension innermost, so for a
+    nested array that names a different type than `N` elements of `T`.
+#}
+template(A: type, N: i64)
+fun stringifyStaticArray(arr: const ref A) -> String = {
+    var result = stringifyStr("[");
+    var i      = 0;
+    while (i < N) {
+        if (i > 0) appendSequenceSeparator(&result);
+        result.append(arr[i].toString());
+        i = i + 1;
+    }
+    result.append(']');
     return result;
 }
 
@@ -396,6 +476,18 @@ class List {
     }
 
     fun length() -> i64 = len;
+
+    fun toString() -> String = {
+        var result = stringifyStr("[");
+        var i      = 0;
+        while (i < len) {
+            if (i > 0) appendSequenceSeparator(&result);
+            result.append(pointer[i].toString());
+            i = i + 1;
+        }
+        result.append(']');
+        return result;
+    }
 
     #{
         Drops the contents but keeps the buffer, so it can be refilled without
