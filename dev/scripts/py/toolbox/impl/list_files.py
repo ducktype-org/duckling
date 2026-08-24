@@ -24,7 +24,7 @@ def list_files_impl(
         branch: The branch to compare against for modified files (ignored if only_modified=False)
         only_modified: If True, list only modified files; if False, list all tracked files
         no_merge_base: If True, compare against latest commit on branch instead of merge base
-        lines: If True and only_modified=True, return dict with file->line_ranges mapping
+        lines: If True, return dict with file->line_ranges mapping
         include_untracked: If True, also list untracked files (counted as fully modified
                    when lines=True); if False, and with only_modified=True, only warn
                    that they were left out
@@ -55,13 +55,12 @@ def list_files_impl(
 
 def _get_all_tracked_files(extensions: list[str] | None = None) -> list[str]:
     """
-    Get all tracked files below the current directory.
+    Get all tracked files below the current directory, relative to it.
 
     The index, not HEAD: a file that is staged but not committed yet is tracked, and a
-    "format/lint everything" caller wants it. Both listings are relative to the current
-    working directory, so they can be concatenated with the untracked ones.
+    "format/lint everything" caller wants it.
     """
-    files_str, _ = bash_command_get_output("git ls-files --cached --exclude-standard")
+    files_str, _ = bash_command_get_output("git ls-files --cached")
     files = [f.strip() for f in files_str.strip().split("\n") if f.strip()]
 
     return _filter_by_extensions(files, extensions)
@@ -104,11 +103,9 @@ def _get_untracked_files_to_list(
     """
     Get the untracked files to append to a modified files listing.
 
-    `git diff` never reports untracked files, so they are opt-in through
-    `include_untracked`. When they are left out we warn about them instead, so that
-    it is clear why a brand new file was skipped. That warning goes to stderr: the
-    stdout of `list-files` is a machine readable file list, and a warning mixed into
-    it ends up being consumed as a file name (see the formatting scripts).
+    `git diff` never reports them, so they are opt-in; when left out they are warned
+    about instead, on stderr — `list-files`' stdout is a machine readable file list,
+    and a warning mixed into it gets consumed as a file name.
     """
     untracked_files = _get_untracked_files(extensions)
     if not untracked_files:
@@ -129,17 +126,14 @@ def _get_full_line_ranges(files: list[str]) -> dict[str, list[tuple[int, int]]]:
     """
     Map each of the files to a single range covering all of its lines.
 
-    Lines are counted in Python rather than with `wc -l`, which counts *newlines*: a file
-    whose last line has no trailing newline (a brand new one, typically) would be
-    under-counted by one, and a one-line file would come out as the inverted range `1-0`.
-    Consumers pass these ranges on verbatim — `clang-format --lines=1:0` errors out with
-    "start line should not exceed end line" — so a file with no lines at all is left out
-    instead of being given an empty range.
+    Counted in Python, not with `wc -l`: that counts *newlines*, so a file without a
+    trailing newline would be one line short and a one-line file would give the
+    inverted range `1-0`, which consumers pass on verbatim (`--lines=1:0` is an error).
     """
     result: dict[str, list[tuple[int, int]]] = {}
     for file in files:
-        # Skip anything that is not a readable file: directories (e.g. git submodules),
-        # and index entries whose working-tree copy is gone (deleted, not staged yet).
+        # Skip directories (e.g. git submodules) and index entries whose working-tree
+        # copy is gone (deleted, not staged yet)
         if not os.path.isfile(file):
             continue
         with open(file, "rb") as f:

@@ -3,9 +3,9 @@
 # Formats C++ sources in place with clang-format.
 #
 # Usage: format_repo_cpp.sh [--all] [--no-untracked] [clang-format-binary]
-#   default         only the files this branch changed (`list-files --modified`), plus untracked ones
-#   --all           every C++ file in the repository — what format_repo_cpp_all.sh calls
-#   --no-untracked  leave untracked files alone, for a caller that did not check them either
+#   default         the files this branch changed, plus the untracked ones
+#   --all           every C++ file in the repository
+#   --no-untracked  leave the untracked files alone
 
 # Pick the scope of the listing
 scope=(--modified)
@@ -26,13 +26,10 @@ done
 original_location=$(pwd)
 cd "$(dirname "$0")"/../../ || exit 1
 
-# Gather the C++ files. A failure of the listing must not read as "nothing to format",
-# so its exit status is checked before the output is used.
+# Gather the C++ files. A failed listing must not read as "nothing to format"
 listing=$(python3 toolbox.py list-files "${scope[@]}" "${untracked[@]}" --extensions .cpp --extensions .hpp --extensions .cc --extensions .cxx --extensions .h) || exit 1
 
-# One file per array element, so that neither a path containing spaces nor an empty
-# listing turns into the wrong argument list (`printf '%s'` keeps the empty listing at
-# zero elements, which a here-string would not)
+# One element per file, so a path with spaces and an empty listing both behave
 readarray -t files < <(printf '%s' "$listing")
 
 # Check if there is anything to format
@@ -51,7 +48,6 @@ fi
 "$clang_format" --Werror --style=file:".clang-format" -i --verbose "${files[@]}"
 status=$?
 
-# Return to the original location, then report what the formatting itself did — callers
-# (cpp-linter, pr-validate) only see the exit status of this script
+# Return to the original location, but report clang-format's status
 cd "$original_location" || exit 1
 exit $status

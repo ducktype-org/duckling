@@ -85,19 +85,18 @@ def cpp_linter_impl(
             to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
             apply = to_format.lower() in ["y", "yes", ""]
         if apply:
-            # `--no-untracked`: the check above listed the diff without untracked files
-            # (and warned about it), so the fix must not silently rewrite them either.
+            # The fix must cover exactly what the check looked at: the same scope, and
+            # never the untracked files the check warned about skipping.
+            scope = "--all --no-untracked" if all else "--no-untracked"
             try:
                 bash_command(
-                    "./scripts/formatting/format_repo_cpp.sh --no-untracked "
-                    f"{clang_format_path}"
+                    "./scripts/formatting/format_repo_cpp.sh "
+                    f"{scope} {clang_format_path}"
                 )
                 clang_format_failed = False
             except BashCommandError as e:
-                # A fix that did not run leaves the files unformatted, so keep reporting
-                # the failure instead of claiming the formatting issues are gone. The
-                # script's own output already reached the terminal (`bash_command` does
-                # not capture it), so only the reason is worth repeating here.
+                # The files are still unformatted, so keep reporting the failure
+                # (`bash_command` already let the script's own output through)
                 log_warning(f"Formatting the repo {e.reason_string}")
 
     # `run_linter_on` skips everything that is not a C++ source, so a diff without any
