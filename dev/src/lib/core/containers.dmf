@@ -237,7 +237,7 @@ fun stringifyBool(x: bool) -> String = {
 }
 
 fun appendHexU64(s: ref String, value: u64) -> () = {
-    var digits = stringReserve(16u64);
+    var digits = stringReserve(16);
     var rest   = value;
 
     if (rest == 0u64) digits.append('0');
@@ -249,7 +249,6 @@ fun appendHexU64(s: ref String, value: u64) -> () = {
     }
 
     s.append(&digits);
-    digits.dispose();
 }
 
 #{
@@ -285,17 +284,16 @@ namespace pointer_stringification {
     @native_only_impl
     fun stringifyPtr(pointer: ptr T) -> String = {
         if (pointer as u64 == 0) return stringifyStr("ptr(null)");
-        let buffer_cap = 21u64;
+        let buffer_cap = 21;
         var address    = stringReserve(buffer_cap);
         let format     = builtins.ptr_from_slice:{char}("%p\0") as cptr char;
         let written
-            = clib.snprintf(address.pointer as cptr char, buffer_cap, format, pointer as cptr u8);
+            = clib.snprintf(address.pointer as cptr char, buffer_cap as u64, format, pointer as cptr u8);
         address.len = runtime.native.writtenLength(written, buffer_cap);
 
         var result = stringifyStr("ptr(");
         result.append(&address);
         result.append(')');
-        address.dispose();
         return result;
     }
 
