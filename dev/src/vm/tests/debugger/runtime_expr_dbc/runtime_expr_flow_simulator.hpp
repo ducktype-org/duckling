@@ -72,28 +72,7 @@ namespace vm::test {
 			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
 			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
 
-			auto& ret_vals_variant = response.value();
-			assertTrue(
-				std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(ret_vals_variant),
-				"Expected vector of IVMValue from runtime expression"
-			);
-			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(ret_vals_variant);
-			assertEqual(expected_result.size(), ret_vals.size(), "Return value count mismatch");
-
-			for (usize i = 0; i < expected_result.size(); ++i) {
-				auto opt_data = ret_vals[i]->readData();
-				assertTrue(opt_data.has_value(), "Failed to read data from return value");
-				// @TODO: Support other InterpretedDataVariant alternatives (Pointer, Table, Data,
-				// Variant, Function, Opaque).
-				auto* primitive
-					= std::get_if<vm::interpreted_data_variant::Primitive>(&opt_data.value());
-				assertTrue(primitive != nullptr, "Expected Primitive return value");
-				assertEqual(
-					expected_result[i],
-					primitive->value,
-					"Return value mismatch at index " + std::to_string(i)
-				);
-			}
+			assertExitValue(response.value(), expected_result);
 			return *this;
 		}
 
@@ -146,6 +125,9 @@ namespace vm::test {
 				"Expected Paused status after expression completion"
 			);
 
+			auto response = vm::api::getRuntimeExprResult(pid, thread_id);
+			assertTrue(response.has_value(), "Failed to get runtime expression result");
+			assertExitValue(response.value(), expectation.expected_result);
 			return *this;
 		}
 
@@ -158,13 +140,35 @@ namespace vm::test {
 
 			auto exit_val_res = vm::api::getExitValue(pid);
 			assertTrue(exit_val_res.has_value(), "Failed to get exit value");
-			auto& exit_vec = std::get<std::vector<Ref<vm::IVMValue>>>(exit_val_res.value());
-			assertEqual(1ULL, exit_vec.size(), "Expected single exit value");
-			assertEqual(expected_exit_val, exit_vec[0]->readBytes<i64>(), "Exit value mismatch");
+			assertExitValue(exit_val_res.value(), { u64(expected_exit_val) });
 			return *this;
 		}
 
 	private:
+		void assertExitValue(
+			const vm::api::ExitValue& exit_value, const std::vector<u64>& expected_result
+		) const {
+			assertTrue(
+				std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_value),
+				"Expected vector of IVMValue from expression"
+			);
+			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value);
+			assertEqual(expected_result.size(), ret_vals.size(), "Return value count mismatch");
+
+			for (usize i = 0; i < expected_result.size(); ++i) {
+				auto opt_data = ret_vals[i]->readData();
+				assertTrue(opt_data.has_value(), "Failed to read data from return value");
+				auto* primitive
+					= std::get_if<vm::interpreted_data_variant::Primitive>(&opt_data.value());
+				assertTrue(primitive != nullptr, "Expected Primitive return value");
+				assertEqual(
+					expected_result[i],
+					primitive->value,
+					"Return value mismatch at index " + std::to_string(i)
+				);
+			}
+		}
+
 		void assertTrue(bool condition, std::string_view err) const {
 			assert_true_fn(condition, err);
 		}
