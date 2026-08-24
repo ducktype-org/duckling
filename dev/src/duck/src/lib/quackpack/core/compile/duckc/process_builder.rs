@@ -24,7 +24,7 @@ pub enum DuckcSubcommand {
 }
 
 impl DuckcSubcommand {
-    fn as_argument(&self) -> &'static str {
+    fn as_argument(self) -> &'static str {
         match self {
             Self::CompilePackage => "compile_package",
             Self::CompileScript => "compile_script",

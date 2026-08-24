@@ -1,4 +1,4 @@
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::path::Path;
 
 use clap::ArgMatches;
@@ -10,7 +10,7 @@ use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Pro
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
-pub struct RunScriptOptions<'duck> {
+pub struct RunScriptOptions<'duck, 'matches> {
     /// Current [`DuckContext`].
     pub ctx: &'duck DuckContext,
     /// Path the script to run.
@@ -26,27 +26,28 @@ pub struct RunScriptOptions<'duck> {
     /// Artefact from [`StorageSyncOptions`].
     pub strict_errors: bool,
     /// Arguments to the script.
-    pub args: Vec<OsString>,
+    pub args: Vec<&'matches OsStr>,
     /// Number of threads to use.
     pub jobs: usize,
 }
 
-impl<'duck> RunScriptOptions<'duck> {
+impl<'duck, 'matches> RunScriptOptions<'duck, 'matches> {
     /// Create [`RunScriptOptions`] from a given [`Path`] and [`ArgMatches`].
     pub fn from_path_and_matches(
         ctx: &'duck DuckContext,
         path: &'duck Path,
-        matches: &ArgMatches,
+        matches: &'matches ArgMatches,
     ) -> QuackResult<Self> {
         let profile = matches
             .get_one::<String>("profile")
             .map(String::as_str)
             .unwrap_or(DEFAULT_SCRIPT_PROFILE_NAME)
             .into();
-        let args: Vec<OsString> = matches
+        let args: Vec<&OsStr> = matches
             .get_many::<OsString>("args")
-            .map(|values| values.cloned().collect())
-            .unwrap_or_default();
+            .unwrap_or_default()
+            .map(OsString::as_os_str)
+            .collect();
         debug!(?args);
         Ok(Self {
             ctx,
@@ -66,7 +67,7 @@ impl<'duck> RunScriptOptions<'duck> {
     pub fn from_path_and_args_with_defaults(
         ctx: &'duck DuckContext,
         path: &'duck Path,
-        args: Vec<OsString>,
+        args: Vec<&'matches OsStr>,
     ) -> QuackResult<Self> {
         let profile = DEFAULT_SCRIPT_PROFILE_NAME.into();
         debug!(?args);
@@ -86,7 +87,9 @@ impl<'duck> RunScriptOptions<'duck> {
 
 /// Run script given options.
 #[expect(unreachable_code, unused_variables)]
-pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()> {
+pub fn run_script<'duck, 'matches>(
+    rs_options: RunScriptOptions<'duck, 'matches>,
+) -> QuackResult<()> {
     // @TODO: #2900 Unmock this.
     qp_bail_internal!("@TODO: #2900 Pass scripts through `Unit`s");
     let RunScriptOptions {

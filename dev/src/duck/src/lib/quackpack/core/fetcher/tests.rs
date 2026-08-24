@@ -188,7 +188,7 @@ fn all_metadata_adds_to_cache() {
     };
     assert_eq!(response.packages_metadata.len(), 2);
     let FetcherResponse::Some(fetched_from_cache) =
-        block_on(fetcher.get_package_metadata(&types::PackageWithUrl {
+        block_on(fetcher.get_package_metadata(types::PackageWithUrl {
             name: "foo".into(),
             version: Version::new(1, 2, 5),
             url: server.base_url().parse().unwrap(),
@@ -206,7 +206,7 @@ fn without_cache_fetch_fails() {
     let (ctx, _dir) = setup_duck_ctx();
     let server = create_mock_server();
     let fetcher = Fetcher::new(&ctx).unwrap();
-    let err = block_on(fetcher.get_package_metadata(&types::PackageWithUrl {
+    let err = block_on(fetcher.get_package_metadata(types::PackageWithUrl {
         name: "foo".into(),
         version: Version::new(1, 2, 5),
         url: server.base_url().parse().unwrap(),

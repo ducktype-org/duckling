@@ -2,7 +2,7 @@ use clap::{ArgMatches, Command};
 
 use crate::{DuckContext, QuackResult};
 
-// @TODO: #1650 Restore removed subcommands once they are implemented.
+mod add;
 mod build;
 mod clean_storage;
 #[cfg(feature = "shell-completion")]
@@ -21,6 +21,7 @@ pub fn subcommands() -> Vec<Command> {
     vec![
         build::get_parser(),
         run::get_parser(),
+        add::get_parser(),
         remove::get_parser(),
         #[cfg(feature = "shell-completion")]
         generate::get_parser(),
@@ -42,6 +43,7 @@ pub type ExecFn = fn(&DuckContext, &ArgMatches) -> QuackResult<()>;
 /// Returns [`None`], if `name` is not a valid duck builtin subcommand name.
 pub fn exec_for(name: &str) -> Option<ExecFn> {
     let f = match name {
+        "add" => add::execute,
         "build" => build::execute,
         "clean-storage" => clean_storage::execute,
         #[cfg(feature = "shell-completion")]

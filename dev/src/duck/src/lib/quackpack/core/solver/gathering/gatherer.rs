@@ -177,7 +177,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                     }
                     SourceKind::Git(git_ref) => {
                         let url = not_pinned_request.id.source.url();
-                        self.fetch_git(&not_pinned_request, url, *git_ref, errors)
+                        self.fetch_git(&not_pinned_request, url, git_ref, errors)
                             .await
                     }
                     SourceKind::Local => {
@@ -208,7 +208,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             version: request.version,
             url: request.id.source.url(),
         };
-        let fetcher_response = match self.fetcher.get_package_metadata(&pkg_to_fetch).await {
+        let fetcher_response = match self.fetcher.get_package_metadata(pkg_to_fetch).await {
             Ok(response) => response,
             Err(e) => {
                 errors.borrow_mut().log(e);

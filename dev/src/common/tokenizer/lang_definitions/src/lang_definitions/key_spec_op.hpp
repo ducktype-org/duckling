@@ -59,7 +59,6 @@ namespace lang_def {
 		With,
 		Try,
 		Catch,
-		Test,
 		Debug,
 		Match,
 		Switch,

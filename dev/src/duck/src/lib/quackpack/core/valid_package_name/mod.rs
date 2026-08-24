@@ -79,7 +79,6 @@ const DUCKLING_KEYWORDS: &[&str] = &[
     "str",
     "switch",
     "template",
-    "test",
     "then",
     "throw",
     "try",
