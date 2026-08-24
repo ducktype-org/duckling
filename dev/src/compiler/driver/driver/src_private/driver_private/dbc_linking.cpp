@@ -52,9 +52,14 @@ namespace compiler::driver {
 
 		using std::ranges::to;
 		using std::ranges::views::transform;
-		auto parse_result = dvm_linker.parseCodeCollectionFromFiles(
-			objects | transform(&artifacts::FileArtifact::file) | to<std::vector>()
-		);
+
+		auto object_files = objects | transform(&artifacts::FileArtifact::file) | to<std::vector>();
+		auto dep_object_files = dvm_linking_options.dependencies_libraries
+		                      | transform([](const std::string& val) { return fs::File(val); })
+		                      | to<std::vector>();
+		base::appendToVector(object_files, dep_object_files);
+
+		auto parse_result = dvm_linker.parseCodeCollectionFromFiles(object_files);
 
 		if (!parse_result.has_value()) {
 			CORE_USER_LOG(

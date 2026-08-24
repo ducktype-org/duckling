@@ -111,6 +111,15 @@
             "output_file": "app2_dvm.dbc"
         },
         {
+            "package": "app2",
+            "strategy": "dvm_exe",
+            "output_file": "app2_dvm_linked.dbc",
+            "dvm_linking_options": {
+                "shared_libraries": [ "libm.so.6" ],
+                "dependency_libraries": [ "build/lib_a_dvm.dbc" ]
+            }
+        },
+        {
             "package": "app3",
             "strategy": "dvm_exe",
             "output_file": "app3_dvm.dbc"
