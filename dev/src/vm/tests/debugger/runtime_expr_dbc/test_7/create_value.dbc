@@ -1,0 +1,4 @@
+function create_value { } -> { i64 } {
+	mov_p64_imm ret0, 42;
+	ret_from_expr;
+}

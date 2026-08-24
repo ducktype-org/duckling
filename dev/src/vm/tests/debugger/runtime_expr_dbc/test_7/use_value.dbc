@@ -1,0 +1,5 @@
+function use_value { } -> { i64 } {
+	initFromVMValue value, $ 0;
+	mov_p64_p64 ret0, value;
+	ret_from_expr;
+}
