@@ -78,6 +78,8 @@ both fields are lists, so the object form is always required.
 > strategy, listing a package in `dependencies` is **not enough**. You must
 > pass the path to the `.dbc` file produced by its `dvm_lib` task inside
 > `link_libraries`. The driver does not resolve those paths automatically.
+> Also while linking the libraries into another libraries is possible by the format
+>  it's against the idea of the library, please don't use it.
 
 ### `strategy: "native"` — native executable (LLVM)
 | field             | required | description |

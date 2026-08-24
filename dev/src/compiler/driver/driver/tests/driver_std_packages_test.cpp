@@ -10,6 +10,7 @@
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
+#include <os_utils/system_libraries.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
@@ -36,6 +37,10 @@ public:
 		TESTER_ADD_TEST(verifyStdPackagesAndDependencies);
 		TESTER_ADD_TEST(verifyStdLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(compileStdPackages);
+		// The two below need the standard library artifacts to already exist, so they run after
+		// compileStdPackages.
+		TESTER_ADD_TEST(verifyStdDVMLinkingOptionsInConvertedTasks);
+		TESTER_ADD_TEST(verifyStdSharedLibsDeclaredForCore);
 	}
 
 protected:
@@ -58,7 +63,7 @@ protected:
 			manifest_opt->verify(compiler::driver::diagnostics::makeGlobalLoggerReporter()).isOk(),
 			"Manifest verification failed"
 		);
-		auto manifest = std::move(*manifest_opt);
+		manifest = std::move(*manifest_opt);
 
 
 		for (auto& package_info: manifest.packages)
@@ -175,6 +180,90 @@ private:
 				)
 			);
 		}
+
+		for (const auto& art: driver::getStdLibDVMArtifacts()) {
+			assertTrue(
+				std::filesystem::exists(art.file.getFilePath().getPath()),
+				base::strConcat(
+					"Missing standard library DVM artifact: ",
+					art.file.getFilePath().getPath().string()
+				)
+			);
+		}
+	}
+
+	/**
+	 * @brief Verifies that the standard library is linked into DVM executables through the
+	 * `link_libraries` of their linking options, and that DVM libraries are left alone.
+	 */
+	void verifyStdDVMLinkingOptionsInConvertedTasks() {
+		driver::options_types::StdLibOptions global_opts{
+			.std_lib_type = driver::options_types::StdLibOptions::DefaultStd{}
+		};
+
+		auto std_link_libraries = driver::getStdLibDVMLinkingDependencies(global_opts);
+		assertTrue(!std_link_libraries.empty(), "No standard library DVM artifacts to link");
+
+		bool seen_executable = false;
+		bool seen_library    = false;
+		for (const auto& raw_task: manifest.tasks) {
+			auto task_opt = driver::convertRawTaskToTask(
+				raw_task, global_opts, compiler::driver::diagnostics::makeGlobalLoggerReporter()
+			);
+			ASSERT_HAS_VALUE(task_opt);
+			auto task_data = std::get<driver::PackageCompilationTask>(task_opt->task_data);
+
+			if (auto* target_exe
+			    = std::get_if<driver::BuildTargetDVMExecutable>(&task_data.build_target)) {
+				seen_executable = true;
+				assertTrue(
+					target_exe->dvm_linking_options.link_libraries == std_link_libraries,
+					"Converted DVM executable task does not link the standard library"
+				);
+			}
+
+			if (auto* target_lib
+			    = std::get_if<driver::BuildTargetDVMLibrary>(&task_data.build_target)) {
+				seen_library = true;
+				assertTrue(
+					target_lib->dvm_linking_options.link_libraries.empty(),
+					"Converted DVM library task should not link the standard library"
+				);
+			}
+		}
+
+		assertTrue(seen_executable, "The manifest has no DVM executable task to verify");
+		assertTrue(seen_library, "The manifest has no DVM library task to verify");
+	}
+
+	/**
+	 * @brief Verifies that `core` declares the system libraries providing its C standard library
+	 * FFI symbols, and that they reach its DVM compilation task.
+	 */
+	void verifyStdSharedLibsDeclaredForCore() {
+		const std::vector<std::string> expected_libs{ os_utils::systemSharedLibC(),
+			                                          os_utils::systemSharedLibM() };
+
+		auto core = std::ranges::find_if(
+			frontend::packages::standardLibraryPackages(),
+			[](const auto& package) { return package.id == base::StrID("core"); }
+		);
+		assertTrue(
+			core != frontend::packages::standardLibraryPackages().end(),
+			"No `core` standard library package"
+		);
+		ASSERT_EQUAL(expected_libs, core->dvm_shared_libs);
+
+		bool seen_core_dvm_task = false;
+		for (const auto& task: driver::getRequiredStdLibCompilationTasks()) {
+			auto* target_lib = std::get_if<driver::BuildTargetDVMLibrary>(&task.build_target);
+			if (target_lib == nullptr or target_lib->output_file_name != base::StrID("core.dbc"))
+				continue;
+
+			seen_core_dvm_task = true;
+			ASSERT_EQUAL(expected_libs, target_lib->dvm_linking_options.shared_libraries);
+		}
+		assertTrue(seen_core_dvm_task, "No DVM compilation task for `core`");
 	}
 };
 
