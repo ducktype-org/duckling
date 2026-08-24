@@ -4,7 +4,11 @@
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <mir/mir_lowering/mir_liveness.hpp>
+
+#include <algorithm>
+#include <set>
 
 namespace compiler::mir {
 
@@ -110,6 +114,45 @@ namespace compiler::mir {
 			return Instruction{
 				op, {}, { MIRFunctionLiteral{ destruct_sym_opt.value() }, target }, {}, instr.scope,
 			};
+		}
+
+		/**
+		 * @brief The new state of every lifetime flag local that @p instr changes. `true` means
+		 * the local owns a value from here on, `false` that it was moved out of.
+		 */
+		std::vector<std::pair<MIRLocalRef, bool>> lifetimeFlagWrites(
+			const Instruction& instr, const base::Map<MIRLocalRef, MIRLocalRef>& flag_of
+		) {
+			std::vector<std::pair<MIRLocalRef, bool>> writes;
+
+			for (const auto& flag: instr.flags) {
+				bool alive = false;
+				switch (flag.flag) {
+					using enum OperationFlag::Flag;
+				case Construct:
+				case Reinit:
+					alive = true;
+					break;
+				case Move:
+					alive = false;
+					break;
+				default:
+					continue;
+				}
+
+				auto flag_local = flag_of.atMaybe(flag.local);
+				if (flag_local.empty()) continue;
+
+				auto previous = std::ranges::find_if(writes, [&](const auto& write) {
+					return write.first == *flag_local.value();
+				});
+				if (previous == writes.end())
+					writes.emplace_back(*flag_local.value(), alive);
+				else if (alive)
+					previous->second = true;
+			}
+
+			return writes;
 		}
 	}
 
@@ -385,6 +428,93 @@ namespace compiler::mir {
 		}
 	}
 
+	void AddLifetimeFlagsLocalsPass::run(query::Context&, Function& function, const LifetimePassArgs&) {
+		// Get the local that is destructed by a DestructIf.
+		auto conditionally_destructed_local
+			= [](const Instruction& instr) -> base::Optional<MIRLocalRef> {
+			if (instr.operation != Operation::DestructIf) return {};
+			if (instr.arguments.size() < 2) return {};
+
+			const auto& place = instr.arguments.at(1).get<MIRPlace>();
+			CORE_ASSERT(place.isLocal(), "A conditional destruction of a non-local place");
+			return place.getBase<MIRLocalRef>();
+		};
+
+		// Only locals that are destructed conditionally need a flag.
+		std::set<MIRLocalRef> conditionally_destructed;
+		for (auto block_id: function.block_order)
+			for (const auto& instr: function.blocks.at(block_id)->instructions)
+				if_opt_some(conditionally_destructed_local(instr), local)
+					conditionally_destructed.insert(local);
+
+		if (conditionally_destructed.empty()) return;
+
+		// Collect all locals tracked by this pass.
+		std::vector<MIRLocalRef> tracked_locals;
+		for (const auto& local: function.local_list)
+			if (conditionally_destructed.contains(&local)) tracked_locals.emplace_back(&local);
+
+		const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+
+		// Add lifetime flags for all of them.
+		base::Map<MIRLocalRef, MIRLocalRef> flag_of;
+		for (auto local: tracked_locals)
+			flag_of.put(
+				local,
+				function.addGeneratedLocal(
+					bool_type,
+					local->scope.value(),
+					LifetimeFlag::NoDestructor | LifetimeFlag::NoMoveStatusValidation
+				)
+			);
+
+		auto flag_write = [&](MIRLocalRef flag, bool alive, const Instruction& at) {
+			return Instruction{
+				Operation::Assign,
+				MIRPlace(flag),
+				{ MIRConstant{ ctv::CompileTimeValue(alive) } },
+				{},
+				at.scope,
+				NoInstrParameters{},
+				at.metadata,
+			};
+		};
+
+		for (auto block_id: function.block_order) {
+			auto& block = *function.blocks.at(block_id);
+
+			std::vector<Instruction> new_instructions;
+			new_instructions.reserve(block.instructions.size());
+
+			// In the first block, set all parameter lifetime flags to true.
+			if (block_id == function.block_order.front())
+				for (auto local: tracked_locals)
+					if (local->parameter_index.has_value())
+						new_instructions.push_back(
+							flag_write(flag_of.at(local), true, block.firstInstruction())
+						);
+
+			auto append_flag_writes = [&](const Instruction& instr) {
+				for (auto [flag, alive]: lifetimeFlagWrites(instr, flag_of))
+					new_instructions.push_back(flag_write(flag, alive, instr));
+			};
+
+			for (const auto& instr: block.instructions) {
+				new_instructions.push_back(instr);
+
+				// The flag the LIR lowering branches on becomes the last argument of the drop.
+				if_opt_some(conditionally_destructed_local(instr), local) new_instructions.back()
+					.arguments.emplace_back(MIRPlace(flag_of.at(local)));
+
+				append_flag_writes(instr);
+			}
+
+			append_flag_writes(block.terminator);
+
+			block.instructions = std::move(new_instructions);
+		}
+	}
+
 	template<OperationFlag::Flag scope_flag, bool reverse_local_order>
 	void addScopeFlagForScopes(
 		Instruction&                 instr,
@@ -504,16 +634,21 @@ namespace compiler::mir {
 		}
 	}
 
+	LocalsByScopeMap collectLocalsByScope(const Function& function) {
+		LocalsByScopeMap locals_by_scope;
+		for (const auto& local: function.local_list)
+			if (local.scope.value() != function.no_lifetime_scope)
+				locals_by_scope.put(local.scope.value()).first->second.emplace_back(&local);
+		return locals_by_scope;
+	}
+
 	/**
 	 * @brief Constructs LifetimePassArgs for given function.
 	 */
 	LifetimePassArgs constructLifetimePassArgs(const Function& function) {
 		LifetimePassArgs args;
 
-		for (const auto& local: function.local_list)
-			if (local.scope.value() != function.no_lifetime_scope)
-				args.locals_by_scope.put(local.scope.value()).first->second.emplace_back(&local);
-
+		args.locals_by_scope = collectLocalsByScope(function);
 
 		// Predecessor lists.
 		for (auto block_id: function.block_order) args.block_predecessors.put(block_id);
@@ -535,6 +670,11 @@ namespace compiler::mir {
 		InvalidUseCheck{}.run(ctx, function, args);
 		AddAssignmentDestructorsPass{}.run(ctx, function, args);
 		AddDestructorsPass{}.run(ctx, function, args);
+		AddLifetimeFlagsLocalsPass{}.run(ctx, function, args);
+		// Update `locals_by_scope` since `AddLifetimeFlagsLocalsPass` may have added new locals
+		// which need ScopeFlags as well. Other `args` don't have to be updated since
+		// `AddScopeFlags` only uses `locals_by_scope`.
+		args.locals_by_scope = collectLocalsByScope(function);
 		AddScopeFlagsPass{}.run(ctx, function, args);
 
 		return function;
