@@ -28,6 +28,14 @@ fun main() -> i64 = {
     # The other elements are untouched.
     builtin_output_i64(table[1] as i64);    # 22
 
+    # A pointer is a `(block, offset)` pair here, so it does not fit into one integer and is
+    # taken apart instead. `dvm_ptr_parts` fails on a null pointer, which points into no block,
+    # hence the null check next to it.
+    let parts = dvm_ptr_parts:{i32}(first);
+    builtin_output_i64(parts[1i64] as i64);                                # 0
+    builtin_output_i64(dvm_is_nullptr:{i32}(first) as i64);                # 0
+    builtin_output_i64(dvm_is_nullptr:{i32}(dvm_nullptr:{i32}()) as i64);  # 1
+
     dvm_free_arr:{i32}(table);
 
     var mp1 : manyptr i32;

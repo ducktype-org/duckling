@@ -23,3 +23,12 @@ fun copiesThroughRef(r: ref W, bx: box W) -> i32 = {
     var c: W = copy bx;
     return b.x;
 }
+
+fun copyofKeepsKind(r: ref W, bx: box W, n: i64) -> i32 = {
+    var a: W = W(1);
+    var ca: W = copyof a;       # Copy constructor call.
+    var cr: ref W = copyof r;   # The reference is copied, the pointee is shared.
+    var cb: box W = copyof bx;  # A fresh allocation holding a copy of the pointee.
+    var cn: i64 = copyof n;     # Trivially copyable, so no node at all.
+    return ca.x;
+}

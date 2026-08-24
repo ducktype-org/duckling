@@ -53,5 +53,20 @@ fun main() -> i64 = {
     c.id = 100;
     builtin_output_i64(from_ref.id as i64);     # 7
 
+    # `copyof` on a `box` keeps the box: a fresh allocation holding a copy of the pointee.
+    var rebox2: box Counter = copyof bc3;       # +1
+    builtin_output_i64(copies);                 # 5
+    builtin_output_i64(rebox2.id as i64);       # 9
+
+    # `copyof` on a `ref` copies the reference itself, so no copy constructor runs.
+    var rref: ref Counter = copyof &c;
+    builtin_output_i64(copies);                 # 5
+    builtin_output_i64(rref.id as i64);         # 100, it still aliases `c`
+
+    # `copyof` on a direct value behaves like `copy`.
+    var direct: Counter = copyof c;             # +1
+    builtin_output_i64(copies);                 # 6
+    builtin_output_i64(direct.id as i64);       # 100
+
     return 0;
 }
