@@ -19,7 +19,7 @@ namespace vm::persistent {
 	 * @brief Class implementing a STL vector with time-persistency aka control version. You can
 	 * modify any of the previous instances of the vector, by using `VectorStateID`.
 	 *
-	 * @note Implementation based of persistent memory.
+	 * @note Implementation based on persistent memory.
 	 * @note two VectorStateID's are equal if and only if corresponding vectors are the same (same
 	 size and same values on same idxs)
 	 * @note Held values are constructed only once, and nodes hold their id's.
@@ -110,7 +110,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief emplaces value at the end of given instance
+		 * @brief overwrites the element at the given index
 		 */
 		[[nodiscard]]
 		VectorStateID change(VectorStateID state_id, usize idx, const VarT& var) {
@@ -124,10 +124,10 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief get a range of vector  [left, right) at given intance
+		 * @brief gets a range of the vector [left, right) at the given instance
 		 * @note interval [left, right) must be contained within interval [0, size)
-		 * @note left must be >= right
-		 * @note it can happen that left == right - this just returns empty vector
+		 * @note left must be <= right
+		 * @note left may equal right; this returns an empty vector
 		 */
 		[[nodiscard]]
 		std::vector<VarT> view(VectorStateID state_id, usize left, usize right) const {
@@ -154,14 +154,18 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief returns a state which consists of `pref_size` first elements at given instamce
+		 * @brief returns a state which consists of `pref_size` first elements at the given instance
 		 * @note `pref_size` must be smaller or equal to the size of vector at given instance
+		 * @note if `pref_size` is zero, the empty state is returned
+		 * @note if `pref_size` equals the vector size, the original state is returned
 		 */
+		[[nodiscard]]
 		VectorStateID getPrefix(VectorStateID state_id, usize pref_size) {
 			auto state = validateState(state_id);
 			auto size  = inner.size(state);
 			if (pref_size > size) throw std::invalid_argument("trying to take too much");
-			if (pref_size == size) return EMPTY;
+			if (pref_size == 0) return EMPTY;
+			if (pref_size == size) return state_id;
 
 			auto new_state = inner.slice(state, 0, pref_size);
 
@@ -169,10 +173,11 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief pops multple values from the vector ar given instance
+		 * @brief pops multiple values from the vector at the given instance
 		 * @note number of values to pop must be smaller or equal to the size of vector at given
 		 * instance
 		 */
+		[[nodiscard]]
 		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
 			auto state = validateState(state_id);
 			auto size  = inner.size(state);
@@ -185,7 +190,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief comapre two states of the vector
+		 * @brief compare two states of the vector
 		 * @return true if the instances are equal
 		 */
 		[[nodiscard]]

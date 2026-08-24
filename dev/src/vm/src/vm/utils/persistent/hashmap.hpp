@@ -11,9 +11,9 @@ namespace vm::persistent {
 
 	/**
 	 * @brief Class implementing a STL hashmap with time-persistency aka control version. You can
-	 * modify any of the previous instances of the vector, by using `HashMapStateID`.
+	 * modify any of the previous instances of the hashmap, by using `HashMapStateID`.
 	 *
-	 * @note Implementation based of persistent memory.
+	 * @note Implementation based on persistent memory.
 	 * @note two HashMapStateID's are equal if and only if corresponding hashmaps are the same (same
 	 size and same values on same keys)
 	 * @note Held values & keys are constructed only once.
@@ -69,7 +69,7 @@ namespace vm::persistent {
 
 
 	public:
-		// public state representing empty vector
+		// public state representing empty hashmap
 		static constexpr auto EMPTY = HashMapStateID(u64(Memory::EMPTY));
 
 		/**
@@ -137,8 +137,9 @@ namespace vm::persistent {
 
 		/**
 		 * @brief method for inserting [key, value] to given instance.
-		 * @note if key was present at given instance, it will be overriden
+		 * @note if key was present at given instance, it will be overridden
 		 */
+		[[nodiscard]]
 		HashMapStateID insert(HashMapStateID state_id, const KeyT& key, const ValT& var) {
 			auto state  = toMemState(state_id);
 			auto key_id = emplaceNewKey(key);
@@ -148,18 +149,22 @@ namespace vm::persistent {
 
 		/**
 		 * @brief method for erasing entry with given key at given instance
-		 * @note if given instance doesn't contain the key, no effect take place
+		 * @note if given instance doesn't contain the key, no effect takes place
 		 */
+		[[nodiscard]]
 		HashMapStateID erase(HashMapStateID state_id, const KeyT& key) {
+			if_opt_none(held_keys.atLeftOpt(key)) return state_id;
+
 			auto state  = toMemState(state_id);
-			auto key_id = emplaceNewKey(key);
+			auto key_id = held_keys.atLeft(key);
 			return toMapState(inner.erase(state, key_id));
 		}
 
 		/**
 		 * @brief method for inserting [key, value] to given instance.
-		 * @note if key was present at given instance, it won't be overriden
+		 * @note if key was present at given instance, it won't be overridden
 		 */
+		[[nodiscard]]
 		std::pair<bool, HashMapStateID> emplace(
 			HashMapStateID state_id, const KeyT& key, const ValT& var
 		) {
@@ -170,7 +175,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief comapre two states of the hashmap
+		 * @brief compare two states of the hashmap
 		 * @return true if the instances are equal
 		 */
 		[[nodiscard]]

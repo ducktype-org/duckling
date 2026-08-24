@@ -807,7 +807,6 @@ namespace vm::persistent::detail {
 
 		using LeafBuilder = std::function<NodeID(usize, base::Optional<usize>)>;
 
-
 		/**
 		 * @brief helper function for modifying a multiple ranges in memory
 		 * @note can be mutable or unmutable, depending of return type of range builder

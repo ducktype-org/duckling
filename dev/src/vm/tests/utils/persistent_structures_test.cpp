@@ -227,6 +227,14 @@ public:
 		auto op03 = vec.push(op02, std::string("val03"));
 		checker(op03, { "val01", "val02", "val03" });
 
+		auto full_prefix = vec.getPrefix(op03, 3);
+		checker(full_prefix, { "val01", "val02", "val03" });
+		ASSERT_EQUAL(full_prefix, op03);
+
+		auto empty_prefix = vec.getPrefix(op03, 0);
+		checker(empty_prefix, {});
+		ASSERT_EQUAL(empty_prefix, Vector<std::string>::EMPTY);
+
 		auto op04 = vec.getPrefix(op03, 2);
 		checker(op04, { "val01", "val02" });
 
@@ -321,6 +329,9 @@ public:
 
 		auto op04 = map.erase(op03, "key2");
 		checker(op04, { { "key1", "val1" }, { "key3", "val2" } });
+
+		auto absent_erase = map.erase(op04, "missing");
+		ASSERT_EQUAL(absent_erase, op04);
 
 		auto [success, op05] = map.emplace(op04, "key2", "val5");
 		ASSERT_EQUAL(success, true);
