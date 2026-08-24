@@ -142,7 +142,7 @@ namespace compiler::helios::defgen {
 				ctx,
 				is_many_pointer ? LanguagePrimitive::StringifyManyPtr
 								: LanguagePrimitive::StringifyPtr,
-				pointee
+				{ pointee }
 			);
 
 			const Shorthand s{ ctx };

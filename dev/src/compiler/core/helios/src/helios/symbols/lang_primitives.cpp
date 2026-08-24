@@ -111,15 +111,29 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLanguagePrimitiveSymID);
 
 	SymID bakeLanguagePrimitive(
-		query::Context& ctx, LanguagePrimitive primitive, tsh::SymbolType<> type_argument
+		query::Context&                    ctx,
+		LanguagePrimitive                  primitive,
+		std::vector<ctv::CompileTimeValue> ctv_arguments
 	) {
 		const SymID template_sym
 			= ctx.query<QueryLanguagePrimitiveSymID>({ primitive })->valueOrThrow();
 
 		const templates::TemplateBakeKey key{
 			.template_sym_id    = template_sym,
-			.template_arguments = { ctv::CompileTimeValue(type_argument) },
+			.template_arguments = std::move(ctv_arguments),
 		};
 		return ctx.query<templates::QueryBakeTemplateSymID>(key).valueOrThrow();
+	}
+
+	SymID bakeLanguagePrimitiveWithTypes(
+		query::Context&                ctx,
+		LanguagePrimitive              primitive,
+		std::vector<tsh::SymbolType<>> type_arguments
+	) {
+		std::vector ctv_args
+			= type_arguments
+		    | std::views::transform([](auto& type) { return ctv::CompileTimeValue(type); })
+		    | std::ranges::to<std::vector>();
+		return bakeLanguagePrimitive(ctx, primitive, std::move(ctv_args));
 	}
 }

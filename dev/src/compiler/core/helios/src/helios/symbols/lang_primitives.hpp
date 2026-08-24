@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ctv/ctv.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
@@ -66,6 +67,17 @@ namespace compiler::helios {
 	 * function symbol.
 	 */
 	SymID bakeLanguagePrimitive(
-		query::Context& ctx, LanguagePrimitive primitive, tsh::SymbolType<> type_argument
+		query::Context&                    ctx,
+		LanguagePrimitive                  primitive,
+		std::vector<ctv::CompileTimeValue> ctv_arguments
+	);
+
+	/**
+	 * @brief Helper overload tha accepts the symbol types.
+	 */
+	SymID bakeLanguagePrimitiveWithTypes(
+		query::Context&                ctx,
+		LanguagePrimitive              primitive,
+		std::vector<tsh::SymbolType<>> type_arguments
 	);
 }
