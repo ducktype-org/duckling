@@ -608,7 +608,7 @@ DEF_INSTR(add_pcptr_imm, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Immediate, o
  * reproducible across runs of the same program.
  */
 DEF_INSTR(
-	cast_p64_p64_pptr,
+	ptrParts_p64_p64_pptr,
 	(vm::opargs::Place64, dst_id),
 	(vm::opargs::Place64, dst_offset),
 	(vm::opargs::PlacePtr, src_ptr)

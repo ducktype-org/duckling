@@ -742,7 +742,7 @@ class FunctionValidator {
 				if (ptr->inner != c_inner) throw CPtrPointeeMismatchError(instr);
 			}
 			instr_case_novalue(
-				Op_cast_p64_p64_pptr, Op_movCast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr
+				Op_ptrParts_p64_p64_pptr, Op_movCast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr
 			) {}
 
 			instr_case(Op_add_pcptr_p64, instr) {

@@ -18,10 +18,10 @@ function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type id2, i64;
 	init_pany_type off2, i64;
 
-	cast_p64_p64_pptr id, off, sp;
+	ptrParts_p64_p64_pptr id, off, sp;
 	output_p64 off;                 # 0, the struct starts at the block's beginning
 
-	cast_p64_p64_pptr id2, off2, fp;
+	ptrParts_p64_p64_pptr id2, off2, fp;
 	output_p64 off2;                # 8, the second field
 
 	# Both pointers address the same block, so their ids are equal.
@@ -31,7 +31,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	# A null pointer points into no block, so decomposing it fails. Last, it ends the program.
 	init_pany_type np, ptr_i64;
 	setNull_pptr np;
-	cast_p64_p64_pptr id, off, np;
+	ptrParts_p64_p64_pptr id, off, np;
 
 	deinit; # np
 	deinit; # off2

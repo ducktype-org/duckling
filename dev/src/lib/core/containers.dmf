@@ -296,12 +296,9 @@ namespace pointer_stringification {
         return result;
     }
 
-    #{
-        `%p` renders a null pointer as `(nil)` on glibc, so it is spelled out here instead to
-        keep both backends saying `null`.
-    #}
     @native_only_impl
     fun stringifyPtr(pointer: ptr T) -> String = {
+        if (pointer as u64 == 0) return stringifyStr("ptr(null)");
         let buffer_cap = 21u64;
         var address    = stringReserve(buffer_cap);
         let format     = builtins.ptr_from_slice:{char}("%p\0") as cptr char;
@@ -320,6 +317,8 @@ namespace pointer_stringification {
 
 template(T: type)
 namespace manyptr_stringification {
+    # The distinction between manyptr and ptr is not supported on the DVM,
+    # as taking a pointer from manyptr throws when manyptr is null.
     @backend_dependent
     fundecl stringifyManyPtr(pointer: manyptr T) -> String;
 

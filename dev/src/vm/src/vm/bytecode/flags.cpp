@@ -545,7 +545,7 @@ namespace vm::code {
 				rd(i.src_ptr);
 			}
 			// Decomposing a pointer only reads it, like the cast above.
-			instr_case(ins::Op_cast_p64_p64_pptr, i) {
+			instr_case(ins::Op_ptrParts_p64_p64_pptr, i) {
 				wr(i.dst_id);
 				wr(i.dst_offset);
 				rd(i.src_ptr);

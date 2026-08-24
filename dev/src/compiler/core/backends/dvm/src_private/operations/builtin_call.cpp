@@ -109,7 +109,7 @@ namespace compiler::backend_vm::internal {
 			const auto     u64_type   = DVMImmediate::u64(0).type;
 			const DVMPlace id_tmp     = ctx->pushTempLocal(u64_type, "ptr_parts_id");
 			const DVMPlace offset_tmp = ctx->pushTempLocal(u64_type, "ptr_parts_offset");
-			ctx->pushInstruction({ OpKind::cast, id_tmp, offset_tmp, ptr.asArgument() });
+			ctx->pushInstruction({ OpKind::ptrParts, id_tmp, offset_tmp, ptr.asArgument() });
 
 			const auto& ptr_to_u64_type = ctx->program_context.getOrInsertPointerType(u64_type);
 
