@@ -568,6 +568,27 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				// `copyof x` copies `x` while keeping its full symbol type (including reference kind).
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copyof)) {
+					const Shorthand s{ ctx };
+
+					// copyof: T -> T
+					// copyof: ref T -> ref T
+					// copyof: box T -> box T
+					// `SymbolType::isCopyable` answers this for the value as a whole: a `ref` is
+					// always copyable (the reference is copied), while a `box` follows its pointee.
+					if (not inner_type.isCopyable(ctx)) {
+						ctx.logInt(makeBox<dia::PlaceholderError>(
+							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
+							stmt->getStablePosition()
+						));
+						return;
+					}
+
+					node = s.copyValue(std::move(inner), pstOrigin(stmt).generatedFrom());
+					return;
+				}
+
 				// After the tricky cases have been handled, execute standard procedures.
 				node = resolveUnaryOperator(
 					op,

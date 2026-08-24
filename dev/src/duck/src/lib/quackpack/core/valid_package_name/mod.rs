@@ -25,6 +25,7 @@ const DUCKLING_KEYWORDS: &[&str] = &[
     "const",
     "continue",
     "copy",
+    "copyof",
     "cptr",
     "debug",
     "defer",
