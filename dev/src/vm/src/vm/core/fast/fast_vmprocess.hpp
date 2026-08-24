@@ -94,6 +94,9 @@ namespace vm::fast {
 			api::ThreadID thread_id, const std::variant<fs::File, code::Function>& expr
 		) override;
 
+		std::expected<api::Response, api::ApiError> getRuntimeExprResult(api::ThreadID thread_id
+		) override;
+
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
 		FastVMThread& getMainVMThread();

@@ -210,6 +210,10 @@ namespace vm {
 			api::ThreadID thread_id, const std::variant<fs::File, code::Function>& expr
 		) = 0;
 
+		virtual std::expected<api::Response, api::ApiError> getRuntimeExprResult(
+			api::ThreadID thread_id
+		) = 0;
+
 	public:
 		IVMProcess(const IVMProcess&)            = delete;
 		IVMProcess(IVMProcess&&)                 = delete;
