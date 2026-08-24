@@ -1,17 +1,17 @@
 //! A context of a package  parsed from the disk.
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use super::script::Script;
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::package_loader::PackageLoader;
-use crate::quackpack::core::venv_config::VenvConfig;
-use crate::quackpack::core::{self, Package};
+use crate::quackpack::core::script::StandaloneScript;
+use crate::quackpack::core::{self, AnyPackage};
 use crate::{DuckContext, QuackResult, qp_bail};
 
 #[derive(Debug)]
 /// A context of a package  parsed from the disk.
 pub struct PackageContext<'duck> {
-    package: Package,
-    venv_config: VenvConfig,
+    package: AnyPackage,
     ctx: &'duck DuckContext,
 }
 
@@ -20,11 +20,8 @@ impl<'duck> PackageContext<'duck> {
     #[tracing::instrument(skip_all)]
     pub fn new(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
         let package = core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
-        let venv_config_path = project_root.join(PackageLoader::VENV_CONFIG_NAME);
-        let venv_config = VenvConfig::new(venv_config_path)?;
         Ok(Self {
-            package,
-            venv_config,
+            package: AnyPackage::Package(package),
             ctx,
         })
     }
@@ -41,19 +38,30 @@ impl<'duck> PackageContext<'duck> {
         Ok(pcx)
     }
 
-    /// Get underlying [`Package`]
-    pub fn package(&self) -> &Package {
+    /// Create a new [`PackageContext`] for a standalone script.
+    #[tracing::instrument(skip_all)]
+    pub fn new_standalone_script(path: &Path, ctx: &'duck DuckContext) -> QuackResult<Self> {
+        let frontmatter = core::parse_frontmatter(path, ctx)?;
+        let script = StandaloneScript::new(frontmatter);
+        Ok(Self::new_script(script.into(), ctx))
+    }
+
+    /// Create a new [`PackageContext`] for a script.
+    pub fn new_script(script: Script, ctx: &'duck DuckContext) -> Self {
+        Self {
+            package: AnyPackage::Script(script),
+            ctx,
+        }
+    }
+
+    /// Get underlying [`AnyPackage`] as a reference.
+    pub fn package(&self) -> &AnyPackage {
         &self.package
     }
 
-    /// Consume self, returning the underlying package.
-    pub fn into_package(self) -> Package {
+    /// Transform into the underlying [`AnyPackage`].
+    pub fn into_package(self) -> AnyPackage {
         self.package
-    }
-
-    /// Get [`VenvConfig`] of this [`PackageContext`]
-    pub fn venv_config(&self) -> &VenvConfig {
-        &self.venv_config
     }
 
     /// Get [`DuckContext`] used to create this [`PackageContext`]
@@ -65,10 +73,9 @@ impl<'duck> PackageContext<'duck> {
     pub fn is_global(&self) -> bool {
         self.package.is_global()
     }
-}
 
-impl From<PackageContext<'_>> for Package {
-    fn from(value: PackageContext<'_>) -> Self {
-        value.package
+    /// Get the path to the storage.
+    pub fn storage_path(&self) -> &Path {
+        self.package().venv().storage_path()
     }
 }

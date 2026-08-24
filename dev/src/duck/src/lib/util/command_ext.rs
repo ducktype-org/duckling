@@ -6,7 +6,9 @@ use std::process::Command;
 
 use itertools::Itertools;
 
-use crate::{QuackResult, QuackResultContext};
+use crate::QuackResult;
+#[cfg(not(windows))]
+use crate::QuackResultContext;
 
 /// Adds a portable [`exec_replace`](CommandExt::exec_replace) method to the [`Command`].
 pub trait CommandExt {
@@ -35,6 +37,8 @@ impl CommandExt for Command {
 
     #[cfg(windows)]
     fn exec_replace(&mut self) -> QuackResult<Infallible> {
+        use std::io;
+
         use windows_sys::Win32::Foundation::{FALSE, TRUE};
         use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
         use windows_sys::core::BOOL;
@@ -43,7 +47,7 @@ impl CommandExt for Command {
         }
         unsafe {
             if SetConsoleCtrlHandler(Some(handler), TRUE) == FALSE {
-                return Err(io::Error::other("failed to overwrite ctrl-c handler"));
+                return Err(io::Error::other("failed to overwrite ctrl-c handler").into());
             }
         }
         let status = self.spawn()?.wait()?;

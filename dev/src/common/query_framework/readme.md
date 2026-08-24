@@ -278,18 +278,18 @@ Now we can finally write the functions:
     and `store` trivializes to simply transforming `PResult` into `QResult`.
     One must, however, conform to @ref general-requirements.
 
-### Optional: loading results directly from disk (loadFromDisc)
+### Optional: loading results directly from disk (loadFromDisk)
 
 For expensive queries with a stable key, you can add a small helper that tries to reuse a previously
 saved result from disk without running the provider.
 
-- Signature: `static auto loadFromDisc(const QKey& key) -> base::Optional<PResult>`
+- Signature: `static auto loadFromDisk(const QKey& key) -> base::Optional<PResult>`
 
 Important:
 - To make reuse possible across runs, the query key must be stable (implement
     `queryStablePerfectHash`).
 - A concrete example exists in the driver, but your PResult can be any type, not only file artifacts.
-- The provide function should store results in a query artifact, and loadFromDisc should load the
+- The provide function should store results in a query artifact, and loadFromDisk should load the
     previously saved results.
 
 #### Full working example
@@ -304,7 +304,7 @@ Important:
 - Incremental compilation is supported: the framework builds an explicit dependency graph and
     selectively recomputes only what has changed.
 - On startup, the previous query graph state is loaded from disk and dependencies are registered.
-    During execution, for queries that implement a stable key and `loadFromDisc(key) -> Optional<PResult>`,
+    During execution, for queries that implement a stable key and `loadFromDisk(key) -> Optional<PResult>`,
     the system automatically tries to restore the result from disk.
 - Reuse occurs when the query key and all its dependencies remain the same between compilations. If
     loading fails or anything relevant has changed, the framework calls `provide(key)` and proceeds

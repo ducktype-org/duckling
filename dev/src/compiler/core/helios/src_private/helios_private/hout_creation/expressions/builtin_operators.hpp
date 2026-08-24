@@ -16,6 +16,16 @@
 
 namespace compiler::helios::code {
 	/**
+	 * @brief Finds a numeric builtin unary operator for an expression and a given name.
+	 * If necessary, returns the required coercion for the argument type to match the operator.
+	 * @return Returns the operation along with coercions to apply to operands in format
+	 * (builtin_operation, coercion)
+	 */
+	base::Optional<std::tuple<BuiltinUnary, Coercion>> findNumericUnaryBuiltin(
+		query::Context& ctx, lexer::Operator op, CRef<Expr> expr
+	);
+
+	/**
 	 * @brief Finds a numeric builtin binary operator between two expressions and for a given name.
 	 * If types don't match directly, checks whether one can implicitly coerce to another.
 	 * @return Returns the operation along with coercions to apply to operands in format
@@ -26,10 +36,10 @@ namespace compiler::helios::code {
 	);
 
 	/**
-	 * @brief Represents a builtin binary operator which is not a numeric operator, and how it
-	 * should appear in HOUT (as a BuiltinBinary, or a function call).
+	 * @brief Represents a builtin operator which is not a numeric operator, and how it
+	 * should appear in HOUT (as a BuiltinUnary, BuiltinBinary, or a function call).
 	 */
-	struct RegularBinaryBuiltin final {
+	struct RegularBuiltinOperator final {
 		// The symbol of the builtin operator.
 		SymID symbol;
 
@@ -37,39 +47,30 @@ namespace compiler::helios::code {
 			SymID function_symbol;
 		};
 
-		using HOUTRepresentation = std::variant<BuiltinBinary, FunctionCall>;
+		using HOUTRepresentation = std::variant<BuiltinUnary, BuiltinBinary, FunctionCall>;
 
-		// The HOUT operation to perform — either a BuiltinBinary or a function call.
+		// The HOUT operation to perform — either a BuiltinUnary, BuiltinBinary or a function call.
 		// Note: the called function may be different from the symbol. For example, the `++`
 		// operator on strings actually calls a built-in concat function under a different name.
 		HOUTRepresentation op;
 	};
 
-	// Type for storing a mapping between regular binary builtin symbols and related helpful data.
+	// Type for storing a mapping between regular builtin operator symbols and related helpful data.
 	// The `symbol` in the data is the same as the key. We predict that the value type will
 	// grow in complexity as we introduce more features, so we keep the symbol for convenience.
-	using RegularBinaryBuiltinSymbolMap = base::StableHashMap<SymID, RegularBinaryBuiltin>;
+	using RegularBuiltinOperatorSymbolMap = base::StableHashMap<SymID, RegularBuiltinOperator>;
 
 	/**
-	 * @brief Get all builtin binary operators which are *not* numeric operators
+	 * @brief Get all builtin operators which are *not* numeric operators
 	 * for the purpose of lookup and overload resolution. This is a query for idiomatic parallelism.
 	 * @note: The symbols' implementation in
 	 * compiler::helios::defgen::generateBuiltinOperatorExpression must be kept up-to-date with
 	 * this list.
 	 */
 	DECLARE_QUERY(
-		QueryRegularBinaryBuiltinSymbols,
+		QueryRegularBuiltinOperatorSymbols,
 		query::EmptyKey,
-		CRef<RegularBinaryBuiltinSymbolMap>,
+		CRef<RegularBuiltinOperatorSymbolMap>,
 		({ .uses_qresult = false })
-	);
-
-	/**
-	 * @brief Finds a builtin unary operation for a given expression and for given operator. If the
-	 * given expression's type is not direct, performs the necessary coercion.
-	 * Returns None if no such operation exists.
-	 */
-	base::Optional<std::tuple<BuiltinUnary, Coercion>> findUnaryBuiltin(
-		query::Context& ctx, lexer::Operator op, CRef<Expr> expr
 	);
 }

@@ -1,4 +1,5 @@
 add_files(debugger.cpp
+          mapper.cpp
           UI/debug_adapter/debug_adapter.cpp
           UI/CLI/cli.cpp)
 

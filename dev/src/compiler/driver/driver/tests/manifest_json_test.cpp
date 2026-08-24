@@ -1,5 +1,3 @@
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/logger.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/manifest/manifest.hpp>
 #include <driver/task/task.hpp>
@@ -9,6 +7,8 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <diagnostic/core/diagnostic_arguments.hpp>
+#include <diagnostic/logger.hpp>
 #include <tester/tester.hpp>
 
 #include <json/json.hpp>
@@ -38,12 +38,10 @@ public:
 	}
 
 protected:
-	void beforeAll() override {
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
-	}
+	void beforeAll() override { global_state::setters::setGlobalLogger(makeBox<dia::Logger>()); }
 
 private:
-	dia_int::Logger& logger() { return *global_state::getGlobalLogger(); }
+	dia::Logger& logger() { return *global_state::getGlobalLogger(); }
 
 	void clearLogger() { logger().clear(); }
 
@@ -78,7 +76,7 @@ private:
             "tasks": [
                 {
                     "package": "app",
-                    "strategy": "dvm",
+                    "strategy": "dvm_exe",
                     "output_file": "bin/app_dvm"
                 }
             ]
@@ -88,9 +86,9 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(result.has_value());
+		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		(void) result->verify(diagnostics::makeGlobalLoggerReporter());
+		std::ignore = result->verify(diagnostics::makeGlobalLoggerReporter());
 		ASSERT_EQUAL(result->packages.size(), 2u);
 		ASSERT_EQUAL(result->tasks.size(), 1u);
 		ASSERT_EQUAL(result->packages[0].package_id.str(), std::string("mylib"));
@@ -112,7 +110,7 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -135,7 +133,7 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -145,7 +143,7 @@ private:
 		auto manifest_json = nlohmann::json::parse(R"({
             "packages": [],
             "tasks": [
-                { "strategy": "dvm" }
+                { "strategy": "dvm_exe" }
             ]
         })");
 
@@ -153,7 +151,7 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -176,7 +174,7 @@ private:
             "tasks": [
                 {
                     "package": "app",
-                    "strategy": "dvm",
+                    "strategy": "dvm_exe",
                     "output_file": "bin/app_dvm",
                     "name": "build_app"
                 }
@@ -187,9 +185,9 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(result.has_value());
+		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(!logger().hasErrors());
-		(void) result->verify(diagnostics::makeGlobalLoggerReporter());
+		std::ignore = result->verify(diagnostics::makeGlobalLoggerReporter());
 		ASSERT_TRUE(hasWarning());
 	}
 
@@ -249,17 +247,17 @@ private:
 		clearLogger();
 
 		auto task_json = nlohmann::json::parse(
-			R"({ "package": "mylib", "strategy": "dvm", "output_file": "bin/mylib_dvm" })"
+			R"({ "package": "mylib", "strategy": "dvm_lib", "output_file": "bin/mylib_dvm" })"
 		);
 		auto result = RawPackageCompilationTask::fromJson(
 			task_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(result.has_value());
+		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetDVM>(result->build_target));
-		const auto& target = std::get<BuildTargetDVM>(result->build_target);
-		ASSERT_EQUAL(target.output_file_stem.str(), std::string("bin/mylib_dvm"));
+		ASSERT_TRUE(std::holds_alternative<BuildTargetDVMLibrary>(result->build_target));
+		const auto& target = std::get<BuildTargetDVMLibrary>(result->build_target);
+		ASSERT_EQUAL(target.output_file_name.str(), std::string("bin/mylib_dvm"));
 		ASSERT_EQUAL(result->package_id.str(), std::string("mylib"));
 	}
 
@@ -273,7 +271,7 @@ private:
 			task_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(result.has_value());
+		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
 		ASSERT_TRUE(std::holds_alternative<BuildTargetLLVMExecutable>(result->build_target));
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
@@ -293,7 +291,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -314,7 +312,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_TRUE(result.has_value());
+		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
 		ASSERT_TRUE(std::holds_alternative<BuildTargetLLVMExecutable>(result->build_target));
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
@@ -336,7 +334,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -345,13 +343,13 @@ private:
 
 		auto task_json = nlohmann::json::parse(R"({
             "package": "app",
-            "strategy": "dvm"
+            "strategy": "dvm_exe"
         })");
 		auto result    = RawPackageCompilationTask::fromJson(
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -363,7 +361,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 

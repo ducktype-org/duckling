@@ -7,11 +7,12 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize, de};
 
-use crate::quackpack::core::Manifest;
+use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::identity::{Identity, Kind, Origin};
-use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::{GitReference, Source, SourceKind};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
+use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::{QuackResult, StrId};
 
@@ -44,20 +45,31 @@ impl FullIdentity {
         Identity::new(self.name(), self.origin().as_origin())
     }
 
-    /// Helper for solver for creating storage's freeze.
-    pub fn from_realization_and_manifest(
-        realization: ExpandedPackage,
-        realization_manifest: &Manifest,
-    ) -> Self {
-        let name = realization_manifest.name();
-        let origin = match realization.location {
-            ExpandedLocation::Registry { url, .. } => FullOrigin::for_registry(url),
-            ExpandedLocation::Git { url, commit } => FullOrigin::for_git(url, commit),
-            ExpandedLocation::Local { absolute_path } => {
-                FullOrigin::new(absolute_path, FullKind::Local)
+    /// Generate a human-readable description of [`self`].
+    pub fn descriptive_name(&self) -> String {
+        match self.origin.kind {
+            FullKind::Registry => format!("`{}`", self.name),
+            FullKind::Git { .. } => format!("cloned from `{}`", self.origin.url),
+            FullKind::Local => {
+                if let Ok(path) = self.origin.url.to_path_buf() {
+                    format!("at the directory `{}`", path.display())
+                } else {
+                    format!("at the directory `{}`", self.origin.url)
+                }
             }
-        };
-        Self::new(name, origin)
+        }
+    }
+
+    pub fn is_local(&self) -> bool {
+        self.origin().is_local()
+    }
+
+    pub fn is_git(&self) -> bool {
+        self.origin().is_git()
+    }
+
+    pub fn is_registry(&self) -> bool {
+        self.origin().is_registry()
     }
 }
 
@@ -119,6 +131,95 @@ impl FullOrigin {
     /// Convert this [`FullOrigin`] into a [`Origin`].
     pub fn as_origin(&self) -> Origin {
         Origin::new(self.url, self.kind.as_kind())
+    }
+
+    /// Check if this is a local identity.
+    pub fn is_local(&self) -> bool {
+        matches!(self.kind(), FullKind::Local)
+    }
+
+    /// Check if this is a git identity.
+    pub fn is_git(&self) -> bool {
+        matches!(self.kind(), FullKind::Git { commit: _ })
+    }
+
+    /// Check if this is a registry identity.
+    pub fn is_registry(&self) -> bool {
+        matches!(self.kind(), FullKind::Registry)
+    }
+
+    /// Checks that [`self`] satisfies the requirenments of some [`Source`].
+    /// This returns [`OriginSatisfiesSource`],
+    /// which gives either a decisive answer or a conditional answer,
+    /// which requires more work to verify.
+    pub fn satisfies_source(&self, source: &Source) -> OriginSatisfiesSource {
+        if self.url() != source.url() {
+            return OriginSatisfiesSource::No;
+        }
+        match (self.kind(), source.kind()) {
+            (FullKind::Local, SourceKind::Local) => OriginSatisfiesSource::Yes,
+            (FullKind::Git { commit }, SourceKind::Git(reference)) => {
+                if let GitReference::Rev(required_commit) = reference
+                    && commit == *required_commit
+                {
+                    OriginSatisfiesSource::Yes
+                } else {
+                    OriginSatisfiesSource::IfGitReferencePointsToCommit {
+                        url: source.url(),
+                        commit,
+                        reference: *reference,
+                    }
+                }
+            }
+            (FullKind::Registry, SourceKind::Registry) => OriginSatisfiesSource::Yes,
+            _ => OriginSatisfiesSource::No,
+        }
+    }
+}
+
+/// Response to [`FullOrigin::satisfies_source`].
+/// The branch [`Self::IfGitReferencePointsToCommit`] signalizes that the origin satisfies source
+/// if and only if `reference` in the git repository at `url` points to `commit`.
+pub enum OriginSatisfiesSource {
+    Yes,
+    No,
+    IfGitReferencePointsToCommit {
+        url: InternedUrl,
+        commit: StrId,
+        reference: GitReference,
+    },
+}
+
+impl OriginSatisfiesSource {
+    /// Detemine the conditional answer given by [`Self::IfGitReferencePointsToCommit`].
+    /// This is done by performing network requests.
+    ///
+    /// Errors:
+    /// -------
+    /// We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
+    /// as it is well ... a fast path.
+    pub async fn finish_check(self, fetcher: &Fetcher<'_>) -> QuackResult<bool> {
+        match self {
+            Self::Yes => Ok(true),
+            Self::No => Ok(false),
+            Self::IfGitReferencePointsToCommit {
+                url,
+                commit,
+                reference,
+            } => {
+                let Some(fast_path_client) = fetcher.try_get_fastpath(url) else {
+                    return Ok(false);
+                };
+                let reference_commit = match fast_path_client.get_commit_hash(reference).await {
+                    Ok(commit) => commit,
+                    Err(e) => {
+                        fetcher.ctx().console().warning(e)?;
+                        return Ok(false);
+                    }
+                };
+                Ok(commit == reference_commit)
+            }
+        }
     }
 }
 
@@ -293,8 +394,14 @@ mod tests {
             assert_eq!(origin.to_string(), "git+https://localhost:9001/");
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
+            #[cfg(windows)]
+            assert_eq!(origin.to_string(), "local+file:///C:/");
+            #[cfg(not(windows))]
             assert_eq!(origin.to_string(), "local+file:///tmp");
         }
     }
@@ -325,9 +432,20 @@ mod tests {
             );
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let formatted = serde_json::to_string_pretty(&origin).unwrap();
+            #[cfg(windows)]
+            assert_eq!(
+                formatted,
+                r#"{
+  "source": "local+file:///C:/"
+}"#
+            );
+            #[cfg(not(windows))]
             assert_eq!(
                 formatted,
                 r#"{
@@ -354,6 +472,9 @@ mod tests {
             assert_eq!(parsed, origin);
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let formatted = serde_json::to_string_pretty(&origin).unwrap();
@@ -442,10 +563,22 @@ mod tests {
             );
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let identity = FullIdentity::new("foo".into(), origin);
             let formatted = serde_json::to_string_pretty(&identity).unwrap();
+            #[cfg(windows)]
+            assert_eq!(
+                formatted,
+                r#"{
+  "name": "foo",
+  "source": "local+file:///C:/"
+}"#
+            );
+            #[cfg(not(windows))]
             assert_eq!(
                 formatted,
                 r#"{
@@ -475,6 +608,9 @@ mod tests {
             assert_eq!(parsed, identity);
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let identity = FullIdentity::new("foo".into(), origin);

@@ -1,5 +1,0 @@
-import core.builtins.*;
-
-fun main() = {
-    return 0;
-}

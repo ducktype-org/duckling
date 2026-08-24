@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # The unusual style of this test so to use as little of the duckling language 
 # as possible, in order to test only the correctness of the ternary operator
 # and not fail when some other functionality is being worked on.

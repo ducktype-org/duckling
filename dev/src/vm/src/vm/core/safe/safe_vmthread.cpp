@@ -23,6 +23,7 @@
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/module_flags/module_flags.hpp>
 #include <vm/utils/interpret.hpp>
@@ -33,21 +34,8 @@
 
 namespace vm {
 
-#if defined(ENABLE_JIT) and not defined(BUILD_TYPE_RELEASE)
-	// When testing JIT, compile all calls from the start function. Specifically main.
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)         \
-		makeLowInstruction(                                              \
-			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_func \
-				? low::MicroOpcode::jit_call_entrypoint                  \
-				: low::MicroOpcode::OPCODE_NAME,                         \
-			ARG_0,                                                       \
-			ARG_1                                                        \
-		)
-
-#else
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-		makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
-#endif
+#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
 	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
 		  IVMThread(thread_id, process),
@@ -148,6 +136,7 @@ namespace vm {
 
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
+			.id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
 			.cfg
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
@@ -185,7 +174,20 @@ namespace vm {
 				);
 			}
 
-			if (arg_value->type != arg_type) {
+			// Downcast once at the API boundary, so the initFromVMValue opcode can rely on the
+			// embedded pointer being a SafeVMValue without any runtime checks.
+			const auto* safe_value = dynamic_cast<const SafeVMValue*>(&*arg_value);
+			if (safe_value == nullptr) {
+				throw exceptions::VMRuntimeException(base::strConcat(
+					"VMValue for argument ",
+					i,
+					" is invalid: it does not belong to the safe VM implementation"
+				));
+			}
+
+			// Safe TypeIDs are asserted (in the type builder) to be numerically equal to
+			// ValidTypeIDs, so the interface-level type ID can be compared with the safe one.
+			if (arg_value->getTypeID() != code::valid_type::ValidTypeID(arg_type->getID().asInt())) {
 				throw exceptions::VMRuntimeException(base::strConcat(
 					"Type mismatch for argument ",
 					i,
@@ -194,16 +196,16 @@ namespace vm {
 					"': expected ",
 					arg_type->getName().str(),
 					", got ",
-					arg_value->type->getName().str()
+					arg_value->getType()->getName().str()
 				));
 			}
 
 			start_function.bc.push_back(
-				MAKE_BYTECODE_INSTRUCTION(initFromVmValue, std::bit_cast<u64>(arg_value.get()), 0)
+				MAKE_BYTECODE_INSTRUCTION(initFromVMValue, std::bit_cast<u64>(safe_value), 0)
 			);
 			start_function.local_stack_size += arg_type->getSize().asInt();
-			start_function.parameters.push_back(arg_value->type);
-			start_function.arg_size += arg_value->type->getSize().asInt();
+			start_function.parameters.push_back(arg_type);
+			start_function.arg_size += arg_type->getSize().asInt();
 		}
 
 
@@ -252,6 +254,7 @@ namespace vm {
 
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
+			.id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
 			.cfg
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
@@ -489,7 +492,7 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
-	std::vector<Ref<VmValue>> SafeVMThread::executeFunction(
+	std::vector<Ref<SafeVMValue>> SafeVMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		ScopedGilGuard gil_guard(*this);
@@ -523,9 +526,9 @@ namespace vm {
 			"result."
 		);
 
-		exit_value_storage = { std::vector<Ref<VmValue>>{} };
+		exit_value_storage = { std::vector<Ref<SafeVMValue>>{} };
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
-			exit_value_storage.value().emplace_back(safe_process.createVmValue(
+			exit_value_storage.value().emplace_back(safe_process.createVMValue(
 				func.result_types[idx],
 				Pointer(frame->local_block_ref_stack_base[orig_block_stack_size + idx], 0)
 			));
@@ -554,18 +557,32 @@ namespace vm {
 		for (const auto& [global, id, name]: process_program->getGlobals().allData()) {
 			auto block_ref
 				= Ref(runtime_data.global_block_ref_buffer_base[global->global_block_idx]);
-			// Insert the global data if it hasn't been initialized; then run constructor if present
-			if (not process_memory.isGlobalInitialized(block_ref) && global->ctor_name.has_value()) {
-				try {
-					const auto& func
-						= *process_program->getFunctions().atMaybe(global->ctor_name.value()).value();
-					low::LowFuncData start_function = createStartFunctionFor(func, {});
-					executeFunction(start_function, func);
-					process_memory.setGlobalInitialized(block_ref);
-				} catch (const KillProcessException& e) {
-					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-					return;
+			if (not process_memory.isGlobalInitialized(block_ref)) {
+				variant_match(global->init) {
+					variant_case(low::GlobalCtorDtor, ctor_dtor) {
+						if (ctor_dtor.ctor_name.has_value()) {
+							try {
+								const auto& func = *process_program->getFunctions()
+								                        .atMaybe(ctor_dtor.ctor_name.value())
+								                        .value();
+								low::LowFuncData start_function = createStartFunctionFor(func, {});
+								executeFunction(start_function, func);
+							} catch (const KillProcessException& e) {
+								auto status = safe_process.getCurrentStatus();
+								if (std::holds_alternative<api::ExecutionPanicked>(status))
+									respondExecutionRequest(status);
+								else
+									respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+								return;
+							}
+						}
+					}
+					variant_case(low::GlobalInitialValue, value_init) {
+						// Copy the constant initial value bytes directly to the global's memory.
+						process_memory.initializeBlockFromConstValue(block_ref, value_init.value);
+					}
 				}
+				process_memory.setGlobalInitialized(block_ref);
 			}
 		}
 
@@ -602,10 +619,16 @@ namespace vm {
 			if (api::isStatusTerminal(current_status))
 				respondExecutionRequest(current_status);
 			else
-				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
-		} catch (const KillProcessException& e) {
+				respondExecutionRequest(api::ExecutionCompleted{
+					std::vector<Ref<IVMValue>>(exit_value.begin(), exit_value.end()) });
+		} catch (const KillProcessException& e) { handleKillProcessException(e); }
+	}
+
+	void SafeVMThread::handleKillProcessException(const KillProcessException& e) {
+		if (safe_process.isExecutionPanicked())
+			respondExecutionRequest(safe_process.getCurrentStatus());
+		else
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-		}
 	}
 
 	void SafeVMThread::execGlobalDestructors() {
@@ -615,28 +638,39 @@ namespace vm {
 		// earlier-created resources is destroyed first, preventing use-after-destruction and
 		// keeping teardown safe and logically consistent.
 		for (const auto& [global, id, name]: std::ranges::reverse_view(globals)) {
-			if (global->dtor_name.has_value()) {
+			auto* ctor_dtor = std::get_if<low::GlobalCtorDtor>(&global->init);
+			if (ctor_dtor && ctor_dtor->dtor_name.has_value()) {
 				try {
 					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(base::StrID(global->dtor_name.value()))
+					                        .atMaybe(ctor_dtor->dtor_name.value())
 					                        .expect(
 												"Called function does not exist: "
-												+ global->dtor_name.value().str()
+												+ ctor_dtor->dtor_name.value().str()
 											);
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
-				} catch (const KillProcessException& e) {
-					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-				}
+				} catch (const KillProcessException& e) { handleKillProcessException(e); }
 			}
 		}
 	}
 
-	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition() {
+	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition(
+		base::Optional<usize> opt_frame_idx
+	) {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
-				auto  frame = runtime_data.frame_stack_current;
-				auto& func  = *frame->current_function;
+				auto frame = runtime_data.frame_stack_current;
+
+				if_opt_some(opt_frame_idx, frame_index) {
+					u64 frames = getNumberOfCurrentStackFrames();
+					if (frame_index >= frames)
+						return std::unexpected(api::ApiError{
+							api::OtherError{ "Frame index out of bounds" } });
+
+					frame = &getStackFrame(frame_index);
+				}
+
+				auto& func = *frame->current_function;
 
 				return low::LowCodePosition{
 					.function          = &func,
@@ -679,6 +713,10 @@ namespace vm {
 	}
 
 	void SafeVMThread::setThreadCtx(std::string str) { thread_ctx = std::move(str); }
+
+	bool SafeVMThread::isCallableFunctionID(usize id) {
+		return id != SafeVMThread::START_FUNCTION_ID;
+	}
 
 	u64 SafeVMThread::getNumberOfCurrentStackFrames() const {
 		// +1 because frame_stack_current points to the current frame, not the next free slot.

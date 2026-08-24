@@ -63,6 +63,7 @@ RUN apt-get update -y && \
     rsync \
     nlohmann-json3-dev \
     nano \
+    gdb \
     && \
     # Make g++-14 default
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
@@ -96,11 +97,16 @@ ENV PATH=/root/.cargo/bin:/usr/lib/llvm-19/bin:$PATH
 ENV HOME=/home/ubuntu
 
 ARG UID=1000
-ARG GID=1000
+ARG GID
 ARG DEFAULT_USER=ubuntu
 
-RUN groupmod -g ${GID} ubuntu && \
-    usermod -u ${UID} -g ${GID} ubuntu
+# `groupmod` can fail with exit code 4 when the provided GID is already in use in the container.
+# Our only concern is that the GID of created files match the GID of the user outside the container,
+# so we can use the already existing group with this GID instead of ubuntu group.
+# This is the case for macOS users whose GID is usually 20 (`staff`).
+RUN echo gid ${GID} uid ${UID} expr ${GID:-${UID}}       && \
+    ( groupmod -g ${GID:-${UID}} ubuntu || [ $? == 4 ] ) && \
+    usermod -u ${UID} -g ${GID:-${UID}} ubuntu
 
 RUN if [ "$DEFAULT_USER" = "root" ]; then \
         rm -rf /root/.ssh && ln -s /home/ubuntu/.ssh /root/.ssh; \

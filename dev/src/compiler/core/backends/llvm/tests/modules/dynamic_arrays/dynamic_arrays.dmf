@@ -1,7 +1,0 @@
-fun dynamic_array_test() -> () = {
-    var l: List[i64];
-    l += 1;
-    let x = len l;
-    l -= 1u64;
-    let y = l[0];
-}

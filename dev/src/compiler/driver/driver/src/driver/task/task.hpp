@@ -8,6 +8,7 @@
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 
+#include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
 #include <string_id/string_id.hpp>
 
@@ -42,13 +43,56 @@ namespace compiler::driver {
 	}  // namespace task
 
 	/**
+	 * @brief Config/metadata that needs to be saved in the generated DBC code,
+	 * in order to properly run the code.
+	 */
+	struct DVMRuntimeConfig {
+		/**
+		 * @brief Shared libraries that have to be loaded to run the code.
+		 */
+		std::vector<std::string> shared_libraries{};
+	};
+
+	/**
 	 * @brief Package build target.
 	 */
-	struct BuildTargetDVM final {
+	struct BuildTargetDVMLibrary final {
 		/**
-		 * @brief The output file path stem for the compiled DVM package.
+		 * @brief The output file path name for the compiled DVM package.
 		 */
-		base::StrID output_file_stem = base::StrID("package_dvm");
+		base::StrID output_file_name = base::StrID("package_dvm.dbc");
+
+		/**
+		 * @brief Runtime config of the DVM.
+		 */
+		DVMRuntimeConfig runtime_config = {};
+
+		/**
+		 * @brief If a value is present, use this artifact collection
+		 * instead of the default.
+		 * @note This only affects the compiled package output, not any
+		 * other query artifacts (if present).
+		 * @TODO: #3158 Solving this would remove the need for this option.
+		 */
+		base::Optional<Ref<artifacts::ArtifactCollection>> custom_art_collection = {};
+	};
+
+	struct BuildTargetDVMExecutable final {
+		/**
+		 * @brief The output file path name for the compiled DVM executable.
+		 */
+		base::StrID output_file_name;
+
+		/**
+		 * @brief Whether to include in the final output the standard
+		 * library packages that the executable depends on.
+		 */
+		bool link_std_packages = false;
+
+		/**
+		 * @brief Runtime config of the DVM.
+		 */
+		DVMRuntimeConfig runtime_config = {};
 	};
 
 	/**
@@ -60,7 +104,7 @@ namespace compiler::driver {
 		/**
 		 * @brief The output file path for the compiled executable.
 		 */
-		base::StrID output_file_stem;
+		base::StrID output_file_name;
 
 		/**
 		 * @brief Linking options for the executable.
@@ -72,19 +116,29 @@ namespace compiler::driver {
 		/**
 		 * @brief The output file path for the compiled static library.
 		 */
-		base::StrID output_file_stem;
+		base::StrID output_file_name;
 
 		/**
 		 * @brief Archiving options for the static library.
 		 */
 		archiver::ArchivingOptions archiving_options;
+
+		/**
+		 * @brief If a value is present, use this artifact collection
+		 * instead of the default.
+		 * @note This only affects the compiled package output, not any
+		 * other query artifacts (if present).
+		 * @TODO: #3158 Solving this would remove the need for this option.
+		 */
+		base::Optional<Ref<artifacts::ArtifactCollection>> custom_art_collection = {};
 	};
 
 	/**
 	 * @brief A variant type representing different build targets.
 	 */
 	using BuildTarget = std::variant<
-		BuildTargetDVM,
+		BuildTargetDVMLibrary,
+		BuildTargetDVMExecutable,
 		BuildTargetLLVM,
 		BuildTargetLLVMExecutable,
 		BuildTargetLLVMStaticLibrary>;
@@ -145,8 +199,10 @@ namespace compiler::driver {
 	 * @brief Construct linker options for a given task, based on the task's build target and the
 	 * standard library options.
 	 */
-	linker::LinkingOptions constructLinkerOptions(
-		const linker::LinkingOptions&       local_options,
-		const options_types::StdLibOptions& stdlib_options
+	linker::LinkingOptions constructNativeLinkerOptions(
+		const options_types::LinkingOptions& linking_options,
+		const options_types::StdLibOptions&  stdlib_options
 	);
+
+	DVMRuntimeConfig constructDVMRuntimeConfig(const options_types::LinkingOptions& linking_options);
 }

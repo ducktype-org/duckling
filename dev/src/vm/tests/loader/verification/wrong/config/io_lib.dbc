@@ -1,0 +1,9 @@
+# Loaded first under an unrestricted config; becomes an already-validated
+# "old" function whose IO effect later callers must inherit.
+function does_io {} -> {} {
+	init_pany_type		val, i64;
+	mov_p64_imm			val, 42;
+	output_p64			val;
+	deinit;
+	ret;
+}

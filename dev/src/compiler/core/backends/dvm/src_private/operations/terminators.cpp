@@ -37,6 +37,17 @@ namespace compiler::backend_vm::internal {
 		}
 	}
 
+	void InstructionLowerer::lower(const BranchIfNullOperation& op) {
+		ctx->pushInstruction({ OpKind::cmpNull, op.pointer.asArgument() });
+
+		ctx->cleanUpRegisteredTemps();
+		// Deinits are pushed between the null check and the jumps, like in Branch.
+		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
+
+		ctx->pushInstruction({ OpKind::jmpIf, op.null_target.asArgument() });
+		ctx->pushInstruction({ OpKind::jmpIfNot, op.not_null_target.asArgument() });
+	}
+
 	void InstructionLowerer::lower(const ReturnOperation& op) {
 		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 

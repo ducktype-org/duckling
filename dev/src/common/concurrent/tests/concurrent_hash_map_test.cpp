@@ -138,11 +138,11 @@ private:
 		ASSERT_TRUE(map.contains(3));
 		ASSERT_TRUE(!map.contains(4));
 
-		ASSERT_TRUE(map.atMaybe(2).has_value());
+		ASSERT_HAS_VALUE(map.atMaybe(2));
 		ASSERT_TRUE(map.atMaybe(4).empty());
 		ASSERT_TRUE(map.atMaybe(5).empty());
 
-		ASSERT_TRUE(map.atMaybeCopy(2).has_value());
+		ASSERT_HAS_VALUE(map.atMaybeCopy(2));
 		ASSERT_TRUE(map.atMaybeCopy(4).empty());
 		ASSERT_TRUE(map.atMaybeCopy(5).empty());
 
@@ -351,7 +351,7 @@ private:
 		for (auto& t: threads) t.join();
 
 		// Validate state:
-		ASSERT_TRUE(moved_map_opt.has_value());
+		ASSERT_HAS_VALUE(moved_map_opt);
 		ASSERT_EQUAL(moved_map_opt->size() + map.size(), thread_count * OPS_PER_THREAD);
 
 		for (u64 thread_id = 0; thread_id < thread_count; thread_id++) {
@@ -404,7 +404,7 @@ private:
 
 		threads.reserve(thread_count);
 		for (u64 i = 0; i < thread_count; i++) {
-			std::minstd_rand rng(42 * i);
+			std::minstd_rand rng(static_cast<std::minstd_rand::result_type>(42 * i));
 
 			threads.emplace_back([&map, &erase_count, rng]() mutable {
 				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
@@ -652,7 +652,7 @@ private:
 				ASSERT_TRUE(map.atMaybe(key).empty());
 			} else {
 				ASSERT_TRUE(map.contains(key));
-				ASSERT_TRUE(map.atMaybe(key).has_value());
+				ASSERT_HAS_VALUE(map.atMaybe(key));
 				ASSERT_TRUE(map.getCopy(key) == key * 10);
 			}
 		}

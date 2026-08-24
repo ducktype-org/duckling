@@ -1,6 +1,7 @@
 #pragma once
 
 #include "access.hpp"
+#include "cloning_decl.hpp"
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
 #include "elements/lang_state_unmethods.hpp"
@@ -25,7 +26,7 @@
 #include <ranges>
 #include <variant>
 
-namespace dia_int {
+namespace dia {
 	class StablePosition;
 }
 
@@ -59,18 +60,62 @@ namespace pst {
 			std::any module_id;
 		};
 
+		struct BakedTemplateParent final {
+			std::any template_bake_data;
+		};
+
 		/**
 		 * @brief Source of PST.
 		 * @note This is used mostly for determining the parent helios-scope of PST root elements.
 		 */
-		std::variant<MacroExpansionParent, ModuleParent> pst_parent;
+		std::variant<MacroExpansionParent, ModuleParent, BakedTemplateParent> pst_parent;
+
+		template<class T>
+		[[nodiscard]]
+		const T& getAs() const {
+			return std::get<T>(pst_parent);
+		}
 	};
 
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
+		THIS_CLASS(LangElement);
+
+	protected:
+		/**
+		 * @TODO: #2938 Change position handling
+		 * @TODO: #2938 Consider what should happen with context hash
+		 * @TODO: #2938 Consider what should happen with token ownership
+		 */
+		explicit LangElement(pst::CloneDummy, const LangElement& other):
+			  source_position(other.source_position),
+			  context_hash(other.context_hash),
+			  element_kind(other.element_kind),
+			  id(PstID::next()) {}
+
+		/**
+		 * @brief Virtual function cloneElement that calls all of the parts of cloning that need to
+		 * be done.
+		 *
+		 * The implementation is should only be defined in final elements.
+		 */
+		virtual CLONE_SIGNATURE() = 0;
+
+		/**
+		 * @brief A non-virtual function that is performed on each inheritance level of elements to
+		 * clone the children elements.
+		 */
+		void cloneSubElements(const LangElement&) { return; }
+
 	public:
+		/**
+		 * @brief Returns a clone of the PST subtree starting in the current element.
+		 */
+		[[nodiscard]]
+		MBox<LangElement> clone() const;
+
 		using SubToken = base::CRef<lexer::Token>;
 
 		/**
@@ -84,10 +129,9 @@ namespace pst {
 		 */
 		friend class Stmt;
 
-		/**
-		 * @brief Needed for access to hash methods.
-		 */
-		friend class ClassStmt;
+		template<typename X>
+		friend class PSTAutomatic;
+		friend class CloningUtils;
 
 		using Child = AccessLocked<LangElement>;
 
@@ -116,21 +160,20 @@ namespace pst {
 		 * @brief The stable position of an element.
 		 */
 		[[nodiscard]]
-		dia_int::StablePosition getStablePosition() const;
+		dia::StablePosition getStablePosition() const;
 
 		/**
 		 * @brief Given a StablePosition of an element, returns the source position of the element.
 		 */
 		static dia::SourcePosition getActiveSourcePosition(
-			query::Context& ctx, const dia_int::StablePosition& pos
+			query::Context& ctx, const dia::StablePosition& pos
 		);
 
 		/**
 		 * @brief Given a StablePosition of an element, returns the source position of the element,
 		 * bypasses the query graph.
 		 */
-		static dia::SourcePosition getActiveSourcePositionIllegalAccess(
-			const dia_int::StablePosition& pos
+		static dia::SourcePosition getActiveSourcePositionIllegalAccess(const dia::StablePosition& pos
 		);
 
 		/**
@@ -199,7 +242,7 @@ namespace pst {
 
 		[[nodiscard]]
 		HashType getHash() const {
-			CORE_ASSERT(hash.has_value(), "Hash not calculated for this" + elementType());
+			CORE_ASSERT(hash.has_value(), "Hash not calculated for this: " + elementType());
 			return hash.value();
 		}
 
@@ -209,7 +252,7 @@ namespace pst {
 		 * * CodeBlock
 		 * * CodeBlockOrStmt
 		 * * TopLevel
-		 * * ClassBlock
+		 * *
 		 */
 		[[nodiscard]]
 		virtual bool isStatementAggregate() const {
@@ -266,13 +309,22 @@ namespace pst {
 
 		virtual void acceptVisitor(PstVisitor& visitor) const;
 
-		template<typename X>
-		friend class PSTAutomatic;
-
 		[[nodiscard]]
 		const AdditionalRootData& getAdditionalRootData() const {
 			CORE_ASSERT(additional_root_data.has_value(), "Element has no additional root data");
 			return additional_root_data.value();
+		}
+
+		/**
+		 * @brief Returns whether the element has additional root data.
+		 * @TODO: #2996 Remove this in favor of some kind of having more proper
+		 * knowledge of PST origin (bake/expand/user/etc).
+		 * This is currently used to hack-in the check for whether a template is baked or not, which
+		 * is not a good solution.
+		 */
+		[[nodiscard]]
+		bool hasAdditionalRootData() const {
+			return additional_root_data.has_value();
 		}
 
 	protected:

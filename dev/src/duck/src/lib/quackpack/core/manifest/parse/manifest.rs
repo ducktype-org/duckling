@@ -4,18 +4,24 @@ use std::path::Path;
 
 use tracing::debug;
 
+use super::source::resolve_path_maybe_relative_to_dir;
 use super::{Scope, dependency};
+use crate::quackpack::core::manifest::VenvConfig;
+use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
-    Features, Manifest, OptLevel, PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard,
-    Version,
+    Dependencies, DependencyKind, Features, Manifest, OptLevel, PackageMetadata, ParseMode,
+    Profile, Profiles, ScopeGuard, Version,
 };
 use crate::quackpack::schemas::manifest::{
     Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
+    VenvConfig as VenvConfigSchema,
 };
+use crate::util::IsPlural;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
 #[tracing::instrument(skip_all)]
+#[track_caller]
 pub(crate) fn parse(
     schema: &ManifestSchema,
     root: &Path,
@@ -23,22 +29,37 @@ pub(crate) fn parse(
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
     let mut scope = Scope::new();
+    let mut deps = Vec::new();
     let guard = scope.push("dependencies".into());
-    let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, guard)?;
+    dependency::parse(
+        schema.dependencies.as_ref(),
+        root,
+        DependencyKind::Normal,
+        &mut deps,
+        ctx,
+        guard,
+    )?;
 
     let guard = scope.push("dev-dependencies".into());
-    let dev_dependencies = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, guard)?;
+    dependency::parse(
+        schema.dev_dependencies.as_ref(),
+        root,
+        DependencyKind::Dev,
+        &mut deps,
+        ctx,
+        guard,
+    )?;
+    let dependencies = Dependencies::new(deps)?;
 
     let guard = scope.push("profiles".into());
     let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
     match mode {
-        ParseMode::FrontMatterScript => {
+        ParseMode::FrontMatter => {
             let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
             if !illegal_fields.is_empty() {
-                let plural = if illegal_fields.len() > 1 { "s" } else { "" };
                 let mut err = qp_err!(
-                    "illegal field{} `{}` in the frontmatter at {}",
-                    plural,
+                    "illegal field{} `{}` in the frontmatter at `{}`",
+                    illegal_fields.s_if_plural(),
                     illegal_fields.join("`, `"),
                     root.display()
                 );
@@ -48,7 +69,17 @@ pub(crate) fn parse(
                 qp_bail!(err);
             }
 
-            let name = StrId::from(root);
+            // NOTE: `script.rs::FrontMatter::name` relies on the fact that script name ==
+            // manifest.name.
+            let name = StrId::from(root.file_stem().unwrap());
+
+            validate_package_name(&name).with_context(|| {
+                format!(
+                    "script at `{}` has an invalid script name (file stem)",
+                    root.display()
+                )
+            })?;
+
             let version = Version::default();
             let manifest = Manifest::new(
                 name,
@@ -56,8 +87,8 @@ pub(crate) fn parse(
                 Features::default(),
                 PackageMetadata::default(),
                 dependencies,
-                dev_dependencies,
                 profiles,
+                VenvConfig::default_for_script(ctx),
             );
             Ok(manifest)
         }
@@ -74,21 +105,30 @@ pub(crate) fn parse(
             let Some(ref name) = metadata.name else {
                 qp_bail!("missing the obligatory key `metadata.name`")
             };
-            debug!("package name is `{name}`, version is `{version}`");
+            debug!(package_name = %name, package_version = %version);
 
+            {
+                let mut guard1 = scope.push("metadata".to_string());
+                let guard2 = guard1.push("name".to_string());
+
+                validate_package_name(name)
+                    .context("package has an invalid name")
+                    .with_context(|| guard2.make_context_string())?;
+            }
             let guard = scope.push("features".into());
             let features = parse_features(schema.features.as_ref())
                 .with_context(move || guard.make_context_string())?;
+            let venv = parse_venv(schema.venv.as_ref(), root, ctx);
             let authors = metadata
                 .authors
                 .as_ref()
                 .map(|vec| vec.iter().map(<&String>::into).collect())
                 .unwrap_or_default();
-            let package_metadata = PackageMetadata::new(
+            let package_metadata = PackageMetadata {
                 authors,
-                metadata.license.as_ref().map(<&String>::into),
-                metadata.description.as_ref().map(<&String>::into),
-            );
+                license: metadata.license.as_ref().map(<&String>::into),
+                description: metadata.description.as_ref().map(<&String>::into),
+            };
 
             Ok(Manifest::new(
                 name.into(),
@@ -96,8 +136,8 @@ pub(crate) fn parse(
                 features,
                 package_metadata,
                 dependencies,
-                dev_dependencies,
                 profiles,
+                venv,
             ))
         }
     }
@@ -176,4 +216,22 @@ fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
         c_std,
         inherits,
     })
+}
+
+/// Parse a `venv:` field.
+fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) -> VenvConfig {
+    let default_config = VenvConfig::default_for_package(ctx);
+    let Some(input) = input else {
+        return default_config;
+    };
+    let storage_root = if let Some(ref storage) = input.storage_path {
+        resolve_path_maybe_relative_to_dir(storage, root, ctx)
+    } else {
+        default_config.storage_path().to_path_buf()
+    };
+    let expose_freezefile = input
+        .expose_freezefile
+        .unwrap_or(default_config.expose_freezefile());
+    let ephemeral = input.ephemeral.unwrap_or(default_config.ephemeral());
+    VenvConfig::new(storage_root, expose_freezefile, ephemeral)
 }

@@ -2,6 +2,7 @@
 add_library(DVMBackend STATIC
     src_private/program_lowering_context.cpp
     src_private/function_lowering_context.cpp
+    src_private/ctv_lowering.cpp
     src_private/instruction_lowering.cpp
     src_private/dvm_value.cpp
     src_private/operations/dvm_operation.cpp
@@ -10,9 +11,10 @@ add_library(DVMBackend STATIC
     src_private/operations/comparison.cpp
     src_private/operations/cast.cpp
     src_private/operations/call.cpp
+    src_private/operations/builtin_call.cpp
     src_private/operations/arithmetic.cpp
     src_private/operations/address_of.cpp
-    src_private/operations/box.cpp
+    src_private/operations/variant.cpp
     src/backends/dvm/repl_lowering.cpp
     src/backends/dvm/dvm_backend.cpp
 )

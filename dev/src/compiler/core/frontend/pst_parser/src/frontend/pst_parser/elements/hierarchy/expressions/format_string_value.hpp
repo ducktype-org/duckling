@@ -8,6 +8,10 @@ namespace pst::expr {
 	 * @brief Element representing a string value in an expression
 	 */
 	class ExprFormatStrValue final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ExprFormatStrValue, ExprElement);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		std::vector<AccessInternalAnonymous<FormatSubElement>> sub_elements;
 
 	public:

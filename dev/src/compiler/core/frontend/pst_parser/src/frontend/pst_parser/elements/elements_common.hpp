@@ -1,10 +1,10 @@
 #pragma once
 
 #include "../access.hpp"
-#include "../ordering.hpp"    // IWYU pragma: export
+#include "../context_options.hpp"  // IWYU pragma: export
 #include "../pst_state_forward.hpp"
-#include "../utility.hpp"     // IWYU pragma: export
-#include "elements_list.hpp"  // IWYU pragma: export
+#include "../utility.hpp"          // IWYU pragma: export
+#include "elements_list.hpp"       // IWYU pragma: export
 
 #include <base/types/ints.hpp>
 
@@ -44,13 +44,19 @@ namespace pst::internal {
 		static bool isCurlyGroup(const TokenStream& state, i64 fwd);
 		static bool isAssignOrSemicolon(const TokenStream& st, i64 fwd);
 		static bool isAssignOrCommaOrEnd(const TokenStream& st, i64 fwd);
-		static bool isAssign(const TokenStream& st, i64 fwd);
 
 		/**
 		 * @brief This is to differentiate blocks from template specification
 		 */
 		static bool isBlockGroup(const TokenStream& st, i64 fwd);
 		static bool isImplementsOrBlockGroup(const TokenStream& st, i64 fwd);
+
+		/**
+		 * @brief Whether the token at @p fwd is the case block of a `match` expression
+		 * (the `match ( ... ) { ... }` token triple). Such a block belongs to the expression
+		 * instead of ending it.
+		 */
+		static bool isMatchBodyBlock(const TokenStream& st, i64 fwd);
 
 		template<lang_def::Keyword key>
 		static bool is(const TokenStream& st, i64 fwd) {
@@ -79,8 +85,6 @@ namespace pst::internal {
 		static std::string inheritanceList() { return "inheritance"; }
 
 		static std::string attributeArgList() { return "attribute argument"; }
-
-		static std::string classInitList() { return "initialization"; }
 
 		static std::string callList() { return "call"; }
 

@@ -9,6 +9,7 @@ add_library(Driver
 	src_private/driver_private/backend_operations/compile_llvm.cpp
 	src_private/driver_private/backend_operations/compile_dvm.cpp
 
+	src_private/driver_private/dbc_linking.cpp
 	src_private/driver_private/operations.cpp
 	src_private/driver_private/debug_artifacts.cpp
 	src_private/driver_private/save_artifacts.cpp
@@ -28,6 +29,7 @@ add_library(Driver
 	src/driver/repl_utils/script_helpers.cpp
 	src/driver/repl_utils/repl_split_helpers.cpp
 	src/driver/repl_utils/repl_statement_helpers.cpp
+	src/driver/test_utils.cpp
 
 	${BUILTINS_EMBEDS}
 )
@@ -43,6 +45,7 @@ make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBac
 duck_add_test(compiler driver tests/driver_test.cpp USES Driver Artifacts)
 duck_add_test(compiler manifest_json tests/manifest_json_test.cpp USES Driver)
 duck_add_test(compiler driver_std_packages tests/driver_std_packages_test.cpp USES Driver Artifacts INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+duck_add_test(compiler driver_std_packages_cache tests/driver_std_packages_cache_test.cpp USES Driver Artifacts INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 duck_add_test(compiler driver_packages tests/driver_packages_test.cpp USES Driver Artifacts)
 duck_add_test_custom(compiler incremental_mark_nodes_test1 tests/incremental_mark_nodes_test1.cpp USES Driver Artifacts)
 duck_add_test_custom(compiler incremental_mark_nodes_test2 tests/incremental_mark_nodes_test2.cpp USES Driver Artifacts)

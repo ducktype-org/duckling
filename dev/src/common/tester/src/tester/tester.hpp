@@ -49,10 +49,43 @@
 
 #define ASSERT_TRUE(actual) ASSERT_EQUAL(true, actual)
 
+#define ASSERT_HAS_VALUE(actual) ASSERT_EQUAL(true, tester::detail::hasValue(actual))
+
+#define ASSERT_NO_VALUE(actual) ASSERT_EQUAL(false, tester::detail::hasValue(actual))
+
 
 class SimpleTesterTest;
 
 namespace tester {
+
+	namespace detail {
+		template<typename>
+		inline constexpr bool ALWAYS_FALSE = false;
+
+		/**
+		 * @brief Resolves hasValue() for multiple cases. Works both on direct types and pointers as
+		 * well as `has_value()` and `hasValue()`
+		 */
+		template<typename T>
+		bool hasValue(const T& value) {
+			if constexpr (requires { value.has_value(); }) {
+				return value.has_value();
+			} else if constexpr (requires { value.hasValue(); }) {
+				return value.hasValue();
+			} else if constexpr (requires { value->has_value(); }) {
+				return value->has_value();
+			} else if constexpr (requires { value->hasValue(); }) {
+				return value->hasValue();
+			} else {
+				static_assert(
+					ALWAYS_FALSE<T>,
+					"ASSERT_HAS_VALUE requires an operand with .has_value(), .hasValue(), "
+					"->has_value() or ->hasValue()"
+				);
+				return false;
+			}
+		}
+	}
 
 	/**
 	 * @brief Add spaces before capital letters in a string,
@@ -106,7 +139,7 @@ namespace tester {
 		void epilog(usize passed, usize failed, double time);
 
 		TestResult* curr_global_res;
-		void        runTest(TestType test);
+		void        runTest(const TestData& test);
 
 		std::string              name;
 		std::vector<TestData>    tests;
@@ -182,7 +215,8 @@ namespace tester {
 #define TESTER_COMMON_MAIN(test_path)                                          \
 	int main(int argc, const char* const* argv) {                              \
 		init::InitObject _;                                                    \
-		auto             config = tester::getTestConfig(test_path);            \
+		base::internal::is_unit_test = true;                                   \
+		auto config                  = tester::getTestConfig(test_path);       \
                                                                                \
 		TESTER_CLASS test(std::move(config));                                  \
                                                                                \

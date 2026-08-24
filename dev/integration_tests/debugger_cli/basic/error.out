@@ -2,9 +2,9 @@
 +   Debugger has started   +
 ++++++++++++++++++++++++++++
 New status: Running
-Run failed...
-Resume failed...
+[91m[Debug error]: [0mRun failed!
+[91m[Debug error]: [0mContinue failed!
+[91m[Debug error]: [0mContinue failed!
 New status: Paused
-Pause failed...
-Exiting debugger...
-
+[91m[Debug error]: [0mPause failed!
+Exiting debugger.

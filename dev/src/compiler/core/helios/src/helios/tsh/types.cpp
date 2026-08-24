@@ -72,6 +72,10 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
+	SymbolType<> SliceAbstractType::getElementType() const {
+		return toCPimpl(pimpl)->getElementType();
+	}
+
 	struct ReferenceConstructionRecord {
 		AbstractType  underlying_type;
 		ReferenceKind ref_kind;
@@ -116,22 +120,12 @@ namespace compiler::tsh {
 
 	bool FunctionAbstractType::isFree() const { return toCPimpl(pimpl)->isFree(); }
 
-	SymbolType<> DynamicArrayAbstractType::getElementType() const {
-		return toCPimpl(pimpl)->getElementType();
-	}
-
 	SymbolType<> StaticArrayAbstractType::getElementType() const {
 		return toCPimpl(pimpl)->getElementType();
 	}
 
 	TypeTemplateAbstractType::Source TypeTemplateAbstractType::getSource() const {
 		return toCPimpl(pimpl)->getSource();
-	}
-
-	AbstractType TypeTemplateAbstractType::instantiate(
-		query::Context& ctx, const SymbolType<>& element_type
-	) const {
-		return toCPimpl(pimpl)->instantiate(ctx, element_type);
 	}
 
 	usize StaticArrayAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
@@ -150,6 +144,10 @@ namespace compiler::tsh {
 
 	compiler::helios::SymID ClassAbstractType::getSymbol() const {
 		return toCPimpl(pimpl)->getSymbol();
+	}
+
+	compiler::helios::SymbolABI ClassAbstractType::getABI(query::Context& ctx) const {
+		return toCPimpl(pimpl)->getABI(ctx);
 	}
 
 	base::Optional<ClassAbstractType> ClassAbstractType::getBaseClassType(query::Context& ctx
@@ -206,10 +204,9 @@ namespace compiler::tsh {
 	INSTANTIATE_CHECKED_CAST(PointerAbstractType)
 	INSTANTIATE_CHECKED_CAST(ManyPointerAbstractType)
 	INSTANTIATE_CHECKED_CAST(CPointerAbstractType)
-	INSTANTIATE_CHECKED_CAST(StringAbstractType)
+	INSTANTIATE_CHECKED_CAST(SliceAbstractType)
 	INSTANTIATE_CHECKED_CAST(TupleAbstractType)
 	INSTANTIATE_CHECKED_CAST(FunctionAbstractType)
-	INSTANTIATE_CHECKED_CAST(DynamicArrayAbstractType)
 	INSTANTIATE_CHECKED_CAST(StaticArrayAbstractType)
 	INSTANTIATE_CHECKED_CAST(VariantAbstractType)
 	INSTANTIATE_CHECKED_CAST(ClassAbstractType)

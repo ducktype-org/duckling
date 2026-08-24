@@ -20,6 +20,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	init,
 	deinit,
 	mov,
+	movCast,
 	cmov,
 	add,
 	sub,
@@ -95,6 +96,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	dynTableLoad,
 	dynTableLea,
 	dynTableReAlloc,
+	fstToDynTable,
 	ref,
 	upcast,
 	downcast,
@@ -145,6 +147,11 @@ namespace vm::code::builders {
 		template<class... Args>
 		void pushArgs(Args&&... args) {
 			(pushArg(std::forward<Args>(args)), ...);
+		}
+
+		template<std::ranges::input_range R>
+		void pushArgs(R&& range) {  // NOLINT
+			for (auto&& arg: range) pushArg(std::forward<decltype(arg)>(arg));
 		}
 
 		[[nodiscard]] Instruction build() const;

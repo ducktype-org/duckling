@@ -8,6 +8,10 @@ namespace pst {
 	 * @brief Attribute element, can be before any statement.
 	 */
 	class Attribute final: public NotStmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Attribute, NotStmt);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(name, DottedName);
 		NAMED_CHILD(args, AtrArgList);
 
@@ -18,6 +22,27 @@ namespace pst {
 
 		static MBox<Attribute> parse(LangParserState& state);
 		~Attribute() final = default;
+
+		[[nodiscard]]
+		auto getName() const {
+			return name.give();
+		}
+
+		/**
+		 * @brief Whether the attribute has an argument list, e.g. `@builtin("x")` vs `@builtin`.
+		 */
+		[[nodiscard]]
+		bool hasArgs() const {
+			return static_cast<bool>(args.internal());
+		}
+
+		/**
+		 * @brief Argument list of the attribute. Only valid when hasArgs() is true.
+		 */
+		[[nodiscard]]
+		auto getArgs() const {
+			return args.give();
+		}
 
 		void     dprint(std::ostream& out) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;

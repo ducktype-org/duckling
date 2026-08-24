@@ -337,7 +337,7 @@ private:
 		ModuleTreeModifier::removeModuleRecursive(module);
 
 		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
-							  [&]() { (void) GetFileID_Functor::get(file_id.getID()); },
+							  [&]() { std::ignore = GetFileID_Functor::get(file_id.getID()); },
 							  "Dangling SourceFile should panic after removal"
 		);)
 

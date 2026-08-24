@@ -11,7 +11,10 @@
 #include <vm/core/safe/memory/memory.hpp>
 #include <vm/core/safe/memory/thread_stack.hpp>
 #include <vm/core/thread/ivmthread.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/thread/kill_process_exception.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
+
+#include <limits>
 
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
@@ -27,6 +30,7 @@ namespace vm {
 	}
 
 	class SafeVMProcess;
+	class SafeVMValue;
 
 	/**
 	 * @brief Frames are on stack, this is the maximum number of frame pointers available.
@@ -106,10 +110,18 @@ namespace vm {
 		bool has_gil = false;
 
 		/**
+		 * @brief Mock ID of the VM program start function.
+		 * This has to be declared explicitly because the start function object is never
+		 * inserted into the `functions` collection, so it doesn't have a real ID; this ID should
+		 * never be assigned to a real function.
+		 */
+		static constexpr usize START_FUNCTION_ID = std::numeric_limits<usize>::max();
+
+		/**
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
 		 * store a reference to this object.
 		 */
-		base::Optional<std::vector<Ref<VmValue>>> exit_value_storage{};
+		base::Optional<std::vector<Ref<SafeVMValue>>> exit_value_storage{};
 
 		/**
 		 * @brief Thread context - currently just the name of the function that will be used in
@@ -154,13 +166,15 @@ namespace vm {
 		 * in the start_function bytecode vector.
 		 * @param start_function - the code of the start function.
 		 * @param func - the function to execute.
-		 * @return Mutable reference to a value returned by the program
+		 * @return Mutable references to the SafeVMValues returned by the program
 		 */
-		std::vector<Ref<VmValue>> executeFunction(
+		std::vector<Ref<SafeVMValue>> executeFunction(
 			const low::LowFuncData& start_function, const low::LowFuncData& func
 		);
 
 		void execGlobalDestructors() override;
+
+		void handleKillProcessException(const KillProcessException& e);
 
 	protected:
 		void executeOneStep() override;
@@ -173,7 +187,9 @@ namespace vm {
 		 */
 		void run(const std::string& func_name, const RunArguments& run_arguments) override;
 
-		std::expected<low::LowCodePosition, api::ApiError> getCurrentPosition();
+		std::expected<low::LowCodePosition, api::ApiError> getCurrentPosition(
+			base::Optional<usize> frame_idx = std::nullopt
+		);
 
 		friend class SafeVMProcess;
 		friend class OpFuns;
@@ -208,6 +224,13 @@ namespace vm {
 		 * @brief Gets name of the function that will be used in builtin spawn thread.
 		 */
 		[[nodiscard]] const std::string& getThreadCtx() const { return thread_ctx; }
+
+		/**
+		 * @brief Checks if the function with the specified ID can be called from the runtime.
+		 * @note By correctness of the compiler, this only checks if the function is not the start
+		 * function.
+		 */
+		static bool isCallableFunctionID(usize id);
 
 		[[nodiscard]] u64 getNumberOfCurrentStackFrames() const override;
 

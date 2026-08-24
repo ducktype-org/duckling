@@ -15,10 +15,8 @@ pub type Dependencies = Vec<Dependency>;
 pub struct Manifest {
     /// Package's metadata.
     pub metadata: Metadata,
-    /// Package's dependencies.
+    /// All direct package's dependencies.
     pub dependencies: Dependencies,
-    /// Package's dev dependencies.
-    pub dev_dependencies: Dependencies,
     /// Package's features.
     pub features: HashMap<String, Vec<String>>,
     /// Package's profiles.
@@ -53,6 +51,8 @@ pub struct Dependency {
     pub version: Vec<Version>,
     /// Source of the dependency.
     pub source: DependencySource,
+    /// Type of this dependency.
+    pub kind: DependencyKind,
     /// Dependency's features.
     pub features: Vec<DependencyFeature>,
     /// Is this dependency pinned to a specific version.
@@ -61,6 +61,16 @@ pub struct Dependency {
     pub conditions: DependencyCondition,
     /// Whether it's aliased.
     pub alias: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+/// A [`Dependency`] kind.
+pub enum DependencyKind {
+    /// A normal dependency, comes from `dependencies:` map.
+    Normal,
+    /// A dev dependency, comes from `dev-dependencies:` map.
+    Dev,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -127,7 +137,7 @@ pub struct Profile {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-#[serde(rename_all = "kebab-case", untagged)]
+#[serde(rename_all = "kebab-case")]
 /// Duckc optimization level.
 pub enum OptLevel {
     Zero,

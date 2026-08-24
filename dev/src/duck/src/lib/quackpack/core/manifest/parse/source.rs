@@ -15,7 +15,7 @@ use crate::quackpack::schemas::manifest::{
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QpContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Parse given [`DependencySchema`] into [`Source`].
 ///
@@ -29,9 +29,9 @@ pub(crate) fn parse(
 ) -> QuackResult<Source> {
     debug!(?schema);
     let Some(ref source) = schema.source else {
-        debug!("missing the source, falling back to the default registry...?");
+        debug!("missing the source, falling back to the default registry");
         if schema.version.is_some() {
-            let url = ctx.registry_url()?;
+            let url = ctx.duck_cfg().registry_url()?;
             return Ok(Source::for_registry(url));
         }
         scope.disarm_and_pop();
@@ -72,7 +72,7 @@ pub(crate) fn parse(
             check_no_registry(source, &mut scope)?;
             if schema.version.is_some() {
                 debug!("...but has a version, assuming registry source");
-                let url = ctx.registry_url()?;
+                let url = ctx.duck_cfg().registry_url()?;
                 Source::for_registry(url)
             } else {
                 scope.pop();
@@ -96,8 +96,8 @@ pub(crate) fn parse(
             debug!("found a local path source");
             check_no_git(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
-            debug!("manifest path is `{root}`");
-            let dir_root = resolve_local_dep_root(root, package_root, ctx)?;
+            debug!(path_in_manifest = %root.display(), "path specified in the manifest");
+            let dir_root = resolve_path_maybe_relative_to_dir(root, package_root, ctx);
             Source::for_local(&dir_root)?
         }
         (None, None, Some(manifest_git_url)) => {
@@ -143,7 +143,7 @@ fn make_could_not_determine_error<const N: usize>(
     scope: &Scope,
     fields: [&'static str; N],
 ) -> QuackError {
-    assert!(N == 2 || N == 3, "implementation relies on it");
+    assert!(N == 2 || N == 3, "implementation relies on it, got N={N}");
     let source = fields
         .iter()
         .map(|field| format!("`source.{}`", field))
@@ -252,27 +252,13 @@ fn resolve_git_reference(source: &DetailedSource, scope: &Scope) -> QuackResult<
 /// Resolve absolute path to the local dependency with entry `manifest_root`.
 ///
 /// This functions returns a tuple `(absolute_path, was_expanded_path_relative)`.
-fn resolve_local_dep_root(
-    manifest_root: &str,
-    package_root: &Path,
+pub(super) fn resolve_path_maybe_relative_to_dir(
+    path: &Path,
+    root: &Path,
     ctx: &DuckContext,
-) -> QuackResult<PathBuf> {
-    let home = ctx.user_home();
-    let Some(home) = home.to_str() else {
-        qp_bail!(
-            "the user home directory `{}` is not a utf8 path, which is unsupported",
-            home.display(),
-        )
-    };
-    let expanded = Path::new(manifest_root).expand_user_with(home)?;
-    if expanded.is_absolute() {
-        Ok(expanded.to_path_buf())
-    } else {
-        Ok(package_root
-            .join(expanded)
-            .expand_user_with(home)?
-            .resolve()?)
-    }
+) -> PathBuf {
+    let expanded = path.expand_tilde(ctx);
+    root.join(expanded).normalize()
 }
 
 /// Parse a url of a git dependency.
@@ -281,21 +267,30 @@ fn parse_git_url(
     package_root: &Path,
     ctx: &DuckContext,
 ) -> QuackResult<Url> {
+    // @TODO: #2542 Unfortunately, windows absolute paths are (often) valid URLs (like `C:\xd`
+    // => `C:/xd` => `{schema: "C", path: "/xd" }`).
+    // Therefore, we can have false positives here. Maybe in `Ok` case we should check it? (That
+    // `Path::new(manifest_git_url).exists()`?) and create a warning?
     let git_url = manifest_git_url.to_url();
-    let mut err: QuackError = match git_url {
+    let mut err = match git_url {
         Ok(parsed) => return Ok(parsed),
         Err(err) => err,
     };
     // We are building error messages from the bottom to the top.
     // If an original URL points to a file, mention it to the user. Also, ignore any errors.
-    if let Ok(path) = resolve_local_dep_root(manifest_git_url, package_root, ctx)
-        && path.exists()
-    {
+    let path = resolve_path_maybe_relative_to_dir(Path::new(manifest_git_url), package_root, ctx);
+    if path.exists() {
+        // If we can construct a URL from the path, use it (less likely that user will have to run
+        // `sync` again, because our manual hint was wrong).
+        // But keep it as a "best effort".
+        let path_url_hint = match path.to_url() {
+            Ok(url) => url.to_string(),
+            Err(_) => format!("file://{}", path.display()),
+        };
         err = err.add_hint(format!(
-            "either change it to a local dependency or change the URL to `file://{}`",
-            path.display()
+            "either change it to a local dependency or change the URL to `{path_url_hint}`",
         ));
         err = err.add_note("git dependency points to a file on the disk");
     }
-    Err(err).context(format!("`{manifest_git_url}` is not a valid URL"))
+    Err(err)
 }

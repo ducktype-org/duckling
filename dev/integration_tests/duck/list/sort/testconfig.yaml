@@ -1,0 +1,60 @@
+# foo.last_access < bar.last_access and foo.last_synchronization > bar.last_synchronization
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} -C bar sync
+  @{duck-exe} -C foo sync
+  @{duck-exe} -C foo info
+  @{duck-exe} -C bar info
+
+Tests:
+  basic:
+    Description: properly sorts the displayed venvs
+    Cases:
+      previous-access:
+        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo list --sort-by previous-access"
+        stderr-regex: ""
+        stdout-regex: |+
+          foo:
+            last-location: $DIT_TMP_DIR/foo
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral
+          
+          bar:
+            last-location: $DIT_TMP_DIR/bar
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral
+      last-modification:
+        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo list --sort-by last-modification"
+        stderr-regex: ""
+        stdout-regex: |+
+          bar:
+            last-location: $DIT_TMP_DIR/bar
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral
+          
+          foo:
+            last-location: $DIT_TMP_DIR/foo
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral
+      reverse:
+        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo list --sort-reverse"
+        stderr-regex: ""
+        stdout-regex: |+
+          foo:
+            last-location: $DIT_TMP_DIR/foo
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral
+          
+          bar:
+            last-location: $DIT_TMP_DIR/bar
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral
+      

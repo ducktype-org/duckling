@@ -6,10 +6,13 @@
 #include <lang_definitions/key_spec_op.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/const_value.hpp>
+#include <vm/bytecode/const_value_visitor.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
+#include <bit>
 #include <iomanip>
 #include <ranges>
 
@@ -33,6 +36,8 @@ namespace vm::code {
 	std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
 
 	std::string toString(opargs::ExtCFunctionName arg) { return arg.function_name.str(); }
+
+	std::string toString(opargs::FFIFunctionName arg) { return arg.function_name.str(); }
 
 	std::string toString(opargs::MethodName arg) { return arg.method_name.str(); }
 
@@ -69,6 +74,29 @@ namespace vm::code {
 		}
 	}
 
+	namespace {
+		/**
+		 * @brief Writes `{ param, ... } -> { result, ... }`, the signature form shared by
+		 * `function` and `ffi function` declarations.
+		 */
+		void serializeSignature(const FuncSignature& signature, std::ostream& out) {
+			auto identifier_list = [&out](const std::vector<Identifier>& identifiers) {
+				out << "{ ";
+				bool first = true;
+				for (const auto& identifier: identifiers) {
+					if (!first) out << ", ";
+					out << identifier.str.strView();
+					first = false;
+				}
+				out << " }";
+			};
+
+			identifier_list(signature.parameters);
+			out << " -> ";
+			identifier_list(signature.result_types);
+		}
+	}
+
 	class FunctionSerializer final {
 		std::ostream&   out;
 		const Function& function;
@@ -101,21 +129,10 @@ namespace vm::code {
 			  function(function) {}
 
 		void display() {
-			out << "function " << function.name.str.strView() << " { ";
-			bool first = true;
-			for (const auto& param: function.signature.parameters) {
-				if (!first) out << ", ";
-				out << param.str.strView();
-				first = false;
-			}
-			out << " } -> { ";
-			first = true;
-			for (const auto& param: function.signature.result_types) {
-				if (!first) out << ", ";
-				out << param.str.strView();
-				first = false;
-			}
-			out << " } {\n";
+			out << lang_def::keywordToStr(lang_def::Keyword::BCFunction).strView() << ' ';
+			out << function.name.str.strView() << ' ';
+			serializeSignature(function.signature, out);
+			out << " {\n";
 
 			indentUp();
 			displayCode();
@@ -143,6 +160,12 @@ namespace vm::code {
 				out << type.inner.strView();
 			}
 
+			void operator()(const CPointerType& type) const {
+				out << "type cpointer: ";
+				out << type.name.strView();
+				if (type.inner.has_value()) out << " " << type.inner->strView();
+			}
+
 			void operator()(const FixedSizeTableType& type) const {
 				out << "type fixed_size_table: ";
 				out << type.name.strView() << " ";
@@ -161,11 +184,22 @@ namespace vm::code {
 				out << type.name.strView() << " {\n";
 				for (auto field: type.fields)
 					out << "    " << field.name.strView() << ": " << field.type.strView() << ",\n";
-				out << "}\n";
+				out << "}";
+				if (type.packed) out << " packed";
+				if (type.assert_size.has_value()) out << " assert_size " << *type.assert_size;
+				out << "\n";
 			}
 
-			void operator()(const VariantType&) const {
-				throw base::NotYetImplemented("VariantType serialization");
+			void operator()(const VariantType& type) const {
+				out << "type variant: ";
+				out << type.name.strView() << " { ";
+				bool first = true;
+				for (const auto& alternative: type.variant_alternatives) {
+					if (!first) out << ", ";
+					out << alternative.strView();
+					first = false;
+				}
+				out << " }";
 			}
 
 			void operator()(const FunctionType& fun) const {
@@ -232,6 +266,55 @@ namespace vm::code {
 		void display() const { std::visit(TypeSerializerVisitor{ out }, type); }
 	};
 
+	class ConstValueSerializer final: public code::ConstVisitor {
+		std::ostream& out;
+
+		void visitConstantImmediate(const code::ConstantImmediate& val) final {
+			static_assert(
+				std::endian::native == std::endian::little,
+				"Only little-endian platforms are supported"
+			);
+			// Output as hex literal: 0x followed by exactly (2*size) hex digits.
+			// This makes the byte count inferable from the serialized form.
+			out << "0x";
+			// We save the number in the big endianness.
+			for (size_t i = val.size.asInt(); i-- > 0;)
+				out << std::format("{:02X}", std::to_integer<unsigned>(val.content.at(i)));
+		}
+
+		void visitConstantClass(const code::ConstantClass& val) final {
+			out << lang_def::keywordToStr(lang_def::Keyword::BCClass).strView() << " { ";
+			bool first = true;
+			for (const auto& [name, field_val]: val.fields) {
+				if (!first) out << ", ";
+				out << name.strView() << ": ";
+				field_val->acceptVisitor(*this);
+				first = false;
+			}
+			out << " }";
+		}
+
+		void visitConstantFixedSizeTable(const code::ConstantFixedSizeTable& val) final {
+			out << lang_def::keywordToStr(lang_def::Keyword::BCFixedSizeTable).strView() << " [ ";
+			bool first = true;
+			for (const auto& elem: val.elements) {
+				if (!first) out << ", ";
+				elem->acceptVisitor(*this);
+				first = false;
+			}
+			out << " ]";
+		}
+
+	public:
+		ConstValueSerializer(std::ostream& out): out(out) {}
+	};
+
+	void serializeConstValue(const ConstantValue& const_value, std::ostream& out) {
+		out << lang_def::keywordToStr(lang_def::Keyword::BCInitialValue).strView() << ": ";
+		ConstValueSerializer serializer(out);
+		const_value.data->acceptVisitor(serializer);
+	}
+
 	class GlobalDataSerializer final {
 		std::ostream&     out;
 		const GlobalData& global_data;
@@ -244,17 +327,35 @@ namespace vm::code {
 		void display() {
 			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
 			out << global_data.name.str.strView() << " " << global_data.type.str.strView() << " {";
+			bool has_content   = false;
+			auto maybe_newline = [&] {
+				if (has_content) out << ",";
+				out << "\n    ";
+				has_content = true;
+			};
+
+			if (global_data.is_constant) {
+				maybe_newline();
+				out << lang_def::keywordToStr(lang_def::Keyword::BCIsConstant).strView() << ": ";
+				out << lang_def::keywordToStr(lang_def::Keyword::BCTrue).strView();
+			}
+
+			if (global_data.initial_value.has_value()) {
+				maybe_newline();
+				serializeConstValue(global_data.initial_value.value(), out);
+			}
+
 			if (global_data.ctor_name.has_value()) {
-				out << "\n    "
-					<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView()
-					<< ": " << global_data.ctor_name.value().str.strView() << ",\n";
+				maybe_newline();
+				out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView()
+					<< ": " << global_data.ctor_name.value().str.strView();
 			}
 			if (global_data.dtor_name.has_value()) {
-				out << "\n    "
-					<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView()
-					<< ": " << global_data.dtor_name.value().str.strView() << ",\n";
+				maybe_newline();
+				out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView()
+					<< ": " << global_data.dtor_name.value().str.strView();
 			}
-			out << '}' << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
+			out << "\n}";
 		}
 	};
 
@@ -276,10 +377,30 @@ namespace vm::code {
 		out << '\n';
 	}
 
+	void serializeFFIFunction(const FFIFunction& function, std::ostream& out) {
+		out << lang_def::keywordToStr(lang_def::Keyword::BCFfi).strView() << ' ';
+		out << lang_def::keywordToStr(lang_def::Keyword::BCFunction).strView() << ' ';
+		out << function.name.str.strView() << ' ';
+		serializeSignature(function.signature, out);
+		out << ";\n";
+	}
+
+	void serializeObjectFile(const std::string& object_file, std::ostream& out) {
+		out << lang_def::keywordToStr(lang_def::Keyword::BCFfi).strView() << ' ';
+		out << lang_def::keywordToStr(lang_def::Keyword::BCObject).strView() << ' ';
+		// The path is emitted verbatim: the lexer does not unescape string literals, so escaping
+		// here would change the path the loader hands to `dlopen`.
+		out << '"' << object_file << "\";\n";
+	}
+
 	void serializeCode(const CodeCollection& code, std::ostream& out) {
 		for (const auto& type: code.types) serializeType(type, out);
 		out << '\n';
 		for (const auto& global_data: code.global_data) serializeGlobal(global_data, out);
+		out << '\n';
+		// Objects first: an `ffi function` is only resolvable through a declared shared object.
+		for (const auto& object_file: code.object_files) serializeObjectFile(object_file, out);
+		for (const auto& ffi_function: code.ffi_functions) serializeFFIFunction(ffi_function, out);
 		out << '\n';
 		for (const auto& func: code.functions) serializeFunction(func, out);
 		out << '\n';

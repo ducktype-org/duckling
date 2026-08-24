@@ -9,3 +9,5 @@ namespace vm::api {
 	 */
 	STRONG_TYPEDEF_ID_DIRECT_CREATION(ThreadID);
 }
+
+ID_STD_HASH(vm::api::ThreadID);

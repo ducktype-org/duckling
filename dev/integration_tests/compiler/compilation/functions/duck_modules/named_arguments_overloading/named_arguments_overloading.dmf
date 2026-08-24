@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 import sub as s;
 
 fun foo(a: i64) -> i64 = {

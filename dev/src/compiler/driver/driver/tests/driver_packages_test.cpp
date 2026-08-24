@@ -1,6 +1,4 @@
 #include <archiver/archive.hpp>
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -18,6 +16,8 @@
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file_path.hpp>
 #include <tester/tester.hpp>
 
@@ -66,8 +66,8 @@ public:
 
 protected:
 	void beforeAll() override {
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
-		dia_int::configureImmediatePrint(&std::cerr);
+		global_state::setters::setGlobalLogger(makeBox<dia::Logger>());
+		dia::configureImmediatePrint(&std::cerr);
 
 		manifest = loadManifest();
 
@@ -164,7 +164,7 @@ private:
 				driver::options_types::StdLibOptions{},
 				compiler::driver::diagnostics::makeGlobalLoggerReporter()
 			);
-			ASSERT_TRUE(task_opt.has_value());
+			ASSERT_HAS_VALUE(task_opt);
 			ASSERT_TRUE(task_opt->type == driver::TaskType::PackageCompilation);
 			auto task_data = std::get<driver::PackageCompilationTask>(task_opt->task_data);
 			tasks.push_back(std::move(task_data));
@@ -210,7 +210,7 @@ private:
 			driver::options_types::StdLibOptions{},
 			compiler::driver::diagnostics::makeGlobalLoggerReporter()
 		);
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(global_state::getGlobalLogger()->hasErrors());
 	}
 
@@ -220,14 +220,14 @@ private:
 		const auto existing_id = packages.front().getPackageID();
 
 		auto found = global_state::getPackageRefOpt(existing_id);
-		ASSERT_TRUE(found.has_value());
+		ASSERT_HAS_VALUE(found);
 		ASSERT_EQUAL(found.value()->getPackageID(), existing_id);
 
 		auto missing = global_state::getPackageRefOpt(base::StrID("definitely_missing"));
-		ASSERT_TRUE(!missing.has_value());
+		ASSERT_NO_VALUE(missing);
 
 		assertThrows<base::Panic>(
-			[&]() { (void) global_state::getPackageRef(base::StrID("definitely_missing")); },
+			[&]() { std::ignore = global_state::getPackageRef(base::StrID("definitely_missing")); },
 			"Expected panic for missing package"
 		);
 
@@ -235,7 +235,7 @@ private:
 		auto root_module = packages.back().getRootModule().illegalAccess().getID();
 		global_state::setters::removePackage(root_module);
 		auto removed = global_state::getPackageRefOpt(removed_id);
-		ASSERT_TRUE(!removed.has_value());
+		ASSERT_NO_VALUE(removed);
 	}
 
 	void archiverFailurePaths() {

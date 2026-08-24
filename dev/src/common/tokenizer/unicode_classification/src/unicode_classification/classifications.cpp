@@ -61,7 +61,12 @@ namespace unicode {
 		std::cerr << "size: " << uset.size() << "\n";
 		icu::UnicodeString ustring;
 		uset.toPattern(ustring, true);
-		std::cerr << "pattern: " << ustring << "\n";
+		// Convert to UTF-8 rather than using icu's operator<<(ostream&, ...): that operator
+		// lives in libicuio built against libc++, which is ABI-incompatible with this
+		// libstdc++ build; toUTF8String is a header template compiled with our std lib.
+		std::string ustring_utf8;
+		ustring.toUTF8String(ustring_utf8);
+		std::cerr << "pattern: " << ustring_utf8 << "\n";
 		UChar32 rb = 0, re = 0;
 		for (int32_t rangeid = 0; rangeid < uset.getRangeCount(); rangeid++) {
 			rb = uset.getRangeStart(rangeid);

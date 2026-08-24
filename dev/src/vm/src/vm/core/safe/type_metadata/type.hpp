@@ -11,6 +11,7 @@
 
 #include <json/json.hpp>
 
+#include <tuple>
 #include <variant>
 
 namespace vm {
@@ -24,6 +25,7 @@ namespace vm {
 			None,
 			Primitive,
 			Pointer,
+			CPointer,
 			FixedSizeTable,
 			DynamicTable,
 			Data,
@@ -47,6 +49,7 @@ namespace vm {
 			std::monostate,
 			kind::Primitive,
 			kind::Pointer,
+			kind::CPointer,
 			kind::FixedSizeTable,
 			kind::DynamicTable,
 			kind::Data,
@@ -82,11 +85,22 @@ namespace vm {
 		// Type definition:
 		void definePrimitive(TypeSize size);
 		void definePointer(TypeCRef inner);
+		/**
+		 * @brief Defines a C pointer: a raw 8-byte native address. An absent inner means an
+		 * unknown pointee (C's `void*`).
+		 */
+		void defineCPointer(base::Optional<TypeCRef> inner);
 		void defineFixedSizeTable(TypeRef inner, u64 table_size);
 		void defineDynamicTable(TypeRef inner);
+		/**
+		 * @brief Defines a data type from a validator-computed layout. The validator
+		 * (`valid_type::ValidType`) is the source of truth for field offsets and the total size;
+		 * the runtime does not compute any layout itself.
+		 */
 		void defineData(
-			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-			base::Optional<InheritanceMetadata>                 inheritance_metadata
+			const std::vector<std::tuple<base::StrID, TypeRef, Offset>>& fields_definitions,
+			TypeSize                                                     data_size,
+			base::Optional<InheritanceMetadata>                          inheritance_metadata
 		);
 		void defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result);
@@ -144,6 +158,8 @@ namespace vm {
 		// data
 		[[nodiscard]]
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
+		[[nodiscard]]
+		base::Optional<TypeCRef> getFieldTypeByName(base::StrID field_name) const;
 		[[nodiscard]]
 		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
 

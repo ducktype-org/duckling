@@ -1,8 +1,0 @@
-fun testDynamic() -> () = {
-    var l: List[i64];
-    l += 1;
-    l -= 1u64;
-    let l_len = len l;
-    l[0] = 42;
-    let x = l[0];
-}

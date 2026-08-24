@@ -4,17 +4,20 @@ use std::path::Path;
 
 use itertools::Itertools;
 use serde::Deserialize;
-use tracing::debug;
+use tracing::trace;
 
 use crate::quackpack::core::Package;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QuackResult, QuackResultContext, qp_internal};
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 mod dependency;
 mod frontmatter;
 mod manifest;
 mod source;
+
+pub use frontmatter::{capture_frontmatter, parse_frontmatter};
+pub(crate) use manifest::parse;
 
 #[cfg(test)]
 mod tests;
@@ -29,7 +32,7 @@ mod tests;
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
 #[tracing::instrument(skip(ctx))]
 pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
-    debug!("starting parsing...");
+    trace!("starting parsing");
     parse_inner(path, ctx).with_context(|| {
         format!(
             "when trying to parse the user manifest at `{}`",
@@ -42,7 +45,7 @@ pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
 /// Used to perform appropriate checks on presence/absence of certain fields.
 pub enum ParseMode {
     Package,
-    FrontMatterScript,
+    FrontMatter,
 }
 
 #[derive(Debug)]
@@ -128,9 +131,9 @@ impl DerefMut for ScopeGuard<'_> {
 
 /// Helper for [`parse_manifest`].
 fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
-    let package_root = path
-        .parent()
-        .ok_or_else(|| qp_internal!("the manifest path has no parent"))?;
+    let package_root = path.parent().with_context_internal(|| {
+        format!("path `{path:?}` does not have a parent folder, but we checked that earlier?")
+    })?;
     let content = path.read_to_string()?;
     let schema = parse_schema(&content)?;
     let manifest = manifest::parse(&schema, package_root, ParseMode::Package, ctx)?;
@@ -145,7 +148,7 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
 
 /// Turn YAML string into the [`ManifestSchema`].
 /// This function also collects unused items in the [`ManifestSchema`].
-fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
+pub fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
     let deserializer = serde_yaml_ng::Deserializer::from_str(yaml_content);
     let schema = ManifestSchema::deserialize(deserializer)?;
     Ok(schema)

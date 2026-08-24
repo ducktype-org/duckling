@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test class methods definition and execution
 
 class Point {

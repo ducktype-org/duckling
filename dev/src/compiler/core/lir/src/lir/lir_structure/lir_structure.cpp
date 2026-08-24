@@ -3,7 +3,6 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/queries.hpp>
@@ -21,7 +20,9 @@ namespace compiler::lir {
 		const mir::MIRLocalRef    mir_local,
 		const base::Optional<u64> new_parameter_index
 	) {
-		auto             type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
+		auto type_layout
+			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type)
+		                                 ->valueOrPanicMsg("layout query failed at LIR stage"));
 		LIRLocalMetadata metadata;
 		if_opt_some(mir_local->helios_id, helios_id) {
 			metadata.source_code_name = helios::name(helios_id);
@@ -36,24 +37,41 @@ namespace compiler::lir {
 	}
 
 	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
-		auto bool_type   = tsh::getBoolType();
-		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
+		auto  bool_type   = tsh::getBoolType();
+		auto& bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type)->valueOrPanicMsg(
+			"layout query failed at LIR stage"
+		);
 
-		return LIRLocal{ bool_layout };
+		return LIRLocal{ CRef<tsl::TypeLayout>(&bool_layout) };
+	}
+
+	LIRLocal LIRLocal::refLocal(query::Context& ctx, const tsh::SymbolType<> pointee_type) {
+		const auto ref_type   = pointee_type.withReferenceKind(tsh::ReferenceKind::Ref);
+		auto&      ref_layout = ctx.query<tsl::QuerySymbolTypeLayout>(ref_type)->valueOrPanicMsg(
+            "layout query failed at LIR stage"
+        );
+
+		return LIRLocal{ CRef<tsl::TypeLayout>(&ref_layout) };
 	}
 
 	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
+		auto type_layout
+			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type)
+		                                 ->valueOrPanicMsg("layout query failed at LIR stage"));
 
 		auto mangled_name  = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
 		LIRGlobalType type = mir_global.kind == mir::MIRGlobal::Kind::Constant
 		                       ? LIRGlobalType::Constant
 		                       : LIRGlobalType::Variable;
 
+		const bool link_once = helios::emissionPolicy(ctx, mir_global.helios_id)
+		                    == helios::EmissionPolicy::Replicated;
+
 		return LIRGlobal{
 			type_layout,
 			mangled_name,
 			type,
+			link_once,
 		};
 	}
 
@@ -77,9 +95,6 @@ namespace compiler::lir {
 						  variant_match(current_layout->getVariant()) {
 							  variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
 								  current_layout = static_array_layout.getElementLayout();
-							  }
-							  variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
-								  current_layout = dynamic_array_layout.getElementLayout();
 							  }
 							  variant_case(tsl::PointerTypeLayout, many_pointer_layout) {
 								  current_layout = many_pointer_layout.getPointee();
@@ -240,9 +255,9 @@ namespace compiler::lir {
 					output << "{ from:" << params.source_type.toString()
 						   << ", to:" << params.target_type.toString() << " }";
 				}
-				variant_case(ListOperationParameters, params) {
-					output << "{ element_layout:" << params.element_layout->toStringIdentification()
-						   << " }";
+				variant_case(VariantParameters, params) {
+					output << "{ alt:" << params.alternative_index << " ("
+						   << params.alternative_type.toString() << ") }";
 				}
 			}
 			output << " ";
@@ -273,8 +288,12 @@ namespace compiler::lir {
 				output_value << " :=";
 			}
 			output << output_value.str() << ' ';
+			std::string op_name{ base::enumToStr(instruction.operation) };
+			if (instruction.operation == Operation::MetaTypeOperation)
+				if (const auto* meta_params = std::get_if<MetaParameters>(&instruction.extra_params))
+					op_name += ":" + std::string{ base::enumToStr(meta_params->kind) };
 			output << std::left << std::setw(15);
-			output << base::enumToStr(instruction.operation) << "  ";
+			output << op_name << "  ";
 			if (!instruction.output.has_value()) output << std::left << std::setw(12);
 
 			std::string_view sep = "";
@@ -297,7 +316,9 @@ namespace compiler::lir {
 			block_id = function.getBlockIDs();
 
 			output << "[LIR] Function \"" << function.mangled_name.strView() << "\""
-				   << (function.link_once ? " (link once)" : "") << ":\n";
+				   << (function.link_once ? " (link once)" : "")
+				   << (function.ignore_on_dvm ? " (ignore on dvm)" : "")
+				   << (function.ignore_on_llvm ? " (ignore on llvm)" : "") << "\n";
 
 			for (const auto& local: function.local_list) {
 				printLocalDesc(&local);
@@ -332,7 +353,8 @@ namespace compiler::lir {
 			.link_once    = function.link_once,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(function.parameter_layouts),
-			.return_type_layout = function.return_type_layout
+			.return_type_layout = function.return_type_layout,
+			.builtin_kind_opt   = {},
 		};
 	}
 
@@ -394,19 +416,43 @@ namespace compiler::lir {
 	}
 
 	void LIRUnit::deduplicateSymbols() {
-		std::unordered_set<base::StrID> seen_globals;
-		base::filterVectorInPlace(lir_globals, [&seen_globals](const LIRGlobalData& global_data) {
-			if (seen_globals.contains(global_data.global.mangled_name)) return false;
-			seen_globals.insert(global_data.global.mangled_name);
-			return true;
+		base::deduplicateBy(lir_globals, [](const LIRGlobalData& global_data) {
+			return global_data.global.mangled_name;
 		});
 
-		std::unordered_set<base::StrID> seen_functions;
-		base::filterVectorInPlace(lir_functions, [&seen_functions](const CRef<Function>& func) {
-			if (seen_functions.contains(func->mangled_name)) return false;
-			seen_functions.insert(func->mangled_name);
-			return true;
-		});
+		std::unordered_set<base::StrID> seen;
+		std::vector<CRef<Function>>     result_functions;
+		for (auto lir_func: lir_functions) {
+			if (seen.insert(lir_func->mangled_name).second)
+				result_functions.push_back(lir_func);
+			else if (lir_func->ignore_on_dvm or lir_func->ignore_on_llvm) {
+				// If we ignore it on some backend then we don't want to deduplicate
+				// it based on mangled name.
+				result_functions.push_back(lir_func);
+			}
+		}
+		lir_functions = std::move(result_functions);
+	}
+
+	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind) {
+		switch (kind) {
+		case helios::BuiltinKind::DvmAllocArr:
+			return BuiltinFunctionKind::DvmAllocArr;
+		case helios::BuiltinKind::DvmReallocArr:
+			return BuiltinFunctionKind::DvmReallocArr;
+		case helios::BuiltinKind::DvmFreeArr:
+			return BuiltinFunctionKind::DvmFreeArr;
+		case helios::BuiltinKind::DvmAlloc:
+			return BuiltinFunctionKind::DvmAlloc;
+		case helios::BuiltinKind::DvmFree:
+			return BuiltinFunctionKind::DvmFree;
+		case helios::BuiltinKind::BoxAlloc:
+			return BuiltinFunctionKind::BoxAlloc;
+		case helios::BuiltinKind::BoxFree:
+			return BuiltinFunctionKind::BoxFree;
+		default:
+			return {};
+		}
 	}
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {
@@ -424,6 +470,7 @@ namespace compiler::lir {
 		case Operation::ReturnValue:
 		case Operation::Jump:
 		case Operation::Branch:
+		case Operation::BranchIfNull:
 			return true;
 		default:
 			return false;

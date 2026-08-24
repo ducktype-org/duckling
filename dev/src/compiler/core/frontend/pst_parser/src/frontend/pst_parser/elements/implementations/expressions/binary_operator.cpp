@@ -3,6 +3,8 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(BinaryOperator, left, op, right);
+
 	void BinaryOperator::dprint(std::ostream& out) const {
 		out << "{";
 

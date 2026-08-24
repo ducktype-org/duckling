@@ -1,0 +1,26 @@
+#{
+    C-FFI for the C standard library.
+    Some of these functions shouldn't be used when on DVM backend (like input/output and memory),
+    others are fine.
+#}
+extern("C") {
+    fundecl malloc(size: u64) -> cptr u8;
+    fundecl realloc(p: cptr u8, new_size: u64) -> cptr u8;
+    fundecl free(p: cptr u8);
+
+    fundecl getchar() -> i32;
+    fundecl putchar(c: i32) -> i32;
+
+    fundecl strtod(nptr: cptr char, endptr: cptr cptr char) -> f64;
+
+    @cffi_variadic_fixed_params(3)
+    fundecl snprintf(s: cptr char, n: u64, format: cptr char, value: f64) -> i32;
+
+    @cffi_variadic_fixed_params(3)
+    fundecl snprintf(s: cptr char, n: u64, format: cptr char, value: i64) -> i32;
+
+    @cffi_variadic_fixed_params(3)
+    fundecl snprintf(s: cptr char, n: u64, format: cptr char, value: u64) -> i32;
+
+    fundecl abort() -> ();
+}

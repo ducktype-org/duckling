@@ -7,6 +7,8 @@ namespace pst::expr {
 	 * @brief Unit type or value (Empty parenthesis expression).
 	 */
 	class UnitExpr final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(UnitExpr, ExprElement);
+
 	public:
 		explicit UnitExpr(const LangParserState& state): ExprElement(state, 0) {}
 

@@ -1,6 +1,7 @@
 //! Managing all dependencies of the root package.
 use std::collections::HashSet;
 
+use super::{DependencyKind, Selector};
 use crate::quackpack::core::Dependency;
 use crate::quackpack::schemas::registry;
 use crate::{QuackError, QuackResult, StrId, qp_bail};
@@ -21,12 +22,11 @@ impl Dependencies {
     fn bail_if_has_duplicated_names(deps: &[Dependency]) -> QuackResult<()> {
         let mut seen_names = HashSet::new();
         for dep in deps {
-            let was_present = !seen_names.insert(dep.name());
+            let kind = dep.kind();
+            let name = dep.name();
+            let was_present = !seen_names.insert((kind, name));
             if was_present {
-                qp_bail!(
-                    "multiple dependencies specify the same name `{}`",
-                    dep.name()
-                )
+                qp_bail!("multiple {kind} dependencies specify the same name `{name}`",)
             }
         }
         Ok(())
@@ -39,7 +39,7 @@ impl Dependencies {
 
     /// Get a dependency by a name.
     pub fn get_by_name(&self, name: StrId) -> Option<&Dependency> {
-        self.0.iter().find(|dep| dep.name() == name)
+        self.get_by_selector(&Selector::Name(name)).next()
     }
 
     /// Check if a dependency exists by an alias.
@@ -49,7 +49,7 @@ impl Dependencies {
 
     /// Get a dependency by an alias.
     pub fn get_by_alias(&self, name: StrId) -> Option<&Dependency> {
-        self.0.iter().find(|dep| dep.alias() == Some(name))
+        self.get_by_selector(&Selector::Alias(name)).next()
     }
 
     /// Check if a dependency exists by an effective name.
@@ -59,7 +59,23 @@ impl Dependencies {
 
     /// Get a dependency by a compilation name.
     pub fn get_by_effective_name(&self, name: StrId) -> Option<&Dependency> {
-        self.0.iter().find(|dep| dep.effective_name() == name)
+        self.get_by_selector(&Selector::EffectiveName(name)).next()
+    }
+
+    /// Get a dependency by a given [`Selector`].
+    pub fn get_by_selector(&self, selector: &Selector) -> impl Iterator<Item = &Dependency> {
+        self.0.iter().filter(|dep| selector.selects(dep))
+    }
+
+    /// Get a dependency by a given [`Selector`].
+    pub fn has_by_selector(&self, selector: &Selector) -> bool {
+        self.get_by_selector(selector).next().is_some()
+    }
+
+    /// Filter by [`DependencyKind`].
+    pub fn filter_by_kind(&self, kind: DependencyKind) -> impl Iterator<Item = &Dependency> {
+        let selector = Selector::Kind(kind);
+        self.0.iter().filter(move |dep| selector.selects(dep))
     }
 
     /// Get an iterator over all dependencies.

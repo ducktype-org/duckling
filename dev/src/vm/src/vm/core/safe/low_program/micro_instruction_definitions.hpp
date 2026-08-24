@@ -86,6 +86,7 @@ DEF_MICRO_INSTR(
 	mov_bste_bste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::PlaceBlockStructure
 )
 DEF_MICRO_INSTR(mov_bfst_bfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::PlaceBlockFSTable)
+DEF_MICRO_INSTR(mov_bvnt_bvnt, vm::low::opargs::PlaceBlockVariant, vm::low::opargs::PlaceBlockVariant)
 // does a shallow pointer copy
 DEF_MICRO_INSTR(mov_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 
@@ -95,7 +96,6 @@ DEF_MICRO_INSTR(setNull_pptr, vm::low::opargs::PlacePtr)
 // It requires a `ext_imm` after this instruction as third argument, defining the size of the opaque
 // type in bytes.
 DEF_MICRO_INSTR(mov_popq_popq, vm::low::opargs::PlaceOpq, vm::low::opargs::PlaceOpq)
-DEF_MICRO_INSTR(mov_popq_imm, vm::low::opargs::PlaceOpq, vm::low::opargs::Immediate)
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 DEF_MICRO_INSTR(add_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
@@ -394,11 +394,22 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::low::opargs::Label)
 
 DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID)
 #ifdef ENABLE_JIT
-// call a function, with the possibility to compile it later
-DEF_MICRO_INSTR(jit_call_entrypoint, vm::low::opargs::FunctionID)
+// function prologue, potentially compiles the current function and executes the native version
+// mentioned in dev/scripts/jit/jitable_interface.py
+/**
+ * @brief Function prologue, potentially compiles the function in which it is situated and executes
+ * the native version.
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py. */
+DEF_MICRO_INSTR(jitEntrypoint)
 #endif
+
+/**
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
 DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
+
 DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
+DEF_MICRO_INSTR(call_ffifunc, vm::low::opargs::FFIFunction)
 
 DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionID)
 
@@ -429,8 +440,6 @@ DEF_MICRO_INSTR(output_p32, vm::low::opargs::Place32)
 DEF_MICRO_INSTR(setVTable_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
 // deinitialises vtable pointer
 DEF_MICRO_INSTR(resetVTable_pptr, vm::low::opargs::PlacePtr)
-// casts pointed object to its superclass
-DEF_MICRO_INSTR(upcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 // tries to cast pointed object to its subclass, requires that ext_64 is next
 DEF_MICRO_INSTR(downcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
@@ -651,6 +660,20 @@ DEF_MICRO_INSTR(fptoui_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place
 DEF_MICRO_INSTR(fptrunc_p32_p64, vm::low::opargs::Place32, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(fpext_p64_p32, vm::low::opargs::Place64, vm::low::opargs::Place32)
 
+// ========= CPOINTER OPERATIONS ========
+// Copies through raw C pointers (native addresses). The cpointer operand is a plain 8-byte
+// value, a Place64.
+
+DEF_MICRO_INSTR(cptrLoad_bany_p64, vm::low::opargs::PlaceBlockAny, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(cptrStore_p64_bany, vm::low::opargs::Place64, vm::low::opargs::PlaceBlockAny)
+
+// Requires `ext_imm`
+DEF_MICRO_INSTR(cptrRead_pptr_p64, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
+// Requires `ext_imm`
+DEF_MICRO_INSTR(cptrWrite_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
+
+DEF_MICRO_INSTR(cptrCast_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
+
 // ========= EXT DEFINITIONS ========
 
 // passes additional argument to preceding instruction
@@ -671,6 +694,9 @@ DEF_MICRO_INSTR(nop)
 // terminates execution
 DEF_MICRO_INSTR(exit)
 
+/**
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
 DEF_MICRO_INSTR(breakpoint)
 
 DEF_MICRO_INSTR(stepGil)
@@ -678,10 +704,10 @@ DEF_MICRO_INSTR(stepGil)
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
  * It is a helper for start functions.
- * @arg0 - pointer to a VmValue.
+ * @arg0 - pointer to a VMValue.
  * @arg1 - n/a.
  */
-DEF_MICRO_INSTR(initFromVmValue)
+DEF_MICRO_INSTR(initFromVMValue)
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR
 #undef DEFAULT_HANDLE_MICRO_INSTR

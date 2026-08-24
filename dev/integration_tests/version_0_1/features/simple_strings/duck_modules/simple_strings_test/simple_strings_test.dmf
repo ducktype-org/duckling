@@ -1,11 +1,9 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     # Test string literals with print
     print("hello\n");
 
     # Test string variable
-    var s: str = "world\n";
+    var s: String = "world\n";
     print(s);
 
     # Test string with escape sequences

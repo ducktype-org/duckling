@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     # 1) Scientific notation, positive and negative exponents, explicit +, no digit between . and e, etc.
     var sci1: f64 = 1.23e4;           # 12300.0

@@ -26,7 +26,12 @@ namespace compiler::backend_vm {
 		 * @param is_comp_time_lowering Whether we are lowering the code to be loaded by the VM for
 		 * compile time evaluation, or for the final output module.
 		 */
-		DVMCodeBuilder(query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering);
+		DVMCodeBuilder(
+			query::Context& query_ctx,
+			base::StrID     module_id,
+			bool            build_debug_info,
+			bool            is_comp_time_lowering
+		);
 
 		/**
 		 * @brief Inserts a LIR unit into the module.
@@ -38,7 +43,7 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Inserts a LIR function into the module.
 		 */
-		void insertLirFunction(CRef<lir::Function> lir_function);
+		void insertLIRFunction(CRef<lir::Function> lir_function);
 
 		/**
 		 * @brief Inserts an extern C function into the module.
@@ -48,7 +53,7 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Inserts a LIR global into the module.
 		 */
-		void insertLirGlobal(const lir::LIRGlobalData& lir_global);
+		void insertLIRGlobal(const lir::LIRGlobalData& lir_global);
 
 		/**
 		 * @brief Insert raw bytecode into a module.
@@ -70,7 +75,14 @@ namespace compiler::backend_vm {
 		[[nodiscard]] base::Optional<debug_info::DebugInfo> buildDebugInfo();
 
 	private:
-		// A Boxed pointer to allow forward declaration in order to hide implementation details.
+		/**
+		 * We friend ReplDVMCodeBuilder, so it can access program_context directly.
+		 */
+		friend class ReplDVMCodeBuilder;
+
+		/**
+		 * A Boxed pointer to allow forward declaration in order to hide implementation details.
+		 */
 		Box<internal::ProgramLoweringContext> program_context;
 
 		bool build_debug_info;

@@ -2,6 +2,8 @@
 #include "../preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(ImportIdentifierAs, names, as);
+
 	MBox<ImportIdentifierAs> ImportIdentifierAs::parse(LangParserState& state) {
 		auto out = makeBox<ImportIdentifierAs>(state);
 

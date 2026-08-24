@@ -62,3 +62,36 @@ fun isI32(a: type) -> bool = {
 const REAL = isI32(i32);
 const FAKE = isI32(i64);
 
+
+### Variant comp-time logic.
+fun pickNumeric(use_variant: bool) -> type = {
+    if (use_variant) {
+        return i32 | f32;
+    }
+    return i32;
+}
+const PICKED_VARIANT = pickNumeric(true);
+const PICKED_PLAIN = pickNumeric(false);
+const PICKED_IS_VARIANT = PICKED_VARIANT == (i32 | f32);
+# Variant component order does not matter: the interning key sorts component hashes.
+const PICKED_ORDER_INSENSITIVE = PICKED_VARIANT == (f32 | i32);
+
+fun variantOf(a: type, b: type) -> type = a | b;
+const VARIANTS_DO_NOT_FLATTEN = variantOf(i32 | f32, i64) == ((i32 | f32) | i64);
+
+fun matchValue(v: i32 | f32) -> i64 = {
+    var r: i64 = match (v) {
+        case x : i32 = x as i64;
+        case _ = (0 as i64) - (1 as i64);
+    };
+    return r;
+}
+fun buildAndMatch(use_int: bool) -> i64 = {
+    var v: i32 | f32 = 0.5 as f32;
+    if (use_int) {
+        v = 17 as i32;
+    }
+    return matchValue(v);
+}
+const MATCHED_INT = buildAndMatch(true);
+const MATCHED_OTHER = buildAndMatch(false);

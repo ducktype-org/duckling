@@ -1,6 +1,12 @@
 #include "gil.hpp"
 
+#include "timed_mutex_recovery.hpp"
+
 namespace vm {
+	// If a DVM thread was killed while holding the GIL, clear it so the timed_mutex is not
+	// destroyed while locked (see clearAbandonedLock).
+	GIL::~GIL() { clearAbandonedLock(gil); }
+
 	void GIL::acquire() {
 		// First, we try to acquire GIL without waiting. If we succeed, we can return immediately.
 		if (gil.try_lock()) return;

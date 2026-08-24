@@ -1,0 +1,63 @@
+#    root
+#   /   \
+#  foo bar
+#   \ /
+#   baz
+PreCase: |+
+  cd $DIT_TMP_DIR
+  mkdir -p root/src foo/src bar/src baz/src
+  echo @{default-src} | tee root/src/src.dmf | tee foo/src/src.dmf | tee bar/src/src.dmf | tee baz/src/src.dmf
+
+  echo "metadata:
+    name: root
+    version: 1.0.0
+
+  dependencies:
+    foo:
+      source:
+        path: ../foo
+    bar:
+      source:
+        path: ../bar" > root/quackconfig.yaml
+
+  echo "metadata:
+    name: foo
+    version: 1.0.0
+
+  dependencies:
+    baz:
+      source:
+        path: ../baz" > foo/quackconfig.yaml
+
+  echo "metadata:
+    name: bar
+    version: 1.0.0
+
+  dependencies:
+    baz:
+      source:
+        path: ../baz" > bar/quackconfig.yaml
+
+  echo "metadata:
+    name: baz
+    version: 1.0.0" > baz/quackconfig.yaml
+PostCase: python3 check.py && @{cleanup_tmp_env}
+Tests:
+  diamond:
+    Description: can build a project with dependencies
+    Cases:
+      build:
+        test-cmd: duck -C root build
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/root\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: running gathering
+            info: starting the solver engine
+            info: starting fetching 4 packages
+            info: successfully synchronized venv \`root\`
+            info: compiling \`baz\`...
+            info: compiling \`foo\`...
+            info: compiling \`bar\`...
+            info: compiling \`root\`..."

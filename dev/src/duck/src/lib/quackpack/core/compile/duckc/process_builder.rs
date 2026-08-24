@@ -3,13 +3,15 @@
 use std::convert::Infallible;
 use std::fmt;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, ExitStatus};
+
+use tracing::{debug, info, trace, warn};
 
 use super::Duckc;
 use crate::quackpack::core::Package;
-use crate::quackpack::core::compile::profiles::{OptLevel, Profile};
+use crate::quackpack::core::compile::profiles::OptLevel;
 use crate::util::command_ext::CommandExt;
-use crate::{QuackResult, QuackResultContext, qp_bail};
+use crate::{QuackResult, QuackResultContext, qp_bail_internal};
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -17,6 +19,7 @@ use crate::{QuackResult, QuackResultContext, qp_bail};
 pub enum DuckcSubcommand {
     CompilePackage,
     CompileScript,
+    CompilePackages,
     Repl,
 }
 
@@ -26,6 +29,7 @@ impl DuckcSubcommand {
             Self::CompilePackage => "compile_package",
             Self::CompileScript => "compile_script",
             Self::Repl => "repl",
+            Self::CompilePackages => "compile_packages",
         }
     }
 }
@@ -39,6 +43,7 @@ pub struct DuckcProcessBuilder {
 impl DuckcProcessBuilder {
     /// Create new [`DuckcProcessBuilder`] from the data in [`Duckc`].
     pub fn new(duckc: &Duckc) -> Self {
+        debug!(%duckc.program_name, "creating new duckc process wrapper");
         Self {
             inner: Command::new(duckc.program_name),
         }
@@ -46,12 +51,21 @@ impl DuckcProcessBuilder {
 
     /// Set [`DuckcSubcommand`] as a main subcommand.
     pub fn set_subcommand(&mut self, subcmd: DuckcSubcommand) -> &mut Self {
+        trace!(?subcmd, "setting subcommand");
         self.inner.arg(subcmd.as_argument());
+        self
+    }
+
+    /// Set path to the manifest.
+    pub fn set_manifest_path(&mut self, path: &Path) -> &mut Self {
+        trace!(?path, "setting manifest path");
+        self.inner.arg(path);
         self
     }
 
     /// Set path to the script to compile.
     pub fn set_script_path(&mut self, path: &Path) -> &mut Self {
+        trace!(?path, "setting script path");
         self.inner.arg(path);
         self
     }
@@ -59,98 +73,93 @@ impl DuckcProcessBuilder {
     /// Set package name of the currently compiling package.
     pub fn set_package_name(&mut self, package: &Package) -> &mut Self {
         let name = package.manifest().name();
+        trace!(?name, "setting package name");
         self.inner.arg("-n").arg(name);
         self
     }
 
     /// Set source directory of the currently compiling package.
-    pub fn set_src_dir(&mut self, package: &Package) -> &mut Self {
-        self.inner.arg(package.source_directory());
+    pub fn set_src_dir(&mut self, package: &Package) -> QuackResult<&mut Self> {
+        let Some(source_directory) = package.source_directory() else {
+            qp_bail_internal!("asked for src directory of the global package: {package:#?}")
+        };
+        trace!(?source_directory, "setting source directory");
+        self.inner.arg(source_directory);
+        Ok(self)
+    }
+
+    /// Set the number of workers to be used by duckc.
+    pub fn set_workers_count(&mut self, workers: usize) -> &mut Self {
+        if workers == 0 {
+            warn!("attempted to set the worker count to 0, ignoring");
+            return self;
+        }
+
+        if workers == 1 {
+            debug!("attempted to set the worker count to 1, ignoring");
+            return self;
+        }
+        trace!(?workers, "setting workers count");
+        self.inner.arg("--workers").arg(workers.to_string());
         self
     }
 
     /// Set artifacts directory of the currently compiling package.
     pub fn set_package_artifacts_dir(&mut self, package: &Package) -> &mut Self {
         let dir = package.artifacts_directory();
-        self.set_artifacts_dir(dir.root_directory())
+        self.set_artifacts_dir(dir)
     }
 
     /// Set artifacts directory of the currently compiling package.
     pub fn set_artifacts_dir(&mut self, dir: &Path) -> &mut Self {
+        trace!(?dir, "setting artifacts directory");
         self.inner.arg("-a").arg(dir);
         self
     }
 
-    /// Sets the following arguments:
-    ///  * LLVM opt level,
-    ///  * compilation backend,
-    ///  * whether to use previous compilation artifacts,
-    ///  * whether to link c standard library.
-    pub fn update_with_profile(&mut self, profile: &Profile) -> &mut Self {
-        self.set_opt_level(profile.opt_level);
-        if profile.dvm_bytecode {
-            self.set_dvm_backend();
-        }
-        if !profile.incremental {
-            self.set_no_incremental();
-        }
-        if !profile.c_std {
-            self.set_no_c_std();
-        }
-        self
-    }
-
-    /// As [`Self::update_with_profile`] but does not set `no_incremental`.
-    pub fn update_with_script_profile(&mut self, profile: &Profile) -> &mut Self {
-        self.set_opt_level(profile.opt_level);
-        if profile.dvm_bytecode {
-            self.set_dvm_backend();
-        }
-        if !profile.c_std {
-            self.set_no_c_std();
-        }
-        self
-    }
-
     /// Set LLVM optimization level.
-    fn set_opt_level(&mut self, opt_level: OptLevel) -> &mut Self {
+    pub fn set_opt_level(&mut self, opt_level: OptLevel) -> &mut Self {
+        trace!(?opt_level, "setting opt level");
         self.inner.arg("-O").arg(opt_level.to_string());
         self
     }
 
     /// Set to use DVM as the backend.
-    fn set_dvm_backend(&mut self) -> &mut Self {
-        self.inner.arg("--dvm-backend");
+    pub fn set_dvm_backend(&mut self, value: bool) -> &mut Self {
+        trace!(will_use_dvm = %value, "setting dvm");
+        if value {
+            self.inner.arg("--dvm-backend");
+        }
         self
     }
 
     /// Set not to use cached compilation artifacts.
-    fn set_no_incremental(&mut self) -> &mut Self {
-        self.inner.arg("--no-incremental");
+    pub fn set_incremental(&mut self, value: bool) -> &mut Self {
+        trace!(will_use_incremental = %value, "setting incremental");
+        if !value {
+            self.inner.arg("--no-incremental");
+        }
         self
     }
 
     /// Set not to link c standard library.
-    fn set_no_c_std(&mut self) -> &mut Self {
-        self.inner.arg("--no-c-standard-library");
+    pub fn set_c_std(&mut self, value: bool) -> &mut Self {
+        trace!(will_use_c_std = %value, "setting libc");
+        if !value {
+            self.inner.arg("--no-c-standard-library");
+        }
         self
     }
 
     /// Execute the built command.
-    pub fn execute<F, T>(&mut self, on_error_message: F) -> QuackResult<()>
-    where
-        T: fmt::Display,
-        F: FnOnce() -> T,
-    {
-        let code = self.inner.status().context("failed to spawn duckc")?;
-        if !code.success() {
-            qp_bail!("{}", on_error_message())
-        }
-        Ok(())
+    pub fn execute(&mut self) -> QuackResult<ExitStatus> {
+        info!(duckc = ?self, "executing duckc");
+        self.inner.status().context("failed to spawn duckc")
     }
 
     /// Execute the built command by replacing current process.
     pub fn execute_and_replace(&mut self) -> QuackResult<Infallible> {
+        info!(duckc = ?self, "replacing with duckc");
         self.inner.exec_replace().context("failed to spawn duckc")
     }
 }

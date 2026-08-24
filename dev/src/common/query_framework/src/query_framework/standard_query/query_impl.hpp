@@ -66,11 +66,11 @@ namespace query::internal {
 
 		// Before computing, try to reuse result from disk if available and safe to do so.
 		// Conditions:
-		//  - QueryImplType provides loadFromDisc(QKey) -> PResult
+		//  - QueryImplType provides loadFromDisk(QKey) -> PResult
 		//  - redGreenSweep(node_id) returns true (node and its deps are green in previous graph)
 		if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK) {
 			if (ContextAccess::getState()->redGreenSweep(node_id) == QueryState::PrevColor::Green) {
-				auto loaded = QueryImplType::loadFromDisc(key);
+				auto loaded = QueryImplType::loadFromDisk(key);
 
 				if (loaded) {
 					CORE_DEV_LOG(
@@ -129,7 +129,7 @@ namespace query::internal {
 				auto provide_result = QueryImplType::provide(*context, key);
 				if (provide_result.hasFailed()) {
 					// Here we need to delete artifact from disk
-					QueryImplType::deleteFromDisc(key);
+					QueryImplType::deleteFromDisk(perfect_hash);
 				}
 				return QueryImplType::store(perfect_hash, provide_result, acd);
 			} else {
@@ -167,7 +167,7 @@ namespace query::internal {
 			);
 			// If provide throws we need to delete artifact from disk from prev compilation
 			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK)
-				QueryImplType::deleteFromDisc(key);
+				QueryImplType::deleteFromDisk(perfect_hash);
 
 			if constexpr (QueryImplType::USES_QRESULT
 			              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
@@ -227,24 +227,47 @@ namespace query::internal {
 	};
 
 	/**
-	 * Checks if query implementation provides loadFromDisc with correct signature.
-	 * @note loadFromDisc should return Optional<PResult>. Empty optional is used to signal absence
+	 * Checks if query implementation provides loadFromDisk with correct signature.
+	 * @note loadFromDisk should return Optional<PResult>. Empty optional is used to signal absence
 	 * of on-disk artifact.
 	 */
 	template<typename Impl>
-	concept HasLoadFromDiscWithSignature = requires(const typename Impl::QKey& key) {
-		{ Impl::loadFromDisc(key) } -> std::same_as<base::Optional<typename Impl::PResult>>;
+	concept HasLoadFromDiskWithSignature = requires(const typename Impl::QKey& key) {
+		{ Impl::loadFromDisk(key) } -> std::same_as<base::Optional<typename Impl::PResult>>;
 	};
 
 	/**
-	 * Checks if query implementation provides deleteFromDisc with correct signature.
-	 * @note deleteFromDisc should return bool, if data was actually deleted it must handle the case
-	 * where the is no data to delete.
+	 * Checks if query implementation provides deleteFromDisk with correct signature.
+	 * @note deleteFromDisk takes the query's stable key hash and returns bool. It must handle the
+	 * case where there is no data to delete. The key itself is intentionally not required, so the
+	 * artifact can be removed from invalidation/cleanup paths that only know the hash.
 	 */
 	template<typename Impl>
-	concept HasDeleteFromDiscWithSignature = requires(const typename Impl::QKey& q_key) {
-		{ Impl::deleteFromDisc(q_key) } -> std::same_as<bool>;
+	concept HasDeleteFromDiskWithSignature = requires(::query::QueryStableHash hash) {
+		{ Impl::deleteFromDisk(hash) } -> std::same_as<bool>;
 	};
+
+	/**
+	 * @brief Erases a query's on-disk cache by hash. Panics if called for a query not cached on disk.
+	 *
+	 * This is a free template on purpose: the branch calling Impl::deleteFromDisk is only
+	 * instantiated for disk-cached queries. A plain `if constexpr` in the (non-template) query
+	 * boilerplate would still require Impl::deleteFromDisk to name-resolve for every query, which
+	 * fails for those that do not provide it.
+	 *
+	 * @note The `else` panics rather than no-ops: every caller (invalidation, orphan cleanup) only
+	 * invokes the disk-erase hook for queries tagged can_be_loaded_from_disk, so reaching it means
+	 * disk-erase was invoked for a query with no disk cache — a bug. The obligation that a
+	 * disk-cached query actually provides deleteFromDisk is enforced once, by the
+	 * HasDeleteFromDiskWithSignature static_assert in QUERY_IMPLEMENTATION_BOILERPLATE.
+	 */
+	template<typename Impl>
+	bool eraseFromDiskByHash(::query::QueryStableHash hash) {
+		if constexpr (Impl::CAN_BE_LOADED_FROM_DISK)
+			return Impl::deleteFromDisk(hash);
+		else
+			CORE_PANIC("Disk-erase hook invoked for a query that is not cached on disk.");
+	}
 }
 
 /**
@@ -273,6 +296,9 @@ namespace query::internal {
 	}                                                                                                                                    \
 	auto type::QueryType::internal_erase(::query::QueryStableHash hash) -> bool {                                                        \
 		return type::erase(type::KHash(hash));                                                                                           \
+	}                                                                                                                                    \
+	auto type::QueryType::internal_disk_erase(::query::QueryStableHash hash) -> bool {                                                   \
+		return ::query::internal::eraseFromDiskByHash<type>(hash);                                                                       \
 	}                                                                                                                                    \
 	static_assert(                                                                                                                       \
 		not std::is_reference_v<type::QResult>,                                                                                          \
@@ -317,11 +343,11 @@ namespace query::internal {
 		"queryStablePerfectHash must be implemented and return QueryStableHash"                                                          \
 	);                                                                                                                                   \
 	static_assert(                                                                                                                       \
-		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.can_be_loaded_from_disk, ::query::internal::HasLoadFromDiscWithSignature<type>),   \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.can_be_loaded_from_disk, ::query::internal::HasLoadFromDiskWithSignature<type>),   \
 		"loadFromDisk must be implemented for queries that are cached on disk"                                                           \
 	);                                                                                                                                   \
 	static_assert(                                                                                                                       \
-		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.can_be_loaded_from_disk, ::query::internal::HasDeleteFromDiscWithSignature<type>), \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.can_be_loaded_from_disk, ::query::internal::HasDeleteFromDiskWithSignature<type>), \
 		"deleteFromDisk must be implemented for queries that are cached on disk"                                                         \
 	);                                                                                                                                   \
 	static_assert(                                                                                                                       \

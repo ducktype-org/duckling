@@ -16,6 +16,9 @@ namespace pst {
 		GetName getName,
 		class Container = std::vector<AccessInternalAnonymous<ListElements>>>
 	class List: public NotStmt {
+		THIS_CLASS(List);
+		PARENT_CLASS(NotStmt);
+
 	protected:
 		Container elements;
 
@@ -28,6 +31,8 @@ namespace pst {
 		usize size() const {
 			return elements.size();
 		}
+
+		ELEMENT_CLONE_DECL(List)
 
 		explicit List(const LangParserState& state): NotStmt(state) {}
 

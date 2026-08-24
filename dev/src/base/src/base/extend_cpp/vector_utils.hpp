@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+#include <unordered_set>
 #include <vector>
 
 // @TODO: #1619 extend this header, and use it across the codebase
@@ -28,5 +30,29 @@ namespace base {
 	template<typename T, typename Predicate>
 	void filterVectorInPlace(std::vector<T>& vec, const Predicate& predicate) {
 		std::erase_if(vec, [&predicate](const T& item) { return !predicate(item); });
+	}
+
+	template<typename T, typename KeyFunc>
+	requires std::invocable<KeyFunc, const T&>
+	void deduplicateBy(std::vector<T>& vec, KeyFunc key_func) {
+		using Key = std::invoke_result_t<KeyFunc, const T&>;
+		std::unordered_set<Key> seen;
+		base::filterVectorInPlace(vec, [&](auto& val) {
+			auto key = std::invoke(key_func, val);
+			return seen.insert(key).second;
+		});
+	}
+
+	/**
+	 * @brief Moves a pack of items into a `std::vector<Element>`, preserving order.
+	 * The element type is explicit — it cannot be deduced when items are, e.g., derived-type.
+	 */
+	template<typename Element, typename... Items>
+	requires(std::is_constructible_v<Element, Items &&> && ...)
+	std::vector<Element> packToVector(Items&&... items) {
+		std::vector<Element> result;
+		result.reserve(sizeof...(items));
+		(result.emplace_back(std::forward<Items>(items)), ...);
+		return result;
 	}
 }

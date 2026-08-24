@@ -4,7 +4,7 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use crate::quackpack::core::{FeatureName, Package};
+use crate::quackpack::core::{AnyPackage, FeatureName};
 use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -16,7 +16,7 @@ pub enum PackageType {
 }
 
 impl PackageType {
-    /// *deepen* `self`, as in „get type for my dependencies”.
+    /// *deepen* `self`, as in “get type for my dependencies”.
     ///
     /// This is mainly used for printing errors, so we can distinguish between transitive and direct
     /// dependencies.
@@ -44,13 +44,13 @@ impl fmt::Display for PackageType {
 /// An abstraction over complete information required to compile a single package.
 pub struct CompilerPackage {
     enabled_features: HashSet<FeatureName>,
-    package: Package,
+    package: AnyPackage,
     pkg_type: PackageType,
 }
 
 impl CompilerPackage {
     /// Create a new [`CompilerPackage`], with empty features.
-    pub fn new(package: Package, pkg_type: PackageType) -> Self {
+    pub fn new(package: AnyPackage, pkg_type: PackageType) -> Self {
         Self {
             enabled_features: HashSet::new(),
             package,
@@ -83,7 +83,7 @@ impl CompilerPackage {
                 format!(
                     "while expanding features of the {} `{}`",
                     self.pkg_type,
-                    self.package.manifest().name()
+                    self.package.name()
                 )
             })?;
         for feature in features {
@@ -106,14 +106,14 @@ impl CompilerPackage {
                 format!(
                     "while expanding features of the {} `{}`",
                     self.pkg_type,
-                    self.package.manifest().name()
+                    self.package.name()
                 )
             })?;
         Ok(features)
     }
 
-    /// Get the underlying [`Package`].
-    pub fn package(&self) -> &Package {
+    /// Get the underlying [`AsPackage`].
+    pub fn package(&self) -> &AnyPackage {
         &self.package
     }
 

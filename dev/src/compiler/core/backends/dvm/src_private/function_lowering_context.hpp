@@ -18,28 +18,13 @@
 namespace compiler::backend_vm::internal {
 	class ProgramLoweringContext;
 
-	/**
-	 * @brief Builds a tiny synthetic global constructor that writes a compile-time value
-	 * into a global variable.
-	 *
-	 * This is a temporary helper used when a LIR global has an initial CTV value but no
-	 * explicit ctor function lowered from LIR.
-	 * @TODO: #1553 Remove this constants should have constants initialization
-
-	 */
-	vm::code::Function createMiniGlobalCtorFromCTV(
-		ProgramLoweringContext&      program_context,
-		CRef<tsl::TypeLayout>        global_layout,
-		const vm::code::TypeOfData&  lowered_global_type,
-		const ctv::CompileTimeValue& global_ctv_value,
-		base::StrID                  mini_ctor_name,
-		const DVMPlace&              dvm_global
-	);
+	class CTVLowering;
 
 	class FunctionLoweringContext {
 	public:
 		friend class InstructionLowerer;
 		friend DVMOperation lirInstrToDVMOperation(FunctionLoweringContext&, const lir::Instruction&);
+		friend class CTVLowering;
 
 		FunctionLoweringContext(
 			ProgramLoweringContext&                     program_context,
@@ -48,6 +33,7 @@ namespace compiler::backend_vm::internal {
 			const std::vector<CRef<tsl::TypeLayout>>&   parameter_types,
 			base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt
 		);
+
 
 		FunctionLoweringContext(const FunctionLoweringContext&)            = delete;
 		FunctionLoweringContext(FunctionLoweringContext&&)                 = delete;
@@ -91,8 +77,44 @@ namespace compiler::backend_vm::internal {
 
 		vm::code::Function finish() &&;
 
+		/**
+		 * @brief Constructs a parameterless, void-returning context. Used to synthesize small
+		 * helper functions (e.g. global constructors) that have no LIR signature to lower.
+		 */
+		static FunctionLoweringContext getVoidParameterLessFunctionContext(
+			ProgramLoweringContext& program_context, base::StrID name
+		);
+
+		void pushInstruction(const vm::code::Instruction& instruction);
+
+		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
+
+		/**
+		 * @brief Pushes a temporary local and based on the @p tracked parameter saves it in the
+		 * `current_temp_count`. This temporary local will be automatically deinitialized after
+		 * `pushInstruction` is executed.
+		 *
+		 * @p tracked Used in special cases when we don't want the temporaries to be automatically
+		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
+		 * These temporaries have to be deinitialized manually.
+		 */
+		DVMPlace pushTempLocal(
+			const vm::code::TypeOfData&      type,
+			base::Optional<std::string_view> name_hint = {},
+			bool                             tracked   = true
+		);
+
+		[[nodiscard]]
+		ProgramLoweringContext& programCtx() {
+			return program_context;
+		}
 
 	private:
+		/**
+		 * @brief Constructs a parameterless, void-returning context. Used to synthesize small
+		 * helper functions (e.g. global constructors) that have no LIR signature to lower.
+		 */
+		FunctionLoweringContext(ProgramLoweringContext& program_context, base::StrID name);
 		/**
 		 * @brief Creates a mapping between a LIR local and DVM local.
 		 */
@@ -110,12 +132,36 @@ namespace compiler::backend_vm::internal {
 		 */
 		DVMPlace loadFromPlace(const DVMPlace& place, const vm::code::TypeOfData& pointee_type);
 
+		void cPointerStructLea(
+			const DVMPlace&             base_place,
+			const DVMPlace&             dest,
+			const tsl::ClassTypeLayout& class_layout,
+			helios::SymID               field_id
+		);
+
+		void cPointerArrayLea(
+			const DVMPlace&       base_place,
+			const DVMPlace&       dest,
+			CRef<tsl::TypeLayout> element_layout,
+			const DVMValue&       index
+		);
+
 		/**
 		 * @brief Makes sure a given @p value is a place and places it in a temporary if needed
 		 * (e.g. the value is an Immediate). If the given value is already a place, it does nothing
 		 * and just returns the inner place.
 		 */
 		DVMPlace forceToPlace(const DVMValue& value, base::Optional<std::string_view> name_hint = {});
+
+		/**
+		 * @brief Copies a given @p value into a fresh temporary place and returns that place.
+		 * Unlike forceToPlace, the returned place never aliases @p value, so it can be used
+		 * as the accumulator of a destructive two-operand opcode without clobbering a live
+		 * local.
+		 */
+		DVMPlace copyToTempPlace(
+			const DVMValue& value, base::Optional<std::string_view> name_hint = {}
+		);
 
 		/**
 		 * @brief Stores a given @p src_value in @p maybe_dest_place, if the destination was given.
@@ -148,11 +194,6 @@ namespace compiler::backend_vm::internal {
 			const std::vector<lir::ScopeFlag>& scope_flags, bool& deinits_pushed
 		);
 
-
-		void pushInstruction(const vm::code::Instruction& instruction);
-
-		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
-
 		/// Push single init instruction
 		void pushInit(lir::LIRLocalRef lir_local);
 
@@ -165,21 +206,6 @@ namespace compiler::backend_vm::internal {
 		 * lowering LIRPlace, temps created for comparison operations, etc.
 		 */
 		void cleanUpRegisteredTemps();
-
-		/**
-		 * @brief Pushes a temporary local and based on the @p tracked parameter saves it in the
-		 * `current_temp_count`. This temporary local will be automatically deinitialized after
-		 * `pushInstruction` is executed.
-		 *
-		 * @p tracked Used in special cases when we don't want the temporaries to be automatically
-		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
-		 * These temporaries have to be deinitialized manually.
-		 */
-		DVMPlace pushTempLocal(
-			const vm::code::TypeOfData&      type,
-			base::Optional<std::string_view> name_hint = {},
-			bool                             tracked   = true
-		);
 
 		[[nodiscard]] usize instructionsCount() const;
 

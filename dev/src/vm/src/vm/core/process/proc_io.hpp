@@ -1,5 +1,7 @@
 #pragma once
 
+#include <events/emitter.hpp>
+
 #include <vm/core/thread/ivmthread.hpp>
 
 #include <condition_variable>
@@ -45,11 +47,35 @@ namespace vm {
 			return v;
 		}
 
+		/**
+		 * Reads a single raw byte, including whitespace (unlike getInput, which uses
+		 * formatted extraction and skips whitespace). Returns the byte as an int, or -1 at end
+		 * of input (or if terminated while waiting), matching libc `getchar`.
+		 * For thread use only.
+		 */
+		int getRawChar(IVMThread& thread) {
+			auto lck = lock();
+
+			if (!attached) {
+				thread.waitUntilNotPausedAndCondition(lck, [this, &thread] {
+					return thread.isTerminateRequested() || input_stream.rdbuf()->in_avail()
+					    || attached;
+				});
+			}
+
+			if (thread.isTerminateRequested()) return -1;
+			return input_stream.get();
+		}
+
 		template<class T>
 		void writeOutput(const T& v) {
 			{
-				auto lck = lock();
-				output_stream << v;
+				auto              lck = lock();
+				std::stringstream sstr;
+				sstr << v;
+				std::string str = std::move(sstr).str();
+				output_stream << str;
+				output_emitter.emitEvent(str);
 			}
 			output_empty_cv.notify_all();
 		}
@@ -60,6 +86,10 @@ namespace vm {
 
 		ProcIORedirecter attach(std::istream& input_source, std::ostream& output_dst);
 
+		void attachOutputListener(Ref<events::Listener<std::string>> listener) {
+			output_emitter.attachListener(listener);
+		}
+
 		std::condition_variable output_empty_cv;
 
 	private:
@@ -69,6 +99,8 @@ namespace vm {
 
 		std::stringstream input_stream;
 		std::stringstream output_stream;
+
+		events::Emitter<std::string> output_emitter;
 	};
 
 	/**

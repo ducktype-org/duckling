@@ -3,13 +3,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::StrId;
-use crate::quackpack::core::full_identity::{FullIdentity, FullKind};
+use crate::quackpack::core::full_identity::FullIdentity;
 use crate::quackpack::core::identity::Identity;
-use crate::quackpack::core::storage::package_id::{GitId, LocalId, PackageId, RegistryId};
-use crate::quackpack::core::{FeatureName, Version};
+use crate::quackpack::core::{FeatureName, PackageId, Version};
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
 /// General storage/venv freezefile.
+#[serde(rename_all = "kebab-case")]
 pub struct VenvFreeze {
     root: RootPackage,
     dependencies: Vec<FreezePackage>,
@@ -54,6 +54,7 @@ impl VenvFreeze {
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
 /// A root package of the freeze.
+#[serde(rename_all = "kebab-case")]
 pub struct RootPackage {
     name: StrId,
     version: Version,
@@ -130,6 +131,7 @@ impl RootPackage {
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Hash, Eq)]
 /// A non-root dependency in a freeze (transitive or direct).
+#[serde(rename_all = "kebab-case")]
 pub struct FreezePackage {
     version: Version,
     features: Vec<FeatureName>,
@@ -216,14 +218,7 @@ impl FreezePackage {
 
     /// Cast self to the [`PackageId`].
     pub fn to_package_id(&self) -> PackageId {
-        let url = self.identity().origin().url();
-        match self.identity().origin().kind() {
-            FullKind::Registry => {
-                PackageId::Registry(RegistryId::new(self.name(), self.version(), url))
-            }
-            FullKind::Git { commit } => PackageId::Git(GitId::new(url, commit)),
-            FullKind::Local => PackageId::Local(LocalId::new(url)),
-        }
+        PackageId::new(*self.identity(), self.version())
     }
 }
 

@@ -14,7 +14,11 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 
 namespace compiler::backend_vm::internal {
+	class CTVLowering;
+
 	class ProgramLoweringContext final {
+		friend class CTVLowering;
+
 		/**
 		 * @brief Context used purely for throwing NotYetImplemented errors.
 		 * @note This context should not be used for anything other than throwing NotYetImplemented
@@ -31,7 +35,10 @@ namespace compiler::backend_vm::internal {
 		 * The context reference should remain valid for the lifetime of this object.
 		 */
 		explicit ProgramLoweringContext(
-			query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering
+			query::Context& query_ctx,
+			base::StrID     module_id,
+			bool            build_debug_info,
+			bool            is_comp_time_lowering
 		);
 
 		/**
@@ -86,7 +93,17 @@ namespace compiler::backend_vm::internal {
 		 * @brief Creates and inserts a pointer type into the program lowering context.
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */
-		const vm::code::TypeOfData& getOrInsertPointerType(const vm::code::TypeOfData& pointee_type);
+		const vm::code::TypeOfData& getOrInsertPointerType(
+			const vm::code::TypeOfData&         pointee_type,
+			tsl::PointerTypeLayout::PointerKind kind
+			= tsl::PointerTypeLayout::PointerKind::SinglePointer
+		);
+
+		/**
+		 * @brief Returns the builtin `cptr` type - a cpointer with an unknown pointee, the DVM
+		 * counterpart of C's `void*`. Inserts it into the module on first use.
+		 */
+		const vm::code::TypeOfData& getVoidCPointerType();
 
 		/**
 		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
@@ -98,6 +115,46 @@ namespace compiler::backend_vm::internal {
 		 * vm::code::GlobalData has already been lowered for that global name.
 		 */
 		const DVMPlace& getLirGlobal(CRef<lir::LIRGlobal> lir_global);
+
+		/**
+		 * @brief Inserts a synthetic, statically-initialized global into the module and returns its
+		 * DVM place.
+		 *
+		 * The global is marked constant and carries @p init as its `initial_value`. The given
+		 * @p name_hint is made unique with an internal counter, so callers may reuse the same hint.
+		 *
+		 * @param name_hint Base name for the global (uniquified internally).
+		 * @param type The DVM type of the global.
+		 * @param init The static initial value bytes.
+		 * @return The DVM place referring to the inserted global.
+		 */
+		const DVMPlace& insertStaticDataGlobal(
+			base::StrID name_hint, const vm::code::TypeOfData& type, vm::code::ConstantValue init
+		);
+
+		/**
+		 * @brief Produces a fresh, unique global name from @p name_hint.
+		 *
+		 * The hint is suffixed with the module id and an internal counter so the same hint can be
+		 * reused for many anonymous globals (string literals, CTV values, ...).
+		 */
+		[[nodiscard]] base::StrID getAnonymousGlobalName(base::StrID name_hint);
+
+		/**
+		 * @brief Registers the DVM place of a global so it can be referenced.
+		 *
+		 * Inserts a `Direct`-access place for @p name / @p type into the place table and returns
+		 * it. This only declares where the global lives; use @ref defineGlobal to attach its data.
+		 */
+		const DVMPlace& declareGlobal(base::StrID name, const vm::code::TypeOfData& type);
+
+		/**
+		 * @brief Stores the data of a global and records it in emission order.
+		 *
+		 * Keyed by @p global_data.name. Order is recorded only on first insertion so REPL can emit
+		 * only new globals.
+		 */
+		const vm::code::GlobalData& defineGlobal(vm::code::GlobalData global_data);
 
 		/**
 		 * @brief Retrieves the extern C function with the given name.
@@ -112,6 +169,14 @@ namespace compiler::backend_vm::internal {
 		 * @brief Inserts an extern C function into the program context.
 		 */
 		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
+
+		/**
+		 * @brief Declares a native function called through libffi (`call_ffifunc`).
+		 *
+		 * Declaring the same function twice is a no-op; in dev builds a conflicting signature for
+		 * an already declared name is an assertion failure.
+		 */
+		void insertFFIFunction(vm::code::FFIFunction ffi_function);
 
 		/**
 		 * @brief Insert raw bytecode into program context.
@@ -155,10 +220,19 @@ namespace compiler::backend_vm::internal {
 	private:
 		base::Optional<vm::code::TypeOfData> lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
+		/**
+		 * @brief Actualy constructs the VM pointer type, internal.
+		 */
+		const vm::code::TypeOfData lowerPointerType(
+			const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
+		);
+
 		/// Whether we are lowering the code to be loaded by the VM for compile time evaluation,
 		/// or for the final output module. This affects how certain compile time values (e.g.
 		/// symbol types) are lowered.
 		bool is_comp_time_lowering;
+
+		base::StrID module_id;
 
 		// Using ValidProgram here would be inefficient due to the need for frequent code verifications.
 
@@ -177,12 +251,19 @@ namespace compiler::backend_vm::internal {
 		std::vector<base::StrID> lowered_function_order;
 		// Maintains insertion order for globals so REPL can emit only new globals.
 		std::vector<base::StrID> lowered_global_order;
+		// Maintains insertion order for FFI functions so REPL can emit only new declarations.
+		std::vector<base::StrID> lowered_ffi_function_order;
 
-		base::Map<CRef<lir::Function>, base::StrID> lir_function_to_name;
-		base::Map<base::StrID, vm::code::Function>  dvm_functions_by_name;
+		// Counter used to make synthetic static-data global names (string literals) unique.
+		usize static_data_global_counter{ 0 };
+
+		base::Map<base::StrID, vm::code::Function> dvm_functions_by_name;
 
 		// Extern function name to definition.
 		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;
+
+		// FFI (libffi-called, C ABI) function name to declaration.
+		base::Map<base::StrID, vm::code::FFIFunction> ffi_functions;
 
 		// Additional, non-lir functions loaded into a module. Used in CTE.
 		std::vector<vm::code::Function> extra_bytecode_functions;

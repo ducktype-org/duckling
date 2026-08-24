@@ -1,11 +1,11 @@
-﻿#include <diagnostic_interactive/stable_position.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+﻿#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/pst.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
@@ -68,6 +68,7 @@ public:
 		TESTER_ADD_TEST(testClass);
 		TESTER_ADD_TEST(testListParsing);
 		TESTER_ADD_TEST(testListParsingErrors);
+		TESTER_ADD_TEST(testTemplateStmtParsing);
 		TESTER_ADD_TEST(testUsingErrors);
 		TESTER_ADD_TEST(testParamListErrors);
 		TESTER_ADD_TEST(testMissingSemiErr);
@@ -75,6 +76,7 @@ public:
 		TESTER_ADD_TEST(testVisitorAlternative);
 		TESTER_ADD_TEST(testFunctionParameterVisitors);
 		TESTER_ADD_TEST(testFunDeclFFI);
+		TESTER_ADD_TEST(testOperatorFun);
 		TESTER_ADD_TEST(testSimpleExpand);
 
 		// TESTER_ADD_TEST(testParsingHandler)
@@ -151,8 +153,13 @@ private:
 		}
 
 		assertTrue(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
-		// @TODO: Do we want to print some information about the differences or the bad output to a
-		// file?
+		if (no_errors) {
+			assertTrue(
+				pst::testElementCloning(CRef{ &*pst.getRootElement().illegalAccess().value() })
+					.isOk(),
+				"Error during cloning"
+			);
+		}
 	}
 
 	void testJsonRelativePath(
@@ -187,11 +194,17 @@ private:
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
+	void testTemplateStmtParsing() {
+		testJsonRelativePath("template_statements.duck", "template_statements.json");
+	}
+
 	void testFormatStrParsing() {
 		testJsonRelativePath("format_strings.duck", "format_strings.json");
 	}
 
 	void testFunDeclFFI() { testJsonRelativePath("ffi.duck", "ffi.json"); }
+
+	void testOperatorFun() { testJsonRelativePath("operator_fun.duck", "operator_fun.json"); }
 
 	void testNumericLiteralParsing() {
 		testJsonRelativePath("numeric_literals.duck", "numeric_literals.json");
@@ -228,7 +241,7 @@ private:
 		                   .illegalAccess()
 		                   .value()
 		                   .dynamicCast<pst::Fun>();
-		ASSERT_TRUE(fun_opt.has_value());
+		ASSERT_HAS_VALUE(fun_opt);
 		auto fun = fun_opt.value();
 
 		auto params = fun->getParams().illegalAccess().value();
@@ -259,7 +272,7 @@ private:
 	}
 
 	void testSimpleExpand() {
-		auto pos      = dia_int::StablePosition::fakePosition();
+		auto pos      = dia::StablePosition::fakePosition();
 		auto contents = "var a: T = 5;";
 		auto pst
 			= pst::PST<>::fromExpand(pos, contents, pst::LangParserContext::programBaseContext());

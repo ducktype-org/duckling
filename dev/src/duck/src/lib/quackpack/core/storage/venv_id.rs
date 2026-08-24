@@ -6,12 +6,18 @@ use std::sync::Arc;
 
 use crate::StrId;
 use crate::duck::util::duck_home::DuckHome;
-use crate::quackpack::core::{Manifest, Package, PackageContext};
+use crate::quackpack::core::script::Script;
+use crate::quackpack::core::{AnyPackage, Manifest, Package, PackageContext};
+use crate::util::hash::sha256_string;
 
 /// A unique venv's identifier.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum VenvId {
-    Named(StrId),
+    Package(StrId),
+    Script {
+        script_name: StrId,
+        venv_name: StrId,
+    },
     Global,
 }
 
@@ -19,8 +25,12 @@ impl VenvId {
     /// Get the name of this [`VenvId`].
     pub fn name(&self) -> StrId {
         match self {
-            Self::Named(name) => *name,
+            Self::Package(name) => *name,
             Self::Global => StrId::new(DuckHome::GLOBAL_PACKAGE_NAME),
+            Self::Script {
+                script_name: _,
+                venv_name,
+            } => *venv_name,
         }
     }
 
@@ -102,7 +112,7 @@ impl ToVenvId for StrId {
         if self == DuckHome::GLOBAL_PACKAGE_NAME {
             VenvId::Global
         } else {
-            VenvId::Named(*self)
+            VenvId::Package(*self)
         }
     }
 }
@@ -113,9 +123,29 @@ impl ToVenvId for PackageContext<'_> {
     }
 }
 
+impl ToVenvId for AnyPackage {
+    fn to_venv_id(&self) -> VenvId {
+        match self {
+            Self::Package(package) => package.to_venv_id(),
+            Self::Script(script) => script.to_venv_id(),
+        }
+    }
+}
+
 impl ToVenvId for Package {
     fn to_venv_id(&self) -> VenvId {
         self.manifest().to_venv_id()
+    }
+}
+
+impl ToVenvId for Script {
+    fn to_venv_id(&self) -> VenvId {
+        let hash = sha256_string(self.script_path().as_os_str().as_encoded_bytes());
+        let id = format!("{}-{hash}", self.manifest().name());
+        VenvId::Script {
+            script_name: self.manifest().name(),
+            venv_name: id.into(),
+        }
     }
 }
 

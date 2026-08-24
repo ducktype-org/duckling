@@ -15,6 +15,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/local_stack_database_builder.hpp>
+#include <vm/bytecode/validator/valid_type/finalized_kinds.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/builtin_functions.hpp>
@@ -38,8 +39,10 @@ namespace {
 		Op_call_func,
 		Op_call_builtinfunc,
 		Op_call_cfunc,
+		Op_call_ffifunc,
 		Op_virtual_call_pptr_method>;
-	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc>;
+	using CallingInstructions
+		= std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc>;
 
 	template<typename T>
 	concept DeinitializingInstruction = base::IsTupleMember<T, DeinitializingInstructions>;
@@ -78,6 +81,18 @@ namespace {
 			= *std::ranges::find(as_struct.fields, field_name, &valid_type::finalized::Field::name);
 
 		if (field.type != expected_field_type) throw ErrorT(std::forward<Args>(error_args)...);
+	}
+
+	template<class... Args>
+	const valid_type::ValidTypeID& derefCPtrType(
+		CRef<valid_type::finalized::CPointer> cptr,
+		const valid_type::ValidTypeMap&       types_ctx,
+		Args&&... error_args
+	) {
+		// Dereferencing needs a known pointee whose VM layout matches the native one.
+		if (!cptr->inner.has_value() || !types_ctx.at(*cptr->inner)->isFFICompliant())
+			throw CPtrNotDereferenceableError(std::forward<Args>(error_args)...);
+		return *cptr->inner;
 	}
 }
 
@@ -167,6 +182,9 @@ public:
 
 		auto size = bld_ref->size(stack_state_id);
 		if (size == number_of_ret_vals) throw RetValDeinitError(cause);
+		// note: we dont't allow to pop the ret-vals from stack, because that would be weird (e.g.
+		// caller's variable has not changed the name, but has changed the block...)
+
 		auto new_state = bld_ref->pop(stack_state_id);
 		auto new_size  = bld_ref->size(new_state);
 		CORE_ASSERT(new_size + 1 == size, "we expect that the size must be valid");
@@ -175,7 +193,7 @@ public:
 
 	[[nodiscard]]
 	usize size() const {
-		return VISIT(source, db, return db->size(stack_state_id););
+		return VISIT(source, db, return db->size(stack_state_id));
 	}
 
 	[[nodiscard]]
@@ -187,21 +205,14 @@ public:
 
 	[[nodiscard]]
 	LocalStackEntry front(usize idx = 0) const {
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				return LocalStackEntry{
-					.local_name = *bld_ref->getName(stack_state_id, idx),
-					.type       = types_ctx->at(*bld_ref->getTypeName(stack_state_id, idx)),
-				};
+		return VISIT(
+			source,
+			db,
+			return LocalStackEntry{
+				.local_name = *db->getName(stack_state_id, idx),
+				.type       = types_ctx->at(*db->getTypeName(stack_state_id, idx)),
 			}
-			variant_case(CRef<LocalStackDb>, db_ref) {
-				return LocalStackEntry{
-					.local_name = *db_ref->getName(stack_state_id, idx),
-					.type       = types_ctx->at(*db_ref->getTypeName(stack_state_id, idx)),
-				};
-			}
-		}
-		CORE_UNREACHABLE();
+		);
 	}
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
@@ -224,11 +235,7 @@ public:
 
 	[[nodiscard]]
 	CRef<valid_type::ValidType> at(base::StrID local_name) const {
-		base::StrID name_of_type{};
-
-		VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, local_name););
-
-		return types_ctx->at(name_of_type);
+		return VISIT(source, db, return types_ctx->at(*db->getTypeName(stack_state_id, local_name)));
 	}
 
 	/**
@@ -238,15 +245,12 @@ public:
 	 */
 	[[nodiscard]]
 	bool eqStack(StackStateID stack_state_1, StackStateID stack_state_2) const {
-		bool ans = false;
-		VISIT(
+		return VISIT(
 			source,
 			db,
-			ans
-			= db->eqTypes(stack_state_1, stack_state_2) && db->eqNames(stack_state_1, stack_state_2)
+			return db->eqTypes(stack_state_1, stack_state_2)
+		        && db->eqNames(stack_state_1, stack_state_2)
 		);
-
-		return ans;
 	}
 };
 
@@ -260,6 +264,7 @@ class FunctionValidator {
 	const ObjIdNameMap<GlobalData>&                  globals;
 	const base::HashMap<base::StrID, FuncSignature>& signatures;
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
+	const ObjIdNameMap<FFIFunction>&                 ffi_signatures;
 	const Function&                                  function;
 
 	std::vector<base::Optional<StackStateID>>            stack_before_instr;
@@ -269,13 +274,16 @@ class FunctionValidator {
 	template<CallingInstruction CallInstructionType>
 	void validateCallAndPop(LocalStack& local_stack, const CallInstructionType& instr) {
 		// Used for errors.
-		auto                generic_arg = opargs::OpCodeArg{ instr.function };
-		CRef<FuncSignature> signature   = [&] -> CRef<FuncSignature> {
-            if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.function)>)
-                return *builtins::getBuiltinFunctionSignature(instr.function.function_name);
-            if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.function)>)
-                return &ext_c_signatures.at(instr.function.function_name)->signature;
-            return &signatures.at(instr.function.function_name);
+		auto generic_arg = opargs::OpCodeArg{ instr.function };
+
+		CRef<FuncSignature> signature = [&] -> CRef<FuncSignature> {
+			if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.function)>)
+				return *builtins::getBuiltinFunctionSignature(instr.function.function_name);
+			if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.function)>)
+				return &ext_c_signatures.at(instr.function.function_name)->signature;
+			if constexpr (std::is_same_v<opargs::FFIFunctionName, decltype(instr.function)>)
+				return &ffi_signatures.at(instr.function.function_name)->signature;
+			return &signatures.at(instr.function.function_name);
 		}();
 
 		auto& params  = signature->parameters;
@@ -354,6 +362,24 @@ class FunctionValidator {
 		for (auto [idx, reslt]: zip(iota(0u), reslts | reverse))
 			if (local_stack.back(idx).type->getID() != reslt)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
+	}
+
+	void validateRet(
+		const LocalStack& local_stack, const Op_ret& instr, const FuncSignature& current_signature
+	) {
+		auto& returns    = current_signature.result_types;
+		usize ret_amount = returns.size();
+		CORE_ASSERT(
+			local_stack.size() >= ret_amount,
+			"Since we cannot pop the ret-vals, all the original return values must be on the stack"
+		);
+
+		// note: As of 22-06-2026, the only way for the function to return invalid types is via
+		// incorrect casting
+
+		for (usize i = 0; i < ret_amount; i++)
+			if (local_stack.front(i).type->getName() != returns.at(i).str)
+				throw InvalidRetError(instr);
 	}
 
 	void validateTailcall(
@@ -461,6 +487,12 @@ class FunctionValidator {
 					if (!type->isKind<valid_type::finalized::Opaque>())
 						throw InvalidArgumentTypeError(*place);
 				}
+				variant_case(CRef<opargs::PlaceCPtr>, place) {
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
+					if (!type->isKind<valid_type::finalized::CPointer>())
+						throw InvalidArgumentTypeError(*place);
+				}
 				variant_case_novalue(CRef<opargs::Immediate>) {}
 				variant_case(CRef<opargs::Type>, type_value) {
 					if (!types_ctx.contains(type_value->type_name))
@@ -478,6 +510,11 @@ class FunctionValidator {
 				variant_case(CRef<opargs::ExtCFunctionName>, function_value) {
 					auto fun_name = function_value->function_name;
 					if (!ext_c_signatures.contains(fun_name))
+						throw UnknownFunctionError(*function_value);
+				}
+				variant_case(CRef<opargs::FFIFunctionName>, function_value) {
+					auto fun_name = function_value->function_name;
+					if (!ffi_signatures.contains(fun_name))
 						throw UnknownFunctionError(*function_value);
 				}
 				variant_case(CRef<opargs::MethodName>, method_value) {
@@ -656,12 +693,69 @@ class FunctionValidator {
 				if (src_type != dst_type) throw PointerTypeMismatchError(instr);
 			}
 
-			instr_case_novalue(Op_mov_popq_popq, Op_mov_popq_imm) {}
+			instr_case_novalue(Op_mov_popq_popq) {}
+
+			instr_case(Op_mov_pcptr_pcptr, instr) {
+				if (getPlaceType(instr.src, current_stack)->getID()
+				    != getPlaceType(instr.dst, current_stack)->getID())
+					throw CPointerTypeMismatchError(instr);
+			}
+
+			instr_case(Op_load_pany_pcptr, instr) {
+				const auto cpointer = getPlaceType(instr.src_ptr, current_stack)
+				                          ->getKindAs<valid_type::finalized::CPointer>();
+				const auto inner = derefCPtrType(cpointer, types_ctx, instr);
+				if (getPlaceType(instr.dst, current_stack)->getID() != inner)
+					throw CPtrPointeeMismatchError(instr);
+			}
+			instr_case(Op_store_pcptr_pany, instr) {
+				const auto cpointer = getPlaceType(instr.dst_ptr, current_stack)
+				                          ->getKindAs<valid_type::finalized::CPointer>();
+				const auto inner = derefCPtrType(cpointer, types_ctx, instr);
+				if (getPlaceType(instr.src, current_stack)->getID() != inner)
+					throw CPtrPointeeMismatchError(instr);
+			}
+			instr_case(Op_read_pptr_pcptr, instr) {
+				const auto ptr = getPlaceType(instr.dst_ptr, current_stack)
+				                     ->getKindAs<valid_type::finalized::Pointer>();
+				const auto inner = ptr->inner;
+				const auto cptr  = getPlaceType(instr.src_ptr, current_stack)
+				                      ->getKindAs<valid_type::finalized::CPointer>();
+				const auto c_inner = derefCPtrType(cptr, types_ctx, instr);
+				if (inner != c_inner) throw CPtrPointeeMismatchError(instr);
+			}
+			instr_case(Op_write_pcptr_pptr, instr) {
+				const auto ptr = getPlaceType(instr.src_ptr, current_stack)
+				                     ->getKindAs<valid_type::finalized::Pointer>();
+				const auto inner = ptr->inner;
+				const auto cptr  = getPlaceType(instr.dst_ptr, current_stack)
+				                      ->getKindAs<valid_type::finalized::CPointer>();
+				const auto c_inner = derefCPtrType(cptr, types_ctx, instr);
+				if (inner != c_inner) throw CPtrPointeeMismatchError(instr);
+			}
+			instr_case(Op_cast_pcptr_pptr, instr) {
+				const auto ptr = getPlaceType(instr.src_ptr, current_stack)
+				                     ->getKindAs<valid_type::finalized::Pointer>();
+				const auto cptr = getPlaceType(instr.dst, current_stack)
+				                      ->getKindAs<valid_type::finalized::CPointer>();
+				const auto c_inner = derefCPtrType(cptr, types_ctx, instr);
+				if (ptr->inner != c_inner) throw CPtrPointeeMismatchError(instr);
+			}
+			instr_case_novalue(Op_movCast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr) {}
+
+			instr_case(Op_add_pcptr_p64, instr) {
+				if (current_stack.at(instr.offset.var_name)->getName() != "i64")
+					throw ArgumentMismatchError(instruction);
+			}
+
 
 			instr_case(Op_mov_pste_pste, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case(Op_mov_pfst_pfst, instr) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case(Op_mov_pvnt_pvnt, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 
@@ -1209,7 +1303,7 @@ class FunctionValidator {
 					throw VariantTypeMismatchError(instr);
 			}
 			instr_case_novalue(Op_label, Op_jmp_label, Op_jmpIf_label, Op_jmpIfNot_label) {}
-			instr_case_novalue(Op_call_func, Op_call_builtinfunc, Op_call_cfunc) {}
+			instr_case_novalue(Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc) {}
 			instr_case_novalue(Op_set_threadctx) {}
 			instr_case(Op_virtual_call_pptr_method, instr) {
 				// For a method call to be valid it has to be present in the interface.
@@ -1471,7 +1565,21 @@ class FunctionValidator {
 				if (types_ctx.at(table_type->inner)->getName() != "byte")
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_nop, Op_exit, Op_initFromVmValue) {}
+			instr_case(Op_fstToDynTable_pptr_pptr, instr) {
+				const auto src_ptr = getPlaceType(instr.src_table_ptr, current_stack)
+				                         ->getKindAs<valid_type::finalized::Pointer>();
+				const auto src_table = expectPointerType<valid_type::finalized::FixedSizeTable>(
+					src_ptr, types_ctx, instr
+				);
+				const auto dst_ptr = getPlaceType(instr.dst_table_ptr, current_stack)
+				                         ->getKindAs<valid_type::finalized::Pointer>();
+				const auto dst_table = expectPointerType<valid_type::finalized::DynamicTable>(
+					dst_ptr, types_ctx, instr
+				);
+				if (src_table->inner != dst_table->inner)
+					throw DynamicTableTypeMismatchError(instr);
+			}
+			instr_case_novalue(Op_nop, Op_exit, Op_initFromVMValue) {}
 		}
 		POP_DIAGNOSTIC
 	}
@@ -1642,7 +1750,8 @@ class FunctionValidator {
 					dfs_stack.emplace_back(getLabelTarget(instr.label), local_stack);
 				}
 				instr_case(Op_ret, instr) {
-					stack_before_instr[index]    = local_stack.getStateID();
+					stack_before_instr[index] = local_stack.getStateID();
+					validateRet(local_stack, instr, function.signature);
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
@@ -1657,6 +1766,11 @@ class FunctionValidator {
 					index++;
 				}
 				instr_case(Op_call_cfunc, instr) {
+					stack_before_instr[index] = local_stack.getStateID();
+					validateCallAndPop(local_stack, instr);
+					index++;
+				}
+				instr_case(Op_call_ffifunc, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
 					validateCallAndPop(local_stack, instr);
 					index++;
@@ -1711,12 +1825,14 @@ public:
 		const ObjIdNameMap<GlobalData>&                  globals,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
+		const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
 		const Function&                                  function
 	):
 		  types_ctx(types_ctx),
 		  globals(globals),
 		  signatures(signatures),
 		  ext_c_signatures(ext_c_signatures),
+		  ffi_signatures(ffi_signatures),
 		  function(function) {}
 
 	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb> validateAndExtractReachableCode(
@@ -1744,12 +1860,16 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
+	const FlagContext&                               flag_context,
+	const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
 	const Function&                                  function
 ) {
 	FuncSignature signature = signatures.at(function.name);
 
 
-	FunctionValidator validator(types, globals_map, signatures, ext_c_signatures, function);
+	FunctionValidator validator(
+		types, globals_map, signatures, ext_c_signatures, ffi_signatures, function
+	);
 
 	valid_function::ValidFunction new_function;
 	new_function.name = function.name;
@@ -1757,6 +1877,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
 	new_function.signature    = signature;
+	new_function.flags        = flag_context.getFlagsForFunction(function.name.str);
 
 	return new_function;
 }

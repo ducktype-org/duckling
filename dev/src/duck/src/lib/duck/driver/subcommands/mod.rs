@@ -4,10 +4,15 @@ use crate::{DuckContext, QuackResult};
 
 // @TODO: #1650 Restore removed subcommands once they are implemented.
 mod build;
+mod clean_storage;
 #[cfg(feature = "shell-completion")]
 mod generate;
+mod info;
 mod init;
+mod list;
+mod remove;
 mod repl;
+mod run;
 pub mod run_script;
 mod sync;
 
@@ -15,12 +20,17 @@ mod sync;
 pub fn subcommands() -> Vec<Command> {
     vec![
         build::get_parser(),
+        run::get_parser(),
+        remove::get_parser(),
         #[cfg(feature = "shell-completion")]
         generate::get_parser(),
         init::get_parser(),
         run_script::get_parser(),
         sync::get_parser(),
         repl::get_parser(),
+        list::get_parser(),
+        info::get_parser(),
+        clean_storage::get_parser(),
     ]
 }
 
@@ -33,12 +43,17 @@ pub type ExecFn = fn(&DuckContext, &ArgMatches) -> QuackResult<()>;
 pub fn exec_for(name: &str) -> Option<ExecFn> {
     let f = match name {
         "build" => build::execute,
+        "clean-storage" => clean_storage::execute,
         #[cfg(feature = "shell-completion")]
         "generate" => generate::execute,
+        "info" => info::execute,
         "init" => init::execute,
+        "list" => list::execute,
+        "remove" => remove::execute,
+        "repl" => repl::execute,
+        "run" => run::execute,
         "run-script" => run_script::execute,
         "sync" => sync::execute,
-        "repl" => repl::execute,
         _ => return None,
     };
     Some(f)

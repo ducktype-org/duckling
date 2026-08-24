@@ -1,0 +1,33 @@
+var copies: i64 = 0;
+
+class Counter {
+    id: i32 = 0;
+    Counter.copy(other: const ref Counter) = {
+        copies = copies + 1;
+        return Counter(other.id);
+    }
+}
+
+# Lists are always deep-copied: their generated copy constructor allocates a fresh buffer and
+# copies every element with the element type's copy constructor.
+#
+fun main() -> i64 = {
+    var lst: List:{Counter};
+    lst.push(Counter(1));
+    lst.push(Counter(1));
+    lst.push(Counter(1));
+
+    var lst2: List:{Counter} = copy lst;    # +3
+    builtin_output_i64(copies);             # 3
+
+    # @TODO: #3351 Restore this once `copy` on a `box T` keeps the box, so that `List.copy` can
+    # copy boxed elements.
+    # var box_lst: List:{box Counter};
+    # box_lst.push(new Counter(1));
+    # box_lst.push(new Counter(1));
+    # box_lst.push(new Counter(1));
+    # var box_lst2: List:{box Counter} = copy box_lst; # +3
+    # builtin_output_i64(copies);                      # 6
+
+    return 0;
+}
