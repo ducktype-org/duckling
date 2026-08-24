@@ -61,7 +61,8 @@ namespace ser {
 			return detail::dispatchWrite<T>(ar, *o);
 		}
 
-		static constexpr Errc read(reader auto& ar, ::std::optional<T>& o) {
+		static constexpr Errc read(reader auto& ar, ::std::optional<T>& o)
+			requires(FILLABLE || ::std::is_move_constructible_v<T>) {
 			::std::uint8_t present = 0;
 			if (const auto c = detail::dispatchRead<::std::uint8_t>(ar, present); c != Errc::Ok)
 				return c;
