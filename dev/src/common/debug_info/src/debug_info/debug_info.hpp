@@ -8,6 +8,9 @@
 #include <ser/std/all.hpp>
 
 #include <functional>
+#include <ostream>
+#include <string>
+#include <string_view>
 #include <variant>
 
 namespace debug_info {
@@ -26,6 +29,12 @@ namespace debug_info {
 
 	struct SourcePosition final {
 		std::variant<PstHashPostion, FilePosition> line_col_position;
+
+		/**
+		 * @brief Returns a one-line human-readable form, e.g. "foo.duck:1:0 - 3:1" for a
+		 * FilePosition or "pst[<begin hex> .. <end hex>]" for a PstHashPostion.
+		 */
+		[[nodiscard]] std::string toString() const;
 	};
 
 	struct InstructionMetadata final {
@@ -82,5 +91,16 @@ namespace debug_info {
 		 * Does not perform any assertions.
 		 */
 		void mergeFrom(DebugInfo&& other);
+
+		/**
+		 * @brief Writes a human-readable dump of the whole DebugInfo to @p os.
+		 */
+		void debugPrint(std::ostream& os) const;
+
+		/**
+		 * @brief Returns what debugPrint() writes as a string.
+		 */
+		[[nodiscard]] std::string toString() const;
 	};
+
 }

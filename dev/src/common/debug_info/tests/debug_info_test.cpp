@@ -6,6 +6,7 @@
 
 #include <sstream>
 #include <string>
+#include <string_view>
 
 using namespace debug_info;
 
@@ -19,6 +20,7 @@ public:
 		TESTER_ADD_TEST(serializationRoundTripTest);
 		TESTER_ADD_TEST(invalidStreamTest);
 		TESTER_ADD_TEST(resolvePositionsTest);
+		TESTER_ADD_TEST(debugPrintTest);
 	}
 
 private:
@@ -283,6 +285,66 @@ private:
 		assertTrue(param_fp.file_path == "resolved.duck", "Parameter: file_path incorrect");
 		assertTrue(param_fp.start_line == 10, "Parameter: start_line incorrect");
 		assertTrue(param_fp.start_column == 100, "Parameter: start_column incorrect");
+	}
+
+	/** @brief What a developer reading a DebugInfo dump gets to see. */
+	void debugPrintTest() {
+		const auto contains = [](const std::string& haystack, std::string_view needle) {
+			return haystack.find(needle) != std::string::npos;
+		};
+
+		const auto dump = makeTestDebugInfo().toString();
+
+		std::ostringstream oss;
+		makeTestDebugInfo().debugPrint(oss);
+		assertTrue(oss.str() == dump, "toString and debugPrint should produce the same text");
+
+		assertTrue(contains(dump, "target: DBC"), "Dump should name the target");
+		assertTrue(contains(dump, "module_path: test.dbc"), "Dump should name the module path");
+		assertTrue(
+			contains(dump, "source_positions_type: LineColumn"),
+			"Dump should name the source positions type"
+		);
+
+		assertTrue(contains(dump, "function _Zfoo {"), "Dump should open the function block");
+		assertTrue(contains(dump, "name: foo"), "Dump should show the demangled function name");
+		assertTrue(
+			contains(dump, "position: test.duck:1:0 - 10:1"),
+			"Dump should show a FilePosition as file:line:column"
+		);
+
+		assertTrue(contains(dump, "parameters: 2"), "Dump should count the parameters");
+		assertTrue(
+			contains(dump, "[0] param_a -> test.duck:2:0 - 2:1"),
+			"Dump should show a parameter by index"
+		);
+		assertTrue(
+			contains(dump, "[1] param_b -> <unknown>"), "Dump should mark a missing position"
+		);
+
+		assertTrue(contains(dump, "instructions: 2"), "Dump should count the instructions");
+		assertTrue(
+			contains(dump, "@0 -> test.duck:2:0 - 2:1"), "Dump should show an instruction by offset"
+		);
+
+		assertTrue(contains(dump, "variable inits: 2"), "Dump should count the variable inits");
+		assertTrue(contains(dump, "@0 local_x -> pst["), "Dump should show a PST-hash position");
+		assertTrue(contains(dump, "@8 local_y -> <unknown>"), "Dump should show every variable");
+
+		assertTrue(contains(dump, "types: 2"), "Dump should count the types");
+		assertTrue(contains(dump, "_TMyType -> MyType"), "Dump should map a type to its name");
+
+		// An empty DebugInfo says so instead of printing bare zeroes.
+		const auto empty_dump = DebugInfoBuilder(Target::DBC, SourcePositionsType::PstHash)
+		                            .beginFunction("_Zempty", std::nullopt, std::nullopt)
+		                            .end()
+		                            .build()
+		                            .toString();
+		assertTrue(contains(empty_dump, "module_path: <none>"), "Empty module path should show");
+		assertTrue(contains(empty_dump, "name: <unnamed>"), "Missing function name should show");
+		assertTrue(contains(empty_dump, "position: <unknown>"), "Missing position should show");
+		assertTrue(contains(empty_dump, "parameters: none"), "Empty parameters should show as none");
+		assertTrue(contains(empty_dump, "types: none"), "Empty types should show as none");
 	}
 };
 

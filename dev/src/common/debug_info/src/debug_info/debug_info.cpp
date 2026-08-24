@@ -2,7 +2,10 @@
 
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/str/str_utils.hpp>
 
+#include <sstream>
 #include <variant>
 
 namespace debug_info {
@@ -51,6 +54,105 @@ namespace debug_info {
 		for (auto& [name, metadata]: other.functions) functions.emplace(name, std::move(metadata));
 		for (auto& [name, metadata]: other.types) types.emplace(name, std::move(metadata));
 		auto _ = std::move(other);
+	}
+
+	namespace {
+
+		/// Position, name of an optional/empty field, count - the placeholders a dump needs.
+		std::string orElse(const base::Optional<SourcePosition>& position) {
+			return position.has_value() ? position.value().toString() : "<unknown>";
+		}
+
+		std::string countOf(usize count) { return count == 0 ? "none" : std::to_string(count); }
+
+		std::string_view nameOf(Target target) {
+			switch (target) {
+			case Target::DBC:
+				return "DBC";
+			}
+			return "<invalid>";
+		}
+
+		std::string_view nameOf(SourcePositionsType type) {
+			switch (type) {
+			case SourcePositionsType::PstHash:
+				return "PstHash";
+			case SourcePositionsType::LineColumn:
+				return "LineColumn";
+			}
+			return "<invalid>";
+		}
+
+	}  // namespace
+
+	std::string SourcePosition::toString() const {
+		variant_match(line_col_position) {
+			variant_case(PstHashPostion, pst) {
+				auto out = base::strConcat("pst[", pst.postion_scope_begin.toStringHex());
+				if_opt_some(pst.postion_scope_end, end) out
+					+= base::strConcat(" .. ", end.toStringHex());
+				return out + "]";
+			}
+			variant_case(FilePosition, file) {
+				return base::strConcat(
+					file.file_path,
+					":",
+					file.start_line,
+					":",
+					file.start_column,
+					" - ",
+					file.end_line,
+					":",
+					file.end_column
+				);
+			}
+		}
+		CORE_PANIC("Unhandled SourcePosition alternative");
+	}
+
+	void DebugInfo::debugPrint(std::ostream& os) const {
+		os << "DebugInfo {\n  target: " << nameOf(target) << "\n  module_path: "
+		   << (module_path.empty() ? "<none>" : std::string_view(module_path))
+		   << "\n  source_positions_type: " << nameOf(source_positions_type)
+		   << "\n  functions: " << countOf(functions.size()) << "\n";
+
+		for (const auto& [mangled_name, function]: functions) {
+			os << "    function " << mangled_name << " {\n      name: "
+			   << (function.function_name.has_value() ? std::string_view(*function.function_name)
+			                                          : "<unnamed>")
+			   << "\n      position: " << orElse(function.position) << "\n";
+
+			// Parameters go by index, instructions and variable inits by bytecode offset.
+			os << "      parameters: " << countOf(function.parameter_indexes_to_metadata.size())
+			   << "\n";
+			for (const auto& [index, parameter]: function.parameter_indexes_to_metadata)
+				os << "        [" << index << "] " << parameter.name << " -> "
+				   << orElse(parameter.position) << "\n";
+
+			os << "      instructions: " << countOf(function.instr_offsets_to_metadata.size())
+			   << "\n";
+			for (const auto& [offset, instruction]: function.instr_offsets_to_metadata)
+				os << "        @" << offset << " -> " << instruction.position.toString() << "\n";
+
+			os << "      variable inits: "
+			   << countOf(function.instr_offsets_to_variable_init.size()) << "\n";
+			for (const auto& [offset, variable]: function.instr_offsets_to_variable_init)
+				os << "        @" << offset << " " << variable.name << " -> "
+				   << orElse(variable.position) << "\n";
+
+			os << "    }\n";
+		}
+
+		os << "  types: " << countOf(types.size()) << "\n";
+		for (const auto& [mangled_name, type]: types)
+			os << "    " << mangled_name << " -> " << type.name << "\n";
+		os << "}\n";
+	}
+
+	std::string DebugInfo::toString() const {
+		std::ostringstream out;
+		debugPrint(out);
+		return out.str();
 	}
 
 }  // namespace debug_info
