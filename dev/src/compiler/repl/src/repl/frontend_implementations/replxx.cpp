@@ -23,7 +23,7 @@ namespace compiler::repl {
 	// clang-format off
 	static const std::set<std::string> DUCKLING_KEYWORDS = {
 		"alias", "and", "as", "assert", "block", "box", "break", "case", "catch",
-		"class", "compile_assert", "const", "continue", "copy", "debug", "defer",
+		"class", "compile_assert", "const", "continue", "copy", "copyof", "debug", "defer",
 		"dict", "else", "expand", "extends", "extern", "false", "for", "fun",
 		"fundecl", "if", "implements", "import", "in", "lambda", "let", "loop",
 		"match", "move", "namespace", "none", "not", "or", "pattern", "private",
