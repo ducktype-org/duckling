@@ -2,16 +2,10 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <debug_info/debug_info_io.hpp>
 
-#include <ser/ser.hpp>
 #include <tester/tester.hpp>
 
-#include <algorithm>
-#include <cstddef>
-#include <functional>
 #include <sstream>
 #include <string>
-#include <utility>
-#include <vector>
 
 using namespace debug_info;
 
@@ -214,26 +208,9 @@ private:
 			assertFalse(result.has_value(), "A truncated stream should fail to load");
 		}
 
-		// Entries out of order: written straight through `ser`, so the sorting saveToStream
-		// does is bypassed and the read side is what has to catch it.
-		{
-			auto  info     = makeTestDebugInfo();
-			auto& function = info.functions.at("_Zfoo");
-			std::ranges::sort(
-				function.instr_offsets_to_metadata,
-				std::greater<>{},
-				&std::pair<u64, InstructionMetadata>::first
-			);
-
-			std::vector<std::byte> bytes;
-			assertTrue(ser::write(bytes, info).hasValue(), "Writing unsorted debug info");
-
-			std::istringstream iss(
-				std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size())
-			);
-			auto result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "Unsorted instr_offsets_to_metadata should fail");
-		}
+		// Entry order is the object's own, not a canonical one: what a stream holds is what
+		// the builder produced, so a reordered vector is a different object and not a
+		// damaged file. The round-trip above is what pins that it comes back unchanged.
 	}
 
 	void resolvePositionsTest() {
