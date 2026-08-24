@@ -324,8 +324,14 @@ namespace compiler::driver {
 		};
 	}
 
-	DVMRuntimeConfig constructDVMRuntimeConfig(const options_types::LinkingOptions& linking_options
+	DVMLinkingOptions constructDVMLinkingOptions(const options_types::LinkingOptions& linking_options
 	) {
-		return { .shared_libraries = linking_options.dvm_shared_libraries };
+		auto dependencies
+			= linking_options.dvm_dependencies
+		    | std::views::transform([](const fs::FilePath& fs_path) { return fs_path.string(); })
+		    | std::ranges::to<std::vector>();
+
+		return { .shared_libraries       = linking_options.dvm_shared_libraries,
+			     .dependencies_libraries = std::move(dependencies) };
 	}
 }  // namespace compiler::driver

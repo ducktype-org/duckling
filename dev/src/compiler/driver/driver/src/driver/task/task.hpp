@@ -46,11 +46,16 @@ namespace compiler::driver {
 	 * @brief Config/metadata that needs to be saved in the generated DBC code,
 	 * in order to properly run the code.
 	 */
-	struct DVMRuntimeConfig {
+	struct DVMLinkingOptions {
 		/**
 		 * @brief Shared libraries that have to be loaded to run the code.
 		 */
 		std::vector<std::string> shared_libraries{};
+
+		/**
+		 * @brief DBC libraries paths to link to final executable.
+		 */
+		std::vector<std::string> dependencies_libraries{};
 	};
 
 	/**
@@ -65,7 +70,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Runtime config of the DVM.
 		 */
-		DVMRuntimeConfig runtime_config = {};
+		DVMLinkingOptions dvm_linking_options = {};
 
 		/**
 		 * @brief If a value is present, use this artifact collection
@@ -92,7 +97,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Runtime config of the DVM.
 		 */
-		DVMRuntimeConfig runtime_config = {};
+		DVMLinkingOptions dvm_linking_options = {};
 	};
 
 	/**
@@ -204,5 +209,6 @@ namespace compiler::driver {
 		const options_types::StdLibOptions&  stdlib_options
 	);
 
-	DVMRuntimeConfig constructDVMRuntimeConfig(const options_types::LinkingOptions& linking_options);
+	DVMLinkingOptions constructDVMLinkingOptions(const options_types::LinkingOptions& linking_options
+	);
 }

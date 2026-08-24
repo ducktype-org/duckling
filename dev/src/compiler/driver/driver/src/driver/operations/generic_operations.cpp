@@ -955,7 +955,7 @@ namespace compiler::driver {
 							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
-							target_dvm.runtime_config,
+							target_dvm.dvm_linking_options,
 							output_file
 						)
 					        .isBad())
@@ -985,7 +985,7 @@ namespace compiler::driver {
 					// We may mix artifacts from different collections here (std
 					// artifacts can come from a separate collection).
 					if (linkDVMPackage(
-							dbc_arts, debug_info_arts, target_dvm.runtime_config, output_file
+							dbc_arts, debug_info_arts, target_dvm.dvm_linking_options, output_file
 						)
 					        .isBad())
 						result = base::BAD;

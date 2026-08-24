@@ -117,6 +117,11 @@ namespace compiler::driver {
 			 * @brief The libraries that needs to be loaded by the VM to run the code.
 			 */
 			std::vector<std::string> dvm_shared_libraries;
+
+			/**
+			 * @brief The paths of the dependency libraries.
+			 */
+			std::vector<fs::FilePath> dvm_dependencies;
 		};
 	}
 

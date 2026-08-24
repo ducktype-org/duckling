@@ -112,7 +112,9 @@ clah::Clah getStandardDucklingOptions() {
 	    // Note that dev-logs options are not handled in pre-handler below,
 	    // they should be handled in each command by debug_options::getDebugOptionsFromClah and
 	    // passed to initializeTheCompiler.
-	    .add(clah::ParamBuilder::ofValue(clah::StringListParser::make("categories"))
+	    .add(clah::ParamBuilder::ofValue(
+				 clah::StringListParser::make("categories", clah::StringParser::make())
+		)
 	             .addLongName("dev-logs")
 	             .addShortDesc("Enable developer logs for given categories.")
 	             .build())
@@ -239,21 +241,32 @@ compiler::archiver::ArchivingOptions getArchivingOptionsFromClah(
 }
 
 auto getClahLinkingOptions() {
-	return std::array{ clah::ParamBuilder::ofValue(clah::FilePathParser::make("linker path"))
-		                   .addLongName("linker")
-		                   .addShortDesc("Path to the linker to use when creating executables.")
-		                   .optional()
-		                   .build(),
-		               clah::ParamBuilder::ofValue(clah::StringParser::make("additional options"))
-		                   .addLongName("additional-link-options")
-		                   .addShortDesc("Additional options to pass to the linker.")
-		                   .optional()
-		                   .build(),
-		               clah::ParamBuilder::ofValue(clah::StringListParser::make("shared libs"))
-		                   .addLongName("dvm-shared-libs")
-		                   .addShortDesc("Shared libraries that will be loaded by the VM.")
-		                   .optional()
-		                   .build() };
+	return std::array{
+		clah::ParamBuilder::ofValue(clah::FilePathParser::make())
+			.addLongName("linker")
+			.addShortDesc("Path to the linker to use when creating executables.")
+			.optional()
+			.build(),
+		clah::ParamBuilder::ofValue(clah::StringParser::make("options"))
+			.addLongName("additional-link-options")
+			.addShortDesc("Additional options to pass to the linker.")
+			.optional()
+			.build(),
+		clah::ParamBuilder::ofValue(
+			clah::StringListParser::make("shared-libs", clah::StringParser::make())
+		)
+			.addLongName("dvm-shared-libs")
+			.addShortDesc("Shared libraries that will be loaded by the VM.")
+			.optional()
+			.build(),
+		clah::ParamBuilder::ofValue(
+			clah::FilePathListParser::make("paths", clah::FilePathParser::make())
+		)
+			.addLongName("dvm-dependencies")
+			.addShortDesc("Paths to the library dependencies files.")
+			.optional()
+			.build(),
+	};
 }
 
 /**
@@ -271,6 +284,9 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 
 	if (auto lib_paths = parsing_result.getValue<std::vector<std::string>>("dvm-shared-libs"))
 		linking_options.dvm_shared_libraries = lib_paths.value();
+
+	if (auto lib_paths = parsing_result.getValue<std::vector<fs::FilePath>>("dvm-dependencies"))
+		linking_options.dvm_dependencies = lib_paths.value();
 
 	linking_options.native_link_c_standard_lib = not parsing_result.isFlag("no-c-standard-library");
 
@@ -312,15 +328,17 @@ namespace debug_options {
 		                                          | std::ranges::to<std::vector<std::string>>();
 
 		return std::array{
-			clah::ParamBuilder::ofValue(clah::CategoryListParser::make("categories", dump_categories)
-			)
+			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
+											"categories", clah::CategoryParser::make(dump_categories)
+										))
 				.addLongName("dump-ir")
 				.addShortDesc("Dump to file the comma separated intermediate representations.")
 				.addLongDesc("Possible values are: asm, llvm, lir, mir, hir.")
 				.build(),
-			clah::ParamBuilder::ofValue(
-				clah::CategoryListParser::make("categories", print_categories)
-			)
+			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
+											"categories",
+											clah::CategoryParser::make(print_categories)
+										))
 				.addLongName("print-ir")
 				.addShortDesc("Print to stdout the comma separated intermediate representations.")
 				.addLongDesc("Possible values are: lir, mir, hir.")
@@ -644,19 +662,19 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("dvm-backend")) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_dvm.dbc");
-						auto runtime_config = compiler::driver::constructDVMRuntimeConfig(
+						auto dvm_linking_options = compiler::driver::constructDVMLinkingOptions(
 							getLinkingOptionsFromClah(options)
 						);
 						if (options.isFlag("emit-static-lib")) {
 							build_target = compiler::driver::BuildTargetDVMLibrary{
-								.output_file_name = base::StrID(output_file_name),
-								.runtime_config   = std::move(runtime_config)
+								.output_file_name    = base::StrID(output_file_name),
+								.dvm_linking_options = std::move(dvm_linking_options)
 							};
 						} else {
 							build_target = compiler::driver::BuildTargetDVMExecutable{
-								.output_file_name  = base::StrID(output_file_name),
-								.link_std_packages = stdlib_options.stdActive(),
-								.runtime_config    = std::move(runtime_config)
+								.output_file_name    = base::StrID(output_file_name),
+								.link_std_packages   = stdlib_options.stdActive(),
+								.dvm_linking_options = std::move(dvm_linking_options)
 							};
 						}
 

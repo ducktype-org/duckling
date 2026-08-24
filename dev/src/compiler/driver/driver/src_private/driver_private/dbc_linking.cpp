@@ -45,7 +45,7 @@ namespace compiler::driver {
 	base::OkBad linkDVMPackage(
 		const std::vector<artifacts::FileArtifact>& objects,
 		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
-		const DVMRuntimeConfig&                     runtime_config,
+		const DVMLinkingOptions&                    dvm_linking_options,
 		artifacts::FileArtifact&                    output_file
 	) {
 		vm::loader::Loader dvm_linker;
@@ -68,7 +68,7 @@ namespace compiler::driver {
 		vm::code::CodeCollection merged_code = std::move(parse_result.value());
 
 		// This is also a bit hacky here, because we don't have any other place to put this code.
-		base::appendToVector(merged_code.object_files, runtime_config.shared_libraries);
+		base::appendToVector(merged_code.object_files, dvm_linking_options.shared_libraries);
 
 		// @TODO: #2895 deal with this once weak/strong symbols are added
 		deduplicateCodeCollection(merged_code);
