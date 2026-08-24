@@ -236,6 +236,98 @@ fun stringifyBool(x: bool) -> String = {
     return stringifyStr("false");
 }
 
+fun appendHexU64(s: ref String, value: u64) -> () = {
+    var digits = stringReserve(16);
+    var rest   = value;
+
+    if (rest == 0u64) digits.append('0');
+    while (rest > 0u64) {
+        let digit = rest % 16u64;
+        if (digit < 10u64) digits.prepend(('0' as u64 + digit) as char);
+        else digits.prepend(('a' as u64 + digit - 10u64) as char);
+        rest = rest / 16u64;
+    }
+
+    s.append(&digits);
+}
+
+#{
+    Pointer stringification.
+#}
+template(T: type)
+namespace pointer_stringification {
+    @backend_dependent
+    fundecl stringifyPtr(pointer: ptr T) -> String;
+
+    @dvm_only_impl
+    fun stringifyPtr(pointer: ptr T) -> String = {
+        var result = stringifyStr("ptr(");
+
+        # `dvm_ptr_parts` fails on a null pointer, which points into no block.
+        if (builtins.dvm_is_nullptr:{T}(pointer)) {
+            result.append("null)");
+            return result;
+        }
+
+        let parts    = builtins.dvm_ptr_parts:{T}(pointer);
+        let block_id = parts[0i64];
+        let offset   = parts[1i64];
+
+        result.append('b');
+        result.append(stringifyU64(block_id));
+        result.append("+0x");
+        appendHexU64(&result, offset);
+        result.append(')');
+        return result;
+    }
+
+    @native_only_impl
+    fun stringifyPtr(pointer: ptr T) -> String = {
+        if (pointer as u64 == 0) return stringifyStr("ptr(null)");
+        let buffer_cap = 21;
+        var address    = stringReserve(buffer_cap);
+        let format     = builtins.ptr_from_slice:{char}("%p\0") as cptr char;
+        let written
+            = clib.snprintf(address.pointer as cptr char, buffer_cap as u64, format, pointer as cptr u8);
+        address.len = runtime.native.writtenLength(written, buffer_cap);
+
+        var result = stringifyStr("ptr(");
+        result.append(&address);
+        result.append(')');
+        return result;
+    }
+
+}
+
+template(T: type)
+namespace manyptr_stringification {
+    # The distinction between manyptr and ptr is not supported on the DVM,
+    # as taking a pointer from manyptr throws when manyptr is null.
+    @backend_dependent
+    fundecl stringifyManyPtr(pointer: manyptr T) -> String;
+
+    @dvm_only_impl
+    fun stringifyManyPtr(pointer: manyptr T) -> String = {
+        if (builtins.dvm_is_nullmanyptr:{T}(pointer)) return stringifyStr("ptr(null)");
+        return pointer_stringification:{T}.stringifyPtr(pointer as ptr T);
+    }
+
+    @native_only_impl
+    fun stringifyManyPtr(pointer: manyptr T) -> String = {
+        return pointer_stringification:{T}.stringifyPtr(pointer as ptr T);
+    }
+}
+
+template(T: type)
+fun stringifyPtr(pointer: ptr T) -> String = {
+    return pointer_stringification:{T}.stringifyPtr(pointer);
+}
+
+template(T: type)
+fun stringifyManyPtr(pointer: manyptr T) -> String = {
+    return manyptr_stringification:{T}.stringifyManyPtr(pointer);
+}
+
 # The `*_to_string` runtime builtins write via `snprintf`, which appends a terminating
 # NUL, so `buffer_cap` is the total buffer size: it fits at most `buffer_cap - 1`
 # characters. 21 bytes hold the 20-character extremes of `i64`/`u64` plus the NUL, and
