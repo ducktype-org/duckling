@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 class Point { x: i64; y: i64; }
 class Wrapper { p: Point; }
 

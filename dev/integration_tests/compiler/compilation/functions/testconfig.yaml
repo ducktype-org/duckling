@@ -1,6 +1,15 @@
 # Tests for statements
 
 Tests:
+  # Call arguments are evaluated left to right, so the nested calls print 1 before 2.
+  argument_evaluation_order:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "1\n2\n3\n"
+        ExitCode: 0
+
   default_args_advanced:
     Cases:
       all:

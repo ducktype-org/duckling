@@ -1,4 +1,3 @@
-import core.builtins.*;
 import core.runtime;
 
 var g_a: i32 = 10;

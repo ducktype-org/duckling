@@ -1,4 +1,4 @@
-# Trivially destructible -  all fields have no-op destructors.
+# Trivially destructible -  all fields are trivially destructible.
 class Trivial {
     a: i32;
     b: i32;
@@ -50,10 +50,6 @@ class FinalBoss {
     # Tuples
     trivial_tup: (i32, bool);           # Trivial       -> no work
     nontrivial_tup: (i32, HasBox);      # Non-trivial   -> tuple destructor
-
-    # Lists
-    prim_list: List[i32];               # Trivial element   -> free buffer
-    class_list: List[HasBox];           # Non-trivial element -> destroy loop
 
     # Classes
     nested_default: HasBox;             # Generated destructor

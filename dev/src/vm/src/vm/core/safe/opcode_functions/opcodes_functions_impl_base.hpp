@@ -768,6 +768,17 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bvnt_bvnt)(FUNCTION_ARGS) {
+		{
+			Ref<vm::Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Ref<vm::Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_pptr)(FUNCTION_ARGS) {
 		{
 			const auto    dst = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
@@ -950,6 +961,15 @@ namespace vm {
 			std::memcpy(dst, view.getBegin(), size);
 		}
 		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrCast_p64_pptr)(FUNCTION_ARGS) {
+		{
+			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto       view = Memory::getRemainingPointerData(src);
+			WRITE_TO_PLACE_ARG(void*, instr->arg0, static_cast<void*>(view.getBegin()));
+		}
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_pptr)(FUNCTION_ARGS) {

@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun A() -> i64 = {
     {
         var index: i64 = 0;

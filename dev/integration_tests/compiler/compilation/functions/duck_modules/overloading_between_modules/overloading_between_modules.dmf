@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 import submodule_a as A;
 import submodule_b as B;
 import submodule_b.submodule_c as C;

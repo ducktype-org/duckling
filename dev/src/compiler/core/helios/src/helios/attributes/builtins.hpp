@@ -4,6 +4,7 @@
 #include <helios/hout/hout_fd.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/flag.hpp>
@@ -26,8 +27,13 @@ namespace compiler::helios::code {
  * This decides what layer implements the builtin. For example `ptr_from_slice`
  * is implemented in HOUT, but in the future some builtins will be implemented only
  * in DVM Backend or LLVM backend.
+ *
+ * A builtin with the `LIR` origin has no callable body at all: the MIR call to it is replaced by
+ * instructions while lowering to LIR, so the symbol never reaches the backends.
  */
-MAKE_FLAG_TYPE(compiler::helios, BuiltinOrigin, BuiltinOrigins, HOUT, DVMBackend, NativeBackend);
+MAKE_FLAG_TYPE(
+	compiler::helios, BuiltinOrigin, BuiltinOrigins, HOUT, LIR, DVMBackend, NativeBackend
+);
 
 namespace compiler::helios {
 	struct SymID;
@@ -54,16 +60,26 @@ namespace compiler::helios {
 		/** `alignment_of(v: meta) -> i64`: byte alignment of a type. HOUT `AlignOf` op. */
 		AlignmentOf,
 		/**
-		 * Box allocation / deallocation, dynamic-array (list) freeing and the box destructor.
+		 * `move_out(pointer: ptr T) -> T`: read the value under `pointer` without an explicit
+		 * `copy`/`move` on it, performs bitwise copy.
+		 */
+		MoveOut,
+		/**
+		 * `move_in(pointer: ptr T, value: T)`: write `value` into the storage under `pointer`
+		 * treating it as uninitialized. The previous content is never destroyed. Performs bitwise
+		 * copy.
+		 */
+		MoveIn,
+		/**
+		 * Box allocation / deallocation and the box destructor.
 		 * Unlike the other builtins these are not selected by the `@builtin("...")` attribute. They
-		 * are only called by the compiler in `box T`/`[T]` constructors and destructors.
+		 * are only called by the compiler in `box T` constructors and destructors.
 		 *
-		 * `BoxAlloc`/`BoxFree`/`ListFree` are implemented by the backends; `BoxDestructor` is
+		 * `BoxAlloc`/`BoxFree` are implemented by the backends; `BoxDestructor` is
 		 * implemented in HOUT (it destroys the pointee, then calls `box_free`).
 		 */
 		BoxAlloc,
 		BoxFree,
-		ListFree,
 		BoxDestructor,
 	};
 
@@ -121,13 +137,7 @@ namespace compiler::helios {
 	 */
 	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
 
-	/**
-	 * @brief Symbol of the compiler-generated `list_free(l: ref List[T])` builtin for a given
-	 * element type.
-	 *
-	 * The returned symbol is a declaration only, it's implemented in both backends.
-	 */
-	SymID listFreeSymForType(query::Context& ctx, tsh::AbstractType element_type);
+	SymID moveInSymForType(query::Context& ctx, tsh::SymbolType<> element_type);
 
 	/**
 	 * @brief Build a HOUT expression that constructs a `box T` holding `inner`.

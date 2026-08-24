@@ -1,4 +1,4 @@
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 
 use clap::{Arg, ArgMatches, Command, value_parser};
 
@@ -58,10 +58,11 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let pcx = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?;
     let features = features_from_matches(matches, pcx.package().get_package());
     let profile = profile_from_matches(matches);
-    let args: Vec<OsString> = matches
+    let args: Vec<&OsStr> = matches
         .get_many::<OsString>("args")
-        .map(|values| values.cloned().collect())
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .map(OsString::as_os_str)
+        .collect();
     let opts = RunOptions {
         pcx,
         used_features: features,

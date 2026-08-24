@@ -3,7 +3,6 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use super::compile::artifacts_layout::ArtifactsLayout;
 use super::identity::{Identity, Origin};
 use super::valid_package_name::{normalise_package_name, validate_package_name};
 use super::{Dependencies, Manifest, Package, Profiles, Version, capture_frontmatter};
@@ -78,14 +77,6 @@ impl Script {
         }
     }
 
-    /// Get the artifacts layout.
-    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
-        match self {
-            Self::Standalone(standalone_script) => standalone_script.artifacts_layout(),
-            Self::Associated(package_script) => package_script.artifacts_layout(),
-        }
-    }
-
     /// Get the appropriate manifest.
     pub fn manifest(&self) -> &Manifest {
         match self {
@@ -97,11 +88,6 @@ impl Script {
     /// Get the dependencies.
     pub fn dependencies(&self) -> &Dependencies {
         self.manifest().dependencies()
-    }
-
-    /// Get the dev-dependencies.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
     }
 
     /// Get the profiles.
@@ -217,6 +203,25 @@ impl Script {
             Self::Associated(package_script) => package_script.into_manifest(),
         }
     }
+
+    /// Get a [`Display`](fmt::Display) impl.
+    pub fn display(&self) -> impl fmt::Display + '_ {
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
+        struct ScriptDisplay<'a> {
+            script: &'a Script,
+        }
+        impl fmt::Display for ScriptDisplay<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self.script {
+                    Script::Standalone(standalone_script) => {
+                        write!(f, "{}", standalone_script.display())
+                    }
+                    Script::Associated(package_script) => write!(f, "{}", package_script.display()),
+                }
+            }
+        }
+        ScriptDisplay { script: self }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -260,11 +265,6 @@ impl PackageScript {
         self.package().artifacts_directory()
     }
 
-    /// Get the artifacts layout.
-    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
-        self.package().artifacts_layout()
-    }
-
     /// Get the package's manifest.
     pub fn manifest(&self) -> &Manifest {
         self.package().manifest()
@@ -273,11 +273,6 @@ impl PackageScript {
     /// Get the package's dependencies.
     pub fn dependencies(&self) -> &Dependencies {
         self.manifest().dependencies()
-    }
-
-    /// Get the package's dev-dependencies.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
     }
 
     /// Get the package's profiles.
@@ -320,6 +315,25 @@ impl PackageScript {
     pub fn package_version(&self) -> Version {
         self.package.version()
     }
+
+    /// Get a [`Display`](fmt::Display) impl.
+    pub fn display(&self) -> impl fmt::Display + '_ {
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
+        struct PackageScriptDisplay<'a> {
+            script: &'a PackageScript,
+        }
+        impl fmt::Display for PackageScriptDisplay<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(
+                    f,
+                    "script `{}` of a {}",
+                    self.script.script_name,
+                    self.script.package.display()
+                )
+            }
+        }
+        PackageScriptDisplay { script: self }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -354,11 +368,6 @@ impl StandaloneScript {
         &self.frontmatter
     }
 
-    /// Get the path to the artifacts directory.
-    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
-        self.frontmatter().artifacts_layout()
-    }
-
     /// Get the manifest constructed from the script's frontmatter.
     pub fn manifest(&self) -> &Manifest {
         self.frontmatter().manifest()
@@ -367,11 +376,6 @@ impl StandaloneScript {
     /// Get the dependencies specified in the frontmatter.
     pub fn dependencies(&self) -> &Dependencies {
         self.manifest().dependencies()
-    }
-
-    /// Get the dev-dependencies specified in the frontmatter.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
     }
 
     /// Get the profiles specified in the frontmatter.
@@ -394,6 +398,20 @@ impl StandaloneScript {
     /// Transform into the underlying frontmatter.
     pub fn into_frontmatter(self) -> FrontMatter {
         self.frontmatter
+    }
+
+    /// Get a [`Display`](fmt::Display) impl.
+    pub fn display(&self) -> impl fmt::Display + '_ {
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
+        struct StandaloneScriptDisplay<'a> {
+            script: &'a StandaloneScript,
+        }
+        impl fmt::Display for StandaloneScriptDisplay<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "script at `{}`", self.script.frontmatter.path.display())
+            }
+        }
+        StandaloneScriptDisplay { script: self }
     }
 }
 
@@ -421,7 +439,7 @@ impl FrontMatter {
     ) -> QuackResult<Self> {
         let script_folder = path
             .parent()
-            .context_internal("script path without parent")?;
+            .with_context_internal(|| format!("script path `{path:?}` without a parent"))?;
         // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
         let script_name = manifest.name();
         let artifacts_dir = script_folder.join(".duck_build").join(script_name);
@@ -471,11 +489,6 @@ impl FrontMatter {
         &self.artifacts_dir
     }
 
-    /// Get the artifacts layout.
-    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
-        T::new(self.artifacts_dir.clone())
-    }
-
     /// Get the manifest constructed from the script's frontmatter.
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
@@ -484,11 +497,6 @@ impl FrontMatter {
     /// Get the dependencies specified in the frontmatter.
     pub fn dependencies(&self) -> &Dependencies {
         self.manifest().dependencies()
-    }
-
-    /// Get the dev-dependencies specified in the frontmatter.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
     }
 
     /// Get the profiles specified in the frontmatter.

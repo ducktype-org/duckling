@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # This checks simple methods like getters and setters
 
 class Simple {

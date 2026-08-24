@@ -1,4 +1,3 @@
-import core.builtins.*;
 import core.*; # for a();
 
 fun main() -> i64 = {

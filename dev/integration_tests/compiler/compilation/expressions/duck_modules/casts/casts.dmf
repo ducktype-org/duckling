@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     # NOTE: Language currently only has i64 literals; no direct float literals.
     # We restrict tests to casts derivable from i64 sources.

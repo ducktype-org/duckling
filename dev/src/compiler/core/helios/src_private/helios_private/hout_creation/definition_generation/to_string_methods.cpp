@@ -1,6 +1,5 @@
 #include "to_string_methods.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
@@ -12,7 +11,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
@@ -21,6 +20,7 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -74,7 +74,7 @@ namespace compiler::helios::defgen {
 			const auto& params = fn_type.getParameterTypes();
 			if (params.size() == 2 && params.at(1) == expected_arg_type) return candidate;
 		}
-		ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+		ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 			base::strConcat(
 				"The String class language primitive doesn't have the `append(",
 				arg_by_reference ? "ref " : "",
@@ -170,7 +170,7 @@ namespace compiler::helios::defgen {
 					s.ret(s.call(s.ident(callee_sym), s.ident(self_param.helios_symbol)))
 				);
 			} else {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"toString for non-string slices not yet implemented."
 				));
 			}
@@ -193,10 +193,9 @@ namespace compiler::helios::defgen {
 			const CRef<tsh::TypeInterface> type_interface
 		) {
 			const Shorthand s{ ctx };
-			const auto      append_sym = stringAppendMethodSym(ctx, true);
-			// Create a reusable expression of the de-reffed self (self is passed by reference)
-			auto reusable_self_expr
-				= s.reusable(s.deref(s.ident(to_string_decl.parameters.at(0).helios_symbol)));
+			const auto      append_sym  = stringAppendMethodSym(ctx, true);
+			const SymID     self_symbol = to_string_decl.parameters.at(0).helios_symbol;
+			auto            deref_self  = [&] { return s.deref(s.ident(self_symbol)); };
 
 			// Prelude: the class name and opening parenthesis
 			const auto result_sym = ctx.query<QueryGeneratedSymbol>(
@@ -219,10 +218,8 @@ namespace compiler::helios::defgen {
 				const auto  field_type          = field.getType(ctx);
 				const SymID field_to_string_sym = toStringSymForType(ctx, field_type.getType());
 
-				auto            next_reusable_self_expr = reusable_self_expr->nextUse();
 				Box<code::Expr> accessed_field
-					= s.prepToPassSelf(s.access(std::move(reusable_self_expr), field.getSymbol()));
-				reusable_self_expr = std::move(next_reusable_self_expr);
+					= s.prepToPassSelf(s.access(deref_self(), field.getSymbol()));
 
 				auto stringified_field
 					= s.call(s.ident(field_to_string_sym), std::move(accessed_field));

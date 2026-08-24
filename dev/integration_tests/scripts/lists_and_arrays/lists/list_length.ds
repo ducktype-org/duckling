@@ -1,6 +1,4 @@
-import core.builtins.*;
-
-var l: List[i64];
+var l: List:{i64};
 l.push(1); 
 l.push(2); 
 l.push(3); 
@@ -8,4 +6,4 @@ l.push(4);
 l.push(5);
 l.push(6);  
 
-builtin_output_u64(l.length());
+builtin_output_i64(l.length());

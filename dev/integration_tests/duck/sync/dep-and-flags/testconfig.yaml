@@ -4,12 +4,8 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
-  echo "dependencies:
-    bar:
-      source:
-        path: ../bar
-
-  features:
+  @{duck-exe} -C foo add --local ../bar bar
+  echo "features:
     f: []" >> foo/quackconfig.yaml
 
   echo "features:
@@ -22,5 +18,12 @@ Tests:
       sync:
         test-cmd: duck -C foo sync
         Output:
-          String: 'info: successfully synchronized venv \`foo\`\n'
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: running gathering
+            info: starting the solver engine
+            info: starting fetching 2 packages
+            info: successfully synchronized venv \`foo\`"
         

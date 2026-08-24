@@ -5,8 +5,6 @@
 #include "query_graph.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
-#include <diagnostic_interactive/logger_fwd.hpp>
-#include <diagnostic_interactive/message_fwd.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
@@ -14,6 +12,8 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <diagnostic/logger_fwd.hpp>
+#include <diagnostic/message_fwd.hpp>
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
 #include <query_framework/internal/task_pool/task_pool.hpp>
 
@@ -324,7 +324,7 @@ namespace query::internal {
 		 * @brief Logs a diagnostic message for a specific node.
 		 * It creates a logger for the node if it doesn't exist and logs the message to it.
 		 */
-		void logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic);
+		void logDiagnosticForNode(NodeID node_id, Box<dia::MessageBase> diagnostic);
 
 		/**
 		 * @brief Logs diagnostic messages from a Logger for a specific node.
@@ -333,7 +333,7 @@ namespace query::internal {
 		 * moves all diagnostics from the provided Logger into the node's logger,
 		 * leaving the provided Logger empty.
 		 */
-		void logDiagnosticFromLoggerForNode(NodeID node_id, dia_int::Logger& src_logger);
+		void logDiagnosticFromLoggerForNode(NodeID node_id, dia::Logger& src_logger);
 
 		/**
 		 * @brief Clears all diagnostics for a specific node.
@@ -346,12 +346,12 @@ namespace query::internal {
 		 *
 		 * Not thread safe.
 		 */
-		base::Optional<CRef<dia_int::Logger>> getDiagnosticForNode(NodeID node_id) const;
+		base::Optional<CRef<dia::Logger>> getDiagnosticForNode(NodeID node_id) const;
 
 		/**
 		 * @brief Get the entire map of diagnostic loggers for direct access.
 		 */
-		CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> getDiagnosticLoggers() const;
+		CRef<concurrent::ConHashMap<NodeID, Box<dia::Logger>>> getDiagnosticLoggers() const;
 
 	private:
 		friend struct ::query::Context;
@@ -432,6 +432,6 @@ namespace query::internal {
 		/**
 		 * @brief Storage for the diagnostic loggers for each noe.
 		 */
-		concurrent::ConHashMap<NodeID, Box<dia_int::Logger>> diagnostic_loggers;
+		concurrent::ConHashMap<NodeID, Box<dia::Logger>> diagnostic_loggers;
 	};
 }

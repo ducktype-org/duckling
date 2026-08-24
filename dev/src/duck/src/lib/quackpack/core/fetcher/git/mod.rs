@@ -32,7 +32,7 @@ impl<'duck> GitClient<'duck> {
     }
 
     /// Clone a repository pointed by `source` into `destination`, and parse a package it contains.
-    #[tracing::instrument(skip(self, url) fields(url = url.as_str()))]
+    #[tracing::instrument(skip(self, url) fields(url = url.as_str(), ?reference, ?destination))]
     #[track_caller]
     pub fn clone_blocking(
         &self,
@@ -40,6 +40,9 @@ impl<'duck> GitClient<'duck> {
         reference: GitReference,
         destination: &Path,
     ) -> QuackResult<GitCloneResponse> {
+        self.ctx
+            .console()
+            .info(format!("cloning a repository at `{url}`"))?;
         let mut builder = RepoBuilder::new();
 
         builder.fetch_options(self.fetch_options_for(url, reference));
@@ -51,7 +54,7 @@ impl<'duck> GitClient<'duck> {
         let repository = match builder.clone(url.as_str(), destination) {
             Ok(repository) => repository,
             Err(e) => {
-                error!(error = %e, "failed to clone");
+                error!(error = %e, "failed to clone the repository");
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
                 // @TODO: #3146 Change this to only retry clone if the error could be from unsupporting shallow clone.
                 if matches!(e.code(), git2::ErrorCode::Auth) {
@@ -60,11 +63,11 @@ impl<'duck> GitClient<'duck> {
                 if !can_shallow_clone(url, reference) {
                     return Err(e.into());
                 }
-                debug!("will attempt full clone");
+                debug!("will attempt a full clone");
                 // We print this only here because otherwise the user gets information from the error.
-                self.ctx
-                    .console()
-                    .info(format!("failed to clone the repository at {url}: {e}"))?;
+                self.ctx.console().warning(format!(
+                    "failed to shallow clone the repository at `{url}`: {e}"
+                ))?;
                 self.ctx
                     .console()
                     .info("retrying with a full clone instead of a shallow clone")?;

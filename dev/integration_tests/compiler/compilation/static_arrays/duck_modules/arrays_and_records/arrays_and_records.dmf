@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 class Point { x: i64 = 0; y: i64 = 0; }
 class Polygon { vertices: Point[3]; id: i64 = 0; }
 

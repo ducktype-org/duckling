@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 class A {
     a: i64 = 0;
 }

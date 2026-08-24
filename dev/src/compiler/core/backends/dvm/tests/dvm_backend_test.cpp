@@ -18,6 +18,14 @@
 
 using namespace compiler::driver;
 
+namespace {
+#ifdef __APPLE__
+	const std::vector<std::string> SYSTEM_FFI_LIBS{ "libSystem.B.dylib" };
+#else
+	const std::vector<std::string> SYSTEM_FFI_LIBS{ "libc.so.6", "libm.so.6" };
+#endif
+}
+
 class DVMBackendTest final: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS DVMBackendTest
@@ -39,6 +47,7 @@ public:
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(backendDependentTest);
 		TESTER_ADD_TEST(allocTest);
+		TESTER_ADD_TEST(ffiTest);
 	}
 
 protected:
@@ -66,6 +75,7 @@ protected:
 			{ fs::FilePath(path("modules/pointers/")), "pointers" },
 			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
 			{ fs::FilePath(path("modules/alloc/")), "alloc" },
+			{ fs::FilePath(path("modules/ffi/")), "ffi" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -122,6 +132,22 @@ private:
 		// for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
 		// for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		runTestOnVm(code, input, output, args, exit_code);
+	}
+
+	/**
+	 * @brief Runs a module whose `extern("C")` calls are resolved from the system libraries.
+	 * The compiler emits the `ffi function` declarations, but the shared objects to resolve them
+	 * from come from the driver (`--dvm-shared-libs`), which is not part of this test, so they
+	 * are declared here directly on the collection.
+	 */
+	void runFFITest(
+		const std::string&                 module_path,
+		const base::Optional<std::string>& output    = {},
+		i64                                exit_code = 0
+	) {
+		auto code         = getModuleFromPath(module_path, ALL_CORE_MODULES);
+		code.object_files = SYSTEM_FFI_LIBS;
+		runTestOnVm(code, {}, output, {}, exit_code);
 	}
 
 	void runTest(
@@ -216,7 +242,21 @@ private:
 	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
 
 	void allocTest() {
-		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n", {}, 42);
+		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n10\n", {}, 42);
+	}
+
+	// Calls into libc/libm through libffi: scalars, a struct returned by value, `cptr char`
+	// strings, and `cptr`s to a struct, to a field, and to a static array element - both
+	// projected by the DVM itself and written through by C.
+	void ffiTest() {
+		runFFITest(
+			"ffi",
+			"8\n0\n"
+			"7\n33\n9\n33\n9\n4\n21\n21\n15\n33\n"
+			"100\n2\n50\n0\n0\n3\n3\n"
+			"5\n6\n7\n"
+			"4\n50\n4\n"
+		);
 	}
 };
 

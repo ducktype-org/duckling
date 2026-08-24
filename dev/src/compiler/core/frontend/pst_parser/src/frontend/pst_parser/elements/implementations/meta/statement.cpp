@@ -46,7 +46,8 @@ namespace pst {
 				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
-				    || Conditions::isBlockGroup(state, fwd - 1);
+				    || (Conditions::isBlockGroup(state, fwd - 1)
+				        && !Conditions::isMatchBodyBlock(state, fwd - 1));
 			}
 		};
 

@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     # Testing various signed integer types
     var i8_val: i8 = 127 as i8;

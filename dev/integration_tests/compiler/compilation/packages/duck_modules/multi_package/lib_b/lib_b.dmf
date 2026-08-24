@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 import lib_a;
 import lib_c;
 

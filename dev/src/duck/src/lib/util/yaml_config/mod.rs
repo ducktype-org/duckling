@@ -154,7 +154,7 @@ impl YamlConfig {
     fn _get(&self, key: &str) -> QuackResult<Option<&Value>> {
         debug!(%key, where = %self.get_location_description());
         if key.is_empty() {
-            qp_bail_internal!("empty key")
+            qp_bail_internal!("empty key in `_get`")
         }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
@@ -197,7 +197,7 @@ impl YamlConfig {
     fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         debug!(%key, ?value, where = %self.get_location_description());
         if key.is_empty() {
-            qp_bail_internal!("empty key")
+            qp_bail_internal!("empty key in `_set`")
         }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {

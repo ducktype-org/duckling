@@ -37,9 +37,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Assign,
 	AddressOf,
 
-	ListPush,
-	ListPop,
-
 	/**
 		@brief Placeholder.
 		@todo  Some decisions here to be made about operations like that.
@@ -89,6 +86,18 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	/** Cast is also parametrized by the source type and the target type */
 	Cast,
 
+	/**
+		Creates a variant value from a payload value.
+		1 argument (the payload), parametrized by VariantParameters (the chosen alternative).
+	*/
+	VariantConstruct,
+	/**
+		Produces a pointer to the variant's payload if its active alternative matches the
+		one in VariantParameters, a null pointer otherwise.
+		1 argument: a reference to the variant, not the variant place itself.
+	*/
+	VariantTryProject,
+
 	ZeroInitialize,
 
 	/** See readme.md for more info about destruct. */
@@ -100,6 +109,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	ReturnValue,
 	Jump,
 	Branch,
+	/**
+		Terminator: jumps to the first block argument if the pointer argument is null,
+		to the second one otherwise. Arguments: [pointer, null_target, not_null_target].
+	*/
+	BranchIfNull,
 
 	/**
 		@brief Operation that represents end of a function.
@@ -155,9 +169,6 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 	/// Used by the return value temporary, as it's destructor would have to be after the return.
 	NoDestructor,
 
-	/// Do not validate use-after-free for this local. Currently not used.
-	NoUseAfterFreeValidation,
-
 	/// We do not add the `ScopeStart` and `ScopeEnd` flags for this local.
 	/// Used for return value and parameters, as their scope is always valid in the function.
 	NoScopeFlags,
@@ -168,7 +179,11 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 	
 	/// Mark this local as a condition temporary, which can be used by the pipeline to handle it differently.
 	/// Not used.
-	ConditionTmpValue
+	ConditionTmpValue,
+
+	/// Do not run the use-before-initialization check 
+	// and use-after-free check for this local.
+	NoMoveStatusValidation
 )
 
 namespace compiler::mir {
@@ -271,6 +286,11 @@ namespace compiler::mir {
 		 */
 		MIRLocal(LocalID id, tsh::SymbolType<> type): id(id), helios_id({}), type(type) {}
 
+		friend struct Function;
+		friend struct FunctionBuilder;
+		friend MIRLocalRef;
+
+	public:
 		/**
 		 * Setter of lifetime scope of this local.
 		 * MIR lowering uses it to set the lifetime scope of the local
@@ -278,14 +298,6 @@ namespace compiler::mir {
 		 */
 		void setLifetimeScope(ScopeRef scope);
 
-		friend struct Function;
-		friend struct FunctionBuilder;
-		friend struct ExprBlockVisitor;
-		friend struct StmtBlockVisitor;
-		friend struct LocalVarCollectionVisitor;
-		friend MIRLocalRef;
-
-	public:
 		void debugPrint(std::ostream& os, bool detailed = false) const;
 
 		[[nodiscard]]
@@ -299,6 +311,11 @@ namespace compiler::mir {
 		[[nodiscard]]
 		bool carriesInformation(query::Context& ctx) const {
 			return type.getType().carriesInformation(ctx);
+		}
+
+		[[nodiscard]]
+		bool isTemporary() const {
+			return helios_id.empty();
 		}
 	};
 
@@ -617,7 +634,7 @@ namespace compiler::mir {
 	 *
 	 * Emitted when an assignment stores a value into a whole local (no projections), as opposed to
 	 * a declaration. Like @ref flagConstruct it marks the local as alive from this point on for
-	 * liveness analysis.
+	 * move-state analysis.
 	 */
 	constexpr OperationFlag flagReinit(MIRLocalRef local) {
 		return { .flag = OperationFlag::Flag::Reinit, .local = local };
@@ -654,6 +671,16 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Parameters of the VariantConstruct and VariantTryProject operations: the variant
+	 * alternative being constructed/projected. The index refers to the canonical order of
+	 * the interned variant type's alternatives.
+	 */
+	struct VariantParameters final {
+		usize             alternative_index;
+		tsh::SymbolType<> alternative_type;
+	};
+
+	/**
 	 * @brief Additional parameters for a `Operation::MetaTypeOperation` instruction, selecting
 	 * which meta operation it is.
 	 */
@@ -666,7 +693,8 @@ namespace compiler::mir {
 	 * For example, cast instruction needs to know
 	 * from which type to which type it is casting.
 	 */
-	using InstrParameters = std::variant<NoInstrParameters, CastParameters, MetaParameters>;
+	using InstrParameters
+		= std::variant<NoInstrParameters, CastParameters, VariantParameters, MetaParameters>;
 
 	/**
 	 * @brief Single instruction of MIR code.
@@ -778,8 +806,19 @@ namespace compiler::mir {
 	 * to the SymID
 	 * See: Function::HSymID for usage
 	 */
-	struct GlobalVariableCTOR final {
+	struct GlobalVariableCtorDtor final {
+		enum class Type { Ctor, Dtor };
+
+		Type          type;
 		helios::SymID global_var_id;
+
+		static GlobalVariableCtorDtor ctor(helios::SymID global_var_id) {
+			return { .type = Type::Ctor, .global_var_id = global_var_id };
+		}
+
+		static GlobalVariableCtorDtor dtor(helios::SymID global_var_id) {
+			return { .type = Type::Dtor, .global_var_id = global_var_id };
+		}
 	};
 
 	/**
@@ -817,6 +856,11 @@ namespace compiler::mir {
 		base::StableVector<const MIRLocal> local_list;
 
 		/**
+		 * @brief The `LocalID` the next local added to this function gets.
+		 */
+		u64 next_local_id;
+
+		/**
 		 * Lifetimes scope-tree of this function.
 		 */
 		LifetimeScopeTree lifetime_scope_tree;
@@ -832,7 +876,7 @@ namespace compiler::mir {
 		 * HELIOS SymID related to the function.
 		 * Functions without a helios_id are functions created for eg. from expressions
 		 */
-		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;
+		using HSymID = std::variant<FunctionSymID, GlobalVariableCtorDtor>;
 
 		HSymID helios_id;
 
@@ -852,6 +896,7 @@ namespace compiler::mir {
 			base::StableHashMap<BlockID, Block> blocks,
 			std::vector<BlockID>                block_order,
 			base::StableVector<const MIRLocal>  local_list,
+			u64                                 next_local_id,
 			LifetimeScopeTree                   lifetime_scope_tree,
 			ScopeRef                            no_lifetime_scope,
 			HSymID                              helios_id
@@ -859,6 +904,12 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
+
+		/**
+		 * @brief Adds a compiler generated local to an already built function and returns it. Used
+		 * when adding lifetime flags in `AddLifetimeFlagsLocalsPass`.
+		 */
+		MIRLocalRef addGeneratedLocal(tsh::SymbolType<> type, ScopeRef scope, LifetimeFlags flags);
 
 		void debugPrint(std::ostream& os) const;
 
@@ -873,6 +924,13 @@ namespace compiler::mir {
 		 */
 		[[nodiscard]]
 		base::OkBad validateBlockIDs() const;
+
+		[[nodiscard]] BlockID lastBlock() const { return block_order.back(); }
+	};
+
+	struct MIRCtorDtorPair {
+		CRef<mir::Function>                 constructor;
+		base::Optional<CRef<mir::Function>> destructor;
 	};
 
 	/**
@@ -884,10 +942,10 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Initial value for the global variable.
-		 * Can be either a compile-time value or a reference to a ctor function.
+		 * Can be either a compile-time value or a reference to a ctor/dtor functions.
 		 * Should always be a CTV if kind is Const
 		 */
-		std::variant<ctv::CompileTimeValue, CRef<mir::Function>> initial_value;
+		std::variant<ctv::CompileTimeValue, MIRCtorDtorPair> initial_value;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};

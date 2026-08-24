@@ -249,6 +249,9 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_cptrWrite_p64_pptr>(i.dst_ptr, i.src_ptr);
 				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
 			}
+			instr_case(high::Op_cast_pcptr_pptr, i) {
+				addLow<Op_cptrCast_p64_pptr>(i.dst, i.src_ptr);
+			}
 			instr_case(high::Op_movCast_pcptr_pcptr, i) {
 				// A reinterpreting cast is a plain 8-byte move.
 				addLow<Op_mov_p64_p64>(i.dst, i.src);
@@ -261,6 +264,7 @@ namespace vm::loader::compiler::safe::detail {
 			}
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
+			instr_case(high::Op_mov_pvnt_pvnt, i) { addLow<Op_mov_bvnt_bvnt>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_imm, i) { addLow<Op_add_p64_imm>(i.dst, i.src); }
 			instr_case(high::Op_add_p32_p32, i) { addLow<Op_add_p32_p32>(i.dst, i.src); }

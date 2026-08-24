@@ -330,8 +330,9 @@ private:
 		{
 			auto module_id = frontend::createModuleTreeFromContents(
 				R"(
+				class C { fun push(x: i32) -> () = {} }
 				fun foo() = {
-					var a: List[i32];
+					var a: C;
 					a.push(5);
 				}
 			)",
@@ -349,9 +350,10 @@ private:
 		{
 			auto module_id = frontend::createModuleTreeFromContents(
 				R"(
+				class C { fun pop() -> i32 = 0; }
 				fun foo() = {
-					var a: List[i32];
-					a.pop(5u64);
+					var a: C;
+					a.pop();
 				}
 			)",
 				"test_pkg"

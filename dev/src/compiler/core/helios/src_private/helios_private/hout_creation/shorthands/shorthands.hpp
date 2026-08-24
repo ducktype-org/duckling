@@ -26,13 +26,16 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/passing.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/pointers/shared_box.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -114,6 +117,50 @@ namespace compiler::helios::code::shorthands {
 	public:
 		explicit Shorthand(query::Context& ctx): ctx(&ctx) {}
 
+		/**
+		 * @brief Prepares an expression to be consumed by a new owner. Every builder that hands a
+		 * value to a new owner should pass it through this method.
+		 */
+		[[nodiscard]]
+		Box<Expr> consume(Box<Expr> value) const {
+			switch (passingMethod(*ctx, value->expression_type)) {
+			case PassingMethod::ByteCopy:
+				return value;
+			case PassingMethod::ImplicitMove: {
+				auto origin = value->origin.generatedFrom();
+				return makeBox<MoveExpr>(
+					*ctx, origin, std::move(value), MoveExpr::MoveKind::Implicit
+				);
+			}
+			case PassingMethod::ExplicitCopyOrMove:
+				CORE_PANIC(base::strConcat(
+					"Generated HOUT passes a non-trivially-copyable value of type `",
+					value->expression_type.getSymbolType().toString(),
+					"` without saying how. Wrap it in `s.copy(...)` to copy it or "
+					"`s.move(...)` "
+					"to move it."
+				));
+			case PassingMethod::NotCopyable:
+				CORE_PANIC(base::strConcat(
+					"Consumed value of type `",
+					value->expression_type.getSymbolType().toString(),
+					"` is not copyable. `s.move(...)` it."
+				));
+			}
+			CORE_UNREACHABLE();
+		}
+
+	private:
+		/**
+		 * @brief Applies `consume(...)` to every expression in @p values.
+		 */
+		[[nodiscard]]
+		std::vector<Box<Expr>> consumeAll(std::vector<Box<Expr>> values) const {
+			for (auto& value: values) value = consume(std::move(value));
+			return values;
+		}
+
+	public:
 		Shorthand(const Shorthand&)            = delete;
 		Shorthand(Shorthand&&)                 = delete;
 		Shorthand& operator=(const Shorthand&) = delete;
@@ -254,10 +301,10 @@ namespace compiler::helios::code::shorthands {
 			);
 		}
 
-		/** @brief A tuple value `(elements, ...)`. */
+		/** @brief A tuple value `(elements, ...)`. The elements are consumed into the tuple. */
 		[[nodiscard]]
 		Box<TupleExpr> tuple(std::vector<Box<Expr>> elements) const {
-			return makeBox<TupleExpr>(*ctx, generatedOrigin(), std::move(elements));
+			return makeBox<TupleExpr>(*ctx, generatedOrigin(), consumeAll(std::move(elements)));
 		}
 
 		/** @brief A tuple value from a pack of elements. */
@@ -272,6 +319,28 @@ namespace compiler::helios::code::shorthands {
 		/** @brief A variant type constructor from a pack of subtypes. */
 		HOUT_EXPR_PACK_OVERLOAD(variant, VariantTypeConstructorExpr, 2)
 
+		/**
+		 * @brief An aggregate value built element-by-element, in place.
+		 *
+		 * @p values holds one expression per element - fields in declaration order for
+		 * struct/class/tuple types, items in index order for static array types, or a single value
+		 * that fills every element of an array. The values are consumed into the aggregate.
+		 */
+		[[nodiscard]]
+		Box<CreateAggregateExpr> createAggregate(
+			tsh::AbstractType type, std::vector<Box<Expr>> values, StmtPack per_element_body = {}
+		) const {
+			auto body = std::move(per_element_body).toCodeBlock();
+
+			base::Optional<base::CSharedBox<CodeBlock>> body_block;
+			if (!body.statements.empty())
+				body_block = base::makeSharedBox<CodeBlock>(std::move(body));
+
+			return makeBox<CreateAggregateExpr>(
+				*ctx, generatedOrigin(), type, consumeAll(std::move(values)), std::move(body_block)
+			);
+		}
+
 		/** @brief A field access `base.field`. */
 		[[nodiscard]]
 		Box<AccessExpr> access(Box<Expr> base, SymID field) const {
@@ -284,11 +353,13 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<IndexExpr>(*ctx, generatedOrigin(), std::move(base), std::move(idx));
 		}
 
-		/** @brief A call `callee(arguments...)`. */
+		/**
+		 * @brief A call `callee(arguments...)`. The values are consumed into the call.
+		 */
 		[[nodiscard]]
 		Box<CallExpr> call(Box<Expr> callee, std::vector<Box<Expr>> arguments) const {
 			return makeBox<CallExpr>(
-				*ctx, generatedOrigin(), std::move(callee), std::move(arguments)
+				*ctx, generatedOrigin(), std::move(callee), consumeAll(std::move(arguments))
 			);
 		}
 
@@ -332,10 +403,35 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<CastExpr>(*ctx, generatedOrigin(), std::move(source), target_type);
 		}
 
+		/**
+		 * @brief A match case, optionally binding the tested alternative's payload.
+		 * An empty `alternative_index` makes it a wildcard case.
+		 */
+		[[nodiscard]]
+		static MatchExpr::Case matchCase(
+			base::Optional<usize> alternative_index, base::Optional<SymID> binding, Box<Expr> result
+		) {
+			return MatchExpr::Case{ .alternative_index = alternative_index,
+				                    .binding           = binding,
+				                    .result            = std::move(result) };
+		}
+
+		/** @brief A `match (subject) { cases }`. Cases are tried in order. */
+		[[nodiscard]]
+		Box<MatchExpr> matchExpr(Box<Expr> subject, std::vector<MatchExpr::Case> cases) const {
+			return makeBox<MatchExpr>(*ctx, generatedOrigin(), std::move(subject), std::move(cases));
+		}
+
 		/** @brief A reference creation `refof inner`. */
 		[[nodiscard]]
 		Box<RefOfExpr> refOf(Box<Expr> inner) const {
 			return makeBox<RefOfExpr>(*ctx, generatedOrigin(), std::move(inner));
+		}
+
+		/** @brief A pointer creation `ptrof inner`. */
+		[[nodiscard]]
+		Box<PtrOfExpr> ptrOf(Box<Expr> inner) const {
+			return makeBox<PtrOfExpr>(*ctx, generatedOrigin(), std::move(inner));
 		}
 
 		/** @brief An explicit move `move inner`. Named `move` to avoid clashing with `std::move`. */
@@ -366,23 +462,15 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<LiftToTypeExpr>(*ctx, generatedOrigin(), std::move(value));
 		}
 
-		/************
-		 *   LIST   *
-		 ************/
-
-		// @note ListPushExpr / ListPopExpr are the two HOUT nodes whose constructors take no
-		// query::Context, so these builders do not read the stored context.
-
-		/** @brief A push `list += element`. */
+		/** @brief A block of statements evaluating to a unit. */
 		[[nodiscard]]
-		static Box<ListPushExpr> listPush(Box<Expr> list, Box<Expr> element) {
-			return makeBox<ListPushExpr>(generatedOrigin(), std::move(list), std::move(element));
+		Box<BlockExpr> blockExpr(Box<BlockStmt> block) const {
+			return makeBox<BlockExpr>(*ctx, generatedOrigin(), std::move(block));
 		}
 
-		/** @brief A pop of `count` elements from `list`. */
 		[[nodiscard]]
-		static Box<ListPopExpr> listPop(Box<Expr> list, Box<Expr> count) {
-			return makeBox<ListPopExpr>(generatedOrigin(), std::move(list), std::move(count));
+		Box<BlockExpr> blockExpr(StmtPack body) const {
+			return makeBox<BlockExpr>(*ctx, generatedOrigin(), block(std::move(body)));
 		}
 
 		/******************
@@ -390,8 +478,8 @@ namespace compiler::helios::code::shorthands {
 		 ******************/
 
 		// @note Unlike expressions, Stmt constructors take no query::Context (they store, they
-		// don't type-check), so these builders never read the stored context — only *expression*
-		// builders do.
+		// don't type-check). The builders that pass a value to a new owner still need it, to run
+		// the value through `consume(...)`.
 
 		/** @brief A bare block statement `{ body }`. Accepts a braced list: `block({s1, s2})`. */
 		[[nodiscard]]
@@ -399,19 +487,20 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<BlockStmt>(generatedOrigin(), std::move(body).toCodeBlock());
 		}
 
-		/** @brief A variable declaration `var/let symbol: type = init;`. */
+		/** @brief A variable declaration `var/let symbol: type = init;`. The init is consumed. */
 		[[nodiscard]]
-		static Box<VariableStmt> var(SymID symbol, tsh::SymbolType<> type, Box<Expr> init) {
-			return makeBox<VariableStmt>(generatedOrigin(), std::move(init), type, symbol);
+		Box<VariableStmt> var(SymID symbol, tsh::SymbolType<> type, Box<Expr> init) const {
+			return makeBox<VariableStmt>(generatedOrigin(), consume(std::move(init)), type, symbol);
 		}
 
 		/** @brief A variable declaration without type `var/let symbol = init;`. */
 		[[nodiscard]]
-		static Box<VariableStmt> var(SymID symbol, Box<Expr> init) {
+		Box<VariableStmt> var(SymID symbol, Box<Expr> init) const {
+			const auto type = init->expression_type.getType();
 			return makeBox<VariableStmt>(
 				generatedOrigin(),
-				std::move(init),
-				tsh::SymbolType<>::withDefaults(init->expression_type.getType()),
+				consume(std::move(init)),
+				tsh::SymbolType<>::withDefaults(type),
 				symbol
 			);
 		}
@@ -427,16 +516,24 @@ namespace compiler::helios::code::shorthands {
 			);
 		}
 
-		/** @brief An assignment `location = value;`. */
+		/** @brief An assignment `location = value;`. The value is consumed into the location. */
 		[[nodiscard]]
-		static Box<AssignmentStmt> assign(Box<Expr> location, Box<Expr> value) {
-			return makeBox<AssignmentStmt>(generatedOrigin(), std::move(location), std::move(value));
+		Box<AssignmentStmt> assign(Box<Expr> location, Box<Expr> value) const {
+			return makeBox<AssignmentStmt>(
+				generatedOrigin(), std::move(location), consume(std::move(value))
+			);
 		}
 
-		/** @brief A `return value;`. */
+		/**
+		 * @brief A `return value;`. The value is consumed by the caller.
+		 *
+		 * A returned local dies with the function, so it is moved out of implicitly.
+		 */
 		[[nodiscard]]
-		static Box<ReturnStmt> ret(Box<Expr> value) {
-			return makeBox<ReturnStmt>(generatedOrigin(), std::move(value));
+		Box<ReturnStmt> ret(Box<Expr> value) const {
+			return makeBox<ReturnStmt>(
+				generatedOrigin(), consume(moveReturnedLocal(*ctx, std::move(value)))
+			);
 		}
 
 		/** @brief A `return;` (no value). */
@@ -519,15 +616,19 @@ namespace compiler::helios::code::shorthands {
 		}
 
 		/**
-		 * @brief Build a HOUT expression producing a copy of `source`.
+		 * @brief Build a HOUT expression producing a copy of `source` of the same type.
 		 *
-		 * Used by the `copy` operator and by generated copy constructors.
-		 * - Trivially-copyable sources are byte-copied.
-		 * - `box T` is deep-copied
-		 * - other non-trivial types are copied via their copy constructor.
+		 * Used by generated copy constructors.
+		 * - `T` is copied with its copy constructor, or byte-copied when trivially copyable
+		 * - `ref T` is byte-copied, meaning the reference is copied
+		 * - `box T` is deep-copied into a fresh allocation holding a copy of the pointee
+		 *
+		 * @warning This does not match the semantics of the language `copy` operator. The operator
+		 * always creates a direct value (`ref T -> T` and `box T -> T`), while this just copies the
+		 * value directly.
 		 */
 		[[nodiscard]]
-		Box<Expr> copy(Box<Expr> source) const {
+		Box<Expr> copyValue(Box<Expr> source) const {
 			const tsh::SymbolType<> type = source->expression_type.getSymbolType();
 			if (type.isTriviallyCopyable(*ctx)) return source;
 
@@ -536,7 +637,7 @@ namespace compiler::helios::code::shorthands {
 			// `box(*source)`.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
 				// Produce a copy of the underlying type.
-				auto pointee_copy = copy(deref(std::move(source)));
+				auto pointee_copy = copyValue(deref(std::move(source)));
 				// Now wrap it in a heap allocation.
 				return makeBoxAllocCall(*ctx, generatedOrigin(), std::move(pointee_copy));
 			}
@@ -547,7 +648,7 @@ namespace compiler::helios::code::shorthands {
 				abstract_type.getKind() == tsh::Kind::Class
 					or abstract_type.getKind() == tsh::Kind::StaticArray
 					or abstract_type.getKind() == tsh::Kind::Tuple
-					or abstract_type.getKind() == tsh::Kind::DynamicArray,
+					or abstract_type.getKind() == tsh::Kind::Variant,
 				"Tried to generate a copy constructor for a type which shouldn't need it"
 			);
 

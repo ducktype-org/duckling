@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 namespace NN {
 	namespace NNN {
         var InnerArray: i32[3];

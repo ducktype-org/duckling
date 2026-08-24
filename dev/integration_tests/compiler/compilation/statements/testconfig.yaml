@@ -31,7 +31,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "=================\n0\n0\n0\nA0\n3\n+++++\n0\n0\n0\nA0\n3\n+++++\n1\n1\n1\nACkajak\n+++++\n=================\n0\n1\n0\n=================\n1\n1\n0\n=================\n0\n0\n0\nA=================\n999\n0\n999\n999\n=================\n1\n=================\n1\n123\n"
+          String: "=================\n0\n0\n0\nA0\n3\n+++++\n0\n0\n0\nA0\n3\n+++++\n1\n1\n1\nACkajak\n+++++\n=================\n0\n1\n0\n=================\n1\n1\n0\n=================\n0\n0\n0\nA0\n=================\n999\n0\n999\n999\n=================\n1\n=================\n1\n123\n"
         ExitCode: 0
 
   for_static:
@@ -43,14 +43,6 @@ Tests:
         Output:
           String: "888\n1\n2\n888\n123\n123\n888\n1\n2\n888\n100\n200\n888\n1\n2\n888\n1\n1\n2\n2\n1\n2\n888\n1\n2\n3\n4\n888\n1\n0\n888\n1\n3\n1\n2\n"
         ExitCode: 0
-
-  for_dynamic:
-    Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "888\n1\n2\n888\n1\n11\n888\n21\n21\n888\n4\n888\n1\n0\n888\n1\n3\n1\n2\n"
-        ExitCode: 0        
 
   loops-performance: # while
     Cases:

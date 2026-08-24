@@ -1,22 +1,25 @@
+import core.builtins as builtins;
+import core.clib as clib;
+
 namespace native {
-    extern("C") {
-        #{
-            Number formatting. Each one writes the decimal representation of `value` into the
-            buffer `p`, whose total capacity is `buffer_cap` bytes, followed by a terminating
-            NUL. Returns how many characters it wrote (excluding the NUL), or `0` when the
-            representation plus its NUL does not fit into `buffer_cap` bytes.
-        #}
-        fundecl float_to_string(value: f64, p: cptr char, buffer_cap: u64) -> u64;
-        fundecl u64_to_string(value: u64, p: cptr char, buffer_cap: u64) -> u64;
-        fundecl i64_to_string(value: i64, p: cptr char, buffer_cap: u64) -> u64;
+    #{
+        Helper to return correct length writen by sprintf.
+    #}
+    fun writtenLength(written: i32, buffer_cap: i64) -> i64 = {
+        if (written < 0i32) return 0i64;
+
+        let length = written as i64;
+        if (length >= buffer_cap) return 0i64;
+        return length;
     }
 }
 
 namespace dvm {
     extern("DVM") {
-        fundecl float_to_string(value: f64, p: manyptr char, buffer_cap: u64) -> u64;
-        fundecl u64_to_string(value: u64, p: manyptr char, buffer_cap: u64) -> u64;
-        fundecl i64_to_string(value: i64, p: manyptr char, buffer_cap: u64) -> u64;
+        fundecl float_to_string(value: f64, p: manyptr char, buffer_cap: i64) -> i64;
+        fundecl u64_to_string(value: u64, p: manyptr char, buffer_cap: i64) -> i64;
+        fundecl i64_to_string(value: i64, p: manyptr char, buffer_cap: i64) -> i64;
+        fundecl abort() -> ();
 
         #{
             Test utils. Do not use outside of the tests.
@@ -26,41 +29,57 @@ namespace dvm {
     }
 }
 
+#{
+    Number formatting. Each one writes the decimal representation of `value` into the buffer `p`,
+    whose total capacity is `buffer_cap` bytes. Returns how many
+    characters it wrote (excluding the NUL), or `0` when the representation plus its NUL does not
+    fit into `buffer_cap` bytes.
+
+    Native targets format through variadic libc `snprintf`, the DVM through its own builtins.
+    The `printf` conversions carry an explicit `\0`, because `str` literals are not
+    NUL-terminated on their own and `snprintf` requires a NUL-terminated format.
+#}
 @backend_dependent
-fundecl float_to_string(value: f64, p: manyptr char, buffer_cap: u64) -> u64;
+fundecl float_to_string(value: f64, p: manyptr char, buffer_cap: i64) -> i64;
 
 @native_only_impl
-fun float_to_string(value: f64, p: manyptr char, buffer_cap: u64) -> u64 = {
-    return native.float_to_string(value, p as cptr char, buffer_cap);
+fun float_to_string(value: f64, p: manyptr char, buffer_cap: i64) -> i64 = {
+    let format  = builtins.ptr_from_slice:{char}("%g\0") as cptr char;
+    let written = clib.snprintf(p as cptr char, buffer_cap as u64, format, value);
+    return native.writtenLength(written, buffer_cap);
 }
 
 @dvm_only_impl
-fun float_to_string(value: f64, p: manyptr char, buffer_cap: u64) -> u64 = {
+fun float_to_string(value: f64, p: manyptr char, buffer_cap: i64) -> i64 = {
     return dvm.float_to_string(value, p, buffer_cap);
 }
 
 @backend_dependent
-fundecl u64_to_string(value: u64, p: manyptr char, buffer_cap: u64) -> u64;
+fundecl u64_to_string(value: u64, p: manyptr char, buffer_cap: i64) -> i64;
 
 @native_only_impl
-fun u64_to_string(value: u64, p: manyptr char, buffer_cap: u64) -> u64 = {
-    return native.u64_to_string(value, p as cptr char, buffer_cap);
+fun u64_to_string(value: u64, p: manyptr char, buffer_cap: i64) -> i64 = {
+    let format  = builtins.ptr_from_slice:{char}("%lu\0") as cptr char;
+    let written = clib.snprintf(p as cptr char, buffer_cap as u64, format, value);
+    return native.writtenLength(written, buffer_cap);
 }
 
 @dvm_only_impl
-fun u64_to_string(value: u64, p: manyptr char, buffer_cap: u64) -> u64 = {
+fun u64_to_string(value: u64, p: manyptr char, buffer_cap: i64) -> i64 = {
     return dvm.u64_to_string(value, p, buffer_cap);
 }
 
 @backend_dependent
-fundecl i64_to_string(value: i64, p: manyptr char, buffer_cap: u64) -> u64;
+fundecl i64_to_string(value: i64, p: manyptr char, buffer_cap: i64) -> i64;
 
 @native_only_impl
-fun i64_to_string(value: i64, p: manyptr char, buffer_cap: u64) -> u64 = {
-    return native.i64_to_string(value, p as cptr char, buffer_cap);
+fun i64_to_string(value: i64, p: manyptr char, buffer_cap: i64) -> i64 = {
+    let format  = builtins.ptr_from_slice:{char}("%ld\0") as cptr char;
+    let written = clib.snprintf(p as cptr char, buffer_cap as u64, format, value);
+    return native.writtenLength(written, buffer_cap);
 }
 
 @dvm_only_impl
-fun i64_to_string(value: i64, p: manyptr char, buffer_cap: u64) -> u64 = {
+fun i64_to_string(value: i64, p: manyptr char, buffer_cap: i64) -> i64 = {
     return dvm.i64_to_string(value, p, buffer_cap);
 }
