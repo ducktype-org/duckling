@@ -200,11 +200,11 @@ namespace compiler::driver {
 		}
 
 		std::vector<PackageCompilationTask> tasks;
-		for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
+		for (const auto& package: frontend::packages::standardLibraryPackages()) {
 			auto pkg = std::find_if(
 				global_state::getPackages().begin(),
 				global_state::getPackages().end(),
-				[&](const auto& pkg_info) { return pkg_info.getPackageID() == std_id; }
+				[&](const auto& pkg_info) { return pkg_info.getPackageID() == package.id; }
 			);
 			// If pkg is not loaded then we skip it.
 			if (pkg == global_state::getPackages().end()) continue;
@@ -212,16 +212,20 @@ namespace compiler::driver {
 			if (global_state::getBackendOptions()->llvm_backend.has_value())
 				tasks.emplace_back(
 					pkg->getRootModule().illegalAccess().getID(),
-					BuildTargetLLVMStaticLibrary{ .output_file_name
-				                                  = base::StrID(base::strConcat(std_id, ".a")),
-				                                  .archiving_options     = {},
-				                                  .custom_art_collection = art_collection }
+					BuildTargetLLVMStaticLibrary{
+						.output_file_name      = base::StrID(base::strConcat(package.id, ".a")),
+						.archiving_options     = {},
+						.custom_art_collection = art_collection,
+					}
 				);
+
 			tasks.emplace_back(
 				pkg->getRootModule().illegalAccess().getID(),
-				BuildTargetDVMLibrary{ .output_file_name
-			                           = base::StrID(base::strConcat(std_id, ".dbc")),
-			                           .custom_art_collection = art_collection }
+				BuildTargetDVMLibrary{
+					.output_file_name = base::StrID(base::strConcat(package.id, ".dbc")),
+					.dvm_linking_options{ .shared_libraries = package.dvm_shared_libs },
+					.custom_art_collection = art_collection,
+				}
 			);
 		}
 		return tasks;

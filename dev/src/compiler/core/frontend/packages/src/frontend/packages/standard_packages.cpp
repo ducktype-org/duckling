@@ -1,6 +1,7 @@
 #include "standard_packages.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <os_utils/system_libraries.hpp>
 
 #include <algorithm>
 #include <ranges>
@@ -9,8 +10,18 @@ namespace compiler::frontend::packages {
 
 	const std::vector<StandardLibraryPackage>& standardLibraryPackages() {
 		static const std::vector<StandardLibraryPackage> packages{
-			{ .id = base::StrID("core"), .dependencies = {} },
-			{ .id = base::StrID("std"), .dependencies = { base::StrID("core") } },
+			// `core` declares the C standard library FFI symbols, so the libraries providing
+			// them have to be loaded by anything linking it.
+			{
+				.id              = base::StrID("core"),
+				.dependencies    = {},
+				.dvm_shared_libs = { os_utils::systemSharedLibC(), os_utils::systemSharedLibM() },
+			},
+			{
+				.id              = base::StrID("std"),
+				.dependencies    = { base::StrID("core") },
+				.dvm_shared_libs = {},
+			},
 		};
 		return packages;
 	}

@@ -4,6 +4,7 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
+#include <os_utils/system_libraries.hpp>
 #include <vm_tester_utils.hpp>
 
 #include <base/extend_cpp/vector_utils.hpp>
@@ -17,14 +18,6 @@
 #include <utility>
 
 using namespace compiler::driver;
-
-namespace {
-#ifdef __APPLE__
-	const std::vector<std::string> SYSTEM_FFI_LIBS{ "libSystem.B.dylib" };
-#else
-	const std::vector<std::string> SYSTEM_FFI_LIBS{ "libc.so.6", "libm.so.6" };
-#endif
-}
 
 class DVMBackendTest final: public VmTestSuite {
 #undef TESTER_CLASS
@@ -146,7 +139,7 @@ private:
 		i64                                exit_code = 0
 	) {
 		auto code         = getModuleFromPath(module_path, ALL_CORE_MODULES);
-		code.object_files = SYSTEM_FFI_LIBS;
+		code.object_files = { os_utils::systemSharedLibC(), os_utils::systemSharedLibM() };
 		runTestOnVm(code, {}, output, {}, exit_code);
 	}
 

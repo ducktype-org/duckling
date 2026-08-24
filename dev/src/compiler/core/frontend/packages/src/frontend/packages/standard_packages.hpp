@@ -17,6 +17,10 @@ namespace compiler::frontend::packages {
 	struct StandardLibraryPackage final {
 		base::StrID              id;
 		std::vector<base::StrID> dependencies;
+
+		/// Shared libs, only relevant for the DVM backend.
+		/// It's std::string because it suits the use cases much better.
+		std::vector<std::string> dvm_shared_libs{};
 	};
 
 	/**
