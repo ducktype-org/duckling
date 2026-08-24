@@ -93,6 +93,83 @@ namespace base {
 		 */
 		friend std::ostream& operator<<(std::ostream& os, const base::Bit256& bit256);
 	};
+
+	struct Bit128 final {
+		std::array<u64, 2> data = {};
+
+		static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
+
+		constexpr Bit128() = default;
+
+		/**
+		 * @param bytes an array of 32 bytes that will be interpreted as a 256-bit number written in
+		 * base 2^8 with the lowest letter in bytes[0]
+		 */
+		constexpr Bit128(const std::array<uint8_t, 16>& bytes) noexcept {
+			for (size_t i = 0; i < 2; ++i) {
+				data.at(i) = 0;
+				for (size_t j = 0; j < 8; ++j) {
+					data.at(i) <<= 8;
+					data.at(i) |= bytes.at(i * 8 + j);
+				}
+			}
+		}
+
+		/**
+		 * @param arr an array of u32 that will be interpreted as a 256-bit number written in base
+		 * 2^32 with the lowest letter in arr[0]
+		 */
+		constexpr Bit128(const std::array<u32, 4>& arr) noexcept {
+			for (size_t i = 0; i < 2; ++i)
+				data.at(i) = (static_cast<u64>(arr.at(i * 2 + 1)) << 32) | arr.at(i * 2);
+		}
+
+		constexpr Bit128(const std::array<u64, 2>& arr) noexcept: data(arr) {}
+
+		constexpr Bit128(u64 a, u64 b) noexcept: data{ a, b } {}
+
+		// Removed, redundant with the previous constructor
+
+		constexpr Bit128(u64 a) noexcept: data{ a, 0 } {}
+
+		/**
+		 * Constructor taking a hex string starting with 0x
+		 */
+		Bit128(std::string_view hex);
+
+		constexpr bool operator==(const Bit128& other) const noexcept = default;
+		constexpr bool operator!=(const Bit128& other) const noexcept = default;
+
+		/**
+		 * @brief Converts the 128-bit integer into a hexadecimal string representation.
+		 */
+		[[nodiscard]] std::string toStringHex() const;
+
+		/*
+		 * @brief Converts the Bit128 to a u64 by taking the least significant 64 bits.
+		 * Use this only when Bit128 was created from single u64 value.
+		 */
+		constexpr explicit operator u64() const RELEASE_NOEXCEPT {
+			CORE_ASSERT(
+				data.at(1) == 0,
+				"Bit128 value too large to convert to u64"
+			);
+			return data.at(0);
+		}
+
+		constexpr std::strong_ordering operator<=>(const Bit128& other) const noexcept {
+			for (usize i = 2;
+			     i-- > 0;) {  // Iterate from the most significant to the least significant
+				if (auto cmp = data.at(i) <=> other.data.at(i); cmp != 0) return cmp;
+			}
+			return std::strong_ordering::equal;
+		}
+
+		/**
+		 * @brief Outputs the Bit128 object to a stream in the format {a, b}.
+		 */
+		friend std::ostream& operator<<(std::ostream& os, const base::Bit128& bit128);
+	};
 }
 
 namespace std {
@@ -101,6 +178,16 @@ namespace std {
 		std::size_t operator()(const base::Bit256& bit256) const noexcept {
 			std::size_t hash = 0;
 			for (const auto& value: bit256.data)
+				hash ^= std::hash<u64>{}(value);  // Combine hashes using XOR
+			return hash;
+		}
+	};
+
+	template<>
+	struct hash<base::Bit128> {
+		std::size_t operator()(const base::Bit128& bit128) const noexcept {
+			std::size_t hash = 0;
+			for (const auto& value: bit128.data)
 				hash ^= std::hash<u64>{}(value);  // Combine hashes using XOR
 			return hash;
 		}

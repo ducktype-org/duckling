@@ -86,7 +86,7 @@ namespace hashing {
 	 * the names of the variables are copied from official standard
 	 * that can be found here: https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.180-4.pdf
 	 */
-	class SHA256 {
+	class SHA256_XD {
 	private:
 		// Internal state: 8 32-bit words
 		std::array<u32, 8> state;
@@ -275,6 +275,198 @@ namespace hashing {
 			return (value >> count) | (value << (32 - count));
 		}
 	};
+
+
+	// SipHash13:
+	class SipHash13 final {
+private:
+    using u8 = std::uint8_t;
+    using u64 = std::uint64_t;
+ 
+    static constexpr std::size_t kElemSize = sizeof(u64);
+ 
+    struct State final {
+        u64 v0;
+        u64 v1;
+        u64 v2;
+        u64 v3;
+    };
+ 
+    [[nodiscard]]
+    static constexpr u64 rotl(u64 x, unsigned n) noexcept {
+        return (x << n) | (x >> (64u - n));
+    }
+ 
+    // The SipRound permutation; `compress!` in sip128.rs.
+    static constexpr void compress(State& s) noexcept {
+        s.v0 += s.v1;
+        s.v1 = rotl(s.v1, 13);
+        s.v1 ^= s.v0;
+        s.v0 = rotl(s.v0, 32);
+        s.v2 += s.v3;
+        s.v3 = rotl(s.v3, 16);
+        s.v3 ^= s.v2;
+        s.v0 += s.v3;
+        s.v3 = rotl(s.v3, 21);
+        s.v3 ^= s.v0;
+        s.v2 += s.v1;
+        s.v1 = rotl(s.v1, 17);
+        s.v1 ^= s.v2;
+        s.v2 = rotl(s.v2, 32);
+    }
+ 
+    // `Sip13Rounds`: one compression round, three finalization rounds.
+    static constexpr void c_rounds(State& s) noexcept {
+        compress(s);
+    }
+ 
+    static constexpr void d_rounds(State& s) noexcept {
+        compress(s);
+        compress(s);
+        compress(s);
+    }
+ 
+    // Absorb one little-endian 64-bit word.
+    static constexpr void absorb(State& s, u64 word) noexcept {
+        s.v3 ^= word;
+        c_rounds(s);
+        s.v0 ^= word;
+    }
+ 
+    template <typename Byte>
+    [[nodiscard]]
+    static constexpr u64 load_le(const Byte* p) noexcept {
+        u64 word = 0;
+        for (std::size_t i = 0; i < kElemSize; ++i) {
+            word |= static_cast<u64>(static_cast<u8>(p[i])) << (8u * i);
+        }
+        return word;
+    }
+ 
+    // The buffered tail, zero-extended to a full word. `tail_len_` is always
+    // < kElemSize between calls, so the high bytes read as zero padding.
+    [[nodiscard]]
+    constexpr u64 tail_word() const noexcept {
+        u64 word = 0;
+        for (std::size_t i = 0; i < tail_len_; ++i) {
+            word |= static_cast<u64>(tail_[i]) << (8u * i);
+        }
+        return word;
+    }
+ 
+    State state_;
+    std::array<u8, kElemSize> tail_{};
+    std::size_t tail_len_{0};
+    std::size_t length_{0};
+ 
+public:
+    using result_type = base::Bit128;
+ 
+    struct Parts final {
+        u64 lo;  // `_0` in `finish128`
+        u64 hi;  // `_1` in `finish128`
+    };
+ 
+    // Constructor - initializes the hash state.
+    // rustc's `StableHasher::new()` uses keys (0, 0).
+    constexpr SipHash13() noexcept
+        : SipHash13(0, 0) {}
+ 
+    // `SipHasher128::new_with_keys`. The extra `^ 0xee` on v1 is what selects
+    // the 128-bit variant.
+    constexpr SipHash13(u64 key0, u64 key1) noexcept
+        : state_{key0 ^ 0x736f6d6570736575ULL,
+                 key1 ^ 0x646f72616e646f6dULL ^ 0xeeULL,
+                 key0 ^ 0x6c7967656e657261ULL,
+                 key1 ^ 0x7465646279746573ULL} {}
+ 
+    // Update state with input data
+    constexpr void operator()(internal::span_of_bytes auto data) noexcept {
+        const auto* const bytes = std::data(data);
+        const std::size_t size = std::size(data);
+        length_ += size;
+ 
+        std::size_t i = 0;
+ 
+        // Top up a partially filled tail first.
+        if (tail_len_ != 0) {
+            while (i < size && tail_len_ < kElemSize) {
+                tail_[tail_len_++] = static_cast<u8>(bytes[i++]);
+            }
+            if (tail_len_ < kElemSize) {
+                return;
+            }
+            absorb(state_, load_le(tail_.data()));
+            tail_len_ = 0;
+        }
+ 
+        // Absorb whole elements directly out of the input.
+        for (; size - i >= kElemSize; i += kElemSize) {
+            absorb(state_, load_le(bytes + i));
+        }
+ 
+        // Buffer the remainder; leaves tail_len_ < kElemSize.
+        while (i < size) {
+            tail_[tail_len_++] = static_cast<u8>(bytes[i++]);
+        }
+    }
+ 
+    // `finish128`, minus the consuming-self part: the tail and the length byte
+    // are folded into a copy of the state so the hasher stays usable.
+    [[nodiscard]]
+    constexpr Parts finalize_parts() const noexcept {
+        State s = state_;
+ 
+        const u64 b = (static_cast<u64>(length_ & 0xff) << 56) | tail_word();
+        s.v3 ^= b;
+        c_rounds(s);
+        s.v0 ^= b;
+ 
+        s.v2 ^= 0xee;
+        d_rounds(s);
+        const u64 lo = s.v0 ^ s.v1 ^ s.v2 ^ s.v3;
+ 
+        s.v1 ^= 0xdd;
+        d_rounds(s);
+        const u64 hi = s.v0 ^ s.v1 ^ s.v2 ^ s.v3;
+ 
+        return Parts{lo, hi};
+    }
+ 
+    [[nodiscard]]
+    constexpr result_type finalize() const noexcept {
+        const Parts parts = finalize_parts();
+ 
+        // Canonical SipHash-128 output order: `_0` little-endian, then `_1`.
+        std::array<u8, 16> bytes{};
+        for (std::size_t i = 0; i < 8; ++i) {
+            bytes[i] = static_cast<u8>(parts.lo >> (8u * i));
+            bytes[i + 8] = static_cast<u8>(parts.hi >> (8u * i));
+        }
+ 
+        return result_type{bytes};
+    }
+};
+
+	class SHA256 final {
+		// not sha, just siphash wrapper, to compile and test quickly
+
+		SipHash13 siphash_;
+	public:
+		using result_type = base::Bit256;
+
+		constexpr void operator()(internal::span_of_bytes auto data) noexcept {
+			siphash_(data);
+		}
+
+		[[nodiscard]]
+		constexpr result_type finalize() const noexcept {
+			auto final = siphash_.finalize();
+			return {final.data.at(0), final.data.at(1)};
+		}
+
+	};
+
 
 	/**
 	 * The default hash algorithm
