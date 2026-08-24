@@ -132,7 +132,8 @@ namespace vm {
 	}
 
 	void Memory::copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src) {
-		runDataCopyConstructors(block_dst);
+		// @note using SRC, because setNestedViewBlock zeroes the bytes
+		runDataCopyConstructors(block_src);
 		for (auto nested: block_src->children_blocks) {
 			Pointer new_pointer{ block_dst, nested.first };
 			setNestedViewBlock(new_pointer, nested.second->data.element_type);
@@ -207,8 +208,10 @@ namespace vm {
 			copyBlocksRecursively(new_pointer.getBlock()->children_blocks[offset], iter->second);
 		}
 
-		// Copy the data itself
+		// Copying the data itself.
+		// It is done here, because setNestedViewBlock creates a block, which zeros the bytes.
 		std::memcpy(dst_view.getBegin(), src_view.getBegin(), type->getSize().asInt());
+
 		runDataCopyConstructors(dst_view, type);
 	}
 
@@ -268,56 +271,66 @@ namespace vm {
 		const TypeCRef         type,
 		void (Memory::*callback)(base::ModRawView data, TypeCRef type)
 	) {
-		if (type->getKind() != Type::Kind::DynamicTable) {
-			// Only types other than dynamic_table can be next to each other.
-			// Callback on the first object
-			(this->*callback)(base::ModRawView{ data.getBegin(), type->getSize().asInt() }, type);
-		}
+		// The algorithm used to iterate over data works as follows:
+		// Invariants:
+		// * `data` is a range of one or more objects of `type` laying next to each other.
+		//   A dynamic table is the exception: its type carries no size, so such a range is always
+		//   a single table spanning the whole `data`.
+		//
+		// Algorithm, for every object of the range:
+		// 1. Run the `callback` on the object.
+		//    (This is not possible on DynamicTable, see above.)
+		//    This is the crucial step, the only place where `callback` is used.
+		//    The `callback` therefore runs top-down, not bottom-up in terms of type-composition.
+		// 2. If the type is an aggregate, then step into each member and recurse. Recursion depth
+		//    is bounded by the type's nesting depth - ranges are walked by the loop, not by
+		//    recursing on the tail.
 
-		switch (type->getKind()) {
-		case Type::Kind::Primitive:
-		case Type::Kind::Function:
-		case Type::Kind::Opaque:
-		case Type::Kind::CPointer:
-		case Type::Kind::Variant:
-		case Type::Kind::Pointer:
-			break;
-		case Type::Kind::DynamicTable:
-		case Type::Kind::FixedSizeTable: {
-			// @TODO: #3225 this walk is one level deep - the callback is invoked on the element
-			// itself, so pointers nested inside an aggregate element (e.g. a table of slices) are
-			// never visited and their refcounts are neither increased nor decreased.
-			const auto inner_type = type->getInnerType().value();
-			const auto inner_size = inner_type->getSize().asInt();
-			for (usize begin = 0; begin < data.size(); begin += inner_size)
-				(this->*callback)(
-					base::ModRawView{ data.getBegin() + begin, inner_size }, inner_type
-				);
-			break;
-		}
-		case Type::Kind::Data: {
-			// Iterate over data's fields
-			for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
-				(this->*callback)(
-					base::ModRawView{ data.getBegin() + offset.asInt(), tp->getSize().asInt() }, tp
-				);
-			break;
-		}
-		default:
-			CORE_PANIC("Handling default");
-		}
+		const bool  is_dynamic_table = type->getKind() == Type::Kind::DynamicTable;
+		const usize object_size      = is_dynamic_table ? data.size() : type->getSize().asInt();
 
-		if (type->getKind() != Type::Kind::DynamicTable) {
-			// In case we were given a slice of a table with multiple objects of the same type laying
-			// next to each other, then iterate over those as well.
-			// Here we start from the second, since the first one was handled above
-			for (auto next_item = type->getSize().asInt(); next_item < data.size();
-			     next_item += type->getSize().asInt()) {
-				iterateOverDataAndExecute(
-					base::ModRawView{ data.getBegin() + next_item, type->getSize().asInt() },
-					type,
-					callback
-				);
+		// Nothing to walk in an empty range, and a zero-sized object would never advance the loop.
+		// Such a type cannot hold a pointer either, so there is nothing for a callback to do.
+		if (object_size == 0) return;
+
+		CORE_ASSERT(data.size() % object_size == 0, "The data must hold a whole number of objects");
+
+		for (usize object_begin = 0; object_begin + object_size <= data.size();
+		     object_begin += object_size) {
+			const base::ModRawView object{ data.getBegin() + object_begin, object_size };
+
+			(this->*callback)(object, type);
+
+			switch (type->getKind()) {
+			case Type::Kind::Variant:
+				// @note We are not touching the variant here,
+				// because variant's nested blocks perform needed `callback`s
+				// on their own, e.g. in `freeBlockData`.
+			case Type::Kind::Primitive:
+			case Type::Kind::Function:
+			case Type::Kind::Opaque:
+			case Type::Kind::CPointer:
+			case Type::Kind::Pointer:
+				break;
+			case Type::Kind::DynamicTable:
+			case Type::Kind::FixedSizeTable:
+				// The elements lay next to each other, so a single call walks all of them. Note
+				// that the range is `object`, not `data`: a fixed size table only owns its own
+				// elements, even when several such tables are next to each other.
+				iterateOverDataAndExecute(object, type->getInnerType().value(), callback);
+				break;
+			case Type::Kind::Data:
+				// Iterate over data's fields
+				for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
+					iterateOverDataAndExecute(
+						base::ModRawView{ object.getBegin() + offset.asInt(),
+					                      tp->getSize().asInt() },
+						tp,
+						callback
+					);
+				break;
+			default:
+				CORE_PANIC("Handling default");
 			}
 		}
 	}
@@ -362,8 +375,8 @@ namespace vm {
 		case Type::Kind::Data:
 		case Type::Kind::Variant:
 			// There is nothing to do with variant, data and tables, because the data should be
-			// already copied thanks to the nested blocks structure, that deletes the nested block's
-			// data first.
+			// already copied thanks to the nested blocks structure, that deletes the nested
+			// block's data first.
 			break;
 		default:
 			CORE_PANIC("Handling default");
@@ -394,9 +407,9 @@ namespace vm {
 
 			for (const auto& block_ptr: global_data_blocks) decreaseBlockRefcount(Ref(block_ptr));
 		} catch (exceptions::VMFoundMemoryLeakException&) {
-			std::cerr
-				<< "Leak during global data deinitialization - e.g. there was a global pointer to "
-				   "data, that was not freed.\n";
+			std::cerr << "Leak during global data deinitialization - e.g. there was a global "
+						 "pointer to "
+						 "data, that was not freed.\n";
 			throw;
 		}
 	}
@@ -429,7 +442,8 @@ namespace vm {
 				CORE_ASSERT(
 					off + type_size <= global_data_buffer.size(),
 					std::format(
-						"Trying to insert global data of size {}, at offset {}, but buffer size is "
+						"Trying to insert global data of size {}, at offset {}, but buffer "
+						"size is "
 						"only {}",
 						type_size,
 						off,
