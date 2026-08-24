@@ -31,22 +31,22 @@ impl FullIdentity {
     }
 
     /// Get the name.
-    pub fn name(&self) -> StrId {
+    pub fn name(self) -> StrId {
         self.name
     }
 
     /// Get the [`FullOrigin`].
-    pub fn origin(&self) -> FullOrigin {
+    pub fn origin(self) -> FullOrigin {
         self.origin
     }
 
     /// Convert this [`FullIdentity`] into a [`Identity`].
-    pub fn as_identity(&self) -> Identity {
+    pub fn as_identity(self) -> Identity {
         Identity::new(self.name(), self.origin().as_origin())
     }
 
     /// Generate a human-readable description of [`self`].
-    pub fn descriptive_name(&self) -> String {
+    pub fn descriptive_name(self) -> String {
         match self.origin.kind {
             FullKind::Registry => format!("`{}`", self.name),
             FullKind::Git { .. } => format!("cloned from `{}`", self.origin.url),
@@ -60,15 +60,15 @@ impl FullIdentity {
         }
     }
 
-    pub fn is_local(&self) -> bool {
+    pub fn is_local(self) -> bool {
         self.origin().is_local()
     }
 
-    pub fn is_git(&self) -> bool {
+    pub fn is_git(self) -> bool {
         self.origin().is_git()
     }
 
-    pub fn is_registry(&self) -> bool {
+    pub fn is_registry(self) -> bool {
         self.origin().is_registry()
     }
 }
@@ -119,32 +119,32 @@ impl FullOrigin {
     }
 
     /// Get an [`InternedUrl`] of this [`FullOrigin`].
-    pub fn url(&self) -> InternedUrl {
+    pub fn url(self) -> InternedUrl {
         self.url
     }
 
     /// Get a [`FullKind`] of this [`FullOrigin`].
-    pub fn kind(&self) -> FullKind {
+    pub fn kind(self) -> FullKind {
         self.kind
     }
 
     /// Convert this [`FullOrigin`] into a [`Origin`].
-    pub fn as_origin(&self) -> Origin {
+    pub fn as_origin(self) -> Origin {
         Origin::new(self.url, self.kind.as_kind())
     }
 
     /// Check if this is a local identity.
-    pub fn is_local(&self) -> bool {
+    pub fn is_local(self) -> bool {
         matches!(self.kind(), FullKind::Local)
     }
 
     /// Check if this is a git identity.
-    pub fn is_git(&self) -> bool {
+    pub fn is_git(self) -> bool {
         matches!(self.kind(), FullKind::Git { commit: _ })
     }
 
     /// Check if this is a registry identity.
-    pub fn is_registry(&self) -> bool {
+    pub fn is_registry(self) -> bool {
         matches!(self.kind(), FullKind::Registry)
     }
 
@@ -152,7 +152,7 @@ impl FullOrigin {
     /// This returns [`OriginSatisfiesSource`],
     /// which gives either a decisive answer or a conditional answer,
     /// which requires more work to verify.
-    pub fn satisfies_source(&self, source: &Source) -> OriginSatisfiesSource {
+    pub fn satisfies_source(self, source: Source) -> OriginSatisfiesSource {
         if self.url() != source.url() {
             return OriginSatisfiesSource::No;
         }
@@ -167,7 +167,7 @@ impl FullOrigin {
                     OriginSatisfiesSource::IfGitReferencePointsToCommit {
                         url: source.url(),
                         commit,
-                        reference: *reference,
+                        reference,
                     }
                 }
             }
@@ -328,7 +328,7 @@ pub enum FullKind {
 
 impl FullKind {
     /// Get a human-like display.
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             Self::Registry => "registry",
             Self::Git { .. } => "git",
@@ -337,22 +337,22 @@ impl FullKind {
     }
 
     /// Check, whether this [`FullKind`] is a registry kind.
-    pub fn is_registry(&self) -> bool {
+    pub fn is_registry(self) -> bool {
         matches!(self, FullKind::Registry)
     }
 
     /// Check, whether this [`FullKind`] is a git kind.
-    pub fn is_git(&self) -> bool {
+    pub fn is_git(self) -> bool {
         matches!(self, FullKind::Git { .. })
     }
 
     /// Check, whether this [`FullKind`] is a local kind.
-    pub fn is_local(&self) -> bool {
+    pub fn is_local(self) -> bool {
         matches!(self, FullKind::Local)
     }
 
     /// Convert this [`FullKind`] into a [`Kind`].
-    pub fn as_kind(&self) -> Kind {
+    pub fn as_kind(self) -> Kind {
         match self {
             Self::Registry => Kind::Registry,
             Self::Git { .. } => Kind::Git,

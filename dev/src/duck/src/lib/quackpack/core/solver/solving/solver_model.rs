@@ -25,7 +25,7 @@ fn package_with_feature_var_name(pkg: PackageId, feature: FeatureName) -> StrId 
 }
 
 /// Creates a unique mapping of a pair of form (dependency relation, child feature) to its variable name.
-fn dependency_feature_var_name(dep: &DependencyEdge, feature: FeatureName) -> StrId {
+fn dependency_feature_var_name(dep: DependencyEdge, feature: FeatureName) -> StrId {
     StrId::new(format!(
         "{}->{:?}@_@{}",
         package_var_name(dep.parent),
@@ -35,7 +35,7 @@ fn dependency_feature_var_name(dep: &DependencyEdge, feature: FeatureName) -> St
 }
 
 /// Creates a unique mapping of a pair of form (dependency relation, child version) to its variable name.
-fn dependency_version_var_name(dep: &DependencyEdge, version: Version) -> StrId {
+fn dependency_version_var_name(dep: DependencyEdge, version: Version) -> StrId {
     StrId::new(format!(
         "{}->{:?}@{:?}@_",
         package_var_name(dep.parent),
@@ -174,7 +174,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         dep: DependencyEdge,
         feature: FeatureName,
     ) {
-        let var_name = dependency_feature_var_name(&dep, feature);
+        let var_name = dependency_feature_var_name(dep, feature);
         self.dependency_to_feature_vars
             .entry(dep)
             .or_default()
@@ -188,7 +188,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         dep: DependencyEdge,
         version: Version,
     ) {
-        let var_name = dependency_version_var_name(&dep, version);
+        let var_name = dependency_version_var_name(dep, version);
         self.dependency_to_version_vars
             .entry(dep)
             .or_default()

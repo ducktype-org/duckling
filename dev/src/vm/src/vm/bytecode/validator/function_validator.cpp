@@ -741,7 +741,7 @@ class FunctionValidator {
 				const auto c_inner = derefCPtrType(cptr, types_ctx, instr);
 				if (ptr->inner != c_inner) throw CPtrPointeeMismatchError(instr);
 			}
-			instr_case_novalue(Op_movCast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr) {}
+			instr_case_novalue(Op_cast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr) {}
 
 			instr_case(Op_add_pcptr_p64, instr) {
 				if (current_stack.at(instr.offset.var_name)->getName() != "i64")
