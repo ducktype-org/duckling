@@ -20,7 +20,7 @@ impl PackageType {
     ///
     /// This is mainly used for printing errors, so we can distinguish between transitive and direct
     /// dependencies.
-    pub fn deepen(&self) -> Self {
+    pub fn deepen(self) -> Self {
         match self {
             Self::RootPackage => Self::DirectDependency,
             Self::DirectDependency => Self::TransitiveDependency,

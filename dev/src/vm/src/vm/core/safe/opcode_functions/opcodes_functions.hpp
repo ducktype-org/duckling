@@ -239,6 +239,9 @@ namespace vm {
 			// Find type index
 			auto  alternatives      = variant_type->getVariantAlternatives().value();
 			usize alternative_index = 0;
+
+			// @TODO: #3374 - Make usage of type 0 be accounted here as well
+			// Also, optimize this...
 			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
 				if (alt == wanted_type) alternative_index = static_cast<usize>(idx);
 

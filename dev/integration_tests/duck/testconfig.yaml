@@ -43,6 +43,7 @@ PreNode: |
 Run: 'export PATH="@{duck-exe-dir}:$PATH" && @{cd-tmp-dir} && @{before-cmd} && @{test-cmd}'
 
 SubDirs:
+  - add
   - clean_storage
   - cli
   - sync
