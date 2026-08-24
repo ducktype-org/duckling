@@ -28,8 +28,8 @@ It runs a couple of checks, each of them can be also run separately with toolbox
 It might also be useful to run code formatter independently from the toolbox which can be achieved with following commands run from `dev` directory.
 
 ```bash
-./scripts/formatting/format_repo_cpp.sh     # run format only on changed files
-./scripts/formatting/format_repo_cpp_all.sh # run format only on all C++ files
+./scripts/formatting/format_repo_cpp.sh     # run format only on changed files (incl. untracked ones)
+./scripts/formatting/format_repo_cpp_all.sh # run format on all C++ files (same as format_repo_cpp.sh --all)
 ```
 
 ## Create pull request

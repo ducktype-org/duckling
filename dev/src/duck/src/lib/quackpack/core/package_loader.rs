@@ -32,7 +32,7 @@ impl From<bool> for AllowGlobalPackage {
 }
 
 impl AllowGlobalPackage {
-    pub fn allows(&self) -> bool {
+    pub fn allows(self) -> bool {
         matches!(self, AllowGlobalPackage::Yes)
     }
 }

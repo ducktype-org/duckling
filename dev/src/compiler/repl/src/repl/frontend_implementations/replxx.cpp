@@ -29,7 +29,7 @@ namespace compiler::repl {
 		"match", "move", "namespace", "none", "not", "or", "pattern", "private",
 		"protected", "public", "redo", "ref", "slice", "ptr", "manyptr", "cptr", 
 		"refof", "ptrof", "restart", "return", "set", "sizeof", "static", "str", "switch",
-		"test", "then", "this", "throw", "true", "try", "type", "using", "var",
+		"then", "this", "throw", "true", "try", "type", "using", "var",
 		"vec", "while", "with", "xor"
 	};
 

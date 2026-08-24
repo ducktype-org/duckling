@@ -176,7 +176,7 @@ void FunctionLoweringContext::cPointerStructLea(
 	helios::SymID               field_id
 ) {
 	const auto field_offset = class_layout.getOffsetOfFieldSymbol(field_id).value().asInt();
-	pushInstruction({ vm::code::builders::OpKind::movCast, dest, base_place });
+	pushInstruction({ vm::code::builders::OpKind::cast, dest, base_place });
 	pushInstruction({ vm::code::builders::OpKind::add, dest, DVMImmediate::u64(field_offset) });
 }
 
@@ -186,7 +186,7 @@ void FunctionLoweringContext::cPointerArrayLea(
 	CRef<tsl::TypeLayout> element_layout,
 	const DVMValue&       index
 ) {
-	pushInstruction({ vm::code::builders::OpKind::movCast, dest, base_place });
+	pushInstruction({ vm::code::builders::OpKind::cast, dest, base_place });
 	const auto element_stride
 		= static_cast<i64>(base::bits2bytes(element_layout->getSize()).asInt());
 

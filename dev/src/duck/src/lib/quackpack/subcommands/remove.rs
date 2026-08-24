@@ -1,30 +1,24 @@
 use std::path::Path;
 
-use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
+use crate::quackpack::core::{AllowGlobalPackage, DependencyKind, PackageLoader};
 use crate::quackpack::schemas::manifest::{DependencyRemoved, Manifest as ManifestSchema};
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{
-    DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal,
-};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
-#[derive(Debug, Default, Clone)]
-/// All options that can be passed to sync.
-pub struct RemoveOptions {
+#[derive(Debug, Clone)]
+/// All options that can be passed to remove.
+pub struct RemoveOptions<'matches> {
     /// Name of the dependency
-    pub name: String,
+    pub name: &'matches str,
     /// Use a global package instead of a local one.
     pub global: bool,
-    /// Remove a dev-dependency.
-    pub dev_dep: bool,
+    /// Kind of the dependency to remove.
+    pub kind: DependencyKind,
 }
 
 /// Logic for executing the `remove` subcommand.
 pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
-    let RemoveOptions {
-        name,
-        global,
-        dev_dep,
-    } = options;
+    let RemoveOptions { name, global, kind } = options;
     let pkg = if global {
         PackageLoader::global_package(ctx)?
     } else {
@@ -41,11 +35,9 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     // since this won't preserve comments and formatting choices in the manifest.
     let manifest_path = pkg.manifest_path().to_path_buf();
     let mut schema = pkg.into_original_schema();
-    if dev_dep {
-        remove_dev_dep(&mut schema, &name, pkg_name, &pkg_root)?;
-    } else {
-        remove_normal_dep(&mut schema, &name, pkg_name, &pkg_root)?;
-    }
+
+    remove_dep(&mut schema, name, kind, pkg_name, &pkg_root)?;
+
     let deserialized_schema = serde_yaml_ng::to_string(&schema)
         .with_context_internal(|| format!("failed to deserialize schema `{schema:?}`"))?;
     manifest_path.write(&deserialized_schema).with_context(|| {
@@ -59,52 +51,39 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
         manifest_path.display()
     ))?;
     ctx.console().info(format!(
-        "successfully removed {}dependency `{name}` from the project `{pkg_name}` at `{}`",
-        if dev_dep { "dev-" } else { "" },
+        "successfully removed {kind} dependency `{name}` from the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;
     Ok(())
 }
 
-/// Remove a dev-dependency or provide a meaningful error.
-fn remove_dev_dep(
-    schema: &mut ManifestSchema,
-    name: &String,
-    pkg_name: StrId,
-    pkg_root: &Path,
-) -> QuackResult<()> {
-    match schema.remove_dev_dependency(name) {
-        DependencyRemoved::Yes => Ok(()),
-        DependencyRemoved::NoDependency => qp_bail!(
-            "no such dev-dependency as `{name}` in the project `{pkg_name}` at `{}`",
-            pkg_root.display()
-        ),
-        DependencyRemoved::NoDependencyButDevDepExists => {
-            qp_bail_internal!("there exists dev-dependency `{name}` but we did not remove it")
-        }
-    }
-}
-
 /// Remove a dependency or provide a meaningful error.
-fn remove_normal_dep(
+fn remove_dep(
     schema: &mut ManifestSchema,
-    name: &String,
+    name: &str,
+    kind: DependencyKind,
     pkg_name: StrId,
     pkg_root: &Path,
 ) -> QuackResult<()> {
-    match schema.remove_dependency(name) {
+    match schema.remove_dependency(name, kind) {
         DependencyRemoved::Yes => Ok(()),
         DependencyRemoved::NoDependency => qp_bail!(
-            "no such dependency as `{name}` in the project `{pkg_name}` at `{}`",
+            "no such {kind} dependency as `{name}` in the project `{pkg_name}` at `{}`",
             pkg_root.display()
         ),
-        DependencyRemoved::NoDependencyButDevDepExists => {
-            let err = Err(QuackError::hint(
-                "if you want to remove a dev-dependency use flag `--dev`",
-            ));
+        DependencyRemoved::NoDependencyButKindExists(other_kind) => {
+            let err = if matches!(other_kind, DependencyKind::Normal) {
+                Err(QuackError::hint(
+                    "if you want to remove a normal dependency don't use any flags",
+                ))
+            } else {
+                Err(QuackError::hint(format!(
+                    "if you want to remove a {other_kind} dependency use flag `--{other_kind}`"
+                )))
+            };
             err.with_context(|| {
                 format!(
-                    "no such dependency as `{name}` in the project `{pkg_name}` at `{}`",
+                    "no such {kind} dependency as `{name}` in the project `{pkg_name}` at `{}`",
                     pkg_root.display()
                 )
             })
