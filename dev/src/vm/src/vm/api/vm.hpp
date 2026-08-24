@@ -262,4 +262,6 @@ namespace vm::api {
 	std::expected<ExitValue, ApiError> executeRuntimeExprFromFile(
 		PID pid, ThreadID thread_id, fs::File file
 	);
+
+	std::expected<ExitValue, ApiError> getRuntimeExprResult(PID pid, ThreadID thread_id);
 }
