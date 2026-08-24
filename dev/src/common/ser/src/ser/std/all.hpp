@@ -13,4 +13,5 @@
 #include <ser/std/optional.hpp>
 #include <ser/std/string.hpp>
 #include <ser/std/tuple.hpp>
+#include <ser/std/variant.hpp>
 #include <ser/std/vector.hpp>

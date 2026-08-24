@@ -22,12 +22,14 @@
 #include <optional>
 #include <set>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 
@@ -403,6 +405,116 @@ static_assert(ser::CAN_ENUMERATE_MEMBERS_V<Branch>, "the field probe has to coun
 // so adding SER_DESCRIBE to a type invalidates no stream that was already written.
 static_assert(ser::schemaHash<Described>() == ser::schemaHash<Twin>());
 
+// ═══════════════════════════════════════════════════════════════════════════════════
+//  Structure four: the variant, and the shapes that make it awkward.
+//
+//  Every question this adapter answers is "which alternative does the TAG name" - never
+//  "which alternative does this value convert to". The types below are the cases where
+//  those two answers differ, or where the answer costs something.
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * @brief monostate, containers, and an alternative that has to be BUILT.
+ *
+ * `Built` is the interesting one: a const field, so it is neither default-constructible
+ * nor assignable, which makes a Payload unassignable too. That is exactly the shape for
+ * which `read` has to exist - emplace replaces an alternative without assigning to it,
+ * while the make path could only fill a field by assigning the whole variant.
+ */
+using Payload = std::variant<std::monostate, i32, std::string, std::vector<Leaf>, Built>;
+
+/** @brief Two alternatives of the SAME type: nothing but the tag can tell them apart. */
+using Twins = std::variant<i32, i32>;
+
+/** @brief `Ambiguous{ "text" }` would pick bool if overload resolution had a say here. */
+using Ambiguous = std::variant<bool, std::string>;
+
+/** @brief A variant as a field of a type with a serRead, which is the only way an
+ *  EXISTING variant is handed to serializer<Payload>::read rather than being built. */
+struct Slot {
+	Payload held;
+
+	static constexpr ser::Errc serWrite(ser::writer auto& ar, const Slot& x) { return ar(x.held); }
+
+	static constexpr ser::Errc serRead(ser::reader auto& ar, Slot& x) { return ar(x.held); }
+
+	friend bool operator==(const Slot&, const Slot&) = default;
+};
+
+/** @brief The same variant as an ordinary field and as a container element. */
+struct Tagged {
+	u64                  id = 0;
+	Payload              payload;
+	std::vector<Payload> history;
+
+	friend bool operator==(const Tagged&, const Tagged&) = default;
+};
+
+/**
+ * @brief Throws while being constructed, which is how a variant becomes valueless with no
+ * undefined behaviour involved.
+ *
+ * The hand-written move constructor is what makes that happen. A throwing constructor is
+ * not enough on its own: while the alternative is NOTHROW-move-constructible, libstdc++
+ * builds a temporary and moves it in, so the throw leaves the old value untouched and the
+ * variant valid. Only a move that may throw forces construction in place, and only then is
+ * there a window for the variant to lose its value.
+ */
+struct Boom {
+	i32 a = 0;
+
+	Boom() = default;
+
+	explicit Boom(i32 /*unused*/) { throw std::runtime_error{ "boom" }; }
+
+	Boom(const Boom&) = default;
+
+	Boom(Boom&& other) noexcept(false): a(other.a) {}
+
+	static ser::Errc serWrite(ser::writer auto& ar, const Boom& x) { return ar(x.a); }
+
+	static ser::Errc serRead(ser::reader auto& ar, Boom& x) { return ar(x.a); }
+};
+
+using Fragile = std::variant<i32, Boom>;
+
+static_assert(
+	ser::serializer<Payload>::FILLABLE,
+	"every alternative is reachable, so a Payload field is filled rather than assigned"
+);
+static_assert(
+	!ser::serializer<Payload>::FILLS_IN_PLACE<Built>,
+	"Built has a const field: it is built by dispatchMake and emplaced, not filled"
+);
+static_assert(
+	!std::is_move_assignable_v<Payload>,
+	"which is why serializer<Payload>::read has to exist - `x = make(ar)` would not compile"
+);
+
+// The tag, plus the smallest alternative - and monostate writes nothing at all.
+static_assert(ser::MIN_WIRE_SIZE_V<std::monostate> == 0);
+static_assert(ser::MIN_WIRE_SIZE_V<Payload> == sizeof(u64));
+static_assert(ser::MIN_WIRE_SIZE_V<Twins> == sizeof(u64) + sizeof(i32));
+
+// A tag means nothing without the alternative LIST it indexes, so order and count are
+// both part of the format - and a variant is not the tuple of the same types.
+static_assert(
+	ser::schemaHash<std::variant<i32, double>>() != ser::schemaHash<std::variant<double, i32>>()
+);
+static_assert(
+	ser::schemaHash<std::variant<i32, double>>()
+	!= ser::schemaHash<std::variant<i32, double, bool>>()
+);
+static_assert(
+	ser::schemaHash<std::variant<i32, double>>() != ser::schemaHash<std::tuple<i32, double>>()
+);
+
+// A cv-qualified alternative is the same wire type as the alternative itself.
+static_assert(
+	ser::schemaHash<std::variant<const i32, std::string>>()
+	== ser::schemaHash<std::variant<i32, std::string>>()
+);
+
 /** @brief The nested array the depth guard is measured against. */
 template<usize Depth>
 struct Nest {
@@ -425,6 +537,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(nestedRoundtrip);
 		TESTER_ADD_TEST(hookLadder);
+		TESTER_ADD_TEST(variants);
 		TESTER_ADD_TEST(envelope);
 		TESTER_ADD_TEST(errorPaths);
 		TESTER_ADD_TEST(mutatedStreams);
@@ -513,6 +626,92 @@ private:
 		const auto hooked_back = ser::read<Hooked>(view(composite));
 		ASSERT_TRUE(hooked_back.hasValue());
 		assertTrue(hooked_back->value == hooked, "the composite did not survive the round trip");
+	}
+
+	/**
+	 * @brief The tag decides which alternative is on the wire, and nothing else does.
+	 *
+	 * Four properties, and each one is a thing that goes wrong when an implementation
+	 * takes the obvious shortcut: monostate costs no bytes, the tag beats overload
+	 * resolution, an unassignable alternative is still readable IN PLACE, and a tag that
+	 * names no alternative is refused before anything is built from it.
+	 */
+	void variants() {
+		// monostate writes nothing: the tag is the entire message.
+		ByteBuf empty_alternative;
+		ASSERT_TRUE(ser::write(empty_alternative, Payload{}).hasValue());
+		ASSERT_EQUAL(sizeof(u64), empty_alternative.size());
+		const auto mono = ser::read<Payload>(view(empty_alternative));
+		ASSERT_TRUE(mono.hasValue());
+		ASSERT_EQUAL(usize{ 0 }, mono->value.index());
+
+		expectAlternative(Payload{ i32{ -7 } }, 1);
+		expectAlternative(Payload{ std::string{ "text" } }, 2);
+		expectAlternative(Payload{ std::vector<Leaf>{ Leaf{ .a = 1, .b = 0.5 } } }, 3);
+		expectAlternative(Payload{ Built{ 5u, "five" } }, 4);  // built, then emplaced
+
+		// Two alternatives of the same type, and one where a converting constructor would
+		// have sent "text" to bool. Only the tag distinguishes either case.
+		expectAlternative(Twins{ std::in_place_index<0>, 5 }, 0);
+		expectAlternative(Twins{ std::in_place_index<1>, 5 }, 1);
+		expectAlternative(Ambiguous{ true }, 0);
+		expectAlternative(Ambiguous{ std::string{ "text" } }, 1);
+
+		// Nested, and a const alternative - which is not fillable, so it is emplaced.
+		expectAlternative(std::variant<i32, Payload>{ Payload{ std::string{ "inner" } } }, 1);
+		expectAlternative(std::variant<const i32, std::string>{ std::in_place_index<0>, 3 }, 0);
+
+		// An EXISTING variant, handed over by Slot::serRead. This is the fill path, and
+		// the static_asserts above are why it has to exist: a Payload cannot be assigned.
+		const Slot slot{ .held = Payload{ Built{ 9u, "nine" } } };
+		ByteBuf    slot_bytes;
+		ASSERT_TRUE(ser::write(slot_bytes, slot).hasValue());
+		const auto slot_back = ser::read<Slot>(view(slot_bytes));
+		ASSERT_TRUE(slot_back.hasValue());
+		assertTrue(slot_back->value == slot, "the filled variant did not come back");
+
+		// A tag no alternative answers to, and a tag with nothing behind it. Both are
+		// refused before the alternative is touched.
+		ByteBuf bad_tag;
+		(void) ser::write(bad_tag, u64{ 99 });
+		ASSERT_EQUAL(ser::Errc::InvalidValue, ser::read<Payload>(view(bad_tag)).code());
+
+		ByteBuf tag_only;
+		(void) ser::write(tag_only, u64{ 2 });  // the std::string alternative, and no string
+		ASSERT_EQUAL(ser::Errc::Truncated, ser::read<Payload>(view(tag_only)).code());
+
+		// A valueless variant is refused rather than written: variant_npos names no
+		// alternative, so no tag could describe it and nothing may reach the buffer.
+		Fragile fragile;
+		try {
+			fragile.emplace<1>(i32{ 0 });
+		} catch (const std::runtime_error&) {}
+		static_assert(!std::is_nothrow_move_constructible_v<Boom>, "or it never goes valueless");
+		assertTrue(fragile.valueless_by_exception(), "the fixture did not become valueless");
+		ByteBuf refused;
+		ASSERT_EQUAL(ser::Errc::InvalidValue, ser::write(refused, fragile).code());
+		assertTrue(refused.empty(), "a refused write must not leave bytes behind");
+
+		// And in the shapes it will actually appear in: a field and a container element.
+		const Tagged tagged{
+			.id      = 7,
+			.payload = Payload{ std::string{ "top" } },
+			.history = { Payload{}, Payload{ i32{ 1 } }, Payload{ Built{ 2u, "two" } } },
+		};
+
+		ByteBuf composite;
+		ASSERT_TRUE(ser::write(composite, tagged).hasValue());
+		const auto tagged_back = ser::read<Tagged>(view(composite));
+		ASSERT_TRUE(tagged_back.hasValue());
+		assertTrue(tagged_back->value == tagged, "the variant fields did not survive");
+		ASSERT_TRUE(SER_TEST_ROUNDTRIP(tagged));
+
+		// No truncation of that stream may be accepted: a tag whose alternative is missing
+		// is the same class of damage as a length prefix with no elements behind it.
+		for (usize n = 0; n < composite.size(); ++n) {
+			const auto cut = ser::read<Tagged>(view(composite, n));
+			assertTrue(!cut.hasValue(), base::strConcat("a prefix of ", n, " bytes was accepted"));
+		}
 	}
 
 	/**
@@ -698,6 +897,20 @@ private:
 	}
 
 	// ── helpers ─────────────────────────────────────────────────────────────────────
+
+	/** @brief Round-trips one alternative and checks the tag it came back under. */
+	template<class V>
+	void expectAlternative(const V& sample, usize index) {
+		ByteBuf buf;
+		assertTrue(ser::write(buf, sample).hasValue(), "a variant failed to write");
+		const auto back = ser::read<V>(view(buf));
+		assertTrue(back.hasValue(), "a variant failed to read back");
+		assertTrue(
+			back->value.index() == index,
+			base::strConcat("alternative ", index, " came back as ", back->value.index())
+		);
+		assertTrue(back->value == sample, "the alternative did not survive the round trip");
+	}
 
 	/** @brief Writes `sample`, checks which rung produced the bytes, and reads it back. */
 	template<uchar M, class T>
