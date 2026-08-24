@@ -12,8 +12,8 @@
 #include <vm/bytecode/validator/local_stack_database.hpp>
 #include <vm/bytecode/validator/valid_type/type_size.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
-#include <vm/utils/persistent/hashmap.hpp>
-#include <vm/utils/persistent/vector.hpp>
+#include <vm/utils/persistent/dummy/hashmap.hpp>
+#include <vm/utils/persistent/dummy/vector.hpp>
 
 namespace vm::code {
 	/**
@@ -46,11 +46,11 @@ namespace vm::code {
 
 		struct TreeNode {
 			base::HashMap<Child, NameStackID, ChildHash> children{};
-			persistent::HashMapStateID name_map_id = persistent::HashMap<base::StrID, usize>::EMPTY;
-			persistent::VectorStateID  name_stack_id = persistent::Vector<base::StrID>::EMPTY;
-			usize                      size          = 0;
-			NameStackID                prev_node     = 0;
-			valid_type::TypeSize       byte_depth = valid_type::TypeSize{ Bytes{ 0 }, Bytes{ 0 } };
+			usize                                        name_map_id   = 0;
+			usize                                        name_stack_id = 0;
+			usize                                        size          = 0;
+			NameStackID                                  prev_node     = 0;
+			valid_type::TypeSize byte_depth = valid_type::TypeSize{ Bytes{ 0 }, Bytes{ 0 } };
 
 			NameStackID emplaceChild(const Child& child, NameStackID new_id);
 		};
@@ -63,9 +63,9 @@ namespace vm::code {
 		const valid_type::ValidTypeMap& types_ctx;
 		std::vector<TreeNode>           tree = { TreeNode{} };
 
-		persistent::HashMap<base::StrID, usize>          name_to_idx;
-		persistent::Vector<base::StrID>                  typenames;
-		persistent::Vector<base::StrID>                  var_names;
+		persistent::DummyHashMap<base::StrID, usize>     name_to_idx;
+		persistent::DummyVector<base::StrID>             typenames;
+		persistent::DummyVector<base::StrID>             var_names;
 		std::vector<std::pair<NameStackID, TypeStackID>> states
 			= { std::make_pair(LocalStackDb::EMPTY_NAME_STACK, LocalStackDb::EMPTY_TYPE_STACK) };
 

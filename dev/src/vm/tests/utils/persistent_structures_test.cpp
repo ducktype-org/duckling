@@ -103,6 +103,28 @@ class PersistentStlTester: public tester::TestSuite {
 		}
 	};
 
+	void testConstCrossingDiff() {
+		using namespace vm::persistent;
+		Memory mem{};
+
+		// two states sharing a small entry but differing on widely-separated indices so the
+		// lowest common ancestor is near the root and the const-mode rebuild must cross
+		// between subtrees (swapSibling).
+		auto base = mem.setMultiple(
+			Memory::EMPTY, { { 1, 100 }, { 2, 200 }, { 3, 300 }, { 4, 400 } }
+		);
+
+		auto a = mem.set(base, 1'000'000, 1'000);
+		auto b = mem.set(base, 2'000'000, 2'000);
+
+		// getDiff drives the const-mode rebuild (RECONSTRUCT == false): the tracked node
+		// climbs to the LCA, swaps to its sibling, then descends to the other side.
+		auto diff = mem.getDiff(a, b);
+
+		decltype(diff) expected = { { 1'000'000, 1'000, std::nullopt }, { 2'000'000, std::nullopt, 2'000 } };
+		ASSERT_EQUAL(expected, diff);
+	}
+
 #undef TESTER_CLASS
 #define TESTER_CLASS PersistentStlTester
 
@@ -112,6 +134,7 @@ public:
 		TESTER_ADD_TEST(testMemory);
 		TESTER_ADD_TEST(testVector);
 		TESTER_ADD_TEST(testHashMap);
+		TESTER_ADD_TEST(testConstCrossingDiff);
 	}
 
 	void testBijective() {

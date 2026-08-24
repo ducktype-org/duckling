@@ -109,17 +109,16 @@ namespace vm::persistent {
 			return inner.getRange(root);
 		}
 
-		using Dir                              = detail::SegmentTree::Dir;
-
 		/**
 		 * @brief returns a const iterator to given idx in given memory instance
 		 */
-		base::Optional<Path> getPathTo(MemoryStateID state, usize idx, base::Optional<Dir> opt_dir = std::nullopt) const {
-			return inner.getPathTo(fromState(state), idx, opt_dir);
+		const Path getPathTo(MemoryStateID state, usize idx) const {
+			return inner.getPathTo(fromState(state), idx);
 		}
 
 		constexpr static MemoryStateID EMPTY   = MemoryStateID{ u64(detail::SegmentTree::EMPTY) };
 		constexpr static auto          IDX_END = detail::SegmentTree::IDX_END;
+		using Dir                              = detail::SegmentTree::Dir;
 
 		using ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;
 		inline const static ConflictPolicy DEFAULT_CONFLICT_POLICY
