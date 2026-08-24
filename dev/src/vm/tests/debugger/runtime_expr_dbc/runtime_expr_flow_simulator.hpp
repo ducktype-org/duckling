@@ -16,11 +16,6 @@
 namespace vm::test {
 	class FlowSimulator {
 	public:
-		struct ExprExpectation {
-			fs::File         expr_file;
-			std::vector<u64> expected_result;
-		};
-
 		FlowSimulator(
 			std::function<void(bool, std::string_view)> assert_true_fn,
 			vm::PID                                     pid,
@@ -38,9 +33,9 @@ namespace vm::test {
 			assertTrue(attach_res.has_value(), "Attach status listener failed");
 		}
 
-		FlowSimulator& putBreakpoint(base::StrID func_name, u64 instr_index) {
-			auto bp_res = vm::api::setBreakpoint(pid, func_name, instr_index, true);
-			assertTrue(bp_res.has_value(), "Set breakpoint failed");
+		FlowSimulator& putBreakpoint(base::StrID func_name, u64 instr_index, bool enable = true) {
+			auto bp_res = vm::api::setBreakpoint(pid, func_name, instr_index, enable);
+			if (!bp_res) assertTrue(false, vm::api::errorToString(bp_res.error()));
 			return *this;
 		}
 
@@ -77,21 +72,13 @@ namespace vm::test {
 		}
 
 		FlowSimulator& evalExprExpectBreakpoint(
-			const fs::File&         file,
-			const std::vector<u64>& expected_result,
-			base::StrID             expected_func,
-			u64                     expected_instr
+			const fs::File& file, base::StrID expected_func, u64 expected_instr
 		) {
 			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
 			assertTrue(
 				!response.has_value(),
 				"Expected expression evaluation to pause on breakpoint, but it completed"
 			);
-
-			pending_expr_stack.push_back(ExprExpectation{
-				.expr_file       = file,
-				.expected_result = expected_result,
-			});
 
 			return assertAtBreakpoint(expected_func, expected_instr);
 		}
@@ -102,11 +89,7 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& resumeUntilExprCompleted() {
-			assertTrue(!pending_expr_stack.empty(), "No pending expression on stack");
-			auto expectation = pending_expr_stack.back();
-			pending_expr_stack.pop_back();
-
+		FlowSimulator& resumeUntilExprCompleted(const std::vector<u64>& expected_result) {
 			auto resume_res = vm::api::resume(pid, thread_id);
 			assertTrue(resume_res.has_value(), "Resume failed");
 
@@ -127,7 +110,7 @@ namespace vm::test {
 
 			auto response = vm::api::getRuntimeExprResult(pid, thread_id);
 			assertTrue(response.has_value(), "Failed to get runtime expression result");
-			assertExitValue(response.value(), expectation.expected_result);
+			assertExitValue(response.value(), expected_result);
 			return *this;
 		}
 
@@ -190,7 +173,6 @@ namespace vm::test {
 		std::function<void(bool, std::string_view)> assert_true_fn;
 		vm::PID                                     pid;
 		vm::api::ThreadID                           thread_id;
-		std::deque<ExprExpectation>                 pending_expr_stack;
 		events::Listener<vm::api::ProcStatus>       status_listener;
 		std::deque<vm::api::ProcStatus>             received_statuses;
 		std::mutex                                  mutex;
