@@ -30,7 +30,6 @@ fun main() -> i32 = {
 	print(pointer_text.at(2i64).toString());
 	print(pointer_text.at(3i64).toString());
 	print(pointer_text.at(pointer_text.length() - 1).toString());
-	pointer_text.dispose();
 
 	return 0;
 }
