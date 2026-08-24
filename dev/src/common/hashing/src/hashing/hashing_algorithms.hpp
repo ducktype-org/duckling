@@ -104,7 +104,7 @@ namespace hashing {
 		using result_type = base::Bit256;
 
 		// Constructor - initializes the hash state
-		constexpr SHA256() noexcept:
+		constexpr SHA256_XD() noexcept:
 			  state{ // Initial hash values: first 32 bits of the fractional parts of the
 			         // square roots of the first 8 primes (2 through 19)
 			         0x6a'09'e6'67, 0xbb'67'ae'85, 0x3c'6e'f3'72, 0xa5'4f'f5'3a,
@@ -147,7 +147,7 @@ namespace hashing {
 		// Finalize and return the hash value
 		[[nodiscard]]
 		constexpr result_type finalize() const noexcept {
-			SHA256 copy = *this;
+			SHA256_XD copy = *this;
 			copy.padAndProcess();
 			std::array<u32, 8> ret{};
 			std::ranges::copy(copy.state.rbegin(), copy.state.rend(), ret.begin());
