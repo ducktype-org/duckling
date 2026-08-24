@@ -66,6 +66,7 @@ DEF_INSTR(cmov_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src)
 DEF_INSTR(mov_pptr_pptr, (vm::opargs::PlacePtr, dst), (vm::opargs::PlacePtr, src))
 DEF_INSTR(mov_pste_pste, (vm::opargs::PlaceStructure, dst), (vm::opargs::PlaceStructure, src))
 DEF_INSTR(mov_pfst_pfst, (vm::opargs::PlaceFSTable, dst), (vm::opargs::PlaceFSTable, src))
+DEF_INSTR(mov_pvnt_pvnt, (vm::opargs::PlaceVnt, dst), (vm::opargs::PlaceVnt, src))
 
 // does a shallow pointer copy
 
@@ -584,7 +585,7 @@ DEF_INSTR(write_pcptr_pptr, (vm::opargs::PlaceCPtr, dst_ptr), (vm::opargs::Place
 DEF_INSTR(mov_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr, src))
 
 /// Reinterprets any cpointer type to any other cpointer type (the analogue of a C cast).
-DEF_INSTR(movCast_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr, src))
+DEF_INSTR(cast_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr, src))
 
 DEF_INSTR(cast_pcptr_pptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlacePtr, src_ptr))
 

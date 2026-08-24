@@ -15,7 +15,8 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/errors/errors.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -201,8 +202,6 @@ namespace compiler::helios {
 			 * @brief Evaluates indexing operations performed on meta types
 			 *
 			 * This includes:
-			 * - For type templates: specializing a TypeTemplate with a type when the index provided
-			 * is a meta type. Currently only implemented for the builtin List type.
 			 * - For static arrays: constructs a static array type with a fixed size `Int[10]` when
 			 * the index is a integral constant.
 			 *
@@ -217,21 +216,9 @@ namespace compiler::helios {
 				auto base_abs = base_type.getType();
 
 				if (base_abs.getKind() == tsh::Kind::TypeTemplate) {
-					// If base is a TypeTemplate type, we expect a meta in the index expression. It
-					// instantiates the type template.
-					auto template_type = base_abs.as<tsh::TypeTemplateAbstractType>();
-					// We just call `.value()` here since the type correctness should be verified
-					// earlier.
-					auto elem_type = index_ctv.get<tsh::SymbolType<>>().value();
-
-					// Instantiate the type template.
-					auto instantiated_abs_type = template_type.instantiate(ctx, elem_type);
-
-					return CompileTimeValue{ tsh::SymbolType<>{
-						instantiated_abs_type,
-						base_type.getRefKind(),
-						base_type.getMutability(),
-					} };
+					throw base::NotYetImplemented(
+						"Instantiating a type template with the `[]` operator"
+					);
 				} else {
 					// If base is meta and not a type template, then the index should be an integral
 					// constant. This expression creates a new static array type.
@@ -666,15 +653,6 @@ namespace compiler::helios {
 				result = CompileTimeValue{ true };
 			}
 
-			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
-				auto sub_result = evalHoutExpr(ctx, expr.inner.ref());
-				if (sub_result.hasFailed()) {
-					result = query::Failed();
-					return;
-				}
-				result = sub_result.valueOrThrow();
-			}
-
 			void visitTupleExpr(const code::TupleExpr& expr) final {
 				std::vector<CompileTimeValue> ctv_elements;
 
@@ -719,11 +697,47 @@ namespace compiler::helios {
 					);
 				}
 
+				for (usize i = 0; i < subtypes.size(); i++) {
+					for (usize j = 0; j < i; j++) {
+						if (subtypes[i].getType() == subtypes[j].getType()) {
+							const auto position = expr.origin.getStablePosition();
+							CORE_ASSERT(
+								position.has_value(),
+								"Variant type constructor without a source position"
+							);
+							// The duplicate is of the underlying type, so that is what gets named:
+							// in `i32 | ref i32` neither alternative is written twice, but they
+							// still describe the same one.
+							ctx.logInt(makeBox<DuplicateVariantAlternativeError>(
+								position.value(),
+								makeBox<InteractiveType>(
+									ctx, tsh::SymbolType<>::withDefaults(subtypes[i].getType())
+								)
+							));
+							result = query::Failed();
+							return;
+						}
+					}
+				}
+
 				result = CompileTimeValue{ tsh::SymbolType<>{
 					ctx.query<tsh::QueryVariantType>({ subtypes }),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				} };
+			}
+
+			void visitMatchExpr(const code::MatchExpr& expr) final {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"Evaluating a `match` at compile time.", expr.origin.getStablePosition()
+				));
+			}
+
+			void visitVariantConstructExpr(const code::VariantConstructExpr& expr) final {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"Evaluating variant construction at compile time.",
+					expr.origin.getStablePosition()
+				));
 			}
 
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
@@ -863,20 +877,6 @@ namespace compiler::helios {
 
 			void visitReusableExpr(const code::ReusableExpr& reusable) override {
 				evaluateSubExpr(reusable.inner.ref());
-			}
-
-			void visitListPushExpr(const code::ListPushExpr& expr) final {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Evaluating list push expression at compile time.",
-					expr.origin.getStablePosition()
-				));
-			}
-
-			void visitListPopExpr(const code::ListPopExpr& expr) final {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Evaluating list pop expression at compile time.",
-					expr.origin.getStablePosition()
-				));
 			}
 		};
 

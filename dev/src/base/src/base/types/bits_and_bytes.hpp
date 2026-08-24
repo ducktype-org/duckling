@@ -32,6 +32,10 @@ namespace base {
 	}
 
 	constexpr Bytes bits2bytesRoundUp(Bits bits) { return Bytes((usize(bits) + 7) / 8); }
+
+	constexpr Bytes bytesRoundTo(Bytes size, Bytes round_to) {
+		return ((size + round_to - Bytes(1)) / round_to.asInt()) * round_to.asInt();
+	}
 }
 
 namespace base::internal {

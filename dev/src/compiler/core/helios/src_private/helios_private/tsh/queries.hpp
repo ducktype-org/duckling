@@ -75,24 +75,6 @@ namespace compiler::tsh {
 	)
 
 	/**
-	 * TSH-private query to get the interface of a dynamic array.
-	 *
-	 * To access the interface of a dynamic array from outside the TSH module, use
-	 * `AbstractType::getInterface`
-	 *
-	 * @note This query is made for the purpose of caching. Analogous queries for most other
-	 * types do not exist, because getting their interfaces is trivial.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(
-		QueryInterfaceOfDynamicArray,
-		DynamicArrayAbstractType,
-		CRef<query::QResult<TypeInterface>>,
-		({})
-	)
-
-	/**
 	 * TSH-private query to get the interface of a static array.
 	 *
 	 * To access the interface of a static array from outside the TSH module, use

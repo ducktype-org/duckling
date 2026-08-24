@@ -1,15 +1,32 @@
+class R {
+    a: i32 = 0;
+    R.destroy() = { var t: i32 = a; }
+}
+
 fun eat(x: i64) = x;
+
+fun borrow(r: ref R) -> i32 = r.a;
+
+fun eat(r: R) -> i32 = r.a;
 
 # No move: the local is alive at its scope end, so it gets an unconditional `Destruct`.
 fun noMove() = {
-    var a: i64 = 5;
-    eat(a);
+    var a: R;
+    borrow(&a);
 }
 
 # Move on only one branch: at the merge the local is `MaybeMoved`, so it gets a
 # conditional `DestructIf`.
 fun maybeMove(c: i64) = {
-    var a: i64 = 5;
+    var a: R;
+    if (c == 0) {
+        eat(move a);
+    }
+}
+
+# A parameter moved on one branch only. Its lifetime flag is set at the top of the entry block,
+# because a parameter owns its value on entry, without a `Construct` to set the flag on.
+fun maybeMoveParam(a: R, c: i64) = {
     if (c == 0) {
         eat(move a);
     }

@@ -4,6 +4,7 @@
 #include <helios/hout/hout_fd.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/flag.hpp>
@@ -82,16 +83,15 @@ namespace compiler::helios {
 		/** `dvm_nullptr() -> ptr T`: a pointer into no block. */
 		DvmNullptr,
 		/**
-		 * Box allocation / deallocation, dynamic-array (list) freeing and the box destructor.
+		 * Box allocation / deallocation and the box destructor.
 		 * Unlike the other builtins these are not selected by the `@builtin("...")` attribute. They
-		 * are only called by the compiler in `box T`/`[T]` constructors and destructors.
+		 * are only called by the compiler in `box T` constructors and destructors.
 		 *
-		 * `BoxAlloc`/`BoxFree`/`ListFree` are implemented by the backends; `BoxDestructor` is
+		 * `BoxAlloc`/`BoxFree` are implemented by the backends; `BoxDestructor` is
 		 * implemented in HOUT (it destroys the pointee, then calls `box_free`).
 		 */
 		BoxAlloc,
 		BoxFree,
-		ListFree,
 		BoxDestructor,
 	};
 
@@ -149,13 +149,7 @@ namespace compiler::helios {
 	 */
 	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
 
-	/**
-	 * @brief Symbol of the compiler-generated `list_free(l: ref List[T])` builtin for a given
-	 * element type.
-	 *
-	 * The returned symbol is a declaration only, it's implemented in both backends.
-	 */
-	SymID listFreeSymForType(query::Context& ctx, tsh::AbstractType element_type);
+	SymID moveInSymForType(query::Context& ctx, tsh::SymbolType<> element_type);
 
 	/**
 	 * @brief Build a HOUT expression that constructs a `box T` holding `inner`.

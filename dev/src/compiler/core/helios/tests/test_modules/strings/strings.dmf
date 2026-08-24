@@ -15,7 +15,7 @@ fun main() = {
 
     let should_char_slice = "abc";
     let should_char = "abc"[0];
-    let should_u64 = "abc".length();
+    let should_i64 = "abc".length();
     let should_string = "abc".toString();
 
     var c = 1;

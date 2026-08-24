@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::ffi::OsStr;
 use std::fs::{
     File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
@@ -77,6 +78,9 @@ pub trait PathOpsExt {
 
     /// Expand `~` into a `home`.
     fn expand_tilde_with(&self, home: &Path) -> PathBuf;
+
+    /// Resolves both `self` and `other` and returns the relative path from `self` to `other`.
+    fn resolve_both_and_get_relative(&self, other: &Path, ctx: &DuckContext) -> PathBuf;
 
     /// Returns `true` if path exists on a disk and points to an executable file.
     ///
@@ -292,35 +296,33 @@ impl PathOpsExt for Path {
 
     #[track_caller]
     fn normalize(&self) -> PathBuf {
-        let mut result = PathBuf::new();
-        let mut components = self.components().peekable();
-        if let Some(c @ Component::Prefix(..)) = components.peek().copied() {
-            result = PathBuf::from(&c);
-            components.next();
-        }
+        let mut result: Vec<Component> = vec![];
+        let components = self.components().peekable();
+
         for component in components {
             match component {
-                Component::Prefix(..) => unreachable!("path `{self:?}` has multiple prefixes"),
-                c @ Component::RootDir => result.push(c),
-                Component::CurDir => {}
-                c @ Component::ParentDir => {
-                    // We end in `..`, push another.
-                    if result.ends_with(Component::ParentDir) {
-                        result.push(c);
-                    } else {
-                        // We have some non-trivial part, remove it.
-                        let popped = result.pop();
-                        // ...but we were empty and we don't have anything. Assume we want to be
-                        // `/`.
-                        if !popped & !result.has_root() {
-                            result.push(Component::RootDir);
-                        }
+                pref @ Component::Prefix(..) => result.push(pref),
+                root @ Component::RootDir => result.push(root),
+                normal @ Component::Normal(..) => result.push(normal),
+                parent @ Component::ParentDir => match result.last() {
+                    Some(Component::Prefix(_)) => {}
+                    Some(Component::RootDir) => {}
+                    Some(Component::ParentDir) => result.push(parent),
+                    Some(Component::Normal(_)) => {
+                        result.pop();
                     }
-                }
-                Component::Normal(os_str) => result.push(os_str),
+                    None => result.push(parent),
+                    Some(Component::CurDir) => {
+                        unreachable!("we removed all curdirs but the current path is `{result:?}`");
+                    }
+                },
+                Component::CurDir => {}
             }
         }
-        result
+        if result.is_empty() {
+            result.push(Component::CurDir);
+        }
+        PathBuf::from_iter(result)
     }
 
     fn expand_tilde(&self, ctx: &DuckContext) -> PathBuf {
@@ -350,6 +352,41 @@ impl PathOpsExt for Path {
 
     fn resolve_with_tilde(&self, ctx: &DuckContext) -> PathBuf {
         ctx.cwd().join(self.expand_tilde(ctx)).normalize()
+    }
+
+    fn resolve_both_and_get_relative(&self, other: &Path, ctx: &DuckContext) -> PathBuf {
+        let source = self.resolve_with_tilde(ctx);
+        let target = other.resolve_with_tilde(ctx);
+        let mut src_components = source.components().fuse();
+        let mut tgt_components = target.components().fuse();
+
+        let mut result_components = VecDeque::new();
+        let mut common_prefix = true;
+        loop {
+            match (src_components.next(), tgt_components.next()) {
+                (None, None) => break,
+                (Some(src_comp), Some(tgt_comp)) => {
+                    if src_comp == tgt_comp && common_prefix {
+                        continue;
+                    }
+                    common_prefix = false;
+                    result_components.push_front(Component::ParentDir);
+                    result_components.push_back(tgt_comp);
+                }
+                (Some(_), None) => {
+                    common_prefix = false;
+                    result_components.push_front(Component::ParentDir)
+                }
+                (None, Some(tgt_comp)) => {
+                    common_prefix = false;
+                    result_components.push_back(tgt_comp)
+                }
+            }
+        }
+        result_components
+            .into_iter()
+            .map(|c| c.as_os_str())
+            .collect()
     }
 }
 
@@ -395,6 +432,9 @@ mod tests {
 
         let path = Path::new("/home/duckling/./xd/..");
         assert_eq!(path.normalize(), Path::new("/home/duckling"));
+
+        let path = Path::new("../a/b/c/../../../../d");
+        assert_eq!(path.normalize(), Path::new("../../d"));
     }
 
     #[test]
@@ -430,5 +470,30 @@ mod tests {
 
         let path = Path::new("~duck");
         assert_eq!(path.expand_tilde_with(home), path,);
+    }
+
+    #[test]
+    fn relative_tests() {
+        let ctx = DuckContext::default();
+
+        let source = Path::new("foo/bar");
+        let target = Path::new("x/y/z");
+        let expected = Path::new("../../x/y/z");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
+
+        let source = Path::new("");
+        let target = Path::new("x/y/z");
+        let expected = Path::new("x/y/z");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
+
+        let source = Path::new("foo/x");
+        let target = Path::new("foo/y");
+        let expected = Path::new("../y");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
+
+        let source = Path::new("foo/bar");
+        let target = Path::new("../x/../y/z");
+        let expected = Path::new("../../../y/z");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
     }
 }

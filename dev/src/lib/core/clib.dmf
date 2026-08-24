@@ -1,6 +1,7 @@
 #{
-    Allocation entry points of the C standard library.
-    Only usable from the native (LLVM) backend.
+    C-FFI for the C standard library.
+    Some of these functions shouldn't be used when on DVM backend (like input/output and memory),
+    others are fine.
 #}
 extern("C") {
     fundecl malloc(size: u64) -> cptr u8;

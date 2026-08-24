@@ -55,8 +55,7 @@ namespace compiler::helios {
 				auto expand_str = expand_str_opt.value();
 				auto pst        = pst::PST<pst::Stmt>::fromExpand(
                     expand->getStablePosition(),
-                    // @TODO: #2471 change to strView, once it is fixed
-                    expand_str.str(),
+                    expand_str.strView(),
                     makeBox<pst::LangParserContext>(expand->getContext()),
 
                     // This is a little weird, we create a path context hash by hashing the string

@@ -152,10 +152,6 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ OpKind::setNull, dest->asArgument() });
 			break;
 		}
-		case lir::BuiltinFunctionKind::ListFree: {
-			// `list_free(l: ref [T])`. Lists are not supported in DVM code generation yet.
-			throw base::NotYetImplemented("Lists are not supported in DVM code generation yet.");
-		}
 		}
 
 		if (indirect_dest) ctx->maybeStoreResult(op.dest, { *dest });

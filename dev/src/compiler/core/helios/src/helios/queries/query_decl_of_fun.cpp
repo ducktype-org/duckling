@@ -596,8 +596,7 @@ namespace compiler::helios {
 					variant_case_novalue(
 						defgen::Method,
 						defgen::BuiltinTemplatedSymbol,
-						defgen::ReplExpressionWrapper,
-						defgen::ReplInstructionWrapper,
+						defgen::ReplInputWrapper,
 						defgen::ScriptMainWrapper
 					) {
 						return funDeclFromType(

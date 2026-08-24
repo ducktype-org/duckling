@@ -24,8 +24,16 @@ class TrivialClass {
     y: bool;
 }
 
+class DeepCopied {
+    v: i32;
+
+    DeepCopied.copy(other: const ref DeepCopied) = {
+        return DeepCopied(other.v);
+    }
+}
+
 class ComplexClass {
-    x: List[i32];
+    x: DeepCopied;
     y: bool;
 }
 
@@ -41,4 +49,9 @@ class MoreComplexComplexClass {
 class MoreComplexNonDefaultable {
     x: NonDefaultConstructibleClass[2];
     y: bool;
+}
+
+template(T: type)
+class TemplateClass {
+    x: T;
 }

@@ -11,15 +11,15 @@ fundecl ptr_from_slice(s: slice T) -> manyptr T;
 
 template(T: type)
 @builtin("slice_from_ptr_len")
-fundecl slice_from_ptr_len(p: manyptr T, l: u64) -> slice T;
+fundecl slice_from_ptr_len(p: manyptr T, l: i64) -> slice T;
 
 template(T: type)
 @builtin("dvm_alloc_arr")
-fundecl dvm_alloc_arr(size: u64) -> manyptr T;
+fundecl dvm_alloc_arr(size: i64) -> manyptr T;
 
 template(T: type)
 @builtin("dvm_realloc_arr")
-fundecl dvm_realloc_arr(p: manyptr T, size: u64);
+fundecl dvm_realloc_arr(p: manyptr T, size: i64);
 
 template(T: type)
 @builtin("dvm_free_arr")
@@ -104,18 +104,17 @@ fun builtin_input_u64() -> u64 = io.readU64();
 fun builtin_input_f64() -> f64 = io.readF64();
 fun builtin_input_string() -> containers.String = io.readString();
 
-fun builtin_output_char(c: char) -> i64 = io.writeChar(c) as i64;
-fun builtin_output_i64(v: i64) -> i64 = io.writeI64(v) as i64;
-fun builtin_output_u64(v: u64) -> i64 = io.writeU64(v) as i64;
-fun builtin_output_f64(v: f64) -> i64 = io.writeF64(v) as i64;
-fun builtin_output_str(v: str) -> i64 = io.writeStr(v) as i64;
+fun builtin_output_char(c: char) -> i64 = io.writeChar(c);
+fun builtin_output_i64(v: i64) -> i64 = io.writeI64(v);
+fun builtin_output_u64(v: u64) -> i64 = io.writeU64(v);
+fun builtin_output_f64(v: f64) -> i64 = io.writeF64(v);
+fun builtin_output_str(v: str) -> i64 = io.writeStr(v);
 
-fun print(v: str) -> u64 = io.writeStr(v);
+fun print(v: str) -> i64 = io.writeStr(v);
 
-fun print(v: ref containers.String) -> u64 = io.writeString(v);
+fun print(v: ref containers.String) -> i64 = io.writeString(v);
 
-fun print(s: containers.String) -> u64 = {
+fun print(s: containers.String) -> i64 = {
     let result = io.writeString(&s);
-    s.dispose();
     return result;
 }

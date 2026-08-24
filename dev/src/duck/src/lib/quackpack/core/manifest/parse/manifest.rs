@@ -9,8 +9,8 @@ use super::{Scope, dependency};
 use crate::quackpack::core::manifest::VenvConfig;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
-    Features, Manifest, OptLevel, PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard,
-    Version,
+    Dependencies, DependencyKind, Features, Manifest, OptLevel, PackageMetadata, ParseMode,
+    Profile, Profiles, ScopeGuard, Version,
 };
 use crate::quackpack::schemas::manifest::{
     Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
@@ -29,11 +29,27 @@ pub(crate) fn parse(
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
     let mut scope = Scope::new();
+    let mut deps = Vec::new();
     let guard = scope.push("dependencies".into());
-    let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, guard)?;
+    dependency::parse(
+        schema.dependencies.as_ref(),
+        root,
+        DependencyKind::Normal,
+        &mut deps,
+        ctx,
+        guard,
+    )?;
 
     let guard = scope.push("dev-dependencies".into());
-    let dev_dependencies = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, guard)?;
+    dependency::parse(
+        schema.dev_dependencies.as_ref(),
+        root,
+        DependencyKind::Dev,
+        &mut deps,
+        ctx,
+        guard,
+    )?;
+    let dependencies = Dependencies::new(deps)?;
 
     let guard = scope.push("profiles".into());
     let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
@@ -71,7 +87,6 @@ pub(crate) fn parse(
                 Features::default(),
                 PackageMetadata::default(),
                 dependencies,
-                dev_dependencies,
                 profiles,
                 VenvConfig::default_for_script(ctx),
             );
@@ -121,7 +136,6 @@ pub(crate) fn parse(
                 features,
                 package_metadata,
                 dependencies,
-                dev_dependencies,
                 profiles,
                 venv,
             ))

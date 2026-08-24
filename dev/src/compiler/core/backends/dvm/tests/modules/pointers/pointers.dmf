@@ -14,7 +14,7 @@ fun main() -> i64 = {
     # A `manyptr T` is lowered to a pointer to a dynamic table of `T`, so narrowing it to a `ptr T`
     # must take the address of the table's first element (`dynTableLea` on index 0), not reuse the
     # table pointer as-is.
-    var table = dvm_alloc_arr:{i32}(3u64);
+    var table = dvm_alloc_arr:{i32}(3i64);
     table[0] = 11i32;
     table[1] = 22i32;
     table[2] = 33i32;

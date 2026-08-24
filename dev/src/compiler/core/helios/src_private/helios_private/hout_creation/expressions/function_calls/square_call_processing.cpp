@@ -6,7 +6,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 
@@ -32,8 +32,7 @@ namespace compiler::helios::code {
 			pst::AccessLocked<pst::ExprElement> index_pst
 		) {
 			if (auto expr_kind = current_expr->expression_type.getSymbolType().getType().getKind();
-			    expr_kind != tsh::Kind::StaticArray && expr_kind != tsh::Kind::DynamicArray
-			    && expr_kind != tsh::Kind::ManyPointer && expr_kind != tsh::Kind::Slice) {
+			    not tsh::isIndexable(expr_kind)) {
 				auto error_pos = current_expr->origin.getStablePosition().copyValueOr(
 					index_pst.unlock(ctx)->getStablePosition()
 				);

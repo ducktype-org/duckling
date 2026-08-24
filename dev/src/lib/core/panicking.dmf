@@ -1,8 +1,21 @@
 import core.builtins.*;
-
-extern("C") fundecl abort() -> ();
+import core.clib;
+import core.runtime;
 
 fun panic() -> () = {
     builtin_output_str("Program panicked!\n");
-    abort();
+    doPanic();
+}
+
+@backend_dependent
+fundecl doPanic() -> ();
+
+@native_only_impl
+fun doPanic() -> () = {
+    clib.abort();
+}
+
+@dvm_only_impl
+fun doPanic() -> () = {
+    runtime.dvm.abort();
 }

@@ -78,7 +78,6 @@ namespace lang_def {
 	          KeywordFlagsOptions::IsStmtStart | KeywordFlagsOptions::IsAction },
 
 			// These Keywords also indicate start of a statement.
-			{ Keyword::Test, "test", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Public, "public", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Private, "private", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Protected, "protected", KeywordFlagsOptions::IsSpecifier },
@@ -150,7 +149,6 @@ namespace lang_def {
 			{ Keyword::Str, "str", KeywordFlags() },
 			{ Keyword::Type, "type", KeywordFlags() },
 
-			{ Keyword::List, "List", KeywordFlags() },
 			{ Keyword::Set, "Set", KeywordFlags() },
 			{ Keyword::Dict, "Dict", KeywordFlags() },
 			{ Keyword::Array, "Array", KeywordFlags() },

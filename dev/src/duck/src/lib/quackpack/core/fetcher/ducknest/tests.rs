@@ -21,6 +21,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -37,6 +38,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -53,6 +55,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -70,7 +73,6 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
         },
         dependencies: vec![pkg1],
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -84,7 +86,6 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
         },
         dependencies: vec![pkg2, pkg3],
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -98,7 +99,6 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             description: "".into(),
         },
         dependencies: registry::Dependencies::new(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -162,7 +162,7 @@ fn single_metadata() {
     let (server, ctx) = create_mock_server();
     let http_client = Arc::new(AsyncHttpClient::new(&ctx));
     let client = DucknestClient::new(http_client);
-    let response = block_on(client.get_exact_metadata(&types::PackageWithUrl {
+    let response = block_on(client.get_exact_metadata(types::PackageWithUrl {
         name: "foo".into(),
         version: Version::new(1, 2, 3),
         url: server.base_url().parse().unwrap(),
@@ -173,7 +173,7 @@ fn single_metadata() {
     assert_eq!(response.dependencies.len(), 2);
 
     assert!(
-        block_on(client.get_exact_metadata(&types::PackageWithUrl {
+        block_on(client.get_exact_metadata(types::PackageWithUrl {
             name: "foo".into(),
             version: Version::new(1, 2, 4),
             url: server.base_url().parse().unwrap(),
@@ -202,7 +202,7 @@ fn download_blob() {
     let http_client = Arc::new(AsyncHttpClient::new(&ctx));
     let client = DucknestClient::new(http_client);
     block_on(client.fetch_blob(
-        &types::PackageWithUrl {
+        types::PackageWithUrl {
             name: "foo".into(),
             version: Version::new(1, 2, 3),
             url: server.base_url().parse().unwrap(),
@@ -221,7 +221,7 @@ fn not_found_in_response() {
     let (server, ctx) = create_mock_server();
     let http_client = Arc::new(AsyncHttpClient::new(&ctx));
     let client = DucknestClient::new(http_client);
-    let err = block_on(client.get_exact_metadata(&types::PackageWithUrl {
+    let err = block_on(client.get_exact_metadata(types::PackageWithUrl {
         name: "foo".into(),
         version: Version::new(2137, 6, 7),
         url: server.base_url().parse().unwrap(),

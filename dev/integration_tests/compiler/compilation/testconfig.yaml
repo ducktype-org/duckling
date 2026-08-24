@@ -113,6 +113,7 @@ SubDirs:
   - comp_time
   - builtins
   - copy_constructors
+  - destructors
   - samples
   - statements
   - functions
@@ -125,6 +126,7 @@ SubDirs:
   - optimisations
   - references
   - boxes
+  - variants
   - pointers
   - globals
   - tuples

@@ -34,7 +34,7 @@ impl Identity {
     }
 
     /// Get the name.
-    pub fn name(&self) -> StrId {
+    pub fn name(self) -> StrId {
         self.name
     }
 
@@ -147,12 +147,12 @@ impl Origin {
     }
 
     /// Get an [`InternedUrl`] of this [`Origin`].
-    pub fn url(&self) -> InternedUrl {
+    pub fn url(self) -> InternedUrl {
         self.url
     }
 
     /// Get a [`Kind`] of this [`Origin`].
-    pub fn kind(&self) -> Kind {
+    pub fn kind(self) -> Kind {
         self.kind
     }
 
@@ -253,7 +253,7 @@ pub enum Kind {
 
 impl Kind {
     /// Get a human-like display.
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             Self::Registry => "registry",
             Self::Git => "git",
@@ -262,17 +262,17 @@ impl Kind {
     }
 
     /// Check, whether this [`Kind`] is a registry kind.
-    pub fn is_registry(&self) -> bool {
+    pub fn is_registry(self) -> bool {
         matches!(self, Kind::Registry)
     }
 
     /// Check, whether this [`Kind`] is a git kind.
-    pub fn is_git(&self) -> bool {
+    pub fn is_git(self) -> bool {
         matches!(self, Kind::Git)
     }
 
     /// Check, whether this [`Kind`] is a local kind.
-    pub fn is_local(&self) -> bool {
+    pub fn is_local(self) -> bool {
         matches!(self, Kind::Local)
     }
 

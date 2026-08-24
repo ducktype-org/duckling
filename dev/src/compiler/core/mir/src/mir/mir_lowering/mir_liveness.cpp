@@ -60,19 +60,17 @@ namespace compiler::mir {
 	 * This is valid as it means that the destructor will be inserted on blocks with the initialized
 	 * values, but at this point we don't have destructors inserted.
 	 */
-	base::Optional<LivenessState> joinStatus(
-		base::Optional<LivenessState> a, base::Optional<LivenessState> b
-	) {
+	base::Optional<MoveState> joinStatus(base::Optional<MoveState> a, base::Optional<MoveState> b) {
 		// Missing on one of the incoming paths -> treated as uninitialized in the merge.
 		if (not a.has_value() || not b.has_value()) return {};
 
-		LivenessStatus kind = (a->kind == b->kind) ? a->kind : LivenessStatus::MaybeMoved;
+		MoveStatus kind = (a->status == b->status) ? a->status : MoveStatus::MaybeMoved;
 
-		LivenessState result{ .kind = kind, .move_sites = {} };
+		MoveState result{ .status = kind, .move_sites = {} };
 		// Collect the reaching move sites from every path that considers the value moved.
-		if (kind != LivenessStatus::Alive) {
-			if (a->kind != LivenessStatus::Alive) mergeMoveSites(result.move_sites, a->move_sites);
-			if (b->kind != LivenessStatus::Alive) mergeMoveSites(result.move_sites, b->move_sites);
+		if (kind != MoveStatus::Alive) {
+			if (a->status != MoveStatus::Alive) mergeMoveSites(result.move_sites, a->move_sites);
+			if (b->status != MoveStatus::Alive) mergeMoveSites(result.move_sites, b->move_sites);
 		}
 		return result;
 	}
@@ -81,15 +79,15 @@ namespace compiler::mir {
 	 * @brief If the value is not present in one of the maps, then we assume that is it
 	 * uninitialized in the merge, as we don't have the destructors inserted there yet.
 	 */
-	LocalLivenessMap joinMaps(const LocalLivenessMap& a, const LocalLivenessMap& b) {
-		LocalLivenessMap result;
+	LocalMoveStateMap joinMaps(const LocalMoveStateMap& a, const LocalMoveStateMap& b) {
+		LocalMoveStateMap result;
 		for (const auto& [local, status]: a)
 			if (auto joined = joinStatus(status, b.atMaybeCopy(local)))
 				result.insertOrAssign(local, *joined);
 		return result;
 	}
 
-	bool sameMap(const LocalLivenessMap& a, const LocalLivenessMap& b) {
+	bool sameMap(const LocalMoveStateMap& a, const LocalMoveStateMap& b) {
 		if (a.size() != b.size()) return false;
 		for (const auto& [local, status]: a) {
 			auto other = b.atMaybe(local);
@@ -98,13 +96,13 @@ namespace compiler::mir {
 		return true;
 	}
 
-	void updateLivenessMapByInstr(LocalLivenessMap& map, const Instruction& instr) {
+	void updateMoveStateMapByInstr(LocalMoveStateMap& map, const Instruction& instr) {
 		for (const auto& flag: instr.flags) {
 			switch (flag.flag) {
 			case OperationFlag::Flag::Construct:
 			case OperationFlag::Flag::Reinit:
 				map.insertOrAssign(
-					flag.local->id, LivenessState{ .kind = LivenessStatus::Alive, .move_sites = {} }
+					flag.local->id, MoveState{ .status = MoveStatus::Alive, .move_sites = {} }
 				);
 				break;
 			case OperationFlag::Flag::Move: {
@@ -114,7 +112,7 @@ namespace compiler::mir {
 					sites.push_back(instr.metadata.position.value());
 				map.insertOrAssign(
 					flag.local->id,
-					LivenessState{ .kind = LivenessStatus::Moved, .move_sites = std::move(sites) }
+					MoveState{ .status = MoveStatus::Moved, .move_sites = std::move(sites) }
 				);
 				break;
 			}
@@ -125,20 +123,20 @@ namespace compiler::mir {
 	}
 
 	/**
-	 * @brief Given LocalLivenessMap valid at the start of the block,
-	 * return the LocalLivenessMap valid at the end of the block.
+	 * @brief Given LocalMoveStateMap valid at the start of the block,
+	 * return the LocalMoveStateMap valid at the end of the block.
 	 */
-	LocalLivenessMap transferBlock(const Block& block, LocalLivenessMap map) {
-		for (const auto& instr: block.instructions) updateLivenessMapByInstr(map, instr);
-		updateLivenessMapByInstr(map, block.terminator);
+	LocalMoveStateMap transferBlock(const Block& block, LocalMoveStateMap map) {
+		for (const auto& instr: block.instructions) updateMoveStateMapByInstr(map, instr);
+		updateMoveStateMapByInstr(map, block.terminator);
 		return map;
 	}
 
-	LivenessData calculateGlobalInLivenessMap(
+	MoveStateData calculateGlobalInMoveStateMap(
 		const Function& fun, const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors
 	) {
 		if (fun.block_order.empty()) return {};
-		CORE_DEV_LOG(Compiler, "Calculating global liveness map for function `", fun.name, "`.\n");
+		CORE_DEV_LOG(Compiler, "Calculating global move-state map for function `", fun.name, "`.\n");
 
 		auto is_tracked = [&](MIRLocalRef local) {
 			return local->scope.has_value() && local->scope.value() != fun.no_lifetime_scope
@@ -146,23 +144,23 @@ namespace compiler::mir {
 		};
 
 		// Parameters are alive on function entry.
-		LocalLivenessMap in_map_from_params;
+		LocalMoveStateMap in_map_from_params;
 		for (const auto& local: fun.local_list) {
 			MIRLocalRef ref = base::Ref(&local);
 			if (ref->parameter_index.has_value() && is_tracked(ref))
 				in_map_from_params.insertOrAssign(
-					ref->id, LivenessState{ .kind = LivenessStatus::Alive, .move_sites = {} }
+					ref->id, MoveState{ .status = MoveStatus::Alive, .move_sites = {} }
 				);
 		}
 
 
-		base::HashMap<BlockID, LocalLivenessMap> out_status;
-		base::HashMap<BlockID, LocalLivenessMap> in_status;
+		base::HashMap<BlockID, LocalMoveStateMap> out_status;
+		base::HashMap<BlockID, LocalMoveStateMap> in_status;
 
 		auto entry = fun.block_order.front();
 
 		auto compute_in = [&](BlockID block_id) {
-			base::Optional<LocalLivenessMap> acc;
+			base::Optional<LocalMoveStateMap> acc;
 			if (block_id == entry) acc = in_map_from_params;
 			if (auto preds = block_predecessors.atMaybe(block_id))
 				for (auto pred: *preds.value()) {
@@ -170,11 +168,11 @@ namespace compiler::mir {
 					if (not pred_out) continue;  // not yet reachable/processed
 					acc = acc ? joinMaps(*acc, *pred_out.value()) : *pred_out.value();
 				}
-			return acc ? std::move(*acc) : LocalLivenessMap{};
+			return acc ? std::move(*acc) : LocalMoveStateMap{};
 		};
 
 		// Worklist fixpoint, seeded from the entry so only reachable blocks are processed.
-		// If the calculated out liveness map differs, we add the successors to the worklist
+		// If the calculated out move-state map differs, we add the successors to the worklist
 		// so they are recalculated.
 		Worklist worklist{ std::ranges::max_element(fun.block_order)->asInt() + 1 };
 		worklist.push(entry);
@@ -183,18 +181,36 @@ namespace compiler::mir {
 			auto new_in   = compute_in(block_id);
 			auto new_out  = transferBlock(*fun.blocks.at(block_id), new_in);
 
+			// The in-state is recorded even when the out-state did not change, because a block can
+			// hide a changed in-state from its successors.
+			// A block that reinitializes a local ends with it alive no matter what it
+			// started with, and the in-state is what the subsequent passes look at.
+			// For example:
+			// ```
+			// var a: Res = Res(13);
+			// if (a.id == 13) {
+			//     eat(move a);
+			// }
+			// a = Res(14);
+			// ```
+			// `a = Res(14)` should get a `DestructIf` inserted, after the first iteration the
+			// `Reinit` flag will mark it as Alive, then in the second iteration when `a` is marked
+			// as `MaybeMoved`, the `Reinit` will mark it as Alive again causing the outputs to not
+			// change, but the `in_status` has been changed. Thus we update the in unconditionally
+			// before ending the fixpoint loop.
+			in_status.insertOrAssign(block_id, std::move(new_in));
+
 			auto prev_out = out_status.atMaybe(block_id);
 			if (prev_out && sameMap(*prev_out.value(), new_out)) continue;
 			out_status.insertOrAssign(block_id, std::move(new_out));
-			in_status.insertOrAssign(block_id, std::move(new_in));
 
 			for (auto succ: getTerminatorSuccessors(fun.blocks.at(block_id)->terminator))
 				worklist.push(succ);
 		}
 
-		LivenessData result{ .block_in_liveness = std::move(in_status) };
+		MoveStateData result{ .block_in_move_state = std::move(in_status) };
 
-		CORE_DEV_LOG(Compiler, "Liveness info calculated.\n");
+		CORE_DEV_LOG(Compiler, "Move-state info calculated.\n");
 		IF_BUILD_TYPE_DEV({
 			std::stringstream sstr;
 			result.debugPrint(sstr);
@@ -256,7 +272,7 @@ namespace compiler::mir {
 	void InvalidUseCheck::run(query::Context& ctx, Function& fun, const LifetimePassArgs& args) {
 		if (fun.block_order.empty()) return;
 
-		// Same tracking predicate as the liveness fixpoint: only locals that participate in
+		// Same tracking predicate as the move-state fixpoint: only locals that participate in
 		// lifetime analysis are validated. Untracked temporaries / `no_lifetime_scope` locals are
 		// never present in the status maps and must not be flagged as "uninitialized".
 		auto is_tracked = [&](MIRLocalRef local) {
@@ -264,17 +280,17 @@ namespace compiler::mir {
 			    && not local->lifetime_flags.contains(LifetimeFlag::NoMoveStatusValidation);
 		};
 
-		const auto& block_in = args.liveness.block_in_liveness;
+		const auto& block_in = args.move_states.block_in_move_state;
 		bool        failed   = false;
 
-		auto check_instr = [&](const Instruction& instr, LocalLivenessMap& map) {
+		auto check_instr = [&](const Instruction& instr, LocalMoveStateMap& map) {
 			// Reads are validated against the state *before* the instruction executes, so a local
 			// that is moved by this very instruction is still considered alive when read here.
 			for (auto local: instructionReads(instr)) {
 				if (not is_tracked(local)) continue;
 
 				auto state = map.atMaybeCopy(local->id);
-				if (state.has_value() && state->kind == LivenessStatus::Alive) continue;
+				if (state.has_value() && state->status == MoveStatus::Alive) continue;
 
 				const bool uninitialized = not state.has_value();
 
@@ -282,7 +298,7 @@ namespace compiler::mir {
 					"The variable `",
 					local->getName(),
 					uninitialized ? "` is used before it is initialized."
-					: state->kind == LivenessStatus::Moved
+					: state->status == MoveStatus::Moved
 						? "` is used after it has been moved out of."
 						: "` may have been moved out of on some "
 						  "control-flow paths reaching this use."
@@ -333,14 +349,14 @@ namespace compiler::mir {
 				failed = true;
 			}
 
-			updateLivenessMapByInstr(map, instr);
+			updateMoveStateMapByInstr(map, instr);
 		};
 
 		for (auto block_id: fun.block_order) {
 			auto in = block_in.atMaybe(block_id);
 			if (not in) continue;  // unreachable block, not part of the fixpoint result.
 
-			LocalLivenessMap map = *in.value();
+			LocalMoveStateMap map = *in.value();
 			for (const auto& instr: fun.blocks.at(block_id)->instructions) check_instr(instr, map);
 			check_instr(fun.blocks.at(block_id)->terminator, map);
 		}
@@ -348,25 +364,25 @@ namespace compiler::mir {
 		if (failed) query::throwFailed();
 	}
 
-	void LivenessData::debugPrint(std::ostream& out) {
-		auto status_name = [](LivenessStatus status) -> std::string_view {
+	void MoveStateData::debugPrint(std::ostream& out) {
+		auto status_name = [](MoveStatus status) -> std::string_view {
 			switch (status) {
-			case LivenessStatus::Alive:
+			case MoveStatus::Alive:
 				return "Alive";
-			case LivenessStatus::Moved:
+			case MoveStatus::Moved:
 				return "Moved";
-			case LivenessStatus::MaybeMoved:
+			case MoveStatus::MaybeMoved:
 				return "MaybeMoved";
 			default:
 				CORE_UNREACHABLE();
 			}
 		};
 
-		out << "LivenessData (in-status per block):\n";
-		for (const auto& [block_id, map]: block_in_liveness) {
+		out << "MoveStateData (in-status per block):\n";
+		for (const auto& [block_id, map]: block_in_move_state) {
 			out << "  block " << block_id.asInt() << ":\n";
 			for (const auto& [local, state]: map) {
-				out << "    local " << local.asInt() << " -> " << status_name(state.kind);
+				out << "    local " << local.asInt() << " -> " << status_name(state.status);
 				if (not state.move_sites.empty())
 					out << " (moved at " << state.move_sites.size() << " site(s))";
 				out << "\n";
