@@ -522,7 +522,7 @@ class FunctionValidator {
 						throw FrameSpecifierWithoutRuntimeThread(*place);
 					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
 					instr_match(instruction) {
-						instr_case_novalue(Op_init_pany_type) {
+						instr_case_novalue(Op_init_pany_type, Op_initFromVMValue) {
 							if (is_local || is_global) throw DuplicatedLocalNameError(*place);
 						}
 						variant_default {
