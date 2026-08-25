@@ -1,216 +1,501 @@
-# Ser module
+ser
+===
 
-Header-only binary serialization for C++23. Scope: **bytes <-> object**. The module has no
-concept of a file and no dependencies beyond `base/`, from which it uses the preprocessor
-helpers (`FOR_EACH`, `FOR_EACH_COMMA`, `CAT`, `STRINGIFY_2`) and nothing else.
+A binary serialization library for C++23, header-only, in namespace `ser`. Objects go to
+bytes and come back. There are no files, no sockets, no
+compression and no dependency beyond `base/`.
 
-Imported from the standalone `ser` repository and then adapted to this repository's
-formatting and naming, so the two copies have diverged on purpose - see
-[Relation to the upstream library](#relation-to-the-upstream-library).
+Contents
+--------
+* [Motivation](#motivation)
+* [Introduction](#introduction)
+* [Error Handling](#error-handling)
+* [Error Codes](#error-codes)
+* [What Works With No Code At All](#what-works-with-no-code-at-all)
+* [Serializing Your Own Type](#serializing-your-own-type)
+* [The Macros](#the-macros)
+* [When The Automatic Walk Needs Help](#when-the-automatic-walk-needs-help)
+* [What ser Refuses](#what-ser-refuses)
+* [Archives: Several Messages In One Buffer](#archives-several-messages-in-one-buffer)
+* [The Envelope](#the-envelope)
+* [Schema Hash](#schema-hash)
+* [Testing Your Format](#testing-your-format)
+* [The Wire Format At A Glance](#the-wire-format-at-a-glance)
+* [Limits And Knobs](#limits-and-knobs)
+* [C++23 Today, C++26 Later](#c23-today-c26-later)
+* [Compilers](#compilers)
+* [Limitations](#limitations)
 
-# Interface
+Motivation
+----------
+* Round-trip an object to binary with as little code as possible - for most types, none.
+* Refuse at compile time, with a message that names the fix, anything whose meaning would
+  not survive the trip. A pointer is a compile error, never a wrong byte.
+* Treat a stream as untrusted input: every length is checked before anything is allocated,
+  every `bool` comes back validated, and recursion has a ceiling.
 
-## Files
+Introduction
+------------
+For most types, enabling serialization takes no additional lines of code. It is enough
+that the type is an aggregate with public fields - the fields are found through structured
+bindings and written in declaration order.
 
-* `ser/ser.hpp` - the umbrella: archives, dispatch, the envelope. Include this.
-* `ser/std/all.hpp` - adapters for the std types, one header per standard header they
-  wrap: whatever `src/ser/std/` contains is what is supported, and `variant` includes
-  `std::monostate`. An **opt-in** include: without it `ser/ser.hpp` never learns those
-  types exist and never pays for `<map>` to serialize something else.
-* `ser/base/all.hpp` - adapters for the `base` types, opt-in the same way. `Optional`,
-  `Map`, `HashMap`, `VectorMap`, `StableHashMap`, `StableVector`, `Box`, `MBox`,
-  `OwningView`, `SharedView`, `DynamicBitset`, `Bit256` serialize; `Ref`/`CRef`/`MRef`,
-  `SharedBox`, `BoxOrCRef`, `RawView`/`ModRawView` and `CheckedOkBad` are **refused** with
-  a message naming what to write instead, which is only visible if the header is included.
-  `OkBad` and `Monostate` need nothing - they are aggregates.
-* `ser/macros.hpp` - `SER_DESCRIBE`, `SER_DESCRIBE_MAKE`, `SER_MAKE_FROM`, `SER_FRIEND`.
-* `ser/test.hpp` - `SER_TEST_ROUNDTRIP(sample)`, which writes, reads back and names the
-  field that came back different.
+```cpp
+struct Person {
+    std::string name;
+    int         age{};
+};
+```
 
-## Symbols
+Writing it into a vector of bytes and reading it back:
 
-Everything is in namespace `ser`.
-
-~~~~~cpp
+```cpp
 #include <ser/ser.hpp>
-#include <ser/std/all.hpp>
-
-struct Point {
-	i32         x;
-	i32         y;
-	std::string name;
-};  // no serialization code at all
+#include <ser/std/all.hpp>   // opt-in: teaches ser about std::string and friends
 
 std::vector<std::byte> buf;
-ser::writeOrPanic(buf, Point{ 1, 2, "origin" });
+ser::writeOrPanic(buf, Person{ "Person1", 25 });
 
-auto p = ser::read<Point>(std::span<const std::byte>{ buf });
-if (!p) { /* p.code() is a ser::Errc */ }
-Point back = std::move(*p).take();
-~~~~~
+auto r = ser::read<Person>(buf);          // -> ser::result<ser::owned<Person>>
+if (!r) { /* r.code() says why */ }
+Person back = std::move(*r).take();
+```
 
-* `ser::write(buf, x, opts = {})` -> `ser::result<>`. **Appends** into a growable buffer,
-  so `buf.size()` is always exactly the bytes produced so far.
-* `ser::read<T>(bytes, opts = {})` -> `ser::result<ser::owned<T, Ctx>>`. Never a bare `T`:
-  `owned` is what will carry the pools in a later version. `*r` is the bundle, `r->value`
-  the object, `std::move(*r).take()` moves it out.
-* `ser::readOrPanic<T>(bytes)` / `ser::writeOrPanic(buf, x)` - the same two, for bytes
-  whose validity is an invariant of the program rather than input: a bad stream is
-  `CORE_PANIC` instead of a code nobody was going to recover from. `readOrPanic` is also
-  what reads a type that cannot be MOVED, because its return type equals the returned
-  prvalue and the object is built once, at its final address; `ser::readOrPanicForce<T>`
-  is the same thing returning a bare `T`.
-* `ser::Errc` / `ser::error` / `ser::result<T>` - errors are codes, and the position of the
-  byte that failed comes with them. **No entry point throws**: an exception is how the
-  by-value read path reports inside the library (`ser::detail::readThrowing`), and every
-  public entry point turns it into a `result` or a panic before it can escape. The panic is
-  real in every build type - `CORE_PANIC` alone is `std::unreachable()` in Release, so the
-  panicking forms do not rely on it and abort loudly there instead. It is still a stop, so
-  the choice between the two is whether the caller has anything to do afterwards: bytes off
-  a disk that is allowed to be damaged want `ser::read`.
+Three things about that snippet are worth knowing right away.
 
-## Serializing your own type
+`ser::write` **appends**. Into a growable buffer each call starts where the last one
+stopped, so `buf.size()` is always exactly the bytes produced so far and two writes give
+you one stream. Into a fixed buffer (`std::span<std::byte>`) there is nothing to append to,
+so each call fills it from the front and a buffer that is too small gives you
+`Errc::BufferFull` rather than a resize.
 
-Four ways, in the order the library consults them:
+`ser::read` never hands back a bare `T`. It returns `ser::owned<T>`, a bundle that will
+carry object pools in a later version; `*r` is the bundle, `r->field` reaches through it,
+and `std::move(*r).take()` moves the object out. `ser::readOrPanicForce<T>` is the one form
+that returns the plain object.
 
-1. A `ser::serializer<T>` specialization - the hook for a type you cannot edit, and the one
-   that outranks everything below. `base::StrID` is one (in `string_id.hpp`), and every
-   adapter under `base/` and `std/` is another.
-2. In-class hooks: `serVisit`, or `serWrite` + `serRead`, or `serWrite` + `serMake`.
-   They may be private behind `SER_FRIEND`.
-3. The same three shapes found by ADL, for a type in someone else's namespace.
-4. Nothing at all: an aggregate is walked field by field through structured bindings.
+The `std/all.hpp` include is deliberate. The std adapters are separate headers so that
+`<ser/ser.hpp>` never pays for `<map>` to serialize something that has nothing to do with
+maps. Include the adapters before the first write or read of a type that uses them -
+the ordinary rule for any trait specialization. `<ser/base/all.hpp>` does the same for the
+`base` types.
 
-`serMake` is what makes a type with `const` fields, no default constructor or no move
-constructor readable: its prvalue is returned into the caller's object directly.
-`SER_DESCRIBE(a, b)` writes the `serVisit` for you, `SER_DESCRIBE_MAKE(T, a, b)` the
-`serWrite` + `serMake` pair.
+Error Handling
+--------------
+Where the bytes came from decides which entry point you want, and the choice is not a
+matter of taste.
 
-The automatic walk cannot count the fields of a type with a **C array field** (it counts
-one clause per element, so the count comes out too high) or with **private** fields; say
-`using ser_members = ser::members<N>;` there. Getting it wrong is a compile error inside
-the bindings ladder, never wrong bytes. A **base class** and a **reference field** are
-refused outright.
+Bytes that are **input** - a file somebody else wrote, a cache from an older build,
+anything allowed to be wrong - go through `ser::read`, which hands back a code:
 
-A `STRONG_TYPEDEF_INT` and a `STRONG_TYPEDEF_INT_DIMENSIONAL` need none of this: the macro
-declares a `serVisit` over the wrapped integer, so a strong typedef - and any struct with a
-field of one - round-trips with no code at all. The same macro also declares
-`ser_schema_as` and `ser_schema_name`, which is what keeps two typedefs over the same
-integer apart in `schemaHash` - see [Telling a wrapper's format](#the-schema-hash) below.
+```cpp
+if (const auto r = ser::read<Config>(bytes); !r) {
+    log("cache unusable: {}", r.err().message());   // "stream Truncated (at position 34)"
+    return {};                                      // carry on without it
+}
+```
 
-# Who uses it
+Bytes that are **ours** - a blob this program wrote a moment ago, an object we are already
+holding on the way out - use the panicking forms. A failure there is not information, it is
+a broken program, and there is no state to recover to:
 
-* **Query framework.** `QueryGraph::ReducedGraphData` is the graph's wire form and needs no
-  code at all; `MetadataStorage` has the one hand-written `serWrite`/`serRead` pair in the
-  repository, because its format is a type table plus whatever each metadata instance writes
-  through `BaseMetadata::serWrite` - a virtual, which is why the archive is pinned to
-  `MetadataOut`/`MetadataIn` there. `DECLARE_METADATA` needs nothing from the wrapped type.
-* **Side-input keys** (`KeyOf_ModuleChildSideInput`, `KeyOf_PackageDependencyAliasSideInput`)
-  are plain aggregates that travel as metadata.
-* **`artifacts`** blobs: `setData<T>` / `getData<T>` are `ser::write` / `ser::read` with the
-  `RawView` plumbing around them.
-* **`debug_info`**: aggregates all the way down. The one shape that needs an adapter rather
-  than the field walk is the `std::variant` in `SourcePosition`, and `<ser/std/variant.hpp>`
-  is that adapter, so the structure itself carries no serialization code.
+```cpp
+ser::writeOrPanic(buf, node);                          // writing what we hold cannot fail
+auto  owned = ser::readOrPanic<Node>(blob);            // returns ser::owned<Node>
+Node  n     = ser::readOrPanicForce<Node>(blob);       // returns a bare Node
+```
 
-Two conventions came out of those: a stream that fails to READ is information, so the caller
-logs it and carries on without the cache, while a failure to WRITE what we are already
-holding is `CORE_PANIC`. Both are now spelled in the library rather than at each call site -
-`ser::read` for the first, `ser::writeOrPanic` / `ser::readOrPanic` for the second - and no
-`ser::exception` can escape into the compiler because no public entry point throws one.
+`readOrPanic` is also what reads a type that **cannot be moved**: its return type is the
+type of the returned prvalue, so the object is built once, at its final address.
 
-# Notes
+Do not reach for a panicking form to keep a call site tidy. `CORE_PANIC` is
+`std::unreachable()` in a Release build, so a panicking form handed bytes that are allowed
+to be wrong is undefined behaviour there, with no diagnostic. Input goes through
+`ser::read`. Always.
 
-* The envelope (`ser::options{ .header = true }`) is 32 bytes: magic, `schema_hash`,
-  payload size, a CRC slot and platform flags. Off by default, so a plain `ser::write` is
-  exactly the payload.
-* The envelope is **off at every call site in this repository**, so nothing above is
-  schema-checked today: the graph, the metadata, a blob and a `.di` file are all bare
-  payloads. What stands in for it is per-format (the metadata type table, the graph's
-  `isConsistent()`), and a blob has nothing at all - turning the envelope on there is the
-  open decision, not a missing feature.
+No public entry point throws. If you prefer an exception at your own call site,
+`ser::result` has `.orThrow()`, which raises `ser::exception` carrying the same code and
+position.
 
-<a name="the-schema-hash"></a>
-* `ser::schemaHash<T>()` is `consteval` and hashes the **wire** field by field, never the
-  layout: padding and alignment stay out, so a change in either does not invalidate a
-  stream that is still readable. It is deliberately **not a portable number** - the root
-  mixes `nativeFlags()`, the byte order and the pointer and length widths - because its job
-  is to refuse a stream this program cannot read back, not to prove two platforms describe
-  the same format. So pin the *relations* in tests (which types agree, what has to change
-  the number) and pin a literal only per toolchain.
-* A type whose format `ser` cannot see - a hand-written `serWrite`, a class with a private
-  member - hashes as `"hook"` plus `sizeof` and `alignof`, which two unrelated types can
-  share. Three ways to say what it really writes, in the order `schemaHash` consults them:
-  a `ser::schema<T>` specialization (every `std`/`base` adapter has one, and so does
-  `base::StrID`), an in-class `using ser_schema_as = W;` with an optional
-  `ser_schema_name` for a type that cannot reach into namespace `ser` (every
-  `STRONG_TYPEDEF_INT` uses this), or `ser::config<T>::schema_id`.
-* Field names are deliberately absent from `schemaHash`; they go into `ser::debugHash<T>()`,
-  which is diagnostics only. Equal `schema_hash` with different `debug_hash` is exactly
-  "somebody renamed a field" - for a type that lists its fields with `SER_DESCRIBE`, which
-  is the only place the names exist at all.
-* Not here yet: pools (`Box`/`Ref`/`StrID`), `chrono`, CRC32C, zero-copy views.
+Error Codes
+-----------
+`ser::Errc`, and every error carries the stream position that failed
+(`r.err().position`, or the whole thing as text through `r.err().message()`).
 
-# Relation to the upstream library
+| code | means |
+|---|---|
+| `Truncated`, `UnexpectedEnd` | the stream ended in the middle of something |
+| `BufferFull` | a fixed output buffer ran out of room |
+| `SizeOverflow` | length arithmetic overflowed |
+| `MessageSize` | a container length exceeded `MAX_CONTAINER_ELEMENTS` |
+| `InvalidValue` | a `bool` that is neither 0 nor 1, an unknown variant tag, a duplicate map key, a valueless variant on write |
+| `DepthExceeded` | nesting past `MAX_DEPTH` - data-dependent recursion |
+| `BadMagic`, `SchemaMismatch`, `PlatformMismatch` | the envelope rejected the stream, see [The Envelope](#the-envelope) |
+| `ChecksumFailed`, `Misaligned`, `IoError` | reserved, not produced today |
+| `PoolMissing`, `PoolModified`, `DanglingRef`, `DoubleTake` | reserved for object pools, which do not exist yet |
 
-The headers came from the standalone `ser` repository and were then put through
-`clang-format` and `clang-tidy`'s `readability-identifier-naming` against this
-repository's configuration. That renamed roughly 250 identifiers, including the hook
-names a type dispatches on:
+What Works With No Code At All
+------------------------------
+* **Aggregates** with public fields, nested to any depth. Fields go on the wire in
+  declaration order.
+* **Scalars**: every arithmetic type and `std::byte`, in native bytes. `bool` is the
+  exception - it goes out as an explicit `0`/`1` byte and comes back validated, because a
+  `bool` holding anything else is undefined behaviour, not a wrong value.
+* **Enums**, scoped and unscoped, as their underlying type. Changing the underlying type
+  changes the format; nothing validates the enumerator list.
+* **Fixed arrays**: `T[N]` and `std::array<T, N>`. The length is in the type, so nothing
+  about it goes on the wire.
+* **Strong integer typedefs**: `STRONG_TYPEDEF_INT` and `STRONG_TYPEDEF_INT_DIMENSIONAL`
+  declare their own hook, so a strong typedef - and any struct with a field of one -
+  round-trips with nothing written. (`STRONG_TYPEDEF_ID` does not: its value is private
+  and minted by `next()`, so an id that has to travel needs a hook of your own.)
 
-| upstream          | here          |
-|-------------------|---------------|
-| `ser_visit`       | `serVisit`    |
-| `ser_write`       | `serWrite`    |
-| `ser_read`        | `serRead`     |
-| `ser_make`        | `serMake`     |
-| `ser::errc::ok`   | `ser::Errc::Ok` |
-| `ser::schema_hash`| `ser::schemaHash` |
-| `min_wire_size_v` | `MIN_WIRE_SIZE_V` |
+With `#include <ser/std/all.hpp>`:
 
-`ser_members` keeps its name: it is a type alias, and the convention leaves those alone.
+`std::string` and the other `basic_string`s, `std::vector`, `std::map`,
+`std::unordered_map`, `std::set`, `std::unordered_set`, `std::pair`, `std::tuple`,
+`std::optional`, `std::variant`, `std::monostate`.
 
-The module also uses `base/preproc` where upstream generates code with Python, and folds
-the repeated hook detectors into the macros in `src/ser/detail/hooks.hpp`.
+With `#include <ser/base/all.hpp>`:
 
-The two copies are therefore no longer mergeable by `git`. Porting a change from upstream
-means applying it by hand and running `clang-format` plus
-`toolbox.py cpp-linter --all` over the module afterwards.
+| serializes | refused, with a message naming the replacement |
+|---|---|
+| `Optional`, `Box`, `MBox` | `Ref` / `CRef` / `MRef` / `MCRef`, `SharedBox`, `BoxOrCRef` |
+| `Map`, `HashMap`, `VectorMap`, `StableHashMap` | `RawView`, `ModRawView` |
+| `StableVector`, `OwningView`, `SharedView` | `CheckedOkBad` |
+| `DynamicBitset`, `Bit256` | |
 
-Four suppressions survive in the module, each one line above the code it covers and each
-with a reason: the C-array partial specializations in `builtin/array.hpp` and
-`detail/dispatch.hpp` (specializing on a C array is their subject), `magic[8]` in
-`stream/header.hpp` (a fixed field of the wire layout), `printf` in `test.hpp` and
-`debug.hpp` (neither may drag `<print>` into every translation unit), and the version
-macros in `config.hpp` (they have to work in an `#if`).
+`OkBad` and `Monostate` need nothing - they are aggregates. `StableObjectPool`,
+`ManualLifetimeStorage` and the `MAKE_FLAG_TYPE` flag types have no adapter at all; the
+first two hold state a stream cannot describe, and a flag type's mask is private.
 
-# The structured-bindings ladder
+A refusal is only visible if you included the header. Leave `<ser/base/all.hpp>` out and a
+struct with a `Ref` field gets the generic "looks pointer-like" message instead of the one
+that tells you what to do.
 
-A structured binding declaration spells its arity out, so "hand me every member" needs one
-branch per member count. `src/ser/detail/ladder.hpp` holds that table as macros:
-`SER_DETAIL_LADDER(RUNG)` expands `RUNG(n)` for every count up to
-`ser::detail::LADDER_MAX`, and `SER_DETAIL_LADDER_NAMES(n)` hands a rung its `n` binding
-names. `ser::access` uses it twice - once to walk the members, once to report their
-declared types - and `detail::MAX_MEMBERS` is taken from `LADDER_MAX`, so nothing can
-drift apart. Upstream generates the same table with a Python script; here it is
-plain preprocessor, and a typo in it is a duplicate or a missing binding, which is a
-compile error either way.
+Some pairs are deliberately **interchangeable on the wire**: a `Box<T>` stream reads back
+into a `T`, a `std::vector<T>` into a `StableVector<T>`, a `std::map` into a
+`base::Map` or a `StableHashMap`, a `std::optional` into a `base::Optional`, an
+`OwningView` into a `SharedView`. Same bytes, same schema hash - the storage is not part of
+the format.
 
-# Tests
+Serializing Your Own Type
+-------------------------
+Four ways, in the order the library consults them. The first one that answers wins, and a
+type with a hook is **never** taken apart field by field - which is what keeps a
+container-shaped type of your own from being walked as if it were a container.
 
-`tests/ser_test.cpp` is eight tests over a handful of structures - one for the data shapes
-(four levels of aggregate, every std adapter, both enum kinds, a C array field, a strong
-typedef), one for the dispatch ladder (all four hook levels plus the macros, each stamping a
-distinct byte so the test proves *which* rung ran), one for the variant, one for the
-envelope, and two for `schemaHash`: `formatContract` pins which types agree and
-`recursiveTypes` pins a type that contains itself - which has no hash at all unless the
-schema walk turns meeting itself into a back-reference. It runs in about 0.11 s.
+**1. `ser::serializer<T>` - for a type you cannot edit.** It outranks everything below.
 
-`tests/ser_base_test.cpp` is ten tests over `ser/base/all.hpp`: what each base type does on
-the wire, which streams are interchangeable with their std form, and what a damaged one
-gets back. The refusals cannot be tested from here - a `static_assert` that fires is a
-build failure, not a failing case - so what it pins instead is that the types next to a
-refused one still work.
+```cpp
+template <>
+struct ser::serializer<third_party::Foreign> {
+    static constexpr Errc visit(auto& ar, auto& self) { return ar(self.a, self.b); }
+};
+```
 
-Upstream's own suite is 205 cases over ten files plus 33 compile-failure targets; those
-are not ported, and this repository has no harness for compile-failure tests.
+**2. Hooks in the class.** Any one of three shapes - and they may be private, behind
+`SER_FRIEND`:
+
+```cpp
+struct Versioned {
+    std::uint32_t v = 2;
+    std::string   payload;
+
+    static ser::Errc serWrite(ser::writer auto& ar, const Versioned& x) {
+        return ar(x.v, x.payload);
+    }
+    static ser::Errc serRead(ser::reader auto& ar, Versioned& x) {
+        if (const auto e = ar(x.v); e != ser::Errc::Ok) return e;
+        if (x.v != 2) return ser::Errc::InvalidValue;      // your own validation
+        return ar(x.payload);
+    }
+};
+```
+
+* `serVisit(auto& ar, auto& self)` - one function, both directions. The object has to
+  exist before it can be filled in.
+* `serWrite` + `serRead` - the asymmetric pair, when the two directions genuinely differ.
+* `serWrite` + `serMake` - `serMake` **builds** the object and returns it by value, so it
+  is the answer for `const` fields, no default constructor, or no move constructor. Read
+  the fields with `ser::readField<F>(ar)`, in braces, so the order is guaranteed.
+
+**3. The same three shapes found by ADL**, for a type in someone else's namespace. Write
+both const and non-const overloads of `serVisit`, or the write side will not find it:
+
+```cpp
+namespace third_party {
+    template <class Ar> ser::Errc serVisit(Ar& ar, Point& p)       { return ar(p.x, p.y); }
+    template <class Ar> ser::Errc serVisit(Ar& ar, const Point& p) { return ar(p.x, p.y); }
+}
+```
+
+**4. Nothing at all** - the aggregate walk.
+
+Four rules the library enforces, each with its own message:
+
+* A hook returns `ser::Errc` (`serMake` returns `T` by value). A hook returning `bool` is
+  reported as such, not as "no way to serialize this type".
+* A hook is a **template on the archive** (`auto&`, or `ser::writer auto&` /
+  `ser::reader auto&`). One pinned to a concrete archive type is silently unreachable, so
+  ser reports it rather than walking past it.
+* Write and read must **pair**. A type that can be written and never read back is a bug
+  with a use case.
+* `serVisit` and `serWrite`/`serRead` on one type is refused - both answer "write this
+  one", and nothing says which format was meant. `serMake` next to `serRead` is fine: they
+  answer different questions.
+
+The Macros
+----------
+From `<ser/macros.hpp>`:
+
+| macro | what it gives you |
+|---|---|
+| `SER_DESCRIBE(a, b)` | a `serVisit` over exactly those fields - the rest are skipped and come back default-constructed |
+| `SER_DESCRIBE_MAKE(T, a, b)` | the same field list as a `serWrite` + `serMake` pair, for a type that must be **built** |
+| `SER_MAKE_FROM(T, a, b)` | just the `serMake`, when you write the write side yourself |
+| `SER_MAKE_FROM_MEMBERS(T)` | the same without a field list, taken from the walk |
+| `*_PAREN` variants | for a type whose braces would reach a `std::initializer_list` constructor |
+| `SER_FRIEND` | `friend struct ser::access;` - lets ser see private fields and private hooks |
+
+`SER_DESCRIBE` is also what gives you field **names**, which is what
+`SER_TEST_ROUNDTRIP` reports and what `debugHash` mixes in. A described aggregate and the
+same aggregate walked automatically produce identical bytes and an identical schema hash,
+so adding `SER_DESCRIBE` to a type invalidates nothing that was already written - as long
+as you list every field.
+
+```cpp
+class Reading {
+public:
+    Reading(std::uint32_t s, float v): sensor(s), value(v) {}
+    SER_FRIEND
+private:
+    const std::uint32_t sensor;   // const: nothing can fill it in after the fact
+    float               value;
+    SER_DESCRIBE_MAKE(Reading, sensor, value)
+};
+```
+
+When The Automatic Walk Needs Help
+----------------------------------
+Field counting works by probing aggregate initialization, and there are shapes it cannot
+count. All of them are compile errors, never wrong bytes.
+
+**A C array field** elides braces, so the probe counts one field per element. Say the
+count yourself:
+
+```cpp
+struct Frame {
+    char tag[4]{};
+    int  n{};
+    using ser_members = ser::members<2>;   // and the type serializes as any other
+};
+```
+
+**Private fields** cannot be probed at all. `using ser_members = ser::members<N>;` plus
+`SER_FRIEND` is the pair that fixes it - the alias may be private too. A wrong `N` is a
+compile error in the bindings ladder, so the format cannot drift silently.
+
+**A base class** is an element of aggregate initialization and not of a structured binding.
+A base with no data members of its own is settled by `ser_members<N>`; one that carries
+data cannot be decomposed at all and needs a hook.
+
+**A reference field** is refused outright, in every direction: reading has to overwrite the
+object and a reference can never be rebound. Hold the value, or leave the field out with
+`SER_DESCRIBE`.
+
+**A `const` field or a bit-field** cannot be written through a reference, so such a type is
+**built** rather than filled. As a whole object it reads fine (`ser::read<T>` builds it);
+as a *field* of an object being filled it needs the enclosing type to have a `serMake`, or
+`SER_DESCRIBE_MAKE`. A bit-field widens to its declared type on the wire.
+
+**More than 64 members** is past the limit of the structured-bindings ladder. Split the
+type, or give it a `serVisit`.
+
+What ser Refuses
+----------------
+Not "unsupported for now". Each of these has no meaning outside the writing process, and
+guessing would be silent data corruption rather than an error:
+
+| refused | write this instead |
+|---|---|
+| raw pointer | the value itself, `std::optional<T>`, or an index into a table you own |
+| `char*` / `const char*` | `std::string`, or `char[N]` for a fixed buffer |
+| `void*`, function pointer, pointer to member | a tag or an index you map back after reading |
+| reference, `std::reference_wrapper` | the referenced value, or an index |
+| union | a tag next to the payload and a `serVisit` that switches on it |
+| `std::vector<bool>` | `std::vector<std::uint8_t>`, or `std::bitset<N>` |
+| `std::string_view`, `base::RawView` | the owning type - a view cannot be read back into |
+| `std::shared_ptr`, `std::unique_ptr` | not supported yet; `base::Box` / `base::MBox` do work |
+| a polymorphic `Box<Base>` | a tag plus a serializer of your own that switches on it |
+
+Archives: Several Messages In One Buffer
+----------------------------------------
+`ser::read` always starts at the front of the span it is given and never says how far it
+got. An archive does say, so reading several appended messages is one archive rather than
+several calls to `ser::read`:
+
+```cpp
+std::vector<std::byte> buf;
+ser::writeOrPanic(buf, header);       // buf: [header]
+ser::writeOrPanic(buf, payload);      // buf: [header][payload]
+
+ser::in ar{ std::span<const std::byte>{ buf } };
+if (const auto e = ar(header); e != ser::Errc::Ok) return { e, ar.position() };
+if (const auto e = ar(payload); e != ser::Errc::Ok) return { e, ar.position() };
+const std::size_t consumed = ar.position();     // where the next message begins
+```
+
+`ar.position()`, `ar.size()`, `ar.avail()` and `ar.reset(p)` are all public. `ser::out`
+works the same way and takes several objects at once - `ar(a, b, c)` stops at the first
+failure and returns that argument's code. Call `ar.finish()` when a write archive is done;
+without pools it folds away to nothing.
+
+The Envelope
+------------
+Thirty-two bytes in front of the payload, so that a stream from another build, another byte
+order or another schema is refused instead of being interpreted as data. It is **off by
+default**, so a plain `ser::write` is exactly the payload and not one byte more.
+
+```cpp
+constexpr ser::options opt{ .header = true, .user_magic = 0xD0C5 };
+
+ser::writeOrPanic(buf, cfg, opt);
+const auto r = ser::read<Config>(buf, opt);
+```
+
+What it checks, in this order, because the order is the diagnosis: the 32 bytes are there
+(`Truncated`), the magic and your `user_magic` match (`BadMagic`), the platform flags match
+- byte order, pointer width (`PlatformMismatch`), the sizes add up
+(`SizeOverflow`/`Truncated`), and finally the schema hash matches the type being read
+(`SchemaMismatch`).
+
+`ser::peekHeader(bytes, user_magic)` reads the envelope without committing to a type, so a
+caller holding several possible types can compare `h.schema_hash` against
+`ser::schemaHash<T>()` for each of them and pick. `payload_crc` is reserved and written as
+zero - there is no checksum yet.
+
+Schema Hash
+-----------
+`ser::schemaHash<T>()` is `consteval` and returns one 64-bit number meaning "this is the
+format I write". It hashes the **wire**, field by field: padding and alignment stay out, so
+a layout change does not invalidate a stream that is still readable.
+
+It is deliberately **not a portable number** - the root mixes the byte order and the
+pointer and length widths - because its job is to refuse a stream *this program* cannot
+read back, not to prove that two platforms describe the same format. Pin the *relations* in
+tests ("these two types agree", "this change has to move the number") and pin a literal
+only per toolchain.
+
+```cpp
+static_assert(ser::schemaHash<Described>() == ser::schemaHash<Twin>());
+```
+
+A type whose format ser cannot see - a hand-written `serWrite`, a class with private
+members - hashes as `"hook"` plus `sizeof` and `alignof`, which two unrelated types can
+share. Three ways to say what it really writes, in the order they are consulted: a
+`ser::schema<T>` specialization, an in-class `using ser_schema_as = W;` (with an optional
+`ser_schema_name`), or `ser::config<T>::schema_id`.
+
+Field names are absent from `schemaHash` on purpose. They go into `ser::debugHash<T>()`,
+which is diagnostics only: equal `schemaHash` with different `debugHash` is exactly
+"somebody renamed a field".
+
+Testing Your Format
+-------------------
+Two fields of the **same type** swapped in a `SER_MAKE_FROM` list compiles perfectly and
+writes the wrong bytes. No hash can see it, so there is a round-trip check instead
+(`<ser/test.hpp>`):
+
+```cpp
+CHECK(SER_TEST_ROUNDTRIP(Vec3{ 1, 2, 3 }));
+```
+
+It writes the sample, reads it back, compares field by field and prints which field came
+back different - by name, when `SER_DESCRIBE` gave it one. With `SER_MAKE_FROM_MEMBERS`,
+which has no field list to check anything against, this is a condition of use rather than
+a suggestion.
+
+The Wire Format At A Glance
+---------------------------
+No padding, no alignment, no field names, no type tags. Nothing is packed and nothing is
+compressed.
+
+| | |
+|---|---|
+| scalar | its native bytes |
+| `bool` | one byte, `0` or `1`, validated on read |
+| enum | its underlying type |
+| fixed array | the elements, each through full dispatch |
+| aggregate | its fields, in declaration order |
+| container | `u64` length, then the elements (a map: each key followed by its value) |
+| `std::string` | `u64` length, then the characters - no terminator, embedded `\0` survives |
+| optional / `MBox` | one presence byte, then the value if present |
+| variant | `u64` tag, then that alternative; `monostate` writes nothing |
+| empty type | zero bytes |
+
+The length prefix is `u64` on every platform, so a stream does not depend on the writer's
+`size_t`. Note that iteration order of the **unordered** containers is unspecified: one map
+written twice gives the same bytes, but two *equal* maps need not. Compare a round-trip
+element by element, not byte for byte, and reach for `std::map` when a payload is going to
+be signed or content-addressed.
+
+Limits And Knobs
+----------------
+`ser::config_global` holds the policy: `MAX_DEPTH` is 256 (data-dependent recursion is a
+stack overflow on write and an attack on read), `MAX_CONTAINER_ELEMENTS` is 2^28, and the
+length prefix type is `u64`.
+
+Every variable-length read checks the length before allocating anything: against the policy
+ceiling, then against the multiplication overflowing, then against how many bytes the stream
+actually holds. A corrupt length gives you `MessageSize`, `SizeOverflow` or `Truncated` -
+never an allocation.
+
+C++23 Today, C++26 Later
+------------------------
+ser is a C++23 library and behaves identically whether or not you build with a later
+standard. Below C++23 it stops with an `#error` rather than half-compiling.
+
+Field enumeration is the only place where the standard version is visible. Today it is a
+structured-bindings ladder, and everything in
+[When The Automatic Walk Needs Help](#when-the-automatic-walk-needs-help) follows from
+that: the 64-member limit, the C-array counting problem, and `ser_members<N>` for private
+fields.
+
+C++26 removes those causes - P1061 lets a structured binding introduce a pack, and P2996
+reflection can enumerate members directly, private ones included. The library reserves that
+path (`SER_HAS_REFLECTION`, set when a compiler defines both `__cpp_impl_reflection` and
+`__cpp_expansion_statements`) but **does not implement it**: no released compiler defines
+both, and the placeholder fails loudly rather than silently, so nothing changes today when
+you switch to `-std=c++2c`. When it does land, it lands behind the same public API - the
+`ser_members` declarations become unnecessary rather than wrong.
+
+Nothing else in the library waits on C++26.
+
+Compilers
+---------
+| compiler | status |
+|---|---|
+| GCC 14 (`-std=c++23`) | works - the toolchain this repository builds with, and what runs the module's tests |
+| Clang 19 (`-std=c++23`) | works - both test files compile clean and produce byte-identical streams and the same `schemaHash` |
+| anything below C++23 | `#error "ser: C++23 is required"` |
+| MSVC | the guards are in place - `/std:c++latest`, `/Zc:__cplusplus` and `/Zc:preprocessor` are required and a missing one is an `#error` - but no build here exercises it |
+
+C++23 is required for real reasons, not for tidiness: `std::expected` is what `ser::result`
+is, and `if !consteval` is what lets the bulk-copy paths exist next to the constant-evaluable
+ones.
+
+Limitations
+-----------
+* **No object graphs.** Pools for `Box`/`Ref` are designed for but not implemented: shared
+  ownership is refused, and two pointers to one object are written as two objects.
+* **No polymorphism.** A `Box<Base>` holding a `Derived` cannot be written - the stream
+  would have to name the type to allocate. Write a tag and switch on it.
+* **No schema evolution.** There are no optional or defaulted fields; adding one changes
+  the format. The envelope's job is to *detect* that, not to survive it. If you need
+  versioning, write a version field and branch on it in `serRead`.
+* **No varints, no compression, no checksum.** `payload_crc` is reserved and written as
+  zero.
+* **No zero-copy reads.** Every read allocates its own storage; views that do not own their
+  bytes are refused.
+* **No `chrono` adapters** yet, and no `std::unique_ptr`/`std::shared_ptr`.
