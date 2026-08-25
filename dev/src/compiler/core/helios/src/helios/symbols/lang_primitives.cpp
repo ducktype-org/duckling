@@ -44,6 +44,14 @@ namespace compiler::helios {
 				  { .package = "core", .path = { "containers" }, .element = "stringifyPtr" } },
 				{ LanguagePrimitive::StringifyManyPtr,
 				  { .package = "core", .path = { "containers" }, .element = "stringifyManyPtr" } },
+				{ LanguagePrimitive::StringifyCPtr,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyCPtr" } },
+				{ LanguagePrimitive::StringifySlice,
+				  { .package = "core", .path = { "containers" }, .element = "stringifySlice" } },
+				{ LanguagePrimitive::StringifyStaticArray,
+				  { .package = "core",
+				    .path    = { "containers" },
+				    .element = "stringifyStaticArray" } },
 			};
 			return paths;
 		}

@@ -20,10 +20,10 @@
 #define ASSERT_FALSE(actual) ASSERT_TRUE(!(actual))
 
 namespace {
-	/** @brief A FilePosition in simple.dmf, the way the compiler emits one. */
+	/** @brief A FilePosition in simple.dk, the way the compiler emits one. */
 	debug_info::SourcePosition at(u64 start_line, u64 start_column, u64 end_line, u64 end_column) {
 		return debug_info::SourcePosition{ debug_info::FilePosition{
-			.file_path    = "simple.dmf",
+			.file_path    = "simple.dk",
 			.start_line   = start_line,
 			.start_column = start_column,
 			.end_line     = end_line,
@@ -46,7 +46,7 @@ namespace {
 		return { offset, debug_info::InstructionMetadata{ .position = position } };
 	}
 
-	/** @brief The four functions of simple.dmf, with their offsets and variables. */
+	/** @brief The four functions of simple.dk, with their offsets and variables. */
 	debug_info::DebugInfo simpleDebugInfo() {
 		debug_info::DebugInfo info{
 			.target                = debug_info::Target::DBC,
@@ -163,7 +163,7 @@ private:
 		// compiler writes - see the note at the top of the file.
 		ASSERT_HAS_VALUE(mapper.loadMapping(writeMappingFile()));
 
-		auto simple = fs::FilePath("simple.dmf");
+		auto simple = fs::FilePath("simple.dk");
 		ASSERT_TRUE(mapper.containsFile(simple));
 
 		auto assert_mapping
