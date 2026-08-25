@@ -1,11 +1,11 @@
 #pragma once
 
-#include <diagnostic_interactive/stable_position.hpp>
-
 #include <base/collections/optional.hpp>
+
+#include <diagnostic/stable_position.hpp>
 
 namespace compiler::mir {
 	struct InstructionMetadata {
-		base::Optional<dia_int::StablePosition> position;
+		base::Optional<dia::StablePosition> position;
 	};
 }

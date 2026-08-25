@@ -1,6 +1,5 @@
 #include "function_queries.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
@@ -39,6 +38,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <lexer/token_common.hpp>
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -171,7 +171,7 @@ namespace compiler::helios {
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Function declared with no explicit return type and inconsistent return "
 					"statements.",
 					fun->getStablePosition()
@@ -596,8 +596,7 @@ namespace compiler::helios {
 					variant_case_novalue(
 						defgen::Method,
 						defgen::BuiltinTemplatedSymbol,
-						defgen::ReplExpressionWrapper,
-						defgen::ReplInstructionWrapper,
+						defgen::ReplInputWrapper,
 						defgen::ScriptMainWrapper
 					) {
 						return funDeclFromType(

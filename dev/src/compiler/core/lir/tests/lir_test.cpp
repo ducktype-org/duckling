@@ -5,14 +5,14 @@
  */
 
 
+#include "utils/lir_test_utils.hpp"
+
 #include <driver/test_utils.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <lir/lir_lowering/lir_unit.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <tsl/queries.hpp>
@@ -28,6 +28,7 @@
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
+using namespace compiler::lir::test_utils;
 using query::utils::withContextDo;
 using namespace compiler;
 
@@ -39,16 +40,14 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(noTest);
 		TESTER_ADD_TEST(simpleBools);
-		TESTER_ADD_TEST(functionCallTest);
-		TESTER_ADD_TEST(functionCallMetadataTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(testGlobals);
 		TESTER_ADD_TEST(testFromFunctionLiterals);
 		TESTER_ADD_TEST(testLIRGlobal);
 		TESTER_ADD_TEST(testLifetimeFlags);
+		TESTER_ADD_TEST(conditionalDestructTest);
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(staticArrayTest);
-		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 		TESTER_ADD_TEST(cVariadicAbiTest);
@@ -64,131 +63,6 @@ protected:
 	}
 
 private:
-	/**
-	 * @brief Collection of functions compiles to LIR, and their HOUT and MIR counterparts.
-	 */
-	struct LIRModuleResult final {
-		/* * * * * * * * * * *\
-		|  HELIOS level data: |
-		\* * * * * * * * * * */
-
-		frontend::ModuleID module;
-		helios::ScopeID    scope;
-
-
-		/* * * * * * * * * * *\
-		|  LIR level data:    |
-		\* * * * * * * * * * */
-
-		lir::LIRUnit lir_unit;
-
-		/* * * * * * * * * * *\
-		|  Mapping data:      |
-		\* * * * * * * * * * */
-
-		base::Map<base::StrID, std::tuple<CRef<helios::HOUTFunction>, CRef<lir::Function>>> funcs{};
-		base::Map<base::StrID, std::tuple<CRef<helios::HOUTGlobalData>, lir::LIRGlobalData>>
-			globals{};
-
-		/* * * * * * * * * * *\
-		|  Easy api:          |
-		\* * * * * * * * * * */
-
-		[[nodiscard]] CRef<helios::HOUTFunction> houtFunc(std::string_view name) const {
-			return std::get<CRef<helios::HOUTFunction>>(funcs.at(base::StrID(name)));
-		}
-
-		[[nodiscard]] CRef<lir::Function> lirFunc(std::string_view name) const {
-			return std::get<CRef<lir::Function>>(funcs.at(base::StrID(name)));
-		}
-
-		[[nodiscard]] CRef<helios::HOUTGlobalData> houtGlobal(std::string_view name) const {
-			return std::get<CRef<helios::HOUTGlobalData>>(globals.at(base::StrID(name)));
-		}
-
-		[[nodiscard]] lir::LIRGlobalData lirGlobalData(std::string_view name) const {
-			return std::get<lir::LIRGlobalData>(globals.at(base::StrID(name)));
-		}
-	};
-
-	/**
-	 * Compiles the module at given path to LIR, returning also HOUT counterparts of
-	 * functions and globals for easier testing.
-	 *
-	 * Note that the functions don't include any global constructors/destructors that might be
-	 * generated for global variables, but they are included in the LIRGlobalData for the global
-	 * variables, so they can be accessed in tests if needed.
-	 */
-	LIRModuleResult getLIROfModule(std::string_view module_path) {
-		auto [module, scope] = getModule(fs::File(module_path));
-
-		base::Optional<LIRModuleResult> result;
-
-		withContextDo([&](query::Context& ctx) {
-			helios::HOUTUnit unit = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
-
-			auto mir_unit = mir::lowerToMIRUnit(ctx, &unit);
-			assertTrue(mir_unit.hasValue(), "MIR lowering failed!");
-
-			auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
-
-			result.emplace(LIRModuleResult{ .module = module, .scope = scope, .lir_unit = lir_unit }
-			);
-
-			// Now we additionally to the lowering also create a mapping from HOUT functions/globals
-			// to their LIR counterparts, to easily navigate between those levels in tests. We do it
-			// based on mangled names. This should be stable, but beware that if mangling logic or
-			// usage changes this might break and require adjustments.
-
-			for (const auto& hout_func: unit.functions) {
-				auto mangled_name = helios::mangler::getSimpleMangledName(
-					ctx, hout_func->declaration->original_symbol
-				);
-
-				// This is O(n^2), but it should be fine in unit tests with small modules.
-				for (const auto& lir_func: lir_unit.lir_functions) {
-					if (lir_func->mangled_name == mangled_name) {
-						result->funcs.put(
-							hout_func->declaration->original_name,
-							std::make_tuple(hout_func, lir_func)
-						);
-						break;
-					}
-				}
-				assertTrue(
-					result->funcs.contains(base::StrID(hout_func->declaration->original_name)),
-					base::strConcat(
-						"Failed to find LIR function for HOUT function: ",
-						hout_func->declaration->original_name.strView()
-					)
-				);
-			}
-
-			for (const auto& hout_glob: unit.glob_data) {
-				auto mangled_name
-					= helios::mangler::getSimpleMangledName(ctx, hout_glob->helios_symbol);
-
-				// This is O(n^2), but it should be fine in unit tests with small modules.
-				for (const auto& lir_global: lir_unit.lir_globals) {
-					if (lir_global.global.mangled_name == mangled_name) {
-						result->globals.put(
-							hout_glob->original_name, std::make_tuple(hout_glob, lir_global)
-						);
-						break;
-					}
-				}
-				assertTrue(
-					result->globals.contains(base::StrID(hout_glob->original_name)),
-					base::strConcat(
-						"Failed to find LIR global for HOUT global: ",
-						hout_glob->original_name.strView()
-					)
-				);
-			}
-		});
-		return result.value();
-	}
-
 	void noTest() {
 		auto module = getLIROfModule(path("modules/simple"));
 
@@ -244,108 +118,6 @@ private:
 
 		ASSERT_EQUAL(true_lir_constant.get<bool>(), true);
 		ASSERT_EQUAL(false_lir_constant.get<bool>(), false);
-	}
-
-	void functionCallTest() {
-		auto module  = getLIROfModule(path("modules/function_calls"));
-		auto foo_lir = module.lirFunc("foo");
-		withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(ctx, std::cerr); });
-	}
-
-/**
- * @brief Helper macro to assert position information with concise syntax.
- * Extracts line/column info from position and validates against expected values.
- */
-#define ASSERT_POSITION(                                                              \
-	pos, expected_start_line, expected_start_col, expected_end_line, expected_end_col \
-)                                                                                     \
-	do {                                                                              \
-		auto [start_line, start_col] = (pos).getStartLineColumn();                    \
-		auto [end_line, end_col]     = (pos).getEndLineColumn();                      \
-		ASSERT_EQUAL(start_line, expected_start_line);                                \
-		ASSERT_EQUAL(start_col, expected_start_col);                                  \
-		ASSERT_EQUAL(end_line, expected_end_line);                                    \
-		ASSERT_EQUAL(end_col, expected_end_col);                                      \
-	} while (false)
-
-	/**
-	 * @brief Test if the stable positions in LIR metadata are correct.
-	 * We check if the positions from metadata of the instructions are correct.
-	 */
-	void functionCallMetadataTest() {
-		auto module  = getLIROfModule(path("modules/function_calls"));
-		auto foo_lir = module.lirFunc("foo");
-
-		auto print_stable_position
-			= [&](const base::Optional<dia_int::StablePosition>& stable, std::string_view label) {
-				  if (!stable.has_value()) {
-					  std::cerr << "[LIR metadata] " << label << ": <none>\n";
-					  return;
-				  }
-
-				  auto position = stable.value().getActiveSourcePositionIllegalAccess();
-				  auto [start_line, start_column] = position.getStartLineColumn();
-				  auto [end_line, end_column]     = position.getEndLineColumn();
-				  auto source_start               = position.getStart();
-				  auto source_end                 = position.getEnd();
-
-				  std::cerr << "[LIR metadata] " << label << ": " << start_line << ":"
-							<< start_column << " -> " << end_line << ":" << end_column << " ["
-							<< source_start << ", " << source_end << "]\n";
-			  };
-
-		assertTrue(
-			foo_lir->metadata.position.has_value(), "Expected function metadata position in LIR foo"
-		);
-		print_stable_position(foo_lir->metadata.position, "foo.function");
-		ASSERT_EQUAL(foo_lir->metadata.source_code_name.value(), base::StrID("foo"));
-
-		assertTrue(!foo_lir->block_order.empty(), "Expected at least one LIR block");
-		const auto& block0 = *foo_lir->block_order[0];
-		assertTrue(block0.instructions.size() >= 4, "Expected at least 4 instructions in block 0");
-
-		const auto& first_instr  = block0.instructions[0];
-		const auto& second_instr = block0.instructions[1];
-		const auto& fourth_instr = block0.instructions[3];
-
-		print_stable_position(first_instr.metadata.position, "foo.block_0.instr_0");
-		print_stable_position(second_instr.metadata.position, "foo.block_0.instr_1");
-		print_stable_position(fourth_instr.metadata.position, "foo.block_0.instr_3");
-
-		auto first_pos
-			= first_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
-		auto second_pos
-			= second_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
-		auto fourth_pos
-			= fourth_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
-
-		auto [first_start_line, first_start_col] = first_pos.getStartLineColumn();
-		auto [first_end_line, first_end_col]     = first_pos.getEndLineColumn();
-		ASSERT_EQUAL(first_start_line, 5);
-		ASSERT_EQUAL(first_start_col, 5);
-		ASSERT_EQUAL(first_end_line, 5);
-		ASSERT_EQUAL(first_end_col, 21);
-
-		ASSERT_POSITION(second_pos, 7, 18, 7, 24);
-		ASSERT_POSITION(fourth_pos, 7, 5, 7, 30);
-
-		// Test local variable metadata
-		bool found_y = false;
-		for (const auto& local: foo_lir->local_list) {
-			if (!local.helios_id.has_value()) continue;
-
-			auto name = helios::name(local.helios_id.value());
-			if (name == base::StrID("y")) {
-				found_y = true;
-				ASSERT_EQUAL(local.metadata.source_code_name.value(), name);
-
-				// Verify source position matches variable declaration on line 7
-				ASSERT_POSITION(
-					local.metadata.position.value().getActiveSourcePositionIllegalAccess(), 7, 5, 7, 30
-				);
-			}
-		}
-		ASSERT_TRUE(found_y);
 	}
 
 	void functionParametersTest() {
@@ -417,7 +189,9 @@ private:
 			// This might change in the future:
 
 			ASSERT_EQUAL(foo_lir->local_list.size(), 3);
-			ASSERT_EQUAL(g_ctor->local_list.size(), 0);
+			// The ctor writes the initial value through a pointer to the global, so it holds that
+			// pointer in a local.
+			ASSERT_EQUAL(g_ctor->local_list.size(), 1);
 
 			// Check local variable 'a'
 			bool found_a = false;
@@ -445,16 +219,23 @@ private:
 			}
 			ASSERT_TRUE(found_global_assign);
 
-			// Check that there is an assignment to a LIRGlobal in the instructions in g_ctor
-			bool found_global_assign_ctor = false;
+			// The ctor takes the address of the global and writes the initial value through it, so
+			// it holds an `AddressOf` on the global and an `Assign` storing through that pointer.
+			bool found_global_address_of = false;
+			bool found_store_through_ptr = false;
 			for (const auto& block: g_ctor->blocks) {
 				for (const auto& instr: block.instructions) {
-					if (instr.operation == lir::Operation::Assign && instr.output.has_value()) {
-						if (instr.output.value().isGlobal()) found_global_assign_ctor = true;
-					}
+					if (instr.operation == lir::Operation::AddressOf && !instr.arguments.empty()
+					    && instr.arguments.at(0).isGlobal())
+						found_global_address_of = true;
+
+					if (instr.operation == lir::Operation::Assign && instr.output.has_value()
+					    && instr.output.value().hasProjections())
+						found_store_through_ptr = true;
 				}
 			}
-			ASSERT_TRUE(found_global_assign_ctor);
+			ASSERT_TRUE(found_global_address_of);
+			ASSERT_TRUE(found_store_through_ptr);
 
 			// Test debug print:
 			std::stringstream foo_str;
@@ -498,6 +279,11 @@ private:
 		ASSERT_HAS_VALUE(g.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(some_global.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(global_tuple.getCtorDtorPair().global_ctor);
+
+		// All the globals here are trivially destructible, so none of them gets a dtor.
+		ASSERT_TRUE(g.getCtorDtorPair().global_dtor.empty());
+		ASSERT_TRUE(some_global.getCtorDtorPair().global_dtor.empty());
+		ASSERT_TRUE(global_tuple.getCtorDtorPair().global_dtor.empty());
 	}
 
 	void testLifetimeFlags() {
@@ -537,6 +323,82 @@ private:
 		auto const_numeric = lir_global.getConstValue().get<numeric_value::NumericValue>();
 		auto const_value   = const_numeric->get<i64>();
 		ASSERT_EQUAL(const_value, 55);
+	}
+
+	void conditionalDestructTest() {
+		using namespace compiler::lir;
+		auto module   = getLIROfModule(path("modules/conditional_destruct"));
+		auto lir_func = module.lirFunc("maybeMove");
+
+		const Instruction* branch_on_flag = nullptr;
+		for (const auto& block: lir_func->block_order) {
+			const auto& terminator = block->terminator;
+			if (terminator.operation != Operation::Branch) continue;
+
+			// The condition of the `if` is a condition temporary, the flag is a plain bool local.
+			const auto& condition = terminator.arguments.at(0).get<LIRPlace>();
+			if (condition.getBase<LIRLocalRef>()->special_kind == LIRLocalSpecialKind::Normal) {
+				ASSERT_TRUE(branch_on_flag == nullptr);
+				branch_on_flag = &terminator;
+			}
+		}
+		ASSERT_TRUE(branch_on_flag != nullptr);
+
+		const auto flag         = branch_on_flag->arguments.at(0).get<LIRPlace>();
+		const auto flag_local   = flag.getBase<LIRLocalRef>();
+		const auto destruct     = branch_on_flag->arguments.at(1).get<BlockRef>();
+		const auto continuation = branch_on_flag->arguments.at(2).get<BlockRef>();
+
+		withContextDo([&](query::Context& ctx) {
+			ASSERT_TRUE(flag.getBaseLayout()->getSourceType().getType().getKind() == Kind::Bool);
+			ASSERT_TRUE(flag.getBaseLayout()->getSourceType().isTriviallyDestructible(ctx));
+		});
+
+		// The taken side calls the destructor, gives the value up by clearing the flag, and merges
+		// back into the continuation.
+		bool calls_destructor = false;
+		bool clears_flag      = false;
+		for (const auto& instr: destruct->instructions) {
+			if (instr.operation == Operation::Call) calls_destructor = true;
+
+			if (instr.operation != Operation::Assign or not instr.output.has_value()) continue;
+			if (not instr.output->isLocal() or instr.output->getBase<LIRLocalRef>() != flag_local)
+				continue;
+
+			auto value = instr.arguments.at(0).get<LIRConstant>().value.get<bool>();
+			ASSERT_HAS_VALUE(value);
+			ASSERT_TRUE(not value.value());
+			clears_flag = true;
+		}
+		ASSERT_TRUE(calls_destructor);
+		ASSERT_TRUE(clears_flag);
+
+		ASSERT_EQUAL(Operation::Jump, destruct->terminator.operation);
+		ASSERT_TRUE(destruct->terminator.arguments.at(0).get<BlockRef>() == continuation);
+
+		// A scope may not end inside the conditional block, because the DVM pairs its `init` and
+		// `deinit` on a stack. The only scopes ending there are of the locals the destructor call
+		// needs itself, and they start there as well.
+		auto scope_flags_of = [](const Instruction& instr, ScopeFlag::Flag kind) {
+			std::vector<LIRLocalRef> locals;
+			for (const auto& scope_flag: instr.scope_flags)
+				if (scope_flag.flag == kind) locals.push_back(scope_flag.local);
+			return locals;
+		};
+
+		std::vector<LIRLocalRef> started;
+		std::vector<LIRLocalRef> ended;
+		for (const auto& instr: destruct->instructions) {
+			for (auto local: scope_flags_of(instr, ScopeFlag::Flag::ScopeStart))
+				started.push_back(local);
+			for (auto local: scope_flags_of(instr, ScopeFlag::Flag::ScopeEnd))
+				ended.push_back(local);
+		}
+		for (auto local: scope_flags_of(destruct->terminator, ScopeFlag::Flag::ScopeEnd))
+			ended.push_back(local);
+
+		ASSERT_EQUAL_PRINT(started.size(), ended.size());
+		for (auto local: ended) ASSERT_TRUE(std::ranges::contains(started, local));
 	}
 
 	void referencesTest() {
@@ -688,51 +550,6 @@ private:
 		ASSERT_TRUE(found_zero_init_b);
 		ASSERT_TRUE(found_index_proj);
 		ASSERT_TRUE(found_nested_proj);
-	}
-
-	void dynamicArrayTest() {
-		auto module   = getLIROfModule(path("modules/dynamic_arrays"));
-		auto lir_func = module.lirFunc("dynamic_array_test");
-
-		using namespace compiler::lir;
-
-		bool found_zero_init        = false;
-		bool found_push_with_params = false;
-		bool found_pop_with_params  = false;
-		bool found_len              = false;
-		bool found_destructor       = false;
-
-		for (const auto& block: lir_func->block_order) {
-			for (const auto& instr: block->instructions) {
-				switch (instr.operation) {
-				case Operation::ZeroInitialize:
-					found_zero_init = true;
-					break;
-				case Operation::Call: {
-					auto name = instr.arguments.at(0).get<FunctionLiteral>().mangled_name.strView();
-					if (name.contains("push"))
-						found_push_with_params = true;
-					else if (name.contains("pop"))
-						found_pop_with_params = true;
-					else if (name.contains("length"))
-						found_len = true;
-					// `Hdd` is the mangling of the compiler-generated destructor, which releases
-					// the list storage.
-					else if (name.contains("Hdd"))
-						found_destructor = true;
-					break;
-				}
-				default:
-					break;
-				}
-			}
-		}
-
-		ASSERT_TRUE(found_zero_init);
-		ASSERT_TRUE(found_push_with_params);
-		ASSERT_TRUE(found_pop_with_params);
-		ASSERT_TRUE(found_len);
-		ASSERT_TRUE(found_destructor);
 	}
 
 	void metaFunctionsTest() {

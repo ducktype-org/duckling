@@ -74,7 +74,7 @@ namespace compiler::helios::code {
 			return id;
 		}
 
-		[[nodiscard]] base::Optional<dia_int::StablePosition> getPosition() const {
+		[[nodiscard]] base::Optional<dia::StablePosition> getPosition() const {
 			return origin.getStablePosition();
 		}
 
@@ -244,6 +244,9 @@ namespace compiler::helios::code {
 	 * @note One should be very careful not to create a "next use" ReusableExpr which does not
 	 * semantically see the result of the corresponding "first use" ReusableExpr, for example
 	 * if they are in different branches of an if expression.
+	 *
+	 * @warning The inner expression must be either trivially copyable or a `Temporary`. For more
+	 * info look in the `ReusableExpr` constructor.
 	 */
 	struct ReusableExpr final: public Expr {
 		SharedBox<Expr> inner;
@@ -267,36 +270,6 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		ReusableExpr(const SharedBox<Expr>& inner, bool first_use);
-	};
-
-	/**
-	 * @brief Represents an expression inside "(" and ")".
-	 * @TODO: Decide if this class is needed.
-	 * For:
-	 * - nice dprints, because with this class we know what was in "()"
-	 * Against:
-	 * - We have/will have TupleTypeConstructorExpr and VariantConstructor Expr.
-	 *
-	 * @TODO HOUT 2.0: once variants are chained in PST we can delete it
-	 * For now it will be kept for simplicity of creating VariantTypeConstructorExpr.
-	 * Also we should print all "()" from hout structure anyway.
-	 */
-	struct ParenthesisExpr final: public Expr {
-		base::Box<Expr> inner;
-
-		ParenthesisExpr(query::Context& ctx, ElementOrigin origin, base::Box<Expr> inner);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		ParenthesisExpr(
-			tsh::ExpressionType<> expression_type, ElementOrigin origin, base::Box<Expr> inner
-		);
 	};
 
 	/**
@@ -510,6 +483,92 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Constructs a variant value from a value of one of its alternatives.
+	 *
+	 * Created on implicit coercion to a variant type. The inner expression's type must be
+	 * exactly equal to the alternative at `alternative_index`.
+	 */
+	struct VariantConstructExpr final: public Expr {
+		Box<Expr> inner;
+		usize     alternative_index;
+
+		VariantConstructExpr(
+			query::Context&   ctx,
+			ElementOrigin     origin,
+			Box<Expr>         inner,
+			tsh::SymbolType<> variant_type,
+			usize             alternative_index
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		VariantConstructExpr(
+			tsh::ExpressionType<> expression_type,
+			ElementOrigin         origin,
+			Box<Expr>             inner,
+			usize                 alternative_index
+		);
+	};
+
+	/**
+	 * @brief Lowered `match` over a variant value.
+	 *
+	 * Cases are tried in order. A case either tests one concrete alternative of the
+	 * subject's variant type or is a wildcard (empty alternative index) that always
+	 * matches. Every case yields a value, and they all have to be of the same type, which
+	 * becomes the type of the whole expression.
+	 *
+	 * A case may bind the tested alternative's payload. The binding is a `ref` to the
+	 * payload inside the subject, so it never copies: testing an alternative already
+	 * produces a pointer to it, and the binding reuses that pointer.
+	 */
+	struct MatchExpr final: public Expr {
+		struct Case final {
+			/** Alternative index in the subject's variant type; empty for wildcards. */
+			base::Optional<usize> alternative_index;
+			/** This is a variable that is used by the expression,
+			  where the alternative value of the same type as constraint should land.*/
+			base::Optional<SymID> binding;
+			/** The value this case evaluates to. */
+			Box<Expr> result;
+		};
+
+		/**
+		 * @brief A `ref` to the matched variant.
+		 *
+		 * The lowering evaluates it once for the whole case chain, so a subject with side
+		 * effects runs exactly once no matter how many alternatives are tested.
+		 */
+		Box<Expr>         subject;
+		std::vector<Case> cases;
+
+		MatchExpr(
+			query::Context& ctx, ElementOrigin origin, Box<Expr> subject, std::vector<Case> cases
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		MatchExpr(
+			tsh::ExpressionType<> expression_type,
+			ElementOrigin         origin,
+			Box<Expr>             subject,
+			std::vector<Case>     cases
+		);
+	};
+
+	/**
 	 * @brief Represents a field access to an expression, like "some_struct.field".
 	 * @note This does not represent namespace-like access, like "some_namespace.some_symbol". It
 	 * is reserved for field access, with the field name dealiased, etc., in its most direct form.
@@ -711,16 +770,18 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents an explicit move expression (`move x`).
+	 * @brief Represents a pointer creation expression (`ptrof`).
+	 * It takes a place holding a value of symbol type `S` and produces a value of type `ptr S`.
 	 *
-	 * It takes a place of type T and produces a value of the same type, but as a temporary,
-	 * signalling that ownership of the operand is transferred out of it. The source local is
-	 * marked as moved during MIR lowering, so using it afterwards is a use-after-move.
+	 * Unlike `RefOfExpr`, the reference kind of the operand is kept instead of being collapsed into
+	 * `Ref`: `ptrof` on a place of type `box T` yields `ptr box T`, the address of the box itself,
+	 * and not a reference to its pointee. That makes it the way to address an element of a buffer
+	 * whose element type is itself a reference or a box.
 	 */
-	struct MoveExpr final: public Expr {
+	struct PtrOfExpr final: public Expr {
 		Box<Expr> inner;
 
-		MoveExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
+		PtrOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
@@ -729,7 +790,52 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		MoveExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
+		PtrOfExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
+	};
+
+	/**
+	 * @brief Represents a move expression (`move x`, or an implicit move of a temporary).
+	 *
+	 * It takes a place of type T and produces a value of the same type, but as a temporary,
+	 * signalling that ownership of the operand is transferred out of it. The source local is
+	 * marked as moved during MIR lowering, so using it afterwards is a use-after-move.
+	 */
+	struct MoveExpr final: public Expr {
+		/**
+		 * @brief Why a `MoveExpr` was created.
+		 *
+		 * - `Explicit` comes from the `move` keyword written in the code.
+		 * - `Implicit` is inserted by a coercion consuming an owned rvalue (a temporary) or when
+		 * moving the return value out of the function.
+		 *
+		 * @note: This is only used for testing and easier debugging purposes. The semantics between
+		 * the two don't differ.
+		 */
+		enum class MoveKind : std::uint8_t { Explicit, Implicit };
+
+		Box<Expr> inner;
+		MoveKind  kind;
+
+		MoveExpr(
+			query::Context& ctx,
+			ElementOrigin   origin,
+			Box<Expr>       inner,
+			MoveKind        kind = MoveKind::Explicit
+		);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		MoveExpr(
+			tsh::ExpressionType<> expression_type,
+			ElementOrigin         origin,
+			Box<Expr>             inner,
+			MoveKind              kind
+		);
 	};
 
 	/**
@@ -873,63 +979,6 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		BlockExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Stmt> block);
-	};
-
-	/**
-	 * @brief Represents a push operation to a dynamic array.
-	 *
-	 * Assumes the `list` argument is a dynamic array and `element` argument is the same as the
-	 * lists element type.
-	 * @TODO: #1959 This should probably be unified with '+=', '*=' etc.
-	 */
-	struct ListPushExpr final: public Expr {
-		Box<Expr> list;
-		Box<Expr> element;
-
-		ListPushExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> element);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		ListPushExpr(
-			tsh::ExpressionType<> expression_type,
-			ElementOrigin         origin,
-			Box<Expr>             list,
-			Box<Expr>             element
-		);
-	};
-
-	/**
-	 * @brief Represents a pop operation from the dynamic array.
-	 *
-	 * Assumes the `list` argument is a dynamic array and `count` argument is an integer.
-	 * @TODO: #1959 This should probably be unified with '+=', '*=' etc.
-	 */
-	struct ListPopExpr final: public Expr {
-		Box<Expr> list;
-		Box<Expr> count;
-
-		ListPopExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> count);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		ListPopExpr(
-			tsh::ExpressionType<> expression_type,
-			ElementOrigin         origin,
-			Box<Expr>             list,
-			Box<Expr>             count
-		);
 	};
 }
 

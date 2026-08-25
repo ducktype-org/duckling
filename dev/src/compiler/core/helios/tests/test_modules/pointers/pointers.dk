@@ -1,0 +1,34 @@
+fun test_pointers() -> i64 = {
+    var a: i32 = 20;
+    var ref_a: ref i32 = &a;
+
+    var p: ptr i32;
+    var from_ref: ptr i32 = ref_a as ptr i32;
+    var from_addr: ptr i32 = &a as ptr i32;
+
+    var box_a: box i32 = new 42;
+    var from_box: ptr i32 = box_a as ptr i32;
+
+    var c: cptr i32 = from_ref as cptr i32;
+    var m: manyptr i32;
+    var pp: ptr ptr i32;
+    var inner: ptr i32;
+
+    var deref_val: i32 = *from_ref;
+    var sum: i32 = *from_ref + 1;
+    var c_elem: i32 = c[0];
+
+    # `ptrof` keeps the reference kind of its operand, so none of these collapse to `ptr i32`.
+    var pof_direct = ptrof a;
+    var pof_box = ptrof box_a;
+    var pof_ref = ptrof ref_a;
+
+    # Replacement of the old `element_ptr` builtin, with a call hidden below the operand.
+    var pof_elem = ptrof m[index()];
+
+    return 0;
+}
+
+fun index() -> i64 = {
+    return 0;
+}

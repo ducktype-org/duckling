@@ -1,0 +1,60 @@
+# Test advanced type inference scenarios
+# Focus: complex expressions, function returns, literals in different bases
+
+class Point {
+    x = 0;
+    y = 0;
+}
+
+fun makePoint(x: i64, y: i64) = Point(x, y);
+fun computeValue() = 99;
+fun isPositive(n: i64) = n > 0;
+
+fun main() -> i64 = {
+    # Test type deduction with hex/binary/octal literals
+    var hex = 0xFF;     # deduced as integer, value 255
+    var bin = 0b1010;   # deduced as integer, value 10
+    var oct = 0o17;     # deduced as integer, value 15
+    builtin_output_i64(hex);            # 255
+    builtin_output_i64(bin);            # 10
+    builtin_output_i64(oct);            # 15
+
+    # Test type deduction for char
+    var ch = 'X';                       # deduced as char
+    builtin_output_i64(ch as i64);      # 88
+
+    # Test type deduction from function return (class)
+    let p = makePoint(3, 4);            # deduced as Point
+    builtin_output_i64(p.x);            # 3
+    builtin_output_i64(p.y);            # 4
+
+    # Test type deduction from ternary expression
+    let ternary_result = if true then 500 else 600;
+    builtin_output_i64(ternary_result); # 500
+
+    # Test type deduction with comparison result (bool)
+    let cmp = 10 < 20;                  # deduced as bool
+    if (cmp) {
+        builtin_output_i64(1);          # 1
+    }
+
+    # Test type deduction from function returning bool
+    let positive = isPositive(5);       # deduced as bool
+    if (positive) {
+        builtin_output_i64(2);          # 2
+    }
+
+    # Test deduction in complex nested expressions
+    let complex = (5 + 10) * 2 - 3;
+    builtin_output_i64(complex);        # 27
+
+    # Test deduction with multiple operations
+    let chained = 1 + 2 + 3 + 4;
+    builtin_output_i64(chained);        # 10
+
+    # Test deduction across different operations
+    let mixed = (hex / 5) + (bin * 2);  # (255/5=51) + (10*2=20) = 71
+    builtin_output_i64(mixed);          # 71
+
+    return 0;
+}

@@ -3,6 +3,8 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/access.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -15,6 +17,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
+#include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
@@ -147,6 +150,17 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassSpecial:
 			return ElementScopeKind::Standard;
 
+		// The match owns the generated subject local; each case owns the symbols bound
+		// by its pattern.
+		case pst::ElementKind::Match:
+		case pst::ElementKind::MatchCase:
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::FlowPattern:
+		case pst::ElementKind::BindingPattern:
+		case pst::ElementKind::WildcardPattern:
+			return ElementScopeKind::Transparent;
+
 		case pst::ElementKind::ClassConstructor:
 		case pst::ElementKind::ClassDestructor:
 			return ElementScopeKind::Standard;
@@ -170,6 +184,13 @@ namespace compiler::helios {
 			    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
 				// This is a special case.
 				// Elements in macro expansions should have their scope parent be the grandparent.
+				return ElementScopeKind::ParentTransparent;
+			}
+			if (expr_parent.has_value()
+			    && expr_parent.value()->getElementKind() == pst::ElementKind::Match) {
+				// The match subject resolves in the scope surrounding the match. Resolving it
+				// inside the match's own scope would create a query cycle: enumerating the
+				// match scope's symbols requires compiling the subject.
 				return ElementScopeKind::ParentTransparent;
 			}
 			return ElementScopeKind::Transparent;
@@ -552,7 +573,7 @@ namespace compiler::helios {
 				// parsed but nothing compiles them yet, so report it instead of falling through
 				// to the panicky visitor default. Leaving `out` unset fails the query.
 				// @TODO: #1290 grab the parameter symbols here once constructors are supported.
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"User-defined constructors are not yet supported",
 					ctor->getStablePosition(),
 					"`T(...)` and `T.name(...)` declare a constructor.\n"
@@ -656,6 +677,23 @@ namespace compiler::helios {
 
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
+			} else if (base_element->getElementKind() == pst::ElementKind::Match) {
+				// A match introduces no symbols of its own; its subject is lowered straight to
+				// MIR without a generated local.
+				return {};
+			} else if (base_element->getElementKind() == pst::ElementKind::MatchCase) {
+				// The only symbol a match case may introduce is its pattern binding.
+				auto match_case = base_element.dynamicCast<pst::MatchCase>().value();
+				auto flow       = match_case->getPattern().unlock(ctx);
+
+				std::vector<SymID> out;
+				if (auto binding
+				    = flow->getPattern().unlock(ctx).dynamicCast<pst::BindingPattern>()) {
+					out.emplace_back(
+						ctx.query<QuerySymbolOfSTMT>({ binding.value()->getName() }).valueOrThrow()
+					);
+				}
+				return out;
 			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
 				// @TODO: #3071 maybe modify this assertion or add a new else-if branch for template
@@ -726,6 +764,75 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
 
+	namespace {
+		/**
+		 * @brief A module implicitly imported (as if by `import <package>.<path>.*;`) into every
+		 * module that is not part of the standard library. Re-exports are not supported yet, so the
+		 * prelude is emulated by importing the original source modules directly rather than through
+		 * a dedicated `prelude` module.
+		 */
+		struct PreludeImport final {
+			base::StrID              package;
+			std::vector<base::StrID> path;
+		};
+
+		/**
+		 * @brief Get the list of modules to import by default (as part of the prelude).
+		 */
+		const std::vector<PreludeImport>& preludeImports() {
+			static const std::vector<PreludeImport> imports{
+				{ .package = base::StrID("core"), .path = { base::StrID("builtins") } },
+				{ .package = base::StrID("core"), .path = { base::StrID("containers") } },
+			};
+			return imports;
+		}
+
+		/**
+		 * @brief True when @p module_id belongs to the standard library itself. Such modules keep
+		 * their explicit imports and must not receive the implicit prelude — this also breaks the
+		 * self-import cycle that `core.builtins` importing itself would otherwise create.
+		 */
+		bool isStandardLibraryModule(query::Context& ctx, frontend::ModuleID module_id) {
+			auto package_id = frontend::getModuleRef(module_id)->getPackage().unlock(ctx).getID();
+			return frontend::packages::isStandardLibraryPackage(package_id);
+		}
+
+		/**
+		 * @brief Looks up @p name as if every non-stdlib module wrote `import <module>.*;` for each
+		 * configured prelude module, merging the matches into a single result. Returns an empty
+		 * result (never fails) when the standard library is absent (e.g. `--no-std`, or a custom
+		 * std that lacks the module) or when @p module_id is itself a standard-library module.
+		 */
+		query::QResult<LookupResult> lookupImplicitPrelude(
+			query::Context& ctx, frontend::ModuleID module_id, base::StrID name, bool with_wildcards
+		) {
+			LookupResult result{ .leaves = {}, .children = {} };
+			if (isStandardLibraryModule(ctx, module_id)) return result;
+
+			for (const auto& prelude_import: preludeImports()) {
+				auto module_opt = frontend::getModuleByAbsolutePath(
+					ctx, prelude_import.package, prelude_import.path
+				);
+				if (module_opt.empty()) continue;
+
+				auto prelude_scope   = queryRootScopeOfMainModuleFile(ctx, module_opt.value());
+				auto prelude_qresult = HInterface::ofScope(prelude_scope)
+				                           .lookup(ctx, name, { .with_wildcards = with_wildcards });
+				UNPACK_QRESULT_CREF(CRef<LookupResult> prelude_result = &, prelude_qresult);
+
+				// The prelude re-exports the contents of the module, but not the modules it
+				// imports itself - otherwise every `import` written in a prelude module would
+				// collide with the same import written by the user.
+				LookupResult exported{ .leaves = {}, .children = prelude_result->children };
+				for (const SymID sym: prelude_result->leaves)
+					if (kind(sym) != SymbolKind::Import) exported.leaves.push_back(sym);
+
+				result.merge(exported);
+			}
+			return result;
+		}
+	}
+
 	struct IMPLEMENT_QUERY(QueryLookupInScope, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			Ref symbol_list = &ctx.query<QuerySymbolsInScope>(key.scope)->valueOrThrow();
@@ -782,42 +889,49 @@ namespace compiler::helios {
 				parent_result.merge(std::move(result));
 
 				return parent_result;
-			} else {
-				// At root scope - check if this is a REPL module with a parent
-				auto       current_module_id = key.scope.ref->parent_module;
-				const bool is_repl_module
-					= ctx.query<frontend::QueryIsReplModule>(current_module_id);
-				auto repl_parent_opt
-					= ctx.query<frontend::QueryReplModuleParent>(current_module_id);
+			}
 
-				CORE_DEV_LOG(
-					REPL,
-					"At root scope, module #",
-					current_module_id.queryUnstablePerfectHash(),
-					", isRepl=",
-					is_repl_module,
-					", hasParent=",
-					repl_parent_opt.has_value(),
-					"\n"
+			// At root scope.
+			auto current_module_id = key.scope.ref->parent_module;
+
+			// Bring the default prelude modules into scope, as if every module wrote
+			// `import <module>.*;`. A no-op under --no-std or inside the standard library.
+			UNPACK_QRESULT(
+				LookupResult prelude_result =,
+				lookupImplicitPrelude(ctx, current_module_id, key.name, key.with_wildcards)
+			);
+			result.merge(std::move(prelude_result));
+
+			// Also check whether this is a REPL module with a parent.
+			const bool is_repl_module = ctx.query<frontend::QueryIsReplModule>(current_module_id);
+			auto repl_parent_opt = ctx.query<frontend::QueryReplModuleParent>(current_module_id);
+
+			CORE_DEV_LOG(
+				REPL,
+				"At root scope, module #",
+				current_module_id.queryUnstablePerfectHash(),
+				", isRepl=",
+				is_repl_module,
+				", hasParent=",
+				repl_parent_opt.has_value(),
+				"\n"
+			);
+
+			if (is_repl_module && repl_parent_opt.has_value()) {
+				// Query the parent REPL module's TopLevel scope.
+				auto parent_module_id      = repl_parent_opt.value();
+				auto parent_toplevel_scope = queryRootScopeOfMainModuleFile(ctx, parent_module_id);
+
+				UNPACK_QRESULT_CREF(
+					LookupResult parent_result =,
+					ctx.query<QueryLookupInScopeAndParents>(
+						{ parent_toplevel_scope, key.name, key.with_wildcards }
+					)
 				);
 
-				if (is_repl_module && repl_parent_opt.has_value()) {
-					// Query the parent REPL module's TopLevel scope.
-					auto parent_module_id = repl_parent_opt.value();
-					auto parent_toplevel_scope
-						= queryRootScopeOfMainModuleFile(ctx, parent_module_id);
+				parent_result.merge(std::move(result));
 
-					UNPACK_QRESULT_CREF(
-						LookupResult parent_result =,
-						ctx.query<QueryLookupInScopeAndParents>(
-							{ parent_toplevel_scope, key.name, key.with_wildcards }
-						)
-					);
-
-					parent_result.merge(std::move(result));
-
-					return parent_result;
-				}
+				return parent_result;
 			}
 
 			return result;

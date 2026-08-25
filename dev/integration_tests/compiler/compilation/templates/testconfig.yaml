@@ -11,8 +11,7 @@ Tests:
   simple_function_template:
     Cases:
       all:
-        # @TODO: #2825 #3178 see if we can reenable it, it currently fails on dvm, because it leaks memory
-        backend: llvm
+        backend: all
         Output:
           String: "2\n2\nabc\n"
         ExitCode: 0

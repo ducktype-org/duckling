@@ -90,11 +90,6 @@ impl Script {
         self.manifest().dependencies()
     }
 
-    /// Get the dev-dependencies.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
-    }
-
     /// Get the profiles.
     pub fn profiles(&self) -> &Profiles {
         self.manifest().profiles()
@@ -211,7 +206,7 @@ impl Script {
 
     /// Get a [`Display`](fmt::Display) impl.
     pub fn display(&self) -> impl fmt::Display + '_ {
-        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
         struct ScriptDisplay<'a> {
             script: &'a Script,
         }
@@ -280,11 +275,6 @@ impl PackageScript {
         self.manifest().dependencies()
     }
 
-    /// Get the package's dev-dependencies.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
-    }
-
     /// Get the package's profiles.
     pub fn profiles(&self) -> &Profiles {
         self.manifest().profiles()
@@ -328,7 +318,7 @@ impl PackageScript {
 
     /// Get a [`Display`](fmt::Display) impl.
     pub fn display(&self) -> impl fmt::Display + '_ {
-        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
         struct PackageScriptDisplay<'a> {
             script: &'a PackageScript,
         }
@@ -388,11 +378,6 @@ impl StandaloneScript {
         self.manifest().dependencies()
     }
 
-    /// Get the dev-dependencies specified in the frontmatter.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
-    }
-
     /// Get the profiles specified in the frontmatter.
     pub fn profiles(&self) -> &Profiles {
         self.manifest().profiles()
@@ -417,7 +402,7 @@ impl StandaloneScript {
 
     /// Get a [`Display`](fmt::Display) impl.
     pub fn display(&self) -> impl fmt::Display + '_ {
-        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
         struct StandaloneScriptDisplay<'a> {
             script: &'a StandaloneScript,
         }
@@ -512,11 +497,6 @@ impl FrontMatter {
     /// Get the dependencies specified in the frontmatter.
     pub fn dependencies(&self) -> &Dependencies {
         self.manifest().dependencies()
-    }
-
-    /// Get the dev-dependencies specified in the frontmatter.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        self.manifest().dev_dependencies()
     }
 
     /// Get the profiles specified in the frontmatter.

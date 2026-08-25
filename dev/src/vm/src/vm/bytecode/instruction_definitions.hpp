@@ -66,6 +66,7 @@ DEF_INSTR(cmov_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src)
 DEF_INSTR(mov_pptr_pptr, (vm::opargs::PlacePtr, dst), (vm::opargs::PlacePtr, src))
 DEF_INSTR(mov_pste_pste, (vm::opargs::PlaceStructure, dst), (vm::opargs::PlaceStructure, src))
 DEF_INSTR(mov_pfst_pfst, (vm::opargs::PlaceFSTable, dst), (vm::opargs::PlaceFSTable, src))
+DEF_INSTR(mov_pvnt_pvnt, (vm::opargs::PlaceVnt, dst), (vm::opargs::PlaceVnt, src))
 
 // does a shallow pointer copy
 
@@ -584,7 +585,7 @@ DEF_INSTR(write_pcptr_pptr, (vm::opargs::PlaceCPtr, dst_ptr), (vm::opargs::Place
 DEF_INSTR(mov_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr, src))
 
 /// Reinterprets any cpointer type to any other cpointer type (the analogue of a C cast).
-DEF_INSTR(movCast_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr, src))
+DEF_INSTR(cast_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr, src))
 
 DEF_INSTR(cast_pcptr_pptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlacePtr, src_ptr))
 
@@ -598,6 +599,21 @@ DEF_INSTR(add_pcptr_p64, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Place64, off
 /// Performs `dst += offset`, where `offset` is in **bytes** (not pointee elements, unlike C pointer
 /// arithmetic).`
 DEF_INSTR(add_pcptr_imm, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Immediate, offset))
+
+// ========= POINTER DECOMPOSITION ========
+
+/**
+ * @brief Decomposes a pointer into the id of the block it points into and the byte offset
+ * within that block. Throws on a null pointer, which points into no block.
+ * @note The id is the identity used by the memory diagnostics, not a native address. It is
+ * reproducible across runs of the same program.
+ */
+DEF_INSTR(
+	ptrParts_p64_p64_pptr,
+	(vm::opargs::Place64, dst_id),
+	(vm::opargs::Place64, dst_offset),
+	(vm::opargs::PlacePtr, src_ptr)
+)
 
 // ========= TYPE OPERATIONS ========
 // Casts a primitive type in-place. This does nothing at runtime, but is needed

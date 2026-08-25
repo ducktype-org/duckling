@@ -61,14 +61,16 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(owning_scope.queryUnstablePerfectHash(), role);
 		}
 
-		// Hash includes both counter and return_type to ensure different wrappers are distinguished.
-		// However, the mangled name (used for linker symbols) is based only on counter.
-		base::Bit256 ReplExpressionWrapper::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(return_type, counter);
+		// Hash includes the return type, the wrapped PST element and the kind of the input, next to
+		// the counter. The mangled name (used for linker symbols) is based only on the counter.
+		base::Bit256 ReplInputWrapper::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(
+				return_type, counter, pst_element_hash, static_cast<u64>(type)
+			);
 		}
 
-		base::Bit256 ReplInstructionWrapper::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(counter);
+		base::Bit256 ReplEmptyVariable::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(original_variable.queryUnstablePerfectHash());
 		}
 
 		base::Bit256 ScriptMainWrapper::queryUnstablePerfectHash() const {
@@ -127,8 +129,7 @@ namespace compiler::helios {
 			variant_case_novalue(
 				defgen::Constructor,
 				defgen::Method,
-				defgen::ReplExpressionWrapper,
-				defgen::ReplInstructionWrapper,
+				defgen::ReplInputWrapper,
 				defgen::ScriptMainWrapper
 			) {
 				kind = SymbolKind::Function;
@@ -137,7 +138,11 @@ namespace compiler::helios {
 				kind = SymbolKind::Parameter;
 			}
 			variant_case_novalue(defgen::Field) { kind = SymbolKind::Field; }
-			variant_case_novalue(defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal) {
+			variant_case_novalue(
+				defgen::GeneratedFunctionVariable,
+				defgen::ControlFlowLocal,
+				defgen::ReplEmptyVariable
+			) {
 				kind = SymbolKind::Variable;
 			}
 			variant_case_novalue(defgen::GeneratedConstant) { kind = SymbolKind::Const; }

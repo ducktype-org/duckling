@@ -32,7 +32,7 @@ impl From<bool> for AllowGlobalPackage {
 }
 
 impl AllowGlobalPackage {
-    pub fn allows(&self) -> bool {
+    pub fn allows(self) -> bool {
         matches!(self, AllowGlobalPackage::Yes)
     }
 }
@@ -88,7 +88,7 @@ impl PackageLoader {
         ctx: &'duck DuckContext,
         allow_global_package: AllowGlobalPackage,
     ) -> QuackResult<PackageContext<'duck>> {
-        let start = start.expand_user()?.resolve()?;
+        let start = start.resolve(ctx);
         if !start.is_dir() {
             let err = qp_err!("the path `{}` is not a directory", start.display());
             return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
@@ -231,7 +231,7 @@ metadata:
     #[test]
     fn no_package_from_directory() {
         #[cfg(windows)]
-        let root = "\\\\?\\C:\\";
+        let root = "C:\\";
         #[cfg(not(windows))]
         let root = "/";
         let tmp_file = tempdir().unwrap();
@@ -242,7 +242,7 @@ metadata:
             format!("{err}"),
             format!(
                 "no manifest has been found from the `{}` to the `{}`",
-                tmp_file.path().resolve().unwrap().display(),
+                tmp_file.path().normalize().display(),
                 root
             )
         );
@@ -258,7 +258,7 @@ metadata:
             format!("{err}"),
             format!(
                 "the path `{}` is not a directory",
-                file.resolve().unwrap().display()
+                file.normalize().display()
             )
         );
     }
@@ -277,9 +277,8 @@ metadata:
                 .into_package()
                 .unwrap_package()
                 .root_directory()
-                .resolve()
-                .unwrap(),
-            tmp_file.path().resolve().unwrap()
+                .normalize(),
+            tmp_file.path().normalize(),
         );
     }
 
@@ -299,9 +298,8 @@ metadata:
                 .into_package()
                 .unwrap_package()
                 .root_directory()
-                .resolve()
-                .unwrap(),
-            tmp_file.path().resolve().unwrap()
+                .normalize(),
+            tmp_file.path().normalize()
         );
     }
 
@@ -318,9 +316,8 @@ metadata:
                 .into_package()
                 .unwrap_package()
                 .root_directory()
-                .resolve()
-                .unwrap(),
-            tmp_file.path().resolve().unwrap()
+                .normalize(),
+            tmp_file.path().normalize()
         );
     }
 

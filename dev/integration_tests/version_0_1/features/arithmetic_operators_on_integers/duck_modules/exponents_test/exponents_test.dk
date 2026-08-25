@@ -1,0 +1,55 @@
+# Test exponentiation operator (**) for various integer types
+
+fun main() -> i64 = {
+    # Unsigned exponentiation
+    var u: u64 = 2;
+    var u_exp: u64 = u ** 10;
+    builtin_output_u64(u_exp);              # 2^10 = 1024
+
+    var u2: u64 = 5;
+    var u2_exp: u64 = u2 ** 4;
+    builtin_output_u64(u2_exp);             # 5^4 = 625
+
+    # Exponent as a variable
+    var base: u64 = 3;
+    var exp: u64 = 3;
+    builtin_output_u64(base ** exp);        # 3^3 = 27
+
+    # Signed exponentiation
+    var s: i64 = -3;
+    var s_exp: i64 = s ** 3;
+    builtin_output_i64(s_exp);              # (-3)^3 = -27
+
+    var s2: i64 = -2;
+    var s2_exp: i64 = s2 ** 4;
+    builtin_output_i64(s2_exp);             # (-2)^4 = 16
+
+    # Exponent as a variable (signed)
+    var base_s: i64 = 4;
+    var exp_s: i64 = 2;
+    builtin_output_i64(base_s ** exp_s);    # 4^2 = 16
+
+    # Zero and one exponents
+    var z: i64 = 42;
+    builtin_output_i64(z ** 0);             # 1
+    builtin_output_i64(z ** 1);             # 42
+
+    # Exponent zero base
+    builtin_output_i64(0 ** 5);             # 0
+    builtin_output_i64(0 ** 0);             # 1 (by convention)
+
+    builtin_output_i64(1 ** -1);            # 1
+    builtin_output_i64(-1 ** -1);           # -1
+
+    # Integer results from non-integer exponents
+    var int1: i64 = 16;
+    builtin_output_i64(int1 ** 0.5);        # sqrt(16) = 4
+
+    var int2: i64 = 81;
+    builtin_output_i64(int2 ** 0.5);        # sqrt(81) = 9
+
+    var int3: i64 = 27;
+    builtin_output_i64(int3 ** 1.5);        # cbrt(27) = 9
+
+    return 0;
+}

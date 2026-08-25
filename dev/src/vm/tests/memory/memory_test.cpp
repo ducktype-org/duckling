@@ -14,6 +14,7 @@ public:
 		TESTER_ADD_TEST(globalLeakTest);
 		TESTER_ADD_TEST(noDoubleDestructorCalls);
 		TESTER_ADD_TEST(nestedLeaks);
+		TESTER_ADD_TEST(variantDestructor);
 	}
 
 private:
@@ -40,6 +41,8 @@ private:
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);
 	}
+
+	void variantDestructor() { runTestOnVm("variant_destructor.dbc", "", ""); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/memory/");

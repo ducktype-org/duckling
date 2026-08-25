@@ -104,6 +104,11 @@ namespace compiler::backend_vm::internal {
 			bool                             tracked   = true
 		);
 
+		[[nodiscard]]
+		ProgramLoweringContext& programCtx() {
+			return program_context;
+		}
+
 	private:
 		/**
 		 * @brief Constructs a parameterless, void-returning context. Used to synthesize small
@@ -126,6 +131,20 @@ namespace compiler::backend_vm::internal {
 		 * Return the place representing the temporary local variable.
 		 */
 		DVMPlace loadFromPlace(const DVMPlace& place, const vm::code::TypeOfData& pointee_type);
+
+		void cPointerStructLea(
+			const DVMPlace&             base_place,
+			const DVMPlace&             dest,
+			const tsl::ClassTypeLayout& class_layout,
+			helios::SymID               field_id
+		);
+
+		void cPointerArrayLea(
+			const DVMPlace&       base_place,
+			const DVMPlace&       dest,
+			CRef<tsl::TypeLayout> element_layout,
+			const DVMValue&       index
+		);
 
 		/**
 		 * @brief Makes sure a given @p value is a place and places it in a temporary if needed

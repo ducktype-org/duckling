@@ -1,0 +1,138 @@
+import core.runtime;
+
+class Point {
+    x: i64 = 0;
+    y: i64 = 0;
+}
+
+class Vector {
+    start: Point = Point(0, 0);
+    end: Point = Point(1, 1);
+}
+
+fun basicFieldAccess() -> () = {
+    var p1 = Point(10, 20);
+    runtime.dvm.builtin_output_i64(p1.x); # 10
+    runtime.dvm.builtin_output_i64(p1.y); # 20
+
+    p1.x = -1;
+    p1.y = -2;
+    runtime.dvm.builtin_output_i64(p1.x); # -1
+    runtime.dvm.builtin_output_i64(p1.y); # -2
+
+    var v1 = Vector(Point(5, 5), Point(15, 15));
+    var v2 = v1;
+    v1.end.x = 999;
+
+    runtime.dvm.builtin_output_i64(v2.start.x); # 5
+    runtime.dvm.builtin_output_i64(v2.end.x);   # 15
+}
+
+class Counter {
+    value: i64 = 0;
+
+    fun increment() = {
+        self.value = self.value + 1;
+    }
+
+    fun add(amount: i64) = {
+        self.value = self.value + amount;
+    }
+
+    fun getValue() -> i64 = {
+        return self.value;
+    }
+}
+
+class CounterManager {
+    mainCounter: Counter = Counter(100);
+
+    fun resetMainCounter() = {
+        self.mainCounter.value = 0;
+    }
+
+    fun getMainCounterValue() -> i64 = {
+        return self.mainCounter.getValue();
+    }
+    
+    fun incrementMainCounter() = {
+        self.mainCounter.increment();
+    }
+}
+
+fun methodsAndSelf() -> () = {
+    var c = Counter(41);
+    c.increment();
+    runtime.dvm.builtin_output_i64(c.getValue()); # 42
+
+    c.add(8);
+    runtime.dvm.builtin_output_i64(c.getValue()); # 50
+
+    var manager = CounterManager();
+    runtime.dvm.builtin_output_i64(manager.getMainCounterValue()); # 100
+    
+    manager.incrementMainCounter();
+    runtime.dvm.builtin_output_i64(manager.mainCounter.value); # 101
+
+    manager.resetMainCounter();
+    runtime.dvm.builtin_output_i64(manager.getMainCounterValue()); # 0
+}
+
+class Wallet {
+    balance: i64 = 1000;
+}
+
+fun performTransaction(w: ref Wallet, amount: i64) = {
+    w.balance = w.balance + amount;
+}
+
+class Bank {
+    mainWallet: Wallet = Wallet();
+    
+    fun deposit(amount: i64) = {
+        self.mainWallet.balance = self.mainWallet.balance + amount;
+    }
+}
+
+fun objectsByReference() -> () = {
+    var myWallet = Wallet(500);
+    performTransaction(&myWallet, -200);
+    runtime.dvm.builtin_output_i64(myWallet.balance); # 300
+
+    let ref_wallet = &myWallet;
+    ref_wallet.balance = 99;
+    runtime.dvm.builtin_output_i64(myWallet.balance); # 99
+    
+    var b = Bank();
+    b.deposit(1000);
+    runtime.dvm.builtin_output_i64(b.mainWallet.balance); # 2000
+}
+
+class T {
+    a: ref i64;
+}
+
+fun accessInConditions() -> () = {
+    var a: i64 = 123;
+    var t: T = T(&a);
+    var ref_t: ref T = &t;
+
+    var cond = if ref_t.a then false else true;
+    runtime.dvm.builtin_output_i64(cond);
+
+    if (ref_t.a) {
+        runtime.dvm.builtin_output_i64(1);
+    } else {
+        runtime.dvm.builtin_output_i64(0);
+    }
+}
+
+
+fun main() -> i64 = {
+    basicFieldAccess();
+    methodsAndSelf();
+    objectsByReference();
+    accessInConditions();
+
+    return 0;
+}

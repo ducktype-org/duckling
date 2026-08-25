@@ -1,0 +1,12 @@
+fun main() -> i32 = {
+	print("What is your name?\n");
+	var name = builtin_input_string();
+	print("What is your favourite number?\n");
+	var number1 = builtin_input_i64();
+	print("And another?\n");
+	var number2 = builtin_input_i64();
+
+    print(f"Hello {name}, did you know that {number1} + {number2} = {number1 + number2}?\n");
+
+    return 0;
+}

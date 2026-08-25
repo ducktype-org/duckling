@@ -1,0 +1,218 @@
+class Point {
+    x: i64 = 1;
+    y: i64 = 2;
+}
+
+fun printSeparator() -> () = {
+    print("888888888888888\n");
+}
+
+fun printPoint(p: ref Point) -> () = {
+    builtin_output_i64(p.x);
+    builtin_output_i64(p.y);
+}
+
+fun printPointList(list: ref List:{Point}) -> () = {
+    var i = 0;
+    while(i < list.length()) {
+        printPoint(list.at(i));
+        i = i + 1;
+    }
+}
+
+fun printMatrix(list: ref List:{i32[3]}) -> () = {
+    var i = 0;
+    while(i < list.length()) {
+        var j = 0;
+        while (j < 3) {
+            builtin_output_i64(list.at(i)[j]);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+fun integersTest() -> () = {
+    var integers: List:{i32};
+    integers.push(111);
+    integers.push(222);
+    integers.push(333);
+
+    builtin_output_i64(integers.at(0)); # 111
+    builtin_output_i64(integers.at(1)); # 222
+    builtin_output_i64(integers.at(2)); # 333
+    builtin_output_i64(integers.length()); # 3
+    printSeparator();
+}
+
+fun floatsTest() -> () = {
+    var floats: List:{f64};
+    floats.push(1.1);
+    floats.push(1.2);
+    floats.push(1.3);
+
+    builtin_output_f64(floats.at(0));
+    builtin_output_f64(floats.at(1));
+    builtin_output_f64(floats.at(2));
+    builtin_output_i64(floats.length()); # 3
+    printSeparator();
+}
+
+fun classesTest() -> () = {
+    var points: List:{Point};
+    points.push(Point(10, 20));
+    points.push(Point(30, 40));
+
+    var p = points.at(0);
+    builtin_output_i64(p.x); # 10
+    builtin_output_i64(p.y); # 20
+    builtin_output_i64(points.at(1).x); # 30
+    builtin_output_i64(points.at(1).y); # 40
+    printSeparator();
+}
+
+fun staticArraysTest() -> () = {
+    var matrix: List:{i32[3]};
+
+    var row1: i32[3];
+    row1[0] = 100; row1[1] = 200; row1[2] = 300;
+    var row2: i32[3];
+    row2[0] = 101; row2[1] = 201; row2[2] = 301;
+
+    matrix.push(row1);
+    matrix.push(row2);
+    matrix.push(row2);
+
+    printMatrix(&matrix);
+    printSeparator();
+}
+
+fun dynamicArraysTest() -> () = {
+    var nested: List:{List:{i32}};
+    var inner1: List:{i32};
+    inner1.push(1);
+    inner1.push(2);
+
+    var inner2: List:{i32};
+    inner2.push(3);
+
+    nested.push(copy inner1);
+    nested.push(copy inner2);
+
+    builtin_output_i64(nested.at(0).length()); # 2
+    builtin_output_i64(nested.at(1).length()); # 1
+
+    builtin_output_i64(nested.at(0).at(0)); # 1
+    builtin_output_i64(nested.at(0).at(1)); # 2
+    builtin_output_i64(nested.at(1).at(0)); # 3
+
+    nested.at(1).push(4);
+
+    builtin_output_i64(nested.at(1).length()); # 2
+    builtin_output_i64(nested.at(0).at(0)); # 1
+    builtin_output_i64(nested.at(0).at(1)); # 2
+    builtin_output_i64(nested.at(1).at(0)); # 3
+    builtin_output_i64(nested.at(1).at(1)); # 4
+
+    # `nested` holds a deep copy, so adding to `inner2` does not modify it.
+    inner2.push(123);
+
+    builtin_output_i64(nested.at(1).length()); # 2
+
+    printSeparator();
+}
+
+fun listOfRefsTest() -> () = {
+    var p1 = Point(1, 2);
+    var p2 = Point(3, 4);
+
+    var list_of_refs: List:{ref Point};
+    list_of_refs.push(&p1);
+    list_of_refs.push(&p2);
+    builtin_output_i64(list_of_refs.length());
+    printSeparator();
+
+    printPoint(list_of_refs.at(0));
+    printPoint(list_of_refs.at(1));
+    printSeparator();
+
+    list_of_refs.at(0).x = 100;
+    list_of_refs.at(1).y = 300;
+    printPoint(&p1);
+    printPoint(&p2);
+    printSeparator();
+
+    # With the current semantics, this line automatically dereferences
+    # `&p2` and inserts a copy to `list_of_refs`.
+    list_of_refs.at(0) = &p2;
+    # This should not modify `list_of_refs.at(0)` which stores a reference to `p2`
+    # with the current semantics, since the line above performed a copy and
+    # not a reference rebind.
+    list_of_refs.at(1).x = 999;
+    list_of_refs.at(1).y = 999;
+    printPoint(list_of_refs.at(0));
+    printPoint(list_of_refs.at(1));
+    printSeparator();
+}
+
+
+fun listOfBoxesTest() -> () = {
+    var list_of_boxes: List:{box Point};
+    var p1: box Point = new Point(1, 2);
+    var p2: box Point = new Point(3, 4);
+
+    list_of_boxes.push(new Point(1, 2));
+
+    list_of_boxes.push(move p1);
+    list_of_boxes.push(move p2);
+    builtin_output_i64(list_of_boxes.length());
+    printSeparator();
+
+    printPoint(list_of_boxes.at(0));
+    printPoint(list_of_boxes.at(1));
+    printSeparator();
+
+    list_of_boxes.at(0).x = 100;
+    list_of_boxes.at(1).y = 100;
+    printPoint(list_of_boxes.at(0));
+    printPoint(list_of_boxes.at(1));
+    printSeparator();
+}
+
+fun boxOfListTest() -> () = {
+    var list: List:{Point};
+    builtin_output_i64(list.length());
+    list.push(Point(1, 2));
+    list.push(Point(3, 4));
+    list.push(Point(5, 6));
+    builtin_output_i64(list.length());
+    printSeparator();
+
+    printPointList(&list);
+    printSeparator();
+
+    var box_list: box List:{Point} = new copy list;
+    builtin_output_i64(list.length());
+    printSeparator();
+
+    box_list.at(0).x = 100;
+    box_list.at(1).x = 200;
+    box_list.at(2).x = 300;
+    printPointList(&list);
+    printSeparator();
+}
+
+
+fun main() -> i32 = {
+    integersTest();
+    floatsTest();
+    classesTest();
+    staticArraysTest();
+    dynamicArraysTest();
+    listOfRefsTest();
+    listOfBoxesTest();
+    boxOfListTest();
+
+    return 0;
+}
+
