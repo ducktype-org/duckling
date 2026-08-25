@@ -388,7 +388,10 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> VariantAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("Variant type interface not yet implemented");
+		// A variant declares nothing of its own: it is reached through its alternatives, so its
+		// whole interface is the default one.
+		static TypeInterface empty{};
+		return &empty;
 	}
 
 	CRef<TypeInterface> NamespaceAbstractTypeImpl::getDeclaredInterface(query::Context&) const {

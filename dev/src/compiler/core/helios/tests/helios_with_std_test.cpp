@@ -10,6 +10,7 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -32,7 +33,9 @@
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
+#include <algorithm>
 #include <any>
+#include <array>
 
 using namespace compiler::helios::test_utils;
 
@@ -522,6 +525,64 @@ private:
 			ASSERT_EQUAL(char_type, getTypeOf("should_char", fun_body_scope));
 			ASSERT_EQUAL(i64_type, getTypeOf("should_i64", fun_body_scope));
 			ASSERT_EQUAL(str_type, getTypeOf("should_string", fun_body_scope));
+
+			// Every kind of type stringifies, and always into a `String`.
+			static constexpr std::array VARS
+				= { "unit_string",         "bool_string",    "char_string",      "integral_string",
+				    "unsigned_string",     "float_string",   "slice_string",     "class_string",
+				    "cptr_string",         "manyptr_string", "int_slice_string", "array_string",
+				    "nested_array_string", "tuple_string",   "variant_string",   "list_string" };
+
+			for (const char* stringified: VARS)
+				assertEqual(
+					str_type,
+					getTypeOf(stringified, fun_body_scope),
+					base::strConcat("`", stringified, "` should be a `String`")
+				);
+
+			// Each of those calls must resolve to a `toString` whose body the compiler really
+			// generates, not just to a declaration that type checks.
+			query::utils::withContextDo([&](query::Context& ctx) {
+				usize checked = 0;
+				for (const auto& stmt: statements) {
+					const auto* var_stmt = dynamic_cast<const VariableStmt*>(stmt.get());
+					if (var_stmt == nullptr) continue;
+
+					const auto var_name = compiler::helios::name(var_stmt->helios_symbol);
+					if (not std::ranges::contains(VARS, var_name.strView())) continue;
+
+					const auto* call = dynamic_cast<const CallExpr*>(
+						stripImplicitMove(var_stmt->initial_value.get())
+					);
+					assertTrue(
+						call != nullptr,
+						base::strConcat("`", var_name, "` should be initialized with a call")
+					);
+
+					const auto to_string_sym
+						= compiler::helios::getIdentifierExprSymID(call->callee.ref()).value();
+					assertEqual(
+						base::StrID("toString"),
+						compiler::helios::name(to_string_sym),
+						base::strConcat("`", var_name, "` should call `toString`")
+					);
+					assertTrue(
+						compiler::helios::implementsQueryCodeOfFun(to_string_sym),
+						base::strConcat("`", var_name, "`'s `toString` should be implemented")
+					);
+
+					const auto& to_string_fun
+						= ctx.query<compiler::helios::QueryCodeOfFun>(to_string_sym)->valueOrThrow();
+					assertTrue(
+						not to_string_fun.body->statements.empty(),
+						base::strConcat("`", var_name, "`'s `toString` should have a body")
+					);
+					++checked;
+				}
+				assertEqual(
+					VARS.size(), checked, "Every stringified variable should have been checked"
+				);
+			});
 		}
 	}
 };
