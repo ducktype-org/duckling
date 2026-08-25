@@ -61,7 +61,7 @@ namespace vm::api {
 		struct WaitForBreakpoint {};
 
 		struct ExecutionPosition {
-			base::Optional<usize> opt_frame_idx;
+			base::Optional<usize> frame_idx;
 		};
 
 		struct TypeMetadata {

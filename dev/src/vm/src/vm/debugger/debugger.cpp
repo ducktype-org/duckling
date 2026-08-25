@@ -165,9 +165,9 @@ namespace vm::debugger {
 	}
 
 	std::expected<CodePosition, api::ApiError> Debugger::getCurrentPosition(
-		base::Optional<usize> opt_frame_idx
+		base::Optional<usize> frame_idx
 	) {
-		return api::getCurrentPosition(pid, opt_frame_idx)
+		return api::getCurrentPosition(pid, frame_idx)
 		    .transform(std::bind_front(&Debugger::mapCodePosition, this));
 	}
 

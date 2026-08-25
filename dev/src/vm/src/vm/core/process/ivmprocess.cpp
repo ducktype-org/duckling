@@ -65,7 +65,7 @@ namespace vm {
 			variant_case_novalue(api::request::Stop) { return stop(); }
 
 			variant_case(api::request::ExecutionPosition, current_pos_req) {
-				return getVMThreadCurrentPosition(getMainThreadID(), current_pos_req.opt_frame_idx);
+				return getVMThreadCurrentPosition(getMainThreadID(), current_pos_req.frame_idx);
 			}
 
 			variant_case_novalue(api::request::WaitForBreakpoint) {

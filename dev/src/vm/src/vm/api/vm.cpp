@@ -199,10 +199,10 @@ namespace vm::api {
 	}
 
 	std::expected<response::CodePosition, ApiError> getCurrentPosition(
-		PID pid, base::Optional<usize> opt_frame_idx
+		PID pid, base::Optional<usize> frame_idx
 	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::ExecutionPosition{ opt_frame_idx }))
+		    .doRequest(SupervisorRequest(pid, request::ExecutionPosition{ frame_idx }))
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 

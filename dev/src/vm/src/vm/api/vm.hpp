@@ -156,12 +156,15 @@ namespace vm::api {
 	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
 
 	/**
-	 * @brief Get the code position of the next line of bytecode to be executed on the specified
-	 * process of the DVM.
+	 * @brief Returns the code position in the specified stack frame.
+	 *
+	 * @param frame_idx Index of the target frame.
+	 *                  The active/current function has the highest frame index.
+	 *                  If not provided (std::nullopt), defaults to the current (top-most) frame.
 	 * @return The response containing code position or an API error.
 	 */
 	std::expected<response::CodePosition, ApiError> getCurrentPosition(
-		PID pid, base::Optional<usize> opt_frame_idx
+		PID pid, base::Optional<usize> frame_idx
 	);
 
 	/// IO REQUESTS ///

@@ -121,10 +121,14 @@ namespace vm::debugger {
 		std::expected<void, api::ApiError> resume();
 
 		/**
-		 * @brief Returns current position
-		 */
+		 * @brief Returns the code position in the specified stack frame.
+		 *
+		 * @param frame_idx Index of the target frame.
+		 *                  The active/current function has the highest frame index.
+		 *                  If not provided (std::nullopt), defaults to the current (top-most) frame.
+		 **/
 		std::expected<CodePosition, api::ApiError> getCurrentPosition(
-			base::Optional<usize> opt_frame_idx = std::nullopt
+			base::Optional<usize> frame_idx = std::nullopt
 		);
 
 		/**
