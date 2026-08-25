@@ -27,33 +27,70 @@ namespace compiler::helios {
 		const std::unordered_map<LanguagePrimitive, PrimitivePath>& primitivePaths() {
 			static const std::unordered_map<LanguagePrimitive, PrimitivePath> paths{
 				{ LanguagePrimitive::Panic,
-				  { .package = "core", .path = { "panicking" }, .namespaces = {}, .element = "panic" } },
+				  { .package    = "core",
+				    .path       = { "panicking" },
+				    .namespaces = {},
+				    .element    = "panic" } },
 				{ LanguagePrimitive::String,
-				  { .package = "core", .path = { "containers" }, .namespaces = {}, .element = "String" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "String" } },
 				{ LanguagePrimitive::StringifyStr,
-				  { .package = "core", .path = { "containers" }, .namespaces = {}, .element = "stringifyStr" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "stringifyStr" } },
 				{ LanguagePrimitive::StringifyChar,
-				  { .package = "core", .path = { "containers" }, .namespaces = {}, .element = "stringifyChar" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "stringifyChar" } },
 				{ LanguagePrimitive::StringifyBool,
-				  { .package = "core", .path = { "containers" }, .namespaces = {}, .element = "stringifyBool" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "stringifyBool" } },
 				{ LanguagePrimitive::StringifyI64,
-				  { .package = "core", .path = { "containers" }, .namespaces = {}, .element = "stringifyI64" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "stringifyI64" } },
 				{ LanguagePrimitive::StringifyU64,
-				  { .package = "core", .path = { "containers" }, .namespaces = {}, .element = "stringifyU64" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "stringifyU64" } },
 				{ LanguagePrimitive::StringifyF64,
-				  { .package = "core", .path = { "containers" }, .namespaces = {}, .element = "stringifyF64" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "stringifyF64" } },
 				{ LanguagePrimitive::StringifyPtr,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyPtr" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "stringifyPtr" } },
 				{ LanguagePrimitive::StringifyManyPtr,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyManyPtr" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "stringifyManyPtr" } },
 				{ LanguagePrimitive::StringifyCPtr,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyCPtr" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "stringifyCPtr" } },
 				{ LanguagePrimitive::StringifySlice,
-				  { .package = "core", .path = { "containers" }, .element = "stringifySlice" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "stringifySlice" } },
 				{ LanguagePrimitive::StringifyStaticArray,
-				  { .package = "core",
-				    .path    = { "containers" },
-				    .element = "stringifyStaticArray" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "stringifyStaticArray" } },
 			};
 			return paths;
 		}
@@ -63,14 +100,20 @@ namespace compiler::helios {
 		) {
 			if (namespaces.empty()) return current;
 
-			auto leaves = HInterface::ofScope(current).lookup(ctx, namespaces.front())->valueOrThrow().leaves;
-			auto nested_namespaces = leaves | std::views::filter([](SymID sym) { return kind(sym) == SymbolKind::Namespace; }) | std::ranges::to<std::vector>();
+			auto leaves
+				= HInterface::ofScope(current).lookup(ctx, namespaces.front())->valueOrThrow().leaves;
+			auto nested_namespaces
+				= leaves
+			    | std::views::filter([](SymID sym) { return kind(sym) == SymbolKind::Namespace; })
+			    | std::ranges::to<std::vector>();
 
 			if (namespaces.size() != 1) return {};
-			
+
 			auto next = leaves.front();
 
-			return lookupScopeOfNamespacePath(ctx, next, std::vector<std::string>(namespaces.begin() + 1, namespaces.end()));
+			return lookupScopeOfNamespacePath(
+				ctx, next, std::vector<std::string>(namespaces.begin() + 1, namespaces.end())
+			);
 		}
 
 		/**
@@ -93,11 +136,10 @@ namespace compiler::helios {
 			if_opt_none(module_opt) return {};
 			auto linked_scope = queryRootScopeOfMainModuleFile(ctx, module_opt.value());
 
-			auto namespace_scope_opt = lookupScopeOfNamespacePath(
-				ctx, linked_scope, location.namespaces
-			);
+			auto namespace_scope_opt
+				= lookupScopeOfNamespacePath(ctx, linked_scope, location.namespaces);
 			if_opt_none(namespace_scope_opt) return {};
-			linked_scope = namespace_scope_opt.value();				
+			linked_scope = namespace_scope_opt.value();
 
 			return HInterface::ofScope(linked_scope)
 			    .lookup(ctx, base::StrID(location.element), { .with_wildcards = false })
