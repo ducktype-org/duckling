@@ -66,38 +66,6 @@ namespace {
 		return {};
 	}
 
-	/*
-	 * @brief A helper for language primitives.
-	 * Primitives work on specific types (ex `i64`), but the partial result might operate in terms of broader type category`Integer`, `Float`, etc.
-	 */
-	enum class PreLangPrimitive {
-		IntegerPow,
-		FloatPow,
-	};
-
-	LanguagePrimitive getLanguagePrimitive(query::Context& ctx, PreLangPrimitive wrap, tsh::AbstractType specific_type) {
-		using tsh::IntegralAbstractType::Signedness::Signed, tsh::IntegralAbstractType::Signedness::Unsigned;
-		using enum PreLangPrimitive;
-		using enum LanguagePrimitive;
-
-		auto i32 = tsh::getIntegralType(ctx, 32,Signed);
-		auto i64 = tsh::getIntegralType(ctx, 64,Signed);
-		auto u32 = tsh::getIntegralType(ctx, 32,Unsigned);
-		auto u64 = tsh::getIntegralType(ctx, 32,Unsigned);
-		auto f32 = tsh::getFloatType(ctx, 32);
-		auto f64 = tsh::getFloatType(ctx, 64);
-		
-		 base::Map<std::pair<PreLangPrimitive, tsh::AbstractType>, LanguagePrimitive> lang_primitive_map = {
-			{ { IntegerPow, i32 }, PowI32 },
-			{ { IntegerPow, i64 }, PowI64 },
-			{ { FloatPow, f32 }, PowF32 },
-			{ { FloatPow, f64 }, PowF64 },
-		};
-
-		CORE_ASSERT(lang_primitive_map.contains({ wrap, specific_type }), "Language primitive not found for the given parameters.");
-		return lang_primitive_map.at({ wrap, specific_type });
-	}
-
 	enum class PreDesugaringOperator {
 		IntegerPlusEq,
 		IntegerMinusEq,
@@ -108,103 +76,89 @@ namespace {
 		FloatMinusEq,
 		FloatMultiplyEq,
 		FloatDivideEq,
+
+		IntegerPow,
+		FloatPow,
 	};
 
-	Box<code::Expr> desugarOperatorToExpr(query::Context& ctx, PreDesugaringOperator op, Box<code::Expr> lhs, Box<code::Expr> rhs) {
+	MBox<code::Expr> desugarOperatorToExpr(query::Context& ctx, PreDesugaringOperator op, Box<code::Expr> lhs, Box<code::Expr> rhs) {
 		using enum PreDesugaringOperator;
 		using namespace compiler::helios::code::shorthands;
 		Shorthand s{ctx};
 
 		auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
 
+		auto makeBinOpEqExpr = [&s, &ctx, &new_origin, lhs = std::move(rhs), rhs = std::move(rhs)](BuiltinBinary op) -> Box<code::Expr> {
+			return withOrigin(
+					new_origin,
+					s.blockExpr(StmtPack{
+						s.assign(
+							lhs->clone(),
+							s.binOp(lhs->clone(), op, std::move(rhs))
+						)
+					})
+				);
+		};
+
+		auto makeLangPrimitiveCall = [&s, &ctx, &new_origin, lhs = std::move(rhs), rhs = std::move(rhs)](LanguagePrimitive lang_primitive) -> Box<code::Expr> {
+			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive })->valueOrThrow();
+
+			return withOrigin(
+				new_origin,
+				s.call(
+					s.ident(callee),
+					std::move(lhs),
+					std::move(rhs)
+				)
+			);
+		};
+
 		switch (op) {
 			case IntegerPlusEq: {
-				return withOrigin(
-					new_origin,
-					s.blockExpr(StmtPack{
-						s.assign(
-							lhs->clone(),
-							s.binOp(lhs->clone(), BuiltinBinary::IntegerAdd, std::move(rhs))
-						)
-					})
-				);
+				return makeBinOpEqExpr(BuiltinBinary::IntegerAdd);
 			}
 			case IntegerMinusEq: {
-				return withOrigin(
-					new_origin,
-					s.blockExpr(StmtPack{
-						s.assign(
-							lhs->clone(),
-							s.binOp(lhs->clone(), BuiltinBinary::IntegerSub, std::move(rhs))
-						)
-					})
-				);
+				return makeBinOpEqExpr(BuiltinBinary::IntegerSub);
 			}
 			case IntegerMultiplyEq: {
-				return withOrigin(
-					new_origin,
-					s.blockExpr(StmtPack{
-						s.assign(
-							lhs->clone(),
-							s.binOp(lhs->clone(), BuiltinBinary::IntegerMul, std::move(rhs))
-						)
-					})
-				);
+				return makeBinOpEqExpr(BuiltinBinary::IntegerMul);
 			}
 			case IntegerDivideEq: {
-				return withOrigin(
-					new_origin,
-					s.blockExpr(StmtPack{
-						s.assign(
-							lhs->clone(),
-							s.binOp(lhs->clone(), BuiltinBinary::IntegerDiv, std::move(rhs))
-						)
-					})
-				);
+				return makeBinOpEqExpr(BuiltinBinary::IntegerDiv);
 			}
 			case FloatPlusEq: {
-				return withOrigin(
-					new_origin,
-					s.blockExpr(StmtPack{
-						s.assign(
-							lhs->clone(),
-							s.binOp(lhs->clone(), BuiltinBinary::FloatAdd, std::move(rhs))
-						)
-					})
-				);
+				return makeBinOpEqExpr(BuiltinBinary::FloatAdd);
 			}
 			case FloatMinusEq: {
-				return withOrigin(
-					new_origin,
-					s.blockExpr(StmtPack{
-						s.assign(
-							lhs->clone(),
-							s.binOp(lhs->clone(), BuiltinBinary::FloatSub, std::move(rhs))
-						)
-					})
-				);
+				return makeBinOpEqExpr(BuiltinBinary::FloatSub);
 			}
 			case FloatMultiplyEq: {
-				return withOrigin(
-					new_origin,
-					s.blockExpr(StmtPack{
-						s.assign(
-							lhs->clone(),
-							s.binOp(lhs->clone(), BuiltinBinary::FloatMul, std::move(rhs))
-						)
-					})
-				);
+				return makeBinOpEqExpr(BuiltinBinary::FloatMul);
 			}
 			case FloatDivideEq: {
-				return withOrigin(
-					new_origin,
-					s.blockExpr(StmtPack{
-						s.assign(
-							lhs->clone(),
-							s.binOp(lhs->clone(), BuiltinBinary::FloatDiv, std::move(rhs))
-						)
-					})
-				);
+				return makeBinOpEqExpr(BuiltinBinary::FloatDiv);
+			}
+			case IntegerPow: {
+				LanguagePrimitive lang_primitive;
+				if (lhs->expression_type.getType() == tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed))
+					lang_primitive = LanguagePrimitive::PowI32;
+				else if (lhs->expression_type.getType() == tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed))
+					lang_primitive = LanguagePrimitive::PowI64;
+				else
+					return nullptr;
+
+				return makeLangPrimitiveCall(lang_primitive);
+			}
+			case FloatPow: {
+				LanguagePrimitive lang_primitive;
+				if (lhs->expression_type.getType() == tsh::getFloatType(ctx, 32))
+					lang_primitive = LanguagePrimitive::PowF32;
+				else if (lhs->expression_type.getType() == tsh::getFloatType(ctx, 64))
+					lang_primitive = LanguagePrimitive::PowF64;
+				else
+					return nullptr;
+				
+				return makeLangPrimitiveCall(lang_primitive);
 			}
 			default:
 				CORE_PANIC("Unsupported desugaring operator");
@@ -259,7 +213,7 @@ namespace compiler::helios::code {
 				  { { base::StrID("*"), tsh::Kind::Integral }, BuiltinBinary::IntegerMul },
 				  { { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
 				  { { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
-				  { { base::StrID("**"), tsh::Kind::Integral }, PreLangPrimitive::IntegerPow},
+				  { { base::StrID("**"), tsh::Kind::Integral }, PreDesugaringOperator::IntegerPow},
 				  { { base::StrID("+="), tsh::Kind::Integral }, PreDesugaringOperator::IntegerPlusEq },
 				  { { base::StrID("-="), tsh::Kind::Integral }, PreDesugaringOperator::IntegerMinusEq },
 				  { { base::StrID("*="), tsh::Kind::Integral }, PreDesugaringOperator::IntegerMultiplyEq },
@@ -279,7 +233,7 @@ namespace compiler::helios::code {
 				  { { base::StrID("*"), tsh::Kind::Float }, BuiltinBinary::FloatMul },
 				  { { base::StrID("/"), tsh::Kind::Float }, BuiltinBinary::FloatDiv },
 				  { { base::StrID("%"), tsh::Kind::Float }, BuiltinBinary::FloatMod },
-				  { { base::StrID("**"), tsh::Kind::Float }, PreLangPrimitive::FloatPow },
+				  { { base::StrID("**"), tsh::Kind::Float }, PreDesugaringOperator::FloatPow },
 				  { { base::StrID("+="), tsh::Kind::Float }, PreDesugaringOperator::FloatPlusEq },
 				  { { base::StrID("-="), tsh::Kind::Float }, PreDesugaringOperator::FloatMinusEq },
 				  { { base::StrID("*="), tsh::Kind::Float }, PreDesugaringOperator::FloatMultiplyEq },
@@ -308,21 +262,8 @@ namespace compiler::helios::code {
 						s.binOp(std::move(coerced_lhs), op, std::move(coerced_rhs))
 					);
 				}
-				variant_case(PreLangPrimitive, op) {
-					auto lang_primitive = getLanguagePrimitive(ctx, op, common_type.getType());
-					auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive })->valueOrThrow();
-
-					return withOrigin(
-						new_origin,
-						s.call(
-							s.ident(callee),
-							std::move(coerced_lhs),
-							std::move(coerced_rhs)
-						)
-					);
-				}
 				variant_case(PreDesugaringOperator, op) {
-					return desugarOperatorToExpr(ctx, op, std::move(coerced_lhs), std::move(coerced_rhs));
+					return desugarOperatorToExpr(ctx, op, std::move(coerced_lhs), std::move(coerced_rhs)).toOptBox();
 				}
 			}
 		}
