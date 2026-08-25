@@ -1,7 +1,6 @@
 /**
  * @file metadata_storage.cpp
  * @brief Implementation of metadata storage serialization/deserialization.
- * @TODO: #1942 - Move/Refactor this
  */
 
 #include "metadata_storage.hpp"
