@@ -580,7 +580,7 @@ private:
 					++checked;
 				}
 				assertEqual(
-					stringified_vars.size(),
+					VARS.size(),
 					checked,
 					"Every stringified variable should have been checked"
 				);
