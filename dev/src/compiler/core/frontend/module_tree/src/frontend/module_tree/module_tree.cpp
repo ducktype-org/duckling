@@ -855,7 +855,7 @@ namespace compiler::frontend {
 		std::string_view contents, base::Optional<base::StrID> package_id
 	) {
 		// createModuleTree function expects .dk extension.
-		auto virtual_file = fs::FileManager::createRandomVirtualFile(contents, ".dk");
+		auto virtual_file = fs::FileManager::createRandomVirtualFile(contents, LANG_MODULE_FILE);
 
 		if (!package_id.has_value())
 			return createModuleTreeWithRandomPackageID(virtual_file);

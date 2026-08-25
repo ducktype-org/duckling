@@ -204,8 +204,8 @@ namespace compiler::frontend::packages {
 					"The main source file is required for package ",
 					module_name,
 					". Please add a ",
-					module_name,
-					".dk file to the package module directory."
+					module_name, LANG_MODULE_FILE,
+					" file to the package module directory."
 				),
 				true
 			);

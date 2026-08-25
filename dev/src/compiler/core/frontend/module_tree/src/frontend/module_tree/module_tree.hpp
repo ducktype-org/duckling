@@ -29,6 +29,12 @@ namespace compiler::frontend {
 	 */
 	constexpr std::string_view LANG_MODULE_FILE = ".dk";
 
+	/**
+	 * If a file's extension is equal to this constant, then it is assumed
+	 * it is a single file script.
+	 */
+	constexpr std::string_view LANG_SCRIPT_FILE = ".dks";
+
 	// Regexes to reject files/directories starting with '.' or '$'
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
 	const std::regex DEFAULT_REJECT_DIRECTORY_REGEX = std::regex(R"((\$.*|\..*))");

@@ -11,7 +11,7 @@
 #include <query_framework/entry/with_context_do.hpp>
 
 #define ext_is_ok(ext) \
-	ext == ".dk" || ext == ".duckling" || ext == ".dl" || ext == ".rift" || ext == ".dks"
+	ext == LANG_MODULE_FILE || ext == ".duckling" || ext == ".dl" || ext == LANG_SCRIPT_FILE
 
 namespace lsp {
 	std::string jsonList(const std::vector<std::string>& list) {
