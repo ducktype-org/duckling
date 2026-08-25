@@ -164,7 +164,7 @@ namespace vm::api {
 	 * @return The response containing code position or an API error.
 	 */
 	std::expected<response::CodePosition, ApiError> getCurrentPosition(
-		PID pid, base::Optional<usize> frame_idx
+		PID pid, base::Optional<usize> frame_idx = {}
 	);
 
 	/// IO REQUESTS ///
