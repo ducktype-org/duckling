@@ -913,16 +913,9 @@ namespace compiler::tsh {
 		) const;
 
 		[[nodiscard]]
-		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
-			const auto& elements_with_same_name
-				= getDeclaredInterface(ctx)->getElementsByName().at(name(sym));
-			for (const auto& element: elements_with_same_name)
-				if (element.getSymbol() == sym) return element.getType(ctx);
-			CORE_PANIC("Element not found.");
-		}
+		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const;
 
 		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
-
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override;
 		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override;
 		[[nodiscard]] bool isCopyable(query::Context&) const override;

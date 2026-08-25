@@ -12,7 +12,6 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/mutability.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -143,7 +142,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
-				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow();
+				return tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryClassType>(sym_id));
 			};
 
 			auto i32_st = st(compiler::tsh::getIntegralType(

@@ -59,8 +59,6 @@ add_library(HELIOS STATIC
 	src/helios/symbols/lang_primitives.cpp
 	src/helios/symbols/query_type_of_symbol.cpp
 	src/helios/symbols/query_type_symbol_data.cpp
-	src/helios/symbols/query_type_from_definition.cpp
-	src/helios/symbols/query_class_of_member.cpp
 	src/helios/symbols/attributes.cpp
 	src/helios/symbols/symbol_abi.cpp
 	src/helios/symbols/symbol_id.cpp

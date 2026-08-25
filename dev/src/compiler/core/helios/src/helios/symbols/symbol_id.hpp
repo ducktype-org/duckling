@@ -17,6 +17,11 @@
 #include <hashing/add_to_hash.hpp>
 #include <string_id/string_id.hpp>
 
+namespace compiler::tsh {
+	// Forwards:
+	class ClassAbstractType;
+}
+
 namespace compiler::helios {
 	// Forwards:
 	struct SymbolData;
@@ -174,4 +179,12 @@ namespace compiler::helios {
 	 * @brief Pretty prints the symbol.
 	 */
 	std::string prettyDebugPrint(SymID, query::Context&);
+
+	/**
+	 * @return the class that a class member symbol is declared in.
+	 * Panics if the given symbol is not a class member created from the PST.
+	 *
+	 * @note The owning class is stored in the symbol data, so this is a plain lookup.
+	 */
+	tsh::ClassAbstractType classOfMember(query::Context&, SymID member);
 }

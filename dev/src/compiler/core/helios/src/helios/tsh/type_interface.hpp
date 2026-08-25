@@ -19,7 +19,22 @@
 #include <ranges>
 
 namespace compiler::tsh {
-	enum class ClassMemberVisibility { Public, Protected, Private };
+	enum class MemberVisibility { Public, Protected, Private };
+
+
+	/**
+	 * These are methods that are special and there should be only
+	 * one instance of this special method in the interface.
+	 */
+	enum class MemberSpecialKind {
+		ParameterlessConstructor,
+		Constructor,
+		Destructor,
+		UserDestructor,
+		CopyConstructor,
+		ToString,
+		None
+	};
 
 	/**
 	 * @brief A single element of a type interface, defined by its symbol (not name).
@@ -34,7 +49,8 @@ namespace compiler::tsh {
 		enum class InterfaceElementKind {
 			Field,
 			Method,
-
+			StaticMethod,
+			StaticField,
 			/**
 			 * Other elements are symbols that are not "part of" a type
 			 * in a direct way, but are declared within the class body.
@@ -42,12 +58,6 @@ namespace compiler::tsh {
 			 */
 			Other,
 		};
-
-		/**
-		 * These are methods that are special and there should be only
-		 * one instance of this special method in the interface.
-		 */
-		enum class SpecialKind { ToString, None };
 
 	private:
 		/**
@@ -80,12 +90,12 @@ namespace compiler::tsh {
 		 * It's better to say "this element is present, but it is private and you cannot use it"
 		 * rather than "this element is not recognised, go figure out why".
 		 */
-		ClassMemberVisibility visibility;
+		MemberVisibility visibility;
 
 		/**
 		 * This makes special method more visible to the lookup and generating code.
 		 */
-		SpecialKind special_kind;
+		MemberSpecialKind special_kind;
 
 	public:
 		/**
@@ -102,8 +112,8 @@ namespace compiler::tsh {
 			const AbstractType            source,
 			const u32                     declaration_order,
 			const InterfaceElementKind    kind,
-			const ClassMemberVisibility   visibility,
-			const SpecialKind             special = SpecialKind::None
+			const MemberVisibility        visibility,
+			const MemberSpecialKind       special = MemberSpecialKind::None
 		):
 			  symbol(symbol),
 			  source(source),
@@ -176,7 +186,7 @@ namespace compiler::tsh {
 		 * @return The visibility of this element.
 		 */
 		[[nodiscard]]
-		ClassMemberVisibility getVisibility() const {
+		MemberVisibility getVisibility() const {
 			return visibility;
 		}
 
@@ -184,7 +194,7 @@ namespace compiler::tsh {
 		 * @brief Get special kind.
 		 */
 		[[nodiscard]]
-		SpecialKind specialKind() const {
+		MemberSpecialKind specialKind() const {
 			return special_kind;
 		}
 
@@ -233,7 +243,9 @@ namespace compiler::tsh {
 		 * \parallel Accessed when building and querying a \ref TypeInterface; should be safe if
 		 * \ref TypeInterface instances are shared across threads.
 		 */
-		base::Map<base::StrID, std::vector<InterfaceElement>> elements_by_name;
+		base::HashMap<base::StrID, std::vector<InterfaceElement>> elements_by_name;
+
+		base::HashMap<MemberSpecialKind, InterfaceElement> element_by_special_kind;
 
 		/**
 		 * Check if the element list of the interface contains duplicates.
@@ -270,7 +282,7 @@ namespace compiler::tsh {
 		 * @return The elements of an interface, grouped by name.
 		 */
 		[[nodiscard]]
-		const base::Map<base::StrID, std::vector<InterfaceElement>>& getElementsByName() const;
+		const base::HashMap<base::StrID, std::vector<InterfaceElement>>& getElementsByName() const;
 
 		/**
 		 * @brief Gets all the elements of an interface with a given name.
@@ -299,5 +311,24 @@ namespace compiler::tsh {
 			return elements
 			     | std::views::filter([](const InterfaceElement& e) { return e.isMethod(); });
 		}
+	};
+
+	class TypeInterfaceBuilder final {
+	private:
+		std::vector<tsh::InterfaceElement> interface_elements{};
+		u32                                declaration_order{};
+		tsh::AbstractType                  owner;
+
+	public:
+		explicit TypeInterfaceBuilder(tsh::AbstractType owner): owner(owner) {}
+
+		void push(
+			compiler::helios::SymID                symbol,
+			InterfaceElement::InterfaceElementKind kind,
+			MemberVisibility                       visibility,
+			MemberSpecialKind                      special = MemberSpecialKind::None
+		);
+
+		[[nodiscard]] TypeInterface build() const;
 	};
 }

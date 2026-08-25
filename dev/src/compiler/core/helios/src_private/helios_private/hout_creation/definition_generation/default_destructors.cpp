@@ -19,7 +19,7 @@
 namespace compiler::helios::defgen {
 	using namespace code::shorthands;
 
-	SymID destructSymForType(query::Context& ctx, const tsh::AbstractType type) {
+	SymID generatedDestructSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name = base::StrID("__destruct"),
 			.generated_symbol_data
@@ -31,7 +31,7 @@ namespace compiler::helios::defgen {
 		if (type.isTriviallyDestructible(ctx)) return {};
 		if (type.getRefKind() == tsh::ReferenceKind::Box)
 			return boxDestructorSymForType(ctx, type.getType());
-		return destructSymForType(ctx, type.getType());
+		return generatedDestructSymForType(ctx, type.getType());
 	}
 
 	bool isUserDefinedDestructor(query::Context&, const SymID sym) {
@@ -95,7 +95,7 @@ namespace compiler::helios::defgen {
 				"Tried to generate a destructor call for a type which shouldn't need one"
 			);
 
-			const SymID dtor_sym = destructSymForType(ctx, abstract_type);
+			const SymID dtor_sym = generatedDestructSymForType(ctx, abstract_type);
 			body.emplace_back(s.expr(s.call(s.ident(dtor_sym), s.refOf(std::move(location)))));
 		}
 
@@ -284,7 +284,7 @@ namespace compiler::helios::defgen {
 
 	struct IMPLEMENT_QUERY(QueryDefaultDestructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey owner_type) {
-			const SymID dtor_sym    = destructSymForType(ctx, owner_type);
+			const SymID dtor_sym    = generatedDestructSymForType(ctx, owner_type);
 			const auto& dtor_decl   = ctx.query<QueryDeclOfFun>(dtor_sym)->valueOrThrow();
 			const SymID self_symbol = dtor_decl.parameters.at(0).helios_symbol;
 

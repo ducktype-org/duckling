@@ -13,8 +13,6 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -155,8 +153,7 @@ namespace compiler::helios {
 			void validateConstructorSource(
 				pst::Access<ConstructorElement> stmt, const HOUTFunctionDeclaration& decl
 			) {
-				const auto class_type
-					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+				const auto class_type = classOfMember(ctx, original_symbol);
 
 				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
 
@@ -197,7 +194,7 @@ namespace compiler::helios {
 
 			// Generated symbol data.
 			variant_match(sym_ref->other) {
-				variant_case(PstImplementedSemantics, data) {
+				variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
 					CORE_ASSERT(
 						isFunctionLike(kind(key)),
 						"Function creation called on non-function, non-method and non-constructor "

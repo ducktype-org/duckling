@@ -16,7 +16,6 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -498,10 +497,7 @@ private:
 		const auto first_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)->valueOrThrow();
 		const auto first_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(first_class);
 
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
@@ -535,10 +531,7 @@ private:
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(class_with_member)
 		          ->valueOrThrow();
 		auto class_with_member_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(class_with_member)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(class_with_member);
 
 		ASSERT_EQUAL(1, class_with_member_info.members.size());
 		ASSERT_EQUAL(1, class_with_member_info.methods.size());
@@ -566,15 +559,11 @@ private:
 
 		const auto class_with_member = getChain("ClassWithMember", root_scope).back();
 		const auto class_with_member_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(class_with_member)
-		          ->valueOrThrow()
-		          .getType();
+			= query::entryPoint<compiler::tsh::QueryClassType>(class_with_member);
 
 		const auto first_class = getChain("FirstClass", root_scope).back();
 		const auto first_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
-		          ->valueOrThrow()
-		          .getType();
+			= query::entryPoint<compiler::tsh::QueryClassType>(first_class);
 
 		auto c_symbol = getChain("c", root_scope).back();
 		auto c_type
@@ -611,10 +600,7 @@ private:
 
 		const auto simple_class = getChain("SimpleClass", root_scope).back();
 		const auto simple_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(simple_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(simple_class);
 
 		const auto h_interface
 			= compiler::helios::HInterface::ofTypeInstance(simple_class_abstract_type);
@@ -2251,10 +2237,7 @@ private:
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(example_class)
 		          ->valueOrThrow();
 		auto example_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(example_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(example_class);
 		ASSERT_EQUAL(3, example_class_info.methods.size());
 
 		for (auto& method: example_class_info.methods) {
@@ -2270,10 +2253,7 @@ private:
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(wrapper_class)
 		          ->valueOrThrow();
 		auto wrapper_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(wrapper_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(wrapper_class);
 		ASSERT_EQUAL(4, wrapper_class_info.methods.size());
 
 		for (auto& method: wrapper_class_info.methods) {
@@ -2288,10 +2268,7 @@ private:
 		auto point_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(point_class)->valueOrThrow();
 		auto point_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(point_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(point_class);
 		ASSERT_EQUAL(6, point_class_info.methods.size());
 
 		for (auto& method: point_class_info.methods) {
@@ -2929,9 +2906,8 @@ private:
 		auto mega_sym    = getChain("FinalBoss", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto get_class_type = [&](SymID sym_id) {
-				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
-			};
+			auto get_class_type
+				= [&](SymID sym_id) { return ctx.query<tsh::QueryClassType>(sym_id); };
 
 			// Classes, tuples and static arrays are copied by a single `create_aggregate` that the
 			// body returns, with one value per copied element.
@@ -3072,15 +3048,15 @@ private:
 
 			// A field whose class defines a user copy constructor calls the user code, not a
 			// generated one.
-			ASSERT_TRUE(v_matches(
-				getSymRef(callee_of(rhs_of("nested_user")))->other, PstImplementedSemantics
-			));
+			ASSERT_TRUE(
+				v_matches(getSymRef(callee_of(rhs_of("nested_user")))->other, ClassMemberSemantics)
+			);
 
 			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
 			{
 				auto boxed = boxAllocArg(rhs_of("deep"));
 				ASSERT_TRUE(boxed != nullptr);
-				ASSERT_TRUE(v_matches(getSymRef(callee_of(boxed))->other, PstImplementedSemantics));
+				ASSERT_TRUE(v_matches(getSymRef(callee_of(boxed))->other, ClassMemberSemantics));
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {
@@ -3334,9 +3310,8 @@ private:
 		auto boss_sym         = getChain("FinalBoss", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto get_class_type = [&](SymID sym_id) {
-				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
-			};
+			auto get_class_type
+				= [&](SymID sym_id) { return ctx.query<tsh::QueryClassType>(sym_id); };
 
 			auto is_builtin_call = [&](const Stmt* stmt, BuiltinKind kind) -> bool {
 				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);

@@ -37,17 +37,17 @@ namespace compiler::tsh {
 	 * @return The default interface for the given type.
 	 */
 	TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
-		using helios::defgen::destructSymForType;
+		using helios::defgen::generatedDestructSymForType;
 		using helios::defgen::generatedToStringSymForType;
 
 		// The generated `toString` returns a `String`, which lives in `core.containers`. It only
 		// exists when a standard library is available, so skip it otherwise (e.g. no-std builds) —
 		// resolving its type would fail to find the `String` language primitive.
-		const bool has_to_string = isStringTypePresent(ctx);
+		const bool string_type_present = isStringTypePresent(ctx);
 
 		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
 		if (not type.carriesInformation(ctx)) {
-			if (type.getKind() == Kind::Unit && has_to_string) {
+			if (type.getKind() == Kind::Unit && string_type_present) {
 				// The unit type has a `toString` method, even though it doesn't carry information,
 				// because it is a simple type and it's passed by value.
 				return TypeInterface{ std::vector{ InterfaceElement{
@@ -55,8 +55,8 @@ namespace compiler::tsh {
 					type,
 					0,
 					InterfaceElement::InterfaceElementKind::Method,
-					ClassMemberVisibility::Public,
-					InterfaceElement::SpecialKind::ToString,
+					MemberVisibility::Public,
+					MemberSpecialKind::ToString,
 				} } };
 			}
 			return {};
@@ -65,25 +65,25 @@ namespace compiler::tsh {
 		std::vector<InterfaceElement> elements;
 
 		// Every type has a `toString` method (when a standard library provides `String`).
-		if (has_to_string) {
+		if (string_type_present) {
 			elements.emplace_back(
 				generatedToStringSymForType(ctx, type),
 				type,
 				0,
 				InterfaceElement::InterfaceElementKind::Method,
-				ClassMemberVisibility::Public,
-				InterfaceElement::SpecialKind::ToString
+				MemberVisibility::Public,
+				MemberSpecialKind::ToString
 			);
 		}
 
-		// Only classes have destructors (for now)
-		if (type.getKind() == Kind::Class) {
+		if (not type.isTriviallyDestructible(ctx)) {
 			elements.emplace_back(
-				destructSymForType(ctx, type),
+				generatedDestructSymForType(ctx, type),
 				type,
 				0,
 				InterfaceElement::InterfaceElementKind::Method,
-				ClassMemberVisibility::Public
+				MemberVisibility::Public,
+				MemberSpecialKind::Destructor
 			);
 		}
 
@@ -128,17 +128,17 @@ namespace compiler::tsh {
 		static TypeInterface addDefaultInterface(
 			Context& ctx, CRef<TypeInterface> declared, const QKey key
 		) {
-			std::vector<InterfaceElement>                     new_elements;
-			std::unordered_set<InterfaceElement::SpecialKind> declared_specials;
+			std::vector<InterfaceElement>         new_elements;
+			std::unordered_set<MemberSpecialKind> declared_specials;
 			for (auto& elem: declared->getElements()) {
 				new_elements.push_back(elem);
-				if (elem.specialKind() != InterfaceElement::SpecialKind::None)
+				if (elem.specialKind() != MemberSpecialKind::None)
 					declared_specials.insert(elem.specialKind());
 			}
 
 			const TypeInterface default_interface = getDefaultTypeInterfaceForType(ctx, key);
 			for (auto& elem: default_interface.getElements()) {
-				if (elem.specialKind() != InterfaceElement::SpecialKind::None
+				if (elem.specialKind() != MemberSpecialKind::None
 				    && declared_specials.contains(elem.specialKind()))
 					continue;
 				new_elements.push_back(elem);
@@ -605,5 +605,15 @@ namespace compiler::tsh {
 		return std::ranges::all_of(underlying_types, [&](const auto& type) {
 			return type.isTriviallyCopyable(ctx);
 		});
+	}
+
+	SymbolType<> ClassAbstractTypeImpl::getMemberType(
+		compiler::helios::SymID sym, query::Context& ctx
+	) const {
+		const auto& elements_with_same_name
+			= getDeclaredInterface(ctx)->getElementsByName().at(name(sym));
+		for (const auto& element: elements_with_same_name)
+			if (element.getSymbol() == sym) return element.getType(ctx);
+		CORE_PANIC("Element not found.");
 	}
 }

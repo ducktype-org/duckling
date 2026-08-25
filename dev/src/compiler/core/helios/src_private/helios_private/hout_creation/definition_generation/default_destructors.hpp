@@ -13,7 +13,7 @@ namespace compiler::helios::defgen {
 	 * This function always returns SymID, even if the requested type is trivially destructible,
 	 * in which case the SymID might be non-usable.
 	 */
-	SymID destructSymForType(query::Context& ctx, tsh::AbstractType type);
+	SymID generatedDestructSymForType(query::Context& ctx, tsh::AbstractType type);
 
 
 	/**

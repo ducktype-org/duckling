@@ -1,6 +1,6 @@
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 
@@ -30,9 +30,7 @@ private:
 		const compiler::helios::SymID my_class_symbol = getChain("MyClass", root_scope).back();
 
 		const AbstractType my_class_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(my_class_symbol)
-		          ->valueOrPanicMsg("Not expecting an ERROR here...")
-		          .getType();
+			= query::entryPoint<compiler::tsh::QueryClassType>(my_class_symbol);
 
 
 		withContextDo([&](query::Context& ctx) {
@@ -92,9 +90,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto get_type = [&](const compiler::helios::SymID sym_id) {
-				return ctx.query<compiler::helios::QueryTypeFromDefinition>(sym_id)->valueOrPanicMsg(
-					"Not expecting an ERROR here..."
-				);
+				return SymbolType<>::withDefaults(ctx.query<compiler::tsh::QueryClassType>(sym_id));
 			};
 
 			auto assert_flags = [&](const SymbolType<>& type,

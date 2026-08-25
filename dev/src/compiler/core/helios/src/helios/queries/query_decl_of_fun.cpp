@@ -14,8 +14,6 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -360,8 +358,7 @@ namespace compiler::helios {
 					stmt->getParams(), {}, HOUTFunctionDeclaration::Operatoriness::None
 				);
 
-				const auto class_type
-					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+				const auto class_type  = classOfMember(ctx, original_symbol);
 				this->out->return_type = tsh::SymbolType<>{
 					class_type,
 					tsh::ReferenceKind::Direct,
@@ -562,7 +559,9 @@ namespace compiler::helios {
 			case SymbolKind::Constructor:
 			case SymbolKind::Destructor: {
 				variant_match(getSymRef(key)->other) {
-					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
+					variant_case_novalue(
+						PstImplementedSemantics, ClassMemberSemantics, BuiltinSemantics
+					) {
 						DeclarationVisitor decl_maker(ctx, key);
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
 						auto result = std::move(decl_maker.out).value();

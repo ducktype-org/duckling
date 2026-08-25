@@ -13,8 +13,6 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/origin.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
@@ -442,10 +440,7 @@ namespace compiler::helios::code {
 			case SymbolKind::Class: {
 				// Retrieve constructors of the class.
 				// @TODO: #1290 Handle auxiliary constructors.
-				auto class_type = query_ctx.query<QueryTypeFromDefinition>({ symbol })
-				                      ->valueOrThrow()
-				                      .getType()
-				                      .as<tsh::ClassAbstractType>();
+				auto        class_type = query_ctx.query<tsh::QueryClassType>({ symbol });
 				const auto& ctor
 					= query_ctx.query<defgen::QueryImplicitClassConstructor>({ class_type })
 				          ->valueOrThrow();
@@ -972,11 +967,9 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			case SymbolKind::Class: {
-				auto type_qresult = query_ctx.query<QueryTypeFromDefinition>({ symbol });
-				UNPACK_QRESULT_CREF(auto type_info =, type_qresult);
+				auto class_type = query_ctx.query<tsh::QueryClassType>({ symbol });
 
-				auto expr
-					= makeBox<LiteralTypeExpr>(query_ctx, pst_element_origin, type_info.getType());
+				auto expr = makeBox<LiteralTypeExpr>(query_ctx, pst_element_origin, class_type);
 				return ChainState::ofExpr(std::move(expr));
 			}
 			case SymbolKind::Field: {

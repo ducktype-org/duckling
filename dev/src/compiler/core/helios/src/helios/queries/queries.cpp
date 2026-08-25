@@ -7,7 +7,6 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/symbols/attributes.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -363,10 +362,7 @@ namespace compiler::helios {
 				"Invalid argument exception: expected class symbol"
 			);
 
-			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
+			const auto class_type = ctx.query<tsh::QueryClassType>(class_sym);
 
 
 			auto methods = class_type.getInterface(ctx)->getMethodsView();

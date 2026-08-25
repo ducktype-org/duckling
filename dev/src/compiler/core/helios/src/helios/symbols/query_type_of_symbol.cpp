@@ -7,8 +7,6 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/deductions.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -274,7 +272,9 @@ namespace compiler::helios {
 			auto symbol_ref = getSymRef(key);
 
 			variant_match(symbol_ref->other) {
-				variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
+				variant_case_novalue(
+					PstImplementedSemantics, ClassMemberSemantics, BuiltinSemantics
+				) {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
 					if (isFunctionLike(kind(key))) return handleFunction(ctx, key);
 
@@ -415,12 +415,11 @@ namespace compiler::helios {
 					return param_symbol_type;
 				}
 				variant_case(defgen::SelfParameter, param) {
-					const auto class_type
-						= ctx.query<QueryClassOfMember>(param.method_symbol)->valueOrThrow();
-					auto param_symbol_type = tsh::SymbolType{
-						class_type,
-						tsh::ReferenceKind::Ref,
-						tsh::Mutability::Mutable,
+					const auto class_type        = classOfMember(ctx, param.method_symbol);
+					auto       param_symbol_type = tsh::SymbolType{
+                        class_type,
+                        tsh::ReferenceKind::Ref,
+                        tsh::Mutability::Mutable,
 					};
 					return param_symbol_type;
 				}
