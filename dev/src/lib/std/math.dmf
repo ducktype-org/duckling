@@ -305,27 +305,12 @@ namespace impl {
     #{
         These are the functions not provided by the C standard library.
     #}
-
-    fun powi(x: i32, y: i32) -> i32 = {
+    template(T: type)
+    fun powi(x: type, y: type) -> type = {
         if (y < 0) panic();
 
-        var result: i32 = 1;
-        var exp: i32 = x;
-        while (y > 0) {
-            if (y % 2 == 1) {
-                result = result * exp;
-            }
-            y = y/2;
-            exp = exp * exp;
-        }
-        return result;
-    }
-
-    fun powl(x: i64, y: i64) -> i64 = {
-        if (y < 0) panic();
-
-        var result: i64 = 1;
-        var exp: i64 = x;
+        var result: type = 1;
+        var exp: type = x;
         while (y > 0) {
             if (y % 2 == 1) {
                 result = result * exp;
