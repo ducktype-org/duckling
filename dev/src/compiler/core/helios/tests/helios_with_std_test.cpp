@@ -527,24 +527,13 @@ private:
 			ASSERT_EQUAL(str_type, getTypeOf("should_string", fun_body_scope));
 
 			// Every kind of type stringifies, and always into a `String`.
-			static constexpr std::array stringified_vars = { "unit_string",
-			                                                 "bool_string",
-			                                                 "char_string",
-			                                                 "integral_string",
-			                                                 "unsigned_string",
-			                                                 "float_string",
-			                                                 "slice_string",
-			                                                 "class_string",
-			                                                 "cptr_string",
-			                                                 "manyptr_string",
-			                                                 "int_slice_string",
-			                                                 "array_string",
-			                                                 "nested_array_string",
-			                                                 "tuple_string",
-			                                                 "variant_string",
-			                                                 "list_string" };
+			static constexpr std::array VARS
+				= { "unit_string",         "bool_string",    "char_string",      "integral_string",
+				    "unsigned_string",     "float_string",   "slice_string",     "class_string",
+				    "cptr_string",         "manyptr_string", "int_slice_string", "array_string",
+				    "nested_array_string", "tuple_string",   "variant_string",   "list_string" };
 
-			for (const char* stringified: stringified_vars)
+			for (const char* stringified: VARS)
 				assertEqual(
 					str_type,
 					getTypeOf(stringified, fun_body_scope),
@@ -560,7 +549,7 @@ private:
 					if (var_stmt == nullptr) continue;
 
 					const auto var_name = compiler::helios::name(var_stmt->helios_symbol);
-					if (not std::ranges::contains(stringified_vars, var_name.strView())) continue;
+					if (not std::ranges::contains(VARS, var_name.strView())) continue;
 
 					const auto* call = dynamic_cast<const CallExpr*>(
 						stripImplicitMove(var_stmt->initial_value.get())
@@ -583,8 +572,7 @@ private:
 					);
 
 					const auto& to_string_fun
-						= ctx.query<compiler::helios::QueryCodeOfFun>(to_string_sym)
-							  ->valueOrThrow();
+						= ctx.query<compiler::helios::QueryCodeOfFun>(to_string_sym)->valueOrThrow();
 					assertTrue(
 						not to_string_fun.body->statements.empty(),
 						base::strConcat("`", var_name, "`'s `toString` should have a body")

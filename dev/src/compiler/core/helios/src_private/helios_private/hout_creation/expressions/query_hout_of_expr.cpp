@@ -296,7 +296,7 @@ namespace compiler::helios::code {
 					pstOrigin(stmt).generatedFrom(),
 					s.call(
 						withOrigin(pstOrigin(stmt).generatedFrom(), s.ident(string_to_string_sym)),
-						std::move(result_expr)
+						s.prepToPassSelf(std::move(result_expr))
 					)
 				);
 
