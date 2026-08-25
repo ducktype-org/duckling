@@ -7,15 +7,14 @@
 
 // The structured-bindings table, expanded inside ser::access.
 //
-// A binding declaration spells its arity out, so "hand me every member" needs one branch
-// per member count. SER_DETAIL_LADDER(RUNG) expands RUNG(n) for every count the library
-// supports, and SER_DETAIL_LADDER_NAMES(n) hands that rung its n binding names - each entry
-// of the table below is the previous one plus one name, so a typo is a duplicate or a
-// missing binding and both are compile errors. LADDER_MAX has to agree with the last entry
-// of both tables; a count above it has no rung, and visitMembersN says so.
+// A binding declaration spells its arity out, so "hand me every member" needs one branch per
+// member count. SER_DETAIL_LADDER(RUNG) expands RUNG(n) for every count supported, and
+// SER_DETAIL_LADDER_NAMES(n) hands that rung its n names - each entry below is the previous
+// one plus one name, so a typo is a duplicate or a missing binding, and both are compile
+// errors. LADDER_MAX has to agree with the last entry of both tables.
 //
 // The arity of a structured binding is CHECKED against the type and never deduced, so a
-// member count that does not match cannot write the wrong bytes - it fails to compile.
+// member count that does not match fails to compile rather than writing the wrong bytes.
 
 namespace ser::detail {
 

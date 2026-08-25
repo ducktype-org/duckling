@@ -2,10 +2,9 @@
 
 namespace ser {
 
-	// The type an ADL serMake dispatches on. A function cannot be overloaded on its
-	// return type, so `serMake(ar)` alone could never say WHICH type to build - the tag
-	// is the argument that carries it, and it also drags namespace ser into the
-	// associated set so the barrier in detail/adl.hpp finds the hook.
+	// The type an ADL serMake dispatches on: a function cannot be overloaded on its return
+	// type, so `serMake(ar)` alone could never say WHICH type to build. The tag also drags
+	// namespace ser into the associated set, so the barrier in detail/adl.hpp finds the hook.
 	template<class T>
 	struct tag {
 		using type = T;

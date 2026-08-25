@@ -7,22 +7,18 @@
 // reads back on another.
 //
 // THE KEY AND THE VALUE ARE READ AS TWO STATEMENTS, never as two arguments of one call.
-// `m.emplace(dispatchMake<K>(ar), dispatchMake<V>(ar))` looks obvious and is wrong: those
-// are function arguments, so their evaluation order is unspecified and the stream would be
-// key-first on one compiler and value-first on another, passing every round-trip test on
-// both while agreeing with neither. Two declarations are ordered by the language. The cost
-// is one move per element into the node, and value_type being pair<const K, V> means the
-// node has to be constructed rather than assigned anyway.
+// `m.emplace(dispatchMake<K>(ar), dispatchMake<V>(ar))` is wrong: argument evaluation order
+// is unspecified, so the stream would be key-first on one compiler and value-first on
+// another, passing every round-trip test on both. Two declarations are ordered by the
+// language, and the cost is one move per element into the node.
 //
-// A repeated key is corrupt input, not a merge: insert reports it and the read fails with
-// Errc::InvalidValue. Silently keeping the first one would turn a damaged stream into a
-// container that is quietly smaller than the one that was written.
+// A repeated key is corrupt input, not a merge: the read fails with Errc::InvalidValue
+// rather than quietly producing a container smaller than the one that was written.
 //
-// On the unordered containers, iteration order is unspecified, so the STREAM IS NOT A
-// CANONICAL FORM of the object: one map written twice gives the same bytes, but two EQUAL
-// maps need not - a different insertion history is enough, at the same bucket count. Two
-// consequences: compare a round-trip element by element and never byte for byte, and reach
-// for std::map when a payload is going to be signed or content-addressed.
+// On the unordered containers iteration order is unspecified, so the STREAM IS NOT A
+// CANONICAL FORM: one map written twice gives the same bytes, but two EQUAL maps need not.
+// So compare a round-trip element by element and never byte for byte, and reach for
+// std::map when a payload is going to be signed or content-addressed.
 
 #include <ser/concepts.hpp>
 #include <ser/detail/container.hpp>

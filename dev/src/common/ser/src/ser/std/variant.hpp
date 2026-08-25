@@ -2,52 +2,33 @@
 
 // ── std::variant and std::monostate ───────────────────────────────────────────
 // A tag, then the alternative the tag names. The tag is a plain 64-bit integer - the same
-// width as a container's length prefix - because a variant is written once and read on a
-// machine whose ::std::size_t need not be the one that wrote it, and a tag that is eight
-// bytes on both sides is one fewer platform question. It costs seven bytes over a byte
-// tag; nothing on this wire is packed, and paying them buys a format that never has to
-// decide how many alternatives are "few enough".
+// width as a container's length prefix - so a stream stays readable on a machine whose
+// ::std::size_t is not the writer's. It costs seven bytes over a byte tag, and buys a
+// format that never has to decide how many alternatives are "few enough".
 //
-// THE INDEX IS A RUNTIME VALUE AND EVERY ALTERNATIVE NEEDS A COMPILE-TIME ONE. That gap
-// is the whole implementation. `v.index()` is an ordinary call on an ordinary object, so
-// neither ::std::get<I> nor ::std::variant_alternative_t accepts it - not even inside a
-// constexpr function, because constexpr says when a function MAY be evaluated and says
-// nothing about its arguments being constants. `applyByIndex` is the bridge, and both
-// directions cross it: the write side has exactly the same problem as the read side.
+// THE INDEX IS A RUNTIME VALUE AND EVERY ALTERNATIVE NEEDS A COMPILE-TIME ONE. That gap is
+// the whole implementation: neither ::std::get<I> nor ::std::variant_alternative_t accepts
+// `v.index()`, so `applyByIndex` is the bridge and both directions cross it.
 //
-// Three shapes, and the reason there are three:
+// Three shapes:
 //
-//   write - tag, then the alternative. A valueless variant is refused rather than written:
-//           ::std::variant_npos is not an alternative, and putting it on the wire would
-//           produce a stream that no reader can honour.
+//   write - tag, then the alternative. A valueless variant is refused rather than written.
 //   read  - fills an EXISTING variant. All-or-nothing, like the tuple adapter: which
-//           alternative arrives is a property of the bytes, so a `read` that exists for
-//           some tags and not others would be a format whose readability depends on the
-//           payload. Every alternative therefore has to be reachable by one of two paths,
-//           and per alternative it takes the cheaper one - emplace<I>() and fill in place
-//           when the alternative is default-constructible and assignable, otherwise
+//           alternative arrives is a property of the bytes, so a `read` available for only
+//           some tags would be a format whose readability depends on the payload. Per
+//           alternative it takes the cheaper path - emplace<I>() and fill in place, or
 //           emplace<I>(dispatchMake<T>(ar)).
-//   make  - builds one. What dispatch reaches for at the top level of ser::read, and the
-//           only path for a variant that has no `read`.
+//   make  - builds one. What dispatch reaches for at the top level of ser::read.
 //
-// `read` does NOT rescue an alternative with a const FIELD from the move: emplace
-// move-constructs, so that move happens either way. What it buys is the VARIANT not having
-// to be move-assignable, which is what dispatch demands of a make-only type being filled
-// in - and a variant with such an alternative is exactly the variant that is not
-// move-assignable, so this is the difference between working and a static_assert.
+// `read` does not save a move for an alternative with a const field - emplace
+// move-constructs either way. What it buys is the VARIANT not having to be move-assignable,
+// which is the difference between working and a static_assert.
 //
-// ALWAYS in_place_index<I>, never the converting constructor. `VType{ value }` picks its
-// alternative by overload resolution, which is a different question from "which index did
-// the tag say" and answers it differently for variant<int, long> or variant<bool, string>.
-// The tag is the answer; in_place_index is how it is obeyed.
-//
-// A failed `read` leaves the variant holding a partially filled alternative, exactly as a
-// failed container read leaves a partly filled container. The rule is the same: a target
-// whose read returned an error is not a value.
-//
-// ::std::monostate is here because that is where it is needed - variant<monostate, T...>
-// is the common shape - and it writes zero bytes. An empty type has nothing to write and
-// its tag has already said everything the reader needs.
+// ALWAYS in_place_index<I>, never the converting constructor: `VType{ value }` picks by
+// overload resolution, which answers a different question than the tag for
+// variant<int, long> or variant<bool, string>. A failed `read` leaves a partially filled
+// alternative, exactly as a failed container read does. ::std::monostate is here because
+// variant<monostate, T...> is the common shape, and it writes zero bytes.
 
 #include <ser/concepts.hpp>
 #include <ser/detail/dispatch_fwd.hpp>

@@ -40,15 +40,14 @@ namespace ser {
 		using context_type               = Ctx;
 
 		// ── where writing starts ──────────────────────────────────────────────
-		// A growable buffer is APPENDED to: a fresh archive begins at buf.size(), so
-		// several independent writes accumulate into one stream and nothing already in
-		// the buffer is overwritten. A fixed buffer is filled from the front, because
-		// its size() is capacity and carries no notion of how much is already written -
-		// to continue inside one, keep the archive and keep calling it.
+		// A growable buffer is APPENDED to - a fresh archive begins at buf.size() - while a
+		// fixed buffer is filled from the front, its size() being capacity and carrying no
+		// notion of how much is already written. To continue inside a fixed one, keep the
+		// archive and keep calling it.
 		//
-		// The consequence worth knowing: position() is an offset into the BUFFER, not
-		// into the message, so an error position points at the byte that failed. reset()
-		// takes buffer offsets too.
+		// So position() is an offset into the BUFFER and not into the message, which is what
+		// makes an error position point at the byte that failed. reset() takes buffer
+		// offsets too.
 		constexpr explicit out(Buf& b) noexcept requires(::std::is_empty_v<Ctx>): buf(b) {
 			pos = detail::bufferOrigin(b);
 		}

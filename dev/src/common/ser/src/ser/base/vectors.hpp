@@ -5,11 +5,9 @@
 // one, because the stability the type provides is a property of its storage and not of the
 // stream. So a std::vector stream reads into a StableVector and back.
 //
-// StableVector<const Data> - the "locked" form handed out by toConstData() - goes through
-// the SAME adapter. The const is about what the accessors hand out, not about the
-// container: pushBack and emplaceBack are exposed on both forms, and what is stored is
-// Data either way. So the only difference is the read path, and it is the same difference
-// std::vector already has:
+// StableVector<const Data> - the "locked" form from toConstData() - goes through the SAME
+// adapter: the const is about what the accessors hand out, not about the container. So the
+// only difference is the read path, and it is the one std::vector already has:
 //
 //   fill   Data can be default-constructed and assigned, and the container is not the
 //          locked form: emplaceBack an empty element, then read into it in place. No moves.
@@ -19,7 +17,7 @@
 //
 // No make hook, for the same reason the std::vector adapter has none: the type is
 // default-constructible and movable, so dispatchMake already builds one by reading into a
-// fresh object. A make hook would be a second copy of the format with nothing to add.
+// fresh object.
 
 #include <base/collections/stable_container.hpp>
 

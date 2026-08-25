@@ -5,23 +5,18 @@
 // terminator is written: a string is `n` and `n` characters, so an embedded '\0' is
 // ordinary data and survives the round-trip.
 //
-// The adapters are ser::serializer<T> specializations - level 1, "the extension point for
-// types you do not own". That is what lets them stay an opt-in include: dispatch consults
-// the trait first, so <ser/ser.hpp> never has to know these types exist, and a user who
-// wants a different format for their own std::vector<Thing> specializes the same trait
-// more specifically and wins by partial ordering.
+// The adapters are ser::serializer<T> specializations, which is what lets them stay an
+// opt-in include: dispatch consults the trait first, so <ser/ser.hpp> never has to know
+// these types exist.
 //
-// A ONE-BYTE character type is copied in bulk, because there the two are the same stream:
-// a single byte has no representation to swap, so a memcpy and a dispatch loop cannot
-// disagree. char16_t and char32_t go one at a time and must - a bulk copy of those would
-// write the host's byte order into the payload, which is the one thing this format does not
-// do. The bulk path is skipped under constant evaluation as well: getting from Ch* to
-// std::byte* needs a reinterpret_cast, which a constant expression may not contain.
+// A ONE-BYTE character type is copied in bulk, because a single byte has no representation
+// to swap and a memcpy cannot disagree with a dispatch loop. char16_t and char32_t go one
+// at a time and must, or the host's byte order would reach the payload. The bulk path is
+// also skipped under constant evaluation, which may not contain a reinterpret_cast.
 //
-// std::string_view is NOT here. It cannot own what it points at, so reading one would mean
-// pointing into the input buffer, and a write-only adapter is refused by the library's own
-// pairing rule - correctly: a format you can write and never read back is a bug with a use
-// case.
+// std::string_view is NOT here: it cannot own what it points at, so reading one could only
+// point into the input buffer, and a write-only adapter is refused by the library's own
+// pairing rule.
 
 #include <ser/concepts.hpp>
 #include <ser/detail/bytes.hpp>

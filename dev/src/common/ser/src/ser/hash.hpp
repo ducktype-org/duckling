@@ -5,27 +5,16 @@
 // (stream/header.hpp) and is checked before a single payload byte is interpreted, so a
 // stream written before a field was added comes back as Errc::SchemaMismatch instead of
 // plausible garbage. It takes Ctx because the pools registered in a context are part of
-// the format; without pools there is one context and it mixes as POOL_COUNT 0.
+// the format.
 //
-// It hashes the WIRE, one field at a time: sizeof and alignof are NOT mixed for a type
-// whose fields are walked, because the wire has neither padding nor alignment and a
-// change in either must not invalidate a stream that is still readable. Same rule as
-// bool, whose wire size is 1 and never sizeof(bool).
+// It hashes the WIRE, one field at a time: sizeof and alignof are never mixed for a type
+// whose fields are walked, because the wire has neither padding nor alignment. Same rule
+// as bool, whose wire size is 1 and never sizeof(bool).
 //
-// IT IS NOT A PORTABLE NUMBER, AND THAT IS THE POINT. schemaRoot() mixes nativeFlags() -
-// the byte order, sizeof(void*) and sizeof(size_type) - so a stream is refused by a build
-// that cannot read it back rather than being interpreted with every scalar reversed. The
-// question this hash answers is "can THIS program read that stream", not "do two
-// platforms describe the same format", so a pinned literal
-// (static_assert(schemaHash<T>() == 0x...)) is pinned per platform and per toolchain.
-// The rule about padding is therefore about LAYOUT not leaking into the format, not about
-// cross-platform equality of the number.
-//
-// A type whose hook the library cannot look inside is where that gets weakest: sizeof and
-// alignof are all there is, so two unrelated hooked types of the same size and alignment
-// share a hash. Three ways out, in the order schemaOf consults them - a
-// ser::schema<T> specialization, an in-class `ser_schema_as` alias (which is what every
-// STRONG_TYPEDEF_INT uses), or ser::config<T>::schema_id.
+// IT IS NOT A PORTABLE NUMBER, AND THAT IS THE POINT. schemaRoot() mixes nativeFlags(), so
+// the question it answers is "can THIS program read that stream" rather than "do two
+// platforms describe the same format" - and a pinned literal is pinned per platform and
+// per toolchain.
 //
 // What is visible, and how much:
 //
@@ -41,12 +30,15 @@
 //   a hand-written hook           "hook", sizeof, alignof
 //   ser::config<T>::schema_id     that number, and nothing else
 //
-// NO FIELD NAMES: the structured-bindings ladder does not know them, and byte identity
-// with a reflection-based implementation outranks a stronger hash. Names go into
-// debugHash(), which is diagnostics only and never reaches a stream.
+// A hooked type is the weak spot: sizeof and alignof are all there is, so two unrelated
+// hooked types of the same size and alignment share a hash. Three ways out, in the order
+// schemaOf consults them - ser::config<T>::schema_id, a ser::schema<T> specialization, or
+// an in-class `ser_schema_as` alias (what every STRONG_TYPEDEF_INT uses).
 //
-// Two same-typed fields swapped is the one change no hash of this kind can see. That is
-// what SER_TEST_ROUNDTRIP in <ser/test.hpp> is for.
+// NO FIELD NAMES: the ladder does not know them, and byte identity with a reflection-based
+// implementation outranks a stronger hash. Names go into debugHash(), which never reaches
+// a stream. Two same-typed fields swapped is the one change no hash of this kind can see,
+// and SER_TEST_ROUNDTRIP in <ser/test.hpp> is what catches it.
 
 #include <ser/access.hpp>
 #include <ser/archive/out.hpp>
@@ -71,11 +63,10 @@
 namespace ser {
 
 	// ── ser::schema<T> ────────────────────────────────────────────────────────
-	// The extension point for "I know what this type's format is, hash THAT". Same shape
-	// and same job as ser::serializer<T>: an empty primary, and a specialization that wins.
-	// Every std adapter has one, which is what keeps a container's hash structural
-	// (vector<int> and vector<float> differ) rather than a sizeof of somebody's
-	// std::vector.
+	// The extension point for "I know what this type's format is, hash THAT". Same shape as
+	// ser::serializer<T>: an empty primary, and a specialization that wins. Every std
+	// adapter has one, which is what keeps a container's hash structural - vector<int> and
+	// vector<float> differ - rather than a sizeof of somebody's std::vector.
 	//
 	//     template <class T, class Al>
 	//     struct ser::schema<std::vector<T, Al>> {
@@ -86,22 +77,10 @@ namespace ser {
 	//         }
 	//     };
 	//
-	// Mode and Seen are passed straight through and never inspected: Mode carries the
-	// context and whether names are being mixed, Seen is the recursion path that makes a
-	// self-referential type terminate. Bundling them into Mode is what lets a later knob
-	// arrive without touching a single adapter.
-	//
-	// No token is injected before the call, on purpose: a serializer that writes exactly a
-	// std::uint32_t can say so with `return detail::schemaOf<std::uint32_t, Mode, Seen>(h);`
-	// and hash identically to the scalar it is.
-	//
-	// Same include rule as min_wire_size: a specialization has to be visible before the
-	// first schema_hash of a type that needs it.
-	//
-	// A type that cannot reach into namespace ser - one a macro generates inside somebody
-	// else's namespace, or one in a module that must not depend on ser - says the same
-	// thing in-class with `using ser_schema_as = W;` and an optional
-	// `ser_schema_name`. See ser::access.
+	// Mode and Seen are passed straight through and never inspected. No token is injected
+	// before the call, so a serializer that writes exactly a std::uint32_t can hash
+	// identically to the scalar it is. A type that cannot reach into namespace ser says the
+	// same thing in-class with `using ser_schema_as = W;` - see ser::access.
 	template<class T>
 	struct schema {};
 
@@ -146,24 +125,18 @@ namespace ser {
 
 	// ── nativeFlags() ────────────────────────────────────────────────────────
 	// The platform facts a stream cannot survive a change in, in sixteen bits. The envelope
-	// carries them and refuses a mismatch with Errc::PlatformMismatch before the schema is
-	// even looked at: a stream from the other byte order is not a stream with a different
-	// schema, every scalar in it is reversed.
+	// carries them and reports Errc::PlatformMismatch before the schema is even looked at,
+	// because a stream from the other byte order is not a stream with a different schema -
+	// every scalar in it is reversed.
 	//
 	// Layout, frozen:  bits 0-1  byte order (1 little, 2 big, 3 neither)
 	//                  bits 2-5  sizeof(void*)
 	//                  bits 6-9  sizeof(config_global::size_type)
 	//
-	// It lives here rather than in stream/header.hpp because schema_hash mixes it and this
-	// header cannot include that one. Nothing writes a pointer, but pool offsets and
-	// zero-copy alignment are sized by one, so a 32-bit reader must not accept a 64-bit
-	// writer's stream.
-	//
-	// It is in the schema hash AS WELL as in the envelope, and the two are not redundant:
-	// the envelope's own field is checked first and reports PlatformMismatch, which is the
-	// precise diagnosis, while a stream written WITHOUT an envelope has only the hash - and
-	// a caller comparing schemaHash<T>() against a number it stored earlier gets the
-	// platform question answered for free.
+	// It is in the schema hash as well, and the two are not redundant: a stream written
+	// WITHOUT an envelope has only the hash. It lives here rather than in
+	// stream/header.hpp because schema_hash mixes it and this header cannot include that
+	// one.
 	[[nodiscard]] consteval ::std::uint16_t nativeFlags() noexcept {
 		constexpr unsigned ORDER = (::std::endian::native == ::std::endian::little) ? 1u
 		                         : (::std::endian::native == ::std::endian::big)    ? 2u

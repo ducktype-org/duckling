@@ -22,12 +22,10 @@
 namespace ser::detail {
 
 	// ── what the walk refuses to take apart ───────────────────────────────────
-	// A field shape every other guard in this file is structurally unable to see, because
-	// it is a property of the DECLARATION and an expression never carries it. field_decls_t
-	// is the one thing that still knows.
-	//
-	// This is asked only where the walk is actually chosen, so a type with a hook never
-	// pays for it and never has its fields judged.
+	// A field shape no other guard here can see, because it is a property of the
+	// DECLARATION and an expression never carries it - field_decls_t is the one thing that
+	// still knows. Asked only where the walk is actually chosen, so a type with a hook
+	// never has its fields judged.
 	template<class... Ds>
 	consteval void checkFieldDecls(type_list<Ds...>) {
 		static_assert(
@@ -47,11 +45,10 @@ namespace ser::detail {
 	}
 
 	// -- fill, or build? -------------------------------------------------------
-	// The walk never assigns the object, it assigns the LEAVES: dispatchRead of a scalar
-	// field writes bytes into that field, in place, through a reference. So what it needs is
-	// per-field and not per-object - every field reachable by a writable reference, which
-	// rules out a const field and a bit-field. Whole-object assignability is a different
-	// question and is asked in exactly one place, step 9.
+	// The walk never assigns the object, it assigns the LEAVES, so what it needs is
+	// per-field: every field reachable by a writable reference, which rules out a const
+	// field and a bit-field. Whole-object assignability is asked in exactly one place,
+	// step 9.
 	template<class T, class Ar>
 	consteval bool readableInPlace();
 	template<class T, class Ar>
@@ -166,16 +163,14 @@ namespace ser::detail {
 	//   dispatchRead    object exists, fill it from bytes
 	//   dispatchMake    no object yet, build and return one
 	//
-	// The order of the ladder is the whole design. A user hook outranks a builtin rule,
-	// a builtin rule outranks guessing, and within a level the asymmetric form outranks
-	// the symmetric one. Levels run trait, then in-class, then ADL: ser::serializer<T>
-	// has to win, because it is the only one available for a type you cannot edit.
+	// The order of the ladder is the whole design: a user hook outranks a builtin rule, a
+	// builtin rule outranks guessing, and within a level the asymmetric form outranks the
+	// symmetric one. Levels run trait, then in-class, then ADL - ser::serializer<T> has to
+	// win, being the only one available for a type you cannot edit.
 	//
-	// Two rules that look like details and are not:
-	//   - a type with a hook is NEVER decomposed, whatever it otherwise looks like. That is
-	//     what stops a container-shaped type with serVisit from being walked as a container.
-	//   - the refusals sit at the top, above every hook. A pointer with a serializer is
-	//     still a pointer.
+	// Two rules that look like details and are not: a type with a hook is NEVER decomposed,
+	// and the refusals sit above every hook, because a pointer with a serializer is still a
+	// pointer.
 
 	template<class T, writer Ar>
 	constexpr Errc dispatchWrite(Ar& ar, const T& x) {
@@ -301,11 +296,9 @@ namespace ser::detail {
 			return visitMembers(x, [&ar](auto&... fields) { return ar(fields...); });
 		}
 
-		// Step 9. Two kinds of type arrive here for the same reason: the object already
-		// exists and cannot be written into field by field, so the only way left is to
-		// build a fresh one and assign it. One is a type that offers only serMake. The
-		// other is a type the walk cannot fill - a BIT-FIELD field is that case, since
-		// braces can initialize one and no reference can be bound to it. Either way it
+		// Step 9. The object exists and cannot be written into field by field, so the only
+		// way left is to build a fresh one and assign it - either a type offering only
+		// serMake, or one the walk cannot fill (a BIT-FIELD field being that case). It
 		// costs one assignment, which is why a type that can offer serRead should.
 		else if constexpr (READ_BY_BUILDING_V<U, Ar>) {
 			// dispatchMake signals by throwing; this context returns a code. The boundary
@@ -371,23 +364,17 @@ namespace ser::detail {
 	}
 
 	// ── building an object out of the stream, field by field ───────────────────
-	// BRACES, never parentheses. [dcl.init.list]/4 guarantees the initializer clauses are
-	// evaluated left to right, so field 0 reads the first bytes of the record. Parentheses
-	// leave the order unspecified - a format that depends on the compiler and passes every
-	// test on the machine that produced it.
-	//
-	// Every clause is a prvalue coming straight out of dispatchMake, so each field is
-	// built once, in its final storage: const fields, fields with no default constructor
-	// and fields that cannot be moved all work.
+	// BRACES, never parentheses: [dcl.init.list]/4 orders the initializer clauses left to
+	// right, so field 0 reads the first bytes of the record, while parentheses leave the
+	// order unspecified. Every clause is a prvalue straight out of dispatchMake, so each
+	// field is built once in its final storage - const fields, fields with no default
+	// constructor and fields that cannot be moved all work.
 
 	// ── one field is not always one clause ─────────────────────────────────────
-	// A C array field cannot take a clause of its own: no function returns an array, so
-	// there is no prvalue of type int[3] to hand it. What it DOES accept is one clause per
-	// element, through brace elision - the very mechanism that makes counting fields
-	// untrustworthy is what makes building them possible. So an array field of extent N
-	// contributes N clauses, recursively, and every other field contributes one. Nothing
-	// about the bytes changes: the write side walks the same array element by element, in
-	// the same order.
+	// A C array field cannot take a clause of its own - no function returns an array - but
+	// it does accept one clause per element, through brace elision. So an array field of
+	// extent N contributes N clauses, recursively, and every other field contributes one.
+	// The bytes are unchanged: the write side walks the same array in the same order.
 	template<class F>
 	struct flatten_field {
 		using type = type_list<F>;
@@ -413,16 +400,13 @@ namespace ser::detail {
 
 	// Two warnings are wrong about this function, and both are suppressed narrowly.
 	//
-	// -Wmissing-braces is exactly backwards: the flattened list gives an array field one
-	// clause per element, and brace elision filling that array is the mechanism, not an
-	// oversight. Adding the braces would be the bug.
+	// -Wmissing-braces is backwards: brace elision filling an array field one clause per
+	// element is the mechanism here, and adding the braces would be the bug.
 	//
-	// -Wconversion fires on a BIT-FIELD, which is initialized here from a prvalue of its own
-	// DECLARED type - `unsigned` for `unsigned a : 4` - so the clause narrows to the width.
-	// It cannot lose anything: the write side read that same bit-field and widened it. There
-	// is nothing to cast to either, a width not being a type, and no other clause here can
-	// convert at all - every one of them is exactly dispatchMake<Fs>, whose result type IS
-	// Fs, and a narrowing that is a real bug is refused by the braces themselves.
+	// -Wconversion fires on a BIT-FIELD initialized from a prvalue of its own DECLARED type,
+	// so the clause narrows to the width. It cannot lose anything - the write side read that
+	// same bit-field and widened it - and there is nothing to cast to, a width not being a
+	// type.
 #if defined(__clang__)
 	#pragma clang diagnostic push
 	#pragma clang diagnostic ignored "-Wmissing-braces"
@@ -548,13 +532,11 @@ namespace ser::detail {
 		// statement, so the object is built once, in the caller's storage. That is what
 		// makes a non-movable type readable at all.
 
-		// `return x;` is NRVO - copy elision that the standard permits but does not
-		// guarantee, so a move constructor must exist as the fallback. All three conditions
-		// are asked in the CONDITION rather than checked inside, so that a type failing any
-		// of them falls through to step 4b instead of being refused here: 4b builds T from
-		// prvalues, so it needs neither a default constructor, nor a move, nor a field that
-		// can be written through a reference. Declining here also breaks what would
-		// otherwise be a cycle, since step 9 of dispatchRead comes back here.
+		// `return x;` is NRVO - permitted, not guaranteed - so a move constructor must exist
+		// as the fallback. All three conditions are asked in the CONDITION so that a type
+		// failing any of them falls through to step 4b, which builds T from prvalues and
+		// needs none of them. Declining here also breaks the cycle with step 9 of
+		// dispatchRead, which comes back into this function.
 		else if constexpr (::std::default_initializable<T> && ::std::move_constructible<T>
 		                   && !MUST_BE_BUILT_V<T, Ar>) {  // 4
 			T x{};
@@ -599,9 +581,8 @@ namespace ser::detail {
 				"type itself a serMake hook."
 			);
 
-		// The same refusal the other two contexts have, and it belongs here most of all:
-		// a const field is what sends a type down the make path in the first place, so an
-		// aggregate with a const ARRAY field arrives here and nowhere else. Without this
+		// The same refusal the other two contexts have, and it belongs here most of all: an
+		// aggregate with a const ARRAY field arrives here and nowhere else, and without this
 		// rung it would get the generic message below, whose suggestions are all about
 		// something other than what is wrong.
 		else if constexpr (::std::is_aggregate_v<T> && !CAN_ENUMERATE_MEMBERS_V<T>)  // 4e

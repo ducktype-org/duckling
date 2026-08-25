@@ -14,14 +14,11 @@
 //   BoxOrCRef<T>  refused. Whether it owns the pointee is a runtime property, so the
 //                reader could not know whether to allocate.
 //
-// Box<T> and T hash the SAME (see the schema specializations): the bytes really are
-// identical, so a stream written from a struct with a T field reads back into one with a
-// Box<T> field. That is a useful conversion, not a collision - the alternative would be
-// refusing a stream that is perfectly readable.
-//
-// A POLYMORPHIC Box - Box<Base> actually holding a Derived - is not handled here and
-// cannot be: the stream would have to say which type to allocate. Write a tag next to the
-// payload and a serializer of your own that switches on it.
+// Box<T> and T hash the SAME, because the bytes really are identical: a stream written from
+// a struct with a T field reads back into one with a Box<T> field. A POLYMORPHIC Box -
+// Box<Base> actually holding a Derived - is not handled and cannot be, since the stream
+// would have to say which type to allocate; write a tag and a serializer that switches on
+// it.
 
 #include <base/pointers/box.hpp>
 #include <base/pointers/box_or_ref.hpp>

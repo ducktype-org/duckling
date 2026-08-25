@@ -1,9 +1,9 @@
 #pragma once
 
 // ── the length prefix, and the three checks that must precede any allocation ───
-// Every variable-length adapter starts the same way, and getting the ORDER wrong is the
-// difference between an error code and an out-of-memory: the prefix is attacker-controlled
-// data, so `n` is not a count until it has been checked against something real.
+// The prefix is attacker-controlled data, so `n` is not a count until it has been checked
+// against something real - and getting the ORDER wrong is the difference between an error
+// code and an out-of-memory.
 //
 //   1. n > MAX_CONTAINER_ELEMENTS            -> MessageSize   (a policy ceiling)
 //   2. n * MIN_WIRE_SIZE_V<E> overflows      -> SizeOverflow   (the multiply itself)
@@ -11,9 +11,8 @@
 //
 // Only then may a caller reserve or resize.
 //
-// An element whose minimum is zero - an empty type - skips steps 2 and 3, because no
-// number of them implies any bytes at all. The policy ceiling is what bounds that case,
-// and it is the only thing that can.
+// An element whose minimum is zero - an empty type - skips steps 2 and 3, because no number
+// of them implies any bytes at all. The policy ceiling is the only thing that bounds it.
 
 #include <ser/concepts.hpp>
 #include <ser/config.hpp>

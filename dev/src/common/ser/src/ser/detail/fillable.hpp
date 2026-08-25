@@ -15,17 +15,15 @@
 //   READABLE_ELEMENT_V<T>  either of the two. That is exactly "this adapter can read a T
 //                          back", so it is the requires-clause on `read` and `make`.
 //
-// Spelled once here rather than in each adapter, because the same conjunction written out
-// five times is five chances for one copy to drift from the format the other four
-// implement.
+// Spelled once here rather than in each adapter, so the same conjunction cannot drift
+// between five copies.
 //
 // ── why these belong on the member and not on the specialization ──────────────
-// None of this constrains WRITING: a type that can be written and not read is a perfectly
-// ordinary shape (a const field, a deleted move), and the write side needs neither a
-// default constructor nor a move. So the constraint goes on `read` and `make`, which
-// leaves the specialization selected and lets ser::detail::checkHooks report the real
-// problem - "this type can be written but never read back" - instead of the specialization
-// vanishing and dispatch reporting the much vaguer "no way to serialize this type".
+// None of this constrains WRITING: a type that can be written and not read is an ordinary
+// shape, and the write side needs neither a default constructor nor a move. So the
+// constraint goes on `read` and `make`, which leaves the specialization selected and lets
+// checkHooks report "this type can be written but never read back" instead of the
+// specialization vanishing and dispatch reporting the much vaguer "no way to serialize".
 
 #include <concepts>
 #include <type_traits>

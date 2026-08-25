@@ -1,18 +1,14 @@
 #pragma once
 
 // ── MIN_WIRE_SIZE_V<T> ────────────────────────────────────────────────────────
-// The fewest bytes T can possibly occupy in a stream. It exists for one job: a length
-// prefix arrives before any of the elements it counts, and `n` elements cannot be there
-// unless `n * MIN_WIRE_SIZE_V<E>` bytes are. Without that arithmetic a corrupt prefix is
-// an allocation, and the first thing an attacker reaches for is a length field.
+// The fewest bytes T can possibly occupy in a stream. It exists for one job: `n` elements
+// cannot be there unless `n * MIN_WIRE_SIZE_V<E>` bytes are, and without that arithmetic a
+// corrupt length prefix is an allocation.
 //
-// A LOWER bound, never an estimate. Anything this cannot measure answers 1 - one byte,
-// because a type that occupies nothing cannot be told apart from the next one - and a
-// bound that is too small only weakens the check, while one that is too large would
-// reject a stream that is perfectly valid.
-//
-// It is a class template rather than a function so that the std adapters can specialize
-// it for their own containers: a vector's minimum is its prefix, whatever the element is.
+// A LOWER bound, never an estimate: anything this cannot measure answers 1, because a bound
+// that is too small only weakens the check while one that is too large would reject a
+// perfectly valid stream. A class template rather than a function, so the std adapters can
+// specialize it - a vector's minimum is its prefix, whatever the element is.
 
 #include <ser/access.hpp>
 #include <ser/builtin/array.hpp>

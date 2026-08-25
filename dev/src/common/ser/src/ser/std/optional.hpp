@@ -11,14 +11,10 @@
 //           it in place. Zero moves.
 //   build - it cannot: emplace(dispatchMake<T>(ar)). One move, and it is unavoidable.
 //
-// Never `opt = dispatchMake<T>(ar)`. Assignment demands that T be move-ASSIGNABLE, which
-// is strictly more than move-constructible, and the difference is exactly the shapes
-// serMake exists for: a type with a const field is move-constructible and not
-// move-assignable, so `=` does not compile and emplace does.
-//
-// The limit worth knowing: a type whose move constructor is DELETED cannot go inside an
-// optional at all - emplace fails on it inside std::construct_at, as a hard error rather
-// than a substitution failure - so no adapter can rescue it.
+// Never `opt = dispatchMake<T>(ar)`: assignment demands move-ASSIGNABLE, which is strictly
+// more than move-constructible, and the difference is exactly the shape serMake exists for.
+// A type whose move constructor is DELETED cannot go inside an optional at all - emplace
+// fails on it inside std::construct_at, as a hard error - so no adapter can rescue it.
 
 #include <ser/concepts.hpp>
 #include <ser/detail/dispatch_fwd.hpp>

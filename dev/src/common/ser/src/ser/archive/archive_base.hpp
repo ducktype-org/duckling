@@ -68,14 +68,10 @@ namespace ser::detail {
 
 	private:
 		// A reference is ALWAYS 8 bytes, which would break the "an empty context costs
-		// nothing" guarantee. Empty contexts are stored by value (0 bytes under
-		// SER_NO_UNIQUE_ADDRESS); everything else by pointer, because the archive
-		// BORROWS the context - a copied pool would diverge from the one finish()
-		// flushes, and the stream would reference entries nobody wrote.
-		//
-		// The condition is emptiness, not POOL_COUNT: what makes by-value storage safe
-		// is having no state to lose, and a stateful context with zero pools would
-		// silently discard every update the archive made to it.
+		// nothing" guarantee. So empty contexts are stored by value and everything else by
+		// pointer, because the archive BORROWS the context - a copied pool would diverge from
+		// the one finish() flushes. The condition is emptiness and not POOL_COUNT: a stateful
+		// context with zero pools would silently discard every update made to it.
 		using ctx_storage = ::std::conditional_t<::std::is_empty_v<Ctx>, Ctx, Ctx*>;
 
 		::std::size_t                     nesting = 0;

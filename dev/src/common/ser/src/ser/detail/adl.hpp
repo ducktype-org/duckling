@@ -10,23 +10,19 @@
 namespace ser::detail::adl_barrier {
 
 	// ── the barrier ───────────────────────────────────────────────────────────
-	// Unqualified lookup stops at the first enclosing scope that declares the name, so
-	// these four declarations keep the calls below from ever reaching ser::detail:: or
-	// ser:: - argument-dependent lookup is then the only way a hook can be found. Without
-	// them an unqualified serWrite(ar, x) inside the library would bind to a library
-	// symbol of that name and the user's hook would never be consulted.
-	//
-	// They take no arguments, so they are never viable candidates themselves; = delete
-	// makes a stray zero-argument call an error rather than a link failure.
+	// Unqualified lookup stops at the first enclosing scope that declares the name, so these
+	// four declarations keep the calls below from reaching ser::detail:: or ser:: - ADL is
+	// then the only way a hook can be found. They take no arguments, so they are never
+	// viable candidates themselves, and = delete makes a stray zero-argument call an error
+	// rather than a link failure.
 	void serVisit() = delete;
 	void serWrite() = delete;
 	void serRead()  = delete;
 	void serMake()  = delete;
 
-	// Trailing return types on purpose. The substitution then happens in the DECLARATION,
-	// where a missing hook is a plain substitution failure the detectors below can see.
-	// With a fixed `Errc` return type the declaration would always be well-formed and
-	// every detector would report true for every type.
+	// Trailing return types on purpose: the substitution then happens in the DECLARATION,
+	// where a missing hook is a substitution failure the detectors below can see. With a
+	// fixed `Errc` return type every detector would report true for every type.
 	template<class Ar, class T>
 	constexpr auto callVisit(Ar& ar, T& x) -> decltype(serVisit(ar, x)) {
 		return serVisit(ar, x);
@@ -55,10 +51,9 @@ namespace ser::detail::adl_barrier {
 namespace ser::detail {
 
 	// ── ADL hook detectors ────────────────────────────────────────────────────
-	// T carries the cv-qualification of the object being visited: dispatchWrite asks
-	// HAS_ADL_VISIT_V<const U, Ar>, dispatchRead asks HAS_ADL_VISIT_V<U, Ar>. A hook
-	// that only accepts a non-const object is therefore invisible on the write side,
-	// and checkHooks turns that asymmetry into a message instead of two formats.
+	// T carries the cv-qualification of the object being visited, so a hook that only accepts
+	// a non-const object is invisible on the write side - and checkHooks turns that asymmetry
+	// into a message instead of two formats.
 	SER_DETAIL_HOOK_VISIT(inline constexpr, ADL, adl_barrier::callVisit(ar, x))
 	SER_DETAIL_HOOK_WRITE(inline constexpr, ADL, adl_barrier::callWrite(ar, x))
 	SER_DETAIL_HOOK_READ(inline constexpr, ADL, adl_barrier::callRead(ar, x))

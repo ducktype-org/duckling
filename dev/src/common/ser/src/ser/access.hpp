@@ -27,18 +27,15 @@ namespace ser {
 	};
 
 	// ── ser::access ───────────────────────────────────────────────────────────
-	// Every in-class hook detector lives HERE rather than in ser::detail, and that is not
-	// a matter of taste: access control is part of SFINAE, so a detector written in
-	// ser::detail reports false for a private serVisit that ser::access can call
-	// perfectly well. Detection and call must happen in the same class the type befriends.
+	// Every in-class hook detector lives HERE rather than in ser::detail because access
+	// control is part of SFINAE: a detector written in ser::detail reports false for a
+	// private serVisit that ser::access can call perfectly well. The trait-level detectors
+	// have no access problem and live here anyway, so the whole priority table reads in one
+	// place.
 	//
-	// Trait-level detectors (ser::serializer<T>) have no access problem, but they live
-	// here too so that the whole priority table can be read in one place.
-	//
-	// T carries the cv-qualification of the object for the symmetric `visit` form:
-	// dispatchWrite asks for `const U`, dispatchRead for `U`. A hook that only binds a
-	// non-const object is then invisible on the write side, which detail::checkHooks
-	// reports instead of letting the two directions use different formats.
+	// T carries the cv-qualification of the object for the symmetric `visit` form, so a hook
+	// binding only a non-const object is invisible on the write side - which
+	// detail::checkHooks reports instead of letting the two directions use different formats.
 	struct access {
 		// ── level 1: ser::serializer<T> ───────────────────────────────────────
 		SER_DETAIL_HOOK_VISIT(
@@ -102,14 +99,11 @@ namespace ser {
 		}
 
 		// ── the opt-in field count ────────────────────────────────────────────
-		// `using ser_members = ser::members<2>;` inside the class. It may be private,
-		// which is the whole reason the detector is here and not in ser::detail.
-		//
-		// It exists because COUNTING and DECOMPOSING have different requirements:
-		// decomposition works on any class whose members are accessible here, but the
-		// count is probed with aggregate initialization, which a non-aggregate does not
-		// support. So a class with private fields, or with a constructor, tells us the
-		// number and the ladder does the rest.
+		// `using ser_members = ser::members<2>;` inside the class, private if you like -
+		// which is why the detector is here. It exists because COUNTING and DECOMPOSING
+		// have different requirements: decomposition works on any class whose members are
+		// accessible here, while the count is probed with aggregate initialization, which a
+		// non-aggregate does not support.
 		template<class T>
 		static constexpr bool NAMES_MEMBER_COUNT_V
 			= requires { ::std::remove_cvref_t<T>::ser_members::COUNT; };
@@ -120,11 +114,9 @@ namespace ser {
 		}
 
 		// ── what SER_DESCRIBE left behind ─────────────────────────────────────
-		// Same access reason as everything else in this struct, and it bites in a way
-		// that is easy to miss: SER_DESCRIBE is usually written in a private section,
-		// next to the fields it names. A detector in ser::detail reports false for it and
-		// the caller then falls back to comparing EVERY member - including the ones the
-		// description deliberately left out, which come back default-constructed.
+		// SER_DESCRIBE is usually written in a private section, so a detector in ser::detail
+		// reports false for it and the caller then compares EVERY member - including the
+		// ones the description deliberately left out, which come back default-constructed.
 		template<class T>
 		static constexpr bool HAS_DESCRIBED_V = requires(const ::std::remove_cvref_t<T>& x) {
 			::std::remove_cvref_t<T>::ser_described(x);
@@ -218,16 +210,14 @@ namespace ser {
 namespace ser::detail {
 
 	// ── the other direction of an archive ─────────────────────────────────────
-	// Half the questions checkHooks asks are about the direction it is NOT in: from
-	// dispatchWrite it has to know whether the type can be read back. Answering that
-	// needs a reader, and the only honest one is a REAL archive carrying the same Ctx -
-	// so a hook reaching for ar.pool<P>() compiles during detection, and a hook usable
-	// only with one archive is judged against the archive actually in use.
+	// Half the questions checkHooks asks are about the direction it is NOT in - from
+	// dispatchWrite, whether the type can be read back - and answering one needs a REAL
+	// archive carrying the same Ctx, so a hook reaching for ar.pool<P>() compiles during
+	// detection.
 	//
-	// ser::in<Ctx> is exact: there is one reader shape and the context is the whole of
-	// it. The writer is exact only in its context - the buffer is the caller's choice and
-	// nothing in a reader remembers it. That imprecision can only matter for a hook
-	// pinned to one concrete out<Buf, Ctx>, which NONGENERIC_*_HOOK_V reports anyway.
+	// ser::in<Ctx> is exact. The writer is exact only in its context, the buffer being the
+	// caller's choice; that can matter only for a hook pinned to one concrete
+	// out<Buf, Ctx>, which NONGENERIC_*_HOOK_V reports anyway.
 	template<class Ar>
 	using reader_for = ::std::conditional_t<reader<Ar>, Ar, in<typename Ar::context_type>>;
 
@@ -243,12 +233,9 @@ namespace ser::detail {
 	SER_DETAIL_HOOK_SUMMARY(ADL, )
 
 	// ── does this type describe its own format? ───────────────────────────────
-	// Either direction, any level, any form. This is the trait that keeps a type with its
-	// own serializer from ever being decomposed field by field - and the types that need
-	// saving from that are exactly the ones that look harmless.
-	//
-	// It takes Ar because the answer only means anything relative to the archive that
-	// will do the work.
+	// Either direction, any level, any form. This is what keeps a type with its own
+	// serializer from ever being decomposed field by field. It takes Ar because the answer
+	// only means anything relative to the archive that will do the work.
 	template<class T, class Ar>
 	inline constexpr bool HAS_ANY_WRITE_HOOK_V
 		= SER_DETAIL_HOOK_ANY_LEVEL(WRITE) || SER_DETAIL_HOOK_ANY_LEVEL(VISIT_WRITE);
@@ -301,15 +288,13 @@ namespace ser::detail {
 	   || NONGENERIC_READ_HOOK_V<T, Ar> || NONGENERIC_MAKE_HOOK_V<T, Ar>;
 
 	// ── checkHooks<T, Ar>() ──────────────────────────────────────────────────
-	// Called at the top of all three dispatch contexts, with the archive they hold.
-	// Everything here is a compile-time diagnostic; it produces no code. The order
-	// matters: the most specific message about a hook that exists comes before the
-	// vaguer ones about hooks that do not.
+	// Called at the top of all three dispatch contexts. Everything here is a compile-time
+	// diagnostic and produces no code; the order matters, because the most specific message
+	// about a hook that exists has to come before the vaguer ones about hooks that do not.
 	//
-	// `serMake` together with `serRead` is deliberately allowed - they answer different
-	// questions ("build me one" vs "fill this one in") and a type may usefully offer both.
-	// `serVisit` together with `serWrite` is not: both answer "write this one", and
-	// nothing in the type says which format was meant.
+	// `serMake` with `serRead` is allowed - they answer different questions. `serVisit`
+	// with `serWrite` is not: both answer "write this one", and nothing says which format
+	// was meant.
 
 	// A visit hook that binds only a non-const object is found when reading and missed
 	// when writing, so writing would silently fall through to the builtin or automatic

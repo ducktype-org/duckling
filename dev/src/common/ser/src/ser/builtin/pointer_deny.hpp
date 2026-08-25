@@ -29,8 +29,8 @@ namespace ser::builtin {
 		= ::std::is_pointer_v<T> || ::std::is_reference_v<T> || ::std::is_member_pointer_v<T>
 	   || ::std::is_union_v<T> || REFERENCE_WRAPPER_LIKE_V<T>;
 
-	// Fires the one message that fits. These strings are the entire user interface of a
-	// refusal, so each names the replacement rather than just the problem.
+	// Fires the one message that fits. Each names the replacement rather than just the
+	// problem.
 	template<class T>
 	constexpr void deny() {
 		using P = ::std::remove_cv_t<::std::remove_pointer_t<T>>;
@@ -113,8 +113,7 @@ namespace ser::builtin {
 
 	// ── the unregistered smart pointer ────────────────────────────────────────
 	// A heuristic, and used only as one: it runs at the very bottom of dispatch, where the
-	// answer is already "no way to serialize this" and the only question left is which
-	// sentence to print.
+	// answer is already "no way to serialize this" and only the wording is left to decide.
 	template<class T>
 	consteval bool looksPointerLike() {
 		return requires(T& t) { *t; } || requires(T& t) { t.operator->(); };

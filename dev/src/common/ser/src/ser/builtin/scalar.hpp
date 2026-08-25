@@ -14,11 +14,9 @@ namespace ser::builtin {
 	                   || ::std::is_same_v<::std::remove_cv_t<T>, ::std::byte>;
 
 	// ── bool is not "just one byte" ───────────────────────────────────────────
-	// sizeof(bool) is implementation-defined and a bool holding anything other than
-	// 0 or 1 is undefined behaviour - reading one back with memcpy from a corrupted
-	// stream would poison every later branch on it. So bool goes on the wire as an
-	// explicit 0/1 byte and comes back validated. This is the difference between
-	// a fuzzer finding Errc::InvalidValue and a fuzzer finding a miscompile.
+	// sizeof(bool) is implementation-defined, and a bool holding anything other than 0 or 1
+	// is undefined behaviour - memcpy from a corrupted stream would poison every later branch
+	// on it. So bool goes on the wire as an explicit 0/1 byte and comes back validated.
 
 	template<class T, writer Ar>
 	constexpr Errc writeScalar(Ar& ar, const T& v) {

@@ -12,15 +12,9 @@
 //
 // CheckedOkBad is refused - it is a check obligation, not a value.
 //
-// Two types in base that are deliberately NOT here, because they already work:
-//
-//   base::OkBad      an aggregate with one field, an enum class over bool. The member walk
-//                    takes it, and the bool goes on the wire as a validated 0/1 byte, so a
-//                    corrupt stream gives Errc::InvalidValue rather than a poisoned branch.
-//   base::Monostate  an empty aggregate: zero fields, zero bytes, min_wire_size 0.
-//
-// Adding specializations for those two would only be a second place for the format to
-// drift away from the first.
+// base::OkBad and base::Monostate are deliberately NOT here: both are aggregates the member
+// walk already handles, and a specialization would only be a second place for the format to
+// drift.
 
 #include <base/types/bit256.hpp>
 #include <base/types/checked_okbad.hpp>
@@ -62,11 +56,9 @@ namespace ser {
 
 	namespace detail {
 
-		// Keyed to the ARCHIVE type, and here that is load-bearing rather than defensive:
-		// serializer<CheckedOkBad> is a full specialization, so the type is not a template
-		// parameter of anything, and an assert naming it fires where the header is parsed
-		// instead of where a write is attempted. gcc waits, clang does not. Same reason as
-		// denyNonOwningRef in refs.hpp.
+		// Keyed to the ARCHIVE type, and that is load-bearing: serializer<CheckedOkBad> is a
+		// full specialization, so an assert naming the type would fire where the header is
+		// parsed rather than where a write is attempted. See denyNonOwningRef in refs.hpp.
 		template<class Ar>
 		constexpr Errc denyCheckedOkBad() {
 			static_assert(

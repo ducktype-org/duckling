@@ -131,15 +131,13 @@ namespace ser {
 		// use u64 as size_type to avoid silent overflows from size_t conversions
 		using size_type = ::std::uint64_t;
 
-		// Max depth when serializing/deserializing nested structures.
-		// This is to avoid stack overflows and excessive recursion.
+		// Bounds nesting, so data-dependent recursion cannot overflow the stack.
 		static constexpr ::std::size_t MAX_DEPTH = 256;
 
 		static constexpr ::std::size_t MAX_CONTAINER_ELEMENTS = ::std::size_t{ 1 } << 28;
 
-		// Whether to align flat arrays (like std::array) to their element type's alignment.
-		// This ensures the array elements are properly aligned in memory, which is
-		// required for zero-copy reads.
+		// Reserved for zero-copy reads and not read anywhere yet: nothing on this wire is
+		// aligned today, so flipping it changes nothing.
 		static constexpr bool ALIGN_FLAT_ARRAYS = true;
 	};
 

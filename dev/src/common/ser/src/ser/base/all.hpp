@@ -1,20 +1,16 @@
 #pragma once
 
-// Every base adapter at once, and the same trade as <ser/std/all.hpp>: separate headers
-// because each one costs the base header it wraps, and separate includes because these are
-// ser::serializer<T> specializations rather than rules inside dispatch - <ser/ser.hpp>
-// serializes a type it has never heard of and never pays for <base/pointers/box.hpp> to do
-// it.
+// Every base adapter at once, and the same trade as <ser/std/all.hpp>: separate headers,
+// because each one costs the base header it wraps.
 //
-// Include this before the first ser::write or ser::read of a type that uses one of them: a
+// Include this before the first ser::write or ser::read of a type that uses one of them - a
 // specialization has to be declared before the use that would instantiate the primary
 // template, which is the ordinary rule for any trait.
 //
-// Several of these adapters exist to REFUSE a type - Ref, SharedBox, BoxOrRef, RawView,
-// CheckedOkBad, a next()-minted id. That is not a gap waiting to be filled: each one names
-// what to write instead, and the refusal is only visible if the header is included, so
-// leaving it out is how a struct with a Ref field ends up reported as "looks pointer-like"
-// instead.
+// Several of these adapters exist to REFUSE a type - Ref, SharedBox, BoxOrCRef, RawView,
+// ModRawView, CheckedOkBad. That is not a gap waiting to be filled: each one names what to
+// write instead, and the refusal is only visible if the header is included, so leaving it
+// out is how a struct with a Ref field ends up reported as "looks pointer-like".
 //
 // What is deliberately NOT here, and why:
 //

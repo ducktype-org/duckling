@@ -10,10 +10,9 @@
 // type is not resizable, so its size is data.
 //
 // The words are rebuilt through set() rather than written into the vector directly, because
-// `words` is private. That costs one branch per bit and buys the invariant the class
-// documents: bits at indices >= capacity stay zero. A stream whose last word has bits above
-// the capacity is refused rather than loaded, because loading it would leave count(), any()
-// and forEachSet() disagreeing with size() forever after.
+// `words` is private. A stream whose last word has bits above the capacity is refused
+// rather than loaded: loading it would leave count(), any() and forEachSet() disagreeing
+// with size() forever after.
 
 #include <base/collections/dynamic_bitset.hpp>
 
@@ -40,13 +39,11 @@ namespace ser {
 			return (bits + BITSET_BITS_PER_WORD - 1) / BITSET_BITS_PER_WORD;
 		}
 
-		// The three checks readLength makes, redone for a count of BITS. readLength cannot
-		// do this one: its bound is n * MIN_WIRE_SIZE_V<E> bytes and a bit costs an eighth
-		// of a byte, so with std::byte as the element type it would refuse every bitset
-		// wider than the stream holding it - a bound that rejects valid input is worse than
-		// no bound at all. The order is the same and matters for the same reason: the policy
-		// ceiling first, so the word arithmetic below cannot overflow on the way to finding
-		// out that it would have.
+		// The three checks readLength makes, redone for a count of BITS. readLength cannot do
+		// this one: its bound is n * MIN_WIRE_SIZE_V<E> bytes, and a bit costs an eighth of a
+		// byte, so it would refuse every bitset wider than the stream holding it. The order
+		// matters for the same reason as there - policy ceiling first, so the word arithmetic
+		// below cannot overflow on the way to finding out that it would have.
 		constexpr Errc readBitCount(reader auto& ar, ::std::size_t& out) {
 			wire_size_type bits = 0;
 			if (const auto c = dispatchRead<wire_size_type>(ar, bits); c != Errc::Ok) return c;

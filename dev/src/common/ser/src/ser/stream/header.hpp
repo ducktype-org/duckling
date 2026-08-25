@@ -8,13 +8,10 @@
 //     [header 32 B]?  [payload]
 //
 // It is OPT-IN - ser::options{}.header is false - so a plain ser::write is exactly the
-// payload and not one byte more. Thirty-two is a multiple of sixteen on purpose: the
-// payload starts at a 16-byte boundary whenever the buffer does, so the envelope will not
-// be in the way of zero-copy spans of types with alignof <= 16.
-//
-// The layout is frozen, has no padding (both asserted below) and every field is written in
-// native byte order - `flags` is what makes that safe, because it is checked before
-// anything else is believed.
+// payload. Thirty-two is a multiple of sixteen on purpose, so the payload starts at a
+// 16-byte boundary whenever the buffer does. The layout is frozen, has no padding (both
+// asserted below) and every field is in native byte order, which `flags` is what makes
+// safe.
 //
 //   char     magic[8]      "SER\0" + four bytes of user_magic, little-endian
 //   u64      schema_hash   ser::schemaHash<T, Ctx>()
@@ -56,10 +53,9 @@ namespace ser {
 		static constexpr ::std::size_t WIRE_SIZE = 32;
 
 		// ── the magic ─────────────────────────────────────────────────────────
-		// Four bytes that say "ser", four that say whose stream it is. user_magic is written
-		// byte by byte, least significant first, rather than as a u32: a reader has to be
-		// able to reject a foreign stream BEFORE it trusts `flags`, so the magic cannot
-		// depend on the byte order.
+		// Four bytes that say "ser", four that say whose stream it is. user_magic goes byte
+		// by byte, least significant first, rather than as a u32: a reader has to reject a
+		// foreign stream BEFORE it trusts `flags`, so the magic cannot depend on byte order.
 		[[nodiscard]] constexpr bool magicOk() const noexcept {
 			return magic[0] == 'S' && magic[1] == 'E' && magic[2] == 'R' && magic[3] == '\0';
 		}
@@ -119,10 +115,9 @@ namespace ser {
 	}
 
 	// ── reading it ────────────────────────────────────────────────────────────
-	// Everything that does not need the type, in a fixed order, because the order is the
-	// diagnosis: a stream from the other byte order is not a stream with a different
-	// schema, and saying "SchemaMismatch" for it would send the reader looking in the
-	// wrong place.
+	// Everything that does not need the type, in a fixed order, because the order IS the
+	// diagnosis - saying "SchemaMismatch" for a stream from the other byte order would send
+	// the reader looking in the wrong place.
 	//
 	//   1. 32 bytes are there                      -> Truncated
 	//   2. magic, user_magic, header_size >= 32    -> BadMagic

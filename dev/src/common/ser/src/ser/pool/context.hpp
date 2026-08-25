@@ -20,9 +20,9 @@ namespace ser {
 	template<class... Pools>
 	struct context;
 
-	// out{buf} must work without the caller naming a context. An archive stores an empty
-	// context BY VALUE (0 bytes under SER_NO_UNIQUE_ADDRESS), so this singleton exists only
-	// for the one-argument constructor to have something to bind to.
+	// out{buf} must work without the caller naming a context, and an archive stores an empty
+	// one BY VALUE - so this singleton exists only for the one-argument constructor to have
+	// something to bind to.
 	inline no_context no_context_instance{};
 
 }  // namespace ser

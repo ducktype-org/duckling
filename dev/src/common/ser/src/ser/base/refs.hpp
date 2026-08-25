@@ -7,11 +7,10 @@
 // thing to write, and on read there is nothing to rebind - a Ref cannot be made to point
 // somewhere new once it exists.
 //
-// This is the refusal ser already gives a raw pointer and a std::reference_wrapper
-// (builtin/pointer_deny.hpp), spelled out for the base types on purpose. Without it these
-// fall to the bottom of dispatch and get the "looks pointer-like" heuristic, whose message
-// says "base::Box / base::Ref? not supported yet" and sends the reader looking for a header
-// that would fix it. There is no such header: this one IS the answer.
+// The same refusal ser already gives a raw pointer (builtin/pointer_deny.hpp), spelled out
+// for the base types on purpose: without it they fall to the "looks pointer-like" heuristic
+// at the bottom of dispatch, whose message sends the reader looking for a header that would
+// fix it. There is no such header - this one IS the answer.
 //
 // CRef<T> is Ref<const T> and MCRef<T> is MRef<const T>, both plain aliases, so the two
 // specializations below cover all four names.
@@ -27,14 +26,11 @@ namespace ser {
 
 	namespace detail {
 
-		// A function rather than a static_assert in each hook: the message is the whole
-		// user interface of a refusal, and one copy of it cannot drift from the other.
-		//
-		// The parameter is the ARCHIVE, and that is not cosmetic. A condition that does not
-		// depend on the enclosing template's own parameters may be diagnosed where the
-		// template is defined rather than where it is instantiated - gcc waits, clang does
-		// not - so keying the assert to the archive type is what makes "declaring this
-		// specialization is free, only a real write or read fires it" true on both.
+		// A function rather than a static_assert in each hook, so the message cannot drift
+		// between the two. The parameter is the ARCHIVE and that is not cosmetic: a condition
+		// not depending on the enclosing template's own parameters may be diagnosed where the
+		// template is DEFINED rather than instantiated - gcc waits, clang does not - and
+		// keying it to the archive is what keeps declaring the specialization free.
 		template<class Ar>
 		constexpr Errc denyNonOwningRef() {
 			static_assert(

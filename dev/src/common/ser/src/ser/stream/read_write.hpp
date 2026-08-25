@@ -25,16 +25,13 @@ namespace ser {
 	// is the switch that puts one there.
 	//
 	// header DEFAULTS TO FALSE: without it a stream loses version, platform and schema
-	// validation and nothing else, and ser::write then produces exactly the payload -
-	// buf.size() is the bytes the object needed, which is what makes the wire testable
-	// byte for byte.
+	// validation and nothing else, and ser::write then produces exactly the payload - which
+	// is what makes the wire testable byte for byte.
 	//
 	// user_magic brands the stream as yours: four bytes after "SER\0" that a reader passes
-	// back in, so somebody else's ser stream is rejected as BadMagic rather than reaching
-	// your schema check.
-	//
-	// There is no checksum flag: the header carries payload_crc and writes 0 into it, and
-	// a flag that quietly does nothing is worse than an absent one.
+	// back in, so somebody else's ser stream is BadMagic rather than reaching your schema
+	// check. There is no checksum flag, because payload_crc is written as 0 and a flag that
+	// quietly does nothing is worse than an absent one.
 	struct options {
 		bool            header     = false;
 		::std::uint32_t user_magic = 0;
@@ -57,11 +54,10 @@ namespace ser {
 	}  // namespace detail
 
 	// ── owned<T, Ctx> ─────────────────────────────────────────────────────────
-	// An AGGREGATE on purpose. ser::read builds it as
+	// An AGGREGATE on purpose: ser::read builds it as
 	//     owned<T, Ctx>{ dispatchMake<T>(ar), std::move(ctx) }
 	// where the prvalue initializes `value` directly - no move, and it compiles for types
-	// with const fields. `owned r; r.value = ...` would throw away the copy elision the
-	// whole make path exists for.
+	// with const fields.
 	//
 	// Field order matters: `value` is declared first, so it is destroyed first. Once the
 	// object can refer into the pools held by `ctx`, it must die before them.
@@ -100,27 +96,23 @@ namespace ser {
 	namespace detail {
 
 		// ── how a panicking entry point stops ──────────────────────────────────
-		// Plain CORE_PANIC
-		//
-		// These forms are for bytes whose validity is an INVARIANT - an object we are holding on
-		// the way out, a buffer we grew ourselves - never for input. Anything that came off a disk,
-		// out of a socket, or from an older build of this compiler is allowed to be wrong and must
-		// go through ser::read, which hands back an Errc. Reaching a panicking form with
-		// input is undefined behaviour in Release, and no diagnostic will say so.
+		// The panicking forms are for bytes whose validity is an INVARIANT - an object we are
+		// holding on the way out, a buffer we grew ourselves - never for input. Anything off a
+		// disk, out of a socket or from an older build must go through ser::read instead:
+		// CORE_PANIC is std::unreachable() in Release, so a panicking form handed input that
+		// is allowed to be wrong is undefined behaviour there, with no diagnostic.
 		[[noreturn]] inline void panicOnStreamError(const char* what, const error& e) {
 			CORE_PANIC(what, e.message());
 		}
 
 		// ── the throwing read, which never leaves this namespace ───────────────
-		// An exception is the only way a read can both return the object BY VALUE and
-		// report an error: the return type then equals the type of the returned prvalue,
-		// so copy elision is guaranteed end to end and T never has to be movable. There
-		// is no room for a return code next to a value built that way.
+		// An exception is the only way a read can both return the object BY VALUE and report
+		// an error: copy elision is then guaranteed end to end and T never has to be movable,
+		// while a return code has nowhere to sit next to the value.
 		//
-		// It is `detail` because that convention stops at the library's edge. Every public
-		// entry point below turns the exception into the thing its caller asked for - a
-		// ser::result, or a CORE_PANIC - so no ser::exception ever escapes into calling
-		// code.
+		// It is `detail` because that convention stops at the library's edge - every public
+		// entry point below turns the exception into a ser::result or a CORE_PANIC, so no
+		// ser::exception ever escapes into calling code.
 		template<class T, class Ctx>
 		[[nodiscard]] owned<T, Ctx> readThrowing(::std::span<const ::std::byte> bytes, options opt) {
 			static_assert(
@@ -136,11 +128,10 @@ namespace ser {
 			return owned<T, Ctx>{ dispatchMake<T>(ar), ::std::move(ctx) };
 		}
 
-		// The bare object, with no bundle around it - same construction guarantee, none of
-		// the ceremony. It drops the context, which is created here and destroyed on the
-		// way out, so anything in the object that pointed into it would be dangling before
-		// the caller saw it: undefined behaviour rather than an error code. Hence the
-		// constraint - an EMPTY context has nothing to point into.
+		// The bare object, with no bundle around it. It drops the context, which is created
+		// here and destroyed on the way out, so anything in the object pointing into it would
+		// dangle before the caller saw it - hence the constraint, an EMPTY context having
+		// nothing to point into.
 		template<class T, class Ctx>
 		requires(::std::is_empty_v<Ctx>)
 		[[nodiscard]] T readThrowingForce(::std::span<const ::std::byte> bytes, options opt) {
@@ -170,14 +161,12 @@ namespace ser {
 	//                    unless the program is already broken, and there is no state to
 	//                    recover to. readOrPanicForce is the same thing returning a bare T.
 	//
-	// The line between them is NOT a matter of taste, and detail::panicOnStreamError spells
-	// out why: CORE_PANIC is std::unreachable() in a Release build, so a panicking form
-	// handed bytes that are allowed to be wrong is undefined behaviour there. Input goes
-	// through ser::read. Always.
+	// The line between them is not a matter of taste - see detail::panicOnStreamError. Input
+	// goes through ser::read. Always.
 	//
-	// Both return owned<T, Ctx> rather than a bare T - even when Ctx is empty - so that
-	// pools can be added later without touching a single call site. readOrPanicForce is
-	// the exception, and it says so in its name.
+	// Both return owned<T, Ctx> rather than a bare T, even when Ctx is empty, so that pools
+	// can be added later without touching a call site. readOrPanicForce is the exception,
+	// and it says so in its name.
 
 	// The bundle reaches std::expected through a constructor parameter, and elision never
 	// crosses one - so this path costs exactly one move of owned<T, Ctx>.
@@ -225,18 +214,17 @@ namespace ser {
 
 	// ── write ─────────────────────────────────────────────────────────────────
 	// Appends. Into a growable buffer each call starts where the last one stopped, so
-	// several objects written separately end up as one stream and buf.size() is always
-	// exactly the bytes produced so far - nothing is trimmed and nothing stale is left
-	// behind. Into a fixed buffer there is nothing to append to (a span's size() is
-	// capacity), so each call fills it from the front.
+	// several objects written separately end up as one stream. Into a fixed buffer there is
+	// nothing to append to - a span's size() is capacity - so each call fills it from the
+	// front.
 	//
 	//     ser::write(buf, header);         // buf: [header]
 	//     ser::write(buf, payload);        // buf: [header][payload]
 	//
-	// Reading them back is the mirror image, and it is one ARCHIVE rather than two calls to
-	// ser::read - not because ser::read always starts at the front of the span it is given and never says how far
-	// it got. An archive does say: ar.position() is public, and so are ar.size(),
-	// ar.avail() and ar.reset(p).
+	// Reading them back is one ARCHIVE rather than two calls to ser::read, because ser::read
+	// always starts at the front of the span it is given and never says how far it got. An
+	// archive does say: ar.position() is public, and so are ar.size(), ar.avail() and
+	// ar.reset(p).
 	//
 	//     ser::in ar{bytes};
 	//     if (const auto e = ar(header); e != Errc::Ok) return {e, ar.position()};
@@ -251,10 +239,9 @@ namespace ser {
 		out<Buf>            ar{ buf };
 		const ::std::size_t start = ar.position();
 
-		// Written twice when there is one, and that is what payload_size costs: the size
-		// is not known until the payload is out, so the first copy reserves the 32 bytes
-		// and the second one - after finish(), so that pool data counts as payload -
-		// patches them. ser::out::reset exists for exactly this.
+		// Written twice, and that is what payload_size costs: the size is not known until the
+		// payload is out, so the first copy reserves the 32 bytes and the second - after
+		// finish(), so pool data counts as payload - patches them.
 		stream_header h{};
 		if (opt.header) {
 			h = stream_header::forType<T>(opt.user_magic);

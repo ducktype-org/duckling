@@ -1,14 +1,11 @@
 #pragma once
 
 // ── SER_TEST_ROUNDTRIP ────────────────────────────────────────────────────────
-// The check that C++23 makes necessary. SER_MAKE_FROM verifies the argument types
-// against the constructor, which catches two swapped fields of DIFFERENT types at
-// compile time - and cannot catch two swapped fields of the same type, because that
-// permutation compiles perfectly and simply writes the wrong bytes.
-//
-// So this round-trips a sample and compares field by field, and names the field that
-// came back wrong. That is a condition of using SER_MAKE_FROM_MEMBERS, not a suggestion:
-// that variant has no field list to check anything against.
+// SER_MAKE_FROM catches two swapped fields of DIFFERENT types at compile time, and cannot
+// catch two swapped fields of the SAME type - that permutation compiles and simply writes
+// the wrong bytes. So this round-trips a sample, compares field by field and names the
+// field that came back wrong. It is a CONDITION of using SER_MAKE_FROM_MEMBERS, which has
+// no field list to check anything against.
 //
 // A separate header because it is the one place in the library that needs a heap buffer,
 // and <vector> has no business in the umbrella for something only tests call.
@@ -41,23 +38,20 @@ namespace ser {
 
 	namespace detail {
 
-		// The described fields when the type says which they are, every field otherwise.
-		// The distinction matters: SER_DESCRIBE deliberately leaves fields out, and those
-		// come back default-constructed, which is not a failure.
-		//
-		// Asked through ser::access, because SER_DESCRIBE is normally written in a
-		// private section: the question and the fields have the same access, and a
-		// detector here would answer false and quietly compare the skipped fields too.
+		// The described fields when the type says which they are, every field otherwise:
+		// SER_DESCRIBE deliberately leaves fields out, and those come back
+		// default-constructed, which is not a failure. Asked through ser::access, because
+		// SER_DESCRIBE is normally written in a private section and a detector here would
+		// answer false and quietly compare the skipped fields too.
 		template<class T>
 		constexpr auto roundtripTie(const T& x) {
 			if constexpr (access::HAS_DESCRIBED_V<T>) {
 				return access::described(x);
 			} else {
-				// tieMembers goes straight to the ladder with MEMBER_COUNT_V, past the
-				// check that visitMembers makes - so for a type nobody can enumerate it
-				// does not fail, it yields an EMPTY tuple, and comparing no fields reports
-				// every round-trip as faithful. A test that cannot fail is worse than no
-				// test, so the condition is stated here rather than assumed.
+				// tieMembers goes straight to the ladder, past the check visitMembers makes,
+				// so for a type nobody can enumerate it yields an EMPTY tuple and every
+				// round-trip reports as faithful. A test that cannot fail is worse than no
+				// test.
 				static_assert(
 					CAN_ENUMERATE_MEMBERS_V<T>,
 					"ser: SER_TEST_ROUNDTRIP cannot see this type's fields, so it would "
@@ -120,9 +114,8 @@ namespace ser {
 
 	}  // namespace detail
 
-	// Writes the sample, reads it back and compares. The throwing read rather than
-	// ser::read, so that a type which cannot be moved is testable too - that is exactly
-	// the kind of type SER_MAKE_FROM exists for.
+	// Writes the sample, reads it back and compares. The throwing read rather than ser::read,
+	// so that a type which cannot be moved is testable too.
 	template<class T>
 	[[nodiscard]] roundtrip_report testRoundtrip(const T& sample) {
 		::std::vector<::std::byte> buf;
@@ -143,8 +136,8 @@ namespace ser {
 }  // namespace ser
 
 // Yields true when the round-trip is faithful, and prints which field is not otherwise.
-// Meant to sit inside whatever the project's check macro is:  CHECK(SER_TEST_ROUNDTRIP(x));
-// Variadic because only PARENTHESES hide a comma from the preprocessor - braces do not -
-// and the samples worth testing are braced: SER_TEST_ROUNDTRIP(Vec3{1, 2, 3}).
+// Meant to sit inside the project's check macro:  CHECK(SER_TEST_ROUNDTRIP(x));
+// Variadic because only PARENTHESES hide a comma from the preprocessor, and the samples
+// worth testing are braced: SER_TEST_ROUNDTRIP(Vec3{1, 2, 3}).
 #define SER_TEST_ROUNDTRIP(...) \
 	(::ser::detail::reportRoundtrip(#__VA_ARGS__, ::ser::testRoundtrip(__VA_ARGS__)))

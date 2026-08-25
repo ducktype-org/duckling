@@ -5,15 +5,11 @@
 // padding. A pair is its first element followed by its second, which is what makes
 // pair<K, V> and a two-field aggregate the same bytes.
 //
-// Both a read and a make, and they answer different questions. `read` fills an existing
-// tuple element by element and is constrained on the elements being assignable, so a
-// tuple with a const element simply does not have it and dispatch moves on to `make`.
-// `make` builds one - IN BRACES, because that is the only way to order the reads: a
-// braced-init-list is evaluated left to right by [dcl.init.list]/4, while the arguments of
-// a constructor call are not ordered at all. Anything else would make the byte order
-// compiler-dependent. Those braces reach a constructor taking the elements by rvalue, so
-// `make` is constrained on the elements being movable, the same way every other build path
-// in the library is - see detail/fillable.hpp.
+// Both a read and a make. `read` fills an existing tuple and is constrained on the elements
+// being assignable, so a tuple with a const element simply does not have it and dispatch
+// moves on to `make`. `make` builds one IN BRACES, because [dcl.init.list]/4 orders the
+// clauses left to right while constructor arguments are not ordered at all - anything else
+// would make the byte order compiler-dependent.
 
 #include <ser/concepts.hpp>
 #include <ser/detail/dispatch_fwd.hpp>
@@ -76,10 +72,10 @@ namespace ser {
 
 	}  // namespace detail
 
-	// A pair is its first element followed by its second, which is the same bytes as a
-	// two-field aggregate - and it hashes DIFFERENTLY, because "struct" and "pair" are
-	// different tokens. That is the conservative direction: a hash that says "changed"
-	// when the bytes did not is a rebuilt cache, while the reverse is a misread stream.
+	// A pair is the same bytes as a two-field aggregate and hashes DIFFERENTLY, because
+	// "struct" and "pair" are different tokens. That is the conservative direction: a hash
+	// that says "changed" when the bytes did not costs a rebuilt cache, while the reverse
+	// costs a misread stream.
 	template<class A, class B>
 	struct schema<::std::pair<A, B>> {
 		template<class Mode, class Seen>

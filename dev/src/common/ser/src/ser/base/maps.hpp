@@ -17,10 +17,9 @@
 //                     between them. The bucket layout is rebuilt on read, which is what
 //                     makes that true.
 //
-// The cast in MapWrapper's adapter is the point of it: MapWrapper hides operator[] and
-// insert to force put(), and the cast puts the std API back in scope. Nothing that matters
-// is bypassed - the wrapper has no invariant of its own, it only re-purposes operator[] to
-// mean at().
+// The cast in MapWrapper's adapter is the point of it: the wrapper hides operator[] and
+// insert to force put(), and the cast puts the std API back in scope. Nothing is bypassed -
+// the wrapper has no invariant of its own.
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_hashmap.hpp>
@@ -52,11 +51,10 @@ namespace ser {
 		static constexpr ::std::size_t VALUE = min_wire_size<ContainerType>::VALUE;
 	};
 
-	// Delegated rather than mixed here: the wrapper adds nothing to the format, so a hash
-	// of its own would be a second description of the container's format, free to drift
-	// from the first. Without this specialization the wrapper is hashed as an opaque hook -
-	// sizeof and alignof only - and sizeof(std::map) does not depend on K or V, so every
-	// base::Map in the program would share one schema.
+	// Delegated rather than mixed here, because the wrapper adds nothing to the format.
+	// Without this it would hash as an opaque hook - sizeof and alignof only - and
+	// sizeof(std::map) does not depend on K or V, so every base::Map in the program would
+	// share one schema.
 	template<class ContainerType>
 	struct schema<::base::MapWrapper<ContainerType>> {
 		template<class Mode, class Seen>
@@ -105,11 +103,10 @@ namespace ser {
 	struct serializer<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
 		using Vm = ::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>;
 
-		// Asymmetric, and the asymmetry is why this is not a visit: element_count is a
-		// function of the slot vector, so it is recomputed on read rather than read.
-		// Writing it would let a corrupt stream disagree with the vector, and then size()
-		// lies, empty() lies with elements present, and erase() walks the counter below
-		// zero.
+		// Asymmetric, and that is why this is not a visit: element_count is a function of the
+		// slot vector, so it is recomputed on read rather than read off the wire. Writing it
+		// would let a corrupt stream disagree with the vector, and then size() and empty()
+		// both lie.
 		static constexpr Errc write(writer auto& ar, const Vm& m) { return ar(m.map); }
 
 		static constexpr Errc read(reader auto& ar, Vm& m) {
@@ -164,9 +161,8 @@ namespace ser {
 
 			m.clear();
 			for (::std::size_t i = 0; i < n; ++i) {
-				// Two statements, never two arguments of one call: argument evaluation
-				// order is unspecified, so a key-first format would hold on one compiler
-				// and not on another. The std map adapter says the same at length.
+				// Two statements, never two arguments of one call - argument evaluation
+				// order is unspecified. See the note in std/map.hpp.
 				auto key   = detail::dispatchMake<KEY_T>(ar);
 				auto value = detail::dispatchMake<DATA_T>(ar);
 				// maybePut rather than put: put PANICS on a repeated key, and a repeated

@@ -8,11 +8,11 @@
 // ── the shape of every hook question ─────────────────────────────────────────
 // The three levels a hook can live at - ser::serializer<T>, the class itself, ADL - are
 // asked the same things about the same four hook forms, and only the call expression
-// differs. The questions are spelled once here and the call is passed in.
+// differs. So the questions are spelled once here and the call is passed in.
 //
 // `DECL` is the declaration prefix: `static constexpr` inside a class, `inline constexpr`
-// in a namespace. The call comes last so that its commas need no protection, and it may
-// name `ar` and `x` - the parameters each form declares.
+// in a namespace. The call comes last so its commas need no protection, and it may name
+// `ar` and `x`.
 
 // clang-format off
 
@@ -114,10 +114,9 @@
  * @brief Declares NONGENERIC_<FORM>_HOOK_V: the name is declared but the archive in use
  * cannot call it, so the hook is there and being ignored.
  *
- * That means one thing: a plain function pinned to some other concrete archive type, so
- * dispatch walks straight past it into the builtin or automatic path and the bytes are not
- * the ones the author wrote. It cannot see an overload set, a template constrained to one
- * archive, or an ADL free function.
+ * That means a plain function pinned to some other concrete archive type, so dispatch walks
+ * past it into the builtin or automatic path. It cannot see an overload set, a template
+ * constrained to one archive, or an ADL free function.
  */
 #define SER_DETAIL_HOOK_NONGENERIC(FORM)                                      \
 	template<class T, class Ar>                                               \

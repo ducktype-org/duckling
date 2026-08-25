@@ -11,12 +11,9 @@
 //   build - it cannot: reserve, then emplace_back(dispatchMake<T>(ar)). One move per
 //           element, which is the price of a type that has to be built rather than filled.
 //
-// The fill path is not just faster: for a large vector it is the difference between one
-// allocation and one allocation plus n constructions of a temporary.
-//
 // `read` is constrained on the element having one of the two paths, so an element with
-// neither - no default constructor and no move - takes the vector out of the read
-// direction rather than failing somewhere inside emplace_back. See detail/fillable.hpp.
+// neither takes the vector out of the read direction rather than failing somewhere inside
+// emplace_back. See detail/fillable.hpp.
 
 #include <ser/concepts.hpp>
 #include <ser/detail/container.hpp>
@@ -40,12 +37,9 @@ namespace ser {
 		static constexpr ::std::size_t VALUE = sizeof(detail::wire_size_type);
 	};
 
-	// The hash is STRUCTURAL, not a sizeof: sizeof(std::vector) is a property of the
-	// standard library and has nothing to do with the bytes this adapter writes, while the
-	// ELEMENT type is the whole of the format after the length prefix. Without this
-	// specialization a vector would hash as an opaque hooked type and vector<int> would be
-	// indistinguishable from vector<float>. The allocator is deliberately absent - it
-	// never reaches the wire.
+	// The hash is STRUCTURAL, not a sizeof: the ELEMENT type is the whole of the format
+	// after the length prefix, and without this specialization vector<int> would be
+	// indistinguishable from vector<float>. The allocator never reaches the wire.
 	template<class T, class Al>
 	struct schema<::std::vector<T, Al>> {
 		template<class Mode, class Seen>
@@ -88,10 +82,9 @@ namespace ser {
 	};
 
 	// ── std::vector<bool> ─────────────────────────────────────────────────────
-	// Refused by name. It is not a container of bool: operator[] hands back a proxy, so
-	// `dispatchRead<bool>(ar, v[i])` would read into a temporary and throw it away, and
-	// the element loop that works for every other T silently reads nothing. Saying so
-	// beats a page of errors about a proxy reference nobody asked for.
+	// Refused by name. operator[] hands back a proxy, so `dispatchRead<bool>(ar, v[i])`
+	// would read into a temporary and throw it away, and the element loop that works for
+	// every other T would silently read nothing.
 	template<class Al>
 	struct serializer<::std::vector<bool, Al>> {
 		static constexpr Errc write(writer auto& ar, const ::std::vector<bool, Al>& v) {

@@ -17,7 +17,6 @@
 #include <type_traits>
 #include <utility>
 
-// ── the preprocessor plumbing ─────────────────────────────────────────────────
 // FOR_EACH and FOR_EACH_COMMA come from base: statements and an argument list
 // respectively. The field count is an EXPRESSION rather than a token, which is all any
 // caller here needs it to be.
@@ -29,19 +28,18 @@
 namespace ser::detail {
 
 	// ── what the SER_MAKE_FROM checks are made of ─────────────────────────────
-	// Every one of them exists because getting it wrong is silent. A permuted argument
-	// list of the same types compiles and produces a stream that reads back as garbage;
-	// a missing field compiles and produces a stream one field short.
+	// Every one of them exists because getting it wrong is SILENT: a permuted argument list
+	// of the same types compiles and reads back as garbage, and a missing field compiles
+	// and produces a stream one field short.
 
-	// The argument count has to match the field count - when the field count is knowable
-	// at all. For a type nobody can enumerate this is vacuously true, and then
-	// SER_TEST_ROUNDTRIP is the only thing left that can catch a mistake.
+	// The argument count has to match the field count, when it is knowable at all. For a
+	// type nobody can enumerate this is vacuously true and SER_TEST_ROUNDTRIP is the only
+	// thing left that can catch a mistake.
 	template<class T, ::std::size_t N>
 	consteval bool makeFromArityOk() {
 		// A base class makes the two numbers mean different things: the declared count is
-		// about this class's own members - the only ones a structured binding could ever
-		// see - while the macro lists every field that goes on the wire, inherited ones
-		// included. Comparing them would refuse code that works.
+		// about this class's own members, while the macro lists every field that goes on the
+		// wire, inherited ones included. Comparing them would refuse code that works.
 		if constexpr (HAS_BASE_V<T>)
 			return true;
 		else if constexpr (CAN_ENUMERATE_MEMBERS_V<T>)
@@ -51,33 +49,26 @@ namespace ser::detail {
 	}
 
 	// Can the constructor be called with these fields, the way the macro will call it?
-	//
-	// std::is_constructible_v is the obvious tool and answers a different question twice
-	// over. It asks about PARENTHESES while the macro expands to BRACES, so a narrowing
-	// conversion passes the check and fails the code; and it asks with an XVALUE while
-	// every argument the macro passes is a PRVALUE out of dispatchMake, so a field that
-	// cannot be moved is reported unusable although it works.
-	//
-	// So the question is asked in the shape it will be answered in. asPrvalue<F>() is a
-	// call expression, so it IS a prvalue - unlike declval, which is an xvalue - and the
-	// braces are the macro's own.
+	// std::is_constructible_v answers a different question twice over: it asks about
+	// PARENTHESES while the macro expands to BRACES, and it asks with an XVALUE while every
+	// argument the macro passes is a PRVALUE out of dispatchMake. So the question is asked
+	// in the shape it will be answered in - asPrvalue<F>() is a call expression and
+	// therefore a prvalue, and the braces are the macro's own.
 	template<class F>
 	F asPrvalue();  // NOT defined, on purpose
 
 	template<class T, class... Fs>
 	concept braced_from_fields = requires { T{ asPrvalue<Fs>()... }; };
 
-	// A constructor taking std::initializer_list swallows braces: Type{a, b} would build
-	// a two-element container instead of calling the two-argument constructor. Such a
-	// type needs SER_MAKE_FROM_PAREN, and this is what tells it apart.
+	// A constructor taking std::initializer_list swallows braces: Type{a, b} would build a
+	// two-element container instead of calling the two-argument constructor. Such a type
+	// needs SER_MAKE_FROM_PAREN, and this tells it apart.
 	//
-	// Two routes, because neither is enough on its own. Asking directly needs the element
-	// type, and the only conventional source for it is T::value_type - which a
-	// hand-written type with an initializer_list constructor need not have. So the second
-	// route asks whether a BRACED list of ANY length constructs the type: a normal type
-	// stops at its field count, a list never stops. Braced is load-bearing - a variadic
-	// constructor template also takes any number of arguments, but a braced-init-list is
-	// a non-deduced context, so the probe stops at 0 for it.
+	// Two routes, because neither is enough alone. Asking directly needs T::value_type,
+	// which a hand-written type need not have; so the second route asks whether a BRACED
+	// list of ANY length constructs the type - a normal type stops at its field count, a
+	// list never stops, and a variadic constructor template does not fool it because a
+	// braced-init-list is a non-deduced context.
 	template<class T>
 	consteval bool hasInitializerListCtor() {
 		if constexpr (requires { typename T::value_type; })
@@ -92,14 +83,13 @@ namespace ser::detail {
 }  // namespace ser::detail
 
 // ── the two field shapes a hook has to refuse for itself ──────────────────────
-// A type with a hook never reaches the automatic walk, so the walk's own field checks
-// never run for it - and by the time `ar(x, y)` runs the arguments are expressions, which
-// carry neither of these properties. A MACRO can still see the field NAMES, and that is
-// what makes the question askable: decltype of a member access is the DECLARED type, and
-// a bit-field is the one thing no non-const lvalue reference binds to.
+// A type with a hook never reaches the automatic walk, so the walk's own field checks never
+// run for it - and by the time `ar(x, y)` runs the arguments are expressions, which carry
+// neither property. A MACRO can still see the field NAMES, which is what makes the question
+// askable at all.
 //
-// Both go through declval<Self&>() rather than `self`, because the write side takes self
-// by const reference and a const reference binds to a bit-field perfectly well.
+// Both go through declval<Self&>() rather than `self`, because the write side takes self by
+// const reference and a const reference binds to a bit-field perfectly well.
 #define SER_DETAIL_FIELD_REF_OK(x)                                                      \
 	static_assert(                                                                      \
 		!::std::is_reference_v<decltype(::std::declval<ser_detail_field_self_t&>().x)>, \
@@ -143,9 +133,9 @@ namespace ser::detail {
 // The half that only DESCRIBES: the count, the names, and the fields as a tuple. It says
 // nothing about the format, so it sits under either of the two hook forms below.
 //
-// std::array rather than a C array, and that is about the CALLER rather than about this
-// file: clang-tidy reports cppcoreguidelines-avoid-c-arrays at the line that uses the
-// macro, so a C array here would make every type that says SER_DESCRIBE carry a NOLINT.
+// std::array rather than a C array, and that is about the CALLER: clang-tidy reports
+// cppcoreguidelines-avoid-c-arrays at the line that USES the macro, so a C array here would
+// make every type that says SER_DESCRIBE carry a NOLINT.
 #define SER_DETAIL_DESCRIBE_FIELDS(...)                                                             \
 	static constexpr ::std::size_t ser_field_count = SER_DETAIL_FIELD_COUNT(__VA_ARGS__);           \
 	static constexpr ::std::array<const char*, SER_DETAIL_FIELD_COUNT(__VA_ARGS__)> ser_field_names \
@@ -262,9 +252,8 @@ namespace ser::detail {
 //     };
 //
 // Not to be combined with SER_DESCRIBE on one type: both define ser_field_names and
-// ser_described, so the compiler reports a redefinition. The two are alternatives anyway
-// - a type whose serVisit can fill it in does not need a serMake - and checkHooks refuses
-// the pair on its own merits.
+// ser_described, so the compiler reports a redefinition. They are alternatives anyway, and
+// checkHooks refuses the pair on its own merits.
 #define SER_DESCRIBE_MAKE(Self, ...)                                                  \
 	SER_DETAIL_DESCRIBE_FIELDS(__VA_ARGS__)                                           \
 	static constexpr ::ser::Errc serWrite(::ser::writer auto& ar, const Self& self) { \

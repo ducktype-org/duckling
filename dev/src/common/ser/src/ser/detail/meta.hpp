@@ -19,11 +19,10 @@ namespace ser::detail {
 		static constexpr ::std::size_t SIZE = sizeof...(Ts);
 	};
 
-	// One field as the ladder saw it, before anything strips anything. `type` is the
-	// DECLARED type - `int&` for a reference member, `const int` for a const one - which is
-	// a distinction no function parameter can carry, because an expression never has
-	// reference type. `BINDABLE` answers "can a non-const lvalue reference bind to this
-	// member", and exactly one thing answers no: a bit-field.
+	// One field as the ladder saw it, before anything strips anything. `type` is the DECLARED
+	// type - `int&` for a reference member, `const int` for a const one - a distinction no
+	// function parameter can carry. `BINDABLE` answers "can a non-const lvalue reference bind
+	// to this member", and exactly one thing answers no: a bit-field.
 	template<class T, bool Bindable>
 	struct field_decl {
 		using type                     = T;

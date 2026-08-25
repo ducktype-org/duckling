@@ -36,8 +36,8 @@ namespace ser {
 	template<class T>
 	concept byte_like = ::std::same_as<::std::remove_cv_t<T>, ::std::byte>;
 
-	// NOT is_flat_v: lets through padding, remapped fields (StrID, Ref, Box) and
-	// types with a custom serializer. Cheap local guard only, never a bulk-copy gate.
+	// A cheap local guard, never a bulk-copy gate: it lets through padding and any type
+	// that has a serializer of its own.
 	template<class T>
 	concept trivially_serializable = ::std::is_trivially_copyable_v<T> && !::std::is_pointer_v<T>;
 

@@ -16,10 +16,8 @@
 //           it in place. Zero moves.
 //   build - it cannot: emplace(dispatchMake<T>(ar)). One move, and it is unavoidable.
 //
-// Never `o = dispatchMake<T>(ar)`. Assignment demands that T be move-ASSIGNABLE, which is
-// strictly more than move-constructible, and the difference is exactly the shape serMake
-// exists for: a type with a const field is move-constructible and not move-assignable, so
-// `=` does not compile and emplace does.
+// Never `o = dispatchMake<T>(ar)`: assignment demands move-ASSIGNABLE, which is strictly
+// more than move-constructible, and the difference is exactly the shape serMake exists for.
 
 #include <base/collections/optional.hpp>
 
@@ -45,11 +43,9 @@ namespace ser {
 		static constexpr ::std::size_t VALUE = 1;  // the presence byte, always there
 	};
 
-	// Delegated to std::optional<T> because the bytes are identical, so a stream written
-	// from a std::optional field reads into a base::Optional field and back. Without this
-	// the type would be hashed as an opaque hook - sizeof and alignof only - and
-	// base::Optional<u32> and base::Optional<f32> have the same size and alignment, so the
-	// envelope would happily read one as the other.
+	// Delegated to std::optional<T> because the bytes are identical. Without this the type
+	// would hash as an opaque hook - sizeof and alignof only - and base::Optional<u32> and
+	// base::Optional<f32> share both, so the envelope would read one as the other.
 	template<class T>
 	struct schema<::base::Optional<T>> {
 		template<class Mode, class Seen>

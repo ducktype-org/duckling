@@ -15,14 +15,12 @@
 //                          sharing (see below).
 //
 // Both owning views hash the same, because the format is the same: a length and that many
-// bytes. So an OwningView stream reads into a SharedView and back, which is a conversion
-// worth having and costs nothing to allow.
+// bytes. So an OwningView stream reads into a SharedView and back.
 //
-// What is NOT preserved for SharedView is the sharing itself. If two SharedViews onto one
-// buffer are written, each writes its own copy of the bytes and each reads back into its
-// own allocation. For a view of immutable bytes that is a memory cost and not a change of
-// meaning - which is exactly why this is allowed while SharedBox<T> is refused: there,
-// sharing a MUTABLE object is the point of the type.
+// What is NOT preserved is SharedView's sharing: two SharedViews onto one buffer each write
+// their own copy and each read back into their own allocation. For immutable bytes that is
+// a memory cost and not a change of meaning, which is why this is allowed while
+// SharedBox<T> - where sharing a MUTABLE object is the point - is refused.
 
 #include <base/misc/raw_view.hpp>
 #include <base/misc/shared_view.hpp>
@@ -44,10 +42,9 @@ namespace ser {
 
 	namespace detail {
 
-		// Keyed to the archive, not to the view type, and here it is load-bearing rather
-		// than defensive: these are FULL specializations, so the view type is not a
-		// template parameter of anything, and an assert naming it fires the moment the
-		// header is parsed. See the note on denyNonOwningRef in refs.hpp.
+		// Keyed to the archive, not to the view type: these are FULL specializations, so an
+		// assert naming the view would fire the moment the header is parsed. See the note on
+		// denyNonOwningRef in refs.hpp.
 		template<class Ar>
 		constexpr Errc denyNonOwningView() {
 			static_assert(
@@ -67,22 +64,21 @@ namespace ser {
 		}
 
 		// Length prefix, then the bytes in ONE copy. A std::byte has no representation to
-		// swap and no value to validate - it is the one element type for which a bulk copy
-		// and a dispatch loop produce the same stream on every platform - so the loop would
-		// buy nothing. rawWrite and take are constexpr-safe (detail::copyBytes switches to
-		// an element loop under `if consteval`), so this stays usable at compile time.
+		// swap and no value to validate, so a dispatch loop would produce the same stream and
+		// buy nothing. Still constexpr-safe: detail::copyBytes switches to an element loop
+		// under `if consteval`.
 		constexpr Errc writeByteBlob(writer auto& ar, const ::base::RawView& v) {
 			if (const auto c = writeLength(ar, v.size()); c != Errc::Ok) return c;
 			return ar.rawWrite({ v.getBegin(), v.size() });
 		}
 
-		// Reads the prefix, allocates exactly that much and fills it. The buffer is handed
-		// out raw because both owning views take ownership of a `new byte[]` block.
+		// Reads the prefix, allocates exactly that much and fills it. The buffer is handed out
+		// raw because both owning views take ownership of a `new byte[]` block.
 		constexpr Errc readByteBlob(reader auto& ar, ::std::byte*& out, ::std::size_t& out_size) {
 			::std::size_t n = 0;
-			// readLength is what makes the allocation below safe: it refuses a prefix that
-			// claims more bytes than the stream can possibly hold. ensure() after it is
-			// belt and braces - take() has it as a precondition and asserts on it.
+			// readLength is what makes the allocation below safe - it refuses a prefix
+			// claiming more bytes than the stream can hold. ensure() after it is take()'s
+			// precondition.
 			if (const auto c = readLength<::std::byte>(ar, n); c != Errc::Ok) return c;
 			if (const auto c = ar.ensure(n); c != Errc::Ok) return c;
 
