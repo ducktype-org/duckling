@@ -90,7 +90,10 @@ namespace compiler::helios {
 				const auto pst_expr = val.value().unlock(ctx)->getExpr();
 
 				auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr });
-				if (expr_hout_qresult->hasFailed()) return;
+				if (expr_hout_qresult->hasFailed()) {
+					is_failed = true;
+					return;
+				}
 
 				const auto& expr_hout = expr_hout_qresult->valueOrThrow();
 
@@ -113,6 +116,17 @@ namespace compiler::helios {
 
 				output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced.value())));
 			} else {
+				const bool returns_unit = return_type.getType() == tsh::getUnitType()
+				                       && return_type.getRefKind() == tsh::ReferenceKind::Direct;
+
+				if (not returns_unit) {
+					ctx.logInt(makeBox<ReturnWithoutValueError>(
+						stmt->getStablePosition(), makeBox<InteractiveType>(ctx, return_type)
+					));
+					is_failed = true;
+					return;
+				}
+
 				output(code::VoidReturnStmt(code::pstOrigin(stmt)));
 			}
 		}

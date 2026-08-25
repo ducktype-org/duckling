@@ -105,6 +105,24 @@ namespace compiler::helios {
 				}
 				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
 
+				if (isGlobalMain(original_symbol)
+				    && body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock) {
+					auto mutable_body = output_body->clone();
+
+					auto zero
+						= numeric_value::NumericValue::createOfType(decl.return_type.getType(), 0)
+					          .expect("Failed to create implicit main return value.");
+
+					auto origin    = code::pstOrigin(body.unlock(ctx)).generatedFrom();
+					auto zero_expr = makeBox<code::LiteralNumericExpr>(ctx, origin, zero);
+
+					mutable_body->statements.emplace_back(
+						makeBox<code::ReturnStmt>(origin, std::move(zero_expr))
+					);
+
+					output_body = std::make_shared<const code::CodeBlock>(std::move(*mutable_body));
+				}
+
 				return output_body;
 			}
 

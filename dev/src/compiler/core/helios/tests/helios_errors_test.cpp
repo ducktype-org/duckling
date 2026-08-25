@@ -34,6 +34,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
@@ -1195,6 +1196,28 @@ private:
 				1
 			);
 		}
+	}
+
+	void testMainReturnErrors() {
+		checkForErrorOnCompileModule(
+			R"(fun main() -> i32 = { return 0; })",
+			{ "main` function must return `i64" },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() -> () = {})", { "main` function must return `i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() -> ref i64 = {})", { "main` function must return `i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() = { return; })", { "return` without a value", "i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() = { return "bad"; })",
+			{ "slice char", "cannot be converted to type `i64`" },
+			1
+		);
 	}
 
 	void testCopyabilityErrors() {

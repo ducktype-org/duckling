@@ -86,6 +86,14 @@ namespace compiler::helios {
 	bool isGlobalFun(SymID);
 
 	/**
+	 * @return whether the symbol is the global function named `main`.
+	 *
+	 * Unlike isGlobalFun(), this function can safely be called for symbols
+	 * that are not global functions.
+	 */
+	bool isGlobalMain(SymID);
+
+	/**
 	 * @return whether SymID is a global variable.
 	 * @note This function iterates through parents of the PST elements of the symbol to obtain this
 	 * information. It might be changed in the future, especially when more kinds of global
