@@ -14,6 +14,7 @@
 // It is a class template rather than a function so that the std adapters can specialize
 // it for their own containers: a vector's minimum is its prefix, whatever the element is.
 
+#include <ser/access.hpp>
 #include <ser/builtin/array.hpp>
 #include <ser/builtin/enum.hpp>
 #include <ser/builtin/scalar.hpp>
@@ -49,6 +50,8 @@ namespace ser {
 				return sizeof(T);
 			else if constexpr (builtin::array_like<T>)
 				return builtin::ARRAY_LENGTH_V<T> * MIN_WIRE_SIZE_V<builtin::array_element_t<T>>;
+			else if constexpr (access::HAS_SCHEMA_AS_V<T>)
+				return MIN_WIRE_SIZE_V<::std::remove_cv_t<access::schema_as_t<T>>>;
 			else if constexpr (::std::is_empty_v<T>)
 				return 0;  // truthful: an empty type writes nothing
 			else if constexpr (CAN_ENUMERATE_MEMBERS_V<T>)

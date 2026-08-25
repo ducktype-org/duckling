@@ -38,8 +38,8 @@ namespace {
 	 */
 	query::internal::QueryGraph readGraph(std::span<const std::byte> bytes) {
 		auto reduced = ser::readOrPanicForce<query::internal::QueryGraph::ReducedGraphData>(bytes);
-		CORE_ASSERT(reduced.isConsistent(), "A graph the framework wrote has to read back");
-		return query::internal::QueryGraph::fromReducedGraphData(std::move(reduced));
+		return query::internal::QueryGraph::fromReducedGraphData(std::move(reduced))
+		    .expect("A graph the framework wrote has to read back");
 	}
 }
 

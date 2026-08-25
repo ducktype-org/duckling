@@ -178,9 +178,11 @@ private:
 			}
 		)
 			.orThrow();
-		state->setPreviousGraph(query::internal::QueryGraph::fromReducedGraphData(
+		auto prev_graph = query::internal::QueryGraph::fromReducedGraphData(
 			ser::readOrPanicForce<query::internal::QueryGraph::ReducedGraphData>(prev_bytes)
-		));
+		);
+		ASSERT_TRUE(prev_graph.has_value());
+		state->setPreviousGraph(std::move(prev_graph).value());
 
 		state->cleanupOrphanedDiskCaches();
 

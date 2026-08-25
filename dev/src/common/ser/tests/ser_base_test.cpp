@@ -16,6 +16,7 @@
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/collections/stable_hashmap.hpp>
+#include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/misc/shared_view.hpp>
 #include <base/pointers/box.hpp>
@@ -40,6 +41,10 @@
 #include <utility>
 #include <vector>
 
+
+/** @brief Two ids over the same integer: nothing but their names differs on the wire. */
+STRONG_TYPEDEF_INT(TestKeyA, usize);
+STRONG_TYPEDEF_INT(TestKeyB, usize);
 
 using ByteBuf = std::vector<std::byte>;
 
@@ -341,6 +346,17 @@ private:
 			ser::schemaHash<base::VectorMap<usize, i32>>()
 			!= ser::schemaHash<base::VectorMap<usize, f32>>()
 		);
+
+		// The KEY of a VectorMap is never on the wire - it is the index - so two maps keyed
+		// by different id types write byte-identical streams, and the hash is the only thing
+		// that can tell them apart. That is what serializer<VectorMap>'s schema mixes the key
+		// for, and it only works because a strong typedef says what it wraps: without that
+		// the two keys below would both hash as sizeof + alignof and come out equal.
+		static_assert(
+			ser::schemaHash<base::VectorMap<TestKeyA, i32>>()
+			!= ser::schemaHash<base::VectorMap<TestKeyB, i32>>()
+		);
+		static_assert(ser::schemaHash<TestKeyA>() != ser::schemaHash<usize>());
 
 		// The bytes, not only the hashes: a base::Map stream really does read into a
 		// std::map, and a std::vector stream into a StableVector.

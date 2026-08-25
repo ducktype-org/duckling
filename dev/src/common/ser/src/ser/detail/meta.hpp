@@ -110,6 +110,6 @@ namespace ser::detail {
 	};
 
 	template<class T, class List>
-	inline constexpr ::std::size_t INDEX_OF_V = index_of<T, List>::value;
+	inline constexpr ::std::size_t INDEX_OF_V = index_of<T, List>::VALUE;
 
 }  // namespace ser::detail

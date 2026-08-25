@@ -100,14 +100,11 @@ namespace ser {
 	namespace detail {
 
 		// ── how a panicking entry point stops ──────────────────────────────────
-		// Plain CORE_PANIC, which is this repository's convention for "the program is
-		// already broken": a catchable base::Panic with a stacktrace in a Dev build, and
-		// std::unreachable() in a Release one.
+		// Plain CORE_PANIC
 		//
-		// That second half is why the choice of entry point matters. These forms are for
-		// bytes whose validity is an INVARIANT - an object we are holding on the way out, a
-		// buffer we grew ourselves - never for input. Anything that came off a disk, out of
-		// a socket, or from an older build of this compiler is allowed to be wrong and must
+		// These forms are for bytes whose validity is an INVARIANT - an object we are holding on
+		// the way out, a buffer we grew ourselves - never for input. Anything that came off a disk,
+		// out of a socket, or from an older build of this compiler is allowed to be wrong and must
 		// go through ser::read, which hands back an Errc. Reaching a panicking form with
 		// input is undefined behaviour in Release, and no diagnostic will say so.
 		[[noreturn]] inline void panicOnStreamError(const char* what, const error& e) {
@@ -236,12 +233,15 @@ namespace ser {
 	//     ser::write(buf, header);         // buf: [header]
 	//     ser::write(buf, payload);        // buf: [header][payload]
 	//
-	// Reading them back is the mirror image, and it is one archive rather than two
-	// calls, because ser::read starts at the front of the span it is given and does not
-	// report how far it got:
+	// Reading them back is the mirror image, and it is one ARCHIVE rather than two calls to
+	// ser::read - not because ser::read always starts at the front of the span it is given and never says how far
+	// it got. An archive does say: ar.position() is public, and so are ar.size(),
+	// ar.avail() and ar.reset(p).
 	//
 	//     ser::in ar{bytes};
-	//     ar(header, payload);
+	//     if (const auto e = ar(header); e != Errc::Ok) return {e, ar.position()};
+	//     if (const auto e = ar(payload); e != Errc::Ok) return {e, ar.position()};
+	//     const usize consumed = ar.position();   // where the next message begins
 	//
 	// One write is one call to finish(), which is what flushes that message's pools - so
 	// appending several messages means several self-contained messages, not one message in
@@ -277,8 +277,7 @@ namespace ser {
 		return result<>{};
 	}
 
-	// The mirror of readOrPanic, and the asymmetry in the pair is real rather than
-	// cosmetic: a read can legitimately fail because its input is somebody else's bytes,
+	// Read can legitimately fail because its input is somebody else's bytes,
 	// while a write is handed an object the caller is already holding
 	template<class Buf, class T>
 	void writeOrPanic(Buf& buf, const T& x, options opt = {}) {

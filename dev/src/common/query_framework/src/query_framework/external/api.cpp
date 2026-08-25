@@ -28,31 +28,36 @@ namespace query::external {
 		auto state = ::query::internal::ContextAccess::getState();
 
 		// A damaged cache is information, not a failure: the previous graph is dropped and
-		// the build carries on with none, exactly as it does on a first build.
+		// the build carries on with none, exactly as it does on a first build. Two ways to be
+		// damaged - bytes that are not a graph, and a graph whose adjacency indices do not
+		// match its nodes - and fromReducedGraphData answers the second one itself.
+		const auto dropPreviousGraph = [&state](const std::string& why) {
+			CORE_USER_LOG("Previous query graph was damaged, compiling without it.\n");
+			CORE_DEV_LOG(Incremental, "Previous query graph rejected: ", why, "\n");
+			state->setPreviousGraph(::query::internal::QueryGraph{});
+		};
+
 		auto reduced
 			= ::ser::read<::query::internal::QueryGraph::ReducedGraphData>(graph_raw_bytes);
-		if (!reduced || !reduced->value.isConsistent()) {
-			CORE_USER_LOG("Previous query graph was damaged, compiling without it.\n");
-			CORE_DEV_LOG(
-				Incremental,
-				"Previous query graph rejected: ",
-				reduced ? std::string{ "adjacency index out of range" } : reduced.err().message(),
-				"\n"
-			);
-			state->setPreviousGraph(::query::internal::QueryGraph{});
+		if (!reduced) {
+			dropPreviousGraph(reduced.err().message());
 			return;
 		}
 
 		// Remap NodeIDs while rebuilding so the framework keeps all QueryIDs registered and
 		// avoids unstable hash collisions.
-		::query::internal::QueryGraph graph = ::query::internal::QueryGraph::fromReducedGraphData(
+		auto graph = ::query::internal::QueryGraph::fromReducedGraphData(
 			std::move(*reduced).take(),
 			[state](::query::internal::NodeID node) {
 				return state->remapUnstableOrUnregisteredNodes(node);
 			}
 		);
+		if (!graph.has_value()) {
+			dropPreviousGraph("adjacency index out of range");
+			return;
+		}
 
-		state->setPreviousGraph(std::move(graph));
+		state->setPreviousGraph(std::move(graph).value());
 	}
 
 	void markPreviousGraphNodesInputs(std::vector<query::external::InputData>&& inputs) {

@@ -39,8 +39,8 @@ std::vector<std::byte> writeGraph(const query::internal::QueryGraph& graph) {
 /** @brief And back: `ser::read`, then the graph rebuilt from what it read. */
 query::internal::QueryGraph readGraph(std::span<const std::byte> bytes) {
 	auto reduced = ser::readOrPanicForce<query::internal::QueryGraph::ReducedGraphData>(bytes);
-	CORE_ASSERT(reduced.isConsistent(), "A graph written by writeGraph has to read back");
-	return query::internal::QueryGraph::fromReducedGraphData(std::move(reduced));
+	return query::internal::QueryGraph::fromReducedGraphData(std::move(reduced))
+	    .expect("A graph written by writeGraph has to read back");
 }
 
 struct Key1 {

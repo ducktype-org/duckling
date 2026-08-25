@@ -7,14 +7,25 @@
 // plausible garbage. It takes Ctx because the pools registered in a context are part of
 // the format; without pools there is one context and it mixes as POOL_COUNT 0.
 //
-// It hashes the WIRE. sizeof and alignof are NOT mixed for a type whose fields are walked,
-// because the wire has neither padding nor alignment: two platforms that agree on the
-// format have to agree on the number. Same rule as bool, whose wire size is 1 and never
-// sizeof(bool).
+// It hashes the WIRE, one field at a time: sizeof and alignof are NOT mixed for a type
+// whose fields are walked, because the wire has neither padding nor alignment and a
+// change in either must not invalidate a stream that is still readable. Same rule as
+// bool, whose wire size is 1 and never sizeof(bool).
 //
-// A type whose hook the library cannot look inside is the exception, and there sizeof and
-// alignof are all there is - so such a type's hash is stable per toolchain rather than per
-// format, and ser::config<T>::schema_id is the only way to make it portable.
+// IT IS NOT A PORTABLE NUMBER, AND THAT IS THE POINT. schemaRoot() mixes nativeFlags() -
+// the byte order, sizeof(void*) and sizeof(size_type) - so a stream is refused by a build
+// that cannot read it back rather than being interpreted with every scalar reversed. The
+// question this hash answers is "can THIS program read that stream", not "do two
+// platforms describe the same format", so a pinned literal
+// (static_assert(schemaHash<T>() == 0x...)) is pinned per platform and per toolchain.
+// The rule about padding is therefore about LAYOUT not leaking into the format, not about
+// cross-platform equality of the number.
+//
+// A type whose hook the library cannot look inside is where that gets weakest: sizeof and
+// alignof are all there is, so two unrelated hooked types of the same size and alignment
+// share a hash. Three ways out, in the order schemaOf consults them - a
+// ser::schema<T> specialization, an in-class `ser_schema_as` alias (which is what every
+// STRONG_TYPEDEF_INT uses), or ser::config<T>::schema_id.
 //
 // What is visible, and how much:
 //
@@ -24,6 +35,9 @@
 //                                 macros emit, so a described aggregate and the same
 //                                 aggregate walked automatically hash IDENTICALLY
 //   std adapters                  a structural token per container (ser::schema<T>)
+//   ser_schema_as (+ _name)       the wire type it names, behind an optional token - the
+//                                 in-class form of the same thing, for a type that cannot
+//                                 reach into namespace ser
 //   a hand-written hook           "hook", sizeof, alignof
 //   ser::config<T>::schema_id     that number, and nothing else
 //
@@ -83,6 +97,11 @@ namespace ser {
 	//
 	// Same include rule as min_wire_size: a specialization has to be visible before the
 	// first schema_hash of a type that needs it.
+	//
+	// A type that cannot reach into namespace ser - one a macro generates inside somebody
+	// else's namespace, or one in a module that must not depend on ser - says the same
+	// thing in-class with `using ser_schema_as = W;` and an optional
+	// `ser_schema_name`. See ser::access.
 	template<class T>
 	struct schema {};
 
@@ -139,6 +158,12 @@ namespace ser {
 	// header cannot include that one. Nothing writes a pointer, but pool offsets and
 	// zero-copy alignment are sized by one, so a 32-bit reader must not accept a 64-bit
 	// writer's stream.
+	//
+	// It is in the schema hash AS WELL as in the envelope, and the two are not redundant:
+	// the envelope's own field is checked first and reports PlatformMismatch, which is the
+	// precise diagnosis, while a stream written WITHOUT an envelope has only the hash - and
+	// a caller comparing schemaHash<T>() against a number it stored earlier gets the
+	// platform question answered for free.
 	[[nodiscard]] consteval ::std::uint16_t nativeFlags() noexcept {
 		constexpr unsigned ORDER = (::std::endian::native == ::std::endian::little) ? 1u
 		                         : (::std::endian::native == ::std::endian::big)    ? 2u
@@ -213,6 +238,16 @@ namespace ser {
 				schema<::std::remove_cv_t<T>>::template mix<Mode, Seen>(h)
 			} -> ::std::convertible_to<::std::uint64_t>;
 		};
+
+		// The in-class alias, and its optional name token - see the note in ser::access.
+		// The token comes FIRST, so a named wrapper is a different format from the type it
+		// wraps while an unnamed one is the same format, byte for byte and hash for hash.
+		template<class T, class Mode, class Seen>
+		[[nodiscard]] consteval ::std::uint64_t schemaAs(::std::uint64_t h) {
+			using U = ::std::remove_cv_t<T>;
+			if constexpr (access::HAS_SCHEMA_NAME_V<U>) h = schemaText(h, access::schemaName<U>());
+			return schemaOf<::std::remove_cv_t<access::schema_as_t<U>>, Mode, Seen>(h);
+		}
 
 		// ser_described returns std::tie of the described fields, so its element types are
 		// references - stripped here for the same reason field_types_t strips them: a
@@ -300,6 +335,8 @@ namespace ser {
 					);
 				else if constexpr (HAS_SCHEMA_MIX_V<U, Mode, Next>)
 					return schema<U>::template mix<Mode, Next>(h);
+				else if constexpr (access::HAS_SCHEMA_AS_V<U>)
+					return schemaAs<U, Mode, Next>(h);
 				else if constexpr (HAS_CUSTOM_SERIALIZER_V<U, Ar>)
 					if constexpr (access::HAS_DESCRIBED_V<U> && !TRAIT_LEVEL_HOOK_V<U, Ar>)
 						return schemaStruct<U, Mode, Next>(h, described_types_t<U>{});
@@ -332,8 +369,8 @@ namespace ser {
 			::std::uint64_t h = FNV_BASIS;
 			h                 = schemaText(h, Mode::NAMES ? "ser.debug.1" : "ser.schema.1");
 			h                 = schemaNumber(h, static_cast<::std::uint64_t>(SER_VERSION));
-			h                 = schemaNumber(h, sizeof(config_global::size_type));
-			h                 = schemaNumber(h, nativeFlags());
+			h = schemaNumber(h, sizeof(config_global::size_type));
+			h = schemaNumber(h, nativeFlags());
 			// The pool count is the whole of it for now, and it is what makes
 			// context<str_pool> and context<> different formats for free - no bytes in
 			// the stream, no runtime check.
@@ -344,7 +381,7 @@ namespace ser {
 
 	}  // namespace detail
 
-	// The number that goes into the envelope. Pin it when the format matters:
+	// The number that goes into the envelope.
 	//     static_assert(ser::schemaHash<Config>() == 0x...);
 	template<class T, class Ctx = no_context>
 	[[nodiscard]] consteval ::std::uint64_t schemaHash() {
@@ -353,7 +390,7 @@ namespace ser {
 
 	// The same walk with field names mixed in. DIAGNOSTICS ONLY - it never goes into a
 	// stream and nothing validates against it. Use it to tell "the struct changed" from
-	// "only a name changed": schema_hash equal and debugHash different means a rename.
+	// "only a name changed": schemaHash equal and debugHash different means a rename.
 	template<class T, class Ctx = no_context>
 	[[nodiscard]] consteval ::std::uint64_t debugHash() {
 		return detail::schemaRoot<T, detail::schema_mode<Ctx, true>>();

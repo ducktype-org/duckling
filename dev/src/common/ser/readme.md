@@ -94,7 +94,9 @@ refused outright.
 
 A `STRONG_TYPEDEF_INT` and a `STRONG_TYPEDEF_INT_DIMENSIONAL` need none of this: the macro
 declares a `serVisit` over the wrapped integer, so a strong typedef - and any struct with a
-field of one - round-trips with no code at all.
+field of one - round-trips with no code at all. The same macro also declares
+`ser_schema_as` and `ser_schema_name`, which is what keeps two typedefs over the same
+integer apart in `schemaHash` - see [Telling a wrapper's format](#the-schema-hash) below.
 
 # Who uses it
 
@@ -107,8 +109,9 @@ field of one - round-trips with no code at all.
   are plain aggregates that travel as metadata.
 * **`artifacts`** blobs: `setData<T>` / `getData<T>` are `ser::write` / `ser::read` with the
   `RawView` plumbing around them.
-* **`debug_info`**: the whole structure is aggregates plus one `serWrite`/`serMake` pair for
-  the `std::variant` in `SourcePosition`, which `ser` cannot walk by itself.
+* **`debug_info`**: aggregates all the way down. The one shape that needs an adapter rather
+  than the field walk is the `std::variant` in `SourcePosition`, and `<ser/std/variant.hpp>`
+  is that adapter, so the structure itself carries no serialization code.
 
 Two conventions came out of those: a stream that fails to READ is information, so the caller
 logs it and carries on without the cache, while a failure to WRITE what we are already
@@ -121,10 +124,31 @@ holding is `CORE_PANIC`. Both are now spelled in the library rather than at each
 * The envelope (`ser::options{ .header = true }`) is 32 bytes: magic, `schema_hash`,
   payload size, a CRC slot and platform flags. Off by default, so a plain `ser::write` is
   exactly the payload.
-* `ser::schemaHash<T>()` is `consteval` and hashes the **wire**, not the layout, so two
-  platforms that agree on the format agree on the number. Field names are deliberately
-  absent from it; they go into `ser::debugHash<T>()`, which is diagnostics only. Equal
-  `schema_hash` with different `debug_hash` is exactly "somebody renamed a field".
+* The envelope is **off at every call site in this repository**, so nothing above is
+  schema-checked today: the graph, the metadata, a blob and a `.di` file are all bare
+  payloads. What stands in for it is per-format (the metadata type table, the graph's
+  `isConsistent()`), and a blob has nothing at all - turning the envelope on there is the
+  open decision, not a missing feature.
+
+<a name="the-schema-hash"></a>
+* `ser::schemaHash<T>()` is `consteval` and hashes the **wire** field by field, never the
+  layout: padding and alignment stay out, so a change in either does not invalidate a
+  stream that is still readable. It is deliberately **not a portable number** - the root
+  mixes `nativeFlags()`, the byte order and the pointer and length widths - because its job
+  is to refuse a stream this program cannot read back, not to prove two platforms describe
+  the same format. So pin the *relations* in tests (which types agree, what has to change
+  the number) and pin a literal only per toolchain.
+* A type whose format `ser` cannot see - a hand-written `serWrite`, a class with a private
+  member - hashes as `"hook"` plus `sizeof` and `alignof`, which two unrelated types can
+  share. Three ways to say what it really writes, in the order `schemaHash` consults them:
+  a `ser::schema<T>` specialization (every `std`/`base` adapter has one, and so does
+  `base::StrID`), an in-class `using ser_schema_as = W;` with an optional
+  `ser_schema_name` for a type that cannot reach into namespace `ser` (every
+  `STRONG_TYPEDEF_INT` uses this), or `ser::config<T>::schema_id`.
+* Field names are deliberately absent from `schemaHash`; they go into `ser::debugHash<T>()`,
+  which is diagnostics only. Equal `schema_hash` with different `debug_hash` is exactly
+  "somebody renamed a field" - for a type that lists its fields with `SER_DESCRIBE`, which
+  is the only place the names exist at all.
 * Not here yet: pools (`Box`/`Ref`/`StrID`), `chrono`, CRC32C, zero-copy views.
 
 # Relation to the upstream library
@@ -174,10 +198,13 @@ compile error either way.
 
 # Tests
 
-`tests/ser_test.cpp` is six tests over two deeply nested structures - one for the data
-shapes (four levels of aggregate, every std adapter, both enum kinds, a C array field, a
-strong typedef), one for the dispatch ladder (all four hook levels plus the macros, each
-stamping a distinct byte so the test proves *which* rung ran). It runs in about 0.13 s.
+`tests/ser_test.cpp` is eight tests over a handful of structures - one for the data shapes
+(four levels of aggregate, every std adapter, both enum kinds, a C array field, a strong
+typedef), one for the dispatch ladder (all four hook levels plus the macros, each stamping a
+distinct byte so the test proves *which* rung ran), one for the variant, one for the
+envelope, and two for `schemaHash`: `formatContract` pins which types agree and
+`recursiveTypes` pins a type that contains itself - which has no hash at all unless the
+schema walk turns meeting itself into a back-reference. It runs in about 0.11 s.
 
 `tests/ser_base_test.cpp` is ten tests over `ser/base/all.hpp`: what each base type does on
 the wire, which streams are interchangeable with their std form, and what a damaged one

@@ -12,10 +12,6 @@
 // That replaces the derived hash for that type. It is the answer for a type whose format
 // the library cannot see (a hand-written serWrite), and the only way to make such a
 // type's hash stable across standard libraries.
-//
-// The primary is EMPTY rather than a set of defaults, so that a specialization naming
-// only the member it cares about cannot silently drop the others as members are added.
-// Every reader asks with a requires-clause and supplies its own default instead.
 
 namespace ser {
 

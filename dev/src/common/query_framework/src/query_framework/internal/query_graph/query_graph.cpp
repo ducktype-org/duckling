@@ -213,16 +213,12 @@ namespace query::internal {
 		return ReducedGraphData{ .nodes = std::move(nodes), .adjacency = std::move(adjacency) };
 	}
 
-	QueryGraph QueryGraph::fromReducedGraphData(
+	base::Optional<QueryGraph> QueryGraph::fromReducedGraphData(
 		ReducedGraphData reduced_graph, std::function<NodeID(NodeID)> node_mapper
 	) {
 		if (!node_mapper) node_mapper = [](NodeID node) { return node; };
 
-		CORE_ASSERT(
-			reduced_graph.isConsistent(),
-			"Reduced graph data is inconsistent - check isConsistent() before rebuilding data that"
-			" came off the wire"
-		);
+		if (!reduced_graph.isConsistent()) return {};
 
 		QueryGraph graph;
 
@@ -243,7 +239,7 @@ namespace query::internal {
 			if (key_value_pair == nullptr) CORE_PANIC("Duplicate node detected in reduced graph");
 		}
 
-		return graph;
+		return base::Optional<QueryGraph>{ std::move(graph) };
 	}
 
 	std::vector<NodeID> QueryGraph::getAllNodes() const {

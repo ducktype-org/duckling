@@ -45,7 +45,6 @@
 namespace ser {
 
 	struct stream_header {
-		// A fixed eight-byte field of the wire layout, not a container.
 		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 		char            magic[8]     = { 'S', 'E', 'R', '\0', '\0', '\0', '\0', '\0' };
 		::std::uint64_t schema_hash  = 0;
@@ -132,7 +131,6 @@ namespace ser {
 	//
 	// On success the archive is positioned at the payload - past header_size bytes, not
 	// past 32, so a longer envelope from a later version is skipped rather than misread.
-	// The schema is step 5 and lives in checkHeader, because that one needs the type.
 	template<reader Ar>
 	constexpr Errc readHeader(Ar& ar, stream_header& h, ::std::uint32_t user_magic = 0) {
 		const ::std::size_t start = ar.position();

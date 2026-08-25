@@ -63,11 +63,13 @@
 #include <hashing/add_to_hash.hpp>
 #include <ser/concepts.hpp>
 #include <ser/errc.hpp>
+#include <ser/hash.hpp>
 #include <ser/serializer.hpp>
 #include <ser/std/string.hpp>
 #include <ser/traits.hpp>
 
 #include <charconv>
+#include <cstdint>
 #include <string>
 #include <type_traits>
 
@@ -227,6 +229,17 @@ namespace ser {
 	template<>
 	struct min_wire_size<::base::StrID> {
 		static constexpr ::std::size_t VALUE = min_wire_size<::std::string>::VALUE;
+	};
+
+	/**
+	 * @brief The same bytes as a `std::string`, so the same schema.
+	 */
+	template<>
+	struct schema<::base::StrID> {
+		template<class Mode, class Seen>
+		static consteval ::std::uint64_t mix(::std::uint64_t h) {
+			return detail::schemaOf<::std::string, Mode, Seen>(h);
+		}
 	};
 
 	template<>

@@ -144,6 +144,23 @@ namespace ser {
 			return ::std::remove_cvref_t<T>::ser_field_names[i];
 		}
 
+		template<class T>
+		static constexpr bool HAS_SCHEMA_AS_V
+			= requires { typename ::std::remove_cvref_t<T>::ser_schema_as; };
+
+		template<class T>
+		using schema_as_t = typename ::std::remove_cvref_t<T>::ser_schema_as;
+
+		template<class T>
+		static constexpr bool HAS_SCHEMA_NAME_V = requires {
+			{ ::std::remove_cvref_t<T>::ser_schema_name } -> ::std::convertible_to<const char*>;
+		};
+
+		template<class T>
+		static constexpr const char* schemaName() {
+			return ::std::remove_cvref_t<T>::ser_schema_name;
+		}
+
 		// ── the structured-bindings ladder ────────────────────────────────────
 		// Calls f with every member of obj as an lvalue. The arity is a template
 		// parameter rather than something computed here, so this stays free of

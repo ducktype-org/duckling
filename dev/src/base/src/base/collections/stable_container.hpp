@@ -8,6 +8,11 @@
 
 #include <deque>
 
+namespace ser {
+	template<class T>
+	struct serializer;
+}
+
 namespace base {
 	namespace internal {
 		/**
@@ -44,12 +49,6 @@ namespace base {
 			 * @note It is deleted because data member can't be copied in a simple way.
 			 */
 			BaseStableVector(const BaseStableVector&) = delete;
-
-			/**
-			 * @brief Destroys all stored elements, leaving the container empty.
-			 * @note Every Ref/CRef handed out earlier is dangling afterwards.
-			 */
-			void clear() { data.clear(); }
 
 			[[nodiscard]]
 			usize size() const noexcept {
@@ -111,6 +110,15 @@ namespace base {
 			Iterator end() { return Iterator{ data.end() }; }
 
 			ConstIterator end() const { return ConstIterator{ data.end() }; }
+
+		protected:
+			/**
+			 * @brief Destroys all stored elements, leaving the container empty.
+			 * @note Every Ref/CRef handed out earlier is dangling afterwards, which is why
+			 * this is not part of either StableVector's public surface: only the `ser`
+			 * adapter needs it, to empty a container it is about to fill from a stream.
+			 */
+			void clear() { data.clear(); }
 		};
 
 	}
@@ -153,7 +161,7 @@ namespace base {
 		StableVector<const Data> toConstData() && { return std::move(*this); }
 
 		using Base::size, Base::empty, Base::notEmpty, Base::pushBack, Base::lastIndex,
-			Base::emplaceBack, Base::clear;
+			Base::emplaceBack;
 		using RefT          = Base::CRefT;
 		using CRefT         = Base::CRefT;
 		using Iterator      = Base::ConstIterator;
@@ -182,6 +190,16 @@ namespace base {
 		ConstIterator begin() const { return Base::begin(); }
 
 		ConstIterator end() const { return Base::end(); }
+
+	private:
+		/**
+		 * @brief `ser` reads a container by emptying it first, and clearing dangles every
+		 * Ref handed out before - so the adapter gets it and nobody else does.
+		 */
+		using Base::clear;
+
+		template<class T>
+		friend struct ::ser::serializer;
 	};
 
 	/**
@@ -201,7 +219,7 @@ namespace base {
 		StableVector(const StableVector&) = delete;
 
 		using Base::size, Base::empty, Base::notEmpty, Base::operator[], Base::pushBack, Base::last,
-			Base::lastIndex, Base::emplaceBack, Base::begin, Base::end, Base::clear;
+			Base::lastIndex, Base::emplaceBack, Base::begin, Base::end;
 		using RefT          = Base::RefT;
 		using CRefT         = Base::CRefT;
 		using Iterator      = Base::Iterator;
@@ -218,6 +236,16 @@ namespace base {
 		StableVector<const Data> toConstData() && {
 			return StableVector<const Data>{ std::move(*this) };
 		}
+
+	private:
+		/**
+		 * @brief `ser` reads a container by emptying it first, and clearing dangles every
+		 * Ref handed out before - so the adapter gets it and nobody else does.
+		 */
+		using Base::clear;
+
+		template<class T>
+		friend struct ::ser::serializer;
 	};
 
 }

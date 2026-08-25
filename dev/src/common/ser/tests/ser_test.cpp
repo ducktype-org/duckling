@@ -8,6 +8,7 @@
  * written above it; the exhaustive per-rule cases stay upstream.
  */
 
+#include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
@@ -18,6 +19,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <set>
@@ -515,6 +517,98 @@ static_assert(
 	== ser::schemaHash<std::variant<i32, std::string>>()
 );
 
+// ═══════════════════════════════════════════════════════════════════════════════════
+//  Structure five: types that contain themselves, and wrappers over one integer.
+//
+//  Both are about ser::schemaHash rather than about the bytes. A self-referential type
+//  makes the schema walk meet a type it is already inside, which is the one shape whose
+//  hash cannot be a plain description of the fields; a strong typedef is a type whose
+//  format the walk cannot see at all, so it has to say what it is.
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+/** @brief Contains itself through a vector - the shape the "recur" token exists for. */
+struct Node final {
+	i32               value = 0;
+	std::vector<Node> kids;
+
+	friend bool operator==(const Node&, const Node&) = default;
+};
+
+/** @brief The same, one level of indirection deeper: recursion through two types. */
+struct Branchy;
+
+struct Twig final {
+	std::vector<Branchy> branches;
+
+	friend bool operator==(const Twig&, const Twig&) = default;
+};
+
+struct Branchy final {
+	i32  value = 0;
+	Twig twig;
+
+	friend bool operator==(const Branchy&, const Branchy&) = default;
+};
+
+/** @brief Recursion through an optional rather than a vector: a different shape. */
+struct Chain final {
+	i32                               value = 0;
+	std::optional<std::vector<Chain>> rest;
+
+	friend bool operator==(const Chain&, const Chain&) = default;
+};
+
+// A self-referential type has a hash AT ALL, which is the whole point: the walk meets
+// itself and mixes a back-reference instead of recursing for ever. This is a compile-time
+// property, so the static_assert is the test.
+static_assert(ser::schemaHash<Node>() != 0);
+static_assert(ser::schemaHash<Node>() == ser::schemaHash<Node>(), "the hash has to be stable");
+static_assert(ser::debugHash<Node>() != 0);
+static_assert(ser::schemaHash<Branchy>() != 0);
+static_assert(ser::schemaHash<Twig>() != 0);
+
+// And the back-reference carries WHERE it points, so two different recursion shapes over
+// the same field types are different formats.
+static_assert(ser::schemaHash<Node>() != ser::schemaHash<Chain>());
+static_assert(ser::schemaHash<Node>() != ser::schemaHash<Branchy>());
+static_assert(ser::schemaHash<Twig>() != ser::schemaHash<Branchy>());
+
+// The envelope of a recursive type is buildable too - stream_header::forType is where a
+// broken hash of one used to surface.
+static_assert(ser::stream_header::forType<Node>().schema_hash == ser::schemaHash<Node>());
+
+/** @brief Two ids over the same integer, and one over an integer of the same width. */
+STRONG_TYPEDEF_INT(TestIdA, std::uint32_t);
+STRONG_TYPEDEF_INT(TestIdB, std::uint32_t);
+STRONG_TYPEDEF_INT(TestIdSigned, std::int32_t);
+
+struct KeyedByA final {
+	TestIdA id;
+	i32     extra = 0;
+};
+
+struct KeyedByB final {
+	TestIdB id;
+	i32     extra = 0;
+};
+
+// A strong typedef writes exactly its integer, and nothing in the class is walkable - the
+// value is private - so without ser_schema_as it would hash as sizeof + alignof and every
+// one of these would share a number. What has to hold instead: the WIDTH and the SIGN of
+// the wrapped integer are in the hash, and so is the type's own name.
+static_assert(ser::schemaHash<TestIdA>() != ser::schemaHash<TestIdB>());
+static_assert(ser::schemaHash<TestIdA>() != ser::schemaHash<TestIdSigned>());
+static_assert(ser::schemaHash<TestIdA>() != ser::schemaHash<std::uint32_t>());
+static_assert(ser::schemaHash<TestIdA>() != ser::schemaHash<u8>());
+static_assert(ser::schemaHash<KeyedByA>() != ser::schemaHash<KeyedByB>());
+
+// And the same alias makes the length-prefix check truthful: a vector of ids can only claim
+// as many elements as four bytes each will fit in the stream, where a hooked type with no
+// alias would fall back to one byte and let a corrupt prefix through four times as far.
+static_assert(ser::MIN_WIRE_SIZE_V<TestIdA> == sizeof(std::uint32_t));
+static_assert(ser::MIN_WIRE_SIZE_V<u8> == 1);
+static_assert(ser::MIN_WIRE_SIZE_V<KeyedByA> == sizeof(std::uint32_t) + sizeof(i32));
+
 /** @brief The nested array the depth guard is measured against. */
 template<usize Depth>
 struct Nest {
@@ -542,6 +636,7 @@ public:
 		TESTER_ADD_TEST(errorPaths);
 		TESTER_ADD_TEST(mutatedStreams);
 		TESTER_ADD_TEST(formatContract);
+		TESTER_ADD_TEST(recursiveTypes);
 	}
 
 	~SerTest() override = default;
@@ -575,6 +670,20 @@ private:
 		ASSERT_EQUAL(ser::Errc::Ok, ar(one, two));
 		assertTrue(one == tree && two == tree, "two appended messages did not read back");
 		ASSERT_EQUAL(buf.size(), ar.position());
+
+		// The position lives in the ARCHIVE, so one call per message reads the same bytes as
+		// one call with both - and position() says where the next one begins, which is the
+		// thing ser::read cannot tell a caller.
+		ser::in split{ view(buf) };
+		Tree    first_back;
+		Tree    second_back;
+		ASSERT_EQUAL(ser::Errc::Ok, split(first_back));
+		ASSERT_EQUAL(first, split.position());
+		ASSERT_EQUAL(ser::Errc::Ok, split(second_back));
+		ASSERT_EQUAL(buf.size(), split.position());
+		assertTrue(
+			first_back == tree && second_back == tree, "one call per message read different bytes"
+		);
 
 		// The library's own round-trip check, which names the field that came back wrong
 		// instead of only reporting that something did.
@@ -894,6 +1003,66 @@ private:
 			ser::MIN_WIRE_SIZE_V<Leaf> >= sizeof(i32) + sizeof(double) + 1 + sizeof(u16) + 4
 		);
 		static_assert(ser::MIN_WIRE_SIZE_V<std::vector<Leaf>> >= sizeof(u64));
+	}
+
+	/**
+	 * @brief A type that contains itself: it hashes, and it round-trips.
+	 *
+	 * The hash is the interesting half and it is pinned by the static_asserts above this
+	 * class - a back-reference is a compile-time thing. What runs here is the other half:
+	 * the same nesting really does survive the wire, and the depth guard is what stops a
+	 * stream that claims more nesting than the reader will do.
+	 */
+	void recursiveTypes() {
+		const Node tree{
+			.value = 1,
+			.kids  = { Node{ .value = 2, .kids = { Node{ .value = 3, .kids = {} } } },
+			           Node{ .value = 4, .kids = {} } },
+		};
+
+		ByteBuf buf;
+		ASSERT_TRUE(ser::write(buf, tree).hasValue());
+
+		const auto back = ser::read<Node>(view(buf));
+		ASSERT_TRUE(back.hasValue());
+		assertTrue(back->value == tree, "the recursive value did not survive the round trip");
+
+		// Through two types, and through an optional - the shapes the hash tells apart.
+		const Branchy nested{ .value = 5,
+			                  .twig  = Twig{ .branches = { Branchy{ .value = 6, .twig = {} } } } };
+		ASSERT_TRUE(SER_TEST_ROUNDTRIP(nested));
+
+		const Chain chain{ .value = 7,
+			               .rest = std::vector<Chain>{ Chain{ .value = 8, .rest = std::nullopt } } };
+		ASSERT_TRUE(SER_TEST_ROUNDTRIP(chain));
+
+		// The envelope of a recursive type, end to end: the schema check is what the
+		// back-reference feeds, so a stream of a Node is refused for a Chain.
+		const ser::options opts{ .header = true };
+		ByteBuf            framed;
+		ASSERT_TRUE(ser::write(framed, tree, opts).hasValue());
+		ASSERT_TRUE(ser::read<Node>(view(framed), opts).hasValue());
+		ASSERT_EQUAL(ser::Errc::SchemaMismatch, ser::read<Chain>(view(framed), opts).code());
+
+		// No prefix of it may be accepted, exactly as for any other type.
+		for (usize n = 0; n < buf.size(); ++n)
+			assertTrue(
+				!ser::read<Node>(view(buf, n)).hasValue(),
+				base::strConcat("a prefix of ", n, " bytes was accepted")
+			);
+
+		// Data-dependent nesting is bounded by the depth guard rather than by the stack: a
+		// chain deeper than MAX_DEPTH is refused on the way in.
+		Node deep;
+		{
+			Node* tip = &deep;
+			for (usize i = 0; i < ser::config_global::MAX_DEPTH + 8; ++i)
+				tip = &tip->kids.emplace_back();
+		}
+		ByteBuf  overflowing;
+		ser::out ar{ overflowing };
+		ASSERT_EQUAL(ser::Errc::DepthExceeded, ar(deep));
+		ASSERT_EQUAL(usize{ 0 }, ar.depth());
 	}
 
 	// ── helpers ─────────────────────────────────────────────────────────────────────

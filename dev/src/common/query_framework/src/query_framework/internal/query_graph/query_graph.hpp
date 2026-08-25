@@ -7,6 +7,7 @@
 #include <concurrent/base/locks/assert_lock.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
@@ -194,7 +195,8 @@ namespace query::internal {
 
 			/**
 			 * @brief Whether the two vectors describe one graph: one adjacency list per node,
-			 * and every index in range. This is used to check that a graph read from disk is consistent before rebuilding it.
+			 * and every index in range. This is used to check that a graph read from disk is
+			 * consistent before rebuilding it.
 			 * @return True if the graph is consistent, false otherwise.
 			 * @note This does not check for cycles or other graph properties, only that the two
 			 * vectors are consistent with each other.
@@ -259,7 +261,8 @@ namespace query::internal {
 		 * @brief The graph as the plain data that goes on the wire. This is used for testing only.
 		 * @note This DOES NOT optimize anything, it just flattens: every node in the graph
 		 * becomes an entry, and every dependency an index into it.
-		 * In the production flow, the graph is optimized before being serialized, so this is not the form that goes on the wire.
+		 * In the production flow, the graph is optimized before being serialized, so this is not
+		 * the form that goes on the wire.
 		 * @return The nodes and their adjacency lists.
 		 */
 		[[nodiscard]] ReducedGraphData toReducedGraphData() const;
@@ -273,11 +276,10 @@ namespace query::internal {
 		 *        NodeIDs that should be stored inside the graph. By default it is an identity
 		 *        function, but callers can override it to keep the query framework state consistent.
 		 *        In production the maping should never be indentity, but in testing it can be used.
-		 * @return The graph those nodes describe.
-		 * @note Requires isConsistent() - data that came off the wire has to be checked by the
-		 * caller first, so that a damaged cache is a dropped cache rather than a panic.
+		 * @return The graph those nodes describe, or nothing when @p reduced_graph is not
+		 * one graph - see isConsistent().
 		 */
-		[[nodiscard]] static QueryGraph fromReducedGraphData(
+		[[nodiscard]] static base::Optional<QueryGraph> fromReducedGraphData(
 			ReducedGraphData reduced_graph, std::function<NodeID(NodeID)> node_mapper = {}
 		);
 
