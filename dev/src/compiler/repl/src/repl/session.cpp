@@ -444,7 +444,7 @@ namespace compiler::repl {
 	ReplResult ReplSession::loadScriptFile(std::string_view file_path) {
 		auto trimmed_path = base::strTrim(file_path);
 		if (trimmed_path.empty())
-			return ReplResult::error("Missing script path. Usage: /load <path-to-script.ds>");
+			return ReplResult::error("Missing script path. Usage: /load <path-to-script.dks>");
 
 		try {
 			m_suppress_repl = true;

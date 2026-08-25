@@ -27,7 +27,7 @@ namespace compiler::frontend {
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a single file module.
 	 */
-	constexpr std::string_view LANG_MODULE_FILE = ".dmf";
+	constexpr std::string_view LANG_MODULE_FILE = ".dk";
 
 	// Regexes to reject files/directories starting with '.' or '$'
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
@@ -135,7 +135,7 @@ namespace compiler::frontend {
 
 		/**
 		 * Parses the name of the module.
-		 * @return base::StrID with the name. `A.dmf -> A`, `/.../module/ -> module`.
+		 * @return base::StrID with the name. `A.dk -> A`, `/.../module/ -> module`.
 		 */
 		[[nodiscard]]
 		base::StrID getName() const;

@@ -38,10 +38,10 @@ PreCase: |+
   @{duck-exe} init root2
   @{duck-exe} init tmp1
   @{duck-exe} init tmp2
-  echo "@{src_root}" > root1/src/src.dmf
-  echo "@{src_root}" > root2/src/src.dmf
-  echo "@{src_tmp1}" > tmp1/src/src.dmf
-  echo "@{src_tmp2}" > tmp2/src/src.dmf
+  echo "@{src_root}" > root1/src/src.dk
+  echo "@{src_root}" > root2/src/src.dk
+  echo "@{src_tmp1}" > tmp1/src/src.dk
+  echo "@{src_tmp2}" > tmp2/src/src.dk
   @{duck-exe} -C root1 add --local ../tmp1 tmp1
   @{duck-exe} -C root2 add --local ../tmp1 tmp1
 
@@ -65,9 +65,9 @@ Tests:
         # Thus the first and second compilation should have different subfolders.
         expected-subfolders: 2
         test-cmd: |+
-          echo "@{src_tmp1_new}" > tmp1/src/src.dmf &&
+          echo "@{src_tmp1_new}" > tmp1/src/src.dk &&
           duck -C root1 build --shared-artifacts &&
           duck -C tmp1 add --local ../tmp2 tmp2 &&
-          echo "@{src_tmp1}" > tmp1/src/src.dmf &&
+          echo "@{src_tmp1}" > tmp1/src/src.dk &&
           duck -C root1 build --shared-artifacts
         

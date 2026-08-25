@@ -205,7 +205,7 @@ namespace compiler::frontend::packages {
 					module_name,
 					". Please add a ",
 					module_name,
-					".dmf file to the package module directory."
+					".dk file to the package module directory."
 				),
 				true
 			);
