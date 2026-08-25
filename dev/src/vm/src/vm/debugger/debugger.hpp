@@ -5,6 +5,8 @@
 #include <vm/api/vm.hpp>
 #include <vm/debugger/mapper.hpp>
 
+#include <optional>
+
 namespace vm::debugger {
 	struct CodePosition: public api::response::CodePosition {
 		base::Optional<dia::SourcePosition> mapped_position;
@@ -119,9 +121,15 @@ namespace vm::debugger {
 		std::expected<void, api::ApiError> resume();
 
 		/**
-		 * @brief Returns current position
-		 */
-		std::expected<CodePosition, api::ApiError> getCurrentPosition();
+		 * @brief Returns the code position in the specified stack frame.
+		 *
+		 * @param frame_idx Index of the target frame.
+		 *                  The active/current function has the highest frame index.
+		 *                  If not provided (std::nullopt), defaults to the current (top-most) frame.
+		 **/
+		std::expected<CodePosition, api::ApiError> getCurrentPosition(
+			base::Optional<usize> frame_idx = std::nullopt
+		);
 
 		/**
 		 * @brief Sets breakpoint
