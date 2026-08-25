@@ -71,6 +71,18 @@ namespace compiler::helios {
 		 */
 		MoveIn,
 		/**
+		 * `dvm_ptr_parts(p: ptr T) -> u64[2]`: decomposes a DVM pointer into the id of the
+		 * block `p` points into and the byte offset within it. Backs pointer stringification,
+		 * which cannot use a plain `ptr`-to-integer cast: a DVM pointer is a `(block, offset)`
+		 * pair and does not fit into one integer. Fails on a null pointer, which points into
+		 * no block, so callers guard with `dvm_is_nullptr` first.
+		 */
+		DvmPtrParts,
+		/** `dvm_is_nullptr(p: ptr T) -> bool`: whether `p` points into no block. */
+		DvmIsNullptr,
+		/** `dvm_nullptr() -> ptr T`: a pointer into no block. */
+		DvmNullptr,
+		/**
 		 * Box allocation / deallocation and the box destructor.
 		 * Unlike the other builtins these are not selected by the `@builtin("...")` attribute. They
 		 * are only called by the compiler in `box T` constructors and destructors.

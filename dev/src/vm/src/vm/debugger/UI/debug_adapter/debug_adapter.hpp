@@ -71,7 +71,7 @@ namespace vm::debugger::debug_adapter {
 			u64         end_column   = 0;
 		};
 
-		std::expected<SourcePositionInfo, std::string> getSourcePositionInfo();
+		std::expected<SourcePositionInfo, std::string> getSourcePositionInfo(usize frame_idx);
 
 		/**
 		 * @brief Retrieves the variables map and function identifier for a specific stack frame.

@@ -232,10 +232,10 @@ fn create_mock_package_at_tmpdir<'duck>(
 
 fn create_mock_package_with_dependencies<'duck>(
     root: &Path,
-    ctx: &'duck DuckContext,
+    ctx: &'duck mut DuckContext,
     name: &str,
 ) -> PackageContext<'duck> {
-    let opts = InitOptions {
+    let init_opts = InitOptions {
         ctx,
         at: root.join("dep"),
         explicit_name: Some("dep"),
@@ -246,9 +246,9 @@ fn create_mock_package_with_dependencies<'duck>(
         git: false,
         full: false,
     };
-    init::init(opts).unwrap();
+    init::init(init_opts).unwrap();
 
-    let opts = InitOptions {
+    let init_opts = InitOptions {
         ctx,
         at: root.join("root"),
         explicit_name: Some(name),
@@ -259,8 +259,9 @@ fn create_mock_package_with_dependencies<'duck>(
         git: false,
         full: false,
     };
-    init::init(opts).unwrap();
-    // @TODO: #3316 Use `duck add`.
+    init::init(init_opts).unwrap();
+    // IMPORTANT: Do NOT use `duck add` here. It requires messing with cwd, which interacts poorly
+    // with concurrent rust's tests.
     let mut file = {
         let mut opts = OpenOptions::new();
         opts.append(true)
@@ -283,7 +284,7 @@ dependencies:
 }
 
 fn create_mock_package_with_deps_at_tmpdir<'duck>(
-    ctx: &'duck DuckContext,
+    ctx: &'duck mut DuckContext,
     name: &str,
 ) -> (TempDir, PackageContext<'duck>) {
     let root = TempDir::new().unwrap();

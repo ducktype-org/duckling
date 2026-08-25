@@ -4,6 +4,7 @@
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/scopes/symbol_id.hpp>
+#include <helios_private/templates/templates.hpp>
 
 #include <diagnostic/placeholder.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -41,6 +42,18 @@ namespace compiler::helios {
 				  { .package = "core", .path = { "containers" }, .namespaces = {}, .element = "stringifyU64" } },
 				{ LanguagePrimitive::StringifyF64,
 				  { .package = "core", .path = { "containers" }, .namespaces = {}, .element = "stringifyF64" } },
+				{ LanguagePrimitive::StringifyPtr,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyPtr" } },
+				{ LanguagePrimitive::StringifyManyPtr,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyManyPtr" } },
+				{ LanguagePrimitive::StringifyCPtr,
+				  { .package = "core", .path = { "containers" }, .element = "stringifyCPtr" } },
+				{ LanguagePrimitive::StringifySlice,
+				  { .package = "core", .path = { "containers" }, .element = "stringifySlice" } },
+				{ LanguagePrimitive::StringifyStaticArray,
+				  { .package = "core",
+				    .path    = { "containers" },
+				    .element = "stringifyStaticArray" } },
 			};
 			return paths;
 		}
@@ -127,4 +140,31 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLanguagePrimitiveSymID);
+
+	SymID bakeLanguagePrimitive(
+		query::Context&                    ctx,
+		LanguagePrimitive                  primitive,
+		std::vector<ctv::CompileTimeValue> ctv_arguments
+	) {
+		const SymID template_sym
+			= ctx.query<QueryLanguagePrimitiveSymID>({ primitive })->valueOrThrow();
+
+		const templates::TemplateBakeKey key{
+			.template_sym_id    = template_sym,
+			.template_arguments = std::move(ctv_arguments),
+		};
+		return ctx.query<templates::QueryBakeTemplateSymID>(key).valueOrThrow();
+	}
+
+	SymID bakeLanguagePrimitiveWithTypes(
+		query::Context&                ctx,
+		LanguagePrimitive              primitive,
+		std::vector<tsh::SymbolType<>> type_arguments
+	) {
+		std::vector ctv_args
+			= type_arguments
+		    | std::views::transform([](auto& type) { return ctv::CompileTimeValue(type); })
+		    | std::ranges::to<std::vector>();
+		return bakeLanguagePrimitive(ctx, primitive, std::move(ctv_args));
+	}
 }

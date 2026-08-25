@@ -71,7 +71,7 @@ impl InternedUrl {
     }
 
     /// Get the reference to the underlying [`Url`].
-    pub fn as_url(&self) -> &'static Url {
+    pub fn as_url(self) -> &'static Url {
         self.inner
     }
 }

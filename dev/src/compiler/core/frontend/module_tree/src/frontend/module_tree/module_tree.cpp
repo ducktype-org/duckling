@@ -854,8 +854,8 @@ namespace compiler::frontend {
 	ModuleID createModuleTreeFromContents(
 		std::string_view contents, base::Optional<base::StrID> package_id
 	) {
-		// createModuleTree function expects .dmf extension.
-		auto virtual_file = fs::FileManager::createRandomVirtualFile(contents, ".dmf");
+		// createModuleTree function expects .dk extension.
+		auto virtual_file = fs::FileManager::createRandomVirtualFile(contents, LANG_MODULE_FILE);
 
 		if (!package_id.has_value())
 			return createModuleTreeWithRandomPackageID(virtual_file);
