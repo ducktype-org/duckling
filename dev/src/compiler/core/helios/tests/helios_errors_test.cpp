@@ -593,7 +593,7 @@ private:
 		// We don't see errors here, because they are produced by the parser, not query:
 		checkForErrorOnCompileModule(
 			R"(
-				fun main() = {
+				fun foo() = {
 					if Loop <= 1 { # no parenthesis around condition
 					
 					}
@@ -1200,9 +1200,7 @@ private:
 
 	void testMainReturnErrors() {
 		checkForErrorOnCompileModule(
-			R"(fun main() -> i32 = { return 0; })",
-			{ "main` function must return `i64" },
-			1
+			R"(fun main() -> i32 = { return 0; })", { "main` function must return `i64" }, 1
 		);
 		checkForErrorOnCompileModule(
 			R"(fun main() -> () = {})", { "main` function must return `i64" }, 1

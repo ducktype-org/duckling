@@ -1821,25 +1821,20 @@ private:
 		using namespace compiler::helios;
 		using namespace compiler::helios::code;
 
-		const auto check_main = [&](
-			std::string_view source,
-			usize            expected_statement_count,
-			i64              expected_first_return,
-			i64              expected_last_return
-		) {
-			const auto module = compiler::frontend::createModuleTreeFromContents(source);
-			const auto scope  = getModuleScope(module);
-			const auto symbol = getChain("main", scope).back();
-			const auto& function
-				= query::entryPoint<QueryCodeOfFun>({ symbol })->valueOrPanic();
+		const auto check_main = [&](std::string_view source,
+		                            usize            expected_statement_count,
+		                            i64              expected_first_return,
+		                            i64              expected_last_return) {
+			const auto  module   = compiler::frontend::createModuleTreeFromContents(source);
+			const auto  scope    = getModuleScope(module);
+			const auto  symbol   = getChain("main", scope).back();
+			const auto& function = query::entryPoint<QueryCodeOfFun>({ symbol })->valueOrPanic();
 
 			ASSERT_EQUAL(
-				function.declaration->return_type.getType(),
-				getIntegralTypeNoContext(64, Signed)
+				function.declaration->return_type.getType(), getIntegralTypeNoContext(64, Signed)
 			);
 			ASSERT_EQUAL(
-				function.declaration->return_type.getRefKind(),
-				compiler::tsh::ReferenceKind::Direct
+				function.declaration->return_type.getRefKind(), compiler::tsh::ReferenceKind::Direct
 			);
 			ASSERT_EQUAL(function.body->statements.size(), expected_statement_count);
 
@@ -1851,9 +1846,9 @@ private:
 
 				const auto value
 					= query::entryPoint<QueryEvaluateHOUTExpression>({ return_stmt->value.get() })
-					      .valueOrThrow()
-					      .get<compiler::numeric_value::NumericValue>()
-					      ->get<i64>();
+				          .valueOrThrow()
+				          .get<compiler::numeric_value::NumericValue>()
+				          ->get<i64>();
 				assertTrue(value.has_value(), "Expected an i64 return value.");
 				return value.value();
 			};

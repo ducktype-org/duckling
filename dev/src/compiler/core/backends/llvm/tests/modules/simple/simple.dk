@@ -3,6 +3,5 @@ fun main() = {
 	#if (0) {
 	#	var b: i32 = 7;
 	#}
-	return;
 }
 

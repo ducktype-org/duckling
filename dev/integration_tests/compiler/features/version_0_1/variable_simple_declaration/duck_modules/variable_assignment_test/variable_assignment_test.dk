@@ -1,4 +1,4 @@
-fun main() -> u64 = {
+fun main() -> i64 = {
     var a: i64;
     var b = 0;
     a = 70;
