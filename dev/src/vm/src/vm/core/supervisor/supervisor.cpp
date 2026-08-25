@@ -24,14 +24,9 @@ namespace vm {
 	}
 
 	std::expected<PID, api::ApiError> Supervisor::newProcess(const api::ProcessConfig& options) {
-		// Reserve the PID under the lock, but build the process outside of it. Constructing a
-		// VMProcess is expensive (loader, compiler, memory, the main VMThread) and it takes the
-		// new process's own locks - notably its state table's `emit_mutex`. Doing that while
-		// holding `rw_process_table` would stall every other API call for the whole construction
-		// and create an `rw_process_table -> emit_mutex` lock order, which inverts the order used
-		// when a status listener calls back into the API (listener-lock -> rw_process_table). The
-		// new process is unreachable until it is inserted below, so nothing can observe it
-		// mid-construction.
+		// Reserve the PID under the lock, but build the process outside of it, since constructing a
+		// VMProcess is expensive (loader, compiler, memory, the main VMThread) and holding
+		// `rw_process_table` blocks every other API call.
 		PID pid = PID::fromU64(0);
 		{
 			std::unique_lock lock(rw_process_table);
@@ -65,30 +60,12 @@ namespace vm {
 				auto res = getProcess(request.pid).and_then([](Ref<IVMProcess> process) {
 					return process->doRequest(api::request::DeinitAndValidate{});
 				});
-				// Remove the process whenever the deinit actually ran.
-				// A failed validation is reported to the caller and the process is not erased.
-				// Keep the process only when there was nothing to erase (ProcessNotFound) or the
-				// deinit was refused because the process is still executing.
+				// Don't erase the process iff the process didn't exist or it's still running.
 				const bool keep_process
 					= !res.has_value()
 				   && v_matches(res.error(), api::ProcessNotFound, api::StateError);
 
-				if (!keep_process) {
-					// We have to destroy the process after releasing `rw_process_table`, since
-					// destroying a process destroys its status Emitter (which takes the Emitter
-					// lock), and the event-emission takes the locks in the opposite order (Emitter
-					// lock -> rw_process_table), so destroying while holding `rw_process_table` can
-					// deadlock.
-					base::MBox<IVMProcess> dying_process;
-					{
-						std::unique_lock lock(rw_process_table);
-						auto             it = process_table.find(request.pid);
-						if (it != process_table.end()) {
-							dying_process = std::move(it->second);
-							process_table.erase(it);
-						}
-					}
-				}
+				if (!keep_process) (void) killProcess(request.pid);
 				return res;
 			}
 			variant_default {
@@ -106,8 +83,8 @@ namespace vm {
 		// We have to destroy the process after releasing `rw_process_table`, since
 		// destroying a process destroys its status Emitter (which takes the Emitter
 		// lock), and the event-emission takes the locks in the opposite order (Emitter
-		// lock -> rw_process_table), so destroying while holding `rw_process_table` can
-		// deadlock.
+		// lock -> listener -> API call -> rw_process_table), so destroying while holding
+		// `rw_process_table` can deadlock.
 		base::MBox<IVMProcess> dying_process;
 		{
 			std::unique_lock lock(rw_process_table);
