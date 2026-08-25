@@ -25,7 +25,7 @@ The primary components in this flow are:
 
 ## Script Execution
 
-The same helper stack also powers `.ds` script handling.
+The same helper stack also powers `.dks` script handling.
 
 Script execution reuses the REPL-style statement chain, but treats the full file as a single compilation input:
 

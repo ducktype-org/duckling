@@ -391,7 +391,7 @@ private:
 				"params": {
 					"location_direct": {
 						"type": "code_location",
-						"file": "a.dmf",
+						"file": "a.dk",
 						"line": 1,
 						"column": 1,
 						"hash_location": {
@@ -407,7 +407,7 @@ private:
 								"target_messages": ["note_1"],
 								"content": {
 									"type": "code_location",
-									"file": "a.dmf",
+									"file": "a.dk",
 									"line": 2,
 									"column": 2
 								}
@@ -428,7 +428,7 @@ private:
 					"params": {
 						"location_linked": {
 							"type": "code_location",
-							"file": "b.dmf",
+							"file": "b.dk",
 							"line": 3,
 							"column": 3,
 							"hash_location": {
