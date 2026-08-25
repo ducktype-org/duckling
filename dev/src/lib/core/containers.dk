@@ -480,10 +480,10 @@ class List {
     fun length() -> i64 = len;
 
     fun toString() -> String = {
-        var result = stringifyStr("[");
+        var result = stringification.stringifyStr("[");
         var i      = 0;
         while (i < len) {
-            if (i > 0) appendSequenceSeparator(&result);
+            if (i > 0) stringification.appendSequenceSeparator(&result);
             result.append(pointer[i].toString());
             i = i + 1;
         }
