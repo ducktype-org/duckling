@@ -1,3 +1,5 @@
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -12,12 +14,7 @@ use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFr
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::ToVenvId;
-use crate::quackpack::core::{
-    DependencyKind, PackageContext, PackageLoader, Version, storage_name_for_registry,
-};
-use crate::quackpack::subcommands::add::{
-    self, AddOptions, DependencySpecification, NameSpecification, SourceSpecification,
-};
+use crate::quackpack::core::{PackageContext, PackageLoader, Version, storage_name_for_registry};
 use crate::quackpack::subcommands::init;
 use crate::quackpack::subcommands::init::InitOptions;
 use crate::quackpack::util::to_url::ToUrl;
@@ -263,33 +260,26 @@ fn create_mock_package_with_dependencies<'duck>(
         full: false,
     };
     init::init(init_opts).unwrap();
-    let prev_cwd = ctx.cwd().to_path_buf();
-    std::env::set_current_dir(root.join("root")).unwrap();
-    ctx.reload_cwd().unwrap();
-    let add_opts = AddOptions {
-        dep_spec: DependencySpecification {
-            name_spec: NameSpecification {
-                name: "dep".into(),
-                alias: None,
-            },
-            source_spec: SourceSpecification {
-                local_path: Some(Path::new("../dep")),
-                git_url: None,
-                git_branch: None,
-                git_tag: None,
-                git_commit: None,
-                registry_url: None,
-            },
-            versions: vec![],
-            features: vec![],
-            pinned: false,
-        },
-        global: false,
-        kind: DependencyKind::Normal,
+    // IMPORTANT: Do NOT use `duck add` here. It requires messing with cwd, which interacts poorly
+    // with concurrent rust's tests.
+    let mut file = {
+        let mut opts = OpenOptions::new();
+        opts.append(true)
+            .open(root.join("root").join(PackageLoader::MANIFEST_NAME))
+            .unwrap()
     };
-    add::add(ctx, add_opts).unwrap();
-    std::env::set_current_dir(prev_cwd).unwrap();
-    ctx.reload_cwd().unwrap();
+    file.write_all(
+        "
+dependencies:
+  dep:
+    source:
+      path: ../dep"
+            .as_bytes(),
+    )
+    .unwrap();
+    file.flush().unwrap();
+    file.sync_data().unwrap();
+    drop(file);
     PackageLoader::find_at_exact_directory(&root.join("root"), ctx).unwrap()
 }
 

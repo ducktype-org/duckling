@@ -222,7 +222,8 @@ namespace compiler::driver {
 	 * @TODO: #2762 probably remove this
 	 */
 	std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
-		auto package_root_file = fs::FileManager::createRandomVirtualFile("", ".dmf");
+		auto package_root_file
+			= fs::FileManager::createRandomVirtualFile("", compiler::frontend::LANG_MODULE_FILE);
 		std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
 			compiler::frontend::packages::RawPackageInfo{
 				.package_id   = base::StrID("repl_session"),
