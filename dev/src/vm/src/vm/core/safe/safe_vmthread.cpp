@@ -600,7 +600,7 @@ namespace vm {
 		}();
 
 		const auto exit_value = executeFunction(start_function, func);
-		commitEvent(thread_sm::thread_event::Finish{
+		applyEvent(thread_sm::thread_event::Finish{
 			std::vector<Ref<IVMValue>>(exit_value.begin(), exit_value.end()) });
 	}
 

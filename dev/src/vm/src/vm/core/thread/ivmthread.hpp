@@ -18,7 +18,7 @@
 
 namespace vm {
 	class IVMProcess;
-	class ProcessStateTable;
+	class ProcessStateManager;
 
 	/**
 	 * @brief Common interface for VM thread implementations.
@@ -27,8 +27,8 @@ namespace vm {
 	 * interface for the external API.
 	 *
 	 * State Model:
-	 * - The thread's state lives in the process's `ProcessStateTable`. VMThread *commits*
-	 * transitions into the ProcessStateTable via `commitEvent`.
+	 * - The thread's state lives in the process's `ProcessStateManager`. VMThread *applies*
+	 * transitions there via `applyEvent`, it does not own its state.
 	 * - Control requests (Pause/Resume/Step/Stop) are passed through a `ThreadSignal`. The exec
 	 * thread converts consumed requests into state transitions.
 	 */
@@ -136,8 +136,8 @@ namespace vm {
 		 * Check `isTerminateRequested()` afterwards to distinguish the two.
 		 */
 		template<class Lock, class Condition>
-		void waitInterruptable(Lock& lock, Condition condition) {
-			signal.waitInterruptable(lock, std::move(condition));
+		void waitInterruptible(Lock& lock, Condition condition) {
+			signal.waitInterruptible(lock, std::move(condition));
 		}
 
 	protected:
@@ -159,7 +159,7 @@ namespace vm {
 		void breakActiveExecution();
 
 		/**
-		 * @brief Wakes this thread if it is blocked in `waitInterruptable` - i.e. re-evaluates
+		 * @brief Wakes this thread if it is blocked in `waitInterruptible` - i.e. re-evaluates
 		 * the condition it is waiting for without posting any control request.
 		 *
 		 * Used when the process changes state the thread may be waiting on.
@@ -208,10 +208,10 @@ namespace vm {
 		void safeRun(const std::string& func_name, const RunArguments& run_arguments);
 
 		/**
-		 * @brief Commits a state transition of this thread into the process's state table
+		 * @brief Applies a state transition of this thread in the process's `ProcessStateManager`.
 		 * Fatal on an illegal transition, as this means a fatal DVM internal error.
 		 */
-		void commitEvent(const ThreadEvent& event);
+		void applyEvent(const ThreadEvent& event);
 
 		/**
 		 * @brief Function to be called when the VMThread hits a breakpoint.
@@ -225,10 +225,10 @@ namespace vm {
 
 	private:
 		/**
-		 * @brief The process's state table (this thread's state lives there).
+		 * @brief The process's state manager (this thread's state lives there).
 		 */
-		[[nodiscard]] ProcessStateTable&       getProcessStateTable();
-		[[nodiscard]] const ProcessStateTable& getProcessStateTable() const;
+		[[nodiscard]] ProcessStateManager&       getProcessStateManager();
+		[[nodiscard]] const ProcessStateManager& getProcessStateManager() const;
 
 		/**
 		 * @brief Spawn preparation, called under `exec_thread_mutex` while the thread is

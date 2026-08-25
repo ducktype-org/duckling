@@ -13,7 +13,7 @@
 #include <vm/bytecode/validator/valid_type/valid_type_id.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/process/process_state.hpp>
-#include <vm/core/process/state_table.hpp>
+#include <vm/core/process/process_state_manager.hpp>
 #include <vm/core/thread/thread_state.hpp>
 
 #include <expected>
@@ -53,7 +53,7 @@ namespace vm {
 		/**
 		 * @brief The single source of truth for all VMThread states of this process.
 		 */
-		ProcessStateTable state_table;
+		ProcessStateManager state_manager{ api::MAIN_THREAD_ID };
 
 		api::ExecutionConfig execution_config;
 
@@ -67,7 +67,7 @@ namespace vm {
 		/**
 		 * @brief Returns a copy of the current calculated process state.
 		 */
-		[[nodiscard]] ProcessState getProcessState() const { return state_table.aggregate(); }
+		[[nodiscard]] ProcessState getProcessState() const { return state_manager.aggregate(); }
 
 		/**
 		 * @brief Blocks until the process state satisfies pred, then returns it. Can be called both
@@ -75,9 +75,11 @@ namespace vm {
 		 */
 		template<typename Pred>
 		[[nodiscard]] ProcessState waitForProcessState(Pred&& pred) const {
-			return state_table.wait([&](const ProcessStateTable::Snapshot& snapshot) {
-				return std::forward<Pred>(pred)(snapshot.processState());
-			});
+			return state_manager.waitForProcessState(
+				[&](const ProcessStateManager::Snapshot& snapshot) {
+					return std::forward<Pred>(pred)(snapshot.processState());
+				}
+			);
 		}
 
 		/**
@@ -226,7 +228,7 @@ namespace vm {
 
 		/**
 		 * @brief Hook called after process status changes to a terminal one.
-		 * Called by the state table's `onStateChangeCallback`.
+		 * Called from the state manager's `OnStatusChangedCallback`.
 		 */
 		virtual void onTerminalStatus(const api::ProcStatus&) noexcept {}
 
@@ -258,18 +260,18 @@ namespace vm {
 		ProcIO& getIO();
 
 		/**
-		 * @brief The state table holding all VMThread states of this process.
+		 * @brief The state manager holding all VMThread states of this process.
 		 */
-		[[nodiscard]] ProcessStateTable& getStateTable() { return state_table; }
+		[[nodiscard]] ProcessStateManager& getStateManager() { return state_manager; }
 
-		[[nodiscard]] const ProcessStateTable& getStateTable() const { return state_table; }
+		[[nodiscard]] const ProcessStateManager& getStateManager() const { return state_manager; }
 
 		/**
-		 * @brief Commits a thread state transition. Aborts on invalid transition, since it's a
-		 * fatal DVM error. Propagates a cascade kill to all threads when the event was a first
-		 * panic. Called by `IVMThread::commitEvent`.
+		 * @brief Applies a thread state transition. Aborts on an invalid transition, since it's a
+		 * fatal DVM error. Sends a Stop out to all threads when the event was a first panic.
+		 * Called by `IVMThread::applyEvent`.
 		 */
-		void commitThreadEvent(api::ThreadID tid, const ThreadEvent& event);
+		void applyThreadEvent(api::ThreadID tid, const ThreadEvent& event);
 
 		/**
 		 * @brief Entry point to perform requests on the process.

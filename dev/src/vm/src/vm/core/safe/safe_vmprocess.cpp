@@ -119,7 +119,7 @@ namespace vm {
 		// Destroying threads down races the memory-touching endpoints, thus the lock.
 		std::unique_lock global_lock(rw_global);
 		// First raise the process stop flag.
-		(void) state_table.requestStop();
+		(void) state_manager.requestStop();
 		// Send a Stop request to all threads.
 		requestStopAllThreads();
 		// Wait for all threads to stop.

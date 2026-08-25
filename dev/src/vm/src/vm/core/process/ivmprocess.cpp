@@ -11,21 +11,22 @@ namespace vm {
 	namespace pe = process_sm::process_event;
 
 	IVMProcess::IVMProcess(const PID my_pid): my_pid(my_pid) {
-		state_table.setOnStatusChangedCallback([this](const ProcessState& state) {
+		state_manager.setOnStatusChangedCallback([this](const ProcessState& state) {
 			const api::ProcStatus status = process_sm::toApiStatus(state);
 			on_status_changed.emitEvent(status);
 			if (ps::isTerminal(state)) onTerminalStatus(status);
 		});
 	}
 
-	void IVMProcess::commitThreadEvent(api::ThreadID tid, const ThreadEvent& event) {
-		const ProcessStateTable::CommitResult result = state_table.commitOrAbort(tid, event);
+	void IVMProcess::applyThreadEvent(api::ThreadID tid, const ThreadEvent& event) {
+		const ProcessStateManager::ApplyResult result
+			= state_manager.applyThreadEventOrAbort(tid, event);
 		// The first panic requests a stop of the whole process.
-		if (result.cascade_kill) requestStopAllThreads();
+		if (result.stop_all_threads) requestStopAllThreads();
 	}
 
 	base::Optional<api::ApiError> IVMProcess::validateRequest(const ProcessEvent& event) const {
-		const ProcessState state = state_table.aggregate();
+		const ProcessState state = state_manager.aggregate();
 		bool               valid = true;
 
 		variant_match(event) {
@@ -46,8 +47,8 @@ namespace vm {
 	}
 
 	base::Optional<api::ApiError> IVMProcess::prepareRun() {
-		if (not ps::isTerminal(state_table.aggregate())) return {};
-		if (auto reset = state_table.resetForRun(); !reset.has_value())
+		if (not ps::isTerminal(state_manager.aggregate())) return {};
+		if (auto reset = state_manager.resetForRun(); !reset.has_value())
 			return api::ApiError{ api::StateError{ reset.error() } };
 		return {};
 	}
@@ -104,8 +105,9 @@ namespace vm {
 			}
 
 			variant_case_novalue(api::request::Step) {
-				// Per-thread operation. It's validity is decided by the target thread not the process.
-				// Until `request::Step` carries a ThreadID it can only target the main thread.
+				// Per-thread operation. It's validity is decided by the target thread not the
+				// process. Until `request::Step` carries a ThreadID it can only target the main
+				// thread.
 				auto response = stepVMThread(getMainThreadID());
 				if (response) return std::unexpected(*response);
 				return getVMThreadCurrentPosition(getMainThreadID());

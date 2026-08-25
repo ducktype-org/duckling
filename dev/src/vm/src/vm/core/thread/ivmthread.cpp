@@ -4,7 +4,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/core/process/ivmprocess.hpp>
-#include <vm/core/process/state_table.hpp>
+#include <vm/core/process/process_state_manager.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/thread/thread_state.hpp>
@@ -21,21 +21,23 @@ namespace vm {
 		  my_process(my_process),
 		  thread_id(thread_id) {
 		// Every VMThread is part of its process's state aggregation.
-		getProcessStateTable().registerThread(thread_id);
+		getProcessStateManager().registerThread(thread_id);
 	}
 
-	ProcessStateTable& IVMThread::getProcessStateTable() { return my_process.getStateTable(); }
+	ProcessStateManager& IVMThread::getProcessStateManager() {
+		return my_process.getStateManager();
+	}
 
-	const ProcessStateTable& IVMThread::getProcessStateTable() const {
-		return my_process.getStateTable();
+	const ProcessStateManager& IVMThread::getProcessStateManager() const {
+		return my_process.getStateManager();
 	}
 
 	IVMThread::ThreadState IVMThread::getThreadState() const {
-		return getProcessStateTable().threadState(thread_id);
+		return getProcessStateManager().threadState(thread_id);
 	}
 
-	void IVMThread::commitEvent(const ThreadEvent& event) {
-		my_process.commitThreadEvent(thread_id, event);
+	void IVMThread::applyEvent(const ThreadEvent& event) {
+		my_process.applyThreadEvent(thread_id, event);
 	}
 
 	std::expected<api::Response, api::ApiError> IVMThread::join() {
@@ -49,7 +51,7 @@ namespace vm {
 
 		// Wait for some terminal state.
 		const ThreadState terminal
-			= getProcessStateTable().waitForThreadState(thread_id, ts::isTerminal);
+			= getProcessStateManager().waitForThreadState(thread_id, ts::isTerminal);
 		// Now join the OS thread.
 		joinExecutionThread();
 
@@ -84,13 +86,13 @@ namespace vm {
 			if (isTerminateRequested()) throw KillProcessException{};
 			run(func_name, run_arguments);
 		} catch (const KillProcessException& e) {
-			commitEvent(te::Kill{});
+			applyEvent(te::Kill{});
 		} catch (const exceptions::VMRuntimeException& e) {
 			std::cerr << "VMThread has panicked: " << e.what() << "\n";
-			commitEvent(te::Panic{ e.what() });
+			applyEvent(te::Panic{ e.what() });
 		} catch (const std::exception& e) {
 			std::cerr << "VMThread has panicked with an unexpected error: " << e.what() << "\n";
-			commitEvent(te::Panic{ std::string{ "Unexpected non-DVM error: " } + e.what() });
+			applyEvent(te::Panic{ std::string{ "Unexpected non-DVM error: " } + e.what() });
 		}
 	}
 
@@ -102,7 +104,7 @@ namespace vm {
 		// The thread is non-active. Clear any control requests from a previous run and
 		// claim the transition to Running. The exec thread is the only writer of state from here on.
 		signal.reset();
-		commitEvent(te::Spawn{});
+		applyEvent(te::Spawn{});
 		return true;
 	}
 
@@ -116,7 +118,7 @@ namespace vm {
 			exec_thread = std::thread(&IVMThread::safeRun, this, func_name, run_arguments);
 		} catch (const std::system_error&) {
 			// OS thread creation failed - roll the claimed Running back to Stopped.
-			commitEvent(te::Kill{});
+			applyEvent(te::Kill{});
 			return false;
 		}
 		return true;
@@ -142,7 +144,7 @@ namespace vm {
 
 		// Wait for the paused state or a terminal.
 		const ThreadState state
-			= getProcessStateTable().waitForThreadState(thread_id, [](const ts::ThreadState& s) {
+			= getProcessStateManager().waitForThreadState(thread_id, [](const ts::ThreadState& s) {
 				  return v_matches(s, ts::Paused) || ts::isTerminal(s);
 			  });
 
@@ -155,12 +157,12 @@ namespace vm {
 		if (ts::isTerminal(copy)) return std::unexpected("Resuming a terminal thread");
 		if (!v_matches(copy, ts::Paused)) return std::unexpected("Resuming a non-paused thread");
 
-		const u64 version = getProcessStateTable().threadVersion(thread_id);
+		const u64 version = getProcessStateManager().threadStateChangeCounter(thread_id);
 		if (!signal.post(ThreadSignal::Request::Resume))
 			return std::unexpected("Another control request is active");
 
 		// Wait until this thread commits any fresh state.
-		(void) getProcessStateTable().waitForFreshThreadState(
+		(void) getProcessStateManager().waitForFreshThreadState(
 			thread_id, version, [](const ts::ThreadState&) { return true; }
 		);
 		return {};
@@ -172,11 +174,11 @@ namespace vm {
 		if (!v_matches(copy, ts::Paused)) return std::unexpected("Stepping a non-paused thread");
 
 		// Version is needed to see the new Paused after a fast Paused -> Running -> Paused transition.
-		const u64 version = getProcessStateTable().threadVersion(thread_id);
+		const u64 version = getProcessStateManager().threadStateChangeCounter(thread_id);
 		if (!signal.post(ThreadSignal::Request::Step))
 			return std::unexpected("Another control request is in flight");
 
-		(void) getProcessStateTable().waitForFreshThreadState(
+		(void) getProcessStateManager().waitForFreshThreadState(
 			thread_id,
 			version,
 			[](const ts::ThreadState& s) { return v_matches(s, ts::Paused) || ts::isTerminal(s); }
@@ -190,13 +192,13 @@ namespace vm {
 		{
 			std::lock_guard lock(exec_thread_mutex);
 			// A thread that was never spawned has no exec thread to see the Stop request.
-			if (!exec_thread.has_value() && getProcessStateTable().tryClaimStopped(thread_id))
+			if (!exec_thread.has_value() && getProcessStateManager().stopIfNotStarted(thread_id))
 				return;
 		}
 
 		// Otherwise the thread is (or was) executing. Post the Stop and wait for a terminal state.
 		(void) signal.post(ThreadSignal::Request::Stop);
-		(void) getProcessStateTable().waitForThreadState(thread_id, ts::isTerminal);
+		(void) getProcessStateManager().waitForThreadState(thread_id, ts::isTerminal);
 	}
 
 	void IVMThread::requestStop() noexcept {
@@ -237,23 +239,23 @@ namespace vm {
 	 * re-enter.
 	 */
 	void IVMThread::pausedLoop() {
-		commitEvent(te::Pause{});
+		applyEvent(te::Pause{});
 
 		while (true) {
 			switch (signal.waitForRequest()) {
 			case ThreadSignal::Request::Resume: {
-				commitEvent(te::Resume{});
+				applyEvent(te::Resume{});
 				return;
 			}
 			case ThreadSignal::Request::Stop: {
 				throw KillProcessException{};
 			}
 			case ThreadSignal::Request::Step: {
-				commitEvent(te::Resume{});
+				applyEvent(te::Resume{});
 				executeOneStep();
 				// A Stop posted while the step ran must win over re-pausing.
 				if (isTerminateRequested()) throw KillProcessException{};
-				commitEvent(te::Pause{});
+				applyEvent(te::Pause{});
 				break;
 			}
 			case ThreadSignal::Request::Pause:
@@ -269,7 +271,7 @@ namespace vm {
 
 	void IVMThread::notifyWaiters() { signal.notifyWaiters(); }
 
-	void IVMThread::reportAsSleeping() { commitEvent(te::EnterSleep{}); }
+	void IVMThread::reportAsSleeping() { applyEvent(te::EnterSleep{}); }
 
-	void IVMThread::reportAsRunning() { commitEvent(te::WakeUp{}); }
+	void IVMThread::reportAsRunning() { applyEvent(te::WakeUp{}); }
 }

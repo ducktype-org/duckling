@@ -392,11 +392,16 @@ private:
 	}
 
 	void runFunctionArgumentValidation() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_non_void_function.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		auto summer_process = [&]() {
+			const vm::PID pid = initProcess();
+			fs::File      file(path("call_non_void_function.dbc"));
+			ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+			return pid;
+		};
+
 		{
 			// Not enough arguments.
+			const vm::PID     pid = summer_process();
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVMValue(pid, 10));
 			auto func_args = createArgumentList(arguments);
@@ -407,9 +412,11 @@ private:
 			);
 
 			freeArguments(arguments);
+			(void) vm::api::deinitAndValidate(pid);
 		}
 		{
 			// Too many arguments.
+			const vm::PID     pid = summer_process();
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVMValue(pid, 10));
 			arguments.push_back(getIntVMValue(pid, 20));
@@ -422,10 +429,12 @@ private:
 			);
 
 			freeArguments(arguments);
+			(void) vm::api::deinitAndValidate(pid);
 		}
 
 		{
 			// Argument type mismatch.
+			const vm::PID     pid = summer_process();
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVMValue(pid, 10));
 
@@ -441,10 +450,12 @@ private:
 			);
 
 			freeArguments(arguments);
+			(void) vm::api::deinitAndValidate(pid);
 		}
 
 		{
 			// VMValue with a matching PID, but not created by the safe VM implementation.
+			const vm::PID     pid = summer_process();
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVMValue(pid, 5));
 			arguments.push_back(Box<vm::IVMValue>::fromPointer(new ForeignVMValue(pid)));
@@ -457,11 +468,13 @@ private:
 			);
 
 			freeArguments(arguments);
+			(void) vm::api::deinitAndValidate(pid);
 		}
 
 		{
 			// VMValue from different process.
-			vm::PID other_pid = initProcess();
+			const vm::PID pid       = summer_process();
+			vm::PID       other_pid = initProcess();
 
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVMValue(pid, 5));
@@ -474,10 +487,9 @@ private:
 			);
 
 			freeArguments(arguments);
-			vm::api::deinitAndValidate(other_pid);
+			(void) vm::api::deinitAndValidate(pid);
+			(void) vm::api::deinitAndValidate(other_pid);
 		}
-
-		vm::api::deinitAndValidate(pid);
 	}
 };
 

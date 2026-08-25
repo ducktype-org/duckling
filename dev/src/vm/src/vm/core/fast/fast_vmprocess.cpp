@@ -117,7 +117,7 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `stop` is not implemented.");
 	}
 
-	FastVMThread& FastVMProcess::getMainVMThread() { return *vm_threads.get(api::ThreadID{ 0 }); }
+	FastVMThread& FastVMProcess::getMainVMThread() { return *vm_threads.get(api::MAIN_THREAD_ID); }
 
 	base::Optional<Ref<FastVMThread>> FastVMProcess::getVMThreadByID(api::ThreadID thread_id) {
 		if_opt_some(vm_threads.maybeGet(thread_id), thread) return thread;
