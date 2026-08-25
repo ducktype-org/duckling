@@ -5,7 +5,7 @@ PreCase: |+
   @{duck-exe} init foo
   @{duck-exe} init bar
   # @TODO: #2920 This shouldn't be needed (manually fixup return type).
-  echo @{default-src} > foo/src/src.dmf
+  echo @{default-src} > foo/src/src.dk
   @{duck-exe} -C foo add --local ../bar bar
   echo "profiles:
     dvm:
