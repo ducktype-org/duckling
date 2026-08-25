@@ -1,9 +1,9 @@
 #include "lang_primitives.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <helios_private/scopes/symbol_id.hpp>
 #include <helios_private/templates/templates.hpp>
 
 #include <diagnostic/placeholder.hpp>
@@ -95,24 +95,23 @@ namespace compiler::helios {
 			return paths;
 		}
 
-		base::Optional<ScopeID> lookupScopeOfNamespacePath(
-			query::Context& ctx, ScopeID current, const std::vector<std::string>& namespaces
+		base::MBox<HInterface> lookupInterfaceOfNamespacePath(
+			query::Context&                 ctx,
+			base::Box<HInterface>           current,
+			const std::vector<std::string>& namespaces
 		) {
-			if (namespaces.empty()) return current;
+			if (namespaces.empty()) return std::move(current);
 
-			auto leaves
-				= HInterface::ofScope(current).lookup(ctx, namespaces.front())->valueOrThrow().leaves;
-			auto nested_namespaces
-				= leaves
-			    | std::views::filter([](SymID sym) { return kind(sym) == SymbolKind::Namespace; })
-			    | std::ranges::to<std::vector>();
+			auto lookup_result
+				= current->lookup(ctx, base::StrID{ namespaces.front() })->valueOrThrow();
+			if (!lookup_result.isSingle()) return nullptr;
 
-			if (namespaces.size() != 1) return {};
+			auto next = std::get<SymbolList>(lookup_result.getAsSingle().valueOrPanic()).back();
 
-			auto next = leaves.front();
-
-			return lookupScopeOfNamespacePath(
-				ctx, next, std::vector<std::string>(namespaces.begin() + 1, namespaces.end())
+			return lookupInterfaceOfNamespacePath(
+				ctx,
+				base::makeBox<HInterface>(HInterface::ofSymbol(next)),
+				std::vector<std::string>(namespaces.begin() + 1, namespaces.end())
 			);
 		}
 
@@ -136,13 +135,17 @@ namespace compiler::helios {
 			if_opt_none(module_opt) return {};
 			auto linked_scope = queryRootScopeOfMainModuleFile(ctx, module_opt.value());
 
-			auto namespace_scope_opt
-				= lookupScopeOfNamespacePath(ctx, linked_scope, location.namespaces);
-			if_opt_none(namespace_scope_opt) return {};
-			linked_scope = namespace_scope_opt.value();
+			auto namespace_interface
+				= lookupInterfaceOfNamespacePath(
+					  ctx,
+					  base::makeBox<HInterface>(HInterface::ofScope(linked_scope)),
+					  location.namespaces
+				)
+			          .toOptBox();
+			if_opt_none(namespace_interface) return {};
 
-			return HInterface::ofScope(linked_scope)
-			    .lookup(ctx, base::StrID(location.element), { .with_wildcards = false })
+			return namespace_interface.value()
+			    ->lookup(ctx, base::StrID(location.element), { .with_wildcards = false })
 			    ->valueOrThrow()
 			    .leaves;
 		}
