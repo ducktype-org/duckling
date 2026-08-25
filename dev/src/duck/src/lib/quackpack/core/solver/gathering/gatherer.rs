@@ -22,7 +22,10 @@ use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::{ErrorsLogger, MessageError};
-use crate::{QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal, qp_err};
+use crate::{
+    DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal,
+    qp_err,
+};
 
 /// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
 pub struct Gatherer<'duck, 'a, Access: GitAccess> {
@@ -300,6 +303,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
 
     /// Helper for [`Gatherer::explore()`], performs a git fetch
     /// (fetch from an external git repository).
+    #[tracing::instrument(skip_all, fields(?request, %url, ?reference))]
     async fn fetch_git(
         &self,
         request: &NotPinnedRequest,
@@ -325,9 +329,10 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         }
         match self.try_git_fastpath(request, url, reference).await {
             Err(e) => {
+                error!(error = %e, "fast path failed");
                 // We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
                 // as it is well ... a fast path.
-                self.fetcher.ctx().console().warning(e)?;
+                display_git_fast_path_failure_warning(&e, request, self.fetcher.ctx())?;
             }
             Ok(Some(fast_path_git)) => {
                 debug!("git fast path worked");
@@ -525,6 +530,7 @@ impl Manifest {
     }
 }
 
+#[track_caller]
 fn assert_root_features_are_expanded(
     root_manifest: &Manifest,
     root_features: &HashSet<FeatureName>,
@@ -536,4 +542,19 @@ fn assert_root_features_are_expanded(
             .unwrap(),
         *root_features
     );
+}
+
+fn display_git_fast_path_failure_warning(
+    error: &QuackError,
+    request: &NotPinnedRequest,
+    ctx: &DuckContext,
+) -> QuackResult<()> {
+    let identifier = request.id;
+    let name = identifier.name;
+    let source = identifier.source;
+    ctx.console().warning(format!(
+        "git fast path for `{name} {source}` failed: {error}"
+    ))?;
+    ctx.console().info("switching to cloning git repository")?;
+    Ok(())
 }
