@@ -1,11 +1,13 @@
 #include <base/types/ints.hpp>
 
 #include <hashing/add_to_hash.hpp>
+#include <hashing/component_hash.hpp>
 #include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <tester/tester.hpp>
 
+#include <array>
 #include <map>
 #include <unordered_map>
 #include <variant>
@@ -13,6 +15,29 @@
 
 
 using namespace hashing;
+
+/** @brief Range-like type whose own member hook must win over the automatic range path. */
+struct WithMemberHook final {
+	std::string value;
+
+	[[nodiscard]] const char* data() const { return value.data(); }
+
+	[[nodiscard]] usize size() const { return value.size(); }
+
+	[[nodiscard]] const char* begin() const { return value.data(); }
+
+	[[nodiscard]] const char* end() const { return value.data() + value.size(); }
+
+	void addToHash(hash_algorithm auto& h) const { hashing::addToHash(h, usize{ 0xAB'CD }); }
+};
+
+/** @brief Two adjacent variable-length fields - the shape that used to collide. */
+struct TwoStrings final {
+	std::string a;
+	std::string b;
+
+	friend auto hashDecompose(const TwoStrings& t) { return std::tie(t.a, t.b); }
+};
 
 struct X {
 	int   x{};
@@ -159,6 +184,8 @@ public:
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
 		TESTER_ADD_TEST(addToHashTest);
 		TESTER_ADD_TEST(hashTest);
+		TESTER_ADD_TEST(selfDelimitingTest);
+		TESTER_ADD_TEST(memberHookTest);
 	}
 
 private:
@@ -310,7 +337,7 @@ private:
             internal::hashRangeAsBytes(d, SV2);
             return d.finalize().size();
 		}();
-		assertTrue(STR_SIZE == 187, "string should have 660 characters");
+		assertTrue(STR_SIZE == 237, "DebugHash output should have 237 characters");
 	}
 
 	void addToHashTest() {
@@ -341,6 +368,80 @@ private:
 
 		addToHash(h, std::tuple{ 1, 2, 3 }, 123, 12.f, X{}, S{});
 		addToHash(h, std::pair{ 1, 3 }, 123, 12.f, X{}, S{});
+	}
+
+	/**
+	 * @brief The byte stream must be self-delimiting: no two distinct values may flatten to
+	 * the same bytes just because a length or a member count was not recorded.
+	 */
+	void selfDelimitingTest() {
+		const Hash<SHA256> hash;
+
+		// Two adjacent strings. Without a length prefix ("ab","") and ("a","b") are both the
+		// bytes "ab" and hash the same.
+		assertTrue(
+			hash(TwoStrings{ .a = "ab", .b = "" }) != hash(TwoStrings{ .a = "a", .b = "b" }),
+			R"(TwoStrings{"ab",""} must not hash like {"a","b"})"
+		);
+		assertTrue(
+			hash(TwoStrings{ .a = "", .b = "ab" }) != hash(TwoStrings{ .a = "ab", .b = "" }),
+			R"(TwoStrings{"","ab"} must not hash like {"ab",""})"
+		);
+
+		// Same for a range of non-char elements.
+		assertTrue(
+			hash(std::pair{ std::vector{ 1, 2 }, std::vector{ 3 } })
+				!= hash(std::pair{ std::vector{ 1 }, std::vector{ 2, 3 } }),
+			"({1,2},{3}) must not hash like ({1},{2,3})"
+		);
+
+		// A composite carries its member count, so two unrelated types do not agree just
+		// because their fields flatten to the same bytes. X{} is three zeroed 4-byte fields;
+		// Y{} is one zeroed float plus an empty string, which is a zeroed 8-byte length.
+		assertTrue(hash(X{}) != hash(Y{}), "X{} must not hash like Y{}");
+
+		// ComponentHash builds module paths out of StrIDs, so a/bc must not collide with ab/c.
+		const ComponentHash a_bc{ ComponentHash{ base::StrID("a") }, base::StrID("bc") };
+		const ComponentHash ab_c{ ComponentHash{ base::StrID("ab") }, base::StrID("c") };
+		assertTrue(a_bc.hash != ab_c.hash, "ComponentHash a/bc must not collide with ab/c");
+
+		// The same through the string_view constructor, where "un" + "ordered" used to be
+		// indistinguishable from "unordered".
+		const ComponentHash one{ ComponentHash{}, "unordered" };
+		const ComponentHash two{ ComponentHash{ ComponentHash{}, "un" }, "ordered" };
+		assertTrue(one.hash != two.hash, R"("unordered" must not collide with "un"+"ordered")");
+
+		// The constexpr and the run-time paths of hashRangeAsBytes must agree - they are two
+		// different implementations behind `if consteval`.
+		constexpr std::array<int, 3> ARR = { 1, 2, 3 };
+		constexpr auto               CT  = Hash<SHA256>{}(ARR);
+		assertTrue(CT == hash(ARR), "constexpr and run-time hashing must agree");
+	}
+
+	/**
+	 * @brief A member `addToHash` must be honoured, and must beat every automatic path.
+	 */
+	void memberHookTest() {
+		const Hash<SHA256> hash;
+
+		// The hook ignores the string, so two different values must hash the same. Hashing
+		// the range instead would make them differ.
+		assertTrue(
+			hash(WithMemberHook{ .value = "aaa" }) == hash(WithMemberHook{ .value = "bbb" }),
+			"the member hook ignores the string, so both values must hash the same"
+		);
+
+		// It is honoured through a qualified call too - member lookup does not depend on ADL.
+		SHA256 alg;
+		hashing::addToHash(alg, WithMemberHook{ .value = "aaa" });
+		assertTrue(
+			alg.finalize() == hash(WithMemberHook{ .value = "zzz" }),
+			"a qualified call must reach the member hook as well"
+		);
+
+		// base::StrID has one. It used to be dead code: StrID exposes begin/end/data/size, so
+		// the automatic range path claimed it first.
+		static_assert(internal::has_member_addToHash<SHA256, base::StrID>);
 	}
 
 	void hashTest() {

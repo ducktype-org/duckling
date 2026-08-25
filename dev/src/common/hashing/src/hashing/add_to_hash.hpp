@@ -40,11 +40,23 @@ namespace hashing {
 		typename T,
 		AddToHashOptions Options = DEFAULT_ADD_TO_HASH_OPTIONS>
 	constexpr void addToHash(HashAlgorithm& hash_alg, const T& t) {
+		// A type that hashes itself through a member wins over every automatic path. Member
+		// lookup is used here, not argument-dependent lookup, so this hook is honoured no
+		// matter how the call at the top of the chain was spelled
+		if constexpr (internal::has_member_addToHash<HashAlgorithm, T>) {
+			t.addToHash(hash_alg);
+		}
 		// For most types we only want to add to hash some subset of their subobjects (bases +
 		// members). This can be done easily by defining `hashDecompose` friend function that lists
 		// subobjects in an order in which we want to hash them
-		if constexpr (internal::can_hashDecompose<T>) {
-			std::apply([&](auto&&... args) { (addToHash(hash_alg, args), ...); }, hashDecompose(t));
+		else if constexpr (internal::can_hashDecompose<T>) {
+			std::apply(
+				[&](auto&&... args) {
+					internal::hashCompositeArity<sizeof...(args)>(hash_alg);
+					(addToHash(hash_alg, args), ...);
+				},
+				hashDecompose(t)
+			);
 		}
 		// Specializations for types that are not ours
 		else if constexpr (std::is_floating_point_v<T>) {
@@ -81,12 +93,14 @@ namespace hashing {
 		// members
 		else if constexpr (internal::supports_std_get<T>) {
 			[&]<std::size_t... I>(std::index_sequence<I...>) {
+				internal::hashCompositeArity<sizeof...(I)>(hash_alg);
 				(addToHash(hash_alg, std::get<I>(t)), ...);
 			}(std::make_index_sequence<std::tuple_size_v<T>>{});
 		}
 		// Other overloads for ranges
 		// Overload if range is contiguous
 		else if constexpr (std::ranges::contiguous_range<T>) {
+			internal::hashRangeLengthPrefix(hash_alg, std::ranges::size(t));
 			for (const auto& elem: t) addToHash(hash_alg, elem);
 		} else {
 			static_assert(
