@@ -133,26 +133,28 @@ namespace {
 				return makeBinOpEqExpr(BuiltinBinary::FloatDiv);
 			}
 			case IntegerPow: {
-				LanguagePrimitive lang_primitive;
-				if (lhs->expression_type.getType() == tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed))
-					lang_primitive = LanguagePrimitive::PowI32;
-				else if (lhs->expression_type.getType() == tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed))
-					lang_primitive = LanguagePrimitive::PowI64;
-				else
-					return nullptr;
-
-				return makeLangPrimitiveCall(lang_primitive);
+				auto lang_primitive = [&] -> base::Optional<LanguagePrimitive> {
+					auto type = lhs->expression_type.getType();
+					if (type == tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed))
+						return LanguagePrimitive::PowI32;
+					else if (type == tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed))
+						return LanguagePrimitive::PowI64;
+					else return {};
+				}();
+				if_opt_none(lang_primitive) return {};
+				return makeLangPrimitiveCall(lang_primitive.value());
 			}
 			case FloatPow: {
-				LanguagePrimitive lang_primitive;
-				if (lhs->expression_type.getType() == tsh::getFloatType(ctx, 32))
-					lang_primitive = LanguagePrimitive::PowF32;
-				else if (lhs->expression_type.getType() == tsh::getFloatType(ctx, 64))
-					lang_primitive = LanguagePrimitive::PowF64;
-				else
-					return nullptr;
-				
-				return makeLangPrimitiveCall(lang_primitive);
+				auto lang_primitive = [&] -> base::Optional<LanguagePrimitive> {
+					auto type = lhs->expression_type.getType();
+					if (type == tsh::getFloatType(ctx, 32))
+						return LanguagePrimitive::PowF32;
+					else if (type == tsh::getFloatType(ctx, 64))
+						return LanguagePrimitive::PowF64;
+					else return {};
+				}();
+				if_opt_none(lang_primitive) return {};
+				return makeLangPrimitiveCall(lang_primitive.value());
 			}
 			default:
 				CORE_PANIC("Unsupported desugaring operator");
@@ -186,7 +188,7 @@ namespace compiler::helios::code {
 	base::Optional<Box<Expr>> resolveNumericBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 	) {
-		using BuiltinOperation = std::variant<BuiltinBinary, PreLangPrimitive, PreDesugaringOperator>;
+		using BuiltinOperation = std::variant<BuiltinBinary, PreDesugaringOperator>;
 		using namespace compiler::helios::code::shorthands;
 		Shorthand s{ctx};
 
