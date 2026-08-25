@@ -536,13 +536,19 @@ namespace vm::code {
 				rd(i.src_ptr);
 				deref_read();
 			}
-			instr_case(ins::Op_movCast_pcptr_pcptr, i) {
+			instr_case(ins::Op_cast_pcptr_pcptr, i) {
 				wr(i.dst);
 				rd(i.src);
 			}
 			// Taking an address only reads the pointer operand, like the ref/lea ops above.
 			instr_case(ins::Op_cast_pcptr_pptr, i) {
 				wr(i.dst);
+				rd(i.src_ptr);
+			}
+			// Decomposing a pointer only reads it, like the cast above.
+			instr_case(ins::Op_ptrParts_p64_p64_pptr, i) {
+				wr(i.dst_id);
+				wr(i.dst_offset);
 				rd(i.src_ptr);
 			}
 			instr_case(ins::Op_add_pcptr_p64, i) {

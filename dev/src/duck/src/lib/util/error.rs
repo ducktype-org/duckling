@@ -64,7 +64,7 @@ impl QuackError {
     where
         T: Error + Send + Sync + 'static,
     {
-        let dyn_err: &dyn Error = &err;
+        let dyn_err = &err as &dyn Error;
         let display_place = if let Some(clap_err) = dyn_err.downcast_ref::<clap::Error>()
             && !clap_err.use_stderr()
         {

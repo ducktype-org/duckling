@@ -232,7 +232,9 @@ private:
 	// The pointer casts (including the `manyptr T` -> `ptr T` narrowing) run first and print their
 	// results; the module then dereferences a null many-pointer, which must fail the process.
 	void pointersTest() {
-		runFailTest("pointers", "Accessing null pointer", {}, "11\n44\n22\n", {}, ALL_CORE_MODULES);
+		runFailTest(
+			"pointers", "Accessing null pointer", {}, "11\n44\n22\n0\n0\n1\n", {}, ALL_CORE_MODULES
+		);
 	}
 
 	void initsDeinitsTest() { runTest("inits_deinits", {}, { "100\n" }, {}, 0); }
@@ -242,7 +244,7 @@ private:
 	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
 
 	void allocTest() {
-		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n", {}, 42);
+		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n10\n", {}, 42);
 	}
 
 	// Calls into libc/libm through libffi: scalars, a struct returned by value, `cptr char`

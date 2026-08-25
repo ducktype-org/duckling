@@ -465,8 +465,8 @@ fn can_sync_after_clean() {
 
 #[test]
 fn sync_with_deps() {
-    let (ctx, _home, storage_root) = setup_mock_storage();
-    let (root, pcx) = create_mock_package_with_deps_at_tmpdir(&ctx, "my-package");
+    let (mut ctx, _home, storage_root) = setup_mock_storage();
+    let (root, pcx) = create_mock_package_with_deps_at_tmpdir(&mut ctx, "my-package");
 
     let mock_simple_identity = |name: &str| {
         let path = root.path().join(name).normalize();
@@ -511,8 +511,8 @@ fn sync_with_deps() {
 
 #[test]
 fn sync_with_deps_and_expose_freezefile() {
-    let (ctx, _home, storage_root) = setup_mock_storage();
-    let (root, _) = create_mock_package_with_deps_at_tmpdir(&ctx, "my-package");
+    let (mut ctx, _home, storage_root) = setup_mock_storage();
+    let (root, _) = create_mock_package_with_deps_at_tmpdir(&mut ctx, "my-package");
     let mock_simple_identity = |name: &str| {
         let path = root.path().join(name).normalize();
         let simple_origin = Origin::for_local(&path).unwrap();

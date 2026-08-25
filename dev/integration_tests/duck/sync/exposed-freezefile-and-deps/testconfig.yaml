@@ -4,13 +4,8 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo --expose-freezefile
   @{duck-exe} init bar
-  echo "dependencies:
-    bar:
-      source:
-        path: ../bar
-      features: [b]
-
-  features:
+  @{duck-exe} -C foo add --features b --local ../bar bar
+  echo "features:
     f: []" >> foo/quackconfig.yaml
 
   echo "features:

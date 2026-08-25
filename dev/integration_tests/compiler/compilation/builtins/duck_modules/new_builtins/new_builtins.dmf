@@ -21,5 +21,17 @@ fun main() -> i64 = {
     builtin_output_char(*single);
     dvm_free:{char}(single);
 
+    # A DVM pointer is a `(block, offset)` pair, so it cannot be cast to a single integer.
+    # `dvm_ptr_parts` fails on a null pointer, hence the `dvm_is_nullptr` guard in `toString`.
+    # The `manyptr` declarations reuse those very same builtins.
+    var value  = 1i64;
+    let single_ptr = &value as ptr i64;
+    let parts  = dvm_ptr_parts:{i64}(single_ptr);
+    print(parts[1i64].toString());                                        # 0, at the block start
+    print(dvm_is_nullptr:{i64}(single_ptr).toString());                   # false
+    print(dvm_is_nullptr:{i64}(dvm_nullptr:{i64}()).toString());          # true
+    print(dvm_is_nullmanyptr:{i64}(dvm_nullmanyptr:{i64}()).toString());  # true
+    print(dvm_nullptr:{i64}().toString());
+
     return 0i64;
 }

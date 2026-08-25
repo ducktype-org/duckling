@@ -89,7 +89,7 @@ impl<'duck> Fetcher<'duck> {
     #[tracing::instrument(skip(self))]
     pub async fn get_package_metadata(
         &self,
-        package: &types::PackageWithUrl,
+        package: types::PackageWithUrl,
     ) -> QuackResult<FetcherResponse<registry::Manifest>> {
         if let Some(cached) = self.cache.borrow().get_manifest(package)? {
             debug!("cache hit");
@@ -134,7 +134,7 @@ impl<'duck> Fetcher<'duck> {
                 version: 1.into(),
                 url,
             };
-            let cached = self.cache.borrow().get_all_manifests(&package)?;
+            let cached = self.cache.borrow().get_all_manifests(package)?;
             return Ok(FetcherResponse::Some(types::MultiMetadata {
                 packages_metadata: cached,
             }));
@@ -152,7 +152,7 @@ impl<'duck> Fetcher<'duck> {
 
     /// Fetch a source of a `package`. Returns a path to the file where the blob has been saved.
     #[tracing::instrument(skip(self))]
-    async fn fetch_package_blob(&self, package: &types::PackageWithUrl) -> QuackResult<PathBuf> {
+    async fn fetch_package_blob(&self, package: types::PackageWithUrl) -> QuackResult<PathBuf> {
         let destination = self
             .download_cache_path
             .join(package.name)
@@ -230,7 +230,7 @@ impl<'duck> Fetcher<'duck> {
     /// Fetch a package from ducknest with retries.
     pub async fn fetch_package_blob_with_retries(
         &self,
-        pkg: &PackageWithUrl,
+        pkg: PackageWithUrl,
         retries: u32,
     ) -> QuackResult<PathBuf> {
         debug!("fetching with retries");
