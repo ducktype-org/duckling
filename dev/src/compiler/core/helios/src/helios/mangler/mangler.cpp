@@ -356,6 +356,7 @@ namespace compiler::helios::mangler {
 					[[fallthrough]];
 				case TemplateStmt:
 					ancestors.push_back(ancestor);
+					break;
 				default:
 					break;
 				}
