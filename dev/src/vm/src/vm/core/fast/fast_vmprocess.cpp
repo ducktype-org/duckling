@@ -87,7 +87,7 @@ namespace vm::fast {
 
 		FastVMThread& thread = getMainVMThread();
 		// thread.setThreadCtx(func_name);
-		auto _ = thread.runNoSpawn(func_name, run_arguments);
+		(void) thread.runNoSpawn(func_name, run_arguments);
 		// thread.setThreadCtx("");
 		const ProcessState state = getProcessState();
 		variant_match(state) {

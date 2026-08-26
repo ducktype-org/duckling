@@ -25,12 +25,6 @@ namespace vm {
 	 * VMThread is responsible for executing the code, while VMProcess is responsible for managing
 	 * the process and its resources (like memory, IO, other threads) while also providing an
 	 * interface for the external API.
-	 *
-	 * State Model:
-	 * - The thread's state lives in the process's `ProcessStateManager`. VMThread *applies*
-	 * transitions there via `applyEvent`, it does not own its state.
-	 * - Control requests (Pause/Resume/Step/Stop) are passed through a `ThreadSignal`. The exec
-	 * thread converts consumed requests into state transitions.
 	 */
 	class IVMThread {
 	public:
@@ -43,7 +37,7 @@ namespace vm {
 
 		/**
 		 * @brief Returns a copy of the VMThread's current state, read from the process's state
-		 * table).
+		 * table.
 		 */
 		[[nodiscard]] ThreadState getThreadState() const;
 
@@ -95,12 +89,6 @@ namespace vm {
 		 * @return `void` iff the request was accepted; an error otherwise.
 		 */
 		std::expected<void, std::string> step();
-
-		/**
-		 * @brief Stops this thread.
-		 * Posts a Stop request and blocks until the thread reaches a terminal state.
-		 */
-		void stop();
 
 		/**
 		 * @brief Non-blocking way of telling the thread to stop.

@@ -12,9 +12,7 @@ namespace vm {
 
 	IVMProcess::IVMProcess(const PID my_pid): my_pid(my_pid) {
 		state_manager.setOnStatusChangedCallback([this](const ProcessState& state) {
-			const api::ProcStatus status = process_sm::toApiStatus(state);
-			on_status_changed.emitEvent(status);
-			if (ps::isTerminal(state)) onTerminalStatus(status);
+			on_status_changed.emitEvent(process_sm::toApiStatus(state));
 		});
 	}
 
@@ -25,7 +23,8 @@ namespace vm {
 		if (result.stop_all_threads) requestStopAllThreads();
 	}
 
-	base::Optional<api::ApiError> IVMProcess::validateRequest(const ProcessEvent& event) const {
+	base::Optional<api::ApiError> IVMProcess::validateProcessRequest(const ProcessEvent& event
+	) const {
 		const ProcessState state = state_manager.aggregate();
 		bool               valid = true;
 
@@ -62,8 +61,8 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> IVMProcess::doRequest(
 		const api::RequestVariant& request
 	) {
-#define VALIDATE_REQUEST(event)                                                       \
-	if (auto validation_error = validateRequest(event); validation_error.has_value()) \
+#define VALIDATE_REQUEST(event)                                                              \
+	if (auto validation_error = validateProcessRequest(event); validation_error.has_value()) \
 		return std::unexpected(*validation_error);
 
 		variant_match(request) {
@@ -106,8 +105,8 @@ namespace vm {
 
 			variant_case_novalue(api::request::Step) {
 				// Per-thread operation. It's validity is decided by the target thread not the
-				// process. Until `request::Step` carries a ThreadID it can only target the main
-				// thread.
+				// process.
+				// @TODO: #2967 For now steps the main thread. This should be done per-thread as well.
 				auto response = stepVMThread(getMainThreadID());
 				if (response) return std::unexpected(*response);
 				return getVMThreadCurrentPosition(getMainThreadID());

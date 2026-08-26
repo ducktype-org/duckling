@@ -102,7 +102,7 @@ namespace vm {
 		if (ts::isActive(getThreadState())) return false;
 
 		// The thread is non-active. Clear any control requests from a previous run and
-		// claim the transition to Running. The exec thread is the only writer of state from here on.
+		// perform a transition to Running. The exec thread is the only writer of state from here on.
 		signal.reset();
 		applyEvent(te::Spawn{});
 		return true;
@@ -117,7 +117,7 @@ namespace vm {
 		try {
 			exec_thread = std::thread(&IVMThread::safeRun, this, func_name, run_arguments);
 		} catch (const std::system_error&) {
-			// OS thread creation failed - roll the claimed Running back to Stopped.
+			// OS thread creation failed.
 			applyEvent(te::Kill{});
 			return false;
 		}
@@ -140,7 +140,7 @@ namespace vm {
 		if (!ts::hasStarted(copy)) return std::unexpected("Pausing a thread that has not started");
 
 		if (!signal.post(ThreadSignal::Request::Pause))
-			return std::unexpected("Another control is active");
+			return std::unexpected("Another request is active");
 
 		// Wait for the paused state or a terminal.
 		const ThreadState state
@@ -186,21 +186,6 @@ namespace vm {
 		return {};
 	}
 
-	void IVMThread::stop() {
-		if (ts::isTerminal(getThreadState())) return;
-
-		{
-			std::lock_guard lock(exec_thread_mutex);
-			// A thread that was never spawned has no exec thread to see the Stop request.
-			if (!exec_thread.has_value() && getProcessStateManager().stopIfNotStarted(thread_id))
-				return;
-		}
-
-		// Otherwise the thread is (or was) executing. Post the Stop and wait for a terminal state.
-		(void) signal.post(ThreadSignal::Request::Stop);
-		(void) getProcessStateManager().waitForThreadState(thread_id, ts::isTerminal);
-	}
-
 	void IVMThread::requestStop() noexcept {
 		if (ts::isTerminal(getThreadState())) return;
 		(void) signal.post(ThreadSignal::Request::Stop);
@@ -217,7 +202,7 @@ namespace vm {
 	 */
 	void IVMThread::breakActiveExecution() {
 		const auto req = signal.consume();
-		if (!req.has_value()) return;  // The request raced away between the flag poll and here.
+		if (!req.has_value()) return;
 
 		switch (*req) {
 		case ThreadSignal::Request::Stop:
@@ -227,8 +212,9 @@ namespace vm {
 			return;
 		case ThreadSignal::Request::Resume:
 		case ThreadSignal::Request::Step:
-			// A stale request that landed on a running thread. Skip it, so it cannot clutter the
-			// request slot.
+			// Resume and Step only mean something to a paused thread, and this thread is running.
+			// The API had to post it while the thread was Paused, but the thread resumed before it
+			// read the request. We skip it here so it doesn't clutter the request channel.
 			return;
 		}
 	}

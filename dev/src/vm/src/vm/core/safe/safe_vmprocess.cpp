@@ -66,8 +66,7 @@ namespace vm {
 		std::unique_lock lock(rw_global);
 		SafeVMThread&    thread = getEmptyThread();
 		thread.setThreadCtx(func_name);
-		// The spawner commits `Running` before the exec thread starts, so no started-wait is
-		// needed - the thread is Running by the time this returns.
+
 		bool response = thread.spawnThreadAndRun(func_name, run_arguments);
 
 		if (!response) {
@@ -87,8 +86,8 @@ namespace vm {
 		main.setThreadCtx(func_name);
 		if (!main.runNoSpawn(func_name, run_arguments)) {
 			main.setThreadCtx("");
-			return std::unexpected(api::ApiError{ api::RunError{
-				"Cannot run function, the main thread is already executing: " + func_name } });
+			return std::unexpected(api::ApiError{
+				api::RunError{ "Main thread is already executing: " + func_name } });
 		}
 
 		variant_match(getProcessState()) {

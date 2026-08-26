@@ -64,9 +64,9 @@ namespace {
 		CompTimeDVM(const CompTimeDVM&)            = delete;
 		CompTimeDVM& operator=(const CompTimeDVM&) = delete;
 
-		// @TODO: #1222 Kill the CompTime VM process in the destructor once we get rid of the
-		// deadlock.
-		~CompTimeDVM() = default;
+		~CompTimeDVM() {
+			if (pid.has_value()) (void) vm::api::deinitAndValidate(pid.value());
+		}
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
 

@@ -86,14 +86,14 @@ namespace vm {
 		 * @brief Validates the current API request against the aggregate state.
 		 * @return Empty optional on success, ApiError if the request is invalid in the current state.
 		 */
-		[[nodiscard]] base::Optional<api::ApiError> validateRequest(const ProcessEvent& event) const;
+		[[nodiscard]] base::Optional<api::ApiError> validateProcessRequest(const ProcessEvent& event
+		) const;
 
 		/**
 		 * @brief Prepares a run (or a rerun). Called when the process is terminal, moves all
 		 * threads back to `NotStarted` and clears the stop-all-threads flag.
-		 * @return An empty optional when the process is ready to run - either because it was not
-		 * terminal or because the reset succeeded. An `ApiError` when the reset was refused (i.e.
-		 * thread is still active)
+		 * @return An empty optional when the process is ready to run. An `ApiError` when the reset
+		 * was refused (i.e. thread is still active or was previously panicked)
 		 */
 		[[nodiscard]] base::Optional<api::ApiError> prepareRun();
 
@@ -227,12 +227,6 @@ namespace vm {
 		virtual api::ThreadID getMainThreadID() = 0;
 
 		/**
-		 * @brief Hook called after process status changes to a terminal one.
-		 * Called from the state manager's `OnStatusChangedCallback`.
-		 */
-		virtual void onTerminalStatus(const api::ProcStatus&) noexcept {}
-
-		/**
 		 * @brief Posts Stop to all threads. Non blocking.
 		 */
 		virtual void requestStopAllThreads() noexcept = 0;
@@ -267,8 +261,8 @@ namespace vm {
 		[[nodiscard]] const ProcessStateManager& getStateManager() const { return state_manager; }
 
 		/**
-		 * @brief Applies a thread state transition. Aborts on an invalid transition, since it's a
-		 * fatal DVM error. Sends a Stop out to all threads when the event was a first panic.
+		 * @brief Applies a thread state transition. Aborts on an invalid transition.
+		 * Sends a Stop out to all threads when the event was a first panic.
 		 * Called by `IVMThread::applyEvent`.
 		 */
 		void applyThreadEvent(api::ThreadID tid, const ThreadEvent& event);
