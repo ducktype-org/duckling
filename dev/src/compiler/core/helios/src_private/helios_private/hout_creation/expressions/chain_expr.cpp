@@ -796,7 +796,12 @@ namespace compiler::helios::code {
 					// @TODO: #1412 handle dealias expressions:
 					auto sym = result.back();
 
-					if (kind(sym) == SymbolKind::Field) {
+					if (isStaticField(query_ctx, sym)) {
+						auto node = makeBox<IdentifierExpr>(
+							query_ctx, pstOriginOrdered(current_expr->origin, expr_access), sym
+						);
+						return ChainState::ofExpr(std::move(node));
+					} else if (kind(sym) == SymbolKind::Field) {
 						// Insert a deref if source of field access is not a direct type.
 						if (current_expr->expression_type.getSymbolType().getRefKind()
 						    != tsh::ReferenceKind::Direct) {
@@ -1123,6 +1128,13 @@ namespace compiler::helios::code {
 				return ChainState::ofType(class_type, pst_element_origin);
 			}
 			case SymbolKind::Field: {
+				// A static field is stored once for the whole program, so it is referred to
+				// directly, the same way a global variable is, and not through a `self`.
+				if (isStaticField(query_ctx, symbol)) {
+					auto expr = makeBox<IdentifierExpr>(query_ctx, pst_element_origin, symbol);
+					return ChainState::ofExpr(std::move(expr));
+				}
+
 				auto expr = processFieldNoSelf(query_ctx, symbol, pst_element_origin, pst_elem);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> field_expr =, expr);
 				return ChainState::ofExpr(std::move(field_expr));

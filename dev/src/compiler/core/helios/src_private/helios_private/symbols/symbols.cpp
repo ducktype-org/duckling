@@ -1164,7 +1164,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
 				isFunctionLike(kind(key)) || kind(key) == SymbolKind::Const
-					|| kind(key) == SymbolKind::Variable,
+					|| kind(key) == SymbolKind::Variable || isStaticField(ctx, key),
 				"Invalid call, this function can only be called with functions and globals."
 			);
 
@@ -1173,7 +1173,8 @@ namespace compiler::helios {
 				mir_used_symbols = mir::getMIRUsedSymbolsByFunction(ctx, key);
 			else if (hasAttribute<attributes::BackendDependent>(key))
 				mir_used_symbols.used_functions = getBackendDependentImplementations(ctx, key);
-			else if (kind(key) == SymbolKind::Const || kind(key) == SymbolKind::Variable)
+			else if (kind(key) == SymbolKind::Const || kind(key) == SymbolKind::Variable
+			         || isStaticField(ctx, key))
 				mir_used_symbols = mir::getMIRUsedSymbolsByGlobal(ctx, key);
 
 			return UsedSymbols{

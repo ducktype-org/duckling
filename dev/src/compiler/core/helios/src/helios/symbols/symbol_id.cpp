@@ -1,6 +1,7 @@
 #include "symbol_id.hpp"
 
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -19,6 +20,13 @@ namespace compiler::helios {
 		CORE_ASSERT(member_data.has_value(), "Expected a class member defined in the PST.");
 
 		return member_data.value()->owner_class;
+	}
+
+	bool isStaticField(query::Context& ctx, const SymID symbol) {
+		if (kind(symbol) != SymbolKind::Field) return false;
+
+		auto element = typeOfMember(symbol).getInterface(ctx)->getElementBySym(symbol);
+		return element.has_value() and element.value()->isStaticField();
 	}
 
 	tsh::AbstractType typeOfMember(const SymID member) {

@@ -99,6 +99,13 @@ namespace compiler::helios {
 	 */
 	bool isGlobalVar(query::Context&, SymID);
 
+	/**
+	 * @return whether the symbol is a static field of a class, that is a field stored once for
+	 * the whole program instead of once per instance of its class.
+	 *
+	 * False for every symbol that is not a field.
+	 */
+	bool isStaticField(query::Context&, SymID symbol);
 
 	/**
 	 * Check if a symbol is a builtin. If so, return the BuiltinKind.

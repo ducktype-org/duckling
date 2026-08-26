@@ -149,14 +149,17 @@ namespace compiler::mir {
 			if (optional_local.has_value()) {
 				valueOutput(continuation, MIRValue{ optional_local.value() });
 			} else {
-				auto symbol_kind = helios::kind(expr.symbol);
+				auto& ctx         = function.getContext();
+				auto  symbol_kind = helios::kind(expr.symbol);
 				CORE_ASSERT(
 					symbol_kind == helios::SymbolKind::Variable
-						|| symbol_kind == helios::SymbolKind::Const,
-					"IdentifierExpr symbol should be either local variable or global variable or "
-					"constant."
+						|| symbol_kind == helios::SymbolKind::Const
+						|| helios::isStaticField(ctx, expr.symbol),
+					"IdentifierExpr symbol should be a local variable, a global variable, a "
+					"constant or a static field."
 				);
 
+				// A static field is stored the same way a global variable is.
 				MIRGlobal::Kind global_kind = (symbol_kind == helios::SymbolKind::Const)
 				                                ? MIRGlobal::Kind::Constant
 				                                : MIRGlobal::Kind::Variable;
