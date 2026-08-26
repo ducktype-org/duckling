@@ -125,6 +125,30 @@ namespace compiler::helios::defgen {
 			);
 		}
 
+		static void stringifyPointer(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body,
+			const bool                     is_many_pointer
+		) {
+			const auto  self_param = to_string_decl.parameters.at(0).helios_symbol;
+			const auto& self_type  = to_string_decl.parameters.at(0).type.getType();
+			const auto  pointee    = is_many_pointer
+			                           ? tsh::ManyPointerAbstractType(self_type).getPointee()
+			                           : tsh::PointerAbstractType(self_type).getPointee();
+			// Both primitives are templated on the pointee, so they have to be baked before
+			// they can be called.
+			const auto builtin_sym = bakeLanguagePrimitive(
+				ctx,
+				is_many_pointer ? LanguagePrimitive::StringifyManyPtr
+								: LanguagePrimitive::StringifyPtr,
+				{ pointee }
+			);
+
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
+		}
+
 		static void stringifyFloat(
 			Context&                       ctx,
 			const HOUTFunctionDeclaration& to_string_decl,
@@ -161,19 +185,106 @@ namespace compiler::helios::defgen {
 			auto& self_param         = to_string_decl.parameters.at(0);
 			auto  slice_type         = self_param.type.getType().as<tsh::SliceAbstractType>();
 			auto  slice_element_type = slice_type.getElementType();
-			if (slice_element_type.getType() == tsh::getCharType()
-			    and slice_element_type.getRefKind() == tsh::ReferenceKind::Direct) {
-				const SymID callee_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyStr);
+			// A `str` is text, not a sequence of characters, so it keeps its own primitive.
+			const SymID callee_sym
+				= (slice_element_type.getType() == tsh::getCharType()
+			       and slice_element_type.getRefKind() == tsh::ReferenceKind::Direct)
+			        ? LANG_PRIMITIVE(LanguagePrimitive::StringifyStr)
+			        : bakeLanguagePrimitive(
+						  ctx, LanguagePrimitive::StringifySlice, { slice_element_type }
+					  );
 
-				const Shorthand s{ ctx };
-				body.emplace_back(
-					s.ret(s.call(s.ident(callee_sym), s.ident(self_param.helios_symbol)))
-				);
-			} else {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"toString for non-string slices not yet implemented."
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(s.call(s.ident(callee_sym), s.ident(self_param.helios_symbol))));
+		}
+
+		static void stringifyCPointer(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const auto  self_param = to_string_decl.parameters.at(0).helios_symbol;
+			const auto& self_type  = to_string_decl.parameters.at(0).type.getType();
+			const auto  pointee    = tsh::CPointerAbstractType(self_type).getPointee();
+			const auto  builtin_sym
+				= bakeLanguagePrimitive(ctx, LanguagePrimitive::StringifyCPtr, { pointee });
+
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
+		}
+
+		/**
+		 * @brief Stringifies a static array with the element-wise primitive, baked on the array
+		 * type and its length.
+		 */
+		static void stringifyStaticArray(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
+			const auto array_type
+				= to_string_decl.parameters.at(0).type.getType().as<tsh::StaticArrayAbstractType>();
+			const auto size
+				= numeric_value::NumericValue::createOfType(
+					  tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
+					  array_type.getSize()
+				)
+			          .expect("The length of a static array always fits an i64");
+			const auto builtin_sym = bakeLanguagePrimitive(
+				ctx,
+				LanguagePrimitive::StringifyStaticArray,
+				{ tsh::SymbolType<>::withDefaults(array_type), size }
+			);
+
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
+		}
+
+		/**
+		 * @brief Stringifies a variant as the text of the value it currently holds.
+		 *
+		 * Every alternative gets a case, so the match is exhaustive without a wildcard. Each case
+		 * binds the payload by reference and defers to that type's own `toString`.
+		 */
+		static void stringifyVariant(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const Shorthand s{ ctx };
+			const SymID     self_param = to_string_decl.parameters.at(0).helios_symbol;
+			const auto      variant_type
+				= to_string_decl.parameters.at(0).type.getType().as<tsh::VariantAbstractType>();
+			const auto& alternatives = variant_type.getUnderlyingTypes();
+
+			std::vector<code::MatchExpr::Case> cases;
+			for (usize i = 0; i < alternatives.size(); i++) {
+				// A binding is always a reference to the payload, which for a `box` alternative
+				// is a reference to the pointee.
+				const auto payload_type = alternatives[i]
+				                              .withReferenceKind(tsh::ReferenceKind::Ref)
+				                              .withMutability(tsh::Mutability::Mutable);
+
+				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
+					.name = base::StrID(base::strConcat("__alternative_", i)),
+					.generated_symbol_data
+					= GeneratedFunctionVariable{ .function_symbol = to_string_decl.original_symbol,
+				                                 .variable_index  = i,
+				                                 .type            = payload_type },
+				});
+
+				const SymID payload_to_string = toStringSymForType(ctx, alternatives[i].getType());
+
+				cases.emplace_back(Shorthand::matchCase(
+					i,
+					payload_sym,
+					s.call(s.ident(payload_to_string), s.prepToPassSelf(s.ident(payload_sym)))
 				));
 			}
+
+			// `self` is already a reference to the variant, which is what the match wants.
+			body.emplace_back(s.ret(s.matchExpr(s.ident(self_param), std::move(cases))));
 		}
 
 		static void stringifyUnit(
@@ -285,6 +396,14 @@ namespace compiler::helios::defgen {
 				stringifyFloat(ctx, to_string_decl, body);
 				break;
 			}
+			case tsh::Kind::Pointer: {
+				stringifyPointer(ctx, to_string_decl, body, false);
+				break;
+			}
+			case tsh::Kind::ManyPointer: {
+				stringifyPointer(ctx, to_string_decl, body, true);
+				break;
+			}
 			case tsh::Kind::Char: {
 				stringifyChar(ctx, to_string_decl, body);
 				break;
@@ -303,6 +422,18 @@ namespace compiler::helios::defgen {
 			}
 			case tsh::Kind::Tuple: {
 				stringifyTuple(ctx, to_string_decl, body);
+				break;
+			}
+			case tsh::Kind::CPointer: {
+				stringifyCPointer(ctx, to_string_decl, body);
+				break;
+			}
+			case tsh::Kind::StaticArray: {
+				stringifyStaticArray(ctx, to_string_decl, body);
+				break;
+			}
+			case tsh::Kind::Variant: {
+				stringifyVariant(ctx, to_string_decl, body);
 				break;
 			}
 			case tsh::Kind::Class: {

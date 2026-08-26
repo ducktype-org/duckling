@@ -164,7 +164,7 @@ namespace compiler::driver {
 		};
 
 		/**
-		 * Script compilation mode for .ds files.
+		 * Script compilation mode for .dks files.
 		 *
 		 * Compiles a script top-to-bottom (like REPL statements executed in sequence),
 		 * but produces a single persistent artifact (.dbc or native executable)
