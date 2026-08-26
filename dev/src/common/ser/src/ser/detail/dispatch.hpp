@@ -185,17 +185,17 @@ namespace ser::detail {
 			return Errc::InvalidValue;
 		}
 
-		else if constexpr (access::HAS_TRAIT_WRITE_V<U, Ar>)         // 1
+		else if constexpr (HAS_WRITE_V<access::trait_hooks, U, Ar>)         // 1
 			return serializer<U>::write(ar, x);
-		else if constexpr (access::HAS_TRAIT_VISIT_V<const U, Ar>)   // 2
+		else if constexpr (HAS_VISIT_V<access::trait_hooks, const U, Ar>)   // 2
 			return serializer<U>::visit(ar, x);
-		else if constexpr (access::HAS_MEMBER_WRITE_V<U, Ar>)        // 3
+		else if constexpr (HAS_WRITE_V<access::member_hooks, U, Ar>)        // 3
 			return access::callWrite<U>(ar, x);
-		else if constexpr (access::HAS_MEMBER_VISIT_V<const U, Ar>)  // 4
+		else if constexpr (HAS_VISIT_V<access::member_hooks, const U, Ar>)  // 4
 			return access::callVisit(ar, x);
-		else if constexpr (HAS_ADL_WRITE_V<U, Ar>)                   // 5
+		else if constexpr (HAS_WRITE_V<adl_hooks, U, Ar>)                   // 5
 			return adl_barrier::callWrite(ar, x);
-		else if constexpr (HAS_ADL_VISIT_V<const U, Ar>)             // 6
+		else if constexpr (HAS_VISIT_V<adl_hooks, const U, Ar>)             // 6
 			return adl_barrier::callVisit(ar, x);
 
 		else if constexpr (builtin::scalar_like<U>)
@@ -246,7 +246,6 @@ namespace ser::detail {
 			);
 	}
 
-
 	template<class F>
 	constexpr Errc codeFromHook(F&& f) {
 		try {
@@ -278,17 +277,17 @@ namespace ser::detail {
 			return Errc::InvalidValue;
 		}
 
-		else if constexpr (access::HAS_TRAIT_READ_V<U, Ar>)    // 1
+		else if constexpr (HAS_READ_V<access::trait_hooks, U, Ar>)    // 1
 			return codeFromHook([&] { return serializer<U>::read(ar, x); });
-		else if constexpr (access::HAS_TRAIT_VISIT_V<U, Ar>)   // 2
+		else if constexpr (HAS_VISIT_V<access::trait_hooks, U, Ar>)   // 2
 			return codeFromHook([&] { return serializer<U>::visit(ar, x); });
-		else if constexpr (access::HAS_MEMBER_READ_V<U, Ar>)   // 3
+		else if constexpr (HAS_READ_V<access::member_hooks, U, Ar>)   // 3
 			return codeFromHook([&] { return access::callRead<U>(ar, x); });
-		else if constexpr (access::HAS_MEMBER_VISIT_V<U, Ar>)  // 4
+		else if constexpr (HAS_VISIT_V<access::member_hooks, U, Ar>)  // 4
 			return codeFromHook([&] { return access::callVisit(ar, x); });
-		else if constexpr (HAS_ADL_READ_V<U, Ar>)              // 5
+		else if constexpr (HAS_READ_V<adl_hooks, U, Ar>)              // 5
 			return codeFromHook([&] { return adl_barrier::callRead(ar, x); });
-		else if constexpr (HAS_ADL_VISIT_V<U, Ar>)             // 6
+		else if constexpr (HAS_VISIT_V<adl_hooks, U, Ar>)             // 6
 			return codeFromHook([&] { return adl_barrier::callVisit(ar, x); });
 
 		else if constexpr (builtin::scalar_like<U>)
@@ -529,11 +528,11 @@ namespace ser::detail {
 			throwError(Errc::InvalidValue, ar.position());
 		}
 
-		else if constexpr (access::HAS_TRAIT_MAKE_V<T, Ar>)
+		else if constexpr (HAS_MAKE_V<access::trait_hooks, T, Ar>)
 			return serializer<T>::make(ar);                     // 1
-		else if constexpr (access::HAS_MEMBER_MAKE_V<T, Ar>)
+		else if constexpr (HAS_MAKE_V<access::member_hooks, T, Ar>)
 			return access::callMake<T>(ar);                     // 2
-		else if constexpr (HAS_ADL_MAKE_V<T, Ar>)
+		else if constexpr (HAS_MAKE_V<adl_hooks, T, Ar>)
 			return adl_barrier::callMake(ar, ::ser::tag<T>{});  // 3
 
 		// Every one of those three returns the hook's prvalue straight out of a return

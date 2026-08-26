@@ -43,9 +43,9 @@ namespace debug_info {
 	/**
 	 * @brief Writes a DebugInfo object to a binary stream.
 	 *
-	 * The vectors go out in the order they are held, so the file is insertion-orderedt. The same input gives the same file, and that comes
-	 * from the pipeline being deterministic: a module's debug info is built once per
-	 * compilation in a deterministic order.
+	 * The vectors go out in the order they are held, so the file is insertion-orderedt. The same
+	 * input gives the same file, and that comes from the pipeline being deterministic: a module's
+	 * debug info is built once per compilation in a deterministic order.
 	 *
 	 * @param info The DebugInfo to serialize.
 	 * @param out  Any std::ostream to write to (e.g. a file stream).

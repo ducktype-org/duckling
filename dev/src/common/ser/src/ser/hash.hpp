@@ -265,8 +265,10 @@ namespace ser {
 		// specialization, and its described field list is NOT the format.
 		template<class T, class Ar>
 		inline constexpr bool TRAIT_LEVEL_HOOK_V
-			= TRAIT_WRITE_V<T, Ar> || TRAIT_READ_V<T, Ar> || TRAIT_MAKE_V<T, Ar>
-		   || TRAIT_VISIT_WRITE_V<T, Ar> || TRAIT_VISIT_READ_V<T, Ar>;
+			= LVL_WRITE_V<access::trait_hooks, T, Ar> || LVL_READ_V<access::trait_hooks, T, Ar>
+		   || LVL_MAKE_V<access::trait_hooks, T, Ar>
+		   || LVL_VISIT_WRITE_V<access::trait_hooks, T, Ar>
+		   || LVL_VISIT_READ_V<access::trait_hooks, T, Ar>;
 
 		// ── the recursion ─────────────────────────────────────────────────────
 		// Seen is the PATH, not a visited set: a type met twice on two different branches

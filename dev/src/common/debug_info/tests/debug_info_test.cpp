@@ -226,7 +226,7 @@ private:
 			auto result = debug_info::loadFromStream(iss);
 			assertFalse(result.has_value(), "A payload with no envelope should fail to load");
 		}
-		
+
 		{
 			std::ostringstream oss;
 			debug_info::saveToStream(makeTestDebugInfo(), oss);

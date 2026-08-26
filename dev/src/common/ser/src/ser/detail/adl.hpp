@@ -4,7 +4,6 @@
 #include <ser/errc.hpp>
 #include <ser/tags.hpp>
 
-#include <concepts>
 #include <type_traits>
 #include <utility>
 
@@ -34,13 +33,13 @@ namespace ser::detail::adl_barrier {
 		return serWrite(ar, x);
 	}
 
+	// Forwarding, so the one declaration answers both "does serRead fill an lvalue" and
+	// "does it also swallow an rvalue" - the second being the by-value hook that reads into
+	// a copy. Dispatch only ever calls it with an lvalue.
 	template<class Ar, class T>
-	constexpr auto callRead(Ar& ar, T& x) -> decltype(serRead(ar, x)) {
-		return serRead(ar, x);
+	constexpr auto callRead(Ar& ar, T&& x) -> decltype(serRead(ar, ::std::forward<T>(x))) {
+		return serRead(ar, ::std::forward<T>(x));
 	}
-
-	template<class Ar, class T>
-	constexpr auto callReadByCopy(Ar& ar, T&& x) -> decltype(serRead(ar, ::std::move(x)));
 
 	// The tag is a PARAMETER so that both template parameters are deduced. Passing T
 	// explicitly instead works everywhere except GCC 13 and 14, which resolve the call
@@ -54,19 +53,26 @@ namespace ser::detail::adl_barrier {
 
 namespace ser::detail {
 
-	// ── ADL hook detectors ────────────────────────────────────────────────────
-	// T carries the cv-qualification of the object being visited, so a hook that only accepts
-	// a non-const object is invisible on the write side - and checkHooks turns that asymmetry
-	// into a message instead of two formats.
-	SER_DETAIL_HOOK_VISIT(inline constexpr, ADL, adl_barrier::callVisit(ar, x))
-	SER_DETAIL_HOOK_WRITE(inline constexpr, ADL, adl_barrier::callWrite(ar, x))
-	SER_DETAIL_HOOK_READ(inline constexpr, ADL, adl_barrier::callRead(ar, x))
-	SER_DETAIL_HOOK_MAKE(
-		inline constexpr, ADL, adl_barrier::callMake(ar, ::ser::tag<::std::remove_cvref_t<T>>{})
-	)
-	SER_DETAIL_HOOK_READ_BY_COPY(
-		inline constexpr, ADL, adl_barrier::callReadByCopy(ar, ::std::move(x))
-	)
+	// ── level 3: hooks found by ADL ───────────────────────────────────────────
+	// The probes the questions in detail/hooks.hpp are asked with. Declared and never
+	// defined; each one just names the barrier call for its form, whose own trailing return
+	// type is what makes a missing hook a substitution failure.
+	struct adl_hooks {
+		template<class Ar, class T>
+		static auto visit(Ar& ar, T& x) -> decltype(adl_barrier::callVisit(ar, x));
 
+		template<class Ar, class T>
+		static auto write(Ar& ar, const T& x) -> decltype(adl_barrier::callWrite(ar, x));
+
+		template<class Ar, class T>
+		static auto read(Ar& ar, T&& x)
+			-> decltype(adl_barrier::callRead(ar, ::std::forward<T>(x)));
+
+		// T first: there is no argument to deduce it from. The tag stays a PARAMETER of
+		// callMake for the reason given there.
+		template<class T, class Ar>
+		static auto make(Ar& ar)
+			-> decltype(adl_barrier::callMake(ar, ::ser::tag<::std::remove_cvref_t<T>>{}));
+	};
 
 }  // namespace ser::detail

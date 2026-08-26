@@ -108,8 +108,8 @@ namespace query {
 #define INTERNAL_DECLARE_METADATA(Metadata, type)                                                   \
 	static_assert(                                                                                  \
 		::ser::MIN_WIRE_SIZE_V<type> > 0,                                                           \
-		"query: this metadata type writes NO bytes, and MetadataStorage relies on "       \
-		"every entry reading at least one byte"                                                      \
+		"query: this metadata type writes NO bytes, and MetadataStorage relies on "                 \
+		"every entry reading at least one byte"                                                     \
 	);                                                                                              \
 	struct Metadata final: public ::query::internal::BaseMetadata {                                 \
 		static inline const base::StrID TYPE_ID{ std::string{ #Metadata } };                        \

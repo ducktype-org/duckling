@@ -180,9 +180,8 @@ public:
 
 	[[nodiscard]] usize cachedLength() const { return length; }
 
-	SER_FRIEND  // = friend struct ser::access; - without it the macro below is invisible
-private: 
-	std::string text;
+SER_FRIEND  // = friend struct ser::access; - without it the macro below is invisible
+	private: std::string text;
 	usize                length = 0;
 
 	SER_DESCRIBE(text)  // the wire is exactly this one field

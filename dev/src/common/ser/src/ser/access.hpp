@@ -40,47 +40,79 @@ namespace ser {
 	// detail::checkHooks reports instead of letting the two directions use different formats.
 	struct access {
 		// ── level 1: ser::serializer<T> ───────────────────────────────────────
-		SER_DETAIL_HOOK_VISIT(
-			static constexpr, TRAIT, serializer<::std::remove_cvref_t<T>>::visit(ar, x)
-		)
-		SER_DETAIL_HOOK_WRITE(
-			static constexpr, TRAIT, serializer<::std::remove_cvref_t<T>>::write(ar, x)
-		)
-		SER_DETAIL_HOOK_READ(
-			static constexpr, TRAIT, serializer<::std::remove_cvref_t<T>>::read(ar, x)
-		)
-		SER_DETAIL_HOOK_MAKE(static constexpr, TRAIT, serializer<::std::remove_cvref_t<T>>::make(ar))
-		SER_DETAIL_HOOK_READ_BY_COPY(
-			static constexpr, TRAIT, serializer<::std::remove_cvref_t<T>>::read(ar, ::std::move(x))
-		)
+		// The probes the questions in detail/hooks.hpp are asked with: declared, never
+		// defined, one per hook form. The trait level needs no access rights of its own,
+		// but it lives here so the whole priority table reads in one place.
+		struct trait_hooks {
+			template<class Ar, class T>
+			static auto visit(Ar& ar, T& x)
+				-> decltype(serializer<::std::remove_cvref_t<T>>::visit(ar, x));
+
+			template<class Ar, class T>
+			static auto write(Ar& ar, const T& x)
+				-> decltype(serializer<::std::remove_cvref_t<T>>::write(ar, x));
+
+			// Forwarding, so this one probe answers both "does it fill an lvalue" and
+			// "does it also swallow an rvalue" - see HAS_READ_RVALUE_V.
+			template<class Ar, class T>
+			static auto read(Ar& ar, T&& x)
+				-> decltype(serializer<::std::remove_cvref_t<T>>::read(ar, ::std::forward<T>(x)));
+
+			// T first: there is no argument to deduce it from.
+			template<class T, class Ar>
+			static auto make(Ar& ar) -> decltype(serializer<::std::remove_cvref_t<T>>::make(ar));
+		};
 
 		// ── level 2: hooks declared in the class ──────────────────────────────
-		SER_DETAIL_HOOK_VISIT(static constexpr, MEMBER, ::std::remove_cvref_t<T>::serVisit(ar, x))
-		SER_DETAIL_HOOK_WRITE(static constexpr, MEMBER, ::std::remove_cvref_t<T>::serWrite(ar, x))
-		SER_DETAIL_HOOK_READ(static constexpr, MEMBER, ::std::remove_cvref_t<T>::serRead(ar, x))
-		SER_DETAIL_HOOK_MAKE(static constexpr, MEMBER, ::std::remove_cvref_t<T>::serMake(ar))
-		SER_DETAIL_HOOK_READ_BY_COPY(
-			static constexpr, MEMBER, ::std::remove_cvref_t<T>::serRead(ar, ::std::move(x))
-		)
+		// These are the probes that make access control part of SFINAE: written in
+		// ser::detail they could not name a private serVisit, and every detector built on
+		// them would report false for a hook that works perfectly well. A nested class of a
+		// befriended class has the same access rights the friend does.
+		struct member_hooks {
+			template<class Ar, class T>
+			static auto visit(Ar& ar, T& x) -> decltype(::std::remove_cvref_t<T>::serVisit(ar, x));
+
+			template<class Ar, class T>
+			static auto write(Ar& ar, const T& x)
+				-> decltype(::std::remove_cvref_t<T>::serWrite(ar, x));
+
+			template<class Ar, class T>
+			static auto read(Ar& ar, T&& x)
+				-> decltype(::std::remove_cvref_t<T>::serRead(ar, ::std::forward<T>(x)));
+
+			template<class T, class Ar>
+			static auto make(Ar& ar) -> decltype(::std::remove_cvref_t<T>::serMake(ar));
+		};
 
 		// ── "the name is there, but this archive cannot call it" ──────────────
-		SER_DETAIL_HOOK_NAMED(
-			static constexpr, TRAIT_VISIT, serializer<::std::remove_cvref_t<T>>::visit
-		)
-		SER_DETAIL_HOOK_NAMED(
-			static constexpr, TRAIT_WRITE, serializer<::std::remove_cvref_t<T>>::write
-		)
-		SER_DETAIL_HOOK_NAMED(
-			static constexpr, TRAIT_READ, serializer<::std::remove_cvref_t<T>>::read
-		)
-		SER_DETAIL_HOOK_NAMED(
-			static constexpr, TRAIT_MAKE, serializer<::std::remove_cvref_t<T>>::make
-		)
+		// An id-expression for a function TEMPLATE cannot be formed without arguments to
+		// deduce from, so each of these is true for exactly a single NON-template
+		// declaration - a hook pinned to one concrete archive type. Compared against the
+		// archive in use, that is how a hook that works is told from a hook that is being
+		// silently ignored.
+		template<class T>
+		static constexpr bool NAMES_TRAIT_VISIT_V
+			= requires { serializer<::std::remove_cvref_t<T>>::visit; };
+		template<class T>
+		static constexpr bool NAMES_TRAIT_WRITE_V
+			= requires { serializer<::std::remove_cvref_t<T>>::write; };
+		template<class T>
+		static constexpr bool NAMES_TRAIT_READ_V
+			= requires { serializer<::std::remove_cvref_t<T>>::read; };
+		template<class T>
+		static constexpr bool NAMES_TRAIT_MAKE_V
+			= requires { serializer<::std::remove_cvref_t<T>>::make; };
 
-		SER_DETAIL_HOOK_NAMED(static constexpr, MEMBER_VISIT, ::std::remove_cvref_t<T>::serVisit)
-		SER_DETAIL_HOOK_NAMED(static constexpr, MEMBER_WRITE, ::std::remove_cvref_t<T>::serWrite)
-		SER_DETAIL_HOOK_NAMED(static constexpr, MEMBER_READ, ::std::remove_cvref_t<T>::serRead)
-		SER_DETAIL_HOOK_NAMED(static constexpr, MEMBER_MAKE, ::std::remove_cvref_t<T>::serMake)
+		template<class T>
+		static constexpr bool NAMES_MEMBER_VISIT_V
+			= requires { ::std::remove_cvref_t<T>::serVisit; };
+		template<class T>
+		static constexpr bool NAMES_MEMBER_WRITE_V
+			= requires { ::std::remove_cvref_t<T>::serWrite; };
+		template<class T>
+		static constexpr bool NAMES_MEMBER_READ_V = requires { ::std::remove_cvref_t<T>::serRead; };
+		template<class T>
+		static constexpr bool NAMES_MEMBER_MAKE_V = requires { ::std::remove_cvref_t<T>::serMake; };
 
 		// ── "the hook is there, but it is not static" ─────────────
 		template<class T, class Ar>
@@ -275,27 +307,68 @@ namespace ser::detail {
 		= ::std::conditional_t<writer<Ar>, Ar, out<::std::span<::std::byte>, typename Ar::context_type>>;
 
 	// ── per-level summaries ───────────────────────────────────────────────────
-	// Every one of them asks with a real archive, so "does this type declare a hook" and
-	// "which rung will dispatch take" are the same question asked twice.
-	SER_DETAIL_HOOK_SUMMARY(TRAIT, access::)
-	SER_DETAIL_HOOK_SUMMARY(MEMBER, access::)
-	SER_DETAIL_HOOK_SUMMARY(ADL, )
+	// The questions in detail/hooks.hpp take whatever archive they are given; these fill in
+	// the one the form is really asked in, so "does this type declare a hook" and "which
+	// rung will dispatch take" are the same question asked twice. LVL_ takes a level tag,
+	// ANY_ folds the three of them.
+	template<class L, class T, class Ar>
+	inline constexpr bool LVL_VISIT_WRITE_V = HAS_VISIT_V<L, const T, writer_for<Ar>>;
+
+	template<class L, class T, class Ar>
+	inline constexpr bool LVL_VISIT_READ_V = HAS_VISIT_V<L, T, reader_for<Ar>>;
+
+	template<class L, class T, class Ar>
+	inline constexpr bool LVL_WRITE_V = HAS_WRITE_V<L, T, writer_for<Ar>>;
+
+	template<class L, class T, class Ar>
+	inline constexpr bool LVL_READ_V = HAS_READ_V<L, T, reader_for<Ar>>;
+
+	template<class L, class T, class Ar>
+	inline constexpr bool LVL_MAKE_V = HAS_MAKE_V<L, T, reader_for<Ar>>;
+
+	template<class L, class T, class Ar>
+	inline constexpr bool LVL_READ_BY_COPY_V = HAS_READ_RVALUE_V<L, T, reader_for<Ar>>;
+
+	// A variable template cannot be passed as a template argument, so the fold over the
+	// three levels is spelled out once per form rather than written generically.
+	template<class T, class Ar>
+	inline constexpr bool ANY_VISIT_WRITE_V
+		= LVL_VISIT_WRITE_V<access::trait_hooks, T, Ar>
+	   || LVL_VISIT_WRITE_V<access::member_hooks, T, Ar> || LVL_VISIT_WRITE_V<adl_hooks, T, Ar>;
+
+	template<class T, class Ar>
+	inline constexpr bool ANY_VISIT_READ_V
+		= LVL_VISIT_READ_V<access::trait_hooks, T, Ar>
+	   || LVL_VISIT_READ_V<access::member_hooks, T, Ar> || LVL_VISIT_READ_V<adl_hooks, T, Ar>;
+
+	template<class T, class Ar>
+	inline constexpr bool ANY_WRITE_V
+		= LVL_WRITE_V<access::trait_hooks, T, Ar> || LVL_WRITE_V<access::member_hooks, T, Ar>
+	   || LVL_WRITE_V<adl_hooks, T, Ar>;
+
+	template<class T, class Ar>
+	inline constexpr bool ANY_READ_V
+		= LVL_READ_V<access::trait_hooks, T, Ar> || LVL_READ_V<access::member_hooks, T, Ar>
+	   || LVL_READ_V<adl_hooks, T, Ar>;
+
+	template<class T, class Ar>
+	inline constexpr bool ANY_MAKE_V
+		= LVL_MAKE_V<access::trait_hooks, T, Ar> || LVL_MAKE_V<access::member_hooks, T, Ar>
+	   || LVL_MAKE_V<adl_hooks, T, Ar>;
 
 	// ── does this type describe its own format? ───────────────────────────────
 	// Either direction, any level, any form. This is what keeps a type with its own
 	// serializer from ever being decomposed field by field. It takes Ar because the answer
 	// only means anything relative to the archive that will do the work.
 	template<class T, class Ar>
-	inline constexpr bool HAS_ANY_WRITE_HOOK_V
-		= SER_DETAIL_HOOK_ANY_LEVEL(WRITE) || SER_DETAIL_HOOK_ANY_LEVEL(VISIT_WRITE);
+	inline constexpr bool HAS_ANY_WRITE_HOOK_V = ANY_WRITE_V<T, Ar> || ANY_VISIT_WRITE_V<T, Ar>;
 
 	template<class T, class Ar>
 	inline constexpr bool HAS_ANY_READ_HOOK_V
-		= SER_DETAIL_HOOK_ANY_LEVEL(READ) || SER_DETAIL_HOOK_ANY_LEVEL(MAKE)
-	   || SER_DETAIL_HOOK_ANY_LEVEL(VISIT_READ);
+		= ANY_READ_V<T, Ar> || ANY_MAKE_V<T, Ar> || ANY_VISIT_READ_V<T, Ar>;
 
 	template<class T, class Ar>
-	inline constexpr bool HAS_ANY_MAKE_HOOK_V = SER_DETAIL_HOOK_ANY_LEVEL(MAKE);
+	inline constexpr bool HAS_ANY_MAKE_HOOK_V = ANY_MAKE_V<T, Ar>;
 
 	// Every form of every level: the union of the two directions.
 	template<class T, class Ar>
@@ -303,48 +376,89 @@ namespace ser::detail {
 		= HAS_ANY_WRITE_HOOK_V<T, Ar> || HAS_ANY_READ_HOOK_V<T, Ar>;
 
 	// ── wrong return type ─────────────────────────────────────────────────────
-	SER_DETAIL_HOOK_WRONG_RETURN(WRITE, writer_for)
-	SER_DETAIL_HOOK_WRONG_RETURN(READ, reader_for)
-	SER_DETAIL_HOOK_WRONG_RETURN(MAKE, reader_for)
+	// A hook of this form exists at some level and none of them got the return type right.
+	// Each fires only when NO level got the form right, so a correct trait hook still wins
+	// over a broken in-class one instead of blocking the build.
+	template<class T, class Ar>
+	inline constexpr bool WRITE_WRONG_RETURN_V
+		= (HAS_WRITE_LOOSE_V<access::trait_hooks, T, writer_for<Ar>>
+	       || HAS_WRITE_LOOSE_V<access::member_hooks, T, writer_for<Ar>>
+	       || HAS_WRITE_LOOSE_V<adl_hooks, T, writer_for<Ar>>)
+	   && !ANY_WRITE_V<T, Ar>;
 
-	// visit is asked in both directions, so it cannot go through the macro above.
+	template<class T, class Ar>
+	inline constexpr bool READ_WRONG_RETURN_V
+		= (HAS_READ_LOOSE_V<access::trait_hooks, T, reader_for<Ar>>
+	       || HAS_READ_LOOSE_V<access::member_hooks, T, reader_for<Ar>>
+	       || HAS_READ_LOOSE_V<adl_hooks, T, reader_for<Ar>>)
+	   && !ANY_READ_V<T, Ar>;
+
+	template<class T, class Ar>
+	inline constexpr bool MAKE_WRONG_RETURN_V
+		= (HAS_MAKE_LOOSE_V<access::trait_hooks, T, reader_for<Ar>>
+	       || HAS_MAKE_LOOSE_V<access::member_hooks, T, reader_for<Ar>>
+	       || HAS_MAKE_LOOSE_V<adl_hooks, T, reader_for<Ar>>)
+	   && !ANY_MAKE_V<T, Ar>;
+
+	// visit is the only form asked in both directions, so it is six terms rather than three.
 	template<class T, class Ar>
 	inline constexpr bool VISIT_WRONG_RETURN_V
-		= (access::HAS_TRAIT_VISIT_LOOSE_V<T, reader_for<Ar>>
-	       || access::HAS_TRAIT_VISIT_LOOSE_V<const T, writer_for<Ar>>
-	       || access::HAS_MEMBER_VISIT_LOOSE_V<T, reader_for<Ar>>
-	       || access::HAS_MEMBER_VISIT_LOOSE_V<const T, writer_for<Ar>>
-	       || HAS_ADL_VISIT_LOOSE_V<T, reader_for<Ar>>
-	       || HAS_ADL_VISIT_LOOSE_V<const T, writer_for<Ar>>)
-	   && !(SER_DETAIL_HOOK_ANY_LEVEL(VISIT_READ) || SER_DETAIL_HOOK_ANY_LEVEL(VISIT_WRITE));
+		= (HAS_VISIT_LOOSE_V<access::trait_hooks, T, reader_for<Ar>>
+	       || HAS_VISIT_LOOSE_V<access::trait_hooks, const T, writer_for<Ar>>
+	       || HAS_VISIT_LOOSE_V<access::member_hooks, T, reader_for<Ar>>
+	       || HAS_VISIT_LOOSE_V<access::member_hooks, const T, writer_for<Ar>>
+	       || HAS_VISIT_LOOSE_V<adl_hooks, T, reader_for<Ar>>
+	       || HAS_VISIT_LOOSE_V<adl_hooks, const T, writer_for<Ar>>)
+	   && !(ANY_VISIT_READ_V<T, Ar> || ANY_VISIT_WRITE_V<T, Ar>);
 
 	// ── a hook this archive cannot reach ──────────────────────────────────────
-	FOR_EACH(SER_DETAIL_HOOK_NONGENERIC, WRITE, READ, MAKE)
+	// The name is declared but the archive in use cannot call it, so the hook is there and
+	// being ignored - a plain function pinned to some other concrete archive type, and
+	// dispatch walks past it into the builtin or automatic path. It cannot see an overload
+	// set, a template constrained to one archive, or an ADL free function, so only the two
+	// levels that have a name to look up are asked.
+	template<class T, class Ar>
+	inline constexpr bool NONGENERIC_WRITE_HOOK_V
+		= (access::NAMES_TRAIT_WRITE_V<T> && !LVL_WRITE_V<access::trait_hooks, T, Ar>)
+	   || (access::NAMES_MEMBER_WRITE_V<T> && !LVL_WRITE_V<access::member_hooks, T, Ar>);
+
+	template<class T, class Ar>
+	inline constexpr bool NONGENERIC_READ_HOOK_V
+		= (access::NAMES_TRAIT_READ_V<T> && !LVL_READ_V<access::trait_hooks, T, Ar>)
+	   || (access::NAMES_MEMBER_READ_V<T> && !LVL_READ_V<access::member_hooks, T, Ar>);
+
+	template<class T, class Ar>
+	inline constexpr bool NONGENERIC_MAKE_HOOK_V
+		= (access::NAMES_TRAIT_MAKE_V<T> && !LVL_MAKE_V<access::trait_hooks, T, Ar>)
+	   || (access::NAMES_MEMBER_MAKE_V<T> && !LVL_MAKE_V<access::member_hooks, T, Ar>);
 
 	template<class T, class Ar>
 	inline constexpr bool NONGENERIC_VISIT_HOOK_V
 		= (access::NAMES_TRAIT_VISIT_V<T>
-	       && !(TRAIT_VISIT_WRITE_V<T, Ar> || TRAIT_VISIT_READ_V<T, Ar>) )
+	       && !(LVL_VISIT_WRITE_V<access::trait_hooks, T, Ar> || LVL_VISIT_READ_V<access::trait_hooks, T, Ar>)
+	      )
 	   || (access::NAMES_MEMBER_VISIT_V<T>
-	       && !(MEMBER_VISIT_WRITE_V<T, Ar> || MEMBER_VISIT_READ_V<T, Ar>) );
+	       && !(LVL_VISIT_WRITE_V<access::member_hooks, T, Ar> || LVL_VISIT_READ_V<access::member_hooks, T, Ar>)
+	   );
 
 	// ── a hook that is not static ─────────────────────────────────────────────
 	template<class T, class Ar>
 	inline constexpr bool NONSTATIC_VISIT_HOOK_V
 		= access::CALLS_MEMBER_VISIT_V<T, reader_for<Ar>>
-	   && !(MEMBER_VISIT_READ_V<T, Ar> || MEMBER_VISIT_WRITE_V<T, Ar>);
+	   && !(LVL_VISIT_READ_V<access::member_hooks, T, Ar>
+	        || LVL_VISIT_WRITE_V<access::member_hooks, T, Ar>);
 
 	template<class T, class Ar>
-	inline constexpr bool NONSTATIC_WRITE_HOOK_V
-		= access::CALLS_MEMBER_WRITE_V<T, writer_for<Ar>> && !MEMBER_WRITE_V<T, Ar>;
+	inline constexpr bool NONSTATIC_WRITE_HOOK_V = access::CALLS_MEMBER_WRITE_V<T, writer_for<Ar>>
+	                                            && !LVL_WRITE_V<access::member_hooks, T, Ar>;
 
 	template<class T, class Ar>
-	inline constexpr bool NONSTATIC_READ_HOOK_V
-		= access::CALLS_MEMBER_READ_V<T, reader_for<Ar>> && !MEMBER_READ_V<T, Ar>;
+	inline constexpr bool NONSTATIC_READ_HOOK_V = access::CALLS_MEMBER_READ_V<T, reader_for<Ar>>
+	                                           && !LVL_READ_V<access::member_hooks, T, Ar>;
 
 	template<class T, class Ar>
-	inline constexpr bool NONSTATIC_MAKE_HOOK_V
-		= access::CALLS_MEMBER_MAKE_V<T, reader_for<Ar>> && !MEMBER_MAKE_V<T, Ar>;
+	inline constexpr bool NONSTATIC_MAKE_HOOK_V = access::CALLS_MEMBER_MAKE_V<T, reader_for<Ar>>
+	                                           && !LVL_MAKE_V<access::member_hooks, T, Ar>;
 
 	// Any of the four. Dispatch uses it to stay quiet: once checkHooks has said "the
 	// hook you wrote is being ignored", a second complaint that the type cannot be
@@ -368,9 +482,9 @@ namespace ser::detail {
 	// A visit hook that binds only a non-const object is found when reading and missed
 	// when writing, so writing would silently fall through to the builtin or automatic
 	// path and the two directions would disagree about the format.
-#define SER_DETAIL_ASSERT_VISIT_TAKES_CONST(LEVEL, WHAT, SIGNATURE)                    \
+#define SER_DETAIL_ASSERT_VISIT_TAKES_CONST(L, WHAT, SIGNATURE)                        \
 	static_assert(                                                                     \
-		!(LEVEL##_VISIT_READ_V<T, Ar> && !LEVEL##_VISIT_WRITE_V<T, Ar>),               \
+		!(LVL_VISIT_READ_V<L, T, Ar> && !LVL_VISIT_WRITE_V<L, T, Ar>),                 \
 		"ser: " WHAT                                                                   \
 		" accepts a non-const object only, so it is invisible when "                   \
 		"writing and the two directions would use different formats. Take the object " \
@@ -378,10 +492,10 @@ namespace ser::detail {
 	);
 
 	// Both answer "write this one", and nothing says which format was meant.
-#define SER_DETAIL_ASSERT_VISIT_NOT_PAIRED(LEVEL, WHAT, KEEP)            \
+#define SER_DETAIL_ASSERT_VISIT_NOT_PAIRED(L, WHAT, KEEP)                \
 	static_assert(                                                       \
-		!((LEVEL##_VISIT_WRITE_V<T, Ar> || LEVEL##_VISIT_READ_V<T, Ar>)  \
-	      && (LEVEL##_WRITE_V<T, Ar> || LEVEL##_READ_V<T, Ar>) ),        \
+		!((LVL_VISIT_WRITE_V<L, T, Ar> || LVL_VISIT_READ_V<L, T, Ar>)    \
+	      && (LVL_WRITE_V<L, T, Ar> || LVL_READ_V<L, T, Ar>) ),          \
 		"ser: " WHAT                                                     \
 		". They answer the same question and nothing says which format " \
 		"was meant. Keep " KEEP                                          \
@@ -389,9 +503,9 @@ namespace ser::detail {
 
 	// A hook that reads into a copy: the call succeeds, returns Errc::Ok, and the caller's
 	// object is exactly as it was. One missing `&`.
-#define SER_DETAIL_ASSERT_READ_FILLS(WHICH, WHAT, SIGNATURE)                               \
+#define SER_DETAIL_ASSERT_READ_FILLS(L, WHAT, SIGNATURE)                                   \
 	static_assert(                                                                         \
-		!(WHICH##_V<T, Ar> && WHICH##_BY_COPY_V<T, Ar>),                                   \
+		!(LVL_READ_V<L, T, Ar> && LVL_READ_BY_COPY_V<L, T, Ar>),                           \
 		"ser: " WHAT                                                                       \
 		" takes the object BY VALUE, or by const reference, so reading fills a copy that " \
 		"is thrown away - the call returns Errc::Ok and the caller's object is "           \
@@ -401,9 +515,9 @@ namespace ser::detail {
 	// Not static, so no detector can name it and dispatch never finds it. A virtual method
 	// that only plays the part of a hook is the one legitimate reason to have the name
 	// here, which is why the message offers the rename.
-#define SER_DETAIL_ASSERT_HOOK_STATIC(FORM, WHAT, SIGNATURE)                           \
+#define SER_DETAIL_ASSERT_HOOK_STATIC(COND, WHAT, SIGNATURE)                           \
 	static_assert(                                                                     \
-		!NONSTATIC_##FORM##_HOOK_V<T, Ar>,                                             \
+		!(COND),                                                                       \
 		"ser: " WHAT                                                                   \
 		" is not static, so nothing can name it and dispatch does not find it - the "  \
 		"type is serialized as if the hook were not there. Make it static: " SIGNATURE \
@@ -416,22 +530,22 @@ namespace ser::detail {
 		// A hook nothing can name comes first: every message below it describes a hook
 		// that at least exists as far as the library is concerned.
 		SER_DETAIL_ASSERT_HOOK_STATIC(
-			VISIT,
+			(NONSTATIC_VISIT_HOOK_V<T, Ar>),
 			"this type's serVisit",
 			"static ser::Errc serVisit(auto& ar, auto& self) { return ar(self.a, self.b); }"
 		)
 		SER_DETAIL_ASSERT_HOOK_STATIC(
-			WRITE,
+			(NONSTATIC_WRITE_HOOK_V<T, Ar>),
 			"this type's serWrite",
 			"static ser::Errc serWrite(ser::writer auto& ar, const T& x) { return ar(x.a); }"
 		)
 		SER_DETAIL_ASSERT_HOOK_STATIC(
-			READ,
+			(NONSTATIC_READ_HOOK_V<T, Ar>),
 			"this type's serRead",
 			"static ser::Errc serRead(ser::reader auto& ar, T& x) { return ar(x.a); }"
 		)
 		SER_DETAIL_ASSERT_HOOK_STATIC(
-			MAKE,
+			(NONSTATIC_MAKE_HOOK_V<T, Ar>),
 			"this type's serMake",
 			"static T serMake(ser::reader auto& ar) { return T{ ser::readField<A>(ar) }; }"
 			"\n  There is no object yet when serMake runs, so a non-static one could never "
@@ -501,39 +615,45 @@ namespace ser::detail {
 		);
 
 		SER_DETAIL_ASSERT_READ_FILLS(
-			TRAIT_READ, "serializer<T>::read", "static ser::Errc read(ser::reader auto& ar, T& x)."
+			access::trait_hooks,
+			"serializer<T>::read",
+			"static ser::Errc read(ser::reader auto& ar, T& x)."
 		)
 		SER_DETAIL_ASSERT_READ_FILLS(
-			MEMBER_READ, "T::serRead", "static ser::Errc serRead(ser::reader auto& ar, T& x)."
+			access::member_hooks,
+			"T::serRead",
+			"static ser::Errc serRead(ser::reader auto& ar, T& x)."
 		)
 		SER_DETAIL_ASSERT_READ_FILLS(
-			ADL_READ,
+			adl_hooks,
 			"the ADL serRead for this type",
 			"ser::Errc serRead(ser::reader auto& ar, T& x)."
 		)
 		SER_DETAIL_ASSERT_VISIT_TAKES_CONST(
-			TRAIT, "serializer<T>::visit", "static ser::Errc visit(auto& ar, auto& self)."
+			access::trait_hooks,
+			"serializer<T>::visit",
+			"static ser::Errc visit(auto& ar, auto& self)."
 		)
 		SER_DETAIL_ASSERT_VISIT_TAKES_CONST(
-			MEMBER, "T::serVisit", "static ser::Errc serVisit(auto& ar, auto& self)."
+			access::member_hooks, "T::serVisit", "static ser::Errc serVisit(auto& ar, auto& self)."
 		)
 		SER_DETAIL_ASSERT_VISIT_TAKES_CONST(
-			ADL, "the ADL serVisit for this type", "ser::Errc serVisit(auto& ar, auto& self)."
+			adl_hooks, "the ADL serVisit for this type", "ser::Errc serVisit(auto& ar, auto& self)."
 		)
 
 		SER_DETAIL_ASSERT_VISIT_NOT_PAIRED(
-			TRAIT,
+			access::trait_hooks,
 			"serializer<T> declares both visit and write/read",
 			"visit for a symmetric format, or the write/read pair for an asymmetric one."
 		)
 		SER_DETAIL_ASSERT_VISIT_NOT_PAIRED(
-			MEMBER,
+			access::member_hooks,
 			"this type declares both serVisit and serWrite/serRead",
 			"serVisit for a symmetric format, or the serWrite/serRead pair for an "
 			"asymmetric one."
 		)
 		SER_DETAIL_ASSERT_VISIT_NOT_PAIRED(
-			ADL,
+			adl_hooks,
 			"this type has both an ADL serVisit and an ADL serWrite/serRead",
 			"serVisit for a symmetric format, or the pair for an asymmetric one."
 		)

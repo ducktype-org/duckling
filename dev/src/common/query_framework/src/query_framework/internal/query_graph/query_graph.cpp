@@ -244,7 +244,10 @@ namespace query::internal {
 				= graph.node_deps->maybePut(nodes.at(node_index), std::move(children));
 
 			if (key_value_pair == nullptr)
-				CORE_PANIC("node_mapper mapped two distinct nodes onto the same NodeID. This should be checked by isConsistent() before calling fromReducedGraphData().");
+				CORE_PANIC(
+					"node_mapper mapped two distinct nodes onto the same NodeID. This should be "
+				    "checked by isConsistent() before calling fromReducedGraphData()."
+				);
 		}
 
 		return base::Optional<QueryGraph>{ std::move(graph) };

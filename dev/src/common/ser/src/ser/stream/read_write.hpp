@@ -60,7 +60,6 @@ namespace ser {
 	// with const fields.
 	template<class T, class Ctx>
 	struct owned {
-
 		T                         value;
 		SER_NO_UNIQUE_ADDRESS Ctx ctx;
 
