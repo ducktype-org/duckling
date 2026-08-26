@@ -1,19 +1,20 @@
 #include "builtin_operators.hpp"
 
+#include "helios/tsh/abstract_type.hpp"
+#include "helios/tsh/symbol_type.hpp"
+
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 
 #include <base/collections/maps.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
-#include "helios/tsh/abstract_type.hpp"
-#include "helios/tsh/symbol_type.hpp"
 
 #include <tuple>
 #include <utility>
@@ -60,7 +61,7 @@ namespace {
 		return {};
 	}
 
-	enum class PreDesugaringOperator {
+	enum class PreDesugarOperator {
 		IntegerPlusEq,
 		IntegerMinusEq,
 		IntegerMultiplyEq,
@@ -75,89 +76,81 @@ namespace {
 		FloatPow,
 	};
 
-	MBox<code::Expr> desugarOperatorToExpr(query::Context& ctx, PreDesugaringOperator op, Box<code::Expr> lhs, Box<code::Expr> rhs) {
-		using enum PreDesugaringOperator;
+	MBox<code::Expr> desugarOperatorToExpr(
+		query::Context& ctx, PreDesugarOperator op, Box<code::Expr> lhs, Box<code::Expr> rhs
+	) {
+		using enum PreDesugarOperator;
 		using namespace compiler::helios::code::shorthands;
-		Shorthand s{ctx};
+		Shorthand s{ ctx };
 
 		auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
 
-		auto makeBinOpEqExpr = [&s, &ctx, &new_origin, lhs = std::move(rhs), rhs = std::move(rhs)](BuiltinBinary op) -> Box<code::Expr> {
-			return withOrigin(
-					new_origin,
-					s.blockExpr(StmtPack{
-						s.assign(
-							lhs->clone(),
-							s.binOp(lhs->clone(), op, std::move(rhs))
-						)
-					})
-				);
-		};
-
-		auto makeLangPrimitiveCall = [&s, &ctx, &new_origin, lhs = std::move(rhs), rhs = std::move(rhs)](LanguagePrimitive lang_primitive) -> Box<code::Expr> {
-			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive })->valueOrThrow();
-
+		auto makeBinOpEqExpr
+			= [&s, &ctx, &new_origin, lhs = std::move(rhs), rhs = std::move(rhs)](BuiltinBinary op
+		      ) -> Box<code::Expr> {
 			return withOrigin(
 				new_origin,
-				s.call(
-					s.ident(callee),
-					std::move(lhs),
-					std::move(rhs)
-				)
+				s.blockExpr(StmtPack{
+					s.assign(lhs->clone(), s.binOp(lhs->clone(), op, std::move(rhs))) })
 			);
 		};
 
+		auto makeLangPrimitiveCall
+			= [&s, &ctx, &new_origin, lhs = std::move(rhs), rhs = std::move(rhs)](
+				  LanguagePrimitive lang_primitive
+			  ) -> Box<code::Expr> {
+			auto callee
+				= ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive })->valueOrThrow();
+
+			return withOrigin(new_origin, s.call(s.ident(callee), std::move(lhs), std::move(rhs)));
+		};
+
 		switch (op) {
-			case IntegerPlusEq: {
-				return makeBinOpEqExpr(BuiltinBinary::IntegerAdd);
-			}
-			case IntegerMinusEq: {
-				return makeBinOpEqExpr(BuiltinBinary::IntegerSub);
-			}
-			case IntegerMultiplyEq: {
-				return makeBinOpEqExpr(BuiltinBinary::IntegerMul);
-			}
-			case IntegerDivideEq: {
-				return makeBinOpEqExpr(BuiltinBinary::IntegerDiv);
-			}
-			case FloatPlusEq: {
-				return makeBinOpEqExpr(BuiltinBinary::FloatAdd);
-			}
-			case FloatMinusEq: {
-				return makeBinOpEqExpr(BuiltinBinary::FloatSub);
-			}
-			case FloatMultiplyEq: {
-				return makeBinOpEqExpr(BuiltinBinary::FloatMul);
-			}
-			case FloatDivideEq: {
-				return makeBinOpEqExpr(BuiltinBinary::FloatDiv);
-			}
-			case IntegerPow: {
-				auto lang_primitive = [&] -> base::Optional<LanguagePrimitive> {
-					auto type = lhs->expression_type.getType();
-					if (type == tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed))
-						return LanguagePrimitive::PowI32;
-					else if (type == tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed))
-						return LanguagePrimitive::PowI64;
-					else return {};
-				}();
-				if_opt_none(lang_primitive) return {};
-				return makeLangPrimitiveCall(lang_primitive.value());
-			}
-			case FloatPow: {
-				auto lang_primitive = [&] -> base::Optional<LanguagePrimitive> {
-					auto type = lhs->expression_type.getType();
-					if (type == tsh::getFloatType(ctx, 32))
-						return LanguagePrimitive::PowF32;
-					else if (type == tsh::getFloatType(ctx, 64))
-						return LanguagePrimitive::PowF64;
-					else return {};
-				}();
-				if_opt_none(lang_primitive) return {};
-				return makeLangPrimitiveCall(lang_primitive.value());
-			}
-			default:
-				CORE_PANIC("Unsupported desugaring operator");
+		case IntegerPlusEq: {
+			return makeBinOpEqExpr(BuiltinBinary::IntegerAdd);
+		}
+		case IntegerMinusEq: {
+			return makeBinOpEqExpr(BuiltinBinary::IntegerSub);
+		}
+		case IntegerMultiplyEq: {
+			return makeBinOpEqExpr(BuiltinBinary::IntegerMul);
+		}
+		case IntegerDivideEq: {
+			return makeBinOpEqExpr(BuiltinBinary::IntegerDiv);
+		}
+		case FloatPlusEq: {
+			return makeBinOpEqExpr(BuiltinBinary::FloatAdd);
+		}
+		case FloatMinusEq: {
+			return makeBinOpEqExpr(BuiltinBinary::FloatSub);
+		}
+		case FloatMultiplyEq: {
+			return makeBinOpEqExpr(BuiltinBinary::FloatMul);
+		}
+		case FloatDivideEq: {
+			return makeBinOpEqExpr(BuiltinBinary::FloatDiv);
+		}
+		case IntegerPow: {
+			auto callee = bakeLanguagePrimitiveWithTypes(
+				ctx, LanguagePrimitive::PowInt, { lhs->expression_type.getSymbolType() }
+			);
+			return withOrigin(new_origin, s.call(s.ident(callee), std::move(lhs), std::move(rhs)));
+		}
+		case FloatPow: {
+			auto lang_primitive = [&] -> base::Optional<LanguagePrimitive> {
+				auto type = lhs->expression_type.getType();
+				if (type == tsh::getFloatType(ctx, 32))
+					return LanguagePrimitive::PowF32;
+				else if (type == tsh::getFloatType(ctx, 64))
+					return LanguagePrimitive::PowF64;
+				else
+					return {};
+			}();
+			if_opt_none(lang_primitive) return {};
+			return makeLangPrimitiveCall(lang_primitive.value());
+		}
+		default:
+			CORE_PANIC("Unsupported desugaring operator");
 		}
 	}
 }
@@ -188,9 +181,9 @@ namespace compiler::helios::code {
 	base::Optional<Box<Expr>> resolveNumericBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 	) {
-		using BuiltinOperation = std::variant<BuiltinBinary, PreDesugaringOperator>;
+		using BuiltinOperation = std::variant<BuiltinBinary, PreDesugarOperator>;
 		using namespace compiler::helios::code::shorthands;
-		Shorthand s{ctx};
+		Shorthand s{ ctx };
 
 		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs.ref(), rhs.ref());
 		if (!common_type_res.has_value()) return {};
@@ -199,65 +192,68 @@ namespace compiler::helios::code {
 
 		auto operation_kind = common_type.getType().getKind();
 
-		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinOperation> numeric_operators
-			= {
-				  /// Integer arithmetic ///
-				  { { base::StrID("+"), tsh::Kind::Integral }, BuiltinBinary::IntegerAdd },
-				  { { base::StrID("-"), tsh::Kind::Integral }, BuiltinBinary::IntegerSub },
-				  { { base::StrID("*"), tsh::Kind::Integral }, BuiltinBinary::IntegerMul },
-				  { { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
-				  { { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
-				  { { base::StrID("**"), tsh::Kind::Integral }, PreDesugaringOperator::IntegerPow},
-				  { { base::StrID("+="), tsh::Kind::Integral }, PreDesugaringOperator::IntegerPlusEq },
-				  { { base::StrID("-="), tsh::Kind::Integral }, PreDesugaringOperator::IntegerMinusEq },
-				  { { base::StrID("*="), tsh::Kind::Integral }, PreDesugaringOperator::IntegerMultiplyEq },
-				  { { base::StrID("/="), tsh::Kind::Integral }, PreDesugaringOperator::IntegerDivideEq },
+		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinOperation>
+			numeric_operators = {
+				/// Integer arithmetic ///
+				{ { base::StrID("+"), tsh::Kind::Integral }, BuiltinBinary::IntegerAdd },
+				{ { base::StrID("-"), tsh::Kind::Integral }, BuiltinBinary::IntegerSub },
+				{ { base::StrID("*"), tsh::Kind::Integral }, BuiltinBinary::IntegerMul },
+				{ { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
+				{ { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
+				{ { base::StrID("**"), tsh::Kind::Integral }, PreDesugarOperator::IntegerPow },
+				{ { base::StrID("+="), tsh::Kind::Integral }, PreDesugarOperator::IntegerPlusEq },
+				{ { base::StrID("-="), tsh::Kind::Integral }, PreDesugarOperator::IntegerMinusEq },
+				{ { base::StrID("*="), tsh::Kind::Integral },
+			      PreDesugarOperator::IntegerMultiplyEq },
+				{ { base::StrID("/="), tsh::Kind::Integral }, PreDesugarOperator::IntegerDivideEq },
 
-				  /// Integer comparisons ///
-				  { { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },
-				  { { base::StrID(">"), tsh::Kind::Integral }, BuiltinBinary::IntegerGt },
-				  { { base::StrID("<="), tsh::Kind::Integral }, BuiltinBinary::IntegerLteq },
-				  { { base::StrID(">="), tsh::Kind::Integral }, BuiltinBinary::IntegerGteq },
-				  { { base::StrID("=="), tsh::Kind::Integral }, BuiltinBinary::IntegerEq },
-				  { { base::StrID("!="), tsh::Kind::Integral }, BuiltinBinary::IntegerNeq },
+				/// Integer comparisons ///
+				{ { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },
+				{ { base::StrID(">"), tsh::Kind::Integral }, BuiltinBinary::IntegerGt },
+				{ { base::StrID("<="), tsh::Kind::Integral }, BuiltinBinary::IntegerLteq },
+				{ { base::StrID(">="), tsh::Kind::Integral }, BuiltinBinary::IntegerGteq },
+				{ { base::StrID("=="), tsh::Kind::Integral }, BuiltinBinary::IntegerEq },
+				{ { base::StrID("!="), tsh::Kind::Integral }, BuiltinBinary::IntegerNeq },
 
-				  /// Floating point arithmetic ///
-				  { { base::StrID("+"), tsh::Kind::Float }, BuiltinBinary::FloatAdd },
-				  { { base::StrID("-"), tsh::Kind::Float }, BuiltinBinary::FloatSub },
-				  { { base::StrID("*"), tsh::Kind::Float }, BuiltinBinary::FloatMul },
-				  { { base::StrID("/"), tsh::Kind::Float }, BuiltinBinary::FloatDiv },
-				  { { base::StrID("%"), tsh::Kind::Float }, BuiltinBinary::FloatMod },
-				  { { base::StrID("**"), tsh::Kind::Float }, PreDesugaringOperator::FloatPow },
-				  { { base::StrID("+="), tsh::Kind::Float }, PreDesugaringOperator::FloatPlusEq },
-				  { { base::StrID("-="), tsh::Kind::Float }, PreDesugaringOperator::FloatMinusEq },
-				  { { base::StrID("*="), tsh::Kind::Float }, PreDesugaringOperator::FloatMultiplyEq },
-				  { { base::StrID("/="), tsh::Kind::Float }, PreDesugaringOperator::FloatDivideEq },
+				/// Floating point arithmetic ///
+				{ { base::StrID("+"), tsh::Kind::Float }, BuiltinBinary::FloatAdd },
+				{ { base::StrID("-"), tsh::Kind::Float }, BuiltinBinary::FloatSub },
+				{ { base::StrID("*"), tsh::Kind::Float }, BuiltinBinary::FloatMul },
+				{ { base::StrID("/"), tsh::Kind::Float }, BuiltinBinary::FloatDiv },
+				{ { base::StrID("%"), tsh::Kind::Float }, BuiltinBinary::FloatMod },
+				{ { base::StrID("**"), tsh::Kind::Float }, PreDesugarOperator::FloatPow },
+				{ { base::StrID("+="), tsh::Kind::Float }, PreDesugarOperator::FloatPlusEq },
+				{ { base::StrID("-="), tsh::Kind::Float }, PreDesugarOperator::FloatMinusEq },
+				{ { base::StrID("*="), tsh::Kind::Float }, PreDesugarOperator::FloatMultiplyEq },
+				{ { base::StrID("/="), tsh::Kind::Float }, PreDesugarOperator::FloatDivideEq },
 
-				  /// Floating point comparisons ///
-				  { { base::StrID("<"), tsh::Kind::Float }, BuiltinBinary::FloatLt },
-				  { { base::StrID(">"), tsh::Kind::Float }, BuiltinBinary::FloatGt },
-				  { { base::StrID("<="), tsh::Kind::Float }, BuiltinBinary::FloatLteq },
-				  { { base::StrID(">="), tsh::Kind::Float }, BuiltinBinary::FloatGteq },
-				  { { base::StrID("=="), tsh::Kind::Float }, BuiltinBinary::FloatEq },
-				  { { base::StrID("!="), tsh::Kind::Float }, BuiltinBinary::FloatNeq },
-			  };
+				/// Floating point comparisons ///
+				{ { base::StrID("<"), tsh::Kind::Float }, BuiltinBinary::FloatLt },
+				{ { base::StrID(">"), tsh::Kind::Float }, BuiltinBinary::FloatGt },
+				{ { base::StrID("<="), tsh::Kind::Float }, BuiltinBinary::FloatLteq },
+				{ { base::StrID(">="), tsh::Kind::Float }, BuiltinBinary::FloatGteq },
+				{ { base::StrID("=="), tsh::Kind::Float }, BuiltinBinary::FloatEq },
+				{ { base::StrID("!="), tsh::Kind::Float }, BuiltinBinary::FloatNeq },
+			};
 
 		if (numeric_operators.contains({ op, operation_kind })) {
 			auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
-			auto operation = numeric_operators.at({ op, operation_kind });
+			auto operation  = numeric_operators.at({ op, operation_kind });
 
 			auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
 			auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
-			
+
 			variant_match(operation) {
 				variant_case(BuiltinBinary, op) {
 					return withOrigin(
-						new_origin,
-						s.binOp(std::move(coerced_lhs), op, std::move(coerced_rhs))
+						new_origin, s.binOp(std::move(coerced_lhs), op, std::move(coerced_rhs))
 					);
 				}
-				variant_case(PreDesugaringOperator, op) {
-					return desugarOperatorToExpr(ctx, op, std::move(coerced_lhs), std::move(coerced_rhs)).toOptBox();
+				variant_case(PreDesugarOperator, op) {
+					return desugarOperatorToExpr(
+							   ctx, op, std::move(coerced_lhs), std::move(coerced_rhs)
+					)
+					    .toOptBox();
 				}
 			}
 		}

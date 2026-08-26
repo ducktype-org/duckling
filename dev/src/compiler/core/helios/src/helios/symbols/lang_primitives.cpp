@@ -14,7 +14,8 @@ namespace compiler::helios {
 	namespace {
 		/**
 		 * @brief The standard-library location of a language primitive: the package, the module
-		 * path within it, and the name of the element (including the namespace it might be nested in) to look up.
+		 * path within it, and the name of the element (including the namespace it might be nested
+		 * in) to look up.
 		 */
 		struct PrimitivePath {
 			std::string              package;
@@ -26,14 +27,12 @@ namespace compiler::helios {
 			static const std::unordered_map<LanguagePrimitive, PrimitivePath> paths{
 				{ LanguagePrimitive::Panic,
 				  { .package = "core", .path = { "panicking" }, .element = "panic" } },
-				{ LanguagePrimitive::PowI32,
-				  { .package = "std", .path = { "math", "impl"}, .element = "powi" } },
-				{ LanguagePrimitive::PowI64,
-				  { .package = "std", .path = { "math", "impl"}, .element = "powl" } },
-				  { LanguagePrimitive::PowF32,
-				  { .package = "std", .path = { "math" }, .element = "libm_forward.pow_funcs.powf" } },
+				{ LanguagePrimitive::PowInt,
+				  { .package = "std", .path = { "math" }, .element = "powi" } },
+				{ LanguagePrimitive::PowF32,
+				  { .package = "std", .path = { "math" }, .element = "powf" } },
 				{ LanguagePrimitive::PowF64,
-				  { .package = "std", .path = { "math" }, .element = "libm_forward.pow_funcs.pow" } },
+				  { .package = "std", .path = { "math" }, .element = "pow" } },
 				{ LanguagePrimitive::String,
 				  { .package = "core", .path = { "containers" }, .element = "String" } },
 				{ LanguagePrimitive::StringifyStr,

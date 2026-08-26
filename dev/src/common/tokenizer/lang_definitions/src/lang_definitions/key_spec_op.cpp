@@ -254,7 +254,7 @@ namespace lang_def {
 		{ NamedOperator::Divide, "/" },
 		{ NamedOperator::Remainder, "%" },
 		{ NamedOperator::Exponentiate, "**" },
-		
+
 		{ NamedOperator::EqPlus, "+=" },
 		{ NamedOperator::EqMinus, "-=" },
 		{ NamedOperator::EqMultiply, "*=" },
