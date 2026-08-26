@@ -1,4 +1,3 @@
-//use std::convert::identity;
 use std::fmt::{self, Debug};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -160,7 +159,9 @@ impl YamlConfig {
             source: Some(path),
         };
         // Make sure `as_mapping` will work in the future.
-        result.as_mapping().with_context(|| result.make_location_error())?;
+        result
+            .as_mapping()
+            .with_context(|| result.make_location_error())?;
         Ok(result)
     }
 
