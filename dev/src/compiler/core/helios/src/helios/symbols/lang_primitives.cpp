@@ -1,6 +1,7 @@
 #include "lang_primitives.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/templates/templates.hpp>
@@ -14,38 +15,104 @@ namespace compiler::helios {
 	namespace {
 		/**
 		 * @brief The standard-library location of a language primitive: the package, the module
-		 * path within it, and the name of the element to look up.
+		 * path within it, the namespace path inside the file, and the name of the element to look up.
 		 */
 		struct PrimitivePath {
 			std::string              package;
 			std::vector<std::string> path;
+			std::vector<std::string> namespaces;
 			std::string              element;
 		};
 
 		const std::unordered_map<LanguagePrimitive, PrimitivePath>& primitivePaths() {
 			static const std::unordered_map<LanguagePrimitive, PrimitivePath> paths{
 				{ LanguagePrimitive::Panic,
-				  { .package = "core", .path = { "panicking" }, .element = "panic" } },
+				  { .package    = "core",
+				    .path       = { "panicking" },
+				    .namespaces = {},
+				    .element    = "panic" } },
 				{ LanguagePrimitive::String,
-				  { .package = "core", .path = { "containers" }, .element = "String" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "String" } },
 				{ LanguagePrimitive::StringifyStr,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyStr" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = { "stringification" },
+				    .element    = "stringifyStr" } },
 				{ LanguagePrimitive::StringifyChar,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyChar" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = { "stringification" },
+				    .element    = "stringifyChar" } },
 				{ LanguagePrimitive::StringifyBool,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyBool" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = { "stringification" },
+				    .element    = "stringifyBool" } },
 				{ LanguagePrimitive::StringifyI64,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyI64" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = { "stringification" },
+				    .element    = "stringifyI64" } },
 				{ LanguagePrimitive::StringifyU64,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyU64" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = { "stringification" },
+				    .element    = "stringifyU64" } },
 				{ LanguagePrimitive::StringifyF64,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyF64" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = { "stringification" },
+				    .element    = "stringifyF64" } },
 				{ LanguagePrimitive::StringifyPtr,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyPtr" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = { "stringification" },
+				    .element    = "stringifyPtr" } },
 				{ LanguagePrimitive::StringifyManyPtr,
-				  { .package = "core", .path = { "containers" }, .element = "stringifyManyPtr" } },
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = { "stringification" },
+				    .element    = "stringifyManyPtr" } },
+				{ LanguagePrimitive::StringifyCPtr,
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = { "stringification" },
+				    .element    = "stringifyCPtr" } },
+				{ LanguagePrimitive::StringifySlice,
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = { "stringification" },
+				    .element    = "stringifySlice" } },
+				{ LanguagePrimitive::StringifyStaticArray,
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = { "stringification" },
+				    .element    = "stringifyStaticArray" } },
 			};
 			return paths;
+		}
+
+		base::MBox<HInterface> lookupInterfaceOfNamespacePath(
+			query::Context&                 ctx,
+			base::Box<HInterface>           current,
+			const std::vector<std::string>& namespaces
+		) {
+			if (namespaces.empty()) return std::move(current);
+
+			auto lookup_result
+				= current->lookup(ctx, base::StrID{ namespaces.front() })->valueOrThrow();
+			if (!lookup_result.isSingle()) return nullptr;
+
+			auto next = std::get<SymbolList>(lookup_result.getAsSingle().valueOrPanic()).back();
+
+			return lookupInterfaceOfNamespacePath(
+				ctx,
+				base::makeBox<HInterface>(HInterface::ofSymbol(next)),
+				std::vector<std::string>(namespaces.begin() + 1, namespaces.end())
+			);
 		}
 
 		/**
@@ -66,10 +133,19 @@ namespace compiler::helios {
 				ctx, base::StrID(location.package), path_str_ids
 			);
 			if_opt_none(module_opt) return {};
-
 			auto linked_scope = queryRootScopeOfMainModuleFile(ctx, module_opt.value());
-			return HInterface::ofScope(linked_scope)
-			    .lookup(ctx, base::StrID(location.element), { .with_wildcards = false })
+
+			auto namespace_interface
+				= lookupInterfaceOfNamespacePath(
+					  ctx,
+					  base::makeBox<HInterface>(HInterface::ofScope(linked_scope)),
+					  location.namespaces
+				)
+			          .toOptBox();
+			if_opt_none(namespace_interface) return {};
+
+			return namespace_interface.value()
+			    ->lookup(ctx, base::StrID(location.element), { .with_wildcards = false })
 			    ->valueOrThrow()
 			    .leaves;
 		}
