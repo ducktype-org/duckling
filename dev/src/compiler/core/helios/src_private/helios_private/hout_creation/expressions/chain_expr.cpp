@@ -783,7 +783,12 @@ namespace compiler::helios::code {
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_qresult
 				= HInterface::ofTypeInstance(current_expr_type)
-			          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
+			          .lookup(
+						  query_ctx,
+						  expr_access->getName().unlock(query_ctx)->unwrap(),
+						  { .accessing_scope
+			                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
+					  );
 			UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 			const auto& looked_up_symbols_result = lookup_result->getAsSingle();
 			// Note that if multiple symbols were found, it results in an error and enters
@@ -915,7 +920,12 @@ namespace compiler::helios::code {
 				auto current_expr_type = current_expr->expression_type.getType();
 				auto lookup_qresult
 					= HInterface::ofTypeInstance(current_expr_type)
-				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
+				          .lookup(
+							  query_ctx,
+							  expr_access->getName().unlock(query_ctx)->unwrap(),
+							  { .accessing_scope
+				                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
+						  );
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias

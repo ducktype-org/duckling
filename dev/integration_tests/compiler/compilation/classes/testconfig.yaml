@@ -1,26 +1,18 @@
 Tests:
-  records:
+  classes:
     # @TODO: #2448 Investigate why deterministic compilation check fails for this test
     enable_conc_deterministic_tests: "false"
     Cases:
       all:
         backend: all
         Output:
-          String: "1\n3\n42\n54\n1\n3\n42\n54\n4\n"
+          String: "1\n3\n42\n54\n1\n3\n42\n54\n4\n7\n6\n5\n0\n4\n5\n1\n100\n1000\n7\n100\n1000\n8\n8\n8\n9\n42\n1\n30\n10\n2\n"
   record_default_values:
     Cases:
       all:
         backend: all
         Output:
           String: "0\n11\n1\n2\n13\n-1\n21\n1\n2\n23\n11\n1\n32\n13\n"
-  getter_setter:
-    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
-    enable_conc_deterministic_tests: "false"
-    Cases:
-      all:
-        backend: all
-        Output:
-          String: "7\n6\n5\n0\n4\n5\n"
   class_alignment:
     Cases:
       all:

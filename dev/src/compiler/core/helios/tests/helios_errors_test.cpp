@@ -33,6 +33,8 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testClassMemberSpecifierErrors);
+		TESTER_ADD_TEST(testMemberVisibilityErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -79,13 +81,15 @@ private:
 	void checkForErrorOnCompileModule(
 		std::string_view                     module_content,
 		const std::vector<std::string_view>& present_phrases,
-		u64                                  logged_msg_count
+		u64                                  logged_msg_count,
+		bool                                 expect_failure = true
 	) {
 		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
 
 		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
 
-		assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
+		if (expect_failure)
+			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 
 		// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
@@ -1178,6 +1182,83 @@ private:
 				1
 			);
 		}
+	}
+
+	/**
+	 * @brief A member may carry at most one visibility specifier and at most one `static`.
+	 */
+	void testClassMemberSpecifierErrors() {
+		checkForErrorOnCompileModule(
+			R"( class C {
+					public private x: i64 = 0;
+					public static static y: i64 = 0;
+				}
+				fun main() -> i64 = {
+					return 0;
+				} )",
+			{ "Class visibility specifier is duplicated with another one.",
+		      "Class static specifier is duplicated with another one." },
+			2,
+			false
+		);
+	}
+
+	/**
+	 * @brief A member hidden by its visibility is reported as existing but unusable, not as
+	 * missing.
+	 */
+	void testMemberVisibilityErrors() {
+		// Reached through the type, which is the path that reports the declaration as well.
+		checkForErrorOnCompileModule(
+			R"( class C {
+					public v: i64 = 1;
+					private static hidden: i64 = 2;
+				}
+				fun main() -> i64 = {
+					var x: i64 = C.hidden;
+					return 0;
+				} )",
+			{ "Accessed value is not visible from here.", "Found declaration:" },
+			1
+		);
+
+		// Reached through a value of the type.
+		checkForErrorOnCompileModule(
+			R"( class C {
+					public v: i64 = 1;
+					private hidden: i64 = 2;
+				}
+				fun main() -> i64 = {
+					var c: C = C(1, 2);
+					var x: i64 = c.hidden;
+					return 0;
+				} )",
+			// The access through a value does not point at the declaration yet.
+			{ "Accessed value is not visible from here." },
+			1
+		);
+
+		// A protected member is hidden from a class that does not inherit from the declaring
+		// one.
+		checkForErrorOnCompileModule(
+			R"( class C {
+					public v: i64 = 1;
+					protected shared: i64 = 2;
+				}
+				class Unrelated {
+					public other: i64 = 3;
+
+					public fun reach(c: const ref C) -> i64 = {
+						var x: i64 = c.shared;
+						return 0;
+					}
+				}
+				fun main() -> i64 = {
+					return 0;
+				} )",
+			{ "Accessed value is not visible from here." },
+			1
+		);
 	}
 
 	void testCopyabilityErrors() {

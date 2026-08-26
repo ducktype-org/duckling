@@ -917,9 +917,6 @@ namespace compiler::tsh {
 		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
 		) const;
 
-		[[nodiscard]]
-		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const;
-
 		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override;
 		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override;
