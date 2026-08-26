@@ -192,6 +192,14 @@ namespace compiler::helios::code {
 				return query::Failed();
 			}
 
+			variant_case(errors::Inaccessible, _) {
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
+					"Symbol found in lookup is not visible from here",
+					element_with_template_specifier->getStablePosition()
+				));
+				return query::Failed();
+			}
+
 			variant_default { CORE_PANIC("Invalid state: unexpected variant in lookup result"); }
 		}
 
@@ -851,6 +859,15 @@ namespace compiler::helios::code {
 					));
 					return query::Failed();
 				}
+				variant_case_novalue(errors::Inaccessible) {
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
+						"Accessed value is not visible from here.",
+						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
+							query_ctx
+						)
+					));
+					return query::Failed();
+				}
 
 				variant_default { CORE_PANIC("Unexpected result type from lookup"); }
 			}
@@ -1208,6 +1225,11 @@ namespace compiler::helios::code {
 								call_expr->getStablePosition()
 							));
 							return query::Failed();
+						}
+						variant_case_novalue(errors::Inaccessible) {
+							// `self` is looked up in a scope, and only the elements of the
+							// interface of a type are ever hidden by their visibility.
+							CORE_PANIC("The `self` argument cannot be inaccessible.");
 						}
 					}
 					CORE_UNREACHABLE();

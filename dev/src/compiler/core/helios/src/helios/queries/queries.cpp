@@ -354,10 +354,10 @@ namespace compiler::helios {
 		 * Append the methods and static variables of a class.
 		 */
 		static base::OkBad appendClassTasks(
-			std::vector<query::TaskHandle>&                  out_function_code_tasks,
-			[[maybe_unused]] std::vector<query::TaskHandle>& out_global_data_tasks,
-			const SymID                                      class_sym,
-			Context&                                         ctx
+			std::vector<query::TaskHandle>& out_function_code_tasks,
+			std::vector<query::TaskHandle>& out_global_data_tasks,
+			const SymID                     class_sym,
+			Context&                        ctx
 		) {
 			CORE_ASSERT(
 				kind(class_sym) == SymbolKind::Class,
@@ -365,11 +365,10 @@ namespace compiler::helios {
 			);
 
 			const auto class_type = ctx.query<tsh::QueryClassType>(class_sym);
+			auto       interface  = class_type.getInterface(ctx);
 
 
-			auto methods = class_type.getInterface(ctx)->getMethodsView();
-
-			for (const auto& method: methods) {
+			for (const auto& method: interface->getAnyMethodsView()) {
 				auto method_sym = method.getSymbol();
 
 				// @TODO: #1956 remove this if when ZST refs are supported
@@ -390,6 +389,11 @@ namespace compiler::helios {
 				if (emissionPolicy(ctx, method_sym) != EmissionPolicy::OwnerOnly) continue;
 
 				out_function_code_tasks.push_back(ctx.schedule<QueryCodeOfFun>(method_sym));
+			}
+
+			for (const auto& field: interface->getStaticFieldsView()) {
+				auto sym = field.getSymbol();
+				out_global_data_tasks.push_back(ctx.schedule<QueryHOUTGlobalData>(sym));
 			}
 			return base::OK;
 		}
