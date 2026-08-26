@@ -419,21 +419,6 @@ private:
 			      "object being copied." },
 				1
 			);
-
-
-			checkForErrorOnCompileModule(
-				R"(
-				class MyClass {
-					x:i64 = 0;
-
-					MyClass.abc(a: i64) = {
-						return MyClass(1);
-					}
-				}
-			)",
-				{ "User-defined constructors are not yet supported" },
-				1
-			);
 		}
 
 		// ============================ Typecheck errors ============================

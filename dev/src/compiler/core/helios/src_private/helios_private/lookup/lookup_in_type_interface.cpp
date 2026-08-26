@@ -93,7 +93,7 @@ namespace compiler::helios {
 			case TypeAccessMode::Instance:
 				return element.isAnyField() or element.isAnyMethod();
 			case TypeAccessMode::Meta:
-				return element.isStaticField() or element.isStaticField();
+				return element.isStaticField() or element.isStaticMethod();
 			}
 			CORE_UNREACHABLE();
 		}

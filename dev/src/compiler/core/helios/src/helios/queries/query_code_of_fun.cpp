@@ -36,6 +36,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include "diagnostic/placeholder.hpp"
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
@@ -127,6 +128,13 @@ namespace compiler::helios {
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
 
+			void visitConstructor(pst::Access<pst::Constructor>) final {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"Support for user defined constructors will be deleted."
+				));
+				query::throwFailed();
+			}
+
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
 				// declaration:
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
@@ -202,6 +210,9 @@ namespace compiler::helios {
 					);
 					HOUTFunctionMaker func_maker(ctx, key);
 					stmt(ctx, key).value()->acceptVisitor(func_maker);
+
+					// A visitor that could not build the function has reported why.
+					if_opt_none(func_maker.out) return query::Failed();
 
 					return func_maker.out.value();
 				}

@@ -40,8 +40,9 @@ private:
 			// these values might need to be updated.
 
 			assertTrue(
-				my_class_interface->getElements().size() == 7,
-				"There should be exactly six members, plus the generated destructor"
+				my_class_interface->getElements().size() == 8,
+				"There should be exactly six declared members, plus the generated constructor and "
+				"the generated parameterless constructor"
 			);
 			assertTrue(
 				my_class_interface->getElementsByName().size() == 5,

@@ -142,7 +142,9 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
-				return tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryClassType>(sym_id));
+				return compiler::tsh::SymbolType<>::withDefaults(
+					ctx.query<compiler::tsh::QueryClassType>(sym_id)
+				);
 			};
 
 			auto i32_st = st(compiler::tsh::getIntegralType(

@@ -196,11 +196,19 @@ namespace compiler::repl {
 		}
 
 		/**
-		 * @brief The constructors of a class: the compiler-generated ones, and the copy
-		 * constructor, which is the user-defined one when the class declares it.
+		 * @brief The constructors the class declares itself.
+		 *
+		 * The compiler-generated ones are left out, as they are reported separately as the
+		 * implicit constructors, and they are told apart by having no PST element of their own.
 		 */
-		std::vector<helios::SymID> constructorSymbols(const tsh::TypeInterface& interface) {
-			return symbolsOf(interface.getAnyMethodsView() | std::views::filter(isConstructorLike));
+		std::vector<helios::SymID> declaredConstructorSymbols(const tsh::TypeInterface& interface) {
+			return symbolsOf(
+				interface.getAnyMethodsView()
+				| std::views::filter([](const tsh::InterfaceElement& element) {
+					  return isConstructorLike(element)
+				         and helios::maybeSymbolPst(element.getSymbol()).has_value();
+				  })
+			);
 		}
 
 		/**
@@ -261,7 +269,9 @@ namespace compiler::repl {
 			const auto& interface = class_data.declared_interface;
 
 			printMemberSection(ctx, out, "fields", symbolsOf(interface.getAnyFieldsView()));
-			printMemberSection(ctx, out, "constructors", constructorSymbols(interface));
+			printMemberSection(
+				ctx, out, "declared constructors", declaredConstructorSymbols(interface)
+			);
 			printImplicitFieldConstructor(ctx, out, class_data);
 			printMemberSection(
 				ctx,

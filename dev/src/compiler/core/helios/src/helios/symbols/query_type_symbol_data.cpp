@@ -115,7 +115,8 @@ namespace compiler::helios {
 				return tsh::MemberSpecialKind::UserDestructor;
 			case SymbolKind::Constructor:
 				CORE_ASSERT(
-					name(sym) == "copy", "The only constructor in the class is copy constructor"
+					name(sym) == "copy",
+					"The only supported constructor in the class is copy constructor"
 				);
 				return tsh::MemberSpecialKind::CopyConstructor;
 			case SymbolKind::Method:
