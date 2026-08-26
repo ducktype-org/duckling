@@ -286,6 +286,24 @@ namespace compiler::helios::code {
 			return ChainState{ { .type = type, .origin = origin } };
 		}
 
+		/**
+		 * @brief The value a chain state holds, which for a type state is the type literal of the
+		 * type it carries. Empty for states that hold no value, like a namespace.
+		 */
+		auto asExpr(query::Context& ctx) -> base::Box<Expr> {
+			if (isExpr()) return getExpr();
+			if (isType()) {
+				auto type_in_chain = getType();
+				return makeBox<LiteralTypeExpr>(ctx, type_in_chain.origin, type_in_chain.type);
+			}
+			if (isNamespaceLike()) {
+				auto sym    = getNamespaceLikeSymbol();
+				auto origin = getNamespaceLikePstOrigin();
+				return makeBox<IdentifierExpr>(ctx, origin, sym);
+			}
+			CORE_PANIC("Invalid ChainState state.");
+		}
+
 	private:
 		ChainState(): expr(base::MBox<Expr>{}), namespace_like_symbol(std::nullopt) {}
 
@@ -552,16 +570,11 @@ namespace compiler::helios::code {
 				UNPACK_QRESULT_MOVE(auto base_state =, base_state_res);
 
 
-				if (base_state.isExpr()) {
-					auto square_call_res
-						= processSquareCall(query_ctx, base_state.getExpr(), call_expr);
-					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
-					return ChainState::ofExpr(std::move(expr));
-				}
-				query_ctx.logInt(makeBox<dia::PlaceholderError>(
-					"This symbol cannot be indexed.", call_expr->getStablePosition()
-				));
-				return query::Failed();
+				auto square_call_res = processSquareCall(
+					query_ctx, std::move(base_state).asExpr(query_ctx), call_expr
+				);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
 				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
@@ -879,13 +892,11 @@ namespace compiler::helios::code {
 				auto access_res = processPSTExpr(std::move(current_expr), expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
 
-				if (access_state.isExpr()) {
-					auto square_call_res
-						= processSquareCall(query_ctx, access_state.getExpr(), call_expr);
-					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
-					return ChainState::ofExpr(std::move(expr));
-				}
-				return query::Failed();
+				auto square_call_res = processSquareCall(
+					query_ctx, std::move(access_state).asExpr(query_ctx), call_expr
+				);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
 				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
@@ -928,32 +939,13 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			case lexer::Token::Square: {
-				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
-				                         .lookupExpectUnique(
-											 expr_access->getStablePosition(),
-											 query_ctx,
-											 expr_access->getName().unlock(query_ctx)->unwrap()
-										 );
-				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
-
-				auto whole_expr_origin
-					= pstOriginOrdered(current_state.getNamespaceLikePstOrigin(), expr_access);
-				auto state_res
-					= processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
-				UNPACK_QRESULT_MOVE(auto access_state =, state_res);
-
-				if (access_state.isExpr()) {
-					auto square_call_res
-						= processSquareCall(query_ctx, access_state.getExpr(), call_expr);
-					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
-					return ChainState::ofExpr(std::move(expr));
-				}
-
-
-				query_ctx.logInt(makeBox<dia::PlaceholderError>(
-					"This symbol cannot be indexed", call_expr->getStablePosition()
-				));
-				return query::Failed();
+				auto access_res = processPSTExpr(namespace_like_symbol, expr_access);
+				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
+				auto square_call_res = processSquareCall(
+					query_ctx, std::move(access_state).asExpr(query_ctx), call_expr
+				);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
 				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(

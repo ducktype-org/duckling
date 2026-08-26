@@ -31,15 +31,14 @@ namespace compiler::helios::defgen {
 	}
 
 	SymID copyConstructorSymForType(query::Context& ctx, const tsh::AbstractType type) {
-		// The interface holds the user-defined copy constructor when the type declares one, and
-		// the generated one otherwise.
-		const auto copy_constructor
-			= type.getInterface(ctx)->getSpecialElement(tsh::MemberSpecialKind::CopyConstructor);
-		CORE_ASSERT(
-			copy_constructor.has_value(),
-			"Tried to get the copy constructor of a type which doesn't have one"
-		);
-		return copy_constructor.value()->getSymbol();
+		// The interface holds the user-defined copy constructor when the type declares one.
+		if_opt_some(
+			type.getInterface(ctx)->getSpecialElement(tsh::MemberSpecialKind::CopyConstructor),
+			copy_constructor
+		) return copy_constructor->getSymbol();
+
+		// This is only used for tests.
+		return generatedCopyConstructorSymForType(ctx, type);
 	}
 
 	namespace {

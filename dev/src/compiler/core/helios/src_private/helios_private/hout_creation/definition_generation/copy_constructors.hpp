@@ -17,7 +17,6 @@ namespace compiler::helios::defgen {
 	/**
 	 * @brief Get the symbol of the copy constructor of a type, which is the user-defined one when
 	 * the type declares it, and the compiler-generated one otherwise.
-	 * Panics for types that are trivially copyable, as those have no copy constructor.
 	 */
 	SymID copyConstructorSymForType(query::Context& ctx, tsh::AbstractType type);
 
