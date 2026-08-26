@@ -121,8 +121,8 @@ namespace vm {
 		(void) state_manager.requestStop();
 		// Send a Stop request to all threads.
 		requestStopAllThreads();
-		// Wait for all threads to stop.
-		(void) waitForProcessState([](const ProcessState& s) { return ps::isTerminal(s); });
+		// Wait for all threads to stop (or `NotStarted`)
+		(void) waitForProcessState([](const ProcessState& s) { return !ps::isExecuting(s); });
 
 		// `joinExecutionThread` blocks until the exec thread exits, and an exec thread
 		// that has not exited yet can still take the `threads_pool_mutex` during panic etc. causing
