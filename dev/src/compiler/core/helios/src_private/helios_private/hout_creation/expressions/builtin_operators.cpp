@@ -85,20 +85,17 @@ namespace {
 
 		auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
 
-		auto makeBinOpEqExpr
-			= [&s, &ctx, &new_origin, lhs = std::move(rhs), rhs = std::move(rhs)](BuiltinBinary op
-		      ) -> Box<code::Expr> {
+		auto makeBinOpEqExpr = [&](BuiltinBinary bin_op) -> Box<code::Expr> {
+			auto lhs_clone = lhs->clone();
 			return withOrigin(
 				new_origin,
-				s.blockExpr(StmtPack{
-					s.assign(lhs->clone(), s.binOp(lhs->clone(), op, std::move(rhs))) })
+				s.blockExpr(StmtPack{ s.assign(
+					std::move(lhs_clone), s.binOp(std::move(lhs), bin_op, std::move(rhs))
+				) })
 			);
 		};
 
-		auto makeLangPrimitiveCall
-			= [&s, &ctx, &new_origin, lhs = std::move(rhs), rhs = std::move(rhs)](
-				  LanguagePrimitive lang_primitive
-			  ) -> Box<code::Expr> {
+		auto makeLangPrimitiveCall = [&](LanguagePrimitive lang_primitive) -> Box<code::Expr> {
 			auto callee
 				= ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive })->valueOrThrow();
 
@@ -107,6 +104,7 @@ namespace {
 
 		switch (op) {
 		case IntegerPlusEq: {
+			std::cout << "I am here!" << std::endl;
 			return makeBinOpEqExpr(BuiltinBinary::IntegerAdd);
 		}
 		case IntegerMinusEq: {
