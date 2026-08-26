@@ -6,6 +6,7 @@
 
 #include <concepts>
 #include <type_traits>
+#include <utility>
 
 namespace ser::detail::adl_barrier {
 
@@ -38,6 +39,9 @@ namespace ser::detail::adl_barrier {
 		return serRead(ar, x);
 	}
 
+	template<class Ar, class T>
+	constexpr auto callReadByCopy(Ar& ar, T&& x) -> decltype(serRead(ar, ::std::move(x)));
+
 	// The tag is a PARAMETER so that both template parameters are deduced. Passing T
 	// explicitly instead works everywhere except GCC 13 and 14, which resolve the call
 	// against the poisoned declaration above rather than in the instantiation context.
@@ -60,5 +64,9 @@ namespace ser::detail {
 	SER_DETAIL_HOOK_MAKE(
 		inline constexpr, ADL, adl_barrier::callMake(ar, ::ser::tag<::std::remove_cvref_t<T>>{})
 	)
+	SER_DETAIL_HOOK_READ_BY_COPY(
+		inline constexpr, ADL, adl_barrier::callReadByCopy(ar, ::std::move(x))
+	)
+
 
 }  // namespace ser::detail

@@ -28,6 +28,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <utility>
 
 namespace ser {
 
@@ -39,22 +41,26 @@ namespace ser {
 			return (bits + BITSET_BITS_PER_WORD - 1) / BITSET_BITS_PER_WORD;
 		}
 
-		// The three checks readLength makes, redone for a count of BITS. readLength cannot do
-		// this one: its bound is n * MIN_WIRE_SIZE_V<E> bytes, and a bit costs an eighth of a
-		// byte, so it would refuse every bitset wider than the stream holding it. The order
-		// matters for the same reason as there - policy ceiling first, so the word arithmetic
-		// below cannot overflow on the way to finding out that it would have.
+		// The checks readLength makes, redone for a count of BITS. readLength cannot do this
+		// one: its bound is n * MIN_WIRE_SIZE_V<E> bytes, and a bit costs an eighth of a byte,
+		// so it would refuse every bitset wider than the stream holding it. The order matters
+		// for the same reason as there - each check makes the next one safe to perform.
 		constexpr Errc readBitCount(reader auto& ar, ::std::size_t& out) {
 			wire_size_type bits = 0;
 			if (const auto c = dispatchRead<wire_size_type>(ar, bits); c != Errc::Ok) return c;
-			if (bits > config_global::MAX_CONTAINER_ELEMENTS) return Errc::MessageSize;
+			if (!::std::in_range<::std::size_t>(bits)) return Errc::SizeOverflow;
+
+			// bitsetWordCount rounds UP, so a count within a word of the maximum would
+			// overflow on the way to the byte figure that is the real bound.
+			const auto bit_count = static_cast<::std::size_t>(bits);
+			if (bit_count > ::std::numeric_limits<::std::size_t>::max() - (BITSET_BITS_PER_WORD - 1))
+				return Errc::SizeOverflow;
 
 			::std::size_t bytes = 0;
-			if (mulOvf(bitsetWordCount(static_cast<::std::size_t>(bits)), sizeof(::u64), bytes))
-				return Errc::SizeOverflow;
+			if (mulOvf(bitsetWordCount(bit_count), sizeof(::u64), bytes)) return Errc::SizeOverflow;
 			if (bytes > ar.avail()) return Errc::Truncated;
 
-			out = static_cast<::std::size_t>(bits);
+			out = bit_count;
 			return Errc::Ok;
 		}
 
@@ -77,7 +83,11 @@ namespace ser {
 	struct serializer<::base::DynamicBitset> {
 		static constexpr Errc write(writer auto& ar, const ::base::DynamicBitset& b) {
 			const ::std::size_t bits = b.size();
-			if (const auto c = detail::writeLength(ar, bits); c != Errc::Ok) return c;
+			if (const auto c = detail::dispatchWrite<detail::wire_size_type>(
+					ar, static_cast<detail::wire_size_type>(bits)
+				);
+			    c != Errc::Ok)
+				return c;
 
 			for (::std::size_t w = 0; w < detail::bitsetWordCount(bits); ++w) {
 				::u64 word = 0;

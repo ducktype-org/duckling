@@ -2,11 +2,15 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <debug_info/debug_info_io.hpp>
 
+#include <ser/ser.hpp>
 #include <tester/tester.hpp>
 
+#include <cstddef>
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 using namespace debug_info;
 
@@ -19,6 +23,7 @@ public:
 		TESTER_ADD_TEST(builderTest);
 		TESTER_ADD_TEST(serializationRoundTripTest);
 		TESTER_ADD_TEST(invalidStreamTest);
+		TESTER_ADD_TEST(formatEnvelopeTest);
 		TESTER_ADD_TEST(resolvePositionsTest);
 		TESTER_ADD_TEST(debugPrintTest);
 	}
@@ -210,9 +215,66 @@ private:
 			assertFalse(result.has_value(), "A truncated stream should fail to load");
 		}
 
+
+		{
+			std::vector<std::byte> raw;
+			const auto             wrote = ::ser::write(raw, makeTestDebugInfo());
+			assertTrue(wrote.hasValue(), "The bare payload should still be writable");
+
+			std::istringstream iss(std::string(reinterpret_cast<const char*>(raw.data()), raw.size())
+			);
+			auto result = debug_info::loadFromStream(iss);
+			assertFalse(result.has_value(), "A payload with no envelope should fail to load");
+		}
+		
+		{
+			std::ostringstream oss;
+			debug_info::saveToStream(makeTestDebugInfo(), oss);
+			std::string whole = oss.str();
+
+			// schema_hash sits right after the eight magic bytes - see stream/header.hpp.
+			whole[8] = static_cast<char>(whole[8] ^ 0x01);
+
+			std::istringstream iss(whole);
+			auto               result = debug_info::loadFromStream(iss);
+			assertFalse(result.has_value(), "A foreign schema_hash should fail to load");
+		}
+
 		// Entry order is the object's own, not a canonical one: what a stream holds is what
 		// the builder produced, so a reordered vector is a different object and not a
 		// damaged file. The round-trip above is what pins that it comes back unchanged.
+	}
+
+	/**
+	 * @brief The on-disk shape of a .di file, pinned.
+	 *
+	 * The VM debugger reads this format from a separately launched binary, so nothing at
+	 * build time makes the writer and the reader agree - a golden file used to, and a
+	 * checked-in binary for a format that moves with every field would only get regenerated
+	 * to green. The envelope is the durable version of that guarantee, and this is what
+	 * fails when the format changes: update the constant deliberately, and know that every
+	 * .di file written by an older compiler is now SchemaMismatch rather than data.
+	 */
+	void formatEnvelopeTest() {
+		std::ostringstream oss;
+		debug_info::saveToStream(makeTestDebugInfo(), oss);
+		const std::string whole = oss.str();
+
+		assertTrue(whole.size() > 32, "A .di file carries a 32-byte header");
+		assertEqual(std::string("SER\0DINF", 8), whole.substr(0, 8), "magic + the .di user magic");
+
+		const auto header = ::ser::peekHeader(
+			std::span<const std::byte>{ reinterpret_cast<const std::byte*>(whole.data()),
+		                                whole.size() },
+			debug_info::DI_STREAM.user_magic
+		);
+		assertTrue(header.hasValue(), "The header must read back");
+		assertEqual(
+			u64{ 0x3C'43'20'AF'4C'A5'78'60 },
+			header->schema_hash,
+			"The .di schema hash changed - so did the format the VM debugger reads"
+		);
+		assertEqual(u64{ whole.size() - 32 }, header->payload_size, "payload_size pins the length");
 	}
 
 	void resolvePositionsTest() {

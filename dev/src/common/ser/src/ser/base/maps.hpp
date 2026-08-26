@@ -9,9 +9,10 @@
 //                     work to the std adapter. Same bytes, same schema: a base::Map stream
 //                     reads into a std::map and back.
 //   VectorMap         a vector of Optional slots indexed by the key, so the key is never
-//                     on the wire. Written densely, which keeps the format canonical:
-//                     empty slots at the end survive the round-trip and equal maps give
-//                     equal bytes.
+//                     on the wire. Written densely, so empty slots at the end survive the
+//                     round-trip - but not canonically: erase() resets a slot without
+//                     shrinking the vector, so a map that once held key 5 writes six slots
+//                     where an equal map built without it writes one.
 //   StableHashMap     length prefix, then each key followed by its value - the same format
 //                     as std::map, so the same schema, and a stream really does move
 //                     between them. The bucket layout is rebuilt on read, which is what
@@ -110,9 +111,9 @@ namespace ser {
 		static constexpr Errc write(writer auto& ar, const Vm& m) { return ar(m.map); }
 
 		static constexpr Errc read(reader auto& ar, Vm& m) {
+			m.element_count = 0;
 			if (const auto c = ar(m.map); c != Errc::Ok) return c;
 
-			m.element_count = 0;
 			for (const auto& slot: m.map)
 				if (slot.has_value()) ++m.element_count;
 			return Errc::Ok;
@@ -141,7 +142,9 @@ namespace ser {
 		using Shm = ::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>;
 
 		static constexpr Errc write(writer auto& ar, const Shm& m) {
-			if (const auto c = detail::writeLength(ar, m.size()); c != Errc::Ok) return c;
+			if (const auto c = detail::writeLength<::std::pair<KEY_T, DATA_T>>(ar, m.size());
+			    c != Errc::Ok)
+				return c;
 			for (const auto& pair: m) {
 				if (const auto c = detail::dispatchWrite<KEY_T>(ar, pair.key); c != Errc::Ok)
 					return c;

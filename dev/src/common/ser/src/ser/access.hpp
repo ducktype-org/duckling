@@ -13,7 +13,9 @@
 #include <concepts>
 #include <cstddef>
 #include <span>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
 namespace ser {
 
@@ -48,12 +50,18 @@ namespace ser {
 			static constexpr, TRAIT, serializer<::std::remove_cvref_t<T>>::read(ar, x)
 		)
 		SER_DETAIL_HOOK_MAKE(static constexpr, TRAIT, serializer<::std::remove_cvref_t<T>>::make(ar))
+		SER_DETAIL_HOOK_READ_BY_COPY(
+			static constexpr, TRAIT, serializer<::std::remove_cvref_t<T>>::read(ar, ::std::move(x))
+		)
 
 		// ── level 2: hooks declared in the class ──────────────────────────────
 		SER_DETAIL_HOOK_VISIT(static constexpr, MEMBER, ::std::remove_cvref_t<T>::serVisit(ar, x))
 		SER_DETAIL_HOOK_WRITE(static constexpr, MEMBER, ::std::remove_cvref_t<T>::serWrite(ar, x))
 		SER_DETAIL_HOOK_READ(static constexpr, MEMBER, ::std::remove_cvref_t<T>::serRead(ar, x))
 		SER_DETAIL_HOOK_MAKE(static constexpr, MEMBER, ::std::remove_cvref_t<T>::serMake(ar))
+		SER_DETAIL_HOOK_READ_BY_COPY(
+			static constexpr, MEMBER, ::std::remove_cvref_t<T>::serRead(ar, ::std::move(x))
+		)
 
 		// ── "the name is there, but this archive cannot call it" ──────────────
 		SER_DETAIL_HOOK_NAMED(
@@ -73,6 +81,27 @@ namespace ser {
 		SER_DETAIL_HOOK_NAMED(static constexpr, MEMBER_WRITE, ::std::remove_cvref_t<T>::serWrite)
 		SER_DETAIL_HOOK_NAMED(static constexpr, MEMBER_READ, ::std::remove_cvref_t<T>::serRead)
 		SER_DETAIL_HOOK_NAMED(static constexpr, MEMBER_MAKE, ::std::remove_cvref_t<T>::serMake)
+
+		// ── "the hook is there, but it is not static" ─────────────
+		template<class T, class Ar>
+		static constexpr bool CALLS_MEMBER_VISIT_V = requires(Ar& ar, ::std::remove_cvref_t<T>& t) {
+			t.serVisit(ar);
+		} || requires(Ar& ar, ::std::remove_cvref_t<T>& t) { t.serVisit(ar, t); };
+
+		template<class T, class Ar>
+		static constexpr bool CALLS_MEMBER_WRITE_V
+			= requires(Ar& ar, const ::std::remove_cvref_t<T>& c) { c.serWrite(ar); }
+		   || requires(Ar& ar, const ::std::remove_cvref_t<T>& c) { c.serWrite(ar, c); }
+		   || requires(Ar& ar, ::std::remove_cvref_t<T>& t) { t.serWrite(ar); };
+
+		template<class T, class Ar>
+		static constexpr bool CALLS_MEMBER_READ_V = requires(Ar& ar, ::std::remove_cvref_t<T>& t) {
+			t.serRead(ar);
+		} || requires(Ar& ar, ::std::remove_cvref_t<T>& t) { t.serRead(ar, t); };
+
+		template<class T, class Ar>
+		static constexpr bool CALLS_MEMBER_MAKE_V
+			= requires(Ar& ar, ::std::remove_cvref_t<T>& t) { t.serMake(ar); };
 
 		// ── the calls ─────────────────────────────────────────────────────────
 		// These are the reason a private hook works at all: the call site is inside the
@@ -169,6 +198,13 @@ namespace ser {
 				"structured-bindings ladder. Split it, or give it a serVisit hook."
 			);
 			if constexpr (N == 0) {
+				static_assert(
+					::std::is_empty_v<::std::remove_cvref_t<T>>,
+					"ser: this type declares zero members - `using ser_members = "
+					"ser::members<0>;` - but it has data. That format writes no bytes and a "
+					"read leaves every field default-constructed, silently. Declare the real "
+					"count, or drop the declaration and let the walk count the fields."
+				);
 				(void) obj;
 				return f();
 			}
@@ -208,6 +244,19 @@ namespace ser {
 }  // namespace ser
 
 namespace ser::detail {
+
+	// ── the types SER_DESCRIBE named ─────────
+	template<class T>
+	struct tuple_field_list;
+
+	template<class... Es>
+	struct tuple_field_list<::std::tuple<Es...>> {
+		using type = type_list<::std::remove_cvref_t<Es>...>;
+	};
+
+	template<class T>
+	using described_types_t = typename tuple_field_list<
+		decltype(access::described(::std::declval<const ::std::remove_cv_t<T>&>()))>::type;
 
 	// ── the other direction of an archive ─────────────────────────────────────
 	// Half the questions checkHooks asks are about the direction it is NOT in - from
@@ -279,13 +328,33 @@ namespace ser::detail {
 	   || (access::NAMES_MEMBER_VISIT_V<T>
 	       && !(MEMBER_VISIT_WRITE_V<T, Ar> || MEMBER_VISIT_READ_V<T, Ar>) );
 
+	// ── a hook that is not static ─────────────────────────────────────────────
+	template<class T, class Ar>
+	inline constexpr bool NONSTATIC_VISIT_HOOK_V
+		= access::CALLS_MEMBER_VISIT_V<T, reader_for<Ar>>
+	   && !(MEMBER_VISIT_READ_V<T, Ar> || MEMBER_VISIT_WRITE_V<T, Ar>);
+
+	template<class T, class Ar>
+	inline constexpr bool NONSTATIC_WRITE_HOOK_V
+		= access::CALLS_MEMBER_WRITE_V<T, writer_for<Ar>> && !MEMBER_WRITE_V<T, Ar>;
+
+	template<class T, class Ar>
+	inline constexpr bool NONSTATIC_READ_HOOK_V
+		= access::CALLS_MEMBER_READ_V<T, reader_for<Ar>> && !MEMBER_READ_V<T, Ar>;
+
+	template<class T, class Ar>
+	inline constexpr bool NONSTATIC_MAKE_HOOK_V
+		= access::CALLS_MEMBER_MAKE_V<T, reader_for<Ar>> && !MEMBER_MAKE_V<T, Ar>;
+
 	// Any of the four. Dispatch uses it to stay quiet: once checkHooks has said "the
 	// hook you wrote is being ignored", a second complaint that the type cannot be
 	// serialized at all is noise pointing away from the cause.
 	template<class T, class Ar>
 	inline constexpr bool NONGENERIC_ANY_HOOK_V
 		= NONGENERIC_VISIT_HOOK_V<T, Ar> || NONGENERIC_WRITE_HOOK_V<T, Ar>
-	   || NONGENERIC_READ_HOOK_V<T, Ar> || NONGENERIC_MAKE_HOOK_V<T, Ar>;
+	   || NONGENERIC_READ_HOOK_V<T, Ar> || NONGENERIC_MAKE_HOOK_V<T, Ar>
+	   || NONSTATIC_VISIT_HOOK_V<T, Ar> || NONSTATIC_WRITE_HOOK_V<T, Ar>
+	   || NONSTATIC_READ_HOOK_V<T, Ar> || NONSTATIC_MAKE_HOOK_V<T, Ar>;
 
 	// ── checkHooks<T, Ar>() ──────────────────────────────────────────────────
 	// Called at the top of all three dispatch contexts. Everything here is a compile-time
@@ -318,8 +387,57 @@ namespace ser::detail {
 		"was meant. Keep " KEEP                                          \
 	);
 
+	// A hook that reads into a copy: the call succeeds, returns Errc::Ok, and the caller's
+	// object is exactly as it was. One missing `&`.
+#define SER_DETAIL_ASSERT_READ_FILLS(WHICH, WHAT, SIGNATURE)                               \
+	static_assert(                                                                         \
+		!(WHICH##_V<T, Ar> && WHICH##_BY_COPY_V<T, Ar>),                                   \
+		"ser: " WHAT                                                                       \
+		" takes the object BY VALUE, or by const reference, so reading fills a copy that " \
+		"is thrown away - the call returns Errc::Ok and the caller's object is "           \
+		"untouched. Take a mutable reference: " SIGNATURE                                  \
+	);
+
+	// Not static, so no detector can name it and dispatch never finds it. A virtual method
+	// that only plays the part of a hook is the one legitimate reason to have the name
+	// here, which is why the message offers the rename.
+#define SER_DETAIL_ASSERT_HOOK_STATIC(FORM, WHAT, SIGNATURE)                           \
+	static_assert(                                                                     \
+		!NONSTATIC_##FORM##_HOOK_V<T, Ar>,                                             \
+		"ser: " WHAT                                                                   \
+		" is not static, so nothing can name it and dispatch does not find it - the "  \
+		"type is serialized as if the hook were not there. Make it static: " SIGNATURE \
+		"\n  If it is a virtual method that only plays the part of a hook, give it "   \
+		"another name - ser reserves serVisit, serWrite, serRead and serMake."         \
+	);
+
 	template<class T, class Ar>
 	constexpr void checkHooks() {
+		// A hook nothing can name comes first: every message below it describes a hook
+		// that at least exists as far as the library is concerned.
+		SER_DETAIL_ASSERT_HOOK_STATIC(
+			VISIT,
+			"this type's serVisit",
+			"static ser::Errc serVisit(auto& ar, auto& self) { return ar(self.a, self.b); }"
+		)
+		SER_DETAIL_ASSERT_HOOK_STATIC(
+			WRITE,
+			"this type's serWrite",
+			"static ser::Errc serWrite(ser::writer auto& ar, const T& x) { return ar(x.a); }"
+		)
+		SER_DETAIL_ASSERT_HOOK_STATIC(
+			READ,
+			"this type's serRead",
+			"static ser::Errc serRead(ser::reader auto& ar, T& x) { return ar(x.a); }"
+		)
+		SER_DETAIL_ASSERT_HOOK_STATIC(
+			MAKE,
+			"this type's serMake",
+			"static T serMake(ser::reader auto& ar) { return T{ ser::readField<A>(ar) }; }"
+			"\n  There is no object yet when serMake runs, so a non-static one could never "
+			"be called at all."
+		)
+
 		// A hook the archive in use cannot call is a hook that silently does nothing;
 		// everything below it is about hooks that are actually being used.
 		static_assert(
@@ -382,6 +500,17 @@ namespace ser::detail {
 			"evaluated is unspecified, and that would make the byte order compiler-dependent."
 		);
 
+		SER_DETAIL_ASSERT_READ_FILLS(
+			TRAIT_READ, "serializer<T>::read", "static ser::Errc read(ser::reader auto& ar, T& x)."
+		)
+		SER_DETAIL_ASSERT_READ_FILLS(
+			MEMBER_READ, "T::serRead", "static ser::Errc serRead(ser::reader auto& ar, T& x)."
+		)
+		SER_DETAIL_ASSERT_READ_FILLS(
+			ADL_READ,
+			"the ADL serRead for this type",
+			"ser::Errc serRead(ser::reader auto& ar, T& x)."
+		)
 		SER_DETAIL_ASSERT_VISIT_TAKES_CONST(
 			TRAIT, "serializer<T>::visit", "static ser::Errc visit(auto& ar, auto& self)."
 		)

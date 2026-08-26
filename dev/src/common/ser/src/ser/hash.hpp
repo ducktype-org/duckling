@@ -222,21 +222,6 @@ namespace ser {
 			return schemaOf<::std::remove_cv_t<access::schema_as_t<U>>, Mode, Seen>(h);
 		}
 
-		// ser_described returns std::tie of the described fields, so its element types are
-		// references - stripped here for the same reason field_types_t strips them: a
-		// `const int` field goes on the wire as an int and has to hash as one.
-		template<class T>
-		struct tuple_field_list;
-
-		template<class... Es>
-		struct tuple_field_list<::std::tuple<Es...>> {
-			using type = type_list<::std::remove_cvref_t<Es>...>;
-		};
-
-		template<class T>
-		using described_types_t = typename tuple_field_list<
-			decltype(access::described(::std::declval<const ::std::remove_cv_t<T>&>()))>::type;
-
 		// Diagnostics only: debugHash mixes the field name when SER_DESCRIBE left one.
 		template<class T, class Mode>
 		[[nodiscard]] consteval ::std::uint64_t schemaFieldName(::std::uint64_t h, ::std::size_t i) {

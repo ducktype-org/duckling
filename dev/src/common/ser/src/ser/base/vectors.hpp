@@ -63,7 +63,8 @@ namespace ser {
 			= !::std::is_const_v<Data> && detail::FILL_IN_PLACE_V<element_type>;
 
 		static constexpr Errc write(writer auto& ar, const vector_type& v) {
-			if (const auto c = detail::writeLength(ar, v.size()); c != Errc::Ok) return c;
+			if (const auto c = detail::writeLength<element_type>(ar, v.size()); c != Errc::Ok)
+				return c;
 			// Indexed rather than iterated: operator[] hands back a CRef, and the element
 			// type is what dispatch has to see - not whatever the iterator dereferences to.
 			for (::std::size_t i = 0; i < v.size(); ++i)

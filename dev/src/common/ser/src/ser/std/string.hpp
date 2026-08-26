@@ -10,9 +10,12 @@
 // these types exist.
 //
 // A ONE-BYTE character type is copied in bulk, because a single byte has no representation
-// to swap and a memcpy cannot disagree with a dispatch loop. char16_t and char32_t go one
-// at a time and must, or the host's byte order would reach the payload. The bulk path is
-// also skipped under constant evaluation, which may not contain a reinterpret_cast.
+// to swap and a memcpy cannot disagree with a dispatch loop. char16_t and char32_t go one at
+// a time so that a custom serializer<Ch> is honoured - NOT for byte order: nothing in this
+// library swaps bytes, so the element path is byte-identical native-endian output too, and
+// endianness is the envelope's job through stream_header::flags and PlatformMismatch. The
+// bulk path is also skipped under constant evaluation, which may not contain a
+// reinterpret_cast.
 //
 // std::string_view is NOT here: it cannot own what it points at, so reading one could only
 // point into the input buffer, and a write-only adapter is refused by the library's own
@@ -56,7 +59,7 @@ namespace ser {
 		static constexpr bool BULK = sizeof(Ch) == 1 && ::std::is_trivially_copyable_v<Ch>;
 
 		static constexpr Errc write(writer auto& ar, const string_type& s) {
-			if (const auto c = detail::writeLength(ar, s.size()); c != Errc::Ok) return c;
+			if (const auto c = detail::writeLength<Ch>(ar, s.size()); c != Errc::Ok) return c;
 
 			if constexpr (BULK)
 				if !consteval {

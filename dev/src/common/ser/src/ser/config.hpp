@@ -134,7 +134,7 @@ namespace ser {
 		// Bounds nesting, so data-dependent recursion cannot overflow the stack.
 		static constexpr ::std::size_t MAX_DEPTH = 256;
 
-		static constexpr ::std::size_t MAX_CONTAINER_ELEMENTS = ::std::size_t{ 1 } << 28;
+		static constexpr ::std::size_t MAX_ZERO_SIZE_ELEMENTS = ::std::size_t{ 1 } << 28;
 
 		// Reserved for zero-copy reads and not read anywhere yet: nothing on this wire is
 		// aligned today, so flipping it changes nothing.

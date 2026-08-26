@@ -177,6 +177,12 @@ namespace query::internal {
 		for (const auto& deps: adjacency)
 			for (usize dep_idx: deps)
 				if (dep_idx >= nodes.size()) return false;
+
+		base::HashMap<NodeID, usize> seen;
+		seen.reserve(nodes.size());
+		for (const NodeID& node: nodes)
+			if (!seen.put(node, seen.size()).second) return false;
+
 		return true;
 	}
 
@@ -236,7 +242,9 @@ namespace query::internal {
 
 			auto key_value_pair
 				= graph.node_deps->maybePut(nodes.at(node_index), std::move(children));
-			if (key_value_pair == nullptr) CORE_PANIC("Duplicate node detected in reduced graph");
+
+			if (key_value_pair == nullptr)
+				CORE_PANIC("node_mapper mapped two distinct nodes onto the same NodeID. This should be checked by isConsistent() before calling fromReducedGraphData().");
 		}
 
 		return base::Optional<QueryGraph>{ std::move(graph) };

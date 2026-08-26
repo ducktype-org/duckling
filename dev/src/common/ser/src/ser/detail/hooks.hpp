@@ -57,6 +57,20 @@
 	)
 
 /**
+ * @brief Declares HAS_<NAME>_RVALUE_V: the hook accepts an RVALUE object.
+ */
+#define SER_DETAIL_HOOK_TAKES_RVALUE(DECL, NAME, PARAMS, ...) \
+	template<class T, class Ar>                               \
+	DECL bool HAS_##NAME##_RVALUE_V = requires PARAMS { __VA_ARGS__; };
+
+/** @brief The rvalue probe for the read form. */
+#define SER_DETAIL_HOOK_READ_BY_COPY(DECL, LEVEL, ...) \
+	SER_DETAIL_HOOK_TAKES_RVALUE(                      \
+		DECL, LEVEL##_READ,                            \
+		(Ar& ar, ::std::remove_cvref_t<T>&& x), __VA_ARGS__ \
+	)
+
+/**
  * @brief Declares NAMES_<NAME>_V: the hook's name exists, whatever it can be called with.
  *
  * An id-expression for a function TEMPLATE cannot be formed without arguments to deduce
@@ -86,7 +100,10 @@
 	template<class T, class Ar>                                                            \
 	inline constexpr bool LEVEL##_READ_V = SCOPE HAS_##LEVEL##_READ_V<T, reader_for<Ar>>;   \
 	template<class T, class Ar>                                                            \
-	inline constexpr bool LEVEL##_MAKE_V = SCOPE HAS_##LEVEL##_MAKE_V<T, reader_for<Ar>>;
+	inline constexpr bool LEVEL##_MAKE_V = SCOPE HAS_##LEVEL##_MAKE_V<T, reader_for<Ar>>;   \
+	template<class T, class Ar>                                                            \
+	inline constexpr bool LEVEL##_READ_BY_COPY_V                                           \
+		= SCOPE HAS_##LEVEL##_READ_RVALUE_V<T, reader_for<Ar>>;
 
 /**
  * @brief The three levels of one hook form, as a disjunction: does ANY level answer it.

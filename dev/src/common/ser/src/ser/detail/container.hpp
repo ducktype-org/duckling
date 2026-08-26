@@ -5,14 +5,11 @@
 // against something real - and getting the ORDER wrong is the difference between an error
 // code and an out-of-memory.
 //
-//   1. n > MAX_CONTAINER_ELEMENTS            -> MessageSize   (a policy ceiling)
-//   2. n * MIN_WIRE_SIZE_V<E> overflows      -> SizeOverflow   (the multiply itself)
-//   3. that many bytes are not there         -> Truncated       (what the stream can hold)
+//   1. n does not fit in size_t                -> SizeOverflow  (the cast below)
+//   2. n * MIN_WIRE_SIZE_V<E> overflows        -> SizeOverflow  (the multiply itself)
+//   3. that many bytes are not there           -> Truncated     (what the stream can hold)
 //
 // Only then may a caller reserve or resize.
-//
-// An element whose minimum is zero - an empty type - skips steps 2 and 3, because no number
-// of them implies any bytes at all. The policy ceiling is the only thing that bounds it.
 
 #include <ser/concepts.hpp>
 #include <ser/config.hpp>
@@ -22,15 +19,17 @@
 #include <ser/traits.hpp>
 
 #include <cstddef>
+#include <utility>
 
 namespace ser::detail {
 
 	using wire_size_type = config_global::size_type;
 
-	// size_t -> u64 is the identity on every platform ser supports, which is why
-	// config_global::size_type is u64 and no adapter needs an overflow check on write.
-	template<writer Ar>
+	template<class E, writer Ar>
 	constexpr Errc writeLength(Ar& ar, ::std::size_t n) {
+		if constexpr (MIN_WIRE_SIZE_V<E> == 0) {
+			if (n > config_global::MAX_ZERO_SIZE_ELEMENTS) return Errc::MessageSize;
+		}
 		return dispatchWrite<wire_size_type>(ar, static_cast<wire_size_type>(n));
 	}
 
@@ -39,13 +38,15 @@ namespace ser::detail {
 		wire_size_type n = 0;
 		if (const auto c = dispatchRead<wire_size_type>(ar, n); c != Errc::Ok) return c;
 
-		if (n > config_global::MAX_CONTAINER_ELEMENTS) return Errc::MessageSize;
+		if (!::std::in_range<::std::size_t>(n)) return Errc::SizeOverflow;
 
 		if constexpr (MIN_WIRE_SIZE_V<E> > 0) {
 			::std::size_t lower_bound = 0;
 			if (mulOvf(static_cast<::std::size_t>(n), MIN_WIRE_SIZE_V<E>, lower_bound))
 				return Errc::SizeOverflow;
 			if (lower_bound > ar.avail()) return Errc::Truncated;
+		} else {
+			if (n > config_global::MAX_ZERO_SIZE_ELEMENTS) return Errc::MessageSize;
 		}
 
 		out = static_cast<::std::size_t>(n);

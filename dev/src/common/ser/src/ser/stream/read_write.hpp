@@ -58,11 +58,9 @@ namespace ser {
 	//     owned<T, Ctx>{ dispatchMake<T>(ar), std::move(ctx) }
 	// where the prvalue initializes `value` directly - no move, and it compiles for types
 	// with const fields.
-	//
-	// Field order matters: `value` is declared first, so it is destroyed first. Once the
-	// object can refer into the pools held by `ctx`, it must die before them.
 	template<class T, class Ctx>
 	struct owned {
+
 		T                         value;
 		SER_NO_UNIQUE_ADDRESS Ctx ctx;
 
@@ -105,6 +103,12 @@ namespace ser {
 			CORE_PANIC(what, e.message());
 		}
 
+		// ── the buffer has to be used up ───────────────────────────────────────
+		template<class Ar>
+		void requireFullyConsumed(Ar& ar) {
+			if (ar.avail() != 0) throwError(Errc::TrailingBytes, ar.position());
+		}
+
 		// ── the throwing read, which never leaves this namespace ───────────────
 		// An exception is the only way a read can both return the object BY VALUE and report
 		// an error: copy elision is then guaranteed end to end and T never has to be movable,
@@ -124,8 +128,11 @@ namespace ser {
 			in<Ctx> ar{ bytes, ctx };
 			if (opt.header) readEnvelope<T, Ctx>(ar, opt);
 			// Left-to-right evaluation is guaranteed for braced init, so `ar` is done being
-			// used before `ctx` is moved out from under it.
-			return owned<T, Ctx>{ dispatchMake<T>(ar), ::std::move(ctx) };
+			// used before `ctx` is moved out from under it - and that is also the one place
+			// the end-of-buffer check can run: after the object exists, without naming it,
+			// which would cost the move this path exists to avoid.
+			return owned<T, Ctx>{ dispatchMake<T>(ar),
+				                  (requireFullyConsumed(ar), ::std::move(ctx)) };
 		}
 
 		// The bare object, with no bundle around it. It drops the context, which is created
@@ -143,7 +150,14 @@ namespace ser {
 			Ctx     ctx{};
 			in<Ctx> ar{ bytes, ctx };
 			if (opt.header) readEnvelope<T, Ctx>(ar, opt);
-			return dispatchMake<T>(ar);
+
+			if constexpr (::std::move_constructible<T>) {
+				T value = dispatchMake<T>(ar);
+				requireFullyConsumed(ar);
+				return value;
+			} else {
+				return dispatchMake<T>(ar);
+			}
 		}
 
 	}  // namespace detail

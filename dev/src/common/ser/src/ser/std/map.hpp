@@ -52,7 +52,8 @@ namespace ser {
 		template<class M, class K, class V>
 		struct map_adapter {
 			static constexpr Errc write(writer auto& ar, const M& m) {
-				if (const auto c = writeLength(ar, m.size()); c != Errc::Ok) return c;
+				if (const auto c = writeLength<::std::pair<K, V>>(ar, m.size()); c != Errc::Ok)
+					return c;
 				for (const auto& [key, value]: m) {
 					if (const auto c = dispatchWrite<K>(ar, key); c != Errc::Ok) return c;
 					if (const auto c = dispatchWrite<V>(ar, value); c != Errc::Ok) return c;
@@ -80,7 +81,7 @@ namespace ser {
 		template<class S, class K>
 		struct set_adapter {
 			static constexpr Errc write(writer auto& ar, const S& s) {
-				if (const auto c = writeLength(ar, s.size()); c != Errc::Ok) return c;
+				if (const auto c = writeLength<K>(ar, s.size()); c != Errc::Ok) return c;
 				for (const auto& key: s)
 					if (const auto c = dispatchWrite<K>(ar, key); c != Errc::Ok) return c;
 				return Errc::Ok;

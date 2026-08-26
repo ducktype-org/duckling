@@ -1,8 +1,15 @@
 #include <base/collections/maps.hpp>
 #include <base/misc/raw_view.hpp>
 
+#include <ser/ser.hpp>
+#include <ser/std/string.hpp>
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
+
+#include <cstddef>
+#include <span>
+#include <string>
+#include <vector>
 
 class SimpleIDMapsTest;
 
@@ -28,6 +35,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicMapTest);
 		TESTER_ADD_TEST(strIDTest);
+		TESTER_ADD_TEST(serRoundTripTest);
 		TESTER_ADD_TEST(bigStringBufferTest);
 	}
 
@@ -77,6 +85,36 @@ private:
 		assertTrue(id2 != id3, "!= error");
 		assertTrue(id3 == id3, "== error");
 		assertTrue(id3 == "ab", "data error");
+	}
+
+	/**
+	 * @brief The ser format: the same bytes as the string, and a bad id is not one of them.
+	 */
+	void serRoundTripTest() {
+		const base::StrID id(makeView("quack"));
+
+		std::vector<std::byte> bytes;
+		assertTrue(::ser::write(bytes, id).hasValue(), "writing a good StrID");
+
+		const auto back = ::ser::read<base::StrID>(std::span<const std::byte>{ bytes });
+		assertTrue(back.hasValue(), "reading it back");
+		assertTrue(back->value == id, "the id has to intern to the same one");
+
+		// The same bytes a std::string would have produced - the schema says so, so a
+		// stream really does move between the two.
+		std::vector<std::byte> as_string;
+		assertTrue(::ser::write(as_string, std::string("quack")).hasValue(), "writing a string");
+		assertTrue(bytes == as_string, "StrID and std::string share the format");
+
+		// A default-constructed StrID holds a bad inner id. str() would panic on it, and the
+		// read side could not restore the state anyway - StrID{""} comes back GOOD - so the
+		// write is refused with a code instead.
+		const base::StrID unset;
+		assertTrue(unset.isBad(), "a default-constructed StrID is bad");
+		std::vector<std::byte> refused;
+		const auto             wrote = ::ser::write(refused, unset);
+		assertFalse(wrote.hasValue(), "a bad StrID must not reach the wire");
+		assertTrue(wrote.code() == ::ser::Errc::InvalidValue, "and it says why");
 	}
 
 	void bigStringBufferTest() {

@@ -128,7 +128,8 @@ namespace ser::detail {
 // Lists the fields that go on the wire, in order, and skips the rest. It expands to an
 // in-class serVisit, so dispatch finds it at level 2 and nothing else has to know about
 // it - and to the field names, which is what lets SER_TEST_ROUNDTRIP say which field came
-// back wrong instead of just "not equal". Needs at least one field.
+// back wrong instead of just "not equal". At least one field, and the macro signature is
+// what enforces it.
 
 // The half that only DESCRIBES: the count, the names, and the fields as a tuple. It says
 // nothing about the format, so it sits under either of the two hook forms below.
@@ -136,19 +137,27 @@ namespace ser::detail {
 // std::array rather than a C array, and that is about the CALLER: clang-tidy reports
 // cppcoreguidelines-avoid-c-arrays at the line that USES the macro, so a C array here would
 // make every type that says SER_DESCRIBE carry a NOLINT.
+#define SER_DETAIL_DESCRIBED_ELEM(x) \
+	::std::conditional_t<requires {  \
+		&self.x;                     \
+	}, const ::std::remove_cvref_t<decltype(self.x)>&, ::std::remove_cvref_t<decltype(self.x)>>
+
 #define SER_DETAIL_DESCRIBE_FIELDS(...)                                                             \
 	static constexpr ::std::size_t ser_field_count = SER_DETAIL_FIELD_COUNT(__VA_ARGS__);           \
 	static constexpr ::std::array<const char*, SER_DETAIL_FIELD_COUNT(__VA_ARGS__)> ser_field_names \
 		= { FOR_EACH_COMMA(STRINGIFY_2, __VA_ARGS__) };                                             \
 	static constexpr auto ser_described(auto& self) {                                               \
-		return ::std::tie(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, __VA_ARGS__));                         \
+		return ::std::tuple<FOR_EACH_COMMA(SER_DETAIL_DESCRIBED_ELEM, __VA_ARGS__)>{                \
+			FOR_EACH_COMMA(SER_DETAIL_QUALIFY, __VA_ARGS__)                                         \
+		};                                                                                          \
 	}
 
-#define SER_DESCRIBE(...)                                           \
-	SER_DETAIL_DESCRIBE_FIELDS(__VA_ARGS__)                         \
-	static constexpr ::ser::Errc serVisit(auto& ar, auto& self) {   \
-		SER_DETAIL_FIELD_CHECKS(__VA_ARGS__)                        \
-		return ar(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, __VA_ARGS__)); \
+
+#define SER_DESCRIBE(F1, ...)                                                         \
+	SER_DETAIL_DESCRIBE_FIELDS(F1 __VA_OPT__(, ) __VA_ARGS__)                         \
+	static constexpr ::ser::Errc serVisit(auto& ar, auto& self) {                     \
+		SER_DETAIL_FIELD_CHECKS(F1 __VA_OPT__(, ) __VA_ARGS__)                        \
+		return ar(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, F1 __VA_OPT__(, ) __VA_ARGS__)); \
 	}
 
 // ── SER_MAKE_FROM ─────────────────────────────────────────────────────────────
@@ -254,23 +263,23 @@ namespace ser::detail {
 // Not to be combined with SER_DESCRIBE on one type: both define ser_field_names and
 // ser_described, so the compiler reports a redefinition. They are alternatives anyway, and
 // checkHooks refuses the pair on its own merits.
-#define SER_DESCRIBE_MAKE(Self, ...)                                                  \
-	SER_DETAIL_DESCRIBE_FIELDS(__VA_ARGS__)                                           \
+#define SER_DESCRIBE_MAKE(Self, F1, ...)                                              \
+	SER_DETAIL_DESCRIBE_FIELDS(F1 __VA_OPT__(, ) __VA_ARGS__)                         \
 	static constexpr ::ser::Errc serWrite(::ser::writer auto& ar, const Self& self) { \
-		SER_DETAIL_FIELD_CHECKS_BUILT(__VA_ARGS__)                                    \
-		return ar(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, __VA_ARGS__));                   \
+		SER_DETAIL_FIELD_CHECKS_BUILT(F1 __VA_OPT__(, ) __VA_ARGS__)                  \
+		return ar(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, F1 __VA_OPT__(, ) __VA_ARGS__)); \
 	}                                                                                 \
-	SER_MAKE_FROM(Self, __VA_ARGS__)
+	SER_MAKE_FROM(Self, F1 __VA_OPT__(, ) __VA_ARGS__)
 
 // The same for a constructor that would swallow the braces - see SER_MAKE_FROM_PAREN.
 // The write side is unaffected by that; only the read side changes.
-#define SER_DESCRIBE_MAKE_PAREN(Self, ...)                                            \
-	SER_DETAIL_DESCRIBE_FIELDS(__VA_ARGS__)                                           \
+#define SER_DESCRIBE_MAKE_PAREN(Self, F1, ...)                                        \
+	SER_DETAIL_DESCRIBE_FIELDS(F1 __VA_OPT__(, ) __VA_ARGS__)                         \
 	static constexpr ::ser::Errc serWrite(::ser::writer auto& ar, const Self& self) { \
-		SER_DETAIL_FIELD_CHECKS_BUILT(__VA_ARGS__)                                    \
-		return ar(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, __VA_ARGS__));                   \
+		SER_DETAIL_FIELD_CHECKS_BUILT(F1 __VA_OPT__(, ) __VA_ARGS__)                  \
+		return ar(FOR_EACH_COMMA(SER_DETAIL_QUALIFY, F1 __VA_OPT__(, ) __VA_ARGS__)); \
 	}                                                                                 \
-	SER_MAKE_FROM_PAREN(Self, __VA_ARGS__)
+	SER_MAKE_FROM_PAREN(Self, F1 __VA_OPT__(, ) __VA_ARGS__)
 
 // Parentheses instead of braces, for a constructor that would otherwise be shadowed by
 // std::initializer_list. Parentheses do not order their arguments, so the fields are

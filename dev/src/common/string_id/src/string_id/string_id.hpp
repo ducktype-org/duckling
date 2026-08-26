@@ -247,6 +247,7 @@ namespace ser {
 		using StrId = ::base::StrID;
 
 		static constexpr Errc write(writer auto& ar, const StrId& s) {
+			if (s.isBad()) return Errc::InvalidValue;
 			if (const auto c = ar(s.str()); c != Errc::Ok) return c;
 			return Errc::Ok;
 		}

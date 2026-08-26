@@ -57,7 +57,7 @@ namespace ser {
 		static constexpr bool FILLABLE = detail::FILL_IN_PLACE_V<T>;
 
 		static constexpr Errc write(writer auto& ar, const vector_type& v) {
-			if (const auto c = detail::writeLength(ar, v.size()); c != Errc::Ok) return c;
+			if (const auto c = detail::writeLength<T>(ar, v.size()); c != Errc::Ok) return c;
 			for (const T& e: v)
 				if (const auto c = detail::dispatchWrite<T>(ar, e); c != Errc::Ok) return c;
 			return Errc::Ok;

@@ -403,13 +403,14 @@ private:
 		ser::in             tampered_ar{ view(tampered) };
 		ASSERT_EQUAL(ser::Errc::InvalidValue, tampered_ar(target));
 
-		// A capacity nobody could have written: past the policy ceiling, so it is refused
-		// before any allocation rather than after.
+		// A capacity nobody could have written: the words it implies are not in the stream,
+		// so it is refused before any allocation rather than after. The bound is the stream
+		// itself and not a policy ceiling - a bitset that really is huge still loads.
 		ByteBuf  absurd;
 		ser::out absurd_ar{ absurd };
 		ASSERT_EQUAL(ser::Errc::Ok, absurd_ar(u64{ 1 } << 40));
 		ser::in absurd_read{ view(absurd) };
-		ASSERT_EQUAL(ser::Errc::MessageSize, absurd_read(target));
+		ASSERT_EQUAL(ser::Errc::Truncated, absurd_read(target));
 
 		// The prefix is there and the words are not.
 		const auto truncated = bytesOf(small);

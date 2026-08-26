@@ -59,6 +59,21 @@ enum class Color : u16 { Red = 1, Green = 2, Blue = 65'535 };
 
 enum Shape { ROUND = 0, SQUARE = 3 };  // unscoped, and the compiler picks its underlying type
 
+// Zero bytes on the wire, whatever the count - which is what makes a container of them the
+// one place a policy ceiling has to do the bounding.
+struct Nothing {
+	friend bool operator==(const Nothing&, const Nothing&) = default;
+};
+
+// An unscoped enum with no fixed underlying type has no queryable value range, and
+// static_cast to it is only defined inside that range - so the range is declared here and
+// readEnum refuses anything outside it. An `enum Shape : u16` would need none of this.
+template<>
+struct ser::enum_range<Shape> {
+	static constexpr Shape MIN = ROUND;
+	static constexpr Shape MAX = SQUARE;
+};
+
 /**
  * @brief Level 0, and the one type here that has to say how many fields it has.
  *
@@ -534,6 +549,29 @@ struct Node final {
 	friend bool operator==(const Node&, const Node&) = default;
 };
 
+/**
+ * @brief A hook that reads its fields with ser::readField, which signals by THROWING.
+ *
+ * The hook is declared to return a code, so the two conventions meet inside dispatch - the
+ * shape MetadataStorage::serRead has, and the shape every serMake-based factory has.
+ */
+struct Thrower final {
+	i32 a = 0;
+	i32 b = 0;
+
+	friend bool operator==(const Thrower&, const Thrower&) = default;
+
+	static ser::Errc serWrite(ser::writer auto& ar, const Thrower& self) {
+		return ar(self.a, self.b);
+	}
+
+	static ser::Errc serRead(ser::reader auto& ar, Thrower& self) {
+		self.a = ser::readField<i32>(ar);
+		self.b = ser::readField<i32>(ar);
+		return ser::Errc::Ok;
+	}
+};
+
 /** @brief The same, one level of indirection deeper: recursion through two types. */
 struct Branchy;
 
@@ -906,17 +944,60 @@ private:
 		ASSERT_EQUAL(ser::Errc::InvalidValue, ser::read<Table>(view(duplicate)).code());
 
 		// A length prefix is the first thing an attacker reaches for: it arrives before
-		// the elements it counts, so it is checked against what the stream can hold and
-		// against the element ceiling BEFORE anything is reserved.
+		// the elements it counts, so it is checked against what the stream can hold BEFORE
+		// anything is reserved.
 		ByteBuf lying;
 		(void) ser::write(lying, u64{ 1'000 });
 		using Numbers = std::vector<u32>;
 		ASSERT_EQUAL(ser::Errc::Truncated, ser::read<Numbers>(view(lying)).code());
 		ASSERT_EQUAL(ser::Errc::Truncated, ser::read<std::string>(view(lying)).code());
 
+		// No ceiling is involved for an element that has bytes on the wire, and that is
+		// deliberate: n * MIN_WIRE_SIZE_V<E> bytes have to be there, which bounds the count
+		// by the input itself and lets a legitimately huge container read.
 		ByteBuf absurd;
-		(void) ser::write(absurd, u64{ ser::config_global::MAX_CONTAINER_ELEMENTS } + 1);
-		ASSERT_EQUAL(ser::Errc::MessageSize, ser::read<Numbers>(view(absurd)).code());
+		(void) ser::write(absurd, u64{ 1 } << 40);
+		ASSERT_EQUAL(ser::Errc::Truncated, ser::read<Numbers>(view(absurd)).code());
+
+		// An EMPTY element is the one case that argument cannot reach: any number of them
+		// occupies no bytes, so the stream carries no evidence about the count and the
+		// policy ceiling is the only bound there is.
+		ByteBuf empties;
+		(void) ser::write(empties, u64{ ser::config_global::MAX_ZERO_SIZE_ELEMENTS } + 1);
+		ASSERT_EQUAL(ser::Errc::MessageSize, ser::read<std::vector<Nothing>>(view(empties)).code());
+
+		// The buffer has to be used up. A record read as a SHORTER one leaves bytes over,
+		// and that is the only signal there is that the two shapes disagree - the payload
+		// itself is perfectly well-formed either way.
+		ByteBuf pair;
+		(void) ser::write(pair, u64{ 1 });
+		(void) ser::write(pair, u64{ 2 });
+		ASSERT_EQUAL(ser::Errc::TrailingBytes, ser::read<u64>(view(pair)).code());
+		ASSERT_TRUE(ser::read<u64>(view(pair, sizeof(u64))).hasValue());
+
+		// The archive is the other half of that rule: reading several appended messages is
+		// what it is for, so it counts nothing and says where it stopped.
+		ser::in appended{ view(pair) };
+		u64     one = 0;
+		u64     two = 0;
+		ASSERT_EQUAL(ser::Errc::Ok, appended(one, two));
+		ASSERT_EQUAL(u64{ 1 }, one);
+		ASSERT_EQUAL(u64{ 2 }, two);
+
+		// A hook that reads with ser::readField throws from inside a function declared to
+		// return a code. Neither entry point may let that out: ser::read turns it into a
+		// result, and the ARCHIVE - which is documented never to throw - into a code.
+		ByteBuf half;
+		(void) ser::write(half, i32{ 7 });
+		ASSERT_EQUAL(ser::Errc::Truncated, ser::read<Thrower>(view(half)).code());
+
+		Thrower target;
+		ser::in throwing_ar{ view(half) };
+		ASSERT_EQUAL(ser::Errc::Truncated, throwing_ar(target));
+
+		ByteBuf whole;
+		(void) ser::write(whole, Thrower{ .a = 3, .b = 4 });
+		ASSERT_TRUE(SER_TEST_ROUNDTRIP(Thrower{ .a = 3, .b = 4 }));
 
 		// The depth counter, checked against the configured limit rather than an
 		// accidental one. No braces on `deep`: Clang materializes the whole initializer
@@ -1063,6 +1144,27 @@ private:
 		ser::out ar{ overflowing };
 		ASSERT_EQUAL(ser::Errc::DepthExceeded, ar(deep));
 		ASSERT_EQUAL(usize{ 0 }, ar.depth());
+
+		// And on the way OUT, which is the direction that faces a disk: a chain nobody could
+		// have written, built by hand rather than from an object, has to come back as a code
+		// and not as a stack overflow. Twelve bytes per level - an i32 and a count of one -
+		// and the last level closes with a count of zero.
+		ByteBuf  handmade;
+		ser::out deep_ar{ handmade };
+		for (usize i = 0; i < ser::config_global::MAX_DEPTH + 64; ++i)
+			ASSERT_EQUAL(ser::Errc::Ok, deep_ar(i32{ 1 }, u64{ 1 }));
+		ASSERT_EQUAL(ser::Errc::Ok, deep_ar(i32{ 1 }, u64{ 0 }));
+
+		const auto too_deep = ser::read<Node>(view(handmade));
+		ASSERT_EQUAL(ser::Errc::DepthExceeded, too_deep.code());
+
+		// The same shape within the limit still reads, so the guard is a limit and not a
+		// refusal of nesting.
+		ByteBuf  shallow;
+		ser::out shallow_ar{ shallow };
+		for (usize i = 0; i < 10; ++i) ASSERT_EQUAL(ser::Errc::Ok, shallow_ar(i32{ 1 }, u64{ 1 }));
+		ASSERT_EQUAL(ser::Errc::Ok, shallow_ar(i32{ 1 }, u64{ 0 }));
+		ASSERT_TRUE(ser::read<Node>(view(shallow)).hasValue());
 	}
 
 	// ── helpers ─────────────────────────────────────────────────────────────────────

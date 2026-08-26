@@ -68,7 +68,7 @@ namespace ser {
 		// buy nothing. Still constexpr-safe: detail::copyBytes switches to an element loop
 		// under `if consteval`.
 		constexpr Errc writeByteBlob(writer auto& ar, const ::base::RawView& v) {
-			if (const auto c = writeLength(ar, v.size()); c != Errc::Ok) return c;
+			if (const auto c = writeLength<::std::byte>(ar, v.size()); c != Errc::Ok) return c;
 			return ar.rawWrite({ v.getBegin(), v.size() });
 		}
 

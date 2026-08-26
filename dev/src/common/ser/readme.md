@@ -113,9 +113,16 @@ Do not reach for a panicking form to keep a call site tidy. `CORE_PANIC` is
 to be wrong is undefined behaviour there, with no diagnostic. Input goes through
 `ser::read`. Always.
 
-No public entry point throws. If you prefer an exception at your own call site,
-`ser::result` has `.orThrow()`, which raises `ser::exception` carrying the same code and
-position.
+No public entry point throws. If
+you prefer an exception at your own call site, `ser::result` has `.orThrow()`, which raises
+`ser::exception` carrying the same code and position.
+
+`ser::read` is handed a buffer whose size it knows, so it also requires the object to
+account for **all** of it: bytes left over are `TrailingBytes`, which is what catches a
+record read as a shorter one, or as a differently shaped one that happens to fit. Several
+messages appended into one buffer are read with an archive rather than with `ser::read` -
+see [Archives: Several Messages In One Buffer](#archives-several-messages-in-one-buffer) -
+and nothing there changes.
 
 Error Codes
 -----------
@@ -127,7 +134,8 @@ Error Codes
 | `Truncated`, `UnexpectedEnd` | the stream ended in the middle of something |
 | `BufferFull` | a fixed output buffer ran out of room |
 | `SizeOverflow` | length arithmetic overflowed |
-| `MessageSize` | a container length exceeded `MAX_CONTAINER_ELEMENTS` |
+| `MessageSize` | a container of zero-byte elements exceeded `MAX_ZERO_SIZE_ELEMENTS` |
+| `TrailingBytes` | `ser::read` finished the object with bytes still left in the buffer |
 | `InvalidValue` | a `bool` that is neither 0 nor 1, an unknown variant tag, a duplicate map key, a valueless variant on write |
 | `DepthExceeded` | nesting past `MAX_DEPTH` - data-dependent recursion |
 | `BadMagic`, `SchemaMismatch`, `PlatformMismatch` | the envelope rejected the stream, see [The Envelope](#the-envelope) |
@@ -140,9 +148,30 @@ What Works With No Code At All
   declaration order.
 * **Scalars**: every arithmetic type and `std::byte`, in native bytes. `bool` is the
   exception - it goes out as an explicit `0`/`1` byte and comes back validated, because a
-  `bool` holding anything else is undefined behaviour, not a wrong value.
+  `bool` holding anything else is undefined behaviour, not a wrong value. `long double` is
+  refused: it has more bytes than it has value, so the padding between them would go on the
+  wire as it happened to be and the same number would not give the same stream twice.
 * **Enums**, scoped and unscoped, as their underlying type. Changing the underlying type
   changes the format; nothing validates the enumerator list.
+
+  An **unscoped enum with no fixed underlying type** needs one line more. Its valid values
+  are those of the smallest bit-field holding its enumerators, and a value off a corrupt
+  stream outside that range is undefined behaviour rather than a wrong value - so either
+  give it a fixed underlying type, which makes every value of that type a defined one:
+
+  ```cpp
+  enum Kind : std::uint32_t { First, Second, Third };   // nothing else needed
+  ```
+
+  or declare the range, and anything outside it comes back as `InvalidValue`:
+
+  ```cpp
+  enum Kind { First, Second, Third };
+  template<> struct ser::enum_range<Kind> {
+      static constexpr Kind MIN = First;
+      static constexpr Kind MAX = Third;
+  };
+  ```
 * **Fixed arrays**: `T[N]` and `std::array<T, N>`. The length is in the type, so nothing
   about it goes on the wire.
 * **Strong integer typedefs**: `STRONG_TYPEDEF_INT` and `STRONG_TYPEDEF_INT_DIMENSIONAL`
@@ -414,7 +443,9 @@ CHECK(SER_TEST_ROUNDTRIP(Vec3{ 1, 2, 3 }));
 It writes the sample, reads it back, compares field by field and prints which field came
 back different - by name, when `SER_DESCRIBE` gave it one. With `SER_MAKE_FROM_MEMBERS`,
 which has no field list to check anything against, this is a condition of use rather than
-a suggestion.
+a suggestion. The same goes for a type that pairs `serVisit` with `serMake`: that pair is
+allowed - it is how a type that cannot be filled in place is read - but the two are separate
+descriptions of one format, and nothing but a round-trip can tell you they still agree.
 
 The Wire Format At A Glance
 ---------------------------
@@ -443,13 +474,17 @@ be signed or content-addressed.
 Limits And Knobs
 ----------------
 `ser::config_global` holds the policy: `MAX_DEPTH` is 256 (data-dependent recursion is a
-stack overflow on write and an attack on read), `MAX_CONTAINER_ELEMENTS` is 2^28, and the
+stack overflow on write and an attack on read), `MAX_ZERO_SIZE_ELEMENTS` is 2^28, and the
 length prefix type is `u64`.
 
-Every variable-length read checks the length before allocating anything: against the policy
-ceiling, then against the multiplication overflowing, then against how many bytes the stream
-actually holds. A corrupt length gives you `MessageSize`, `SizeOverflow` or `Truncated` -
-never an allocation.
+Every variable-length read validates the length before allocating anything: a corrupt
+length gives you `SizeOverflow` or `Truncated`, never a huge allocation. There is no fixed
+ceiling on the element count - the stream itself has to hold the bytes, which is a tighter
+bound than any constant and lets a container as large as your data reads.
+
+Elements that occupy **no bytes** are the exception: the stream carries no evidence about
+their count, so `MAX_ZERO_SIZE_ELEMENTS` bounds them and the error is `MessageSize` - on
+write as well as read, so nothing can be written that cannot be read back.
 
 C++23 Today, C++26 Later
 ------------------------

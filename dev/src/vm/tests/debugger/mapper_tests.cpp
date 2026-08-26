@@ -160,7 +160,7 @@ private:
 		ASSERT_FALSE(mapper.containsFile("abc"));
 
 		// The mapping is produced by this test and read back through the same format the
-		// compiler writes - see the note at the top of the file.
+		// compiler writes.
 		ASSERT_HAS_VALUE(mapper.loadMapping(writeMappingFile()));
 
 		auto simple = fs::FilePath("simple.dk");

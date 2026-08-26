@@ -59,7 +59,7 @@ void plainAggregateExample() {
 	ser::writeOrPanic(bytes, point);
 
 	// The bytes are ours too - written a line ago - so the read may panic as well.
-	const Point back = ser::readOrPanicForce<Point>(bytes);
+	const auto back = ser::readOrPanicForce<Point>(bytes);
 
 	std::println(
 		"  {} bytes; back ({}, {}), equal: {}",
@@ -87,6 +87,8 @@ struct Person final {
 	base::Box<Point>            home;      // the pointer is storage, not format: a Point
 };
 
+// The static analyzer does not model base::Box's deleter and reads makeBox as a leak.
+// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 Person samplePerson() {
 	return Person{
 		.name     = "Ada",
@@ -100,8 +102,6 @@ Person samplePerson() {
 	};
 }
 
-// The static analyzer does not model base::Box's deleter and reads makeBox as a leak.
-// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 void containersExample() {
 	std::println("\n── 2. containers, enums, std and base types ───────────────");
 
@@ -110,7 +110,7 @@ void containersExample() {
 	std::vector<std::byte> bytes;
 	ser::writeOrPanic(bytes, person);
 
-	const Person back = ser::readOrPanicForce<Person>(bytes);
+	const auto back = ser::readOrPanicForce<Person>(bytes);
 
 	std::println(
 		"  {} bytes; back {}, {} scores, nickname {}, note {}, home ({}, {})",
@@ -152,14 +152,15 @@ void memberCountExample() {
 	std::vector<std::byte> bytes;
 	ser::writeOrPanic(bytes, marker);
 
-	const Marker back = ser::readOrPanicForce<Marker>(bytes);
+	const auto back = ser::readOrPanicForce<Marker>(bytes);
 
 	std::println(
 		"  {} bytes; back \"{}\" x{}, equal: {}",
 		bytes.size(),
-		std::string_view{ back.code, 4 },
+		std::string_view{ static_cast<const char*>(back.code), 4 },
 		back.count,
-		std::string_view{ back.code, 4 } == std::string_view{ marker.code, 4 }
+		std::string_view{ static_cast<const char*>(back.code), 4 }
+				== std::string_view{ static_cast<const char*>(marker.code), 4 }
 			&& back.count == marker.count
 	);
 }
@@ -195,7 +196,7 @@ void describeExample() {
 	std::vector<std::byte> bytes;
 	ser::writeOrPanic(bytes, message);
 
-	const Message back = ser::readOrPanicForce<Message>(bytes);
+	const auto back = ser::readOrPanicForce<Message>(bytes);
 
 	std::println(
 		"  {} bytes ({} of them the text); back \"{}\", equal: {}",
@@ -241,7 +242,7 @@ void describeMakeExample() {
 	std::vector<std::byte> bytes;
 	ser::writeOrPanic(bytes, measurement);
 
-	const Measurement back = ser::readOrPanicForce<Measurement>(bytes);
+	const auto back = ser::readOrPanicForce<Measurement>(bytes);
 
 	std::println(
 		"  {} bytes; back sensor {} value {}, sensor equal: {}",
@@ -279,7 +280,7 @@ void visitHookExample() {
 	std::vector<std::byte> bytes;
 	ser::writeOrPanic(bytes, stamp);
 
-	const Timestamp back = ser::readOrPanicForce<Timestamp>(bytes);
+	const auto back = ser::readOrPanicForce<Timestamp>(bytes);
 
 	std::println(
 		"  {} bytes; back {}.{}, equal: {}",
@@ -318,7 +319,7 @@ void writeReadHookExample() {
 	std::vector<std::byte> bytes;
 	ser::writeOrPanic(bytes, config);
 
-	const Config back = ser::readOrPanicForce<Config>(bytes);
+	const auto back = ser::readOrPanicForce<Config>(bytes);
 	std::println(
 		"  {} bytes; back version {}, {} bytes of data, equal: {}",
 		bytes.size(),
@@ -367,7 +368,7 @@ void makeHookExample() {
 	std::vector<std::byte> bytes;
 	ser::writeOrPanic(bytes, label);
 
-	const Label back = ser::readOrPanicForce<Label>(bytes);
+	const auto back = ser::readOrPanicForce<Label>(bytes);
 
 	std::println(
 		"  {} bytes; back \"{}\", equal: {}",
@@ -516,7 +517,7 @@ void archiveExample() {
 	std::println(
 		"  {} bytes read as \"{}\" x{}, then ({}, {}); {} bytes left",
 		ar.position(),
-		std::string_view{ marker.code, 4 },
+		std::string_view{ static_cast<const char*>(marker.code), 4 },
 		marker.count,
 		point.x,
 		point.y,

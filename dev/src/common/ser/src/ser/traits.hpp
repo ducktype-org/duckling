@@ -50,6 +50,8 @@ namespace ser {
 				return MIN_WIRE_SIZE_V<::std::remove_cv_t<access::schema_as_t<T>>>;
 			else if constexpr (::std::is_empty_v<T>)
 				return 0;  // truthful: an empty type writes nothing
+			else if constexpr (access::HAS_DESCRIBED_V<T>)
+				return sumMinWire(described_types_t<T>{});
 			else if constexpr (CAN_ENUMERATE_MEMBERS_V<T>)
 				return sumMinWire(field_types_t<T>{});
 			else

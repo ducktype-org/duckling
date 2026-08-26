@@ -246,6 +246,14 @@ namespace ser::detail {
 			);
 	}
 
+
+	template<class F>
+	constexpr Errc codeFromHook(F&& f) {
+		try {
+			return ::std::forward<F>(f)();
+		} catch (const exception& e) { return e.code(); }
+	}
+
 	template<class T, reader Ar>
 	constexpr Errc dispatchRead(Ar& ar, T& x) {
 		using U = ::std::remove_cv_t<T>;
@@ -271,17 +279,17 @@ namespace ser::detail {
 		}
 
 		else if constexpr (access::HAS_TRAIT_READ_V<U, Ar>)    // 1
-			return serializer<U>::read(ar, x);
+			return codeFromHook([&] { return serializer<U>::read(ar, x); });
 		else if constexpr (access::HAS_TRAIT_VISIT_V<U, Ar>)   // 2
-			return serializer<U>::visit(ar, x);
+			return codeFromHook([&] { return serializer<U>::visit(ar, x); });
 		else if constexpr (access::HAS_MEMBER_READ_V<U, Ar>)   // 3
-			return access::callRead<U>(ar, x);
+			return codeFromHook([&] { return access::callRead<U>(ar, x); });
 		else if constexpr (access::HAS_MEMBER_VISIT_V<U, Ar>)  // 4
-			return access::callVisit(ar, x);
+			return codeFromHook([&] { return access::callVisit(ar, x); });
 		else if constexpr (HAS_ADL_READ_V<U, Ar>)              // 5
-			return adl_barrier::callRead(ar, x);
+			return codeFromHook([&] { return adl_barrier::callRead(ar, x); });
 		else if constexpr (HAS_ADL_VISIT_V<U, Ar>)             // 6
-			return adl_barrier::callVisit(ar, x);
+			return codeFromHook([&] { return adl_barrier::callVisit(ar, x); });
 
 		else if constexpr (builtin::scalar_like<U>)
 			return builtin::readScalar<U>(ar, x);  // 7

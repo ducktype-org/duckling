@@ -18,6 +18,7 @@ namespace ser {
 		Truncated,
 		BufferFull,
 		UnexpectedEnd,
+		TrailingBytes,
 
 		SizeOverflow,
 		MessageSize,
@@ -48,6 +49,8 @@ namespace ser {
 			return "no space left in buffer";
 		case Errc::UnexpectedEnd:
 			return "unexpected end of data";
+		case Errc::TrailingBytes:
+			return "bytes left over after the object";
 		case Errc::SizeOverflow:
 			return "length arithmetic overflowed";
 		case Errc::MessageSize:
