@@ -49,7 +49,7 @@ impl<'duck> Fetcher<'duck> {
     /// Filename of the default package's compressed source.
     const DEFAULT_BLOB_FILENAME: &'static str = "source.tar.gz";
 
-    /// Filename of the default package's compressed source.
+    /// Filename of the per-package lock.
     const PER_PACKAGE_LOCK: &'static str = ".duck.package.lock";
 
     /// URL of the default Ducknest instance.
