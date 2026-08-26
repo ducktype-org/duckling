@@ -7,9 +7,20 @@ Tests:
         backend: dvm
         ExitCode: 0
         Output:
-          String: "HELLO\nH"
+          String: "HELLO\nH0falsetruetrueptr(null)"
+  # Freeing a table of aggregates that hold a pointer only leaks on stderr, so `Err` is what makes
+  # this case fail - the exit code stays 0 either way.
+  dvm_alloc_nested:
+    Cases:
+      dvm:
+        backend: dvm
+        ExitCode: 0
+        Output:
+          String: "5\n"
+        Err:
+          String: ""
   numeric_io:
-    Cases: 
+    Cases:
       llvm:
         backend: llvm
         Input:
@@ -22,7 +33,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "123.14dtrue()(John Smith,42,1.69)Person(John Smith,42,1.69)"
+          String: "123.14dtrue()(John Smith,42,1.69)Person(John Smith,42,1.69)ptr()"
   format_strings:
     Cases:
       llvm:

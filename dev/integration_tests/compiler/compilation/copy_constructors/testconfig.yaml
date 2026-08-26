@@ -13,7 +13,7 @@ Tests:
       all:
         backend: all
         Output:
-          String: "1\n7\n2\n9\n2\n3\n9\n4\n5\n7\n"
+          String: "1\n7\n2\n9\n2\n3\n9\n4\n5\n7\n5\n9\n5\n100\n6\n100\n"
         ExitCode: 0
 
   function_calls:
@@ -24,12 +24,11 @@ Tests:
           String: "0\n1\n1\n"
         ExitCode: 0
 
-  # @TODO: #2866 Merge this test with `aggregates` once Lists are supported in DVM.
+  # @TODO: #3387 Merge this test with `aggregates` once refcount bug is fixed on DVM.
   list_copies:
-    # @TODO: #3351 Expect "3\n6\n" again once boxed list elements can be copied.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: "3\n"
+          String: "3\n6\n6\n40\n5\n"
         ExitCode: 0

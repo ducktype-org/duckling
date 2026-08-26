@@ -30,7 +30,7 @@ pub enum VenvOrderings {
 
 impl VenvOrderings {
     /// Return the correct function pointer for comparing venvs.
-    pub fn comparator(&self) -> fn(&Venv, &Venv) -> Ordering {
+    pub fn comparator(self) -> fn(&Venv, &Venv) -> Ordering {
         match self {
             VenvOrderings::Name => Venv::compare_name,
             VenvOrderings::Access => Venv::compare_access,

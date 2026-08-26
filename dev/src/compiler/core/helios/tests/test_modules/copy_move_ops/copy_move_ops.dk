@@ -1,0 +1,34 @@
+class W {
+    x: i32 = 0;
+
+    W.copy(other: const ref W) = {
+        return W(other.x);
+    }
+}
+
+fun usesOps() -> i32 = {
+    var a: W = W(1);
+    var b: W = copy a;
+    var c: W = move a;
+    return c.x;
+}
+
+fun returnsLocal() -> W = {
+    var w: W = W(2);
+    return w; # Should implicitly move.
+}
+
+fun copiesThroughRef(r: ref W, bx: box W) -> i32 = {
+    var b: W = copy r;
+    var c: W = copy bx;
+    return b.x;
+}
+
+fun copyofKeepsKind(r: ref W, bx: box W, n: i64) -> i32 = {
+    var a: W = W(1);
+    var ca: W = copyof a;       # Copy constructor call.
+    var cr: ref W = copyof r;   # The reference is copied, the pointee is shared.
+    var cb: box W = copyof bx;  # A fresh allocation holding a copy of the pointee.
+    var cn: i64 = copyof n;     # Trivially copyable, so no node at all.
+    return ca.x;
+}
