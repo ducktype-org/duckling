@@ -43,7 +43,7 @@ namespace {
 	std::pair<u64, debug_info::InstructionMetadata> instr(
 		u64 offset, debug_info::SourcePosition position
 	) {
-		return { offset, debug_info::InstructionMetadata{ .position = position } };
+		return { offset, debug_info::InstructionMetadata{ .position = std::move(position) } };
 	}
 
 	/** @brief The four functions of simple.dk, with their offsets and variables. */
@@ -132,7 +132,7 @@ namespace {
 		debug_info::saveToStream(simpleDebugInfo(), out);
 		out.close();
 
-		return fs::File(fs::FilePath(di_path));
+		return { fs::FilePath(di_path) };
 	}
 }
 

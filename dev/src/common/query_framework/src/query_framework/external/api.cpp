@@ -31,7 +31,7 @@ namespace query::external {
 		// the build carries on with none, exactly as it does on a first build. Two ways to be
 		// damaged - bytes that are not a graph, and a graph whose adjacency indices do not
 		// match its nodes - and fromReducedGraphData answers the second one itself.
-		const auto dropPreviousGraph = [&state](const std::string& why) {
+		const auto drop_previous_graph = [&state](const std::string& why) {
 			CORE_USER_LOG("Previous query graph was damaged, compiling without it.\n");
 			CORE_DEV_LOG(Incremental, "Previous query graph rejected: ", why, "\n");
 			state->setPreviousGraph(::query::internal::QueryGraph{});
@@ -40,7 +40,7 @@ namespace query::external {
 		auto reduced
 			= ::ser::read<::query::internal::QueryGraph::ReducedGraphData>(graph_raw_bytes);
 		if (!reduced) {
-			dropPreviousGraph(reduced.err().message());
+			drop_previous_graph(reduced.err().message());
 			return;
 		}
 
@@ -53,7 +53,7 @@ namespace query::external {
 			}
 		);
 		if (!graph.has_value()) {
-			dropPreviousGraph("adjacency index out of range");
+			drop_previous_graph("adjacency index out of range");
 			return;
 		}
 
