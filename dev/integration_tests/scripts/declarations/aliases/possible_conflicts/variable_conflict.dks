@@ -1,0 +1,5 @@
+class Test {var test = 21;}
+var t = Test();
+alias x = t.test;
+x = 42;
+builtin_output_i64(t.test);

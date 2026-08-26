@@ -151,6 +151,6 @@ fn ignore_clap_errors<T: Default>(result: Result<T, clap::parser::MatchesError>)
     match result {
         Ok(val) => val,
         Err(clap::parser::MatchesError::UnknownArgument { .. }) => T::default(),
-        Err(e) => panic!("cli flag used incorrectly: {}", e),
+        Err(e) => panic!("cli flag used incorrectly: {e}"),
     }
 }

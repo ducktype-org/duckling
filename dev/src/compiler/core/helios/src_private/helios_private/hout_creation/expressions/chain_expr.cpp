@@ -5,7 +5,6 @@
 
 #include "chain_expr.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
@@ -22,7 +21,7 @@
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/square_call_processing.hpp>
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
@@ -40,6 +39,7 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 
@@ -71,7 +71,7 @@ namespace compiler::helios::code {
 			return base::Optional<SymID>{};  // no template specifier, no bake
 
 		if (kind(template_sym_id) != SymbolKind::Template) {
-			query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			query_ctx.logInt(makeBox<dia::PlaceholderError>(
 				"template bake called on non-template symbol",
 				element_with_template_specifier->getStablePosition()
 			));
@@ -97,7 +97,7 @@ namespace compiler::helios::code {
 		auto argument_list = template_specifier_dc->getArgumentList().unlock(query_ctx);
 
 		if (template_signature.parameters.size() != argument_list->size()) {
-			query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			query_ctx.logInt(makeBox<dia::PlaceholderError>(
 				"argument count does not match template parameter count",
 				element_with_template_specifier->getStablePosition()
 			));
@@ -166,7 +166,7 @@ namespace compiler::helios::code {
 			}
 
 			variant_case(errors::Ambiguity, _) {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					"template bake called on ambiguous lookup result",
 					element_with_template_specifier->getStablePosition()
 				));
@@ -174,7 +174,7 @@ namespace compiler::helios::code {
 			}
 
 			variant_case(errors::SymbolNotFound, _) {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Symbol not found in lookup",
 					element_with_template_specifier->getStablePosition()
 				));
@@ -191,8 +191,8 @@ namespace compiler::helios::code {
 	 * @brief This error message is used when there are both function symbols and non-function valid
 	 * symbols found during the lookup (like function and class constructor with the same name).
 	 */
-	class CallInvalidCallablesError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class CallInvalidCallablesError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -200,8 +200,8 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		class InvalidCallableReferenceDocs final: public dia_int::MessageBase {
-			dia_int::Metadata getMetadata() const final {
+		class InvalidCallableReferenceDocs final: public dia::MessageBase {
+			dia::Metadata getMetadata() const final {
 				return { .template_type = "message",
 					     .type          = "docs",
 					     .family        = "expressions",
@@ -212,8 +212,8 @@ namespace compiler::helios::code {
 			InvalidCallableReferenceDocs(): MessageBase() {}
 		};
 
-		class CandidateNote final: public dia_int::MessageWithCodeFragmentAndCause {
-			dia_int::Metadata getMetadata() const final {
+		class CandidateNote final: public dia::MessageWithCodeFragmentAndCause {
+			dia::Metadata getMetadata() const final {
 				return { .template_type = "message",
 					     .type          = "note",
 					     .family        = "type_check",
@@ -221,11 +221,11 @@ namespace compiler::helios::code {
 			}
 
 		public:
-			CandidateNote(dia_int::StablePosition source_position):
+			CandidateNote(dia::StablePosition source_position):
 				  MessageWithCodeFragmentAndCause(source_position) {}
 		};
 
-		CallInvalidCallablesError(dia_int::StablePosition source_position):
+		CallInvalidCallablesError(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addAttachedMessage(makeBox<InvalidCallableReferenceDocs>());
 		}
@@ -452,7 +452,7 @@ namespace compiler::helios::code {
 				return std::vector{ ctor.declaration->original_symbol };
 			}
 			default: {
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat("Round Call '()' operator on symbol: ", name(symbol)),
 					stmt(query_ctx, symbol).value()->getStablePosition()
 				));
@@ -537,13 +537,13 @@ namespace compiler::helios::code {
 					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
 					return ChainState::ofExpr(std::move(expr));
 				}
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					"This symbol cannot be indexed.", call_expr->getStablePosition()
 				));
 				return query::Failed();
 			}
 			default: {
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
@@ -559,7 +559,6 @@ namespace compiler::helios::code {
 		 * chain.
 		 * It is when we have keyword literal followed by a call expression. This currently includes:
 		 * - `i64[42]` - used for static array type creation.
-		 * - `List[i64]` - for dynamic array type creation.
 		 *
 		 * Note that `i64(42)` is no longer a type cast - the `as` operator (`42 as i64`) is the
 		 * only supported explicit conversion syntax.
@@ -574,7 +573,7 @@ namespace compiler::helios::code {
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
 				if (dynamic_cast<const LiteralTypeExpr*>(hout_expr.get()) != nullptr) {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
 						"A type cannot be called. Explicit conversions use the `as` operator.",
 						call_expr->getStablePosition(),
 						"Write `value as Type` instead of `Type(value)`."
@@ -582,7 +581,7 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Unsupported keyword literal in call expression.", call_expr->getStablePosition()
 				));
 				break;
@@ -594,7 +593,7 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default:
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
@@ -680,7 +679,7 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
@@ -697,7 +696,7 @@ namespace compiler::helios::code {
 		auto processPSTExpr(
 			[[maybe_unused]] SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState> {
-			query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			query_ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat("Namespace is not callable"), call_expr->getStablePosition()
 			));
 			return query::Failed();
@@ -748,14 +747,14 @@ namespace compiler::helios::code {
 						result_sequence.push_back(std::move(current_expr));
 						return ChainState::ofNamespaceLike(sym, pstOrigin(expr_access));
 					} else if (kind(sym) == SymbolKind::Method) {
-						query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 							"Handling of access to method without a call is not implemented yet"
 							"argument at compile time",
 							current_expr->origin.getStablePosition()
 						));
 						return query::Failed();
 					}
-					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Unsupported symbol kind in type lookup for symbol: ",
 							prettyDebugPrint(sym, query_ctx)
@@ -768,7 +767,7 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 				variant_case_novalue(errors::Ambiguity) {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
 						"Accessed value is ambiguous.",
 						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
 							query_ctx
@@ -782,7 +781,7 @@ namespace compiler::helios::code {
 					// obj.selectDynamic("a"). See Scala's Dynamic:
 					// https://www.scala-lang.org/api/current/scala/Dynamic.html
 
-					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
 						"Accessed value not found.",
 						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
 							query_ctx
@@ -868,7 +867,7 @@ namespace compiler::helios::code {
 				return query::Failed();
 			}
 			default: {
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
@@ -930,13 +929,13 @@ namespace compiler::helios::code {
 				}
 
 
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					"This symbol cannot be indexed", call_expr->getStablePosition()
 				));
 				return query::Failed();
 			}
 			default: {
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
@@ -989,7 +988,7 @@ namespace compiler::helios::code {
 				return ChainState::ofNamespaceLike(symbol, pst_element_origin);
 			}
 			default:
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"Unsupported kind of the symbol `", name(symbol), "` in chain expression."
 					),
@@ -1024,7 +1023,7 @@ namespace compiler::helios::code {
 			auto fields = self_type.getInterface(query_ctx)->getFieldsView();
 			if (std::ranges::find(fields, field_symbol, &tsh::InterfaceElement::getSymbol)
 			    == fields.end()) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"No such field found in the interface of prefix expression.",
 					pst_elem->getStablePosition()
 				));
@@ -1070,14 +1069,14 @@ namespace compiler::helios::code {
 					variant_match(sym_list) {
 						variant_case(SymbolList, result) { return result.back(); }
 						variant_case_novalue(errors::SymbolNotFound) {
-							ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							ctx.logInt(makeBox<dia::PlaceholderError>(
 								"Method call without `self` argument.",
 								call_expr->getStablePosition()
 							));
 							return query::Failed();
 						}
 						variant_case_novalue(errors::Ambiguity) {
-							ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							ctx.logInt(makeBox<dia::PlaceholderError>(
 								"Multiple candidates for `self` argument found which should be "
 								"impossible.",
 								call_expr->getStablePosition()
@@ -1245,7 +1244,7 @@ namespace compiler::helios::code {
 				}
 
 				else {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
 						"Expected access or call expression in chain expression",
 						currentElem().value()->getStablePosition()
 					));
@@ -1266,7 +1265,7 @@ namespace compiler::helios::code {
 			}
 
 			if (result_sequence.empty()) {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Chain expression resulted in empty expression sequence.",
 					chain_elements[0].unlock(query_ctx)->getStablePosition()
 				));

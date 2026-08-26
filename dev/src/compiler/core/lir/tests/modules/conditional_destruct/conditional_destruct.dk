@@ -1,0 +1,13 @@
+class R {
+    a: i32 = 0;
+    R.destroy() = { var t: i32 = a; }
+}
+
+fun eat(r: R) -> i32 = r.a;
+
+fun maybeMove(c: i64) = {
+    var r: R;
+    if (c == 0) {
+        eat(move r);
+    }
+}

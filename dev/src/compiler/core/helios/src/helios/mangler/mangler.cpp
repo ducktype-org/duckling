@@ -346,11 +346,8 @@ namespace compiler::helios::mangler {
 		 * @note See mangling-scheme.md for details
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
+			// fast-path for global symbols that are not templates
 			if (scopeDepth(scope(symbol_id)) == 1) return "G" + unscopedName(ctx, symbol_id);
-
-			// @todo: #3285 add backreferences -- <name-prefix>
-			std::vector<std::string> path_parts;
-
 
 			// This function can be only called for symbols
 			// that have clear PST-path mangling.
@@ -374,29 +371,68 @@ namespace compiler::helios::mangler {
 				CORE_UNREACHABLE();
 			}();
 
-			bool is_global = true;
+			// it's not compiler-generated and it's ancestor is a template statement
+			const bool is_template = maybeSymbolPst(symbol_id).has_value()
+			                      && ancestor_opt.isLangElement()
+			                      && ancestor_opt.getAsLangElement().unlock(ctx)->getElementKind()
+			                             == pst::ElementKind::TemplateStmt;
+
+			std::vector<pst::Access<pst::LangElement>> ancestors;
+			bool                                       is_nested = false;
 			while (ancestor_opt.isLangElement()) {
 				auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
+				switch (ancestor->getElementKind()) {
+					using enum pst::ElementKind;
+				case Namespace:
+				case Class:
+					is_nested = true;
+					[[fallthrough]];
+				case TemplateStmt:
+					ancestors.push_back(ancestor);
+					break;
+				default:
+					break;
+				}
+				ancestor_opt = getPSTElementParent(ctx, ancestor);
+			}
 
-				if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
-					auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
-					path_parts.push_back(
-						identifier(namespace_v->getName().unlock(ctx)->unwrap().strView())
-					);
-					is_global = false;
-				} else if (ancestor->getElementKind() == pst::ElementKind::Class) {
-					auto class_v = ancestor.dynamicCast<pst::Class>().value();
-					path_parts.push_back(
-						identifier(class_v->getName().unlock(ctx)->unwrap().strView())
-					);
-					is_global = false;
-				} else if (ancestor->getElementKind() == pst::ElementKind::TemplateStmt) {
-					auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
+			std::string ret = (is_nested ? "N" : "G");
+			for (auto it = ancestors.rbegin(); it != ancestors.rend(); ++it) {
+				const auto ancestor = *it;
+
+				// @todo: #3285 add backreferences -- <name-prefix>
+				switch (ancestor->getElementKind()) {
+					using enum pst::ElementKind;
+				case Namespace: {
+					if (it == ancestors.rbegin()
+					    || (*std::prev(it))->getElementKind() != TemplateStmt) {
+						const auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
+						ret += identifier(namespace_v->getName().unlock(ctx)->unwrap().strView());
+					}
+					break;
+				}
+				case Class: {
+					if (it == ancestors.rbegin()
+					    || (*std::prev(it))->getElementKind() != TemplateStmt) {
+						const auto class_v = ancestor.dynamicCast<pst::Class>().value();
+						ret += identifier(class_v->getName().unlock(ctx)->unwrap().strView());
+					}
+					break;
+				}
+				case TemplateStmt: {
+					const auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
+
+					ret += identifier(template_stmt_v->getInnerStatement()
+					                      .unlock(ctx)
+					                      ->getDeclSymbolIdentifier()
+					                      ->unlock(ctx)
+					                      ->unwrap()
+					                      .strView());
 
 					if (template_stmt_v->hasAdditionalRootData()) {
-						// We are inside baked template
+						// We are inside a baked template
 
-						auto root_data = template_stmt_v->getAdditionalRootData();
+						const auto root_data = template_stmt_v->getAdditionalRootData();
 						variant_match(root_data.pst_parent) {
 							variant_case(
 								pst::AdditionalRootData::BakedTemplateParent, template_parent
@@ -408,17 +444,15 @@ namespace compiler::helios::mangler {
 										template_bake_data_any
 									);
 
-								path_parts.emplace_back("E");
-								for (const auto& bake_argument:
-								     template_bake_data.postponed_data
-								             ->load(std::memory_order_acquire)
-								             ->template_arguments_symbols
-								         | std::views::reverse) {
+								ret += "I";
+								for (const auto& bake_argument: template_bake_data.postponed_data
+								                                    ->load(std::memory_order_acquire)
+								                                    ->template_arguments_symbols) {
 									auto value = ctx.query<helios::QueryConstValueOf>(bake_argument)
 									                 .valueOrThrow();
-									path_parts.push_back(mangleCTV(ctx, value));
+									ret += mangleCTV(ctx, value);
 								}
-								path_parts.emplace_back("I");
+								ret += "E";
 							}
 							variant_default {
 								CORE_PANIC(
@@ -433,14 +467,16 @@ namespace compiler::helios::mangler {
 							"It should not happen in mangling"
 						);
 					}
+					break;
 				}
-
-				ancestor_opt = getPSTElementParent(ctx, ancestor);
+				default:
+					CORE_UNREACHABLE();
+				}
 			}
 
-			std::string ret = is_global ? "G" : "N";
-			for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
-			ret += unscopedName(ctx, symbol_id) + (is_global ? "" : "E");
+			if (!is_template) ret += unscopedName(ctx, symbol_id);
+
+			if (is_nested) ret += "E";
 
 			return ret;
 		}
@@ -490,8 +526,15 @@ namespace compiler::helios::mangler {
 			switch (kind(symbol_id)) {
 			case SymbolKind::Variable:
 			case SymbolKind::Field:
-			case SymbolKind::Const:
+			case SymbolKind::Const: {
+				// The empty storage of a REPL global variable stands for the variable itself, so
+				// everything referring to the variable has to refer to that storage.
+				if (auto empty_variable
+				    = std::get_if<defgen::ReplEmptyVariable>(&getSymRef(symbol_id)->other))
+					return symbolEncoding(ctx, empty_variable->original_variable);
+
 				return path(ctx, symbol_id);
+			}
 
 			case SymbolKind::Function:
 			case SymbolKind::Method:
@@ -538,10 +581,6 @@ namespace compiler::helios::mangler {
 							return "HtoString" + func(ctx, symbol_id) + "E";
 						case defgen::Method::Kind::LengthMethod:
 							return "Hlength" + func(ctx, symbol_id) + "E";
-						case defgen::Method::Kind::Push:
-							return "Hpush" + func(ctx, symbol_id) + "E";
-						case defgen::Method::Kind::Pop:
-							return "Hpop" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}
@@ -554,18 +593,15 @@ namespace compiler::helios::mangler {
 							return "Hba" + func(ctx, symbol_id) + "E";
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
 							return "Hbf" + func(ctx, symbol_id) + "E";
-						case defgen::BuiltinTemplatedSymbol::Kind::ListFree:
-							return "Hlf" + func(ctx, symbol_id) + "E";
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
 							return "Hbd" + func(ctx, symbol_id) + "E";
+						case defgen::BuiltinTemplatedSymbol::Kind::MoveIn:
+							return "Hmin" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}
-					variant_case(defgen::ReplExpressionWrapper, repl_wrapper) {
-						return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
-					}
-					variant_case(defgen::ReplInstructionWrapper, repl_instr_wrapper) {
-						return base::strConcat("__repl_instr_wrapper_", repl_instr_wrapper.counter);
+					variant_case(defgen::ReplInputWrapper, repl_wrapper) {
+						return base::strConcat("__repl_input_wrapper_", repl_wrapper.counter);
 					}
 					// Other cases of generated symbols cannot be functions.
 				}
@@ -887,14 +923,6 @@ namespace compiler::helios::mangler {
 			return res.str();
 		}
 
-		static std::string mangle(query::Context& ctx, tsh::DynamicArrayAbstractType type) {
-			return base::strConcat(
-				"D",
-				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
-				"E"
-			);
-		}
-
 		static std::string mangle(query::Context& ctx, tsh::StaticArrayAbstractType type) {
 			return base::strConcat(
 				"A",
@@ -959,8 +987,6 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::SliceAbstractType>());
 			case Function:
 				return mangle(ctx, type.as<tsh::FunctionAbstractType>());
-			case DynamicArray:
-				return mangle(ctx, type.as<tsh::DynamicArrayAbstractType>());
 			case StaticArray:
 				return mangle(ctx, type.as<tsh::StaticArrayAbstractType>());
 			case Tuple:
@@ -972,7 +998,7 @@ namespace compiler::helios::mangler {
 			case Meta:
 				return mangle(ctx, type.as<tsh::MetaAbstractType>());
 			default:
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat("Cannot mangle type of kind: ", type.getKind()), ""
 				));
 				return query::Failed();

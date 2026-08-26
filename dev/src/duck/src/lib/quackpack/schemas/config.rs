@@ -69,7 +69,7 @@ impl FromStr for HumanDeserializableDuration {
             qp_bail!("expected a duration in format `<count> <unit>`")
         };
         let count = count.parse::<u64>().context("<count> wasn't a u64")?;
-        // !TODO: Use `from_<unit>(count)`, after bumping rust's version in CI to 1.91.0.
+        // @TODO: #3318 Use `from_<unit>(count)`, after bumping rust's version in CI to 1.91.0.
         let seconds_in_unit = match unit {
             "second" | "seconds" => 1,
             "minute" | "minutes" => 60,

@@ -1,6 +1,5 @@
 #include "../../hierarchy/expressions/match_expr.hpp"  // IWYU pragma: keep
 
-#include "../../hierarchy/expressions/ternary.hpp"     // IWYU pragma: keep
 #include "../../hierarchy/not_statements/match_case.hpp"
 #include "preamble.hpp"
 
@@ -9,8 +8,6 @@ namespace pst::expr {
 
 	MBox<ExprElement> MatchExpr::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
-
-		if (!state[0].is(Keyword::Match)) return Lower::parse(state);
 
 		auto out = makeBox<MatchExpr>(state);
 

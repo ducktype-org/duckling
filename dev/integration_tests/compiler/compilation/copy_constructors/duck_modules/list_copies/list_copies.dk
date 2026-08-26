@@ -1,0 +1,49 @@
+var copies: i64 = 0;
+
+class Counter {
+    id: i32 = 0;
+    Counter.copy(other: const ref Counter) = {
+        copies = copies + 1;
+        return Counter(other.id);
+    }
+}
+
+# Lists are always deep-copied: their generated copy constructor allocates a fresh buffer and
+# copies every element with the element type's copy constructor.
+#
+fun main() -> i64 = {
+    var lst: List:{Counter};
+    lst.push(Counter(1));
+    lst.push(Counter(1));
+    lst.push(Counter(1));
+
+    var lst2: List:{Counter} = copy lst;    # +3
+    builtin_output_i64(copies);             # 3
+
+    # `List.copy` copies its elements with `copyof`, so a boxed element stays boxed: each copy is
+    # a fresh allocation holding a copy of the pointee.
+    var box_lst: List:{box Counter};
+    box_lst.push(new Counter(1));
+    box_lst.push(new Counter(1));
+    box_lst.push(new Counter(1));
+    var box_lst2: List:{box Counter} = copy box_lst; # +3
+    builtin_output_i64(copies);                      # 6
+
+    # A `ref` element stays a reference, so copying the list copies the references and runs no
+    # copy constructor at all.
+    var c1: Counter = Counter(4);
+    var c2: Counter = Counter(5);
+    var ref_lst: List:{ref Counter};
+    ref_lst.push(&c1);
+    ref_lst.push(&c2);
+
+    var ref_lst2: List:{ref Counter} = copy ref_lst;
+    builtin_output_i64(copies);                      # 6, unchanged
+
+    # The copied references still alias the original counters.
+    c1.id = 40;
+    builtin_output_i64(ref_lst2.at(0i64).id as i64); # 40
+    builtin_output_i64(ref_lst2.at(1i64).id as i64); # 5
+
+    return 0;
+}

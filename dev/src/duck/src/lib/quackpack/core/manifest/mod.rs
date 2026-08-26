@@ -33,7 +33,6 @@ pub struct Manifest {
     features: Features,
     metadata: PackageMetadata,
     dependencies: Dependencies,
-    dev_dependencies: Dependencies,
     profiles: Profiles,
     venv: VenvConfig,
 }
@@ -47,7 +46,6 @@ impl Manifest {
         features: Features,
         metadata: PackageMetadata,
         dependencies: Dependencies,
-        dev_dependencies: Dependencies,
         profiles: Profiles,
         venv: VenvConfig,
     ) -> Self {
@@ -57,7 +55,6 @@ impl Manifest {
             features,
             metadata,
             dependencies,
-            dev_dependencies,
             profiles,
             venv,
         }
@@ -98,11 +95,6 @@ impl Manifest {
         &mut self.dependencies
     }
 
-    /// Get the development dependencies.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        &self.dev_dependencies
-    }
-
     /// Get the compiler specific options for profile.
     pub fn profiles(&self) -> &Profiles {
         &self.profiles
@@ -134,7 +126,6 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
         let registry::Manifest {
             metadata,
             dependencies,
-            dev_dependencies,
             features,
             profiles,
         } = value;
@@ -159,7 +150,6 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             features.try_into()?,
             metadata,
             dependencies.try_into()?,
-            dev_dependencies.try_into()?,
             profiles.into(),
             VenvConfig::default_for_package(ctx),
         ))
@@ -176,7 +166,6 @@ impl TryFrom<Manifest> for registry::Manifest {
             features,
             metadata,
             dependencies,
-            dev_dependencies,
             profiles,
             venv: _,
         } = value;
@@ -193,7 +182,6 @@ impl TryFrom<Manifest> for registry::Manifest {
         Ok(Self {
             metadata,
             dependencies: dependencies.try_into()?,
-            dev_dependencies: dev_dependencies.try_into()?,
             features: features.into(),
             profiles: profiles.into(),
         })

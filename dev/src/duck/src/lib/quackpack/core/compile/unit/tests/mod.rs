@@ -1,12 +1,13 @@
+use std::ops::ControlFlow;
+
 use super::graph::lower_early_graph;
-use crate::QuackResult;
+use super::unit_visitor::UnitVisitor;
+use super::{ArtifactsType, Unit};
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::creating_graph::create_early_graph_from_bcx;
 use crate::quackpack::core::compile::early_graph::tests::cycling::setup::*;
 use crate::quackpack::core::compile::profiles::Profile;
-use crate::quackpack::core::compile::unit::unit_visitor::UnitVisitor;
-use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::storage::paths::Storage;
@@ -24,9 +25,10 @@ use crate::quackpack::util::to_url::ToUrl;
 struct IdOrder(Vec<u64>);
 
 impl UnitVisitor for IdOrder {
-    fn visit(&mut self, unit: &Unit) -> QuackResult<()> {
+    type Break = ();
+    fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
         self.0.push(unit.unit_id());
-        Ok(())
+        ControlFlow::Continue(())
     }
 }
 
@@ -183,10 +185,7 @@ fn basic_visitor_order_cycle() {
     {
         let mut visitor = IdOrder::default();
 
-        unit_graph
-            .root_unit()
-            .accept(&mut visitor, &unit_graph)
-            .unwrap();
+        unit_graph.root_unit().accept(&mut visitor, &unit_graph);
 
         assert_eq!(visitor.0, [root_id, bar_id, cycle_id, foo_id]);
     }
@@ -195,8 +194,7 @@ fn basic_visitor_order_cycle() {
 
         unit_graph
             .unit_for(cycle_id)
-            .accept(&mut visitor, &unit_graph)
-            .unwrap();
+            .accept(&mut visitor, &unit_graph);
 
         assert_eq!(visitor.0, [cycle_id, root_id, bar_id, foo_id]);
     }
@@ -204,8 +202,7 @@ fn basic_visitor_order_cycle() {
         let mut visitor = IdOrder::default();
         unit_graph
             .unit_for(foo_id)
-            .accept(&mut visitor, &unit_graph)
-            .unwrap();
+            .accept(&mut visitor, &unit_graph);
 
         assert_eq!(visitor.0, [foo_id]);
     }
@@ -240,10 +237,7 @@ fn basic_visitor_order() {
     {
         let mut visitor = IdOrder::default();
 
-        unit_graph
-            .root_unit()
-            .accept(&mut visitor, &unit_graph)
-            .unwrap();
+        unit_graph.root_unit().accept(&mut visitor, &unit_graph);
 
         assert_eq!(visitor.0, [root_id, bar_id, foo_id, baz_id]);
     }
@@ -252,8 +246,7 @@ fn basic_visitor_order() {
 
         unit_graph
             .unit_for(foo_id)
-            .accept(&mut visitor, &unit_graph)
-            .unwrap();
+            .accept(&mut visitor, &unit_graph);
 
         assert_eq!(visitor.0, [foo_id, baz_id]);
     }
@@ -262,8 +255,7 @@ fn basic_visitor_order() {
 
         unit_graph
             .unit_for(bar_id)
-            .accept(&mut visitor, &unit_graph)
-            .unwrap();
+            .accept(&mut visitor, &unit_graph);
 
         assert_eq!(visitor.0, [bar_id, baz_id]);
     }
@@ -273,8 +265,7 @@ fn basic_visitor_order() {
 
         unit_graph
             .unit_for(baz_id)
-            .accept(&mut visitor, &unit_graph)
-            .unwrap();
+            .accept(&mut visitor, &unit_graph);
 
         assert_eq!(visitor.0, [baz_id]);
     }

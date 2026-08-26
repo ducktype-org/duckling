@@ -1,0 +1,29 @@
+namespace Deep {
+    fun bump(v: i32) = {
+        return v;
+    }
+}
+
+# NYI in current DVM backend path: class layout lowering.
+# @TODO: #2617 fix repl dvm lowering so that it includes types, similar to normal dvm_run pipeline.
+#class Box {
+#    value: i32 = Deep.OFFSET;
+#}
+
+fun nasty_value() = {
+    var i: i32 = 0;
+    var acc: i32 = 0;
+
+    while (i < 3) {
+        acc = acc + i;
+        i = i + 1;
+    }
+
+    if (true) {
+        return Deep.bump(acc);
+    }
+
+    return 0;
+}
+
+builtin_output_i64(nasty_value());

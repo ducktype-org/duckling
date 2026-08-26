@@ -94,7 +94,11 @@ namespace compiler::backend_llvm {
 				return_type = llvm::Type::getVoidTy(ctx);
 			}
 
-			for (usize i = 0; i < function_info.param_info.size(); i++) {
+			const usize declared_params = function_info.num_fixed_params.has_value()
+			                                ? usize(function_info.num_fixed_params.value())
+			                                : function_info.param_info.size();
+
+			for (usize i = 0; i < declared_params; i++) {
 				const auto& param = function_info.param_info.at(i);
 				variant_match(param.info.kind) {
 					variant_case(cc::ArgInfo::ByValue, data) {
@@ -121,7 +125,9 @@ namespace compiler::backend_llvm {
 			}
 
 			return LoweredCAbiSignature{
-				.type              = llvm::FunctionType::get(return_type, llvm_parameters, false),
+				.type = llvm::FunctionType::get(
+					return_type, llvm_parameters, function_info.num_fixed_params.has_value()
+				),
 				.attributes        = std::move(attributes),
 				.return_attributes = std::move(return_attributes)
 			};

@@ -121,7 +121,7 @@ def assert_eq(lhs: Any, rhs: Any, msg: str | None = None) -> None:
 
 
 def check_src_from_root(root: Path):
-    src = (root / "src" / "src.dmf").read_text()
+    src = (root / "src" / "src.dk").read_text()
     assert_eq(src, DEFAULT_SRC)
 
 

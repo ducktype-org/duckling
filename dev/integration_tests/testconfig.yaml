@@ -40,8 +40,8 @@ std_artifacts_dir: "/tmp/dit/std_artifacts"
 # artifacts may not match the new compiler. The script must live outside the
 # `-a` directory, which duckc may clear on a build-id mismatch.
 warmup_std_artifacts: "rm -rf @{std_artifacts_dir} /tmp/dit/std_warmup
-  && mkdir -p /tmp/dit && printf 'fun main() -> i64 = { return 0; }' > /tmp/dit/std_warmup.ds
-  && @{duckc_path} compile_script /tmp/dit/std_warmup.ds -a /tmp/dit/std_warmup
+  && mkdir -p /tmp/dit && printf 'fun main() -> i64 = { return 0; }' > /tmp/dit/std_warmup.dks
+  && @{duckc_path} compile_script /tmp/dit/std_warmup.dks -a /tmp/dit/std_warmup
   --custom-std-artifacts-path @{std_artifacts_dir}"
 
 # If JIT is enabled then set timeout to 10s
