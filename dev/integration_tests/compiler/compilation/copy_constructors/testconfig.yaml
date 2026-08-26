@@ -26,7 +26,7 @@ Tests:
 
   list_copies:
     Cases:
-      llvm:
+      all:
         backend: all
         Output:
           String: "3\n6\n6\n40\n5\n"

@@ -137,7 +137,8 @@ namespace vm {
 	}
 
 	void Memory::changeBlockData(Ref<Block> block, BlockData new_data) {
-		usize bytes_to_move = std::min(block->data.view.size(), new_data.view.size());
+		BlockData old_data      = block->data;
+		usize     bytes_to_move = std::min(old_data.view.size(), new_data.view.size());
 
 		// Free the unfitting children blocks.
 		auto& children_blocks = block->children_blocks;
@@ -148,21 +149,24 @@ namespace vm {
 		}
 
 		// Run the destructors - e.g. pointers don't have their own blocks, but need destructing.
-		if (bytes_to_move < block->data.view.size())
+		// The suffix has to hold live objects - a moved-from one would be destructed twice.
+		if (bytes_to_move < old_data.view.size())
 			runDataDestructors(
 				base::ModRawView(
-					block->data.view.getBegin() + bytes_to_move,
-					block->data.view.size() - bytes_to_move
+					old_data.view.getBegin() + bytes_to_move, old_data.view.size() - bytes_to_move
 				),
-				block->data.element_type
+				old_data.element_type
 			);
 
-		std::memset(new_data.view.getBegin(), 0, new_data.view.size());
-		std::memcpy(new_data.view.getBegin(), block->data.view.getBegin(), bytes_to_move);
-		heap_allocator.deallocate(&block->data);
+		std::memcpy(new_data.view.getBegin(), old_data.view.getBegin(), bytes_to_move);
+		std::memset(
+			new_data.view.getBegin() + bytes_to_move, 0, new_data.view.size() - bytes_to_move
+		);
 
 		updateBlockDataView(block, new_data.view);
 		block->data = new_data;
+
+		old_data.allocator->deallocate(&old_data);
 	}
 
 	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
@@ -452,18 +456,19 @@ namespace vm {
 	}
 
 	void Memory::updateBlockDataView(Ref<Block> block, base::ModRawView new_view) {
-		base::ModRawView old_root_view = block->data.view;
+		const std::byte* old_root_begin = block->data.view.getBegin();
 
-		auto update_block_data_recursively
+		auto rebase_children_recursively
 			= [&](this const auto& self, Ref<Block> current_block) -> void {
-			base::ModRawView current_view      = current_block->data.view;
-			auto             offset_from_start = current_view.getBegin() - old_root_view.getBegin();
-			current_block->data.view
-				= { new_view.getBegin() + offset_from_start, current_view.size() };
-
-			for (auto& child: current_block->children_blocks | std::views::values) self(child);
+			for (auto& child: current_block->children_blocks | std::views::values) {
+				const auto offset_from_start = child->data.view.getBegin() - old_root_begin;
+				child->data.view
+					= { new_view.getBegin() + offset_from_start, child->data.view.size() };
+				self(child);
+			}
 		};
 
-		update_block_data_recursively(block);
+		block->data.view = new_view;
+		rebase_children_recursively(block);
 	}
 }

@@ -72,15 +72,18 @@ namespace vm {
 		 * It does so by moving objects from block's data to new_data.
 		 * This means data copy-constructors of the moved objects are not invoked.
 		 * @note Frees *block's nested blocks whose offsets would not fit
-		 * inside the `new_data` memory area - the objects that are in the suffix are destructed.
-		 * @note `new_data` is cleared.
-		 * @note Data should be allocated with heap allocator.
+		 * inside the `new_data` memory area - the objects that are in the suffix are destructed,
+		 * so the suffix must not hold moved-from objects.
+		 * @note The part of `new_data` past the moved objects is cleared.
+		 * @note The old data is deallocated with its own allocator.
 		 */
 		void changeBlockData(Ref<Block> block, BlockData new_data);
 
 		/**
 		 * @brief Replaces the block data memory view with the new one,
 		 * taking care of the children blocks.
+		 *
+		 * @note The children keep their own sizes, only their base is rebased onto `new_view`.
 		 *
 		 * @param block The block to update the data view for.
 		 * @param new_view The new view to set for the block.
