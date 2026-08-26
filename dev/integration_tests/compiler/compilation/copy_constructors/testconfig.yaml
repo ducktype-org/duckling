@@ -24,11 +24,10 @@ Tests:
           String: "0\n1\n1\n"
         ExitCode: 0
 
-  # @TODO: #3387 Merge this test with `aggregates` once refcount bug is fixed on DVM.
   list_copies:
     Cases:
       llvm:
-        backend: llvm
+        backend: all
         Output:
           String: "3\n6\n6\n40\n5\n"
         ExitCode: 0
