@@ -996,33 +996,70 @@ namespace compiler::helios::code {
 
 		/**
 		 * Case when we have an access expression not followed by a call expression and the
-		 * current state is a type, for example "MyClass.field".
+		 * current state is a type, for example "MyClass.CONSTANT".
 		 */
 		auto processPSTExpr(TypeInChain type, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
-			// @TODO: #1477 look the name up in the interface of the type itself, which requires
-			// the meta lookup of HInterface::ofTypeMeta.
-			query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-				base::strConcat(
-					"Access on the type `",
-					type.type.toString(),
-					"` itself is not supported yet, it is only supported on its instances"
-				),
-				expr_access->getStablePosition()
-			));
-			return query::Failed();
+			auto lookup_result = HInterface::ofTypeMeta(type.type).lookupExpectUnique(
+				expr_access->getStablePosition(),
+				query_ctx,
+				expr_access->getName().unlock(query_ctx)->unwrap(),
+				{ .accessing_scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
+			);
+			// @TODO: #1412 handle dealias expressions:
+			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
+
+			auto whole_expr_origin = pstOriginOrdered(type.origin, expr_access);
+			return processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
 		}
 
 		/**
 		 * Case when we have an access expression followed by a call expression and the current
-		 * state is a type, for example "MyClass.staticMethod()".
+		 * state is a type, for example:
+		 * - `MyClass.staticMethod()` - this may result in a static method overload.
+		 * - `MyClass.CONSTANT_ARRAY[ix]` - this is an index access into a constant of the class.
 		 */
 		auto processPSTExpr(
 			TypeInChain                    type,
 			pst::Access<pst::expr::Access> expr_access,
 			pst::Access<pst::expr::Call>   call_expr
 		) -> query::QResult<ChainState> {
-			return processPSTExpr(type, expr_access);
+			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				auto lookup_qresult = HInterface::ofTypeMeta(type.type).lookup(
+					query_ctx,
+					expr_access->getName().unlock(query_ctx)->unwrap(),
+					{ .accessing_scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
+				);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+
+				UNPACK_QRESULT(
+					const auto& callees =, getCallableCandidatesWithBake(lookup_result, expr_access)
+				);
+
+				auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			case lexer::Token::Square: {
+				auto access_res = processPSTExpr(type, expr_access);
+				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
+				auto square_call_res = processSquareCall(
+					query_ctx, std::move(access_state).asExpr(query_ctx), call_expr
+				);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			default: {
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getStablePosition()
+				));
+				return query::Failed();
+			}
+			}
 		}
 
 		/**
