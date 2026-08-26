@@ -30,3 +30,10 @@ Tests:
       bad-dev-logs:
         run_args: "--dev-logs \"\"  dummy "
         ExitCode: 1
+
+  compile-modules:
+    Cases:
+      two-modules:
+        run_args: "compile_modules ./duck_modules/two_modules/a.dmf ./duck_modules/two_modules/b.dmf -O 0 --no-incremental"
+        ExitCode: 0
+        
