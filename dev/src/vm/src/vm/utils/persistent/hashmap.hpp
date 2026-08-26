@@ -103,7 +103,7 @@ namespace vm::persistent {
 
 				CORE_ASSERT(success, "I need the value to be successfully emplaced");
 
-				keep_going &= iter.moveToValid(Memory::Dir::Right);
+				keep_going &= iter.moveToValid(Memory::Dir::Rght);
 			}
 
 			return ans;
