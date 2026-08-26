@@ -1,11 +1,10 @@
 #include "builtin_operators.hpp"
 
-#include <helios/tsh/abstract_type.hpp>
-#include <helios/tsh/symbol_type.hpp>
-
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>

@@ -7,9 +7,8 @@
 
 #pragma once
 
-#include <helios/symbols/lang_primitives.hpp>
-
 #include <helios/hout/elements/expr.hpp>  // @TODO: #404 relax it.
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 
 #include <lexer/token_common.hpp>
