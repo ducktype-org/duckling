@@ -3,7 +3,9 @@
 #include <base/comptime/constexpr_cat.hpp>
 #include <base/types/ints.hpp>
 
+#include <array>
 #include <memory>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -24,6 +26,19 @@ namespace js::impl {
 		static constexpr auto NAME
 			= CONSTEXPR_CAT(TypeParseTraits<Arg1>::NAME, ", ", MakeList<Arg2, Args...>::NAME);
 	};
+}
+
+namespace js {
+	template<class T>
+	[[nodiscard]] constexpr std::string_view typeName() {
+		static_assert(
+			TypeParseTraits<T>::NAME.back() == '\0',
+			"TypeParseTraits<T>::NAME must be \\0 terminated"
+		);
+		return std::string_view(
+			TypeParseTraits<T>::NAME.data(), TypeParseTraits<T>::NAME.size() - 1
+		);
+	}
 }
 
 #define JSON_REGISTER_TYPE(T)                                 \
