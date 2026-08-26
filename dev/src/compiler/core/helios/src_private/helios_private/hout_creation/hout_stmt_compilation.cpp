@@ -298,8 +298,14 @@ namespace compiler::helios {
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};
+			auto condition_holder = stmt->getCondition();
+			if (!condition_holder.has_value()) {
+				is_failed = true;
+				return;
+			}
+
 			auto condition = getHoutOfExprWithExpectedType(
-								 ctx, stmt->getCondition().unlock(ctx)->getExpr(), bool_type
+								 ctx, condition_holder.value().unlock(ctx)->getExpr(), bool_type
 			)
 			                     .valueOrThrow();
 
@@ -328,8 +334,14 @@ namespace compiler::helios {
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};
+			auto condition_holder = stmt->getCondition();
+			if (!condition_holder.has_value()) {
+				is_failed = true;
+				return;
+			}
+
 			auto condition = getHoutOfExprWithExpectedType(
-								 ctx, stmt->getCondition().unlock(ctx)->getExpr(), bool_type
+								 ctx, condition_holder.value().unlock(ctx)->getExpr(), bool_type
 			)
 			                     .valueOrThrow();
 

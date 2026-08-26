@@ -1864,12 +1864,46 @@ private:
 		check_main(R"(fun main() = {})", 1, 0, 0);
 		check_main(R"(fun main() -> i64 = {})", 1, 0, 0);
 
-		// An explicit return keeps its value; the trailing generated return covers only
-		// fallthrough paths and becomes unreachable on this path.
-		check_main(R"(fun main() = { return 7; })", 2, 7, 0);
-
 		// An expression-bodied main already lowers to a return and needs no trailing zero.
 		check_main(R"(fun main() = 9;)", 1, 9, 9);
+
+		// An explicit trailing return needs no generated return.
+		check_main(R"(fun main() = { return 7; })", 1, 7, 7);
+
+		// A generated `return 0` covers a path that reaches the end of main.
+		{
+			const auto module = compiler::frontend::createModuleTreeFromContents(
+				R"(
+					fun main() = {
+						if (false) {
+							return 31;
+						}
+					}
+				)"
+			);
+			const auto  scope    = getModuleScope(module);
+			const auto  symbol   = getChain("main", scope).back();
+			const auto& function = query::entryPoint<QueryCodeOfFun>({ symbol })->valueOrPanic();
+
+			ASSERT_EQUAL(function.body->statements.size(), 2);
+			assertTrue(
+				dynamic_cast<const IfStmt*>(function.body->statements.front().get()) != nullptr,
+				"Expected the first statement to be an if statement."
+			);
+
+			const auto* return_stmt
+				= dynamic_cast<const ReturnStmt*>(function.body->statements.back().get());
+			assertTrue(return_stmt != nullptr, "Expected a generated return statement.");
+
+			const auto value
+				= query::entryPoint<QueryEvaluateHOUTExpression>({ return_stmt->value.get() })
+			          .valueOrThrow()
+			          .get<compiler::numeric_value::NumericValue>()
+			          ->get<i64>();
+
+			assertTrue(value.has_value(), "Expected an i64 return value.");
+			ASSERT_EQUAL(value.value(), 0);
+		}
 	}
 
 	void testFunctionReturnTypeCheckAndCoercion() {

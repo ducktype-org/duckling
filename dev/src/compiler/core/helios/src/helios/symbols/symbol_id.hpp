@@ -11,6 +11,7 @@
 #include <helios/scope_id.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <base/pointers/ref.hpp>
 
@@ -89,9 +90,14 @@ namespace compiler::helios {
 	 * @return whether the symbol is the global function named `main`.
 	 *
 	 * Unlike isGlobalFun(), this function can safely be called for symbols
-	 * that are not global functions.
+	 * that are not functions.
 	 */
 	bool isGlobalMain(SymID);
+
+	/**
+	 * @return the main return type required by the toolchain entry points.
+	 */
+	tsh::SymbolType<> requiredMainReturnType(query::Context& ctx);
 
 	/**
 	 * @return whether SymID is a global variable.

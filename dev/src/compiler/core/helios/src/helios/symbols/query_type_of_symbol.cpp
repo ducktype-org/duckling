@@ -466,9 +466,7 @@ namespace compiler::helios {
 					};
 				}
 				variant_case_novalue(defgen::ScriptMainWrapper) {
-					const auto return_type = tsh::SymbolType<>::withDefaults(
-						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
-					);
+					const auto return_type = requiredMainReturnType(ctx);
 					const auto function_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
 					                                          .result_type     = return_type });

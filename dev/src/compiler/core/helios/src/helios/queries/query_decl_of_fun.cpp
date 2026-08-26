@@ -249,12 +249,6 @@ namespace compiler::helios {
 		}
 	}
 
-	static tsh::SymbolType<> requiredMainReturnType(query::Context& ctx) {
-		using enum tsh::IntegralAbstractType::Signedness;
-
-		return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(ctx, 64, Signed));
-	}
-
 	static bool isValidMainReturnType(query::Context& ctx, const tsh::SymbolType<>& return_type) {
 		const auto required_type = requiredMainReturnType(ctx);
 
@@ -278,7 +272,8 @@ namespace compiler::helios {
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret,
 				HOUTFunctionDeclaration::Operatoriness             operatoriness
 			) {
-				const bool global_main = isGlobalMain(original_symbol);
+				const bool global_main_definition = isGlobalMain(original_symbol)
+				                                 && kind(original_symbol) == SymbolKind::Function;
 
 				// Default return type is a direct unit.
 				auto ret_type = tsh::SymbolType<>{
@@ -295,7 +290,7 @@ namespace compiler::helios {
 
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
 
-					if (global_main && not isValidMainReturnType(ctx, ret_type)) {
+					if (global_main_definition && not isValidMainReturnType(ctx, ret_type)) {
 						ctx.logInt(makeBox<InvalidMainReturnTypeError>(
 							ret.value().unlock(ctx)->getStablePosition(),
 							makeBox<InteractiveType>(ctx, ret_type)
@@ -309,7 +304,7 @@ namespace compiler::helios {
 					});
 				}
 				// A global main without an explicit return type is treated as `main -> i64`.
-				else if (global_main) {
+				else if (global_main_definition) {
 					ret_type = requiredMainReturnType(ctx);
 					origin   = code::pstOrigin(param_list.unlock(ctx));
 				}

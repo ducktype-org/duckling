@@ -55,12 +55,7 @@ namespace compiler::repl {
 			}
 
 			// Return i64 zero to satisfy the VM/LLVM main contract used by the toolchain.
-			// This is exactly same return type as in symbol_data.cpp for the ScriptMainWrapper case.
-			const auto return_type = tsh::SymbolType<>{
-				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
+			const auto return_type = helios::requiredMainReturnType(ctx);
 			auto zero_value = numeric_value::NumericValue::createOfType(return_type.getType(), 0);
 			CORE_ASSERT(zero_value.has_value(), "Failed to create script main return literal");
 			auto return_expr = base::makeBox<helios::code::LiteralNumericExpr>(

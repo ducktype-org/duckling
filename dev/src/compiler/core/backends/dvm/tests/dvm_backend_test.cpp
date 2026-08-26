@@ -1,6 +1,5 @@
 #include <backends/dvm/dvm_backend.hpp>
 #include <driver/test_utils.hpp>
-#include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -30,7 +29,6 @@ class DVMBackendTest final: public VmTestSuite {
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
-		TESTER_ADD_TEST(mainReturnVariantsTest);
 		TESTER_ADD_TEST(functionCallsTest);
 		TESTER_ADD_TEST(builtinFuncsTest);
 		TESTER_ADD_TEST(globalVariablesTest);
@@ -118,29 +116,6 @@ private:
 
 		base::deduplicateBy(code.functions, [](const vm::code::Function& f) { return f.name.str; });
 		base::deduplicateBy(code.types, [](const vm::code::TypeOfData& f) { return typeName(f); });
-		return code;
-	}
-
-	auto getModuleFromContents(std::string_view source) {
-		using namespace compiler;
-
-		const auto module = frontend::createModuleTreeFromContents(source);
-		auto       code   = vm::code::CodeCollection{};
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
-			auto  mir_unit  = mir::lowerToMIRUnit(ctx, &top_level);
-			assertTrue(mir_unit.hasValue(), "MIR lowering failed");
-
-			auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
-
-			backend_vm::DVMCodeBuilder builder(
-				ctx, base::StrID("main_return_variants"), false, false
-			);
-			builder.insertLIRUnit(lir_unit);
-			code = builder.build();
-		});
-
 		return code;
 	}
 
@@ -246,35 +221,6 @@ private:
 	}
 
 	void simpleTest() { runTest("simple", {}, {}, {}, 42); }
-
-	void mainReturnVariantsTest() {
-		const auto run_main = [&](std::string_view source, i64 expected_exit_code) {
-			auto code = getModuleFromContents(source);
-			runTestOnVm(code, {}, {}, {}, expected_exit_code);
-		};
-
-		// This is the original reproducer: an unannotated main returning a numeric literal.
-		run_main(R"(fun main() = { return 23; })", 23);
-
-		// Reaching the end of either inferred or explicitly typed main is `return 0`.
-		run_main(R"(fun main() = {})", 0);
-		run_main(R"(fun main() -> i64 = {})", 0);
-
-		// Single-expression bodies already return their expression value.
-		run_main(R"(fun main() = 17;)", 17);
-
-		// The generated return is used only when a control-flow path reaches the end.
-		run_main(
-			R"(
-				fun main() = {
-					if (false) {
-						return 31;
-					}
-				}
-			)",
-			0
-		);
-	}
 
 	void functionCallsTest() { runTest("function_calls", {}, {}, {}, 4); }
 

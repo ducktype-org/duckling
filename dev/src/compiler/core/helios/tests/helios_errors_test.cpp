@@ -593,9 +593,20 @@ private:
 		// We don't see errors here, because they are produced by the parser, not query:
 		checkForErrorOnCompileModule(
 			R"(
-				fun foo() = {
+				fun main() = {
 					if Loop <= 1 { # no parenthesis around condition
 					
+					}
+				}
+			)",
+			{},
+			0
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					while true { # no parenthesis around condition
 					}
 				}
 			)",

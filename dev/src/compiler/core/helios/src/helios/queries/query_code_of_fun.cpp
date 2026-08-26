@@ -88,42 +88,43 @@ namespace compiler::helios {
 			std::shared_ptr<const code::CodeBlock> processBody(
 				const HOUTFunctionDeclaration& decl, pst::AccessLocked<pst::CodeBlockOrStmt> body
 			) {
-				std::shared_ptr<const code::CodeBlock> output_body = nullptr;
+				const auto unlocked_body = body.unlock(ctx);
 
-				if (body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
+				if (unlocked_body->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
 					// The `fun abc() = expr;` case.
+					auto function_body
+						= queryCodeOfSingleStmtFunctionBody(ctx, unlocked_body, decl.return_type);
 
-					code::CodeBlock function_body
-						= queryCodeOfSingleStmtFunctionBody(ctx, body.unlock(ctx), decl.return_type);
-					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
-				} else {
-					CORE_ASSERT(
-						body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
-						"This should not happen"
-					);
-					output_body = compileCodeOfCodeBlock(ctx, body, decl.return_type);
-				}
-				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
-
-				if (isGlobalMain(original_symbol)
-				    && body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock) {
-					auto mutable_body = output_body->clone();
-
-					auto zero
-						= numeric_value::NumericValue::createOfType(decl.return_type.getType(), 0)
-					          .expect("Failed to create implicit main return value.");
-
-					auto origin    = code::pstOrigin(body.unlock(ctx)).generatedFrom();
-					auto zero_expr = makeBox<code::LiteralNumericExpr>(ctx, origin, zero);
-
-					mutable_body->statements.emplace_back(
-						makeBox<code::ReturnStmt>(origin, std::move(zero_expr))
-					);
-
-					output_body = std::make_shared<const code::CodeBlock>(std::move(*mutable_body));
+					return std::make_shared<const code::CodeBlock>(std::move(function_body));
 				}
 
-				return output_body;
+				CORE_ASSERT(
+					unlocked_body->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
+					"This should not happen"
+				);
+
+				auto output_body = compileCodeOfCodeBlock(ctx, body, decl.return_type);
+
+				const bool ends_with_return
+					= !output_body->statements.empty()
+				   && dynamic_cast<const code::ReturnStmt*>(output_body->statements.back().get())
+				          != nullptr;
+
+				// Only block-bodied global main functions receive an implicit return.
+				if (!isGlobalMain(original_symbol) || ends_with_return) return output_body;
+
+				auto mutable_body = output_body->clone();
+				auto zero = numeric_value::NumericValue::createOfType(decl.return_type.getType(), 0)
+				                .expect("Failed to create implicit main return value.");
+
+				const auto origin    = code::pstOrigin(unlocked_body).generatedFrom();
+				auto       zero_expr = makeBox<code::LiteralNumericExpr>(ctx, origin, zero);
+
+				mutable_body->statements.emplace_back(
+					makeBox<code::ReturnStmt>(origin, std::move(zero_expr))
+				);
+
+				return std::make_shared<const code::CodeBlock>(std::move(*mutable_body));
 			}
 
 			void visitFun(pst::Access<pst::Fun> stmt) final {
