@@ -12,8 +12,21 @@ use crate::quackpack::core::compile::unit::unit_visitor::UnitVisitor;
 use crate::{QuackResult, StrId, qp_bail};
 
 #[derive(Debug)]
+/// Marker struct indicating that we have found an external library.
+///
+/// It may not make sense to have explicit [`links`](ExternalLibrariesFound::links) field, but
+/// otherwise it's hard for the caller to get the links field, since the [`Unit`] only stores an
+/// [`Option`].
+///
+/// This struct has a logic invariant that
+/// ```
+/// unit.root_package().package().manifest().build_options().links == Some(links)
+/// ```
+/// but allows caller to get `links` without going through an [`Option`].
 pub struct ExternalLibrariesFound {
+    /// [`Unit`] which links against the library.
     pub unit: Unit,
+    /// The said external library.
     pub links: StrId,
 }
 
