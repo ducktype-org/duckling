@@ -31,10 +31,10 @@ namespace vm::persistent {
 		auto path          = *getPathTo(state, left_idx);
 
 		do {
-			auto idx = path.idx;
+			auto idx = path.getIdx();
 			auto val = path.getValue();
 			ans.emplace_back(idx, val);
-		} while (path.moveToValid(Dir::Right, 0));
+		} while (path.moveToValid(Dir::Rght, 0));
 
 		return ans;
 	}
@@ -131,9 +131,7 @@ namespace vm::persistent {
 	base::Optional<usize> Memory::access(MemoryStateID state, usize idx) const {
 		validateInput(state, idx);
 
-		if_opt_some(getPathTo(state, idx), path) {
-			return path.getValue();
-		}
+		if_opt_some(getPathTo(state, idx), path) { return path.getValue(); }
 		return std::nullopt;
 	}
 
@@ -191,7 +189,7 @@ namespace vm::persistent {
 
 	memIt& memIt::operator++() {
 		if_opt_some(maybe_path, path) {
-			auto success = path.moveToValid(detail::SegmentTree::Dir::Right);
+			auto success = path.moveToValid(detail::SegmentTree::Dir::Rght);
 			if (!success) maybe_path = std::nullopt;
 		}
 		return *this;

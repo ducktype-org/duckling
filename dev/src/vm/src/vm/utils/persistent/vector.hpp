@@ -135,22 +135,22 @@ namespace vm::persistent {
 			if (right > size(state_id)) throw std::invalid_argument("right bound is too big");
 
 			auto state  = validateState(state_id);
-			auto m_iter = inner.getPathTo(state, left, Memory::Dir::Right);
+			auto m_iter = inner.getPathTo(state, left, Memory::Dir::Rght);
 
 			if_opt_none(m_iter) return {};
 			auto iter = *m_iter;
 
-			if (iter.idx >= right) return {};
+			if (iter.getIdx() >= right) return {};
 
 			std::vector<VarT> ans        = {};
 			bool              iter_valid = true;
 
 			for (usize i = 0; i < right - left; i++) {
-				CORE_ASSERT(iter.idx == left + i, "I skipped some fields?!");
+				CORE_ASSERT(iter.getIdx() == left + i, "I skipped some fields?!");
 
 				auto val_id = iter.getValue();
 				ans.emplace_back(held_values.atRight(val_id));
-				iter_valid &= iter.moveToValid(Memory::Dir::Right);
+				iter_valid &= iter.moveToValid(Memory::Dir::Rght);
 			}
 
 			return ans;

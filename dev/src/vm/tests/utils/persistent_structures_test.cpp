@@ -351,6 +351,11 @@ public:
 		auto [success_2, op06] = map.emplace(op05, "key2", "val6");
 		ASSERT_EQUAL(success_2, false);
 		checker(op06, { { "key1", "val1" }, { "key2", "val5" }, { "key3", "val2" } });
+
+		auto op07 = map.insert(op06, "key4", "val4");
+		checker(op07, {
+			{ "key1", "val1" }, { "key2", "val5" }, { "key3", "val2" }, { "key4", "val4" }
+		});
 	}
 };
 

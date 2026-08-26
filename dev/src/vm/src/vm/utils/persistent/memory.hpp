@@ -51,9 +51,8 @@ namespace vm::persistent {
 		}
 
 		// basic method for validating input
-		ID validateInput(MemoryStateID state, bool allow_weird_roots = false) const {
+		ID validateInput(MemoryStateID state) const {
 			auto root = fromState(state);
-			inner.validateRoot(root, allow_weird_roots);
 
 			return root;
 		}
@@ -109,12 +108,14 @@ namespace vm::persistent {
 			return inner.getRange(root);
 		}
 
-		using Dir                              = detail::SegmentTree::Dir;
+		using Dir = detail::SegmentTree::Dir;
 
 		/**
 		 * @brief returns a const iterator to given idx in given memory instance
 		 */
-		base::Optional<Path> getPathTo(MemoryStateID state, usize idx, base::Optional<Dir> opt_dir = std::nullopt) const {
+		base::Optional<Path> getPathTo(
+			MemoryStateID state, usize idx, base::Optional<Dir> opt_dir = std::nullopt
+		) const {
 			return inner.getPathTo(fromState(state), idx, opt_dir);
 		}
 

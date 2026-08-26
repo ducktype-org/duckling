@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/extend_cpp/defer.hpp"
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -9,7 +10,6 @@
 #include <vm/utils/bijective_map.hpp>
 
 #include <algorithm>
-#include <array>
 #include <bit>
 #include <deque>
 #include <functional>
@@ -17,6 +17,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 
 namespace vm::persistent::detail {
 	STRONG_TYPEDEF_INT(NodeID, usize);
@@ -30,12 +31,10 @@ namespace vm::persistent::detail {
 	template<typename T>
 	concept RebuildRes = std::is_same_v<T, void> || std::is_same_v<T, NodeID>;
 
-	template<typename T1, typename T2>
-	concept SameWNoQual = std::is_same_v<std::remove_cvref_t<T1>, std::remove_cvref_t<T2>>;
-
 	template<typename SelfT, typename ResT>
-	concept ValidSignature = RebuildRes<ResT> && SameWNoQual<SegmentTree, SelfT>
-	                      && (std::is_same_v<void, ResT> || !std::is_const_v<SelfT>);
+	concept ValidSignature
+		= RebuildRes<ResT> && std::is_same_v<SegmentTree, std::remove_cvref_t<SelfT>>
+	   && (std::is_same_v<void, ResT> || !std::is_const_v<SelfT>);
 
 	class SegmentTree final {
 		using posT = usize;
@@ -55,7 +54,7 @@ namespace vm::persistent::detail {
 		constexpr static auto EMPTY   = NodeID{ 0 };
 		constexpr static idxT IDX_END = idxT(1) << (POS_T_SIZE - 1);
 
-		enum class Dir { Left, Right };
+		enum class Dir { Left, Rght };
 
 	private:
 		constexpr static posT OFFSET_MASK = (posT(-1) >> 1);
@@ -101,11 +100,6 @@ namespace vm::persistent::detail {
 			idxT  left_bound;
 			idxT  right_bound;
 		};
-
-		/**
-		 * @brief helper function for getting other direction
-		 */
-		static constexpr Dir othDir(Dir dir) { return dir == Dir::Left ? Dir::Right : Dir::Left; }
 
 		/**
 		 * @brief helper function for getting height of tree position
@@ -194,7 +188,7 @@ namespace vm::persistent::detail {
 
 		static constexpr posT getChildPos(posT pos, Dir dir) {
 			CORE_ASSERT(!isLeafPos(pos), "Leaf doesn't have any children");
-			idxT modifier = (dir == Dir::Right) ? 1 : 0;
+			idxT modifier = (dir == Dir::Rght) ? 1 : 0;
 			return (pos << 1) | modifier;
 		}
 
@@ -202,21 +196,11 @@ namespace vm::persistent::detail {
 			return inSubtree(maybe_child, getChildPos(root, dir));
 		}
 
-		static constexpr Dir directionToChoseAtHeightToGetToPos(posT pos, usize height) {
-			CORE_ASSERT(pos != 0, "We don't want the position to be 0");
-			CORE_ASSERT(0 < height && height < POS_T_SIZE, "this should always be the case");
+		static constexpr Dir dirToChild(posT child, posT ancestor) {
+			CORE_ASSERT(inSubtree(child, ancestor), "it must be a child");
+			CORE_ASSERT(child != ancestor, "Ancestor is not it's own child");
 
-			auto node_h = heightFromPos(pos);
-			CORE_ASSERT(node_h < height, "The height must refer to valid ancestor of the position");
-
-			// normalized represents trace from root to pos
-			auto normalized = (pos << node_h);
-			// mask for the bit which indicates we go to reach height
-			auto mask = idxT{ 1 } << (height - 1);
-
-			bool in_right = normalized & mask;
-
-			return in_right ? Dir::Right : Dir::Left;
+			return inSubtree(child, ancestor, Dir::Rght) ? Dir::Rght : Dir::Left;
 		}
 
 		static constexpr posT elevate(posT pos, usize height_diff) { return pos >> height_diff; }
@@ -308,7 +292,8 @@ namespace vm::persistent::detail {
 		/**
 		 * @brief Get the tree positions of nodes responsible for range [lefft_idx, right_idx)
 		 */
-		static constexpr std::deque<posT> getPosForRange(idxT left_idx, idxT right_idx) {
+		static constexpr std::deque<posT> getPosForRange(std::pair<idxT, idxT> arg) {
+			auto [left_idx, right_idx] = arg;
 			CORE_ASSERT(left_idx < right_idx, "Received wrong invalid/empty");
 			CORE_ASSERT(right_idx <= IDX_END, "Expecting a valid interval");
 
@@ -329,278 +314,6 @@ namespace vm::persistent::detail {
 			return ans;
 		}
 
-		/**
-		 * @brief Helper struct for moving around th tree, with built-in support for tree-rebuilding
-		 * @note this is to avoid non-trivial recursion and make a more generic code
-		 * @note reconstruction will only happen if the segTreeT is not const-qualified
-		 * @tparam segTreeT underlying inner type of the ptr to memory. Passed explicitly to
-		 * determine qualifiers
-		 */
-		template<SameWNoQual<SegmentTree> segTreeT>
-		class RebuildCtx {
-			segTreeT* mem;
-			posT      root_pos{};
-			posT      node_pos{};
-			NodeID    node{};
-
-			static constexpr bool RECONSTRUCT = !std::is_const_v<segTreeT>;
-
-			std::array<NodeID, POS_T_SIZE> nodes_on_path{};
-			idxT                           active = TOP_BIT;
-
-		public:
-			[[nodiscard]]
-			usize getHeightOfLowestActive() const {
-				return (usize) std::countr_zero(active);
-			}
-
-			[[nodiscard]]
-			NodeID getLowestNodeOnPath() const {
-				auto active_h = getHeightOfLowestActive();
-				CORE_ASSERT(
-					active_h < POS_T_SIZE, "someone needs to be active for this method to work"
-				);
-
-				return nodes_on_path.at(active_h);
-			}
-
-			void goUp(usize desired_height) {
-				CORE_ASSERT(desired_height < heightFromPos(root_pos), "we cannot go above the root");
-
-				usize height = heightFromPos(node_pos);
-
-				while (height < desired_height) {
-					auto next_height = getHeightOfLowestActive();
-
-					if (next_height >= desired_height) break;
-
-					auto node_on_path  = getLowestNodeOnPath();
-					auto result_height = next_height + 1;
-
-					if constexpr (RECONSTRUCT) {
-						auto left = node_on_path, right = node;
-
-						if (directionToChoseAtHeightToGetToPos(node_pos, result_height) == Dir::Left)
-							std::swap(left, right);
-
-						node = mem->emplaceBranch(left, right);
-					} else {
-						node = node_on_path;
-					}
-
-					node_pos = elevateTo(node_pos, result_height);
-					height   = heightFromPos(node_pos);
-				}
-
-				node_pos = elevateTo(node_pos, desired_height);
-			}
-
-			void swapSibling() {
-				usize current_h = heightFromPos(node_pos);
-
-				node_pos           = getSiblingPos(node_pos);
-				auto& node_on_path = nodes_on_path.at(current_h);
-
-				if constexpr (!RECONSTRUCT) {
-					if (node_on_path != EMPTY) {
-						Dir dir = directionToChoseAtHeightToGetToPos(node_pos, current_h + 1);
-						// I am becoming my own father
-						node = node_on_path;
-						// I am putting my father becomes my sibling
-						nodes_on_path = mem->getChild(othDir(dir), nodes_on_path.at(current_h));
-					}
-				}
-
-				auto prev_sib = node_on_path;
-				changeSibling(node, current_h);
-				node = prev_sib;
-			}
-
-			void goDownTo(posT desired_pos) {
-				CORE_ASSERT(inSubtree(desired_pos, node_pos), "we can go only downwards");
-
-				if (desired_pos == 0) return;
-
-				auto real_node_pos = mem->getPos(node);
-
-				if (inSubtree(real_node_pos, desired_pos)) {
-					node_pos = desired_pos;
-					return;
-				}
-
-				if (!inSubtree(desired_pos, real_node_pos)) {
-					auto decision_height = getLCAHeight(real_node_pos, desired_pos);
-
-					changeSibling(node, decision_height - 1);
-
-					node     = EMPTY;
-					node_pos = desired_pos;
-					return;
-				}
-
-				node_pos = real_node_pos;
-
-				while (inSubtree(desired_pos, node_pos) && node_pos != desired_pos) {
-					auto decision_height = heightFromPos(node_pos);
-					auto dir = directionToChoseAtHeightToGetToPos(desired_pos, decision_height);
-
-					NodeID sibling{};
-
-					if constexpr (RECONSTRUCT)
-						sibling = mem->getChild(othDir(dir), node);
-					else
-						sibling = node;
-
-					changeSibling(sibling, decision_height - 1);
-
-					node     = mem->getChild(dir, node);
-					node_pos = mem->getPos(node);
-				}
-
-				node_pos = desired_pos;
-			}
-
-			void changeSibling(NodeID new_sibling, usize height) {
-				CORE_ASSERT(height < POS_T_SIZE - 1, "we cannot change the root");
-
-				auto& node_on_path  = nodes_on_path.at(height);
-				bool  current_empty = (node_on_path == EMPTY);
-				bool  sibling_empty = (new_sibling == EMPTY);
-				bool  change        = current_empty != sibling_empty;
-
-				if (change) {
-					idxT mask = idxT{ 1 } << height;
-					active ^= mask;
-				}
-			}
-
-			/**
-			 * @brief moves the tracked node to desired position
-			 * @note when moving upwards, children are reconstructed by lazily merging
-			 */
-			void moveNodeTo(posT desired_pos) {
-				if (desired_pos == 0) return;
-				CORE_ASSERT(
-					inSubtree(desired_pos, root_pos),
-					"we should go to somewhere within root's subtree"
-				);
-
-				if (inSubtree(node_pos, desired_pos)) {
-					goUp(heightFromPos(desired_pos));
-					return;
-				}
-
-				if (inSubtree(desired_pos, node_pos)) {
-					goDownTo(desired_pos);
-					return;
-				}
-
-				auto decision_height = getLCAHeight(node_pos, desired_pos);
-				goUp(decision_height - 1);
-				swapSibling();
-				goDownTo(desired_pos);
-			}
-
-			/**
-			 * @brief returns a list of nodes and positions of the nodes which would habe been touch
-			 * if there have been executed a recursive call from given node to tracked position and
-			 * the idx of the currently tracked node
-			 * @note nodes are given in the order from left to right (just as if the call was
-			 * recursive)
-			 */
-			[[nodiscard]]
-			std::pair<usize, std::deque<std::pair<posT, NodeID>>> inOrder(posT upto_here) const {
-				CORE_ASSERT(
-					inSubtree(node_pos, upto_here),
-					"Passed argument should be an ancestor of current position"
-				);
-
-				CORE_ASSERT(
-					inSubtree(upto_here, root_pos),
-					"Passed argument should be a descendant of the root"
-				);
-
-				std::deque<std::pair<posT, NodeID>> ans = {};
-
-				auto before = getSiblingsOnSide(Dir::Left, upto_here);
-				for (auto el: before) ans.emplace_back(el);
-
-				usize idx = ans.size();
-				ans.emplace_back(node_pos, node);
-
-				auto after = getSiblingsOnSide(Dir::Right, upto_here);
-				for (auto el: after) ans.emplace_back(el);
-
-				return { idx, ans };
-			}
-
-			/**
-			 * @brief Gives all the nodes which are in subtree of given position and preceed/follow
-			 * (depending on dir parameter) currently tracked node in pre-order traverse of tree
-			 * @note Think about returned list as a list of nodes which had to be processed
-			 * before/after node if we were doing recursive operations from given node to currently
-			 * tracked
-			 * @note nodes are given in the order from left to right (just as if the call was
-			 * recursive)
-			 * @note related to inOrder
-			 */
-			[[nodiscard]]
-			std::deque<std::pair<posT, NodeID>> getSiblingsOnSide(Dir dir, posT upto_here) const {
-				auto cur_pos = node_pos;
-
-				std::deque<std::pair<posT, NodeID>> ans = {};
-				CORE_ASSERT(
-					inSubtree(upto_here, root_pos) && inSubtree(cur_pos, upto_here),
-					"cur_pos must be in target_pos which must be in root_pos"
-				);
-
-				while (cur_pos != upto_here) {
-					auto cur_h    = heightFromPos(cur_pos);
-					auto orig_dir = directionToChoseAtHeightToGetToPos(node_pos, cur_h + 1);
-
-					if (orig_dir == dir) {
-						NodeID sibling{};
-
-						if constexpr (RECONSTRUCT) {
-							sibling = nodes_on_path.at(cur_h);
-						} else {
-							auto father = nodes_on_path.at(cur_h);
-							sibling     = mem->getChild(othDir(dir), father);
-						}
-
-						ans.emplace_front(getSiblingPos(cur_pos), sibling);
-					}
-
-					cur_pos = elevate(cur_pos, 1);
-				}
-
-				if (dir == Dir::Right) std::ranges::reverse(ans);
-
-				return ans;
-			}
-
-			[[nodiscard]]
-			auto getPos() const {
-				return node_pos;
-			}
-
-			[[nodiscard]]
-			auto getNode() const {
-				return node;
-			}
-
-			[[nodiscard]]
-			auto getSiblingAt(usize h) const {
-				if constexpr (RECONSTRUCT) {
-					return nodes_on_path.at(h);
-				} else {
-					auto father      = nodes_on_path.at(h);
-					auto subtree_dir = directionToChoseAtHeightToGetToPos(node_pos, h + 1);
-					return mem->getChild(othDir(subtree_dir), father);
-				}
-			}
-		};
-
 		BijectiveMap<ChildEntry, NodeID, ChildEntryH> child_entries{};
 		BijectiveMap<LeafEntry, NodeID, LeafEntryH>   leaf_entries{};
 
@@ -612,10 +325,13 @@ namespace vm::persistent::detail {
 		 * @brief struture used to iterate over the unmutable memory
 		 */
 		struct Path {
-			idxT                    idx;
 			std::deque<NodeID>      trace;
 			base::CRef<SegmentTree> mem;
-			NodeID                  root;
+
+			void enforceValidState() const {
+				CORE_ASSERT(trace.size(), "there must be a leaf on the path");
+				CORE_ASSERT(isLeafPos(mem->getPos(trace.front())), "we go down to leaf");
+			}
 
 			/**
 			 * @brief moves Path to the leaf, which is present in Memory
@@ -627,7 +343,49 @@ namespace vm::persistent::detail {
 			 */
 			[[nodiscard("When is false, the path must be discarded")]]
 			bool moveToValid(Dir move_dir, usize skip = 0) {
-				CORE_ASSERT(trace.size(), "there must be a leaf on the path");
+				enforceValidState();
+				auto prev = trace.front();
+				trace.pop_front();
+				auto prev_pos = mem->getPos(prev);
+
+				while (trace.size()) {
+					auto next = trace.front();
+					trace.pop_front();
+					auto next_pos = mem->getPos(next);
+
+					defer(std::tie(prev, prev_pos) = std::tie(next, next_pos););
+
+					if (dirToChild(prev_pos, next_pos) == move_dir) continue;
+
+					auto [left_child, right_child] = mem->getChildren(next);
+
+					auto considered = move_dir == Dir::Left ? left_child : right_child;
+
+					if (auto size = mem->getSize(considered); size <= skip) {
+						skip -= size;
+						continue;
+					}
+
+					trace.push_front(considered);
+					break;
+				}
+
+				if (trace.size() == 0) return false;
+
+				while (!mem->isLeaf(trace.front())) {
+					auto tip                       = trace.front();
+					auto [left_child, right_child] = mem->getChildren(tip);
+
+					auto considered = move_dir == Dir::Rght ? left_child : right_child;
+
+					if (auto size = mem->getSize(considered); size <= skip) {
+						skip -= size;
+						trace.push_front(move_dir == Dir::Left ? left_child : right_child);
+						continue;
+					}
+
+					trace.push_front(considered);
+				}
 
 				return true;
 			}
@@ -637,108 +395,52 @@ namespace vm::persistent::detail {
 			 * not active
 			 */
 			[[nodiscard]]
-			base::Optional<valT> getValue() const {
-				if (trace.at(0) == EMPTY)
-					return std::nullopt;
-				else
-					return mem->getValueOfLeaf(trace.at(0));
+			valT getValue() const {
+				enforceValidState();
+				return mem->getValueOfLeaf(trace.front());
+			}
+
+			[[nodiscard]]
+			idxT getIdx() const {
+				enforceValidState();
+				return mem->getIndexOfLeaf(trace.front());
 			}
 		};
 
-		bool isLeaf(NodeID state) const {
-			return leaf_entries.atRightOpt(state).has_value();
-		}
-
-		/**
-		 * @brief Get the height and the smallest idx of the leaf which could potentially be in the
-		 * subtree
-		 */
-		std::pair<usize, idxT> getHeightOffset(NodeID state) const {
-			if_opt_some(branch_info.atMaybeCopy(state), entry) {
-				auto pos = entry.position;
-				CORE_ASSERT((pos & LEAF_MASK) == 0, "Branch position must have designated bit off");
-
-				return {
-					heightFromPos(pos),
-					offsetFromPos(pos),
-				};
-			}
-			if_opt_some(leaf_entries.atRightOpt(state), val) {
-				return {
-					0UL,
-					val.idx,
-				};
-			}
-			CORE_UNREACHABLE();
-		}
+		bool isLeaf(NodeID state) const { return leaf_entries.atRightOpt(state).has_value(); }
 
 		/**
 		 * @brief Return number of active leaves in subtree
 		 */
 		usize getSize(NodeID state) const {
-			if_opt_some(branch_info.atMaybeCopy(state), entry) {
-				CORE_ASSERT(
-					(entry.size == 0) == (state == EMPTY),
-					"the only branch which is empty has a designated ID"
-				);
-				return entry.size;
-			}
-			if_opt_some(leaf_entries.atRightOpt(state), _) { return 1UL; }
-			CORE_UNREACHABLE();
+			auto entry = *branch_info.atMaybeCopy(state);
+			CORE_ASSERT((entry.size == 0) == (state == EMPTY), "empty state iff empty size");
+			return entry.size;
 		}
 
 		/**
 		 * @brief Return position in the tree of given node
 		 */
-		posT getPos(NodeID state) const {
-			if_opt_some(branch_info.atMaybeCopy(state), entry) {
-				CORE_ASSERT(
-					(entry.position & LEAF_MASK) == 0, "Branch position must have designated bit off"
-				);
-				return entry.position;
-			}
-			if_opt_some(leaf_entries.atRightOpt(state), entry) {
-				CORE_ASSERT((entry.idx & LEAF_MASK) == 0, "Leaf idx must have designated bit off");
-
-				return LEAF_MASK | entry.idx;
-			}
-			CORE_UNREACHABLE();
-		}
+		posT getPos(NodeID state) const { return branch_info.atMaybeCopy(state)->position; }
 
 		/**
 		 * @brief Return idx of leftmost and rightmost idx of active leavs in fiven subtree
 		 */
 		std::pair<idxT, idxT> getRange(NodeID state) const {
-			if_opt_some(branch_info.atMaybeCopy(state), entry) {
-				CORE_ASSERT(
-					entry.left_bound <= entry.right_bound, "Branch bounds should have a valid range"
-				);
-				CORE_ASSERT(
-					(state == EMPTY) == (entry.left_bound == entry.right_bound),
-					"should have an empty range only for a designated ID"
-				);
-
-				CORE_ASSERT(
-					entry.right_bound <= IDX_END, "Right bound must be smaller than end of idxs"
-				);
-
-				return { entry.left_bound, entry.right_bound };
-			}
-			if_opt_some(leaf_entries.atRightOpt(state), entry) {
-				CORE_ASSERT(entry.idx < IDX_END, "Leaf idx must be smaller than end of idxs");
-
-				return { entry.idx, entry.idx + 1 };
-			}
-			CORE_UNREACHABLE();
+			auto entry = *branch_info.atMaybeCopy(state);
+			auto l = entry.left_bound, r = entry.right_bound;
+			CORE_ASSERT(l <= r, "Branch bounds should have a valid range");
+			CORE_ASSERT((state == EMPTY) == (l == r), "empty range iff empty state");
+			CORE_ASSERT(r <= IDX_END, "Right bound must be smaller than end of idxs");
+			return { l, r };
 		}
 
 		/**
 		 * @brief Return the value held by leaf
 		 */
-		valT getValueOfLeaf(NodeID leaf) const {
-			if_opt_some(leaf_entries.atRightOpt(leaf), entry) { return entry.value; }
-			CORE_UNREACHABLE();
-		}
+		valT getValueOfLeaf(NodeID leaf) const { return leaf_entries.atRight(leaf).value; }
+
+		idxT getIndexOfLeaf(NodeID leaf) const { return leaf_entries.atRight(leaf).idx; }
 
 		std::pair<NodeID, NodeID> getChildren(NodeID node) const {
 			if_opt_some(child_entries.atRightOpt(node), [left COMMA right]) {
@@ -746,22 +448,6 @@ namespace vm::persistent::detail {
 			}
 			if_opt_some(leaf_entries.atRightOpt(node), _) { return { EMPTY, EMPTY }; }
 			CORE_UNREACHABLE();
-		}
-
-		/**
-		 * @brief Checks if the id is a valid root of some tree
-		 */
-		void validateRoot(NodeID root, bool weird_root = false) const {
-			if (!branch_info.contains(root) && !leaf_entries.atRightOpt(root))
-				throw std::invalid_argument("got invalid state");
-
-			if (root == EMPTY) return;
-
-			auto size             = (idxT) getSize(root);
-			auto [height, offset] = getHeightOffset(root);
-			CORE_ASSERT(height < POS_T_SIZE, "all non-empty roots need to have valid height");
-			CORE_ASSERT(height % (1ULL << offset) == 0, "offset must be properly aligned");
-			CORE_ASSERT(size <= (idxT(1) << height), "root's size is too large");
 		}
 
 		/**
@@ -777,7 +463,7 @@ namespace vm::persistent::detail {
 			auto lca_pos = getLCAPos(pos_left, pos_right);
 			CORE_ASSERT(pos_right != 1 && pos_left != 1, "top node cannot be ever passed");
 			CORE_ASSERT(
-				inSubtree(pos_left, lca_pos, Dir::Left) && inSubtree(pos_right, lca_pos, Dir::Right),
+				inSubtree(pos_left, lca_pos, Dir::Left) && inSubtree(pos_right, lca_pos, Dir::Rght),
 				"we should always get the nodes in the right subtrees"
 			);
 
@@ -813,7 +499,18 @@ namespace vm::persistent::detail {
 			};
 
 			auto [is_new, node] = leaf_entries.emplaceByLeft(leaf_entry, next_node_id);
-			if (is_new) next_node_id++;
+			if (!is_new) return node;
+
+			next_node_id++;
+			branch_info.emplace(
+				node,
+				BranchEntry{
+					.size        = 1,
+					.position    = idx | TOP_BIT,
+					.left_bound  = idx,
+					.right_bound = idx + 1,
+				}
+			);
 
 			return node;
 		}
@@ -839,6 +536,16 @@ namespace vm::persistent::detail {
 			std::function<ResT(idxT, valT, valT)> confilicts = [](idxT, valT, valT) -> ResT {
 				throw std::invalid_argument("conflicts present");
 			};
+
+			template<typename... ArgT>
+			base::Optional<NodeID> call(auto MergeBuilder::* member, ArgT&&... args) {
+				if constexpr (std::is_same_v<ResT, NodeID>)
+					return (this->*member)(std::forward<ArgT>(args)...);
+				else {
+					(this->*member)(std::forward<ArgT>(args)...);
+					return std::nullopt;
+				}
+			}
 		};
 
 		/**
@@ -863,167 +570,115 @@ namespace vm::persistent::detail {
 		 * @note can be mutable or unmutable, depending of return type of merge poliscy (hence use
 		 * of this deduction)
 		 */
-		template<RebuildRes ResT, SameWNoQual<SegmentTree> SelfT>
+		template<RebuildRes ResT, typename SelfT>
 		ResT rebuildFromTwo(
 			this SelfT& st, NodeID root_1, NodeID root_2, MergeBuilder<ResT> merge_policy
 		) requires ValidSignature<SelfT, ResT> {
-			using BaseT = std::conditional_t<
-				std::is_const_v<std::remove_reference_t<SelfT>>,
-				const SegmentTree,
-				SegmentTree>;
-
-			auto& obj = static_cast<BaseT&>(st);
-
+			using bldT                        = MergeBuilder<ResT>;
 			static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
 
-			auto pos_1 = obj.getPos(root_1);
-			auto pos_2 = obj.getPos(root_2);
+			auto helper = [&](this auto& self, posT cur_pos, NodeID node_1, NodeID node_2
+			              ) -> base::Optional<NodeID> {
+				const auto pos_1 = st.getPos(node_1);
+				const auto pos_2 = st.getPos(node_2);
+
+				const auto lca_pos = getLCAPos(pos_1, pos_2);
+				CORE_ASSERT(inSubtree(lca_pos, cur_pos), "invariant of the recursive call");
+
+				if (node_1 == node_2) return merge_policy.call(&bldT::the_same, node_1, pos_1);
+
+				if (isLeafPos(cur_pos))
+					return merge_policy.call(
+						&bldT::confilicts,
+						offsetFromPos(cur_pos),
+						st.getValueOfLeaf(node_1),
+						st.getValueOfLeaf(node_2)
+					);
+
+
+				base::Optional<NodeID> left = EMPTY, rght = EMPTY;
+
+				const auto pos_l = getChildPos(cur_pos, Dir::Left),
+						   pos_r = getChildPos(cur_pos, Dir::Rght);
+
+				[&] {
+					if (lca_pos != cur_pos) {
+						const auto dir_lca = dirToChild(lca_pos, cur_pos);
+
+
+						left = dir_lca == Dir::Left
+						         ? self(pos_l, node_1, node_2)
+						         : merge_policy.call(&bldT::the_same, EMPTY, pos_l);
+						rght = dir_lca == Dir::Rght
+						         ? self(pos_r, node_1, node_2)
+						         : merge_policy.call(&bldT::the_same, EMPTY, pos_r);
+
+						return;
+					}
+
+					if (pos_1 == cur_pos && pos_2 == cur_pos) {
+						const auto [left_1, right_1] = st.getChildren(node_1);
+						const auto [left_2, right_2] = st.getChildren(node_2);
+
+						left = self(pos_l, left_1, left_2);
+						rght = self(pos_r, right_1, right_2);
+
+						return;
+					}
+
+					if (pos_1 != lca_pos && pos_2 != lca_pos) {
+						const auto dir_1 = dirToChild(pos_1, cur_pos);
+
+						left = dir_1 == Dir::Left ? merge_policy.call(&bldT::only_1, node_1, pos_l)
+						                          : merge_policy.call(&bldT::only_2, node_2, pos_l);
+						rght = dir_1 == Dir::Rght ? merge_policy.call(&bldT::only_1, node_1, pos_r)
+						                          : merge_policy.call(&bldT::only_2, node_2, pos_r);
+
+						return;
+					}
+
+					if (pos_1 == lca_pos) {
+						const auto [left_1, rght_1] = st.getChildren(node_1);
+						const auto dir_2            = dirToChild(pos_2, cur_pos);
+
+						left = dir_2 == Dir::Left ? self(pos_l, left_1, node_2)
+						                          : merge_policy.call(&bldT::only_1, left_1, pos_l);
+
+						rght = dir_2 == Dir::Rght ? self(pos_r, rght_1, node_2)
+						                          : merge_policy.call(&bldT::only_1, rght_1, pos_r);
+
+						return;
+					}
+
+					if (pos_2 == lca_pos) {
+						const auto [left_2, rght_2] = st.getChildren(node_2);
+						const auto dir_1            = dirToChild(pos_1, cur_pos);
+
+						left = dir_1 == Dir::Left ? self(pos_l, node_1, left_2)
+						                          : merge_policy.call(&bldT::only_2, left_2, pos_l);
+						rght = dir_1 == Dir::Rght ? self(pos_r, node_1, rght_2)
+						                          : merge_policy.call(&bldT::only_2, rght_2, pos_r);
+
+						return;
+					}
+				}();
+
+				if constexpr (RECONSTRUCT)
+					return st.emplaceBranch(*left, *rght);
+				else
+					return std::nullopt;
+			};
+
+			const auto pos_1 = st.getPos(root_1);
+			const auto pos_2 = st.getPos(root_2);
 
 			if (root_1 == EMPTY && root_2 == EMPTY) return merge_policy.the_same(EMPTY, 1);
 			if (root_1 == EMPTY) return merge_policy.only_2(root_2, pos_2);
 			if (root_2 == EMPTY) return merge_policy.only_1(root_1, pos_1);
 
-			if (offsetFromPos(pos_2) < offsetFromPos(pos_1)) {
-				std::swap(pos_1, pos_2);
-				std::swap(root_1, root_2);
-				std::swap(merge_policy.only_1, merge_policy.only_2);
-				merge_policy.confilicts = [orig_strat = merge_policy.confilicts](
-											  idxT idx, valT val_1, valT val_2
-										  ) -> ResT { return orig_strat(idx, val_2, val_1); };
-			}
+			auto res = helper(getLCAPos(pos_1, pos_2), root_1, root_2);
 
-			auto detail_merge =
-				[&, mem = &obj](this auto&& self, posT pos, NodeID node_1, NodeID node_2) -> ResT {
-				CORE_ASSERT(
-					mem->getPos(node_1) == mem->getPos(node_2) || !node_1 || !node_2,
-					"both nodes are responsible for the same memory region"
-				);
-
-				if (node_1 == node_2) return merge_policy.the_same(node_1, pos);
-				if (!node_1) return merge_policy.only_2(node_2, pos);
-				if (!node_2) return merge_policy.only_1(node_1, pos);
-
-				if_opt_some(mem->leaf_entries.atRightOpt(node_1), leaf_entry1) {
-					CORE_ASSERT(
-						pos & LEAF_MASK,
-						"When merging two leaves, position must have the leaf bit on"
-					);
-					auto maybe_entry2 = mem->leaf_entries.atRightOpt(node_2);
-					CORE_ASSERT(
-						maybe_entry2.has_value(),
-						"When one node is a leaf, other also must be a leaf"
-					);
-					auto leaf_entry2    = *maybe_entry2;
-					auto [idx_1, val_1] = leaf_entry1;
-					auto [idx_2, val_2] = leaf_entry2;
-					CORE_ASSERT(idx_1 == idx_2, "Merged leaves must be of the same index");
-					CORE_ASSERT(val_1 != val_2, "At this point, values should be different");
-
-					return merge_policy.confilicts(idx_1, val_1, val_2);
-				}
-
-				CORE_ASSERT(
-					!mem->leaf_entries.atRightOpt(node_2).has_value(),
-					"When one node is not a leaf, the other node also must be a leaf"
-				);
-				CORE_ASSERT(
-					mem->child_entries.atRightOpt(node_1).has_value()
-						&& mem->child_entries.atRightOpt(node_2).has_value(),
-					"At this point, both nodes should be branches and have children"
-				);
-				auto [left_1, right_1] = mem->child_entries.atRight(node_1);
-				auto [left_2, right_2] = mem->child_entries.atRight(node_2);
-				auto pos_left = pos << 1, pos_right = ((pos << 1) | 1);
-
-				if constexpr (RECONSTRUCT) {
-					auto rec_left  = self(pos_left, left_1, left_2);
-					auto rec_right = self(pos_right, right_1, right_2);
-
-					CORE_ASSERT(
-						rec_left == EMPTY || inSubtree(mem->getPos(rec_left), pos_left),
-						"The left subtree which is being constructed, should remain within left "
-						"subtree"
-					);
-					CORE_ASSERT(
-						rec_right == EMPTY || inSubtree(mem->getPos(rec_right), pos_right),
-						"The right subtree which is being constructed, should remain within right "
-						"subtree"
-					);
-
-					return mem->lazyMergeTwoNodes(rec_left, rec_right);
-				} else {
-					self(pos_left, left_1, left_2);
-					self(pos_right, right_1, right_2);
-					return;
-				}
-			};
-
-			auto lca_pos = getLCAPos(pos_1, pos_2);
-
-			RebuildCtx<BaseT> neigh = {
-				.mem      = &obj,
-				.root_pos = lca_pos,
-				.node_pos = lca_pos,
-				.node     = EMPTY,
-				.siblings = {},
-			};
-
-			auto handle_list =
-				[&](const auto& list, usize special_idx, posT special_pos, NodeID special_val) {
-					for (usize i = 0; i < list.size(); i++) {
-						auto [orig_pos, node] = list.at(i);
-						bool special          = (i == special_idx);
-
-						if (special) CORE_ASSERT(orig_pos == special_pos, "This is our node");
-
-						NodeID corresponding = special ? special_val : EMPTY;
-
-						if constexpr (!RECONSTRUCT)
-							detail_merge(orig_pos, node, corresponding);
-						else {
-							usize relative_h = heightFromPos(orig_pos) - heightFromPos(special_pos);
-							CORE_ASSERT(
-								relative_h < neigh.nodes_on_path.size(),
-								"Height diff must refer to some sibling"
-							);
-							auto& dst = special ? neigh.node : neigh.nodes_on_path.at(relative_h);
-							dst       = detail_merge(orig_pos, node, corresponding);
-							CORE_ASSERT(
-								dst == EMPTY || inSubtree(st.getPos(dst), orig_pos),
-								"returned node must fit within original subtree"
-							);
-						}
-					}
-				};
-
-			neigh.moveNodeTo(pos_1);
-			neigh.node                    = root_1;
-			auto [node_1_idx, in_order_1] = neigh.inOrder(lca_pos);
-			in_order_1.pop_back();
-
-			CORE_ASSERT(
-				in_order_1.empty() == (lca_pos == pos_1),
-				"The only case when in_order is empty is when pos_1 is lca"
-			);
-
-			handle_list(in_order_1, node_1_idx, pos_1, EMPTY);
-
-			neigh.moveNodeTo(pos_2);
-			auto [node_2_idx, in_order_2] = neigh.inOrder(lca_pos);
-
-			if (!inSubtree(pos_2, pos_1)) {
-				CORE_ASSERT(in_order_2.size() >= 2, "There must be sth going on");
-				CORE_ASSERT(node_2_idx > 0, "second node must have at least one sibling on left");
-				in_order_2.pop_front();
-				node_2_idx--;
-			}
-
-			handle_list(in_order_2, node_2_idx, pos_2, root_2);
-
-			if constexpr (RECONSTRUCT) {
-				neigh.moveNodeTo(lca_pos);
-				return neigh.node;
-			}
+			if constexpr (RECONSTRUCT) return *res;
 		}
 
 		/**
@@ -1031,20 +686,13 @@ namespace vm::persistent::detail {
 		 * @note can be mutable or unmutable, depending of return type of range builder
 		 * @note ranges are right opened [l, r) where l < r, and we expect at least one range.
 		 */
-		template<RebuildRes ResT, SameWNoQual<SegmentTree> SelfT>
+		template<RebuildRes ResT, typename SelfT>
 		ResT rebuildRanges(
 			this SelfT&                              st,
 			NodeID                                   root,
 			const std::deque<std::pair<idxT, idxT>>& ranges,
 			const RangeBuilder<ResT>&                range_constructor
 		) requires ValidSignature<SelfT, ResT> {
-			using BaseT = std::conditional_t<
-				std::is_const_v<std::remove_reference_t<SelfT>>,
-				const SegmentTree,
-				SegmentTree>;
-
-			auto&& obj = static_cast<BaseT&>(st);
-
 			static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
 
 			CORE_ASSERT(ranges.size(), "We require at least one range");
@@ -1061,14 +709,9 @@ namespace vm::persistent::detail {
 			idxT right_idx = ranges.back().second;
 
 			if (root) {
-				auto [height, offset] = obj.getHeightOffset(root);
-				CORE_ASSERT(
-					height < POS_T_SIZE,
-					"For non-empty nodes, size of address is general limit for height"
-				);
-
-				left_idx  = std::min(left_idx, offset);
-				right_idx = std::max(right_idx, offset + (usize(1) << height));
+				auto [range_l, range_r] = st.getRange(root);
+				left_idx                = std::min(left_idx, range_l);
+				right_idx               = std::max(right_idx, range_r);
 			}
 
 			CORE_ASSERT(left_idx < right_idx, "The full range must be valid & non-empty");
@@ -1077,99 +720,56 @@ namespace vm::persistent::detail {
 			posT left_pos  = left_idx | LEAF_MASK;
 			posT right_pos = (right_idx - 1) | LEAF_MASK;
 
-			auto lca_pos = getLCAPos(left_pos, right_pos);
+			std::deque<posT> nodes_to_visit = ranges | std::views::transform(getPosForRange)
+			                                | std::views::join | std::ranges::to<std::deque>();
 
-			RebuildCtx<BaseT> neigh = {
-				.mem      = &obj,
-				.root_pos = lca_pos,
-				.node_pos = lca_pos,
-				.node     = EMPTY,
-				.siblings = {},
-			};
 
-			neigh.moveNodeTo(obj.getPos(root));
-			neigh.node = root;
+			auto helper = [&](this auto&& self, posT cur_pos, NodeID node) -> ResT {
+				if (nodes_to_visit.empty()) return range_constructor.out_of_range(node, cur_pos);
 
-			auto handle_range = [&](idxT l, idxT r) {
-				if (l == r) return;
-				auto range_nodes = getPosForRange(l, r);
-				CORE_ASSERT(
-					neigh.node_pos == range_nodes.front(),
-					"Currently tracked position must be at the starting position for current range"
-				);
+				auto& to_visit = nodes_to_visit.front();
 
-				for (auto pos: range_nodes) {
-					neigh.moveNodeTo(pos);
+				if (!inSubtree(to_visit, cur_pos))
+					return range_constructor.out_of_range(node, cur_pos);
 
-					if constexpr (RECONSTRUCT)
-						neigh.node = range_constructor.in_range(neigh.node, pos);
-					else
-						range_constructor.in_range(neigh.node, pos);
+				if (cur_pos == to_visit) {
+					nodes_to_visit.pop_front();
+					return range_constructor.in_range(node, cur_pos);
+				}
+
+				NodeID left_n = EMPTY, right_n = EMPTY;
+
+				if (node != EMPTY) {
+					auto node_pos = st.getPos(node);
+					if (cur_pos == node_pos) {
+						std::tie(left_n, right_n) = st.getChildren(node);
+					} else {
+						auto  dir       = dirToChild(node_pos, cur_pos);
+						auto& to_change = dir == Dir::Left ? left_n : right_n;
+						to_change       = node;
+					}
+				}
+
+				if constexpr (RECONSTRUCT) {
+					auto new_left  = self(getChildPos(cur_pos, Dir::Left), left_n);
+					auto new_right = self(getChildPos(cur_pos, Dir::Rght), right_n);
+					return st.emplaceBranch(new_left, new_right);
+				} else {
+					self(getChildPos(cur_pos, Dir::Left), left_n);
+					self(getChildPos(cur_pos, Dir::Rght), right_n);
 				}
 			};
 
-			auto handle_list = [&](const std::deque<std::pair<posT, NodeID>>& list) {
-				for (auto [pos, node]: list)
-					if constexpr (RECONSTRUCT) {
-						usize relative_h = heightFromPos(pos) - heightFromPos(neigh.node_pos);
-						CORE_ASSERT(
-							relative_h < neigh.nodes_on_path.size(),
-							"Height diff must refer particular sibling"
-						);
-						neigh.nodes_on_path.at(relative_h)
-							= range_constructor.out_of_range(node, pos);
-					} else
-						range_constructor.out_of_range(node, pos);
-			};
+			auto lca_pos = getLCAPos(left_pos, right_pos);
 
-			{
-				auto [l1, r1]  = ranges.front();
-				auto begin_pos = firstNodeForRange(l1, r1);
-				neigh.moveNodeTo(begin_pos);
-
-				handle_list(neigh.getSiblingsOnSide(Dir::Left, lca_pos));
-				handle_range(l1, r1);
-			}
-
-			using namespace std::views;
-			for (auto [l, r]: ranges | drop(1)) {
-				auto begin_pos = firstNodeForRange(l, r);
-				auto lca       = getLCAPos(neigh.node_pos, begin_pos);
-
-				CORE_ASSERT(
-					inSubtree(neigh.node_pos, lca) && inSubtree(begin_pos, lca),
-					"this must always be the case (one is in left subtree other in right)"
-				);
-				CORE_ASSERT(
-					!inSubtree(neigh.node_pos, begin_pos) && !inSubtree(begin_pos, neigh.node_pos),
-					"one position cannot be a predecessor of other"
-				);
-
-				auto list_1 = neigh.getSiblingsOnSide(Dir::Right, lca);
-				list_1.pop_back();
-				handle_list(list_1);
-
-				neigh.moveNodeTo(begin_pos);
-
-				auto list_2 = neigh.getSiblingsOnSide(Dir::Left, lca);
-				list_2.pop_front();
-				handle_list(list_2);
-
-				handle_range(l, r);
-			}
-
-
-			handle_list(neigh.getSiblingsOnSide(Dir::Right, lca_pos));
-			neigh.moveNodeTo(lca_pos);
-
-			if constexpr (RECONSTRUCT) return neigh.node;
+			return helper(lca_pos, root);
 		}
 
 		/**
 		 * @brief helper function for modifying a single range of memory
 		 * @note can be mutable or unmutable, depending of return type of range constructor
 		 */
-		template<RebuildRes ResT, SameWNoQual<SegmentTree> SelfT>
+		template<RebuildRes ResT, typename SelfT>
 		ResT rebuildRange(
 			this SelfT&               st,
 			NodeID                    root,
@@ -1232,30 +832,45 @@ namespace vm::persistent::detail {
 		 * @brief returns a path from particular root to the idx
 		 */
 		[[nodiscard]]
-		Path getPathTo(NodeID root, idxT idx) const {
-			auto [height, offset] = getHeightOffset(root);
+		base::Optional<Path> getPathTo(
+			NodeID root, idxT idx, base::Optional<Dir> opt_dir = std::nullopt
+		) const {
+			std::deque<NodeID> trace = {};
 
-			std::deque<NodeID> trace = { root };
+			auto [left_r, right_r] = getRange(root);
 
-			if (idx < offset || idx >= offset + (idxT(1) << height))
-				trace = { EMPTY };
-			else {
-				NodeID node = root;
-				idxT   mask = (idxT(1) << height);
+			if (idx < left_r || right_r <= idx) return std::nullopt;
 
-				for (usize i = 0; i < height; i++) {
-					mask >>= 1;
-					Dir dir = (idx & mask) ? Dir::Right : Dir::Left;
-					node    = getChild(dir, node);
-					trace.emplace_front(node);
+			for (NodeID node = root; true;) {
+				trace.push_front(node);
+
+				if (isLeaf(node)) {
+					CORE_ASSERT(getIndexOfLeaf(node) == idx, "invariant");
+					break;
 				}
+
+				auto [child_l, child_r] = getChildren(node);
+
+				auto [begin_l, end_l] = getRange(child_l);
+				auto [begin_r, end_r] = getRange(child_r);
+
+				if (end_l <= idx && idx < begin_r) {
+					if_opt_none(opt_dir) return std::nullopt;
+
+					idx = (*opt_dir == Dir::Left) ? end_l - 1 : begin_r;
+				}
+
+				if (begin_l <= idx && idx < end_l) {
+					node = child_l;
+					continue;
+				}
+				CORE_ASSERT(begin_r <= idx && idx < end_r, "someone has to");
+				node = child_r;
 			}
 
 			return Path{
-				.idx   = idx,
 				.trace = trace,
 				.mem   = this,
-				.root  = root,
 			};
 		}
 

@@ -96,14 +96,14 @@ namespace vm::persistent {
 
 			while (keep_going) {
 				auto val_id = iter.getValue();
-				auto idx    = iter.idx;
+				auto idx    = iter.getIdx();
 
 				auto [_, success]
 					= ans.emplace(held_keys.atRight(idx), held_values.atRight(val_id));
 
 				CORE_ASSERT(success, "I need the value to be successfully emplaced");
 
-				keep_going &= iter.moveToValid(Memory::Dir::Right);
+				keep_going &= iter.moveToValid(Memory::Dir::Rght);
 			}
 
 			return ans;
