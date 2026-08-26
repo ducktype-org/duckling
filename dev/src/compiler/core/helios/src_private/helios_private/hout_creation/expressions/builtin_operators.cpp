@@ -85,7 +85,7 @@ namespace {
 
 		auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
 
-		auto makeBinOpEqExpr = [&](BuiltinBinary bin_op) -> Box<code::Expr> {
+		auto make_bin_op_eq_expr = [&](BuiltinBinary bin_op) -> Box<code::Expr> {
 			auto lhs_clone = lhs->clone();
 			return withOrigin(
 				new_origin,
@@ -95,7 +95,7 @@ namespace {
 			);
 		};
 
-		auto makeLangPrimitiveCall = [&](LanguagePrimitive lang_primitive) -> Box<code::Expr> {
+		auto make_lang_primitive_call = [&](LanguagePrimitive lang_primitive) -> Box<code::Expr> {
 			auto callee
 				= ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive })->valueOrThrow();
 
@@ -104,29 +104,28 @@ namespace {
 
 		switch (op) {
 		case IntegerPlusEq: {
-			std::cout << "I am here!" << std::endl;
-			return makeBinOpEqExpr(BuiltinBinary::IntegerAdd);
+			return make_bin_op_eq_expr(BuiltinBinary::IntegerAdd);
 		}
 		case IntegerMinusEq: {
-			return makeBinOpEqExpr(BuiltinBinary::IntegerSub);
+			return make_bin_op_eq_expr(BuiltinBinary::IntegerSub);
 		}
 		case IntegerMultiplyEq: {
-			return makeBinOpEqExpr(BuiltinBinary::IntegerMul);
+			return make_bin_op_eq_expr(BuiltinBinary::IntegerMul);
 		}
 		case IntegerDivideEq: {
-			return makeBinOpEqExpr(BuiltinBinary::IntegerDiv);
+			return make_bin_op_eq_expr(BuiltinBinary::IntegerDiv);
 		}
 		case FloatPlusEq: {
-			return makeBinOpEqExpr(BuiltinBinary::FloatAdd);
+			return make_bin_op_eq_expr(BuiltinBinary::FloatAdd);
 		}
 		case FloatMinusEq: {
-			return makeBinOpEqExpr(BuiltinBinary::FloatSub);
+			return make_bin_op_eq_expr(BuiltinBinary::FloatSub);
 		}
 		case FloatMultiplyEq: {
-			return makeBinOpEqExpr(BuiltinBinary::FloatMul);
+			return make_bin_op_eq_expr(BuiltinBinary::FloatMul);
 		}
 		case FloatDivideEq: {
-			return makeBinOpEqExpr(BuiltinBinary::FloatDiv);
+			return make_bin_op_eq_expr(BuiltinBinary::FloatDiv);
 		}
 		case IntegerPow: {
 			auto callee = bakeLanguagePrimitiveWithTypes(
@@ -145,7 +144,7 @@ namespace {
 					return {};
 			}();
 			if_opt_none(lang_primitive) return {};
-			return makeLangPrimitiveCall(lang_primitive.value());
+			return make_lang_primitive_call(lang_primitive.value());
 		}
 		default:
 			CORE_PANIC("Unsupported desugaring operator");
