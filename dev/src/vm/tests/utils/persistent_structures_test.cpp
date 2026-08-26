@@ -2,106 +2,20 @@
 #include <tester/tester.hpp>
 
 #include <vm/utils/bijective_map.hpp>
+#include <vm/utils/persistent/dummy/hashmap.hpp>
+#include <vm/utils/persistent/dummy/vector.hpp>
 #include <vm/utils/persistent/hashmap.hpp>
 #include <vm/utils/persistent/memory.hpp>
 #include <vm/utils/persistent/vector.hpp>
 
 #include <array>
 #include <optional>
+#include <random>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 class PersistentStlTester: public tester::TestSuite {
-	template<typename Val>
-	struct dummyPersistentVec {
-		std::unordered_map<usize, std::vector<Val>> dict = { 0, {} };
-
-		usize emplace(const std::vector<Val>& inp) {
-			for (auto& [id, vec]: dict)
-				if (vec == inp) return id;
-
-			usize new_id = dict.size();
-			dict.emplace(new_id, inp);
-
-			return new_id;
-		}
-
-		usize push(usize id, const Val& v) {
-			CORE_ASSERT(dict.contains(id), "must be valid id");
-			auto cpy = dict.at(id);
-			cpy.push_back(v);
-
-			return emplace(cpy);
-		}
-
-		usize pop(usize id, usize how_many = 1) {
-			CORE_ASSERT(dict.contains(id), "must be valid id");
-			auto cpy = dict.at(id);
-
-			CORE_ASSERT(cpy.size() >= how_many, "vec must be big enough");
-			for (usize i = 0; i < how_many; i++) cpy.pop_back();
-
-			return emplace(cpy);
-		}
-
-		usize change(usize id, usize idx, const Val& v) {
-			CORE_ASSERT(dict.contains(id), "must be valid id");
-			auto cpy = dict.at(id);
-			CORE_ASSERT(idx < cpy.size(), "we require valid idx");
-			cpy.at(idx) = v;
-
-			return emplace(cpy);
-		}
-	};
-
-	template<typename Key, typename Val>
-	struct dummyPersistentMap {
-		std::unordered_map<usize, base::HashMap<Key, Val>> dict = { 0, {} };
-
-		usize emplace(const base::HashMap<Key, Val>& inp) {
-			for (auto& [id, map]: dict)
-				if (map == inp) return id;
-
-			usize new_id = dict.size();
-			dict.emplace(new_id, inp);
-
-			return new_id;
-		}
-
-		usize insert(usize id, const Key& k, const Val& v) {
-			CORE_ASSERT(dict.contains(id), "must be valid id");
-			auto cpy  = dict.at(id);
-			cpy.at(k) = v;
-
-			return emplace(cpy);
-		}
-
-		usize erase(usize id, const Key& k) {
-			CORE_ASSERT(dict.contains(id), "must be valid id");
-			auto cpy = dict.at(id);
-			cpy.erase(k);
-
-			return emplace(cpy);
-		}
-
-		bool contains(usize id, const Key& k) const {
-			CORE_ASSERT(dict.contains(id), "must be valid id");
-			return dict.at(id).contains(k);
-		}
-
-		std::pair<bool, usize> emplace(usize id, const Key& k, const Val& v) {
-			CORE_ASSERT(dict.contains(id), "must be valid id");
-			auto cpy      = dict.at(id);
-			auto [suc, _] = cpy.emplace(k, v);
-
-			if (!suc) return { false, id };
-
-			usize new_id = emplace(cpy);
-			return { true, new_id };
-		}
-	};
 
 #undef TESTER_CLASS
 #define TESTER_CLASS PersistentStlTester
@@ -112,6 +26,8 @@ public:
 		TESTER_ADD_TEST(testMemory);
 		TESTER_ADD_TEST(testVector);
 		TESTER_ADD_TEST(testHashMap);
+		TESTER_ADD_TEST(testRandomVector);
+		TESTER_ADD_TEST(testRandomHashMap);
 	}
 
 	void testBijective() {
@@ -126,7 +42,6 @@ public:
 		for (usize i = 0; i < 10; i++) {
 			auto& rght = dir.atLeft(vals.at(i));
 			auto& left = dir.atRight(i);
-
 
 			ASSERT_EQUAL(i, rght);
 			ASSERT_EQUAL(vals.at(i), left);
@@ -146,8 +61,10 @@ public:
 
 		base::StrID new_val("new_val");
 		auto [inserted, refR] = dir.emplaceByLeft(new_val, 11);
-
 		ASSERT_TRUE(inserted);
+
+		ASSERT_TRUE(dir.atLeftOpt(base::StrID("non_existent")).empty());
+		ASSERT_TRUE(dir.atRightOpt(999).empty());
 	}
 
 	void testMemory() {
@@ -202,6 +119,9 @@ public:
 		decltype(diff) exp  = { { 1'410, 512, std::nullopt }, { 2'137, 67, std::nullopt } };
 		CORE_ASSERT(diff == exp, "Expecting two elements missing");
 
+		auto diff_same = mem.getDiff(op07, op07);
+		ASSERT_TRUE(diff_same.empty());
+
 		auto op09 = mem.set(empt, 8'484, 173);
 		checker(op09, { { 8'484, 173 } });
 
@@ -222,6 +142,26 @@ public:
 
 		ASSERT_EQUAL(op10, op11);
 		ASSERT_EQUAL(op11, op12);
+
+		auto op13 = mem.erase(op02, 1);
+		checker(op13, { { 2, 7 } });
+		ASSERT_EQUAL(op13, op03);
+
+		auto op14 = mem.erase(op13, 2);
+		checker(op14, {});
+		ASSERT_EQUAL(op14, empt);
+
+		auto op15 = mem.slice(op07, 1'000, 2'138);
+		checker(op15, { { 1'410, 512 }, { 2'137, 67 } });
+
+		auto op16 = mem.set(op01, 1, 999);
+		checker(op16, { { 1, 999 } });
+
+		auto op17 = mem.merge(op01, op16, [](usize, usize, usize r) -> base::Optional<usize> {
+			return r;
+		});
+		checker(op17, { { 1, 999 } });
+		ASSERT_EQUAL(op17, op16);
 	}
 
 	void testVector() {
@@ -291,6 +231,73 @@ public:
 		ASSERT_EQUAL(op16, op03);
 		ASSERT_EQUAL(op02, op04);
 		ASSERT_EQUAL(op05, op04);
+
+		auto subview = vec.view(op07, 1, 4);
+		ASSERT_EQUAL((std::vector<std::string>{ "val02", "val03", "val05" }), subview);
+
+		auto empty_view = vec.view(op07, 2, 2);
+		ASSERT_TRUE(empty_view.empty());
+
+		auto op17 = vec.pop(op01);
+		checker(op17, {});
+		ASSERT_EQUAL(op17, empt);
+
+		auto bulk_state = empt;
+		std::vector<std::string> bulk_expected;
+		for (usize i = 0; i < 20; i++) {
+			auto s = "bulk_" + std::to_string(i);
+			bulk_expected.push_back(s);
+			bulk_state = vec.push(bulk_state, s);
+		}
+		checker(bulk_state, bulk_expected);
+
+		for (usize i = 0; i < 10; i++) {
+			bulk_expected.pop_back();
+			bulk_state = vec.pop(bulk_state);
+		}
+		checker(bulk_state, bulk_expected);
+	}
+
+	void testRandomVector() {
+		using namespace vm::persistent;
+
+		DummyVector<std::string> dummy;
+		Vector<std::string>      real;
+		std::vector<usize>       dummy_states = { DummyVector<std::string>::EMPTY };
+		std::vector<VectorStateID> real_states = { Vector<std::string>::EMPTY };
+		std::mt19937_64           random{ 0x5EED1234 };
+
+		auto check = [&](usize dummy_state, VectorStateID real_state) {
+			ASSERT_EQUAL(dummy.size(dummy_state), real.size(real_state));
+			for (usize i = 0; i < dummy.size(dummy_state); i++)
+				ASSERT_EQUAL(dummy.at(dummy_state, i), real.at(real_state, i));
+		};
+
+		for (usize i = 0; i < 10'000; i++) {
+			auto state_idx  = random() % real_states.size();
+			auto dummy_id   = dummy_states.at(state_idx);
+			auto real_state = real_states.at(state_idx);
+			auto size       = dummy.size(dummy_id);
+			auto operation  = random() % 3;
+
+			if (operation == 0 || size == 0) {
+				auto value = "random_" + std::to_string(i);
+				dummy_states.push_back(dummy.push(dummy_id, value));
+				real_states.push_back(real.push(real_state, value));
+			} else if (operation == 1) {
+				auto idx   = random() % size;
+				auto value = "random_" + std::to_string(i);
+				dummy_states.push_back(dummy.change(dummy_id, idx, value));
+				real_states.push_back(real.change(real_state, idx, value));
+			} else {
+				auto amount = 1 + random() % size;
+				dummy_states.push_back(dummy.pop(dummy_id, amount));
+				real_states.push_back(real.pop(real_state, amount));
+			}
+
+			check(dummy_states.back(), real_states.back());
+			if (i % 256 == 0) check(dummy_id, real_state);
+		}
 	}
 
 	void testHashMap() {
@@ -356,6 +363,56 @@ public:
 		checker(op07, {
 			{ "key1", "val1" }, { "key2", "val5" }, { "key3", "val2" }, { "key4", "val4" }
 		});
+
+		auto op08 = map.erase(op07, "key1");
+		auto op09 = map.erase(op08, "key2");
+		auto op10 = map.erase(op09, "key3");
+		auto op11 = map.erase(op10, "key4");
+		checker(op11, {});
+		ASSERT_EQUAL(op11, empt);
+
+		auto bulk_map = empt;
+		base::HashMap<std::string, std::string> bulk_expected{};
+		for (usize i = 0; i < 20; i++) {
+			auto k = "k_" + std::to_string(i);
+			auto v = "v_" + std::to_string(i);
+			bulk_expected.emplace(k, v);
+			bulk_map = map.insert(bulk_map, k, v);
+		}
+		checker(bulk_map, bulk_expected);
+	}
+
+	void testRandomHashMap() {
+		using namespace vm::persistent;
+
+		DummyHashMap<std::string, std::string> dummy;
+		HashMap<std::string, std::string>      real;
+		std::vector<usize>                    dummy_states = { DummyHashMap<std::string, std::string>::EMPTY };
+		std::vector<HashMapStateID>            real_states = { HashMap<std::string, std::string>::EMPTY };
+		std::mt19937_64                        random{ 0xBADC0FFE };
+
+		auto check = [&](usize dummy_state, HashMapStateID real_state, usize max_key) {
+			for (usize i = 0; i <= max_key; i++) {
+				auto key = "random_key_" + std::to_string(i);
+				ASSERT_EQUAL(dummy.contains(dummy_state, key), real.contains(real_state, key));
+				if (dummy.contains(dummy_state, key))
+					ASSERT_EQUAL(dummy.at(dummy_state, key), real.at(real_state, key));
+			}
+		};
+
+		for (usize i = 0; i < 10'000; i++) {
+			auto state_idx  = random() % real_states.size();
+			auto dummy_id   = dummy_states.at(state_idx);
+			auto real_state = real_states.at(state_idx);
+			auto key        = "random_key_" + std::to_string(i);
+			auto value      = "random_value_" + std::to_string(random());
+
+			dummy_states.push_back(dummy.insert(dummy_id, key, value));
+			real_states.push_back(real.insert(real_state, key, value));
+
+			check(dummy_states.back(), real_states.back(), i);
+			if (i % 256 == 0) check(dummy_id, real_state, i);
+		}
 	}
 };
 
