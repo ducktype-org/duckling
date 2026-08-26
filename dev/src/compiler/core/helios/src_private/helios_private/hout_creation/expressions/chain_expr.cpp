@@ -5,10 +5,6 @@
 
 #include "chain_expr.hpp"
 
-#include "helios/symbols/symbol_id.hpp"
-#include "helios/tsh/type_interface.hpp"
-#include "helios_private/symbols/pst_symbol_data.hpp"
-
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>

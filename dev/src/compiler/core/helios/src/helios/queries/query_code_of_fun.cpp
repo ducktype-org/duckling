@@ -36,7 +36,6 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "diagnostic/placeholder.hpp"
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
