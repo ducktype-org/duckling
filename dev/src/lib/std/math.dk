@@ -306,11 +306,11 @@ namespace impl {
         These are the functions not provided by the C standard library.
     #}
     template(T: type)
-    fun powi(x: type, y: type) -> type = {
+    fun powi(x: T, y: T) -> T = {
         if (y < 0) panic();
 
-        var result: type = 1;
-        var exp: type = x;
+        var result: T = 1;
+        var exp: T = x;
         while (y > 0) {
             if (y % 2 == 1) {
                 result = result * exp;
