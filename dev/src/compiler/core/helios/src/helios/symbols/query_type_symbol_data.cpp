@@ -1,10 +1,12 @@
 
 #include "query_type_symbol_data.hpp"
 
+#include "helios/symbols/query_type_of_symbol.hpp"
 #include "helios/tsh/queries/types.hpp"
 #include "helios/tsh/type_interface.hpp"
 #include "symbol_kind.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
@@ -79,10 +81,225 @@ namespace compiler::helios {
 			return { .visibility_opt = visibility_opt, .is_static = is_static };
 		}
 
+		static tsh::MemberVisibility getDefaultMemberVisibility(
+			std::vector<SpecifiersResult> members_specifiers
+		) {
+			if (std::ranges::any_of(members_specifiers, [](SpecifiersResult spec) {
+					return spec.visibility_opt.has_value();
+				}))
+				return tsh::MemberVisibility::Private;
+			return tsh::MemberVisibility::Public;
+		}
+
+		static tsh::InterfaceElement::InterfaceElementKind getElementKind(
+			SymbolKind kind, SpecifiersResult specifiers
+		) {
+			using ElementKind = tsh::InterfaceElement::InterfaceElementKind;
+			switch (kind) {
+			case SymbolKind::Method:
+				if (specifiers.is_static) return ElementKind::StaticMethod;
+				return ElementKind::Method;
+			case SymbolKind::Destructor:
+				return ElementKind::Method;
+			case SymbolKind::Field:
+				if (specifiers.is_static) return ElementKind::StaticField;
+				return ElementKind::Field;
+			case SymbolKind::Constructor:
+				// The only constructor now is a copy constructor which is a static method
+				return ElementKind::StaticMethod;
+			default:
+				return ElementKind::Other;
+			}
+		}
+
+		static tsh::MemberSpecialKind specialKind(query::Context& ctx, SymID sym) {
+			switch (kind(sym)) {
+			case SymbolKind::Destructor:
+				return tsh::MemberSpecialKind::UserDestructor;
+			case SymbolKind::Constructor:
+				CORE_ASSERT(
+					name(sym) == "copy", "The only constructor in the class is copy constructor"
+				);
+				return tsh::MemberSpecialKind::CopyConstructor;
+			case SymbolKind::Method:
+				if (name(sym) == "toString") {
+					const auto method_type
+						= ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
+					if (method_type.getKind() == tsh::Kind::Function) {
+						const auto fn_type = method_type.as<tsh::FunctionAbstractType>();
+						// parameterTypes.size() == 1 means method has not params except self.
+						if (fn_type.getParameterTypes().size() == 1
+						    && fn_type.getResultType()
+						           == tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx)))
+							return tsh::MemberSpecialKind::ToString;
+					}
+				}
+				return tsh::MemberSpecialKind::None;
+			default:
+				return tsh::MemberSpecialKind::None;
+			}
+		}
+
+		/**
+		 * @brief The members of a class that change how it is constructed, copied and destroyed.
+		 * @note These are collected from the members of the class rather than from the `defgen`
+		 * helpers, because those ask for the `ClassSymbolData` that is being built here.
+		 */
+		struct UserDefinedMembers {
+			bool has_copy_constructor = false;
+			bool has_destructor       = false;
+		};
+
+		static void collectUserDefinedMember(
+			tsh::MemberSpecialKind special_kind, UserDefinedMembers& user_members
+		) {
+			if (special_kind == tsh::MemberSpecialKind::CopyConstructor)
+				user_members.has_copy_constructor = true;
+			if (special_kind == tsh::MemberSpecialKind::UserDestructor)
+				user_members.has_destructor = true;
+		}
+
+		/**
+		 * @brief Whether the field is declared with an initializing value, as in `x: i32 = 2;`.
+		 */
+		static bool hasInitializer(query::Context& ctx, const tsh::InterfaceElement& field) {
+			auto field_pst = maybeSymbolPst(field.getSymbol())
+			                     .value()
+			                     .unlock(ctx)
+			                     .dynamicCast<pst::Field>()
+			                     .value();
+			return field_pst->getInit().has_value();
+		}
+
+		/**
+		 * @brief A class is default constructible when each of its fields either has an
+		 * initializing value, or is of a default constructible type.
+		 */
+		static bool isDefaultConstructible(
+			query::Context& ctx, const tsh::TypeInterface& class_interface
+		) {
+			return std::ranges::all_of(
+				class_interface.getFieldsView(),
+				[&](const tsh::InterfaceElement& field) {
+					return hasInitializer(ctx, field)
+				        or field.getType(ctx).isDefaultConstructible(ctx);
+				}
+			);
+		}
+
+		/**
+		 * @brief A class is trivially zero initializable when none of its fields has an
+		 * initializing value, and all of them are trivially zero initializable.
+		 */
+		static bool isTriviallyZeroInitializable(
+			query::Context& ctx, const tsh::TypeInterface& class_interface
+		) {
+			return std::ranges::all_of(class_interface.getFieldsView(), [&](const auto& field) {
+				return not hasInitializer(ctx, field)
+				   and field.getType(ctx).isTriviallyZeroInitializable(ctx);
+			});
+		}
+
+		/**
+		 * @brief A user-defined copy constructor makes the class copyable regardless of its
+		 * fields, otherwise all of its fields have to be copyable.
+		 */
+		static bool isCopyable(
+			query::Context&           ctx,
+			const tsh::TypeInterface& class_interface,
+			UserDefinedMembers        user_members
+		) {
+			if (user_members.has_copy_constructor) return true;
+
+			return std::ranges::all_of(class_interface.getFieldsView(), [&](const auto& field) {
+				return field.getType(ctx).isCopyable(ctx);
+			});
+		}
+
+		/**
+		 * @brief A user-defined copy constructor means copies must run user code, so the class is
+		 * never trivially copyable. Otherwise all of its fields have to be trivially copyable.
+		 */
+		static bool isTriviallyCopyable(
+			query::Context&           ctx,
+			const tsh::TypeInterface& class_interface,
+			UserDefinedMembers        user_members
+		) {
+			if (user_members.has_copy_constructor) return false;
+
+			return std::ranges::all_of(class_interface.getFieldsView(), [&](const auto& field) {
+				return field.getType(ctx).isTriviallyCopyable(ctx);
+			});
+		}
+
+		/**
+		 * @brief A user-defined destructor means destruction runs user code, so the class is never
+		 * trivially destructible. Otherwise the destructor is a no-op only when all of the fields
+		 * are trivially destructible.
+		 */
+		static bool isTriviallyDestructible(
+			query::Context&           ctx,
+			const tsh::TypeInterface& class_interface,
+			UserDefinedMembers        user_members
+		) {
+			if (user_members.has_destructor) return false;
+
+			return std::ranges::all_of(class_interface.getFieldsView(), [&](const auto& field) {
+				return field.getType(ctx).isTriviallyDestructible(ctx);
+			});
+		}
+
+		/**
+		 * @brief A class carries information when it declares at least one field.
+		 */
+		static bool carriesInformation(const tsh::TypeInterface& class_interface) {
+			// this should probably be changed/expanded in the future:
+			auto fields = class_interface.getFieldsView();
+			return fields.begin() != fields.end();
+		}
+
+		/**
+		 * @brief Push the compiler-generated constructors of the class into its interface.
+		 *
+		 * The constructor taking a value for each field always exists. The parameterless one,
+		 * which uses the initializing values of the fields and the default values of their types,
+		 * only exists when the class is default constructible.
+		 */
+		static void pushConstructors(
+			query::Context&            ctx,
+			tsh::TypeInterfaceBuilder& interface_builder,
+			tsh::ClassAbstractType     class_type,
+			bool                       is_default_constructible
+		) {
+			using ElementKind = tsh::InterfaceElement::InterfaceElementKind;
+
+			auto generated_constructor = [&](defgen::Constructor::Kind kind) {
+				return ctx.query<defgen::QueryGeneratedSymbol>({
+					.name = name(class_type.getSymbol()),
+					.generated_symbol_data = defgen::Constructor{ .type = class_type, .kind = kind },
+				});
+			};
+
+			interface_builder.push(
+				generated_constructor(defgen::Constructor::Kind::Implicit),
+				ElementKind::StaticMethod,
+				tsh::MemberVisibility::Public,
+				tsh::MemberSpecialKind::Constructor
+			);
+
+			if (not is_default_constructible) return;
+
+			interface_builder.push(
+				generated_constructor(defgen::Constructor::Kind::Default),
+				ElementKind::StaticMethod,
+				tsh::MemberVisibility::Public,
+				tsh::MemberSpecialKind::ParameterlessConstructor
+			);
+		}
+
 		static auto provide(Context& ctx, QKey sym) -> PResult {
 			CORE_ASSERT(kind(sym) == SymbolKind::Class, "Symbol is not a class");
 			tsh::ClassAbstractType    class_type = ctx.query<tsh::QueryClassType>(sym);
-			ClassSymbolData           result{};
 			tsh::TypeInterfaceBuilder interface_builder(class_type);
 
 			auto class_stmt       = getSymRef(sym)->stmtCast(ctx).value();
@@ -94,38 +311,41 @@ namespace compiler::helios {
 			    | std::views::transform([&](SymID sym) { return getSpecifiers(ctx, sym); })
 			    | std::ranges::to<std::vector>();
 
-			tsh::MemberVisibility default_visiblity = tsh::MemberVisibility::Public;
-			if (std::ranges::any_of(members_specifiers, [](SpecifiersResult spec) {
-					return spec.visibility_opt.has_value();
-				}))
-				default_visiblity = tsh::MemberVisibility::Private;
+			auto default_visiblity = getDefaultMemberVisibility(members_specifiers);
 
-			ClassSymbolData class_info;
+			ClassSymbolData    class_info;
+			UserDefinedMembers user_members;
 			for (usize i{ 0 }; i < (*class_symbols).size(); i++) {
-				auto sym        = (*class_symbols)[i];
-				auto specifiers = members_specifiers[i];
-				switch (kind(sym)) {
-				case SymbolKind::Method:
-					interface_builder.push({
-						sym,
-						class_type,
-					}) break;
-				case SymbolKind::Constructor:
-					class_info.constructors.push_back(sym);
-					break;
-				case SymbolKind::Destructor:
-					// This doesn't catch multiple destructors
-					class_info.destructor = sym;
-					break;
-				case SymbolKind::Field:
-					class_info.members.push_back(sym);
-					break;
-				default:
-					throw base::NotYetImplemented(base::strConcat(
-						"Using ", typeid(kind(sym)).name(), " inside a class is not yet implemented."
-					));
-				}
+				auto sym                 = (*class_symbols)[i];
+				auto specifiers          = members_specifiers[i];
+				auto interface_elem_kind = getElementKind(kind(sym), specifiers);
+				auto member_visibility   = specifiers.visibility_opt.copyValueOr(default_visiblity);
+				auto member_special_kind = specialKind(ctx, sym);
+
+				collectUserDefinedMember(member_special_kind, user_members);
+
+				interface_builder.push(
+					sym, interface_elem_kind, member_visibility, member_special_kind
+				);
 			}
+
+			auto tmp_interface = interface_builder.build();
+
+			class_info.is_trivially_zero_initializable
+				= isTriviallyZeroInitializable(ctx, tmp_interface);
+			class_info.is_copyable = isCopyable(ctx, tmp_interface, user_members);
+			class_info.is_trivially_copyable
+				= isTriviallyCopyable(ctx, tmp_interface, user_members);
+			class_info.is_trivially_destructible
+				= isTriviallyDestructible(ctx, tmp_interface, user_members);
+			class_info.carries_information = carriesInformation(tmp_interface);
+
+			pushConstructors(
+				ctx, interface_builder, class_type, class_info.is_default_constructible
+			);
+
+			class_info.declared_interface = interface_builder.build();
+
 			// Find the name
 			auto class_data_parser = ClassDataParser(ctx);
 			class_stmt->acceptVisitor(class_data_parser);

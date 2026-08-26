@@ -3412,10 +3412,13 @@ private:
 				const auto type = get_class_type(user_sym);
 				ASSERT_TRUE(!type.isTriviallyDestructible(ctx));
 
-				const auto user_dtor = userDestructorOf(ctx, user_sym);
-				ASSERT_HAS_VALUE(user_dtor);
-				ASSERT_TRUE(isUserDefinedDestructor(ctx, user_dtor.value()));
-				ctx.query<QueryCodeOfFun>(user_dtor.value())->valueOrThrow();
+				const auto user_dtor_element = type.getInterface(ctx)->getSpecialElement(
+					tsh::MemberSpecialKind::UserDestructor
+				);
+				ASSERT_HAS_VALUE(user_dtor_element);
+				const auto user_dtor = user_dtor_element.value()->getSymbol();
+				ASSERT_TRUE(isUserDefinedDestructor(ctx, user_dtor));
+				ctx.query<QueryCodeOfFun>(user_dtor)->valueOrThrow();
 
 				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
 				const auto& stmts = dtor.body->statements;
@@ -3425,7 +3428,7 @@ private:
 				ASSERT_TRUE(expr_stmt != nullptr);
 				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
 				ASSERT_TRUE(call != nullptr);
-				ASSERT_EQUAL(user_dtor.value(), getIdentifierExprSymID(call->callee.ref()).value());
+				ASSERT_EQUAL(user_dtor, getIdentifierExprSymID(call->callee.ref()).value());
 			}
 
 			// A class with a user destructor and non-trivial members should call the user code
@@ -3437,10 +3440,14 @@ private:
 				ASSERT_EQUAL_PRINT(3, stmts.size());
 
 				// [0] user destructor call.
-				const auto user_dtor = userDestructorOf(ctx, user_members_sym).value();
-				auto       user_call = dynamic_cast<const CallExpr*>(
-                    dynamic_cast<const ExprStmt*>(stmts.at(0).get())->expr.get()
-                );
+				const auto user_dtor
+					= type.getInterface(ctx)
+				          ->getSpecialElement(tsh::MemberSpecialKind::UserDestructor)
+				          .value()
+				          ->getSymbol();
+				auto user_call = dynamic_cast<const CallExpr*>(
+					dynamic_cast<const ExprStmt*>(stmts.at(0).get())->expr.get()
+				);
 				ASSERT_TRUE(user_call != nullptr);
 				ASSERT_EQUAL(user_dtor, getIdentifierExprSymID(user_call->callee.ref()).value());
 

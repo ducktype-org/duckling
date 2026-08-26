@@ -14,6 +14,8 @@
 
 #include <helios/symbols/symbol_id.hpp>
 
+#include <base/collections/optional.hpp>
+
 #include <string_id/string_id.hpp>
 
 #include <ranges>
@@ -141,12 +143,11 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Checks if this element of the interface is a field.
+		 * @brief Checks if this element of the interface is a (non-static) field.
 		 *
 		 * An element is a field if it cannot be called (unlike a method).
 		 * Equivalently, its value is stored in memory instead of being computed every time.
 		 *
-		 * This is always equal to `!isMethod()`.
 		 * @return Whether this element of the interface is a field.
 		 */
 		[[nodiscard]]
@@ -155,17 +156,48 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Checks if this element of the interface is a method.
+		 * @brief Checks if this element of the interface is a static field.
+		 */
+		[[nodiscard]]
+		bool isStaticField() const {
+			return kind == InterfaceElementKind::StaticField;
+		}
+
+		/**
+		 * @brief Checks if this element of the interface is a field, static or not.
+		 */
+		[[nodiscard]]
+		bool isAnyField() const {
+			return isField() or isStaticField();
+		}
+
+		/**
+		 * @brief Checks if this element of the interface is a (non-static) method.
 		 *
 		 * An element is a method if it must be called to get its value (unlike a field).
 		 * Equivalently, its value is computed anew every time instead of being stored in memory.
-		 *
-		 * This is always equal to `!isField()`.
+		 *.
 		 * @return Whether this element of the interface is a method.
 		 */
 		[[nodiscard]]
 		bool isMethod() const {
 			return kind == InterfaceElementKind::Method;
+		}
+
+		/**
+		 * @brief Checks if this element of the interface is a static method.
+		 */
+		[[nodiscard]]
+		bool isStaticMethod() const {
+			return kind == InterfaceElementKind::StaticMethod;
+		}
+
+		/**
+		 * @brief Checks if this element of the interface is a method, static or not.
+		 */
+		[[nodiscard]]
+		bool isAnyMethod() const {
+			return isMethod() or isStaticMethod();
 		}
 
 		/**
@@ -278,6 +310,14 @@ namespace compiler::tsh {
 		}
 
 		/**
+		 * @brief Gets all the elements of an interface with a given name.
+		 * @param name The requested name.
+		 * @return The elements of an interface with the requested name.
+		 */
+		[[nodiscard]]
+		const std::vector<InterfaceElement>& getElementsWithName(base::StrID name) const;
+
+		/**
 		 * @brief Gets all the elements of an interface, grouped by name.
 		 * @return The elements of an interface, grouped by name.
 		 */
@@ -285,12 +325,11 @@ namespace compiler::tsh {
 		const base::HashMap<base::StrID, std::vector<InterfaceElement>>& getElementsByName() const;
 
 		/**
-		 * @brief Gets all the elements of an interface with a given name.
-		 * @param name The requested name.
-		 * @return The elements of an interface with the requested name.
+		 * @brief Gets the element of this interface with the given special kind, if it has one.
+		 * @note `MemberSpecialKind::None` is not a special kind, so it never has an element.
 		 */
 		[[nodiscard]]
-		const std::vector<InterfaceElement>& getElementsWithName(base::StrID name) const;
+		base::Optional<CRef<InterfaceElement>> getSpecialElement(MemberSpecialKind special) const;
 
 		/**
 		 * @brief Gets a view of all the fields of this interface.
@@ -303,6 +342,26 @@ namespace compiler::tsh {
 		}
 
 		/**
+		 * @brief Gets a view of all the static fields of this interface.
+		 * @return A view of all the static fields of this interface.
+		 */
+		[[nodiscard]]
+		auto getStaticFieldsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isStaticField(); });
+		}
+
+		/**
+		 * @brief Gets a view of all the fields of this interface, static and non-static.
+		 * @return A view of all the fields of this interface.
+		 */
+		[[nodiscard]]
+		auto getAnyFieldsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isAnyField(); });
+		}
+
+		/**
 		 * @brief Gets a view of all the methods of this interface.
 		 * @return A view of all the methods of this interface.
 		 */
@@ -310,6 +369,26 @@ namespace compiler::tsh {
 		auto getMethodsView() const {
 			return elements
 			     | std::views::filter([](const InterfaceElement& e) { return e.isMethod(); });
+		}
+
+		/**
+		 * @brief Gets a view of all the static methods of this interface.
+		 * @return A view of all the static methods of this interface.
+		 */
+		[[nodiscard]]
+		auto getStaticMethodsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isStaticMethod(); });
+		}
+
+		/**
+		 * @brief Gets a view of all the methods of this interface, static and non-static.
+		 * @return A view of all the methods of this interface.
+		 */
+		[[nodiscard]]
+		auto getAnyMethodsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isAnyMethod(); });
 		}
 	};
 

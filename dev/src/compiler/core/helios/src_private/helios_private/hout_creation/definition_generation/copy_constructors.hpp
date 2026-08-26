@@ -8,21 +8,18 @@
 
 namespace compiler::helios::defgen {
 	/**
-	 * @brief Get the symbol of the default copy constructor for a given type.
+	 * @brief Get the symbol of the compiler-generated copy constructor for a given type.
+	 * This function always returns a SymID, even if the requested type is trivially copyable,
+	 * in which case the SymID might be non-usable.
+	 */
+	SymID generatedCopyConstructorSymForType(query::Context& ctx, tsh::AbstractType type);
+
+	/**
+	 * @brief Get the symbol of the copy constructor of a type, which is the user-defined one when
+	 * the type declares it, and the compiler-generated one otherwise.
+	 * Panics for types that are trivially copyable, as those have no copy constructor.
 	 */
 	SymID copyConstructorSymForType(query::Context& ctx, tsh::AbstractType type);
-
-	/**
-	 * @brief Whether the given symbol is a user-defined copy constructor.
-	 */
-	bool isUserDefinedCopyConstructor(query::Context& ctx, SymID sym);
-
-	/**
-	 * @brief Finds the user-defined copy constructor of a class, if it declares one.
-	 * @param class_sym The symbol of the class.
-	 * @return The copy constructor symbol, or an empty optional if the class doesn't declare one.
-	 */
-	base::Optional<SymID> userCopyConstructorOf(query::Context& ctx, SymID class_sym);
 
 	/**
 	 * @brief Get the compiler-generated HOUT representation of a type's default copy constructor.

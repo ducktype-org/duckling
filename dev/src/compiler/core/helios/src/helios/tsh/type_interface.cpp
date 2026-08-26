@@ -27,6 +27,7 @@ namespace compiler::tsh {
 			base::HashMap<MemberSpecialKind, InterfaceElement> result{};
 			for (const InterfaceElement& element: elements) {
 				auto special_kind = element.specialKind();
+				if (special_kind == MemberSpecialKind::None) continue;
 				result.put(special_kind, element);
 			}
 			return result;
@@ -44,6 +45,13 @@ namespace compiler::tsh {
 		  elements_by_name(groupElementsByName(elements)),
 		  element_by_special_kind(groupElementBySpecialKind(elements)) {
 		CORE_ASSERT(checkForDuplicates().isOk(), "Duplicate elements in type interface");
+	}
+
+	base::Optional<CRef<InterfaceElement>> TypeInterface::getSpecialElement(
+		const MemberSpecialKind special
+	) const {
+		if (not element_by_special_kind.contains(special)) return {};
+		return CRef(&element_by_special_kind.at(special));
 	}
 
 	const base::HashMap<base::StrID, std::vector<InterfaceElement>>& TypeInterface::getElementsByName(

@@ -38,11 +38,6 @@ namespace compiler::helios::defgen {
 		return kind(sym) == SymbolKind::Destructor;
 	}
 
-	base::Optional<SymID> userDestructorOf(query::Context& ctx, const SymID class_sym) {
-		if (kind(class_sym) != SymbolKind::Class) return {};
-		return ctx.query<QueryClassSymbolData>(class_sym)->valueOrThrow().destructor;
-	}
-
 	namespace {
 		/**
 		 * @brief Append the statements that destroy the `location` value.
@@ -121,11 +116,12 @@ namespace compiler::helios::defgen {
 
 			// For a class that declares its own destructor, run the user code before destroying the
 			// members.
-			if (owner_type.getKind() == tsh::Kind::Class) {
-				if (const auto user
-				    = userDestructorOf(ctx, owner_type.as<tsh::ClassAbstractType>().getSymbol())) {
-					body.emplace_back(s.expr(s.call(s.ident(user.value()), s.ident(self_symbol))));
-				}
+			if (const auto user = owner_type.getInterface(ctx)->getSpecialElement(
+					tsh::MemberSpecialKind::UserDestructor
+				)) {
+				body.emplace_back(
+					s.expr(s.call(s.ident(user.value()->getSymbol()), s.ident(self_symbol)))
+				);
 			}
 
 			const std::vector<tsh::InterfaceElement> fields

@@ -363,7 +363,7 @@ namespace compiler::helios {
 			);
 
 			const auto class_type = ctx.query<tsh::QueryClassType>(class_sym);
-
+			
 
 			auto methods = class_type.getInterface(ctx)->getMethodsView();
 

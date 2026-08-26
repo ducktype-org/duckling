@@ -28,7 +28,7 @@ namespace compiler::helios {
 		// =============== Precomputed type properties ===============
 
 		bool is_trivially_destructible;
-		bool is_trivially_constructible;
+		bool is_default_constructible;
 		bool is_trivially_zero_initializable;
 		bool is_copyable;
 		bool is_trivially_copyable;

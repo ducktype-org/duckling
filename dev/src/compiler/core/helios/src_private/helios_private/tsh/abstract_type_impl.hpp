@@ -15,6 +15,11 @@
 #include <utility>
 #include <vector>
 
+namespace compiler::helios {
+	// Forwards:
+	struct ClassSymbolData;
+}
+
 namespace compiler::tsh {
 	/**
 	 * @brief The AbstractTypeImpl class and its subclasses are a heavy type implementation
@@ -920,14 +925,15 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override;
 		[[nodiscard]] bool isCopyable(query::Context&) const override;
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override;
+		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override;
 
-		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
-			// this should probably be changed/expanded in the future:
-			u64 fields_count = 0;
-			for (const auto& element: getDeclaredInterface(ctx)->getElements())
-				if (element.isField()) fields_count++;
-			return fields_count != 0;
-		}
+	private:
+		/**
+		 * @brief The data of the class the type describes, holding its interface and the
+		 * properties precomputed from it.
+		 */
+		[[nodiscard]]
+		CRef<compiler::helios::ClassSymbolData> classSymbolData(query::Context& ctx) const;
 	};
 
 	class NamespaceAbstractTypeImpl final: public AbstractTypeImpl {

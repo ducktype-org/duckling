@@ -4,7 +4,6 @@
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/type_interface.hpp>
-#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 
 // @TODO: #2331 Remove these includes
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -16,6 +15,7 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
@@ -37,6 +37,7 @@ namespace compiler::tsh {
 	 * @return The default interface for the given type.
 	 */
 	TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
+		using helios::defgen::generatedCopyConstructorSymForType;
 		using helios::defgen::generatedDestructSymForType;
 		using helios::defgen::generatedToStringSymForType;
 
@@ -84,6 +85,20 @@ namespace compiler::tsh {
 				InterfaceElement::InterfaceElementKind::Method,
 				MemberVisibility::Public,
 				MemberSpecialKind::Destructor
+			);
+		}
+
+		// A trivially copyable type is copied by copying its bytes, so it needs no copy
+		// constructor. A type that declares its own one keeps it, because the declared interface
+		// wins over the default one for every special kind.
+		if (not type.isTriviallyCopyable(ctx)) {
+			elements.emplace_back(
+				generatedCopyConstructorSymForType(ctx, type),
+				type,
+				0,
+				InterfaceElement::InterfaceElementKind::StaticMethod,
+				MemberVisibility::Public,
+				MemberSpecialKind::CopyConstructor
 			);
 		}
 
@@ -304,6 +319,11 @@ namespace compiler::tsh {
 		representation = "Class " + name(symbol).str();
 	}
 
+	CRef<compiler::helios::ClassSymbolData> ClassAbstractTypeImpl::classSymbolData(query::Context& ctx
+	) const {
+		return &ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow();
+	}
+
 	CRef<TypeInterface> ClassAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
 		return &ctx.query<QueryInterfaceOfClass>(this)->valueOrThrow();
 	}
@@ -447,75 +467,27 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isDefaultConstructible(query::Context& ctx) const {
-		auto fields = getDeclaredInterface(ctx)->getFieldsView();
-		for (const auto& field: fields) {
-			// @TODO: #2331 Move this logic out of TSH.
-			auto field_pst = helios::maybeSymbolPst(field.getSymbol())
-			                     .value()
-			                     .unlock(ctx)
-			                     .dynamicCast<pst::Field>()
-			                     .value();
-			// If the field has an initializing value, then it's always constructible.
-			if (field_pst->getInit().has_value()) continue;
-			// Otherwise it has to be default constructible.
-			if (!field.getType(ctx).isDefaultConstructible(ctx)) return false;
-		}
-		return true;
+		return classSymbolData(ctx)->is_default_constructible;
 	}
 
 	bool ClassAbstractTypeImpl::isTriviallyZeroInitializable(query::Context& ctx) const {
-		auto fields = getDeclaredInterface(ctx)->getFieldsView();
-		for (const auto& field: fields) {
-			// @TODO: #2331 Move this logic out of TSH.
-			auto field_pst = helios::maybeSymbolPst(field.getSymbol())
-			                     .value()
-			                     .unlock(ctx)
-			                     .dynamicCast<pst::Field>()
-			                     .value();
-			// If any of the fields has an initial value than the class is not trivially zero
-			// initializable.
-			if (field_pst->getInit().has_value()) return false;
-			// All fields have to be trivially zero initializable.
-			if (!field.getType(ctx).isTriviallyZeroInitializable(ctx)) return false;
-		}
-		return true;
+		return classSymbolData(ctx)->is_trivially_zero_initializable;
 	}
 
 	bool ClassAbstractTypeImpl::isCopyable(query::Context& ctx) const {
-		// A user-defined copy constructor makes the class copyable regardless of its fields.
-		if (compiler::helios::defgen::userCopyConstructorOf(ctx, symbol).has_value()) return true;
-
-		auto fields = getDeclaredInterface(ctx)->getFieldsView();
-		// All component types have to be copyable.
-		return std::ranges::all_of(fields, [&](const auto& field) {
-			return field.getType(ctx).isCopyable(ctx);
-		});
+		return classSymbolData(ctx)->is_copyable;
 	}
 
 	bool ClassAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
-		// A user-defined copy constructor means copies must run user code, so the class is never
-		// trivially copyable.
-		if (compiler::helios::defgen::userCopyConstructorOf(ctx, symbol).has_value()) return false;
-
-		auto fields = getDeclaredInterface(ctx)->getFieldsView();
-		// All component types have to be trivially copyable.
-		return std::ranges::all_of(fields, [&](const auto& field) {
-			return field.getType(ctx).isTriviallyCopyable(ctx);
-		});
+		return classSymbolData(ctx)->is_trivially_copyable;
 	}
 
 	bool ClassAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
-		// A user-defined destructor code, means the class is not trivially destructible.
-		if (ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		        ->valueOrThrow()
-		        .destructor.has_value())
-			return false;
+		return classSymbolData(ctx)->is_trivially_destructible;
+	}
 
-		auto fields = getDeclaredInterface(ctx)->getFieldsView();
-		// Otherwise the destructor is a no-op only if every field is trivially destructible.
-		return std::ranges::all_of(fields, [&](const auto& field) {
-			return field.getType(ctx).isTriviallyDestructible(ctx);
-		});
+	bool ClassAbstractTypeImpl::carriesInformation(query::Context& ctx) const {
+		return classSymbolData(ctx)->carries_information;
 	}
 
 	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(AbstractType, query::Context&) const {
