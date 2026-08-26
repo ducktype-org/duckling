@@ -51,10 +51,11 @@ namespace vm::persistent::detail {
 		);
 
 	public:
-		constexpr static auto EMPTY   = NodeID{ 0 };
-		constexpr static idxT IDX_END = idxT(1) << (POS_T_SIZE - 1);
+		constexpr static NodeID EMPTY    = NodeID{ 0 };
+		constexpr static posT   ROOT_POS = 1;
+		constexpr static idxT   IDX_END  = idxT(1) << (POS_T_SIZE - 1);
 
-		enum class Dir { Left, Rght };
+		enum class Dir { Left, Right };
 
 	private:
 		constexpr static posT OFFSET_MASK = (posT(-1) >> 1);
@@ -188,7 +189,7 @@ namespace vm::persistent::detail {
 
 		static constexpr posT getChildPos(posT pos, Dir dir) {
 			CORE_ASSERT(!isLeafPos(pos), "Leaf doesn't have any children");
-			idxT modifier = (dir == Dir::Rght) ? 1 : 0;
+			idxT modifier = (dir == Dir::Right) ? 1 : 0;
 			return (pos << 1) | modifier;
 		}
 
@@ -200,7 +201,7 @@ namespace vm::persistent::detail {
 			CORE_ASSERT(inSubtree(child, ancestor), "it must be a child");
 			CORE_ASSERT(child != ancestor, "Ancestor is not it's own child");
 
-			return inSubtree(child, ancestor, Dir::Rght) ? Dir::Rght : Dir::Left;
+			return inSubtree(child, ancestor, Dir::Right) ? Dir::Right : Dir::Left;
 		}
 
 		static constexpr posT elevate(posT pos, usize height_diff) { return pos >> height_diff; }
@@ -376,7 +377,7 @@ namespace vm::persistent::detail {
 					auto tip                       = trace.front();
 					auto [left_child, right_child] = mem->getChildren(tip);
 
-					auto considered = move_dir == Dir::Rght ? left_child : right_child;
+					auto considered = move_dir == Dir::Right ? left_child : right_child;
 
 					if (auto size = mem->getSize(considered); size <= skip) {
 						skip -= size;
@@ -463,7 +464,7 @@ namespace vm::persistent::detail {
 			auto lca_pos = getLCAPos(pos_left, pos_right);
 			CORE_ASSERT(pos_right != 1 && pos_left != 1, "top node cannot be ever passed");
 			CORE_ASSERT(
-				inSubtree(pos_left, lca_pos, Dir::Left) && inSubtree(pos_right, lca_pos, Dir::Rght),
+				inSubtree(pos_left, lca_pos, Dir::Left) && inSubtree(pos_right, lca_pos, Dir::Right),
 				"we should always get the nodes in the right subtrees"
 			);
 
@@ -533,12 +534,12 @@ namespace vm::persistent::detail {
 				if constexpr (std::is_same_v<ResT, NodeID>) return id;
 			};
 
-			std::function<ResT(idxT, valT, valT)> confilicts = [](idxT, valT, valT) -> ResT {
+			std::function<ResT(idxT, valT, valT)> conflicts = [](idxT, valT, valT) -> ResT {
 				throw std::invalid_argument("conflicts present");
 			};
 
 			template<typename... ArgT>
-			base::Optional<NodeID> call(auto MergeBuilder::* member, ArgT&&... args) {
+			base::Optional<NodeID> invoke(auto MergeBuilder<ResT>::* member, ArgT&&... args) const {
 				if constexpr (std::is_same_v<ResT, NodeID>)
 					return (this->*member)(std::forward<ArgT>(args)...);
 				else {
@@ -585,33 +586,33 @@ namespace vm::persistent::detail {
 				const auto lca_pos = getLCAPos(pos_1, pos_2);
 				CORE_ASSERT(inSubtree(lca_pos, cur_pos), "invariant of the recursive call");
 
-				if (node_1 == node_2) return merge_policy.call(&bldT::the_same, node_1, pos_1);
+				if (node_1 == node_2) return merge_policy.invoke(&bldT::the_same, node_1, pos_1);
 
 				if (isLeafPos(cur_pos))
-					return merge_policy.call(
-						&bldT::confilicts,
+					return merge_policy.invoke(
+						&bldT::conflicts,
 						offsetFromPos(cur_pos),
 						st.getValueOfLeaf(node_1),
 						st.getValueOfLeaf(node_2)
 					);
 
 
-				base::Optional<NodeID> left = EMPTY, rght = EMPTY;
+				base::Optional<NodeID> left = EMPTY, right = EMPTY;
 
 				const auto pos_l = getChildPos(cur_pos, Dir::Left),
-						   pos_r = getChildPos(cur_pos, Dir::Rght);
+						   pos_r = getChildPos(cur_pos, Dir::Right);
 
 				[&] {
 					if (lca_pos != cur_pos) {
 						const auto dir_lca = dirToChild(lca_pos, cur_pos);
 
 
-						left = dir_lca == Dir::Left
-						         ? self(pos_l, node_1, node_2)
-						         : merge_policy.call(&bldT::the_same, EMPTY, pos_l);
-						rght = dir_lca == Dir::Rght
-						         ? self(pos_r, node_1, node_2)
-						         : merge_policy.call(&bldT::the_same, EMPTY, pos_r);
+						left  = dir_lca == Dir::Left
+						          ? self(pos_l, node_1, node_2)
+						          : merge_policy.invoke(&bldT::the_same, EMPTY, pos_l);
+						right = dir_lca == Dir::Right
+						          ? self(pos_r, node_1, node_2)
+						          : merge_policy.invoke(&bldT::the_same, EMPTY, pos_r);
 
 						return;
 					}
@@ -620,8 +621,8 @@ namespace vm::persistent::detail {
 						const auto [left_1, right_1] = st.getChildren(node_1);
 						const auto [left_2, right_2] = st.getChildren(node_2);
 
-						left = self(pos_l, left_1, left_2);
-						rght = self(pos_r, right_1, right_2);
+						left  = self(pos_l, left_1, left_2);
+						right = self(pos_r, right_1, right_2);
 
 						return;
 					}
@@ -629,42 +630,48 @@ namespace vm::persistent::detail {
 					if (pos_1 != lca_pos && pos_2 != lca_pos) {
 						const auto dir_1 = dirToChild(pos_1, cur_pos);
 
-						left = dir_1 == Dir::Left ? merge_policy.call(&bldT::only_1, node_1, pos_l)
-						                          : merge_policy.call(&bldT::only_2, node_2, pos_l);
-						rght = dir_1 == Dir::Rght ? merge_policy.call(&bldT::only_1, node_1, pos_r)
-						                          : merge_policy.call(&bldT::only_2, node_2, pos_r);
+						left  = dir_1 == Dir::Left
+						          ? merge_policy.invoke(&bldT::only_1, node_1, pos_l)
+						          : merge_policy.invoke(&bldT::only_2, node_2, pos_l);
+						right = dir_1 == Dir::Right
+						          ? merge_policy.invoke(&bldT::only_1, node_1, pos_r)
+						          : merge_policy.invoke(&bldT::only_2, node_2, pos_r);
 
 						return;
 					}
 
 					if (pos_1 == lca_pos) {
-						const auto [left_1, rght_1] = st.getChildren(node_1);
-						const auto dir_2            = dirToChild(pos_2, cur_pos);
+						const auto [left_1, right_1] = st.getChildren(node_1);
+						const auto dir_2             = dirToChild(pos_2, cur_pos);
 
-						left = dir_2 == Dir::Left ? self(pos_l, left_1, node_2)
-						                          : merge_policy.call(&bldT::only_1, left_1, pos_l);
+						left = dir_2 == Dir::Left
+						         ? self(pos_l, left_1, node_2)
+						         : merge_policy.invoke(&bldT::only_1, left_1, pos_l);
 
-						rght = dir_2 == Dir::Rght ? self(pos_r, rght_1, node_2)
-						                          : merge_policy.call(&bldT::only_1, rght_1, pos_r);
+						right = dir_2 == Dir::Right
+						          ? self(pos_r, right_1, node_2)
+						          : merge_policy.invoke(&bldT::only_1, right_1, pos_r);
 
 						return;
 					}
 
 					if (pos_2 == lca_pos) {
-						const auto [left_2, rght_2] = st.getChildren(node_2);
-						const auto dir_1            = dirToChild(pos_1, cur_pos);
+						const auto [left_2, right_2] = st.getChildren(node_2);
+						const auto dir_1             = dirToChild(pos_1, cur_pos);
 
-						left = dir_1 == Dir::Left ? self(pos_l, node_1, left_2)
-						                          : merge_policy.call(&bldT::only_2, left_2, pos_l);
-						rght = dir_1 == Dir::Rght ? self(pos_r, node_1, rght_2)
-						                          : merge_policy.call(&bldT::only_2, rght_2, pos_r);
+						left  = dir_1 == Dir::Left
+						          ? self(pos_l, node_1, left_2)
+						          : merge_policy.invoke(&bldT::only_2, left_2, pos_l);
+						right = dir_1 == Dir::Right
+						          ? self(pos_r, node_1, right_2)
+						          : merge_policy.invoke(&bldT::only_2, right_2, pos_r);
 
 						return;
 					}
 				}();
 
 				if constexpr (RECONSTRUCT)
-					return st.emplaceBranch(*left, *rght);
+					return st.emplaceBranch(*left, *right);
 				else
 					return std::nullopt;
 			};
@@ -672,7 +679,7 @@ namespace vm::persistent::detail {
 			const auto pos_1 = st.getPos(root_1);
 			const auto pos_2 = st.getPos(root_2);
 
-			if (root_1 == EMPTY && root_2 == EMPTY) return merge_policy.the_same(EMPTY, 1);
+			if (root_1 == EMPTY && root_2 == EMPTY) return merge_policy.the_same(EMPTY, ROOT_POS);
 			if (root_1 == EMPTY) return merge_policy.only_2(root_2, pos_2);
 			if (root_2 == EMPTY) return merge_policy.only_1(root_1, pos_1);
 
@@ -752,11 +759,11 @@ namespace vm::persistent::detail {
 
 				if constexpr (RECONSTRUCT) {
 					auto new_left  = self(getChildPos(cur_pos, Dir::Left), left_n);
-					auto new_right = self(getChildPos(cur_pos, Dir::Rght), right_n);
+					auto new_right = self(getChildPos(cur_pos, Dir::Right), right_n);
 					return st.emplaceBranch(new_left, new_right);
 				} else {
 					self(getChildPos(cur_pos, Dir::Left), left_n);
-					self(getChildPos(cur_pos, Dir::Rght), right_n);
+					self(getChildPos(cur_pos, Dir::Right), right_n);
 				}
 			};
 

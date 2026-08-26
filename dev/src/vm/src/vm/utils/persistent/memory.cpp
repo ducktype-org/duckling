@@ -34,7 +34,7 @@ namespace vm::persistent {
 			auto idx = path.getIdx();
 			auto val = path.getValue();
 			ans.emplace_back(idx, val);
-		} while (path.moveToValid(Dir::Rght, 0));
+		} while (path.moveToValid(Dir::Right, 0));
 
 		return ans;
 	}
@@ -63,7 +63,7 @@ namespace vm::persistent {
 				.only_1   = add_left,
 				.only_2   = add_right,
 				.the_same = [](ID, usize) {},
-				.confilicts
+				.conflicts
 				= [&](usize idx, usize val_1, usize val_2) { ans.emplace_back(idx, val_1, val_2); },
 			}
 		);
@@ -83,7 +83,7 @@ namespace vm::persistent {
 				.only_1     = [](ID id, usize) { return id; },
 				.only_2     = [](ID id, usize) { return id; },
 				.the_same   = [](ID id, usize) { return id; },
-				.confilicts = [&](usize idx, usize val_1, usize val_2) -> ID {
+				.conflicts = [&](usize idx, usize val_1, usize val_2) -> ID {
 					match_optional(policy(idx, val_1, val_2)) {
 						opt_some(val) { return inner.emplaceLeaf(idx, val); }
 						opt_none { return detail::SegmentTree::EMPTY; }
@@ -189,7 +189,7 @@ namespace vm::persistent {
 
 	memIt& memIt::operator++() {
 		if_opt_some(maybe_path, path) {
-			auto success = path.moveToValid(detail::SegmentTree::Dir::Rght);
+			auto success = path.moveToValid(detail::SegmentTree::Dir::Right);
 			if (!success) maybe_path = std::nullopt;
 		}
 		return *this;
