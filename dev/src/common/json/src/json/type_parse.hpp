@@ -31,6 +31,10 @@ namespace js::impl {
 namespace js {
 	template<class T>
 	[[nodiscard]] constexpr std::string_view typeName() {
+		static_assert(
+			TypeParseTraits<T>::NAME.back() == '\0',
+			"TypeParseTraits<T>::NAME must be \\0 terminated"
+		);
 		return std::string_view(
 			TypeParseTraits<T>::NAME.data(), TypeParseTraits<T>::NAME.size() - 1
 		);

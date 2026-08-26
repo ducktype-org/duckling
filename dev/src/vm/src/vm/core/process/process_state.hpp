@@ -12,6 +12,7 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
@@ -22,6 +23,7 @@
 
 #include <json/type_parse.hpp>
 
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <variant>
@@ -34,10 +36,10 @@ namespace vm::process_sm {
 
 		struct Running {};     ///< At least one VMThread is actively executing.
 
+		struct Paused {};      ///< All active VMThreads are paused, none are running or sleeping.
+
 		struct Sleeping {
 		};  ///< No VMThread is running - at least one is sleeping, none are running.
-
-		struct Paused {};    ///< All active VMThreads are paused, none are running or sleeping.
 
 		struct Stopping {};  ///< A stop has been requested and at least one VMThread has not yet
 		                     ///< reached a terminal state.
@@ -46,15 +48,19 @@ namespace vm::process_sm {
 			api::ExitValue exit_value;
 		};  ///< No VMThread is active any more and the main thread finished normally.
 
-		struct Stopped {};  ///< No VMThread is active and the main VMThread did not finish normally
-		                    ///< (it was stopped, killed or never started).
+		/**
+		 * @brief No VMThread is active and the process did not complete normally. Either a stop was
+		 * requested, or the main VMThread never finished (it was stopped, killed or never
+		 * started).
+		 */
+		struct Stopped {};
 
 		struct Panicked {
 			std::string err;
 		};  ///< At least one VMThread panicked.
 
 		using ProcessState
-			= std::variant<NotStarted, Running, Sleeping, Paused, Stopping, Completed, Stopped, Panicked>;
+			= std::variant<NotStarted, Running, Paused, Sleeping, Stopping, Completed, Stopped, Panicked>;
 
 		/**
 		 * @note When changing the behaviour of these function remember to change ones in
@@ -109,6 +115,9 @@ namespace vm::process_sm {
 		/// of the individual threads.
 		bool stop_requested{ false };
 
+		/// Error message of the VMThread which panicked first.
+		base::Optional<std::string> first_panic_err;
+
 		/// The main VMThread. The only thread whose `Completed` completes the whole process (if all
 		/// other threads are terminal or not started).
 		api::ThreadID main_tid{ api::MAIN_THREAD_ID };
@@ -126,8 +135,16 @@ namespace vm::process_sm {
 			);
 		}
 
-		/// Overwrites a registered thread's state and bumps its version.
+		/**
+		 * @brief Overwrites a registered thread's state and bumps its version.
+		 * Saves the panic message on the first panic of the process.
+		 */
 		void setThreadState(api::ThreadID tid, ThreadState state) {
+			// The first panic is the one the aggregate reports, so we save it here.
+			if (!first_panic_err.has_value())
+				v_if_matches(state, thread_sm::thread_state::Panicked, panicked) first_panic_err
+					= panicked->err;
+
 			const auto entry = threads.atMaybe(tid);
 			if (!entry.has_value()) CORE_PANIC(base::strConcat("Unknown ThreadID: ", tid.asInt()));
 			entry.value()->state = std::move(state);
@@ -156,9 +173,8 @@ namespace vm::process_sm {
 			using namespace process_state;
 			namespace ts = thread_sm::thread_state;
 
-			// If any VMThread panicked - we panic as well.
-			for (const auto& [tid, entry]: threads)
-				v_if_matches(entry.state, ts::Panicked, panicked) return Panicked{ panicked->err };
+			// If any VMThread panicked - we panic as well, and report the first panic.
+			if (first_panic_err.has_value()) return Panicked{ *first_panic_err };
 
 			const bool any_started_active = std::ranges::any_of(threads, [](const auto& p) {
 				return ts::isActive(p.second.state);

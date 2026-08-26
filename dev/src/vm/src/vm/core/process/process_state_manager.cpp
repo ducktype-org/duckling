@@ -70,8 +70,8 @@ namespace vm {
 		std::unique_lock<std::mutex>& table_lock, const ProcessState& prev, const ProcessState& next
 	) {
 		table_lock.unlock();
-		state_changed.notify_all();
 		// Notify waiters when the state changed.
+		state_changed.notify_all();
 		if (prev.index() != next.index() && on_status_changed) on_status_changed(next);
 	}
 
@@ -146,7 +146,8 @@ namespace vm {
 			));
 		for (const auto& [tid, _]: agg_state.threads) setThreadStateLocked(tid, ts::NotStarted{});
 		agg_state.stop_requested = false;
-		const ProcessState next  = agg_state.aggregateState();
+		agg_state.first_panic_err.reset();
+		const ProcessState next = agg_state.aggregateState();
 		finalizeStateChangeLocked(table_lock, prev, next);
 		return {};
 	}
@@ -158,6 +159,9 @@ namespace vm {
 		const ProcessState prev = agg_state.aggregateState();
 		// A stop must never overwrite a terminal state (e.g. Completed -> Stopped).
 		if (ps::isTerminal(prev)) return false;
+		// Nothing has ever started, so there is nothing to stop. Raising the flag here would make
+		// the process state `Stopped` and make it impossible to rerun.
+		if (v_matches(prev, ps::NotStarted)) return false;
 		if (agg_state.stop_requested) return true;  // Already requested.
 
 		agg_state.stop_requested = true;
