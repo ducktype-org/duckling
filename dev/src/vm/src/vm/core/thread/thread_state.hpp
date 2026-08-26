@@ -78,10 +78,6 @@ namespace vm::thread_sm {
 		[[nodiscard]] inline bool isActive(const ThreadState& state) {
 			return v_matches(state, Running, Sleeping, Paused);
 		}
-
-		[[nodiscard]] inline std::string_view threadStateName(const ThreadState& state) {
-			return VISIT(state, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
-		}
 	}
 
 	namespace thread_event {
@@ -107,10 +103,6 @@ namespace vm::thread_sm {
 
 		using ThreadEvent
 			= std::variant<Spawn, Pause, Resume, EnterSleep, WakeUp, Finish, Kill, Panic>;
-
-		[[nodiscard]] inline std::string_view threadEventName(const ThreadEvent& event) {
-			return VISIT(event, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
-		}
 	}
 
 	/**
@@ -177,3 +169,17 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::WakeUp, "WakeUp")
 JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Finish, "Finish")
 JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Kill, "Kill")
 JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Panic, "Panic")
+
+namespace vm::thread_sm {
+	namespace thread_state {
+		[[nodiscard]] inline std::string_view threadStateName(const ThreadState& state) {
+			return VISIT(state, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
+		}
+	}
+
+	namespace thread_event {
+		[[nodiscard]] inline std::string_view threadEventName(const ThreadEvent& event) {
+			return VISIT(event, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
+		}
+	}
+}

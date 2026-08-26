@@ -73,10 +73,6 @@ namespace vm::process_sm {
 		[[nodiscard]] inline bool canRespond(const ProcessState& state) {
 			return v_matches(state, NotStarted, Paused) || isTerminal(state);
 		}
-
-		[[nodiscard]] inline std::string_view processStateName(const ProcessState& state) {
-			return VISIT(state, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
-		}
 	}
 
 	/**
@@ -89,10 +85,6 @@ namespace vm::process_sm {
 		struct Stop {};  ///< Request an orderly stop of all threads.
 
 		using ProcessEvent = std::variant<Run, Stop>;
-
-		[[nodiscard]] inline std::string_view processEventName(const ProcessEvent& event) {
-			return VISIT(event, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
-		}
 	}
 
 	/**
@@ -241,3 +233,17 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Panicked, "Panicked"
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_event::Run, "Run")
 JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_event::Stop, "Stop")
+
+namespace vm::process_sm {
+	namespace process_state {
+		[[nodiscard]] inline std::string_view processStateName(const ProcessState& state) {
+			return VISIT(state, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
+		}
+	}
+
+	namespace process_event {
+		[[nodiscard]] inline std::string_view processEventName(const ProcessEvent& event) {
+			return VISIT(event, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
+		}
+	}
+}
