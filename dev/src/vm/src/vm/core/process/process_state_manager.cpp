@@ -132,19 +132,6 @@ namespace vm {
 		fatalStateError(base::strConcat("applyThreadEventOrAbort failed: ", result.error()));
 	}
 
-	bool ProcessStateManager::stopIfNotStarted(api::ThreadID tid) {
-		std::lock_guard  emit_lock(emit_mutex);
-		std::unique_lock table_lock(table_mutex);
-
-		if (!v_matches(threadEntryOrAbort(agg_state, tid).state, ts::NotStarted)) return false;
-
-		const ProcessState prev = agg_state.aggregateState();
-		setThreadStateLocked(tid, ts::Stopped{});
-		const ProcessState next = agg_state.aggregateState();
-		finalizeStateChangeLocked(table_lock, prev, next);
-		return true;
-	}
-
 	std::expected<void, std::string> ProcessStateManager::resetForRun() {
 		std::lock_guard  emit_lock(emit_mutex);
 		std::unique_lock table_lock(table_mutex);

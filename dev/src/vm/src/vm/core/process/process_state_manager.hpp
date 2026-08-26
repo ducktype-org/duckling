@@ -106,18 +106,6 @@ namespace vm {
 		ApplyResult applyThreadEventOrAbort(api::ThreadID tid, const ThreadEvent& event);
 
 		/**
-		 * @brief Moves a thread that never started to a `Stopped` state, so a stop request on it
-		 * does not wait forever for an exec thread that will never exist.
-		 *
-		 * @note: This is the one thread state change which the process may perform. Race free
-		 * because the exec thread was never spawned, so nobody else can apply an event for
-		 * this thread.
-		 *
-		 * @return true if the thread state was changed, false if the thread had already started.
-		 */
-		bool stopIfNotStarted(api::ThreadID tid);
-
-		/**
 		 * @brief Prepares a re-run by changing every thread state back to `NotStarted` and clearing
 		 * the stop flag.
 		 *
