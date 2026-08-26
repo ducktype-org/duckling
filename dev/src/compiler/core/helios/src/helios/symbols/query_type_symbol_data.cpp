@@ -6,8 +6,10 @@
 #include "helios/tsh/type_interface.hpp"
 #include "symbol_kind.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -19,6 +21,43 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
+
+	ClassMemberSpecifiersResult getClassMemberSpecifiers(query::Context& ctx, SymID sym) {
+		auto                                  specifiers = ctx.query<QuerySpecifiersOfSymbol>(sym);
+		base::Optional<tsh::MemberVisibility> visibility_opt{};
+		bool                                  is_static = false;
+
+		auto is_visiblity_keyword = [](lang_def::Keyword keyword) {
+			return keyword == lang_def::Keyword::Private || keyword == lang_def::Keyword::Public
+			    || keyword == lang_def::Keyword::Protected;
+		};
+		auto is_static_keyword
+			= [](lang_def::Keyword keyword) { return keyword == lang_def::Keyword::Static; };
+
+		for (auto specifier_locked: *specifiers) {
+			auto specifier = specifier_locked.unlock(ctx);
+			auto keyword   = specifier->getSpecifier().unlock(ctx)->unwrap();
+
+			if (is_visiblity_keyword(keyword) and visibility_opt.has_value())
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					"Class visibility specifier is duplicated with another one.",
+					specifier->getStablePosition()
+				));
+			if (is_static_keyword(keyword) and is_static)
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					"Class static specifier is duplicated with another one.",
+					specifier->getStablePosition()
+				));
+			if (keyword == lang_def::Keyword::Public)
+				visibility_opt = tsh::MemberVisibility::Public;
+			if (keyword == lang_def::Keyword::Protected)
+				visibility_opt = tsh::MemberVisibility::Protected;
+			if (keyword == lang_def::Keyword::Private)
+				visibility_opt = tsh::MemberVisibility::Private;
+			if (keyword == lang_def::Keyword::Static) is_static = true;
+		}
+		return { .visibility_opt = visibility_opt, .is_static = is_static };
+	}
 
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
 		struct ClassDataParser final: pst::PstVisitorPanicky {
@@ -39,52 +78,10 @@ namespace compiler::helios {
 			}
 		};
 
-		struct SpecifiersResult {
-			base::Optional<tsh::MemberVisibility> visibility_opt;
-			bool                                  is_static;
-		};
-
-		static SpecifiersResult getSpecifiers(query::Context& ctx, SymID sym) {
-			auto specifiers = ctx.query<QuerySpecifiersOfSymbol>(sym);
-			base::Optional<tsh::MemberVisibility> visibility_opt{};
-			bool                                  is_static = false;
-
-			auto is_visiblity_keyword = [](lang_def::Keyword keyword) {
-				return keyword == lang_def::Keyword::Private || keyword == lang_def::Keyword::Public
-				    || keyword == lang_def::Keyword::Protected;
-			};
-			auto is_static_keyword
-				= [](lang_def::Keyword keyword) { return keyword == lang_def::Keyword::Static; };
-
-			for (auto specifier_locked: *specifiers) {
-				auto specifier = specifier_locked.unlock(ctx);
-				auto keyword   = specifier->getSpecifier().unlock(ctx)->unwrap();
-
-				if (is_visiblity_keyword(keyword) and visibility_opt.has_value())
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						"Class visibility specifier is duplicated with another one.",
-						specifier->getStablePosition()
-					));
-				if (is_static_keyword(keyword) and is_static)
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						"Class static specifier is duplicated with another one.",
-						specifier->getStablePosition()
-					));
-				if (keyword == lang_def::Keyword::Private)
-					visibility_opt = tsh::MemberVisibility::Public;
-				if (keyword == lang_def::Keyword::Public)
-					visibility_opt = tsh::MemberVisibility::Private;
-				if (keyword == lang_def::Keyword::Private)
-					visibility_opt = tsh::MemberVisibility::Protected;
-				if (keyword == lang_def::Keyword::Static) is_static = true;
-			}
-			return { .visibility_opt = visibility_opt, .is_static = is_static };
-		}
-
 		static tsh::MemberVisibility getDefaultMemberVisibility(
-			std::vector<SpecifiersResult> members_specifiers
+			std::vector<ClassMemberSpecifiersResult> members_specifiers
 		) {
-			if (std::ranges::any_of(members_specifiers, [](SpecifiersResult spec) {
+			if (std::ranges::any_of(members_specifiers, [](ClassMemberSpecifiersResult spec) {
 					return spec.visibility_opt.has_value();
 				}))
 				return tsh::MemberVisibility::Private;
@@ -92,7 +89,7 @@ namespace compiler::helios {
 		}
 
 		static tsh::InterfaceElement::InterfaceElementKind getElementKind(
-			SymbolKind kind, SpecifiersResult specifiers
+			SymbolKind kind, ClassMemberSpecifiersResult specifiers
 		) {
 			using ElementKind = tsh::InterfaceElement::InterfaceElementKind;
 			switch (kind) {
@@ -302,9 +299,9 @@ namespace compiler::helios {
 			auto class_body_scope = queryBodyCodeScopeFor(ctx, class_stmt);
 			Ref  class_symbols = &ctx.query<QuerySymbolsInScope>(class_body_scope)->valueOrThrow();
 
-			std::vector<SpecifiersResult> members_specifiers
+			std::vector<ClassMemberSpecifiersResult> members_specifiers
 				= (*class_symbols) | std::views::transform([&](SymID member_sym) {
-					  return getSpecifiers(ctx, member_sym);
+					  return getClassMemberSpecifiers(ctx, member_sym);
 				  })
 			    | std::ranges::to<std::vector>();
 
@@ -418,4 +415,5 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySliceTypeData);
+
 }

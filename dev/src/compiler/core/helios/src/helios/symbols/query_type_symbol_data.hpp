@@ -10,6 +10,12 @@
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios {
+	struct ClassMemberSpecifiersResult {
+		base::Optional<tsh::MemberVisibility> visibility_opt;
+		bool                                  is_static;
+	};
+
+	ClassMemberSpecifiersResult getClassMemberSpecifiers(query::Context& ctx, SymID sym);
 
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.

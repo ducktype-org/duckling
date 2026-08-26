@@ -2247,7 +2247,7 @@ private:
 		          ->valueOrThrow();
 		auto example_class_abstract_type
 			= query::entryPoint<compiler::tsh::QueryClassType>(example_class);
-		const auto example_class_info_methods
+		auto example_class_info_methods
 			= example_class_info.declared_interface.getMethodsView();
 		ASSERT_EQUAL(3, std::ranges::distance(example_class_info_methods));
 
@@ -2266,7 +2266,7 @@ private:
 		          ->valueOrThrow();
 		auto wrapper_class_abstract_type
 			= query::entryPoint<compiler::tsh::QueryClassType>(wrapper_class);
-		const auto wrapper_class_info_methods
+		auto wrapper_class_info_methods
 			= wrapper_class_info.declared_interface.getMethodsView();
 		ASSERT_EQUAL(4, std::ranges::distance(wrapper_class_info_methods));
 
@@ -2284,7 +2284,7 @@ private:
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(point_class)->valueOrThrow();
 		auto point_class_abstract_type
 			= query::entryPoint<compiler::tsh::QueryClassType>(point_class);
-		const auto point_class_info_methods = point_class_info.declared_interface.getMethodsView();
+		auto point_class_info_methods = point_class_info.declared_interface.getMethodsView();
 		ASSERT_EQUAL(6, std::ranges::distance(point_class_info_methods));
 
 		for (const auto& method: point_class_info_methods) {
@@ -2928,7 +2928,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type
-				= [&](SymID sym_id) { return ctx.query<tsh::QueryClassType>(sym_id); };
+				= [&](SymID sym_id) { return ctx.query<compiler::tsh::QueryClassType>(sym_id); };
 
 			// Classes, tuples and static arrays are copied by a single `create_aggregate` that the
 			// body returns, with one value per copied element.
@@ -3332,7 +3332,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type
-				= [&](SymID sym_id) { return ctx.query<tsh::QueryClassType>(sym_id); };
+				= [&](SymID sym_id) { return ctx.query<compiler::tsh::QueryClassType>(sym_id); };
 
 			auto is_builtin_call = [&](const Stmt* stmt, BuiltinKind kind) -> bool {
 				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
@@ -3434,7 +3434,7 @@ private:
 				ASSERT_TRUE(!type.isTriviallyDestructible(ctx));
 
 				const auto user_dtor_element = type.getInterface(ctx)->getSpecialElement(
-					tsh::MemberSpecialKind::UserDestructor
+					compiler::tsh::MemberSpecialKind::UserDestructor
 				);
 				ASSERT_HAS_VALUE(user_dtor_element);
 				const auto user_dtor = user_dtor_element.value()->getSymbol();
@@ -3463,7 +3463,7 @@ private:
 				// [0] user destructor call.
 				const auto user_dtor
 					= type.getInterface(ctx)
-				          ->getSpecialElement(tsh::MemberSpecialKind::UserDestructor)
+				          ->getSpecialElement(compiler::tsh::MemberSpecialKind::UserDestructor)
 				          .value()
 				          ->getSymbol();
 				auto user_call = dynamic_cast<const CallExpr*>(

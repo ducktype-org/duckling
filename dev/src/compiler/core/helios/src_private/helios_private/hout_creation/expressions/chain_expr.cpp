@@ -230,9 +230,22 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief A type written in the chain, as in the `T` of `T.foo` or of `let t = T;`.
+	 *
+	 * It is kept as a type, and not as a `LiteralTypeExpr`, because what follows in the chain
+	 * decides what it becomes: an access on it is a lookup in the type, while a type that ends
+	 * the chain is a value of the meta type.
+	 */
+	struct TypeInChain final {
+		tsh::AbstractType type;
+		ElementOrigin     origin;
+	};
+
+	/**
 	 * State for the building of the chain expression in HOUT.
-	 * It mainly stores two distinct states:
+	 * It mainly stores three distinct states:
 	 * - namespace-like state, for example after processing "foo().Namespace"
+	 * - type state, for example after processing "foo().MyClass"
 	 * - expression state, for example after processing "foo().bar[20]"
 	 *
 	 * Its stores the state of chain expression creation that does not include
@@ -241,9 +254,13 @@ namespace compiler::helios::code {
 	struct ChainState final {
 		[[nodiscard]] bool isNamespaceLike() const { return namespace_like_symbol.has_value(); }
 
+		[[nodiscard]] bool isType() const { return type.has_value(); }
+
 		[[nodiscard]] bool isExpr() const { return expr.toOpt().has_value(); }
 
-		[[nodiscard]] bool isEmpty() const { return not isNamespaceLike() and not isExpr(); }
+		[[nodiscard]] bool isEmpty() const {
+			return not isNamespaceLike() and not isType() and not isExpr();
+		}
 
 		[[nodiscard]] auto getExpr() -> base::Box<Expr> {
 			return std::move(expr).toOptBox().value();
@@ -257,10 +274,16 @@ namespace compiler::helios::code {
 			return namespace_like_symbol.value().second;
 		}
 
+		[[nodiscard]] auto getType() -> TypeInChain { return type.value(); }
+
 		static ChainState ofExpr(base::Box<Expr> expr) { return { std::move(expr) }; }
 
 		static ChainState ofNamespaceLike(SymID namespace_like_symbol, ElementOrigin origin) {
 			return { namespace_like_symbol, origin };
+		}
+
+		static ChainState ofType(tsh::AbstractType type, ElementOrigin origin) {
+			return ChainState{ { .type = type, .origin = origin } };
 		}
 
 	private:
@@ -274,8 +297,11 @@ namespace compiler::helios::code {
 			  expr(base::MBox<Expr>{}),
 			  namespace_like_symbol(std::make_pair(namespace_like_symbol, origin)) {}
 
+		explicit ChainState(TypeInChain type): expr(base::MBox<Expr>{}), type(type) {}
+
 		base::MBox<Expr>                                expr{};
 		base::Optional<std::pair<SymID, ElementOrigin>> namespace_like_symbol{};
+		base::Optional<TypeInChain>                     type{};
 
 		friend class ChainExprConstruction;
 	};
@@ -941,6 +967,51 @@ namespace compiler::helios::code {
 			}
 		}
 
+		/**
+		 * Case when we have an access expression not followed by a call expression and the
+		 * current state is a type, for example "MyClass.field".
+		 */
+		auto processPSTExpr(TypeInChain type, pst::Access<pst::expr::Access> expr_access)
+			-> query::QResult<ChainState> {
+			// @TODO: #1477 look the name up in the interface of the type itself, which requires
+			// the meta lookup of HInterface::ofTypeMeta.
+			query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				base::strConcat(
+					"Access on the type `",
+					type.type.toString(),
+					"` itself is not supported yet, it is only supported on its instances"
+				),
+				expr_access->getStablePosition()
+			));
+			return query::Failed();
+		}
+
+		/**
+		 * Case when we have an access expression followed by a call expression and the current
+		 * state is a type, for example "MyClass.staticMethod()".
+		 */
+		auto processPSTExpr(
+			TypeInChain                    type,
+			pst::Access<pst::expr::Access> expr_access,
+			pst::Access<pst::expr::Call>   call_expr
+		) -> query::QResult<ChainState> {
+			return processPSTExpr(type, expr_access);
+		}
+
+		/**
+		 * Case when we have a call expression and the current state is a type,
+		 * for example "Point[3]".
+		 *
+		 * A call on a type is not a lookup in it, but an operation on the type used as a value,
+		 * so the type becomes a type literal and the call is processed as on any expression.
+		 */
+		auto processPSTExpr(TypeInChain type, pst::Access<pst::expr::Call> call_expr)
+			-> query::QResult<ChainState> {
+			return processPSTExpr(
+				Box<Expr>(makeBox<LiteralTypeExpr>(query_ctx, type.origin, type.type)), call_expr
+			);
+		}
+
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
 
 
@@ -968,9 +1039,7 @@ namespace compiler::helios::code {
 			}
 			case SymbolKind::Class: {
 				auto class_type = query_ctx.query<tsh::QueryClassType>({ symbol });
-
-				auto expr = makeBox<LiteralTypeExpr>(query_ctx, pst_element_origin, class_type);
-				return ChainState::ofExpr(std::move(expr));
+				return ChainState::ofType(class_type, pst_element_origin);
 			}
 			case SymbolKind::Field: {
 				auto expr = processFieldNoSelf(query_ctx, symbol, pst_element_origin, pst_elem);
@@ -1117,6 +1186,8 @@ namespace compiler::helios::code {
 				} else if (this->current_state.isNamespaceLike()) {
 					auto namespace_like_symbol = this->current_state.getNamespaceLikeSymbol();
 					return processPSTExpr(namespace_like_symbol, current_element_value);
+				} else if (this->current_state.isType()) {
+					return processPSTExpr(this->current_state.getType(), current_element_value);
 				}
 				CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
 			}();
@@ -1143,6 +1214,10 @@ namespace compiler::helios::code {
                     auto namespace_like_symbol = this->current_state.getNamespaceLikeSymbol();
                     return processPSTExpr(
                         namespace_like_symbol, current_element_value, next_element_value
+                    );
+                } else if (this->current_state.isType()) {
+                    return processPSTExpr(
+                        this->current_state.getType(), current_element_value, next_element_value
                     );
                 }
                 CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
@@ -1248,6 +1323,13 @@ namespace compiler::helios::code {
 
 			if (this->current_state.isExpr())
 				result_sequence.push_back(this->current_state.getExpr());
+			// A type that ends the chain is used as a value, so it becomes a type literal.
+			if (this->current_state.isType()) {
+				auto type_in_chain = this->current_state.getType();
+				result_sequence.emplace_back(
+					makeBox<LiteralTypeExpr>(query_ctx, type_in_chain.origin, type_in_chain.type)
+				);
+			}
 			if (this->current_state.isNamespaceLike()) {
 				auto namespace_expr = makeBox<IdentifierExpr>(
 					query_ctx,

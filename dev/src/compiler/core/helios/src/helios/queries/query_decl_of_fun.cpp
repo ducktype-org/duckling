@@ -1,4 +1,5 @@
 #include "function_queries.hpp"
+#include "helios/symbols/query_type_symbol_data.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -328,10 +329,20 @@ namespace compiler::helios {
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
-				// +1 for the implicit `self` parameter.
+				// We can't use the interface directly because the interface
+				// can use the declaration of function query, and we could get a cycle.
+				auto specifiers = getClassMemberSpecifiers(ctx, original_symbol);
+				if (specifiers.is_static) {
+					const auto operatoriness = operatorinessFromNameAndArity(
+						name(original_symbol), stmt->getParams().unlock(ctx)->size()
+					);
+					emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+					return;
+				}
 				const auto operatoriness = operatorinessFromNameAndArity(
 					name(original_symbol), stmt->getParams().unlock(ctx)->size() + 1
 				);
+				// +1 for the implicit `self` parameter.
 				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);

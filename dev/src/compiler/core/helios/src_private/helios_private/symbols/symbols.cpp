@@ -570,7 +570,7 @@ namespace compiler::helios {
 		case pst::StmtKind::CopyConstructor: {
 			return CommonSymbolData{
 				.name = lang_def::keywordToStr(lang_def::Keyword::Copy),
-				.kind = SymbolKind::Method,
+				.kind = SymbolKind::Constructor,
 			};
 		}
 		case pst::StmtKind::Destructor: {

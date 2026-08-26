@@ -60,6 +60,37 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInTypeInstance);
 
+	/**
+	 * This query is placed here, to keep it close to HInterface::lookup.
+	 * In #1477 and/or #1392 it should be placed in a more appropriate location.
+	 *
+	 * See https://docs.duckling.pl/duckling/lookup/name_lookup.html
+	 * for more info on type-instance lookups.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryLookupInTypeMeta, KeyOf_LookupInTypeInstance, CRef<query::QResult<LookupResult>>, ({})
+	)
+
+	struct IMPLEMENT_QUERY(QueryLookupInTypeMeta, query::QResult<LookupResult>) {
+		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
+			// @TODO: #1412 #1531 this a mock that works for now, make it better
+
+			auto        interface = key.type.getInterface(ctx);
+			const auto& elements  = interface->getElementsWithName(key.name);
+
+			LookupResult result;
+			for (const auto& element: elements) result.leaves.emplace_back(element.getSymbol());
+
+			return result;
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInTypeMeta);
+
 	CRef<query::QResult<LookupResult>> HInterface::lookup(
 		query::Context& ctx, base::StrID name, AdditionalLookupParameters params
 	) const {
@@ -80,11 +111,7 @@ namespace compiler::helios {
 				return ctx.query<QueryLookupInTypeInstance>({ type.type, name });
 			}
 			variant_case(TypeMetaInterface, type) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Type meta lookups are not implemented yet", ""
-				));
-				static query::QResult<LookupResult> failed_result = query::Failed();
-				return &failed_result;
+				return ctx.query<QueryLookupInTypeMeta>({ type.type, name });
 			}
 			variant_case(CustomInterface, custom) {
 				return custom.custom->lookup(ctx, name, params);

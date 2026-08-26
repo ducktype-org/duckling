@@ -66,15 +66,6 @@ namespace compiler::tsh {
 		return EMPTY;
 	}
 
-	base::Optional<CRef<InterfaceElement>> TypeInterface::getElementWithSym(const helios::SymID sym
-	) const {
-		// Elements are grouped by name, and an element's name is always the name of its symbol,
-		// so only the overloads sharing the symbol's name have to be checked.
-		for (const InterfaceElement& element: getElementsWithName(helios::name(sym)))
-			if (element.getSymbol() == sym) return CRef(&element);
-		return {};
-	}
-
 	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {
 		return ctx.query<compiler::helios::QueryTypeOfSymbol>(symbol)->valueOrThrow();
 	}
