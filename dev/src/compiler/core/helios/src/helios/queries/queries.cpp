@@ -279,7 +279,9 @@ namespace compiler::helios {
 
 				base::HashMap<base::StrID, dia::StablePosition> seen_fields;
 
-				for (SymID field_sym: class_data->valueOrPanic().members) {
+				for (const auto& field:
+				     class_data->valueOrPanic().declared_interface.getAnyFieldsView()) {
+					const SymID field_sym = field.getSymbol();
 					if_opt_some(maybeSymbolPst(field_sym), pst) {
 						if (reportIfNameTaken(
 								ctx,
@@ -363,7 +365,7 @@ namespace compiler::helios {
 			);
 
 			const auto class_type = ctx.query<tsh::QueryClassType>(class_sym);
-			
+
 
 			auto methods = class_type.getInterface(ctx)->getMethodsView();
 

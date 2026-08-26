@@ -260,10 +260,6 @@ namespace compiler::helios {
 
 		/**
 		 * @brief Push the compiler-generated constructors of the class into its interface.
-		 *
-		 * The constructor taking a value for each field always exists. The parameterless one,
-		 * which uses the initializing values of the fields and the default values of their types,
-		 * only exists when the class is default constructible.
 		 */
 		static void pushConstructors(
 			query::Context&            ctx,
@@ -307,8 +303,9 @@ namespace compiler::helios {
 			Ref  class_symbols = &ctx.query<QuerySymbolsInScope>(class_body_scope)->valueOrThrow();
 
 			std::vector<SpecifiersResult> members_specifiers
-				= (*class_symbols)
-			    | std::views::transform([&](SymID sym) { return getSpecifiers(ctx, sym); })
+				= (*class_symbols) | std::views::transform([&](SymID member_sym) {
+					  return getSpecifiers(ctx, member_sym);
+				  })
 			    | std::ranges::to<std::vector>();
 
 			auto default_visiblity = getDefaultMemberVisibility(members_specifiers);
@@ -316,21 +313,22 @@ namespace compiler::helios {
 			ClassSymbolData    class_info;
 			UserDefinedMembers user_members;
 			for (usize i{ 0 }; i < (*class_symbols).size(); i++) {
-				auto sym                 = (*class_symbols)[i];
+				auto member_sym          = (*class_symbols)[i];
 				auto specifiers          = members_specifiers[i];
-				auto interface_elem_kind = getElementKind(kind(sym), specifiers);
+				auto interface_elem_kind = getElementKind(kind(member_sym), specifiers);
 				auto member_visibility   = specifiers.visibility_opt.copyValueOr(default_visiblity);
-				auto member_special_kind = specialKind(ctx, sym);
+				auto member_special_kind = specialKind(ctx, member_sym);
 
 				collectUserDefinedMember(member_special_kind, user_members);
 
 				interface_builder.push(
-					sym, interface_elem_kind, member_visibility, member_special_kind
+					member_sym, interface_elem_kind, member_visibility, member_special_kind
 				);
 			}
 
 			auto tmp_interface = interface_builder.build();
 
+			class_info.is_default_constructible = isDefaultConstructible(ctx, tmp_interface);
 			class_info.is_trivially_zero_initializable
 				= isTriviallyZeroInitializable(ctx, tmp_interface);
 			class_info.is_copyable = isCopyable(ctx, tmp_interface, user_members);

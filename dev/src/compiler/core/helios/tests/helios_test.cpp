@@ -499,10 +499,16 @@ private:
 		const auto first_class_abstract_type
 			= query::entryPoint<compiler::tsh::QueryClassType>(first_class);
 
-		ASSERT_EQUAL(2, first_class_info.members.size());
-		ASSERT_EQUAL(2, first_class_info.methods.size());
-		ASSERT_EQUAL(1, first_class_info.constructors.size());
-		ASSERT_HAS_VALUE(first_class_info.destructor);
+		using compiler::tsh::MemberSpecialKind;
+		const auto& first_class_interface = first_class_info.declared_interface;
+
+		ASSERT_EQUAL(2, std::ranges::distance(first_class_interface.getAnyFieldsView()));
+		ASSERT_EQUAL(1, first_class_interface.getElementsWithName(base::StrID("getA")).size());
+		ASSERT_EQUAL(1, first_class_interface.getElementsWithName(base::StrID("setA")).size());
+		ASSERT_HAS_VALUE(first_class_interface.getSpecialElement(MemberSpecialKind::CopyConstructor)
+		);
+		ASSERT_HAS_VALUE(first_class_interface.getSpecialElement(MemberSpecialKind::UserDestructor));
+		ASSERT_HAS_VALUE(first_class_interface.getSpecialElement(MemberSpecialKind::Constructor));
 		ASSERT_NO_VALUE(first_class_info.base);
 		ASSERT_EQUAL(0, first_class_info.implements.size());
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
@@ -518,10 +524,11 @@ private:
 		auto       second_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class)->valueOrThrow();
 
-		ASSERT_EQUAL(0, second_class_info.members.size());
-		ASSERT_EQUAL(0, second_class_info.methods.size());
-		ASSERT_EQUAL(0, second_class_info.constructors.size());
-		ASSERT_NO_VALUE(second_class_info.destructor);
+		const auto& second_class_interface = second_class_info.declared_interface;
+
+		ASSERT_EQUAL(0, std::ranges::distance(second_class_interface.getAnyFieldsView()));
+		ASSERT_EQUAL(0, std::ranges::distance(second_class_interface.getMethodsView()));
+		ASSERT_NO_VALUE(second_class_interface.getSpecialElement(MemberSpecialKind::UserDestructor));
 		ASSERT_HAS_VALUE(second_class_info.base);
 		ASSERT_EQUAL(first_class_abstract_type, second_class_info.base);
 		ASSERT_EQUAL("SecondClass", second_class_info.name);
@@ -533,8 +540,10 @@ private:
 		auto class_with_member_abstract_type
 			= query::entryPoint<compiler::tsh::QueryClassType>(class_with_member);
 
-		ASSERT_EQUAL(1, class_with_member_info.members.size());
-		ASSERT_EQUAL(1, class_with_member_info.methods.size());
+		const auto& class_with_member_interface = class_with_member_info.declared_interface;
+
+		ASSERT_EQUAL(1, std::ranges::distance(class_with_member_interface.getAnyFieldsView()));
+		ASSERT_EQUAL(1, std::ranges::distance(class_with_member_interface.getMethodsView()));
 
 		const auto& class_with_members_ctor
 			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
@@ -2238,11 +2247,14 @@ private:
 		          ->valueOrThrow();
 		auto example_class_abstract_type
 			= query::entryPoint<compiler::tsh::QueryClassType>(example_class);
-		ASSERT_EQUAL(3, example_class_info.methods.size());
+		const auto example_class_info_methods
+			= example_class_info.declared_interface.getMethodsView();
+		ASSERT_EQUAL(3, std::ranges::distance(example_class_info_methods));
 
-		for (auto& method: example_class_info.methods) {
+		for (const auto& method: example_class_info_methods) {
 			auto method_hout
-				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
+			          ->valueOrPanic();
 			ASSERT_EQUAL(
 				refst(example_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
@@ -2254,11 +2266,14 @@ private:
 		          ->valueOrThrow();
 		auto wrapper_class_abstract_type
 			= query::entryPoint<compiler::tsh::QueryClassType>(wrapper_class);
-		ASSERT_EQUAL(4, wrapper_class_info.methods.size());
+		const auto wrapper_class_info_methods
+			= wrapper_class_info.declared_interface.getMethodsView();
+		ASSERT_EQUAL(4, std::ranges::distance(wrapper_class_info_methods));
 
-		for (auto& method: wrapper_class_info.methods) {
+		for (const auto& method: wrapper_class_info_methods) {
 			auto method_hout
-				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
+			          ->valueOrPanic();
 			ASSERT_EQUAL(
 				refst(wrapper_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
@@ -2269,11 +2284,13 @@ private:
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(point_class)->valueOrThrow();
 		auto point_class_abstract_type
 			= query::entryPoint<compiler::tsh::QueryClassType>(point_class);
-		ASSERT_EQUAL(6, point_class_info.methods.size());
+		const auto point_class_info_methods = point_class_info.declared_interface.getMethodsView();
+		ASSERT_EQUAL(6, std::ranges::distance(point_class_info_methods));
 
-		for (auto& method: point_class_info.methods) {
+		for (const auto& method: point_class_info_methods) {
 			auto method_hout
-				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
+			          ->valueOrPanic();
 			ASSERT_EQUAL(
 				refst(point_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
@@ -2454,13 +2471,17 @@ private:
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
-		ASSERT_EQUAL(2, foo_class_info.methods.size());
+		const auto foo_methods
+			= foo_class_info.declared_interface.getMethodsView()
+		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
+		    | std::ranges::to<std::vector>();
+		ASSERT_EQUAL(2, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
-			for (const auto& method: foo_class_info.methods)
+			for (const auto& method: foo_methods)
 				if (compiler::helios::name(method) == base::StrID(name)) return method;
 			fail(base::strConcat("Method ", name, " not found"));
-			return foo_class_info.methods.at(0);
+			return foo_methods.at(0);
 		};
 
 		auto infix_method  = mangle(find_method("+*"));
@@ -4113,13 +4134,17 @@ private:
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
-		ASSERT_EQUAL(2, foo_class_info.methods.size());
+		const auto foo_methods
+			= foo_class_info.declared_interface.getMethodsView()
+		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
+		    | std::ranges::to<std::vector>();
+		ASSERT_EQUAL(2, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
-			for (const auto& method: foo_class_info.methods)
+			for (const auto& method: foo_methods)
 				if (compiler::helios::name(method) == base::StrID(name)) return method;
 			fail(base::strConcat("Method ", name, " not found"));
-			return foo_class_info.methods.at(0);
+			return foo_methods.at(0);
 		};
 
 		ASSERT_EQUAL(
@@ -4145,13 +4170,17 @@ private:
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
-		ASSERT_EQUAL(2, foo_class_info.methods.size());
+		const auto foo_methods
+			= foo_class_info.declared_interface.getMethodsView()
+		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
+		    | std::ranges::to<std::vector>();
+		ASSERT_EQUAL(2, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
-			for (const auto& method: foo_class_info.methods)
+			for (const auto& method: foo_methods)
 				if (compiler::helios::name(method) == base::StrID(name)) return method;
 			fail(base::strConcat("Method ", name, " not found"));
-			return foo_class_info.methods.at(0);
+			return foo_methods.at(0);
 		};
 		auto infix_method_sym  = find_method("+*");
 		auto prefix_method_sym = find_method("-*");

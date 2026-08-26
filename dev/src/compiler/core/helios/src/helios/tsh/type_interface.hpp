@@ -332,6 +332,12 @@ namespace compiler::tsh {
 		base::Optional<CRef<InterfaceElement>> getSpecialElement(MemberSpecialKind special) const;
 
 		/**
+		 * @brief Get the element with a given helios Symbol ID. Empty if not found.
+		 */
+		[[nodiscard]]
+		base::Optional<CRef<InterfaceElement>> getElementWithSym(helios::SymID sym) const;
+
+		/**
 		 * @brief Gets a view of all the fields of this interface.
 		 * @return A view of all the fields of this interface.
 		 */
