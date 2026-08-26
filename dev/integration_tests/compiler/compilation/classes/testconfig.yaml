@@ -1,7 +1,5 @@
 Tests:
   classes:
-    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
-    enable_conc_deterministic_tests: "false"
     Cases:
       all:
         backend: all
