@@ -20,7 +20,10 @@
 #include <vm/api/data/thread_id.hpp>
 #include <vm/core/thread/thread_state.hpp>
 
+#include <json/type_parse.hpp>
+
 #include <string_view>
+#include <type_traits>
 #include <variant>
 
 namespace vm::process_sm {
@@ -53,10 +56,6 @@ namespace vm::process_sm {
 		using ProcessState
 			= std::variant<NotStarted, Running, Sleeping, Paused, Stopping, Completed, Stopped, Panicked>;
 
-		inline constexpr std::array<std::string_view, std::variant_size_v<ProcessState>>
-			PROCESS_STATE_NAMES{ "NotStarted", "Running",   "Sleeping", "Paused",
-			                     "Stopping",   "Completed", "Stopped",  "Panicked" };
-
 		/**
 		 * @note When changing the behaviour of these function remember to change ones in
 		 * `status.hpp` as well.
@@ -76,7 +75,7 @@ namespace vm::process_sm {
 		}
 
 		[[nodiscard]] inline std::string_view processStateName(const ProcessState& state) {
-			return PROCESS_STATE_NAMES.at(state.index());
+			return VISIT(state, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
 		}
 	}
 
@@ -91,11 +90,8 @@ namespace vm::process_sm {
 
 		using ProcessEvent = std::variant<Run, Stop>;
 
-		inline constexpr std::array<std::string_view, std::variant_size_v<ProcessEvent>>
-			PROCESS_EVENT_NAMES{ "Run", "Stop" };
-
 		[[nodiscard]] inline std::string_view processEventName(const ProcessEvent& event) {
-			return PROCESS_EVENT_NAMES.at(event.index());
+			return VISIT(event, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
 		}
 	}
 
@@ -233,3 +229,15 @@ namespace vm::process_sm {
 		CORE_UNREACHABLE();
 	}
 }
+
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::NotStarted, "NotStarted")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Running, "Running")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Sleeping, "Sleeping")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Paused, "Paused")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Stopping, "Stopping")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Completed, "Completed")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Stopped, "Stopped")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Panicked, "Panicked")
+
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_event::Run, "Run")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_event::Stop, "Stop")

@@ -37,7 +37,10 @@
 
 #include <vm/api/data/status.hpp>
 
+#include <json/type_parse.hpp>
+
 #include <string_view>
+#include <type_traits>
 #include <variant>
 
 namespace vm::thread_sm {
@@ -64,10 +67,6 @@ namespace vm::thread_sm {
 		using ThreadState
 			= std::variant<NotStarted, Running, Sleeping, Paused, Stopped, Completed, Panicked>;
 
-		inline constexpr std::array<std::string_view, std::variant_size_v<ThreadState>>
-			THREAD_STATE_NAMES{ "NotStarted", "Running",   "Sleeping", "Paused",
-			                    "Stopped",    "Completed", "Panicked" };
-
 		[[nodiscard]] inline bool isTerminal(const ThreadState& state) {
 			return v_matches(state, Completed, Stopped, Panicked);
 		}
@@ -81,7 +80,7 @@ namespace vm::thread_sm {
 		}
 
 		[[nodiscard]] inline std::string_view threadStateName(const ThreadState& state) {
-			return THREAD_STATE_NAMES.at(state.index());
+			return VISIT(state, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
 		}
 	}
 
@@ -109,12 +108,8 @@ namespace vm::thread_sm {
 		using ThreadEvent
 			= std::variant<Spawn, Pause, Resume, EnterSleep, WakeUp, Finish, Kill, Panic>;
 
-		inline constexpr std::array<std::string_view, std::variant_size_v<ThreadEvent>>
-			THREAD_EVENT_NAMES{ "Spawn",  "Pause",  "Resume", "EnterSleep",
-			                    "WakeUp", "Finish", "Kill",   "Panic" };
-
 		[[nodiscard]] inline std::string_view threadEventName(const ThreadEvent& event) {
-			return THREAD_EVENT_NAMES.at(event.index());
+			return VISIT(event, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
 		}
 	}
 
@@ -165,3 +160,20 @@ namespace vm::thread_sm {
 	}
 
 }
+
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::NotStarted, "NotStarted")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Running, "Running")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Sleeping, "Sleeping")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Paused, "Paused")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Stopped, "Stopped")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Completed, "Completed")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Panicked, "Panicked")
+
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Spawn, "Spawn")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Pause, "Pause")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Resume, "Resume")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::EnterSleep, "EnterSleep")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::WakeUp, "WakeUp")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Finish, "Finish")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Kill, "Kill")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Panic, "Panic")
