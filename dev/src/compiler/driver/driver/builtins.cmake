@@ -2,6 +2,7 @@
 # By default this is Clang's own default target (i.e. the host triple).
 # Cross-compiling the driver requires setting BUILTINS_TARGET to the target triple,
 # and providing Clang with a matching sysroot / libraries via BUILTINS_EXTRA_CLANG_FLAGS.
+# On macOS the SDK sysroot is added automatically, see below.
 set(BUILTINS_TARGET "" CACHE STRING "Target triple for the built-in library (empty = Clang default/host)")
 set(BUILTINS_EXTRA_CLANG_FLAGS "" CACHE STRING "Extra Clang flags used when compiling the built-in library")
 
@@ -64,6 +65,27 @@ if (BUILTINS_TARGET)
 else ()
     set(clang_target_flag "")
     message(STATUS "Built-in library target: Clang default (host)")
+endif ()
+
+# This Clang is not the compiler CMake configured the build with, so it does not pick up the
+# macOS SDK on its own. Without a sysroot it resolves no system header at all, not even <cstdint>.
+if (APPLE AND NOT BUILTINS_EXTRA_CLANG_FLAGS MATCHES "-isysroot|--sysroot")
+    set(builtins_sysroot "${CMAKE_OSX_SYSROOT}")
+    if (NOT builtins_sysroot)
+        execute_process(
+                COMMAND xcrun --show-sdk-path
+                OUTPUT_VARIABLE builtins_sysroot
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+        )
+    endif ()
+
+    if (builtins_sysroot)
+        list(PREPEND BUILTINS_EXTRA_CLANG_FLAGS -isysroot "${builtins_sysroot}")
+        message(STATUS "Built-in library sysroot: ${builtins_sysroot}")
+    else ()
+        message(WARNING "Could not determine the macOS SDK path. If generating the built-in library fails on missing system headers, pass the SDK explicitly via -DBUILTINS_EXTRA_CLANG_FLAGS=\"-isysroot;<sdk-path>\".")
+    endif ()
 endif ()
 
 # Generate LLVM bitcode by compiling the built-ins source code via clang.
