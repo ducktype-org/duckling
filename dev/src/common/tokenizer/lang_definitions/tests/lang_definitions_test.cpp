@@ -92,7 +92,7 @@ private:
 	void exportsForLSPTest() {
 		ASSERT_EQUAL_PRINT(lang_def::getKeywords().size(), 90);
 		ASSERT_EQUAL_PRINT(lang_def::getSpecials().size(), 7);
-		ASSERT_EQUAL_PRINT(lang_def::getOperators().size(), 31);
+		ASSERT_EQUAL_PRINT(lang_def::getOperators().size(), 35);
 		ASSERT_EQUAL_PRINT(lang_def::getNumericTypeSpecifiers().size(), 15);
 	}
 };
