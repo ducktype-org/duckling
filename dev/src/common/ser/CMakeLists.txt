@@ -4,6 +4,8 @@ add_library(Ser
 
 make_module(Ser USES Base)
 
+add_example(ser_example examples/ser_example.cpp USES Ser Base)
+
 duck_add_test(common ser tests/ser_test.cpp USES Ser Base)
 
 duck_add_test(common ser_base tests/ser_base_test.cpp USES Ser Base)
