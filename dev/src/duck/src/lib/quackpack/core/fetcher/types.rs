@@ -31,18 +31,12 @@ pub struct Package {
     pub version: Version,
 }
 
-impl From<&PackageWithUrl> for Package {
-    fn from(value: &PackageWithUrl) -> Self {
+impl From<PackageWithUrl> for Package {
+    fn from(value: PackageWithUrl) -> Self {
         Self {
             name: value.name,
             version: value.version,
         }
-    }
-}
-
-impl From<PackageWithUrl> for Package {
-    fn from(value: PackageWithUrl) -> Self {
-        Self::from(&value)
     }
 }
 

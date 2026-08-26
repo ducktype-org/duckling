@@ -7,8 +7,6 @@
  */
 
 #include <archiver/archive.hpp>
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -35,6 +33,8 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
+#include <diagnostic/logger.hpp>
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
@@ -248,6 +248,11 @@ auto getClahLinkingOptions() {
 		                   .addLongName("additional-link-options")
 		                   .addShortDesc("Additional options to pass to the linker.")
 		                   .optional()
+		                   .build(),
+		               clah::ParamBuilder::ofValue(clah::StringListParser::make("shared libs"))
+		                   .addLongName("dvm-shared-libs")
+		                   .addShortDesc("Shared libraries that will be loaded by the VM.")
+		                   .optional()
 		                   .build() };
 }
 
@@ -263,6 +268,9 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 
 	if (auto lib_path = parsing_result.getValue<std::string>("additional-link-options"))
 		linking_options.native_additional_link_options = lib_path.value();
+
+	if (auto lib_paths = parsing_result.getValue<std::vector<std::string>>("dvm-shared-libs"))
+		linking_options.dvm_shared_libraries = lib_paths.value();
 
 	linking_options.native_link_c_standard_lib = not parsing_result.isFlag("no-c-standard-library");
 
@@ -429,7 +437,7 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(
 			clah::Clah("compile_module", "Compile given module into a binary.")
-				.addPositional(clah::FileParser::make("module"))
+				.addPositional(clah::FileParser::make("module", true))
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
 				.add(getClahStdLibOptions())
@@ -507,7 +515,7 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
-				.addPositional(clah::FileParser::make("module"))
+				.addPositional(clah::FileParser::make("module", true))
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
 				.add(getClahStdLibOptions())
@@ -636,15 +644,19 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("dvm-backend")) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_dvm.dbc");
-
+						auto runtime_config = compiler::driver::constructDVMRuntimeConfig(
+							getLinkingOptionsFromClah(options)
+						);
 						if (options.isFlag("emit-static-lib")) {
 							build_target = compiler::driver::BuildTargetDVMLibrary{
 								.output_file_name = base::StrID(output_file_name),
+								.runtime_config   = std::move(runtime_config)
 							};
 						} else {
 							build_target = compiler::driver::BuildTargetDVMExecutable{
 								.output_file_name  = base::StrID(output_file_name),
 								.link_std_packages = stdlib_options.stdActive(),
+								.runtime_config    = std::move(runtime_config)
 							};
 						}
 
@@ -842,7 +854,7 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_script", "Compile a .ds script file into a .dbc or executable.")
+			clah::Clah("compile_script", "Compile a .dks script file into a .dbc or executable.")
 				.addPositional(clah::FileParser::make("script"))
 				.add(getLlvmOptLevelParam())
 				.add(getClahLinkingOptions())
@@ -915,7 +927,7 @@ clah::Clah getClahForMain() {
 	    // Scripts can only be "run" on DVM for now, since compiling with LLVM would produce
 	    // artifacts. To compile to native executable, the compile_script command can be used.
 	    // This may change in the future.
-	    .addSubcommand(clah::Clah("run", "Compile a .ds script file and run it on DVM.")
+	    .addSubcommand(clah::Clah("run", "Compile a .dks script file and run it on DVM.")
 	                       .addPositional(clah::FileParser::make("script"))
 	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                                .addShortName('w')
@@ -1048,7 +1060,7 @@ clah::Clah getClahForMain() {
 							);
 						if (options.getExtraParameterCount() > 1) {
 							std::cerr << "Error: repl accepts at most one script path. "
-										 "Usage: duckc repl [script.ds]\n";
+										 "Usage: duckc repl [script.dks]\n";
 							compiler::driver::exit();
 							return 1;
 						}

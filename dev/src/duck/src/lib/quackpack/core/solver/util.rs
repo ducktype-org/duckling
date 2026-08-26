@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
 use crate::quackpack::core::solver::gathering::fetch_types::{
     ManifestsRequest, NotPinnedRequest, PinnedRequest, RequestIdentifier,
@@ -17,7 +18,7 @@ pub fn get_possible_realizations(
     versions_for_identity: &HashMap<FullIdentity, HashSet<Version>>,
     source_to_origin_resolver: &HashMap<Source, FullOrigin>,
 ) -> QuackResult<Vec<PackageId>> {
-    let Some(origin) = source_to_origin_resolver.get(dependency_description.source()) else {
+    let Some(origin) = source_to_origin_resolver.get(&dependency_description.source()) else {
         return Ok(vec![]);
     };
     let identity = FullIdentity::new(dependency_description.name(), *origin);
@@ -90,7 +91,11 @@ impl PackageId {
     ///  * the packages origin satisfies the source requirements,
     ///  * version requirements are satisfied,
     ///  * package's name coincides with the required name.
-    pub fn still_satisfies_dep(&self, dependency: &Dependency) -> QuackResult<bool> {
+    pub async fn still_satisfies_dep(
+        &self,
+        dependency: &Dependency,
+        fetcher: &Fetcher<'_>,
+    ) -> QuackResult<bool> {
         if !self.check_satisfaction_of_versions(dependency)? {
             return Ok(false);
         }
@@ -98,16 +103,18 @@ impl PackageId {
         if self.url() != source.url() || self.name() != dependency.name() {
             return Ok(false);
         }
-        Ok(self.kind().satisfies_source_kind(*source.kind()))
+        self.origin()
+            .satisfies_source(source)
+            .finish_check(fetcher)
+            .await
     }
 
     /// Helper for [`Self::still_satisfies_dep`].
     fn check_satisfaction_of_versions(&self, dependency: &Dependency) -> QuackResult<bool> {
         if dependency.is_pinned() {
-            let required_version = dependency
-                .versions()
-                .first()
-                .context_internal("pinned dependency without specified version")?;
+            let required_version = dependency.versions().first().with_context_internal(|| {
+                format!("pinned dependency without a specified version, {dependency:#?}")
+            })?;
             Ok(self.version() == *required_version)
         } else {
             Ok(dependency

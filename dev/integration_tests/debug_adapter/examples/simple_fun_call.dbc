@@ -1,0 +1,23 @@
+# Tests a simple function call.
+# input = n
+# output = n
+
+function check { i64 } -> {} {
+	output_p64          arg0;
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
+	# arg0 -> argc
+	# arg1 -> *argv
+
+	init_pany_type 		check_arg0, i64;
+	mov_p64_imm			check_arg0, 42;
+	call_func          	check;
+
+	mov_p64_imm			ret0, 42;
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}

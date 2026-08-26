@@ -1,0 +1,38 @@
+# This test checks basic record type functionalities,
+# that is construction, copy, field access and field assignment.
+
+class RecordClass {
+    a: i64 = 0;
+    b: f32 = 0.0 as f32;
+    c: i16 = 0 as i16;
+}
+
+class BiggerRecordClass {
+    x: i8 = 0 as i8;
+    y: RecordClass = RecordClass(1, 2.0 as f32, 3 as i16);
+    z: f64 = 0.0;
+}
+
+fun printRecordClass(r: RecordClass) = {
+    builtin_output_i64(r.a);
+    builtin_output_i64(r.c);
+}
+
+let a: RecordClass = RecordClass(1, 2.0 as f32, 3 as i16);
+
+let big = BiggerRecordClass(1 as i8, RecordClass(2, 3.0 as f32, 4 as i16), 5 as f64);
+
+fun main() -> i64 = {
+    var b = a;
+    printRecordClass(a);
+    a.a = 42;
+    a.c = (6 * 9) as i16;
+    printRecordClass(a);
+    printRecordClass(b);
+    b = a;
+    printRecordClass(b);
+
+    builtin_output_i64(big.y.c); # 4
+
+    return 0i64;
+}

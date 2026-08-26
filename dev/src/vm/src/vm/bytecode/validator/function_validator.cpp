@@ -733,7 +733,17 @@ class FunctionValidator {
 				const auto c_inner = derefCPtrType(cptr, types_ctx, instr);
 				if (inner != c_inner) throw CPtrPointeeMismatchError(instr);
 			}
-			instr_case_novalue(Op_movCast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr) {}
+			instr_case(Op_cast_pcptr_pptr, instr) {
+				const auto ptr = getPlaceType(instr.src_ptr, current_stack)
+				                     ->getKindAs<valid_type::finalized::Pointer>();
+				const auto cptr = getPlaceType(instr.dst, current_stack)
+				                      ->getKindAs<valid_type::finalized::CPointer>();
+				const auto c_inner = derefCPtrType(cptr, types_ctx, instr);
+				if (ptr->inner != c_inner) throw CPtrPointeeMismatchError(instr);
+			}
+			instr_case_novalue(
+				Op_ptrParts_p64_p64_pptr, Op_cast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr
+			) {}
 
 			instr_case(Op_add_pcptr_p64, instr) {
 				if (current_stack.at(instr.offset.var_name)->getName() != "i64")
@@ -745,6 +755,9 @@ class FunctionValidator {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case(Op_mov_pfst_pfst, instr) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case(Op_mov_pvnt_pvnt, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 

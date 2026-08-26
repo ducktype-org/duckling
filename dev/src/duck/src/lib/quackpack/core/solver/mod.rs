@@ -111,6 +111,9 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         fetcher: &Fetcher<'_>,
         git_access: &Access,
     ) -> QuackResult<ShouldRunSolverEngine> {
+        let ctx = fetcher.ctx();
+        ctx.console()
+            .info("starting gathering the dependency graph")?;
         let gatherer = Gatherer::new(fetcher, git_access);
 
         let root_manifest = self.root_pcx.package().manifest().clone();
@@ -127,7 +130,8 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         prev_freeze_manifests.insert(self.root_pkg, Box::new(root_manifest.clone()));
         let (maximal_valid_freeze, is_root_satisfied) = self
             .current_freeze
-            .find_maximal_correct_dep_solution(&prev_freeze_manifests)?;
+            .find_maximal_correct_dep_solution(&prev_freeze_manifests, fetcher)
+            .await?;
 
         if is_root_satisfied {
             debug!("root has been satisfied");
@@ -144,6 +148,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         }
 
         let root_path = self.root_pcx.package().root().into();
+        ctx.console().info("running gathering")?;
         let gathered_info = Self::run_solver_gatherer(
             &gatherer,
             root_manifest,
@@ -192,7 +197,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         freeze: &SolverFreeze,
     ) -> QuackResult<Manifest> {
         let Some(root_freeze) = freeze.package_freezes.get(&freeze.main_pkg) else {
-            qp_bail_internal!("Maximal valid freeze without main package freeze")
+            qp_bail_internal!("maximal valid freeze without main package freeze {freeze:#?}")
         };
         root_manifest
             .dependencies_mut()

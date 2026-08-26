@@ -51,6 +51,13 @@ namespace pst::internal {
 		static bool isBlockGroup(const TokenStream& st, i64 fwd);
 		static bool isImplementsOrBlockGroup(const TokenStream& st, i64 fwd);
 
+		/**
+		 * @brief Whether the token at @p fwd is the case block of a `match` expression
+		 * (the `match ( ... ) { ... }` token triple). Such a block belongs to the expression
+		 * instead of ending it.
+		 */
+		static bool isMatchBodyBlock(const TokenStream& st, i64 fwd);
+
 		template<lang_def::Keyword key>
 		static bool is(const TokenStream& st, i64 fwd) {
 			return isKeyword(st, fwd, key);

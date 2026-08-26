@@ -46,9 +46,11 @@ impl PackageData {
                     .versions()
                     .first()
                     .copied()
-                    .context_internal("pinned dependency without version")?;
+                    .with_context_internal(|| {
+                        format!("pinned dependency without version: {dependency:#?}")
+                    })?;
                 result.push(ManifestsRequest::new_pinned(
-                    *source,
+                    source,
                     dependency.name(),
                     version,
                     features,
@@ -61,7 +63,7 @@ impl PackageData {
                     None
                 };
                 result.push(ManifestsRequest::new_not_pinned(
-                    *source,
+                    source,
                     dependency.name(),
                     versions,
                     features,
@@ -74,7 +76,7 @@ impl PackageData {
 
 /// Type representing the state of a fetch.
 /// The requests in the Pending version signify which requests want to use the result of this fetch.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum QueryState {
     Failed,
     Pending { requests: Vec<ManifestsRequest> },
@@ -185,7 +187,7 @@ impl GathererState {
                 let answer_pkg = request_pkg
                     .resolve(&self.source_to_origin_resolver)
                     .with_context_internal(|| {
-                        format!("could not expand the package {:?}", request_pkg)
+                        format!("could not expand the package {request_pkg:#?} {self:#?}")
                     })?;
                 Ok(self
                     .update_pkg_data(answer_pkg, pinned_request.features, errors)?
@@ -228,11 +230,11 @@ impl GathererState {
                 let answer_pkg = request_pkg
                     .resolve(&self.source_to_origin_resolver)
                     .with_context_internal(|| {
-                        format!("could not expand the package {:?}", request_pkg)
+                        format!("could not expand the package {request_pkg:#?} {self:#?}")
                     })?;
                 if !self.pkgs_data.contains_key(&answer_pkg) {
                     qp_bail_internal!(
-                        "pinned package {answer_pkg:?} was supposed to be already fetched by a not pinned fetch but has no data"
+                        "pinned package {answer_pkg:?} was supposed to be already fetched by a not pinned fetch but has no data {self:#?}"
                     );
                 }
                 Ok(self
@@ -255,7 +257,7 @@ impl GathererState {
         let mut result = vec![];
         let mut any_matched = false;
         let Some(answer_origin) = self.source_to_origin_resolver.get(&id.source).copied() else {
-            qp_bail_internal!("could not resolve source {:?}", id.source);
+            qp_bail_internal!("could not resolve source {:?} {self:#?}", id.source);
         };
         let answer_identity = FullIdentity::new(id.name, answer_origin);
         let versions: Vec<Version> = self
@@ -309,7 +311,7 @@ impl GathererState {
         errors: &mut ErrorsLogger,
     ) -> QuackResult<Vec<ManifestsRequest>> {
         let Some(pkg_data) = self.pkgs_data.get_mut(&pkg) else {
-            qp_bail_internal!("Fetched package {pkg:?} without PackageData")
+            qp_bail_internal!("fetched package {pkg:?} without PackageData {self:#?}")
         };
         // Collect features which were requested but the package does not have them.
         let mut nonexistent_features = vec![];
@@ -384,10 +386,15 @@ impl GathererState {
     ) -> QuackResult<Vec<ManifestsRequest>> {
         let request_pkg = WithVersion::new(pinned_success.origin_id, pinned_success.origin_version);
         let Some(state) = self.pinned_fetches.get_mut(&request_pkg) else {
-            qp_bail_internal!("response with no associated request state");
+            qp_bail_internal!(
+                "response `{request_pkg:?}` with no associated request state {self:#?}"
+            );
         };
         let QueryState::Pending { requests } = state else {
-            qp_bail_internal!("query not in PENDING state");
+            // HACK: Otherwise we get `cannot borrow self as immutable`, because state is mutable.
+            // However, other two states are trivially copyable.
+            let state = state.clone();
+            qp_bail_internal!("query not in PENDING state {state:?}, {request_pkg:?}, {self:#?}");
         };
         let requests = requests.clone();
         *state = QueryState::Done;
@@ -413,10 +420,17 @@ impl GathererState {
             .not_pinned_fetches
             .get_mut(&not_pinned_response.origin_id)
         else {
-            qp_bail_internal!("response with no associated request state");
+            qp_bail_internal!(
+                "response {not_pinned_response:?} with no associated request state {self:#?}"
+            );
         };
         let QueryState::Pending { requests } = state else {
-            qp_bail_internal!("query not in PENDING state");
+            // HACK: Otherwise we get `cannot borrow self as immutable`, because state is mutable.
+            // However, other two states are trivially copyable.
+            let state = state.clone();
+            qp_bail_internal!(
+                "query not in PENDING state: `{state:?}` `{not_pinned_response:?}` {self:#?}"
+            );
         };
         let requests = requests.clone();
         *state = QueryState::Done;
@@ -427,7 +441,9 @@ impl GathererState {
             .next()
             .map(|pkg| pkg.identity())
         else {
-            qp_bail_internal!("successful not pinned fetch result despite no manifests");
+            qp_bail_internal!(
+                "successful not pinned fetch result despite no manifests: {not_pinned_response:?}"
+            );
         };
         self.source_to_origin_resolver.insert(
             not_pinned_response.origin_id.source,
@@ -460,7 +476,9 @@ impl GathererState {
             failure_pinned_response.origin_version,
         );
         let Some(state) = self.pinned_fetches.get_mut(&origin_package) else {
-            qp_bail_internal!("response with no associated request state");
+            qp_bail_internal!(
+                "response with no associated request state `{origin_package:?}` {self:#?}"
+            );
         };
         *state = QueryState::Failed;
         Ok(vec![])
@@ -475,7 +493,9 @@ impl GathererState {
             .not_pinned_fetches
             .get_mut(&failure_not_pinned_response.origin_id)
         else {
-            qp_bail_internal!("response with no associated request state");
+            qp_bail_internal!(
+                "response with no associated request state `{failure_not_pinned_response:?}` {self:#?}"
+            );
         };
         *state = QueryState::Failed;
         Ok(vec![])
@@ -517,11 +537,13 @@ impl GathererState {
                         .source_to_origin_resolver
                         .get(&pinned_request.id.source)
                     else {
-                        qp_bail_internal!("could not resolve source {:?}", pinned_request.id.source)
+                        qp_bail_internal!("could not resolve source `{pinned_request:?}` {self:#?}")
                     };
                     let answer_identity = FullIdentity::new(pinned_request.id.name, *answer_origin);
                     let Some(versions) = self.versions_for_identity.get(&answer_identity) else {
-                        qp_bail_internal!("no gathered versions for identity {answer_identity:?}")
+                        qp_bail_internal!(
+                            "no gathered versions for identity {answer_identity:?} {self:#?}"
+                        )
                     };
                     if !versions.contains(&pinned_request.version) {
                         errors.log(qp_err!(
@@ -577,7 +599,8 @@ impl TryFrom<GathererState> for GatheredInfo {
         for pkg in unnecessary_pkgs {
             let Some(versions) = value.versions_for_identity.get_mut(&pkg.identity()) else {
                 qp_bail_internal!(
-                    "unnecessary package's identity not present in the versions for identity map"
+                    "unnecessary package's identity not present in the versions for identity map {pkg:?} {:#?}",
+                    value.versions_for_identity
                 );
             };
             versions.remove(&pkg.version());

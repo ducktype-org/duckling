@@ -1,10 +1,10 @@
 #include "hout.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/elements.hpp>
 
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 
 namespace compiler::helios {
@@ -23,7 +23,7 @@ namespace compiler::helios {
 
 		if (a.return_type != b.return_type) {
 			if (do_log) {
-				auto err = makeBox<dia_int::PlaceholderError>(
+				auto err = makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"Return type `",
 						a.return_type.toString(),
@@ -34,7 +34,7 @@ namespace compiler::helios {
 					a.origin.getStablePosition(),
 					detailed_reason
 				);
-				err->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
+				err->addAttachedMessage(makeBox<dia::PlaceholderNote>(
 					"Other function declared here",
 					b.origin.getStablePosition(),
 					base::strConcat("Return type is `", b.return_type.toString(), "`.")
@@ -46,7 +46,7 @@ namespace compiler::helios {
 
 		if (a.parameters.size() != b.parameters.size()) {
 			if (do_log) {
-				auto err = makeBox<dia_int::PlaceholderError>(
+				auto err = makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"Function parameter count mismatch. ",
 						"Function has ",
@@ -56,7 +56,7 @@ namespace compiler::helios {
 					),
 					a.origin.getStablePosition()
 				);
-				err->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
+				err->addAttachedMessage(makeBox<dia::PlaceholderNote>(
 					base::strConcat("Other function has ", b.parameters.size(), " parameter(s)."),
 					b.origin.getStablePosition()
 				));
@@ -71,7 +71,7 @@ namespace compiler::helios {
 
 			if (pa.type != pb.type) {
 				if (do_log) {
-					auto err = makeBox<dia_int::PlaceholderError>(
+					auto err = makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Parameter type `",
 							pa.type.toString(),
@@ -82,7 +82,7 @@ namespace compiler::helios {
 						pa.origin.getStablePosition(),
 						detailed_reason
 					);
-					err->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
+					err->addAttachedMessage(makeBox<dia::PlaceholderNote>(
 						"Corresponding parameter declared here",
 						pb.origin.getStablePosition(),
 						base::strConcat("Parameter type is `", pb.type.toString(), "`.")
@@ -94,14 +94,14 @@ namespace compiler::helios {
 
 			if (params.compare_parameter_names and pa.name != pb.name) {
 				if (do_log) {
-					auto err = makeBox<dia_int::PlaceholderError>(
+					auto err = makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Parameter named `", pa.name, "` does not match `", pb.name, "`."
 						),
 						pa.origin.getStablePosition(),
 						detailed_reason
 					);
-					err->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
+					err->addAttachedMessage(makeBox<dia::PlaceholderNote>(
 						"Corresponding parameter declared here",
 						pb.origin.getStablePosition(),
 						base::strConcat("Parameter is named `", pb.name, "`.")
@@ -120,7 +120,7 @@ namespace compiler::helios {
 	) {
 		for (auto& param: fun.parameters) {
 			if_opt_some(param.initial_value, expr) {
-				auto err = makeBox<dia_int::PlaceholderError>(
+				auto err = makeBox<dia::PlaceholderError>(
 					base::strConcat("Initial value is not allowed here. ", reason),
 					expr->origin.getStablePosition()
 				);

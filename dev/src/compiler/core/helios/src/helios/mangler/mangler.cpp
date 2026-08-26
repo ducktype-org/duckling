@@ -489,8 +489,15 @@ namespace compiler::helios::mangler {
 			switch (kind(symbol_id)) {
 			case SymbolKind::Variable:
 			case SymbolKind::Field:
-			case SymbolKind::Const:
+			case SymbolKind::Const: {
+				// The empty storage of a REPL global variable stands for the variable itself, so
+				// everything referring to the variable has to refer to that storage.
+				if (auto empty_variable
+				    = std::get_if<defgen::ReplEmptyVariable>(&getSymRef(symbol_id)->other))
+					return symbolEncoding(ctx, empty_variable->original_variable);
+
 				return path(ctx, symbol_id);
+			}
 
 			case SymbolKind::Function:
 			case SymbolKind::Method:
@@ -537,10 +544,6 @@ namespace compiler::helios::mangler {
 							return "HtoString" + func(ctx, symbol_id) + "E";
 						case defgen::Method::Kind::LengthMethod:
 							return "Hlength" + func(ctx, symbol_id) + "E";
-						case defgen::Method::Kind::Push:
-							return "Hpush" + func(ctx, symbol_id) + "E";
-						case defgen::Method::Kind::Pop:
-							return "Hpop" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}
@@ -553,18 +556,15 @@ namespace compiler::helios::mangler {
 							return "Hba" + func(ctx, symbol_id) + "E";
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
 							return "Hbf" + func(ctx, symbol_id) + "E";
-						case defgen::BuiltinTemplatedSymbol::Kind::ListFree:
-							return "Hlf" + func(ctx, symbol_id) + "E";
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
 							return "Hbd" + func(ctx, symbol_id) + "E";
+						case defgen::BuiltinTemplatedSymbol::Kind::MoveIn:
+							return "Hmin" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}
-					variant_case(defgen::ReplExpressionWrapper, repl_wrapper) {
-						return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
-					}
-					variant_case(defgen::ReplInstructionWrapper, repl_instr_wrapper) {
-						return base::strConcat("__repl_instr_wrapper_", repl_instr_wrapper.counter);
+					variant_case(defgen::ReplInputWrapper, repl_wrapper) {
+						return base::strConcat("__repl_input_wrapper_", repl_wrapper.counter);
 					}
 					// Other cases of generated symbols cannot be functions.
 				}
@@ -885,14 +885,6 @@ namespace compiler::helios::mangler {
 			return res.str();
 		}
 
-		static std::string mangle(query::Context& ctx, tsh::DynamicArrayAbstractType type) {
-			return base::strConcat(
-				"D",
-				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
-				"E"
-			);
-		}
-
 		static std::string mangle(query::Context& ctx, tsh::StaticArrayAbstractType type) {
 			return base::strConcat(
 				"A",
@@ -957,8 +949,6 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::SliceAbstractType>());
 			case Function:
 				return mangle(ctx, type.as<tsh::FunctionAbstractType>());
-			case DynamicArray:
-				return mangle(ctx, type.as<tsh::DynamicArrayAbstractType>());
 			case StaticArray:
 				return mangle(ctx, type.as<tsh::StaticArrayAbstractType>());
 			case Tuple:
@@ -970,7 +960,7 @@ namespace compiler::helios::mangler {
 			case Meta:
 				return mangle(ctx, type.as<tsh::MetaAbstractType>());
 			default:
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat("Cannot mangle type of kind: ", type.getKind()), ""
 				));
 				return query::Failed();

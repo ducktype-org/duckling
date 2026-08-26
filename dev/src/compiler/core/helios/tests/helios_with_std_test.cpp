@@ -10,6 +10,7 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -18,6 +19,8 @@
 #include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -30,7 +33,9 @@
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
+#include <algorithm>
 #include <any>
+#include <array>
 
 using namespace compiler::helios::test_utils;
 
@@ -40,6 +45,7 @@ class HeliosWithStdTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(testImplicitPrelude);
 		TESTER_ADD_TEST(testBuiltinDefinitionInModuleHOUT);
 		TESTER_ADD_TEST(testTemplatedBuiltinDefinitionsInModuleHOUT);
 		TESTER_ADD_TEST(testStrings);
@@ -108,6 +114,15 @@ private:
 				return ctx.query<compiler::tsh::QuerySliceType>(element_type);
 			})
 		);
+	}
+
+	static const compiler::helios::code::Expr* stripImplicitMove(
+		const compiler::helios::code::Expr* expr
+	) {
+		const auto* move = dynamic_cast<const compiler::helios::code::MoveExpr*>(expr);
+		if (move == nullptr || move->kind != compiler::helios::code::MoveExpr::MoveKind::Implicit)
+			return expr;
+		return move->inner.get();
 	}
 
 	void testDefaultInitializers() {
@@ -217,13 +232,7 @@ private:
 				auto deps
 					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
-				// Ctor(ArrayHolder) (the root, excluded) -> Ctor(WithInit[5]) (`__init_array`) ->
-				// Ctor(WithInit), plus the bounds-check chain emitted by the static-array init loop
-				// (`panic`, `builtin_output_str`, `length`) and its own transitive callees: `abort`
-				// from `panic`, and the string-printing chain of `builtin_output_str`
-				// (`writeStr` -> `writeChar` overloads -> `putchar`) together with
-				// `builtin_output_char`, which the MIR-level used-symbol collection sees.
-				ASSERT_EQUAL_PRINT(12, deps.size());
+				ASSERT_EQUAL_PRINT(2, deps.size());
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
@@ -296,6 +305,22 @@ private:
 				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
 			}
 		});
+	}
+
+	// The implicit prelude brings `core.builtins` symbols into scope of every non-stdlib module
+	// without an explicit import. The `builtins` module has no import statements at all, yet an
+	// unqualified `builtin_output_i64` must resolve — that resolution is the prelude at work.
+	void testImplicitPrelude() {
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
+		auto scope     = getModuleScope(module_id);
+
+		auto result = query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
+			{ scope, base::StrID("builtin_output_i64"), true }
+		);
+		assertFalse(
+			result->valueOrThrow().isEmpty(),
+			"builtin_output_i64 should resolve via the implicit prelude with no explicit import"
+		);
 	}
 
 	// A `@builtin(...)` fundecl (here `ptr_from_slice` from core.builtins) has no body in
@@ -379,8 +404,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertFalse(
-				string_type.hasNoOpDestructor(ctx),
-				"String should not have a no-op destructor: it defines one to free its buffer."
+				string_type.isTriviallyDestructible(ctx),
+				"String should not be trivially destructible: it defines one to free its buffer."
 			);
 
 			const auto string_st = st(string_type);
@@ -433,7 +458,8 @@ private:
 			// let ab = 'a' +: (&b);
 			const auto& prepended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(1));
 			const auto  prepended_expr
-				= dynamic_cast<const CallExpr*>(prepended_stmt.initial_value.get());
+				= dynamic_cast<const CallExpr*>(stripImplicitMove(prepended_stmt.initial_value.get()
+			    ));
 			const auto prepended_callee
 				= dynamic_cast<IdentifierExpr*>(prepended_expr->callee.get());
 			assertEqual(
@@ -447,7 +473,8 @@ private:
 			// let bcd = (&b) :+ 'c' :+ 'd';
 			const auto& appended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(2));
 			const auto  appended_expr
-				= dynamic_cast<const CallExpr*>(appended_stmt.initial_value.get());
+				= dynamic_cast<const CallExpr*>(stripImplicitMove(appended_stmt.initial_value.get())
+			    );
 			const auto appended_callee = dynamic_cast<IdentifierExpr*>(appended_expr->callee.get());
 			assertEqual(
 				compiler::helios::name(appended_callee->symbol),
@@ -458,8 +485,9 @@ private:
 
 		{
 			const auto& concatenated_stmt = dynamic_cast<const VariableStmt&>(*statements.at(5));
-			const auto  concatenated_expr
-				= dynamic_cast<const CallExpr*>(concatenated_stmt.initial_value.get());
+			const auto  concatenated_expr = dynamic_cast<const CallExpr*>(
+                stripImplicitMove(concatenated_stmt.initial_value.get())
+            );
 			const auto concatenated_callee
 				= dynamic_cast<IdentifierExpr*>(concatenated_expr->callee.get());
 			assertEqual(
@@ -474,7 +502,8 @@ private:
 			// let y = 2;
 			// let format = f"Did you know that {x} plus {y} equals ({x + y})?";
 			const auto& format_stmt = dynamic_cast<const VariableStmt&>(*statements.at(8));
-			const auto format_expr = dynamic_cast<const CallExpr*>(format_stmt.initial_value.get());
+			const auto  format_expr
+				= dynamic_cast<const CallExpr*>(stripImplicitMove(format_stmt.initial_value.get()));
 			const auto format_callee = dynamic_cast<IdentifierExpr*>(format_expr->callee.get());
 			assertEqual(
 				compiler::helios::name(format_callee->symbol),
@@ -486,7 +515,7 @@ private:
 		{
 			const auto char_type       = compiler::tsh::getCharType();
 			const auto str_type        = getStringTypeNoContext();
-			const auto u64_type        = getIntegralTypeNoContext(64, Unsigned);
+			const auto i64_type        = getIntegralTypeNoContext(64, Signed);
 			const auto char_slice_type = getSliceTypeNoContext(st(char_type));
 
 			auto fun_body_scope = getFunctionBodyScope(fun_sym);
@@ -494,8 +523,66 @@ private:
 			// Vars
 			ASSERT_EQUAL(char_slice_type, getTypeOf("should_char_slice", fun_body_scope));
 			ASSERT_EQUAL(char_type, getTypeOf("should_char", fun_body_scope));
-			ASSERT_EQUAL(u64_type, getTypeOf("should_u64", fun_body_scope));
+			ASSERT_EQUAL(i64_type, getTypeOf("should_i64", fun_body_scope));
 			ASSERT_EQUAL(str_type, getTypeOf("should_string", fun_body_scope));
+
+			// Every kind of type stringifies, and always into a `String`.
+			static constexpr std::array VARS
+				= { "unit_string",         "bool_string",    "char_string",      "integral_string",
+				    "unsigned_string",     "float_string",   "slice_string",     "class_string",
+				    "cptr_string",         "manyptr_string", "int_slice_string", "array_string",
+				    "nested_array_string", "tuple_string",   "variant_string",   "list_string" };
+
+			for (const char* stringified: VARS)
+				assertEqual(
+					str_type,
+					getTypeOf(stringified, fun_body_scope),
+					base::strConcat("`", stringified, "` should be a `String`")
+				);
+
+			// Each of those calls must resolve to a `toString` whose body the compiler really
+			// generates, not just to a declaration that type checks.
+			query::utils::withContextDo([&](query::Context& ctx) {
+				usize checked = 0;
+				for (const auto& stmt: statements) {
+					const auto* var_stmt = dynamic_cast<const VariableStmt*>(stmt.get());
+					if (var_stmt == nullptr) continue;
+
+					const auto var_name = compiler::helios::name(var_stmt->helios_symbol);
+					if (not std::ranges::contains(VARS, var_name.strView())) continue;
+
+					const auto* call = dynamic_cast<const CallExpr*>(
+						stripImplicitMove(var_stmt->initial_value.get())
+					);
+					assertTrue(
+						call != nullptr,
+						base::strConcat("`", var_name, "` should be initialized with a call")
+					);
+
+					const auto to_string_sym
+						= compiler::helios::getIdentifierExprSymID(call->callee.ref()).value();
+					assertEqual(
+						base::StrID("toString"),
+						compiler::helios::name(to_string_sym),
+						base::strConcat("`", var_name, "` should call `toString`")
+					);
+					assertTrue(
+						compiler::helios::implementsQueryCodeOfFun(to_string_sym),
+						base::strConcat("`", var_name, "`'s `toString` should be implemented")
+					);
+
+					const auto& to_string_fun
+						= ctx.query<compiler::helios::QueryCodeOfFun>(to_string_sym)->valueOrThrow();
+					assertTrue(
+						not to_string_fun.body->statements.empty(),
+						base::strConcat("`", var_name, "`'s `toString` should have a body")
+					);
+					++checked;
+				}
+				assertEqual(
+					VARS.size(), checked, "Every stringified variable should have been checked"
+				);
+			});
 		}
 	}
 };

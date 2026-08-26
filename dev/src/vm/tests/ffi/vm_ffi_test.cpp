@@ -52,6 +52,9 @@ public:
 		TESTER_ADD_TEST(cptrWritePointeeMismatchFails);
 		TESTER_ADD_TEST(cptrReadIntoPointerPointeeFails);
 		TESTER_ADD_TEST(cptrWriteFromPointerPointeeFails);
+		TESTER_ADD_TEST(cptrCastFromPointer);
+		TESTER_ADD_TEST(cptrCastKeepsPointerOffset);
+		TESTER_ADD_TEST(cptrCastOfNullPointerFails);
 		TESTER_ADD_TEST(floatArgsAndReturn);
 		TESTER_ADD_TEST(doubleArgsAndReturn);
 		TESTER_ADD_TEST(mixedIntFloatArgs);
@@ -1046,7 +1049,7 @@ private:
 				  "    mov_p64_imm n, 16;\n"
 				  "    call_ffifunc ffi_alloc;\n"
 				  "    init_pany_type pp, PairPtr;\n"
-				  "    movCast_pcptr_pcptr pp, buf;\n"
+				  "    cast_pcptr_pcptr pp, buf;\n"
 				  "    init_pany_type v, i64;\n"
 				  "    init_pany_type s, Pair;\n"
 				  "    mov_p64_imm v, 30;\n"
@@ -1086,7 +1089,7 @@ private:
 				  "    mov_p64_imm n, 24;\n"
 				  "    call_ffifunc ffi_alloc;\n"
 				  "    init_pany_type p, I64Ptr;\n"
-				  "    movCast_pcptr_pcptr p, buf;\n"
+				  "    cast_pcptr_pcptr p, buf;\n"
 				  "    init_pany_type v, i64;\n"
 				  "    mov_p64_imm v, 20;\n"
 				  "    store_pcptr_pany p, v;\n"
@@ -1308,6 +1311,82 @@ private:
 			"}\n",
 			{ "cannot be dereferenced" }
 		);
+	}
+
+	// Hands the native address of a VM local to C, which writes through it. The VM sees the
+	// updated value because the cpointer addresses the block's data directly.
+	void cptrCastFromPointer() {
+		runProgram(
+			"cptr_cast_from_pointer",
+			ffiObjectHeader()
+				+ "type cpointer: I64Ptr i64\n"
+				  "ffi function ffi_fill8 { I64Ptr, i64 } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type v, i64;\n"
+				  "    mov_p64_imm v, 0;\n"
+				  "    init_pany_type vp, ptr_i64;\n"
+				  "    ref_pptr_pany vp, v;\n"
+				  "    init_pany_type c, I64Ptr;\n"
+				  "    cast_pcptr_pptr c, vp;\n"
+				  "    init_pany_type x, i64;\n"
+				  "    mov_p64_imm x, 42;\n"
+				  "    call_ffifunc ffi_fill8;\n"
+				  "    output_p64 v;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// The cast keeps the pointer's offset, so a field address computed in the VM stays a field
+	// address on the native side.
+	void cptrCastKeepsPointerOffset() {
+		runProgram(
+			"cptr_cast_offset",
+			ffiObjectHeader()
+				+ "type data: Pair { a: i64, b: i64 } assert_size 16\n"
+				  "type pointer: PairPtr Pair\n"
+				  "type cpointer: I64CPtr i64\n"
+				  "ffi function ffi_read8 { I64CPtr } -> { i64 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type s, Pair;\n"
+				  "    init_pany_type v, i64;\n"
+				  "    mov_p64_imm v, 7;\n"
+				  "    structStore_pste_pany_field s, v, Pair.a;\n"
+				  "    mov_p64_imm v, 42;\n"
+				  "    structStore_pste_pany_field s, v, Pair.b;\n"
+				  "    init_pany_type sp, PairPtr;\n"
+				  "    ref_pptr_pany sp, s;\n"
+				  "    init_pany_type fp, ptr_i64;\n"
+				  "    structLea_pptr_pptr_field fp, sp, Pair.b;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type c, I64CPtr;\n"
+				  "    cast_pcptr_pptr c, fp;\n"
+				  "    call_ffifunc ffi_read8;\n"
+				  "    output_p64 res;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// A null VM pointer has no block, so there is no address to take.
+	void cptrCastOfNullPointerFails() {
+		auto pid  = initProcess();
+		auto file = writeTempDbc(
+			"cptr_cast_null",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, ptr_i64;\n"
+			"    setNull_pptr p;\n"
+			"    init_pany_type c, I64Ptr;\n"
+			"    cast_pcptr_pptr c, p;\n"
+			"    ret;\n"
+			"}\n"
+		);
+		auto load = vm::api::loadFiles(pid, { file });
+		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
+		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessing null pointer");
 	}
 
 	void duplicateFfiFunctionFails() {

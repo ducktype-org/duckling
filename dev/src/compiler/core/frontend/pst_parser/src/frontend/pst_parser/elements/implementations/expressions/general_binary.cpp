@@ -3,7 +3,7 @@
 #include "../../hierarchy/expressions/general_suffix.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
+#include <diagnostic/message.hpp>
 
 #include <stack>
 

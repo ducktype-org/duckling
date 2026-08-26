@@ -110,6 +110,8 @@ namespace compiler::tsh {
 		case Integral:
 		case Float:
 		case Pointer:
+		case ManyPointer:
+		case CPointer:
 		case RawPointer:
 		case Slice:
 			return true;
@@ -282,10 +284,17 @@ namespace compiler::tsh {
 
 	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
 		  underlying_types(variant_types) {
+		// Variants are unordered; canonicalize the alternative order so that the runtime tag
+		// (= index into getUnderlyingTypes()) does not depend on construction order.
+		// Sorting must not use queryUnstablePerfectHash: it differs between compiler
+		// processes, which would make the emitted code non-deterministic.
+		std::ranges::stable_sort(underlying_types, [](const SymbolType<>& a, const SymbolType<>& b) {
+			return a.toString() < b.toString();
+		});
 		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}
 
-	bool VariantAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
+	bool VariantAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
 		for (const auto& type: underlying_types)
 			if (!type.isTriviallyDestructible(ctx)) return false;
 		return true;
@@ -364,12 +373,6 @@ namespace compiler::tsh {
 		return &ctx.query<QueryInterfaceOfSlice>(type)->valueOrThrow();
 	}
 
-	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
-	) const {
-		const auto type = toAbstractType().as<DynamicArrayAbstractType>();
-		return &ctx.query<QueryInterfaceOfDynamicArray>(type)->valueOrThrow();
-	}
-
 	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
 	) const {
 		const auto type = toAbstractType().as<StaticArrayAbstractType>();
@@ -385,7 +388,10 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> VariantAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("Variant type interface not yet implemented");
+		// A variant declares nothing of its own: it is reached through its alternatives, so its
+		// whole interface is the default one.
+		static TypeInterface empty{};
+		return &empty;
 	}
 
 	CRef<TypeInterface> NamespaceAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
@@ -406,31 +412,6 @@ namespace compiler::tsh {
 
 	CRef<TypeInterface> TypeTemplateAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("Type template interface not yet implemented");
-	}
-
-	AbstractType TypeTemplateAbstractTypeImpl::instantiate(
-		query::Context& ctx, const SymbolType<>& element_type
-	) const {
-		variant_match(source) {
-			variant_case(BuiltinKind, builtin) {
-				switch (builtin) {
-				case TypeTemplateAbstractType::BuiltinKind::List: {
-					return ctx.query<tsh::QueryDynamicArrayType>({ element_type });
-				}
-				default: {
-					throw base::NotYetImplemented(base::strConcat(
-						"Instantiation of a builtin type template type: ", representation
-					));
-				}
-				}
-			}
-			variant_default {
-				throw base::NotYetImplemented(base::strConcat(
-					"Instantiation of a non-builtin type template type: ", representation
-				));
-			}
-		}
-		CORE_UNREACHABLE();
 	}
 
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
@@ -523,7 +504,7 @@ namespace compiler::tsh {
 		});
 	}
 
-	bool ClassAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
+	bool ClassAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
 		// A user-defined destructor code, means the class is not trivially destructible.
 		if (ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
 		        ->valueOrThrow()
@@ -537,14 +518,7 @@ namespace compiler::tsh {
 		});
 	}
 
-	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(AbstractType target, query::Context&)
-		const {
-		// Static arrays are implicitly coercible to dynamic arrays storing the same type.
-		if (target.getKind() == Kind::DynamicArray) {
-			auto dynamic_array_type = DynamicArrayAbstractType(target);
-			return dynamic_array_type.getElementType() == element_type;
-		}
-
+	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(AbstractType, query::Context&) const {
 		return false;
 	}
 
@@ -552,10 +526,10 @@ namespace compiler::tsh {
 		return false;
 	}
 
-	bool StaticArrayAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
-		// Static arrays have trivial destructors if the inner type has a noOpDestructor or they
-		// are zero sized.
-		return size == 0 || element_type.getType().hasNoOpDestructor(ctx);
+	bool StaticArrayAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
+		// Static arrays have trivial destructors if the inner type is trivially destructible or
+		// they are zero sized.
+		return size == 0 || element_type.getType().isTriviallyDestructible(ctx);
 	}
 
 	bool StaticArrayAbstractTypeImpl::isDefaultConstructible(query::Context& ctx) const {
@@ -580,7 +554,7 @@ namespace compiler::tsh {
 		return element_type.getType().carriesInformation(ctx) && size > 0;
 	}
 
-	bool TupleAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
+	bool TupleAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {
 		return std::ranges::all_of(components, [&](const auto& component) {
 			return component.isTriviallyDestructible(ctx);
 		});

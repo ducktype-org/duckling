@@ -7,9 +7,10 @@ use clap::{Arg, ArgMatches, Command, value_parser};
 use crate::duck::driver::cli_ext::{CommandExt, flag, subcommand};
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::error::MessageError;
+use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, qp_bail};
 
-pub const DUCKLING_SCRIPT_EXT: &str = "ds";
+pub const DUCKLING_SCRIPT_EXT: &str = "dks";
 
 /// Creates parser for the `run_script` subcommand.
 pub fn get_parser() -> Command {
@@ -54,7 +55,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let path = matches
         .get_one::<PathBuf>("path")
         .expect("guarded by the parser");
-    let path = ctx.cwd().join(path);
+    let path = path.resolve_with_tilde(ctx);
     check_is_script(&path)?;
     run_script(RunScriptOptions::from_path_and_matches(
         ctx, &path, matches,

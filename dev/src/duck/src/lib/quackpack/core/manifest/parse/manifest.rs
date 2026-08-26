@@ -9,8 +9,8 @@ use super::{Scope, dependency};
 use crate::quackpack::core::manifest::VenvConfig;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
-    Features, Manifest, OptLevel, PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard,
-    Version,
+    Dependencies, DependencyKind, Features, Manifest, OptLevel, PackageMetadata, ParseMode,
+    Profile, Profiles, ScopeGuard, Version,
 };
 use crate::quackpack::schemas::manifest::{
     Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
@@ -29,11 +29,27 @@ pub(crate) fn parse(
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
     let mut scope = Scope::new();
+    let mut deps = Vec::new();
     let guard = scope.push("dependencies".into());
-    let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, guard)?;
+    dependency::parse(
+        schema.dependencies.as_ref(),
+        root,
+        DependencyKind::Normal,
+        &mut deps,
+        ctx,
+        guard,
+    )?;
 
     let guard = scope.push("dev-dependencies".into());
-    let dev_dependencies = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, guard)?;
+    dependency::parse(
+        schema.dev_dependencies.as_ref(),
+        root,
+        DependencyKind::Dev,
+        &mut deps,
+        ctx,
+        guard,
+    )?;
+    let dependencies = Dependencies::new(deps)?;
 
     let guard = scope.push("profiles".into());
     let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
@@ -71,7 +87,6 @@ pub(crate) fn parse(
                 Features::default(),
                 PackageMetadata::default(),
                 dependencies,
-                dev_dependencies,
                 profiles,
                 VenvConfig::default_for_script(ctx),
             );
@@ -103,8 +118,7 @@ pub(crate) fn parse(
             let guard = scope.push("features".into());
             let features = parse_features(schema.features.as_ref())
                 .with_context(move || guard.make_context_string())?;
-            let guard = scope.push("venv".into());
-            let venv = parse_venv(schema.venv.as_ref(), root, ctx, guard)?;
+            let venv = parse_venv(schema.venv.as_ref(), root, ctx);
             let authors = metadata
                 .authors
                 .as_ref()
@@ -122,7 +136,6 @@ pub(crate) fn parse(
                 features,
                 package_metadata,
                 dependencies,
-                dev_dependencies,
                 profiles,
                 venv,
             ))
@@ -206,20 +219,13 @@ fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
 }
 
 /// Parse a `venv:` field.
-fn parse_venv(
-    input: Option<&VenvConfigSchema>,
-    root: &Path,
-    ctx: &DuckContext,
-    mut scope: ScopeGuard<'_>,
-) -> QuackResult<VenvConfig> {
+fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) -> VenvConfig {
     let default_config = VenvConfig::default_for_package(ctx);
     let Some(input) = input else {
-        return Ok(default_config);
+        return default_config;
     };
-    let guard = scope.push("storage-path".into());
     let storage_root = if let Some(ref storage) = input.storage_path {
         resolve_path_maybe_relative_to_dir(storage, root, ctx)
-            .with_context(|| guard.make_context_string())?
     } else {
         default_config.storage_path().to_path_buf()
     };
@@ -227,5 +233,5 @@ fn parse_venv(
         .expose_freezefile
         .unwrap_or(default_config.expose_freezefile());
     let ephemeral = input.ephemeral.unwrap_or(default_config.ephemeral());
-    Ok(VenvConfig::new(storage_root, expose_freezefile, ephemeral))
+    VenvConfig::new(storage_root, expose_freezefile, ephemeral)
 }

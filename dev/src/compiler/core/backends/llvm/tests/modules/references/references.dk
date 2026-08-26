@@ -1,0 +1,47 @@
+fun test_simple_ref() -> i64 = {
+    var x: i32 = 10;
+    var r: ref i32 = &x;
+    r = 42;
+    return x;
+}
+
+fun adder(v: ref i32) -> () = {
+    v = v + 1;
+}
+
+fun test_pass_through_reference() -> i64 = {
+    var x: i32 = 10;
+    adder(&x);
+    return x;
+}
+
+fun builtinOperators() -> () = {
+    var x: i32 = 123;
+    var y: i32 = 234;
+
+    var ref_x = &x;
+    var ref_y = &y;
+    builtin_output_i64(ref_x); # 123
+    builtin_output_i64(ref_y); # 234
+
+    # Builtin operators require direct types, thus all refs should be derefed here.
+    var bin_value: i32 = ref_x + ref_y;
+    var bin2_value = ref_x + ref_y; # Type should be inferred to i32.
+    var un_value: i32 = -ref_x;
+    var un2_value = -ref_x;         # Type should be inferred to i32.
+    builtin_output_i64(bin_value);  # 357
+    builtin_output_i64(un_value);   # -123
+
+    # Similarly here. 123 + 234 should be assigned to x through the reference.
+    ref_x = ref_x + ref_y;
+    builtin_output_i64(x);          # 357
+    ref_y = -ref_x;
+    builtin_output_i64(y);          # -357
+}
+
+fun main() -> i64 = {
+    builtin_output_i64(test_simple_ref());              # 42
+    builtin_output_i64(test_pass_through_reference());  # 11
+    builtinOperators();
+    return 0;
+}

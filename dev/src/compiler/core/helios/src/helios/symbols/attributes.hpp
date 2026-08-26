@@ -15,7 +15,7 @@ namespace compiler::helios {
 
 #define ATTRIBUTES_LIST                                                                \
 	attributes::BackendDependent, attributes::DVMOnlyImpl, attributes::NativeOnlyImpl, \
-		attributes::Builtin
+		attributes::Builtin, attributes::CFFIVariadicFunction
 
 	namespace attributes {
 		struct BackendDependent {
@@ -33,6 +33,17 @@ namespace compiler::helios {
 		struct Builtin {
 			BuiltinKind builtin;
 			bool        operator==(const Builtin&) const = default;
+		};
+
+		/**
+		 * @brief Marks an `extern("C")` `fundecl` as a variadic C function.
+		 */
+		struct CFFIVariadicFunction {
+			/**
+			 * @brief Number of fixed parameters preceding the variadic ones.
+			 */
+			u64  fixed_params;
+			bool operator==(const CFFIVariadicFunction&) const = default;
 		};
 	}
 

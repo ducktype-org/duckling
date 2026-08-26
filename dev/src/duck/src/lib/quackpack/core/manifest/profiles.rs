@@ -128,7 +128,9 @@ impl Profiles {
         counter: usize,
     ) -> QuackResult<()> {
         let Some(profile) = self.0.get(&profile_name) else {
-            qp_bail_internal!("Already checked parents exist");
+            qp_bail_internal!(
+                "no profile `{profile_name}`, but already checked, that it exists? {self:#?}"
+            );
         };
         if let Some(previous_occurrence) = current_visit.get(&profile_name) {
             return Err(create_cycle_error_msg(

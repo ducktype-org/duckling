@@ -1,4 +1,3 @@
-#include <diagnostic_interactive/logger.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -14,6 +13,7 @@
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/logger.hpp>
 #include <filesystem/file_path.hpp>
 #include <tester/tester.hpp>
 
@@ -47,7 +47,7 @@ protected:
 	 *   std artifacts cache path
 	 */
 	void beforeAll() override {
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
+		global_state::setters::setGlobalLogger(makeBox<dia::Logger>());
 		const auto     manifest_path = fs::FilePath(path("modules/packages/manifest.json"));
 		std::ifstream  in(manifest_path.getPath());
 		nlohmann::json manifest_json = nlohmann::json::parse(in, nullptr, true, true);

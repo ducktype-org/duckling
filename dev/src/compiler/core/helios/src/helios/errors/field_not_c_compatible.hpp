@@ -1,9 +1,9 @@
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
+#include <diagnostic/message.hpp>
+#include <diagnostic/stable_position.hpp>
 #include <query_framework/context/context_fd.hpp>
 
 #include <string>
@@ -17,8 +17,8 @@ namespace compiler::helios {
 	 * The `reason` argument, produced by the C-ABI converter, carries a short
 	 *  explanation of why the field's type was rejected.
 	 */
-	class FieldNotCCompatibleError final: public dia_int::MessageWithCodeFragmentAndCause {
-		[[nodiscard]] dia_int::Metadata getMetadata() const final {
+	class FieldNotCCompatibleError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -27,11 +27,11 @@ namespace compiler::helios {
 
 	public:
 		FieldNotCCompatibleError(
-			query::Context&         ctx,
-			dia_int::StablePosition source_position,
-			std::string             field_name,
-			tsh::SymbolType<>       field_type,
-			std::string             reason
+			query::Context&     ctx,
+			dia::StablePosition source_position,
+			std::string         field_name,
+			tsh::SymbolType<>   field_type,
+			std::string         reason
 		);
 	};
 
