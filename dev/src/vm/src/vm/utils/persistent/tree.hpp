@@ -578,8 +578,14 @@ namespace vm::persistent::detail {
 			using bldT                        = MergeBuilder<ResT>;
 			static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
 
-			auto helper = [&](this auto& self, posT cur_pos, NodeID node_1, NodeID node_2
-			              ) -> base::Optional<NodeID> {
+			auto make_branch = [&](auto left, auto right) -> base::Optional<NodeID> {
+				if constexpr (RECONSTRUCT)
+					return st.emplaceBranch(*left, *right);
+				else
+					return std::nullopt;
+			};
+
+			auto helper = [&](this auto& self, posT cur_pos, NodeID node_1, NodeID node_2) {
 				const auto pos_1 = st.getPos(node_1);
 				const auto pos_2 = st.getPos(node_2);
 
@@ -602,78 +608,69 @@ namespace vm::persistent::detail {
 				const auto pos_l = getChildPos(cur_pos, Dir::Left),
 						   pos_r = getChildPos(cur_pos, Dir::Right);
 
-				[&] {
-					if (lca_pos != cur_pos) {
-						const auto dir_lca = dirToChild(lca_pos, cur_pos);
+				if (lca_pos != cur_pos) {
+					const auto dir_lca = dirToChild(lca_pos, cur_pos);
 
 
-						left  = dir_lca == Dir::Left
-						          ? self(pos_l, node_1, node_2)
-						          : merge_policy.invoke(&bldT::the_same, EMPTY, pos_l);
-						right = dir_lca == Dir::Right
-						          ? self(pos_r, node_1, node_2)
-						          : merge_policy.invoke(&bldT::the_same, EMPTY, pos_r);
+					left  = dir_lca == Dir::Left
+					          ? self(pos_l, node_1, node_2)
+					          : merge_policy.invoke(&bldT::the_same, EMPTY, pos_l);
+					right = dir_lca == Dir::Right
+					          ? self(pos_r, node_1, node_2)
+					          : merge_policy.invoke(&bldT::the_same, EMPTY, pos_r);
 
-						return;
-					}
+					return make_branch(left, right);
+				}
 
-					if (pos_1 == cur_pos && pos_2 == cur_pos) {
-						const auto [left_1, right_1] = st.getChildren(node_1);
-						const auto [left_2, right_2] = st.getChildren(node_2);
+				if (pos_1 == cur_pos && pos_2 == cur_pos) {
+					const auto [left_1, right_1] = st.getChildren(node_1);
+					const auto [left_2, right_2] = st.getChildren(node_2);
 
-						left  = self(pos_l, left_1, left_2);
-						right = self(pos_r, right_1, right_2);
+					left  = self(pos_l, left_1, left_2);
+					right = self(pos_r, right_1, right_2);
 
-						return;
-					}
+					return make_branch(left, right);
+				}
 
-					if (pos_1 != lca_pos && pos_2 != lca_pos) {
-						const auto dir_1 = dirToChild(pos_1, cur_pos);
+				if (pos_1 != lca_pos && pos_2 != lca_pos) {
+					const auto dir_1 = dirToChild(pos_1, cur_pos);
 
-						left  = dir_1 == Dir::Left
-						          ? merge_policy.invoke(&bldT::only_1, node_1, pos_l)
-						          : merge_policy.invoke(&bldT::only_2, node_2, pos_l);
-						right = dir_1 == Dir::Right
-						          ? merge_policy.invoke(&bldT::only_1, node_1, pos_r)
-						          : merge_policy.invoke(&bldT::only_2, node_2, pos_r);
+					left  = dir_1 == Dir::Left ? merge_policy.invoke(&bldT::only_1, node_1, pos_l)
+					                           : merge_policy.invoke(&bldT::only_2, node_2, pos_l);
+					right = dir_1 == Dir::Right ? merge_policy.invoke(&bldT::only_1, node_1, pos_r)
+					                            : merge_policy.invoke(&bldT::only_2, node_2, pos_r);
 
-						return;
-					}
+					return make_branch(left, right);
+				}
 
-					if (pos_1 == lca_pos) {
-						const auto [left_1, right_1] = st.getChildren(node_1);
-						const auto dir_2             = dirToChild(pos_2, cur_pos);
+				if (pos_1 == lca_pos) {
+					const auto [left_1, right_1] = st.getChildren(node_1);
+					const auto dir_2             = dirToChild(pos_2, cur_pos);
 
-						left = dir_2 == Dir::Left
-						         ? self(pos_l, left_1, node_2)
-						         : merge_policy.invoke(&bldT::only_1, left_1, pos_l);
+					left = dir_2 == Dir::Left ? self(pos_l, left_1, node_2)
+					                          : merge_policy.invoke(&bldT::only_1, left_1, pos_l);
 
-						right = dir_2 == Dir::Right
-						          ? self(pos_r, right_1, node_2)
-						          : merge_policy.invoke(&bldT::only_1, right_1, pos_r);
+					right = dir_2 == Dir::Right
+					          ? self(pos_r, right_1, node_2)
+					          : merge_policy.invoke(&bldT::only_1, right_1, pos_r);
 
-						return;
-					}
+					return make_branch(left, right);
+				}
 
-					if (pos_2 == lca_pos) {
-						const auto [left_2, right_2] = st.getChildren(node_2);
-						const auto dir_1             = dirToChild(pos_1, cur_pos);
+				if (pos_2 == lca_pos) {
+					const auto [left_2, right_2] = st.getChildren(node_2);
+					const auto dir_1             = dirToChild(pos_1, cur_pos);
 
-						left  = dir_1 == Dir::Left
-						          ? self(pos_l, node_1, left_2)
-						          : merge_policy.invoke(&bldT::only_2, left_2, pos_l);
-						right = dir_1 == Dir::Right
-						          ? self(pos_r, node_1, right_2)
-						          : merge_policy.invoke(&bldT::only_2, right_2, pos_r);
+					left  = dir_1 == Dir::Left ? self(pos_l, node_1, left_2)
+					                           : merge_policy.invoke(&bldT::only_2, left_2, pos_l);
+					right = dir_1 == Dir::Right
+					          ? self(pos_r, node_1, right_2)
+					          : merge_policy.invoke(&bldT::only_2, right_2, pos_r);
 
-						return;
-					}
-				}();
+					return make_branch(left, right);
+				}
 
-				if constexpr (RECONSTRUCT)
-					return st.emplaceBranch(*left, *right);
-				else
-					return std::nullopt;
+				CORE_UNREACHABLE();
 			};
 
 			const auto pos_1 = st.getPos(root_1);
