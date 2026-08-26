@@ -531,13 +531,6 @@ namespace compiler::driver {
 				);
 
 				auto llvm_module = compileLIRModuleToLLVM(ctx, &script_lir.value());
-				{
-					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
-					llvm_module.compile(
-						object_artifact.file.getFilePath(),
-						backend_llvm::CompilationOutputType::Object
-					);
-				}
 
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
@@ -554,6 +547,14 @@ namespace compiler::driver {
 					llvm_module.compile(
 						asm_artifact.file.getFilePath().getPath(),
 						backend_llvm::CompilationOutputType::Assembly
+					);
+				}
+
+				{
+					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
+					llvm_module.compile(
+						object_artifact.file.getFilePath(),
+						backend_llvm::CompilationOutputType::Object
 					);
 				}
 

@@ -530,12 +530,6 @@ clah::Clah getClahForMain() {
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)
 				.add(getClahLinkingOptions())
-				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
-	                     .addShortName('n')
-	                     .addLongName("name")
-	                     .addShortDesc("Name of the package the first given module belongs to.")
-	                     .optional()
-	                     .build())
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("output-file-name"))
 	                     .addShortName('o')
 	                     .addLongName("output-file-name")
@@ -562,9 +556,13 @@ clah::Clah getClahForMain() {
 					for (usize i = 0; i < options.getExtraParameterCount(); ++i)
 						modules_to_compile.push_back(options.getExtra<fs::File>(i).value());
 
-					// The first given module gets its package name from --name, the rest get
-		            // random ones.
-					auto first_package_name = options.getValue<std::string>("name");
+					const bool dvm_backend = options.isFlag("dvm-backend");
+
+					if (dvm_backend) {
+						std::cerr << "DVM Backend does not create full (linked) output artifacts in compile_modules command.\n";
+						return 1;
+					}
+
 
 					// Package names other than the first one are random, so the dependency alias
 		            // is set to the module's file name to keep those packages importable.
@@ -572,20 +570,16 @@ clah::Clah getClahForMain() {
 					std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
 					aliases.reserve(modules_to_compile.size());
 					packages_info.reserve(modules_to_compile.size());
-					for (usize i = 0; i < modules_to_compile.size(); ++i) {
-						bool named        = i == 0 && first_package_name;
+					for (const auto& module : modules_to_compile) {
 						auto package_name = base::StrID(
-							named ? first_package_name.value() : base::generateRandomString(32)
+							base::generateRandomString(32)
 						);
-						aliases.push_back(
-							named ? package_name
-								  : base::StrID(modules_to_compile[i].getFilePath().stem())
-						);
+						aliases.emplace_back(module.getFilePath().stem());
 						packages_info.push_back(compiler::frontend::packages::RawPackageInfo{
 							.package_id   = package_name,
 							.package_name = package_name,
 							.version      = base::StrID("not_supported"),
-							.package_path = modules_to_compile[i].getFilePath(),
+							.package_path = module.getFilePath(),
 							.features     = {},
 							.dependencies = {},
 						});
@@ -643,8 +637,6 @@ clah::Clah getClahForMain() {
 						compiler::driver::exit();
 						return 1;
 					}
-
-					const bool dvm_backend = options.isFlag("dvm-backend");
 
 					// Every module but the first one is built into a library, which is then linked
 		            // into the artifact of the first module. The first module is the last task, so
