@@ -520,8 +520,8 @@ clah::Clah getClahForMain() {
 				"Compile given modules into binaries. Every module is placed in its own package "
 				"and every package depends on all the other ones. "
 				"This mimics the simple case of multi file compilation with GCC/clang which is "
-	            "sometimes useful. Note that the package based entry points should be preferred "
-	            "when possible."
+				"sometimes useful. Note that the package based entry points should be preferred "
+				"when possible."
 			)
 				.addPositional(clah::FileParser::make("module"))
 				.setDefaultValueParser(clah::FileParser::make("module"))
@@ -559,7 +559,8 @@ clah::Clah getClahForMain() {
 					const bool dvm_backend = options.isFlag("dvm-backend");
 
 					if (dvm_backend) {
-						std::cerr << "DVM Backend does not create full (linked) output artifacts in compile_modules command.\n";
+						std::cerr << "DVM Backend does not create full (linked) output artifacts "
+			                         "in compile_modules command.\n";
 						return 1;
 					}
 
@@ -570,10 +571,8 @@ clah::Clah getClahForMain() {
 					std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
 					aliases.reserve(modules_to_compile.size());
 					packages_info.reserve(modules_to_compile.size());
-					for (const auto& module : modules_to_compile) {
-						auto package_name = base::StrID(
-							base::generateRandomString(32)
-						);
+					for (const auto& module: modules_to_compile) {
+						auto package_name = base::StrID(base::generateRandomString(32));
 						aliases.emplace_back(module.getFilePath().stem());
 						packages_info.push_back(compiler::frontend::packages::RawPackageInfo{
 							.package_id   = package_name,
