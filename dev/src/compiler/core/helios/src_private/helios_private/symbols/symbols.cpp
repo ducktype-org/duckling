@@ -676,7 +676,9 @@ namespace compiler::helios {
 			ClassMemberSemantics(
 				scope,
 				stmt->getHash(),
-				ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
+				ctx.query<tsh::QueryClassType>(
+					ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
+				)
 			)
 		);
 	}

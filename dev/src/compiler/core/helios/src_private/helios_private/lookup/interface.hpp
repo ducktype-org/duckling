@@ -6,6 +6,7 @@
 #include <helios/scope_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 
 #include <diagnostic/stable_position.hpp>
@@ -22,7 +23,13 @@ namespace compiler::helios {
 
 	struct AdditionalLookupParameters final {
 		bool with_wildcards = true;
-		// @TODO: public/private/protected?
+
+		/**
+		 * @brief The scope the lookup is written in.
+		 *
+		 * It decides which private and protected members of a class are visible.
+		 */
+		base::Optional<ScopeID> accessing_scope{};
 	};
 
 	/**

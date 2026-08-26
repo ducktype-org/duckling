@@ -54,6 +54,14 @@ namespace compiler::tsh {
 		return CRef(&element_by_special_kind.at(special));
 	}
 
+	base::Optional<CRef<InterfaceElement>> TypeInterface::getElementBySym(
+		const compiler::helios::SymID sym
+	) const {
+		for (const InterfaceElement& element: elements)
+			if (element.getSymbol() == sym) return CRef(&element);
+		return {};
+	}
+
 	const base::HashMap<base::StrID, std::vector<InterfaceElement>>& TypeInterface::getElementsByName(
 	) const {
 		return elements_by_name;

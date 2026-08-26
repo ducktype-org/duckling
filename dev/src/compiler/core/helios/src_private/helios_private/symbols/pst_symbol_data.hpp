@@ -5,6 +5,7 @@
 #include <helios/attributes/builtins.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/types.hpp>
 
 namespace compiler::helios {
 	/**
@@ -51,9 +52,11 @@ namespace compiler::helios {
 		/**
 		 * Class the symbol is a member of.
 		 */
-		SymID owner_class;
+		tsh::ClassAbstractType owner_class;
 
-		ClassMemberSemantics(ScopeID scope, pst::HashType pst_element_hash, SymID owner_class):
+		ClassMemberSemantics(
+			ScopeID scope, pst::HashType pst_element_hash, tsh::ClassAbstractType owner_class
+		):
 			  scope(scope),
 			  pst_element_hash(pst_element_hash),
 			  owner_class(owner_class) {}

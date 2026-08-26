@@ -2247,8 +2247,7 @@ private:
 		          ->valueOrThrow();
 		auto example_class_abstract_type
 			= query::entryPoint<compiler::tsh::QueryClassType>(example_class);
-		auto example_class_info_methods
-			= example_class_info.declared_interface.getMethodsView();
+		auto example_class_info_methods = example_class_info.declared_interface.getMethodsView();
 		ASSERT_EQUAL(3, std::ranges::distance(example_class_info_methods));
 
 		for (const auto& method: example_class_info_methods) {
@@ -2266,8 +2265,7 @@ private:
 		          ->valueOrThrow();
 		auto wrapper_class_abstract_type
 			= query::entryPoint<compiler::tsh::QueryClassType>(wrapper_class);
-		auto wrapper_class_info_methods
-			= wrapper_class_info.declared_interface.getMethodsView();
+		auto wrapper_class_info_methods = wrapper_class_info.declared_interface.getMethodsView();
 		ASSERT_EQUAL(4, std::ranges::distance(wrapper_class_info_methods));
 
 		for (const auto& method: wrapper_class_info_methods) {

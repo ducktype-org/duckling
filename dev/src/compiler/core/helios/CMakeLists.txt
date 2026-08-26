@@ -12,6 +12,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/pst_layer/pst_parent.cpp
 	src_private/helios_private/lookup/lookup_result.cpp
 	src_private/helios_private/lookup/interface.cpp
+	src_private/helios_private/lookup/lookup_in_type_interface.cpp
 	src_private/helios_private/lookup/lookup_chain.cpp
 	src_private/helios_private/hout_creation/expressions/function_calls/call_processing.cpp
 	src_private/helios_private/hout_creation/expressions/function_calls/square_call_processing.cpp

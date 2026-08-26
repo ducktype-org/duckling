@@ -332,6 +332,14 @@ namespace compiler::tsh {
 		base::Optional<CRef<InterfaceElement>> getSpecialElement(MemberSpecialKind special) const;
 
 		/**
+		 * @brief Gets the element of this interface declared by the given symbol, if it has one.
+		 * @param sym The symbol of the requested element.
+		 * @return The element of this interface with the requested symbol.
+		 */
+		[[nodiscard]]
+		base::Optional<CRef<InterfaceElement>> getElementBySym(compiler::helios::SymID sym) const;
+
+		/**
 		 * @brief Gets a view of all the fields of this interface.
 		 * @return A view of all the fields of this interface.
 		 */

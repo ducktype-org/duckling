@@ -5,6 +5,10 @@
 
 #include "chain_expr.hpp"
 
+#include "helios/symbols/symbol_id.hpp"
+#include "helios/tsh/type_interface.hpp"
+#include "helios_private/symbols/pst_symbol_data.hpp"
+
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
@@ -44,6 +48,15 @@
 #include <ranges>
 
 namespace compiler::helios::code {
+
+	namespace {
+		/**
+		 * @brief Helper to get the interface element of a symbol that is a type member.
+		 */
+		CRef<tsh::InterfaceElement> getInterfaceElement(query::Context& ctx, SymID sym) {
+			return typeOfMember(sym).getInterface(ctx)->getElementBySym(sym).value();
+		}
+	}
 
 	/**
 	 * This is temporary helper used before #3095.
@@ -448,7 +461,7 @@ namespace compiler::helios::code {
 		query::QResult<std::vector<SymID>> getCallableCandidates(
 			const std::vector<SymID>& looked_up_callees
 		) const {
-			// @TODO: #2135 handle ambiguity in class scopes
+			if (looked_up_callees.empty()) return std::vector<SymID>{};
 
 			// If all candidates are functions, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
@@ -461,7 +474,22 @@ namespace compiler::helios::code {
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
 					return kind(symbol) == SymbolKind::Method;
 				})) {
-				return looked_up_callees;
+				// Make sure that all of the found methods are either static methods or instance methods.
+				auto type      = typeOfMember(looked_up_callees.at(0));
+				auto interface = type.getInterface(query_ctx);
+				auto elements  = looked_up_callees | std::views::transform([&](SymID symbol) {
+                                    return interface->getElementBySym(symbol).value();
+                                })
+				              | std::ranges::to<std::vector<CRef<tsh::InterfaceElement>>>();
+
+				if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
+						return interface->getElementBySym(symbol).value()->isStaticMethod();
+					}))
+					return looked_up_callees;
+				else if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
+							 return interface->getElementBySym(symbol).value()->isMethod();
+						 }))
+					return looked_up_callees;
 			}
 
 			// Check error condition and report error.
@@ -872,21 +900,28 @@ namespace compiler::helios::code {
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-				// The self expression may be passed by copy or by reference,
-				// depending on whether the type is simple or composite, respectively.
-				auto self_expr = current_expr->expression_type.getType().isSimple()
-				                   ? std::move(current_expr)
-				                   : Box<Expr>(makeBox<RefOfExpr>(
-										 query_ctx,
-										 current_expr->origin.generatedFrom(),
-										 std::move(current_expr)
-									 ));
+				base::Optional<base::Box<Expr>> expr{};
+				if (callees.size() > 0
+				    and getInterfaceElement(query_ctx, callees.at(0))->isMethod()) {
+					// The self expression may be passed by copy or by reference,
+					// depending on whether the type is simple or composite, respectively.
+					auto self_expr = current_expr->expression_type.getType().isSimple()
+					                   ? std::move(current_expr)
+					                   : Box<Expr>(makeBox<RefOfExpr>(
+											 query_ctx,
+											 current_expr->origin.generatedFrom(),
+											 std::move(current_expr)
+										 ));
 
-				auto res = processMethodCall(
-					query_ctx, callees, expr_access, call_expr, std::move(self_expr)
-				);
-				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
-				return ChainState::ofExpr(std::move(expr));
+					auto res = processMethodCall(
+						query_ctx, callees, expr_access, call_expr, std::move(self_expr)
+					);
+					UNPACK_QRESULT_MOVE(expr =, res);
+				} else {
+					auto res = processFunctionCall(query_ctx, callees, expr_access, call_expr);
+					UNPACK_QRESULT_MOVE(expr =, res);
+				}
+				return ChainState::ofExpr(std::move(expr.value()));
 			}
 			case lexer::Token::Square: {
 				auto access_res = processPSTExpr(std::move(current_expr), expr_access);
@@ -992,7 +1027,7 @@ namespace compiler::helios::code {
 
 		/**
 		 * Case when we have a call expression and the current state is a type,
-		 * for example "Point[3]".
+		 * for example "Point[3][3]".
 		 *
 		 * A call on a type is not a lookup in it, but an operation on the type used as a value,
 		 * so the type becomes a type literal and the call is processed as on any expression.

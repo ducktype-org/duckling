@@ -19,6 +19,7 @@
 
 namespace compiler::tsh {
 	// Forwards:
+	class AbstractType;
 	class ClassAbstractType;
 }
 
@@ -186,5 +187,17 @@ namespace compiler::helios {
 	 *
 	 * @note The owning class is stored in the symbol data, so this is a plain lookup.
 	 */
-	tsh::ClassAbstractType classOfMember(query::Context&, SymID member);
+	tsh::ClassAbstractType classOfMember(SymID member);
+
+	/**
+	 * @return the type that a member symbol belongs to.
+	 * Panics for a symbol that is not a member of a type.
+	 *
+	 * Unlike @ref classOfMember it also answers for the compiler-generated members, which is why
+	 * the type it returns is not necessarily a class. A generated field of a tuple belongs to
+	 * that tuple, and a generated destructor belongs to whatever type it destroys.
+	 *
+	 * @note The owning type is stored in the symbol data, so this is a plain lookup.
+	 */
+	tsh::AbstractType typeOfMember(SymID member);
 }
