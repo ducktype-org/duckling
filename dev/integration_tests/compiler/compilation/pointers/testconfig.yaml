@@ -34,14 +34,14 @@ Tests:
 
   ref_to_index:
     Cases:
-      all:
-        backend: all
+      dvm:
+        backend: dvm
         Output:
           String: "10\n99\n"
         ExitCode: 0
       llvm_valgrind:
         backend: llvm
-        valgrind: "true"F
+        valgrind: "true"
         Output:
           String: "10\n99\n"
         ExitCode: 0
