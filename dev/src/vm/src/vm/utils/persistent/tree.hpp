@@ -367,6 +367,7 @@ namespace vm::persistent::detail {
 						continue;
 					}
 
+					trace.push_front(next);
 					trace.push_front(considered);
 					break;
 				}
