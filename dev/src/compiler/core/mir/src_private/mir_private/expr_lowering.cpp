@@ -1048,8 +1048,9 @@ namespace compiler::mir {
 
 			if (never_returns)
 				// This is needed, because the consumer may assign the result (void) to a value
-				// (non-void) But if we create a value, then the consumer is after the panic,
-				// unreachable.
+				// (non-void) But if we create a value, we fills this assignment hole with our
+				// assigment to void tempoarary, then the consumer assignment to non-void type is
+				// after the panic, unreachable.
 				valueOutput(sub_continuation, result.getResult(function));
 			else
 				output(std::move(result));

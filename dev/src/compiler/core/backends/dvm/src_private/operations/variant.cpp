@@ -8,10 +8,11 @@ namespace compiler::backend_vm::internal {
 
 	namespace {
 		/**
-		 * @brief The DVM type naming the chosen alternative.
+		 * @brief The strategy of lowering the variant alternative type to DVM type.
 		 *
-		 * The DVM identifies alternatives by type name, so an alternative carrying no information
-		 * (e.g. `()`), which has no DVM type of its own, is named by the stand-in unit type.
+		 * We can't use the lowerAndKeepTslType directly, as it lowers the unit type
+		 * to empty optional result. We want a different behaviour for variant alterantive
+		 * type, we want unit type to lower to some opaque type.
 		 */
 		const TypeOfData& alternativeTypeOf(
 			Ref<FunctionLoweringContext> ctx, const lir::VariantParameters& params

@@ -935,10 +935,8 @@ namespace compiler::lir {
 				case mir::Operation::Call: {
 					if (lowerLIRBuiltinCall(mir_instruction, curr_block)) break;
 
-
 					auto output = getOutput(mir_instruction.output);
 					auto args   = getLocations(mir_instruction.arguments);
-
 					curr_block->instructions.emplace_back(
 						Operation::Call, output, std::move(args), mir_instruction.metadata
 					);

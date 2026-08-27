@@ -142,8 +142,10 @@ namespace compiler::backend_vm::internal {
 	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): always aggregate-initialized
 	struct VariantConstructOperation {
 		lir::VariantParameters variant_params;
-		/// Empty when the chosen alternative carries no information (e.g. `()`), as then only
-		/// the alternative itself has to be activated.
+		/*
+		 * Empty when the chosen alternative carries no information (e.g. `()`), as then only
+		 * the alternative itself has to be activated.
+		 */
 		base::Optional<DVMValue> payload;
 		DVMPlace                 dest;  ///< The variant place; always present.
 	};
@@ -199,6 +201,13 @@ namespace compiler::backend_vm::internal {
 	};
 
 	/**
+	 * @brief Represents an unreachable terminator.
+	 */
+	struct UnreachableOperation {
+		std::vector<lir::ScopeFlag> scope_flags;
+	};
+
+	/**
 	 * @brief DVMOperation is a more generalised abstraction over lir::Instruction which allows to
 	 * bundle up the instruction lowering logic for similar instructions.
 	 *
@@ -220,7 +229,8 @@ namespace compiler::backend_vm::internal {
 		JumpOperation,
 		BranchOperation,
 		BranchIfNullOperation,
-		ReturnOperation>;
+		ReturnOperation,
+		UnreachableOperation>;
 
 
 	/**

@@ -542,7 +542,7 @@ private:
 	 * eliminated.
 	 */
 	void voidCallTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/function_calls")));
+		auto [module, _] = getModule(fs::File(path("modules/function_calls")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();

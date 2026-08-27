@@ -46,7 +46,10 @@ namespace compiler::helios {
 
 			void setSymbolTypeByTypeExpr(const pst::Access<pst::ExprElement> expr) {
 				const auto type_ctv = getTypeCTVFromPST(ctx, expr);
-				if (type_ctv.hasFailed()) setFailed();
+				if (type_ctv.hasFailed()) {
+					setFailed();
+					return;
+				}
 				setTypeOfSymbol(type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value());
 			}
 

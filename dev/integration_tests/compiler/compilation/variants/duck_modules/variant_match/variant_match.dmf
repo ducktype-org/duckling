@@ -249,9 +249,11 @@ namespace maybe {
 
 fun maybeExample() -> () = {
     var a : maybe.Maybe(i32) = ();
+	if (maybe.hasValue:{i32}(a)) print("unit alternative reported as full");
     a = 20;
-	if (not maybe.hasValue:{i32}(a)) print("1");
-	if (maybe.value:{i32}(a) != 20) print("1");
+	if (not maybe.hasValue:{i32}(a)) print("hasValue wrong");
+	
+	if (maybe.value:{i32}(a) != 20) print("value wrong");
 }
 
 fun main() -> i64 = {

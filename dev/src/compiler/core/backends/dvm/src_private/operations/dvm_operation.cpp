@@ -3,7 +3,6 @@
 #include "../dvm_value.hpp"
 #include "../function_lowering_context.hpp"
 #include "../program_lowering_context.hpp"
-#include "instruction_lowerer.hpp"
 
 #include <ctv/ctv.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -399,17 +398,7 @@ namespace compiler::backend_vm::internal {
 			};
 		}
 		case Unreachable: {
-			auto abort_call = CallOperation{
-				.call_info = { .call_target = DVMFunctionName{ .name = base::StrID("abort") },
-				               .return_type = {},
-				               .param_types = {} },
-				.args      = {},
-				.dest      = {},
-			};
-
-			InstructionLowerer{ &ctx }.lower(abort_call);
-			return ReturnOperation{
-				.value       = {},
+			return UnreachableOperation{
 				.scope_flags = instr.scope_flags,
 			};
 		}

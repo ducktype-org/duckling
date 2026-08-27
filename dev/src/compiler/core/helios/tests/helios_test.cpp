@@ -1986,7 +1986,7 @@ private:
 	// A `-> void` declaration must give the function symbol a result type of the Void type,
 	// which is the marker that the function never returns.
 	void testVoidReturnType() {
-		auto [module, scope] = getModule(fs::File(path("test_modules/functions")));
+		auto [_, scope] = getModule(fs::File(path("test_modules/functions")));
 
 		const auto diverges_symbol = getChain("diverges", scope).back();
 		const auto function_type
