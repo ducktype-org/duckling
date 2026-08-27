@@ -170,7 +170,7 @@ namespace ser::detail {
 	//
 	// Two rules that look like details and are not: a type with a hook is NEVER decomposed,
 	// and the refusals sit above every hook, because a pointer with a serializer is still a
-	// pointer.
+	// pointer. 
 
 	template<class T, writer Ar>
 	constexpr Errc dispatchWrite(Ar& ar, const T& x) {

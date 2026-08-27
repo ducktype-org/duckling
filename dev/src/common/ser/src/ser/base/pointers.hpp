@@ -22,6 +22,7 @@
 
 #include <base/pointers/box.hpp>
 #include <base/pointers/box_or_ref.hpp>
+#include <base/pointers/default_deleter.hpp>
 #include <base/pointers/shared_box.hpp>
 
 #include <ser/concepts.hpp>
@@ -63,6 +64,26 @@ namespace ser {
 		}
 
 		template<class Ar>
+		constexpr Errc denyCustomBoxDeleter() {
+			static_assert(
+				DEPENDENT_FALSE<Ar>,
+				"ser: cannot serialize a base::Box / base::MBox with a custom deleter - "
+				"reading one ALLOCATES, and the only allocation ser has is `new T` with a "
+				"default-constructed deleter. A custom deleter says the pointee came from "
+				"somewhere else - an arena, a pool, malloc, a C API - so ser would hand "
+				"`new`-ed memory to something that frees it another way, and the state the "
+				"deleter needs to find its way home (WHICH arena) is not on the wire.\n"
+				"  The default deleter?  base::Box<T> / base::MBox<T>, nothing to do\n"
+				"  An arena or a pool?   serialize the VALUE, and put it back where it "
+				"belongs yourself after reading\n"
+				"  Stateless, and really plain `delete`?  opt in with one line:\n"
+				"    template<> struct ser::box_deleter_is_new_delete<MyDeleter> { static "
+				"constexpr bool VALUE = true; };"
+			);
+			return Errc::InvalidValue;
+		}
+
+		template<class Ar>
 		constexpr Errc denyBoxOrCRef() {
 			static_assert(
 				DEPENDENT_FALSE<Ar>,
@@ -75,6 +96,34 @@ namespace ser {
 		}
 
 	}  // namespace detail
+
+	// ── which deleters a read may allocate for ────────────────────────────────
+
+	/**
+	 * @brief Does D free its pointee with plain `delete`, and carry no state?
+	 * Those are the two promises, and reading a Box needs both: it allocates with `new` and
+	 * default-constructs the deleter. True only for base::DefaultBoxPtrDeleter; anything
+	 * else is refused unless you opt in with one line:
+	 *
+	 *     template<>
+	 *     struct ser::box_deleter_is_new_delete<MyDeleter> {
+	 *         static constexpr bool VALUE = true;
+	 *     };
+	 */
+	template<class D>
+	struct box_deleter_is_new_delete {
+		static constexpr bool VALUE = false;
+	};
+
+	// Any U: DefaultBoxPtrDeleter is plain `delete ptr` whatever it is spelled over, which is
+	// exactly what makeBox's `new` pairs with.
+	template<class U>
+	struct box_deleter_is_new_delete<::base::DefaultBoxPtrDeleter<U>> {
+		static constexpr bool VALUE = true;
+	};
+
+	template<class D>
+	inline constexpr bool BOX_DELETER_IS_NEW_DELETE_V = box_deleter_is_new_delete<D>::VALUE;
 
 	// ── Box ───────────────────────────────────────────────────────────────────
 
@@ -96,17 +145,26 @@ namespace ser {
 	struct serializer<::base::Box<T, D>> {
 		using box_type = ::base::Box<T, D>;
 
+		// Writing needs nothing from the deleter, so this could have let a custom one
+		// through - but a type that writes and cannot be read back is what the pairing rule
+		// in checkHooks exists to refuse, and the refusal reads better at the write than as
+		// a surprise at the first read.
 		static constexpr Errc write(writer auto& ar, const box_type& b) {
-			// operator* is const and hands back T&, and a Box is never null - the class
-			// panics before it can be - so there is no presence byte and no check here.
-			return detail::dispatchWrite<T>(ar, *b);
+			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
+				return detail::denyCustomBoxDeleter<decltype(ar)>();
+			else
+				// operator* is const and hands back T&, and a Box is never null - the class
+				// panics before it can be - so there is no presence byte and no check here.
+				return detail::dispatchWrite<T>(ar, *b);
 		}
 
 		static constexpr Errc read(reader auto& ar, box_type& b)
 			requires(detail::READABLE_ELEMENT_V<T>) {
+			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
+				return detail::denyCustomBoxDeleter<decltype(ar)>();
 			// The Box already owns an object, so reading fills THAT object rather than
 			// allocating a second one and throwing the first away.
-			if constexpr (detail::FILL_IN_PLACE_V<T>)
+			else if constexpr (detail::FILL_IN_PLACE_V<T>)
 				return detail::dispatchRead<T>(ar, *b);
 			else {
 				b = ::base::makeBox<T, D>(detail::dispatchMake<T>(ar));
@@ -115,7 +173,11 @@ namespace ser {
 		}
 
 		static box_type make(reader auto& ar) requires(detail::READABLE_ELEMENT_V<T>) {
-			if constexpr (detail::FILL_IN_PLACE_V<T>) {
+			// throwError only so this compiles once the static_assert has had its say - a
+			// make has a box to return and a refused deleter has none.
+			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
+				throwError(detail::denyCustomBoxDeleter<decltype(ar)>(), ar.position());
+			else if constexpr (detail::FILL_IN_PLACE_V<T>) {
 				box_type b = ::base::makeBox<T, D>();
 				if (const auto c = detail::dispatchRead<T>(ar, *b); c != Errc::Ok)
 					throwError(c, ar.position());
@@ -147,34 +209,46 @@ namespace ser {
 		using box_type = ::base::MBox<T, D>;
 
 		static constexpr Errc write(writer auto& ar, const box_type& b) {
-			const ::std::uint8_t present = b ? 1u : 0u;
-			if (const auto c = detail::dispatchWrite<::std::uint8_t>(ar, present); c != Errc::Ok)
-				return c;
-			if (!present) return Errc::Ok;
-			return detail::dispatchWrite<T>(ar, *b);
+			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
+				return detail::denyCustomBoxDeleter<decltype(ar)>();
+			else {
+				const ::std::uint8_t present = b ? 1u : 0u;
+				if (const auto c = detail::dispatchWrite<::std::uint8_t>(ar, present); c != Errc::Ok)
+					return c;
+				if (!present) return Errc::Ok;
+				return detail::dispatchWrite<T>(ar, *b);
+			}
 		}
 
+		// An MBox is worse off than a Box even on the fill path: reading a null assigns a
+		// fresh box_type, and reading a value into one that is null allocates - so whether
+		// the deleter survives would depend on the BYTES, which is the same runtime-property
+		// objection that refuses BoxOrCRef above.
 		static constexpr Errc read(reader auto& ar, box_type& b)
 			requires(detail::READABLE_ELEMENT_V<T>) {
-			::std::uint8_t present = 0;
-			if (const auto c = detail::dispatchRead<::std::uint8_t>(ar, present); c != Errc::Ok)
-				return c;
-			// A byte that is neither 0 nor 1 is corrupt input, not a value to interpret -
-			// the same rule the optional and bool adapters follow.
-			if (present > 1) return Errc::InvalidValue;
+			if constexpr (!BOX_DELETER_IS_NEW_DELETE_V<D>)
+				return detail::denyCustomBoxDeleter<decltype(ar)>();
+			else {
+				::std::uint8_t present = 0;
+				if (const auto c = detail::dispatchRead<::std::uint8_t>(ar, present); c != Errc::Ok)
+					return c;
+				// A byte that is neither 0 nor 1 is corrupt input, not a value to interpret -
+				// the same rule the optional and bool adapters follow.
+				if (present > 1) return Errc::InvalidValue;
 
-			if (present == 0) {
-				b = box_type{};  // drops whatever was there, which is the point of a read
-				return Errc::Ok;
-			}
+				if (present == 0) {
+					b = box_type{};  // drops whatever was there, which is the point of a read
+					return Errc::Ok;
+				}
 
-			if constexpr (detail::FILL_IN_PLACE_V<T>) {
-				// Reuse the allocation when there is one; allocate only for a null MBox.
-				if (!b) b = ::base::makeBox<T, D>();
-				return detail::dispatchRead<T>(ar, *b);
-			} else {
-				b = ::base::makeBox<T, D>(detail::dispatchMake<T>(ar));
-				return Errc::Ok;
+				if constexpr (detail::FILL_IN_PLACE_V<T>) {
+					// Reuse the allocation when there is one; allocate only for a null MBox.
+					if (!b) b = ::base::makeBox<T, D>();
+					return detail::dispatchRead<T>(ar, *b);
+				} else {
+					b = ::base::makeBox<T, D>(detail::dispatchMake<T>(ar));
+					return Errc::Ok;
+				}
 			}
 		}
 	};

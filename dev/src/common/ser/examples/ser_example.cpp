@@ -20,6 +20,7 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
+#include "ser/access.hpp"
 #include <ser/base/all.hpp>  // opt-in: base::Optional, base::Box, base::Map, ...
 #include <ser/macros.hpp>
 #include <ser/ser.hpp>
@@ -30,6 +31,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <format>
+#include <initializer_list>
 #include <map>
 #include <optional>
 #include <print>
@@ -44,14 +46,14 @@
 // Nothing to declare, register or list.
 
 struct Point final {
-	i32 x = 0;
-	i32 y = 0;
+	double x = 0;
+	u32 y = 0;
 };
 
 void plainAggregateExample() {
 	std::println("\n── 1. a plain aggregate, with no serialization code ───────────────");
 
-	const Point point{ .x = 3, .y = -4 };
+	const Point point;
 
 	// Writing an object we are already holding cannot fail unless the program is broken,
 	// so this is the panicking form. It APPENDS to the buffer.
@@ -78,7 +80,7 @@ enum class Color : std::uint8_t { Red = 1, Blue = 2 };  // travels as its underl
 
 struct Person final {
 	std::string                 name;
-	Color                       color = Color::Red;
+	Color                       color;
 	std::array<Point, 2>        pins;      // length is in the TYPE, so it is not written
 	std::vector<i32>            scores;    // container: u64 length, then the elements
 	std::optional<std::string>  nickname;  // presence byte, then the value if present
@@ -172,19 +174,18 @@ void memberCountExample() {
 
 class Message final {
 public:
-	Message() = default;  // serVisit FILLS an object, so there has to be one to fill
-
 	explicit Message(std::string text): text(std::move(text)), length(this->text.size()) {}
+	explicit Message(std::initializer_list<int> list) {}
 
 	[[nodiscard]] const std::string& body() const { return text; }
-
+	
 	[[nodiscard]] usize cachedLength() const { return length; }
 
-SER_FRIEND  // = friend struct ser::access; - without it the macro below is invisible
-	private: std::string text;
+	SER_FRIEND  // = friend struct ser::access; - without it the macro below is invisible
+private: std::string text;
 	usize                length = 0;
 
-	SER_DESCRIBE(text)  // the wire is exactly this one field
+	SER_MAKE_FROM_PAREN(Message, text)  // the wire is exactly this one field
 };
 
 void describeExample() {
@@ -266,9 +267,10 @@ struct Timestamp final {
 	i64 seconds = 0;
 	i32 nanos   = 0;
 
-	static constexpr ser::Errc serVisit(auto& ar, auto& self) {
+	static constexpr ser::Errc serVisit(auto& ar, Timestamp self) {
 		return ar(self.seconds, self.nanos);
 	}
+
 };
 
 void visitHookExample() {

@@ -46,6 +46,25 @@
 STRONG_TYPEDEF_INT(TestKeyA, usize);
 STRONG_TYPEDEF_INT(TestKeyB, usize);
 
+/** @brief Stateless and really plain `delete`, so opting it in below is honest. */
+template<class T>
+struct TestPlainDeleter final {
+	void del(T* ptr) { delete ptr; }
+};
+
+template<class T>
+struct ser::box_deleter_is_new_delete<TestPlainDeleter<T>> {
+	static constexpr bool VALUE = true;
+};
+
+/** @brief Neither: the memory belongs to an arena that ser has no way to learn about. */
+template<class T>
+struct TestArenaDeleter final {
+	void* arena = nullptr;
+
+	void del(T* ptr) { delete ptr; }
+};
+
 using ByteBuf = std::vector<std::byte>;
 
 /** @brief The whole buffer as the span ser::read wants. */
@@ -84,6 +103,7 @@ public:
 		TESTER_ADD_TEST(plainValues);
 		TESTER_ADD_TEST(optionals);
 		TESTER_ADD_TEST(owningPointers);
+		TESTER_ADD_TEST(boxDeleters);
 		TESTER_ADD_TEST(byteViews);
 		TESTER_ADD_TEST(maps);
 		TESTER_ADD_TEST(stableVectors);
@@ -166,6 +186,37 @@ private:
 		ser::in                 ar{ view(null_bytes) };
 		ASSERT_EQUAL(ser::Errc::Ok, ar(target));
 		ASSERT_TRUE(!static_cast<bool>(target));
+	}
+
+	/**
+	 * @brief A Box's deleter has to pair with the `new` that a read performs.
+	 *
+	 * Reading a Box allocates with `new` and default-constructs the deleter, so a custom
+	 * deleter - an arena, a pool, malloc - is refused outright, and the refusal is a
+	 * static_assert this file cannot exercise. What it CAN pin is the opt-in for a deleter
+	 * that keeps both halves of the promise: stateless, and really plain `delete`.
+	 */
+	void boxDeleters() {
+		static_assert(ser::BOX_DELETER_IS_NEW_DELETE_V<base::DefaultBoxPtrDeleter<i32>>);
+		static_assert(ser::BOX_DELETER_IS_NEW_DELETE_V<TestPlainDeleter<i32>>);
+		static_assert(not ser::BOX_DELETER_IS_NEW_DELETE_V<TestArenaDeleter<i32>>);
+
+		using PlainBox  = base::Box<i32, TestPlainDeleter<i32>>;
+		using PlainMBox = base::MBox<i32, TestPlainDeleter<i32>>;
+
+		// The deleter is not on the wire, so an opted-in Box is still transparent and still
+		// interchangeable with the default-deleter one.
+		const auto bytes = bytesOf(base::makeBox<i32, TestPlainDeleter<i32>>(42));
+		ASSERT_EQUAL(sizeof(i32), bytes.size());
+		ASSERT_EQUAL(i32{ 42 }, *ser::readOrPanicForce<PlainBox>(view(bytes)));
+		ASSERT_EQUAL(i32{ 42 }, *ser::readOrPanicForce<base::Box<i32>>(view(bytes)));
+		static_assert(ser::schemaHash<PlainBox>() == ser::schemaHash<i32>());
+		static_assert(ser::schemaHash<PlainMBox>() == ser::schemaHash<std::optional<i32>>());
+
+		const auto engaged = bytesOf(PlainMBox{ base::makeBox<i32, TestPlainDeleter<i32>>(7) });
+		ASSERT_EQUAL(i32{ 7 }, *ser::readOrPanicForce<PlainMBox>(view(engaged)));
+		const auto null_bytes = bytesOf(PlainMBox{});
+		ASSERT_TRUE(!static_cast<bool>(ser::readOrPanicForce<PlainMBox>(view(null_bytes))));
 	}
 
 	/** @brief The owning views: a length prefix and that many bytes, copied in one go. */

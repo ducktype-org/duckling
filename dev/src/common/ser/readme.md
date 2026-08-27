@@ -198,6 +198,19 @@ With `#include <ser/base/all.hpp>`:
 `ManualLifetimeStorage` and the `MAKE_FLAG_TYPE` flag types have no adapter at all; the
 first two hold state a stream cannot describe, and a flag type's mask is private.
 
+`Box` and `MBox` are the plain ones only. Reading either **allocates**, and the one
+allocation ser has is `new T` with a default-constructed deleter - so a custom deleter (an
+arena, a pool, `malloc`, a C API) is refused: the pairing would be wrong, and the state the
+deleter needs to find its way home is not on the wire. If yours is stateless and really does
+plain `delete`, say so in one line:
+
+```cpp
+template<>
+struct ser::box_deleter_is_new_delete<MyDeleter> {
+    static constexpr bool VALUE = true;
+};
+```
+
 A refusal is only visible if you included the header. Leave `<ser/base/all.hpp>` out and a
 struct with a `Ref` field gets the generic "looks pointer-like" message instead of the one
 that tells you what to do.
@@ -357,6 +370,7 @@ guessing would be silent data corruption rather than an error:
 | `std::string_view`, `base::RawView` | the owning type - a view cannot be read back into |
 | `std::shared_ptr`, `std::unique_ptr` | not supported yet; `base::Box` / `base::MBox` do work |
 | a polymorphic `Box<Base>` | a tag plus a serializer of your own that switches on it |
+| a `Box` / `MBox` with a custom deleter | the value, put back where it belongs after reading - or opt in with `ser::box_deleter_is_new_delete` |
 
 Archives: Several Messages In One Buffer
 ----------------------------------------
