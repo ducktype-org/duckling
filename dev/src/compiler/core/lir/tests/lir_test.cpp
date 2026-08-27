@@ -102,7 +102,7 @@ private:
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
 			std::stringstream foo_str;
-			foo_lir->debugPrint(ctx, foo_str);
+			foo_lir->debugPrint(foo_str, Ref{ &ctx });
 		});
 	}
 
@@ -243,7 +243,7 @@ private:
 
 			// Test debug print:
 			std::stringstream foo_str;
-			foo_lir->debugPrint(ctx, foo_str);
+			foo_lir->debugPrint(foo_str, Ref{ &ctx });
 		});
 	}
 
@@ -262,7 +262,7 @@ private:
 				{ g_ctor, some_global_ctor, global_tuple_ctor },
 				base::StrID("_MODULE_CTOR_globals")
 			)
-				.debugPrint(ctx, foo_str);
+				.debugPrint(foo_str, Ref{ &ctx });
 		});
 	}
 
@@ -732,11 +732,11 @@ private:
 
 		std::stringstream place_output;
 		output.debugPrint(place_output);
-		ASSERT_EQUAL(std::string("Local(0)"), place_output.str());
+		ASSERT_EQUAL(std::string("Local(?0)"), place_output.str());
 
 		std::stringstream value_output;
 		lir::LIRValue{ output }.debugPrint(value_output);
-		ASSERT_EQUAL(std::string("Local(0)"), value_output.str());
+		ASSERT_EQUAL(std::string("Local(?0)"), value_output.str());
 
 		lir::Instruction  instruction{ lir::Operation::Assign,
                                       output,
@@ -744,13 +744,13 @@ private:
 			                           {} };
 		std::stringstream instruction_output;
 		instruction.debugPrint(instruction_output);
-		ASSERT_TRUE(instruction_output.str().find("Local(0) :=") != std::string::npos);
+		ASSERT_TRUE(instruction_output.str().find("Local(?0) :=") != std::string::npos);
 		ASSERT_TRUE(instruction_output.str().find("Assign") != std::string::npos);
-		ASSERT_TRUE(instruction_output.str().find("Local(1), Local(0)") != std::string::npos);
+		ASSERT_TRUE(instruction_output.str().find("Local(?1), Local(?0)") != std::string::npos);
 
 		std::stringstream block_output;
 		lir::LIRValue{ foo_lir->block_order.at(0) }.debugPrint(block_output);
-		ASSERT_EQUAL(std::string("Block(0)"), block_output.str());
+		ASSERT_EQUAL(std::string("Block(?0)"), block_output.str());
 
 		std::stringstream function_output;
 		lir::LIRValue{ lir::FunctionLiteral::fromFunction(*foo_lir) }.debugPrint(function_output);
@@ -787,16 +787,16 @@ private:
 		auto module  = getLIROfModule(path("modules/simple"));
 		auto foo_lir = module.lirFunc("foo");
 
-		// Standalone printing would assign Local(0) to this place because it is the first
+		// Standalone printing would assign Local(?0) to this place because it is the first
 		// encountered local. Function context preserves its actual index in local_list.
 		lir::LIRPlace place{ foo_lir->local_list[1], {} };
 
 		std::stringstream place_output;
-		place.debugPrint(place_output, *foo_lir);
+		place.debugPrint(place_output, foo_lir);
 		ASSERT_EQUAL(std::string("Local(1)"), place_output.str());
 
 		std::stringstream value_output;
-		lir::LIRValue{ place }.debugPrint(value_output, *foo_lir);
+		lir::LIRValue{ place }.debugPrint(value_output, foo_lir);
 		ASSERT_EQUAL(std::string("Local(1)"), value_output.str());
 
 		lir::Instruction  instruction{ lir::Operation::Assign,
@@ -805,7 +805,7 @@ private:
                                           lir::LIRPlace{ foo_lir->local_list[0], {} } } },
 			                           {} };
 		std::stringstream instruction_output;
-		instruction.debugPrint(instruction_output, *foo_lir);
+		instruction.debugPrint(instruction_output, foo_lir);
 		const auto printed = instruction_output.str();
 
 		ASSERT_TRUE(printed.find("Local(1) :=") != std::string::npos);
@@ -826,7 +826,7 @@ private:
 		);
 		withContextDo([&](query::Context& ctx) {
 			std::stringstream function_with_context_output;
-			foo_lir->debugPrint(ctx, function_with_context_output);
+			foo_lir->debugPrint(function_with_context_output, Ref{ &ctx });
 			ASSERT_TRUE(
 				function_with_context_output.str().find(
 					foo_lir->local_list[0]->layout->toStringDefinition(ctx, true, 1)
@@ -871,15 +871,15 @@ private:
 			const auto definition = global.layout->toStringDefinition(ctx);
 
 			std::stringstream global_with_context;
-			global.debugPrint(ctx, global_with_context);
+			global.debugPrint(global_with_context, Ref{ &ctx });
 			ASSERT_TRUE(global_with_context.str().find(definition) != std::string::npos);
 
 			std::stringstream global_data_with_context;
-			global_data.debugPrint(ctx, global_data_with_context);
+			global_data.debugPrint(global_data_with_context, Ref{ &ctx });
 			ASSERT_TRUE(global_data_with_context.str().find(definition) != std::string::npos);
 
 			std::stringstream unit_with_context;
-			module.lir_unit.debugPrint(ctx, unit_with_context);
+			module.lir_unit.debugPrint(unit_with_context, Ref{ &ctx });
 			ASSERT_TRUE(unit_with_context.str().find(definition) != std::string::npos);
 		});
 	}

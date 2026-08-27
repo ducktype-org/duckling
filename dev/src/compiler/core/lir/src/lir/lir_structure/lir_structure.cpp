@@ -8,6 +8,7 @@
 #include <tsl/queries.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
 
@@ -169,11 +170,22 @@ namespace compiler::lir {
 	 * operation.
 	 */
 	struct LIRPrinter final {
-		base::Optional<Ref<query::Context>> ctx;
 		std::ostream&                       output;
+		base::Optional<Ref<query::Context>> ctx;
 
 		base::Map<LIRLocalRef, usize> local_id;
 		base::Map<BlockRef, usize>    block_id;
+		std::string_view              id_prefix = "?";
+
+		explicit LIRPrinter(
+			std::ostream&                       output,
+			base::Optional<Ref<query::Context>> ctx      = {},
+			base::Optional<CRef<Function>>      function = {}
+		):
+			  output(output),
+			  ctx(ctx) {
+			if (function.has_value()) useFunctionIDs(*function.value());
+		}
 
 		usize getLocalID(LIRLocalRef local) {
 			if (local_id.contains(local)) return local_id[local];
@@ -191,15 +203,11 @@ namespace compiler::lir {
 			return id;
 		}
 
-		LIRPrinter(std::ostream& output): ctx(), output(output) {}
-
-		LIRPrinter(std::ostream& output, const Function& function):
-			  ctx(),
-			  output(output),
-			  local_id(function.getLocalVariableIDs()),
-			  block_id(function.getBlockIDs()) {}
-
-		LIRPrinter(query::Context& ctx, std::ostream& output): ctx(Ref{ &ctx }), output(output) {}
+		void useFunctionIDs(const Function& function) {
+			local_id  = function.getLocalVariableIDs();
+			block_id  = function.getBlockIDs();
+			id_prefix = "";
+		}
 
 		void printLocalDesc(LIRLocalRef local) {
 			output << "  Local(" << getLocalID(local) << ")";
@@ -214,7 +222,7 @@ namespace compiler::lir {
 			if (ctx.has_value())
 				output << local->layout->toStringDefinition(*ctx.value(), true, 1);
 			else
-				output << local->layout->toStringIdentification();
+				output << "\t" << local->layout->toStringIdentification();
 			output << '\n';
 		}
 
@@ -222,7 +230,7 @@ namespace compiler::lir {
 		 * @note Custom output, so we can align when printing instruction
 		 */
 		void printLocal(LIRLocalRef local, std::ostream& loc_output) {
-			loc_output << "Local(" << getLocalID(local) << ")";
+			loc_output << "Local(" << id_prefix << getLocalID(local) << ")";
 		}
 
 		void printGlobal(const LIRGlobal& global, std::ostream& loc_output) const {
@@ -241,6 +249,7 @@ namespace compiler::lir {
 						loc_output << "]";
 					}
 					variant_case_novalue(LIRPlace::DerefProjection) { loc_output << ".*"; }
+					variant_default { CORE_UNREACHABLE(); }
 				}
 			}
 		}
@@ -258,7 +267,7 @@ namespace compiler::lir {
 				variant_case(LIRConstant, constant) { loc_output << constant.value.toString(); }
 				variant_case(LIRPlace, place) { printPlace(place, loc_output); }
 				variant_case(BlockRef, block) {
-					loc_output << "Block(" << getBlockID(block) << ")";
+					loc_output << "Block(" << id_prefix << getBlockID(block) << ")";
 				}
 				variant_case(FunctionLiteral, func) {
 					loc_output << "Func(" << func.mangled_name.strView() << ")";
@@ -330,10 +339,8 @@ namespace compiler::lir {
 			printInstructionLifetimeFlags(instruction.scope_flags);
 		}
 
-		void debugPrint(const Function& function) {
-			// set local and block ids:
-			local_id = function.getLocalVariableIDs();
-			block_id = function.getBlockIDs();
+		void printFunction(const Function& function) {
+			useFunctionIDs(function);
 
 			output << "[LIR] Function \"" << function.mangled_name.strView() << "\""
 				   << (function.link_once ? " (link once)" : "")
@@ -362,12 +369,8 @@ namespace compiler::lir {
 		}
 	};
 
-	void Function::debugPrint(std::ostream& output) const {
-		LIRPrinter{ output }.debugPrint(*this);
-	}
-
-	void Function::debugPrint(query::Context& ctx, std::ostream& output) const {
-		LIRPrinter{ ctx, output }.debugPrint(*this);
+	void Function::debugPrint(std::ostream& output, base::Optional<Ref<query::Context>> ctx) const {
+		LIRPrinter{ output, ctx }.printFunction(*this);
 	}
 
 	FunctionLiteral FunctionLiteral::fromFunction(const Function& function) {
@@ -382,51 +385,31 @@ namespace compiler::lir {
 		};
 	}
 
-	void LIRGlobal::debugPrint(query::Context& ctx, std::ostream& os) const {
+	void LIRGlobal::debugPrint(std::ostream& os, base::Optional<Ref<query::Context>> ctx) const {
 		os << "[LIR] Global ";
 		os << (type == LIRGlobalType::Constant ? "constant" : "variable") << ": ";
 		os << mangled_name.strView() << "\n";
-		os << "Type: " << layout->toStringDefinition(ctx) << "\n";
+		if (ctx.has_value())
+			os << "Type: " << layout->toStringDefinition(*ctx.value()) << "\n";
+		else
+			os << "Type: " << layout->toStringIdentification() << '\n';
 	}
 
-	void LIRGlobal::debugPrint(std::ostream& os) const {
-		os << "[LIR] Global ";
-		os << (type == LIRGlobalType::Constant ? "constant" : "variable") << ": ";
-		os << mangled_name.strView() << '\n';
-		os << "Type: " << layout->toStringIdentification() << '\n';
-	}
-
-	void LIRGlobalData::debugPrint(query::Context& ctx, std::ostream& os) const {
-		global.debugPrint(ctx, os);
+	void LIRGlobalData::debugPrint(std::ostream& os, base::Optional<Ref<query::Context>> ctx) const {
+		global.debugPrint(os, ctx);
 		os << "  Data Initialization: ";
+
 		variant_match(data_initialization) {
 			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
 			variant_case(CTorDtorPair, ctor_dtor_pair) {
+				os << "\n";
 				if_opt_some(ctor_dtor_pair.global_ctor, ctor) {
 					os << "  Global constructor:\n";
-					ctor->debugPrint(ctx, os);
+					ctor->debugPrint(os, ctx);
 				}
 				if_opt_some(ctor_dtor_pair.global_dtor, dtor) {
 					os << "  Global destructor:\n";
-					dtor->debugPrint(ctx, os);
-				}
-			}
-		}
-	}
-
-	void LIRGlobalData::debugPrint(std::ostream& os) const {
-		global.debugPrint(os);
-		os << "  Data Initialization: ";
-		variant_match(data_initialization) {
-			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
-			variant_case(CTorDtorPair, ctor_dtor_pair) {
-				if_opt_some(ctor_dtor_pair.global_ctor, ctor) {
-					os << "  Global constructor:\n";
-					ctor->debugPrint(os);
-				}
-				if_opt_some(ctor_dtor_pair.global_dtor, dtor) {
-					os << "  Global destructor:\n";
-					dtor->debugPrint(os);
+					dtor->debugPrint(os, ctx);
 				}
 			}
 		}
@@ -450,30 +433,16 @@ namespace compiler::lir {
 		return std::get<ctv::CompileTimeValue>(data_initialization);
 	}
 
-	void LIRUnit::debugPrint(query::Context& ctx, std::ostream& os) const {
+	void LIRUnit::debugPrint(std::ostream& os, base::Optional<Ref<query::Context>> ctx) const {
 		os << "LIRUnit: \n";
 		os << "Globals:\n";
 		for (const auto& global: lir_globals) {
-			global.debugPrint(ctx, os);
+			global.debugPrint(os, ctx);
 			os << "\n";
 		}
 		os << "Functions:\n";
 		for (const auto& func: lir_functions) {
-			func->debugPrint(ctx, os);
-			os << "\n";
-		}
-	}
-
-	void LIRUnit::debugPrint(std::ostream& os) const {
-		os << "LIRUnit: \n";
-		os << "Globals:\n";
-		for (const auto& global: lir_globals) {
-			global.debugPrint(os);
-			os << "\n";
-		}
-		os << "Functions:\n";
-		for (const auto& func: lir_functions) {
-			func->debugPrint(os);
+			func->debugPrint(os, ctx);
 			os << "\n";
 		}
 	}
@@ -540,27 +509,16 @@ namespace compiler::lir {
 		}
 	}
 
-	void LIRPlace::debugPrint(std::ostream& output) const {
-		LIRPrinter{ output }.printPlace(*this, output);
+	void LIRPlace::debugPrint(std::ostream& output, base::Optional<CRef<Function>> function) const {
+		LIRPrinter{ output, {}, function }.printPlace(*this, output);
 	}
 
-	void LIRPlace::debugPrint(std::ostream& output, const Function& function) const {
-		LIRPrinter{ output, function }.printPlace(*this, output);
+	void LIRValue::debugPrint(std::ostream& output, base::Optional<CRef<Function>> function) const {
+		LIRPrinter{ output, {}, function }.printValue(*this, output);
 	}
 
-	void LIRValue::debugPrint(std::ostream& output) const {
-		LIRPrinter{ output }.printValue(*this, output);
-	}
-
-	void LIRValue::debugPrint(std::ostream& output, const Function& function) const {
-		LIRPrinter{ output, function }.printValue(*this, output);
-	}
-
-	void Instruction::debugPrint(std::ostream& output) const {
-		LIRPrinter{ output }.printInstruction(*this);
-	}
-
-	void Instruction::debugPrint(std::ostream& output, const Function& function) const {
-		LIRPrinter{ output, function }.printInstruction(*this);
+	void Instruction::debugPrint(std::ostream& output, base::Optional<CRef<Function>> function)
+		const {
+		LIRPrinter{ output, {}, function }.printInstruction(*this);
 	}
 }
