@@ -106,6 +106,16 @@ namespace compiler::backend_vm::internal {
 		const vm::code::TypeOfData& getVoidCPointerType();
 
 		/**
+		 * @brief Returns the DVM type standing in for an information-less type (`()`).
+		 *
+		 * Such a type has no representation of its own, but the DVM identifies variant
+		 * alternatives by type name, so the alternative still needs a name to be set and tested.
+		 * It is a distinct opaque type rather than a one-byte primitive, so that it never
+		 * collides with a `bool` or `i8` alternative of the same variant.
+		 */
+		const vm::code::TypeOfData& getUnitType();
+
+		/**
 		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
 		 *
 		 * This lookup is not purely observational: it may insert and cache a placeholder entry
