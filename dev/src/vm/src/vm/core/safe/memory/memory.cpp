@@ -56,19 +56,12 @@ namespace vm {
 	}
 
 	auto Memory::dynTableReallocateBlockDataN(Ref<Block> block, u64 n) -> void {
-		auto      tbl_type       = block->data.element_type;
-		auto      inner_type     = tbl_type->getInnerType().value();
+		TypeCRef tbl_type   = block->data.element_type;
+		TypeCRef inner_type = tbl_type->getInnerType().value();
+
 		BlockData new_block_data = heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
-		auto      old_view_size  = block->data.view.size();
-		auto      new_view_size  = new_block_data.view.size();
 
-		Block mock_block{ BlockID{ 0 }, new_block_data };
-
-		moveBlockDataAndEraseSuffix(&mock_block, block, std::min(old_view_size, new_view_size));
-
-		heap_allocator.deallocate(&block->data);
-
-		block->data = mock_block.data;
+		changeBlockData(block, new_block_data);
 	}
 
 	void Memory::freeBlockData(Ref<Block> block) {
@@ -143,39 +136,40 @@ namespace vm {
 		}
 	}
 
-	void Memory::moveBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src) {
-		for (auto nested: block_src->children_blocks) {
-			Pointer new_pointer{ block_dst, nested.first };
-			setNestedViewBlock(new_pointer, nested.second->data.element_type);
-			moveBlocksRecursively(
-				new_pointer.getBlock()->children_blocks[nested.first], nested.second
+	void Memory::changeBlockData(Ref<Block> block, BlockData new_data) {
+		BlockData old_data      = block->data;
+		usize     bytes_to_move = std::min(old_data.view.size(), new_data.view.size());
+
+		// Free the unfitting children blocks.
+		auto& children_blocks = block->children_blocks;
+		for (auto child_it = children_blocks.lower_bound(bytes_to_move);
+		     child_it != children_blocks.end();
+		     child_it = children_blocks.erase(child_it)) {
+			freeBlockData(child_it->second);
+		}
+
+		// Run the destructors - e.g. pointers don't have their own blocks, but need destructing.
+		// The suffix has to hold live objects.
+		// Here we run the destructor for the second time, but as different type.
+		// And this pass is shallow. First pass goes over child blocks, eg variant data - a pointer.
+		// Then in the second pass we run the destructor on variant type, which does nothing.
+		if (bytes_to_move < old_data.view.size())
+			runDataDestructors(
+				base::ModRawView(
+					old_data.view.getBegin() + bytes_to_move, old_data.view.size() - bytes_to_move
+				),
+				old_data.element_type
 			);
-		}
-	}
 
-	void Memory::moveBlockDataAndEraseSuffix(Ref<Block> dst, Ref<Block> src, usize byte_count) {
-		// Free all child blocks on suffix.
-		auto& dst_child_blocks = dst->children_blocks;
-		for (auto iter = dst_child_blocks.lower_bound(0); iter != dst_child_blocks.end();
-		     iter      = dst_child_blocks.erase(iter)) {
-			freeBlockData(iter->second);
-		}
+		std::memcpy(new_data.view.getBegin(), old_data.view.getBegin(), bytes_to_move);
+		std::memset(
+			new_data.view.getBegin() + bytes_to_move, 0, new_data.view.size() - bytes_to_move
+		);
 
-		// Copy the child blocks.
-		auto& src_child_blocks = src->children_blocks;
-		for (auto iter = src_child_blocks.lower_bound(0);
-		     iter != src_child_blocks.end() && iter->first < byte_count;
-		     ++iter) {
-			auto    offset = iter->first;
-			Pointer new_pointer{ dst, offset };
-			setNestedViewBlock(new_pointer, iter->second->data.element_type);
-			moveBlocksRecursively(new_pointer.getBlock()->children_blocks[offset], iter->second);
-		}
+		updateBlockDataView(block, new_data.view);
+		block->data = new_data;
 
-		// Copy the data itself.
-		// @note: We are not running destructors or copy-constructors
-		// because the data being is "moved".
-		std::memcpy(dst->data.view.getBegin(), src->data.view.getBegin(), byte_count);
+		old_data.allocator->deallocate(&old_data);
 	}
 
 	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
@@ -183,7 +177,6 @@ namespace vm {
 		// data and call the data destructors, then run copy constructors only on the copied data parts.
 
 		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
-
 
 		// Free child blocks.
 		auto& dst_child_blocks = dst.getBlock()->children_blocks;
@@ -466,23 +459,19 @@ namespace vm {
 	}
 
 	void Memory::updateBlockDataView(Ref<Block> block, base::ModRawView new_view) {
-		CORE_ASSERT(
-			block->data.element_type->getSize().asInt() == new_view.size(),
-			"New view size must match the block's type size"
-		);
-		base::ModRawView old_root_view = block->data.view;
+		const std::byte* old_root_begin = block->data.view.getBegin();
 
-		std::function<void(Ref<Block>)> update_block_data_recursively
-			= [&](Ref<Block> current_block) -> void {
-			base::ModRawView current_view      = current_block->data.view;
-			auto             offset_from_start = current_view.getBegin() - old_root_view.getBegin();
-			current_block->data.view
-				= { new_view.getBegin() + offset_from_start, current_view.size() };
-
-			for (auto& child: current_block->children_blocks | std::views::values)
-				update_block_data_recursively(child);
+		auto rebase_children_recursively
+			= [&](this const auto& self, Ref<Block> current_block) -> void {
+			for (auto& child: current_block->children_blocks | std::views::values) {
+				const auto offset_from_start = child->data.view.getBegin() - old_root_begin;
+				child->data.view
+					= { new_view.getBegin() + offset_from_start, child->data.view.size() };
+				self(child);
+			}
 		};
 
-		update_block_data_recursively(block);
+		block->data.view = new_view;
+		rebase_children_recursively(block);
 	}
 }

@@ -79,7 +79,7 @@ fun someFunction(tmp: i64) = {
     return tmp*2 + 7;
 }
 
-fun main() = {
+fun main() -> i64 = {
     aa = ();
     b = (4, 3, 2, 1);
     cc = (true, 1, 2.5, "three");

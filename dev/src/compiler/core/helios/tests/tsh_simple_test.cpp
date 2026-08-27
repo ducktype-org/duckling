@@ -930,8 +930,12 @@ private:
 
 		const auto void_type = getVoidType();
 		assertTrue(
-			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ void_type, int_2 }),
-			"Void should not be coercible to anything."
+			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ void_type, int_2 }),
+			"Void has no values, so it should be coercible to anything."
+		);
+		assertTrue(
+			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_2, void_type }),
+			"Nothing should be coercible to Void."
 		);
 
 		const auto i2_const
