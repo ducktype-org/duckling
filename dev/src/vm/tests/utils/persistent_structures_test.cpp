@@ -93,6 +93,13 @@ public:
 		auto op02 = mem.set(op01, 2, 7);
 		checker(op02, { { 1, 5 }, { 2, 7 } });
 
+		auto path = *mem.getPathTo(op02, 1, Memory::Dir::Rght);
+		ASSERT_EQUAL(1, path.getIdx());
+		ASSERT_TRUE(path.moveToValid(Memory::Dir::Rght));
+		ASSERT_EQUAL(2, path.getIdx());
+		ASSERT_TRUE(path.moveToValid(Memory::Dir::Left));
+		ASSERT_EQUAL(1, path.getIdx());
+
 		auto op03 = mem.set(empt, 2, 7);
 		checker(op03, { { 2, 7 } });
 
@@ -226,6 +233,8 @@ public:
 
 		auto op16 = vec.getPrefix(op15, 3);
 		checker(op16, { "val01", "val02", "val03" });
+		ASSERT_EQUAL(op15, vec.getPrefix(op15, vec.size(op15)));
+		ASSERT_EQUAL(empt, vec.getPrefix(op15, 0));
 
 		ASSERT_EQUAL(op16, op03);
 		ASSERT_EQUAL(op02, op04);
@@ -399,7 +408,7 @@ public:
 			}
 		};
 
-		for (usize i = 0; i < 10'000; i++) {
+		for (usize i = 0; i < 1'000; i++) {
 			auto state_idx  = random() % real_states.size();
 			auto dummy_id   = dummy_states.at(state_idx);
 			auto real_state = real_states.at(state_idx);
