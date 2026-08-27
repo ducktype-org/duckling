@@ -42,8 +42,8 @@ Tests:
 
   unit_simple_multiple_modules:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "1\n1\n"
         ExitCode: 0
@@ -113,7 +113,6 @@ Tests:
         ExitCode: 0
 
   zero_init:
-    enable_conc_deterministic_tests: "false"
     Cases:
       all:
         backend: all
@@ -123,8 +122,8 @@ Tests:
 
   strings:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Input:
           String: "Test"
         Output:
@@ -132,8 +131,8 @@ Tests:
 
   chars:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Input:
           String: "Xd;"
         Output:
