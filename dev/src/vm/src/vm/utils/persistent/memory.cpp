@@ -21,7 +21,7 @@
 namespace vm::persistent {
 
 	std::vector<std::pair<usize, usize>> Memory::toVec(MemoryStateID state) const {
-		auto root = validateInput(state, true);
+		auto root = validateInput(state);
 
 		if (root == detail::SegmentTree::EMPTY) return {};
 
@@ -237,7 +237,7 @@ namespace vm::persistent {
 	}
 
 	[[nodiscard]]
-	auto MemoryStateView::diff(const MemoryStateView& oth) const {
+	Memory::diffResT MemoryStateView::diff(const MemoryStateView& oth) const {
 		return mem.getDiff(id, oth.id);
 	}
 

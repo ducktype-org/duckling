@@ -84,7 +84,7 @@ namespace vm::persistent {
 		const VarT& at(VectorStateID state_id, usize idx) const {
 			auto state = validateState(state_id);
 			if_opt_some(inner.access(state, idx), val_id) { return held_values.atRight(val_id); }
-			CORE_UNREACHABLE();
+			throw std::out_of_range("idx out of bounds");
 		}
 
 		/**
@@ -110,7 +110,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief emplaces value at the end of given instance
+		 * @brief replaces the value at an index of a given instance
 		 */
 		[[nodiscard]]
 		VectorStateID change(VectorStateID state_id, usize idx, const VarT& var) {
@@ -126,7 +126,7 @@ namespace vm::persistent {
 		/**
 		 * @brief get a range of vector  [left, right) at given intance
 		 * @note interval [left, right) must be contained within interval [0, size)
-		 * @note left must be >= right
+		 * @note left must be <= right
 		 * @note it can happen that left == right - this just returns empty vector
 		 */
 		[[nodiscard]]
@@ -142,15 +142,15 @@ namespace vm::persistent {
 
 			if (iter.getIdx() >= right) return {};
 
-			std::vector<VarT> ans        = {};
-			bool              iter_valid = true;
+			std::vector<VarT> ans = {};
 
 			for (usize i = 0; i < right - left; i++) {
 				CORE_ASSERT(iter.getIdx() == left + i, "I skipped some fields?!");
 
 				auto val_id = iter.getValue();
 				ans.emplace_back(held_values.atRight(val_id));
-				iter_valid &= iter.moveToValid(Memory::Dir::Rght);
+				if (i + 1 < right - left)
+					CORE_ASSERT(iter.moveToValid(Memory::Dir::Rght), "dense vector");
 			}
 
 			return ans;

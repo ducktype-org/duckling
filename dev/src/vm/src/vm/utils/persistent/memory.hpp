@@ -20,7 +20,6 @@ STRONGLY_TYPED_INT_STD_HASH(vm::persistent::MemoryStateID)
 
 namespace vm::persistent {
 	class MemoryStateView;
-	class MemoryIterator;
 
 	/**
 	 * @brief Class implementing an abstract access to fully persistent memory - allows to
@@ -32,7 +31,6 @@ namespace vm::persistent {
 	 */
 	class Memory final {
 		friend MemoryStateView;
-		friend MemoryIterator;
 
 		detail::SegmentTree inner;
 
@@ -53,6 +51,7 @@ namespace vm::persistent {
 		// basic method for validating input
 		ID validateInput(MemoryStateID state) const {
 			auto root = fromState(state);
+			if (!inner.knows(root)) throw std::invalid_argument("unknown memory state");
 
 			return root;
 		}
@@ -116,6 +115,7 @@ namespace vm::persistent {
 		base::Optional<Path> getPathTo(
 			MemoryStateID state, usize idx, base::Optional<Dir> opt_dir = std::nullopt
 		) const {
+			validateInput(state, idx);
 			return inner.getPathTo(fromState(state), idx, opt_dir);
 		}
 
@@ -242,7 +242,7 @@ namespace vm::persistent {
 		[[nodiscard]]
 		std::vector<std::pair<usize, usize>> toVec() const;
 		[[nodiscard]]
-		auto diff(const MemoryStateView& oth) const;
+		Memory::diffResT diff(const MemoryStateView& oth) const;
 		[[nodiscard]]
 		bool contains(usize idx) const;
 	};

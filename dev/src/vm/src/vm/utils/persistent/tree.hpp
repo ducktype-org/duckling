@@ -393,8 +393,7 @@ namespace vm::persistent::detail {
 			}
 
 			/**
-			 * @brief returns a value of at the idx to which path points or empty optional if idx is
-			 * not active
+			 * @brief returns the value at the index to which the path points
 			 */
 			[[nodiscard]]
 			valT getValue() const {
@@ -410,6 +409,8 @@ namespace vm::persistent::detail {
 		};
 
 		bool isLeaf(NodeID state) const { return leaf_entries.atRightOpt(state).has_value(); }
+
+		bool knows(NodeID state) const { return branch_info.atMaybeCopy(state).has_value(); }
 
 		/**
 		 * @brief Return number of active leaves in subtree

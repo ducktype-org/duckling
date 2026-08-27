@@ -16,7 +16,7 @@ namespace vm::persistent::detail {
 	 * @tparam HashR hash object used for type R
 	 */
 	template<typename L, typename R, typename HashL = std::hash<L>, typename HashR = std::hash<R>>
-	class BijectiveMap {
+	class BijectiveMap final {
 		base::HashMap<L, R, HashL> left_right;
 		base::HashMap<R, L, HashR> right_left;
 
@@ -64,9 +64,9 @@ namespace vm::persistent::detail {
 			return { true, right_left[rght] };
 		}
 
-		auto leftToRight() const { return left_right; }
+		const auto& leftToRight() const { return left_right; }
 
-		auto rightToLeft() const { return right_left; }
+		const auto& rightToLeft() const { return right_left; }
 
 		void clear() {
 			left_right.clear();

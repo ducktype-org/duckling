@@ -69,7 +69,7 @@ namespace vm::persistent {
 
 
 	public:
-		// public state representing empty vector
+		// public state representing an empty hashmap
 		static constexpr auto EMPTY = HashMapStateID(u64(Memory::EMPTY));
 
 		/**
@@ -124,6 +124,16 @@ namespace vm::persistent {
 		/**
 		 * @brief method for accessing element for given key at given instance.
 		 */
+		base::Optional<ValT> atMaybe(HashMapStateID state_id, const KeyT& key) const {
+			auto state = toMemState(state_id);
+			if_opt_some(held_keys.atLeftOpt(key), key_id) {
+				if_opt_some(inner.access(state, key_id), val_id) {
+					return held_values.atRight(val_id);
+				}
+			}
+			return std::nullopt;
+		}
+
 		const ValT& at(HashMapStateID state_id, const KeyT& key) const {
 			auto state = toMemState(state_id);
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
@@ -131,7 +141,7 @@ namespace vm::persistent {
 					return held_values.atRight(val_id);
 				}
 			}
-			CORE_UNREACHABLE();
+			throw std::out_of_range("key not found");
 		}
 
 		/**
@@ -150,9 +160,11 @@ namespace vm::persistent {
 		 * @note if given instance doesn't contain the key, no effect take place
 		 */
 		HashMapStateID erase(HashMapStateID state_id, const KeyT& key) {
-			auto state  = toMemState(state_id);
-			auto key_id = emplaceNewKey(key);
-			return toMapState(inner.erase(state, key_id));
+			auto state = toMemState(state_id);
+			if_opt_some(held_keys.atLeftOpt(key), key_id) {
+				return toMapState(inner.erase(state, key_id));
+			}
+			return state_id;
 		}
 
 		/**
