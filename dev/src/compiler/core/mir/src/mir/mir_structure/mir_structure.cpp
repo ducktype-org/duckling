@@ -67,6 +67,7 @@ namespace compiler::mir {
 		switch (op) {
 		case Operation::ReturnVoid:
 		case Operation::ReturnValue:
+		case Operation::Unreachable:
 		case Operation::Jump:
 		case Operation::Branch:
 		case Operation::BranchIfNull:
@@ -90,6 +91,7 @@ namespace compiler::mir {
 
 		case ReturnVoid:
 		case ReturnValue:
+		case Unreachable:
 		case FunctionEnd:
 			return {};
 

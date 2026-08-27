@@ -1742,7 +1742,7 @@ private:
 					var y = *x;
 				}
 			)",
-			{ "Tried to dereference a non-pointer type" },
+			{ "Tried to dereference an invalid type" },
 			1
 		);
 

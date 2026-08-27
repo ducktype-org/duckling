@@ -315,16 +315,20 @@ namespace compiler::backend_vm::internal {
 
 		/// Variant operations ///
 		case VariantConstruct: {
+			// An alternative carrying no information (e.g. `()`) has its payload argument
+			// discarded in LIR, so there is nothing left to store.
 			CORE_ASSERT(
-				instr.arguments.size() == 1,
-				"VariantConstruct expects 1 argument, got: ",
+				instr.arguments.size() <= 1,
+				"VariantConstruct expects at most 1 argument, got: ",
 				instr.arguments.size()
 			);
 			const auto variant_params = std::get_if<lir::VariantParameters>(&instr.extra_params);
 			CORE_ASSERT(variant_params != nullptr, "VariantConstruct without parameters");
 			return VariantConstructOperation{
 				.variant_params = *variant_params,
-				.payload        = lower_arg(instr.arguments[0]),
+				.payload        = instr.arguments.empty()
+				                    ? base::Optional<DVMValue>()
+				                    : base::Optional<DVMValue>(lower_arg(instr.arguments[0])),
 				.dest           = lower_dest(),
 			};
 		}
@@ -396,6 +400,11 @@ namespace compiler::backend_vm::internal {
 			return ReturnOperation{
 				.value       = instr.arguments.size() == 1 ? lower_arg(instr.arguments[0])
 				                                           : base::Optional<DVMValue>(),
+				.scope_flags = instr.scope_flags,
+			};
+		}
+		case Unreachable: {
+			return UnreachableOperation{
 				.scope_flags = instr.scope_flags,
 			};
 		}
