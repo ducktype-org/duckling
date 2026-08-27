@@ -1,0 +1,2808 @@
+type data: ScE {
+    _0: ptr_dyntable_i8,
+    _1: i64,
+}
+
+type fixed_size_table: arr_i8_18 i8 18
+type dynamic_table: dyntable_i8 i8
+type primitive: i64 8
+type primitive: i8 1
+type pointer: ptr_arr_i8_18 arr_i8_18
+type pointer: ptr_dyntable_i8 dyntable_i8
+type pointer: ptr_i64 i64
+type pointer: ptr_ptr_dyntable_i8 ptr_dyntable_i8
+type data: _Q_CM4core10containersG6String {
+    _0: ptr_dyntable_i8,
+    _1: i64,
+    _2: i64,
+    _3: i64,
+}
+
+type primitive: f64 8
+type pointer: ptr__Q_CM4core10containersG6String _Q_CM4core10containersG6String
+type primitive: i32 4
+type pointer: ptr_i8 i8
+type fixed_size_table: arr_i8_4 i8 4
+type fixed_size_table: arr_i8_5 i8 5
+type pointer: ptr_arr_i8_4 arr_i8_4
+type pointer: ptr_arr_i8_5 arr_i8_5
+
+global_data str_data_module_0b0c388637b6bc1a9e9d346e294b7c7e66f635fd3bfe0b82393e1482af2e9002_1 arr_i8_18 {
+    is_constant: true,
+    initial_value: fixed_size_table [ 0x50, 0x72, 0x6F, 0x67, 0x72, 0x61, 0x6D, 0x20, 0x70, 0x61, 0x6E, 0x69, 0x63, 0x6B, 0x65, 0x64, 0x21, 0x0A ]
+}
+global_data ctv_value_module_0b0c388637b6bc1a9e9d346e294b7c7e66f635fd3bfe0b82393e1482af2e9002_0 ScE {
+    is_constant: true,
+    constructor: ctv_value_module_0b0c388637b6bc1a9e9d346e294b7c7e66f635fd3bfe0b82393e1482af2e9002_0_ctor
+}
+global_data _Q_M4core10containersN1c10allocation10allocation14LLVM_ELEM_SIZEE i64 {
+    initial_value: 0x0000000000000001
+}
+global_data str_data_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_2 arr_i8_4 {
+    is_constant: true,
+    initial_value: fixed_size_table [ 0x74, 0x72, 0x75, 0x65 ]
+}
+global_data ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_1 ScE {
+    is_constant: true,
+    constructor: ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_1_ctor
+}
+global_data str_data_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_4 arr_i8_5 {
+    is_constant: true,
+    initial_value: fixed_size_table [ 0x66, 0x61, 0x6C, 0x73, 0x65 ]
+}
+global_data ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_3 ScE {
+    is_constant: true,
+    constructor: ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_3_ctor
+}
+
+
+function _Q_M4core9panickingG5panicFuEE {  } -> {  } {
+    label                   label_0;
+    init_pany_type             var0,      i64;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,      ScE;
+    mov_pste_pste          call_arg0_1, ctv_value_module_0b0c388637b6bc1a9e9d346e294b7c7e66f635fd3bfe0b82393e1482af2e9002_0;
+    call_func              _Q_M4core8builtinsG18builtin_output_strFi64ScEE1vE;
+    mov_p64_p64                var0, call_result0;
+    deinit                ;
+    deinit                ;
+    call_func              _Q_M4core9panickingG7doPanicFuEE;
+    ret                   ;
+}
+
+function _Q_M4core9panickingG7doPanicFuEE {  } -> {  } {
+    label                   label_0;
+    call_builtinfunc          abort;
+    ret                   ;
+}
+
+function ctv_value_module_0b0c388637b6bc1a9e9d346e294b7c7e66f635fd3bfe0b82393e1482af2e9002_0_ctor {  } -> {  } {
+    init_pany_type         str_fst_ptr0, ptr_arr_i8_18;
+    ref_pptr_pany          str_fst_ptr0, str_data_module_0b0c388637b6bc1a9e9d346e294b7c7e66f635fd3bfe0b82393e1482af2e9002_1;
+    init_pany_type         str_dyn_ptr1, ptr_dyntable_i8;
+    fstToDynTable_pptr_pptr str_dyn_ptr1, str_fst_ptr0;
+    init_pany_type         str_slice_field2, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field str_slice_field2, ctv_value_module_0b0c388637b6bc1a9e9d346e294b7c7e66f635fd3bfe0b82393e1482af2e9002_0,   ScE._0;
+    store_pptr_pany        str_slice_field2, str_dyn_ptr1;
+    init_pany_type         str_slice_field3,  ptr_i64;
+    structLea_pptr_pste_field str_slice_field3, ctv_value_module_0b0c388637b6bc1a9e9d346e294b7c7e66f635fd3bfe0b82393e1482af2e9002_0,   ScE._1;
+    init_pany_type         store_tmp4,      i64;
+    mov_p64_imm            store_tmp4,       18;
+    store_pptr_pany        str_slice_field3, store_tmp4;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE { ptr__Q_CM4core10containersG6String } -> {  } {
+    label                   label_0;
+    init_pany_type         call_arg0_0, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_0,     arg0;
+    call_func              _Q_M4core10containersN6String7destroyEFuR_Q_CM4core10containersG6StringE4selfE;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG17builtin_input_f64Ff64EE {  } -> { f64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      f64;
+    call_func              _Q_M4core2ioG7readF64Ff64EE;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG17builtin_input_i64Fi64EE {  } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    call_func              _Q_M4core2ioG7readI64Fi64EE;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG17builtin_input_u64Fj64EE {  } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    call_func              _Q_M4core2ioG7readU64Fj64EE;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG18builtin_input_charFcEE {  } -> { i8 } {
+    label                   label_0;
+    init_pany_type         call_result0,       i8;
+    call_func              _Q_M4core2ioG8readCharFcEE;
+    mov_p8_p8                  ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG18builtin_output_f64Fi64f64E1vE { f64 } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,      f64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    call_func              _Q_M4core2ioG8writeF64Fi64f64E1xE;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG18builtin_output_i64Fi64i64E1vE { i64 } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    call_func              _Q_M4core2ioG8writeI64Fi64i64E1xE;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG18builtin_output_strFi64ScEE1vE { ScE } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,      ScE;
+    mov_pste_pste          call_arg0_1,     arg0;
+    call_func              _Q_M4core2ioG8writeStrFi64ScEE1sE;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG18builtin_output_u64Fi64j64E1vE { i64 } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    call_func              _Q_M4core2ioG8writeU64Fi64j64E1xE;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG19builtin_output_charFi64cE1cE { i8 } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,       i8;
+    mov_p8_p8              call_arg0_1,     arg0;
+    call_func              _Q_M4core2ioG9writeCharFi64cE1cE;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG20builtin_input_stringF_Q_CM4core10containersG6StringEE {  } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    call_func              _Q_M4core2ioG10readStringF_Q_CM4core10containersG6StringEE;
+    mov_pste_pste              ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG5printFi64R_Q_CM4core10containersG6StringE1vE { ptr__Q_CM4core10containersG6String } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_1,     arg0;
+    call_func              _Q_M4core2ioG11writeStringFi64R_Q_CM4core10containersG6StringE1vE;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG5printFi64ScEE1vE { ScE } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,      ScE;
+    mov_pste_pste          call_arg0_1,     arg0;
+    call_func              _Q_M4core2ioG8writeStrFi64ScEE1sE;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsG5printFi64_Q_CM4core10containersG6StringE1sE { _Q_CM4core10containersG6String } -> { i64 } {
+    label                   label_0;
+    init_pany_type             var1,      i64;
+    init_pany_type             var3, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of0, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of0,     arg0;
+    mov_pptr_pptr              var3, addr_of0;
+    deinit                ;
+    init_pany_type         call_result1,      i64;
+    init_pany_type         call_arg0_2, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_2,     var3;
+    call_func              _Q_M4core2ioG11writeStringFi64R_Q_CM4core10containersG6StringE1vE;
+    mov_p64_p64                var1, call_result1;
+    deinit                ;
+    deinit                ;
+    mov_p64_p64                ret0,     var1;
+    init_pany_type             var4, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of3, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of3,     arg0;
+    mov_pptr_pptr              var4, addr_of3;
+    deinit                ;
+    init_pany_type         call_arg0_4, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_4,     var4;
+    call_func              _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_HlengthNFi64NScEE2_0EE { ScE } -> { i64 } {
+    label                   label_0;
+    init_pany_type         field_addr0,  ptr_i64;
+    structLea_pptr_pste_field field_addr0,     arg0,   ScE._1;
+    init_pany_type         deref_tmp1,      i64;
+    load_pany_pptr         deref_tmp1, field_addr0;
+    mov_p64_p64                ret0, deref_tmp1;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_HtoStringNF_Q_CM4core10containersG6StringNf64E2_0EE { f64 } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1,      f64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    call_func              _Q_M4core10containersN15stringification12stringifyF64EF_Q_CM4core10containersG6Stringf64E1xE;
+    mov_pste_pste              ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_HtoStringNF_Q_CM4core10containersG6StringNi64E2_0EE { i64 } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    call_func              _Q_M4core10containersN15stringification12stringifyI64EF_Q_CM4core10containersG6Stringi64E1xE;
+    mov_pste_pste              ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_HtoStringNF_Q_CM4core10containersG6StringNj64E2_0EE { i64 } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    call_func              _Q_M4core10containersN15stringification12stringifyU64EF_Q_CM4core10containersG6Stringj64E1xE;
+    mov_pste_pste              ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG10readStringF_Q_CM4core10containersG6StringEE {  } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var0, _Q_CM4core10containersG6String;
+    init_pany_type             var1,      i32;
+    init_pany_type         call_result0,      i32;
+    call_func              _Q_M4core2ioG12readCharCodeFi32EE;
+    mov_p32_p32                var1, call_result0;
+    deinit                ;
+    jmp_label               label_1;
+    label                   label_2;
+    init_pany_type             var6,       i8;
+    init_pany_type             var7, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var8, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of1, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of1,     var0;
+    mov_pptr_pptr              var7, addr_of1;
+    deinit                ;
+    trunc_p8_p32               var6,     var1;
+    init_pany_type         call_result2, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_3, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_3,     var7;
+    init_pany_type         call_arg1_4,       i8;
+    mov_p8_p8              call_arg1_4,     var6;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE;
+    mov_pptr_pptr              var8, call_result2;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         call_result5,      i32;
+    call_func              _Q_M4core2ioG12readCharCodeFi32EE;
+    mov_p32_p32                var1, call_result5;
+    deinit                ;
+    jmp_label               label_1;
+    label                   label_1;
+    init_pany_type             var3,      i32;
+    init_pany_type             var4,       i8;
+    init_pany_type             var5,       i8;
+    init_pany_type             var9,       i8;
+    cmpGe_p32_imm              var1,        0;
+    mov_p8_imm                 var5,        0;
+    cmov_p8_imm                var5,        1;
+    init_pany_type         cast_src_tmp6,       i8;
+    mov_p8_imm             cast_src_tmp6,       10;
+    zext_p32_p8                var3, cast_src_tmp6;
+    deinit                ;
+    cmpNeq_p32_p32             var1,     var3;
+    mov_p8_imm                 var4,        0;
+    cmov_p8_imm                var4,        1;
+    mov_p8_p8                  var9,     var5;
+    log_and_p8_p8              var9,     var4;
+    cmpEq_p8_imm               var9,        1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    jmpIf_label             label_2;
+    jmpIfNot_label          label_3;
+    label                   label_3;
+    mov_pste_pste              ret0,     var0;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG10skipBlanksFcEE {  } -> { i8 } {
+    label                   label_0;
+    init_pany_type             var0,       i8;
+    init_pany_type         call_result0,       i8;
+    call_func              _Q_M4core2ioG8readCharFcEE;
+    mov_p8_p8                  var0, call_result0;
+    deinit                ;
+    jmp_label               label_1;
+    label                   label_2;
+    init_pany_type         call_result1,       i8;
+    call_func              _Q_M4core2ioG8readCharFcEE;
+    mov_p8_p8                  var0, call_result1;
+    deinit                ;
+    jmp_label               label_1;
+    label                   label_1;
+    init_pany_type             var2,       i8;
+    init_pany_type             var3,       i8;
+    init_pany_type             var4,       i8;
+    init_pany_type             var5,       i8;
+    init_pany_type             var6,       i8;
+    cmpEq_p8_imm               var0,       32;
+    mov_p8_imm                 var5,        0;
+    cmov_p8_imm                var5,        1;
+    cmpEq_p8_imm               var0,        9;
+    mov_p8_imm                 var3,        0;
+    cmov_p8_imm                var3,        1;
+    cmpEq_p8_imm               var0,       10;
+    mov_p8_imm                 var2,        0;
+    cmov_p8_imm                var2,        1;
+    mov_p8_p8                  var4,     var3;
+    log_or_p8_p8               var4,     var2;
+    mov_p8_p8                  var6,     var5;
+    log_or_p8_p8               var6,     var4;
+    cmpEq_p8_imm               var6,        1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    jmpIf_label             label_2;
+    jmpIfNot_label          label_3;
+    label                   label_3;
+    mov_p8_p8                  ret0,     var0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG11writeStringFi64R_Q_CM4core10containersG6StringE1vE { ptr__Q_CM4core10containersG6String } -> { i64 } {
+    label                   label_0;
+    init_pany_type             var1,      ScE;
+    init_pany_type         call_result0,      ScE;
+    init_pany_type         call_arg0_1, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_1,     arg0;
+    call_func              _Q_M4core10containersN6String7asSliceEFScER_Q_CM4core10containersG6StringE4selfE;
+    mov_pste_pste              var1, call_result0;
+    deinit                ;
+    init_pany_type         call_result2,      i64;
+    init_pany_type         call_arg0_3,      ScE;
+    mov_pste_pste          call_arg0_3,     var1;
+    call_func              _Q_M4core2ioG8writeStrFi64ScEE1sE;
+    mov_p64_p64                ret0, call_result2;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG12readCharCodeFi32EE {  } -> { i32 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i32;
+    call_builtinfunc       builtin_input_char;
+    mov_p32_p32                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG6strtodFf64MPcEE1pE { ptr_dyntable_i8 } -> { f64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      f64;
+    init_pany_type         call_arg0_1, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg0_1,     arg0;
+    call_builtinfunc         strtod;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG7readF64Ff64EE {  } -> { f64 } {
+    label                   label_0;
+    init_pany_type             var0, _Q_CM4core10containersG6String;
+    init_pany_type             var1,      i32;
+    init_pany_type             var2,      f64;
+    init_pany_type         call_result0,      i32;
+    call_func              _Q_M4core2ioG12readCharCodeFi32EE;
+    mov_p32_p32                var1, call_result0;
+    deinit                ;
+    jmp_label               label_1;
+    label                   label_2;
+    init_pany_type         call_result1,      i32;
+    call_func              _Q_M4core2ioG12readCharCodeFi32EE;
+    mov_p32_p32                var1, call_result1;
+    deinit                ;
+    jmp_label               label_1;
+    label                   label_1;
+    init_pany_type            var22,      i32;
+    init_pany_type            var23,       i8;
+    init_pany_type            var24,      i32;
+    init_pany_type            var25,       i8;
+    init_pany_type            var26,       i8;
+    init_pany_type            var27,      i32;
+    init_pany_type            var28,       i8;
+    init_pany_type            var29,       i8;
+    init_pany_type         cast_src_tmp2,       i8;
+    mov_p8_imm             cast_src_tmp2,       32;
+    zext_p32_p8               var27, cast_src_tmp2;
+    deinit                ;
+    cmpEq_p32_p32              var1,    var27;
+    mov_p8_imm                var28,        0;
+    cmov_p8_imm               var28,        1;
+    init_pany_type         cast_src_tmp3,       i8;
+    mov_p8_imm             cast_src_tmp3,        9;
+    zext_p32_p8               var24, cast_src_tmp3;
+    deinit                ;
+    cmpEq_p32_p32              var1,    var24;
+    mov_p8_imm                var25,        0;
+    cmov_p8_imm               var25,        1;
+    init_pany_type         cast_src_tmp4,       i8;
+    mov_p8_imm             cast_src_tmp4,       10;
+    zext_p32_p8               var22, cast_src_tmp4;
+    deinit                ;
+    cmpEq_p32_p32              var1,    var22;
+    mov_p8_imm                var23,        0;
+    cmov_p8_imm               var23,        1;
+    mov_p8_p8                 var26,    var25;
+    log_or_p8_p8              var26,    var23;
+    mov_p8_p8                 var29,    var28;
+    log_or_p8_p8              var29,    var26;
+    cmpEq_p8_imm              var29,        1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    jmpIf_label             label_2;
+    jmpIfNot_label          label_3;
+    label                   label_3;
+    jmp_label               label_4;
+    label                   label_5;
+    init_pany_type            var18,       i8;
+    init_pany_type            var19, ptr__Q_CM4core10containersG6String;
+    init_pany_type            var20, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of5, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of5,     var0;
+    mov_pptr_pptr             var19, addr_of5;
+    deinit                ;
+    trunc_p8_p32              var18,     var1;
+    init_pany_type         call_result6, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_7, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_7,    var19;
+    init_pany_type         call_arg1_8,       i8;
+    mov_p8_p8              call_arg1_8,    var18;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE;
+    mov_pptr_pptr             var20, call_result6;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         call_result9,      i32;
+    call_func              _Q_M4core2ioG12readCharCodeFi32EE;
+    mov_p32_p32                var1, call_result9;
+    deinit                ;
+    jmp_label               label_4;
+    label                   label_4;
+    init_pany_type             var9,      i32;
+    init_pany_type            var10,       i8;
+    init_pany_type            var11,      i32;
+    init_pany_type            var12,       i8;
+    init_pany_type            var13,       i8;
+    init_pany_type            var14,      i32;
+    init_pany_type            var15,       i8;
+    init_pany_type            var16,       i8;
+    init_pany_type            var17,       i8;
+    init_pany_type            var21,       i8;
+    cmpGe_p32_imm              var1,        0;
+    mov_p8_imm                var17,        0;
+    cmov_p8_imm               var17,        1;
+    init_pany_type         cast_src_tmp10,       i8;
+    mov_p8_imm             cast_src_tmp10,       32;
+    zext_p32_p8               var14, cast_src_tmp10;
+    deinit                ;
+    cmpNeq_p32_p32             var1,    var14;
+    mov_p8_imm                var15,        0;
+    cmov_p8_imm               var15,        1;
+    init_pany_type         cast_src_tmp11,       i8;
+    mov_p8_imm             cast_src_tmp11,        9;
+    zext_p32_p8               var11, cast_src_tmp11;
+    deinit                ;
+    cmpNeq_p32_p32             var1,    var11;
+    mov_p8_imm                var12,        0;
+    cmov_p8_imm               var12,        1;
+    init_pany_type         cast_src_tmp12,       i8;
+    mov_p8_imm             cast_src_tmp12,       10;
+    zext_p32_p8                var9, cast_src_tmp12;
+    deinit                ;
+    cmpNeq_p32_p32             var1,     var9;
+    mov_p8_imm                var10,        0;
+    cmov_p8_imm               var10,        1;
+    mov_p8_p8                 var13,    var12;
+    log_and_p8_p8             var13,    var10;
+    mov_p8_p8                 var16,    var15;
+    log_and_p8_p8             var16,    var13;
+    mov_p8_p8                 var21,    var17;
+    log_and_p8_p8             var21,    var16;
+    cmpEq_p8_imm              var21,        1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    jmpIf_label             label_5;
+    jmpIfNot_label          label_6;
+    label                   label_6;
+    init_pany_type             var7, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var8, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of13, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of13,     var0;
+    mov_pptr_pptr              var7, addr_of13;
+    deinit                ;
+    init_pany_type         call_result14, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_15, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_15,     var7;
+    init_pany_type         call_arg1_16,       i8;
+    mov_p8_imm             call_arg1_16,        0;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE;
+    mov_pptr_pptr              var8, call_result14;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var4, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var5,      ScE;
+    init_pany_type             var6, ptr_dyntable_i8;
+    init_pany_type         addr_of17, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of17,     var0;
+    mov_pptr_pptr              var4, addr_of17;
+    deinit                ;
+    init_pany_type         call_result18,      ScE;
+    init_pany_type         call_arg0_19, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_19,     var4;
+    call_func              _Q_M4core10containersN6String7asSliceEFScER_Q_CM4core10containersG6StringE4selfE;
+    mov_pste_pste              var5, call_result18;
+    deinit                ;
+    init_pany_type         call_result20, ptr_dyntable_i8;
+    init_pany_type         call_arg0_21,      ScE;
+    mov_pste_pste          call_arg0_21,     var5;
+    call_func              _Q_M4core8builtinsN1c14ptr_from_slice14ptr_from_sliceEFMPcEScEE1sE;
+    mov_pptr_pptr              var6, call_result20;
+    deinit                ;
+    init_pany_type         call_result22,      f64;
+    init_pany_type         call_arg0_23, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg0_23,     var6;
+    call_func              _Q_M4core2ioG6strtodFf64MPcEE1pE;
+    mov_p64_p64                var2, call_result22;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_p64_p64                ret0,     var2;
+    init_pany_type            var30, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of24, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of24,     var0;
+    mov_pptr_pptr             var30, addr_of24;
+    deinit                ;
+    init_pany_type         call_arg0_25, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_25,    var30;
+    call_func              _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG7readI64Fi64EE {  } -> { i64 } {
+    label                   label_0;
+    init_pany_type             var0,       i8;
+    init_pany_type             var1,       i8;
+    init_pany_type             var2,      i64;
+    init_pany_type         call_result0,       i8;
+    call_func              _Q_M4core2ioG10skipBlanksFcEE;
+    mov_p8_p8                  var0, call_result0;
+    deinit                ;
+    mov_p8_imm                 var1,        0;
+    init_pany_type            var13,       i8;
+    cmpEq_p8_imm               var0,       45;
+    mov_p8_imm                var13,        0;
+    cmov_p8_imm               var13,        1;
+    cmpEq_p8_imm              var13,        1;
+    deinit                ;
+    jmpIf_label             label_1;
+    jmpIfNot_label          label_2;
+    label                   label_1;
+    mov_p8_imm                 var1,        1;
+    init_pany_type         call_result1,       i8;
+    call_func              _Q_M4core2ioG8readCharFcEE;
+    mov_p8_p8                  var0, call_result1;
+    deinit                ;
+    jmp_label               label_3;
+    label                   label_2;
+    jmp_label               label_3;
+    label                   label_3;
+    mov_p64_imm                var2,        0;
+    jmp_label               label_4;
+    label                   label_5;
+    init_pany_type             var8,      i64;
+    init_pany_type             var9,      i64;
+    init_pany_type            var10,      i64;
+    init_pany_type            var11,      i64;
+    mov_p64_p64               var11,     var2;
+    mul_p64_imm               var11,       10;
+    zext_p64_p8                var9,     var0;
+    init_pany_type         cast_src_tmp2,       i8;
+    mov_p8_imm             cast_src_tmp2,       48;
+    zext_p64_p8                var8, cast_src_tmp2;
+    deinit                ;
+    mov_p64_p64               var10,     var9;
+    sub_p64_p64               var10,     var8;
+    mov_p64_p64                var2,    var11;
+    add_p64_p64                var2,    var10;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         call_result3,       i8;
+    call_func              _Q_M4core2ioG8readCharFcEE;
+    mov_p8_p8                  var0, call_result3;
+    deinit                ;
+    jmp_label               label_4;
+    label                   label_4;
+    init_pany_type             var6,       i8;
+    init_pany_type             var7,       i8;
+    init_pany_type            var12,       i8;
+    ucmpGe_p8_imm              var0,       48;
+    mov_p8_imm                 var7,        0;
+    cmov_p8_imm                var7,        1;
+    ucmpLe_p8_imm              var0,       57;
+    mov_p8_imm                 var6,        0;
+    cmov_p8_imm                var6,        1;
+    mov_p8_p8                 var12,     var7;
+    log_and_p8_p8             var12,     var6;
+    cmpEq_p8_imm              var12,        1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    jmpIf_label             label_5;
+    jmpIfNot_label          label_6;
+    label                   label_6;
+    init_pany_type             var5,       i8;
+    mov_p8_p8                  var5,     var1;
+    cmpEq_p8_imm               var5,        1;
+    deinit                ;
+    jmpIf_label             label_7;
+    jmpIfNot_label          label_8;
+    label                   label_7;
+    mov_p64_imm                ret0,        0;
+    sub_p64_p64                ret0,     var2;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+    label                   label_8;
+    jmp_label               label_9;
+    label                   label_9;
+    mov_p64_p64                ret0,     var2;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG7readU64Fj64EE {  } -> { i64 } {
+    label                   label_0;
+    init_pany_type             var0,       i8;
+    init_pany_type             var1,      i64;
+    init_pany_type         call_result0,       i8;
+    call_func              _Q_M4core2ioG10skipBlanksFcEE;
+    mov_p8_p8                  var0, call_result0;
+    deinit                ;
+    mov_p64_imm                var1,        0;
+    jmp_label               label_1;
+    label                   label_2;
+    init_pany_type             var5,      i64;
+    init_pany_type             var6,      i64;
+    init_pany_type             var7,      i64;
+    init_pany_type             var8,      i64;
+    init_pany_type             var9,      i64;
+    mov_p64_p64                var9,     var1;
+    mul_p64_imm                var9,       10;
+    zext_p64_p8                var6,     var0;
+    init_pany_type         cast_src_tmp1,       i8;
+    mov_p8_imm             cast_src_tmp1,       48;
+    zext_p64_p8                var5, cast_src_tmp1;
+    deinit                ;
+    mov_p64_p64                var7,     var6;
+    sub_p64_p64                var7,     var5;
+    mov_p64_p64                var8,     var7;
+    mov_p64_p64                var1,     var9;
+    add_p64_p64                var1,     var8;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         call_result2,       i8;
+    call_func              _Q_M4core2ioG8readCharFcEE;
+    mov_p8_p8                  var0, call_result2;
+    deinit                ;
+    jmp_label               label_1;
+    label                   label_1;
+    init_pany_type             var3,       i8;
+    init_pany_type             var4,       i8;
+    init_pany_type            var10,       i8;
+    ucmpGe_p8_imm              var0,       48;
+    mov_p8_imm                 var4,        0;
+    cmov_p8_imm                var4,        1;
+    ucmpLe_p8_imm              var0,       57;
+    mov_p8_imm                 var3,        0;
+    cmov_p8_imm                var3,        1;
+    mov_p8_p8                 var10,     var4;
+    log_and_p8_p8             var10,     var3;
+    cmpEq_p8_imm              var10,        1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    jmpIf_label             label_2;
+    jmpIfNot_label          label_3;
+    label                   label_3;
+    mov_p64_p64                ret0,     var1;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG8readCharFcEE {  } -> { i8 } {
+    label                   label_0;
+    init_pany_type             var0,      i32;
+    init_pany_type         call_result0,      i32;
+    call_func              _Q_M4core2ioG12readCharCodeFi32EE;
+    mov_p32_p32                var0, call_result0;
+    deinit                ;
+    trunc_p8_p32               ret0,     var0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG8writeF64Fi64f64E1xE { f64 } -> { i64 } {
+    label                   label_0;
+    init_pany_type             var1, _Q_CM4core10containersG6String;
+    init_pany_type             var2,      i64;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1,      f64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    call_func              _Q_HtoStringNF_Q_CM4core10containersG6StringNf64E2_0EE;
+    mov_pste_pste              var1, call_result0;
+    deinit                ;
+    init_pany_type             var5, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of2, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of2,     var1;
+    mov_pptr_pptr              var5, addr_of2;
+    deinit                ;
+    init_pany_type         call_result3,      i64;
+    init_pany_type         call_arg0_4, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_4,     var5;
+    call_func              _Q_M4core2ioG11writeStringFi64R_Q_CM4core10containersG6StringE1vE;
+    mov_p64_p64                var2, call_result3;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var4,      i64;
+    init_pany_type         call_result5,      i64;
+    init_pany_type         call_arg0_6,       i8;
+    mov_p8_imm             call_arg0_6,       10;
+    call_func              _Q_M4core2ioG9writeCharFi64cE1cE;
+    mov_p64_p64                var4, call_result5;
+    deinit                ;
+    deinit                ;
+    mov_p64_p64                ret0,     var2;
+    add_p64_imm                ret0,        1;
+    init_pany_type             var6, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of7, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of7,     var1;
+    mov_pptr_pptr              var6, addr_of7;
+    deinit                ;
+    init_pany_type         call_arg0_8, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_8,     var6;
+    call_func              _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG8writeI64Fi64i64E1xE { i64 } -> { i64 } {
+    label                   label_0;
+    init_pany_type             var1, _Q_CM4core10containersG6String;
+    init_pany_type             var2,      i64;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    call_func              _Q_HtoStringNF_Q_CM4core10containersG6StringNi64E2_0EE;
+    mov_pste_pste              var1, call_result0;
+    deinit                ;
+    init_pany_type             var5, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of2, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of2,     var1;
+    mov_pptr_pptr              var5, addr_of2;
+    deinit                ;
+    init_pany_type         call_result3,      i64;
+    init_pany_type         call_arg0_4, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_4,     var5;
+    call_func              _Q_M4core2ioG11writeStringFi64R_Q_CM4core10containersG6StringE1vE;
+    mov_p64_p64                var2, call_result3;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var4,      i64;
+    init_pany_type         call_result5,      i64;
+    init_pany_type         call_arg0_6,       i8;
+    mov_p8_imm             call_arg0_6,       10;
+    call_func              _Q_M4core2ioG9writeCharFi64cE1cE;
+    mov_p64_p64                var4, call_result5;
+    deinit                ;
+    deinit                ;
+    mov_p64_p64                ret0,     var2;
+    add_p64_imm                ret0,        1;
+    init_pany_type             var6, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of7, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of7,     var1;
+    mov_pptr_pptr              var6, addr_of7;
+    deinit                ;
+    init_pany_type         call_arg0_8, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_8,     var6;
+    call_func              _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG8writeStrFi64ScEE1sE { ScE } -> { i64 } {
+    label                   label_0;
+    init_pany_type             var1,      i64;
+    mov_p64_imm                var1,        0;
+    jmp_label               label_1;
+    label                   label_2;
+    init_pany_type             var4,       i8;
+    init_pany_type             var5,       i8;
+    init_pany_type             var6,       i8;
+    init_pany_type             var7,      i64;
+    jmp_label               label_3;
+    label                   label_3;
+    init_pany_type         field_addr0,  ptr_i64;
+    structLea_pptr_pste_field field_addr0,     arg0,   ScE._1;
+    init_pany_type         deref_tmp1,      i64;
+    load_pany_pptr         deref_tmp1, field_addr0;
+    cmpLt_p64_p64              var1, deref_tmp1;
+    mov_p8_imm                 var4,        0;
+    cmov_p8_imm                var4,        1;
+    deinit                ;
+    deinit                ;
+    cmpGe_p64_imm              var1,        0;
+    mov_p8_imm                 var5,        0;
+    cmov_p8_imm                var5,        1;
+    mov_p8_p8                  var6,     var4;
+    log_and_p8_p8              var6,     var5;
+    cmpEq_p8_imm               var6,        1;
+    jmpIf_label             label_4;
+    jmpIfNot_label          label_5;
+    label                   label_5;
+    call_func              _Q_M4core9panickingG5panicFuEE;
+    jmp_label               label_4;
+    label                   label_4;
+    init_pany_type         field_addr2, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field field_addr2,     arg0,   ScE._0;
+    init_pany_type         deref_tmp3, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp3, field_addr2;
+    init_pany_type         element_ptr4,   ptr_i8;
+    dynTableLea_pptr_pptr_p64 element_ptr4, deref_tmp3,     var1;
+    init_pany_type         deref_tmp5,       i8;
+    load_pany_pptr         deref_tmp5, element_ptr4;
+    init_pany_type         call_result6,      i64;
+    init_pany_type         call_arg0_7,       i8;
+    mov_p8_p8              call_arg0_7, deref_tmp5;
+    call_func              _Q_M4core2ioG9writeCharFi64cE1cE;
+    mov_p64_p64                var7, call_result6;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         bin_tmp8,      i64;
+    mov_p64_p64            bin_tmp8,     var1;
+    add_p64_imm            bin_tmp8,        1;
+    mov_p64_p64                var1, bin_tmp8;
+    deinit                ;
+    jmp_label               label_1;
+    label                   label_1;
+    init_pany_type             var3,      i64;
+    init_pany_type             var8,       i8;
+    init_pany_type         call_result9,      i64;
+    init_pany_type         call_arg0_10,      ScE;
+    mov_pste_pste          call_arg0_10,     arg0;
+    call_func              _Q_HlengthNFi64NScEE2_0EE;
+    mov_p64_p64                var3, call_result9;
+    deinit                ;
+    cmpLt_p64_p64              var1,     var3;
+    mov_p8_imm                 var8,        0;
+    cmov_p8_imm                var8,        1;
+    cmpEq_p8_imm               var8,        1;
+    deinit                ;
+    deinit                ;
+    jmpIf_label             label_2;
+    jmpIfNot_label          label_6;
+    label                   label_6;
+    mov_p64_p64                ret0,     var1;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG8writeU64Fi64j64E1xE { i64 } -> { i64 } {
+    label                   label_0;
+    init_pany_type             var1, _Q_CM4core10containersG6String;
+    init_pany_type             var2,      i64;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    call_func              _Q_HtoStringNF_Q_CM4core10containersG6StringNj64E2_0EE;
+    mov_pste_pste              var1, call_result0;
+    deinit                ;
+    init_pany_type             var5, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of2, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of2,     var1;
+    mov_pptr_pptr              var5, addr_of2;
+    deinit                ;
+    init_pany_type         call_result3,      i64;
+    init_pany_type         call_arg0_4, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_4,     var5;
+    call_func              _Q_M4core2ioG11writeStringFi64R_Q_CM4core10containersG6StringE1vE;
+    mov_p64_p64                var2, call_result3;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var4,      i64;
+    init_pany_type         call_result5,      i64;
+    init_pany_type         call_arg0_6,       i8;
+    mov_p8_imm             call_arg0_6,       10;
+    call_func              _Q_M4core2ioG9writeCharFi64cE1cE;
+    mov_p64_p64                var4, call_result5;
+    deinit                ;
+    deinit                ;
+    mov_p64_p64                ret0,     var2;
+    add_p64_imm                ret0,        1;
+    init_pany_type             var6, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of7, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of7,     var1;
+    mov_pptr_pptr              var6, addr_of7;
+    deinit                ;
+    init_pany_type         call_arg0_8, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_8,     var6;
+    call_func              _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core2ioG9writeCharFi64cE1cE { i8 } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,       i8;
+    mov_p8_p8              call_arg0_1,     arg0;
+    call_builtinfunc       builtin_output_char;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsN1c14ptr_from_slice14ptr_from_sliceEFMPcEScEE1sE { ScE } -> { ptr_dyntable_i8 } {
+    label                   label_0;
+    init_pany_type         field_addr0, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field field_addr0,     arg0,   ScE._0;
+    init_pany_type         deref_tmp1, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp1, field_addr0;
+    mov_pptr_pptr              ret0, deref_tmp1;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersG11copyCharsAtFuMPcEMPcEi64i64E6source4dest11dest_offset5countE { ptr_dyntable_i8, ptr_dyntable_i8, i64, i64 } -> {  } {
+    label                   label_0;
+    init_pany_type             var4,      i64;
+    mov_p64_imm                var4,        0;
+    jmp_label               label_1;
+    label                   label_2;
+    init_pany_type             var5,      i64;
+    mov_p64_p64                var5,     arg2;
+    add_p64_p64                var5,     var4;
+    init_pany_type         element_ptr0,   ptr_i8;
+    dynTableLea_pptr_pptr_p64 element_ptr0,     arg0,     var4;
+    init_pany_type         deref_tmp1,       i8;
+    load_pany_pptr         deref_tmp1, element_ptr0;
+    init_pany_type         element_ptr2,   ptr_i8;
+    dynTableLea_pptr_pptr_p64 element_ptr2,     arg1,     var5;
+    store_pptr_pany        element_ptr2, deref_tmp1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         bin_tmp3,      i64;
+    mov_p64_p64            bin_tmp3,     var4;
+    add_p64_imm            bin_tmp3,        1;
+    mov_p64_p64                var4, bin_tmp3;
+    deinit                ;
+    jmp_label               label_1;
+    label                   label_1;
+    init_pany_type             var6,       i8;
+    cmpLt_p64_p64              var4,     arg3;
+    mov_p8_imm                 var6,        0;
+    cmov_p8_imm                var6,        1;
+    cmpEq_p8_imm               var6,        1;
+    deinit                ;
+    jmpIf_label             label_2;
+    jmpIfNot_label          label_3;
+    label                   label_3;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE { i64 } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var1, _Q_CM4core10containersG6String;
+    init_pany_type             var3, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of0, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of0,     var1;
+    mov_pptr_pptr              var3, addr_of0;
+    deinit                ;
+    init_pany_type         call_arg0_1, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_1,     var3;
+    init_pany_type         call_arg1_2,      i64;
+    mov_p64_p64            call_arg1_2,     arg0;
+    call_func              _Q_M4core10containersN6String7reserveEFuR_Q_CM4core10containersG6Stringi64E4self8requiredE;
+    deinit                ;
+    mov_pste_pste              ret0,     var1;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersG9copyCharsFuMPcEMPcEi64E6source4dest5countE { ptr_dyntable_i8, ptr_dyntable_i8, i64 } -> {  } {
+    label                   label_0;
+    init_pany_type         call_arg0_0, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg0_0,     arg0;
+    init_pany_type         call_arg1_1, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg1_1,     arg1;
+    init_pany_type         call_arg2_2,      i64;
+    mov_p64_imm            call_arg2_2,        0;
+    init_pany_type         call_arg3_3,      i64;
+    mov_p64_p64            call_arg3_3,     arg2;
+    call_func              _Q_M4core10containersG11copyCharsAtFuMPcEMPcEi64i64E6source4dest11dest_offset5countE;
+    ret                   ;
+}
+
+function _Q_M4core10containersGOi4coplF_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE1s1cE { ptr__Q_CM4core10containersG6String, i8 } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var2, _Q_CM4core10containersG6String;
+    init_pany_type             var8,      i64;
+    init_pany_type             var9,      i64;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_1,     arg0;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    mov_p64_p64                var8, call_result0;
+    deinit                ;
+    mov_p64_p64                var9,     var8;
+    add_p64_imm                var9,        1;
+    init_pany_type         call_result2, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_3,      i64;
+    mov_p64_p64            call_arg0_3,     var9;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var2, call_result2;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var6, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var7, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of4, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of4,     var2;
+    mov_pptr_pptr              var6, addr_of4;
+    deinit                ;
+    init_pany_type         call_result5, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_6, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_6,     var6;
+    init_pany_type         call_arg1_7, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg1_7,     arg0;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4self5otherE;
+    mov_pptr_pptr              var7, call_result5;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var4, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var5, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of8, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of8,     var2;
+    mov_pptr_pptr              var4, addr_of8;
+    deinit                ;
+    init_pany_type         call_result9, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_10, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_10,     var4;
+    init_pany_type         call_arg1_11,       i8;
+    mov_p8_p8              call_arg1_11,     arg1;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE;
+    mov_pptr_pptr              var5, call_result9;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pste_pste              ret0,     var2;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersGOi4coplF_Q_CM4core10containersG6String_Q_CM4core10containersG6StringcE1s1cE { _Q_CM4core10containersG6String, i8 } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var2, _Q_CM4core10containersG6String;
+    init_pany_type             var9, ptr__Q_CM4core10containersG6String;
+    init_pany_type            var10,      i64;
+    init_pany_type            var11,      i64;
+    init_pany_type         addr_of0, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of0,     arg0;
+    mov_pptr_pptr              var9, addr_of0;
+    deinit                ;
+    init_pany_type         call_result1,      i64;
+    init_pany_type         call_arg0_2, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_2,     var9;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    mov_p64_p64               var10, call_result1;
+    deinit                ;
+    mov_p64_p64               var11,    var10;
+    add_p64_imm               var11,        1;
+    init_pany_type         call_result3, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_4,      i64;
+    mov_p64_p64            call_arg0_4,    var11;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var2, call_result3;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var6, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var7, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var8, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of5, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of5,     var2;
+    mov_pptr_pptr              var7, addr_of5;
+    deinit                ;
+    init_pany_type         addr_of6, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of6,     arg0;
+    mov_pptr_pptr              var6, addr_of6;
+    deinit                ;
+    init_pany_type         call_result7, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_8, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_8,     var7;
+    init_pany_type         call_arg1_9, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg1_9,     var6;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4self5otherE;
+    mov_pptr_pptr              var8, call_result7;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var4, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var5, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of10, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of10,     var2;
+    mov_pptr_pptr              var4, addr_of10;
+    deinit                ;
+    init_pany_type         call_result11, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_12, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_12,     var4;
+    init_pany_type         call_arg1_13,       i8;
+    mov_p8_p8              call_arg1_13,     arg1;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE;
+    mov_pptr_pptr              var5, call_result11;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pste_pste              ret0,     var2;
+    init_pany_type            var12, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of14, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of14,     arg0;
+    mov_pptr_pptr             var12, addr_of14;
+    deinit                ;
+    init_pany_type         call_arg0_15, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_15,    var12;
+    call_func              _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersGOi4plcoF_Q_CM4core10containersG6StringcR_Q_CM4core10containersG6StringE1c1sE { i8, ptr__Q_CM4core10containersG6String } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var2, _Q_CM4core10containersG6String;
+    init_pany_type             var8,      i64;
+    init_pany_type             var9,      i64;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_1,     arg1;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    mov_p64_p64                var8, call_result0;
+    deinit                ;
+    mov_p64_p64                var9,     var8;
+    add_p64_imm                var9,        1;
+    init_pany_type         call_result2, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_3,      i64;
+    mov_p64_p64            call_arg0_3,     var9;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var2, call_result2;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var6, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var7, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of4, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of4,     var2;
+    mov_pptr_pptr              var6, addr_of4;
+    deinit                ;
+    init_pany_type         call_result5, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_6, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_6,     var6;
+    init_pany_type         call_arg1_7,       i8;
+    mov_p8_p8              call_arg1_7,     arg0;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE;
+    mov_pptr_pptr              var7, call_result5;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var4, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var5, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of8, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of8,     var2;
+    mov_pptr_pptr              var4, addr_of8;
+    deinit                ;
+    init_pany_type         call_result9, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_10, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_10,     var4;
+    init_pany_type         call_arg1_11, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg1_11,     arg1;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4self5otherE;
+    mov_pptr_pptr              var5, call_result9;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pste_pste              ret0,     var2;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersGOi4plcoF_Q_CM4core10containersG6Stringc_Q_CM4core10containersG6StringE1c1sE { i8, _Q_CM4core10containersG6String } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var2, _Q_CM4core10containersG6String;
+    init_pany_type             var9, ptr__Q_CM4core10containersG6String;
+    init_pany_type            var10,      i64;
+    init_pany_type            var11,      i64;
+    init_pany_type         addr_of0, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of0,     arg1;
+    mov_pptr_pptr              var9, addr_of0;
+    deinit                ;
+    init_pany_type         call_result1,      i64;
+    init_pany_type         call_arg0_2, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_2,     var9;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    mov_p64_p64               var10, call_result1;
+    deinit                ;
+    mov_p64_p64               var11,    var10;
+    add_p64_imm               var11,        1;
+    init_pany_type         call_result3, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_4,      i64;
+    mov_p64_p64            call_arg0_4,    var11;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var2, call_result3;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var7, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var8, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of5, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of5,     var2;
+    mov_pptr_pptr              var7, addr_of5;
+    deinit                ;
+    init_pany_type         call_result6, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_7, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_7,     var7;
+    init_pany_type         call_arg1_8,       i8;
+    mov_p8_p8              call_arg1_8,     arg0;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE;
+    mov_pptr_pptr              var8, call_result6;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var4, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var5, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var6, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of9, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of9,     var2;
+    mov_pptr_pptr              var5, addr_of9;
+    deinit                ;
+    init_pany_type         addr_of10, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of10,     arg1;
+    mov_pptr_pptr              var4, addr_of10;
+    deinit                ;
+    init_pany_type         call_result11, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_12, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_12,     var5;
+    init_pany_type         call_arg1_13, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg1_13,     var4;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4self5otherE;
+    mov_pptr_pptr              var6, call_result11;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pste_pste              ret0,     var2;
+    init_pany_type            var12, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of14, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of14,     arg1;
+    mov_pptr_pptr             var12, addr_of14;
+    deinit                ;
+    init_pany_type         call_arg0_15, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_15,    var12;
+    call_func              _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersGOi4plplF_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE1a1bE { ptr__Q_CM4core10containersG6String, ptr__Q_CM4core10containersG6String } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var2, _Q_CM4core10containersG6String;
+    init_pany_type             var8,      i64;
+    init_pany_type             var9,      i64;
+    init_pany_type            var10,      i64;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_1,     arg0;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    mov_p64_p64                var9, call_result0;
+    deinit                ;
+    init_pany_type         call_result2,      i64;
+    init_pany_type         call_arg0_3, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_3,     arg1;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    mov_p64_p64                var8, call_result2;
+    deinit                ;
+    mov_p64_p64               var10,     var9;
+    add_p64_p64               var10,     var8;
+    init_pany_type         call_result4, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_5,      i64;
+    mov_p64_p64            call_arg0_5,    var10;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var2, call_result4;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var6, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var7, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of6, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of6,     var2;
+    mov_pptr_pptr              var6, addr_of6;
+    deinit                ;
+    init_pany_type         call_result7, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_8, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_8,     var6;
+    init_pany_type         call_arg1_9, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg1_9,     arg0;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4self5otherE;
+    mov_pptr_pptr              var7, call_result7;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var4, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var5, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of10, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of10,     var2;
+    mov_pptr_pptr              var4, addr_of10;
+    deinit                ;
+    init_pany_type         call_result11, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_12, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_12,     var4;
+    init_pany_type         call_arg1_13, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg1_13,     arg1;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4self5otherE;
+    mov_pptr_pptr              var5, call_result11;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pste_pste              ret0,     var2;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersGOi4plplF_Q_CM4core10containersG6String_Q_CM4core10containersG6String_Q_CM4core10containersG6StringE1a1bE { _Q_CM4core10containersG6String, _Q_CM4core10containersG6String } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var2, _Q_CM4core10containersG6String;
+    init_pany_type            var10, ptr__Q_CM4core10containersG6String;
+    init_pany_type            var11,      i64;
+    init_pany_type            var12, ptr__Q_CM4core10containersG6String;
+    init_pany_type            var13,      i64;
+    init_pany_type            var14,      i64;
+    init_pany_type         addr_of0, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of0,     arg0;
+    mov_pptr_pptr             var12, addr_of0;
+    deinit                ;
+    init_pany_type         call_result1,      i64;
+    init_pany_type         call_arg0_2, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_2,    var12;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    mov_p64_p64               var13, call_result1;
+    deinit                ;
+    init_pany_type         addr_of3, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of3,     arg1;
+    mov_pptr_pptr             var10, addr_of3;
+    deinit                ;
+    init_pany_type         call_result4,      i64;
+    init_pany_type         call_arg0_5, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_5,    var10;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    mov_p64_p64               var11, call_result4;
+    deinit                ;
+    mov_p64_p64               var14,    var13;
+    add_p64_p64               var14,    var11;
+    init_pany_type         call_result6, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_7,      i64;
+    mov_p64_p64            call_arg0_7,    var14;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var2, call_result6;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var7, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var8, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var9, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of8, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of8,     var2;
+    mov_pptr_pptr              var8, addr_of8;
+    deinit                ;
+    init_pany_type         addr_of9, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of9,     arg0;
+    mov_pptr_pptr              var7, addr_of9;
+    deinit                ;
+    init_pany_type         call_result10, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_11, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_11,     var8;
+    init_pany_type         call_arg1_12, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg1_12,     var7;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4self5otherE;
+    mov_pptr_pptr              var9, call_result10;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var4, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var5, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var6, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of13, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of13,     var2;
+    mov_pptr_pptr              var5, addr_of13;
+    deinit                ;
+    init_pany_type         addr_of14, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of14,     arg1;
+    mov_pptr_pptr              var4, addr_of14;
+    deinit                ;
+    init_pany_type         call_result15, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_16, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_16,     var5;
+    init_pany_type         call_arg1_17, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg1_17,     var4;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4self5otherE;
+    mov_pptr_pptr              var6, call_result15;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pste_pste              ret0,     var2;
+    init_pany_type            var15, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of18, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of18,     arg1;
+    mov_pptr_pptr             var15, addr_of18;
+    deinit                ;
+    init_pany_type         call_arg0_19, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_19,    var15;
+    call_func              _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE;
+    deinit                ;
+    init_pany_type            var16, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of20, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of20,     arg0;
+    mov_pptr_pptr             var16, addr_of20;
+    deinit                ;
+    init_pany_type         call_arg0_21, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_21,    var16;
+    call_func              _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN15stringification12appendHexU64EFuR_Q_CM4core10containersG6Stringj64E1s5valueE { ptr__Q_CM4core10containersG6String, i64 } -> {  } {
+    label                   label_0;
+    init_pany_type             var2, _Q_CM4core10containersG6String;
+    init_pany_type             var3,      i64;
+    init_pany_type            var23,      i64;
+    init_pany_type         cast_src_tmp0,      i32;
+    mov_p32_imm            cast_src_tmp0,       16;
+    sext_p64_p32              var23, cast_src_tmp0;
+    deinit                ;
+    init_pany_type         call_result1, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_2,      i64;
+    mov_p64_p64            call_arg0_2,    var23;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var2, call_result1;
+    deinit                ;
+    deinit                ;
+    mov_p64_p64                var3,     arg1;
+    init_pany_type            var22,       i8;
+    cmpEq_p64_imm              var3,        0;
+    mov_p8_imm                var22,        0;
+    cmov_p8_imm               var22,        1;
+    cmpEq_p8_imm              var22,        1;
+    deinit                ;
+    jmpIf_label             label_1;
+    jmpIfNot_label          label_2;
+    label                   label_1;
+    init_pany_type            var20, ptr__Q_CM4core10containersG6String;
+    init_pany_type            var21, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of3, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of3,     var2;
+    mov_pptr_pptr             var20, addr_of3;
+    deinit                ;
+    init_pany_type         call_result4, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_5, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_5,    var20;
+    init_pany_type         call_arg1_6,       i8;
+    mov_p8_imm             call_arg1_6,       48;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE;
+    mov_pptr_pptr             var21, call_result4;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    jmp_label               label_3;
+    label                   label_2;
+    jmp_label               label_3;
+    label                   label_3;
+    jmp_label               label_4;
+    label                   label_5;
+    init_pany_type             var4,      i64;
+    mov_p64_p64                var4,     var3;
+    umod_p64_imm               var4,       16;
+    init_pany_type            var18,       i8;
+    ucmpLt_p64_imm             var4,       10;
+    mov_p8_imm                var18,        0;
+    cmov_p8_imm               var18,        1;
+    cmpEq_p8_imm              var18,        1;
+    deinit                ;
+    jmpIf_label             label_6;
+    jmpIfNot_label          label_7;
+    label                   label_6;
+    init_pany_type            var13,      i64;
+    init_pany_type            var14,      i64;
+    init_pany_type            var15,       i8;
+    init_pany_type            var16, ptr__Q_CM4core10containersG6String;
+    init_pany_type            var17, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of7, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of7,     var2;
+    mov_pptr_pptr             var16, addr_of7;
+    deinit                ;
+    init_pany_type         cast_src_tmp8,       i8;
+    mov_p8_imm             cast_src_tmp8,       48;
+    zext_p64_p8               var13, cast_src_tmp8;
+    deinit                ;
+    mov_p64_p64               var14,    var13;
+    add_p64_p64               var14,     var4;
+    trunc_p8_p64              var15,    var14;
+    init_pany_type         call_result9, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_10, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_10,    var16;
+    init_pany_type         call_arg1_11,       i8;
+    mov_p8_p8              call_arg1_11,    var15;
+    call_func              _Q_M4core10containersN6String7prependEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE;
+    mov_pptr_pptr             var17, call_result9;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    jmp_label               label_8;
+    label                   label_7;
+    init_pany_type             var7,      i64;
+    init_pany_type             var8,      i64;
+    init_pany_type             var9,      i64;
+    init_pany_type            var10,       i8;
+    init_pany_type            var11, ptr__Q_CM4core10containersG6String;
+    init_pany_type            var12, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of12, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of12,     var2;
+    mov_pptr_pptr             var11, addr_of12;
+    deinit                ;
+    init_pany_type         cast_src_tmp13,       i8;
+    mov_p8_imm             cast_src_tmp13,       97;
+    zext_p64_p8                var7, cast_src_tmp13;
+    deinit                ;
+    mov_p64_p64                var8,     var7;
+    add_p64_p64                var8,     var4;
+    mov_p64_p64                var9,     var8;
+    sub_p64_imm                var9,       10;
+    trunc_p8_p64              var10,     var9;
+    init_pany_type         call_result14, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_15, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_15,    var11;
+    init_pany_type         call_arg1_16,       i8;
+    mov_p8_p8              call_arg1_16,    var10;
+    call_func              _Q_M4core10containersN6String7prependEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE;
+    mov_pptr_pptr             var12, call_result14;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    jmp_label               label_8;
+    label                   label_8;
+    init_pany_type         bin_tmp17,      i64;
+    mov_p64_p64            bin_tmp17,     var3;
+    udiv_p64_imm           bin_tmp17,       16;
+    mov_p64_p64                var3, bin_tmp17;
+    deinit                ;
+    deinit                ;
+    jmp_label               label_4;
+    label                   label_4;
+    init_pany_type            var19,       i8;
+    ucmpGt_p64_imm             var3,        0;
+    mov_p8_imm                var19,        0;
+    cmov_p8_imm               var19,        1;
+    cmpEq_p8_imm              var19,        1;
+    deinit                ;
+    jmpIf_label             label_5;
+    jmpIfNot_label          label_9;
+    label                   label_9;
+    init_pany_type             var5, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var6, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of18, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of18,     var2;
+    mov_pptr_pptr              var5, addr_of18;
+    deinit                ;
+    init_pany_type         call_result19, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_20, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_20,     arg0;
+    init_pany_type         call_arg1_21, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg1_21,     var5;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4self5otherE;
+    mov_pptr_pptr              var6, call_result19;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type            var24, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of22, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of22,     var2;
+    mov_pptr_pptr             var24, addr_of22;
+    deinit                ;
+    init_pany_type         call_arg0_23, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_23,    var24;
+    call_func              _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN15stringification12stringifyF64EF_Q_CM4core10containersG6Stringf64E1xE { f64 } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var1,      i64;
+    init_pany_type             var2, _Q_CM4core10containersG6String;
+    mov_p64_imm                var1,       21;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_p64            call_arg0_1,     var1;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var2, call_result0;
+    deinit                ;
+    init_pany_type         field_addr2, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field field_addr2,     var2, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp3, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp3, field_addr2;
+    init_pany_type         field_addr4,  ptr_i64;
+    structLea_pptr_pste_field field_addr4,     var2, _Q_CM4core10containersG6String._1;
+    init_pany_type         call_result5,      i64;
+    init_pany_type         call_arg0_6,      f64;
+    mov_p64_p64            call_arg0_6,     arg0;
+    init_pany_type         call_arg1_7, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg1_7, deref_tmp3;
+    init_pany_type         call_arg2_8,      i64;
+    mov_p64_p64            call_arg2_8,     var1;
+    call_func              _Q_M4core7runtimeG15float_to_stringFi64f64MPcEi64E5value1p10buffer_capE;
+    store_pptr_pany        field_addr4, call_result5;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pste_pste              ret0,     var2;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN15stringification12stringifyI64EF_Q_CM4core10containersG6Stringi64E1xE { i64 } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var1,      i64;
+    init_pany_type             var2, _Q_CM4core10containersG6String;
+    mov_p64_imm                var1,       21;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_p64            call_arg0_1,     var1;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var2, call_result0;
+    deinit                ;
+    init_pany_type         field_addr2, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field field_addr2,     var2, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp3, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp3, field_addr2;
+    init_pany_type         field_addr4,  ptr_i64;
+    structLea_pptr_pste_field field_addr4,     var2, _Q_CM4core10containersG6String._1;
+    init_pany_type         call_result5,      i64;
+    init_pany_type         call_arg0_6,      i64;
+    mov_p64_p64            call_arg0_6,     arg0;
+    init_pany_type         call_arg1_7, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg1_7, deref_tmp3;
+    init_pany_type         call_arg2_8,      i64;
+    mov_p64_p64            call_arg2_8,     var1;
+    call_func              _Q_M4core7runtimeG13i64_to_stringFi64i64MPcEi64E5value1p10buffer_capE;
+    store_pptr_pany        field_addr4, call_result5;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pste_pste              ret0,     var2;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN15stringification12stringifyStrEF_Q_CM4core10containersG6StringScEE1xE { ScE } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var1,      i64;
+    init_pany_type             var2, _Q_CM4core10containersG6String;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,      ScE;
+    mov_pste_pste          call_arg0_1,     arg0;
+    call_func              _Q_HlengthNFi64NScEE2_0EE;
+    mov_p64_p64                var1, call_result0;
+    deinit                ;
+    init_pany_type         call_result2, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_3,      i64;
+    mov_p64_p64            call_arg0_3,     var1;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var2, call_result2;
+    deinit                ;
+    init_pany_type             var4, ptr_dyntable_i8;
+    init_pany_type         call_result4, ptr_dyntable_i8;
+    init_pany_type         call_arg0_5,      ScE;
+    mov_pste_pste          call_arg0_5,     arg0;
+    call_func              _Q_M4core8builtinsN1c14ptr_from_slice14ptr_from_sliceEFMPcEScEE1sE;
+    mov_pptr_pptr              var4, call_result4;
+    deinit                ;
+    init_pany_type         field_addr6, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field field_addr6,     var2, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp7, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp7, field_addr6;
+    init_pany_type         call_arg0_8, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg0_8,     var4;
+    init_pany_type         call_arg1_9, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg1_9, deref_tmp7;
+    init_pany_type         call_arg2_10,      i64;
+    mov_p64_p64            call_arg2_10,     var1;
+    call_func              _Q_M4core10containersG9copyCharsFuMPcEMPcEi64E6source4dest5countE;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         field_addr11,  ptr_i64;
+    structLea_pptr_pste_field field_addr11,     var2, _Q_CM4core10containersG6String._1;
+    store_pptr_pany        field_addr11,     var1;
+    deinit                ;
+    mov_pste_pste              ret0,     var2;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN15stringification12stringifyU64EF_Q_CM4core10containersG6Stringj64E1xE { i64 } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var1,      i64;
+    init_pany_type             var2, _Q_CM4core10containersG6String;
+    mov_p64_imm                var1,       21;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_p64            call_arg0_1,     var1;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var2, call_result0;
+    deinit                ;
+    init_pany_type         field_addr2, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field field_addr2,     var2, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp3, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp3, field_addr2;
+    init_pany_type         field_addr4,  ptr_i64;
+    structLea_pptr_pste_field field_addr4,     var2, _Q_CM4core10containersG6String._1;
+    init_pany_type         call_result5,      i64;
+    init_pany_type         call_arg0_6,      i64;
+    mov_p64_p64            call_arg0_6,     arg0;
+    init_pany_type         call_arg1_7, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg1_7, deref_tmp3;
+    init_pany_type         call_arg2_8,      i64;
+    mov_p64_p64            call_arg2_8,     var1;
+    call_func              _Q_M4core7runtimeG13u64_to_stringFi64j64MPcEi64E5value1p10buffer_capE;
+    store_pptr_pany        field_addr4, call_result5;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pste_pste              ret0,     var2;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN15stringification13stringifyBoolEF_Q_CM4core10containersG6StringbE1xE { i8 } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var3,       i8;
+    mov_p8_p8                  var3,     arg0;
+    cmpEq_p8_imm               var3,        1;
+    deinit                ;
+    jmpIf_label             label_1;
+    jmpIfNot_label          label_2;
+    label                   label_1;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1,      ScE;
+    mov_pste_pste          call_arg0_1, ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_1;
+    call_func              _Q_M4core10containersN15stringification12stringifyStrEF_Q_CM4core10containersG6StringScEE1xE;
+    mov_pste_pste              ret0, call_result0;
+    deinit                ;
+    ret                   ;
+    label                   label_2;
+    jmp_label               label_3;
+    label                   label_3;
+    init_pany_type         call_result2, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_3,      ScE;
+    mov_pste_pste          call_arg0_3, ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_3;
+    call_func              _Q_M4core10containersN15stringification12stringifyStrEF_Q_CM4core10containersG6StringScEE1xE;
+    mov_pste_pste              ret0, call_result2;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN15stringification13stringifyCharEF_Q_CM4core10containersG6StringcE1xE { i8 } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var1, _Q_CM4core10containersG6String;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_imm            call_arg0_1,        1;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var1, call_result0;
+    deinit                ;
+    init_pany_type             var3,      i64;
+    init_pany_type         cast_src_tmp2,      i32;
+    mov_p32_imm            cast_src_tmp2,        0;
+    sext_p64_p32               var3, cast_src_tmp2;
+    deinit                ;
+    init_pany_type         field_addr3, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field field_addr3,     var1, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp4, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp4, field_addr3;
+    init_pany_type         element_ptr5,   ptr_i8;
+    dynTableLea_pptr_pptr_p64 element_ptr5, deref_tmp4,     var3;
+    store_pptr_pany        element_ptr5,     arg0;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         field_addr6,  ptr_i64;
+    structLea_pptr_pste_field field_addr6,     var1, _Q_CM4core10containersG6String._1;
+    init_pany_type         store_tmp7,      i64;
+    mov_p64_imm            store_tmp7,        1;
+    store_pptr_pany        field_addr6, store_tmp7;
+    deinit                ;
+    deinit                ;
+    mov_pste_pste              ret0,     var1;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN15stringification23appendSequenceSeparatorEFuR_Q_CM4core10containersG6StringE1sE { ptr__Q_CM4core10containersG6String } -> {  } {
+    label                   label_0;
+    init_pany_type             var1,       i8;
+    init_pany_type             var2, ptr__Q_CM4core10containersG6String;
+    init_pany_type         cast_src_tmp0,      i64;
+    mov_p64_imm            cast_src_tmp0,       44;
+    trunc_p8_p64               var1, cast_src_tmp0;
+    deinit                ;
+    init_pany_type         call_result1, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_2, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_2,     arg0;
+    init_pany_type         call_arg1_3,       i8;
+    mov_p8_p8              call_arg1_3,     var1;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE;
+    mov_pptr_pptr              var2, call_result1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN1c10allocation10allocation4freeEFuMPcEE1pE { ptr_dyntable_i8 } -> {  } {
+    label                   label_0;
+    free_pptr                  arg0;
+    ret                   ;
+}
+
+function _Q_M4core10containersN1c10allocation10allocation5allocEFMPcEi64E3lenE { i64 } -> { ptr_dyntable_i8 } {
+    label                   label_0;
+    dynTableReAlloc_pptr_type_p64     ret0, dyntable_i8,     arg0;
+    ret                   ;
+}
+
+function _Q_M4core10containersN1c10allocation10allocation7reallocEFMPcEMPcEi64E1p8new_sizeE { ptr_dyntable_i8, i64 } -> { ptr_dyntable_i8 } {
+    label                   label_0;
+    dynTableReAlloc_pptr_type_p64     arg0, dyntable_i8,     arg1;
+    mov_pptr_pptr              ret0,     arg0;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String2atEFRcR_Q_CM4core10containersG6Stringi64E4self1iE { ptr__Q_CM4core10containersG6String, i64 } -> { ptr_i8 } {
+    label                   label_0;
+    init_pany_type             var3,       i8;
+    init_pany_type             var4,       i8;
+    init_pany_type             var5,       i8;
+    cmpLt_p64_imm              arg1,        0;
+    mov_p8_imm                 var4,        0;
+    cmov_p8_imm                var4,        1;
+    init_pany_type         field_addr0,  ptr_i64;
+    structLea_pptr_pptr_field field_addr0,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp1,      i64;
+    load_pany_pptr         deref_tmp1, field_addr0;
+    cmpGe_p64_p64              arg1, deref_tmp1;
+    mov_p8_imm                 var3,        0;
+    cmov_p8_imm                var3,        1;
+    deinit                ;
+    deinit                ;
+    mov_p8_p8                  var5,     var4;
+    log_or_p8_p8               var5,     var3;
+    cmpEq_p8_imm               var5,        1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    jmpIf_label             label_1;
+    jmpIfNot_label          label_2;
+    label                   label_1;
+    call_func              _Q_M4core9panickingG5panicFuEE;
+    jmp_label               label_3;
+    label                   label_2;
+    jmp_label               label_3;
+    label                   label_3;
+    init_pany_type         field_addr2, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr2,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp3, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp3, field_addr2;
+    init_pany_type         element_ptr4,   ptr_i8;
+    dynTableLea_pptr_pptr_p64 element_ptr4, deref_tmp3,     arg1;
+    mov_pptr_pptr              ret0, element_ptr4;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String4copyEF_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE5otherE { ptr__Q_CM4core10containersG6String } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var1, _Q_CM4core10containersG6String;
+    init_pany_type             var4,      i64;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_1,     arg0;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    mov_p64_p64                var4, call_result0;
+    deinit                ;
+    init_pany_type         call_result2, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_3,      i64;
+    mov_p64_p64            call_arg0_3,     var4;
+    call_func              _Q_M4core10containersG13stringReserveF_Q_CM4core10containersG6Stringi64E3capE;
+    mov_pste_pste              var1, call_result2;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var3,      i64;
+    init_pany_type         call_result4,      i64;
+    init_pany_type         call_arg0_5, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_5,     arg0;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    mov_p64_p64                var3, call_result4;
+    deinit                ;
+    init_pany_type         field_addr6, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr6,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp7, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp7, field_addr6;
+    init_pany_type         field_addr8, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field field_addr8,     var1, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp9, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp9, field_addr8;
+    init_pany_type         call_arg0_10, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg0_10, deref_tmp7;
+    init_pany_type         call_arg1_11, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg1_11, deref_tmp9;
+    init_pany_type         call_arg2_12,      i64;
+    mov_p64_p64            call_arg2_12,     var3;
+    call_func              _Q_M4core10containersG9copyCharsFuMPcEMPcEi64E6source4dest5countE;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         field_addr13,  ptr_i64;
+    structLea_pptr_pste_field field_addr13,     var1, _Q_CM4core10containersG6String._1;
+    init_pany_type         call_result14,      i64;
+    init_pany_type         call_arg0_15, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_15,     arg0;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    store_pptr_pany        field_addr13, call_result14;
+    deinit                ;
+    deinit                ;
+    mov_pste_pste              ret0,     var1;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String5clearEFuR_Q_CM4core10containersG6StringE4selfE { ptr__Q_CM4core10containersG6String } -> {  } {
+    label                   label_0;
+    init_pany_type         field_addr0,  ptr_i64;
+    structLea_pptr_pptr_field field_addr0,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         store_tmp1,      i64;
+    mov_p64_imm            store_tmp1,        0;
+    store_pptr_pany        field_addr0, store_tmp1;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4self5otherE { ptr__Q_CM4core10containersG6String, ptr__Q_CM4core10containersG6String } -> { ptr__Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var2,      i64;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_1,     arg1;
+    call_func              _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE;
+    mov_p64_p64                var2, call_result0;
+    deinit                ;
+    init_pany_type             var4,      i64;
+    init_pany_type         field_addr2,  ptr_i64;
+    structLea_pptr_pptr_field field_addr2,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp3,      i64;
+    load_pany_pptr         deref_tmp3, field_addr2;
+    mov_p64_p64                var4, deref_tmp3;
+    add_p64_p64                var4,     var2;
+    deinit                ;
+    deinit                ;
+    init_pany_type         call_arg0_4, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_4,     arg0;
+    init_pany_type         call_arg1_5,      i64;
+    mov_p64_p64            call_arg1_5,     var4;
+    call_func              _Q_M4core10containersN6String7reserveEFuR_Q_CM4core10containersG6Stringi64E4self8requiredE;
+    deinit                ;
+    init_pany_type         field_addr6, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr6,     arg1, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp7, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp7, field_addr6;
+    init_pany_type         field_addr8, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr8,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp9, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp9, field_addr8;
+    init_pany_type         field_addr10,  ptr_i64;
+    structLea_pptr_pptr_field field_addr10,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp11,      i64;
+    load_pany_pptr         deref_tmp11, field_addr10;
+    init_pany_type         call_arg0_12, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg0_12, deref_tmp7;
+    init_pany_type         call_arg1_13, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg1_13, deref_tmp9;
+    init_pany_type         call_arg2_14,      i64;
+    mov_p64_p64            call_arg2_14, deref_tmp11;
+    init_pany_type         call_arg3_15,      i64;
+    mov_p64_p64            call_arg3_15,     var2;
+    call_func              _Q_M4core10containersG11copyCharsAtFuMPcEMPcEi64i64E6source4dest11dest_offset5countE;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         field_addr16,  ptr_i64;
+    structLea_pptr_pptr_field field_addr16,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp17,      i64;
+    load_pany_pptr         deref_tmp17, field_addr16;
+    init_pany_type         field_addr18,  ptr_i64;
+    structLea_pptr_pptr_field field_addr18,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         bin_tmp19,      i64;
+    mov_p64_p64            bin_tmp19, deref_tmp17;
+    add_p64_p64            bin_tmp19,     var2;
+    store_pptr_pany        field_addr18, bin_tmp19;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pptr_pptr              ret0,     arg0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringScEE4self5otherE { ptr__Q_CM4core10containersG6String, ScE } -> { ptr__Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var2,      i64;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,      ScE;
+    mov_pste_pste          call_arg0_1,     arg1;
+    call_func              _Q_HlengthNFi64NScEE2_0EE;
+    mov_p64_p64                var2, call_result0;
+    deinit                ;
+    init_pany_type             var5,      i64;
+    init_pany_type         field_addr2,  ptr_i64;
+    structLea_pptr_pptr_field field_addr2,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp3,      i64;
+    load_pany_pptr         deref_tmp3, field_addr2;
+    mov_p64_p64                var5, deref_tmp3;
+    add_p64_p64                var5,     var2;
+    deinit                ;
+    deinit                ;
+    init_pany_type         call_arg0_4, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_4,     arg0;
+    init_pany_type         call_arg1_5,      i64;
+    mov_p64_p64            call_arg1_5,     var5;
+    call_func              _Q_M4core10containersN6String7reserveEFuR_Q_CM4core10containersG6Stringi64E4self8requiredE;
+    deinit                ;
+    init_pany_type             var4, ptr_dyntable_i8;
+    init_pany_type         call_result6, ptr_dyntable_i8;
+    init_pany_type         call_arg0_7,      ScE;
+    mov_pste_pste          call_arg0_7,     arg1;
+    call_func              _Q_M4core8builtinsN1c14ptr_from_slice14ptr_from_sliceEFMPcEScEE1sE;
+    mov_pptr_pptr              var4, call_result6;
+    deinit                ;
+    init_pany_type         field_addr8, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr8,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp9, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp9, field_addr8;
+    init_pany_type         field_addr10,  ptr_i64;
+    structLea_pptr_pptr_field field_addr10,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp11,      i64;
+    load_pany_pptr         deref_tmp11, field_addr10;
+    init_pany_type         call_arg0_12, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg0_12,     var4;
+    init_pany_type         call_arg1_13, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg1_13, deref_tmp9;
+    init_pany_type         call_arg2_14,      i64;
+    mov_p64_p64            call_arg2_14, deref_tmp11;
+    init_pany_type         call_arg3_15,      i64;
+    mov_p64_p64            call_arg3_15,     var2;
+    call_func              _Q_M4core10containersG11copyCharsAtFuMPcEMPcEi64i64E6source4dest11dest_offset5countE;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         field_addr16,  ptr_i64;
+    structLea_pptr_pptr_field field_addr16,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp17,      i64;
+    load_pany_pptr         deref_tmp17, field_addr16;
+    init_pany_type         field_addr18,  ptr_i64;
+    structLea_pptr_pptr_field field_addr18,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         bin_tmp19,      i64;
+    mov_p64_p64            bin_tmp19, deref_tmp17;
+    add_p64_p64            bin_tmp19,     var2;
+    store_pptr_pany        field_addr18, bin_tmp19;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pptr_pptr              ret0,     arg0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6String_Q_CM4core10containersG6StringE4self5otherE { ptr__Q_CM4core10containersG6String, _Q_CM4core10containersG6String } -> { ptr__Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var3, ptr__Q_CM4core10containersG6String;
+    init_pany_type             var4, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of0, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of0,     arg1;
+    mov_pptr_pptr              var3, addr_of0;
+    deinit                ;
+    init_pany_type         call_result1, ptr__Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_2, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_2,     arg0;
+    init_pany_type         call_arg1_3, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg1_3,     var3;
+    call_func              _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4self5otherE;
+    mov_pptr_pptr              var4, call_result1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pptr_pptr              ret0,     arg0;
+    init_pany_type             var5, ptr__Q_CM4core10containersG6String;
+    init_pany_type         addr_of4, ptr__Q_CM4core10containersG6String;
+    ref_pptr_pany          addr_of4,     arg1;
+    mov_pptr_pptr              var5, addr_of4;
+    deinit                ;
+    init_pany_type         call_arg0_5, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_5,     var5;
+    call_func              _Q_HddNFNuR_Q_CM4core10containersG6StringE2_0EE;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String6appendEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE { ptr__Q_CM4core10containersG6String, i8 } -> { ptr__Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var3,      i64;
+    init_pany_type         field_addr0,  ptr_i64;
+    structLea_pptr_pptr_field field_addr0,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp1,      i64;
+    load_pany_pptr         deref_tmp1, field_addr0;
+    mov_p64_p64                var3, deref_tmp1;
+    add_p64_imm                var3,        1;
+    deinit                ;
+    deinit                ;
+    init_pany_type         call_arg0_2, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_2,     arg0;
+    init_pany_type         call_arg1_3,      i64;
+    mov_p64_p64            call_arg1_3,     var3;
+    call_func              _Q_M4core10containersN6String7reserveEFuR_Q_CM4core10containersG6Stringi64E4self8requiredE;
+    deinit                ;
+    init_pany_type         field_addr4, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr4,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         field_addr5,  ptr_i64;
+    structLea_pptr_pptr_field field_addr5,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp6,      i64;
+    load_pany_pptr         deref_tmp6, field_addr5;
+    init_pany_type         deref_tmp7, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp7, field_addr4;
+    init_pany_type         element_ptr8,   ptr_i8;
+    dynTableLea_pptr_pptr_p64 element_ptr8, deref_tmp7, deref_tmp6;
+    store_pptr_pany        element_ptr8,     arg1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         field_addr9,  ptr_i64;
+    structLea_pptr_pptr_field field_addr9,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp10,      i64;
+    load_pany_pptr         deref_tmp10, field_addr9;
+    init_pany_type         field_addr11,  ptr_i64;
+    structLea_pptr_pptr_field field_addr11,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         bin_tmp12,      i64;
+    mov_p64_p64            bin_tmp12, deref_tmp10;
+    add_p64_imm            bin_tmp12,        1;
+    store_pptr_pany        field_addr11, bin_tmp12;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pptr_pptr              ret0,     arg0;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String6lengthEFi64R_Q_CM4core10containersG6StringE4selfE { ptr__Q_CM4core10containersG6String } -> { i64 } {
+    label                   label_0;
+    init_pany_type         field_addr0,  ptr_i64;
+    structLea_pptr_pptr_field field_addr0,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp1,      i64;
+    load_pany_pptr         deref_tmp1, field_addr0;
+    mov_p64_p64                ret0, deref_tmp1;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String7asSliceEFScER_Q_CM4core10containersG6StringE4selfE { ptr__Q_CM4core10containersG6String } -> { ScE } {
+    label                   label_0;
+    init_pany_type         field_addr0, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr0,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp1, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp1, field_addr0;
+    init_pany_type         field_addr2,  ptr_i64;
+    structLea_pptr_pptr_field field_addr2,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp3,      i64;
+    load_pany_pptr         deref_tmp3, field_addr2;
+    init_pany_type         call_result4,      ScE;
+    init_pany_type         call_arg0_5, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg0_5, deref_tmp1;
+    init_pany_type         call_arg1_6,      i64;
+    mov_p64_p64            call_arg1_6, deref_tmp3;
+    call_func              _Q_M4core8builtinsN1c18slice_from_ptr_len18slice_from_ptr_lenEFScEMPcEi64E1p1lE;
+    mov_pste_pste              ret0, call_result4;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String7destroyEFuR_Q_CM4core10containersG6StringE4selfE { ptr__Q_CM4core10containersG6String } -> {  } {
+    label                   label_0;
+    init_pany_type         field_addr0, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr0,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp1, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp1, field_addr0;
+    init_pany_type         call_arg0_2, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg0_2, deref_tmp1;
+    call_func              _Q_M4core10containersN1c10allocation10allocation4freeEFuMPcEE1pE;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String7prependEFR_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringcE4self1cE { ptr__Q_CM4core10containersG6String, i8 } -> { ptr__Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type             var2,      i64;
+    init_pany_type             var7,      i64;
+    init_pany_type         field_addr0,  ptr_i64;
+    structLea_pptr_pptr_field field_addr0,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp1,      i64;
+    load_pany_pptr         deref_tmp1, field_addr0;
+    mov_p64_p64                var7, deref_tmp1;
+    add_p64_imm                var7,        1;
+    deinit                ;
+    deinit                ;
+    init_pany_type         call_arg0_2, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_2,     arg0;
+    init_pany_type         call_arg1_3,      i64;
+    mov_p64_p64            call_arg1_3,     var7;
+    call_func              _Q_M4core10containersN6String7reserveEFuR_Q_CM4core10containersG6Stringi64E4self8requiredE;
+    deinit                ;
+    init_pany_type         field_addr4,  ptr_i64;
+    structLea_pptr_pptr_field field_addr4,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp5,      i64;
+    load_pany_pptr         deref_tmp5, field_addr4;
+    mov_p64_p64                var2, deref_tmp5;
+    deinit                ;
+    deinit                ;
+    jmp_label               label_1;
+    label                   label_2;
+    init_pany_type             var5,      i64;
+    mov_p64_p64                var5,     var2;
+    sub_p64_imm                var5,        1;
+    init_pany_type         field_addr6, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr6,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp7, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp7, field_addr6;
+    init_pany_type         element_ptr8,   ptr_i8;
+    dynTableLea_pptr_pptr_p64 element_ptr8, deref_tmp7,     var5;
+    init_pany_type         deref_tmp9,       i8;
+    load_pany_pptr         deref_tmp9, element_ptr8;
+    init_pany_type         field_addr10, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr10,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp11, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp11, field_addr10;
+    init_pany_type         element_ptr12,   ptr_i8;
+    dynTableLea_pptr_pptr_p64 element_ptr12, deref_tmp11,     var2;
+    store_pptr_pany        element_ptr12, deref_tmp9;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         bin_tmp13,      i64;
+    mov_p64_p64            bin_tmp13,     var2;
+    sub_p64_imm            bin_tmp13,        1;
+    mov_p64_p64                var2, bin_tmp13;
+    deinit                ;
+    jmp_label               label_1;
+    label                   label_1;
+    init_pany_type             var6,       i8;
+    cmpGt_p64_imm              var2,        0;
+    mov_p8_imm                 var6,        0;
+    cmov_p8_imm                var6,        1;
+    cmpEq_p8_imm               var6,        1;
+    deinit                ;
+    jmpIf_label             label_2;
+    jmpIfNot_label          label_3;
+    label                   label_3;
+    init_pany_type             var4,      i64;
+    init_pany_type         cast_src_tmp14,      i32;
+    mov_p32_imm            cast_src_tmp14,        0;
+    sext_p64_p32               var4, cast_src_tmp14;
+    deinit                ;
+    init_pany_type         field_addr15, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr15,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp16, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp16, field_addr15;
+    init_pany_type         element_ptr17,   ptr_i8;
+    dynTableLea_pptr_pptr_p64 element_ptr17, deref_tmp16,     var4;
+    store_pptr_pany        element_ptr17,     arg1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    init_pany_type         field_addr18,  ptr_i64;
+    structLea_pptr_pptr_field field_addr18,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         deref_tmp19,      i64;
+    load_pany_pptr         deref_tmp19, field_addr18;
+    init_pany_type         field_addr20,  ptr_i64;
+    structLea_pptr_pptr_field field_addr20,     arg0, _Q_CM4core10containersG6String._1;
+    init_pany_type         bin_tmp21,      i64;
+    mov_p64_p64            bin_tmp21, deref_tmp19;
+    add_p64_imm            bin_tmp21,        1;
+    store_pptr_pany        field_addr20, bin_tmp21;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    mov_pptr_pptr              ret0,     arg0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String7reserveEFuR_Q_CM4core10containersG6Stringi64E4self8requiredE { ptr__Q_CM4core10containersG6String, i64 } -> {  } {
+    label                   label_0;
+    init_pany_type             var6,       i8;
+    init_pany_type         field_addr0,  ptr_i64;
+    structLea_pptr_pptr_field field_addr0,     arg0, _Q_CM4core10containersG6String._2;
+    init_pany_type         deref_tmp1,      i64;
+    load_pany_pptr         deref_tmp1, field_addr0;
+    cmpGt_p64_p64              arg1, deref_tmp1;
+    mov_p8_imm                 var6,        0;
+    cmov_p8_imm                var6,        1;
+    deinit                ;
+    deinit                ;
+    cmpEq_p8_imm               var6,        1;
+    deinit                ;
+    jmpIf_label             label_1;
+    jmpIfNot_label          label_2;
+    label                   label_1;
+    init_pany_type             var2,      i64;
+    init_pany_type         field_addr2,  ptr_i64;
+    structLea_pptr_pptr_field field_addr2,     arg0, _Q_CM4core10containersG6String._2;
+    init_pany_type         deref_tmp3,      i64;
+    load_pany_pptr         deref_tmp3, field_addr2;
+    mov_p64_p64                var2, deref_tmp3;
+    deinit                ;
+    deinit                ;
+    init_pany_type             var5,       i8;
+    cmpEq_p64_imm              var2,        0;
+    mov_p8_imm                 var5,        0;
+    cmov_p8_imm                var5,        1;
+    cmpEq_p8_imm               var5,        1;
+    deinit                ;
+    jmpIf_label             label_3;
+    jmpIfNot_label          label_4;
+    label                   label_3;
+    mov_p64_imm                var2,        1;
+    jmp_label               label_5;
+    label                   label_4;
+    jmp_label               label_5;
+    label                   label_5;
+    jmp_label               label_6;
+    label                   label_7;
+    init_pany_type         bin_tmp4,      i64;
+    mov_p64_p64            bin_tmp4,     var2;
+    mul_p64_imm            bin_tmp4,        2;
+    mov_p64_p64                var2, bin_tmp4;
+    deinit                ;
+    jmp_label               label_6;
+    label                   label_6;
+    init_pany_type             var4,       i8;
+    cmpLt_p64_p64              var2,     arg1;
+    mov_p8_imm                 var4,        0;
+    cmov_p8_imm                var4,        1;
+    cmpEq_p8_imm               var4,        1;
+    deinit                ;
+    jmpIf_label             label_7;
+    jmpIfNot_label          label_8;
+    label                   label_8;
+    init_pany_type             var3,       i8;
+    init_pany_type         field_addr5,  ptr_i64;
+    structLea_pptr_pptr_field field_addr5,     arg0, _Q_CM4core10containersG6String._2;
+    init_pany_type         deref_tmp6,      i64;
+    load_pany_pptr         deref_tmp6, field_addr5;
+    cmpEq_p64_imm          deref_tmp6,        0;
+    mov_p8_imm                 var3,        0;
+    cmov_p8_imm                var3,        1;
+    deinit                ;
+    deinit                ;
+    cmpEq_p8_imm               var3,        1;
+    deinit                ;
+    jmpIf_label             label_9;
+    jmpIfNot_label         label_10;
+    label                   label_9;
+    init_pany_type         field_addr7, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr7,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         call_result8, ptr_dyntable_i8;
+    init_pany_type         call_arg0_9,      i64;
+    mov_p64_p64            call_arg0_9,     var2;
+    call_func              _Q_M4core10containersN1c10allocation10allocation5allocEFMPcEi64E3lenE;
+    store_pptr_pany        field_addr7, call_result8;
+    deinit                ;
+    deinit                ;
+    jmp_label              label_11;
+    label                  label_10;
+    init_pany_type         field_addr10, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr10,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         deref_tmp11, ptr_dyntable_i8;
+    load_pany_pptr         deref_tmp11, field_addr10;
+    init_pany_type         field_addr12, ptr_ptr_dyntable_i8;
+    structLea_pptr_pptr_field field_addr12,     arg0, _Q_CM4core10containersG6String._0;
+    init_pany_type         call_result13, ptr_dyntable_i8;
+    init_pany_type         call_arg0_14, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg0_14, deref_tmp11;
+    init_pany_type         call_arg1_15,      i64;
+    mov_p64_p64            call_arg1_15,     var2;
+    call_func              _Q_M4core10containersN1c10allocation10allocation7reallocEFMPcEMPcEi64E1p8new_sizeE;
+    store_pptr_pany        field_addr12, call_result13;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    jmp_label              label_11;
+    label                  label_11;
+    init_pany_type         field_addr16,  ptr_i64;
+    structLea_pptr_pptr_field field_addr16,     arg0, _Q_CM4core10containersG6String._2;
+    store_pptr_pany        field_addr16,     var2;
+    deinit                ;
+    deinit                ;
+    jmp_label              label_12;
+    label                   label_2;
+    jmp_label              label_12;
+    label                  label_12;
+    ret                   ;
+}
+
+function _Q_M4core10containersN6String8toStringEF_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE4selfE { ptr__Q_CM4core10containersG6String } -> { _Q_CM4core10containersG6String } {
+    label                   label_0;
+    init_pany_type         call_result0, _Q_CM4core10containersG6String;
+    init_pany_type         call_arg0_1, ptr__Q_CM4core10containersG6String;
+    mov_pptr_pptr          call_arg0_1,     arg0;
+    call_func              _Q_M4core10containersN6String4copyEF_Q_CM4core10containersG6StringR_Q_CM4core10containersG6StringE5otherE;
+    mov_pste_pste              ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core8builtinsN1c18slice_from_ptr_len18slice_from_ptr_lenEFScEMPcEi64E1p1lE { ptr_dyntable_i8, i64 } -> { ScE } {
+    label                   label_0;
+    init_pany_type             var2,      ScE;
+    init_pany_type         field_addr0, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field field_addr0,     var2,   ScE._0;
+    store_pptr_pany        field_addr0,     arg0;
+    deinit                ;
+    init_pany_type         field_addr1,  ptr_i64;
+    structLea_pptr_pste_field field_addr1,     var2,   ScE._1;
+    store_pptr_pany        field_addr1,     arg1;
+    deinit                ;
+    mov_pste_pste              ret0,     var2;
+    deinit                ;
+    ret                   ;
+}
+
+function ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_1_ctor {  } -> {  } {
+    init_pany_type         str_fst_ptr0, ptr_arr_i8_4;
+    ref_pptr_pany          str_fst_ptr0, str_data_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_2;
+    init_pany_type         str_dyn_ptr1, ptr_dyntable_i8;
+    fstToDynTable_pptr_pptr str_dyn_ptr1, str_fst_ptr0;
+    init_pany_type         str_slice_field2, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field str_slice_field2, ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_1,   ScE._0;
+    store_pptr_pany        str_slice_field2, str_dyn_ptr1;
+    init_pany_type         str_slice_field3,  ptr_i64;
+    structLea_pptr_pste_field str_slice_field3, ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_1,   ScE._1;
+    init_pany_type         store_tmp4,      i64;
+    mov_p64_imm            store_tmp4,        4;
+    store_pptr_pany        str_slice_field3, store_tmp4;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_3_ctor {  } -> {  } {
+    init_pany_type         str_fst_ptr0, ptr_arr_i8_5;
+    ref_pptr_pany          str_fst_ptr0, str_data_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_4;
+    init_pany_type         str_dyn_ptr1, ptr_dyntable_i8;
+    fstToDynTable_pptr_pptr str_dyn_ptr1, str_fst_ptr0;
+    init_pany_type         str_slice_field2, ptr_ptr_dyntable_i8;
+    structLea_pptr_pste_field str_slice_field2, ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_3,   ScE._0;
+    store_pptr_pany        str_slice_field2, str_dyn_ptr1;
+    init_pany_type         str_slice_field3,  ptr_i64;
+    structLea_pptr_pste_field str_slice_field3, ctv_value_module_c944632692d97fed37432f3e24b113cd4885ca2409d2a18a5de5aabef6fe8817_3,   ScE._1;
+    init_pany_type         store_tmp4,      i64;
+    mov_p64_imm            store_tmp4,        5;
+    store_pptr_pany        str_slice_field3, store_tmp4;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4coreG1aFuEE {  } -> {  } {
+    label                   label_0;
+    init_pany_type             var0,      i64;
+    init_pany_type             var1,      i64;
+    init_pany_type         cast_src_tmp0,      i32;
+    mov_p32_imm            cast_src_tmp0,       42;
+    sext_p64_p32               var0, cast_src_tmp0;
+    deinit                ;
+    init_pany_type         call_result1,      i64;
+    init_pany_type         call_arg0_2,      i64;
+    mov_p64_p64            call_arg0_2,     var0;
+    call_func              _Q_M4core8builtinsG18builtin_output_i64Fi64i64E1vE;
+    mov_p64_p64                var1, call_result1;
+    deinit                ;
+    deinit                ;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core7runtimeG13i64_to_stringFi64i64MPcEi64E5value1p10buffer_capE { i64, ptr_dyntable_i8, i64 } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    init_pany_type         call_arg1_2, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg1_2,     arg1;
+    init_pany_type         call_arg2_3,      i64;
+    mov_p64_p64            call_arg2_3,     arg2;
+    call_builtinfunc       i64_to_string;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core7runtimeG13u64_to_stringFi64j64MPcEi64E5value1p10buffer_capE { i64, ptr_dyntable_i8, i64 } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,      i64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    init_pany_type         call_arg1_2, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg1_2,     arg1;
+    init_pany_type         call_arg2_3,      i64;
+    mov_p64_p64            call_arg2_3,     arg2;
+    call_builtinfunc       u64_to_string;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core7runtimeG15float_to_stringFi64f64MPcEi64E5value1p10buffer_capE { f64, ptr_dyntable_i8, i64 } -> { i64 } {
+    label                   label_0;
+    init_pany_type         call_result0,      i64;
+    init_pany_type         call_arg0_1,      f64;
+    mov_p64_p64            call_arg0_1,     arg0;
+    init_pany_type         call_arg1_2, ptr_dyntable_i8;
+    mov_pptr_pptr          call_arg1_2,     arg1;
+    init_pany_type         call_arg2_3,      i64;
+    mov_p64_p64            call_arg2_3,     arg2;
+    call_builtinfunc       float_to_string;
+    mov_p64_p64                ret0, call_result0;
+    deinit                ;
+    ret                   ;
+}
+
+function _Q_M4core7runtimeN6native13writtenLengthEFi64i32i64E7written10buffer_capE { i32, i64 } -> { i64 } {
+    label                   label_0;
+    init_pany_type             var2,      i64;
+    init_pany_type             var5,       i8;
+    cmpLt_p32_imm              arg0,        0;
+    mov_p8_imm                 var5,        0;
+    cmov_p8_imm                var5,        1;
+    cmpEq_p8_imm               var5,        1;
+    deinit                ;
+    jmpIf_label             label_1;
+    jmpIfNot_label          label_2;
+    label                   label_1;
+    deinit                ;
+    mov_p64_imm                ret0,        0;
+    ret                   ;
+    label                   label_2;
+    jmp_label               label_3;
+    label                   label_3;
+    sext_p64_p32               var2,     arg0;
+    init_pany_type             var4,       i8;
+    cmpGe_p64_p64              var2,     arg1;
+    mov_p8_imm                 var4,        0;
+    cmov_p8_imm                var4,        1;
+    cmpEq_p8_imm               var4,        1;
+    deinit                ;
+    jmpIf_label             label_4;
+    jmpIfNot_label          label_5;
+    label                   label_4;
+    deinit                ;
+    mov_p64_imm                ret0,        0;
+    ret                   ;
+    label                   label_5;
+    jmp_label               label_6;
+    label                   label_6;
+    mov_p64_p64                ret0,     var2;
+    deinit                ;
+    ret                   ;
+}
+
+

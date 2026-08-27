@@ -1,0 +1,10 @@
+
+
+
+function _Q_M3stdG1bFuEE {  } -> {  } {
+    label                   label_0;
+    call_func              _Q_M4coreG1aFuEE;
+    ret                   ;
+}
+
+

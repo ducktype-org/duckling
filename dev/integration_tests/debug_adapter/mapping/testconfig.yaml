@@ -1,0 +1,6 @@
+Tests:
+  debug_mapping:
+    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir}"
+    TimeOut: 1
+    Cases:
+      mapping: { }
