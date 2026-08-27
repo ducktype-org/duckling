@@ -153,6 +153,98 @@ array-to-pointer decay - `std::tuple{ 42, "hello" }` deduces a `const char*` mem
 so use `std::string_view{ "hello" }` (or `std::string`) when you want the characters hashed.
 
 
+What the byte stream looks like
+==============================
+
+The hash of an object is the hash of a byte stream, and that stream has to be
+**self-delimiting**: no two distinct values may flatten to the same bytes.
+
+There is exactly **one entry point** through which payload bytes reach an algorithm -
+`hashing::internal::addBytes()` - and it always writes the **length first**, then the bytes.
+Every automatic path and every hand-written hook funnels through it, so the guarantee does not
+depend on anybody remembering it. That is the whole design: not two helpers where you have to
+know which one frames and which one does not.
+
+~~~~~
+<length> <bytes>          every field, without exception
+~~~~~
+
+Because the length is in front of *every* field and not only the variable-length ones, all of
+these are separated:
+
+* two adjacent strings - `("ab", "c")` no longer collides with `("a", "bc")`
+* a `{u32, u32}` against a `{u64}` - the first says `4|.. 4|..`, the second `8|..`
+* a range against the same bytes reached any other way
+
+Two fields are **framing** rather than payload and are written by the framing layer directly: a
+composite's arity and, on the element-by-element range path, the element count. The grammar
+says where they appear, so the reader expects them and they need no length of their own - the
+same reasoning that makes a length prefix unable to carry a length prefix.
+
+### The length encoding
+
+One byte for a length up to `0xFE`; otherwise the escape byte `0xFF` followed by a
+little-endian `u64`. Canonical because the rule leaves no choice - below `0xFF` the short form
+is required and the escape is forbidden, so every length has exactly one spelling. A scheme
+allowing two spellings of the same length would put the ambiguity back into the very field
+meant to remove it.
+
+This is not only cheaper than a fixed eight-byte length, it is cheaper than **no** universal
+prefix at all. Measured with `perf` on a 63k line package, `-O3`:
+
+~~~~~
+                                  SHA256::transform    all of hashing::
+prefix on ranges only (before)          8.80%              11.28%
+universal prefix, fixed u64             9.43%              12.10%      +0.82 pp
+universal prefix, 1 byte + escape       7.28%               9.75%      -1.53 pp
+~~~~~
+
+Adding prefixes everywhere costs, exactly as you would expect - that is the `+0.82 pp`. What
+pays for it is narrowing the prefix that *already* existed on every range. The compiler hashes
+mostly identifiers, five to fifteen characters, where an eight-byte length was about as large
+as the data it described; and SHA-256 charges per 64-byte block, so shaving seven bytes off
+several prefixes in one key drops a great many streams from two blocks to one. Net effect on a
+full compile: **1.5% faster than before the change**.
+
+For context, `hashing::SHA256::transform` is the single hottest symbol in `duckc`.
+
+### Writing an algorithm, or a hook
+
+An algorithm receives **bytes and nothing else**. Its byte sink is called `update()`, not
+`operator()`, precisely so that it does not read like "hash this object" - a hook author who
+wrote `h(something)` used to hand over unframed bytes and quietly lose the length prefix.
+
+Inside a hook, never touch the algorithm. Call `addToHash()` on the things you want hashed and
+the framing takes care of itself:
+
+~~~~~cpp
+// yes
+void addToHash(hashing::hash_algorithm auto& h) const { hashing::addToHash(h, a, b); }
+
+// no - unframed bytes, and it will not compile
+void addToHash(hashing::hash_algorithm auto& h) const { h(asBytes(a)); }
+~~~~~
+
+
+What still gives the same hash
+------------------------------
+
+The stream records shapes, not types. These still agree, by design:
+
+* **Same-width integers of different signedness.** `u32(1)` and `i32(1)` are the same four bytes.
+* **Two composites with the same arity and the same field widths.**
+* **A hand-written hook that flattens differently** from another type's hook.
+
+**Why this is not a problem in practice.** A query's cache key has exactly one type, fixed for
+the whole compilation. The hash only ever has to separate *values of one type* from each other,
+never a value of one key type from a value of another - they never share a hash space. Within
+one type the encoding is unambiguous, which is what the rule above buys.
+
+It stops being safe the moment one hash space holds keys of more than one type. If you ever key
+a single map by hashes coming from different sources, put a discriminator in the stream
+yourself.
+
+
 Obtaining hashes
 ================
 
@@ -265,12 +357,14 @@ Adapting algorithm to the module
 
 If we want to add a new hashing algorithm we have to create a class that will split the hashing logic into three parts: setup, hashing and finalization.
 
-To help organize it a bit there is a `hash_algorithm` concept which checks some of those properties. To satisfy it our algorithm has to be an object, have a `result_type` member type which will be returned after calling the member function `finalize()`. It also has to have a call operator can take a `std::span<const std::byte>`.
+To help organize it a bit there is a `hash_algorithm` concept which checks some of those properties. To satisfy it our algorithm has to be an object, have a `result_type` member type which will be returned after calling the member function `finalize()`. It also has to have an `update()` member function taking a `std::span<const std::byte>`.
+
+Note that `update()` is the algorithm's *private* interface with the module: only `hashing::internal::addBytes()` is meant to call it, and it receives bytes that already carry a length prefix. An algorithm never sees objects, only bytes.
 
 As stated before algorithm has to be organized into three stages:
 
 1) setting up the initial state - this should happen in the constructor
-2) hashing bytes - should be done in the call operator. After receiving the bytes to hash, the algorithm should update its state.
+2) hashing bytes - should be done in `update()`. After receiving the bytes to hash, the algorithm should update its state.
 3) finalizing the hash - this should be done in the `finalize()` function returning a `result_type`; algorithm should convert it's internal state to the hash value and return it without changing it's state in the process
 
 After the setup it should be possible to call stages 2 and 3 multiple times in any order.

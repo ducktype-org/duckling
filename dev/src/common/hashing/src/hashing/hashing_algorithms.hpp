@@ -27,7 +27,7 @@ namespace hashing {
 		std::vector<std::tuple<std::vector<char>, usize>> bytes;
 
 	public:
-		constexpr void operator()(internal::span_of_bytes auto span) noexcept {
+		constexpr void update(internal::span_of_bytes auto span) noexcept {
 			std::vector<char> vec;
 			vec.reserve(span.size());
 
@@ -111,8 +111,14 @@ namespace hashing {
 			         0x51'0e'52'7f, 0x9b'05'68'8c, 0x1f'83'd9'ab, 0x5b'e0'cd'19
 		      } {}
 
-		// Update state with input data
-		constexpr void operator()(internal::span_of_bytes auto data) noexcept {
+		/**
+		 * @brief Feeds bytes into the hash state.
+		 *
+		 * Named `update` and not `operator()` on purpose - see the `accepts_byte_span`
+		 * concept. Only `hashing::internal::addBytes()` is meant to call this; everything else
+		 * would be handing over bytes with no length in front of them.
+		 */
+		constexpr void update(internal::span_of_bytes auto data) noexcept {
 			total_bits += data.size() * 8;  // Update total bits processed
 
 			const std::byte* ptr       = data.data();

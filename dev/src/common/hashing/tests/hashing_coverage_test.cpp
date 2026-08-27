@@ -173,7 +173,7 @@ struct type_with_bases: X, S {
 struct algo {
 	using result_type = u32;
 
-	void operator()(std::span<const std::byte>) const {}
+	void update(std::span<const std::byte>) const {}
 
 	[[nodiscard]]
 	u32 finalize() const {
@@ -184,7 +184,7 @@ struct algo {
 struct algo2 {
 	using result_type = u32;
 
-	void operator()(std::span<const std::byte>) const {}
+	void update(std::span<const std::byte>) const {}
 
 	void operator()(int) const {}
 
@@ -262,8 +262,7 @@ private:
 		assertFalse(internal::can_hashDecompose<S>, "S should not be hashDecomposable");
 
 		static_assert(
-			internal::invocable_with_byte_span<SHA256>,
-			"SHA256 should be invocable with a span of bytes"
+			internal::accepts_byte_span<SHA256>, "SHA256 should accept a span of bytes"
 		);
 
 		SHA256 h1;
@@ -325,40 +324,43 @@ private:
 			"DebugHash::result_type should be std::string"
 		);
 		std::string s = "qwertyuiopasdfghjk";
-		h2(std::span{ reinterpret_cast<std::byte*>(s.data()), s.size() });
-		h2(std::as_bytes(SP));
+		h2.update(std::span{ reinterpret_cast<std::byte*>(s.data()), s.size() });
+		h2.update(std::as_bytes(SP));
 		constexpr auto ARR = std::array<char, 123>{};
-		h2(std::as_bytes(std::span{ ARR }));
+		h2.update(std::as_bytes(std::span{ ARR }));
 		SHA256 h4;
 		assertTrue(
 			h4.finalize() == h4.finalize(),
 			"SHA256 should give the same values for .finalize() on the same state"
 		);
-		h4(std::as_bytes(SP));
+		h4.update(std::as_bytes(SP));
 		const auto& r = { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
-		h4(std::as_bytes(std::span{ r }));
+		h4.update(std::as_bytes(std::span{ r }));
 		auto h5 = h4;
 		assertTrue(h5.finalize() == h4.finalize(), "casted h5 should be equal to casted h4");
-		h4(std::as_bytes(std::span{ s.data(), s.size() }));
-		h5(std::as_bytes(std::span{ s.data(), s.size() }));
-		h4(std::as_bytes(SP));
-		h5(std::as_bytes(SP));
+		h4.update(std::as_bytes(std::span{ s.data(), s.size() }));
+		h5.update(std::as_bytes(std::span{ s.data(), s.size() }));
+		h4.update(std::as_bytes(SP));
+		h5.update(std::as_bytes(SP));
 		assertTrue(h4.finalize() == h5.finalize(), "casted h4 should be equal to casted h5");
 
 		DebugHash dh;
-		dh(std::as_bytes(std::span{ s.data(), s.size() }));
-		dh(std::as_bytes(SP));
+		dh.update(std::as_bytes(std::span{ s.data(), s.size() }));
+		dh.update(std::as_bytes(SP));
 		std::array<char, 16> array{};
-		dh(std::as_bytes(std::span{ array }));
+		dh.update(std::as_bytes(std::span{ array }));
 		Hash<DebugHash>{}(std::array<char, 16>{});
-		dh(std::as_bytes(std::span{ SP.data(), SP.size() }));
+		dh.update(std::as_bytes(std::span{ SP.data(), SP.size() }));
 		constexpr std::string_view SV2      = "qwertyuioplkjhgfdsazxcvbnm123456789098765432";
 		constexpr auto             STR_SIZE = [&] {
             DebugHash d;
             internal::hashRangeAsBytes(d, SV2);
             return d.finalize().size();
 		}();
-		assertTrue(STR_SIZE == 237, "DebugHash output should have 237 characters");
+		// 201, not the 237 of the eight byte prefix: a 44 character view now goes out as one
+		// length byte plus 44 bytes rather than eight plus 44, and DebugHash spends three
+		// characters per byte plus a fourteen character header every sixteen.
+		assertTrue(STR_SIZE == 201, "DebugHash output should have 201 characters");
 	}
 
 	void addToHashTest() {
@@ -437,6 +439,37 @@ private:
 		constexpr std::array<int, 3> ARR = { 1, 2, 3 };
 		constexpr auto               CT  = Hash<SHA256>{}(ARR);
 		assertTrue(CT == hash(ARR), "constexpr and run-time hashing must agree");
+
+		// Every field carries its own length now, not just the variable-length ones, so two
+		// u32s no longer flatten into the same bytes as one u64. This is what the universal
+		// prefix buys over prefixing ranges alone.
+		StatefulHash<SHA256> two_narrow;
+		two_narrow(u32{ 1 }, u32{ 0 });
+		StatefulHash<SHA256> one_wide;
+		one_wide(u64{ 1 });
+		assertTrue(
+			two_narrow.finalize() != one_wide.finalize(),
+			"{u32,u32} must not hash like {u64}"
+		);
+
+		// The escape form kicks in above 254 bytes. 254 and 255 element vectors must differ
+		// for the obvious reason, but the point here is that both encodings round-trip
+		// through the same stream without the short and the wide form ever colliding.
+		const std::vector<char> at_threshold(0xFE, 'x');
+		const std::vector<char> past_threshold(0xFF, 'x');
+		assertTrue(
+			hash(at_threshold) != hash(past_threshold),
+			"a 254 byte range must not hash like a 255 byte one"
+		);
+
+		// The escape byte is 0xFF, so a range whose *content* starts with 0xFF must not be
+		// confusable with a length written in the wide form.
+		const std::vector<unsigned char> looks_like_escape{ 0xFF, 0x08, 0, 0, 0, 0, 0, 0, 0 };
+		const std::vector<unsigned char> nine_bytes(9, 0x00);
+		assertTrue(
+			hash(looks_like_escape) != hash(nine_bytes),
+			"content starting with the escape byte must not confuse the framing"
+		);
 	}
 
 	/**

@@ -5,6 +5,7 @@
 
 #include <base/comptime/type_traits.hpp>
 
+#include <span>
 #include <type_traits>
 
 namespace hashing {
@@ -59,6 +60,18 @@ namespace hashing {
 
 	public:
 		using result_type = typename HashAlgorithm::result_type;
+
+		/**
+		 * @brief Forwards already-framed bytes to the wrapped algorithm.
+		 *
+		 * Present so that `StatefulHash` itself models `hash_algorithm` and can be handed to
+		 * `addToHash` - `ComponentHash` relies on exactly that. Like the algorithms it wraps,
+		 * this is for `hashing::internal::addBytes()` and nothing else; to add an object, call
+		 * the object overload below, which frames it.
+		 */
+		constexpr void update(std::span<const std::byte> bytes) noexcept {
+			h.update(bytes);
+		}
 
 		template<typename T>
 		constexpr StatefulHash& operator()(const T& t) {

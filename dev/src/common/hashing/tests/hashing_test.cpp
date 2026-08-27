@@ -158,18 +158,18 @@ private:
 
 		constexpr auto ARR = std::array{ 1, 2, 3 };
 		SHA256         h;
-		h(std::as_bytes(std::span{ ARR }));
+		h.update(std::as_bytes(std::span{ ARR }));
 
 		auto res3 = [] {
 			DebugHash dh;
-			dh(std::as_bytes(std::span{ "hello" }));
+			dh.update(std::as_bytes(std::span{ "hello" }));
 			return dh.finalize().size();
 		}();
 
 		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
 
 		DebugHash dh;
-		dh(std::as_bytes(std::span{ "hello 1234567890" }));
+		dh.update(std::as_bytes(std::span{ "hello 1234567890" }));
 
 		Hash<DebugHash>{}(type4{});
 	}
@@ -235,8 +235,15 @@ private:
 	}
 
 	void sha256Test() {
-		constexpr auto HASH_VALUE_SIMPLE
-			= hashing::StatefulHash<hashing::SHA256>{}(std::byte{ 0x42 }).finalize();
+		// The reference vector is for the bare algorithm, so the byte goes in through
+		// update(). Routing it through addToHash would frame it - the digest would then be
+		// of "\x01\x42" and this would stop being a conformance test.
+		constexpr auto HASH_VALUE_SIMPLE = [] {
+			hashing::SHA256          h{};
+			constexpr std::byte      BYTE{ 0x42 };
+			h.update(std::span<const std::byte>{ &BYTE, 1 });
+			return h.finalize();
+		}();
 		std::cerr << HASH_VALUE_SIMPLE << '\n' << HASH_VALUE_SIMPLE.toStringHex() << '\n';
 		assertEqual(
 			HASH_VALUE_SIMPLE.toStringHex(),
@@ -267,8 +274,19 @@ private:
 		)
 		                                .finalize();
 
+		// Derived by hand from the framing rules and confirmed with python hashlib, not copied
+		// from what the code happened to print - otherwise this asserts nothing.
+		//
+		// Every field goes out as <length><bytes>; `type2` has a hand-written hook, so it gets
+		// no arity byte and contributes just its two fields:
+		//
+		//   04 07000000                                    7
+		//   04 2a000000  05 68656c6c6f                     type2{ .x = 42, .s = "hello" }
+		//  (04 07000000  05 68656c6c6f  04 2a000000) x5    7, "hello", 42
+		//
+		// 96 bytes, whose SHA-256 is:
 		const std::string expected_hash
-			= "1fe6b64b8554496b703631c85ffcd99d504153a7a868243e65f5ddfba664d135";
+			= "2e13b01739e1cd593be110bc8f41dc465a0957aa84e019ce0a0d2fee637305a2";
 		const std::string computed_hash = HASH_VALUE.toStringHex();
 
 		assertTrue(
