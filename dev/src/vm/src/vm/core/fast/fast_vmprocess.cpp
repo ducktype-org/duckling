@@ -87,12 +87,19 @@ namespace vm::fast {
 
 		FastVMThread& thread = getMainVMThread();
 		// thread.setThreadCtx(func_name);
-		(void) thread.runNoSpawn(func_name, run_arguments);
+		if (!thread.runNoSpawn(func_name, run_arguments)) {
+			return std::unexpected(api::ApiError{
+				api::RunError{ "Main thread is already executing: " + func_name } });
+		}
 		// thread.setThreadCtx("");
+
 		const ProcessState state = getProcessState();
 		variant_match(state) {
 			variant_case(process_sm::process_state::Completed, completed) {
 				return completed.exit_value;
+			}
+			variant_case(process_sm::process_state::Panicked, panicked) {
+				return std::unexpected(api::StateError{ panicked.err });
 			}
 			variant_default return std::unexpected(api::StateError(
 				v_matches(state, process_sm::process_state::NotStarted)
