@@ -207,7 +207,7 @@ fn download_blob() {
             version: Version::new(1, 2, 3),
             url: server.base_url().parse().unwrap(),
         },
-        path,
+        &path,
     ))
     .unwrap();
     assert_eq!(

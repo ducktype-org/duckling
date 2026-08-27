@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 use chrono::Utc;
 use flate2::read::GzDecoder;
 use futures::executor::block_on;
-use futures::future::join_all;
+use futures::prelude::*;
+use futures::stream;
 use tar::Archive;
 use tracing::{debug, error, warn};
 
@@ -297,11 +298,13 @@ fn fetch_source_codes(
         .ctx()
         .duck_home()
         .open_fetcher_lockfile(fetcher.ctx())?;
+    let max_connections = fetcher.ctx().max_open_connections();
     let logger = RefCell::new(ErrorsLogger::default());
-    let fetches = pkgs
-        .into_iter()
-        .map(|pkg| fetch_source_code(storage, fetcher, git_access, pkg, &logger));
-    let fetches = block_on(join_all(fetches));
+    let fetches = stream::iter(pkgs)
+        .map(|pkg| fetch_source_code(storage, fetcher, git_access, pkg, &logger))
+        .buffer_unordered(max_connections)
+        .collect::<Vec<_>>();
+    let fetches = block_on(fetches);
     drop(fetcher_lock);
     bail_if_failed_to_fetch(fetcher.ctx(), logger.take())?;
     Ok(fetches.into_iter().flatten().count())
