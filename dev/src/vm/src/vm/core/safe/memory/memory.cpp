@@ -149,7 +149,10 @@ namespace vm {
 		}
 
 		// Run the destructors - e.g. pointers don't have their own blocks, but need destructing.
-		// The suffix has to hold live objects - a moved-from one would be destructed twice.
+		// The suffix has to hold live objects.
+		// Here we run the destructor for the second time, but as different type.
+		// And this pass is shallow. First pass goes over child blocks, eg variant data - a pointer.
+		// Then in the second pass we run the destructor on variant type, which does nothing.
 		if (bytes_to_move < old_data.view.size())
 			runDataDestructors(
 				base::ModRawView(
