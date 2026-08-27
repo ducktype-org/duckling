@@ -1,6 +1,7 @@
 #include "query_hout_of_expr.hpp"
 
-#include "coercions.hpp"
+#include "coercions/coercions.hpp"
+#include "coercions/errors.hpp"
 #include "function_calls/call_processing.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
@@ -295,7 +296,7 @@ namespace compiler::helios::code {
 					pstOrigin(stmt).generatedFrom(),
 					s.call(
 						withOrigin(pstOrigin(stmt).generatedFrom(), s.ident(string_to_string_sym)),
-						std::move(result_expr)
+						s.prepToPassSelf(std::move(result_expr))
 					)
 				);
 
@@ -564,6 +565,27 @@ namespace compiler::helios::code {
 						s.ident(defgen::copyConstructorSymForType(ctx, abstract_type)),
 						s.refOf(std::move(inner))
 					);
+					return;
+				}
+
+				// `copyof x` copies `x` while keeping its full symbol type (including reference kind).
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copyof)) {
+					const Shorthand s{ ctx };
+
+					// copyof: T -> T
+					// copyof: ref T -> ref T
+					// copyof: box T -> box T
+					// `SymbolType::isCopyable` answers this for the value as a whole: a `ref` is
+					// always copyable (the reference is copied), while a `box` follows its pointee.
+					if (not inner_type.isCopyable(ctx)) {
+						ctx.logInt(makeBox<dia::PlaceholderError>(
+							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
+							stmt->getStablePosition()
+						));
+						return;
+					}
+
+					node = s.copyValue(std::move(inner), pstOrigin(stmt).generatedFrom());
 					return;
 				}
 

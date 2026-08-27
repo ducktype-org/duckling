@@ -1,4 +1,5 @@
 #include "../function_lowering_context.hpp"
+#include "../program_lowering_context.hpp"
 #include "dvm_operation.hpp"
 #include "instruction_lowerer.hpp"
 
@@ -18,15 +19,19 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void InstructionLowerer::lower(const BuiltinCallOperation& op) {
+		const bool               indirect_dest = op.dest.has_value() && not op.dest->isDirect();
+		base::Optional<DVMPlace> dest          = op.dest;
+		if (indirect_dest) dest = ctx->pushTempLocal(op.return_type.value(), "builtin_result");
+
 		switch (op.kind) {
 		case lir::BuiltinFunctionKind::DvmAllocArr: {
 			CORE_ASSERT(op.args.size() == 1, "dvm_alloc_arr expects 1 argument (size)");
-			CORE_ASSERT(op.dest.has_value(), "dvm_alloc_arr must have a destination");
+			CORE_ASSERT(dest.has_value(), "dvm_alloc_arr must have a destination");
 
 			auto count      = ctx->forceToPlace(op.args.front(), "alloc_count");
-			auto table_type = extractPointeeTypeName(op.dest->getType());
+			auto table_type = extractPointeeTypeName(dest->getType());
 			ctx->pushInstruction({ OpKind::dynTableReAlloc,
-			                       op.dest->asArgument(),
+			                       dest->asArgument(),
 			                       vm::opargs::Type(table_type),
 			                       count.asArgument() });
 			break;
@@ -55,11 +60,11 @@ namespace compiler::backend_vm::internal {
 			// `dvm_alloc() -> ptr T`. Allocates storage for a single `T`, the pointee type is read
 			// off the destination `ptr T`.
 			CORE_ASSERT(op.args.empty(), "dvm_alloc expects no arguments");
-			CORE_ASSERT(op.dest.has_value(), "dvm_alloc must have a destination");
+			CORE_ASSERT(dest.has_value(), "dvm_alloc must have a destination");
 
-			auto pointee_type = extractPointeeTypeName(op.dest->getType());
+			auto pointee_type = extractPointeeTypeName(dest->getType());
 			ctx->pushInstruction(
-				{ OpKind::alloc, op.dest->asArgument(), vm::opargs::Type(pointee_type) }
+				{ OpKind::alloc, dest->asArgument(), vm::opargs::Type(pointee_type) }
 			);
 			break;
 		}
@@ -74,16 +79,14 @@ namespace compiler::backend_vm::internal {
 		case lir::BuiltinFunctionKind::BoxAlloc: {
 			// `box_alloc(value: T) -> box T`. Allocate memory of size `T` and move the value into it.
 			CORE_ASSERT(op.args.size() == 1, "box_alloc expects 1 argument (value)");
-			CORE_ASSERT(op.dest.has_value(), "box_alloc must have a destination");
+			CORE_ASSERT(dest.has_value(), "box_alloc must have a destination");
 
 			auto& value = op.args.at(0);
-			ctx->pushInstruction({ OpKind::alloc,
-			                       op.dest->asArgument(),
-			                       vm::opargs::Type(typeName(value.getType())) });
-			auto value_place = ctx->forceToPlace(value, "box_value");
 			ctx->pushInstruction(
-				{ OpKind::store, op.dest->asArgument(), value_place.asAnyArgument() }
+				{ OpKind::alloc, dest->asArgument(), vm::opargs::Type(typeName(value.getType())) }
 			);
+			auto value_place = ctx->forceToPlace(value, "box_value");
+			ctx->pushInstruction({ OpKind::store, dest->asArgument(), value_place.asAnyArgument() });
 			break;
 		}
 		case lir::BuiltinFunctionKind::BoxFree: {
@@ -94,6 +97,63 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ OpKind::free, box_ptr.asArgument() });
 			break;
 		}
+		case lir::BuiltinFunctionKind::DvmPtrParts: {
+			// `dvm_ptr_parts(p: ptr T) -> u64[2]`. A DVM pointer is a (block, offset) pair, so
+			// both halves are written into the destination array: the id of the block `p`
+			// points into, then the offset within it.
+			CORE_ASSERT(op.args.size() == 1, "dvm_ptr_parts expects 1 argument (ptr)");
+			CORE_ASSERT(dest.has_value(), "dvm_ptr_parts must have a destination");
+
+			auto ptr = ctx->forceToPlace(op.args.front(), "ptr_parts_ptr");
+
+			const auto     u64_type   = DVMImmediate::u64(0).type;
+			const DVMPlace id_tmp     = ctx->pushTempLocal(u64_type, "ptr_parts_id");
+			const DVMPlace offset_tmp = ctx->pushTempLocal(u64_type, "ptr_parts_offset");
+			ctx->pushInstruction({ OpKind::ptrParts, id_tmp, offset_tmp, ptr.asArgument() });
+
+			const auto& ptr_to_u64_type = ctx->program_context.getOrInsertPointerType(u64_type);
+
+			// We store the results in a two-element array.
+			const std::array<DVMPlace, 2> halves{ id_tmp, offset_tmp };
+			for (::u64 index = 0; index < halves.size(); index++) {
+				const auto     index_imm = DVMImmediate::u64(index);
+				const DVMPlace index_tmp = ctx->pushTempLocal(index_imm.type, "ptr_parts_index");
+				ctx->pushInstruction({ OpKind::mov, index_tmp, index_imm });
+
+				const DVMPlace element_ptr
+					= ctx->pushTempLocal(ptr_to_u64_type, "ptr_parts_element");
+				ctx->pushInstruction({ OpKind::fixedSizeTableLea,
+				                       element_ptr,
+				                       dest->asArgument(),
+				                       index_tmp.asArgument() });
+				ctx->pushInstruction(
+					{ OpKind::store, element_ptr.asArgument(), halves.at(index).asAnyArgument() }
+				);
+			}
+			break;
 		}
+		case lir::BuiltinFunctionKind::DvmIsNullptr: {
+			// `dvm_is_nullptr(p: ptr T) -> bool`
+			CORE_ASSERT(op.args.size() == 1, "dvm_is_nullptr expects 1 argument (ptr)");
+			CORE_ASSERT(dest.has_value(), "dvm_is_nullptr must have a destination");
+
+			auto ptr = ctx->forceToPlace(op.args.front(), "is_nullptr_ptr");
+
+			ctx->pushInstruction({ OpKind::cmpNull, ptr.asArgument() });
+			ctx->pushInstruction({ OpKind::mov, *dest, DVMImmediate::boolean(false) });
+			ctx->pushInstruction({ OpKind::cmov, *dest, DVMImmediate::boolean(true) });
+			break;
+		}
+		case lir::BuiltinFunctionKind::DvmNullptr: {
+			// `dvm_nullptr() -> ptr T`. A pointer into no block.
+			CORE_ASSERT(op.args.empty(), "dvm_nullptr expects no arguments");
+			CORE_ASSERT(dest.has_value(), "dvm_nullptr must have a destination");
+
+			ctx->pushInstruction({ OpKind::setNull, dest->asArgument() });
+			break;
+		}
+		}
+
+		if (indirect_dest) ctx->maybeStoreResult(op.dest, { *dest });
 	}
 }

@@ -16,6 +16,7 @@ public:
 		TESTER_ADD_TEST(tooLarge);
 		TESTER_ADD_TEST(stringOutput);
 		TESTER_ADD_TEST(reallocZero);
+		TESTER_ADD_TEST(reallocShrink);
 		TESTER_ADD_TEST(fstToDyn);
 		TESTER_ADD_TEST(reallocOnFst);
 	}
@@ -41,6 +42,8 @@ private:
 	void stringOutput() { runTestOnVm("string_output.dbc", {}, "test\ntest", { "test" }, 0); }
 
 	void reallocZero() { runTestOnVm("realloc_zero.dbc", "", "42", {}); }
+
+	void reallocShrink() { runTestOnVm("realloc_shrink.dbc", "", "42", {}); }
 
 	void fstToDyn() {
 		runTestOnVm("fst_to_dyn.dbc", "0", "42", {});

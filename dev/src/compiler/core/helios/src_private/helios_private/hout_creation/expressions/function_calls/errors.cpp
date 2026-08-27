@@ -8,6 +8,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/hout_creation/expressions/coercions/errors.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>

@@ -189,10 +189,14 @@ namespace compiler::backend_vm::internal {
 
 
 			if_opt_some(func_literal.builtin_kind_opt, builtin) {
+				base::Optional<vm::code::TypeOfData> return_type
+					= ctx.program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+				          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
 				return BuiltinCallOperation{
-					.kind = builtin,
-					.args = std::move(call_args),
-					.dest = std::move(dest),
+					.kind        = builtin,
+					.args        = std::move(call_args),
+					.dest        = std::move(dest),
+					.return_type = std::move(return_type),
 				};
 			}
 

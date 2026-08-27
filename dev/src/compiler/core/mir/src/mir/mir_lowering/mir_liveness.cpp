@@ -181,10 +181,28 @@ namespace compiler::mir {
 			auto new_in   = compute_in(block_id);
 			auto new_out  = transferBlock(*fun.blocks.at(block_id), new_in);
 
+			// The in-state is recorded even when the out-state did not change, because a block can
+			// hide a changed in-state from its successors.
+			// A block that reinitializes a local ends with it alive no matter what it
+			// started with, and the in-state is what the subsequent passes look at.
+			// For example:
+			// ```
+			// var a: Res = Res(13);
+			// if (a.id == 13) {
+			//     eat(move a);
+			// }
+			// a = Res(14);
+			// ```
+			// `a = Res(14)` should get a `DestructIf` inserted, after the first iteration the
+			// `Reinit` flag will mark it as Alive, then in the second iteration when `a` is marked
+			// as `MaybeMoved`, the `Reinit` will mark it as Alive again causing the outputs to not
+			// change, but the `in_status` has been changed. Thus we update the in unconditionally
+			// before ending the fixpoint loop.
+			in_status.insertOrAssign(block_id, std::move(new_in));
+
 			auto prev_out = out_status.atMaybe(block_id);
 			if (prev_out && sameMap(*prev_out.value(), new_out)) continue;
 			out_status.insertOrAssign(block_id, std::move(new_out));
-			in_status.insertOrAssign(block_id, std::move(new_in));
 
 			for (auto succ: getTerminatorSuccessors(fun.blocks.at(block_id)->terminator))
 				worklist.push(succ);

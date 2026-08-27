@@ -184,7 +184,10 @@ namespace compiler::lir {
 		DvmAlloc,
 		DvmFree,
 		BoxAlloc,
-		BoxFree
+		BoxFree,
+		DvmPtrParts,
+		DvmIsNullptr,
+		DvmNullptr
 	};
 
 	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
@@ -282,15 +285,6 @@ namespace compiler::lir {
 			mir::MIRLocalRef    mir_local,
 			base::Optional<u64> new_parameter_index = {}
 		);
-
-		/**
-		 * @brief Crates unique local with bool-type, and without
-		 * helios_id.
-		 * @note it's used to create lifetime-flags
-		 * @param ctx
-		 * @return LIRLocal
-		 */
-		static LIRLocal boolLocal(query::Context& ctx);
 
 		/**
 		 * @brief Creates unique local holding a reference to @p pointee_type, and without

@@ -12,6 +12,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/repl_utils/repl_queries.hpp>
 #include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -274,6 +275,9 @@ namespace compiler::helios {
 				}
 				variant_case(defgen::BuiltinTemplatedSymbol, symbol_data) {
 					return getBuiltinImpl(ctx, key, symbol_data.getBuiltinKind());
+				}
+				variant_case(defgen::ReplInputWrapper, input) {
+					return repl::getReplInputFunction(ctx, input);
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(
