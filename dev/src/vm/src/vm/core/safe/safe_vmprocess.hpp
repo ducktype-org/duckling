@@ -97,6 +97,13 @@ namespace vm {
 		 */
 		SafeVMThread& getEmptyThread();
 
+		/**
+		 * @brief Helper used by `runFunction` and `startThreadFromExec`. Takes no `rw_global`.
+		 */
+		std::expected<api::Response, api::ApiError> spawnThreadLocked(
+			const std::string& func_name, const RunArguments& run_arguments
+		);
+
 		base::Optional<api::ApiError> assertProcessCanRespond();
 
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
@@ -183,6 +190,16 @@ namespace vm {
 		}
 
 		Memory& getMemory();
+
+		/**
+		 * @brief Spawns a thread running @p func_name, for `builtin_start_thread` only.
+		 *
+		 * @note Called from an exec thread, so it must NOT take `rw_global`. Look at the impl for
+		 * more info.
+		 */
+		std::expected<api::ThreadID, api::ApiError> startNewThreadFromExecutionThread(
+			const std::string& func_name
+		);
 
 
 		Ref<IVMValue> createVMValue(code::valid_type::ValidTypeID type_id) override;

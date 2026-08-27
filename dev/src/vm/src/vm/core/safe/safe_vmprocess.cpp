@@ -64,7 +64,28 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
-		SafeVMThread&    thread = getEmptyThread();
+		return spawnThreadLocked(func_name, run_arguments);
+	}
+
+	std::expected<api::ThreadID, api::ApiError> SafeVMProcess::startNewThreadFromExecutionThread(
+		const std::string& func_name
+	) {
+		// On purpose without `rw_global`. This runs on the exec_thread as part of bytecode
+		// execution, and `stepVMThread`/`stop`/`pauseVMThread` hold `rw_global`. Taking it here
+		// again would deadlocks when stepping onto `call_builtinfunc builtin_start_thread`.
+		if (v_matches(getProcessState(), ps::Stopping))
+			return std::unexpected(api::ApiError{
+				api::StateError{ "Cannot start a thread while the process is stopping" } });
+
+		return spawnThreadLocked(func_name, {}).transform([](const api::Response& response) {
+			return v_get(response, api::ThreadID);
+		});
+	}
+
+	std::expected<api::Response, api::ApiError> SafeVMProcess::spawnThreadLocked(
+		const std::string& func_name, const RunArguments& run_arguments
+	) {
+		SafeVMThread& thread = getEmptyThread();
 		thread.setThreadCtx(func_name);
 
 		bool response = thread.spawnThreadAndRun(func_name, run_arguments);
@@ -202,8 +223,9 @@ namespace vm {
 	SafeVMThread& SafeVMProcess::getEmptyThread() {
 		std::lock_guard lock(threads_pool_mutex);
 		for (auto& thread: vm_threads) {
-			// Thread must not be executing AND must not have an active exec_thread handle
-			if (!ts::isActive(thread.getThreadState()) && !thread.hasActiveThread()) return thread;
+			// A non-active thread is reusable even when its exec_thread handle still exists. The
+			// handle will be reset by `prepareSpawnLocked`.
+			if (!ts::isActive(thread.getThreadState())) return thread;
 		}
 		return *vm_threads.get(vm_threads.add(*this));
 	}

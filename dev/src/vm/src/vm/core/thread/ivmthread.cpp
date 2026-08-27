@@ -97,9 +97,16 @@ namespace vm {
 	}
 
 	bool IVMThread::prepareSpawnLocked() {
-		// There is already an exec thread attached to this VMThread.
-		if (exec_thread.has_value() && exec_thread->joinable()) return false;
 		if (ts::isActive(getThreadState())) return false;
+
+		// The thread is non-active, but a finished run leaves its `exec_thread` joinable until
+		// `join` runs. We reset it here since otherwise a second `run` couldn't reuse this
+		// VMThread. For the main thread that means the process state never sees `main` as
+		// `Completed` again, which downgrades it to `Stopped` and loses the exit value.
+		if (exec_thread.has_value()) {
+			if (exec_thread->joinable()) exec_thread->join();
+			exec_thread.reset();
+		}
 
 		// The thread is non-active. Clear any control requests from a previous run and
 		// perform a transition to Running. The exec thread is the only writer of state from here on.
