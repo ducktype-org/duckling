@@ -1,0 +1,38 @@
+type dynamic_table: dtable_i64 i64
+type pointer: ptr_dtable_i64 dtable_i64
+type dynamic_table: dtable_ptr ptr_dtable_i64
+type pointer: ptr_dtable_ptr dtable_ptr
+
+function main { i64, ptr_argv } -> { i64 } {
+
+    init_pany_type idx, i64;
+    init_pany_type inner_ptr, ptr_dtable_i64;
+    init_pany_type outer_ptr, ptr_dtable_ptr;
+
+    # A table of two i64s, referenced by `inner_ptr`.
+    mov_p64_imm idx, 2;
+    dynTableReAlloc_pptr_type_p64 inner_ptr, dtable_i64, idx;
+
+    # A table of two pointers, with `inner_ptr` stored in the last slot,
+    # so the inner table is referenced twice.
+    dynTableReAlloc_pptr_type_p64 outer_ptr, dtable_ptr, idx;
+    mov_p64_imm idx, 1;
+    dynTableStore_pptr_pany_p64 outer_ptr, inner_ptr, idx;
+
+    # Shrinking drops the last slot - its pointer has to be destructed here,
+    # otherwise the reference it holds on the inner table is leaked.
+    dynTableReAlloc_pptr_type_p64 outer_ptr, dtable_ptr, idx;
+
+    mov_p64_imm idx, 42;
+    output_p64 idx;
+
+    free_pptr inner_ptr;
+    free_pptr outer_ptr;
+
+    deinit; # *outer_ptr
+    deinit; # *inner_ptr
+    deinit; # idx
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}
