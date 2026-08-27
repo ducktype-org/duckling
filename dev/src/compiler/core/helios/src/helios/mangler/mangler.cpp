@@ -103,7 +103,7 @@ namespace compiler::helios::mangler {
 			std::string ret;
 			--number;
 			do {
-				ret += BASE_62_DIGITS[number % BASE];
+				ret += BASE_62_DIGITS.at(number % BASE);
 				number /= BASE;
 			} while (number > 0);
 			std::ranges::reverse(ret);
@@ -388,8 +388,11 @@ namespace compiler::helios::mangler {
 			                      && ancestor_opt.getAsLangElement().unlock(ctx)->getElementKind()
 			                             == pst::ElementKind::TemplateStmt;
 
-			std::vector<pst::Access<pst::LangElement>> ancestors;
-			bool                                       is_nested = false;
+			// for template statements we additionally keep PstID of their inner statement to check
+			// if their identifier was already added before
+			std::vector<std::pair<pst::Access<pst::LangElement>, base::Optional<pst::PstID>>>
+				 ancestors;
+			bool is_nested = false;
 			while (ancestor_opt.isLangElement()) {
 				auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
 				switch (ancestor->getElementKind()) {
@@ -397,9 +400,17 @@ namespace compiler::helios::mangler {
 				case Namespace:
 				case Class:
 					is_nested = true;
-					[[fallthrough]];
+					ancestors.emplace_back(ancestor, std::nullopt);
+					break;
 				case TemplateStmt:
-					ancestors.push_back(ancestor);
+					ancestors.emplace_back(
+						ancestor,
+						ancestor.dynamicCast<pst::TemplateStmt>()
+							.value()
+							->getInnerStatement()
+							.unlock(ctx)
+							->getID()
+					);
 					break;
 				default:
 					break;
@@ -409,25 +420,27 @@ namespace compiler::helios::mangler {
 
 			std::string ret = (is_nested ? "N" : "G");
 			for (auto it = ancestors.rbegin(); it != ancestors.rend(); ++it) {
-				const auto ancestor = *it;
+				const auto [ancestor, _] = *it;
 
 				// @todo: #3285 add backreferences -- <name-prefix>
 				switch (ancestor->getElementKind()) {
 					using enum pst::ElementKind;
 				case Namespace: {
-					if (it == ancestors.rbegin()
-					    || (*std::prev(it))->getElementKind() != TemplateStmt) {
-						const auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
-						ret += identifier(namespace_v->getName().unlock(ctx)->unwrap().strView());
-					}
+					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
+						if (it_cpy->second == ancestor->getID()) break;
+
+					const auto val = ancestor.dynamicCast<pst::Namespace>().value();
+					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
+
 					break;
 				}
 				case Class: {
-					if (it == ancestors.rbegin()
-					    || (*std::prev(it))->getElementKind() != TemplateStmt) {
-						const auto class_v = ancestor.dynamicCast<pst::Class>().value();
-						ret += identifier(class_v->getName().unlock(ctx)->unwrap().strView());
-					}
+					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
+						if (it_cpy->second == ancestor->getID()) break;
+
+					const auto val = ancestor.dynamicCast<pst::Class>().value();
+					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
+
 					break;
 				}
 				case TemplateStmt: {
@@ -733,8 +746,8 @@ namespace compiler::helios::mangler {
 			hex_str.reserve(bytes.size() * 2);
 
 			for (const auto byte: bytes) {
-				hex_str += HEX_DIGITS[byte >> 4];
-				hex_str += HEX_DIGITS[byte & 0x0F];
+				hex_str += HEX_DIGITS.at(byte >> 4);
+				hex_str += HEX_DIGITS.at(byte & 0x0F);
 			}
 
 			return hex_str;
@@ -748,7 +761,9 @@ namespace compiler::helios::mangler {
 					const i64 int_value = std::visit(
 						[&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value
 					);
-					return base::strConcat((int_value < 0 ? "n" : ""), std::abs(int_value), "_");
+					const u64 magnitude = int_value < 0 ? 0u - static_cast<u64>(int_value)
+					                                    : static_cast<u64>(int_value);
+					return base::strConcat((int_value < 0 ? "n" : ""), magnitude, "_");
 				}
 				variant_case_novalue(uint8_t, u16, u32, u64) {
 					const u64 uint_value = std::visit(
@@ -769,8 +784,8 @@ namespace compiler::helios::mangler {
 
 			for (const char c: sv) {
 				const auto byte = static_cast<unsigned char>(c);
-				hex_str += HEX_DIGITS[byte >> 4];
-				hex_str += HEX_DIGITS[byte & 0x0F];
+				hex_str += HEX_DIGITS.at(byte >> 4);
+				hex_str += HEX_DIGITS.at(byte & 0x0F);
 			}
 
 			return base::strConcat(sv.size(), '_', hex_str);
@@ -791,7 +806,9 @@ namespace compiler::helios::mangler {
 					internal::mangleValue(ctx, num)
 				);  // adds '_' to ints
 			}
-			variant_case(char, c) { return base::strConcat("c", static_cast<u32>(c), "_"); }
+			variant_case(char, c) {
+				return base::strConcat("c", static_cast<u32>(static_cast<unsigned char>(c)), "_");
+			}
 			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, cs) {
 				return base::strConcat("r", internal::mangleString(cs.value.strView()));
 			}
@@ -849,6 +866,8 @@ namespace compiler::helios::mangler {
 		static std::string mangle(query::Context&, tsh::CharAbstractType) { return "c"; }
 
 		static std::string mangle(query::Context&, tsh::IntegralAbstractType type) {
+			// note: new integers' names are not updated in the scheme
+			// it will be done in #3417
 			const bool is_signed
 				= type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed;
 			const auto  size = type.getSize().asInt();
