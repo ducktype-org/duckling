@@ -164,7 +164,8 @@ namespace vm::persistent {
 			auto state = validateState(state_id);
 			auto size  = inner.size(state);
 			if (pref_size > size) throw std::invalid_argument("trying to take too much");
-			if (pref_size == size) return EMPTY;
+			if (pref_size == size) return state_id;
+			if (pref_size == 0) return EMPTY;
 
 			auto new_state = inner.slice(state, 0, pref_size);
 
