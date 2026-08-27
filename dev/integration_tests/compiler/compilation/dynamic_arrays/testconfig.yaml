@@ -60,6 +60,7 @@ Tests:
   list_out_of_bounds:
     Cases:
       llvm:
+        TimeOut: 4
         backend: llvm
         ExitCode: 134
       dvm:
