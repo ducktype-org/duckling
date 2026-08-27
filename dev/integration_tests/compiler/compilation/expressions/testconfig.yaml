@@ -32,6 +32,14 @@ Tests:
           String: ""
         ExitCode: 0
 
+  complex_operators:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "9\n729\n0.137313\n0.167472"
+        ExitCode: 0
+
   unit_simple:
     Cases:
       all:
