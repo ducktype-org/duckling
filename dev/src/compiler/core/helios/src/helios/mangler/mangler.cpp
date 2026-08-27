@@ -382,7 +382,7 @@ namespace compiler::helios::mangler {
 					using enum pst::ElementKind;
 				case Namespace: {
 					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
-						if (it_cpy->second == ancestor->getID()) return;
+						if (it_cpy->second == ancestor->getID()) break;
 
 					const auto val = ancestor.dynamicCast<pst::Namespace>().value();
 					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
@@ -391,7 +391,7 @@ namespace compiler::helios::mangler {
 				}
 				case Class: {
 					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
-						if (it_cpy->second == ancestor->getID()) return;
+						if (it_cpy->second == ancestor->getID()) break;
 
 					const auto val = ancestor.dynamicCast<pst::Class>().value();
 					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
