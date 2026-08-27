@@ -604,7 +604,7 @@ namespace vm {
 			std::vector<Ref<IVMValue>>(exit_value.begin(), exit_value.end()) });
 	}
 
-	void SafeVMThread::execGlobalDestructors() {
+	bool SafeVMThread::execGlobalDestructors() {
 		const auto& executing_program = process_program;
 		auto        globals           = executing_program->getGlobals().allData();
 		// Destructors should run in reverse order of construction so that any object depending on
@@ -624,9 +624,11 @@ namespace vm {
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
 					std::cerr << "Global destructor interrupted: " << e.what() << "\n";
+					return false;
 				}
 			}
 		}
+		return true;
 	}
 
 	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition(

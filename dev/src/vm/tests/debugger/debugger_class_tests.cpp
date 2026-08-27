@@ -1,7 +1,10 @@
+#include "base/extend_cpp/variant_match.hpp"
 #include <base/comptime/type_traits.hpp>
 
 #include <tester/tester.hpp>
 
+#include "vm/api/data/status.hpp"
+#include "vm/core/vmvalue/ivmvalue.hpp"
 #include <vm/debugger/debugger.hpp>
 
 #include <condition_variable>
@@ -48,9 +51,9 @@ private:
 		const std::vector<usize>& expected_statuses,
 		const std::vector<usize>& breakpoints = {}
 	) {
-		std::atomic<size_t>     status_counter   = 0;
-		std::atomic<size_t>     ret_val_counter  = 0;
-		std::atomic<size_t>     position_counter = 0;
+		std::atomic<usize>      status_counter   = 0;
+		std::atomic<usize>      ret_val_counter  = 0;
+		std::atomic<usize>      position_counter = 0;
 		std::mutex              m;
 		std::condition_variable cv;
 
@@ -67,11 +70,8 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(
-							exit_value_variant
-						));
-						auto exit_value
-							= std::get<std::vector<Ref<vm::IVMValue>>>(exit_value_variant);
+						ASSERT_TRUE(v_matches(exit_value_variant, std::vector<Ref<vm::IVMValue>>));
+						auto exit_value = v_get(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
@@ -149,7 +149,7 @@ private:
 	}
 
 	void continuePauseTest() {
-		std::atomic<size_t> status_counter = 0;
+		std::atomic<usize> status_counter = 0;
 
 		std::mutex              m;
 		std::condition_variable cv;
@@ -188,7 +188,7 @@ private:
 		{
 			std::unique_lock lk(m);
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-				return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
+				return v_matches(debugger.getStatus(), vm::api::Paused);
 			}));
 		}
 
@@ -196,7 +196,7 @@ private:
 		{
 			std::unique_lock lk(m);
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-				return std::holds_alternative<vm::api::Running>(debugger.getStatus());
+				return v_matches(debugger.getStatus(), vm::api::Running);
 			}));
 		}
 
@@ -204,7 +204,7 @@ private:
 		{
 			std::unique_lock lk(m);
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-				return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
+				return v_matches(debugger.getStatus(), vm::api::Paused);
 			}));
 		}
 
@@ -212,7 +212,7 @@ private:
 		{
 			std::unique_lock lk(m);
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-				return std::holds_alternative<vm::api::Running>(debugger.getStatus());
+				return v_matches(debugger.getStatus(), vm::api::Running);
 			}));
 		}
 
@@ -222,25 +222,26 @@ private:
 			return status_counter == expected_statuses.size();
 		}));
 
-		ASSERT_TRUE(std::holds_alternative<vm::api::Paused>(debugger.getStatus()));
+		ASSERT_TRUE(v_matches(debugger.getStatus(), vm::api::Paused));
 		ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter.load());
 	}
 
 	void rerunTest() {
-		std::atomic<size_t> status_counter  = 0;
-		std::atomic<size_t> ret_val_counter = 0;
+		std::atomic<usize> status_counter  = 0;
+		std::atomic<usize> ret_val_counter = 0;
 
 		std::mutex              m;
 		std::condition_variable cv;
 
 		// A re-run of a terminal process first resets it, which is a real, emitted state
 		// change - so from the second run on the sequence starts with `NotStarted`.
+		// `expected_statuses` is modified by the main thread and should be read under `m`.
 		std::vector<usize> expected_statuses = {
 			altIndex(vm::api::Running),
 			altIndex(vm::api::ExecutionCompleted),
 		};
 
-		const std::vector<int> expected_values = { 0, 0, 0 };
+		const std::vector<i32> expected_values = { 0, 0, 0 };
 
 		std::atomic<bool> all_expected_seen = false;
 
@@ -253,11 +254,8 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(
-							exit_value_variant
-						));
-						auto exit_value
-							= std::get<std::vector<Ref<vm::IVMValue>>>(exit_value_variant);
+						ASSERT_TRUE(v_matches(exit_value_variant, std::vector<Ref<vm::IVMValue>>));
+						auto exit_value = v_get(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
@@ -269,8 +267,6 @@ private:
 					}
 				}
 				status_counter++;
-				// `expected_statuses` is rewritten by the main thread between runs, so it may
-				// only be read under `m`.
 				all_expected_seen = status_counter == expected_statuses.size();
 			}
 			if (all_expected_seen) cv.notify_one();
@@ -284,13 +280,14 @@ private:
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 
-		int  loop      = 3;
+		i32  loop      = 3;
 		bool first_run = true;
 
 		while (loop-- > 0) {
 			{
 				std::lock_guard lk(m);
-				status_counter = 0;
+				status_counter    = 0;
+				all_expected_seen = false;
 				if (!first_run)
 					expected_statuses = { altIndex(vm::api::NotStarted),
 						                  altIndex(vm::api::Running),
@@ -305,7 +302,7 @@ private:
 			}));
 			ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter.load());
 		}
-		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionCompleted>(debugger.getStatus()));
+		ASSERT_TRUE(v_matches(debugger.getStatus(), vm::api::ExecutionCompleted));
 		std::lock_guard lk(m);
 		ASSERT_EQUAL_PRINT(expected_values.size(), ret_val_counter.load());
 	}
@@ -327,7 +324,7 @@ private:
 
 		ASSERT_HAS_VALUE(debugger.resume());
 
-		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
+		ASSERT_TRUE(v_matches(debugger.getStatus(), vm::api::Running));
 	}
 
 	/**
@@ -372,7 +369,7 @@ private:
 		ASSERT_HAS_VALUE(debugger.runMain());
 		std::unique_lock lk(m);
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
+			return v_matches(debugger.getStatus(), vm::api::Paused);
 		}));
 
 		{
@@ -423,7 +420,7 @@ private:
 
 		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
 		                                                      ) {
-			if (status.index() == altIndex(vm::api::ExecutionCompleted)) cv.notify_one();
+			if (v_matches(status, vm::api::ExecutionCompleted)) cv.notify_one();
 		});
 		debugger.attachOnStatusChangedListener(status_listener);
 
@@ -433,7 +430,7 @@ private:
 
 		std::unique_lock lk(m);
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-			return std::holds_alternative<vm::api::ExecutionCompleted>(debugger.getStatus());
+			return v_matches(debugger.getStatus(), vm::api::ExecutionCompleted);
 		}));
 
 		auto  status         = debugger.getStatus();

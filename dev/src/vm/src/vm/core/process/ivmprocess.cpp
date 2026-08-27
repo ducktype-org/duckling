@@ -90,21 +90,21 @@ namespace vm {
 
 
 			variant_case(api::request::Pause, pause_request) {
-				// Per-thread operation. It's validity is decided by the target thread not the process.
+				// Per-thread operation. Its validity is decided by the target thread not the process.
 				auto response = pauseVMThread(pause_request.thread_id);
 				if (response) return std::unexpected(*response);
 				return getVMThreadCurrentPosition(pause_request.thread_id);
 			}
 
 			variant_case(api::request::Resume, resume_request) {
-				// Per-thread operation. It's validity is decided by the target thread not the process.
+				// Per-thread operation. Its validity is decided by the target thread not the process.
 				auto response = resumeVMThread(resume_request.thread_id);
 				if (response) return std::unexpected(*response);
 				return api::Response(api::response::Empty());
 			}
 
 			variant_case_novalue(api::request::Step) {
-				// Per-thread operation. It's validity is decided by the target thread not the
+				// Per-thread operation. Its validity is decided by the target thread not the
 				// process.
 				// @TODO: #2967 For now steps the main thread. This should be done per-thread as well.
 				auto response = stepVMThread(getMainThreadID());

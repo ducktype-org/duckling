@@ -208,7 +208,8 @@ namespace vm {
 		case ThreadSignal::Request::Stop:
 			throw KillProcessException{};
 		case ThreadSignal::Request::Pause:
-			pausedLoop();
+			// Skip any stale Pause requests of they came to a non-running thread.
+			if (v_matches(getThreadState(), ts::Running)) pausedLoop();
 			return;
 		case ThreadSignal::Request::Resume:
 		case ThreadSignal::Request::Step:

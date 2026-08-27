@@ -32,7 +32,7 @@ namespace vm::fast {
 
 		void executeOneStep() override;
 
-		void execGlobalDestructors() override;
+		bool execGlobalDestructors() override;
 
 	private:
 		i64 exit_value = 0;

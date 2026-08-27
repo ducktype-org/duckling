@@ -48,7 +48,7 @@ void vm::fast::FastVMThread::executeOneStep() {
 	throw vm::VMNotImplemented("Method `executeOneStep` is not implemented.");
 }
 
-void vm::fast::FastVMThread::execGlobalDestructors() {
+bool vm::fast::FastVMThread::execGlobalDestructors() {
 	throw vm::VMNotImplemented("Method `execGlobalDestructors` is not implemented.");
 }
 

@@ -172,7 +172,7 @@ namespace vm {
 			const low::LowFuncData& start_function, const low::LowFuncData& func
 		);
 
-		void execGlobalDestructors() override;
+		bool execGlobalDestructors() override;
 
 	protected:
 		void executeOneStep() override;

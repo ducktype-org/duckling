@@ -51,16 +51,19 @@ namespace vm {
 		std::ios_base::Init cin_cout_init;
 
 		/**
+		 * @brief Emits after the process status has changed.
+		 *
+		 * @note Has to be declared before `state_manager` as destruction of `ProcessStateManager`
+		 * may still use the Emitter, thus it has to be destructed later.
+		 */
+		events::Emitter<api::ProcStatus> on_status_changed;
+
+		/**
 		 * @brief The single source of truth for all VMThread states of this process.
 		 */
 		ProcessStateManager state_manager{ api::MAIN_THREAD_ID };
 
 		api::ExecutionConfig execution_config;
-
-		/**
-		 * @brief Emits after the process status has changed.
-		 */
-		events::Emitter<api::ProcStatus> on_status_changed;
 
 		IVMProcess(PID my_pid);
 
@@ -92,8 +95,9 @@ namespace vm {
 		/**
 		 * @brief Prepares a run (or a rerun). Called when the process is terminal, moves all
 		 * threads back to `NotStarted` and clears the stop-all-threads flag.
-		 * @return An empty optional when the process is ready to run. An `ApiError` when the reset
-		 * was refused (i.e. thread is still active or was previously panicked)
+		 * @return An empty optional when the process is ready to run. An `ApiError` when the
+		 * previous run did not complete normally (the process was stopped, killed or panicked,
+		 * which may have left the VM in an undefined state).
 		 */
 		[[nodiscard]] base::Optional<api::ApiError> prepareRun();
 

@@ -188,9 +188,13 @@ namespace vm {
 		vm_threads.add(*this);
 	}
 
-	SafeVMThread& SafeVMProcess::getMainVMThread() { return *vm_threads.get(api::MAIN_THREAD_ID); }
+	SafeVMThread& SafeVMProcess::getMainVMThread() {
+		std::lock_guard lock(threads_pool_mutex);
+		return *vm_threads.get(api::MAIN_THREAD_ID);
+	}
 
 	base::Optional<Ref<SafeVMThread>> SafeVMProcess::getVMThreadByID(api::ThreadID thread_id) {
+		std::lock_guard lock(threads_pool_mutex);
 		if_opt_some(vm_threads.maybeGet(thread_id), thread) return thread;
 		return std::nullopt;
 	}
@@ -220,10 +224,11 @@ namespace vm {
 		if (auto stop_result = stop(); !stop_result.has_value()) return stop_result;
 
 		std::unique_lock lock(rw_global);
+		bool             destructors_ran = false;
 		try {
 			// There might be numerous runtime exceptions during the deinitialization,
 			// any of those means there was an issue during the validation.
-			getMainVMThread().execGlobalDestructors();
+			destructors_ran = getMainVMThread().execGlobalDestructors();
 
 			for (const auto& vm_value: owned_vm_values) vm_value->freeData();
 
@@ -233,6 +238,9 @@ namespace vm {
 					  << e.what() << '\n';
 			return false;
 		}
+		// If the destructors weren't run, we don't perform memory state validation as it wouldn't
+		// mean anything.
+		if (!destructors_ran) return false;
 		return memory.validateMemoryState();
 	}
 

@@ -57,7 +57,10 @@ namespace {
 		CompTimeDVM(query::Context& ctx): code_builder(ctx, true) {
 			if (auto res = vm::api::spawn()) {
 				pid = res->pid;
-				if (!initializeCompTimeOps()) pid.reset();
+				if (!initializeCompTimeOps()) {
+					(void) vm::api::kill(pid.value());
+					pid.reset();
+				}
 			}
 		}
 
@@ -65,7 +68,10 @@ namespace {
 		CompTimeDVM& operator=(const CompTimeDVM&) = delete;
 
 		~CompTimeDVM() {
-			if (pid.has_value()) (void) vm::api::deinitAndValidate(pid.value());
+			if (!pid.has_value()) return;
+			if (!vm::api::deinitAndValidate(pid.value()).has_value())
+				// Force kill if the process doesn't want to die.
+				(void) vm::api::kill(pid.value());
 		}
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
