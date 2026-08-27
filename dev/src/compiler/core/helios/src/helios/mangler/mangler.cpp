@@ -111,19 +111,27 @@ namespace compiler::helios::mangler {
 			return ret;
 		}
 
-		constexpr base::Optional<base::Ref<const char>> findExtendedChar(std::string_view str) {
+		constexpr base::Optional<const char> findExtendedChar(std::string_view str) {
 			auto it = std::ranges::find_if_not(str, [](char c) -> bool {
 				return c == '_' || BASE_62_DIGITS.contains(c);
 			});
 
 			if (it != str.end())
-				return it;
+				return *it;
 			else
 				return std::nullopt;
 		}
 
-		auto quoteExtendedChar(base::Optional<base::Ref<const char>> c) {
-			return base::strConcat('\'', *c->get(), "' (int: ", static_cast<int>(*c->get()), ")");
+		auto quoteExtendedChar(const char c) {
+			return std::isprint(static_cast<unsigned char>(c))
+			         ? base::strConcat(
+						   '\'', c, "' (int: ", static_cast<int>(static_cast<unsigned char>(c)), ")"
+					   )
+			         : base::strConcat(
+						   "[not-printable] (int: ",
+						   static_cast<int>(static_cast<unsigned char>(c)),
+						   ")"
+					   );
 		}
 
 		/**
@@ -171,13 +179,15 @@ namespace compiler::helios::mangler {
 				= compiler::frontend::getModuleRef(symbol_module)->getPackage().unlock(ctx).getID();
 			if (const auto package_ref_opt = global_state::getPackageRefOpt(package_id)) {
 				/* we're in a package */
-				auto package_name = identifier(package_ref_opt.value()->getName().strView());
-
+				auto raw_package_name = package_ref_opt.value()->getName().strView();
 				// @todo: #3286 for now we allow '-' and just treat it as '_'
-				std::ranges::replace(package_name, '-', '_');
-				if (auto c = findExtendedChar(package_name))
-					CORE_PANIC(base::strConcat(
-						"Name of a package contains an invalid character: ", quoteExtendedChar(c)
+				std::ranges::replace(raw_package_name, '-', '_');
+				auto package_name = identifier(raw_package_name);
+
+				if (const auto c = findExtendedChar(package_name))
+					throw base::NotYetImplemented(base::strConcat(
+						"Name of a package contains a character that is not allowed yet: ",
+						quoteExtendedChar(c.value())
 					));
 				ret_ss << 'P' << package_name;
 			} else {
@@ -203,9 +213,10 @@ namespace compiler::helios::mangler {
 			auto ret = ret_ss.str();
 			// @todo: #3286 for now we allow '-' and just treat it as '_'
 			std::ranges::replace(ret, '-', '_');
-			if (auto c = findExtendedChar(ret))
-				CORE_PANIC(base::strConcat(
-					"Name of a module contains an invalid character: ", quoteExtendedChar(c)
+			if (const auto c = findExtendedChar(ret))
+				throw base::NotYetImplemented(base::strConcat(
+					"Name of a module contains a character that is not allowed yet: ",
+					quoteExtendedChar(c.value())
 				));
 
 			// @todo: #3285 add backreferences
