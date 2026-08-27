@@ -179,7 +179,7 @@ namespace compiler::helios::mangler {
 				= compiler::frontend::getModuleRef(symbol_module)->getPackage().unlock(ctx).getID();
 			if (const auto package_ref_opt = global_state::getPackageRefOpt(package_id)) {
 				/* we're in a package */
-				auto raw_package_name = package_ref_opt.value()->getName().strView();
+				auto raw_package_name = package_ref_opt.value()->getName().str();
 				// @todo: #3286 for now we allow '-' and just treat it as '_'
 				std::ranges::replace(raw_package_name, '-', '_');
 				auto package_name = identifier(raw_package_name);
