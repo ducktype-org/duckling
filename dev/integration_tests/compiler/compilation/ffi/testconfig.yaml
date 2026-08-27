@@ -26,13 +26,9 @@ PreCase: "@{create_dirs} &&
   case '@{backend}' in
     llvm) @{compile_c_object} && @{compile_package_cmd} -O 3 --additional-link-options @{case_build_c}/c_lib.o ;;
     dvm)  @{compile_c_shared} && @{compile_package_cmd} --dvm-backend --dvm-shared-libs @{case_build_c}/libc_lib.so ;;
-    *)    echo 'Unknown backend'; exit 1 ;;
-  esac;"
-
-Run: "
-  case '@{backend}' in
-    llvm) @{compiled_to_llvm} ;;
-    dvm)  @{dvm_path} run @{compiled_to_dvm} ;;
+    all)  @{compile_c_object} && @{compile_c_shared} &&
+          @{compile_package_cmd} --dvm-backend --dvm-shared-libs @{case_build_c}/libc_lib.so &&
+          @{compile_package_cmd} -O 3 --additional-link-options @{case_build_c}/c_lib.o ;;
     *)    echo 'Unknown backend'; exit 1 ;;
   esac;"
 
