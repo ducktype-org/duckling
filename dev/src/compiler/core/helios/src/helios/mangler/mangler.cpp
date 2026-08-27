@@ -185,10 +185,10 @@ namespace compiler::helios::mangler {
 				auto package_name = identifier(raw_package_name);
 
 				if (const auto c = findExtendedChar(package_name))
-					throw base::NotYetImplemented(base::strConcat(
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
 						"Name of a package contains a character that is not allowed yet: ",
 						quoteExtendedChar(c.value())
-					));
+					)));
 				ret_ss << 'P' << package_name;
 			} else {
 				/* standalone module */
@@ -214,10 +214,10 @@ namespace compiler::helios::mangler {
 			// @todo: #3286 for now we allow '-' and just treat it as '_'
 			std::ranges::replace(ret, '-', '_');
 			if (const auto c = findExtendedChar(ret))
-				throw base::NotYetImplemented(base::strConcat(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
 					"Name of a module contains a character that is not allowed yet: ",
 					quoteExtendedChar(c.value())
-				));
+				)));
 
 			// @todo: #3285 add backreferences
 			return ret;
