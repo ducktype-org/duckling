@@ -64,13 +64,8 @@ Tests:
       -21554
       -55
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "@{expected_output}"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "@{expected_output}"
         ExitCode: 0

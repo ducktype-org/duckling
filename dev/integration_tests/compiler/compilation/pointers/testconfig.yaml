@@ -34,8 +34,8 @@ Tests:
 
   ref_to_index:
     Cases:
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "10\n99\n"
         ExitCode: 0
