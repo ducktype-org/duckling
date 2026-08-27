@@ -631,7 +631,7 @@ namespace compiler::helios::code {
 				if (isNumericType(lhs_type.getType()) && isNumericType(rhs_type.getType())
 				    && isNumericOperator(op->unwrap())) {
 					auto numeric_builtin_opt = resolveNumericBinaryBuiltin(
-						ctx, op->unwrap(), std::move(lhs), std::move(rhs)
+						ctx, op->unwrap(), lhs->clone(), rhs->clone()
 					);
 
 					if_opt_some(numeric_builtin_opt, numeric_builtin) {
