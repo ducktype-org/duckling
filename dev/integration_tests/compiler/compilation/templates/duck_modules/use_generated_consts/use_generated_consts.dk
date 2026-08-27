@@ -4,15 +4,15 @@ template(a: i64)
 namespace M {
     var b = a;
 
-    template(d: i64)
-    fun foo() = a + d + 1;
+    template(c: i64)
+    fun foo() = a + c + 1;
 }
 
-template(c: i64)
-fun get() = c;
+template(a: i64)
+fun get() = a;
 
-template(x: i64)
-const X = x;
+template(a: i64)
+const X = a;
 
 fun main() -> i64 = {
     builtin_output_i64(M:{1}.b);

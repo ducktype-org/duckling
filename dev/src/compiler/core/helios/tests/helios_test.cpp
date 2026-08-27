@@ -2530,6 +2530,7 @@ private:
 			auto u32_137   = NumericValue{ u32{ 137 } };
 			auto i64_n1234 = NumericValue{ i64{ -1'234 } };
 			auto u64_1234  = NumericValue{ u64{ 1'234 } };
+			auto int_min   = NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
 			auto str1
 				= CompileTimeValue{ CompileTimeValue::CharSliceValue{ base::StrID{ "strABC" } } };
 			auto str2  = CompileTimeValue{ CompileTimeValue::StringClassValue{
@@ -2537,8 +2538,9 @@ private:
 			auto tuple = CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
 
 			std::vector<CompileTimeValue> ctvs = {
-				false,     true,     f_1, d_1, i8_n7, u8_7, i16_n42, u16_42, i32_n137, u32_137,
-				i64_n1234, u64_1234, 'B', '^', str1,  str2, unit,    tuple,  symbol_1, symbol_2,
+				false,  true,     f_1,     d_1,       i8_n7,    u8_7,     i16_n42,
+				u16_42, i32_n137, u32_137, i64_n1234, u64_1234, int_min,  'B',
+				'^',    str1,     str2,    unit,      tuple,    symbol_1, symbol_2,
 			};
 
 			for (auto&& it: ctvs) result += compiler::helios::mangler::mangleCTV(ctx, it) + ' ';
@@ -2549,11 +2551,11 @@ private:
 
 		std::string expected
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
-			  "jq1234_ c66_ c94_ r6_737472414243 "
+			  "jq1234_ iqn9223372036854775808_ c66_ c94_ r6_737472414243 "
 			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u Tb1b0E tNid "
 			  "tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
 
-		ASSERT_EQUAL(result, expected);
+		ASSERT_EQUAL(expected, result);
 	}
 
 	void testManglingOfTemplates() {
@@ -2588,33 +2590,44 @@ private:
 
 			auto baked_foo_1 = bake(tmpl_foo, val42, i64_type);
 			auto name_foo_1
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ baked_foo_1 }).strView();
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                 = baked_foo_1 })
+			          .strView();
 			std::cerr << std::setw(16) << "name_foo_1:" << name_foo_1 << '\n';
 
 			auto baked_foo_2 = bake(tmpl_foo, val42, cls_type);
 			auto name_foo_2
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ baked_foo_2 }).strView();
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                 = baked_foo_2 })
+			          .strView();
 			std::cerr << std::setw(16) << "name_foo_2:" << name_foo_2 << '\n';
 
 			auto baked_tcls      = bake(tmpl_tcls, val_f);
 			auto baked_tcls_type = st(ctx.query<compiler::tsh::QueryClassType>(baked_tcls));
 			auto baked_foo_3     = bake(tmpl_foo, val42, baked_tcls_type);
 			auto name_foo_3
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ baked_foo_3 }).strView();
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                 = baked_foo_3 })
+			          .strView();
 			std::cerr << std::setw(16) << "name_foo_3:" << name_foo_3 << '\n';
 
 			auto baked_foo_4 = bake(tmpl_foo, val42, glob_cls_type);
 			auto name_foo_4
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ baked_foo_4 }).strView();
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                 = baked_foo_4 })
+			          .strView();
 			std::cerr << std::setw(16) << "name_foo_4:" << name_foo_4 << '\n';
 
 			auto name_hoo
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ hoo }).strView();
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key = hoo })
+			          .strView();
 			std::cerr << std::setw(16) << "name_hoo:" << name_hoo << '\n';
 
 			auto baked_goo = bake(tmpl_goo, val42);
 			auto name_goo
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ baked_goo }).strView();
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                 = baked_goo })
+			          .strView();
 			std::cerr << std::setw(16) << "name_goo:" << name_goo << '\n';
 
 			std::cerr << std::right;
