@@ -923,18 +923,6 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun main() -> i64 = {
-					var a: i64 = 0;
-					a += 1;
-					return a;
-				}
-			)",
-				{ "Feature not implemented" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
 				class A { x: i64 = 0; }
 				const a = A();
 
