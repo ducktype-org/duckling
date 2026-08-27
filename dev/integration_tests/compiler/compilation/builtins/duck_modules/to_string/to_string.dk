@@ -4,7 +4,7 @@ class Person {
 	height: f64
 }
 
-fun main() -> i32 = {
+fun main() -> i64 = {
 	print((1).toString());
 	var a = 2;
 	print(a.toString());

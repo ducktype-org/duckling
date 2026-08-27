@@ -18,8 +18,6 @@
 namespace {
 	using namespace compiler;
 
-	bool isMetaTypeOperation(lir::Operation op) { return op == lir::Operation::MetaTypeOperation; }
-
 	vm::code::builders::OpKind lirOperationToDVMOpKind(const lir::Operation& op) {
 		using enum lir::Operation;
 		using namespace vm::code::builders;
@@ -146,7 +144,12 @@ namespace compiler::backend_vm::internal {
 			return {};
 		};
 
-		if (isMetaTypeOperation(operation)) {
+		switch (operation) {
+		/// Special operations ///
+		case MetaTypeOperation: {
+			// If we are not in the comp time lowering context ignore the instruction,
+			// same behaviour as on LLVM backend.
+			if (not ctx.program_context.isCompTimeLowering()) return NoOperation{};
 			const auto* meta_params = std::get_if<lir::MetaParameters>(&instr.extra_params);
 			CORE_ASSERT(meta_params, "Meta operation without MetaParameters");
 			return MetaOperation{
@@ -155,10 +158,6 @@ namespace compiler::backend_vm::internal {
 				.dest      = lower_opt_dest(),
 			};
 		}
-
-
-		switch (operation) {
-		/// Special operations ///
 		case ZeroInitialize:
 			// Data in DVM is zeroinitialized by default, so this is a NoOp.
 			return NoOperation{};
