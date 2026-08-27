@@ -16,7 +16,6 @@
 #include <vector>
 
 class PersistentStlTester: public tester::TestSuite {
-
 #undef TESTER_CLASS
 #define TESTER_CLASS PersistentStlTester
 
@@ -242,7 +241,7 @@ public:
 		checker(op17, {});
 		ASSERT_EQUAL(op17, empt);
 
-		auto bulk_state = empt;
+		auto                     bulk_state = empt;
 		std::vector<std::string> bulk_expected;
 		for (usize i = 0; i < 20; i++) {
 			auto s = "bulk_" + std::to_string(i);
@@ -261,11 +260,11 @@ public:
 	void testRandomVector() {
 		using namespace vm::persistent;
 
-		DummyVector<std::string> dummy;
-		Vector<std::string>      real;
-		std::vector<usize>       dummy_states = { DummyVector<std::string>::EMPTY };
-		std::vector<VectorStateID> real_states = { Vector<std::string>::EMPTY };
-		std::mt19937_64           random{ 0x5EED1234 };
+		DummyVector<std::string>   dummy;
+		Vector<std::string>        real;
+		std::vector<usize>         dummy_states = { DummyVector<std::string>::EMPTY };
+		std::vector<VectorStateID> real_states  = { Vector<std::string>::EMPTY };
+		std::mt19937_64            random{ 0x5E'ED'12'34 };
 
 		auto check = [&](usize dummy_state, VectorStateID real_state) {
 			ASSERT_EQUAL(dummy.size(dummy_state), real.size(real_state));
@@ -360,9 +359,9 @@ public:
 		checker(op06, { { "key1", "val1" }, { "key2", "val5" }, { "key3", "val2" } });
 
 		auto op07 = map.insert(op06, "key4", "val4");
-		checker(op07, {
-			{ "key1", "val1" }, { "key2", "val5" }, { "key3", "val2" }, { "key4", "val4" }
-		});
+		checker(
+			op07, { { "key1", "val1" }, { "key2", "val5" }, { "key3", "val2" }, { "key4", "val4" } }
+		);
 
 		auto op08 = map.erase(op07, "key1");
 		auto op09 = map.erase(op08, "key2");
@@ -371,7 +370,7 @@ public:
 		checker(op11, {});
 		ASSERT_EQUAL(op11, empt);
 
-		auto bulk_map = empt;
+		auto                                    bulk_map = empt;
 		base::HashMap<std::string, std::string> bulk_expected{};
 		for (usize i = 0; i < 20; i++) {
 			auto k = "k_" + std::to_string(i);
@@ -387,9 +386,9 @@ public:
 
 		DummyHashMap<std::string, std::string> dummy;
 		HashMap<std::string, std::string>      real;
-		std::vector<usize>                    dummy_states = { DummyHashMap<std::string, std::string>::EMPTY };
-		std::vector<HashMapStateID>            real_states = { HashMap<std::string, std::string>::EMPTY };
-		std::mt19937_64                        random{ 0xBADC0FFE };
+		std::vector<usize> dummy_states         = { DummyHashMap<std::string, std::string>::EMPTY };
+		std::vector<HashMapStateID> real_states = { HashMap<std::string, std::string>::EMPTY };
+		std::mt19937_64             random{ 0xBA'DC'0F'FE };
 
 		auto check = [&](usize dummy_state, HashMapStateID real_state, usize max_key) {
 			for (usize i = 0; i <= max_key; i++) {

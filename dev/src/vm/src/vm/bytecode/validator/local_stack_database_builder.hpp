@@ -46,11 +46,11 @@ namespace vm::code {
 
 		struct TreeNode {
 			base::HashMap<Child, NameStackID, ChildHash> children{};
-			usize name_map_id = 0;
-			usize name_stack_id = 0;
-			usize                      size          = 0;
-			NameStackID                prev_node     = 0;
-			valid_type::TypeSize       byte_depth = valid_type::TypeSize{ Bytes{ 0 }, Bytes{ 0 } };
+			usize                                        name_map_id   = 0;
+			usize                                        name_stack_id = 0;
+			usize                                        size          = 0;
+			NameStackID                                  prev_node     = 0;
+			valid_type::TypeSize byte_depth = valid_type::TypeSize{ Bytes{ 0 }, Bytes{ 0 } };
 
 			NameStackID emplaceChild(const Child& child, NameStackID new_id);
 		};
