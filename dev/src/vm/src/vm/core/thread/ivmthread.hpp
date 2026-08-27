@@ -71,6 +71,10 @@ namespace vm {
 		/**
 		 * @brief Pauses the execution of this thread.
 		 * Posts a Pause request and blocks until the thread is `Paused` (or terminal).
+		 *
+		 * @note A thread sleeping on IO/Mutex cannot pause when sleeping. So this blocks until the
+		 * thread wakes up and pauses successfully.
+		 *
 		 * @return `void` iff the thread ended up `Paused` or an error otherwise.
 		 */
 		std::expected<void, std::string> pause();

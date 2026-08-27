@@ -98,7 +98,13 @@ namespace vm {
 		SafeVMThread& getEmptyThread();
 
 		/**
-		 * @brief Helper used by `runFunction` and `startThreadFromExec`. Takes no `rw_global`.
+		 * @brief Joins the exec thread of every VMThread. Every thread must already be non-active.
+		 */
+		void joinAllExecutionThreads();
+
+		/**
+		 * @brief Helper used by `runFunction` and `startNewThreadFromExecutionThread`. Takes no
+		 * `rw_global`.
 		 */
 		std::expected<api::Response, api::ApiError> spawnThreadLocked(
 			const std::string& func_name, const RunArguments& run_arguments

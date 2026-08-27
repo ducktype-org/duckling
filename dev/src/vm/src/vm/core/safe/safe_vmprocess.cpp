@@ -145,9 +145,14 @@ namespace vm {
 		// Wait for all threads to stop (or `NotStarted`)
 		(void) waitForProcessState([](const ProcessState& s) { return !ps::isExecuting(s); });
 
-		// `joinExecutionThread` blocks until the exec thread exits, and an exec thread
-		// that has not exited yet can still take the `threads_pool_mutex` during panic etc. causing
-		// a deadlock. Thus we iterate over a copy to not hold `threads_pool_mutex`.
+		joinAllExecutionThreads();
+		return api::Response(api::response::Empty());
+	}
+
+	void SafeVMProcess::joinAllExecutionThreads() {
+		// `joinExecutionThread` blocks until the exec thread exits, and an exec thread that has
+		// not exited yet can still take the `threads_pool_mutex` during panic etc. causing a
+		// deadlock. Thus we iterate over a copy to not hold `threads_pool_mutex`.
 		std::vector<Ref<SafeVMThread>> threads;
 		{
 			std::lock_guard lock(threads_pool_mutex);
@@ -155,8 +160,6 @@ namespace vm {
 		}
 
 		for (auto thread: threads) thread->joinExecutionThread();
-
-		return api::Response(api::response::Empty());
 	}
 
 	void SafeVMProcess::requestStopAllThreads() noexcept {
@@ -243,7 +246,9 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::deinitAndValidate() {
-		if (auto stop_result = stop(); !stop_result.has_value()) return stop_result;
+		// We just `joinAllExecutionThreads` here as this endpoint assumes that the process is
+		// stopped already.
+		joinAllExecutionThreads();
 
 		std::unique_lock lock(rw_global);
 		bool             destructors_ran = false;

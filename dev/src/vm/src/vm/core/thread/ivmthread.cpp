@@ -143,7 +143,6 @@ namespace vm {
 	std::expected<void, std::string> IVMThread::pause() {
 		const ThreadState copy = getThreadState();
 		if (ts::isTerminal(copy)) return std::unexpected("Pausing a terminal thread");
-		if (v_matches(copy, ts::Sleeping)) return std::unexpected("Pausing a sleeping thread");
 		if (!ts::hasStarted(copy)) return std::unexpected("Pausing a thread that has not started");
 
 		if (!signal.post(ThreadSignal::Request::Pause))
