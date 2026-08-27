@@ -33,44 +33,26 @@ Tests:
         ExitCode: 0
 
   various_statements:
-    # @TODO: #2448 reenable it, it fails because the imports are not handled correctly in determinism tests.
-    enable_conc_deterministic_tests: "false"
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "177\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "177\n"
         ExitCode: 0
 
   expand_comp_time:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "42\n1\n30\n20\nhello10\n"
         ExitCode: 0
-      dvm:
-        backend: dvm
-        Output:
-          String: "42\n1\n30\n20\nhello10\n"
-        ExitCode: 0
-
 
   mangling_in_expand:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "1\n2\n"
         ExitCode: 0
 
-      dvm:
-        backend: dvm
-        Output:
-          String: "1\n2\n"
-        ExitCode: 0
