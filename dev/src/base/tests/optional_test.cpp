@@ -571,19 +571,22 @@ public:
 	}
 
 	void testCopyValueOrElse() {
-		u64  calls = 0;
-		auto make  = [&](int base) {
-            calls++;
-            return base + 1;
+		u64 calls = 0;
+		int base  = 41;
+		// The fallback takes no arguments, exactly like Rust's unwrap_or_else: whatever it needs
+		// is captured.
+		auto make = [&] {
+			calls++;
+			return base + 1;
 		};
 
 		Optional<int> opt = 1;
-		ASSERT_EQUAL(1, opt.copyValueOrElse(make, 41));
+		ASSERT_EQUAL(1, opt.copyValueOrElse(make));
 		// This is the whole point of the method: a non-empty optional never runs the fallback.
 		ASSERT_EQUAL(u64{ 0 }, calls);
 
 		Optional<int> empty;
-		ASSERT_EQUAL(42, empty.copyValueOrElse(make, 41));
+		ASSERT_EQUAL(42, empty.copyValueOrElse(make));
 		ASSERT_EQUAL(u64{ 1 }, calls);
 
 		ASSERT_EQUAL(0, empty.copyValueOrDefault());
@@ -645,18 +648,20 @@ public:
 	}
 
 	void testOrElse() {
-		u64  calls = 0;
-		auto make  = [&](int value) -> Optional<int> {
-            calls++;
-            return value;
+		u64 calls = 0;
+		int value = 7;
+		// No arguments here either, so orElse and copyValueOrElse are used the same way.
+		auto make = [&]() -> Optional<int> {
+			calls++;
+			return value;
 		};
 
 		Optional<int> opt = 1;
-		ASSERT_EQUAL(1, *opt.orElse(make, 7));
+		ASSERT_EQUAL(1, *opt.orElse(make));
 		ASSERT_EQUAL(u64{ 0 }, calls);
 
 		Optional<int> empty;
-		ASSERT_EQUAL(7, *empty.orElse(make, 7));
+		ASSERT_EQUAL(7, *empty.orElse(make));
 		ASSERT_EQUAL(u64{ 1 }, calls);
 
 		// The function is allowed to give back an empty optional as well.

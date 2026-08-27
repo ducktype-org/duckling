@@ -150,7 +150,9 @@ namespace base {
 	 * / orElse to keep transforming, okOr to turn emptiness into a std::expected error, and take /
 	 * replace / getOrInsert to change what is stored. Every "OrElse" flavour takes a callable and
 	 * runs it only when the optional is empty, so an expensive fallback costs nothing when there is
-	 * a value.
+	 * a value. Just like in Rust, that callable is always called with no arguments: capture what it
+	 * needs in the lambda. The methods that do take arguments - emplace, replace, getOrInsert,
+	 * expect and okOr - forward them to a constructor, they never call anything.
 	 *
 	 * base::Optional does not inherit from std::optional, because std::optional doesn't throw on
 	 * null-value access, but base::optional does.
@@ -313,20 +315,17 @@ namespace base {
 
 		/**
 		 * @brief Get the stored value, or the result of calling a fallback function.
-		 * @param function called only when the optional is empty.
-		 * @param args arguments forwarded to the function.
+		 * @param function called with no arguments, and only when the optional is empty.
 		 * @details Unlike copyValueOr, the fallback is not built unless it is really needed, so an
 		 * expensive default costs nothing on a non-empty optional.
-		 * @return Stored value if exists, otherwise function(args...).
+		 * @return Stored value if exists, otherwise function().
 		 */
-		template<class Self, class Function, class... Args>
-		requires std::invocable<Function&&, Args&&...>
-		      && std::convertible_to<std::invoke_result_t<Function&&, Args&&...>, T> [[nodiscard]]
-		constexpr T copyValueOrElse(this Self&& self, Function&& function, Args&&... args) {
+		template<class Self, class Function>
+		requires std::invocable<Function&&>
+		      && std::convertible_to<std::invoke_result_t<Function&&>, T> [[nodiscard]]
+		constexpr T copyValueOrElse(this Self&& self, Function&& function) {
 			if (self.has_value()) return std::forward<Self>(self).value();
-			return static_cast<T>(
-				std::invoke(std::forward<Function>(function), std::forward<Args>(args)...)
-			);
+			return static_cast<T>(std::invoke(std::forward<Function>(function)));
 		}
 
 		/**
@@ -494,18 +493,17 @@ namespace base {
 
 		/**
 		 * @brief Returns this optional when it holds a value, otherwise the one a function makes.
-		 * @param function called only when the optional is empty. It has to return an optional of
-		 * the same type.
-		 * @param args arguments forwarded to the function.
-		 * @return This optional if it is not empty, otherwise function(args...).
+		 * @param function called with no arguments, and only when the optional is empty. It has to
+		 * return an optional of the same type.
+		 * @return This optional if it is not empty, otherwise function().
 		 */
-		template<class Self, class Function, class... Args>
-		requires std::invocable<Function&&, Args&&...> [[nodiscard]]
-		constexpr Optional orElse(this Self&& self, Function&& function, Args&&... args) {
-			using result_type = std::invoke_result_t<Function&&, Args&&...>;
+		template<class Self, class Function>
+		requires std::invocable<Function&&> [[nodiscard]]
+		constexpr Optional orElse(this Self&& self, Function&& function) {
+			using result_type = std::invoke_result_t<Function&&>;
 			static_assert(std::same_as<std::remove_cvref_t<result_type>, Optional>);
 			if (self.has_value()) return std::forward<Self>(self).value();
-			return std::invoke(std::forward<Function>(function), std::forward<Args>(args)...);
+			return std::invoke(std::forward<Function>(function));
 		}
 
 		/**
