@@ -1,7 +1,7 @@
 #include "debug_adapter.hpp"
 
-#include <base/extend_cpp/variant_match.hpp>
 #include <base/collections/optional.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <filesystem/file_path.hpp>
 #include <string_id/string_id.hpp>
@@ -328,26 +328,22 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	void DebugAdapter::handleLaunch(const nlohmann::json& req) {
-		std::string program     = req["arguments"]["program"];
+		std::string  program = req["arguments"]["program"];
 		fs::FilePath program_path(program);
 		fs::FilePath base_dir = program_path.parentPath();
-		std::expected<void, std::variant<api::ApiError, std::string>>        load_result;
-		if (program.ends_with(".dk")){
+		std::expected<void, std::variant<api::ApiError, std::string>> load_result;
+		if (program.ends_with(".dk"))
 			load_result = debugger.loadDefault(base_dir);
-		} else {
-		 	load_result = debugger.loadFiles({ fs::File(program) });
-		}
+		else
+			load_result = debugger.loadFiles({ fs::File(program) });
 
 		if (!load_result.has_value()) {
 			std::string err_msg = "Failed to load file '" + program + "': ";
 			variant_match(load_result.error()) {
-				variant_case(api::ApiError, error) {err_msg += api::errorToString(error);}
-				variant_case(std::string, error_str) {err_msg += error_str;}
+				variant_case(api::ApiError, error) { err_msg += api::errorToString(error); }
+				variant_case(std::string, error_str) { err_msg += error_str; }
 			}
-			sendErrorResponse(
-				req,
-				err_msg 
-			);
+			sendErrorResponse(req, err_msg);
 			return;
 		}
 
@@ -407,10 +403,8 @@ namespace vm::debugger::debug_adapter {
 		SourcePositionInfo info;
 
 		auto source_position = pos.source_position;
-		if (pos.mapped_position.has_value()) {
-			source_position = pos.mapped_position;
-		}
-		if(source_position.has_value()) {
+		if (pos.mapped_position.has_value()) source_position = pos.mapped_position;
+		if (source_position.has_value()) {
 			auto src          = source_position.value();
 			auto [sl, sc]     = src.getStartLineColumn();
 			auto [el, ec]     = src.getEndLineColumn();

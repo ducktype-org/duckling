@@ -94,7 +94,9 @@ namespace vm::debugger {
 		 */
 		std::expected<void, api::ApiError> loadFiles(const std::vector<fs::File>& files);
 
-		std::expected<void, std::variant<api::ApiError, std::string>> loadDefault(base::Optional<fs::FilePath> prefix = std::nullopt);
+		std::expected<void, std::variant<api::ApiError, std::string>> loadDefault(
+			base::Optional<fs::FilePath> prefix = std::nullopt
+		);
 
 		void setProgramArguments(const ProgramRunArguments& args);
 
