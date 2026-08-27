@@ -630,9 +630,8 @@ namespace compiler::helios::code {
 				// Step 1. — special path for numeric promotions
 				if (isNumericType(lhs_type.getType()) && isNumericType(rhs_type.getType())
 				    && isNumericOperator(op->unwrap())) {
-					auto numeric_builtin_opt = resolveNumericBinaryBuiltin(
-						ctx, op->unwrap(), lhs->clone(), rhs->clone()
-					);
+					auto numeric_builtin_opt
+						= resolveNumericBinaryBuiltin(ctx, op->unwrap(), lhs->clone(), rhs->clone());
 
 					if_opt_some(numeric_builtin_opt, numeric_builtin) {
 						return std::move(numeric_builtin);
