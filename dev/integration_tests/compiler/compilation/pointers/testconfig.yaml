@@ -42,6 +42,7 @@ Tests:
       llvm_valgrind:
         backend: llvm
         valgrind: "true"
+        TimeOut: 3
         Output:
           String: "10\n99\n"
         ExitCode: 0

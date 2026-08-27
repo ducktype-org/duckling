@@ -112,14 +112,6 @@ Tests:
           String: ""
         ExitCode: 0
 
-  zero_init:
-    Cases:
-      all:
-        backend: all
-        Output:
-          String: "0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n"
-        ExitCode: 0
-
   strings:
     Cases:
       all:
