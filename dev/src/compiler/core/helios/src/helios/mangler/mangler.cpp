@@ -377,22 +377,25 @@ namespace compiler::helios::mangler {
 			std::string ret = (is_nested ? "N" : "G");
 			for (auto it = ancestors.rbegin(); it != ancestors.rend(); ++it) {
 				const auto [ancestor, _] = *it;
-				const auto check_and_add = [&]<typename T>() {
-					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
-						if (it_cpy->second == ancestor->getID()) return;
-
-					const auto val = ancestor.dynamicCast<T>().value();
-					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
-				};
 
 				switch (ancestor->getElementKind()) {
 					using enum pst::ElementKind;
 				case Namespace: {
-					check_and_add.template operator()<pst::Namespace>();
+					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
+						if (it_cpy->second == ancestor->getID()) return;
+
+					const auto val = ancestor.dynamicCast<pst::Namespace>().value();
+					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
+
 					break;
 				}
 				case Class: {
-					check_and_add.template operator()<pst::Class>();
+					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
+						if (it_cpy->second == ancestor->getID()) return;
+
+					const auto val = ancestor.dynamicCast<pst::Class>().value();
+					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
+
 					break;
 				}
 				case TemplateStmt: {
