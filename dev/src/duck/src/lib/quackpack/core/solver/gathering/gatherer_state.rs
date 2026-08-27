@@ -50,7 +50,7 @@ impl PackageData {
                         format!("pinned dependency without version: {dependency:#?}")
                     })?;
                 result.push(ManifestsRequest::new_pinned(
-                    *source,
+                    source,
                     dependency.name(),
                     version,
                     features,
@@ -63,7 +63,7 @@ impl PackageData {
                     None
                 };
                 result.push(ManifestsRequest::new_not_pinned(
-                    *source,
+                    source,
                     dependency.name(),
                     versions,
                     features,

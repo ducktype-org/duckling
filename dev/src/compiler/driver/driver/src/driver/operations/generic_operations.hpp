@@ -62,7 +62,7 @@ namespace compiler::driver {
 	};
 
 	/**
-	 * @brief Compile a Duckling script (.ds file) into a single artifact.
+	 * @brief Compile a Duckling script (.dks file) into a single artifact.
 	 *
 	 * Reads the script source from global_state::ScriptContext, splits it into individual
 	 * statements, creates a chain of REPL-style modules (each with a parent link to the previous),

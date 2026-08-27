@@ -90,6 +90,7 @@ public:
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testHoutWalkers);
 		TESTER_ADD_TEST(testFunctions);
+		TESTER_ADD_TEST(testVoidReturnType);
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
@@ -1982,6 +1983,21 @@ private:
 		}
 	}
 
+	// A `-> void` declaration must give the function symbol a result type of the Void type,
+	// which is the marker that the function never returns.
+	void testVoidReturnType() {
+		auto [_, scope] = getModule(fs::File(path("test_modules/functions")));
+
+		const auto diverges_symbol = getChain("diverges", scope).back();
+		const auto function_type
+			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(diverges_symbol)
+		          ->valueOrThrow()
+		          .getType()
+		          .as<compiler::tsh::FunctionAbstractType>();
+
+		ASSERT_EQUAL(compiler::tsh::getVoidType(), function_type.getResultType().getType());
+	}
+
 	void testStaticArrays() {
 		auto [module, top_scope] = getModule(fs::File(path("test_modules/static_arrays")));
 		auto& hout
@@ -3273,6 +3289,50 @@ private:
 				!= nullptr
 			);
 		}
+
+		const HOUTFunction* keeps_kind = nullptr;
+		for (auto& f: hout.functions)
+			if (f->declaration->original_name == "copyofKeepsKind") keeps_kind = &*f;
+		ASSERT_TRUE(keeps_kind != nullptr);
+
+		// var a = W(1);
+		// var ca = copyof a;    (W)
+		// var cr = copyof r;    (ref W)
+		// var cb = copyof bx;   (box W)
+		// var cn = copyof n;    (i64)
+		// return ca.x;
+		const auto& kind_stmts = keeps_kind->body->statements;
+		ASSERT_EQUAL_PRINT(6, kind_stmts.size());
+
+		const auto init_of = [&](const usize i) -> const Expr* {
+			const auto* var_stmt = dynamic_cast<const VariableStmt*>(kind_stmts.at(i).get());
+			ASSERT_TRUE(var_stmt != nullptr);
+			return var_stmt->initial_value.get();
+		};
+
+		// `copyof a` on a direct value calls the copy constructor, just like `copy` does.
+		const auto* ca_init = init_of(1);
+		ASSERT_TRUE(dynamic_cast<const CallExpr*>(stripImplicitMove(ca_init)) != nullptr);
+		ASSERT_EQUAL(
+			compiler::tsh::ReferenceKind::Direct,
+			ca_init->expression_type.getSymbolType().getRefKind()
+		);
+
+		// `copyof r` keeps the `ref`: the reference itself is copied, so there is no node.
+		const auto* cr_init = init_of(2);
+		ASSERT_TRUE(dynamic_cast<const IdentifierExpr*>(cr_init) != nullptr);
+		ASSERT_EQUAL(
+			compiler::tsh::ReferenceKind::Ref, cr_init->expression_type.getSymbolType().getRefKind()
+		);
+
+		// `copyof bx` keeps the `box`: a fresh allocation holding a copy-constructed pointee.
+		const auto* cb_init = init_of(3);
+		ASSERT_EQUAL(
+			compiler::tsh::ReferenceKind::Box, cb_init->expression_type.getSymbolType().getRefKind()
+		);
+		const auto* boxed = boxAllocArg(cb_init);
+		ASSERT_TRUE(boxed != nullptr);
+		ASSERT_TRUE(dynamic_cast<const CallExpr*>(boxed) != nullptr);
 	}
 
 	void testDestructors() {

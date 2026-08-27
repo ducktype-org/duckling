@@ -158,7 +158,7 @@ fn compile_unit_with_schema(
     let name = unit.root_package().package().name();
     let status = (|| {
         let unit_layout = layout.for_dependency(unit, graph)?;
-        let builder = finished_builder_for_layout_and_profile(bcx, &*unit_layout, &bcx.profile);
+        let builder = finished_builder_for_layout_and_profile(bcx, &*unit_layout, bcx.profile);
         let _lock = unit_layout.acquire_lock(bcx.pcx.ctx())?;
         let locked_manifest_file = unit_layout
             .dependency_json(bcx.pcx.ctx())
@@ -208,7 +208,7 @@ fn write_schema(
 fn finished_builder_for_layout_and_profile(
     bcx: &BuildContext<'_, '_>,
     layout: &dyn DependencyLayout,
-    profile: &Profile,
+    profile: Profile,
 ) -> process_builder::DuckcProcessBuilder {
     let mut builder = Duckc::new(bcx.pcx.ctx()).process_builder();
     builder

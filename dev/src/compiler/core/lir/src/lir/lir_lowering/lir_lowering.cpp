@@ -171,6 +171,8 @@ namespace compiler::lir {
 			return Operation::ReturnValue;
 		case mir::Operation::ReturnVoid:
 			return Operation::ReturnVoid;
+		case mir::Operation::Unreachable:
+			return Operation::Unreachable;
 		case mir::Operation::Jump:
 			return Operation::Jump;
 		case mir::Operation::Branch:
@@ -1067,6 +1069,7 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::ReturnVoid:
+				case mir::Operation::Unreachable:
 				case mir::Operation::Jump:
 				case mir::Operation::Branch:
 				case mir::Operation::BranchIfNull: {
