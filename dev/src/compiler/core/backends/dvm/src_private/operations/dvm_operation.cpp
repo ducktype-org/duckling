@@ -147,6 +147,8 @@ namespace compiler::backend_vm::internal {
 		switch (operation) {
 		/// Special operations ///
 		case MetaTypeOperation: {
+			// If we are not in the comp time lowering context ignore the instruction,
+			// same behaviour as on LLVM backend.
 			if (not ctx.program_context.isCompTimeLowering()) return NoOperation{};
 			const auto* meta_params = std::get_if<lir::MetaParameters>(&instr.extra_params);
 			CORE_ASSERT(meta_params, "Meta operation without MetaParameters");
