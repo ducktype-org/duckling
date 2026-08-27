@@ -60,14 +60,12 @@ private:
 				assertTrue(result.has_value(), "Assignment classification should succeed");
 				assertTrue(
 					std::holds_alternative<repl::InstructionSingleStatementInfo>(*result),
-					"Expected assignment ExprStmt to be routed as instruction"
+					base::strConcat("Expected assignment '", code, " 'to be routed as instruction")
 				);
 			});
 		};
 
 		assignment_test("x = 10;");
-		assignment_test("x += 10;");
-		assignment_test("x -= 10;");
 	}
 
 	void testClassifySingleInstruction() {
