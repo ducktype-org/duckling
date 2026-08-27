@@ -18,7 +18,7 @@ pub fn get_possible_realizations(
     versions_for_identity: &HashMap<FullIdentity, HashSet<Version>>,
     source_to_origin_resolver: &HashMap<Source, FullOrigin>,
 ) -> QuackResult<Vec<PackageId>> {
-    let Some(origin) = source_to_origin_resolver.get(dependency_description.source()) else {
+    let Some(origin) = source_to_origin_resolver.get(&dependency_description.source()) else {
         return Ok(vec![]);
     };
     let identity = FullIdentity::new(dependency_description.name(), *origin);

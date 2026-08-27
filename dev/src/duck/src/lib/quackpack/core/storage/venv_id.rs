@@ -23,24 +23,24 @@ pub enum VenvId {
 
 impl VenvId {
     /// Get the name of this [`VenvId`].
-    pub fn name(&self) -> StrId {
+    pub fn name(self) -> StrId {
         match self {
-            Self::Package(name) => *name,
+            Self::Package(name) => name,
             Self::Global => StrId::new(DuckHome::GLOBAL_PACKAGE_NAME),
             Self::Script {
                 script_name: _,
                 venv_name,
-            } => *venv_name,
+            } => venv_name,
         }
     }
 
     /// Get the static ref from [`name`](Self::name).
-    pub fn static_name(&self) -> &'static str {
+    pub fn static_name(self) -> &'static str {
         self.name().as_str()
     }
 
     /// Check, if this [`VenvId`] corresponds to the global venv.
-    pub fn is_global(&self) -> bool {
+    pub fn is_global(self) -> bool {
         matches!(self, Self::Global)
     }
 }
