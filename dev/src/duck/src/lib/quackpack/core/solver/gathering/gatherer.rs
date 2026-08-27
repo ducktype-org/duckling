@@ -83,11 +83,11 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         let mut fetches = FuturesUnordered::new();
         let requests =
             state.handle_fetch_response(root_fetch_response, &mut logger.borrow_mut())?;
-        self.push_request(&fetches, requests, state, &logger)?;
+        self.recursively_push_requests(&fetches, requests, state, &logger)?;
         while let Some(response) = fetches.next().await {
             let response = response?;
             let new_requests = state.handle_fetch_response(response, &mut logger.borrow_mut())?;
-            self.push_request(&fetches, new_requests, state, &logger)?;
+            self.recursively_push_requests(&fetches, new_requests, state, &logger)?;
         }
         if !logger.borrow().is_empty() {
             if mode.suppress_foreign_manifests_errors {
@@ -103,7 +103,12 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         Ok(())
     }
 
-    fn push_request<'b>(
+    /// Push `requests` recursively to `fetches`.
+    ///
+    /// Any [`RequestAction::More`] turns into a recursive call.
+    ///
+    /// We process [`ManifestsRequest`]s until only [`RequestAction::Fetch`]es are left.
+    fn recursively_push_requests<'b>(
         &'b self,
         fetches: &FuturesUnordered<FetchFuture<'b>>,
         requests: Vec<ManifestsRequest>,
@@ -115,7 +120,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             match action {
                 RequestAction::Fetch => fetches.push(Box::pin(self.fetch(request, errors))),
                 RequestAction::More { requests } => {
-                    self.push_request(fetches, requests, state, errors)?
+                    self.recursively_push_requests(fetches, requests, state, errors)?
                 }
             }
         }

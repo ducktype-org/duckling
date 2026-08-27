@@ -15,9 +15,9 @@ use crate::quackpack::core::GitReference;
 use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
 use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
+use crate::quackpack::util::guards;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::{FileLockManager, LockedFile};
-use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 pub mod cache;
@@ -183,37 +183,10 @@ impl<'duck> Fetcher<'duck> {
 
         let blob = destination.open_exclusive(Self::DEFAULT_BLOB_FILENAME, self.ctx)?;
 
-        /// Remove a file on drop, if armed.
-        /// That way we don't leave files with length 0 in FS in case of an error.
-        struct RemoveOnDrop {
-            /// Always some.
-            file: Option<LockedFile>,
-            /// Whether we should remove the file.
-            armed: bool,
-        }
-
-        impl Drop for RemoveOnDrop {
-            fn drop(&mut self) {
-                if !self.armed {
-                    return;
-                }
-                let file = self.file.take().expect("always Some");
-                let path = file.path().to_path_buf();
-                // Close the file.
-                drop(file);
-                if let Err(e) = path.rm() {
-                    error!(error = %e, ?path, "failed to remove");
-                }
-            }
-        }
-
-        let mut guard = RemoveOnDrop {
-            file: Some(blob),
-            armed: true,
-        };
+        let mut guard = guards::RemoveOnDrop::new(blob);
 
         self.ducknest_client
-            .fetch_blob(package, guard.file.as_ref().expect("always Some"))
+            .fetch_blob(package, guard.file())
             .await
             .with_context(|| {
                 format!(
@@ -221,7 +194,7 @@ impl<'duck> Fetcher<'duck> {
                     package.name, package.version
                 )
             })?;
-        guard.armed = false;
+        guard.disarm();
         Ok(blob_path)
     }
 
