@@ -23,7 +23,7 @@ namespace vm::persistent {
 
 	/**
 	 * @brief Class implementing an abstract access to fully persistent memory - allows to
-	 modificate any previous instance efficiently (simmilar to control version for map[idx, value])
+	 modify any previous instance efficiently (simmilar to control version for map[idx, value])
 	 * @note two memoryStateID's are equal if and only if corresponding memories are the same (same
 	 values on same idxs)
 	 * @note Implementation is based on persistent segement tree
