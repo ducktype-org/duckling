@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ctv/ctv_fd.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -10,6 +11,8 @@
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios::mangler {
+
+	std::string mangleCTV(query::Context& ctx, const compiler::ctv::CompileTimeValue& value);
 
 	namespace special_symbol_keys {
 		struct LIRModuleID {
