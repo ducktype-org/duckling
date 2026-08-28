@@ -18,6 +18,7 @@ public:
 		TESTER_ADD_TEST(weirdCases);
 		TESTER_ADD_TEST(noDefaultValueParser);
 		TESTER_ADD_TEST(escapingTest);
+		TESTER_ADD_TEST(helpMessageLongEntryWrappingTest);
 
 		// Subcommands tests.
 		TESTER_ADD_TEST(subcommandBasicTest);
@@ -206,6 +207,40 @@ private:
 		correctly_parses_argument({ "./prog", "--file", "=" STR_ARG }, STR_ARG);
 		correctly_parses_argument({ "./prog", "--file=" STR_ARG }, STR_ARG);
 		correctly_parses_argument({ "./prog", "--file=abc" }, "abc");
+	}
+
+	void helpMessageLongEntryWrappingTest() {
+		auto clah = clah::Clah("prog")
+		                .add(clah::ParamBuilder::ofFlag()
+		                         .addLongName("option-name-that-exceeds-padding")
+		                         .addShortDesc("Option description.")
+		                         .build())
+		                .addSubcommand(
+							clah::Clah("command-name-that-exceeds-padding", "Command description.")
+						)
+		                .addSubcommand(clah::Clah("short", "Short command description."));
+
+		std::array argv{ "./prog" };
+		auto       result       = clah.parse(argv.size(), argv.data());
+		auto       help_message = clah::HelpMessageGenerator::generate(clah, result);
+		auto       indentation  = std::string(27, ' ');
+
+		ASSERT_TRUE(
+			help_message.find(
+				"  --option-name-that-exceeds-padding\n" + indentation + "Option description."
+			)
+			!= std::string::npos
+		);
+		ASSERT_TRUE(
+			help_message.find(
+				" command-name-that-exceeds-padding\n" + indentation + "Command description."
+			)
+			!= std::string::npos
+		);
+		ASSERT_TRUE(
+			help_message.find(" short                     Short command description.")
+			!= std::string::npos
+		);
 	}
 
 	void subcommandBasicTest() {
