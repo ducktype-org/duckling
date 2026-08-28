@@ -64,9 +64,9 @@ namespace vm::persistent::detail {
 			return { true, right_left[rght] };
 		}
 
-		const auto& leftToRight() const { return left_right; }
+		const base::HashMap<L, R, HashL>& leftToRight() const { return left_right; }
 
-		const auto& rightToLeft() const { return right_left; }
+		const base::HashMap<R, L, HashR>& rightToLeft() const { return right_left; }
 
 		void clear() {
 			left_right.clear();
@@ -78,8 +78,8 @@ namespace vm::persistent::detail {
 			return (size() == 0);
 		}
 
-		auto begin() const { return left_right.begin(); }
+		base::HashMap<L, R, HashL>::const_iterator begin() const { return left_right.begin(); }
 
-		auto end() const { return left_right.end(); }
+		base::HashMap<L, R, HashL>::const_iterator end() const { return left_right.end(); }
 	};
 }

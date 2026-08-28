@@ -48,15 +48,9 @@ namespace vm::persistent {
 		 * @return passed state transformed to MemoryStateID
 		 */
 		MemoryStateID validateState(VectorStateID vec_state) const {
-			auto  state = toMemState(vec_state);
-			usize size{};
-			try {
-				size = inner.size(state);
-			} catch (...) { CORE_PANIC("I need size"); }
-			usize l{}, r{};
-			try {
-				std::tie(l, r) = inner.getRangeOf(state);
-			} catch (...) { CORE_PANIC("I need size"); }
+			auto        state  = toMemState(vec_state);
+			const usize size   = inner.size(state);
+			auto [l, r]        = inner.getRangeOf(state);
 
 			CORE_ASSERT(r == size, "Size of vector isn't consistent");
 			CORE_ASSERT(l == 0, "left bound starts always on 0");
@@ -149,8 +143,10 @@ namespace vm::persistent {
 
 				auto val_id = iter.getValue();
 				ans.emplace_back(held_values.atRight(val_id));
-				if (i + 1 < right - left)
-					CORE_ASSERT(iter.moveToValid(Memory::Dir::Rght), "dense vector");
+				if (i + 1 < right - left) {
+					const bool moved = iter.moveToValid(Memory::Dir::Rght);
+					CORE_ASSERT(moved, "dense vector");
+				}
 			}
 
 			return ans;

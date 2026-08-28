@@ -241,7 +241,11 @@ namespace vm::persistent {
 		return mem.getDiff(id, oth.id);
 	}
 
-	usize MemoryStateView::operator[](usize idx) const { return *atMaybe(idx); }
+	usize MemoryStateView::operator[](usize idx) const {
+		auto val = atMaybe(idx);
+		if (!val.has_value()) throw std::out_of_range("idx is not active in this memory state");
+		return *val;
+	}
 
 	[[nodiscard]]
 	bool MemoryStateView::contains(usize idx) const {

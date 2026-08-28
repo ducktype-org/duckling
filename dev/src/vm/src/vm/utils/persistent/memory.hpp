@@ -115,8 +115,8 @@ namespace vm::persistent {
 		base::Optional<Path> getPathTo(
 			MemoryStateID state, usize idx, base::Optional<Dir> opt_dir = std::nullopt
 		) const {
-			validateInput(state, idx);
-			return inner.getPathTo(fromState(state), idx, opt_dir);
+			auto root = validateInput(state, idx);
+			return inner.getPathTo(root, idx, opt_dir);
 		}
 
 		constexpr static MemoryStateID EMPTY   = MemoryStateID{ u64(detail::SegmentTree::EMPTY) };
