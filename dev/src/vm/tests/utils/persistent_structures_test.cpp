@@ -23,6 +23,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testBijective);
 		TESTER_ADD_TEST(testMemory);
+		TESTER_ADD_TEST(testMemoryAccess);
 		TESTER_ADD_TEST(testVector);
 		TESTER_ADD_TEST(testHashMap);
 		TESTER_ADD_TEST(testRandomVector);
@@ -168,6 +169,31 @@ public:
 		});
 		checker(op17, { { 1, 999 } });
 		ASSERT_EQUAL(op17, op16);
+	}
+
+	void testMemoryAccess() {
+		using namespace vm::persistent;
+
+		Memory memory;
+		auto   state = memory.set(Memory::EMPTY, 10, 100);
+		state        = memory.set(state, 20, 200);
+
+		ASSERT_TRUE(memory.access(state, 10).has_value());
+		ASSERT_EQUAL(100, *memory.access(state, 10));
+		ASSERT_TRUE(memory.access(state, 20).has_value());
+		ASSERT_EQUAL(200, *memory.access(state, 20));
+
+		ASSERT_TRUE(memory.getPathTo(state, 15).empty());
+
+		auto left_path = memory.getPathTo(state, 15, Memory::Dir::Left);
+		ASSERT_TRUE(left_path.has_value());
+		ASSERT_EQUAL(10, left_path->getIdx());
+		ASSERT_EQUAL(100, left_path->getValue());
+
+		auto right_path = memory.getPathTo(state, 15, Memory::Dir::Rght);
+		ASSERT_TRUE(right_path.has_value());
+		ASSERT_EQUAL(20, right_path->getIdx());
+		ASSERT_EQUAL(200, right_path->getValue());
 	}
 
 	void testVector() {
