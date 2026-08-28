@@ -7,7 +7,7 @@ use itertools::Itertools;
 use serde::{Deserialize, de};
 use serde_untagged::UntaggedEnumVisitor;
 use yaml_edit::path::YamlPath;
-use yaml_edit::{Mapping, SequenceBuilder};
+use yaml_edit::{Mapping, MappingBuilder, SequenceBuilder};
 
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
@@ -349,21 +349,18 @@ pub struct DependencyCondition {
 
 impl From<DependencyCondition> for Mapping {
     fn from(value: DependencyCondition) -> Self {
-        let result = Mapping::new();
+        let mut result = MappingBuilder::new();
         if let Some(package_features) = value.package_features {
             let mut features = SequenceBuilder::new();
             for feature in package_features {
                 features = features.item(feature);
             }
-            result.set(
-                "package-features",
-                features
-                    .build_document()
-                    .as_sequence()
-                    .expect("SequenceBuilder should produce a sequence"),
-            );
+            result = result.insert_sequence("package-features", features);
         }
         result
+            .build_document()
+            .as_mapping()
+            .expect("MappingBuilder did not produce a Mapping")
     }
 }
 

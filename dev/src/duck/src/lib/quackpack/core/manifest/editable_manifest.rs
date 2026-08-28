@@ -109,49 +109,66 @@ impl<'duck> EditableManifest<'duck> {
     }
 
     /// Remove a dependency from the manifest.
+    ///
+    /// Important
+    /// ---------
+    /// For this to have IO effect, it should be followed by [`Self::save`].
     pub fn remove_dependency(
         &self,
         name: &str,
         kind: DependencyKind,
     ) -> QuackResult<DependencyRemoved> {
         let manifest = self.as_mapping()?;
-        let dependencies_maps = [
-            (DependencyKind::Normal, manifest.get("dependencies")),
-            (DependencyKind::Dev, manifest.get("dev-dependencies")),
-        ];
-        let mut other_kind = None;
+        // Mapping for `kind` and a slice of pairs (other kind, mapping for it).
+        let (my_dep_map, other_dep_maps) = match kind {
+            DependencyKind::Normal => (
+                manifest.get(DependencyKind::Normal.key_in_manifest()),
+                [(
+                    DependencyKind::Dev,
+                    manifest.get(DependencyKind::Dev.key_in_manifest()),
+                )],
+            ),
+            DependencyKind::Dev => (
+                manifest.get(DependencyKind::Dev.key_in_manifest()),
+                [(
+                    DependencyKind::Normal,
+                    manifest.get(DependencyKind::Normal.key_in_manifest()),
+                )],
+            ),
+        };
         let mut removed = false;
-        // We iterate over all kinds of dependencies for better error messages.
-        for (dep_kind, dep_map) in dependencies_maps {
-            if dep_kind == kind {
-                // Remove the dependency.
-                if let Some(dep_map) = dep_map {
-                    let dep_map = self.dependencies_as_mapping(dep_map, dep_kind)?;
-                    removed = dep_map.remove(name).is_some();
-                    // If the mapping became empty, remove it from the manifest.
-                    if dep_map.is_empty() {
-                        manifest.remove(dep_kind.key_in_manifest());
-                    }
-                }
-            } else if let Some(dep_map) = dep_map {
-                // Check if there is a dependency of same name but different kind.
-                let dep_map = self.dependencies_as_mapping(dep_map, dep_kind)?;
-                if dep_map.contains_key(name) {
-                    other_kind = Some(dep_kind);
-                }
+        // Try to remove the dependency from the map matching the kind.
+        if let Some(my_dep_map) = my_dep_map {
+            let my_dep_map = self.dependencies_as_mapping(my_dep_map, kind)?;
+            removed = my_dep_map.remove(name).is_some();
+            // If the mapping became empty, remove it from the manifest.
+            if my_dep_map.is_empty() {
+                manifest.remove(kind.key_in_manifest());
             }
         }
         if removed {
-            self.save()?;
-            Ok(DependencyRemoved::Yes)
-        } else if let Some(other_kind) = other_kind {
-            Ok(DependencyRemoved::NoDependencyButKindExists(other_kind))
-        } else {
-            Ok(DependencyRemoved::NoDependency)
+            return Ok(DependencyRemoved::Yes);
         }
+        // There was no such dependency.
+        // Check if there is dependency with such name but of other kind.
+        for (other_kind, other_dep_map) in other_dep_maps {
+            let Some(other_dep_map) = other_dep_map else {
+                continue;
+            };
+            let other_dep_map = self.dependencies_as_mapping(other_dep_map, other_kind)?;
+            if other_dep_map.contains_key(name) {
+                return Ok(DependencyRemoved::NoDependencyButKindExists(other_kind));
+            }
+        }
+        // No dependency with such name of any kind.
+        Ok(DependencyRemoved::NoDependency)
     }
 
     /// Add a dependency into the manifest.
+    ///
+    /// Important
+    /// ---------
+    /// For this to have IO effect, it should be followed by [`Self::save`].
     pub fn add_dependency(
         &self,
         name: &str,
@@ -165,7 +182,6 @@ impl<'duck> EditableManifest<'duck> {
             let dependency = Into::<Mapping>::into(dependency);
             dependencies_map.set(name, dependency);
         }
-        self.save()?;
         Ok(DependencyAdded::Yes)
     }
 
@@ -201,7 +217,7 @@ impl<'duck> EditableManifest<'duck> {
     }
 
     /// Serialize the underlying [`YamlFile`] to the manifest.
-    fn save(&self) -> QuackResult<()> {
+    pub fn save(&self) -> QuackResult<()> {
         let new_manifest = self.yaml_file.to_string();
         self.manifest_path().write(new_manifest).with_context(|| {
             format!(
