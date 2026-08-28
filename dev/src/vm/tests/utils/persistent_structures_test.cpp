@@ -183,7 +183,20 @@ public:
 		ASSERT_TRUE(memory.access(state, 20).has_value());
 		ASSERT_EQUAL(200, *memory.access(state, 20));
 
-		ASSERT_TRUE(memory.getPathTo(state, 15).empty());
+		ASSERT_TRUE(memory.getPathTo(state, 5).empty());
+		ASSERT_TRUE(memory.getPathTo(state, 100'000).empty());
+
+		for (auto dir: { Memory::Dir::Left, Memory::Dir::Rght }) {
+			auto path = memory.getPathTo(state, 10, dir);
+			ASSERT_TRUE(path.has_value());
+			ASSERT_EQUAL(10, path->getIdx());
+			ASSERT_EQUAL(100, path->getValue());
+
+			path = memory.getPathTo(state, 20, dir);
+			ASSERT_TRUE(path.has_value());
+			ASSERT_EQUAL(20, path->getIdx());
+			ASSERT_EQUAL(200, path->getValue());
+		}
 
 		auto left_path = memory.getPathTo(state, 15, Memory::Dir::Left);
 		ASSERT_TRUE(left_path.has_value());
@@ -194,6 +207,18 @@ public:
 		ASSERT_TRUE(right_path.has_value());
 		ASSERT_EQUAL(20, right_path->getIdx());
 		ASSERT_EQUAL(200, right_path->getValue());
+
+		ASSERT_TRUE(memory.getPathTo(state, 5, Memory::Dir::Left).empty());
+		left_path = memory.getPathTo(state, 5, Memory::Dir::Rght);
+		ASSERT_TRUE(left_path.has_value());
+		ASSERT_EQUAL(10, left_path->getIdx());
+		ASSERT_EQUAL(100, left_path->getValue());
+
+		left_path = memory.getPathTo(state, 100'000, Memory::Dir::Left);
+		ASSERT_TRUE(left_path.has_value());
+		ASSERT_EQUAL(20, left_path->getIdx());
+		ASSERT_EQUAL(200, left_path->getValue());
+		ASSERT_TRUE(memory.getPathTo(state, 100'000, Memory::Dir::Rght).empty());
 	}
 
 	void testVector() {

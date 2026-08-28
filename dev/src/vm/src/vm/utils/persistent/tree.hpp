@@ -826,7 +826,7 @@ namespace vm::persistent::detail {
 				if_opt_none(opt_dir) return std::nullopt;
 				if (*opt_dir == side) return std::nullopt;
 
-				idx = side == Dir::Left ? begin : end;
+				idx = side == Dir::Left ? begin : end - 1;
 			}
 
 			std::deque<NodeID> trace = { root };
