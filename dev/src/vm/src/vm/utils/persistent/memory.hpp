@@ -22,12 +22,13 @@ namespace vm::persistent {
 	class MemoryStateView;
 
 	/**
-	 * @brief Class implementing an abstract access to fully persistent memory - allows to
-	 modify any previous instance efficiently (simmilar to control version for map[idx, value])
-	 * @note two memoryStateID's are equal if and only if corresponding memories are the same (same
-	 values on same idxs)
-	 * @note Implementation is based on persistent segement tree
-	 * @note can be thought of as unordered_map<MemoryStateID, MemoryStateView>
+	 * @brief Persistent indexed storage whose previous states remain available after updates.
+	 *
+	 * Each operation returns a `MemoryStateID` identifying the resulting state. Existing states
+	 * remain unchanged and can be used for subsequent operations.
+	 *
+	 * @note Two state IDs are equal if and only if they represent equal memories.
+	 * @note The memory is implemented with a persistent segment tree.
 	 */
 	class Memory final {
 		friend MemoryStateView;
@@ -43,12 +44,12 @@ namespace vm::persistent {
 		// casting id of node of segment tree to memory state
 		constexpr static ID fromState(MemoryStateID state) { return ID{ u64(state) }; }
 
-		// checks if the provided idx is valid ()
+		// Validates an index.
 		constexpr static void validateIdx(usize idx) {
 			if (idx >= IDX_END) throw std::invalid_argument("got too big idx");
 		}
 
-		// basic method for validating input
+		// Validates a memory state.
 		ID validateInput(MemoryStateID state) const {
 			auto root = fromState(state);
 			if (!inner.knows(root)) throw std::invalid_argument("unknown memory state");
@@ -57,8 +58,8 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief method for validating input
-		 * @return checks that idxs are valid, unique and sorted increasingly
+		 * @brief Validates a state and a sorted collection of indices.
+		 * @return The root node corresponding to the state.
 		 */
 		ID validateInput(MemoryStateID state, const std::deque<usize>& idxs) const {
 			auto root = validateInput(state);
@@ -72,14 +73,14 @@ namespace vm::persistent {
 			return root;
 		}
 
-		// simple method for validating input
+		// Validates a memory state and an index.
 		ID validateInput(MemoryStateID state, usize idx) const {
 			auto root = validateInput(state);
 			validateIdx(idx);
 			return root;
 		}
 
-		// simple method for validating input
+		// Validates two memory states.
 		std::pair<ID, ID> validateInput(MemoryStateID state_1, MemoryStateID state_2) const {
 			auto root_1 = validateInput(state_1);
 			auto root_2 = validateInput(state_2);
@@ -87,8 +88,8 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief method for validating input
-		 * @return checks that given range is well defined and withing bounds
+		 * @brief Validates a state and a half-open index range.
+		 * @return The root node corresponding to the state.
 		 */
 		ID validateInput(MemoryStateID state, usize l, usize r) const {
 			auto root = validateInput(state);
@@ -100,7 +101,7 @@ namespace vm::persistent {
 
 	public:
 		/**
-		 * @brief raturns minimal range contaiing all the leaves of active idxs
+		 * @brief Returns the smallest range containing all active indices in a state.
 		 */
 		std::pair<usize, usize> getRangeOf(MemoryStateID state) const {
 			auto root = validateInput(state);
@@ -110,7 +111,7 @@ namespace vm::persistent {
 		using Dir = detail::SegmentTree::Dir;
 
 		/**
-		 * @brief returns a const iterator to given idx in given memory instance
+		 * @brief Returns a path to an index in a memory state.
 		 */
 		base::Optional<Path> getPathTo(
 			MemoryStateID state, usize idx, base::Optional<Dir> opt_dir = std::nullopt
@@ -129,25 +130,25 @@ namespace vm::persistent {
 			  } };
 
 		/**
-		 * @brief sets multiple values at certain idxs
+		 * @brief Returns a state with values set at multiple indices.
 		 */
 		[[nodiscard]]
 		MemoryStateID setMultiple(MemoryStateID root, std::deque<std::pair<usize, usize>> vals);
 
 		/**
-		 * @brief erases multiple values at certain idxs
+		 * @brief Returns a state with multiple indices removed.
 		 */
 		[[nodiscard]]
 		MemoryStateID eraseMultiple(MemoryStateID root, std::deque<usize> idxs);
 
 		/**
-		 * @brief erases single idx
+		 * @brief Returns a state with one index removed.
 		 */
 		[[nodiscard]]
 		MemoryStateID erase(MemoryStateID root, usize idx);
 
 		/**
-		 * @brief sets valuea at single idxs
+		 * @brief Returns a state with a value set at one index.
 		 */
 		[[nodiscard]]
 		MemoryStateID set(MemoryStateID root, usize idx, usize val);
@@ -156,19 +157,20 @@ namespace vm::persistent {
 			= std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>>;
 
 		/**
-		 * @brief transforms memory to list of pair [idx, value]
+		 * @brief Returns the active indices and their values as pairs.
 		 */
 		[[nodiscard]]
 		std::vector<std::pair<usize, usize>> toVec(MemoryStateID root) const;
 
 		/**
-		 * @brief gets a difference of as the list of tuples [idx, value_1, value_2]
+		 * @brief Returns the differences between two memory states.
 		 */
 		[[nodiscard]]
 		diffResT getDiff(MemoryStateID root_1, MemoryStateID root_2) const;
 
 		/**
-		 * @brief merge two instances of memory, accoring to conflict policy
+		 * @brief Returns a state formed by merging two memory states.
+		 * @note Conflicts are resolved with the provided policy.
 		 */
 		MemoryStateID merge(
 			MemoryStateID  root_1,
@@ -177,29 +179,29 @@ namespace vm::persistent {
 		);
 
 		/**
-		 * @brief erase all the active idx which are outside of given interval
+		 * @brief Returns a state containing only active indices in the given interval.
 		 */
 		MemoryStateID slice(MemoryStateID root, usize left_idx, usize right_idx);
 
 		/**
-		 * @brief erase all the active idx which are inside of given interval
+		 * @brief Returns a state with active indices in the given interval removed.
 		 */
 		MemoryStateID eraseRange(MemoryStateID root, usize left_idx, usize right_idx);
 
 		/**
-		 * @brief return nmber of active idx in given instance
+		 * @brief Returns the number of active indices in a memory state.
 		 */
 		[[nodiscard]]
 		usize size(MemoryStateID root) const;
 
 		/**
-		 * @brief checks whether given idx is active in given instance
+		 * @brief Returns whether an index is active in a memory state.
 		 */
 		[[nodiscard]]
 		bool active(MemoryStateID root, usize idx) const;
 
 		/**
-		 * @brief returns held value at given idx in given instance
+		 * @brief Returns the value stored at an index in a memory state, if present.
 		 */
 		[[nodiscard]]
 		base::Optional<usize> access(MemoryStateID root, usize idx) const;
@@ -208,7 +210,7 @@ namespace vm::persistent {
 	};
 
 	/**
-	 * @brief draft impl of class for wrapping a id for memory state
+	 * @brief View of a persistent memory state.
 	 */
 	class MemoryStateView final {
 		MemoryStateID id;
@@ -216,7 +218,7 @@ namespace vm::persistent {
 
 	public:
 		/**
-		 * @brief draft impl of iterator for MemoryStateView
+		 * @brief Iterator over the active entries in a memory state.
 		 */
 		class MemoryIterator {
 			base::Optional<Memory::Path> maybe_path = std::nullopt;

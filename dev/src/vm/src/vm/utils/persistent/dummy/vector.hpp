@@ -9,11 +9,10 @@
 namespace vm::persistent {
 
 	/**
-	 * @brief A persistent data structure simulating STL vector but with the ability to access
-	 * and modify any of it's previous states.
-	 * @note can be thought of Hashmap<VectorStateID, Vector<T> >
-	 * @warning THIS IS A NAIVE IMPLEMENTATION IN O(N^2), USE FOR TESTING OR SMALL NUMBER OF
-	 * OPERATIONS
+	 * @brief A simple persistent vector implementation for testing.
+	 *
+	 * Each operation creates a new state while preserving all previous states.
+	 * @warning This implementation is O(N^2) and should only be used for testing or small inputs.
 	 */
 	template<typename T>
 	class DummyVector final {
@@ -29,9 +28,8 @@ namespace vm::persistent {
 		static constexpr usize EMPTY = 0;
 
 		/**
-		 * @brief creates a new state from the pevious one, by popping some number of variables from
-		 * the end
-		 * @throws when size of vector is smaller than the number of values to pop
+		 * @brief Returns a new state with values removed from the end.
+		 * @throws std::invalid_argument if the number of values exceeds the vector size.
 		 */
 		[[nodiscard]]
 		usize pop(usize state, usize no_of_values_to_pop = 1) {
@@ -55,7 +53,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief creates a new state from the pevious one, by changing value at the index
+		 * @brief Returns a new state with the value at an index replaced.
 		 */
 		[[nodiscard]]
 		usize change(usize state, usize idx, const T& val) {
@@ -67,7 +65,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief creates a new state from the pevious one, by pushing variable at the end
+		 * @brief Returns a new state with a value appended to the end.
 		 */
 		[[nodiscard]]
 		usize push(usize state, const T& val) {
@@ -79,9 +77,8 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief comapre two states of the vector
-		 * @return true if the instances are equal
-		 * @warning THIS TAKES O(N)
+		 * @brief Returns whether two vector states are equal.
+		 * @warning This operation is O(N).
 		 */
 		[[nodiscard]]
 		bool eq(usize state_1, usize state_2) const {
@@ -89,7 +86,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief accessor to elements at given state by idx
+		 * @brief Returns the element at an index in a vector state.
 		 */
 		[[nodiscard]]
 		const T& at(usize state, usize idx) const {
@@ -97,7 +94,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief return size of the vector at given state
+		 * @brief Returns the number of elements in a vector state.
 		 */
 		[[nodiscard]]
 		usize size(usize state) const {

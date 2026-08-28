@@ -10,18 +10,18 @@ namespace vm::persistent {
 	STRONG_TYPEDEF_INT(HashMapStateID, u64);
 
 	/**
-	 * @brief Class implementing a STL hashmap with time-persistency aka control version. You can
-	 * modify any of the previous instances of the vector, by using `HashMapStateID`.
+	 * @brief A persistent hash map whose previous states remain available after updates.
 	 *
-	 * @note Implementation based of persistent memory.
-	 * @note two HashMapStateID's are equal if and only if corresponding hashmaps are the same (same
-	 size and same values on same keys)
-	 * @note Held values & keys are constructed only once.
+	 * Each operation returns a `HashMapStateID` identifying the resulting state. Existing states
+	 * remain unchanged and can be used for subsequent operations.
 	 *
-	 * @tparam KeyT
-	 * @tparam ValT
-	 * @tparam KeyH
-	 * @tparam ValH
+	 * @note Two state IDs are equal if and only if they represent equal hash maps.
+	 * @note Keys and values are stored once and referenced by ID in the persistent memory.
+	 *
+	 * @tparam KeyT key type
+	 * @tparam ValT value type
+	 * @tparam KeyH hash function for keys
+	 * @tparam ValH hash function for values
 	 */
 	template<
 		typename KeyT,
@@ -37,19 +37,19 @@ namespace vm::persistent {
 
 		Memory inner;
 
-		// casting memory state to hashmap state
+		// Converts a memory state ID to a hash map state ID.
 		constexpr static HashMapStateID toMapState(MemoryStateID state) {
 			return HashMapStateID{ u64(state) };
 		}
 
-		// casting hashmap state to memory state
+		// Converts a hash map state ID to a memory state ID.
 		constexpr static MemoryStateID toMemState(HashMapStateID state) {
 			return MemoryStateID{ u64(state) };
 		}
 
 		/**
-		 * @brief returns an ID of a ValT value
-		 * @note if the value wasn't previously used, it is assigned a new one
+		 * @brief Returns the ID associated with a value.
+		 * @note A new ID is assigned if the value has not been stored before.
 		 */
 		usize emplaceNewVal(const ValT& var) {
 			auto [is_new, var_id] = held_values.emplaceByLeft(var, next_val_id);
@@ -58,8 +58,8 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief returns an ID of a KeyT key
-		 * @note if the key wasn't previously used, it is assigned a new one
+		 * @brief Returns the ID associated with a key.
+		 * @note A new ID is assigned if the key has not been stored before.
 		 */
 		usize emplaceNewKey(const KeyT& key) {
 			auto [is_new, var_id] = held_keys.emplaceByLeft(key, next_key_id);
@@ -69,11 +69,11 @@ namespace vm::persistent {
 
 
 	public:
-		// public state representing an empty hashmap
+		// Public state representing an empty hash map.
 		static constexpr auto EMPTY = HashMapStateID(u64(Memory::EMPTY));
 
 		/**
-		 * @brief return size of hashmap at given instance
+		 * @brief Returns the number of entries in a hash map state.
 		 */
 		usize size(HashMapStateID state_id) const {
 			auto mem_state = toMemState(state_id);
@@ -81,7 +81,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief transforms given state to actual hashmap
+		 * @brief Returns the hash map represented by a state.
 		 */
 		base::HashMap<KeyT, ValT, KeyH> toMap(HashMapStateID state_id) const {
 			if (state_id == EMPTY) return {};
@@ -110,7 +110,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief checks if the key is present in given instance of hashmap
+		 * @brief Returns whether a key is present in a hash map state.
 		 */
 		bool contains(HashMapStateID state_id, const KeyT& key) const {
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
@@ -122,7 +122,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief method for accessing element for given key at given instance.
+		 * @brief Returns the value associated with a key, if present.
 		 */
 		base::Optional<ValT> atMaybe(HashMapStateID state_id, const KeyT& key) const {
 			auto state = toMemState(state_id);
@@ -145,8 +145,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief method for inserting [key, value] to given instance.
-		 * @note if key was present at given instance, it will be overriden
+		 * @brief Returns a state with a key-value pair inserted or replaced.
 		 */
 		HashMapStateID insert(HashMapStateID state_id, const KeyT& key, const ValT& var) {
 			auto state  = toMemState(state_id);
@@ -156,8 +155,8 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief method for erasing entry with given key at given instance
-		 * @note if given instance doesn't contain the key, no effect take place
+		 * @brief Returns a state with the entry for a key removed.
+		 * @note If the key is not present, the state is unchanged.
 		 */
 		HashMapStateID erase(HashMapStateID state_id, const KeyT& key) {
 			auto state = toMemState(state_id);
@@ -168,8 +167,8 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief method for inserting [key, value] to given instance.
-		 * @note if key was present at given instance, it won't be overriden
+		 * @brief Returns whether a key-value pair was inserted and the resulting state.
+		 * @note If the key is already present, the state is unchanged.
 		 */
 		std::pair<bool, HashMapStateID> emplace(
 			HashMapStateID state_id, const KeyT& key, const ValT& var
@@ -181,8 +180,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief comapre two states of the hashmap
-		 * @return true if the instances are equal
+		 * @brief Returns whether two hash map states are equal.
 		 */
 		[[nodiscard]]
 		bool eq(HashMapStateID state_1, HashMapStateID state_2) const {

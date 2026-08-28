@@ -16,16 +16,16 @@ namespace vm::persistent {
 	STRONG_TYPEDEF_INT(VectorStateID, u64);
 
 	/**
-	 * @brief Class implementing a STL vector with time-persistency aka control version. You can
-	 * modify any of the previous instances of the vector, by using `VectorStateID`.
+	 * @brief A persistent vector whose previous states remain available after updates.
 	 *
-	 * @note Implementation based of persistent memory.
-	 * @note two VectorStateID's are equal if and only if corresponding vectors are the same (same
-	 size and same values on same idxs)
-	 * @note Held values are constructed only once, and nodes hold their id's.
+	 * Each operation returns a `VectorStateID` identifying the resulting state. Existing states
+	 * remain unchanged and can be used for subsequent operations.
 	 *
-	 * @tparam VarT type held in the vector
-	 * @tparam VarH hash object for VarT
+	 * @note Two state IDs are equal if and only if they represent equal vectors.
+	 * @note Values are stored once and referenced by ID in the persistent memory.
+	 *
+	 * @tparam VarT value type
+	 * @tparam VarH hash function for values
 	 */
 	template<typename VarT, typename VarH = std::hash<VarT>>
 	class Vector final {
@@ -33,19 +33,19 @@ namespace vm::persistent {
 		usize                                   next_val_id = 0;
 		Memory                                  inner;
 
-		// casting memory state to vector state
+		// Converts a memory state ID to a vector state ID.
 		constexpr static VectorStateID toVecState(MemoryStateID state) {
 			return VectorStateID{ u64(state) };
 		}
 
-		// casting vector state to underlying memory state
+		// Converts a vector state ID to a memory state ID.
 		constexpr static MemoryStateID toMemState(VectorStateID state) {
 			return MemoryStateID{ u64(state) };
 		}
 
 		/**
-		 * @brief basic method for validating vector state
-		 * @return passed state transformed to MemoryStateID
+		 * @brief Validates a vector state.
+		 * @return The corresponding memory state.
 		 */
 		MemoryStateID validateState(VectorStateID vec_state) const {
 			auto        state  = toMemState(vec_state);
@@ -59,8 +59,8 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief returns an ID of a VarT value
-		 * @note if the value wasn't previously used, it is assigned a new one
+		 * @brief Returns the ID associated with a value.
+		 * @note A new ID is assigned if the value has not been stored before.
 		 */
 		usize emplaceNewVal(const VarT& var) {
 			auto [is_new, var_id] = held_values.emplaceByLeft(var, next_val_id);
@@ -69,11 +69,11 @@ namespace vm::persistent {
 		}
 
 	public:
-		// public state representing empty vector
+		// Public state representing an empty vector.
 		static constexpr auto EMPTY = VectorStateID{ u64{ Memory::EMPTY } };
 
 		/**
-		 * @brief method for accessing element at given idx for given instance.
+		 * @brief Returns the element at an index in a vector state.
 		 */
 		const VarT& at(VectorStateID state_id, usize idx) const {
 			auto state = validateState(state_id);
@@ -82,7 +82,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief return size of vector at given instance
+		 * @brief Returns the number of elements in a vector state.
 		 */
 		[[nodiscard]]
 		usize size(VectorStateID state_id) const {
@@ -91,7 +91,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief emplaces value at the end vector at given instance
+		 * @brief Returns a state with a value appended to the vector.
 		 */
 		[[nodiscard]]
 		VectorStateID push(VectorStateID state_id, const VarT& var) {
@@ -104,7 +104,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief replaces the value at an index of a given instance
+		 * @brief Returns a state with the value at an index replaced.
 		 */
 		[[nodiscard]]
 		VectorStateID change(VectorStateID state_id, usize idx, const VarT& var) {
@@ -118,10 +118,9 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief get a range of vector  [left, right) at given intance
-		 * @note interval [left, right) must be contained within interval [0, size)
-		 * @note left must be <= right
-		 * @note it can happen that left == right - this just returns empty vector
+		 * @brief Returns the half-open range `[left, right)` from a vector state.
+		 * @note The range must be contained within `[0, size)` and `left` must not exceed `right`.
+		 * @note An empty range is allowed and returns an empty vector.
 		 */
 		[[nodiscard]]
 		std::vector<VarT> view(VectorStateID state_id, usize left, usize right) const {
@@ -153,8 +152,8 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief returns a state which consists of `pref_size` first elements at given instamce
-		 * @note `pref_size` must be smaller or equal to the size of vector at given instance
+		 * @brief Returns a state containing the first `pref_size` elements.
+		 * @note `pref_size` must not exceed the size of the vector.
 		 */
 		VectorStateID getPrefix(VectorStateID state_id, usize pref_size) {
 			auto state = validateState(state_id);
@@ -169,9 +168,8 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief pops multple values from the vector ar given instance
-		 * @note number of values to pop must be smaller or equal to the size of vector at given
-		 * instance
+		 * @brief Returns a state with values removed from the end of the vector.
+		 * @note The number of values to remove must not exceed the size of the vector.
 		 */
 		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
 			auto state = validateState(state_id);
@@ -185,8 +183,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief comapre two states of the vector
-		 * @return true if the instances are equal
+		 * @brief Returns whether two vector states are equal.
 		 */
 		[[nodiscard]]
 		bool eq(VectorStateID state_1, VectorStateID state_2) const {

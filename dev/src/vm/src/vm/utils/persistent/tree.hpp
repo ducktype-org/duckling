@@ -69,7 +69,7 @@ namespace vm::persistent::detail {
 			bool operator==(const ChildEntry&) const = default;
 		};
 
-		// required for use of BijectiveMap (both sides must be hashable)
+		// Both sides must be hashable for use with BijectiveMap.
 		struct ChildEntryH {
 			usize operator()(const ChildEntry& h) const {
 				return (std::hash<NodeID>{}(h.left_child) << 1)
@@ -84,7 +84,7 @@ namespace vm::persistent::detail {
 			bool operator==(const LeafEntry&) const = default;
 		};
 
-		// required for use of BijectiveMap (both sides must be hashable)
+		// Both sides must be hashable for use with BijectiveMap.
 		struct LeafEntryH {
 			usize operator()(const LeafEntry& h) const {
 				return (std::hash<usize>{}(h.idx) << 1) ^ std::hash<usize>{}(h.value);
@@ -92,8 +92,7 @@ namespace vm::persistent::detail {
 		};
 
 		/**
-		 * @brief helds no of actiVe nodes, position in the tree and idx of leftmost and rightmost
-		 * leaf
+		 * @brief Metadata for a branch node, including its size, position, and bounds.
 		 */
 		struct BranchEntry {
 			usize size;
@@ -103,16 +102,15 @@ namespace vm::persistent::detail {
 		};
 
 		/**
-		 * @brief helper function for getting height of tree position
-		 * @note leaf nodes get height 0
-		 * @note empty position has position higher than everyone else
+		 * @brief Returns the height of a tree position.
+		 * @note Leaf positions have height zero.
+		 * @note The empty position has a height greater than every non-empty position.
 		 */
 		static constexpr usize heightFromPos(posT pos) { return usize(std::countl_zero(pos)); }
 
 		/**
-		 * @brief helper function for getting smallest possible idx of leaf in subtree of given tree
-		 * position
-		 * @note empty position has offset 0
+		 * @brief Returns the smallest possible leaf index in a subtree.
+		 * @note The empty position has offset zero.
 		 */
 		static constexpr idxT offsetFromPos(posT pos) {
 			auto h = heightFromPos(pos);
@@ -128,9 +126,9 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief helper function for getting height of lca for two tree positions
-		 * @note when one of the given positions is 0, then we return the height of the other
-		 * @note when both positions are 0, returned height is `POS_T_SIZE`
+		 * @brief Returns the height of the lowest common ancestor of two positions.
+		 * @note If one position is zero, returns the height of the other position.
+		 * @note If both positions are zero, returns `POS_T_SIZE`.
 		 */
 		static constexpr usize getLCAHeight(posT pos_1, posT pos_2) {
 			if (pos_1 > pos_2) std::swap(pos_1, pos_2);
@@ -160,8 +158,8 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief helper function for getting position of lca for two tree positions
-		 * @note when one of the given positions is 0, then we return the position of the other
+		 * @brief Returns the position of the lowest common ancestor of two positions.
+		 * @note If one position is zero, returns the other position.
 		 */
 		static constexpr posT getLCAPos(posT pos_1, posT pos_2) {
 			if (pos_1 == 0 && pos_2 == 0) return 0;
@@ -177,9 +175,9 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief helper function for determining if one position in subtree of another
-		 * @note when maybe_child is zero, function will always return true
-		 * @note unless maybe child is zero, root == 0 implies that function will return false
+		 * @brief Returns whether a position is in another position's subtree.
+		 * @note A zero child position is always considered to be in the subtree.
+		 * @note A zero root position returns false unless the child position is also zero.
 		 */
 		static constexpr bool inSubtree(posT maybe_child, posT root) {
 			return (root == getLCAPos(root, maybe_child));
@@ -221,8 +219,7 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief helper function for determining first node, whose subtree fits within range
-		 * [left_idx, right_idx) interval
+		 * @brief Returns the first node whose subtree fits within a range.
 		 */
 		static constexpr posT firstNodeForRange(idxT left_idx, idxT right_idx) {
 			CORE_ASSERT(left_idx < right_idx, "Received wrong invalid/empty");
@@ -251,7 +248,7 @@ namespace vm::persistent::detail {
 
 				mask -= 1;
 				CORE_ASSERT(
-					(mask & left_pos) == 0, "all bits with idx smaller tha (max_height - 1) are 0"
+					(mask & left_pos) == 0, "all bits with index smaller than (max_height - 1) are 0"
 				);
 			}
 
@@ -291,7 +288,7 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief Get the tree positions of nodes responsible for range [lefft_idx, right_idx)
+		 * @brief Returns the tree positions responsible for the range `[left_idx, right_idx)`.
 		 */
 		static constexpr std::deque<posT> getPosForRange(std::pair<idxT, idxT> arg) {
 			auto [left_idx, right_idx] = arg;
@@ -323,7 +320,7 @@ namespace vm::persistent::detail {
 
 	public:
 		/**
-		 * @brief struture used to iterate over the unmutable memory
+		 * @brief Iterator for traversing the active leaves of a tree.
 		 */
 		struct Path {
 			std::deque<NodeID>      trace;
@@ -335,12 +332,11 @@ namespace vm::persistent::detail {
 			}
 
 			/**
-			 * @brief moves Path to the leaf, which is present in Memory
-			 * @param move_dir the direction in which we seek the leaf
-			 * @param skip number of leaves to skip
-			 * @return boolean, if the was successful (whethter leaf was found)
-			 * @note works even if Path was pointing to idx which wasn't active in `root` state of
-			 * Memory
+			 * @brief Moves the path to the next active leaf in the given direction.
+			 * @param move_dir Direction in which to move.
+			 * @param skip Number of active leaves to skip.
+			 * @return Whether an active leaf was found.
+			 * @note The path may initially point to an inactive index.
 			 */
 			[[nodiscard("When is false, the path must be discarded")]]
 			bool moveToValid(Dir move_dir, usize skip = 0) {
@@ -393,7 +389,7 @@ namespace vm::persistent::detail {
 			}
 
 			/**
-			 * @brief returns the value at the index to which the path points
+			 * @brief Returns the value at the leaf to which the path points.
 			 */
 			[[nodiscard]]
 			valT getValue() const {
@@ -413,7 +409,7 @@ namespace vm::persistent::detail {
 		bool knows(NodeID state) const { return branch_info.atMaybeCopy(state).has_value(); }
 
 		/**
-		 * @brief Return number of active leaves in subtree
+		 * @brief Returns the number of active leaves in a subtree.
 		 */
 		usize getSize(NodeID state) const {
 			auto entry = *branch_info.atMaybeCopy(state);
@@ -422,12 +418,12 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief Return position in the tree of given node
+		 * @brief Returns the position of a node in the tree.
 		 */
 		posT getPos(NodeID state) const { return branch_info.atMaybeCopy(state)->position; }
 
 		/**
-		 * @brief Return idx of leftmost and rightmost idx of active leavs in fiven subtree
+		 * @brief Returns the bounds of the active leaves in a subtree.
 		 */
 		std::pair<idxT, idxT> getRange(NodeID state) const {
 			auto entry = *branch_info.atMaybeCopy(state);
@@ -439,7 +435,7 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief Return the value held by leaf
+		 * @brief Returns the value held by a leaf.
 		 */
 		valT getValueOfLeaf(NodeID leaf) const { return leaf_entries.atRight(leaf).value; }
 
@@ -454,9 +450,8 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief emplaces a new node, which has given nodes as children (a branch).
-		 * @note node can be either constructed, or returned previously constructed (depeding if
-		 * there already was node with given subtrees)
+		 * @brief Returns a branch node with the given children.
+		 * @note Returns an existing node when the same children have already been stored.
 		 */
 		NodeID emplaceBranch(NodeID left, NodeID right) {
 			if (left == EMPTY) return right;
@@ -490,9 +485,8 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief emplaces a new new from idx and value (a leaf).
-		 * @note node can be either constructed, or returned previously constructed (depeding if
-		 * there already was node with given idx and value)
+		 * @brief Returns a leaf node for an index and value.
+		 * @note Returns an existing node when the same index and value have already been stored.
 		 */
 		NodeID emplaceLeaf(idxT idx, valT var_id) {
 			CORE_ASSERT(idx < IDX_END, "idx of the leaf must be small enough");
@@ -519,8 +513,8 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief helper structure dedicated for merging two trees
-		 * @note used either for rebuilding or const operations (depending on result type)
+		 * @brief Callbacks used when merging two trees.
+		 * @note The result type determines whether the operation rebuilds or only reads the trees.
 		 */
 		template<RebuildRes ResT>
 		struct MergeBuilder {
@@ -552,8 +546,8 @@ namespace vm::persistent::detail {
 		};
 
 		/**
-		 * @brief helper structure dedicated for handling ranges
-		 * @note used either for rebuilding or const operations (depending on result type)
+		 * @brief Callbacks used when processing ranges of a tree.
+		 * @note The result type determines whether the operation rebuilds or only reads the tree.
 		 */
 		template<RebuildRes ResT>
 		struct RangeBuilder {
@@ -569,9 +563,7 @@ namespace vm::persistent::detail {
 		using LeafBuilder = std::function<NodeID(usize, base::Optional<usize>)>;
 
 		/**
-		 * @brief helper function for merging two instances of the memory
-		 * @note can be mutable or unmutable, depending of return type of merge poliscy (hence use
-		 * of this deduction)
+		 * @brief Merges two tree states using callbacks for differences and conflicts.
 		 */
 		template<RebuildRes ResT, typename SelfT>
 		ResT rebuildFromTwo(
@@ -686,9 +678,8 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief helper function for modifying a multiple ranges in memory
-		 * @note can be mutable or unmutable, depending of return type of range builder
-		 * @note ranges are right opened [l, r) where l < r, and we expect at least one range.
+		 * @brief Applies callbacks to multiple disjoint half-open ranges.
+		 * @note At least one range is required, and each range must satisfy `l < r`.
 		 */
 		template<RebuildRes ResT, typename SelfT>
 		ResT rebuildRanges(
@@ -770,8 +761,7 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief helper function for modifying a single range of memory
-		 * @note can be mutable or unmutable, depending of return type of range constructor
+		 * @brief Applies callbacks to a single half-open range.
 		 */
 		template<RebuildRes ResT, typename SelfT>
 		ResT rebuildRange(
@@ -785,9 +775,8 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief helper function for atomically modifying the certain idxs
-		 * @note idxs must be sorted from left to right
-		 * @note this function is never const (use Path for iterating over unmutable memory)
+		 * @brief Applies callbacks to a sorted collection of indices.
+		 * @note This operation modifies the tree; use `Path` to traverse it without modification.
 		 */
 		NodeID reconstructLeaves(
 			NodeID root, const std::deque<idxT>& idxs, const LeafBuilder& constructor
@@ -817,7 +806,7 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief Gets a child of given root in particular direction
+		 * @brief Returns the child of a node in the given direction.
 		 */
 		[[nodiscard]]
 		NodeID getChild(Dir dir, NodeID root) const {
@@ -833,7 +822,7 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief returns a path from particular root to the idx
+		 * @brief Returns a path from a root node to an index.
 		 */
 		[[nodiscard]]
 		base::Optional<Path> getPathTo(
@@ -879,7 +868,7 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief Construct a new Segment Tree object
+		 * @brief Constructs an empty segment tree.
 		 */
 		SegmentTree() {
 			branch_info.put(
