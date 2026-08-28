@@ -68,26 +68,22 @@ namespace vm {
 		void copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
 
 		/**
-		 * @brief Copies blocks from `block_src` to `block_dst`, going down the nested block
-		 * hierarchy.
-		 * @note Moving here means no data copy-constructors are called.
+		 * @brief Changes `BlockData` object that is used underneath a block.
+		 * It does so by moving objects from block's data to new_data.
+		 * This means data copy-constructors of the moved objects are not invoked.
+		 * @note Frees *block's nested blocks whose offsets would not fit
+		 * inside the `new_data` memory area - the objects that are in the suffix are destructed,
+		 * so the suffix must not hold moved-from objects.
+		 * @note The part of `new_data` past the moved objects is cleared.
+		 * @note The old data is deallocated with its own allocator.
 		 */
-		void moveBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
-
-		/**
-		 * @brief Moves `byte_size` bytes pointed-to by `src` to `dst`.
-		 * Moving here means data copy-constructors of the moved object are not invoked.
-		 * The objects that are in the "suffix" are destructed.
-		 * @note Frees *block_dst's nested blocks whose offsets would not fit
-		 * inside the new memory area.
-		 * @note These blocks must be of a dynamic table type.
-		 */
-		void moveBlockDataAndEraseSuffix(Ref<Block> dst, Ref<Block> src, usize byte_count);
-
+		void changeBlockData(Ref<Block> block, BlockData new_data);
 
 		/**
 		 * @brief Replaces the block data memory view with the new one,
 		 * taking care of the children blocks.
+		 *
+		 * @note The children keep their own sizes, only their base is rebased onto `new_view`.
 		 *
 		 * @param block The block to update the data view for.
 		 * @param new_view The new view to set for the block.

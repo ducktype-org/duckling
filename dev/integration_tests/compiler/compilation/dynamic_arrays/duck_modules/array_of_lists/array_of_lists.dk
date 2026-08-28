@@ -45,7 +45,7 @@ fun arrayOfListsTest() -> () = {
     }
 }
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     arrayOfListsTest();
 
     return 0;

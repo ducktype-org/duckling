@@ -16,7 +16,7 @@ fun getAge(p: Person) = {
     return p._3;
 }
 
-fun main() = {
+fun main() -> i64 = {
     var p = makePerson("John", "Doe", 30);
     var name = getName(p);
     var surname = getSurname(p);
