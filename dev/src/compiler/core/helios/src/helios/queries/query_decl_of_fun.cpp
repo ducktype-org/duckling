@@ -143,6 +143,21 @@ namespace compiler::helios {
 			}
 
 			void visitIf(pst::Access<pst::If> stmt) final {
+				if (stmt->isConst()) {
+					// Only the taken branch takes part in the return type deduction, the other
+					// one is never compiled.
+					auto taken
+						= evaluateConstIfCondition(ctx, stmt->getCondition().unlock(ctx)->getExpr());
+					if (taken.hasFailed()) query::throwFailed();
+
+					if (taken.valueOrThrow())
+						visitRecursion(stmt->getThenBody());
+					else if (stmt->getElseBody().has_value())
+						visitRecursion(stmt->getElseBody().value());
+
+					return;
+				}
+
 				visitRecursion(stmt->getThenBody());
 
 				if (stmt->getElseBody().has_value()) visitRecursion(stmt->getElseBody().value());

@@ -1132,4 +1132,34 @@ namespace compiler::helios {
 		if (hout_qresult.hasFailed()) return query::Failed();
 		return ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
 	}
+
+	query::QResult<bool> evaluateConstIfCondition(
+		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
+	) {
+		const auto hout_qresult = getHoutOfExprWithExpectedType(
+			ctx,
+			pst_expr,
+			tsh::SymbolType<>{
+				tsh::getBoolType(),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			}
+		);
+		if (hout_qresult.hasFailed()) return query::Failed();
+
+		auto ctv_qresult
+			= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+		if (ctv_qresult.hasFailed()) return query::Failed();
+
+		auto value = std::move(ctv_qresult).valueOrThrow().get<bool>();
+		if (value.empty()) {
+			ctx.logInt(makeBox<dia::PlaceholderError>(
+				"The condition of `if const` must evaluate to a compile time `bool`.",
+				pst_expr.element.unlock(ctx)->getStablePosition()
+			));
+			return query::Failed();
+		}
+
+		return value.value();
+	}
 }

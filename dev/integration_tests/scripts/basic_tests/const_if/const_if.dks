@@ -1,0 +1,19 @@
+template(a: i64)
+fun pick() -> i64 = {
+	if const (a == 1) {
+		return 1;
+	} else if const (a == 2) {
+		return 2;
+	} else {
+		# Never compiled for the instantiations below.
+		return this_function_does_not_exist();
+	}
+}
+
+# The condition is false, so the body is never compiled.
+if const (1 == 2) {
+	builtin_output_i64(this_function_does_not_exist());
+}
+
+builtin_output_i64(pick:{1i64}());
+builtin_output_i64(pick:{2i64}());

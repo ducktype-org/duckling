@@ -41,4 +41,15 @@ namespace compiler::helios {
 	CompTimeEvalResult getTypeCTVFromPST(
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
 	);
+
+	/**
+	 * Evaluate a condition of an `if const` statement at compile time.
+	 * @param ctx The query context.
+	 * @param pst_expr The PST expression of the condition.
+	 * @return The value of the condition, or query::Failed if it could not be evaluated as a
+	 * compile time `bool`.
+	 */
+	query::QResult<bool> evaluateConstIfCondition(
+		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
+	);
 }
