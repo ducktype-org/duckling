@@ -1,4 +1,4 @@
-fun main() -> i32 = {
+fun main() -> i64 = {
 	print("What is your name?\n");
 	var name = builtin_input_string();
 	print("What is your favourite number?\n");

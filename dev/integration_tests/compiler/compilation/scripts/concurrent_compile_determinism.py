@@ -53,13 +53,22 @@ import tempfile
 
 
 GENERATED_COPY_STEM_RE = re.compile(r"^concurrent_copy\d+_.+")
-IMPORT_RE = re.compile(r"^(\s*import\s+)([A-Za-z_]\w*)(?=[\s\.;]|$)")
+# Matched anywhere in a line, not only at its start, so that imports nested inside
+# `expand "..."` macro strings are rewritten as well.
+IMPORT_RE = re.compile(r"(?<![\w.])(import\s+)([A-Za-z_]\w*)(?=[\s\.;]|$)")
 MAIN_FUN_RE = re.compile(r"(\bfun\s+)main(\s*\()")
 
 
-def std_artifacts_path_args() -> list[str]:
+# The warm artifacts cached in `$DUCKC_STD_ARTIFACTS_PATH` are the ones of the default
+# std, so they must not be handed to a compile that builds its own std from sources.
+def std_artifacts_path_args(compile_options: str) -> list[str]:
     std_artifacts_path = os.environ.get("DUCKC_STD_ARTIFACTS_PATH")
     if not std_artifacts_path:
+        return []
+    if any(
+        option in shlex.split(compile_options)
+        for option in ("--custom-std-path", "--custom-std-artifacts-path", "--no-std")
+    ):
         return []
     return ["--custom-std-artifacts-path", std_artifacts_path]
 
@@ -94,32 +103,21 @@ def get_child_module_names(main_module_file: Path) -> set[str]:
     return child_names
 
 
-# Rewrites one import line to keep copied module imports valid.
+# Rewrites the imports of one line to keep copied module imports valid.
 def rewrite_import_line_if_needed(
     line: str,
     main_module_name: str,
     child_module_names: set[str],
 ) -> str:
-    newline = "\n" if line.endswith("\n") else ""
-    line_without_newline = line[:-1] if newline else line
+    def rewrite_import(match: re.Match[str]) -> str:
+        first_segment = match.group(2)
+        if first_segment not in child_module_names:
+            return match.group(0)
+        if first_segment == main_module_name:
+            return match.group(0)
+        return f"{match.group(1)}{main_module_name}.{first_segment}"
 
-    match = IMPORT_RE.match(line_without_newline)
-    if not match:
-        return line
-
-    first_segment = match.group(2)
-    if first_segment not in child_module_names:
-        return line
-    if first_segment == main_module_name:
-        return line
-
-    first_segment_start, first_segment_end = match.span(2)
-    rewritten = (
-        f"{line_without_newline[:first_segment_start]}"
-        f"{main_module_name}.{line_without_newline[first_segment_start:first_segment_end]}"
-        f"{line_without_newline[first_segment_end:]}"
-    )
-    return f"{rewritten}{newline}"
+    return IMPORT_RE.sub(rewrite_import, line)
 
 
 # Applies main rename and import rewrites to one copied file content.
@@ -255,6 +253,10 @@ def parse_args() -> argparse.Namespace:
     # provided in manifest mode it is silently ignored.
     parser.add_argument("--backend", choices=["dvm", "llvm"])
     parser.add_argument("--copy-count", type=int, default=3)
+    # Manifest mode only: a manifest may hard-code artifact paths in its linking options
+    # (e.g. a static library built by another task), which resolve only when the check
+    # builds into the very directory those paths point at.
+    parser.add_argument("--build-dir")
     return parser.parse_args()
 
 
@@ -281,7 +283,7 @@ def compile_packages_manifest(
         "-a",
         str(build_dir),
     ]
-    command.extend(std_artifacts_path_args())
+    command.extend(std_artifacts_path_args(compile_options))
 
     if compile_options.strip():
         command.extend(shlex.split(compile_options))
@@ -336,7 +338,7 @@ def run_manifest_mode(args: argparse.Namespace) -> int:
     # the manifest), so manifest mode is not safe under concurrent cases that
     # share packages; only the build directory is private.
     work_dir = make_work_dir()
-    build_dir = work_dir / "build"
+    build_dir = Path(args.build_dir) if args.build_dir else work_dir / "build"
     created_files: list[Path] = []
 
     try:
@@ -428,7 +430,7 @@ def compile_package(
         "-n",
         f"package_{module_name}",
     ]
-    command.extend(std_artifacts_path_args())
+    command.extend(std_artifacts_path_args(compile_options))
 
     if compile_options.strip():
         command.extend(shlex.split(compile_options))
