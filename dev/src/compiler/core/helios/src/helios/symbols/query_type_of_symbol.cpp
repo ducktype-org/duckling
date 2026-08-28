@@ -44,6 +44,15 @@ namespace compiler::helios {
 				symbol_type_qresult = tsh::SymbolType<>::withDefaults(type);
 			}
 
+			void setSymbolTypeByTypeExpr(const pst::Access<pst::ExprElement> expr) {
+				const auto type_ctv = getTypeCTVFromPST(ctx, expr);
+				if (type_ctv.hasFailed()) {
+					setFailed();
+					return;
+				}
+				setTypeOfSymbol(type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value());
+			}
+
 			void setSymbolTypeByTypeExpr(
 				const pst::Access<pst::ExprElement> expr, const tsh::Mutability expected_mutability
 			) {
@@ -190,9 +199,7 @@ namespace compiler::helios {
 					return;
 				}
 
-				setSymbolTypeByTypeExpr(
-					constraint.value().unlock(ctx)->getExpr().unlock(ctx), tsh::Mutability::Immutable
-				);
+				setSymbolTypeByTypeExpr(constraint.value().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
 			void handleForIterator(pst::Access<pst::For> stmt) {
