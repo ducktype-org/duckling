@@ -719,13 +719,6 @@ namespace vm::persistent::detail {
 			                                | std::views::join | std::ranges::to<std::deque>();
 
 
-			auto emplace_branch = [&](auto& l, auto& r) -> base::Optional<NodeID> {
-				if constexpr (RECONSTRUCT)
-					return st.emplaceBranch(*l, *r);
-				else
-					return std::nullopt;
-			};
-
 			auto helper
 				= [&](this auto&& self, posT cur_pos, NodeID node) -> base::Optional<NodeID> {
 				if (nodes_to_visit.empty()) return range_constructor.out_of_range(node, cur_pos);
@@ -740,37 +733,33 @@ namespace vm::persistent::detail {
 					return range_constructor.in_range(node, cur_pos);
 				}
 
-				NodeID left_n, right_n;
-				auto   node_pos = st.getPos(node);
+				NodeID     left_n, right_n;
+				const auto node_pos = st.getPos(node);
 
-				[&] {
-					if (node == EMPTY) {
-						left_n  = EMPTY;
-						right_n = EMPTY;
-						return;
-					}
+				if (node == EMPTY) {
+					left_n  = EMPTY;
+					right_n = EMPTY;
+				}
 
-					if (cur_pos == node_pos) {
-						auto [l, r] = st.getChildren(node);
-						left_n      = l;
-						right_n     = r;
-						return;
-					}
+				if (cur_pos == node_pos) {
+					auto [l, r] = st.getChildren(node);
+					left_n      = l;
+					right_n     = r;
+				}
 
-					if (inSubtree(node_pos, cur_pos)) {
-						auto  dir       = dirToChild(node_pos, cur_pos);
-						auto& to_change = dir == Dir::Left ? left_n : right_n;
-						to_change       = node;
-						return;
-					}
-
-					CORE_UNREACHABLE();
-				}();
+				if (cur_pos != node_pos) {
+					auto dir = dirToChild(node_pos, cur_pos);
+					left_n   = dir == Dir::Left ? node : EMPTY;
+					right_n  = dir == Dir::Rght ? node : EMPTY;
+				}
 
 				auto new_left  = self(getChildPos(cur_pos, Dir::Left), left_n);
 				auto new_right = self(getChildPos(cur_pos, Dir::Rght), right_n);
 
-				return emplace_branch(new_left, new_right);
+				if constexpr (RECONSTRUCT)
+					return st.emplaceBranch(*new_left, *new_right);
+				else
+					return std::nullopt;
 			};
 
 			auto lca_pos = getLCAPos(left_pos, right_pos);
