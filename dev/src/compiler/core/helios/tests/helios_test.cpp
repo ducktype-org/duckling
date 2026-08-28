@@ -2330,7 +2330,7 @@ private:
 	}
 
 	void testMangler() {
-		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling")));
 		const auto& hout_unit
 			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
@@ -2437,6 +2437,23 @@ private:
 
 		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub6subFunEFidEE$metadata_v5", mangled_sub_fun.str());
 		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
+
+		auto const_1 = getChain("GlobalConst", root_scope).back();
+		auto const_2 = getChain("foooo.LocalConst", root_scope).back();
+		auto const_3 = getChain("Mspc.Ooo.goooo.NestedLocalConst", root_scope).back();
+
+		auto mangle = [&](compiler::helios::SymID sym) {
+			return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                          = sym });
+		};
+
+		auto const_1_n = mangle(const_1).strView();
+		auto const_2_n = mangle(const_2).strView();
+		auto const_3_n = mangle(const_3).strView();
+
+		ASSERT_EQUAL("_Q_M8manglingG11GlobalConst", const_1_n);
+		ASSERT_EQUAL("_Q_M8manglingN5foooo10LocalConstE", const_2_n);
+		ASSERT_EQUAL("_Q_M8manglingN4Mspc3Ooo5goooo16NestedLocalConstE", const_3_n);
 	}
 
 	void testManglerSpecialMembers() {

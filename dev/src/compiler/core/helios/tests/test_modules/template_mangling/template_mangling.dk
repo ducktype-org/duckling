@@ -11,6 +11,8 @@ namespace Name {
     class Tcls {}
 }
 
+
+
 fun hoo(j: i64) -> i64 = {
     return j;
 }

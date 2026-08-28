@@ -808,6 +808,7 @@ namespace compiler::helios {
 			switch (key.symbol.ref->common.kind) {
 			case SymbolKind::Using:
 			case SymbolKind::Namespace:
+			case SymbolKind::Function:
 			case SymbolKind::Import: {
 				// @NOTE: for now imports are done via linked scope that looks at root
 				// module scope, but in the future it might be changed to custom code
@@ -930,10 +931,10 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.ref->common.kind) {
 			case SymbolKind::Namespace:
+			case SymbolKind::Function:
 				return queryBodyCodeScopeFor(ctx, key.ref->stmtCast(ctx).value());
 
-
-			// Special cases for "wildcards":
+				// Special cases for "wildcards":
 			case SymbolKind::Using:
 			case SymbolKind::Import: {
 				QueryLinkedScopeVisitor visitor(ctx, key);

@@ -4,7 +4,10 @@ namespace Nmspc {
     var B: i64 = 4 + 4;
 }
 
+const GlobalConst: i32 = 5;
+
 fun foooo(a: i32) -> i32 = {
+    const LocalConst: i32 = 6;
     return a;
 }
 
@@ -13,6 +16,7 @@ namespace Mspc {
         const Cnst: i32 = 3;
 
         fun goooo(a: i32, b: f64) -> i32 = {
+            const NestedLocalConst: i32 = 7;
             var x: i64 = 5;
             return a;
         }

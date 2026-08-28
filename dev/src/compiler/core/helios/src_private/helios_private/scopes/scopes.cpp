@@ -357,6 +357,10 @@ namespace compiler::helios {
 			void visitClass(pst::Access<pst::Class> class_stmt) override {
 				out = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt->getBody() });
 			}
+
+			void visitFun(pst::Access<pst::Fun> fun_stmt) override {
+				out = ctx.query<QueryPrimaryCodeScopeFor>({ fun_stmt->getBody() });
+			}
 		};
 
 		QueryBodyScopeVisitor visitor(ctx, stmt);
