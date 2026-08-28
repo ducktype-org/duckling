@@ -52,7 +52,7 @@ namespace vm::persistent {
 		 * @note A new ID is assigned if the value has not been stored before.
 		 */
 		usize emplaceNewVal(const ValT& var) {
-			auto [is_new, var_id] = held_values.emplaceByLeft(var, next_val_id);
+			const auto [is_new, var_id] = held_values.emplaceByLeft(var, next_val_id);
 			next_val_id += (is_new ? 1 : 0);
 			return var_id;
 		}
@@ -62,7 +62,7 @@ namespace vm::persistent {
 		 * @note A new ID is assigned if the key has not been stored before.
 		 */
 		usize emplaceNewKey(const KeyT& key) {
-			auto [is_new, var_id] = held_keys.emplaceByLeft(key, next_key_id);
+			const auto [is_new, var_id] = held_keys.emplaceByLeft(key, next_key_id);
 			next_key_id += (is_new ? 1 : 0);
 			return var_id;
 		}
@@ -76,7 +76,7 @@ namespace vm::persistent {
 		 * @brief Returns the number of entries in a hash map state.
 		 */
 		usize size(HashMapStateID state_id) const {
-			auto mem_state = toMemState(state_id);
+			const auto mem_state = toMemState(state_id);
 			return inner.size(mem_state);
 		}
 
@@ -86,19 +86,19 @@ namespace vm::persistent {
 		base::HashMap<KeyT, ValT, KeyH> toMap(HashMapStateID state_id) const {
 			if (state_id == EMPTY) return {};
 
-			auto mem_state = toMemState(state_id);
-			auto [l, r]    = inner.getRangeOf(mem_state);
-			auto iter      = *inner.getPathTo(mem_state, l);
+			const auto mem_state = toMemState(state_id);
+			const auto [l, r]    = inner.getRangeOf(mem_state);
+			auto iter            = *inner.getPathTo(mem_state, l);
 
 			base::HashMap<KeyT, ValT, KeyH> ans = {};
 
 			bool keep_going = true;
 
 			while (keep_going) {
-				auto val_id = iter.getValue();
-				auto idx    = iter.getIdx();
+				const auto val_id = iter.getValue();
+				const auto idx    = iter.getIdx();
 
-				auto [_, success]
+				const auto [_, success]
 					= ans.emplace(held_keys.atRight(idx), held_values.atRight(val_id));
 
 				CORE_ASSERT(success, "I need the value to be successfully emplaced");
@@ -114,7 +114,7 @@ namespace vm::persistent {
 		 */
 		bool contains(HashMapStateID state_id, const KeyT& key) const {
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
-				auto state = toMemState(state_id);
+				const auto state = toMemState(state_id);
 				return inner.active(state, key_id);
 			}
 
@@ -132,7 +132,7 @@ namespace vm::persistent {
 		}
 
 		const ValT& at(HashMapStateID state_id, const KeyT& key) const {
-			auto state = toMemState(state_id);
+			const auto state = toMemState(state_id);
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
 				if_opt_some(inner.access(state, key_id), val_id) {
 					return held_values.atRight(val_id);
@@ -145,9 +145,9 @@ namespace vm::persistent {
 		 * @brief Returns a state with a key-value pair inserted or replaced.
 		 */
 		HashMapStateID insert(HashMapStateID state_id, const KeyT& key, const ValT& var) {
-			auto state  = toMemState(state_id);
-			auto key_id = emplaceNewKey(key);
-			auto val_id = emplaceNewVal(var);
+			const auto state  = toMemState(state_id);
+			const auto key_id = emplaceNewKey(key);
+			const auto val_id = emplaceNewVal(var);
 			return toMapState(inner.set(state, key_id, val_id));
 		}
 
@@ -156,7 +156,7 @@ namespace vm::persistent {
 		 * @note If the key is not present, the state is unchanged.
 		 */
 		HashMapStateID erase(HashMapStateID state_id, const KeyT& key) {
-			auto state = toMemState(state_id);
+			const auto state = toMemState(state_id);
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
 				return toMapState(inner.erase(state, key_id));
 			}
@@ -172,7 +172,7 @@ namespace vm::persistent {
 		) {
 			if (contains(state_id, key)) return { false, state_id };
 
-			auto ans = insert(state_id, key, var);
+			const auto ans = insert(state_id, key, var);
 			return { true, ans };
 		}
 

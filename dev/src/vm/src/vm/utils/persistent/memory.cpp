@@ -21,18 +21,18 @@
 namespace vm::persistent {
 
 	std::vector<std::pair<usize, usize>> Memory::toVec(MemoryStateID state) const {
-		auto root = validateInput(state);
+		const auto root = validateInput(state);
 
 		if (root == detail::SegmentTree::EMPTY) return {};
 
 		std::vector<std::pair<usize, usize>> ans = {};
 
-		auto [left_idx, _] = inner.getRange(root);
-		auto path          = *getPathTo(state, left_idx);
+		const auto [left_idx, _] = inner.getRange(root);
+		auto path                = *getPathTo(state, left_idx);
 
 		do {
-			auto idx = path.getIdx();
-			auto val = path.getValue();
+			const auto idx = path.getIdx();
+			const auto val = path.getValue();
 			ans.emplace_back(idx, val);
 		} while (path.moveToValid(Dir::Rght, 0));
 
@@ -40,7 +40,7 @@ namespace vm::persistent {
 	}
 
 	Memory::diffResT Memory::getDiff(MemoryStateID state_1, MemoryStateID state_2) const {
-		auto [root_1, root_2] = validateInput(state_1, state_2);
+		const auto [root_1, root_2] = validateInput(state_1, state_2);
 
 		using helper = std::function<void(ID, usize)>;
 
@@ -72,11 +72,11 @@ namespace vm::persistent {
 	}
 
 	MemoryStateID Memory::merge(MemoryStateID state_1, MemoryStateID state_2, ConflictPolicy policy) {
-		auto [root_1, root_2] = validateInput(state_1, state_2);
+		const auto [root_1, root_2] = validateInput(state_1, state_2);
 
 		std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>> ans = {};
 
-		auto new_root = inner.rebuildFromTwo(
+		const auto new_root = inner.rebuildFromTwo(
 			root_1,
 			root_2,
 			detail::SegmentTree::MergeBuilder<ID>{
@@ -97,9 +97,9 @@ namespace vm::persistent {
 	}
 
 	MemoryStateID Memory::slice(MemoryStateID state, usize left_idx, usize right_idx) {
-		auto root = validateInput(state, left_idx, right_idx);
+		const auto root = validateInput(state, left_idx, right_idx);
 
-		auto new_root = inner.rebuildRange(
+		const auto new_root = inner.rebuildRange(
 			root,
 			left_idx,
 			right_idx,
@@ -113,9 +113,9 @@ namespace vm::persistent {
 	}
 
 	MemoryStateID Memory::eraseRange(MemoryStateID state, usize left_idx, usize right_idx) {
-		auto root = validateInput(state, left_idx, right_idx);
+		const auto root = validateInput(state, left_idx, right_idx);
 
-		auto new_root = inner.rebuildRange(
+		const auto new_root = inner.rebuildRange(
 			root,
 			left_idx,
 			right_idx,
@@ -138,15 +138,15 @@ namespace vm::persistent {
 	MemoryStateID Memory::setMultiple(MemoryStateID state, std::deque<std::pair<usize, usize>> vals) {
 		std::ranges::sort(vals);
 		using namespace std::views;
-		std::deque<usize> idxs{};
-		for (auto [idx, _]: vals) idxs.emplace_back(idx);
+		using std::ranges::to;
+		const auto idxs = vals | transform(&std::pair<usize, usize>::first) | to<std::deque>();
 
-		auto root = validateInput(state, idxs);
+		const auto root = validateInput(state, idxs);
 
-		auto new_root
+		const auto new_root
 			= inner.reconstructLeaves(root, idxs, [&](usize cur_idx, base::Optional<usize>) -> ID {
 				  CORE_ASSERT(vals.size(), "there must be sth");
-				  auto [idx, val] = vals.front();
+				  const auto [idx, val] = vals.front();
 				  vals.pop_front();
 				  CORE_ASSERT(cur_idx == idx, "expected other idx");
 				  return inner.emplaceLeaf(idx, val);
@@ -157,11 +157,11 @@ namespace vm::persistent {
 
 	MemoryStateID Memory::eraseMultiple(MemoryStateID state, std::deque<usize> idxs) {
 		std::ranges::sort(idxs);
-		auto root = validateInput(state, idxs);
+		const auto root = validateInput(state, idxs);
 
-		auto new_root = inner.reconstructLeaves(root, idxs, [&](usize, base::Optional<usize>) {
-			return detail::SegmentTree::EMPTY;
-		});
+		const auto new_root = inner.reconstructLeaves(
+			root, idxs, [&](usize, base::Optional<usize>) { return detail::SegmentTree::EMPTY; }
+		);
 
 		return toState(new_root);
 	}
@@ -175,7 +175,7 @@ namespace vm::persistent {
 	}
 
 	usize Memory::size(MemoryStateID state) const {
-		auto root = validateInput(state);
+		const auto root = validateInput(state);
 		return inner.getSize(root);
 	}
 
@@ -189,7 +189,7 @@ namespace vm::persistent {
 
 	memIt& memIt::operator++() {
 		if_opt_some(maybe_path, path) {
-			auto success = path.moveToValid(detail::SegmentTree::Dir::Rght);
+			const auto success = path.moveToValid(detail::SegmentTree::Dir::Rght);
 			if (!success) maybe_path = std::nullopt;
 		}
 		return *this;
@@ -203,7 +203,7 @@ namespace vm::persistent {
 
 	memIt& memIt::operator--() {
 		if_opt_some(maybe_path, path) {
-			auto success = path.moveToValid(detail::SegmentTree::Dir::Left);
+			const auto success = path.moveToValid(detail::SegmentTree::Dir::Left);
 			if (!success) maybe_path = std::nullopt;
 		}
 		return *this;
@@ -242,7 +242,7 @@ namespace vm::persistent {
 	}
 
 	usize MemoryStateView::operator[](usize idx) const {
-		auto val = atMaybe(idx);
+		const auto val = atMaybe(idx);
 		if (!val.has_value()) throw std::out_of_range("idx is not active in this memory state");
 		return *val;
 	}

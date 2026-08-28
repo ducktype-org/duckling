@@ -51,7 +51,7 @@ namespace vm::persistent {
 
 		// Validates a memory state.
 		ID validateInput(MemoryStateID state) const {
-			auto root = fromState(state);
+			const auto root = fromState(state);
 			if (!inner.knows(root)) throw std::invalid_argument("unknown memory state");
 
 			return root;
@@ -62,7 +62,7 @@ namespace vm::persistent {
 		 * @return The root node corresponding to the state.
 		 */
 		ID validateInput(MemoryStateID state, const std::deque<usize>& idxs) const {
-			auto root = validateInput(state);
+			const auto root = validateInput(state);
 
 			for (auto idx: idxs) validateIdx(idx);
 			for (usize i = 1; i < idxs.size(); i++) {
@@ -75,15 +75,15 @@ namespace vm::persistent {
 
 		// Validates a memory state and an index.
 		ID validateInput(MemoryStateID state, usize idx) const {
-			auto root = validateInput(state);
+			const auto root = validateInput(state);
 			validateIdx(idx);
 			return root;
 		}
 
 		// Validates two memory states.
 		std::pair<ID, ID> validateInput(MemoryStateID state_1, MemoryStateID state_2) const {
-			auto root_1 = validateInput(state_1);
-			auto root_2 = validateInput(state_2);
+			const auto root_1 = validateInput(state_1);
+			const auto root_2 = validateInput(state_2);
 			return { root_1, root_2 };
 		}
 
@@ -92,7 +92,7 @@ namespace vm::persistent {
 		 * @return The root node corresponding to the state.
 		 */
 		ID validateInput(MemoryStateID state, usize l, usize r) const {
-			auto root = validateInput(state);
+			const auto root = validateInput(state);
 			if (l >= r) throw std::invalid_argument("left bound is bigger or equal to right bound");
 			if (r > IDX_END) throw std::invalid_argument("right bound is too big");
 
@@ -100,11 +100,13 @@ namespace vm::persistent {
 		}
 
 	public:
+		using idxT = detail::SegmentTree::idxT;
+
 		/**
 		 * @brief Returns the smallest range containing all active indices in a state.
 		 */
 		std::pair<usize, usize> getRangeOf(MemoryStateID state) const {
-			auto root = validateInput(state);
+			const auto root = validateInput(state);
 			return inner.getRange(root);
 		}
 
@@ -116,12 +118,12 @@ namespace vm::persistent {
 		base::Optional<Path> getPathTo(
 			MemoryStateID state, usize idx, base::Optional<Dir> opt_dir = std::nullopt
 		) const {
-			auto root = validateInput(state, idx);
+			const auto root = validateInput(state, idx);
 			return inner.getPathTo(root, idx, opt_dir);
 		}
 
 		constexpr static MemoryStateID EMPTY   = MemoryStateID{ u64(detail::SegmentTree::EMPTY) };
-		constexpr static auto          IDX_END = detail::SegmentTree::IDX_END;
+		constexpr static idxT          IDX_END = detail::SegmentTree::IDX_END;
 
 		using ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;
 		inline const static ConflictPolicy DEFAULT_CONFLICT_POLICY

@@ -48,9 +48,9 @@ namespace vm::persistent {
 		 * @return The corresponding memory state.
 		 */
 		MemoryStateID validateState(VectorStateID vec_state) const {
-			auto        state  = toMemState(vec_state);
-			const usize size   = inner.size(state);
-			auto [l, r]        = inner.getRangeOf(state);
+			const auto  state = toMemState(vec_state);
+			const usize size  = inner.size(state);
+			const auto [l, r] = inner.getRangeOf(state);
 
 			CORE_ASSERT(r == size, "Size of vector isn't consistent");
 			CORE_ASSERT(l == 0, "left bound starts always on 0");
@@ -63,7 +63,7 @@ namespace vm::persistent {
 		 * @note A new ID is assigned if the value has not been stored before.
 		 */
 		usize emplaceNewVal(const VarT& var) {
-			auto [is_new, var_id] = held_values.emplaceByLeft(var, next_val_id);
+			const auto [is_new, var_id] = held_values.emplaceByLeft(var, next_val_id);
 			next_val_id += (is_new ? 1 : 0);
 			return var_id;
 		}
@@ -76,7 +76,7 @@ namespace vm::persistent {
 		 * @brief Returns the element at an index in a vector state.
 		 */
 		const VarT& at(VectorStateID state_id, usize idx) const {
-			auto state = validateState(state_id);
+			const auto state = validateState(state_id);
 			if_opt_some(inner.access(state, idx), val_id) { return held_values.atRight(val_id); }
 			throw std::out_of_range("idx out of bounds");
 		}
@@ -86,7 +86,7 @@ namespace vm::persistent {
 		 */
 		[[nodiscard]]
 		usize size(VectorStateID state_id) const {
-			auto state = validateState(state_id);
+			const auto state = validateState(state_id);
 			return inner.size(state);
 		}
 
@@ -95,10 +95,10 @@ namespace vm::persistent {
 		 */
 		[[nodiscard]]
 		VectorStateID push(VectorStateID state_id, const VarT& var) {
-			auto  state     = validateState(state_id);
-			auto  size      = inner.size(state);
-			usize val_id    = emplaceNewVal(var);
-			auto  new_state = inner.set(state, size, val_id);
+			const auto state = validateState(state_id);
+			const auto size  = inner.size(state);
+			const auto val_id    = emplaceNewVal(var);
+			const auto new_state = inner.set(state, size, val_id);
 
 			return toVecState(new_state);
 		}
@@ -108,11 +108,11 @@ namespace vm::persistent {
 		 */
 		[[nodiscard]]
 		VectorStateID change(VectorStateID state_id, usize idx, const VarT& var) {
-			auto state = validateState(state_id);
+			const auto state = validateState(state_id);
 			if (idx >= size(state_id)) throw std::invalid_argument("idx out of bounds");
 
-			usize val_id    = emplaceNewVal(var);
-			auto  new_state = inner.set(state, idx, val_id);
+			const usize val_id    = emplaceNewVal(var);
+			const auto  new_state = inner.set(state, idx, val_id);
 
 			return toVecState(new_state);
 		}
@@ -127,8 +127,8 @@ namespace vm::persistent {
 			if (left > right) throw std::invalid_argument("left idx was bigger than right");
 			if (right > size(state_id)) throw std::invalid_argument("right bound is too big");
 
-			auto state  = validateState(state_id);
-			auto m_iter = inner.getPathTo(state, left, Memory::Dir::Rght);
+			const auto state  = validateState(state_id);
+			const auto m_iter = inner.getPathTo(state, left, Memory::Dir::Rght);
 
 			if_opt_none(m_iter) return {};
 			auto iter = *m_iter;
@@ -140,7 +140,7 @@ namespace vm::persistent {
 			for (usize i = 0; i < right - left; i++) {
 				CORE_ASSERT(iter.getIdx() == left + i, "I skipped some fields?!");
 
-				auto val_id = iter.getValue();
+				const auto val_id = iter.getValue();
 				ans.emplace_back(held_values.atRight(val_id));
 				if (i + 1 < right - left) {
 					const bool moved = iter.moveToValid(Memory::Dir::Rght);
@@ -156,13 +156,13 @@ namespace vm::persistent {
 		 * @note `pref_size` must not exceed the size of the vector.
 		 */
 		VectorStateID getPrefix(VectorStateID state_id, usize pref_size) {
-			auto state = validateState(state_id);
-			auto size  = inner.size(state);
+			const auto state = validateState(state_id);
+			const auto size  = inner.size(state);
 			if (pref_size > size) throw std::invalid_argument("trying to take too much");
 			if (pref_size == size) return state_id;
 			if (pref_size == 0) return EMPTY;
 
-			auto new_state = inner.slice(state, 0, pref_size);
+			const auto new_state = inner.slice(state, 0, pref_size);
 
 			return toVecState(new_state);
 		}
@@ -172,12 +172,12 @@ namespace vm::persistent {
 		 * @note The number of values to remove must not exceed the size of the vector.
 		 */
 		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
-			auto state = validateState(state_id);
-			auto size  = inner.size(state);
+			const auto state = validateState(state_id);
+			const auto size  = inner.size(state);
 			if (how_many_pop > size) throw std::invalid_argument("trying to pop too much");
 			if (how_many_pop == size) return EMPTY;
 
-			auto new_state = inner.slice(state, 0, size - how_many_pop);
+			const auto new_state = inner.slice(state, 0, size - how_many_pop);
 
 			return toVecState(new_state);
 		}
