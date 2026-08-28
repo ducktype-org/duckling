@@ -93,7 +93,11 @@ std::string generateOptionsBlock(
 		}
 		if (param.getValueParser() != nullptr)
 			names_stream << " <" + param.getValueParser()->getTypeName() + ">";
-		output << std::setw(padding) << std::left << names_stream.str();
+		const auto names = names_stream.str();
+		if (padding < names.size() + 2)
+			output << names << '\n' << std::setw(padding) << std::left << " ";
+		else
+			output << std::setw(padding) << std::left << names;
 		output << param.getShortDesc().stdString() << '\n';
 
 		if_opt_some(param.getLongDesc(), long_desc) {
@@ -113,7 +117,10 @@ std::string generateSubcommandsBlock(const std::vector<clah::Clah>& subcommands,
 	output << "\nAvailable Commands:\n";
 	for (const auto& cmd: subcommands) {
 		std::string name = " " + cmd.getName();
-		output << std::setw(padding) << std::left << name;
+		if (padding < name.size() + 2)
+			output << name << '\n' << std::setw(padding) << std::left << " ";
+		else
+			output << std::setw(padding) << std::left << name;
 		output << cmd.getDescription() << '\n';
 	}
 	return output.str();
