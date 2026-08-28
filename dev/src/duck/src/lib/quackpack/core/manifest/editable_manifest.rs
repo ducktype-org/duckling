@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::str::FromStr;
 
 use yaml_edit::{Mapping, YamlFile, YamlNode};
 
@@ -6,7 +7,7 @@ use crate::quackpack::core::{DependencyKind, Package, PackageContext};
 use crate::quackpack::schemas::manifest::Dependency;
 use crate::util::DescriptionWithAnArticle;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail_internal};
 
 /// Desired order of the top-level keys in a manifest.
 const TOPLEVEL_KEYS_ORDER: [&str; 6] = [
@@ -62,7 +63,7 @@ impl<'duck> EditableManifest<'duck> {
     pub fn new(pcx: &'duck PackageContext) -> QuackResult<Self> {
         let ctx = pcx.ctx();
         let pkg = pcx.package().get_package();
-        let content = YamlFile::from_path(pkg.manifest_path()).with_context(|| {
+        let content = YamlFile::from_str(pkg.original_content()).with_context(|| {
             format!(
                 "when trying to editably read the manifest at `{}`",
                 pkg.manifest_path().display()
@@ -86,21 +87,21 @@ impl<'duck> EditableManifest<'duck> {
     /// Get the underlying top level [`Mapping`] of this [`EditableManifest`].
     fn as_mapping(&self) -> QuackResult<Mapping> {
         if self.yaml_file.documents().count() > 1 {
-            qp_bail!(
+            qp_bail_internal!(
                 "manifest file `{}` contains multiple YAML documents which is not supported",
                 self.manifest_path().display()
             )
         }
         self.yaml_file
             .document()
-            .with_context(|| {
+            .with_context_internal(|| {
                 format!(
                     "no yaml document found inside `{}`",
                     self.manifest_path().display()
                 )
             })?
             .as_mapping()
-            .with_context(|| {
+            .with_context_internal(|| {
                 format!(
                     "document found inside `{}` is not a mapping",
                     self.manifest_path().display()
@@ -206,7 +207,7 @@ impl<'duck> EditableManifest<'duck> {
         kind: DependencyKind,
     ) -> QuackResult<Mapping> {
         let YamlNode::Mapping(mapping) = mapping else {
-            qp_bail!(
+            qp_bail_internal!(
                 "in the manifest at `{}`, `{}` should be a mapping, not {}",
                 self.manifest_path().display(),
                 kind.key_in_manifest(),
