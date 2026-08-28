@@ -14,7 +14,7 @@ namespace vm::persistent {
 	 * OPERATIONS
 	 */
 	template<typename Key, typename Val, typename Hasher = std::hash<Key>>
-	class DummyHashMap {
+	class DummyHashMap final {
 		std::vector<base::HashMap<Key, Val, Hasher>> copies;
 
 		[[nodiscard]]

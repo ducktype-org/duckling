@@ -541,7 +541,7 @@ namespace vm::persistent::detail {
 			};
 
 			template<typename... ArgT>
-			base::Optional<NodeID> invoke(auto MergeBuilder<ResT>::* member, ArgT&&... args) const {
+			base::Optional<NodeID> invoke(auto MergeBuilder::* member, ArgT&&... args) const {
 				if constexpr (std::is_same_v<ResT, NodeID>)
 					return (this->*member)(std::forward<ArgT>(args)...);
 				else {

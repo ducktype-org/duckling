@@ -210,7 +210,7 @@ namespace vm::persistent {
 	/**
 	 * @brief draft impl of class for wrapping a id for memory state
 	 */
-	class MemoryStateView {
+	class MemoryStateView final {
 		MemoryStateID id;
 		const Memory& mem;
 

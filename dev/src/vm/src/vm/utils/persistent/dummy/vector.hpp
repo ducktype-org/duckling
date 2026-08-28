@@ -16,7 +16,7 @@ namespace vm::persistent {
 	 * OPERATIONS
 	 */
 	template<typename T>
-	class DummyVector {
+	class DummyVector final {
 		std::vector<std::pair<base::Optional<usize>, std::vector<T>>> copies;
 
 		[[nodiscard]]
