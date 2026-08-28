@@ -20,6 +20,9 @@ namespace Mspc {
         class Cls {
             data: i32 = 0 as i32;
         }
+
+        var x = Cls(42); 
+        var r: ref Cls = &x;
     }
 
     const ABC: i64 = 4 + 4;
