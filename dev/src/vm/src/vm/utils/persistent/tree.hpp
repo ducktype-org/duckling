@@ -731,7 +731,7 @@ namespace vm::persistent::detail {
 					return range_constructor.in_range(node, cur_pos);
 				}
 
-				NodeID     left_n, right_n;
+				NodeID     left_n{}, right_n{};
 				const auto node_pos = st.getPos(node);
 
 				if (node == EMPTY) {
@@ -818,9 +818,15 @@ namespace vm::persistent::detail {
 		base::Optional<Path> getPathTo(
 			NodeID root, idxT idx, base::Optional<Dir> opt_dir = std::nullopt
 		) const {
-			auto [begin, end] = getRange(root);
+			const auto [begin, end] = getRange(root);
 
-			if (idx < begin || end <= idx) return std::nullopt;
+			if (idx < begin || end <= idx) {
+				const auto side = idx < begin ? Dir::Left : Dir::Rght;
+				if_opt_none(opt_dir) return std::nullopt;
+				if (*opt_dir == side) return std::nullopt;
+
+				idx = side == Dir::Left ? begin : end;
+			}
 
 			std::deque<NodeID> trace = { root };
 
