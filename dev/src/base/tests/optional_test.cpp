@@ -37,6 +37,15 @@ public:
 		TESTER_ADD_TEST(testPreservingValueCategories);
 		TESTER_ADD_TEST(testAddresses);
 		TESTER_ADD_TEST(testCopyValueOr);
+		TESTER_ADD_TEST(testCopyValueOrElse);
+		TESTER_ADD_TEST(testMapOr);
+		TESTER_ADD_TEST(testFilter);
+		TESTER_ADD_TEST(testOrElse);
+		TESTER_ADD_TEST(testInspect);
+		TESTER_ADD_TEST(testFlatten);
+		TESTER_ADD_TEST(testOkOr);
+		TESTER_ADD_TEST(testTakeAndReplace);
+		TESTER_ADD_TEST(testGetOrInsert);
 	}
 
 	template<typename X>
@@ -559,6 +568,182 @@ public:
 			Optional<CountCtrStruct>{}.copyValueOr(value),
 			"copyValueOr failed (empty r-value)"
 		);
+	}
+
+	void testCopyValueOrElse() {
+		u64 calls = 0;
+		int base  = 41;
+		// The fallback takes no arguments, exactly like Rust's unwrap_or_else: whatever it needs
+		// is captured.
+		auto make = [&] {
+			calls++;
+			return base + 1;
+		};
+
+		Optional<int> opt = 1;
+		ASSERT_EQUAL(1, opt.copyValueOrElse(make));
+		// This is the whole point of the method: a non-empty optional never runs the fallback.
+		ASSERT_EQUAL(u64{ 0 }, calls);
+
+		Optional<int> empty;
+		ASSERT_EQUAL(42, empty.copyValueOrElse(make));
+		ASSERT_EQUAL(u64{ 1 }, calls);
+
+		ASSERT_EQUAL(0, empty.copyValueOrDefault());
+		ASSERT_EQUAL(1, opt.copyValueOrDefault());
+
+		// Skipping the fallback also means skipping the objects it would have built.
+		CountCtrStruct::counter().reset();
+		auto&& result
+			= Optional<CountCtrStruct>{ 3 }.copyValueOrElse([] { return CountCtrStruct{ 4 }; });
+		checkCountsAndReset(
+			CtrAssignCounter{
+				.value_constructed = 1,
+				.move_constructed  = 1,
+				.destructed        = 1,
+			},
+			"copyValueOrElse on non-empty r-value"
+		);
+		assertEqual(CountCtrStruct{ 3 }, result, "copyValueOrElse failed (non-empty r-value)");
+	}
+
+	void testMapOr() {
+		auto twice = [](int value) { return value * 2; };
+
+		Optional<int> opt = 4;
+		Optional<int> empty;
+		ASSERT_EQUAL(8, opt.mapOr(-1, twice));
+		ASSERT_EQUAL(-1, empty.mapOr(-1, twice));
+
+		u64  calls    = 0;
+		auto fallback = [&]() {
+			calls++;
+			return -1;
+		};
+		ASSERT_EQUAL(8, opt.mapOrElse(fallback, twice));
+		ASSERT_EQUAL(u64{ 0 }, calls);
+		ASSERT_EQUAL(-1, empty.mapOrElse(fallback, twice));
+		ASSERT_EQUAL(u64{ 1 }, calls);
+
+		// The mapping function may change the type, just like map does.
+		ASSERT_EQUAL(4.4, opt.mapOr(0.0, [](int value) { return value * 1.1; }));
+	}
+
+	void testFilter() {
+		auto is_even = [](int value) { return value % 2 == 0; };
+
+		Optional<int> opt = 4;
+		ASSERT_EQUAL(4, *opt.filter(is_even));
+		ASSERT_TRUE(opt.filter([](int value) { return value % 2 == 1; }).empty());
+
+		Optional<int> empty;
+		ASSERT_TRUE(empty.filter(is_even).empty());
+
+		// A predicate taking a reference must not consume the stored value.
+		Optional<std::string> text = "duckling";
+		ASSERT_EQUAL("duckling", *text.filter([](const std::string& value) {
+			return !value.empty();
+		}));
+		ASSERT_EQUAL("duckling", *text);
+	}
+
+	void testOrElse() {
+		u64 calls = 0;
+		int value = 7;
+		// No arguments here either, so orElse and copyValueOrElse are used the same way.
+		auto make = [&]() -> Optional<int> {
+			calls++;
+			return value;
+		};
+
+		Optional<int> opt = 1;
+		ASSERT_EQUAL(1, *opt.orElse(make));
+		ASSERT_EQUAL(u64{ 0 }, calls);
+
+		Optional<int> empty;
+		ASSERT_EQUAL(7, *empty.orElse(make));
+		ASSERT_EQUAL(u64{ 1 }, calls);
+
+		// The function is allowed to give back an empty optional as well.
+		ASSERT_TRUE(empty.orElse([]() { return Optional<int>{}; }).empty());
+	}
+
+	void testInspect() {
+		Optional<int> opt  = 1;
+		int           seen = 0;
+		opt.inspect([&](int value) { seen = value; });
+		ASSERT_EQUAL(1, seen);
+
+		// The reference is not const, so the stored value can be edited in place.
+		opt.inspect([](int& value) { value++; });
+		ASSERT_EQUAL(2, *opt);
+
+		// inspect hands the optional back, so it fits in the middle of a chain.
+		auto chained = opt.inspect([&](int value) { seen = value; }
+		).map([](int value) { return value * 2; });
+		ASSERT_EQUAL(4, *chained);
+		ASSERT_EQUAL(2, seen);
+
+		seen = 0;
+		Optional<int> empty;
+		empty.inspect([&](int value) { seen = value; });
+		ASSERT_EQUAL(0, seen);
+	}
+
+	void testFlatten() {
+		Optional<Optional<int>> nested = Optional<int>(1);
+		ASSERT_EQUAL(1, *nested.flatten());
+
+		Optional<Optional<int>> inner_empty = Optional<int>{};
+		ASSERT_TRUE(inner_empty.flatten().empty());
+
+		Optional<Optional<int>> outer_empty;
+		ASSERT_TRUE(outer_empty.flatten().empty());
+	}
+
+	void testOkOr() {
+		auto ok = Optional<int>(1).okOr<std::string>("empty");
+		match_optional(ok) {
+			opt_some(value) ASSERT_EQUAL(1, value);
+			opt_err(error [[maybe_unused]]) fail("okOr made an error out of a stored value");
+		}
+
+		auto error = Optional<int>().okOr<std::string>("empty");
+		match_optional(error) {
+			opt_some(value [[maybe_unused]]) fail("okOr made a value out of an empty optional");
+			opt_err(err) ASSERT_EQUAL("empty", err);
+		}
+	}
+
+	void testTakeAndReplace() {
+		Optional<std::string> opt   = "hello";
+		auto                  taken = opt.take();
+		ASSERT_TRUE(opt.empty());
+		ASSERT_EQUAL("hello", *taken);
+
+		Optional<std::string> nothing;
+		ASSERT_TRUE(nothing.take().empty());
+
+		Optional<int> number = 1;
+		ASSERT_EQUAL(1, *number.replace(2));
+		ASSERT_EQUAL(2, *number);
+
+		Optional<int> empty;
+		ASSERT_TRUE(empty.replace(5).empty());
+		ASSERT_EQUAL(5, *empty);
+	}
+
+	void testGetOrInsert() {
+		Optional<std::string> opt;
+		std::string&          inserted = opt.getOrInsert("abc");
+		ASSERT_EQUAL("abc", inserted);
+
+		// The reference points at the stored value, not at a copy.
+		inserted.push_back('d');
+		ASSERT_EQUAL("abcd", *opt);
+
+		// A stored value is never overwritten.
+		ASSERT_EQUAL("abcd", opt.getOrInsert("zzz"));
 	}
 };
 
