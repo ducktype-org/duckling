@@ -712,8 +712,8 @@ namespace vm::persistent::detail {
 			CORE_ASSERT(left_idx < right_idx, "The full range must be valid & non-empty");
 			CORE_ASSERT(right_idx <= IDX_END, "Last range must finish before the end of idxs");
 
-			posT left_pos  = left_idx | LEAF_MASK;
-			posT right_pos = (right_idx - 1) | LEAF_MASK;
+			const posT left_pos  = left_idx | LEAF_MASK;
+			const posT right_pos = (right_idx - 1) | LEAF_MASK;
 
 			std::deque<posT> nodes_to_visit = ranges | std::views::transform(getPosForRange)
 			                                | std::views::join | std::ranges::to<std::deque>();
@@ -836,21 +836,14 @@ namespace vm::persistent::detail {
 		base::Optional<Path> getPathTo(
 			NodeID root, idxT idx, base::Optional<Dir> opt_dir = std::nullopt
 		) const {
-			std::deque<NodeID> trace = {};
+			auto [begin, end] = getRange(root);
 
-			auto [left_r, right_r] = getRange(root);
+			if (idx < begin || end <= idx) return std::nullopt;
 
-			if (idx < left_r || right_r <= idx) return std::nullopt;
+			std::deque<NodeID> trace = { root };
 
-			for (NodeID node = root; true;) {
-				trace.push_front(node);
-
-				if (isLeaf(node)) {
-					CORE_ASSERT(getIndexOfLeaf(node) == idx, "invariant");
-					break;
-				}
-
-				auto [child_l, child_r] = getChildren(node);
+			while (!isLeaf(trace.front())) {
+				auto [child_l, child_r] = getChildren(trace.front());
 
 				auto [begin_l, end_l] = getRange(child_l);
 				auto [begin_r, end_r] = getRange(child_r);
@@ -862,12 +855,18 @@ namespace vm::persistent::detail {
 				}
 
 				if (begin_l <= idx && idx < end_l) {
-					node = child_l;
+					trace.push_front(child_l);
 					continue;
 				}
-				CORE_ASSERT(begin_r <= idx && idx < end_r, "someone has to");
-				node = child_r;
+
+				if (begin_r <= idx && idx < end_r) {
+					trace.push_front(child_r);
+					continue;
+				}
+
+				CORE_UNREACHABLE();
 			}
+			CORE_ASSERT(getIndexOfLeaf(trace.front()) == idx, "invariant");
 
 			return Path{
 				.trace = trace,
