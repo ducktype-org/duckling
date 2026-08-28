@@ -50,6 +50,8 @@ namespace vm::persistent::detail {
 			std::is_integral_v<valT> && std::is_unsigned_v<valT>, "valT must be an unsigned integer"
 		);
 
+		constexpr static posT TOP_BIT = posT(1) << (POS_T_SIZE - 1);
+
 	public:
 		constexpr static NodeID EMPTY    = NodeID{ 0 };
 		constexpr static posT   ROOT_POS = 1;
@@ -58,10 +60,6 @@ namespace vm::persistent::detail {
 		enum class Dir { Left, Rght };
 
 	private:
-		constexpr static posT OFFSET_MASK = (posT(-1) >> 1);
-		constexpr static posT LEAF_MASK   = posT(1) << (POS_T_SIZE - 1);
-		constexpr static posT TOP_BIT     = posT(1) << (POS_T_SIZE - 1);
-
 		struct ChildEntry {
 			NodeID left_child;
 			NodeID right_child;
@@ -119,7 +117,7 @@ namespace vm::persistent::detail {
 			auto shifted = (pos << h);
 			CORE_ASSERT(shifted & TOP_BIT, "After the shift, top bit must be set");
 
-			auto ans = shifted & OFFSET_MASK;
+			auto ans = shifted & (~TOP_BIT);
 			CORE_ASSERT(ans < IDX_END, "Returned idx must be smaller than end of idxs");
 
 			return ans;
@@ -252,7 +250,7 @@ namespace vm::persistent::detail {
 				);
 			}
 
-			auto right_guard = right_idx & OFFSET_MASK;
+			auto right_guard = right_idx & (~TOP_BIT);
 			CORE_ASSERT(
 				(right_guard != right_idx) == (right_idx == IDX_END),
 				"we modify right_guard only when right_idx == IDX_END"
@@ -712,8 +710,8 @@ namespace vm::persistent::detail {
 			CORE_ASSERT(left_idx < right_idx, "The full range must be valid & non-empty");
 			CORE_ASSERT(right_idx <= IDX_END, "Last range must finish before the end of idxs");
 
-			const posT left_pos  = left_idx | LEAF_MASK;
-			const posT right_pos = (right_idx - 1) | LEAF_MASK;
+			const posT left_pos  = left_idx | TOP_BIT;
+			const posT right_pos = (right_idx - 1) | TOP_BIT;
 
 			std::deque<posT> nodes_to_visit = ranges | std::views::transform(getPosForRange)
 			                                | std::views::join | std::ranges::to<std::deque>();
@@ -798,7 +796,7 @@ namespace vm::persistent::detail {
 
 			auto reconstructor = RangeBuilder<NodeID>{
 				.in_range = [&](NodeID id, posT pos) -> NodeID {
-					CORE_ASSERT(pos & LEAF_MASK, "expecting a leaf");
+					CORE_ASSERT(pos & TOP_BIT, "expecting a leaf");
 					idxT offset = offsetFromPos(pos);
 					CORE_ASSERT(idxs.at(idx) == offset, "I iterate exactly over the idxs");
 					idx++;
