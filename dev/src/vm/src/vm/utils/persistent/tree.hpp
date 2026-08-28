@@ -814,22 +814,6 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief Returns the child of a node in the given direction.
-		 */
-		[[nodiscard]]
-		NodeID getChild(Dir dir, NodeID root) const {
-			if_opt_some(child_entries.atRightOpt(root), children) {
-				auto [left, right] = children;
-				return (dir == Dir::Left) ? left : right;
-			}
-
-			CORE_ASSERT(
-				leaf_entries.atRightOpt(root).has_value(), "if not a root, node, has to be a leaf"
-			);
-			return EMPTY;
-		}
-
-		/**
 		 * @brief Returns a path from a root node to an index.
 		 */
 		[[nodiscard]]
