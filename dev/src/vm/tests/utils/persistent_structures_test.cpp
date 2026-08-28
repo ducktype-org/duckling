@@ -237,7 +237,18 @@ public:
 			auto view = vec.view(state, 0, size);
 			ASSERT_EQUAL(expected, view);
 
-			for (usize i = 0; i < size; i++) ASSERT_EQUAL(expected[i], vec.at(state, i));
+			VectorStateView state_view(vec, state);
+			ASSERT_EQUAL(expected.size(), state_view.size());
+			std::vector<std::string> iterated;
+			for (const auto& item: state_view) {
+				iterated.push_back(item);
+			}
+			ASSERT_EQUAL(expected, iterated);
+
+			for (usize i = 0; i < size; i++) {
+				ASSERT_EQUAL(expected[i], vec.at(state, i));
+				ASSERT_EQUAL(expected[i], state_view[i]);
+			}
 		};
 
 		auto empt = Vector<std::string>::EMPTY;
@@ -374,9 +385,17 @@ public:
 			ASSERT_EQUAL(expected.size(), map.size(state));
 			auto map_copy = map.toMap(state);
 
+			HashMapStateView state_view(map, state);
+			ASSERT_EQUAL(expected.size(), state_view.size());
+			base::HashMap<std::string, std::string> iterated;
+			for (const auto& [k, v]: state_view) {
+				iterated.emplace(k, v);
+			}
+			ASSERT_EQUAL(expected.size(), iterated.size());
+
 			for (auto& [key, val]: expected) {
 				CORE_ASSERT(
-					map_copy.contains(key) && map.contains(state, key),
+					map_copy.contains(key) && map.contains(state, key) && state_view.contains(key),
 					"map should contain all of expected values"
 				);
 				CORE_ASSERT(
@@ -384,17 +403,23 @@ public:
 				);
 
 				CORE_ASSERT(
-					map.at(state, key) == val, "values should be equal in both copy and database"
+					map.at(state, key) == val && state_view.at(key) == val,
+					"values should be equal in both copy and database"
+				);
+
+				CORE_ASSERT(
+					iterated.contains(key) && iterated.at(key) == val,
+					"iterated map should contain the key/value"
 				);
 			}
 
 			for (auto& [key, val]: map_copy) {
 				CORE_ASSERT(
-					expected.contains(key) && map.contains(state, key),
+					expected.contains(key) && map.contains(state, key) && state_view.contains(key),
 					"map should contain all of expected values"
 				);
 				CORE_ASSERT(
-					expected.at(key) == val && map.at(state, key) == val,
+					expected.at(key) == val && map.at(state, key) == val && state_view.at(key) == val,
 					"values should be equal in both copy and database"
 				);
 			}

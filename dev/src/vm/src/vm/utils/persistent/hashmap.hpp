@@ -26,9 +26,18 @@ namespace vm::persistent {
 	template<
 		typename KeyT,
 		typename ValT,
+		typename KeyH,
+		typename ValH>
+	class HashMapStateView;
+
+	template<
+		typename KeyT,
+		typename ValT,
 		typename KeyH = std::hash<KeyT>,
 		typename ValH = std::hash<ValT>>
 	class HashMap final {
+		friend class HashMapStateView<KeyT, ValT, KeyH, ValH>;
+
 		detail::BijectiveMap<ValT, usize, ValH> held_values{};
 		detail::BijectiveMap<KeyT, usize, KeyH> held_keys{};
 
@@ -182,6 +191,91 @@ namespace vm::persistent {
 		[[nodiscard]]
 		bool eq(HashMapStateID state_1, HashMapStateID state_2) const {
 			return state_1 == state_2;
+		}
+	};
+
+	template<
+		typename KeyT,
+		typename ValT,
+		typename KeyH = std::hash<KeyT>,
+		typename ValH = std::hash<ValT>>
+	class HashMapStateView final {
+		HashMapStateID                               id;
+		const HashMap<KeyT, ValT, KeyH, ValH>&       map;
+		MemoryStateView                              mem_view;
+
+	public:
+		class HashMapIterator {
+			MemoryStateView::MemoryIterator              mem_it;
+			const HashMap<KeyT, ValT, KeyH, ValH>*       map = nullptr;
+
+		public:
+			using value_type = std::pair<const KeyT&, const ValT&>;
+
+			std::pair<const KeyT&, const ValT&> operator*() const {
+				auto [key_id, val_id] = *mem_it;
+				return { map->held_keys.atRight(key_id), map->held_values.atRight(val_id) };
+			}
+
+			HashMapIterator& operator++() {
+				++mem_it;
+				return *this;
+			}
+
+			HashMapIterator operator++(int) {
+				auto copy = *this;
+				++(*this);
+				return copy;
+			}
+
+			HashMapIterator& operator--() {
+				--mem_it;
+				return *this;
+			}
+
+			HashMapIterator operator--(int) {
+				auto copy = *this;
+				--(*this);
+				return copy;
+			}
+
+			bool operator==(const HashMapIterator& oth) const {
+				return mem_it == oth.mem_it;
+			}
+
+			bool operator!=(const HashMapIterator& oth) const { return !(*this == oth); }
+
+			HashMapIterator() = default;
+			HashMapIterator(
+				const HashMap<KeyT, ValT, KeyH, ValH>& map,
+				MemoryStateView::MemoryIterator mem_it
+			) : mem_it(mem_it), map(&map) {}
+		};
+
+		HashMapStateView(const HashMap<KeyT, ValT, KeyH, ValH>& map, HashMapStateID id)
+			: id(id),
+			  map(map),
+			  mem_view(map.inner, HashMap<KeyT, ValT, KeyH, ValH>::toMemState(id)) {}
+
+		HashMapIterator begin() const {
+			return HashMapIterator{ map, mem_view.begin() };
+		}
+
+		HashMapIterator end() const {
+			return HashMapIterator{ map, mem_view.end() };
+		}
+
+		const ValT& at(const KeyT& key) const {
+			return map.at(id, key);
+		}
+
+		bool contains(const KeyT& key) const {
+			return map.contains(id, key);
+		}
+
+		[[nodiscard]]
+		usize size() const {
+			return map.size(id);
 		}
 	};
 }
