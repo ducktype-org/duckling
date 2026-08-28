@@ -125,12 +125,9 @@ namespace vm::persistent {
 		 * @brief Returns the value associated with a key, if present.
 		 */
 		base::Optional<ValT> atMaybe(HashMapStateID state_id, const KeyT& key) const {
-			auto state = toMemState(state_id);
-			if_opt_some(held_keys.atLeftOpt(key), key_id) {
-				if_opt_some(inner.access(state, key_id), val_id) {
-					return held_values.atRight(val_id);
-				}
-			}
+			try {
+				return at(state_id, key);
+			} catch (...) {}
 			return std::nullopt;
 		}
 
