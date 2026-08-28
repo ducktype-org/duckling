@@ -187,6 +187,20 @@ namespace vm::persistent {
 
 	using memIt = MemoryStateView::MemoryIterator;
 
+	memIt::value_type memIt::operator*() const {
+		if (!maybe_path.has_value()) throw std::out_of_range("Cannot dereference end iterator");
+		return { maybe_path->getIdx(), maybe_path->getValue() };
+	}
+
+	bool memIt::operator==(const memIt& oth) const {
+		if (maybe_path.has_value() != oth.maybe_path.has_value()) return false;
+		if (!maybe_path.has_value()) return true;
+		return maybe_path->trace.back() == oth.maybe_path->trace.back()
+		    && maybe_path->getIdx() == oth.maybe_path->getIdx();
+	}
+
+	bool memIt::operator!=(const memIt& oth) const { return !(*this == oth); }
+
 	memIt& memIt::operator++() {
 		if_opt_some(maybe_path, path) {
 			const auto success = path.moveToValid(detail::SegmentTree::Dir::Rght);
@@ -220,6 +234,14 @@ namespace vm::persistent {
 	}
 
 	MemoryStateView::MemoryStateView(const Memory& mem, MemoryStateID id): id{ id }, mem{ mem } {}
+
+	MemoryStateView::MemoryIterator MemoryStateView::begin() const {
+		const auto [left, right] = mem.getRangeOf(id);
+		if (left == right) return end();
+		return MemoryIterator{ mem, id, left };
+	}
+
+	MemoryStateView::MemoryIterator MemoryStateView::end() const { return {}; }
 
 	[[nodiscard]]
 	base::Optional<usize> MemoryStateView::atMaybe(usize idx) const {

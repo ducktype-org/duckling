@@ -183,6 +183,12 @@ public:
 		ASSERT_TRUE(memory.access(state, 20).has_value());
 		ASSERT_EQUAL(200, *memory.access(state, 20));
 
+		MemoryStateView view(memory, state);
+		std::vector<std::pair<usize, usize>> entries;
+		for (auto entry: view) entries.emplace_back(entry);
+		const std::vector<std::pair<usize, usize>> expected{ { 10, 100 }, { 20, 200 } };
+		ASSERT_EQUAL(expected, entries);
+
 		ASSERT_TRUE(memory.getPathTo(state, 5).empty());
 		ASSERT_TRUE(memory.getPathTo(state, 100'000).empty());
 

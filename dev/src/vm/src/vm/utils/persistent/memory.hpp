@@ -226,16 +226,25 @@ namespace vm::persistent {
 			base::Optional<Memory::Path> maybe_path = std::nullopt;
 
 		public:
+			using value_type = std::pair<usize, usize>;
+
+			value_type operator*() const;
 			MemoryIterator& operator++();
 			MemoryIterator  operator++(int);
 			MemoryIterator& operator--();
 			MemoryIterator  operator--(int);
+
+			bool operator==(const MemoryIterator& oth) const;
+			bool operator!=(const MemoryIterator& oth) const;
 
 			MemoryIterator() = default;
 			MemoryIterator(const Memory& mem, MemoryStateID state, usize idx);
 		};
 
 		MemoryStateView(const Memory& mem, MemoryStateID id);
+
+		MemoryIterator begin() const;
+		MemoryIterator end() const;
 
 		usize operator[](usize idx) const;
 
