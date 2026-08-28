@@ -1137,21 +1137,12 @@ namespace compiler::helios {
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
 	) {
 		const auto hout_qresult = getHoutOfExprWithExpectedType(
-			ctx,
-			pst_expr,
-			tsh::SymbolType<>{
-				tsh::getBoolType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			}
+			ctx, pst_expr, tsh::SymbolType<>::withDefaults(tsh::getBoolType())
 		);
-		if (hout_qresult.hasFailed()) return query::Failed();
+		UNPACK_QRESULT_MOVE(const auto& hout =, hout_qresult);
 
-		auto ctv_qresult
-			= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
-		if (ctv_qresult.hasFailed()) return query::Failed();
-
-		auto value = std::move(ctv_qresult).valueOrThrow().get<bool>();
+		UNPACK_QRESULT(auto ctv =, ctx.query<QueryEvaluateHOUTExpression>({ hout.ref() }));
+		auto value = ctv.get<bool>();
 		if (value.empty()) {
 			ctx.logInt(makeBox<dia::PlaceholderError>(
 				"The condition of `if const` must evaluate to a compile time `bool`.",

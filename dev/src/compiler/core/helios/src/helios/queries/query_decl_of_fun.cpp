@@ -147,10 +147,10 @@ namespace compiler::helios {
 					// Only the taken branch takes part in the return type deduction, the other
 					// one is never compiled.
 					auto taken
-						= evaluateConstIfCondition(ctx, stmt->getCondition().unlock(ctx)->getExpr());
-					if (taken.hasFailed()) query::throwFailed();
+						= evaluateConstIfCondition(ctx, stmt->getCondition().unlock(ctx)->getExpr())
+					          .valueOrThrow();
 
-					if (taken.valueOrThrow())
+					if (taken)
 						visitRecursion(stmt->getThenBody());
 					else if (stmt->getElseBody().has_value())
 						visitRecursion(stmt->getElseBody().value());
