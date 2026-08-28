@@ -32,6 +32,10 @@ pub struct ExternalLibrariesFound {
 
 #[instrument(skip_all)]
 /// Check whether subtree rooted at `unit` links against external libraries.
+///
+/// This function returns _any_ [`Unit`] with external library, if there is one.
+///
+/// In case there are multiple such [`Unit`]s, it's not guaranteed which one is returned.
 pub fn has_external_libraries(unit: &Unit, graph: &UnitGraph) -> Option<ExternalLibrariesFound> {
     struct ExternalLibsVisitor;
 
