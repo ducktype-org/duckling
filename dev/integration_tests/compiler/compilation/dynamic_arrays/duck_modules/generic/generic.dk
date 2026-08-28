@@ -203,7 +203,7 @@ fun boxOfListTest() -> () = {
 }
 
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     integersTest();
     floatsTest();
     classesTest();
