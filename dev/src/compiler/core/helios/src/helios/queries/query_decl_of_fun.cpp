@@ -146,9 +146,8 @@ namespace compiler::helios {
 				if (stmt->isConst()) {
 					// Only the taken branch takes part in the return type deduction, the other
 					// one is never compiled.
-					auto taken
-						= evaluateConstIfCondition(ctx, stmt->getCondition().unlock(ctx)->getExpr())
-					          .valueOrThrow();
+					auto taken = getBoolCTVFromPST(ctx, stmt->getCondition().unlock(ctx)->getExpr())
+					                 .valueOrThrow();
 
 					if (taken)
 						visitRecursion(stmt->getThenBody());
