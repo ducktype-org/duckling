@@ -142,7 +142,7 @@ impl Unit {
 
     /// Get a descriptive name of this [`Unit`].
     ///
-    /// It's a _nice_ name, which can be displayed to a user.
+    /// It's a _nice_ name, which can be displayed to the user.
     pub fn descriptive_name(&self) -> String {
         let name = self.root_package().package().name();
         let version = self.root_package().package().version();

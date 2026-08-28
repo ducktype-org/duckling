@@ -20,7 +20,7 @@ use crate::{QuackResult, StrId, qp_bail};
 ///
 /// This struct has a logic invariant that
 /// ```
-/// unit.root_package().package().manifest().build_options().links == Some(links)
+/// self.unit.root_package().package().manifest().build_options().links == Some(self.links)
 /// ```
 /// but allows caller to get `links` without going through an [`Option`].
 pub struct ExternalLibrariesFound {
@@ -62,7 +62,7 @@ pub fn has_external_libraries(unit: &Unit, graph: &UnitGraph) -> Option<External
 /// Right now this checks for duplicates of the same library.
 pub fn validate_external_libraries(unit: &Unit, graph: &UnitGraph) -> QuackResult<()> {
     #[derive(Default)]
-    /// Map external libs -> Unit.
+    /// Map external lib -> Unit linking with it.
     struct DuplicateLibsVisitor(HashMap<StrId, Unit>);
 
     impl UnitVisitor for DuplicateLibsVisitor {
