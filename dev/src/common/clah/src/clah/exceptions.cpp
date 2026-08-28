@@ -68,6 +68,9 @@ namespace clah::exceptions {
 	InvalidParameterName::InvalidParameterName(const std::string& name):
 		  ClahException("There is no parameter named \'" + name + '\'') {}
 
+	InvalidCommandName::InvalidCommandName(const std::string& name):
+		  ClahException("Command \"" + name + "\" is invalid.") {}
+
 	ParameterRequiresValue::ParameterRequiresValue(
 		const std::string& name, const std::string& value_type
 	):

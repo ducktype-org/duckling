@@ -4,6 +4,7 @@
  */
 
 #include "clah.hpp"
+#include "exceptions.hpp"
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -174,6 +175,8 @@ namespace clah {
 
 				subcmd->parse(st);
 				return;
+			} else if (not subcommands.empty()) {
+				throw exceptions::InvalidCommandName(token);
 			} else {
 				// If not found a "-" parse using default value parser.
 				// Check if value is positional or extra.

@@ -22,6 +22,7 @@ public:
 		// Subcommands tests.
 		TESTER_ADD_TEST(subcommandBasicTest);
 		TESTER_ADD_TEST(subcommandNestedTest);
+		TESTER_ADD_TEST(invalidCommandNameTest);
 		TESTER_ADD_TEST(globalOptionsTest);
 		TESTER_ADD_TEST(preHandlerAndHandlerExecutionOrder);
 		TESTER_ADD_TEST(requiredParameterValidation);
@@ -247,6 +248,22 @@ private:
 		ASSERT_EQUAL("git", path[0]->getName());
 		ASSERT_EQUAL("remote", path[1]->getName());
 		ASSERT_EQUAL("add", path[2]->getName());
+	}
+
+	void invalidCommandNameTest() {
+		auto clah = clah::Clah("prog").addSubcommand(
+			clah::Clah("compile_package", "Compile a package")
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make())
+		                 .addShortName('n')
+		                 .addShortDesc("Package name")
+		                 .build())
+		);
+
+		std::array argv{ "./prog", "comple_package", "-n", "main" };
+		assertThrows<clah::exceptions::InvalidCommandName>(
+			[&]() { clah.parse(argv.size(), argv.data()); },
+			"Clah did not reject an invalid command name."
+		);
 	}
 
 	void globalOptionsTest() {
