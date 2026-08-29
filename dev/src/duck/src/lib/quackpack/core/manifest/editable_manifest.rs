@@ -137,18 +137,17 @@ impl<'duck> EditableManifest<'duck> {
                 )],
             ),
         };
-        let mut removed = false;
         // Try to remove the dependency from the map matching the kind.
         if let Some(my_dep_map) = my_dep_map {
             let my_dep_map = self.dependencies_as_mapping(my_dep_map, kind)?;
-            removed = my_dep_map.remove(name).is_some();
+            let removed = my_dep_map.remove(name).is_some();
             // If the mapping became empty, remove it from the manifest.
             if my_dep_map.is_empty() {
                 manifest.remove(kind.key_in_manifest());
             }
-        }
-        if removed {
-            return Ok(DependencyRemoved::Yes);
+            if removed {
+                return Ok(DependencyRemoved::Yes);
+            }
         }
         // There was no such dependency.
         // Check if there is dependency with such name but of other kind.
