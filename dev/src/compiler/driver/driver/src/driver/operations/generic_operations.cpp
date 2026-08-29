@@ -50,7 +50,6 @@
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
-#include "vm/api/data/api_error.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
