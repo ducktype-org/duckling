@@ -1241,6 +1241,22 @@ private:
 		ASSERT_EQUAL(
 			member_access_expr->expression_type.getType(), getIntegralTypeNoContext(32, Signed)
 		);
+
+		auto              incr_sym  = getChain("incr", root_scope).back();
+		auto              incr_expr = getExprOfVariable(incr_sym);
+		std::stringstream incr_out;
+		incr_expr->debugPrint(incr_out);
+		ASSERT_EQUAL_PRINT(
+			"block({\n    (Symbol counter (13)) = (Symbol counter (13)) + 1;\n}\n)", incr_out.str()
+		);
+
+		auto              decr_sym  = getChain("decr", root_scope).back();
+		auto              decr_expr = getExprOfVariable(decr_sym);
+		std::stringstream decr_out;
+		decr_expr->debugPrint(decr_out);
+		ASSERT_EQUAL_PRINT(
+			"block({\n    (Symbol counter (13)) = (Symbol counter (13)) - 1;\n}\n)", decr_out.str()
+		);
 	}
 
 	void testHoutVariables() {
