@@ -39,7 +39,7 @@ namespace lsp {
 		base::Optional<dia::SourcePosition> getOriginPosition(
 			const compiler::helios::code::ElementOrigin& origin
 		) {
-			return origin.getStablePosition().map([](const dia_int::StablePosition& stable_pos) {
+			return origin.getStablePosition().map([](const dia::StablePosition& stable_pos) {
 				return stable_pos.getActiveSourcePositionIllegalAccess();
 			});
 		}
@@ -394,10 +394,6 @@ namespace lsp {
 			for (const auto& comparison: elem.comparisons) comparison->acceptVisitor(*this);
 		}
 
-		void visitParenthesisExpr(const code::ParenthesisExpr& elem) override {
-			elem.inner->acceptVisitor(*this);
-		}
-
 		void visitTupleExpr(const code::TupleExpr& elem) override {
 			for (const auto& item: elem.elements) item->acceptVisitor(*this);
 		}
@@ -432,22 +428,16 @@ namespace lsp {
 			elem.inner->acceptVisitor(*this);
 		}
 
+		void visitPtrOfExpr(const code::PtrOfExpr& elem) override {
+			elem.inner->acceptVisitor(*this);
+		}
+
 		void visitDerefExpr(const code::DerefExpr& elem) override {
 			elem.inner->acceptVisitor(*this);
 		}
 
 		void visitCastExpr(const code::CastExpr& elem) override {
 			elem.source_expr->acceptVisitor(*this);
-		}
-
-		void visitListPushExpr(const code::ListPushExpr& elem) override {
-			elem.list->acceptVisitor(*this);
-			elem.element->acceptVisitor(*this);
-		}
-
-		void visitListPopExpr(const code::ListPopExpr& elem) override {
-			elem.list->acceptVisitor(*this);
-			elem.count->acceptVisitor(*this);
 		}
 	};
 

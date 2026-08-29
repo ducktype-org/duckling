@@ -2,6 +2,8 @@
 
 #include "../visitors.hpp"
 
+#include <base/except/exceptions.hpp>
+
 namespace compiler::helios::code {
 #define STMT_VISITOR(type) \
 	void type::acceptVisitor(HoutStmtVisitor& visitor) const { visitor.visit##type(*this); }
@@ -140,4 +142,5 @@ namespace compiler::helios::code {
 	Box<Stmt> BlockStmt::clone() const {
 		return makeBox<BlockStmt>(origin, std::move(*body.clone()));
 	}
+
 }

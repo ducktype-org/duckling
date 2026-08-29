@@ -30,11 +30,15 @@ namespace compiler::backend_vm::internal {
 		void lower(const AddressOfOperation& op);
 		void lower(const CastOperation& op);
 		void lower(const MetaOperation& op);
+		void lower(const VariantConstructOperation& op);
+		void lower(const VariantTryProjectOperation& op);
 
 		// Terminators
 		void lower(const JumpOperation& op);
 		void lower(const BranchOperation& op);
+		void lower(const BranchIfNullOperation& op);
 		void lower(const ReturnOperation& op);
+		void lower(const UnreachableOperation& op);
 
 		/**
 		 * @brief Makes sure deinits for the current instruction are only pushed once.
@@ -43,5 +47,11 @@ namespace compiler::backend_vm::internal {
 
 	private:
 		Ref<FunctionLoweringContext> ctx;
+
+		static vm::code::builders::OpKind getOpKindFromLIRLayouts(
+			Ref<FunctionLoweringContext>        ctx,
+			const lir::CastParameters&          cast_params,
+			std::vector<vm::opargs::OpCodeArg>& out_arguments
+		);
 	};
 }

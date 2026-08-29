@@ -56,6 +56,32 @@ impl Seek for LockedFile {
     }
 }
 
+impl Read for &LockedFile {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let mut file = &self.file;
+        file.read(buf)
+    }
+}
+
+impl Write for &LockedFile {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let mut file = &self.file;
+        file.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        let mut file = &self.file;
+        file.flush()
+    }
+}
+
+impl Seek for &LockedFile {
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+        let mut file = &self.file;
+        file.seek(pos)
+    }
+}
+
 impl Drop for LockedFile {
     fn drop(&mut self) {
         if let Err(e) = self.file.unlock() {

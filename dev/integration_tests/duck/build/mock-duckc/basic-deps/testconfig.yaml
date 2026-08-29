@@ -4,10 +4,8 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
-  echo "dependencies:
-    bar:
-      source:
-        path: ../bar" >> foo/quackconfig.yaml
+  @{duck-exe} -C foo add --local ../bar bar
+
 Tests:
   basic-deps:
     Description: can build a project with dependencies

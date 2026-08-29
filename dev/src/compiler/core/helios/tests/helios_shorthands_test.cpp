@@ -308,17 +308,6 @@ public:
 
 			ASSERT_EQUAL(dprint(block_expr), std::string("block({\n    return 1;\n    do 2\n}\n)"));
 			ASSERT_EQUAL(block_expr->expression_type.getType().getKind(), tsh::Kind::Unit);
-
-			// listPush / listPop are structural wrappers evaluating to unit; like the underlying
-			// nodes they do not type-check their operands, so plain literals exercise the wiring.
-			// `1` is not a list, but whatever, these are going away anyway soon.
-			const auto push = s.listPush(s.litNum(1), s.litNum(2));
-			ASSERT_EQUAL(dprint(push), std::string("list_push(1, 2)"));
-			ASSERT_EQUAL(push->expression_type.getType().getKind(), tsh::Kind::Unit);
-
-			const auto pop = s.listPop(s.litNum(1), s.litNum(2));
-			ASSERT_EQUAL(dprint(pop), std::string("list_pop(1, 2)"));
-			ASSERT_EQUAL(pop->expression_type.getType().getKind(), tsh::Kind::Unit);
 		});
 	}
 

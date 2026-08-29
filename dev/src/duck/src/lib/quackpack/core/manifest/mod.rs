@@ -3,6 +3,7 @@
 //! The most notable members are [`Manifest`] and [`Dependency`].
 //!
 //! Parsing is implemented in the [`parse`] module.
+mod build_options;
 mod dependency;
 mod features;
 mod metadata;
@@ -11,6 +12,7 @@ mod profiles;
 mod source;
 mod venv_config;
 
+pub use build_options::BuildOptions;
 pub use dependency::*;
 pub use features::*;
 pub use metadata::*;
@@ -33,9 +35,9 @@ pub struct Manifest {
     features: Features,
     metadata: PackageMetadata,
     dependencies: Dependencies,
-    dev_dependencies: Dependencies,
     profiles: Profiles,
     venv: VenvConfig,
+    build_options: BuildOptions,
 }
 
 impl Manifest {
@@ -47,9 +49,9 @@ impl Manifest {
         features: Features,
         metadata: PackageMetadata,
         dependencies: Dependencies,
-        dev_dependencies: Dependencies,
         profiles: Profiles,
         venv: VenvConfig,
+        build_options: BuildOptions,
     ) -> Self {
         Self {
             name,
@@ -57,9 +59,9 @@ impl Manifest {
             features,
             metadata,
             dependencies,
-            dev_dependencies,
             profiles,
             venv,
+            build_options,
         }
     }
 
@@ -98,11 +100,6 @@ impl Manifest {
         &mut self.dependencies
     }
 
-    /// Get the development dependencies.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        &self.dev_dependencies
-    }
-
     /// Get the compiler specific options for profile.
     pub fn profiles(&self) -> &Profiles {
         &self.profiles
@@ -125,6 +122,11 @@ impl Manifest {
     pub fn venv(&self) -> &VenvConfig {
         &self.venv
     }
+
+    /// Get the [`BuildOptions`] of this manifest.
+    pub fn build_options(&self) -> &BuildOptions {
+        &self.build_options
+    }
 }
 
 impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
@@ -134,7 +136,6 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
         let registry::Manifest {
             metadata,
             dependencies,
-            dev_dependencies,
             features,
             profiles,
         } = value;
@@ -144,6 +145,7 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             license,
             name,
             description,
+            links,
         } = metadata;
         let authors = authors.into_iter().collect();
         let metadata = PackageMetadata {
@@ -159,9 +161,11 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             features.try_into()?,
             metadata,
             dependencies.try_into()?,
-            dev_dependencies.try_into()?,
             profiles.into(),
             VenvConfig::default_for_package(ctx),
+            BuildOptions {
+                links: links.map(Into::into),
+            },
         ))
     }
 }
@@ -176,9 +180,9 @@ impl TryFrom<Manifest> for registry::Manifest {
             features,
             metadata,
             dependencies,
-            dev_dependencies,
             profiles,
             venv: _,
+            build_options,
         } = value;
         let license = metadata.license.unwrap_or_default();
         let description = metadata.description.unwrap_or_default();
@@ -189,11 +193,11 @@ impl TryFrom<Manifest> for registry::Manifest {
             license,
             name: name.into(),
             description,
+            links: build_options.links.map(Into::into),
         };
         Ok(Self {
             metadata,
             dependencies: dependencies.try_into()?,
-            dev_dependencies: dev_dependencies.try_into()?,
             features: features.into(),
             profiles: profiles.into(),
         })

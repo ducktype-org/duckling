@@ -1,6 +1,15 @@
 # Tests for statements
 
 Tests:
+  # Call arguments are evaluated left to right, so the nested calls print 1 before 2.
+  argument_evaluation_order:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "1\n2\n3\n"
+        ExitCode: 0
+
   default_args_advanced:
     Cases:
       all:
@@ -11,13 +20,8 @@ Tests:
 
   named_arguments_overloading:
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "42\n7\n43\n54\n108\n6\n3\n5\n11\n7\n13\n"
-        ExitCode: 54
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "42\n7\n43\n54\n108\n6\n3\n5\n11\n7\n13\n"
         ExitCode: 54
@@ -40,13 +44,8 @@ Tests:
 
   overloading_between_modules:
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "1000\n200\n500\n30\n60\n4\n7\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "1000\n200\n500\n30\n60\n4\n7\n"
         ExitCode: 0
@@ -68,8 +67,6 @@ Tests:
         ExitCode: 0
 
   type_overloading:
-    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
-    enable_conc_deterministic_tests: "false"
     Cases:
       all:
         backend: all

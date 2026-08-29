@@ -32,7 +32,7 @@ namespace compiler::helios::code {
 
 		virtual void acceptVisitor(HoutStmtVisitor&) const = 0;
 
-		[[nodiscard]] base::Optional<dia_int::StablePosition> getPosition() const {
+		[[nodiscard]] base::Optional<dia::StablePosition> getPosition() const {
 			return origin.getStablePosition();
 		}
 
@@ -204,4 +204,5 @@ namespace compiler::helios::code {
 		void                    acceptVisitor(HoutStmtVisitor&) const override;
 		[[nodiscard]] Box<Stmt> clone() const final;
 	};
+
 }

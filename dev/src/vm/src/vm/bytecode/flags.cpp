@@ -151,6 +151,7 @@ namespace vm::code {
 			FLAGS_W_R(mov_pste_pste)
 			FLAGS_W_R(mov_pfst_pfst)
 			FLAGS_W_R(mov_popq_popq)
+			FLAGS_W_R(mov_pvnt_pvnt)
 
 			// ===== Conditional moves: dst is read (kept conditionally) and written =====
 			FLAGS_RW_R(cmov_p8_p8)
@@ -535,13 +536,19 @@ namespace vm::code {
 				rd(i.src_ptr);
 				deref_read();
 			}
-			instr_case(ins::Op_movCast_pcptr_pcptr, i) {
+			instr_case(ins::Op_cast_pcptr_pcptr, i) {
 				wr(i.dst);
 				rd(i.src);
 			}
 			// Taking an address only reads the pointer operand, like the ref/lea ops above.
 			instr_case(ins::Op_cast_pcptr_pptr, i) {
 				wr(i.dst);
+				rd(i.src_ptr);
+			}
+			// Decomposing a pointer only reads it, like the cast above.
+			instr_case(ins::Op_ptrParts_p64_p64_pptr, i) {
+				wr(i.dst_id);
+				wr(i.dst_offset);
 				rd(i.src_ptr);
 			}
 			instr_case(ins::Op_add_pcptr_p64, i) {

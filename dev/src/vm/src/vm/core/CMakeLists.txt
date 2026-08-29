@@ -7,6 +7,7 @@ add_files(
 	supervisor/supervisor.cpp
 	safe/safe_vmprocess.cpp
 	process/ivmprocess.cpp
+	process/process_state_manager.cpp
 	process/proc_io.cpp
 	thread/ivmthread.cpp
 	builtin_functions.cpp

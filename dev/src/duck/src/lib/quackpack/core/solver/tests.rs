@@ -78,9 +78,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -92,9 +92,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: [("a".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -106,9 +106,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };

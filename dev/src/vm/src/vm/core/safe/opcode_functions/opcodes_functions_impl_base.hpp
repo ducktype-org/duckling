@@ -665,6 +665,10 @@ namespace vm {
 		CORE_PANIC("ext_p64 not consumed by previous instruction");
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_pptr)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_pptr not consumed by previous instruction");
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_imm)(FUNCTION_ARGS) {
 		CORE_PANIC("ext_imm not consumed by previous instruction");
 	}
@@ -758,6 +762,17 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bfst_bfst)(FUNCTION_ARGS) {
+		{
+			Ref<vm::Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Ref<vm::Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bvnt_bvnt)(FUNCTION_ARGS) {
 		{
 			Ref<vm::Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			Ref<vm::Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
@@ -959,6 +974,17 @@ namespace vm {
 			WRITE_TO_PLACE_ARG(void*, instr->arg0, static_cast<void*>(view.getBegin()));
 		}
 		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ptrParts_p64_p64_pptr)(FUNCTION_ARGS) {
+		{
+			const auto src    = READ_FROM_PLACE_ARG(Pointer, instr[1].arg0);
+			const u64  id     = thread.process_memory.requestBlockID(src.getBlock()).asInt();
+			const u64  offset = src.getOffset();
+			WRITE_TO_PLACE_ARG(u64, instr->arg0, id);
+			WRITE_TO_PLACE_ARG(u64, instr->arg1, offset);
+		}
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_pptr)(FUNCTION_ARGS) {

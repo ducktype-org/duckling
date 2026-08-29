@@ -1,0 +1,29 @@
+fun main() -> i64 = {
+    let small: f64 = 3.14;
+    let big: f64 = 9.81;
+    let equal: f64 = 3.14;
+
+    if (small < big) {} else { builtin_output_i64(1); }
+    if (big < small) { builtin_output_i64(2); }
+
+    if (big > small) {} else { builtin_output_i64(3); }
+    if (small > big) { builtin_output_i64(4); }
+
+    if (small <= big) {} else { builtin_output_i64(5); }
+    if (small <= equal) {} else { builtin_output_i64(6); }
+    if (big <= small) { builtin_output_i64(7); }
+
+    if (big >= small) {} else { builtin_output_i64(8); }
+    if (equal >= small) {} else { builtin_output_i64(9); }
+    if (small >= big) { builtin_output_i64(10); }
+
+    if (small == equal) {} else { builtin_output_i64(11); }
+    if (small == big) { builtin_output_i64(12); }
+
+    if (small != big) {} else { builtin_output_i64(13); }
+    if (small != equal) { builtin_output_i64(14); }
+
+    if (1.5f64 >= 1.50001) { builtin_output_i64(15); }
+
+    return 0i64;
+}
