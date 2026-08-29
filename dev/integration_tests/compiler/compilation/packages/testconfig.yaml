@@ -22,12 +22,12 @@ compile_only_cmd:  "@{duckc_path} compile_packages @{case_manifest} -w @{duckc_w
 PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts} && @{make_manifest} && @{compile_deterministically_cmd} && @{compile_only_cmd}"
 
 # Run only LLVM executables; DVM run is intentionally skipped.
-Run: "@{case_build}/app1.exe && @{case_build}/app2.exe && @{case_build}/app3.exe && @{case_build}/app3_alias.exe"
+Run: "@{case_build}/app1.exe && @{case_build}/app2.exe && @{case_build}/app3.exe && @{case_build}/app3_alias.exe && @{case_build}/app4.exe"
 
 Tests:
   multi_package:
     Cases:
       all:
         Output:
-          String: "10\n42\n20\n73\n42\n42\n73\n"
+          String: "10\n42\n20\n73\n42\n42\n73\n1\n"
         ExitCode: 0
