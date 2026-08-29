@@ -29,6 +29,8 @@ duck_add_test(base stable_container tests/stable_container_test.cpp USES Base)
 
 duck_add_test(base optional tests/optional_test.cpp USES Base)
 
+duck_add_test(base expected tests/expected_test.cpp USES Base)
+
 duck_add_test(base str_concat tests/str_concat_test.cpp USES Base)
 
 duck_add_test(base constexpr_cat tests/constexpr_cat_test.cpp USES Base)
@@ -80,6 +82,9 @@ add_example(constexpr_cat_example examples/constexpr_cat_example.cpp
         USES Base)
 
 add_example(defer_example examples/defer_example.cpp
+        USES Base)
+
+add_example(expected_simple_example examples/expected_simple_example.cpp
         USES Base)
 
 add_example(optional_simple_example examples/optional_simple_example.cpp

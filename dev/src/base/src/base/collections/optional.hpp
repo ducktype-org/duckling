@@ -69,6 +69,7 @@
  *
  *
  * // Furthermore, it can be used with `std::expected<T, K>`!
+ * // For that case `match_expected` in `base/collections/expected.hpp` reads better, but both work.
  *	std::expected<int, float> t = 1;
  *	match_optional(t) {
  *		opt_some(val) { assert(val == 1); }
@@ -536,8 +537,8 @@ namespace base {
 		 * @brief Turns the optional into a std::expected, so an empty one becomes an error.
 		 * @tparam Err error type stored when the optional is empty.
 		 * @param args arguments passed to a constructor of the error type.
-		 * @details match_optional also understands std::expected, so the result can be matched with
-		 * opt_some and opt_err.
+		 * @details The result can be matched with match_expected, from
+		 * base/collections/expected.hpp.
 		 * @return std::expected holding the value, or Err(args...) when the optional is empty.
 		 */
 		template<class Err, class... Args, class Self>
