@@ -24,7 +24,6 @@
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
-#include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/thread/thread_state.hpp>
 #include <vm/module_flags/module_flags.hpp>
 #include <vm/utils/interpret.hpp>
@@ -603,7 +602,7 @@ namespace vm {
 		applyEvent(te::Finish{ std::vector<Ref<IVMValue>>(exit_value.begin(), exit_value.end()) });
 	}
 
-	bool SafeVMThread::execGlobalDestructors() {
+	void SafeVMThread::execGlobalDestructors() {
 		const auto& executing_program = process_program;
 		auto        globals           = executing_program->getGlobals().allData();
 		// Destructors should run in reverse order of construction so that any object depending on
@@ -612,22 +611,16 @@ namespace vm {
 		for (const auto& [global, id, name]: std::ranges::reverse_view(globals)) {
 			auto* ctor_dtor = std::get_if<low::GlobalCtorDtor>(&global->init);
 			if (ctor_dtor && ctor_dtor->dtor_name.has_value()) {
-				try {
-					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(ctor_dtor->dtor_name.value())
-					                        .expect(
-												"Called function does not exist: "
-												+ ctor_dtor->dtor_name.value().str()
-											);
-					low::LowFuncData start_function = createStartFunctionFor(func, {});
-					executeFunction(start_function, func);
-				} catch (const KillProcessException& e) {
-					std::cerr << "Global destructor interrupted: " << e.what() << "\n";
-					return false;
-				}
+				const auto& func = *executing_program->getFunctions()
+				                        .atMaybe(ctor_dtor->dtor_name.value())
+				                        .expect(
+											"Called function does not exist: "
+											+ ctor_dtor->dtor_name.value().str()
+										);
+				low::LowFuncData start_function = createStartFunctionFor(func, {});
+				executeFunction(start_function, func);
 			}
 		}
-		return true;
 	}
 
 	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition(

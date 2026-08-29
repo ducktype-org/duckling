@@ -183,11 +183,9 @@ namespace vm {
 
 		/**
 		 * @brief Function to be called when the VMProcess is deinitialized. Calls GlobalData's
-		 * destructor functions.
-		 *
-		 * @return false when a destructor was interrupted
+		 * destructor functions. Can throw anything the normal interpreter does.
 		 */
-		virtual bool execGlobalDestructors() = 0;
+		virtual void execGlobalDestructors() = 0;
 
 		/**
 		 * @brief Main debug function that executes one step of the program.

@@ -78,7 +78,6 @@ namespace vm {
 	void IVMThread::safeRun(const std::string& func_name, const RunArguments& run_arguments) {
 		// Thread event `Spawn` was committed by the `prepareSpawnLocked`.
 		try {
-			if (isTerminateRequested()) throw KillProcessException{};
 			run(func_name, run_arguments);
 		} catch (const KillProcessException& e) {
 			applyEvent(te::Kill{});

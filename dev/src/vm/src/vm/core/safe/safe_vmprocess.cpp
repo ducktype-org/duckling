@@ -4,6 +4,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
@@ -16,6 +17,7 @@
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalueref.hpp>
+#include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/thread/thread_state.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
@@ -251,23 +253,21 @@ namespace vm {
 		joinAllExecutionThreads();
 
 		std::unique_lock lock(api_lock);
-		bool             destructors_ran = false;
 		try {
-			// There might be numerous runtime exceptions during the deinitialization,
-			// any of those means there was an issue during the validation.
-			destructors_ran = getMainVMThread().execGlobalDestructors();
+			getMainVMThread().execGlobalDestructors();
 
 			for (const auto& vm_value: owned_vm_values) vm_value->freeData();
 
 			memory.deinitGlobals();
-		} catch (exceptions::VMRuntimeException& e) {
-			std::cerr << " - VM has detected issues during program\'s deinitialization: "
-					  << e.what() << '\n';
+		} catch (const exceptions::VMFoundMemoryLeakException&) {
 			return false;
+		} catch (const KillProcessException& e) {
+			return std::unexpected(api::ApiError{ api::OtherError{
+				base::strConcat("A global destructor was interrupted: ", e.what()) } });
+		} catch (const exceptions::VMRuntimeException& e) {
+			return std::unexpected(api::ApiError{ api::OtherError{
+				base::strConcat("The process could not be deinitialized: ", e.what()) } });
 		}
-		// If the destructors weren't run, we don't perform memory state validation as it wouldn't
-		// mean anything.
-		if (!destructors_ran) return false;
 		return memory.validateMemoryState();
 	}
 

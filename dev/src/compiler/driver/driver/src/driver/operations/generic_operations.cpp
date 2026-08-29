@@ -50,6 +50,7 @@
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
+#include "vm/api/data/api_error.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
@@ -701,7 +702,12 @@ namespace compiler::driver {
 			              ) -> std::expected<RunOutput, vm::api::ApiError> {
 							  const vm::PID pid = process.pid;
 							  // Deinitialize the process and execute global destructors.
-							  defer((void) vm::api::deinitAndValidate(pid));
+
+							  defer({
+								  auto deinit = vm::api::deinitAndValidate(pid);
+								  if (!deinit.has_value())
+									  std::cerr << vm::api::errorToString(deinit.error()) << '\n';
+							  });
 
 							  return vm::api::loadCode(pid, dvm_module.code)
 				                  .and_then([&] {

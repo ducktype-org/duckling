@@ -111,7 +111,10 @@ namespace vm {
 						  << " is still executing. Processes must be stopped or finished before "
 							 "the Supervisor is destroyed.\n";
 			const auto deinit = proc->doRequest(api::request::DeinitAndValidate{});
-			if (deinit && v_matches(*deinit, bool) && !v_get(*deinit, bool))
+			if (!deinit.has_value())
+				std::cerr << "Process " << pid << " failed to deinitialize during Supervisor "
+						  << "teardown: " << api::errorToString(deinit.error()) << "\n";
+			else if (v_matches(*deinit, bool) && !v_get(*deinit, bool))
 				std::cerr << "Process " << pid
 						  << " failed validation during Supervisor teardown.\n";
 		}
