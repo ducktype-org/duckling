@@ -59,11 +59,11 @@ namespace vm::fast {
 
 		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
 
-		base::Optional<api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
 
-		base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
 
-		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
 		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
 			api::ThreadID thread_id, base::Optional<usize> frame_idx

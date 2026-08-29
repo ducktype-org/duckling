@@ -27,8 +27,8 @@
 #include <variant>
 
 namespace vm {
-	namespace ps = process_sm::process_state;
-	namespace ts = thread_sm::thread_state;
+	namespace ps = process_state;
+	namespace ts = thread_state;
 
 	Memory& SafeVMProcess::getMemory() { return memory; }
 
@@ -167,10 +167,10 @@ namespace vm {
 		for (auto& thread: vm_threads) thread.requestStop();
 	}
 
-	base::Optional<api::ApiError> SafeVMProcess::assertProcessCanRespond() {
+	std::expected<void, api::ApiError> SafeVMProcess::assertProcessCanRespond() {
 		if (!ps::canRespond(getProcessState()))
-			return api::ApiError{ api::OtherError{
-				"Cannot do memory request while program is running" } };
+			return std::unexpected(api::ApiError{
+				api::OtherError{ "Cannot do memory request while program is running" } });
 
 		return {};
 	}
@@ -272,39 +272,42 @@ namespace vm {
 		return memory.validateMemoryState();
 	}
 
-	base::Optional<api::ApiError> SafeVMProcess::pauseVMThread(api::ThreadID thread_id) {
+	std::expected<void, api::ApiError> SafeVMProcess::pauseVMThread(api::ThreadID thread_id) {
 		// API reads cannot happen while the thread is changing state.
 		std::unique_lock lock(api_lock);
 		auto             opt_thread = getVMThreadByID(thread_id);
-		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
 		auto response = opt_thread.value()->pause();
-		if (!response) return api::ApiError{ api::PauseError{} };
+		if (!response) return std::unexpected(api::ApiError{ api::PauseError{} });
 		return {};
 	}
 
-	base::Optional<api::ApiError> SafeVMProcess::resumeVMThread(api::ThreadID thread_id) {
+	std::expected<void, api::ApiError> SafeVMProcess::resumeVMThread(api::ThreadID thread_id) {
 		// API reads cannot happen while the thread is changing run state.
 		std::unique_lock lock(api_lock);
 		auto             opt_thread = getVMThreadByID(thread_id);
-		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
 		auto response = opt_thread.value()->resume();
-		if (!response) return api::ApiError{ api::ResumeError{} };
+		if (!response) return std::unexpected(api::ApiError{ api::ResumeError{} });
 		return {};
 	}
 
-	base::Optional<api::ApiError> SafeVMProcess::stepVMThread(api::ThreadID thread_id) {
+	std::expected<void, api::ApiError> SafeVMProcess::stepVMThread(api::ThreadID thread_id) {
 		// Stepping actually executes bytecode, which mutates process memory. It must not
 		// run concurrently with other memory-touching endpoints.
 		std::unique_lock lock(api_lock);
 
 		// Try to obtain thread
 		auto opt_thread = getVMThreadByID(thread_id);
-		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
 		auto thread = opt_thread.value();
 
 		// Try to obtain low position
 		auto maybe_lp = thread->getCurrentPosition();
-		if (!maybe_lp) return maybe_lp.error();
+		if (!maybe_lp) return std::unexpected(maybe_lp.error());
 		auto low_position = maybe_lp.value();
 
 		auto function = low_position.function;
@@ -332,14 +335,14 @@ namespace vm {
 
 		do {
 			auto response = thread->step();
-			if (!response) return api::ApiError{ api::OtherError{ "step error" } };
+			if (!response) return std::unexpected(api::ApiError{ api::OtherError{ "step error" } });
 
 			auto maybe_new_lp = thread->getCurrentPosition();
-			if (!maybe_new_lp) return maybe_new_lp.error();
+			if (!maybe_new_lp) return std::unexpected(maybe_new_lp.error());
 			low_position = maybe_new_lp.value();
 		} while (in_exclusive_range(low_position));
 
-		return std::nullopt;
+		return {};
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getVMThreadCurrentPosition(
@@ -398,17 +401,14 @@ namespace vm {
 		api::ThreadID thread_id
 	) {
 		std::shared_lock lock(api_lock);
-		match_optional(assertProcessCanRespond()) {
-			opt_some(error) { return std::unexpected(error); }
-			opt_none {
-				auto opt_thread = getVMThreadByID(thread_id);
-				if (!opt_thread)
-					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-				u64 frames = opt_thread.value()->getNumberOfCurrentStackFrames();
-				return api::Response(api::response::NumberOfCurrentStackFrames{
-					.number_of_stack_frames = frames });
-			}
-		}
+		if (auto can_respond = assertProcessCanRespond(); !can_respond.has_value())
+			return std::unexpected(can_respond.error());
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+		u64 frames = opt_thread.value()->getNumberOfCurrentStackFrames();
+		return api::Response(api::response::NumberOfCurrentStackFrames{ .number_of_stack_frames
+		                                                                = frames });
 		CORE_UNREACHABLE();
 	}
 
@@ -416,61 +416,54 @@ namespace vm {
 		api::ThreadID thread_id, u64 frame_index
 	) {
 		std::shared_lock lock(api_lock);
-		match_optional(assertProcessCanRespond()) {
-			opt_some(error) { return std::unexpected(error); }
-			opt_none {
-				auto opt_thread = getVMThreadByID(thread_id);
-				if (!opt_thread)
-					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-				auto thread        = opt_thread.value();
-				auto maybe_low_pos = thread->getCurrentPosition(frame_index);
-				if (!maybe_low_pos) return std::unexpected(maybe_low_pos.error());
-				const low::LowCodePosition low_pos = maybe_low_pos.value();
+		if (auto can_respond = assertProcessCanRespond(); !can_respond.has_value())
+			return std::unexpected(can_respond.error());
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+		auto thread        = opt_thread.value();
+		auto maybe_low_pos = thread->getCurrentPosition(frame_index);
+		if (!maybe_low_pos) return std::unexpected(maybe_low_pos.error());
+		const low::LowCodePosition low_pos = maybe_low_pos.value();
 
-				Frame& frame = thread->getStackFrame(frame_index);
+		Frame& frame = thread->getStackFrame(frame_index);
 
-				auto block_span
-					= std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end);
+		auto block_span
+			= std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end);
 
-				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
-				for (Block* const& block_ptr: block_span) {
-					Ref<Block> block  = Ref(block_ptr);
-					u64        offset = base::safeIntConv<u64>(
-                        memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
-                    );
-					frame_vars.push_back(api::response::StackFrameData::FrameVar{
-						.offset = offset,
-						.name   = std::nullopt,
-						.type   = std::nullopt,
-						.value  = SafeVMValueRef::makeShared(
-                            *this, memory.getBlockType(block), Pointer(block, 0)
-                        ),
-					});
-				}
+		std::vector<api::response::StackFrameData::FrameVar> frame_vars;
+		for (Block* const& block_ptr: block_span) {
+			Ref<Block> block  = Ref(block_ptr);
+			u64        offset = base::safeIntConv<u64>(
+                memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
+            );
+			frame_vars.push_back(api::response::StackFrameData::FrameVar{
+				.offset = offset,
+				.name   = std::nullopt,
+				.type   = std::nullopt,
+				.value
+				= SafeVMValueRef::makeShared(*this, memory.getBlockType(block), Pointer(block, 0)),
+			});
+		}
 
-				if_opt_some(
-					compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_pos), high_pos
-				) {
-					auto func_opt
-						= loader.getHighProgram()->functions().atMaybe(high_pos.function_name);
-					CORE_ASSERT(func_opt, "We mapped low position to high, high-func should exist");
-					auto  func_ref    = *func_opt;
-					auto  stack_state = func_ref->stack_states.at(high_pos.instruction_index);
-					auto& ls_db       = func_ref->local_stack;
+		if_opt_some(compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_pos), high_pos) {
+			auto func_opt = loader.getHighProgram()->functions().atMaybe(high_pos.function_name);
+			CORE_ASSERT(func_opt, "We mapped low position to high, high-func should exist");
+			auto  func_ref    = *func_opt;
+			auto  stack_state = func_ref->stack_states.at(high_pos.instruction_index);
+			auto& ls_db       = func_ref->local_stack;
 
-					using namespace std::views;
-					for (auto&& [block_idx, frame_var]: zip(iota(0u), frame_vars)) {
-						frame_var.name = ls_db.getName(stack_state, block_idx);
-						frame_var.type = ls_db.getTypeName(stack_state, block_idx);
-						CORE_ASSERT(frame_var.type, "we should have a type of a variable on stack");
-						CORE_ASSERT(frame_var.name, "we should have a name of a variable on stack");
-					}
-				}
-
-				return api::Response(api::response::StackFrameData{
-					.function_name = frame.current_function->name, .frame_vars = frame_vars });
+			using namespace std::views;
+			for (auto&& [block_idx, frame_var]: zip(iota(0u), frame_vars)) {
+				frame_var.name = ls_db.getName(stack_state, block_idx);
+				frame_var.type = ls_db.getTypeName(stack_state, block_idx);
+				CORE_ASSERT(frame_var.type, "we should have a type of a variable on stack");
+				CORE_ASSERT(frame_var.name, "we should have a name of a variable on stack");
 			}
 		}
+
+		return api::Response(api::response::StackFrameData{
+			.function_name = frame.current_function->name, .frame_vars = frame_vars });
 		CORE_UNREACHABLE();
 	}
 
@@ -478,16 +471,13 @@ namespace vm {
 		const std::string& type_name
 	) {
 		std::shared_lock lock(api_lock);
-		match_optional(assertProcessCanRespond()) {
-			opt_some(error) { return std::unexpected(error); }
+		if (auto can_respond = assertProcessCanRespond(); !can_respond.has_value())
+			return std::unexpected(can_respond.error());
+		auto res = loaded_program->getTypes().atMaybe(base::StrID(type_name.c_str()));
+		match_optional(res) {
+			opt_some(value) { return api::response::Type{ value }; }
 			opt_none {
-				auto res = loaded_program->getTypes().atMaybe(base::StrID(type_name.c_str()));
-				match_optional(res) {
-					opt_some(value) { return api::response::Type{ value }; }
-					opt_none {
-						return std::unexpected(api::ApiError{ api::OtherError{ "Type not found" } });
-					}
-				}
+				return std::unexpected(api::ApiError{ api::OtherError{ "Type not found" } });
 			}
 		}
 		CORE_UNREACHABLE();
@@ -499,20 +489,16 @@ namespace vm {
 		// Constructing VMValue allocates a block in memory, so it must be guarded against every
 		// other memory-touching endpoint.
 		std::unique_lock lock(api_lock);
-		match_optional(assertProcessCanRespond()) {
-			opt_some(error) { return std::unexpected(error); }
+		if (auto can_respond = assertProcessCanRespond(); !can_respond.has_value())
+			return std::unexpected(can_respond.error());
+		auto maybe_type = loaded_program->getTypes().atMaybe(base::StrID(type_name.c_str()));
+		match_optional(maybe_type) {
+			opt_some(type) {
+				auto vm_value = createOwnedVMValue(type);
+				return api::response::VMValue{ std::move(vm_value) };
+			}
 			opt_none {
-				auto maybe_type
-					= loaded_program->getTypes().atMaybe(base::StrID(type_name.c_str()));
-				match_optional(maybe_type) {
-					opt_some(type) {
-						auto vm_value = createOwnedVMValue(type);
-						return api::response::VMValue{ std::move(vm_value) };
-					}
-					opt_none {
-						return std::unexpected(api::ApiError{ api::OtherError{ "Type not found" } });
-					}
-				}
+				return std::unexpected(api::ApiError{ api::OtherError{ "Type not found" } });
 			}
 		}
 		CORE_UNREACHABLE();

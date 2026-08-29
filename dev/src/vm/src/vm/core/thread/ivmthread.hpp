@@ -28,8 +28,8 @@ namespace vm {
 	 */
 	class IVMThread {
 	public:
-		using ThreadState = thread_sm::thread_state::ThreadState;
-		using ThreadEvent = thread_sm::thread_event::ThreadEvent;
+		using ThreadState = thread_state::ThreadState;
+		using ThreadEvent = thread_event::ThreadEvent;
 
 		IVMThread(api::ThreadID thread_id, IVMProcess& my_process);
 

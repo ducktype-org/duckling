@@ -26,9 +26,9 @@ namespace vm {
 	 */
 	class ProcessStateManager final {
 	public:
-		using ThreadState  = thread_sm::thread_state::ThreadState;
-		using ThreadEvent  = thread_sm::thread_event::ThreadEvent;
-		using ProcessState = process_sm::process_state::ProcessState;
+		using ThreadState  = thread_state::ThreadState;
+		using ThreadEvent  = thread_event::ThreadEvent;
+		using ProcessState = process_state::ProcessState;
 
 		/**
 		 * @brief Callback called whenever the aggregate process state changes.
@@ -213,7 +213,7 @@ namespace vm {
 		mutable std::mutex table_mutex;  ///< Guards all fields below. Inner.
 		mutable std::condition_variable state_changed;
 
-		process_sm::ProcessStateAggregation agg_state;
+		ProcessStateAggregation agg_state;
 
 		OnStatusChangedCallback on_status_changed;  ///< Accessed under `emit_mutex` only.
 	};

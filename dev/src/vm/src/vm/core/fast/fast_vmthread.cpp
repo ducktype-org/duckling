@@ -41,7 +41,7 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 	const exec::ExecFunction& func      = functions->at(func_info->id.asInt());
 
 	exit_value = createStartAndExecuteFunction(func, args);
-	applyEvent(thread_sm::thread_event::Finish{ exit_value });
+	applyEvent(thread_event::Finish{ exit_value });
 }
 
 void vm::fast::FastVMThread::executeOneStep() {

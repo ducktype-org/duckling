@@ -95,16 +95,13 @@ namespace vm::fast {
 
 		const ProcessState state = getProcessState();
 		variant_match(state) {
-			variant_case(process_sm::process_state::Completed, completed) {
-				return completed.exit_value;
-			}
-			variant_case(process_sm::process_state::Panicked, panicked) {
+			variant_case(process_state::Completed, completed) { return completed.exit_value; }
+			variant_case(process_state::Panicked, panicked) {
 				return std::unexpected(api::StateError{ panicked.err });
 			}
 			variant_default return std::unexpected(api::StateError(
-				v_matches(state, process_sm::process_state::NotStarted)
-					? "Execution did not start"
-					: "Execution did not complete"
+				v_matches(state, process_state::NotStarted) ? "Execution did not start"
+															: "Execution did not complete"
 			));
 		}
 		CORE_UNREACHABLE();
@@ -155,21 +152,22 @@ namespace vm::fast {
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::deinitAndValidate() { return true; }
 
-	base::Optional<api::ApiError> FastVMProcess::pauseVMThread(
+	std::expected<void, api::ApiError> FastVMProcess::pauseVMThread(
 		[[maybe_unused]] api::ThreadID thread_id
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `pauseVMThread` is not implemented.");
 	}
 
-	base::Optional<api::ApiError> FastVMProcess::resumeVMThread(
+	std::expected<void, api::ApiError> FastVMProcess::resumeVMThread(
 		[[maybe_unused]] api::ThreadID thread_id
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `resumeVMThread` is not implemented.");
 	}
 
-	base::Optional<api::ApiError> FastVMProcess::stepVMThread([[maybe_unused]] api::ThreadID thread_id
+	std::expected<void, api::ApiError> FastVMProcess::stepVMThread(
+		[[maybe_unused]] api::ThreadID thread_id
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `stepVMThread` is not implemented.");
@@ -232,7 +230,7 @@ namespace vm::fast {
 	std::vector<api::ThreadID> FastVMProcess::getAllActiveThreadIDs() {
 		std::vector<api::ThreadID> thread_ids;
 		for (const auto& thread: vm_threads)
-			if (thread_sm::thread_state::isActive(thread.getThreadState()))
+			if (thread_state::isActive(thread.getThreadState()))
 				thread_ids.push_back(thread.getThreadID());
 		return thread_ids;
 	}

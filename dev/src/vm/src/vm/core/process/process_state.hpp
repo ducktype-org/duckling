@@ -28,8 +28,8 @@
 #include <type_traits>
 #include <variant>
 
-namespace vm::process_sm {
-	using ThreadState = thread_sm::thread_state::ThreadState;
+namespace vm {
+	using ThreadState = thread_state::ThreadState;
 
 	namespace process_state {
 		struct NotStarted {};  ///< All VMThreads are in the `NotStarted` state.
@@ -129,7 +129,7 @@ namespace vm::process_sm {
 			threads.insert_or_assign(
 				tid,
 				ThreadEntry{
-					.state                = thread_sm::thread_state::NotStarted{},
+					.state                = thread_state::NotStarted{},
 					.state_change_counter = 0,
 				}
 			);
@@ -142,7 +142,7 @@ namespace vm::process_sm {
 		void setThreadState(api::ThreadID tid, ThreadState state) {
 			// The first panic is the one the aggregate reports, so we save it here.
 			if (!first_panic_err.has_value())
-				v_if_matches(state, thread_sm::thread_state::Panicked, panicked) first_panic_err
+				v_if_matches(state, thread_state::Panicked, panicked) first_panic_err
 					= panicked->err;
 
 			const auto entry = threads.atMaybe(tid);
@@ -171,7 +171,7 @@ namespace vm::process_sm {
 		 */
 		[[nodiscard]] process_state::ProcessState aggregateState() const {
 			using namespace process_state;
-			namespace ts = thread_sm::thread_state;
+			namespace ts = thread_state;
 
 			// If any VMThread panicked - we panic as well, and report the first panic.
 			if (first_panic_err.has_value()) return Panicked{ *first_panic_err };
@@ -205,7 +205,7 @@ namespace vm::process_sm {
 				for (const auto& [tid, entry]: threads)
 					CORE_ASSERT(
 						ts::isTerminal(entry.state)
-							|| v_matches(entry.state, thread_sm::thread_state::NotStarted),
+							|| v_matches(entry.state, thread_state::NotStarted),
 						"Unhandled state: ",
 						threadStateName(entry.state)
 					);
@@ -238,19 +238,19 @@ namespace vm::process_sm {
 	}
 }
 
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::NotStarted, "NotStarted")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Running, "Running")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Sleeping, "Sleeping")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Paused, "Paused")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Stopping, "Stopping")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Completed, "Completed")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Stopped, "Stopped")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_state::Panicked, "Panicked")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::NotStarted, "NotStarted")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Running, "Running")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Sleeping, "Sleeping")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Paused, "Paused")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Stopping, "Stopping")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Completed, "Completed")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Stopped, "Stopped")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Panicked, "Panicked")
 
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_event::Run, "Run")
-JSON_REGISTER_TYPE_WITH_NAME(vm::process_sm::process_event::Stop, "Stop")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_event::Run, "Run")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_event::Stop, "Stop")
 
-namespace vm::process_sm {
+namespace vm {
 	namespace process_state {
 		[[nodiscard]] inline std::string_view processStateName(const ProcessState& state) {
 			return VISIT(state, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());

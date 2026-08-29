@@ -14,8 +14,8 @@
 #include <mutex>
 
 namespace vm {
-	namespace ts = thread_sm::thread_state;
-	namespace te = thread_sm::thread_event;
+	namespace ts = thread_state;
+	namespace te = thread_event;
 
 	IVMThread::IVMThread(api::ThreadID thread_id, IVMProcess& my_process):
 		  my_process(my_process),

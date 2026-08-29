@@ -39,9 +39,9 @@ namespace vm {
 	 */
 	class IVMProcess {
 	public:
-		using ProcessState = process_sm::process_state::ProcessState;
-		using ProcessEvent = process_sm::process_event::ProcessEvent;
-		using ThreadEvent  = thread_sm::thread_event::ThreadEvent;
+		using ProcessState = process_state::ProcessState;
+		using ProcessEvent = process_event::ProcessEvent;
+		using ThreadEvent  = thread_event::ThreadEvent;
 
 	protected:
 		PID                              my_pid;
@@ -87,19 +87,20 @@ namespace vm {
 
 		/**
 		 * @brief Validates the current API request against the aggregate state.
-		 * @return Empty optional on success, ApiError if the request is invalid in the current state.
+		 * @return Nothing on success, an `ApiError` if the request is invalid in the current state.
 		 */
-		[[nodiscard]] base::Optional<api::ApiError> validateProcessRequest(const ProcessEvent& event
+		[[nodiscard]] std::expected<void, api::ApiError> validateProcessRequest(
+			const ProcessEvent& event
 		) const;
 
 		/**
 		 * @brief Prepares a run (or a rerun). Called when the process is terminal, moves all
 		 * threads back to `NotStarted` and clears the stop-all-threads flag.
-		 * @return An empty optional when the process is ready to run. An `ApiError` when the
+		 * @return Nothing when the process is ready to run. An `ApiError` when the
 		 * previous run did not complete normally (the process was stopped, killed or panicked,
 		 * which may have left the VM in an undefined state).
 		 */
-		[[nodiscard]] base::Optional<api::ApiError> prepareRun();
+		[[nodiscard]] std::expected<void, api::ApiError> prepareRun();
 
 	private:
 		/**
@@ -185,11 +186,11 @@ namespace vm {
 		virtual std::expected<api::Response, api::ApiError> detach();
 
 		// Virtual thread dependencies for doRequest
-		virtual base::Optional<api::ApiError> pauseVMThread(api::ThreadID thread_id) = 0;
+		virtual std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) = 0;
 
-		virtual base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) = 0;
+		virtual std::expected<void, api::ApiError> resumeVMThread(api::ThreadID thread_id) = 0;
 
-		virtual base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) = 0;
+		virtual std::expected<void, api::ApiError> stepVMThread(api::ThreadID thread_id) = 0;
 
 		virtual std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
 			api::ThreadID thread_id, base::Optional<usize> frame_idx = std::nullopt

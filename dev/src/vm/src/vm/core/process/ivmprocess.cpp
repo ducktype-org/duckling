@@ -7,12 +7,12 @@
 #include <vm/api/data/response.hpp>
 
 namespace vm {
-	namespace ps = process_sm::process_state;
-	namespace pe = process_sm::process_event;
+	namespace ps = process_state;
+	namespace pe = process_event;
 
 	IVMProcess::IVMProcess(const PID my_pid): my_pid(my_pid) {
 		state_manager.setOnStatusChangedCallback([this](const ProcessState& state) {
-			on_status_changed.emitEvent(process_sm::toApiStatus(state));
+			on_status_changed.emitEvent(toApiStatus(state));
 		});
 	}
 
@@ -23,7 +23,7 @@ namespace vm {
 		if (result.stop_all_threads) requestStopAllThreads();
 	}
 
-	base::Optional<api::ApiError> IVMProcess::validateProcessRequest(const ProcessEvent& event
+	std::expected<void, api::ApiError> IVMProcess::validateProcessRequest(const ProcessEvent& event
 	) const {
 		const ProcessState state = state_manager.aggregate();
 		bool               valid = true;
@@ -35,24 +35,24 @@ namespace vm {
 		}
 
 		if (!valid)
-			return api::ApiError{ api::StateError{ base::strConcat(
+			return std::unexpected(api::ApiError{ api::StateError{ base::strConcat(
 				"Invalid request '",
 				pe::processEventName(event),
 				"' in current state '",
 				ps::processStateName(state),
 				"'"
-			) } };
+			) } });
 		return {};
 	}
 
-	base::Optional<api::ApiError> IVMProcess::prepareRun() {
+	std::expected<void, api::ApiError> IVMProcess::prepareRun() {
 		if (not ps::isTerminal(state_manager.aggregate())) return {};
 		if (auto reset = state_manager.resetForRun(); !reset.has_value())
-			return api::ApiError{ api::StateError{ reset.error() } };
+			return std::unexpected(api::ApiError{ api::StateError{ reset.error() } });
 		return {};
 	}
 
-	api::ProcStatus IVMProcess::getStatus() { return process_sm::toApiStatus(getProcessState()); }
+	api::ProcStatus IVMProcess::getStatus() { return toApiStatus(getProcessState()); }
 
 	ProcIO& IVMProcess::getIO() { return io; }
 
@@ -61,26 +61,26 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> IVMProcess::doRequest(
 		const api::RequestVariant& request
 	) {
-#define VALIDATE_REQUEST(event)                                                              \
-	if (auto validation_error = validateProcessRequest(event); validation_error.has_value()) \
-		return std::unexpected(*validation_error);
+#define VALIDATE_REQUEST(event)                                                   \
+	if (auto validation = validateProcessRequest(event); !validation.has_value()) \
+		return std::unexpected(validation.error());
 
 		variant_match(request) {
 			variant_case(api::request::Run, run_request) {
 				VALIDATE_REQUEST(pe::Run{});
-				if (auto e = prepareRun(); e.has_value()) return std::unexpected(*e);
+				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
 				return runFunction("main", run_request.program_args);
 			}
 
 			variant_case(api::request::RunFunction, run_func_request) {
 				VALIDATE_REQUEST(pe::Run{});
-				if (auto e = prepareRun(); e.has_value()) return std::unexpected(*e);
+				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
 				return runFunction(run_func_request.func_name, run_func_request.func_args);
 			}
 
 			variant_case(api::request::RunFunctionAwait, run_func_await_request) {
 				VALIDATE_REQUEST(pe::Run{});
-				if (auto e = prepareRun(); e.has_value()) return std::unexpected(*e);
+				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
 				return runFunctionAwait(
 					run_func_await_request.func_name, run_func_await_request.func_args
 				);
@@ -92,14 +92,14 @@ namespace vm {
 			variant_case(api::request::Pause, pause_request) {
 				// Per-thread operation. Its validity is decided by the target thread not the process.
 				auto response = pauseVMThread(pause_request.thread_id);
-				if (response) return std::unexpected(*response);
+				if (!response) return std::unexpected(response.error());
 				return getVMThreadCurrentPosition(pause_request.thread_id);
 			}
 
 			variant_case(api::request::Resume, resume_request) {
 				// Per-thread operation. Its validity is decided by the target thread not the process.
 				auto response = resumeVMThread(resume_request.thread_id);
-				if (response) return std::unexpected(*response);
+				if (!response) return std::unexpected(response.error());
 				return api::Response(api::response::Empty());
 			}
 
@@ -108,7 +108,7 @@ namespace vm {
 				// process.
 				// @TODO: #2967 For now steps the main thread. This should be done per-thread as well.
 				auto response = stepVMThread(api::MAIN_THREAD_ID);
-				if (response) return std::unexpected(*response);
+				if (!response) return std::unexpected(response.error());
 				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID);
 			}
 

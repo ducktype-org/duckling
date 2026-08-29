@@ -34,8 +34,8 @@
 #include <vector>
 
 namespace vm {
-	namespace ts = thread_sm::thread_state;
-	namespace te = thread_sm::thread_event;
+	namespace ts = thread_state;
+	namespace te = thread_event;
 
 #define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
 	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
