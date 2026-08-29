@@ -5,17 +5,27 @@
             "id": "lib_a",
             "version": "0.1.0",
             "path": "duck_modules/multi_package/lib_a",
-            "features": [ "use_mathlib" ]
+            "features": [
+                "use_mathlib"
+            ]
         },
         {
             "name": "lib_b",
             "id": "lib_b",
             "version": "0.1.0",
             "path": "duck_modules/multi_package/lib_b",
-            "features": [ "use_mathlib", "use_lib_a" ],
+            "features": [
+                "use_mathlib",
+                "use_lib_a"
+            ],
             "dependencies": [
-                { "id": "lib_a", "alias": "lib_a" },
-                { "id": "lib_c" }
+                {
+                    "id": "lib_a",
+                    "alias": "lib_a"
+                },
+                {
+                    "id": "lib_c"
+                }
             ]
         },
         {
@@ -23,9 +33,13 @@
             "id": "lib_c",
             "version": "0.1.0",
             "path": "duck_modules/multi_package/lib_c",
-            "features": [ "use_lib_b" ],
+            "features": [
+                "use_lib_b"
+            ],
             "dependencies": [
-                { "id": "lib_b" }
+                {
+                    "id": "lib_b"
+                }
             ]
         },
         {
@@ -35,8 +49,14 @@
             "path": "duck_modules/multi_package/app1",
             "features": [],
             "dependencies": [
-                { "id": "lib_a", "alias": "lib_a" },
-                { "id": "lib_c", "alias": "lib_b" }
+                {
+                    "id": "lib_a",
+                    "alias": "lib_a"
+                },
+                {
+                    "id": "lib_c",
+                    "alias": "lib_b"
+                }
             ]
         },
         {
@@ -45,7 +65,10 @@
             "version": "0.1.0",
             "path": "duck_modules/multi_package/app2",
             "dependencies": [
-                { "id": "lib_a", "alias": "lib_a" }
+                {
+                    "id": "lib_a",
+                    "alias": "lib_a"
+                }
             ]
         },
         {
@@ -54,8 +77,12 @@
             "version": "0.1.0",
             "path": "duck_modules/multi_package/app3",
             "dependencies": [
-                { "id": "lib_a" },
-                { "id": "lib_b" }
+                {
+                    "id": "lib_a"
+                },
+                {
+                    "id": "lib_b"
+                }
             ]
         },
         {
@@ -64,8 +91,31 @@
             "version": "0.1.0",
             "path": "duck_modules/multi_package/app3",
             "dependencies": [
-                { "id": "lib_a", "alias": "lib_b" },
-                { "id": "lib_b", "alias": "lib_a" }
+                {
+                    "id": "lib_a",
+                    "alias": "lib_b"
+                },
+                {
+                    "id": "lib_b",
+                    "alias": "lib_a"
+                }
+            ]
+        },
+        {
+            "name": "app4",
+            "id": "app4",
+            "version": "0.1.0",
+            "path": "duck_modules/multi_package/app4",
+            "dependencies": [
+                {
+                    "id": "lib_a"
+                },
+                {
+                    "id": "lib_b"
+                },
+                {
+                    "id": "lib_c"
+                }
             ]
         }
     ],
@@ -121,6 +171,11 @@
             "output_file": "app3_alias_dvm.dbc"
         },
         {
+            "package": "app4",
+            "strategy": "dvm_exe",
+            "output_file": "app4_dvm.dbc"
+        },
+        {
             "package": "app1",
             "strategy": "native",
             "output_file": "app1.exe",
@@ -148,6 +203,15 @@
             "package": "app3_alias",
             "strategy": "native",
             "output_file": "app3_alias.exe",
+            "linking_options": {
+                "additional_link_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+                "link_c_standard_library": true
+            }
+        },
+        {
+            "package": "app4",
+            "strategy": "native",
+            "output_file": "app4.exe",
             "linking_options": {
                 "additional_link_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
                 "link_c_standard_library": true
