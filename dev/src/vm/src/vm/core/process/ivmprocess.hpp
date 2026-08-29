@@ -112,6 +112,18 @@ namespace vm {
 		) = 0;
 
 		/**
+		 * @brief Checks that the function to run exists and that the passed arguments match its
+		 * signature.
+		 *
+		 * Runs on the caller's thread, before any thread is spawned, so a faulty call is reported
+		 * with an API error and leaves the process untouched and re-runnable.
+		 */
+		[[nodiscard]] virtual std::expected<void, api::ApiError> validateRunArguments(
+			const std::string& func_name, const RunArguments& run_arguments
+		) const
+			= 0;
+
+		/**
 		 * @brief Creates new thread that runs a function.
 		 */
 		virtual std::expected<api::Response, api::ApiError> runFunction(

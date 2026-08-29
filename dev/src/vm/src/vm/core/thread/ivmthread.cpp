@@ -2,6 +2,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/process/process_state_manager.hpp>
@@ -94,7 +95,7 @@ namespace vm {
 		// `run` has to be followed by a `join`. Having an active `exec_thread` handle here means
 		// the previous run was never joined.
 		if (exec_thread.has_value()) return false;
-		if (ts::isActive(getThreadState())) return false;
+		if (!te::applyThreadEvent(getThreadState(), te::Spawn{}).has_value()) return false;
 
 		// Clear any control requests from a previous run and perform a transition to Running. The
 		// `exec_thread` is the only writer of state from here on.
@@ -111,9 +112,10 @@ namespace vm {
 
 		try {
 			exec_thread = std::thread(&IVMThread::safeRun, this, func_name, run_arguments);
-		} catch (const std::system_error&) {
+		} catch (const std::system_error& e) {
 			// OS thread creation failed.
-			applyEvent(te::Kill{});
+			applyEvent(te::Panic{
+				base::strConcat("Failed to create the execution thread: ", e.what()) });
 			return false;
 		}
 		return true;
@@ -128,10 +130,41 @@ namespace vm {
 		return true;
 	}
 
+	std::expected<void, std::string> IVMThread::validateThreadRequest(
+		const ThreadSignal::Request request
+	) const {
+		const ThreadState state = getThreadState();
+
+		const auto refuse = [&](std::string_view why) {
+			return std::unexpected(base::strConcat(
+				"Invalid request '",
+				ThreadSignal::requestName(request),
+				"' for a thread in state '",
+				ts::threadStateName(state),
+				"': ",
+				why
+			));
+		};
+
+		switch (request) {
+		case ThreadSignal::Request::Pause:
+			if (ts::isTerminal(state)) return refuse("the thread already terminated");
+			if (!ts::hasStarted(state)) return refuse("the thread has not started");
+			return {};
+		case ThreadSignal::Request::Resume:
+		case ThreadSignal::Request::Step:
+			if (!v_matches(state, ts::Paused)) return refuse("the thread is not paused");
+			return {};
+		case ThreadSignal::Request::Stop:
+			if (ts::isTerminal(state)) return refuse("the thread already terminated");
+			return {};
+		}
+		CORE_UNREACHABLE();
+	}
+
 	std::expected<void, std::string> IVMThread::pause() {
-		const ThreadState copy = getThreadState();
-		if (ts::isTerminal(copy)) return std::unexpected("Pausing a terminal thread");
-		if (!ts::hasStarted(copy)) return std::unexpected("Pausing a thread that has not started");
+		if (auto valid = validateThreadRequest(ThreadSignal::Request::Pause); !valid.has_value())
+			return valid;
 
 		if (!signal.post(ThreadSignal::Request::Pause))
 			return std::unexpected("Another request is active");
@@ -147,9 +180,8 @@ namespace vm {
 	}
 
 	std::expected<void, std::string> IVMThread::resume() {
-		const ThreadState copy = getThreadState();
-		if (ts::isTerminal(copy)) return std::unexpected("Resuming a terminal thread");
-		if (!v_matches(copy, ts::Paused)) return std::unexpected("Resuming a non-paused thread");
+		if (auto valid = validateThreadRequest(ThreadSignal::Request::Resume); !valid.has_value())
+			return valid;
 
 		const u64 version = getProcessStateManager().threadStateChangeCounter(thread_id);
 		if (!signal.post(ThreadSignal::Request::Resume))
@@ -163,9 +195,8 @@ namespace vm {
 	}
 
 	std::expected<void, std::string> IVMThread::step() {
-		const ThreadState copy = getThreadState();
-		if (ts::isTerminal(copy)) return std::unexpected("Stepping a terminal thread");
-		if (!v_matches(copy, ts::Paused)) return std::unexpected("Stepping a non-paused thread");
+		if (auto valid = validateThreadRequest(ThreadSignal::Request::Step); !valid.has_value())
+			return valid;
 
 		// The state change counter is needed to distinguish the "current Paused state" we're in and
 		// the one we're waiting for. The step flow is as follows:
@@ -194,7 +225,7 @@ namespace vm {
 	}
 
 	void IVMThread::requestStop() noexcept {
-		if (ts::isTerminal(getThreadState())) return;
+		if (!validateThreadRequest(ThreadSignal::Request::Stop).has_value()) return;
 		(void) signal.post(ThreadSignal::Request::Stop);
 	}
 

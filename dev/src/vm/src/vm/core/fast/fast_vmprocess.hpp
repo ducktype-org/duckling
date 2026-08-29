@@ -33,6 +33,10 @@ namespace vm::fast {
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		) override;
 
+		[[nodiscard]] std::expected<void, api::ApiError> validateRunArguments(
+			const std::string& func_name, const RunArguments& run_arguments
+		) const override;
+
 		std::expected<api::Response, api::ApiError> runFunction(
 			const std::string& func_name, const RunArguments& run_arguments
 		) override;

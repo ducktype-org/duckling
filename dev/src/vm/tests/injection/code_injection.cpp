@@ -206,7 +206,7 @@ private:
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1, file2 }));
 
 		runAndCheckReturnValue(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void injectCode() {
@@ -217,7 +217,7 @@ private:
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 
 		runAndCheckReturnValue(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void runNoArgFunction() {
@@ -226,7 +226,7 @@ private:
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		runAndCheckReturnValue(pid, "summer", vm::FunctionRunArguments{}, {}, "735", {});
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void runVoidFunction() {
@@ -237,7 +237,7 @@ private:
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, "3", {});
 		freeArguments(owned_arguments);
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void runNonVoidFunction() {
@@ -248,7 +248,7 @@ private:
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 695, 40 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, {}, 735);
 		freeArguments(owned_arguments);
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void runMultipleReturnValuesFunction() {
@@ -276,7 +276,7 @@ private:
 			base::Optional<std::vector<i64>>{ { 17, 15 } }
 		);
 		freeArguments(owned_arguments);
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void doubleRunFunction() {
@@ -290,7 +290,7 @@ private:
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 24);
 		freeArguments(owned_arguments);
 		freeArguments(owned_arguments2);
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void manyRunFunctions() {
@@ -305,7 +305,7 @@ private:
 			);
 			freeArguments(owned_arguments);
 		}
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void repl() {
@@ -322,7 +322,7 @@ private:
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments2), {}, {}, 3);
 		freeArguments(owned_arguments2);
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void replWithGlobals() {
@@ -334,7 +334,7 @@ private:
 		fs::File file2(path("repl_with_globals_2.dbc"));
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		runAndCheckReturnValue(pid, "globaler_reader", vm::FunctionRunArguments{}, {}, "12", {});
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void incrementalGlobalVariantPersistsValue() {
@@ -352,7 +352,7 @@ private:
 		runAndCheckReturnValue(
 			pid, "read_global_variant_value", vm::FunctionRunArguments{}, {}, "735", {}
 		);
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void cyclicRepl() {
@@ -369,7 +369,7 @@ private:
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 2, 3 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 10);
 		freeArguments(owned_arguments2);
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void separateGlobals() {
@@ -380,7 +380,7 @@ private:
 		fs::File file2(path("separate_globals_2.dbc"));
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		runAndCheckReturnValue(pid, "globaler_setter", vm::FunctionRunArguments{}, "12", "12", {});
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void injectExistingFunction() {
@@ -388,53 +388,42 @@ private:
 		fs::File file(path("inject_code_1.dbc"));
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 		ASSERT_NO_VALUE(vm::api::loadFiles(pid, { file }));
-		vm::api::deinitAndValidate(pid);
+		(void) vm::api::deinitAndValidate(pid);
 	}
 
 	void runFunctionArgumentValidation() {
-		auto summer_process = [&]() {
-			const vm::PID pid = initProcess();
-			fs::File      file(path("call_non_void_function.dbc"));
-			ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
-			return pid;
-		};
-
+		vm::PID  pid = initProcess();
+		fs::File file(path("call_non_void_function.dbc"));
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 		{
 			// Not enough arguments.
-			const vm::PID     pid = summer_process();
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVMValue(pid, 10));
 			auto func_args = createArgumentList(arguments);
 
-			assertExecutionPanickedWith(
-				runFunctionExpectPanic(pid, "summer", func_args),
-				"expects 2 arguments, but 1 were provided"
+			assertRunFunctionRefusedWith(
+				pid, "summer", func_args, "expects 2 arguments, but 1 were provided"
 			);
 
 			freeArguments(arguments);
-			(void) vm::api::deinitAndValidate(pid);
 		}
 		{
 			// Too many arguments.
-			const vm::PID     pid = summer_process();
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVMValue(pid, 10));
 			arguments.push_back(getIntVMValue(pid, 20));
 			arguments.push_back(getIntVMValue(pid, 30));
 			auto func_args = createArgumentList(arguments);
 
-			assertExecutionPanickedWith(
-				runFunctionExpectPanic(pid, "summer", func_args),
-				"expects 2 arguments, but 3 were provided"
+			assertRunFunctionRefusedWith(
+				pid, "summer", func_args, "expects 2 arguments, but 3 were provided"
 			);
 
 			freeArguments(arguments);
-			(void) vm::api::deinitAndValidate(pid);
 		}
 
 		{
 			// Argument type mismatch.
-			const vm::PID     pid = summer_process();
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVMValue(pid, 10));
 
@@ -444,52 +433,52 @@ private:
 
 			auto func_args = createArgumentList(arguments);
 
-			assertExecutionPanickedWith(
-				runFunctionExpectPanic(pid, "summer", func_args),
+			assertRunFunctionRefusedWith(
+				pid,
+				"summer",
+				func_args,
 				"Type mismatch for argument 1 of function 'summer': expected i64, got i32"
 			);
 
 			freeArguments(arguments);
-			(void) vm::api::deinitAndValidate(pid);
 		}
 
 		{
 			// VMValue with a matching PID, but not created by the safe VM implementation.
-			const vm::PID     pid = summer_process();
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVMValue(pid, 5));
 			arguments.push_back(Box<vm::IVMValue>::fromPointer(new ForeignVMValue(pid)));
 			auto func_args = createArgumentList(arguments);
 
-			assertExecutionPanickedWith(
-				runFunctionExpectPanic(pid, "summer", func_args),
+			assertRunFunctionRefusedWith(
+				pid,
+				"summer",
+				func_args,
 				"VMValue for argument 1 is invalid: it does not belong to the safe VM "
 				"implementation"
 			);
 
 			freeArguments(arguments);
-			(void) vm::api::deinitAndValidate(pid);
 		}
 
 		{
 			// VMValue from different process.
-			const vm::PID pid       = summer_process();
-			vm::PID       other_pid = initProcess();
+			vm::PID other_pid = initProcess();
 
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVMValue(pid, 5));
 			arguments.push_back(getIntVMValue(other_pid, 99));
 			auto func_args = createArgumentList(arguments);
 
-			assertExecutionPanickedWith(
-				runFunctionExpectPanic(pid, "summer", func_args),
-				"VMValue for argument 1 comes from a different process"
+			assertRunFunctionRefusedWith(
+				pid, "summer", func_args, "VMValue for argument 1 comes from a different process"
 			);
 
 			freeArguments(arguments);
-			(void) vm::api::deinitAndValidate(pid);
 			(void) vm::api::deinitAndValidate(other_pid);
 		}
+
+		(void) vm::api::deinitAndValidate(pid);
 	}
 };
 

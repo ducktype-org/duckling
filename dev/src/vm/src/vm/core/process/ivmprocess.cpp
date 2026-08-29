@@ -79,21 +79,30 @@ namespace vm {
 	if (auto validation = validateProcessRequest(event); !validation.has_value()) \
 		return std::unexpected(validation.error());
 
+#define VALIDATE_RUN_ARGUMENTS(func_name, args)                                           \
+	if (auto validation = validateRunArguments(func_name, args); !validation.has_value()) \
+		return std::unexpected(validation.error());
+
 		variant_match(request) {
 			variant_case(api::request::Run, run_request) {
 				VALIDATE_REQUEST(pe::Run{});
+				VALIDATE_RUN_ARGUMENTS("main", run_request.program_args);
 				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
 				return runFunction("main", run_request.program_args);
 			}
 
 			variant_case(api::request::RunFunction, run_func_request) {
 				VALIDATE_REQUEST(pe::Run{});
+				VALIDATE_RUN_ARGUMENTS(run_func_request.func_name, run_func_request.func_args);
 				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
 				return runFunction(run_func_request.func_name, run_func_request.func_args);
 			}
 
 			variant_case(api::request::RunFunctionAwait, run_func_await_request) {
 				VALIDATE_REQUEST(pe::Run{});
+				VALIDATE_RUN_ARGUMENTS(
+					run_func_await_request.func_name, run_func_await_request.func_args
+				);
 				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
 				return runFunctionAwait(
 					run_func_await_request.func_name, run_func_await_request.func_args

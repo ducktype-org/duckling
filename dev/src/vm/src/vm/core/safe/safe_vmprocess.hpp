@@ -37,7 +37,7 @@ namespace vm {
 		friend class SafeVMValueRef;
 
 	private:
-		std::shared_mutex api_lock;
+		mutable std::shared_mutex api_lock;
 
 		/**
 		 * @brief A loader instance for this SafeVMProcess. Stores the high level and low level
@@ -111,6 +111,10 @@ namespace vm {
 		);
 
 		std::expected<void, api::ApiError> assertProcessCanRespond();
+
+		[[nodiscard]] std::expected<void, api::ApiError> validateRunArguments(
+			const std::string& func_name, const RunArguments& run_arguments
+		) const override;
 
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source

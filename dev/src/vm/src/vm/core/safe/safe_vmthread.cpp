@@ -124,18 +124,6 @@ namespace vm {
 	low::LowFuncData SafeVMThread::createStartFunctionFor(
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
-		if (func_args.size() != func.parameters.size()) {
-			throw exceptions::VMRuntimeException(base::strConcat(
-				"Function '",
-				func.name.str(),
-				"' expects ",
-				func.parameters.size(),
-				" arguments, but ",
-				func_args.size(),
-				" were provided."
-			));
-		}
-
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
 			.id   = START_FUNCTION_ID,
@@ -166,45 +154,13 @@ namespace vm {
 
 		start_function.local_stack_size += func.ret_size;
 
-		for (u64 i = 0; i < func_args.size(); i++) {
-			const auto& arg_value = func_args[i];
-			auto        arg_type  = func.parameters[i];
+		// Argument validity was already checked when validating the API call.
+		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {
+			const auto& arg_type = func.parameters[i];
 
-			if (arg_value->getPID() != safe_process.getPID()) {
-				throw exceptions::VMRuntimeException(
-					base::strConcat("VMValue for argument ", i, " comes from a different process")
-				);
-			}
-
-			// Downcast once at the API boundary, so the initFromVMValue opcode can rely on the
-			// embedded pointer being a SafeVMValue without any runtime checks.
-			const auto* safe_value = dynamic_cast<const SafeVMValue*>(&*arg_value);
-			if (safe_value == nullptr) {
-				throw exceptions::VMRuntimeException(base::strConcat(
-					"VMValue for argument ",
-					i,
-					" is invalid: it does not belong to the safe VM implementation"
-				));
-			}
-
-			// Safe TypeIDs are asserted (in the type builder) to be numerically equal to
-			// ValidTypeIDs, so the interface-level type ID can be compared with the safe one.
-			if (arg_value->getTypeID() != code::valid_type::ValidTypeID(arg_type->getID().asInt())) {
-				throw exceptions::VMRuntimeException(base::strConcat(
-					"Type mismatch for argument ",
-					i,
-					" of function '",
-					func.name.str(),
-					"': expected ",
-					arg_type->getName().str(),
-					", got ",
-					arg_value->getType()->getName().str()
-				));
-			}
-
-			start_function.bc.push_back(
-				MAKE_BYTECODE_INSTRUCTION(initFromVMValue, std::bit_cast<u64>(safe_value), 0)
-			);
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
+				initFromVMValue, std::bit_cast<u64>(dynamic_cast<const SafeVMValue*>(&*arg_value)), 0
+			));
 			start_function.local_stack_size += arg_type->getSize().asInt();
 			start_function.parameters.push_back(arg_type);
 			start_function.arg_size += arg_type->getSize().asInt();

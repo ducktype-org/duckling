@@ -64,6 +64,11 @@ namespace vm::fast {
 		}
 	}
 
+	std::expected<void, api::ApiError> FastVMProcess::
+		validateRunArguments(const std::string&, const RunArguments&) const {
+		return {};
+	}
+
 	std::expected<api::Response, api::ApiError> FastVMProcess::runFunction(
 		const std::string& func_name, const RunArguments& run_arguments
 	) {

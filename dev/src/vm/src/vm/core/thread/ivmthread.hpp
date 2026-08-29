@@ -112,6 +112,15 @@ namespace vm {
 		[[nodiscard]] bool hasActiveThread() const;
 
 		/**
+		 * @brief Decides whether an API control request can be performed in current thread state.
+		 *
+		 * @return Nothing if the request may be performed or the reason why it can't.
+		 */
+		[[nodiscard]] std::expected<void, std::string> validateThreadRequest(
+			ThreadSignal::Request request
+		) const;
+
+		/**
 		 * @brief Returns true if a Stop request is pending.
 		 */
 		[[nodiscard]] bool isTerminateRequested() const { return signal.stopRequested(); }
