@@ -114,6 +114,11 @@ impl<'duck> EditableManifest<'duck> {
     /// Important
     /// ---------
     /// For this to have IO effect, it should be followed by [`Self::save`].
+    /// 
+    /// Note
+    /// ----
+    /// The reason this is so complicated (we check other kinds of dependencies, not only the desired one)
+    /// is to provide the user with a better error message.
     pub fn remove_dependency(
         &self,
         name: &str,
