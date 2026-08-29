@@ -19,7 +19,7 @@ use crate::{QuackResult, StrId, qp_bail};
 /// [`Option`].
 ///
 /// This struct has a logic invariant that
-/// ```
+/// ```rust,ignore (illustrative)
 /// self.unit.root_package().package().manifest().build_options().links == Some(self.links)
 /// ```
 /// but allows caller to get `links` without going through an [`Option`].
