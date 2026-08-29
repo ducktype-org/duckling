@@ -107,9 +107,9 @@ namespace vm {
 				// Per-thread operation. Its validity is decided by the target thread not the
 				// process.
 				// @TODO: #2967 For now steps the main thread. This should be done per-thread as well.
-				auto response = stepVMThread(getMainThreadID());
+				auto response = stepVMThread(api::MAIN_THREAD_ID);
 				if (response) return std::unexpected(*response);
-				return getVMThreadCurrentPosition(getMainThreadID());
+				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID);
 			}
 
 			variant_case_novalue(api::request::Stop) {
@@ -123,7 +123,7 @@ namespace vm {
 					return std::unexpected(api::ApiError{
 						api::OtherError{ "Unexpected status response" } });
 
-				return getVMThreadCurrentPosition(getMainThreadID());
+				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID);
 			}
 
 			// The following are read-only and don't change the state.
@@ -140,7 +140,7 @@ namespace vm {
 			}
 
 			variant_case(api::request::ExecutionPosition, current_pos_req) {
-				return getVMThreadCurrentPosition(getMainThreadID(), current_pos_req.frame_idx);
+				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID, current_pos_req.frame_idx);
 			}
 
 			variant_case(api::request::Input, input_request) { return input(input_request); }
@@ -236,7 +236,7 @@ namespace vm {
 		// @TODO: #2342 https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();
 		io.inputStream() << request.input;
-		for (auto id: getAllThreadIDs()) notifyVMThreadWaiters(id);
+		for (auto id: getAllActiveThreadIDs()) notifyVMThreadWaiters(id);
 		return api::Response(api::response::Empty());
 	}
 

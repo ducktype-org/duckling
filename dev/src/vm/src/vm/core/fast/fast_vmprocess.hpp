@@ -93,13 +93,11 @@ namespace vm::fast {
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
-		std::vector<api::ThreadID> getAllThreadIDs() override;
+		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
 
 		FastVMThread& getMainVMThread();
 
 		base::Optional<Ref<FastVMThread>> getVMThreadByID(api::ThreadID thread_id);
-
-		api::ThreadID getMainThreadID() override;
 
 	private:
 		base::StableObjectPool<FastVMThread, api::ThreadID, false, true> vm_threads;

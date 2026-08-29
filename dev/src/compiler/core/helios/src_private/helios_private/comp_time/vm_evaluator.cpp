@@ -58,7 +58,9 @@ namespace {
 			if (auto res = vm::api::spawn()) {
 				pid = res->pid;
 				if (!initializeCompTimeOps()) {
-					(void) vm::api::kill(pid.value());
+					CORE_ASSERT(
+						vm::api::kill(pid.value()), "Failed to kill a freshly spawned comp time DVM"
+					);
 					pid.reset();
 				}
 			}

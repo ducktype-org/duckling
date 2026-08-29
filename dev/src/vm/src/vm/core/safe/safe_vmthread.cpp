@@ -600,8 +600,7 @@ namespace vm {
 		}();
 
 		const auto exit_value = executeFunction(start_function, func);
-		applyEvent(thread_sm::thread_event::Finish{
-			std::vector<Ref<IVMValue>>(exit_value.begin(), exit_value.end()) });
+		applyEvent(te::Finish{ std::vector<Ref<IVMValue>>(exit_value.begin(), exit_value.end()) });
 	}
 
 	bool SafeVMThread::execGlobalDestructors() {

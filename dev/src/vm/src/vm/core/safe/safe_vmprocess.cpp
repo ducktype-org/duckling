@@ -35,7 +35,7 @@ namespace vm {
 	std::expected<api::Response, api::LoadProgramError> SafeVMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
-		std::unique_lock                          lock(rw_global);
+		std::unique_lock                          lock(api_lock);
 		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
 				variant_case(std::vector<fs::File>, files) {
@@ -63,15 +63,15 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::runFunction(
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
-		std::unique_lock lock(rw_global);
+		std::unique_lock lock(api_lock);
 		return spawnThreadLocked(func_name, run_arguments);
 	}
 
 	std::expected<api::ThreadID, api::ApiError> SafeVMProcess::startNewThreadFromExecutionThread(
 		const std::string& func_name
 	) {
-		// On purpose without `rw_global`. This runs on the exec_thread as part of bytecode
-		// execution, and `stepVMThread`/`stop`/`pauseVMThread` hold `rw_global`. Taking it here
+		// On purpose without `api_lock`. This runs on the exec_thread as part of bytecode
+		// execution, and `stepVMThread`/`stop`/`pauseVMThread` hold `api_lock`. Taking it here
 		// again would deadlocks when stepping onto `call_builtinfunc builtin_start_thread`.
 		if (v_matches(getProcessState(), ps::Stopping))
 			return std::unexpected(api::ApiError{
@@ -101,7 +101,7 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::runFunctionAwait(
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
-		std::unique_lock lock(rw_global);
+		std::unique_lock lock(api_lock);
 
 		SafeVMThread& main = getMainVMThread();
 		main.setThreadCtx(func_name);
@@ -137,7 +137,7 @@ namespace vm {
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::stop() {
 		// Destroying threads down races the memory-touching endpoints, thus the lock.
-		std::unique_lock global_lock(rw_global);
+		std::unique_lock global_lock(api_lock);
 		// First raise the process stop flag.
 		(void) state_manager.requestStop();
 		// Send a Stop request to all threads.
@@ -219,8 +219,7 @@ namespace vm {
 
 	base::Optional<Ref<SafeVMThread>> SafeVMProcess::getVMThreadByID(api::ThreadID thread_id) {
 		std::lock_guard lock(threads_pool_mutex);
-		if_opt_some(vm_threads.maybeGet(thread_id), thread) return thread;
-		return std::nullopt;
+		return vm_threads.maybeGet(thread_id);
 	}
 
 	SafeVMThread& SafeVMProcess::getEmptyThread() {
@@ -234,6 +233,8 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::StateError> SafeVMProcess::getExitCode() {
+		// `api_lock` is not needed here, since the only shared read here is the process state which
+		// is being synchronized by `ProcessStateManager`.
 		const ProcessState state = getProcessState();
 		variant_match(state) {
 			variant_case(ps::Completed, completed) { return completed.exit_value; }
@@ -250,7 +251,7 @@ namespace vm {
 		// stopped already.
 		joinAllExecutionThreads();
 
-		std::unique_lock lock(rw_global);
+		std::unique_lock lock(api_lock);
 		bool             destructors_ran = false;
 		try {
 			// There might be numerous runtime exceptions during the deinitialization,
@@ -273,7 +274,7 @@ namespace vm {
 
 	base::Optional<api::ApiError> SafeVMProcess::pauseVMThread(api::ThreadID thread_id) {
 		// API reads cannot happen while the thread is changing state.
-		std::unique_lock lock(rw_global);
+		std::unique_lock lock(api_lock);
 		auto             opt_thread = getVMThreadByID(thread_id);
 		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
 		auto response = opt_thread.value()->pause();
@@ -283,7 +284,7 @@ namespace vm {
 
 	base::Optional<api::ApiError> SafeVMProcess::resumeVMThread(api::ThreadID thread_id) {
 		// API reads cannot happen while the thread is changing run state.
-		std::unique_lock lock(rw_global);
+		std::unique_lock lock(api_lock);
 		auto             opt_thread = getVMThreadByID(thread_id);
 		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
 		auto response = opt_thread.value()->resume();
@@ -294,7 +295,7 @@ namespace vm {
 	base::Optional<api::ApiError> SafeVMProcess::stepVMThread(api::ThreadID thread_id) {
 		// Stepping actually executes bytecode, which mutates process memory. It must not
 		// run concurrently with other memory-touching endpoints.
-		std::unique_lock lock(rw_global);
+		std::unique_lock lock(api_lock);
 
 		// Try to obtain thread
 		auto opt_thread = getVMThreadByID(thread_id);
@@ -344,7 +345,7 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getVMThreadCurrentPosition(
 		api::ThreadID thread_id, base::Optional<usize> frame_idx
 	) {
-		std::shared_lock lock(rw_global);
+		std::shared_lock lock(api_lock);
 
 		// Try to obtain thread
 		auto opt_thread = getVMThreadByID(thread_id);
@@ -388,7 +389,7 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::setExecutionConfig(
 		const api::ExecutionConfig& config
 	) {
-		std::unique_lock lock(rw_global);
+		std::unique_lock lock(api_lock);
 		this->execution_config = config;
 		return api::Response(api::response::Empty());
 	}
@@ -396,7 +397,7 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getNumberOfCurrentStackFrames(
 		api::ThreadID thread_id
 	) {
-		std::shared_lock lock(rw_global);
+		std::shared_lock lock(api_lock);
 		match_optional(assertProcessCanRespond()) {
 			opt_some(error) { return std::unexpected(error); }
 			opt_none {
@@ -414,7 +415,7 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getStackFrameData(
 		api::ThreadID thread_id, u64 frame_index
 	) {
-		std::shared_lock lock(rw_global);
+		std::shared_lock lock(api_lock);
 		match_optional(assertProcessCanRespond()) {
 			opt_some(error) { return std::unexpected(error); }
 			opt_none {
@@ -476,7 +477,7 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getTypeMetadata(
 		const std::string& type_name
 	) {
-		std::shared_lock lock(rw_global);
+		std::shared_lock lock(api_lock);
 		match_optional(assertProcessCanRespond()) {
 			opt_some(error) { return std::unexpected(error); }
 			opt_none {
@@ -497,7 +498,7 @@ namespace vm {
 	) {
 		// Constructing VMValue allocates a block in memory, so it must be guarded against every
 		// other memory-touching endpoint.
-		std::unique_lock lock(rw_global);
+		std::unique_lock lock(api_lock);
 		match_optional(assertProcessCanRespond()) {
 			opt_some(error) { return std::unexpected(error); }
 			opt_none {
@@ -517,7 +518,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::vector<api::ThreadID> SafeVMProcess::getAllThreadIDs() {
+	std::vector<api::ThreadID> SafeVMProcess::getAllActiveThreadIDs() {
 		std::lock_guard            lock(threads_pool_mutex);
 		std::vector<api::ThreadID> thread_ids;
 		for (const auto& thread: vm_threads)
@@ -525,12 +526,10 @@ namespace vm {
 		return thread_ids;
 	}
 
-	api::ThreadID SafeVMProcess::getMainThreadID() { return api::MAIN_THREAD_ID; }
-
 	std::expected<api::Response, api::ApiError> SafeVMProcess::setBreakpoint(
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
-		std::unique_lock lock(rw_global);
+		std::unique_lock lock(api_lock);
 
 		// Try to obtain original function
 		auto maybe_original_function
@@ -569,7 +568,7 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::mapFileLineToCodeCollectionPosition(
 		const fs::File& file, usize line_number
 	) {
-		std::shared_lock lock(rw_global);
+		std::shared_lock lock(api_lock);
 
 		auto maybe_position = loader.mapFileLineToCodeCollectionPosition(file, line_number);
 		if (!maybe_position)

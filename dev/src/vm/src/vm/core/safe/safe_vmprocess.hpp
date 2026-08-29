@@ -37,7 +37,7 @@ namespace vm {
 		friend class SafeVMValueRef;
 
 	private:
-		std::shared_mutex rw_global;
+		std::shared_mutex api_lock;
 
 		/**
 		 * @brief A loader instance for this SafeVMProcess. Stores the high level and low level
@@ -104,7 +104,7 @@ namespace vm {
 
 		/**
 		 * @brief Helper used by `runFunction` and `startNewThreadFromExecutionThread`. Takes no
-		 * `rw_global`.
+		 * `api_lock`.
 		 */
 		std::expected<api::Response, api::ApiError> spawnThreadLocked(
 			const std::string& func_name, const RunArguments& run_arguments
@@ -164,9 +164,7 @@ namespace vm {
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
-		api::ThreadID getMainThreadID() override;
-
-		std::vector<api::ThreadID> getAllThreadIDs() override;
+		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
 
 		void requestStopAllThreads() noexcept override;
 
@@ -200,7 +198,7 @@ namespace vm {
 		/**
 		 * @brief Spawns a thread running @p func_name, for `builtin_start_thread` only.
 		 *
-		 * @note Called from an exec thread, so it must NOT take `rw_global`. Look at the impl for
+		 * @note Called from an exec thread, so it must NOT take `api_lock`. Look at the impl for
 		 * more info.
 		 */
 		std::expected<api::ThreadID, api::ApiError> startNewThreadFromExecutionThread(

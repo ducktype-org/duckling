@@ -226,9 +226,10 @@ namespace vm {
 			const std::string& type_name
 		) = 0;
 
-		virtual std::vector<api::ThreadID> getAllThreadIDs() = 0;
-
-		virtual api::ThreadID getMainThreadID() = 0;
+		/**
+		 * @brief IDs of the threads which are currently active (started and not terminal).
+		 */
+		virtual std::vector<api::ThreadID> getAllActiveThreadIDs() = 0;
 
 		/**
 		 * @brief Posts Stop to all threads. Non blocking.

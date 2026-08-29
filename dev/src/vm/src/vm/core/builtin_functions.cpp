@@ -199,9 +199,9 @@ namespace vm::builtins {
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
 		thread.releaseGil();
-		// @note: Don't call `api::runFunction` here as it takes `rw_global` (which is held by
+		// @note: Don't call `api::runFunction` here as it takes `api_lock` (which is held by
 		// `pause`, `step` etc.). Doing that deadlocks when stepping over `call_builtinfunc
-		// builtin_start_thread` as it would take `rw_global` again.
+		// builtin_start_thread` as it would take `api_lock` again.
 		auto result = thread.safe_process.startNewThreadFromExecutionThread(thread.getThreadCtx());
 		thread.acquireGil();
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());

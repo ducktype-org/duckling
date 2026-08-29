@@ -64,11 +64,7 @@ namespace vm {
 					api::ApiError(api::OtherError("Execution panicked with error: " + panicked.err))
 				);
 			}
-			variant_default {
-				return std::unexpected(
-					api::ApiError(api::OtherError("Unexpected run status after join!"))
-				);
-			}
+			variant_default { CORE_UNREACHABLE(); }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -80,8 +76,7 @@ namespace vm {
 	}
 
 	void IVMThread::safeRun(const std::string& func_name, const RunArguments& run_arguments) {
-		// `Spawn` was committed by the `prepareSpawnLocked`). From here on this exec thread is the
-		// only writer of this thread's state.
+		// Thread event `Spawn` was committed by the `prepareSpawnLocked`.
 		try {
 			if (isTerminateRequested()) throw KillProcessException{};
 			run(func_name, run_arguments);
@@ -179,7 +174,20 @@ namespace vm {
 		if (ts::isTerminal(copy)) return std::unexpected("Stepping a terminal thread");
 		if (!v_matches(copy, ts::Paused)) return std::unexpected("Stepping a non-paused thread");
 
-		// Version is needed to see the new Paused after a fast Paused -> Running -> Paused transition.
+		// The state change counter is needed to distinguish the "current Paused state" we're in and
+		// the one we're waiting for. The step flow is as follows:
+		// 1) The thread is in state `Paused` when entering the step.
+		// 2) We post a `Resume` request through `ThreadSignal`
+		// 3) We wait for the step to perform and wait for the next `Paused` state.
+		//
+		// It is possible, that when being in step 3), the `exec_thread` didn't manage to read the
+		// new `Resume` request we posted in step 2) (meaning it didn't change it state from Paused
+		// to Running and the state is sill `Paused`). This means the thread is still in the same
+		// `Paused` state we started with, with no actual step of instruction happening in between.
+		// Waiting for ANY Paused state in step 3) would mean we exit right away in the case
+		// described above. For this reason, we use the state change counter and remember that the
+		// `Paused` state we started with has some index `Paused{N}`. Than, we wait for any new
+		// `Paused` state newer then `N` (Paused{>N})
 		const u64 version = getProcessStateManager().threadStateChangeCounter(thread_id);
 		if (!signal.post(ThreadSignal::Request::Step))
 			return std::unexpected("Another control request is in flight");

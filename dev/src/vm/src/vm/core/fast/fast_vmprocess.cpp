@@ -229,15 +229,12 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `getVMValueForType` is not implemented.");
 	}
 
-	std::vector<api::ThreadID> FastVMProcess::getAllThreadIDs() {
+	std::vector<api::ThreadID> FastVMProcess::getAllActiveThreadIDs() {
 		std::vector<api::ThreadID> thread_ids;
-		for (const auto& thread: vm_threads) thread_ids.push_back(thread.getThreadID());
+		for (const auto& thread: vm_threads)
+			if (thread_sm::thread_state::isActive(thread.getThreadState()))
+				thread_ids.push_back(thread.getThreadID());
 		return thread_ids;
-	}
-
-	api::ThreadID FastVMProcess::getMainThreadID() {
-		std::scoped_lock lock(data_lock);
-		return getMainVMThread().getThreadID();
 	}
 
 	void FastVMProcess::requestStopAllThreads() noexcept {
