@@ -61,8 +61,11 @@ namespace compiler::backend_vm::internal {
 		bool                         is_constant,
 		base::Optional<base::StrID>  lowered_global_name
 	) {
-		base::StrID global_name
-			= lowered_global_name.copyValueOr(pctx.getAnonymousGlobalName(base::StrID("ctv_value")));
+		// copyValueOrElse and not copyValueOr: getAnonymousGlobalName bumps a counter, so asking
+		// for a name we already have would burn one for nothing.
+		base::StrID global_name = lowered_global_name.copyValueOrElse([&pctx] {
+			return pctx.getAnonymousGlobalName(base::StrID("ctv_value"));
+		});
 
 		vm::code::GlobalData global_data{};
 		global_data.name        = global_name;
