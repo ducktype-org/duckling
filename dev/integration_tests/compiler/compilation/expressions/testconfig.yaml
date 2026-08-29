@@ -37,7 +37,7 @@ Tests:
       all:
         backend: llvm
         Output:
-          String: "9\n729\n0.137313\n0.167472\n"
+          String: "9\n729\n0.137313\n0.167472\n7\n343\n"
         ExitCode: 0
 
   unit_simple:

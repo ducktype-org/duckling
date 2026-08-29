@@ -14,8 +14,6 @@ const A: i32 = 1;
 const B: i32 = (X - 6) + (1 + A); # B = -3
 
 const E: i32 = 2 + 2 * 2; # E = 6
-# we have max i32 here, to avoid signed overflow in the compiler.
-const MAX_I32: i32 = 2 ** 31 - 1;
 
 const MOD: i32 = 69 % 42; # MOD = 27 27
 

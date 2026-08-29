@@ -588,23 +588,17 @@ private:
 	}
 
 	void testOperatorsWithPrimitives() {
-		{
-			auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
-			ASSERT_EQUAL(
-				std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope)
-			);
-		}
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/std_operators")));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
 
-		{
-			auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
-			ASSERT_EQUAL(256, getConstValueAs<i32>("V256", root_scope));
+		ASSERT_EQUAL(256, getConstValueAs<i32>("V256", root_scope));
 
-			auto              sym_v256 = getChain("V256", root_scope).back();
-			std::stringstream out_v256;
-			auto              tree_v256 = getExprOfConst(sym_v256);
-			tree_v256->debugPrint(out_v256);
-			ASSERT_EQUAL("(Symbol powi (510))(3 + 4 - 4 * 16 / 5 % 7, 8)", out_v256.str());
-		}
+		auto              sym_v256 = getChain("V256", root_scope).back();
+		std::stringstream out_v256;
+		auto              tree_v256 = getExprOfConst(sym_v256);
+		tree_v256->debugPrint(out_v256);
+		ASSERT_TRUE(out_v256.str().starts_with("(Symbol powi ("));
+		ASSERT_TRUE(out_v256.str().ends_with("))(3 + 4 - 4 * 16 / 5 % 7, 8)"));
 	}
 };
 

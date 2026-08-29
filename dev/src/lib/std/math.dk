@@ -307,16 +307,16 @@ namespace impl {
     #}
     template(T: type)
     fun powi(x: T, y: T) -> T = {
-        if (y < 0) panic();
+        if (y < 0 as T) panic();
 
-        var result: T = 1;
+        var result: T = 1 as T;
         var exp: T = x;
-        while (y > 0) {
-            if (y % 2 == 1) {
-                result = result * exp;
+        while (y > 0 as T) {
+            if (y % 2 as T == 1) {
+                result *= exp;
             }
-            y = y/2;
-            exp = exp * exp;
+            y /= 2 as T;
+            exp *= exp;
         }
         return result;
     }

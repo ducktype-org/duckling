@@ -15,5 +15,12 @@ fun main() = {
     builtin_output_f64(y);
     builtin_output_f64(y**0.9);
 
+    var z: u32 = 5u32;
+    z += 1u32;
+    z *= 3u32;
+    z -= 11u32;
+    builtin_output_i64(z);
+    builtin_output_i64(z**3u32);
+
     return 0;
 }

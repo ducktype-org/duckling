@@ -60,6 +60,11 @@ namespace {
 		return {};
 	}
 
+	/**
+	 * @brief This enum represents builtin binary numeric operators that are not directly handed to
+	 * lowering via BinaryOperatorExpr, but instead require handling in HELIOS, such as generating a
+	 * call to language primitive.
+	 */
 	enum class PreDesugarOperator {
 		IntegerPlusEq,
 		IntegerMinusEq,
@@ -75,6 +80,16 @@ namespace {
 		FloatPow,
 	};
 
+	/**
+	 * @brief Resolves a builtin binary numeric operator into HELIOS expression. If it cannot be
+	 * resolved correctly (for example, because there is no language primitive that matches the @p
+	 * lhs and @p rhs types) an empty box is returned.
+	 * @param ctx Query context
+	 * @param op Operator to be resolved
+	 * @param lhs Left hand side argument of the operator
+	 * @param rhs Right hand side argument of the operator
+	 * @return Corresponding desugared expression
+	 */
 	MBox<code::Expr> desugarOperatorToExpr(
 		query::Context& ctx, PreDesugarOperator op, Box<code::Expr> lhs, Box<code::Expr> rhs
 	) {
