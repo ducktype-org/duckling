@@ -6,6 +6,7 @@
 #include <vm/utils/persistent/dummy/vector.hpp>
 #include <vm/utils/persistent/hashmap.hpp>
 #include <vm/utils/persistent/memory.hpp>
+#include <vm/utils/persistent/tree.hpp>
 #include <vm/utils/persistent/vector.hpp>
 
 #include <array>
@@ -24,6 +25,7 @@ public:
 		TESTER_ADD_TEST(testBijective);
 		TESTER_ADD_TEST(testMemory);
 		TESTER_ADD_TEST(testMemoryAccess);
+		TESTER_ADD_TEST(testSegmentTreePaths);
 		TESTER_ADD_TEST(testVector);
 		TESTER_ADD_TEST(testHashMap);
 		TESTER_ADD_TEST(testRandomVector);
@@ -225,6 +227,104 @@ public:
 		ASSERT_EQUAL(20, left_path->getIdx());
 		ASSERT_EQUAL(200, left_path->getValue());
 		ASSERT_TRUE(memory.getPathTo(state, 100'000, Memory::Dir::Rght).empty());
+	}
+
+	void testSegmentTreePaths() {
+		using Tree = vm::persistent::detail::SegmentTree;
+		using Dir  = Tree::Dir;
+
+		Tree tree;
+		const auto empty = Tree::EMPTY;
+
+		ASSERT_TRUE(!tree.getPathTo(empty, 0).has_value());
+
+		const auto single = tree.emplaceLeaf(10, 100);
+		ASSERT_EQUAL(1, tree.getSize(single));
+		const auto single_range = tree.getRange(single);
+		ASSERT_EQUAL(10, single_range.first);
+		ASSERT_EQUAL(11, single_range.second);
+
+		auto path = tree.getPathTo(single, 10);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_EQUAL(10, path->getIdx());
+		ASSERT_EQUAL(100, path->getValue());
+		path = tree.getPathTo(single, 10);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_TRUE(!path->moveToValid(Dir::Left));
+		path = tree.getPathTo(single, 10);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_TRUE(!path->moveToValid(Dir::Rght));
+
+		ASSERT_TRUE(!tree.getPathTo(single, 5).has_value());
+		path = tree.getPathTo(single, 5, Dir::Left);
+		ASSERT_TRUE(!path.has_value());
+		path = tree.getPathTo(single, 5, Dir::Rght);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_EQUAL(10, path->getIdx());
+		path = tree.getPathTo(single, 15, Dir::Left);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_EQUAL(10, path->getIdx());
+		path = tree.getPathTo(single, 15, Dir::Rght);
+		ASSERT_TRUE(!path.has_value());
+
+		const std::deque<usize> indices = { 0, 10, 20, Tree::IDX_END - 1 };
+		const auto root = tree.reconstructLeaves(
+			empty,
+			indices,
+			[&tree](usize idx, base::Optional<usize>) { return tree.emplaceLeaf(idx, idx + 1); }
+		);
+
+		path = tree.getPathTo(root, 0);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_EQUAL(0, path->getIdx());
+		ASSERT_TRUE(path->moveToValid(Dir::Rght));
+		ASSERT_EQUAL(10, path->getIdx());
+		ASSERT_TRUE(path->moveToValid(Dir::Rght));
+		ASSERT_EQUAL(20, path->getIdx());
+		ASSERT_TRUE(path->moveToValid(Dir::Rght));
+		ASSERT_EQUAL(Tree::IDX_END - 1, path->getIdx());
+		ASSERT_TRUE(!path->moveToValid(Dir::Rght));
+
+		path = tree.getPathTo(root, Tree::IDX_END - 1);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_TRUE(path->moveToValid(Dir::Left));
+		ASSERT_EQUAL(20, path->getIdx());
+		ASSERT_TRUE(path->moveToValid(Dir::Left));
+		ASSERT_EQUAL(10, path->getIdx());
+		ASSERT_TRUE(path->moveToValid(Dir::Left));
+		ASSERT_EQUAL(0, path->getIdx());
+		ASSERT_TRUE(!path->moveToValid(Dir::Left));
+
+		path = tree.getPathTo(root, 10);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_TRUE(path->moveToValid(Dir::Rght, 0));
+		ASSERT_EQUAL(20, path->getIdx());
+		ASSERT_TRUE(path->moveToValid(Dir::Left, 0));
+		ASSERT_EQUAL(10, path->getIdx());
+
+		path = tree.getPathTo(root, 10);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_TRUE(path->moveToValid(Dir::Rght, 1));
+		ASSERT_EQUAL(Tree::IDX_END - 1, path->getIdx());
+		ASSERT_TRUE(!path->moveToValid(Dir::Rght, 1));
+
+		path = tree.getPathTo(root, 0);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_TRUE(path->moveToValid(Dir::Rght, 2));
+		ASSERT_EQUAL(Tree::IDX_END - 1, path->getIdx());
+		ASSERT_TRUE(!path->moveToValid(Dir::Left, 4));
+
+		path = tree.getPathTo(root, 15, Dir::Left);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_EQUAL(10, path->getIdx());
+		path = tree.getPathTo(root, 15, Dir::Rght);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_EQUAL(20, path->getIdx());
+		path = tree.getPathTo(root, 0, Dir::Left);
+		ASSERT_TRUE(path.has_value());
+		ASSERT_EQUAL(0, path->getIdx());
+		path = tree.getPathTo(root, Tree::IDX_END, Dir::Rght);
+		ASSERT_TRUE(!path.has_value());
 	}
 
 	void testVector() {
