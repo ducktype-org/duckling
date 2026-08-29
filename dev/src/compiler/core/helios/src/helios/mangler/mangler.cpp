@@ -350,7 +350,9 @@ namespace compiler::helios::mangler {
 		}
 
 		template<typename ElemT>
-		auto check_and_add_elem(auto it, const auto& ancestors, auto ancestor, auto& ret, auto& ctx) {
+		auto checkAndAddElem(
+			const auto& it, const auto& ancestors, const auto& ancestor, auto& ret, auto& ctx
+		) {
 			for (auto it_cpy = it; it_cpy != ancestors.rbegin();)
 				if ((--it_cpy)->second == ancestor->getID()) return;
 
@@ -358,7 +360,7 @@ namespace compiler::helios::mangler {
 			ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
 
 			if constexpr (std::same_as<ElemT, pst::Fun>) {
-				//
+				// @taw3e8 @todo: add fun params
 			}
 		}
 
@@ -410,9 +412,9 @@ namespace compiler::helios::mangler {
 				auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
 				switch (ancestor->getElementKind()) {
 					using enum pst::ElementKind;
-				case Fun:
 				case Namespace:
 				case Class:
+				case Fun:
 					is_nested = true;
 					ancestors.emplace_back(ancestor, std::nullopt);
 					break;
@@ -440,15 +442,15 @@ namespace compiler::helios::mangler {
 				switch (ancestor->getElementKind()) {
 					using enum pst::ElementKind;
 				case Namespace: {
-					check_and_add_elem<pst::Namespace>(it, ancestors, ancestor, ret, ctx);
+					checkAndAddElem<pst::Namespace>();
 					break;
 				}
 				case Class: {
-					check_and_add_elem<pst::Class>(it, ancestors, ancestor, ret, ctx);
+					checkAndAddElem<pst::Class>();
 					break;
 				}
 				case Fun: {
-					check_and_add_elem<pst::Fun>(it, ancestors, ancestor, ret, ctx);
+					checkAndAddElem<pst::Fun>();
 					break;
 				}
 				case TemplateStmt: {
