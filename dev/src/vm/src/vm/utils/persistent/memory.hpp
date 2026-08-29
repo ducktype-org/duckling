@@ -228,7 +228,7 @@ namespace vm::persistent {
 		public:
 			using value_type = std::pair<usize, usize>;
 
-			value_type operator*() const;
+			value_type      operator*() const;
 			MemoryIterator& operator++();
 			MemoryIterator  operator++(int);
 			MemoryIterator& operator--();

@@ -100,8 +100,8 @@ namespace vm::persistent {
 		 */
 		[[nodiscard]]
 		VectorStateID push(VectorStateID state_id, const VarT& var) {
-			const auto state = validateState(state_id);
-			const auto size  = inner.size(state);
+			const auto state     = validateState(state_id);
+			const auto size      = inner.size(state);
 			const auto val_id    = emplaceNewVal(var);
 			const auto new_state = inner.set(state, size, val_id);
 
@@ -200,9 +200,9 @@ namespace vm::persistent {
 
 	template<typename VarT, typename VarH = std::hash<VarT>>
 	class VectorStateView final {
-		VectorStateID                   id;
-		const Vector<VarT, VarH>&       vec;
-		MemoryStateView                 mem_view;
+		VectorStateID             id;
+		const Vector<VarT, VarH>& vec;
+		MemoryStateView           mem_view;
 
 	public:
 		class VectorIterator {
@@ -239,31 +239,27 @@ namespace vm::persistent {
 				return copy;
 			}
 
-			bool operator==(const VectorIterator& oth) const {
-				return mem_it == oth.mem_it;
-			}
+			bool operator==(const VectorIterator& oth) const { return mem_it == oth.mem_it; }
 
 			bool operator!=(const VectorIterator& oth) const { return !(*this == oth); }
 
 			VectorIterator() = default;
-			VectorIterator(const Vector<VarT, VarH>& vec, MemoryStateView::MemoryIterator mem_it)
-				: mem_it(mem_it), vec(&vec) {}
+
+			VectorIterator(const Vector<VarT, VarH>& vec, MemoryStateView::MemoryIterator mem_it):
+				  mem_it(mem_it),
+				  vec(&vec) {}
 		};
 
-		VectorStateView(const Vector<VarT, VarH>& vec, VectorStateID id)
-			: id(id), vec(vec), mem_view(vec.inner, Vector<VarT, VarH>::toMemState(id)) {}
+		VectorStateView(const Vector<VarT, VarH>& vec, VectorStateID id):
+			  id(id),
+			  vec(vec),
+			  mem_view(vec.inner, Vector<VarT, VarH>::toMemState(id)) {}
 
-		VectorIterator begin() const {
-			return VectorIterator{ vec, mem_view.begin() };
-		}
+		VectorIterator begin() const { return VectorIterator{ vec, mem_view.begin() }; }
 
-		VectorIterator end() const {
-			return VectorIterator{ vec, mem_view.end() };
-		}
+		VectorIterator end() const { return VectorIterator{ vec, mem_view.end() }; }
 
-		const VarT& operator[](usize idx) const {
-			return vec.at(id, idx);
-		}
+		const VarT& operator[](usize idx) const { return vec.at(id, idx); }
 
 		[[nodiscard]]
 		usize size() const {

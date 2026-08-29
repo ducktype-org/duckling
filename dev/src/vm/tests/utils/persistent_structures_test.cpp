@@ -186,7 +186,7 @@ public:
 		ASSERT_TRUE(memory.access(state, 20).has_value());
 		ASSERT_EQUAL(200, *memory.access(state, 20));
 
-		MemoryStateView view(memory, state);
+		MemoryStateView                      view(memory, state);
 		std::vector<std::pair<usize, usize>> entries;
 		for (auto entry: view) entries.emplace_back(entry);
 		const std::vector<std::pair<usize, usize>> expected{ { 10, 100 }, { 20, 200 } };
@@ -234,7 +234,7 @@ public:
 		using Tree = vm::persistent::detail::SegmentTree;
 		using Dir  = Tree::Dir;
 
-		Tree tree;
+		Tree       tree;
 		const auto empty = Tree::EMPTY;
 
 		ASSERT_TRUE(!tree.getPathTo(empty, 0).has_value());
@@ -269,11 +269,10 @@ public:
 		ASSERT_TRUE(!path.has_value());
 
 		const std::deque<usize> indices = { 0, 10, 20, Tree::IDX_END - 1 };
-		const auto root = tree.reconstructLeaves(
-			empty,
-			indices,
-			[&tree](usize idx, base::Optional<usize>) { return tree.emplaceLeaf(idx, idx + 1); }
-		);
+		const auto              root
+			= tree.reconstructLeaves(empty, indices, [&tree](usize idx, base::Optional<usize>) {
+				  return tree.emplaceLeaf(idx, idx + 1);
+			  });
 
 		path = tree.getPathTo(root, 0);
 		ASSERT_TRUE(path.has_value());
@@ -331,16 +330,16 @@ public:
 	void testSegmentTreeReadOnlyRangeTraversal() {
 		using Tree = vm::persistent::detail::SegmentTree;
 
-		Tree tree;
-		const auto leaf = tree.emplaceLeaf(10, 100);
-		usize in_range_leaves = 0;
+		Tree       tree;
+		const auto leaf            = tree.emplaceLeaf(10, 100);
+		usize      in_range_leaves = 0;
 
 		tree.rebuildRange<void>(
 			leaf,
 			0,
 			5,
 			Tree::RangeBuilder<void>{
-				.in_range = [&](auto node, auto) { in_range_leaves += tree.getSize(node); },
+				.in_range     = [&](auto node, auto) { in_range_leaves += tree.getSize(node); },
 				.out_of_range = [](auto, auto) {},
 			}
 		);
@@ -349,7 +348,7 @@ public:
 			10,
 			11,
 			Tree::RangeBuilder<void>{
-				.in_range = [&](auto node, auto) { in_range_leaves += tree.getSize(node); },
+				.in_range     = [&](auto node, auto) { in_range_leaves += tree.getSize(node); },
 				.out_of_range = [](auto, auto) {},
 			}
 		);
@@ -370,9 +369,7 @@ public:
 			VectorStateView state_view(vec, state);
 			ASSERT_EQUAL(expected.size(), state_view.size());
 			std::vector<std::string> iterated;
-			for (const auto& item: state_view) {
-				iterated.push_back(item);
-			}
+			for (const auto& item: state_view) iterated.push_back(item);
 			ASSERT_EQUAL(expected, iterated);
 
 			for (usize i = 0; i < size; i++) {
@@ -518,9 +515,7 @@ public:
 			HashMapStateView state_view(map, state);
 			ASSERT_EQUAL(expected.size(), state_view.size());
 			base::HashMap<std::string, std::string> iterated;
-			for (const auto& [k, v]: state_view) {
-				iterated.emplace(k, v);
-			}
+			for (const auto& [k, v]: state_view) iterated.emplace(k, v);
 			ASSERT_EQUAL(expected.size(), iterated.size());
 
 			for (auto& [key, val]: expected) {
@@ -549,7 +544,8 @@ public:
 					"map should contain all of expected values"
 				);
 				CORE_ASSERT(
-					expected.at(key) == val && map.at(state, key) == val && state_view.at(key) == val,
+					expected.at(key) == val && map.at(state, key) == val
+						&& state_view.at(key) == val,
 					"values should be equal in both copy and database"
 				);
 			}
