@@ -854,7 +854,7 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_script", "Compile a .ds script file into a .dbc or executable.")
+			clah::Clah("compile_script", "Compile a .dks script file into a .dbc or executable.")
 				.addPositional(clah::FileParser::make("script"))
 				.add(getLlvmOptLevelParam())
 				.add(getClahLinkingOptions())
@@ -927,7 +927,7 @@ clah::Clah getClahForMain() {
 	    // Scripts can only be "run" on DVM for now, since compiling with LLVM would produce
 	    // artifacts. To compile to native executable, the compile_script command can be used.
 	    // This may change in the future.
-	    .addSubcommand(clah::Clah("run", "Compile a .ds script file and run it on DVM.")
+	    .addSubcommand(clah::Clah("run", "Compile a .dks script file and run it on DVM.")
 	                       .addPositional(clah::FileParser::make("script"))
 	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                                .addShortName('w')
@@ -1060,7 +1060,7 @@ clah::Clah getClahForMain() {
 							);
 						if (options.getExtraParameterCount() > 1) {
 							std::cerr << "Error: repl accepts at most one script path. "
-										 "Usage: duckc repl [script.ds]\n";
+										 "Usage: duckc repl [script.dks]\n";
 							compiler::driver::exit();
 							return 1;
 						}

@@ -74,3 +74,19 @@ Tests:
         mode: exe
         Output:
           String: "2\n1\n3\n"
+
+  const_if:
+    folder: "const_if"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "1\n2\n"
+      vm:
+        mode: vm
+        Output:
+          String: "1\n2\n"
+      exe:
+        mode: exe
+        Output:
+          String: "1\n2\n"

@@ -59,7 +59,6 @@ namespace lang_def {
 		With,
 		Try,
 		Catch,
-		Test,
 		Debug,
 		Match,
 		Switch,
@@ -115,6 +114,7 @@ namespace lang_def {
 		Bool,
 		Str,
 		Type,  // ...
+		Void,
 
 		// @TODO: do we need all of them?
 		Set,
@@ -144,6 +144,7 @@ namespace lang_def {
 		ManyPtr,
 		Slice,
 		Copy,
+		Copyof,
 		Move,
 		Refof,
 		Ptrof,

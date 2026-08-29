@@ -138,6 +138,22 @@ namespace compiler::helios::code {
 				.to_kind           = Kind::CPointer,
 				.same_pointee_type = false,
 			},
+			// From CPointer to Integral
+			{
+				.from_ref_kind     = ReferenceKind::Direct,
+				.from_kind         = Kind::CPointer,
+				.to_ref_kind       = ReferenceKind::Direct,
+				.to_kind           = Kind::Integral,
+				.same_pointee_type = false,
+			},
+			// From Pointer to Integral (LLVM only friendly)
+			{
+				.from_ref_kind     = ReferenceKind::Direct,
+				.from_kind         = Kind::Pointer,
+				.to_ref_kind       = ReferenceKind::Direct,
+				.to_kind           = Kind::Integral,
+				.same_pointee_type = false,
+			},
 		};
 
 		bool found_match = false;

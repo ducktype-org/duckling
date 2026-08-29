@@ -441,6 +441,12 @@ namespace compiler::lir {
 			return BuiltinFunctionKind::BoxAlloc;
 		case helios::BuiltinKind::BoxFree:
 			return BuiltinFunctionKind::BoxFree;
+		case helios::BuiltinKind::DvmPtrParts:
+			return BuiltinFunctionKind::DvmPtrParts;
+		case helios::BuiltinKind::DvmIsNullptr:
+			return BuiltinFunctionKind::DvmIsNullptr;
+		case helios::BuiltinKind::DvmNullptr:
+			return BuiltinFunctionKind::DvmNullptr;
 		default:
 			return {};
 		}
@@ -462,6 +468,7 @@ namespace compiler::lir {
 		case Operation::Jump:
 		case Operation::Branch:
 		case Operation::BranchIfNull:
+		case Operation::Unreachable:
 			return true;
 		default:
 			return false;

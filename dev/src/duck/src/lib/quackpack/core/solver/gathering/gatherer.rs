@@ -1,8 +1,10 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 
-use futures::future::select_all;
+use futures::StreamExt;
+use futures::stream::FuturesUnordered;
 use tracing::{debug, error, trace};
 
 use crate::quackpack::core::fetcher::Fetcher;
@@ -22,7 +24,12 @@ use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::{ErrorsLogger, MessageError};
-use crate::{QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal, qp_err};
+use crate::{
+    DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal,
+    qp_err,
+};
+
+type FetchFuture<'a> = Pin<Box<dyn Future<Output = QuackResult<FetchResponse>> + 'a>>;
 
 /// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
 pub struct Gatherer<'duck, 'a, Access: GitAccess> {
@@ -60,37 +67,64 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             &mut errors.borrow_mut(),
         )?;
 
-        let mut fetches = vec![];
-        let mut requests =
-            state.handle_fetch_response(root_fetch_result, &mut errors.borrow_mut())?;
-        while !fetches.is_empty() || !requests.is_empty() {
-            if let Some(request) = requests.pop() {
-                let action = state.get_request_action(request.clone(), &mut errors.borrow_mut())?;
-                match action {
-                    RequestAction::Fetch => fetches.push(Box::pin(self.fetch(request, &errors))),
-                    RequestAction::More {
-                        requests: new_requests,
-                    } => requests.extend(new_requests),
-                }
-            }
-            if !fetches.is_empty() {
-                let (response, _, remaining) = select_all(fetches).await;
-                requests.extend(state.handle_fetch_response(response?, &mut errors.borrow_mut())?);
-                fetches = remaining;
-            }
+        self.explore_deps(root_fetch_result, &mut state, mode, errors)
+            .await?;
+        state.try_into()
+    }
+
+    #[tracing::instrument(skip_all, fields(mode, offline = self.fetcher.ctx().is_offline()))]
+    async fn explore_deps(
+        &self,
+        root_fetch_response: FetchResponse,
+        state: &mut GathererState,
+        mode: SolverMode,
+        logger: RefCell<ErrorsLogger>,
+    ) -> QuackResult<()> {
+        let mut fetches = FuturesUnordered::new();
+        let requests =
+            state.handle_fetch_response(root_fetch_response, &mut logger.borrow_mut())?;
+        self.recursively_push_requests(&fetches, requests, state, &logger)?;
+        while let Some(response) = fetches.next().await {
+            let response = response?;
+            let new_requests = state.handle_fetch_response(response, &mut logger.borrow_mut())?;
+            self.recursively_push_requests(&fetches, new_requests, state, &logger)?;
         }
-        if !errors.borrow().is_empty() {
+        if !logger.borrow().is_empty() {
             if mode.suppress_foreign_manifests_errors {
-                for e in errors.take() {
+                for e in logger.take() {
                     self.fetcher.ctx().error_console().info_verbose(format!(
                         "error\n{e}\nsuppressed due to the Merciful mode of the solver",
                     ))?;
                 }
             } else {
-                return Err(errors.take().unwrap_first());
+                return Err(logger.take().unwrap_first());
             }
         }
-        state.try_into()
+        Ok(())
+    }
+
+    /// Push `requests` recursively to `fetches`.
+    ///
+    /// Any [`RequestAction::More`] turns into a recursive call.
+    ///
+    /// We process [`ManifestsRequest`]s until only [`RequestAction::Fetch`]es are left.
+    fn recursively_push_requests<'b>(
+        &'b self,
+        fetches: &FuturesUnordered<FetchFuture<'b>>,
+        requests: Vec<ManifestsRequest>,
+        state: &mut GathererState,
+        errors: &'b RefCell<ErrorsLogger>,
+    ) -> QuackResult<()> {
+        for request in requests {
+            let action = state.get_request_action(request.clone(), &mut errors.borrow_mut())?;
+            match action {
+                RequestAction::Fetch => fetches.push(Box::pin(self.fetch(request, errors))),
+                RequestAction::More { requests } => {
+                    self.recursively_push_requests(fetches, requests, state, errors)?
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Helper for [`Gatherer::explore()`], creates a dummy [`ManifestsRequest`] for the root package to update the state
@@ -300,6 +334,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
 
     /// Helper for [`Gatherer::explore()`], performs a git fetch
     /// (fetch from an external git repository).
+    #[tracing::instrument(skip_all, fields(?request, %url, ?reference))]
     async fn fetch_git(
         &self,
         request: &NotPinnedRequest,
@@ -325,9 +360,10 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         }
         match self.try_git_fastpath(request, url, reference).await {
             Err(e) => {
+                error!(error = %e, "fast path failed");
                 // We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
                 // as it is well ... a fast path.
-                self.fetcher.ctx().console().warning(e)?;
+                display_git_fast_path_failure_warning(&e, request, self.fetcher.ctx())?;
             }
             Ok(Some(fast_path_git)) => {
                 debug!("git fast path worked");
@@ -525,6 +561,7 @@ impl Manifest {
     }
 }
 
+#[track_caller]
 fn assert_root_features_are_expanded(
     root_manifest: &Manifest,
     root_features: &HashSet<FeatureName>,
@@ -536,4 +573,19 @@ fn assert_root_features_are_expanded(
             .unwrap(),
         *root_features
     );
+}
+
+fn display_git_fast_path_failure_warning(
+    error: &QuackError,
+    request: &NotPinnedRequest,
+    ctx: &DuckContext,
+) -> QuackResult<()> {
+    let identifier = request.id;
+    let name = identifier.name;
+    let source = identifier.source;
+    ctx.console().warning(format!(
+        "git fast path for `{name} {source}` failed: {error}"
+    ))?;
+    ctx.console().info("switching to cloning git repository")?;
+    Ok(())
 }

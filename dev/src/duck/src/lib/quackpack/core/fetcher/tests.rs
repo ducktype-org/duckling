@@ -218,7 +218,7 @@ fn without_cache_fetch_fails() {
     assert_eq!(
         err.to_string(),
         format!(
-            "while getting a metadata of `foo` version `1.2.5`
+            "while getting a metadata of `foo` version 1.2.5
 HTTP status client error (404) for url `{}/packages/foo/1.2.5`",
             server.base_url(),
         )

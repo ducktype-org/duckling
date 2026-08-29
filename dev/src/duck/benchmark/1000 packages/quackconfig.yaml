@@ -1,0 +1,9 @@
+metadata:
+  name: benchmark-1000-packages
+  version: '1.0.0'
+
+dependencies:
+  a_0:
+    version: '1.0.0'
+    source:
+      registry-url: http://localhost:9001

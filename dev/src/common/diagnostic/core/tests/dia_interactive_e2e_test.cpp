@@ -218,7 +218,7 @@ content:
             },
             "location": {
                 "type": "code_location",
-                "file": "example.dmf",
+                "file": "example.dk",
                 "line": 1,
       				"column": 1,
       				"hash_location": {
@@ -288,7 +288,7 @@ content:
 			= dynamic_cast<const state::CodeBlockComponent*>(concat->components[0].get());
 		ASSERT_EQUAL(false, code_block == nullptr);
 		ASSERT_EQUAL(true, code_block->location.has_value());
-		ASSERT_EQUAL("example.dmf", code_block->location.value().file);
+		ASSERT_EQUAL("example.dk", code_block->location.value().file);
 		ASSERT_EQUAL(1, code_block->location.value().line);
 		ASSERT_EQUAL(1, code_block->location.value().column);
 	}
