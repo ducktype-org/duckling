@@ -7,6 +7,8 @@
 #include <vm/core/safe/low_program/micro_instruction_args.hpp>
 #include <vm/loader/loader.hpp>
 
+#include <expected>
+
 namespace vm::loader::compiler::safe {
 	namespace detail {
 		class SafeMicroBytecodeBuilder;
@@ -63,7 +65,9 @@ namespace vm::loader::compiler::safe {
 		std::expected<void, std::string> setBreakpoint(
 			const base::StrID& func_name, usize idx, bool enable
 		) {
-			auto& original_function = *low_program.functions.at(func_name);
+			auto maybe_function = low_program.functions.atMaybe(func_name);
+			if (!maybe_function) return std::unexpected{ "setBreakpoint: Function does not exist" };
+			auto& original_function = **maybe_function;
 
 			// Try to obtain micro index
 			if (original_function.instruction_mapping.size() <= idx)
