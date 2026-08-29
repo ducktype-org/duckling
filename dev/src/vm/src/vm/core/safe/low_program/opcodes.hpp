@@ -80,17 +80,19 @@ namespace vm::low {
 #define HANDLE_MICRO_INSTR(instr) ++count;
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
-		return count * 2;
+		return count;
 	}
 
-	constexpr u64 OP_CASES_COUNT = microInstrCount();
+	// Every micro instruction has a `break_` twin, hence the x2.
+	constexpr u64 OP_CASES_COUNT = microInstrCount() * 2;
+
 
 	constexpr std::array<std::string_view, OP_CASES_COUNT> OPCODE_NAMES = {
 #define HANDLE_MICRO_INSTR(opcode) #opcode,
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
 
-#define HANDLE_MICRO_INSTR(opcode) "break_##opcode",
+#define HANDLE_MICRO_INSTR(opcode) "break_" #opcode,
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
 	};
@@ -136,6 +138,7 @@ namespace vm::low {
 		}
 	}
 
+	// this array doesn't include any information about breakpoint-version of opcodes
 	static constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()>
 		NON_EXEC_OPCODES = internal::constructNonExecOpcodeArray();
 

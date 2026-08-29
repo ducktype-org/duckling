@@ -101,6 +101,8 @@ namespace vm::low::instruction_tags {
 	 * @brief Array used for checking if a given argument of a given instruction is a label.
 	 * This is used for inspecting lowered untyped vm::MicroInstruction structs
 	 * when linking labels.
+	 * @note This tablee intentionally cover only the non-breakpoint opcodes; in an unlikely case
+	 * that you need to call it for breakpoint-version opcodes, call `getUnderlying()` before doing so
 	 */
 	inline constexpr auto IS_ARGUMENT_LABEL = std::to_array<std::array<bool, 2>>({
 #define HANDLE_MICRO_INSTR(INSTR) \

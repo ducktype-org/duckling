@@ -62,7 +62,9 @@ namespace vm {
 			OPFUN_CONT(0);
 		}
 
-		// we give every "normal" bytecode instruction it's breakpoint counterpart (evil twin)
+		// we give every "normal" bytecode instruction it is breakpoint counterpart (evil twin)
+		// this way, when we call breakpoint impl, we always know what was the underlying opcode
+		// and we don't need to remamber the original opcode anywhere
 #define HANDLE_MICRO_INSTR(opcode)                                      \
 	static RETURN_TYPE op_break_##opcode(OPFUN_ARGS) {                  \
 		MUST_TAIL return breakpoint(instr, local_stack, frame, thread); \
@@ -108,6 +110,12 @@ namespace vm {
 		 * @brief A mapping between opcode ids and debug function pointers.
 		 */
 		static constexpr std::array<DebugOpFun*, low::OP_CASES_COUNT> DEBUG_OPFUNS{
+#define HANDLE_MICRO_INSTR(opcode) \
+	low::MicroOpcode::opcode == low::MicroOpcode::check_strategy ? op_debug_nop : op_debug_##opcode,
+#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+
+#undef HANDLE_MICRO_INSTR
+
 #define HANDLE_MICRO_INSTR(opcode) \
 	low::MicroOpcode::opcode == low::MicroOpcode::check_strategy ? op_debug_nop : op_debug_##opcode,
 #include <vm/core/safe/low_program/micro_instruction_definitions.hpp>

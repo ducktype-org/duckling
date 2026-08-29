@@ -26,6 +26,9 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 		std::pair{ "virtual_call_pptr_method", &vm::OpFuns::op_debug_virtual_call_pptr_method },
 		std::pair{ "ret_tailcall_func", &vm::OpFuns::op_debug_ret_tailcall_func },
 		std::pair{ "trampoline", &vm::jit::helpers::trampoline },
+#define HANDLE_MICRO_INSTR(opcode) std::pair{ #opcode, &vm::OpFuns::opcode },
+#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+#undef HANDLE_MICRO_INSTR
 	};
 
 	// NOLINTBEGIN(clang-analyzer-optin.core.EnumCastOutOfRange)

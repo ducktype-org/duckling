@@ -461,10 +461,14 @@ namespace vm {
 	#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 	#undef HANDLE_MICRO_INSTR
 
-	#define HANDLE_MICRO_INSTR(opcode_name)                                    \
-	case low::MicroOpcode::break_##opcode_name: {                              \
-		vm::OpFuns::op_break_##opcode_name(instr, local_stack, frame, thread); \
-		break;                                                                 \
+	#define HANDLE_MICRO_INSTR(opcode_name)                                                     \
+	case low::MicroOpcode::break_##opcode_name: {                                               \
+		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                           \
+			CORE_DEV_LOG(                                                                       \
+				DVMDetails, "opcode, ", #opcode_name, ", ", thread.getThreadID().asInt(), ";\n" \
+			);                                                                                  \
+		vm::OpFuns::op_break_##opcode_name(instr, local_stack, frame, thread);                  \
+		break;                                                                                  \
 	}
 	#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 	#undef HANDLE_MICRO_INSTR
