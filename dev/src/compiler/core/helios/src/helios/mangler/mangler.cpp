@@ -357,11 +357,17 @@ namespace compiler::helios::mangler {
 				if ((--it_cpy)->second == ancestor->getID()) return;
 
 			const auto val = ancestor.template dynamicCast<ElemT>().value();
-			ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
 
 			if constexpr (std::same_as<ElemT, pst::Fun>) {
-				// @taw3e8 @todo: add fun params
+				auto sym = ctx.template query<QuerySymbolOfSTMT>({ val }).valueOrPanic();
+				ret += unscopedName(ctx, sym);
+
+				std::string func(query::Context&, SymID);
+				ret += func(ctx, sym);
+				return;
 			}
+
+			ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
 		}
 
 		/**
@@ -442,15 +448,15 @@ namespace compiler::helios::mangler {
 				switch (ancestor->getElementKind()) {
 					using enum pst::ElementKind;
 				case Namespace: {
-					checkAndAddElem<pst::Namespace>();
+					checkAndAddElem<pst::Namespace>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case Class: {
-					checkAndAddElem<pst::Class>();
+					checkAndAddElem<pst::Class>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case Fun: {
-					checkAndAddElem<pst::Fun>();
+					checkAndAddElem<pst::Fun>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case TemplateStmt: {

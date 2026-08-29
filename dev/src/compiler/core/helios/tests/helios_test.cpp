@@ -2452,8 +2452,8 @@ private:
 		auto const_3_n = mangle(const_3).strView();
 
 		ASSERT_EQUAL("_Q_M8manglingG11GlobalConst", const_1_n);
-		ASSERT_EQUAL("_Q_M8manglingN5foooo10LocalConstE", const_2_n);
-		ASSERT_EQUAL("_Q_M8manglingN4Mspc3Ooo5goooo16NestedLocalConstE", const_3_n);
+		ASSERT_EQUAL("_Q_M8manglingN5fooooFididE1aE10LocalConstE", const_2_n);
+		ASSERT_EQUAL("_Q_M8manglingN4Mspc3Ooo5gooooFididdE1a1bE16NestedLocalConstE", const_3_n);
 	}
 
 	void testManglerSpecialMembers() {
