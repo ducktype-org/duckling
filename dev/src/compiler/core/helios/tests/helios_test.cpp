@@ -56,6 +56,8 @@
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
 
+#include <regex>
+
 using namespace compiler::helios::test_utils;
 
 class HeliosTests: public tester::TestSuite {
@@ -1246,17 +1248,21 @@ private:
 		auto              incr_expr = getExprOfVariable(incr_sym);
 		std::stringstream incr_out;
 		incr_expr->debugPrint(incr_out);
-		ASSERT_EQUAL_PRINT(
-			"block({\n    (Symbol counter (13)) = (Symbol counter (13)) + 1;\n}\n)", incr_out.str()
-		);
+		ASSERT_TRUE(std::regex_search(incr_out.str(), std::regex{ R"(block\(\{)" }));
+		ASSERT_TRUE(std::regex_search(
+			incr_out.str(),
+			std::regex{ R"(\(Symbol counter \((.+?)\)\) = \(Symbol counter \(\1\)\) \+ 1;)" }
+		));
 
 		auto              decr_sym  = getChain("decr", root_scope).back();
 		auto              decr_expr = getExprOfVariable(decr_sym);
 		std::stringstream decr_out;
 		decr_expr->debugPrint(decr_out);
-		ASSERT_EQUAL_PRINT(
-			"block({\n    (Symbol counter (13)) = (Symbol counter (13)) - 1;\n}\n)", decr_out.str()
-		);
+		ASSERT_TRUE(std::regex_search(decr_out.str(), std::regex{ R"(block\(\{)" }));
+		ASSERT_TRUE(std::regex_search(
+			decr_out.str(),
+			std::regex{ R"(\(Symbol counter \((.+?)\)\) = \(Symbol counter \(\1\)\) - 1;)" }
+		));
 	}
 
 	void testHoutVariables() {

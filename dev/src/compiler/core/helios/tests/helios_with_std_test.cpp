@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <any>
 #include <array>
+#include <regex>
 
 using namespace compiler::helios::test_utils;
 
@@ -597,8 +598,10 @@ private:
 		std::stringstream out_v256;
 		auto              tree_v256 = getExprOfConst(sym_v256);
 		tree_v256->debugPrint(out_v256);
-		ASSERT_TRUE(out_v256.str().starts_with("(Symbol powi ("));
-		ASSERT_TRUE(out_v256.str().ends_with("))(3 + 4 - 4 * 16 / 5 % 7, 8)"));
+		ASSERT_TRUE(std::regex_match(
+			out_v256.str(),
+			std::regex{ R"(\(Symbol powi \((\d+)\)\)\(3 \+ 4 - 4 \* 16 / 5 % 7, 8\))" }
+		));
 	}
 };
 
