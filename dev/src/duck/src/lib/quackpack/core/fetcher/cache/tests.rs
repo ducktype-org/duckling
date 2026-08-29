@@ -15,7 +15,8 @@ fn create_sample_metadata() -> registry::Manifest {
         "version": "1.2.3",
         "name": "quackpack",
         "license": "GPS",
-        "description": ""
+        "description": "",
+        "links": null
     },
     "dependencies": [
         {
