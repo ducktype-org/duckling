@@ -6,6 +6,7 @@
 #include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/utils/bijective_map.hpp>
 
@@ -112,13 +113,13 @@ namespace vm::persistent::detail {
 		 * @note The empty position has offset zero.
 		 */
 		static constexpr idxT offsetFromPos(posT pos) {
-			const auto h = heightFromPos(pos);
+			const usize h = heightFromPos(pos);
 			if (h >= POS_T_SIZE) return 0;
 
-			const auto shifted = (pos << h);
+			const posT shifted = (pos << h);
 			CORE_ASSERT(shifted & TOP_BIT, "After the shift, top bit must be set");
 
-			const auto ans = shifted & (~TOP_BIT);
+			const posT ans = shifted & (~TOP_BIT);
 			CORE_ASSERT(ans < IDX_END, "Returned idx must be smaller than end of idxs");
 
 			return ans;
@@ -131,12 +132,12 @@ namespace vm::persistent::detail {
 		 */
 		static constexpr usize getLCAHeight(posT pos_1, posT pos_2) {
 			if (pos_1 > pos_2) std::swap(pos_1, pos_2);
-			const auto h_2 = heightFromPos(pos_2);
+			const usize h_2 = heightFromPos(pos_2);
 
 			if (pos_1 == 0) return h_2;
 			CORE_ASSERT(pos_1 && pos_2, "At this point, both positions are non-empty");
 
-			const auto h_1 = heightFromPos(pos_1);
+			const usize h_1 = heightFromPos(pos_1);
 			CORE_ASSERT(h_1 >= h_2, "At this point, pos_1 should be higher than pos_2");
 
 			pos_2 >>= (h_1 - h_2);
@@ -145,7 +146,7 @@ namespace vm::persistent::detail {
 				"At this point, both positions must be at the same depth"
 			);
 
-			auto ans = (usize) std::bit_width(pos_1 ^ pos_2);
+			usize ans = (usize) std::bit_width(pos_1 ^ pos_2);
 			CORE_ASSERT(
 				(pos_1 >> ans) == (pos_2 >> ans),
 				"Since both are at the same height, they must be equal if we shift by partial "
@@ -201,17 +202,6 @@ namespace vm::persistent::detail {
 			return inSubtree(child, ancestor, Dir::Rght) ? Dir::Rght : Dir::Left;
 		}
 
-		static constexpr posT elevate(posT pos, usize height_diff) { return pos >> height_diff; }
-
-		static constexpr posT elevateTo(posT pos, usize desired_height) {
-			CORE_ASSERT(pos != 0, "We don't want the position to be 0");
-			CORE_ASSERT(desired_height < POS_T_SIZE, "we cannot go above the root");
-
-			const auto current_height = heightFromPos(pos);
-			CORE_ASSERT(current_height <= desired_height, "we should only elevate upwards");
-			return elevate(pos, desired_height - current_height);
-		}
-
 		static constexpr posT getSiblingPos(posT pos) {
 			CORE_ASSERT(pos != 0, "We don't want the position to be 0");
 			return pos ^ 1;
@@ -225,7 +215,7 @@ namespace vm::persistent::detail {
 			CORE_ASSERT(right_idx <= IDX_END, "Expecting a valid interval");
 			CORE_ASSERT((left_idx & TOP_BIT) == 0, "Follows from previous assertions");
 
-			const auto left_pos   = left_idx | TOP_BIT;
+			const posT left_pos   = left_idx | TOP_BIT;
 			const auto max_height = (usize) std::bit_width(left_pos & (-left_pos));
 
 			CORE_ASSERT(
@@ -251,7 +241,7 @@ namespace vm::persistent::detail {
 				);
 			}
 
-			const auto right_guard = right_idx & (~TOP_BIT);
+			const posT right_guard = right_idx & (~TOP_BIT);
 			CORE_ASSERT(
 				(right_guard != right_idx) == (right_idx == IDX_END),
 				"we modify right_guard only when right_idx == IDX_END"
@@ -264,8 +254,7 @@ namespace vm::persistent::detail {
 
 			{
 				const usize diff_idx = height_of_diff - 1;
-				posT        diff_bit = 1;
-				diff_bit <<= diff_idx;
+				const usize diff_bit = usize(1) << diff_idx;
 				CORE_ASSERT(
 					(diff_bit & left_idx) != (diff_bit & right_guard),
 					"left idx and right_guard must differ at diff_idx"
@@ -299,7 +288,7 @@ namespace vm::persistent::detail {
 			while (left_idx < right_idx) {
 				const posT pos = firstNodeForRange(left_idx, right_idx);
 				ans.emplace_back(pos);
-				const auto height = heightFromPos(pos);
+				const usize height = heightFromPos(pos);
 
 				CORE_ASSERT(
 					height < POS_T_SIZE, "height for valid nodes is smaller than size of address"
@@ -340,42 +329,38 @@ namespace vm::persistent::detail {
 			[[nodiscard("When is false, the path must be discarded")]]
 			bool moveToValid(Dir move_dir, usize skip = 0) {
 				enforceValidState();
-				auto prev = trace.front();
-				trace.pop_front();
-				auto prev_pos = mem->getPos(prev);
 
-				while (trace.size()) {
-					auto next = trace.front();
+				while (trace.size() > 1) {
+					const NodeID tip     = trace.front();
+					const posT   tip_pos = mem->getPos(tip);
 					trace.pop_front();
-					auto next_pos = mem->getPos(next);
 
-					defer(std::tie(prev, prev_pos) = std::tie(next, next_pos););
+					const NodeID parent     = trace.front();
+					const posT   parent_pos = mem->getPos(parent);
 
-					if (dirToChild(prev_pos, next_pos) == move_dir) continue;
+					if (dirToChild(tip_pos, parent_pos) == move_dir) continue;
 
-					auto [left_child, right_child] = mem->getChildren(next);
+					const auto [left_child, right_child] = mem->getChildren(parent);
+					const NodeID new_tip = move_dir == Dir::Left ? left_child : right_child;
 
-					auto considered = move_dir == Dir::Left ? left_child : right_child;
-
-					if (auto size = mem->getSize(considered); size <= skip) {
+					if (usize size = mem->getSize(new_tip); size <= skip) {
 						skip -= size;
 						continue;
 					}
 
-					trace.push_front(next);
-					trace.push_front(considered);
+					trace.push_front(new_tip);
 					break;
 				}
 
-				if (trace.size() == 0) return false;
+				if (trace.size() <= 1) return false;
 
 				while (!mem->isLeaf(trace.front())) {
-					const auto tip                       = trace.front();
+					const NodeID tip                     = trace.front();
 					const auto [left_child, right_child] = mem->getChildren(tip);
 
-					auto new_tip = move_dir == Dir::Rght ? left_child : right_child;
+					NodeID new_tip = move_dir == Dir::Rght ? left_child : right_child;
 
-					if (auto size = mem->getSize(new_tip); size <= skip) {
+					if (usize size = mem->getSize(new_tip); size <= skip) {
 						skip -= size;
 						new_tip = move_dir == Dir::Rght ? right_child : left_child;
 					}
@@ -425,7 +410,7 @@ namespace vm::persistent::detail {
 		 */
 		std::pair<idxT, idxT> getRange(NodeID state) const {
 			const auto entry = *branch_info.atMaybeCopy(state);
-			const auto l = entry.left_bound, r = entry.right_bound;
+			const idxT l = entry.left_bound, r = entry.right_bound;
 			CORE_ASSERT(l <= r, "Branch bounds should have a valid range");
 			CORE_ASSERT((state == EMPTY) == (l == r), "empty range iff empty state");
 			CORE_ASSERT(r <= IDX_END, "Right bound must be smaller than end of idxs");
@@ -440,8 +425,8 @@ namespace vm::persistent::detail {
 		idxT getIndexOfLeaf(NodeID leaf) const { return leaf_entries.atRight(leaf).idx; }
 
 		std::pair<NodeID, NodeID> getChildren(NodeID node) const {
-			if_opt_some(child_entries.atRightOpt(node), [left COMMA right]) {
-				return { left, right };
+			if_opt_some(child_entries.atRightOpt(node), children) {
+				return { children.left_child, children.right_child };
 			}
 			if_opt_some(leaf_entries.atRightOpt(node), _) { return { EMPTY, EMPTY }; }
 			CORE_UNREACHABLE();
@@ -455,8 +440,8 @@ namespace vm::persistent::detail {
 			if (left == EMPTY) return right;
 			if (right == EMPTY) return left;
 
-			const auto pos_left = getPos(left), pos_right = getPos(right);
-			const auto lca_pos = getLCAPos(pos_left, pos_right);
+			const posT pos_left = getPos(left), pos_right = getPos(right);
+			const posT lca_pos = getLCAPos(pos_left, pos_right);
 			CORE_ASSERT(pos_right != 1 && pos_left != 1, "top node cannot be ever passed");
 			CORE_ASSERT(
 				inSubtree(pos_left, lca_pos, Dir::Left) && inSubtree(pos_right, lca_pos, Dir::Rght),
@@ -578,10 +563,10 @@ namespace vm::persistent::detail {
 			};
 
 			const auto helper = [&](this auto& self, posT cur_pos, NodeID node_1, NodeID node_2) {
-				const auto pos_1 = st.getPos(node_1);
-				const auto pos_2 = st.getPos(node_2);
+				const posT pos_1 = st.getPos(node_1);
+				const posT pos_2 = st.getPos(node_2);
 
-				const auto lca_pos = getLCAPos(pos_1, pos_2);
+				const posT lca_pos = getLCAPos(pos_1, pos_2);
 				CORE_ASSERT(inSubtree(lca_pos, cur_pos), "invariant of the recursive call");
 
 				if (node_1 == node_2) return merge_policy.invoke(&bldT::the_same, node_1, pos_1);
@@ -597,11 +582,11 @@ namespace vm::persistent::detail {
 
 				base::Optional<NodeID> left = EMPTY, right = EMPTY;
 
-				const auto pos_l = getChildPos(cur_pos, Dir::Left),
+				const posT pos_l = getChildPos(cur_pos, Dir::Left),
 						   pos_r = getChildPos(cur_pos, Dir::Rght);
 
 				if (lca_pos != cur_pos) {
-					const auto dir_lca = dirToChild(lca_pos, cur_pos);
+					const Dir dir_lca = dirToChild(lca_pos, cur_pos);
 
 
 					left  = dir_lca == Dir::Left
@@ -625,7 +610,7 @@ namespace vm::persistent::detail {
 				}
 
 				if (pos_1 != lca_pos && pos_2 != lca_pos) {
-					const auto dir_1 = dirToChild(pos_1, cur_pos);
+					const Dir dir_1 = dirToChild(pos_1, cur_pos);
 
 					left  = dir_1 == Dir::Left ? merge_policy.invoke(&bldT::only_1, node_1, pos_l)
 					                           : merge_policy.invoke(&bldT::only_2, node_2, pos_l);
@@ -637,7 +622,7 @@ namespace vm::persistent::detail {
 
 				if (pos_1 == lca_pos) {
 					const auto [left_1, right_1] = st.getChildren(node_1);
-					const auto dir_2             = dirToChild(pos_2, cur_pos);
+					const Dir dir_2              = dirToChild(pos_2, cur_pos);
 
 					left = dir_2 == Dir::Left ? self(pos_l, left_1, node_2)
 					                          : merge_policy.invoke(&bldT::only_1, left_1, pos_l);
@@ -650,7 +635,7 @@ namespace vm::persistent::detail {
 
 				if (pos_2 == lca_pos) {
 					const auto [left_2, right_2] = st.getChildren(node_2);
-					const auto dir_1             = dirToChild(pos_1, cur_pos);
+					const Dir dir_1              = dirToChild(pos_1, cur_pos);
 
 					left  = dir_1 == Dir::Left ? self(pos_l, node_1, left_2)
 					                           : merge_policy.invoke(&bldT::only_2, left_2, pos_l);
@@ -663,8 +648,8 @@ namespace vm::persistent::detail {
 				CORE_UNREACHABLE();
 			};
 
-			const auto pos_1 = st.getPos(root_1);
-			const auto pos_2 = st.getPos(root_2);
+			const posT pos_1 = st.getPos(root_1);
+			const posT pos_2 = st.getPos(root_2);
 
 			if (root_1 == EMPTY && root_2 == EMPTY) return merge_policy.the_same(EMPTY, ROOT_POS);
 			if (root_1 == EMPTY) return merge_policy.only_2(root_2, pos_2);
@@ -721,7 +706,7 @@ namespace vm::persistent::detail {
 				= [&](this auto&& self, posT cur_pos, NodeID node) -> base::Optional<NodeID> {
 				if (nodes_to_visit.empty()) return range_constructor.out_of_range(node, cur_pos);
 
-				const auto& to_visit = nodes_to_visit.front();
+				const posT& to_visit = nodes_to_visit.front();
 
 				if (!inSubtree(to_visit, cur_pos))
 					return range_constructor.out_of_range(node, cur_pos);
@@ -732,7 +717,7 @@ namespace vm::persistent::detail {
 				}
 
 				NodeID     left_n{}, right_n{};
-				const auto node_pos = st.getPos(node);
+				const posT node_pos = st.getPos(node);
 
 				if (node == EMPTY) {
 					left_n  = EMPTY;
@@ -788,7 +773,7 @@ namespace vm::persistent::detail {
 			NodeID root, const std::deque<idxT>& idxs, const LeafBuilder& constructor
 		) {
 			std::deque<std::pair<idxT, idxT>> ranges{};
-			for (auto idx: idxs) {
+			for (idxT idx: idxs) {
 				CORE_ASSERT(idx < IDX_END, "it has to be valid idx");
 				ranges.emplace_back(idx, idx + 1);
 			}
@@ -822,11 +807,11 @@ namespace vm::persistent::detail {
 			const auto [begin, end] = getRange(root);
 
 			if (idx < begin || end <= idx) {
-				const auto side = idx < begin ? Dir::Left : Dir::Rght;
+				const Dir side_dir = idx < begin ? Dir::Left : Dir::Rght;
 				if_opt_none(opt_dir) return std::nullopt;
-				if (*opt_dir == side) return std::nullopt;
+				if (*opt_dir == side_dir) return std::nullopt;
 
-				idx = side == Dir::Left ? begin : end - 1;
+				idx = side_dir == Dir::Left ? begin : end - 1;
 			}
 
 			std::deque<NodeID> trace = { root };
