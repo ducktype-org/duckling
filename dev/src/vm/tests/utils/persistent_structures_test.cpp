@@ -26,6 +26,7 @@ public:
 		TESTER_ADD_TEST(testMemory);
 		TESTER_ADD_TEST(testMemoryAccess);
 		TESTER_ADD_TEST(testSegmentTreePaths);
+		TESTER_ADD_TEST(testSegmentTreeReadOnlyRangeTraversal);
 		TESTER_ADD_TEST(testVector);
 		TESTER_ADD_TEST(testHashMap);
 		TESTER_ADD_TEST(testRandomVector);
@@ -325,6 +326,35 @@ public:
 		ASSERT_EQUAL(0, path->getIdx());
 		path = tree.getPathTo(root, Tree::IDX_END, Dir::Rght);
 		ASSERT_TRUE(!path.has_value());
+	}
+
+	void testSegmentTreeReadOnlyRangeTraversal() {
+		using Tree = vm::persistent::detail::SegmentTree;
+
+		Tree tree;
+		const auto leaf = tree.emplaceLeaf(10, 100);
+		usize in_range_leaves = 0;
+
+		tree.rebuildRange<void>(
+			leaf,
+			0,
+			5,
+			Tree::RangeBuilder<void>{
+				.in_range = [&](auto node, auto) { in_range_leaves += tree.getSize(node); },
+				.out_of_range = [](auto, auto) {},
+			}
+		);
+		tree.rebuildRange<void>(
+			leaf,
+			10,
+			11,
+			Tree::RangeBuilder<void>{
+				.in_range = [&](auto node, auto) { in_range_leaves += tree.getSize(node); },
+				.out_of_range = [](auto, auto) {},
+			}
+		);
+
+		ASSERT_EQUAL(1, in_range_leaves);
 	}
 
 	void testVector() {

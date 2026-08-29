@@ -541,6 +541,16 @@ namespace vm::persistent::detail {
 			std::function<ResT(NodeID, posT)> out_of_range = [](NodeID id, posT) -> ResT {
 				if constexpr (std::is_same_v<ResT, NodeID>) return id;
 			};
+
+			template<typename... ArgT>
+			base::Optional<NodeID> invoke(auto RangeBuilder::* member, ArgT&&... args) const {
+				if constexpr (std::is_same_v<ResT, NodeID>)
+					return (this->*member)(std::forward<ArgT>(args)...);
+				else {
+					(this->*member)(std::forward<ArgT>(args)...);
+					return std::nullopt;
+				}
+			}
 		};
 
 		using LeafBuilder = std::function<NodeID(usize, base::Optional<usize>)>;
@@ -702,18 +712,20 @@ namespace vm::persistent::detail {
 			                                | std::views::join | std::ranges::to<std::deque>();
 
 
+			using bldT = RangeBuilder<ResT>;
 			const auto helper
 				= [&](this auto&& self, posT cur_pos, NodeID node) -> base::Optional<NodeID> {
-				if (nodes_to_visit.empty()) return range_constructor.out_of_range(node, cur_pos);
+				if (nodes_to_visit.empty())
+					return range_constructor.invoke(&bldT::out_of_range, node, cur_pos);
 
 				const posT& to_visit = nodes_to_visit.front();
 
 				if (!inSubtree(to_visit, cur_pos))
-					return range_constructor.out_of_range(node, cur_pos);
+					return range_constructor.invoke(&bldT::out_of_range, node, cur_pos);
 
 				if (cur_pos == to_visit) {
 					nodes_to_visit.pop_front();
-					return range_constructor.in_range(node, cur_pos);
+					return range_constructor.invoke(&bldT::in_range, node, cur_pos);
 				}
 
 				NodeID     left_n{}, right_n{};
