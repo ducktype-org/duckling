@@ -90,7 +90,10 @@ namespace vm {
 
 		struct Stop {};  ///< Request an orderly stop of all threads.
 
-		using ProcessEvent = std::variant<Run, Stop>;
+		struct DeinitAndValidate {
+		};  ///< Deinitialize the process down and validate its memory state.
+
+		using ProcessEvent = std::variant<Run, Stop, DeinitAndValidate>;
 	}
 
 	/**
@@ -249,6 +252,7 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::process_state::Panicked, "Panicked")
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::process_event::Run, "Run")
 JSON_REGISTER_TYPE_WITH_NAME(vm::process_event::Stop, "Stop")
+JSON_REGISTER_TYPE_WITH_NAME(vm::process_event::DeinitAndValidate, "DeinitAndValidate")
 
 namespace vm {
 	namespace process_state {

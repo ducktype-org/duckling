@@ -227,6 +227,12 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `getVMValueForType` is not implemented.");
 	}
 
+	bool FastVMProcess::hasUnjoinedExecutionThreads() const {
+		for (const auto& thread: vm_threads)
+			if (thread.hasActiveThread()) return true;
+		return false;
+	}
+
 	std::vector<api::ThreadID> FastVMProcess::getAllActiveThreadIDs() {
 		std::vector<api::ThreadID> thread_ids;
 		for (const auto& thread: vm_threads)

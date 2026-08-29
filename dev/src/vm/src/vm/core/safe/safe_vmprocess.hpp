@@ -72,7 +72,7 @@ namespace vm {
 		 * @brief Protects the thread pool which can be modified by `builtin_start_thread` and has
 		 * to be serialized with it.
 		 */
-		std::mutex threads_pool_mutex;
+		mutable std::mutex threads_pool_mutex;
 		/**
 		 * @brief Pool of threads in this process.
 		 * @note Thread with ID 0 is the main thread, it is created together with the process.
@@ -165,6 +165,8 @@ namespace vm {
 		) override;
 
 		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
+
+		[[nodiscard]] bool hasUnjoinedExecutionThreads() const override;
 
 		void requestStopAllThreads() noexcept override;
 

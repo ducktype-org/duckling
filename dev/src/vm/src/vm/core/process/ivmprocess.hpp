@@ -233,6 +233,14 @@ namespace vm {
 		virtual std::vector<api::ThreadID> getAllActiveThreadIDs() = 0;
 
 		/**
+		 * @brief True when a previous run left an `exec_thread` which was never joined.
+		 *
+		 * An `api::run()` should always be followed by a `Join`. Without it the VMThread cannot be
+		 * reused.
+		 */
+		[[nodiscard]] virtual bool hasUnjoinedExecutionThreads() const = 0;
+
+		/**
 		 * @brief Posts Stop to all threads. Non blocking.
 		 */
 		virtual void requestStopAllThreads() noexcept = 0;

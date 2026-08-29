@@ -225,9 +225,8 @@ namespace vm {
 	SafeVMThread& SafeVMProcess::getEmptyThread() {
 		std::lock_guard lock(threads_pool_mutex);
 		for (auto& thread: vm_threads) {
-			// A non-active thread is reusable even when its exec_thread handle still exists. The
-			// handle will be reset by `prepareSpawnLocked`.
-			if (!ts::isActive(thread.getThreadState())) return thread;
+			// Thread must not be executing AND must not have an active exec_thread handle
+			if (!ts::isActive(thread.getThreadState()) && !thread.hasActiveThread()) return thread;
 		}
 		return *vm_threads.get(vm_threads.add(*this));
 	}
@@ -502,6 +501,13 @@ namespace vm {
 			}
 		}
 		CORE_UNREACHABLE();
+	}
+
+	bool SafeVMProcess::hasUnjoinedExecutionThreads() const {
+		std::lock_guard lock(threads_pool_mutex);
+		for (const auto& thread: vm_threads)
+			if (thread.hasActiveThread()) return true;
+		return false;
 	}
 
 	std::vector<api::ThreadID> SafeVMProcess::getAllActiveThreadIDs() {

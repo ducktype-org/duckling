@@ -25,22 +25,36 @@ namespace vm {
 
 	std::expected<void, api::ApiError> IVMProcess::validateProcessRequest(const ProcessEvent& event
 	) const {
-		const ProcessState state = state_manager.aggregate();
-		bool               valid = true;
+		const ProcessState          state = state_manager.aggregate();
+		base::Optional<std::string> invalid_reason;
 
 		variant_match(event) {
-			variant_case_novalue(pe::Run) { valid = !v_matches(state, ps::Stopping); }
+			variant_case_novalue(pe::Run) {
+				// Run can be performed only if the previous run was completed successfully. `Stopper`
+				// or `Panicked` means the DVM was left in an undefined state and can't be reused.
+				if (!v_matches(state, ps::NotStarted, ps::Completed))
+					invalid_reason
+						= "the process must be freshly loaded or completed successfully in the "
+						  "previous run";
+				else if (hasUnjoinedExecutionThreads())
+					// We also require the previous run to be joined.
+					invalid_reason = "the previous run was never joined";
+			}
 			variant_case_novalue(pe::Stop) {}
+			variant_case_novalue(pe::DeinitAndValidate) {
+				if (ps::isExecuting(state)) invalid_reason = "the process is still executing";
+			}
 			variant_default { CORE_UNREACHABLE(); }
 		}
 
-		if (!valid)
+		if (invalid_reason.has_value())
 			return std::unexpected(api::ApiError{ api::StateError{ base::strConcat(
 				"Invalid request '",
 				pe::processEventName(event),
-				"' in current state '",
+				"' in state '",
 				ps::processStateName(state),
-				"'"
+				"': ",
+				*invalid_reason
 			) } });
 		return {};
 	}
@@ -112,6 +126,11 @@ namespace vm {
 				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID);
 			}
 
+			variant_case_novalue(api::request::DeinitAndValidate) {
+				VALIDATE_REQUEST(pe::DeinitAndValidate{});
+				return deinitAndValidate();
+			}
+
 			variant_case_novalue(api::request::Stop) {
 				// Always legal.
 				return stop();
@@ -174,15 +193,6 @@ namespace vm {
 			}
 
 			variant_case_novalue(api::request::ExitCodeRequest) { return getExitCode(); }
-
-			variant_case_novalue(api::request::DeinitAndValidate) {
-				if (ps::isExecuting(getProcessState()))
-					return std::unexpected(api::ApiError{
-						api::StateError{ "Cannot deinitialize and validate a "
-					                     "process while it is still executing; "
-					                     "stop or finish all threads first" } });
-				return deinitAndValidate();
-			}
 
 			variant_case(api::request::AttachStatusListener, request) {
 				on_status_changed.attachListener(request.listener);
