@@ -1,3 +1,4 @@
+#include <ctv/ctv.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -99,6 +100,8 @@ public:
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testManglerOperators);
+		TESTER_ADD_TEST(testManglerCTV);
+		TESTER_ADD_TEST(testManglingOfTemplates);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
 		TESTER_ADD_TEST(testDebugPrint);
@@ -2415,7 +2418,7 @@ private:
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
 		ASSERT_EQUAL(
-			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E1a1bE$metadata_v123", mangled_goo.str()
+			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFididdE1a1bE$metadata_v123", mangled_goo.str()
 		);
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 
@@ -2423,7 +2426,7 @@ private:
 
 		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.str());
 
-		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub6subFunEFi32EE$metadata_v5", mangled_sub_fun.str());
+		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub6subFunEFidEE$metadata_v5", mangled_sub_fun.str());
 		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
 	}
 
@@ -2496,21 +2499,163 @@ private:
 		auto infix_method  = mangle(find_method("+*"));
 		auto prefix_method = mangle(find_method("-*"));
 
-		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFi64i64i64E1a1bE", infix_free.str());
-		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFi64i64E1aE", prefix_free.str());
-		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi6plxd7_Fi64i64i64E1a1bE", unicode_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFiqiqiqE1a1bE", infix_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFiqiqE1aE", prefix_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi6plxd7_FiqiqiqE1a1bE", unicode_free.str());
 		ASSERT_EQUAL(
-			"_Q_M18mangling_operatorsN3FooOi4plmlEFi64R_Q_CM18mangling_operatorsG3Fooi64E4self1aE",
+			"_Q_M18mangling_operatorsN3FooOi4plmlEFiqR_Q_CM18mangling_operatorsG3FooiqE4self1aE",
 			infix_method.str()
 		);
 		ASSERT_EQUAL(
-			"_Q_M18mangling_operatorsN3FooOp4mimlEFi64R_Q_CM18mangling_operatorsG3FooE4selfE",
+			"_Q_M18mangling_operatorsN3FooOp4mimlEFiqR_Q_CM18mangling_operatorsG3FooE4selfE",
 			prefix_method.str()
 		);
 
 		// Suffix has no declaration syntax yet (see testOperatoriness) -- nothing to mangle here
 		// until fixity keywords exist. Once they do, add e.g.:
 		// ASSERT_EQUAL("...", mangle(.../* a suffix-declared operator */).str());
+	}
+
+	void testManglerCTV() {
+		using namespace compiler::ctv;
+		using compiler::numeric_value::NumericValue;
+
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling")));
+		auto symbol_1        = getSymbolTypeOf("Mspc.Ooo.Cnst", root_scope);
+		auto symbol_2        = getSymbolTypeOf("Mspc.Ooo.r", root_scope);
+
+		std::string result;
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto unit      = CompileTimeValue::UnitCTV{};
+			auto f_1       = NumericValue{ f32{ 1.0f } };
+			auto d_1       = NumericValue{ f64{ 1.0 } };
+			auto i8_n7     = NumericValue{ int8_t{ -7 } };
+			auto u8_7      = NumericValue{ uint8_t{ 7 } };
+			auto i16_n42   = NumericValue{ i16{ -42 } };
+			auto u16_42    = NumericValue{ u16{ 42 } };
+			auto i32_n137  = NumericValue{ i32{ -137 } };
+			auto u32_137   = NumericValue{ u32{ 137 } };
+			auto i64_n1234 = NumericValue{ i64{ -1'234 } };
+			auto u64_1234  = NumericValue{ u64{ 1'234 } };
+			auto int_min   = NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
+			auto str1
+				= CompileTimeValue{ CompileTimeValue::CharSliceValue{ base::StrID{ "strABC" } } };
+			auto str2  = CompileTimeValue{ CompileTimeValue::StringClassValue{
+                base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
+			auto tuple = CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
+
+			std::vector<CompileTimeValue> ctvs = {
+				false,  true,     f_1,     d_1,       i8_n7,    u8_7,     i16_n42,
+				u16_42, i32_n137, u32_137, i64_n1234, u64_1234, int_min,  'B',
+				'^',    str1,     str2,    unit,      tuple,    symbol_1, symbol_2,
+			};
+
+			for (auto&& it: ctvs) result += compiler::helios::mangler::mangleCTV(ctx, it) + ' ';
+			return result;
+		});
+
+		std::cerr << result << '\n';
+
+		std::string expected
+			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
+			  "jq1234_ iqn9223372036854775808_ c66_ c94_ r6_737472414243 "
+			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u Tb1b0E tNid "
+			  "tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
+
+		ASSERT_EQUAL(expected, result);
+	}
+
+	void testManglingOfTemplates() {
+		using namespace std::string_view_literals;
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/template_mangling")));
+
+		const auto tmpl_foo  = getChain("Name.foo", root_scope).back();
+		const auto cls       = getChain("Name.Cls", root_scope).back();
+		const auto tmpl_tcls = getChain("Name.Tcls", root_scope).back();
+		const auto hoo       = getChain("hoo", root_scope).back();
+		const auto tmpl_goo  = getChain("goo", root_scope).back();
+		const auto glob_cls  = getChain("GlobCls", root_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			namespace tmpl = compiler::helios::templates;
+
+			auto        val42         = compiler::numeric_value::NumericValue{ i64{ 42 } };
+			auto        val_f         = compiler::numeric_value::NumericValue{ f32{ 1.0f } };
+			const auto& i64_type      = st(compiler::tsh::getIntegralType(
+                ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
+            ));
+			const auto& cls_type      = st(ctx.query<compiler::tsh::QueryClassType>(cls));
+			const auto& glob_cls_type = st(ctx.query<compiler::tsh::QueryClassType>(glob_cls));
+
+			const auto bake = [&](const auto& tmpl, const auto&... t_params) {
+				tmpl::TemplateBakeKey key{ .template_sym_id    = tmpl,
+					                       .template_arguments = { t_params... } };
+				return ctx.query<tmpl::QueryBakeTemplateSymID>(key).valueOrThrow();
+			};
+
+			std::cerr << std::left;
+
+			auto baked_foo_1 = bake(tmpl_foo, val42, i64_type);
+			auto name_foo_1
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                 = baked_foo_1 })
+			          .strView();
+			std::cerr << std::setw(16) << "name_foo_1:" << name_foo_1 << '\n';
+
+			auto baked_foo_2 = bake(tmpl_foo, val42, cls_type);
+			auto name_foo_2
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                 = baked_foo_2 })
+			          .strView();
+			std::cerr << std::setw(16) << "name_foo_2:" << name_foo_2 << '\n';
+
+			auto baked_tcls      = bake(tmpl_tcls, val_f);
+			auto baked_tcls_type = st(ctx.query<compiler::tsh::QueryClassType>(baked_tcls));
+			auto baked_foo_3     = bake(tmpl_foo, val42, baked_tcls_type);
+			auto name_foo_3
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                 = baked_foo_3 })
+			          .strView();
+			std::cerr << std::setw(16) << "name_foo_3:" << name_foo_3 << '\n';
+
+			auto baked_foo_4 = bake(tmpl_foo, val42, glob_cls_type);
+			auto name_foo_4
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                 = baked_foo_4 })
+			          .strView();
+			std::cerr << std::setw(16) << "name_foo_4:" << name_foo_4 << '\n';
+
+			auto name_hoo
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key = hoo })
+			          .strView();
+			std::cerr << std::setw(16) << "name_hoo:" << name_hoo << '\n';
+
+			auto baked_goo = bake(tmpl_goo, val42);
+			auto name_goo
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                 = baked_goo })
+			          .strView();
+			std::cerr << std::setw(16) << "name_goo:" << name_goo << '\n';
+
+			std::cerr << std::right;
+
+			const auto efoo1 = "_Q_M17template_manglingN4Name3fooIiq42_tiqEEFiqiqE5paramE"sv;
+			const auto efoo2
+				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingN4Name3ClsEEEF_Q_CM17template_manglingN4Name3ClsEiqE5paramE"sv;
+			const auto efoo3
+				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingN4Name4TclsIf0000803fEEEEF_Q_CM17template_manglingN4Name4TclsIf0000803fEEiqE5paramE"sv;
+			const auto efoo4
+				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingG7GlobClsEEF_Q_CM17template_manglingG7GlobClsiqE5paramE"sv;
+			const auto ehoo = "_Q_M17template_manglingG3hooFiqiqE1jE"sv;
+			const auto egoo = "_Q_M17template_manglingG3gooIiq42_EFiqiqE1jE"sv;
+
+			ASSERT_EQUAL(efoo1, name_foo_1);
+			ASSERT_EQUAL(efoo2, name_foo_2);
+			ASSERT_EQUAL(efoo3, name_foo_3);
+			ASSERT_EQUAL(efoo4, name_foo_4);
+			ASSERT_EQUAL(ehoo, name_hoo);
+			ASSERT_EQUAL(egoo, name_goo);
+		});
 	}
 
 	void testGlobalVariableExpressions() {

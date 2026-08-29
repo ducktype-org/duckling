@@ -14,7 +14,9 @@ namespace pst {
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
-			PARSE().all(Keyword::If, &out->name, &out->condition, &out->then_body);
+			PARSE().one(Keyword::If);
+			if (PARSE().tryEat(Keyword::Const)) out->is_const = true;
+			PARSE().all(&out->name, &out->condition, &out->then_body);
 
 			if (PARSE().tryEat(Keyword::Else)) PARSE().one(&out->else_body);
 		})
@@ -24,6 +26,8 @@ namespace pst {
 
 	void If::dprint(std::ostream& out) const {
 		out << "{";
+
+		if (is_const) out << R"("is_const":true,)";
 
 		if (name.has_value()) {
 			out << "\"name\":";
@@ -44,6 +48,7 @@ namespace pst {
 
 	HashAlg& If::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, else_body.has_value());
+		addToHash(partial_hash, is_const);
 		return partial_hash;
 	}
 

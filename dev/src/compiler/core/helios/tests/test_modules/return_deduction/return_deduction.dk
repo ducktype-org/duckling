@@ -18,3 +18,13 @@ fun multiple_returns(x: i64) = {
         return -x;
     }
 }
+
+fun const_if_returns(x: i64) = {
+    if const (1 == 1) {
+        return x;
+    }
+    else {
+        # Not compiled, so it takes no part in the deduction.
+        return true;
+    }
+}
