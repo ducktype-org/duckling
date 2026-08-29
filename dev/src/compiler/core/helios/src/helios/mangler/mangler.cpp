@@ -349,6 +349,19 @@ namespace compiler::helios::mangler {
 			return identifier(compiler::helios::name(symbol_id).strView());
 		}
 
+		template<typename ElemT>
+		auto check_and_add_elem(auto it, const auto& ancestors, auto ancestor, auto& ret, auto& ctx) {
+			for (auto it_cpy = it; it_cpy != ancestors.rbegin();)
+				if ((--it_cpy)->second == ancestor->getID()) return;
+
+			const auto val = ancestor.template dynamicCast<ElemT>().value();
+			ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
+
+			if constexpr (std::same_as<ElemT, pst::Fun>) {
+				//
+			}
+		}
+
 		/**
 		 * @brief Returns symbol name prefixed with all enclosing it scopes to uniquely identify it
 		 * within a single module.
@@ -423,27 +436,19 @@ namespace compiler::helios::mangler {
 			for (auto it = ancestors.rbegin(); it != ancestors.rend(); ++it) {
 				const auto [ancestor, _] = *it;
 
-				const auto check_and_add_elem = [&]<typename ElemT>() {
-					for (auto it_cpy = it; it_cpy != ancestors.rbegin(); --it_cpy)
-						if (it_cpy->second == ancestor->getID()) return;
-
-					const auto val = ancestor.dynamicCast<ElemT>().value();
-					ret += identifier(val->getName().unlock(ctx)->unwrap().strView());
-				};
-
 				// @todo: #3285 add backreferences -- <name-prefix>
 				switch (ancestor->getElementKind()) {
 					using enum pst::ElementKind;
 				case Namespace: {
-					check_and_add_elem.template operator()<pst::Namespace>();
+					check_and_add_elem<pst::Namespace>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case Class: {
-					check_and_add_elem.template operator()<pst::Class>();
+					check_and_add_elem<pst::Class>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case Fun: {
-					check_and_add_elem.template operator()<pst::Fun>();
+					check_and_add_elem<pst::Fun>(it, ancestors, ancestor, ret, ctx);
 					break;
 				}
 				case TemplateStmt: {
