@@ -384,6 +384,23 @@ namespace compiler::backend_llvm {
 					llvm_context, base::safeIntConv<unsigned>(static_cast<usize>(layout->getSize()))
 				);
 			}
+			variant_case(tsl::VariantTypeLayout, variant_layout) {
+				// Variants lower to a packed literal struct (structurally uniqued by LLVM):
+				// { i8 tag, [pad x i8], [payload x i8] }, mirroring the TSL layout.
+				const usize data_offset = variant_layout.getDataOffset().asInt();
+				const usize total_bytes = base::bits2bytes(layout->getSize()).asInt();
+				const usize data_bytes  = total_bytes - data_offset;
+
+				llvm::Type* i8_type = llvm::Type::getInt8Ty(llvm_context);
+
+				std::vector<llvm::Type*> members;
+				members.push_back(i8_type);  // The tag.
+				if (data_offset > 1)
+					members.push_back(llvm::ArrayType::get(i8_type, data_offset - 1));
+				members.push_back(llvm::ArrayType::get(i8_type, data_bytes));
+
+				return llvm::StructType::get(llvm_context, members, /*isPacked=*/true);
+			}
 			variant_default {
 				CORE_PANIC(
 					base::strConcat("Type not handled yet: ", layout->toStringIdentification())
@@ -424,7 +441,10 @@ namespace compiler::backend_llvm {
 
 		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
 
-		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
+		global->setLinkage(
+			lir_global.global.link_once ? llvm::GlobalValue::LinkOnceODRLinkage
+										: llvm::GlobalValue::ExternalLinkage
+		);
 		global->setConstant(lir_global.global.type == lir::LIRGlobalType::Constant);
 
 		// We set null initialization for all globals by default to keep potential uninitialized
@@ -1163,13 +1183,6 @@ namespace compiler::backend_llvm {
                     );
 					builder.CreateCall(free_func, { ptr_to_free });
 					return nullptr;
-				} else if (builtin_kind == lir::BuiltinFunctionKind::ListFree) {
-					llvm::Value* list_ptr  = loadLIRValue(lir_instruction.arguments.at(1), builder);
-					auto         free_func = loadBuiltin(
-                        "builtin_list_free", builder.getVoidTy(), { builder.getPtrTy() }
-                    );
-					builder.CreateCall(free_func, { list_ptr });
-					return nullptr;
 				}
 			}
 
@@ -1220,6 +1233,10 @@ namespace compiler::backend_llvm {
 				builder.CreateRet(loadLIRValue(lir_instruction.arguments.at(0), builder));
 				break;
 			}
+			case Unreachable: {
+				builder.CreateUnreachable();
+				break;
+			}
 			case Jump: {
 				builder.CreateBr(
 					block_mapping[lir_instruction.arguments.at(0).get<lir::BlockRef>()].get()
@@ -1256,50 +1273,76 @@ namespace compiler::backend_llvm {
 				builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
 				break;
 			}
-			case ListPush:
-			case ListPop: {
-				llvm::Value* list_ptr
-					= loadLIRValueToPointer(lir_instruction.arguments.at(0), builder);
+			case VariantConstruct: {
+				const auto& params = std::get<lir::VariantParameters>(lir_instruction.extra_params);
+				const auto& variant_layout
+					= std::get<tsl::VariantTypeLayout>(params.variant_layout->getVariant());
 
-				// Get the size of the List element. Needed to pass to the generic
-				// `builtin_list_push`/'builtin_list_pop' builtins.
-				auto get_elem_size = [&]() {
-					const auto& params
-						= std::get<lir::ListOperationParameters>(lir_instruction.extra_params);
-					return builder.getInt64(
-						static_cast<u64>(base::bits2bytes(params.element_layout->getSize()))
+				llvm::Value* variant_ptr
+					= gepPointerFromLIRPlace(lir_instruction.output.value(), builder);
+
+				// The tag lives at offset 0.
+				builder.CreateStore(
+					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
+					variant_ptr
+				);
+
+				// An alternative whose payload carries no information (e.g. `()`) has no value to
+				// store, so the tag alone identifies it.
+				if (not lir_instruction.arguments.empty()) {
+					llvm::Value* payload  = loadLIRValue(lir_instruction.arguments.at(0), builder);
+					llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
+						builder.getInt8Ty(),
+						variant_ptr,
+						variant_layout.getDataOffset().asInt(),
+						"variant_data"
 					);
-				};
-
-				switch (lir_instruction.operation) {
-				case ListPush: {
-					llvm::Value* element_ptr
-						= loadLIRValueToPointer(lir_instruction.arguments.at(1), builder);
-
-					auto push_func = loadBuiltin(
-						"builtin_list_push",
-						builder.getVoidTy(),
-						{ builder.getPtrTy(), builder.getPtrTy(), builder.getInt64Ty() }
-					);
-
-					builder.CreateCall(push_func, { list_ptr, element_ptr, get_elem_size() });
-					break;
+					builder.CreateStore(payload, data_ptr);
 				}
-				case ListPop: {
-					llvm::Value* count_val = loadLIRValue(lir_instruction.arguments.at(1), builder);
+				break;
+			}
+			case VariantTryProject: {
+				const auto& params = std::get<lir::VariantParameters>(lir_instruction.extra_params);
+				const auto& variant_layout
+					= std::get<tsl::VariantTypeLayout>(params.variant_layout->getVariant());
 
-					auto pop_func = loadBuiltin(
-						"builtin_list_pop",
-						builder.getVoidTy(),
-						{ builder.getPtrTy(), builder.getInt64Ty(), builder.getInt64Ty() }
-					);
+				// The argument is a reference to the variant, so the pointer is the value held
+				// in the place rather than the place's own address.
+				llvm::Value* variant_ptr = loadLIRValue(lir_instruction.arguments.at(0), builder);
 
-					builder.CreateCall(pop_func, { list_ptr, count_val, get_elem_size() });
-					break;
-				}
-				default:
-					CORE_UNREACHABLE();
-				}
+				llvm::Value* tag
+					= builder.CreateLoad(builder.getInt8Ty(), variant_ptr, "variant_tag");
+				llvm::Value* tag_matches = builder.CreateICmpEQ(
+					tag,
+					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
+					"tag_matches"
+				);
+				llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
+					builder.getInt8Ty(),
+					variant_ptr,
+					variant_layout.getDataOffset().asInt(),
+					"variant_data"
+				);
+				llvm::Value* result = builder.CreateSelect(
+					tag_matches,
+					data_ptr,
+					llvm::ConstantPointerNull::get(builder.getPtrTy()),
+					"variant_proj"
+				);
+				storeOutput(lir_instruction.output.value(), result, builder);
+				break;
+			}
+			case BranchIfNull: {
+				const auto pointer = loadLIRValue(lir_instruction.arguments.at(0), builder);
+				const auto null_block
+					= block_mapping[lir_instruction.arguments.at(1).get<lir::BlockRef>()];
+				const auto not_null_block
+					= block_mapping[lir_instruction.arguments.at(2).get<lir::BlockRef>()];
+
+				llvm::Value* is_null = builder.CreateICmpEQ(
+					pointer, llvm::ConstantPointerNull::get(builder.getPtrTy()), "is_null"
+				);
+				builder.CreateCondBr(is_null, null_block.get(), not_null_block.get());
 				break;
 			}
 			/// Integer arithmetic ///

@@ -59,7 +59,7 @@ private:
 	void functionCallTest() {
 		auto module  = getLIROfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
-		withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(ctx, std::cerr); });
+		withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(std::cerr, Ref{ &ctx }); });
 	}
 
 	/**

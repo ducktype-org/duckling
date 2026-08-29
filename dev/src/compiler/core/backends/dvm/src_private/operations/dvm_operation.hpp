@@ -79,9 +79,10 @@ namespace compiler::backend_vm::internal {
 	 * @brief Represents a call DVM operation.
 	 */
 	struct BuiltinCallOperation final {
-		lir::BuiltinFunctionKind kind;
-		std::deque<DVMValue>     args;
-		base::Optional<DVMPlace> dest;
+		lir::BuiltinFunctionKind             kind;
+		std::deque<DVMValue>                 args;
+		base::Optional<DVMPlace>             dest;
+		base::Optional<vm::code::TypeOfData> return_type;
 	};
 
 	/**
@@ -137,6 +138,41 @@ namespace compiler::backend_vm::internal {
 	};
 
 	/**
+	 * @brief Constructs a variant value: sets the active alternative and stores the payload.
+	 */
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): always aggregate-initialized
+	struct VariantConstructOperation {
+		lir::VariantParameters variant_params;
+		/*
+		 * Empty when the chosen alternative carries no information (e.g. `()`), as then only
+		 * the alternative itself has to be activated.
+		 */
+		base::Optional<DVMValue> payload;
+		DVMPlace                 dest;  ///< The variant place; always present.
+	};
+
+	/**
+	 * @brief Produces a pointer to the variant's payload, null on alternative mismatch.
+	 */
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): always aggregate-initialized
+	struct VariantTryProjectOperation {
+		lir::VariantParameters variant_params;
+		DVMPlace               variant;  ///< A reference to the variant, not the variant itself.
+		DVMPlace               dest;     ///< The pointer place; always present.
+	};
+
+	/**
+	 * @brief Terminator branching on pointer nullness.
+	 */
+	struct BranchIfNullOperation {
+		DVMValue pointer;
+		DVMLabel null_target;
+		DVMLabel not_null_target;
+
+		std::vector<lir::ScopeFlag> scope_flags;
+	};
+
+	/**
 	 * @brief Represents a jump terminator.
 	 */
 	struct JumpOperation {
@@ -166,6 +202,13 @@ namespace compiler::backend_vm::internal {
 	};
 
 	/**
+	 * @brief Represents an unreachable terminator.
+	 */
+	struct UnreachableOperation {
+		std::vector<lir::ScopeFlag> scope_flags;
+	};
+
+	/**
 	 * @brief DVMOperation is a more generalised abstraction over lir::Instruction which allows to
 	 * bundle up the instruction lowering logic for similar instructions.
 	 *
@@ -182,9 +225,13 @@ namespace compiler::backend_vm::internal {
 		AddressOfOperation,
 		CastOperation,
 		MetaOperation,
+		VariantConstructOperation,
+		VariantTryProjectOperation,
 		JumpOperation,
 		BranchOperation,
-		ReturnOperation>;
+		BranchIfNullOperation,
+		ReturnOperation,
+		UnreachableOperation>;
 
 
 	/**

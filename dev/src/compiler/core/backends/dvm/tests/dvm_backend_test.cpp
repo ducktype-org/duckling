@@ -1,9 +1,12 @@
 #include <backends/dvm/dvm_backend.hpp>
 #include <driver/test_utils.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
+#include <program_lowering_context.hpp>
+#include <tsl/queries.hpp>
 #include <vm_tester_utils.hpp>
 
 #include <base/extend_cpp/vector_utils.hpp>
@@ -48,6 +51,7 @@ public:
 		TESTER_ADD_TEST(backendDependentTest);
 		TESTER_ADD_TEST(allocTest);
 		TESTER_ADD_TEST(ffiTest);
+		TESTER_ADD_TEST(variantUnitAlternativeTest);
 	}
 
 protected:
@@ -184,6 +188,42 @@ private:
 		ASSERT_HAS_VALUE(validation_result);
 	}
 
+	/**
+	 * @brief A variant alternative carrying no information (`()`) has no DVM type of its own, but
+	 * the DVM names alternatives by type name, so the lowering must name it with the stand-in
+	 * `unit` opaque type instead of dropping it.
+	 */
+	void variantUnitAlternativeTest() {
+		using namespace compiler;
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto unit_type = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+			const auto i64_type  = tsh::SymbolType<>::withDefaults(
+                tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
+            );
+			const tsh::VariantAbstractType variant_type
+				= ctx.query<tsh::QueryVariantType>({ { unit_type, i64_type } });
+
+			CRef<tsl::TypeLayout> layout
+				= &ctx.query<tsl::QueryAbstractTypeLayout>(variant_type)->valueOrThrow();
+
+			backend_vm::internal::ProgramLoweringContext program_ctx(
+				ctx, base::StrID("variant_unit_alternative_test"), false, false
+			);
+			const auto dvm_type = program_ctx.lowerAndKeepTslType(layout);
+			ASSERT_HAS_VALUE(dvm_type);
+
+			const auto dvm_variant = vm::code::getTypeKind<vm::code::VariantType>(**dvm_type);
+			ASSERT_HAS_VALUE(dvm_variant);
+
+			const auto& unit_dvm_type = program_ctx.getUnitType();
+			ASSERT_TRUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type).has_value());
+			ASSERT_TRUE(std::ranges::contains(
+				dvm_variant.value().variant_alternatives, typeName(unit_dvm_type)
+			));
+		});
+	}
+
 	void simpleTest() { runTest("simple", {}, {}, {}, 42); }
 
 	void functionCallsTest() { runTest("function_calls", {}, {}, {}, 4); }
@@ -232,7 +272,9 @@ private:
 	// The pointer casts (including the `manyptr T` -> `ptr T` narrowing) run first and print their
 	// results; the module then dereferences a null many-pointer, which must fail the process.
 	void pointersTest() {
-		runFailTest("pointers", "Accessing null pointer", {}, "11\n44\n22\n", {}, ALL_CORE_MODULES);
+		runFailTest(
+			"pointers", "Accessing null pointer", {}, "11\n44\n22\n0\n0\n1\n", {}, ALL_CORE_MODULES
+		);
 	}
 
 	void initsDeinitsTest() { runTest("inits_deinits", {}, { "100\n" }, {}, 0); }
@@ -242,7 +284,7 @@ private:
 	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
 
 	void allocTest() {
-		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n", {}, 42);
+		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n10\n", {}, 42);
 	}
 
 	// Calls into libc/libm through libffi: scalars, a struct returned by value, `cptr char`

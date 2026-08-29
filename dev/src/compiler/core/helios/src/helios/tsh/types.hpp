@@ -31,7 +31,6 @@ namespace compiler::tsh {
 	class SliceAbstractTypeImpl;
 	class TupleAbstractTypeImpl;
 	class FunctionAbstractTypeImpl;
-	class DynamicArrayAbstractTypeImpl;
 	class StaticArrayAbstractTypeImpl;
 	class VariantAbstractTypeImpl;
 	class ClassAbstractTypeImpl;
@@ -410,22 +409,6 @@ namespace compiler::tsh {
 		CONSTRUCT_FROM_IMPLEMENTATION(FunctionAbstractType)
 	};
 
-	class DynamicArrayAbstractType: public AbstractType {
-	public:
-		SETUP_TYPE_WITH_BASE(DynamicArrayAbstractType, AbstractType)
-
-		/**
-		 * @brief Gets the type of the elements of the dynamic array.
-		 * @return The type of the elements of the dynamic array.
-		 */
-		[[nodiscard]]
-		SymbolType<> getElementType() const;
-
-		CONSTRUCT_WITH_CHECKED_CAST(DynamicArrayAbstractType)
-
-		CONSTRUCT_FROM_IMPLEMENTATION(DynamicArrayAbstractType)
-	};
-
 	class StaticArrayAbstractType: public AbstractType {
 	public:
 		SETUP_TYPE_WITH_BASE(StaticArrayAbstractType, AbstractType)
@@ -596,47 +579,26 @@ namespace compiler::tsh {
 	 * A Type Template represents an "incomplete" type.
 	 *
 	 * This is a compile-time concept used primarily to implement generics.
-	 * For instance, the bare keyword `List` is represented as a Type Template which cannot hold
-	 * values or exist in the final program's memory on its own, indexing it with a type (e.g.,
-	 * `List[i64]`) "saturates" the template, resulting in a concrete `DynamicArrayAbstractType`.
-	 *
-	 * The source of a template defines its behavior:
-	 * - **BuiltinKind**: Identifies primitive generic constructors recognized
-	 *   directly by the compiler (like the built-in dynamic list).
-	 * - **SymID**: A reference to a user-defined generic class.
+	 * A type template cannot hold values or exist in the final program's memory on its own,
+	 * baking it with template arguments (e.g., `List:{i64}`) results in a concrete type.
 	 *
 	 * @TODO: #717 This may come in handy when implementing generics/templates. This implementation
-	 * may change then. This is just a stub needed for generic List implementation.
+	 * may change then.
 	 */
 	class TypeTemplateAbstractType: public AbstractType {
 	public:
 		SETUP_TYPE_WITH_BASE(TypeTemplateAbstractType, AbstractType)
 
-		enum class BuiltinKind {
-			List  ///< The built-in dynamic array constructor.
-		};
-
 		/**
-		 * @brief The origin of the template/generic.
+		 * @brief The origin of the template/generic -- the user-defined generic symbol.
 		 */
-		using Source = std::variant<BuiltinKind, helios::SymID>;
+		using Source = helios::SymID;
 
 		/**
-		 * @brief Gets the source (built-in or user-defined) of this template.
+		 * @brief Gets the source of this template.
 		 * @return The template source.
 		 */
 		[[nodiscard]] Source getSource() const;
-
-		/**
-		 * @brief Creates a concrete type from this type template instantiated with the
-		 * `element_type`.
-		 * @param element_type The type to instantiate the type template with.
-		 * @return The concrete type after instantiation.
-		 */
-		[[nodiscard]] AbstractType instantiate(
-			query::Context& ctx, const SymbolType<>& element_type
-		) const;
-
 
 		CONSTRUCT_WITH_CHECKED_CAST(TypeTemplateAbstractType)
 

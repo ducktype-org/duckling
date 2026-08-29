@@ -1,0 +1,57 @@
+class MyClass {
+    a: i32 = 0;
+    b: f32 = 0;
+
+    fun getA() -> i32 = {
+        return a;
+    }
+
+    fun add(x: i32) -> f32 = {
+        return a + x;
+    }
+
+    fun add(x: i32, f1: f32 = 1.0, f2: f64 = 2.0) -> f32 = {
+        return a + x + f1 + f2;
+    }
+
+    fun add(x: i32, i1: i32 = 3, i2: i64 = 4) -> f32 = {
+        return a + x + i1 + i2;
+    }
+}
+
+class TrivialClass {
+    x: i64;
+    y: bool;
+}
+
+class DeepCopied {
+    v: i32;
+
+    DeepCopied.copy(other: const ref DeepCopied) = {
+        return DeepCopied(other.v);
+    }
+}
+
+class ComplexClass {
+    x: DeepCopied;
+    y: bool;
+}
+
+class NonDefaultConstructibleClass {
+    x: ref i64;
+}
+
+class MoreComplexComplexClass {
+    x: ComplexClass[2];
+    y: bool;
+}
+
+class MoreComplexNonDefaultable {
+    x: NonDefaultConstructibleClass[2];
+    y: bool;
+}
+
+template(T: type)
+class TemplateClass {
+    x: T;
+}

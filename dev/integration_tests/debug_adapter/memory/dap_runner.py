@@ -131,7 +131,7 @@ try:
         sys.stdout.write("SUCCESS: Complex structures, cyclic pointers, tables and variants verified perfectly.\n")
 
     # =========================================================================
-    # Scenario 2: Double request for the same variables refernce
+    # Scenario 2: Double request for the same variables reference
     # =========================================================================
     elif scenario == "test_double_expansion":
         st_seq = client.send_stack_trace()

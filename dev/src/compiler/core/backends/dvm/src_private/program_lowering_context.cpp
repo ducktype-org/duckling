@@ -136,6 +136,14 @@ const vm::code::TypeOfData& ProgramLoweringContext::getVoidCPointerType() {
 	return *keepVMType(vm::code::getBuiltinTypeByName(void_cpointer_name).value());
 }
 
+const vm::code::TypeOfData& ProgramLoweringContext::getUnitType() {
+	static const base::StrID unit_name{ "unit" };
+
+	if (auto maybe_type = type_storage.dvm_types.atMaybe(unit_name)) return **maybe_type;
+
+	return *keepVMType(vm::code::OpaqueType(unit_name, Bytes{ 1 }));
+}
+
 const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> lir_global) {
 	if (auto maybe_global = global_name_to_dvm.atMaybe(lir_global->mangled_name))
 		return **maybe_global;
@@ -433,8 +441,10 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			    and not pointer_layout.hasPointee())
 				return getVoidCPointerType();
 
+			// A pointer to an information-less type (e.g. the payload of a `()` variant
+			// alternative) still needs a named pointee type.
 			const vm::code::TypeOfData& pointee_type
-				= **lowerAndKeepTslType(pointer_layout.getPointee());
+				= *lowerAndKeepTslType(pointer_layout.getPointee()).copyValueOr(&getUnitType());
 			return lowerPointerType(pointee_type, pointer_layout.getPointerKind());
 		}
 		variant_case(tsl::ClassTypeLayout, class_layout) {
@@ -460,6 +470,26 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			return vm::code::DataType{
 				base::StrID(class_layout.getMangledName()),
 				std::move(fields),
+			};
+		}
+		variant_case(tsl::VariantTypeLayout, variant_layout) {
+			const usize num_alternatives = variant_layout.getNumAlternatives();
+
+			std::vector<base::StrID> alternatives;
+			alternatives.reserve(num_alternatives);
+			std::string variant_type_name = "vnt";
+			for (usize i{ 0 }; i < num_alternatives; i++) {
+				const auto                  alternative_layout = variant_layout.getLayoutOfIndex(i);
+				const vm::code::TypeOfData& vm_alternative_type
+					= *lowerAndKeepTslType(alternative_layout).copyValueOr(&getUnitType());
+				alternatives.emplace_back(typeName(vm_alternative_type));
+				variant_type_name
+					= base::strConcat(variant_type_name, "_", typeName(vm_alternative_type));
+			}
+
+			return vm::code::VariantType{
+				base::StrID(variant_type_name),
+				std::move(alternatives),
 			};
 		}
 		variant_case(tsl::StaticArrayTypeLayout, array_layout) {

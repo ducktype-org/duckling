@@ -145,16 +145,27 @@ namespace clah {
 	 * Additionally, it accepts std::regex to match only given file extensions or anything else.
 	 */
 	class FileParser final: public ValueParser {
-		using ValueParser::ValueParser;
-
 		std::regex file_regex = std::regex(".*");  // The regex - default matches everything.
 
-	public:
-		explicit FileParser(std::regex regex): file_regex(std::move(regex)) {}
+		// Some commands (e.g. compile_package) take a directory through this parser, the rest
+		// accepts regular files only.
+		bool accept_directories = false;
 
-		FileParser(std::string_view name, std::regex regex):
+	public:
+		FileParser() = default;
+
+		explicit FileParser(std::string_view name, bool accept_directories = false):
 			  ValueParser(name),
-			  file_regex(std::move(regex)) {}
+			  accept_directories(accept_directories) {}
+
+		explicit FileParser(std::regex regex, bool accept_directories = false):
+			  file_regex(std::move(regex)),
+			  accept_directories(accept_directories) {}
+
+		FileParser(std::string_view name, std::regex regex, bool accept_directories = false):
+			  ValueParser(name),
+			  file_regex(std::move(regex)),
+			  accept_directories(accept_directories) {}
 
 		template<class... Args>
 		static Box<FileParser> make(Args&&... args) {

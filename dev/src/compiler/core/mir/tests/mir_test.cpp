@@ -38,12 +38,13 @@ public:
 		TESTER_ADD_TEST(numericLiteralsTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(functionEndTest);
+		TESTER_ADD_TEST(voidCallTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(tupleTypeCoercionTest);
-		TESTER_ADD_TEST(livenessMapTest);
+		TESTER_ADD_TEST(moveStateMapTest);
 		TESTER_ADD_TEST(sliceTest);
 		TESTER_ADD_TEST(pointersTest);
 	}
@@ -55,7 +56,7 @@ private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
 
 	/**
-	 * @brief Unit test for the global in-liveness map produced by `calculateGlobalInLivenessMap`.
+	 * @brief Unit test for the global in-move-state map produced by `calculateGlobalInMoveStateMap`.
 	 *
 	 * Uses `moveParamThenBlock(a, c)`, which moves the parameter `a` in the entry block and then
 	 * branches. The map is computed on the pre-lifetime MIR (so the move flag is present but no
@@ -63,7 +64,7 @@ private:
 	 *  - `a` is alive on entry (it is a parameter),
 	 *  - some successor block sees `a` as `Moved` with exactly one reaching move site.
 	 */
-	void livenessMapTest() {
+	void moveStateMapTest() {
 		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
 
 		withContextDo([&](query::Context& ctx) {
@@ -90,22 +91,22 @@ private:
 				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
 					preds.put(succ).first->second.push_back(block_id);
 
-			auto liveness = compiler::mir::calculateGlobalInLivenessMap(pre_mir, preds);
+			auto move_states = compiler::mir::calculateGlobalInMoveStateMap(pre_mir, preds);
 
 			// `a` is a parameter, so it is alive at the entry block.
 			auto entry     = pre_mir.block_order.front();
-			auto entry_map = liveness.block_in_liveness.atMaybe(entry);
+			auto entry_map = move_states.block_in_move_state.atMaybe(entry);
 			ASSERT_TRUE(entry_map.has_value());
 			auto a_at_entry = entry_map.value()->atMaybe(a_id.value());
 			ASSERT_TRUE(a_at_entry.has_value());
-			ASSERT_TRUE(a_at_entry.value()->kind == compiler::mir::LivenessStatus::Alive);
+			ASSERT_TRUE(a_at_entry.value()->status == compiler::mir::MoveStatus::Alive);
 
 			// After the unconditional move in the entry block, at least one successor block must
 			// observe `a` as `Moved` with exactly one reaching move site.
 			bool found_moved = false;
-			for (const auto& [block_id, map]: liveness.block_in_liveness) {
+			for (const auto& [block_id, map]: move_states.block_in_move_state) {
 				auto state = map.atMaybe(a_id.value());
-				if (state.has_value() && state.value()->kind == compiler::mir::LivenessStatus::Moved
+				if (state.has_value() && state.value()->status == compiler::mir::MoveStatus::Moved
 				    && state.value()->move_sites.size() == 1)
 					found_moved = true;
 			}
@@ -170,8 +171,10 @@ private:
 
 			auto& c_data
 				= ctx.query<compiler::mir::LowerGlobalData>({ globals.at(0) })->valueOrThrow();
-			auto c_ctor = std::get<CRef<compiler::mir::Function>>(c_data.initial_value);
-			ASSERT_TRUE(c_ctor->name.strView() == "constructor_of_c");
+			auto c_ctor_dtor = std::get<compiler::mir::MIRCtorDtorPair>(c_data.initial_value);
+			ASSERT_TRUE(c_ctor_dtor.constructor->name.strView() == "constructor_of_c");
+			// `c` is an i64, it is trivially destructible, so it gets no destructor.
+			ASSERT_TRUE(c_ctor_dtor.destructor.empty());
 
 			auto foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
@@ -337,7 +340,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
-			ASSERT_EQUAL(3, functions.size());
+			ASSERT_EQUAL(4, functions.size());
 
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
@@ -530,6 +533,38 @@ private:
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->valueOrThrow();
 			ASSERT_EQUAL(empty.block_order.size(), 1);
+		});
+	}
+
+	/**
+	 * @brief A call to a `-> void` function never returns, so its block ends with `Unreachable`
+	 * and everything the source wrote after the call (here `return 42`) is unreachable and gets
+	 * eliminated.
+	 */
+	void voidCallTest() {
+		auto [module, _] = getModule(fs::File(path("modules/function_calls")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
+			for (const auto& fn: unit.functions)
+				if (fn->declaration->original_name.strView() == "callDiverges") target = fn;
+			ASSERT_HAS_VALUE(target);
+
+			auto& function
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ target.value() })->valueOrThrow();
+
+			auto& last_block = function.blocks[function.block_order.back()];
+			ASSERT_EQUAL_PRINT(
+				last_block.terminator.operation, compiler::mir::Operation::Unreachable
+			);
+
+			for (auto block_id: function.block_order)
+				ASSERT_TRUE(
+					function.blocks[block_id].terminator.operation
+					!= compiler::mir::Operation::ReturnValue
+				);
 		});
 	}
 

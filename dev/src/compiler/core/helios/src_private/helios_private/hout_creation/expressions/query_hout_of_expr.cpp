@@ -1,6 +1,7 @@
 #include "query_hout_of_expr.hpp"
 
-#include "coercions.hpp"
+#include "coercions/coercions.hpp"
+#include "coercions/errors.hpp"
 #include "function_calls/call_processing.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
@@ -20,6 +21,7 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
+#include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/casts.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
@@ -294,7 +296,7 @@ namespace compiler::helios::code {
 					pstOrigin(stmt).generatedFrom(),
 					s.call(
 						withOrigin(pstOrigin(stmt).generatedFrom(), s.ident(string_to_string_sym)),
-						std::move(result_expr)
+						s.prepToPassSelf(std::move(result_expr))
 					)
 				);
 
@@ -471,9 +473,10 @@ namespace compiler::helios::code {
 
 				// Handle dereferencing
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
-					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
+					if (not(tsh::isPointerKind(inner_type.getType().getKind())
+					        or inner_type.getRefKind() != tsh::ReferenceKind::Direct)) {
 						ctx.logInt(makeBox<dia::PlaceholderError>(
-							"Tried to dereference a non-pointer type", stmt->getStablePosition()
+							"Tried to dereference an invalid type", stmt->getStablePosition()
 						));
 						return;
 					}
@@ -552,7 +555,7 @@ namespace compiler::helios::code {
 					const auto kind          = abstract_type.getKind();
 					CORE_ASSERT(
 						kind == tsh::Kind::Class or kind == tsh::Kind::StaticArray
-							or kind == tsh::Kind::Tuple or kind == tsh::Kind::DynamicArray,
+							or kind == tsh::Kind::Tuple or kind == tsh::Kind::Variant,
 						"Tried to call a copy constructor of a type which shouldn't need one"
 					);
 
@@ -563,6 +566,27 @@ namespace compiler::helios::code {
 						s.ident(defgen::copyConstructorSymForType(ctx, abstract_type)),
 						s.refOf(std::move(inner))
 					);
+					return;
+				}
+
+				// `copyof x` copies `x` while keeping its full symbol type (including reference kind).
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copyof)) {
+					const Shorthand s{ ctx };
+
+					// copyof: T -> T
+					// copyof: ref T -> ref T
+					// copyof: box T -> box T
+					// `SymbolType::isCopyable` answers this for the value as a whole: a `ref` is
+					// always copyable (the reference is copied), while a `box` follows its pointee.
+					if (not inner_type.isCopyable(ctx)) {
+						ctx.logInt(makeBox<dia::PlaceholderError>(
+							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
+							stmt->getStablePosition()
+						));
+						return;
+					}
+
+					node = s.copyValue(std::move(inner), pstOrigin(stmt).generatedFrom());
 					return;
 				}
 
@@ -663,6 +687,12 @@ namespace compiler::helios::code {
 				    .valueOrThrow();
 			}
 
+			void visitMatchExpr(pst::Access<pst::expr::MatchExpr> stmt) override {
+				auto desugared = desugaring::desugarMatch(ctx, stmt);
+				if (desugared.hasFailed()) return;
+				node = std::move(desugared).valueOrThrow();
+			}
+
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// Handle explicit type conversions
 				const auto op = stmt->getOperator().unlock(ctx);
@@ -758,6 +788,10 @@ namespace compiler::helios::code {
 					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getMetaType());
 					break;
 
+				case pst::Keyword::Void:
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getVoidType());
+					break;
+
 				case pst::Keyword::i128:
 					node = makeBox<LiteralTypeExpr>(
 						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 128, Signed)
@@ -831,16 +865,6 @@ namespace compiler::helios::code {
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
-				case pst::Keyword::List: {
-					node = makeBox<LiteralTypeExpr>(
-						ctx,
-						pstOrigin(stmt),
-						ctx.query<tsh::QueryTypeTemplateType>(
-							{ tsh::TypeTemplateAbstractType::BuiltinKind::List }
-						)
-					);
-					break;
-				}
 				case pst::Keyword::Self: {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
