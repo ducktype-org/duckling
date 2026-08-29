@@ -65,7 +65,7 @@ namespace compiler::helios {
 				elements.emplace_back(makeBox<code::AccessExpr>(
 					ctx,
 					tuple->origin.generatedFrom(),
-					tuple->nextUse(),
+					i == 0 ? tuple : tuple->nextUse(),
 					ctx.query<defgen::QueryGeneratedSymbol>(
 						{ .name = base::StrID{ base::strConcat("_", i + 1) },
 				          .generated_symbol_data
@@ -78,9 +78,9 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief Performs element by element coercion.
+		 * @brief Performs tuple->tuple coercion element by element.
 		 */
-		Box<code::Expr> handleTupleCoercion(
+		Box<code::Expr> handleTupleToTupleCoercion(
 			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
 		) {
 			auto to_type = to.getType().as<tsh::TupleAbstractType>();
@@ -316,7 +316,7 @@ namespace compiler::helios {
 			return handleLiftToType(ctx, std::move(current_expr));
 		} else if (source_type.getKind() == tsh::Kind::Tuple
 		           and to.getType().getKind() == tsh::Kind::Tuple) {
-			return handleTupleCoercion(ctx, std::move(current_expr), to);
+			return handleTupleToTupleCoercion(ctx, std::move(current_expr), to);
 		} else {
 			CORE_PANIC("Coercion should always be valid at this point.");
 		}
