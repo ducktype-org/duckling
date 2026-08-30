@@ -130,3 +130,10 @@ Tests:
         Output:
           String: "Enter a character: The provided character is uppercase.\nIts lowercase counterpart is: x\nEnter a character: The provided character is lowercase.\nIts uppercase counterpart is: D\nEnter a character: The provided character is not a letter.\n"
           
+  bitwise:
+    Cases:
+      all:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
