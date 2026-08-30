@@ -9,12 +9,12 @@ use super::{Scope, dependency};
 use crate::quackpack::core::manifest::VenvConfig;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
-    Dependencies, DependencyKind, Features, Manifest, OptLevel, PackageMetadata, ParseMode,
-    Profile, Profiles, ScopeGuard, Version,
+    BuildOptions, Dependencies, DependencyKind, Features, Manifest, OptLevel, PackageMetadata,
+    ParseMode, Profile, Profiles, ScopeGuard, Version,
 };
 use crate::quackpack::schemas::manifest::{
-    Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
-    VenvConfig as VenvConfigSchema,
+    Manifest as ManifestSchema, Metadata as MetadataSchema, OptLevel as SchemaOptLevel,
+    Profile as ProfileSchema, VenvConfig as VenvConfigSchema,
 };
 use crate::util::IsPlural;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
@@ -89,6 +89,7 @@ pub(crate) fn parse(
                 dependencies,
                 profiles,
                 VenvConfig::default_for_script(ctx),
+                BuildOptions::default(),
             );
             Ok(manifest)
         }
@@ -130,6 +131,8 @@ pub(crate) fn parse(
                 description: metadata.description.as_ref().map(<&String>::into),
             };
 
+            let build_options = parse_build_options(metadata);
+
             Ok(Manifest::new(
                 name.into(),
                 version,
@@ -138,6 +141,7 @@ pub(crate) fn parse(
                 dependencies,
                 profiles,
                 venv,
+                build_options,
             ))
         }
     }
@@ -234,4 +238,10 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
         .unwrap_or(default_config.expose_freezefile());
     let ephemeral = input.ephemeral.unwrap_or(default_config.ephemeral());
     VenvConfig::new(storage_root, expose_freezefile, ephemeral)
+}
+
+/// Parse a [`BuildOptions`] from the schema.
+fn parse_build_options(input: &MetadataSchema) -> BuildOptions {
+    let links = input.links.as_ref().map(StrId::from);
+    BuildOptions { links }
 }

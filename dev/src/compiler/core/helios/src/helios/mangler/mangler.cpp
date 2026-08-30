@@ -47,12 +47,14 @@ namespace compiler::helios::mangler {
 
 	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
 		addToHash(h, k.symbol_key.index());
-		if (k.symbol_key.index() == 0)
-			addToHash(h, std::get<0>(k.symbol_key));
-		else if (k.symbol_key.index() == 1)
-			addToHash(h, std::get<1>(k.symbol_key));
-		else
-			CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
+
+		variant_match(k.symbol_key) {
+			variant_case(SymID, val) { addToHash(h, val); }
+			variant_case(special_symbol_keys::LIRModuleID, val) { addToHash(h, val); }
+			variant_default {
+				CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
+			}
+		}
 
 		addToHash(h, k.kind);
 		addToHash(h, k.mangling_scheme_version);
@@ -72,7 +74,7 @@ namespace compiler::helios::mangler {
 		 * @brief Check if the symbol should be mangled in the first place.
 		 * @note: See mangling-scheme.md for details
 		 */
-		bool shouldMangle(query::Context& ctx, const auto& key) {
+		bool shouldMangle(query::Context& ctx, const KeyOf_MangledSymbol& key) {
 			if (key.kind != ManglingSymbolKind::Standard) {
 				// Non-standard symbols can't have C mangling
 				return true;
@@ -123,15 +125,14 @@ namespace compiler::helios::mangler {
 		}
 
 		auto quoteExtendedChar(const char c) {
-			return std::isprint(static_cast<unsigned char>(c))
-			         ? base::strConcat(
-						   '\'', c, "' (int: ", static_cast<int>(static_cast<unsigned char>(c)), ")"
-					   )
-			         : base::strConcat(
-						   "[not-printable] (int: ",
-						   static_cast<int>(static_cast<unsigned char>(c)),
-						   ")"
-					   );
+			if (std::isprint(static_cast<unsigned char>(c)))
+				return base::strConcat(
+					'\'', c, "' (int: ", static_cast<int>(static_cast<unsigned char>(c)), ")"
+				);
+			else
+				return base::strConcat(
+					"[not-printable] (int: ", static_cast<int>(static_cast<unsigned char>(c)), ")"
+				);
 		}
 
 		/**
@@ -177,18 +178,22 @@ namespace compiler::helios::mangler {
 			const auto symbol_module = module(scope(symbol_id));
 			const auto package_id
 				= compiler::frontend::getModuleRef(symbol_module)->getPackage().unlock(ctx).getID();
+			std::cerr << "@taw3e8 halo 1\n";
 			if (const auto package_ref_opt = global_state::getPackageRefOpt(package_id)) {
+				std::cerr << "@taw3e8 halo 2\n";
 				/* we're in a package */
 				auto raw_package_name = package_ref_opt.value()->getName().str();
 				// @todo: #3286 for now we allow '-' and just treat it as '_'
 				std::ranges::replace(raw_package_name, '-', '_');
 				auto package_name = identifier(raw_package_name);
 
-				if (const auto c = findExtendedChar(package_name))
+				if (const auto c = findExtendedChar(package_name)) {
+					std::cerr << "@taw3e8 halo 3\n";
 					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
 						"Name of a package contains a character that is not allowed yet: ",
 						quoteExtendedChar(c.value())
 					)));
+				}
 				ret_ss << 'P' << package_name;
 			} else {
 				/* standalone module */
@@ -707,7 +712,7 @@ namespace compiler::helios::mangler {
 		 * @brief Get the encoding of a symbol
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string encoding(query::Context& ctx, const auto& key) {
+		std::string encoding(query::Context& ctx, const KeyOf_MangledSymbol& key) {
 			switch (key.kind) {
 			case ManglingSymbolKind::Standard:
 				return internal::symbolEncoding(ctx, std::get<SymID>(key.symbol_key));

@@ -26,6 +26,7 @@
 //!     ├── deps.json # JSON used to communicate between QuackPack and duckc.
 //!     └── .duck_lock # Per dependency lock
 
+use std::convert::Infallible;
 use std::ops::ControlFlow;
 use std::path::PathBuf;
 
@@ -52,7 +53,7 @@ fn hash_subgraph_and_profile(
     impl TryUnitVisitor for SubgraphHasher<'_> {
         type Err = QuackError;
 
-        type Break = ();
+        type Break = Infallible;
 
         fn try_visit(&mut self, unit: &Unit) -> Result<ControlFlow<Self::Break>, Self::Err> {
             let package = unit.multipackage_schema_package(self.graph)?;
