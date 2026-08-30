@@ -264,11 +264,16 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> getRuntimeExprResult() override;
 
+		[[nodiscard]]
 		Ref<SafeVMValue> getVMValue(u64 id) const;
 
+		[[nodiscard]]
 		bool isValidVMValueID(u64 id) const;
 
-		RuntimeData getRuntimeData() const { return runtime_data; }
+		[[nodiscard]]
+		RuntimeData getRuntimeData() const {
+			return runtime_data;
+		}
 
 		/**
 		 * @brief Update the pointers to the global data buffer and global blocks buffer.

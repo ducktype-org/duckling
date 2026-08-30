@@ -11,6 +11,7 @@ Available Commands:
  status                    writes current VM status
  position                  writes current position
  step                      executes one step
+ eval                      evaluates runtime expression
  break                     sets or unsets the breakpoint
 
 Global options:
