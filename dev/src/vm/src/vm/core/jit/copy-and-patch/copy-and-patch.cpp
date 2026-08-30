@@ -147,7 +147,7 @@ namespace vm::jit {
 
 		CORE_DEV_LOG(
 			DVMDetails,
-			(memory.dump("compiled_function"), "Compiled function dumped to: compiled_function")
+			(memory.dump("compiled_function.cnp"), "Compiled function dumped to: compiled_function.cnp")
 		);
 		memory.markExecutable();
 		return memory;

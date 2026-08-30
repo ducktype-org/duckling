@@ -71,6 +71,18 @@ namespace vm::jit {
 		mpm.run(m, mam);
 	}
 
+	static void printModule(Ref<llvm::Module> module, std::string_view filename) {
+		std::error_code      error_code;
+		llvm::raw_fd_ostream file(
+			filename, error_code, llvm::sys::fs::OF_Text
+		);
+
+		if (error_code)
+			llvm::errs() << "Error opening file: " << error_code.message() << "\n";
+		else
+			module->print(file, nullptr);
+	}
+
 	MRef<JitLLVMFunc> compileLLVM(
 		const low::cf::ControlFlowGraph& cfg, const low::MicroBytecode& bc, const base::StrID& name
 	) {
@@ -94,10 +106,21 @@ namespace vm::jit {
 			!llvm::verifyModule(*new_module, &llvm::errs()), "Module invalid BEFORE optimization"
 		);
 
+		CORE_DEV_LOG(
+			DVMDetails,
+			(printModule(new_module.get(), "compiled_function-before.llvm"), "Compiled function dumped")
+		);
+		std::cerr << "Compiled?\n";
+
 		optimizeModule(*new_module);
 
 		CORE_ASSERT(
 			!llvm::verifyModule(*new_module, &llvm::errs()), "Module invalid AFTER optimization"
+		);
+
+		CORE_DEV_LOG(
+			DVMDetails,
+			(printModule(new_module.get(), "compiled_function-after.llvm"), "Compiled function dumped")
 		);
 
 		auto&                       lljit = *llvm_data.lljit_instance;
