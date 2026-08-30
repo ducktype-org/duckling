@@ -56,7 +56,6 @@ def get_stencil_name(unmangled_name: str, truncate: bool) -> str:
     assert is_stencil_section(unmangled_name)
     return unmangled_name[len("vm::jit::cnp::stencil_"):-len(f"({stencil_args})")]
 
-
 def split_section_relocations(
     section: ELFSection, stencils: list[Stencil]
 ) -> list[Stencil]:
@@ -70,7 +69,7 @@ def split_section_relocations(
         idx = bisect.bisect_right(beginnings, rel_offset, key=stencil_offset)
         if idx == 0:
             continue
-        stencil = stencils[idx - 1]
+        stencil = beginnings[idx - 1]
         if rel_offset < stencil.offset + stencil.size:
             stencil.holes.append(parse_relocation(relocation, stencil))
     return stencils

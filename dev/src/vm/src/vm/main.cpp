@@ -104,7 +104,7 @@ clah::Clah getVmClah() {
 						 )
 	                     .build())
 #ifndef ENABLE_JIT
-				// JIT and debugger are mutually exclusive due to common usage of LowVMProgramCopy,
+				// JIT and debugger are conflicting due to common usage of LowVMProgramCopy,
 	            // with both JIT and debugger assuming exclusive control of program copy opcode
 	            // modification.
 				.add(clah::ParamBuilder::ofFlag()

@@ -145,7 +145,10 @@ namespace vm::jit {
 			}
 		}
 
-		IF_BUILD_TYPE_DEV(memory.dump("compiled_function"));
+		CORE_DEV_LOG(
+			DVMDetails,
+			(memory.dump("compiled_function"), "Compiled function dumped to: compiled_function")
+		);
 		memory.markExecutable();
 		return memory;
 	}
