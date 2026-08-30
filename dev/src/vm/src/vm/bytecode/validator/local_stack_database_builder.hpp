@@ -48,9 +48,9 @@ namespace vm::code {
 			base::HashMap<Child, NameStackID, ChildHash> children{};
 			persistent::HashMapStateID name_map_id = persistent::HashMap<base::StrID, usize>::EMPTY;
 			persistent::VectorStateID  name_stack_id = persistent::Vector<base::StrID>::EMPTY;
-			usize                                        size          = 0;
-			NameStackID                                  prev_node     = 0;
-			valid_type::TypeSize byte_depth = valid_type::TypeSize{ Bytes{ 0 }, Bytes{ 0 } };
+			usize                      size          = 0;
+			NameStackID                prev_node     = 0;
+			valid_type::TypeSize       byte_depth = valid_type::TypeSize{ Bytes{ 0 }, Bytes{ 0 } };
 
 			NameStackID emplaceChild(const Child& child, NameStackID new_id);
 		};

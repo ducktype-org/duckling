@@ -61,7 +61,7 @@ namespace vm::code {
 	public:
 		static constexpr StackStateID EMPTY            = StackStateID{ 0 };
 		static constexpr NameStackID  EMPTY_NAME_STACK = 0;
-		static constexpr TypeStackID EMPTY_TYPE_STACK = persistent::Vector<base::StrID>::EMPTY;
+		static constexpr TypeStackID  EMPTY_TYPE_STACK = persistent::Vector<base::StrID>::EMPTY;
 
 		base::Optional<valid_type::TypeSize> getByteOffset(StackStateID state, base::StrID name)
 			const;
