@@ -52,7 +52,7 @@ public:
 		TESTER_ADD_TEST(allocTest);
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(bitwiseOperationsTest);
-    TESTER_ADD_TEST(variantUnitAlternativeTest);
+		TESTER_ADD_TEST(variantUnitAlternativeTest);
 	}
 
 protected:
