@@ -146,7 +146,7 @@ namespace vm::persistent::detail {
 				"At this point, both positions must be at the same depth"
 			);
 
-			usize ans = (usize) std::bit_width(pos_1 ^ pos_2);
+			auto ans = (usize) std::bit_width(pos_1 ^ pos_2);
 			CORE_ASSERT(
 				(pos_1 >> ans) == (pos_2 >> ans),
 				"Since both are at the same height, they must be equal if we shift by partial "

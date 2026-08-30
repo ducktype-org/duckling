@@ -272,7 +272,7 @@ namespace vm::persistent {
 			HashMapIterator(
 				const HashMap<KeyT, ValT, KeyH, ValH>& map, MemoryStateView::MemoryIterator mem_it
 			):
-				  mem_it(mem_it),
+				  mem_it(std::move(mem_it)),
 				  map(&map) {}
 		};
 

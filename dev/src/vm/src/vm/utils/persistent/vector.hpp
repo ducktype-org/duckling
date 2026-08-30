@@ -253,7 +253,7 @@ namespace vm::persistent {
 			VectorIterator() = default;
 
 			VectorIterator(const Vector<VarT, VarH>& vec, MemoryStateView::MemoryIterator mem_it):
-				  mem_it(mem_it),
+				  mem_it(std::move(mem_it)),
 				  vec(&vec) {}
 		};
 
