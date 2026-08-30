@@ -2,6 +2,8 @@
 
 #include "fast_vmprocess.hpp"
 
+#include <base/except/exceptions.hpp>
+
 #include <vm/core/fast/eval/evaluator.hpp>
 #include <vm/core/fast/program/instructions/executable.hpp>
 #include <vm/core/fast/program/program.hpp>
@@ -29,23 +31,17 @@ vm::fast::FastVMThread::FastVMThread(
 }
 
 void vm::fast::FastVMThread::run(const std::string& func_name, const RunArguments& args) {
-	respondExecutionRequest(api::Running{});
+	// The spawner already committed `Spawn` (see `IVMThread::prepareSpawnLocked`).
+	if (!program->functions.contains(base::StrID(func_name.data())))
+		throw exceptions::VMRuntimeException(
+			base::strConcat("Called function '", func_name, "' does not exist.")
+		);
 
-	if (!program->functions.contains(base::StrID(func_name.data()))) {
-		respondExecutionRequest(api::ExecutionPanicked{
-			base::strConcat("Called function '", func_name, "' does not exist.") });
-		return;
-	}
+	CRef<FunctionInfo>        func_info = program->functions.at(base::StrID(func_name.data()));
+	const exec::ExecFunction& func      = functions->at(func_info->id.asInt());
 
-	try {
-		CRef<FunctionInfo>        func_info = program->functions.at(base::StrID(func_name.data()));
-		const exec::ExecFunction& func      = functions->at(func_info->id.asInt());
-
-		exit_value = createStartAndExecuteFunction(func, args);
-		respondExecutionRequest(api::ExecutionCompleted{ exit_value });
-	} catch (const vm::KillProcessException& e) {
-		respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-	}
+	exit_value = createStartAndExecuteFunction(func, args);
+	applyEvent(thread_event::Finish{ exit_value });
 }
 
 void vm::fast::FastVMThread::executeOneStep() {

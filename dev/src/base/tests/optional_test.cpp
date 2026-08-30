@@ -44,6 +44,7 @@ public:
 		TESTER_ADD_TEST(testInspect);
 		TESTER_ADD_TEST(testFlatten);
 		TESTER_ADD_TEST(testOkOr);
+		TESTER_ADD_TEST(testMatchVoidExpected);
 		TESTER_ADD_TEST(testTakeAndReplace);
 		TESTER_ADD_TEST(testGetOrInsert);
 	}
@@ -699,6 +700,22 @@ public:
 
 		Optional<Optional<int>> outer_empty;
 		ASSERT_TRUE(outer_empty.flatten().empty());
+	}
+
+	void testMatchVoidExpected() {
+		std::expected<void, std::string> ok;
+		bool                             took_ok_branch = false;
+		match_optional(ok) {
+			opt_some() took_ok_branch = true;
+			opt_err(err [[maybe_unused]]) fail("A value holding expected took the error branch");
+		}
+		ASSERT_TRUE(took_ok_branch);
+
+		std::expected<void, std::string> failed = std::unexpected("boom");
+		match_optional(failed) {
+			opt_some() fail("An errored expected took the value branch");
+			opt_err(err) ASSERT_EQUAL("boom", err);
+		}
 	}
 
 	void testOkOr() {

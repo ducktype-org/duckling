@@ -174,8 +174,6 @@ namespace vm {
 
 		void execGlobalDestructors() override;
 
-		void handleKillProcessException(const KillProcessException& e);
-
 	protected:
 		void executeOneStep() override;
 

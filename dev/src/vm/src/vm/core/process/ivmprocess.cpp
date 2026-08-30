@@ -1,12 +1,87 @@
 #include "ivmprocess.hpp"
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <vm/api/data/response.hpp>
 
-namespace vm {
+#include <ranges>
 
-	IVMProcess::IVMProcess(const PID my_pid): my_pid(my_pid), status(api::NotStarted{}) {}
+namespace vm {
+	namespace ps = process_state;
+	namespace pe = process_event;
+
+	IVMProcess::IVMProcess(const PID my_pid): my_pid(my_pid) {
+		state_manager.setOnStatusChangedCallback([this](const ProcessState& state) {
+			on_status_changed.emitEvent(toApiStatus(state));
+		});
+	}
+
+	void IVMProcess::applyThreadEvent(api::ThreadID tid, const ThreadEvent& event) {
+		const ProcessStateManager::ApplyResult result
+			= state_manager.applyThreadEventOrAbort(tid, event);
+		// The first panic requests a stop of the whole process.
+		if (result.stop_all_threads) requestStopAllThreads();
+	}
+
+	std::expected<void, api::ApiError> IVMProcess::validateProcessRequest(const ProcessEvent& event
+	) const {
+		const ProcessState          state = state_manager.aggregate();
+		base::Optional<std::string> invalid_reason;
+
+		variant_match(event) {
+			variant_case_novalue(pe::Run) {
+				// Run can be performed only if the previous run was completed successfully. `Stopper`
+				// or `Panicked` means the DVM was left in an undefined state and can't be reused.
+				if (!v_matches(state, ps::NotStarted, ps::Completed))
+					invalid_reason
+						= "the process must be freshly loaded or completed successfully in the "
+						  "previous run";
+				else if (const std::vector<api::ThreadID> unjoined = unjoinedThreadIds();
+				         !unjoined.empty()) {
+					// We also require every thread of the previous run to be joined.
+					std::string ids = base::strJoin(
+						unjoined | std::views::transform([](const api::ThreadID id) {
+							return std::to_string(id.asInt());
+						}),
+						", "
+					);
+					invalid_reason = base::strConcat(
+						unjoined.size() == 1 ? "thread " : "threads ",
+						ids,
+						unjoined.size() == 1 ? " of the previous run was never joined"
+											 : " of the previous run were never joined"
+					);
+				}
+			}
+			variant_case_novalue(pe::Stop) {}
+			variant_case_novalue(pe::DeinitAndValidate) {
+				if (ps::isExecuting(state)) invalid_reason = "the process is still executing";
+			}
+			variant_default { CORE_UNREACHABLE(); }
+		}
+
+		if (invalid_reason.has_value())
+			return std::unexpected(api::ApiError{ api::StateError{ base::strConcat(
+				"Invalid request '",
+				pe::processEventName(event),
+				"' in state '",
+				ps::processStateName(state),
+				"': ",
+				*invalid_reason
+			) } });
+		return {};
+	}
+
+	std::expected<void, api::ApiError> IVMProcess::prepareRun() {
+		if (not ps::isTerminal(state_manager.aggregate())) return {};
+		if (auto reset = state_manager.resetForRun(); !reset.has_value())
+			return std::unexpected(api::ApiError{ api::StateError{ reset.error() } });
+		return {};
+	}
+
+	api::ProcStatus IVMProcess::getStatus() { return toApiStatus(getProcessState()); }
 
 	ProcIO& IVMProcess::getIO() { return io; }
 
@@ -15,41 +90,86 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> IVMProcess::doRequest(
 		const api::RequestVariant& request
 	) {
+#define VALIDATE_REQUEST(event)                                                   \
+	if (auto validation = validateProcessRequest(event); !validation.has_value()) \
+		return std::unexpected(validation.error());
+
+#define VALIDATE_RUN_ARGUMENTS(func_name, args)                                           \
+	if (auto validation = validateRunArguments(func_name, args); !validation.has_value()) \
+		return std::unexpected(validation.error());
+
 		variant_match(request) {
 			variant_case(api::request::Run, run_request) {
+				VALIDATE_REQUEST(pe::Run{});
+				VALIDATE_RUN_ARGUMENTS("main", run_request.program_args);
+				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
 				return runFunction("main", run_request.program_args);
 			}
 
 			variant_case(api::request::RunFunction, run_func_request) {
+				VALIDATE_REQUEST(pe::Run{});
+				VALIDATE_RUN_ARGUMENTS(run_func_request.func_name, run_func_request.func_args);
+				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
 				return runFunction(run_func_request.func_name, run_func_request.func_args);
 			}
 
-			variant_case(api::request::Join, join_request) { return join(join_request.thread_id); }
-
 			variant_case(api::request::RunFunctionAwait, run_func_await_request) {
+				VALIDATE_REQUEST(pe::Run{});
+				VALIDATE_RUN_ARGUMENTS(
+					run_func_await_request.func_name, run_func_await_request.func_args
+				);
+				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
 				return runFunctionAwait(
 					run_func_await_request.func_name, run_func_await_request.func_args
 				);
 			}
 
+			variant_case(api::request::Join, join_request) { return join(join_request.thread_id); }
+
+
 			variant_case(api::request::Pause, pause_request) {
+				// Per-thread operation. Its validity is decided by the target thread not the process.
 				auto response = pauseVMThread(pause_request.thread_id);
-				if (response) return std::unexpected(*response);
+				if (!response) return std::unexpected(response.error());
 				return getVMThreadCurrentPosition(pause_request.thread_id);
 			}
 
 			variant_case(api::request::Resume, resume_request) {
+				// Per-thread operation. Its validity is decided by the target thread not the process.
 				auto response = resumeVMThread(resume_request.thread_id);
-				if (response) return std::unexpected(*response);
+				if (!response) return std::unexpected(response.error());
 				return api::Response(api::response::Empty());
 			}
 
 			variant_case_novalue(api::request::Step) {
-				auto response = stepVMThread(getMainThreadID());
-				if (response) return std::unexpected(*response);
-				return getVMThreadCurrentPosition(getMainThreadID());
+				// Per-thread operation. Its validity is decided by the target thread not the
+				// process.
+				// @TODO: #2967 For now steps the main thread. This should be done per-thread as well.
+				auto response = stepVMThread(api::MAIN_THREAD_ID);
+				if (!response) return std::unexpected(response.error());
+				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID);
 			}
 
+			variant_case_novalue(api::request::DeinitAndValidate) {
+				VALIDATE_REQUEST(pe::DeinitAndValidate{});
+				return deinitAndValidate();
+			}
+
+			variant_case_novalue(api::request::Stop) {
+				// Always legal.
+				return stop();
+			}
+
+			variant_case_novalue(api::request::WaitForBreakpoint) {
+				waitForBreakpoint();
+				if (!v_matches(getProcessState(), ps::Paused))
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "Unexpected status response" } });
+
+				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID);
+			}
+
+			// The following are read-only and don't change the state.
 			variant_case(api::request::LoadFiles, load_request) {
 				return loadProgram(load_request.filenames).transform_error([](auto err) {
 					return api::ApiError{ err };
@@ -62,20 +182,8 @@ namespace vm {
 				});
 			}
 
-			variant_case_novalue(api::request::Stop) { return stop(); }
-
 			variant_case(api::request::ExecutionPosition, current_pos_req) {
-				return getVMThreadCurrentPosition(getMainThreadID(), current_pos_req.frame_idx);
-			}
-
-			variant_case_novalue(api::request::WaitForBreakpoint) {
-				waitForBreakpoint();
-				api::ProcStatus stat = getStatus();
-				if (!std::holds_alternative<api::Paused>(stat))
-					return std::unexpected(api::ApiError{
-						api::OtherError{ "unexpected status response" } });
-
-				return getVMThreadCurrentPosition(getMainThreadID());
+				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID, current_pos_req.frame_idx);
 			}
 
 			variant_case(api::request::Input, input_request) { return input(input_request); }
@@ -110,8 +218,6 @@ namespace vm {
 
 			variant_case_novalue(api::request::ExitCodeRequest) { return getExitCode(); }
 
-			variant_case_novalue(api::request::DeinitAndValidate) { return deinitAndValidate(); }
-
 			variant_case(api::request::AttachStatusListener, request) {
 				on_status_changed.attachListener(request.listener);
 				return api::Response(api::response::Empty());
@@ -138,7 +244,7 @@ namespace vm {
 
 			variant_default { return api::Response(api::response::Empty()); }
 		}
-
+#undef VALIDATE_REQUEST
 		CORE_UNREACHABLE();
 	}
 
@@ -159,74 +265,12 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	void IVMProcess::setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept {
-		const bool is_main_thread      = thread_id.asInt() == 0;
-		const bool is_terminal_failure = std::holds_alternative<api::ExecutionPanicked>(new_status)
-		                              || std::holds_alternative<api::ExecutionStopped>(new_status);
-
-		// Only main thread can set overall process status
-		if (!is_main_thread) {
-			// Child threads can publish terminal failures if process is not already terminal
-			if (is_terminal_failure) setStatusIfNotTerminal(new_status, thread_id);
-			return;
-		}
-
-		{
-			std::unique_lock<std::shared_mutex> lock(rw_status);
-			status = new_status;
-		}
-		// Emit after releasing rw_status: observers may call isExecutionPanicked() which
-		// takes a shared_lock on rw_status; emitting under the unique_lock would self-deadlock.
-		on_status_changed.emitEvent(new_status);
-		status_cv.notify_all();
-
-		if (api::isStatusTerminal(new_status)) onTerminalStatus(new_status);
-	}
-
-	bool IVMProcess::setStatusIfNotTerminal(
-		const api::ProcStatus& new_status, api::ThreadID thread_id
-	) noexcept {
-		const bool is_main_thread = thread_id.asInt() == 0;
-
-		// Child threads should not move the whole process into a terminal state.
-		// They may still publish a terminal failure so the process can stop as a whole.
-		if (is_main_thread) return false;
-
-		bool            updated = false;
-		api::ProcStatus emitted_status;
-		{
-			std::unique_lock<std::shared_mutex> lock(rw_status);
-			if (!api::isStatusTerminal(status)) {
-				status         = new_status;
-				emitted_status = new_status;
-				updated        = true;
-			}
-		}
-		if (updated) {
-			// Emit after releasing rw_status: same invariant as setStatus.
-			on_status_changed.emitEvent(emitted_status);
-			status_cv.notify_all();
-			if (api::isStatusTerminal(emitted_status)) onTerminalStatus(emitted_status);
-		}
-		return updated;
-	}
-
-	api::ProcStatus IVMProcess::getStatus() {
-		std::shared_lock lock(rw_status);
-		return status;
-	}
-
-	bool IVMProcess::isExecutionPanicked() {
-		std::shared_lock lock(rw_status);
-		return std::holds_alternative<api::ExecutionPanicked>(status);
-	}
-
 	std::expected<api::Response, api::ApiError> IVMProcess::input(const api::request::Input& request
 	) {
 		// @TODO: #2342 https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();
 		io.inputStream() << request.input;
-		for (auto id: getAllThreadIDs()) notifyPausedVMThread(id);
+		for (auto id: getAllActiveThreadIDs()) notifyVMThreadWaiters(id);
 		return api::Response(api::response::Empty());
 	}
 
@@ -237,7 +281,7 @@ namespace vm {
 			return std::unexpected(api::ApiError{
 				api::IOError{ "Cannot read output from api when IO is being redirected" } });
 
-		if (isExecuting(status))
+		if (isExecuting(getStatus()))
 			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
 
 		const std::string content = io.outputStream().str();
