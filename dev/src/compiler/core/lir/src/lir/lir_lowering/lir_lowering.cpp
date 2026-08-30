@@ -171,6 +171,8 @@ namespace compiler::lir {
 			return Operation::ReturnValue;
 		case mir::Operation::ReturnVoid:
 			return Operation::ReturnVoid;
+		case mir::Operation::Unreachable:
+			return Operation::Unreachable;
 		case mir::Operation::Jump:
 			return Operation::Jump;
 		case mir::Operation::Branch:
@@ -314,7 +316,6 @@ namespace compiler::lir {
 
 			// locals mapping:
 			base::Map<mir::MIRLocalRef, LIRLocalRef> mir_to_lir_local;
-			base::Map<mir::MIRLocalRef, LIRLocalRef> mir_to_lifetime_flag;
 
 			base::StableVector<Block> blocks;
 
@@ -340,6 +341,17 @@ namespace compiler::lir {
 			LIRLocalRef insertNewLocal(lir::LIRLocal lir_local) {
 				locals.pushBack(lir_local);
 				return locals.last();
+			}
+
+			/**
+			 * @brief Adds an empty block to the function and puts it at the end of the block order.
+			 */
+			[[nodiscard]]
+			MutBlockRef insertNewBlock() {
+				blocks.pushBack({});
+				auto new_block = blocks.last();
+				block_order.emplace_back(new_block);
+				return new_block;
 			}
 
 			[[nodiscard]]
@@ -472,14 +484,6 @@ namespace compiler::lir {
 					locals.pushBack(lir_local);
 					auto local_index = locals.lastIndex();
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
-
-					// Only create lifetime flag if needed
-					if (!mir_local.type.isTriviallyDestructible(ctx)) {
-						auto lifetime_flag = LIRLocal::boolLocal(ctx);
-						locals.pushBack(lifetime_flag);
-						auto flag_index = locals.lastIndex();
-						mir_to_lifetime_flag.put(&mir_local, locals[flag_index]);
-					}
 				}
 			}
 
@@ -653,6 +657,164 @@ namespace compiler::lir {
 			}
 
 			/**
+			 * @brief Emits the destructor call of a `Destruct` / `DestructIf` into @p block.
+			 * Emits nothing for a place that carries no information (ex. Unit).
+			 */
+			void emitDestructorCall(MutBlockRef block, const mir::Instruction& mir_instruction) {
+				CORE_ASSERT(
+					mir_instruction.operation == mir::Operation::Destruct
+						or mir_instruction.operation == mir::Operation::DestructIf,
+					"Expected a `Destruct` or a `DestructIf`"
+				);
+
+				const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+				CORE_ASSERT(
+					to_destruct.carriesInformation(ctx),
+					"The destructred place does not carry information. This probably means a "
+					"Destruct of a ZST class got here. Adjust this code accordingly."
+				);
+
+				const auto  destructor = getLocation(mir_instruction.arguments.at(0)).value();
+				const auto  destructed = getPlace(to_destruct);
+				const auto& type       = to_destruct.type;
+
+				if (type.getRefKind() == tsh::ReferenceKind::Direct) {
+					// The destructor takes `self: ref T`, so the address of the destructed
+					// place is materialized first.
+					LIRLocalRef addr_local = insertNewLocal(LIRLocal::refLocal(ctx, type));
+					LIRPlace    addr_place{ addr_local, {} };
+
+					auto& address_instr = block->instructions.emplace_back(
+						Operation::AddressOf,
+						addr_place,
+						std::vector<LIRValue>{ LIRValue{ destructed } },
+						mir_instruction.metadata
+					);
+					address_instr.scope_flags.push_back(ScopeFlag{
+						.flag = ScopeFlag::Flag::ScopeStart, .local = addr_local });
+
+					auto& call_instr = block->instructions.emplace_back(
+						Operation::Call,
+						base::Optional<LIRPlace>{},
+						std::vector<LIRValue>{ destructor, LIRValue{ addr_place } },
+						mir_instruction.metadata
+					);
+					call_instr.scope_flags.push_back(ScopeFlag{ .flag  = ScopeFlag::Flag::ScopeEnd,
+					                                            .local = addr_local });
+				} else if (type.getRefKind() == tsh::ReferenceKind::Box) {
+					// Box — call the destructor on it directly, as the destructor should take
+					// ref T, and box T == ref T in lower representation.
+					block->instructions.emplace_back(
+						Operation::Call,
+						base::Optional<LIRPlace>{},
+						std::vector<LIRValue>{ destructor, LIRValue{ destructed } },
+						mir_instruction.metadata
+					);
+				} else {
+					CORE_PANIC("The reference types don't have destructors.");
+				}
+			}
+
+			/**
+			 * @brief Lowers a `DestructIf` into a branch on the lifetime flag (added by
+			 * `AddLifetimeFlags` pass in MIR) of the destructed local.
+			 *
+			 * ```
+			 * <curr>:          branch flag, <destruct>, <continuation>
+			 * <destruct>:      destructor(place); flag = false; jump <continuation>
+			 * <continuation>:  whatever followed the destruction
+			 * ```
+			 *
+			 * `ScopeEnd` flags of the destruction point are moved to the continuation block. They
+			 * have to be reached on every path, because DVM pairs `init`/`deinit` on a stack, so a
+			 * scope may not end inside the conditional block. `ScopeStart` flags are put before the
+			 * branch for the same reason.
+			 *
+			 * @return the block the instructions following the conditional destruct belong to
+			 */
+			MutBlockRef lowerConditionalDestruct(
+				MutBlockRef curr_block, const mir::Instruction& mir_instruction
+			) {
+				auto flags = lowerFlags(mir_instruction);
+
+				// Creates a `Nop` instruction at the end of @p instructions and moves @p held scope
+				// flags there.
+				auto hold_flags
+					= [&](std::vector<Instruction>& instructions, std::vector<ScopeFlag>&& held) {
+						  if (held.empty()) return;
+
+						  instructions
+							  .emplace_back(
+								  Operation::Nop,
+								  base::Optional<LIRPlace>{},
+								  std::vector<LIRValue>{},
+								  mir_instruction.metadata
+							  )
+							  .scope_flags
+							  = std::move(held);
+					  };
+
+				auto flags_of_kind = [&](ScopeFlag::Flag kind) -> std::vector<ScopeFlag> {
+					std::vector<ScopeFlag> result;
+					for (const auto& flag: flags)
+						if (flag.flag == kind) result.push_back(flag);
+					return result;
+				};
+
+				const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+				// With nothing to destroy there is nothing to branch over either.
+				if (not to_destruct.carriesInformation(ctx)) {
+					hold_flags(curr_block->instructions, std::move(flags));
+					return curr_block;
+				}
+
+				CORE_ASSERT(
+					mir_instruction.arguments.size() == 3,
+					"A `DestructIf` needs the lifetime flag of the destructed local"
+				);
+				const auto lifetime_flag
+					= getPlace(mir_instruction.arguments.at(2).get<mir::MIRPlace>());
+
+				auto destruct_block     = insertNewBlock();
+				auto continuation_block = insertNewBlock();
+
+				hold_flags(curr_block->instructions, flags_of_kind(ScopeFlag::Flag::ScopeStart));
+				curr_block->terminator = Instruction{
+					Operation::Branch,
+					{},
+					std::vector<LIRValue>{ LIRValue{ lifetime_flag },
+					                       LIRValue{ BlockRef(destruct_block) },
+					                       LIRValue{ BlockRef(continuation_block) } },
+					mir_instruction.metadata,
+				};
+
+				emitDestructorCall(destruct_block, mir_instruction);
+				// Set the lifetime flag to false, after the destructor call.
+				destruct_block->instructions.emplace_back(
+					Operation::Assign,
+					lifetime_flag,
+					std::vector<LIRValue>{
+						getLocation(mir::MIRValue(mir::MIRConstant{ ctv::CompileTimeValue(false) }))
+							.value() },
+					mir_instruction.metadata
+				);
+				destruct_block->terminator = Instruction{
+					Operation::Jump,
+					{},
+					std::vector<LIRValue>{ LIRValue{ BlockRef(continuation_block) } },
+					mir_instruction.metadata,
+				};
+
+				hold_flags(
+					continuation_block->instructions, flags_of_kind(ScopeFlag::Flag::ScopeEnd)
+				);
+
+				return continuation_block;
+			}
+
+			/**
 			 * @brief Lowers instruction from MIR to LIR.
 			 * * Fills @p curr_block.
 			 * Legal to use only in lowerBlocks
@@ -764,57 +926,12 @@ namespace compiler::lir {
 					);
 					break;
 				}
-				case mir::Operation::DestructIf:
 				case mir::Operation::Destruct: {
-					// @TODO: #1894 The destructor is called on every `DestructIf` (even if the
-					// value was moved). This will cause double free's if the value was moved
-					// around between other variables.
-					auto args = getLocations(mir_instruction.arguments);
-
-					// The destruction is discarded if the place carries no information (ex. Unit),
-					// in which case only the destructor literal is left.
-					if (args.size() < 2) break;
-
-					const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
-					const auto& type        = to_destruct.type;
-
-					if (type.getRefKind() == tsh::ReferenceKind::Direct) {
-						// The destructor takes `self: ref T`, so the address of the destructed
-						// place is materialized first.
-						LIRLocalRef addr_local = insertNewLocal(LIRLocal::refLocal(ctx, type));
-						LIRPlace    addr_place{ addr_local, {} };
-
-						auto& address_instr = curr_block->instructions.emplace_back(
-							Operation::AddressOf,
-							addr_place,
-							std::vector<LIRValue>{ args.at(1) },
-							mir_instruction.metadata
-						);
-						address_instr.scope_flags.push_back(ScopeFlag{
-							.flag = ScopeFlag::Flag::ScopeStart, .local = addr_local });
-
-						auto& call_instr = curr_block->instructions.emplace_back(
-							Operation::Call,
-							base::Optional<LIRPlace>{},
-							std::vector<LIRValue>{ args.at(0), LIRValue{ addr_place } },
-							mir_instruction.metadata
-						);
-						call_instr.scope_flags.push_back(ScopeFlag{
-							.flag = ScopeFlag::Flag::ScopeEnd, .local = addr_local });
-					} else if (type.getRefKind() == tsh::ReferenceKind::Box) {
-						// Box — call the destructor on it directly, as the destructor should take
-						// ref T, and box T == ref T in lower representation.
-						curr_block->instructions.emplace_back(
-							Operation::Call,
-							base::Optional<LIRPlace>{},
-							std::move(args),
-							mir_instruction.metadata
-						);
-					} else {
-						CORE_PANIC("The reference types don't have destructors.");
-					}
+					emitDestructorCall(curr_block, mir_instruction);
 					break;
 				}
+				case mir::Operation::DestructIf:
+					return lowerConditionalDestruct(curr_block, mir_instruction);
 				case mir::Operation::Call: {
 					if (lowerLIRBuiltinCall(mir_instruction, curr_block)) break;
 
@@ -952,6 +1069,7 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::ReturnVoid:
+				case mir::Operation::Unreachable:
 				case mir::Operation::Jump:
 				case mir::Operation::Branch:
 				case mir::Operation::BranchIfNull: {

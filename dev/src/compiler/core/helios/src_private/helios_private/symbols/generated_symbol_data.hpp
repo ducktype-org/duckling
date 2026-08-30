@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ctv/ctv.hpp>
+#include <frontend/pst_parser/pst_config.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout.hpp>  // @TODO: #404 try to relax it, it's just for Operatoriness, we could move it elsewhere
 #include <helios/scope_id.hpp>
@@ -213,32 +214,56 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated function wrapper for REPL expressions.
-	 * This is used to wrap single REPL expressions in a synthetic function.
-	 * @note this does not store any function data, since this symbol is created when
-	 * programmatically generating the function HOUT via QueryReplExpressionWrapper.
+	 * Represents a compiler-generated function wrapper for REPL expressions,
+	 * instructions and global initializers. It's a synthetic function wrapper around them.
 	 *
-	 * @warning counter must never be reused with a different return_type.
+	 * @warning counter must never be reused with a different return_type and type.
 	 * The mangled name is based only on counter, so reusing counter with different return_type
 	 * will produce linker symbol collisions. The REPL code path (ReplSession::executeInput)
 	 * enforces this by incrementing m_line_counter per statement, but any manual wrapper
 	 * construction must preserve this rule.
 	 */
-	struct ReplExpressionWrapper final {
-		u64 counter;  // A unique counter to distinguish different REPL expression wrappers.
+	struct ReplInputWrapper final {
+		/**
+		 * @brief Which kind of REPL input the wrapper was generated for.
+		 */
+		enum class Type { Instruction, Expression, GlobalInitializer };
+		Type type;
+
+		/**
+		 * @brief A unique counter to distinguish different REPL expression wrappers.
+		 */
+		u64 counter;
+
+		/**
+		 * @brief Return type of the wrapper function.
+		 */
 		tsh::SymbolType<> return_type;
+
+		/**
+		 * @brief Hash of the PST element (expression statement or instruction statement) that the
+		 * wrapper executes.
+		 */
+		pst::HashType pst_element_hash;
+
+		ReplInputWrapper(
+			Type type, u64 counter, tsh::SymbolType<> return_type, pst::HashType pst_element_hash
+		):
+			  type(type),
+			  counter(counter),
+			  return_type(return_type),
+			  pst_element_hash(pst_element_hash) {}
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
 	/**
-	 * Represents a compiler-generated function wrapper for REPL instructions.
-	 * This is used to wrap a single REPL instruction (if/while/for/block) in a
-	 * synthetic void function so the DVM can execute it via runFunction.
+	 * @brief Represents the storage of a REPL/script global variable, stripped of its initial
+	 * value.
 	 */
-	struct ReplInstructionWrapper final {
-		u64 counter;
+	struct ReplEmptyVariable final {
+		SymID original_variable;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -280,9 +305,8 @@ namespace compiler::helios::defgen {
 #define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
 	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::BuiltinTemplatedSymbol, \
 		defgen::Parameter, defgen::SelfParameter, defgen::Field,                                  \
-		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal,                              \
-		defgen::ReplExpressionWrapper, defgen::ReplInstructionWrapper, defgen::ScriptMainWrapper, \
-		defgen::GeneratedConstant
+		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal, defgen::ReplInputWrapper,    \
+		defgen::ReplEmptyVariable, defgen::ScriptMainWrapper, defgen::GeneratedConstant
 
 	using GeneratedSymbolDataVariant = std::variant<GENERATED_SYMBOL_SEMANTICS_LIST>;
 

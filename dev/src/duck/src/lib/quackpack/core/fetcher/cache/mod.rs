@@ -134,7 +134,7 @@ impl ManifestCache {
     #[tracing::instrument(skip(self))]
     pub fn get_manifest(
         &self,
-        package: &types::PackageWithUrl,
+        package: types::PackageWithUrl,
     ) -> QuackResult<Option<registry::Manifest>> {
         let maybe_json = self
             .connection
@@ -158,7 +158,7 @@ impl ManifestCache {
     #[tracing::instrument(skip(self))]
     pub fn get_all_manifests(
         &self,
-        package: &types::PackageWithUrl,
+        package: types::PackageWithUrl,
     ) -> QuackResult<Vec<registry::Manifest>> {
         let jsons = self
             .connection
@@ -180,7 +180,7 @@ impl ManifestCache {
     #[tracing::instrument(skip(self))]
     pub fn add_or_replace_manifest(
         &self,
-        package: &types::PackageWithUrl,
+        package: types::PackageWithUrl,
         manifest: registry::Manifest,
     ) -> QuackResult<()> {
         let json = serde_json::to_string(&manifest).with_context_internal(|| {
@@ -241,13 +241,13 @@ trait ConnectionExt {
     /// Helper for extracting JSON manifest of a `package`.
     fn get_single_manifest_json(
         &self,
-        package: &types::PackageWithUrl,
+        package: types::PackageWithUrl,
     ) -> rusqlite::Result<Option<String>>;
 
     /// Helper for extracting all JSON manifests of a `package`.
     fn get_all_manifests_json(
         &self,
-        package: &types::PackageWithUrl,
+        package: types::PackageWithUrl,
     ) -> rusqlite::Result<Vec<String>>;
 
     /// Helper for creating internal cache table.
@@ -256,7 +256,7 @@ trait ConnectionExt {
     /// Helper for adding or replacing JSON manifest of a `package`.
     fn add_or_replace_manifest_json(
         &self,
-        package: &types::PackageWithUrl,
+        package: types::PackageWithUrl,
         manifest_json: String,
     ) -> rusqlite::Result<()>;
 
@@ -279,7 +279,7 @@ impl ConnectionExt for rusqlite::Connection {
 
     fn get_single_manifest_json(
         &self,
-        package: &types::PackageWithUrl,
+        package: types::PackageWithUrl,
     ) -> rusqlite::Result<Option<String>> {
         self.query_maybe_one(
             &format!(
@@ -326,7 +326,7 @@ impl ConnectionExt for rusqlite::Connection {
 
     fn get_all_manifests_json(
         &self,
-        package: &types::PackageWithUrl,
+        package: types::PackageWithUrl,
     ) -> rusqlite::Result<Vec<String>> {
         let mut stmt = self.prepare(&format!(
             "SELECT {manifest} FROM {table} WHERE {name} = :package_name AND {url} = :package_url;",
@@ -347,7 +347,7 @@ impl ConnectionExt for rusqlite::Connection {
 
     fn add_or_replace_manifest_json(
         &self,
-        package: &types::PackageWithUrl,
+        package: types::PackageWithUrl,
         manifest_json: String,
     ) -> rusqlite::Result<()> {
         self.execute(

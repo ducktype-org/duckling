@@ -34,6 +34,7 @@ public:
 		TESTER_ADD_TEST(moveValidationTest);
 		TESTER_ADD_TEST(reinitAfterMoveTest);
 		TESTER_ADD_TEST(moveDestructorTest);
+		TESTER_ADD_TEST(lifetimeFlagsTest);
 		TESTER_ADD_TEST(moveOwnershipTest);
 		TESTER_ADD_TEST(simpleLifetimeSequenceTest);
 		TESTER_ADD_TEST(lifetimeFlagsRepeatedBlocks);
@@ -72,7 +73,7 @@ private:
 
 	void lifetimeFlagsRepeatedBlocks() {
 		auto [module, scope]
-			= getModule(fs::File(path("modules/lifetime_flags/repeated_blocks.dmf")));
+			= getModule(fs::File(path("modules/lifetime_flags/repeated_blocks.dk")));
 		auto            foo_mir = getMIRFunctionByName(module, "main");
 		LifetimeChecker checker;
 		checker.expectConstruct("a")
@@ -113,7 +114,7 @@ private:
 	}
 
 	void lifetimeFlagsSingleBlock() {
-		auto [module, scope] = getModule(fs::File(path("modules/lifetime_flags/single_block.dmf")));
+		auto [module, scope] = getModule(fs::File(path("modules/lifetime_flags/single_block.dk")));
 		auto            main = getMIRFunctionByName(module, "main");
 		LifetimeChecker checker;
 		checker.expectConstruct("x")
@@ -135,8 +136,7 @@ private:
 	}
 
 	void lifetimeFlagsNestedBlocks() {
-		auto [module, scope]
-			= getModule(fs::File(path("modules/lifetime_flags/nested_blocks.dmf")));
+		auto [module, scope] = getModule(fs::File(path("modules/lifetime_flags/nested_blocks.dk")));
 		auto            main = getMIRFunctionByName(module, "main");
 		LifetimeChecker checker;
 		checker.expectConstruct("x")
@@ -285,6 +285,108 @@ private:
 			.expectInstruction(compiler::mir::Operation::DestructIf)
 			.expectDestruct("a")
 			.validate(maybe_move);
+	}
+
+	/**
+	 * @brief Finds in @p func the single conditional destruction of the local named @p var_name,
+	 * which is the `DestructIf` reading the lifetime flag of that local.
+	 */
+	const compiler::mir::Instruction* conditionalDropOf(
+		CRef<compiler::mir::Function> func, std::string_view var_name
+	) {
+		using namespace compiler::mir;
+
+		const Instruction* found = nullptr;
+		for (const auto* instr: allInstructions(func)) {
+			if (instr->operation != Operation::DestructIf) continue;
+
+			const auto& dropped = instr->arguments.at(1).get<MIRPlace>();
+			if (dropped.getBase<MIRLocalRef>()->getName().strView() != var_name) continue;
+
+			ASSERT_TRUE(found == nullptr);
+			found = instr;
+		}
+		ASSERT_TRUE(found != nullptr);
+		return found;
+	}
+
+	/**
+	 * @brief The values written to @p flag over the whole function in block order, as a string of
+	 * `T` (set) and `F` (cleared).
+	 */
+	std::string lifetimeFlagWrites(
+		CRef<compiler::mir::Function> func, compiler::mir::MIRLocalRef flag
+	) {
+		using namespace compiler::mir;
+
+		std::string writes;
+		for (const auto* instr: allInstructions(func)) {
+			if (instr->operation != Operation::Assign) continue;
+			if (not instr->output.has_value() or not instr->output->isLocal()) continue;
+			if (instr->output->getBase<MIRLocalRef>() != flag) continue;
+
+			auto value = instr->arguments.at(0).get<MIRConstant>().value.get<bool>();
+			ASSERT_HAS_VALUE(value);
+			writes += value.value() ? 'T' : 'F';
+		}
+		return writes;
+	}
+
+	void lifetimeFlagsTest() {
+		using namespace compiler::mir;
+		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
+
+		{
+			// `a` is constructed, then its flag is set, the `if` branch moves `a` and clears the
+			// flag, and the drop at the scope end reads it.
+			auto maybe_move = getMIRFunctionByName(module, "maybeMove");
+			LifetimeChecker{}
+				.expectConstruct("a")
+				.expectInstruction(Operation::Assign)
+				.expectMove("a")
+				.expectInstruction(Operation::Assign)
+				.expectInstruction(Operation::DestructIf)
+				.validate(maybe_move);
+
+			auto drop = conditionalDropOf(maybe_move, "a");
+			auto flag = drop->arguments.at(2).get<MIRPlace>().getBase<MIRLocalRef>();
+			ASSERT_EQUAL_PRINT(std::string("TF"), lifetimeFlagWrites(maybe_move, flag));
+
+			auto dropped = drop->arguments.at(1).get<MIRPlace>().getBase<MIRLocalRef>();
+			ASSERT_EQUAL(compiler::tsh::Kind::Bool, flag->type.getType().getKind());
+			// The flag shares the lifetime scope of the local it tracks, so it gets the same
+			// `ScopeStart` / `ScopeEnd` placement.
+			ASSERT_TRUE(flag->scope.value() == dropped->scope.value());
+			ASSERT_TRUE(flag->lifetime_flags.contains(LifetimeFlag::NoDestructor));
+		}
+		{
+			// A parameter owns its value on entry, its flag is set by the very first instruction of
+			// the entry block instead.
+			auto  param       = getMIRFunctionByName(module, "maybeMoveParam");
+			auto  param_flag  = conditionalDropOf(param, "a")->arguments.at(2).get<MIRPlace>();
+			auto& entry_block = *param->blocks.at(param->block_order.front());
+			auto& first_instr = entry_block.instructions.at(0);
+
+			ASSERT_EQUAL(Operation::Assign, first_instr.operation);
+			ASSERT_TRUE(
+				first_instr.output->getBase<MIRLocalRef>() == param_flag.getBase<MIRLocalRef>()
+			);
+			LifetimeChecker{}
+				.expectMove("a")
+				.expectInstruction(Operation::Assign)
+				.expectInstruction(Operation::DestructIf)
+				.validate(param);
+			ASSERT_EQUAL_PRINT(
+				std::string("TF"), lifetimeFlagWrites(param, param_flag.getBase<MIRLocalRef>())
+			);
+		}
+		{
+			// A local that is never destructed conditionally doesn't have a lifetime flag.
+			auto no_move = getMIRFunctionByName(module, "noMove");
+			for (const auto* instr: allInstructions(no_move))
+				ASSERT_TRUE(instr->operation != Operation::DestructIf);
+			ASSERT_EQUAL_PRINT(no_move->next_local_id, static_cast<u64>(no_move->local_list.size()));
+		}
 	}
 
 	/**

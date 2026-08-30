@@ -187,7 +187,6 @@ private:
 		auto        llvm_module = getLLVMModuleFromPath("modules/boxes");
 		std::string ir          = llvm_module.dumpLLVMToString();
 
-		// @TODO: #1894 This test is far to simple. Make it better once it's possible.
 		auto count_matches = [&](const std::string& text) {
 			std::smatch matches;
 			int         count        = 0;

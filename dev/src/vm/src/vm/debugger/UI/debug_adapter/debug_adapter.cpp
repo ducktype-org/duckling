@@ -379,8 +379,9 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	std::expected<DebugAdapter::SourcePositionInfo, std::string> DebugAdapter::getSourcePositionInfo(
+		usize frame_idx
 	) {
-		auto pos_result = debugger.getCurrentPosition();
+		auto pos_result = debugger.getCurrentPosition(frame_idx);
 
 		if (!pos_result.has_value()) {
 			return std::unexpected(
@@ -518,7 +519,7 @@ namespace vm::debugger::debug_adapter {
 			auto [refs, fun_name] = var_ref_frame.value();
 			variables[i]          = refs;
 
-			auto pos_info = getSourcePositionInfo();
+			auto pos_info = getSourcePositionInfo(i);
 			if (!pos_info.has_value()) {
 				sendErrorResponse(req, pos_info.error());
 				return;

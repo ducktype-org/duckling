@@ -207,8 +207,8 @@ impl FreezePackage {
     }
 
     /// Get the source of this dependency.
-    pub fn identity(&self) -> &FullIdentity {
-        &self.source
+    pub fn identity(&self) -> FullIdentity {
+        self.source
     }
 
     /// Set the source of this dependency.
@@ -218,7 +218,7 @@ impl FreezePackage {
 
     /// Cast self to the [`PackageId`].
     pub fn to_package_id(&self) -> PackageId {
-        PackageId::new(*self.identity(), self.version())
+        PackageId::new(self.identity(), self.version())
     }
 }
 

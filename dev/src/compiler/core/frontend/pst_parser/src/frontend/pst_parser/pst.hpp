@@ -352,7 +352,7 @@ namespace pst {
 		[[nodiscard]] bool hasErrors() const { return file->getIntLogger()->hasErrors(); }
 
 		[[nodiscard]]
-		Ref<tokenizer::TokenSource> getFile() const {
+		CRef<tokenizer::TokenSource> getFile() const {
 			return file.ref();
 		}
 

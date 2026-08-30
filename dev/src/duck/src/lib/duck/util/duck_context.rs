@@ -120,6 +120,11 @@ impl DuckContext {
     pub fn default_storage_root(&self) -> FileLockManager {
         self.duck_home().storage()
     }
+
+    /// Get the maximal allowed amount of opened connections.
+    pub fn max_open_connections(&self) -> usize {
+        self.duck_cfg.max_open_connections()
+    }
 }
 
 #[cfg(test)]

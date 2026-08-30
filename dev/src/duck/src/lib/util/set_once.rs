@@ -27,7 +27,7 @@ impl SetOnce {
     }
 
     /// Check, if this value was set (equivalently, was [`set`](Self::set) called on this value).
-    pub fn was_set(&self) -> bool {
+    pub fn was_set(self) -> bool {
         self.was_set
     }
 }

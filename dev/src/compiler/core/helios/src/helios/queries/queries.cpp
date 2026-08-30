@@ -34,6 +34,62 @@
 
 namespace compiler::helios {
 
+	/**
+	 * @brief This function collects all used symbols from the hout unit module
+	 * that should be appended to the module, for example some compiler generated symbols
+	 * or template instantiations in the future.
+	 */
+	base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
+		// We perform a DFS traversal of the HOUT Unit. We keep track of the visited functions.
+		std::unordered_set<SymID> added_symbols;
+		std::vector<SymID>        symbol_stack;
+		base::OkBad               result = base::OK;
+
+		for (auto f: out_unit.functions) {
+			added_symbols.insert(f->declaration->original_symbol);
+			symbol_stack.push_back(f->declaration->original_symbol);
+		}
+		for (auto g: out_unit.glob_data) {
+			added_symbols.insert(g->helios_symbol);
+			symbol_stack.push_back(g->helios_symbol);
+		}
+
+		while (not symbol_stack.empty()) {
+			auto current_sym = symbol_stack.back();
+			symbol_stack.pop_back();
+
+			auto qresult = ctx.query<QueryDirectUsedSymbols>(current_sym);
+			if (qresult->hasFailed()) {
+				result = base::BAD;
+				continue;
+			}
+			auto& used_symbols = qresult->valueOrPanic();
+
+			for (auto used_fun: used_symbols.used_functions) {
+				if (added_symbols.contains(used_fun)) continue;
+				if (emissionPolicy(ctx, used_fun) != EmissionPolicy::Replicated) continue;
+
+				added_symbols.insert(used_fun);
+				if (implementsQueryCodeOfFun(used_fun))
+					out_unit.functions.emplace_back(
+						&ctx.query<QueryCodeOfFun>(used_fun)->valueOrThrow()
+					);
+				symbol_stack.push_back(used_fun);
+			}
+			for (auto used_global: used_symbols.used_globals) {
+				if (added_symbols.contains(used_global)) continue;
+				if (emissionPolicy(ctx, used_global) != EmissionPolicy::Replicated) continue;
+
+				added_symbols.insert(used_global);
+				out_unit.glob_data.emplace_back(
+					&ctx.query<QueryHOUTGlobalData>(used_global)->valueOrThrow()
+				);
+				symbol_stack.push_back(used_global);
+			}
+		}
+		return result;
+	}
+
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// We want to continue gathering other entities
@@ -137,62 +193,6 @@ namespace compiler::helios {
 			if (is_failed) return query::Failed();
 
 			return out;
-		}
-
-		/**
-		 * @brief This function collects all used symbols from the hout unit module
-		 * that should be appended to the module, for example some compiler generated symbols
-		 * or template instantiations in the future.
-		 */
-		static base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
-			// We perform a DFS traversal of the HOUT Unit. We keep track of the visited functions.
-			std::unordered_set<SymID> added_symbols;
-			std::vector<SymID>        symbol_stack;
-			base::OkBad               result = base::OK;
-
-			for (auto f: out_unit.functions) {
-				added_symbols.insert(f->declaration->original_symbol);
-				symbol_stack.push_back(f->declaration->original_symbol);
-			}
-			for (auto g: out_unit.glob_data) {
-				added_symbols.insert(g->helios_symbol);
-				symbol_stack.push_back(g->helios_symbol);
-			}
-
-			while (not symbol_stack.empty()) {
-				auto current_sym = symbol_stack.back();
-				symbol_stack.pop_back();
-
-				auto qresult = ctx.query<QueryDirectUsedSymbols>(current_sym);
-				if (qresult->hasFailed()) {
-					result = base::BAD;
-					continue;
-				}
-				auto& used_symbols = qresult->valueOrPanic();
-
-				for (auto used_fun: used_symbols.used_functions) {
-					if (added_symbols.contains(used_fun)) continue;
-					if (emissionPolicy(ctx, used_fun) != EmissionPolicy::Replicated) continue;
-
-					added_symbols.insert(used_fun);
-					if (implementsQueryCodeOfFun(used_fun))
-						out_unit.functions.emplace_back(
-							&ctx.query<QueryCodeOfFun>(used_fun)->valueOrThrow()
-						);
-					symbol_stack.push_back(used_fun);
-				}
-				for (auto used_global: used_symbols.used_globals) {
-					if (added_symbols.contains(used_global)) continue;
-					if (emissionPolicy(ctx, used_global) != EmissionPolicy::Replicated) continue;
-
-					added_symbols.insert(used_global);
-					out_unit.glob_data.emplace_back(
-						&ctx.query<QueryHOUTGlobalData>(used_global)->valueOrThrow()
-					);
-					symbol_stack.push_back(used_global);
-				}
-			}
-			return result;
 		}
 
 		/**
