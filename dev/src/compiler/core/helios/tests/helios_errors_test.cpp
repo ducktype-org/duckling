@@ -9,6 +9,7 @@
 #include <helios/tsh/types.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/errors.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
@@ -1899,15 +1900,15 @@ private:
 
 	void testManglingErrors() {
 		using namespace compiler::helios;
+		constexpr char PRINTABLE     = '@';
+		constexpr char NON_PRINTABLE = '\x07f';
 
-		constexpr char PRINTABLE = '@';
 		auto [_, root_scope_prt] = test_utils::getModule(fs::File(
 			path(base::strConcat("test_modules/error_generating/mod_w_prt_char_", PRINTABLE, "_"))
 		));
 		auto id_prt              = test_utils::getChain("foo", root_scope_prt).back();
 
-		// note: Delete is no-printable on win/linux/mac but it's allowed in filenames
-		constexpr char NON_PRINTABLE = '\x07f';
+		// note: `Delete` is not-printable on win/linux/mac but it's allowed in filenames
 		ASSERT_TRUE(not std::isprint(static_cast<unsigned char>(NON_PRINTABLE)));
 		auto [dummy, root_scope_nprt] = test_utils::getModule(fs::File(path(
 			base::strConcat("test_modules/error_generating/mod_w_non_prt_char_", NON_PRINTABLE, "_")
@@ -1916,32 +1917,20 @@ private:
 		auto id_nprt                  = test_utils::getChain("foo", root_scope_nprt).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto mangle
-				= [&](SymID symbol) { return ctx.query<mangler::QueryMangledSymbol>({ symbol }); };
-
-			mangle(id_prt);
+			ctx.query<mangler::QueryMangledSymbol>({ id_prt });
 			checkForError(
 				{ "[Feature not implemented] Name of a module contains a character that is not "
 			      "allowed yet: '@' (int: 64)" },
 				1
 			);
 
-			mangle(id_nprt);
+			ctx.query<mangler::QueryMangledSymbol>({ id_nprt });
 			checkForError(
 				{ "[Feature not implemented] Name of a module contains a character that is not "
 			      "allowed yet: [not-printable] (int: 127)" },
 				1
 			);
 		});
-
-
-		// checkForErrorOnCompileModule(
-		// 	R"(
-		// 	fun foo() -> i64 = 42;
-		// 	)",
-		// 	{ "Message" },
-		// 	1
-		// );
 	}
 
 	void testErrorBadExpr() {

@@ -2469,9 +2469,8 @@ private:
 			prefix_method.str()
 		);
 
-		// @todo: #3131
-		// Suffix has no declaration syntax yet (see testOperatoriness) -- nothing to mangle here
-		// until fixity keywords exist. Once they do, add e.g.:
+		// @todo: #3131 Suffix has no declaration syntax yet (see testOperatoriness)
+		// nothing to mangle here until fixity keywords exist. Once they do, add e.g.:
 		// ASSERT_EQUAL("...", mangle(.../* a suffix-declared operator */).str());
 	}
 
