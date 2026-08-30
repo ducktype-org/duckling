@@ -1,3 +1,6 @@
+import core.containers;
+import helper;
+
 class Point {
     x: i64 = 1;
     y: i64 = 2;
@@ -13,9 +16,7 @@ fun printPointList(l: ref List:{Point}) -> () = {
 }
 
 fun arrayOfListsTest() -> () = {
-    # @TODO: #3349 Write `List:{Point}[2]` directly once a bake can be indexed.
-    const PointList = List:{Point};
-    var arrayOfLists: PointList[2];
+    var arrayOfLists: List:{Point}[2];
 
     arrayOfLists[0].push(Point(1, 2));
     arrayOfLists[0].push(Point(3, 4));
@@ -43,6 +44,30 @@ fun arrayOfListsTest() -> () = {
         printPointList(&arrayOfLists[i]);
         i = i + 1;
     }
+
+    var nsArray: containers.List:{Point}[2];
+    nsArray[0].push(Point(11, 12));
+    builtin_output_i64(nsArray[0].at(0).x); # 11
+
+    var nsArgArray: List:{helper.P}[2];
+    nsArgArray[0].push(helper.P(5));
+    builtin_output_i64(nsArgArray[0].at(0).x); # 5
+
+    var nestedLists: List:{List:{i64}}[2];
+    var inner: List:{i64};
+    inner.push(1);
+    inner.push(2);
+    nestedLists[0].push(copy inner);
+    builtin_output_i64(nestedLists[0].at(0).length()); # 2
+
+    # The workaround spellings must keep working too.
+    const PointList = List:{Point};
+    var aliasArray: PointList[2];
+    var parenArray: (List:{Point})[2];
+    aliasArray[0].push(Point(21, 22));
+    parenArray[0].push(Point(31, 32));
+    builtin_output_i64(aliasArray[0].at(0).x); # 21
+    builtin_output_i64(parenArray[0].at(0).x); # 31
 }
 
 fun main() -> i64 = {

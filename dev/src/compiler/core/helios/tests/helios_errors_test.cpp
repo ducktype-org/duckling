@@ -853,6 +853,141 @@ private:
 			);
 		}
 
+
+		// ==================== Baked template arrays (diagnostics) ====================
+		{
+			checkForErrorOnCompileModule(
+				R"(
+				class Point {
+					x: i64 = 1;
+				}
+				template(T: type)
+				class MyBox {
+					v: T;
+				}
+
+				fun main(n: i64) = {
+					var arr: MyBox:{Point}[n];
+				}
+			)",
+				{ "Expression cannot be evaluated at compile-time." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Point {
+					x: i64 = 1;
+				}
+				template(T: type)
+				class MyBox {
+					v: T;
+				}
+
+				fun main() = {
+					var arr: MyBox:{Point}[2.5];
+				}
+			)",
+				{ "Type `f32` cannot be converted to type `const i64`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Point {
+					x: i64 = 1;
+				}
+				template(T: type)
+				class MyBox {
+					v: T;
+				}
+
+				fun main() = {
+					var arr: MyBox:{Point}[-1];
+				}
+			)",
+				{ "Static array size must be a non-negative integral value." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Point {
+					x: i64 = 1;
+				}
+				template(T: type)
+				class MyBox {
+					v: T;
+				}
+
+				fun main() = {
+					var arr: MyBox:{Point}[2, 3];
+				}
+			)",
+				{ "Array index/size must be exactly one expression." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Point {
+					x: i64 = 1;
+				}
+				template(T: type)
+				class MyBox {
+					v: T;
+				}
+
+				fun main() = {
+					var arr: MyBox:{42}[2];
+				}
+			)",
+				{ "Type `i32` cannot be converted to type `const type`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Point {
+					x: i64 = 1;
+				}
+				template(T: type)
+				class MyBox {
+					v: T;
+				}
+
+				fun main() = {
+					var a: MyBox:{Point}[2];
+					var b: MyBox:{Point}[3] = a;
+				}
+			)",
+				{ "cannot be converted to type `Class MyBox[3]`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Point {
+					x: i64 = 1;
+				}
+				class Other {
+					x: i64 = 1;
+				}
+				template(T: type)
+				class MyBox {
+					v: T;
+				}
+
+				fun main() = {
+					var a: MyBox:{Point}[2];
+					var b: MyBox:{Other}[2] = a;
+				}
+			)",
+				{ "Type `Class MyBox[2]` cannot be converted" },
+				1
+			);
+		}
+
 		// ========================= Not-yet-implemented errors =========================
 		{
 			checkForErrorOnCompileModule(

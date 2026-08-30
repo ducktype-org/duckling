@@ -19,3 +19,94 @@ fun test_complex_indexing() -> i32 = {
     let idx = 1;
     return matrix[idx][0] + poly.vertices[idx].x;
 }
+
+template(T: type)
+class MyBox {
+    v: T;
+}
+
+fun test_baked_template_array() -> i64 = {
+    var arr: MyBox:{Point}[2];
+    return 0i64;
+}
+
+fun test_baked_template_array_const_size() -> i64 = {
+    var arr: MyBox:{Point}[SIZE];
+    return 0i64;
+}
+
+fun bakeArg() -> type = Point;
+
+fun test_baked_template_array_comp_time_arg() -> i64 = {
+    var arr: MyBox:{bakeArg()}[2];
+    return 0i64;
+}
+
+template(A: type, B: type)
+class PairBox {
+    a: A;
+    b: B;
+}
+
+class Holder {
+    holder_field: MyBox:{Point}[2];
+}
+
+template(T: type)
+class Outer {
+    outer_field: MyBox:{T}[2];
+}
+
+var global_baked_array: MyBox:{Point}[2];
+
+fun test_baked_template_array_arith_size() -> i64 = {
+    var arr: MyBox:{Point}[SIZE * 2];
+    return 0i64;
+}
+
+fun test_baked_template_array_zero_size() -> i64 = {
+    var arr: MyBox:{Point}[0];
+    return 0i64;
+}
+
+fun test_baked_template_array_nested_square() -> i64 = {
+    var arr: MyBox:{Point}[2][3];
+    return 0i64;
+}
+
+fun test_baked_template_array_array_type_arg() -> i64 = {
+    var arr: MyBox:{i64[3]}[2];
+    return 0i64;
+}
+
+fun test_baked_template_array_two_params() -> i64 = {
+    var arr: PairBox:{Point, Point}[2];
+    return 0i64;
+}
+
+fun test_baked_template_array_template_arg() -> i64 = {
+    var outer: Outer:{Point};
+    return 0i64;
+}
+
+fun test_baked_template_array_field() -> i64 = {
+    var holder: Holder;
+    return 0i64;
+}
+
+fun test_baked_template_array_param(arr: MyBox:{Point}[2]) -> i64 = {
+    return 0i64;
+}
+
+fun test_baked_template_array_return() -> MyBox:{Point}[2] = {
+    var arr: MyBox:{Point}[2];
+    return arr;
+}
+
+fun test_baked_template_array_identity() -> i64 = {
+    var a: MyBox:{Point}[2];
+    var b: (MyBox:{Point})[2] = a;
+    const Alias = MyBox:{Point};
+    var c: Alias[2] = a;
+    return 0i64;
+}
