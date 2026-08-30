@@ -38,20 +38,20 @@ public:
 	}
 
 	void testOpcodeConversions() {
-#define HANDLE_MICRO_INSTR(opcode)                                                       \
-		{                                                                                     \
-			auto instruction = vm::makeLowInstruction(vm::low::MicroOpcode::opcode);            \
-			vm::setBreakpoint(instruction, true);                                              \
-			ASSERT_TRUE(vm::low::isBreakpoint(vm::getInstructionOpcode(instruction)));           \
-			ASSERT_EQUAL(                                                                       \
-				vm::low::MicroOpcode::break_##opcode, vm::getInstructionOpcode(instruction)       \
-			);                                                                                  \
-			ASSERT_EQUAL(vm::low::MicroOpcode::opcode,                                         \
-			             vm::low::getUnderlying(vm::getInstructionOpcode(instruction)));        \
-			vm::setBreakpoint(instruction, false);                                             \
-			ASSERT_TRUE(!vm::low::isBreakpoint(vm::getInstructionOpcode(instruction)));         \
-			ASSERT_EQUAL(vm::low::MicroOpcode::opcode, vm::getInstructionOpcode(instruction)); \
-		}
+#define HANDLE_MICRO_INSTR(opcode)                                                                 \
+	{                                                                                              \
+		auto instruction = vm::makeLowInstruction(vm::low::MicroOpcode::opcode);                   \
+		vm::setBreakpoint(instruction, true);                                                      \
+		ASSERT_TRUE(vm::low::isBreakpoint(vm::getInstructionOpcode(instruction)));                 \
+		ASSERT_EQUAL(vm::low::MicroOpcode::break_##opcode, vm::getInstructionOpcode(instruction)); \
+		ASSERT_EQUAL(                                                                              \
+			vm::low::MicroOpcode::opcode,                                                          \
+			vm::low::getUnderlying(vm::getInstructionOpcode(instruction))                          \
+		);                                                                                         \
+		vm::setBreakpoint(instruction, false);                                                     \
+		ASSERT_TRUE(!vm::low::isBreakpoint(vm::getInstructionOpcode(instruction)));                \
+		ASSERT_EQUAL(vm::low::MicroOpcode::opcode, vm::getInstructionOpcode(instruction));         \
+	}
 #include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 #undef HANDLE_MICRO_INSTR
 	}
