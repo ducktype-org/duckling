@@ -3,6 +3,7 @@
 //! The most notable members are [`Manifest`] and [`Dependency`].
 //!
 //! Parsing is implemented in the [`parse`] module.
+mod build_options;
 mod dependency;
 mod features;
 mod metadata;
@@ -11,6 +12,7 @@ mod profiles;
 mod source;
 mod venv_config;
 
+pub use build_options::BuildOptions;
 pub use dependency::*;
 pub use features::*;
 pub use metadata::*;
@@ -35,6 +37,7 @@ pub struct Manifest {
     dependencies: Dependencies,
     profiles: Profiles,
     venv: VenvConfig,
+    build_options: BuildOptions,
 }
 
 impl Manifest {
@@ -48,6 +51,7 @@ impl Manifest {
         dependencies: Dependencies,
         profiles: Profiles,
         venv: VenvConfig,
+        build_options: BuildOptions,
     ) -> Self {
         Self {
             name,
@@ -57,6 +61,7 @@ impl Manifest {
             dependencies,
             profiles,
             venv,
+            build_options,
         }
     }
 
@@ -117,6 +122,11 @@ impl Manifest {
     pub fn venv(&self) -> &VenvConfig {
         &self.venv
     }
+
+    /// Get the [`BuildOptions`] of this manifest.
+    pub fn build_options(&self) -> &BuildOptions {
+        &self.build_options
+    }
 }
 
 impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
@@ -135,6 +145,7 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             license,
             name,
             description,
+            links,
         } = metadata;
         let authors = authors.into_iter().collect();
         let metadata = PackageMetadata {
@@ -152,6 +163,9 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             dependencies.try_into()?,
             profiles.into(),
             VenvConfig::default_for_package(ctx),
+            BuildOptions {
+                links: links.map(Into::into),
+            },
         ))
     }
 }
@@ -168,6 +182,7 @@ impl TryFrom<Manifest> for registry::Manifest {
             dependencies,
             profiles,
             venv: _,
+            build_options,
         } = value;
         let license = metadata.license.unwrap_or_default();
         let description = metadata.description.unwrap_or_default();
@@ -178,6 +193,7 @@ impl TryFrom<Manifest> for registry::Manifest {
             license,
             name: name.into(),
             description,
+            links: build_options.links.map(Into::into),
         };
         Ok(Self {
             metadata,

@@ -474,9 +474,10 @@ namespace compiler::helios::code {
 
 				// Handle dereferencing
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
-					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
+					if (not(tsh::isPointerKind(inner_type.getType().getKind())
+					        or inner_type.getRefKind() != tsh::ReferenceKind::Direct)) {
 						ctx.logInt(makeBox<dia::PlaceholderError>(
-							"Tried to dereference a non-pointer type", stmt->getStablePosition()
+							"Tried to dereference an invalid type", stmt->getStablePosition()
 						));
 						return;
 					}
@@ -783,6 +784,10 @@ namespace compiler::helios::code {
 
 				case pst::Keyword::Type:
 					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getMetaType());
+					break;
+
+				case pst::Keyword::Void:
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getVoidType());
 					break;
 
 				case pst::Keyword::i128:

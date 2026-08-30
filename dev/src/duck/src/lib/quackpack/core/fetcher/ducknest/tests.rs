@@ -71,6 +71,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![pkg1],
         features: HashMap::new(),
@@ -84,6 +85,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![pkg2, pkg3],
         features: HashMap::new(),
@@ -97,6 +99,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
@@ -207,7 +210,7 @@ fn download_blob() {
             version: Version::new(1, 2, 3),
             url: server.base_url().parse().unwrap(),
         },
-        path,
+        &path,
     ))
     .unwrap();
     assert_eq!(

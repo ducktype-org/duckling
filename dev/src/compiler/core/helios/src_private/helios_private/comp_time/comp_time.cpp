@@ -1175,7 +1175,21 @@ namespace compiler::helios {
 				tsh::Mutability::Mutable,
 			}
 		);
-		if (hout_qresult.hasFailed()) return query::Failed();
-		return ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+
+		UNPACK_QRESULT_MOVE(const auto& hout =, hout_qresult);
+		UNPACK_QRESULT(auto ctv =, ctx.query<QueryEvaluateHOUTExpression>({ hout.ref() }));
+		return ctv;
+	}
+
+	query::QResult<bool> getBoolCTVFromPST(
+		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
+	) {
+		const auto hout_qresult = getHoutOfExprWithExpectedType(
+			ctx, pst_expr, tsh::SymbolType<>::withDefaults(tsh::getBoolType())
+		);
+		UNPACK_QRESULT_MOVE(const auto& hout =, hout_qresult);
+		UNPACK_QRESULT(auto ctv =, ctx.query<QueryEvaluateHOUTExpression>({ hout.ref() }));
+
+		return ctv.get<bool>().value();
 	}
 }
