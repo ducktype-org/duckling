@@ -1251,8 +1251,6 @@ class FunctionValidator {
 			}
 			instr_case_novalue(Op_log_xor_p8_imm) {}
 			instr_case_novalue(Op_log_not_p8) {}
-			// ===== Bitwise operations =====
-			// 64-bit
 			instr_case_novalue(Op_bit_and_p64_p64) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
@@ -1274,8 +1272,6 @@ class FunctionValidator {
 			}
 			instr_case_novalue(Op_shr_p64_imm) {}
 			instr_case_novalue(Op_bit_not_p64) {}
-
-			// 32-bit
 			instr_case_novalue(Op_bit_and_p32_p32) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
@@ -1297,8 +1293,6 @@ class FunctionValidator {
 			}
 			instr_case_novalue(Op_shr_p32_imm) {}
 			instr_case_novalue(Op_bit_not_p32) {}
-
-			// 16-bit
 			instr_case_novalue(Op_bit_and_p16_p16) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
