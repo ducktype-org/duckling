@@ -72,13 +72,13 @@ fun main() -> i64 = {
     if (r64 != 0) { return r64; }
 
     let r32 = test_32(12i32, 10i32, 2i32);
-    if (r32 != 0i32) { return 100; }
+    if (r32 != 0i32) { return 100 + r32; }
 
     let r16 = test_16(12i16, 10i16, 2i16);
-    if (r16 != 0i16) { return 200; }
+    if (r16 != 0i16) { return 200 + r16; }
 
     let r8 = test_8(12i8, 10i8, 2i8);
-    if (r8 != 0i8) { return 300; }
+    if (r8 != 0i8) { return 300 + r8; }
 
     return 0;
 }
