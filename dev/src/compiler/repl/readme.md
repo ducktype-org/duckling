@@ -8,7 +8,7 @@ The REPL compiles and executes Duckling input incrementally. It runs on a dedica
 
 The primary components in this flow are:
 
-1. **User Input (CLI/API):** Input is entered interactively (`duckc repl`) or preloaded from script (`duckc repl script.ds`, `/load <file.ds>`).
+1. **User Input (CLI/API):** Input is entered interactively (`duckc repl`) or preloaded from script (`duckc repl script.dks`, `/load <file.dks>`).
 2. **[`ReplSession`](./src/repl/session.hpp):** Main orchestrator. Handles commands, splits code into statements, creates statement modules, and routes execution.
 3. **[`ReplFrontend`](./src/repl/frontend.hpp):** Terminal interaction layer (replxx or minimal implementation), including history display and help.
 4. **Driver REPL Helpers (`driver/repl_utils`):** Statement splitting/classification, HOUT-to-DVM compilation, and code loading.
@@ -56,7 +56,7 @@ src/repl/
 Optional script preload:
 
 ```bash
-./duckc repl script.ds
+./duckc repl script.dks
 ```
 
 Disable completions/hints:
@@ -80,7 +80,7 @@ Disable completions/hints:
 | `/cmds` | `/commands` | Show all inputs history(also previous sessions) |
 | `/commands-reset` | `/cmds-reset` | Resets all inputs history |
 | `/clear` | `/c` | Clear terminal screen |
-| `/load <file.ds>` | - | Load script into current session |
+| `/load <file.dks>` | - | Load script into current session |
 
 ### Editing
 
@@ -109,7 +109,7 @@ using namespace compiler::repl;
 
 ReplSession session;
 
-auto load_result = session.loadScriptFile("./bootstrap.ds");
+auto load_result = session.loadScriptFile("./bootstrap.dks");
 if (load_result.status == ReplResult::Status::Error) {
     std::cerr << load_result.message << "\n";
     return 1;

@@ -4,15 +4,23 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/except/exceptions.hpp>
+
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -20,56 +28,62 @@
 #include <ranges>
 
 namespace compiler::helios::defgen {
+	using namespace code::shorthands;
+
+	/**
+	 * @brief Get the symbol of the `toString` method for a given type.
+	 */
 	SymID toStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
+		for (auto& elem: type.getInterface(ctx)->getElementsWithName(base::StrID("toString")))
+			if (elem.specialKind() == tsh::InterfaceElement::SpecialKind::ToString)
+				return elem.getSymbol();
+		CORE_PANIC("Every symbol should have toString.");
+	}
+
+	SymID generatedToStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name                  = base::StrID("toString"),
 			.generated_symbol_data = Method{ .owner_type = type, .kind = Method::Kind::ToString },
 		});
 	}
 
-	namespace {
-		inline const auto STRING_TYPE = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+#define STRING_TYPE tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
+#define LANG_PRIMITIVE(primitive) \
+	ctx.query<QueryLanguagePrimitiveSymID>({ primitive })->valueOrThrow()
 
-		SymID stringifySym(
-			query::Context& ctx, const tsh::SymbolType<>& type, const std::string& name
-		) {
-			return ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID(name),
-				.generated_symbol_data = BuiltinOperator{
-					.operator_type = ctx.query<tsh::QueryFunctionType>({
-						{ type },
-						STRING_TYPE,
-					}),
-					.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
-				},
-			});
+	SymID stringAppendMethodSym(query::Context& ctx, const bool arg_by_reference) {
+		// Look up the `append` method on the `String` class. `append` is overloaded on a `String`
+		// argument, so we select either the by-reference (`append(other: ref String)`) or the
+		// by-value (`append(other: String)`) overload depending on `arg_by_reference`.
+		auto       string_abstract_type = tsh::getStringType(ctx);
+		const auto expected_arg_type
+			= tsh::SymbolType<>::withDefaults(string_abstract_type)
+		          .withReferenceKind(
+					  arg_by_reference ? tsh::ReferenceKind::Ref : tsh::ReferenceKind::Direct
+				  );
+		const auto& lookup_result = HInterface::ofTypeInstance(string_abstract_type)
+		                                .lookup(ctx, base::StrID("append"))
+		                                ->valueOrThrow();
+
+
+		for (const SymID candidate: lookup_result.leaves) {
+			const auto fn_type = ctx.query<QueryTypeOfSymbol>(candidate)
+			                         ->valueOrThrow()
+			                         .getType()
+			                         .as<tsh::FunctionAbstractType>();
+			const auto& params = fn_type.getParameterTypes();
+			if (params.size() == 2 && params.at(1) == expected_arg_type) return candidate;
 		}
-	}
-
-	SymID concatSym(query::Context& ctx) {
-		return ctx.query<QueryGeneratedSymbol>({
-			.name                  = base::StrID("builtin_string_concatenated"),
-			.generated_symbol_data = BuiltinOperator{
-				.operator_type = ctx.query<tsh::QueryFunctionType>({
-					{ STRING_TYPE, STRING_TYPE },
-					STRING_TYPE,
-				}),
-				.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
-			},
-		});
-	}
-
-	Box<code::Expr> getStringFromLiteralExpr(query::Context& ctx, base::StrID value) {
-		std::vector<Box<code::Expr>> call_args;
-		call_args.emplace_back(makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), value)
-		);
-		SymID callee_sym = stringifySym(
-			ctx, tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx)), "builtin_stringify_str"
-		);
-		auto callee = makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), callee_sym);
-		return makeBox<code::CallExpr>(
-			ctx, code::generatedOrigin(), std::move(callee), std::move(call_args)
-		);
+		ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			base::strConcat(
+				"The String class language primitive doesn't have the `append(",
+				arg_by_reference ? "ref " : "",
+				"String)` method."
+			),
+			"This method is required for the compiler to work."
+		));
+		query::throwFailed();
+		CORE_UNREACHABLE();
 	}
 
 	struct IMPLEMENT_QUERY(QueryToStringMethod, query::QResult<HOUTFunction>) {
@@ -79,22 +93,10 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Stmt>>&  body
 		) {
 			const auto self_param  = to_string_decl.parameters.at(0).helios_symbol;
-			const auto bool_type   = to_string_decl.parameters.at(0).type;
-			const auto builtin_sym = stringifySym(ctx, bool_type, "builtin_stringify_bool");
+			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyBool);
 
-			std::vector<Box<code::Expr>> args;
-			args.emplace_back(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
-			);
-
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::CallExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-					std::move(args)
-				)
-			));
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
 		}
 
 		static void stringifyIntegral(
@@ -107,36 +109,44 @@ namespace compiler::helios::defgen {
 			const bool is_signed
 				= source_int_type.getType().as<tsh::IntegralAbstractType>().getSignedness()
 			   == tsh::IntegralAbstractType::Signedness::Signed;
-			const auto target_builtin_name
-				= is_signed ? "builtin_stringify_i64" : "builtin_stringify_u64";
 			const auto target_int_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
 				ctx,
 				64,
 				is_signed ? tsh::IntegralAbstractType::Signedness::Signed
 						  : tsh::IntegralAbstractType::Signedness::Unsigned
 			));
-			const auto builtin_sym     = stringifySym(ctx, target_int_type, target_builtin_name);
+			const auto builtin_sym     = LANG_PRIMITIVE(
+                is_signed ? LanguagePrimitive::StringifyI64 : LanguagePrimitive::StringifyU64
+			);
 
-			Box<code::Expr> arg_expr
-				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
+			const Shorthand s{ ctx };
+			body.emplace_back(
+				s.ret(s.call(s.ident(builtin_sym), s.coerce(s.ident(self_param), target_int_type)))
+			);
+		}
 
-			const auto coercion_res
-				= canCoerce(ctx, source_int_type, target_int_type).valueOrThrow();
-			if (!coercion_res.getCoercion().isEmptyCoercion())
-				arg_expr = coercion_res.coerce(ctx, std::move(arg_expr));
+		static void stringifyPointer(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body,
+			const bool                     is_many_pointer
+		) {
+			const auto  self_param = to_string_decl.parameters.at(0).helios_symbol;
+			const auto& self_type  = to_string_decl.parameters.at(0).type.getType();
+			const auto  pointee    = is_many_pointer
+			                           ? tsh::ManyPointerAbstractType(self_type).getPointee()
+			                           : tsh::PointerAbstractType(self_type).getPointee();
+			// Both primitives are templated on the pointee, so they have to be baked before
+			// they can be called.
+			const auto builtin_sym = bakeLanguagePrimitive(
+				ctx,
+				is_many_pointer ? LanguagePrimitive::StringifyManyPtr
+								: LanguagePrimitive::StringifyPtr,
+				{ pointee }
+			);
 
-			std::vector<Box<code::Expr>> args;
-			args.emplace_back(std::move(arg_expr));
-
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::CallExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-					std::move(args)
-				)
-			));
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
 		}
 
 		static void stringifyFloat(
@@ -144,31 +154,14 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto self_param        = to_string_decl.parameters.at(0).helios_symbol;
-			const auto source_float_type = to_string_decl.parameters.at(0).type;
+			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 			const auto target_float_type
 				= tsh::SymbolType<>::withDefaults(tsh::getFloatType(ctx, 64));
-			const auto builtin_sym = stringifySym(ctx, target_float_type, "builtin_stringify_f64");
+			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyF64);
 
-			Box<code::Expr> arg_expr
-				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
-
-			const auto coercion_res
-				= canCoerce(ctx, source_float_type, target_float_type).valueOrThrow();
-			if (!coercion_res.getCoercion().isEmptyCoercion())
-				arg_expr = coercion_res.coerce(ctx, std::move(arg_expr));
-
-			std::vector<Box<code::Expr>> args;
-			args.emplace_back(std::move(arg_expr));
-
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::CallExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-					std::move(args)
-				)
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(
+				s.call(s.ident(builtin_sym), s.coerce(s.ident(self_param), target_float_type))
 			));
 		}
 
@@ -177,40 +170,11 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto self_param       = to_string_decl.parameters.at(0).helios_symbol;
-			const auto source_char_type = to_string_decl.parameters.at(0).type;
-			const auto builtin_sym = stringifySym(ctx, source_char_type, "builtin_stringify_char");
+			const auto self_param  = to_string_decl.parameters.at(0).helios_symbol;
+			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyChar);
 
-			std::vector<Box<code::Expr>> args;
-			args.emplace_back(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
-			);
-
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::CallExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-					std::move(args)
-				)
-			));
-		}
-
-		static void stringifyString(
-			Context&                       ctx,
-			const HOUTFunctionDeclaration& to_string_decl,
-			std::vector<Box<code::Stmt>>&  body
-		) {
-			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
-
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DerefExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
-				)
-			));
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
 		}
 
 		static void stringifySlice(
@@ -221,32 +185,106 @@ namespace compiler::helios::defgen {
 			auto& self_param         = to_string_decl.parameters.at(0);
 			auto  slice_type         = self_param.type.getType().as<tsh::SliceAbstractType>();
 			auto  slice_element_type = slice_type.getElementType();
-			if (slice_element_type.getType() == tsh::getCharType()
-			    and slice_element_type.getRefKind() == tsh::ReferenceKind::Direct) {
-				SymID callee_sym = stringifySym(
-					ctx,
-					tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx)),
-					"builtin_stringify_str"
-				);
-				auto callee
-					= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), callee_sym);
+			// A `str` is text, not a sequence of characters, so it keeps its own primitive.
+			const SymID callee_sym
+				= (slice_element_type.getType() == tsh::getCharType()
+			       and slice_element_type.getRefKind() == tsh::ReferenceKind::Direct)
+			        ? LANG_PRIMITIVE(LanguagePrimitive::StringifyStr)
+			        : bakeLanguagePrimitive(
+						  ctx, LanguagePrimitive::StringifySlice, { slice_element_type }
+					  );
 
-				std::vector<Box<code::Expr>> call_args;
-				call_args.emplace_back(makeBox<code::IdentifierExpr>(
-					ctx, code::generatedOrigin(), self_param.helios_symbol
-				));
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(s.call(s.ident(callee_sym), s.ident(self_param.helios_symbol))));
+		}
 
-				body.emplace_back(makeBox<code::ReturnStmt>(
-					code::generatedOrigin(),
-					makeBox<code::CallExpr>(
-						ctx, code::generatedOrigin(), std::move(callee), std::move(call_args)
-					)
-				));
-			} else {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"toString for non-string slices not yet implemented."
+		static void stringifyCPointer(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const auto  self_param = to_string_decl.parameters.at(0).helios_symbol;
+			const auto& self_type  = to_string_decl.parameters.at(0).type.getType();
+			const auto  pointee    = tsh::CPointerAbstractType(self_type).getPointee();
+			const auto  builtin_sym
+				= bakeLanguagePrimitive(ctx, LanguagePrimitive::StringifyCPtr, { pointee });
+
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
+		}
+
+		/**
+		 * @brief Stringifies a static array with the element-wise primitive, baked on the array
+		 * type and its length.
+		 */
+		static void stringifyStaticArray(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
+			const auto array_type
+				= to_string_decl.parameters.at(0).type.getType().as<tsh::StaticArrayAbstractType>();
+			const auto size
+				= numeric_value::NumericValue::createOfType(
+					  tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
+					  array_type.getSize()
+				)
+			          .expect("The length of a static array always fits an i64");
+			const auto builtin_sym = bakeLanguagePrimitive(
+				ctx,
+				LanguagePrimitive::StringifyStaticArray,
+				{ tsh::SymbolType<>::withDefaults(array_type), size }
+			);
+
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
+		}
+
+		/**
+		 * @brief Stringifies a variant as the text of the value it currently holds.
+		 *
+		 * Every alternative gets a case, so the match is exhaustive without a wildcard. Each case
+		 * binds the payload by reference and defers to that type's own `toString`.
+		 */
+		static void stringifyVariant(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const Shorthand s{ ctx };
+			const SymID     self_param = to_string_decl.parameters.at(0).helios_symbol;
+			const auto      variant_type
+				= to_string_decl.parameters.at(0).type.getType().as<tsh::VariantAbstractType>();
+			const auto& alternatives = variant_type.getUnderlyingTypes();
+
+			std::vector<code::MatchExpr::Case> cases;
+			for (usize i = 0; i < alternatives.size(); i++) {
+				// A binding is always a reference to the payload, which for a `box` alternative
+				// is a reference to the pointee.
+				const auto payload_type = alternatives[i]
+				                              .withReferenceKind(tsh::ReferenceKind::Ref)
+				                              .withMutability(tsh::Mutability::Mutable);
+
+				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
+					.name = base::StrID(base::strConcat("__alternative_", i)),
+					.generated_symbol_data
+					= GeneratedFunctionVariable{ .function_symbol = to_string_decl.original_symbol,
+				                                 .variable_index  = i,
+				                                 .type            = payload_type },
+				});
+
+				const SymID payload_to_string = toStringSymForType(ctx, alternatives[i].getType());
+
+				cases.emplace_back(Shorthand::matchCase(
+					i,
+					payload_sym,
+					s.call(s.ident(payload_to_string), s.prepToPassSelf(s.ident(payload_sym)))
 				));
 			}
+
+			// `self` is already a reference to the variant, which is what the match wants.
+			body.emplace_back(s.ret(s.matchExpr(s.ident(self_param), std::move(cases))));
 		}
 
 		static void stringifyUnit(
@@ -254,9 +292,8 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& /* to_string_decl */,
 			std::vector<Box<code::Stmt>>& body
 		) {
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(), getStringFromLiteralExpr(ctx, base::StrID("()"))
-			));
+			const Shorthand s{ ctx };
+			body.emplace_back(s.ret(s.litStrObj(base::StrID("()"))));
 		}
 
 		static void stringifyAggregate(
@@ -266,16 +303,10 @@ namespace compiler::helios::defgen {
 			const base::StrID              prefix,
 			const CRef<tsh::TypeInterface> type_interface
 		) {
-			const auto concat_sym = concatSym(ctx);
-			// Create a reusable expression of the de-reffed self (self is passed by reference)
-			auto self_expr = makeBox<code::DerefExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(
-					ctx, code::generatedOrigin(), to_string_decl.parameters.at(0).helios_symbol
-				)
-			);
-			auto reusable_self_expr = makeBox<code::ReusableExpr>(ctx, std::move(self_expr), true);
+			const Shorthand s{ ctx };
+			const auto      append_sym  = stringAppendMethodSym(ctx, true);
+			const SymID     self_symbol = to_string_decl.parameters.at(0).helios_symbol;
+			auto            deref_self  = [&] { return s.deref(s.ident(self_symbol)); };
 
 			// Prelude: the class name and opening parenthesis
 			const auto result_sym = ctx.query<QueryGeneratedSymbol>(
@@ -285,12 +316,7 @@ namespace compiler::helios::defgen {
 			                                   .variable_index  = 0,
 			                                   .type            = STRING_TYPE } }
 			);
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				getStringFromLiteralExpr(ctx, base::StrID(prefix)),
-				STRING_TYPE,
-				result_sym
-			));
+			body.emplace_back(s.var(result_sym, STRING_TYPE, s.litStrObj(base::StrID(prefix))));
 
 			// Main body: append the fields
 			const std::vector<tsh::InterfaceElement> fields
@@ -303,80 +329,29 @@ namespace compiler::helios::defgen {
 				const auto  field_type          = field.getType(ctx);
 				const SymID field_to_string_sym = toStringSymForType(ctx, field_type.getType());
 
-				auto            next_reusable_self_expr = reusable_self_expr->nextUse();
-				Box<code::Expr> accessed_field          = makeBox<code::AccessExpr>(
-                    ctx, code::generatedOrigin(), std::move(reusable_self_expr), field.getSymbol()
-                );
-				// If the field is not a simple type, we must call its `toString` method on a reference.
-				if (not accessed_field->expression_type.getType().isSimple()
-				    and accessed_field->expression_type.getSymbolType().getRefKind()
-				            != tsh::ReferenceKind::Ref) {
-					accessed_field = makeBox<code::RefOfExpr>(
-						ctx, code::generatedOrigin(), std::move(accessed_field)
-					);
-				}
-				// But also if the accessed field is a reference to a simple type, we must deref it.
-				if (accessed_field->expression_type.getType().isSimple()
-				    and accessed_field->expression_type.getSymbolType().getRefKind()
-				            != tsh::ReferenceKind::Direct) {
-					accessed_field = makeBox<code::DerefExpr>(
-						ctx, code::generatedOrigin(), std::move(accessed_field)
-					);
-				}
-				reusable_self_expr = std::move(next_reusable_self_expr);
+				Box<code::Expr> accessed_field
+					= s.prepToPassSelf(s.access(deref_self(), field.getSymbol()));
 
-				std::vector<Box<code::Expr>> v1;
-				v1.emplace_back(std::move(accessed_field));
+				auto stringified_field
+					= s.call(s.ident(field_to_string_sym), std::move(accessed_field));
 
-				auto stringified_field = makeBox<code::CallExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), field_to_string_sym),
-					std::move(v1)
-				);
+				// Append the stringified field.
+				body.emplace_back(s.expr(s.call(
+					s.ident(append_sym),
+					s.refOf(s.ident(result_sym)),
+					s.refOf(std::move(stringified_field))
+				)));
 
-				// Concatenate the stringified field
-				std::vector<Box<code::Expr>> v2;
-				v2.emplace_back(
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym)
-				);
-				v2.emplace_back(std::move(std::move(stringified_field)));
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym),
-					makeBox<code::CallExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), concat_sym),
-						std::move(v2)
-					)
-				));
-
-				// Concatenate the separator or closing parenthesis
-				std::vector<Box<code::Expr>> v3;
-				v3.emplace_back(
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym)
-				);
-				v3.emplace_back(
-					getStringFromLiteralExpr(ctx, base::StrID(idx < num_fields - 1 ? "," : ")"))
-				);
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym),
-					makeBox<code::CallExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), concat_sym),
-						std::move(v3)
-					)
-				));
+				// Append the separator or closing parenthesis.
+				body.emplace_back(s.expr(s.call(
+					s.ident(append_sym),
+					s.refOf(s.ident(result_sym)),
+					s.refOf(s.litStrObj(base::StrID(idx < num_fields - 1 ? "," : ")")))
+				)));
 			}
 
 			// Finally, return
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym)
-			));
+			body.emplace_back(s.ret(s.ident(result_sym)));
 		}
 
 		static void stringifyTuple(
@@ -421,16 +396,20 @@ namespace compiler::helios::defgen {
 				stringifyFloat(ctx, to_string_decl, body);
 				break;
 			}
+			case tsh::Kind::Pointer: {
+				stringifyPointer(ctx, to_string_decl, body, false);
+				break;
+			}
+			case tsh::Kind::ManyPointer: {
+				stringifyPointer(ctx, to_string_decl, body, true);
+				break;
+			}
 			case tsh::Kind::Char: {
 				stringifyChar(ctx, to_string_decl, body);
 				break;
 			}
 			case tsh::Kind::Bool: {
 				stringifyBool(ctx, to_string_decl, body);
-				break;
-			}
-			case tsh::Kind::String: {
-				stringifyString(ctx, to_string_decl, body);
 				break;
 			}
 			case tsh::Kind::Slice: {
@@ -445,16 +424,27 @@ namespace compiler::helios::defgen {
 				stringifyTuple(ctx, to_string_decl, body);
 				break;
 			}
+			case tsh::Kind::CPointer: {
+				stringifyCPointer(ctx, to_string_decl, body);
+				break;
+			}
+			case tsh::Kind::StaticArray: {
+				stringifyStaticArray(ctx, to_string_decl, body);
+				break;
+			}
+			case tsh::Kind::Variant: {
+				stringifyVariant(ctx, to_string_decl, body);
+				break;
+			}
 			case tsh::Kind::Class: {
 				stringifyClass(ctx, to_string_decl, body);
 				break;
 			}
 			default: {
-				std::string msg
+				const Shorthand s{ ctx };
+				std::string     msg
 					= "Stringification not yet implemented for " + owner_type.toString();
-				body.emplace_back(makeBox<code::ReturnStmt>(
-					code::generatedOrigin(), getStringFromLiteralExpr(ctx, base::StrID(msg))
-				));
+				body.emplace_back(s.ret(s.litStrObj(base::StrID(msg))));
 				break;
 			}
 			}

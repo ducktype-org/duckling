@@ -33,7 +33,7 @@ static auto stencils = Stencils{
 			.stencils_data =
 	#include <mock_stencils-nm>
 #endif
-		}.load();
+		}.load().value();
 
 class JitMemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -58,20 +58,24 @@ private:
 	};
 
 	void testSimple() {
-		auto foo_code = FIND_FUNC("simple_function_plus_1");
-		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		auto foo_code      = FIND_FUNC("simple_function_plus_1");
+		auto memory_result = JitFuncMemory::allocate(foo_code.size);
+		ASSERT_HAS_VALUE(memory_result);
+		auto& memory = *memory_result;
 		stencils.relocate(foo_code, memory.addr);
-		memory.markExecutable();
+		ASSERT_HAS_VALUE(memory.markExecutable());
 
 		auto simple = memory.intoFunc<int(int)>();
 		for (int i = 0; i < 10; ++i) ASSERT_EQUAL(std::invoke(simple, i), i + 1);
 	}
 
 	void testRecursive() {
-		auto foo_code = FIND_FUNC("recursive_fibonacci");
-		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		auto foo_code      = FIND_FUNC("recursive_fibonacci");
+		auto memory_result = JitFuncMemory::allocate(foo_code.size);
+		ASSERT_HAS_VALUE(memory_result);
+		auto& memory = *memory_result;
 		stencils.relocate(foo_code, memory.addr);
-		memory.markExecutable();
+		ASSERT_HAS_VALUE(memory.markExecutable());
 
 		auto fibonacci = memory.intoFunc<int(int)>();
 		ASSERT_EQUAL(std::invoke(fibonacci, 0), 1);
@@ -83,20 +87,24 @@ private:
 	}
 
 	void testCallingSimple() {
-		auto foo_code = FIND_FUNC("calling_simple_odd");
-		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		auto foo_code      = FIND_FUNC("calling_simple_odd");
+		auto memory_result = JitFuncMemory::allocate(foo_code.size);
+		ASSERT_HAS_VALUE(memory_result);
+		auto& memory = *memory_result;
 		stencils.relocate(foo_code, memory.addr);
-		memory.markExecutable();
+		ASSERT_HAS_VALUE(memory.markExecutable());
 
 		auto simple = memory.intoFunc<int(int)>();
 		for (int i = 0; i < 10; ++i) ASSERT_EQUAL(std::invoke(simple, i), 2 * i + 1);
 	}
 
 	void testCallingRecursive() {
-		auto foo_code = FIND_FUNC("calling_fibonacci_sum");
-		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		auto foo_code      = FIND_FUNC("calling_fibonacci_sum");
+		auto memory_result = JitFuncMemory::allocate(foo_code.size);
+		ASSERT_HAS_VALUE(memory_result);
+		auto& memory = *memory_result;
 		stencils.relocate(foo_code, memory.addr);
-		memory.markExecutable();
+		ASSERT_HAS_VALUE(memory.markExecutable());
 
 		auto fibonacci_sum = memory.intoFunc<int(int)>();
 		ASSERT_EQUAL(std::invoke(fibonacci_sum, 0), 1);
@@ -106,10 +114,12 @@ private:
 	}
 
 	void testCallingLibc() {
-		auto foo_code = FIND_FUNC("calling_libc");
-		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		auto foo_code      = FIND_FUNC("calling_libc");
+		auto memory_result = JitFuncMemory::allocate(foo_code.size);
+		ASSERT_HAS_VALUE(memory_result);
+		auto& memory = *memory_result;
 		stencils.relocate(foo_code, memory.addr);
-		memory.markExecutable();
+		ASSERT_HAS_VALUE(memory.markExecutable());
 
 		auto calling_libc    = memory.intoFunc<int*(int)>();
 		auto from_jit_memory = base::Box<int>::fromPointer(std::invoke(calling_libc, 100));
@@ -118,7 +128,9 @@ private:
 
 	void testPatching() {
 		auto foo_code = FIND_FUNC("must_patch");
-		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		auto memory_result = JitFuncMemory::allocate(foo_code.size);
+		ASSERT_HAS_VALUE(memory_result);
+		auto& memory = *memory_result;
 		stencils.relocate(foo_code, memory.addr);
 		foo_code.patch(memory.addr, [](HoleValue value) {
 			if (value == HoleValue::Arg0)
@@ -137,7 +149,9 @@ private:
 		auto mul_code = FIND_FUNC("mock_mul");
 		auto end_code = FIND_FUNC("mock_end");
 
-		auto memory = JitFuncMemory::allocate(add_code.size + mul_code.size + end_code.size);
+		auto memory_result = JitFuncMemory::allocate(add_code.size + mul_code.size + end_code.size);
+		ASSERT_HAS_VALUE(memory_result);
+		auto& memory = *memory_result;
 
 		auto add_addr = memory.addr;
 		auto mul_addr = stencils.relocate(add_code, add_addr);

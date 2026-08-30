@@ -182,14 +182,6 @@ expected = f"""{{
       ]
     }},
     {{
-      "id": "{baz_name}",
-      "name": "baz",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(baz_path)}/src",
-      "dependencies": []
-    }},
-    {{
       "id": "{foo_name}",
       "name": "foo",
       "version": "1.0.0",
@@ -200,6 +192,14 @@ expected = f"""{{
           "id": "{baz_name}"
         }}
       ]
+    }},
+    {{
+      "id": "{baz_name}",
+      "name": "baz",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(baz_path)}/src",
+      "dependencies": []
     }}
   ],
   "tasks": [
@@ -207,7 +207,7 @@ expected = f"""{{
       "package": "{root_name}",
       "strategy": "native",
       "output_file": "{str(layout / "root")}",
-      "linking_options": "{str(bar_artifacts / bar_name)}.a {str(baz_artifacts / baz_name)}.a {str(foo_artifacts / foo_name)}.a"
+      "linking_options": "{str(bar_artifacts / bar_name)}.a {str(foo_artifacts / foo_name)}.a {str(baz_artifacts / baz_name)}.a"
     }}
   ]
 }}"""

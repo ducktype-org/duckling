@@ -63,9 +63,17 @@ namespace compiler::tsh {
 	RawPointerAbstractType getRawPointerType(bool mutable_pointer);
 
 	/**
-	 * @brief Simple getter to create and get string type.
+	 * @brief Get the `String` type, i.e. the `String` class from `core.containers`.
+	 * Resolved through the language-primitive lookup, so it requires a query context.
 	 */
-	StringAbstractType getStringType();
+	ClassAbstractType getStringType(query::Context& ctx);
+
+	/**
+	 * @brief Checks whether the `String` type is available, i.e. whether `core.containers` (and
+	 * thus a standard library) is present. Use this to guard code that would otherwise fail
+	 * resolving the `String` language primitive in no-std builds.
+	 */
+	bool isStringTypePresent(query::Context& ctx);
 
 	/**
 	 * @brief Get the type of a slice of characters, which is used for string literals and string
@@ -123,17 +131,6 @@ namespace compiler::tsh {
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QuerySliceType, SymbolType<>, SliceAbstractType, ({ .uses_qresult = false }))
-
-
-	/**
-	 * @brief Query to get the DynamicArray type.
-	 * The AbstractType of the elements of the array is given as a key.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(
-		QueryDynamicArrayType, SymbolType<>, DynamicArrayAbstractType, ({ .uses_qresult = false })
-	)
 
 	/**
 	 * @brief Key for QueryStaticArrayType.
@@ -309,8 +306,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher{};
-			addToHash(hasher, source.index());
-			VISIT(source, value, addToHash(hasher, value));
+			addToHash(hasher, source);
 			return hasher.finalize();
 		}
 	};
@@ -318,6 +314,8 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Query to get the TypeTemplate.
+	 *
+	 * @TODO: #3177 revisit this query
 	 *
 	 * \query_thread_safe_if_cache
 	 */

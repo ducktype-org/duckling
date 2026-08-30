@@ -1,0 +1,42 @@
+# Test file for statement specifiers - simplified
+
+# Basic extern("C") function  
+extern("C") fundecl cFunction() -> i32;
+
+# Private function
+private fundecl privateFunction() -> i32;
+
+# Public function
+public fundecl publicFunction() -> i32;
+
+# Multiple specifiers with order test
+extern("C") private fundecl cPrivateFunction() -> i32;
+
+# Library extern function
+extern("C", "mylib") fundecl libFunction() -> i32;
+
+# Function with incorrect ABI (for error testing)
+extern("InvalidABI") fundecl invalidAbiFunction() -> i32;
+
+# Extern("C") block to test block-level specifiers
+extern("C") {
+    fundecl cBlockFunction() -> i32;
+    public fundecl cBlockPublicFunction() -> i32;
+}
+
+# Namespace nested inside an extern("C") block - the ABI has to propagate through it
+extern("C") {
+    namespace c_block_namespace {
+        fundecl cNestedInNamespace() -> i32;
+    }
+}
+
+# The reverse nesting, which has to keep working
+namespace reverse_namespace { extern("C") {
+    fundecl cReverseNested() -> i32;
+}}
+
+# Basic struct (no specifiers)
+class RegularStruct {
+     x: i32;
+}

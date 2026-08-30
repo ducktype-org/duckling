@@ -14,9 +14,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize, de};
 
-use crate::quackpack::core::Manifest;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
-use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_url::ToUrl;
@@ -36,27 +34,13 @@ impl Identity {
     }
 
     /// Get the name.
-    pub fn name(&self) -> StrId {
+    pub fn name(self) -> StrId {
         self.name
     }
 
     /// Get the [`Origin`].
     pub fn origin(&self) -> Origin {
         self.origin
-    }
-
-    /// Helper for solver for creating storage's freeze.
-    pub fn from_realization_and_manifest(
-        realization: ExpandedPackage,
-        realization_manifest: &Manifest,
-    ) -> Self {
-        let name = realization_manifest.name();
-        let origin = match realization.location {
-            ExpandedLocation::Registry { url, .. } => Origin::for_registry(url),
-            ExpandedLocation::Git { url, .. } => Origin::for_git(url),
-            ExpandedLocation::Local { absolute_path } => Origin::new(absolute_path, Kind::Local),
-        };
-        Self::new(name, origin)
     }
 
     /// Compare `lhs` and `rhs` in a stable way!
@@ -163,12 +147,12 @@ impl Origin {
     }
 
     /// Get an [`InternedUrl`] of this [`Origin`].
-    pub fn url(&self) -> InternedUrl {
+    pub fn url(self) -> InternedUrl {
         self.url
     }
 
     /// Get a [`Kind`] of this [`Origin`].
-    pub fn kind(&self) -> Kind {
+    pub fn kind(self) -> Kind {
         self.kind
     }
 
@@ -269,7 +253,7 @@ pub enum Kind {
 
 impl Kind {
     /// Get a human-like display.
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             Self::Registry => "registry",
             Self::Git => "git",
@@ -278,17 +262,17 @@ impl Kind {
     }
 
     /// Check, whether this [`Kind`] is a registry kind.
-    pub fn is_registry(&self) -> bool {
+    pub fn is_registry(self) -> bool {
         matches!(self, Kind::Registry)
     }
 
     /// Check, whether this [`Kind`] is a git kind.
-    pub fn is_git(&self) -> bool {
+    pub fn is_git(self) -> bool {
         matches!(self, Kind::Git)
     }
 
     /// Check, whether this [`Kind`] is a local kind.
-    pub fn is_local(&self) -> bool {
+    pub fn is_local(self) -> bool {
         matches!(self, Kind::Local)
     }
 
@@ -361,8 +345,14 @@ mod tests {
             assert_eq!(origin.to_string(), "git+https://localhost:9001/");
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = Origin::for_local(&root).unwrap();
+            #[cfg(windows)]
+            assert_eq!(origin.to_string(), "local+file:///C:/");
+            #[cfg(not(windows))]
             assert_eq!(origin.to_string(), "local+file:///tmp");
         }
     }
@@ -384,6 +374,9 @@ mod tests {
             assert_eq!(parsed, origin);
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = Origin::for_local(&root).unwrap();
             let formatted = origin.to_string();
@@ -432,10 +425,16 @@ mod tests {
             assert_eq!(formatted, "foo git+https://localhost:9001/");
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = Origin::for_local(&root).unwrap();
             let identity = Identity::new("foo".into(), origin);
             let formatted = identity.to_string();
+            #[cfg(windows)]
+            assert_eq!(formatted, "foo local+file:///C:/");
+            #[cfg(not(windows))]
             assert_eq!(formatted, "foo local+file:///tmp");
         }
     }
@@ -448,6 +447,9 @@ mod tests {
         let url = "https://localhost:9001".to_url().unwrap();
         let origin = Origin::for_git(url);
         let foo_git = Identity::new("foo".into(), origin);
+        #[cfg(windows)]
+        let root = PathBuf::from("C:\\");
+        #[cfg(not(windows))]
         let root = PathBuf::from("/tmp");
         let origin = Origin::for_local(&root).unwrap();
         let foo_local = Identity::new("foo".into(), origin);
@@ -458,6 +460,9 @@ mod tests {
         let url = "https://localhost:9001".to_url().unwrap();
         let origin = Origin::for_git(url);
         let bar_git = Identity::new("bar".into(), origin);
+        #[cfg(windows)]
+        let root = PathBuf::from("C:\\");
+        #[cfg(not(windows))]
         let root = PathBuf::from("/tmp");
         let origin = Origin::for_local(&root).unwrap();
         let bar_local = Identity::new("bar".into(), origin);
@@ -551,6 +556,9 @@ mod tests {
             assert_eq!(parsed, identity);
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = Origin::for_local(&root).unwrap();
             let identity = Identity::new("foo".into(), origin);

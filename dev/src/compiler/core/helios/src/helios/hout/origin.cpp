@@ -1,20 +1,20 @@
 #include "origin.hpp"
 
-#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 
 #include <base/except/exceptions.hpp>
 
 #include <diagnostic/source_position.hpp>
+#include <diagnostic/stable_position.hpp>
 
 namespace compiler::helios::code {
 	base::Optional<dia::SourcePosition> ElementOrigin::getSourcePosition(query::Context& ctx) const {
-		return source_position.map([&ctx](const dia_int::StablePosition& pos) {
+		return source_position.map([&ctx](const dia::StablePosition& pos) {
 			return pos.getActiveSourcePosition(ctx);
 		});
 	}
 
-	base::Optional<dia_int::StablePosition> ElementOrigin::getStablePosition() const {
+	base::Optional<dia::StablePosition> ElementOrigin::getStablePosition() const {
 		return source_position;
 	}
 

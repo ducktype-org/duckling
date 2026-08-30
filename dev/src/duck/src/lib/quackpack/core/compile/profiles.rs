@@ -185,7 +185,7 @@ macro_rules! determine_field {
                     PREDEFINED_PROFILES
                         .get(&parent_name)
                         .map(|prof| prof.$name)
-                        .context_internal("Parent profile neither in profiles map nor predefined")
+                        .with_context_internal(|| format!("parent profile `{parent_name}` neither in profiles map nor predefined"))
                 }
             } else {
                 // None of the inheritance ancestors specified the field.
@@ -245,6 +245,14 @@ impl Profile {
             incremental: determine_incremental(profile_name, manifest_profiles)?,
             c_std: determine_c_std(profile_name, manifest_profiles)?,
         })
+    }
+
+    /// Get a [`String`] describing the value (everything except `name`) of this profile.
+    pub fn serialize_raw(self) -> String {
+        format!(
+            "{}-{}-{}-{}",
+            self.opt_level, self.incremental, self.c_std, self.dvm_bytecode
+        )
     }
 }
 

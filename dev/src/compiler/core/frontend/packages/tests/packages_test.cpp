@@ -83,7 +83,7 @@ private:
 		auto         json = nlohmann::json::parse(R"({
             "id": "pkg_id",
             "name": "pkg",
-            "path": "VFS:/packages/pkg.dmf",
+            "path": "VFS:/packages/pkg.dk",
             "version": "1.2.3",
             "features": ["f1", "f2"],
             "dependencies": [
@@ -106,7 +106,7 @@ private:
 		auto         json = nlohmann::json::parse(R"({
             "id": "pkg",
             "name": "pkg",
-            "path": "VFS:/packages/pkg.dmf",
+            "path": "VFS:/packages/pkg.dk",
             "weird": 123,
             "dependencies": []
         })");
@@ -121,7 +121,7 @@ private:
 		auto         json = nlohmann::json::parse(R"({
             "id": "pkg",
             "name": "pkg",
-            "path": "VFS:/packages/pkg.dmf",
+            "path": "VFS:/packages/pkg.dk",
             "features": ["ok", 123],
             "dependencies": []
         })");
@@ -135,7 +135,7 @@ private:
 		auto         json = nlohmann::json::parse(R"({
             "id": "pkg",
             "name": "pkg",
-            "path": "VFS:/packages/pkg.dmf",
+            "path": "VFS:/packages/pkg.dk",
             "version": 123,
             "dependencies": []
         })");
@@ -149,7 +149,7 @@ private:
 		auto         json = nlohmann::json::parse(R"({
             "id": "pkg",
             "name": "pkg",
-            "path": "VFS:/packages/pkg.dmf",
+            "path": "VFS:/packages/pkg.dk",
             "dependencies": { "id": "dep" }
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
@@ -163,10 +163,10 @@ private:
 		auto pkg_hash = hasher.finalize();
 
 		KeyOf_PackageSideInput pkg_key{ pkg_hash };
-		(void) pkg_key.queryStablePerfectHash();
+		std::ignore = pkg_key.queryStablePerfectHash();
 
 		auto count_key = KeyOf_PackageDependencyCountSideInput::computeHash(base::StrID("pkg"), 3u);
-		(void) count_key.queryStablePerfectHash();
+		std::ignore    = count_key.queryStablePerfectHash();
 
 		KeyOf_PackageDependencyAliasSideInput alias_key{
 			.package_hash      = pkg_hash,
@@ -174,7 +174,7 @@ private:
 			.found             = true,
 			.target_package_id = base::StrID("dep"),
 		};
-		(void) alias_key.queryStablePerfectHash();
+		std::ignore = alias_key.queryStablePerfectHash();
 
 		auto bytes   = alias_key.serialize();
 		auto decoded = KeyOf_PackageDependencyAliasSideInput::deserialize(bytes);
@@ -197,7 +197,8 @@ private:
 
 	void packageDependenciesAccessUnlock() {
 		TestReporter reporter;
-		auto         main_file = fs::FileManager::createRandomVirtualFile("fn main() {}", ".dmf");
+		auto         main_file = fs::FileManager::createRandomVirtualFile("fn main() {}", ".dk");
+
 		RawPackageInfo raw{
 			.package_id   = base::StrID("pkg"),
 			.package_name = base::StrID("pkg"),
@@ -281,7 +282,7 @@ private:
 
 	void createPackageInfoSuccess() {
 		TestReporter   reporter;
-		auto           main_file = fs::FileManager::createRandomVirtualFile("fn main() {}", ".dmf");
+		auto           main_file = fs::FileManager::createRandomVirtualFile("fn main() {}", ".dk");
 		RawPackageInfo raw{
 			.package_id   = base::StrID("pkg"),
 			.package_name = base::StrID("pkg"),

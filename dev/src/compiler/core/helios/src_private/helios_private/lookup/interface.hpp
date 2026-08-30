@@ -2,13 +2,13 @@
 
 #include "lookup_result.hpp"
 
-#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/pst_parser/source_position_locked.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
 
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <query_framework/query_result.hpp>
 
 #include <variant>

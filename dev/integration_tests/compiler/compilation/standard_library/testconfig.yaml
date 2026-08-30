@@ -20,16 +20,15 @@ Tests:
   # In custom std instead of the default one we have a different implementation
   # of builtin_output that output 20 for the same `no_std` user code.
   custom_std:
-
-    enable_conc_deterministic_tests: "false"
     module_to_compile: "uses_std"
     compile_dvm_options: "--custom-std-path custom_std"
     compile_llvm_options: "--custom-std-path custom_std"
+    std_artifacts_path_flag: ""
     Cases:
       all:
         backend: all
         Output:
-          String: "20\n84\n"
+          String: "x\nx\n"
 
   # We test if disabling the std and using it in the user code causes the expected compile error.
   no_std_fails:

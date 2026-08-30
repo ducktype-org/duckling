@@ -163,9 +163,21 @@ namespace vm::code {
 	public:
 		constexpr static std::string_view ERR_MSG
 			= "Type cannot be used in an FFI function signature (expected a primitive of size 1, "
-			  "2, 4 or 8, `cptr`, or a data structure with only such fields): ";
+			  "2, 4 or 8, `cptr`, or a non-empty, non-packed data structure whose fields are "
+			  "themselves FFI-compliant, including nested structures and non-empty fixed-size "
+			  "tables): ";
 
 		FFIUnsupportedTypeError(const valid_type::ValidType& type):
+			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
+	};
+
+	class FFITableByValueError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "C has no by-value arrays, so a fixed-size table cannot be passed or returned "
+			  "directly by an FFI function (wrap it in a data structure): ";
+
+		FFITableByValueError(const valid_type::ValidType& type):
 			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
 	};
 
@@ -490,6 +502,16 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		PointerTypeMismatchError, "Pointer type does not match the expected type."
 	);
+	DEFINE_INSTRUCTION_ERROR(
+		CPointerTypeMismatchError, "C pointer type does not match the expected type."
+	);
+	DEFINE_INSTRUCTION_ERROR(
+		CPtrNotDereferenceableError,
+		"This C pointer cannot be dereferenced: its pointee is unknown or not FFI-compliant."
+	);
+	DEFINE_INSTRUCTION_ERROR(
+		CPtrPointeeMismatchError, "The value type does not match the C pointer's pointee type."
+	);
 	DEFINE_INSTRUCTION_ERROR(FieldTypeMismatchError, "Field type does not match the expected type.");
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidVirtualCallError, "Provided method does not exists for a given argument."
@@ -556,4 +578,16 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		OpaqueTypeMismatchError, "The opaque type does not match the expected type."
 	);
+
+	class ExecutionConfigViolationError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG = "Function violates execution config: ";
+		const base::StrID                 func_name;
+		const std::string                 violation_reason;
+
+		ExecutionConfigViolationError(base::StrID func_name, std::string violation_reason):
+			  ValidationError(base::strConcat(ERR_MSG, func_name, " (", violation_reason, ")")),
+			  func_name(func_name),
+			  violation_reason(std::move(violation_reason)) {}
+	};
 }

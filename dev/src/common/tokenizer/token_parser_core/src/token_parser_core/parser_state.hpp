@@ -2,9 +2,8 @@
 
 #include "token_stream.hpp"
 
-#include <diagnostic_interactive/logger_fwd.hpp>
-#include <diagnostic_interactive/message.hpp>
-
+#include <diagnostic/logger_fwd.hpp>
+#include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 
 namespace tpc {
@@ -82,7 +81,7 @@ namespace tpc {
 
 		std::variant<Box<ParserContext>, CRef<ParserContext>> current_context;
 
-		ParserState(TokenStream&& tokens, Box<ParserContext>&& ctx, Ref<dia_int::Logger> int_err):
+		ParserState(TokenStream&& tokens, Box<ParserContext>&& ctx, Ref<dia::Logger> int_err):
 			  current_stream(makeBox<TokenStream>(std::move(tokens))),
 			  fallback_stack(),
 			  current_context(std::move(ctx)),
@@ -108,9 +107,9 @@ namespace tpc {
 
 		// clang-format on
 
-		Ref<dia_int::Logger> int_err;  ///< Stores parsing errors
+		Ref<dia::Logger> int_err;  ///< Stores parsing errors
 
-		ParserState(TokenStream&& tokens, Ref<dia_int::Logger> int_err):
+		ParserState(TokenStream&& tokens, Ref<dia::Logger> int_err):
 			  current_stream(makeBox<TokenStream>(std::move(tokens))),
 			  fallback_stack(),
 			  current_context(makeBox<ParserContext>()),
@@ -151,7 +150,7 @@ namespace tpc {
 		 */
 		virtual void goUpAndSkip();
 
-		virtual void logInt(Box<dia_int::MessageBase> message) { int_err->log(std::move(message)); }
+		virtual void logInt(Box<dia::MessageBase> message) { int_err->log(std::move(message)); }
 
 		template<TokenStreamCondition until>
 		[[nodiscard]]

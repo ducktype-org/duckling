@@ -254,73 +254,6 @@ namespace compiler::tsl {
 		}
 	};
 
-	/**
-	 * @brief Layout of the string type.
-	 */
-	class StringTypeLayout final: public TypeLayoutABC {
-		/**
-		 * The string type consists of four parts of information:
-		 * -# Pointer to the start of data
-		 * -# Offset of the end of data wrt. the pointer to its start
-		 * -# Offset of the start of reserved memory
-		 * -# Offset of the end of reserved memory
-		 * The pointer and offsets are arranged in this exact order in memory.
-		 */
-		static constexpr auto METADATA_SIZE = Bytes(8);
-
-		explicit StringTypeLayout(const tsh::StringAbstractType string_type, query::Context& ctx):
-			  TypeLayoutABC(
-				  POINTER_SIZE + base::bytes2bits(METADATA_SIZE) * 3,
-				  /*alignment=*/POINTER_SIZE_BYTES,
-				  tsh::SymbolType<>::withDefaults(string_type),
-				  ctx
-			  ) {}
-
-		friend struct ImplementationOf_QueryAbstractTypeLayout;
-
-	public:
-		[[nodiscard]]
-		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
-			return getIndent(indent) + "string : " + base::toString(getSize());
-		}
-
-		/**
-		 * @return The offset of the pointer to the data
-		 */
-		[[nodiscard]]
-		Bytes getDataPointerPosition() const {
-			(void) this;
-			return Bytes(0);
-		}
-
-		/**
-		 * @return The offset of the end of data offset
-		 */
-		[[nodiscard]]
-		Bytes getEndOfDataOffsetPosition() const {
-			(void) this;
-			return POINTER_SIZE_BYTES;
-		}
-
-		/**
-		 * @return The offset of the start of reserved memory offset
-		 */
-		[[nodiscard]]
-		Bytes getStartOfMemoryOffsetPosition() const {
-			(void) this;
-			return POINTER_SIZE_BYTES + METADATA_SIZE;
-		}
-
-		/**
-		 * @return The offset of the end of reserved memory offset
-		 */
-		[[nodiscard]]
-		Bytes getEndOfMemoryOffsetPosition() const {
-			(void) this;
-			return POINTER_SIZE_BYTES + METADATA_SIZE * 2;
-		}
-	};
-
 	class StaticArrayTypeLayout final: public TypeLayoutABC {
 		CRef<TypeLayout> element_layout;
 		usize            element_count;
@@ -415,6 +348,14 @@ namespace compiler::tsl {
 			return index_to_layout.at(index);
 		}
 
+		/**
+		 * @return The number of alternatives of this variant.
+		 */
+		[[nodiscard]]
+		usize getNumAlternatives() const {
+			return index_to_layout.size();
+		}
+
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
 			const override;
@@ -462,8 +403,6 @@ namespace compiler::tsl {
 		ClassTypeLayout(tsh::TupleAbstractType tuple_type, query::Context& ctx);
 
 		ClassTypeLayout(tsh::SliceAbstractType slice_type, query::Context& ctx);
-
-		ClassTypeLayout(tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx);
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -641,7 +580,6 @@ namespace compiler::tsl {
 		IntegralTypeLayout,
 		FloatTypeLayout,
 		VariantTypeLayout,
-		StringTypeLayout,
 		StaticArrayTypeLayout,
 		ClassTypeLayout,
 		FunctionalTypeLayout,

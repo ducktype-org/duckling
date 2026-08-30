@@ -64,8 +64,8 @@ namespace vm {
 
 			variant_case_novalue(api::request::Stop) { return stop(); }
 
-			variant_case_novalue(api::request::ExecutionPosition) {
-				return getVMThreadCurrentPosition(getMainThreadID());
+			variant_case(api::request::ExecutionPosition, current_pos_req) {
+				return getVMThreadCurrentPosition(getMainThreadID(), current_pos_req.frame_idx);
 			}
 
 			variant_case_novalue(api::request::WaitForBreakpoint) {
@@ -92,7 +92,7 @@ namespace vm {
 				return getTypeMetadata(type_request.type_name);
 			}
 
-			variant_case(api::request::VmValue, vmvalue_request) {
+			variant_case(api::request::VMValue, vmvalue_request) {
 				return getVMValueForType(vmvalue_request.type_name);
 			}
 
@@ -130,6 +130,10 @@ namespace vm {
 
 			variant_case(api::request::MapFileLineToCodeCollectionPosition, request) {
 				return mapFileLineToCodeCollectionPosition(request.file, request.line_number);
+			}
+
+			variant_case(api::request::SetExecutionConfig, request) {
+				return setExecutionConfig(request.config);
 			}
 
 			variant_default { return api::Response(api::response::Empty()); }

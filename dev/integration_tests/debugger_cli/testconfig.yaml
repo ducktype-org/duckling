@@ -1,4 +1,8 @@
+# The toolchain is built by the root PreNode; do not inherit it here.
+PreNode: ""
+
 SubDirs:
   - basic
+  - advanced
 
 # @TODO: #2798 Write advanced integration tests for debugger CLI

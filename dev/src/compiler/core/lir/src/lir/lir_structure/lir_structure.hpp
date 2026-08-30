@@ -2,8 +2,8 @@
 
 #include "lir_structure_fd.hpp"  // IWYU pragma: keep
 
+#include <abi/calling_conv/calling_conv.hpp>
 #include <ctv/ctv.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -18,6 +18,7 @@
 #include <base/pointers/shared_box.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <query_framework/context/context_fd.hpp>
 
 #include <memory>
@@ -31,12 +32,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 	/** Simple byte by byte assignment. */
 	Assign,
-	AddressOf, 
-	// @TODO: #1894 Remove the `List*` when Lists are implemented in STD.
-	ListFree,
-
-	ListPush,
-	ListPop,
+	AddressOf,
 
 	/**
 		@brief Placeholder.
@@ -84,14 +80,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	FloatEq,
 	FloatNeq,
 
-	/** Meta type operations. */
-	MetaCreateBox,
-	MetaCreateRef,
-	MetaCreateConst,
-	MetaCreateTuple, // N arguments, types to create the tuple type from
-	MetaCreateVariant, // N arguments, types to create the variant type from
-	MetaEq,
-	MetaNeq,
+	/**
+	 * Meta type operation. The specific operation is parametrized by `MetaParameters` (a
+	 * `MetaKind`) stored in the instruction's `extra_params`.
+	 */
+	MetaTypeOperation,
 
 	BooleanAnd,
 	BooleanOr,
@@ -100,16 +93,49 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	Cast,
 	ZeroInitialize,
 
+	/** Creates a variant value from a payload value (see mir::Operation::VariantConstruct). */
+	VariantConstruct,
+	/**
+	 * Pointer to the variant's payload, null on alternative mismatch. Its single argument is a
+	 * reference to the variant, not the variant place itself.
+	 */
+	VariantTryProject,
+
 	Call,
 
 	ReturnVoid,
 	ReturnValue,
 	Jump,
 	Branch,
-	
+	/** Terminator: [pointer, null_target, not_null_target]. */
+	BranchIfNull,
+
+	/** Terminator: marks control flow that can never be reached (e.g. after a diverging call). */
+	Unreachable,
+
 	// Nop can be useful when lowering the instruction flags and MIR instr translates
 	// to zero instructions in LIR, but we want to have the flags in correct place.
 	Nop
+)
+
+/**
+ *   @brief The specific kind of a `Operation::MetaTypeOperation` instruction.
+ *   Stored in the instruction's `extra_params` as `MetaParameters`. Mirrors `mir::MetaKind`.
+ */
+MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, MetaKind,
+	CreateBox,
+	CreateRef,
+	CreateConst,
+	CreatePtr,
+	CreateManyPtr,
+	CreateCPtr,
+	CreateSlice,
+	CreateTuple,
+	CreateVariant,
+	Eq,
+	Neq,
+	SizeOf,
+	AlignOf
 )
 
 /// A helper tag that indicates that a value has some special meaning
@@ -139,11 +165,33 @@ namespace compiler::lir {
 	 */
 	using BlockRef = CRef<Block>;
 
+	struct LIRAbi final {
+		struct CAbi final {
+			abi::calling_conv::FunctionInfo function_info;
+		};
+
+		struct DefaultAbi final {};
+
+		using ValueType = std::variant<CAbi, DefaultAbi>;
+		ValueType value;
+	};
+
 	/**
 	 * @brief Function which call will be replaced
 	 * manually in the backend.
 	 */
-	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree, BoxAlloc, BoxFree };
+	enum class BuiltinFunctionKind {
+		DvmAllocArr,
+		DvmReallocArr,
+		DvmFreeArr,
+		DvmAlloc,
+		DvmFree,
+		BoxAlloc,
+		BoxFree,
+		DvmPtrParts,
+		DvmIsNullptr,
+		DvmNullptr
+	};
 
 	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
 
@@ -152,7 +200,7 @@ namespace compiler::lir {
 	 */
 	struct FunctionLiteral final {
 		base::StrID                                         mangled_name;
-		helios::SymbolABI                                   abi;
+		LIRAbi                                              abi;
 		bool                                                link_once;
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
@@ -171,8 +219,8 @@ namespace compiler::lir {
 	 * Used by the backends for the DebugInfo.
 	 */
 	struct LIRLocalMetadata {
-		base::Optional<base::StrID>             source_code_name;
-		base::Optional<dia_int::StablePosition> position;
+		base::Optional<base::StrID>         source_code_name;
+		base::Optional<dia::StablePosition> position;
 	};
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local);
@@ -242,13 +290,15 @@ namespace compiler::lir {
 		);
 
 		/**
-		 * @brief Crates unique local with bool-type, and without
+		 * @brief Creates unique local holding a reference to @p pointee_type, and without
 		 * helios_id.
-		 * @note it's used to create lifetime-flags
+		 * @note It's used to materialize addresses of places passed to functions taking
+		 * references.
 		 * @param ctx
+		 * @param pointee_type Type of the referenced value.
 		 * @return LIRLocal
 		 */
-		static LIRLocal boolLocal(query::Context& ctx);
+		static LIRLocal refLocal(query::Context& ctx, tsh::SymbolType<> pointee_type);
 	};
 
 	enum class LIRGlobalType { Variable, Constant };
@@ -271,15 +321,23 @@ namespace compiler::lir {
 
 		LIRGlobalType type;
 
+		/**
+		 * @brief Whether the global is replicated into every module that uses it (e.g. a constant
+		 * belonging to a template instance), so its definition must be merged at link time.
+		 */
+		bool link_once;
+
 	private:
 		LIRGlobal(
 			const CRef<tsl::TypeLayout> layout,
 			const base::StrID&          mangled_name,
-			const LIRGlobalType         type
+			const LIRGlobalType         type,
+			const bool                  link_once
 		):
 			  layout(layout),
 			  mangled_name(mangled_name),
-			  type(type) {}
+			  type(type),
+			  link_once(link_once) {}
 
 		friend Function;
 
@@ -289,7 +347,7 @@ namespace compiler::lir {
 		 */
 		static LIRGlobal fromMIR(query::Context& ctx, mir::MIRGlobal mir_global);
 
-		void debugPrint(query::Context& ctx, std::ostream& os) const;
+		void debugPrint(std::ostream& output, base::Optional<Ref<query::Context>> ctx = {}) const;
 	};
 
 	/**
@@ -410,6 +468,12 @@ namespace compiler::lir {
 		bool hasProjections() const {
 			return !projection_chain.empty();
 		}
+
+		/**
+		 * Prints this place, assigning IDs to referenced locals in encounter order
+		 * or using local and block IDs from the function if given.
+		 */
+		void debugPrint(std::ostream& output, base::Optional<CRef<Function>> function = {}) const;
 	};
 
 	/**
@@ -435,7 +499,7 @@ namespace compiler::lir {
 
 		LIRValue(BlockRef value): value(value) {}
 
-		LIRValue(FunctionLiteral value): value(value) {}
+		LIRValue(FunctionLiteral value): value(std::move(value)) {}
 
 		[[nodiscard]]
 		const ValueType& getVariant() const {
@@ -471,6 +535,12 @@ namespace compiler::lir {
 		[[nodiscard]] bool is() const {
 			return std::holds_alternative<T>(value);
 		}
+
+		/**
+		 * Prints this value, assigning IDs to referenced locals and blocks in encounter order
+		 * or using local and block IDs from the function if given.
+		 */
+		void debugPrint(std::ostream& output, base::Optional<CRef<Function>> function = {}) const;
 	};
 
 	/**
@@ -497,21 +567,33 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout> target_layout;
 	};
 
-	struct ListOperationParameters final {
-		/**
-		 * @brief The element layout for generic `ListPush` and `ListPop` operations.
-		 */
-		CRef<tsl::TypeLayout> element_layout;
+	/**
+	 * @brief Parameters of VariantConstruct/VariantTryProject: the variant alternative
+	 * (index in the canonical order of the interned variant type) and its layout.
+	 */
+	struct VariantParameters final {
+		usize                 alternative_index;
+		tsh::SymbolType<>     alternative_type;
+		CRef<tsl::TypeLayout> alternative_layout;
+		CRef<tsl::TypeLayout> variant_layout;
+	};
+
+	/**
+	 * @brief Additional parameters for a `Operation::MetaTypeOperation` instruction, selecting
+	 * which meta operation it is.
+	 */
+	struct MetaParameters final {
+		MetaKind kind;
 	};
 
 	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
 	using InstrParameters
-		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
+		= std::variant<NoInstrParameters, CastParameters, VariantParameters, MetaParameters>;
 
 	struct InstructionMetadata {
-		base::Optional<dia_int::StablePosition> position;
+		base::Optional<dia::StablePosition> position;
 
 		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
 
@@ -569,6 +651,12 @@ namespace compiler::lir {
 		 * Whether the instruction can be the last instruction in the block (i.e. be a terminator).
 		 */
 		[[nodiscard]] bool isTerminating() const;
+
+		/**
+		 * Prints this instruction, assigning IDs to referenced locals and blocks in encounter order
+		 * or using local and block IDs from the function if given.
+		 */
+		void debugPrint(std::ostream& output, base::Optional<CRef<Function>> function = {}) const;
 	};
 
 	/**
@@ -582,16 +670,16 @@ namespace compiler::lir {
 	};
 
 	struct FunctionMetadata {
-		base::Optional<dia_int::StablePosition> position;
-		base::Optional<base::StrID>             source_code_name;
+		base::Optional<dia::StablePosition> position;
+		base::Optional<base::StrID>         source_code_name;
 	};
 
 	/**
 	 * @brief Function in LIR.
 	 */
 	struct Function final {
-		base::StrID       mangled_name;
-		helios::SymbolABI abi;
+		base::StrID mangled_name;
+		LIRAbi      abi;
 
 		/**
 		 * If true, this function can have repeated definitions
@@ -638,7 +726,7 @@ namespace compiler::lir {
 		[[nodiscard]]
 		base::OkBad validateParameters() const;
 
-		void debugPrint(query::Context&, std::ostream& output) const;
+		void debugPrint(std::ostream& output, base::Optional<Ref<query::Context>> ctx = {}) const;
 
 		/**
 		 * @brief Returns a map from all blocks to unique ids.
@@ -696,7 +784,7 @@ namespace compiler::lir {
 		[[nodiscard]]
 		ctv::CompileTimeValue getConstValue() const;
 
-		void debugPrint(query::Context& ctx, std::ostream& out) const;
+		void debugPrint(std::ostream& output, base::Optional<Ref<query::Context>> ctx = {}) const;
 	};
 
 	/**
@@ -711,7 +799,7 @@ namespace compiler::lir {
 		std::vector<CRef<Function>> lir_functions;
 		std::vector<LIRGlobalData>  lir_globals;
 
-		void debugPrint(query::Context& ctx, std::ostream& out) const;
+		void debugPrint(std::ostream& output, base::Optional<Ref<query::Context>> ctx = {}) const;
 
 		/**
 		 * @brief Removes duplicate functions and globals from the LIR unit.

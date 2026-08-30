@@ -1,0 +1,73 @@
+# The layout is:
+# - tmp1 depends on tmp2,
+# - root1 and root2 depend on tmp1.
+
+src_tmp2: |+
+  import core.builtins.*;
+
+  fun xdd() -> i64 = {
+    return 0;
+  }
+
+src_tmp1: |+
+  import core.builtins.*;
+  import tmp2.*;
+
+  fun xd() -> i64 = {
+    return xdd();
+  }
+
+src_tmp1_new: |+
+  import core.builtins.*;
+
+  fun xd() -> i64 = {
+    return 0;
+  }
+
+src_root: |+
+  import core.builtins.*;
+  import tmp1.*;
+
+  fun main() -> i64 = {
+    return xd();
+  }
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init root1
+  @{duck-exe} init root2
+  @{duck-exe} init tmp1
+  @{duck-exe} init tmp2
+  echo "@{src_root}" > root1/src/src.dk
+  echo "@{src_root}" > root2/src/src.dk
+  echo "@{src_tmp1}" > tmp1/src/src.dk
+  echo "@{src_tmp2}" > tmp2/src/src.dk
+  @{duck-exe} -C root1 add --local ../tmp1 tmp1
+  @{duck-exe} -C root2 add --local ../tmp1 tmp1
+
+PostCase: python3 check.py @{expected-subfolders}
+
+Tests:
+  shared-artifacts:
+    Description: correctly utilises sharing artifacts mechanism
+    Cases:
+      same-subgraphs:
+        # This should produce only one subfolder in build folder of tmp1.
+        # Compilations of `root1` and `root2` should reuse the same subfolder in the build folder of `tmp1`.
+        expected-subfolders: 1
+        test-cmd: |+
+          duck -C tmp1 add --local ../tmp2 tmp2 &&
+          duck -C root1 build --shared-artifacts &&
+          duck -C root2 build --shared-artifacts
+      different-subgraphs:
+        # This should produce two subfolders in build folder of tmp1.
+        # We change the dependency subgraph of `tmp1`.
+        # Thus the first and second compilation should have different subfolders.
+        expected-subfolders: 2
+        test-cmd: |+
+          echo "@{src_tmp1_new}" > tmp1/src/src.dk &&
+          duck -C root1 build --shared-artifacts &&
+          duck -C tmp1 add --local ../tmp2 tmp2 &&
+          echo "@{src_tmp1}" > tmp1/src/src.dk &&
+          duck -C root1 build --shared-artifacts
+        

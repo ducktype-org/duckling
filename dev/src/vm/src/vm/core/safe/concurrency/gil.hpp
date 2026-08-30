@@ -34,6 +34,8 @@ namespace vm {
 
 
 	public:
+		~GIL();
+
 		/**
 		 * @brief Acquires GIL. After you call this function you always have right to interpret DVM
 		 * code.

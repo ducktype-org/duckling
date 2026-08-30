@@ -202,7 +202,7 @@ namespace pst {
 		return *pst_hash_map.at(stable_hash);
 	}
 
-	dia_int::StablePosition LangElement::getStablePosition() const {
+	dia::StablePosition LangElement::getStablePosition() const {
 		return {
 			LangElement::getActiveSourcePosition,
 			LangElement::getActiveSourcePositionIllegalAccess,
@@ -212,7 +212,7 @@ namespace pst {
 	}
 
 	dia::SourcePosition LangElement::getActiveSourcePositionIllegalAccess(
-		const dia_int::StablePosition& pos
+		const dia::StablePosition& pos
 	) {
 		auto first_pos = LangElement::getByStableHash(pos.begin_node)
 		                     .illegalAccess()
@@ -233,7 +233,7 @@ namespace pst {
 	}
 
 	dia::SourcePosition LangElement::getActiveSourcePosition(
-		query::Context& ctx, const dia_int::StablePosition& pos
+		query::Context& ctx, const dia::StablePosition& pos
 	) {
 		auto first_pos = LangElement::getByStableHash(pos.begin_node)
 		                     .unlock(ctx)
@@ -257,6 +257,6 @@ namespace pst {
 		IF_BUILD_TYPE_DEV(for ([[maybe_unused]] auto& ref : viewChildren()) my_count++;
 		                  for ([[maybe_unused]] auto& ref : clone->viewChildren()) clone_count++;
 		                  CORE_ASSERT(my_count == clone_count, "Not all children cloned."););
-		return cloneElement();
+		return clone;
 	}
 }

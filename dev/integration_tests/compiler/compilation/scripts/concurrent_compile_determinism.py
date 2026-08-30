@@ -29,14 +29,14 @@ import tempfile
 # a meaningful class of threading issues.
 #
 # High-level flow:
-# 1) duplicate every .dmf module file in every package under test (default x3),
+# 1) duplicate every .dk module file in every package under test (default x3),
 #    so there is enough work to exercise concurrent modification paths
 #    and force parallel processing of identical function bodies,
 # 2) rewrite duplicated files so they can coexist in one package:
 #    - rename `fun main(...)` to `fun main_copyN(...)` because the linker
 #      requires exactly one main function per package,
 #    - rewrite imports in copied main-module files from `import child...`
-#      to `import main.child...` because copied .dmf files become
+#      to `import main.child...` because copied .dk files become
 #      sub-modules of the original, so their import paths must be adjusted,
 # 3) compile the same package(s) twice into a local `build` dir:
 #    - first with 1 worker to get a deterministic baseline,
@@ -53,18 +53,34 @@ import tempfile
 
 
 GENERATED_COPY_STEM_RE = re.compile(r"^concurrent_copy\d+_.+")
-IMPORT_RE = re.compile(r"^(\s*import\s+)([A-Za-z_]\w*)(?=[\s\.;]|$)")
+# Matched anywhere in a line, not only at its start, so that imports nested inside
+# `expand "..."` macro strings are rewritten as well.
+IMPORT_RE = re.compile(r"(?<![\w.])(import\s+)([A-Za-z_]\w*)(?=[\s\.;]|$)")
 MAIN_FUN_RE = re.compile(r"(\bfun\s+)main(\s*\()")
+
+
+# The warm artifacts cached in `$DUCKC_STD_ARTIFACTS_PATH` are the ones of the default
+# std, so they must not be handed to a compile that builds its own std from sources.
+def std_artifacts_path_args(compile_options: str) -> list[str]:
+    std_artifacts_path = os.environ.get("DUCKC_STD_ARTIFACTS_PATH")
+    if not std_artifacts_path:
+        return []
+    if any(
+        option in shlex.split(compile_options)
+        for option in ("--custom-std-path", "--custom-std-artifacts-path", "--no-std")
+    ):
+        return []
+    return ["--custom-std-artifacts-path", std_artifacts_path]
 
 
 # Returns True when file is a generated temporary copy.
 def is_copy_file(path: Path) -> bool:
-    return path.suffix == ".dmf" and GENERATED_COPY_STEM_RE.match(path.stem) is not None
+    return path.suffix == ".dk" and GENERATED_COPY_STEM_RE.match(path.stem) is not None
 
 
-# Lists original .dmf files that should be duplicated.
-def iter_original_dmf_files(package_dir: Path) -> list[Path]:
-    return sorted([file for file in package_dir.rglob("*.dmf") if not is_copy_file(file)])
+# Lists original .dk files that should be duplicated.
+def iter_original_dk_files(package_dir: Path) -> list[Path]:
+    return sorted([file for file in package_dir.rglob("*.dk") if not is_copy_file(file)])
 
 
 # Detects child module names for import rewriting in copied main modules.
@@ -74,45 +90,34 @@ def get_child_module_names(main_module_file: Path) -> set[str]:
     child_names = set()
 
     for child in parent_dir.iterdir():
-        if child.is_file() and child.suffix == ".dmf" and not is_copy_file(child):
+        if child.is_file() and child.suffix == ".dk" and not is_copy_file(child):
             if child.stem != main_name:
                 child_names.add(child.stem)
             continue
 
         if child.is_dir() and any(
-            nested.suffix == ".dmf" and not is_copy_file(nested) for nested in child.rglob("*.dmf")
+            nested.suffix == ".dk" and not is_copy_file(nested) for nested in child.rglob("*.dk")
         ):
             child_names.add(child.name)
 
     return child_names
 
 
-# Rewrites one import line to keep copied module imports valid.
+# Rewrites the imports of one line to keep copied module imports valid.
 def rewrite_import_line_if_needed(
     line: str,
     main_module_name: str,
     child_module_names: set[str],
 ) -> str:
-    newline = "\n" if line.endswith("\n") else ""
-    line_without_newline = line[:-1] if newline else line
+    def rewrite_import(match: re.Match[str]) -> str:
+        first_segment = match.group(2)
+        if first_segment not in child_module_names:
+            return match.group(0)
+        if first_segment == main_module_name:
+            return match.group(0)
+        return f"{match.group(1)}{main_module_name}.{first_segment}"
 
-    match = IMPORT_RE.match(line_without_newline)
-    if not match:
-        return line
-
-    first_segment = match.group(2)
-    if first_segment not in child_module_names:
-        return line
-    if first_segment == main_module_name:
-        return line
-
-    first_segment_start, first_segment_end = match.span(2)
-    rewritten = (
-        f"{line_without_newline[:first_segment_start]}"
-        f"{main_module_name}.{line_without_newline[first_segment_start:first_segment_end]}"
-        f"{line_without_newline[first_segment_end:]}"
-    )
-    return f"{rewritten}{newline}"
+    return IMPORT_RE.sub(rewrite_import, line)
 
 
 # Applies main rename and import rewrites to one copied file content.
@@ -136,12 +141,12 @@ def rewrite_for_copy(source_text: str, source_file: Path, copy_index: int) -> st
 def duplicate_package_modules(package_dir: Path, copy_count: int) -> list[Path]:
     created_files: list[Path] = []
 
-    originals = iter_original_dmf_files(package_dir)
+    originals = iter_original_dk_files(package_dir)
     for source_file in originals:
         source_text = source_file.read_text(encoding="utf-8")
         sanitized_source_stem = source_file.stem.replace("-", "_")
         for copy_index in range(1, copy_count + 1):
-            target = source_file.with_name(f"concurrent_copy{copy_index}_{sanitized_source_stem}.dmf")
+            target = source_file.with_name(f"concurrent_copy{copy_index}_{sanitized_source_stem}.dk")
             rewritten = rewrite_for_copy(source_text, source_file, copy_index)
             target.write_text(rewritten, encoding="utf-8")
             created_files.append(target)
@@ -248,6 +253,10 @@ def parse_args() -> argparse.Namespace:
     # provided in manifest mode it is silently ignored.
     parser.add_argument("--backend", choices=["dvm", "llvm"])
     parser.add_argument("--copy-count", type=int, default=3)
+    # Manifest mode only: a manifest may hard-code artifact paths in its linking options
+    # (e.g. a static library built by another task), which resolve only when the check
+    # builds into the very directory those paths point at.
+    parser.add_argument("--build-dir")
     return parser.parse_args()
 
 
@@ -274,6 +283,7 @@ def compile_packages_manifest(
         "-a",
         str(build_dir),
     ]
+    command.extend(std_artifacts_path_args(compile_options))
 
     if compile_options.strip():
         command.extend(shlex.split(compile_options))
@@ -328,7 +338,7 @@ def run_manifest_mode(args: argparse.Namespace) -> int:
     # the manifest), so manifest mode is not safe under concurrent cases that
     # share packages; only the build directory is private.
     work_dir = make_work_dir()
-    build_dir = work_dir / "build"
+    build_dir = Path(args.build_dir) if args.build_dir else work_dir / "build"
     created_files: list[Path] = []
 
     try:
@@ -420,6 +430,7 @@ def compile_package(
         "-n",
         f"package_{module_name}",
     ]
+    command.extend(std_artifacts_path_args(compile_options))
 
     if compile_options.strip():
         command.extend(shlex.split(compile_options))

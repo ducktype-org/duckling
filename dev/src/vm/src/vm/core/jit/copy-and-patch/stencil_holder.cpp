@@ -33,7 +33,7 @@ namespace vm::jit::cnp {
 #endif
 		};
 
-		static auto loaded_stencils = std::move(stencils).load();
+		static auto loaded_stencils = std::move(stencils).load().value();
 		return loaded_stencils;
 	}
 

@@ -44,8 +44,8 @@ pub fn get_parser() -> Command {
 pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let at = matches
         .get_one::<PathBuf>("path")
-        .expect("required by clap")
-        .resolve()?;
+        .expect("required by clap");
+    let at = at.resolve_with_tilde(ctx);
     let explicit_name = matches.get_one::<String>("name").map(String::as_str);
     init(InitOptions {
         ctx,

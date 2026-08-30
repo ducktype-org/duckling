@@ -8,6 +8,7 @@
 #include "thread_stack.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/collections/object_pool.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
@@ -15,8 +16,6 @@
 #include <vm/bytecode/constant_value_fd.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
-
-#include <deque>
 
 namespace vm {
 	/**
@@ -49,14 +48,7 @@ namespace vm {
 		/// set. Otherwise, it is not.
 		std::unordered_set<BlockID> initialized_globals{};
 
-		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
-		// After the block is destroyed and the reference count drops to zero, instead of freeing
-		// the memory, we mark the block as unused and add its ID to the free_ids list. Then when we
-		// need to allocate a new block, we first check if there are any free IDs available. Blocks
-		// are stored in a deque, so we can have pointers to them without worrying about
-		// reallocation.
-		std::deque<Block>   blocks   = {};
-		std::deque<BlockID> free_ids = {};
+		base::StableObjectPool<Block, BlockID, true, true> blocks_pool;
 
 		[[nodiscard]]
 		Ref<Block> createBlock(BlockData data);
@@ -76,26 +68,22 @@ namespace vm {
 		void copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
 
 		/**
-		 * @brief Copies blocks from `block_src` to `block_dst`, going down the nested block
-		 * hierarchy.
-		 * @note Moving here means no data copy-constructors are called.
+		 * @brief Changes `BlockData` object that is used underneath a block.
+		 * It does so by moving objects from block's data to new_data.
+		 * This means data copy-constructors of the moved objects are not invoked.
+		 * @note Frees *block's nested blocks whose offsets would not fit
+		 * inside the `new_data` memory area - the objects that are in the suffix are destructed,
+		 * so the suffix must not hold moved-from objects.
+		 * @note The part of `new_data` past the moved objects is cleared.
+		 * @note The old data is deallocated with its own allocator.
 		 */
-		void moveBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
-
-		/**
-		 * @brief Moves `byte_size` bytes pointed-to by `src` to `dst`.
-		 * Moving here means data copy-constructors of the moved object are not invoked.
-		 * The objects that are in the "suffix" are destructed.
-		 * @note Frees *block_dst's nested blocks whose offsets would not fit
-		 * inside the new memory area.
-		 * @note These blocks must be of a dynamic table type.
-		 */
-		void moveBlockDataAndEraseSuffix(Ref<Block> dst, Ref<Block> src, usize byte_count);
-
+		void changeBlockData(Ref<Block> block, BlockData new_data);
 
 		/**
 		 * @brief Replaces the block data memory view with the new one,
 		 * taking care of the children blocks.
+		 *
+		 * @note The children keep their own sizes, only their base is rebased onto `new_view`.
 		 *
 		 * @param block The block to update the data view for.
 		 * @param new_view The new view to set for the block.
@@ -318,6 +306,19 @@ namespace vm {
 			if (pointer.offset + size_bytes > pointer.block->data.view.size())
 				throw exceptions::VMOutOfBlockBoundsException();
 			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };
+		}
+
+		/** @brief Returns the block data from `pointer.offset` to the end of the block. */
+		[[nodiscard]]
+		static constexpr
+			__attribute__((always_inline)) auto getRemainingPointerData(Pointer pointer)
+				-> base::ModRawView {
+			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
+			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
+			if (pointer.offset > pointer.block->data.view.size())
+				throw exceptions::VMOutOfBlockBoundsException();
+			return { pointer.block->data.view.getBegin() + pointer.offset,
+				     pointer.block->data.view.size() - pointer.offset };
 		}
 
 		/**

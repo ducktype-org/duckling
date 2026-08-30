@@ -241,6 +241,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::If, true>  simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
 	Example<pst::If, true>  simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };
 	Example<pst::If, false> empty_if_condition{ "if () {}" };
+	Example<pst::If, true>  simple_const_if{ "if const (a == b) {c = d;}" };
+	Example<pst::If, true>  const_if_else{ "if const (a == b) {c = d;} else {c = e;}" };
+	Example<pst::If, true>  const_if_else_const_if{
+        "if const (a == b) {c = d;} else if const (a == c) {c = e;}"
+	};
+	Example<pst::If, false> const_if_no_condition{ "if const {}" };
 
 	Example<pst::Import, true>  simple_import{ "import std.math.sqrt as sqrt" };
 	Example<pst::Import, false> empty_import{ "import" };
@@ -342,14 +348,15 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::Constructor, true> named_constructor{
 		"name.from_pair(p: (i32, i32)) = {}", "name"
 	};
-	ClassStmtExample<pst::Constructor, true> init_constructor{
-		"name.init(x: i32, y: i32): z(x, y) = {}", "name"
-	};
 	ClassStmtExample<pst::Constructor, false> bad_constructor1{
 		"name.(x: i32, y: i32): z(x, y) = {}", "name"
 	};
 	ClassStmtExample<pst::Constructor, false> bad_constructor2{ "name.(x: i32, y: i32) -> i32 = {}",
 		                                                        "name" };
+
+	ClassStmtExample<pst::CopyConstructor, true> simple_copy_ctor{ "name.copy() = {}", "name" };
+
+	ClassStmtExample<pst::MoveConstructor, true> simple_move_ctor{ "name.move() = {}", "name" };
 
 	ClassStmtExample<pst::Destructor, true>  simple_destructor{ "name.destroy() = {}", "name" };
 	ClassStmtExample<pst::Destructor, false> non_empty_destructor{ "name.destroy(x: i32) = {}",
@@ -480,7 +487,7 @@ class PSTErrorTests: public tester::TestSuite {
 	}
 
 	void diagnosticTests() {
-		using dia_int::testDiagnosticMessage;
+		using dia::testDiagnosticMessage;
 		std::stringstream ss;
 
 		testDiagnosticMessage<pst::error::BlockStartError>(ss, dia::SourcePosition::fakePosition());

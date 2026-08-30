@@ -73,9 +73,7 @@ namespace vm::jit {
 
 	static void printModule(Ref<llvm::Module> module, std::string_view filename) {
 		std::error_code      error_code;
-		llvm::raw_fd_ostream file(
-			filename, error_code, llvm::sys::fs::OF_Text
-		);
+		llvm::raw_fd_ostream file(filename, error_code, llvm::sys::fs::OF_Text);
 
 		if (error_code)
 			llvm::errs() << "Error opening file: " << error_code.message() << "\n";
@@ -108,7 +106,8 @@ namespace vm::jit {
 
 		CORE_DEV_LOG(
 			DVMDetails,
-			(printModule(new_module.get(), "compiled_function-before.llvm"), "Compiled function dumped")
+			(printModule(new_module.get(), "compiled_function-before.llvm"),
+		     "Compiled function dumped")
 		);
 		std::cerr << "Compiled?\n";
 
@@ -120,7 +119,8 @@ namespace vm::jit {
 
 		CORE_DEV_LOG(
 			DVMDetails,
-			(printModule(new_module.get(), "compiled_function-after.llvm"), "Compiled function dumped")
+			(printModule(new_module.get(), "compiled_function-after.llvm"),
+		     "Compiled function dumped")
 		);
 
 		auto&                       lljit = *llvm_data.lljit_instance;

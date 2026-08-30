@@ -4,6 +4,8 @@
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <frontend/pst_parser/generic_query_key.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/errors.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <query_framework/query_int.hpp>
@@ -34,9 +36,10 @@ namespace compiler::helios::code {
 	 * building context or the `QueryHoutOfExpr` entry point.
 	 */
 	query::QResult<Box<code::Expr>> subExprFromPSTWithType(
-		query::Context&                                      ctx,
-		pst::AccessLocked<pst::ExprElement>                  element,
-		tsh::SymbolType<>                                    expected_type,
-		base::Optional<std::function<void(query::Context&)>> log_error = {}
+		query::Context&                     ctx,
+		pst::AccessLocked<pst::ExprElement> element,
+		tsh::SymbolType<>                   expected_type,
+		base::Optional<dia::StablePosition> coercion_expects_pos = {},
+		CoercionErrorOverrides              error_overrides      = {}
 	);
 }

@@ -3,7 +3,9 @@
 #include <base/types/ints.hpp>
 
 #include <cstddef>
+#include <expected>
 #include <span>
+#include <string>
 
 namespace vm::jit::cnp {
 
@@ -18,11 +20,11 @@ namespace vm::jit::cnp {
 			return *this;
 		}
 
-		static JitFuncMemory allocate(usize size);
+		static std::expected<JitFuncMemory, std::string> allocate(usize size);
 		~JitFuncMemory() noexcept;
 
-		void markExecutable();
-		void dump(const char* filename);
+		std::expected<void, std::string> markExecutable();
+		void                             dump(const char* filename);
 
 		[[nodiscard]] std::span<byte> span() const { return std::span{ addr, size }; }
 

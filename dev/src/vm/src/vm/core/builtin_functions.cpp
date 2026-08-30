@@ -15,18 +15,18 @@
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<Box<VmValue>>
-			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, IVMProcess& process, SafeVMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
+		base::Optional<Box<SafeVMValue>>
+			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, SafeVMProcess& process, SafeVMThread& thread, const std::vector<Box<SafeVMValue>>& args, std::index_sequence<Is...>) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
@@ -40,7 +40,7 @@ namespace vm::builtins {
 					"Type sizes do not match"
 				);
 
-				auto vm_value = process.createOwnedVmValue(vm_return_types.at(0));
+				auto vm_value = process.createOwnedVMValue(vm_return_types.at(0));
 
 				vm_value->writeBytes<Ret>(value);
 				return vm_value;
@@ -65,12 +65,12 @@ namespace vm::builtins {
 		 * be expensive we could go back to that approach.
 		 */
 		template<class Ret, class... FunArgs>
-		base::Optional<Box<VmValue>> callUnpackArgs(
+		base::Optional<Box<SafeVMValue>> callUnpackArgs(
 			Ret (*function)(SafeVMThread&, FunArgs...),
-			const std::vector<TypeCRef>&     vm_return_types,
-			IVMProcess&                      process,
-			SafeVMThread&                    thread,
-			const std::vector<Box<VmValue>>& args
+			const std::vector<TypeCRef>&         vm_return_types,
+			SafeVMProcess&                       process,
+			SafeVMThread&                        thread,
+			const std::vector<Box<SafeVMValue>>& args
 		) {
 			CORE_ASSERT(
 				sizeof...(FunArgs) == args.size(),
@@ -121,6 +121,13 @@ namespace vm::builtins {
 		auto return_value = thread.safe_process.getIO().getInput<i64>(thread);
 		thread.setProcessStatus(api::Running{});
 		return return_value;
+	}
+
+	i32 FunctionHandlers::builtinInputChar(SafeVMThread& thread) {
+		thread.setProcessStatus(api::Sleeping{});
+		const int c = thread.safe_process.getIO().getRawChar(thread);
+		thread.setProcessStatus(api::Running{});
+		return static_cast<i32>(c);
 	}
 
 	i64 FunctionHandlers::builtinOutputI64(SafeVMThread& thread, i64 arg) {
@@ -177,6 +184,17 @@ namespace vm::builtins {
 
 		auto str_data = block_data.stdString();
 		return std::stoll(str_data);
+	}
+
+	f64 FunctionHandlers::builtinStrtod(SafeVMThread& thread, Pointer ptr) {
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
+		auto block_data = thread.process_memory.requestBlockData(block_id);
+
+		// The block spans the whole allocated buffer, which may be larger than the string content.
+		// The content is NUL-terminated, so hand the raw pointer to `strtod` directly: it stops at
+		// the NUL and never reads the trailing (possibly uninitialized) bytes.
+		return std::strtod(reinterpret_cast<const char*>(block_data.getBegin()), nullptr);
 	}
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
@@ -245,6 +263,14 @@ namespace vm::builtins {
 	}
 
 	void FunctionHandlers::builtinDestroyMutex(SafeVMThread& thread, u64 mutex_id) {
+		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		// Destroying a still-held mutex is a program error. try_lock() never blocks and fails iff
+		// the mutex is currently locked (by this or any thread), so use it to detect and report
+		// the misuse instead of silently destroying a locked mutex (which also aborts at teardown
+		// on macOS). On the success path the mutex was free and we now own it, so release it.
+		if (!mutex->try_lock()) throw vm::exceptions::VMDestroyLockedMutexException{};
+		mutex->unlock();
+
 		if_opt_some(thread.safe_process.getDeadlockDetector(), d) d.clearMutexState(mutex_id);
 		thread.safe_process.getSynchronizationPrimitives().removeMutex(mutex_id);
 	}
@@ -315,38 +341,12 @@ namespace vm::builtins {
 		thread.safe_process.getSynchronizationPrimitives().removeCV(cv_id);
 	}
 
-	namespace {
-		// The VM side of the copy must stay within the pointed-to block.
-		void assertCopyWithinBlock(
-			const Pointer& ptr, u64 size, usize block_size, const char* builtin_name
-		) {
-			if (ptr.getOffset() > block_size || size > block_size - ptr.getOffset())
-				throw vm::exceptions::VMRuntimeException(
-					base::strConcat(builtin_name, ": copy region exceeds the pointed-to block")
-				);
-		}
-	}
-
-	void FunctionHandlers::builtinCptrRead(SafeVMThread& thread, u64 src, Pointer dst, u64 size) {
-		auto view = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
-		assertCopyWithinBlock(dst, size, view.size(), "builtin_cptr_read");
-		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
-		std::memcpy(view.getBegin() + dst.getOffset(), reinterpret_cast<const void*>(src), size);
-	}
-
-	void FunctionHandlers::builtinCptrWrite(SafeVMThread& thread, u64 dst, Pointer src, u64 size) {
-		auto view = thread.process_memory.getBlockViewUnsafe(src.getBlock());
-		assertCopyWithinBlock(src, size, view.size(), "builtin_cptr_write");
-		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
-		std::memcpy(reinterpret_cast<void*>(dst), view.getBegin() + src.getOffset(), size);
-	}
-
-	base::Optional<Box<VmValue>> callBuiltinFunction(
-		BuiltinFunctionID                id,
-		const std::vector<TypeCRef>&     result_types,
-		IVMProcess&                      process,
-		SafeVMThread&                    thread,
-		const std::vector<Box<VmValue>>& arguments
+	base::Optional<Box<SafeVMValue>> callBuiltinFunction(
+		BuiltinFunctionID                    id,
+		const std::vector<TypeCRef>&         result_types,
+		SafeVMProcess&                       process,
+		SafeVMThread&                        thread,
+		const std::vector<Box<SafeVMValue>>& arguments
 	) {
 		switch (id) {
 #define CASE_FUNC(ID_NAME)                                                               \
@@ -360,6 +360,7 @@ namespace vm::builtins {
 				CASE_FUNC,
 				Abort,
 				InputI64,
+				InputChar,
 				OutputI64,
 				OutputI32,
 				OutputChar,
@@ -368,6 +369,7 @@ namespace vm::builtins {
 				U64ToString,
 				I64ToString,
 				Stoi,
+				Strtod,
 				StartThread,
 				JoinThread,
 				CreateMutex,
@@ -378,32 +380,12 @@ namespace vm::builtins {
 				WaitCV,
 				NotifyCV,
 				NotifyAllCV,
-				DestroyCV,
-				CptrRead,
-				CptrWrite
+				DestroyCV
 			)
 
 
 		default:
 			CORE_PANIC("Invalid builtin function ID");
-		}
-	}
-
-	namespace {
-		// Shared verifier for the `cptr` copy builtins: (cptr, pointer-to-any-type, byte count).
-		base::Optional<std::string> verifyCptrCopyArgs(
-			const std::vector<CRef<code::valid_type::ValidType>>& arg_types
-		) {
-			if (arg_types.size() != 3) return "expected exactly three arguments";
-			if (!(arg_types[0]->isKind<code::valid_type::finalized::Opaque>()
-			      && arg_types[0]->getName() == base::StrID("cptr")))
-				return "first argument must be a `cptr`";
-			if (!arg_types[1]->isKind<code::valid_type::finalized::Pointer>())
-				return "second argument must be a pointer";
-			auto size_type = arg_types[2]->maybeGetKindAs<code::valid_type::finalized::Primitive>();
-			if (!size_type.has_value() || usize(size_type.value()->size) != 8)
-				return "third argument (byte count) must be an 8-byte primitive";
-			return {};
 		}
 	}
 
@@ -417,6 +399,11 @@ namespace vm::builtins {
 				BuiltinFunctionID::InputI64,
 				{ base::StrID("builtin_input_i64"),
 			      code::FuncSignature({ base::StrID("i64") }, {}) },
+			},
+			{
+				BuiltinFunctionID::InputChar,
+				{ base::StrID("builtin_input_char"),
+			      code::FuncSignature({ base::StrID("i32") }, {}) },
 			},
 			{
 				BuiltinFunctionID::OutputI64,
@@ -443,6 +430,15 @@ namespace vm::builtins {
 				{
 					base::StrID("builtin_stoi_pptr"),
 					code::FuncSignature({ base::StrID("i64") }, { base::StrID("ptr_string") }),
+				},
+			},
+			// `manyptr char` lowers to a pointer to a dynamic table of `i8`; the parsed value is
+			// an `f64`.
+			{
+				BuiltinFunctionID::Strtod,
+				{
+					base::StrID("strtod"),
+					code::FuncSignature({ base::StrID("f64") }, { base::StrID("ptr_dyntable_i8") }),
 				},
 			},
 			// `manyptr char` lowers to a pointer to a dynamic table of `i8`, and both `u64`
@@ -512,33 +508,9 @@ namespace vm::builtins {
 				{ base::StrID("builtin_destroy_cv"),
 			      code::FuncSignature({}, { base::StrID("condition_variable") }) },
 			},
-			{
-				BuiltinFunctionID::CptrRead,
-				{ base::StrID("builtin_cptr_read_pptr"),
-			      code::FuncSignature(
-					  {},
-					  { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM), base::StrID("i64") }
-				  ),
-			      &verifyCptrCopyArgs },
-			},
-			{
-				BuiltinFunctionID::CptrWrite,
-				{ base::StrID("builtin_cptr_write_pptr"),
-			      code::FuncSignature(
-					  {},
-					  { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM), base::StrID("i64") }
-				  ),
-			      &verifyCptrCopyArgs },
-			},
 		};
 
 		return &map;
-	}
-
-	base::Optional<BuiltinArgVerifier> getBuiltinArgVerifier(base::StrID name) {
-		auto id = getBuiltinFunctionID(name);
-		if (!id.has_value()) return {};
-		return getBuiltinFunctions()->at(id.value()).arg_verifier;
 	}
 
 	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name) {

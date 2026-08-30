@@ -5,7 +5,6 @@
 
 #include "chain_expr.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
@@ -20,8 +19,9 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/square_call_processing.hpp>
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
@@ -30,6 +30,7 @@
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/templates/templates.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -38,17 +39,160 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <ranges>
+
 namespace compiler::helios::code {
+
+	/**
+	 * This is temporary helper used before #3095.
+	 * It is written in a way that it can be used with minimal boilerplate with the current chain
+	 * chain expression processing code (as both chain expression processing and this function are
+	 * soon to be refactored)
+	 *
+	 * @TODO: #3095 remove it, move the relevant code to the handling of the new :{} PST node.
+	 *
+	 * @note Usage of this function is added only in few places for now, after #3095 the number of
+	 * required places to handle templates here will be much lower either way.
+	 *
+	 * @return QResult<base::Optional<SymID>> - the resulting symbol id of the baked template, or
+	 * empty if the template did not happen (with standard QResult semantics on top of it).
+	 */
+	template<typename T>
+	query::QResult<base::Optional<SymID>> transformTemplateBake(
+		query::Context& query_ctx,
+		SymID           template_sym_id,
+		pst::Access<T>  element_with_template_specifier
+	) requires requires(T t) { t.getTemplateSpecifier(); } {
+		if (not element_with_template_specifier->getTemplateSpecifier().has_value())
+			return base::Optional<SymID>{};  // no template specifier, no bake
+
+		if (kind(template_sym_id) != SymbolKind::Template) {
+			query_ctx.logInt(makeBox<dia::PlaceholderError>(
+				"template bake called on non-template symbol",
+				element_with_template_specifier->getStablePosition()
+			));
+			return query::Failed();
+		}
+
+		auto template_specifier = element_with_template_specifier->getTemplateSpecifier().value();
+		auto template_specifier_dc
+			= template_specifier.template dynamicCast<pst::expr::TemplateSpecifier>().unlock(
+				query_ctx
+			);
+
+		templates::TemplateBakeKey key{
+			.template_sym_id    = template_sym_id,
+			.template_arguments = {},
+		};
+
+		auto template_signature_qr
+			= templates::getTemplateDeclarationSignature(query_ctx, template_sym_id);
+		if (template_signature_qr.hasFailed()) return query::Failed();
+		const auto& template_signature = template_signature_qr.valueOrPanic();
+
+		auto argument_list = template_specifier_dc->getArgumentList().unlock(query_ctx);
+
+		if (template_signature.parameters.size() != argument_list->size()) {
+			query_ctx.logInt(makeBox<dia::PlaceholderError>(
+				"argument count does not match template parameter count",
+				element_with_template_specifier->getStablePosition()
+			));
+			return query::Failed();
+		}
+
+		for (const auto& [arg, parameter]:
+		     std::views::zip(*argument_list, template_signature.parameters)) {
+			auto arg_unlocked    = arg.unlock(query_ctx);
+			auto arg_expr_result = subExprFromPST(query_ctx, arg_unlocked->getExpr());
+
+			if (arg_expr_result.hasFailed()) return query::Failed();
+			auto arg_expr                = std::move(arg_expr_result).valueOrPanic();
+			auto coerced_arg_expr_result = coerceFromBox(
+				query_ctx, std::move(arg_expr), parameter.type, arg_unlocked->getStablePosition()
+			);
+			if (coerced_arg_expr_result.empty()) return query::Failed();
+
+			auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>(
+				{ coerced_arg_expr_result.value().ref() }
+			);
+
+			if (ctv.hasFailed()) return query::Failed();
+			auto ctv_value = std::move(ctv).valueOrPanic();
+
+			key.template_arguments.emplace_back(std::move(ctv_value));
+		}
+
+		auto resulting_symbol = query_ctx.query<helios::templates::QueryBakeTemplateSymID>({ key });
+
+		if (resulting_symbol.hasFailed()) return query::Failed();
+		return resulting_symbol.valueOrPanic();
+	}
+
+	/**
+	 * This is temporary helper used before #3095 and before #3112
+	 *
+	 * @TODO: #3095 remove or adjust it, move the relevant code to the handling of the new :{} PST
+	 * node.
+	 */
+	template<typename T>
+	query::QResult<base::Optional<SymID>> transformTemplateBakeLookupResult(
+		query::Context&    query_ctx,
+		CRef<LookupResult> lookup_result,
+		pst::Access<T>     element_with_template_specifier
+	) requires requires(T t) { t.getTemplateSpecifier(); } {
+		if (not element_with_template_specifier->getTemplateSpecifier().has_value())
+			return base::Optional<SymID>{};  // no template specifier, no bake
+
+		auto as_single = lookup_result->getAsSingle();
+
+		if (as_single.hasFailed()) return query::Failed();
+
+		variant_match(as_single.valueOrPanic()) {
+			variant_case(SymbolList, symbol_list) {
+				CORE_ASSERT(
+					not symbol_list.empty(), "Invalid state: empty symbol list in lookup result"
+				);
+
+				// @TODO: #1412 fix dealias, this discards all aliases and takes the last symbol in
+				// the list
+				auto template_sym_id = symbol_list.list.back();
+				return transformTemplateBake(
+					query_ctx, template_sym_id, element_with_template_specifier
+				);
+			}
+
+			variant_case(errors::Ambiguity, _) {
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
+					"template bake called on ambiguous lookup result",
+					element_with_template_specifier->getStablePosition()
+				));
+				return query::Failed();
+			}
+
+			variant_case(errors::SymbolNotFound, _) {
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
+					"Symbol not found in lookup",
+					element_with_template_specifier->getStablePosition()
+				));
+				return query::Failed();
+			}
+
+			variant_default { CORE_PANIC("Invalid state: unexpected variant in lookup result"); }
+		}
+
+		CORE_UNREACHABLE();
+	}
 
 	/**
 	 * @brief This error message is used when there are both function symbols and non-function valid
 	 * symbols found during the lookup (like function and class constructor with the same name).
 	 */
-	class CallInvalidCallablesError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class CallInvalidCallablesError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -56,8 +200,8 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		class InvalidCallableReferenceDocs final: public dia_int::MessageBase {
-			dia_int::Metadata getMetadata() const final {
+		class InvalidCallableReferenceDocs final: public dia::MessageBase {
+			dia::Metadata getMetadata() const final {
 				return { .template_type = "message",
 					     .type          = "docs",
 					     .family        = "expressions",
@@ -68,8 +212,8 @@ namespace compiler::helios::code {
 			InvalidCallableReferenceDocs(): MessageBase() {}
 		};
 
-		class CandidateNote final: public dia_int::MessageWithCodeFragmentAndCause {
-			dia_int::Metadata getMetadata() const final {
+		class CandidateNote final: public dia::MessageWithCodeFragmentAndCause {
+			dia::Metadata getMetadata() const final {
 				return { .template_type = "message",
 					     .type          = "note",
 					     .family        = "type_check",
@@ -77,11 +221,11 @@ namespace compiler::helios::code {
 			}
 
 		public:
-			CandidateNote(dia_int::StablePosition source_position):
+			CandidateNote(dia::StablePosition source_position):
 				  MessageWithCodeFragmentAndCause(source_position) {}
 		};
 
-		CallInvalidCallablesError(dia_int::StablePosition source_position):
+		CallInvalidCallablesError(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addAttachedMessage(makeBox<InvalidCallableReferenceDocs>());
 		}
@@ -308,7 +452,7 @@ namespace compiler::helios::code {
 				return std::vector{ ctor.declaration->original_symbol };
 			}
 			default: {
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat("Round Call '()' operator on symbol: ", name(symbol)),
 					stmt(query_ctx, symbol).value()->getStablePosition()
 				));
@@ -316,6 +460,34 @@ namespace compiler::helios::code {
 			}
 			}
 			CORE_UNREACHABLE();
+		}
+
+		/**
+		 * @brief Bakes the callee if it carries a template specifier, then resolves the result
+		 * into callable candidates.
+		 *
+		 * @param lookup_result The result of the lookup for the callee.
+		 * @param element_with_template_specifier The PST element naming the callee.
+		 * @return Candidates after baking and resolution of functions vs call operators.
+		 *
+		 * @TODO: #3095 fold into the handling of the new :{} PST node.
+		 */
+		template<typename T>
+		[[nodiscard]]
+		query::QResult<std::vector<SymID>> getCallableCandidatesWithBake(
+			CRef<LookupResult> lookup_result, pst::Access<T> element_with_template_specifier
+		) const {
+			UNPACK_QRESULT(
+				auto maybe_bake =,
+				transformTemplateBakeLookupResult(
+					query_ctx, lookup_result, element_with_template_specifier
+				)
+			);
+
+			// @TODO: #1412 fix dealias
+			if (maybe_bake.has_value())
+				return getCallableCandidates(std::vector{ maybe_bake.value() });
+			return getCallableCandidates(lookup_result->leaves);
 		}
 
 		// =============================== MAIN PROCESSING FUNCTIONS ===============================
@@ -337,9 +509,10 @@ namespace compiler::helios::code {
 				const auto lookup_qresult
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
-				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				UNPACK_QRESULT(
+					const auto& callees =, getCallableCandidatesWithBake(lookup_result, ident)
+				);
 
 				auto res = processFunctionOrMethodNoSelfCall(query_ctx, callees, ident, call_expr);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
@@ -364,13 +537,13 @@ namespace compiler::helios::code {
 					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
 					return ChainState::ofExpr(std::move(expr));
 				}
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					"This symbol cannot be indexed.", call_expr->getStablePosition()
 				));
 				return query::Failed();
 			}
 			default: {
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
@@ -385,9 +558,10 @@ namespace compiler::helios::code {
 		 * This function has no previous state argument so it is called as a first element in the
 		 * chain.
 		 * It is when we have keyword literal followed by a call expression. This currently includes:
-		 * - `i64(42)` - used for explicit type casts.
 		 * - `i64[42]` - used for static array type creation.
-		 * - `List[i64]` - for dynamic array type creation.
+		 *
+		 * Note that `i64(42)` is no longer a type cast - the `as` operator (`42 as i64`) is the
+		 * only supported explicit conversion syntax.
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
@@ -398,32 +572,16 @@ namespace compiler::helios::code {
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				if (auto literal_type_expr = dynamic_cast<const LiteralTypeExpr*>(hout_expr.get())) {
-					auto args = call_expr->getArgs().unlock(query_ctx);
-					if (args->size() != 1) {
-						query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-							"Type cast must have exactly one argument.",
-							call_expr->getStablePosition()
-						));
-						return query::Failed();
-					}
-
-					auto arg_access      = (*args->begin()).unlock(query_ctx);
-					auto arg_expr_result = subExprFromPST(
-						query_ctx, arg_access->getArg().unlock(query_ctx)->getExpr()
-					);
-					UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
-
-					auto cast_expr = makeBox<CastExpr>(
-						query_ctx,
-						multiplePstOriginOrdered({ keyword, call_expr }),
-						std::move(arg_expr),
-						literal_type_expr->value_type
-					);
-					return ChainState::ofExpr(std::move(cast_expr));
+				if (dynamic_cast<const LiteralTypeExpr*>(hout_expr.get()) != nullptr) {
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
+						"A type cannot be called. Explicit conversions use the `as` operator.",
+						call_expr->getStablePosition(),
+						"Write `value as Type` instead of `Type(value)`."
+					));
+					return query::Failed();
 				}
 
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Unsupported keyword literal in call expression.", call_expr->getStablePosition()
 				));
 				break;
@@ -435,7 +593,7 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default:
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
@@ -463,6 +621,16 @@ namespace compiler::helios::code {
 			);
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
+			auto mock_symbol = sym_list.back();
+
+			UNPACK_QRESULT(
+				auto maybe_template_bake =, transformTemplateBake(query_ctx, mock_symbol, ident)
+			);
+
+			if_opt_some(maybe_template_bake, template_bake) {
+				return processNamespaceOrValue(template_bake, pstOrigin(ident), ident);
+			}
+
 			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
 		}
 
@@ -511,7 +679,7 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
@@ -525,10 +693,10 @@ namespace compiler::helios::code {
 		/**
 		 * Call on the namespace, for example Namespace()
 		 */
-		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr)
-			-> query::QResult<ChainState> {
-			(void) namespace_like_symbol;
-			query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+		auto processPSTExpr(
+			[[maybe_unused]] SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr
+		) -> query::QResult<ChainState> {
+			query_ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat("Namespace is not callable"), call_expr->getStablePosition()
 			));
 			return query::Failed();
@@ -579,14 +747,14 @@ namespace compiler::helios::code {
 						result_sequence.push_back(std::move(current_expr));
 						return ChainState::ofNamespaceLike(sym, pstOrigin(expr_access));
 					} else if (kind(sym) == SymbolKind::Method) {
-						query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 							"Handling of access to method without a call is not implemented yet"
 							"argument at compile time",
 							current_expr->origin.getStablePosition()
 						));
 						return query::Failed();
 					}
-					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Unsupported symbol kind in type lookup for symbol: ",
 							prettyDebugPrint(sym, query_ctx)
@@ -599,7 +767,7 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 				variant_case_novalue(errors::Ambiguity) {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
 						"Accessed value is ambiguous.",
 						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
 							query_ctx
@@ -613,7 +781,7 @@ namespace compiler::helios::code {
 					// obj.selectDynamic("a"). See Scala's Dynamic:
 					// https://www.scala-lang.org/api/current/scala/Dynamic.html
 
-					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
 						"Accessed value not found.",
 						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
 							query_ctx
@@ -699,7 +867,7 @@ namespace compiler::helios::code {
 				return query::Failed();
 			}
 			default: {
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
@@ -728,9 +896,10 @@ namespace compiler::helios::code {
 					= HInterface::ofSymbol(namespace_like_symbol)
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
-				// @TODO: #1412 fix dealias
-				auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				UNPACK_QRESULT(
+					const auto& callees =, getCallableCandidatesWithBake(lookup_result, expr_access)
+				);
 
 				auto expr_result
 					= processFunctionOrMethodNoSelfCall(query_ctx, callees, expr_access, call_expr);
@@ -760,13 +929,13 @@ namespace compiler::helios::code {
 				}
 
 
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					"This symbol cannot be indexed", call_expr->getStablePosition()
 				));
 				return query::Failed();
 			}
 			default: {
-				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				query_ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
@@ -815,8 +984,11 @@ namespace compiler::helios::code {
 				UNPACK_QRESULT_MOVE(base::Box<Expr> field_expr =, expr);
 				return ChainState::ofExpr(std::move(field_expr));
 			}
+			case SymbolKind::Template: {
+				return ChainState::ofNamespaceLike(symbol, pst_element_origin);
+			}
 			default:
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"Unsupported kind of the symbol `", name(symbol), "` in chain expression."
 					),
@@ -851,7 +1023,7 @@ namespace compiler::helios::code {
 			auto fields = self_type.getInterface(query_ctx)->getFieldsView();
 			if (std::ranges::find(fields, field_symbol, &tsh::InterfaceElement::getSymbol)
 			    == fields.end()) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"No such field found in the interface of prefix expression.",
 					pst_elem->getStablePosition()
 				));
@@ -897,14 +1069,14 @@ namespace compiler::helios::code {
 					variant_match(sym_list) {
 						variant_case(SymbolList, result) { return result.back(); }
 						variant_case_novalue(errors::SymbolNotFound) {
-							ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							ctx.logInt(makeBox<dia::PlaceholderError>(
 								"Method call without `self` argument.",
 								call_expr->getStablePosition()
 							));
 							return query::Failed();
 						}
 						variant_case_novalue(errors::Ambiguity) {
-							ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							ctx.logInt(makeBox<dia::PlaceholderError>(
 								"Multiple candidates for `self` argument found which should be "
 								"impossible.",
 								call_expr->getStablePosition()
@@ -1072,7 +1244,7 @@ namespace compiler::helios::code {
 				}
 
 				else {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					query_ctx.logInt(makeBox<dia::PlaceholderError>(
 						"Expected access or call expression in chain expression",
 						currentElem().value()->getStablePosition()
 					));
@@ -1093,7 +1265,7 @@ namespace compiler::helios::code {
 			}
 
 			if (result_sequence.empty()) {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				query_ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Chain expression resulted in empty expression sequence.",
 					chain_elements[0].unlock(query_ctx)->getStablePosition()
 				));

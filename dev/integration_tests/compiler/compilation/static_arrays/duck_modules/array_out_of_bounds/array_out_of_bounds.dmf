@@ -1,8 +1,0 @@
-import core.builtins.*;
-
-fun main() -> i64 = {
-    var arr: i64[3];
-    builtin_output_i64(arr[4]);
-
-    return 0;
-}

@@ -4,8 +4,14 @@
 # so cases can run concurrently and never dirty the source tree.
 Env:
     DIT_TMP_DIR: "@{new_tmp_dir}"
+    DUCKC_STD_ARTIFACTS_PATH: "echo @{case_std_artifacts}"
 
 case_build: "$DIT_TMP_DIR/build"
+# Private copy of the shared warm std artifacts (see the root testconfig).
+# duckc rewrites the artifacts directory on exit (#3169), so concurrent cases
+# must not point at the shared one.
+case_std_artifacts: "$DIT_TMP_DIR/std_artifacts"
+copy_std_artifacts: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/null || true"
 
 backend: "nobackend"
 # If set to "true" the produced duckling executable will be run with valgrind and checked for leaks.
@@ -13,6 +19,7 @@ valgrind: "false"
 
 compile_dvm_options: ""
 compile_llvm_options: ""
+std_artifacts_path_flag: "--custom-std-artifacts-path @{case_std_artifacts}"
 # Runs an extra deterministic compile check before normal compile_package.
 # You can override this to "false" in any subtree/test when duplication-based checks fail
 # for test-specific reasons (for example repeated globals or intentionally conflicting symbols).
@@ -28,12 +35,11 @@ compare_runs_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/
 compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
 compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
 
-compile_dvm_backend_cmd: "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_dvm_options} --dvm-backend"
-compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_llvm_options}"
+compile_dvm_backend_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend && @{compile_dvm_backend_deterministically_cmd}"
+compile_llvm_backend_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_llvm_options} && @{compile_llvm_backend_deterministically_cmd}"
 
-# "compile only" commands used by the all backend (determinism checks run separately before these).
-compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_dvm_options} --dvm-backend"
-compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_llvm_options}"
+compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend"
+compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_llvm_options}"
 
 compiled_to_llvm: "@{case_build}/package_llvm.exe"
 compiled_to_dvm: "@{case_build}/package_dvm.dbc"
@@ -42,12 +48,12 @@ compiled_to_dvm: "@{case_build}/package_dvm.dbc"
 PreNode: ""
 
 PostCase: "@{cleanup_tmp_env}"
-PreCase: "mkdir -p @{case_build};
+PreCase: "mkdir -p @{case_build}; @{copy_std_artifacts};
   case '@{backend}' in
     dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
     llvm)      @{compile_llvm_backend_cmd}                                                                               ;;
-    all)       @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd} &&
-               @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd}                                                      ;;
+    all)       @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd} &&
+               @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd}           ;;
     nobackend) echo 'Backend undefined'; exit 1                                                                          ;;
     *)         echo 'Unknown backend';   exit 1                                                                          ;;
   esac;"
@@ -72,43 +78,43 @@ Run: "
   esac;"
 
 SubDirs:
-  #################################
-  #         WORKING FULLY
-  #################################
-  - comparison_operators_on_integers
-  - constants
-  - ffi
-  - float_literals
-  - function_call
-  - namespace_declaration
-  - simple_ifs
-  - unit_type
-  #################################
-  #         ONLY LLVM WORKING
-  #################################
-  - simple_cffi
-  - coercions # (requires `builtin_output_f64` in DVM)
-  #################################
-  #         ONLY DVM WORKING
-  #################################
-  # very funny
-  #################################
-  #         NOT WORKING
-  # this is mainly due to the features not being implemented yet
-  #################################
-  # - arithmetic_operators_on_integers (requires exponentiation)
-  # - overloading (requires operator names, and, in one case, string `==` comparison)
-  # - primitive_integers (requires byte type)
-  # - type_deduction (requires deduction for fields with initializers)
-  # - function_definition (requires static variables in functions)
-  # - let_simple_declaration (requires proper shadowing handling)
-  # - alias_using_declaration (requires linked scopes for functions)
-  # - boolean_operators (requires short-circuit evaluation)
-  # - variable_simple_declaration (requires i128 and u128, also a VM bugfix)
-  # - io_builtins (requires format strings and a `print` function)
-  # - while_loops (requires break statements, DVM cannot perform 100M loop iters in one second)
-  # - primitive_booleans (requires xor)
-  # - class_declaration (requires DVM backend determinism)
-  # - simple_chars (requires strings in DVM, and -(char, u8) operator — reconsider adding it.)
-  # - simple_strings (requires string access operator and format strings)
-  # - first_class_typing (requires better constructor/method resolution, and proper tuple handling in compile-time)
+    #################################
+    #         WORKING FULLY
+    #################################
+    - class_declaration
+    - comparison_operators_on_integers
+    - constants
+    - ffi
+    - float_literals
+    - function_call
+    - namespace_declaration
+    - simple_ifs
+    - unit_type
+    #################################
+    #         ONLY LLVM WORKING
+    #################################
+    - simple_cffi # (only variadic not working)
+    - coercions # (requires `builtin_output_f64` in DVM)
+    #################################
+    #         NOT WORKING
+    # These are blocked on language features that are missing on BOTH backends -
+    # every test below fails identically for llvm and for dvm, so none of them is
+    # waiting on the DVM. The exceptions are called out explicitly.
+    #################################
+    # - alias_using_declaration (requires linked scopes for functions)
+    # - arithmetic_operators_on_integers (requires exponentiation and u64 literal coercion;
+    #   its `arithmetic_operators_test` alone passes on both backends)
+    # - boolean_operators (both backends agree, but the expected output of both tests is stale)
+    # - first_class_typing (requires better constructor/method resolution, and proper tuple handling in compile-time)
+    # - function_definition (requires static variables in functions)
+    # - io_builtins (requires format strings and a `print` function)
+    # - let_simple_declaration (requires proper shadowing handling)
+    # - overloading (requires operator names, and, in one case, string `==` comparison)
+    # - primitive_booleans (requires xor)
+    # - primitive_integers (requires byte type)
+    # - simple_chars (requires -(char, u8) operator - reconsider adding it)
+    # - simple_strings (requires string access operator)
+    # - type_deduction (requires deduction for fields with initializers)
+    # - variable_simple_declaration (requires i128 and u128, also a VM bugfix)
+    # - while_loops (requires break statements; its `loops_performance` case is native only,
+    #   the DVM cannot run 100M loop iterations within the timeout)

@@ -42,6 +42,7 @@ namespace vm::jit {
 			case vm::low::cf::OutEdges::Kind::Default:
 				return SpecialStencils::Jump;
 			}
+			return std::nullopt;
 		};
 
 		auto get_opfunc_size = [&](u64 opcode) -> u64 { return stencilsData().at(opcode).size; };
@@ -55,15 +56,16 @@ namespace vm::jit {
 			for (const MicroInstruction& instr: block.instructions(bc)) {
 				auto opcode = getInstructionOpcode(instr);
 				if (low::isOpcodeNonExecutable(opcode)) continue;
-				current_offset += get_opfunc_size(transform_opcode((opcode)));
+				current_offset += get_opfunc_size(transform_opcode(opcode));
 			}
 
 			if (auto stencil = choose_edge(block))
 				current_offset += get_opfunc_size(std::to_underlying(stencil.value()));
 		}
 
-
-		auto  memory = JitFuncMemory::allocate(block_offsets.back());
+		auto memory_result = JitFuncMemory::allocate(block_offsets.back());
+		if (!memory_result) CORE_PANIC(memory_result.error());
+		auto  memory = std::move(*memory_result);
 		byte* next   = memory.addr;
 
 		auto patch_stencil = [&](u64 opcode, auto func) {
@@ -147,9 +149,10 @@ namespace vm::jit {
 
 		CORE_DEV_LOG(
 			DVMDetails,
-			(memory.dump("compiled_function.cnp"), "Compiled function dumped to: compiled_function.cnp")
+			(memory.dump("compiled_function.cnp"),
+		     "Compiled function dumped to: compiled_function.cnp")
 		);
-		memory.markExecutable();
+		(void) memory.markExecutable();
 		return memory;
 	}
 }

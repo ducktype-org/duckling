@@ -1,0 +1,17 @@
+# Tests for variant types
+Tests:
+  variant_match:
+    Cases:
+      all:
+        backend: all
+        TimeOut: 3 # 1 second is often not enough on runners
+        Output:
+          String: ""
+        ExitCode: 0
+      llvm_valgrind:
+        backend: llvm
+        valgrind: "true"
+        TimeOut: 3 # 1 second is often not enough on runners
+        Output:
+          String: ""
+        ExitCode: 0

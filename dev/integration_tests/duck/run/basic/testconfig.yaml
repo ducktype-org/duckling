@@ -1,0 +1,26 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  # @TODO: #2920 This shouldn't be needed (manually fixup return type).
+  echo @{default-src} > foo/src/src.dk
+  echo "profiles:
+    dvm:
+      dvm-bytecode: true" >> foo/quackconfig.yaml
+Tests:
+  basic:
+    Description: can run a new project, and expands profiles
+    Cases:
+      dev-42:
+        default-src-rc: 42
+        test-cmd: duck -C foo run
+        ExitCode: 42
+      dvm-42:
+        default-src-rc: 42
+        test-cmd: duck -C foo run --profile=dvm
+        ExitCode: 42
+      dev-0:
+        test-cmd: duck -C foo run
+        ExitCode: 0
+      dvm-0:
+        test-cmd: duck -C foo run --profile=dvm
+        ExitCode: 0

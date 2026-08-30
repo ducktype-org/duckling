@@ -81,6 +81,13 @@ namespace compiler::driver {
 			 */
 			std::variant<NoStd, DefaultStd, CustomStd> std_lib_type = NoStd{};
 
+			/**
+			 * If a value is present, do not recompile the standard library
+			 * and try to use the compiled packages from this path.
+			 * @note The path should point to valid compiler artifacts location
+			 */
+			base::Optional<fs::FilePath> std_artifacts_path = {};
+
 			[[nodiscard]] bool stdActive() const { return not base::holds<NoStd>(std_lib_type); }
 		};
 
@@ -105,7 +112,11 @@ namespace compiler::driver {
 			/**
 			 * Options only supported on DVM backend.
 			 */
-			// Empty for now...
+
+			/**
+			 * @brief The libraries that needs to be loaded by the VM to run the code.
+			 */
+			std::vector<std::string> dvm_shared_libraries;
 		};
 	}
 
@@ -153,7 +164,7 @@ namespace compiler::driver {
 		};
 
 		/**
-		 * Script compilation mode for .ds files.
+		 * Script compilation mode for .dks files.
 		 *
 		 * Compiles a script top-to-bottom (like REPL statements executed in sequence),
 		 * but produces a single persistent artifact (.dbc or native executable)

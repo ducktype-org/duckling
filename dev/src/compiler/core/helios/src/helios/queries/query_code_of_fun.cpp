@@ -3,6 +3,7 @@
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/destructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -11,6 +12,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/repl_utils/repl_queries.hpp>
 #include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -23,7 +25,6 @@
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
-#include <helios_private/hout_creation/definition_generation/list_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -138,6 +139,15 @@ namespace compiler::helios {
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
 
+			void visitDestructor(pst::Access<pst::Destructor> stmt) final {
+				// declaration:
+				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
+
+				// body: a destructor body is always a code block
+				auto output_body = compileCodeOfCodeBlock(ctx, stmt->getBody(), decl.return_type);
+				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
+			}
+
 			// Validates a user-defined copy constructor's source parameter. The copy
 			// constructor must declare exactly one parameter, which must be a constant reference
 			// to its own class.
@@ -151,7 +161,7 @@ namespace compiler::helios {
 				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
 
 				if (decl.parameters.size() != 1) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						"A copy constructor must declare exactly one parameter: a reference to "
 						"the object being copied.",
 						params_source
@@ -161,16 +171,17 @@ namespace compiler::helios {
 
 				const auto other_type   = decl.parameters.at(0).type;
 				const bool is_reference = other_type.getRefKind() == tsh::ReferenceKind::Ref;
-				const bool is_const     = other_type.getMutability() == tsh::Mutability::Immutable;
 				const bool is_matching_class
 					= other_type.getType().getKind() == tsh::Kind::Class
 				   && other_type.getType().as<tsh::ClassAbstractType>().getSymbol()
 				          == class_type.getSymbol();
-				if (!is_reference || !is_matching_class || !is_const) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				// @TODO: #2104 Require the reference to be `const` once `const ref T` actually
+				// resolves to an immutable reference.
+				if (!is_reference || !is_matching_class) {
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
-							"A copy constructor's parameter must be a constant reference to "
-							"its own class `",
+							"A copy constructor's parameter must be a reference to its own "
+							"class `",
 							name(class_type.getSymbol()),
 							"`."
 						),
@@ -259,12 +270,14 @@ namespace compiler::helios {
 					case defgen::Method::Kind::LengthMethod:
 						return ctx.query<defgen::QueryLengthMethod>(method.owner_type)
 						    ->valueOrThrow();
-					case defgen::Method::Kind::Push:
-						return ctx.query<defgen::QueryPushMethod>(method.owner_type)->valueOrThrow();
-					case defgen::Method::Kind::Pop:
-						return ctx.query<defgen::QueryPopMethod>(method.owner_type)->valueOrThrow();
 					}
 					CORE_UNREACHABLE();
+				}
+				variant_case(defgen::BuiltinTemplatedSymbol, symbol_data) {
+					return getBuiltinImpl(ctx, key, symbol_data.getBuiltinKind());
+				}
+				variant_case(defgen::ReplInputWrapper, input) {
+					return repl::getReplInputFunction(ctx, input);
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(

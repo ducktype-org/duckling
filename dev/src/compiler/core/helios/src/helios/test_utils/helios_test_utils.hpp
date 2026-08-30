@@ -3,7 +3,7 @@
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <frontend/module_tree/module_id.hpp>
-#include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
+#include <helios/hout/elements/expr.hpp>  // @TODO: #404 relax this dependency, just expr is needed
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
@@ -20,6 +20,14 @@ namespace compiler::helios::test_utils {
 	 * @return The module's ModuleID and ScopeID.
 	 */
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path);
+
+	/**
+	 * Get the ScopeID of the main file of a module that was registered as a package (e.g. via the
+	 * driver test utils), so that its `import`s of the standard library resolve.
+	 * @param module The module's ModuleID.
+	 * @return The module's main-file root ScopeID.
+	 */
+	ScopeID getModuleScope(frontend::ModuleID module);
 
 	/**
 	 * Get the SymIDs of all symbols in a chain in a given scope.

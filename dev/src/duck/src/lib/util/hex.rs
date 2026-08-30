@@ -42,7 +42,7 @@ fn format_hex(hex: u8) -> char {
         13 => 'd',
         14 => 'e',
         15 => 'f',
-        _ => unreachable!("it's a hex value"),
+        _ => unreachable!("`{hex}` is not a hex value?"),
     }
 }
 

@@ -1,3 +1,0 @@
-import core.builtins.*;
-
-builtin_output_i64(40 + 2);

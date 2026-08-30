@@ -14,6 +14,7 @@
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/loader/compiler/safe/safe_compiler.hpp>
 #include <vm/loader/loader.hpp>
 
@@ -31,8 +32,8 @@ namespace vm {
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
 	class SafeVMProcess final: public IVMProcess {
-		friend class VmValue;
-		friend class VMValueRef;
+		friend class SafeVMValue;
+		friend class SafeVMValueRef;
 
 	private:
 		std::shared_mutex rw_global;
@@ -64,11 +65,11 @@ namespace vm {
 #endif
 
 		/**
-		 * @brief Storage for all VmValues which belong to this process.
-		 * @note Lifetime of these VmValues is controlled by this process. They will be destructed
+		 * @brief Storage for all VMValues which belong to this process.
+		 * @note Lifetime of these VMValues is controlled by this process. They will be destructed
 		 * when process is deinitialized.
 		 */
-		std::vector<Box<VmValue>> owned_vm_values;
+		std::vector<Box<SafeVMValue>> owned_vm_values;
 
 		/**
 		 * @brief Pool of threads in this process.
@@ -122,12 +123,17 @@ namespace vm {
 
 		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
-		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
+		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
+			api::ThreadID thread_id, base::Optional<usize> frame_idx
 		) override;
 
 		void notifyPausedVMThread(api::ThreadID thread_id) override;
 
 		void waitForBreakpoint() override;
+
+		std::expected<api::Response, api::ApiError> setExecutionConfig(
+			const api::ExecutionConfig& config
+		) override;
 
 		std::expected<api::Response, api::ApiError> getNumberOfCurrentStackFrames(
 			api::ThreadID thread_id
@@ -191,13 +197,33 @@ namespace vm {
 
 		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
 
-		Ref<VmValue> createVmValue(TypeCRef type) override;
+		Ref<IVMValue> createVMValue(code::valid_type::ValidTypeID type_id) override;
 
-		Ref<VmValue> createVmValue(TypeCRef type, Pointer src) override;
+		Box<IVMValue> createOwnedVMValue(code::valid_type::ValidTypeID type_id) override;
 
-		Box<VmValue> createOwnedVmValue(TypeCRef type) override;
+		/**
+		 * @brief Creates an empty, process-owned SafeVMValue from safe type metadata.
+		 * Safe-VM-internal counterpart of the interface factory.
+		 */
+		Ref<SafeVMValue> createVMValue(TypeCRef type);
 
-		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) override;
+		/**
+		 * @brief Creates a process-owned SafeVMValue from safe type metadata, filled with the
+		 * bytes pointed to by `src`. Safe-VM-internal only.
+		 */
+		Ref<SafeVMValue> createVMValue(TypeCRef type, Pointer src);
+
+		/**
+		 * @brief Creates an empty, caller-owned SafeVMValue from safe type metadata.
+		 * Safe-VM-internal counterpart of the interface factory.
+		 */
+		Box<SafeVMValue> createOwnedVMValue(TypeCRef type);
+
+		/**
+		 * @brief Creates a caller-owned SafeVMValue from safe type metadata, filled with the
+		 * bytes pointed to by `src`. Safe-VM-internal only.
+		 */
+		Box<SafeVMValue> createOwnedVMValue(TypeCRef type, Pointer src);
 
 		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
 
