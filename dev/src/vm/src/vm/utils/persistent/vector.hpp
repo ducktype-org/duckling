@@ -1,14 +1,17 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
+#include <base/types/ints.hpp>
 
 #include <string_id/string_id.hpp>
 
 #include <vm/utils/bijective_map.hpp>
 #include <vm/utils/persistent/memory.hpp>
 
+#include <functional>
 #include <stdexcept>
 #include <vector>
 
@@ -53,14 +56,16 @@ namespace vm::persistent {
 		 * @return The corresponding memory state.
 		 */
 		MemoryStateID validateState(VectorStateID vec_state) const {
-			const auto  state = toMemState(vec_state);
-			const usize size  = inner.size(state);
-			const auto [l, r] = inner.getRangeOf(state);
+			const auto mem_state = toMemState(vec_state);
+			if (!inner.knows(mem_state)) throw std::invalid_argument("unknown vector state");
+
+			const usize size  = inner.size(mem_state);
+			const auto [l, r] = inner.getRangeOf(mem_state);
 
 			CORE_ASSERT(r == size, "Size of vector isn't consistent");
 			CORE_ASSERT(l == 0, "left bound starts always on 0");
 
-			return state;
+			return mem_state;
 		}
 
 		/**
@@ -160,6 +165,7 @@ namespace vm::persistent {
 		 * @brief Returns a state containing the first `pref_size` elements.
 		 * @note `pref_size` must not exceed the size of the vector.
 		 */
+		[[nodiscard]]
 		VectorStateID getPrefix(VectorStateID state_id, usize pref_size) {
 			const auto state = validateState(state_id);
 			const auto size  = inner.size(state);
@@ -176,6 +182,7 @@ namespace vm::persistent {
 		 * @brief Returns a state with values removed from the end of the vector.
 		 * @note The number of values to remove must not exceed the size of the vector.
 		 */
+		[[nodiscard]]
 		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
 			const auto state = validateState(state_id);
 			const auto size  = inner.size(state);

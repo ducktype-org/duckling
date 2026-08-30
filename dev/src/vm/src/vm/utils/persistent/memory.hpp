@@ -1,6 +1,9 @@
 #pragma once
 
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/utils/bijective_map.hpp>
 #include <vm/utils/persistent/tree.hpp>
@@ -100,6 +103,8 @@ namespace vm::persistent {
 		}
 
 	public:
+		bool knows(MemoryStateID state) const { return inner.knows(fromState(state)); }
+
 		using idxT = detail::SegmentTree::idxT;
 
 		/**
@@ -115,6 +120,7 @@ namespace vm::persistent {
 		/**
 		 * @brief Returns a path to an index in a memory state.
 		 */
+		[[nodiscard]]
 		base::Optional<Path> getPathTo(
 			MemoryStateID state, usize idx, base::Optional<Dir> opt_dir = std::nullopt
 		) const {
@@ -126,6 +132,7 @@ namespace vm::persistent {
 		constexpr static idxT          IDX_END = detail::SegmentTree::IDX_END;
 
 		using ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;
+
 		inline const static ConflictPolicy DEFAULT_CONFLICT_POLICY
 			= ConflictPolicy{ [](usize, usize, usize) -> base::Optional<usize> {
 				  throw std::invalid_argument("no conflicts allowed");
@@ -174,6 +181,7 @@ namespace vm::persistent {
 		 * @brief Returns a state formed by merging two memory states.
 		 * @note Conflicts are resolved with the provided policy.
 		 */
+		[[nodiscard]]
 		MemoryStateID merge(
 			MemoryStateID  root_1,
 			MemoryStateID  root_2,
@@ -183,11 +191,13 @@ namespace vm::persistent {
 		/**
 		 * @brief Returns a state containing only active indices in the given interval.
 		 */
+		[[nodiscard]]
 		MemoryStateID slice(MemoryStateID root, usize left_idx, usize right_idx);
 
 		/**
 		 * @brief Returns a state with active indices in the given interval removed.
 		 */
+		[[nodiscard]]
 		MemoryStateID eraseRange(MemoryStateID root, usize left_idx, usize right_idx);
 
 		/**
@@ -243,7 +253,9 @@ namespace vm::persistent {
 
 		MemoryStateView(const Memory& mem, MemoryStateID id);
 
+		[[nodiscard]]
 		MemoryIterator begin() const;
+		[[nodiscard]]
 		MemoryIterator end() const;
 
 		usize operator[](usize idx) const;

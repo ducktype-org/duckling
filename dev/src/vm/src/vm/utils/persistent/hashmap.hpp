@@ -1,10 +1,18 @@
 #pragma once
 
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/utils/bijective_map.hpp>
 #include <vm/utils/persistent/memory.hpp>
+
+#include <functional>
+#include <optional>
+#include <stdexcept>
+#include <utility>
 
 namespace vm::persistent {
 	STRONG_TYPEDEF_INT(HashMapStateID, u64);
@@ -72,6 +80,16 @@ namespace vm::persistent {
 			return var_id;
 		}
 
+		/**
+		 * @brief Validates a vector state.
+		 * @return The corresponding memory state.
+		 */
+		MemoryStateID validateState(HashMapStateID map_state) const {
+			const auto mem_state = toMemState(map_state);
+			if (!inner.knows(mem_state)) throw std::invalid_argument("unknown hashmap state");
+			return mem_state;
+		}
+
 
 	public:
 		// Public state representing an empty hash map.
@@ -80,18 +98,20 @@ namespace vm::persistent {
 		/**
 		 * @brief Returns the number of entries in a hash map state.
 		 */
+		[[nodiscard]]
 		usize size(HashMapStateID state_id) const {
-			const auto mem_state = toMemState(state_id);
+			const auto mem_state = validateState(state_id);
 			return inner.size(mem_state);
 		}
 
 		/**
 		 * @brief Returns the hash map represented by a state.
 		 */
+		[[nodiscard]]
 		base::HashMap<KeyT, ValT, KeyH> toMap(HashMapStateID state_id) const {
 			if (state_id == EMPTY) return {};
 
-			const auto mem_state = toMemState(state_id);
+			const auto mem_state = validateState(state_id);
 			const auto [l, r]    = inner.getRangeOf(mem_state);
 			auto iter            = *inner.getPathTo(mem_state, l);
 
@@ -117,10 +137,11 @@ namespace vm::persistent {
 		/**
 		 * @brief Returns whether a key is present in a hash map state.
 		 */
+		[[nodiscard]]
 		bool contains(HashMapStateID state_id, const KeyT& key) const {
+			const auto mem_state = validateState(state_id);
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
-				const auto state = toMemState(state_id);
-				return inner.active(state, key_id);
+				return inner.active(mem_state, key_id);
 			}
 
 			return false;
@@ -129,6 +150,7 @@ namespace vm::persistent {
 		/**
 		 * @brief Returns the value associated with a key, if present.
 		 */
+		[[nodiscard]]
 		base::Optional<ValT> atMaybe(HashMapStateID state_id, const KeyT& key) const {
 			try {
 				return at(state_id, key);
@@ -136,12 +158,15 @@ namespace vm::persistent {
 			return std::nullopt;
 		}
 
+		[[nodiscard]]
 		const ValT& at(HashMapStateID state_id, const KeyT& key) const {
-			const auto state = toMemState(state_id);
+			const auto mem_state = validateState(state_id);
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
-				if_opt_some(inner.access(state, key_id), val_id) {
+				if_opt_some(inner.access(mem_state, key_id), val_id) {
 					return held_values.atRight(val_id);
 				}
+
+				throw std::out_of_range("key not present at current state");
 			}
 			throw std::out_of_range("key not found");
 		}
@@ -149,21 +174,23 @@ namespace vm::persistent {
 		/**
 		 * @brief Returns a state with a key-value pair inserted or replaced.
 		 */
+		[[nodiscard]]
 		HashMapStateID insert(HashMapStateID state_id, const KeyT& key, const ValT& var) {
-			const auto state  = toMemState(state_id);
-			const auto key_id = emplaceNewKey(key);
-			const auto val_id = emplaceNewVal(var);
-			return toMapState(inner.set(state, key_id, val_id));
+			const auto mem_state = validateState(state_id);
+			const auto key_id    = emplaceNewKey(key);
+			const auto val_id    = emplaceNewVal(var);
+			return toMapState(inner.set(mem_state, key_id, val_id));
 		}
 
 		/**
 		 * @brief Returns a state with the entry for a key removed.
 		 * @note If the key is not present, the state is unchanged.
 		 */
+		[[nodiscard]]
 		HashMapStateID erase(HashMapStateID state_id, const KeyT& key) {
-			const auto state = toMemState(state_id);
+			const auto mem_state = validateState(state_id);
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
-				return toMapState(inner.erase(state, key_id));
+				return toMapState(inner.erase(mem_state, key_id));
 			}
 			return state_id;
 		}
@@ -172,6 +199,7 @@ namespace vm::persistent {
 		 * @brief Returns whether a key-value pair was inserted and the resulting state.
 		 * @note If the key is already present, the state is unchanged.
 		 */
+		[[nodiscard]]
 		std::pair<bool, HashMapStateID> emplace(
 			HashMapStateID state_id, const KeyT& key, const ValT& var
 		) {

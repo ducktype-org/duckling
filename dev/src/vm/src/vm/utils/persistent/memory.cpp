@@ -14,6 +14,8 @@
 #include <deque>
 #include <functional>
 #include <optional>
+#include <ranges>
+#include <stdexcept>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -73,8 +75,6 @@ namespace vm::persistent {
 
 	MemoryStateID Memory::merge(MemoryStateID state_1, MemoryStateID state_2, ConflictPolicy policy) {
 		const auto [root_1, root_2] = validateInput(state_1, state_2);
-
-		std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>> ans = {};
 
 		const auto new_root = inner.rebuildFromTwo(
 			root_1,
@@ -136,12 +136,14 @@ namespace vm::persistent {
 	}
 
 	MemoryStateID Memory::setMultiple(MemoryStateID state, std::deque<std::pair<usize, usize>> vals) {
-		std::ranges::sort(vals);
-		using namespace std::views;
 		using std::ranges::to;
+		using namespace std::views;
 		const auto idxs = vals | transform(&std::pair<usize, usize>::first) | to<std::deque>();
-
 		const auto root = validateInput(state, idxs);
+
+		if (vals.empty()) return state;
+
+		std::ranges::sort(vals);
 
 		const auto new_root
 			= inner.reconstructLeaves(root, idxs, [&](usize cur_idx, base::Optional<usize>) -> ID {
@@ -156,8 +158,10 @@ namespace vm::persistent {
 	}
 
 	MemoryStateID Memory::eraseMultiple(MemoryStateID state, std::deque<usize> idxs) {
-		std::ranges::sort(idxs);
 		const auto root = validateInput(state, idxs);
+
+		if (idxs.empty()) return toState(root);
+		std::ranges::sort(idxs);
 
 		const auto new_root = inner.reconstructLeaves(
 			root, idxs, [&](usize, base::Optional<usize>) { return detail::SegmentTree::EMPTY; }

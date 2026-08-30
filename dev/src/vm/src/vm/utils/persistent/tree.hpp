@@ -728,25 +728,17 @@ namespace vm::persistent::detail {
 					return range_constructor.invoke(&bldT::in_range, node, cur_pos);
 				}
 
-				NodeID     left_n{}, right_n{};
-				const posT node_pos = st.getPos(node);
+				const posT node_pos          = st.getPos(node);
+				const auto [left_n, right_n] = [&] -> std::pair<NodeID, NodeID> {
+					if (node == EMPTY) return { EMPTY, EMPTY };
+					if (cur_pos == node_pos) return st.getChildren(node);
+					if (inSubtree(node_pos, cur_pos))
+						return dirToChild(node_pos, cur_pos) == Dir::Left
+						         ? std::make_pair(node, EMPTY)
+						         : std::make_pair(EMPTY, node);
 
-				if (node == EMPTY) {
-					left_n  = EMPTY;
-					right_n = EMPTY;
-				}
-
-				if (cur_pos == node_pos) {
-					auto [l, r] = st.getChildren(node);
-					left_n      = l;
-					right_n     = r;
-				}
-
-				if (cur_pos != node_pos) {
-					auto dir = dirToChild(node_pos, cur_pos);
-					left_n   = dir == Dir::Left ? node : EMPTY;
-					right_n  = dir == Dir::Rght ? node : EMPTY;
-				}
+					CORE_UNREACHABLE();
+				}();
 
 				const auto new_left  = self(getChildPos(cur_pos, Dir::Left), left_n);
 				const auto new_right = self(getChildPos(cur_pos, Dir::Rght), right_n);
@@ -785,22 +777,24 @@ namespace vm::persistent::detail {
 			NodeID root, const std::deque<idxT>& idxs, const LeafBuilder& constructor
 		) {
 			std::deque<std::pair<idxT, idxT>> ranges{};
+			std::deque<idxT>                  expected{};
 			for (idxT idx: idxs) {
 				CORE_ASSERT(idx < IDX_END, "it has to be valid idx");
 				ranges.emplace_back(idx, idx + 1);
+				expected.emplace_back(idx);
 			}
-			usize idx = 0;
 
 			auto reconstructor = RangeBuilder<NodeID>{
 				.in_range = [&](NodeID id, posT pos) -> NodeID {
 					CORE_ASSERT(isLeafPos(pos), "expecting a leaf");
 					const idxT offset = offsetFromPos(pos);
 
-					CORE_ASSERT(idxs.at(idx) == offset, "I iterate exactly over the idxs");
-					idx++;
+					CORE_ASSERT(expected.size(), "There has to be a range");
+					CORE_ASSERT(expected.front() == offset, "I iterate exactly over the idxs");
+					expected.pop_front();
 
 					base::Optional<valT> val = std::nullopt;
-					if (id) val = getValueOfLeaf(id);
+					if (id != EMPTY) val = getValueOfLeaf(id);
 
 					return constructor(offset, val);
 				},

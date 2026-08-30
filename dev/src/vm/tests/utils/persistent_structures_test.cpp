@@ -1,3 +1,7 @@
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/types/ints.hpp>
+
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
@@ -10,6 +14,7 @@
 #include <vm/utils/persistent/vector.hpp>
 
 #include <array>
+#include <deque>
 #include <optional>
 #include <random>
 #include <string>
@@ -127,7 +132,7 @@ public:
 
 		auto           diff = mem.getDiff(op07, op08);
 		decltype(diff) exp  = { { 1'410, 512, std::nullopt }, { 2'137, 67, std::nullopt } };
-		CORE_ASSERT(diff == exp, "Expecting two elements missing");
+		ASSERT_EQUAL(diff, exp);
 
 		auto diff_same = mem.getDiff(op07, op07);
 		ASSERT_TRUE(diff_same.empty());
@@ -468,7 +473,7 @@ public:
 		Vector<std::string>        real;
 		std::vector<usize>         dummy_states = { DummyVector<std::string>::EMPTY };
 		std::vector<VectorStateID> real_states  = { Vector<std::string>::EMPTY };
-		std::mt19937_64            random{ 0x5E'ED'12'34 };
+		std::mt19937_64            random{ 0xC'0F'FE'BA'BE };
 
 		auto check = [&](usize dummy_state, VectorStateID real_state) {
 			ASSERT_EQUAL(dummy.size(dummy_state), real.size(real_state));
@@ -519,35 +524,26 @@ public:
 			ASSERT_EQUAL(expected.size(), iterated.size());
 
 			for (auto& [key, val]: expected) {
-				CORE_ASSERT(
-					map_copy.contains(key) && map.contains(state, key) && state_view.contains(key),
-					"map should contain all of expected values"
-				);
-				CORE_ASSERT(
-					map_copy.at(key) == val, "values should be equal in both copy and database"
-				);
+				ASSERT_TRUE(map_copy.contains(key));
+				ASSERT_TRUE(map.contains(state, key));
+				ASSERT_TRUE(state_view.contains(key));
+				ASSERT_EQUAL(map_copy.at(key), val);
 
-				CORE_ASSERT(
-					map.at(state, key) == val && state_view.at(key) == val,
-					"values should be equal in both copy and database"
-				);
+				ASSERT_EQUAL(map.at(state, key), val);
+				ASSERT_EQUAL(state_view.at(key), val);
 
-				CORE_ASSERT(
-					iterated.contains(key) && iterated.at(key) == val,
-					"iterated map should contain the key/value"
-				);
+				ASSERT_TRUE(iterated.contains(key));
+				ASSERT_EQUAL(iterated.at(key), val);
 			}
 
 			for (auto& [key, val]: map_copy) {
-				CORE_ASSERT(
-					expected.contains(key) && map.contains(state, key) && state_view.contains(key),
-					"map should contain all of expected values"
-				);
-				CORE_ASSERT(
-					expected.at(key) == val && map.at(state, key) == val
-						&& state_view.at(key) == val,
-					"values should be equal in both copy and database"
-				);
+				ASSERT_TRUE(expected.contains(key));
+				ASSERT_TRUE(map.contains(state, key));
+				ASSERT_TRUE(state_view.contains(key));
+
+				ASSERT_EQUAL(expected.at(key), val);
+				ASSERT_EQUAL(map.at(state, key), val);
+				ASSERT_EQUAL(state_view.at(key), val);
 			}
 		};
 
@@ -564,8 +560,17 @@ public:
 		auto op03 = map.insert(op02, "key3", "val2");
 		checker(op03, { { "key1", "val1" }, { "key2", "val2" }, { "key3", "val2" } });
 
-		auto op04 = map.erase(op03, "key2");
+		auto op03_overwritten = map.insert(op03, "key2", "val3");
+		checker(op03_overwritten, { { "key1", "val1" }, { "key2", "val3" }, { "key3", "val2" } });
+		ASSERT_TRUE(map.atMaybe(op03_overwritten, "key2").has_value());
+		ASSERT_EQUAL("val3", *map.atMaybe(op03_overwritten, "key2"));
+		ASSERT_TRUE(!map.atMaybe(op03_overwritten, "missing").has_value());
+
+		auto op04 = map.erase(op03_overwritten, "key2");
 		checker(op04, { { "key1", "val1" }, { "key3", "val2" } });
+		ASSERT_TRUE(!map.atMaybe(op04, "key2").has_value());
+		ASSERT_TRUE(map.atMaybe(op04, "key1").has_value());
+		ASSERT_EQUAL("val1", *map.atMaybe(op04, "key1"));
 
 		auto [success, op05] = map.emplace(op04, "key2", "val5");
 		ASSERT_EQUAL(success, true);
@@ -611,20 +616,38 @@ public:
 			for (usize i = 0; i <= max_key; i++) {
 				auto key = "random_key_" + std::to_string(i);
 				ASSERT_EQUAL(dummy.contains(dummy_state, key), real.contains(real_state, key));
-				if (dummy.contains(dummy_state, key))
+				if (dummy.contains(dummy_state, key)) {
+					ASSERT_TRUE(real.atMaybe(real_state, key).has_value());
 					ASSERT_EQUAL(dummy.at(dummy_state, key), real.at(real_state, key));
+					ASSERT_EQUAL(dummy.at(dummy_state, key), *real.atMaybe(real_state, key));
+				} else {
+					ASSERT_TRUE(!real.atMaybe(real_state, key).has_value());
+				}
 			}
 		};
 
 		for (usize i = 0; i < 1'000; i++) {
-			auto state_idx  = random() % real_states.size();
-			auto dummy_id   = dummy_states.at(state_idx);
-			auto real_state = real_states.at(state_idx);
-			auto key        = "random_key_" + std::to_string(i);
-			auto value      = "random_value_" + std::to_string(random());
+			const auto state_idx  = random() % real_states.size();
+			const auto dummy_id   = dummy_states.at(state_idx);
+			const auto real_state = real_states.at(state_idx);
+			const auto key_idx    = random() % (i + 1);
+			const auto key        = "random_key_" + std::to_string(key_idx);
+			const auto value      = "random_value_" + std::to_string(random());
+			const auto operation  = random() % 3;
 
-			dummy_states.push_back(dummy.insert(dummy_id, key, value));
-			real_states.push_back(real.insert(real_state, key, value));
+			if (operation == 0) {
+				dummy_states.push_back(dummy.insert(dummy_id, key, value));
+				real_states.push_back(real.insert(real_state, key, value));
+			} else if (operation == 1) {
+				dummy_states.push_back(dummy.erase(dummy_id, key));
+				real_states.push_back(real.erase(real_state, key));
+			} else {
+				const auto [dummy_inserted, dummy_new_state] = dummy.emplace(dummy_id, key, value);
+				const auto [real_inserted, real_new_state]   = real.emplace(real_state, key, value);
+				ASSERT_EQUAL(dummy_inserted, real_inserted);
+				dummy_states.push_back(dummy_new_state);
+				real_states.push_back(real_new_state);
+			}
 
 			check(dummy_states.back(), real_states.back(), i);
 			if (i % 256 == 0) check(dummy_id, real_state, i);

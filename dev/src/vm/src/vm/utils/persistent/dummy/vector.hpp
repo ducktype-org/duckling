@@ -1,10 +1,15 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/types/ints.hpp>
 
+#include <optional>
+#include <stdexcept>
 #include <utility>
+#include <vector>
 
 namespace vm::persistent {
 
@@ -38,17 +43,11 @@ namespace vm::persistent {
 				if_opt_none(curr_state.first) break;
 				state = *curr_state.first;
 			}
-
 			if (no_of_values_to_pop == 0) return state;
-
 			if (state == EMPTY) throw std::invalid_argument("Trying to pop from an empty state");
-
 			auto copy = validateState(state).second;
-
 			for (; no_of_values_to_pop > 0; no_of_values_to_pop--) copy.pop_back();
-
 			copies.emplace_back(std::nullopt, copy);
-
 			return copies.size() - 1;
 		}
 

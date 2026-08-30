@@ -3,6 +3,10 @@
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/types/ints.hpp>
+
+#include <functional>
+#include <vector>
 
 namespace vm::persistent {
 
@@ -26,19 +30,37 @@ namespace vm::persistent {
 		static constexpr usize EMPTY = 0;
 
 		/**
-		 * @brief Returns a new state with a key-value pair inserted.
-		 * @throws std::invalid_argument if the key is already present in the state.
+		 * @brief Returns a new state with a key-value pair inserted or replaced.
 		 */
 		[[nodiscard]]
 		usize insert(usize state, const Key& k, const Val& v) {
 			auto copy = validateState(state);
-
-			if (copy.contains(k)) throw std::invalid_argument("overriding a present value");
-			copy.put(k, v);
-
+			copy.insertOrAssign(k, v);
 			copies.emplace_back(copy);
-
 			return copies.size() - 1;
+		}
+
+		/**
+		 * @brief Returns a new state with the entry for a key removed.
+		 */
+		[[nodiscard]]
+		usize erase(usize state, const Key& k) {
+			auto copy = validateState(state);
+			copy.erase(k);
+			copies.emplace_back(copy);
+			return copies.size() - 1;
+		}
+
+		/**
+		 * @brief Returns whether a key-value pair was inserted and the resulting state.
+		 */
+		[[nodiscard]]
+		std::pair<bool, usize> emplace(usize state, const Key& k, const Val& v) {
+			auto copy = validateState(state);
+			if (copy.contains(k)) return { false, state };
+			copy.put(k, v);
+			copies.emplace_back(copy);
+			return { true, copies.size() - 1 };
 		}
 
 		/**
