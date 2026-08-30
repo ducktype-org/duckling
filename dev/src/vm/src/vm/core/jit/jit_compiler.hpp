@@ -27,6 +27,7 @@ constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD = 0;
 
 
 namespace vm::jit {
+	// There is a strong dependency in creating this type for LLVM. (jit_data.cpp)
 	using JitLLVMFunc
 		= i64(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
 

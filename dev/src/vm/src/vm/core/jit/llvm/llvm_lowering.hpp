@@ -51,7 +51,7 @@ namespace vm::jit {
 		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx): llvm_ctx(ctx), module(module) {
 			auto& llvm_data   = llvmData();
 			user_func_wrapper = llvm::Function::Create(
-				llvm_data.types.opfun.get(),
+				llvm_data.types.compiled.get(),
 				llvm::Function::ExternalLinkage,
 				module->getName(),
 				module
