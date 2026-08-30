@@ -74,7 +74,7 @@ namespace compiler::helios::mangler {
 		 * @brief Check if the symbol should be mangled in the first place.
 		 * @note: See mangling-scheme.md for details
 		 */
-		bool shouldMangle(query::Context& ctx, const auto& key) {
+		bool shouldMangle(query::Context& ctx, const KeyOf_MangledSymbol& key) {
 			if (key.kind != ManglingSymbolKind::Standard) {
 				// Non-standard symbols can't have C mangling
 				return true;
@@ -696,7 +696,7 @@ namespace compiler::helios::mangler {
 		 * @brief Get the encoding of a symbol
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string encoding(query::Context& ctx, const auto& key) {
+		std::string encoding(query::Context& ctx, const KeyOf_MangledSymbol& key) {
 			switch (key.kind) {
 			case ManglingSymbolKind::Standard:
 				return internal::symbolEncoding(ctx, std::get<SymID>(key.symbol_key));
