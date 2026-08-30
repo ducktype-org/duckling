@@ -1900,19 +1900,20 @@ private:
 	void testManglingErrors() {
 		using namespace compiler::helios;
 
-		constexpr char printable = '@';
+		constexpr char PRINTABLE = '@';
 		auto [_, root_scope_prt] = test_utils::getModule(fs::File(
-			path(base::strConcat("test_modules/error_generating/mod_w_prt_char_", printable, "_"))
+			path(base::strConcat("test_modules/error_generating/mod_w_prt_char_", PRINTABLE, "_"))
 		));
 		auto id_prt              = test_utils::getChain("foo", root_scope_prt).back();
 
 		// note: Delete is no-printable on win/linux/mac but it's allowed in filenames
-		constexpr char non_printable = '\x07f';
-		ASSERT_TRUE(not std::isprint(static_cast<unsigned char>(non_printable)));
-		auto [_, root_scope_nprt] = test_utils::getModule(fs::File(path(
-			base::strConcat("test_modules/error_generating/mod_w_non_prt_char_", non_printable, "_")
+		constexpr char NON_PRINTABLE = '\x07f';
+		ASSERT_TRUE(not std::isprint(static_cast<unsigned char>(NON_PRINTABLE)));
+		auto [dummy, root_scope_nprt] = test_utils::getModule(fs::File(path(
+			base::strConcat("test_modules/error_generating/mod_w_non_prt_char_", NON_PRINTABLE, "_")
 		)));
-		auto id_nprt              = test_utils::getChain("foo", root_scope_nprt).back();
+		std::ignore                   = dummy;  // @todo: #761 replace `dummy` with `_`
+		auto id_nprt                  = test_utils::getChain("foo", root_scope_nprt).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			const auto mangle
