@@ -1,5 +1,4 @@
 #include <filepath_utils/file_uri.hpp>
-
 #include <tester/tester.hpp>
 
 #include <string>

@@ -1,11 +1,10 @@
 #include "memory.hpp"
 
+#include <base/except/exceptions.hpp>
+
 #if defined(__unix__) || defined(__APPLE__)
 	#include <sys/mman.h>
 	#include <unistd.h>
-#else
-	#error "os_utils::memory: unsupported platform"
-#endif
 
 namespace os_utils {
 
@@ -35,6 +34,28 @@ namespace os_utils {
 	}
 
 	void freePages(byte* addr, usize size) {
-		if (addr != nullptr) munmap(addr, size);
+		if (addr == nullptr) return;
+		int res = munmap(addr, size);
+		CORE_ASSERT_NOEXCEPT(res == 0, "unable to unmap memory");
 	}
 }
+
+#else
+namespace os_utils {
+	// Unsupported platforms compile but return errors at runtime.
+	// @TODO: #3343 Add Windows CI coverage for os_utils and filepath_utils platform branches.
+	std::expected<usize, std::string> getPageSize() {
+		return std::unexpected<std::string>("os_utils::memory: not implemented on this platform");
+	}
+
+	std::expected<byte*, std::string> allocatePages(usize) {
+		return std::unexpected<std::string>("os_utils::memory: not implemented on this platform");
+	}
+
+	std::expected<void, std::string> markExecutable(byte*, usize) {
+		return std::unexpected<std::string>("os_utils::memory: not implemented on this platform");
+	}
+
+	void freePages(byte*, usize) {}
+}
+#endif

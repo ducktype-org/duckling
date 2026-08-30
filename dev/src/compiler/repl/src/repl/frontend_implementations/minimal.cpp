@@ -1,10 +1,11 @@
 #define NOMINMAX
 #include "minimal.hpp"
 
-#include <os_utils/terminal.hpp>
 #include <repl/helpers.hpp>
 
 #include <base/types/ints.hpp>
+
+#include <os_utils/terminal.hpp>
 
 #include <algorithm>
 #include <cstddef>

@@ -1,8 +1,8 @@
 #include "memory.hpp"
 
-#include <os_utils/memory.hpp>
-
 #include <base/except/exceptions.hpp>
+
+#include <os_utils/memory.hpp>
 
 #include <expected>
 

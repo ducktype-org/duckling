@@ -21,9 +21,9 @@ namespace os_utils {
 	 * @return Pointer to the start of the mapping, or an error message.
 	 *
 	 * @note The returned memory is zero-initialized.
-	 * @note The returned address is page-aligned by the OS, but the *size* is not
-	 *       tracked by this API — the caller is responsible for remembering the
-	 *       aligned size to pass to freePages().
+	 * @note The returned address is page-aligned by the OS, but the size is not
+	 *       tracked by this API; the caller must remember the aligned size to
+	 *       pass to freePages().
 	 */
 	std::expected<byte*, std::string> allocatePages(usize size);
 
@@ -33,7 +33,7 @@ namespace os_utils {
 	 * @param addr Start of the mapping, as returned by allocatePages().
 	 * @param size Size of the mapping. Should match what was passed to allocatePages().
 	 *
-	 * @note Write the machine code *before* calling this function — the mapping is
+	 * @note Write the machine code before calling this function; the mapping is
 	 *       no longer writable afterwards.
 	 */
 	std::expected<void, std::string> markExecutable(byte* addr, usize size);

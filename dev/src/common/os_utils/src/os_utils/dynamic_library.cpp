@@ -15,8 +15,7 @@
 namespace os_utils {
 
 	namespace {
-		// dlerror() returns null if no error occurred since the last call on this
-		// thread. Never construct std::string from a null pointer.
+		// dlerror() can return null; never build a std::string from it.
 		std::string dlErrorMessage() {
 			const char* msg = dlerror();  // NOLINT(concurrency-mt-unsafe)
 			if (msg) return { msg };
@@ -26,7 +25,9 @@ namespace os_utils {
 
 	std::expected<NativeLibrary, std::string> openLibrary(const char* path) {
 		void* handle = dlopen(path, RTLD_NOW);
-		if (!handle) return std::unexpected(dlErrorMessage());
+		if (!handle)
+			return std::unexpected<std::string>(base::strConcat("dlopen failed: ", dlErrorMessage())
+			);
 		return NativeLibrary{ .handle = handle };
 	}
 
@@ -34,8 +35,7 @@ namespace os_utils {
 		std::span<const byte> library_bytes
 	) {
 	#if defined(__APPLE__)
-		// macOS has neither memfd_create nor /proc/self/fd, and dlopen requires a real
-		// path, so stage the library in a temp file that is unlinked once it is loaded.
+		// No memfd or /proc/self/fd on macOS; use a temp file, unlinked after load.
 		std::string tmp_path = "/tmp/duckling_lib_XXXXXX";
 		int         fd       = mkstemp(tmp_path.data());
 		if (fd == -1) return std::unexpected<std::string>("mkstemp failed");
@@ -50,7 +50,7 @@ namespace os_utils {
 			while (to_write) {
 				ssize_t ret = write(fd, ptr, to_write);
 				if (ret == -1) {
-					if (errno == EINTR) continue;  // interrupted by a signal — retry
+					if (errno == EINTR) continue;  // interrupted by a signal, retry
 					// Clean up before returning: the fd is no longer usable.
 	#if defined(__APPLE__)
 					unlink(tmp_path.c_str());
@@ -67,25 +67,20 @@ namespace os_utils {
 
 		return write_n().and_then([&]() -> std::expected<NativeLibrary, std::string> {
 	#if defined(__APPLE__)
-			// dlopen reads from the temp file path, not from fd — no lseek needed.
+			// dlopen reads from the path, not the fd; no lseek needed.
 			void* handle = dlopen(tmp_path.c_str(), RTLD_NOW);  // NOLINT(concurrency-mt-unsafe)
-			// dlopen has read the file, so the backing file and fd are no longer needed regardless
-			// of the outcome (the loaded image stays valid without them). Clean up before checking
-			// the result so a failed dlopen does not leak the temp file.
+			// The loaded image stays valid without the temp file; clean up before checking the result.
 			unlink(tmp_path.c_str());
 			close(fd);
 	#else
-			// The fd was written from offset 0; rewind so dlopen (via /proc/self/fd/N)
-			// reads the library from the beginning.
+			// Rewind so dlopen (via /proc/self/fd/N) reads from the start.
 			if (lseek(fd, 0, SEEK_SET) == -1) {
 				close(fd);
 				return std::unexpected<std::string>("lseek failed");
 			}
 			auto  path   = base::strConcat("/proc/self/fd/", fd);
 			void* handle = dlopen(path.data(), RTLD_NOW);
-			// dlopen has read the library, so the fd is no longer needed regardless
-			// of the outcome (the loaded image stays valid without it). Close before
-			// checking the result so a failed dlopen does not leak the memfd.
+			// The loaded image stays valid without the fd; close before checking the result.
 			close(fd);
 	#endif
 			if (!handle)
@@ -97,7 +92,7 @@ namespace os_utils {
 	}
 
 	std::expected<void*, std::string> findSymbol(const NativeLibrary& lib, const char* name) {
-		dlerror();                        // NOLINT(concurrency-mt-unsafe) — clear stale error state
+		dlerror();                        // NOLINT(concurrency-mt-unsafe), clear stale errors
 		void* sym = dlsym(lib.handle, name);
 		if (const char* err = dlerror())  // NOLINT(concurrency-mt-unsafe)
 			return std::unexpected<std::string>(err);
@@ -111,5 +106,27 @@ namespace os_utils {
 }
 
 #else
-	#error "Unsupported system"
+namespace os_utils {
+	// Unsupported platforms compile but return errors at runtime.
+	// @TODO: #3343 Add Windows CI coverage for os_utils and filepath_utils platform branches.
+	std::expected<NativeLibrary, std::string> openLibrary(const char*) {
+		return std::unexpected<std::string>(
+			"os_utils::dynamic_library: not implemented on this platform"
+		);
+	}
+
+	std::expected<NativeLibrary, std::string> openLibraryFromMemory(std::span<const byte>) {
+		return std::unexpected<std::string>(
+			"os_utils::dynamic_library: not implemented on this platform"
+		);
+	}
+
+	std::expected<void*, std::string> findSymbol(const NativeLibrary&, const char*) {
+		return std::unexpected<std::string>(
+			"os_utils::dynamic_library: not implemented on this platform"
+		);
+	}
+
+	void closeLibrary(NativeLibrary& lib) { lib = NativeLibrary{}; }
+}
 #endif

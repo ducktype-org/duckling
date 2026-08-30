@@ -1,10 +1,11 @@
 #include "file_path.hpp"
 
-#include <filepath_utils/file_uri.hpp>
 #include <filesystem_private/vfs.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
+
+#include <filepath_utils/file_uri.hpp>
 
 namespace {
 	Ref<fs::VFS> vfs = fs::VFS::getInstance();

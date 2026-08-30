@@ -1,15 +1,15 @@
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <sys/wait.h>
+#include <termios.h>
+#include <unistd.h>
+
 #include <os_utils/dynamic_library.hpp>
 #include <os_utils/exec_self.hpp>
 #include <os_utils/executable_path.hpp>
 #include <os_utils/memory.hpp>
 #include <os_utils/terminal.hpp>
 #include <os_utils/timed_mutex_recovery.hpp>
-#include <sys/wait.h>
-#include <termios.h>
-#include <unistd.h>
-
 #include <tester/tester.hpp>
 
 #include <array>
@@ -117,6 +117,8 @@ public:
 		TESTER_ADD_TEST(clearScreenEmitsEscapeSequence);
 		TESTER_ADD_TEST(rawTerminalModeSetsAndRestoresTermios);
 		TESTER_ADD_TEST(rawTerminalModeFailsOnNonTty);
+		TESTER_ADD_TEST(rawTerminalModeMoveAssignment);
+		TESTER_ADD_TEST(rawTerminalModeExplicitRestore);
 		TESTER_ADD_TEST(execSelfSuccessPath);
 #endif
 		TESTER_ADD_TEST(execSelfErrorPath);
@@ -168,8 +170,8 @@ private:
 		auto memory = os_utils::allocatePages(*page_size);
 		assertTrue(memory.has_value(), "allocatePages should succeed");
 
-		// Write a 'ret' instruction (0xC3 on x86-64) before marking
-		// executable — writing after mprotect removes PROT_WRITE would fail.
+		// Write a 'ret' instruction (0xC3 on x86-64) before marking it
+		// executable; mprotect removes PROT_WRITE afterwards.
 		(*memory)[0] = byte{ 0xC3 };
 
 		auto result = os_utils::markExecutable(*memory, *page_size);
@@ -188,8 +190,7 @@ private:
 		auto page_size = os_utils::getPageSize();
 		assertTrue(page_size.has_value(), "getPageSize should succeed");
 
-		// mprotect on a null address is invalid — the function must return an
-		// error, not crash or return success.
+		// mprotect on a null address is invalid; the function must fail, not crash.
 		auto result = os_utils::markExecutable(nullptr, *page_size);
 		assertTrue(!result.has_value(), "markExecutable(nullptr) should fail");
 	}
@@ -240,35 +241,33 @@ private:
 		file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(file_size));
 		assertTrue(static_cast<usize>(file.gcount()) == file_size, "must read entire libc file");
 
-		// 3. Load the library from memory — the function under test.
+		// 3. Load the library from memory (the function under test).
 		auto lib = os_utils::openLibraryFromMemory(buffer);
 		assertTrue(lib.has_value(), "openLibraryFromMemory should succeed");
 
-		// 4. Look up a symbol — verify dlsym works on memory-loaded libraries.
+		// 4. Look up a symbol; dlsym must work on memory-loaded libraries.
 		auto sym = os_utils::findSymbol(*lib, "strlen");
 		assertTrue(sym.has_value(), "strlen should be found in memory-loaded lib");
 		assertTrue(*sym != nullptr, "strlen symbol should not be null");
 
-		// 5. Call the symbol — verify the loaded code is actually executable.
+		// 5. Call the symbol to prove the loaded code is executable.
 		using StrlenFunc = unsigned long (*)(const char*);
 		auto func        = reinterpret_cast<StrlenFunc>(*sym);
 		ASSERT_EQUAL(5UL, func("hello"));
 
-		// 6. Close — verify cleanup doesn't crash.
+		// 6. Close; cleanup must not crash.
 		os_utils::closeLibrary(*lib);
 	}
 
 	void openLibraryFromMemoryEmptyBuffer() {
-		// An empty buffer cannot contain a shared library — must return an
-		// error, not crash or return a valid handle.
+		// An empty buffer cannot be a shared library; must return an error, not crash.
 		std::vector<byte> empty{};
 		auto              lib = os_utils::openLibraryFromMemory(empty);
 		assertTrue(!lib.has_value(), "openLibraryFromMemory(empty) should fail");
 	}
 
 	void openLibraryFromMemoryCorruptBuffer() {
-		// Valid writable bytes that are not a shared library — dlopen will
-		// reject them. Must return an error, not crash.
+		// Valid writable bytes that are not a shared library; dlopen must reject them.
 		std::vector<byte> garbage(4'096, byte{ 0xAB });
 		auto              lib = os_utils::openLibraryFromMemory(garbage);
 		assertTrue(!lib.has_value(), "openLibraryFromMemory(garbage) should fail");
@@ -416,6 +415,74 @@ private:
 		assertTrue(!guard.has_value(), "RawTerminalMode::create should fail on a non-TTY stdin");
 	}
 
+	void rawTerminalModeMoveAssignment() {
+		auto pty = PtyPair::create();
+		assertTrue(pty.master != -1 && pty.slave != -1, "PTY creation should succeed");
+		FdRedirect redirect(STDIN_FILENO, pty.slave);
+
+		termios original{};
+		ASSERT_EQUAL(0, tcgetattr(STDIN_FILENO, &original));
+
+		{
+			auto first = os_utils::RawTerminalMode::create();
+			assertTrue(first.has_value(), "first create should succeed");
+
+			// A second guard created while raw mode is active captures raw as its
+			// baseline; moving the first (clean) guard into it must transfer the
+			// clean baseline and keep raw mode on.
+			auto second = os_utils::RawTerminalMode::create();
+			assertTrue(second.has_value(), "second create should succeed");
+			*second = std::move(*first);
+
+			termios raw{};
+			ASSERT_EQUAL(0, tcgetattr(STDIN_FILENO, &raw));
+			assertTrue(
+				(raw.c_lflag & (ECHO | ICANON)) == 0,
+				"raw mode should remain active after move assignment"
+			);
+		}
+
+		termios restored{};
+		ASSERT_EQUAL(0, tcgetattr(STDIN_FILENO, &restored));
+		assertTrue(
+			std::memcmp(&restored, &original, sizeof(termios)) == 0,
+			"the moved-into guard should restore the original settings"
+		);
+	}
+
+	void rawTerminalModeExplicitRestore() {
+		auto pty = PtyPair::create();
+		assertTrue(pty.master != -1 && pty.slave != -1, "PTY creation should succeed");
+		FdRedirect redirect(STDIN_FILENO, pty.slave);
+
+		termios original{};
+		ASSERT_EQUAL(0, tcgetattr(STDIN_FILENO, &original));
+
+		{
+			auto guard = os_utils::RawTerminalMode::create();
+			assertTrue(guard.has_value(), "create should succeed on a TTY");
+
+			// restore() succeeds and puts the settings back.
+			auto res = guard->restore();
+			assertTrue(res.has_value(), "restore should succeed");
+			termios after{};
+			ASSERT_EQUAL(0, tcgetattr(STDIN_FILENO, &after));
+			assertTrue(
+				std::memcmp(&after, &original, sizeof(termios)) == 0,
+				"explicit restore should restore the original settings"
+			);
+
+			// Calling restore() again does nothing.
+			assertTrue(guard->restore().has_value(), "second restore should be a no-op");
+		}
+
+		// restore() reports an error when stdin is gone.
+		auto guard = os_utils::RawTerminalMode::create();
+		assertTrue(guard.has_value(), "create should succeed on a TTY");
+		close(STDIN_FILENO);
+		assertTrue(!guard->restore().has_value(), "restore should fail when stdin is closed");
+	}
+
 	void execSelfSuccessPath() {
 		pid_t pid = fork();
 		assertTrue(pid >= 0, "fork should succeed");
@@ -455,7 +522,7 @@ private:
 
 	void clearAbandonedLockTest() {
 		std::timed_mutex mutex;
-		os_utils::clearAbandonedLock(mutex);  // unlocked — must not crash
+		os_utils::clearAbandonedLock(mutex);  // unlocked; must not crash
 		mutex.lock();
 		os_utils::clearAbandonedLock(mutex);  // no-op on Linux, clears the lock on macOS
 #ifndef __APPLE__

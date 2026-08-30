@@ -2,6 +2,14 @@
 
 OS syscall and platform API wrappers.
 
+## Platform support
+
+`memory` and `dynamic_library` are implemented for Unix-like systems (Linux,
+macOS). On other platforms (e.g. Windows) the module still compiles and the
+functions return "not implemented" errors at runtime instead of failing the
+build. Real Windows implementations are tracked in
+@TODO: #3343 Add Windows CI coverage for os_utils and filepath_utils platform branches.
+
 ## What belongs here
 
 - Platform-specific workarounds that affect production code

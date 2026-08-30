@@ -1,9 +1,9 @@
 #pragma once
 
-#include <os_utils/dynamic_library.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
+
+#include <os_utils/dynamic_library.hpp>
 
 #include <expected>
 #include <span>

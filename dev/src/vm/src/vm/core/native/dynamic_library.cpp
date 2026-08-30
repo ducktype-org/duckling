@@ -26,8 +26,10 @@ namespace vm::native {
 	}
 
 	DynamicLibrary& DynamicLibrary::operator=(DynamicLibrary&& dynlib) noexcept {
+		if (this == &dynlib) return *this;
+		os_utils::closeLibrary(lib);
 		lib        = dynlib.lib;
-		dynlib.lib = { .handle = nullptr };
+		dynlib.lib = {};
 		return *this;
 	}
 

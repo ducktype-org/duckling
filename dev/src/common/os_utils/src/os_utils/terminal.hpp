@@ -12,9 +12,17 @@
 
 namespace os_utils {
 
+	/// @brief Writes a string to the standard output.
 	void writeStr(std::string_view str);
+
+	/// @brief Writes a single character to the standard output.
 	void writeChar(char c);
+
+	/// @brief Reads a single character from the standard input.
+	/// @return True if a character was read, false on EOF or error.
 	bool readChar(char& c);
+
+	/// @brief Clears the terminal screen.
 	void clearScreen();
 
 	/**
@@ -25,7 +33,7 @@ namespace os_utils {
 	 *
 	 * Create one via RawTerminalMode::create(). The type is move-only.
 	 */
-	class RawTerminalMode {
+	class RawTerminalMode final {
 	public:
 		/**
 		 * @brief Switches the terminal to raw mode.
@@ -34,7 +42,17 @@ namespace os_utils {
 		 */
 		static std::expected<RawTerminalMode, std::string> create();
 
+		/**
+		 * @brief Restores the original terminal settings.
+		 *
+		 * The explicit, checkable alternative to the best-effort destructor
+		 * cleanup. Safe to call multiple times; subsequent calls are no-ops.
+		 * @return An error message if the restore failed.
+		 */
+		std::expected<void, std::string> restore();
+
 		RawTerminalMode(RawTerminalMode&& other) noexcept;
+		RawTerminalMode& operator=(RawTerminalMode&& other) noexcept;
 		RawTerminalMode(const RawTerminalMode&)            = delete;
 		RawTerminalMode& operator=(const RawTerminalMode&) = delete;
 		~RawTerminalMode();
@@ -43,7 +61,7 @@ namespace os_utils {
 		RawTerminalMode() = default;
 
 #ifndef _WIN32
-		struct termios m_orig_term{};
+		termios m_orig_term{};
 #else
 		DWORD m_orig_in_mode{};
 		DWORD m_orig_out_mode{};
