@@ -210,6 +210,13 @@ private:
 		return stripImplicitMove(call->arguments.at(0).get());
 	}
 
+	/**
+	 * @brief Simple wrapper for querying mangled name of a symbol without context
+	 */
+	static auto mangle(const compiler::helios::mangler::KeyOf_MangledSymbol& key) {
+		return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(key);
+	}
+
 	void testConstants() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
 
@@ -2330,67 +2337,52 @@ private:
 	}
 
 	void testMangler() {
-		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
-		const auto& hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
+		using namespace compiler::helios;
 
-		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                     ) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {
+		auto [module, _]      = getModule(fs::File(path("test_modules/mangling")));
+		const auto& hout_unit = query::entryPoint<QueryModuleHOUT>(module)->valueOrPanic();
+
+		auto find_function = [&](const HOUTUnit&    unit,
+		                         const base::StrID& name) -> base::Optional<CRef<HOUTFunction>> {
 			for (const auto& fun: unit.functions)
 				if (fun->declaration->original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
+		auto find_global = [&](const HOUTUnit&    unit,
+		                       const base::StrID& name) -> base::Optional<CRef<HOUTGlobalData>> {
 			for (const auto& glob: unit.glob_data)
 				if (glob->original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto goo = find_function(hout_unit, base::StrID("goooo")).value();
-		std::cerr << "\nFunction name: " << goo->declaration->original_name.strView() << '\n';
-		auto mangled_goo = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = goo->declaration->original_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 123,
-		      .additional_metadata     = "metadata_v123" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_goo.strView() << '\n';
+		auto goo         = find_function(hout_unit, base::StrID("goooo")).value();
+		auto mangled_goo = mangle({ .symbol_key = goo->declaration->original_symbol,
+		                            .kind       = mangler::ManglingSymbolKind::Standard,
+		                            .mangling_scheme_version = 123,
+		                            .additional_metadata     = "metadata_v123" });
 
-		auto glob_a = find_global(hout_unit, base::StrID("A")).value();
-		std::cerr << "\nGlobal variable name: " << glob_a->original_name.strView() << '\n';
-		auto mangled_glob_a = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = glob_a->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 0,
-		      .additional_metadata     = std::nullopt }
-		);
-		std::cerr << "Mangled symbol: " << mangled_glob_a.strView() << '\n';
+		auto glob_a         = find_global(hout_unit, base::StrID("A")).value();
+		auto mangled_glob_a = mangle({ .symbol_key = glob_a->helios_symbol,
+		                               .kind       = mangler::ManglingSymbolKind::Standard,
+		                               .mangling_scheme_version = 0,
+		                               .additional_metadata     = std::nullopt });
 		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
 
-		auto glob_b = find_global(hout_unit, base::StrID("B")).value();
-		std::cerr << "\nGlobal Variable name: " << glob_b->original_name.strView() << '\n';
-		auto mangled_glob_b = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = glob_b->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 321,
-		      .additional_metadata     = "metadata_v321" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_glob_b.strView() << '\n';
+		auto glob_b         = find_global(hout_unit, base::StrID("B")).value();
+		auto mangled_glob_b = mangle({ .symbol_key = glob_b->helios_symbol,
+		                               .kind       = mangler::ManglingSymbolKind::Standard,
+		                               .mangling_scheme_version = 321,
+		                               .additional_metadata     = "metadata_v321" });
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 
-		auto g_const = find_global(hout_unit, base::StrID("Cnst")).value();
-		std::cerr << "\nConst name: " << g_const->original_name.strView() << '\n';
-		auto mangled_g_const = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = g_const->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 321,
-		      .additional_metadata     = "metadata_v321" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_g_const.strView() << '\n';
+		auto g_const         = find_global(hout_unit, base::StrID("Cnst")).value();
+		auto mangled_g_const = mangle({ .symbol_key = g_const->helios_symbol,
+		                                .kind       = mangler::ManglingSymbolKind::Standard,
+		                                .mangling_scheme_version = 321,
+		                                .additional_metadata     = "metadata_v321" });
 
 
 		auto sub_module_a = query::utils::withContextCompute([&](query::Context& ctx) {
@@ -2402,29 +2394,19 @@ private:
 		});
 		auto sub_module   = std::any_cast<compiler::frontend::ModuleID>(sub_module_a);
 
-		const auto& sub_hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module)->valueOrPanic();
+		const auto& sub_hout_unit = query::entryPoint<QueryModuleHOUT>(sub_module)->valueOrPanic();
 
-		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
-		std::cerr << "\nSub function name: " << sub_fun->declaration->original_name.strView()
-				  << '\n';
-		auto mangled_sub_fun = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = sub_fun->declaration->original_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 5,
-		      .additional_metadata     = "metadata_v5" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_sub_fun.strView() << '\n';
+		auto sub_fun         = find_function(sub_hout_unit, base::StrID("subFun")).value();
+		auto mangled_sub_fun = mangle({ .symbol_key = sub_fun->declaration->original_symbol,
+		                                .kind       = mangler::ManglingSymbolKind::Standard,
+		                                .mangling_scheme_version = 5,
+		                                .additional_metadata     = "metadata_v5" });
 
-		auto sub_cnst = find_global(sub_hout_unit, base::StrID("subConst")).value();
-		std::cerr << "\nSub constant name: " << sub_cnst->original_name.strView() << '\n';
-		auto mangled_sub_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = sub_cnst->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 5,
-		      .additional_metadata     = "metadata_v5" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
+		auto sub_cnst         = find_global(sub_hout_unit, base::StrID("subConst")).value();
+		auto mangled_sub_cnst = mangle({ .symbol_key = sub_cnst->helios_symbol,
+		                                 .kind       = mangler::ManglingSymbolKind::Standard,
+		                                 .mangling_scheme_version = 5,
+		                                 .additional_metadata     = "metadata_v5" });
 
 		ASSERT_EQUAL(
 			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFididdE1a1bE$metadata_v123", mangled_goo.str()
@@ -2480,18 +2462,9 @@ private:
 	void testManglerOperators() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
 
-		auto mangle = [&](compiler::helios::SymID sym) {
-			return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-				{ .symbol_key = sym,
-			      .kind       = compiler::helios::mangler::ManglingSymbolKind::Standard,
-			      .mangling_scheme_version = 0,
-			      .additional_metadata     = std::nullopt }
-			);
-		};
-
-		auto infix_free   = mangle(getChain("+*", root_scope).back());
-		auto prefix_free  = mangle(getChain("-*", root_scope).back());
-		auto unicode_free = mangle(getChain("+×", root_scope).back());
+		auto infix_free   = mangle({ getChain("+*", root_scope).back() });
+		auto prefix_free  = mangle({ getChain("-*", root_scope).back() });
+		auto unicode_free = mangle({ getChain("+×", root_scope).back() });
 
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
@@ -2505,8 +2478,8 @@ private:
 			return foo_class_info.methods.at(0);
 		};
 
-		auto infix_method  = mangle(find_method("+*"));
-		auto prefix_method = mangle(find_method("-*"));
+		auto infix_method  = mangle({ find_method("+*") });
+		auto prefix_method = mangle({ find_method("-*") });
 
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFiqiqiqE1a1bE", infix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFiqiqE1aE", prefix_free.str());
