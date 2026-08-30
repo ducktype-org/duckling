@@ -1,5 +1,3 @@
-# Moduł testowy dla operacji bitowych w Heliosie
-
 const A: i64 = 12;
 const B: i64 = 10;
 const C: i64 = 7;
