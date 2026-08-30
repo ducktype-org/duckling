@@ -47,12 +47,14 @@ namespace compiler::helios::mangler {
 
 	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
 		addToHash(h, k.symbol_key.index());
-		if (k.symbol_key.index() == 0)
-			addToHash(h, std::get<0>(k.symbol_key));
-		else if (k.symbol_key.index() == 1)
-			addToHash(h, std::get<1>(k.symbol_key));
-		else
-			CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
+
+		variant_match(k.symbol_key) {
+			variant_case(SymID, val) { addToHash(h, val); }
+			variant_case(special_symbol_keys::LIRModuleID, val) { addToHash(h, val); }
+			variant_default {
+				CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
+			}
+		}
 
 		addToHash(h, k.kind);
 		addToHash(h, k.mangling_scheme_version);
@@ -123,15 +125,14 @@ namespace compiler::helios::mangler {
 		}
 
 		auto quoteExtendedChar(const char c) {
-			return std::isprint(static_cast<unsigned char>(c))
-			         ? base::strConcat(
-						   '\'', c, "' (int: ", static_cast<int>(static_cast<unsigned char>(c)), ")"
-					   )
-			         : base::strConcat(
-						   "[not-printable] (int: ",
-						   static_cast<int>(static_cast<unsigned char>(c)),
-						   ")"
-					   );
+			if (std::isprint(static_cast<unsigned char>(c)))
+				return base::strConcat(
+					'\'', c, "' (int: ", static_cast<int>(static_cast<unsigned char>(c)), ")"
+				);
+			else
+				return base::strConcat(
+					"[not-printable] (int: ", static_cast<int>(static_cast<unsigned char>(c)), ")"
+				);
 		}
 
 		/**
