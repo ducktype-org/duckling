@@ -120,8 +120,11 @@ namespace vm {
 		void notifyWaiters() { cv.notify_all(); }
 
 		/**
-		 * @brief Clears the slot and flags. Must only be called while the owning VMThread is
-		 * non-active (NotStarted/terminal with no exec thread) - i.e. on (re)spawn preparation.
+		 * @brief Clears the slot and flags.
+		 *
+		 * Called by the `exec_thread` when its run ends, and by the spawner when preparing a
+		 * re-spawn. Must only be called while the owning VMThread is non-active, so no
+		 * request meant for a running thread can be dropped.
 		 */
 		void reset() {
 			std::lock_guard lock(mutex);

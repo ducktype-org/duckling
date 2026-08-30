@@ -69,15 +69,21 @@ namespace vm {
 		);
 
 		/**
-		 * @brief Pauses the execution of this thread.
-		 * Posts a Pause request and blocks until the thread is `Paused` (or terminal).
+		 * @brief Posts a Pause request and returns without waiting for the thread to pause.
 		 *
-		 * @note A thread sleeping on IO/Mutex cannot pause when sleeping. So this blocks until the
-		 * thread wakes up and pauses successfully.
+		 * @return `void` iff the request was accepted or the reason why it was refused otherwise.
+		 */
+		[[nodiscard]] std::expected<void, std::string> requestPause();
+
+		/**
+		 * @brief Blocks until this thread is `Paused` (or terminal).
+		 *
+		 * @note A thread sleeping on IO/Mutex cannot pause while asleep, so this blocks for as long
+		 * as the IO does. The caller must hold no lock that `api::input` or `api::stop` needs.
 		 *
 		 * @return `void` iff the thread ended up `Paused` or an error otherwise.
 		 */
-		std::expected<void, std::string> pause();
+		[[nodiscard]] std::expected<void, std::string> awaitPause();
 
 		/**
 		 * @brief Resumes the execution of this (paused) thread.

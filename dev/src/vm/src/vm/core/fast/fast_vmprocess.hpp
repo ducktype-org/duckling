@@ -99,7 +99,7 @@ namespace vm::fast {
 
 		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
 
-		[[nodiscard]] bool hasUnjoinedExecutionThreads() const override;
+		[[nodiscard]] std::vector<api::ThreadID> unjoinedThreadIds() const override;
 
 		FastVMThread& getMainVMThread();
 

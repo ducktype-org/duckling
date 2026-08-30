@@ -89,6 +89,8 @@ namespace vm {
 			std::cerr << "VMThread has panicked with an unexpected error: " << e.what() << "\n";
 			applyEvent(te::Panic{ std::string{ "Unexpected non-DVM error: " } + e.what() });
 		}
+		// After the run ended, clear any requests for `deinitAndValidate` to not see them.
+		signal.reset();
 	}
 
 	bool IVMThread::prepareSpawnLocked() {
@@ -162,13 +164,16 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<void, std::string> IVMThread::pause() {
+	std::expected<void, std::string> IVMThread::requestPause() {
 		if (auto valid = validateThreadRequest(ThreadSignal::Request::Pause); !valid.has_value())
 			return valid;
 
 		if (!signal.post(ThreadSignal::Request::Pause))
 			return std::unexpected("Another request is active");
+		return {};
+	}
 
+	std::expected<void, std::string> IVMThread::awaitPause() {
 		// Wait for the paused state or a terminal.
 		const ThreadState state
 			= getProcessStateManager().waitForThreadState(thread_id, [](const ts::ThreadState& s) {
@@ -244,7 +249,8 @@ namespace vm {
 
 		switch (*req) {
 		case ThreadSignal::Request::Stop:
-			throw KillProcessException{};
+			if (ts::isActive(getThreadState())) throw KillProcessException{};
+			return;
 		case ThreadSignal::Request::Pause:
 			// Skip any stale Pause requests of they came to a non-running thread.
 			if (v_matches(getThreadState(), ts::Running)) pausedLoop();

@@ -94,8 +94,10 @@ namespace vm {
 		/**
 		 * @brief Returns reference to either existing empty thread or
 		 * creates new thread without worker and returns it
+		 *
+		 * @note Call with `threads_pool_mutex`.
 		 */
-		SafeVMThread& getEmptyThread();
+		SafeVMThread& getEmptyThreadLocked();
 
 		/**
 		 * @brief Joins the exec thread of every VMThread. Every thread must already be non-active.
@@ -104,9 +106,9 @@ namespace vm {
 
 		/**
 		 * @brief Helper used by `runFunction` and `startNewThreadFromExecutionThread`. Takes no
-		 * `api_lock`.
+		 * `api_lock`, only `threads_pool_mutex`.
 		 */
-		std::expected<api::Response, api::ApiError> spawnThreadLocked(
+		std::expected<api::Response, api::ApiError> spawnThread(
 			const std::string& func_name, const RunArguments& run_arguments
 		);
 
@@ -170,7 +172,7 @@ namespace vm {
 
 		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
 
-		[[nodiscard]] bool hasUnjoinedExecutionThreads() const override;
+		[[nodiscard]] std::vector<api::ThreadID> unjoinedThreadIds() const override;
 
 		void requestStopAllThreads() noexcept override;
 

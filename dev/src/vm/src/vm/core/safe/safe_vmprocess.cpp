@@ -129,7 +129,7 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(api_lock);
-		return spawnThreadLocked(func_name, run_arguments);
+		return spawnThread(func_name, run_arguments);
 	}
 
 	std::expected<api::ThreadID, api::ApiError> SafeVMProcess::startNewThreadFromExecutionThread(
@@ -142,20 +142,20 @@ namespace vm {
 			return std::unexpected(api::ApiError{
 				api::StateError{ "Cannot start a thread while the process is stopping" } });
 
-		return spawnThreadLocked(func_name, {}).transform([](const api::Response& response) {
+		return spawnThread(func_name, {}).transform([](const api::Response& response) {
 			return v_get(response, api::ThreadID);
 		});
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMProcess::spawnThreadLocked(
+	std::expected<api::Response, api::ApiError> SafeVMProcess::spawnThread(
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
-		SafeVMThread& thread = getEmptyThread();
+		std::lock_guard lock(threads_pool_mutex);
+
+		SafeVMThread& thread = getEmptyThreadLocked();
 		thread.setThreadCtx(func_name);
 
-		bool response = thread.spawnThreadAndRun(func_name, run_arguments);
-
-		if (!response) {
+		if (!thread.spawnThreadAndRun(func_name, run_arguments)) {
 			thread.setThreadCtx("");
 			return std::unexpected(api::ApiError{
 				api::RunError{ "Failed to spawn thread for function: " + func_name } });
@@ -287,8 +287,7 @@ namespace vm {
 		return vm_threads.maybeGet(thread_id);
 	}
 
-	SafeVMThread& SafeVMProcess::getEmptyThread() {
-		std::lock_guard lock(threads_pool_mutex);
+	SafeVMThread& SafeVMProcess::getEmptyThreadLocked() {
 		for (auto& thread: vm_threads) {
 			// Thread must not be executing AND must not have an active exec_thread handle
 			if (!ts::isActive(thread.getThreadState()) && !thread.hasActiveThread()) return thread;
@@ -340,8 +339,15 @@ namespace vm {
 		auto             opt_thread = getVMThreadByID(thread_id);
 		if (!opt_thread)
 			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-		auto response = opt_thread.value()->pause();
-		if (!response) return std::unexpected(api::ApiError{ api::PauseError{ response.error() } });
+		auto thread = opt_thread.value();
+
+		if (auto requested = thread->requestPause(); !requested.has_value())
+			return std::unexpected(api::ApiError{ api::PauseError{ requested.error() } });
+		// Unlock before we block on the pause, so an incoming `stop` request can be received.
+		lock.unlock();
+
+		if (auto paused = thread->awaitPause(); !paused.has_value())
+			return std::unexpected(api::ApiError{ api::PauseError{ paused.error() } });
 		return {};
 	}
 
@@ -585,11 +591,12 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	bool SafeVMProcess::hasUnjoinedExecutionThreads() const {
-		std::lock_guard lock(threads_pool_mutex);
+	std::vector<api::ThreadID> SafeVMProcess::unjoinedThreadIds() const {
+		std::lock_guard            lock(threads_pool_mutex);
+		std::vector<api::ThreadID> ids;
 		for (const auto& thread: vm_threads)
-			if (thread.hasActiveThread()) return true;
-		return false;
+			if (thread.hasActiveThread()) ids.push_back(thread.getThreadID());
+		return ids;
 	}
 
 	std::vector<api::ThreadID> SafeVMProcess::getAllActiveThreadIDs() {

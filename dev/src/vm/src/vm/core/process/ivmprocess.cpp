@@ -6,6 +6,8 @@
 
 #include <vm/api/data/response.hpp>
 
+#include <ranges>
+
 namespace vm {
 	namespace ps = process_state;
 	namespace pe = process_event;
@@ -36,9 +38,22 @@ namespace vm {
 					invalid_reason
 						= "the process must be freshly loaded or completed successfully in the "
 						  "previous run";
-				else if (hasUnjoinedExecutionThreads())
-					// We also require the previous run to be joined.
-					invalid_reason = "the previous run was never joined";
+				else if (const std::vector<api::ThreadID> unjoined = unjoinedThreadIds();
+				         !unjoined.empty()) {
+					// We also require every thread of the previous run to be joined.
+					std::string ids = base::strJoin(
+						unjoined | std::views::transform([](const api::ThreadID id) {
+							return std::to_string(id.asInt());
+						}),
+						", "
+					);
+					invalid_reason = base::strConcat(
+						unjoined.size() == 1 ? "thread " : "threads ",
+						ids,
+						unjoined.size() == 1 ? " of the previous run was never joined"
+											 : " of the previous run were never joined"
+					);
+				}
 			}
 			variant_case_novalue(pe::Stop) {}
 			variant_case_novalue(pe::DeinitAndValidate) {

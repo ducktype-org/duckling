@@ -106,10 +106,14 @@ namespace vm {
 		for (auto& [pid, proc]: process_table) {
 			// Every process must be stopped or finished before the Supervisor is destroyed.
 			auto status = proc->doRequest(api::request::StatusRequest{});
-			if (status && isExecuting(v_get(*status, api::ProcStatus)))
+			if (status && isExecuting(v_get(*status, api::ProcStatus))) {
 				std::cerr << "Supervisor destroyed while process " << pid
 						  << " is still executing. Processes must be stopped or finished before "
 							 "the Supervisor is destroyed.\n";
+				// `DeinitAndValidate` expects the process to be non-active, so we stop it before
+				// the deinit. If it was already stopped this won't change anything.
+				(void) proc->doRequest(api::request::Stop{});
+			}
 			const auto deinit = proc->doRequest(api::request::DeinitAndValidate{});
 			if (!deinit.has_value())
 				std::cerr << "Process " << pid << " failed to deinitialize during Supervisor "
