@@ -28,6 +28,7 @@ namespace {
 		case IntegerNeg: 	return OpKind::neg;
 		case FloatNeg:   	return OpKind::fneg;
 		case BooleanNot: 	return OpKind::log_not;
+		case IntegerBitNot: return OpKind::bit_not;
 		case IntegerAdd:  	return OpKind::add;
 		case IntegerSub:  	return OpKind::sub;
 		case IntegerMul:  	return OpKind::mul;
@@ -35,6 +36,11 @@ namespace {
 		case IntegerSMod: 	return OpKind::mod;
 		case IntegerUDiv: 	return OpKind::udiv;
 		case IntegerUMod: 	return OpKind::umod;
+		case IntegerBitAnd: return OpKind::bit_and;
+        case IntegerBitOr:  return OpKind::bit_or;
+        case IntegerBitXor: return OpKind::bit_xor;
+        case IntegerShl:    return OpKind::shl;
+        case IntegerShr:    return OpKind::shr;
 		case FloatAdd:    	return OpKind::fadd;
 		case FloatSub:    	return OpKind::fsub;
 		case FloatMul:    	return OpKind::fmul;
@@ -241,6 +247,7 @@ namespace compiler::backend_vm::internal {
 
 		/// Unary operations ///
 		case IntegerNeg:
+		case IntegerBitNot:
 		case FloatNeg:
 		case BooleanNot: {
 			CORE_ASSERT(
@@ -263,6 +270,11 @@ namespace compiler::backend_vm::internal {
 		case IntegerSMod:
 		case IntegerUDiv:
 		case IntegerUMod:
+		case IntegerBitAnd:
+		case IntegerBitOr:
+		case IntegerBitXor:
+		case IntegerShl:
+		case IntegerShr:
 		case FloatAdd:
 		case FloatSub:
 		case FloatMul:

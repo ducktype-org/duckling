@@ -1310,6 +1310,16 @@ namespace compiler::mir {
 				// @TODO: #1610 Implement exponentiation as a function call.
 				throw base::NotYetImplemented("Exponentiation on variables");
 
+			case IntegerBitAnd:
+				return { Operation::IntegerBitAnd };
+			case IntegerBitOr:
+				return { Operation::IntegerBitOr };
+			case IntegerBitXor:
+				return { Operation::IntegerBitXor };
+			case IntegerShl:
+				return { Operation::IntegerShl };
+			case IntegerShr:
+				return { Operation::IntegerShr };
 			/// Integer comparisons ///
 			case IntegerLt:
 				return { Operation::IntegerLt };
@@ -1370,6 +1380,8 @@ namespace compiler::mir {
 			switch (builtin) {
 			case IntegerNegation:
 				return { Operation::IntegerNeg };
+			case IntegerBitNot:
+				return { Operation::IntegerBitNot };
 			case FloatNegation:
 				return { Operation::FloatNeg };
 			case BooleanNot:

@@ -153,5 +153,19 @@ namespace compiler::numeric_value {
 		 * @return True if CTV stores an integer, false otherwise.
 		 */
 		[[nodiscard]] bool isIntegral() const;
+
+		/**
+		 * @brief Binary negation (~) operator for integral types.
+		 */
+		[[nodiscard]] base::Optional<NumericValue> bitNot() const;
+
+		/**
+		 * @brief Binary bitwise operations for integral types.
+		 */
+		[[nodiscard]] base::Optional<NumericValue> bitAnd(const NumericValue& rhs) const;
+		[[nodiscard]] base::Optional<NumericValue> bitOr(const NumericValue& rhs) const;
+		[[nodiscard]] base::Optional<NumericValue> bitXor(const NumericValue& rhs) const;
+		[[nodiscard]] base::Optional<NumericValue> shl(const NumericValue& rhs) const;
+		[[nodiscard]] base::Optional<NumericValue> shr(const NumericValue& rhs) const;
 	};
 }

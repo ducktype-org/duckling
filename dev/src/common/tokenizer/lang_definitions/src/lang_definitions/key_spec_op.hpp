@@ -229,6 +229,7 @@ namespace lang_def {
 
 		Pipe,       // | for variants and bitwise or.
 		Ampersand,  // & for references and bitwise and.
+		BitNot,
 		BitXor,
 
 		LeftShift,

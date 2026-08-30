@@ -1,0 +1,58 @@
+fun bit_and(a: i64, b: i64) -> i64 = {
+    return a & b;
+}
+
+fun bit_or(a: i64, b: i64) -> i64 = {
+    return a | b;
+}
+
+fun bit_xor(a: i64, b: i64) -> i64 = {
+    return a ^ b;
+}
+
+fun bit_shl(a: i64, b: i64) -> i64 = {
+    return a << b;
+}
+
+fun bit_shr(a: i64, b: i64) -> i64 = {
+    return a >> b;
+}
+
+fun bit_not(a: i64) -> i64 = {
+    return ~a;
+}
+
+fun main() -> i64 = {
+    let a: i64 = 12;
+    let b: i64 = 10;
+
+    if ((a & b) != 8) { return 1; }
+    if ((a & 10) != 8) { return 2; }
+    if (bit_and(a, b) != 8) { return 3; }
+
+    if ((a | b) != 14) { return 4; }
+    if ((a | 10) != 14) { return 5; }
+    if (bit_or(a, b) != 14) { return 6; }
+
+    if ((a ^ b) != 6) { return 7; }
+    if ((a ^ 10) != 6) { return 8; }
+    if ((a ^ a) != 0) { return 9; }
+    if (bit_xor(a, b) != 6) { return 10; }
+
+    let val: i64 = 5;
+    if ((val << 3) != 40) { return 11; }
+    if (bit_shl(val, 3) != 40) { return 12; }
+    if ((40 >> 3) != 5) { return 13; }
+    if (bit_shr(40, 3) != 5) { return 14; }
+
+    if (~a != -13) { return 15; }
+    if (bit_not(a) != -13) { return 16; }
+    if (~(~a) != 12) { return 17; }
+
+    if (~(a & b) != ((~a) | (~b))) { return 18; }
+
+    let res: i64 = ((a & b) | (b ^ 7)) << 2; # ((8) | (13)) << 2 = 13 << 2 = 52
+    if (res != 52) { return 19; }
+
+    return 0;
+}

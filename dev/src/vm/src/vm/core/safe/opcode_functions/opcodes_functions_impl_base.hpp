@@ -199,6 +199,52 @@ namespace vm {
 
 	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
+#define DEFINE_BITWISE_BINARY_OP(NAME, BITS_SIZE, RAW_TYPE, OP)                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) { \
+		{                                                                                \
+			auto       lhs = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg0);                 \
+			const auto rhs = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg1);                 \
+			lhs            = static_cast<RAW_TYPE>(lhs OP rhs);                          \
+			WRITE_TO_PLACE_ARG(RAW_TYPE, instr->arg0, lhs);                              \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}                                                                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+		{                                                                                \
+			auto       lhs = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg0);                 \
+			const auto rhs = READ_FROM_DIRECT_ARG(RAW_TYPE, instr->arg1);                \
+			lhs            = static_cast<RAW_TYPE>(lhs OP rhs);                          \
+			WRITE_TO_PLACE_ARG(RAW_TYPE, instr->arg0, lhs);                              \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}
+
+#define DEFINE_BITWISE_NOT_OP(BITS_SIZE, RAW_TYPE)                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(bit_not_p##BITS_SIZE)(FUNCTION_ARGS) {            \
+		{                                                                             \
+			auto value = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg0);                  \
+			WRITE_TO_PLACE_ARG(RAW_TYPE, instr->arg0, static_cast<RAW_TYPE>(~value)); \
+		}                                                                             \
+		FUNCTION_CONT(1);                                                             \
+	}
+
+#define DEFINE_INT_N_BITWISE(SIZE, RAW_TYPE)             \
+	DEFINE_BITWISE_BINARY_OP(bit_and, SIZE, RAW_TYPE, &) \
+	DEFINE_BITWISE_BINARY_OP(bit_or, SIZE, RAW_TYPE, |)  \
+	DEFINE_BITWISE_BINARY_OP(bit_xor, SIZE, RAW_TYPE, ^) \
+	DEFINE_BITWISE_BINARY_OP(shl, SIZE, RAW_TYPE, <<)    \
+	DEFINE_BITWISE_BINARY_OP(shr, SIZE, RAW_TYPE, >>)    \
+	DEFINE_BITWISE_NOT_OP(SIZE, RAW_TYPE)
+
+	DEFINE_INT_N_BITWISE(64, std::uint64_t)
+	DEFINE_INT_N_BITWISE(32, std::uint32_t)
+	DEFINE_INT_N_BITWISE(16, std::uint16_t)
+	DEFINE_INT_N_BITWISE(8, std::uint8_t)
+
+#undef DEFINE_BITWISE_BINARY_OP
+#undef DEFINE_BITWISE_NOT_OP
+#undef DEFINE_INT_N_BITWISE
+
 #define FLOAT_64_TYPE f64
 #define FLOAT_32_TYPE f32
 #define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                         \

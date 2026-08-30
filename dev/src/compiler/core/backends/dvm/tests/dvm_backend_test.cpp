@@ -48,6 +48,7 @@ public:
 		TESTER_ADD_TEST(backendDependentTest);
 		TESTER_ADD_TEST(allocTest);
 		TESTER_ADD_TEST(ffiTest);
+		TESTER_ADD_TEST(bitwiseOperationsTest);
 	}
 
 protected:
@@ -76,6 +77,7 @@ protected:
 			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
 			{ fs::FilePath(path("modules/alloc/")), "alloc" },
 			{ fs::FilePath(path("modules/ffi/")), "ffi" },
+			{ fs::FilePath(path("modules/bitwise_operations/")), "bitwise_operations" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -260,6 +262,8 @@ private:
 			"4\n50\n4\n"
 		);
 	}
+
+	void bitwiseOperationsTest() { runTest("bitwise_operations", {}, {}, {}, 0); }
 };
 
 

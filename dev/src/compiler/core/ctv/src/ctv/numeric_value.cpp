@@ -10,6 +10,25 @@
 #include <type_traits>
 
 namespace compiler::numeric_value {
+	namespace {
+		template<typename Op>
+		base::Optional<NumericValue> applyBitwiseBinary(
+			const NumericValue::Storage& lhs, const NumericValue::Storage& rhs, Op op
+		) {
+			return std::visit(
+				[&](auto&& l, auto&& r) -> base::Optional<NumericValue> {
+					using L = std::decay_t<decltype(l)>;
+					using R = std::decay_t<decltype(r)>;
+					if constexpr (std::is_integral_v<L> && std::is_same_v<L, R>)
+						return NumericValue{ static_cast<L>(op(l, r)) };
+					return {};
+				},
+				lhs,
+				rhs
+			);
+		}
+	}
+
 	const NumericValue::Storage& NumericValue::getStorage() const { return value; }
 
 	[[nodiscard]] std::string NumericValue::toString() const {
@@ -122,5 +141,68 @@ namespace compiler::numeric_value {
 		default:
 			CORE_PANIC("Invalid compile-time cast to a non-numeric type");
 		}
+	}
+
+	base::Optional<NumericValue> NumericValue::bitNot() const {
+		return std::visit(
+			[&](auto&& val) -> base::Optional<NumericValue> {
+				using T = std::decay_t<decltype(val)>;
+				if constexpr (std::is_integral_v<T>) return NumericValue{ static_cast<T>(~val) };
+				return {};
+			},
+			value
+		);
+	}
+
+	base::Optional<NumericValue> NumericValue::bitAnd(const NumericValue& rhs) const {
+		return applyBitwiseBinary(value, rhs.value, [](auto a, auto b) { return a & b; });
+	}
+
+	base::Optional<NumericValue> NumericValue::bitOr(const NumericValue& rhs) const {
+		return applyBitwiseBinary(value, rhs.value, [](auto a, auto b) { return a | b; });
+	}
+
+	base::Optional<NumericValue> NumericValue::bitXor(const NumericValue& rhs) const {
+		return applyBitwiseBinary(value, rhs.value, [](auto a, auto b) { return a ^ b; });
+	}
+
+	base::Optional<NumericValue> NumericValue::shl(const NumericValue& rhs) const {
+		return std::visit(
+			[&](auto&& l, auto&& r) -> base::Optional<NumericValue> {
+				using L = std::decay_t<decltype(l)>;
+				using R = std::decay_t<decltype(r)>;
+				if constexpr (std::is_integral_v<L> && std::is_integral_v<R>) {
+					if constexpr (std::is_signed_v<R>) {
+						if (r < 0) return {};
+					}
+					if (static_cast<std::uint64_t>(r) >= sizeof(L) * 8) return {};
+
+					return NumericValue{ static_cast<L>(l << r) };
+				}
+				return {};
+			},
+			value,
+			rhs.value
+		);
+	}
+
+	base::Optional<NumericValue> NumericValue::shr(const NumericValue& rhs) const {
+		return std::visit(
+			[&](auto&& l, auto&& r) -> base::Optional<NumericValue> {
+				using L = std::decay_t<decltype(l)>;
+				using R = std::decay_t<decltype(r)>;
+				if constexpr (std::is_integral_v<L> && std::is_integral_v<R>) {
+					if constexpr (std::is_signed_v<R>) {
+						if (r < 0) return {};
+					}
+					if (static_cast<std::uint64_t>(r) >= sizeof(L) * 8) return {};
+
+					return NumericValue{ static_cast<L>(l >> r) };
+				}
+				return {};
+			},
+			value,
+			rhs.value
+		);
 	}
 }
