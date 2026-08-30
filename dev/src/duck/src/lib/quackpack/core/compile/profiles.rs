@@ -248,7 +248,7 @@ impl Profile {
     }
 
     /// Get a [`String`] describing the value (everything except `name`) of this profile.
-    pub fn serialize_raw(&self) -> String {
+    pub fn serialize_raw(self) -> String {
         format!(
             "{}-{}-{}-{}",
             self.opt_level, self.incremental, self.c_std, self.dvm_bytecode

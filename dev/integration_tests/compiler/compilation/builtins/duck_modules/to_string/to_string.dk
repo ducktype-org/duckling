@@ -1,0 +1,35 @@
+class Person {
+	name: str;
+	age: i32;
+	height: f64
+}
+
+fun main() -> i64 = {
+	print((1).toString());
+	var a = 2;
+	print(a.toString());
+
+	print(3.14.toString());
+
+	print('d'.toString());
+
+	print(true.toString());
+
+	print(().toString());
+
+	var t = ("John Smith", 42, 1.69);
+	print(t.toString());
+
+	var p = Person("John Smith", 42, 1.69);
+	print(p.toString());
+
+	# Print only the "ptr()" part, without the insides, as the inside is different on DVM and LLVM.
+	var pointer_text = (&p as ptr Person).toString();
+	print(pointer_text.at(0i64).toString());
+	print(pointer_text.at(1i64).toString());
+	print(pointer_text.at(2i64).toString());
+	print(pointer_text.at(3i64).toString());
+	print(pointer_text.at(pointer_text.length() - 1).toString());
+
+	return 0;
+}

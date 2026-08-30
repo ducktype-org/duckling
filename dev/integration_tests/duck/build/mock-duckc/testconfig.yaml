@@ -5,6 +5,7 @@ SubDirs:
   - basic
   - basic-deps
   - basic-deps-and-conds
+  - basic-deps-with-libs
   - diamond
   - dvm-deps
   - errors

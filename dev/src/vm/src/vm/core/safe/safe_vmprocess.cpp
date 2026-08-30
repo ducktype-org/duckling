@@ -316,7 +316,7 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getVMThreadCurrentPosition(
-		api::ThreadID thread_id
+		api::ThreadID thread_id, base::Optional<usize> frame_idx
 	) {
 		// Try to obtain thread
 		auto opt_thread = getVMThreadByID(thread_id);
@@ -324,7 +324,7 @@ namespace vm {
 		auto thread = opt_thread.value();
 
 		// Try to obtain low position
-		auto maybe_lp = thread->getCurrentPosition();
+		auto maybe_lp = thread->getCurrentPosition(frame_idx);
 		if (!maybe_lp) return std::unexpected(maybe_lp.error());
 		auto low_position = maybe_lp.value();
 

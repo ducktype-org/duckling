@@ -659,26 +659,31 @@ namespace vm {
 	}
 
 	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition(
-		base::Optional<usize> opt_frame_idx
+		base::Optional<usize> frame_idx
 	) const {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
 				const Frame* frame = runtime_data.frame_stack_current;
-
-				if_opt_some(opt_frame_idx, frame_index) {
+				// In caller frames, the instruction pointer rests on the return address (the
+				// instruction after the call). We must adjust it backward by 1 to point to the
+				// actual call site.
+				bool call_adjustment = false;
+				if_opt_some(frame_idx, frame_index) {
 					u64 frames = getNumberOfCurrentStackFrames();
 					if (frame_index >= frames)
 						return std::unexpected(api::ApiError{
 							api::OtherError{ "Frame index out of bounds" } });
 
 					frame = &getStackFrame(frame_index);
+					if (frame_index + 1 != frames) call_adjustment = true;
 				}
 
 				auto& func = *frame->current_function;
 
 				return low::LowCodePosition{
-					.function          = &func,
-					.instruction_index = static_cast<u64>(frame->instr - func.bc.data()),
+					.function = &func,
+					.instruction_index
+					= static_cast<u64>(frame->instr - func.bc.data() - (call_adjustment ? 1 : 0)),
 				};
 			}
 			variant_default {

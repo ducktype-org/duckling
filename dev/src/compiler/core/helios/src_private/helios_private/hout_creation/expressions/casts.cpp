@@ -2,7 +2,7 @@
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 
 #include <base/except/exceptions.hpp>
 
@@ -138,6 +138,22 @@ namespace compiler::helios::code {
 				.to_kind           = Kind::CPointer,
 				.same_pointee_type = false,
 			},
+			// From CPointer to Integral
+			{
+				.from_ref_kind     = ReferenceKind::Direct,
+				.from_kind         = Kind::CPointer,
+				.to_ref_kind       = ReferenceKind::Direct,
+				.to_kind           = Kind::Integral,
+				.same_pointee_type = false,
+			},
+			// From Pointer to Integral (LLVM only friendly)
+			{
+				.from_ref_kind     = ReferenceKind::Direct,
+				.from_kind         = Kind::Pointer,
+				.to_ref_kind       = ReferenceKind::Direct,
+				.to_kind           = Kind::Integral,
+				.same_pointee_type = false,
+			},
 		};
 
 		bool found_match = false;
@@ -163,15 +179,9 @@ namespace compiler::helios::code {
 				break;
 			}
 		}
-		// Temporarily allow casts from CPointer to Pointer and ManyPointer, with a warning.
+		// Temporarily allow casts from CPointer to Pointer and ManyPointer.
 		if (found_match && from.getRefKind() == ReferenceKind::Direct
 		    && from.getType().getKind() == tsh::Kind::CPointer) {
-			ctx.logInt(makeBox<dia::PlaceholderWarning>(
-				"Casts from CPointer will be disabled in the future and only work on "
-				"native targets.",
-				stmt->getStablePosition(),
-				"There will be a different syntax for such casts in the future."
-			));
 			// I do not like this syntax "as" to work on some targets and not work on
 			// others. I would like to have some syntax, so that the user has to write
 			// `native_cptr_cast<ptr T>(original_ctype)` or `@native v as ptr T`

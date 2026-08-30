@@ -11,8 +11,8 @@
 
 #include <vm/bytecode/validator/valid_type/type_size.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
-#include <vm/utils/persistent/dummy/hashmap.hpp>
-#include <vm/utils/persistent/dummy/vector.hpp>
+#include <vm/utils/persistent/hashmap.hpp>
+#include <vm/utils/persistent/vector.hpp>
 
 #include <utility>
 
@@ -30,7 +30,7 @@ namespace vm::code {
 		friend LocalStackDbBuilder;
 
 		using NameStackID = u64;
-		using TypeStackID = u64;
+		using TypeStackID = persistent::VectorStateID;
 
 		struct Lifetime {
 			usize deinit_idx                         = 0;
@@ -62,7 +62,7 @@ namespace vm::code {
 	public:
 		static constexpr StackStateID EMPTY            = StackStateID{ 0 };
 		static constexpr NameStackID  EMPTY_NAME_STACK = 0;
-		static constexpr TypeStackID EMPTY_TYPE_STACK = persistent::DummyVector<base::StrID>::EMPTY;
+		static constexpr TypeStackID  EMPTY_TYPE_STACK = persistent::Vector<base::StrID>::EMPTY;
 
 		base::Optional<valid_type::TypeSize> getByteOffset(StackStateID state, base::StrID name)
 			const;
@@ -135,7 +135,7 @@ namespace vm::code {
 		base::HashMap<base::StrID, NameMap>              name_to_namestack{};
 		std::vector<NameStackEntry>                      namestack_entries{};
 		std::vector<std::pair<NameStackID, TypeStackID>> stack_state_to_substacks{};
-		persistent::DummyVector<base::StrID>             typestack{};
+		persistent::Vector<base::StrID>                  typestack{};
 		std::vector<NameMap>                             nodes_at_depth;
 
 		LocalStackDb(

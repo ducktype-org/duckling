@@ -71,6 +71,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![pkg1],
         features: HashMap::new(),
@@ -84,6 +85,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![pkg2, pkg3],
         features: HashMap::new(),
@@ -97,6 +99,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
@@ -162,7 +165,7 @@ fn single_metadata() {
     let (server, ctx) = create_mock_server();
     let http_client = Arc::new(AsyncHttpClient::new(&ctx));
     let client = DucknestClient::new(http_client);
-    let response = block_on(client.get_exact_metadata(&types::PackageWithUrl {
+    let response = block_on(client.get_exact_metadata(types::PackageWithUrl {
         name: "foo".into(),
         version: Version::new(1, 2, 3),
         url: server.base_url().parse().unwrap(),
@@ -173,7 +176,7 @@ fn single_metadata() {
     assert_eq!(response.dependencies.len(), 2);
 
     assert!(
-        block_on(client.get_exact_metadata(&types::PackageWithUrl {
+        block_on(client.get_exact_metadata(types::PackageWithUrl {
             name: "foo".into(),
             version: Version::new(1, 2, 4),
             url: server.base_url().parse().unwrap(),
@@ -202,12 +205,12 @@ fn download_blob() {
     let http_client = Arc::new(AsyncHttpClient::new(&ctx));
     let client = DucknestClient::new(http_client);
     block_on(client.fetch_blob(
-        &types::PackageWithUrl {
+        types::PackageWithUrl {
             name: "foo".into(),
             version: Version::new(1, 2, 3),
             url: server.base_url().parse().unwrap(),
         },
-        path,
+        &path,
     ))
     .unwrap();
     assert_eq!(
@@ -221,7 +224,7 @@ fn not_found_in_response() {
     let (server, ctx) = create_mock_server();
     let http_client = Arc::new(AsyncHttpClient::new(&ctx));
     let client = DucknestClient::new(http_client);
-    let err = block_on(client.get_exact_metadata(&types::PackageWithUrl {
+    let err = block_on(client.get_exact_metadata(types::PackageWithUrl {
         name: "foo".into(),
         version: Version::new(2137, 6, 7),
         url: server.base_url().parse().unwrap(),

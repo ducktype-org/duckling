@@ -1,0 +1,29 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init a
+
+PostCase: python3 check.py @{expected-manifest} && @{cleanup_tmp_env}
+
+Tests:
+  alias:
+    Cases:
+      alias:
+        test-cmd: duck -C foo add --local ../a --alias b a
+        Output:
+          Run: |+
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
+            echo "info: successfully added normal dependency \`b\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+        expected-manifest: 1
+      multiple-with-alias:
+        test-cmd: |+
+          duck -C foo add --local ../a a &&
+          duck -C foo add --local ../a --alias b a
+        Output:
+          Run: |+
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
+            echo "info: successfully added normal dependency \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`" &&
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
+            echo "info: successfully added normal dependency \`b\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+        expected-manifest: 2
+        

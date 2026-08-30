@@ -1,32 +1,43 @@
 # Tests for statements
 
 Tests:
+  # DVM only: the module calls the `dvm_*` allocation and pointer builtins directly.
   new_builtins:
     Cases:
       dvm:
         backend: dvm
         ExitCode: 0
         Output:
-          String: "HELLO\nH"
+          String: "HELLO\nH0falsetruetrueptr(null)"
+  # Freeing a table of aggregates that hold a pointer only leaks on stderr, so `Err` is what makes
+  # this case fail - the exit code stays 0 either way.
+  dvm_alloc_nested:
+    Cases:
+      dvm:
+        backend: dvm
+        ExitCode: 0
+        Output:
+          String: "5\n"
+        Err:
+          String: ""
   numeric_io:
-    Cases: 
-      llvm:
-        backend: llvm
+    Cases:
+      all:
+        backend: all
         Input:
           String: "42\n-42\n18446744073709551615\n3.141\n-6.022e+23\n"
         Output:
           String: "42\n-42\n18446744073709551615\n3.141\n-6.022e+23\n"
-      # @TODO: #1782 Add dvm test when DVM supports more builtins.
   to_string:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
-          String: "123.14dtrue()(John Smith,42,1.69)Person(John Smith,42,1.69)"
+          String: "123.14dtrue()(John Smith,42,1.69)Person(John Smith,42,1.69)ptr()"
   format_strings:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Input:
           String: "John\n42\n69\n"
         Output:

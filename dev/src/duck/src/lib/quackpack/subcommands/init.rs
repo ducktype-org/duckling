@@ -15,12 +15,12 @@ use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Options for initializing a new project.
-pub struct InitOptions<'duck, 'a> {
+pub struct InitOptions<'duck, 'matches> {
     pub ctx: &'duck DuckContext,
     /// Root of the project.
     pub at: PathBuf,
     /// Name of the project.
-    pub explicit_name: Option<&'a str>,
+    pub explicit_name: Option<&'matches str>,
     /// Initialize a venv instead of a project (do not create the `src` folder).
     pub as_venv: bool,
     /// Make the project expose freezefile.
@@ -61,7 +61,7 @@ impl Display for VenvConfigBuilder {
     }
 }
 
-const DEFAULT_SOURCE_FILENAME: &str = "src.dmf";
+const DEFAULT_SOURCE_FILENAME: &str = "src.dk";
 
 const DEFAULT_SOURCE_CONTENTS: &str = "\
 import core.builtins.*;
@@ -264,8 +264,8 @@ fn generate_venv_config(
 /// Add a package structure to the project.
 /// Note:
 /// -----
-/// Currently makes the project's main entry point a `.dmf` file with a `main()` function.
-/// In the future an option should be added to initialize the project's entry point as a script (`main.ds`).
+/// Currently makes the project's main entry point a `.dk` file with a `main()` function.
+/// In the future an option should be added to initialize the project's entry point as a script (`main.dks`).
 fn add_package_structure(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
     let source_file_path = root_path.join("src").join(DEFAULT_SOURCE_FILENAME);
     if let Some(parent) = source_file_path.parent() {
