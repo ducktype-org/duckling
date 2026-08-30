@@ -2503,11 +2503,10 @@ private:
 			const auto tuple
 				= CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
 
-			const std::vector<CompileTimeValue> ctvs = {
-				false,  true,     F_1,     D_1,       I8_N7,    U8_7,     I16_N42,
-				U16_42, I32_N137, U32_137, I64_N1234, U64_1234, INT_MIN,  'B',
-				'^',    str1,     str2,    UNIT,      tuple,    symbol_1, symbol_2,
-			};
+			const std::vector<CompileTimeValue> ctvs
+				= { false,  true,     F_1,     D_1,       I8_N7,    U8_7,     I16_N42,
+				    U16_42, I32_N137, U32_137, I64_N1234, U64_1234, INT_MIN,  'B',
+				    '^',    str1,     str2,    UNIT,      tuple,    symbol_1, symbol_2 };
 
 			for (auto&& it: ctvs) result += compiler::helios::mangler::mangleCTV(ctx, it) + ' ';
 			return result;
