@@ -2467,6 +2467,7 @@ private:
 			prefix_method.str()
 		);
 
+		// @todo: #3131
 		// Suffix has no declaration syntax yet (see testOperatoriness) -- nothing to mangle here
 		// until fixity keywords exist. Once they do, add e.g.:
 		// ASSERT_EQUAL("...", mangle(.../* a suffix-declared operator */).str());
@@ -2510,8 +2511,6 @@ private:
 			return result;
 		});
 
-		std::cerr << result << '\n';
-
 		std::string expected
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
 			  "jq1234_ iqn9223372036854775808_ c66_ c94_ r6_737472414243 "
@@ -2523,6 +2522,8 @@ private:
 
 	void testManglingOfTemplates() {
 		using namespace std::string_view_literals;
+		using compiler::helios::mangler::getSimpleMangledName;
+
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/template_mangling")));
 
 		const auto tmpl_foo  = getChain("Name.foo", root_scope).back();
@@ -2549,51 +2550,26 @@ private:
 				return ctx.query<tmpl::QueryBakeTemplateSymID>(key).valueOrThrow();
 			};
 
-			std::cerr << std::left;
 
 			auto baked_foo_1 = bake(tmpl_foo, val42, i64_type);
-			auto name_foo_1
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_1 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_1:" << name_foo_1 << '\n';
+			auto name_foo_1  = getSimpleMangledName(ctx, baked_foo_1).strView();
 
 			auto baked_foo_2 = bake(tmpl_foo, val42, cls_type);
-			auto name_foo_2
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_2 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_2:" << name_foo_2 << '\n';
+			auto name_foo_2  = getSimpleMangledName(ctx, baked_foo_2).strView();
 
 			auto baked_tcls      = bake(tmpl_tcls, val_f);
 			auto baked_tcls_type = st(ctx.query<compiler::tsh::QueryClassType>(baked_tcls));
 			auto baked_foo_3     = bake(tmpl_foo, val42, baked_tcls_type);
-			auto name_foo_3
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_3 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_3:" << name_foo_3 << '\n';
+			auto name_foo_3      = getSimpleMangledName(ctx, baked_foo_3).strView();
 
 			auto baked_foo_4 = bake(tmpl_foo, val42, glob_cls_type);
-			auto name_foo_4
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_4 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_4:" << name_foo_4 << '\n';
+			auto name_foo_4  = getSimpleMangledName(ctx, baked_foo_4).strView();
 
-			auto name_hoo
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key = hoo })
-			          .strView();
-			std::cerr << std::setw(16) << "name_hoo:" << name_hoo << '\n';
+			auto name_hoo = getSimpleMangledName(ctx, hoo).strView();
 
 			auto baked_goo = bake(tmpl_goo, val42);
-			auto name_goo
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_goo })
-			          .strView();
-			std::cerr << std::setw(16) << "name_goo:" << name_goo << '\n';
+			auto name_goo  = getSimpleMangledName(ctx, baked_goo).strView();
 
-			std::cerr << std::right;
 
 			const auto efoo1 = "_Q_M17template_manglingN4Name3fooIiq42_tiqEEFiqiqE5paramE"sv;
 			const auto efoo2
