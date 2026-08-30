@@ -4287,7 +4287,7 @@ private:
 		auto find_fun = [&](std::string_view target) -> const auto& {
 			for (const auto& fun: hout.functions)
 				if (fun->declaration->original_name.strView() == target) return *fun;
-			CORE_PANIC(base::strConcat("Funkcja nie znaleziona: ", target));
+			CORE_PANIC(base::strConcat("Function not found: ", target));
 		};
 
 		const auto& fn    = find_fun("fnBitwise");
