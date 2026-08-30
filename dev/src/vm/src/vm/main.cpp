@@ -183,6 +183,7 @@ clah::Clah getVmClah() {
 							   return 0;
 						   }))
 #endif  // ENABLE_JIT
+		;
 }
 
 int main(int argc, const char** argv) {

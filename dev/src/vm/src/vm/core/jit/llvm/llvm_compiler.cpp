@@ -109,7 +109,6 @@ namespace vm::jit {
 			(printModule(new_module.get(), "compiled_function-before.llvm"),
 		     "Compiled function dumped")
 		);
-		std::cerr << "Compiled?\n";
 
 		optimizeModule(*new_module);
 

@@ -140,6 +140,7 @@ function(add_vm_variant suffix compile_def)
         target_compile_definitions(${lib_thread_vm_name}_bc PRIVATE ${compile_def})
 
         set(common_bc ${CMAKE_CURRENT_BINARY_DIR}/common_${suffix}.bc)
+        set(common_bc_stripped ${CMAKE_CURRENT_BINARY_DIR}/common_${suffix}.stripped.bc)
         set(extracted_func_file ${CMAKE_CURRENT_BINARY_DIR}/extracted_function_${suffix}.txt)
 
         # Pipeline preparing opcodes definitions for JIT.
@@ -161,7 +162,7 @@ function(add_vm_variant suffix compile_def)
                 -o ${extracted_func_file}
             
             # Strip global constructors, they are not necessary for jit.
-            COMMAND ${LLVM_EXTRACT} --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc}
+            COMMAND ${LLVM_EXTRACT} --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc_stripped}
 
             # Passess used to shorten bytecode and reduce JIT startup. Public api list, represents all jitable opcodes.
             # globalopt removes unused global variables. It is crucial to do it first to clean up after global constcors
@@ -174,7 +175,7 @@ function(add_vm_variant suffix compile_def)
             COMMAND ${LLVM_OPT}
                 -passes=globalopt,internalize,simplifycfg,default<O3>,strip-dead-prototypes,default<O3>
                 --internalize-public-api-file=${extracted_func_file}
-                ${common_bc}
+                ${common_bc_stripped}
                 -o ${common_bc}
 
             VERBATIM
