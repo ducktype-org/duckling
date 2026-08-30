@@ -23,7 +23,7 @@ fun elementByRef(element: ref i64) -> () = {
 }
 
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     # Simple usage.
     var arr: List:{i64};
     arr.push(111);

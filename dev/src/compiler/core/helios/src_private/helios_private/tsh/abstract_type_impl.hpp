@@ -246,6 +246,12 @@ namespace compiler::tsh {
 
 		VoidAbstractTypeImpl() { representation = "void"; }
 
+		[[nodiscard]]
+		bool isImplicitlyCoercible(const AbstractType, query::Context&) const override {
+			// Void has no values, so it is a subtype of every type.
+			return true;
+		}
+
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }

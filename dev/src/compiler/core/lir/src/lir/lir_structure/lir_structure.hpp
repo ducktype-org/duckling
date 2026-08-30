@@ -110,6 +110,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Terminator: [pointer, null_target, not_null_target]. */
 	BranchIfNull,
 
+	/** Terminator: marks control flow that can never be reached (e.g. after a diverging call). */
+	Unreachable,
+
 	// Nop can be useful when lowering the instruction flags and MIR instr translates
 	// to zero instructions in LIR, but we want to have the flags in correct place.
 	Nop
@@ -344,7 +347,7 @@ namespace compiler::lir {
 		 */
 		static LIRGlobal fromMIR(query::Context& ctx, mir::MIRGlobal mir_global);
 
-		void debugPrint(query::Context& ctx, std::ostream& os) const;
+		void debugPrint(std::ostream& output, base::Optional<Ref<query::Context>> ctx = {}) const;
 	};
 
 	/**
@@ -465,6 +468,12 @@ namespace compiler::lir {
 		bool hasProjections() const {
 			return !projection_chain.empty();
 		}
+
+		/**
+		 * Prints this place, assigning IDs to referenced locals in encounter order
+		 * or using local and block IDs from the function if given.
+		 */
+		void debugPrint(std::ostream& output, base::Optional<CRef<Function>> function = {}) const;
 	};
 
 	/**
@@ -526,6 +535,12 @@ namespace compiler::lir {
 		[[nodiscard]] bool is() const {
 			return std::holds_alternative<T>(value);
 		}
+
+		/**
+		 * Prints this value, assigning IDs to referenced locals and blocks in encounter order
+		 * or using local and block IDs from the function if given.
+		 */
+		void debugPrint(std::ostream& output, base::Optional<CRef<Function>> function = {}) const;
 	};
 
 	/**
@@ -636,6 +651,12 @@ namespace compiler::lir {
 		 * Whether the instruction can be the last instruction in the block (i.e. be a terminator).
 		 */
 		[[nodiscard]] bool isTerminating() const;
+
+		/**
+		 * Prints this instruction, assigning IDs to referenced locals and blocks in encounter order
+		 * or using local and block IDs from the function if given.
+		 */
+		void debugPrint(std::ostream& output, base::Optional<CRef<Function>> function = {}) const;
 	};
 
 	/**
@@ -705,7 +726,7 @@ namespace compiler::lir {
 		[[nodiscard]]
 		base::OkBad validateParameters() const;
 
-		void debugPrint(query::Context&, std::ostream& output) const;
+		void debugPrint(std::ostream& output, base::Optional<Ref<query::Context>> ctx = {}) const;
 
 		/**
 		 * @brief Returns a map from all blocks to unique ids.
@@ -763,7 +784,7 @@ namespace compiler::lir {
 		[[nodiscard]]
 		ctv::CompileTimeValue getConstValue() const;
 
-		void debugPrint(query::Context& ctx, std::ostream& out) const;
+		void debugPrint(std::ostream& output, base::Optional<Ref<query::Context>> ctx = {}) const;
 	};
 
 	/**
@@ -778,7 +799,7 @@ namespace compiler::lir {
 		std::vector<CRef<Function>> lir_functions;
 		std::vector<LIRGlobalData>  lir_globals;
 
-		void debugPrint(query::Context& ctx, std::ostream& out) const;
+		void debugPrint(std::ostream& output, base::Optional<Ref<query::Context>> ctx = {}) const;
 
 		/**
 		 * @brief Removes duplicate functions and globals from the LIR unit.

@@ -44,7 +44,7 @@ fun testPopUntilEmpty() -> () = {
     builtin_output_i64(l.at(0)); # 555
 }
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     testBigRealloc();
     testPushPopPushPopPushPop();
     testPopUntilEmpty();

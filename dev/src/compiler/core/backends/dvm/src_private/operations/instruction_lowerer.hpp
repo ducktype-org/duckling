@@ -38,6 +38,7 @@ namespace compiler::backend_vm::internal {
 		void lower(const BranchOperation& op);
 		void lower(const BranchIfNullOperation& op);
 		void lower(const ReturnOperation& op);
+		void lower(const UnreachableOperation& op);
 
 		/**
 		 * @brief Makes sure deinits for the current instruction are only pushed once.

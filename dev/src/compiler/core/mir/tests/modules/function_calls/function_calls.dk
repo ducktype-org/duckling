@@ -14,3 +14,10 @@ fun foo() -> i64 = {
 }
 
 
+
+fundecl diverges() -> void;
+
+fun callDiverges() -> i64 = {
+    diverges();
+    return 42;
+}

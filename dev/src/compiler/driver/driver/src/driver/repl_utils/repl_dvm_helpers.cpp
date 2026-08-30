@@ -64,7 +64,7 @@ namespace compiler::repl {
 
 		if (logger::isCategoryEnabled(logger::DevLogCategories::REPL)) {
 			std::stringstream lir_unit_print;
-			lir_data.lir_unit.debugPrint(ctx, lir_unit_print);
+			lir_data.lir_unit.debugPrint(lir_unit_print, Ref{ &ctx });
 			CORE_DEV_LOG(REPL, "LIR unit:\n", lir_unit_print.str());
 		}
 
