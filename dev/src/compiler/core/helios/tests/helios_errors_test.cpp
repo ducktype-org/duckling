@@ -1903,28 +1903,28 @@ private:
 		constexpr char PRINTABLE     = '@';
 		constexpr char NON_PRINTABLE = '\x07f';
 
-		auto [_, root_scope_prt] = test_utils::getModule(fs::File(
+		const auto [_, root_scope_prt] = test_utils::getModule(fs::File(
 			path(base::strConcat("test_modules/error_generating/mod_w_prt_char_", PRINTABLE, "_"))
 		));
-		auto id_prt              = test_utils::getChain("foo", root_scope_prt).back();
+		const auto id_prt              = test_utils::getChain("foo", root_scope_prt).back();
 
 		// note: `Delete` is not-printable on win/linux/mac but it's allowed in filenames
 		ASSERT_TRUE(not std::isprint(static_cast<unsigned char>(NON_PRINTABLE)));
-		auto [dummy, root_scope_nprt] = test_utils::getModule(fs::File(path(
+		const auto [dummy, root_scope_nprt] = test_utils::getModule(fs::File(path(
 			base::strConcat("test_modules/error_generating/mod_w_non_prt_char_", NON_PRINTABLE, "_")
 		)));
-		std::ignore                   = dummy;  // @todo: #761 replace `dummy` with `_`
-		auto id_nprt                  = test_utils::getChain("foo", root_scope_nprt).back();
+		std::ignore                         = dummy;  // @todo: #761 replace `dummy` with `_`
+		const auto id_nprt                  = test_utils::getChain("foo", root_scope_nprt).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			ctx.query<mangler::QueryMangledSymbol>({ id_prt });
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_prt });
 			checkForError(
 				{ "[Feature not implemented] Name of a module contains a character that is not "
 			      "allowed yet: '@' (int: 64)" },
 				1
 			);
 
-			ctx.query<mangler::QueryMangledSymbol>({ id_nprt });
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_nprt });
 			checkForError(
 				{ "[Feature not implemented] Name of a module contains a character that is not "
 			      "allowed yet: [not-printable] (int: 127)" },

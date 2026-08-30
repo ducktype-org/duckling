@@ -2438,9 +2438,9 @@ private:
 	void testManglerOperators() {
 		const auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
 
-		const auto infix_free   = mangle({ getChain("+*", root_scope).back() });
-		const auto prefix_free  = mangle({ getChain("-*", root_scope).back() });
-		const auto unicode_free = mangle({ getChain("+×", root_scope).back() });
+		const auto infix_free   = mangle({ .symbol_key = getChain("+*", root_scope).back() });
+		const auto prefix_free  = mangle({ .symbol_key = getChain("-*", root_scope).back() });
+		const auto unicode_free = mangle({ .symbol_key = getChain("+×", root_scope).back() });
 
 		const auto foo_class = getChain("Foo", root_scope).back();
 		const auto foo_class_info
@@ -2454,8 +2454,8 @@ private:
 			return foo_class_info.methods.at(0);
 		};
 
-		const auto infix_method  = mangle({ find_method("+*") });
-		const auto prefix_method = mangle({ find_method("-*") });
+		const auto infix_method  = mangle({ .symbol_key = find_method("+*") });
+		const auto prefix_method = mangle({ .symbol_key = find_method("-*") });
 
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFiqiqiqE1a1bE", infix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFiqiqE1aE", prefix_free.str());
@@ -2484,18 +2484,18 @@ private:
 
 		std::string result;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			constexpr auto unit      = CompileTimeValue::UnitCTV{};
-			constexpr auto f_1       = NumericValue{ f32{ 1.0f } };
-			constexpr auto d_1       = NumericValue{ f64{ 1.0 } };
-			constexpr auto i8_n7     = NumericValue{ int8_t{ -7 } };
-			constexpr auto u8_7      = NumericValue{ uint8_t{ 7 } };
-			constexpr auto i16_n42   = NumericValue{ i16{ -42 } };
-			constexpr auto u16_42    = NumericValue{ u16{ 42 } };
-			constexpr auto i32_n137  = NumericValue{ i32{ -137 } };
-			constexpr auto u32_137   = NumericValue{ u32{ 137 } };
-			constexpr auto i64_n1234 = NumericValue{ i64{ -1'234 } };
-			constexpr auto u64_1234  = NumericValue{ u64{ 1'234 } };
-			constexpr auto int_min   = NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
+			constexpr auto UNIT      = CompileTimeValue::UnitCTV{};
+			constexpr auto F_1       = NumericValue{ f32{ 1.0f } };
+			constexpr auto D_1       = NumericValue{ f64{ 1.0 } };
+			constexpr auto I8_N7     = NumericValue{ int8_t{ -7 } };
+			constexpr auto U8_7      = NumericValue{ uint8_t{ 7 } };
+			constexpr auto I16_N42   = NumericValue{ i16{ -42 } };
+			constexpr auto U16_42    = NumericValue{ u16{ 42 } };
+			constexpr auto I32_N137  = NumericValue{ i32{ -137 } };
+			constexpr auto U32_137   = NumericValue{ u32{ 137 } };
+			constexpr auto I64_N1234 = NumericValue{ i64{ -1'234 } };
+			constexpr auto U64_1234  = NumericValue{ u64{ 1'234 } };
+			constexpr auto INT_MIN   = NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
 			const auto     str1
 				= CompileTimeValue{ CompileTimeValue::CharSliceValue{ base::StrID{ "strABC" } } };
 			const auto str2 = CompileTimeValue{ CompileTimeValue::StringClassValue{
@@ -2504,22 +2504,22 @@ private:
 				= CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
 
 			const std::vector<CompileTimeValue> ctvs = {
-				false,  true,     f_1,     d_1,       i8_n7,    u8_7,     i16_n42,
-				u16_42, i32_n137, u32_137, i64_n1234, u64_1234, int_min,  'B',
-				'^',    str1,     str2,    unit,      tuple,    symbol_1, symbol_2,
+				false,  true,     F_1,     D_1,       I8_N7,    U8_7,     I16_N42,
+				U16_42, I32_N137, U32_137, I64_N1234, U64_1234, INT_MIN,  'B',
+				'^',    str1,     str2,    UNIT,      tuple,    symbol_1, symbol_2,
 			};
 
 			for (auto&& it: ctvs) result += compiler::helios::mangler::mangleCTV(ctx, it) + ' ';
 			return result;
 		});
 
-		constexpr std::string_view expected
+		constexpr std::string_view EXPECTED
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
 			  "jq1234_ iqn9223372036854775808_ c66_ c94_ r6_737472414243 "
 			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u Tb1b0E tNid "
 			  "tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
 
-		ASSERT_EQUAL(expected, result);
+		ASSERT_EQUAL(EXPECTED, result);
 	}
 
 	void testManglingOfTemplates() {
@@ -2538,8 +2538,8 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			namespace tmpl = compiler::helios::templates;
 
-			constexpr auto val42         = compiler::numeric_value::NumericValue{ i64{ 42 } };
-			constexpr auto val_f         = compiler::numeric_value::NumericValue{ f32{ 1.0f } };
+			constexpr auto VAL42         = compiler::numeric_value::NumericValue{ i64{ 42 } };
+			constexpr auto VAL_F         = compiler::numeric_value::NumericValue{ f32{ 1.0f } };
 			const auto&    i64_type      = st(compiler::tsh::getIntegralType(
                 ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
             ));
@@ -2553,42 +2553,42 @@ private:
 			};
 
 
-			const auto baked_foo_1 = bake(tmpl_foo, val42, i64_type);
+			const auto baked_foo_1 = bake(tmpl_foo, VAL42, i64_type);
 			const auto name_foo_1  = getSimpleMangledName(ctx, baked_foo_1).strView();
 
-			const auto baked_foo_2 = bake(tmpl_foo, val42, cls_type);
+			const auto baked_foo_2 = bake(tmpl_foo, VAL42, cls_type);
 			const auto name_foo_2  = getSimpleMangledName(ctx, baked_foo_2).strView();
 
-			const auto baked_tcls      = bake(tmpl_tcls, val_f);
+			const auto baked_tcls      = bake(tmpl_tcls, VAL_F);
 			const auto baked_tcls_type = st(ctx.query<compiler::tsh::QueryClassType>(baked_tcls));
-			const auto baked_foo_3     = bake(tmpl_foo, val42, baked_tcls_type);
+			const auto baked_foo_3     = bake(tmpl_foo, VAL42, baked_tcls_type);
 			const auto name_foo_3      = getSimpleMangledName(ctx, baked_foo_3).strView();
 
-			const auto baked_foo_4 = bake(tmpl_foo, val42, glob_cls_type);
+			const auto baked_foo_4 = bake(tmpl_foo, VAL42, glob_cls_type);
 			const auto name_foo_4  = getSimpleMangledName(ctx, baked_foo_4).strView();
 
 			const auto name_hoo = getSimpleMangledName(ctx, hoo).strView();
 
-			const auto baked_goo = bake(tmpl_goo, val42);
+			const auto baked_goo = bake(tmpl_goo, VAL42);
 			const auto name_goo  = getSimpleMangledName(ctx, baked_goo).strView();
 
 
-			constexpr auto efoo1 = "_Q_M17template_manglingN4Name3fooIiq42_tiqEEFiqiqE5paramE"sv;
-			constexpr auto efoo2
+			constexpr auto EFOO1 = "_Q_M17template_manglingN4Name3fooIiq42_tiqEEFiqiqE5paramE"sv;
+			constexpr auto EFOO2
 				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingN4Name3ClsEEEF_Q_CM17template_manglingN4Name3ClsEiqE5paramE"sv;
-			constexpr auto efoo3
+			constexpr auto EFOO3
 				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingN4Name4TclsIf0000803fEEEEF_Q_CM17template_manglingN4Name4TclsIf0000803fEEiqE5paramE"sv;
-			constexpr auto efoo4
+			constexpr auto EFOO4
 				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingG7GlobClsEEF_Q_CM17template_manglingG7GlobClsiqE5paramE"sv;
-			constexpr auto ehoo = "_Q_M17template_manglingG3hooFiqiqE1jE"sv;
-			constexpr auto egoo = "_Q_M17template_manglingG3gooIiq42_EFiqiqE1jE"sv;
+			constexpr auto EHOO = "_Q_M17template_manglingG3hooFiqiqE1jE"sv;
+			constexpr auto EGOO = "_Q_M17template_manglingG3gooIiq42_EFiqiqE1jE"sv;
 
-			ASSERT_EQUAL(efoo1, name_foo_1);
-			ASSERT_EQUAL(efoo2, name_foo_2);
-			ASSERT_EQUAL(efoo3, name_foo_3);
-			ASSERT_EQUAL(efoo4, name_foo_4);
-			ASSERT_EQUAL(ehoo, name_hoo);
-			ASSERT_EQUAL(egoo, name_goo);
+			ASSERT_EQUAL(EFOO1, name_foo_1);
+			ASSERT_EQUAL(EFOO2, name_foo_2);
+			ASSERT_EQUAL(EFOO3, name_foo_3);
+			ASSERT_EQUAL(EFOO4, name_foo_4);
+			ASSERT_EQUAL(EHOO, name_hoo);
+			ASSERT_EQUAL(EGOO, name_goo);
 		});
 	}
 
