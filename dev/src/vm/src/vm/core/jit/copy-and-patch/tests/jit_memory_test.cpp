@@ -127,7 +127,7 @@ private:
 	}
 
 	void testPatching() {
-		auto foo_code = FIND_FUNC("must_patch");
+		auto foo_code      = FIND_FUNC("must_patch");
 		auto memory_result = JitFuncMemory::allocate(foo_code.size);
 		ASSERT_HAS_VALUE(memory_result);
 		auto& memory = *memory_result;

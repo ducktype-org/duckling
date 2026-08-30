@@ -24,7 +24,7 @@ namespace vm::jit::cnp {
 	DECLARE_LINK_VARIABLE(continue_fn);
 
 	template<OpFun* InstructionImplementation, low::MicroOpcode OpCode>
-	__always_inline CP_RETURN base_stencil(CP_ARGS) {
+	__always_inline CP_RETURN baseStencil(CP_ARGS) {
 		auto instr = GET_LINK_VARIABLE(instr_ptr, const MicroInstruction*, 64);
 		FORCE_ASSUME(instr->arg0 == GET_LINK_VARIABLE(arg0, u64, 64));
 		FORCE_ASSUME(instr->arg1 == GET_LINK_VARIABLE(arg1, u64, 64));
@@ -43,7 +43,7 @@ namespace vm::jit::cnp {
 // jitable_interface.py depends on the exact fully-qualified name
 #define HANDLE_MICRO_INSTR(opcode_name)                                                   \
 	CP_RETURN stencil_##opcode_name(CP_ARGS) {                                            \
-		return base_stencil<vm::OpFuns::op_##opcode_name, low::MicroOpcode::opcode_name>( \
+		return baseStencil<vm::OpFuns::op_##opcode_name, low::MicroOpcode::opcode_name>( \
 			CP_PASS_ARGS                                                                  \
 		);                                                                                \
 	}
