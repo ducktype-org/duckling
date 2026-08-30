@@ -41,11 +41,11 @@ namespace vm::jit::cnp {
 
 // for now only a single(ext-less) instruction
 // jitable_interface.py depends on the exact fully-qualified name
-#define HANDLE_MICRO_INSTR(opcode_name)                                                   \
-	CP_RETURN stencil_##opcode_name(CP_ARGS) {                                            \
+#define HANDLE_MICRO_INSTR(opcode_name)                                                  \
+	CP_RETURN stencil_##opcode_name(CP_ARGS) {                                           \
 		return baseStencil<vm::OpFuns::op_##opcode_name, low::MicroOpcode::opcode_name>( \
-			CP_PASS_ARGS                                                                  \
-		);                                                                                \
+			CP_PASS_ARGS                                                                 \
+		);                                                                               \
 	}
 #include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 #undef HANDLE_MICRO_INSTR
