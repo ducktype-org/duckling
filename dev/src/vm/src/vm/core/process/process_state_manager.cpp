@@ -10,12 +10,12 @@
 #endif
 
 namespace vm {
-	namespace ts = thread_sm::thread_state;
-	namespace te = thread_sm::thread_event;
-	namespace ps = process_sm::process_state;
+	namespace ts = thread_state;
+	namespace te = thread_event;
+	namespace ps = process_state;
 
 	namespace {
-		using ThreadEntry = process_sm::ProcessStateAggregation::ThreadEntry;
+		using ThreadEntry = ProcessStateAggregation::ThreadEntry;
 
 		[[noreturn]] void fatalStateError(const std::string& message) {
 #if defined(BUILD_TYPE_DEV)
@@ -28,7 +28,7 @@ namespace vm {
 		}
 
 		const ThreadEntry& threadEntryOrAbort(
-			const process_sm::ProcessStateAggregation& agg_state, api::ThreadID tid
+			const ProcessStateAggregation& agg_state, api::ThreadID tid
 		) {
 			const base::Optional<CRef<ThreadEntry>> entry = agg_state.threads.atMaybe(tid);
 			if (!entry.has_value())
@@ -99,7 +99,7 @@ namespace vm {
 			return std::unexpected(base::strConcat("Unknown ThreadID: ", tid.asInt()));
 
 		const ThreadState&                state     = entry.value()->state;
-		const base::Optional<ThreadState> new_state = thread_sm::applyThreadEvent(state, event);
+		const base::Optional<ThreadState> new_state = thread_event::applyThreadEvent(state, event);
 		if (!new_state.has_value())
 			return std::unexpected(base::strConcat(
 				"No transition for thread event '",
