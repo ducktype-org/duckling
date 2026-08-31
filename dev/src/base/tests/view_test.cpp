@@ -2,6 +2,8 @@
 
 #include <tester/tester.hpp>
 
+#include <array>
+
 class ViewTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ViewTest
@@ -59,11 +61,11 @@ public:
 	}
 
 	void typedModRawViewTest() {
-		u32 numbers[4] = { 1, 2, 3, 4 };
+		std::array<u32, 4> numbers{ 1, 2, 3, 4 };
 
-		base::TypedModRawView<u32> view(numbers, 4);
+		base::TypedModRawView<u32> view(numbers.data(), numbers.size());
 
-		assertTrue(view.getBegin() == numbers, "bad TypedModRawView.getBegin()");
+		assertTrue(view.getBegin() == numbers.data(), "bad TypedModRawView.getBegin()");
 		assertTrue(view.size() == 4, "bad TypedModRawView.size(), it counts entries not bytes");
 		assertTrue(view[2] == 3, "bad TypedModRawView.operator[]");
 
@@ -105,6 +107,11 @@ public:
 
 			assertTrue(moved.getBegin() == raw, "move ctor did not adopt the buffer");
 			assertTrue(moved.size() == 3, "move ctor lost the size");
+
+			// Inspecting the moved-from object is exactly what is under test here: it must have
+			// been emptied rather than left aliasing the buffer, which would double-free. Reading
+			// it is well-defined for this type, so the use-after-move check is suppressed.
+			// NOLINTBEGIN(clang-analyzer-cplusplus.Move)
 			assertTrue(owner.getBegin() == nullptr, "move ctor left the source aliasing the buffer");
 			assertTrue(owner.size() == 0, "move ctor left a stale size on the source");
 
@@ -113,6 +120,7 @@ public:
 
 			assertTrue(assigned.getBegin() == raw, "move assign did not adopt the buffer");
 			assertTrue(moved.getBegin() == nullptr, "move assign left the source aliasing");
+			// NOLINTEND(clang-analyzer-cplusplus.Move)
 		}
 	}
 
