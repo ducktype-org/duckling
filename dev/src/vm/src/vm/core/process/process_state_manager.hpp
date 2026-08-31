@@ -148,7 +148,7 @@ namespace vm {
 		ProcessState waitForProcessState(Pred pred) const {
 			std::unique_lock lock(table_mutex);
 			const Snapshot   snapshot(*this);
-			state_changed.wait(lock, [&] { return pred(snapshot); });
+			state_changed.wait(lock, [&] { return !emitting_status_change && pred(snapshot); });
 			return agg_state.aggregateState();
 		}
 
@@ -161,7 +161,9 @@ namespace vm {
 		ThreadState waitForThreadState(api::ThreadID tid, Pred pred) const {
 			std::unique_lock lock(table_mutex);
 			const Snapshot   snapshot(*this);
-			state_changed.wait(lock, [&] { return pred(snapshot.threadState(tid)); });
+			state_changed.wait(lock, [&] {
+				return !emitting_status_change && pred(snapshot.threadState(tid));
+			});
 			return snapshot.threadState(tid);
 		}
 
@@ -175,7 +177,7 @@ namespace vm {
 			std::unique_lock lock(table_mutex);
 			const Snapshot   snapshot(*this);
 			state_changed.wait(lock, [&] {
-				return snapshot.threadStateChangeCounter(tid) > since
+				return !emitting_status_change && snapshot.threadStateChangeCounter(tid) > since
 				    && pred(snapshot.threadState(tid));
 			});
 			return snapshot.threadState(tid);
@@ -214,6 +216,11 @@ namespace vm {
 		mutable std::condition_variable state_changed;
 
 		ProcessStateAggregation agg_state;
+
+		/// Set while `on_status_changed` is running for a change that was already written to
+		/// `agg_state`. So `waitFor{Process/Thread}State` doesn't return until the
+		/// `on_status_changed` callback has ended.
+		bool emitting_status_change{ false };
 
 		OnStatusChangedCallback on_status_changed;  ///< Accessed under `emit_mutex` only.
 	};
