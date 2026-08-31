@@ -199,7 +199,7 @@ def config_get_name_path(config: dict) -> str:
     An example would be "/tests/a/b/c".
     """
     # Cases carry their name under `CaseName`; every other node uses `Name`.
-    name = config.get(NAME) or config[CASE_NAME]
+    name: str = config.get(NAME) or config.get(CASE_NAME, "<unnamed>")
     return (
         (config_get_name_path(parent) if (parent := config[PARENT]) else "")
         + "/"

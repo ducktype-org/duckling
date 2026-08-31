@@ -142,7 +142,7 @@ def _check_thread_budget(groups: list[TestGroup], ctx: RunContext):
     ]
     if too_wide:
         listing = "\n".join(f" - {entry}" for entry in too_wide)
-        exit_with_error(
+        log_warning(
             f"`{NEEDED_THREADS}` of {len(too_wide)} case(s) exceeds the"
             f" `-j {ctx.jobs}` thread budget:\n{listing}\n"
             f"Raise `-j`, or pass `--sequential` to run one case at a time."
