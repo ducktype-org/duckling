@@ -133,7 +133,7 @@ Tests:
   bitwise:
     Cases:
       all:
-        backend: dvm
+        backend: all
         Output:
           String: ""
         ExitCode: 0
