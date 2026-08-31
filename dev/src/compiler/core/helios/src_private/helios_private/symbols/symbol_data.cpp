@@ -120,13 +120,10 @@ namespace compiler::helios {
 			variant_case_novalue(defgen::BuiltinOperator) {
 				kind = SymbolKind::FunctionDeclaration;
 			}
-			variant_case(defgen::BuiltinTemplatedSymbol, templated) {
-				// The box family is implemented in HOUT, so those symbols carry a body. `MoveIn`
-				// is a LIR builtin: its call is replaced by an instruction, so it stays a
-				// declaration.
-				kind = templated.kind == defgen::BuiltinTemplatedSymbol::Kind::MoveIn
-				         ? SymbolKind::FunctionDeclaration
-				         : SymbolKind::Function;
+			variant_case_novalue(defgen::BuiltinTemplatedSymbol) {
+				// `MoveIn` is a LIR builtin: its call is replaced by an instruction, so it never
+				// gets a body.
+				kind = SymbolKind::FunctionDeclaration;
 			}
 			variant_case_novalue(
 				defgen::Constructor,

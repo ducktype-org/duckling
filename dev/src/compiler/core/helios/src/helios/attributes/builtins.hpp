@@ -82,18 +82,6 @@ namespace compiler::helios {
 		DvmIsNullptr,
 		/** `dvm_nullptr() -> ptr T`: a pointer into no block. */
 		DvmNullptr,
-		/**
-		 * Box allocation / deallocation and the box destructor.
-		 * Unlike the other builtins these are not selected by the `@builtin("...")` attribute. They
-		 * are only called by the compiler in `box T` constructors and destructors.
-		 *
-		 * All three are implemented in HOUT. `BoxAlloc`/`BoxFree` call the `boxAlloc`/`boxFree`
-		 * language primitives of `core.containers`, which is where the actual allocation lives;
-		 * `BoxDestructor` destroys the pointee, then calls `box_free`.
-		 */
-		BoxAlloc,
-		BoxFree,
-		BoxDestructor,
 	};
 
 	/**
@@ -125,35 +113,13 @@ namespace compiler::helios {
 	 */
 	HOUTFunction getBuiltinImpl(query::Context& ctx, SymID symbol, BuiltinKind type);
 
-	/**
-	 * @brief Symbol of the compiler-generated `box_alloc(value: T) -> box T` builtin for a given
-	 * pointee type.
-	 *
-	 * Its body is synthesized in HOUT and allocates through the `boxAlloc` language primitive.
-	 */
-	SymID boxAllocSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
-
-	/**
-	 * @brief Symbol of the compiler-generated `box_free(b: box T)` builtin for a given pointee type.
-	 *
-	 * Its body is synthesized in HOUT and frees through the `boxFree` language primitive.
-	 */
-	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
-
-
-	/**
-	 * @brief Symbol of the compiler-generated `box_destructor(b: box T)` builtin for a given
-	 * pointee type.
-	 *
-	 * It destroys the pointee first, then frees the box storage via `box_free`. It is the
-	 * destructor used for `box T` values.
-	 */
-	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
-
 	SymID moveInSymForType(query::Context& ctx, tsh::SymbolType<> element_type);
 
 	/**
 	 * @brief Build a HOUT expression that constructs a `box T` holding `inner`.
+	 *
+	 * It is a call to the `boxAlloc` language primitive of `core.containers`, cast to `box T`:
+	 * the primitive hands the storage back as a `ptr T`, which is what a box is underneath.
 	 */
 	Box<code::Expr> makeBoxAllocCall(
 		query::Context& ctx, code::ElementOrigin origin, Box<code::Expr> inner

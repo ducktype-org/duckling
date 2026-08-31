@@ -199,9 +199,9 @@ private:
 			return count;
 		};
 
-		// The storage of a box comes from `core.containers`: the generated `box_alloc` calls the
-		// `boxAlloc` language primitive, which on a native target ends up in libc `malloc`.
-		// Every step of that chain is emitted into this module, so both ends are visible here.
+		// The storage of a box comes from `core.containers`: `new` calls the `boxAlloc` language
+		// primitive, which on a native target ends up in libc `malloc`. Every step of that chain
+		// is emitted into this module, so both ends are visible here.
 		assertTrue(
 			count_matches(R"(define linkonce_odr ptr @\S*8boxAlloc)") == 1,
 			"Expected the baked 'boxAlloc' primitive to be emitted for 'box i32'"
@@ -211,8 +211,8 @@ private:
 			"Expected the baked 'boxFree' primitive to be emitted for 'box i32'"
 		);
 
-		// `new 42` hands the boxed value to the generated `box_alloc`, which moves it into the
-		// fresh storage - so the literal shows up as a call argument now, not as a store here.
+		// `new 42` hands the boxed value to `boxAlloc`, which moves it into the fresh storage -
+		// so the literal shows up as a call argument now, not as a store here.
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(call ptr @\S+\(i32 42\))" }),
 			"Expected the boxed value 42 to be passed to the box allocation"

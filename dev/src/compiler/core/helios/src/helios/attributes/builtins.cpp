@@ -78,12 +78,6 @@ namespace compiler::helios {
 			return base::StrID("dvm_is_nullptr");
 		case BuiltinKind::DvmNullptr:
 			return base::StrID("dvm_nullptr");
-		case BuiltinKind::BoxAlloc:
-			return base::StrID("box_alloc");
-		case BuiltinKind::BoxFree:
-			return base::StrID("box_free");
-		case BuiltinKind::BoxDestructor:
-			return base::StrID("box_destructor");
 		}
 		CORE_UNREACHABLE();
 	}
@@ -234,83 +228,6 @@ namespace compiler::helios {
 				})
 			);
 		}
-		case BuiltinKind::BoxDestructor: {
-			// `box_destructor(b: box T)` destroys the pointee, then frees the box storage. The
-			// pointee type `T` is the pointee of the `box T` parameter.
-			auto&      decl         = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
-			const auto pointee_type = decl.parameters.at(0).type.getType();
-			return defgen::buildBoxDestructor(ctx, pointee_type);
-		}
-		case BuiltinKind::BoxAlloc: {
-			// `box_alloc(value: T) -> box T` asks the standard library for storage for a single
-			// `T`, moves `value` into it and hands that storage back as the box:
-			// ```
-			// var __storage: ptr T = boxAlloc:{T}();
-			// move_in:{T}(__storage, move value);
-			// return __storage as box T;
-			// ```
-			auto&      decl = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
-			const auto value_type
-				= tsh::SymbolType<>::withDefaults(decl.parameters.at(0).type.getType());
-			const auto storage_type
-				= tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryPointerType>({ value_type }));
-
-			const SymID storage_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
-				.name = base::StrID("__storage"),
-				.generated_symbol_data
-				= defgen::GeneratedFunctionVariable{ .function_symbol = symbol,
-			                                         .variable_index  = 0,
-			                                         .type            = storage_type },
-			});
-			const SymID alloc_symbol
-				= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::BoxAlloc, { value_type });
-
-			auto body = StmtPack{
-				s.var(
-					storage_symbol,
-					storage_type,
-					s.call(s.ident(alloc_symbol), std::vector<Box<code::Expr>>{})
-				),
-				s.expr(s.call(
-					s.ident(moveInSymForType(ctx, value_type)),
-					s.ident(storage_symbol),
-					s.move(s.ident(decl.parameters.at(0).helios_symbol))
-				)),
-				s.ret(s.cast(s.ident(storage_symbol), decl.return_type)),
-			}.toCodeBlock();
-
-			return {
-				code::generatedOrigin(),
-				&decl,
-				std::make_shared<const code::CodeBlock>(std::move(body)),
-			};
-		}
-		case BuiltinKind::BoxFree: {
-			// `box_free(b: ref T)` releases the storage the box owns, without touching the value
-			// in it - the box destructor has already destroyed that. It becomes
-			// `boxFree:{T}(b as ptr T);`.
-			auto&      decl = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
-			const auto value_type
-				= tsh::SymbolType<>::withDefaults(decl.parameters.at(0).type.getType());
-			const auto storage_type
-				= tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryPointerType>({ value_type }));
-
-			const SymID free_symbol
-				= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::BoxFree, { value_type });
-
-			auto body = StmtPack{
-				s.expr(s.call(
-					s.ident(free_symbol),
-					s.cast(s.ident(decl.parameters.at(0).helios_symbol), storage_type)
-				)),
-			}.toCodeBlock();
-
-			return {
-				code::generatedOrigin(),
-				&decl,
-				std::make_shared<const code::CodeBlock>(std::move(body)),
-			};
-		}
 		default: {
 			CORE_PANIC(
 				base::strConcat("Builtin `", builtinKindToStr(type), "` is not implemented in HOUT")
@@ -341,40 +258,9 @@ namespace compiler::helios {
 		case BuiltinKind::MoveOut:
 		case BuiltinKind::MoveIn:
 			return BuiltinOrigin::LIR;
-		case BuiltinKind::BoxAlloc:
-		case BuiltinKind::BoxFree:
-		case BuiltinKind::BoxDestructor:
-			return BuiltinOrigin::HOUT;
 		}
 
 		CORE_UNREACHABLE();
-	}
-
-	SymID boxAllocSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
-		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = builtinKindToStr(BuiltinKind::BoxAlloc),
-			.generated_symbol_data
-			= defgen::BuiltinTemplatedSymbol{ tsh::SymbolType<>::withDefaults(pointee_type),
-		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc },
-		});
-	}
-
-	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
-		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = builtinKindToStr(BuiltinKind::BoxFree),
-			.generated_symbol_data
-			= defgen::BuiltinTemplatedSymbol{ tsh::SymbolType<>::withDefaults(pointee_type),
-		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxFree },
-		});
-	}
-
-	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
-		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = builtinKindToStr(BuiltinKind::BoxDestructor),
-			.generated_symbol_data
-			= defgen::BuiltinTemplatedSymbol{ tsh::SymbolType<>::withDefaults(pointee_type),
-		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor },
-		});
 	}
 
 	SymID moveInSymForType(query::Context& ctx, tsh::SymbolType<> element_type) {
@@ -391,12 +277,21 @@ namespace compiler::helios {
 	) {
 		using namespace code::shorthands;
 		const Shorthand s{ ctx };
-		const auto      pointee_type = inner->expression_type.getSymbolType().getType();
+		const auto      pointee_type
+			= tsh::SymbolType<>::withDefaults(inner->expression_type.getSymbolType().getType());
+		const SymID alloc_symbol
+			= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::BoxAlloc, { pointee_type });
 
 		// This helper preserves the caller-supplied `origin` rather than the builders' default
-		// `generatedOrigin()`, so both the callee identifier and the call itself carry it.
-		auto callee = withOrigin(origin, s.ident(boxAllocSymForType(ctx, pointee_type)));
-		return withOrigin(origin, s.call(std::move(callee), std::move(inner)));
+		// `generatedOrigin()`, so the callee identifier, the call and the cast all carry it.
+		auto callee = withOrigin(origin, s.ident(alloc_symbol));
+		auto call   = withOrigin(origin, s.call(std::move(callee), std::move(inner)));
+
+		// `boxAlloc` returns the storage as a `ptr T`; the box is that same pointer. The cast is
+		// representation-free and is the only way to spell a box from a pointer.
+		return withOrigin(
+			origin, s.cast(std::move(call), pointee_type.withReferenceKind(tsh::ReferenceKind::Box))
+		);
 	}
 
 }
