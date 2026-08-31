@@ -18,8 +18,6 @@ Tests:
           String: "run\npause\ncontinue\nexit"
         Output:
           File: "run.out"
-        # @TODO: #2040 Unluckily this is still failing...
-        Enabled: false
       errors:
         Input:
           String: "run\nrun\ncontinue\ncontinue\npause\npause\nexit"
