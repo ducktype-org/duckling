@@ -114,6 +114,7 @@ public:
 		TESTER_ADD_TEST(testCastAs);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testTypeLifting);
+		TESTER_ADD_TEST(testBuiltinKindNamesAndOrigins);
 		TESTER_ADD_TEST(testAliases);
 		TESTER_ADD_TEST(testBackendDependentCompTime);
 		TESTER_ADD_TEST(testTemplates);
@@ -4042,6 +4043,74 @@ private:
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
 			);
 		});
+	}
+
+	/**
+	 * Every `BuiltinKind` needs a name and an origin.
+	 *
+	 * `builtinKindToStr` and `getBuiltinOrigins` are both a `switch` without a `default`, so a
+	 * kind nobody listed there does not break the build - it falls through to
+	 * `CORE_UNREACHABLE()` and kills the compiler at runtime instead. This test walks the whole
+	 * enum so that gap is caught here.
+	 *
+	 * The origin is what decides who implements a builtin, so it is checked as well. The box
+	 * family used to be implemented by the two backends and is now synthesized in HOUT, on top of
+	 * `core.containers`.
+	 */
+	void testBuiltinKindNamesAndOrigins() {
+		using compiler::helios::BuiltinKind;
+		using compiler::helios::BuiltinOrigin;
+		using compiler::helios::BuiltinOrigins;
+
+		using Expectation = std::tuple<BuiltinKind, std::string_view, BuiltinOrigins>;
+
+		// Spelled out by hand on purpose: adding a `BuiltinKind` should bring somebody here to
+		// say what it is called and who is expected to implement it.
+		const std::vector<Expectation> expectations = {
+			{ BuiltinKind::PtrFromSlice, "ptr_from_slice", BuiltinOrigin::HOUT },
+			{ BuiltinKind::SliceFromPtrLen, "slice_from_ptr_len", BuiltinOrigin::HOUT },
+			{ BuiltinKind::DvmAllocArr, "dvm_alloc_arr", BuiltinOrigin::DVMBackend },
+			{ BuiltinKind::DvmReallocArr, "dvm_realloc_arr", BuiltinOrigin::DVMBackend },
+			{ BuiltinKind::DvmFreeArr, "dvm_free_arr", BuiltinOrigin::DVMBackend },
+			{ BuiltinKind::DvmAlloc, "dvm_alloc", BuiltinOrigin::DVMBackend },
+			{ BuiltinKind::DvmFree, "dvm_free", BuiltinOrigin::DVMBackend },
+			{ BuiltinKind::SizeOf, "size_of", BuiltinOrigin::HOUT },
+			{ BuiltinKind::AlignmentOf, "alignment_of", BuiltinOrigin::HOUT },
+			{ BuiltinKind::MoveOut, "move_out", BuiltinOrigin::LIR },
+			{ BuiltinKind::MoveIn, "move_in", BuiltinOrigin::LIR },
+			{ BuiltinKind::DvmPtrParts, "dvm_ptr_parts", BuiltinOrigin::DVMBackend },
+			{ BuiltinKind::DvmIsNullptr, "dvm_is_nullptr", BuiltinOrigin::DVMBackend },
+			{ BuiltinKind::DvmNullptr, "dvm_nullptr", BuiltinOrigin::DVMBackend },
+			{ BuiltinKind::BoxAlloc, "box_alloc", BuiltinOrigin::HOUT },
+			{ BuiltinKind::BoxFree, "box_free", BuiltinOrigin::HOUT },
+			{ BuiltinKind::BoxDestructor, "box_destructor", BuiltinOrigin::HOUT },
+		};
+
+		// `BoxDestructor` is the last enumerator, so this counts the whole enum.
+		assertEqual(
+			expectations.size(),
+			static_cast<usize>(BuiltinKind::BoxDestructor) + 1,
+			"Every BuiltinKind has to be listed in this test"
+		);
+
+		for (const auto& [kind, name, origins]: expectations) {
+			assertEqual(
+				compiler::helios::builtinKindToStr(kind).strView(),
+				name,
+				base::strConcat("Wrong name for the builtin expected to be called '", name, "'")
+			);
+			assertTrue(
+				compiler::helios::getBuiltinOrigins(kind) == origins,
+				base::strConcat(
+					"Wrong origin for builtin '",
+					name,
+					"': expected ",
+					origins.toString(true),
+					", got ",
+					compiler::helios::getBuiltinOrigins(kind).toString(true)
+				)
+			);
+		}
 	}
 
 	void testAliases() {
