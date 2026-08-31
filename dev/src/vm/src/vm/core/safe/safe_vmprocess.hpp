@@ -147,7 +147,7 @@ namespace vm {
 		std::expected<void, api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
 		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
-			api::ThreadID thread_id, base::Optional<usize> frame_idx
+			api::ThreadID thread_id, base::Optional<usize> frame_idx = {}
 		) override;
 
 		void notifyVMThreadWaiters(api::ThreadID thread_id) override;

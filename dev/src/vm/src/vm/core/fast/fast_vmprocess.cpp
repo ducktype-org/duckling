@@ -216,7 +216,8 @@ namespace vm::fast {
 		[[maybe_unused]] api::ThreadID thread_id
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `waitForBreakpoint` is not implemented.");
+		throw vm::VMNotImplemented("Method `waitForBreakpointAndReportPosition` is not implemented."
+		);
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::setExecutionConfig(

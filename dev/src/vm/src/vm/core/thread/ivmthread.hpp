@@ -173,7 +173,7 @@ namespace vm {
 		virtual void releaseGilIfHeld() {}
 
 		/**
-		 * @brief Reacquired the GIL if it's not taken.
+		 * @brief Reacquires the GIL if it's not taken.
 		 *
 		 * @note Used to reacquire the GIL when this thread performs a `step`, `stop`, `resume` in
 		 * the debugger loop.

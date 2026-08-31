@@ -11,6 +11,7 @@
 namespace vm {
 	namespace ps = process_state;
 	namespace pe = process_event;
+	namespace ts = thread_state;
 
 	IVMProcess::IVMProcess(const PID my_pid): my_pid(my_pid) {
 		state_manager.setOnStatusChangedCallback([this](const ProcessState& state) {
@@ -83,32 +84,34 @@ namespace vm {
 
 	api::ProcStatus IVMProcess::getStatus() { return toApiStatus(getProcessState()); }
 
-	std::expected<void, api::ApiError> IVMProcess::pauseAllVMThreads() {
-		// Request pause on all threads first.
-		std::vector<api::ThreadID> refused;
-		for (const api::ThreadID tid: getAllActiveThreadIDs())
-			if (!requestPauseOfVMThread(tid).has_value()) refused.push_back(tid);
+	std::vector<api::ThreadID> IVMProcess::pauseAllVMThreads() {
+		using ThreadState = thread_state::ThreadState;
 
-		if (!refused.empty())
-			return std::unexpected(api::ApiError{ api::PauseError{ base::strConcat(
-				refused.size() == 1 ? "thread " : "threads ",
-				base::strJoin(
-					refused | std::views::transform([](const api::ThreadID id) {
-						return std::to_string(id.asInt());
-					}),
-					", "
-				),
-				" refused the pause request"
-			) } });
+		std::vector<api::ThreadID> paused;
+		std::vector<api::ThreadID> awaited;
 
-		// Now wait for all of them to pause.
-		const ProcessState state = waitForProcessState([](const ProcessState& s) {
-			return v_matches(s, ps::Paused) || ps::isTerminal(s);
-		});
-		if (!v_matches(state, ps::Paused))
-			return std::unexpected(api::ApiError{ api::PauseError{
-				"the process reached a terminal state before every thread paused" } });
-		return {};
+		// First ask all threads to pause.
+		for (const api::ThreadID tid: getAllActiveThreadIDs()) {
+			const ThreadState state = state_manager.threadState(tid);
+			// Already paused.
+			if (v_matches(state, ts::Paused)) {
+				paused.push_back(tid);
+				continue;
+			}
+
+			// Thread can't be paused, so we skip it.
+			if (requestPauseOfVMThread(tid).has_value()) awaited.push_back(tid);
+		}
+
+		// Now wait for all threads that need awaiting to be paused.
+		for (const api::ThreadID tid: awaited) {
+			const ThreadState state
+				= state_manager.waitForThreadState(tid, [](const ThreadState& s) {
+					  return v_matches(s, ts::Paused) || ts::isTerminal(s);
+				  });
+			if (v_matches(state, ts::Paused)) paused.push_back(tid);
+		}
+		return paused;
 	}
 
 	ProcIO& IVMProcess::getIO() { return io; }
@@ -164,9 +167,7 @@ namespace vm {
 
 			variant_case_novalue(api::request::PauseAll) {
 				// Per-thread operation. Its validity is decided by the target thread not the process.
-				auto response = pauseAllVMThreads();
-				if (!response) return std::unexpected(response.error());
-				return api::Response(api::response::Empty());
+				return api::Response(api::response::ThreadIDs{ pauseAllVMThreads() });
 			}
 
 			variant_case(api::request::Resume, resume_request) {

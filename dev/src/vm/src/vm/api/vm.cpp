@@ -45,10 +45,10 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> pauseAll(PID pid) {
+	std::expected<response::ThreadIDs, ApiError> pauseAll(PID pid) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::PauseAll{}))
-		    .transform(ignoreResponse);
+		    .and_then(mapOrWrongResponse<response::ThreadIDs>);
 	}
 
 	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid, ThreadID thread_id) {

@@ -130,12 +130,17 @@ namespace vm::api {
 	);
 
 	/**
-	 * @brief Pauses every active thread of the process, blocks until they are all paused.
+	 * @brief Asks every running thread to pause and waits for them to be paused.
 	 *
-	 * @return Nothing when every active thread got paused, an error telling which threads refused
-	 * the request or that the process terminated first.
+	 * Blocks until every asked thread parked. A thread sleeping on IO pauses once it wakes up
+	 * from the IO.
+	 *
+	 * A thread is skipped when another control request is still in progress, or when it
+	 * finishes first. Skipped threads are not included in the result.
+	 *
+	 * @return The threads that are actually paused.
 	 */
-	std::expected<void, ApiError> pauseAll(PID pid);
+	std::expected<response::ThreadIDs, ApiError> pauseAll(PID pid);
 
 	/**
 	 * @brief Resume the execution of the program.

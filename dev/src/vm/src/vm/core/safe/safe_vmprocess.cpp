@@ -468,6 +468,9 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::waitForBreakpointAndReportPosition(
 		api::ThreadID thread_id
 	) {
+		if (!getVMThreadByID(thread_id))
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+
 		const ts::ThreadState state
 			= state_manager.waitForThreadState(thread_id, [](const ts::ThreadState& s) {
 				  return v_matches(s, ts::Paused) || ts::isTerminal(s);
@@ -478,8 +481,7 @@ namespace vm {
 				"Thread ", thread_id.asInt(), " reached a terminal state instead of a breakpoint"
 			) } });
 
-		// The override does not repeat the base's default argument, so the frame is named here.
-		return getVMThreadCurrentPosition(thread_id, std::nullopt);
+		return getVMThreadCurrentPosition(thread_id);
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::setExecutionConfig(
