@@ -1314,8 +1314,6 @@ class FunctionValidator {
 			}
 			instr_case_novalue(Op_shr_p16_imm) {}
 			instr_case_novalue(Op_bit_not_p16) {}
-
-			// 8-bit
 			instr_case_novalue(Op_bit_and_p8_p8) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
