@@ -113,7 +113,7 @@ public:
 		TESTER_ADD_TEST(testTemplates);
 		TESTER_ADD_TEST(testOperatoriness);
 		TESTER_ADD_TEST(testMethodOperatorResolution);
-
+		TESTER_ADD_TEST(testBitwiseOperators);
 		// this is at the end
 		// so we test all the scopes created in helios tests:
 		TESTER_ADD_TEST(testScopeParentsAndDepth);
@@ -3344,6 +3344,64 @@ private:
 					+ compiler::helios::name(symbol).str()
 			);
 		}
+	}
+
+	void testBitwiseOperators() {
+		using namespace compiler::helios;
+		using namespace compiler::helios::code;
+
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/bitwise")));
+
+		ASSERT_EQUAL(8, getConstValueAs<i64>("CONST_AND", root_scope));
+		ASSERT_EQUAL(14, getConstValueAs<i64>("CONST_OR", root_scope));
+		ASSERT_EQUAL(6, getConstValueAs<i64>("CONST_XOR", root_scope));
+		ASSERT_EQUAL(0, getConstValueAs<i64>("CONST_XOR_SELF", root_scope));
+		ASSERT_EQUAL(40, getConstValueAs<i64>("CONST_SHL", root_scope));
+		ASSERT_EQUAL(5, getConstValueAs<i64>("CONST_SHR", root_scope));
+		ASSERT_EQUAL(-13, getConstValueAs<i64>("CONST_NOT", root_scope));
+		ASSERT_EQUAL(12, getConstValueAs<i64>("CONST_NOT_NOT", root_scope));
+		ASSERT_EQUAL(52, getConstValueAs<i64>("CONST_COMPLEX", root_scope));
+
+		ASSERT_EQUAL(8, getConstValueAs<i32>("AND_I32", root_scope));
+		ASSERT_EQUAL(true, getConstValueAs<bool>("DE_MORGAN_EQ", root_scope));
+
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		ASSERT_TRUE(hout.functions.size() >= 1);
+
+		auto find_fun = [&](std::string_view target) -> const auto& {
+			for (const auto& fun: hout.functions)
+				if (fun->declaration->original_name.strView() == target) return *fun;
+			CORE_PANIC(base::strConcat("Function not found: ", target));
+		};
+
+		const auto& fn    = find_fun("fnBitwise");
+		const auto& stmts = fn.body->statements;
+		ASSERT_TRUE(stmts.size() >= 4);
+
+		const auto* and_stmt = dynamic_cast<const VariableStmt*>(stmts.at(0).get());
+		ASSERT_TRUE(and_stmt != nullptr);
+		const auto* and_expr = dynamic_cast<const BinaryOperatorExpr*>(
+			stripImplicitMove(and_stmt->initial_value.get())
+		);
+		ASSERT_TRUE(and_expr != nullptr);
+		ASSERT_EQUAL(and_expr->expression_type.getType(), getIntegralTypeNoContext(64, Signed));
+
+		const auto* not_stmt = dynamic_cast<const VariableStmt*>(stmts.at(1).get());
+		ASSERT_TRUE(not_stmt != nullptr);
+		const auto* not_expr
+			= dynamic_cast<const UnaryOperatorExpr*>(stripImplicitMove(not_stmt->initial_value.get()
+		    ));
+		ASSERT_TRUE(not_expr != nullptr);
+		ASSERT_EQUAL(not_expr->expression_type.getType(), getIntegralTypeNoContext(64, Signed));
+
+		const auto* ret_stmt = dynamic_cast<const ReturnStmt*>(stmts.back().get());
+		ASSERT_TRUE(ret_stmt != nullptr);
+		const auto* ret_bin
+			= dynamic_cast<const BinaryOperatorExpr*>(stripImplicitMove(ret_stmt->value.get()));
+		ASSERT_TRUE(ret_bin != nullptr);
+		ASSERT_TRUE(dynamic_cast<const BinaryOperatorExpr*>(ret_bin->lhs.get()) != nullptr);
+		ASSERT_TRUE(dynamic_cast<const BinaryOperatorExpr*>(ret_bin->rhs.get()) != nullptr);
 	}
 };
 

@@ -192,6 +192,18 @@ namespace compiler::lir {
 		case mir::Operation::IntegerNeg:
 			return Operation::IntegerNeg;
 
+		case mir::Operation::IntegerBitAnd:
+			return Operation::IntegerBitAnd;
+		case mir::Operation::IntegerBitOr:
+			return Operation::IntegerBitOr;
+		case mir::Operation::IntegerBitXor:
+			return Operation::IntegerBitXor;
+		case mir::Operation::IntegerBitNot:
+			return Operation::IntegerBitNot;
+		case mir::Operation::IntegerShl:
+			return Operation::IntegerShl;
+		case mir::Operation::IntegerShr:
+			return Operation::IntegerShr;
 		// Integer Comparison
 		case mir::Operation::IntegerLt:
 			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
@@ -874,6 +886,12 @@ namespace compiler::lir {
 				case mir::Operation::IntegerMul:
 				case mir::Operation::IntegerDiv:
 				case mir::Operation::IntegerMod:
+				case mir::Operation::IntegerBitAnd:
+				case mir::Operation::IntegerBitOr:
+				case mir::Operation::IntegerBitXor:
+				case mir::Operation::IntegerBitNot:
+				case mir::Operation::IntegerShl:
+				case mir::Operation::IntegerShr:
 				case mir::Operation::IntegerLt:
 				case mir::Operation::IntegerGt:
 				case mir::Operation::IntegerLteq:

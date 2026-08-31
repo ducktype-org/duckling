@@ -1179,6 +1179,13 @@ namespace compiler::backend_llvm {
 		storeOutput(lir_instruction.output.value(), value, builder);               \
 		break;                                                                     \
 	}
+#define LIR_2_LLVM_UNARY_OPERATION_CASE(op)                                           \
+	{                                                                                 \
+		const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder); \
+		const auto value    = builder.Create##op(argument);                           \
+		storeOutput(lir_instruction.output.value(), value, builder);                  \
+		break;                                                                        \
+	}
 
 		/**
 		 * @brief Lowers LIRInstruction to LLVM instructions and appends them
@@ -1324,13 +1331,8 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(URem)
 			case IntegerSMod:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(SRem)
-			case IntegerNeg: {
-				const auto output   = lir_instruction.output.value();
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateNeg(argument);
-				storeOutput(output, value, builder);
-				break;
-			}
+			case IntegerNeg:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Neg)
 
 			/// Floatin point arithmetic ///
 			case FloatAdd:
@@ -1341,13 +1343,8 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FMul)
 			case FloatDiv:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FDiv)
-			case FloatNeg: {
-				const auto output   = lir_instruction.output.value();
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateFNeg(argument);
-				storeOutput(output, value, builder);
-				break;
-			}
+			case FloatNeg:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(FNeg)
 
 			/// Integer comparisons ///
 			case IntegerULt:
@@ -1393,12 +1390,21 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalAnd)
 			case BooleanOr:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalOr)
-			case BooleanNot: {
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateNot(argument);
-				storeOutput(lir_instruction.output.value(), value, builder);
-				break;
-			}
+			case BooleanNot:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Not)
+			/// Integer bitwise operations ///
+			case IntegerBitAnd:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(And)
+			case IntegerBitOr:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Or)
+			case IntegerBitXor:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Xor)
+			case IntegerShl:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Shl)
+			case IntegerShr:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(LShr)
+			case IntegerBitNot:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Not)
 			case Cast: {
 				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				const auto output   = lir_instruction.output.value();

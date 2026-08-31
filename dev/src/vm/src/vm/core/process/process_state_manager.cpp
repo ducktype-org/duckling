@@ -69,10 +69,23 @@ namespace vm {
 	void ProcessStateManager::finalizeStateChangeLocked(
 		std::unique_lock<std::mutex>& table_lock, const ProcessState& prev, const ProcessState& next
 	) {
+		const bool emits = prev.index() != next.index() && on_status_changed;
+
+		// Ensure a someone waiting for the status change, sees it after the `on_status_changed`
+		// callback runs. Releasing the `table_lock` may cause a thread waiting in
+		// `waitFor{Process/Thread}State` to wake up and return from the API call, but the callback
+		// wasn't invoked yet.
+		emitting_status_change = emits;
+
 		table_lock.unlock();
-		// Notify waiters when the state changed.
+
+		if (emits) {
+			on_status_changed(next);
+			std::lock_guard emitted_lock(table_mutex);
+			emitting_status_change = false;
+		}
+
 		state_changed.notify_all();
-		if (prev.index() != next.index() && on_status_changed) on_status_changed(next);
 	}
 
 	void ProcessStateManager::registerThread(api::ThreadID tid) {
