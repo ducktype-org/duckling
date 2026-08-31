@@ -414,25 +414,31 @@ namespace compiler::helios {
 										break;
 									case IntegerShl:
 										if constexpr (std::is_integral_v<ResultT>) {
-											CORE_ASSERT(
-												rhs_val >= 0
-													&& static_cast<u64>(rhs_val)
-														   < sizeof(ResultT) * 8,
-												"Invalid shift amount in compile-time expression "
-												"evaluation"
-											);
+											if (rhs_val < 0
+									            || static_cast<u64>(rhs_val)
+									                   >= sizeof(ResultT) * 8) {
+												ctx.logInt(makeBox<dia::PlaceholderError>(
+													"Invalid shift amount in compile-time "
+													"expression evaluation.",
+													expr.origin.getStablePosition().value()
+												));
+												return query::Failed();
+											}
 											set_num_result(static_cast<ResultT>(lhs_val << rhs_val));
 										}
 										break;
 									case IntegerShr:
 										if constexpr (std::is_integral_v<ResultT>) {
-											CORE_ASSERT(
-												rhs_val >= 0
-													&& static_cast<u64>(rhs_val)
-														   < sizeof(ResultT) * 8,
-												"Invalid shift amount in compile-time expression "
-												"evaluation"
-											);
+											if (rhs_val < 0
+									            || static_cast<u64>(rhs_val)
+									                   >= sizeof(ResultT) * 8) {
+												ctx.logInt(makeBox<dia::PlaceholderError>(
+													"Invalid shift amount in compile-time "
+													"expression evaluation.",
+													expr.origin.getStablePosition().value()
+												));
+												return query::Failed();
+											}
 											set_num_result(static_cast<ResultT>(lhs_val >> rhs_val));
 										}
 										break;

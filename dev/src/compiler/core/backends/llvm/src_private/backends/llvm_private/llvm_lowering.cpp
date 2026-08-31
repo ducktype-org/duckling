@@ -1215,6 +1215,13 @@ namespace compiler::backend_llvm {
 		storeOutput(lir_instruction.output.value(), value, builder);               \
 		break;                                                                     \
 	}
+#define LIR_2_LLVM_UNARY_OPERATION_CASE(op)                                           \
+	{                                                                                 \
+		const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder); \
+		const auto value    = builder.Create##op(argument);                           \
+		storeOutput(lir_instruction.output.value(), value, builder);                  \
+		break;                                                                        \
+	}
 
 		/**
 		 * @brief Lowers LIRInstruction to LLVM instructions and appends them
@@ -1360,13 +1367,8 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(URem)
 			case IntegerSMod:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(SRem)
-			case IntegerNeg: {
-				const auto output   = lir_instruction.output.value();
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateNeg(argument);
-				storeOutput(output, value, builder);
-				break;
-			}
+			case IntegerNeg:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Neg)
 
 			/// Floatin point arithmetic ///
 			case FloatAdd:
