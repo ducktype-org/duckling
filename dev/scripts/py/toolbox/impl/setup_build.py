@@ -29,6 +29,7 @@ def setup_build_impl(
     strip_symbol_information,
     disable_unity_compilation,
     enable_link_time_optimization,
+    clang_for_builtins,
     sanitizer,
     use_replxx,
     enable_jit,
@@ -95,6 +96,9 @@ def setup_build_impl(
         cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")
     if coverage:
         cmd_parts.append(f"-D GCOV_VERSION={gcov_version}")
+    if clang_for_builtins:
+        cmd_parts.append(f"-D CLANG_BIN={clang_for_builtins}")
+
     if should_add_linker_flags(linker):
         if supports_cmake_linker_type():
             cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
