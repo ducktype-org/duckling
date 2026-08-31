@@ -115,25 +115,39 @@ impl From<Dependency> for Mapping {
                 // Temporary workaround over a bug in yaml-edit.
                 DependencySource::Detailed(detailed) => {
                     if let Some(registry_url) = detailed.registry_url {
-                        result.set_path("source.registry-url", registry_url);
+                        result
+                            .try_set_path("source.registry-url", registry_url)
+                            .expect("malformed path");
                     }
                     if let Some(name) = detailed.name {
-                        result.set_path("source.name", name);
+                        result
+                            .try_set_path("source.name", name)
+                            .expect("malformed path");
                     }
                     if let Some(path) = detailed.path {
-                        result.set_path("source.path", path.display().to_string());
+                        result
+                            .try_set_path("source.path", path.display().to_string())
+                            .expect("malformed path");
                     }
                     if let Some(git_url) = detailed.git_url {
-                        result.set_path("source.git-url", git_url);
+                        result
+                            .try_set_path("source.git-url", git_url)
+                            .expect("malformed path");
                     }
                     if let Some(tag) = detailed.tag {
-                        result.set_path("source.tag", tag);
+                        result
+                            .try_set_path("source.tag", tag)
+                            .expect("malformed path");
                     }
                     if let Some(branch) = detailed.branch {
-                        result.set_path("source.branch", branch);
+                        result
+                            .try_set_path("source.branch", branch)
+                            .expect("malformed path");
                     }
                     if let Some(commit) = detailed.commit {
-                        result.set_path("source.commit", commit);
+                        result
+                            .try_set_path("source.commit", commit)
+                            .expect("malformed path");
                     }
                 }
             }

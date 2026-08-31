@@ -4,7 +4,6 @@
 //!
 //! Parsing is implemented in the [`parse`] module.
 mod dependency;
-mod editable_manifest;
 mod features;
 mod metadata;
 mod parse;
@@ -13,7 +12,6 @@ mod source;
 mod venv_config;
 
 pub use dependency::*;
-pub use editable_manifest::{DependencyAdded, DependencyRemoved, EditableManifest};
 pub use features::*;
 pub use metadata::*;
 pub use parse::*;

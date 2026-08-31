@@ -1,8 +1,7 @@
 use std::path::Path;
 
-use crate::quackpack::core::{
-    AllowGlobalPackage, DependencyAdded, DependencyKind, EditableManifest, PackageLoader,
-};
+use crate::quackpack::core::editable_manifest::{DependencyAdded, EditableManifest};
+use crate::quackpack::core::{AllowGlobalPackage, DependencyKind, PackageLoader};
 use crate::quackpack::schemas::manifest::Dependency;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId};
 

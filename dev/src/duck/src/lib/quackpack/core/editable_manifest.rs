@@ -1,3 +1,6 @@
+//! Abstraction over manifest which allows for lossless edits of the underlying file,
+//! meaning that e.g. comments and stylistic choices in the underlying YAML file are kept.
+//! Used by `add` and `remove` subcommands.
 use std::path::Path;
 use std::str::FromStr;
 
@@ -114,7 +117,7 @@ impl<'duck> EditableManifest<'duck> {
     /// Important
     /// ---------
     /// For this to have IO effect, it should be followed by [`Self::save`].
-    /// 
+    ///
     /// Note
     /// ----
     /// The reason this is so complicated (we check other kinds of dependencies, not only the desired one)
