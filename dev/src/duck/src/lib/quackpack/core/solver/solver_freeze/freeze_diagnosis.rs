@@ -185,7 +185,7 @@ impl SolverFreeze {
         fetcher: &Fetcher<'_>,
     ) -> QuackResult<bool> {
         if !realization.still_satisfies_dep(dep, fetcher).await? {
-            debug!("not satisfied beforehand");
+            debug!("was satisfied before, but now is not");
             return Ok(false);
         }
         let forced_child_features =
