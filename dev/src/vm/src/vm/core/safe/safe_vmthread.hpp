@@ -204,6 +204,16 @@ namespace vm {
 		void stepGil();
 
 		/**
+		 * @brief Releases the GIL if it's taken.
+		 */
+		void releaseGilIfHeld() override;
+
+		/**
+		 * @brief Reacquires the GIL if it's not taken already.
+		 */
+		void acquireGilIfNotHeld() override;
+
+		/**
 		 * @brief Releases GIL.
 		 */
 		void releaseGil();
