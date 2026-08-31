@@ -1237,17 +1237,6 @@ private:
 				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
 			};
 
-			auto is_builtin_call = [&](const Stmt* stmt, BuiltinKind kind) -> bool {
-				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
-				if (expr_stmt == nullptr) return false;
-				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
-				if (call == nullptr) return false;
-				auto callee = getIdentifierExprSymID(call->callee.ref());
-				if (!callee.has_value()) return false;
-				auto builtin = isBuiltin(callee.value());
-				return builtin.has_value() && builtin.value() == kind;
-			};
-
 			auto is_method_call = [&](const Stmt* stmt, Method::Kind kind) -> bool {
 				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
 				if (expr_stmt == nullptr) return false;

@@ -293,5 +293,4 @@ namespace compiler::helios {
 			origin, s.cast(std::move(call), pointee_type.withReferenceKind(tsh::ReferenceKind::Box))
 		);
 	}
-
 }
