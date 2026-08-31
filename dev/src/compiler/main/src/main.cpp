@@ -552,7 +552,6 @@ clah::Clah getClahForMain() {
 						 )
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
-
 					// @TODO: #3449 fix it here
 
 					std::vector<fs::File> modules_to_compile{ options.getPositional<fs::File>(0) };
@@ -564,21 +563,26 @@ clah::Clah getClahForMain() {
 					if (dvm_backend) {
 						// @TODO: #3397 fix it, when compilePackages tasks support it!
 						std::cerr << "DVM Backend does not create full (linked) output artifacts "
-			                         "in compile_modules command.\n";
+									 "in compile_modules command.\n";
 						return 1;
 					}
 
 
-					std::set<base::StrID>                                  aliases_duplicate_check;
+					std::set<base::StrID>               aliases_duplicate_check;
 					base::Map<base::StrID, base::StrID> package_id_aliases;
 					std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
 					packages_info.reserve(modules_to_compile.size());
 					for (const auto& module: modules_to_compile) {
 						auto package_name = base::StrID(base::generateRandomString(32));
-						
-						auto inserted = aliases_duplicate_check.emplace(module.getFilePath().stem());
+
+						auto inserted
+							= aliases_duplicate_check.emplace(module.getFilePath().stem());
 						if (!inserted.second) {
-							CORE_USER_LOG("ERROR: Duplicate module names: ", module.getFilePath().string(), "\n");
+							CORE_USER_LOG(
+								"ERROR: Duplicate module names: ",
+								module.getFilePath().string(),
+								"\n"
+							);
 							return 1;
 						}
 
@@ -603,7 +607,8 @@ clah::Clah getClahForMain() {
 							packages_info.at(dependent).dependencies.push_back(
 								compiler::frontend::packages::RawDependencyInfo{
 									.package_id = packages_info.at(dependency).package_id,
-									.alias      = package_id_aliases.at(packages_info.at(dependency).package_id),
+									.alias
+									= package_id_aliases.at(packages_info.at(dependency).package_id),
 								}
 							);
 						}
