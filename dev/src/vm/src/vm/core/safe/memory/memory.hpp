@@ -67,6 +67,16 @@ namespace vm {
 			return blocks_pool.get(id);
 		}
 
+		[[nodiscard]]
+		Ref<BlockT> getBlock(BlockID id) {
+			if (auto maybe_block = blocks_pool.maybeGet(id)) {
+				Ref<BlockT> block_ref = *maybe_block;
+				if (block_ref->deallocated) throw exceptions::VMUseAfterFreeException();
+				return block_ref;
+			}
+			throw exceptions::VMOutOfBlockBoundsException();
+		}
+
 		/**
 		 * @brief Erases the block object from the memory.
 		 */
@@ -98,6 +108,8 @@ namespace vm {
 		 * @note The part of `new_data` past the moved objects is cleared.
 		 * @note The old data is deallocated with its own allocator.
 		 */
+		// @TODO: #3447 `children_blocks` is keyed by a byte offset while `entries_to_move` is an
+		// entry count; the two are interchangeable only while `sizeof(EntryT) == 1`.
 		void changeBlockData(Ref<BlockT> block, BlockData<EntryT> new_data) {
 			BlockData<EntryT> old_data = block->data;
 			usize entries_to_move      = std::min(old_data.view.size(), new_data.view.size());
@@ -376,16 +388,6 @@ namespace vm {
 
 	public:
 		GenericMemory() = default;
-
-		[[nodiscard]]
-		Ref<BlockT> getBlock(BlockID id) {
-			if (auto maybe_block = blocks_pool.maybeGet(id)) {
-				Ref<BlockT> block_ref = *maybe_block;
-				if (block_ref->deallocated) throw exceptions::VMUseAfterFreeException();
-				return block_ref;
-			}
-			throw exceptions::VMOutOfBlockBoundsException();
-		}
 
 		// =================== Used by the process ===================
 
@@ -751,8 +753,8 @@ namespace vm {
 		}
 	};
 
-	using Memory                      = GenericMemory<std::byte>;
-	using GlobalBufferPointersGeneric = GlobalBufferPointers<std::byte>;
+	using Memory                   = GenericMemory<std::byte>;
+	using GlobalBufferPointersByte = GlobalBufferPointers<std::byte>;
 
 	// The member specialization is defined in initialization_from_const.cpp. It must be declared
 	// here so it is visible in every TU before the explicit instantiation of
@@ -761,4 +763,9 @@ namespace vm {
 	void Memory::initializeBlockFromConstValue(
 		Ref<Block> block, const code::ConstantValue& const_value
 	);
+
+	// Suppress implicit instantiation in every TU that uses `Memory`; the members are emitted once
+	// by the explicit instantiation definition in memory.cpp. Must come after the member
+	// specialization declaration above.
+	extern template class GenericMemory<std::byte>;
 }

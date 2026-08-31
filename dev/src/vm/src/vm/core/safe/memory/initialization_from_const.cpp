@@ -59,5 +59,4 @@ namespace vm {
 		ConstInitializationVisitor visitor{ block_type, Bytes(0), block->data.view };
 		const_value.data->acceptVisitor(visitor);
 	}
-
 }
