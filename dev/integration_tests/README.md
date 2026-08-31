@@ -124,6 +124,7 @@ General variables (not tied to any context):
 - `PreCase` - Bash command executed **before** running a test case.
 - `PostCase` - Bash command executed **after** running a test case.
 - `TimeOut` - Maximum time given for the execution in seconds - defaults to 1 - On timeout the process exits with exit code 124.
+- `NeededThreads` - How many machine threads one case of this test occupies while it runs - defaults to 1. See [Concurrency](#concurrency).
 - `ExitCode` - Expected test case's exit code - defaults to 0.
 - `Enabled` - Bash command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
 - `Env` - A mapping of **environment variable names to bash commands**. The commands are evaluated once per case, in definition order (later entries see the earlier ones); each command's stdout becomes the variable's value. The resulting environment is passed to every command of the case. Entries are inherited down the tree and can be shadowed per key.
@@ -166,7 +167,7 @@ Case specific:
 - `Input` - Stdin passed to a program.
 - `Output` - Expected stdout of a program.
 - `Err` - Expected stderr of a program.
-- Additionally: `Run`, `PreCase`, `PostCase`, `TimeOut`, `ExitCode`, `Enabled` explained above.
+- Additionally: `Run`, `PreCase`, `PostCase`, `TimeOut`, `NeededThreads`, `ExitCode`, `Enabled` explained above.
 
 `Input`, `Output`, `Err` inside a case can be specified as follows:
 
@@ -177,9 +178,10 @@ Case specific:
 
 ## Concurrency
 
-Tests run concurrently by default (`-j` defaults to the CPU count; `-j 1` runs
-sequentially, which is useful for debugging). **Tests must be written so that
-they can run concurrently.** The scheduler guarantees only the following order:
+Tests run concurrently by default (`-j` defaults to the CPU count; pass
+`--sequential` / `-s` to run one case at a time, which is useful for debugging).
+**Tests must be written so that they can run concurrently.** The scheduler
+guarantees only the following order:
 
 - `PreNode` of a node runs **before** all tests and subnodes of that node,
   and `PostNode` runs **after** all of them.
@@ -191,7 +193,34 @@ Practically this means a case must not write to files shared with other cases:
 no artifacts in the test's source directory, no shared scratch paths. Use the
 per-case temporary environment below for anything a case writes.
 
-A test can opt out with `NoParallel: true` (settable on the test or inherited
+`-j` is a budget of machine **threads**, not a count of cases: a case declaring
+`NeededThreads: N` holds `N` of them for its whole run, and the scheduler starts
+another case only once the remainder covers it. Cases that spawn their own
+threads or processes should declare it, otherwise `-j 22` runs 22 of them at
+once and the machine ends up with several times that many runnable threads —
+everything then slows down and the tight `TimeOut`s start failing:
+
+```yaml
+duckc_worker_count: "3"
+NeededThreads: "@{duckc_worker_count}"   # inherited by every case below
+```
+
+It is a general variable, so it can be set on a node, a test or a single case,
+and it is inherited down the tree like the rest.
+
+A case declaring more than the whole `-j` budget is **rejected before the run
+starts**, at any `-j`: the budget could never cover it, and running it on fewer
+threads than it declared would quietly defeat the point. Either raise `-j`, or
+use `--sequential`, which runs one case at a time and ignores both the budget
+and every `NeededThreads` — so a `-j 3` test set is still debuggable on a
+smaller machine. `--dry` and `--clean` imply `--sequential`.
+
+Note that `-j 1` is **not** a sequential run: it is a budget of one thread, so
+cases still go through the scheduler, their output is still buffered into
+per-test sections, and a case needing more than one thread is still rejected.
+`itest` warns when it sees it. Use `--sequential` for the debugging mode.
+
+A test can opt out of parallelism entirely with `NoParallel: true` (settable on the test or inherited
 from any ancestor node): all such tests are deferred to a second phase after
 every other test has finished, where their cases run **strictly one at a time
 on an otherwise idle machine**. Use it sparingly, for tests sensitive to

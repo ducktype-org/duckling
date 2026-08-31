@@ -13,6 +13,15 @@ PostCase: "@{cleanup_tmp_env}"
 
 Run: "@{duckc_path} repl @{disable-bracketed-paste} --custom-std-artifacts-path @{case_std_artifacts}"
 
+# The REPL runs one worker next to its main thread.
+NeededThreads: "2"
+
+# Every case here is ~0.6 s of fixed REPL start-up (loading the std artifacts)
+# and only milliseconds of actual work, so the default 2 s left under 3x of
+# head-room and the whole suite timed out together whenever the machine was
+# loaded. These cases assert REPL semantics, not start-up speed.
+timeout_default: 8
+
 prompt: "duckling> "
 welcome_message: "Duckling REPL\nType /help for available commands, /exit to quit.\nPress Enter to submit. Press Alt+Enter for new line.\n"
 beginning: "@{welcome_message}"

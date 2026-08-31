@@ -31,6 +31,7 @@ GENERAL_VARIABLES = {
     EXIT_CODE,
     CONFIG_DIR,
     ENABLED,
+    NEEDED_THREADS,
 }
 
 """
@@ -197,8 +198,10 @@ def config_get_name_path(config: dict) -> str:
     Builds a string representing of the test tree up to `config`'s node.
     An example would be "/tests/a/b/c".
     """
+    # Cases carry their name under `CaseName`; every other node uses `Name`.
+    name = config.get(NAME) or config[CASE_NAME]
     return (
         (config_get_name_path(parent) if (parent := config[PARENT]) else "")
         + "/"
-        + config[NAME]
+        + name
     )
