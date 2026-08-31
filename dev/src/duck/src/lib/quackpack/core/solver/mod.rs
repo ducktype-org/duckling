@@ -137,6 +137,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             debug!("root has been satisfied");
             let trimmed = maximal_valid_freeze
                 .find_minimal_dep_solution(&prev_freeze_manifests, root_features)?;
+            ctx.console().info("no need to run the gathering")?;
             return Ok(ShouldRunSolverEngine::No(SolverAnswer {
                 new_freeze: trimmed,
                 pkgs_manifests: prev_freeze_manifests,
