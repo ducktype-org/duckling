@@ -145,7 +145,7 @@ namespace base {
 			return { reinterpret_cast<byte*>(begin), arr_size * sizeof(T) };
 		}
 
-		operator ModRawView() const requires std::same_as<std::remove_const_t<T>, std::byte> {
+		operator ModRawView() const requires std::same_as<T, std::byte> {
 			return { begin, arr_size };
 		}
 	};

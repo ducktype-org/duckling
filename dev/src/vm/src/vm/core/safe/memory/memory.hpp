@@ -317,29 +317,28 @@ namespace vm {
 		 * range of objects from a table, but it can be a single object from a table, or from
 		 * somewhere else.
 		 */
-		void runObjectDestructor(base::TypedModRawView<EntryT> data, TypeCRef type) {
-			if constexpr (std::is_same_v<EntryT, std::byte>) {
-				switch (type->getKind()) {
-				case Type::Kind::Pointer: {
-					const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
-					destroyBlockReference(ptr);
-					break;
-				}
-				case Type::Kind::Primitive:
-				case Type::Kind::Function:
-				case Type::Kind::Opaque:
-				case Type::Kind::CPointer:
-				case Type::Kind::DynamicTable:
-				case Type::Kind::FixedSizeTable:
-				case Type::Kind::Data:
-				case Type::Kind::Variant:
-					// There is nothing to do with variant, data and tables, because the data should
-					// be already deleted thanks to the nested blocks structure, that deletes the
-					// nested block's data first.
-					break;
-				default:
-					CORE_PANIC("Handling default");
-				}
+		void runObjectDestructor(base::TypedModRawView<EntryT> data, TypeCRef type)
+			requires std::is_same_v<EntryT, std::byte> {
+			switch (type->getKind()) {
+			case Type::Kind::Pointer: {
+				const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
+				destroyBlockReference(ptr);
+				break;
+			}
+			case Type::Kind::Primitive:
+			case Type::Kind::Function:
+			case Type::Kind::Opaque:
+			case Type::Kind::CPointer:
+			case Type::Kind::DynamicTable:
+			case Type::Kind::FixedSizeTable:
+			case Type::Kind::Data:
+			case Type::Kind::Variant:
+				// There is nothing to do with variant, data and tables, because the data should
+				// be already deleted thanks to the nested blocks structure, that deletes the
+				// nested block's data first.
+				break;
+			default:
+				CORE_PANIC("Handling default");
 			}
 		}
 
@@ -350,29 +349,28 @@ namespace vm {
 		 * range of objects from a table, but it can be a single object from a table, or from
 		 * somewhere else.
 		 */
-		void runObjectCopyConstructor(base::TypedModRawView<EntryT> data, TypeCRef type) {
-			if constexpr (std::is_same_v<EntryT, std::byte>) {
-				switch (type->getKind()) {
-				case Type::Kind::Pointer: {
-					const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
-					if_opt_some(ptr.block.toOpt(), block) increaseBlockRefcount(block);
-					break;
-				}
-				case Type::Kind::Primitive:
-				case Type::Kind::Function:
-				case Type::Kind::Opaque:
-				case Type::Kind::CPointer:
-				case Type::Kind::DynamicTable:
-				case Type::Kind::FixedSizeTable:
-				case Type::Kind::Data:
-				case Type::Kind::Variant:
-					// There is nothing to do with variant, data and tables, because the data should
-					// be already copied thanks to the nested blocks structure, that deletes the
-					// nested block's data first.
-					break;
-				default:
-					CORE_PANIC("Handling default");
-				}
+		void runObjectCopyConstructor(base::TypedModRawView<EntryT> data, TypeCRef type)
+			requires std::is_same_v<EntryT, std::byte> {
+			switch (type->getKind()) {
+			case Type::Kind::Pointer: {
+				const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
+				if_opt_some(ptr.block.toOpt(), block) increaseBlockRefcount(block);
+				break;
+			}
+			case Type::Kind::Primitive:
+			case Type::Kind::Function:
+			case Type::Kind::Opaque:
+			case Type::Kind::CPointer:
+			case Type::Kind::DynamicTable:
+			case Type::Kind::FixedSizeTable:
+			case Type::Kind::Data:
+			case Type::Kind::Variant:
+				// There is nothing to do with variant, data and tables, because the data should
+				// be already copied thanks to the nested blocks structure, that deletes the
+				// nested block's data first.
+				break;
+			default:
+				CORE_PANIC("Handling default");
 			}
 		}
 
@@ -754,7 +752,6 @@ namespace vm {
 	};
 
 	using Memory                      = GenericMemory<std::byte>;
-	using PointerGeneric              = Pointer;
 	using GlobalBufferPointersGeneric = GlobalBufferPointers<std::byte>;
 
 	// The member specialization is defined in initialization_from_const.cpp. It must be declared
