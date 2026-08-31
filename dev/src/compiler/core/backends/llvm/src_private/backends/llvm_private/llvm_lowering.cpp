@@ -1379,13 +1379,8 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FMul)
 			case FloatDiv:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FDiv)
-			case FloatNeg: {
-				const auto output   = lir_instruction.output.value();
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateFNeg(argument);
-				storeOutput(output, value, builder);
-				break;
-			}
+			case FloatNeg:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(FNeg)
 
 			/// Integer comparisons ///
 			case IntegerULt:
@@ -1431,12 +1426,8 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalAnd)
 			case BooleanOr:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalOr)
-			case BooleanNot: {
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateNot(argument);
-				storeOutput(lir_instruction.output.value(), value, builder);
-				break;
-			}
+			case BooleanNot:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Not)
 			/// Integer bitwise operations ///
 			case IntegerBitAnd:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(And)
@@ -1448,12 +1439,8 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(Shl)
 			case IntegerShr:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LShr)
-			case IntegerBitNot: {
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateNot(argument);
-				storeOutput(lir_instruction.output.value(), value, builder);
-				break;
-			}
+			case IntegerBitNot:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Not)
 			case Cast: {
 				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				const auto output   = lir_instruction.output.value();
