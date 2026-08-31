@@ -6,7 +6,6 @@
  * the `INFO_<ArgType>()` macro (e.g. `INFO_Place8()` -> `(p8)`). It therefore only works for
  * argument types that have a matching `INFO_<ArgType>` macro defined (see argument_definitions.hpp).
  */
-#pragma once
 
 #include <base/preproc/cat.hpp>
 #include <base/preproc/for_each.hpp>
