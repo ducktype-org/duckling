@@ -1436,22 +1436,22 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			/// Integer bitwise operations ///
-            case IntegerBitAnd:
-                LIR_2_LLVM_BINARY_OPERATION_CASE(And)
-            case IntegerBitOr:
-                LIR_2_LLVM_BINARY_OPERATION_CASE(Or)
-            case IntegerBitXor:
-                LIR_2_LLVM_BINARY_OPERATION_CASE(Xor)
-            case IntegerShl:
-                LIR_2_LLVM_BINARY_OPERATION_CASE(Shl)
-            case IntegerShr:
-                LIR_2_LLVM_BINARY_OPERATION_CASE(LShr)
-            case IntegerBitNot: {
-                const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-                const auto value    = builder.CreateNot(argument);
-                storeOutput(lir_instruction.output.value(), value, builder);
-                break;
-            }
+			case IntegerBitAnd:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(And)
+			case IntegerBitOr:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Or)
+			case IntegerBitXor:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Xor)
+			case IntegerShl:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Shl)
+			case IntegerShr:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(LShr)
+			case IntegerBitNot: {
+				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
+				const auto value    = builder.CreateNot(argument);
+				storeOutput(lir_instruction.output.value(), value, builder);
+				break;
+			}
 			case Cast: {
 				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				const auto output   = lir_instruction.output.value();
