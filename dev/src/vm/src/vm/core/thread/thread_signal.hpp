@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
+#include <string_view>
 
 namespace vm {
 
@@ -25,6 +26,21 @@ namespace vm {
 	class ThreadSignal final {
 	public:
 		enum class Request : std::uint8_t { Pause, Resume, Step, Stop };
+
+		[[nodiscard]] static constexpr std::string_view requestName(Request req) {
+			switch (req) {
+			case Request::Pause:
+				return "Pause";
+			case Request::Resume:
+				return "Resume";
+			case Request::Step:
+				return "Step";
+			case Request::Stop:
+				return "Stop";
+			default:
+				CORE_UNREACHABLE();
+			}
+		}
 
 		ThreadSignal() = default;
 
@@ -104,8 +120,11 @@ namespace vm {
 		void notifyWaiters() { cv.notify_all(); }
 
 		/**
-		 * @brief Clears the slot and flags. Must only be called while the owning VMThread is
-		 * non-active (NotStarted/terminal with no exec thread) - i.e. on (re)spawn preparation.
+		 * @brief Clears the slot and flags.
+		 *
+		 * Called by the `exec_thread` when its run ends, and by the spawner when preparing a
+		 * re-spawn. Must only be called while the owning VMThread is non-active, so no
+		 * request meant for a running thread can be dropped.
 		 */
 		void reset() {
 			std::lock_guard lock(mutex);

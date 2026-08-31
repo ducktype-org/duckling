@@ -19,6 +19,7 @@
 #include <vm/loader/loader.hpp>
 
 #include <expected>
+#include <shared_mutex>
 #include <string>
 #include <variant>
 #include <vector>
@@ -36,7 +37,7 @@ namespace vm {
 		friend class SafeVMValueRef;
 
 	private:
-		std::shared_mutex rw_global;
+		mutable std::shared_mutex api_lock;
 
 		/**
 		 * @brief A loader instance for this SafeVMProcess. Stores the high level and low level
@@ -68,6 +69,11 @@ namespace vm {
 		std::vector<Box<SafeVMValue>> owned_vm_values;
 
 		/**
+		 * @brief Protects the thread pool which can be modified by `builtin_start_thread` and has
+		 * to be serialized with it.
+		 */
+		mutable std::mutex threads_pool_mutex;
+		/**
 		 * @brief Pool of threads in this process.
 		 * @note Thread with ID 0 is the main thread, it is created together with the process.
 		 * Not recycling, because SafeVMThread is not move-constructible.
@@ -88,10 +94,29 @@ namespace vm {
 		/**
 		 * @brief Returns reference to either existing empty thread or
 		 * creates new thread without worker and returns it
+		 *
+		 * @note Call with `threads_pool_mutex`.
 		 */
-		SafeVMThread& getEmptyThread();
+		SafeVMThread& getEmptyThreadLocked();
 
-		base::Optional<api::ApiError> assertProcessCanRespond();
+		/**
+		 * @brief Joins the exec thread of every VMThread. Every thread must already be non-active.
+		 */
+		void joinAllExecutionThreads();
+
+		/**
+		 * @brief Helper used by `runFunction` and `startNewThreadFromExecutionThread`. Takes no
+		 * `api_lock`, only `threads_pool_mutex`.
+		 */
+		std::expected<api::Response, api::ApiError> spawnThread(
+			const std::string& func_name, const RunArguments& run_arguments
+		);
+
+		std::expected<void, api::ApiError> assertProcessCanRespond();
+
+		[[nodiscard]] std::expected<void, api::ApiError> validateRunArguments(
+			const std::string& func_name, const RunArguments& run_arguments
+		) const override;
 
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
@@ -113,17 +138,17 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
 
-		base::Optional<api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
 
-		base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
 
-		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
 		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
 			api::ThreadID thread_id, base::Optional<usize> frame_idx
 		) override;
 
-		void notifyPausedVMThread(api::ThreadID thread_id) override;
+		void notifyVMThreadWaiters(api::ThreadID thread_id) override;
 
 		void waitForBreakpoint() override;
 
@@ -145,11 +170,12 @@ namespace vm {
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
-		api::ThreadID getMainThreadID() override;
+		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
 
-		std::vector<api::ThreadID> getAllThreadIDs() override;
+		[[nodiscard]] std::vector<api::ThreadID> unjoinedThreadIds() const override;
 
-		void onTerminalStatus(const api::ProcStatus& status) noexcept override;
+		void requestStopAllThreads() noexcept override;
+
 		std::expected<api::Response, api::ApiError> setBreakpoint(
 			base::StrID function_name, usize instruction_index, bool enable
 		) override;
@@ -177,7 +203,16 @@ namespace vm {
 
 		Memory& getMemory();
 
-		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
+		/**
+		 * @brief Spawns a thread running @p func_name, for `builtin_start_thread` only.
+		 *
+		 * @note Called from an exec thread, so it must NOT take `api_lock`. Look at the impl for
+		 * more info.
+		 */
+		std::expected<api::ThreadID, api::ApiError> startNewThreadFromExecutionThread(
+			const std::string& func_name
+		);
+
 
 		Ref<IVMValue> createVMValue(code::valid_type::ValidTypeID type_id) override;
 
