@@ -99,8 +99,8 @@ namespace vm {
 		 * @note The old data is deallocated with its own allocator.
 		 */
 		void changeBlockData(Ref<BlockT> block, BlockData<EntryT> new_data) {
-			BlockData<EntryT> old_data        = block->data;
-			usize             entries_to_move = std::min(old_data.view.size(), new_data.view.size());
+			BlockData<EntryT> old_data = block->data;
+			usize entries_to_move      = std::min(old_data.view.size(), new_data.view.size());
 
 			// Free the unfitting children blocks.
 			auto& children_blocks = block->children_blocks;
@@ -110,11 +110,11 @@ namespace vm {
 				freeBlockData(child_it->second);
 			}
 
-			// Run the destructors - e.g. pointers don't have their own blocks, but need destructing.
-			// The suffix has to hold live objects.
-			// Here we run the destructor for the second time, but as different type.
-			// And this pass is shallow. First pass goes over child blocks, eg variant data - a pointer.
-			// Then in the second pass we run the destructor on variant type, which does nothing.
+			// Run the destructors - e.g. pointers don't have their own blocks, but need
+			// destructing. The suffix has to hold live objects. Here we run the destructor for the
+			// second time, but as different type. And this pass is shallow. First pass goes over
+			// child blocks, eg variant data - a pointer. Then in the second pass we run the
+			// destructor on variant type, which does nothing.
 			if (entries_to_move < old_data.view.size())
 				runDataDestructors(
 					base::TypedModRawView<EntryT>(

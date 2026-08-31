@@ -30,6 +30,8 @@ namespace vm {
 		std::deque<base::TypedOwningView<EntryT>> allocated;
 
 	public:
+		// @TODO: #3447 Resolve the bytes-vs-entries unit conflation below before instantiating
+		// the memory module with a non-byte `EntryT`, then drop the `static_assert`.
 		// @note `size` here is a byte count (from Type::getSize()) but is passed to
 		// heapAllocOrThrow<EntryT>(size) -> new EntryT[size], where the argument is an element
 		// count. The two only coincide while sizeof(EntryT) == 1, which the static_assert below
