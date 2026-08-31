@@ -241,10 +241,6 @@ namespace vm {
 	DEFINE_INT_N_BITWISE(16, std::uint16_t)
 	DEFINE_INT_N_BITWISE(8, std::uint8_t)
 
-#undef DEFINE_BITWISE_BINARY_OP
-#undef DEFINE_BITWISE_NOT_OP
-#undef DEFINE_INT_N_BITWISE
-
 #define FLOAT_64_TYPE f64
 #define FLOAT_32_TYPE f32
 #define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                         \

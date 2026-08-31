@@ -419,7 +419,7 @@ namespace compiler::helios {
 													&& static_cast<u64>(rhs_val)
 														   < sizeof(ResultT) * 8,
 												"Invalid shift amount in compile-time expression "
-									            "evaluation"
+												"evaluation"
 											);
 											set_num_result(static_cast<ResultT>(lhs_val << rhs_val));
 										}
@@ -431,7 +431,7 @@ namespace compiler::helios {
 													&& static_cast<u64>(rhs_val)
 														   < sizeof(ResultT) * 8,
 												"Invalid shift amount in compile-time expression "
-									            "evaluation"
+												"evaluation"
 											);
 											set_num_result(static_cast<ResultT>(lhs_val >> rhs_val));
 										}
