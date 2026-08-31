@@ -185,6 +185,7 @@ impl SolverFreeze {
         fetcher: &Fetcher<'_>,
     ) -> QuackResult<bool> {
         if !realization.still_satisfies_dep(dep, fetcher).await? {
+            debug!("was satisfied before, but now is not");
             return Ok(false);
         }
         let forced_child_features =
@@ -238,6 +239,7 @@ impl SolverFreeze {
         manifests: &HashMap<PackageId, Box<Manifest>>,
         fetcher: &Fetcher<'_>,
     ) -> QuackResult<(Self, bool)> {
+        debug!(?self);
         let Some(main_pkg_freeze) = self.package_freezes.get(&self.main_pkg) else {
             qp_bail_internal!("main package was not put into package freezes: {self:#?}")
         };
@@ -265,9 +267,12 @@ impl SolverFreeze {
         let Some(main_pkg_freeze) = self.package_freezes.get_mut(&self.main_pkg) else {
             qp_bail_internal!("main package manifest not provided: {self:#?}")
         };
+        debug!(?main_pkg_freeze, ?still_satisfied_root_deps);
         main_pkg_freeze
             .dependencies_realization
             .retain(|alias, _| still_satisfied_root_deps.contains(alias));
+        debug!(?main_pkg_freeze);
+        debug!(?main_manifest, ?manifests);
         let all_main_pkg_deps_satisfied = main_manifest
             .dependencies()
             .all_dependencies()
