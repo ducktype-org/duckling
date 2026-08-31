@@ -271,7 +271,7 @@ namespace vm {
 		bool isValidVMValueID(u64 id) const;
 
 		[[nodiscard]]
-		RuntimeData getRuntimeData() const {
+		const RuntimeData& getRuntimeData() const {
 			return runtime_data;
 		}
 
