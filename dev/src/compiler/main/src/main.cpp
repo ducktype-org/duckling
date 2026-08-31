@@ -561,7 +561,7 @@ clah::Clah getClahForMain() {
 					const bool dvm_backend = options.isFlag("dvm-backend");
 
 					if (dvm_backend) {
-						// @TODO: #3397 fix it, when compilePackages tasks support it!
+						// @TODO: #2670 fix it, when compilePackages tasks support it!
 						std::cerr << "DVM Backend does not create full (linked) output artifacts "
 									 "in compile_modules command.\n";
 						return 1;
