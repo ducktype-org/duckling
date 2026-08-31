@@ -73,9 +73,13 @@ def _get_modified_files(
     include_untracked: bool = False,
 ) -> list[str]:
     """Get modified files compared to the specified branch."""
-    # Get the diff
+    # Get the diff. `--diff-filter=d` drops the files the branch DELETED: every caller wants to
+    # read or rewrite the files it gets back, and a deleted path is not there anymore, so listing
+    # it just makes the caller fail (clang-format reports "No such file or directory" and
+    # `format_repo_cpp.sh` returns non-zero on a branch that removed a source file).
     diff_out, _ = bash_command_get_output(
-        f"git diff {'' if no_merge_base else '--merge-base'} {branch} --name-only --relative"
+        f"git diff {'' if no_merge_base else '--merge-base'} {branch} "
+        "--name-only --relative --diff-filter=d"
     )
     files = [f.strip() for f in diff_out.strip().split("\n") if f.strip()]
 

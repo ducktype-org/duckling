@@ -961,17 +961,6 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		/**
-		 * @brief Retrieves or inserts a built-in function prototype in the LLVM module.
-		 */
-		auto loadBuiltin(
-			const std::string_view             name,
-			llvm::Type*                        ret_type,
-			std::initializer_list<llvm::Type*> args
-		) -> llvm::FunctionCallee {
-			return module->getOrInsertFunction(name, llvm::FunctionType::get(ret_type, args, false));
-		}
-
 		llvm::Value* lowerCallCAbiInstruction(
 			const lir::Instruction&  lir_instruction,
 			llvm::IRBuilder<>&       builder,
@@ -1160,31 +1149,6 @@ namespace compiler::backend_llvm {
 				v_matches(function_literal.abi.value, lir::LIRAbi::DefaultAbi),
 				"Non default abi lowering."
 			);
-
-			if_opt_some(function_literal.builtin_kind_opt, builtin_kind) {
-				if (builtin_kind == lir::BuiltinFunctionKind::BoxAlloc) {
-					const auto value_to_box
-						= loadLIRValue(lir_instruction.arguments.at(1), builder);
-					const usize size
-						= module->getDataLayout().getTypeAllocSize(value_to_box->getType());
-					auto alloc_func
-						= loadBuiltin("builtin_alloc", builder.getPtrTy(), { builder.getInt64Ty() });
-					llvm::Value* allocated_ptr
-						= builder.CreateCall(alloc_func, { builder.getInt64(size) }, "box_ptr");
-					// @TODO: #1895 This is suboptimal. In the future class constructors should
-					// take the allocated memory pointer as a parameter and construct it
-					// in-place.
-					builder.CreateStore(value_to_box, allocated_ptr);
-					return allocated_ptr;
-				} else if (builtin_kind == lir::BuiltinFunctionKind::BoxFree) {
-					const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(1), builder);
-					auto       free_func   = loadBuiltin(
-                        "builtin_dealloc", builder.getVoidTy(), { builder.getPtrTy() }
-                    );
-					builder.CreateCall(free_func, { ptr_to_free });
-					return nullptr;
-				}
-			}
 
 			std::vector<llvm::Value*> args;
 			args.reserve(lir_instruction.arguments.size() - 1);

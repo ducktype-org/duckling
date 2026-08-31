@@ -87,8 +87,9 @@ namespace compiler::helios {
 		 * Unlike the other builtins these are not selected by the `@builtin("...")` attribute. They
 		 * are only called by the compiler in `box T` constructors and destructors.
 		 *
-		 * `BoxAlloc`/`BoxFree` are implemented by the backends; `BoxDestructor` is
-		 * implemented in HOUT (it destroys the pointee, then calls `box_free`).
+		 * All three are implemented in HOUT. `BoxAlloc`/`BoxFree` call the `boxAlloc`/`boxFree`
+		 * language primitives of `core.containers`, which is where the actual allocation lives;
+		 * `BoxDestructor` destroys the pointee, then calls `box_free`.
 		 */
 		BoxAlloc,
 		BoxFree,
@@ -128,14 +129,14 @@ namespace compiler::helios {
 	 * @brief Symbol of the compiler-generated `box_alloc(value: T) -> box T` builtin for a given
 	 * pointee type.
 	 *
-	 * The returned symbol is a declaration only, it's implemented in both backends.
+	 * Its body is synthesized in HOUT and allocates through the `boxAlloc` language primitive.
 	 */
 	SymID boxAllocSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
 
 	/**
 	 * @brief Symbol of the compiler-generated `box_free(b: box T)` builtin for a given pointee type.
 	 *
-	 * The returned symbol is a declaration only, it's implemented in both backends.
+	 * Its body is synthesized in HOUT and frees through the `boxFree` language primitive.
 	 */
 	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
 
@@ -144,8 +145,8 @@ namespace compiler::helios {
 	 * @brief Symbol of the compiler-generated `box_destructor(b: box T)` builtin for a given
 	 * pointee type.
 	 *
-	 * Unlike `box_free`, this is implemented in HOUT: it destroys the pointee first, then frees the
-	 * box storage via `box_free`. It is the destructor used for `box T` values.
+	 * It destroys the pointee first, then frees the box storage via `box_free`. It is the
+	 * destructor used for `box T` values.
 	 */
 	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
 

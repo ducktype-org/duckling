@@ -83,7 +83,8 @@ namespace compiler::helios::defgen {
 	 * Represents a compiler-generated builtin function templated on a single type argument, for a
 	 * specific `box` pointee type. The concrete builtin is distinguished by `kind`.
 	 *
-	 * These are declaration-only functions. Implementation is provided by the backends.
+	 * The box family is implemented in HOUT (see `getBuiltinImpl`); `MoveIn` is declaration-only,
+	 * its call is replaced by an instruction while lowering to LIR.
 	 * @note This is not related with language template implementation.
 	 */
 	class BuiltinTemplatedSymbol final {

@@ -5,7 +5,9 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
@@ -239,6 +241,76 @@ namespace compiler::helios {
 			const auto pointee_type = decl.parameters.at(0).type.getType();
 			return defgen::buildBoxDestructor(ctx, pointee_type);
 		}
+		case BuiltinKind::BoxAlloc: {
+			// `box_alloc(value: T) -> box T` asks the standard library for storage for a single
+			// `T`, moves `value` into it and hands that storage back as the box:
+			// ```
+			// var __storage: ptr T = boxAlloc:{T}();
+			// move_in:{T}(__storage, move value);
+			// return __storage as box T;
+			// ```
+			auto&      decl = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
+			const auto value_type
+				= tsh::SymbolType<>::withDefaults(decl.parameters.at(0).type.getType());
+			const auto storage_type
+				= tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryPointerType>({ value_type }));
+
+			const SymID storage_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
+				.name = base::StrID("__storage"),
+				.generated_symbol_data
+				= defgen::GeneratedFunctionVariable{ .function_symbol = symbol,
+			                                         .variable_index  = 0,
+			                                         .type            = storage_type },
+			});
+			const SymID alloc_symbol
+				= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::BoxAlloc, { value_type });
+
+			auto body = StmtPack{
+				s.var(
+					storage_symbol,
+					storage_type,
+					s.call(s.ident(alloc_symbol), std::vector<Box<code::Expr>>{})
+				),
+				s.expr(s.call(
+					s.ident(moveInSymForType(ctx, value_type)),
+					s.ident(storage_symbol),
+					s.move(s.ident(decl.parameters.at(0).helios_symbol))
+				)),
+				s.ret(s.cast(s.ident(storage_symbol), decl.return_type)),
+			}.toCodeBlock();
+
+			return {
+				code::generatedOrigin(),
+				&decl,
+				std::make_shared<const code::CodeBlock>(std::move(body)),
+			};
+		}
+		case BuiltinKind::BoxFree: {
+			// `box_free(b: ref T)` releases the storage the box owns, without touching the value
+			// in it - the box destructor has already destroyed that. It becomes
+			// `boxFree:{T}(b as ptr T);`.
+			auto&      decl = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
+			const auto value_type
+				= tsh::SymbolType<>::withDefaults(decl.parameters.at(0).type.getType());
+			const auto storage_type
+				= tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryPointerType>({ value_type }));
+
+			const SymID free_symbol
+				= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::BoxFree, { value_type });
+
+			auto body = StmtPack{
+				s.expr(s.call(
+					s.ident(free_symbol),
+					s.cast(s.ident(decl.parameters.at(0).helios_symbol), storage_type)
+				)),
+			}.toCodeBlock();
+
+			return {
+				code::generatedOrigin(),
+				&decl,
+				std::make_shared<const code::CodeBlock>(std::move(body)),
+			};
+		}
 		default: {
 			CORE_PANIC(
 				base::strConcat("Builtin `", builtinKindToStr(type), "` is not implemented in HOUT")
@@ -271,7 +343,6 @@ namespace compiler::helios {
 			return BuiltinOrigin::LIR;
 		case BuiltinKind::BoxAlloc:
 		case BuiltinKind::BoxFree:
-			return BuiltinOrigin::DVMBackend | BuiltinOrigin::NativeBackend;
 		case BuiltinKind::BoxDestructor:
 			return BuiltinOrigin::HOUT;
 		}

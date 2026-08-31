@@ -121,10 +121,12 @@ namespace compiler::helios {
 				kind = SymbolKind::FunctionDeclaration;
 			}
 			variant_case(defgen::BuiltinTemplatedSymbol, templated) {
-				// BoxDestructor is the only builtin that is implemented in HOUT.
-				kind = templated.kind == defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor
-				         ? SymbolKind::Function
-				         : SymbolKind::FunctionDeclaration;
+				// The box family is implemented in HOUT, so those symbols carry a body. `MoveIn`
+				// is a LIR builtin: its call is replaced by an instruction, so it stays a
+				// declaration.
+				kind = templated.kind == defgen::BuiltinTemplatedSymbol::Kind::MoveIn
+				         ? SymbolKind::FunctionDeclaration
+				         : SymbolKind::Function;
 			}
 			variant_case_novalue(
 				defgen::Constructor,

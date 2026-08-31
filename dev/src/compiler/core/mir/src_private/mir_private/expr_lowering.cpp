@@ -1073,6 +1073,16 @@ namespace compiler::mir {
 				return true;
 			}
 
+			// And the other way around: a `box T` is represented by the pointer to its storage,
+			// so handing a fresh `ptr T` over to a box changes nothing. Only the generated
+			// `box_alloc` does this, `as` cannot express it in the source language.
+			const auto source_type = expr.source_expr->expression_type.getSymbolType();
+			if (source_type.getRefKind() == tsh::ReferenceKind::Direct
+			    && source_type.getType().getKind() == tsh::Kind::Pointer
+			    && expr.target_type.getRefKind() == tsh::ReferenceKind::Box) {
+				return true;
+			}
+
 			if (expr.source_expr->expression_type.getType().getKind() == tsh::Kind::Void)
 				return true;
 

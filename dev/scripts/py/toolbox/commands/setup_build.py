@@ -176,11 +176,6 @@ def configure_presets(ctx, param, value):
     is_flag=True,
 )
 @option(
-    "--clang-for-builtins",
-    help="Path to a custom Clang compiler for generating builtins. If not specified, auto-detected based on LLVM version.",
-    default=None,
-)
-@option(
     "--sanitizer",
     help="Enable a sanitizer. Choices: asan (AddressSanitizer), tsan (ThreadSanitizer), ubsan (UndefinedBehaviorSanitizer).",
     type=Choice(["asan", "tsan", "ubsan"], case_sensitive=False),
