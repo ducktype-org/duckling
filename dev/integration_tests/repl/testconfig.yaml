@@ -13,10 +13,7 @@ PostCase: "@{cleanup_tmp_env}"
 
 Run: "@{duckc_path} repl @{disable-bracketed-paste} --custom-std-artifacts-path @{case_std_artifacts}"
 
-# Every case here is ~0.6 s of fixed REPL start-up (loading the std artifacts)
-# and only milliseconds of actual work, so the default 2 s left under 3x of
-# head-room and the whole suite timed out together whenever the machine was
-# loaded. These cases assert REPL semantics, not start-up speed.
+# REPL tends to time-out, so we give it a nice, 8s legroom 
 timeout_default: 8
 
 prompt: "duckling> "
