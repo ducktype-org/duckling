@@ -10,25 +10,6 @@
 #include <type_traits>
 
 namespace compiler::numeric_value {
-	namespace {
-		template<typename Op>
-		base::Optional<NumericValue> applyBitwiseBinary(
-			const NumericValue::Storage& lhs, const NumericValue::Storage& rhs, Op op
-		) {
-			return std::visit(
-				[&](auto&& l, auto&& r) -> base::Optional<NumericValue> {
-					using L = std::decay_t<decltype(l)>;
-					using R = std::decay_t<decltype(r)>;
-					if constexpr (std::is_integral_v<L> && std::is_same_v<L, R>)
-						return NumericValue{ static_cast<L>(op(l, r)) };
-					return {};
-				},
-				lhs,
-				rhs
-			);
-		}
-	}
-
 	const NumericValue::Storage& NumericValue::getStorage() const { return value; }
 
 	[[nodiscard]] std::string NumericValue::toString() const {
