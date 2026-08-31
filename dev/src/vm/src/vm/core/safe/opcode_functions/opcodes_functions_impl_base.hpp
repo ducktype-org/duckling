@@ -228,18 +228,15 @@ namespace vm {
 		FUNCTION_CONT(1);                                                             \
 	}
 
-#define DEFINE_INT_N_BITWISE(SIZE, RAW_TYPE)             \
-	DEFINE_BITWISE_BINARY_OP(bit_and, SIZE, RAW_TYPE, &) \
-	DEFINE_BITWISE_BINARY_OP(bit_or, SIZE, RAW_TYPE, |)  \
-	DEFINE_BITWISE_BINARY_OP(bit_xor, SIZE, RAW_TYPE, ^) \
-	DEFINE_BITWISE_BINARY_OP(shl, SIZE, RAW_TYPE, <<)    \
-	DEFINE_BITWISE_BINARY_OP(shr, SIZE, RAW_TYPE, >>)    \
-	DEFINE_BITWISE_NOT_OP(SIZE, RAW_TYPE)
+#define DEFINE_INT_N_BITWISE(SIZE)                                  \
+	DEFINE_BITWISE_BINARY_OP(bit_and, SIZE, std::uint##SIZE##_t, &) \
+	DEFINE_BITWISE_BINARY_OP(bit_or, SIZE, std::uint##SIZE##_t, |)  \
+	DEFINE_BITWISE_BINARY_OP(bit_xor, SIZE, std::uint##SIZE##_t, ^) \
+	DEFINE_BITWISE_BINARY_OP(shl, SIZE, std::uint##SIZE##_t, <<)    \
+	DEFINE_BITWISE_BINARY_OP(shr, SIZE, std::uint##SIZE##_t, >>)    \
+	DEFINE_BITWISE_NOT_OP(SIZE, std::uint##SIZE##_t)
 
-	DEFINE_INT_N_BITWISE(64, std::uint64_t)
-	DEFINE_INT_N_BITWISE(32, std::uint32_t)
-	DEFINE_INT_N_BITWISE(16, std::uint16_t)
-	DEFINE_INT_N_BITWISE(8, std::uint8_t)
+	FOR_EACH(DEFINE_INT_N_BITWISE, 64, 32, 16, 8)
 
 #define FLOAT_64_TYPE f64
 #define FLOAT_32_TYPE f32
