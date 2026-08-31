@@ -6,9 +6,15 @@
 #include <variant>
 
 namespace vm::api {
-	struct ResumeError {};
+	struct ResumeError {
+		std::string why;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ResumeError, why);
+	};
 
-	struct PauseError {};
+	struct PauseError {
+		std::string why;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(PauseError, why);
+	};
 
 	struct RunError {
 		std::string error;
