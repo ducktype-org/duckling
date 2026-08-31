@@ -715,8 +715,8 @@ namespace compiler::lir {
 					call_instr.scope_flags.push_back(ScopeFlag{ .flag  = ScopeFlag::Flag::ScopeEnd,
 					                                            .local = addr_local });
 				} else if (type.getRefKind() == tsh::ReferenceKind::Box) {
-					// Box — call the destructor on it directly, as the destructor should take
-					// ref T, and box T == ref T in lower representation.
+					// Box — call the destructor on it directly. A box destructor is the `boxFree`
+					// primitive, which takes a `ptr T`, and box T == ptr T in lower representation.
 					block->instructions.emplace_back(
 						Operation::Call,
 						base::Optional<LIRPlace>{},

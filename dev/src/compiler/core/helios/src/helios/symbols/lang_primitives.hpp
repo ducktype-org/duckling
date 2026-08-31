@@ -22,7 +22,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
 	StringifyManyPtr,
 	StringifyCPtr,
 	StringifySlice,
-	StringifyStaticArray
+	StringifyStaticArray,
+	BoxAlloc,
+	BoxFree
 	// List
 	// PanicOutOfBounds
 )

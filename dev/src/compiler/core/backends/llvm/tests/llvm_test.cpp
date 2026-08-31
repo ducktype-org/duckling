@@ -199,17 +199,34 @@ private:
 			return count;
 		};
 
-		std::regex alloc_re(R"(call ptr @builtin_alloc\(i64 4\))");
+		// The storage of a box comes from `core.containers`: `new` calls the `boxAlloc` language
+		// primitive, which on a native target ends up in libc `malloc`. Every step of that chain
+		// is emitted into this module, so both ends are visible here.
 		assertTrue(
-			std::regex_search(ir, alloc_re), "Expected @builtin_alloc with size 4 for 'box i32'"
+			count_matches(R"(define linkonce_odr ptr @\S*8boxAlloc)") == 1,
+			"Expected the baked 'boxAlloc' primitive to be emitted for 'box i32'"
 		);
-		std::regex store_re(R"(store i32 42, ptr)");
-		assertTrue(std::regex_search(ir, store_re), "Expected 'store i32 42' for box init");
-		std::regex dealloc_re(R"(call void @builtin_dealloc\(ptr)");
-		assertTrue(std::regex_search(ir, dealloc_re), "Expected @builtin_dealloc");
+		assertTrue(
+			count_matches(R"(define linkonce_odr void @\S*7boxFree)") == 1,
+			"Expected the baked 'boxFree' primitive to be emitted for 'box i32'"
+		);
 
-		int alloc_count   = count_matches(R"(call ptr @builtin_alloc)");
-		int dealloc_count = count_matches(R"(call void @builtin_dealloc)");
+		// `new 42` hands the boxed value to `boxAlloc`, which moves it into the fresh storage -
+		// so the literal shows up as a call argument now, not as a store here.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(call ptr @\S+\(i32 42\))" }),
+			"Expected the boxed value 42 to be passed to the box allocation"
+		);
+		// `box i32` asks for 4 bytes, which the primitive reads off this baked constant.
+		assertTrue(
+			std::regex_search(
+				ir, std::regex{ R"(@\S*LLVM_OBJECT_SIZE\S* = linkonce_odr constant i64 4)" }
+			),
+			"Expected the allocation size baked for 'box i32' to be 4"
+		);
+
+		int alloc_count   = count_matches(R"(call ptr @malloc\()");
+		int dealloc_count = count_matches(R"(call void @free\(ptr)");
 		ASSERT_EQUAL_PRINT(alloc_count, dealloc_count);
 		ASSERT_EQUAL_PRINT(alloc_count, 1);
 	}
