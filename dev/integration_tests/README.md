@@ -208,17 +208,10 @@ NeededThreads: "@{duckc_worker_count}"   # inherited by every case below
 It is a general variable, so it can be set on a node, a test or a single case,
 and it is inherited down the tree like the rest.
 
-A case declaring more than the whole `-j` budget is **rejected before the run
-starts**, at any `-j`: the budget could never cover it, and running it on fewer
-threads than it declared would quietly defeat the point. Either raise `-j`, or
-use `--sequential`, which runs one case at a time and ignores both the budget
-and every `NeededThreads` — so a `-j 3` test set is still debuggable on a
-smaller machine. `--dry` and `--clean` imply `--sequential`.
-
-Note that `-j 1` is **not** a sequential run: it is a budget of one thread, so
-cases still go through the scheduler, their output is still buffered into
-per-test sections, and a case needing more than one thread is still rejected.
-`itest` warns when it sees it. Use `--sequential` for the debugging mode.
+Keep `NeededThreads` within the `-j` a run realistically gets: a case asking for
+more than the whole budget is rejected, since it could never be scheduled.
+`--sequential` runs one case at a time and ignores the budget entirely, so a
+wide test set stays debuggable on a small machine.
 
 A test can opt out of parallelism entirely with `NoParallel: true` (settable on the test or inherited
 from any ancestor node): all such tests are deferred to a second phase after
