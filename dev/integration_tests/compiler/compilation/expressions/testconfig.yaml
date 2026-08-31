@@ -42,8 +42,8 @@ Tests:
 
   unit_simple_multiple_modules:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "1\n1\n"
         ExitCode: 0
@@ -53,7 +53,7 @@ Tests:
       all:
         backend: all
         Output:
-          String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n"
+          String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n0\n"
         ExitCode: 0
 
   floating_point_arithmetic:
@@ -112,19 +112,10 @@ Tests:
           String: ""
         ExitCode: 0
 
-  zero_init:
-    enable_conc_deterministic_tests: "false"
+  strings:
     Cases:
       all:
         backend: all
-        Output:
-          String: "0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n"
-        ExitCode: 0
-
-  strings:
-    Cases:
-      llvm:
-        backend: llvm
         Input:
           String: "Test"
         Output:
@@ -132,8 +123,8 @@ Tests:
 
   chars:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Input:
           String: "Xd;"
         Output:

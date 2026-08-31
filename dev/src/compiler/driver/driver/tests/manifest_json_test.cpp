@@ -1,5 +1,3 @@
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/logger.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/manifest/manifest.hpp>
 #include <driver/task/task.hpp>
@@ -9,6 +7,8 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <diagnostic/core/diagnostic_arguments.hpp>
+#include <diagnostic/logger.hpp>
 #include <tester/tester.hpp>
 
 #include <json/json.hpp>
@@ -38,12 +38,10 @@ public:
 	}
 
 protected:
-	void beforeAll() override {
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
-	}
+	void beforeAll() override { global_state::setters::setGlobalLogger(makeBox<dia::Logger>()); }
 
 private:
-	dia_int::Logger& logger() { return *global_state::getGlobalLogger(); }
+	dia::Logger& logger() { return *global_state::getGlobalLogger(); }
 
 	void clearLogger() { logger().clear(); }
 
@@ -90,7 +88,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		(void) result->verify(diagnostics::makeGlobalLoggerReporter());
+		std::ignore = result->verify(diagnostics::makeGlobalLoggerReporter());
 		ASSERT_EQUAL(result->packages.size(), 2u);
 		ASSERT_EQUAL(result->tasks.size(), 1u);
 		ASSERT_EQUAL(result->packages[0].package_id.str(), std::string("mylib"));
@@ -189,7 +187,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(!logger().hasErrors());
-		(void) result->verify(diagnostics::makeGlobalLoggerReporter());
+		std::ignore = result->verify(diagnostics::makeGlobalLoggerReporter());
 		ASSERT_TRUE(hasWarning());
 	}
 

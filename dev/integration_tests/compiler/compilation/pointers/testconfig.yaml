@@ -3,8 +3,8 @@
 Tests:
   manyptr:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "1\n3\n7\n42\n43\n30\n"
         ExitCode: 0
@@ -34,8 +34,8 @@ Tests:
 
   ref_to_index:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "10\n99\n"
         ExitCode: 0
@@ -65,15 +65,16 @@ Tests:
         backend: dvm
         stderr_regex: "VMThread has panicked: Accessing null pointer"
   slices:
-    enable_conc_deterministic_tests: "false"
     Cases:
       all:
         backend: all
         Output:
           String: "Hello from VM!\nl\n15\nHello from Duckling!\n"
         ExitCode: 0
+  # The llvm cases abort (SIGABRT). DIT disables core dumps, so the abort
+  # exits promptly; these still run exclusively out of caution.
   slices_out_of_bounds:
-    enable_conc_deterministic_tests: "false"
+    NoParallel: true
     Cases:
       llvm:
         backend: llvm
@@ -84,7 +85,7 @@ Tests:
         Output:
           String: "Program panicked!\n"
   slices_negative_index:
-    enable_conc_deterministic_tests: "false"
+    NoParallel: true
     Cases:
       llvm:
         backend: llvm
@@ -92,4 +93,3 @@ Tests:
       dvm:
         backend: dvm
         ExitCode: 1
-

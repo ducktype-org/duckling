@@ -12,7 +12,7 @@
 #include <vm/core/safe/memory/thread_stack.hpp>
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <limits>
 
@@ -30,6 +30,7 @@ namespace vm {
 	}
 
 	class SafeVMProcess;
+	class SafeVMValue;
 
 	/**
 	 * @brief Frames are on stack, this is the maximum number of frame pointers available.
@@ -120,7 +121,7 @@ namespace vm {
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
 		 * store a reference to this object.
 		 */
-		base::Optional<std::vector<Ref<VmValue>>> exit_value_storage{};
+		base::Optional<std::vector<Ref<SafeVMValue>>> exit_value_storage{};
 
 		/**
 		 * @brief Thread context - currently just the name of the function that will be used in
@@ -165,15 +166,13 @@ namespace vm {
 		 * in the start_function bytecode vector.
 		 * @param start_function - the code of the start function.
 		 * @param func - the function to execute.
-		 * @return Mutable reference to a value returned by the program
+		 * @return Mutable references to the SafeVMValues returned by the program
 		 */
-		std::vector<Ref<VmValue>> executeFunction(
+		std::vector<Ref<SafeVMValue>> executeFunction(
 			const low::LowFuncData& start_function, const low::LowFuncData& func
 		);
 
 		void execGlobalDestructors() override;
-
-		void handleKillProcessException(const KillProcessException& e);
 
 	protected:
 		void executeOneStep() override;

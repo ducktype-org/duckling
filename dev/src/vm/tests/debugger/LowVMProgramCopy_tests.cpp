@@ -25,12 +25,12 @@ private:
 		vm::loader::compiler::safe::SafeCompiler compiler(*loader.getHighProgram());
 		CRef<vm::low::LowVMProgram>              program = compiler.getLowProgram();
 		vm::low::LowVMProgramCopy                program_copy(program);
+		vm::api::ExecutionConfig                 config{};
 
 		ASSERT_EQUAL(program_copy.getOriginalProgram(), program);
 
-		ASSERT_HAS_VALUE(loader.loadAndValidate({ { path("breakpoint.dbc") } }));
+		ASSERT_HAS_VALUE(loader.loadAndValidate({ { path("breakpoint.dbc") } }, config));
 		compiler.recompile();
-
 		ASSERT_TRUE(program->getFunctions().size());
 		ASSERT_EQUAL_PRINT(program_copy.getFunctions().size(), 0);
 

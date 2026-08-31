@@ -1,6 +1,8 @@
 #pragma once
 
+#include <ctv/ctv.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 
@@ -8,11 +10,26 @@
 #include <query_framework/query_result.hpp>
 
 MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
-    Panic
-	// String
+    Panic,
+	String,
+	StringifyStr,
+	StringifyChar,
+	StringifyBool,
+	StringifyI64,
+	StringifyU64,
+	StringifyF64,
+	StringifyPtr,
+	StringifyManyPtr,
+	StringifyCPtr,
+	StringifySlice,
+	StringifyStaticArray
 	// List
 	// PanicOutOfBounds
 )
+
+namespace query {
+	struct Context;
+}
 
 namespace compiler::helios {
 	struct QueryLanguagePrimitiveSymID_key {
@@ -37,5 +54,33 @@ namespace compiler::helios {
 		QueryLanguagePrimitiveSymID_key,
 		CRef<query::QResult<SymID>>,
 		({})
+	);
+
+	/**
+	 * @brief Checks whether a language primitive resolves to at least one symbol.
+	 * Unlike QueryLanguagePrimitiveSymID this never logs an error: a missing primitive
+	 * (e.g. a no-std build without `core.containers`) simply returns false.
+	 */
+	bool isLanguagePrimitivePresent(query::Context& ctx, LanguagePrimitive primitive);
+
+	/**
+	 * @brief Bakes a templated language primitive with a single type argument.
+	 * The primitive must be declared as `template(T: type)` in the standard library; the
+	 * returned symbol is the specialization for @p type_argument, callable like any other
+	 * function symbol.
+	 */
+	SymID bakeLanguagePrimitive(
+		query::Context&                    ctx,
+		LanguagePrimitive                  primitive,
+		std::vector<ctv::CompileTimeValue> ctv_arguments
+	);
+
+	/**
+	 * @brief Helper overload tha accepts the symbol types.
+	 */
+	SymID bakeLanguagePrimitiveWithTypes(
+		query::Context&                ctx,
+		LanguagePrimitive              primitive,
+		std::vector<tsh::SymbolType<>> type_arguments
 	);
 }

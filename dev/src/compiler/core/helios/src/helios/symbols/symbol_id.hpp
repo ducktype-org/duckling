@@ -126,7 +126,7 @@ namespace compiler::helios {
 		OwnerOnly,
 		Replicated,
 	};
-	EmissionPolicy emissionPolicy(SymID id);
+	EmissionPolicy emissionPolicy(query::Context& ctx, SymID id);
 
 	/**
 	 * @brief Whether the symbol can be called
@@ -149,6 +149,13 @@ namespace compiler::helios {
 	 */
 	template<typename Attribute>
 	bool hasAttribute(SymID);
+
+	/**
+	 * Get the attribute of the given type applied to a symbol,
+	 * or an empty optional when the symbol does not have it.
+	 */
+	template<typename Attribute>
+	base::Optional<CRef<Attribute>> getAttribute(SymID);
 
 	/**
 	 * @return PST Stmt element symbol was created from.

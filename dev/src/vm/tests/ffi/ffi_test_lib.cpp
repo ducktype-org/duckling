@@ -22,6 +22,14 @@ extern "C" {
 	// Pointer (cptr) round-trip helpers.
 	void* ffi_alloc8() { return std::malloc(8); }
 
+	// Sized allocation, for the typed cpointer instructions (malloc workflow).
+	void* ffi_alloc(int64_t n) {
+		if (n <= 0) return nullptr;
+		return std::malloc(static_cast<size_t>(n));
+	}
+
+	void ffi_free(void* p) { std::free(p); }
+
 	void ffi_fill8(void* p, int64_t v) { *static_cast<int64_t*>(p) = v; }
 
 	int64_t ffi_read8(void* p) { return *static_cast<int64_t*>(p); }
@@ -55,6 +63,14 @@ extern "C" {
 
 	int64_t ffi_cpair_sum(CPair c) { return *static_cast<int64_t*>(c.p) + c.v; }
 
+	// Struct with a pointer field passed by value; C writes through the pointer.
+	struct Tagged {
+		void*   p;
+		int64_t tag;
+	};
+
+	void ffi_tagged_store(Tagged t) { *static_cast<int64_t*>(t.p) = t.tag; }
+
 	// Struct whose C layout needs alignment padding (b sits at offset 8, size is 16).
 	struct Mix {
 		int8_t  a;
@@ -62,6 +78,60 @@ extern "C" {
 	};
 
 	int64_t ffi_mix_sum(Mix m) { return static_cast<int64_t>(m.a) + m.b; }
+
+	// Struct with an array field - flattened in the libffi descriptor (libffi has no array type).
+	struct WithArr {
+		int32_t v[4];
+		int64_t tail;
+	};
+
+	int64_t ffi_arr_sum(WithArr w) {
+		int64_t sum = w.tail;
+		for (int32_t x: w.v) sum += x;
+		return sum;
+	}
+
+	// Struct with an array field, returned by value (the return path differs from the argument
+	// path - a 24-byte aggregate comes back through a hidden pointer).
+	WithArr ffi_arr_make(int32_t base) {
+		WithArr w{};
+		int32_t next = base;
+		for (int32_t& x: w.v) x = next++;
+		w.tail = static_cast<int64_t>(base) * 2;
+		return w;
+	}
+
+	// All-SSE aggregate with an array field, passed by value.
+	struct FQuad {
+		float v[4];
+	};
+
+	float ffi_fquad_sum(FQuad q) { return q.v[0] + q.v[1] + q.v[2] + q.v[3]; }
+
+	// Nested plain structs, passed by value.
+	struct Inner {
+		int32_t x;
+		int32_t y;
+	};
+
+	struct Outer {
+		Inner   first;
+		int64_t z;
+	};
+
+	int64_t ffi_nested_sum(Outer o) { return o.first.x + o.first.y + o.z; }
+
+	// Struct with an array-of-structs field, passed by value.
+	struct PtTab {
+		Inner   pts[2];
+		int64_t tail;
+	};
+
+	int64_t ffi_pt_sum(PtTab t) {
+		int64_t sum = t.tail;
+		for (const Inner& p: t.pts) sum += p.x + p.y;
+		return sum;
+	}
 }
 
 // NOLINTEND(readability-identifier-naming,cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory)

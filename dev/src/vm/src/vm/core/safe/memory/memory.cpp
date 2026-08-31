@@ -11,7 +11,7 @@ namespace vm {
 		std::cerr << #test ", BlockID=" << block.id.asInt() << "\n"; \
 		return false;                                                \
 	}
-		for (const auto& block: blocks) {
+		for (const auto& block: blocks_pool) {
 			TEST_HERE(block.refcount != 0)
 			TEST_HERE(!block.deallocated)
 		}

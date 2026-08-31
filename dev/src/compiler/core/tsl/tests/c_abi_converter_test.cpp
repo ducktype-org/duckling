@@ -19,7 +19,7 @@
 using namespace compiler::tsh;
 using namespace compiler::tsl;
 using query::utils::withContextDo;
-namespace ats = abi::type_system;
+namespace ats = abi::types;
 
 namespace {
 
@@ -108,7 +108,7 @@ private:
 			// aarch64 has no such format and must reject it.
 			const auto  f80_type = getFloatType(ctx, 80);
 			const auto& r        = queryConv(ctx, directOf(f80_type));
-			if (compilerTargetABI().data_layout.float_layouts.contains(u8(80)))
+			if (compilerTargetABI().data_layout.float_layouts.contains(80))
 				expectFloat(r, 80);
 			else
 				assertFalse(r.has_value(), "f80 should be rejected without an x87 unit");
@@ -177,8 +177,6 @@ private:
 				= ctx.query<QueryPointerType>({ directOf(i32_type) });
 			const ManyPointerAbstractType many_pointer
 				= ctx.query<QueryManyPointerType>({ directOf(i32_type) });
-			const DynamicArrayAbstractType dynamic_array
-				= ctx.query<QueryDynamicArrayType>(directOf(i32_type));
 			const TupleAbstractType tuple
 				= ctx.query<QueryTupleType>({ { directOf(i32_type), directOf(i32_type) } });
 			const FunctionAbstractType function
@@ -191,9 +189,7 @@ private:
 				{ directOf(many_pointer), "many-pointer" },
 				{ refOf(i32_type), "ref" },
 				{ boxOf(i32_type), "box" },
-				{ directOf(getStringType()), "string" },
 				{ directOf(getUnitType()), "unit" },
-				{ directOf(dynamic_array), "dynamic array" },
 				{ directOf(tuple), "tuple" },
 				{ directOf(function), "function" },
 			};

@@ -42,6 +42,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	fneg,
 
 	cmpNull,
+	setNull,
 	cmpEq,
 	cmpNeq,
 	cmpGt,
@@ -85,6 +86,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	store,
 	setVTable,
 	cast,
+	ptrParts,
 	fixedSizeTableStore,
 	fixedSizeTableLoad,
 	fixedSizeTableLea,
@@ -146,6 +148,11 @@ namespace vm::code::builders {
 		template<class... Args>
 		void pushArgs(Args&&... args) {
 			(pushArg(std::forward<Args>(args)), ...);
+		}
+
+		template<std::ranges::input_range R>
+		void pushArgs(R&& range) {  // NOLINT
+			for (auto&& arg: range) pushArg(std::forward<decltype(arg)>(arg));
 		}
 
 		[[nodiscard]] Instruction build() const;

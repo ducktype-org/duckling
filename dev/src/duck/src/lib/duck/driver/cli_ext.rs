@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
-use tracing::error;
+use tracing::{error, info};
 
 use crate::StrId;
 use crate::quackpack::core::Package;
@@ -116,7 +116,8 @@ fn get_available_parallelism() -> usize {
     match std::thread::available_parallelism() {
         Ok(value) => value.get(),
         Err(e) => {
-            error!("failed to determine number of available threads: {e}; falling back to 1");
+            error!(error = %e, "failed to determine number of available threads");
+            info!("falling back to 1 available thread");
             1
         }
     }
@@ -150,6 +151,6 @@ fn ignore_clap_errors<T: Default>(result: Result<T, clap::parser::MatchesError>)
     match result {
         Ok(val) => val,
         Err(clap::parser::MatchesError::UnknownArgument { .. }) => T::default(),
-        Err(e) => panic!("cli flag used incorrectly: {}", e),
+        Err(e) => panic!("cli flag used incorrectly: {e}"),
     }
 }

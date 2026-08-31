@@ -18,13 +18,6 @@
 namespace {
 	using namespace compiler;
 
-	bool isMetaTypeOperation(lir::Operation op) {
-		return op == lir::Operation::MetaCreateBox || op == lir::Operation::MetaCreateRef
-		    || op == lir::Operation::MetaCreateConst || op == lir::Operation::MetaCreateTuple
-		    || op == lir::Operation::MetaCreateVariant || op == lir::Operation::MetaEq
-		    || op == lir::Operation::MetaNeq;
-	}
-
 	vm::code::builders::OpKind lirOperationToDVMOpKind(const lir::Operation& op) {
 		using enum lir::Operation;
 		using namespace vm::code::builders;
@@ -82,12 +75,15 @@ namespace compiler::backend_vm::internal {
 			  })
 		    | std::ranges::to<std::vector>();
 
-		return FunctionCallInfo{
-			.call_target = DVMFunctionName{ .name = func_literal.mangled_name },
-			.return_type = called_result_type,
-			.param_types = param_types,
-			.is_extern_c = false,
-		};
+		FunctionCallInfo call_info{ .call_target
+			                        = DVMFunctionName{ .name = func_literal.mangled_name },
+			                        .return_type = called_result_type,
+			                        .param_types = param_types };
+
+		if (v_matches(func_literal.abi.value, lir::LIRAbi::CAbi))
+			call_info.call_target = DVMFFIFunctionName{ .name = func_literal.mangled_name };
+
+		return call_info;
 	}
 
 	FunctionCallInfo FunctionCallInfo::fromExternCFunction(
@@ -115,7 +111,6 @@ namespace compiler::backend_vm::internal {
 			.call_target = DVMExternCFunctionName{ .name = ext_func_name },
 			.return_type = called_result_type,
 			.param_types = param_types,
-			.is_extern_c = true,
 		};
 	}
 
@@ -149,16 +144,20 @@ namespace compiler::backend_vm::internal {
 			return {};
 		};
 
-		if (isMetaTypeOperation(operation))
-			return MetaOperation{
-				.meta_op = operation,
-				.args    = lower_all_args(),
-				.dest    = lower_opt_dest(),
-			};
-
-
 		switch (operation) {
 		/// Special operations ///
+		case MetaTypeOperation: {
+			// If we are not in the comp time lowering context ignore the instruction,
+			// same behaviour as on LLVM backend.
+			if (not ctx.program_context.isCompTimeLowering()) return NoOperation{};
+			const auto* meta_params = std::get_if<lir::MetaParameters>(&instr.extra_params);
+			CORE_ASSERT(meta_params, "Meta operation without MetaParameters");
+			return MetaOperation{
+				.meta_kind = meta_params->kind,
+				.args      = lower_all_args(),
+				.dest      = lower_opt_dest(),
+			};
+		}
 		case ZeroInitialize:
 			// Data in DVM is zeroinitialized by default, so this is a NoOp.
 			return NoOperation{};
@@ -189,10 +188,14 @@ namespace compiler::backend_vm::internal {
 
 
 			if_opt_some(func_literal.builtin_kind_opt, builtin) {
+				base::Optional<vm::code::TypeOfData> return_type
+					= ctx.program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+				          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
 				return BuiltinCallOperation{
-					.kind = builtin,
-					.args = std::move(call_args),
-					.dest = std::move(dest),
+					.kind        = builtin,
+					.args        = std::move(call_args),
+					.dest        = std::move(dest),
+					.return_type = std::move(return_type),
 				};
 			}
 
@@ -310,6 +313,44 @@ namespace compiler::backend_vm::internal {
 			};
 		}
 
+		/// Variant operations ///
+		case VariantConstruct: {
+			// An alternative carrying no information (e.g. `()`) has its payload argument
+			// discarded in LIR, so there is nothing left to store.
+			CORE_ASSERT(
+				instr.arguments.size() <= 1,
+				"VariantConstruct expects at most 1 argument, got: ",
+				instr.arguments.size()
+			);
+			const auto variant_params = std::get_if<lir::VariantParameters>(&instr.extra_params);
+			CORE_ASSERT(variant_params != nullptr, "VariantConstruct without parameters");
+			return VariantConstructOperation{
+				.variant_params = *variant_params,
+				.payload        = instr.arguments.empty()
+				                    ? base::Optional<DVMValue>()
+				                    : base::Optional<DVMValue>(lower_arg(instr.arguments[0])),
+				.dest           = lower_dest(),
+			};
+		}
+		case VariantTryProject: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"VariantTryProject expects 1 argument, got: ",
+				instr.arguments.size()
+			);
+			CORE_ASSERT(
+				instr.arguments[0].is<lir::LIRPlace>(),
+				"VariantTryProject argument must be a LIRPlace"
+			);
+			const auto variant_params = std::get_if<lir::VariantParameters>(&instr.extra_params);
+			CORE_ASSERT(variant_params != nullptr, "VariantTryProject without parameters");
+			return VariantTryProjectOperation{
+				.variant_params = *variant_params,
+				.variant        = ctx.resolveLirPlace(instr.arguments[0].get<lir::LIRPlace>()),
+				.dest           = lower_dest(),
+			};
+		}
+
 		/// Terminator operations ///
 		case Jump: {
 			CORE_ASSERT(
@@ -335,6 +376,19 @@ namespace compiler::backend_vm::internal {
 				.scope_flags  = instr.scope_flags,
 			};
 		}
+		case BranchIfNull: {
+			CORE_ASSERT(
+				instr.arguments.size() == 3,
+				"BranchIfNull operation expects 3 arguments, got: ",
+				instr.arguments.size()
+			);
+			return BranchIfNullOperation{
+				.pointer         = lower_arg(instr.arguments[0]),
+				.null_target     = lower_arg(instr.arguments[1]).get<DVMLabel>(),
+				.not_null_target = lower_arg(instr.arguments[2]).get<DVMLabel>(),
+				.scope_flags     = instr.scope_flags,
+			};
+		}
 		case ReturnValue:
 		case ReturnVoid: {
 			CORE_ASSERT(
@@ -349,20 +403,14 @@ namespace compiler::backend_vm::internal {
 				.scope_flags = instr.scope_flags,
 			};
 		}
+		case Unreachable: {
+			return UnreachableOperation{
+				.scope_flags = instr.scope_flags,
+			};
+		}
 		case Nop: {
 			// No instruction to generate, just skip.
 			return NoOperation{};
-		}
-		case ListPush:
-		case ListPop:
-		case ListFree: {
-			ctx.program_context.getActiveContext().value()->logInt(
-				makeBox<dia_int::NotYetImplementedCodeError>(
-					"Lists are not supported in DVM code generation yet."
-				)
-			);
-			query::throwFailed();
-			CORE_UNREACHABLE();
 		}
 		default:
 			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));

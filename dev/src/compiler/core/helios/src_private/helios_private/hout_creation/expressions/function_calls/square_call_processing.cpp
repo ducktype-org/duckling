@@ -1,15 +1,16 @@
 #include "square_call_processing.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+
+#include <diagnostic/placeholder.hpp>
 
 namespace compiler::helios::code {
 	namespace {
@@ -31,12 +32,11 @@ namespace compiler::helios::code {
 			pst::AccessLocked<pst::ExprElement> index_pst
 		) {
 			if (auto expr_kind = current_expr->expression_type.getSymbolType().getType().getKind();
-			    expr_kind != tsh::Kind::StaticArray && expr_kind != tsh::Kind::DynamicArray
-			    && expr_kind != tsh::Kind::ManyPointer && expr_kind != tsh::Kind::Slice) {
+			    not tsh::isIndexable(expr_kind)) {
 				auto error_pos = current_expr->origin.getStablePosition().copyValueOr(
 					index_pst.unlock(ctx)->getStablePosition()
 				);
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Index operator base must be indexable.", error_pos
 				));
 				return query::Failed();
@@ -129,7 +129,7 @@ namespace compiler::helios::code {
 		// @TODO: #1532 This check should be handled by the `[]` operator.
 		auto args = call_expr->getArgs().unlock(ctx);
 		if (args->size() != 1) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				"Array index/size must be exactly one expression.", call_expr->getStablePosition()
 			));
 			return query::Failed();
@@ -137,7 +137,7 @@ namespace compiler::helios::code {
 
 		auto arg_pst = (*args->begin()).unlock(ctx)->getArg().unlock(ctx)->getExpr();
 
-		auto meta_res = canCoerceToMeta(ctx, base->expression_type.getSymbolType());
+		auto meta_res = canCoerceToMeta(ctx, base->expression_type);
 		UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
 
 		// If base is coercible to meta, this is an array type creation.

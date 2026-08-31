@@ -1,0 +1,207 @@
+# Entry point for quacker-bot: one workflow handling all four triggers.
+# The `setup` job runs on a GitHub-hosted runner and decides whether and in which
+# mode the bot should run. The `agent` job then mints a GitHub App token (tokens
+# cannot be passed between jobs — Actions drops outputs that contain secrets)
+# and runs ci/run.sh from the config repo on a self-hosted runner.
+name: Quacker
+
+on:
+  issues:
+    types: [labeled]                    # "quacker" label on an issue starts a task
+  issue_comment:
+    types: [created]                    # "@quacker-bot" mentioned on a PR gets a reply
+  pull_request_review_comment:
+    types: [created]                     # "@quacker-bot" mentioned in an inline PR review comment
+  workflow_run:
+    workflows: [tests, linter, rust]    # failed CI on a bot branch triggers a self-fix
+    types: [completed]
+
+# Only runs that will DO work get a shared (serialized) group keyed by their target; everything
+# that will just skip gets a unique run_id group so it can never cancel a real @quacker-bot run.
+# GitHub expressions can't hold inline comments, so each branch of the ${{ }} chain below is
+# documented here in order (condition -> group it produces):
+#   1. issues event + label == 'quacker'                    -> quacker-issue-<issue#>  (task on the issue)
+#   2. issue_comment on an ISSUE + '@quacker-bot'           -> quacker-issue-<issue#>  (shares the issue's branch -> serialize with #1)
+#   3. issue_comment on a PR + '@quacker-bot'               -> quacker-mention-<PR#>   (issue.number == PR number here)
+#   4. pull_request_review_comment + '@quacker-bot'         -> quacker-mention-<PR#>
+#   5. anything else (non-mention comment / non-quacker label / workflow_run) -> run_id (unique -> skips, never cancels a real run)
+concurrency:
+  group: >-
+    ${{
+      github.event_name == 'issues' && github.event.label.name == 'quacker'
+        && format('quacker-issue-{0}', github.event.issue.number)
+      || github.event_name == 'issue_comment' && !github.event.issue.pull_request
+        && contains(github.event.comment.body, '@quacker-bot')
+        && format('quacker-issue-{0}', github.event.issue.number)
+      || github.event_name == 'issue_comment' && github.event.issue.pull_request
+        && contains(github.event.comment.body, '@quacker-bot')
+        && format('quacker-mention-{0}', github.event.issue.number)
+      || github.event_name == 'pull_request_review_comment'
+        && contains(github.event.comment.body, '@quacker-bot')
+        && format('quacker-mention-{0}', github.event.pull_request.number)
+      || github.run_id
+    }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+
+    # note: we can add "COLLABORATOR" to the author_association check if needed in the future.
+    if: >-
+      (
+        github.event_name == 'issues' && 
+        github.event.label.name == 'quacker'
+      ) || (
+        github.event_name == 'issue_comment' &&
+        github.event.comment.user.type != 'Bot' &&
+        (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER') &&
+        contains(github.event.comment.body, '@quacker-bot')
+      ) || (
+        github.event_name == 'pull_request_review_comment' &&
+        github.event.comment.user.type != 'Bot' &&
+        (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER') &&
+        contains(github.event.comment.body, '@quacker-bot')
+      ) || (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'failure' &&
+        github.event.workflow_run.actor.type == 'Bot' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        startsWith(github.event.workflow_run.head_branch, 'quacker-bot/')
+      )
+
+    outputs:
+      run: ${{ steps.d.outputs.run }}
+      mode: ${{ steps.d.outputs.mode }}
+      a1: ${{ steps.d.outputs.a1 }}
+      a2: ${{ steps.d.outputs.a2 }}
+    steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ secrets.QUACKER_APP_ID }}
+          private-key: ${{ secrets.QUACKER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+      - name: Determine mode
+        id: d
+        env:  # untrusted event data is passed via env vars, never interpolated into the script
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          ORG: ${{ github.repository_owner }}
+          CORE_DEV_TEAM: core-dev
+          EVENT: ${{ github.event_name }}
+          LABEL: ${{ github.event.label.name }}
+          SENDER: ${{ github.event.sender.login }}
+          ISSUE_NUM: ${{ github.event.issue.number }}
+          IS_PR: ${{ github.event.issue.pull_request.url }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          COMMENT_USER_TYPE: ${{ github.event.comment.user.type }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WR_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WR_ID: ${{ github.event.workflow_run.id }}
+          WR_ACTOR_TYPE: ${{ github.event.workflow_run.actor.type }}
+          WR_HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          run=false; mode=; a1=; a2=
+          # Returns 0 (true) iff the given GitHub user is an active member of the core-dev team.
+          # Requires the Quacker App to hold the organization "Members: read" permission; if it
+          # does not, this fails closed (no one can trigger the bot) rather than open.
+          is_core_dev() {
+            [ -n "$1" ] || return 1
+            local state
+            state="$(gh api "orgs/$ORG/teams/$CORE_DEV_TEAM/memberships/$1" --jq '.state' 2>/dev/null || true)"
+            [ "$state" = "active" ]
+          }
+          case "$EVENT" in
+            issues)
+              # Only core-dev members may start a task by adding the "quacker" label.
+              [ "$LABEL" = "quacker" ] && is_core_dev "$SENDER" && { run=true; mode=task; a1="$ISSUE_NUM"; } ;;
+            issue_comment)
+              # Only core-dev members may invoke the bot via @quacker-bot — it runs with the App
+              # token's write access and can push commits. Bot comments are skipped (including
+              # quacker's own) so the bot can't trigger itself. On a PR -> `comment` mode (works on
+              # the PR branch); on an issue -> `issue-comment` mode (works on quacker-bot/issue-N).
+              if [ "$COMMENT_USER_TYPE" != "Bot" ] && \
+                 printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot' && \
+                 is_core_dev "$COMMENT_USER"; then
+                if [ -n "$IS_PR" ]; then run=true; mode=comment;       a1="$ISSUE_NUM"
+                else                     run=true; mode=issue-comment; a1="$ISSUE_NUM"; fi
+              fi ;;
+            pull_request_review_comment)
+              # Inline/review-comment mention of @quacker-bot — same core-dev gate as above.
+              if [ "$COMMENT_USER_TYPE" != "Bot" ] && \
+                 printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot' && \
+                 is_core_dev "$COMMENT_USER"; then
+                run=true; mode=comment; a1="$PR_NUM"
+              fi ;;
+            workflow_run)
+              # Self-heal only the bot's own failed CI. Require all of:
+              #  - failure conclusion,
+              #  - the failed run was triggered by a Bot (not a human PR author),
+              #  - the run originated in this repo (not a fork),
+              #  - a quacker-bot/* branch the bot created.
+              if [ "$WR_CONCLUSION" = "failure" ] && [ "$WR_ACTOR_TYPE" = "Bot" ] && \
+                 [ "$WR_HEAD_REPO" = "$REPO" ] && \
+                 printf '%s' "$WR_BRANCH" | grep -qE '^quacker-bot/'; then
+                run=true; mode=ci-fix; a1="$WR_BRANCH"; a2="$WR_ID"
+              fi ;;
+          esac
+          { echo "run=$run"; echo "mode=$mode"; echo "a1=$a1"; echo "a2=$a2"; } >> "$GITHUB_OUTPUT"
+
+  agent:
+    needs: setup
+    if: needs.setup.outputs.run == 'true'
+    runs-on:
+      group: SelfHostedRunners
+      labels: [quacker-bot]
+    timeout-minutes: 90
+    env:
+      QUACKER_BOT_ID: ${{ secrets.QUACKER_BOT_ID }}
+      DUCKLING_REPO: ${{ github.repository }}
+      CONFIG_REPO: ${{ github.repository_owner }}/agent-config
+      MODE: ${{ needs.setup.outputs.mode }}
+      A1: ${{ needs.setup.outputs.a1 }}
+      A2: ${{ needs.setup.outputs.a2 }}
+      COMMENT_BODY: ${{ github.event.comment.body }}
+    steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ secrets.QUACKER_APP_ID }}
+          private-key: ${{ secrets.QUACKER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            duckling
+            agent-config
+      - name: Clone config repo
+        env:
+          GITHUB_APP_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          CONFIG_DIR="$RUNNER_TEMP/config"
+          echo "CONFIG_DIR=$CONFIG_DIR" >> "$GITHUB_ENV"
+          rm -rf "$CONFIG_DIR"
+          git clone "https://x-access-token:${GITHUB_APP_TOKEN}@github.com/${CONFIG_REPO}.git" "$CONFIG_DIR"
+      - name: Run agent
+        # ci/run.sh resolves the remaining runtime args (PR head ref, ci-fix checks)
+        # and drives the agent; the OAuth token is exposed to this step only.
+        env:
+          GITHUB_APP_TOKEN: ${{ steps.app.outputs.token }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          SLUG: ${{ steps.app.outputs.app-slug }}
+          AGENT_OAUTH_TOKEN: ${{ secrets.AGENT_OAUTH_TOKEN }}
+        run: bash "$CONFIG_DIR/ci/run.sh" "$MODE" "$A1" "$A2" "$COMMENT_BODY"
+
+      - name: Upload bot output artifact
+        # Upload full bot reasoning/output for debugging (no truncation)
+        # Runs always (even if agent failed) so logs are available for troubleshooting
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quacker-bot-output-run-${{ github.run_id }}
+          path: ${{ runner.temp }}/quacker-bot-full-output-*.log
+          retention-days: 7
+          if-no-files-found: ignore

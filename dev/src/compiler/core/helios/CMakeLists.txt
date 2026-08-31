@@ -20,7 +20,10 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/expressions/query_hout_of_expr.cpp
 	src_private/helios_private/hout_creation/expressions/builtin_operators.cpp
 	src_private/helios_private/hout_creation/expressions/numeric_literals.cpp
-	src_private/helios_private/hout_creation/expressions/coercions.cpp
+	src_private/helios_private/hout_creation/expressions/coercions/coercions.cpp
+	src_private/helios_private/hout_creation/expressions/coercions/errors.cpp
+	src_private/helios_private/hout_creation/expressions/coercions/passing.cpp
+	src_private/helios_private/hout_creation/expressions/casts.cpp
 	src_private/helios_private/comp_time/comp_time.cpp
 	src_private/helios_private/comp_time/vm_evaluator.cpp
 	src_private/helios_private/comp_time/comptime_type_operations.cpp
@@ -30,14 +33,15 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/definition_generation/copy_constructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_destructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/length_methods.cpp
-	src_private/helios_private/hout_creation/definition_generation/list_methods.cpp
 	src_private/helios_private/hout_creation/definition_generation/to_string_methods.cpp
 	src_private/helios_private/hout_creation/desugaring/for.cpp
+	src_private/helios_private/hout_creation/desugaring/match.cpp
 	src_private/helios_private/hout_creation/hout_stmt_compilation.cpp
 	src_private/helios_private/errors/dia_interactive_elements.cpp
 	src_private/helios_private/errors/duplicated_definition.cpp
 	src_private/helios_private/tsh/abstract_type_impl.cpp
 	src_private/helios_private/tsh/queries.cpp
+	src_private/helios_private/templates/templates.cpp
 
 	src/helios/errors/extern_c_class_empty.cpp
 	src/helios/errors/field_not_c_compatible.cpp
@@ -85,15 +89,20 @@ duck_add_test(compiler helios tests/helios_test.cpp
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_with_std tests/helios_with_std_test.cpp
-	USES Base PstParser HELIOS Driver)
+	USES Base PstParser HELIOS Driver
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 
 duck_add_test(compiler helios_errors tests/helios_errors_test.cpp
-	USES Base PstParser HELIOS
+	USES Base PstParser HELIOS Driver
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_stmt_compilation tests/helios_stmt_compilation_test.cpp
 	USES Base PstParser HELIOS
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
+duck_add_test(compiler helios_shorthands tests/helios_shorthands_test.cpp
+	USES Base PstParser HELIOS Driver
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_repl_instruction_wrapper tests/helios_repl_instruction_wrapper_test.cpp

@@ -31,7 +31,11 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+
+namespace vm {
+	class SafeVMValue;
+	class SafeVMProcess;
+}
 
 namespace vm::builtins {
 
@@ -50,6 +54,7 @@ namespace vm::builtins {
 	enum class BuiltinFunctionID : usize {
 		Abort,
 		InputI64,
+		InputChar,
 		OutputI64,
 		OutputI32,
 		OutputChar,
@@ -58,6 +63,7 @@ namespace vm::builtins {
 		U64ToString,
 		I64ToString,
 		Stoi,
+		Strtod,
 		StartThread,
 		JoinThread,
 		CreateMutex,
@@ -68,54 +74,20 @@ namespace vm::builtins {
 		WaitCV,
 		NotifyCV,
 		NotifyAllCV,
-		DestroyCV,
-		CptrRead,
-		CptrWrite
+		DestroyCV
 	};
 
 	/**
-	 * @brief Placeholder parameter type used for a builtin argument whose type is checked by the
-	 * builtin's own `arg_verifier` rather than by exact name match. It only contributes to the
-	 * parameter count; it is never resolved as a real type.
-	 */
-	inline constexpr std::string_view VERIFIER_CHECKED_PARAM = "$checked";
-
-	/**
-	 * @brief Verifies the argument types of a builtin call that cannot be expressed as a fixed
-	 * list of type names (e.g. a pointer to any type). Returns an error message if the types are
-	 * invalid, or an empty optional if they are acceptable.
-	 * @param arg_types The concrete types of the arguments on the stack, in call order.
-	 */
-	using BuiltinArgVerifier = base::Optional<std::string> (*)(
-		const std::vector<base::CRef<code::valid_type::ValidType>>& arg_types
-	);
-
-	/**
-	 * @brief Full description of a builtin function: its bytecode-visible name, its signature,
-	 * and an optional custom argument verifier.
+	 * @brief Full description of a builtin function: its bytecode-visible name and its signature.
 	 */
 	struct BuiltinFunction {
 		base::StrID         name;
 		code::FuncSignature signature;
-		/// When set, validates the whole argument list instead of exact per-parameter type-name
-		/// matching. Parameters it covers use `VERIFIER_CHECKED_PARAM` as a placeholder.
-		base::Optional<BuiltinArgVerifier> arg_verifier = {};
 
-		BuiltinFunction(
-			base::StrID                        name,
-			code::FuncSignature                signature,
-			base::Optional<BuiltinArgVerifier> arg_verifier = {}
-		):
+		BuiltinFunction(base::StrID name, code::FuncSignature signature):
 			  name(name),
-			  signature(std::move(signature)),
-			  arg_verifier(arg_verifier) {}
+			  signature(std::move(signature)) {}
 	};
-
-	/**
-	 * @brief Returns the argument verifier for a builtin, or an empty optional if the name is not
-	 * a builtin or its arguments are checked by ordinary exact type-name matching.
-	 */
-	base::Optional<BuiltinArgVerifier> getBuiltinArgVerifier(base::StrID name);
 
 	/**
 	 * @brief Class for FunctionHandlers.
@@ -129,6 +101,13 @@ namespace vm::builtins {
 	public:
 		static void builtinAbort(SafeVMThread& process);
 		static i64  builtinInputI64(SafeVMThread& process);
+
+		/**
+		 * @brief Reads a single raw byte from input (no whitespace skipping), returning it as an
+		 * `i32`, or `-1` at end of input (matching libc `getchar`). Backs `core.io.readCharCode`
+		 * on the DVM.
+		 */
+		static i32  builtinInputChar(SafeVMThread& process);
 		static i64  builtinOutputI64(SafeVMThread& process, i64 arg);
 		static i64  builtinOutputI32(SafeVMThread& process, i32 arg);
 		static i64  builtinOutputChar(SafeVMThread& process, i8 arg);
@@ -149,7 +128,14 @@ namespace vm::builtins {
 		static u64 builtinU64ToString(SafeVMThread& process, u64 value, Pointer ptr, u64 buffer_cap);
 		static u64 builtinI64ToString(SafeVMThread& process, i64 value, Pointer ptr, u64 buffer_cap);
 
-		static i64  builtinStoi(SafeVMThread& process, Pointer ptr);
+		static i64 builtinStoi(SafeVMThread& process, Pointer ptr);
+
+		/**
+		 * @brief Parses the leading floating-point number out of the NUL-terminated char table
+		 * under `ptr`. Backs `core.io.strtod` on the DVM; the native backend uses libc `strtod`
+		 * directly (see `core.clib`).
+		 */
+		static f64  builtinStrtod(SafeVMThread& process, Pointer ptr);
 		static i64  builtinStartThread(SafeVMThread& process);
 		static i64  builtinJoinThread(SafeVMThread& process, u64 thread_id);
 		static u64  builtinCreateMutex(SafeVMThread& process);
@@ -161,35 +147,17 @@ namespace vm::builtins {
 		static void builtinNotifyCV(SafeVMThread& process, u64 cv_id);
 		static void builtinNotifyAllCV(SafeVMThread& process, u64 cv_id);
 		static void builtinDestroyCV(SafeVMThread& process, u64 cv_id);
-
-		/**
-		 * @brief Copies `size` bytes out of the raw C memory addressed by `src` (a `cptr`) to the
-		 * location pointed to by the VM pointer `dst`. Used to read FFI results back into the VM.
-		 * @warning `src` must address at least `size` bytes of valid, readable memory.
-		 * @note The copy region must fit within `dst`'s block, otherwise a runtime exception is
-		 * raised.
-		 */
-		static void builtinCptrRead(SafeVMThread& thread, u64 src, Pointer dst, u64 size);
-
-		/**
-		 * @brief Copies `size` bytes from the location pointed to by the VM pointer `src` into the
-		 * raw C memory addressed by `dst` (a `cptr`). Used to hand VM data to FFI functions.
-		 * @warning `dst` must address at least `size` bytes of valid, writable memory.
-		 * @note The copy region must fit within `src`'s block, otherwise a runtime exception is
-		 * raised.
-		 */
-		static void builtinCptrWrite(SafeVMThread& thread, u64 dst, Pointer src, u64 size);
 	};
 
 	/**
 	 * @brief Calls a builtin function with the given ID and arguments.
 	 */
-	base::Optional<Box<VmValue>> callBuiltinFunction(
-		BuiltinFunctionID                id,
-		const std::vector<TypeCRef>&     result_types,
-		IVMProcess&                      process,
-		SafeVMThread&                    thread,
-		const std::vector<Box<VmValue>>& arguments
+	base::Optional<Box<SafeVMValue>> callBuiltinFunction(
+		BuiltinFunctionID                    id,
+		const std::vector<TypeCRef>&         result_types,
+		SafeVMProcess&                       process,
+		SafeVMThread&                        thread,
+		const std::vector<Box<SafeVMValue>>& arguments
 	);
 
 	/**

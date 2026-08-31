@@ -1,0 +1,29 @@
+# This test is meant to be hard to perform init/deinit analysis on
+import core.runtime;
+
+fun foo(arg : i32) -> i32 = {
+    var a = 0;
+    var b = 1;
+
+    {
+        var c = 2; # blocks and nesting blocks
+        var d = 3;
+
+        if (c > d) return c; # condition, return value
+        else if (a > b) return a;
+        else {
+            # nothing
+        }
+    };
+
+    while (0 < arg < 10 < arg * 2) { # comparison chain, loop
+        arg = arg + 1;
+    }
+
+    return 100;
+}
+
+fun main() -> i64 = {
+    runtime.dvm.builtin_output_i64(foo(7));
+    return 0;
+}

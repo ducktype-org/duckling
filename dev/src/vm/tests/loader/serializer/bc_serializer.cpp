@@ -48,6 +48,9 @@ private:
 		point.assert_size = 8;
 		code.types.emplace_back(std::move(point));
 		code.types.emplace_back(FixedSizeTableType(base::StrID("points"), base::StrID("Point"), 3));
+		// C pointers: one typed, one with an unknown pointee (no inner).
+		code.types.emplace_back(CPointerType(base::StrID("point_ptr"), base::StrID("Point")));
+		code.types.emplace_back(CPointerType(base::StrID("raw_ptr"), {}));
 
 		// Global data: constant answer i64 with initial_value 42
 		GlobalData global;
@@ -68,6 +71,20 @@ private:
 
 		global.initial_value = ConstantValue::fromData(std::move(constant_array));
 		code.global_data.push_back(std::move(global));
+
+		// FFI: a bare library name is handed to `dlopen` untouched, so it survives the round-trip
+		// verbatim (a relative path would be resolved against the source file).
+		code.object_files.emplace_back("libm.so.6");
+
+		FFIFunction ffi_func;
+		ffi_func.name = Identifier(base::StrID("sqrt"));
+		ffi_func.signature.parameters.emplace_back(base::StrID("f64"));
+		ffi_func.signature.result_types.emplace_back(base::StrID("f64"));
+		code.ffi_functions.push_back(std::move(ffi_func));
+
+		FFIFunction ffi_void_func;
+		ffi_void_func.name = Identifier(base::StrID("abort"));
+		code.ffi_functions.push_back(std::move(ffi_void_func));
 
 		Function func;
 		func.name = Identifier(base::StrID("main"));
@@ -124,6 +141,18 @@ private:
 			"Data type should keep assert_size after round-trip"
 		);
 
+		const auto& typed_cptr = std::get<CPointerType>(parsed.types[3]);
+		assertEqual(typed_cptr.name, base::StrID("point_ptr"), "C pointer name should survive");
+		assertTrue(
+			typed_cptr.inner == base::Optional<base::StrID>(base::StrID("Point")),
+			"C pointer inner should survive round-trip"
+		);
+		const auto& void_cptr = std::get<CPointerType>(parsed.types[4]);
+		assertEqual(void_cptr.name, base::StrID("raw_ptr"), "C pointer name should survive");
+		assertTrue(
+			!void_cptr.inner.has_value(), "An absent C pointer inner should survive round-trip"
+		);
+
 		// Check global data
 		assertEqual(
 			parsed.global_data.size(), original.global_data.size(), "Global count should match"
@@ -144,6 +173,32 @@ private:
 		int decoded_value = 0;
 		std::memcpy(&decoded_value, cimm->content.data(), 4);
 		ASSERT_EQUAL_PRINT(decoded_value, 1);
+
+		// Check FFI declarations
+		assertEqual(
+			parsed.object_files.size(),
+			original.object_files.size(),
+			"Object file count should match"
+		);
+		assertEqual(
+			parsed.object_files[0], std::string("libm.so.6"), "Object file path should match"
+		);
+
+		assertEqual(
+			parsed.ffi_functions.size(), original.ffi_functions.size(), "FFI count should match"
+		);
+		const FFIFunction& ffi = parsed.ffi_functions[0];
+		assertEqual(ffi.name.str, base::StrID("sqrt"), "FFI function name should be sqrt");
+		assertTrue(
+			ffi.signature == original.ffi_functions[0].signature,
+			"FFI function signature should survive round-trip"
+		);
+		const FFIFunction& void_ffi = parsed.ffi_functions[1];
+		assertEqual(void_ffi.name.str, base::StrID("abort"), "FFI function name should be abort");
+		assertTrue(
+			void_ffi.signature.parameters.empty() && void_ffi.signature.result_types.empty(),
+			"An empty FFI signature should survive round-trip"
+		);
 
 		// Check function
 		assertEqual(
@@ -169,11 +224,16 @@ type data: PackedPoint {
 } packed assert_size 8
 
 type fixed_size_table: point_arr Point 2
+type cpointer: point_ptr Point
+type cpointer: raw_ptr
 
 global_data answers point_arr {
     is_constant: true,
     initial_value: fixed_size_table [ class { x: 0x12345678, y: 0x87654321, is_ok: 0xFF }, class { x: 0x00000001, y: 0xFFFFFFFF, is_ok: 0x0A } ]
 }
+
+ffi object "libm.so.6";
+ffi function sqrt { i64 } -> { i64 };
 
 function main { i64, ptr_argv } -> { i64 } {
     mov_p64_imm                ret0,        0;

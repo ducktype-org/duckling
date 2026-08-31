@@ -28,7 +28,8 @@ namespace {
 		if (at - back > 0) shortened += "...";
 
 		shortened += source.substr(
-			usize(std::max(0L, at - back)), source.size() - usize(std::max(0L, at - front)) + 1
+			usize(std::max<i64>(0, at - back)),
+			source.size() - usize(std::max<i64>(0, at - front)) + 1
 		);
 
 		if (at + front < source.size() - 1) shortened += "...";
@@ -104,6 +105,12 @@ namespace clah::exceptions {
 
 	FileDoesNotExist::FileDoesNotExist(const std::filesystem::path& path):
 		  ClahException("File at \"" + absolute(path).string() + "\" does not exist.") {}
+
+	NotARegularFile::NotARegularFile(const std::filesystem::path& path, bool directory_accepted):
+		  ClahException(
+			  "Path at \"" + absolute(path).string() + "\" is not a regular file"
+			  + (directory_accepted ? " nor a directory." : ".")
+		  ) {}
 
 	NoDefaultValueParser::NoDefaultValueParser(u64 at, std::string_view values):
 		  ClahException(base::strConcat(

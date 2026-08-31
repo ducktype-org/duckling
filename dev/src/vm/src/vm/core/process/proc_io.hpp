@@ -36,15 +36,33 @@ namespace vm {
 			// Also, in case of any other redirected input, all the data is usually in the buffer
 			// beforehand, but it's not always true so this design is not perfect.
 			if (!attached) {
-				thread.waitUntilNotPausedAndCondition(lck, [this, &thread] {
-					return thread.isTerminateRequested() || input_stream.rdbuf()->in_avail()
-					    || attached;
+				thread.waitInterruptible(lck, [this] {
+					return input_stream.rdbuf()->in_avail() || attached;
 				});
 			}
 
 			if (!thread.isTerminateRequested()) input_stream >> v;
 
 			return v;
+		}
+
+		/**
+		 * Reads a single raw byte, including whitespace (unlike getInput, which uses
+		 * formatted extraction and skips whitespace). Returns the byte as an int, or -1 at end
+		 * of input (or if terminated while waiting), matching libc `getchar`.
+		 * For thread use only.
+		 */
+		int getRawChar(IVMThread& thread) {
+			auto lck = lock();
+
+			if (!attached) {
+				thread.waitInterruptible(lck, [this] {
+					return input_stream.rdbuf()->in_avail() || attached;
+				});
+			}
+
+			if (thread.isTerminateRequested()) return -1;
+			return input_stream.get();
 		}
 
 		template<class T>

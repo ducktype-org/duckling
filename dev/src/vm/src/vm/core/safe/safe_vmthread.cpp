@@ -23,7 +23,8 @@
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type.hpp>
-#include <vm/core/thread/kill_process_exception.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
+#include <vm/core/thread/thread_state.hpp>
 #include <vm/module_flags/module_flags.hpp>
 #include <vm/utils/interpret.hpp>
 
@@ -32,6 +33,8 @@
 #include <vector>
 
 namespace vm {
+	namespace ts = thread_state;
+	namespace te = thread_event;
 
 #define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
 	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
@@ -121,18 +124,6 @@ namespace vm {
 	low::LowFuncData SafeVMThread::createStartFunctionFor(
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
-		if (func_args.size() != func.parameters.size()) {
-			throw exceptions::VMRuntimeException(base::strConcat(
-				"Function '",
-				func.name.str(),
-				"' expects ",
-				func.parameters.size(),
-				" arguments, but ",
-				func_args.size(),
-				" were provided."
-			));
-		}
-
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
 			.id   = START_FUNCTION_ID,
@@ -163,35 +154,16 @@ namespace vm {
 
 		start_function.local_stack_size += func.ret_size;
 
-		for (u64 i = 0; i < func_args.size(); i++) {
-			const auto& arg_value = func_args[i];
-			auto        arg_type  = func.parameters[i];
+		// Argument validity was already checked when validating the API call.
+		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {
+			const auto& arg_type = func.parameters[i];
 
-			if (arg_value->getPID() != safe_process.getPID()) {
-				throw exceptions::VMRuntimeException(
-					base::strConcat("VMValue for argument ", i, " comes from a different process")
-				);
-			}
-
-			if (arg_value->type != arg_type) {
-				throw exceptions::VMRuntimeException(base::strConcat(
-					"Type mismatch for argument ",
-					i,
-					" of function '",
-					func.name.str(),
-					"': expected ",
-					arg_type->getName().str(),
-					", got ",
-					arg_value->type->getName().str()
-				));
-			}
-
-			start_function.bc.push_back(
-				MAKE_BYTECODE_INSTRUCTION(initFromVmValue, std::bit_cast<u64>(arg_value.get()), 0)
-			);
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
+				initFromVMValue, std::bit_cast<u64>(dynamic_cast<const SafeVMValue*>(&*arg_value)), 0
+			));
 			start_function.local_stack_size += arg_type->getSize().asInt();
-			start_function.parameters.push_back(arg_value->type);
-			start_function.arg_size += arg_value->type->getSize().asInt();
+			start_function.parameters.push_back(arg_type);
+			start_function.arg_size += arg_type->getSize().asInt();
 		}
 
 
@@ -478,7 +450,7 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
-	std::vector<Ref<VmValue>> SafeVMThread::executeFunction(
+	std::vector<Ref<SafeVMValue>> SafeVMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		ScopedGilGuard gil_guard(*this);
@@ -512,9 +484,9 @@ namespace vm {
 			"result."
 		);
 
-		exit_value_storage = { std::vector<Ref<VmValue>>{} };
+		exit_value_storage = { std::vector<Ref<SafeVMValue>>{} };
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
-			exit_value_storage.value().emplace_back(safe_process.createVmValue(
+			exit_value_storage.value().emplace_back(safe_process.createVMValue(
 				func.result_types[idx],
 				Pointer(frame->local_block_ref_stack_base[orig_block_stack_size + idx], 0)
 			));
@@ -538,8 +510,6 @@ namespace vm {
 	 * @brief Starts the execution of a function with a given name and arguments.
 	 */
 	void SafeVMThread::run(const std::string& func_name, const RunArguments& run_arguments) {
-		respondExecutionRequest(api::Running{});
-
 		for (const auto& [global, id, name]: process_program->getGlobals().allData()) {
 			auto block_ref
 				= Ref(runtime_data.global_block_ref_buffer_base[global->global_block_idx]);
@@ -547,20 +517,11 @@ namespace vm {
 				variant_match(global->init) {
 					variant_case(low::GlobalCtorDtor, ctor_dtor) {
 						if (ctor_dtor.ctor_name.has_value()) {
-							try {
-								const auto& func = *process_program->getFunctions()
-								                        .atMaybe(ctor_dtor.ctor_name.value())
-								                        .value();
-								low::LowFuncData start_function = createStartFunctionFor(func, {});
-								executeFunction(start_function, func);
-							} catch (const KillProcessException& e) {
-								auto status = safe_process.getCurrentStatus();
-								if (std::holds_alternative<api::ExecutionPanicked>(status))
-									respondExecutionRequest(status);
-								else
-									respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-								return;
-							}
+							const auto& func = *process_program->getFunctions()
+							                        .atMaybe(ctor_dtor.ctor_name.value())
+							                        .value();
+							low::LowFuncData start_function = createStartFunctionFor(func, {});
+							executeFunction(start_function, func);
 						}
 					}
 					variant_case(low::GlobalInitialValue, value_init) {
@@ -572,48 +533,29 @@ namespace vm {
 			}
 		}
 
-		const auto terminal_status = safe_process.getCurrentStatus();
-		if (api::isStatusTerminal(terminal_status)) {
-			respondExecutionRequest(terminal_status);
-			return;
+		const auto& maybe_func
+			= process_program->getFunctions().atMaybe(base::StrID(func_name.data()));
+		if (!maybe_func.has_value()) {
+			throw exceptions::VMRuntimeException(
+				base::strConcat("Called function '", func_name, "' does not exist.")
+			);
 		}
+		const auto& func = *maybe_func.value();
 
-		try {
-			const auto& maybe_func
-				= process_program->getFunctions().atMaybe(base::StrID(func_name.data()));
-			if (!maybe_func.has_value()) {
-				respondExecutionRequest(api::ExecutionPanicked{
-					base::strConcat("Called function '", func_name, "' does not exist.") });
-				return;
-			}
-			const auto& func = *maybe_func.value();
-
-			low::LowFuncData start_function = [&]() {
-				variant_match(run_arguments) {
-					variant_case(ProgramRunArguments, program_run_arguments) {
-						return createProgramStartFunction(func, program_run_arguments);
-					}
-					variant_case(FunctionRunArguments, function_run_data) {
-						return createStartFunctionFor(func, function_run_data);
-					}
+		low::LowFuncData start_function = [&]() {
+			variant_match(run_arguments) {
+				variant_case(ProgramRunArguments, program_run_arguments) {
+					return createProgramStartFunction(func, program_run_arguments);
 				}
-				CORE_UNREACHABLE();
-			}();
+				variant_case(FunctionRunArguments, function_run_data) {
+					return createStartFunctionFor(func, function_run_data);
+				}
+			}
+			CORE_UNREACHABLE();
+		}();
 
-			const auto exit_value     = executeFunction(start_function, func);
-			const auto current_status = safe_process.getCurrentStatus();
-			if (api::isStatusTerminal(current_status))
-				respondExecutionRequest(current_status);
-			else
-				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
-		} catch (const KillProcessException& e) { handleKillProcessException(e); }
-	}
-
-	void SafeVMThread::handleKillProcessException(const KillProcessException& e) {
-		if (safe_process.isExecutionPanicked())
-			respondExecutionRequest(safe_process.getCurrentStatus());
-		else
-			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+		const auto exit_value = executeFunction(start_function, func);
+		applyEvent(te::Finish{ std::vector<Ref<IVMValue>>(exit_value.begin(), exit_value.end()) });
 	}
 
 	void SafeVMThread::execGlobalDestructors() {
@@ -625,41 +567,44 @@ namespace vm {
 		for (const auto& [global, id, name]: std::ranges::reverse_view(globals)) {
 			auto* ctor_dtor = std::get_if<low::GlobalCtorDtor>(&global->init);
 			if (ctor_dtor && ctor_dtor->dtor_name.has_value()) {
-				try {
-					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(ctor_dtor->dtor_name.value())
-					                        .expect(
-												"Called function does not exist: "
-												+ ctor_dtor->dtor_name.value().str()
-											);
-					low::LowFuncData start_function = createStartFunctionFor(func, {});
-					executeFunction(start_function, func);
-				} catch (const KillProcessException& e) { handleKillProcessException(e); }
+				const auto& func = *executing_program->getFunctions()
+				                        .atMaybe(ctor_dtor->dtor_name.value())
+				                        .expect(
+											"Called function does not exist: "
+											+ ctor_dtor->dtor_name.value().str()
+										);
+				low::LowFuncData start_function = createStartFunctionFor(func, {});
+				executeFunction(start_function, func);
 			}
 		}
 	}
 
 	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition(
-		base::Optional<usize> opt_frame_idx
+		base::Optional<usize> frame_idx
 	) {
-		variant_match(getStatus()) {
-			variant_case_novalue(api::Paused) {
+		variant_match(getThreadState()) {
+			variant_case_novalue(ts::Paused) {
 				auto frame = runtime_data.frame_stack_current;
-
-				if_opt_some(opt_frame_idx, frame_index) {
+				// In caller frames, the instruction pointer rests on the return address (the
+				// instruction after the call). We must adjust it backward by 1 to point to the
+				// actual call site.
+				bool call_adjustment = false;
+				if_opt_some(frame_idx, frame_index) {
 					u64 frames = getNumberOfCurrentStackFrames();
 					if (frame_index >= frames)
 						return std::unexpected(api::ApiError{
 							api::OtherError{ "Frame index out of bounds" } });
 
 					frame = &getStackFrame(frame_index);
+					if (frame_index + 1 != frames) call_adjustment = true;
 				}
 
 				auto& func = *frame->current_function;
 
 				return low::LowCodePosition{
-					.function          = &func,
-					.instruction_index = static_cast<u64>(frame->instr - func.bc.data()),
+					.function = &func,
+					.instruction_index
+					= static_cast<u64>(frame->instr - func.bc.data() - (call_adjustment ? 1 : 0)),
 				};
 			}
 			variant_default {

@@ -86,6 +86,7 @@ DEF_MICRO_INSTR(
 	mov_bste_bste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::PlaceBlockStructure
 )
 DEF_MICRO_INSTR(mov_bfst_bfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::PlaceBlockFSTable)
+DEF_MICRO_INSTR(mov_bvnt_bvnt, vm::low::opargs::PlaceBlockVariant, vm::low::opargs::PlaceBlockVariant)
 // does a shallow pointer copy
 DEF_MICRO_INSTR(mov_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 
@@ -406,6 +407,7 @@ DEF_MICRO_INSTR(jitEntrypoint)
  * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
  */
 DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
+
 DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
 DEF_MICRO_INSTR(call_ffifunc, vm::low::opargs::FFIFunction)
 
@@ -658,10 +660,34 @@ DEF_MICRO_INSTR(fptoui_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place
 DEF_MICRO_INSTR(fptrunc_p32_p64, vm::low::opargs::Place32, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(fpext_p64_p32, vm::low::opargs::Place64, vm::low::opargs::Place32)
 
+// ========= CPOINTER OPERATIONS ========
+// Copies through raw C pointers (native addresses). The cpointer operand is a plain 8-byte
+// value, a Place64.
+
+DEF_MICRO_INSTR(cptrLoad_bany_p64, vm::low::opargs::PlaceBlockAny, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(cptrStore_p64_bany, vm::low::opargs::Place64, vm::low::opargs::PlaceBlockAny)
+
+// Requires `ext_imm`
+DEF_MICRO_INSTR(cptrRead_pptr_p64, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
+// Requires `ext_imm`
+DEF_MICRO_INSTR(cptrWrite_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
+
+DEF_MICRO_INSTR(cptrCast_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
+
+// ========= POINTER DECOMPOSITION ========
+
+DEF_MICRO_INSTR(
+	ptrParts_p64_p64_pptr,
+	vm::low::opargs::Place64 /* dst_id */,
+	vm::low::opargs::Place64 /* dst_offset,
+    vm::low::opargs::PlacePtr	 src_ptr */
+)
+
 // ========= EXT DEFINITIONS ========
 
 // passes additional argument to preceding instruction
 DEF_MICRO_INSTR(ext_p64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(ext_pptr, vm::low::opargs::PlacePtr)
 DEF_MICRO_INSTR(ext_imm, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(ext_type, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ext_field, vm::low::opargs::Field)
@@ -688,10 +714,10 @@ DEF_MICRO_INSTR(stepGil)
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
  * It is a helper for start functions.
- * @arg0 - pointer to a VmValue.
+ * @arg0 - pointer to a VMValue.
  * @arg1 - n/a.
  */
-DEF_MICRO_INSTR(initFromVmValue)
+DEF_MICRO_INSTR(initFromVMValue)
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR
 #undef DEFAULT_HANDLE_MICRO_INSTR

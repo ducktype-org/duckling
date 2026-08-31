@@ -226,8 +226,51 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_mov_popq_popq>(i.dst, i.src);
 				addLow<Op_ext_imm>(vm::opargs::Immediate{ type_size });
 			}
+			instr_case(high::Op_mov_pcptr_pcptr, i) {
+				// A C pointer is a plain 8-byte value in every mode.
+				addLow<Op_mov_p64_p64>(i.dst, i.src);
+			}
+			instr_case(high::Op_load_pany_pcptr, i) {
+				addLow<Op_cptrLoad_bany_p64>(i.dst, i.src_ptr);
+			}
+			instr_case(high::Op_store_pcptr_pany, i) {
+				addLow<Op_cptrStore_p64_bany>(i.dst_ptr, i.src);
+			}
+			instr_case(high::Op_read_pptr_pcptr, i) {
+				// The byte count is the VM pointer's pointee size, resolved at lowering time.
+				TypeCRef pointee
+					= getPlaceType(i.dst_ptr)->get<vm::kind::Pointer>().value()->inner_type;
+				addLow<Op_cptrRead_pptr_p64>(i.dst_ptr, i.src_ptr);
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
+			}
+			instr_case(high::Op_write_pcptr_pptr, i) {
+				TypeCRef pointee
+					= getPlaceType(i.src_ptr)->get<vm::kind::Pointer>().value()->inner_type;
+				addLow<Op_cptrWrite_p64_pptr>(i.dst_ptr, i.src_ptr);
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
+			}
+			instr_case(high::Op_cast_pcptr_pptr, i) {
+				addLow<Op_cptrCast_p64_pptr>(i.dst, i.src_ptr);
+			}
+			instr_case(high::Op_ptrParts_p64_p64_pptr, i) {
+				// The source pointer does not fit in the two micro arguments, so it rides an
+				// `ext_pptr`.
+				addLow<Op_ptrParts_p64_p64_pptr>(i.dst_id, i.dst_offset);
+				addLow<Op_ext_pptr>(i.src_ptr);
+			}
+			instr_case(high::Op_cast_pcptr_pcptr, i) {
+				// A reinterpreting cast is a plain 8-byte move.
+				addLow<Op_mov_p64_p64>(i.dst, i.src);
+			}
+			instr_case(high::Op_add_pcptr_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.offset); }
+			instr_case(high::Op_add_pcptr_imm, i) { addLow<Op_add_p64_imm>(i.dst, i.offset); }
+			instr_case(high::Op_cmpNull_pcptr, i) {
+				// A null cpointer is the native address 0.
+				addLow<Op_cmpEq_p64_imm>(i.ptr, vm::opargs::Immediate{ 0 });
+			}
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
+			instr_case(high::Op_mov_pvnt_pvnt, i) { addLow<Op_mov_bvnt_bvnt>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_imm, i) { addLow<Op_add_p64_imm>(i.dst, i.src); }
 			instr_case(high::Op_add_p32_p32, i) { addLow<Op_add_p32_p32>(i.dst, i.src); }
@@ -639,7 +682,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_fpext_p64_p32, i) { addLow<Op_fpext_p64_p32>(i.dst, i.src); }
 			instr_case(high::Op_nop, i) { addLow<Op_nop>(); }
 			instr_case(high::Op_exit, i) { addLow<Op_exit>(); }
-			instr_case(high::Op_initFromVmValue, i) { addLow<Op_initFromVmValue>(); }
+			instr_case(high::Op_initFromVMValue, i) { addLow<Op_initFromVMValue>(); }
 			instr_case(high::Comment, i) {
 				// Do nothing
 			}

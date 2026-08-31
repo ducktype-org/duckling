@@ -14,7 +14,7 @@ namespace pst::expr {
 		CLONE_SUBELEMENTS();
 
 	protected:
-		using Lower = MatchExpr;
+		using Lower = Ternary;
 
 		std::vector<AccessInternalAnonymous<ExprElement>> expressions;
 

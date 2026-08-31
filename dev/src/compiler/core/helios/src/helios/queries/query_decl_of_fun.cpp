@@ -1,9 +1,9 @@
 #include "function_queries.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/destructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -38,6 +38,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <diagnostic/placeholder.hpp>
+#include <lexer/token_common.hpp>
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -141,6 +143,20 @@ namespace compiler::helios {
 			}
 
 			void visitIf(pst::Access<pst::If> stmt) final {
+				if (stmt->isConst()) {
+					// Only the taken branch takes part in the return type deduction, the other
+					// one is never compiled.
+					auto taken = getBoolCTVFromPST(ctx, stmt->getCondition().unlock(ctx)->getExpr())
+					                 .valueOrThrow();
+
+					if (taken)
+						visitRecursion(stmt->getThenBody());
+					else if (stmt->getElseBody().has_value())
+						visitRecursion(stmt->getElseBody().value());
+
+					return;
+				}
+
 				visitRecursion(stmt->getThenBody());
 
 				if (stmt->getElseBody().has_value()) visitRecursion(stmt->getElseBody().value());
@@ -169,7 +185,7 @@ namespace compiler::helios {
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Function declared with no explicit return type and inconsistent return "
 					"statements.",
 					fun->getStablePosition()
@@ -203,6 +219,32 @@ namespace compiler::helios {
 		if (hasAttribute<attributes::BackendDependent>(fun_decl.original_symbol)) {
 			verifyBackendDependentAttrUsage(ctx, fun_decl);
 			return;
+		}
+	}
+
+	/**
+	 * @brief Deduces the operatoriness of a user-declared function/method from its name and arity
+	 * (parameter count, including an implicit `self` for methods).
+	 *
+	 * @note There is no dedicated syntax yet to declare fixity (prefix vs. suffix), so a
+	 * single-parameter operator name is assumed to be a prefix operator. Suffix stays unreachable
+	 * from user code until that syntax exists.
+	 * @TODO: #3131 Extract fixity in unary operators from keywords used in PST.
+	 */
+	static HOUTFunctionDeclaration::Operatoriness operatorinessFromNameAndArity(
+		base::StrID name, u64 arity
+	) {
+		using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
+
+		if (!lexer::isOperatorSymbolString(name.strView())) return Operatoriness::None;
+
+		switch (arity) {
+		case 1:
+			return Operatoriness::Prefix;
+		case 2:
+			return Operatoriness::Infix;
+		default:
+			return Operatoriness::None;
 		}
 	}
 
@@ -288,21 +330,25 @@ namespace compiler::helios {
 			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: #1029 rest, flags, attributes, etc
-				emplaceDeclaration(
-					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				const auto operatoriness = operatorinessFromNameAndArity(
+					name(original_symbol), stmt->getParams().unlock(ctx)->size()
 				);
+				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
-				emplaceDeclaration(
-					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				const auto operatoriness = operatorinessFromNameAndArity(
+					name(original_symbol), stmt->getParams().unlock(ctx)->size()
 				);
+				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
-				emplaceDeclaration(
-					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				// +1 for the implicit `self` parameter.
+				const auto operatoriness = operatorinessFromNameAndArity(
+					name(original_symbol), stmt->getParams().unlock(ctx)->size() + 1
 				);
+				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
@@ -335,6 +381,36 @@ namespace compiler::helios {
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
+			}
+
+			void visitDestructor(pst::Access<pst::Destructor> stmt) final {
+				// A destructor takes an implicit `ref T` and returns unit
+				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
+				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
+					.name = base::StrID("self"),
+					.generated_symbol_data
+					= defgen::SelfParameter{ .method_symbol = this->original_symbol,
+				                             .scope         = self_scope },
+				});
+
+				std::vector<code::Parameter> parameters;
+				parameters.emplace_back(
+					name(self_symbol),
+					ctx.query<QueryTypeOfSymbol>(self_symbol)->valueOrThrow(),
+					std::nullopt,
+					self_symbol,
+					code::generatedOrigin()
+				);
+
+				const auto unit_ret = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+
+				this->out.emplace(HOUTFunctionDeclaration(
+					original_symbol,
+					HOUTFunctionDeclaration::Operatoriness::None,
+					unit_ret,
+					std::move(parameters),
+					code::pstOrigin(stmt)
+				));
 			}
 		};
 
@@ -497,7 +573,8 @@ namespace compiler::helios {
 			case SymbolKind::Function:
 			case SymbolKind::FunctionDeclaration:
 			case SymbolKind::Method:
-			case SymbolKind::Constructor: {
+			case SymbolKind::Constructor:
+			case SymbolKind::Destructor: {
 				variant_match(getSymRef(key)->other) {
 					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 						DeclarationVisitor decl_maker(ctx, key);
@@ -532,9 +609,8 @@ namespace compiler::helios {
 					}
 					variant_case_novalue(
 						defgen::Method,
-						defgen::BoxBuiltin,
-						defgen::ReplExpressionWrapper,
-						defgen::ReplInstructionWrapper,
+						defgen::BuiltinTemplatedSymbol,
+						defgen::ReplInputWrapper,
 						defgen::ScriptMainWrapper
 					) {
 						return funDeclFromType(

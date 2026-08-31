@@ -12,7 +12,7 @@ use crate::quackpack::util::interned_url::InternedUrl;
 /// `version` from repository at `url`.
 pub struct PackageWithUrl {
     /// Name of this package.
-    pub id: StrId,
+    pub name: StrId,
     /// Version of this package.
     pub version: Version,
     /// Url pointing to a Ducknest instance with this package.
@@ -26,23 +26,17 @@ pub struct PackageWithUrl {
 ///    we don't need the root `url`, it's `self`.
 pub struct Package {
     /// Name of this package.
-    pub id: StrId,
+    pub name: StrId,
     /// Version of this package.
     pub version: Version,
 }
 
-impl From<&PackageWithUrl> for Package {
-    fn from(value: &PackageWithUrl) -> Self {
-        Self {
-            id: value.id,
-            version: value.version,
-        }
-    }
-}
-
 impl From<PackageWithUrl> for Package {
     fn from(value: PackageWithUrl) -> Self {
-        Self::from(&value)
+        Self {
+            name: value.name,
+            version: value.version,
+        }
     }
 }
 
@@ -50,7 +44,7 @@ impl From<&registry::Manifest> for Package {
     fn from(value: &registry::Manifest) -> Self {
         let name = &value.metadata.name;
         Self {
-            id: name.into(),
+            name: name.into(),
             version: value.metadata.version,
         }
     }

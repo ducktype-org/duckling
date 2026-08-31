@@ -23,8 +23,9 @@ protected:
 		std::expected<i64, vm::api::ApiError> run_result;  // exit code or error
 	};
 
-	vm::PID initProcess(const vm::api::ProcessConfig& config = {});
-
+	vm::PID initProcess(
+		const vm::api::ProcessConfig& config = {}, vm::api::ExecutionConfig execution_config = {}
+	);
 	void handleTestResult(const TestResult& test_result, i64 exit_code);
 
 	/**
@@ -107,15 +108,41 @@ protected:
 	void assertExecutionPanickedWith(const TestResult& test_result, std::string_view err_piece);
 
 	/**
+	 * @brief Asserts that `runFunction` refused the call and that the process is still runnable
+	 * after the rejected validation.
+	 */
+	void assertRunFunctionRefusedWith(
+		vm::PID                         pid,
+		const std::string&              func_name,
+		const vm::FunctionRunArguments& args,
+		std::string_view                expected_reason
+	);
+
+	/**
 	 * @brief Loads a file containing a program which violates syntactic or static verification
 	 * guidelines. Asserts what error keywords are present in the error message.
 	 */
 	void loadInvalidDbc(
-		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+		const std::string&                   dbc_filename,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	);
+
+	/**
+	 * @brief Loads @p first_dbc under an unrestricted config, then loads @p second_dbc under
+	 * @p config on the same process, asserting the second load fails verification with the
+	 * given error keywords. Exercises flag propagation from already-loaded ("old") functions
+	 * to newly loaded ones.
+	 */
+	void loadThenLoadInvalidDbc(
+		const std::string&                   first_dbc,
+		const std::string&                   second_dbc,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
 	);
 
 	/**
 	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
 	 */
-	void loadValidDbc(const std::string& dbc_filename);
+	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {});
 };

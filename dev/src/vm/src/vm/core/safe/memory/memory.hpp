@@ -8,6 +8,7 @@
 #include "thread_stack.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/collections/object_pool.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
@@ -53,14 +54,7 @@ namespace vm {
 		/// set. Otherwise, it is not.
 		std::unordered_set<BlockID> initialized_globals{};
 
-		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
-		// After the block is destroyed and the reference count drops to zero, instead of freeing
-		// the memory, we mark the block as unused and add its ID to the free_ids list. Then when we
-		// need to allocate a new block, we first check if there are any free IDs available. Blocks
-		// are stored in a deque, so we can have pointers to them without worrying about
-		// reallocation.
-		std::deque<BlockT>  blocks   = {};
-		std::deque<BlockID> free_ids = {};
+		base::StableObjectPool<BlockT, BlockID, true, true> blocks_pool;
 
 		[[nodiscard]]
 		Ref<BlockT> createBlock(BlockData<EntryT> data) {
@@ -69,16 +63,8 @@ namespace vm {
 			else
 				std::fill(data.view.getBegin(), data.view.getBegin() + data.view.size(), EntryT{});
 
-			if (free_ids.empty()) {
-				auto id = BlockID(blocks.size());
-				blocks.emplace_back(id, data);
-				return &blocks.back();
-			} else {
-				BlockID id = free_ids.back();
-				free_ids.pop_back();
-				blocks[usize(id)] = BlockT(id, data);
-				return &blocks[static_cast<u64>(id)];
-			}
+			auto id = blocks_pool.add(data);
+			return blocks_pool.get(id);
 		}
 
 		/**
@@ -86,7 +72,7 @@ namespace vm {
 		 */
 		void deleteBlock(Ref<BlockT> block) {
 			if (!block->deallocated) throw exceptions::VMFoundMemoryLeakException();
-			free_ids.push_back(block->id);
+			blocks_pool.remove(block->id);
 		}
 
 		/**
@@ -94,7 +80,8 @@ namespace vm {
 		 * hierarchy.
 		 */
 		void copyBlocksRecursively(Ref<BlockT> block_dst, Ref<BlockT> block_src) {
-			runDataCopyConstructors(block_dst);
+			// @note using SRC, because setNestedViewBlock zeroes the entries
+			runDataCopyConstructors(block_src);
 			for (auto nested: block_src->children_blocks) {
 				setNestedViewBlock(block_dst, nested.first, nested.second->data.element_type);
 				copyBlocksRecursively(block_dst->children_blocks[nested.first], nested.second);
@@ -102,64 +89,80 @@ namespace vm {
 		}
 
 		/**
-		 * @brief Copies blocks from `block_src` to `block_dst`, going down the nested block
-		 * hierarchy.
-		 * @note Moving here means no data copy-constructors are called.
+		 * @brief Changes `BlockData` object that is used underneath a block.
+		 * It does so by moving objects from block's data to new_data.
+		 * This means data copy-constructors of the moved objects are not invoked.
+		 * @note Frees *block's nested blocks whose offsets would not fit
+		 * inside the `new_data` memory area - the objects that are in the suffix are destructed,
+		 * so the suffix must not hold moved-from objects.
+		 * @note The part of `new_data` past the moved objects is cleared.
+		 * @note The old data is deallocated with its own allocator.
 		 */
-		void moveBlocksRecursively(Ref<BlockT> block_dst, Ref<BlockT> block_src) {
-			for (auto nested: block_src->children_blocks) {
-				setNestedViewBlock(block_dst, nested.first, nested.second->data.element_type);
-				moveBlocksRecursively(block_dst->children_blocks[nested.first], nested.second);
-			}
-		}
+		void changeBlockData(Ref<BlockT> block, BlockData<EntryT> new_data) {
+			BlockData<EntryT> old_data        = block->data;
+			usize             entries_to_move = std::min(old_data.view.size(), new_data.view.size());
 
-		/**
-		 * @brief Moves `entry_count` entries pointed-to by `src` to `dst`.
-		 * Moving here means data copy-constructors of the moved object are not invoked.
-		 * The objects that are in the "suffix" are destructed.
-		 * @note Frees *block_dst's nested blocks whose offsets would not fit
-		 * inside the new memory area.
-		 * @note These blocks must be of a dynamic table type.
-		 */
-		void moveBlockDataAndEraseSuffix(Ref<BlockT> dst, Ref<BlockT> src, usize entry_count) {
-			// Free all child blocks on suffix.
-			auto& dst_child_blocks = dst->children_blocks;
-			for (auto iter = dst_child_blocks.lower_bound(0); iter != dst_child_blocks.end();
-			     iter      = dst_child_blocks.erase(iter)) {
-				freeBlockData(iter->second);
+			// Free the unfitting children blocks.
+			auto& children_blocks = block->children_blocks;
+			for (auto child_it = children_blocks.lower_bound(entries_to_move);
+			     child_it != children_blocks.end();
+			     child_it = children_blocks.erase(child_it)) {
+				freeBlockData(child_it->second);
 			}
 
-			// Copy the child blocks.
-			auto& src_child_blocks = src->children_blocks;
-			for (auto iter = src_child_blocks.lower_bound(0);
-			     iter != src_child_blocks.end() && iter->first < entry_count;
-			     ++iter) {
-				auto offset = iter->first;
-				setNestedViewBlock(dst, offset, iter->second->data.element_type);
-				moveBlocksRecursively(dst->children_blocks[offset], iter->second);
-			}
+			// Run the destructors - e.g. pointers don't have their own blocks, but need destructing.
+			// The suffix has to hold live objects.
+			// Here we run the destructor for the second time, but as different type.
+			// And this pass is shallow. First pass goes over child blocks, eg variant data - a pointer.
+			// Then in the second pass we run the destructor on variant type, which does nothing.
+			if (entries_to_move < old_data.view.size())
+				runDataDestructors(
+					base::TypedModRawView<EntryT>(
+						old_data.view.getBegin() + entries_to_move,
+						old_data.view.size() - entries_to_move
+					),
+					old_data.element_type
+				);
 
-			// Copy the data itself.
-			// @note: We are not running destructors or copy-constructors
-			// because the data being is "moved".
 			if constexpr (std::is_trivially_copyable_v<EntryT>) {
 				std::memcpy(
-					dst->data.view.getBegin(),
-					src->data.view.getBegin(),
-					entry_count * sizeof(EntryT)
+					new_data.view.getBegin(),
+					old_data.view.getBegin(),
+					entries_to_move * sizeof(EntryT)
 				);
 			} else {
 				std::copy(
-					src->data.view.getBegin(),
-					src->data.view.getBegin() + entry_count,
-					dst->data.view.getBegin()
+					old_data.view.getBegin(),
+					old_data.view.getBegin() + entries_to_move,
+					new_data.view.getBegin()
 				);
 			}
+
+			if constexpr (std::is_trivially_default_constructible_v<EntryT>) {
+				std::memset(
+					new_data.view.getBegin() + entries_to_move,
+					0,
+					(new_data.view.size() - entries_to_move) * sizeof(EntryT)
+				);
+			} else {
+				std::fill(
+					new_data.view.getBegin() + entries_to_move,
+					new_data.view.getBegin() + new_data.view.size(),
+					EntryT{}
+				);
+			}
+
+			updateBlockDataView(block, new_data.view);
+			block->data = new_data;
+
+			old_data.allocator->deallocate(&old_data);
 		}
 
 		/**
 		 * @brief Replaces the block data memory view with the new one,
 		 * taking care of the children blocks.
+		 *
+		 * @note The children keep their own sizes, only their base is rebased onto `new_view`.
 		 *
 		 * @param block The block to update the data view for.
 		 * @param new_view The new view to set for the block.
@@ -167,24 +170,20 @@ namespace vm {
 
 	public:
 		void updateBlockDataView(Ref<BlockT> block, base::TypedModRawView<EntryT> new_view) {
-			usize expected_size = block->data.element_type->getSize().asInt();
-			CORE_ASSERT(
-				expected_size == new_view.size(), "New view size must match the block's type size"
-			);
-			base::TypedModRawView<EntryT> old_root_view = block->data.view;
+			const EntryT* old_root_begin = block->data.view.getBegin();
 
-			std::function<void(Ref<BlockT>)> update_block_data_recursively
-				= [&](Ref<BlockT> current_block) -> void {
-				base::TypedModRawView<EntryT> current_view = current_block->data.view;
-				auto offset_from_start = current_view.getBegin() - old_root_view.getBegin();
-				current_block->data.view
-					= { new_view.getBegin() + offset_from_start, current_view.size() };
-
-				for (auto& child: current_block->children_blocks | std::views::values)
-					update_block_data_recursively(child);
+			auto rebase_children_recursively
+				= [&](this const auto& self, Ref<BlockT> current_block) -> void {
+				for (auto& child: current_block->children_blocks | std::views::values) {
+					const auto offset_from_start = child->data.view.getBegin() - old_root_begin;
+					child->data.view
+						= { new_view.getBegin() + offset_from_start, child->data.view.size() };
+					self(child);
+				}
 			};
 
-			update_block_data_recursively(block);
+			block->data.view = new_view;
+			rebase_children_recursively(block);
 		}
 
 	private:
@@ -242,58 +241,71 @@ namespace vm {
 			TypeCRef                      type,
 			void (GenericMemory::*callback)(base::TypedModRawView<EntryT> data, TypeCRef type)
 		) {
-			if (type->getKind() != Type::Kind::DynamicTable) {
-				// Only types other than dynamic_table can be next to each other.
-				// Callback on the first object
-				(this->*callback)(
-					base::TypedModRawView<EntryT>{ data.getBegin(), type->getSize().asInt() }, type
-				);
-			}
+			// The algorithm used to iterate over data works as follows:
+			// Invariants:
+			// * `data` is a range of one or more objects of `type` laying next to each other.
+			//   A dynamic table is the exception: its type carries no size, so such a range is
+			//   always a single table spanning the whole `data`.
+			//
+			// Algorithm, for every object of the range:
+			// 1. Run the `callback` on the object.
+			//    (This is not possible on DynamicTable, see above.)
+			//    This is the crucial step, the only place where `callback` is used.
+			//    The `callback` therefore runs top-down, not bottom-up in terms of
+			//    type-composition.
+			// 2. If the type is an aggregate, then step into each member and recurse. Recursion
+			//    depth is bounded by the type's nesting depth - ranges are walked by the loop, not
+			//    by recursing on the tail.
 
-			switch (type->getKind()) {
-			case Type::Kind::Primitive:
-			case Type::Kind::Function:
-			case Type::Kind::Opaque:
-			case Type::Kind::Variant:
-			case Type::Kind::Pointer:
-				break;
-			case Type::Kind::DynamicTable:
-			case Type::Kind::FixedSizeTable: {
-				const auto inner_type = type->getInnerType().value();
-				const auto inner_size = inner_type->getSize().asInt();
-				for (usize begin = 0; begin < data.size(); begin += inner_size)
-					(this->*callback)(
-						base::TypedModRawView<EntryT>{ data.getBegin() + begin, inner_size },
-						inner_type
-					);
-				break;
-			}
-			case Type::Kind::Data: {
-				// Iterate over data's fields
-				for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
-					(this->*callback)(
-						base::TypedModRawView<EntryT>{ data.getBegin() + offset.asInt(),
-					                                   tp->getSize().asInt() },
-						tp
-					);
-				break;
-			}
-			default:
-				CORE_PANIC("Handling default");
-			}
+			const bool  is_dynamic_table = type->getKind() == Type::Kind::DynamicTable;
+			const usize object_size      = is_dynamic_table ? data.size() : type->getSize().asInt();
 
-			if (type->getKind() != Type::Kind::DynamicTable) {
-				// In case we were given a slice of a table with multiple objects of the same type
-				// laying next to each other, then iterate over those as well. Here we start from
-				// the second, since the first one was handled above
-				for (auto next_item = type->getSize().asInt(); next_item < data.size();
-				     next_item += type->getSize().asInt()) {
-					iterateOverDataAndExecute(
-						base::TypedModRawView<EntryT>{ data.getBegin() + next_item,
-					                                   type->getSize().asInt() },
-						type,
-						callback
-					);
+			// Nothing to walk in an empty range, and a zero-sized object would never advance the
+			// loop. Such a type cannot hold a pointer either, so there is nothing for a callback
+			// to do.
+			if (object_size == 0) return;
+
+			CORE_ASSERT(
+				data.size() % object_size == 0, "The data must hold a whole number of objects"
+			);
+
+			for (usize object_begin = 0; object_begin + object_size <= data.size();
+			     object_begin += object_size) {
+				const base::TypedModRawView<EntryT> object{ data.getBegin() + object_begin,
+					                                        object_size };
+
+				(this->*callback)(object, type);
+
+				switch (type->getKind()) {
+				case Type::Kind::Variant:
+					// @note We are not touching the variant here,
+					// because variant's nested blocks perform needed `callback`s
+					// on their own, e.g. in `freeBlockData`.
+				case Type::Kind::Primitive:
+				case Type::Kind::Function:
+				case Type::Kind::Opaque:
+				case Type::Kind::CPointer:
+				case Type::Kind::Pointer:
+					break;
+				case Type::Kind::DynamicTable:
+				case Type::Kind::FixedSizeTable:
+					// The elements lay next to each other, so a single call walks all of them.
+					// Note that the range is `object`, not `data`: a fixed size table only owns
+					// its own elements, even when several such tables are next to each other.
+					iterateOverDataAndExecute(object, type->getInnerType().value(), callback);
+					break;
+				case Type::Kind::Data:
+					// Iterate over data's fields
+					for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
+						iterateOverDataAndExecute(
+							base::TypedModRawView<EntryT>{ object.getBegin() + offset.asInt(),
+						                                   tp->getSize().asInt() },
+							tp,
+							callback
+						);
+					break;
+				default:
+					CORE_PANIC("Handling default");
 				}
 			}
 		}
@@ -316,6 +328,7 @@ namespace vm {
 				case Type::Kind::Primitive:
 				case Type::Kind::Function:
 				case Type::Kind::Opaque:
+				case Type::Kind::CPointer:
 				case Type::Kind::DynamicTable:
 				case Type::Kind::FixedSizeTable:
 				case Type::Kind::Data:
@@ -348,6 +361,7 @@ namespace vm {
 				case Type::Kind::Primitive:
 				case Type::Kind::Function:
 				case Type::Kind::Opaque:
+				case Type::Kind::CPointer:
 				case Type::Kind::DynamicTable:
 				case Type::Kind::FixedSizeTable:
 				case Type::Kind::Data:
@@ -367,10 +381,12 @@ namespace vm {
 
 		[[nodiscard]]
 		Ref<BlockT> getBlock(BlockID id) {
-			const auto block_index = static_cast<usize>(id);
-			if (block_index >= blocks.size()) throw exceptions::VMOutOfBlockBoundsException();
-			if (blocks[block_index].deallocated) throw exceptions::VMUseAfterFreeException();
-			return &blocks[block_index];
+			if (auto maybe_block = blocks_pool.maybeGet(id)) {
+				Ref<BlockT> block_ref = *maybe_block;
+				if (block_ref->deallocated) throw exceptions::VMUseAfterFreeException();
+				return block_ref;
+			}
+			throw exceptions::VMOutOfBlockBoundsException();
 		}
 
 		// =================== Used by the process ===================
@@ -510,20 +526,13 @@ namespace vm {
 		   a table of size n with elements of type equal to type's inner type.
 		 */
 		auto dynTableReallocateBlockDataN(Ref<BlockT> block, u64 n) -> void {
-			auto              tbl_type   = block->data.element_type;
-			auto              inner_type = tbl_type->getInnerType().value();
+			TypeCRef tbl_type   = block->data.element_type;
+			TypeCRef inner_type = tbl_type->getInnerType().value();
+
 			BlockData<EntryT> new_block_data
 				= heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
-			auto old_view_size = block->data.view.size();
-			auto new_view_size = new_block_data.view.size();
 
-			BlockT mock_block{ BlockID{ 0 }, new_block_data };
-
-			moveBlockDataAndEraseSuffix(&mock_block, block, std::min(old_view_size, new_view_size));
-
-			heap_allocator.deallocate(&block->data);
-
-			block->data = mock_block.data;
+			changeBlockData(block, new_block_data);
 		}
 
 		/**
@@ -658,6 +667,19 @@ namespace vm {
 			if (pointer.offset + entry_count > pointer.block->data.view.size())
 				throw exceptions::VMOutOfBlockBoundsException();
 			return { pointer.block->data.view.getBegin() + pointer.offset, entry_count };
+		}
+
+		/** @brief Returns the block data from `pointer.offset` to the end of the block. */
+		[[nodiscard]]
+		static constexpr
+			__attribute__((always_inline)) auto getRemainingPointerData(Pointer pointer)
+				-> base::TypedModRawView<std::byte> requires std::is_same_v<EntryT, std::byte> {
+			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
+			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
+			if (pointer.offset > pointer.block->data.view.size())
+				throw exceptions::VMOutOfBlockBoundsException();
+			return { pointer.block->data.view.getBegin() + pointer.offset,
+				     pointer.block->data.view.size() - pointer.offset };
 		}
 
 		/**

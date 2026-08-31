@@ -1,5 +1,3 @@
-#include <diagnostic_interactive/message.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -11,7 +9,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/errors.hpp>
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
@@ -24,6 +22,8 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
+#include <diagnostic/message.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 
@@ -126,41 +126,26 @@ namespace compiler::helios::code {
 
 		// Go over positional arguments.
 		for (usize i{ 0 }; i < positional_arguments.size(); i++) {
-			tsh::SymbolType provided_type
-				= positional_arguments[i]->expression_type.getSymbolType();
 			tsh::SymbolType expected_type = decl.parameters[i].type;
-			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
+			auto coercion = canCoerce(ctx, positional_arguments[i]->expression_type, expected_type)
+			                    .valueOrThrow();
 
-			if (coercion.valueOrThrow().isInvalid()) {
-				variant_match(coercion.valueOrThrow().getVariant()) {
-					variant_case_novalue(InvalidCoercion) {
-						return NoMatch{ .function = fun,
-							            .reason   = TypeMismatch{
-											  .given_type     = provided_type,
-											  .expected_type  = expected_type,
-											  .argument_index = i,
-											  .function       = fun,
-                                        } };
-					}
-					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
-						return NoMatch{ .function = fun,
-							            .reason   = code::TypeNotTriviallyCopyable{
-											  .argument_index = i,
-											  .given_type     = provided_type,
-											  .expected_type  = expected_type,
-											  .function       = fun,
-                                        } };
-					}
-				}
+			if (coercion.isInvalid()) {
+				return NoMatch{ .function = fun,
+					            .reason   = ArgumentCoercionFailure{
+									  .failed         = coercion,
+									  .argument_index = i,
+									  .function       = fun,
+                                } };
 			}
 
-			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
+			bool is_empty = coercion.isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
 
 			// Position in the parameter list is the same as in the positional arguments list.
 			argument_origin[i].emplace(PositionalArgumentOrigin{
 				.index_in_positional_args = i, .requires_coercion = not is_empty });
-			coercions[i].emplace(std::move(coercion).valueOrThrow().getCoercion());
+			coercions[i].emplace(std::move(coercion));
 		}
 
 
@@ -189,40 +174,27 @@ namespace compiler::helios::code {
                                                                 = positional_arguments.size() + i,
 					                                              .function = fun } };
 
-			usize           param_idx = param_idx_with_matching_name.value();
-			tsh::SymbolType provided_type
-				= std::get<1>(named_arguments[i])->expression_type.getSymbolType();
+			usize               param_idx = param_idx_with_matching_name.value();
+			tsh::ExpressionType provided_expr_type
+				= std::get<1>(named_arguments[i])->expression_type;
 			tsh::SymbolType expected_type = decl.parameters[param_idx].type;
-			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
+			auto coercion = canCoerce(ctx, provided_expr_type, expected_type).valueOrThrow();
 
-			if (coercion.valueOrThrow().isInvalid()) {
-				variant_match(coercion.valueOrThrow().getVariant()) {
-					variant_case_novalue(InvalidCoercion) {
-						return NoMatch{ .function = fun,
-							            .reason   = TypeMismatch{ .given_type    = provided_type,
-							                                      .expected_type = expected_type,
-							                                      .argument_index
-                                                                = positional_arguments.size() + i,
-							                                      .function = fun } };
-					}
-					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
-						return NoMatch{ .function = fun,
-							            .reason   = code::TypeNotTriviallyCopyable{
-											  .argument_index = positional_arguments.size() + i,
-											  .given_type     = provided_type,
-											  .expected_type  = expected_type,
-											  .function       = fun,
-                                        } };
-					}
-				}
+			if (coercion.isInvalid()) {
+				return NoMatch{ .function = fun,
+					            .reason   = ArgumentCoercionFailure{
+									  .failed         = coercion,
+									  .argument_index = positional_arguments.size() + i,
+									  .function       = fun,
+                                } };
 			}
 
-			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
+			bool is_empty = coercion.isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
 
 			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i,
 				                                              .requires_coercion   = not is_empty };
-			coercions[param_idx].emplace(std::move(coercion).valueOrThrow().getCoercion());
+			coercions[param_idx].emplace(std::move(coercion));
 		}
 
 		// Go over default arguments
@@ -391,15 +363,15 @@ namespace compiler::helios::code {
 		if (exact_matches.empty()) return;
 		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
-		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
+		base::Optional<Box<dia::MessageBase>> first_candidate_msg{};
 		for (const auto& match: exact_matches) {
-			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+			auto candidate_note = [&] -> Box<dia::MessageBase> {
 				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
 				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderError>(
+					return makeBox<dia::PlaceholderError>(
 						"Found exact candidate.",
 						base::strConcat(
 							"Candidate is compiler-generated, with type " + type.toString() + "."
@@ -432,15 +404,15 @@ namespace compiler::helios::code {
 		if (coercible_matches.empty()) return;
 		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
-		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
+		base::Optional<Box<dia::MessageBase>> first_candidate_msg{};
 		for (const auto& match: coercible_matches) {
-			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+			auto candidate_note = [&] -> Box<dia::MessageBase> {
 				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
 				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderNote>(
+					return makeBox<dia::PlaceholderNote>(
 						"Found coercible candidate.",
 						"Candidate is compiler-generated, with type " + type.toString() + "."
 					);
@@ -458,7 +430,7 @@ namespace compiler::helios::code {
 						auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
 							coercion.to.toString(), coercion.validated_from.toString()
 						);
-						auto pm_message_id = dia_int::MessageBase::getUniqueID();
+						auto pm_message_id = dia::MessageBase::getUniqueID();
 						result->addLinkedMessage(pm_message_id, std::move(pm));
 
 						result->addPointerMessage("coercion", param_pos, pm_message_id);
@@ -491,15 +463,15 @@ namespace compiler::helios::code {
 		if (failed_matches.empty()) return;
 		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
-		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
+		base::Optional<Box<dia::MessageBase>> first_candidate_msg{};
 		for (const auto& [function, reason]: failed_matches) {
-			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+			auto candidate_note = [&] -> Box<dia::MessageBase> {
 				auto& decl = ctx.query<QueryDeclOfFun>(function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
 				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderNote>(
+					return makeBox<dia::PlaceholderNote>(
 						"Candidate failed to match.",
 						"Candidate is compiler-generated, with type " + type.toString() + "."
 					);

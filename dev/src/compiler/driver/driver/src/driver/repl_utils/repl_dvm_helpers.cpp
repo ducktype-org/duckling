@@ -4,9 +4,9 @@
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/lir_unit_with_name.hpp>
 #include <driver_private/operations.hpp>
-#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -64,7 +64,7 @@ namespace compiler::repl {
 
 		if (logger::isCategoryEnabled(logger::DevLogCategories::REPL)) {
 			std::stringstream lir_unit_print;
-			lir_data.lir_unit.debugPrint(ctx, lir_unit_print);
+			lir_data.lir_unit.debugPrint(lir_unit_print, Ref{ &ctx });
 			CORE_DEV_LOG(REPL, "LIR unit:\n", lir_unit_print.str());
 		}
 
@@ -126,7 +126,7 @@ namespace compiler::repl {
 	std::expected<void, std::string> preloadStandardLibrary(
 		query::Context& ctx, vm::PID pid, backend_vm::ReplDVMCodeBuilder& lowering_context
 	) {
-		const auto root_modules = driver::getStandardLibraryRootModules();
+		const auto root_modules = frontend::packages::standardLibraryRootModules(ctx);
 		if (root_modules.empty()) return {};  // No standard library registered: nothing to load.
 
 		// Collect every module reachable from the standard library package roots.
@@ -176,11 +176,11 @@ namespace compiler::repl {
 				[type_view](vm::api::ExitValue exit_values
 		        ) -> std::expected<std::string, std::string> {
 					CORE_ASSERT(
-						std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_values),
-						"Expecting exit values to be a vector of VmValue references"
+						std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_values),
+						"Expecting exit values to be a vector of VMValue references"
 					);
 					const auto& exit_values_vec
-						= std::get<std::vector<Ref<vm::VmValue>>>(exit_values);
+						= std::get<std::vector<Ref<vm::IVMValue>>>(exit_values);
 					if (type_view == "()") {
 						CORE_ASSERT(
 							exit_values_vec.empty(),

@@ -1,4 +1,3 @@
-#include <diagnostic_interactive/logger.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -7,6 +6,7 @@
 #include <driver/standard_library/standard_library.hpp>
 #include <driver/task/task.hpp>
 #include <driver_private/standard_library/standard_library.hpp>
+#include <frontend/packages/standard_packages.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
@@ -14,6 +14,7 @@
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/logger.hpp>
 #include <filesystem/file_path.hpp>
 #include <tester/tester.hpp>
 
@@ -45,7 +46,7 @@ protected:
 	 * - Initializes the compiler in package compilation mode
 	 */
 	void beforeAll() override {
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
+		global_state::setters::setGlobalLogger(makeBox<dia::Logger>());
 		const auto     manifest_path = fs::FilePath(path("modules/packages/manifest.json"));
 		std::ifstream  in(manifest_path.getPath());
 		nlohmann::json manifest_json = nlohmann::json::parse(in, nullptr, true, true);
@@ -94,34 +95,24 @@ private:
 		const auto& global_packages = global_state::getPackages();
 
 		// Check that standard library packages exist
-		for (const auto& std_pkg_config: driver::STD_PACKAGES_CONFIG) {
+		for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
 			if (std::ranges::none_of(global_packages, [&](const auto& pkg) {
-					return pkg.getPackageID() == base::StrID(std_pkg_config.name);
+					return pkg.getPackageID() == std_id;
 				})) {
-				assertTrue(
-					false,
-					base::strConcat("Standard library package not found: ", std_pkg_config.name)
-				);
+				assertTrue(false, base::strConcat("Standard library package not found: ", std_id));
 			}
 		}
 
 		// Check that non-std packages have standard library dependencies
 		for (const auto& pkg: global_packages) {
-			const auto pkg_id = pkg.getPackageID().strView();
-
 			// Skip checking dependencies of the std lib itself
-			bool is_std_lib
-				= std::ranges::any_of(driver::STD_PACKAGES_CONFIG, [&](const auto& std_pkg_config) {
-					  return pkg_id == std_pkg_config.name;
-				  });
-			if (is_std_lib) continue;
+			if (frontend::packages::isStandardLibraryPackage(pkg.getPackageID())) continue;
 
 			// Verify it depends on all std packages
-			for (const auto& std_pkg_config: driver::STD_PACKAGES_CONFIG) {
+			for (const auto& std_id: frontend::packages::standardLibraryPackageIds()) {
 				bool depends_on_std = false;
 				for (const auto& dep: pkg.getDependencies().illegalAccess()) {
-					if (dep.illegalAccess().getPackage().illegalAccess().getID()
-					    == base::StrID(std_pkg_config.name)) {
+					if (dep.illegalAccess().getPackage().illegalAccess().getID() == std_id) {
 						depends_on_std = true;
 						break;
 					}
@@ -169,7 +160,7 @@ private:
 	 * @brief Compiles all standard library packages and verifies output artifacts.
 	 */
 	void compileStdPackages() {
-		auto tasks = driver::getLoadedStdLibCompilationTasks();
+		auto tasks = driver::getRequiredStdLibCompilationTasks();
 
 		// Run standard library compilation
 		ASSERT_TRUE(driver::compilePackages(tasks).isOk());

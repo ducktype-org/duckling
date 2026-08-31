@@ -19,7 +19,7 @@
 
 namespace compiler::tsl {
 
-	namespace ats = abi::type_system;
+	namespace ats = abi::types;
 
 	namespace {
 
@@ -37,20 +37,20 @@ namespace compiler::tsl {
 				);
 			const bool is_signed
 				= integral.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed;
-			return ok(ats::intType(u8(width), is_signed));
+			return ok(ats::intType(width, is_signed));
 		}
 
 		CAbiConversionResult convertFloat(tsh::FloatAbstractType flt) {
 			const usize width = usize(flt.getSize());
 			// A float is C-compatible iff the target lists its width: the IEEE
 			// formats everywhere, the x87 80-bit extended only on x87 targets.
-			if (!compilerTargetABI().data_layout.float_layouts.atMaybe(u8(width)).has_value())
+			if (!compilerTargetABI().data_layout.float_layouts.contains(width))
 				return fail(base::strConcat(
 					"floating-point width ",
 					std::to_string(width),
 					" bits is not representable on the target ABI"
 				));
-			return ok(ats::floatType(u8(width)));
+			return ok(ats::floatType(width));
 		}
 
 		CAbiConversionResult convertStaticArray(
@@ -120,7 +120,7 @@ namespace compiler::tsl {
 			case Kind::Integral:
 				return convertIntegral(tsh::IntegralAbstractType(abstract));
 			case Kind::Byte:
-				return ok(ats::intType(u8(8), false));
+				return ok(ats::intType(8, false));
 			case Kind::RawPointer:
 				return fail("raw pointer is not C-compatible; use `cptr T`");
 			case Kind::CPointer:
@@ -143,10 +143,6 @@ namespace compiler::tsl {
 				return ok(ats::boolType());
 			case Kind::Char:
 				return ok(ats::charType());
-			case Kind::String:
-				return fail("`string` is not C-compatible");
-			case Kind::DynamicArray:
-				return fail("dynamic arrays are not C-compatible");
 			case Kind::Function:
 				return fail("function types are not C-compatible");
 			case Kind::Unit:

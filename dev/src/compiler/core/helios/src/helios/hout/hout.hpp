@@ -23,12 +23,6 @@
 #include <variant>
 #include <vector>
 
-namespace compiler::repl {
-	// for friend:
-	struct ImplementationOf_QueryReplExpressionWrapper;
-	struct ImplementationOf_QueryReplInstructionWrapper;
-}
-
 namespace compiler::helios {
 
 	// for friend:
@@ -100,8 +94,6 @@ namespace compiler::helios {
 			code::ElementOrigin          origin
 		);
 		friend ImplementationOf_QueryDeclOfFun;
-		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
-		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
 	};
 
 	/**

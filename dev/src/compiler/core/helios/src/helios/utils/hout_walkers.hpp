@@ -10,12 +10,12 @@ namespace compiler::helios::code {
 	 * (e.g. pointers to functions, lambdas) are skipped. The result is deduplicated.
 	 */
 	[[nodiscard]]
-	std::vector<SymID> collectCalledSymbols(const HOUTFunction& fun);
+	std::vector<SymID> collectCalledSymbolsFromHOUT(const HOUTFunction& fun);
 
 
 	/**
 	 * @brief Collect the symbols of every function called from the expression tree.
 	 */
 	[[nodiscard]]
-	std::vector<SymID> collectCalledSymbols(const Expr& expr);
+	std::vector<SymID> collectCalledSymbolsFromHOUT(const Expr& expr);
 }

@@ -50,6 +50,9 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("debugger_infinite_test" ${test_set})
 
+        duck_add_test_custom(vm ${test_set}_mapper_test debugger/mapper_tests.cpp
+                USES ${libvm} Tester ${vmtester})
+
         duck_add_test_custom(vm ${test_set}_LowVMProgramCopy_test debugger/LowVMProgramCopy_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
@@ -103,6 +106,8 @@ duck_add_vm_tests("tc")
 duck_add_vm_tests("sc")
 
 duck_add_test_custom(vm vm_stable_obj_id_name_map_test utils/stable_obj_id_name_map_test.cpp
+        USES LibVM Tester)
+duck_add_test_custom(vm persistent_structures_test utils/persistent_structures_test.cpp
         USES LibVM Tester)
 duck_add_test_custom(vm vm_memory_test memory/memory_test.cpp
         USES LibVM_sc Tester VmTester_sc)

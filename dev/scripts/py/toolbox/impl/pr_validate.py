@@ -2,12 +2,14 @@ from ..impl.test import test_impl
 from .helpers import (
     bash_command,
     exit_with_error,
+    log_good,
 )
 from .duck_linter import duck_linter_impl
 from .cpp_linter import cpp_linter_impl
 from .issue_checker import issue_checker_impl
 from .todo_validate import todo_validate_impl
 from .integration.tester import tester_impl, DEFAULT_LOG_FILE_PATH
+from .workflows_lint import workflows_lint_impl
 
 
 def pr_validate_impl(
@@ -24,19 +26,23 @@ def pr_validate_impl(
     more time-consuming ones.
     """
 
-    # Step 1 - duck linter
+    # Step 1 - workflow YAML validation
+    if not workflows_lint_impl():
+        exit_with_error("Workflow YAML validation has failed")
+
+    # Step 2 - duck linter
     if not duck_linter_impl(auto_fix=auto_fix, no_fix=no_fix):
         exit_with_error("Duck linter has failed")
 
-    # Step 2 - validate !todos and !fixmes
+    # Step 3 - validate !todos and !fixmes
     if not todo_validate_impl():
         exit_with_error("T" + "ODO validation has failed")
 
-    # Step 3 - issue checker
+    # Step 4 - issue checker
     if not issue_checker_impl([]):
         exit_with_error("Issue checker has failed")
 
-    # Step 4 - Run formatting checker
+    # Step 5 - Run formatting checker
     _, clang_format_failed = cpp_linter_impl(
         clang_tidy_path=None,
         clang_format_path=clang_format_path,
@@ -51,15 +57,18 @@ def pr_validate_impl(
             f"C++ formatting check failed. Please run `./scripts/formatting/format_repo_cpp.sh {clang_format_path}` or fix the issues manually."
         )
 
-    # Step 5 - build
+    # Step 6 - build
+    # `bash_command` raises on a non-zero exit code, so getting past it means
+    # everything has been built.
     bash_command(
         f"cmake --build {build_dir} -- -j {thread_count} all build_all_tests build_all_playgrounds"
     )
+    log_good("Everything has been built successfully")
 
-    # Step 6 - test
+    # Step 7 - test
     test_impl(build_dir=build_dir, thread_count=thread_count, timeout=60)
 
-    # Step 7 - integration tests
+    # Step 8 - integration tests
     tester_impl(
         clean=False,
         dry=False,
@@ -68,9 +77,10 @@ def pr_validate_impl(
         verbose=False,
         log_file=DEFAULT_LOG_FILE_PATH,
         build_dir=build_dir,
+        jobs=thread_count,
     )
 
-    # Step 8 - clang-tidy
+    # Step 9 - clang-tidy
     clang_tidy_failed, _ = cpp_linter_impl(
         clang_tidy_path=clang_tidy_path,
         clang_format_path=None,
@@ -82,3 +92,5 @@ def pr_validate_impl(
 
     if clang_tidy_failed:
         exit_with_error("C++ clang-tidy check has failed")
+
+    log_good("PR validation has succeeded - every step has passed!")

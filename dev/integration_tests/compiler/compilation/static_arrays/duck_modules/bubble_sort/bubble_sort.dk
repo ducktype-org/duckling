@@ -1,0 +1,42 @@
+fun swap(a: ref i64, b: ref i64) -> () = {
+    let tmp: i64 = a;
+    a = b;
+    b = tmp;
+}
+
+fun bubble_sort(size: i64, arr: ref i64[10]) -> () = {
+    var i = 0;
+    while (i < size) {
+        var j = 0;
+        let limit = size - i - 1;
+        while (j < limit) {
+            if (arr[j] > arr[j + 1]) {
+                swap(&arr[j], &arr[j + 1]);
+            }
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+fun main() -> i64 = {
+    let n = builtin_input_i64(); 
+    
+    var data: i64[10];
+    var k = 0;
+    
+    while (k < n) {
+        data[k] = builtin_input_i64();
+        k = k + 1;
+    }
+
+    bubble_sort(n, &data);
+
+    k = 0;
+    while (k < n) {
+        builtin_output_i64(data[k]);
+        k = k + 1;
+    }
+
+    return 0;
+}

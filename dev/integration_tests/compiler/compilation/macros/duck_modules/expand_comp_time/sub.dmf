@@ -1,5 +1,0 @@
-import core.builtins.*;
-
-
-const s = "fun fromSub() = 1;";
-
