@@ -66,12 +66,14 @@ namespace lexer {
 	i64 Operator::getGenBinOpPrecedence() const {
 		using namespace lang_def;
 		static const std::unordered_map<lang_def::NamedOperator, i64> precedences
-			= { { NamedOperator::RightShift, 510 }, { NamedOperator::LeftShift, 510 },
-			    { NamedOperator::Ampersand, 520 },  { NamedOperator::BitXor, 530 },
-			    { NamedOperator::Pipe, 540 },       { NamedOperator::Exponentiate, 550 },
-			    { NamedOperator::Multiply, 560 },   { NamedOperator::Divide, 560 },
-			    { NamedOperator::Remainder, 560 },  { NamedOperator::Plus, 570 },
-			    { NamedOperator::Minus, 570 },      { NamedOperator::As, 400 } };
+			= { { NamedOperator::EqPlus, 1'000 },     { NamedOperator::EqMinus, 1'000 },
+			    { NamedOperator::EqMultiply, 1'000 }, { NamedOperator::EqDivide, 1'000 },
+			    { NamedOperator::RightShift, 510 },   { NamedOperator::LeftShift, 510 },
+			    { NamedOperator::Ampersand, 520 },    { NamedOperator::BitXor, 530 },
+			    { NamedOperator::Pipe, 540 },         { NamedOperator::Exponentiate, 550 },
+			    { NamedOperator::Multiply, 560 },     { NamedOperator::Divide, 560 },
+			    { NamedOperator::Remainder, 560 },    { NamedOperator::Plus, 570 },
+			    { NamedOperator::Minus, 570 },        { NamedOperator::As, 400 } };
 		if (precedences.contains(asNamed()))
 			return precedences.at(asNamed());
 		else

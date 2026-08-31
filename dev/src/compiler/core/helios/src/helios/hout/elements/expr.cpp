@@ -369,13 +369,11 @@ namespace compiler::helios::code {
 		case IntegerMul:
 		case IntegerDiv:
 		case IntegerMod:
-		case IntegerPow:
 		case FloatAdd:
 		case FloatSub:
 		case FloatMul:
 		case FloatDiv:
 		case FloatMod:
-		case FloatPow:
 			return lhs_type;
 		case IntegerLt:
 		case IntegerGt:
@@ -467,10 +465,6 @@ namespace compiler::helios::code {
 		case IntegerMod:
 		case FloatMod:
 			out << "%";
-			break;
-		case IntegerPow:
-		case FloatPow:
-			out << "**";
 			break;
 		case IntegerLt:
 		case FloatLt:

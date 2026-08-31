@@ -284,14 +284,12 @@ namespace compiler::helios::code {
 		IntegerMul,
 		IntegerDiv,
 		IntegerMod,
-		IntegerPow,
 
 		FloatAdd,
 		FloatSub,
 		FloatMul,
 		FloatDiv,
 		FloatMod,
-		FloatPow,
 
 		// Comparison operators
 		IntegerLt,    // Less than

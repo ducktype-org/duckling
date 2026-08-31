@@ -99,21 +99,25 @@ namespace {
 
 		auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
 
+		// @TODO: #2104 This does not check the mutability of the left hand side
 		auto make_bin_op_eq_expr = [&](BuiltinBinary bin_op) -> Box<code::Expr> {
-			auto lhs_clone = lhs->clone();
+			auto meterialized_lhs = s.reusable(s.refOf(std::move(lhs)));
+			auto next_lhs         = meterialized_lhs->nextUse();
 			return withOrigin(
 				new_origin,
 				s.blockExpr(StmtPack{ s.assign(
-					std::move(lhs_clone), s.binOp(std::move(lhs), bin_op, std::move(rhs))
+					s.deref(std::move(meterialized_lhs)),
+					s.binOp(s.deref(std::move(next_lhs)), bin_op, std::move(rhs))
 				) })
 			);
 		};
 
-		auto make_lang_primitive_call = [&](LanguagePrimitive lang_primitive) -> Box<code::Expr> {
-			auto callee
-				= ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive })->valueOrThrow();
-
-			return withOrigin(new_origin, s.call(s.ident(callee), std::move(lhs), std::move(rhs)));
+		auto logIfLangPrimitiveNotPresent = [&](LanguagePrimitive lang_primitive) -> void {
+			if(!isLanguagePrimitivePresent(ctx, lang_primitive)) {
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					base::strConcat("Calling an operator that requires '", base::enumToStr(lang_primitive), "' language primitive, but no such primitive was found.")
+				));
+			}
 		};
 
 		switch (op) {
@@ -142,6 +146,7 @@ namespace {
 			return make_bin_op_eq_expr(BuiltinBinary::FloatDiv);
 		}
 		case IntegerPow: {
+			logIfLangPrimitiveNotPresent(LanguagePrimitive::PowInt);
 			auto callee = bakeLanguagePrimitiveWithTypes(
 				ctx, LanguagePrimitive::PowInt, { lhs->expression_type.getSymbolType() }
 			);
@@ -158,11 +163,13 @@ namespace {
 					return {};
 			}();
 			if_opt_none(lang_primitive) return {};
-			return make_lang_primitive_call(lang_primitive.value());
+			logIfLangPrimitiveNotPresent(lang_primitive.value());
+			auto callee
+				= ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })->valueOrThrow();
+			return withOrigin(new_origin, s.call(s.ident(callee), std::move(lhs), std::move(rhs)));
 		}
-		default:
-			CORE_PANIC("Unsupported desugaring operator");
 		}
+		CORE_UNREACHABLE();
 	}
 }
 

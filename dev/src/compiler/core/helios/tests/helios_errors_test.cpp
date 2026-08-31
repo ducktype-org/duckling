@@ -743,6 +743,15 @@ private:
 				{ "Left side of assignment can't be immutable." },
 				1
 			);
+
+			// @TODO: #2104 Uncomment when operation assignment operators properly handle
+			// mutability. checkForErrorOnCompileModule( 	R"( 	fun main() -> i64 = { 		let x: i64 = 1;
+			// 		x += 123;
+			// 	}
+			// )",
+			// 	{ "Left side of assignment can't be immutable." },
+			// 	1
+			// );
 		}
 
 		// ============================ Variant errors ============================

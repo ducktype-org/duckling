@@ -305,6 +305,10 @@ namespace impl {
     #{
         These are the functions not provided by the C standard library.
     #}
+
+    # Computes an integer raised to the given power
+    # Panics on a negative exponent
+    # Wraps on overflow
     template(T: type)
     fun powi(x: T, y: T) -> T = {
         if (y < 0 as T) panic();
