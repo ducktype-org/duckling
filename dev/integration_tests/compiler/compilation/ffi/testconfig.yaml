@@ -20,7 +20,7 @@ compile_c_shared: "@{c_compiler} -O3 -shared -fPIC -o @{case_build_c}/libc_lib.s
 create_dirs: "mkdir -p @{case_build} && mkdir -p @{case_build_c}"
 
 ffi_module: "@{Name}"
-compile_package_cmd: "@{duckc_path} compile_package duck_modules/@{ffi_module} -a @{case_build} -n duck_modules/package_@{ffi_module} @{std_artifacts_path_flag} --no-incremental"
+compile_package_cmd: "@{duckc_path} compile_package duck_modules/@{ffi_module} -a @{case_build} -n duck_modules/package_@{ffi_module} @{std_artifacts_path_flag}"
 
 PreCase: "@{create_dirs} &&
   case '@{backend}' in
