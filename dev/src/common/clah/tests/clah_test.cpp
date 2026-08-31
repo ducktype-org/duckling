@@ -19,6 +19,7 @@ public:
 		TESTER_ADD_TEST(noDefaultValueParser);
 		TESTER_ADD_TEST(escapingTest);
 		TESTER_ADD_TEST(helpMessageLongEntryWrappingTest);
+		TESTER_ADD_TEST(positionalHelpDocumentationTest);
 
 		// Subcommands tests.
 		TESTER_ADD_TEST(subcommandBasicTest);
@@ -241,6 +242,53 @@ private:
 			help_message.find(" short                     Short command description.")
 			!= std::string::npos
 		);
+	}
+
+	void positionalHelpDocumentationTest() {
+		auto clah
+			= clah::Clah("prog")
+		          .addPositional(
+					  clah::CategoryParser::make("option", std::vector<std::string>{ "set", "del" }),
+					  "Breakpoint operation. Possible values are: set, del."
+				  )
+		          .addPositional(clah::IntParser::make("line"), "Source line number.")
+		          .addPositional(
+					  clah::StringParser::make("argument-name-that-exceeds-padding"),
+					  "Long argument description."
+				  );
+
+		std::array argv{ "./prog", "set", "42", "value" };
+		auto       result       = clah.parse(argv.size(), argv.data());
+		auto       help_message = clah::HelpMessageGenerator::generate(clah, result);
+
+		ASSERT_TRUE(
+			help_message.find(
+				"Command arguments:\n- <option>" + std::string(17, ' ')
+				+ "Breakpoint operation. Possible values are: set, del."
+			)
+			!= std::string::npos
+		);
+		ASSERT_TRUE(
+			help_message.find("- <line>" + std::string(19, ' ') + "Source line number.")
+			!= std::string::npos
+		);
+		ASSERT_TRUE(
+			help_message.find(
+				"- <argument-name-that-exceeds-padding>\n" + std::string(27, ' ')
+				+ "Long argument description."
+			)
+			!= std::string::npos
+		);
+
+		auto undocumented
+			= clah::Clah("undocumented").addPositional(clah::StringParser::make("value"));
+		std::array undocumented_argv{ "./undocumented", "value" };
+		auto       undocumented_result
+			= undocumented.parse(undocumented_argv.size(), undocumented_argv.data());
+		auto undocumented_help
+			= clah::HelpMessageGenerator::generate(undocumented, undocumented_result);
+
+		ASSERT_TRUE(undocumented_help.find("Command arguments:") == std::string::npos);
 	}
 
 	void subcommandBasicTest() {

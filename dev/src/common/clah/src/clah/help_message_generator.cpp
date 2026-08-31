@@ -62,13 +62,45 @@ namespace {
 		print_required_parameters(command.value()->getParameters());
 
 		for (const auto& positional: command.value()->getPositionalParameters())
-			usage << " <" << positional->getTypeName() << ">";
+			usage << " <" << positional.getValueParser().getTypeName() << ">";
 		usage << " [OPTIONS] ";
 		auto default_parser = command.value()->getDefaultValueParser();
 		if (default_parser != nullptr) usage << "[" + default_parser->getTypeName() + "...]";
 		return usage.str();
 	}
 
+}
+
+void appendHelpEntry(
+	std::stringstream& output, const std::string& name, const std::string& description, int padding
+) {
+	if (padding < name.size() + 2)
+		output << name << '\n' << std::setw(padding) << std::left << " ";
+	else
+		output << std::setw(padding) << std::left << name;
+
+	output << description << '\n';
+}
+
+std::string generateCommandArgumentsBlock(
+	const std::vector<clah::PositionalParameter>& positional_parameters, int padding = 27
+) {
+	std::stringstream output;
+	bool              header_printed = false;
+
+	for (const auto& positional: positional_parameters) {
+		if (positional.getDescription().empty()) continue;
+
+		if (!header_printed) {
+			output << "\nCommand arguments:\n";
+			header_printed = true;
+		}
+
+		std::string name = "- <" + positional.getValueParser().getTypeName() + ">";
+		appendHelpEntry(output, name, positional.getDescription(), padding);
+	}
+
+	return output.str();
 }
 
 std::string generateOptionsBlock(
@@ -94,11 +126,7 @@ std::string generateOptionsBlock(
 		if (param.getValueParser() != nullptr)
 			names_stream << " <" + param.getValueParser()->getTypeName() + ">";
 		const auto names = names_stream.str();
-		if (padding < names.size() + 2)
-			output << names << '\n' << std::setw(padding) << std::left << " ";
-		else
-			output << std::setw(padding) << std::left << names;
-		output << param.getShortDesc().stdString() << '\n';
+		appendHelpEntry(output, names, param.getShortDesc().stdString(), padding);
 
 		if_opt_some(param.getLongDesc(), long_desc) {
 			std::stringstream input(long_desc.stdString());
@@ -117,11 +145,7 @@ std::string generateSubcommandsBlock(const std::vector<clah::Clah>& subcommands,
 	output << "\nAvailable Commands:\n";
 	for (const auto& cmd: subcommands) {
 		std::string name = " " + cmd.getName();
-		if (padding < name.size() + 2)
-			output << name << '\n' << std::setw(padding) << std::left << " ";
-		else
-			output << std::setw(padding) << std::left << name;
-		output << cmd.getDescription() << '\n';
+		appendHelpEntry(output, name, cmd.getDescription(), padding);
 	}
 	return output.str();
 }
@@ -133,6 +157,7 @@ namespace clah {
 		auto              program_name = getFileName(result.getFilePath());
 
 		output << generateUsage(clah, result) << '\n';
+		output << generateCommandArgumentsBlock(command.value()->getPositionalParameters());
 		output << generateSubcommandsBlock(command.value()->getSubcommands());
 		output << generateOptionsBlock("Global options:", clah.getParameters());
 		if (command->get() != &clah)
