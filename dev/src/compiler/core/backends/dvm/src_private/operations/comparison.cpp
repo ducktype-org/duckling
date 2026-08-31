@@ -83,6 +83,8 @@ namespace {
 		case OpKind::ucmpGe: 	return OpKind::ucmpLe;
 		case OpKind::cmpLt: 	return OpKind::cmpGt;
 		case OpKind::cmpLe: 	return OpKind::cmpGe;
+		case OpKind::ucmpLt: 	return OpKind::ucmpGt;
+		case OpKind::ucmpLe: 	return OpKind::ucmpGe;
 		case OpKind::fcmpGt: 	return OpKind::fcmpLt;
 		case OpKind::fcmpGe: 	return OpKind::fcmpLe;
 		case OpKind::fcmpLt: 	return OpKind::fcmpGt;

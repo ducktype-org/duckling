@@ -703,7 +703,12 @@ namespace compiler::driver {
 			              ) -> std::expected<RunOutput, vm::api::ApiError> {
 							  const vm::PID pid = process.pid;
 							  // Deinitialize the process and execute global destructors.
-							  defer((void) vm::api::deinitAndValidate(pid));
+
+							  defer({
+								  auto deinit = vm::api::deinitAndValidate(pid);
+								  if (!deinit.has_value())
+									  std::cerr << vm::api::errorToString(deinit.error()) << '\n';
+							  });
 
 							  return vm::api::loadCode(pid, dvm_module.code)
 				                  .and_then([&] {

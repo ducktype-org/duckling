@@ -2,20 +2,20 @@ import core.builtins.*;
 import core.clib;
 import core.runtime;
 
-fun panic() -> () = {
+fun panic() -> void = {
     builtin_output_str("Program panicked!\n");
-    doPanic();
+    return doPanic();
 }
 
 @backend_dependent
-fundecl doPanic() -> ();
+fundecl doPanic() -> void;
 
 @native_only_impl
-fun doPanic() -> () = {
-    clib.abort();
+fun doPanic() -> void = {
+    return clib.abort();
 }
 
 @dvm_only_impl
-fun doPanic() -> () = {
-    runtime.dvm.abort();
+fun doPanic() -> void = {
+    return runtime.dvm.abort();
 }

@@ -4,6 +4,8 @@
 
 #include <base/collections/optional.hpp>
 
+#include <vm/core/builtin_functions.hpp>
+
 namespace compiler::backend_vm::internal {
 	using namespace vm::code;
 
@@ -66,5 +68,22 @@ namespace compiler::backend_vm::internal {
 			);
 		}
 		ctx->pushInstruction({ OpKind::ret });
+	}
+
+	void InstructionLowerer::lower(const UnreachableOperation& op) {
+		const auto& abort_name
+			= vm::builtins::getBuiltinFunctions()->at(vm::builtins::BuiltinFunctionID::Abort).name;
+
+		lower(CallOperation{
+			.call_info = { .call_target = DVMFunctionName{ .name = abort_name },
+		                   .return_type = {},
+		                   .param_types = {} },
+			.args      = {},
+			.dest      = {},
+		});
+		lower(ReturnOperation{
+			.value       = {},
+			.scope_flags = op.scope_flags,
+		});
 	}
 }

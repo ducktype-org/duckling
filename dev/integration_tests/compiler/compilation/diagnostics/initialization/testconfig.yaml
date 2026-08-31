@@ -1,4 +1,5 @@
-# @TODO: #2448 Investigate why deterministic compilation check fails for these tests
+# It's turned off as this doesn't check the runtime and generated code
+# and only if the compiler throws a nice compilation error.
 enable_conc_deterministic_tests: "false"
 
 Tests:

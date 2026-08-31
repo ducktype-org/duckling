@@ -41,6 +41,13 @@ impl DependencyKind {
     pub fn is_dev(self) -> bool {
         matches!(self, Self::Dev)
     }
+
+    pub fn key_in_manifest(self) -> &'static str {
+        match self {
+            DependencyKind::Normal => "dependencies",
+            DependencyKind::Dev => "dev-dependencies",
+        }
+    }
 }
 
 impl fmt::Display for DependencyKind {

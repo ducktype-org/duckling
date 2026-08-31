@@ -24,7 +24,7 @@ namespace compiler::driver {
 
 	void LIRUnitWithBackendName::debugPrint(query::Context& ctx, std::ostream& os) const {
 		os << "LIRUnitWithBackendName for module: " << module_id.strView() << "\n";
-		lir_unit.debugPrint(ctx, os);
+		lir_unit.debugPrint(os, Ref{ &ctx });
 	}
 
 	/**
