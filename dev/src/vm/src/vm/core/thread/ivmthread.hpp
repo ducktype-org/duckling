@@ -166,6 +166,21 @@ namespace vm {
 		void breakActiveExecution();
 
 		/**
+		 * @brief Releases the GIL if it's taken.
+		 *
+		 * @note Used to release the GIL when this thread pauses, so others may go.
+		 */
+		virtual void releaseGilIfHeld() {}
+
+		/**
+		 * @brief Reacquired the GIL if it's not taken.
+		 *
+		 * @note Used to reacquire the GIL when this thread performs a `step`, `stop`, `resume` in
+		 * the debugger loop.
+		 */
+		virtual void acquireGilIfNotHeld() {}
+
+		/**
 		 * @brief Wakes this thread if it is blocked in `waitInterruptible` - i.e. re-evaluates
 		 * the condition it is waiting for without posting any control request.
 		 *

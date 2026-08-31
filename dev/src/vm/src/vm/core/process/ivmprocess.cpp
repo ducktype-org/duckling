@@ -84,7 +84,30 @@ namespace vm {
 	api::ProcStatus IVMProcess::getStatus() { return toApiStatus(getProcessState()); }
 
 	std::expected<void, api::ApiError> IVMProcess::pauseAllVMThreads() {
-		for (const api::ThreadID tid: getAllActiveThreadIDs()) (void) pauseVMThread(tid);
+		// Request pause on all threads first.
+		std::vector<api::ThreadID> refused;
+		for (const api::ThreadID tid: getAllActiveThreadIDs())
+			if (!requestPauseOfVMThread(tid).has_value()) refused.push_back(tid);
+
+		if (!refused.empty())
+			return std::unexpected(api::ApiError{ api::PauseError{ base::strConcat(
+				refused.size() == 1 ? "thread " : "threads ",
+				base::strJoin(
+					refused | std::views::transform([](const api::ThreadID id) {
+						return std::to_string(id.asInt());
+					}),
+					", "
+				),
+				" refused the pause request"
+			) } });
+
+		// Now wait for all of them to pause.
+		const ProcessState state = waitForProcessState([](const ProcessState& s) {
+			return v_matches(s, ps::Paused) || ps::isTerminal(s);
+		});
+		if (!v_matches(state, ps::Paused))
+			return std::unexpected(api::ApiError{ api::PauseError{
+				"the process reached a terminal state before every thread paused" } });
 		return {};
 	}
 
@@ -160,6 +183,11 @@ namespace vm {
 				return getVMThreadCurrentPosition(step_request.thread_id);
 			}
 
+			variant_case(api::request::WaitForBreakpoint, wait_request) {
+				// Per-thread operation. Its validity is decided by the target thread not the process.
+				return waitForBreakpointAndReportPosition(wait_request.thread_id);
+			}
+
 			variant_case_novalue(api::request::DeinitAndValidate) {
 				VALIDATE_REQUEST(pe::DeinitAndValidate{});
 				return deinitAndValidate();
@@ -170,14 +198,6 @@ namespace vm {
 				return stop();
 			}
 
-			variant_case_novalue(api::request::WaitForBreakpoint) {
-				waitForBreakpoint();
-				if (!v_matches(getProcessState(), ps::Paused))
-					return std::unexpected(api::ApiError{
-						api::OtherError{ "Unexpected status response" } });
-
-				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID);
-			}
 
 			// The following are read-only and don't change the state.
 			variant_case(api::request::LoadFiles, load_request) {

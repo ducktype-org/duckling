@@ -1,8 +1,8 @@
 #include "vm.hpp"
 
-#include "vm/api/data/thread_id.hpp"
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
+#include <vm/api/data/thread_id.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
@@ -51,9 +51,9 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid) {
+	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid, ThreadID thread_id) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::WaitForBreakpoint{}))
+		    .doRequest(SupervisorRequest(pid, request::WaitForBreakpoint{ thread_id }))
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 

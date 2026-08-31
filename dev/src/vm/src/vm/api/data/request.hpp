@@ -62,7 +62,9 @@ namespace vm::api {
 
 		struct PauseAll {};
 
-		struct WaitForBreakpoint {};
+		struct WaitForBreakpoint {
+			ThreadID thread_id;
+		};
 
 		struct ExecutionPosition {
 			base::Optional<usize> frame_idx;
