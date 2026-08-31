@@ -1,0 +1,27 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} -C foo add --local ../bar bar
+  # Make sure we have freezefile
+  @{duck-exe} -C foo sync
+
+Tests:
+  solver-cache:
+    Description: deps with empty versions list should be reused by solver
+    Cases:
+      dep-with-empty-versions-list:
+        test-cmd: duck -C foo sync
+        Output:
+          # This checks two things:
+          # 1. Absence of `running gathering` means we don't even enter gathering,
+          # 2. and absence of `starting the solver engine` means we don't run the engine.
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the gathering
+            info: no need to run the solver engine
+            info: starting fetching 2 packages
+            info: successfully synchronized venv \`foo\`"
+        

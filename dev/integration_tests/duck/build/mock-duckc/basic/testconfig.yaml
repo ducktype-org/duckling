@@ -29,6 +29,7 @@ Tests:
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
+            info: no need to run the gathering
             info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
@@ -41,6 +42,7 @@ Tests:
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
+            info: no need to run the gathering
             info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
@@ -53,6 +55,7 @@ Tests:
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
+            info: no need to run the gathering
             info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
@@ -65,6 +68,7 @@ Tests:
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
+            info: no need to run the gathering
             info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
@@ -77,6 +81,7 @@ Tests:
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
+            info: no need to run the gathering
             info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
@@ -89,6 +94,7 @@ Tests:
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
+            info: no need to run the gathering
             info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
@@ -101,6 +107,7 @@ Tests:
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
+            info: no need to run the gathering
             info: no need to run the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
