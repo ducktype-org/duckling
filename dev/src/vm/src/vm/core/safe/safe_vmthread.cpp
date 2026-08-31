@@ -541,7 +541,7 @@ namespace vm {
 			process_memory.freeBlockData(block);
 			process_memory.decreaseBlockRefcount(block);
 		}
-		*orig_frame_ptr = orig_frame_cpy;
+		*orig_frame_ptr                  = orig_frame_cpy;
 		runtime_data.frame_stack_current = orig_frame_ptr;
 
 		return exit_value_storage.value();
