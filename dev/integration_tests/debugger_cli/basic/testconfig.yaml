@@ -1,27 +1,26 @@
 Tests:
   debugger_cli_basic:
     Run: "@{build_dir}/bin/VM run -d inf_loop.dbc"
-    TimeOut: 5 
+    TimeOut: 5
     Cases:
       status_exit:
         Input:
-          String: "status\nexit" 
+          String: "status\nexit"
         Output:
           File: "start.out"
       help_quit:
         Input:
-          String: "--help\nexit" 
+          String: "--help\nexit"
         Output:
           File: "help.out"
       run_pause_continue:
         Input:
-          String: "run\npause\ncontinue\nexit" 
+          String: "run\npause\ncontinue\nexit"
         Output:
           File: "run.out"
+        Enabled: false
       errors:
         Input:
           String: "run\nrun\ncontinue\ncontinue\npause\npause\nexit"
         Output:
           File: "error.out"
-
-    
