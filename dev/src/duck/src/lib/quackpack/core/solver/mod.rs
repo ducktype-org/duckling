@@ -42,7 +42,7 @@ use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::solver::solving::solver_engine::{SolverEngine, SolverInput};
 use crate::quackpack::core::{FeatureName, Manifest, PackageContext, PackageId};
-use crate::{QuackResult, qp_bail, qp_bail_internal};
+use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
 
 /// A struct designated to finding the full dependency graph of a given package.
 pub struct SolverGathererData<'duck, 'ctx> {
@@ -137,6 +137,8 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             debug!("root has been satisfied");
             let trimmed = maximal_valid_freeze
                 .find_minimal_dep_solution(&prev_freeze_manifests, root_features)?;
+            ctx.console()
+                .info("no need to run the gathering or the solver engine")?;
             return Ok(ShouldRunSolverEngine::No(SolverAnswer {
                 new_freeze: trimmed,
                 pkgs_manifests: prev_freeze_manifests,
@@ -226,7 +228,8 @@ impl SolverEngineData {
     /// Finds dependency resolution of a given package.
     /// Returns a [`SolverAnswer`].
     #[tracing::instrument(skip_all)]
-    pub fn solve(self) -> QuackResult<SolverAnswer> {
+    pub fn solve(self, ctx: &DuckContext) -> QuackResult<SolverAnswer> {
+        ctx.console().info("starting the solver engine")?;
         let manifests = self.input.gathered_manifests.clone();
         let solver_output =
             SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
