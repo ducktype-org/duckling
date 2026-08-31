@@ -51,6 +51,7 @@ namespace vm {
 			  data(data) {}
 	};
 
+	template<>
 	void Memory::initializeBlockFromConstValue(
 		Ref<Block> block, const code::ConstantValue& const_value
 	) {
@@ -58,5 +59,4 @@ namespace vm {
 		ConstInitializationVisitor visitor{ block_type, Bytes(0), block->data.view };
 		const_value.data->acceptVisitor(visitor);
 	}
-
 }

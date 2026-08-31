@@ -8,7 +8,7 @@ from utilities import *
 
 expected_manifest_1 = """metadata:
   name: foo
-  version: 1.0.0
+  version: '1.0.0'
 dependencies:
   b:
     source:
@@ -18,7 +18,7 @@ dependencies:
 
 expected_manifest_21 = """metadata:
   name: foo
-  version: 1.0.0
+  version: '1.0.0'
 dependencies:
   a:
     source:
@@ -31,7 +31,7 @@ dependencies:
 
 expected_manifest_22 = """metadata:
   name: foo
-  version: 1.0.0
+  version: '1.0.0'
 dependencies:
   b:
     source:
