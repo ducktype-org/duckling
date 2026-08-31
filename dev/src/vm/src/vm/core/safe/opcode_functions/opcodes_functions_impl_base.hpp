@@ -25,6 +25,8 @@
  * and defined twice leading to multiple definition error. Utilities functions are defined in
  * `opcodes_functions_utils.hpp`.
  */
+#pragma once
+
 
 #include "opcodes_functions_utils.hpp"
 
