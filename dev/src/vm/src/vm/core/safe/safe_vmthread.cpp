@@ -658,7 +658,8 @@ namespace vm {
 		return runtime_data.frame_stack_base[frame_index];
 	}
 
-	void SafeVMThread::updateGlobalDataBufferPointers(GlobalBufferPointers global_buffer_pointers) {
+	void SafeVMThread::updateGlobalDataBufferPointers(GlobalBufferPointersByte global_buffer_pointers
+	) {
 		runtime_data.global_data_buffer_base      = global_buffer_pointers.data_buffer_base;
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
 	}
