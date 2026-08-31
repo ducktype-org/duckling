@@ -552,6 +552,9 @@ clah::Clah getClahForMain() {
 						 )
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
+
+					// @TODO: #3449 fix it here
+
 					std::vector<fs::File> modules_to_compile{ options.getPositional<fs::File>(0) };
 					for (usize i = 0; i < options.getExtraParameterCount(); ++i)
 						modules_to_compile.push_back(options.getExtra<fs::File>(i).value());
@@ -559,21 +562,28 @@ clah::Clah getClahForMain() {
 					const bool dvm_backend = options.isFlag("dvm-backend");
 
 					if (dvm_backend) {
+						// @TODO: #3397 fix it, when compilePackages tasks support it!
 						std::cerr << "DVM Backend does not create full (linked) output artifacts "
 			                         "in compile_modules command.\n";
 						return 1;
 					}
 
 
-					// Package names other than the first one are random, so the dependency alias
-		            // is set to the module's file name to keep those packages importable.
-					std::vector<base::StrID>                                  aliases;
+					std::set<base::StrID>                                  aliases_duplicate_check;
+					base::Map<base::StrID, base::StrID> package_id_aliases;
 					std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
-					aliases.reserve(modules_to_compile.size());
 					packages_info.reserve(modules_to_compile.size());
 					for (const auto& module: modules_to_compile) {
 						auto package_name = base::StrID(base::generateRandomString(32));
-						aliases.emplace_back(module.getFilePath().stem());
+						
+						auto inserted = aliases_duplicate_check.emplace(module.getFilePath().stem());
+						if (!inserted.second) {
+							CORE_USER_LOG("ERROR: Duplicate module names: ", module.getFilePath().string(), "\n");
+							return 1;
+						}
+
+						package_id_aliases.emplace(package_name, module.getFilePath().stem());
+
 						packages_info.push_back(compiler::frontend::packages::RawPackageInfo{
 							.package_id   = package_name,
 							.package_name = package_name,
@@ -589,10 +599,11 @@ clah::Clah getClahForMain() {
 					for (usize dependent = 0; dependent < package_count; ++dependent)
 						for (usize dependency = 0; dependency < package_count; ++dependency) {
 							if (dependent == dependency) continue;
-							packages_info[dependent].dependencies.push_back(
+
+							packages_info.at(dependent).dependencies.push_back(
 								compiler::frontend::packages::RawDependencyInfo{
-									.package_id = packages_info[dependency].package_id,
-									.alias      = aliases[dependency],
+									.package_id = packages_info.at(dependency).package_id,
+									.alias      = package_id_aliases.at(packages_info.at(dependency).package_id),
 								}
 							);
 						}
