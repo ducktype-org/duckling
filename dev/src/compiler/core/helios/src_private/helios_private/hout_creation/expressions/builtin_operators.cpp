@@ -72,6 +72,9 @@ namespace compiler::helios::code {
 				  /// Negations ///
 				  { { base::StrID("-"), tsh::Kind::Integral }, BuiltinUnary::IntegerNegation },
 				  { { base::StrID("-"), tsh::Kind::Float }, BuiltinUnary::FloatNegation },
+
+				  /// Bitwise negation ///
+				  { { base::StrID("~"), tsh::Kind::Integral }, BuiltinUnary::IntegerBitNot },
 			  };
 
 		if (numeric_operators.contains({ op, operation_kind }))
@@ -99,6 +102,13 @@ namespace compiler::helios::code {
 				  { { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
 				  { { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
 				  { { base::StrID("**"), tsh::Kind::Integral }, BuiltinBinary::IntegerPow },
+
+				  /// Bitwise operations ///
+				  { { base::StrID("&"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitAnd },
+				  { { base::StrID("|"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitOr },
+				  { { base::StrID("^"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitXor },
+				  { { base::StrID("<<"), tsh::Kind::Integral }, BuiltinBinary::IntegerShl },
+				  { { base::StrID(">>"), tsh::Kind::Integral }, BuiltinBinary::IntegerShr },
 
 				  /// Integer comparisons ///
 				  { { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },
