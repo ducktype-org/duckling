@@ -41,18 +41,10 @@ namespace vm::debugger {
 	Debugger::~Debugger() {
 		updater.detach();
 
-		// @TODO: #1222 Remove checking status and always kill after fixing kill
-
-		api::getExecutionStatus(pid)
-			.and_then([&](const api::ProcStatus& status) {
-				if (!std::holds_alternative<api::NotStarted>(status)) return api::kill(pid);
-
-				return std::expected<void, api::ApiError>{};
-			})
-			.transform_error([&](const api::ApiError& api_error) {
-				on_error.emitEvent(api::errorToString(api_error));
-				return api_error;
-			});
+		(void) api::kill(pid).transform_error([&](const api::ApiError& api_error) {
+			on_error.emitEvent(api::errorToString(api_error));
+			return api_error;
+		});
 	}
 
 	void Debugger::attachOnStatusChangedListener(events::Listener<api::ProcStatus>& listener) {
