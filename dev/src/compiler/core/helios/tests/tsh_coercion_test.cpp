@@ -1,4 +1,4 @@
-#include <helios/tsh/coercions/reference.hpp>
+#include <helios/tsh/coercions/reference_coercion.hpp>
 #include <helios/tsh/types.hpp>
 
 #include <tester/tester.hpp>

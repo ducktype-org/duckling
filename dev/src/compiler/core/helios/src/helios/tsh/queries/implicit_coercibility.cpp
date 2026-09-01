@@ -1,6 +1,6 @@
 #include "implicit_coercibility.hpp"
 
-#include <helios/tsh/coercions/reference.hpp>
+#include <helios/tsh/coercions/reference_coercion.hpp>
 #include <helios/tsh/types.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>

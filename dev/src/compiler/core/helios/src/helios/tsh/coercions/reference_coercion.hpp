@@ -1,5 +1,5 @@
 /**
- * @file reference.hpp
+ * @file reference_coercion.hpp
  * @brief What a coercion may do to the reference part of a value.
  */
 
