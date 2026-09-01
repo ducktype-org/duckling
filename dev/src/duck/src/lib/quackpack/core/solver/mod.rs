@@ -179,25 +179,24 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     #[tracing::instrument(skip_all)]
     async fn run_solver_gatherer<Access: GitAccess>(
         gatherer: &Gatherer<'_, '_, Access>,
-        root_manifest: Box<Manifest>,
+        mut root_manifest: Box<Manifest>,
         root_path: PathBuf,
         root_features: HashSet<FeatureName>,
         freeze: &SolverFreeze,
         mode: SolverMode,
     ) -> QuackResult<GatheredInfo> {
-        let root_manifest_for_gathering =
-            Self::prepare_root_manifest_for_gathering(*root_manifest, freeze)?;
+        Self::prepare_root_manifest_for_gathering(&mut root_manifest, freeze)?;
         gatherer
-            .explore(root_path, root_manifest_for_gathering, root_features, mode)
+            .explore(root_path, root_manifest, root_features, mode)
             .await
     }
 
     /// Helper for [`Self::run_solver_gatherer`].
     /// Retains only unsatisfied dependencies in the root package's manifest, so that it can be used in gathering.
     fn prepare_root_manifest_for_gathering(
-        mut root_manifest: Manifest,
+        root_manifest: &mut Manifest,
         freeze: &SolverFreeze,
-    ) -> QuackResult<Box<Manifest>> {
+    ) -> QuackResult<()> {
         let Some(root_freeze) = freeze.package_freezes.get(&freeze.main_pkg) else {
             qp_bail_internal!("maximal valid freeze without main package freeze {freeze:#?}")
         };
@@ -209,7 +208,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
                     .dependencies_realization
                     .contains_key(&dep.effective_name())
             });
-        Ok(Box::new(root_manifest))
+        Ok(())
     }
 }
 
