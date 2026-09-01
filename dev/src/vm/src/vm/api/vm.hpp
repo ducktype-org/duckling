@@ -68,7 +68,7 @@ namespace vm::api {
 
 	/**
 	 * @brief Same as `run`, but executes the program synchronously on the caller's thread and
-	 * returns it's return value.
+	 * returns its exit value.
 	 * @return The return value of the program if it was ran successfully or an API error otherwise.
 	 */
 	std::expected<ExitValue, ApiError> runAwait(PID pid, const ProgramRunArguments& args = {});

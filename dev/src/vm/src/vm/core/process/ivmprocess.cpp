@@ -264,6 +264,7 @@ namespace vm {
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 #undef VALIDATE_REQUEST
+#undef HANDLE_RUN_CASE
 		CORE_UNREACHABLE();
 	}
 
