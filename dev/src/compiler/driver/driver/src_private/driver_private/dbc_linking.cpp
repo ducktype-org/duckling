@@ -77,7 +77,17 @@ namespace compiler::driver {
 		using std::ranges::views::transform;
 
 		auto object_files = objects | transform(&artifacts::FileArtifact::file) | to<std::vector>();
-		base::appendToVector(object_files, dvm_linking_options.link_libraries);
+		for (const auto& link_library: dvm_linking_options.link_libraries) {
+			if (!link_library.isRegularFile()) {
+				CORE_USER_LOG(
+					"DVM linking failed: library to link `",
+					link_library.string(),
+					"` does not exist.\n"
+				);
+				return base::BAD;
+			}
+			object_files.emplace_back(link_library);
+		}
 
 		auto parse_result = dvm_linker.parseCodeCollectionFromFiles(object_files);
 
@@ -107,7 +117,7 @@ namespace compiler::driver {
 		debug_info_paths.reserve(debug_info_artifacts.size());
 		for (auto& art: debug_info_artifacts) debug_info_paths.push_back(art.file.getFilePath());
 		for (const auto& link_library: dvm_linking_options.link_libraries)
-			if_opt_some(findLinkLibraryDebugInfoPath(link_library.name()), debug_info_path) {
+			if_opt_some(findLinkLibraryDebugInfoPath(link_library.string()), debug_info_path) {
 				debug_info_paths.push_back(debug_info_path);
 			}
 

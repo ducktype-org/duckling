@@ -263,7 +263,9 @@ auto getClahLinkingOptions() {
 			.addShortDesc("Shared libraries that will be loaded by the VM.")
 			.optional()
 			.build(),
-		clah::ParamBuilder::ofValue(clah::FileListParser::make("paths", clah::FileParser::make()))
+		clah::ParamBuilder::ofValue(
+			clah::FilePathListParser::make("paths", clah::FilePathParser::make())
+		)
 			.addLongName("dvm-link-libraries")
 			.addShortDesc("Paths to the .dbc libraries to link into the output.")
 			.optional()
@@ -287,7 +289,7 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 	if (auto lib_paths = parsing_result.getValue<std::vector<std::string>>("dvm-shared-libs"))
 		linking_options.dvm_shared_libraries = lib_paths.value();
 
-	if (auto lib_paths = parsing_result.getValue<std::vector<fs::File>>("dvm-link-libraries"))
+	if (auto lib_paths = parsing_result.getValue<std::vector<fs::FilePath>>("dvm-link-libraries"))
 		linking_options.dvm_link_libraries = lib_paths.value();
 
 	linking_options.native_link_c_standard_lib = not parsing_result.isFlag("no-c-standard-library");
@@ -672,7 +674,7 @@ clah::Clah getClahForMain() {
 		            // that all the libraries it links are already built.
 					std::vector<driver::PackageCompilationTask> compilation_tasks;
 					base::Optional<frontend::ModuleID>          main_root_module;
-					std::vector<fs::File>                       libraries_to_link;
+					std::vector<fs::FilePath>                   libraries_to_link;
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
 					for (const auto& package: global_state::getPackages()) {
@@ -713,7 +715,7 @@ clah::Clah getClahForMain() {
 						auto artifact_file = global_state::getRootCollection()
 			                                     ->fileArtifactAtOrNew(library_name)
 			                                     .file;
-						libraries_to_link.push_back(std::move(artifact_file));
+						libraries_to_link.push_back(artifact_file.getFilePath());
 					}
 
 					CORE_ASSERT(main_root_module.has_value(), "First package is not registered");
@@ -738,8 +740,8 @@ clah::Clah getClahForMain() {
 						auto linking_options = getLinkingOptionsFromClah(options);
 						linking_options.native_additional_link_options = base::strConcat(
 							linking_options.native_additional_link_options.copyValueOr(""),
-							libraries_to_link | std::views::transform([](fs::File& f) {
-								return f.getFilePath().native();
+							libraries_to_link | std::views::transform([](fs::FilePath& path) {
+								return path.native();
 							}) | base::rangesIntersperse(std::string(", "))
 								| std::views::join | std::ranges::to<std::string>()
 						);

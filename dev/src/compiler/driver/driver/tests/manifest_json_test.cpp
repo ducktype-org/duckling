@@ -289,7 +289,7 @@ private:
 			target.dvm_linking_options.shared_libraries
 		);
 		ASSERT_EQUAL(
-			(std::vector<std::string>{ "bin/mylib_dvm.dbc" }),
+			(std::vector<fs::FilePath>{ fs::FilePath("bin/mylib_dvm.dbc") }),
 			target.dvm_linking_options.link_libraries
 		);
 	}

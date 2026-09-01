@@ -55,7 +55,7 @@ namespace compiler::driver {
 		/**
 		 * @brief DBC libraries paths to link to final executable.
 		 */
-		std::vector<fs::File> link_libraries{};
+		std::vector<fs::FilePath> link_libraries{};
 	};
 
 	/**

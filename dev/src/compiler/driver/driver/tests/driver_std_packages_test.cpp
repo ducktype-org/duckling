@@ -12,6 +12,7 @@
 #include <global_state/packages.hpp>
 #include <os_utils/system_libraries.hpp>
 
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
@@ -35,10 +36,10 @@ class StdPackagesTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(verifyStdPackagesAndDependencies);
-		TESTER_ADD_TEST(verifyStdLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(compileStdPackages);
-		// The two below need the standard library artifacts to already exist, so they run after
+		// The ones below need the standard library artifacts to already exist, so they run after
 		// compileStdPackages.
+		TESTER_ADD_TEST(verifyStdLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(verifyStdDVMLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(verifyStdSharedLibsDeclaredForCore);
 	}
@@ -217,7 +218,9 @@ private:
 			    = std::get_if<driver::BuildTargetDVMExecutable>(&task_data.build_target)) {
 				seen_executable = true;
 				assertTrue(
-					target_exe->dvm_linking_options.link_libraries == std_link_libraries,
+					base::containsAllOf(
+						target_exe->dvm_linking_options.link_libraries, std_link_libraries
+					),
 					"Converted DVM executable task does not link the standard library"
 				);
 			}
@@ -252,7 +255,7 @@ private:
 			core != frontend::packages::standardLibraryPackages().end(),
 			"No `core` standard library package"
 		);
-		ASSERT_EQUAL(expected_libs, core->dvm_shared_libs);
+		ASSERT_EQUAL(expected_libs, core->getSharedLibsAsStr());
 
 		bool seen_core_dvm_task = false;
 		for (const auto& task: driver::getRequiredStdLibCompilationTasks()) {

@@ -286,7 +286,7 @@ namespace compiler::driver {
 		return getStdLibArtifacts(".dbc").artifacts;
 	}
 
-	std::vector<fs::File> getStdLibDVMLinkingDependencies(
+	std::vector<fs::FilePath> getStdLibDVMLinkingDependencies(
 		const options_types::StdLibOptions& standard_library_options
 	) {
 		if (!standard_library_options.stdActive()) return {};
@@ -294,8 +294,9 @@ namespace compiler::driver {
 			allStdlibArtifactsPresent(), "std DVM artifacts requested before they were compiled"
 		);
 
-		std::vector<fs::File> dependencies;
-		for (const auto& art: getStdLibDVMArtifacts()) dependencies.push_back(art.file);
+		std::vector<fs::FilePath> dependencies;
+		for (const auto& art: getStdLibDVMArtifacts())
+			dependencies.push_back(art.file.getFilePath());
 		return dependencies;
 	}
 

@@ -83,20 +83,9 @@ namespace compiler::driver {
 						auto value = js::getStringFromArray(
 							elem, base::strConcat("dvm_linking_options.", key), report
 						);
-						if (value) {
-							if constexpr (std::same_as<T, fs::File>) {
-								if (not fs::FilePath(value->str()).isRegularFile()) {
-									report(
-										base::strConcat("File `", *value, "` not found."),
-										std::string{},
-										true
-									);
-									had_error = true;
-									continue;
-								}
-							}
+						if (value)
 							target.emplace_back(T(value->str()));
-						} else
+						else
 							had_error = true;
 					}
 				};
