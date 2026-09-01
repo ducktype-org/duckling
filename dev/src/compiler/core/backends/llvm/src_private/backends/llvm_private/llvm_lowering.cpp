@@ -961,17 +961,6 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		/**
-		 * @brief Retrieves or inserts a built-in function prototype in the LLVM module.
-		 */
-		auto loadBuiltin(
-			const std::string_view             name,
-			llvm::Type*                        ret_type,
-			std::initializer_list<llvm::Type*> args
-		) -> llvm::FunctionCallee {
-			return module->getOrInsertFunction(name, llvm::FunctionType::get(ret_type, args, false));
-		}
-
 		llvm::Value* lowerCallCAbiInstruction(
 			const lir::Instruction&  lir_instruction,
 			llvm::IRBuilder<>&       builder,
@@ -1161,31 +1150,6 @@ namespace compiler::backend_llvm {
 				"Non default abi lowering."
 			);
 
-			if_opt_some(function_literal.builtin_kind_opt, builtin_kind) {
-				if (builtin_kind == lir::BuiltinFunctionKind::BoxAlloc) {
-					const auto value_to_box
-						= loadLIRValue(lir_instruction.arguments.at(1), builder);
-					const usize size
-						= module->getDataLayout().getTypeAllocSize(value_to_box->getType());
-					auto alloc_func
-						= loadBuiltin("builtin_alloc", builder.getPtrTy(), { builder.getInt64Ty() });
-					llvm::Value* allocated_ptr
-						= builder.CreateCall(alloc_func, { builder.getInt64(size) }, "box_ptr");
-					// @TODO: #1895 This is suboptimal. In the future class constructors should
-					// take the allocated memory pointer as a parameter and construct it
-					// in-place.
-					builder.CreateStore(value_to_box, allocated_ptr);
-					return allocated_ptr;
-				} else if (builtin_kind == lir::BuiltinFunctionKind::BoxFree) {
-					const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(1), builder);
-					auto       free_func   = loadBuiltin(
-                        "builtin_dealloc", builder.getVoidTy(), { builder.getPtrTy() }
-                    );
-					builder.CreateCall(free_func, { ptr_to_free });
-					return nullptr;
-				}
-			}
-
 			std::vector<llvm::Value*> args;
 			args.reserve(lir_instruction.arguments.size() - 1);
 			for (usize i = 1; i < lir_instruction.arguments.size(); i++)
@@ -1214,6 +1178,13 @@ namespace compiler::backend_llvm {
 		const auto value = builder.Create##op(lhs, rhs);                           \
 		storeOutput(lir_instruction.output.value(), value, builder);               \
 		break;                                                                     \
+	}
+#define LIR_2_LLVM_UNARY_OPERATION_CASE(op)                                           \
+	{                                                                                 \
+		const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder); \
+		const auto value    = builder.Create##op(argument);                           \
+		storeOutput(lir_instruction.output.value(), value, builder);                  \
+		break;                                                                        \
 	}
 
 		/**
@@ -1360,13 +1331,8 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(URem)
 			case IntegerSMod:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(SRem)
-			case IntegerNeg: {
-				const auto output   = lir_instruction.output.value();
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateNeg(argument);
-				storeOutput(output, value, builder);
-				break;
-			}
+			case IntegerNeg:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Neg)
 
 			/// Floatin point arithmetic ///
 			case FloatAdd:
@@ -1377,13 +1343,8 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FMul)
 			case FloatDiv:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FDiv)
-			case FloatNeg: {
-				const auto output   = lir_instruction.output.value();
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateFNeg(argument);
-				storeOutput(output, value, builder);
-				break;
-			}
+			case FloatNeg:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(FNeg)
 
 			/// Integer comparisons ///
 			case IntegerULt:
@@ -1429,12 +1390,21 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalAnd)
 			case BooleanOr:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalOr)
-			case BooleanNot: {
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateNot(argument);
-				storeOutput(lir_instruction.output.value(), value, builder);
-				break;
-			}
+			case BooleanNot:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Not)
+			/// Integer bitwise operations ///
+			case IntegerBitAnd:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(And)
+			case IntegerBitOr:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Or)
+			case IntegerBitXor:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Xor)
+			case IntegerShl:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Shl)
+			case IntegerShr:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(LShr)
+			case IntegerBitNot:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Not)
 			case Cast: {
 				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				const auto output   = lir_instruction.output.value();

@@ -375,20 +375,9 @@ namespace compiler::helios {
 					};
 				}
 				variant_case(defgen::BuiltinTemplatedSymbol, builtin) {
-					// `box_alloc(value: T) -> box T` and `box_free(b: box T) -> ()`.
-					const auto box_type = builtin.type.withReferenceKind(tsh::ReferenceKind::Box);
-
 					auto [arg_types, return_type]
 						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
 						switch (builtin.kind) {
-						case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
-							return { { builtin.type }, box_type };
-						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
-							return { { builtin.type.withReferenceKind(tsh::ReferenceKind::Ref) },
-								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
-						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
-							return { { builtin.type.withReferenceKind(tsh::ReferenceKind::Ref) },
-								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
 						case defgen::BuiltinTemplatedSymbol::Kind::MoveIn: {
 							const auto ptr_type = tsh::SymbolType<>::withDefaults(
 								ctx.query<tsh::QueryPointerType>({ builtin.type })

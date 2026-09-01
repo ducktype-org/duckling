@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 
 from .classes import Case, Test, TestNode
 from .context import RunContext
+from .resource_manager import ResourceAcquirer
 from .reporting import (
     CaseLog,
     TestStatistics,
@@ -305,7 +306,7 @@ def _finish_group(group: TestGroup, ctx: RunContext):
 
 def _execute_group_inline(group: TestGroup, ctx: RunContext):
     """
-    Runs a whole group on the calling thread: the `jobs == 1` mode and
+    Runs a whole group on the calling thread: the `--sequential` mode and
     the `NoParallel` phase, where cases run strictly one-by-one.
     """
     if ctx.clean:
@@ -328,15 +329,23 @@ def _launch_group(group: TestGroup, ctx: RunContext, on_done):
     """
     Schedules a group on the pool: a start task opens the node and runs
     `PreTest`, then submits one task per case; the task finishing the
-    last case runs `PostTest` and emits the section. No task ever blocks
-    waiting for another task's slot, so the pool cannot deadlock.
+    last case runs `PostTest` and emits the section. A case task only
+    ever waits for the threads of cases that are already running, so the
+    pool cannot deadlock.
     """
+    assert ctx.pool is not None
+    assert ctx.threads is not None
     pool = ctx.pool
-    assert pool is not None
+    threads = ctx.threads
 
     def case_task(slot: int):
         try:
-            _run_group_case(group, slot, ctx)
+            # `NeededThreads` of the case are held for its whole run, so
+            # the cases running at any moment never ask the machine for
+            # more than `-j` threads in total.
+            if not ctx.abort.is_set():
+                with ResourceAcquirer(threads, group.cases[slot][1].needed_threads):
+                    _run_group_case(group, slot, ctx)
         finally:
             with group.lock:
                 group.remaining -= 1

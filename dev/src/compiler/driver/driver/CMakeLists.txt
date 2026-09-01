@@ -1,8 +1,3 @@
-include(builtins.cmake)
-# ^ This exposes:
-# - GENERATED_DIR: the directory of the generated builtin sources, and
-# - BUILTINS_EMBEDS: the list of generated source filenames in GENERATED_DIR
-
 option(USE_FIXED_STD_PATH "Bake the default standard library path into the driver" ON)
 
 add_library(Driver
@@ -30,17 +25,18 @@ add_library(Driver
 	src/driver/repl_utils/repl_split_helpers.cpp
 	src/driver/repl_utils/repl_statement_helpers.cpp
 	src/driver/test_utils.cpp
-
-	${BUILTINS_EMBEDS}
 )
 
 if(USE_FIXED_STD_PATH)
 	target_compile_definitions(Driver PRIVATE STD_FIXED_PATH="${CMAKE_SOURCE_DIR}/src/lib")
 endif()
 
-add_dependencies(Driver builtins_embeds)
-
-make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts GlobalState Lexer Diagnostic Linker Archiver ModuleTree Packages CompilerTimeStats Repl JSON)
+make_module(Driver USES
+	Base QueryFramework SystemCommand HELIOS MIR LIR
+	LLVMBackend DVMBackend LibVM Artifacts GlobalState
+	Lexer Diagnostic Linker Archiver ModuleTree
+	Packages CompilerTimeStats Repl JSON OSUtils
+)
 
 duck_add_test(compiler driver tests/driver_test.cpp USES Driver Artifacts)
 duck_add_test(compiler manifest_json tests/manifest_json_test.cpp USES Driver)

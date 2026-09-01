@@ -179,10 +179,10 @@ namespace vm {
 		variant_match(getProcessState()) {
 			variant_case(ps::Completed, completed) { return api::Response{ completed.exit_value }; }
 			variant_case(ps::Panicked, panicked) {
-				return std::unexpected(api::StateError{ panicked.err });
+				return std::unexpected(api::OtherError{ panicked.err });
 			}
 			variant_default {
-				return std::unexpected(api::StateError("Execution did not complete"));
+				return std::unexpected(api::OtherError("Execution did not complete"));
 			}
 		}
 		CORE_UNREACHABLE();
@@ -333,6 +333,18 @@ namespace vm {
 		return memory.validateMemoryState();
 	}
 
+	std::expected<void, api::ApiError> SafeVMProcess::requestPauseOfVMThread(api::ThreadID thread_id
+	) {
+		std::unique_lock lock(api_lock);
+		auto             opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+
+		if (auto requested = opt_thread.value()->requestPause(); !requested.has_value())
+			return std::unexpected(api::ApiError{ api::PauseError{ requested.error() } });
+		return {};
+	}
+
 	std::expected<void, api::ApiError> SafeVMProcess::pauseVMThread(api::ThreadID thread_id) {
 		// API reads cannot happen while the thread is changing state.
 		std::unique_lock lock(api_lock);
@@ -453,10 +465,23 @@ namespace vm {
 		return code_position;
 	}
 
-	void SafeVMProcess::waitForBreakpoint() {
-		(void) waitForProcessState([](const ProcessState& s) {
-			return v_matches(s, ps::Paused) || ps::isTerminal(s);
-		});
+	std::expected<api::Response, api::ApiError> SafeVMProcess::waitForBreakpointAndReportPosition(
+		api::ThreadID thread_id
+	) {
+		if (!getVMThreadByID(thread_id))
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+
+		const ts::ThreadState state
+			= state_manager.waitForThreadState(thread_id, [](const ts::ThreadState& s) {
+				  return v_matches(s, ts::Paused) || ts::isTerminal(s);
+			  });
+
+		if (!v_matches(state, ts::Paused))
+			return std::unexpected(api::ApiError{ api::StateError{ base::strConcat(
+				"Thread ", thread_id.asInt(), " reached a terminal state instead of a breakpoint"
+			) } });
+
+		return getVMThreadCurrentPosition(thread_id);
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::setExecutionConfig(

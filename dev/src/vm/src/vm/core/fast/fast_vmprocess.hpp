@@ -65,6 +65,8 @@ namespace vm::fast {
 
 		std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
 
+		std::expected<void, api::ApiError> requestPauseOfVMThread(api::ThreadID thread_id) override;
+
 		std::expected<void, api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
 
 		std::expected<void, api::ApiError> stepVMThread(api::ThreadID thread_id) override;
@@ -85,7 +87,9 @@ namespace vm::fast {
 
 		void requestStopAllThreads() noexcept override;
 
-		void waitForBreakpoint() override;
+		std::expected<api::Response, api::ApiError> waitForBreakpointAndReportPosition(
+			api::ThreadID thread_id
+		) override;
 
 		std::expected<api::Response, api::ApiError> setExecutionConfig(
 			const api::ExecutionConfig& config

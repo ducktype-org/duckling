@@ -399,6 +399,16 @@ namespace vm {
 		if (thread.has_gil) thread.releaseGil();
 	}
 
+	SafeVMThread::ScopedBlockingWait::ScopedBlockingWait(SafeVMThread& t): thread(t) {
+		thread.reportAsSleeping();
+		thread.releaseGilIfHeld();
+	}
+
+	SafeVMThread::ScopedBlockingWait::~ScopedBlockingWait() {
+		thread.acquireGilIfNotHeld();
+		thread.reportAsRunning();
+	}
+
 #if defined(__clang__)
 // @TODO: #2582 suppress code deduplication in Clang
 #elif defined(__GNUG__)
@@ -629,6 +639,14 @@ namespace vm {
 		}
 		// Try to acquire GIL
 		acquireGil();
+	}
+
+	void SafeVMThread::releaseGilIfHeld() {
+		if (has_gil) releaseGil();
+	}
+
+	void SafeVMThread::acquireGilIfNotHeld() {
+		if (!has_gil) acquireGil();
 	}
 
 	void SafeVMThread::releaseGil() {

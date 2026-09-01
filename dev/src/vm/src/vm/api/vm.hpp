@@ -9,6 +9,7 @@
 #include <vm/api/data/execution_config.hpp>
 #include <vm/api/data/process_options.hpp>
 #include <vm/api/data/response.hpp>
+#include <vm/api/data/thread_id.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/vmvalue/ivmvalue.hpp>
@@ -66,6 +67,13 @@ namespace vm::api {
 	std::expected<void, ApiError> run(PID pid, const ProgramRunArguments& args = {});
 
 	/**
+	 * @brief Same as `run`, but executes the program synchronously on the caller's thread and
+	 * returns its exit value.
+	 * @return The return value of the program if it was ran successfully or an API error otherwise.
+	 */
+	std::expected<ExitValue, ApiError> runAwait(PID pid, const ProgramRunArguments& args = {});
+
+	/**
 	 * @brief Run a function with a given name on DVM.
 	 * @note The exit value of the called function can be retrieved by the `getExitValue` endpoint.
 	 *
@@ -98,8 +106,7 @@ namespace vm::api {
 	 * @return Nothing if the thread successfully stopped or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
-	std::expected<void, ApiError> join(PID pid, ThreadID thread_id);
-	std::expected<void, ApiError> join(PID pid);
+	std::expected<void, ApiError> join(PID pid, ThreadID thread_id = api::MAIN_THREAD_ID);
 
 	/**
 	 * @brief Request the main execution thread of the given process to stop running, kill the
@@ -125,23 +132,36 @@ namespace vm::api {
 	 * @return Code position of the next instruction to execute after the program is paused or an
 	 * error in which case the state is undefined.
 	 */
-	std::expected<response::CodePosition, ApiError> pause(PID pid, ThreadID thread_id);
-	std::expected<response::CodePosition, ApiError> pause(PID pid);
+	std::expected<response::CodePosition, ApiError> pause(
+		PID pid, ThreadID thread_id = api::MAIN_THREAD_ID
+	);
+
+	/**
+	 * @brief Asks every running thread to pause and waits for them to be paused.
+	 *
+	 * Blocks until every asked thread parked. A thread sleeping on IO pauses once it wakes up
+	 * from the IO.
+	 *
+	 * A thread is skipped when another control request is still in progress, or when it
+	 * finishes first. Skipped threads are not included in the result.
+	 *
+	 * @return The threads that are actually paused.
+	 */
+	std::expected<response::ThreadIDs, ApiError> pauseAll(PID pid);
 
 	/**
 	 * @brief Resume the execution of the program.
 	 * @return Nothing if the program successfully resumed or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
-	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id);
-	std::expected<void, ApiError> resume(PID pid);
+	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id = api::MAIN_THREAD_ID);
 
 	/**
-	 * @brief Perform one instruction of the program and pause.
-	 * @return Nothing if the program successfully stepped and paused or an API error otherwise, in
+	 * @brief Perform one instruction of the given (paused) thread and pause again.
+	 * @return Nothing if the thread successfully stepped and paused or an API error otherwise, in
 	 * which case the state is undefined.
 	 */
-	std::expected<void, ApiError> step(PID pid);
+	std::expected<void, ApiError> step(PID pid, ThreadID thread_id = api::MAIN_THREAD_ID);
 
 	/**
 	 * @brief Force the main execution thread of the given process to stop running and kill the
@@ -154,7 +174,9 @@ namespace vm::api {
 	/**
 	 * @brief Wait for breakpoint hit. Used by tests.
 	 */
-	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
+	std::expected<response::CodePosition, ApiError> waitForBreakpoint(
+		PID pid, ThreadID thread_id = api::MAIN_THREAD_ID
+	);
 
 	/**
 	 * @brief Returns the code position in the specified stack frame.

@@ -478,10 +478,6 @@ namespace compiler::lir {
 			return BuiltinFunctionKind::DvmAlloc;
 		case helios::BuiltinKind::DvmFree:
 			return BuiltinFunctionKind::DvmFree;
-		case helios::BuiltinKind::BoxAlloc:
-			return BuiltinFunctionKind::BoxAlloc;
-		case helios::BuiltinKind::BoxFree:
-			return BuiltinFunctionKind::BoxFree;
 		case helios::BuiltinKind::DvmPtrParts:
 			return BuiltinFunctionKind::DvmPtrParts;
 		case helios::BuiltinKind::DvmIsNullptr:
