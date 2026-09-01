@@ -10,6 +10,8 @@
 #include <ranges>
 
 namespace {
+	constexpr int DEFAULT_PADDING = 27;
+
 	std::string getFileName(const std::string& path) {
 		auto position = path.find_last_of("/\\");
 		if (position != std::string::npos) return path.substr(position + 1);
@@ -83,7 +85,8 @@ void appendHelpEntry(
 }
 
 std::string generateCommandArgumentsBlock(
-	const std::vector<clah::PositionalParameter>& positional_parameters, int padding = 27
+	const std::vector<clah::PositionalParameter>& positional_parameters,
+	int                                           padding = DEFAULT_PADDING
 ) {
 	std::stringstream output;
 	bool              header_printed = false;
@@ -104,7 +107,9 @@ std::string generateCommandArgumentsBlock(
 }
 
 std::string generateOptionsBlock(
-	const std::string& title, const std::vector<clah::Parameter>& params, int padding = 27
+	const std::string&                  title,
+	const std::vector<clah::Parameter>& params,
+	int                                 padding = DEFAULT_PADDING
 ) {
 	if (params.empty()) return "";
 
@@ -138,7 +143,9 @@ std::string generateOptionsBlock(
 	return output.str();
 }
 
-std::string generateSubcommandsBlock(const std::vector<clah::Clah>& subcommands, int padding = 27) {
+std::string generateSubcommandsBlock(
+	const std::vector<clah::Clah>& subcommands, int padding = DEFAULT_PADDING
+) {
 	if (subcommands.empty()) return "";
 	std::stringstream output;
 
