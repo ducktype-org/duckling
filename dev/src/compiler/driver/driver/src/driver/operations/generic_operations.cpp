@@ -556,7 +556,6 @@ namespace compiler::driver {
 					);
 				}
 
-				// Link the script object with builtins to produce a runnable executable.
 				auto output_name     = base::strConcat(script_context.script_file.stem(), ".exe");
 				auto output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(output_name.c_str())
@@ -564,7 +563,6 @@ namespace compiler::driver {
 
 				std::vector<artifacts::FileArtifact> objects;
 				objects.push_back(object_artifact);
-				objects.push_back(emitBuiltinLLVMObjectFile());
 
 				auto linking_result
 					= linker::linkExecutable(output_artifact, objects, linking_options);
@@ -701,7 +699,12 @@ namespace compiler::driver {
 			              ) -> std::expected<RunOutput, vm::api::ApiError> {
 							  const vm::PID pid = process.pid;
 							  // Deinitialize the process and execute global destructors.
-							  defer((void) vm::api::deinitAndValidate(pid));
+
+							  defer({
+								  auto deinit = vm::api::deinitAndValidate(pid);
+								  if (!deinit.has_value())
+									  std::cerr << vm::api::errorToString(deinit.error()) << '\n';
+							  });
 
 							  return vm::api::loadCode(pid, dvm_module.code)
 				                  .and_then([&] {
@@ -884,10 +887,6 @@ namespace compiler::driver {
 					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
 						target_exe.output_file_name
 					);
-
-					llvm_objects_by_root_module.atMaybe(task.root_module)
-						.value()
-						->push_back(emitBuiltinLLVMObjectFile());
 
 					auto linking_result = linker::linkExecutable(
 						output_file,

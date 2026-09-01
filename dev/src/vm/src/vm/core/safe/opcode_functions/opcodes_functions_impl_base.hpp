@@ -97,7 +97,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(check_strategy)(FUNCTION_ARGS) {
 		{
 			++instr;
-			if (thread.getExecutionRequestPendingFlag())
+			if (thread.isBreakRequested())
 				return handle_execution_break(instr, local_stack, frame, thread);
 		}
 		FUNCTION_CONT(0);
@@ -198,6 +198,45 @@ namespace vm {
 	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /)
 
 	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
+
+#define DEFINE_BITWISE_BINARY_OP(NAME, BITS_SIZE, RAW_TYPE, OP)                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) { \
+		{                                                                                \
+			auto       lhs = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg0);                 \
+			const auto rhs = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg1);                 \
+			lhs            = static_cast<RAW_TYPE>(lhs OP rhs);                          \
+			WRITE_TO_PLACE_ARG(RAW_TYPE, instr->arg0, lhs);                              \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}                                                                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+		{                                                                                \
+			auto       lhs = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg0);                 \
+			const auto rhs = READ_FROM_DIRECT_ARG(RAW_TYPE, instr->arg1);                \
+			lhs            = static_cast<RAW_TYPE>(lhs OP rhs);                          \
+			WRITE_TO_PLACE_ARG(RAW_TYPE, instr->arg0, lhs);                              \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}
+
+#define DEFINE_BITWISE_NOT_OP(BITS_SIZE, RAW_TYPE)                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(bit_not_p##BITS_SIZE)(FUNCTION_ARGS) {            \
+		{                                                                             \
+			auto value = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg0);                  \
+			WRITE_TO_PLACE_ARG(RAW_TYPE, instr->arg0, static_cast<RAW_TYPE>(~value)); \
+		}                                                                             \
+		FUNCTION_CONT(1);                                                             \
+	}
+
+#define DEFINE_INT_N_BITWISE(SIZE)                                  \
+	DEFINE_BITWISE_BINARY_OP(bit_and, SIZE, std::uint##SIZE##_t, &) \
+	DEFINE_BITWISE_BINARY_OP(bit_or, SIZE, std::uint##SIZE##_t, |)  \
+	DEFINE_BITWISE_BINARY_OP(bit_xor, SIZE, std::uint##SIZE##_t, ^) \
+	DEFINE_BITWISE_BINARY_OP(shl, SIZE, std::uint##SIZE##_t, <<)    \
+	DEFINE_BITWISE_BINARY_OP(shr, SIZE, std::uint##SIZE##_t, >>)    \
+	DEFINE_BITWISE_NOT_OP(SIZE, std::uint##SIZE##_t)
+
+	FOR_EACH(DEFINE_INT_N_BITWISE, 64, 32, 16, 8)
 
 #define FLOAT_64_TYPE f64
 #define FLOAT_32_TYPE f32
@@ -618,10 +657,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_p64)(FUNCTION_ARGS) {
 		{
-			thread.setProcessStatus(api::Sleeping{});
+			thread.reportAsSleeping();
 			i64 io_value = thread.safe_process.getIO().getInput<i64>(thread);
 			WRITE_TO_PLACE_ARG(i64, instr->arg0, io_value);
-			thread.setProcessStatus(api::Running{});
+			thread.reportAsRunning();
 		}
 		FUNCTION_CONT(1);
 	}
@@ -633,10 +672,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_p32)(FUNCTION_ARGS) {
 		{
-			thread.setProcessStatus(api::Sleeping{});
+			thread.reportAsSleeping();
 			i32 io_value = thread.safe_process.getIO().getInput<i32>(thread);
 			WRITE_TO_PLACE_ARG(i32, instr->arg0, io_value);
-			thread.setProcessStatus(api::Running{});
+			thread.reportAsRunning();
 		}
 		FUNCTION_CONT(1);
 	}

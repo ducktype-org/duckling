@@ -13,7 +13,6 @@ RUN apt-get update -y && \
     xz-utils \
     make \
     pkg-config \
-    xxd \
     ssh \
     gh \
     less \

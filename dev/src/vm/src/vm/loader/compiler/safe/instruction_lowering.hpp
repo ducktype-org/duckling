@@ -364,6 +364,50 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_log_xor_p8_p8, i) { addLow<Op_log_xor_p8_p8>(i.dst, i.src); }
 			instr_case(high::Op_log_xor_p8_imm, i) { addLow<Op_log_xor_p8_imm>(i.dst, i.src); }
 			instr_case(high::Op_log_not_p8, i) { addLow<Op_log_not_p8>(i.dst); }
+			instr_case(high::Op_bit_and_p64_p64, i) { addLow<Op_bit_and_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_bit_and_p64_imm, i) { addLow<Op_bit_and_p64_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_or_p64_p64, i) { addLow<Op_bit_or_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_bit_or_p64_imm, i) { addLow<Op_bit_or_p64_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_xor_p64_p64, i) { addLow<Op_bit_xor_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_bit_xor_p64_imm, i) { addLow<Op_bit_xor_p64_imm>(i.dst, i.src); }
+			instr_case(high::Op_shl_p64_p64, i) { addLow<Op_shl_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_shl_p64_imm, i) { addLow<Op_shl_p64_imm>(i.dst, i.src); }
+			instr_case(high::Op_shr_p64_p64, i) { addLow<Op_shr_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_shr_p64_imm, i) { addLow<Op_shr_p64_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_not_p64, i) { addLow<Op_bit_not_p64>(i.dst); }
+			instr_case(high::Op_bit_and_p32_p32, i) { addLow<Op_bit_and_p32_p32>(i.dst, i.src); }
+			instr_case(high::Op_bit_and_p32_imm, i) { addLow<Op_bit_and_p32_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_or_p32_p32, i) { addLow<Op_bit_or_p32_p32>(i.dst, i.src); }
+			instr_case(high::Op_bit_or_p32_imm, i) { addLow<Op_bit_or_p32_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_xor_p32_p32, i) { addLow<Op_bit_xor_p32_p32>(i.dst, i.src); }
+			instr_case(high::Op_bit_xor_p32_imm, i) { addLow<Op_bit_xor_p32_imm>(i.dst, i.src); }
+			instr_case(high::Op_shl_p32_p32, i) { addLow<Op_shl_p32_p32>(i.dst, i.src); }
+			instr_case(high::Op_shl_p32_imm, i) { addLow<Op_shl_p32_imm>(i.dst, i.src); }
+			instr_case(high::Op_shr_p32_p32, i) { addLow<Op_shr_p32_p32>(i.dst, i.src); }
+			instr_case(high::Op_shr_p32_imm, i) { addLow<Op_shr_p32_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_not_p32, i) { addLow<Op_bit_not_p32>(i.dst); }
+			instr_case(high::Op_bit_and_p16_p16, i) { addLow<Op_bit_and_p16_p16>(i.dst, i.src); }
+			instr_case(high::Op_bit_and_p16_imm, i) { addLow<Op_bit_and_p16_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_or_p16_p16, i) { addLow<Op_bit_or_p16_p16>(i.dst, i.src); }
+			instr_case(high::Op_bit_or_p16_imm, i) { addLow<Op_bit_or_p16_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_xor_p16_p16, i) { addLow<Op_bit_xor_p16_p16>(i.dst, i.src); }
+			instr_case(high::Op_bit_xor_p16_imm, i) { addLow<Op_bit_xor_p16_imm>(i.dst, i.src); }
+			instr_case(high::Op_shl_p16_p16, i) { addLow<Op_shl_p16_p16>(i.dst, i.src); }
+			instr_case(high::Op_shl_p16_imm, i) { addLow<Op_shl_p16_imm>(i.dst, i.src); }
+			instr_case(high::Op_shr_p16_p16, i) { addLow<Op_shr_p16_p16>(i.dst, i.src); }
+			instr_case(high::Op_shr_p16_imm, i) { addLow<Op_shr_p16_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_not_p16, i) { addLow<Op_bit_not_p16>(i.dst); }
+			instr_case(high::Op_bit_and_p8_p8, i) { addLow<Op_bit_and_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_bit_and_p8_imm, i) { addLow<Op_bit_and_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_or_p8_p8, i) { addLow<Op_bit_or_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_bit_or_p8_imm, i) { addLow<Op_bit_or_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_xor_p8_p8, i) { addLow<Op_bit_xor_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_bit_xor_p8_imm, i) { addLow<Op_bit_xor_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_shl_p8_p8, i) { addLow<Op_shl_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_shl_p8_imm, i) { addLow<Op_shl_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_shr_p8_p8, i) { addLow<Op_shr_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_shr_p8_imm, i) { addLow<Op_shr_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_bit_not_p8, i) { addLow<Op_bit_not_p8>(i.dst); }
 			instr_case(high::Op_cmpEq_p64_p64, i) { addLow<Op_cmpEq_p64_p64>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpEq_p64_imm, i) { addLow<Op_cmpEq_p64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_p64_p64, i) { addLow<Op_cmpNeq_p64_p64>(i.lhs, i.rhs); }

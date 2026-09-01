@@ -56,9 +56,15 @@ namespace vm::api {
 			FunctionRunArguments func_args;
 		};
 
-		struct Step {};
+		struct Step {
+			ThreadID thread_id;
+		};
 
-		struct WaitForBreakpoint {};
+		struct PauseAll {};
+
+		struct WaitForBreakpoint {
+			ThreadID thread_id;
+		};
 
 		struct ExecutionPosition {
 			base::Optional<usize> frame_idx;
@@ -128,6 +134,7 @@ namespace vm::api {
 		request::LoadFiles,
 		request::LoadCode,
 		request::Pause,
+		request::PauseAll,
 		request::Resume,
 		request::Stop,
 		request::Run,

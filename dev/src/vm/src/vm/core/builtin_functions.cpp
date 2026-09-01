@@ -117,16 +117,16 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinInputI64(SafeVMThread& thread) {
-		thread.setProcessStatus(api::Sleeping{});
+		thread.reportAsSleeping();
 		auto return_value = thread.safe_process.getIO().getInput<i64>(thread);
-		thread.setProcessStatus(api::Running{});
+		thread.reportAsRunning();
 		return return_value;
 	}
 
 	i32 FunctionHandlers::builtinInputChar(SafeVMThread& thread) {
-		thread.setProcessStatus(api::Sleeping{});
+		thread.reportAsSleeping();
 		const int c = thread.safe_process.getIO().getRawChar(thread);
-		thread.setProcessStatus(api::Running{});
+		thread.reportAsRunning();
 		return static_cast<i32>(c);
 	}
 
@@ -199,7 +199,10 @@ namespace vm::builtins {
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
 		thread.releaseGil();
-		auto result = vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx());
+		// @note: Don't call `api::runFunction` here as it takes `api_lock` (which is held by
+		// `pause`, `step` etc.). Doing that deadlocks when stepping over `call_builtinfunc
+		// builtin_start_thread` as it would take `api_lock` again.
+		auto result = thread.safe_process.startNewThreadFromExecutionThread(thread.getThreadCtx());
 		thread.acquireGil();
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
 		return static_cast<i64>(result.value().asInt());
