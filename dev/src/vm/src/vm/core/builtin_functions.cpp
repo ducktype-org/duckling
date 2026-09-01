@@ -117,12 +117,12 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinInputI64(SafeVMThread& thread) {
-		const SafeVMThread::ScopedIOWait io_wait(thread);
+		const SafeVMThread::ScopedBlockingWait io_wait(thread);
 		return thread.safe_process.getIO().getInput<i64>(thread);
 	}
 
 	i32 FunctionHandlers::builtinInputChar(SafeVMThread& thread) {
-		const SafeVMThread::ScopedIOWait io_wait(thread);
+		const SafeVMThread::ScopedBlockingWait io_wait(thread);
 		return static_cast<i32>(thread.safe_process.getIO().getRawChar(thread));
 	}
 
@@ -234,21 +234,26 @@ namespace vm::builtins {
 			return;
 		}
 
-		// Slow path: mutex is contended. Mark ourselves as waiting, then release the GIL so
-		// other DVM threads can run while we block.
+		// Slow path: mutex is contended. Mark ourselves as waiting, then report the thread as
+		// sleeping and release the GIL so other DVM threads can run while we block.
 		if_opt_some(detector, d) d.markThreadWaitingForMutex(thread_id, mutex_id);
-		thread.releaseGil();
-		while (!mutex->try_lock_for(std::chrono::milliseconds{ 500 })) {
-			if (thread.isTerminateRequested()) {
-				// Acquire GIL before throwing: exception handlers and destructors need exclusive
-				// access to process state (memory blocks, primitives, thread metadata) during cleanup.
-				thread.acquireGil();
-				if_opt_some(detector, d) d.markThreadStoppedWaiting(thread_id);
-				throw vm::KillProcessException{};
+		bool terminate_requested = false;
+		{
+			const SafeVMThread::ScopedBlockingWait blocking_wait(thread);
+			while (!mutex->try_lock_for(std::chrono::milliseconds{ 500 })) {
+				if (thread.isTerminateRequested()) {
+					terminate_requested = true;
+					break;
+				}
 			}
 		}
-		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
-		thread.acquireGil();
+		// The guard reacquired the GIL and reported the thread as running again: bytecode
+		// execution, exception handlers and destructors all need exclusive access to process
+		// state (memory blocks, primitives, thread metadata).
+		if (terminate_requested) {
+			if_opt_some(detector, d) d.markThreadStoppedWaiting(thread_id);
+			throw vm::KillProcessException{};
+		}
 		if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 	}
 
@@ -287,42 +292,32 @@ namespace vm::builtins {
 		// cv->wait atomically unlocks the mutex then relocks it before returning (on any path),
 		// so we mirror that in the detector: release ownership now, reacquire after the wait.
 		if_opt_some(detector, d) d.markThreadReleasedMutex(thread_id, mutex_id);
-		thread.releaseGil();
 		try {
+			const SafeVMThread::ScopedBlockingWait blocking_wait(thread);
+
 			const bool interrupted
 				= cv->wait(*mutex, [&thread] { return thread.isTerminateRequested(); });
 			if (interrupted) throw vm::KillProcessException{};
 		} catch (const vm::exceptions::VMRuntimeException&) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state during cleanup and propagation of VM runtime exceptions.
-			thread.acquireGil();
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw;
 		} catch (const vm::KillProcessException&) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state.
-			thread.acquireGil();
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw;
 		} catch (const std::exception& e) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state. Then wrap the exception so the VM can report ExecutionPanicked.
-			thread.acquireGil();
+			// Wrap the exception so the VM can report ExecutionPanicked.
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			std::string msg = "builtinWaitCV failed during condition variable wait: ";
 			msg += e.what();
 			throw vm::exceptions::VMRuntimeException(std::move(msg));
 		} catch (...) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process
-			// state. Then convert unknown exceptions into a VMRuntimeException.
-			thread.acquireGil();
+			// Convert unknown exceptions into a VMRuntimeException.
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw vm::exceptions::VMRuntimeException(
 				"builtinWaitCV failed during condition variable wait with an unknown exception"
 			);
 		}
-		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
-		thread.acquireGil();
+		// The guard reacquired the GIL: bytecode execution requires holding it.
 		if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 	}
 

@@ -145,18 +145,18 @@ namespace vm {
 		};
 
 		/**
-		 * @brief RAII guard for a blocking IO wait: reports the thread as sleeping and releases the
-		 * GIL on construction, then reacquires the GIL and reports the thread as running again when
-		 * the scope ends.
+		 * @brief RAII guard for a blocking wait (IO, mutex, a condition variable):
+		 * reports the thread as sleeping and releases the GIL on construction, then reacquires the
+		 * GIL and reports the thread as running again when the scope ends.
 		 *
 		 * @note The thread must be `Running` when the guard is created.
 		 */
-		struct ScopedIOWait {
+		struct ScopedBlockingWait {
 			SafeVMThread& thread;
-			explicit ScopedIOWait(SafeVMThread& t);
-			ScopedIOWait(const ScopedIOWait&)            = delete;
-			ScopedIOWait& operator=(const ScopedIOWait&) = delete;
-			~ScopedIOWait();
+			explicit ScopedBlockingWait(SafeVMThread& t);
+			ScopedBlockingWait(const ScopedBlockingWait&)            = delete;
+			ScopedBlockingWait& operator=(const ScopedBlockingWait&) = delete;
+			~ScopedBlockingWait();
 		};
 
 		/**

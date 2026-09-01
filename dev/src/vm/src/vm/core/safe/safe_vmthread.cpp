@@ -399,12 +399,12 @@ namespace vm {
 		if (thread.has_gil) thread.releaseGil();
 	}
 
-	SafeVMThread::ScopedIOWait::ScopedIOWait(SafeVMThread& t): thread(t) {
+	SafeVMThread::ScopedBlockingWait::ScopedBlockingWait(SafeVMThread& t): thread(t) {
 		thread.reportAsSleeping();
 		thread.releaseGilIfHeld();
 	}
 
-	SafeVMThread::ScopedIOWait::~ScopedIOWait() {
+	SafeVMThread::ScopedBlockingWait::~ScopedBlockingWait() {
 		thread.acquireGilIfNotHeld();
 		thread.reportAsRunning();
 	}

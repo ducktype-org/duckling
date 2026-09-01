@@ -659,7 +659,7 @@ namespace vm {
 		{
 			i64 io_value = 0;
 			{
-				const SafeVMThread::ScopedIOWait io_wait(thread);
+				const SafeVMThread::ScopedBlockingWait io_wait(thread);
 				io_value = thread.safe_process.getIO().getInput<i64>(thread);
 			}
 			// Write to a place only when the GIL is held.
@@ -677,7 +677,7 @@ namespace vm {
 		{
 			i32 io_value = 0;
 			{
-				const SafeVMThread::ScopedIOWait io_wait(thread);
+				const SafeVMThread::ScopedBlockingWait io_wait(thread);
 				io_value = thread.safe_process.getIO().getInput<i32>(thread);
 			}
 			// Write to a place only when the GIL is held.
