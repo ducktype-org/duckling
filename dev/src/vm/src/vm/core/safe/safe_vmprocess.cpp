@@ -179,10 +179,10 @@ namespace vm {
 		variant_match(getProcessState()) {
 			variant_case(ps::Completed, completed) { return api::Response{ completed.exit_value }; }
 			variant_case(ps::Panicked, panicked) {
-				return std::unexpected(api::StateError{ panicked.err });
+				return std::unexpected(api::OtherError{ panicked.err });
 			}
 			variant_default {
-				return std::unexpected(api::StateError("Execution did not complete"));
+				return std::unexpected(api::OtherError("Execution did not complete"));
 			}
 		}
 		CORE_UNREACHABLE();
