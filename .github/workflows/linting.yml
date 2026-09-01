@@ -127,6 +127,12 @@ jobs:
          python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose --no-fix
         shell: bash
 
+      - name: Run header checker
+        run: |
+         cd dev
+         python3 toolbox.py header-checker --branch origin/main --no-merge-base
+        shell: bash
+
       - name: Run issue checker
         env:
           GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
