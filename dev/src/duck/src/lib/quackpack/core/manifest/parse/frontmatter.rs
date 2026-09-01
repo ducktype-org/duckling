@@ -58,7 +58,7 @@ pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<FrontMat
 fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<FrontMatter> {
     let schema = generate_schema(path)?;
     let frontmatter = parse(&schema, path, ParseMode::FrontMatter, ctx)?;
-    FrontMatter::new(path.to_path_buf(), schema, frontmatter)
+    FrontMatter::new(path.to_path_buf(), schema, Box::new(frontmatter))
 }
 
 /// Try to capture a frontmatter from the given contents.
