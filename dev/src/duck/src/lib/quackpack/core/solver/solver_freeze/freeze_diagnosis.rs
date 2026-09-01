@@ -355,8 +355,8 @@ features:
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.into_manifest())),
-            (pkg_b, Box::new(manifest_b.into_manifest())),
+            (pkg_a, manifest_a.into_manifest()),
+            (pkg_b, manifest_b.into_manifest()),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -415,8 +415,8 @@ metadata:
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.into_manifest())),
-            (pkg_b, Box::new(manifest_b.into_manifest())),
+            (pkg_a, manifest_a.into_manifest()),
+            (pkg_b, manifest_b.into_manifest()),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -486,9 +486,9 @@ metadata:
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.into_manifest())),
-            (pkg_b, Box::new(manifest_b.into_manifest())),
-            (pkg_c, Box::new(manifest_c.into_manifest())),
+            (pkg_a, manifest_a.into_manifest()),
+            (pkg_b, manifest_b.into_manifest()),
+            (pkg_c, manifest_c.into_manifest()),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -574,10 +574,10 @@ metadata:
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let pkg_d = PackageId::new(identity_d, Version::new(4, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.into_manifest())),
-            (pkg_b, Box::new(manifest_b.into_manifest())),
-            (pkg_c, Box::new(manifest_c.into_manifest())),
-            (pkg_d, Box::new(manifest_d.into_manifest())),
+            (pkg_a, manifest_a.into_manifest()),
+            (pkg_b, manifest_b.into_manifest()),
+            (pkg_c, manifest_c.into_manifest()),
+            (pkg_d, manifest_d.into_manifest()),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -640,8 +640,8 @@ features:
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.into_manifest())),
-            (pkg_b, Box::new(manifest_b.into_manifest())),
+            (pkg_a, manifest_a.into_manifest()),
+            (pkg_b, manifest_b.into_manifest()),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: [].into(),

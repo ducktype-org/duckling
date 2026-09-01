@@ -53,7 +53,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     pub async fn explore(
         &self,
         root_path: PathBuf,
-        root_manifest: Manifest,
+        root_manifest: Box<Manifest>,
         root_features: HashSet<FeatureName>,
         mode: SolverMode,
     ) -> QuackResult<GatheredInfo> {
@@ -135,7 +135,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     fn fetch_root(
         &self,
         root_path: PathBuf,
-        root_manifest: Manifest,
+        root_manifest: Box<Manifest>,
         root_features: HashSet<FeatureName>,
         state: &mut GathererState,
         errors: &mut ErrorsLogger,
@@ -175,7 +175,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                         ),
                         root_version,
                     ),
-                    Box::new(root_manifest),
+                    root_manifest,
                 )]),
             },
         )))
