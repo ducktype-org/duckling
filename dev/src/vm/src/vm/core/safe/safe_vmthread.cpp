@@ -132,6 +132,7 @@ namespace vm {
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
 #endif
 			.bc                  = {},
+			.orig_bc             = {},
 			.local_stack_size    = 0,
 			.local_block_count   = func.result_types.size() + func.parameters.size(),
 			.arg_size            = 0,
@@ -178,6 +179,8 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
+		start_function.orig_bc = start_function.bc;
+
 		return start_function;
 	}
 
@@ -218,6 +221,7 @@ namespace vm {
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
 #endif
 			.bc                  = {},
+			.orig_bc = {},
 			.local_stack_size    = 72,
 			.local_block_count   = 7,
 			.arg_size            = 0,
@@ -388,6 +392,9 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
+
+		start_function.orig_bc = start_function.bc;
+
 		return start_function;
 	}
 

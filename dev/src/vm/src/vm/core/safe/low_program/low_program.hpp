@@ -35,6 +35,7 @@ namespace vm::low {
 		cf::ControlFlowGraph cfg;
 #endif
 		MicroBytecode bc;
+		MicroBytecode orig_bc;
 
 		/// The maximum size of the local variables on stack required by the function frame.
 		usize local_stack_size;
