@@ -39,6 +39,9 @@ std_artifacts_path_flag: "--custom-std-artifacts-path @{case_std_artifacts}"
 enable_conc_deterministic_tests: "true"
 # Number of duckc worker threads used for compilation and determinism checks.
 duckc_worker_count: "3"
+# Each case occupies that many threads, so the scheduler runs fewer cases at
+# once instead of oversubscribing the machine (and blowing the `TimeOut`s).
+NeededThreads: "@{duckc_worker_count}"
 
 # Path to the local helper script used by the deterministic pre-check.
 compile_determinism_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/concurrent_compile_determinism.py"
