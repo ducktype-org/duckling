@@ -78,7 +78,6 @@ You can install it using:
 ```bash
 brew install llvm@23
 brew install llvm@19
-brew install 
 ```
 
 Installing using homebrew doesn't expose the aliasys visible from the terminal session 
