@@ -140,17 +140,21 @@ namespace vm {
 
 		std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
 
+		std::expected<void, api::ApiError> requestPauseOfVMThread(api::ThreadID thread_id) override;
+
 		std::expected<void, api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
 
 		std::expected<void, api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
 		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
-			api::ThreadID thread_id, base::Optional<usize> frame_idx
+			api::ThreadID thread_id, base::Optional<usize> frame_idx = {}
 		) override;
 
 		void notifyVMThreadWaiters(api::ThreadID thread_id) override;
 
-		void waitForBreakpoint() override;
+		std::expected<api::Response, api::ApiError> waitForBreakpointAndReportPosition(
+			api::ThreadID thread_id
+		) override;
 
 		std::expected<api::Response, api::ApiError> setExecutionConfig(
 			const api::ExecutionConfig& config

@@ -2,6 +2,7 @@
 
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
+#include <vm/api/data/thread_id.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
@@ -32,33 +33,27 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<response::CodePosition, ApiError> pause(PID pid) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Pause{ ThreadID{ 0 } }))
-		    .and_then(mapOrWrongResponse<response::CodePosition>);
-	}
-
 	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Resume{ thread_id }))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> resume(PID pid) {
+	std::expected<void, ApiError> step(PID pid, ThreadID thread_id) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Resume{ ThreadID{ 0 } }))
+		    .doRequest(SupervisorRequest(pid, request::Step{ thread_id }))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> step(PID pid) {
+	std::expected<response::ThreadIDs, ApiError> pauseAll(PID pid) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Step{}))
-		    .transform(ignoreResponse);
+		    .doRequest(SupervisorRequest(pid, request::PauseAll{}))
+		    .and_then(mapOrWrongResponse<response::ThreadIDs>);
 	}
 
-	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid) {
+	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid, ThreadID thread_id) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::WaitForBreakpoint{}))
+		    .doRequest(SupervisorRequest(pid, request::WaitForBreakpoint{ thread_id }))
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
@@ -117,12 +112,6 @@ namespace vm::api {
 	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::SetExecutionConfig{ config }))
-		    .transform(ignoreResponse);
-	}
-
-	std::expected<void, ApiError> join(PID pid) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Join{ ThreadID{ 0 } }))
 		    .transform(ignoreResponse);
 	}
 

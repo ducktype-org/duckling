@@ -260,16 +260,8 @@ fn get_solver_answer(
     drop(fetcher_lock);
     debug!(%should_run_engine);
     match should_run_engine {
-        ShouldRunSolverEngine::No(answer) => {
-            pcx.ctx()
-                .console()
-                .info("no need to run the solver engine")?;
-            Ok(answer)
-        }
-        ShouldRunSolverEngine::Yes(solver) => {
-            pcx.ctx().console().info("starting the solver engine")?;
-            solver.solve()
-        }
+        ShouldRunSolverEngine::No(answer) => Ok(answer),
+        ShouldRunSolverEngine::Yes(solver) => solver.solve(pcx.ctx()),
     }
 }
 

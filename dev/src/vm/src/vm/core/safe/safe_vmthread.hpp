@@ -69,7 +69,7 @@ namespace vm {
 		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
-		RuntimeData(Ref<ThreadStack> stack, GlobalBufferPointers global_buffer_pointers):
+		RuntimeData(Ref<ThreadStack> stack, GlobalBufferPointersByte global_buffer_pointers):
 			  frame_stack_base(stack->getFrameStack()->data()),
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
 			  frame_stack_current(stack->getFrameStack()->data()),
@@ -204,6 +204,16 @@ namespace vm {
 		void stepGil();
 
 		/**
+		 * @brief Releases the GIL if it's taken.
+		 */
+		void releaseGilIfHeld() override;
+
+		/**
+		 * @brief Reacquires the GIL if it's not taken already.
+		 */
+		void acquireGilIfNotHeld() override;
+
+		/**
 		 * @brief Releases GIL.
 		 */
 		void releaseGil();
@@ -239,7 +249,7 @@ namespace vm {
 		 * For now only the VMProcess calls this function after the global data memory is
 		 * reallocated and the pointers change.
 		 */
-		void updateGlobalDataBufferPointers(GlobalBufferPointers global_buffer_pointers);
+		void updateGlobalDataBufferPointers(GlobalBufferPointersByte global_buffer_pointers);
 	};
 
 	/**

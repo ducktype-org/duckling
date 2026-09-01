@@ -1,0 +1,26 @@
+const A: i64 = 12;
+const B: i64 = 10;
+const C: i64 = 7;
+
+const CONST_AND: i64 = A & B;
+const CONST_OR: i64  = A | B;
+const CONST_XOR: i64 = A ^ B;
+const CONST_XOR_SELF: i64 = A ^ A;
+const CONST_SHL: i64 = 5 << 3;
+const CONST_SHR: i64 = 40 >> 3;
+const CONST_NOT: i64 = ~A;
+const CONST_NOT_NOT: i64 = ~(~A);
+const CONST_COMPLEX: i64 = ((A & B) | (B ^ C)) << 2;
+
+const AND_I32: i32 = 12i32 & 10i32;
+const OR_I16: i16  = 12i16 | 10i16;
+const XOR_I8: i8   = 12i8 ^ 10i8;
+
+const DE_MORGAN_EQ: bool = ~(A & B) == ((~A) | (~B));
+
+fun fnBitwise(a: i64, b: i64) -> i64 = {
+    var and_res = a & b;
+    var not_res = ~a;
+    var xor_res = a ^ b;
+    return (a << 2) | (b >> 1);
+}

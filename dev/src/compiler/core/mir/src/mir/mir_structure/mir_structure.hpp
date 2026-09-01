@@ -51,6 +51,13 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerDiv,
 	IntegerMod,
 
+	IntegerBitAnd,
+    IntegerBitOr,
+    IntegerBitXor,
+    IntegerBitNot,
+    IntegerShl,
+    IntegerShr,
+
 	IntegerLt,    // Less than
 	IntegerGt,    // Greater than
 	IntegerLteq,  // Less than or equal to
