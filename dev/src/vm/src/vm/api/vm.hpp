@@ -67,6 +67,13 @@ namespace vm::api {
 	std::expected<void, ApiError> run(PID pid, const ProgramRunArguments& args = {});
 
 	/**
+	 * @brief Same as `run`, but executes the program synchronously on the caller's thread and
+	 * returns it's return value.
+	 * @return The return value of the program if it was ran successfully or an API error otherwise.
+	 */
+	std::expected<ExitValue, ApiError> runAwait(PID pid, const ProgramRunArguments& args = {});
+
+	/**
 	 * @brief Run a function with a given name on DVM.
 	 * @note The exit value of the called function can be retrieved by the `getExitValue` endpoint.
 	 *
