@@ -35,6 +35,7 @@ namespace {
                     "Comparison between different numeric types is not supported"
                 );
                 auto rhs_num = rhs_num_opt.value();
+                // clang-format off
                 switch (operation) {
                 case OpKind::cmpEq:
                 case OpKind::fcmpEq:
@@ -59,10 +60,9 @@ namespace {
                 case OpKind::ucmpLe:
                     return lhs_num <= rhs_num;
                 default:
-                    // clang-format off
                     CORE_PANIC("Unhandled comparison operation in compTimeEvaluateComparison");
-                    // clang-format on
                 }
+                // clang-format on
             },
             lhs_numeric.getStorage()
         );
