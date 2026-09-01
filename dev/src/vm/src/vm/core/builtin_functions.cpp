@@ -247,9 +247,7 @@ namespace vm::builtins {
 				}
 			}
 		}
-		// The guard reacquired the GIL and reported the thread as running again: bytecode
-		// execution, exception handlers and destructors all need exclusive access to process
-		// state (memory blocks, primitives, thread metadata).
+		// The guard reacquired the GIL and reported the thread as running again.
 		if (terminate_requested) {
 			if_opt_some(detector, d) d.markThreadStoppedWaiting(thread_id);
 			throw vm::KillProcessException{};
