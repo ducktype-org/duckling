@@ -1,11 +1,7 @@
 #pragma once
 
 #include <base/extend_cpp/strongly_typed_id.hpp>
-
-namespace std {
-	template<class Key>
-	struct hash;
-}
+#include <functional>
 
 namespace pst {
 	/**

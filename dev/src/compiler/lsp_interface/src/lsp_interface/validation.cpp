@@ -16,6 +16,8 @@
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
+#include <sstream>
+
 namespace lsp {
 	using namespace compiler;
 

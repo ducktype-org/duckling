@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <functional>
 #include <iostream>
+#include <sstream>
 
 namespace vm {
 	// Decisions made are based on this great article:

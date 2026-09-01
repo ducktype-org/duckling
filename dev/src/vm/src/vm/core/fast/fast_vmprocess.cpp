@@ -5,6 +5,8 @@
 #include <vm/loader/logger.hpp>
 #include <vm/utils/vm_not_implemented.hpp>
 
+#include <sstream>
+
 namespace vm::fast {
 	FastVMProcess::FastVMProcess(PID pid): IVMProcess(pid) {
 		vm_threads.add(*this, compiler.getProgramBase(), &functions);

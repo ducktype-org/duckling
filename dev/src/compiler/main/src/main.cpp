@@ -754,10 +754,13 @@ clah::Clah getClahForMain() {
 					auto manifest_content = manifest_file.getContent();
 					auto file_content     = manifest_content.view();
 
+					const auto* content_begin
+						= reinterpret_cast<const char*>(file_content.getBegin());
+
 					nlohmann::json manifest_json;
 					try {
 						manifest_json = nlohmann::json::parse(
-							file_content.getBegin(), file_content.getBegin() + file_content.size()
+							content_begin, content_begin + file_content.size()
 						);
 					} catch (const nlohmann::json::parse_error& e) {
 						CORE_USER_LOG(base::strConcat(
