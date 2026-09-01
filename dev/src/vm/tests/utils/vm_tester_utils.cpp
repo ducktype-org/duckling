@@ -9,6 +9,106 @@
 
 #include <variant>
 
+namespace {
+	using vm::api::ProcStatus;
+
+	template<typename Alternative>
+	constexpr usize statusIndex() {
+		return base::variantTypeIndex<ProcStatus, Alternative>();
+	}
+}
+
+std::string_view VmTestSuite::TransitionLog::statusName(usize index) {
+	static constexpr std::array<std::string_view, STATUS_COUNT> NAMES = [] {
+		std::array<std::string_view, STATUS_COUNT> names{};
+		names[statusIndex<vm::api::NotStarted>()]         = "NotStarted";
+		names[statusIndex<vm::api::Running>()]            = "Running";
+		names[statusIndex<vm::api::Paused>()]             = "Paused";
+		names[statusIndex<vm::api::Sleeping>()]           = "Sleeping";
+		names[statusIndex<vm::api::ExecutionStopping>()]  = "ExecutionStopping";
+		names[statusIndex<vm::api::ExecutionCompleted>()] = "ExecutionCompleted";
+		names[statusIndex<vm::api::ExecutionStopped>()]   = "ExecutionStopped";
+		names[statusIndex<vm::api::ExecutionPanicked>()]  = "ExecutionPanicked";
+		return names;
+	}();
+	return NAMES.at(index);
+}
+
+bool VmTestSuite::TransitionLog::legalStatusEdge(usize from, usize to) {
+	constexpr usize NOT_STARTED = statusIndex<vm::api::NotStarted>();
+	constexpr usize RUNNING     = statusIndex<vm::api::Running>();
+	constexpr usize PAUSED      = statusIndex<vm::api::Paused>();
+	constexpr usize SLEEPING    = statusIndex<vm::api::Sleeping>();
+	constexpr usize STOPPING    = statusIndex<vm::api::ExecutionStopping>();
+	constexpr usize COMPLETED   = statusIndex<vm::api::ExecutionCompleted>();
+	constexpr usize STOPPED     = statusIndex<vm::api::ExecutionStopped>();
+	constexpr usize PANICKED    = statusIndex<vm::api::ExecutionPanicked>();
+
+	static const auto matrix = [] {
+		std::array<std::array<bool, STATUS_COUNT>, STATUS_COUNT> m{};
+		const auto allow = [&m](usize f, std::initializer_list<usize> tos) {
+			for (usize t: tos) m.at(f).at(t) = true;
+		};
+		allow(NOT_STARTED, { RUNNING, PAUSED, SLEEPING, STOPPING, COMPLETED, STOPPED, PANICKED });
+		allow(RUNNING, { PAUSED, SLEEPING, STOPPING, COMPLETED, STOPPED, PANICKED });
+		// Paused and Sleeping reach each other directly in a multi-threaded process, without the
+		// aggregate passing through Running: the aggregate ranks Sleeping above Paused, so a
+		// process with one sleeping and one paused thread reports Sleeping, and it reports Paused
+		// the moment the sleeping thread terminates.
+		allow(PAUSED, { RUNNING, SLEEPING, STOPPING, COMPLETED, STOPPED, PANICKED });
+		allow(SLEEPING, { RUNNING, PAUSED, STOPPING, COMPLETED, STOPPED, PANICKED });
+		allow(STOPPING, { COMPLETED, STOPPED, PANICKED });
+		// A terminal process can be re-run: the reset emits NotStarted first.
+		allow(COMPLETED, { NOT_STARTED, RUNNING });
+		allow(STOPPED, { NOT_STARTED, RUNNING });
+		allow(PANICKED, { NOT_STARTED, RUNNING });
+		return m;
+	}();
+	return matrix.at(from).at(to);
+}
+
+VmTestSuite::ScopedStatusLog::ScopedStatusLog(VmTestSuite& test, vm::PID pid):
+	  listener([this](const ProcStatus& status) { log.record(status); }) {
+	test.assertTrue(
+		vm::api::attachStatusListener(pid, &listener).has_value(), "Attach listener failed"
+	);
+}
+
+void VmTestSuite::validateTransitions(const TransitionLog& log, std::string_view what) {
+	const auto illegal_edge = log.findIllegalEdge();
+	assertTrue(
+		!illegal_edge.has_value(),
+		illegal_edge.has_value() ? base::strConcat(*illegal_edge, " (", what, ")") : ""
+	);
+}
+
+vm::PID VmTestSuite::spawnProcess() {
+	auto spawned = vm::api::spawn();
+	assertTrue(spawned.has_value(), "Spawn failed");
+	return spawned.value().pid;
+}
+
+vm::PID VmTestSuite::spawnAndLoad(const std::string& dbc_filename) {
+	const vm::PID pid    = spawnProcess();
+	auto          loaded = vm::api::loadFiles(pid, { fs::File(path(dbc_filename)) });
+	assertTrue(
+		loaded.has_value(), base::strConcat("Load of '", dbc_filename, "' failed: ", errorOf(loaded))
+	);
+	return pid;
+}
+
+void VmTestSuite::releaseUntilTerminal(vm::PID pid, const std::string& function_name) {
+	for (u64 instr = 0; instr <= MAX_BREAKPOINT_INDEX; instr++)
+		(void) vm::api::setBreakpoint(pid, base::StrID(function_name), instr, false);
+
+	while (true) {
+		auto status = vm::api::getExecutionStatus(pid);
+		if (!status.has_value() || vm::api::isStatusTerminal(status.value())) return;
+		(void) vm::api::resume(pid);
+		std::this_thread::yield();
+	}
+}
+
 vm::PID VmTestSuite::initProcess(
 	const vm::api::ProcessConfig& config, vm::api::ExecutionConfig execution_config
 ) {

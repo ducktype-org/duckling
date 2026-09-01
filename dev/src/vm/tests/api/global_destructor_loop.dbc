@@ -1,0 +1,35 @@
+# Endless program with a global that has a destructor writing to the output. `deinitAndValidate`
+# runs the destructors as bytecode after the run already ended, so the write is how a test observes
+# that they ran even when the run was stopped mid-instruction.
+
+global_data g i64 {
+	constructor: g_ctor,
+	destructor: g_dtor
+}
+
+function g_ctor {} -> {} {
+	mov_p64_imm				g, 7;
+	ret;
+}
+
+function g_dtor {} -> {} {
+	init_pany_type			out, i64;
+
+	mov_p64_p64				out, g;
+	output_p64				out;
+
+	deinit; # out
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type			tmp, i64;
+
+	mov_p64_p64				tmp, g;
+	label Loop;
+		cmpGt_p64_imm		tmp, 0;
+		jmpIf_label			Loop;
+
+	deinit; # tmp
+	ret;
+}

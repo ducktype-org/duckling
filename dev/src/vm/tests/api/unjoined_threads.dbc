@@ -1,0 +1,27 @@
+# Main starts two short-lived workers and returns without joining them. Every thread reaches a
+# terminal state, but the OS thread handles of the workers are never reaped from bytecode.
+
+global_data bumped i64 {}
+
+function bump {} -> {} {
+	init_pany_type			tmp, i64;
+
+	mov_p64_p64				tmp, bumped;
+	add_p64_imm				tmp, 1;
+	mov_p64_p64				bumped, tmp;
+
+	deinit; # tmp
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type			t1, i64;
+	set_threadctx			bump;
+	call_builtinfunc		builtin_start_thread;
+
+	init_pany_type			t2, i64;
+	set_threadctx			bump;
+	call_builtinfunc		builtin_start_thread;
+
+	ret;
+}
