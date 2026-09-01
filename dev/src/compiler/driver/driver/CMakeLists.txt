@@ -31,7 +31,12 @@ if(USE_FIXED_STD_PATH)
 	target_compile_definitions(Driver PRIVATE STD_FIXED_PATH="${CMAKE_SOURCE_DIR}/src/lib")
 endif()
 
-make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts GlobalState Lexer Diagnostic Linker Archiver ModuleTree Packages CompilerTimeStats Repl JSON)
+make_module(Driver USES
+	Base QueryFramework SystemCommand HELIOS MIR LIR
+	LLVMBackend DVMBackend LibVM Artifacts GlobalState
+	Lexer Diagnostic Linker Archiver ModuleTree
+	Packages CompilerTimeStats Repl JSON OSUtils
+)
 
 duck_add_test(compiler driver tests/driver_test.cpp USES Driver Artifacts)
 duck_add_test(compiler manifest_json tests/manifest_json_test.cpp USES Driver)

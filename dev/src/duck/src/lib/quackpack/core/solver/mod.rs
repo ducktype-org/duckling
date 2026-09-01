@@ -116,7 +116,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             .info("starting gathering the dependency graph")?;
         let gatherer = Gatherer::new(fetcher, git_access);
 
-        let root_manifest = self.root_pcx.package().manifest().clone();
+        let root_manifest = Box::new(self.root_pcx.package().manifest().clone());
         let root_features = root_manifest
             .features()
             .all_features()
@@ -127,7 +127,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             .current_freeze
             .get_prev_freeze_manifests(&gatherer)
             .await?;
-        prev_freeze_manifests.insert(self.root_pkg, Box::new(root_manifest.clone()));
+        prev_freeze_manifests.insert(self.root_pkg, root_manifest.clone());
         let (maximal_valid_freeze, is_root_satisfied) = self
             .current_freeze
             .find_maximal_correct_dep_solution(&prev_freeze_manifests, fetcher)
@@ -179,25 +179,24 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     #[tracing::instrument(skip_all)]
     async fn run_solver_gatherer<Access: GitAccess>(
         gatherer: &Gatherer<'_, '_, Access>,
-        root_manifest: Manifest,
+        mut root_manifest: Box<Manifest>,
         root_path: PathBuf,
         root_features: HashSet<FeatureName>,
         freeze: &SolverFreeze,
         mode: SolverMode,
     ) -> QuackResult<GatheredInfo> {
-        let root_manifest_for_gathering =
-            Self::prepare_root_manifest_for_gathering(root_manifest, freeze)?;
+        Self::prepare_root_manifest_for_gathering(&mut root_manifest, freeze)?;
         gatherer
-            .explore(root_path, root_manifest_for_gathering, root_features, mode)
+            .explore(root_path, root_manifest, root_features, mode)
             .await
     }
 
     /// Helper for [`Self::run_solver_gatherer`].
     /// Retains only unsatisfied dependencies in the root package's manifest, so that it can be used in gathering.
     fn prepare_root_manifest_for_gathering(
-        mut root_manifest: Manifest,
+        root_manifest: &mut Manifest,
         freeze: &SolverFreeze,
-    ) -> QuackResult<Manifest> {
+    ) -> QuackResult<()> {
         let Some(root_freeze) = freeze.package_freezes.get(&freeze.main_pkg) else {
             qp_bail_internal!("maximal valid freeze without main package freeze {freeze:#?}")
         };
@@ -209,7 +208,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
                     .dependencies_realization
                     .contains_key(&dep.effective_name())
             });
-        Ok(root_manifest)
+        Ok(())
     }
 }
 
