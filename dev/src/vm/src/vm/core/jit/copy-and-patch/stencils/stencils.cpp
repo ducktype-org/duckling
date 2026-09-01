@@ -4,7 +4,6 @@
 #include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 
 namespace vm::jit::cnp {
-
 // for now only a single(ext-less) instruction
 // jitable_interface.py depends on the exact fully-qualified name
 #define HANDLE_MICRO_INSTR(opcode_name)                                               \
@@ -21,5 +20,4 @@ namespace vm::jit::cnp {
 	}
 #include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 #undef HANDLE_MICRO_INSTR
-
 }
