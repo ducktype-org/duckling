@@ -2258,8 +2258,9 @@ private:
 			constexpr auto U32_137   = NumericValue{ u32{ 137 } };
 			constexpr auto I64_N1234 = NumericValue{ i64{ -1'234 } };
 			constexpr auto U64_1234  = NumericValue{ u64{ 1'234 } };
-			constexpr auto INT_MIN   = NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
-			const auto     str1
+			constexpr auto MIN_INT64_VAL
+				= NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
+			const auto str1
 				= CompileTimeValue{ CompileTimeValue::CharSliceValue{ base::StrID{ "strABC" } } };
 			const auto str2 = CompileTimeValue{ CompileTimeValue::StringClassValue{
 				base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
@@ -2267,9 +2268,9 @@ private:
 				= CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
 
 			const std::vector<CompileTimeValue> ctvs
-				= { false,  true,     F_1,     D_1,       I8_N7,    U8_7,     I16_N42,
-				    U16_42, I32_N137, U32_137, I64_N1234, U64_1234, INT_MIN,  'B',
-				    '^',    str1,     str2,    UNIT,      tuple,    symbol_1, symbol_2 };
+				= { false,  true,     F_1,     D_1,       I8_N7,    U8_7,          I16_N42,
+				    U16_42, I32_N137, U32_137, I64_N1234, U64_1234, MIN_INT64_VAL, 'B',
+				    '^',    str1,     str2,    UNIT,      tuple,    symbol_1,      symbol_2 };
 
 			for (auto&& it: ctvs) result += compiler::helios::mangler::mangleCTV(ctx, it) + ' ';
 			return result;
