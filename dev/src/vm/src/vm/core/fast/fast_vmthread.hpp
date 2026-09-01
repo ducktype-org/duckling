@@ -13,6 +13,7 @@ namespace vm::fast {
 
 	class FastVMThread: public vm::IVMThread {
 		friend class FastExecutor;
+		friend class FastVMProcess;
 
 	public:
 		FastVMThread(

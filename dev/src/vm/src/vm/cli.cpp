@@ -34,7 +34,10 @@ int cli(
 	          .and_then([&](vm::api::ProcessInfo info) -> std::expected<i64, vm::api::ApiError> {
 				  const vm::PID pid = info.pid;
 				  // Deinitialize the process and execute global destructors.
-				  defer((void) vm::api::deinitAndValidate(pid));
+				  defer({
+					  auto deinit = vm::api::deinitAndValidate(pid);
+					  if (!deinit.has_value()) std::cerr << convertError(deinit.error()) << '\n';
+				  });
 
 				  return std::expected<void, vm::api::ApiError>{}
 		              .and_then([&] -> std::expected<void, vm::api::ApiError> {

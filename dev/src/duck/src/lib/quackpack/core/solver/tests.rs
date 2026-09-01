@@ -210,7 +210,7 @@ dependencies:
     else {
         panic!()
     };
-    let new_freeze = solver.solve().unwrap().new_freeze;
+    let new_freeze = solver.solve(&ctx).unwrap().new_freeze;
     assert_eq!(new_freeze.main_pkg, pkg_root);
     assert_eq!(
         new_freeze.package_freezes,
@@ -409,7 +409,7 @@ dependencies:
     else {
         panic!()
     };
-    let new_freeze = solver.solve().unwrap().new_freeze;
+    let new_freeze = solver.solve(&ctx).unwrap().new_freeze;
     assert_eq!(new_freeze.main_pkg, pkg_root);
     assert_eq!(
         new_freeze.package_freezes,

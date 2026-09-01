@@ -33,6 +33,10 @@ namespace vm::fast {
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		) override;
 
+		[[nodiscard]] std::expected<void, api::ApiError> validateRunArguments(
+			const std::string& func_name, const RunArguments& run_arguments
+		) const override;
+
 		std::expected<api::Response, api::ApiError> runFunction(
 			const std::string& func_name, const RunArguments& run_arguments
 		) override;
@@ -59,11 +63,13 @@ namespace vm::fast {
 
 		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
 
-		base::Optional<api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
 
-		base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> requestPauseOfVMThread(api::ThreadID thread_id) override;
 
-		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
+
+		std::expected<void, api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
 		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
 			api::ThreadID thread_id, base::Optional<usize> frame_idx
@@ -77,9 +83,13 @@ namespace vm::fast {
 			api::ThreadID thread_id, u64 frame_index
 		) override;
 
-		void notifyPausedVMThread(api::ThreadID thread_id) override;
+		void notifyVMThreadWaiters(api::ThreadID thread_id) override;
 
-		void waitForBreakpoint() override;
+		void requestStopAllThreads() noexcept override;
+
+		std::expected<api::Response, api::ApiError> waitForBreakpointAndReportPosition(
+			api::ThreadID thread_id
+		) override;
 
 		std::expected<api::Response, api::ApiError> setExecutionConfig(
 			const api::ExecutionConfig& config
@@ -91,13 +101,13 @@ namespace vm::fast {
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
-		std::vector<api::ThreadID> getAllThreadIDs() override;
+		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
+
+		[[nodiscard]] std::vector<api::ThreadID> unjoinedThreadIds() const override;
 
 		FastVMThread& getMainVMThread();
 
 		base::Optional<Ref<FastVMThread>> getVMThreadByID(api::ThreadID thread_id);
-
-		api::ThreadID getMainThreadID() override;
 
 	private:
 		base::StableObjectPool<FastVMThread, api::ThreadID, false, true> vm_threads;

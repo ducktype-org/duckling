@@ -1809,6 +1809,8 @@ private:
 			= "Division by zero in compile-time expression evaluation.";
 		const std::string_view mod_by_zero
 			= "Modulo by zero in compile-time expression evaluation.";
+		const std::string_view invalid_shift
+			= "Invalid shift amount in compile-time expression evaluation.";
 
 		// ======================= Failing arithmetic in tree eval =======================
 		{
@@ -1816,25 +1818,40 @@ private:
 			checkForErrorOnCompileModule(R"(const A: i64 = 1 % 0;)", { mod_by_zero }, 1);
 			checkForErrorOnCompileModule(R"(const A: f64 = 1.0 % 0.0;)", { mod_by_zero }, 1);
 			checkForErrorOnCompileModule(R"(const A: i64 = -(1 / 0);)", { div_by_zero }, 1);
+
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 << 32;)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 << 64;)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i64 = 1i64 >> 64;)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 >> 32;)", { invalid_shift }, 1);
+
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 << (-1);)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i64 = 10i64 >> (-5);)", { invalid_shift }, 1);
 		}
 
 		// ======================= Failure propagation through sub-expressions =======================
 		{
 			// Parenthesis expression.
 			checkForErrorOnCompileModule(R"(const A: i64 = (1 / 0);)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A: i32 = (1i32 << 32);)", { invalid_shift }, 1);
 
 			// Tuple element.
 			checkForErrorOnCompileModule(R"(const A = (1 / 0, 2);)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", { invalid_shift }, 1);
 
 			// Cast source expression.
 			checkForErrorOnCompileModule(R"(const A = (1 / 0) as f64;)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A = (1i32 << 32) as f64;)", { invalid_shift }, 1);
 
 			// Static array size.
 			checkForErrorOnCompileModule(R"(const A = i64[1 / 0];)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A = i64[1i32 << 32];)", { invalid_shift }, 1);
 
 			// Taken ternary branch (the untaken one is never evaluated).
 			checkForErrorOnCompileModule(
 				R"(const A: i64 = if true then 1 / 0 else 2;)", { div_by_zero }, 1
+			);
+			checkForErrorOnCompileModule(
+				R"(const A: i32 = if true then 1i32 << 32 else 2;)", { invalid_shift }, 1
 			);
 		}
 
@@ -1903,28 +1920,28 @@ private:
 		constexpr char PRINTABLE     = '@';
 		constexpr char NON_PRINTABLE = '\x07f';
 
-		auto [_, root_scope_prt] = test_utils::getModule(fs::File(
+		const auto [_, root_scope_prt] = test_utils::getModule(fs::File(
 			path(base::strConcat("test_modules/error_generating/mod_w_prt_char_", PRINTABLE, "_"))
 		));
-		auto id_prt              = test_utils::getChain("foo", root_scope_prt).back();
+		const auto id_prt              = test_utils::getChain("foo", root_scope_prt).back();
 
 		// note: `Delete` is not-printable on win/linux/mac but it's allowed in filenames
 		ASSERT_TRUE(not std::isprint(static_cast<unsigned char>(NON_PRINTABLE)));
-		auto [dummy, root_scope_nprt] = test_utils::getModule(fs::File(path(
+		const auto [dummy, root_scope_nprt] = test_utils::getModule(fs::File(path(
 			base::strConcat("test_modules/error_generating/mod_w_non_prt_char_", NON_PRINTABLE, "_")
 		)));
-		std::ignore                   = dummy;  // @todo: #761 replace `dummy` with `_`
-		auto id_nprt                  = test_utils::getChain("foo", root_scope_nprt).back();
+		std::ignore                         = dummy;  // @todo: #761 replace `dummy` with `_`
+		const auto id_nprt                  = test_utils::getChain("foo", root_scope_nprt).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			ctx.query<mangler::QueryMangledSymbol>({ id_prt });
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_prt });
 			checkForError(
 				{ "[Feature not implemented] Name of a module contains a character that is not "
 			      "allowed yet: '@' (int: 64)" },
 				1
 			);
 
-			ctx.query<mangler::QueryMangledSymbol>({ id_nprt });
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_nprt });
 			checkForError(
 				{ "[Feature not implemented] Name of a module contains a character that is not "
 			      "allowed yet: [not-printable] (int: 127)" },

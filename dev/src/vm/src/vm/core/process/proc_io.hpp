@@ -36,9 +36,8 @@ namespace vm {
 			// Also, in case of any other redirected input, all the data is usually in the buffer
 			// beforehand, but it's not always true so this design is not perfect.
 			if (!attached) {
-				thread.waitUntilNotPausedAndCondition(lck, [this, &thread] {
-					return thread.isTerminateRequested() || input_stream.rdbuf()->in_avail()
-					    || attached;
+				thread.waitInterruptible(lck, [this] {
+					return input_stream.rdbuf()->in_avail() || attached;
 				});
 			}
 
@@ -57,9 +56,8 @@ namespace vm {
 			auto lck = lock();
 
 			if (!attached) {
-				thread.waitUntilNotPausedAndCondition(lck, [this, &thread] {
-					return thread.isTerminateRequested() || input_stream.rdbuf()->in_avail()
-					    || attached;
+				thread.waitInterruptible(lck, [this] {
+					return input_stream.rdbuf()->in_avail() || attached;
 				});
 			}
 
