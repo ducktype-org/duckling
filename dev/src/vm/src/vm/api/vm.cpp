@@ -188,10 +188,8 @@ namespace vm::api {
 	std::expected<response::CodePosition, ApiError> mapFileLineToCodeCollectionPosition(
 		PID pid, fs::File file, usize line_number
 	) {
-		return REQUEST(
-				   MapFileLineToCodeCollectionPosition{ .file = std::move(file) COMMA.line_number
-		                                                = line_number }
-		)
+		return REQUEST(MapFileLineToCodeCollectionPosition{
+						   .file = std::move(file) COMMA.line_number = line_number })
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 }
