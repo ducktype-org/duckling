@@ -93,13 +93,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -isysroot ${MACOS_SDK_PATH}")
 			set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -isysroot ${MACOS_SDK_PATH}")
 		endif()
-
-		# On macOS clang uses libc++, which keeps parts of the standard library we rely
-		# on behind the experimental library. It has to be on the link line as well,
-		# since that is what pulls in libc++experimental.
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexperimental-library")
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fexperimental-library")
-		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fexperimental-library")
 	endif()
 
 else()
