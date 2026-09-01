@@ -288,10 +288,6 @@ private:
 	/**
 	 * @brief One random per-thread request, aimed at a random thread id.
 	 *
-	 * The id range deliberately runs past the live threads, so the "unknown thread" path is hit
-	 * concurrently too. `step` is included: `spin_threads.dbc` never reaches the end of a function,
-	 * so it cannot trip the live-lock tracked by @TODO #3274.
-	 *
 	 * `resume` is deliberately NOT in the mix. `pause` and `pauseAll` wait for the target thread to
 	 * be observed in the `Paused` state, so a `resume` landing between the thread parking and the
 	 * waiter looking makes the waiter miss that state and wait forever. Measured at 3 hangs in 30
