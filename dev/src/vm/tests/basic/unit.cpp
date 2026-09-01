@@ -25,6 +25,7 @@ public:
 		TESTER_ADD_TEST(checkMultipleRetVals);
 		TESTER_ADD_TEST(checkVoidTypeValid);
 		TESTER_ADD_TEST(pointerTest);
+		TESTER_ADD_TEST(referenceOnColdBranchTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(globalDestructorTest);
 		TESTER_ADD_TEST(globalNoConstructorTest);
@@ -71,6 +72,12 @@ private:
 		}
 		runTestOnVm("pointer_to_global.dbc", {}, "429913371337", {}, 1'337);
 	}
+
+	/**
+	 * @brief A variable whose address is only taken on a path that is not executed never gets a
+	 * block, and the process must still validate its memory cleanly.
+	 */
+	void referenceOnColdBranchTest() { runTestOnVm("reference_on_cold_branch.dbc", "", "42"); }
 
 	void commandLineArguments() {
 		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" }, 0);

@@ -87,13 +87,21 @@ namespace vm::loader::compiler::safe {
 		);
 
 		/**
+		 * @brief Everything `lowerInstructions` produces for a single function.
+		 */
+		struct LoweredFunction {
+			low::MicroBytecode                                  bytecode;
+			std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
+			std::vector<vm::low::LocalSlotDesc>                 local_slot_descs;
+		};
+
+		/**
 		 * @brief Lowers instructions to micro-bytecode. Iterates through the instructions and
 		 * translates them into a sequence of `MicroInstruction`s.
-		 * @return The converted list of instructions as well as the mapping from instruction
-		 * indices to instruction ranges in micro-bytecode.
+		 * @return The converted list of instructions, the mapping from instruction indices to
+		 * instruction ranges in micro-bytecode, and the description of the frame's local slots.
 		 */
-
-		std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> lowerInstructions(
+		LoweredFunction lowerInstructions(
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		);
 

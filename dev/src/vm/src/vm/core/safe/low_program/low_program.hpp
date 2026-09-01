@@ -26,6 +26,26 @@ namespace vm::low {
 	using MicroBytecode = std::vector<MicroInstruction>;
 
 	/**
+	 * @brief Static description of one local variable slot of a function's frame.
+	 *
+	 * A slot is identified by its index in `Frame::local_block_ref_stack_base`, and the layout
+	 * of the frame's local stack is fixed, so the type and the location of the variable living
+	 * in a slot are known without a block being present.
+	 */
+	struct LocalSlotDesc {
+		/**
+		 * @brief Type of the variable occupying the slot.
+		 * @note `nullptr` when the slot does not hold the same type on every path through the
+		 * function. Such slots always have their block created eagerly, so nothing needs to
+		 * reconstruct their description at runtime.
+		 */
+		MCRef<Type> type = nullptr;
+
+		/// Byte offset of the variable in the frame's local stack.
+		u64 byte_offset = 0;
+	};
+
+	/**
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData {
@@ -40,6 +60,12 @@ namespace vm::low {
 		usize local_stack_size;
 		/// The maximum count of blocks required by the function frame.
 		usize local_block_count;
+
+		/**
+		 * @brief Description of every local variable slot of the frame, indexed by slot index.
+		 * Lets a block be created for a slot that was initialized without one.
+		 */
+		std::vector<LocalSlotDesc> local_slot_descs;
 
 		usize arg_size;
 		// The total summed size of all return values.

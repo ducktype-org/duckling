@@ -56,6 +56,16 @@ namespace vm {
 
 		base::StableObjectPool<BlockT, BlockID, true, true> blocks_pool;
 
+		/**
+		 * @brief Registers a block over `data` without touching the data itself.
+		 * @note Only for data that already holds a live value, see `adoptDummy`.
+		 */
+		[[nodiscard]]
+		Ref<BlockT> adoptBlock(BlockData<EntryT> data) {
+			auto id = blocks_pool.add(data);
+			return blocks_pool.get(id);
+		}
+
 		[[nodiscard]]
 		Ref<BlockT> createBlock(BlockData<EntryT> data) {
 			if constexpr (std::is_trivially_default_constructible_v<EntryT>)
@@ -63,8 +73,7 @@ namespace vm {
 			else
 				std::fill(data.view.getBegin(), data.view.getBegin() + data.view.size(), EntryT{});
 
-			auto id = blocks_pool.add(data);
-			return blocks_pool.get(id);
+			return adoptBlock(data);
 		}
 
 		[[nodiscard]]
@@ -205,13 +214,6 @@ namespace vm {
 		 */
 		void runDataDestructors(Ref<BlockT> block) {
 			iterateOverDataAndExecute(block, &GenericMemory::runObjectDestructor);
-		}
-
-		/**
-		 * @brief Executes destructors on a range of objects, that lay next to each other.
-		 */
-		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
-			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
 		}
 
 		/**
@@ -387,6 +389,13 @@ namespace vm {
 		}
 
 	public:
+		/**
+		 * @brief Executes destructors on a range of objects, that lay next to each other.
+		 */
+		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
+			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
+		}
+
 		GenericMemory() = default;
 
 		// =================== Used by the process ===================
@@ -518,6 +527,16 @@ namespace vm {
 		 */
 		auto allocateDummy(TypeCRef type, Ref<EntryT> data_pointer) -> Ref<BlockT> {
 			return createBlock(dummy_allocator.allocate(type, data_pointer));
+		}
+
+		/**
+		 * @brief Like `allocateDummy`, but leaves the pointed data untouched.
+		 *
+		 * Used when a block is created for a local variable that was already initialized
+		 * without one - zeroing it would destroy the value it holds.
+		 */
+		auto adoptDummy(TypeCRef type, Ref<EntryT> data_pointer) -> Ref<BlockT> {
+			return adoptBlock(dummy_allocator.allocate(type, data_pointer));
 		}
 
 		/**

@@ -14,6 +14,12 @@
 #include <tuple>
 #include <type_traits>
 
+namespace vm::loader::compiler::safe {
+	inline usize getIntTypeSize(const code::valid_type::TypeSize& size) {
+		return static_cast<usize>(size.assumePointerSize(Bytes(16)));
+	}
+}
+
 namespace vm::loader::compiler::safe::detail {
 	/**
 	 * @brief Checks whether a high-level instruction argument type can be translated
@@ -65,6 +71,18 @@ namespace vm::loader::compiler::safe::detail {
 	 * from temporary label IDs to label offsets used later by `Compiler::linkLabelArguments`.
 	 */
 	class SafeMicroBytecodeBuilder {
+		/**
+		 * @brief What a local variable of a given type needs when it goes out of scope.
+		 */
+		enum class TypeCleanup {
+			/// Nothing at all - the variable is made of plain values.
+			None,
+			/// Destructors, because the variable holds pointers whose blocks must be released.
+			Destructors,
+			/// A block from the start, because the variable owns nested blocks of its own.
+			EagerBlock,
+		};
+
 		safe::SafeCompiler&                                       compiler;
 		const vm::loader::compiler::detail::FunctionStackContext& ctx;
 
@@ -73,6 +91,12 @@ namespace vm::loader::compiler::safe::detail {
 		usize                             next_instruction_index = 0;
 
 		low::MicroBytecode result;
+
+		std::vector<low::LocalSlotDesc> slot_descs;
+		/// Slots whose description is not the same on every path, see `computeLocalSlotDescs`.
+		std::vector<bool> slot_ambiguous;
+
+		mutable base::HashMap<TypeCRef, TypeCleanup> type_cleanup_cache{};
 
 #if (BUILD_TYPE_DEV_DEBUG)
 		std::string current_high_instruction_representation{};
@@ -87,6 +111,7 @@ namespace vm::loader::compiler::safe::detail {
 		):
 			  compiler{ compiler },
 			  ctx{ ctx } {
+			computeLocalSlotDescs();
 #ifdef ENABLE_JIT
 			addLow<Op_jitEntrypoint>();
 #endif
@@ -95,6 +120,8 @@ namespace vm::loader::compiler::safe::detail {
 		std::pair<low::MicroBytecode, decltype(label_id_to_offset)> build() {
 			return { std::move(result), std::move(label_id_to_offset) };
 		}
+
+		std::vector<low::LocalSlotDesc> takeLocalSlotDescs() { return std::move(slot_descs); }
 
 		/**
 		 * @brief Add a new high instruction.
@@ -114,15 +141,159 @@ namespace vm::loader::compiler::safe::detail {
 		bool push_step_gil_on_next_add_low = true;
 		bool is_control_flow               = true;
 
+		/**
+		 * @brief Byte size of the frame's local stack at the current state, which is also the
+		 * offset the next initialized variable lands on.
+		 */
+		u64 currentStackSize() const {
+			return getIntTypeSize(ctx.function.local_stack.byteSize(curr_state));
+		}
+
+		/**
+		 * @brief Byte offset of a local variable in the frame's local stack.
+		 */
+		u64 byteOffsetOf(const opargs::ArgumentType auto p) const {
+			return getIntTypeSize(
+				ctx.function.local_stack.getByteOffset(curr_state, p.var_name).value()
+			);
+		}
+
+		/**
+		 * @brief Size of the stack space the caller shares with the callee, which holds the
+		 * callee's return values followed by its arguments.
+		 */
+		u64 sharedStackSpaceSize(base::StrID function_name) const {
+			const auto& signature = compiler.high_program.functions().at(function_name)->signature;
+			const auto& types     = compiler.high_program.getTypeContext().getCurrentTypes();
+
+			code::valid_type::TypeSize size{};
+			for (const auto& parameter: signature.parameters)
+				size += types.at(parameter.str)->getSize();
+			for (const auto& result: signature.result_types) size += types.at(result)->getSize();
+
+			return getIntTypeSize(size);
+		}
+
+		/**
+		 * @brief Same as `sharedStackSpaceSize`, for a virtually dispatched method. Every
+		 * override shares the declared method's signature, so the size does not depend on which
+		 * implementation ends up being called.
+		 */
+		u64 sharedStackSpaceSizeOfMethod(
+			const opargs::ArgumentType auto object_ptr, const opargs::MethodName method
+		) const {
+			TypeCRef object_type = getPlaceType(object_ptr)->getInnerType().value();
+			TypeCRef method_type
+				= object_type->getInheritanceMetadata().value()->available_methods.at(
+					method.method_name
+				);
+
+			return method_type->getParametersSize().value().asInt()
+			     + method_type->getResultTypeSize().value().asInt();
+		}
+
+		/**
+		 * @brief Distance between the caller's local stack base and the callee's one.
+		 */
+		vm::opargs::Immediate calleeStackDistance(u64 shared_stack_space_size) const {
+			return vm::opargs::Immediate{ currentStackSize() - shared_stack_space_size };
+		}
+
+		TypeCRef resolveTypeName(base::StrID type_name) const {
+			code::valid_type::ValidTypeID type_id
+				= compiler.high_program.getTypeContext().getCurrentTypes().at(type_name)->getID();
+			return compiler.getLowProgram()->getTypes().at(TypeID(type_id.asInt()));
+		}
+
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
-			if (auto maybe_val = ctx.function.local_stack.getTypeName(curr_state, p.var_name)) {
-				code::valid_type::ValidTypeID type_id = compiler.high_program.getTypeContext()
-				                                            .getCurrentTypes()
-				                                            .at(*maybe_val)
-				                                            ->getID();
-				return compiler.getLowProgram()->getTypes().at(TypeID(type_id.asInt()));
-			}
+			if (auto maybe_val = ctx.function.local_stack.getTypeName(curr_state, p.var_name))
+				return resolveTypeName(*maybe_val);
 			return compiler.getLowProgram()->getGlobals().at(p.var_name)->type;
+		}
+
+		/**
+		 * @brief Determines the cleanup a variable of `type` requires.
+		 *
+		 * Only `Kind::Pointer` has a destructor of its own (it releases the pointed-to block),
+		 * and variants and dynamic tables are the kinds that own nested blocks, which are much
+		 * easier to handle when the variable's own block exists from the beginning.
+		 */
+		TypeCleanup typeCleanup(TypeCRef type) const {
+			if (auto cached = type_cleanup_cache.atMaybeCopy(type)) return *cached;
+
+			// Guard against a type that transitively contains itself.
+			type_cleanup_cache.insertOrAssign(type, TypeCleanup::EagerBlock);
+
+			const auto cleanup = [&] {
+				switch (type->getKind()) {
+				case Type::Kind::Primitive:
+				case Type::Kind::Function:
+				case Type::Kind::CPointer:
+				case Type::Kind::Opaque:
+					return TypeCleanup::None;
+				case Type::Kind::Pointer:
+					return TypeCleanup::Destructors;
+				case Type::Kind::Data: {
+					auto result = TypeCleanup::None;
+					for (const auto& field: **type->getFields())
+						result = std::max(result, typeCleanup(field.type));
+					return result;
+				}
+				case Type::Kind::FixedSizeTable:
+					return typeCleanup(type->getInnerType().value());
+				case Type::Kind::Variant:
+				case Type::Kind::DynamicTable:
+				case Type::Kind::None:
+				default:
+					return TypeCleanup::EagerBlock;
+				}
+			}();
+
+			type_cleanup_cache.insertOrAssign(type, cleanup);
+			return cleanup;
+		}
+
+		/**
+		 * @brief Fills `slot_descs` with the type and the location of the variable living in
+		 * each local slot, and marks the slots whose contents are not the same on every path
+		 * through the function as ambiguous.
+		 *
+		 * A slot's offset is the sum of the sizes below it, so two branches can reach the same
+		 * slot index with different offsets. Such slots always get their block eagerly, which
+		 * means nothing ever has to reconstruct their description.
+		 */
+		void computeLocalSlotDescs() {
+			const auto& db = ctx.function.local_stack;
+
+			slot_descs.assign(ctx.local_block_count, {});
+			slot_ambiguous.assign(ctx.local_block_count, false);
+			std::vector<bool> slot_seen(ctx.local_block_count, false);
+
+			// Consecutive instructions almost always share a state.
+			base::Optional<code::StackStateID> previous_state{};
+
+			for (const auto& state: ctx.function.stack_states) {
+				if (previous_state.has_value() && u64{ *previous_state } == u64{ state }) continue;
+				previous_state = state;
+
+				for (usize idx = 0; idx < db.size(state); idx++) {
+					const auto name = db.getName(state, idx).value();
+
+					const low::LocalSlotDesc desc{
+						.type        = resolveTypeName(db.getTypeName(state, idx).value()),
+						.byte_offset = getIntTypeSize(db.getByteOffset(state, name).value()),
+					};
+
+					if (!slot_seen[idx]) {
+						slot_seen[idx]  = true;
+						slot_descs[idx] = desc;
+					} else if (slot_descs[idx].type != desc.type
+					           || slot_descs[idx].byte_offset != desc.byte_offset) {
+						slot_ambiguous[idx] = true;
+						slot_descs[idx]     = {};
+					}
+				}
+			}
 		}
 
 		template<typename LowArg, typename HighArg>
@@ -165,6 +336,34 @@ namespace vm::loader::compiler::safe::detail {
 #endif
 				next_instruction_index++;
 			}(static_cast<T::ArgTypes*>(nullptr));
+		}
+
+		/**
+		 * @brief Emits the deinitialization of the variable in slot `slot_index`, which defaults
+		 * to the topmost one of the current stack state.
+		 *
+		 * A variable holding pointers needs its destructors run whether or not a block was ever
+		 * created for it, and with no block there is nothing to take its type from, so the type
+		 * travels in the instruction.
+		 */
+		void addDeinitOfTopVariable() { addDeinitOfVariable(topSlotIndex()); }
+
+		usize topSlotIndex() const { return ctx.function.local_stack.size(curr_state) - 1; }
+
+		void addDeinitOfVariable(usize idx) {
+			const auto& db   = ctx.function.local_stack;
+			const auto  name = db.getName(curr_state, idx).value();
+
+			if (typeCleanup(resolveTypeName(db.getTypeName(curr_state, idx).value()))
+			    != TypeCleanup::Destructors) {
+				addLow<Op_deinit>();
+				return;
+			}
+
+			addLow<Op_deinit_dtor_imm_type>(
+				vm::opargs::Immediate{ getIntTypeSize(db.getByteOffset(curr_state, name).value()) },
+				opargs::Type{ db.getTypeName(curr_state, idx).value() }
+			);
 		}
 
 		void addLabel(opargs::Label label) {
@@ -547,15 +746,45 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_jmp_label, i) { addLow<Op_jmp_label>(i.label); }
 			instr_case(high::Op_jmpIf_label, i) { addLow<Op_jmpIf_label>(i.label); }
 			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
-			instr_case(high::Op_call_func, i) { addLow<Op_call_func>(i.function); }
+			instr_case(high::Op_call_func, i) {
+				addLow<Op_call_func>(
+					i.function, calleeStackDistance(sharedStackSpaceSize(i.function.function_name))
+				);
+			}
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
 			instr_case(high::Op_call_ffifunc, i) { addLow<Op_call_ffifunc>(i.function); }
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
 			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
-			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
-			instr_case(high::Op_init_pany_type, i) { addLow<Op_init_bany_type>(i.var, i.type); }
-			instr_case(high::Op_deinit, i) { addLow<Op_deinit>(); }
+			instr_case(high::Op_ret, i) {
+				// The return values sit at the bottom of the local stack and belong to the
+				// caller. Everything above them is still live and has to be popped here, as
+				// `ret_imm` does no cleanup of its own.
+				const usize ret_count = ctx.function.signature.result_types.size();
+				for (usize live = ctx.function.local_stack.size(curr_state); live > ret_count;
+				     live--)
+					addDeinitOfVariable(live - 1);
+
+				addLow<Op_ret_imm>(vm::opargs::Immediate{ ret_count });
+			}
+			instr_case(high::Op_init_pany_type, i) {
+				const TypeCRef type   = getPlaceType(i.var);
+				const u64      offset = byteOffsetOf(i.var);
+
+				// A variable owning nested blocks, or one living in a slot whose layout is not
+				// the same on every path, gets its block right away. Everything else is
+				// initialized without one.
+				if (typeCleanup(type) == TypeCleanup::EagerBlock
+				    || slot_ambiguous.at(*ctx.function.local_stack.getIdx(curr_state, i.var.var_name)
+				    ))
+					addLow<Op_initBlock_imm_type>(vm::opargs::Immediate{ offset }, i.type);
+				else
+					addLow<Op_simpleInit_imm_imm>(
+						vm::opargs::Immediate{ offset },
+						vm::opargs::Immediate{ type->getSize().asInt() }
+					);
+			}
+			instr_case(high::Op_deinit, i) { addDeinitOfTopVariable(); }
 			instr_case(high::Op_input_p64, i) { addLow<Op_input_p64>(i.dst); }
 			instr_case(high::Op_output_p64, i) { addLow<Op_output_p64>(i.src); }
 			instr_case(high::Op_input_p32, i) { addLow<Op_input_p32>(i.dst); }
@@ -572,6 +801,9 @@ namespace vm::loader::compiler::safe::detail {
 			}
 			instr_case(high::Op_virtual_call_pptr_method, i) {
 				addLow<Op_virtual_call_pptr_method>(i.object_ptr, i.method);
+				addLow<Op_ext_imm>(
+					calleeStackDistance(sharedStackSpaceSizeOfMethod(i.object_ptr, i.method))
+				);
 			}
 			instr_case(high::Op_alloc_pptr_type, i) { addLow<Op_alloc_pptr_type>(i.ptr, i.type); }
 			instr_case(high::Op_free_pptr, i) { addLow<Op_free_pptr>(i.ptr); }

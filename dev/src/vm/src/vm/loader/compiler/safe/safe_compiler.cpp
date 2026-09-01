@@ -15,10 +15,6 @@
 
 namespace vm::loader::compiler::safe {
 
-	static usize getIntTypeSize(const code::valid_type::TypeSize& size) {
-		return static_cast<usize>(size.assumePointerSize(Bytes(16)));
-	}
-
 	namespace detail {
 
 #define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...)                                   \
@@ -161,8 +157,9 @@ namespace vm::loader::compiler::safe {
 		}
 	}
 
-	std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> SafeCompiler::
-		lowerInstructions(const vm::loader::compiler::detail::FunctionStackContext& ctx) {
+	SafeCompiler::LoweredFunction SafeCompiler::lowerInstructions(
+		const vm::loader::compiler::detail::FunctionStackContext& ctx
+	) {
 		detail::SafeMicroBytecodeBuilder                    builder{ *this, ctx };
 		std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
 
@@ -175,7 +172,9 @@ namespace vm::loader::compiler::safe {
 		auto [micro_bytecode, label_map] = builder.build();
 		linkLabelArguments(micro_bytecode, label_map);
 
-		return { std::move(micro_bytecode), std::move(instruction_mapping) };
+		return { .bytecode            = std::move(micro_bytecode),
+			     .instruction_mapping = std::move(instruction_mapping),
+			     .local_slot_descs    = builder.takeLocalSlotDescs() };
 	}
 
 	void SafeCompiler::compileNewFunctions(
@@ -185,7 +184,7 @@ namespace vm::loader::compiler::safe {
 			vm::loader::compiler::detail::FunctionStackContext ctx
 				= calculateStackContext(function);
 
-			auto [bytecode, instruction_mapping] = lowerInstructions(ctx);
+			auto [bytecode, instruction_mapping, local_slot_descs] = lowerInstructions(ctx);
 
 			// Calculate the functions metadata.
 			code::FuncSignature        signature       = function.signature;
@@ -216,6 +215,7 @@ namespace vm::loader::compiler::safe {
 			                      .bc                  = std::move(bytecode),
 			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
 			                      .local_block_count   = ctx.local_block_count,
+			                      .local_slot_descs    = std::move(local_slot_descs),
 			                      .arg_size            = getIntTypeSize(parameters_size),
 			                      .ret_size            = getIntTypeSize(ret_type_sum),
 			                      .parameters          = std::move(parameters),

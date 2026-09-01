@@ -95,6 +95,58 @@ namespace vm {
 		}
 
 		/**
+		 * @brief Creates the block of a local variable that was initialized without one.
+		 *
+		 * Locals start out with an empty block reference slot; the block is only needed once
+		 * something refers to the variable through it. Its type and location come from the
+		 * function's `local_slot_descs`, so nothing has to be tracked at runtime.
+		 *
+		 * @note Never inlined - this runs at most once per variable, so it must not bloat the
+		 * instruction implementations.
+		 */
+		[[gnu::noinline]]
+		static Ref<Block> createLocalBlock(
+			std::byte* local_stack, Frame* frame, SafeVMThread& thread, u64 slot_index
+		) {
+			const auto& slot_desc = frame->current_function->local_slot_descs[slot_index];
+
+			auto block = thread.process_memory.adoptDummy(
+				slot_desc.type.toOpt().value(), local_stack + slot_desc.byte_offset
+			);
+			// So that nobody can delete our block.
+			thread.process_memory.increaseBlockRefcount(block);
+
+			frame->local_block_ref_stack_base[slot_index] = block.get();
+			return block;
+		}
+
+		/**
+		 * @brief Resolves a block place argument - an index into the frame's block reference
+		 * stack, or into the global block buffer when the highest bit is set - to a block.
+		 *
+		 * Globals always have their blocks; a local gets one created on the spot the first time
+		 * one is needed.
+		 */
+		[[nodiscard]]
+#ifndef BUILD_TYPE_DEV_DEBUG
+		__attribute__((always_inline))
+#endif
+		static Ref<Block> readBlockRefFromArg(
+			std::byte* local_stack, Frame* frame, SafeVMThread& thread, u64 arg
+		) {
+			// The highest bit tells globals apart from locals, the rest is the index.
+			const bool is_global = (arg >> 63) != 0;
+			const u64  index     = arg & ~(1ULL << 63);
+
+			if (is_global) return { thread.runtime_data.global_block_ref_buffer_base[index] };
+
+			if (frame->local_block_ref_stack_base[index] == nullptr) [[unlikely]]
+				return createLocalBlock(local_stack, frame, thread, index);
+
+			return { frame->local_block_ref_stack_base[index] };
+		}
+
+		/**
 		 * @brief Prepares the execution variables and frames for a call to a function with a
 		 * specified id.
 		 *
@@ -117,7 +169,9 @@ namespace vm {
 				std::byte*&              local_stack,
 				Frame*&                  frame,
 				SafeVMThread&            thread,
-				usize                    function_id
+				usize                    function_id,
+				u64                      callee_stack_distance,
+				u64                      instruction_size
 			) {
 			auto& runtime_data = thread.runtime_data;
 			auto& called_func  = thread.process_program->getFunctions()[function_id];
@@ -132,9 +186,6 @@ namespace vm {
 					";\n"
 				);
 
-			// Size of the shared stack space between called functions.
-			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
-
 			auto arg_count           = called_func.parameters.size();
 			auto ret_count           = called_func.result_types.size();
 			auto shared_blocks_count = arg_count + ret_count;
@@ -142,7 +193,7 @@ namespace vm {
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
 			// Save current registers and flow.
-			frame->instr       = instr + 1;
+			frame->instr       = instr + instruction_size;
 			frame->local_stack = local_stack;
 
 			// Save the last frame
@@ -156,9 +207,9 @@ namespace vm {
 
 			// Update values passed as arguments.
 			instr = called_func.bc.data();
-			// New local_stack address is the local_stack_head (all typed initialized by the caller
-			// up to this point) - the size of ret_vals and arguments passed to callee.
-			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
+			// The callee's local stack starts where the space shared with the caller (its return
+			// values followed by its arguments) begins.
+			local_stack += callee_stack_distance;
 			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
 			                                  + (prev_frame_block_ref_count - shared_blocks_count);
 
@@ -169,7 +220,6 @@ namespace vm {
 			    >= runtime_data.block_ref_stack_end)
 				throw exceptions::VMStackOverflowException();
 
-			frame->local_stack_head          = shared_stack_space_size;
 			frame->local_block_ref_stack_end = prev_frame->local_block_ref_stack_end;
 
 			// Remove the argument blocks from caller's block stack. Only the return value stays in
@@ -177,7 +227,6 @@ namespace vm {
 			// @note: We require that the callee can't deinitialize the return value passed by the
 			// caller.
 			prev_frame->local_block_ref_stack_end -= arg_count;
-			prev_frame->local_stack_head -= called_func.arg_size;
 		}
 
 		static
@@ -186,13 +235,13 @@ namespace vm {
 #endif
 			void
 			performInit(
-				[[maybe_unused]] const MicroInstruction*& instr,
-				std::byte*&                               local_stack,
-				Frame*&                                   frame,
-				SafeVMThread&                             thread,
-				TypeCRef                                  type
+				std::byte*&   local_stack,
+				Frame*&       frame,
+				SafeVMThread& thread,
+				u64           byte_offset,
+				TypeCRef      type
 			) {
-			auto data_ptr = local_stack + frame->local_stack_head;
+			auto data_ptr = local_stack + byte_offset;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 
 			thread.process_memory.increaseBlockRefcount(block
@@ -200,7 +249,6 @@ namespace vm {
 
 			*frame->local_block_ref_stack_end = block.get();
 			frame->local_block_ref_stack_end += 1;
-			frame->local_stack_head += type->getSize().asInt();
 		}
 
 		static
@@ -210,11 +258,14 @@ namespace vm {
 			void
 			performDeinit(Frame*& frame, SafeVMThread& thread) {
 			auto block = frame->local_block_ref_stack_end[-1];
-			auto type  = thread.process_memory.getBlockType(block);
+			if (block == nullptr) {
+				// The variable never needed a block, so there is nothing to free.
+				frame->local_block_ref_stack_end -= 1;
+				return;
+			}
 
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
-			frame->local_stack_head -= type->getSize().asInt();
 			frame->local_block_ref_stack_end -= 1;
 		}
 

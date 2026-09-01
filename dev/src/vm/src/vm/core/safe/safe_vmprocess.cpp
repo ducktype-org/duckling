@@ -513,7 +513,9 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getStackFrameData(
 		api::ThreadID thread_id, u64 frame_index
 	) {
-		std::shared_lock lock(api_lock);
+		// Inspecting a variable that was initialized without a block creates one, so this must be
+		// guarded against every other memory-touching endpoint.
+		std::unique_lock lock(api_lock);
 		match_optional(assertProcessCanRespond()) {
 			opt_err(error) return std::unexpected(error);
 			opt_some() {
@@ -527,12 +529,26 @@ namespace vm {
 
 				Frame& frame = thread->getStackFrame(frame_index);
 
-				auto block_span
-					= std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end);
+				const u64 slot_count = base::safeIntConv<u64>(
+					frame.local_block_ref_stack_end - frame.local_block_ref_stack_base
+				);
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
-				for (Block* const& block_ptr: block_span) {
-					Ref<Block> block  = Ref(block_ptr);
+				for (u64 slot_index = 0; slot_index < slot_count; slot_index++) {
+					// Variables are initialized without a block, and a value can only be read
+					// through one, so it is created here just like the executor does.
+					Block*& slot = frame.local_block_ref_stack_base[slot_index];
+					if (slot == nullptr) {
+						const auto& slot_desc
+							= frame.current_function->local_slot_descs[slot_index];
+						Ref<Block> new_block = memory.adoptDummy(
+							slot_desc.type.toOpt().value(), frame.local_stack + slot_desc.byte_offset
+						);
+						memory.increaseBlockRefcount(new_block);
+						slot = new_block.get();
+					}
+
+					Ref<Block> block  = Ref(slot);
 					u64        offset = base::safeIntConv<u64>(
                         memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
                     );

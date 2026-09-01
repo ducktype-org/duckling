@@ -61,12 +61,6 @@ namespace vm {
 		Block** local_block_ref_stack_end = nullptr;
 
 		/**
-		 * @brief First free byte in the local stack.
-		 * Used when new block is created on the local stack.
-		 */
-		u64 local_stack_head = 0;
-
-		/**
 		 * @brief Function linked to the frame.
 		 * If frame doesn't change, but a function does (e.g. tailcall), this pointer should be
 		 * updated accordingly, so that it's always valid.

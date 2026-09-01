@@ -36,26 +36,6 @@ inline static std::byte* getBytePtrFromPlaceArg(
 }
 
 /**
- * @brief Given the argument of type "place", which is an index in the local block reference stack
- * or global block reference buffer, with the highest bit indicating whether it's global or local,
- * returns the actual block reference.
- * @param arg - the mentioned argument
- */
-[[nodiscard]] [[gnu::always_inline]]
-inline static Ref<vm::Block> getBlockRefFromArg(
-	vm::Block** local_stack_blocks, vm::Block** global_buffer_blocks, u64 arg
-) {
-	// Extract the highest bit.
-	bool is_global = (arg >> 63) != 0;
-
-	// Mask out the highest bit to get the offset.
-	u64 offset = arg & ~(1ULL << 63);
-
-	vm::Block** base = is_global ? global_buffer_blocks : local_stack_blocks;
-	return { base[offset] };
-}
-
-/**
  * @brief Writes a value of a given TYPE to a specified location on the stack or global buffer,
  * depending on the highest bit of the place argument.
  */
@@ -86,10 +66,9 @@ inline static void writeToPlace(
 	readFromPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG)
 #define WRITE_TO_PLACE_ARG(TYPE, ARG, VALUE) \
 	writeToPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG, VALUE)
-#define READ_BLOCK_REF_FROM_ARG(ARG)                                                             \
-	getBlockRefFromArg(                                                                          \
-		frame->local_block_ref_stack_base, thread.runtime_data.global_block_ref_buffer_base, ARG \
-	)
+// Resolves a block place argument, creating the local's block if it does not exist yet.
+// Defined as `vm::OpFuns::readBlockRefFromArg`, which is complete at every expansion site.
+#define READ_BLOCK_REF_FROM_ARG(ARG) OpFuns::readBlockRefFromArg(local_stack, frame, thread, ARG)
 /**
  * @brief Helper macro for reading a value from a immediate argument.
  */
