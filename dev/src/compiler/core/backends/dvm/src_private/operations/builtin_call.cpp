@@ -76,27 +76,6 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ OpKind::free, ptr.asArgument() });
 			break;
 		}
-		case lir::BuiltinFunctionKind::BoxAlloc: {
-			// `box_alloc(value: T) -> box T`. Allocate memory of size `T` and move the value into it.
-			CORE_ASSERT(op.args.size() == 1, "box_alloc expects 1 argument (value)");
-			CORE_ASSERT(dest.has_value(), "box_alloc must have a destination");
-
-			auto& value = op.args.at(0);
-			ctx->pushInstruction(
-				{ OpKind::alloc, dest->asArgument(), vm::opargs::Type(typeName(value.getType())) }
-			);
-			auto value_place = ctx->forceToPlace(value, "box_value");
-			ctx->pushInstruction({ OpKind::store, dest->asArgument(), value_place.asAnyArgument() });
-			break;
-		}
-		case lir::BuiltinFunctionKind::BoxFree: {
-			// `box_free(b: box T)`. Free the memory owned by the box.
-			CORE_ASSERT(op.args.size() == 1, "box_free expects 1 argument (ptr)");
-
-			auto box_ptr = ctx->forceToPlace(op.args.front(), "box_ptr");
-			ctx->pushInstruction({ OpKind::free, box_ptr.asArgument() });
-			break;
-		}
 		case lir::BuiltinFunctionKind::DvmPtrParts: {
 			// `dvm_ptr_parts(p: ptr T) -> u64[2]`. A DVM pointer is a (block, offset) pair, so
 			// both halves are written into the destination array: the id of the block `p`

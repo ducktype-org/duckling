@@ -273,7 +273,16 @@ namespace vm {
 		applyEvent(te::Pause{});
 
 		while (true) {
-			switch (signal.waitForRequest()) {
+			// Release the GIL if it's held since we're paused, to give other threads a chance to
+			// execute.
+			releaseGilIfHeld();
+
+			const ThreadSignal::Request request = signal.waitForRequest();
+
+			// Reacquire when performing the request.
+			acquireGilIfNotHeld();
+
+			switch (request) {
 			case ThreadSignal::Request::Resume: {
 				applyEvent(te::Resume{});
 				return;
