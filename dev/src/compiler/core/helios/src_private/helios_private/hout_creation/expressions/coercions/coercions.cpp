@@ -7,6 +7,7 @@
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/tsh/coercions/reference.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -133,7 +134,8 @@ namespace compiler::helios {
 			const auto alternatives
 				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
 			for (usize i = 0; i < alternatives.size(); i++)
-				if (tsh::isRefKindCoercible(from.getRefKind(), alternatives[i].getRefKind())
+				if (tsh::referenceCoercionRule(from.getRefKind(), alternatives[i].getRefKind())
+				        .isLegal()
 				    && alternatives[i].getType() == from.getType())
 					return std::pair{ i, alternatives[i] };
 
