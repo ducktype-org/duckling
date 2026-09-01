@@ -224,7 +224,7 @@ namespace vm {
 
 		/**
 		 * @brief Returns true if the instruction the thread is paused on ends the execution (is an
-		 * Opcode::Exit).
+		 * MicroOpcode::Exit).
 		 */
 		[[nodiscard]] virtual bool isAtExecutionEnd() const = 0;
 

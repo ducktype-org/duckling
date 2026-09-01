@@ -181,6 +181,9 @@ private:
 
 		auto exit_value = vm::api::getExitValue(pid);
 		ASSERT_HAS_VALUE(exit_value);
+		ASSERT_EQUAL_PRINT(
+			v_get(exit_value.value(), std::vector<Ref<vm::IVMValue>>).at(0)->readBytes<i64>(), 1
+		);
 
 		// Memory state should be intact.
 		auto validation_result = vm::api::deinitAndValidate(pid);
