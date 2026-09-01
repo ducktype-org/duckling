@@ -74,6 +74,34 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CLANG_FLAGS}" )
 
+	if(APPLE)
+		# Homebrew's clang is not the Apple one, so it does not find the macOS SDK on
+		# its own; point it at the SDK that xcrun reports.
+		if(NOT CMAKE_OSX_SYSROOT)
+			execute_process(COMMAND xcrun --show-sdk-path
+					OUTPUT_VARIABLE MACOS_SDK_PATH
+					OUTPUT_STRIP_TRAILING_WHITESPACE
+					ERROR_QUIET)
+			if(NOT MACOS_SDK_PATH)
+				message(FATAL_ERROR
+						"Could not determine the macOS SDK path. "
+						"Install the command line tools with `xcode-select --install`.")
+			endif()
+			message("-- Using macOS SDK: ${MACOS_SDK_PATH}")
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -isysroot ${MACOS_SDK_PATH}")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -isysroot ${MACOS_SDK_PATH}")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -isysroot ${MACOS_SDK_PATH}")
+			set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -isysroot ${MACOS_SDK_PATH}")
+		endif()
+
+		# On macOS clang uses libc++, which keeps parts of the standard library we rely
+		# on behind the experimental library. It has to be on the link line as well,
+		# since that is what pulls in libc++experimental.
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexperimental-library")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fexperimental-library")
+		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fexperimental-library")
+	endif()
+
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
