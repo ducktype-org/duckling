@@ -138,17 +138,24 @@ namespace vm {
 		 */
 		struct ScopedGilGuard {
 			SafeVMThread& thread;
-			ScopedGilGuard(SafeVMThread& t);
+			explicit ScopedGilGuard(SafeVMThread& t);
+			ScopedGilGuard(const ScopedGilGuard&)            = delete;
+			ScopedGilGuard& operator=(const ScopedGilGuard&) = delete;
 			~ScopedGilGuard();
 		};
 
 		/**
-		 * @brief RAII object guaranteeing the release of the GIL lock, report of sleeping and
-		 * reacquire of GIL and reporting as running when IO comes.
+		 * @brief RAII guard for a blocking IO wait: reports the thread as sleeping and releases the
+		 * GIL on construction, then reacquires the GIL and reports the thread as running again when
+		 * the scope ends.
+		 *
+		 * @note The thread must be `Running` when the guard is created.
 		 */
 		struct ScopedIOWait {
 			SafeVMThread& thread;
-			ScopedIOWait(SafeVMThread& t);
+			explicit ScopedIOWait(SafeVMThread& t);
+			ScopedIOWait(const ScopedIOWait&)            = delete;
+			ScopedIOWait& operator=(const ScopedIOWait&) = delete;
 			~ScopedIOWait();
 		};
 

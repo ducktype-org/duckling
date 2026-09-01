@@ -664,7 +664,6 @@ namespace vm {
 			}
 			// Write to a place only when the GIL is held.
 			WRITE_TO_PLACE_ARG(i64, instr->arg0, io_value);
-			thread.reportAsRunning();
 		}
 		FUNCTION_CONT(1);
 	}
@@ -684,7 +683,6 @@ namespace vm {
 			// Write to a place only when the GIL is held.
 			WRITE_TO_PLACE_ARG(i32, instr->arg0, io_value);
 		}
-
 		FUNCTION_CONT(1);
 	}
 
