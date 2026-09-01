@@ -8,7 +8,7 @@ use super::valid_package_name::{normalise_package_name, validate_package_name};
 use super::{Dependencies, Manifest, Package, Profiles, Version, capture_frontmatter};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
 #[derive(Clone, Debug)]
 /// A generic script.
@@ -222,6 +222,11 @@ impl Script {
         }
         ScriptDisplay { script: self }
     }
+
+    /// Emit collected [`Warnings`](super::lints::warnings::Warnings).
+    pub fn emit_warnings(&self, ctx: &DuckContext) -> QuackResult<()> {
+        self.manifest().emit_warnings(ctx)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -334,6 +339,11 @@ impl PackageScript {
         }
         PackageScriptDisplay { script: self }
     }
+
+    /// Emit collected [`Warnings`](super::lints::warnings::Warnings).
+    pub fn emit_warnings(&self, ctx: &DuckContext) -> QuackResult<()> {
+        self.manifest().emit_warnings(ctx)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -412,6 +422,11 @@ impl StandaloneScript {
             }
         }
         StandaloneScriptDisplay { script: self }
+    }
+
+    /// Emit collected [`Warnings`](super::lints::warnings::Warnings).
+    pub fn emit_warnings(&self, ctx: &DuckContext) -> QuackResult<()> {
+        self.manifest().emit_warnings(ctx)
     }
 }
 
@@ -514,6 +529,11 @@ impl FrontMatter {
     /// Transform into the underlying manifest.
     pub fn into_manifest(self) -> Manifest {
         self.manifest
+    }
+
+    /// Emit collected [`Warnings`](super::lints::warnings::Warnings).
+    pub fn emit_warnings(&self, ctx: &DuckContext) -> QuackResult<()> {
+        self.manifest.emit_warnings(ctx)
     }
 }
 
