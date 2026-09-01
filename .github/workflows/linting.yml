@@ -116,21 +116,21 @@ jobs:
 
       - uses: actions/checkout@v6
 
-      # Fetch origin/main for the following steps, because by default repo on the runners contains just the bare-minimum.
-      - name: Fetch origin/main
+      # Fetch the target base branch of the PR dynamically
+      - name: Fetch PR target branch
         run: |
-         git fetch origin main
+         git fetch origin ${{ github.base_ref }}
 
       - name: Run duck linter
         run: |
          cd dev
-         python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose --no-fix
+         python3 toolbox.py duck-linter --branch origin/${{ github.base_ref }} --no-merge-base --verbose --no-fix
         shell: bash
 
       - name: Run header checker
         run: |
          cd dev
-         python3 toolbox.py header-checker --branch origin/main --no-merge-base
+         python3 toolbox.py header-checker --branch origin/${{ github.base_ref }} --no-merge-base
         shell: bash
 
       - name: Run issue checker
@@ -139,7 +139,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
          cd dev
-         python3 toolbox.py issue-checker --branch origin/main --no-merge-base
+         python3 toolbox.py issue-checker --branch origin/${{ github.base_ref }} --no-merge-base
         shell: bash
 
       - name: Run TODO validation
@@ -147,5 +147,5 @@ jobs:
           GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
         run: |
          cd dev
-         python3 toolbox.py todo-validate --branch origin/main --no-merge-base
+         python3 toolbox.py todo-validate --branch origin/${{ github.base_ref }} --no-merge-base
         shell: bash
