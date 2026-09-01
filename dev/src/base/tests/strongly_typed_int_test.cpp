@@ -5,7 +5,7 @@
 STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, i64);
 STRONG_TYPEDEF_INT_DIMENSIONAL(TestU8, std::uint8_t);
 STRONG_TYPEDEF_INT_DIMENSIONAL(TestU64, u64);
-STRONG_TYPEDEF_INT_BINARY(TestBits, std::uint8_t);
+STRONG_TYPEDEF_INT(TestBits, std::uint8_t);
 
 class StronglyTypedIntTest: public tester::TestSuite {
 #undef TESTER_CLASS

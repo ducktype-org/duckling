@@ -177,16 +177,7 @@
  *
  * Allows for operations like MyOwnI32 * MyOwnI32
  */
-#define STRONG_TYPEDEF_INT(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, 0, 0)
-
-/**
- * @brief Same as `STRONG_TYPEDEF_INT`, but additionally provides the bitwise
- * operators: `~`, `&`, `|`, `^`, `<<`, `>>` and their compound assignment forms.
- * Shifts additionally accept the raw base type on the right hand side, so `x << 3` works.
- *
- * Usage: STRONG_TYPEDEF_INT_BINARY(MyOwnU32, u32)
- */
-#define STRONG_TYPEDEF_INT_BINARY(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, 0, 1)
+#define STRONG_TYPEDEF_INT(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, 0, 1)
 
 #define STRONGLY_TYPED_INT_STD_HASH(TYPE)                                                  \
 	template<>                                                                             \
