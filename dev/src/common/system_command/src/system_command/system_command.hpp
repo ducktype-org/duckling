@@ -6,6 +6,8 @@
 
 #include <string_id/string_id.hpp>
 
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace system_command {
@@ -26,8 +28,9 @@ namespace system_command {
 	 */
 	class SystemCommand {
 	private:
-		std::string              program_name;
-		std::vector<std::string> arguments;
+		std::string                                        program_name;
+		std::vector<std::string>                           arguments;
+		std::vector<std::pair<std::string, std::string>>   environment;
 
 	public:
 		SystemCommand(std::string program_name): program_name(std::move(program_name)) {}
@@ -38,6 +41,17 @@ namespace system_command {
 		 * @param arg
 		 */
 		SystemCommand& addArg(std::string arg);
+
+		/**
+		 * @brief Adds an environment variable to the command's environment.
+		 *
+		 * The variable is set for the spawned command only, so this does not touch the
+		 * environment of the compiler itself (which several threads may be reading).
+		 *
+		 * @param name
+		 * @param value
+		 */
+		SystemCommand& addEnv(std::string name, std::string value);
 
 		/**
 		 * @brief Helper enum to specify how to handle non-zero exit codes from the command.
