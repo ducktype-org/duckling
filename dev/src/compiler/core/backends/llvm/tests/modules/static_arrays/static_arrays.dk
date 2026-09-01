@@ -20,3 +20,8 @@ fun struct_array_test() -> i32 = {
     points[1].y = 50;
     return points[1].y;
 }
+
+fun large_array_test() -> i64 = {
+    var arr: i64[99000];
+    return arr[98999];
+}
