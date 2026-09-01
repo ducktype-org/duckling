@@ -102,6 +102,19 @@ namespace vm {
 		 */
 		[[nodiscard]] std::expected<void, api::ApiError> prepareRun();
 
+		/**
+		 * @brief Asks every running thread to pause and waits for them to be paused.
+		 *
+		 * Blocks until every asked thread parked. A thread sleeping on IO pauses once it wakes up
+		 * from the IO.
+		 *
+		 * A thread is skipped when another control request is still in progress, or when it
+		 * finishes first. Skipped threads are not included in the result.
+		 *
+		 * @return The threads that are actually paused.
+		 */
+		[[nodiscard]] std::vector<api::ThreadID> pauseAllVMThreads();
+
 	private:
 		/**
 		 * @brief Loads the program from a given source into the current loader program state,
@@ -200,6 +213,10 @@ namespace vm {
 		// Virtual thread dependencies for doRequest
 		virtual std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) = 0;
 
+		/// Like `pauseVMThread`, but only posts the request and doesn't pause.
+		virtual std::expected<void, api::ApiError> requestPauseOfVMThread(api::ThreadID thread_id)
+			= 0;
+
 		virtual std::expected<void, api::ApiError> resumeVMThread(api::ThreadID thread_id) = 0;
 
 		virtual std::expected<void, api::ApiError> stepVMThread(api::ThreadID thread_id) = 0;
@@ -218,7 +235,15 @@ namespace vm {
 
 		virtual void notifyVMThreadWaiters(api::ThreadID thread_id) = 0;
 
-		virtual void waitForBreakpoint() = 0;
+		/**
+		 * @brief Blocks until the given thread reaches a breakpoint and reports where it stopped.
+		 *
+		 * @return The thread's code position, or an error when the thread reached a terminal state
+		 * instead.
+		 */
+		virtual std::expected<api::Response, api::ApiError> waitForBreakpointAndReportPosition(
+			api::ThreadID thread_id
+		) = 0;
 
 		virtual std::expected<api::Response, api::ApiError> setExecutionConfig(
 			const api::ExecutionConfig& config

@@ -194,8 +194,6 @@ namespace compiler::lir {
 		DvmFreeArr,
 		DvmAlloc,
 		DvmFree,
-		BoxAlloc,
-		BoxFree,
 		DvmPtrParts,
 		DvmIsNullptr,
 		DvmNullptr

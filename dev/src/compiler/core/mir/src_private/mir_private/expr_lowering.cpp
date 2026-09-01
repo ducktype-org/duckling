@@ -1079,12 +1079,45 @@ namespace compiler::mir {
 			return false;
 		}
 
+		/**
+		 * @brief Whether the cast hands a `ptr T` over to a `box T`.
+		 *
+		 * A box is represented by the pointer to its storage, so no bits change - but the box
+		 * owns that storage from here on, and only a place typed `box T` is given a destructor.
+		 * That makes it a re-typing move rather than an empty cast. Only the generated box
+		 * construction does this, `as` cannot express it in the source language.
+		 */
+		bool isBoxFromPointerCast(const hc::CastExpr& expr) {
+			const auto source_type = expr.source_expr->expression_type.getSymbolType();
+			return source_type.getRefKind() == tsh::ReferenceKind::Direct
+			    && source_type.getType().getKind() == tsh::Kind::Pointer
+			    && expr.target_type.getRefKind() == tsh::ReferenceKind::Box;
+		}
+
 		void visitCastExpr(const hc::CastExpr& expr) override {
 			// Maybe in the future the cast expr can be converted into more specific instructions.
 			if (isEmptyCast(expr)) {
 				// If the cast doesn't change the representation, simply ignore it.
 				output(lowerSubExpr(*expr.source_expr, continuation));
 				return;
+			}
+
+			if (isBoxFromPointerCast(expr)) {
+				auto       assign   = continuation->addHole();
+				auto       lowered  = lowerSubExpr(*expr.source_expr, continuation);
+				const auto res_move = lowered.getResult(function);
+				return noValueOutput(
+					lowered.begin,
+					assign,
+					Instruction{ Operation::Assign,
+				                 {},
+				                 { res_move },
+				                 {},
+				                 expr_scope,
+				                 {},
+				                 { expr.getPosition() } },
+					expr.expression_type.getSymbolType()
+				);
 			}
 
 			auto       cast        = continuation->addHole();
