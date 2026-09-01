@@ -70,7 +70,7 @@ namespace base {
 	 * @brief Helper function for filtering variants
 	 */
 	template<typename T, typename U>
-	[[maybe_unused]]  static bool holds(const U& el) {
+	[[maybe_unused]] static bool holds(const U& el) {
 		return std::holds_alternative<T>(el);
 	}
 
@@ -79,7 +79,7 @@ namespace base {
 	 * @TODO: #3073 change to ref
 	 */
 	template<typename T, typename U>
-	[[maybe_unused]]  static T choose(const U& el) {
+	[[maybe_unused]] static T choose(const U& el) {
 		return std::get<T>(el);
 	}
 

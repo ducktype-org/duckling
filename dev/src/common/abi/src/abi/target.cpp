@@ -69,7 +69,7 @@ namespace abi {
 	const TargetABI& aarch64Linux() {
 		static const TargetABI abi = [] {
 			return TargetABI{
-				.triple = TargetTriple{ .arch = Arch::AArch64, .os = OperatingSystem::Linux },
+				.triple      = TargetTriple{ .arch = Arch::AArch64, .os = OperatingSystem::Linux },
 				.data_layout = aarch64DataLayout(),
 			};
 		}();
@@ -79,7 +79,7 @@ namespace abi {
 	const TargetABI& aarch64Darwin() {
 		static const TargetABI abi = [] {
 			return TargetABI{
-				.triple = TargetTriple{ .arch = Arch::AArch64, .os = OperatingSystem::Darwin },
+				.triple      = TargetTriple{ .arch = Arch::AArch64, .os = OperatingSystem::Darwin },
 				.data_layout = aarch64DataLayout(),
 			};
 		}();

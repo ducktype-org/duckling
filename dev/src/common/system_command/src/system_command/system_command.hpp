@@ -28,9 +28,9 @@ namespace system_command {
 	 */
 	class SystemCommand {
 	private:
-		std::string                                        program_name;
-		std::vector<std::string>                           arguments;
-		std::vector<std::pair<std::string, std::string>>   environment;
+		std::string                                      program_name;
+		std::vector<std::string>                         arguments;
+		std::vector<std::pair<std::string, std::string>> environment;
 
 	public:
 		SystemCommand(std::string program_name): program_name(std::move(program_name)) {}
