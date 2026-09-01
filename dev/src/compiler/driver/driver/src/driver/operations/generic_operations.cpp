@@ -547,7 +547,7 @@ namespace compiler::driver {
 
 					// We create a copy here, since compiling the module to assembly might modify it.
 					auto llvm_module_copy = llvm_module.clone();
-					
+
 					llvm_module_copy.compile(
 						asm_artifact.file.getFilePath().getPath(),
 						backend_llvm::CompilationOutputType::Assembly
