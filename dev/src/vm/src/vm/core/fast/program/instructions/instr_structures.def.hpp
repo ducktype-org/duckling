@@ -29,7 +29,7 @@ namespace instr_structs {
 		};                                                      \
 		static_assert(sizeof(NAME) <= 16);
 
-	#include "instruction_definitions.hpp"
+	#include "instruction_definitions.def.hpp"
 	#undef _DETAIL_CREATE_MEMBER
 	#undef HANDLE_INSTR_ARGS
 }
@@ -39,7 +39,7 @@ namespace instr_structs {
 struct Instruction {
 	union {
 	#define HANDLE_INSTR(NAME) instr_structs::NAME CAT(instr_, NAME);
-	#include "instruction_definitions.hpp"
+	#include "instruction_definitions.def.hpp"
 	#undef HANDLE_INSTR
 	};
 
@@ -78,7 +78,7 @@ namespace maker {
 	#elif defined(MAKE_MAKERS_JUST_DEF)
 		#define HANDLE_INSTR_ARGS(NAME, ...) MAKER_SIGNATURE(NAME, __VA_ARGS__);
 	#endif
-	#include "instruction_definitions.hpp"
+	#include "instruction_definitions.def.hpp"
 	#undef HANDLE_ARG
 	#undef HANDLE_ARG_LAST
 	#undef HANDLE_CONS

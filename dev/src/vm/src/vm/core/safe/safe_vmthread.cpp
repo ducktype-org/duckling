@@ -429,7 +429,7 @@ namespace vm {
 			break;                                                                                  \
 		}                                                                                           \
 	}
-	#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+	#include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 	#undef HANDLE_MICRO_INSTR
 
 			default: {

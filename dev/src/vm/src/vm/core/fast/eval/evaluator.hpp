@@ -13,7 +13,7 @@ namespace vm::fast {
 	class FastExecutor {
 	public:
 #define HANDLE_INSTR(NAME) static void Instr_##NAME(INSTRFUN_ARGS(NAME));
-#include <vm/core/fast/program/instructions/instruction_definitions.hpp>
+#include <vm/core/fast/program/instructions/instruction_definitions.def.hpp>
 #undef HANDLE_INSTR
 
 		constexpr static void eval(INSTRFUN_ARGS_BASE) {
@@ -32,7 +32,7 @@ namespace vm::fast {
 		}                                                                             \
 		break;                                                                        \
 	}
-	#include <vm/core/fast/program/instructions/instruction_definitions.hpp>
+	#include <vm/core/fast/program/instructions/instruction_definitions.def.hpp>
 	#undef HANDLE_INSTR
 				default:
 					CORE_PANIC("Unknown instruction ID: ", static_cast<u64>(frame->ip->id));

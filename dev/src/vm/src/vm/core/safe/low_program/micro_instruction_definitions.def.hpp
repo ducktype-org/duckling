@@ -1,5 +1,5 @@
 /**
- * @file micro_instruction_definitions.hpp
+ * @file micro_instruction_definitions.def.hpp
  * @brief Contains definitions of all micro bytecode instructions. Can be used for generating
  * repetitive code based on list of instructions.
  *
@@ -9,7 +9,7 @@
  *  constexpr usize countMicroInstructions() {
  *  	usize count = 0;
  *		#define HANDLE_MICRO_INSTR(i) count++;
- * 		#include "micro_instruction_definitions.hpp"
+ * 		#include "micro_instruction_definitions.def.hpp"
  * 		#undef HANDLE_MICRO_INSTR
  * 		return count;
  * 	}
