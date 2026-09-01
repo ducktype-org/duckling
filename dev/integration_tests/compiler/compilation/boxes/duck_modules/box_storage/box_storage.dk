@@ -1,0 +1,34 @@
+#{
+    The storage of a `box T` comes from `core.containers`, not from a compiler-embedded
+    allocator. This module takes and gives back a lot of that storage, so a leak or a double
+    free shows up under valgrind on native and as a refcount complaint on the DVM.
+#}
+class Counter {
+    value: i64;
+
+    Counter.destroy() = {
+        builtin_output_i64(value);
+    }
+}
+
+fun main() -> i64 = {
+    # Many boxes of a trivial type, taken and released one after another.
+    var i     = 0i64;
+    var total = 0i64;
+    while (i < 100i64) {
+        var b: box i64 = new i;
+        total          = total + b;
+        i              = i + 1i64;
+    }
+    builtin_output_i64(total);          # 4950
+
+    # A box whose pointee has a destructor: the box destructor runs it, then frees the storage.
+    var boxed: box Counter = new Counter(7);
+    builtin_output_i64(boxed.value);    # 7
+
+    # A box holding a box, so the storage is released from the inside out.
+    var nested: box box i64 = new (new 11i64);
+    builtin_output_i64(*nested);        # 11
+
+    return 0;
+}

@@ -38,7 +38,7 @@ fun main() = {
     let point_ptr = &point as ptr Point;
     let cptr_string = (point_ptr as cptr Point).toString();
 
-    var buffer = allocation:{i32}.alloc(2);
+    var buffer = allocation:{i32}.many_alloc(2);
     let manyptr_string = buffer.toString();
     let int_slice_string = builtins.slice_from_ptr_len:{i32}(buffer, 2).toString();
 

@@ -631,6 +631,14 @@ namespace vm {
 		acquireGil();
 	}
 
+	void SafeVMThread::releaseGilIfHeld() {
+		if (has_gil) releaseGil();
+	}
+
+	void SafeVMThread::acquireGilIfNotHeld() {
+		if (!has_gil) acquireGil();
+	}
+
 	void SafeVMThread::releaseGil() {
 		CORE_ASSERT(has_gil, "Cannot release GIL without acquiring it first");
 		has_gil = false;
