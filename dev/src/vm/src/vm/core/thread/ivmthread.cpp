@@ -292,6 +292,9 @@ namespace vm {
 			}
 			case ThreadSignal::Request::Step: {
 				applyEvent(te::Resume{});
+				// If we're on `Opcode::Exit` we release the paused loop and let the interpreter
+				// handle the program exit.
+				if (isAtExecutionEnd()) return;
 				executeOneStep();
 				// A Stop posted while the step ran must win over re-pausing.
 				if (isTerminateRequested()) throw KillProcessException{};

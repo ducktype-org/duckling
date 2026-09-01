@@ -32,6 +32,8 @@ namespace vm::fast {
 
 		void executeOneStep() override;
 
+		[[nodiscard]] bool isAtExecutionEnd() const override { return false; }
+
 		void execGlobalDestructors() override;
 
 	private:

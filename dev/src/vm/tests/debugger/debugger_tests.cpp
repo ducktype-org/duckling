@@ -20,6 +20,7 @@ public:
 		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
 		TESTER_ADD_TEST(notPausesOnRemovedBreakpoint);
 		TESTER_ADD_TEST(executesStepByStep);
+		TESTER_ADD_TEST(stepsUntilProgramTerminates);
 		TESTER_ADD_TEST(backMapTest);
 		TESTER_ADD_TEST(vmApiMemoryAllTypes);
 		TESTER_ADD_TEST(outputTest);
@@ -151,6 +152,40 @@ private:
 		vm::api::resume(pid).value();  // "Resume failed (2)"
 
 		vm::api::stop(pid).value();    // "Stop failed (1)"
+	}
+
+	void stepsUntilProgramTerminates() {
+		auto pid = loadProgram("breakpoint.dbc");
+		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 2, true));
+		ASSERT_HAS_VALUE(vm::api::run(pid));
+		ASSERT_HAS_VALUE(vm::api::waitForBreakpoint(pid));
+		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 2, false));
+
+		constexpr u64 STEP_LIMIT = 100;
+
+		bool terminated = false;
+		for (u64 i = 0; i < STEP_LIMIT && !terminated; i++) {
+			ASSERT_HAS_VALUE(vm::api::step(pid));
+
+			auto status = vm::api::getExecutionStatus(pid);
+			ASSERT_HAS_VALUE(status);
+			terminated = vm::api::isStatusTerminal(status.value());
+		}
+		ASSERT_TRUE(terminated);
+
+		auto status = vm::api::getExecutionStatus(pid);
+		ASSERT_HAS_VALUE(status);
+		ASSERT_TRUE(v_matches(status.value(), vm::api::ExecutionCompleted));
+
+		ASSERT_HAS_VALUE(vm::api::join(pid));
+
+		auto exit_value = vm::api::getExitValue(pid);
+		ASSERT_HAS_VALUE(exit_value);
+
+		// Memory state should be intact.
+		auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(validation_result);
+		ASSERT_TRUE(validation_result.value());
 	}
 
 	u64 stepAndGetLine(vm::PID pid) {
