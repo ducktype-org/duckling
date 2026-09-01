@@ -4,7 +4,6 @@
 # so cases can run concurrently and never dirty the source tree.
 Env:
     DIT_TMP_DIR: "@{new_tmp_dir}"
-    DUCKC_STD_ARTIFACTS_PATH: "echo @{case_std_artifacts}"
 
 case_build: "$DIT_TMP_DIR/build"
 

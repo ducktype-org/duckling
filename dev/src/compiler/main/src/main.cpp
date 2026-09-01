@@ -530,10 +530,16 @@ clah::Clah getClahForMain() {
 				.add(getClahStdLibOptions())
 				.addCustomVerification(verifyStdLibOptions)
 				.add(getClahLinkingOptions())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
+	                     .addShortName('a')
+	                     .addLongName("artifact-location")
+	                     .addShortDesc("Path to the top-level folder with build artifacts")
+	                     .optional()
+	                     .build())
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("output-file-name"))
 	                     .addShortName('o')
 	                     .addLongName("output-file-name")
-	                     .addShortDesc("Output artifact file name of the first given module.")
+	                     .addShortDesc("Output artifact file name of the executable.")
 	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("archiver"))
@@ -626,7 +632,7 @@ clah::Clah getClahForMain() {
                         compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info         = std::move(packages_info),
 							.compilation_artifacts = {
-								.artifacts_path = fs::FilePath("./duck_build/"),
+								.artifacts_path = options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
 							.backend_options   = getBackendOptionsFromClah(options),
 							.debug_options     = debug_options::getDebugOptionsFromClah(options),

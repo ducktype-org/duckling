@@ -232,7 +232,11 @@ namespace compiler::driver {
 					auto asm_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(lir_data.module_id.str() + ".s")
 					);
-					llvm_module.compile(
+
+					// We create a copy here, since compiling the module to assembly might modify it.
+					auto llvm_module_copy = llvm_module.clone();
+
+					llvm_module_copy.compile(
 						asm_artifact.file.getFilePath().getPath(),
 						backend_llvm::CompilationOutputType::Assembly
 					);
