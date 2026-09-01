@@ -84,13 +84,23 @@ private:
 		});
 
 		// debug print for coverage only:
-		llvm_module_opt->debugPrint();
+		auto llvm_module_dprint = llvm_module_opt->dumpLLVMToString();
+
+		// clone for coverage:
+		auto cloned        = llvm_module_opt->clone();
+		auto cloned_dprint = cloned.dumpLLVMToString();
+
+		ASSERT_EQUAL(llvm_module_dprint, cloned_dprint);
 
 		// verify integrity, then return for further checks.
 		assertTrue(
 			llvm_module_opt->verify().isOk(),
 			"LLVM module verification failed (enable Backend dev logs to see details)"
 		);
+
+		assertTrue(cloned.verify().isOk(), "Cloned LLVM module verification failed");
+
+
 		return std::move(llvm_module_opt.value());
 	}
 

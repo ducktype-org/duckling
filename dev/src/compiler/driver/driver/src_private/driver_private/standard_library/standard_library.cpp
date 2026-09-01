@@ -4,6 +4,7 @@
 #include <frontend/packages/standard_packages.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
+#include <os_utils/executable_path.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -20,7 +21,7 @@ namespace compiler::driver {
 #ifdef STD_FIXED_PATH
 			return { STD_FIXED_PATH };
 #else
-			return getExecutablePath().parentPath().parentPath().join(fs::FilePath("lib/core/std"));
+			return os_utils::getExecutablePath().parentPath().join(fs::FilePath("duck_lib/"));
 #endif
 		}
 	}
