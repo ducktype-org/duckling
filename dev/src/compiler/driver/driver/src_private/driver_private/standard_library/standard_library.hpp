@@ -56,7 +56,7 @@ namespace compiler::driver {
 	 * @brief Based on the `StdLibOptions` returns the paths of the standard library DVM
 	 * artifacts, to be linked as dependencies. Empty if the standard library is not used.
 	 */
-	std::vector<std::string> getStdLibDVMLinkingDependencies(
+	std::vector<fs::File> getStdLibDVMLinkingDependencies(
 		const options_types::StdLibOptions& standard_library_options
 	);
 

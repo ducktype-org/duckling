@@ -1,3 +1,5 @@
+#pragma once
+
 /**
  * @brief file_fd.hpp
  * Forward declarations of the filesystem.

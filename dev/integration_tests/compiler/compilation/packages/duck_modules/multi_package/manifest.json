@@ -115,7 +115,7 @@
             "strategy": "dvm_exe",
             "output_file": "app2_dvm_linked.dbc",
             "dvm_linking_options": {
-                "shared_libraries": [ "libm.so.6" ],
+                "shared_libraries": [ "build_c/libc_helper.so" ],
                 "link_libraries": [ "build/lib_a_dvm.dbc" ]
             }
         },
@@ -140,7 +140,7 @@
             "strategy": "native",
             "output_file": "app2.exe",
             "linking_options": {
-                "additional_link_options": "build/lib_a.a",
+                "additional_link_options": "build/lib_a.a build_c/c_helper.o",
                 "link_c_standard_library": true
             }
         },

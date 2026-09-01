@@ -121,7 +121,7 @@ namespace compiler::driver {
 			/**
 			 * @brief The paths of the DBC libraries to link into the output.
 			 */
-			std::vector<fs::FilePath> dvm_link_libraries;
+			std::vector<fs::File> dvm_link_libraries;
 		};
 	}
 

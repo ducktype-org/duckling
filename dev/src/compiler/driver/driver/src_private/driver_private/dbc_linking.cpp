@@ -53,8 +53,10 @@ namespace compiler::driver {
 			constexpr std::string_view DBC_EXTENSION = ".dbc";
 			constexpr std::string_view DI_EXTENSION  = ".di.json";
 
+			if (!link_library_path.ends_with(DBC_EXTENSION)) return {};
+
 			std::string stem = link_library_path;
-			if (stem.ends_with(DBC_EXTENSION)) stem.resize(stem.size() - DBC_EXTENSION.size());
+			stem.resize(stem.size() - DBC_EXTENSION.size());
 
 			fs::FilePath debug_info_path = stem + std::string(DI_EXTENSION);
 			if (!debug_info_path.isRegularFile()) return {};
@@ -75,10 +77,7 @@ namespace compiler::driver {
 		using std::ranges::views::transform;
 
 		auto object_files = objects | transform(&artifacts::FileArtifact::file) | to<std::vector>();
-		auto link_library_files = dvm_linking_options.link_libraries
-		                        | transform([](const std::string& val) { return fs::File(val); })
-		                        | to<std::vector>();
-		base::appendToVector(object_files, link_library_files);
+		base::appendToVector(object_files, dvm_linking_options.link_libraries);
 
 		auto parse_result = dvm_linker.parseCodeCollectionFromFiles(object_files);
 
@@ -108,7 +107,7 @@ namespace compiler::driver {
 		debug_info_paths.reserve(debug_info_artifacts.size());
 		for (auto& art: debug_info_artifacts) debug_info_paths.push_back(art.file.getFilePath());
 		for (const auto& link_library: dvm_linking_options.link_libraries)
-			if_opt_some(findLinkLibraryDebugInfoPath(link_library), debug_info_path) {
+			if_opt_some(findLinkLibraryDebugInfoPath(link_library.name()), debug_info_path) {
 				debug_info_paths.push_back(debug_info_path);
 			}
 

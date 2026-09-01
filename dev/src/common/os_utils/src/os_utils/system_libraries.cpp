@@ -3,20 +3,22 @@
 namespace os_utils {
 #ifdef __APPLE__
 	const std::string& systemSharedLibC() {
-		static const std::string library = "libSystem.B.dylib";
-		return library;
+		static constexpr std::string LIBRARY = "libSystem.B.dylib";
+		return LIBRARY;
 	}
 
 	const std::string& systemSharedLibM() { return systemSharedLibC(); }
+#elif defined(_WIN32)
+	#error "systemSharedLibC/systemSharedLibM are not supported on Windows"
 #else
 	const std::string& systemSharedLibC() {
-		static const std::string library = "libc.so.6";
-		return library;
+		static constexpr std::string LIBRARY = "libc.so.6";
+		return LIBRARY;
 	}
 
 	const std::string& systemSharedLibM() {
-		static const std::string library = "libm.so.6";
-		return library;
+		static constexpr std::string LIBRARY = "libm.so.6";
+		return LIBRARY;
 	}
 #endif
 }

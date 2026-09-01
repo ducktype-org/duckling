@@ -278,8 +278,8 @@ namespace clah {
 	 * Each item is parsed by an element parser of type T.
 	 * Creates values of type std::vector<T::Result>.
 	 */
-	template<class T>
-	requires ElementValueParser<T> class ListParser final: public ValueParser {
+	template<ElementValueParser T>
+	class ListParser final: public ValueParser {
 		using ElemType = T::Result;
 
 		Box<T> element_parser;
@@ -317,4 +317,5 @@ namespace clah {
 	using StringListParser   = ListParser<StringParser>;
 	using CategoryListParser = ListParser<CategoryParser>;
 	using FilePathListParser = ListParser<FilePathParser>;
+	using FileListParser     = ListParser<FileParser>;
 }

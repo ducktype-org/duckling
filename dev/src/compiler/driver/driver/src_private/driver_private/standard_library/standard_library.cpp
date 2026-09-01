@@ -223,7 +223,7 @@ namespace compiler::driver {
 				pkg->getRootModule().illegalAccess().getID(),
 				BuildTargetDVMLibrary{
 					.output_file_name = base::StrID(base::strConcat(package.id, ".dbc")),
-					.dvm_linking_options{ .shared_libraries = package.dvm_shared_libs },
+					.dvm_linking_options{ .shared_libraries = package.getSharedLibsAsStr() },
 					.custom_art_collection = art_collection,
 				}
 			);
@@ -285,14 +285,16 @@ namespace compiler::driver {
 		return getStdLibArtifacts(".dbc").artifacts;
 	}
 
-	std::vector<std::string> getStdLibDVMLinkingDependencies(
+	std::vector<fs::File> getStdLibDVMLinkingDependencies(
 		const options_types::StdLibOptions& standard_library_options
 	) {
 		if (!standard_library_options.stdActive()) return {};
+		CORE_ASSERT(
+			allStdlibArtifactsPresent(), "std DVM artifacts requested before they were compiled"
+		);
 
-		std::vector<std::string> dependencies;
-		for (const auto& art: getStdLibDVMArtifacts())
-			dependencies.push_back(art.file.getFilePath().string());
+		std::vector<fs::File> dependencies;
+		for (const auto& art: getStdLibDVMArtifacts()) dependencies.push_back(art.file);
 		return dependencies;
 	}
 

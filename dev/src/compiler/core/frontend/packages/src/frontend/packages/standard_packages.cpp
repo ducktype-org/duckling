@@ -15,7 +15,7 @@ namespace compiler::frontend::packages {
 			{
 				.id              = base::StrID("core"),
 				.dependencies    = {},
-				.dvm_shared_libs = { os_utils::systemSharedLibC(), os_utils::systemSharedLibM() },
+				.dvm_shared_libs = { SharedDVMLibName{os_utils::systemSharedLibC()}, SharedDVMLibName{os_utils::systemSharedLibM()}, },
 			},
 			{
 				.id              = base::StrID("std"),
@@ -45,5 +45,10 @@ namespace compiler::frontend::packages {
 			if (module.has_value()) root_modules.push_back(module.value());
 		}
 		return root_modules;
+	}
+
+	std::vector<std::string> StandardLibraryPackage::getSharedLibsAsStr() const {
+		return dvm_shared_libs | std::views::transform(&SharedDVMLibName::soname)
+		     | std::ranges::to<std::vector>();
 	}
 }

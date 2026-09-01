@@ -157,7 +157,7 @@ namespace compiler::repl {
 		// shared libraries the standard library needs for its `ffi object` symbols, so they are
 		// declared straight on the preloaded batch.
 		for (const auto& package: frontend::packages::standardLibraryPackages())
-			base::appendToVector(preload_code.object_files, package.dvm_shared_libs);
+			base::appendToVector(preload_code.object_files, package.getSharedLibsAsStr());
 
 		return vm::api::loadCode(pid, preload_code).transform_error(vm::api::errorToString);
 	}

@@ -62,8 +62,6 @@ namespace vm {
 		auto      old_view_size  = block->data.view.size();
 		auto      new_view_size  = new_block_data.view.size();
 
-		std::memset(new_block_data.view.getBegin(), 0, new_block_data.view.size());
-
 		Block mock_block{ BlockID{ 0 }, new_block_data };
 
 		moveBlockDataAndEraseSuffix(&mock_block, block, std::min(old_view_size, new_view_size));

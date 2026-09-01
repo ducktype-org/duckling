@@ -62,7 +62,9 @@ namespace compiler::driver {
 					report
 				);
 
-				auto parseStringArray = [&](std::string_view key, std::vector<std::string>& target) {
+				auto parse_string_array = [&]<typename T>(
+											  std::string_view key, std::vector<T>& target
+										  ) {
 					if (!options_obj->contains(key)) return;
 
 					auto array = js::getArray(
@@ -81,15 +83,26 @@ namespace compiler::driver {
 						auto value = js::getStringFromArray(
 							elem, base::strConcat("dvm_linking_options.", key), report
 						);
-						if (value)
-							target.emplace_back(value->str());
-						else
+						if (value) {
+							if constexpr (std::same_as<T, fs::File>) {
+								if (not fs::FilePath(value->str()).isRegularFile()) {
+									report(
+										base::strConcat("File `", *value, "` not found."),
+										std::string{},
+										true
+									);
+									had_error = true;
+									continue;
+								}
+							}
+							target.emplace_back(T(value->str()));
+						} else
 							had_error = true;
 					}
 				};
 
-				parseStringArray("shared_libraries", dvm_linking_options.shared_libraries);
-				parseStringArray("link_libraries", dvm_linking_options.link_libraries);
+				parse_string_array("shared_libraries", dvm_linking_options.shared_libraries);
+				parse_string_array("link_libraries", dvm_linking_options.link_libraries);
 
 				return dvm_linking_options;
 			}
@@ -396,11 +409,7 @@ namespace compiler::driver {
 		const options_types::StdLibOptions&  stdlib_options,
 		bool                                 is_static_lib
 	) {
-		auto link_libraries
-			= linking_options.dvm_link_libraries
-		    | std::views::transform([](const fs::FilePath& fs_path) { return fs_path.string(); })
-		    | std::ranges::to<std::vector>();
-
+		auto link_libraries = linking_options.dvm_link_libraries;
 		if (not is_static_lib)
 			base::appendToVector(link_libraries, getStdLibDVMLinkingDependencies(stdlib_options));
 

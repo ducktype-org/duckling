@@ -259,9 +259,7 @@ auto getClahLinkingOptions() {
 			.addShortDesc("Shared libraries that will be loaded by the VM.")
 			.optional()
 			.build(),
-		clah::ParamBuilder::ofValue(
-			clah::FilePathListParser::make("paths", clah::FilePathParser::make())
-		)
+		clah::ParamBuilder::ofValue(clah::FileListParser::make("paths", clah::FileParser::make()))
 			.addLongName("dvm-link-libraries")
 			.addShortDesc("Paths to the .dbc libraries to link into the output.")
 			.optional()
@@ -285,7 +283,7 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 	if (auto lib_paths = parsing_result.getValue<std::vector<std::string>>("dvm-shared-libs"))
 		linking_options.dvm_shared_libraries = lib_paths.value();
 
-	if (auto lib_paths = parsing_result.getValue<std::vector<fs::FilePath>>("dvm-link-libraries"))
+	if (auto lib_paths = parsing_result.getValue<std::vector<fs::File>>("dvm-link-libraries"))
 		linking_options.dvm_link_libraries = lib_paths.value();
 
 	linking_options.native_link_c_standard_lib = not parsing_result.isFlag("no-c-standard-library");
