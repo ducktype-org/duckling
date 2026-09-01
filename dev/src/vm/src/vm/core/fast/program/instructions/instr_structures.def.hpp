@@ -3,8 +3,8 @@
  * given argument type definitions. It also defines instruction maker functions for easier
  * instruction creation.
  * You need to include "ids.hpp" before this file, which defines the
- * instruction IDs, and define the argument types and verify them with "argument_definitions.hpp".
- * Example usages are in "relocatable.hpp" and "executable.hpp".
+ * instruction IDs, and define the argument types and verify them with
+ * "argument_definitions.def.hpp". Example usages are in "relocatable.hpp" and "executable.hpp".
  */
 // NOLINTBEGIN
 
