@@ -190,20 +190,6 @@ private:
 	}
 
 	/**
-	 * Get the value boxed by the `boxAlloc` call or nullptr on error.
-	 */
-	const compiler::helios::code::Expr* boxAllocArg(const compiler::helios::code::Expr* expr) {
-		using namespace compiler::helios;
-		const auto* call = dynamic_cast<const code::CallExpr*>(stripImplicitMove(expr));
-		if (call == nullptr) return nullptr;
-		const auto callee = getIdentifierExprSymID(call->callee.ref());
-		if (!callee.has_value()) return nullptr;
-		const auto builtin = isBuiltin(callee.value());
-		if (!builtin.has_value() || builtin.value() != BuiltinKind::BoxAlloc) return nullptr;
-		return stripImplicitMove(call->arguments.at(0).get());
-	}
-
-	/**
 	 * @brief Simple wrapper for querying mangled name of a symbol without context
 	 */
 	static auto mangle(const compiler::helios::mangler::KeyOf_MangledSymbol& key) {
