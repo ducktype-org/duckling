@@ -657,10 +657,13 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_p64)(FUNCTION_ARGS) {
 		{
-			thread.reportAsSleeping();
-			i64 io_value = thread.safe_process.getIO().getInput<i64>(thread);
+			i64 io_value = 0;
+			{
+				const SafeVMThread::ScopedBlockingWait io_wait(thread);
+				io_value = thread.safe_process.getIO().getInput<i64>(thread);
+			}
+			// Write to a place only when the GIL is held.
 			WRITE_TO_PLACE_ARG(i64, instr->arg0, io_value);
-			thread.reportAsRunning();
 		}
 		FUNCTION_CONT(1);
 	}
@@ -672,10 +675,13 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_p32)(FUNCTION_ARGS) {
 		{
-			thread.reportAsSleeping();
-			i32 io_value = thread.safe_process.getIO().getInput<i32>(thread);
+			i32 io_value = 0;
+			{
+				const SafeVMThread::ScopedBlockingWait io_wait(thread);
+				io_value = thread.safe_process.getIO().getInput<i32>(thread);
+			}
+			// Write to a place only when the GIL is held.
 			WRITE_TO_PLACE_ARG(i32, instr->arg0, io_value);
-			thread.reportAsRunning();
 		}
 		FUNCTION_CONT(1);
 	}
