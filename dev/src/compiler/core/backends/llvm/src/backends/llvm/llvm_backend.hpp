@@ -114,6 +114,13 @@ namespace compiler::backend_llvm {
 		[[nodiscard]]
 		base::OkBad verify() const;
 
+		/**
+		 * @brief Creates a clone of the current LLVM module.
+		 *
+		 * @return A new Module instance that is a copy of the current module.
+		 */
+		[[nodiscard]]
+		Module clone() const;
 
 		/**
 		 * @brief Compile the module to binary object file or assembly file.

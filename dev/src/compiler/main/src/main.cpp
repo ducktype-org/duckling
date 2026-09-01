@@ -562,8 +562,10 @@ clah::Clah getClahForMain() {
 
 					if (dvm_backend) {
 						// @TODO: #2670 fix it, when compilePackages tasks support it!
-						std::cerr << "DVM Backend does not create full (linked) output artifacts "
-									 "in compile_modules command.\n";
+						CORE_USER_LOG(
+							"DVM Backend does not create full (linked) output artifacts "
+							"in compile_modules command. Stop.\n"
+						);
 						return 1;
 					}
 

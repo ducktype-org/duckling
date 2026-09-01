@@ -1,5 +1,13 @@
 # CLI tests
 
+# Every case gets a private scratch directory for its build artifacts,
+# so cases can run concurrently and never dirty the source tree.
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+    DUCKC_STD_ARTIFACTS_PATH: "echo @{case_std_artifacts}"
+
+case_build: "$DIT_TMP_DIR/build"
+
 Run: "@{duckc_path} @{run_args}"
 
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
@@ -34,6 +42,6 @@ Tests:
   compile-modules:
     Cases:
       two-modules:
-        run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental"
+        run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build}"
         ExitCode: 0
         
