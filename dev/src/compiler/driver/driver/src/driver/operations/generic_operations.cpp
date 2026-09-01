@@ -250,8 +250,6 @@ namespace compiler::driver {
 						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
-
-
 				break;
 			}
 			case BackendType::DVM: {

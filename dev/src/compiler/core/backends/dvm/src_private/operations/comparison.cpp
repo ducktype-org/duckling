@@ -59,7 +59,9 @@ namespace {
                 case OpKind::ucmpLe:
                     return lhs_num <= rhs_num;
                 default:
+					// clang-format off
                     CORE_PANIC("Unhandled comparison operation in compTimeEvaluateComparison");
+					// clang-format on
                 }
             },
             lhs_numeric.getStorage()
