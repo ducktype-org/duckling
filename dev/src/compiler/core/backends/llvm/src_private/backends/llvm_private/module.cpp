@@ -140,7 +140,7 @@ namespace compiler::backend_llvm {
 
 		Box<llvm::Module> llvm_module = Box<llvm::Module>::fromPointer(new_module.release());
 		auto              module_impl = makeBox<ModuleImpl>(std::move(llvm_module));
-		return Module(std::move(module_impl));
+		return { std::move(module_impl) };
 	}
 
 	void Module::debugPrint() const { return impl->module->print(llvm::errs(), nullptr); }
