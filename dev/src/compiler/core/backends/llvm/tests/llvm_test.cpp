@@ -87,7 +87,7 @@ private:
 		auto llvm_module_dprint = llvm_module_opt->dumpLLVMToString();
 
 		// clone for coverage:
-		auto cloned = llvm_module_opt->clone();
+		auto cloned        = llvm_module_opt->clone();
 		auto cloned_dprint = cloned.dumpLLVMToString();
 
 		ASSERT_EQUAL(llvm_module_dprint, cloned_dprint);
