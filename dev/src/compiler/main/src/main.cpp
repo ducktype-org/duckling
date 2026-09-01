@@ -27,6 +27,8 @@
 #include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include "base/extend_cpp/ranges_utils.hpp"
+#include "base/extend_cpp/vector_utils.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
@@ -574,23 +576,11 @@ clah::Clah getClahForMain() {
 						 )
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					// @TODO: #3449 fix it here
-
 					std::vector<fs::File> modules_to_compile{ options.getPositional<fs::File>(0) };
 					for (usize i = 0; i < options.getExtraParameterCount(); ++i)
 						modules_to_compile.push_back(options.getExtra<fs::File>(i).value());
 
 					const bool dvm_backend = options.isFlag("dvm-backend");
-
-					if (dvm_backend) {
-						// @TODO: #2670 fix it, when compilePackages tasks support it!
-						CORE_USER_LOG(
-							"DVM Backend does not create full (linked) output artifacts "
-							"in compile_modules command. Stop.\n"
-						);
-						return 1;
-					}
-
 
 					std::set<base::StrID>               aliases_duplicate_check;
 					base::Map<base::StrID, base::StrID> package_id_aliases;
@@ -682,7 +672,7 @@ clah::Clah getClahForMain() {
 		            // that all the libraries it links are already built.
 					std::vector<driver::PackageCompilationTask> compilation_tasks;
 					base::Optional<frontend::ModuleID>          main_root_module;
-					std::string                                 libraries_to_link;
+					std::vector<fs::File>                       libraries_to_link;
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
 					for (const auto& package: global_state::getPackages()) {
@@ -706,9 +696,9 @@ clah::Clah getClahForMain() {
 								.root_module  = root_module,
 								.build_target = driver::BuildTargetDVMLibrary{
 									.output_file_name = library_name,
-									.runtime_config   = driver::constructDVMRuntimeConfig(
-										getLinkingOptionsFromClah(options)
-									),
+									.dvm_linking_options   = driver::constructDVMLinkingOptions(
+									getLinkingOptionsFromClah(options), stdlib_options, true
+								),
 								},
 							});
 						} else {
@@ -719,14 +709,11 @@ clah::Clah getClahForMain() {
 									.archiving_options = getArchivingOptionsFromClah(options),
 								},
 							});
-							libraries_to_link += base::strConcat(
-								" ",
-								global_state::getRootCollection()
-									->fileArtifactAtOrNew(library_name)
-									.file.getFilePath()
-									.native()
-							);
 						}
+						auto artifact_file = global_state::getRootCollection()
+			                                     ->fileArtifactAtOrNew(library_name)
+			                                     .file;
+						libraries_to_link.push_back(std::move(artifact_file));
 					}
 
 					CORE_ASSERT(main_root_module.has_value(), "First package is not registered");
@@ -734,13 +721,14 @@ clah::Clah getClahForMain() {
 					if (dvm_backend) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_dvm.dbc");
+						auto linking_options = getLinkingOptionsFromClah(options);
+						base::appendToVector(linking_options.dvm_link_libraries, libraries_to_link);
 						compilation_tasks.push_back(driver::PackageCompilationTask{
 							.root_module  = main_root_module.value(),
 							.build_target = driver::BuildTargetDVMExecutable{
 								.output_file_name  = base::StrID(output_file_name),
-								.link_std_packages = stdlib_options.stdActive(),
-								.runtime_config    = driver::constructDVMRuntimeConfig(
-									getLinkingOptionsFromClah(options)
+								.dvm_linking_options    = driver::constructDVMLinkingOptions(
+									getLinkingOptionsFromClah(options), stdlib_options, false
 								),
 							},
 						});
@@ -750,7 +738,10 @@ clah::Clah getClahForMain() {
 						auto linking_options = getLinkingOptionsFromClah(options);
 						linking_options.native_additional_link_options = base::strConcat(
 							linking_options.native_additional_link_options.copyValueOr(""),
-							libraries_to_link
+							libraries_to_link | std::views::transform([](fs::File& f) {
+								return f.getFilePath().native();
+							}) | base::rangesIntersperse(std::string(", "))
+								| std::views::join | std::ranges::to<std::string>()
 						);
 						compilation_tasks.push_back(driver::PackageCompilationTask{
 							.root_module  = main_root_module.value(),
