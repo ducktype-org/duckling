@@ -71,7 +71,8 @@ pip3 install click -r requirements.txt
 #### MacOS (clang)
 
 If you want to use the clang instead of the **Homebrew GCC**, it's perfectly fine. The minimal clang version that supports
-the compilation is the 23 from the LLVM 23. But we still need LLVM 19, if we want to use a system-wide precompiled LLVM version.
+the compilation is the 23 from the LLVM 23. But we still need LLVM 19, if we want to use a system-wide precompiled LLVM version
+and for the `clang-format` and `clang-tidy`.
 You can install it using:
 
 ```bash
