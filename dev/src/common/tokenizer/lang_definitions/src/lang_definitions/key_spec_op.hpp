@@ -114,6 +114,7 @@ namespace lang_def {
 		Bool,
 		Str,
 		Type,  // ...
+		Void,
 
 		// @TODO: do we need all of them?
 		Set,
@@ -143,6 +144,7 @@ namespace lang_def {
 		ManyPtr,
 		Slice,
 		Copy,
+		Copyof,
 		Move,
 		Refof,
 		Ptrof,
@@ -228,6 +230,7 @@ namespace lang_def {
 
 		Pipe,       // | for variants and bitwise or.
 		Ampersand,  // & for references and bitwise and.
+		BitNot,
 		BitXor,
 
 		LeftShift,

@@ -78,6 +78,7 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
         features: HashMap::new(),
@@ -91,6 +92,7 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
         features: [("a".into(), vec![])].into(),
@@ -104,6 +106,7 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
         features: HashMap::new(),
@@ -207,7 +210,7 @@ dependencies:
     else {
         panic!()
     };
-    let new_freeze = solver.solve().unwrap().new_freeze;
+    let new_freeze = solver.solve(&ctx).unwrap().new_freeze;
     assert_eq!(new_freeze.main_pkg, pkg_root);
     assert_eq!(
         new_freeze.package_freezes,
@@ -406,7 +409,7 @@ dependencies:
     else {
         panic!()
     };
-    let new_freeze = solver.solve().unwrap().new_freeze;
+    let new_freeze = solver.solve(&ctx).unwrap().new_freeze;
     assert_eq!(new_freeze.main_pkg, pkg_root);
     assert_eq!(
         new_freeze.package_freezes,

@@ -193,6 +193,59 @@ DEF_INSTR(log_xor_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src
 
 DEF_INSTR(log_not_p8, (vm::opargs::Place8, dst))
 
+// ========= BITWISE OPERATIONS ========
+
+// 64-bit Bitwise Operations
+DEF_INSTR(bit_and_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
+DEF_INSTR(bit_and_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_or_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
+DEF_INSTR(bit_or_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_xor_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
+DEF_INSTR(bit_xor_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(shl_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
+DEF_INSTR(shl_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(shr_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
+DEF_INSTR(shr_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_not_p64, (vm::opargs::Place64, dst))
+
+// 32-bit Bitwise Operations
+DEF_INSTR(bit_and_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
+DEF_INSTR(bit_and_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_or_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
+DEF_INSTR(bit_or_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_xor_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
+DEF_INSTR(bit_xor_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(shl_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
+DEF_INSTR(shl_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(shr_p32_p32, (vm::opargs::Place32, dst), (vm::opargs::Place32, src))
+DEF_INSTR(shr_p32_imm, (vm::opargs::Place32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_not_p32, (vm::opargs::Place32, dst))
+
+// 16-bit Bitwise Operations
+DEF_INSTR(bit_and_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
+DEF_INSTR(bit_and_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_or_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
+DEF_INSTR(bit_or_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_xor_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
+DEF_INSTR(bit_xor_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(shl_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
+DEF_INSTR(shl_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(shr_p16_p16, (vm::opargs::Place16, dst), (vm::opargs::Place16, src))
+DEF_INSTR(shr_p16_imm, (vm::opargs::Place16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_not_p16, (vm::opargs::Place16, dst))
+
+// 8-bit Bitwise Operations
+DEF_INSTR(bit_and_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
+DEF_INSTR(bit_and_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_or_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
+DEF_INSTR(bit_or_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_xor_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
+DEF_INSTR(bit_xor_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(shl_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
+DEF_INSTR(shl_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(shr_p8_p8, (vm::opargs::Place8, dst), (vm::opargs::Place8, src))
+DEF_INSTR(shr_p8_imm, (vm::opargs::Place8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(bit_not_p8, (vm::opargs::Place8, dst))
 // ========= LOGICAL OPERATIONS ========
 
 // --- 64-bit Integer Comparisons ---
@@ -599,6 +652,21 @@ DEF_INSTR(add_pcptr_p64, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Place64, off
 /// Performs `dst += offset`, where `offset` is in **bytes** (not pointee elements, unlike C pointer
 /// arithmetic).`
 DEF_INSTR(add_pcptr_imm, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Immediate, offset))
+
+// ========= POINTER DECOMPOSITION ========
+
+/**
+ * @brief Decomposes a pointer into the id of the block it points into and the byte offset
+ * within that block. Throws on a null pointer, which points into no block.
+ * @note The id is the identity used by the memory diagnostics, not a native address. It is
+ * reproducible across runs of the same program.
+ */
+DEF_INSTR(
+	ptrParts_p64_p64_pptr,
+	(vm::opargs::Place64, dst_id),
+	(vm::opargs::Place64, dst_offset),
+	(vm::opargs::PlacePtr, src_ptr)
+)
 
 // ========= TYPE OPERATIONS ========
 // Casts a primitive type in-place. This does nothing at runtime, but is needed

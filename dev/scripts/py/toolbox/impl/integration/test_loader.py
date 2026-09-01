@@ -36,6 +36,7 @@ CASE_ALLOWED_KEYS = {
     TIME_OUT,
     EXIT_CODE,
     ENABLED,
+    NEEDED_THREADS,
     PARENT,
 }
 
@@ -54,6 +55,24 @@ def _get_case_io_data_list(case_dict: dict) -> list[IOData]:
                 io_dict[k] = config_eval_variables(case_dict, str(v))
             io_data[i] = make_data_from_dict(io_dict, config_dir)
     return io_data
+
+
+def _get_case_needed_threads(case_dict: dict) -> int:
+    """
+    Resolves the `NeededThreads` of a case: how many machine threads the
+    case occupies while it runs (defaults to 1).
+    """
+    value = config_find_and_eval(case_dict, NEEDED_THREADS, default=1)
+    try:
+        count = int(value)
+    except (TypeError, ValueError):
+        count = 0
+    if count < 1:
+        exit_with_error(
+            f"In case {config_get_name_path(case_dict)}\n\t`{NEEDED_THREADS}`"
+            f" must be a positive integer, got `{value}`."
+        )
+    return count
 
 
 def _make_case(test_dict: dict, case_name: str) -> Case:
@@ -83,6 +102,7 @@ def _make_case(test_dict: dict, case_name: str) -> Case:
             expected_output=io_data[1],
             expected_err=io_data[2],
             expected_exitcode=config_find_value(case_dict, EXIT_CODE, default=0),
+            needed_threads=_get_case_needed_threads(case_dict),
             timeout=config_find_and_eval(case_dict, TIME_OUT, default="1"),
         )
     except (VariableNotFound, ExpressionFillError) as e:

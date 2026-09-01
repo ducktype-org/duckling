@@ -220,16 +220,6 @@ namespace compiler::driver {
 			switch (key.backend_type) {
 			case BackendType::LLVM: {
 				auto llvm_module = compileLIRModuleToLLVM(ctx, &lir_data);
-				{
-					// compileLIRModuleToLLVM time is added on its own,
-					// but tracking time of the actual compilation to object file is done here
-					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
-
-					llvm_module.compile(
-						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
-					);
-				}
-
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(lir_data.module_id.str() + ".ll")
@@ -242,9 +232,22 @@ namespace compiler::driver {
 					auto asm_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(lir_data.module_id.str() + ".s")
 					);
-					llvm_module.compile(
+
+					// We create a copy here, since compiling the module to assembly might modify it.
+					auto llvm_module_copy = llvm_module.clone();
+
+					llvm_module_copy.compile(
 						asm_artifact.file.getFilePath().getPath(),
 						backend_llvm::CompilationOutputType::Assembly
+					);
+				}
+				{
+					// compileLIRModuleToLLVM time is added on its own,
+					// but tracking time of the actual compilation to object file is done here
+					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
+
+					llvm_module.compile(
+						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
 				break;
@@ -530,13 +533,6 @@ namespace compiler::driver {
 				);
 
 				auto llvm_module = compileLIRModuleToLLVM(ctx, &script_lir.value());
-				{
-					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
-					llvm_module.compile(
-						object_artifact.file.getFilePath(),
-						backend_llvm::CompilationOutputType::Object
-					);
-				}
 
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
@@ -550,13 +546,24 @@ namespace compiler::driver {
 					auto asm_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(base::strConcat(script_lir->module_id.strView(), ".s"))
 					);
-					llvm_module.compile(
+
+					// We create a copy here, since compiling the module to assembly might modify it.
+					auto llvm_module_copy = llvm_module.clone();
+
+					llvm_module_copy.compile(
 						asm_artifact.file.getFilePath().getPath(),
 						backend_llvm::CompilationOutputType::Assembly
 					);
 				}
 
-				// Link the script object with builtins to produce a runnable executable.
+				{
+					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
+					llvm_module.compile(
+						object_artifact.file.getFilePath(),
+						backend_llvm::CompilationOutputType::Object
+					);
+				}
+
 				auto output_name     = base::strConcat(script_context.script_file.stem(), ".exe");
 				auto output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(output_name.c_str())
@@ -564,7 +571,6 @@ namespace compiler::driver {
 
 				std::vector<artifacts::FileArtifact> objects;
 				objects.push_back(object_artifact);
-				objects.push_back(emitBuiltinLLVMObjectFile());
 
 				auto linking_result
 					= linker::linkExecutable(output_artifact, objects, linking_options);
@@ -700,7 +706,12 @@ namespace compiler::driver {
 			              ) -> std::expected<RunOutput, vm::api::ApiError> {
 							  const vm::PID pid = process.pid;
 							  // Deinitialize the process and execute global destructors.
-							  defer((void) vm::api::deinitAndValidate(pid));
+
+							  defer({
+								  auto deinit = vm::api::deinitAndValidate(pid);
+								  if (!deinit.has_value())
+									  std::cerr << vm::api::errorToString(deinit.error()) << '\n';
+							  });
 
 							  return vm::api::loadCode(pid, dvm_module.code)
 				                  .and_then([&] {
@@ -883,10 +894,6 @@ namespace compiler::driver {
 					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
 						target_exe.output_file_name
 					);
-
-					llvm_objects_by_root_module.atMaybe(task.root_module)
-						.value()
-						->push_back(emitBuiltinLLVMObjectFile());
 
 					auto linking_result = linker::linkExecutable(
 						output_file,

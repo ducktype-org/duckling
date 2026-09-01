@@ -13,9 +13,6 @@
 # object file (linked into `app2.exe`) in their own directory, so the duckc
 # artifact-cache clean (which wipes @{case_build}) cannot delete them.
 
-# DVM fails in determinizm check
-enable_conc_deterministic_tests: "false"
-
 case_build_c: "$DIT_TMP_DIR/build_c"
 c_compiler: "$(command -v clang-19 || command -v clang)"
 compile_c_object: "@{c_compiler} -O3 -c -o @{case_build_c}/c_helper.o c_helper.c"
@@ -29,11 +26,13 @@ compile_c_shared: "@{c_compiler} -O3 -shared -fPIC -o @{case_build_c}/libc_helpe
 case_manifest: "$DIT_TMP_DIR/manifest.json"
 make_manifest: 'sed "s|\([\" ]\)build|\1$DIT_TMP_DIR/build|g" duck_modules/@{Name}/manifest.json > @{case_manifest}'
 
-compile_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --manifest @{case_manifest} --duckc-worker-count @{duckc_worker_count}; else true; fi"
+# The manifest's linking options name the libraries by their path in @{case_build}, so the
+# check has to build there too - see its `--build-dir`.
+compile_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --manifest @{case_manifest} --duckc-worker-count @{duckc_worker_count} --build-dir @{case_build}; else true; fi"
 compile_only_cmd:  "@{duckc_path} compile_packages @{case_manifest} -w @{duckc_worker_count} -a @{case_build}"
 
 
-PreCase: "mkdir -p @{case_build} && mkdir -p @{case_build_c} && @{compile_c_object} && @{compile_c_shared} && @{make_manifest} && @{compile_deterministically_cmd} && @{compile_only_cmd}"
+PreCase: "mkdir -p @{case_build} && mkdir -p @{case_build_c} && @{copy_std_artifacts} && @{compile_c_object} && @{compile_c_shared} && @{make_manifest} && @{compile_deterministically_cmd} && @{compile_only_cmd}"
 
 # Run the LLVM executables, plus the one DVM output that links its dependency.
 Run: "@{case_build}/app1.exe && @{case_build}/app2.exe && @{case_build}/app3.exe && @{case_build}/app3_alias.exe && @{dvm_path} run @{case_build}/app2_dvm_linked.dbc"

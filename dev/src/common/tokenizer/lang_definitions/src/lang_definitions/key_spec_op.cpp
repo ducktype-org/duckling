@@ -100,6 +100,7 @@ namespace lang_def {
 			{ Keyword::ManyPtr, "manyptr", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Slice, "slice", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Copyof, "copyof", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ptrof, "ptrof", KeywordFlagsOptions::IsGenPrefixOp },
@@ -148,6 +149,7 @@ namespace lang_def {
 			{ Keyword::Bool, "bool", KeywordFlags() },
 			{ Keyword::Str, "str", KeywordFlags() },
 			{ Keyword::Type, "type", KeywordFlags() },
+			{ Keyword::Void, "void", KeywordFlags() },
 
 			{ Keyword::Set, "Set", KeywordFlags() },
 			{ Keyword::Dict, "Dict", KeywordFlags() },
@@ -234,6 +236,7 @@ namespace lang_def {
 		{ NamedOperator::Pipe, "|" },
 		{ NamedOperator::Ampersand, "&" },
 		{ NamedOperator::BitXor, "^" },
+		{ NamedOperator::BitNot, "~" },
 
 		{ NamedOperator::LeftShift, "<<" },
 		{ NamedOperator::RightShift, ">>" },

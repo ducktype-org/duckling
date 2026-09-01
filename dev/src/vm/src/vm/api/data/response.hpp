@@ -53,6 +53,11 @@ namespace vm::api {
 			std::vector<FrameVar> frame_vars;
 		};
 
+		struct ThreadIDs {
+			std::vector<ThreadID> thread_ids;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(ThreadIDs, thread_ids);
+		};
+
 		using Boolean = bool;
 	}
 
@@ -67,5 +72,6 @@ namespace vm::api {
 		ThreadID,
 		response::NumberOfCurrentStackFrames,
 		response::StackFrameData,
+		response::ThreadIDs,
 		ExitValue>;
 }

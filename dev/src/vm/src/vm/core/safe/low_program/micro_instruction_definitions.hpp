@@ -212,6 +212,60 @@ DEF_MICRO_INSTR(log_xor_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immedi
 
 DEF_MICRO_INSTR(log_not_p8, vm::low::opargs::Place8)
 
+// ======== BITWISE OPERATIONS ========
+
+// 64-bit
+DEF_MICRO_INSTR(bit_and_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(bit_and_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_or_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(bit_or_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_xor_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(bit_xor_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shl_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(shl_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shr_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(shr_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_not_p64, vm::low::opargs::Place64)
+
+// 32-bit
+DEF_MICRO_INSTR(bit_and_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(bit_and_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_or_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(bit_or_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_xor_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(bit_xor_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shl_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(shl_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shr_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(shr_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_not_p32, vm::low::opargs::Place32)
+
+// 16-bit
+DEF_MICRO_INSTR(bit_and_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(bit_and_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_or_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(bit_or_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_xor_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(bit_xor_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shl_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(shl_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shr_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(shr_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_not_p16, vm::low::opargs::Place16)
+
+// 8-bit
+DEF_MICRO_INSTR(bit_and_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(bit_and_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_or_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(bit_or_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_xor_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(bit_xor_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shl_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(shl_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shr_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(shr_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_not_p8, vm::low::opargs::Place8)
+
 // ========= LOGICAL OPERATIONS ========
 
 // --- 64-bit Integer Comparisons ---
@@ -674,10 +728,20 @@ DEF_MICRO_INSTR(cptrWrite_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::P
 
 DEF_MICRO_INSTR(cptrCast_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
 
+// ========= POINTER DECOMPOSITION ========
+
+DEF_MICRO_INSTR(
+	ptrParts_p64_p64_pptr,
+	vm::low::opargs::Place64 /* dst_id */,
+	vm::low::opargs::Place64 /* dst_offset,
+    vm::low::opargs::PlacePtr	 src_ptr */
+)
+
 // ========= EXT DEFINITIONS ========
 
 // passes additional argument to preceding instruction
 DEF_MICRO_INSTR(ext_p64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(ext_pptr, vm::low::opargs::PlacePtr)
 DEF_MICRO_INSTR(ext_imm, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(ext_type, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ext_field, vm::low::opargs::Field)

@@ -144,10 +144,10 @@ clah::Clah getVmClah() {
 						process_options.mode = vm::api::ProcessMode::Fast;
 
 					if (options.isFlag("debug")) {
-						auto cli = vm::debugger::cli::CLIDebugger();
+						auto debugger = vm::debugger::cli::CLIDebugger();
 
-						auto result
-							= source_files.size() ? cli.load(source_files[0]) : cli.loadDefault();
+						auto result = source_files.size() ? debugger.load(source_files[0])
+			                                              : debugger.loadDefault();
 						if (!result) {
 							std::string error_string;
 							variant_match(result.error()) {
@@ -167,9 +167,9 @@ clah::Clah getVmClah() {
 							return 1;
 						}
 
-						cli.setProgramArguments(args);
+						debugger.setProgramArguments(args);
 
-						return cli.run();
+						return debugger.run();
 					} else
 						return cli(source_files, args, process_options, ffi_libs);
 				})

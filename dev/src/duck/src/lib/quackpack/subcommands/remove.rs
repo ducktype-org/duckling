@@ -1,8 +1,7 @@
 use std::path::Path;
 
+use crate::quackpack::core::editable_manifest::{DependencyRemoved, EditableManifest};
 use crate::quackpack::core::{AllowGlobalPackage, DependencyKind, PackageLoader};
-use crate::quackpack::schemas::manifest::{DependencyRemoved, Manifest as ManifestSchema};
-use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug, Clone)]
@@ -19,37 +18,22 @@ pub struct RemoveOptions<'matches> {
 /// Logic for executing the `remove` subcommand.
 pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     let RemoveOptions { name, global, kind } = options;
-    let pkg = if global {
+    let pcx = if global {
         PackageLoader::global_package(ctx)?
     } else {
         PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
-    }
-    .into_package()
-    .unwrap_package();
+    };
+    let pkg = pcx.package().get_package();
 
     // Only necessary for diagnostic messages.
     let pkg_name = pkg.name();
     let pkg_root = pkg.root_directory().to_path_buf();
 
-    // @TODO: #1394 We would like to use a better mechanism than modify deserialized schema -> blindly serialize it,
-    // since this won't preserve comments and formatting choices in the manifest.
-    let manifest_path = pkg.manifest_path().to_path_buf();
-    let mut schema = pkg.into_original_schema();
+    let editable_manifest = EditableManifest::new(&pcx)?;
 
-    remove_dep(&mut schema, name, kind, pkg_name, &pkg_root)?;
+    remove_dep(&editable_manifest, name, kind, pkg_name, &pkg_root)?;
+    editable_manifest.save()?;
 
-    let deserialized_schema = serde_yaml_ng::to_string(&schema)
-        .with_context_internal(|| format!("failed to deserialize schema `{schema:?}`"))?;
-    manifest_path.write(&deserialized_schema).with_context(|| {
-        format!(
-            "failed to write the new manifest into file at `{}`",
-            manifest_path.display()
-        )
-    })?;
-    ctx.console().info(format!(
-        "written new manifest to `{}`",
-        manifest_path.display()
-    ))?;
     ctx.console().info(format!(
         "successfully removed {kind} dependency `{name}` from the project `{pkg_name}` at `{}`",
         pkg_root.display(),
@@ -59,13 +43,13 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
 
 /// Remove a dependency or provide a meaningful error.
 fn remove_dep(
-    schema: &mut ManifestSchema,
+    editable_manifest: &EditableManifest,
     name: &str,
     kind: DependencyKind,
     pkg_name: StrId,
     pkg_root: &Path,
 ) -> QuackResult<()> {
-    match schema.remove_dependency(name, kind) {
+    match editable_manifest.remove_dependency(name, kind)? {
         DependencyRemoved::Yes => Ok(()),
         DependencyRemoved::NoDependency => qp_bail!(
             "no such {kind} dependency as `{name}` in the project `{pkg_name}` at `{}`",

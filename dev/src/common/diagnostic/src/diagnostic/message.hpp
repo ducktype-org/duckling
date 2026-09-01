@@ -470,4 +470,6 @@ namespace dia {
 	template<typename T>
 	concept SourcePositionType
 		= std::same_as<T, dia::SourcePosition> || std::same_as<T, dia::StablePosition>;
+
+	using MessageLogger = std::function<Box<MessageBase>()>;
 }

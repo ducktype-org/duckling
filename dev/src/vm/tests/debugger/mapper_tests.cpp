@@ -36,7 +36,7 @@ private:
 
 		ASSERT_HAS_VALUE(mapper.loadMapping(fs::File(path("package_dvm.di.json"))));
 
-		auto simple = fs::FilePath("simple.dmf");
+		auto simple = fs::FilePath("simple.dk");
 		ASSERT_TRUE(mapper.containsFile(simple));
 
 		auto assert_mapping
