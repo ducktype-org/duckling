@@ -37,9 +37,8 @@
 	::base::FieldDecl<decltype(m), (requires { ::base::bindProbe(m); })>
 
 /** @brief One rung of the declared-type table: every member of `obj` as a `base::TypeList`. */
-#define BASE_LADDER_DECLS(n)                                                       \
-	else if constexpr (N == (n)) {                                                 \
-		auto&& [BASE_LADDER_NAMES(n)] = obj;                                       \
-		return ::base::TypeList<                                                   \
-			FOR_EACH_COMMA(BASE_LADDER_FIELD_DECL, BASE_LADDER_NAMES(n))>{};       \
+#define BASE_LADDER_DECLS(n)                                                                     \
+	else if constexpr (N == (n)) {                                                               \
+		auto&& [BASE_LADDER_NAMES(n)] = obj;                                                     \
+		return ::base::TypeList<FOR_EACH_COMMA(BASE_LADDER_FIELD_DECL, BASE_LADDER_NAMES(n))>{}; \
 	}

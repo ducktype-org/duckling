@@ -70,11 +70,14 @@ namespace compiler::frontend {
 	 * that: it is an aggregate, so the `ser` module walks its three fields.
 	 */
 	struct KeyOf_ModuleChildSideInput final {
-		hashing::ComponentHash::HashType parent_hash;  // hash of the parent module
-		base::StrID                      child_name;   // name of the child module
-		/// @brief Whether the child module exists in the parent module.
-		/// This field is part of the key so that dependencies can distinguish between successful
-		/// lookups (found = true) and failed lookups (found = false) for the same child name.
+		hashing::ComponentHash::HashType parent_hash; /* hash of the parent module */
+		base::StrID                      child_name;  /* name of the child module */
+		/**
+		 * @brief Whether the child module exists in the parent module.
+		 * @details This field is part of the key so that dependencies can distinguish between
+		 * successful lookups (found = true) and failed lookups (found = false) for the same child
+		 * name.
+		 */
 		bool found;
 
 		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
@@ -124,7 +127,7 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]] Access<IDType> illegalAccess() const { return Access<IDType>(id); }
 
-		// Allow moving
+		/* Allow moving */
 		AccessLocked(AccessLocked&&)                 = default;
 		AccessLocked& operator=(AccessLocked&&)      = default;
 		AccessLocked(const AccessLocked&)            = default;

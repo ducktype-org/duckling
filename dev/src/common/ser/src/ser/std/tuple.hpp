@@ -1,21 +1,23 @@
 #pragma once
 
-// ── std::pair and std::tuple ──────────────────────────────────────────────────
-// The elements in order, nothing else: no count, because the type carries it, and no
-// padding. A pair is its first element followed by its second, which is what makes
-// pair<K, V> and a two-field aggregate the same bytes.
-//
-// Both a read and a make. `read` fills an existing tuple and is constrained on the elements
-// being assignable, so a tuple with a const element simply does not have it and dispatch
-// moves on to `make`. `make` builds one IN BRACES, because [dcl.init.list]/4 orders the
-// clauses left to right while constructor arguments are not ordered at all - anything else
-// would make the byte order compiler-dependent.
+/*
+ * std::pair and std::tuple
+ * The elements in order, nothing else: no count, because the type carries it, and no
+ * padding. A pair is its first element followed by its second, which is what makes
+ * pair<K, V> and a two-field aggregate the same bytes.
+ *
+ * Both a read and a make. `read` fills an existing tuple and is constrained on the elements
+ * being assignable, so a tuple with a const element simply does not have it and dispatch
+ * moves on to `make`. `make` builds one IN BRACES, because [dcl.init.list]/4 orders the
+ * clauses left to right while constructor arguments are not ordered at all - anything else
+ * would make the byte order compiler-dependent.
+ */
 
 #include <ser/concepts.hpp>
-#include <ser/detail/dispatch_fwd.hpp>
-#include <ser/detail/fillable.hpp>
 #include <ser/errc.hpp>
 #include <ser/hash.hpp>
+#include <ser/internal/dispatch_fwd.hpp>
+#include <ser/internal/fillable.hpp>
 #include <ser/serializer.hpp>
 #include <ser/traits.hpp>
 
@@ -36,11 +38,13 @@ namespace ser {
 		static constexpr ::std::size_t VALUE = (::std::size_t{ 0 } + ... + MIN_WIRE_SIZE_V<Es>);
 	};
 
-	namespace detail {
+	namespace internal {
 
-		// Shared by both, so pair and tuple cannot drift apart in a way the format would
-		// notice. Es are the element types with cv stripped - a const element is written
-		// and read as its underlying type.
+		/**
+		 * @brief Shared by both, so pair and tuple cannot drift apart in a way the format would
+		 * notice. Es are the element types with cv stripped - a const element is written
+		 * and read as its underlying type.
+		 */
 		template<class T, class... Es>
 		constexpr Errc writeElements(writer auto& ar, const T& t) {
 			Errc code = Errc::Ok;
@@ -70,19 +74,21 @@ namespace ser {
 		inline constexpr bool TUPLE_ELEMENTS_FILLABLE<::std::tuple<Es...>>
 			= (::std::is_move_assignable_v<Es> && ... && true);
 
-	}  // namespace detail
+	} /* namespace internal */
 
-	// A pair is the same bytes as a two-field aggregate and hashes DIFFERENTLY, because
-	// "struct" and "pair" are different tokens. That is the conservative direction: a hash
-	// that says "changed" when the bytes did not costs a rebuilt cache, while the reverse
-	// costs a misread stream.
+	/**
+	 * @brief A pair is the same bytes as a two-field aggregate and hashes DIFFERENTLY, because
+	 * "struct" and "pair" are different tokens. That is the conservative direction: a hash
+	 * that says "changed" when the bytes did not costs a rebuilt cache, while the reverse
+	 * costs a misread stream.
+	 */
 	template<class A, class B>
 	struct schema<::std::pair<A, B>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
-			h = detail::schemaText(h, "pair");
-			h = detail::schemaOf<::std::remove_cv_t<A>, Mode, Seen>(h);
-			return detail::schemaOf<::std::remove_cv_t<B>, Mode, Seen>(h);
+			h = internal::schemaText(h, "pair");
+			h = internal::schemaOf<::std::remove_cv_t<A>, Mode, Seen>(h);
+			return internal::schemaOf<::std::remove_cv_t<B>, Mode, Seen>(h);
 		}
 	};
 
@@ -90,8 +96,8 @@ namespace ser {
 	struct schema<::std::tuple<Es...>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
-			h = detail::schemaNumber(detail::schemaText(h, "tuple"), sizeof...(Es));
-			((h = detail::schemaOf<::std::remove_cv_t<Es>, Mode, Seen>(h)), ...);
+			h = internal::schemaNumber(internal::schemaText(h, "tuple"), sizeof...(Es));
+			((h = internal::schemaOf<::std::remove_cv_t<Es>, Mode, Seen>(h)), ...);
 			return h;
 		}
 	};
@@ -103,17 +109,18 @@ namespace ser {
 		using second    = ::std::remove_cv_t<B>;
 
 		static constexpr Errc write(writer auto& ar, const pair_type& p) {
-			return detail::writeElements<pair_type, first, second>(ar, p);
+			return internal::writeElements<pair_type, first, second>(ar, p);
 		}
 
 		static constexpr Errc read(reader auto& ar, pair_type& p)
-			requires(detail::TUPLE_ELEMENTS_FILLABLE<pair_type>) {
-			return detail::readElements<pair_type, first, second>(ar, p);
+			requires(internal::TUPLE_ELEMENTS_FILLABLE<pair_type>) {
+			return internal::readElements<pair_type, first, second>(ar, p);
 		}
 
 		static constexpr pair_type make(reader auto& ar)
-			requires(detail::BUILDABLE_V<first> && detail::BUILDABLE_V<second>) {
-			return pair_type{ detail::dispatchMake<first>(ar), detail::dispatchMake<second>(ar) };
+			requires(internal::BUILDABLE_V<first> && internal::BUILDABLE_V<second>) {
+			return pair_type{ internal::dispatchMake<first>(ar),
+				              internal::dispatchMake<second>(ar) };
 		}
 	};
 
@@ -122,18 +129,18 @@ namespace ser {
 		using tuple_type = ::std::tuple<Es...>;
 
 		static constexpr Errc write(writer auto& ar, const tuple_type& t) {
-			return detail::writeElements<tuple_type, ::std::remove_cv_t<Es>...>(ar, t);
+			return internal::writeElements<tuple_type, ::std::remove_cv_t<Es>...>(ar, t);
 		}
 
 		static constexpr Errc read(reader auto& ar, tuple_type& t)
-			requires(detail::TUPLE_ELEMENTS_FILLABLE<tuple_type>) {
-			return detail::readElements<tuple_type, ::std::remove_cv_t<Es>...>(ar, t);
+			requires(internal::TUPLE_ELEMENTS_FILLABLE<tuple_type>) {
+			return internal::readElements<tuple_type, ::std::remove_cv_t<Es>...>(ar, t);
 		}
 
 		static constexpr tuple_type make(reader auto& ar)
-			requires((detail::BUILDABLE_V<::std::remove_cv_t<Es>> && ... && true)) {
-			return tuple_type{ detail::dispatchMake<::std::remove_cv_t<Es>>(ar)... };
+			requires((internal::BUILDABLE_V<::std::remove_cv_t<Es>> && ... && true)) {
+			return tuple_type{ internal::dispatchMake<::std::remove_cv_t<Es>>(ar)... };
 		}
 	};
 
-}  // namespace ser
+} /* namespace ser */

@@ -81,7 +81,7 @@ namespace query {
 			base.internal::BaseMetadata::prettyPrint(os);
 	}
 
-}  // namespace query
+} /* namespace query */
 
 /**
  * @brief Macro to declare a serializable metadata type.
@@ -139,12 +139,12 @@ namespace query {
                                                                                                     \
 		[[nodiscard]]                                                                               \
 		static Metadata serMake(::query::internal::MetadataIn& ar) {                                \
-			return Metadata{ ::ser::readField<type>(ar) };                                          \
+			return Metadata{ ::ser::subMake<type>(ar) };                                            \
 		}                                                                                           \
                                                                                                     \
 	private:                                                                                        \
 		static Box<::query::internal::BaseMetadata> boxSerMake(::query::internal::MetadataIn& ar) { \
-			return makeBox<Metadata>(::ser::readField<type>(ar));                                   \
+			return makeBox<Metadata>(::ser::subMake<type>(ar));                                     \
 		}                                                                                           \
 		static bool doRegister() {                                                                  \
 			return ::query::internal::MetadataRegistry::instance().registerType(                    \

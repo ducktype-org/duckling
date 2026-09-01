@@ -25,7 +25,7 @@ namespace debug_info {
 	 */
 	inline constexpr ::ser::options DI_STREAM{
 		.header = true,
-		// 'DINF', little-endian
+		/* 'DINF', little-endian */
 		.user_magic = ::std::uint32_t{ 0x46'4E'49'44 },
 	};
 
@@ -52,4 +52,4 @@ namespace debug_info {
 	 */
 	void saveToStream(const DebugInfo& info, std::ostream& out);
 
-}  // namespace debug_info
+} /* namespace debug_info */

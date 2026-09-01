@@ -166,14 +166,14 @@ namespace artifacts {
 		ArtifactCollection& operator=(const ArtifactCollection&) = delete;
 		ArtifactCollection& operator=(ArtifactCollection&&)      = delete;
 
-		///////////////////////// GENERAL OPERATIONS ///////////////////////
+		/* ── GENERAL OPERATIONS ── */
 
 		/**
 		 * @brief Flushes ArtifactCollection tree data to the disk.
 		 */
 		void flush();
 
-		/////////////////////////// SUB COLLECTIONS /////////////////////////
+		/* ── SUB COLLECTIONS ── */
 
 		Ref<ArtifactCollection> subCollectionNew(base::StrID collection_name);
 
@@ -183,7 +183,7 @@ namespace artifacts {
 
 		base::Optional<Ref<ArtifactCollection>> subCollectionAtMaybe(base::StrID collection_name);
 
-		/////////////////////////// FILE ARTIFACTS /////////////////////////
+		/* ── FILE ARTIFACTS ── */
 
 		FileArtifact fileArtifactNew(base::StrID artifact_name);
 
@@ -196,7 +196,7 @@ namespace artifacts {
 
 		bool deleteFileArtifact(base::StrID artifact_name);
 
-		/////////////////////////// BLOB ARTIFACTS /////////////////////////
+		/* ── BLOB ARTIFACTS ── */
 
 		BlobArtifact blobArtifactNew(base::StrID artifact_name);
 
@@ -211,7 +211,7 @@ namespace artifacts {
 
 		template<class T>
 		void setBlobData(const BlobArtifact& blob, const T& data) {
-			// lock will happen in the call bellow:
+			/* lock will happen in the call bellow: */
 			const std::vector<byte> bytes = toBytes(data);
 			setBlobData(blob, bytes.data(), bytes.size());
 		}
@@ -221,14 +221,14 @@ namespace artifacts {
 		/** @brief As BlobArtifact::getData, and empty for the same reasons. */
 		template<class T>
 		base::Optional<std::remove_cv_t<T>> getBlobData(const BlobArtifact& blob) const {
-			// lock will happen in the call bellow:
+			/* lock will happen in the call bellow: */
 			return fromBytes<T>(getBlobDataView(blob));
 		}
 
-		/////////////////////////// PRIVATE /////////////////////////
+		/* ── PRIVATE ── */
 
 	private:
-		/////////////////// NO LOCK INTERNALL API ///////////////////
+		/* ── NO LOCK INTERNALL API ── */
 
 		/**
 		 * @brief Flushes ArtifactCollection tree data to the disk.
@@ -280,7 +280,7 @@ namespace artifacts {
 			return fromBytes<T>(getBlobDataViewNoLock(blob));
 		}
 
-		///////////////////////// OBJECT STATE //////////////////////
+		/* ── OBJECT STATE ── */
 
 
 		const std::filesystem::path PATH;

@@ -63,10 +63,6 @@
 #include <hashing/add_to_hash.hpp>
 #include <ser/concepts.hpp>
 #include <ser/errc.hpp>
-#include <ser/hash.hpp>
-#include <ser/serializer.hpp>
-#include <ser/std/string.hpp>
-#include <ser/traits.hpp>
 
 #include <charconv>
 #include <cstdint>
@@ -98,7 +94,7 @@ namespace base {
 
 		explicit StrID(char character);
 
-		// Makes copy
+		/** @brief Makes copy */
 		explicit StrID(const RawView& data);
 		explicit StrID(const char* data);
 		explicit StrID(std::string_view data);
@@ -118,7 +114,7 @@ namespace base {
 			return view().stdString();
 		}
 
-		// Ranges-friendly API (contiguous range over characters)
+		/* Ranges-friendly API (contiguous range over characters) */
 		[[nodiscard]]
 		usize size() const noexcept {
 			return view().stringView().size();
@@ -190,6 +186,35 @@ namespace base {
 			hashing::addToHash(hash_alg, strView());
 		}
 
+		/*
+		 * ser
+		 * A StrID is a std::string on the wire, so `ser_wire_as` gives it that type's
+		 * schema and its min_wire_size for free - no ser::schema or ser::min_wire_size
+		 * specialization needed.
+		 */
+
+		/** @brief The wire type: a StrID travels as the string it interns. */
+		using ser_wire_as = std::string;
+
+		/**
+		 * @brief Writes the interned string.
+		 * @note A default-constructed StrID holds a bad id and has no string to write;
+		 * refusing it here is the only place that can, because the read side cannot
+		 * represent it - interning "" yields a GOOD id, so isBad() never round-trips.
+		 */
+		static ser::Errc serWrite(ser::writer auto& ar, const StrID& s) {
+			if (s.isBad()) return ser::Errc::InvalidValue;
+			return ar(s.str());
+		}
+
+		/** @brief Reads a string and interns it. */
+		static ser::Errc serRead(ser::reader auto& ar, StrID& s) {
+			std::string str;
+			if (const auto c = ar(str); c != ser::Errc::Ok) return c;
+			s = StrID{ str };
+			return ser::Errc::Ok;
+		}
+
 		friend struct std::hash<StrID>;
 	};
 
@@ -223,41 +248,3 @@ namespace std {
 		usize operator()(const base::StrID& x) const { return x.id.asInt(); }
 	};
 }
-
-namespace ser {
-
-	template<>
-	struct min_wire_size<::base::StrID> {
-		static constexpr ::std::size_t VALUE = min_wire_size<::std::string>::VALUE;
-	};
-
-	/**
-	 * @brief The same bytes as a `std::string`, so the same schema.
-	 */
-	template<>
-	struct schema<::base::StrID> {
-		template<class Mode, class Seen>
-		static consteval ::std::uint64_t mix(::std::uint64_t h) {
-			return detail::schemaOf<::std::string, Mode, Seen>(h);
-		}
-	};
-
-	template<>
-	struct serializer<::base::StrID> {
-		using StrId = ::base::StrID;
-
-		static constexpr Errc write(writer auto& ar, const StrId& s) {
-			if (s.isBad()) return Errc::InvalidValue;
-			if (const auto c = ar(s.str()); c != Errc::Ok) return c;
-			return Errc::Ok;
-		}
-
-		static constexpr Errc read(reader auto& ar, StrId& s) {
-			::std::string str;
-			if (const auto c = ar(str); c != Errc::Ok) return c;
-			s = StrId{ str };
-			return Errc::Ok;
-		}
-	};
-
-}  // namespace ser

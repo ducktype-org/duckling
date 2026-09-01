@@ -57,10 +57,10 @@ namespace ser::internal {
 
 	/**
 	 * @brief per-level summaries
-	 * @details The questions in internal/hooks.hpp take whatever archive they are given; these fill in
-	 * the one the form is really asked in, so "does this type declare a hook" and "which
-	 * rung will dispatch take" are the same question asked twice. LVL_ takes a level tag,
-	 * ANY_ folds the three of them.
+	 * @details The questions in internal/hooks.hpp take whatever archive they are given; these fill
+	 * in the one the form is really asked in, so "does this type declare a hook" and "which rung
+	 * will dispatch take" are the same question asked twice. LVL_ takes a level tag, ANY_ folds the
+	 * three of them.
 	 */
 	template<class L, class T, class Ar>
 	inline constexpr bool LVL_VISIT_WRITE_V = HAS_VISIT_V<L, const T, writer_for<Ar>>;
@@ -249,7 +249,7 @@ namespace ser::internal {
 	 * when writing, so writing would silently fall through to the builtin or automatic
 	 * path and the two directions would disagree about the format.
 	 */
-#define SER_INTERNAL_ASSERT_VISIT_TAKES_CONST(L, WHAT, SIGNATURE)                        \
+#define SER_INTERNAL_ASSERT_VISIT_TAKES_CONST(L, WHAT, SIGNATURE)                      \
 	static_assert(                                                                     \
 		!(LVL_VISIT_READ_V<L, T, Ar> && !LVL_VISIT_WRITE_V<L, T, Ar>),                 \
 		"ser: " WHAT                                                                   \
@@ -259,7 +259,7 @@ namespace ser::internal {
 	);
 
 	/** @brief Both answer "write this one", and nothing says which format was meant. */
-#define SER_INTERNAL_ASSERT_VISIT_NOT_PAIRED(L, WHAT, KEEP)                \
+#define SER_INTERNAL_ASSERT_VISIT_NOT_PAIRED(L, WHAT, KEEP)              \
 	static_assert(                                                       \
 		!((LVL_VISIT_WRITE_V<L, T, Ar> || LVL_VISIT_READ_V<L, T, Ar>)    \
 	      && (LVL_WRITE_V<L, T, Ar> || LVL_READ_V<L, T, Ar>) ),          \
@@ -272,7 +272,7 @@ namespace ser::internal {
 	 * @brief A hook that reads into a copy: the call succeeds, returns Errc::Ok, and the caller's
 	 * object is exactly as it was. One missing `&`.
 	 */
-#define SER_INTERNAL_ASSERT_READ_FILLS(L, WHAT, SIGNATURE)                                   \
+#define SER_INTERNAL_ASSERT_READ_FILLS(L, WHAT, SIGNATURE)                                 \
 	static_assert(                                                                         \
 		!(LVL_READ_V<L, T, Ar> && LVL_READ_BY_COPY_V<L, T, Ar>),                           \
 		"ser: " WHAT                                                                       \
@@ -286,7 +286,7 @@ namespace ser::internal {
 	 * that only plays the part of a hook is the one legitimate reason to have the name
 	 * here, which is why the message offers the rename.
 	 */
-#define SER_INTERNAL_ASSERT_HOOK_STATIC(COND, WHAT, SIGNATURE)                           \
+#define SER_INTERNAL_ASSERT_HOOK_STATIC(COND, WHAT, SIGNATURE)                         \
 	static_assert(                                                                     \
 		!(COND),                                                                       \
 		"ser: " WHAT                                                                   \
@@ -305,7 +305,8 @@ namespace ser::internal {
 		SER_INTERNAL_ASSERT_HOOK_STATIC(
 			(NONSTATIC_VISIT_HOOK_V<T, Ar>),
 			"this type's serVisit",
-			"static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self) { return ar(self.a, self.b); }"
+			"static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self) { return "
+			"ar(self.a, self.b); }"
 		)
 		SER_INTERNAL_ASSERT_HOOK_STATIC(
 			(NONSTATIC_WRITE_HOOK_V<T, Ar>),
@@ -333,7 +334,8 @@ namespace ser::internal {
 			!NONGENERIC_VISIT_HOOK_V<T, Ar>,
 			"ser: this type declares a visit hook that the archive in use cannot call, so "
 			"it is being ignored. Make it a template on the archive:\n"
-			"  static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self) { return ar(self.a, self.b); }"
+			"  static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self) { return "
+			"ar(self.a, self.b); }"
 		);
 
 		static_assert(
@@ -361,7 +363,8 @@ namespace ser::internal {
 		static_assert(
 			!VISIT_WRONG_RETURN_V<T, Ar>,
 			"ser: a serVisit hook for this type exists but does not return ser::Errc.\n"
-			"  in the class:  static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self) { return ar(self.a, "
+			"  in the class:  static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& "
+			"self) { return ar(self.a, "
 			"self.b); }\n"
 			"  by ADL:        ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self)\n"
 			"  by trait:      ser::serializer<T>::visit, same signature"
@@ -410,10 +413,14 @@ namespace ser::internal {
 			"static ser::Errc visit(auto& ar, auto& self)."
 		)
 		SER_INTERNAL_ASSERT_VISIT_TAKES_CONST(
-			access::member_hooks, "T::serVisit", "static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self)."
+			access::member_hooks,
+			"T::serVisit",
+			"static ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self)."
 		)
 		SER_INTERNAL_ASSERT_VISIT_TAKES_CONST(
-			adl_hooks, "the ADL serVisit for this type", "ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self)."
+			adl_hooks,
+			"the ADL serVisit for this type",
+			"ser::Errc serVisit(ser::reader_or_writer auto& ar, auto& self)."
 		)
 
 		SER_INTERNAL_ASSERT_VISIT_NOT_PAIRED(
@@ -456,4 +463,4 @@ namespace ser::internal {
 		}
 	}
 
-}  /* namespace ser::internal */
+} /* namespace ser::internal */

@@ -1,26 +1,29 @@
 #pragma once
 
-// ── base::Bit256, base::CheckedOkBad ──────────────────────────────────────────
-// Bit256 is four u64s in base 2^64 with the lowest word first, and that is exactly what
-// goes on the wire - low word first, each through dispatch, so the stream is the same on a
-// big-endian machine as on a little-endian one. A SHA-256 written on one reads back equal
-// on the other.
-//
-// It needs an adapter at all only because it has constructors: `data` is public, but a
-// class with a user-provided constructor is not an aggregate, so the member walk cannot
-// see it.
-//
-// CheckedOkBad is refused - it is a check obligation, not a value.
-//
-// base::OkBad and base::Monostate are deliberately NOT here: both are aggregates the member
-// walk already handles, and a specialization would only be a second place for the format to
-// drift.
+/*
+ * base::Bit256, base::CheckedOkBad
+ * Bit256 is four u64s in base 2^64 with the lowest word first, and that is exactly what
+ * goes on the wire - low word first, each through dispatch, so the stream is the same on a
+ * big-endian machine as on a little-endian one. A SHA-256 written on one reads back equal
+ * on the other.
+ *
+ * It needs an adapter at all only because it has constructors: `data` is public, but a
+ * class with a user-provided constructor is not an aggregate, so the member walk cannot
+ * see it.
+ *
+ * CheckedOkBad is refused - it is a check obligation, not a value.
+ *
+ * base::OkBad and base::Monostate are deliberately NOT here: both are aggregates the member
+ * walk already handles, and a specialization would only be a second place for the format to
+ * drift.
+ */
 
+#include <base/comptime/type_list.hpp>
+#include <base/comptime/type_traits.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/checked_okbad.hpp>
 
 #include <ser/concepts.hpp>
-#include <ser/detail/meta.hpp>
 #include <ser/errc.hpp>
 #include <ser/hash.hpp>
 #include <ser/serializer.hpp>
@@ -40,7 +43,7 @@ namespace ser {
 	struct schema<::base::Bit256> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
-			return detail::schemaOf<::u64, Mode, Seen>(detail::schemaText(h, "base.bit256"));
+			return internal::schemaOf<::u64, Mode, Seen>(internal::schemaText(h, "base.bit256"));
 		}
 	};
 
@@ -54,15 +57,17 @@ namespace ser {
 		}
 	};
 
-	namespace detail {
+	namespace internal {
 
-		// Keyed to the ARCHIVE type, and that is load-bearing: serializer<CheckedOkBad> is a
-		// full specialization, so an assert naming the type would fire where the header is
-		// parsed rather than where a write is attempted. See denyNonOwningRef in refs.hpp.
+		/**
+		 * @brief Keyed to the ARCHIVE type, and that is load-bearing: serializer<CheckedOkBad> is a
+		 * full specialization, so an assert naming the type would fire where the header is
+		 * parsed rather than where a write is attempted. See denyNonOwningRef in refs.hpp.
+		 */
 		template<class Ar>
 		constexpr Errc denyCheckedOkBad() {
 			static_assert(
-				DEPENDENT_FALSE<Ar>,
+				::base::DEPENDENT_FALSE_V<Ar>,
 				"ser: cannot serialize base::CheckedOkBad - what it carries is an obligation "
 				"to call status(), and an obligation does not travel in a stream. It is also "
 				"neither copyable nor movable, so it could not be read back into anyway. "
@@ -72,17 +77,17 @@ namespace ser {
 			return Errc::InvalidValue;
 		}
 
-	}  // namespace detail
+	} /* namespace internal */
 
 	template<>
 	struct serializer<::base::CheckedOkBad> {
 		static constexpr Errc write(writer auto& ar, const ::base::CheckedOkBad&) {
-			return detail::denyCheckedOkBad<decltype(ar)>();
+			return internal::denyCheckedOkBad<decltype(ar)>();
 		}
 
 		static constexpr Errc read(reader auto& ar, ::base::CheckedOkBad&) {
-			return detail::denyCheckedOkBad<decltype(ar)>();
+			return internal::denyCheckedOkBad<decltype(ar)>();
 		}
 	};
 
-}  // namespace ser
+} /* namespace ser */

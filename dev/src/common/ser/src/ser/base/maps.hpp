@@ -1,37 +1,39 @@
 #pragma once
 
-// ── base::Map, base::HashMap, base::VectorMap, base::StableHashMap ────────────
-// Three shapes, three reasons.
-//
-//   MapWrapper<C>     base::Map and base::HashMap are this over std::map and
-//                     std::unordered_map. It IS its container - public inheritance, no
-//                     data of its own - so the adapter casts to the base and hands the
-//                     work to the std adapter. Same bytes, same schema: a base::Map stream
-//                     reads into a std::map and back.
-//   VectorMap         a vector of Optional slots indexed by the key, so the key is never
-//                     on the wire. Written densely, so empty slots at the end survive the
-//                     round-trip - but not canonically: erase() resets a slot without
-//                     shrinking the vector, so a map that once held key 5 writes six slots
-//                     where an equal map built without it writes one.
-//   StableHashMap     length prefix, then each key followed by its value - the same format
-//                     as std::map, so the same schema, and a stream really does move
-//                     between them. The bucket layout is rebuilt on read, which is what
-//                     makes that true.
-//
-// The cast in MapWrapper's adapter is the point of it: the wrapper hides operator[] and
-// insert to force put(), and the cast puts the std API back in scope. Nothing is bypassed -
-// the wrapper has no invariant of its own.
+/*
+ * base::Map, base::HashMap, base::VectorMap, base::StableHashMap
+ * Three shapes, three reasons.
+ *
+ *   MapWrapper<C>     base::Map and base::HashMap are this over std::map and
+ *                     std::unordered_map. It IS its container - public inheritance, no
+ *                     data of its own - so the adapter casts to the base and hands the
+ *                     work to the std adapter. Same bytes, same schema: a base::Map stream
+ *                     reads into a std::map and back.
+ *   VectorMap         a vector of Optional slots indexed by the key, so the key is never
+ *                     on the wire. Written densely, so empty slots at the end survive the
+ *                     round-trip - but not canonically: erase() resets a slot without
+ *                     shrinking the vector, so a map that once held key 5 writes six slots
+ *                     where an equal map built without it writes one.
+ *   StableHashMap     length prefix, then each key followed by its value - the same format
+ *                     as std::map, so the same schema, and a stream really does move
+ *                     between them. The bucket layout is rebuilt on read, which is what
+ *                     makes that true.
+ *
+ * The cast in MapWrapper's adapter is the point of it: the wrapper hides operator[] and
+ * insert to force put(), and the cast puts the std API back in scope. Nothing is bypassed -
+ * the wrapper has no invariant of its own.
+ */
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_hashmap.hpp>
 
 #include <ser/base/optional.hpp>
 #include <ser/concepts.hpp>
-#include <ser/detail/container.hpp>
-#include <ser/detail/dispatch_fwd.hpp>
-#include <ser/detail/fillable.hpp>
 #include <ser/errc.hpp>
 #include <ser/hash.hpp>
+#include <ser/internal/container.hpp>
+#include <ser/internal/dispatch_fwd.hpp>
+#include <ser/internal/fillable.hpp>
 #include <ser/serializer.hpp>
 #include <ser/std/map.hpp>
 #include <ser/std/vector.hpp>
@@ -45,30 +47,34 @@
 
 namespace ser {
 
-	// ── MapWrapper: base::Map, base::HashMap ──────────────────────────────────
+	/** @brief MapWrapper: base::Map, base::HashMap */
 
 	template<class ContainerType>
 	struct min_wire_size<::base::MapWrapper<ContainerType>> {
 		static constexpr ::std::size_t VALUE = min_wire_size<ContainerType>::VALUE;
 	};
 
-	// Delegated rather than mixed here, because the wrapper adds nothing to the format.
-	// Without this it would hash as an opaque hook - sizeof and alignof only - and
-	// sizeof(std::map) does not depend on K or V, so every base::Map in the program would
-	// share one schema.
+	/**
+	 * @brief Delegated rather than mixed here, because the wrapper adds nothing to the format.
+	 * Without this it would hash as an opaque hook - sizeof and alignof only - and
+	 * sizeof(std::map) does not depend on K or V, so every base::Map in the program would
+	 * share one schema.
+	 */
 	template<class ContainerType>
 	struct schema<::base::MapWrapper<ContainerType>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
-			return detail::schemaOf<ContainerType, Mode, Seen>(h);
+			return internal::schemaOf<ContainerType, Mode, Seen>(h);
 		}
 	};
 
 	template<class ContainerType>
 	struct serializer<::base::MapWrapper<ContainerType>> {
-		// Self is a named template parameter rather than `auto&` so that is_const_v answers
-		// about the OBJECT - decltype(self) would be a reference, and a reference is never
-		// const on top.
+		/**
+		 * @brief Self is a named template parameter rather than `auto&` so that is_const_v answers
+		 * about the OBJECT - decltype(self) would be a reference, and a reference is never
+		 * const on top.
+		 */
 		template<class Ar, class Self>
 		static constexpr Errc visit(Ar& ar, Self& self) {
 			using Base
@@ -77,7 +83,7 @@ namespace ser {
 		}
 	};
 
-	// ── VectorMap ─────────────────────────────────────────────────────────────
+	/** @brief VectorMap */
 
 	template<class KEY_T, class DATA_T, bool is_move, bool is_copy>
 	struct min_wire_size<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
@@ -89,14 +95,16 @@ namespace ser {
 	struct schema<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
-			// The key is not on the wire - it is the index - but it is in the hash on
-			// purpose: two VectorMaps keyed by different strong id types produce
-			// byte-identical streams, and without this the envelope could not tell them
-			// apart. is_move and is_copy are left out for the mirror-image reason: they
-			// change what the type lets you do, not what it writes.
-			h = detail::schemaText(h, "base.VectorMap");
-			h = detail::schemaOf<KEY_T, Mode, Seen>(h);
-			return detail::schemaOf<DATA_T, Mode, Seen>(h);
+			/*
+			 * The key is not on the wire - it is the index - but it is in the hash on
+			 * purpose: two VectorMaps keyed by different strong id types produce
+			 * byte-identical streams, and without this the envelope could not tell them
+			 * apart. is_move and is_copy are left out for the mirror-image reason: they
+			 * change what the type lets you do, not what it writes.
+			 */
+			h = internal::schemaText(h, "base.VectorMap");
+			h = internal::schemaOf<KEY_T, Mode, Seen>(h);
+			return internal::schemaOf<DATA_T, Mode, Seen>(h);
 		}
 	};
 
@@ -104,10 +112,12 @@ namespace ser {
 	struct serializer<::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>> {
 		using Vm = ::base::VectorMap<KEY_T, DATA_T, is_move, is_copy>;
 
-		// Asymmetric, and that is why this is not a visit: element_count is a function of the
-		// slot vector, so it is recomputed on read rather than read off the wire. Writing it
-		// would let a corrupt stream disagree with the vector, and then size() and empty()
-		// both lie.
+		/**
+		 * @brief Asymmetric, and that is why this is not a visit: element_count is a function of
+		 * the slot vector, so it is recomputed on read rather than read off the wire. Writing it
+		 * would let a corrupt stream disagree with the vector, and then size() and empty() both
+		 * lie.
+		 */
 		static constexpr Errc write(writer auto& ar, const Vm& m) { return ar(m.map); }
 
 		static constexpr Errc read(reader auto& ar, Vm& m) {
@@ -120,20 +130,22 @@ namespace ser {
 		}
 	};
 
-	// ── StableHashMap ─────────────────────────────────────────────────────────
+	/** @brief StableHashMap */
 
 	template<class KEY_T, class DATA_T, class HASH_T, ::u64 BLOCK>
 	struct min_wire_size<::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>> {
-		static constexpr ::std::size_t VALUE = sizeof(detail::wire_size_type);
+		static constexpr ::std::size_t VALUE = sizeof(internal::wire_size_type);
 	};
 
-	// The same hash as std::map and std::unordered_map, because it is the same format. The
-	// hash functor and the allocator block size are not on the wire and are not hashed.
+	/**
+	 * @brief The same hash as std::map and std::unordered_map, because it is the same format. The
+	 * hash functor and the allocator block size are not on the wire and are not hashed.
+	 */
 	template<class KEY_T, class DATA_T, class HASH_T, ::u64 BLOCK>
 	struct schema<::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>> {
 		template<class Mode, class Seen>
 		static consteval ::std::uint64_t mix(::std::uint64_t h) {
-			return detail::schemaMap<Mode, Seen, KEY_T, DATA_T>(h);
+			return internal::schemaMap<Mode, Seen, KEY_T, DATA_T>(h);
 		}
 	};
 
@@ -142,38 +154,45 @@ namespace ser {
 		using Shm = ::base::StableHashMap<KEY_T, DATA_T, HASH_T, BLOCK>;
 
 		static constexpr Errc write(writer auto& ar, const Shm& m) {
-			if (const auto c = detail::writeLength<::std::pair<KEY_T, DATA_T>>(ar, m.size());
+			if (const auto c = internal::writeLength<::std::pair<KEY_T, DATA_T>>(ar, m.size());
 			    c != Errc::Ok)
 				return c;
 			for (const auto& pair: m) {
-				if (const auto c = detail::dispatchWrite<KEY_T>(ar, pair.key); c != Errc::Ok)
+				if (const auto c = internal::dispatchWrite<KEY_T>(ar, pair.key); c != Errc::Ok)
 					return c;
-				if (const auto c = detail::dispatchWrite<DATA_T>(ar, pair.value); c != Errc::Ok)
+				if (const auto c = internal::dispatchWrite<DATA_T>(ar, pair.value); c != Errc::Ok)
 					return c;
 			}
 			return Errc::Ok;
 		}
 
-		// maybePut takes both by value, so there is no fill path and the key and the
-		// value have to be movable - the same constraint the std map adapter carries.
+		/**
+		 * @brief maybePut takes both by value, so there is no fill path and the key and the
+		 * value have to be movable - the same constraint the std map adapter carries.
+		 */
 		static constexpr Errc read(reader auto& ar, Shm& m)
-			requires(detail::BUILDABLE_V<KEY_T> && detail::BUILDABLE_V<DATA_T>) {
+			requires(internal::BUILDABLE_V<KEY_T> && internal::BUILDABLE_V<DATA_T>) {
 			::std::size_t n = 0;
-			if (const auto c = detail::readLength<::std::pair<KEY_T, DATA_T>>(ar, n); c != Errc::Ok)
+			if (const auto c = internal::readLength<::std::pair<KEY_T, DATA_T>>(ar, n);
+			    c != Errc::Ok)
 				return c;
 
 			m.clear();
 			for (::std::size_t i = 0; i < n; ++i) {
-				// Two statements, never two arguments of one call - argument evaluation
-				// order is unspecified. See the note in std/map.hpp.
-				auto key   = detail::dispatchMake<KEY_T>(ar);
-				auto value = detail::dispatchMake<DATA_T>(ar);
-				// maybePut rather than put: put PANICS on a repeated key, and a repeated
-				// key is corrupt input - an error code, not a crash.
+				/**
+				 * @brief Two statements, never two arguments of one call - argument evaluation
+				 * order is unspecified. See the note in std/map.hpp.
+				 */
+				auto key   = internal::dispatchMake<KEY_T>(ar);
+				auto value = internal::dispatchMake<DATA_T>(ar);
+				/*
+				 * maybePut rather than put: put PANICS on a repeated key, and a repeated
+				 * key is corrupt input - an error code, not a crash.
+				 */
 				if (!m.maybePut(::std::move(key), ::std::move(value))) return Errc::InvalidValue;
 			}
 			return Errc::Ok;
 		}
 	};
 
-}  // namespace ser
+} /* namespace ser */

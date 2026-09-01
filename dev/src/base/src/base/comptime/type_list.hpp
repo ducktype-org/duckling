@@ -58,8 +58,10 @@ namespace base {
 		template<class... Ts>
 		struct IsTypeListImpl<TypeList<Ts...>>: ::std::true_type {};
 
-		// One empty base per element, so "is T among them" is one is_base_of instead of a
-		// fold - the compiler answers it without instantiating a recursion per element.
+		/**
+		 * @brief One empty base per element, so "is T among them" is one is_base_of instead of a
+		 * fold - the compiler answers it without instantiating a recursion per element.
+		 */
 		template<class T>
 		struct TagOf {};
 
@@ -83,7 +85,7 @@ namespace base {
 		struct CatLists<TypeList<A...>, TypeList<B...>, Rest...>:
 			  CatLists<TypeList<A..., B...>, Rest...> {};
 
-		// The index is there only to give the pack something to expand over.
+		/** @brief The index is there only to give the pack something to expand over. */
 		template<class L, ::std::size_t>
 		using IgnoreIndexT = L;
 
@@ -117,7 +119,7 @@ namespace base {
 			}();
 		};
 
-	}  // namespace internal
+	} /* namespace internal */
 
 	/** @brief Whether @p T is a `base::TypeList`. */
 	template<class T>
@@ -142,4 +144,4 @@ namespace base {
 	template<class T, class List>
 	inline constexpr ::std::size_t LIST_INDEX_OF_V = internal::IndexOf<T, List>::VALUE;
 
-}  // namespace base
+} /* namespace base */

@@ -36,8 +36,9 @@ namespace query::internal {
 		struct ChildrenData final {
 		private:
 			std::vector<NodeID> children;
-			IF_BUILD_TYPE_DEV(mutable base::Box<concurrent::AssertLock> lock
-			                  = base::makeBox<concurrent::AssertLock>();  // protects children vector
+			IF_BUILD_TYPE_DEV(
+				mutable base::Box<concurrent::AssertLock> lock
+				= base::makeBox<concurrent::AssertLock>(); /* protects children vector */
 			)
 
 		public:
@@ -69,8 +70,10 @@ namespace query::internal {
 				return { this };
 			}
 
-			// Each node (query call with unique key) should be executed once at the same time, but
-			// we use AssertLock to be sure about that
+			/*
+			 * Each node (query call with unique key) should be executed once at the same time, but
+			 * we use AssertLock to be sure about that
+			 */
 		};
 
 		/**
@@ -133,26 +136,32 @@ namespace query::internal {
 			 * become dangling after the move.
 			 */
 			ChildrenData moveFrom() {
-				// this sets the original lock to nullptr,
-				// we have to do it first:
+				/**
+				 * @brief this sets the original lock to nullptr,
+				 * we have to do it first:
+				 */
 				auto moved_1 = std::move(*children);
 
 				IF_BUILD_TYPE_DEV({
 					bool was_released_check = was_released.test_and_set(std::memory_order_acquire);
 					CORE_ASSERT(!was_released_check, "ChildrenDataHolderImpl already released");
 
-					// we unlock not on *children, as that object is moved from, but on this local
-					// one no one else can see (yet):
+					/*
+					 * we unlock not on *children, as that object is moved from, but on this local
+					 * one no one else can see (yet):
+					 */
 					moved_1.lock->unlock();
 				})
 
-				// we move again, to actually return the children data:
+				/* we move again, to actually return the children data: */
 				return std::move(moved_1);
 			}
 
 			~ChildrenDataHolderImpl() {
-				// we don't cal release() in the destructor, because we don't want to panic on
-				// double release here.
+				/*
+				 * we don't cal release() in the destructor, because we don't want to panic on
+				 * double release here.
+				 */
 				IF_BUILD_TYPE_DEV({
 					auto was_released_check = was_released.test_and_set(std::memory_order_acquire);
 					if (!was_released_check) children->lock->unlock();

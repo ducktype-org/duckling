@@ -9,7 +9,6 @@
 #include <base/types/ints.hpp>
 
 #include <ser/macros.hpp>
-#include <ser/ser.hpp>
 
 #include <vector>
 
@@ -18,7 +17,7 @@ namespace query::external {
 }
 
 namespace query::internal {
-	class MetadataStorage;  // Forward declaration for friend access
+	class MetadataStorage; /* Forward declaration for friend access */
 }
 
 namespace query::internal {

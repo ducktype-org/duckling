@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <version>
 
-// The version is macros rather than an enum because it has to be usable from #if.
+/** @brief The version is macros rather than an enum because it has to be usable from #if. */
 // NOLINTBEGIN(cppcoreguidelines-macro-to-enum,modernize-macro-to-enum)
 #define SER_VERSION_MAJOR 0
 #define SER_VERSION_MINOR 1
@@ -44,12 +44,6 @@
 	#define SER_HAS_START_LIFETIME_AS 1
 #else
 	#define SER_HAS_START_LIFETIME_AS 0
-#endif
-
-#if defined(__cpp_lib_saturation_arithmetic)
-	#define SER_HAS_SATURATING 1
-#else
-	#define SER_HAS_SATURATING 0
 #endif
 
 #if defined(__cpp_lib_inplace_vector)
@@ -127,18 +121,20 @@
 #endif
 
 namespace ser {
-	struct config_global {
-		// use u64 as size_type to avoid silent overflows from size_t conversions
+	struct config_global final {
+		/** @brief use u64 as size_type to avoid silent overflows from size_t conversions */
 		using size_type = ::std::uint64_t;
 
-		// Bounds nesting, so data-dependent recursion cannot overflow the stack.
+		/** @brief Bounds nesting, so data-dependent recursion cannot overflow the stack. */
 		static constexpr ::std::size_t MAX_DEPTH = 256;
 
 		static constexpr ::std::size_t MAX_ZERO_SIZE_ELEMENTS = ::std::size_t{ 1 } << 28;
 
-		// Reserved for zero-copy reads and not read anywhere yet: nothing on this wire is
-		// aligned today, so flipping it changes nothing.
+		/**
+		 * @brief Reserved for zero-copy reads and not read anywhere yet: nothing on this wire is
+		 * aligned today, so flipping it changes nothing.
+		 */
 		static constexpr bool ALIGN_FLAT_ARRAYS = true;
 	};
 
-}  // namespace ser
+} /* namespace ser */

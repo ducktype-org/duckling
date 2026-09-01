@@ -138,7 +138,7 @@ namespace compiler::frontend::packages {
 					  metadata_PackageDependencyAliasLookup>();
 
 		for (const auto& lookup: lookups) {
-			// Metadata may be attached to other query types as well.
+			/* Metadata may be attached to other query types as well. */
 			if (lookup.input_data.q_id != QueryPackageDependencyAliasSideInput::getID()) continue;
 			const auto& key = lookup.value->value;
 
@@ -148,7 +148,7 @@ namespace compiler::frontend::packages {
 					owner = &package;
 					break;
 				}
-			// Owner package no longer exists -> the lookup node stays red.
+			/* Owner package no longer exists -> the lookup node stays red. */
 			if (owner == nullptr) continue;
 
 			auto       target = owner->getPackageDependencyByAlias(key.alias).illegalAccess();
@@ -157,9 +157,9 @@ namespace compiler::frontend::packages {
 			if (found && target.value().illegalAccess().getID() != key.target_package_id.value())
 				continue;
 
-			// Lookup result is unchanged -> reuse the stored InputData.
+			/* Lookup result is unchanged -> reuse the stored InputData. */
 			out.emplace_back(lookup.input_data);
 		}
 	}
 
-}  // namespace compiler::frontend::packages
+} /* namespace compiler::frontend::packages */

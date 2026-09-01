@@ -8,9 +8,9 @@
 #include <cstring>
 #include <type_traits>
 
-#define SER_BYTE_ARRAY(T) ::ser::detail::byte_array_t<T>
+#define SER_BYTE_ARRAY(T) ::ser::internal::byte_array_t<T>
 
-namespace ser::detail {
+namespace ser::internal {
 
 	template<class T>
 	using byte_array_t = ::std::array<::std::byte, sizeof(T)>;
@@ -19,7 +19,7 @@ namespace ser::detail {
 	constexpr void store(::std::byte* dst, const T& v) noexcept {
 		static_assert(
 			::std::is_trivially_copyable_v<T>,
-			"ser::detail::store requires a trivially copyable type"
+			"ser::internal::store requires a trivially copyable type"
 		);
 		if consteval {
 			const auto arr = SER_BIT_CAST(SER_BYTE_ARRAY(T), v);
@@ -32,7 +32,8 @@ namespace ser::detail {
 	template<class T>
 	[[nodiscard]] constexpr T load(const ::std::byte* src) noexcept {
 		static_assert(
-			::std::is_trivially_copyable_v<T>, "ser::detail::load requires a trivially copyable type"
+			::std::is_trivially_copyable_v<T>,
+			"ser::internal::load requires a trivially copyable type"
 		);
 		if consteval {
 			byte_array_t<T> arr{};
@@ -49,11 +50,11 @@ namespace ser::detail {
 	constexpr void loadInto(T& dst, const ::std::byte* src) noexcept {
 		static_assert(
 			::std::is_trivially_copyable_v<T>,
-			"ser::detail::loadInto requires a trivially copyable type"
+			"ser::internal::loadInto requires a trivially copyable type"
 		);
 		static_assert(
 			::std::is_trivially_copy_assignable_v<T>,
-			"ser::detail::loadInto requires assignability - a type with const "
+			"ser::internal::loadInto requires assignability - a type with const "
 			"fields goes through serMake, not serRead"
 		);
 		if consteval {
@@ -85,4 +86,4 @@ namespace ser::detail {
 		return (n + a - 1) & ~(a - 1);
 	}
 
-}  // namespace ser::detail
+} /* namespace ser::internal */

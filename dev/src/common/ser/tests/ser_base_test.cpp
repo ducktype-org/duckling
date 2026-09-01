@@ -144,14 +144,18 @@ private:
 		ASSERT_EQUAL(usize{ 1 }, bytesOf(base::Optional<i32>()).size());
 		ASSERT_EQUAL(usize{ 1 + sizeof(i32) }, bytesOf(base::Optional<i32>(5)).size());
 
-		// A payload that is not trivially copyable, so the value travels through its own
-		// adapter rather than as bytes.
+		/*
+		 * A payload that is not trivially copyable, so the value travels through its own
+		 * adapter rather than as bytes.
+		 */
 		const auto text = roundTrip(base::Optional<std::string>("hi"));
 		ASSERT_TRUE(text.has_value());
 		ASSERT_EQUAL(std::string("hi"), text.value());
 
-		// Reading an empty one over an engaged one has to clear it, not leave the old
-		// value behind.
+		/**
+		 * @brief Reading an empty one over an engaged one has to clear it, not leave the old
+		 * value behind.
+		 */
 		base::Optional<i32> target(7);
 		const auto          empty = bytesOf(base::Optional<i32>());
 		ser::in             ar{ view(empty) };
@@ -181,7 +185,7 @@ private:
 		const auto null_back = ser::readOrPanicForce<base::MBox<std::string>>(view(null_bytes));
 		ASSERT_TRUE(!static_cast<bool>(null_back));
 
-		// Reading a null over an engaged MBox releases what it held.
+		/* Reading a null over an engaged MBox releases what it held. */
 		base::MBox<std::string> target = base::makeBox<std::string>("old");
 		ser::in                 ar{ view(null_bytes) };
 		ASSERT_EQUAL(ser::Errc::Ok, ar(target));
@@ -204,8 +208,10 @@ private:
 		using PlainBox  = base::Box<i32, TestPlainDeleter<i32>>;
 		using PlainMBox = base::MBox<i32, TestPlainDeleter<i32>>;
 
-		// The deleter is not on the wire, so an opted-in Box is still transparent and still
-		// interchangeable with the default-deleter one.
+		/*
+		 * The deleter is not on the wire, so an opted-in Box is still transparent and still
+		 * interchangeable with the default-deleter one.
+		 */
 		const auto bytes = bytesOf(base::makeBox<i32, TestPlainDeleter<i32>>(42));
 		ASSERT_EQUAL(sizeof(i32), bytes.size());
 		ASSERT_EQUAL(i32{ 42 }, *ser::readOrPanicForce<PlainBox>(view(bytes)));
@@ -230,8 +236,10 @@ private:
 		const auto shared_back = ser::readOrPanicForce<base::SharedView>(view(shared));
 		ASSERT_EQUAL(std::string_view("shared", 6), shared_back.view().stringView());
 
-		// Empty is a length and nothing else, and it has to survive as empty rather than
-		// as a view onto one byte.
+		/*
+		 * Empty is a length and nothing else, and it has to survive as empty rather than
+		 * as a view onto one byte.
+		 */
 		const auto empty = bytesOf(base::OwningView{});
 		ASSERT_EQUAL(sizeof(u64), empty.size());
 		ASSERT_EQUAL(usize{ 0 }, ser::readOrPanicForce<base::OwningView>(view(empty)).view().size());
@@ -256,8 +264,10 @@ private:
 		hashed.put(3, 4);
 		ASSERT_EQUAL(i32{ 4 }, roundTrip(hashed)[3]);
 
-		// A hole in the middle and a used slot after it: the dense format is what keeps
-		// the indices meaning the same thing on the other side.
+		/*
+		 * A hole in the middle and a used slot after it: the dense format is what keeps
+		 * the indices meaning the same thing on the other side.
+		 */
 		base::VectorMap<usize, i32> vec_map;
 		vec_map.put(0, 10);
 		vec_map.put(3, 13);
@@ -268,8 +278,10 @@ private:
 		ASSERT_EQUAL(i32{ 13 }, vec_back[3]);
 		ASSERT_TRUE(!vec_back.contains(1));
 
-		// element_count is recomputed rather than read, so the count and the slots cannot
-		// disagree: nothing on the wire says how many there are.
+		/*
+		 * element_count is recomputed rather than read, so the count and the slots cannot
+		 * disagree: nothing on the wire says how many there are.
+		 */
 		ASSERT_EQUAL(bytesOf(vec_map).size(), bytesOf(vec_back).size());
 
 		base::StableHashMap<i32, std::string> stable;
@@ -288,6 +300,11 @@ private:
 	 * The locked form - what toConstData() hands out - takes the same format through the
 	 * same adapter: the const is about what the accessors return, not about the container,
 	 * so it is still filled by appending.
+	 *
+	 * The target has to be EMPTY. Unlike std::vector, this container promises that a Ref
+	 * handed out stays valid, so the adapter cannot quietly clear it - it refuses instead.
+	 * ser::read default-constructs its target, so the only way to hit that is to read into
+	 * a container you already filled.
 	 */
 	void stableVectors() {
 		base::StableVector<i32> numbers;
@@ -296,20 +313,25 @@ private:
 		numbers.pushBack(3);
 		const auto bytes = bytesOf(numbers);
 
-		// The read has to discard what is already there, not append to it.
 		base::StableVector<i32> back;
-		back.pushBack(99);
 		readInPlace(bytes, back);
 		ASSERT_EQUAL(usize{ 3 }, back.size());
 		ASSERT_EQUAL(i32{ 1 }, *back[0]);
 		ASSERT_EQUAL(i32{ 3 }, *back[2]);
+
+		/*
+		 * A Ref taken before the read is still the element it was: nothing moved, and
+		 * nothing was destroyed under it.
+		 */
+		const auto first = back[0];
+		ASSERT_EQUAL(i32{ 1 }, *first);
 
 		base::StableVector<const i32> locked;
 		readInPlace(bytes, locked);
 		ASSERT_EQUAL(usize{ 3 }, locked.size());
 		ASSERT_EQUAL(i32{ 2 }, *locked[1]);
 
-		// Same bytes either way, which is what makes one schema honest for both.
+		/* Same bytes either way, which is what makes one schema honest for both. */
 		base::StableVector<i32> other;
 		other.pushBack(1);
 		other.pushBack(2);
@@ -339,7 +361,7 @@ private:
 		ASSERT_TRUE(back.test(69));
 		ASSERT_TRUE(!back.test(1));
 
-		// An empty one is a capacity of zero and no words - not one word of zeroes.
+		/* An empty one is a capacity of zero and no words - not one word of zeroes. */
 		const auto empty = bytesOf(base::DynamicBitset{});
 		ASSERT_EQUAL(sizeof(u64), empty.size());
 		ASSERT_EQUAL(usize{ 0 }, ser::readOrPanicForce<base::DynamicBitset>(view(empty)).size());
@@ -347,9 +369,11 @@ private:
 
 	/** @brief One aggregate holding three base types with three different read paths. */
 	// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks): the analyzer cannot follow
-	// Box's deleter and reports every Box going out of scope as a leak - the same false
-	// positive box.hpp already suppresses, see
-	// https://github.com/ducktype-org/duckling/issues/402
+	/*
+	 * Box's deleter and reports every Box going out of scope as a leak - the same false
+	 * positive box.hpp already suppresses, see
+	 * https://github.com/ducktype-org/duckling/issues/402
+	 */
 	void mixedAggregate() {
 		const Mixed sample{ .maybe = base::Optional<i32>(11),
 			                .boxed = base::makeBox<std::string>("inside"),
@@ -385,8 +409,10 @@ private:
 		);
 		static_assert(ser::schemaHash<base::OwningView>() == ser::schemaHash<base::SharedView>());
 
-		// And the same distinctions the std adapters make are still made here, so the
-		// envelope can still refuse the wrong type.
+		/*
+		 * And the same distinctions the std adapters make are still made here, so the
+		 * envelope can still refuse the wrong type.
+		 */
 		static_assert(
 			ser::schemaHash<base::Map<i32, i32>>() != ser::schemaHash<base::Map<i32, f32>>()
 		);
@@ -398,19 +424,23 @@ private:
 			!= ser::schemaHash<base::VectorMap<usize, f32>>()
 		);
 
-		// The KEY of a VectorMap is never on the wire - it is the index - so two maps keyed
-		// by different id types write byte-identical streams, and the hash is the only thing
-		// that can tell them apart. That is what serializer<VectorMap>'s schema mixes the key
-		// for, and it only works because a strong typedef says what it wraps: without that
-		// the two keys below would both hash as sizeof + alignof and come out equal.
+		/*
+		 * The KEY of a VectorMap is never on the wire - it is the index - so two maps keyed
+		 * by different id types write byte-identical streams, and the hash is the only thing
+		 * that can tell them apart. That is what serializer<VectorMap>'s schema mixes the key
+		 * for, and it only works because a strong typedef says what it wraps: without that
+		 * the two keys below would both hash as sizeof + alignof and come out equal.
+		 */
 		static_assert(
 			ser::schemaHash<base::VectorMap<TestKeyA, i32>>()
 			!= ser::schemaHash<base::VectorMap<TestKeyB, i32>>()
 		);
 		static_assert(ser::schemaHash<TestKeyA>() != ser::schemaHash<usize>());
 
-		// The bytes, not only the hashes: a base::Map stream really does read into a
-		// std::map, and a std::vector stream into a StableVector.
+		/*
+		 * The bytes, not only the hashes: a base::Map stream really does read into a
+		 * std::map, and a std::vector stream into a StableVector.
+		 */
 		base::Map<std::string, i32> ordered;
 		ordered.put("k", 5);
 		const auto as_std
@@ -424,14 +454,16 @@ private:
 		ASSERT_EQUAL(usize{ 3 }, stable.size());
 		ASSERT_EQUAL(i32{ 6 }, *stable[2]);
 
-		// The envelope refuses a type whose schema differs, which is the whole point of
-		// the specializations above being specific.
+		/**
+		 * @brief The envelope refuses a type whose schema differs, which is the whole point of
+		 * the specializations above being specific.
+		 */
 		ser::options opt{};
 		opt.header = true;
 		ByteBuf with_header;
-		ASSERT_TRUE(ser::write(with_header, base::Optional<u32>(1U), opt).hasValue());
-		ASSERT_TRUE(!ser::read<base::Optional<f32>>(view(with_header), opt).hasValue());
-		ASSERT_TRUE(ser::read<std::optional<u32>>(view(with_header), opt).hasValue());
+		ASSERT_TRUE(ser::write(with_header, base::Optional<u32>(1U), opt).has_value());
+		ASSERT_TRUE(!ser::read<base::Optional<f32>>(view(with_header), opt).has_value());
+		ASSERT_TRUE(ser::read<std::optional<u32>>(view(with_header), opt).has_value());
 	}
 
 	/**
@@ -442,9 +474,11 @@ private:
 	 * the second of two identical keys - so each is pinned to the code it must return.
 	 */
 	void corruptStreams() {
-		// A bit set above the capacity. Three bits means one word, and bit five of that
-		// word is outside the object: loading it would leave count() disagreeing with
-		// size() for the rest of the object's life.
+		/**
+		 * @brief A bit set above the capacity. Three bits means one word, and bit five of that
+		 * word is outside the object: loading it would leave count() disagreeing with
+		 * size() for the rest of the object's life.
+		 */
 		base::DynamicBitset small(3);
 		small.set(1);
 		ByteBuf tampered = bytesOf(small);
@@ -454,22 +488,26 @@ private:
 		ser::in             tampered_ar{ view(tampered) };
 		ASSERT_EQUAL(ser::Errc::InvalidValue, tampered_ar(target));
 
-		// A capacity nobody could have written: the words it implies are not in the stream,
-		// so it is refused before any allocation rather than after. The bound is the stream
-		// itself and not a policy ceiling - a bitset that really is huge still loads.
+		/**
+		 * @brief A capacity nobody could have written: the words it implies are not in the stream,
+		 * so it is refused before any allocation rather than after. The bound is the stream
+		 * itself and not a policy ceiling - a bitset that really is huge still loads.
+		 */
 		ByteBuf  absurd;
 		ser::out absurd_ar{ absurd };
 		ASSERT_EQUAL(ser::Errc::Ok, absurd_ar(u64{ 1 } << 40));
 		ser::in absurd_read{ view(absurd) };
 		ASSERT_EQUAL(ser::Errc::Truncated, absurd_read(target));
 
-		// The prefix is there and the words are not.
+		/* The prefix is there and the words are not. */
 		const auto truncated = bytesOf(small);
 		ser::in    truncated_ar{ view(truncated, sizeof(u64)) };
 		ASSERT_EQUAL(ser::Errc::Truncated, truncated_ar(target));
 
-		// The same key twice in a map stream. put() would panic on it, so the adapter has
-		// to use the checking insert and report corrupt input instead.
+		/**
+		 * @brief The same key twice in a map stream. put() would panic on it, so the adapter has
+		 * to use the checking insert and report corrupt input instead.
+		 */
 		ByteBuf  repeated;
 		ser::out repeated_ar{ repeated };
 		ASSERT_EQUAL(
@@ -480,7 +518,7 @@ private:
 		ser::in                               repeated_read{ view(repeated) };
 		ASSERT_EQUAL(ser::Errc::InvalidValue, repeated_read(stable));
 
-		// A view whose length prefix promises more bytes than the stream holds.
+		/** @brief A view whose length prefix promises more bytes than the stream holds. */
 		ByteBuf  lying;
 		ser::out lying_ar{ lying };
 		ASSERT_EQUAL(ser::Errc::Ok, lying_ar(u64{ 64 }, u32{ 0 }));

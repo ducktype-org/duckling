@@ -8,11 +8,6 @@
 
 #include <deque>
 
-namespace ser {
-	template<class T>
-	struct serializer;
-}
-
 namespace base {
 	namespace internal {
 		/**
@@ -110,15 +105,6 @@ namespace base {
 			Iterator end() { return Iterator{ data.end() }; }
 
 			ConstIterator end() const { return ConstIterator{ data.end() }; }
-
-		protected:
-			/**
-			 * @brief Destroys all stored elements, leaving the container empty.
-			 * @note Every Ref/CRef handed out earlier is dangling afterwards, which is why
-			 * this is not part of either StableVector's public surface: only the `ser`
-			 * adapter needs it, to empty a container it is about to fill from a stream.
-			 */
-			void clear() { data.clear(); }
 		};
 
 	}
@@ -190,16 +176,6 @@ namespace base {
 		ConstIterator begin() const { return Base::begin(); }
 
 		ConstIterator end() const { return Base::end(); }
-
-	private:
-		/**
-		 * @brief `ser` reads a container by emptying it first, and clearing dangles every
-		 * Ref handed out before - so the adapter gets it and nobody else does.
-		 */
-		using Base::clear;
-
-		template<class T>
-		friend struct ::ser::serializer;
 	};
 
 	/**
@@ -236,16 +212,6 @@ namespace base {
 		StableVector<const Data> toConstData() && {
 			return StableVector<const Data>{ std::move(*this) };
 		}
-
-	private:
-		/**
-		 * @brief `ser` reads a container by emptying it first, and clearing dangles every
-		 * Ref handed out before - so the adapter gets it and nobody else does.
-		 */
-		using Base::clear;
-
-		template<class T>
-		friend struct ::ser::serializer;
 	};
 
 }

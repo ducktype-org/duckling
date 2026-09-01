@@ -182,11 +182,11 @@ private:
 		};
 		std::ignore = alias_key.queryStablePerfectHash();
 
-		// The key is an aggregate, so `ser` needs nothing from it to put it on the wire
+		/* The key is an aggregate, so `ser` needs nothing from it to put it on the wire */
 		std::vector<std::byte> bytes;
-		ASSERT_TRUE(ser::write(bytes, alias_key).hasValue());
+		ASSERT_TRUE(ser::write(bytes, alias_key).has_value());
 		auto decoded = ser::read<KeyOf_PackageDependencyAliasSideInput>(bytes);
-		ASSERT_TRUE(decoded.hasValue());
+		ASSERT_TRUE(decoded.has_value());
 		ASSERT_TRUE(decoded->value == alias_key);
 
 		std::ostringstream os;
@@ -200,9 +200,9 @@ private:
 			.target_package_id = {},
 		};
 		std::vector<std::byte> missing_bytes;
-		ASSERT_TRUE(ser::write(missing_bytes, missing_key).hasValue());
+		ASSERT_TRUE(ser::write(missing_bytes, missing_key).has_value());
 		auto missing_decoded = ser::read<KeyOf_PackageDependencyAliasSideInput>(missing_bytes);
-		ASSERT_TRUE(missing_decoded.hasValue());
+		ASSERT_TRUE(missing_decoded.has_value());
 		ASSERT_TRUE(missing_decoded->value == missing_key);
 	}
 

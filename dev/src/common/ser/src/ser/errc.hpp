@@ -83,7 +83,7 @@ namespace ser {
 		return "unknown error";
 	}
 
-	struct error {
+	struct error final {
 		Errc          code     = Errc::Ok;
 		::std::size_t position = 0;
 
@@ -95,7 +95,7 @@ namespace ser {
 		friend constexpr bool operator==(const error&, const error&) = default;
 	};
 
-	class exception: public ::std::runtime_error {
+	class exception final: public ::std::runtime_error {
 		error e;
 
 	public:
@@ -112,58 +112,58 @@ namespace ser {
 		throwError(error{ .code = c, .position = pos });
 	}
 
+	/**
+	 * @brief What every public entry point hands back: the value, or the `error` that stopped it.
+	 * @details A plain alias for `std::expected`, so the standard vocabulary applies -
+	 * `has_value()`, `error()`, `operator*`, `value_or` and the monadic `and_then` / `transform`.
+	 * The helpers below are the whole reason there is no wrapper class: they build the error side
+	 * straight from an `Errc`, so no call site has to spell `std::unexpected` by hand.
+	 * @note Every function returning one is `[[nodiscard]]` in its own right, since the alias
+	 * cannot carry the attribute the way a class could.
+	 */
 	template<class T = void>
-	class [[nodiscard]] result {
-		::std::expected<T, error> e{};
+	using result = ::std::expected<T, error>;
 
-	public:
-		using value_type = T;
-
-		constexpr result() = default;
-
-		template<class U = T>
-		requires(!::std::is_void_v<T> && !::std::same_as<::std::remove_cvref_t<U>, error> && !::std::same_as<::std::remove_cvref_t<U>, Errc> && !::std::same_as<::std::remove_cvref_t<U>, result> && ::std::constructible_from<T, U>)
-		constexpr result(U&& v): e(::std::forward<U>(v)) {}
-
-		constexpr result(error err): e(::std::unexpected(err)) {}
-
-		constexpr result(Errc c, ::std::size_t pos = 0):
-			  e(::std::unexpected(error{ .code = c, .position = pos })) {}
-
-		[[nodiscard]] constexpr bool hasValue() const noexcept { return e.has_value(); }
-
-		constexpr explicit operator bool() const noexcept { return e.has_value(); }
-
-		[[nodiscard]] constexpr const error& err() const { return e.error(); }
-
-		[[nodiscard]] constexpr Errc code() const noexcept {
-			return e.has_value() ? Errc::Ok : e.error().code;
-		}
-
-		constexpr decltype(auto) operator*() && { return *::std::move(e); }
-
-		constexpr decltype(auto) operator*() & { return *e; }
-
-		constexpr decltype(auto) operator*() const& { return *e; }
-
-		constexpr auto operator->() { return &*e; }
-
-		constexpr auto operator->() const { return &*e; }
-
-		constexpr decltype(auto) orThrow() && {
-			if (!e) throwError(e.error());
-			if constexpr (!::std::is_void_v<T>) return *::std::move(e);
-		}
-
-		constexpr decltype(auto) orThrow() & {
-			if (!e) throwError(e.error());
-			if constexpr (!::std::is_void_v<T>) return *e;
-		}
-	};
-
-	// Boundary between the internal layer (Errc) and the public one (result).
-	[[nodiscard]] constexpr result<> asResult(Errc c, ::std::size_t pos = 0) noexcept {
-		return c == Errc::Ok ? result<>{} : result<>{ c, pos };
+	/** @brief The error side of a `result`, from a code and the position that failed. */
+	[[nodiscard]] constexpr ::std::unexpected<error> fail(Errc c, ::std::size_t pos = 0) noexcept {
+		return ::std::unexpected(error{ .code = c, .position = pos });
 	}
 
-}  // namespace ser
+	/** @brief The error side of a `result`, from an `error` that has already been formed. */
+	[[nodiscard]] constexpr ::std::unexpected<error> fail(error e) noexcept {
+		return ::std::unexpected(e);
+	}
+
+	/** @brief A successful `result<>`, for a call that produces no value. */
+	[[nodiscard]] constexpr result<> ok() noexcept { return result<>{}; }
+
+	/** @brief Boundary between the internal layer (`Errc`) and the public one (`result`). */
+	[[nodiscard]] constexpr result<> asResult(Errc c, ::std::size_t pos = 0) noexcept {
+		return c == Errc::Ok ? ok() : result<>{ fail(c, pos) };
+	}
+
+	/** @brief The code a `result` carries, or `Errc::Ok` when it holds a value. */
+	template<class T>
+	[[nodiscard]] constexpr Errc codeOf(const result<T>& r) noexcept {
+		return r.has_value() ? Errc::Ok : r.error().code;
+	}
+
+	/**
+	 * @brief The value of a `result`, or a thrown `ser::exception` when it holds an error.
+	 * @details Free rather than a member, so `result` stays a plain `std::expected` with no
+	 * throwing surface of its own.
+	 */
+	template<class T>
+	constexpr decltype(auto) orThrow(result<T>&& r) {
+		if (!r) throwError(r.error());
+		if constexpr (!::std::is_void_v<T>) return *::std::move(r);
+	}
+
+	/** @brief The value of a `result`, or a thrown `ser::exception` when it holds an error. */
+	template<class T>
+	constexpr decltype(auto) orThrow(result<T>& r) {
+		if (!r) throwError(r.error());
+		if constexpr (!::std::is_void_v<T>) return *r;
+	}
+
+} /* namespace ser */

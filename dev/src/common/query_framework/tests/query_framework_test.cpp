@@ -32,7 +32,7 @@
  */
 std::vector<std::byte> writeGraph(const query::internal::QueryGraph& graph) {
 	std::vector<std::byte> bytes;
-	ser::write(bytes, graph.toReducedGraphData()).orThrow();
+	ser::orThrow(ser::write(bytes, graph.toReducedGraphData()));
 	return bytes;
 }
 
@@ -1187,9 +1187,9 @@ private:
 		// Test SerializableData serialization/deserialization
 		SerializableData       original{ 123, "hello world" };
 		std::vector<std::byte> serialized;
-		ASSERT_TRUE(ser::write(serialized, original).hasValue());
+		ASSERT_TRUE(ser::write(serialized, original).has_value());
 		auto deserialized = ser::read<SerializableData>(serialized);
-		ASSERT_TRUE(deserialized.hasValue());
+		ASSERT_TRUE(deserialized.has_value());
 
 		ASSERT_EQUAL(original.value1, deserialized->value.value1);
 		ASSERT_EQUAL(original.value2, deserialized->value.value2);
@@ -1263,12 +1263,12 @@ private:
 
 		// Serialize the entire storage
 		std::vector<std::byte> serialized_storage;
-		ASSERT_TRUE(ser::write(serialized_storage, storage2).hasValue());
+		ASSERT_TRUE(ser::write(serialized_storage, storage2).has_value());
 		ASSERT_TRUE(serialized_storage.size() > 0);
 
 		// Deserialize into a new storage
 		auto restored_result = ser::read<query::internal::MetadataStorage>(serialized_storage);
-		ASSERT_TRUE(restored_result.hasValue());
+		ASSERT_TRUE(restored_result.has_value());
 		auto restored = std::move(*restored_result).take();
 
 		// Verify SimpleMeta on node1

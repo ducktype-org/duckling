@@ -74,11 +74,15 @@ carry object pools in a later version; `*r` is the bundle, `r->field` reaches th
 and `std::move(*r).take()` moves the object out. `ser::readOrPanicForce<T>` is the one form
 that returns the plain object.
 
-The `std/all.hpp` include is deliberate. The std adapters are separate headers so that
-`<ser/ser.hpp>` never pays for `<map>` to serialize something that has nothing to do with
-maps. Include the adapters before the first write or read of a type that uses them -
-the ordinary rule for any trait specialization. `<ser/base/all.hpp>` does the same for the
-`base` types.
+`<ser/ser.hpp>` is the only header you have to remember. The entry points, the hook
+vocabulary, every `SER_*` macro and `SER_TEST_ROUNDTRIP` all arrive with it, and nothing
+under `ser/internal/` is yours to include.
+
+The two adapter sets are the exception, and the `std/all.hpp` include above is deliberate.
+They are separate so that `<ser/ser.hpp>` never pays for `<map>` to serialize something that
+has nothing to do with maps. Include them before the first write or read of a type that uses
+them - the ordinary rule for any trait specialization. So the complete list of headers a
+caller ever needs is three: `<ser/ser.hpp>`, `<ser/std/all.hpp>`, `<ser/base/all.hpp>`.
 
 Error Handling
 --------------
@@ -104,6 +108,11 @@ ser::writeOrPanic(buf, node);                          // writing what we hold c
 auto  owned = ser::readOrPanic<Node>(blob);            // returns ser::owned<Node>
 Node  n     = ser::readOrPanicForce<Node>(blob);       // returns a bare Node
 ```
+
+Reading into an object you already hold - `ser::in ar{bytes}; ar(obj);` - overwrites it. For
+`base::StableVector` that object has to be **empty**: the container promises a `Ref` handed
+out stays valid, so the adapter refuses a non-empty target rather than clearing it and
+dangling every reference. `std::vector` has no such promise and is simply cleared.
 
 `readOrPanic` is also what reads a type that **cannot be moved**: its return type is the
 type of the returned prvalue, so the object is built once, at its final address.
@@ -255,12 +264,12 @@ struct Versioned {
 };
 ```
 
-* `serVisit(auto& ar, auto& self)` - one function, both directions. The object has to
+* `serVisit(ser::reader_or_writer auto& ar, auto& self)` - one function, both directions. The object has to
   exist before it can be filled in.
 * `serWrite` + `serRead` - the asymmetric pair, when the two directions genuinely differ.
 * `serWrite` + `serMake` - `serMake` **builds** the object and returns it by value, so it
   is the answer for `const` fields, no default constructor, or no move constructor. Read
-  the fields with `ser::readField<F>(ar)`, in braces, so the order is guaranteed.
+  the fields with `ser::subMake<F>(ar)`, in braces, so the order is guaranteed.
 
 **3. The same three shapes found by ADL**, for a type in someone else's namespace. Write
 both const and non-const overloads of `serVisit`, or the write side will not find it:
@@ -278,9 +287,11 @@ Four rules the library enforces, each with its own message:
 
 * A hook returns `ser::Errc` (`serMake` returns `T` by value). A hook returning `bool` is
   reported as such, not as "no way to serialize this type".
-* A hook is a **template on the archive** (`auto&`, or `ser::writer auto&` /
-  `ser::reader auto&`). One pinned to a concrete archive type is silently unreachable, so
-  ser reports it rather than walking past it.
+* A hook is a **template on the archive**. Three concepts name the directions, and spelling
+  one is optional but says the intention out loud: `ser::writer auto&` for `serWrite`,
+  `ser::reader auto&` for `serRead` and `serMake`, and `ser::reader_or_writer auto&` for the
+  symmetric `serVisit`, which serves both. A hook pinned to a concrete archive type is
+  silently unreachable, so ser reports it rather than walking past it.
 * Write and read must **pair**. A type that can be written and never read back is a bug
   with a use case.
 * `serVisit` and `serWrite`/`serRead` on one type is refused - both answer "write this
@@ -289,7 +300,7 @@ Four rules the library enforces, each with its own message:
 
 The Macros
 ----------
-From `<ser/macros.hpp>`:
+All of these come with `<ser/ser.hpp>`:
 
 | macro | what it gives you |
 |---|---|
@@ -437,8 +448,10 @@ static_assert(ser::schemaHash<Described>() == ser::schemaHash<Twin>());
 A type whose format ser cannot see - a hand-written `serWrite`, a class with private
 members - hashes as `"hook"` plus `sizeof` and `alignof`, which two unrelated types can
 share. Three ways to say what it really writes, in the order they are consulted: a
-`ser::schema<T>` specialization, an in-class `using ser_schema_as = W;` (with an optional
-`ser_schema_name`), or `ser::config<T>::schema_id`.
+`ser::schema<T>` specialization, an in-class `using ser_wire_as = W;` (with an optional
+`ser_schema_tag`), or `ser::config<T>::schema_id`. `ser_wire_as` says "the wire is this type";
+`ser_schema_tag` is a discriminator mixed into the hash, so two strong typedefs over one
+integer do not collide.
 
 Field names are absent from `schemaHash` on purpose. They go into `ser::debugHash<T>()`,
 which is diagnostics only: equal `schemaHash` with different `debugHash` is exactly
@@ -447,8 +460,7 @@ which is diagnostics only: equal `schemaHash` with different `debugHash` is exac
 Testing Your Format
 -------------------
 Two fields of the **same type** swapped in a `SER_MAKE_FROM` list compiles perfectly and
-writes the wrong bytes. No hash can see it, so there is a round-trip check instead
-(`<ser/test.hpp>`):
+writes the wrong bytes. No hash can see it, so there is a round-trip check instead:
 
 ```cpp
 CHECK(SER_TEST_ROUNDTRIP(Vec3{ 1, 2, 3 }));
@@ -506,7 +518,9 @@ ser is a C++23 library and behaves identically whether or not you build with a l
 standard. Below C++23 it stops with an `#error` rather than half-compiling.
 
 Field enumeration is the only place where the standard version is visible. Today it is a
-structured-bindings ladder, and everything in
+structured-bindings ladder - the arity table lives in `base/preproc/ladder.hpp` and the rungs
+that walk members in `base/comptime/member_walk.hpp`, since neither says anything about
+serialization - and everything in
 [When The Automatic Walk Needs Help](#when-the-automatic-walk-needs-help) follows from
 that: the 64-member limit, the C-array counting problem, and `ser_members<N>` for private
 fields.

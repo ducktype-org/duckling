@@ -51,7 +51,7 @@ namespace query::internal {
 			node_deps->contains(node_id), "Node not found in dep graph, call the given query first."
 		);
 
-		// some simple bfs for now:
+		/* some simple bfs for now: */
 		std::set<NodeID>   visited;
 		std::queue<NodeID> queue;
 		queue.push(node_id);
@@ -77,8 +77,10 @@ namespace query::internal {
 				if (!visited.contains(dep)) queue.push(dep);
 		}
 
-		// make issue for query types (side input/input/standard/etc):
-		// it would be cool to print only input ones, but for now we print all of them:
+		/*
+		 * make issue for query types (side input/input/standard/etc):
+		 * it would be cool to print only input ones, but for now we print all of them:
+		 */
 
 		return { visited.begin(), visited.end() };
 	}
@@ -321,14 +323,18 @@ namespace query::internal {
 
 
 		for (const auto& node: nodes_to_erase.dependents_recursive) {
-			// A(input) <- B <- C
-			//        D <--┘
-			// deps(B) = {A, D}
-			// rev_deps(A) = {B}
-			// rev_deps(D) = {B}
+			/*
+			 * A(input) <- B <- C
+			 *        D <--┘
+			 * deps(B) = {A, D}
+			 * rev_deps(A) = {B}
+			 * rev_deps(D) = {B}
+			 */
 
-			// Some inputs may have no dependencies at all when in Language Server mode (e.g. no
-			// queries were executed between reparsings).
+			/*
+			 * Some inputs may have no dependencies at all when in Language Server mode (e.g. no
+			 * queries were executed between reparsings).
+			 */
 			if_opt_some(node_deps->atMaybe(node), node_deps_children_data) {
 				auto removed_node_deps = node_deps_children_data->getHolder();
 

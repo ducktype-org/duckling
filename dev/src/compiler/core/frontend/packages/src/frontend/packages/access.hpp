@@ -37,10 +37,10 @@ namespace compiler::frontend::packages {
 	 * puts it on the wire.
 	 */
 	struct KeyOf_PackageDependencyAliasSideInput final {
-		hashing::ComponentHash::HashType package_hash;       //< owner package hash
-		base::StrID                      alias;              //< alias being looked up
-		bool                             found;              //< whether alias is declared
-		base::Optional<base::StrID>      target_package_id;  //< target package id if found
+		hashing::ComponentHash::HashType package_hash;      /* < owner package hash */
+		base::StrID                      alias;             /* < alias being looked up */
+		bool                             found;             /* < whether alias is declared */
+		base::Optional<base::StrID>      target_package_id; /* < target package id if found */
 
 		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
 		bool operator==(const KeyOf_PackageDependencyAliasSideInput&) const = default;
@@ -195,4 +195,4 @@ namespace compiler::frontend::packages {
 		[[nodiscard]] base::Optional<PackageAccessLocked> illegalAccess() const;
 	};
 
-}  // namespace compiler::frontend::packages
+} /* namespace compiler::frontend::packages */

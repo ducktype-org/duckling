@@ -6,29 +6,31 @@
 #include <type_traits>
 #include <utility>
 
-namespace ser::detail {
+namespace ser::internal {
 
-	// ── the shape of every hook question ──────────────────────────────────────
-	// A hook can live in three places - ser::serializer<T>, the class itself, ADL - and all
-	// three are asked the same things about the same four forms. Only the call expression
-	// differs, so each place is a tag struct declaring one probe per form
-	// (access::trait_hooks and access::member_hooks in access.hpp, adl_hooks in
-	// detail/adl.hpp) and every question below is written once, then asked with whichever
-	// tag it is handed as `L`.
-	//
-	// A probe is DECLARED and never defined, with a trailing return type: substitution then
-	// happens in the declaration, so a missing hook is a substitution failure these
-	// requires-expressions can see rather than a hard error.
-	//
-	// T carries the cv-qualification of the object for the symmetric `visit` form, so a hook
-	// binding only a non-const object is invisible on the write side - which
-	// detail::checkHooks reports instead of letting the two directions use different
-	// formats.
-	//
-	// Each form comes as a pair. The loose one drops the return-type requirement, so "loose
-	// but not strict" is exactly "the hook is there and returns the wrong thing" - the most
-	// common way to write one, and the one whose default diagnostic points nowhere near the
-	// cause.
+	/*
+	 * the shape of every hook question
+	 * A hook can live in three places - ser::serializer<T>, the class itself, ADL - and all
+	 * three are asked the same things about the same four forms. Only the call expression
+	 * differs, so each place is a tag struct declaring one probe per form
+	 * (access::trait_hooks and access::member_hooks in access.hpp, adl_hooks in
+	 * internal/adl.hpp) and every question below is written once, then asked with whichever
+	 * tag it is handed as `L`.
+	 *
+	 * A probe is DECLARED and never defined, with a trailing return type: substitution then
+	 * happens in the declaration, so a missing hook is a substitution failure these
+	 * requires-expressions can see rather than a hard error.
+	 *
+	 * T carries the cv-qualification of the object for the symmetric `visit` form, so a hook
+	 * binding only a non-const object is invisible on the write side - which
+	 * internal::checkHooks reports instead of letting the two directions use different
+	 * formats.
+	 *
+	 * Each form comes as a pair. The loose one drops the return-type requirement, so "loose
+	 * but not strict" is exactly "the hook is there and returns the wrong thing" - the most
+	 * common way to write one, and the one whose default diagnostic points nowhere near the
+	 * cause.
+	 */
 
 	/** @brief The symmetric form, at level L: one hook for both directions. */
 	template<class L, class T, class Ar>
@@ -83,7 +85,7 @@ namespace ser::detail {
 	 * same probe answer both questions.
 	 *
 	 * Only the read form can be asked this. A visit hook has to accept a const object -
-	 * that is the write direction, and SER_DETAIL_ASSERT_VISIT_TAKES_CONST demands it - so
+	 * that is the write direction, and SER_INTERNAL_ASSERT_VISIT_TAKES_CONST demands it - so
 	 * an rvalue binds to the const overload and a by-value serVisit is indistinguishable
 	 * from a correct one. serRead has no such overload: reading into a const object means
 	 * nothing.
@@ -92,4 +94,4 @@ namespace ser::detail {
 	inline constexpr bool HAS_READ_RVALUE_V
 		= requires(Ar& ar, ::std::remove_cvref_t<T>&& x) { L::read(ar, ::std::move(x)); };
 
-}  // namespace ser::detail
+} /* namespace ser::internal */

@@ -1,7 +1,7 @@
 #pragma once
 #include "macro_base.hpp"
 
-// Heavily inspired by (actually copied from): https://www.scs.stanford.edu/~dm/blog/va-opt.html
+/* Heavily inspired by (actually copied from): https://www.scs.stanford.edu/~dm/blog/va-opt.html */
 
 /**
  * @brief Macro that applies `macro` on all arguments.

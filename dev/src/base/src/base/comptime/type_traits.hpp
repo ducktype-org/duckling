@@ -62,8 +62,10 @@ namespace base {
 			}
 		};
 
-		// Source - https://stackoverflow.com/a/11251376/
-		// {
+		/**
+		 * @brief Source - https://stackoverflow.com/a/11251376/
+		 * {
+		 */
 		template<typename T, template<typename...> typename Template>
 		inline constexpr bool IS_INSTANTIATION_OF_V = false;
 
@@ -76,10 +78,12 @@ namespace base {
 		template<template<typename, auto> class Template, typename U, auto V>
 		inline constexpr bool IS_INSTANTIATION_OF_TYPE_VALUE_V<Template<U, V>, Template> = true;
 
-		// }
+		/* } */
 
-		// Source - https://stackoverflow.com/a/52303687
-		// {
+		/**
+		 * @brief Source - https://stackoverflow.com/a/52303687
+		 * {
+		 */
 
 		template<typename...>
 		inline constexpr bool DEPENDENT_FALSE_V = false;
@@ -101,8 +105,23 @@ namespace base {
 			}
 		};
 
-		// }
+		/* } */
 	}
+
+	/**
+	 * @brief Always false, but only once a template is instantiated.
+	 * @details The way to write a `static_assert` in the `else` of an `if constexpr` chain that
+	 * fires for the types that reach it and not while the template is merely parsed.
+	 */
+	template<typename... Ts>
+	inline constexpr bool DEPENDENT_FALSE_V = internal::DEPENDENT_FALSE_V<Ts...>;
+
+	/**
+	 * @brief Carries a type as a value, for passing one to a function or through overload
+	 * resolution without ever instantiating it.
+	 */
+	template<typename T>
+	using Tag = internal::Tag<T>;
 
 	/**
 	 * @brief Checks if type `T` is an instantiation of template `Template`.

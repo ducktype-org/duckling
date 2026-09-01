@@ -27,7 +27,7 @@ namespace base {
 	 */
 	template<class ContainerType>
 	class MapWrapper: public ContainerType {
-		// hiding base member:
+		/** @brief hiding base member: */
 		using ContainerType::operator[];
 		using ContainerType::insert;
 
@@ -127,7 +127,7 @@ namespace base {
 		typename DATA_T,
 		bool is_move = std::is_move_constructible_v<DATA_T>,
 		bool is_copy = std::is_copy_constructible_v<DATA_T>>
-	// Sanity check
+	/* Sanity check */
 	requires base::Implication<is_move, std::is_move_constructible_v<DATA_T>>
 	      && base::Implication<is_copy, std::is_copy_constructible_v<DATA_T>>
 	      && requires(KEY_T&& k) { static_cast<usize>(k); } class VectorMap {

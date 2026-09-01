@@ -1,18 +1,22 @@
 #pragma once
 
-// ── SER_TEST_ROUNDTRIP ────────────────────────────────────────────────────────
-// SER_MAKE_FROM catches two swapped fields of DIFFERENT types at compile time, and cannot
-// catch two swapped fields of the SAME type - that permutation compiles and simply writes
-// the wrong bytes. So this round-trips a sample, compares field by field and names the
-// field that came back wrong. It is a CONDITION of using SER_MAKE_FROM_MEMBERS, which has
-// no field list to check anything against.
-//
-// A separate header because it is the one place in the library that needs a heap buffer,
-// and <vector> has no business in the umbrella for something only tests call.
+/**
+ * @file
+ * @brief `SER_TEST_ROUNDTRIP` - the round-trip check for a format no hash can verify.
+ * @details `SER_MAKE_FROM` catches two swapped fields of DIFFERENT types at compile time, and
+ * cannot catch two swapped fields of the SAME type - that permutation compiles and simply
+ * writes the wrong bytes. So this round-trips a sample, compares field by field and names the
+ * field that came back wrong. It is a CONDITION of using `SER_MAKE_FROM_MEMBERS`, which has no
+ * field list to check anything against.
+ * @note Reached through `<ser/ser.hpp>`; this file lists the headers it needs itself rather
+ * than the umbrella, because the umbrella includes it.
+ */
 
+#include <ser/access.hpp>
 #include <ser/errc.hpp>
 #include <ser/macros.hpp>
-#include <ser/ser.hpp>
+#include <ser/pool/context.hpp>
+#include <ser/stream/read_write.hpp>
 
 #include <cstddef>
 #include <cstdio>
@@ -26,32 +30,36 @@ namespace ser {
 
 	inline constexpr ::std::size_t NO_FIELD = static_cast<::std::size_t>(-1);
 
-	struct roundtrip_report {
-		Errc          code  = Errc::Ok;  // the round-trip itself
-		::std::size_t field = NO_FIELD;  // first field that came back different
-		const char*   name  = nullptr;   // its name, when SER_DESCRIBE gave one
+	struct roundtrip_report final {
+		Errc          code  = Errc::Ok; /* the round-trip itself */
+		::std::size_t field = NO_FIELD; /* first field that came back different */
+		const char*   name  = nullptr;  /* its name, when SER_DESCRIBE gave one */
 
 		[[nodiscard]] constexpr bool ok() const noexcept {
 			return code == Errc::Ok && field == NO_FIELD;
 		}
 	};
 
-	namespace detail {
+	namespace internal {
 
-		// The described fields when the type says which they are, every field otherwise:
-		// SER_DESCRIBE deliberately leaves fields out, and those come back
-		// default-constructed, which is not a failure. Asked through ser::access, because
-		// SER_DESCRIBE is normally written in a private section and a detector here would
-		// answer false and quietly compare the skipped fields too.
+		/**
+		 * @brief The described fields when the type says which they are, every field otherwise:
+		 * SER_DESCRIBE deliberately leaves fields out, and those come back
+		 * default-constructed, which is not a failure. Asked through ser::access, because
+		 * SER_DESCRIBE is normally written in a private section and a detector here would
+		 * answer false and quietly compare the skipped fields too.
+		 */
 		template<class T>
 		constexpr auto roundtripTie(const T& x) {
 			if constexpr (access::HAS_DESCRIBED_V<T>) {
 				return access::described(x);
 			} else {
-				// tieMembers goes straight to the ladder, past the check visitMembers makes,
-				// so for a type nobody can enumerate it yields an EMPTY tuple and every
-				// round-trip reports as faithful. A test that cannot fail is worse than no
-				// test.
+				/*
+				 * tieMembers goes straight to the ladder, past the check visitMembers makes,
+				 * so for a type nobody can enumerate it yields an EMPTY tuple and every
+				 * round-trip reports as faithful. A test that cannot fail is worse than no
+				 * test.
+				 */
 				static_assert(
 					CAN_ENUMERATE_MEMBERS_V<T>,
 					"ser: SER_TEST_ROUNDTRIP cannot see this type's fields, so it would "
@@ -112,32 +120,37 @@ namespace ser {
 			return false;
 		}
 
-	}  // namespace detail
+	} /* namespace internal */
 
-	// Writes the sample, reads it back and compares. The throwing read rather than ser::read,
-	// so that a type which cannot be moved is testable too.
+	/**
+	 * @brief Writes the sample, reads it back and compares. The throwing read rather than
+	 * ser::read, so that a type which cannot be moved is testable too.
+	 */
 	template<class T>
 	[[nodiscard]] roundtrip_report testRoundtrip(const T& sample) {
 		::std::vector<::std::byte> buf;
-		if (const auto w = write(buf, sample); !w.hasValue())
-			return roundtrip_report{ .code = w.code() };
+		if (const auto w = write(buf, sample); !w.has_value())
+			return roundtrip_report{ .code = codeOf(w) };
 
 		try {
-			const auto back = detail::readThrowing<T, no_context>(
+			const auto back = internal::readThrowing<T, no_context>(
 				::std::span<const ::std::byte>{ buf.data(), buf.size() }, options{}
 			);
-			const auto bad = detail::compareFields(sample, *back);
+			const auto bad = internal::compareFields(sample, *back);
 			return roundtrip_report{ .code  = Errc::Ok,
 				                     .field = bad,
-				                     .name = bad == NO_FIELD ? nullptr : detail::fieldName<T>(bad) };
+				                     .name
+				                     = bad == NO_FIELD ? nullptr : internal::fieldName<T>(bad) };
 		} catch (const exception& e) { return roundtrip_report{ .code = e.err().code }; }
 	}
 
-}  // namespace ser
+} /* namespace ser */
 
-// Yields true when the round-trip is faithful, and prints which field is not otherwise.
-// Meant to sit inside the project's check macro:  CHECK(SER_TEST_ROUNDTRIP(x));
-// Variadic because only PARENTHESES hide a comma from the preprocessor, and the samples
-// worth testing are braced: SER_TEST_ROUNDTRIP(Vec3{1, 2, 3}).
+/**
+ * @brief Yields true when the round-trip is faithful, and prints which field is not otherwise.
+ * Meant to sit inside the project's check macro:  CHECK(SER_TEST_ROUNDTRIP(x));
+ * Variadic because only PARENTHESES hide a comma from the preprocessor, and the samples
+ * worth testing are braced: SER_TEST_ROUNDTRIP(Vec3{1, 2, 3}).
+ */
 #define SER_TEST_ROUNDTRIP(...) \
-	(::ser::detail::reportRoundtrip(#__VA_ARGS__, ::ser::testRoundtrip(__VA_ARGS__)))
+	(::ser::internal::reportRoundtrip(#__VA_ARGS__, ::ser::testRoundtrip(__VA_ARGS__)))

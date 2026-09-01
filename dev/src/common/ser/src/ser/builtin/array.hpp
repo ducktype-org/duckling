@@ -1,8 +1,8 @@
 #pragma once
 
 #include <ser/concepts.hpp>
-#include <ser/detail/dispatch_fwd.hpp>
 #include <ser/errc.hpp>
+#include <ser/internal/dispatch_fwd.hpp>
 
 #include <array>
 #include <cstddef>
@@ -10,11 +10,11 @@
 
 namespace ser::builtin {
 
-	// Fixed extent, so nothing about the length goes on the wire - the type carries it.
+	/** @brief Fixed extent, so nothing about the length goes on the wire - the type carries it. */
 	template<class T>
 	struct fixed_array: ::std::false_type {};
 
-	// Specializing on a C array is what these three exist for.
+	/** @brief Specializing on a C array is what these three exist for. */
 	template<class T, ::std::size_t N>
 	// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 	struct fixed_array<T[N]>: ::std::true_type {};
@@ -42,9 +42,11 @@ namespace ser::builtin {
 	template<class A>
 	using array_element_t = typename array_element<::std::remove_cv_t<A>>::type;
 
-	// The extent, which the type carries and the wire does not. MIN_WIRE_SIZE_V needs it
-	// to turn an array field into a byte count, and sizeof arithmetic would not do:
-	// sizeof(std::array<T, N>) is only N * sizeof(T) by convention, not by rule.
+	/**
+	 * @brief The extent, which the type carries and the wire does not. MIN_WIRE_SIZE_V needs it
+	 * to turn an array field into a byte count, and sizeof arithmetic would not do:
+	 * sizeof(std::array<T, N>) is only N * sizeof(T) by convention, not by rule.
+	 */
 	template<class A>
 	struct array_length;
 
@@ -58,13 +60,15 @@ namespace ser::builtin {
 	template<class A>
 	inline constexpr ::std::size_t ARRAY_LENGTH_V = array_length<::std::remove_cv_t<A>>::value;
 
-	// Elements go through full dispatch, not a bulk copy: an element may have its own
-	// hook, and the wire has neither padding nor the platform's alignment.
+	/**
+	 * @brief Elements go through full dispatch, not a bulk copy: an element may have its own
+	 * hook, and the wire has neither padding nor the platform's alignment.
+	 */
 	template<class T, writer Ar>
 	constexpr Errc writeArray(Ar& ar, const T& a) {
 		using E = array_element_t<T>;
 		for (const auto& e: a)
-			if (const auto c = detail::dispatchWrite<E>(ar, e); c != Errc::Ok) return c;
+			if (const auto c = internal::dispatchWrite<E>(ar, e); c != Errc::Ok) return c;
 		return Errc::Ok;
 	}
 
@@ -72,8 +76,8 @@ namespace ser::builtin {
 	constexpr Errc readArray(Ar& ar, T& a) {
 		using E = array_element_t<T>;
 		for (auto& e: a)
-			if (const auto c = detail::dispatchRead<E>(ar, e); c != Errc::Ok) return c;
+			if (const auto c = internal::dispatchRead<E>(ar, e); c != Errc::Ok) return c;
 		return Errc::Ok;
 	}
 
-}  // namespace ser::builtin
+} /* namespace ser::builtin */

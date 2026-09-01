@@ -41,7 +41,7 @@ namespace vm::debugger {
 	Debugger::~Debugger() {
 		updater.detach();
 
-		// @TODO: #1222 Remove checking status and always kill after fixing kill
+		/* @TODO: #1222 Remove checking status and always kill after fixing kill */
 
 		api::getExecutionStatus(pid)
 			.and_then([&](const api::ProcStatus& status) {
@@ -94,7 +94,7 @@ namespace vm::debugger {
 	}
 
 	api::ProcStatus Debugger::getStatus() {
-		// will never fail when pid is correct
+		/* will never fail when pid is correct */
 		return api::getExecutionStatus(pid)
 		    .transform_error([&](const api::ApiError& api_error) -> std::monostate {
 				throw std::runtime_error(api::errorToString(api_error));

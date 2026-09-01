@@ -26,20 +26,24 @@ namespace ser {
 	template<class T>
 	struct enum_range;
 
-}  // namespace ser
+} /* namespace ser */
 
 namespace ser::builtin {
 
 	template<class T>
 	concept enum_like = ::std::is_enum_v<::std::remove_cv_t<T>>;
 
-	// The underlying type is what goes on the wire, so changing it changes the format -
-	// ser::schemaHash is what catches that. No enumerator validation on read: without
-	// reflection there is no list to check against, and a scoped enum holding an unlisted
-	// value is well-defined as long as it fits.
+	/*
+	 * The underlying type is what goes on the wire, so changing it changes the format -
+	 * ser::schemaHash is what catches that. No enumerator validation on read: without
+	 * reflection there is no list to check against, and a scoped enum holding an unlisted
+	 * value is well-defined as long as it fits.
+	 */
 
-	// List-initialization from the underlying type is the discriminator: it is valid for a
-	// fixed underlying type and for nothing else.
+	/**
+	 * @brief List-initialization from the underlying type is the discriminator: it is valid for a
+	 * fixed underlying type and for nothing else.
+	 */
 	template<class T>
 	inline constexpr bool ENUM_CONVERSION_DEFINED_V
 		= ::std::is_scoped_enum_v<::std::remove_cv_t<T>>
@@ -87,4 +91,4 @@ namespace ser::builtin {
 		return Errc::Ok;
 	}
 
-}  // namespace ser::builtin
+} /* namespace ser::builtin */
