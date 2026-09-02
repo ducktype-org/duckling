@@ -8,18 +8,8 @@ function g_ctor {} -> {} {
     ret;
 }
 
-# Decomposing a null pointer fails at runtime, so the destructor never reaches its `ret`. The run
-# itself completed, so the deinit is legal, but it cannot finish.
 function g_dtor {} -> {} {
-    init_pany_type id, i64;
-    init_pany_type off, i64;
-    init_pany_type np, ptr_i64;
-    setNull_pptr np;
-    ptrParts_p64_p64_pptr id, off, np;
-
-    deinit; # np
-    deinit; # off
-    deinit; # id
+    call_builtinfunc abort;
     ret;
 }
 
