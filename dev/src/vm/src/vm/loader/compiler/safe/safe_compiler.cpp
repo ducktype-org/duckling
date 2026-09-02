@@ -148,6 +148,40 @@ namespace vm::loader::compiler::safe {
 		);
 	}
 
+	std::expected<void, std::string> SafeCompiler::setBreakpoint(
+		const base::StrID& func_name, usize idx, bool enable
+	) {
+		auto maybe_function = low_program.functions.atMaybe(func_name);
+		if (!maybe_function) return std::unexpected{ "setBreakpoint: Function does not exist" };
+		auto& function = **maybe_function;
+
+		return setBreakpoint(function, idx, enable);
+	}
+
+	std::expected<void, std::string> SafeCompiler::setBreakpoint(
+		low::LowFuncData& function, usize idx, bool enable
+	) const {
+		// Try to obtain micro index
+		if (function.instruction_mapping.size() <= idx)
+			return std::unexpected{ "setBreakpoint: Function too short" };
+
+		usize micro_instruction_index = function.instruction_mapping[idx].begin;
+
+		if (function.bc.size() <= micro_instruction_index)
+			return std::unexpected("setBreakpoint: No code after breakpoint");
+
+		auto& instruction = function.bc.at(micro_instruction_index);
+
+		if (enable)
+			instruction = makeLowInstruction(
+				low::MicroOpcode::breakpoint, instruction.arg0, instruction.arg1
+			);
+		else
+			instruction = function.orig_bc.at(micro_instruction_index);
+
+		return {};
+	}
+
 	void SafeCompiler::linkLabelArguments(
 		low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
 	) {

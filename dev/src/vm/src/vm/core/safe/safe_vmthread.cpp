@@ -94,15 +94,9 @@ namespace vm {
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
 		if (opcode == low::MicroOpcode::breakpoint) {
-			const auto* program_copy
-				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
-			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
-
-			auto original_instr
-				= program_copy->getOriginalProgram()
-			          ->getFunctions()
-			          .at(frame->current_function->name)
-			          ->bc[static_cast<size_t>(frame->instr - &frame->current_function->bc[0])];
+			auto& micro_func     = *frame->current_function;
+			auto  low_instr_idx  = (usize) (frame->instr - micro_func.bc.data());
+			auto  original_instr = micro_func.orig_bc[low_instr_idx];
 
 			opcode = getInstructionOpcode(original_instr);
 		}
@@ -221,7 +215,7 @@ namespace vm {
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
 #endif
 			.bc                  = {},
-			.orig_bc = {},
+			.orig_bc             = {},
 			.local_stack_size    = 72,
 			.local_block_count   = 7,
 			.arg_size            = 0,
