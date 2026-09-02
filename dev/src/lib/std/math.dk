@@ -9,6 +9,11 @@
 
 import core.panicking.*;
 
+fun abs(x: i32) -> i32 = libm_forward.int_funcs.abs(x);
+fun abs(x: i64) -> i64 = libm_forward.int_funcs.labs(x);
+fun abs(x: f32) -> f32 = libm_forward.basic_ops.fabsf(x);
+fun abs(x: f64) -> f64 = libm_forward.basic_ops.fabs(x);
+
 namespace libm_forward {
     #{
         These are marked `fundecl` since the definition
