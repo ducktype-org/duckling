@@ -1,5 +1,7 @@
 #include "expr_lowering.hpp"
 
+#include "helios/tsh/symbol_type.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
@@ -786,18 +788,52 @@ namespace compiler::mir {
 				return;
 			}
 
+			// These are only needed if the subject type is not ref.
+			tsh::SymbolType<> subject_type = expr.subject->expression_type.getSymbolType();
+			bool is_subject_ref = subject_type.getRefKind() == tsh::ReferenceKind::Direct;
+
+			base::Optional<BlockBuilder::InstructionHole> assign_ref_subject;
+			base::Optional<MIRLocalRef>                   ref_subject_local;
+
+			if (not is_subject_ref) {
+				assign_ref_subject = first_entry.value()->addHole();
+				ref_subject_local  = function.addTmp(
+                    subject_type.withReferenceKind(tsh::ReferenceKind::Ref), expr_scope
+                );
+			}
+
+			auto       assign_subject = first_entry.value()->addHole();
+			const auto subject_local  = function.addTmp(subject_type, expr_scope);
+			subject_local->lifetime_flags |= LifetimeFlag::NoDestructor;
+
 			// The subject goes into the block the chain starts at, which dominates every
 			// projection. Its instructions are added after the holes were reserved, so they end
 			// up ahead of them. It is a reference to the variant, which is what the projections
 			// take, so it is passed on without dereferencing.
 			auto lowered_subject
 				= lowerExpr(*expr.subject, first_entry.value(), function, expr_scope);
-			auto subject_val = lowered_subject.getResult(function);
-			CORE_ASSERT(
-				std::holds_alternative<MIRPlace>(subject_val.getVariant())
-					&& subject_val.get<MIRPlace>().type.getRefKind() != tsh::ReferenceKind::Direct,
-				"A match subject must lower to a place holding a reference to the variant."
+
+
+			lowered_subject.storeResultInGivenPlace(
+				MIRPlace{ subject_local },
+				assign_subject,
+				{ flagConstruct(subject_local) },
+				expr_scope,
+				{}
 			);
+
+			MIRValue subject_val = MIRPlace{ subject_local };
+
+			if (not is_subject_ref) {
+				assign_ref_subject->fill({
+					Operation::AddressOf,
+					*ref_subject_local,
+					{ subject_val },
+					{ flagConstruct(*ref_subject_local) },
+					expr_scope,
+				});
+				subject_val = MIRPlace{ *ref_subject_local };
+			}
 
 			for (auto& projection: pending_projections) {
 				const auto  alternative_type = variant_type.getMember(projection.alternative_index);

@@ -745,12 +745,6 @@ namespace compiler::helios::code {
 		  Expr(matchExpressionType(cases), origin),
 		  subject(std::move(subject)),
 		  cases(std::move(cases)) {
-		CORE_ASSERT(
-			this->subject->expression_type.getSymbolType().getRefKind()
-				!= tsh::ReferenceKind::Direct,
-			"A match subject has to be a reference to the matched variant, got: ",
-			this->subject->expression_type.getSymbolType().toString()
-		);
 
 		for (const auto& match_case: this->cases)
 			CORE_ASSERT(

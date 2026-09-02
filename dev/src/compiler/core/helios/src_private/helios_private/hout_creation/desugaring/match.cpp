@@ -1,5 +1,9 @@
 #include "match.hpp"
 
+#include "helios/tsh/symbol_type.hpp"
+#include "helios_private/hout_creation/expressions/coercions/coercions.hpp"
+#include "helios_private/hout_creation/expressions/hout_of_subexpr.hpp"
+
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/match_case.hpp>
@@ -16,6 +20,7 @@
 
 #include <base/collections/optional.hpp>
 
+#include "diagnostic/stable_position.hpp"
 #include <diagnostic/placeholder.hpp>
 
 #include <set>
@@ -25,26 +30,132 @@ namespace compiler::helios::desugaring {
 	using code::shorthands::withOrigin;
 
 	namespace {
-		void logMatchNYI(query::Context& ctx, std::string what, dia::StablePosition position) {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(std::move(what), position));
+		template<typename... MsgParts>
+		void logNYI(query::Context& ctx, dia::StablePosition position, MsgParts&&... what) {
+			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				base::strConcat(std::forward<MsgParts>(what)...), position
+			));
+		}
+
+		template<typename... MsgParts>
+		void logError(query::Context& ctx, dia::StablePosition position, MsgParts&&... what) {
+			ctx.logInt(makeBox<dia::PlaceholderError>(
+				base::strConcat(std::forward<MsgParts>(what)...), position
+			));
+		}
+
+		class MatchSubject final {
+		public:
+			tsh::SymbolType<> whole_type;
+			/// True if the reference kind of the subject is Direct.
+			bool                     passed_by_value;
+			tsh::VariantAbstractType variant;
+			bool                     num_alternatives;
+		};
+
+		/**
+		 * @brief Validate if the match subject is correct.
+		 * @return Boolean flag with true if subject it is a direct and takes ownership, otherwise
+		 * false.
+		 */
+		query::QResult<MatchSubject> validateMatchSubject(
+			query::Context& ctx, CRef<code::Expr> expr, dia::StablePosition pos
+		) {
+			auto type = expr->expression_type.getSymbolType();
+			if (type.getType().getKind() != tsh::Kind::Variant
+			    or type.getRefKind() == tsh::ReferenceKind::Box) {
+				logError(
+					ctx,
+					pos,
+					"`Boxes and non-variant types are invalid to be passed to match. Got `",
+					type.toString(),
+					"`."
+				);
+				return query::Failed();
+			}
+			UNPACK_QRESULT(auto coercion =, canCoerce(ctx, expr->expression_type, type));
+			if (coercion.isInvalid()) {
+				logCoercionFailure(ctx, coercion, pos, {});
+				return query::Failed();
+			}
+
+			bool passed_by_value                  = type.getRefKind() == tsh::ReferenceKind::Direct;
+			tsh::VariantAbstractType variant_type = type.getType();
+			usize                    num_alternatives = variant_type.getUnderlyingTypes().size();
+			return { type, passed_by_value, variant_type, num_alternatives };
 		}
 
 		/**
-		 * @brief Finds the alternative index matched by a case's type constraint.
-		 *
-		 * Only the underlying type decides which alternative is meant; the constraint's
-		 * reference kind picks how the payload is bound, not what is matched. A variant may
-		 * not list one type twice, so this stays unambiguous.
+		 * @brief Validate the match case type constraint.
+		 * @return The alternative index of the type.
 		 */
-		base::Optional<usize> findAlternativeIndex(
-			const tsh::VariantAbstractType& variant_type, const tsh::SymbolType<>& constraint
+		query::QResult<usize> validateMatchCaseConstraint(
+			query::Context&          ctx,
+			const MatchSubject&      match_subject,
+			const tsh::SymbolType<>& constraint,
+			dia::StablePosition      pos
 		) {
-			const auto& alternatives = variant_type.getUnderlyingTypes();
+			if (match_subject.whole_type.getRefKind() == tsh::ReferenceKind::Box) {
+				logError(ctx, pos, "Box type in the match case is invalid.");
+				return query::Failed();
+			}
 
-			for (usize i = 0; i < alternatives.size(); i++)
-				if (alternatives[i].getType() == constraint.getType()) return i;
+			const auto& alternatives = match_subject.variant.getUnderlyingTypes();
 
-			return {};
+			base::Optional<usize> found_index;
+
+			for (usize i = 0; i < alternatives.size(); i++) {
+				// If the subject is passed by value, the whole type has to be exactly the same.
+				if (match_subject.passed_by_value) {
+					if (alternatives[i] == constraint) found_index = i;
+				} else {
+					if (alternatives[i].getType() == constraint.getType()) found_index = i;
+				}
+			}
+
+			if (found_index.empty()) {
+				if (match_subject.passed_by_value) {
+					logError(
+						ctx,
+						pos,
+						"Failed to find the alternative of the variant for `",
+						constraint.toString(),
+						"`. The type has to match exactly the variant alternative."
+					);
+				} else {
+					logError(
+						ctx,
+						pos,
+						"Failed to find the alternative of the variant for `",
+						constraint.toString()
+					);
+				}
+
+				return query::Failed();
+			}
+
+			auto index = found_index.value();
+
+			// Check if we can do the coercion from the alternative into the constraint type.
+			// If the subject was passed by ref, then the cases also coerce from ref types.
+			// If the subject was passed by value, then we have to materialize the case by value
+			// - where the ownership will move from the variant into the case variable.
+			// @TODO: #1488 sorry Piotrek, we will have to check const-ness here someday
+			auto source_type = match_subject.variant.getUnderlyingTypes()[index].withMutability(
+				match_subject.whole_type.getMutability()
+			);
+			tsh::ExpressionType<> expr_type{
+				match_subject.passed_by_value
+					? source_type
+					: source_type.withReferenceKind(tsh::ReferenceKind::Ref),
+				tsh::ValueCategory{ tsh::PrimaryCategory::Temporary }
+			};
+			UNPACK_QRESULT(auto coercion =, canCoerce(ctx, expr_type, constraint));
+			if (coercion.isInvalid()) {
+				logCoercionFailure(ctx, coercion, pos, {});
+				return query::Failed();
+			}
+			return index;
 		}
 	}
 
@@ -53,23 +164,14 @@ namespace compiler::helios::desugaring {
 	) {
 		const Shorthand s{ ctx };
 		const auto      match_position = match_expr->getStablePosition();
+		auto            subject_pst    = match_expr->getValueToMatch().unlock(ctx);
 
-		UNPACK_QRESULT_CREF_TO_BOX(
-			auto subject_hout =,
-			ctx.query<QueryHoutOfExpr>({ match_expr->getValueToMatch().unlock(ctx)->getExpr() })
+		UNPACK_QRESULT_MOVE(
+			auto subject_hout =, code::subExprFromPST(ctx, subject_pst->getExpr())
 		);
-
-		const auto subject_type = subject_hout->expression_type.getSymbolType();
-		if (subject_type.getType().getKind() != tsh::Kind::Variant) {
-			logMatchNYI(
-				ctx,
-				base::strConcat("`match` over non-variant type: ", subject_type.toString(), "."),
-				match_position
-			);
-			return query::Failed();
-		}
-		const tsh::VariantAbstractType variant_type     = subject_type.getType();
-		const usize                    num_alternatives = variant_type.getUnderlyingTypes().size();
+		UNPACK_QRESULT(
+			auto subject =, validateMatchSubject(ctx, subject_hout.ref(), subject_pst->getStablePosition())
+		);
 
 		// Lower all cases.
 		std::vector<code::MatchExpr::Case> cases;
@@ -82,13 +184,13 @@ namespace compiler::helios::desugaring {
 			auto       flow          = match_case.unlock(ctx)->getPattern().unlock(ctx);
 
 			if (flow->getAsIdentifier().has_value()) {
-				logMatchNYI(ctx, "`as` bindings in match patterns.", case_position);
+				logNYI(ctx, case_position, "`as` bindings in match patterns.");
 				return query::Failed();
 			}
 
 			auto branches = match_case.unlock(ctx)->getBranches();
 			if (branches.size() != 1 || branches.front().condition.has_value()) {
-				logMatchNYI(ctx, "Guarded match case branches (`case ... if ...`).", case_position);
+				logNYI(ctx, case_position, "Guarded match case branches (`case ... if ...`).");
 				return query::Failed();
 			}
 
@@ -103,84 +205,59 @@ namespace compiler::helios::desugaring {
 
 			if (auto binding_opt = pattern.dynamicCast<pst::BindingPattern>()) {
 				if (!constraint.has_value()) {
-					logMatchNYI(
+					logNYI(
 						ctx,
-						"Match pattern bindings without a type constraint (`case x : T`).",
-						case_position
+						case_position,
+						"Match pattern bindings without a type constraint (`case x : T`)."
 					);
 					return query::Failed();
 				}
 				binding_sym = ctx.query<QuerySymbolOfSTMT>({ binding_opt.value()->getName() })
 				                  .valueOrThrow();
-			} else if (!pattern.dynamicCast<pst::WildcardPattern>().has_value()) {
-				logMatchNYI(
+			} else if (not pattern.dynamicCast<pst::WildcardPattern>().has_value()) {
+				logNYI(
 					ctx,
-					base::strConcat("Match pattern kind: ", pattern->elementType(), "."),
-					case_position
+					case_position,
+					base::strConcat("Match pattern kind: ", pattern->elementType(), ".")
 				);
 				return query::Failed();
 			}
 
+
 			if (constraint.has_value()) {
-				UNPACK_QRESULT(
-					auto constraint_ctv =,
-					getTypeCTVFromPST(ctx, constraint.value().unlock(ctx)->getExpr().unlock(ctx))
-				);
+				auto pst_expr = constraint.value().unlock(ctx)->getExpr().unlock(ctx);
+				UNPACK_QRESULT(auto constraint_ctv =, getTypeCTVFromPST(ctx, pst_expr));
 				constraint_type = constraint_ctv.get<tsh::SymbolType<>>().value();
 
-				alternative_index = findAlternativeIndex(variant_type, constraint_type.value());
-				if (!alternative_index.has_value()) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat(
-							"Type `",
-							constraint_type.value().toString(),
-							"` is not an alternative of the matched variant `",
-							subject_type.toString(),
-							"`."
-						),
-						case_position
-					));
-					return query::Failed();
-				}
+				UNPACK_QRESULT(
+					alternative_index =,
+					validateMatchCaseConstraint(
+						ctx, subject, constraint_type.value(), pst_expr->getStablePosition()
+					)
+				);
 				if (!covered.insert(alternative_index.value()).second) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat(
-							"Alternative `",
-							constraint_type.value().toString(),
-							"` is matched by more than one case."
-						),
-						case_position
-					));
+					logError(
+						ctx,
+						case_position,
+						"Alternative `",
+						constraint_type.value().toString(),
+						"` is matched by more than one case."
+
+					);
 					return query::Failed();
 				}
-
-				if (constraint_type->getRefKind() == tsh::ReferenceKind::Box)
-					logMatchNYI(ctx, "Box types in cases.", case_position);
 			} else {
 				has_wildcard = true;
-			}
-
-
-			if (binding_sym.has_value()) {
-				if (constraint_type->getRefKind() != tsh::ReferenceKind::Ref
-				    and not constraint_type->isTriviallyCopyable(ctx)) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						base::strConcat(
-							"Alternative `",
-							constraint_type->toString(),
-							"` cannot be bound by value because it is not trivially copyable. "
-							"Bind it by reference instead: `case ",
-							name(binding_sym.value()).strView(),
-							" : ref ",
-							constraint_type->getType().toString(),
-							"`."
-						),
-						case_position
-					));
+				if (subject.passed_by_value) {
+					logError(
+						ctx,
+						case_position,
+						"When the value expression is passed to the match, it is invalid to use "
+					    "the wildcard pattern in cases"
+					);
 					return query::Failed();
 				}
 			}
-
 			auto result_holder = branches.front().result.unlock(ctx);
 			UNPACK_QRESULT_CREF_TO_BOX(
 				auto result =, ctx.query<QueryHoutOfExpr>({ result_holder->getExpr() })
@@ -191,16 +268,15 @@ namespace compiler::helios::desugaring {
 			const auto result_type = result->expression_type.getSymbolType();
 			if (!common_type.has_value()) common_type = result_type;
 			if (common_type.value() != result_type) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
-					base::strConcat(
-						"All `match` cases have to be of the same type, but this one is `",
-						result_type.toString(),
-						"` while an earlier one is `",
-						common_type.value().toString(),
-						"`."
-					),
-					case_position
-				));
+				logError(
+					ctx,
+					case_position,
+					"All `match` cases have to be of the same type, but this one is `",
+					result_type.toString(),
+					"` while an earlier one is `",
+					common_type.value().toString(),
+					"`."
+				);
 				return query::Failed();
 			}
 
@@ -208,13 +284,13 @@ namespace compiler::helios::desugaring {
 			);
 		}
 
-		if (!has_wildcard && covered.size() < num_alternatives) {
+		if (!has_wildcard && covered.size() < subject.num_alternatives) {
 			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"`match` is not exhaustive: it covers ",
 					covered.size(),
 					" of ",
-					num_alternatives,
+					subject.num_alternatives,
 					" alternatives and has no wildcard (`case _`)."
 				),
 				match_position
@@ -227,7 +303,7 @@ namespace compiler::helios::desugaring {
 		// well defined and is what a match over a temporary needs, so it is built directly.
 		return Box<code::Expr>(withOrigin(
 			code::pstOrigin(match_expr),
-			s.matchExpr(s.refOf(subject_hout->clone()), std::move(cases))
+			s.matchExpr(std::move(subject_hout), std::move(cases))
 		));
 	}
 }
