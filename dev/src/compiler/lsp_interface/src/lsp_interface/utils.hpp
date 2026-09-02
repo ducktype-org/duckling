@@ -1,3 +1,5 @@
+#pragma once
+
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 

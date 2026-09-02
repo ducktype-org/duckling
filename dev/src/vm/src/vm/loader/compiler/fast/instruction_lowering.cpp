@@ -83,7 +83,7 @@ namespace {
 
 #define DEF_INSTR(name, ...) HANDLE_INSTR_ARGS(INSTR_NAME(name, __VA_ARGS__), __VA_ARGS__)
 
-#include <vm/core/fast/program/instructions/instruction_definitions.hpp>
+#include <vm/core/fast/program/instructions/instruction_definitions.def.hpp>
 #undef HANDLE_INSTR_ARGS
 
 	/**
@@ -132,7 +132,7 @@ namespace {
 // only for instructions carrying a JumpDestination argument, so every other instruction is left
 // untouched and falls through to the `default` case below.
 #define HANDLE_INSTR_ARGS(NAME, ...) IF(COND(__VA_ARGS__))(BODY(NAME, __VA_ARGS__))
-#include <vm/core/fast/program/instructions/instruction_definitions.hpp>
+#include <vm/core/fast/program/instructions/instruction_definitions.def.hpp>
 #undef HANDLE_INSTR_ARGS
 
 			default:
