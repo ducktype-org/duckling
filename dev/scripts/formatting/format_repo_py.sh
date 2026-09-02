@@ -30,6 +30,9 @@ echo "Formatting Python files with $black"
 
 # Call black with all files as separate arguments
 "$black" "${files[@]}"
+status=$?
 
 # Return to the original location
 cd "$original_location" || exit 1
+
+exit $status

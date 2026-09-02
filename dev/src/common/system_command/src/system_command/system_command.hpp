@@ -37,6 +37,8 @@ namespace system_command {
 
 		/**
 		 * @brief Adds an argument to the command.
+		 * @note The string is passed as-is, the caller has to wrap it in the parenthesis
+		 * if it contains spaces.
 		 *
 		 * @param arg
 		 */
@@ -47,6 +49,9 @@ namespace system_command {
 		 *
 		 * The variable is set for the spawned command only, so this does not touch the
 		 * environment of the compiler itself (which several threads may be reading).
+		 *
+		 * @note The string is passed as-is, the caller has to wrap it in the parenthesis
+		 * if it contains spaces.
 		 *
 		 * @param name
 		 * @param value

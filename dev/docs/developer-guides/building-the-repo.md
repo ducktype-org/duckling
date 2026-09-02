@@ -70,7 +70,7 @@ pip3 install click -r requirements.txt
 
 #### MacOS (clang)
 
-If you want to use the clang instead of the **Homebrew GCC**, it's perfectly fine, but you don't get the stacktraces on errors. 
+If you want to use the clang instead of the **Homebrew GCC**, it's perfectly fine, but you don't get the stack-traces on errors. 
 The minimal clang version that supports the compilation is the 23 from the LLVM 23. 
 But we still need LLVM 19, if we want to use a system-wide precompiled LLVM version
 and for the `clang-format` and `clang-tidy`.
@@ -81,8 +81,8 @@ brew install llvm@23
 brew install llvm@19
 ```
 
-Installing using homebrew doesn't expose the aliasys visible from the terminal session 
-(not to override the system default `clang`),  you can pass to the `setup-build` the paths directly 
+Installing using Homebrew doesn't expose the aliases visible from the terminal session 
+(not to override the system default `clang`), you can pass to the `setup-build` the paths directly 
 or create some aliases. 
 
 When compiling the repo with clang, we don't have to compile the LLVM manually, but we can use the 

@@ -88,10 +88,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 						"Install the command line tools with `xcode-select --install`.")
 			endif()
 			message("-- Using macOS SDK: ${MACOS_SDK_PATH}")
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -isysroot ${MACOS_SDK_PATH}")
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -isysroot ${MACOS_SDK_PATH}")
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -isysroot ${MACOS_SDK_PATH}")
-			set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -isysroot ${MACOS_SDK_PATH}")
+			set(CMAKE_OSX_SYSROOT "${MACOS_SDK_PATH}")
 		endif()
 	endif()
 

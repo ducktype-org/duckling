@@ -105,8 +105,6 @@ namespace vm {
 		 * buffer - on an attached buffer (`std::cin`) `sgetc()` would block.
 		 */
 		bool hasPendingInput() {
-			// Drop a sticky eofbit left by an earlier read that drained the buffer, so the next
-			// extraction can succeed once new input arrives.
 			if (!input_stream.good()) input_stream.clear();
 			return input_stream.rdbuf()->sgetc() != std::char_traits<char>::eof();
 		}
