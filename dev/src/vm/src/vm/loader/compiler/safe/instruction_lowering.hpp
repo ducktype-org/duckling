@@ -207,9 +207,15 @@ namespace vm::loader::compiler::safe::detail {
 		/**
 		 * @brief Determines the cleanup a variable of `type` requires.
 		 *
-		 * Only `Kind::Pointer` has a destructor of its own (it releases the pointed-to block),
-		 * and variants and dynamic tables are the kinds that own nested blocks, which are much
-		 * easier to handle when the variable's own block exists from the beginning.
+		 * Only `Kind::Pointer` has a destructor of its own - it releases the block it points at.
+		 *
+		 * A variant instead delegates its cleanup entirely to its nested block:
+		 * `Memory::runObjectDestructor` does nothing for one, so a variant without a block of its
+		 * own would never release a pointer held in its active alternative. Hence it needs a block
+		 * from the start rather than on demand.
+		 *
+		 * @note A dynamic table has no size of its own and is not instantiable, so it can never be
+		 * a local variable. It and `Kind::None` are named only to keep the switch exhaustive.
 		 */
 		TypeCleanup typeCleanup(TypeCRef type) const {
 			if (auto cached = type_cleanup_cache.atMaybeCopy(type)) return *cached;
