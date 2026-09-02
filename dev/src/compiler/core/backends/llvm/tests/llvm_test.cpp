@@ -265,7 +265,7 @@ private:
 			std::regex_search(
 				ir,
 				std::regex{
-					R"(define[^\n]*array_test[\s\S]*?call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+40,\s+i1\s+false)" }
+					R"(define[^\n]*large_array_test[\s\S]*?call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+792000,\s+i1\s+false)" }
 			),
 			"Expected zero-initialization of i64[99000] with memset"
 		);
