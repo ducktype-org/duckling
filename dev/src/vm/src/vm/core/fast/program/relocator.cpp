@@ -22,7 +22,7 @@ namespace {
 // Forward declare the argument translation functions.
 #define HANDLE_ARG_DEF(ARG_NAME) \
 	exec::arg::ARG_NAME relocate##ARG_NAME(TRANSLATOR_ARGUMENTS(ARG_NAME));
-#include <vm/core/fast/program/instructions/argument_definitions.hpp>
+#include <vm/core/fast/program/instructions/argument_definitions.def.hpp>
 #undef HANDLE_ARG_DEF
 
 // Define the translations
@@ -82,7 +82,7 @@ exec::Instruction relocInstruction(
 			FOR_EACH_CUSTOM_LAST(DO_TRANSLATION, DO_TRANSLATION_LAST, __VA_ARGS__) \
 		);                                                                         \
 	}
-#include "instructions/instruction_definitions.hpp"
+#include "instructions/instruction_definitions.def.hpp"
 #undef HANDLE_INSTR_ARGS
 #undef ARG_TYPE
 #undef ARG_NAME

@@ -67,6 +67,13 @@ namespace vm::api {
 	std::expected<void, ApiError> run(PID pid, const ProgramRunArguments& args = {});
 
 	/**
+	 * @brief Same as `run`, but executes the program synchronously on the caller's thread and
+	 * returns its exit value.
+	 * @return The return value of the program if it was ran successfully or an API error otherwise.
+	 */
+	std::expected<ExitValue, ApiError> runAwait(PID pid, const ProgramRunArguments& args = {});
+
+	/**
 	 * @brief Run a function with a given name on DVM.
 	 * @note The exit value of the called function can be retrieved by the `getExitValue` endpoint.
 	 *
@@ -151,8 +158,9 @@ namespace vm::api {
 
 	/**
 	 * @brief Perform one instruction of the given (paused) thread and pause again.
-	 * @return Nothing if the thread successfully stepped and paused or an API error otherwise, in
-	 * which case the state is undefined.
+	 *
+	 * @return Nothing if the thread successfully stepped (and paused again or terminated) or an API
+	 * error otherwise.
 	 */
 	std::expected<void, ApiError> step(PID pid, ThreadID thread_id = api::MAIN_THREAD_ID);
 

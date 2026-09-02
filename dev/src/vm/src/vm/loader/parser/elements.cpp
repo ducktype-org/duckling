@@ -389,7 +389,7 @@ namespace vm::loader::parser {
 #define HANDLE_INSTR_ARGS(NAME, ...) \
 	std::make_pair(std::string{ #NAME }, parseOpCodeArgs<void FOR_EACH(ARG_TYPE EXPAND, __VA_ARGS__)>),
 
-#include <vm/bytecode/instruction_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.def.hpp>
 #undef HANDLE_INSTR_ARGS
 #undef ARG_TYPE
 		};

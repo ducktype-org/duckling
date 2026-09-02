@@ -138,8 +138,25 @@ namespace vm {
 		 */
 		struct ScopedGilGuard {
 			SafeVMThread& thread;
-			ScopedGilGuard(SafeVMThread& t);
+			explicit ScopedGilGuard(SafeVMThread& t);
+			ScopedGilGuard(const ScopedGilGuard&)            = delete;
+			ScopedGilGuard& operator=(const ScopedGilGuard&) = delete;
 			~ScopedGilGuard();
+		};
+
+		/**
+		 * @brief RAII guard for a blocking wait (IO, mutex, a condition variable):
+		 * reports the thread as sleeping and releases the GIL on construction, then reacquires the
+		 * GIL and reports the thread as running again when the scope ends.
+		 *
+		 * @note The thread must be `Running` when the guard is created.
+		 */
+		struct ScopedBlockingWait {
+			SafeVMThread& thread;
+			explicit ScopedBlockingWait(SafeVMThread& t);
+			ScopedBlockingWait(const ScopedBlockingWait&)            = delete;
+			ScopedBlockingWait& operator=(const ScopedBlockingWait&) = delete;
+			~ScopedBlockingWait();
 		};
 
 		/**
@@ -174,8 +191,16 @@ namespace vm {
 
 		void execGlobalDestructors() override;
 
+		/**
+		 * @brief Opcode of the instruction the thread would execute next. `breakpoint`
+		 * gets resolved to the instruction it replaced.
+		 */
+		[[nodiscard]] low::MicroOpcode getCurrentOpcode() const;
+
 	protected:
 		void executeOneStep() override;
+
+		[[nodiscard]] bool isAtExecutionEnd() const override;
 
 	public:
 		SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process);

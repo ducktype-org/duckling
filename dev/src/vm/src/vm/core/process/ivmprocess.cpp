@@ -130,30 +130,18 @@ namespace vm {
 		return std::unexpected(validation.error());
 
 		variant_match(request) {
-			variant_case(api::request::Run, run_request) {
-				VALIDATE_REQUEST(pe::Run{});
-				VALIDATE_RUN_ARGUMENTS("main", run_request.program_args);
-				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
-				return runFunction("main", run_request.program_args);
-			}
+#define HANDLE_RUN_CASE(REQUEST, FUN_NAME, CALLBACK, ARGS)                            \
+	variant_case(api::request::REQUEST, req) {                                        \
+		VALIDATE_REQUEST(pe::Run{});                                                  \
+		VALIDATE_RUN_ARGUMENTS(FUN_NAME, ARGS);                                       \
+		if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error()); \
+		return CALLBACK(FUN_NAME, ARGS);                                              \
+	}
 
-			variant_case(api::request::RunFunction, run_func_request) {
-				VALIDATE_REQUEST(pe::Run{});
-				VALIDATE_RUN_ARGUMENTS(run_func_request.func_name, run_func_request.func_args);
-				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
-				return runFunction(run_func_request.func_name, run_func_request.func_args);
-			}
-
-			variant_case(api::request::RunFunctionAwait, run_func_await_request) {
-				VALIDATE_REQUEST(pe::Run{});
-				VALIDATE_RUN_ARGUMENTS(
-					run_func_await_request.func_name, run_func_await_request.func_args
-				);
-				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
-				return runFunctionAwait(
-					run_func_await_request.func_name, run_func_await_request.func_args
-				);
-			}
+			HANDLE_RUN_CASE(Run, "main", runFunction, req.program_args);
+			HANDLE_RUN_CASE(RunAwait, "main", runFunctionAwait, req.program_args);
+			HANDLE_RUN_CASE(RunFunction, req.func_name, runFunction, req.func_args);
+			HANDLE_RUN_CASE(RunFunctionAwait, req.func_name, runFunctionAwait, req.func_args);
 
 			variant_case(api::request::Join, join_request) { return join(join_request.thread_id); }
 
@@ -181,6 +169,9 @@ namespace vm {
 				// Per-thread operation. Its validity is decided by the target thread not the process.
 				auto response = stepVMThread(step_request.thread_id);
 				if (!response) return std::unexpected(response.error());
+				// If this step finished the program.
+				if (ts::isTerminal(state_manager.threadState(step_request.thread_id)))
+					return api::Response(api::response::Empty());
 				return getVMThreadCurrentPosition(step_request.thread_id);
 			}
 
@@ -276,6 +267,7 @@ namespace vm {
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 #undef VALIDATE_REQUEST
+#undef HANDLE_RUN_CASE
 		CORE_UNREACHABLE();
 	}
 

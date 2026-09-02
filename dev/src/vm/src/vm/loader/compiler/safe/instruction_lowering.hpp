@@ -107,6 +107,9 @@ namespace vm::loader::compiler::safe::detail {
 	private:
 		/**
 		 * @brief Whether to add a step Gil instruction before the next low instruction.
+		 *
+		 * Only set at the start of a function and for instructions that change the execution
+		 * flow, see `SafeMicroBytecodeBuilder::add`.
 		 */
 		bool push_step_gil_on_next_add_low = true;
 		bool is_control_flow               = true;
@@ -180,8 +183,6 @@ namespace vm::loader::compiler::safe::detail {
 #endif
 		usize instruction_begin_index = next_instruction_index;
 
-		push_step_gil_on_next_add_low = true;
-
 		// Mark control flow instruction
 		// @TODO: #2692 make it an instruction's trait
 		PUSH_DIAGNOSTIC
@@ -198,6 +199,13 @@ namespace vm::loader::compiler::safe::detail {
 			instr_default { is_control_flow = false; }
 		}
 		POP_DIAGNOSTIC
+
+		// The GIL only has to be offered back where the execution flow changes. Every loop and
+		// every call goes through such an instruction, so a spinning thread still hands the GIL
+		// over regularly, while straight line code no longer pays for a GIL step per instruction.
+		// The flag is or-ed instead of assigned, so a pending step survives a high instruction
+		// that lowers to no low instruction at all.
+		push_step_gil_on_next_add_low |= is_control_flow;
 
 
 		PUSH_DIAGNOSTIC
