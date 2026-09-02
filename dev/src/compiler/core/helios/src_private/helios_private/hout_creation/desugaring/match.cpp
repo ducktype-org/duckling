@@ -23,7 +23,8 @@
 #include "diagnostic/stable_position.hpp"
 #include <diagnostic/placeholder.hpp>
 
-#include <set>
+#include <algorithm>
+#include <vector>
 
 namespace compiler::helios::desugaring {
 	using code::shorthands::Shorthand;
@@ -325,11 +326,12 @@ namespace compiler::helios::desugaring {
 			));
 		}
 
-		if (!has_wildcard && covered.size() < subject.num_alternatives) {
+		const auto covered_count = static_cast<usize>(std::ranges::count(covered, true));
+		if (!has_wildcard && covered_count < subject.num_alternatives) {
 			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"`match` is not exhaustive: it covers ",
-					covered.size(),
+					covered_count,
 					" of ",
 					subject.num_alternatives,
 					" alternatives and has no wildcard (`case _`)."
