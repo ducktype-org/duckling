@@ -70,7 +70,7 @@ Tests:
   large_array:
     Cases:
       llvm:
-        backend: llvm
+        backend: all
         Output:
           String: "0\n"
         ExitCode: 0

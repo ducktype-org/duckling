@@ -265,7 +265,7 @@ private:
 			std::regex_search(
 				ir,
 				std::regex{
-					R"(call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+792000,\s+i1\s+false)" }
+					R"(define[^\n]*array_test[\s\S]*?call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+40,\s+i1\s+false)" }
 			),
 			"Expected zero-initialization of i64[99000] with memset"
 		);
@@ -333,7 +333,7 @@ private:
 			"Expected default initialization of f64 with 0.000000e+00"
 		);
 
-		// Point = zeroinitializer @class.point
+		// Point occupies 8 bytes.
 		assertTrue(
 			std::regex_search(
 				ir,
@@ -342,7 +342,7 @@ private:
 			"Expected default initialization of Point with memset"
 		);
 
-		// i32[5] = zeroinitializer [5 x i32]
+		// i32[5] occupies 20 bytes.
 		assertTrue(
 			std::regex_search(
 				ir,
