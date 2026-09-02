@@ -26,6 +26,8 @@
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
+#include <sstream>
+
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
 using namespace compiler::lir::test_utils;

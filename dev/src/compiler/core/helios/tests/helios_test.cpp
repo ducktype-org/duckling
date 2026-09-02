@@ -56,6 +56,8 @@
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
 
+#include <sstream>
+
 using namespace compiler::helios::test_utils;
 
 class HeliosTests: public tester::TestSuite {

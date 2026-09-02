@@ -29,5 +29,5 @@ Tests:
     Cases:
       all:
         Output:
-          String: "10\n42\n20\n73\n42\n42\n73\n1\n"
+          String: "10\n42\n20\n73\n42\n42\n73\n1\n2006\n"
         ExitCode: 0

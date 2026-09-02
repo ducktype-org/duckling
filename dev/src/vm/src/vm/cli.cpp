@@ -14,12 +14,14 @@
 
 #include <iostream>
 
-std::string convertError(const vm::api::ApiError& api_error) {
-	variant_match(api_error) {
-		variant_case(vm::api::LoadProgramError, load) { return load.why; }
+namespace {
+	std::string convertError(const vm::api::ApiError& api_error) {
+		variant_match(api_error) {
+			variant_case(vm::api::LoadProgramError, load) { return load.why; }
+		}
+		return vm::api::errorToString(api_error);
 	}
-	return vm::api::errorToString(api_error);
-}
+}  // namespace
 
 int cli(
 	const std::vector<fs::File>&    files,
@@ -50,9 +52,7 @@ int cli(
 					  })
 		              .and_then([&] { return vm::api::loadFiles(pid, files); })
 		              .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
-		              .and_then([&] { return vm::api::run(pid, args); })
-		              .and_then([&] { return vm::api::join(pid); })
-		              .and_then([&] { return vm::api::getExitValue(pid); })
+		              .and_then([&] { return vm::api::runAwait(pid, args); })
 		              .transform([](vm::api::ExitValue vm_values) {
 						  variant_match(vm_values) {
 							  variant_case(i64, exit_code) { return exit_code; }
