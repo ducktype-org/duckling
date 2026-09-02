@@ -4,7 +4,7 @@
             "name": "lib_a",
             "id": "lib_a",
             "version": "0.1.0",
-            "path": "duck_modules/multi_package/lib_a",
+            "path": "duck_modules/multi_package/lib_a/src",
             "features": [
                 "use_mathlib"
             ]
@@ -13,7 +13,7 @@
             "name": "lib_b",
             "id": "lib_b",
             "version": "0.1.0",
-            "path": "duck_modules/multi_package/lib_b",
+            "path": "duck_modules/multi_package/lib_b/src",
             "features": [
                 "use_mathlib",
                 "use_lib_a"
@@ -32,7 +32,7 @@
             "name": "lib_c",
             "id": "lib_c",
             "version": "0.1.0",
-            "path": "duck_modules/multi_package/lib_c",
+            "path": "duck_modules/multi_package/lib_c/src",
             "features": [
                 "use_lib_b"
             ],

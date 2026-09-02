@@ -9,6 +9,13 @@ fun check(val: i64 | ()) -> bool = {
     }
 }
 
+fun get(val: i64 | ()) -> i64 = {
+    return match(val) {
+        case i: i64 = i;
+        case _: ()  = 1000i64;
+    }
+}
+
 fun main() -> i64 = {
     const empty: () = ();
     let check_empty = check(empty);
@@ -30,6 +37,9 @@ fun main() -> i64 = {
     } else {
         builtin_output_i64(0);
     }
+
+    let final_val = get(a) + get(na) + get(b) + get(nb) + get(c) + get(nc);
+    builtin_output_i64(final_val);
 
     return 0;
 }
