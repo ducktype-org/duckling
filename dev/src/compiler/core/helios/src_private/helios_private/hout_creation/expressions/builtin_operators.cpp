@@ -101,12 +101,12 @@ namespace {
 
 		// @TODO: #2104 This does not check the mutability of the left hand side
 		auto make_bin_op_eq_expr = [&](BuiltinBinary bin_op) -> Box<code::Expr> {
-			auto meterialized_lhs = s.reusable(s.refOf(std::move(lhs)));
-			auto next_lhs         = meterialized_lhs->nextUse();
+			auto materialized_lhs = s.reusable(s.refOf(std::move(lhs)));
+			auto next_lhs         = materialized_lhs->nextUse();
 			return withOrigin(
 				new_origin,
 				s.blockExpr(StmtPack{ s.assign(
-					s.deref(std::move(meterialized_lhs)),
+					s.deref(std::move(materialized_lhs)),
 					s.binOp(s.deref(std::move(next_lhs)), bin_op, std::move(rhs))
 				) })
 			);
