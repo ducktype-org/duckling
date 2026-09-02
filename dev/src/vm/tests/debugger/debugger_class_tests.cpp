@@ -141,7 +141,7 @@ private:
 				altIndex(vm::api::Running),
 				altIndex(vm::api::Paused),
 			},
-			{ 13, 18 }
+			{ 13, 19 }
 		);
 	}
 
