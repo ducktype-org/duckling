@@ -735,7 +735,7 @@ namespace compiler::mir {
 							local->setLifetimeScope(case_scope);
 							return local;
 						}
-						return function.addTmp(match_case.constraint_type.value(), expr_scope);
+						return function.addTmp(match_case.constraint_type.value(), case_scope);
 					}();
 
 					MIRValue bound_value = [&](tsh::ReferenceKind binding_ref,

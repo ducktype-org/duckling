@@ -194,13 +194,13 @@ namespace compiler::helios::desugaring {
                         },
                 }
             );
-			if (!element_expr.has_value()) return {};
+			if (!element_expr.hasFailed()) return {};
 
 			code::CodeBlock body{};
 
 			// let <user_var> = __collection[__idx];
 			body.statements.emplace_back(makeBox<code::VariableStmt>(
-				ctx.iterator_origin, std::move(element_expr.value()), iter_type, iter_sym
+				ctx.iterator_origin, std::move(element_expr.valueOrPanic()), iter_type, iter_sym
 			));
 
 			// <body>;

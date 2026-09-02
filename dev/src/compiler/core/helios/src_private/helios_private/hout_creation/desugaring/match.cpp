@@ -46,6 +46,7 @@ namespace compiler::helios::desugaring {
 
 		class MatchSubject final {
 		public:
+			Box<code::Expr>   expr;
 			tsh::SymbolType<> whole_type;
 			/// True if the reference kind of the subject is Direct.
 			bool                     passed_by_value;
@@ -59,7 +60,7 @@ namespace compiler::helios::desugaring {
 		 * false.
 		 */
 		query::QResult<MatchSubject> validateMatchSubject(
-			query::Context& ctx, CRef<code::Expr> expr, dia::StablePosition pos
+			query::Context& ctx, Box<code::Expr> expr, dia::StablePosition pos
 		) {
 			auto type = expr->expression_type.getSymbolType();
 			if (type.getType().getKind() != tsh::Kind::Variant
@@ -73,16 +74,14 @@ namespace compiler::helios::desugaring {
 				);
 				return query::Failed();
 			}
-			UNPACK_QRESULT(auto coercion =, canCoerce(ctx, expr->expression_type, type));
-			if (coercion.isInvalid()) {
-				logCoercionFailure(ctx, coercion, pos, {});
-				return query::Failed();
-			}
+			UNPACK_QRESULT_MOVE(auto return_expr =, coerceFromBox(ctx, std::move(expr), type, pos));
 
 			bool passed_by_value                  = type.getRefKind() == tsh::ReferenceKind::Direct;
 			tsh::VariantAbstractType variant_type = type.getType();
 			usize                    num_alternatives = variant_type.getUnderlyingTypes().size();
-			return { type, passed_by_value, variant_type, num_alternatives };
+			return {
+				std::move(return_expr), type, passed_by_value, variant_type, num_alternatives,
+			};
 		}
 
 		/**
@@ -95,7 +94,7 @@ namespace compiler::helios::desugaring {
 			const tsh::SymbolType<>& constraint,
 			dia::StablePosition      pos
 		) {
-			if (match_subject.whole_type.getRefKind() == tsh::ReferenceKind::Box) {
+			if (constraint.getRefKind() == tsh::ReferenceKind::Box) {
 				logError(ctx, pos, "Box type in the match case is invalid.");
 				return query::Failed();
 			}
@@ -136,11 +135,16 @@ namespace compiler::helios::desugaring {
 
 			auto index = found_index.value();
 
-			// Check if we can do the coercion from the alternative into the constraint type.
-			// If the subject was passed by ref, then the cases also coerce from ref types.
-			// If the subject was passed by value, then we have to materialize the case by value
+
+			// Note: we don't do here an actual coercion of some expression (it is done in MIR by
+			// adding `derefs` manually) but we check here if the coercion don in MIR is valid, so
+			// we must construct a proxy expression type. Check if we can do the coercion from the
+			// alternative into the constraint type. If the subject was passed by ref, then the
+			// cases also coerce from ref types in MIR. If the subject was passed by value, then we
+			// have to materialize the case by value in MIR
 			// - where the ownership will move from the variant into the case variable.
-			// @TODO: #1488 sorry Piotrek, we will have to check const-ness here someday
+			// @TODO: #1488 sorry Piotrek, we will have to check const-ness here someday, maybe it's
+			// automatic by using coercion.
 			auto source_type = match_subject.variant.getUnderlyingTypes()[index].withMutability(
 				match_subject.whole_type.getMutability()
 			);
@@ -148,8 +152,9 @@ namespace compiler::helios::desugaring {
 				match_subject.passed_by_value
 					? source_type
 					: source_type.withReferenceKind(tsh::ReferenceKind::Ref),
-				tsh::ValueCategory{ tsh::PrimaryCategory::Temporary }
+				match_subject.expr->expression_type.getValueCategory()
 			};
+
 			UNPACK_QRESULT(auto coercion =, canCoerce(ctx, expr_type, constraint));
 			if (coercion.isInvalid()) {
 				logCoercionFailure(ctx, coercion, pos, {});
@@ -167,9 +172,9 @@ namespace compiler::helios::desugaring {
 		auto            subject_pst    = match_expr->getValueToMatch().unlock(ctx);
 
 		UNPACK_QRESULT_MOVE(auto subject_hout =, code::subExprFromPST(ctx, subject_pst->getExpr()));
-		UNPACK_QRESULT(
+		UNPACK_QRESULT_MOVE(
 			auto subject =,
-			validateMatchSubject(ctx, subject_hout.ref(), subject_pst->getStablePosition())
+			validateMatchSubject(ctx, std::move(subject_hout), subject_pst->getStablePosition())
 		);
 
 		// Lower all cases.
@@ -277,11 +282,12 @@ namespace compiler::helios::desugaring {
 				return query::Failed();
 			}
 
-			UNPACK_QRESULT(auto coercion =, canCoerce(ctx, result->expression_type, result_type));
-			if (coercion.isInvalid()) {
-				logCoercionFailure(ctx, coercion, result_holder->getStablePosition(), {});
-				return query::Failed();
-			}
+			UNPACK_QRESULT_MOVE(
+				result =,
+				coerceFromBox(
+					ctx, std::move(result), result_type, result_holder->getStablePosition()
+				)
+			);
 
 			cases.emplace_back(Shorthand::matchCase(
 				alternative_index, constraint_type, binding_sym, std::move(result)
@@ -302,11 +308,8 @@ namespace compiler::helios::desugaring {
 			return query::Failed();
 		}
 
-		// The subject is handed over as a reference and evaluated once by the MIR lowering.
-		// Referencing a temporary is not expressible in the surface language yet, but it is
-		// well defined and is what a match over a temporary needs, so it is built directly.
 		return Box<code::Expr>(withOrigin(
-			code::pstOrigin(match_expr), s.matchExpr(std::move(subject_hout), std::move(cases))
+			code::pstOrigin(match_expr), s.matchExpr(std::move(subject.expr), std::move(cases))
 		));
 	}
 }

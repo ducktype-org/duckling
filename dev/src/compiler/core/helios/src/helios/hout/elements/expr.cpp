@@ -811,6 +811,7 @@ namespace compiler::helios::code {
 		cloned_cases.reserve(cases.size());
 		for (const auto& match_case: cases)
 			cloned_cases.emplace_back(Case{ .alternative_index = match_case.alternative_index,
+			                                .constraint_type   = match_case.constraint_type,
 			                                .binding           = match_case.binding,
 			                                .result            = match_case.result->clone() });
 		return makeBox<MatchExpr>(
