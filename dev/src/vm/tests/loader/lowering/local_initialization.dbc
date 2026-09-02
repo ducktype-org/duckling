@@ -50,6 +50,18 @@ function owns_nested_blocks { } -> { } {
 	ret;
 }
 
+# The same slot index holds variables of different types at different points, which used to force
+# both of them to get a block eagerly. The type travels on the frame's type stack instead.
+function reuses_a_slot { } -> { } {
+	init_pany_type		first, i64;
+	deinit; # first
+	init_pany_type		second, i8;
+	deinit; # second
+	init_pany_type		third, pair;
+	deinit; # third
+	ret;
+}
+
 # Returns with a live local, which the lowering has to deinitialize before `ret_imm`.
 function returns_with_live_locals { } -> { i64 } {
 	init_pany_type		leftover, i64;

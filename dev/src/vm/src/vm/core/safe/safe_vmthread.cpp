@@ -62,7 +62,7 @@ namespace vm {
 			// Restore current registers and flow, because
 			// they could be changed when doing "step by step" execution.
 			frame       = thread.runtime_data.frame_stack_current;
-			instr       = frame->instr;
+			instr       = frame->return_address;
 			local_stack = frame->local_stack;
 		}
 		OPFUN_CONT(0);
@@ -78,7 +78,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::save_execution_state(OPFUN_ARGS) {
 		{
 			// Save current registers and flow.
-			frame->instr                            = instr;
+			frame->return_address                   = instr;
 			frame->local_stack                      = local_stack;
 			thread.runtime_data.frame_stack_current = frame;
 		}
@@ -89,7 +89,7 @@ namespace vm {
 	 */
 	void SafeVMThread::executeOneStep() {
 		Frame*     frame       = runtime_data.frame_stack_current;
-		auto*      instr       = frame->instr;
+		auto*      instr       = frame->return_address;
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
@@ -98,11 +98,12 @@ namespace vm {
 				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
 			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
 
-			auto original_instr
-				= program_copy->getOriginalProgram()
-			          ->getFunctions()
-			          .at(frame->current_function->name)
-			          ->bc[static_cast<size_t>(frame->instr - &frame->current_function->bc[0])];
+			auto original_instr = program_copy->getOriginalProgram()
+			                          ->getFunctions()
+			                          .at(frame->current_function->name)
+			                          ->bc[static_cast<size_t>(
+										  frame->return_address - &frame->current_function->bc[0]
+									  )];
 
 			opcode = getInstructionOpcode(original_instr);
 		}
@@ -112,7 +113,7 @@ namespace vm {
 
 		runtime_data.frame_stack_current = frame;
 		frame->local_stack               = local_stack;
-		frame->instr                     = instr;
+		frame->return_address            = instr;
 	}
 
 	/**
@@ -490,6 +491,7 @@ namespace vm {
 		frame->current_function           = &start_function;
 		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
 		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
+		frame->local_type_stack_base      = runtime_data.type_stack_base;
 
 		const auto* instr = start_function.bc.data();
 
@@ -629,9 +631,10 @@ namespace vm {
 				auto& func = *frame->current_function;
 
 				return low::LowCodePosition{
-					.function = &func,
-					.instruction_index
-					= static_cast<u64>(frame->instr - func.bc.data() - (call_adjustment ? 1 : 0)),
+					.function          = &func,
+					.instruction_index = static_cast<u64>(
+						frame->return_address - func.bc.data() - (call_adjustment ? 1 : 0)
+					),
 				};
 			}
 			variant_default {

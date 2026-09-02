@@ -590,7 +590,7 @@ namespace vm {
 			callee_frame->resetFrameData();
 
 			// Load previous frame.
-			instr       = frame->instr;  // This is already a pointer to next instr.
+			instr       = frame->return_address;  // This is already a pointer to next instr.
 			local_stack = frame->local_stack;
 		}
 		// Here the argument is `0` because of the convention defined in the op_call_func.
@@ -606,13 +606,14 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(simpleInit_imm_imm)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(initSimple_imm_type)(FUNCTION_ARGS) {
 		{
-			// No block: one is created only if something ends up needing it.
-			std::memset(local_stack + instr->arg0, 0, instr->arg1);
+			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 
-			*frame->local_block_ref_stack_end = nullptr;
-			frame->local_block_ref_stack_end += 1;
+			// No block: one is created only if something ends up needing it.
+			std::memset(local_stack + instr->arg0, 0, type->getSize().asInt());
+
+			pushLocalSlot(frame, type, nullptr);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -622,14 +623,14 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(deinit_dtor_imm_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(deinitDtor_imm)(FUNCTION_ARGS) {
 		{
 			if (frame->local_block_ref_stack_end[-1] != nullptr) {
 				performDeinit(frame, thread);
 			} else {
 				// Without a block there is nothing to run the destructors off, so they are run
 				// over the variable's bytes directly.
-				const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+				const TypeCRef type = topLocalSlotType(frame);
 				thread.process_memory.runDataDestructors(
 					{ local_stack + instr->arg0, type->getSize().asInt() }, type
 				);
@@ -1374,7 +1375,7 @@ namespace vm {
 			// Restore current flow.
 			// They can be changed when doing "step by step" execution.
 			frame       = thread.runtime_data.frame_stack_current;
-			instr       = frame->instr;
+			instr       = frame->return_address;
 			local_stack = frame->local_stack;
 		}
 

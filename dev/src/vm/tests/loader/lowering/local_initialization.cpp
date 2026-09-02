@@ -25,6 +25,7 @@ public:
 		TESTER_ADD_TEST(pointerVariableIsDeinitializedWithDestructors);
 		TESTER_ADD_TEST(variantVariableGetsItsBlockUpfront);
 		TESTER_ADD_TEST(liveLocalsAreDeinitializedBeforeReturning);
+		TESTER_ADD_TEST(reusedSlotDoesNotForceABlock);
 	}
 
 private:
@@ -90,10 +91,10 @@ private:
 	 */
 	void plainVariablesGetNoBlock() {
 		const auto name = base::StrID("simple");
-		assertOpcodeCount(name, MicroOpcode::simpleInit_imm_imm, 2);
+		assertOpcodeCount(name, MicroOpcode::initSimple_imm_type, 2);
 		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 0);
 		assertOpcodeCount(name, MicroOpcode::deinit, 2);
-		assertOpcodeCount(name, MicroOpcode::deinit_dtor_imm_type, 0);
+		assertOpcodeCount(name, MicroOpcode::deinitDtor_imm, 0);
 	}
 
 	/**
@@ -102,7 +103,7 @@ private:
 	 */
 	void referencedVariableStillGetsNoBlockUpfront() {
 		const auto name = base::StrID("referenced");
-		assertOpcodeCount(name, MicroOpcode::simpleInit_imm_imm, 2);
+		assertOpcodeCount(name, MicroOpcode::initSimple_imm_type, 2);
 		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 0);
 		assertOpcodeCount(name, MicroOpcode::ref_pptr_bany, 1);
 	}
@@ -113,9 +114,9 @@ private:
 	 */
 	void pointerVariableIsDeinitializedWithDestructors() {
 		const auto name = base::StrID("holds_pointer");
-		assertOpcodeCount(name, MicroOpcode::simpleInit_imm_imm, 2);
+		assertOpcodeCount(name, MicroOpcode::initSimple_imm_type, 2);
 		// One for `ptr`, none for `plain` - a structure of plain fields needs no destructors.
-		assertOpcodeCount(name, MicroOpcode::deinit_dtor_imm_type, 1);
+		assertOpcodeCount(name, MicroOpcode::deinitDtor_imm, 1);
 		assertOpcodeCount(name, MicroOpcode::deinit, 1);
 	}
 
@@ -126,7 +127,18 @@ private:
 	void variantVariableGetsItsBlockUpfront() {
 		const auto name = base::StrID("owns_nested_blocks");
 		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 1);
-		assertOpcodeCount(name, MicroOpcode::simpleInit_imm_imm, 0);
+		assertOpcodeCount(name, MicroOpcode::initSimple_imm_type, 0);
+	}
+
+	/**
+	 * @brief A slot index that holds differently typed variables at different points in the
+	 * function still initializes all of them without a block - the type is taken from the
+	 * frame's type stack, not from the slot index.
+	 */
+	void reusedSlotDoesNotForceABlock() {
+		const auto name = base::StrID("reuses_a_slot");
+		assertOpcodeCount(name, MicroOpcode::initSimple_imm_type, 3);
+		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 0);
 	}
 
 	/**

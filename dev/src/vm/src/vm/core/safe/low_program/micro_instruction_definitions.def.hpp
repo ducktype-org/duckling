@@ -492,15 +492,15 @@ DEF_MICRO_INSTR(initBlock_imm_type, vm::low::opargs::Immediate, vm::low::opargs:
 
 /**
  * @brief Initializes a local variable without creating a block for it: zeroes the variable's
- * bytes and reserves its slot.
+ * bytes, pushes its type onto the frame's type stack and reserves its slot.
  *
  * A block is only needed once something refers to the variable through it, and it is created
- * on demand by the instruction that needs it, out of `LowFuncData::local_slot_descs`.
+ * on demand by the instruction that needs it, out of the frame's type stack.
  *
  * @arg0 - byte offset of the variable in the frame's local stack.
- * @arg1 - size of the variable in bytes.
+ * @arg1 - type of the variable.
  */
-DEF_MICRO_INSTR(simpleInit_imm_imm, vm::low::opargs::Immediate, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(initSimple_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
 
 /**
  * @brief Pops the topmost variable from the local stack, freeing its block if one was created.
@@ -510,12 +510,11 @@ DEF_MICRO_INSTR(deinit)
 /**
  * @brief Like `deinit`, for a variable whose type needs destructors run - i.e. one that holds
  * pointers, whose pointed-to blocks must be dereferenced. Needed separately because with no
- * block around there is nothing to take the type from.
+ * block around there is nothing to run the destructors off.
  *
  * @arg0 - byte offset of the variable in the frame's local stack.
- * @arg1 - type of the variable.
  */
-DEF_MICRO_INSTR(deinit_dtor_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
+DEF_MICRO_INSTR(deinitDtor_imm, vm::low::opargs::Immediate)
 
 // ========= IO OPERATIONS ========
 

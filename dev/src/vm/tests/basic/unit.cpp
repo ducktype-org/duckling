@@ -26,6 +26,7 @@ public:
 		TESTER_ADD_TEST(checkVoidTypeValid);
 		TESTER_ADD_TEST(pointerTest);
 		TESTER_ADD_TEST(referenceOnColdBranchTest);
+		TESTER_ADD_TEST(localSlotAddressingTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(globalDestructorTest);
 		TESTER_ADD_TEST(globalNoConstructorTest);
@@ -78,6 +79,8 @@ private:
 	 * block, and the process must still validate its memory cleanly.
 	 */
 	void referenceOnColdBranchTest() { runTestOnVm("reference_on_cold_branch.dbc", "", "42"); }
+
+	void localSlotAddressingTest() { runTestOnVm("local_slot_addressing.dbc", "", "7724"); }
 
 	void commandLineArguments() {
 		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" }, 0);

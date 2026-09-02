@@ -92,7 +92,6 @@ namespace vm::loader::compiler::safe {
 		struct LoweredFunction {
 			low::MicroBytecode                                  bytecode;
 			std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
-			std::vector<vm::low::LocalSlotDesc>                 local_slot_descs;
 		};
 
 		/**

@@ -92,10 +92,6 @@ namespace vm::loader::compiler::safe::detail {
 
 		low::MicroBytecode result;
 
-		std::vector<low::LocalSlotDesc> slot_descs;
-		/// Slots whose description is not the same on every path, see `computeLocalSlotDescs`.
-		std::vector<bool> slot_ambiguous;
-
 		mutable base::HashMap<TypeCRef, TypeCleanup> type_cleanup_cache{};
 
 #if (BUILD_TYPE_DEV_DEBUG)
@@ -111,7 +107,6 @@ namespace vm::loader::compiler::safe::detail {
 		):
 			  compiler{ compiler },
 			  ctx{ ctx } {
-			computeLocalSlotDescs();
 #ifdef ENABLE_JIT
 			addLow<Op_jitEntrypoint>();
 #endif
@@ -120,8 +115,6 @@ namespace vm::loader::compiler::safe::detail {
 		std::pair<low::MicroBytecode, decltype(label_id_to_offset)> build() {
 			return { std::move(result), std::move(label_id_to_offset) };
 		}
-
-		std::vector<low::LocalSlotDesc> takeLocalSlotDescs() { return std::move(slot_descs); }
 
 		/**
 		 * @brief Add a new high instruction.
@@ -253,49 +246,6 @@ namespace vm::loader::compiler::safe::detail {
 			return cleanup;
 		}
 
-		/**
-		 * @brief Fills `slot_descs` with the type and the location of the variable living in
-		 * each local slot, and marks the slots whose contents are not the same on every path
-		 * through the function as ambiguous.
-		 *
-		 * A slot's offset is the sum of the sizes below it, so two branches can reach the same
-		 * slot index with different offsets. Such slots always get their block eagerly, which
-		 * means nothing ever has to reconstruct their description.
-		 */
-		void computeLocalSlotDescs() {
-			const auto& db = ctx.function.local_stack;
-
-			slot_descs.assign(ctx.local_block_count, {});
-			slot_ambiguous.assign(ctx.local_block_count, false);
-			std::vector<bool> slot_seen(ctx.local_block_count, false);
-
-			// Consecutive instructions almost always share a state.
-			base::Optional<code::StackStateID> previous_state{};
-
-			for (const auto& state: ctx.function.stack_states) {
-				if (previous_state.has_value() && u64{ *previous_state } == u64{ state }) continue;
-				previous_state = state;
-
-				for (usize idx = 0; idx < db.size(state); idx++) {
-					const auto name = db.getName(state, idx).value();
-
-					const low::LocalSlotDesc desc{
-						.type        = resolveTypeName(db.getTypeName(state, idx).value()),
-						.byte_offset = getIntTypeSize(db.getByteOffset(state, name).value()),
-					};
-
-					if (!slot_seen[idx]) {
-						slot_seen[idx]  = true;
-						slot_descs[idx] = desc;
-					} else if (slot_descs[idx].type != desc.type
-					           || slot_descs[idx].byte_offset != desc.byte_offset) {
-						slot_ambiguous[idx] = true;
-						slot_descs[idx]     = {};
-					}
-				}
-			}
-		}
-
 		template<typename LowArg, typename HighArg>
 		requires IsTranslatableInstructionArgumentPair<LowArg, HighArg>
 		u64 lowerLowArg(const HighArg& arg) {
@@ -343,8 +293,7 @@ namespace vm::loader::compiler::safe::detail {
 		 * to the topmost one of the current stack state.
 		 *
 		 * A variable holding pointers needs its destructors run whether or not a block was ever
-		 * created for it, and with no block there is nothing to take its type from, so the type
-		 * travels in the instruction.
+		 * created for it, so the instruction carries the variable's location.
 		 */
 		void addDeinitOfTopVariable() { addDeinitOfVariable(topSlotIndex()); }
 
@@ -360,10 +309,8 @@ namespace vm::loader::compiler::safe::detail {
 				return;
 			}
 
-			addLow<Op_deinit_dtor_imm_type>(
-				vm::opargs::Immediate{ getIntTypeSize(db.getByteOffset(curr_state, name).value()) },
-				opargs::Type{ db.getTypeName(curr_state, idx).value() }
-			);
+			addLow<Op_deinitDtor_imm>(vm::opargs::Immediate{
+				getIntTypeSize(db.getByteOffset(curr_state, name).value()) });
 		}
 
 		void addLabel(opargs::Label label) {
@@ -771,18 +718,12 @@ namespace vm::loader::compiler::safe::detail {
 				const TypeCRef type   = getPlaceType(i.var);
 				const u64      offset = byteOffsetOf(i.var);
 
-				// A variable owning nested blocks, or one living in a slot whose layout is not
-				// the same on every path, gets its block right away. Everything else is
+				// A variable owning nested blocks gets its block right away. Everything else is
 				// initialized without one.
-				if (typeCleanup(type) == TypeCleanup::EagerBlock
-				    || slot_ambiguous.at(*ctx.function.local_stack.getIdx(curr_state, i.var.var_name)
-				    ))
+				if (typeCleanup(type) == TypeCleanup::EagerBlock)
 					addLow<Op_initBlock_imm_type>(vm::opargs::Immediate{ offset }, i.type);
 				else
-					addLow<Op_simpleInit_imm_imm>(
-						vm::opargs::Immediate{ offset },
-						vm::opargs::Immediate{ type->getSize().asInt() }
-					);
+					addLow<Op_initSimple_imm_type>(vm::opargs::Immediate{ offset }, i.type);
 			}
 			instr_case(high::Op_deinit, i) { addDeinitOfTopVariable(); }
 			instr_case(high::Op_input_p64, i) { addLow<Op_input_p64>(i.dst); }

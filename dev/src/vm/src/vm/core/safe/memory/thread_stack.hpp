@@ -11,6 +11,7 @@ namespace vm {
 		std::vector<Frame>                 frame_stack;
 		std::vector<EntryT>                local_stack;
 		std::vector<GenericBlock<EntryT>*> block_ref_stack;
+		std::vector<const Type*>           type_stack;
 
 	public:
 		static constexpr u64 FRAMES_LENGTH = 16'384;
@@ -35,7 +36,8 @@ namespace vm {
 		GenericThreadStack():
 			  frame_stack(FRAMES_LENGTH),
 			  local_stack(STACK_LENGTH),
-			  block_ref_stack(BLOCK_REF_STACK_LENGTH) {}
+			  block_ref_stack(BLOCK_REF_STACK_LENGTH),
+			  type_stack(BLOCK_REF_STACK_LENGTH) {}
 
 		auto getFrameStack() -> Ref<std::vector<Frame>> { return &frame_stack; }
 
@@ -44,6 +46,8 @@ namespace vm {
 		auto getBlockRefStack() -> Ref<std::vector<GenericBlock<EntryT>*>> {
 			return &block_ref_stack;
 		}
+
+		auto getTypeStack() -> Ref<std::vector<const Type*>> { return &type_stack; }
 	};
 
 	using ThreadStack = GenericThreadStack<std::byte>;

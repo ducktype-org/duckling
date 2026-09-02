@@ -95,11 +95,50 @@ namespace vm {
 		}
 
 		/**
+		 * @brief Reserves the slot of a freshly initialized local variable.
+		 *
+		 * Every slot carries the type of the variable in it, so that a block can still be made
+		 * for a variable that was initialized without one. `block` is null in exactly that case,
+		 * which is the common one.
+		 */
+		static void pushLocalSlot(Frame* frame, TypeCRef type, Block* block) {
+			const u64 slot_index
+				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+			frame->local_type_stack_base[slot_index] = type.get();
+
+			*frame->local_block_ref_stack_end = block;
+			frame->local_block_ref_stack_end += 1;
+		}
+
+		/**
+		 * @brief Type of the variable in the topmost local slot.
+		 */
+		static TypeCRef topLocalSlotType(Frame* frame) {
+			const u64 slot_index
+				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base) - 1;
+			return frame->local_type_stack_base[slot_index];
+		}
+
+		/**
+		 * @brief Address of the variable living in slot `slot_index`.
+		 *
+		 * Offsets on the local stack are a running sum of the sizes of the variables with no
+		 * padding in between, so a variable sits right above all the ones below it in the frame.
+		 */
+		static std::byte* localSlotAddress(std::byte* local_stack, Frame* frame, u64 slot_index) {
+			u64 offset = 0;
+			for (u64 idx = 0; idx < slot_index; idx++)
+				offset += frame->local_type_stack_base[idx]->getSize().asInt();
+
+			return local_stack + offset;
+		}
+
+		/**
 		 * @brief Creates the block of a local variable that was initialized without one.
 		 *
 		 * Locals start out with an empty block reference slot; the block is only needed once
-		 * something refers to the variable through it. Its type and location come from the
-		 * function's `local_slot_descs`, so nothing has to be tracked at runtime.
+		 * something refers to the variable through it. Its type comes from the frame's type
+		 * stack, and its location follows from the types of the slots below it.
 		 *
 		 * @note Never inlined - this runs at most once per variable, so it must not bloat the
 		 * instruction implementations.
@@ -108,10 +147,9 @@ namespace vm {
 		static Ref<Block> createLocalBlock(
 			std::byte* local_stack, Frame* frame, SafeVMThread& thread, u64 slot_index
 		) {
-			const auto& slot_desc = frame->current_function->local_slot_descs[slot_index];
-
 			auto block = thread.process_memory.adoptDummy(
-				slot_desc.type.toOpt().value(), local_stack + slot_desc.byte_offset
+				frame->local_type_stack_base[slot_index],
+				localSlotAddress(local_stack, frame, slot_index)
 			);
 			// So that nobody can delete our block.
 			thread.process_memory.increaseBlockRefcount(block);
@@ -193,8 +231,8 @@ namespace vm {
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
 			// Save current registers and flow.
-			frame->instr       = instr + instruction_size;
-			frame->local_stack = local_stack;
+			frame->return_address = instr + instruction_size;
+			frame->local_stack    = local_stack;
 
 			// Save the last frame
 			auto* prev_frame = frame;
@@ -212,6 +250,8 @@ namespace vm {
 			local_stack += callee_stack_distance;
 			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
 			                                  + (prev_frame_block_ref_count - shared_blocks_count);
+			frame->local_type_stack_base = prev_frame->local_type_stack_base
+			                             + (prev_frame_block_ref_count - shared_blocks_count);
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
@@ -247,8 +287,7 @@ namespace vm {
 			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
 
-			*frame->local_block_ref_stack_end = block.get();
-			frame->local_block_ref_stack_end += 1;
+			pushLocalSlot(frame, type, block.get());
 		}
 
 		static

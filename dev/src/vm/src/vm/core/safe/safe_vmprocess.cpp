@@ -534,24 +534,22 @@ namespace vm {
 				);
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
+				// Offsets on the local stack are a running sum of the variable sizes, so they
+				// are accumulated while walking the slots.
+				u64 offset = 0;
 				for (u64 slot_index = 0; slot_index < slot_count; slot_index++) {
+					const TypeCRef type = frame.local_type_stack_base[slot_index];
+
 					// Variables are initialized without a block, and a value can only be read
 					// through one, so it is created here just like the executor does.
 					Block*& slot = frame.local_block_ref_stack_base[slot_index];
 					if (slot == nullptr) {
-						const auto& slot_desc
-							= frame.current_function->local_slot_descs[slot_index];
-						Ref<Block> new_block = memory.adoptDummy(
-							slot_desc.type.toOpt().value(), frame.local_stack + slot_desc.byte_offset
-						);
+						Ref<Block> new_block = memory.adoptDummy(type, frame.local_stack + offset);
 						memory.increaseBlockRefcount(new_block);
 						slot = new_block.get();
 					}
 
-					Ref<Block> block  = Ref(slot);
-					u64        offset = base::safeIntConv<u64>(
-                        memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
-                    );
+					Ref<Block> block = Ref(slot);
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset = offset,
 						.name   = std::nullopt,
@@ -560,6 +558,8 @@ namespace vm {
                             *this, memory.getBlockType(block), Pointer(block, 0)
                         ),
 					});
+
+					offset += type->getSize().asInt();
 				}
 
 				if_opt_some(
