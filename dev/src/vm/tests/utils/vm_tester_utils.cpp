@@ -58,10 +58,7 @@ bool VmTestSuite::TransitionLog::legalStatusEdge(usize from, usize to) {
 		allow(PAUSED, { RUNNING, SLEEPING, STOPPING, COMPLETED, STOPPED, PANICKED });
 		allow(SLEEPING, { RUNNING, PAUSED, STOPPING, COMPLETED, STOPPED, PANICKED });
 		allow(STOPPING, { COMPLETED, STOPPED, PANICKED });
-		// A terminal process can be re-run: the reset emits NotStarted first.
-		allow(COMPLETED, { NOT_STARTED, RUNNING });
-		allow(STOPPED, { NOT_STARTED, RUNNING });
-		allow(PANICKED, { NOT_STARTED, RUNNING });
+		allow(COMPLETED, { NOT_STARTED });
 		return m;
 	}();
 	return matrix.at(from).at(to);

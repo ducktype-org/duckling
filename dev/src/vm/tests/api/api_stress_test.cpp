@@ -50,6 +50,8 @@ private:
 	/// new interleavings.
 	static constexpr u64 MASTER_SEED = 0x5D'EE'CE'66'D1'CE'20'40ULL;
 
+	static constexpr u64 PARK_INSTRUCTION = 5;
+
 	/// `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
 	static constexpr usize SPIN_THREAD_COUNT = 4;
 
@@ -68,7 +70,12 @@ private:
 			const vm::PID   pid = spawnAndLoad("breakpoint.dbc");
 			ScopedStatusLog scoped(*this, pid);
 
+			assertSucceeded(
+				api::setBreakpoint(pid, base::StrID("main"), PARK_INSTRUCTION, true),
+				"setBreakpoint before the random ops"
+			);
 			assertSucceeded(api::run(pid), "run");
+			assertSucceeded(api::waitForBreakpoint(pid), "waitForBreakpoint");
 
 			// Debugger-only ops, no stop/run and no step: the program is allowed to complete
 			// cleanly so guest-memory validity is a meaningful post-condition.
@@ -84,6 +91,16 @@ private:
 			// join can finish.
 			releaseUntilTerminal(pid);
 			(void) api::join(pid);
+
+			auto final_status = api::getExecutionStatus(pid);
+			assertSucceeded(final_status, base::strConcat("the final status, seed=", seed));
+			assertTrue(
+				v_matches(final_status.value(), api::ExecutionCompleted),
+				base::strConcat("the program must complete, not stop, seed=", seed)
+			);
+			assertSucceeded(
+				api::getExitValue(pid), base::strConcat("getExitValue after completion, seed=", seed)
+			);
 
 			validateTransitions(scoped.log, base::strConcat("seed=", seed));
 
@@ -152,7 +169,7 @@ private:
 			for (usize client = 0; client < CLIENT_COUNT; client++) {
 				clients.emplace_back([this, pid, seed, client, &status_ok] {
 					std::mt19937_64 rng(seed * CLIENT_COUNT + client);
-					for (usize op = 0; op < 20; op++) randomOp(pid, rng, true, true, status_ok);
+					for (usize op = 0; op < 20; op++) randomOp(pid, rng, false, true, status_ok);
 				});
 			}
 			for (auto& client: clients) client.join();
@@ -226,8 +243,10 @@ private:
 	/**
 	 * @brief One random, non-blocking API call against the process.
 	 *
-	 * @p allow_lifecycle adds `stop`, which terminates the program, so it is only set where
-	 * guest-memory validity is not asserted afterwards.
+	 * @p allow_lifecycle adds `stop`. It terminates the program, so every op drawn after it only
+	 * exercises the "illegal in a terminal state" path - which is worth covering, but only in one
+	 * place. `stressInfiniteProgram` is that place; the scenarios that assert guest-memory
+	 * validity or race a live process against several clients leave it off.
 	 *
 	 * @p allow_step gates the `step` op. Stepping past the end of the stepped function live-locks
 	 * the execution thread and `api::step` never returns, so it is only exercised against the
