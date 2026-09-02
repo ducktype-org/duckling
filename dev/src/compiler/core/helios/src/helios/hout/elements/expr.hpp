@@ -530,19 +530,30 @@ namespace compiler::helios::code {
 	 * matches. Every case yields a value, and they all have to be of the same type, which
 	 * becomes the type of the whole expression.
 	 *
-	 * A case may bind the tested alternative's payload. The binding is a `ref` to the
-	 * payload inside the subject, so it never copies: testing an alternative already
-	 * produces a pointer to it, and the binding reuses that pointer.
+	 * Examples:
+	 * `case <sym>: <type> = <result>`
+	 *     - has alternative index, constraint type <type>, sym <sym>, result <result>
+	 * `case _: <type> = <result>`
+	 *     - has alternative index, constraint type <type>, result <result>
+	 *     - no sym
+	 * `cast _ = <result>`
+	 *     - has result <result>
+	 *     - no alternative index, no constraint, no sym
 	 */
 	struct MatchExpr final: public Expr {
 		struct Case final {
 			/** Alternative index in the subject's variant type; empty for wildcards. */
 			base::Optional<usize> alternative_index;
+			/** If binding is non-empty, then this is a type of the binding, otherwise
+			   it's the type that the binding would have. */
+			base::Optional<tsh::SymbolType<>> constraint_type;
 			/** This is a variable that is used by the expression,
 			  where the alternative value of the same type as constraint should land.*/
 			base::Optional<SymID> binding;
 			/** The value this case evaluates to. */
 			Box<Expr> result;
+
+			[[nodiscard]] bool shouldBindToTemporary(query::Context& ctx) const;
 		};
 
 		/**

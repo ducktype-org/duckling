@@ -143,6 +143,7 @@ namespace compiler::helios::defgen {
 
 				cases.emplace_back(Shorthand::matchCase(
 					i,
+					payload_type,
 					payload_sym,
 					makeBox<code::VariantConstructExpr>(
 						ctx, code::generatedOrigin(), std::move(payload_value), result_symbol_type, i

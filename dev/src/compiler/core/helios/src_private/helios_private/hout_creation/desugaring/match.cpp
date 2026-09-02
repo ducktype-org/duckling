@@ -166,11 +166,10 @@ namespace compiler::helios::desugaring {
 		const auto      match_position = match_expr->getStablePosition();
 		auto            subject_pst    = match_expr->getValueToMatch().unlock(ctx);
 
-		UNPACK_QRESULT_MOVE(
-			auto subject_hout =, code::subExprFromPST(ctx, subject_pst->getExpr())
-		);
+		UNPACK_QRESULT_MOVE(auto subject_hout =, code::subExprFromPST(ctx, subject_pst->getExpr()));
 		UNPACK_QRESULT(
-			auto subject =, validateMatchSubject(ctx, subject_hout.ref(), subject_pst->getStablePosition())
+			auto subject =,
+			validateMatchSubject(ctx, subject_hout.ref(), subject_pst->getStablePosition())
 		);
 
 		// Lower all cases.
@@ -253,15 +252,13 @@ namespace compiler::helios::desugaring {
 						ctx,
 						case_position,
 						"When the value expression is passed to the match, it is invalid to use "
-					    "the wildcard pattern in cases"
+						"the wildcard pattern in cases"
 					);
 					return query::Failed();
 				}
 			}
 			auto result_holder = branches.front().result.unlock(ctx);
-			UNPACK_QRESULT_CREF_TO_BOX(
-				auto result =, ctx.query<QueryHoutOfExpr>({ result_holder->getExpr() })
-			);
+			UNPACK_QRESULT_MOVE(auto result =, code::subExprFromPST(ctx, result_holder->getExpr()));
 
 			// A match yields one value, so every case has to agree on its type. There is no
 			// common-type inference, so anything else is an error the user has to resolve.
@@ -280,8 +277,15 @@ namespace compiler::helios::desugaring {
 				return query::Failed();
 			}
 
-			cases.emplace_back(Shorthand::matchCase(alternative_index, binding_sym, result->clone())
-			);
+			UNPACK_QRESULT(auto coercion =, canCoerce(ctx, result->expression_type, result_type));
+			if (coercion.isInvalid()) {
+				logCoercionFailure(ctx, coercion, result_holder->getStablePosition(), {});
+				return query::Failed();
+			}
+
+			cases.emplace_back(Shorthand::matchCase(
+				alternative_index, constraint_type, binding_sym, std::move(result)
+			));
 		}
 
 		if (!has_wildcard && covered.size() < subject.num_alternatives) {
@@ -302,8 +306,7 @@ namespace compiler::helios::desugaring {
 		// Referencing a temporary is not expressible in the surface language yet, but it is
 		// well defined and is what a match over a temporary needs, so it is built directly.
 		return Box<code::Expr>(withOrigin(
-			code::pstOrigin(match_expr),
-			s.matchExpr(std::move(subject_hout), std::move(cases))
+			code::pstOrigin(match_expr), s.matchExpr(std::move(subject_hout), std::move(cases))
 		));
 	}
 }

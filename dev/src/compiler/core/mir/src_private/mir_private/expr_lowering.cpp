@@ -1,6 +1,7 @@
 #include "expr_lowering.hpp"
 
 #include "helios/tsh/symbol_type.hpp"
+#include "mir/mir_structure/mir_local_ref.hpp"
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
@@ -650,6 +651,7 @@ namespace compiler::mir {
 		}
 
 		void visitMatchExpr(const hc::MatchExpr& expr) override {
+			auto&      ctx          = function.getContext();
 			const auto variant_type = expr.subject->expression_type.getSymbolType()
 			                              .getType()
 			                              .as<tsh::VariantAbstractType>();
@@ -695,20 +697,22 @@ namespace compiler::mir {
 				);
 				auto case_entry = lowered_result.begin;
 
-				// A match covers its subject exhaustively, so the last case is bound to match and
-				// needs no test.
-				bool tests_alternative = match_case.alternative_index.has_value() && !is_last_case;
-
-				bool projects_payload = tests_alternative || match_case.binding.has_value();
-
-				auto test_block = function.newBlock();
-
 				base::Optional<MIRLocalMutRef>    payload_ptr;
 				base::Optional<tsh::SymbolType<>> alternative_type;
 
 				if_opt_some(match_case.alternative_index, index) {
 					alternative_type = variant_type.getMember(index);
 				}
+
+				// A match covers its subject exhaustively, so the last case is bound to match and
+				// needs no test.
+				bool tests_alternative = match_case.alternative_index.has_value() && !is_last_case;
+				bool binds_to_variable
+					= match_case.binding.has_value() || match_case.shouldBindToTemporary(ctx);
+				bool projects_payload = tests_alternative || binds_to_variable;
+
+				auto test_block = function.newBlock();
+
 
 				if (projects_payload) {
 					const auto pointer_type = tsh::SymbolType<>::withDefaults(
@@ -724,9 +728,15 @@ namespace compiler::mir {
 					});
 				}
 
-				if (match_case.binding.has_value()) {
-					auto binding_local = function.findLocal(match_case.binding.value()).value();
-					binding_local->setLifetimeScope(case_scope);
+				if (binds_to_variable) {
+					auto binding_local = [&] -> MIRLocalRef {
+						if_opt_some(match_case.binding, binding) {
+							auto local = function.findLocal(binding).value();
+							local->setLifetimeScope(case_scope);
+							return local;
+						}
+						return function.addTmp(match_case.constraint_type.value(), expr_scope);
+					}();
 
 					MIRValue bound_value = [&](tsh::ReferenceKind binding_ref,
 					                           tsh::ReferenceKind alternative_ref) -> MIRValue {
@@ -839,7 +849,7 @@ namespace compiler::mir {
 			for (auto& projection: pending_projections) {
 				const auto  alternative_type = variant_type.getMember(projection.alternative_index);
 				Instruction project_instr{ Operation::VariantTryProject,
-					                       {},
+					                       { projection.payload_ptr },
 					                       { subject_val },
 					                       { flagConstruct(projection.payload_ptr) },
 					                       expr_scope,
@@ -847,7 +857,6 @@ namespace compiler::mir {
 											   .alternative_index = projection.alternative_index,
 											   .alternative_type  = alternative_type },
 					                       { expr.getPosition() } };
-				project_instr.output.emplace(projection.payload_ptr);
 				projection.hole.fill(std::move(project_instr));
 			}
 
