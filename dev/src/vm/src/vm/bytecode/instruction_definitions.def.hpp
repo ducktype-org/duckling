@@ -1,6 +1,6 @@
 
 /**
- * @file instruction_definitions.hpp
+ * @file instruction_definitions.def.hpp
  * @brief Contains definitions of all high bytecode instructions. Can be used for generating
  * repetitive code based on list of instructions.
  *
@@ -10,7 +10,7 @@
  *  constexpr usize countHighInstructions() {
  *  	usize count = 0;
  *		#define HANDLE_INSTR(i) count++;
- * 		#include "instruction_definitions.hpp"
+ * 		#include "instruction_definitions.def.hpp"
  * 		#undef HANDLE_INSTR
  * 		return count;
  * 	}
