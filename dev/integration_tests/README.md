@@ -247,17 +247,19 @@ Env:
     DIT_TMP_DIR: "@{new_tmp_dir}"
 ```
 
-Every case then gets a fresh directory under `/tmp/dit/`, visible to all of
-its commands as `$DIT_TMP_DIR`. The root config defines helpers around
-`integration_tests/helpers/tmp_env.py`:
+Every case then gets a fresh directory under the suite's scratch root, visible
+to all of its commands as `$DIT_TMP_DIR`. That root is `/tmp/dit-$(id -un)`, so
+several accounts can run the suite on one machine without stepping on each
+other; set `$DIT_TMP_ROOT` to put it somewhere else. The root config defines
+helpers around `integration_tests/helpers/tmp_env.py`:
 
 - `@{make_tmp_env}` - copies the files listed in the `tmp_env_files` variable
   (paths relative to the test's directory, mirrored inside the tmp dir) and
   sweeps stale directories of past runs. Not needed if nothing is copied.
 - `@{at_tmp_env} CMD` - runs `CMD` inside the tmp dir.
 - `@{cleanup_tmp_env}` - removes the tmp dir; put it in `PostCase`, which only
-  runs for successful cases - directories of failed cases are kept in
-  `/tmp/dit/` for debugging and are swept once they age out.
+  runs for successful cases - directories of failed cases are kept in the
+  scratch root for debugging and are swept once they age out.
 
 Often no files need copying at all: point the compiler's artifact option at
 `$DIT_TMP_DIR/build` (see `compiler/compilation/testconfig.yaml`) and keep

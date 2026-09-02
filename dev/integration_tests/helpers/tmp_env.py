@@ -5,6 +5,10 @@ Helpers for running DIT test cases inside a temporary directory.
 The directory is taken from $DIT_TMP_DIR, which tests define with the
 `Env` config key (see `new_tmp_dir` in the root testconfig.yaml).
 
+All scratch space lives under a per-user root, `/tmp/dit-$(id -un)` by
+default and $DIT_TMP_ROOT when that is set. The root testconfig.yaml
+applies the very same rule, so both sides always agree.
+
 Subcommands:
     make [FILES...]  -- copy FILES (relative to the test's directory)
                         into the temporary directory, mirroring their
@@ -13,24 +17,50 @@ Subcommands:
     exec -- CMD...   -- run CMD (bash syntax) inside the temporary directory
     clean            -- remove the temporary directory
     sweep            -- only sweep stale directories of past runs
+    root             -- print the root all temporary directories live under
 """
 import os
+import pwd
 import shutil
 import sys
 import time
 from pathlib import Path
 
-TMP_ROOT = Path("/tmp/dit")
-# MacOS has a lot of weird symlinks.
-# F.e. `/tmp` is a symlink to `/private/tmp`, and duck resolves paths, so I get a lot of mismatches on my local machine.
-MACOS_WEIRD_TMP_ROOT = Path("/private/tmp/dit")
-ALLOWED_TMP_ROOTS = [TMP_ROOT, MACOS_WEIRD_TMP_ROOT]
+DEFAULT_TMP_ROOT_PREFIX = "/tmp/dit-"
 STALE_AGE_SECONDS = 24 * 60 * 60
 
 
 def fail(msg: str):
     print(f"tmp_env.py: {msg}", file=sys.stderr)
     sys.exit(1)
+
+
+def current_user_name() -> str:
+    """Gives the same answer as `id -un`, which the root testconfig.yaml uses."""
+    try:
+        return pwd.getpwuid(os.getuid()).pw_name
+    except (KeyError, OSError):
+        # No passwd entry for us: the numeric id is still unique per user.
+        return str(os.getuid())
+
+
+def tmp_root() -> Path:
+    """
+    The root every scratch directory lives under. It is per-user, so two
+    accounts on one machine never fight over the same directory: the first
+    one to run the suite would own it and lock everybody else out.
+    """
+    override = os.environ.get("DIT_TMP_ROOT", "")
+    if override:
+        return Path(override)
+    return Path(DEFAULT_TMP_ROOT_PREFIX + current_user_name())
+
+
+TMP_ROOT = tmp_root()
+# MacOS has a lot of weird symlinks.
+# F.e. `/tmp` is a symlink to `/private/tmp`, and duck resolves paths, so I get a lot of mismatches on my local machine.
+# Accepting the resolved root as well keeps those paths valid.
+ALLOWED_TMP_ROOTS = list(dict.fromkeys([TMP_ROOT, TMP_ROOT.resolve()]))
 
 
 def tmp_dir() -> Path:
@@ -95,9 +125,15 @@ def cmd_clean():
     shutil.rmtree(tmp_dir(), ignore_errors=True)
 
 
+def cmd_root():
+    print(TMP_ROOT)
+
+
 def main():
     if len(sys.argv) < 2:
-        fail("usage: tmp_env.py make [FILES...] | exec -- CMD... | clean")
+        fail(
+            "usage: tmp_env.py make [FILES...] | exec -- CMD... | clean | sweep | root"
+        )
     match sys.argv[1]:
         case "make":
             cmd_make(sys.argv[2:])
@@ -110,6 +146,8 @@ def main():
             cmd_clean()
         case "sweep":
             sweep_stale()
+        case "root":
+            cmd_root()
         case unknown:
             fail(f"unknown subcommand: {unknown}")
 

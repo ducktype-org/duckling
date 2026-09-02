@@ -31,6 +31,39 @@ Tests:
                 PostCase: "@{cleanup_tmp_env}"
                 Output:
                     String: "second\n"
+    tmp_root:
+        Description: "Checks that the scratch root is per-user and overridable."
+        Cases:
+            # /tmp is shared between accounts, so a fixed root would be owned by
+            # whoever ran the suite first and unusable for everybody else.
+            default_root_is_per_user:
+                Run: "[ \"$(env -u DIT_TMP_ROOT @{tmp_env_tool} root)\" = \"/tmp/dit-$(id -un)\" ]
+                  && echo ok"
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "ok\n"
+            # The default and the override must agree between tmp_env.py and the
+            # root testconfig.yaml, so the case dir this run got must sit under it.
+            case_dir_lives_under_the_root:
+                Run: "case \"$DIT_TMP_DIR/\" in \"$(@{tmp_env_tool} root)\"/*) echo ok ;;
+                  *) echo \"$DIT_TMP_DIR\" ;; esac"
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "ok\n"
+            env_override_is_used_end_to_end:
+                Run: "root=$(mktemp -d) && export DIT_TMP_ROOT=\"$root\" DIT_TMP_DIR=\"$root/case\"
+                  && @{tmp_env_tool} make
+                  && @{tmp_env_tool} exec -- \"echo quack > out.txt && cat out.txt\"
+                  && @{tmp_env_tool} clean && [ ! -d \"$root/case\" ] && rmdir \"$root\" && echo done"
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "quack\ndone\n"
+            rejects_dir_outside_the_root:
+                Run: "DIT_TMP_DIR=/tmp/not-the-dit-root/case @{tmp_env_tool} make 2>&1 >/dev/null
+                  | grep -c 'must live under'"
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "1\n"
     env_key:
         Description: "Checks the Env config key: ordered evaluation and derived variables."
         Cases:
