@@ -296,7 +296,7 @@ namespace compiler::helios::code {
 					pstOrigin(stmt).generatedFrom(),
 					s.call(
 						withOrigin(pstOrigin(stmt).generatedFrom(), s.ident(string_to_string_sym)),
-						std::move(result_expr)
+						s.prepToPassSelf(std::move(result_expr))
 					)
 				);
 
@@ -310,7 +310,8 @@ namespace compiler::helios::code {
 			static bool isNumericOperator(const lexer::Operator op) {
 				// Only operators which allow their arguments to undergo numeric promotion.
 				static const std::set<std::string> numeric_ops
-					= { "+", "-", "*", "/", "%", "**", "<", "<=", ">", ">=", "==", "!=" };
+					= { "+",  "-",  "*",  "/", "%", "**", "<", "<=", ">",
+					    ">=", "==", "!=", "&", "|", "^",  "~", "<<", ">>" };
 				return numeric_ops.contains(op.str());
 			}
 
@@ -473,9 +474,10 @@ namespace compiler::helios::code {
 
 				// Handle dereferencing
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
-					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
+					if (not(tsh::isPointerKind(inner_type.getType().getKind())
+					        or inner_type.getRefKind() != tsh::ReferenceKind::Direct)) {
 						ctx.logInt(makeBox<dia::PlaceholderError>(
-							"Tried to dereference a non-pointer type", stmt->getStablePosition()
+							"Tried to dereference an invalid type", stmt->getStablePosition()
 						));
 						return;
 					}
@@ -565,6 +567,27 @@ namespace compiler::helios::code {
 						s.ident(defgen::copyConstructorSymForType(ctx, abstract_type)),
 						s.refOf(std::move(inner))
 					);
+					return;
+				}
+
+				// `copyof x` copies `x` while keeping its full symbol type (including reference kind).
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copyof)) {
+					const Shorthand s{ ctx };
+
+					// copyof: T -> T
+					// copyof: ref T -> ref T
+					// copyof: box T -> box T
+					// `SymbolType::isCopyable` answers this for the value as a whole: a `ref` is
+					// always copyable (the reference is copied), while a `box` follows its pointee.
+					if (not inner_type.isCopyable(ctx)) {
+						ctx.logInt(makeBox<dia::PlaceholderError>(
+							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
+							stmt->getStablePosition()
+						));
+						return;
+					}
+
+					node = s.copyValue(std::move(inner), pstOrigin(stmt).generatedFrom());
 					return;
 				}
 
@@ -683,13 +706,16 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand());
+				if (lhs_res.hasFailed()) return;
+				auto lhs = std::move(lhs_res).valueOrThrow();
+
 				// Handle variant type construction
-				if (op->unwrap() == lang_def::NamedOperator::Pipe) {
+				if (op->unwrap() == lang_def::NamedOperator::Pipe
+				    && lhs->expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
-					// Expect all subexpressions in variant constructor to be Meta types or try to
-					// lift them if they aren't.
 					const auto meta_type = tsh::SymbolType<>{
 						tsh::getMetaType(),
 						tsh::ReferenceKind::Direct,
@@ -700,10 +726,7 @@ namespace compiler::helios::code {
 						auto sub_expr_hout = subExprFromPSTWithType(
 							ctx, sub_expr, meta_type, op->getStablePosition()
 						);
-						if (sub_expr_hout.hasFailed()) {
-							// Error has occurred.
-							return;
-						}
+						if (sub_expr_hout.hasFailed()) return;
 						all_subtypes.emplace_back(std::move(sub_expr_hout).valueOrThrow());
 					}
 					node = makeBox<VariantTypeConstructorExpr>(
@@ -712,11 +735,8 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				// Default case (typical operators, built-in or user-defined)
-				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand());
 				auto rhs_res = subExprFromPST(ctx, stmt->getRightOperand());
-
-				auto lhs = std::move(lhs_res).valueOrThrow();
+				if (rhs_res.hasFailed()) return;
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
 				node = resolveBinaryOperator(
@@ -764,6 +784,10 @@ namespace compiler::helios::code {
 
 				case pst::Keyword::Type:
 					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getMetaType());
+					break;
+
+				case pst::Keyword::Void:
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getVoidType());
 					break;
 
 				case pst::Keyword::i128:

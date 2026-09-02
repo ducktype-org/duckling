@@ -1,0 +1,25 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "  links: sqlite" >> foo/quackconfig.yaml
+  echo "profiles:
+    dvm:
+      dvm-bytecode: true" >> foo/quackconfig.yaml
+Tests:
+  external-libs-dvm:
+    Description: errors when a package has an external library specified on the DVM
+    Cases:
+      external-libs-dvm:
+        test-cmd: duck -C foo build --profile dvm
+        ExitCode: 1
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the gathering or the solver engine
+            info: starting fetching 1 package
+            info: successfully synchronized venv \`foo\`"
+        Err:
+          String: |+
+            error: package foo version 1.0.0 links against \`sqlite\`, which is not supported on the DVM

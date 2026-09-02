@@ -18,8 +18,6 @@
 namespace {
 	using namespace compiler;
 
-	bool isMetaTypeOperation(lir::Operation op) { return op == lir::Operation::MetaTypeOperation; }
-
 	vm::code::builders::OpKind lirOperationToDVMOpKind(const lir::Operation& op) {
 		using enum lir::Operation;
 		using namespace vm::code::builders;
@@ -28,6 +26,7 @@ namespace {
 		case IntegerNeg: 	return OpKind::neg;
 		case FloatNeg:   	return OpKind::fneg;
 		case BooleanNot: 	return OpKind::log_not;
+		case IntegerBitNot: return OpKind::bit_not;
 		case IntegerAdd:  	return OpKind::add;
 		case IntegerSub:  	return OpKind::sub;
 		case IntegerMul:  	return OpKind::mul;
@@ -35,6 +34,11 @@ namespace {
 		case IntegerSMod: 	return OpKind::mod;
 		case IntegerUDiv: 	return OpKind::udiv;
 		case IntegerUMod: 	return OpKind::umod;
+		case IntegerBitAnd: return OpKind::bit_and;
+        case IntegerBitOr:  return OpKind::bit_or;
+        case IntegerBitXor: return OpKind::bit_xor;
+        case IntegerShl:    return OpKind::shl;
+        case IntegerShr:    return OpKind::shr;
 		case FloatAdd:    	return OpKind::fadd;
 		case FloatSub:    	return OpKind::fsub;
 		case FloatMul:    	return OpKind::fmul;
@@ -146,7 +150,12 @@ namespace compiler::backend_vm::internal {
 			return {};
 		};
 
-		if (isMetaTypeOperation(operation)) {
+		switch (operation) {
+		/// Special operations ///
+		case MetaTypeOperation: {
+			// If we are not in the comp time lowering context ignore the instruction,
+			// same behaviour as on LLVM backend.
+			if (not ctx.program_context.isCompTimeLowering()) return NoOperation{};
 			const auto* meta_params = std::get_if<lir::MetaParameters>(&instr.extra_params);
 			CORE_ASSERT(meta_params, "Meta operation without MetaParameters");
 			return MetaOperation{
@@ -155,10 +164,6 @@ namespace compiler::backend_vm::internal {
 				.dest      = lower_opt_dest(),
 			};
 		}
-
-
-		switch (operation) {
-		/// Special operations ///
 		case ZeroInitialize:
 			// Data in DVM is zeroinitialized by default, so this is a NoOp.
 			return NoOperation{};
@@ -189,10 +194,14 @@ namespace compiler::backend_vm::internal {
 
 
 			if_opt_some(func_literal.builtin_kind_opt, builtin) {
+				base::Optional<vm::code::TypeOfData> return_type
+					= ctx.program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+				          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
 				return BuiltinCallOperation{
-					.kind = builtin,
-					.args = std::move(call_args),
-					.dest = std::move(dest),
+					.kind        = builtin,
+					.args        = std::move(call_args),
+					.dest        = std::move(dest),
+					.return_type = std::move(return_type),
 				};
 			}
 
@@ -237,6 +246,7 @@ namespace compiler::backend_vm::internal {
 
 		/// Unary operations ///
 		case IntegerNeg:
+		case IntegerBitNot:
 		case FloatNeg:
 		case BooleanNot: {
 			CORE_ASSERT(
@@ -259,6 +269,11 @@ namespace compiler::backend_vm::internal {
 		case IntegerSMod:
 		case IntegerUDiv:
 		case IntegerUMod:
+		case IntegerBitAnd:
+		case IntegerBitOr:
+		case IntegerBitXor:
+		case IntegerShl:
+		case IntegerShr:
 		case FloatAdd:
 		case FloatSub:
 		case FloatMul:
@@ -312,16 +327,20 @@ namespace compiler::backend_vm::internal {
 
 		/// Variant operations ///
 		case VariantConstruct: {
+			// An alternative carrying no information (e.g. `()`) has its payload argument
+			// discarded in LIR, so there is nothing left to store.
 			CORE_ASSERT(
-				instr.arguments.size() == 1,
-				"VariantConstruct expects 1 argument, got: ",
+				instr.arguments.size() <= 1,
+				"VariantConstruct expects at most 1 argument, got: ",
 				instr.arguments.size()
 			);
 			const auto variant_params = std::get_if<lir::VariantParameters>(&instr.extra_params);
 			CORE_ASSERT(variant_params != nullptr, "VariantConstruct without parameters");
 			return VariantConstructOperation{
 				.variant_params = *variant_params,
-				.payload        = lower_arg(instr.arguments[0]),
+				.payload        = instr.arguments.empty()
+				                    ? base::Optional<DVMValue>()
+				                    : base::Optional<DVMValue>(lower_arg(instr.arguments[0])),
 				.dest           = lower_dest(),
 			};
 		}
@@ -393,6 +412,11 @@ namespace compiler::backend_vm::internal {
 			return ReturnOperation{
 				.value       = instr.arguments.size() == 1 ? lower_arg(instr.arguments[0])
 				                                           : base::Optional<DVMValue>(),
+				.scope_flags = instr.scope_flags,
+			};
+		}
+		case Unreachable: {
+			return UnreachableOperation{
 				.scope_flags = instr.scope_flags,
 			};
 		}

@@ -42,7 +42,16 @@ namespace vm::api {
 			ProgramRunArguments program_args;
 		};
 
+		struct RunAwait {
+			ProgramRunArguments program_args;
+		};
+
 		struct RunFunction {
+			std::string          func_name;
+			FunctionRunArguments func_args;
+		};
+
+		struct RunFunctionAwait {
 			std::string          func_name;
 			FunctionRunArguments func_args;
 		};
@@ -51,16 +60,19 @@ namespace vm::api {
 			ThreadID thread_id;
 		};
 
-		struct RunFunctionAwait {
-			std::string          func_name;
-			FunctionRunArguments func_args;
+		struct Step {
+			ThreadID thread_id;
 		};
 
-		struct Step {};
+		struct PauseAll {};
 
-		struct WaitForBreakpoint {};
+		struct WaitForBreakpoint {
+			ThreadID thread_id;
+		};
 
-		struct ExecutionPosition {};
+		struct ExecutionPosition {
+			base::Optional<usize> frame_idx;
+		};
 
 		struct TypeMetadata {
 			std::string type_name;
@@ -126,9 +138,11 @@ namespace vm::api {
 		request::LoadFiles,
 		request::LoadCode,
 		request::Pause,
+		request::PauseAll,
 		request::Resume,
 		request::Stop,
 		request::Run,
+		request::RunAwait,
 		request::RunFunction,
 		request::RunFunctionAwait,
 		request::Join,
@@ -151,10 +165,4 @@ namespace vm::api {
 		request::AttachOutputListener,
 		request::SetBreakpoint,
 		request::MapFileLineToCodeCollectionPosition>;
-
-	struct SupervisorRequest {
-		PID            pid;
-		RequestVariant request;
-	};
-
 }

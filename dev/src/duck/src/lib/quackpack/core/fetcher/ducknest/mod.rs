@@ -83,7 +83,7 @@ impl<'duck> DucknestClient<'duck> {
     pub async fn fetch_blob(
         &self,
         package: types::PackageWithUrl,
-        mut target: LockedFile,
+        mut target: &LockedFile,
     ) -> QuackResult<()> {
         debug!("fetching");
         let url = package.url.for_blob(package.into())?;
@@ -91,7 +91,7 @@ impl<'duck> DucknestClient<'duck> {
 
         let response = self.client.request(request).await?;
 
-        info!("fetched");
+        info!(len = %response.body().len(), "fetched");
         debug!("saving response to file");
         target
             .write_all(response.body())

@@ -78,43 +78,43 @@ Run: "
   esac;"
 
 SubDirs:
-  #################################
-  #         WORKING FULLY
-  #################################
-  - comparison_operators_on_integers
-  - constants
-  - ffi
-  - float_literals
-  - function_call
-  - namespace_declaration
-  - simple_ifs
-  - unit_type
-  #################################
-  #         ONLY LLVM WORKING
-  #################################
-  - simple_cffi
-  - coercions # (requires `builtin_output_f64` in DVM)
-  #################################
-  #         ONLY DVM WORKING
-  #################################
-  # very funny
-  #################################
-  #         NOT WORKING
-  # this is mainly due to the features not being implemented yet
-  #################################
-  # - arithmetic_operators_on_integers (requires exponentiation)
-  # - overloading (requires operator names, and, in one case, string `==` comparison)
-  # - primitive_integers (requires byte type)
-  # - type_deduction (requires deduction for fields with initializers)
-  # - function_definition (requires static variables in functions)
-  # - let_simple_declaration (requires proper shadowing handling)
-  # - alias_using_declaration (requires linked scopes for functions)
-  # - boolean_operators (requires short-circuit evaluation)
-  # - variable_simple_declaration (requires i128 and u128, also a VM bugfix)
-  # - io_builtins (requires format strings and a `print` function)
-  # - while_loops (requires break statements, DVM cannot perform 100M loop iters in one second)
-  # - primitive_booleans (requires xor)
-  # - class_declaration (requires DVM backend determinism)
-  # - simple_chars (requires strings in DVM, and -(char, u8) operator — reconsider adding it.)
-  # - simple_strings (requires string access operator and format strings)
-  # - first_class_typing (requires better constructor/method resolution, and proper tuple handling in compile-time)
+    #################################
+    #         WORKING FULLY
+    #################################
+    - class_declaration
+    - comparison_operators_on_integers
+    - constants
+    - ffi
+    - float_literals
+    - function_call
+    - namespace_declaration
+    - simple_ifs
+    - unit_type
+    #################################
+    #         ONLY LLVM WORKING
+    #################################
+    - simple_cffi # (only variadic not working)
+    - coercions # (requires `builtin_output_f64` in DVM)
+    #################################
+    #         NOT WORKING
+    # These are blocked on language features that are missing on BOTH backends -
+    # every test below fails identically for llvm and for dvm, so none of them is
+    # waiting on the DVM. The exceptions are called out explicitly.
+    #################################
+    # - alias_using_declaration (requires linked scopes for functions)
+    # - arithmetic_operators_on_integers (requires exponentiation and u64 literal coercion;
+    #   its `arithmetic_operators_test` alone passes on both backends)
+    # - boolean_operators (both backends agree, but the expected output of both tests is stale)
+    # - first_class_typing (requires better constructor/method resolution, and proper tuple handling in compile-time)
+    # - function_definition (requires static variables in functions)
+    # - io_builtins (requires format strings and a `print` function)
+    # - let_simple_declaration (requires proper shadowing handling)
+    # - overloading (requires operator names, and, in one case, string `==` comparison)
+    # - primitive_booleans (requires xor)
+    # - primitive_integers (requires byte type)
+    # - simple_chars (requires -(char, u8) operator - reconsider adding it)
+    # - simple_strings (requires string access operator)
+    # - type_deduction (requires deduction for fields with initializers)
+    # - variable_simple_declaration (requires i128 and u128, also a VM bugfix)
+    # - while_loops (requires break statements; its `loops_performance` case is native only,
+    #   the DVM cannot run 100M loop iterations within the timeout)

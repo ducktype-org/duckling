@@ -80,34 +80,24 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated builtin function templated on a single type argument, for a
-	 * specific `box` pointee type. The concrete builtin is distinguished by `kind`.
+	 * Represents a compiler-generated builtin function templated on a single type argument. The
+	 * concrete builtin is distinguished by `kind`.
 	 *
-	 * These are declaration-only functions. Implementation is provided by the backends.
+	 * `MoveIn` is declaration-only, its call is replaced by an instruction while lowering to LIR.
 	 * @note This is not related with language template implementation.
 	 */
 	class BuiltinTemplatedSymbol final {
 	public:
 		enum class Kind {
-			BoxAlloc,       //< `box_alloc(value: T) -> box T` - allocates memory for the Box.
-			BoxFree,        //< `box_free(b: ref T)` - release the storage owned by the box.
-			BoxDestructor,  //< `box_destructor(b: ref T)` - destroys the pointee, then calls BoxFree.
-			MoveIn          //< `move_in(ptr T, T)` - in place construct T by bytecopy
+			MoveIn  //< `move_in(ptr T, T)` - in place construct T by bytecopy
 		};
 
-		// The type argument the builtin is templated on: the `T` in `box T` for
-		// `BoxAlloc`/`BoxFree`.
+		// The type argument the builtin is templated on.
 		tsh::SymbolType<>            type;
 		BuiltinTemplatedSymbol::Kind kind;
 
 		[[nodiscard]] BuiltinKind getBuiltinKind() const {
 			switch (kind) {
-			case Kind::BoxAlloc:
-				return BuiltinKind::BoxAlloc;
-			case Kind::BoxFree:
-				return BuiltinKind::BoxFree;
-			case Kind::BoxDestructor:
-				return BuiltinKind::BoxDestructor;
 			case Kind::MoveIn:
 				return BuiltinKind::MoveIn;
 			default:

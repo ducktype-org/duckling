@@ -34,7 +34,10 @@ int cli(
 	          .and_then([&](vm::api::ProcessInfo info) -> std::expected<i64, vm::api::ApiError> {
 				  const vm::PID pid = info.pid;
 				  // Deinitialize the process and execute global destructors.
-				  defer((void) vm::api::deinitAndValidate(pid));
+				  defer({
+					  auto deinit = vm::api::deinitAndValidate(pid);
+					  if (!deinit.has_value()) std::cerr << convertError(deinit.error()) << '\n';
+				  });
 
 				  return std::expected<void, vm::api::ApiError>{}
 		              .and_then([&] -> std::expected<void, vm::api::ApiError> {
@@ -47,9 +50,7 @@ int cli(
 					  })
 		              .and_then([&] { return vm::api::loadFiles(pid, files); })
 		              .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
-		              .and_then([&] { return vm::api::run(pid, args); })
-		              .and_then([&] { return vm::api::join(pid); })
-		              .and_then([&] { return vm::api::getExitValue(pid); })
+		              .and_then([&] { return vm::api::runAwait(pid, args); })
 		              .transform([](vm::api::ExitValue vm_values) {
 						  variant_match(vm_values) {
 							  variant_case(i64, exit_code) { return exit_code; }

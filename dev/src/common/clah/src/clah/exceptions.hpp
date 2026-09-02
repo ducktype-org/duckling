@@ -87,6 +87,13 @@ namespace clah::exceptions {
 	};
 
 	/**
+	 * @brief Raised when user passes an unknown command.
+	 */
+	struct InvalidCommandName: public ClahException {
+		explicit InvalidCommandName(const std::string& name);
+	};
+
+	/**
 	 * @brief Raised when parameter was passed twice.
 	 */
 	struct DuplicatedParameter: public ClahException {

@@ -429,8 +429,7 @@ metadata:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests =
-            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
+        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
         let all_possible_features =
             HashMap::from([(pkg_a, HashSet::new()), (pkg_b, HashSet::new())]);
         let versions_for_identity = HashMap::from([
@@ -505,8 +504,7 @@ dependencies:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests =
-            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
+        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
         let all_possible_features = HashMap::from([
             (pkg_a, HashSet::from([FeatureName::new("xd")])),
             (pkg_b, HashSet::new()),
@@ -592,8 +590,7 @@ features:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests =
-            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
+        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
         let all_possible_features = HashMap::from([
             (pkg_a, HashSet::new()),
             (
@@ -666,8 +663,7 @@ features:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests =
-            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
+        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
         let all_possible_features = HashMap::from([
             (pkg_a, HashSet::new()),
             (
@@ -759,9 +755,9 @@ features:
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let gathered_manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a)),
-            (pkg_b, Box::new(manifest_b)),
-            (pkg_c, Box::new(manifest_c)),
+            (pkg_a, manifest_a),
+            (pkg_b, manifest_b),
+            (pkg_c, manifest_c),
         ]);
         let all_possible_features = HashMap::from([
             (pkg_a, HashSet::new()),
@@ -843,8 +839,7 @@ features:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests =
-            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
+        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
         let all_possible_features = HashMap::from([
             (pkg_a, HashSet::new()),
             (pkg_b, ["f".into(), "g".into()].into()),

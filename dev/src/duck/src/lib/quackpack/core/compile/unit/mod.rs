@@ -140,6 +140,15 @@ impl Unit {
         format!("{}-{}-{}", name, version, id)
     }
 
+    /// Get a descriptive name of this [`Unit`].
+    ///
+    /// It's a _nice_ name, which can be displayed to the user.
+    pub fn descriptive_name(&self) -> String {
+        let name = self.root_package().package().name();
+        let version = self.root_package().package().version();
+        format!("{name} version {version}")
+    }
+
     /// Get the filename of the output of this [`Unit`].
     pub fn output_file_name(&self) -> String {
         let name = self.root_package().package().name();

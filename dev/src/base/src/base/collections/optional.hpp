@@ -31,10 +31,13 @@
  */
 #pragma once
 
+#include <base/comptime/type_traits.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/preproc/diagnostics.hpp>
 
 #include <compare>
+#include <concepts>
+#include <expected>
 #include <functional>
 #include <optional>
 #include <type_traits>
@@ -77,17 +80,24 @@
  *		opt_err(err) { assert(err == 1.5f); }
  *	}
  *
+ * // `std::expected<void, K>` has no value to bind, so `opt_some` is used without a name:
+ *	std::expected<void, std::string> v = std::unexpected("a");
+ *	match_optional(v) {
+ *		opt_some() { CORE_PANIC("No value!") }
+ *		opt_err(err) { assert(err == "a"); }
+ *	}
+ *
  */
 #define match_optional(optional) \
 	PUSH_DIAGNOSTIC              \
 	NO_SHADOW                    \
 	if (auto&& _internal_optional = (optional); true) POP_DIAGNOSTIC
 
-#define opt_some(_value_name)           \
+#define opt_some(...)                   \
 	PUSH_DIAGNOSTIC                     \
 	NO_SHADOW                           \
 	if (_internal_optional.has_value()) \
-		if (auto&& _value_name = *_internal_optional; true) POP_DIAGNOSTIC
+	__VA_OPT__(if (auto&& __VA_ARGS__ = *_internal_optional; true)) POP_DIAGNOSTIC
 
 #define opt_some_move(_value_name)      \
 	PUSH_DIAGNOSTIC                     \
@@ -141,6 +151,15 @@ namespace base {
 	 *
 	 * Macros defined above may come in handy when dealing with these creatures.
 	 * Also methods - map and flatMap - are very useful.
+	 *
+	 * The rest of the interface mirrors Rust's Option: copyValueOr / copyValueOrElse /
+	 * copyValueOrDefault to fall back on emptiness, mapOr / mapOrElse / filter / flatten / inspect
+	 * / orElse to keep transforming, okOr to turn emptiness into a std::expected error, and take /
+	 * replace / getOrInsert to change what is stored. Every "OrElse" flavour takes a callable and
+	 * runs it only when the optional is empty, so an expensive fallback costs nothing when there is
+	 * a value. Just like in Rust, that callable is always called with no arguments: capture what it
+	 * needs in the lambda. The methods that do take arguments - emplace, replace, getOrInsert,
+	 * expect and okOr - forward them to a constructor, they never call anything.
 	 *
 	 * base::Optional does not inherit from std::optional, because std::optional doesn't throw on
 	 * null-value access, but base::optional does.
@@ -198,6 +217,41 @@ namespace base {
 		constexpr T& emplace(Args&&... args
 		) noexcept(std::is_nothrow_constructible_v<T, Args&&...>) {
 			return private_optional.emplace(std::forward<Args>(args)...);
+		}
+
+		/**
+		 * @brief Move the stored value out, leaving this optional empty.
+		 * @return An optional with the value that was stored, or an empty one if there was none.
+		 */
+		[[nodiscard]]
+		constexpr Optional take() noexcept(std::is_nothrow_move_constructible_v<T>) {
+			Optional taken = std::move(*this);
+			reset();
+			return taken;
+		}
+
+		/**
+		 * @brief Store a new value built in place, and give back whatever was stored before.
+		 * @param args arguments passed to a constructor of T.
+		 * @return An optional with the previous value, or an empty one if there was none.
+		 */
+		template<class... Args>
+		requires std::is_constructible_v<T, Args&&...> constexpr Optional replace(Args&&... args) {
+			Optional previous = take();
+			emplace(std::forward<Args>(args)...);
+			return previous;
+		}
+
+		/**
+		 * @brief Get a reference to the stored value, building it first if the optional is empty.
+		 * @param args arguments passed to a constructor of T. They are used only when empty.
+		 * @return Reference to the stored value. It never panics, because the optional always holds
+		 * a value once this returns.
+		 */
+		template<class... Args>
+		requires std::is_constructible_v<T, Args&&...> constexpr T& getOrInsert(Args&&... args) {
+			if (!has_value()) emplace(std::forward<Args>(args)...);
+			return private_optional.value();
 		}
 
 		explicit constexpr operator bool() const noexcept { return has_value(); }
@@ -264,6 +318,33 @@ namespace base {
 				return std::forward<Self>(self).value();
 			else
 				return static_cast<T>(std::forward<U>(or_value));
+		}
+
+		/**
+		 * @brief Get the stored value, or the result of calling a fallback function.
+		 * @param function called with no arguments, and only when the optional is empty.
+		 * @details Unlike copyValueOr, the fallback is not built unless it is really needed, so an
+		 * expensive default costs nothing on a non-empty optional.
+		 * @return Stored value if exists, otherwise function().
+		 */
+		template<class Self, class Function>
+		requires std::invocable<Function&&>
+		      && std::convertible_to<std::invoke_result_t<Function&&>, T> [[nodiscard]]
+		constexpr T copyValueOrElse(this Self&& self, Function&& function) {
+			if (self.has_value()) return std::forward<Self>(self).value();
+			return static_cast<T>(std::invoke(std::forward<Function>(function)));
+		}
+
+		/**
+		 * @brief Get the stored value, or a default constructed one.
+		 * @details Only available when T can be default constructed.
+		 * @return Stored value if exists, otherwise T{}.
+		 */
+		template<class Self>
+		requires std::default_initializable<T> [[nodiscard]]
+		constexpr T copyValueOrDefault(this Self&& self) {
+			if (self.has_value()) return std::forward<Self>(self).value();
+			return T{};
 		}
 
 		/**
@@ -357,6 +438,120 @@ namespace base {
 			} else {
 				return {};
 			}
+		}
+
+		/**
+		 * @brief Applies the passed function on the value, or returns a given backup.
+		 * @param or_value returned when the optional is empty.
+		 * @param function applied on the value when there is one.
+		 * @details This is map() followed by copyValueOr(), without the intermediate optional.
+		 * @return function(value) if there is a value, otherwise or_value.
+		 */
+		template<class Self, class Function, class U>
+		requires std::invocable<Function&&, QualifiedT<Self>>
+		constexpr auto mapOr(this Self&& self, U&& or_value, Function&& function)
+			-> std::remove_cvref_t<std::invoke_result_t<Function&&, QualifiedT<Self>>> {
+			using result_type
+				= std::remove_cvref_t<std::invoke_result_t<Function&&, QualifiedT<Self>>>;
+			if (self.has_value()) {
+				return std::invoke(
+					std::forward<Function>(function), std::forward<Self>(self).value()
+				);
+			} else {
+				return static_cast<result_type>(std::forward<U>(or_value));
+			}
+		}
+
+		/**
+		 * @brief Applies the passed function on the value, or calls a fallback function.
+		 * @param or_function called with no arguments when the optional is empty.
+		 * @param function applied on the value when there is one.
+		 * @details Only the branch that is actually taken runs, so neither side pays for the other.
+		 * @return function(value) if there is a value, otherwise or_function().
+		 */
+		template<class Self, class OrFunction, class Function>
+		requires std::invocable<Function&&, QualifiedT<Self>> && std::invocable<OrFunction&&>
+		constexpr auto mapOrElse(this Self&& self, OrFunction&& or_function, Function&& function)
+			-> std::remove_cvref_t<std::invoke_result_t<Function&&, QualifiedT<Self>>> {
+			using result_type
+				= std::remove_cvref_t<std::invoke_result_t<Function&&, QualifiedT<Self>>>;
+			if (self.has_value()) {
+				return std::invoke(
+					std::forward<Function>(function), std::forward<Self>(self).value()
+				);
+			} else {
+				return static_cast<result_type>(std::invoke(std::forward<OrFunction>(or_function)));
+			}
+		}
+
+		/**
+		 * @brief Keeps the value only when it satisfies a predicate.
+		 * @param predicate called with a reference to the stored value.
+		 * @return A copy of this optional when it holds a value the predicate accepts, an empty
+		 * optional in every other case.
+		 */
+		template<class Self, class Predicate>
+		requires std::predicate<Predicate&&, QualifiedT<Self&>> [[nodiscard]]
+		constexpr Optional filter(this Self&& self, Predicate&& predicate) {
+			if (self.has_value() && std::invoke(std::forward<Predicate>(predicate), self.value()))
+				return std::forward<Self>(self).value();
+			return {};
+		}
+
+		/**
+		 * @brief Returns this optional when it holds a value, otherwise the one a function makes.
+		 * @param function called with no arguments, and only when the optional is empty. It has to
+		 * return an optional of the same type.
+		 * @return This optional if it is not empty, otherwise function().
+		 */
+		template<class Self, class Function>
+		requires std::invocable<Function&&> [[nodiscard]]
+		constexpr Optional orElse(this Self&& self, Function&& function) {
+			using result_type = std::invoke_result_t<Function&&>;
+			static_assert(std::same_as<std::remove_cvref_t<result_type>, Optional>);
+			if (self.has_value()) return std::forward<Self>(self).value();
+			return std::invoke(std::forward<Function>(function));
+		}
+
+		/**
+		 * @brief Calls a function on the stored value, if any, and hands the optional back.
+		 * @param function called with a reference to the stored value. Its result is ignored.
+		 * @details The value is only observed, never moved out, so chaining stays safe:
+		 * optional.inspect(log).map(convert).
+		 * @return The very same optional, so calls can be chained.
+		 */
+		template<class Self, class Function>
+		requires std::invocable<Function&&, QualifiedT<Self&>>
+		constexpr Self&& inspect(this Self&& self, Function&& function) {
+			if (self.has_value()) std::invoke(std::forward<Function>(function), self.value());
+			return std::forward<Self>(self);
+		}
+
+		/**
+		 * @brief Removes one level of nesting from an Optional<Optional<U>>.
+		 * @details Only available when the stored type is itself a base::Optional.
+		 * @return The inner optional, or an empty one when the outer optional is empty.
+		 */
+		template<class Self>
+		requires IsOfSameClass<T, Optional> [[nodiscard]]
+		constexpr T flatten(this Self&& self) {
+			if (self.has_value()) return std::forward<Self>(self).value();
+			return {};
+		}
+
+		/**
+		 * @brief Turns the optional into a std::expected, so an empty one becomes an error.
+		 * @tparam Err error type stored when the optional is empty.
+		 * @param args arguments passed to a constructor of the error type.
+		 * @details match_optional also understands std::expected, so the result can be matched with
+		 * opt_some and opt_err.
+		 * @return std::expected holding the value, or Err(args...) when the optional is empty.
+		 */
+		template<class Err, class... Args, class Self>
+		requires(std::constructible_from<Err, Args && ...>) [[nodiscard]]
+		constexpr std::expected<T, Err> okOr(this Self&& self, Args&&... args) {
+			if (self.has_value()) return std::forward<Self>(self).value();
+			return std::unexpected<Err>(std::forward<Args>(args)...);
 		}
 	};
 

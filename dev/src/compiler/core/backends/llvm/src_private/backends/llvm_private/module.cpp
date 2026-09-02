@@ -1,4 +1,5 @@
 #include "compile_llvm.hpp"
+#include "llvm_includes/cloning.hpp"
 #include "llvm_includes/filesystem.hpp"
 #include "llvm_includes/ir_verifier.hpp"
 #include "llvm_lowering.hpp"
@@ -132,6 +133,14 @@ namespace compiler::backend_llvm {
 		}
 
 		return error_found ? base::BAD : base::OK;
+	}
+
+	Module Module::clone() const {
+		std::unique_ptr<llvm::Module> new_module = llvm::CloneModule(*impl->module);
+
+		Box<llvm::Module> llvm_module = Box<llvm::Module>::fromPointer(new_module.release());
+		auto              module_impl = makeBox<ModuleImpl>(std::move(llvm_module));
+		return { std::move(module_impl) };
 	}
 
 	void Module::debugPrint() const { return impl->module->print(llvm::errs(), nullptr); }

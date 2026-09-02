@@ -17,6 +17,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
@@ -46,6 +47,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <cstdio>
 #include <iostream>
 #include <ranges>
@@ -494,7 +496,6 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
 
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
@@ -514,8 +515,251 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
+			clah::Clah(
+				"compile_modules",
+				"Compile given modules into binaries. Every module is placed in its own package "
+				"and every package depends on all the other ones. "
+				"This mimics the simple case of multi file compilation with GCC/clang which is "
+				"sometimes useful. Note that the package based entry points should be preferred "
+				"when possible."
+			)
+				.addPositional(clah::FileParser::make("module"))
+				.setDefaultValueParser(clah::FileParser::make("module"))
+				.add(getLlvmOptLevelParam())
+				.add(debug_options::getClahDebugParameters())
+				.add(getClahStdLibOptions())
+				.addCustomVerification(verifyStdLibOptions)
+				.add(getClahLinkingOptions())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
+	                     .addShortName('a')
+	                     .addLongName("artifact-location")
+	                     .addShortDesc("Path to the top-level folder with build artifacts")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("output-file-name"))
+	                     .addShortName('o')
+	                     .addLongName("output-file-name")
+	                     .addShortDesc("Output artifact file name of the executable.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("archiver"))
+	                     .addLongName("archiver")
+	                     .addShortDesc("Path to the archiver executable.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("dvm-backend")
+	                     .addShortDesc("Compile to DVM bytecode.")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-incremental")
+	                     .addShortDesc(
+							 "Disable incremental compilation (do not load previous query graph)."
+						 )
+	                     .build())
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					// @TODO: #3449 fix it here
+
+					std::vector<fs::File> modules_to_compile{ options.getPositional<fs::File>(0) };
+					for (usize i = 0; i < options.getExtraParameterCount(); ++i)
+						modules_to_compile.push_back(options.getExtra<fs::File>(i).value());
+
+					const bool dvm_backend = options.isFlag("dvm-backend");
+
+					if (dvm_backend) {
+						// @TODO: #2670 fix it, when compilePackages tasks support it!
+						CORE_USER_LOG(
+							"DVM Backend does not create full (linked) output artifacts "
+							"in compile_modules command. Stop.\n"
+						);
+						return 1;
+					}
+
+
+					std::set<base::StrID>               aliases_duplicate_check;
+					base::Map<base::StrID, base::StrID> package_id_aliases;
+					std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
+					packages_info.reserve(modules_to_compile.size());
+					for (const auto& module: modules_to_compile) {
+						auto package_name = base::StrID(base::generateRandomString(32));
+
+						auto inserted
+							= aliases_duplicate_check.emplace(module.getFilePath().stem());
+						if (!inserted.second) {
+							CORE_USER_LOG(
+								"ERROR: Duplicate module names: ",
+								module.getFilePath().string(),
+								"\n"
+							);
+							return 1;
+						}
+
+						package_id_aliases.emplace(package_name, module.getFilePath().stem());
+
+						packages_info.push_back(compiler::frontend::packages::RawPackageInfo{
+							.package_id   = package_name,
+							.package_name = package_name,
+							.version      = base::StrID("not_supported"),
+							.package_path = module.getFilePath(),
+							.features     = {},
+							.dependencies = {},
+						});
+					}
+
+					// Every package depends on every other one.
+					const usize package_count = packages_info.size();
+					for (usize dependent = 0; dependent < package_count; ++dependent)
+						for (usize dependency = 0; dependency < package_count; ++dependency) {
+							if (dependent == dependency) continue;
+
+							packages_info.at(dependent).dependencies.push_back(
+								compiler::frontend::packages::RawDependencyInfo{
+									.package_id = packages_info.at(dependency).package_id,
+									.alias
+									= package_id_aliases.at(packages_info.at(dependency).package_id),
+								}
+							);
+						}
+
+					// Package ids of the modules given in the command line, in the same order.
+					std::vector<base::StrID> package_ids;
+					package_ids.reserve(packages_info.size());
+					for (const auto& package_info: packages_info)
+						package_ids.push_back(package_info.package_id);
+
+					auto stdlib_options = getStdLibOptionsFromClah(options);
+					auto init_result    = compiler::driver::initializeTheCompiler(
+                        compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.packages_info         = std::move(packages_info),
+							.compilation_artifacts = {
+								.artifacts_path = options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
+							},
+							.backend_options   = getBackendOptionsFromClah(options),
+							.debug_options     = debug_options::getDebugOptionsFromClah(options),
+							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = 1,
+							},
+							.stdlib_options = stdlib_options,
+                        }
+                    );
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					using namespace compiler;
+
+					// For now we always compile the standard library on demand,
+		            // note that it will be always cached.
+					auto std_compilation_result = compiler::driver::compilePackages(
+						compiler::driver::getRequiredStdLibCompilationTasks()
+					);
+					if (std_compilation_result.isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					// Every module but the first one is built into a library, which is then linked
+		            // into the artifact of the first module. The first module is the last task, so
+		            // that all the libraries it links are already built.
+					std::vector<driver::PackageCompilationTask> compilation_tasks;
+					base::Optional<frontend::ModuleID>          main_root_module;
+					std::string                                 libraries_to_link;
+
+					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
+					for (const auto& package: global_state::getPackages()) {
+						auto package_id = package.getPackageID();
+						// Skip the packages that were not given in the command line, like the
+			            // standard library ones.
+						if (std::ranges::find(package_ids, package_id) == package_ids.end())
+							continue;
+
+						auto root_module = package.getRootModule().illegalAccess().getID();
+						if (package_id == package_ids.front()) {
+							main_root_module = root_module;
+							continue;
+						}
+
+						auto library_name = base::StrID(
+							base::strConcat(package_id.strView(), dvm_backend ? ".dbc" : ".a")
+						);
+						if (dvm_backend) {
+							compilation_tasks.push_back(driver::PackageCompilationTask{
+								.root_module  = root_module,
+								.build_target = driver::BuildTargetDVMLibrary{
+									.output_file_name = library_name,
+									.runtime_config   = driver::constructDVMRuntimeConfig(
+										getLinkingOptionsFromClah(options)
+									),
+								},
+							});
+						} else {
+							compilation_tasks.push_back(driver::PackageCompilationTask{
+								.root_module  = root_module,
+								.build_target = driver::BuildTargetLLVMStaticLibrary{
+									.output_file_name  = library_name,
+									.archiving_options = getArchivingOptionsFromClah(options),
+								},
+							});
+							libraries_to_link += base::strConcat(
+								" ",
+								global_state::getRootCollection()
+									->fileArtifactAtOrNew(library_name)
+									.file.getFilePath()
+									.native()
+							);
+						}
+					}
+
+					CORE_ASSERT(main_root_module.has_value(), "First package is not registered");
+
+					if (dvm_backend) {
+						auto output_file_name = options.getValue<std::string>("output-file-name")
+			                                        .copyValueOr("package_dvm.dbc");
+						compilation_tasks.push_back(driver::PackageCompilationTask{
+							.root_module  = main_root_module.value(),
+							.build_target = driver::BuildTargetDVMExecutable{
+								.output_file_name  = base::StrID(output_file_name),
+								.link_std_packages = stdlib_options.stdActive(),
+								.runtime_config    = driver::constructDVMRuntimeConfig(
+									getLinkingOptionsFromClah(options)
+								),
+							},
+						});
+					} else {
+						auto output_file_name = options.getValue<std::string>("output-file-name")
+			                                        .copyValueOr("package_llvm.exe");
+						auto linking_options = getLinkingOptionsFromClah(options);
+						linking_options.native_additional_link_options = base::strConcat(
+							linking_options.native_additional_link_options.copyValueOr(""),
+							libraries_to_link
+						);
+						compilation_tasks.push_back(driver::PackageCompilationTask{
+							.root_module  = main_root_module.value(),
+							.build_target = driver::BuildTargetLLVMExecutable{
+								.output_file_name = base::StrID(output_file_name),
+								.linking_options  = driver::constructNativeLinkerOptions(
+									linking_options, stdlib_options
+								),
+							},
+						});
+					}
+
+					base::OkBad result = driver::compilePackages(compilation_tasks);
+
+					compiler::driver::exit();
+
+					return result.isOk() ? 0 : 1;
+				})
+		)
+	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
-				.addPositional(clah::FileParser::make("module", true))
+				.addPositional(
+					clah::FileParser::make("path", true),
+					"Path to the root module of the package or the root module file."
+				)
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
 				.add(getClahStdLibOptions())
@@ -854,7 +1098,7 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(
-			clah::Clah("compile_script", "Compile a .ds script file into a .dbc or executable.")
+			clah::Clah("compile_script", "Compile a .dks script file into a .dbc or executable.")
 				.addPositional(clah::FileParser::make("script"))
 				.add(getLlvmOptLevelParam())
 				.add(getClahLinkingOptions())
@@ -927,7 +1171,7 @@ clah::Clah getClahForMain() {
 	    // Scripts can only be "run" on DVM for now, since compiling with LLVM would produce
 	    // artifacts. To compile to native executable, the compile_script command can be used.
 	    // This may change in the future.
-	    .addSubcommand(clah::Clah("run", "Compile a .ds script file and run it on DVM.")
+	    .addSubcommand(clah::Clah("run", "Compile a .dks script file and run it on DVM.")
 	                       .addPositional(clah::FileParser::make("script"))
 	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                                .addShortName('w')
@@ -1060,7 +1304,7 @@ clah::Clah getClahForMain() {
 							);
 						if (options.getExtraParameterCount() > 1) {
 							std::cerr << "Error: repl accepts at most one script path. "
-										 "Usage: duckc repl [script.ds]\n";
+										 "Usage: duckc repl [script.dks]\n";
 							compiler::driver::exit();
 							return 1;
 						}

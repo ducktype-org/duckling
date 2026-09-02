@@ -51,6 +51,13 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerDiv,
 	IntegerMod,
 
+	IntegerBitAnd,
+    IntegerBitOr,
+    IntegerBitXor,
+    IntegerBitNot,
+    IntegerShl,
+    IntegerShr,
+
 	IntegerLt,    // Less than
 	IntegerGt,    // Greater than
 	IntegerLteq,  // Less than or equal to
@@ -107,6 +114,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 	ReturnVoid,
 	ReturnValue,
+	/**
+		Terminator: control flow that can never be reached, i.e. the block ends with a call to a
+		function returning `void`. Has no successors.
+	*/
+	Unreachable,
 	Jump,
 	Branch,
 	/**
