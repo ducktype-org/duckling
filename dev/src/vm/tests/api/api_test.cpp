@@ -365,8 +365,10 @@ private:
 
 		{  // A panicking function reports the panic instead of a return value.
 			const vm::PID pid = spawnAndLoad("panic.dbc");
-			assertRefusedWith<api::StateError>(
-				api::runFunctionAwait(pid, "main"), "runFunctionAwait of a panicking function"
+			assertRefusedWith<api::OtherError>(
+				api::runFunctionAwait(pid, "main"),
+				"runFunctionAwait of a panicking function",
+				"Tried dividing by zero"
 			);
 			(void) api::kill(pid);
 		}
@@ -602,8 +604,9 @@ private:
 
 	void deinitAndValidateEndpoint() {
 		/*
-		 * `deinitAndValidate` refuses an executing process, reports `false` for a leaked
-		 * allocation, and drops the process once it ran.
+		 * `deinitAndValidate` accepts only a process that never ran or completed cleanly. It
+		 * refuses an executing one and a stopped one, reports `false` for a leaked allocation,
+		 * and drops the process once it ran.
 		 */
 		namespace api = vm::api;
 		Watchdog watchdog("deinitAndValidateEndpoint");
@@ -613,16 +616,24 @@ private:
 			const vm::PID pid = spawnAndLoad("while_true.dbc");
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running");
+
+			// Check that `deinitAndValidate` was refused on a running process.
 			assertRefusedWith<api::StateError>(
 				api::deinitAndValidate(pid),
 				"deinitAndValidate of a running process",
 				"the process is still executing"
 			);
 			assertSucceeded(api::stop(pid), "stop");
-			// The threads were killed mid-instruction, so their locals are still alive and the
-			// memory state is legitimately invalid - that is exactly why a stopped process may not
-			// be rerun. What matters is that the teardown itself goes through.
-			assertSucceeded(api::deinitAndValidate(pid), "deinitAndValidate of a stopped process");
+
+			// Check that `deinitAndValidate` was refused on a stopper process.
+			assertRefusedWith<api::StateError>(
+				api::deinitAndValidate(pid),
+				"deinitAndValidate of a stopped process",
+				"reclaim the process with `kill`"
+			);
+
+			assertSucceeded(api::getExecutionStatus(pid), "getExecutionStatus after the refusal");
+			assertSucceeded(api::kill(pid), "kill of a stopped process");
 		}
 
 		{  // A clean run leaves a valid memory state, and the process is dropped.
@@ -652,8 +663,7 @@ private:
 	void globalDestructorsRunOnDeinit() {
 		/*
 		 * The global destructors run as bytecode during `deinitAndValidate`, after the run has
-		 * already ended. They have to run whether that run completed or was stopped mid-instruction
-		 * - a `Stop` left over from the stopped run must not kill them.
+		 * already ended.
 		 */
 		namespace api = vm::api;
 		Watchdog watchdog("globalDestructorsRunOnDeinit");
@@ -675,9 +685,7 @@ private:
 		}
 
 		{
-			// After a stop the leaked locals of the killed thread make the memory state invalid
-			// either way, so the destructor writes to the output instead and the listener is what
-			// proves it ran.
+			// The same program stopped mid-run: the destructor must NOT be executed.
 			const vm::PID pid = spawnAndLoad("global_destructor_loop.dbc");
 
 			std::atomic<u64>              writes{ 0 };
@@ -693,10 +701,17 @@ private:
 			assertSucceeded(api::stop(pid), "stop");
 			waitUntilStatus(pid, isTerminal, "Stopped");
 
-			assertSucceeded(api::deinitAndValidate(pid), "deinitAndValidate after a stop");
-			assertTrue(
-				writes.load() > 0,
-				"The global destructor did not run after the program was stopped mid-instruction"
+			assertRefusedWith<api::StateError>(
+				api::deinitAndValidate(pid),
+				"deinitAndValidate after a stop",
+				"reclaim the process with `kill`"
+			);
+			assertSucceeded(api::kill(pid), "kill of a stopped process");
+			assertEqual(
+				u64(0),
+				writes.load(),
+				"The global destructor ran after a stop, but a stopped run must not execute any "
+				"more bytecode"
 			);
 			output_listener.detach();
 		}

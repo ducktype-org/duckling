@@ -8,6 +8,7 @@
 #include <vm/api/vm.hpp>
 
 #include <array>
+#include <atomic>
 #include <random>
 #include <string>
 #include <thread>
@@ -71,8 +72,13 @@ private:
 
 			// Debugger-only ops, no stop/run and no step: the program is allowed to complete
 			// cleanly so guest-memory validity is a meaningful post-condition.
-			const usize op_count = std::uniform_int_distribution<usize>(0, 30)(rng);
-			for (usize op = 0; op < op_count; op++) randomOp(pid, rng, false, false);
+			std::atomic<bool> status_ok{ true };
+			const usize       op_count = std::uniform_int_distribution<usize>(0, 30)(rng);
+			for (usize op = 0; op < op_count; op++) randomOp(pid, rng, false, false, status_ok);
+			assertTrue(
+				status_ok.load(),
+				base::strConcat("getExecutionStatus must succeed for a live process, seed=", seed)
+			);
 
 			// The program may be parked by racing pauses or breakpoints - release it fully so the
 			// join can finish.
@@ -106,8 +112,13 @@ private:
 
 			assertSucceeded(api::run(pid), "run");
 
-			const usize op_count = std::uniform_int_distribution<usize>(1, 40)(rng);
-			for (usize op = 0; op < op_count; op++) randomOp(pid, rng, true, false);
+			std::atomic<bool> status_ok{ true };
+			const usize       op_count = std::uniform_int_distribution<usize>(1, 40)(rng);
+			for (usize op = 0; op < op_count; op++) randomOp(pid, rng, true, false, status_ok);
+			assertTrue(
+				status_ok.load(),
+				base::strConcat("getExecutionStatus must succeed for a live process, seed=", seed)
+			);
 
 			(void) api::resume(pid);
 			assertSucceeded(
@@ -135,15 +146,20 @@ private:
 
 			assertSucceeded(api::run(pid), "run");
 
+			std::atomic<bool>        status_ok{ true };
 			std::vector<std::thread> clients;
 			clients.reserve(CLIENT_COUNT);
 			for (usize client = 0; client < CLIENT_COUNT; client++) {
-				clients.emplace_back([this, pid, seed, client] {
+				clients.emplace_back([this, pid, seed, client, &status_ok] {
 					std::mt19937_64 rng(seed * CLIENT_COUNT + client);
-					for (usize op = 0; op < 20; op++) randomOp(pid, rng, true, true);
+					for (usize op = 0; op < 20; op++) randomOp(pid, rng, true, true, status_ok);
 				});
 			}
 			for (auto& client: clients) client.join();
+			assertTrue(
+				status_ok.load(),
+				base::strConcat("getExecutionStatus must succeed for a live process, seed=", seed)
+			);
 
 			(void) api::resume(pid);
 			assertSucceeded(
@@ -174,15 +190,21 @@ private:
 			assertSucceeded(api::run(pid), "run of spin_threads.dbc");
 			waitUntilStatus(pid, isRunning, "Running");
 
+			std::atomic<bool>        status_ok{ true };
 			std::vector<std::thread> clients;
 			clients.reserve(CLIENT_COUNT);
 			for (usize client = 0; client < CLIENT_COUNT; client++) {
-				clients.emplace_back([this, pid, seed, client] {
+				clients.emplace_back([this, pid, seed, client, &status_ok] {
 					std::mt19937_64 rng(seed * CLIENT_COUNT + client);
-					for (usize op = 0; op < OPS_PER_CLIENT; op++) randomPerThreadOp(pid, rng);
+					for (usize op = 0; op < OPS_PER_CLIENT; op++)
+						randomPerThreadOp(pid, rng, status_ok);
 				});
 			}
 			for (auto& client: clients) client.join();
+			assertTrue(
+				status_ok.load(),
+				base::strConcat("getExecutionStatus must succeed for a live process, seed=", seed)
+			);
 
 			// Whatever the clients left pending, the process must still stop.
 			for (usize tid = 0; tid < SPIN_THREAD_COUNT; tid++)
@@ -215,8 +237,18 @@ private:
 	 * The endpoints that may block by design, tear the process down or spawn extra threads are
 	 * excluded here and covered by the dedicated tests: join, runFunctionAwait, output,
 	 * waitForBreakpoint, kill, deinitAndValidate, run and runFunction.
+	 *
+	 * @p status_ok is cleared instead of asserting on the spot, because this runs on client
+	 * `std::thread`s as well. `tester::TestSuite::fail` throws, and an exception escaping a
+	 * thread function calls `std::terminate`
 	 */
-	void randomOp(vm::PID pid, std::mt19937_64& rng, bool allow_lifecycle, bool allow_step) {
+	void randomOp(
+		vm::PID            pid,
+		std::mt19937_64&   rng,
+		bool               allow_lifecycle,
+		bool               allow_step,
+		std::atomic<bool>& status_ok
+	) {
 		namespace api = vm::api;
 		static const std::array<std::string, 3> type_names{ "i64", "i32", "DoesNotExist" };
 		const auto                              rand_type
@@ -225,10 +257,7 @@ private:
 		const int max_op = allow_lifecycle ? 13 : 12;
 		switch (std::uniform_int_distribution<int>(0, max_op)(rng)) {
 		case 0:
-			assertTrue(
-				api::getExecutionStatus(pid).has_value(),
-				"getExecutionStatus must succeed for a live process"
-			);
+			if (!api::getExecutionStatus(pid).has_value()) status_ok = false;
 			break;
 		case 1:
 			(void) api::pause(pid);
@@ -294,8 +323,11 @@ private:
 	 * runs with `resume` in the mix and 0 in 30 without it. Concurrent pause/resume of a single
 	 * thread is still exercised by `stressConcurrentClients`, and `resume` itself by the
 	 * deterministic debugger tests.
+	 *
+	 * @p status_ok is an out-parameter for the same reason as in `randomOp`: this runs on client
+	 * threads, where an assertion failure would abort the binary instead of failing the test.
 	 */
-	void randomPerThreadOp(vm::PID pid, std::mt19937_64& rng) {
+	void randomPerThreadOp(vm::PID pid, std::mt19937_64& rng, std::atomic<bool>& status_ok) {
 		namespace api = vm::api;
 		const api::ThreadID tid{ std::uniform_int_distribution<usize>(0, SPIN_THREAD_COUNT)(rng) };
 
@@ -320,10 +352,7 @@ private:
 			);
 			break;
 		case 5:
-			assertTrue(
-				api::getExecutionStatus(pid).has_value(),
-				"getExecutionStatus must succeed for a live process"
-			);
+			if (!api::getExecutionStatus(pid).has_value()) status_ok = false;
 			break;
 		default:
 			break;
