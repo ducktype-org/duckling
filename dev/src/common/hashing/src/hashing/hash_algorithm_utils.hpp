@@ -4,6 +4,7 @@
 #include <base/types/ints.hpp>
 #include <base/types/monostate.hpp>
 
+#include <algorithm>
 #include <array>
 #include <bit>
 #include <concepts>

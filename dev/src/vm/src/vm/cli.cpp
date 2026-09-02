@@ -14,12 +14,14 @@
 
 #include <iostream>
 
-std::string convertError(const vm::api::ApiError& api_error) {
-	variant_match(api_error) {
-		variant_case(vm::api::LoadProgramError, load) { return load.why; }
+namespace {
+	std::string convertError(const vm::api::ApiError& api_error) {
+		variant_match(api_error) {
+			variant_case(vm::api::LoadProgramError, load) { return load.why; }
+		}
+		return vm::api::errorToString(api_error);
 	}
-	return vm::api::errorToString(api_error);
-}
+}  // namespace
 
 int cli(
 	const std::vector<fs::File>&    files,
