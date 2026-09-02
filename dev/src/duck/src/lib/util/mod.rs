@@ -23,12 +23,12 @@ pub trait DescriptionWithAnArticle {
     fn desc_with_article(&self) -> &'static str;
 }
 
-/// English pluralization helper trait.
-pub trait IsPlural {
+/// English Pluralize helper trait.
+pub trait Pluralize {
     /// Determine whether `self` is plural or singular.
     fn is_plural(&self) -> bool;
 
-    /// Return `s` if plural else
+    /// Return `s` if plural else an empty word.
     /// Obviously in english there are words for which the plural form is created differently to simply adding `s`.
     /// But in the project there are currently no such words displayed to the user.
     fn s_if_plural(&self) -> &'static str {
@@ -41,31 +41,31 @@ pub trait IsPlural {
     }
 }
 
-impl<T> IsPlural for Vec<T> {
+impl<T> Pluralize for Vec<T> {
     fn is_plural(&self) -> bool {
         self.len() != 1
     }
 }
 
-impl<T> IsPlural for &[T] {
+impl<T> Pluralize for &[T] {
     fn is_plural(&self) -> bool {
         self.len() != 1
     }
 }
 
-impl<K, V> IsPlural for HashMap<K, V> {
+impl<K, V> Pluralize for HashMap<K, V> {
     fn is_plural(&self) -> bool {
         self.len() != 1
     }
 }
 
-impl<T> IsPlural for HashSet<T> {
+impl<T> Pluralize for HashSet<T> {
     fn is_plural(&self) -> bool {
         self.len() != 1
     }
 }
 
-impl IsPlural for usize {
+impl Pluralize for usize {
     fn is_plural(&self) -> bool {
         *self != 1
     }

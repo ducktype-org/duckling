@@ -16,7 +16,7 @@ use crate::quackpack::schemas::manifest::{
     Manifest as ManifestSchema, Metadata as MetadataSchema, OptLevel as SchemaOptLevel,
     Profile as ProfileSchema, VenvConfig as VenvConfigSchema,
 };
-use crate::util::IsPlural;
+use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].

@@ -25,7 +25,7 @@ use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::{
     AnyPackage, Package, PackageContext, PackageId, PackageLoader, VenvConfig, storage,
 };
-use crate::util::IsPlural;
+use crate::util::Pluralize;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
@@ -96,7 +96,7 @@ pub fn sync(
         _pkgs,
         freshly_downloaded_num,
         already_present_num,
-    } = fetch_source_codes(&storage, &fetcher, git_access, pkgs)?;
+    } = fetch_source_codes(&storage, &fetcher, pkgs)?;
     make_after_fetch_message(pcx.ctx(), already_present_num, freshly_downloaded_num)?;
 
     let venv = update_venv(venv, venv_config, new_freeze, id, pcx);
@@ -251,10 +251,12 @@ fn make_after_fetch_message(
 ) -> QuackResult<()> {
     let total = already_present + downloaded;
     ctx.console().info(format!(
-        "fetched source codes of {} package{}, {} downloaded, {} {} alredy present",
+        "fetched source code{} of {} package{}, {} {} downloaded, {} {} alredy present",
+        total.s_if_plural(),
         total,
         total.s_if_plural(),
         downloaded,
+        downloaded.was_or_were(),
         already_present,
         already_present.was_or_were()
     ))
@@ -262,7 +264,6 @@ fn make_after_fetch_message(
 
 /// Helper for [`sync`].
 /// Updates the data of the venv.
-#[tracing::instrument(skip_all)]
 fn update_venv(
     venv: Option<Venv>,
     venv_config: &VenvConfig,
@@ -292,7 +293,6 @@ fn update_venv(
 
 /// Helper for [`sync`].
 /// Prints to the user a message that synchronization was successful.
-#[tracing::instrument(skip_all)]
 fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {
     match pcx.package() {
         AnyPackage::Script(Script::Standalone(script)) => pcx.ctx().console().info(format!(

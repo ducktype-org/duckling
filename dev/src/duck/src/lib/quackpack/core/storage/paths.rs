@@ -237,7 +237,7 @@ impl Storage {
             FullKind::Registry => self.registry_dir(&pkg_id.name(), pkg_id.version(), pkg_id.url()),
             FullKind::Local => return Ok(()),
         };
-        pkg_dir.rmdir()
+        pkg_dir.rmtree()
     }
 }
 

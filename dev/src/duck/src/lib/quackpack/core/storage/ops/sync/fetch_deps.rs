@@ -6,12 +6,11 @@ use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
 use crate::quackpack::core::full_identity::FullKind;
 use crate::quackpack::core::identity::Identity;
-use crate::quackpack::core::solver::git_access::GitAccess;
-use crate::quackpack::core::storage::git_access::StorageGitAccess;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::{AnyPackage, GitReference, PackageId, PackageLoader};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
+use crate::util::Pluralize;
 use crate::util::error::ErrorsLogger;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
@@ -58,7 +57,6 @@ pub struct FetchedDependencies {
 pub fn fetch_source_codes(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
-    git_access: StorageGitAccess<'_>,
     pkgs: Vec<PackageId>,
 ) -> QuackResult<FetchedDependencies> {
     if pkgs.is_empty() {
@@ -66,11 +64,10 @@ pub fn fetch_source_codes(
         return Ok(FetchedDependencies::default());
     }
     let count = pkgs.len();
-    let suffix = if count == 1 { "" } else { "s" };
-    fetcher
-        .ctx()
-        .console()
-        .info(format!("starting fetching {count} package{suffix}"))?;
+    fetcher.ctx().console().info(format!(
+        "starting fetching {count} package{}",
+        count.s_if_plural()
+    ))?;
     let fetcher_lock = fetcher
         .ctx()
         .duck_home()
@@ -78,7 +75,7 @@ pub fn fetch_source_codes(
     let max_connections = fetcher.ctx().max_open_connections();
     let logger = RefCell::new(ErrorsLogger::default());
     let fetches = stream::iter(pkgs)
-        .map(|pkg| fetch_source_code(storage, fetcher, git_access, pkg, &logger))
+        .map(|pkg| fetch_source_code(storage, fetcher, pkg, &logger))
         .buffer_unordered(max_connections)
         .collect::<Vec<_>>();
     let fetches = block_on(fetches);
@@ -108,11 +105,13 @@ fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResu
         return Ok(());
     }
     let failed_count = logger.logged_errors();
-    let failed_suffix = if failed_count == 1 { "" } else { "s" };
     for fail in logger {
         ctx.error_console().error(fail)?;
     }
-    qp_bail!("failed to fetch {failed_count} package{failed_suffix}")
+    qp_bail!(
+        "failed to fetch {failed_count} package{}",
+        failed_count.s_if_plural()
+    )
 }
 
 /// Helper for [`fetch_source_codes`].
@@ -121,25 +120,38 @@ fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResu
 async fn fetch_source_code(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
-    git_access: StorageGitAccess<'_>,
     pkg_id: PackageId,
     logger: &RefCell<ErrorsLogger>,
 ) -> Option<SuccessfullyFetchedPackage> {
     debug!("fetching package");
     // Logs a result into the `logger`.
     macro_rules! log {
-        ($e:expr) => {{ logger.borrow_mut().log_result($e)? }};
+        ($e:expr) => {
+            logger.borrow_mut().log_result($e)?
+        };
     }
     // Logs a result into the `logger`.
     // If the result is an error, tries to remove the malformed package from storage.
     macro_rules! rm_and_log {
-        ($e:expr) => {{ logger.borrow_mut().log_result($e)? }};
+        ($e:expr) => {{
+            let mut logger = logger.borrow_mut();
+            if $e.is_err() {
+                logger.log_result(storage.try_remove_pkg(pkg_id));
+            }
+            logger.log_result($e)?
+        }};
     }
     let url = pkg_id.url();
     let (pkg_dir, was_present) = match pkg_id.kind() {
-        FullKind::Local => (log!(url.to_path_buf()), true),
+        FullKind::Local => (
+            log!(
+                url.to_path_buf()
+                    .context("when fetching a local dependency")
+            ),
+            true,
+        ),
         FullKind::Git { commit } => {
-            rm_and_log!(fetch_git(pkg_id, url, commit, storage, fetcher, git_access))
+            rm_and_log!(fetch_git(pkg_id, url, commit, storage, fetcher))
         }
         FullKind::Registry => {
             let maybe_fetched = fetch_registry(pkg_id, url, storage, fetcher).await;
@@ -147,25 +159,8 @@ async fn fetch_source_code(
         }
     };
     let pkg = rm_and_log!(
-        PackageLoader::find_at_exact_directory(&pkg_dir, fetcher.ctx()).with_context(
-            || match pkg_id.kind() {
-                FullKind::Registry => format!(
-                    "downloaded malformed dependency `{}` from `{}`",
-                    Into::<Identity>::into(*pkg_id.value()),
-                    url
-                ),
-                FullKind::Git { commit: _ } => format!(
-                    "cloned malformed dependency `{}` from `{}`",
-                    Into::<Identity>::into(*pkg_id.value()),
-                    url
-                ),
-                FullKind::Local => format!(
-                    "malformed local dependency `{}` at `{}`",
-                    Into::<Identity>::into(*pkg_id.value()),
-                    pkg_dir.display(),
-                ),
-            }
-        )
+        PackageLoader::find_at_exact_directory(&pkg_dir, fetcher.ctx())
+            .with_context(|| malformed_dependency_msg(pkg_id, &pkg_dir, url))
     )
     .into_package();
     rm_and_log!(check_metadata(pkg_id, &pkg));
@@ -186,19 +181,9 @@ fn fetch_git(
     commit: StrId,
     storage: &Storage,
     fetcher: &Fetcher<'_>,
-    git_access: StorageGitAccess<'_>,
 ) -> QuackResult<(PathBuf, bool)> {
-    if git_access.is_stored(url, &commit) {
-        storage.mark_as_stored(pkg_id).with_context(|| {
-            format!(
-                "failed to store a cloned repository of a package `{}`",
-                pkg_id.value().as_identity()
-            )
-        })?;
-    }
-    let mut was_present = true;
-    if !storage.is_stored_git(url, &commit) {
-        was_present = false;
+    let was_present = storage.is_stored_git(url, &commit);
+    if !was_present {
         fetcher.clone_from_git_to_directory(
             &url,
             GitReference::Rev(commit),
@@ -235,9 +220,8 @@ async fn fetch_registry(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
 ) -> QuackResult<(PathBuf, bool)> {
-    let mut was_present = true;
-    if !storage.is_package_stored(pkg_id) {
-        was_present = false;
+    let was_present = storage.is_package_stored(pkg_id);
+    if !was_present {
         let fetcher_package = PackageWithUrl {
             name: pkg_id.name(),
             version: pkg_id.version(),
@@ -260,9 +244,7 @@ async fn fetch_registry(
 /// Unpack a fetched package blob.
 fn unpack_package_blob(pkg: PackageId, storage: &Storage, blob_path: &Path) -> QuackResult<()> {
     let pkg_dir = storage.pkg_dir(pkg);
-    if pkg_dir.exists() {
-        pkg_dir.rm()?;
-    }
+    storage.try_remove_pkg(pkg)?;
     let file = File::open(blob_path)
         .with_context(|| format!("failed to open `{}`", blob_path.display()))?;
     let decompressed = GzDecoder::new(file);
@@ -277,6 +259,26 @@ fn unpack_package_blob(pkg: PackageId, storage: &Storage, blob_path: &Path) -> Q
     storage.mark_as_stored(pkg)?;
     pkg_dir.try_fsync_dir()?;
     Ok(())
+}
+
+fn malformed_dependency_msg(pkg_id: PackageId, pkg_dir: &Path, url: InternedUrl) -> String {
+    match pkg_id.kind() {
+        FullKind::Registry => format!(
+            "downloaded malformed dependency `{}` from `{}`",
+            Into::<Identity>::into(*pkg_id.value()),
+            url
+        ),
+        FullKind::Git { commit: _ } => format!(
+            "cloned malformed dependency `{}` from `{}`",
+            Into::<Identity>::into(*pkg_id.value()),
+            url
+        ),
+        FullKind::Local => format!(
+            "malformed local dependency `{}` at `{}`",
+            Into::<Identity>::into(*pkg_id.value()),
+            pkg_dir.display(),
+        ),
+    }
 }
 
 /// Check that the downloaded or loaded package has the desired name and version.
