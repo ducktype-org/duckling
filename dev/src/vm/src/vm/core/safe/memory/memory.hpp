@@ -582,6 +582,15 @@ namespace vm {
 			initialized_globals.insert(global_block->id);
 		}
 
+		/**
+		 * @brief Set the global as no longer initialized when it's destructor ran.
+		 *
+		 * @param global_block The block of the global variable to set as uninitialized.
+		 */
+		void unsetGlobalInitialized(Ref<BlockT> global_block) {
+			initialized_globals.erase(global_block->id);
+		}
+
 		void initializeBlockFromConstValue(Ref<Block> block, const code::ConstantValue& const_value);
 
 		/**

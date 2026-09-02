@@ -98,9 +98,9 @@ namespace vm {
 		// Every process left here is force killed.
 		for (auto& [pid, proc]: process_table) {
 			auto status = proc->doRequest(api::request::StatusRequest{});
-			if (status && isExecuting(v_get(*status, api::ProcStatus)))
+			if (status)
 				std::cerr << "Supervisor destroyed while process " << pid
-						  << " is still executing. Processes should be stopped or finished before "
+						  << " still exists. Processes should be deinitialized before "
 							 "the Supervisor is destroyed.\n";
 			(void) proc->doRequest(api::request::Stop{});
 		}

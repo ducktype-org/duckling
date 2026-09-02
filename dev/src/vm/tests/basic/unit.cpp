@@ -112,11 +112,11 @@ private:
 	void verySimpleBooleanTest() { runTestOnVm("very_simple_boolean.dbc", "", "1", {}); }
 
 	void checkZeroDivision() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("zero_division_i64.dbc", "", "0"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("zero_division_i32.dbc", "", "0"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);

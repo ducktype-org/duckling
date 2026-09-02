@@ -117,17 +117,20 @@ namespace vm::api {
 
 	/**
 	 * @brief Deinitialize and validate processes memory state.
-	 * Also, remove the process from the internal structures.
 	 *
 	 * @note Legal only when a process never started or completed successfully without being stopped
 	 * or panicked. Still executing process or one that was stopped or panicked will be refused with
 	 * a `StateError`. Such process should be killed.
+	 *
+	 * @note The process is removed from the internal structures only when the call succeeds. On
+	 * any error it stays registered and the caller has to `kill` it.
 	 */
 	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid);
 
 	/**
-	 * @brief Tears down the process. If it's possible, we tear down it gracefully with
-	 `deinitAndValdate`, otherwise if it panicked or stopped we force `kill` it.
+	 * @brief Tears down the process. If it's possible, we tear it down gracefully with
+	 * `deinitAndValidate`, otherwise (still running, stopped, panicked, or a global destructor
+	 * which failed) we force `kill` it.
 	 *
 	 * @return The validation result if the process was deinitialized, an empty optional if it had
 	 * to be killed, or an API error if neither could be done.
