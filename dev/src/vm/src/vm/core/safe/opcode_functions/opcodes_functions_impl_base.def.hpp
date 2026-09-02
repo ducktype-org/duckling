@@ -1,5 +1,5 @@
 /**
- * @file opcodes_functions_impl_base.hpp
+ * @file opcodes_functions_impl_base.def.hpp
  * @brief The opcodes functions implementations.
  *
  * @warning Do not include this file directly. Include `opcodes_functions_impl_exec.cpp` or

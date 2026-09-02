@@ -40,13 +40,13 @@ namespace vm {
 	class OpFuns final {
 	public:
 #define HANDLE_MICRO_INSTR(opcode) static OpFun op_##opcode;
-#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+#include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 
 
 #undef HANDLE_MICRO_INSTR
 
 #define HANDLE_MICRO_INSTR(opcode) static DebugOpFun op_debug_##opcode;
-#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+#include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 
 
 #undef HANDLE_MICRO_INSTR
@@ -64,7 +64,7 @@ namespace vm {
 		 */
 		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
 #define HANDLE_MICRO_INSTR(opcode) op_##opcode,
-#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+#include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 
 
 #undef HANDLE_MICRO_INSTR
@@ -76,7 +76,7 @@ namespace vm {
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
 #define HANDLE_MICRO_INSTR(opcode) \
 	low::MicroOpcode::opcode == low::MicroOpcode::check_strategy ? op_debug_nop : op_debug_##opcode,
-#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+#include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 
 
 #undef HANDLE_MICRO_INSTR
@@ -88,7 +88,7 @@ namespace vm {
 		static low::MicroOpcode getOpcodeFromOpFun(OpFun* fun) {
 			static std::unordered_map<OpFun*, low::MicroOpcode> map{
 #define HANDLE_MICRO_INSTR(instr) { op_##instr, low::instruction_tags::Op_##instr::OPCODE },
-#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+#include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 #undef HANDLE_MICRO_INSTR
 			};
 			return map.at(fun);

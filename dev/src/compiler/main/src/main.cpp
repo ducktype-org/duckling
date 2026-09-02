@@ -756,7 +756,10 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
-				.addPositional(clah::FileParser::make("module", true))
+				.addPositional(
+					clah::FileParser::make("path", true),
+					"Path to the root module of the package or the root module file."
+				)
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
 				.add(getClahStdLibOptions())
