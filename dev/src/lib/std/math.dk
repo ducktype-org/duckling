@@ -303,12 +303,13 @@ namespace libm_forward {
 }
 
 namespace constants {
-#{
-    Mathematical constants.
+    #{
+        Mathematical constants.
 
-    The hex representations, precomputed using python's
-    mpmath library, are used to keep maximum precision.
-#}
+        The hex representations, precomputed using python's
+        mpmath library, are used to keep maximum precision.
+    #}
+    
     # Ratio of a circle's circumference to its diameter
     let PI: f64          = helpers.exact_float("0x1.921fb54442d18p+1");
     let SQRT_PI: f64     = helpers.exact_float("0x1.c5bf891b4ef6bp+0");
@@ -343,9 +344,10 @@ namespace constants {
 }
 
 namespace helpers {
-#{
-    Helper functions
-#}
+    #{
+        Helper functions
+    #}
+    
     # Turns textual hex float literal into exact value
     fun exact_float(repr: slice char) -> f64 = io.strtod(builtins.ptr_from_slice:{char}(repr));
 }
