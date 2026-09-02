@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <functional>
 #include <iostream>
+#include <sstream>
 
 namespace vm {
 	// Decisions made are based on this great article:
@@ -37,7 +38,7 @@ namespace vm {
 			// beforehand, but it's not always true so this design is not perfect.
 			if (!attached) {
 				thread.waitInterruptible(lck, [this] {
-					return input_stream.rdbuf()->in_avail() || attached;
+					return hasPendingInput() || attached.load();
 				});
 			}
 
@@ -57,7 +58,7 @@ namespace vm {
 
 			if (!attached) {
 				thread.waitInterruptible(lck, [this] {
-					return input_stream.rdbuf()->in_avail() || attached;
+					return hasPendingInput() || attached.load();
 				});
 			}
 
@@ -91,6 +92,23 @@ namespace vm {
 		std::condition_variable output_empty_cv;
 
 	private:
+		/**
+		 * @brief Whether the internal input buffer holds data that has not been read yet.
+		 *
+		 * @note `in_avail()` cannot be used for this. It reports `egptr() - gptr()` and otherwise
+		 * falls back to `showmanyc()`, which defaults to 0, and libc++'s `stringbuf` extends the
+		 * get area only inside `underflow()`. Freshly written input therefore reads as "nothing
+		 * available" under libc++, while libstdc++ syncs the get area eagerly and reports it.
+		 * `sgetc()` goes through `underflow()`, so it sees the data on both implementations.
+		 *
+		 * @warning Only valid while not `attached`, i.e. while `input_stream` still owns its own
+		 * buffer - on an attached buffer (`std::cin`) `sgetc()` would block.
+		 */
+		bool hasPendingInput() {
+			if (!input_stream.good()) input_stream.clear();
+			return input_stream.rdbuf()->sgetc() != std::char_traits<char>::eof();
+		}
+
 		std::atomic_bool attached = false;
 
 		std::mutex iomutex;

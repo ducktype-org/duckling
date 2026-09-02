@@ -3,6 +3,7 @@
 #include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <fstream>
 

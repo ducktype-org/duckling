@@ -25,6 +25,8 @@
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
 
+#include <sstream>
+
 using namespace compiler;
 
 class HeliosErrorsTests: public tester::TestSuite {

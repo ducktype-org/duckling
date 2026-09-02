@@ -15,6 +15,7 @@
 #include <bit>
 #include <iomanip>
 #include <ranges>
+#include <sstream>
 
 namespace vm::code {
 	std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
