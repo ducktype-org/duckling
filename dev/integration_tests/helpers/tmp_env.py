@@ -17,7 +17,10 @@ Subcommands:
     exec -- CMD...   -- run CMD (bash syntax) inside the temporary directory
     clean            -- remove the temporary directory
     sweep            -- only sweep stale directories of past runs
-    root             -- print the root all temporary directories live under
+    root [--resolved]
+                     -- print the root all temporary directories live
+                        under; --resolved follows symlinks, which is the
+                        form a case directory actually has
 """
 import os
 import pwd
@@ -125,14 +128,28 @@ def cmd_clean():
     shutil.rmtree(tmp_dir(), ignore_errors=True)
 
 
-def cmd_root():
-    print(TMP_ROOT)
+def cmd_root(argv: list[str]):
+    """
+    Plain `root` prints the configured root, the one the root
+    testconfig.yaml computes as well. `root --resolved` follows symlinks
+    first: that is the form a case directory really has, because
+    `new_tmp_dir` puts it through `realpath` and on macOS `/tmp` is a
+    symlink to `/private/tmp`. Compare a case directory against this one.
+    """
+    match argv:
+        case []:
+            print(TMP_ROOT)
+        case ["--resolved"]:
+            print(TMP_ROOT.resolve())
+        case _:
+            fail("usage: tmp_env.py root [--resolved]")
 
 
 def main():
     if len(sys.argv) < 2:
         fail(
-            "usage: tmp_env.py make [FILES...] | exec -- CMD... | clean | sweep | root"
+            "usage: tmp_env.py make [FILES...] | exec -- CMD... | clean"
+            " | sweep | root [--resolved]"
         )
     match sys.argv[1]:
         case "make":
@@ -147,7 +164,7 @@ def main():
         case "sweep":
             sweep_stale()
         case "root":
-            cmd_root()
+            cmd_root(sys.argv[2:])
         case unknown:
             fail(f"unknown subcommand: {unknown}")
 

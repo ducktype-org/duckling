@@ -44,9 +44,22 @@ Tests:
                     String: "ok\n"
             # The default and the override must agree between tmp_env.py and the
             # root testconfig.yaml, so the case dir this run got must sit under it.
+            # `new_tmp_dir` runs the path through `realpath`, and on macOS /tmp is
+            # a symlink to /private/tmp, so compare against the resolved root.
             case_dir_lives_under_the_root:
-                Run: "case \"$DIT_TMP_DIR/\" in \"$(@{tmp_env_tool} root)\"/*) echo ok ;;
+                Run: "case \"$DIT_TMP_DIR/\" in \"$(@{tmp_env_tool} root --resolved)\"/*) echo ok ;;
                   *) echo \"$DIT_TMP_DIR\" ;; esac"
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "ok\n"
+            # The same symlink story from the other side: a root reached through
+            # a symlink stays valid once resolved. That is /tmp -> /private/tmp on
+            # macOS; building the symlink by hand reproduces it on any platform.
+            symlinked_root_is_accepted:
+                Run: "real=$(mktemp -d) && link=\"$real.link\" && ln -s \"$real\" \"$link\"
+                  && export DIT_TMP_ROOT=\"$link\" DIT_TMP_DIR=\"$real/case\"
+                  && @{tmp_env_tool} make && @{tmp_env_tool} clean
+                  && rm \"$link\" && rmdir \"$real\" && echo ok"
                 PostCase: "@{cleanup_tmp_env}"
                 Output:
                     String: "ok\n"
