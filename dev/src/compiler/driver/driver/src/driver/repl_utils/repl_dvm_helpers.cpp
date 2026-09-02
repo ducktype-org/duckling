@@ -22,6 +22,7 @@
 #include <vm/bytecode/bytecode.hpp>
 
 #include <functional>
+#include <sstream>
 #include <variant>
 #include <vector>
 

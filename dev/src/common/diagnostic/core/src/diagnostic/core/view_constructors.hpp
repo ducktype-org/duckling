@@ -1,3 +1,5 @@
+#pragma once
+
 #include "diagnostic_state.hpp"
 #include "term_ui_view.hpp"
 

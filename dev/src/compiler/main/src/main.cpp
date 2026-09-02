@@ -765,7 +765,10 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
-				.addPositional(clah::FileParser::make("module", true))
+				.addPositional(
+					clah::FileParser::make("path", true),
+					"Path to the root module of the package or the root module file."
+				)
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
 				.add(getClahStdLibOptions())
@@ -1006,9 +1009,7 @@ clah::Clah getClahForMain() {
 
 					nlohmann::json manifest_json;
 					try {
-						manifest_json = nlohmann::json::parse(
-							file_content.getBegin(), file_content.getBegin() + file_content.size()
-						);
+						manifest_json = nlohmann::json::parse(file_content.stringView());
 					} catch (const nlohmann::json::parse_error& e) {
 						CORE_USER_LOG(base::strConcat(
 							"Error: failed to parse manifest JSON: ", e.what(), "\n"

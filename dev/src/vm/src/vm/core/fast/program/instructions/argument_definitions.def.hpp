@@ -1,5 +1,5 @@
 /**
- * @file arguments.hpp
+ * @file argument_definitions.def.hpp
  * Include this file in order to statically verify all arguments types are defined.
  */
 
