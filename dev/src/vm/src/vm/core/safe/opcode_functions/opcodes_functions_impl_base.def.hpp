@@ -137,7 +137,7 @@ namespace vm {
 #define DEFINE_BINARY_OP(NAME, BITS_SIZE, TYPE, OP)                                      \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
-			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
 			const auto rhs = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                     \
 			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));        \
 		}                                                                                \
@@ -145,7 +145,7 @@ namespace vm {
 	}                                                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
-			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
 			const auto rhs = READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                    \
 			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));        \
 		}                                                                                \
@@ -155,21 +155,19 @@ namespace vm {
 #define DEFINE_DIVISION_LIKE_OP(NAME, BITS_SIZE, TYPE, OP)                                \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {  \
 		{                                                                                 \
-			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                      \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                      \
 			const auto rhs = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                      \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
-			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                   \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));         \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
 	}                                                                                     \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
 		{                                                                                 \
-			auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                            \
-			auto rhs = READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                           \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                      \
+			const auto rhs = READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                     \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
-			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                   \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));         \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
 	}
@@ -177,7 +175,7 @@ namespace vm {
 #define DEFINE_UNARY_OP(NAME, BITS_SIZE, TYPE, OP)                              \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {       \
 		{                                                                       \
-			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                \
+			const auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);          \
 			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(OP value)); \
 		}                                                                       \
 		FUNCTION_CONT(1);                                                       \

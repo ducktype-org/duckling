@@ -8,11 +8,10 @@
  * Functionalities
  * ---------------
  *
- * Three variants are provided:
+ * Two variants are provided:
  *
  * - STRONG_TYPEDEF_INT_DIMENSIONAL
  * - STRONG_TYPEDEF_INT
- * - STRONG_TYPEDEF_INT_BINARY
  *
  * ### Usage
  * @include strongly_typed_int_example.cpp
