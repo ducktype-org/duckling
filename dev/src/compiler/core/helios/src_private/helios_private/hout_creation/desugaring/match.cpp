@@ -44,6 +44,13 @@ namespace compiler::helios::desugaring {
 			));
 		}
 
+		template<typename... MsgParts>
+		void logWarning(query::Context& ctx, dia::StablePosition position, MsgParts&&... what) {
+			ctx.logInt(makeBox<dia::PlaceholderWarning>(
+				base::strConcat(std::forward<MsgParts>(what)...), position
+			));
+		}
+
 		class MatchSubject final {
 		public:
 			Box<code::Expr>          expr;
@@ -182,10 +189,23 @@ namespace compiler::helios::desugaring {
 		base::Optional<tsh::SymbolType<>>  common_type;
 		std::vector<bool>                  covered(subject.num_alternatives, false);
 		bool                               has_wildcard = false;
+		base::Optional<dia::StablePosition> wildcard_position;
 
 		for (auto match_case: match_expr->getCases()) {
 			const auto case_position = match_case.unlock(ctx)->getStablePosition();
 			auto       flow          = match_case.unlock(ctx)->getPattern().unlock(ctx);
+
+			// The wildcard always matches, so the lowering enters it unconditionally and never
+			// reaches whatever is listed after it.
+			if_opt_some(wildcard_position, position) {
+				logWarning(
+					ctx,
+					case_position,
+					"This `case` is never entered, because the wildcard `case _` above it always "
+					"matches. The wildcard has to be the last case."
+				);
+				ctx.logInt(makeBox<dia::PlaceholderNote>("The wildcard case is here.", position));
+			}
 
 			if (flow->getAsIdentifier().has_value()) {
 				logNYI(ctx, case_position, "`as` bindings in match patterns.");
@@ -253,6 +273,7 @@ namespace compiler::helios::desugaring {
 				covered[alternative_index.value()] = true;
 			} else {
 				has_wildcard                          = true;
+				wildcard_position                     = case_position;
 				auto has_destructor_among_not_covered = [&] {
 					auto& alternatives = subject.variant.getUnderlyingTypes();
 					for (usize i{ 0 }; i < subject.num_alternatives; i++) {

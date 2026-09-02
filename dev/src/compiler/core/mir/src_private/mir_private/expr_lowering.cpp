@@ -792,21 +792,14 @@ namespace compiler::mir {
 
 			CORE_ASSERT(first_entry.has_value(), "A match has to have at least one case.");
 
-			// With nothing to project the subject is never read, so it is not evaluated either.
-			if (pending_projections.empty()) {
-				valueOutput(first_entry.value(), MIRValue{ MIRPlace(target_location) });
-				return;
-			}
-
-			// These are only needed if the subject type is not ref.
 			tsh::SymbolType<> subject_type = expr.subject->expression_type.getSymbolType();
-			const bool        is_subject_by_value
+			const bool        needs_reference_to_subject
 				= subject_type.getRefKind() == tsh::ReferenceKind::Direct;
 
 			base::Optional<BlockBuilder::InstructionHole> assign_ref_subject;
 			base::Optional<MIRLocalRef>                   ref_subject_local;
 
-			if (is_subject_by_value) {
+			if (needs_reference_to_subject) {
 				assign_ref_subject = first_entry.value()->addHole();
 				ref_subject_local  = function.addTmp(
                     subject_type.withReferenceKind(tsh::ReferenceKind::Ref), expr_scope
@@ -835,7 +828,7 @@ namespace compiler::mir {
 
 			MIRValue subject_val = MIRPlace{ subject_local };
 
-			if (is_subject_by_value) {
+			if (needs_reference_to_subject) {
 				assign_ref_subject->fill({
 					Operation::AddressOf,
 					*ref_subject_local,
