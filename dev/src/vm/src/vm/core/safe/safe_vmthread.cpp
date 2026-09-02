@@ -89,15 +89,9 @@ namespace vm {
 		const low::MicroOpcode opcode = getInstructionOpcode(*frame->instr);
 		if (opcode != low::MicroOpcode::breakpoint) return opcode;
 
-		const auto* program_copy
-			= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
-		CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
-
-		const auto original_instr
-			= program_copy->getOriginalProgram()
-		          ->getFunctions()
-		          .at(frame->current_function->name)
-		          ->bc[static_cast<usize>(frame->instr - &frame->current_function->bc[0])];
+		auto& micro_func     = *frame->current_function;
+		auto  low_instr_idx  = (usize) (frame->instr - micro_func.bc.data());
+		auto  original_instr = micro_func.orig_bc[low_instr_idx];
 
 		return getInstructionOpcode(original_instr);
 	}
