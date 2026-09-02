@@ -52,9 +52,7 @@ int cli(
 					  })
 		              .and_then([&] { return vm::api::loadFiles(pid, files); })
 		              .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
-		              .and_then([&] { return vm::api::run(pid, args); })
-		              .and_then([&] { return vm::api::join(pid); })
-		              .and_then([&] { return vm::api::getExitValue(pid); })
+		              .and_then([&] { return vm::api::runAwait(pid, args); })
 		              .transform([](vm::api::ExitValue vm_values) {
 						  variant_match(vm_values) {
 							  variant_case(i64, exit_code) { return exit_code; }

@@ -12,6 +12,7 @@
 #include "parameter.hpp"
 #include "parsing_result.hpp"
 #include "parsing_state.hpp"
+#include "positional_parameter.hpp"
 #include "value_parser.hpp"
 
 #include <base/types/ints.hpp>
@@ -89,10 +90,11 @@ namespace clah {
 
 		/**
 		 * @brief Adds a positional parameter without a name to the Clah.
-		 * @param parameter value parser created like: clah::StringParser::make().
+		 * @param parser value parser created like: clah::StringParser::make().
+		 * @param description positional parameter description, potentially empty.
 		 * @return A reference to self.
 		 */
-		Clah&& addPositional(Box<ValueParser> parser);
+		Clah&& addPositional(Box<ValueParser> parser, std::string description = "");
 
 		/**
 		 * @brief Adds a subcommand to this command.
@@ -183,7 +185,7 @@ namespace clah {
 		 * @return A list of positional parameters (their value parsers).
 		 */
 		[[nodiscard]]
-		const std::vector<Box<ValueParser>>& getPositionalParameters() const;
+		const std::vector<PositionalParameter>& getPositionalParameters() const;
 
 		/**
 		 * @return A list of subcommands for this command.
@@ -319,8 +321,8 @@ namespace clah {
 		 */
 		Handler handler{};
 
-		std::vector<Parameter>        parameters;
-		std::vector<Box<ValueParser>> positional_parameters;
+		std::vector<Parameter>           parameters;
+		std::vector<PositionalParameter> positional_parameters;
 
 		/**
 		 * @brief A list of subcommands (sub-clahs) for this command.
