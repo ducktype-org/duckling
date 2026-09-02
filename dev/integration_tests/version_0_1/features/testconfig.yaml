@@ -87,6 +87,7 @@ SubDirs:
     - ffi
     - float_literals
     - function_call
+    - io_builtins
     - namespace_declaration
     - simple_ifs
     - unit_type
@@ -107,7 +108,6 @@ SubDirs:
     # - boolean_operators (both backends agree, but the expected output of both tests is stale)
     # - first_class_typing (requires better constructor/method resolution, and proper tuple handling in compile-time)
     # - function_definition (requires static variables in functions)
-    # - io_builtins (requires format strings and a `print` function)
     # - let_simple_declaration (requires proper shadowing handling)
     # - overloading (requires operator names, and, in one case, string `==` comparison)
     # - primitive_booleans (requires xor)
