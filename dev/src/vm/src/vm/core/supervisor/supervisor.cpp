@@ -52,16 +52,16 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> Supervisor::doRequest(
-		const api::SupervisorRequest& request
+		const PID pid, const api::RequestVariant& request
 	) {
-		variant_match(request.request) {
+		variant_match(request) {
 			variant_case_novalue(api::request::DeinitAndValidate) {
-				auto res = getProcess(request.pid).and_then([](Ref<IVMProcess> process) {
+				auto res = getProcess(pid).and_then([](Ref<IVMProcess> process) {
 					return process->doRequest(api::request::DeinitAndValidate{});
 				});
 				// Don't erase the process iff the process didn't exist or it's still running.
 				const bool still_executing
-					= getProcess(request.pid)
+					= getProcess(pid)
 				          .and_then([](Ref<IVMProcess> process) {
 							  return process->doRequest(api::request::StatusRequest{});
 						  })
@@ -70,12 +70,12 @@ namespace vm {
 						  })
 				          .value_or(false);
 
-				if (!still_executing) (void) killProcess(request.pid);
+				if (!still_executing) (void) killProcess(pid);
 				return res;
 			}
 			variant_default {
-				return getProcess(request.pid).and_then([&request](Ref<IVMProcess> process) {
-					return process->doRequest(request.request).transform_error([](const auto& x) {
+				return getProcess(pid).and_then([&request](Ref<IVMProcess> process) {
+					return process->doRequest(request).transform_error([](const auto& x) {
 						return api::ApiError{ x };
 					});
 				});

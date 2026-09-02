@@ -42,7 +42,7 @@ namespace internal {
 	constexpr u64 countOpCases() {
 		u64 count = 0;
 #define HANDLE_MICRO_INSTR(opcode) count++;
-#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+#include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 #undef HANDLE_MICRO_INSTR
 		return count;
 	}

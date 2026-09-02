@@ -1,3 +1,5 @@
+#pragma once
+
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
