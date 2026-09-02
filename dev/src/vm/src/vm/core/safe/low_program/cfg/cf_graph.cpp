@@ -152,7 +152,7 @@ namespace vm::low::cf {
 				blocks[block.id].setCondEdge(OutEdges::Kind::JmpIfNot, jmp_target, block.id + 1);
 				break;
 			}
-			case low::MicroOpcode::ret_imm:
+			case low::MicroOpcode::ret:
 			case low::MicroOpcode::ret_tailcall_func: {
 				// No outgoing edges from return blocks
 				break;

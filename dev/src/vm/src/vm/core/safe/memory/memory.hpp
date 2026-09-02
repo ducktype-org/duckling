@@ -540,6 +540,25 @@ namespace vm {
 		}
 
 		/**
+		 * @brief Creates the block of a local variable that was initialized without one.
+		 *
+		 * Locals start out with an empty block reference slot; the block is only needed once
+		 * something refers to the variable through it, and the variable's slot holds everything
+		 * needed to make one. Both the executor and the debug adapter go through here.
+		 */
+		auto createLocalSlotBlock(Frame& frame, u64 slot_index)
+			-> Ref<BlockT> requires std::is_same_v<EntryT, std::byte> {
+			const LocalSlot& slot = frame.local_slot_stack_base[slot_index];
+
+			auto block = adoptDummy(slot.type, slot.data);
+			// So that nobody can delete our block.
+			increaseBlockRefcount(block);
+
+			frame.local_block_ref_stack_base[slot_index] = block.get();
+			return block;
+		}
+
+		/**
 		 * @brief Dynamically reallocates block data.
 		 * @note Assumes that type is a dynamic table type and reallocates it to
 		   a table of size n with elements of type equal to type's inner type.

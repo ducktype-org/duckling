@@ -24,6 +24,18 @@ namespace vm {
 
 	class Type;
 
+	/**
+	 * @brief Type and location of the variable living in one local variable slot.
+	 *
+	 * A block is created for a local variable only once something refers to it through one, so
+	 * both have to be available without a block being present.
+	 */
+	struct LocalSlot {
+		const Type* type = nullptr;
+		/// Address of the variable, absolute so that a slot shared with the caller reads alike.
+		byte* data = nullptr;
+	};
+
 	struct FlagData {
 		// CRITICAL: Field flag must be defined first due to rules of field accessing in LLVM (used
 		// for JIT purposes)
@@ -62,14 +74,9 @@ namespace vm {
 		Block** local_block_ref_stack_end = nullptr;
 
 		/**
-		 * @brief Base of the stack of the types of the local variables, indexed by slot index.
-		 *
-		 * A block is created for a local variable only once something refers to it through one,
-		 * so its type has to be available without a block being present. Local stack offsets are
-		 * a running sum of the slot sizes, so the variable's location follows from the types of
-		 * the slots below it and nothing else needs to be kept here.
+		 * @brief Base of the stack of local variable slots, indexed by slot index.
 		 */
-		const Type** local_type_stack_base = nullptr;
+		LocalSlot* local_slot_stack_base = nullptr;
 
 		/**
 		 * @brief Function linked to the frame.

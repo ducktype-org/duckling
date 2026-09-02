@@ -491,7 +491,7 @@ namespace vm {
 		frame->current_function           = &start_function;
 		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
 		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
-		frame->local_type_stack_base      = runtime_data.type_stack_base;
+		frame->local_slot_stack_base      = runtime_data.slot_stack_base;
 
 		const auto* instr = start_function.bc.data();
 
@@ -517,15 +517,21 @@ namespace vm {
 			));
 		}
 
-		for (auto block_ptr = frame->local_block_ref_stack_base + orig_block_stack_size;
-		     block_ptr < frame->local_block_ref_stack_end;
-		     block_ptr++) {
-			// A variable that never needed a block has none to free.
-			if (*block_ptr == nullptr) continue;
+		for (usize idx = orig_block_stack_size;
+		     idx < usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+		     idx++) {
+			if (Block* block = frame->local_block_ref_stack_base[idx]) {
+				process_memory.freeBlockData(block);
+				process_memory.decreaseBlockRefcount(block);
+				continue;
+			}
 
-			auto& block = *block_ptr;
-			process_memory.freeBlockData(block);
-			process_memory.decreaseBlockRefcount(block);
+			// A variable that never needed a block still has to release whatever it points at,
+			// which is what `freeBlockData` would have done for it.
+			const LocalSlot& slot = frame->local_slot_stack_base[idx];
+			process_memory.runDataDestructors(
+				{ slot.data, slot.type->getSize().asInt() }, slot.type
+			);
 		}
 		*orig_frame_ptr                  = orig_frame_cpy;
 		runtime_data.frame_stack_current = orig_frame_ptr;

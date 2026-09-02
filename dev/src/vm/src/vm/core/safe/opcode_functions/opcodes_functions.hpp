@@ -95,67 +95,55 @@ namespace vm {
 		}
 
 		/**
-		 * @brief Reserves the slot of a freshly initialized local variable.
+		 * @brief Zeroes a freshly initialized local variable and reserves its slot.
 		 *
-		 * Every slot carries the type of the variable in it, so that a block can still be made
-		 * for a variable that was initialized without one. `block` is null in exactly that case,
-		 * which is the common one.
+		 * Every slot carries the type and the address of the variable in it, so that a block can
+		 * still be made for one that was initialized without any. `block` is null in exactly
+		 * that case, which is the common one.
+		 *
+		 * @param zeroed_size Always the size of `type`. Taken separately so that the callers
+		 * knowing it at compile time zero the variable with a plain store instead of a call.
 		 */
-		static void pushLocalSlot(Frame* frame, TypeCRef type, Block* block) {
+		static void pushLocalSlot(
+			Frame* frame, TypeCRef type, std::byte* data, u64 zeroed_size, Block* block
+		) {
+			CORE_ASSERT(
+				zeroed_size == type->getSize().asInt(),
+				"A local variable has to be zeroed over its whole size"
+			);
+			std::memset(data, 0, zeroed_size);
+
 			const u64 slot_index
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-			frame->local_type_stack_base[slot_index] = type.get();
+			frame->local_slot_stack_base[slot_index] = { .type = type.get(), .data = data };
 
 			*frame->local_block_ref_stack_end = block;
 			frame->local_block_ref_stack_end += 1;
 		}
 
 		/**
-		 * @brief Type of the variable in the topmost local slot.
+		 * @brief Drops the topmost local variable slot without touching its block.
 		 */
-		static TypeCRef topLocalSlotType(Frame* frame) {
+		static void popLocalSlot(Frame* frame) { frame->local_block_ref_stack_end -= 1; }
+
+		/**
+		 * @brief The topmost local variable slot.
+		 */
+		static const LocalSlot& topLocalSlot(Frame* frame) {
 			const u64 slot_index
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base) - 1;
-			return frame->local_type_stack_base[slot_index];
+			return frame->local_slot_stack_base[slot_index];
 		}
 
 		/**
-		 * @brief Address of the variable living in slot `slot_index`.
-		 *
-		 * Offsets on the local stack are a running sum of the sizes of the variables with no
-		 * padding in between, so a variable sits right above all the ones below it in the frame.
-		 */
-		static std::byte* localSlotAddress(std::byte* local_stack, Frame* frame, u64 slot_index) {
-			u64 offset = 0;
-			for (u64 idx = 0; idx < slot_index; idx++)
-				offset += frame->local_type_stack_base[idx]->getSize().asInt();
-
-			return local_stack + offset;
-		}
-
-		/**
-		 * @brief Creates the block of a local variable that was initialized without one.
-		 *
-		 * Locals start out with an empty block reference slot; the block is only needed once
-		 * something refers to the variable through it. Its type comes from the frame's type
-		 * stack, and its location follows from the types of the slots below it.
+		 * @brief `Memory::createLocalSlotBlock`, kept out of line.
 		 *
 		 * @note Never inlined - this runs at most once per variable, so it must not bloat the
 		 * instruction implementations.
 		 */
 		[[gnu::noinline]]
-		static Ref<Block> createLocalBlock(
-			std::byte* local_stack, Frame* frame, SafeVMThread& thread, u64 slot_index
-		) {
-			auto block = thread.process_memory.adoptDummy(
-				frame->local_type_stack_base[slot_index],
-				localSlotAddress(local_stack, frame, slot_index)
-			);
-			// So that nobody can delete our block.
-			thread.process_memory.increaseBlockRefcount(block);
-
-			frame->local_block_ref_stack_base[slot_index] = block.get();
-			return block;
+		static Ref<Block> createLocalBlock(Frame* frame, SafeVMThread& thread, u64 slot_index) {
+			return thread.process_memory.createLocalSlotBlock(*frame, slot_index);
 		}
 
 		/**
@@ -169,9 +157,7 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 		__attribute__((always_inline))
 #endif
-		static Ref<Block> readBlockRefFromArg(
-			std::byte* local_stack, Frame* frame, SafeVMThread& thread, u64 arg
-		) {
+		static Ref<Block> readBlockRefFromArg(Frame* frame, SafeVMThread& thread, u64 arg) {
 			// The highest bit tells globals apart from locals, the rest is the index.
 			const bool is_global = (arg >> 63) != 0;
 			const u64  index     = arg & ~(1ULL << 63);
@@ -179,7 +165,7 @@ namespace vm {
 			if (is_global) return { thread.runtime_data.global_block_ref_buffer_base[index] };
 
 			if (frame->local_block_ref_stack_base[index] == nullptr) [[unlikely]]
-				return createLocalBlock(local_stack, frame, thread, index);
+				return createLocalBlock(frame, thread, index);
 
 			return { frame->local_block_ref_stack_base[index] };
 		}
@@ -250,7 +236,7 @@ namespace vm {
 			local_stack += callee_stack_distance;
 			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
 			                                  + (prev_frame_block_ref_count - shared_blocks_count);
-			frame->local_type_stack_base = prev_frame->local_type_stack_base
+			frame->local_slot_stack_base = prev_frame->local_slot_stack_base
 			                             + (prev_frame_block_ref_count - shared_blocks_count);
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
@@ -282,12 +268,13 @@ namespace vm {
 				TypeCRef      type
 			) {
 			auto data_ptr = local_stack + byte_offset;
-			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
+			// The variable is zeroed by `pushLocalSlot`, so the block only adopts its bytes.
+			auto block = thread.process_memory.adoptDummy(type, data_ptr);
 
 			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
 
-			pushLocalSlot(frame, type, block.get());
+			pushLocalSlot(frame, type, data_ptr, type->getSize().asInt(), block.get());
 		}
 
 		static
@@ -296,16 +283,13 @@ namespace vm {
 #endif
 			void
 			performDeinit(Frame*& frame, SafeVMThread& thread) {
-			auto block = frame->local_block_ref_stack_end[-1];
-			if (block == nullptr) {
-				// The variable never needed a block, so there is nothing to free.
-				frame->local_block_ref_stack_end -= 1;
-				return;
+			// A variable that never needed a block has none to free.
+			if (Block* block = frame->local_block_ref_stack_end[-1]) {
+				thread.process_memory.freeBlockData(block);
+				thread.process_memory.decreaseBlockRefcount(block);
 			}
 
-			thread.process_memory.freeBlockData(block);
-			thread.process_memory.decreaseBlockRefcount(block);
-			frame->local_block_ref_stack_end -= 1;
+			popLocalSlot(frame);
 		}
 
 		static

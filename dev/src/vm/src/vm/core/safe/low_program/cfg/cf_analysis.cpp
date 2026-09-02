@@ -37,7 +37,7 @@ namespace vm::low::cf {
 					block_beginnings.push_back(jump_target);  // Jump destination starts a new block
 				break;
 			}
-			case low::MicroOpcode::ret_imm:
+			case low::MicroOpcode::ret:
 			case low::MicroOpcode::ret_tailcall_func: {
 				block_beginnings.push_back(index + 1);  // Next block starts after ret
 				break;

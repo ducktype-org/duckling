@@ -6,6 +6,11 @@ type data: pair {
 	second: i64
 }
 type variant: maybe { i64, i8 }
+type data: pair_with_pointer {
+	first: ptr_i64,
+	second: i64
+}
+type fixed_size_table: pointer_table ptr_i64 2
 
 function noop { } -> { } {
 	ret;
@@ -62,7 +67,17 @@ function reuses_a_slot { } -> { } {
 	ret;
 }
 
-# Returns with a live local, which the lowering has to deinitialize before `ret_imm`.
+# A pointer reached through a structure field or a table element still has to be released, so
+# `typeCleanup` has to find it by recursing into the type.
+function nests_pointers { } -> { } {
+	init_pany_type		in_a_struct, pair_with_pointer;
+	init_pany_type		in_a_table, pointer_table;
+	deinit; # in_a_table
+	deinit; # in_a_struct
+	ret;
+}
+
+# Returns with a live local, which the lowering has to deinitialize before `ret`.
 function returns_with_live_locals { } -> { i64 } {
 	init_pany_type		leftover, i64;
 	mov_p64_imm			ret0, 1;

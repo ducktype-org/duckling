@@ -377,8 +377,7 @@ namespace vm {
 			// Create VMValue objects from local arguments. The argument's actual block type is
 			// used (verification guarantees it matches what the builtin expects).
 			for (u64 i = 0; i < arg_count; i++) {
-				auto block
-					= OpFuns::readBlockRefFromArg(local_stack, frame, thread, first_arg_idx + i);
+				auto     block     = OpFuns::readBlockRefFromArg(frame, thread, first_arg_idx + i);
 				TypeCRef real_type = Memory::getBlockType(block);
 				args.push_back(thread.safe_process.createOwnedVMValue(real_type, Pointer(block, 0)));
 			}
@@ -398,9 +397,9 @@ namespace vm {
 
 			if (return_value.has_value()) {
 				auto value = std::move(return_value.value());
-				value->exportData(Pointer(
-					OpFuns::readBlockRefFromArg(local_stack, frame, thread, first_arg_idx - 1), 0
-				));
+				value->exportData(
+					Pointer(OpFuns::readBlockRefFromArg(frame, thread, first_arg_idx - 1), 0)
+				);
 				value->freeData();
 			}
 			for (auto& vm_value: args) vm_value->freeData();
@@ -444,7 +443,7 @@ namespace vm {
 
 
 				auto ext_result_destination
-					= OpFuns::readBlockRefFromArg(local_stack, frame, thread, result_value_idx);
+					= OpFuns::readBlockRefFromArg(frame, thread, result_value_idx);
 				auto result_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
 
 				// Prepare arguments and call the function.
@@ -481,8 +480,7 @@ namespace vm {
 
 			std::vector<void*> arg_values(arg_count);
 			for (u64 i = 0; i < arg_count; i++) {
-				auto block
-					= OpFuns::readBlockRefFromArg(local_stack, frame, thread, first_arg_idx + i);
+				auto block    = OpFuns::readBlockRefFromArg(frame, thread, first_arg_idx + i);
 				arg_values[i] = thread.process_memory.getBlockViewUnsafe(block).getBegin();
 			}
 
@@ -491,8 +489,7 @@ namespace vm {
 			if (is_void) {
 				ffi_call(cif, ffi_func->symbol, nullptr, arg_values.data());
 			} else {
-				auto result_block
-					= OpFuns::readBlockRefFromArg(local_stack, frame, thread, first_block_idx);
+				auto  result_block = OpFuns::readBlockRefFromArg(frame, thread, first_block_idx);
 				byte* result_pointer
 					= thread.process_memory.getBlockViewUnsafe(result_block).getBegin();
 				usize result_size = ffi_func->result_types.at(0)->getSize().asInt();
@@ -568,7 +565,7 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ret_imm)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
 		{
 			// Frame of the function we're returning from.
 			auto* callee_frame = frame;
@@ -576,8 +573,10 @@ namespace vm {
 			// The function deinitialized its own locals, so the only entries left on its block
 			// reference stack are its return values, which the caller took care of and keeps using.
 			CORE_ASSERT(
-				callee_frame->local_block_ref_stack_end
-					== callee_frame->local_block_ref_stack_base + instr->arg0,
+				usize(
+					callee_frame->local_block_ref_stack_end
+					- callee_frame->local_block_ref_stack_base
+				) == callee_frame->current_function->result_types.size(),
 				"On return only the function's return values may be left on the block stack"
 			);
 
@@ -608,29 +607,26 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(initSimple_imm_type)(FUNCTION_ARGS) {
 		{
-			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
-
 			// No block: one is created only if something ends up needing it.
-			std::memset(local_stack + instr->arg0, 0, type->getSize().asInt());
-
-			pushLocalSlot(frame, type, nullptr);
+			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			pushLocalSlot(frame, type, local_stack + instr->arg0, type->getSize().asInt(), nullptr);
 		}
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(initSimple64_imm_type)(FUNCTION_ARGS) {
 		{
-			// A constant size zeroes inline instead of calling `memset`.
-			std::memset(local_stack + instr->arg0, 0, 8);
-			pushLocalSlot(frame, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1), nullptr);
+			// A size known here zeroes with a plain store instead of a call to `memset`.
+			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			pushLocalSlot(frame, type, local_stack + instr->arg0, 8, nullptr);
 		}
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(initSimple128_imm_type)(FUNCTION_ARGS) {
 		{
-			std::memset(local_stack + instr->arg0, 0, 16);
-			pushLocalSlot(frame, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1), nullptr);
+			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			pushLocalSlot(frame, type, local_stack + instr->arg0, 16, nullptr);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -640,19 +636,21 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(deinitDtor_imm)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(deinitDtor)(FUNCTION_ARGS) {
 		{
-			if (frame->local_block_ref_stack_end[-1] != nullptr) {
-				performDeinit(frame, thread);
+			if (Block* block = frame->local_block_ref_stack_end[-1]) {
+				thread.process_memory.freeBlockData(block);
+				thread.process_memory.decreaseBlockRefcount(block);
 			} else {
 				// Without a block there is nothing to run the destructors off, so they are run
 				// over the variable's bytes directly.
-				const TypeCRef type = topLocalSlotType(frame);
+				const LocalSlot& slot = topLocalSlot(frame);
 				thread.process_memory.runDataDestructors(
-					{ local_stack + instr->arg0, type->getSize().asInt() }, type
+					{ slot.data, slot.type->getSize().asInt() }, slot.type
 				);
-				frame->local_block_ref_stack_end -= 1;
 			}
+
+			popLocalSlot(frame);
 		}
 		FUNCTION_CONT(1);
 	}

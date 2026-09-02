@@ -66,7 +66,7 @@ namespace vm {
 		Block** block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
 		Block** block_ref_stack_end;   /// Pointer to the first value not allocated.
 
-		const Type** type_stack_base;  /// Pointer to the start of the local variable type stack.
+		LocalSlot* slot_stack_base;    /// Pointer to the start of the local variable slot stack.
 
 		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
@@ -81,7 +81,7 @@ namespace vm {
 			  block_ref_stack_end(
 				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()
 			  ),
-			  type_stack_base(stack->getTypeStack()->data()),
+			  slot_stack_base(stack->getSlotStack()->data()),
 			  global_data_buffer_base(global_buffer_pointers.data_buffer_base),
 			  global_block_ref_buffer_base(global_buffer_pointers.blocks_buffer_base) {}
 	};

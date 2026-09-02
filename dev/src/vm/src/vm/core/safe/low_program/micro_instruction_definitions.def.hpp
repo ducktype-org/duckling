@@ -476,10 +476,10 @@ DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionID)
 DEF_MICRO_INSTR(ret_tailcall_func, vm::low::opargs::FunctionID)
 /**
  * @brief Returns from the function.
- * The argument is the number of the function's return values, which are the only entries
- * left on the block reference stack once the function's own `deinit`s ran.
+ * @note Does no cleanup of its own: the function's own `deinit`s already ran, so the only
+ * entries left on its block reference stack are its return values, which belong to the caller.
  */
-DEF_MICRO_INSTR(ret_imm, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(ret)
 
 // ========= STACK OPERATIONS ========
 
@@ -523,12 +523,10 @@ DEF_MICRO_INSTR(deinit)
 
 /**
  * @brief Like `deinit`, for a variable whose type needs destructors run - i.e. one that holds
- * pointers, whose pointed-to blocks must be dereferenced. Needed separately because with no
- * block around there is nothing to run the destructors off.
- *
- * @arg0 - byte offset of the variable in the frame's local stack.
+ * pointers, whose pointed-to blocks must have their reference released. Needed separately
+ * because with no block around there is nothing to run the destructors off.
  */
-DEF_MICRO_INSTR(deinitDtor_imm, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(deinitDtor)
 
 // ========= IO OPERATIONS ========
 

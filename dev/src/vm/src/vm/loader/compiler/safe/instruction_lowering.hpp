@@ -306,17 +306,13 @@ namespace vm::loader::compiler::safe::detail {
 		usize topSlotIndex() const { return ctx.function.local_stack.size(curr_state) - 1; }
 
 		void addDeinitOfVariable(usize idx) {
-			const auto& db   = ctx.function.local_stack;
-			const auto  name = db.getName(curr_state, idx).value();
+			const auto& db = ctx.function.local_stack;
 
 			if (typeCleanup(resolveTypeName(db.getTypeName(curr_state, idx).value()))
-			    != TypeCleanup::Destructors) {
+			    == TypeCleanup::Destructors)
+				addLow<Op_deinitDtor>();
+			else
 				addLow<Op_deinit>();
-				return;
-			}
-
-			addLow<Op_deinitDtor_imm>(vm::opargs::Immediate{
-				getIntTypeSize(db.getByteOffset(curr_state, name).value()) });
 		}
 
 		void addLabel(opargs::Label label) {
@@ -712,13 +708,13 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_ret, i) {
 				// The return values sit at the bottom of the local stack and belong to the
 				// caller. Everything above them is still live and has to be popped here, as
-				// `ret_imm` does no cleanup of its own.
+				// `ret` does no cleanup of its own.
 				const usize ret_count = ctx.function.signature.result_types.size();
 				for (usize live = ctx.function.local_stack.size(curr_state); live > ret_count;
 				     live--)
 					addDeinitOfVariable(live - 1);
 
-				addLow<Op_ret_imm>(vm::opargs::Immediate{ ret_count });
+				addLow<Op_ret>();
 			}
 			instr_case(high::Op_init_pany_type, i) {
 				const TypeCRef type   = getPlaceType(i.var);

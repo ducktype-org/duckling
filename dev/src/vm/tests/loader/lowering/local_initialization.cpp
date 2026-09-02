@@ -27,6 +27,7 @@ public:
 		TESTER_ADD_TEST(liveLocalsAreDeinitializedBeforeReturning);
 		TESTER_ADD_TEST(reusedSlotDoesNotForceABlock);
 		TESTER_ADD_TEST(zeroingIsSpecializedBySize);
+		TESTER_ADD_TEST(pointersNestedInAggregatesAreFound);
 	}
 
 private:
@@ -123,7 +124,7 @@ private:
 		assertBlockFreeInitCount(name, 2);
 		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 0);
 		assertOpcodeCount(name, MicroOpcode::deinit, 2);
-		assertOpcodeCount(name, MicroOpcode::deinitDtor_imm, 0);
+		assertOpcodeCount(name, MicroOpcode::deinitDtor, 0);
 	}
 
 	/**
@@ -145,7 +146,7 @@ private:
 		const auto name = base::StrID("holds_pointer");
 		assertBlockFreeInitCount(name, 2);
 		// One for `ptr`, none for `plain` - a structure of plain fields needs no destructors.
-		assertOpcodeCount(name, MicroOpcode::deinitDtor_imm, 1);
+		assertOpcodeCount(name, MicroOpcode::deinitDtor, 1);
 		assertOpcodeCount(name, MicroOpcode::deinit, 1);
 	}
 
@@ -171,6 +172,16 @@ private:
 	}
 
 	/**
+	 * @brief `typeCleanup` recurses into structures and tables, so a pointer held inside one
+	 * still gets its scope exit lowered to `deinitDtor`.
+	 */
+	void pointersNestedInAggregatesAreFound() {
+		const auto name = base::StrID("nests_pointers");
+		assertOpcodeCount(name, MicroOpcode::deinitDtor, 2);
+		assertOpcodeCount(name, MicroOpcode::deinit, 0);
+	}
+
+	/**
 	 * @brief The sizes that get a plain store instead of a call to `memset` are picked by the
 	 * size of the variable alone, not by what its type is made of.
 	 */
@@ -186,22 +197,22 @@ private:
 	}
 
 	/**
-	 * @brief `ret_imm` does no cleanup, so the lowering has to pop whatever is still live -
+	 * @brief `ret` does no cleanup, so the lowering has to pop whatever is still live -
 	 * without touching the return values.
 	 */
 	void liveLocalsAreDeinitializedBeforeReturning() {
 		const auto               name    = base::StrID("returns_with_live_locals");
 		std::vector<MicroOpcode> opcodes = opcodesOf(name);
 
-		assertOpcodeCount(name, MicroOpcode::ret_imm, 1);
+		assertOpcodeCount(name, MicroOpcode::ret, 1);
 		// `leftover` only, `ret0` belongs to the caller.
 		assertOpcodeCount(name, MicroOpcode::deinit, 1);
 
-		const auto ret = std::ranges::find(opcodes, MicroOpcode::ret_imm);
-		assertTrue(ret != opcodes.begin(), "`ret_imm` must not be the first instruction");
+		const auto ret = std::ranges::find(opcodes, MicroOpcode::ret);
+		assertTrue(ret != opcodes.begin(), "`ret` must not be the first instruction");
 		assertTrue(
 			*std::prev(ret) == MicroOpcode::deinit,
-			"the live local must be deinitialized right before `ret_imm`"
+			"the live local must be deinitialized right before `ret`"
 		);
 	}
 };
