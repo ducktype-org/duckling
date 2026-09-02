@@ -191,8 +191,16 @@ namespace vm {
 
 		void execGlobalDestructors() override;
 
+		/**
+		 * @brief Opcode of the instruction the thread would execute next. `breakpoint`
+		 * gets resolved to the instruction it replaced.
+		 */
+		[[nodiscard]] low::MicroOpcode getCurrentOpcode() const;
+
 	protected:
 		void executeOneStep() override;
+
+		[[nodiscard]] bool isAtExecutionEnd() const override;
 
 	public:
 		SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process);
