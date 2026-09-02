@@ -27,7 +27,7 @@ pub(crate) fn parse(
     schema: &ManifestSchema,
     root: &Path,
     mode: ParseMode,
-    _warnings: &mut Warnings,
+    warnings: &mut Warnings,
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
     let mut scope = Scope::new();
@@ -38,6 +38,7 @@ pub(crate) fn parse(
         root,
         DependencyKind::Normal,
         &mut deps,
+        warnings,
         ctx,
         guard,
     )?;
@@ -48,6 +49,7 @@ pub(crate) fn parse(
         root,
         DependencyKind::Dev,
         &mut deps,
+        warnings,
         ctx,
         guard,
     )?;

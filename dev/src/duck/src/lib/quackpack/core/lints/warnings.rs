@@ -65,3 +65,30 @@ impl fmt::Display for UnusedKey {
 }
 
 impl Warning for UnusedKey {}
+
+#[derive(Debug)]
+pub struct GitUrlIsPath {
+    url: String,
+    path_to_dep: String,
+}
+
+impl GitUrlIsPath {
+    pub fn new(url: String, path_to_dependency: String) -> Self {
+        Self {
+            url,
+            path_to_dep: path_to_dependency,
+        }
+    }
+}
+
+impl fmt::Display for GitUrlIsPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "git url `{}` of a dependency `{}` is a path; it can cause surprising effects",
+            self.url, self.path_to_dep
+        )
+    }
+}
+
+impl Warning for GitUrlIsPath {}
