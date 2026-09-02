@@ -10,6 +10,7 @@
 #include <string_id/string_id.hpp>
 
 #include <cstring>
+#include <sstream>
 #include <type_traits>
 
 namespace artifacts {

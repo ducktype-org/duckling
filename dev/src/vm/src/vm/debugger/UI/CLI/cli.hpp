@@ -3,6 +3,7 @@
 #include <vm/debugger/debugger.hpp>
 
 #include <mutex>
+#include <sstream>
 
 namespace vm::debugger::cli {
 	/**
