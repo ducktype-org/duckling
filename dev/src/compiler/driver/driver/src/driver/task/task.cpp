@@ -84,7 +84,7 @@ namespace compiler::driver {
 							elem, base::strConcat("dvm_linking_options.", key), report
 						);
 						if (value)
-							target.emplace_back(T(value->str()));
+							target.emplace_back(value->str());
 						else
 							had_error = true;
 					}

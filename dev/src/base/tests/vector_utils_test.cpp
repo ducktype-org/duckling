@@ -51,7 +51,7 @@ public:
 	}
 
 	void containsAllOfTest() {
-		std::vector<int> vec = { 1, 2, 3, 4, 5, 6 };
+		std::vector<int> vec = { 1, 2, 3, 4, 5, 6, 2, 3 };
 
 		assertTrue(base::containsAllOf(vec, { 2, 4, 6 }), "Expected a subset to be contained");
 		assertTrue(base::containsAllOf(vec, vec), "Expected the same vector to be contained");

@@ -8,7 +8,7 @@ namespace base {
 	 * For example [a,b,c,d] and delim = "t" we get [a,t,b,t,c,t,d].
 	 * Usege: `v | intersperse(std::string("x"))`
 	 *
-	 * @tparam D Delimiter type.
+	 * @tparam Delimiter type.
 	 * @param delim Value inserted between adjacent elements.
 	 * @return A range adaptor closure.
 	 */
@@ -17,7 +17,7 @@ namespace base {
 		// transform ((a,t), (b,t), (c,t), (d,t))
 		// join (a,t,b,t,c,t,d,t)
 		// drop last (a,t,b,c,t,d)
-		return std::views::transform([delim](auto&& val) {
+		return std::views::transform([delim = std::move(delim)](auto&& val) {
 				   return std::array<decltype(delim), 2>{ delim, std::forward<decltype(val)>(val) };
 			   })
 		     | std::views::join | std::views::drop(1);
