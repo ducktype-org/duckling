@@ -44,7 +44,7 @@ pub static UNCLOSED_FRONTMATTER_REGEX: LazyLock<Regex> =
 /// Parse a frontmatter of a script at a given `path`.
 ///
 /// Script doesn't have to have a frontmatter; in that case, a default will be returned.
-pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<FrontMatter> {
+pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMatter, Warnings)> {
     trace!("starting parsing");
     parse_inner(path, ctx).with_context(|| {
         format!(
@@ -56,11 +56,12 @@ pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<FrontMat
 
 /// Helper for [`parse_frontmatter`].
 /// First generates the appropriate [`ManifestSchema`] and then parses it into [`FrontMatter`].
-fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<FrontMatter> {
+fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMatter, Warnings)> {
     let mut warnings = Warnings::default();
     let schema = generate_schema(path, &mut warnings)?;
-    let frontmatter = parse(&schema, path, ParseMode::FrontMatter, warnings, ctx)?;
+    let frontmatter = parse(&schema, path, ParseMode::FrontMatter, &mut warnings, ctx)?;
     FrontMatter::new(path.to_path_buf(), schema, frontmatter)
+        .map(|frontmatter| (frontmatter, warnings))
 }
 
 /// Try to capture a frontmatter from the given contents.

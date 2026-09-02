@@ -6,7 +6,7 @@ use super::identity::{Identity, Origin};
 use super::script::Script;
 use super::{Manifest, VenvConfig, Version};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::{DuckContext, QuackResult, StrId};
+use crate::{QuackResult, StrId};
 
 #[derive(Clone, Debug)]
 /// Entities which can be treated as a package (have their own venvs).
@@ -212,11 +212,6 @@ impl AnyPackage {
         }
         AnyPackageDisplay { any_package: self }
     }
-
-    /// Emit collected [`Warnings`](super::lints::warnings::Warnings).
-    pub fn emit_warnings(&self, ctx: &DuckContext) -> QuackResult<()> {
-        self.manifest().emit_warnings(ctx)
-    }
 }
 
 #[derive(Clone)]
@@ -351,11 +346,6 @@ impl Package {
             }
         }
         PackageDisplay { package: self }
-    }
-
-    /// Emit collected [`Warnings`](super::lints::warnings::Warnings).
-    pub fn emit_warnings(&self, ctx: &DuckContext) -> QuackResult<()> {
-        self.manifest.emit_warnings(ctx)
     }
 }
 

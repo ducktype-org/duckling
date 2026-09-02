@@ -21,12 +21,11 @@ pub use profiles::*;
 pub use source::*;
 pub use venv_config::*;
 
-use super::lints::warnings::Warnings;
 use super::valid_package_name::{normalise_package_name, validate_package_name};
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::registry;
-use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId};
+use crate::{DuckContext, QuackError, QuackResultContext, StrId};
 
 #[derive(Clone, Debug)]
 /// Machine friendly abstraction over a manifest.
@@ -39,8 +38,6 @@ pub struct Manifest {
     profiles: Profiles,
     venv: VenvConfig,
     build_options: BuildOptions,
-
-    warnings: Warnings,
 }
 
 impl Manifest {
@@ -55,7 +52,6 @@ impl Manifest {
         profiles: Profiles,
         venv: VenvConfig,
         build_options: BuildOptions,
-        warnings: Warnings,
     ) -> Self {
         Self {
             name,
@@ -66,7 +62,6 @@ impl Manifest {
             profiles,
             venv,
             build_options,
-            warnings,
         }
     }
 
@@ -132,11 +127,6 @@ impl Manifest {
     pub fn build_options(&self) -> &BuildOptions {
         &self.build_options
     }
-
-    /// Emit collected [`Warnings`].
-    pub fn emit_warnings(&self, ctx: &DuckContext) -> QuackResult<()> {
-        self.warnings.emit_warnings(ctx)
-    }
 }
 
 impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
@@ -176,7 +166,6 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             BuildOptions {
                 links: links.map(Into::into),
             },
-            Warnings::default(),
         ))
     }
 }
@@ -194,7 +183,6 @@ impl TryFrom<Manifest> for registry::Manifest {
             profiles,
             venv: _,
             build_options,
-            warnings: _,
         } = value;
         let license = metadata.license.unwrap_or_default();
         let description = metadata.description.unwrap_or_default();

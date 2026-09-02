@@ -74,7 +74,7 @@ impl<'duck> GitFastPathExt for GithubClient<'duck> {
                 &manifest_schema,
                 Path::new(""), // Dummy path.
                 ParseMode::Package,
-                warnings,
+                &mut warnings,
                 self.client.ctx(),
             )?;
             Ok(manifest)

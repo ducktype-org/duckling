@@ -59,7 +59,7 @@ pub fn sync(
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     debug!(root = %pcx.package().root().display(), ?options);
-    pcx.package().emit_warnings(pcx.ctx())?;
+    pcx.emit_warnings()?;
     pcx.ctx().console().info(format!(
         "starting synchronization of the {}",
         pcx.package().display()

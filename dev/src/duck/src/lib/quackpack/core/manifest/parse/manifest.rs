@@ -27,7 +27,7 @@ pub(crate) fn parse(
     schema: &ManifestSchema,
     root: &Path,
     mode: ParseMode,
-    warnings: Warnings,
+    _warnings: &mut Warnings,
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
     let mut scope = Scope::new();
@@ -92,7 +92,6 @@ pub(crate) fn parse(
                 profiles,
                 VenvConfig::default_for_script(ctx),
                 BuildOptions::default(),
-                warnings,
             );
             Ok(manifest)
         }
@@ -145,7 +144,6 @@ pub(crate) fn parse(
                 profiles,
                 venv,
                 build_options,
-                warnings,
             ))
         }
     }

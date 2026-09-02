@@ -31,7 +31,7 @@ mod tests;
 /// 2. Turn that string into [`ManifestSchema`].
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
 #[tracing::instrument(skip(ctx))]
-pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
+pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings)> {
     trace!("starting parsing");
     parse_inner(path, ctx).with_context(|| {
         format!(
@@ -130,20 +130,23 @@ impl DerefMut for ScopeGuard<'_> {
 }
 
 /// Helper for [`parse_manifest`].
-fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
+fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings)> {
     let package_root = path.parent().with_context_internal(|| {
         format!("path `{path:?}` does not have a parent folder, but we checked that earlier?")
     })?;
     let content = path.read_to_string()?;
     let mut warnings = Warnings::default();
     let schema = parse_schema(&content, &mut warnings)?;
-    let manifest = manifest::parse(&schema, package_root, ParseMode::Package, warnings, ctx)?;
-    Ok(Package::new(
-        content,
-        schema,
-        manifest,
-        package_root.into(),
-        path.into(),
+    let manifest = manifest::parse(
+        &schema,
+        package_root,
+        ParseMode::Package,
+        &mut warnings,
+        ctx,
+    )?;
+    Ok((
+        Package::new(content, schema, manifest, package_root.into(), path.into()),
+        warnings,
     ))
 }
 
