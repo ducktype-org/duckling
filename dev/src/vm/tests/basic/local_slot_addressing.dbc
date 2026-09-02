@@ -1,5 +1,5 @@
-# A local whose block is created on demand sits above variables of mixed sizes, so its address
-# only comes out right if the local stack really is a running sum of the sizes with no padding.
+# A local whose block is created on demand sits above variables of mixed sizes, so the offset
+# the lowering emits and the address its slot records have to agree.
 
 function main { i64, ptr_argv } -> { i64 } {
 	# ret0 -> main ret0

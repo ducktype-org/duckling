@@ -97,12 +97,8 @@ namespace vm {
 		/**
 		 * @brief Zeroes a freshly initialized local variable and reserves its slot.
 		 *
-		 * Every slot carries the type and the address of the variable in it, so that a block can
-		 * still be made for one that was initialized without any. `block` is null in exactly
-		 * that case, which is the common one.
-		 *
-		 * @param zeroed_size Always the size of `type`. Taken separately so that the callers
-		 * knowing it at compile time zero the variable with a plain store instead of a call.
+		 * @param zeroed_size Always the size of `type`, taken separately so that a caller
+		 * knowing it at compile time zeroes with a plain store instead of a call.
 		 */
 		static void pushLocalSlot(
 			Frame* frame, TypeCRef type, std::byte* data, u64 zeroed_size, Block* block
@@ -135,12 +131,8 @@ namespace vm {
 			return frame->local_slot_stack_base[slot_index];
 		}
 
-		/**
-		 * @brief `Memory::createLocalSlotBlock`, kept out of line.
-		 *
-		 * @note Never inlined - this runs at most once per variable, so it must not bloat the
-		 * instruction implementations.
-		 */
+		/// `Memory::createLocalSlotBlock`, kept out of line so it does not bloat the opfuns.
+
 		[[gnu::noinline]]
 		static Ref<Block> createLocalBlock(Frame* frame, SafeVMThread& thread, u64 slot_index) {
 			return thread.process_memory.createLocalSlotBlock(*frame, slot_index);
@@ -238,6 +230,13 @@ namespace vm {
 			                                  + (prev_frame_block_ref_count - shared_blocks_count);
 			frame->local_slot_stack_base = prev_frame->local_slot_stack_base
 			                             + (prev_frame_block_ref_count - shared_blocks_count);
+
+			// Cross-checks the distance, computed at lowering time, against the address the
+			// caller's own `init` recorded for the first slot they share.
+			CORE_ASSERT(
+				shared_blocks_count == 0 || frame->local_slot_stack_base[0].data == local_stack,
+				"The callee's shared slots have to start where its local stack does"
+			);
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)

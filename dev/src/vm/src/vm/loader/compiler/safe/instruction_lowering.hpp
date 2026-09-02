@@ -157,14 +157,16 @@ namespace vm::loader::compiler::safe::detail {
 		 */
 		u64 sharedStackSpaceSize(base::StrID function_name) const {
 			const auto& signature = compiler.high_program.functions().at(function_name)->signature;
-			const auto& types     = compiler.high_program.getTypeContext().getCurrentTypes();
 
-			code::valid_type::TypeSize size{};
+			// Summed over the low types, the same ones `sharedStackSpaceSizeOfMethod` and the
+			// executor measure, so there is a single answer to how big a variable is.
+			u64 size = 0;
 			for (const auto& parameter: signature.parameters)
-				size += types.at(parameter.str)->getSize();
-			for (const auto& result: signature.result_types) size += types.at(result)->getSize();
+				size += resolveTypeName(parameter.str)->getSize().asInt();
+			for (const auto& result: signature.result_types)
+				size += resolveTypeName(result)->getSize().asInt();
 
-			return getIntTypeSize(size);
+			return size;
 		}
 
 		/**
@@ -294,17 +296,16 @@ namespace vm::loader::compiler::safe::detail {
 			}(static_cast<T::ArgTypes*>(nullptr));
 		}
 
-		/**
-		 * @brief Emits the deinitialization of the variable in slot `slot_index`, which defaults
-		 * to the topmost one of the current stack state.
-		 *
-		 * A variable holding pointers needs its destructors run whether or not a block was ever
-		 * created for it, so the instruction carries the variable's location.
-		 */
 		void addDeinitOfTopVariable() { addDeinitOfVariable(topSlotIndex()); }
 
 		usize topSlotIndex() const { return ctx.function.local_stack.size(curr_state) - 1; }
 
+		/**
+		 * @brief Emits the deinitialization of the variable in slot `idx`.
+		 *
+		 * @note Both deinit instructions act on whichever slot is on top when they run, so `idx`
+		 * only picks the type. Callers have to emit deinits from the top down.
+		 */
 		void addDeinitOfVariable(usize idx) {
 			const auto& db = ctx.function.local_stack;
 

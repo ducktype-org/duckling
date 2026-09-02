@@ -25,14 +25,12 @@ namespace vm {
 	class Type;
 
 	/**
-	 * @brief Type and location of the variable living in one local variable slot.
-	 *
-	 * A block is created for a local variable only once something refers to it through one, so
-	 * both have to be available without a block being present.
+	 * @brief Type and location of the variable living in one local variable slot, which is what
+	 * a block is made out of when something first refers to the variable through one.
 	 */
 	struct LocalSlot {
 		const Type* type = nullptr;
-		/// Address of the variable, absolute so that a slot shared with the caller reads alike.
+		/// Absolute, so that a slot shared with the caller reads alike from both frames.
 		byte* data = nullptr;
 	};
 
@@ -53,7 +51,8 @@ namespace vm {
 		FlagData flags{};
 
 		/**
-		 * @brief Slot to put return address when calling a function.
+		 * @brief Where to resume: the return address while a call is in progress, and the
+		 * instruction the frame stopped on while the thread is paused.
 		 */
 		const struct MicroInstruction* return_address = nullptr;
 
@@ -73,9 +72,7 @@ namespace vm {
 		 */
 		Block** local_block_ref_stack_end = nullptr;
 
-		/**
-		 * @brief Base of the stack of local variable slots, indexed by slot index.
-		 */
+		/// Base of the stack of local variable slots, indexed by slot index.
 		LocalSlot* local_slot_stack_base = nullptr;
 
 		/**

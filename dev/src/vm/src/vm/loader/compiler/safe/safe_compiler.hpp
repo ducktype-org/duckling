@@ -97,8 +97,8 @@ namespace vm::loader::compiler::safe {
 		/**
 		 * @brief Lowers instructions to micro-bytecode. Iterates through the instructions and
 		 * translates them into a sequence of `MicroInstruction`s.
-		 * @return The converted list of instructions, the mapping from instruction indices to
-		 * instruction ranges in micro-bytecode, and the description of the frame's local slots.
+		 * @return The converted list of instructions and the mapping from instruction indices to
+		 * instruction ranges in micro-bytecode.
 		 */
 		LoweredFunction lowerInstructions(
 			const vm::loader::compiler::detail::FunctionStackContext& ctx

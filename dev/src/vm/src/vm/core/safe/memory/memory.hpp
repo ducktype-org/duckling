@@ -540,11 +540,8 @@ namespace vm {
 		}
 
 		/**
-		 * @brief Creates the block of a local variable that was initialized without one.
-		 *
-		 * Locals start out with an empty block reference slot; the block is only needed once
-		 * something refers to the variable through it, and the variable's slot holds everything
-		 * needed to make one. Both the executor and the debug adapter go through here.
+		 * @brief Creates the block of a local variable that was initialized without one, out of
+		 * what its slot recorded. Both the executor and the debug adapter go through here.
 		 */
 		auto createLocalSlotBlock(Frame& frame, u64 slot_index)
 			-> Ref<BlockT> requires std::is_same_v<EntryT, std::byte> {

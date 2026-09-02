@@ -484,47 +484,36 @@ DEF_MICRO_INSTR(ret)
 // ========= STACK OPERATIONS ========
 
 /**
- * @brief Initializes a local variable at a statically known offset on the local stack,
- * creating a block for it.
- * The first argument is the byte offset of the variable in the frame's local stack.
+ * @brief `initSimple_imm_type` for a variable that needs its block from the start.
+ *
+ * @arg0 - byte offset of the variable in the frame's local stack.
+ * @arg1 - type of the variable.
  */
 DEF_MICRO_INSTR(initBlock_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
 
 /**
- * @brief Initializes a local variable without creating a block for it: zeroes the variable's
- * bytes, pushes its type onto the frame's type stack and reserves its slot.
+ * @brief Initializes a local variable without creating a block for it: zeroes it and records
+ * its type and address in the frame's slot stack.
  *
- * A block is only needed once something refers to the variable through it, and it is created
- * on demand by the instruction that needs it, out of the frame's type stack.
+ * A block is only needed once something refers to the variable through it, and is then created
+ * out of the recorded slot.
  *
  * @arg0 - byte offset of the variable in the frame's local stack.
  * @arg1 - type of the variable.
  */
 DEF_MICRO_INSTR(initSimple_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
 
-/**
- * @brief `initSimple_imm_type` for the variable sizes that almost every local has.
- *
- * The size of the variable is not known to `initSimple_imm_type` until it reads it off the
- * type, so it has to zero the variable with a call to `memset`. Naming the size in the opcode
- * turns that into a plain store, and saves reading the size altogether.
- *
- * @arg0 - byte offset of the variable in the frame's local stack.
- * @arg1 - type of the variable.
- */
+/// `initSimple_imm_type` for an 8-byte variable, which zeroes with a plain store.
 DEF_MICRO_INSTR(initSimple64_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
 /// 16-byte counterpart of `initSimple64_imm_type`, the size of a `Pointer`.
 DEF_MICRO_INSTR(initSimple128_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
 
-/**
- * @brief Pops the topmost variable from the local stack, freeing its block if one was created.
- */
+/// Pops the topmost local variable, freeing its block if one was created.
 DEF_MICRO_INSTR(deinit)
 
 /**
- * @brief Like `deinit`, for a variable whose type needs destructors run - i.e. one that holds
- * pointers, whose pointed-to blocks must have their reference released. Needed separately
- * because with no block around there is nothing to run the destructors off.
+ * @brief `deinit` for a variable holding pointers, whose reference to the blocks they point at
+ * has to be released even when the variable itself never got a block.
  */
 DEF_MICRO_INSTR(deinitDtor)
 

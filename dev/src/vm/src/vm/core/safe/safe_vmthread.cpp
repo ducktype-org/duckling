@@ -519,10 +519,16 @@ namespace vm {
 
 		exit_value_storage = { std::vector<Ref<SafeVMValue>>{} };
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
-			exit_value_storage.value().emplace_back(safe_process.createVMValue(
-				func.result_types[idx],
-				Pointer(frame->local_block_ref_stack_base[orig_block_stack_size + idx], 0)
-			));
+			const usize slot_index = orig_block_stack_size + idx;
+			// A result the callee never took a block for still has to be handed out as a
+			// pointer, so it gets one here.
+			Block* block = frame->local_block_ref_stack_base[slot_index];
+			if (block == nullptr)
+				block = process_memory.createLocalSlotBlock(*frame, slot_index).get();
+
+			exit_value_storage.value().emplace_back(
+				safe_process.createVMValue(func.result_types[idx], Pointer(block, 0))
+			);
 		}
 
 		for (usize idx = orig_block_stack_size;

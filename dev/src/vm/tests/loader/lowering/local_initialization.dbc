@@ -11,6 +11,10 @@ type data: pair_with_pointer {
 	second: i64
 }
 type fixed_size_table: pointer_table ptr_i64 2
+type data: holds_a_variant {
+	tag: i64,
+	choice: maybe
+}
 
 function noop { } -> { } {
 	ret;
@@ -56,7 +60,7 @@ function owns_nested_blocks { } -> { } {
 }
 
 # The same slot index holds variables of different types at different points, which used to force
-# both of them to get a block eagerly. The type travels on the frame's type stack instead.
+# both of them to get a block eagerly. The type is recorded in the frame's slot stack instead.
 function reuses_a_slot { } -> { } {
 	init_pany_type		first, i64;
 	deinit; # first
@@ -67,13 +71,19 @@ function reuses_a_slot { } -> { } {
 	ret;
 }
 
-# A pointer reached through a structure field or a table element still has to be released, so
-# `typeCleanup` has to find it by recursing into the type.
+# `typeCleanup` recurses into aggregates, so a pointer or a variant reached through a field or
+# a table element still decides how the variable is initialized and deinitialized.
 function nests_pointers { } -> { } {
 	init_pany_type		in_a_struct, pair_with_pointer;
 	init_pany_type		in_a_table, pointer_table;
 	deinit; # in_a_table
 	deinit; # in_a_struct
+	ret;
+}
+
+function nests_a_variant { } -> { } {
+	init_pany_type		wrapper, holds_a_variant;
+	deinit; # wrapper
 	ret;
 }
 

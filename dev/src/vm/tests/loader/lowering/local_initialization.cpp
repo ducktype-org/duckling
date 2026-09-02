@@ -162,8 +162,8 @@ private:
 
 	/**
 	 * @brief A slot index that holds differently typed variables at different points in the
-	 * function still initializes all of them without a block - the type is taken from the
-	 * frame's type stack, not from the slot index.
+	 * function still initializes all of them without a block - the type is recorded per slot
+	 * at runtime, not derived from the slot index.
 	 */
 	void reusedSlotDoesNotForceABlock() {
 		const auto name = base::StrID("reuses_a_slot");
@@ -179,6 +179,12 @@ private:
 		const auto name = base::StrID("nests_pointers");
 		assertOpcodeCount(name, MicroOpcode::deinitDtor, 2);
 		assertOpcodeCount(name, MicroOpcode::deinit, 0);
+
+		// A variant behind a field makes the whole structure own nested blocks, so it needs
+		// its own from the start - otherwise a pointer in the active alternative would leak.
+		const auto wraps_variant = base::StrID("nests_a_variant");
+		assertOpcodeCount(wraps_variant, MicroOpcode::initBlock_imm_type, 1);
+		assertBlockFreeInitCount(wraps_variant, 0);
 	}
 
 	/**
