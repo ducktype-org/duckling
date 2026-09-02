@@ -11,7 +11,7 @@ Tests:
           File: "position.test"
       return_value:
         Input:
-          File: "retval.test"
+          File: "return_value.test"
       output:
         Input:
           File: "output.test"
