@@ -595,6 +595,12 @@ private:
 		const auto var_4 = query::entryPoint<QueryVariantType>({ { st(int_32), st(int_32) } });
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
+		// A boxed alternative owns its allocation, which is what decides whether a `match` over
+		// the variant by value takes its ownership.
+		const auto var_boxed = query::entryPoint<QueryVariantType>({
+			{ st(int_16), st(int_32).withReferenceKind(ReferenceKind::Box) },
+		});
+
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
@@ -614,6 +620,15 @@ private:
 			assertTrue(
 				var_st.isTriviallyCopyable(ctx),
 				"Variant of Ints should be trivially copyable (if all components are)."
+			);
+
+			assertFalse(
+				var_boxed.isTriviallyDestructible(ctx),
+				"Variant with a boxed alternative should NOT be trivially destructible."
+			);
+			assertFalse(
+				st(var_boxed).isTriviallyCopyable(ctx),
+				"Variant with a boxed alternative should NOT be trivially copyable."
 			);
 		});
 	}

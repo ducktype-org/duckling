@@ -811,7 +811,8 @@ private:
 
 			// Only variants can be matched, and never through a box.
 			checkForErrorOnCompileModule(
-				"fun main(v: i64) -> i64 = { var r: i64 = match (v) { case _ = 0i64; }; return r; }",
+				"fun main(v: i64) -> i64 = { var r: i64 = match (v) { case _ = 0i64; }; return r; "
+			    "}",
 				{ "non-variant types are invalid to be passed to match. Got `i64`" },
 				1
 			);

@@ -186,10 +186,10 @@ namespace compiler::helios::desugaring {
 		);
 
 		// Lower all cases.
-		std::vector<code::MatchExpr::Case> cases;
-		base::Optional<tsh::SymbolType<>>  common_type;
-		std::vector<bool>                  covered(subject.num_alternatives, false);
-		bool                               has_wildcard = false;
+		std::vector<code::MatchExpr::Case>  cases;
+		base::Optional<tsh::SymbolType<>>   common_type;
+		std::vector<bool>                   covered(subject.num_alternatives, false);
+		bool                                has_wildcard = false;
 		base::Optional<dia::StablePosition> wildcard_position;
 
 		for (auto match_case: match_expr->getCases()) {
@@ -289,7 +289,7 @@ namespace compiler::helios::desugaring {
 						ctx,
 						case_position,
 						"The wildcard constraint in this case is invalid, as among not-covered "
-					    "cases are not trivially destructible types."
+						"cases are not trivially destructible types."
 					);
 					return query::Failed();
 				}
