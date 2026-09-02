@@ -310,36 +310,36 @@ namespace constants {
     mpmath library, are used to keep maximum precision.
 #}
     # Ratio of a circle's circumference to its diameter
-    var PI: f64          = helpers.exact_float("0x1.921fb54442d18p+1");
-    var SQRT_PI: f64     = helpers.exact_float("0x1.c5bf891b4ef6bp+0");
-    var INV_PI: f64      = helpers.exact_float("0x1.45f306dc9c883p-2");
-    var INV_SQRT_PI: f64 = helpers.exact_float("0x1.20dd750429b6dp-1");
+    let PI: f64          = helpers.exact_float("0x1.921fb54442d18p+1");
+    let SQRT_PI: f64     = helpers.exact_float("0x1.c5bf891b4ef6bp+0");
+    let INV_PI: f64      = helpers.exact_float("0x1.45f306dc9c883p-2");
+    let INV_SQRT_PI: f64 = helpers.exact_float("0x1.20dd750429b6dp-1");
 
     # Ratio of a circle's circumference to its radius
-    var TAU: f64 = helpers.exact_float("0x1.921fb54442d18p+2");
+    let TAU: f64 = helpers.exact_float("0x1.921fb54442d18p+2");
 
     # Euler's number
-    var E: f64      = helpers.exact_float("0x1.5bf0a8b145769p+1");
-    var SQRT_E: f64 = helpers.exact_float("0x1.a61298e1e069cp+0");
-    var INV_E: f64  = helpers.exact_float("0x1.78b56362cef38p-2");
-    var LOG2E: f64  = helpers.exact_float("0x1.71547652b82fep+0");
-    var LOG10E: f64 = helpers.exact_float("0x1.bcb7b1526e50ep-2");
+    let E: f64      = helpers.exact_float("0x1.5bf0a8b145769p+1");
+    let SQRT_E: f64 = helpers.exact_float("0x1.a61298e1e069cp+0");
+    let INV_E: f64  = helpers.exact_float("0x1.78b56362cef38p-2");
+    let LOG2E: f64  = helpers.exact_float("0x1.71547652b82fep+0");
+    let LOG10E: f64 = helpers.exact_float("0x1.bcb7b1526e50ep-2");
 
     # Euler–Mascheroni constant
-    var EGAMMA: f64 = helpers.exact_float("0x1.2788cfc6fb619p-1");
+    let EGAMMA: f64 = helpers.exact_float("0x1.2788cfc6fb619p-1");
 
     # Golden ratio
-    var PHI: f64           = helpers.exact_float("0x1.9e3779b97f4a8p+0");
-    var SQRT_PHI: f64      = helpers.exact_float("0x1.45a3146a88456p+0");
-    var MINUS_INV_PHI: f64 = helpers.exact_float("-0x1.3c6ef372fe950p-1");
+    let PHI: f64           = helpers.exact_float("0x1.9e3779b97f4a8p+0");
+    let SQRT_PHI: f64      = helpers.exact_float("0x1.45a3146a88456p+0");
+    let MINUS_INV_PHI: f64 = helpers.exact_float("-0x1.3c6ef372fe950p-1");
 
     # Other
-    var LN2: f64       = helpers.exact_float("0x1.62e42fefa39efp-1");
-    var LN10: f64      = helpers.exact_float("0x1.26bb1bbb55516p+1");
-    var SQRT2: f64     = helpers.exact_float("0x1.6a09e667f3bcdp+0");
-    var SQRT3: f64     = helpers.exact_float("0x1.bb67ae8584caap+0");
-    var INV_SQRT2: f64 = helpers.exact_float("0x1.6a09e667f3bcdp-1");
-    var INV_SQRT3: f64 = helpers.exact_float("0x1.279a74590331cp-1");
+    let LN2: f64       = helpers.exact_float("0x1.62e42fefa39efp-1");
+    let LN10: f64      = helpers.exact_float("0x1.26bb1bbb55516p+1");
+    let SQRT2: f64     = helpers.exact_float("0x1.6a09e667f3bcdp+0");
+    let SQRT3: f64     = helpers.exact_float("0x1.bb67ae8584caap+0");
+    let INV_SQRT2: f64 = helpers.exact_float("0x1.6a09e667f3bcdp-1");
+    let INV_SQRT3: f64 = helpers.exact_float("0x1.279a74590331cp-1");
 }
 
 namespace helpers {
