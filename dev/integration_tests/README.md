@@ -248,14 +248,20 @@ Env:
 ```
 
 Every case then gets a fresh directory under the suite's scratch root, visible
-to all of its commands as `$DIT_TMP_DIR`. That root is `/tmp/dit-$(id -un)`, so
+to all of its commands as `$DIT_TMP_DIR`. That root is `/tmp/dit-<user>`, so
 several accounts can run the suite on one machine without stepping on each
-other; set `$DIT_TMP_ROOT` to put it somewhere else. `python3
-integration_tests/helpers/tmp_env.py root` prints the root it resolved to, and
-`root --resolved` prints it with symlinks followed - on macOS `/tmp` is a
-symlink to `/private/tmp`, and a case directory shows up in that resolved form.
-The root config defines helpers around the same script:
+other; set `$DIT_TMP_ROOT` to put it somewhere else.
 
+`helpers/tmp_env.py` is the only place that root is worked out - the config just
+asks it, so there is nothing to keep in sync. `python3
+integration_tests/helpers/tmp_env.py root` prints the root, and `root
+--resolved` prints it with symlinks followed. Use the resolved form whenever you
+compare it against a case directory: on macOS `/tmp` is really `/private/tmp`,
+and case directories come out that way. The root config defines helpers around
+the same script:
+
+- `@{new_tmp_dir}` - `tmp_env.py new`: creates a fresh case directory under the
+  root and prints it, symlinks already followed.
 - `@{make_tmp_env}` - copies the files listed in the `tmp_env_files` variable
   (paths relative to the test's directory, mirrored inside the tmp dir) and
   sweeps stale directories of past runs. Not needed if nothing is copied.

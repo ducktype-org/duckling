@@ -22,17 +22,20 @@ is_jit_enabled: "cmake -L -N @{build_dir} | grep JIT_ENABLED | cut -d \"=\" -f 2
 is_macos: "$([ \"$(uname)\" = Darwin ] && echo true || echo false)"
 is_linux: "$([ \"$(uname)\" = Linux ] && echo true || echo false)"
 
-# Root of every scratch directory the suite creates. It carries the user name
-# because /tmp is shared: with one fixed root, the first account to run the
-# suite owns it at 0755 and every other account then fails on `mktemp`. Set
-# $DIT_TMP_ROOT to point somewhere else; helpers/tmp_env.py reads the very same
-# variable and falls back to the very same default, so both sides agree.
-tmp_root: "${DIT_TMP_ROOT:-/tmp/dit-$(id -un)}"
+# Root of every scratch directory the suite creates. helpers/tmp_env.py owns
+# it, so we just ask the script: it is `/tmp/dit-<user>` by default, or
+# $DIT_TMP_ROOT when that is set, and this file does not repeat that rule.
+# The root carries the user name because /tmp is shared: with one fixed root
+# the first account to run the suite owns it at 0755 and every other account
+# then fails to create anything in it.
+tmp_root: "$(@{tmp_env_tool} root)"
 
 # Per-case temporary environment (opt-in). A subtree that needs a scratch
 # directory defines `Env: { DIT_TMP_DIR: "@{new_tmp_dir}" }` and then uses
 # the helpers below; tests set `tmp_env_files` to the files they need copied.
-new_tmp_dir: "mkdir -p @{tmp_root} && realpath $(mktemp -d -p @{tmp_root} case-XXXXXXXX)"
+# `new` creates the directory under the root and prints it, symlinks already
+# followed - duck resolves paths, and on macOS /tmp is a symlink.
+new_tmp_dir: "@{tmp_env_tool} new"
 tmp_env_tool: "python3 @{dev_dir}/integration_tests/helpers/tmp_env.py"
 tmp_env_files: ""
 make_tmp_env: "@{tmp_env_tool} make @{tmp_env_files}"

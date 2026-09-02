@@ -5,11 +5,15 @@ Helpers for running DIT test cases inside a temporary directory.
 The directory is taken from $DIT_TMP_DIR, which tests define with the
 `Env` config key (see `new_tmp_dir` in the root testconfig.yaml).
 
-All scratch space lives under a per-user root, `/tmp/dit-$(id -un)` by
-default and $DIT_TMP_ROOT when that is set. The root testconfig.yaml
-applies the very same rule, so both sides always agree.
+All scratch space lives under a per-user root, `/tmp/dit-<user>` by
+default and $DIT_TMP_ROOT when that is set. This script is the ONLY
+place that rule is written down: the root testconfig.yaml asks it
+(`new_tmp_dir` is `tmp_env.py new`, `tmp_root` is `$(tmp_env.py root)`)
+rather than computing the same path a second time in shell.
 
 Subcommands:
+    new              -- create a fresh case directory under the root and
+                        print it; this is what `new_tmp_dir` calls
     make [FILES...]  -- copy FILES (relative to the test's directory)
                         into the temporary directory, mirroring their
                         relative paths, and sweep stale directories
@@ -26,6 +30,7 @@ import os
 import pwd
 import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -39,7 +44,7 @@ def fail(msg: str):
 
 
 def current_user_name() -> str:
-    """Gives the same answer as `id -un`, which the root testconfig.yaml uses."""
+    """The current user's login name, the same answer `id -un` gives."""
     try:
         return pwd.getpwuid(os.getuid()).pw_name
     except (KeyError, OSError):
@@ -94,6 +99,18 @@ def sweep_stale():
             pass
 
 
+def cmd_new():
+    """
+    Creates a fresh directory for one case and prints it. `new_tmp_dir` in
+    the root testconfig.yaml is nothing but a call to this, so the root is
+    resolved here and nowhere else. Symlinks are followed in the printed
+    path: duck resolves the paths it is given, and on macOS `/tmp` is a
+    symlink to `/private/tmp`.
+    """
+    TMP_ROOT.mkdir(parents=True, exist_ok=True)
+    print(Path(tempfile.mkdtemp(prefix="case-", dir=TMP_ROOT)).resolve())
+
+
 def cmd_make(files: list[str]):
     path = tmp_dir()
     path.mkdir(parents=True, exist_ok=True)
@@ -130,11 +147,11 @@ def cmd_clean():
 
 def cmd_root(argv: list[str]):
     """
-    Plain `root` prints the configured root, the one the root
-    testconfig.yaml computes as well. `root --resolved` follows symlinks
-    first: that is the form a case directory really has, because
-    `new_tmp_dir` puts it through `realpath` and on macOS `/tmp` is a
-    symlink to `/private/tmp`. Compare a case directory against this one.
+    Plain `root` prints the configured root, exactly as `$DIT_TMP_ROOT`
+    or the default spells it. `root --resolved` follows symlinks first:
+    that is the form a case directory really has, because `new` resolves
+    it and on macOS `/tmp` is a symlink to `/private/tmp`. Compare a case
+    directory against this one.
     """
     match argv:
         case []:
@@ -148,10 +165,12 @@ def cmd_root(argv: list[str]):
 def main():
     if len(sys.argv) < 2:
         fail(
-            "usage: tmp_env.py make [FILES...] | exec -- CMD... | clean"
-            " | sweep | root [--resolved]"
+            "usage: tmp_env.py new | make [FILES...] | exec -- CMD..."
+            " | clean | sweep | root [--resolved]"
         )
     match sys.argv[1]:
+        case "new":
+            cmd_new()
         case "make":
             cmd_make(sys.argv[2:])
         case "exec":
