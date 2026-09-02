@@ -297,6 +297,18 @@ namespace libm_forward {
         # Probably not needed, but we can add it later.
         # Note that these are macros, not functions, so external C implementation is needed.
     }}
+
+    # Basel functions
+    namespace basel_funcs { extern("C") {
+        # Computes the cylindrical Bessel function of the first kind
+        fundecl cyl_bessel_jf (x: f32, y: f32) -> f32;
+        fundecl cyl_bessel_j (x: f64, y: f64) -> f64;
+
+        # Computes the cylindrical Neumann function
+        # (also known as Bessel function of the second kind or Weber function)
+        fundecl cyl_neumannf (x: f32, y: f32) -> f32;
+        fundecl cyl_neumann (x: f64, y: f64) -> f64;
+    }}
 }
 
 namespace constants {
