@@ -546,28 +546,12 @@ private:
 			waitUntilStatus(pid, isPaused, "Paused");
 		});
 
-		// Blocked on a bytecode condition variable behind a bytecode mutex. The thread stays
-		// `Running` throughout - `builtinWaitCV` drops the GIL but never reports the thread as
-		// sleeping - so the status cannot say when the wait was entered. The fixture writes a
-		// marker on the last instruction before it, and that is what is waited for here: without
-		// it the case would quietly degrade into a second copy of the plain `Running` one.
+		// Blocked on a bytecode condition variable behind a bytecode mutex. `builtinWaitCV`
+		// brackets the wait with `ScopedBlockingWait`, so the thread reports itself as sleeping
+		// for its duration - which is the readiness signal this case waits for.
 		kill_from("Blocked(mutex/cv)", "mutex_hang.dbc", [&](vm::PID pid) {
-			std::atomic<bool>             marked{ false };
-			events::Listener<std::string> output_listener([&marked](const std::string&) {
-				marked = true;
-			});
-			assertSucceeded(
-				api::attachOutputListener(pid, &output_listener), "attachOutputListener"
-			);
-
 			assertSucceeded(api::run(pid), "run");
-			waitUntilStatus(pid, isRunning, "Running (CV-blocked)");
-
-			const auto deadline = std::chrono::steady_clock::now() + STATUS_WAIT_BUDGET;
-			while (!marked.load() && std::chrono::steady_clock::now() < deadline)
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			assertTrue(marked.load(), "mutex_hang.dbc never reached its condition-variable wait");
-			output_listener.detach();
+			waitUntilStatus(pid, isSleeping, "Sleeping (CV-blocked)");
 		});
 
 		// Sleeping on IO, reading input that never arrives.
