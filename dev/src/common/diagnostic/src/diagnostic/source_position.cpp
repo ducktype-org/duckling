@@ -13,6 +13,7 @@
 #include <token_source/source.hpp>
 
 #include <algorithm>
+#include <sstream>
 #include <string>
 
 namespace dia {

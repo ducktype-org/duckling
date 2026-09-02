@@ -1000,9 +1000,7 @@ clah::Clah getClahForMain() {
 
 					nlohmann::json manifest_json;
 					try {
-						manifest_json = nlohmann::json::parse(
-							file_content.getBegin(), file_content.getBegin() + file_content.size()
-						);
+						manifest_json = nlohmann::json::parse(file_content.stringView());
 					} catch (const nlohmann::json::parse_error& e) {
 						CORE_USER_LOG(base::strConcat(
 							"Error: failed to parse manifest JSON: ", e.what(), "\n"

@@ -11,6 +11,8 @@
 
 #include <json/json.hpp>
 
+#include <sstream>
+
 using namespace compiler::frontend::packages;
 
 namespace {
