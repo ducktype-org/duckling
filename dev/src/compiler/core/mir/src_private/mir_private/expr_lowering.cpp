@@ -790,12 +790,13 @@ namespace compiler::mir {
 
 			// These are only needed if the subject type is not ref.
 			tsh::SymbolType<> subject_type = expr.subject->expression_type.getSymbolType();
-			bool is_subject_ref = subject_type.getRefKind() == tsh::ReferenceKind::Direct;
+			const bool        is_subject_by_value
+				= subject_type.getRefKind() == tsh::ReferenceKind::Direct;
 
 			base::Optional<BlockBuilder::InstructionHole> assign_ref_subject;
 			base::Optional<MIRLocalRef>                   ref_subject_local;
 
-			if (not is_subject_ref) {
+			if (is_subject_by_value) {
 				assign_ref_subject = first_entry.value()->addHole();
 				ref_subject_local  = function.addTmp(
                     subject_type.withReferenceKind(tsh::ReferenceKind::Ref), expr_scope
@@ -824,7 +825,7 @@ namespace compiler::mir {
 
 			MIRValue subject_val = MIRPlace{ subject_local };
 
-			if (not is_subject_ref) {
+			if (is_subject_by_value) {
 				assign_ref_subject->fill({
 					Operation::AddressOf,
 					*ref_subject_local,

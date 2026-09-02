@@ -50,7 +50,7 @@ namespace compiler::helios::desugaring {
 			/// True if the reference kind of the subject is Direct.
 			bool                     passed_by_value;
 			tsh::VariantAbstractType variant;
-			bool                     num_alternatives;
+			usize                    num_alternatives;
 		};
 
 		/**
