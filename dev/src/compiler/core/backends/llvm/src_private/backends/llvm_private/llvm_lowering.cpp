@@ -1225,8 +1225,38 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case Assign: {
-				const auto value = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				storeOutput(lir_instruction.output.value(), value, builder);
+				const auto& source = lir_instruction.arguments.at(0);
+				const auto& output = lir_instruction.output.value();
+
+				llvm::Type* output_type = typeFromLayout(module, output.layout);
+
+				if (output_type->isAggregateType() && source.is<lir::LIRPlace>()) {
+					const auto& source_place = source.get<lir::LIRPlace>();
+
+					llvm::Value* source_ptr = gepPointerFromLIRPlace(source_place, builder);
+					llvm::Value* output_ptr = gepPointerFromLIRPlace(output, builder);
+
+					const auto& data_layout = module->getDataLayout();
+					llvm::Type* source_type = typeFromLayout(module, source_place.layout);
+
+					CORE_ASSERT(
+						data_layout.getTypeAllocSize(source_type)
+							== data_layout.getTypeAllocSize(output_type),
+						"Aggregate assignment size mismatch"
+					);
+
+					builder.CreateMemMove(
+						output_ptr,
+						data_layout.getABITypeAlign(output_type),
+						source_ptr,
+						data_layout.getABITypeAlign(source_type),
+						data_layout.getTypeAllocSize(output_type)
+					);
+				} else {
+					llvm::Value* value = loadLIRValue(source, builder);
+					storeOutput(output, value, builder);
+				}
+
 				break;
 			}
 			case AddressOf: {

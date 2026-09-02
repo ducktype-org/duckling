@@ -37,6 +37,13 @@ namespace compiler::backend_llvm {
 		const lir::LIRAbi&                        abi = lir::LIRAbi{ lir::LIRAbi::DefaultAbi{} }
 	);
 
+	struct LoweredDefaultAbiSignature {
+		llvm::FunctionType*                          type;
+		bool                                         return_indirect;
+		std::vector<bool>                            parameter_indirect;
+		std::vector<std::pair<u32, llvm::Attribute>> parameter_attributes;
+	};
+
 	/**
 	 * @brief Maps a LIR ABI to the LLVM calling convention to use for the function.
 	 */
