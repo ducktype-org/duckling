@@ -31,6 +31,7 @@ Tests:
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
             info: starting fetching 1 package
+            info: fetched source codes of 1 package, 0 downloaded, 1 was alredy present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
       release:
@@ -43,6 +44,7 @@ Tests:
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
             info: starting fetching 1 package
+            info: fetched source codes of 1 package, 0 downloaded, 1 was alredy present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
       release2:
@@ -55,6 +57,7 @@ Tests:
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
             info: starting fetching 1 package
+            info: fetched source codes of 1 package, 0 downloaded, 1 was alredy present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
       release3:
@@ -67,6 +70,7 @@ Tests:
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
             info: starting fetching 1 package
+            info: fetched source codes of 1 package, 0 downloaded, 1 was alredy present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
       custom-profile:
@@ -79,6 +83,7 @@ Tests:
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
             info: starting fetching 1 package
+            info: fetched source codes of 1 package, 0 downloaded, 1 was alredy present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
       overridden-builtin-profile:
@@ -91,6 +96,7 @@ Tests:
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
             info: starting fetching 1 package
+            info: fetched source codes of 1 package, 0 downloaded, 1 was alredy present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
       custom-profile-inherited:
@@ -103,6 +109,7 @@ Tests:
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
             info: starting fetching 1 package
+            info: fetched source codes of 1 package, 0 downloaded, 1 was alredy present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
       # @TODO: #3023 Reenable verbose itests

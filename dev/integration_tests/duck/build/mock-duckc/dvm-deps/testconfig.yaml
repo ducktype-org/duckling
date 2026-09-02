@@ -22,5 +22,6 @@ Tests:
             info: running gathering
             info: starting the solver engine
             info: starting fetching 2 packages
+            info: fetched source codes of 2 packages, 0 downloaded, 2 were alredy present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
