@@ -162,7 +162,7 @@ private:
 		vm::PID pid = initProcess();
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
 		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 };
 

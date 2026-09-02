@@ -160,6 +160,16 @@ namespace vm::api {
 		return REQUEST(DeinitAndValidate{}).and_then(mapOrWrongResponse<response::Boolean>);
 	}
 
+	std::expected<base::Optional<response::Boolean>, ApiError> deinitOrKill(PID pid) {
+		// If the process was validated successfully we return the validation result.
+		if (const auto validated = deinitAndValidate(pid))
+			return base::Optional<response::Boolean>{ validated.value() };
+
+		// Otherwise, we force kill it. The process might have been still running or finished with
+		// Stopped or Panicked.
+		return kill(pid).transform([] { return base::Optional<response::Boolean>{}; });
+	}
+
 	std::expected<void, ApiError> attachStatusListener(
 		PID pid, Ref<events::Listener<ProcStatus>> listener
 	) {

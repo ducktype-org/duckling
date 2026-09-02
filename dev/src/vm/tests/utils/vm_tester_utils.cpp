@@ -72,6 +72,8 @@ void VmTestSuite::assertExecutionPanickedWith(
 			));
 		}
 	}
+
+	ASSERT_HAS_VALUE(vm::api::kill(test_result.pid));
 }
 
 void VmTestSuite::loadInvalidDbc(

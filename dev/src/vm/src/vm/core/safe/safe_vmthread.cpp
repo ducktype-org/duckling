@@ -5,6 +5,7 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/types/ints.hpp>
@@ -480,6 +481,13 @@ namespace vm {
 
 		const auto* instr = start_function.bc.data();
 
+		// Make sure the frame will be moved back after the interpreter runs. Even if it throws a
+		// `KillProcessException` so the state stays valid.
+		defer({
+			*orig_frame_ptr                  = orig_frame_cpy;
+			runtime_data.frame_stack_current = orig_frame_ptr;
+		});
+
 		runInterpreter(instr, local_stack, frame, *this);
 
 		CORE_ASSERT(
@@ -509,8 +517,6 @@ namespace vm {
 			process_memory.freeBlockData(block);
 			process_memory.decreaseBlockRefcount(block);
 		}
-		*orig_frame_ptr                  = orig_frame_cpy;
-		runtime_data.frame_stack_current = orig_frame_ptr;
 
 		return exit_value_storage.value();
 	}

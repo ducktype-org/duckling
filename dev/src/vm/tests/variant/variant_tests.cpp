@@ -139,7 +139,7 @@ private:
 		assert_type_tag(16, 1);
 		assert_type_tag(16, 256);
 		vm_value_max64->freeData();
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 };
 
