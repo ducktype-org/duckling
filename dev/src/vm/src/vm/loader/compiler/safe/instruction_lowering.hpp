@@ -719,11 +719,23 @@ namespace vm::loader::compiler::safe::detail {
 				const u64      offset = byteOffsetOf(i.var);
 
 				// A variable owning nested blocks gets its block right away. Everything else is
-				// initialized without one.
-				if (typeCleanup(type) == TypeCleanup::EagerBlock)
-					addLow<Op_initBlock_imm_type>(vm::opargs::Immediate{ offset }, i.type);
-				else
-					addLow<Op_initSimple_imm_type>(vm::opargs::Immediate{ offset }, i.type);
+				// initialized without one, zeroed by a plain store where its size allows.
+				const auto address = vm::opargs::Immediate{ offset };
+
+				if (typeCleanup(type) == TypeCleanup::EagerBlock) {
+					addLow<Op_initBlock_imm_type>(address, i.type);
+				} else {
+					switch (type->getSize().asInt()) {
+					case 8:
+						addLow<Op_initSimple64_imm_type>(address, i.type);
+						break;
+					case 16:
+						addLow<Op_initSimple128_imm_type>(address, i.type);
+						break;
+					default:
+						addLow<Op_initSimple_imm_type>(address, i.type);
+					}
+				}
 			}
 			instr_case(high::Op_deinit, i) { addDeinitOfTopVariable(); }
 			instr_case(high::Op_input_p64, i) { addLow<Op_input_p64>(i.dst); }

@@ -618,6 +618,23 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(initSimple64_imm_type)(FUNCTION_ARGS) {
+		{
+			// A constant size zeroes inline instead of calling `memset`.
+			std::memset(local_stack + instr->arg0, 0, 8);
+			pushLocalSlot(frame, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1), nullptr);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(initSimple128_imm_type)(FUNCTION_ARGS) {
+		{
+			std::memset(local_stack + instr->arg0, 0, 16);
+			pushLocalSlot(frame, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1), nullptr);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
 		{ performDeinit(frame, thread); }
 		FUNCTION_CONT(1);

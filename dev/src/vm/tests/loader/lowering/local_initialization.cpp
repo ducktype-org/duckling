@@ -26,6 +26,7 @@ public:
 		TESTER_ADD_TEST(variantVariableGetsItsBlockUpfront);
 		TESTER_ADD_TEST(liveLocalsAreDeinitializedBeforeReturning);
 		TESTER_ADD_TEST(reusedSlotDoesNotForceABlock);
+		TESTER_ADD_TEST(zeroingIsSpecializedBySize);
 	}
 
 private:
@@ -68,6 +69,34 @@ private:
 		return static_cast<usize>(std::ranges::count(opcodesOf(function_name), opcode));
 	}
 
+	/**
+	 * @brief Number of locals a function initializes without a block.
+	 *
+	 * Which of the block-free initializations a variable gets depends only on its size, so the
+	 * tests below count all of them together.
+	 */
+	usize countBlockFreeInits(base::StrID function_name) {
+		return countOpcode(function_name, MicroOpcode::initSimple_imm_type)
+		     + countOpcode(function_name, MicroOpcode::initSimple64_imm_type)
+		     + countOpcode(function_name, MicroOpcode::initSimple128_imm_type);
+	}
+
+	void assertBlockFreeInitCount(base::StrID function_name, usize expected) {
+		const usize found = countBlockFreeInits(function_name);
+		assertEqual(
+			found,
+			expected,
+			base::strConcat(
+				"`",
+				function_name.str(),
+				"` initializes ",
+				found,
+				" locals without a block instead of ",
+				expected
+			)
+		);
+	}
+
 	void assertOpcodeCount(base::StrID function_name, MicroOpcode opcode, usize expected) {
 		const usize found = countOpcode(function_name, opcode);
 		assertEqual(
@@ -91,7 +120,7 @@ private:
 	 */
 	void plainVariablesGetNoBlock() {
 		const auto name = base::StrID("simple");
-		assertOpcodeCount(name, MicroOpcode::initSimple_imm_type, 2);
+		assertBlockFreeInitCount(name, 2);
 		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 0);
 		assertOpcodeCount(name, MicroOpcode::deinit, 2);
 		assertOpcodeCount(name, MicroOpcode::deinitDtor_imm, 0);
@@ -103,7 +132,7 @@ private:
 	 */
 	void referencedVariableStillGetsNoBlockUpfront() {
 		const auto name = base::StrID("referenced");
-		assertOpcodeCount(name, MicroOpcode::initSimple_imm_type, 2);
+		assertBlockFreeInitCount(name, 2);
 		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 0);
 		assertOpcodeCount(name, MicroOpcode::ref_pptr_bany, 1);
 	}
@@ -114,7 +143,7 @@ private:
 	 */
 	void pointerVariableIsDeinitializedWithDestructors() {
 		const auto name = base::StrID("holds_pointer");
-		assertOpcodeCount(name, MicroOpcode::initSimple_imm_type, 2);
+		assertBlockFreeInitCount(name, 2);
 		// One for `ptr`, none for `plain` - a structure of plain fields needs no destructors.
 		assertOpcodeCount(name, MicroOpcode::deinitDtor_imm, 1);
 		assertOpcodeCount(name, MicroOpcode::deinit, 1);
@@ -127,7 +156,7 @@ private:
 	void variantVariableGetsItsBlockUpfront() {
 		const auto name = base::StrID("owns_nested_blocks");
 		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 1);
-		assertOpcodeCount(name, MicroOpcode::initSimple_imm_type, 0);
+		assertBlockFreeInitCount(name, 0);
 	}
 
 	/**
@@ -137,8 +166,23 @@ private:
 	 */
 	void reusedSlotDoesNotForceABlock() {
 		const auto name = base::StrID("reuses_a_slot");
-		assertOpcodeCount(name, MicroOpcode::initSimple_imm_type, 3);
+		assertBlockFreeInitCount(name, 3);
 		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 0);
+	}
+
+	/**
+	 * @brief The sizes that get a plain store instead of a call to `memset` are picked by the
+	 * size of the variable alone, not by what its type is made of.
+	 */
+	void zeroingIsSpecializedBySize() {
+		// `counter` is an `i64`, `flag` an `i8` - only the first has a specialized size.
+		const auto mixed_sizes = base::StrID("simple");
+		assertOpcodeCount(mixed_sizes, MicroOpcode::initSimple64_imm_type, 1);
+		assertOpcodeCount(mixed_sizes, MicroOpcode::initSimple_imm_type, 1);
+
+		// A pointer and a pair of `i64`s are both 16 bytes wide.
+		const auto both_16_bytes = base::StrID("holds_pointer");
+		assertOpcodeCount(both_16_bytes, MicroOpcode::initSimple128_imm_type, 2);
 	}
 
 	/**
