@@ -59,8 +59,6 @@ namespace vm::fast {
 			base::StrID function_name, usize instruction_index, bool enable
 		) override;
 
-		std::expected<api::Response, api::StateError> getExitCode() override;
-
 		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
 
 		std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) override;

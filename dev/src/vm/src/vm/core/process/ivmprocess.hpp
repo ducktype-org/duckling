@@ -187,13 +187,6 @@ namespace vm {
 
 
 		/**
-		 * @brief Returns exit code of the process - i.e. return value of `main` bytecode function.
-		 *
-		 * @return api::Response
-		 */
-		virtual std::expected<api::Response, api::StateError> getExitCode() = 0;
-
-		/**
 		 * @brief Expects the process to be stopped and asks memory module if the memory is valid.
 		 * For more information about execution's validation,
 		 * see Memory::validateMemoryState's description.

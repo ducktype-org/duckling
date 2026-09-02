@@ -107,7 +107,9 @@ namespace vm {
 		void requestStop() noexcept;
 
 		/**
-		 * @brief Waits for the exec thread to finish and returns the final response.
+		 * @brief Waits for the exec thread to finish and returns its exit value.
+		 * @return The exit value of the thread if it completed normally, an API error otherwise
+		 * (the thread was never started, it panicked or it was stopped before completing).
 		 */
 		std::expected<api::Response, api::ApiError> join();
 

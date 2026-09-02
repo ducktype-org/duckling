@@ -77,8 +77,8 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<ThreadID>);
 	}
 
-	std::expected<void, ApiError> join(PID pid, ThreadID thread_id) {
-		return REQUEST(Join{ thread_id }).transform(ignoreResponse);
+	std::expected<ExitValue, ApiError> join(PID pid, ThreadID thread_id) {
+		return REQUEST(Join{ thread_id }).and_then(mapOrWrongResponse<ExitValue>);
 	}
 
 	std::expected<ExitValue, ApiError> runFunctionAwait(
@@ -150,10 +150,6 @@ namespace vm::api {
 	) {
 		return REQUEST(ExecutionPosition{ frame_idx })
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
-	}
-
-	std::expected<ExitValue, ApiError> getExitValue(PID pid) {
-		return REQUEST(ExitCodeRequest{}).and_then(mapOrWrongResponse<ExitValue>);
 	}
 
 	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid) {

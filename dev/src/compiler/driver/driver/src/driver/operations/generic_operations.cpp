@@ -720,7 +720,6 @@ namespace compiler::driver {
 								  })
 				                  .and_then([&] { return vm::api::run(pid); })
 				                  .and_then([&] { return vm::api::join(pid); })
-				                  .and_then([&] { return vm::api::getExitValue(pid); })
 				                  .transform([](vm::api::ExitValue exit_values) {
 									  CORE_ASSERT(
 										  v_matches(exit_values, std::vector<Ref<vm::IVMValue>>),

@@ -177,9 +177,7 @@ private:
 		ASSERT_HAS_VALUE(status);
 		ASSERT_TRUE(v_matches(status.value(), vm::api::ExecutionCompleted));
 
-		ASSERT_HAS_VALUE(vm::api::join(pid));
-
-		auto exit_value = vm::api::getExitValue(pid);
+		auto exit_value = vm::api::join(pid);
 		ASSERT_HAS_VALUE(exit_value);
 		ASSERT_EQUAL_PRINT(
 			v_get(exit_value.value(), std::vector<Ref<vm::IVMValue>>).at(0)->readBytes<i64>(), 1
@@ -366,10 +364,9 @@ private:
 		}
 
 		ASSERT_HAS_VALUE(vm::api::resume(pid));
-		ASSERT_HAS_VALUE(vm::api::join(pid));
 
 		{
-			auto exit_code_response = vm::api::getExitValue(pid);
+			auto exit_code_response = vm::api::join(pid);
 			ASSERT_HAS_VALUE(exit_code_response);
 			ASSERT_TRUE(
 				std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value())

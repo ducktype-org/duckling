@@ -37,6 +37,7 @@ public:
 		TESTER_ADD_TEST(invalidPrimitiveTypes);
 		TESTER_ADD_TEST(checkCastingInstructions);
 		TESTER_ADD_TEST(testSyncRun);
+		TESTER_ADD_TEST(joinReturnsExitValue);
 		TESTER_ADD_TEST(structureOperations);
 		TESTER_ADD_TEST(fixedSizeTableOperations);
 		TESTER_ADD_TEST(nestedAggregateTypesCorrectness);
@@ -163,6 +164,31 @@ private:
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
 		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
 		vm::api::deinitAndValidate(pid);
+	}
+
+	/**
+	 * @brief `api::join` is the endpoint that reports the exit value of a finished run, so a plain
+	 * `run` + `join` has to hand back what `main` returned. Joining a process that never ran has no
+	 * exit value to report and must fail instead.
+	 */
+	void joinReturnsExitValue() {
+		vm::PID pid = initProcess();
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("return_1337.dbc")) }));
+
+		ASSERT_NO_VALUE(vm::api::join(pid));
+
+		ASSERT_HAS_VALUE(vm::api::run(pid));
+
+		auto exit_value = vm::api::join(pid);
+		ASSERT_HAS_VALUE(exit_value);
+		ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_value.value()));
+		const auto& exit_values = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value.value());
+		ASSERT_EQUAL(exit_values.size(), 1);
+		ASSERT_EQUAL_PRINT(exit_values.at(0)->readBytes<i64>(), 1'337);
+
+		auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(validation_result);
+		ASSERT_TRUE(validation_result.value());
 	}
 };
 

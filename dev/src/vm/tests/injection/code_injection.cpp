@@ -116,7 +116,8 @@ private:
 
 		if_opt_some(optional_input, input) { ASSERT_HAS_VALUE(vm::api::input(pid, input)); }
 
-		ASSERT_HAS_VALUE(vm::api::join(pid));
+		auto exit_code_response = vm::api::join(pid);
+		ASSERT_HAS_VALUE(exit_code_response);
 
 		if_opt_some(optional_output, output) {
 			auto output_response = vm::api::output(pid);
@@ -124,8 +125,6 @@ private:
 			ASSERT_EQUAL(output, output_response->output);
 		}
 
-		auto exit_code_response = vm::api::getExitValue(pid);
-		ASSERT_HAS_VALUE(exit_code_response);
 		const auto& exit_value = exit_code_response.value();
 		ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_value));
 		auto& exit_value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value);

@@ -295,20 +295,6 @@ namespace vm {
 		return *vm_threads.get(vm_threads.add(*this));
 	}
 
-	std::expected<api::Response, api::StateError> SafeVMProcess::getExitCode() {
-		// `api_lock` is not needed here, since the only shared read here is the process state which
-		// is being synchronized by `ProcessStateManager`.
-		const ProcessState state = getProcessState();
-		variant_match(state) {
-			variant_case(ps::Completed, completed) { return completed.exit_value; }
-			variant_default return std::unexpected(api::StateError(
-				v_matches(state, ps::NotStarted) ? "Execution did not start"
-												 : "Execution did not complete"
-			));
-		}
-		CORE_UNREACHABLE();
-	}
-
 	std::expected<api::Response, api::ApiError> SafeVMProcess::deinitAndValidate() {
 		// We just `joinAllExecutionThreads` here as this endpoint assumes that the process is
 		// stopped already.

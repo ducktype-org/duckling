@@ -151,10 +151,6 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `setBreakpoint` is not implemented.");
 	}
 
-	std::expected<api::Response, api::StateError> FastVMProcess::getExitCode() {
-		return getMainVMThread().getExitValue();
-	}
-
 	std::expected<api::Response, api::ApiError> FastVMProcess::deinitAndValidate() { return true; }
 
 	std::expected<void, api::ApiError> FastVMProcess::requestPauseOfVMThread(

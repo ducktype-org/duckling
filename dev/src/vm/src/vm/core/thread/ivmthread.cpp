@@ -57,8 +57,10 @@ namespace vm {
 		joinExecutionThread();
 
 		variant_match(terminal) {
-			variant_case_novalue(ts::Completed, ts::Stopped) {
-				return api::Response(api::response::Empty());
+			variant_case(ts::Completed, completed) { return api::Response(completed.exit_value); }
+			// A stopped thread never reached its `ret`, so there is no exit value to report.
+			variant_case_novalue(ts::Stopped) {
+				return std::unexpected(api::ApiError(api::StateError("Execution was stopped")));
 			}
 			variant_case(ts::Panicked, panicked) {
 				return std::unexpected(

@@ -238,8 +238,6 @@ namespace vm {
 				return api::Response(getStatus());
 			}
 
-			variant_case_novalue(api::request::ExitCodeRequest) { return getExitCode(); }
-
 			variant_case(api::request::AttachStatusListener, request) {
 				on_status_changed.attachListener(request.listener);
 				return api::Response(api::response::Empty());

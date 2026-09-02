@@ -170,7 +170,6 @@ namespace compiler::repl {
 
 		return vm::api::runFunction(pid, std::string(func_name), {})
 		    .and_then([&](auto) { return vm::api::join(pid); })
-		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .and_then(
 				[type_view](vm::api::ExitValue exit_values
