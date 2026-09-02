@@ -84,6 +84,28 @@ namespace vm {
 		}
 	}
 
+	low::MicroOpcode SafeVMThread::getCurrentOpcode() const {
+		const Frame*           frame  = runtime_data.frame_stack_current;
+		const low::MicroOpcode opcode = getInstructionOpcode(*frame->instr);
+		if (opcode != low::MicroOpcode::breakpoint) return opcode;
+
+		const auto* program_copy
+			= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
+		CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
+
+		const auto original_instr
+			= program_copy->getOriginalProgram()
+		          ->getFunctions()
+		          .at(frame->current_function->name)
+		          ->bc[static_cast<usize>(frame->instr - &frame->current_function->bc[0])];
+
+		return getInstructionOpcode(original_instr);
+	}
+
+	bool SafeVMThread::isAtExecutionEnd() const {
+		return getCurrentOpcode() == low::MicroOpcode::exit;
+	}
+
 	/**
 	 * @brief Main debug function that executes one step of the program.
 	 */
@@ -92,14 +114,7 @@ namespace vm {
 		auto*      instr       = frame->instr;
 		std::byte* local_stack = frame->local_stack;
 
-		low::MicroOpcode opcode = getInstructionOpcode(*instr);
-		if (opcode == low::MicroOpcode::breakpoint) {
-			auto& micro_func     = *frame->current_function;
-			auto  low_instr_idx  = (usize) (frame->instr - micro_func.bc.data());
-			auto  original_instr = micro_func.orig_bc[low_instr_idx];
-
-			opcode = getInstructionOpcode(original_instr);
-		}
+		const low::MicroOpcode opcode = getCurrentOpcode();
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
@@ -440,7 +455,7 @@ namespace vm {
 			break;                                                                                  \
 		}                                                                                           \
 	}
-	#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+	#include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 	#undef HANDLE_MICRO_INSTR
 
 			default: {

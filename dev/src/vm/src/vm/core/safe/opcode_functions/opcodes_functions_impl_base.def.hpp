@@ -1,5 +1,5 @@
 /**
- * @file opcodes_functions_impl_base.hpp
+ * @file opcodes_functions_impl_base.def.hpp
  * @brief The opcodes functions implementations.
  *
  * @warning Do not include this file directly. Include `opcodes_functions_impl_exec.cpp` or
@@ -134,22 +134,20 @@ namespace vm {
 	DEFINE_MOVE_OPS(16, u16)
 	DEFINE_MOVE_OPS(8, u8)
 
-#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
+#define DEFINE_BINARY_OP(NAME, BITS_SIZE, TYPE, OP)                                      \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
-			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
 			const auto rhs = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                     \
-			lhs OP     rhs;                                                              \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                  \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));        \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}                                                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
-			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
 			const auto rhs = READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                    \
-			lhs        OP static_cast<TYPE>(rhs);                                        \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                  \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));        \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
@@ -157,95 +155,62 @@ namespace vm {
 #define DEFINE_DIVISION_LIKE_OP(NAME, BITS_SIZE, TYPE, OP)                                \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {  \
 		{                                                                                 \
-			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                      \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                      \
 			const auto rhs = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                      \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
-			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                   \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));         \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
 	}                                                                                     \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
 		{                                                                                 \
-			auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                            \
-			auto rhs = READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                           \
+			const auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                      \
+			const auto rhs = READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                     \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
-			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                   \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(lhs OP rhs));         \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
 	}
 
-#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {        \
-		{                                                                        \
-			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                 \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value* static_cast<TYPE>(-1)); \
-		}                                                                        \
-		FUNCTION_CONT(1);                                                        \
+#define DEFINE_UNARY_OP(NAME, BITS_SIZE, TYPE, OP)                              \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {       \
+		{                                                                       \
+			const auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);          \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, static_cast<TYPE>(OP value)); \
+		}                                                                       \
+		FUNCTION_CONT(1);                                                       \
 	}
 
 // @TODO: #1216 Check for over/under flows.
 #define DEFINE_INT_N_ARITHMETIC(SIZE)               \
-	DEFINE_ARITHMETIC_OP(add, SIZE, i##SIZE, +=)    \
-	DEFINE_ARITHMETIC_OP(sub, SIZE, i##SIZE, -=)    \
-	DEFINE_ARITHMETIC_OP(mul, SIZE, i##SIZE, *=)    \
+	DEFINE_BINARY_OP(add, SIZE, i##SIZE, +)         \
+	DEFINE_BINARY_OP(sub, SIZE, i##SIZE, -)         \
+	DEFINE_BINARY_OP(mul, SIZE, i##SIZE, *)         \
+	DEFINE_BINARY_OP(umul, SIZE, u##SIZE, *)        \
 	DEFINE_DIVISION_LIKE_OP(mod, SIZE, i##SIZE, %)  \
 	DEFINE_DIVISION_LIKE_OP(div, SIZE, i##SIZE, /)  \
-	DEFINE_NEGATION_OP(neg, SIZE, i##SIZE)          \
-	DEFINE_ARITHMETIC_OP(umul, SIZE, u##SIZE, *=)   \
 	DEFINE_DIVISION_LIKE_OP(umod, SIZE, u##SIZE, %) \
-	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /)
+	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /) \
+	DEFINE_UNARY_OP(neg, SIZE, i##SIZE, -)
 
 	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
-#define DEFINE_BITWISE_BINARY_OP(NAME, BITS_SIZE, RAW_TYPE, OP)                          \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) { \
-		{                                                                                \
-			auto       lhs = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg0);                 \
-			const auto rhs = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg1);                 \
-			lhs            = static_cast<RAW_TYPE>(lhs OP rhs);                          \
-			WRITE_TO_PLACE_ARG(RAW_TYPE, instr->arg0, lhs);                              \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
-		{                                                                                \
-			auto       lhs = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg0);                 \
-			const auto rhs = READ_FROM_DIRECT_ARG(RAW_TYPE, instr->arg1);                \
-			lhs            = static_cast<RAW_TYPE>(lhs OP rhs);                          \
-			WRITE_TO_PLACE_ARG(RAW_TYPE, instr->arg0, lhs);                              \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}
-
-#define DEFINE_BITWISE_NOT_OP(BITS_SIZE, RAW_TYPE)                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(bit_not_p##BITS_SIZE)(FUNCTION_ARGS) {            \
-		{                                                                             \
-			auto value = READ_FROM_PLACE_ARG(RAW_TYPE, instr->arg0);                  \
-			WRITE_TO_PLACE_ARG(RAW_TYPE, instr->arg0, static_cast<RAW_TYPE>(~value)); \
-		}                                                                             \
-		FUNCTION_CONT(1);                                                             \
-	}
-
-#define DEFINE_INT_N_BITWISE(SIZE)                                  \
-	DEFINE_BITWISE_BINARY_OP(bit_and, SIZE, std::uint##SIZE##_t, &) \
-	DEFINE_BITWISE_BINARY_OP(bit_or, SIZE, std::uint##SIZE##_t, |)  \
-	DEFINE_BITWISE_BINARY_OP(bit_xor, SIZE, std::uint##SIZE##_t, ^) \
-	DEFINE_BITWISE_BINARY_OP(shl, SIZE, std::uint##SIZE##_t, <<)    \
-	DEFINE_BITWISE_BINARY_OP(shr, SIZE, std::uint##SIZE##_t, >>)    \
-	DEFINE_BITWISE_NOT_OP(SIZE, std::uint##SIZE##_t)
+#define DEFINE_INT_N_BITWISE(SIZE)              \
+	DEFINE_BINARY_OP(bit_and, SIZE, u##SIZE, &) \
+	DEFINE_BINARY_OP(bit_or, SIZE, u##SIZE, |)  \
+	DEFINE_BINARY_OP(bit_xor, SIZE, u##SIZE, ^) \
+	DEFINE_BINARY_OP(shl, SIZE, u##SIZE, <<)    \
+	DEFINE_BINARY_OP(shr, SIZE, u##SIZE, >>)    \
+	DEFINE_UNARY_OP(bit_not, SIZE, u##SIZE, ~)
 
 	FOR_EACH(DEFINE_INT_N_BITWISE, 64, 32, 16, 8)
 
-#define FLOAT_64_TYPE f64
-#define FLOAT_32_TYPE f32
-#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                         \
-	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)   \
-	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)   \
-	DEFINE_ARITHMETIC_OP(fmul, SIZE, FLOAT_##SIZE##_TYPE, *=)   \
-	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, FLOAT_##SIZE##_TYPE, /) \
-	DEFINE_NEGATION_OP(fneg, SIZE, FLOAT_##SIZE##_TYPE)
+#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)             \
+	DEFINE_BINARY_OP(fadd, SIZE, f##SIZE, +)        \
+	DEFINE_BINARY_OP(fsub, SIZE, f##SIZE, -)        \
+	DEFINE_BINARY_OP(fmul, SIZE, f##SIZE, *)        \
+	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, f##SIZE, /) \
+	DEFINE_UNARY_OP(fneg, SIZE, f##SIZE, -)
 
 	FOR_EACH(DEFINE_FLOAT_N_ARITHMETIC, 64, 32)
 
@@ -310,13 +275,13 @@ namespace vm {
 
 	FOR_EACH(DEFINE_INT_N_COMPARISONS, 64, 32, 16, 8)
 
-#define DEFINE_FLOAT_N_COMPARISONS(SIZE)                         \
-	DEFINE_COMPARISON_OP(fcmpEq, SIZE, FLOAT_##SIZE##_TYPE, ==)  \
-	DEFINE_COMPARISON_OP(fcmpNeq, SIZE, FLOAT_##SIZE##_TYPE, !=) \
-	DEFINE_COMPARISON_OP(fcmpGt, SIZE, FLOAT_##SIZE##_TYPE, >)   \
-	DEFINE_COMPARISON_OP(fcmpGe, SIZE, FLOAT_##SIZE##_TYPE, >=)  \
-	DEFINE_COMPARISON_OP(fcmpLt, SIZE, FLOAT_##SIZE##_TYPE, <)   \
-	DEFINE_COMPARISON_OP(fcmpLe, SIZE, FLOAT_##SIZE##_TYPE, <=)
+#define DEFINE_FLOAT_N_COMPARISONS(SIZE)             \
+	DEFINE_COMPARISON_OP(fcmpEq, SIZE, f##SIZE, ==)  \
+	DEFINE_COMPARISON_OP(fcmpNeq, SIZE, f##SIZE, !=) \
+	DEFINE_COMPARISON_OP(fcmpGt, SIZE, f##SIZE, >)   \
+	DEFINE_COMPARISON_OP(fcmpGe, SIZE, f##SIZE, >=)  \
+	DEFINE_COMPARISON_OP(fcmpLt, SIZE, f##SIZE, <)   \
+	DEFINE_COMPARISON_OP(fcmpLe, SIZE, f##SIZE, <=)
 
 	FOR_EACH(DEFINE_FLOAT_N_COMPARISONS, 64, 32)
 
@@ -1301,15 +1266,15 @@ namespace vm {
 	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 32, 64, u32, u64)
 
 
-#define DEFINE_INT_TO_FLOAT(DST_SIZE)                                                    \
-	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 8, FLOAT_##DST_SIZE##_TYPE, i8)   \
-	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 8, FLOAT_##DST_SIZE##_TYPE, u8)   \
-	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 16, FLOAT_##DST_SIZE##_TYPE, i16) \
-	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 16, FLOAT_##DST_SIZE##_TYPE, u16) \
-	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 32, FLOAT_##DST_SIZE##_TYPE, i32) \
-	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 32, FLOAT_##DST_SIZE##_TYPE, u32) \
-	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 64, FLOAT_##DST_SIZE##_TYPE, i64) \
-	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 64, FLOAT_##DST_SIZE##_TYPE, u64)
+#define DEFINE_INT_TO_FLOAT(DST_SIZE)                                        \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 8, f##DST_SIZE, i8)   \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 8, f##DST_SIZE, u8)   \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 16, f##DST_SIZE, i16) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 16, f##DST_SIZE, u16) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 32, f##DST_SIZE, i32) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 32, f##DST_SIZE, u32) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 64, f##DST_SIZE, i64) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 64, f##DST_SIZE, u64)
 
 	DEFINE_INT_TO_FLOAT(32)
 	DEFINE_INT_TO_FLOAT(64)
@@ -1364,21 +1329,21 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                      \
 	}
 
-#define DEFINE_FLOAT_TO_INT(SRC_SIZE)                                            \
-	DEFINE_FPTOSI_OP(fptosi, 8, SRC_SIZE, std::int8_t, FLOAT_##SRC_SIZE##_TYPE)  \
-	DEFINE_FPTOUI_OP(fptoui, 8, SRC_SIZE, std::uint8_t, FLOAT_##SRC_SIZE##_TYPE) \
-	DEFINE_FPTOSI_OP(fptosi, 16, SRC_SIZE, i16, FLOAT_##SRC_SIZE##_TYPE)         \
-	DEFINE_FPTOUI_OP(fptoui, 16, SRC_SIZE, u16, FLOAT_##SRC_SIZE##_TYPE)         \
-	DEFINE_FPTOSI_OP(fptosi, 32, SRC_SIZE, i32, FLOAT_##SRC_SIZE##_TYPE)         \
-	DEFINE_FPTOUI_OP(fptoui, 32, SRC_SIZE, u32, FLOAT_##SRC_SIZE##_TYPE)         \
-	DEFINE_FPTOSI_OP(fptosi, 64, SRC_SIZE, i64, FLOAT_##SRC_SIZE##_TYPE)         \
-	DEFINE_FPTOUI_OP(fptoui, 64, SRC_SIZE, u64, FLOAT_##SRC_SIZE##_TYPE)
+#define DEFINE_FLOAT_TO_INT(SRC_SIZE)                                \
+	DEFINE_FPTOSI_OP(fptosi, 8, SRC_SIZE, std::int8_t, f##SRC_SIZE)  \
+	DEFINE_FPTOUI_OP(fptoui, 8, SRC_SIZE, std::uint8_t, f##SRC_SIZE) \
+	DEFINE_FPTOSI_OP(fptosi, 16, SRC_SIZE, i16, f##SRC_SIZE)         \
+	DEFINE_FPTOUI_OP(fptoui, 16, SRC_SIZE, u16, f##SRC_SIZE)         \
+	DEFINE_FPTOSI_OP(fptosi, 32, SRC_SIZE, i32, f##SRC_SIZE)         \
+	DEFINE_FPTOUI_OP(fptoui, 32, SRC_SIZE, u32, f##SRC_SIZE)         \
+	DEFINE_FPTOSI_OP(fptosi, 64, SRC_SIZE, i64, f##SRC_SIZE)         \
+	DEFINE_FPTOUI_OP(fptoui, 64, SRC_SIZE, u64, f##SRC_SIZE)
 
 	DEFINE_FLOAT_TO_INT(32)
 	DEFINE_FLOAT_TO_INT(64)
 
-	DEFINE_STATIC_CAST_CONVERSION_OP(fptrunc, 32, 64, FLOAT_32_TYPE, FLOAT_64_TYPE)
-	DEFINE_STATIC_CAST_CONVERSION_OP(fpext, 64, 32, FLOAT_64_TYPE, FLOAT_32_TYPE)
+	DEFINE_STATIC_CAST_CONVERSION_OP(fptrunc, 32, 64, f32, f64)
+	DEFINE_STATIC_CAST_CONVERSION_OP(fpext, 64, 32, f64, f32)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{

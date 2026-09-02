@@ -417,6 +417,10 @@ namespace vm {
 			if (!response)
 				return std::unexpected(api::ApiError{ api::OtherError{ response.error() } });
 
+			// `getCurrentPosition` only works in `Paused` state, so if this step ended the
+			// execution we return early.
+			if (ts::isTerminal(thread->getThreadState())) return {};
+
 			auto maybe_new_lp = thread->getCurrentPosition();
 			if (!maybe_new_lp) return std::unexpected(maybe_new_lp.error());
 			low_position = maybe_new_lp.value();

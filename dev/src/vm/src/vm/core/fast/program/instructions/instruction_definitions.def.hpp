@@ -1,13 +1,13 @@
 /**
- * @file instruction_definitions.hpp
+ * @file instruction_definitions.def.hpp
  * @brief This file contains the definitions of all fast instructions.
  * Note that unlike in other places, here we are not appending argument names to the instruction
  * name, as this is performed automatically.
  * @author Mateusz Kołpa
  */
 
-#include "argument_definitions.hpp"
-#include "instr_macro_helper.hpp"
+#include "argument_definitions.def.hpp"
+#include "instr_macro_helper.def.hpp"
 
 #ifndef HANDLE_INSTR
 	#define DEFAULT_HANDLE_INSTR
