@@ -25,32 +25,48 @@ pub trait DescriptionWithAnArticle {
 
 /// English pluralization helper trait.
 pub trait IsPlural {
-    /// Return `s` if the data structure has 0 or at least 2 elements, otherwise return ``.
+    /// Determine whether `self` is plural or singular.
+    fn is_plural(&self) -> bool;
+
+    /// Return `s` if plural else
     /// Obviously in english there are words for which the plural form is created differently to simply adding `s`.
     /// But in the project there are currently no such words displayed to the user.
-    fn s_if_plural(&self) -> &'static str;
+    fn s_if_plural(&self) -> &'static str {
+        if self.is_plural() { "s" } else { "" }
+    }
+
+    /// Return `were` if plural else `was`.
+    fn was_or_were(&self) -> &'static str {
+        if self.is_plural() { "were" } else { "was" }
+    }
 }
 
 impl<T> IsPlural for Vec<T> {
-    fn s_if_plural(&self) -> &'static str {
-        if self.len() == 1 { "" } else { "s" }
+    fn is_plural(&self) -> bool {
+        self.len() != 1
     }
 }
 
 impl<T> IsPlural for &[T] {
-    fn s_if_plural(&self) -> &'static str {
-        if self.len() == 1 { "" } else { "s" }
+    fn is_plural(&self) -> bool {
+        self.len() != 1
     }
 }
 
 impl<K, V> IsPlural for HashMap<K, V> {
-    fn s_if_plural(&self) -> &'static str {
-        if self.len() == 1 { "" } else { "s" }
+    fn is_plural(&self) -> bool {
+        self.len() != 1
     }
 }
 
 impl<T> IsPlural for HashSet<T> {
-    fn s_if_plural(&self) -> &'static str {
-        if self.len() == 1 { "" } else { "s" }
+    fn is_plural(&self) -> bool {
+        self.len() != 1
+    }
+}
+
+impl IsPlural for usize {
+    fn is_plural(&self) -> bool {
+        *self != 1
     }
 }
