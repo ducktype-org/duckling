@@ -14,8 +14,22 @@ namespace system_command {
 		return *this;
 	}
 
+	SystemCommand& SystemCommand::addEnv(std::string name, std::string value) {
+		environment.emplace_back(std::move(name), std::move(value));
+		return *this;
+	}
+
 	i32 SystemCommand::execute(ExitCodeHandling on_exit_code) {
-		std::string out = program_name;
+		std::string out;
+
+		for (const auto& [name, value]: environment) {
+			out += name;
+			out += "=";
+			out += value;
+			out += " ";
+		}
+
+		out += program_name;
 		out += " ";
 
 		for (const auto& arg: arguments) {
