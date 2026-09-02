@@ -1,5 +1,7 @@
 #include "vm_tester_utils.hpp"
 
+#include <base/except/exceptions.hpp>
+
 #include <tester/tester.hpp>
 
 #include <vm/api/data/status.hpp>
@@ -7,6 +9,8 @@
 
 #include <nlohmann/json_fwd.hpp>
 
+#include <chrono>
+#include <thread>
 #include <variant>
 
 namespace {
@@ -29,6 +33,9 @@ std::string_view VmTestSuite::TransitionLog::statusName(usize index) {
 		names[statusIndex<vm::api::ExecutionCompleted>()] = "ExecutionCompleted";
 		names[statusIndex<vm::api::ExecutionStopped>()]   = "ExecutionStopped";
 		names[statusIndex<vm::api::ExecutionPanicked>()]  = "ExecutionPanicked";
+
+		for (const std::string_view name: names)
+			CORE_ASSERT(!name.empty(), "A ProcStatus alternative has no name");
 		return names;
 	}();
 	return NAMES.at(index);
@@ -98,12 +105,42 @@ void VmTestSuite::releaseUntilTerminal(vm::PID pid, const std::string& function_
 	for (u64 instr = 0; instr <= MAX_BREAKPOINT_INDEX; instr++)
 		(void) vm::api::setBreakpoint(pid, base::StrID(function_name), instr, false);
 
-	while (true) {
+	const auto deadline = std::chrono::steady_clock::now() + STATUS_WAIT_BUDGET;
+	while (std::chrono::steady_clock::now() < deadline) {
 		auto status = vm::api::getExecutionStatus(pid);
 		if (!status.has_value() || vm::api::isStatusTerminal(status.value())) return;
 		(void) vm::api::resume(pid);
-		std::this_thread::yield();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
+	// Without a budget this spins until the scenario `Watchdog` aborts the whole binary, which
+	// says nothing about where the program got stuck.
+	fail(base::strConcat(
+		"The program never reached a terminal status. Only breakpoints in '",
+		function_name,
+		"' up to instruction ",
+		MAX_BREAKPOINT_INDEX,
+		" are cleared here, so a breakpoint outside that set keeps parking it."
+	));
+}
+
+void VmTestSuite::waitUntilEveryThreadRuns(vm::PID pid) {
+	namespace api = vm::api;
+
+	waitUntilStatus(pid, isRunning, "Running");
+
+	const auto deadline = std::chrono::steady_clock::now() + STATUS_WAIT_BUDGET;
+	while (std::chrono::steady_clock::now() < deadline) {
+		auto paused = api::pauseAll(pid);
+		assertSucceeded(paused, "pauseAll while waiting for the workers to start");
+		const bool all_up = paused->thread_ids.size() == SPIN_THREAD_COUNT;
+		for (const api::ThreadID tid: paused->thread_ids) (void) api::resume(pid, tid);
+		if (all_up) {
+			waitUntilStatus(pid, isRunning, "Running again after the readiness check");
+			return;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	fail("spin_threads.dbc never got all of its threads running");
 }
 
 vm::PID VmTestSuite::initProcess(

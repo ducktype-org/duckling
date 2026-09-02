@@ -65,7 +65,7 @@ protected:
 	 * A hung API call cannot be recovered from inside the process, so failing hard with the name of
 	 * the case is the only useful outcome.
 	 */
-	class Watchdog {
+	class Watchdog final {
 	public:
 		Watchdog(std::string what, std::chrono::seconds budget = SCENARIO_TIME_BUDGET):
 			  what(std::move(what)) {
@@ -99,6 +99,30 @@ protected:
 		std::mutex              mutex;
 		std::condition_variable cv;
 		bool                    done = false;
+	};
+
+	/**
+	 * @brief Kills the process when the scope ends, however it ends.
+	 *
+	 * A failed assertion unwinds out of the test method with `CritTestError`, so a scenario that
+	 * kills its process on its last line leaves it running when it fails. The `Supervisor`
+	 * teardown then prints "still executing", a block-refcount warning and a failed validation on
+	 * top of the real failure message, and those three lines read like findings of their own.
+	 *
+	 * Killing a process that is already gone answers `ProcessNotFound`, so this is a no-op after a
+	 * scenario tore its process down itself.
+	 */
+	struct ScopedKill final {
+		vm::PID pid;
+
+		explicit ScopedKill(vm::PID pid): pid(pid) {}
+
+		~ScopedKill() { (void) vm::api::kill(pid); }
+
+		ScopedKill(const ScopedKill&)            = delete;
+		ScopedKill& operator=(const ScopedKill&) = delete;
+		ScopedKill(ScopedKill&&)                 = delete;
+		ScopedKill& operator=(ScopedKill&&)      = delete;
 	};
 
 	/**
@@ -139,8 +163,24 @@ protected:
 	 * @brief Runs the program the rest of the way. Disables every breakpoint the test may have set
 	 * in @p function_name and resumes whenever the program parks, until it reaches a terminal
 	 * status.
+	 *
+	 * @note Only breakpoints in @p function_name, and only up to `MAX_BREAKPOINT_INDEX`, are
+	 * cleared. A breakpoint outside that set keeps parking the program, which is reported as a
+	 * normal test failure once `STATUS_WAIT_BUDGET` runs out.
 	 */
 	void releaseUntilTerminal(vm::PID pid, const std::string& function_name = "main");
+
+	/// Thread count of `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
+	static constexpr usize SPIN_THREAD_COUNT = 4;
+
+	/**
+	 * @brief Waits until every thread of `spin_threads.dbc` is up, and leaves them all running.
+	 *
+	 * `pauseAll` is the only way to count the live threads through the API, so it doubles as the
+	 * readiness check. It is retried until it reports every thread, because the workers are
+	 * started one by one by the running program. Fails the test if they never all show up.
+	 */
+	void waitUntilEveryThreadRuns(vm::PID pid);
 
 	// ------------------------------------------------------------------
 	// Status transition validation
@@ -150,7 +190,7 @@ protected:
 	 * @brief Records every status the process emits, so the emitted sequence can be checked
 	 * against the process-state model.
 	 */
-	struct TransitionLog {
+	struct TransitionLog final {
 		static constexpr usize STATUS_COUNT = std::variant_size_v<vm::api::ProcStatus>;
 
 		void record(const vm::api::ProcStatus& status) {
@@ -202,7 +242,7 @@ protected:
 	/**
 	 * @brief Attaches a status-recording listener for the lifetime of a scenario.
 	 */
-	struct ScopedStatusLog {
+	struct ScopedStatusLog final {
 		TransitionLog                         log;
 		events::Listener<vm::api::ProcStatus> listener;
 

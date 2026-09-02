@@ -39,9 +39,6 @@ public:
 	~MultithreadedDebuggerTest() override = default;
 
 private:
-	/// `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
-	static constexpr usize SPIN_THREAD_COUNT = 4;
-
 	/// Instruction index of the breakpoint marked in `worker_breakpoint.dbc`.
 	static constexpr u64 WORKER_BREAKPOINT_INDEX = 5;
 
@@ -433,31 +430,11 @@ private:
 
 	/**
 	 * @brief Runs `spin_threads.dbc` and waits until every one of its threads is up.
-	 *
-	 * `pauseAll` is the only way to count the live threads through the API, so it doubles as the
-	 * readiness check here. It is retried until it reports every thread, because the workers are
-	 * started one by one by the running program.
 	 */
 	vm::PID runSpinThreads() {
-		namespace api = vm::api;
-
 		const vm::PID pid = spawnAndLoad("spin_threads.dbc");
-		assertSucceeded(api::run(pid), "run of spin_threads.dbc");
-		waitUntilStatus(pid, isRunning, "Running");
-
-		const auto deadline = std::chrono::steady_clock::now() + STATUS_WAIT_BUDGET;
-		while (std::chrono::steady_clock::now() < deadline) {
-			auto paused = api::pauseAll(pid);
-			assertSucceeded(paused, "pauseAll while waiting for the workers to start");
-			const bool all_up = paused->thread_ids.size() == SPIN_THREAD_COUNT;
-			for (const api::ThreadID tid: paused->thread_ids) (void) api::resume(pid, tid);
-			if (all_up) {
-				waitUntilStatus(pid, isRunning, "Running again after the readiness check");
-				return pid;
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-		fail("spin_threads.dbc never got all of its threads running");
+		assertSucceeded(vm::api::run(pid), "run of spin_threads.dbc");
+		waitUntilEveryThreadRuns(pid);
 		return pid;
 	}
 

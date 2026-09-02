@@ -52,9 +52,6 @@ private:
 
 	static constexpr u64 PARK_INSTRUCTION = 5;
 
-	/// `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
-	static constexpr usize SPIN_THREAD_COUNT = 4;
-
 	void stressTerminatingProgram() {
 		/*
 		 * Runs a fast-terminating program to completion while hammering it with random requests,
@@ -68,6 +65,7 @@ private:
 			Watchdog        watchdog(base::strConcat("stressTerminatingProgram seed=", seed));
 
 			const vm::PID   pid = spawnAndLoad("breakpoint.dbc");
+			ScopedKill      kill_guard(pid);
 			ScopedStatusLog scoped(*this, pid);
 
 			assertSucceeded(
@@ -81,8 +79,7 @@ private:
 			// cleanly so guest-memory validity is a meaningful post-condition.
 			std::atomic<bool> status_ok{ true };
 			const usize       op_count = std::uniform_int_distribution<usize>(0, 30)(rng);
-			for (usize op = 0; op < op_count; op++)
-				randomOp(pid, rng, false, false, true, status_ok);
+			for (usize op = 0; op < op_count; op++) randomOp(pid, rng, false, true, status_ok);
 			assertTrue(
 				status_ok.load(),
 				base::strConcat("getExecutionStatus must succeed for a live process, seed=", seed)
@@ -126,23 +123,27 @@ private:
 			Watchdog        watchdog(base::strConcat("stressInfiniteProgram seed=", seed));
 
 			const vm::PID   pid = spawnAndLoad("while_true.dbc");
+			ScopedKill      kill_guard(pid);
 			ScopedStatusLog scoped(*this, pid);
 
 			assertSucceeded(api::run(pid), "run");
 
 			std::atomic<bool> status_ok{ true };
 			const usize       op_count = std::uniform_int_distribution<usize>(1, 40)(rng);
-			for (usize op = 0; op < op_count; op++)
-				randomOp(pid, rng, true, false, true, status_ok);
+			for (usize op = 0; op < op_count; op++) randomOp(pid, rng, true, true, status_ok);
 			assertTrue(
 				status_ok.load(),
 				base::strConcat("getExecutionStatus must succeed for a live process, seed=", seed)
 			);
 
-			(void) api::resume(pid);
+			// No `resume` before the `stop`: a pause left pending by the random mix is exactly
+			// what must not prevent stopping, and resuming first would remove it. `stop` itself
+			// is "always legal" and its only reachable error is `ProcessNotFound`, so the
+			// terminal state afterwards is what actually proves it worked.
 			assertSucceeded(
 				api::stop(pid), base::strConcat("stop of an infinite program, seed=", seed)
 			);
+			waitUntilStatus(pid, isTerminal, "terminal after the stop");
 
 			validateTransitions(scoped.log, base::strConcat("seed=", seed));
 			assertSucceeded(api::kill(pid), "kill");
@@ -161,6 +162,7 @@ private:
 			Watchdog  watchdog(base::strConcat("stressConcurrentClients seed=", seed));
 
 			const vm::PID   pid = spawnAndLoad("while_true.dbc");
+			ScopedKill      kill_guard(pid);
 			ScopedStatusLog scoped(*this, pid);
 
 			assertSucceeded(api::run(pid), "run");
@@ -174,8 +176,7 @@ private:
 					// No `resume` in the mix: it can park a concurrent `api::pause` forever, see
 					// `randomOp`. Dropping `stop` from this scenario is what exposed it - another
 					// client's `stop` used to free the waiter by accident.
-					for (usize op = 0; op < 20; op++)
-						randomOp(pid, rng, false, true, false, status_ok);
+					for (usize op = 0; op < 20; op++) randomOp(pid, rng, false, false, status_ok);
 				});
 			}
 			for (auto& client: clients) client.join();
@@ -184,10 +185,12 @@ private:
 				base::strConcat("getExecutionStatus must succeed for a live process, seed=", seed)
 			);
 
-			(void) api::resume(pid);
+			// Same as `stressInfiniteProgram`: whatever the clients left pending, including a
+			// pause, must not prevent the stop, and the terminal state is what proves it.
 			assertSucceeded(
 				api::stop(pid), base::strConcat("stop after concurrent stress, seed=", seed)
 			);
+			waitUntilStatus(pid, isTerminal, "terminal after the stop");
 
 			validateTransitions(scoped.log, base::strConcat("seed=", seed));
 			assertSucceeded(api::kill(pid), "kill");
@@ -208,6 +211,7 @@ private:
 			Watchdog  watchdog(base::strConcat("stressConcurrentPerThreadClients seed=", seed));
 
 			const vm::PID   pid = spawnAndLoad("spin_threads.dbc");
+			ScopedKill      kill_guard(pid);
 			ScopedStatusLog scoped(*this, pid);
 
 			assertSucceeded(api::run(pid), "run of spin_threads.dbc");
@@ -254,11 +258,6 @@ private:
 	 * place. `stressInfiniteProgram` is that place; the scenarios that assert guest-memory
 	 * validity or race a live process against several clients leave it off.
 	 *
-	 * @p allow_step gates the `step` op. Stepping past the end of the stepped function live-locks
-	 * the execution thread and `api::step` never returns, so it is only exercised against the
-	 * never-completing program, where it cannot reach a function end.
-	 * @TODO: #3274 Re-enable stepping everywhere once the step path handles a returning function.
-	 *
 	 * @p allow_resume gates the `resume` op, and it is off wherever several clients hit the same
 	 * thread. `IVMThread::awaitPause` waits on a *level* predicate - "is this thread `Paused`
 	 * right now" - so a `resume` landing between the thread parking and the waiter looking makes
@@ -284,7 +283,6 @@ private:
 		vm::PID            pid,
 		std::mt19937_64&   rng,
 		bool               allow_lifecycle,
-		bool               allow_step,
 		bool               allow_resume,
 		std::atomic<bool>& status_ok
 	) {
@@ -305,7 +303,7 @@ private:
 			if (allow_resume) (void) api::resume(pid);
 			break;
 		case 3:
-			if (allow_step) (void) api::step(pid);
+			(void) api::step(pid);
 			break;
 		case 4:
 			(void) api::getCurrentPosition(pid);

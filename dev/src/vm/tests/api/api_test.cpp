@@ -44,9 +44,6 @@ public:
 	~VmApiTest() override = default;
 
 private:
-	/// `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
-	static constexpr usize SPIN_THREAD_COUNT = 4;
-
 	// ==================================================================
 	// Process lifecycle
 	// ==================================================================
@@ -549,11 +546,28 @@ private:
 			waitUntilStatus(pid, isPaused, "Paused");
 		});
 
-		// Blocked on a bytecode condition variable behind a bytecode mutex.
+		// Blocked on a bytecode condition variable behind a bytecode mutex. The thread stays
+		// `Running` throughout - `builtinWaitCV` drops the GIL but never reports the thread as
+		// sleeping - so the status cannot say when the wait was entered. The fixture writes a
+		// marker on the last instruction before it, and that is what is waited for here: without
+		// it the case would quietly degrade into a second copy of the plain `Running` one.
 		kill_from("Blocked(mutex/cv)", "mutex_hang.dbc", [&](vm::PID pid) {
+			std::atomic<bool>             marked{ false };
+			events::Listener<std::string> output_listener([&marked](const std::string&) {
+				marked = true;
+			});
+			assertSucceeded(
+				api::attachOutputListener(pid, &output_listener), "attachOutputListener"
+			);
+
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running (CV-blocked)");
-			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+			const auto deadline = std::chrono::steady_clock::now() + STATUS_WAIT_BUDGET;
+			while (!marked.load() && std::chrono::steady_clock::now() < deadline)
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			assertTrue(marked.load(), "mutex_hang.dbc never reached its condition-variable wait");
+			output_listener.detach();
 		});
 
 		// Sleeping on IO, reading input that never arrives.
@@ -907,32 +921,6 @@ private:
 	// ------------------------------------------------------------------
 	// Helpers
 	// ------------------------------------------------------------------
-
-	/**
-	 * @brief Waits until every thread of a running `spin_threads.dbc` is up, then leaves them all
-	 * running.
-	 *
-	 * `pauseAll` is the only way to count the live threads through the API, so it doubles as the
-	 * readiness check. It is retried because the workers are started one by one by the running
-	 * program.
-	 */
-	void waitUntilEveryThreadRuns(vm::PID pid) {
-		namespace api = vm::api;
-
-		const auto deadline = std::chrono::steady_clock::now() + STATUS_WAIT_BUDGET;
-		while (std::chrono::steady_clock::now() < deadline) {
-			auto paused = api::pauseAll(pid);
-			assertSucceeded(paused, "pauseAll while waiting for the workers to start");
-			const bool all_up = paused->thread_ids.size() == SPIN_THREAD_COUNT;
-			for (const api::ThreadID tid: paused->thread_ids) (void) api::resume(pid, tid);
-			if (all_up) {
-				waitUntilStatus(pid, isRunning, "Running again after the readiness check");
-				return;
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-		fail("spin_threads.dbc never got all of its threads running");
-	}
 
 	/**
 	 * @brief Asserts an `ExitValue` carries exactly one `i64` equal to @p expected.

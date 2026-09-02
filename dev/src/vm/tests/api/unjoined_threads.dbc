@@ -23,5 +23,8 @@ function main { i64, ptr_argv } -> { i64 } {
 	set_threadctx			bump;
 	call_builtinfunc		builtin_start_thread;
 
+	# Assigned explicitly so the exit value is intentional rather than a fresh return slot that
+	# happens to read as zero. No test reads it today.
+	mov_p64_imm				ret0, 0;
 	ret;
 }
