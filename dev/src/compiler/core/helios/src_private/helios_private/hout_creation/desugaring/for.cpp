@@ -194,7 +194,7 @@ namespace compiler::helios::desugaring {
                         },
                 }
             );
-			if (!element_expr.hasFailed()) return {};
+			if (element_expr.hasFailed()) return {};
 
 			code::CodeBlock body{};
 

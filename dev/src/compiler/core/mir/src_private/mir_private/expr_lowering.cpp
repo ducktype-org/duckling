@@ -747,11 +747,11 @@ namespace compiler::mir {
 							return { MIRPlace(payload_ptr.value()).withDeref() };
 						if (binding_ref == Direct && alternative_ref != Direct)
 							return { MIRPlace(payload_ptr.value()).withDeref().withDeref() };
-						if (binding_ref == Ref && alternative_ref == Direct)
+						if (binding_ref != Direct && alternative_ref == Direct)
 							return MIRValue{ payload_ptr.value() };
-						if (binding_ref == Ref && alternative_ref != Direct)
+						if (binding_ref != Direct && alternative_ref != Direct)
 							return { MIRPlace(payload_ptr.value()).withDeref() };
-						CORE_PANIC("Binding match case to box unsupported.");
+						CORE_PANIC("Should coverall cases");
 					}(binding_local->type.getRefKind(), alternative_type.value().getRefKind());
 
 					case_entry->addInstruction(Instruction(

@@ -46,10 +46,9 @@ namespace compiler::helios::desugaring {
 
 		class MatchSubject final {
 		public:
-			Box<code::Expr>   expr;
-			tsh::SymbolType<> whole_type;
-			/// True if the reference kind of the subject is Direct.
-			bool                     passed_by_value;
+			Box<code::Expr>          expr;
+			tsh::SymbolType<>        whole_type;
+			bool                     moves_ownership;
 			tsh::VariantAbstractType variant;
 			usize                    num_alternatives;
 		};
@@ -76,11 +75,11 @@ namespace compiler::helios::desugaring {
 			}
 			UNPACK_QRESULT_MOVE(auto return_expr =, coerceFromBox(ctx, std::move(expr), type, pos));
 
-			bool passed_by_value                  = type.getRefKind() == tsh::ReferenceKind::Direct;
-			tsh::VariantAbstractType variant_type = type.getType();
+			bool                     moves_ownership  = not type.isTriviallyDestructible(ctx);
+			tsh::VariantAbstractType variant_type     = type.getType();
 			usize                    num_alternatives = variant_type.getUnderlyingTypes().size();
 			return {
-				std::move(return_expr), type, passed_by_value, variant_type, num_alternatives,
+				std::move(return_expr), type, moves_ownership, variant_type, num_alternatives,
 			};
 		}
 
@@ -94,7 +93,8 @@ namespace compiler::helios::desugaring {
 			const tsh::SymbolType<>& constraint,
 			dia::StablePosition      pos
 		) {
-			if (constraint.getRefKind() == tsh::ReferenceKind::Box) {
+			if (not match_subject.moves_ownership
+			    and constraint.getRefKind() == tsh::ReferenceKind::Box) {
 				logError(ctx, pos, "Box type in the match case is invalid.");
 				return query::Failed();
 			}
@@ -104,8 +104,8 @@ namespace compiler::helios::desugaring {
 			base::Optional<usize> found_index;
 
 			for (usize i = 0; i < alternatives.size(); i++) {
-				// If the subject is passed by value, the whole type has to be exactly the same.
-				if (match_subject.passed_by_value) {
+				// If the subject moves ownership, the case type has to be exactly the same.
+				if (match_subject.moves_ownership) {
 					if (alternatives[i] == constraint) found_index = i;
 				} else {
 					if (alternatives[i].getType() == constraint.getType()) found_index = i;
@@ -113,7 +113,7 @@ namespace compiler::helios::desugaring {
 			}
 
 			if (found_index.empty()) {
-				if (match_subject.passed_by_value) {
+				if (match_subject.moves_ownership) {
 					logError(
 						ctx,
 						pos,
@@ -149,7 +149,7 @@ namespace compiler::helios::desugaring {
 				match_subject.whole_type.getMutability()
 			);
 			tsh::ExpressionType<> expr_type{
-				match_subject.passed_by_value
+				match_subject.moves_ownership
 					? source_type
 					: source_type.withReferenceKind(tsh::ReferenceKind::Ref),
 				match_subject.expr->expression_type.getValueCategory()
@@ -180,7 +180,7 @@ namespace compiler::helios::desugaring {
 		// Lower all cases.
 		std::vector<code::MatchExpr::Case> cases;
 		base::Optional<tsh::SymbolType<>>  common_type;
-		std::set<usize>                    covered;
+		std::vector<bool>                  covered(subject.num_alternatives, false);
 		bool                               has_wildcard = false;
 
 		for (auto match_case: match_expr->getCases()) {
@@ -239,7 +239,7 @@ namespace compiler::helios::desugaring {
 						ctx, subject, constraint_type.value(), pst_expr->getStablePosition()
 					)
 				);
-				if (!covered.insert(alternative_index.value()).second) {
+				if (covered[alternative_index.value()]) {
 					logError(
 						ctx,
 						case_position,
@@ -250,14 +250,24 @@ namespace compiler::helios::desugaring {
 					);
 					return query::Failed();
 				}
+				covered[alternative_index.value()] = true;
 			} else {
-				has_wildcard = true;
-				if (subject.passed_by_value) {
+				has_wildcard                          = true;
+				auto has_destructor_among_not_covered = [&] {
+					auto& alternatives = subject.variant.getUnderlyingTypes();
+					for (usize i{ 0 }; i < subject.num_alternatives; i++) {
+						if (covered[i]) continue;
+
+						if (not alternatives[i].isTriviallyDestructible(ctx)) return true;
+					}
+					return false;
+				};
+				if (subject.moves_ownership and has_destructor_among_not_covered()) {
 					logError(
 						ctx,
 						case_position,
-						"When the value expression is passed to the match, it is invalid to use "
-						"the wildcard pattern in cases"
+						"The wildcard constraint in this case is invalid, as among not-covered "
+					    "cases are not trivially destructible types."
 					);
 					return query::Failed();
 				}

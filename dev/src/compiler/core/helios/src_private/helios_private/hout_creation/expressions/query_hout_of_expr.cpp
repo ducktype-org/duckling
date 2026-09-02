@@ -510,7 +510,7 @@ namespace compiler::helios::code {
 						ctx, std::move(inner), direct_type, stmt->getStablePosition(), {}
 					);
 
-					if (value.hasFailed())
+					if (not value.hasFailed())
 						node = makeBoxAllocCall(ctx, origin, std::move(value.valueOrPanic()));
 					return;
 				}
