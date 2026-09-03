@@ -423,8 +423,8 @@ metadata:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
@@ -498,8 +498,8 @@ dependencies:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
@@ -584,8 +584,8 @@ features:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
@@ -657,8 +657,8 @@ features:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
@@ -745,9 +745,9 @@ features:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
-        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let identity_c = FullIdentity::new("c".into(), registry_origin);
@@ -833,8 +833,8 @@ features:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
