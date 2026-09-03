@@ -1,5 +1,7 @@
 #include "vm.hpp"
 
+#include <base/extend_cpp/variant_match.hpp>
+
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/thread_id.hpp>
@@ -162,11 +164,14 @@ namespace vm::api {
 
 	std::expected<base::Optional<response::Boolean>, ApiError> deinitOrKill(PID pid) {
 		// If the process was validated successfully we return the validation result.
-		if (const auto validated = deinitAndValidate(pid))
-			return base::Optional<response::Boolean>{ validated.value() };
+		const auto validated = deinitAndValidate(pid);
+		if (validated) return base::Optional<response::Boolean>{ validated.value() };
 
-		// Otherwise, we force kill it. The process might have been still running or finished with
-		// Stopped or Panicked.
+		// A deinit which panicked in a global destructor already destroyed the process.
+		if (v_matches(validated.error(), Panicked)) return base::Optional<response::Boolean>{};
+
+		// Otherwise the deinit was refused, so we force kill it. The process might have
+		// been still running or finished with Stopped or Panicked.
 		return kill(pid).transform([] { return base::Optional<response::Boolean>{}; });
 	}
 

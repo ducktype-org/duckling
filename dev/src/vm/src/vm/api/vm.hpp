@@ -122,15 +122,16 @@ namespace vm::api {
 	 * or panicked. Still executing process or one that was stopped or panicked will be refused with
 	 * a `StateError`. Such process should be killed.
 	 *
-	 * @note The process is removed from the internal structures only when the call succeeds. On
-	 * any error it stays registered and the caller has to `kill` it.
+	 * @note The process is removed from the internal structures whenever the deinitialization
+	 * actually ran. This includes a successful deinit and when a global destructor panicked during
+	 * execution.
 	 */
 	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid);
 
 	/**
 	 * @brief Tears down the process. If it's possible, we tear it down gracefully with
-	 * `deinitAndValidate`, otherwise (still running, stopped, panicked, or a global destructor
-	 * which failed) we force `kill` it.
+	 * `deinitAndValidate`, otherwise (still running, stopped or panicked) we force `kill` it. In
+	 * both cases, the process is gone.
 	 *
 	 * @return The validation result if the process was deinitialized, an empty optional if it had
 	 * to be killed, or an API error if neither could be done.

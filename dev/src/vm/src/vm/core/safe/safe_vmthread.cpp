@@ -594,14 +594,10 @@ namespace vm {
 			auto* ctor_dtor = std::get_if<low::GlobalCtorDtor>(&global->init);
 			if (!ctor_dtor || !ctor_dtor->dtor_name.has_value()) continue;
 
-			// A global which was never constructed (or already destructed) has nothing to destroy.
+			// A global which was never constructed has nothing to destroy.
 			auto block_ref
 				= Ref(runtime_data.global_block_ref_buffer_base[global->global_block_idx]);
 			if (not process_memory.isGlobalInitialized(block_ref)) continue;
-
-			// Set it uninitialized before the call, so if a destructor throws we won't run this
-			// dtor again.
-			process_memory.unsetGlobalInitialized(block_ref);
 
 			const auto& func
 				= *executing_program->getFunctions()

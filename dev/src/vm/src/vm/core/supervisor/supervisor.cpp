@@ -60,9 +60,11 @@ namespace vm {
 					return process->doRequest(api::request::DeinitAndValidate{});
 				});
 
-				// If the deinit was successful, we destroy the process here. Otherwise we leave it
-				// in the supervisor and let someone kill by hand.
-				if (res.has_value()) (void) killProcess(pid);
+				// If the deinit was successful or it ran but a global destructor panicked, we
+				// destroy the process here. Otherwise, if it was refused because the process is
+				// still executing, we leave it and let someone kill by hand.
+				if (res.has_value() || v_matches(res.error(), api::Panicked))
+					(void) killProcess(pid);
 				return res;
 			}
 			variant_default {

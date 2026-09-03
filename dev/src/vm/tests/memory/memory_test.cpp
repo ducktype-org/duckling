@@ -19,8 +19,8 @@ public:
 		TESTER_ADD_TEST(variantDestructor);
 		TESTER_ADD_TEST(deinitAfterPanicIsRefused);
 		TESTER_ADD_TEST(deinitOrKillTearsDownEitherWay);
-		TESTER_ADD_TEST(deinitOrKillFallsBackToKillWhenDeinitFails);
-		TESTER_ADD_TEST(failedDeinitDoesNotRerunFinishedGlobalDestructors);
+		TESTER_ADD_TEST(deinitKillsTheProcessWhenAGlobalDestructorPanics);
+		TESTER_ADD_TEST(deinitOrKillHandlesAProcessKilledByItsFailedDeinit);
 		TESTER_ADD_TEST(deinitOnNotStartedProcessRunsNoGlobalDestructors);
 	}
 
@@ -89,9 +89,8 @@ private:
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(panicked.pid));
 	}
 
-	/// Run completes and the deinit is legal, but we panicking in a global destructor
-	/// `deinitOrKill` should fall back to the kill.
-	void deinitOrKillFallsBackToKillWhenDeinitFails() {
+	/// Run completes and the deinit is legal, but we panic in a global destructor.
+	void deinitKillsTheProcessWhenAGlobalDestructorPanics() {
 		const auto result = runTestOnVmGetResult("panicking_global_destructor.dbc", "", "");
 		ASSERT_HAS_VALUE(result.run_result);
 
@@ -101,38 +100,32 @@ private:
 
 		const auto deinit = vm::api::deinitAndValidate(result.pid);
 		ASSERT_NO_VALUE(deinit);
-		ASSERT_TRUE(v_matches(deinit.error(), vm::api::OtherError));
-		ASSERT_HAS_VALUE(vm::api::getExecutionStatus(result.pid));
-		ASSERT_HAS_VALUE(vm::api::kill(result.pid));
+		ASSERT_TRUE(v_matches(deinit.error(), vm::api::Panicked));
 
-		const auto killed = runTestOnVmGetResult("panicking_global_destructor.dbc", "", "");
-		ASSERT_HAS_VALUE(killed.run_result);
-		const auto teardown = vm::api::deinitOrKill(killed.pid);
-		ASSERT_HAS_VALUE(teardown);
-		ASSERT_TRUE(!teardown.value().has_value());
-		ASSERT_NO_VALUE(vm::api::getExecutionStatus(killed.pid));
+		// Process should be gone.
+		ASSERT_NO_VALUE(vm::api::getExecutionStatus(result.pid));
+		// Second deinit should not run.
+		const auto second = vm::api::deinitAndValidate(result.pid);
+		ASSERT_NO_VALUE(second);
+		ASSERT_TRUE(v_matches(second.error(), vm::api::ProcessNotFound));
 	}
 
-	/**
-	 * @brief A failed deinit keeps the process alive, so it can be deinitialized again. The second
-	 * attempt must not run the destructors the first one already finished.
-	 */
-	void failedDeinitDoesNotRerunFinishedGlobalDestructors() {
+	void deinitOrKillHandlesAProcessKilledByItsFailedDeinit() {
 		const auto result = runTestOnVmGetResult("two_globals_second_destructor_aborts.dbc");
 		ASSERT_HAS_VALUE(result.run_result);
 
 		std::ostringstream captured;
 		ASSERT_HAS_VALUE(vm::api::attach(result.pid, std::cin, captured));
 
-		const auto first = vm::api::deinitAndValidate(result.pid);
-		ASSERT_NO_VALUE(first);
-		ASSERT_EQUAL_PRINT(std::string("2"), captured.str());
-
-		// The second attempt skips `b_dtor` and `a_dtor`, so it should append.
-		const auto second = vm::api::deinitAndValidate(result.pid);
-		ASSERT_HAS_VALUE(second);
-		ASSERT_EQUAL_PRINT(std::string("2"), captured.str());
+		const auto teardown = vm::api::deinitOrKill(result.pid);
+		ASSERT_HAS_VALUE(teardown);
+		// Deinit or kill should report that the deinit failed.
+		ASSERT_TRUE(!teardown.value().has_value());
+		// But the process should be gone either way.
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(result.pid));
+
+		// `b_dtor` ran once, before `a_dtor` aborted.
+		ASSERT_EQUAL_PRINT(std::string("2"), captured.str());
 	}
 
 	/**
