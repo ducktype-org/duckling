@@ -84,6 +84,28 @@ namespace vm {
 		}
 	}
 
+	low::MicroOpcode SafeVMThread::getCurrentOpcode() const {
+		const Frame*           frame  = runtime_data.frame_stack_current;
+		const low::MicroOpcode opcode = getInstructionOpcode(*frame->instr);
+		if (opcode != low::MicroOpcode::breakpoint) return opcode;
+
+		const auto* program_copy
+			= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
+		CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
+
+		const auto original_instr
+			= program_copy->getOriginalProgram()
+		          ->getFunctions()
+		          .at(frame->current_function->name)
+		          ->bc[static_cast<usize>(frame->instr - &frame->current_function->bc[0])];
+
+		return getInstructionOpcode(original_instr);
+	}
+
+	bool SafeVMThread::isAtExecutionEnd() const {
+		return getCurrentOpcode() == low::MicroOpcode::exit;
+	}
+
 	/**
 	 * @brief Main debug function that executes one step of the program.
 	 */
@@ -92,20 +114,7 @@ namespace vm {
 		auto*      instr       = frame->instr;
 		std::byte* local_stack = frame->local_stack;
 
-		low::MicroOpcode opcode = getInstructionOpcode(*instr);
-		if (opcode == low::MicroOpcode::breakpoint) {
-			const auto* program_copy
-				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
-			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
-
-			auto original_instr
-				= program_copy->getOriginalProgram()
-			          ->getFunctions()
-			          .at(frame->current_function->name)
-			          ->bc[static_cast<size_t>(frame->instr - &frame->current_function->bc[0])];
-
-			opcode = getInstructionOpcode(original_instr);
-		}
+		const low::MicroOpcode opcode = getCurrentOpcode();
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
@@ -399,6 +408,16 @@ namespace vm {
 		if (thread.has_gil) thread.releaseGil();
 	}
 
+	SafeVMThread::ScopedBlockingWait::ScopedBlockingWait(SafeVMThread& t): thread(t) {
+		thread.reportAsSleeping();
+		thread.releaseGilIfHeld();
+	}
+
+	SafeVMThread::ScopedBlockingWait::~ScopedBlockingWait() {
+		thread.acquireGilIfNotHeld();
+		thread.reportAsRunning();
+	}
+
 #if defined(__clang__)
 // @TODO: #2582 suppress code deduplication in Clang
 #elif defined(__GNUG__)
@@ -429,7 +448,7 @@ namespace vm {
 			break;                                                                                  \
 		}                                                                                           \
 	}
-	#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+	#include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 	#undef HANDLE_MICRO_INSTR
 
 			default: {

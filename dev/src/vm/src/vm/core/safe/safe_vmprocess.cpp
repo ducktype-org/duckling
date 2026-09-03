@@ -179,10 +179,10 @@ namespace vm {
 		variant_match(getProcessState()) {
 			variant_case(ps::Completed, completed) { return api::Response{ completed.exit_value }; }
 			variant_case(ps::Panicked, panicked) {
-				return std::unexpected(api::StateError{ panicked.err });
+				return std::unexpected(api::OtherError{ panicked.err });
 			}
 			variant_default {
-				return std::unexpected(api::StateError("Execution did not complete"));
+				return std::unexpected(api::OtherError("Execution did not complete"));
 			}
 		}
 		CORE_UNREACHABLE();
@@ -418,6 +418,10 @@ namespace vm {
 			auto response = thread->step();
 			if (!response)
 				return std::unexpected(api::ApiError{ api::OtherError{ response.error() } });
+
+			// `getCurrentPosition` only works in `Paused` state, so if this step ended the
+			// execution we return early.
+			if (ts::isTerminal(thread->getThreadState())) return {};
 
 			auto maybe_new_lp = thread->getCurrentPosition();
 			if (!maybe_new_lp) return std::unexpected(maybe_new_lp.error());

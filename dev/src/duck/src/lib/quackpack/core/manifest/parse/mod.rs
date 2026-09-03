@@ -145,7 +145,13 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings
         ctx,
     )?;
     Ok((
-        Package::new(content, schema, manifest, package_root.into(), path.into()),
+        Package::new(
+            content,
+            schema,
+            Box::new(manifest),
+            package_root.into(),
+            path.into(),
+        ),
         warnings,
     ))
 }

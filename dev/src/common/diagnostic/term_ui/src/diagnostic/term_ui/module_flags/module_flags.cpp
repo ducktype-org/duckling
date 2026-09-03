@@ -2,6 +2,8 @@
 
 #include <rang.hpp>
 
+#include <sstream>
+
 namespace term_ui {
 	bool use_color = true;
 
