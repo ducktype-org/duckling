@@ -12,6 +12,7 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <logger/logger.hpp>
@@ -152,6 +153,12 @@ namespace compiler::repl {
 				lir_data_qr.valueOrPanic().lir_unit
 			));
 		}
+
+		// The REPL never goes through the DVM linker, which is the only other place declaring the
+		// shared libraries the standard library needs for its `ffi object` symbols, so they are
+		// declared straight on the preloaded batch.
+		for (const auto& package: frontend::packages::standardLibraryPackages())
+			base::appendToVector(preload_code.object_files, package.getSharedLibsAsStr());
 
 		return vm::api::loadCode(pid, preload_code).transform_error(vm::api::errorToString);
 	}

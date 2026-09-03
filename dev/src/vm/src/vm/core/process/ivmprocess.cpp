@@ -58,7 +58,12 @@ namespace vm {
 			}
 			variant_case_novalue(pe::Stop) {}
 			variant_case_novalue(pe::DeinitAndValidate) {
-				if (ps::isExecuting(state)) invalid_reason = "the process is still executing";
+				if (not ps::canDeinit(state)) {
+					invalid_reason
+						= ps::isExecuting(state)
+					        ? "the process is still executing"
+					        : "the previous run did not complete cleanly. Use `api::kill` instead";
+				}
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}

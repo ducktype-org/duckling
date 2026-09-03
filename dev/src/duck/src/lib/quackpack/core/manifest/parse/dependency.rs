@@ -4,6 +4,7 @@ use std::path::Path;
 use tracing::debug;
 
 use super::{ScopeGuard, source};
+use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{Conditions, Dependency, DependencyFeature, DependencyKind};
 use crate::quackpack::schemas::OneEntryMap;
@@ -23,6 +24,7 @@ pub(crate) fn parse(
     package_root: &Path,
     kind: DependencyKind,
     dependencies: &mut Vec<Dependency>,
+    warnings: &mut Warnings,
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<()> {
@@ -36,6 +38,7 @@ pub(crate) fn parse(
             dep_schema,
             package_root,
             kind,
+            warnings,
             ctx,
             guard,
         )?);
@@ -50,6 +53,7 @@ fn parse_single_dependency(
     schema: &DependencySchema,
     package_root: &Path,
     kind: DependencyKind,
+    warnings: &mut Warnings,
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Dependency> {
@@ -75,7 +79,7 @@ fn parse_single_dependency(
             .with_context(|| scope.make_context_string())?;
     }
     let guard = scope.push("source".into());
-    let source = source::parse(schema, package_root, ctx, guard)?;
+    let source = source::parse(schema, package_root, warnings, ctx, guard)?;
 
     let versions = schema
         .version

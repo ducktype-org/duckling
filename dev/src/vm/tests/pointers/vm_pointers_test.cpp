@@ -23,7 +23,7 @@ private:
 	// The offsets of the struct and of its second field, the two ids being equal, and then the
 	// null pointer failing to decompose the way a dereference does.
 	void ptrPartsTest() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("ptr_parts.dbc", "", "080"), "Accessing null pointer"
 		);
 	}

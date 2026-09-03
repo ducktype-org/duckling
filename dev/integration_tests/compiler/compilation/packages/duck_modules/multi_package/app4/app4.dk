@@ -27,10 +27,10 @@ fun main() -> i64 = {
     let c = lib_c.foo();
     let nc = lib_c.Name.foo();
 
-    let is_ok = not check_empty or
-                not check(a) or not check(na) or
-                check(b) or check(nb) or
-                check(c) or check(nc);
+    let is_ok = not check_empty and
+                not check(a) and not check(na) and
+                check(b) and check(nb) and
+                check(c) and check(nc);
 
     if (is_ok) {
         builtin_output_i64(1);

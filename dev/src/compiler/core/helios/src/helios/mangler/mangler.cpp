@@ -142,13 +142,13 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		void identifier(std::stringstream& ss, std::string_view name) {
-			// @todo: #3285 add backreferences
+			// @TODO: #3285 add backreferences
 			if (not findExtendedChar(name)) {
 				ss << name.size() << name;
 				return;
 			} else {
 				constexpr char UNICODE_PREFIX = 'U';
-				// @todo: #3286 convert to punycode
+				// @TODO: #3286 convert to punycode
 				std::string_view puny_string = name;
 				ss << UNICODE_PREFIX << puny_string.size() << puny_string;
 			}
@@ -175,20 +175,24 @@ namespace compiler::helios::mangler {
 			std::stringstream ret_ss;
 
 			// package/module prefix
-			const auto symbol_module = module(scope(symbol_id));
+			const auto module_id = module(scope(symbol_id));
 			const auto package_id
-				= compiler::frontend::getModuleRef(symbol_module)->getPackage().unlock(ctx).getID();
-			std::cerr << "@taw3e8 halo 1\n";
+				= ctx.query<compiler::frontend::QueryPackageOfModule>(module_id).unlock(ctx).getID();
+
 			if (const auto package_ref_opt = global_state::getPackageRefOpt(package_id)) {
-				std::cerr << "@taw3e8 halo 2\n";
 				/* we're in a package */
+				// @TODO: #3505 - currently changing package name/version doesn't invalidate old symbols
 				auto raw_package_name = package_ref_opt.value()->getName().str();
-				// @todo: #3286 for now we allow '-' and just treat it as '_'
+
+				// @TODO: #3286 for now we allow '-' and just treat it as '_'
+				if (raw_package_name.contains('-') && raw_package_name.contains('_'))
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+						"Currently it is not allowed to mix '-' and '_' in package names."
+					));
 				std::ranges::replace(raw_package_name, '-', '_');
 				auto package_name = identifier(raw_package_name);
 
 				if (const auto c = findExtendedChar(package_name)) {
-					std::cerr << "@taw3e8 halo 3\n";
 					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
 						"Name of a package contains a character that is not allowed yet: ",
 						quoteExtendedChar(c.value())
@@ -204,9 +208,9 @@ namespace compiler::helios::mangler {
 			// @future: templated modules
 			{
 				std::vector<std::string_view> modules;
-				modules.push_back(frontend::moduleName(symbol_module).strView());
+				modules.push_back(frontend::moduleName(module_id).strView());
 
-				for (auto current_module = symbol_module;
+				for (auto current_module = module_id;
 				     auto parent_module = ctx.query<frontend::QueryParentModule>(current_module);) {
 					current_module = parent_module.value();
 					modules.push_back(frontend::moduleName(current_module).strView());
@@ -216,7 +220,7 @@ namespace compiler::helios::mangler {
 			}
 
 			auto ret = ret_ss.str();
-			// @todo: #3286 for now we allow '-' and just treat it as '_'
+			// @TODO: #3286 for now we allow '-' and just treat it as '_'
 			std::ranges::replace(ret, '-', '_');
 			if (const auto c = findExtendedChar(ret))
 				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
@@ -224,13 +228,13 @@ namespace compiler::helios::mangler {
 					quoteExtendedChar(c.value())
 				)));
 
-			// @todo: #3285 add backreferences
+			// @TODO: #3285 add backreferences
 			return ret;
 		}
 
 		std::string pathPrefix(special_symbol_keys::LIRModuleID mod_id) {
-			// @todo: #2643 rething compiler-generated symbols
-			// @todo: #3285 add backreferences
+			// @TODO: #2643 rething compiler-generated symbols
+			// @TODO: #3285 add backreferences
 			return base::strConcat("M", mod_id.id);
 		}
 
@@ -344,7 +348,7 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string unscopedName(query::Context& ctx, SymID symbol_id) {
-			// @todo: #3285 add backreferences
+			// @TODO: #3285 add backreferences
 			if (isFunctionLike(kind(symbol_id))) {
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
@@ -449,7 +453,7 @@ namespace compiler::helios::mangler {
 			for (auto it = ancestors.rbegin(); it != ancestors.rend(); ++it) {
 				const auto [ancestor, _] = *it;
 
-				// @todo: #3285 add backreferences -- <name-prefix>
+				// @TODO: #3285 add backreferences -- <name-prefix>
 				switch (ancestor->getElementKind()) {
 					using enum pst::ElementKind;
 				case Namespace: {
@@ -533,7 +537,7 @@ namespace compiler::helios::mangler {
 		 */
 		std::string path(query::Context& ctx, SymID symbol_id) {
 			auto prefix = pathPrefix(ctx, symbol_id);
-			// @todo: #3285 add backreferences
+			// @TODO: #3285 add backreferences
 			return base::strConcat(std::move(prefix), symbolName(ctx, symbol_id));
 		}
 
@@ -809,7 +813,7 @@ namespace compiler::helios::mangler {
 	}  // namespace internal
 
 	std::string mangleCTV(query::Context& ctx, const compiler::ctv::CompileTimeValue& value) {
-		// @todo: #3285 add backreferences
+		// @TODO: #3285 add backreferences
 		variant_match(value.getStorage()) {
 			variant_case(bool, b) { return base::strConcat("b", (b ? "1" : "0")); }
 			variant_case(compiler::numeric_value::NumericValue, num) {
@@ -1051,7 +1055,7 @@ namespace compiler::helios::mangler {
 		}
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			// @todo: #3285 add backreferences
+			// @TODO: #3285 add backreferences
 			return base::StrID{ base::strConcat(
 				key.getUniqueness() == tsh::Uniqueness::Unique ? "M" : "",
 				key.getLeakage() == tsh::Leakage::Leaking ? "L" : "",

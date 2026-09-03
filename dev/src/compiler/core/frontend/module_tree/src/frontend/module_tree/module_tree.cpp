@@ -915,6 +915,19 @@ namespace compiler::frontend {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryParentModule);
 
+	/************************
+	 * QueryPackageOfModule *
+	 ************************/
+	struct IMPLEMENT_QUERY(QueryPackageOfModule, packages::PackageAccessLocked) {
+		static auto provide(Context&, QKey key) -> PResult {
+			return GetModuleID_Functor::get(key)->getPackage();
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPackageOfModule);
+
 	/***********************
 	 * QueryMainSourceFile *
 	 ***********************/
