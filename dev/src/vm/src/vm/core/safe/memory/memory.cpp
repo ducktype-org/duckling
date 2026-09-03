@@ -20,6 +20,16 @@ namespace vm {
 	}
 
 	template<typename EntryT, typename BlockT>
+	void GenericMemory<EntryT, BlockT>::freeAllocatedBlockData() {
+		for (auto& block: blocks_pool) {
+			if (!block.deallocated && !block.parent) {
+				block.data.allocator->deallocate(&block.data);
+				block.deallocated = true;
+			}
+		}
+	}
+
+	template<typename EntryT, typename BlockT>
 	void GenericMemory<EntryT, BlockT>::deinitGlobals() {
 		try {
 			// We are first freeing all the data and then decreasing the refcounts.

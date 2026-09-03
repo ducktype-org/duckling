@@ -417,6 +417,11 @@ namespace vm {
 		 */
 		void deinitGlobals();
 
+		/**
+		 * @brief Free left-over block data, so that VM does not leak memory :)
+		 */
+		void freeAllocatedBlockData();
+
 		struct GlobalBlocksConfig {
 			std::vector<usize>    global_data_offsets;
 			std::vector<usize>    global_blocks_idxs;

@@ -67,7 +67,6 @@ inline static void writeToPlace(
 #define WRITE_TO_PLACE_ARG(TYPE, ARG, VALUE) \
 	writeToPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG, VALUE)
 // Resolves a block place argument, creating the local's block if it does not exist yet.
-// Defined as `vm::OpFuns::readBlockRefFromArg`, which is complete at every expansion site.
 #define READ_BLOCK_REF_FROM_ARG(ARG) OpFuns::readBlockRefFromArg(frame, thread, ARG)
 /**
  * @brief Helper macro for reading a value from a immediate argument.
