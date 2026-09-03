@@ -19,13 +19,8 @@
                 "use_lib_a"
             ],
             "dependencies": [
-                {
-                    "id": "lib_a",
-                    "alias": "lib_a"
-                },
-                {
-                    "id": "lib_c"
-                }
+                { "id": "lib_a", "alias": "lib_a" },
+                { "id": "lib_c" }
             ]
         },
         {
@@ -37,9 +32,7 @@
                 "use_lib_b"
             ],
             "dependencies": [
-                {
-                    "id": "lib_b"
-                }
+                { "id": "lib_b" }
             ]
         },
         {
@@ -49,14 +42,8 @@
             "path": "duck_modules/multi_package/app1",
             "features": [],
             "dependencies": [
-                {
-                    "id": "lib_a",
-                    "alias": "lib_a"
-                },
-                {
-                    "id": "lib_c",
-                    "alias": "lib_b"
-                }
+                { "id": "lib_a", "alias": "lib_a" },
+                { "id": "lib_c", "alias": "lib_b" }
             ]
         },
         {
@@ -65,10 +52,7 @@
             "version": "0.1.0",
             "path": "duck_modules/multi_package/app2",
             "dependencies": [
-                {
-                    "id": "lib_a",
-                    "alias": "lib_a"
-                }
+                { "id": "lib_a", "alias": "lib_a" }
             ]
         },
         {
@@ -77,12 +61,8 @@
             "version": "0.1.0",
             "path": "duck_modules/multi_package/app3",
             "dependencies": [
-                {
-                    "id": "lib_a"
-                },
-                {
-                    "id": "lib_b"
-                }
+                { "id": "lib_a" },
+                { "id": "lib_b" }
             ]
         },
         {
@@ -91,14 +71,8 @@
             "version": "0.1.0",
             "path": "duck_modules/multi_package/app3",
             "dependencies": [
-                {
-                    "id": "lib_a",
-                    "alias": "lib_b"
-                },
-                {
-                    "id": "lib_b",
-                    "alias": "lib_a"
-                }
+                { "id": "lib_a", "alias": "lib_b" },
+                { "id": "lib_b", "alias": "lib_a" }
             ]
         },
         {
@@ -107,15 +81,9 @@
             "version": "0.1.0",
             "path": "duck_modules/multi_package/app4",
             "dependencies": [
-                {
-                    "id": "lib_a"
-                },
-                {
-                    "id": "lib_b"
-                },
-                {
-                    "id": "lib_c"
-                }
+                { "id": "lib_a" },
+                { "id": "lib_b" },
+                { "id": "lib_c" }
             ]
         }
     ],
@@ -165,8 +133,12 @@
             "strategy": "dvm_exe",
             "output_file": "app2_dvm_linked.dbc",
             "dvm_linking_options": {
-                "shared_libraries": [ "build_c/libc_helper.so" ],
-                "link_libraries": [ "build/lib_a_dvm.dbc" ]
+                "shared_libraries": [
+                    "build_c/libc_helper.so"
+                ],
+                "link_libraries": [
+                    "build/lib_a_dvm.dbc"
+                ]
             }
         },
         {
