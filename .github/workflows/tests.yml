@@ -130,6 +130,7 @@ jobs:
       # See if github is present in known hosts
       - name: Check known hosts for github
         run: |
+          mkdir -p ~/.ssh && touch ~/.ssh/known_hosts
           ssh-keygen -l -F github.com || (ssh-keyscan github.com >> ~/.ssh/known_hosts)
 
       - name: Install lcov
