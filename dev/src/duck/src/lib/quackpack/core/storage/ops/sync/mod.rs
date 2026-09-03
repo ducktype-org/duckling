@@ -1,5 +1,5 @@
 //! Synchronize a given venv.
-//! This includes: creating a venv, resolving dependencies, downloading them.use std::io;
+//! This includes: creating a venv, resolving dependencies, downloading them.
 use std::io;
 use std::path::PathBuf;
 

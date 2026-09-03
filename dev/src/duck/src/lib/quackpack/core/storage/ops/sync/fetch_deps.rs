@@ -1,3 +1,4 @@
+//! Module for loading (and firstly downloading if absent) packages of the freeze generated during `sync`.
 use std::cell::RefCell;
 use std::fs::File;
 use std::path::{Path, PathBuf};
