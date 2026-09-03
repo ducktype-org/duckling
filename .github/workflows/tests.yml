@@ -127,6 +127,11 @@ jobs:
       - name: Update apt
         run: sudo apt update
 
+      # See if github is present in known hosts
+      - name: Check known hosts for github
+        run: |
+          ssh-keygen -l -F github.com || (ssh-keyscan github.com >> ~/.ssh/known_hosts)
+
       - name: Install lcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov
