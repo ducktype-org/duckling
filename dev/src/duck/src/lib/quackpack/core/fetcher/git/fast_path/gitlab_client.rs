@@ -3,6 +3,7 @@ use std::pin::Pin;
 
 use crate::quackpack::core::fetcher::git::fast_path::GitFastPathExt;
 use crate::quackpack::core::fetcher::git::fast_path::gitlab_api_client::GitlabApiClient;
+use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::{
     GitReference, Manifest, PackageLoader, ParseMode, manifest, parse_schema,
 };
@@ -72,11 +73,13 @@ impl<'duck> GitFastPathExt for GitlabClient<'duck> {
                 .client
                 .download_file_from_commit(&self.repo_api_url, PackageLoader::MANIFEST_NAME, commit)
                 .await?;
-            let manifest_schema = parse_schema(&deserialized_manifest)?;
+            let mut warnings = Warnings::default();
+            let manifest_schema = parse_schema(&deserialized_manifest, &mut warnings)?;
             let manifest = manifest::parse(
                 &manifest_schema,
                 Path::new(""), // Dummy path.
                 ParseMode::Package,
+                &mut warnings,
                 self.client.ctx(),
             )?;
             Ok(manifest)

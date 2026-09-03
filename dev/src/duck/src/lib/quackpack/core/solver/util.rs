@@ -185,7 +185,7 @@ dependencies:
 "#,
         );
         let ctx = DuckContext::default();
-        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap().0;
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
@@ -229,7 +229,7 @@ dependencies:
 "#,
         );
         let ctx = DuckContext::default();
-        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap().0;
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
