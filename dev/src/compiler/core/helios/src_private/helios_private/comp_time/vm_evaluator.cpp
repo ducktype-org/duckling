@@ -22,6 +22,7 @@
 #include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <expected>
+#include <iostream>
 #include <mutex>
 
 namespace {
@@ -71,9 +72,25 @@ namespace {
 
 		~CompTimeDVM() {
 			if (!pid.has_value()) return;
+			dumpOutput();
 			if (!vm::api::deinitAndValidate(pid.value()).has_value())
 				// Force kill if the process doesn't want to die.
 				(void) vm::api::kill(pid.value());
+		}
+
+		/**
+		 * @brief Prints everything the compile-time code has printed so far on `std::cerr`.
+		 *
+		 * The DVM buffers the output of a program instead of writing it out, so a `print` inside a
+		 * compile-time evaluation would otherwise be lost. Draining that buffer onto `std::cerr`
+		 * makes such prints visible without mixing them into the compiler's own standard output.
+		 */
+		void dumpOutput() {
+			if (!pid.has_value()) return;
+			auto response = vm::api::output(pid.value());
+			if (!response.has_value() || response->output.empty()) return;
+			std::cerr << "[comp-time] " << response->output;
+			if (!response->output.ends_with('\n')) std::cerr << '\n';
 		}
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
@@ -533,6 +550,9 @@ namespace compiler::helios {
 				VmEvaluationError::Kind::VmInitializationFailed,
 				"Failed to initialize the comptime DVM process."
 			));
+
+		// Show what the evaluated code printed, whether or not the evaluation itself succeeded.
+		defer(comptime_dvm.dumpOutput());
 
 		if (auto res = comptime_dvm.loadCode(ctx, lir_unit); !res)
 			return std::unexpected(res.error());

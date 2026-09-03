@@ -35,6 +35,8 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/extend_cpp/defer.hpp>
+
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <query_framework/context/context.hpp>
@@ -46,6 +48,7 @@
 #include <algorithm>
 #include <any>
 #include <array>
+#include <iostream>
 #include <sstream>
 
 using namespace compiler::helios::test_utils;
@@ -63,6 +66,7 @@ public:
 		TESTER_ADD_TEST(testStringClassProperties);
 		TESTER_ADD_TEST(testDefaultInitializers);
 		TESTER_ADD_TEST(testCompTimeStrings);
+		TESTER_ADD_TEST(testCompTimeOutput);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testCopy);
@@ -80,7 +84,8 @@ protected:
 		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
 			{ fs::FilePath(path("test_modules/builtins")), "builtins" },
 			{ fs::FilePath(path("test_modules/strings")), "strings" },
-			{ fs::FilePath(path("test_modules/comp_time_strings")), "comp_time_strings" }
+			{ fs::FilePath(path("test_modules/comp_time_strings")), "comp_time_strings" },
+			{ fs::FilePath(path("test_modules/comp_time_output")), "comp_time_output" }
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -483,6 +488,24 @@ private:
 		// The `expand`s above should have injected `fromString`/`fromSlice` into `expanded`.
 		ASSERT_TRUE(!getChain("expanded.fromString", root_scope).empty());
 		ASSERT_TRUE(!getChain("expanded.fromSlice", root_scope).empty());
+	}
+
+	/**
+	 * The compile-time DVM buffers whatever the evaluated code prints, so a `print` inside a
+	 * compile-time evaluation used to be dropped. It now ends up on `std::cerr` instead.
+	 */
+	void testCompTimeOutput() {
+		auto module     = compiler::driver::test_utils::getModuleIdFromPath("comp_time_output");
+		auto root_scope = getModuleScope(module);
+
+		std::ostringstream captured_cerr;
+		auto*              real_cerr_buffer = std::cerr.rdbuf(captured_cerr.rdbuf());
+		defer(std::cerr.rdbuf(real_cerr_buffer));
+
+		// Evaluating the const runs `printAtCompTime` on the compile-time DVM.
+		ASSERT_EQUAL(1, getConstValueAs<i64>("printed_at_comp_time", root_scope));
+
+		ASSERT_TRUE(captured_cerr.str().contains("[comp-time] 3492"));
 	}
 
 	void testStrings() {

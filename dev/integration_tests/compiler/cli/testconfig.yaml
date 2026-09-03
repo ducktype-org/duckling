@@ -59,3 +59,18 @@ Tests:
       two-modules:
         run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
         ExitCode: 0
+
+  comp-time-output:
+    # A `print` that runs while the compiler evaluates a `const` at compile time must show up on
+    # duckc's stderr. The rest of that stderr is a volatile progress line, so we match a
+    # regex instead of comparing the whole stream literally.
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    # A real compile plus a compile-time DVM evaluation, so more than the 2 s default.
+    timeout_default: 5
+    Run: "@{expect_output} --err-regex '\\[comp-time\\] 3492'
+      -- @{duckc_path} compile_modules ./duck_modules/comp_time_output/comp_time_output.dk
+      -O 0 --no-incremental --dvm-backend -a @{case_build}
+      --custom-std-artifacts-path @{case_std_artifacts}"
+    Cases:
+      dvm-backend:
+        ExitCode: 0
