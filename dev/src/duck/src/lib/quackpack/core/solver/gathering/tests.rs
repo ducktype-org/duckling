@@ -529,7 +529,7 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
@@ -628,7 +628,7 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
@@ -691,7 +691,7 @@ features:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
@@ -764,7 +764,7 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
@@ -834,7 +834,7 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
@@ -900,7 +900,7 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
