@@ -484,16 +484,8 @@ DEF_MICRO_INSTR(ret)
 // ========= STACK OPERATIONS ========
 
 /**
- * @brief `initSimple_imm_type` for a variable that needs its block from the start.
- *
- * @arg0 - byte offset of the variable in the frame's local stack.
- * @arg1 - type of the variable.
- */
-DEF_MICRO_INSTR(initBlock_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
-
-/**
- * @brief Initializes a local variable without creating a block for it: zeroes it and records
- * its type and address in the frame's slot stack.
+ * @brief Initializes a local variable: zeroes it and records its type and address in the frame's
+ * slot stack.
  *
  * A block is only needed once something refers to the variable through it, and is then created
  * out of the recorded slot.
@@ -501,12 +493,12 @@ DEF_MICRO_INSTR(initBlock_imm_type, vm::low::opargs::Immediate, vm::low::opargs:
  * @arg0 - byte offset of the variable in the frame's local stack.
  * @arg1 - type of the variable.
  */
-DEF_MICRO_INSTR(initSimple_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
+DEF_MICRO_INSTR(init_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
 
-/// `initSimple_imm_type` for an 8-byte variable, which zeroes with a plain store.
-DEF_MICRO_INSTR(initSimple64_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
-/// 16-byte counterpart of `initSimple64_imm_type`, the size of a `Pointer`.
-DEF_MICRO_INSTR(initSimple128_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
+/// `init_imm_type` for an 8-byte variable, which zeroes with a plain store.
+DEF_MICRO_INSTR(init64_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
+/// 16-byte counterpart of `init64_imm_type`, the size of a `Pointer`.
+DEF_MICRO_INSTR(init128_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
 
 /// Pops the topmost local variable, freeing its block if one was created.
 DEF_MICRO_INSTR(deinit)

@@ -44,6 +44,7 @@ namespace vm {
 		Kind        kind_type = Kind::None;
 		TypeID      id{};
 		bool        am_i_instantiable = true;
+		bool        has_destructors   = false;
 
 		std::variant<
 			std::monostate,
@@ -135,6 +136,19 @@ namespace vm {
 		[[nodiscard]]
 		Kind getKind() const {
 			return kind_type;
+		}
+
+		/**
+		 * @brief Whether an object of this type holds a pointer, directly or through a field or
+		 * a table element, and so has to run destructors when it dies.
+		 *
+		 * @note A variant reports `false`: it delegates its cleanup to its nested block, which
+		 * `Memory::runObjectDestructor` relies on.
+		 */
+		[[nodiscard]]
+		bool hasDestructors() const {
+			CORE_ASSERT(state == State::Finalized, "hasDestructors called before type finalization");
+			return has_destructors;
 		}
 
 		[[nodiscard]]

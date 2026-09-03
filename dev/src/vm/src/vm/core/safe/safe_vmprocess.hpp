@@ -168,12 +168,10 @@ namespace vm {
 			api::ThreadID thread_id, u64 frame_index
 		) override;
 
-		std::expected<api::Response, api::ApiError> getTypeMetadata(
-			const std::string& type_name
+		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
 		) override;
 
-		std::expected<api::Response, api::ApiError> getVMValueForType(
-			const std::string& type_name
+		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
 		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
@@ -203,7 +201,7 @@ namespace vm {
 	public:
 		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
 
-		~SafeVMProcess() { memory.freeAllocatedBlockData(); }
+		~SafeVMProcess() override { memory.freeAllocatedBlockData(); }
 
 		DeadlockDetector* getDeadlockDetector() {
 			return deadlock_detector ? &*deadlock_detector : nullptr;

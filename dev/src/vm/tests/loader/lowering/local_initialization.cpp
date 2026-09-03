@@ -5,14 +5,11 @@
 #include <vm/loader/compiler/safe/safe_compiler.hpp>
 #include <vm/loader/loader.hpp>
 
-#include <ranges>
-
 /**
  * @brief Checks how local variables are initialized and deinitialized in micro bytecode.
  *
  * A local is initialized without a block, and the block is only created once something needs to
- * refer to the variable through it. The exceptions are variables owning nested blocks of their
- * own, which get theirs right away.
+ * refer to the variable through it.
  */
 class LocalInitializationTests: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -23,7 +20,7 @@ public:
 		TESTER_ADD_TEST(plainVariablesGetNoBlock);
 		TESTER_ADD_TEST(referencedVariableStillGetsNoBlockUpfront);
 		TESTER_ADD_TEST(pointerVariableIsDeinitializedWithDestructors);
-		TESTER_ADD_TEST(variantVariableGetsItsBlockUpfront);
+		TESTER_ADD_TEST(variantVariableGetsNoBlockUpfront);
 		TESTER_ADD_TEST(liveLocalsAreDeinitializedBeforeReturning);
 		TESTER_ADD_TEST(reusedSlotDoesNotForceABlock);
 		TESTER_ADD_TEST(zeroingIsSpecializedBySize);
@@ -71,29 +68,24 @@ private:
 	}
 
 	/**
-	 * @brief Number of locals a function initializes without a block.
+	 * @brief Number of locals a function initializes.
 	 *
-	 * Which of the block-free initializations a variable gets depends only on its size, so the
-	 * tests below count all of them together.
+	 * Which init a variable gets depends only on its size, so the tests below count all of them
+	 * together.
 	 */
-	usize countBlockFreeInits(base::StrID function_name) {
-		return countOpcode(function_name, MicroOpcode::initSimple_imm_type)
-		     + countOpcode(function_name, MicroOpcode::initSimple64_imm_type)
-		     + countOpcode(function_name, MicroOpcode::initSimple128_imm_type);
+	usize countInits(base::StrID function_name) {
+		return countOpcode(function_name, MicroOpcode::init_imm_type)
+		     + countOpcode(function_name, MicroOpcode::init64_imm_type)
+		     + countOpcode(function_name, MicroOpcode::init128_imm_type);
 	}
 
-	void assertBlockFreeInitCount(base::StrID function_name, usize expected) {
-		const usize found = countBlockFreeInits(function_name);
+	void assertInitCount(base::StrID function_name, usize expected) {
+		const usize found = countInits(function_name);
 		assertEqual(
 			found,
 			expected,
 			base::strConcat(
-				"`",
-				function_name.str(),
-				"` initializes ",
-				found,
-				" locals without a block instead of ",
-				expected
+				"`", function_name.str(), "` initializes ", found, " locals instead of ", expected
 			)
 		);
 	}
@@ -121,8 +113,7 @@ private:
 	 */
 	void plainVariablesGetNoBlock() {
 		const auto name = base::StrID("simple");
-		assertBlockFreeInitCount(name, 2);
-		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 0);
+		assertInitCount(name, 2);
 		assertOpcodeCount(name, MicroOpcode::deinit, 2);
 		assertOpcodeCount(name, MicroOpcode::deinitDtor, 0);
 	}
@@ -133,8 +124,7 @@ private:
 	 */
 	void referencedVariableStillGetsNoBlockUpfront() {
 		const auto name = base::StrID("referenced");
-		assertBlockFreeInitCount(name, 2);
-		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 0);
+		assertInitCount(name, 2);
 		assertOpcodeCount(name, MicroOpcode::ref_pptr_bany, 1);
 	}
 
@@ -144,20 +134,21 @@ private:
 	 */
 	void pointerVariableIsDeinitializedWithDestructors() {
 		const auto name = base::StrID("holds_pointer");
-		assertBlockFreeInitCount(name, 2);
+		assertInitCount(name, 2);
 		// One for `ptr`, none for `plain` - a structure of plain fields needs no destructors.
 		assertOpcodeCount(name, MicroOpcode::deinitDtor, 1);
 		assertOpcodeCount(name, MicroOpcode::deinit, 1);
 	}
 
 	/**
-	 * @brief A variant owns nested blocks, which is much simpler to handle when its own block
-	 * exists from the start.
+	 * @brief A variant gets no block upfront either. Its nested blocks can only be reached
+	 * through a block place argument, which creates the variant's own block first.
 	 */
-	void variantVariableGetsItsBlockUpfront() {
+	void variantVariableGetsNoBlockUpfront() {
 		const auto name = base::StrID("owns_nested_blocks");
-		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 1);
-		assertBlockFreeInitCount(name, 0);
+		assertInitCount(name, 1);
+		// A variant leaves its cleanup to its nested block, so it needs no destructors of its own.
+		assertOpcodeCount(name, MicroOpcode::deinit, 1);
 	}
 
 	/**
@@ -167,24 +158,24 @@ private:
 	 */
 	void reusedSlotDoesNotForceABlock() {
 		const auto name = base::StrID("reuses_a_slot");
-		assertBlockFreeInitCount(name, 3);
-		assertOpcodeCount(name, MicroOpcode::initBlock_imm_type, 0);
+		assertInitCount(name, 3);
 	}
 
 	/**
-	 * @brief `typeCleanup` recurses into structures and tables, so a pointer held inside one
-	 * still gets its scope exit lowered to `deinitDtor`.
+	 * @brief `Type::hasDestructors` recurses into structures and tables, so a pointer held inside
+	 * one still gets its scope exit lowered to `deinitDtor`.
 	 */
 	void pointersNestedInAggregatesAreFound() {
 		const auto name = base::StrID("nests_pointers");
+		assertInitCount(name, 2);
 		assertOpcodeCount(name, MicroOpcode::deinitDtor, 2);
 		assertOpcodeCount(name, MicroOpcode::deinit, 0);
 
-		// A variant behind a field makes the whole structure own nested blocks, so it needs
-		// its own from the start - otherwise a pointer in the active alternative would leak.
+		// A variant behind a field brings no destructors with it - whatever its active
+		// alternative holds is released through the variant's nested block.
 		const auto wraps_variant = base::StrID("nests_a_variant");
-		assertOpcodeCount(wraps_variant, MicroOpcode::initBlock_imm_type, 1);
-		assertBlockFreeInitCount(wraps_variant, 0);
+		assertInitCount(wraps_variant, 1);
+		assertOpcodeCount(wraps_variant, MicroOpcode::deinit, 1);
 	}
 
 	/**
@@ -194,12 +185,12 @@ private:
 	void zeroingIsSpecializedBySize() {
 		// `counter` is an `i64`, `flag` an `i8` - only the first has a specialized size.
 		const auto mixed_sizes = base::StrID("simple");
-		assertOpcodeCount(mixed_sizes, MicroOpcode::initSimple64_imm_type, 1);
-		assertOpcodeCount(mixed_sizes, MicroOpcode::initSimple_imm_type, 1);
+		assertOpcodeCount(mixed_sizes, MicroOpcode::init64_imm_type, 1);
+		assertOpcodeCount(mixed_sizes, MicroOpcode::init_imm_type, 1);
 
 		// A pointer and a pair of `i64`s are both 16 bytes wide.
 		const auto both_16_bytes = base::StrID("holds_pointer");
-		assertOpcodeCount(both_16_bytes, MicroOpcode::initSimple128_imm_type, 2);
+		assertOpcodeCount(both_16_bytes, MicroOpcode::init128_imm_type, 2);
 	}
 
 	/**

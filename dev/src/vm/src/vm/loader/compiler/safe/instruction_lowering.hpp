@@ -71,18 +71,6 @@ namespace vm::loader::compiler::safe::detail {
 	 * from temporary label IDs to label offsets used later by `Compiler::linkLabelArguments`.
 	 */
 	class SafeMicroBytecodeBuilder {
-		/**
-		 * @brief What a local variable of a given type needs when it goes out of scope.
-		 */
-		enum class TypeCleanup {
-			/// Nothing at all - the variable is made of plain values.
-			None,
-			/// Destructors, because the variable holds pointers whose blocks must be released.
-			Destructors,
-			/// A block from the start, because the variable owns nested blocks of its own.
-			EagerBlock,
-		};
-
 		safe::SafeCompiler&                                       compiler;
 		const vm::loader::compiler::detail::FunctionStackContext& ctx;
 
@@ -91,8 +79,6 @@ namespace vm::loader::compiler::safe::detail {
 		usize                             next_instruction_index = 0;
 
 		low::MicroBytecode result;
-
-		mutable base::HashMap<TypeCRef, TypeCleanup> type_cleanup_cache{};
 
 #if (BUILD_TYPE_DEV_DEBUG)
 		std::string current_high_instruction_representation{};
@@ -206,54 +192,6 @@ namespace vm::loader::compiler::safe::detail {
 			return compiler.getLowProgram()->getGlobals().at(p.var_name)->type;
 		}
 
-		/**
-		 * @brief Determines the cleanup a variable of `type` requires.
-		 *
-		 * Only `Kind::Pointer` has a destructor of its own - it releases the block it points at.
-		 *
-		 * A variant instead delegates its cleanup entirely to its nested block:
-		 * `Memory::runObjectDestructor` does nothing for one, so a variant without a block of its
-		 * own would never release a pointer held in its active alternative. Hence it needs a block
-		 * from the start rather than on demand.
-		 *
-		 * @note A dynamic table has no size of its own and is not instantiable, so it can never be
-		 * a local variable. It and `Kind::None` are named only to keep the switch exhaustive.
-		 */
-		TypeCleanup typeCleanup(TypeCRef type) const {
-			if (auto cached = type_cleanup_cache.atMaybeCopy(type)) return *cached;
-
-			// Guard against a type that transitively contains itself.
-			type_cleanup_cache.insertOrAssign(type, TypeCleanup::EagerBlock);
-
-			const auto cleanup = [&] {
-				switch (type->getKind()) {
-				case Type::Kind::Primitive:
-				case Type::Kind::Function:
-				case Type::Kind::CPointer:
-				case Type::Kind::Opaque:
-					return TypeCleanup::None;
-				case Type::Kind::Pointer:
-					return TypeCleanup::Destructors;
-				case Type::Kind::Data: {
-					auto result = TypeCleanup::None;
-					for (const auto& field: **type->getFields())
-						result = std::max(result, typeCleanup(field.type));
-					return result;
-				}
-				case Type::Kind::FixedSizeTable:
-					return typeCleanup(type->getInnerType().value());
-				case Type::Kind::Variant:
-				case Type::Kind::DynamicTable:
-				case Type::Kind::None:
-				default:
-					return TypeCleanup::EagerBlock;
-				}
-			}();
-
-			type_cleanup_cache.insertOrAssign(type, cleanup);
-			return cleanup;
-		}
-
 		template<typename LowArg, typename HighArg>
 		requires IsTranslatableInstructionArgumentPair<LowArg, HighArg>
 		u64 lowerLowArg(const HighArg& arg) {
@@ -304,13 +242,12 @@ namespace vm::loader::compiler::safe::detail {
 		 * @brief Emits the deinitialization of the variable in slot `idx`.
 		 *
 		 * @note Both deinit instructions act on whichever slot is on top when they run, so `idx`
-		 * only picks the type. Callers have to emit deinits from the top down.
+		 * only picks which one is emitted. Callers have to emit deinits from the top down.
 		 */
 		void addDeinitOfVariable(usize idx) {
 			const auto& db = ctx.function.local_stack;
 
-			if (typeCleanup(resolveTypeName(db.getTypeName(curr_state, idx).value()))
-			    == TypeCleanup::Destructors)
+			if (resolveTypeName(db.getTypeName(curr_state, idx).value())->hasDestructors())
 				addLow<Op_deinitDtor>();
 			else
 				addLow<Op_deinit>();
@@ -721,23 +658,17 @@ namespace vm::loader::compiler::safe::detail {
 				const TypeCRef type   = getPlaceType(i.var);
 				const u64      offset = byteOffsetOf(i.var);
 
-				// A variable owning nested blocks gets its block right away. Everything else is
-				// initialized without one, zeroed by a plain store where its size allows.
+				// Zeroed by a plain store where the size allows.
 				const auto address = vm::opargs::Immediate{ offset };
-
-				if (typeCleanup(type) == TypeCleanup::EagerBlock) {
-					addLow<Op_initBlock_imm_type>(address, i.type);
-				} else {
-					switch (type->getSize().asInt()) {
-					case 8:
-						addLow<Op_initSimple64_imm_type>(address, i.type);
-						break;
-					case 16:
-						addLow<Op_initSimple128_imm_type>(address, i.type);
-						break;
-					default:
-						addLow<Op_initSimple_imm_type>(address, i.type);
-					}
+				switch (type->getSize().asInt()) {
+				case 8:
+					addLow<Op_init64_imm_type>(address, i.type);
+					break;
+				case 16:
+					addLow<Op_init128_imm_type>(address, i.type);
+					break;
+				default:
+					addLow<Op_init_imm_type>(address, i.type);
 				}
 			}
 			instr_case(high::Op_deinit, i) { addDeinitOfTopVariable(); }
