@@ -128,7 +128,7 @@ jobs:
       - name: Update apt
         run: sudo apt update && sudo apt upgrade -y
 
-       - name: Install lcov
+      - name: Install lcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov
 
