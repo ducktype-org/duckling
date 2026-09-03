@@ -15,7 +15,11 @@ namespace cc = abi::calling_conv;
 namespace at = abi::types;
 
 namespace {
+	// `i` is an unsigned integer, `si` a signed one. The sign only matters for the
+	// sign/zero-extension flags: everything else classifies the two the same way.
 	at::AbiType i(u64 width_bits) { return at::intType(width_bits, false); }
+
+	at::AbiType si(u64 width_bits) { return at::intType(width_bits, true); }
 
 	at::AbiType f(u64 width_bits) { return at::floatType(width_bits); }
 
@@ -63,6 +67,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(x86Test);
 		TESTER_ADD_TEST(aarch64Test);
+		TESTER_ADD_TEST(extensionTest);
 	}
 
 private:
@@ -136,6 +141,71 @@ private:
 		std::unique_ptr<cc::TargetInfo> abi = std::make_unique<cc::AArch64ABIInfo>();
 		cc::FunctionType ft{ .return_type = arena.add(std::move(ret)), .param_types = {} };
 		return std::move(abi->computeInfo(ft).return_info).value();
+	}
+
+	// These two go through the public entry point rather than an ABI class directly, so
+	// they also cover the `triple.os` dispatch inside `computeCallingConv`.
+	cc::ArgInfo dispatchArg(TypeArena& arena, const abi::TargetABI& target, at::AbiType arg) {
+		cc::FunctionType ft{ .return_type = arena.add(at::intType(32, false)),
+			                 .param_types = { arena.add(std::move(arg)) } };
+		return std::move(cc::computeCallingConv(target, ft).param_info.at(0).info);
+	}
+
+	cc::ReturnEntry dispatchReturn(TypeArena& arena, const abi::TargetABI& target, at::AbiType ret) {
+		cc::FunctionType ft{ .return_type = arena.add(std::move(ret)), .param_types = {} };
+		return std::move(cc::computeCallingConv(target, ft).return_info).value();
+	}
+
+	void expectExt(const cc::ArgInfo& info, bool sign_ext, bool zero_ext, const std::string& ctx) {
+		const auto* by_value = std::get_if<cc::ArgInfo::ByValue>(&info.kind);
+		assertTrue(by_value != nullptr, ctx + ": expected ByValue");
+		assertTrue(
+			by_value->sign_ext == sign_ext,
+			ctx + ": sign_ext mismatch, got " + std::to_string(by_value->sign_ext) + " want "
+				+ std::to_string(sign_ext)
+		);
+		assertTrue(
+			by_value->zero_ext == zero_ext,
+			ctx + ": zero_ext mismatch, got " + std::to_string(by_value->zero_ext) + " want "
+				+ std::to_string(zero_ext)
+		);
+	}
+
+	/**
+	 * Runs the whole scalar table against one target, once as a parameter and once as a
+	 * return value. `extends` picks the expected column: Apple arm64 and x86-64 System V
+	 * make the caller extend sub-word integers to 32 bits, plain aarch64-linux does not.
+	 *
+	 * The expected values are what clang emits for the same C signatures - checked with
+	 * `clang --target=<triple> -emit-llvm` for arm64-apple-macosx, aarch64-linux-gnu and
+	 * x86_64-linux-gnu. Note `char`: signed (so sign_ext) on both Apple arm64 and x86-64.
+	 */
+	void checkScalarExtensions(const abi::TargetABI& target, bool extends, const std::string& name) {
+		TypeArena arena;
+
+		auto check = [&](auto make_type, bool sign_ext, bool zero_ext, const std::string& what) {
+			expectExt(
+				dispatchArg(arena, target, make_type()), sign_ext, zero_ext, name + " param " + what
+			);
+			auto ret = dispatchReturn(arena, target, make_type());
+			assertFalse(ret.passed_as_param, name + " return " + what + " not sret");
+			expectExt(ret.info, sign_ext, zero_ext, name + " return " + what);
+		};
+
+		check([] { return si(8); }, extends, false, "i8 signed");
+		check([] { return i(8); }, false, extends, "i8 unsigned");
+		check([] { return si(16); }, extends, false, "i16 signed");
+		check([] { return i(16); }, false, extends, "i16 unsigned");
+		// 32 bits and wider are already register-width: never extended anywhere.
+		check([] { return si(32); }, false, false, "i32 signed");
+		check([] { return i(32); }, false, false, "i32 unsigned");
+		check([] { return si(64); }, false, false, "i64 signed");
+		check([] { return i(64); }, false, false, "i64 unsigned");
+		check([] { return f(32); }, false, false, "f32");
+		check([] { return f(64); }, false, false, "f64");
+		check([] { return p(); }, false, false, "ptr");
+		check([] { return at::charType(); }, extends, false, "char");
+		check([] { return at::boolType(); }, false, extends, "bool");
 	}
 
 	void x86Test() {
@@ -314,6 +384,15 @@ private:
 		const auto ret = aarch64Return(arena, s(i(64), arr(i(8), 8), i(8)));
 		assertTrue(ret.passed_as_param, "big return is sret");
 		expectByPointer(ret.info, /*by_val=*/false, "big return");
+	}
+
+	void extensionTest() {
+		// This is the whole reason AArch64DarwinABIInfo exists: the same machine extends
+		// narrow integers under Apple's ABI and leaves them alone under AAPCS64/Linux.
+		checkScalarExtensions(abi::aarch64Darwin(), /*extends=*/true, "aarch64-darwin");
+		checkScalarExtensions(abi::aarch64Linux(), /*extends=*/false, "aarch64-linux");
+		// x86-64 System V has always extended, but nothing asserted it before.
+		checkScalarExtensions(abi::x86_64Linux(), /*extends=*/true, "x86_64-linux");
 	}
 };
 

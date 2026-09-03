@@ -67,6 +67,13 @@ Tests:
         Output:
           String: "100\n500\n10\n20\n"
         ExitCode: 0
+  large_array:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "0\n"
+        ExitCode: 0
   array_out_of_bounds:
     Cases:
       llvm:

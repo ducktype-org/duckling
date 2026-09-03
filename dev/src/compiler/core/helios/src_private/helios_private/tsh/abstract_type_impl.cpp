@@ -25,6 +25,7 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <sstream>
 #include <unordered_set>
 #include <utility>
 

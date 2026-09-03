@@ -101,7 +101,7 @@ namespace abi::calling_conv {
 		 * @brief Number of fixed (non-variadic) parameters. An empty optional means the
 		 * function is not variadic.
 		 */
-		base::Optional<usize> num_fixed_params;
+		base::Optional<usize> num_fixed_params{};
 	};
 
 	/**
@@ -126,13 +126,30 @@ namespace abi::calling_conv {
 	};
 
 	/**
-	 * @brief AArch64 ABI.
+	 * @brief AArch64 ABI, as specified by AAPCS64 (aarch64-linux).
 	 */
-	class AArch64ABIInfo final: public TargetInfo {
+	class AArch64ABIInfo: public TargetInfo {
 	public:
-		[[nodiscard]] const TargetABI& myTargetABI() const final { return aarch64Linux(); }
+		[[nodiscard]] const TargetABI& myTargetABI() const override { return aarch64Linux(); }
 
 		[[nodiscard]] FunctionInfo computeInfo(const FunctionType& ft) const final;
+
+	protected:
+		/**
+		 * @brief Whether the caller has to sign/zero-extend sub-word integers to 32 bits.
+		 */
+		[[nodiscard]] virtual bool callerExtendsNarrowArgs() const { return false; }
+	};
+
+	/**
+	 * @brief Apple arm64 ABI: AAPCS64 with Apple's deviations.
+	 */
+	class AArch64DarwinABIInfo final: public AArch64ABIInfo {
+	public:
+		[[nodiscard]] const TargetABI& myTargetABI() const final { return aarch64Darwin(); }
+
+	protected:
+		[[nodiscard]] bool callerExtendsNarrowArgs() const final { return true; }
 	};
 
 	/**
