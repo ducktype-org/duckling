@@ -260,7 +260,13 @@ namespace compiler::helios {
 		 * would not compile for the current instantiation.
 		 */
 		void compileConstIf(pst::Access<pst::If> stmt) {
-			auto taken = getBoolCTVFromPST(ctx, stmt->getCondition().unlock(ctx)->getExpr());
+			auto condition_holder = stmt->getCondition();
+			if (!condition_holder.has_value()) {
+				is_failed = true;
+				return;
+			}
+
+			auto taken = getBoolCTVFromPST(ctx, condition_holder.value().unlock(ctx)->getExpr());
 			if (taken.hasFailed()) {
 				is_failed = true;
 				return;
