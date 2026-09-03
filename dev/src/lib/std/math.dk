@@ -14,6 +14,36 @@ fun abs(x: i64) -> i64 = libm_forward.int_funcs.labs(x);
 fun abs(x: f32) -> f32 = libm_forward.basic_ops.fabsf(x);
 fun abs(x: f64) -> f64 = libm_forward.basic_ops.fabs(x);
 
+fun max(x: i32, y: i32) -> i32 = impl.max:{i32}(x, y);
+fun max(x: i64, y: i64) -> i64 = impl.max:{i64}(x, y);
+fun max(x: f32, y: f32) -> f32 = libm_forward.basic_ops.fmaxf(x, y);
+fun max(x: f64, y: f64) -> f64 = libm_forward.basic_ops.fmax(x, y);
+
+fun min(x: i32, y: i32) -> i32 = impl.min:{i32}(x, y);
+fun min(x: i64, y: i64) -> i64 = impl.min:{i64}(x, y);
+fun min(x: f32, y: f32) -> f32 = libm_forward.basic_ops.fminf(x, y);
+fun min(x: f64, y: f64) -> f64 = libm_forward.basic_ops.fmin(x, y);
+
+fun exp(x: f32) -> f32 = libm_forward.exp_funcs.expf(x);
+fun exp(x: f64) -> f64 = libm_forward.exp_funcs.exp(x);
+
+fun log(x: f32) -> f32 = libm_forward.exp_funcs.logf(x);
+fun log(x: f64) -> f64 = libm_forward.exp_funcs.log(x);
+
+fun pow(x: i32, y: i32) -> i32 = impl.powi:{i32}(x, y);
+fun pow(x: i64, y: i64) -> i64 = impl.powi:{i64}(x, y);
+fun pow(x: f32, y: f32) -> f32 = libm_forward.pow_funcs.powf(x, y);
+fun pow(x: f64, y: f64) -> f64 = libm_forward.pow_funcs.pow(x, y);
+
+fun sqrt(x: f32) -> f32 = libm_forward.pow_funcs.sqrtf(x);
+fun sqrt(x: f64) -> f64 = libm_forward.pow_funcs.sqrt(x);
+
+fun sin(x: f32) -> f32 = libm_forward.trig_funcs.sinf(x);
+fun sin(x: f64) -> f64 = libm_forward.trig_funcs.sin(x);
+
+fun cos(x: f32) -> f32 = libm_forward.trig_funcs.cosf(x);
+fun cos(x: f64) -> f64 = libm_forward.trig_funcs.cos(x);
+
 namespace libm_forward {
     #{
         These are marked `fundecl` since the definition
