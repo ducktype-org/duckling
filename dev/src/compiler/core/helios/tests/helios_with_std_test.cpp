@@ -46,6 +46,7 @@
 #include <algorithm>
 #include <any>
 #include <array>
+#include <sstream>
 
 using namespace compiler::helios::test_utils;
 

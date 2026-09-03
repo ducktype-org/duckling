@@ -36,7 +36,7 @@ private:
 
 	static std::vector<std::string> parseStringList(const std::string& str) {
 		return std::any_cast<std::vector<std::string>>(
-			clah::StringListParser::make()->parse(str).value
+			clah::StringListParser::make(clah::StringParser::make())->parse(str).value
 		);
 	}
 

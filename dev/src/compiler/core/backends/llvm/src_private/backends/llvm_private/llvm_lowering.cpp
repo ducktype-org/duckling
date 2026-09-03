@@ -1241,7 +1241,17 @@ namespace compiler::backend_llvm {
 				llvm::Value* ptr    = gepPointerFromLIRPlace(output, builder);
 				llvm::Type*  type   = typeFromLayout(module, output.layout);
 
-				builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
+				if (type->isAggregateType()) {
+					const llvm::DataLayout& data_layout = module->getDataLayout();
+					builder.CreateMemSet(
+						ptr,
+						builder.getInt8(0),
+						data_layout.getTypeAllocSize(type).getFixedValue(),
+						data_layout.getABITypeAlign(type)
+					);
+				} else {
+					builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
+				}
 				break;
 			}
 			case VariantConstruct: {

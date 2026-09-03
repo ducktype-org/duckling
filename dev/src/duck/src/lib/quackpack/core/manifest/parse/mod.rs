@@ -3,10 +3,10 @@ use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
 use itertools::Itertools;
-use serde::Deserialize;
 use tracing::trace;
 
 use crate::quackpack::core::Package;
+use crate::quackpack::core::lints::warnings::{UnusedKey, Warnings};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext};
@@ -31,7 +31,7 @@ mod tests;
 /// 2. Turn that string into [`ManifestSchema`].
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
 #[tracing::instrument(skip(ctx))]
-pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
+pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings)> {
     trace!("starting parsing");
     parse_inner(path, ctx).with_context(|| {
         format!(
@@ -130,26 +130,63 @@ impl DerefMut for ScopeGuard<'_> {
 }
 
 /// Helper for [`parse_manifest`].
-fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
+fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings)> {
     let package_root = path.parent().with_context_internal(|| {
         format!("path `{path:?}` does not have a parent folder, but we checked that earlier?")
     })?;
     let content = path.read_to_string()?;
-    let schema = parse_schema(&content)?;
-    let manifest = manifest::parse(&schema, package_root, ParseMode::Package, ctx)?;
-    Ok(Package::new(
-        content,
-        schema,
-        Box::new(manifest),
-        package_root.into(),
-        path.into(),
+    let mut warnings = Warnings::default();
+    let schema = parse_schema(&content, &mut warnings)?;
+    let manifest = manifest::parse(
+        &schema,
+        package_root,
+        ParseMode::Package,
+        &mut warnings,
+        ctx,
+    )?;
+    Ok((
+        Package::new(
+            content,
+            schema,
+            Box::new(manifest),
+            package_root.into(),
+            path.into(),
+        ),
+        warnings,
     ))
 }
 
 /// Turn YAML string into the [`ManifestSchema`].
 /// This function also collects unused items in the [`ManifestSchema`].
-pub fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
+pub fn parse_schema(yaml_content: &str, warnings: &mut Warnings) -> QuackResult<ManifestSchema> {
     let deserializer = serde_yaml_ng::Deserializer::from_str(yaml_content);
-    let schema = ManifestSchema::deserialize(deserializer)?;
+    let schema = serde_ignored::deserialize(deserializer, |path| {
+        let mut buffer = String::new();
+        stringify_unused_path(&mut buffer, &path);
+        warnings.push(UnusedKey::new(buffer));
+    })?;
     Ok(schema)
+}
+
+fn stringify_unused_path(buffer: &mut String, path: &serde_ignored::Path<'_>) {
+    match path {
+        serde_ignored::Path::Root => {}
+        serde_ignored::Path::Seq { parent, index } => {
+            stringify_unused_path(buffer, parent);
+            if !buffer.is_empty() {
+                buffer.push('.');
+            }
+            buffer.push_str(&format!("{index}"));
+        }
+        serde_ignored::Path::Map { parent, key } => {
+            stringify_unused_path(buffer, parent);
+            if !buffer.is_empty() {
+                buffer.push('.');
+            }
+            buffer.push_str(key);
+        }
+        serde_ignored::Path::Some { parent }
+        | serde_ignored::Path::NewtypeStruct { parent }
+        | serde_ignored::Path::NewtypeVariant { parent } => stringify_unused_path(buffer, parent),
+    }
 }

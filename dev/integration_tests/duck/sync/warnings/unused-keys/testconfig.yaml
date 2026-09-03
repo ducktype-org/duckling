@@ -1,0 +1,24 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "  unused-under-metadata: unused
+  unused-top-level:
+    inner: 1" >> foo/quackconfig.yaml
+
+Tests:
+  unused-keys:
+    Description: emits warnings about unused keys
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        Output:
+          Run: |+
+            echo "warning: the key \`metadata.unused-under-metadata\` is unused
+            warning: the key \`unused-top-level\` is unused
+            info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the gathering or the solver engine
+            info: starting fetching 1 package
+            info: successfully synchronized venv \`foo\`"
+        

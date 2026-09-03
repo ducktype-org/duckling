@@ -28,7 +28,7 @@ namespace compiler::driver {
 	base::OkBad linkDVMPackage(
 		const std::vector<artifacts::FileArtifact>& objects,
 		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
-		const DVMRuntimeConfig&                     runtime_config,
+		const DVMLinkingOptions&                    dvm_linking_options,
 		artifacts::FileArtifact&                    output_file
 	);
 }
