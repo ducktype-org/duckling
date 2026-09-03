@@ -41,6 +41,8 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: Configure git
+        run: git config --global http.version HTTP/1.1
       - uses: actions/checkout@v6
 
       - name: Determine build matrix
