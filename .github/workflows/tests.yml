@@ -127,7 +127,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Update apt
-        run: sudo apt update && git --version
+        run: sudo apt update && sudo apt upgrade
 
       - name: Install lcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
