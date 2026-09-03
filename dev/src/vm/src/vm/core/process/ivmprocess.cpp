@@ -169,6 +169,9 @@ namespace vm {
 				// Per-thread operation. Its validity is decided by the target thread not the process.
 				auto response = stepVMThread(step_request.thread_id);
 				if (!response) return std::unexpected(response.error());
+				// If this step finished the program.
+				if (ts::isTerminal(state_manager.threadState(step_request.thread_id)))
+					return api::Response(api::response::Empty());
 				return getVMThreadCurrentPosition(step_request.thread_id);
 			}
 

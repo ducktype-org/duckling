@@ -46,6 +46,14 @@ namespace compiler::archiver {
 		command.addArg("rcs");
 		command.addArg(output.file.getFilePath().native());
 
+#if defined(__APPLE__)
+		// Apple's cctools `ar` stamps each member with its mtime and the current uid/gid, so
+		// re-archiving the same objects yields different bytes and every consumer of the archive
+		// hash sees a spurious change. It has no deterministic flag (`-D` is rejected); the
+		// cctools mechanism is this environment variable, which zeroes all three.
+		command.addEnv("ZERO_AR_DATE", "1");
+#endif
+
 		for (const auto& object_file_path: inputs)
 			command.addArg(object_file_path.file.getFilePath().native());
 

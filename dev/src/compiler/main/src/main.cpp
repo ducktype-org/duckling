@@ -28,7 +28,9 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/ranges_utils.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/str/str_utils.hpp>
 #include <base/types/ok_bad.hpp>
@@ -114,7 +116,9 @@ clah::Clah getStandardDucklingOptions() {
 	    // Note that dev-logs options are not handled in pre-handler below,
 	    // they should be handled in each command by debug_options::getDebugOptionsFromClah and
 	    // passed to initializeTheCompiler.
-	    .add(clah::ParamBuilder::ofValue(clah::StringListParser::make("categories"))
+	    .add(clah::ParamBuilder::ofValue(
+				 clah::StringListParser::make("categories", clah::StringParser::make())
+		)
 	             .addLongName("dev-logs")
 	             .addShortDesc("Enable developer logs for given categories.")
 	             .build())
@@ -241,21 +245,32 @@ compiler::archiver::ArchivingOptions getArchivingOptionsFromClah(
 }
 
 auto getClahLinkingOptions() {
-	return std::array{ clah::ParamBuilder::ofValue(clah::FilePathParser::make("linker path"))
-		                   .addLongName("linker")
-		                   .addShortDesc("Path to the linker to use when creating executables.")
-		                   .optional()
-		                   .build(),
-		               clah::ParamBuilder::ofValue(clah::StringParser::make("additional options"))
-		                   .addLongName("additional-link-options")
-		                   .addShortDesc("Additional options to pass to the linker.")
-		                   .optional()
-		                   .build(),
-		               clah::ParamBuilder::ofValue(clah::StringListParser::make("shared libs"))
-		                   .addLongName("dvm-shared-libs")
-		                   .addShortDesc("Shared libraries that will be loaded by the VM.")
-		                   .optional()
-		                   .build() };
+	return std::array{
+		clah::ParamBuilder::ofValue(clah::FilePathParser::make())
+			.addLongName("linker")
+			.addShortDesc("Path to the linker to use when creating executables.")
+			.optional()
+			.build(),
+		clah::ParamBuilder::ofValue(clah::StringParser::make("options"))
+			.addLongName("additional-link-options")
+			.addShortDesc("Additional options to pass to the linker.")
+			.optional()
+			.build(),
+		clah::ParamBuilder::ofValue(
+			clah::StringListParser::make("shared-libs", clah::StringParser::make())
+		)
+			.addLongName("dvm-shared-libs")
+			.addShortDesc("Shared libraries that will be loaded by the VM.")
+			.optional()
+			.build(),
+		clah::ParamBuilder::ofValue(
+			clah::FilePathListParser::make("paths", clah::FilePathParser::make())
+		)
+			.addLongName("dvm-link-libraries")
+			.addShortDesc("Paths to the .dbc libraries to link into the output.")
+			.optional()
+			.build(),
+	};
 }
 
 /**
@@ -273,6 +288,9 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClah(
 
 	if (auto lib_paths = parsing_result.getValue<std::vector<std::string>>("dvm-shared-libs"))
 		linking_options.dvm_shared_libraries = lib_paths.value();
+
+	if (auto lib_paths = parsing_result.getValue<std::vector<fs::FilePath>>("dvm-link-libraries"))
+		linking_options.dvm_link_libraries = lib_paths.value();
 
 	linking_options.native_link_c_standard_lib = not parsing_result.isFlag("no-c-standard-library");
 
@@ -314,15 +332,17 @@ namespace debug_options {
 		                                          | std::ranges::to<std::vector<std::string>>();
 
 		return std::array{
-			clah::ParamBuilder::ofValue(clah::CategoryListParser::make("categories", dump_categories)
-			)
+			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
+											"categories", clah::CategoryParser::make(dump_categories)
+										))
 				.addLongName("dump-ir")
 				.addShortDesc("Dump to file the comma separated intermediate representations.")
 				.addLongDesc("Possible values are: asm, llvm, lir, mir, hir.")
 				.build(),
-			clah::ParamBuilder::ofValue(
-				clah::CategoryListParser::make("categories", print_categories)
-			)
+			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
+											"categories",
+											clah::CategoryParser::make(print_categories)
+										))
 				.addLongName("print-ir")
 				.addShortDesc("Print to stdout the comma separated intermediate representations.")
 				.addLongDesc("Possible values are: lir, mir, hir.")
@@ -558,23 +578,11 @@ clah::Clah getClahForMain() {
 						 )
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					// @TODO: #3449 fix it here
-
 					std::vector<fs::File> modules_to_compile{ options.getPositional<fs::File>(0) };
 					for (usize i = 0; i < options.getExtraParameterCount(); ++i)
 						modules_to_compile.push_back(options.getExtra<fs::File>(i).value());
 
 					const bool dvm_backend = options.isFlag("dvm-backend");
-
-					if (dvm_backend) {
-						// @TODO: #2670 fix it, when compilePackages tasks support it!
-						CORE_USER_LOG(
-							"DVM Backend does not create full (linked) output artifacts "
-							"in compile_modules command. Stop.\n"
-						);
-						return 1;
-					}
-
 
 					std::set<base::StrID>               aliases_duplicate_check;
 					base::Map<base::StrID, base::StrID> package_id_aliases;
@@ -666,7 +674,7 @@ clah::Clah getClahForMain() {
 		            // that all the libraries it links are already built.
 					std::vector<driver::PackageCompilationTask> compilation_tasks;
 					base::Optional<frontend::ModuleID>          main_root_module;
-					std::string                                 libraries_to_link;
+					std::vector<fs::FilePath>                   libraries_to_link;
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
 					for (const auto& package: global_state::getPackages()) {
@@ -690,9 +698,9 @@ clah::Clah getClahForMain() {
 								.root_module  = root_module,
 								.build_target = driver::BuildTargetDVMLibrary{
 									.output_file_name = library_name,
-									.runtime_config   = driver::constructDVMRuntimeConfig(
-										getLinkingOptionsFromClah(options)
-									),
+									.dvm_linking_options   = driver::constructDVMLinkingOptions(
+									getLinkingOptionsFromClah(options), stdlib_options, true
+								),
 								},
 							});
 						} else {
@@ -703,14 +711,11 @@ clah::Clah getClahForMain() {
 									.archiving_options = getArchivingOptionsFromClah(options),
 								},
 							});
-							libraries_to_link += base::strConcat(
-								" ",
-								global_state::getRootCollection()
-									->fileArtifactAtOrNew(library_name)
-									.file.getFilePath()
-									.native()
-							);
 						}
+						auto artifact_file = global_state::getRootCollection()
+			                                     ->fileArtifactAtOrNew(library_name)
+			                                     .file;
+						libraries_to_link.push_back(artifact_file.getFilePath());
 					}
 
 					CORE_ASSERT(main_root_module.has_value(), "First package is not registered");
@@ -718,13 +723,14 @@ clah::Clah getClahForMain() {
 					if (dvm_backend) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_dvm.dbc");
+						auto linking_options = getLinkingOptionsFromClah(options);
+						base::appendToVector(linking_options.dvm_link_libraries, libraries_to_link);
 						compilation_tasks.push_back(driver::PackageCompilationTask{
 							.root_module  = main_root_module.value(),
 							.build_target = driver::BuildTargetDVMExecutable{
 								.output_file_name  = base::StrID(output_file_name),
-								.link_std_packages = stdlib_options.stdActive(),
-								.runtime_config    = driver::constructDVMRuntimeConfig(
-									getLinkingOptionsFromClah(options)
+								.dvm_linking_options    = driver::constructDVMLinkingOptions(
+									getLinkingOptionsFromClah(options), stdlib_options, false
 								),
 							},
 						});
@@ -734,7 +740,10 @@ clah::Clah getClahForMain() {
 						auto linking_options = getLinkingOptionsFromClah(options);
 						linking_options.native_additional_link_options = base::strConcat(
 							linking_options.native_additional_link_options.copyValueOr(""),
-							libraries_to_link
+							libraries_to_link | std::views::transform([](fs::FilePath& path) {
+								return path.native();
+							}) | base::rangesIntersperse(std::string(", "))
+								| std::views::join | std::ranges::to<std::string>()
 						);
 						compilation_tasks.push_back(driver::PackageCompilationTask{
 							.root_module  = main_root_module.value(),
@@ -888,19 +897,19 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("dvm-backend")) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_dvm.dbc");
-						auto runtime_config = compiler::driver::constructDVMRuntimeConfig(
-							getLinkingOptionsFromClah(options)
+						auto is_lib              = options.isFlag("emit-static-lib");
+						auto dvm_linking_options = compiler::driver::constructDVMLinkingOptions(
+							getLinkingOptionsFromClah(options), stdlib_options, is_lib
 						);
-						if (options.isFlag("emit-static-lib")) {
+						if (is_lib) {
 							build_target = compiler::driver::BuildTargetDVMLibrary{
-								.output_file_name = base::StrID(output_file_name),
-								.runtime_config   = std::move(runtime_config)
+								.output_file_name    = base::StrID(output_file_name),
+								.dvm_linking_options = std::move(dvm_linking_options)
 							};
 						} else {
 							build_target = compiler::driver::BuildTargetDVMExecutable{
-								.output_file_name  = base::StrID(output_file_name),
-								.link_std_packages = stdlib_options.stdActive(),
-								.runtime_config    = std::move(runtime_config)
+								.output_file_name    = base::StrID(output_file_name),
+								.dvm_linking_options = std::move(dvm_linking_options)
 							};
 						}
 
@@ -1000,9 +1009,7 @@ clah::Clah getClahForMain() {
 
 					nlohmann::json manifest_json;
 					try {
-						manifest_json = nlohmann::json::parse(
-							file_content.getBegin(), file_content.getBegin() + file_content.size()
-						);
+						manifest_json = nlohmann::json::parse(file_content.stringView());
 					} catch (const nlohmann::json::parse_error& e) {
 						CORE_USER_LOG(base::strConcat(
 							"Error: failed to parse manifest JSON: ", e.what(), "\n"
