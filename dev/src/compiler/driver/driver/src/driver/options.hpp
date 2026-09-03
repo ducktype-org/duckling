@@ -112,7 +112,16 @@ namespace compiler::driver {
 			/**
 			 * Options only supported on DVM backend.
 			 */
-			// Empty for now...
+
+			/**
+			 * @brief The libraries that needs to be loaded by the VM to run the code.
+			 */
+			std::vector<std::string> dvm_shared_libraries;
+
+			/**
+			 * @brief The paths of the DBC libraries to link into the output.
+			 */
+			std::vector<fs::FilePath> dvm_link_libraries;
 		};
 	}
 
@@ -160,7 +169,7 @@ namespace compiler::driver {
 		};
 
 		/**
-		 * Script compilation mode for .ds files.
+		 * Script compilation mode for .dks files.
 		 *
 		 * Compiles a script top-to-bottom (like REPL statements executed in sequence),
 		 * but produces a single persistent artifact (.dbc or native executable)

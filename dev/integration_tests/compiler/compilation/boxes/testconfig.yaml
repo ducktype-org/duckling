@@ -28,17 +28,31 @@ Tests:
         Output:
           String: "2\n1\n2\n777\n2\n"
         ExitCode: 0
-  reference_kind_collapsing:
+  box_storage:
     Cases:
       all:
         backend: all
         Output:
-          String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n3\n"
+          String: "4950\n7\n11\n7\n"
         ExitCode: 0
       llvm_valgrind:
         backend: llvm
         valgrind: "true"
         TimeOut: 3 # 1 second is often not enough on runners
         Output:
-          String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n3\n"
+          String: "4950\n7\n11\n7\n"
+        ExitCode: 0
+  reference_kind_collapsing:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n3\n"
+        ExitCode: 0
+      llvm_valgrind:
+        backend: llvm
+        valgrind: "true"
+        TimeOut: 3 # 1 second is often not enough on runners
+        Output:
+          String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n3\n"
         ExitCode: 0

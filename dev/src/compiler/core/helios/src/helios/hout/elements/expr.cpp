@@ -21,8 +21,11 @@
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/config/build_type.hpp>
+
 #include <query_framework/context/context.hpp>
 
+#include <set>
 #include <utility>
 
 namespace compiler::helios::code {
@@ -44,21 +47,21 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(ChainComparisonExpr)
 	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
-	EXPR_VISITOR(ParenthesisExpr)
+	EXPR_VISITOR(VariantConstructExpr)
+	EXPR_VISITOR(MatchExpr)
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(IndexExpr)
 	EXPR_VISITOR(SequenceExpr)
 	EXPR_VISITOR(MoveExpr)
 	EXPR_VISITOR(RefOfExpr)
+	EXPR_VISITOR(PtrOfExpr)
 	EXPR_VISITOR(DerefExpr)
 	EXPR_VISITOR(DefaultValueExpr)
 	EXPR_VISITOR(CreateAggregateExpr)
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
 	EXPR_VISITOR(BlockExpr)
-	EXPR_VISITOR(ListPushExpr)
-	EXPR_VISITOR(ListPopExpr)
 
 	LiteralUnitExpr::LiteralUnitExpr(query::Context&, ElementOrigin origin):
 		  Expr(
@@ -244,10 +247,61 @@ namespace compiler::helios::code {
 		return makeBox<IdentifierExpr>(expression_type, origin, symbol);
 	}
 
-	ReusableExpr::ReusableExpr(query::Context&, Box<Expr> inner, const bool first_use):
-		  Expr(inner->expression_type, inner->origin),
+	/**
+	 * @brief The `PrimaryCategory` of a reusable expression based on it's `inner` type.
+	 *
+	 * A reusable expression is evaluated once into a hidden local that every use reads afterwards,
+	 * so a `Temporary` (an owned rvalue) becomes a `Local` (an owned lvalue). The hidden local is
+	 * what owns the value now and what gets destroyed at the end of the scope.
+	 *
+	 * We can't just inherit the inner category of a `Temporary` here. As every read of the
+	 * `ReusableExpr` would be an implicit move which would move the same value multiple times.
+	 * Additionally, field reads off the reusable would be treated as partial moves, which are NYI.
+	 *
+	 * Every other category is already an lvalue or owns nothing (`Local`, `Global`, `Dereferenced`,
+	 * `Literal`) so reading it repeatedly is safe (in case of trivially copyable types).
+	 */
+	static tsh::ExpressionType<> reusableExpressionType(const Expr& inner) {
+		const tsh::ExpressionType<> inner_type = inner.expression_type;
+		if (inner_type.getValueCategory().getCategory() != tsh::PrimaryCategory::Temporary)
+			return inner_type;
+
+		return { inner_type.getSymbolType(), tsh::ValueCategory(tsh::PrimaryCategory::Local) };
+	}
+
+	ReusableExpr::ReusableExpr(query::Context& ctx, Box<Expr> inner, const bool first_use):
+		  Expr(reusableExpressionType(*inner), inner->origin),
 		  inner(std::move(inner)),
-		  first_use(first_use) {}
+		  first_use(first_use) {
+		const tsh::ExpressionType<> inner_type = this->inner->expression_type;
+
+		// MIR lowers a reusable expr by storing its inner value into a hidden local,
+		// and that store is a plain byte-copy. This hidden local gets a destructor inserted
+		// afterwards. The only cases where such byte-copy is legal (and won't cause a double free)
+		// is:
+		// - a trivially copyable value
+		// - a `Temporary` which is an owned rvalue, so the hidden local takes its ownership over
+		// and the temporary is destructed after use.
+		//
+		// Anything else is a place somebody already owns. Copying its bytes naively may cause a
+		// double free. In this case, read the place again instead of reusing it, or bind a
+		// reference to it and reuse that.
+		//
+		// @note: If you ever need to use reusable expr on an owned local, feel free to remove this
+		// `CORE_ASSERT`, but figure out how to change `ReusableExpr` so duplicate destructors don't
+		// get inserted.
+		CORE_ASSERT(
+			inner_type.getSymbolType().isTriviallyCopyable(ctx)
+				or inner_type.getValueCategory().getCategory() == tsh::PrimaryCategory::Temporary,
+			base::strConcat(
+				"A ReusableExpr over `",
+				inner_type.getSymbolType().toString(),
+				"` would be stored by copying its bytes, but the value is not trivially "
+				"copyable and not an owned rvalue, so the copy and the original would both be "
+				"destroyed. Which will cause a double destructor call."
+			)
+		);
+	}
 
 	void ReusableExpr::debugPrint(std::ostream& out) const {
 		if (first_use)
@@ -290,7 +344,7 @@ namespace compiler::helios::code {
 	}
 
 	ReusableExpr::ReusableExpr(const SharedBox<Expr>& inner, const bool first_use):
-		  Expr(inner->expression_type, inner->origin),
+		  Expr(reusableExpressionType(*inner), inner->origin),
 		  inner(inner),
 		  first_use(first_use) {}
 
@@ -316,6 +370,11 @@ namespace compiler::helios::code {
 		case IntegerDiv:
 		case IntegerMod:
 		case IntegerPow:
+		case IntegerBitAnd:
+		case IntegerBitOr:
+		case IntegerBitXor:
+		case IntegerShl:
+		case IntegerShr:
 		case FloatAdd:
 		case FloatSub:
 		case FloatMul:
@@ -464,26 +523,6 @@ namespace compiler::helios::code {
 		);
 	}
 
-	ParenthesisExpr::ParenthesisExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(inner->expression_type, origin),
-		  inner(std::move(inner)) {}
-
-	ParenthesisExpr::ParenthesisExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, base::Box<Expr> inner
-	):
-		  Expr(expression_type, origin),
-		  inner(std::move(inner)) {}
-
-	void ParenthesisExpr::debugPrint(std::ostream& out) const {
-		out << "(";
-		inner->debugPrint(out);
-		out << ")";
-	}
-
-	Box<Expr> ParenthesisExpr::clone() const {
-		return makeBox<ParenthesisExpr>(expression_type, origin, inner->clone());
-	}
-
 	TernaryOperatorExpr::TernaryOperatorExpr(
 		query::Context&,
 		ElementOrigin origin,
@@ -625,6 +664,167 @@ namespace compiler::helios::code {
 		);
 	}
 
+	VariantConstructExpr::VariantConstructExpr(
+		query::Context&,
+		ElementOrigin     origin,
+		Box<Expr>         inner,
+		tsh::SymbolType<> variant_type,
+		usize             alternative_index
+	):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  variant_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  inner(std::move(inner)),
+		  alternative_index(alternative_index) {}
+
+	VariantConstructExpr::VariantConstructExpr(
+		tsh::ExpressionType<> expression_type,
+		ElementOrigin         origin,
+		Box<Expr>             inner,
+		usize                 alternative_index
+	):
+		  Expr(expression_type, origin),
+		  inner(std::move(inner)),
+		  alternative_index(alternative_index) {}
+
+	void VariantConstructExpr::debugPrint(std::ostream& out) const {
+		out << "variant_construct[alt=" << alternative_index
+			<< ", to=" << expression_type.getSymbolType().toString() << "](";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> VariantConstructExpr::clone() const {
+		return makeBox<VariantConstructExpr>(
+			expression_type, origin, inner->clone(), alternative_index
+		);
+	}
+
+	namespace {
+		/**
+		 * @brief Whether two case results can share one result location.
+		 *
+		 * Mutability is left out on purpose: it is not enforced anywhere else either (see
+		 * @TODO: #1488 in the coercion rules), and a bound payload comes out `const` while a
+		 * freshly computed value does not, so comparing it would reject reasonable matches.
+		 */
+		bool sameResultType(const tsh::SymbolType<>& a, const tsh::SymbolType<>& b) {
+			return a.getType() == b.getType() && a.getRefKind() == b.getRefKind();
+		}
+
+		/**
+		 * @brief The type of a match: the type its cases agree on.
+		 *
+		 * Cases carrying different types is a user error, and it is reported where the cases
+		 * are built, so by the time the expression exists they have to match.
+		 */
+		tsh::ExpressionType<> matchExpressionType(const std::vector<MatchExpr::Case>& cases) {
+			CORE_ASSERT(!cases.empty(), "A match has to have at least one case.");
+
+			const auto type = cases.front().result->expression_type.getSymbolType();
+			for (const auto& match_case: cases)
+				CORE_ASSERT(
+					sameResultType(match_case.result->expression_type.getSymbolType(), type),
+					"All match cases have to be of the same type, got: ",
+					type.toString(),
+					" and ",
+					match_case.result->expression_type.getSymbolType().toString()
+				);
+
+			// The value lives in a temporary the lowering fills in from whichever case ran.
+			return { type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary) };
+		}
+	}
+
+	MatchExpr::MatchExpr(
+		query::Context&, ElementOrigin origin, Box<Expr> subject, std::vector<Case> cases
+	):
+		  Expr(matchExpressionType(cases), origin),
+		  subject(std::move(subject)),
+		  cases(std::move(cases)) {
+		CORE_ASSERT(
+			this->subject->expression_type.getSymbolType().getRefKind()
+				!= tsh::ReferenceKind::Direct,
+			"A match subject has to be a reference to the matched variant, got: ",
+			this->subject->expression_type.getSymbolType().toString()
+		);
+
+		for (const auto& match_case: this->cases)
+			CORE_ASSERT(
+				!match_case.binding.has_value() || match_case.alternative_index.has_value(),
+				"A match case can only bind the payload of an alternative it names."
+			);
+
+		// The lowering relies on this: it enters the last case without testing it, so a match
+		// that does not cover its subject would run the wrong case instead of falling through.
+		IF_BUILD_TYPE_DEV({
+			const auto variant = this->subject->expression_type.getSymbolType()
+			                         .getType()
+			                         .as<tsh::VariantAbstractType>();
+
+			std::set<usize> covered;
+			bool            has_wildcard = false;
+			for (const auto& match_case: this->cases)
+				if (match_case.alternative_index.has_value())
+					covered.insert(match_case.alternative_index.value());
+				else
+					has_wildcard = true;
+
+			CORE_ASSERT(
+				has_wildcard || covered.size() == variant.getUnderlyingTypes().size(),
+				"A match has to cover every alternative of its subject or have a wildcard case. "
+				"Covered ",
+				covered.size(),
+				" of ",
+				variant.getUnderlyingTypes().size(),
+				"."
+			);
+		})
+	}
+
+	MatchExpr::MatchExpr(
+		tsh::ExpressionType<> expression_type,
+		ElementOrigin         origin,
+		Box<Expr>             subject,
+		std::vector<Case>     cases
+	):
+		  Expr(expression_type, origin),
+		  subject(std::move(subject)),
+		  cases(std::move(cases)) {}
+
+	void MatchExpr::debugPrint(std::ostream& out) const {
+		out << "match (";
+		subject->debugPrint(out);
+		out << ") { ";
+		for (const auto& match_case: cases) {
+			if (match_case.alternative_index.has_value())
+				out << "case [alt=" << match_case.alternative_index.value() << "]";
+			else
+				out << "case [wildcard]";
+			if (match_case.binding.has_value())
+				out << " [bind " << name(match_case.binding.value()).strView() << "]";
+			out << " = ";
+			match_case.result->debugPrint(out);
+			out << "; ";
+		}
+		out << "}";
+	}
+
+	Box<Expr> MatchExpr::clone() const {
+		std::vector<Case> cloned_cases;
+		cloned_cases.reserve(cases.size());
+		for (const auto& match_case: cases)
+			cloned_cases.emplace_back(Case{ .alternative_index = match_case.alternative_index,
+			                                .binding           = match_case.binding,
+			                                .result            = match_case.result->clone() });
+		return makeBox<MatchExpr>(
+			expression_type, origin, subject->clone(), std::move(cloned_cases)
+		);
+	}
+
 	tsh::AbstractType builtinUnaryOperationToReturnType(
 		[[maybe_unused]] query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
 	) {
@@ -632,6 +832,7 @@ namespace compiler::helios::code {
 		switch (operation) {
 		case BuiltinUnary::IntegerNegation:
 		case BuiltinUnary::FloatNegation:
+		case BuiltinUnary::IntegerBitNot:
 		case BuiltinUnary::BooleanNot:
 		case BuiltinUnary::Ref:
 		case BuiltinUnary::Box:
@@ -801,9 +1002,9 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType(
 				  ctx.query<QueryTypeOfSymbol>(field)->valueOrThrow(),
-				  // The accessed field inherits the base's value category. If the class is a
-	              // Local/Global, then so is the accessed field.
-				  base->expression_type.getValueCategory()
+				  tsh::ValueCategory(base->expression_type.getValueCategory().withDisabled(
+					  tsh::ValueSemanticsOptions::MOVE
+				  ))
 			  ),
 			  origin
 		  ),
@@ -843,21 +1044,21 @@ namespace compiler::helios::code {
 			                                   // expression on meta is meta as well.
 						  return base->expression_type.getSymbolType();
 					  }
-					  case tsh::Kind::DynamicArray:
-						  return base_type.as<tsh::DynamicArrayAbstractType>().getElementType();
 					  case tsh::Kind::StaticArray:
 						  return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 					  case tsh::Kind::ManyPointer:
 						  return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
+					  case tsh::Kind::CPointer:
+						  return base_type.as<tsh::CPointerAbstractType>().getPointee();
 					  case tsh::Kind::Slice:
 						  return base_type.as<tsh::SliceAbstractType>().getElementType();
 					  default:
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }
 				  }(),
-				  // Propagate the base category. If the array is a Local/Global, then the
-	              // indexed element is as well.
-				  base->expression_type.getValueCategory()
+				  tsh::ValueCategory(base->expression_type.getValueCategory().withDisabled(
+					  tsh::ValueSemanticsOptions::MOVE
+				  ))
 			  ),
 			  origin
 
@@ -998,7 +1199,18 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType<>(
 				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+				  [](const tsh::ExpressionType<>& inner_type) -> tsh::ValueCategory {
+					  switch (inner_type.getSymbolType().getRefKind()) {
+					  case tsh::ReferenceKind::Direct:
+						  return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
+					  case tsh::ReferenceKind::Ref:
+						  return inner_type.getValueCategory();
+					  case tsh::ReferenceKind::Box:
+						  return tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced);
+					  }
+					  CORE_UNREACHABLE();
+				  }(inner->expression_type)
+
 			  ),
 			  origin
 		  ),
@@ -1020,28 +1232,67 @@ namespace compiler::helios::code {
 		return makeBox<RefOfExpr>(expression_type, origin, inner->clone());
 	}
 
-	MoveExpr::MoveExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
+	PtrOfExpr::PtrOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  inner->expression_type.getSymbolType(),
+				  // The whole symbol type of the operand becomes the pointee, so its reference kind
+	              // survives: `ptrof` on a `box T` place gives `ptr box T`.
+				  tsh::SymbolType<>::withDefaults(
+					  ctx.query<tsh::QueryPointerType>({ inner->expression_type.getSymbolType() })
+				  ),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  ),
 			  origin
 		  ),
 		  inner(std::move(inner)) {}
 
-	MoveExpr::MoveExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner):
+	PtrOfExpr::PtrOfExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner
+	):
 		  Expr(expression_type, origin),
 		  inner(std::move(inner)) {}
 
+	void PtrOfExpr::debugPrint(std::ostream& out) const {
+		out << "ptrof(";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> PtrOfExpr::clone() const {
+		return makeBox<PtrOfExpr>(expression_type, origin, inner->clone());
+	}
+
+	MoveExpr::MoveExpr(query::Context&, ElementOrigin origin, Box<Expr> inner, const MoveKind kind):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  inner->expression_type.getSymbolType(),
+				  // `move` forces the move semantic.
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+					  .withForceSemantics(tsh::ValueSemanticsOptions::MOVE)
+			  ),
+			  origin
+		  ),
+		  inner(std::move(inner)),
+		  kind(kind) {}
+
+	MoveExpr::MoveExpr(
+		tsh::ExpressionType<> expression_type,
+		ElementOrigin         origin,
+		Box<Expr>             inner,
+		const MoveKind        kind
+	):
+		  Expr(expression_type, origin),
+		  inner(std::move(inner)),
+		  kind(kind) {}
+
 	void MoveExpr::debugPrint(std::ostream& out) const {
-		out << "move(";
+		out << (kind == MoveKind::Implicit ? "implicit_move(" : "move(");
 		inner->debugPrint(out);
 		out << ")";
 	}
 
 	Box<Expr> MoveExpr::clone() const {
-		return makeBox<MoveExpr>(expression_type, origin, inner->clone());
+		return makeBox<MoveExpr>(expression_type, origin, inner->clone(), kind);
 	}
 
 	DerefExpr::DerefExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
@@ -1211,69 +1462,4 @@ namespace compiler::helios::code {
 	Box<Expr> BlockExpr::clone() const {
 		return makeBox<BlockExpr>(expression_type, origin, block->clone());
 	}
-
-	ListPushExpr::ListPushExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> element):
-		  Expr(
-			  tsh::ExpressionType(
-				  tsh::SymbolType<>(
-					  tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
-				  ),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
-			  origin
-		  ),
-		  list(std::move(list)),
-		  element(std::move(element)) {}
-
-	ListPushExpr::ListPushExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> list, Box<Expr> element
-	):
-		  Expr(expression_type, origin),
-		  list(std::move(list)),
-		  element(std::move(element)) {}
-
-	void ListPushExpr::debugPrint(std::ostream& out) const {
-		out << "list_push(";
-		list->debugPrint(out);
-		out << ", ";
-		element->debugPrint(out);
-		out << ")";
-	}
-
-	Box<Expr> ListPushExpr::clone() const {
-		return makeBox<ListPushExpr>(expression_type, origin, list->clone(), element->clone());
-	}
-
-	ListPopExpr::ListPopExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> count):
-		  Expr(
-			  tsh::ExpressionType(
-				  tsh::SymbolType<>(
-					  tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
-				  ),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
-			  origin
-		  ),
-		  list(std::move(list)),
-		  count(std::move(count)) {}
-
-	ListPopExpr::ListPopExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> list, Box<Expr> count
-	):
-		  Expr(expression_type, origin),
-		  list(std::move(list)),
-		  count(std::move(count)) {}
-
-	void ListPopExpr::debugPrint(std::ostream& out) const {
-		out << "list_pop(";
-		list->debugPrint(out);
-		out << ", ";
-		count->debugPrint(out);
-		out << ")";
-	}
-
-	Box<Expr> ListPopExpr::clone() const {
-		return makeBox<ListPopExpr>(expression_type, origin, list->clone(), count->clone());
-	}
-
 }

@@ -15,6 +15,7 @@
 #include <bit>
 #include <iomanip>
 #include <ranges>
+#include <sstream>
 
 namespace vm::code {
 	std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
@@ -190,8 +191,16 @@ namespace vm::code {
 				out << "\n";
 			}
 
-			void operator()(const VariantType&) const {
-				throw base::NotYetImplemented("VariantType serialization");
+			void operator()(const VariantType& type) const {
+				out << "type variant: ";
+				out << type.name.strView() << " { ";
+				bool first = true;
+				for (const auto& alternative: type.variant_alternatives) {
+					if (!first) out << ", ";
+					out << alternative.strView();
+					first = false;
+				}
+				out << " }";
 			}
 
 			void operator()(const FunctionType& fun) const {

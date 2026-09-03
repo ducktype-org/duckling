@@ -25,7 +25,7 @@ impl AnyPackage {
     }
 
     /// Transform into the underlying manifest.
-    pub fn into_manifest(self) -> Manifest {
+    pub fn into_manifest(self) -> Box<Manifest> {
         match self {
             Self::Package(package) => package.into_manifest(),
             Self::Script(script) => script.into_manifest(),
@@ -198,7 +198,7 @@ impl AnyPackage {
 
     /// Get a [`Display`](fmt::Display) impl.
     pub fn display(&self) -> impl fmt::Display + '_ {
-        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
         struct AnyPackageDisplay<'a> {
             any_package: &'a AnyPackage,
         }
@@ -222,7 +222,7 @@ pub struct Package {
     /// Original schema of the manifest.
     original_schema: ManifestSchema,
     /// Manifest of the package.
-    manifest: Manifest,
+    manifest: Box<Manifest>,
     /// Path to the root folder of the package.
     root: PathBuf,
     /// Path to the manifest of the package.
@@ -238,7 +238,7 @@ impl Package {
     pub fn new(
         original_content: String,
         original_schema: ManifestSchema,
-        manifest: Manifest,
+        manifest: Box<Manifest>,
         root: PathBuf,
         manifest_path: PathBuf,
     ) -> Self {
@@ -280,13 +280,20 @@ impl Package {
         &self.original_schema
     }
 
+    /// Transform into the original parsed manifest schema.
+    /// Should be used when we want to mutate the underlying schema (instead of mutable accessors),
+    /// to not leave the [`Package`] in an invalid state (schema incompatible with manifest).
+    pub fn into_original_schema(self) -> ManifestSchema {
+        self.original_schema
+    }
+
     /// Get the high-level abstraction over the manifest.
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
     }
 
     /// Transform into the underlying manifest.
-    pub fn into_manifest(self) -> Manifest {
+    pub fn into_manifest(self) -> Box<Manifest> {
         self.manifest
     }
 
@@ -329,7 +336,7 @@ impl Package {
 
     /// Get a [`Display`](fmt::Display) impl.
     pub fn display(&self) -> impl fmt::Display + '_ {
-        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
         struct PackageDisplay<'a> {
             package: &'a Package,
         }

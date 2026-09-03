@@ -9,11 +9,14 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/api/data/thread_id.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type_id.hpp>
 #include <vm/core/process/proc_io.hpp>
+#include <vm/core/process/process_state.hpp>
+#include <vm/core/process/process_state_manager.hpp>
+#include <vm/core/thread/thread_state.hpp>
 
 #include <expected>
-#include <shared_mutex>
 #include <variant>
 
 namespace vm {
@@ -33,9 +36,13 @@ namespace vm {
 	 * creating and resetting the Execution Thread,
 	 * setting the status of the execution (pause, stop, run),
 	 * managing the input and output of the executing thread and some more.
-	 *
 	 */
 	class IVMProcess {
+	public:
+		using ProcessState = process_state::ProcessState;
+		using ProcessEvent = process_event::ProcessEvent;
+		using ThreadEvent  = thread_event::ThreadEvent;
+
 	protected:
 		PID                              my_pid;
 		ProcIO                           io;
@@ -43,18 +50,70 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		api::ProcStatus             status;
-		std::shared_mutex           rw_status;
-		std::condition_variable_any status_cv;
-
-		api::ExecutionConfig execution_config;
-
 		/**
 		 * @brief Emits after the process status has changed.
+		 *
+		 * @note Has to be declared before `state_manager` as destruction of `ProcessStateManager`
+		 * may still use the Emitter, thus it has to be destructed later.
 		 */
 		events::Emitter<api::ProcStatus> on_status_changed;
 
+		/**
+		 * @brief The single source of truth for all VMThread states of this process.
+		 */
+		ProcessStateManager state_manager{ api::MAIN_THREAD_ID };
+
+		api::ExecutionConfig execution_config;
+
 		IVMProcess(PID my_pid);
+
+		/**
+		 * @brief Returns a copy of the current calculated process state.
+		 */
+		[[nodiscard]] ProcessState getProcessState() const { return state_manager.aggregate(); }
+
+		/**
+		 * @brief Blocks until the process state satisfies pred, then returns it. Can be called both
+		 * from VMProcess and VMThread.
+		 */
+		template<typename Pred>
+		[[nodiscard]] ProcessState waitForProcessState(Pred&& pred) const {
+			return state_manager.waitForProcessState(
+				[&](const ProcessStateManager::Snapshot& snapshot) {
+					return std::forward<Pred>(pred)(snapshot.processState());
+				}
+			);
+		}
+
+		/**
+		 * @brief Validates the current API request against the aggregate state.
+		 * @return Nothing on success, an `ApiError` if the request is invalid in the current state.
+		 */
+		[[nodiscard]] std::expected<void, api::ApiError> validateProcessRequest(
+			const ProcessEvent& event
+		) const;
+
+		/**
+		 * @brief Prepares a run (or a rerun). Called when the process is terminal, moves all
+		 * threads back to `NotStarted` and clears the stop-all-threads flag.
+		 * @return Nothing when the process is ready to run. An `ApiError` when the
+		 * previous run did not complete normally (the process was stopped, killed or panicked,
+		 * which may have left the VM in an undefined state).
+		 */
+		[[nodiscard]] std::expected<void, api::ApiError> prepareRun();
+
+		/**
+		 * @brief Asks every running thread to pause and waits for them to be paused.
+		 *
+		 * Blocks until every asked thread parked. A thread sleeping on IO pauses once it wakes up
+		 * from the IO.
+		 *
+		 * A thread is skipped when another control request is still in progress, or when it
+		 * finishes first. Skipped threads are not included in the result.
+		 *
+		 * @return The threads that are actually paused.
+		 */
+		[[nodiscard]] std::vector<api::ThreadID> pauseAllVMThreads();
 
 	private:
 		/**
@@ -64,6 +123,18 @@ namespace vm {
 		virtual std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		) = 0;
+
+		/**
+		 * @brief Checks that the function to run exists and that the passed arguments match its
+		 * signature.
+		 *
+		 * Runs on the caller's thread, before any thread is spawned, so a faulty call is reported
+		 * with an API error and leaves the process untouched and re-runnable.
+		 */
+		[[nodiscard]] virtual std::expected<void, api::ApiError> validateRunArguments(
+			const std::string& func_name, const RunArguments& run_arguments
+		) const
+			= 0;
 
 		/**
 		 * @brief Creates new thread that runs a function.
@@ -88,8 +159,7 @@ namespace vm {
 		virtual std::expected<api::Response, api::ApiError> join(api::ThreadID thread_id) = 0;
 
 		/**
-		 * @brief Stops the executing thread (by joining it).
-		 * After this method is called, the thread is removed.
+		 * @brief Stops the executing threads (by joining them).
 		 */
 		virtual std::expected<api::Response, api::ApiError> stop() = 0;
 
@@ -141,14 +211,18 @@ namespace vm {
 		virtual std::expected<api::Response, api::ApiError> detach();
 
 		// Virtual thread dependencies for doRequest
-		virtual base::Optional<api::ApiError> pauseVMThread(api::ThreadID thread_id) = 0;
+		virtual std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) = 0;
 
-		virtual base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) = 0;
+		/// Like `pauseVMThread`, but only posts the request and doesn't pause.
+		virtual std::expected<void, api::ApiError> requestPauseOfVMThread(api::ThreadID thread_id)
+			= 0;
 
-		virtual base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) = 0;
+		virtual std::expected<void, api::ApiError> resumeVMThread(api::ThreadID thread_id) = 0;
+
+		virtual std::expected<void, api::ApiError> stepVMThread(api::ThreadID thread_id) = 0;
 
 		virtual std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
-			api::ThreadID thread_id
+			api::ThreadID thread_id, base::Optional<usize> frame_idx = std::nullopt
 		) = 0;
 
 		virtual std::expected<api::Response, api::ApiError> getNumberOfCurrentStackFrames(
@@ -159,9 +233,17 @@ namespace vm {
 			api::ThreadID thread_id, u64 frame_index
 		) = 0;
 
-		virtual void notifyPausedVMThread(api::ThreadID thread_id) = 0;
+		virtual void notifyVMThreadWaiters(api::ThreadID thread_id) = 0;
 
-		virtual void waitForBreakpoint() = 0;
+		/**
+		 * @brief Blocks until the given thread reaches a breakpoint and reports where it stopped.
+		 *
+		 * @return The thread's code position, or an error when the thread reached a terminal state
+		 * instead.
+		 */
+		virtual std::expected<api::Response, api::ApiError> waitForBreakpointAndReportPosition(
+			api::ThreadID thread_id
+		) = 0;
 
 		virtual std::expected<api::Response, api::ApiError> setExecutionConfig(
 			const api::ExecutionConfig& config
@@ -182,15 +264,28 @@ namespace vm {
 			const std::string& type_name
 		) = 0;
 
-		virtual std::vector<api::ThreadID> getAllThreadIDs() = 0;
-
-		virtual api::ThreadID getMainThreadID() = 0;
+		/**
+		 * @brief IDs of the threads which are currently active (started and not terminal).
+		 */
+		virtual std::vector<api::ThreadID> getAllActiveThreadIDs() = 0;
 
 		/**
-		 * @brief Hook called after process status changes to a terminal one.
-		 * Called without holding `rw_status` lock.
+		 * @brief True when a previous run left an `exec_thread` which was never joined.
+		 *
+		 * An `api::run()` should always be followed by a `Join`. Without it the VMThread cannot be
+		 * reused.
 		 */
-		virtual void onTerminalStatus(const api::ProcStatus&) noexcept {}
+		/**
+		 * @brief The threads of the previous run whose execution threads were never joined.
+		 *
+		 * @return The IDs of every such thread, empty when the previous run was fully joined.
+		 */
+		[[nodiscard]] virtual std::vector<api::ThreadID> unjoinedThreadIds() const = 0;
+
+		/**
+		 * @brief Posts Stop to all threads. Non blocking.
+		 */
+		virtual void requestStopAllThreads() noexcept = 0;
 
 		/**
 		 * @brief Enables or disables breakpoint on a given instruction in a given function.
@@ -214,7 +309,19 @@ namespace vm {
 
 		ProcIO& getIO();
 
-		[[nodiscard]] bool isExecutionPanicked();
+		/**
+		 * @brief The state manager holding all VMThread states of this process.
+		 */
+		[[nodiscard]] ProcessStateManager& getStateManager() { return state_manager; }
+
+		[[nodiscard]] const ProcessStateManager& getStateManager() const { return state_manager; }
+
+		/**
+		 * @brief Applies a thread state transition. Aborts on an invalid transition.
+		 * Sends a Stop out to all threads when the event was a first panic.
+		 * Called by `IVMThread::applyEvent`.
+		 */
+		void applyThreadEvent(api::ThreadID tid, const ThreadEvent& event);
 
 		/**
 		 * @brief Entry point to perform requests on the process.
@@ -227,16 +334,6 @@ namespace vm {
 		 * @brief Get the PID of the process.
 		 */
 		[[nodiscard]] PID getPID() const;
-
-		void setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept;
-
-		/**
-		 * @brief Atomically set process status if it is not already terminal.
-		 * @return true if status was updated, false if status was already terminal.
-		 */
-		bool setStatusIfNotTerminal(
-			const api::ProcStatus& new_status, api::ThreadID thread_id
-		) noexcept;
 
 		/**
 		 * @brief Creates an empty VMValue of a given type and registers it in this VMProcess.

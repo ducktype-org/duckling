@@ -1,0 +1,49 @@
+const A: i64 = 1;
+
+namespace Nmspc {
+    var B: i64 = 4 + 4;
+}
+
+fun foooo(a: i32) -> i32 = {
+    return a;
+}
+
+namespace Mspc {
+    namespace Ooo {
+        const Cnst: i32 = 3;
+
+        fun goooo(a: i32, b: f64) -> i32 = {
+            var x: i64 = 5;
+            return a;
+        }
+        
+        class Cls {
+            data: i32 = 0 as i32;
+        }
+
+        var x = Cls(42); 
+        var r: ref Cls = &x;
+    }
+
+    const ABC: i64 = 4 + 4;
+
+    var XB: i64 = foooo(10 as i32);
+}
+
+namespace P {
+    class MyClass {
+        a: i32 = 1 as i32;
+    }
+
+    fun barrr() -> i32 = {
+        return Mspc.Ooo.Cnst;
+    }
+}
+
+import sub as S;
+
+namespace Nmspc2 {
+    fun fromSub() -> i32 = {
+        return S.inSub.subFun() * S.inSub.subConst;
+    }
+}

@@ -1,0 +1,19 @@
+# Tests whether variant data (here a pointer) is properly destructed.
+# This means it is destructed exactly once.
+
+type variant: IntOrPtr { i64, ptr_i64 }
+type pointer: ptr_ptr_i64 ptr_i64
+
+function main {} -> { i64 } {
+    init_pany_type v, IntOrPtr;
+    variantSetInner_pvnt_type v, ptr_i64;
+    init_pany_type ptr, ptr_ptr_i64;
+    variantGetInner_pptr_pvnt_type ptr, v, ptr_i64;
+
+    init_pany_type ret_ptr, ptr_i64;
+    ref_pptr_pany ret_ptr, ret0;
+
+    store_pptr_pany ptr, ret_ptr;
+
+    ret;
+}

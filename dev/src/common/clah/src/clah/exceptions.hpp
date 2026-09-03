@@ -65,6 +65,14 @@ namespace clah::exceptions {
 	};
 
 	/**
+	 * @brief Raised by value parser clah::FileParser when a passed path is neither a regular file
+	 * nor, for the parsers accepting them, a directory.
+	 */
+	struct NotARegularFile: public ClahException {
+		explicit NotARegularFile(const std::filesystem::path& path, bool directory_accepted = false);
+	};
+
+	/**
 	 * @brief Raised when user did not pass a necessary positional argument.
 	 */
 	struct PositionalParameterExpected: public ClahException {
@@ -76,6 +84,13 @@ namespace clah::exceptions {
 	 */
 	struct InvalidParameterName: public ClahException {
 		explicit InvalidParameterName(const std::string& name);
+	};
+
+	/**
+	 * @brief Raised when user passes an unknown command.
+	 */
+	struct InvalidCommandName: public ClahException {
+		explicit InvalidCommandName(const std::string& name);
 	};
 
 	/**

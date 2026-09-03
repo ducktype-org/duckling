@@ -41,18 +41,10 @@ namespace vm::debugger {
 	Debugger::~Debugger() {
 		updater.detach();
 
-		// @TODO: #1222 Remove checking status and always kill after fixing kill
-
-		api::getExecutionStatus(pid)
-			.and_then([&](const api::ProcStatus& status) {
-				if (!std::holds_alternative<api::NotStarted>(status)) return api::kill(pid);
-
-				return std::expected<void, api::ApiError>{};
-			})
-			.transform_error([&](const api::ApiError& api_error) {
-				on_error.emitEvent(api::errorToString(api_error));
-				return api_error;
-			});
+		(void) api::kill(pid).transform_error([&](const api::ApiError& api_error) {
+			on_error.emitEvent(api::errorToString(api_error));
+			return api_error;
+		});
 	}
 
 	void Debugger::attachOnStatusChangedListener(events::Listener<api::ProcStatus>& listener) {
@@ -164,10 +156,11 @@ namespace vm::debugger {
 		    .and_then([&] { return api::resume(pid); });
 	}
 
-	std::expected<CodePosition, api::ApiError> Debugger::getCurrentPosition() {
-		return api::getCurrentPosition(pid).transform(
-			std::bind_front(&Debugger::mapCodePosition, this)
-		);
+	std::expected<CodePosition, api::ApiError> Debugger::getCurrentPosition(
+		base::Optional<usize> frame_idx
+	) {
+		return api::getCurrentPosition(pid, frame_idx)
+		    .transform(std::bind_front(&Debugger::mapCodePosition, this));
 	}
 
 	std::expected<void, api::ApiError> Debugger::setBreakpoint(
@@ -189,25 +182,27 @@ namespace vm::debugger {
 			});
 	}
 
-	std::expected<CodePosition, api::ApiError> Debugger::step() {
+	std::expected<base::Optional<CodePosition>, api::ApiError> Debugger::step() {
 		auto step_response = api::step(pid);
 		if (!step_response) return std::unexpected(step_response.error());
 
-		auto pos = getCurrentPosition();
-		if (pos && pos->function_name == "vm_start_function") {
-			auto resume_response = resume();
-			if (!resume_response) return std::unexpected(resume_response.error());
-		}
+		// The step may have ended a program, so we don't report any position.
+		if (api::isStatusTerminal(getStatus())) return base::Optional<CodePosition>();
 
-		return pos;
+		return getCurrentPosition().transform([](const CodePosition& position) {
+			return base::Optional<CodePosition>(position);
+		});
 	}
 
-	std::expected<CodePosition, api::ApiError> Debugger::mappedStep() {
+	std::expected<base::Optional<CodePosition>, api::ApiError> Debugger::mappedStep() {
 		auto response = step();
 
-		for (usize guard = 1'024; response && guard; response = step(), guard--) {
-			if (!response->mapped_position) return response;
-			auto mapped = *response->mapped_position;
+		for (usize guard = 1'024; response && response->has_value() && guard;
+		     response    = step(), guard--) {
+			const CodePosition& position = response->value();
+
+			if (!position.mapped_position) return response;
+			auto mapped = *position.mapped_position;
 
 			auto unmapped = mapper.mapSourcePositionToCodePosition(
 				mapped.getLocation()->getSourceFile().getFilePath(),
@@ -215,8 +210,8 @@ namespace vm::debugger {
 			);
 
 			if (!unmapped) return response;
-			if (unmapped->first == response->function_name
-			    && unmapped->second == response->instr_number)
+			if (unmapped->first == position.function_name
+			    && unmapped->second == position.instr_number)
 				return response;
 		}
 

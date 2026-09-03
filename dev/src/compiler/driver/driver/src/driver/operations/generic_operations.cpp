@@ -37,6 +37,7 @@
 #include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/ok_bad.hpp>
 
@@ -219,16 +220,6 @@ namespace compiler::driver {
 			switch (key.backend_type) {
 			case BackendType::LLVM: {
 				auto llvm_module = compileLIRModuleToLLVM(ctx, &lir_data);
-				{
-					// compileLIRModuleToLLVM time is added on its own,
-					// but tracking time of the actual compilation to object file is done here
-					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
-
-					llvm_module.compile(
-						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
-					);
-				}
-
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(lir_data.module_id.str() + ".ll")
@@ -241,9 +232,22 @@ namespace compiler::driver {
 					auto asm_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(lir_data.module_id.str() + ".s")
 					);
-					llvm_module.compile(
+
+					// We create a copy here, since compiling the module to assembly might modify it.
+					auto llvm_module_copy = llvm_module.clone();
+
+					llvm_module_copy.compile(
 						asm_artifact.file.getFilePath().getPath(),
 						backend_llvm::CompilationOutputType::Assembly
+					);
+				}
+				{
+					// compileLIRModuleToLLVM time is added on its own,
+					// but tracking time of the actual compilation to object file is done here
+					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
+
+					llvm_module.compile(
+						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
 				break;
@@ -417,39 +421,69 @@ namespace compiler::driver {
 				auto statement_info_result = repl::classifySingleStatement(ctx, module_id);
 				if (!statement_info_result.has_value())
 					return std::unexpected(statement_info_result.error());
-
+				auto statement_info = statement_info_result.value();
 				auto module_name    = repl::getStatementModuleName(module_id, "script_module_");
 				auto module_name_id = base::StrID(module_name.c_str());
 
-				if (std::holds_alternative<repl::DefinitionSingleStatementInfo>(
-						statement_info_result.value()
-					)) {
-					CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
-					const auto& hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
-					auto        lir_result
-						= compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
-					if (lir_result.hasFailed())
-						return std::unexpected("Failed to compile definition statement to LIR");
-					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
-				} else {
-					// Executable statements are wrapped into functions so we can sequence them
-					// under a synthetic main while still lowering via the normal pipeline.
-					CORE_DEV_LOG(REPL, "compile_script: classified as executable statement\n");
-					auto wrapper_result = repl::buildStatementWrapper(
-						ctx, statement_info_result.value(), statement_counter
-					);
-					if (!wrapper_result.has_value()) return std::unexpected(wrapper_result.error());
+				variant_match(statement_info) {
+					variant_case_novalue(repl::DefinitionSingleStatementInfo) {
+						CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
+						auto hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
 
-					wrapper_symbols.push_back(
-						wrapper_result->wrapper_function.declaration->original_symbol
-					);
+						if (not hout_unit.has_value()) return std::unexpected(hout_unit.error());
+						auto lir_result = compileHOUTUnitToLIRModuleData(
+							ctx, *hout_unit.value(), module_name_id
+						);
+						if (lir_result.hasFailed())
+							return std::unexpected("Failed to compile definition statement to LIR");
+						repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
+					}
+					variant_case_novalue(
+						repl::ExpressionSingleStatementInfo, repl::InstructionSingleStatementInfo
+					) {
+						CORE_DEV_LOG(REPL, "compile_script: classified as executable statement\n");
+						auto wrapper_result = repl::buildStatementWrapper(
+							ctx, statement_info_result.value(), statement_counter
+						);
+						if (!wrapper_result.has_value())
+							return std::unexpected(wrapper_result.error());
 
-					auto hout_unit = repl::makeExecutableHOUTUnit(wrapper_result->wrapper_function);
-					auto lir_result
-						= compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
-					if (lir_result.hasFailed())
-						return std::unexpected("Failed to compile executable statement to LIR");
-					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
+						wrapper_symbols.push_back(
+							wrapper_result->wrapper_function.declaration->original_symbol
+						);
+
+						auto hout_unit_result
+							= repl::makeExecutableHOUTUnit(ctx, wrapper_result->wrapper_function);
+						if (not hout_unit_result.has_value())
+							return std::unexpected(hout_unit_result.error());
+
+						auto lir_result = compileHOUTUnitToLIRModuleData(
+							ctx, std::move(hout_unit_result).value(), module_name_id
+						);
+						if (lir_result.hasFailed())
+							return std::unexpected("Failed to compile executable statement to LIR");
+
+						repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
+					}
+					variant_case(repl::VariableSingleStatementInfo, value) {
+						CORE_DEV_LOG(REPL, "compile_script: classified as variable statement\n");
+
+						auto wrapper_result
+							= repl::buildVariableWrapper(ctx, value, statement_counter);
+						if (not wrapper_result.has_value())
+							return std::unexpected(wrapper_result.error());
+
+						wrapper_symbols.push_back(wrapper_result->initializer_function);
+
+						auto lir_result = compileHOUTUnitToLIRModuleData(
+							ctx, wrapper_result->hout_unit, module_name_id
+						);
+						if (lir_result.hasFailed())
+							return std::unexpected("Failed to compile variable statement to LIR");
+
+						repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
+					}
+					variant_default { CORE_UNREACHABLE(); }
 				}
 
 				++statement_counter;
@@ -499,13 +533,6 @@ namespace compiler::driver {
 				);
 
 				auto llvm_module = compileLIRModuleToLLVM(ctx, &script_lir.value());
-				{
-					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
-					llvm_module.compile(
-						object_artifact.file.getFilePath(),
-						backend_llvm::CompilationOutputType::Object
-					);
-				}
 
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
@@ -519,13 +546,24 @@ namespace compiler::driver {
 					auto asm_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(base::strConcat(script_lir->module_id.strView(), ".s"))
 					);
-					llvm_module.compile(
+
+					// We create a copy here, since compiling the module to assembly might modify it.
+					auto llvm_module_copy = llvm_module.clone();
+
+					llvm_module_copy.compile(
 						asm_artifact.file.getFilePath().getPath(),
 						backend_llvm::CompilationOutputType::Assembly
 					);
 				}
 
-				// Link the script object with builtins to produce a runnable executable.
+				{
+					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
+					llvm_module.compile(
+						object_artifact.file.getFilePath(),
+						backend_llvm::CompilationOutputType::Object
+					);
+				}
+
 				auto output_name     = base::strConcat(script_context.script_file.stem(), ".exe");
 				auto output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(output_name.c_str())
@@ -533,7 +571,6 @@ namespace compiler::driver {
 
 				std::vector<artifacts::FileArtifact> objects;
 				objects.push_back(object_artifact);
-				objects.push_back(emitBuiltinLLVMObjectFile());
 
 				auto linking_result
 					= linker::linkExecutable(output_artifact, objects, linking_options);
@@ -556,7 +593,7 @@ namespace compiler::driver {
 			return base::OK;
 		}
 
-		base::OkBad compileScriptToDVMBytecode(bool link_std_lib) {
+		base::OkBad compileScriptToDVMBytecode(const DVMLinkingOptions& linking_options) {
 			base::Optional<std::string> error_message;
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto script_lir = compileScriptToLIRModuleData(ctx);
@@ -590,12 +627,11 @@ namespace compiler::driver {
                 );
 
 				std::vector<artifacts::FileArtifact> dvm_objs = { std::move(script_obj_artifact) };
-				if (link_std_lib)
-					for (auto&& dvm_std_obj: getStdLibDVMArtifacts())
-						dvm_objs.emplace_back(std::move(dvm_std_obj));
 
 
-				if (linkDVMPackage(dvm_objs, {}, output_file).isBad()) {
+				// Compiling a bare script has no build target, so there are no shared libraries
+				// to declare for the runtime.
+				if (linkDVMPackage(dvm_objs, {}, linking_options, output_file).isBad()) {
 					error_message = "Linking of the DVM objects failed.";
 					return;
 				}
@@ -625,7 +661,9 @@ namespace compiler::driver {
 				constructNativeLinkerOptions(linking_opts, std_lib_opts)
 			);
 		case BackendType::DVM:
-			return compileScriptToDVMBytecode(std_lib_opts.stdActive());
+			return compileScriptToDVMBytecode(
+				constructDVMLinkingOptions(linking_opts, std_lib_opts, false)
+			);
 		default:
 			CORE_PANIC("bad backend type");
 		}
@@ -661,31 +699,44 @@ namespace compiler::driver {
 				deduplicateCodeCollection(dvm_module.code);
 			}
 
-			vm::PID pid{};
-			auto    run_result
+			auto run_result
 				= vm::api::spawn()
-			          .and_then([&](vm::api::ProcessInfo process) {
-						  pid = process.pid;
-						  return std::expected<void, vm::api::ApiError>{};
-					  })
-			          .and_then([&] { return vm::api::loadCode(pid, dvm_module.code); })
-			          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
-			          .and_then([&] { return vm::api::run(pid); })
-			          .and_then([&] { return vm::api::join(pid); })
-			          .and_then([&] { return vm::api::getExitValue(pid); })
-			          .transform_error(vm::api::errorToString)
-			          .transform([](vm::api::ExitValue exit_values) {
-						  CORE_ASSERT(
-							  v_matches(exit_values, std::vector<Ref<vm::IVMValue>>),
-							  "Expected exit value to be vector"
-						  );
-						  const auto& exit_values_vec
-							  = std::get<std::vector<Ref<vm::IVMValue>>>(exit_values);
-						  CORE_ASSERT(exit_values_vec.size() == 1, "Expected single exit value");
-						  return RunOutput{ .exit_code = base::safeIntConv<int>(
-												exit_values_vec.at(0)->readBytes<i64>()
-											) };
-					  });
+			          .and_then(
+						  [&](vm::api::ProcessInfo process
+			              ) -> std::expected<RunOutput, vm::api::ApiError> {
+							  const vm::PID pid = process.pid;
+							  // Deinitialize the process and execute global destructors.
+
+							  defer({
+								  auto deinit = vm::api::deinitAndValidate(pid);
+								  if (!deinit.has_value())
+									  std::cerr << vm::api::errorToString(deinit.error()) << '\n';
+							  });
+
+							  return vm::api::loadCode(pid, dvm_module.code)
+				                  .and_then([&] {
+									  return vm::api::attach(pid, std::cin, std::cout);
+								  })
+				                  .and_then([&] { return vm::api::run(pid); })
+				                  .and_then([&] { return vm::api::join(pid); })
+				                  .and_then([&] { return vm::api::getExitValue(pid); })
+				                  .transform([](vm::api::ExitValue exit_values) {
+									  CORE_ASSERT(
+										  v_matches(exit_values, std::vector<Ref<vm::IVMValue>>),
+										  "Expected exit value to be vector"
+									  );
+									  const auto& exit_values_vec
+										  = std::get<std::vector<Ref<vm::IVMValue>>>(exit_values);
+									  CORE_ASSERT(
+										  exit_values_vec.size() == 1, "Expected single exit value"
+									  );
+									  return RunOutput{ .exit_code = base::safeIntConv<int>(
+															exit_values_vec.at(0)->readBytes<i64>()
+														) };
+								  });
+						  }
+					  )
+			          .transform_error(vm::api::errorToString);
 
 			if (run_result.has_value())
 				output = run_result.value();
@@ -844,10 +895,6 @@ namespace compiler::driver {
 						target_exe.output_file_name
 					);
 
-					llvm_objects_by_root_module.atMaybe(task.root_module)
-						.value()
-						->push_back(emitBuiltinLLVMObjectFile());
-
 					auto linking_result = linker::linkExecutable(
 						output_file,
 						llvm_objects_by_root_module.at(task.root_module),
@@ -914,17 +961,17 @@ namespace compiler::driver {
 							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
+							target_dvm.dvm_linking_options,
 							output_file
 						)
 					        .isBad())
 						result = base::BAD;
 				}
 				variant_case(BuildTargetDVMExecutable, target_dvm) {
-					// If the `target_dvm.link_std_packages` is on, we link the std packages as well.
-					std::vector<artifacts::FileArtifact> dbc_arts
+					// The standard library (and any other dependency) is linked in through
+					// `dvm_linking_options.link_libraries`.
+					const std::vector<artifacts::FileArtifact>& dbc_arts
 						= *dvm_objects_by_root_module.atMaybe(task.root_module).value();
-					if (target_dvm.link_std_packages)
-						for (auto& art: getStdLibDVMArtifacts()) dbc_arts.push_back(std::move(art));
 
 					std::vector<artifacts::FileArtifact> debug_info_arts;
 
@@ -932,17 +979,15 @@ namespace compiler::driver {
 						debug_info_artifacts_by_root_module.atMaybe(task.root_module), debug_arts
 					) {
 						for (const auto& art: *debug_arts) debug_info_arts.push_back(art);
-						if (target_dvm.link_std_packages)
-							for (auto& art: getStdLibDVMDebugInfoArtifacts())
-								debug_info_arts.push_back(std::move(art));
 					}
 
 					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
 						target_dvm.output_file_name
 					);
-					// We may mix artifacts from different collections here (std
-					// artifacts can come from a separate collection).
-					if (linkDVMPackage(dbc_arts, debug_info_arts, output_file).isBad())
+					if (linkDVMPackage(
+							dbc_arts, debug_info_arts, target_dvm.dvm_linking_options, output_file
+						)
+					        .isBad())
 						result = base::BAD;
 				}
 			}

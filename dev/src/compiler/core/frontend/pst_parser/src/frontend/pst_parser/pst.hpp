@@ -6,17 +6,17 @@
 #include "lang_parser_context.hpp"
 #include "pst_state_forward.hpp"
 
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/stable_position.hpp>
 #include <token_source/source.hpp>
 
 namespace pst {
 	// Used to not include full state definition
 	namespace internal {
 		Box<LangParserState> makeState(
-			tpc::TokenStream&&, Box<LangParserContext>&&, Ref<dia_int::Logger> int_logger
+			tpc::TokenStream&&, Box<LangParserContext>&&, Ref<dia::Logger> int_logger
 		);
 		std::vector<ImportType> extractState(Box<LangParserState>);
 
@@ -173,10 +173,10 @@ namespace pst {
 		 */
 		template<typename... Args>
 		explicit PST(
-			dia_int::StablePosition pos,
-			std::string_view        content,
-			Box<LangParserContext>  parsing_ctx,
-			hashing::ComponentHash  hash_ctx = {},
+			dia::StablePosition    pos,
+			std::string_view       content,
+			Box<LangParserContext> parsing_ctx,
+			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
 		) requires PARSE_ABLE<Args...>
 			  : file(tokenizer::makeTokenSource(pos, content)), hash_ctx_info(std::move(hash_ctx)) {
@@ -291,7 +291,7 @@ namespace pst {
 		/** @brief Create a PST from an expanded (macro) text, with correct query dependency
 		 * tracking via unlock(ctx). */
 		static PST fromExpand(
-			dia_int::StablePosition  pos,
+			dia::StablePosition      pos,
 			std::string_view         contents,
 			Box<LangParserContext>&& parsing_ctx,
 			hashing::ComponentHash   hash_ctx = {}
@@ -301,10 +301,10 @@ namespace pst {
 
 		template<typename... Args>
 		static PST fromExpandWithArgs(
-			dia_int::StablePosition pos,
-			std::string_view        contents,
-			Box<LangParserContext>  parsing_ctx,
-			hashing::ComponentHash  hash_ctx = {},
+			dia::StablePosition    pos,
+			std::string_view       contents,
+			Box<LangParserContext> parsing_ctx,
+			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
 		) requires PARSE_ABLE<Args...> {
 			auto out = PST(
@@ -340,19 +340,19 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		CRef<dia_int::Logger> getLogger() const {
+		CRef<dia::Logger> getLogger() const {
 			return file->getIntLogger();
 		}
 
 		[[nodiscard]]
-		Ref<dia_int::Logger> getLoggerMut() {
+		Ref<dia::Logger> getLoggerMut() {
 			return file->getIntLogger();
 		}
 
 		[[nodiscard]] bool hasErrors() const { return file->getIntLogger()->hasErrors(); }
 
 		[[nodiscard]]
-		Ref<tokenizer::TokenSource> getFile() const {
+		CRef<tokenizer::TokenSource> getFile() const {
 			return file.ref();
 		}
 

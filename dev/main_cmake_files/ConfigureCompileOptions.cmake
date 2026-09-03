@@ -74,6 +74,24 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CLANG_FLAGS}" )
 
+	if(APPLE)
+		# Homebrew's clang is not the Apple one, so it does not find the macOS SDK on
+		# its own; point it at the SDK that xcrun reports.
+		if(NOT CMAKE_OSX_SYSROOT)
+			execute_process(COMMAND xcrun --show-sdk-path
+					OUTPUT_VARIABLE MACOS_SDK_PATH
+					OUTPUT_STRIP_TRAILING_WHITESPACE
+					ERROR_QUIET)
+			if(NOT MACOS_SDK_PATH)
+				message(FATAL_ERROR
+						"Could not determine the macOS SDK path. "
+						"Install the command line tools with `xcode-select --install`.")
+			endif()
+			message("-- Using macOS SDK: ${MACOS_SDK_PATH}")
+			set(CMAKE_OSX_SYSROOT "${MACOS_SDK_PATH}")
+		endif()
+	endif()
+
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()

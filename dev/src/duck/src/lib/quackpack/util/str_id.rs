@@ -26,7 +26,7 @@ pub struct StrId {
 
 impl StrId {
     /// Get the inner [`str`] as a static.
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         self.inner
     }
 

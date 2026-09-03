@@ -43,7 +43,7 @@ impl SolverFreeze {
         debug!(?root, freeze = ?value);
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
-            let pkg = PackageId::new(*pkg_freeze.identity(), pkg_freeze.version());
+            let pkg = PackageId::new(pkg_freeze.identity(), pkg_freeze.version());
             expanded_pkgs_by_name.insert(pkg_freeze.name(), pkg);
         }
         let mut pkg_freezes = HashMap::new();

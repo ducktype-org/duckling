@@ -41,4 +41,14 @@ namespace compiler::helios {
 	CompTimeEvalResult getTypeCTVFromPST(
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
 	);
+
+	/**
+	 * Evaluate an expression into a bool CTV, may perform the coercion to a bool inside.
+	 * @param ctx The query context.
+	 * @param pst_expr The PST expression of the condition.
+	 * @return The value of the condition, or query::Failed if it could not be evaluated.
+	 */
+	query::QResult<bool> getBoolCTVFromPST(
+		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
+	);
 }

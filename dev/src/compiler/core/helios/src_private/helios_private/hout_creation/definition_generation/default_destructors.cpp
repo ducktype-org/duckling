@@ -4,6 +4,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -19,6 +20,17 @@
 namespace compiler::helios::defgen {
 	using namespace code::shorthands;
 
+	namespace {
+		/**
+		 * @brief The `boxFree` language primitive baked for the pointee type of a `box T`.
+		 */
+		SymID boxFreeSymFor(query::Context& ctx, const tsh::AbstractType pointee_type) {
+			return bakeLanguagePrimitiveWithTypes(
+				ctx, LanguagePrimitive::BoxFree, { tsh::SymbolType<>::withDefaults(pointee_type) }
+			);
+		}
+	}
+
 	SymID destructSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name = base::StrID("__destruct"),
@@ -29,8 +41,10 @@ namespace compiler::helios::defgen {
 
 	base::Optional<SymID> destructSymForSymbolType(query::Context& ctx, tsh::SymbolType<> type) {
 		if (type.isTriviallyDestructible(ctx)) return {};
-		if (type.getRefKind() == tsh::ReferenceKind::Box)
-			return boxDestructorSymForType(ctx, type.getType());
+		// A `box T` is released by the `boxFree` primitive of `core.containers`, which destroys
+		// the pointee and frees the storage. It takes a `ptr T`, which is what a box is
+		// underneath, so it can stand in as the box destructor directly.
+		if (type.getRefKind() == tsh::ReferenceKind::Box) return boxFreeSymFor(ctx, type.getType());
 		return destructSymForType(ctx, type.getType());
 	}
 
@@ -48,10 +62,10 @@ namespace compiler::helios::defgen {
 		 * @brief Append the statements that destroy the `location` value.
 		 *
 		 * - Trivially-destructible values do nothing.
-		 * - A `box T` is destroyed by calling its `box_destructor` builtin (which destroys the
-		 *   pointee and then frees the heap storage).
-		 * - Non-trivially-destructible class, static-array, tuple and dynamic-array members are
-		 *   destroyed by calling their own destructor with a reference to `location`.
+		 * - A `box T` is destroyed by calling the `boxFree` primitive (which destroys the pointee
+		 *   and then frees the heap storage).
+		 * - Non-trivially-destructible class, static-array and tuple members are destroyed by
+		 *   calling their own destructor with a reference to `location`.
 		 */
 		void appendDestruction(
 			query::Context& ctx, std::vector<Box<code::Stmt>>& body, Box<code::Expr> location
@@ -62,16 +76,18 @@ namespace compiler::helios::defgen {
 
 			const Shorthand s{ ctx };
 
-			// A `box T` owns its pointee and its heap storage. Its `box_destructor` builtin destroys
-			// the pointee and then frees the memory, so we just call it with the box by value.
+			// A `box T` owns its pointee and its heap storage. `boxFree` destroys the pointee and
+			// then frees the memory, so the box itself is all it needs.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
-				const auto pointee_type = type.getType();
+				const auto pointee_type = tsh::SymbolType<>::withDefaults(type.getType());
+				const auto storage_type = tsh::SymbolType<>::withDefaults(
+					ctx.query<tsh::QueryPointerType>({ pointee_type })
+				);
 
-				appendDestruction(ctx, body, s.deref(location->clone()));
-
-				body.emplace_back(s.expr(
-					s.call(s.ident(boxDestructorSymForType(ctx, pointee_type)), std::move(location))
-				));
+				body.emplace_back(s.expr(s.call(
+					s.ident(boxFreeSymFor(ctx, type.getType())),
+					s.cast(std::move(location), storage_type)
+				)));
 				return;
 			}
 
@@ -81,7 +97,6 @@ namespace compiler::helios::defgen {
 				abstract_type.getKind() == tsh::Kind::Class
 					or abstract_type.getKind() == tsh::Kind::StaticArray
 					or abstract_type.getKind() == tsh::Kind::Tuple
-					or abstract_type.getKind() == tsh::Kind::DynamicArray
 					or abstract_type.getKind() == tsh::Kind::Variant,
 				"Tried to generate a destructor call for a type which shouldn't need one"
 			);
@@ -129,35 +144,102 @@ namespace compiler::helios::defgen {
 			return body;
 		}
 
-		// `var __i: u64 = 0;`
+		/**
+		 * @brief Builds the destructor body for a variant: destroys the active alternative.
+		 *
+		 * Only the alternatives that actually need destroying get a case. The trivially
+		 * destructible ones are left out entirely and fall through the case chain, which is
+		 * also why no wildcard case is needed.
+		 *
+		 * Each case binds a reference to the payload, so the alternative is destroyed in
+		 * place, through the very pointer the alternative test produced.
+		 */
+		std::vector<Box<code::Stmt>> buildVariantDestructBody(
+			query::Context&                 ctx,
+			const tsh::VariantAbstractType& variant_type,
+			const SymID                     dtor_sym,
+			const SymID                     self_symbol
+		) {
+			using Variable = GeneratedFunctionVariable;
+
+			std::vector<Box<code::Stmt>> body;
+
+			const Shorthand s{ ctx };
+			const auto&     alternatives = variant_type.getUnderlyingTypes();
+
+			std::vector<code::MatchExpr::Case> cases;
+			for (usize i = 0; i < alternatives.size(); i++) {
+				if (alternatives[i].isTriviallyDestructible(ctx)) continue;
+
+				const auto payload_type = alternatives[i]
+				                              .withReferenceKind(tsh::ReferenceKind::Ref)
+				                              .withMutability(tsh::Mutability::Mutable);
+
+				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
+					.name                  = base::StrID(base::strConcat("__alternative_", i)),
+					.generated_symbol_data = Variable{ .function_symbol = dtor_sym,
+				                                       .variable_index  = i,
+				                                       .type            = payload_type },
+				});
+
+				// The binding already is the reference the destructor wants. Going through
+				// `appendDestruction` would dereference it only to take its address again, and
+				// it would also skip the work entirely, since a `ref` is trivially destructible.
+				//
+				// A `box T` alternative stores the box itself, so the binding holds that box and
+				// the box destructor - which takes it as a `ref T` - is the one to call.
+				const SymID alternative_dtor
+					= destructSymForSymbolType(ctx, alternatives[i]).value();
+
+				cases.emplace_back(Shorthand::matchCase(
+					i, payload_sym, s.call(s.ident(alternative_dtor), s.ident(payload_sym))
+				));
+			}
+
+			// Nothing owns anything, so there is nothing to match on. An empty match would
+			// also be invalid, as the lowering requires at least one case.
+			if (cases.empty()) return body;
+
+			// Only the alternatives that own something are listed, so the match needs a wildcard
+			// to stay exhaustive. Without it the lowering would enter the last case
+			// unconditionally and destroy a payload that is not there.
+			cases.emplace_back(Shorthand::matchCase({}, {}, s.litUnit()));
+
+			// `self` is already a reference to the variant, which is what the match wants. The
+			// destructor calls are unit-valued, so the match is used as a plain statement.
+			body.emplace_back(s.expr(s.matchExpr(s.ident(self_symbol), std::move(cases))));
+			return body;
+		}
+
+		// `var __i: i64 = 0;`
 		SymID buildLoopCounter(
 			query::Context& ctx, std::vector<Box<code::Stmt>>& body, SymID dtor_sym
 		) {
 			using Variable = GeneratedFunctionVariable;
 
-			const auto u64_abs_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-			const auto u64_type = tsh::SymbolType<>::withDefaults(u64_abs_type);
+			const auto i64_abs_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			const auto i64_type = tsh::SymbolType<>::withDefaults(i64_abs_type);
 
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
 				   .name = base::StrID("__i"),
 				   .generated_symbol_data
-                = Variable{ .function_symbol = dtor_sym, .variable_index = 0, .type = u64_type },
+                = Variable{ .function_symbol = dtor_sym, .variable_index = 0, .type = i64_type },
             });
-			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-			                    .expect("u64 creation failed");
+			auto        zero_val = numeric_value::NumericValue::createOfType(i64_abs_type)
+			                    .expect("i64 creation failed");
 
 			const Shorthand s{ ctx };
-			body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
+			body.emplace_back(s.var(i_sym, i64_type, s.litNum(zero_val)));
 			return i_sym;
 		}
 
 		// `__i = __i + 1;`.
 		Box<code::Stmt> buildLoopIncrement(query::Context& ctx, SymID i_sym) {
-			const auto u64_abs_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-			auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
-			                   .expect("u64 creation failed");
+			const auto i64_abs_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			auto one_val = numeric_value::NumericValue::createOfType(i64_abs_type, 1)
+			                   .expect("i64 creation failed");
 			const Shorthand s{ ctx };
 			return s.assign(
 				s.ident(i_sym),
@@ -178,17 +260,17 @@ namespace compiler::helios::defgen {
 			// Nothing to destroy for empty or trivially-destructible arrays.
 			if (size == 0 || array_type.getElementType().isTriviallyDestructible(ctx)) return body;
 
-			// var __i: u64 = 0;
+			// var __i: i64 = 0;
 			const SymID i_sym = buildLoopCounter(ctx, body, dtor_sym);
 
 			// while (__i < size) {
 			// 		(*self)[__i].__destruct(...);
 			// 		__i = __i + 1;
 			// }
-			const auto u64_abs_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-			auto size_val = numeric_value::NumericValue::createOfType(u64_abs_type, size)
-			                    .expect("u64 creation failed");
+			const auto i64_abs_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			auto size_val = numeric_value::NumericValue::createOfType(i64_abs_type, size)
+			                    .expect("i64 creation failed");
 
 			const Shorthand s{ ctx };
 			auto            condition
@@ -201,44 +283,6 @@ namespace compiler::helios::defgen {
 			loop_body.emplace_back(buildLoopIncrement(ctx, i_sym));
 
 			body.emplace_back(s.whileStmt(std::move(condition), std::move(loop_body)));
-
-			return body;
-		}
-
-		std::vector<Box<code::Stmt>> buildDynamicArrayDestructBody(
-			query::Context&                      ctx,
-			const tsh::DynamicArrayAbstractType& array_type,
-			const SymID                          dtor_sym,
-			const SymID                          self_symbol
-		) {
-			std::vector<Box<code::Stmt>> body;
-
-			const Shorthand s{ ctx };
-
-			// Destroy each element only if the element type is not trivially destructible.
-			// while (__i < self.length()) { (*self)[__i].__destruct(...); __i = __i + 1; }
-			if (not array_type.getElementType().isTriviallyDestructible(ctx)) {
-				// var __i: u64 = 0;
-				const SymID i_sym             = buildLoopCounter(ctx, body, dtor_sym);
-				const SymID length_method_sym = defgen::lengthMethodForType(ctx, array_type);
-
-				Box<code::Expr> len_expr = s.call(s.ident(length_method_sym), s.ident(self_symbol));
-				auto            condition
-					= s.binOp(s.ident(i_sym), code::BuiltinBinary::IntegerLt, std::move(len_expr));
-
-				std::vector<Box<code::Stmt>> loop_body;
-				appendDestruction(
-					ctx, loop_body, s.index(s.deref(s.ident(self_symbol)), s.ident(i_sym))
-				);
-				loop_body.emplace_back(buildLoopIncrement(ctx, i_sym));
-
-				body.emplace_back(s.whileStmt(std::move(condition), std::move(loop_body)));
-			}
-
-			body.emplace_back(s.expr(s.call(
-				s.ident(listFreeSymForType(ctx, array_type.getElementType().getType())),
-				s.move(s.ident(self_symbol))
-			)));
 
 			return body;
 		}
@@ -261,15 +305,13 @@ namespace compiler::helios::defgen {
 					ctx, owner_type.as<tsh::StaticArrayAbstractType>(), dtor_sym, self_symbol
 				);
 				break;
-			case tsh::Kind::DynamicArray:
-				body = buildDynamicArrayDestructBody(
-					ctx, owner_type.as<tsh::DynamicArrayAbstractType>(), dtor_sym, self_symbol
+			case tsh::Kind::Variant:
+				body = buildVariantDestructBody(
+					ctx, owner_type.as<tsh::VariantAbstractType>(), dtor_sym, self_symbol
 				);
 				break;
 			default:
-				// Other types (e.g. strings and variants) either have a no-op destructor or their
-				// destruction is not yet implemented. This stub just provides an empty destructor.
-				break;
+				CORE_UNREACHABLE();
 			}
 
 			return HOUTFunction(
@@ -285,29 +327,4 @@ namespace compiler::helios::defgen {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultDestructor);
-
-	HOUTFunction buildBoxDestructor(query::Context& ctx, const tsh::AbstractType pointee_type) {
-		const SymID box_dtor_sym = boxDestructorSymForType(ctx, pointee_type);
-		const auto& dtor_decl    = ctx.query<QueryDeclOfFun>(box_dtor_sym)->valueOrThrow();
-		const SymID self_symbol  = dtor_decl.parameters.at(0).helios_symbol;
-
-		const Shorthand s{ ctx };
-
-		std::vector<Box<code::Stmt>> body;
-
-		// Destroy the pointee: `appendDestruction(*self)`.
-		appendDestruction(ctx, body, s.deref(s.ident(self_symbol)));
-
-		body.emplace_back(s.expr(
-			s.call(s.ident(boxFreeSymForType(ctx, pointee_type)), s.move(s.ident(self_symbol)))
-		));
-
-		return HOUTFunction(
-			code::generatedOrigin(),
-			&dtor_decl,
-			std::make_shared<const code::CodeBlock>(code::CodeBlock{
-				.statements = std::move(body),
-			})
-		);
-	}
 }

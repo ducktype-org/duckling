@@ -41,7 +41,7 @@ namespace compiler::mir {
 								);
 								ctx.logInt(std::move(msg));
 							} else {
-								ctx.logInt(makeBox<dia_int::PlaceholderError>(
+								ctx.logInt(makeBox<dia::PlaceholderError>(
 									"Variable declaration shadows a previous declaration.",
 									base::strConcat(
 										"The exact code location is unavailable because the "

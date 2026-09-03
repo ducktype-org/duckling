@@ -244,6 +244,27 @@ void VmTestSuite::runFunctionSynchronouslyAsTest(
 	}
 }
 
+void VmTestSuite::assertRunFunctionRefusedWith(
+	vm::PID                         pid,
+	const std::string&              func_name,
+	const vm::FunctionRunArguments& args,
+	std::string_view                expected_reason
+) {
+	auto result = vm::api::runFunction(pid, func_name, args);
+	ASSERT_NO_VALUE(result);
+	ASSERT_TRUE(v_matches(result.error(), vm::api::RunError));
+	const std::string why = v_get(result.error(), vm::api::RunError).error;
+	assertTrue(
+		why.find(expected_reason) != std::string::npos,
+		"Expected to see'" + std::string(expected_reason)
+			+ "' in the error message, but the message was: " + why
+	);
+
+	auto status = vm::api::getExecutionStatus(pid);
+	ASSERT_HAS_VALUE(status);
+	ASSERT_TRUE(v_matches(status.value(), vm::api::NotStarted));
+}
+
 auto VmTestSuite::runFunctionExpectPanic(
 	vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
 ) -> TestResult {

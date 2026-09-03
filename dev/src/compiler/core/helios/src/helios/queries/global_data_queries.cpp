@@ -2,10 +2,13 @@
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_cache_macros.hpp>
@@ -15,6 +18,34 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryHOUTGlobalData, query::QResult<HOUTGlobalData>) {
 		static auto provide(Context& ctx, QKey symbol) -> PResult {
 			auto symbol_kind = kind(symbol);
+
+			// The empty storage of a REPL global variable shares everything with the variable it
+			// stands for, except for the initial value. It shares the same symbol as for the
+			// original variable, to have the same mangling.
+			if (auto empty_variable
+			    = std::get_if<defgen::ReplEmptyVariable>(&getSymRef(symbol)->other)) {
+				const auto& original
+					= ctx.query<QueryHOUTGlobalData>(empty_variable->original_variable)
+				          ->valueOrThrow();
+				CORE_ASSERT(
+					original.data_type == HOUTGlobalDataType::Variable,
+					"An empty REPL variable expects a variable declaration"
+				);
+
+				Box<code::Expr> empty_value = base::makeBox<code::DefaultValueExpr>(
+					ctx, code::generatedOrigin(), original.type.getType()
+				);
+
+				return HOUTGlobalData{
+					.helios_symbol = symbol,
+					.origin        = original.origin,
+					.original_name = original.original_name,
+					.data_type     = original.data_type,
+					.value         = HOUTGlobalVariable{ std::move(empty_value) },
+					.type          = original.type,
+				};
+			}
+
 			CORE_ASSERT(
 				symbol_kind == SymbolKind::Const
 					|| (symbol_kind == SymbolKind::Variable && isGlobalVar(ctx, symbol)),
@@ -53,7 +84,12 @@ namespace compiler::helios {
 						if (auto maybe_initial_pst = var_decl->getValue()) {
 							auto initial_value_pst
 								= maybe_initial_pst.value().unlock(ctx)->getExpr();
-							return getHoutOfExprWithExpectedType(ctx, initial_value_pst, symbol_type)
+							return getHoutOfExprWithExpectedType(
+									   ctx,
+									   initial_value_pst,
+									   symbol_type,
+									   var_decl->getName().unlock(ctx)->getStablePosition()
+							)
 							    .valueOrThrow();
 						}
 
@@ -87,4 +123,38 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHOUTGlobalData);
+
+	Box<code::Expr> getGlobalConstructorExpr(query::Context& ctx, CRef<HOUTGlobalData> global_data) {
+		using namespace code::shorthands;
+		Shorthand s(ctx);
+
+		CORE_ASSERT(
+			v_matches(global_data->value, HOUTGlobalVariable),
+			"Call only valid with global variable."
+		);
+
+		CRef<code::Expr> initial_value_expr
+			= v_get(global_data->value, HOUTGlobalVariable).initial_value.ref();
+
+		auto move_in_symbol = moveInSymForType(ctx, global_data->type);
+		return s.call(
+			s.ident(move_in_symbol),
+			s.ptrOf(s.ident(global_data->helios_symbol)),
+			initial_value_expr->clone()
+		);
+	}
+
+	base::Optional<Box<code::Expr>> getGlobalDestructorExpr(
+		query::Context& ctx, CRef<HOUTGlobalData> global_data
+	) {
+		using namespace code::shorthands;
+		Shorthand s(ctx);
+		auto      destructor = getTypeDestructor(ctx, global_data->type);
+		if (destructor.empty()) return {};
+
+		// refOf here is intentional, for `box T` reference types
+		// we change the type to `ref T` and the MIR will remove the additional address of.
+		// And for direct types it will just add the address of.
+		return s.call(s.ident(destructor.value()), s.refOf(s.ident(global_data->helios_symbol)));
+	}
 }

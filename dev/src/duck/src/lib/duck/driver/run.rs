@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -129,7 +129,8 @@ fn run_subcmd(
                 .with_context(|| format!("failed to execute the external subcommand `{sub_cmd}`"))
         }
         (None, None, Some(path)) => {
-            let path = ctx.cwd().join(path);
+            let path = Path::new(path);
+            let path = path.resolve_with_tilde(ctx);
             check_is_script(&path)?;
             let args = external_cli_args(sub_args);
             run_script(RunScriptOptions::from_path_and_args_with_defaults(
@@ -141,16 +142,16 @@ fn run_subcmd(
 }
 
 /// Get all arguments passed to the external subcommand.
-fn external_cli_args(sub_args: &ArgMatches) -> Vec<OsString> {
+fn external_cli_args(sub_args: &ArgMatches) -> Vec<&OsStr> {
     sub_args
         .get_many::<OsString>("")
         .unwrap_or_default()
-        .cloned()
-        .collect::<Vec<_>>()
+        .map(OsString::as_os_str)
+        .collect()
 }
 
 /// Execute the external subcommand.
-fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackResult<()> {
+fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<&OsStr>) -> QuackResult<()> {
     debug!(
         path = %exec_path.display(),
         ?cli_args,

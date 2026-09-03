@@ -1,5 +1,3 @@
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/logger.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/manifest/manifest.hpp>
 #include <driver/task/task.hpp>
@@ -9,6 +7,8 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <diagnostic/core/diagnostic_arguments.hpp>
+#include <diagnostic/logger.hpp>
 #include <tester/tester.hpp>
 
 #include <json/json.hpp>
@@ -29,6 +29,9 @@ public:
 		TESTER_ADD_TEST(verifyEmptyPackagesFails);
 		TESTER_ADD_TEST(verifyDuplicateAndUnknownDepsFail);
 		TESTER_ADD_TEST(dvmStrategyParsed);
+		TESTER_ADD_TEST(dvmStrategyLinkingOptionsParsed);
+		TESTER_ADD_TEST(dvmLibStrategyLinkingOptionsParsed);
+		TESTER_ADD_TEST(dvmStrategyBadLinkingOptionsFails);
 		TESTER_ADD_TEST(nativeStrategyParsed);
 		TESTER_ADD_TEST(nativeStrategyBadLinkingOptionsFails);
 		TESTER_ADD_TEST(nativeStrategyLinkingOptionsObjectParsed);
@@ -38,12 +41,10 @@ public:
 	}
 
 protected:
-	void beforeAll() override {
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
-	}
+	void beforeAll() override { global_state::setters::setGlobalLogger(makeBox<dia::Logger>()); }
 
 private:
-	dia_int::Logger& logger() { return *global_state::getGlobalLogger(); }
+	dia::Logger& logger() { return *global_state::getGlobalLogger(); }
 
 	void clearLogger() { logger().clear(); }
 
@@ -261,6 +262,91 @@ private:
 		const auto& target = std::get<BuildTargetDVMLibrary>(result->build_target);
 		ASSERT_EQUAL(target.output_file_name.str(), std::string("bin/mylib_dvm"));
 		ASSERT_EQUAL(result->package_id.str(), std::string("mylib"));
+	}
+
+	void dvmStrategyLinkingOptionsParsed() {
+		clearLogger();
+
+		auto task_json = nlohmann::json::parse(R"({
+            "package": "app",
+            "strategy": "dvm_exe",
+            "output_file": "bin/app",
+            "dvm_linking_options": {
+                "shared_libraries": [ "libm.so.6", "libfoo.so" ],
+                "link_libraries": [ "bin/mylib_dvm.dbc" ]
+            }
+        })");
+		auto result    = RawPackageCompilationTask::fromJson(
+            task_json, diagnostics::makeGlobalLoggerReporter()
+        );
+
+		ASSERT_HAS_VALUE(result);
+		ASSERT_TRUE(logger().good());
+		ASSERT_TRUE(std::holds_alternative<BuildTargetDVMExecutable>(result->build_target));
+		const auto& target = std::get<BuildTargetDVMExecutable>(result->build_target);
+		ASSERT_EQUAL(
+			(std::vector<std::string>{ "libm.so.6", "libfoo.so" }),
+			target.dvm_linking_options.shared_libraries
+		);
+		ASSERT_EQUAL(
+			(std::vector<fs::FilePath>{ fs::FilePath("bin/mylib_dvm.dbc") }),
+			target.dvm_linking_options.link_libraries
+		);
+	}
+
+	void dvmLibStrategyLinkingOptionsParsed() {
+		clearLogger();
+
+		auto task_json = nlohmann::json::parse(R"({
+            "package": "mylib",
+            "strategy": "dvm_lib",
+            "output_file": "bin/mylib_dvm",
+            "dvm_linking_options": { "shared_libraries": [ "libm.so.6" ] }
+        })");
+		auto result    = RawPackageCompilationTask::fromJson(
+            task_json, diagnostics::makeGlobalLoggerReporter()
+        );
+
+		ASSERT_HAS_VALUE(result);
+		ASSERT_TRUE(logger().good());
+		ASSERT_TRUE(std::holds_alternative<BuildTargetDVMLibrary>(result->build_target));
+		const auto& target = std::get<BuildTargetDVMLibrary>(result->build_target);
+		ASSERT_EQUAL(
+			(std::vector<std::string>{ "libm.so.6" }), target.dvm_linking_options.shared_libraries
+		);
+		ASSERT_TRUE(target.dvm_linking_options.link_libraries.empty());
+	}
+
+	void dvmStrategyBadLinkingOptionsFails() {
+		clearLogger();
+
+		auto task_json = nlohmann::json::parse(R"({
+            "package": "app",
+            "strategy": "dvm_exe",
+            "output_file": "bin/app",
+            "dvm_linking_options": { "shared_libraries": [ 123 ] }
+        })");
+		auto result    = RawPackageCompilationTask::fromJson(
+            task_json, diagnostics::makeGlobalLoggerReporter()
+        );
+
+		ASSERT_NO_VALUE(result);
+		ASSERT_TRUE(logger().hasErrors());
+
+		clearLogger();
+
+		auto not_an_object_json   = nlohmann::json::parse(R"({
+            "package": "app",
+            "strategy": "dvm_exe",
+            "output_file": "bin/app",
+            "dvm_linking_options": "libm.so.6"
+        })");
+		auto not_an_object_result = RawPackageCompilationTask::fromJson(
+			not_an_object_json, diagnostics::makeGlobalLoggerReporter()
+		);
+
+		ASSERT_NO_VALUE(not_an_object_result);
+		ASSERT_TRUE(logger().hasErrors());
 	}
 
 	void nativeStrategyParsed() {

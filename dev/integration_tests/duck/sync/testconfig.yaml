@@ -3,6 +3,7 @@ PreNode: ""
 SubDirs:
   - basic
   - basic-with-flags
+  - can-reuse-solution-with-local-deps
   - cycle-in-flags
   - dep
   - dep-and-conditions

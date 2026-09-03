@@ -19,11 +19,14 @@ public:
 		TESTER_ADD_TEST(testClassifyAssignmentExpressionAsInstruction);
 		TESTER_ADD_TEST(testClassifySingleInstruction);
 		TESTER_ADD_TEST(testClassifySingleDefinition);
+		TESTER_ADD_TEST(testClassifySingleVariable);
 		TESTER_ADD_TEST(testClassifyRejectsNonSingleInput);
 		TESTER_ADD_TEST(testClassifyRejectsSingleActionStatements);
 		TESTER_ADD_TEST(testBuildExpressionWrapper);
 		TESTER_ADD_TEST(testBuildInstructionWrapper);
 		TESTER_ADD_TEST(testBuildWrapperRejectsDefinition);
+		TESTER_ADD_TEST(testBuildWrapperRejectsVariable);
+		TESTER_ADD_TEST(testBuildVariableWrapper);
 		TESTER_ADD_TEST(testMakeExecutableHOUTUnit);
 		TESTER_ADD_TEST(testCreateEphemeralChainedStatementModule);
 		TESTER_ADD_TEST(testGetStatementModuleName);
@@ -93,6 +96,19 @@ private:
 		});
 	}
 
+	void testClassifySingleVariable() {
+		auto module_id = createModule("var x = 1;");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto result = repl::classifySingleStatement(ctx, module_id);
+			assertTrue(result.has_value(), "Variable classification should succeed");
+			assertTrue(
+				std::holds_alternative<repl::VariableSingleStatementInfo>(*result),
+				"Expected variable variant"
+			);
+		});
+	}
+
 	void testClassifyRejectsNonSingleInput() {
 		auto module_id = createModule("1 + 2;\n3 + 4;");
 
@@ -142,7 +158,7 @@ private:
 			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 101);
 			assertTrue(wrapped.has_value(), "Expression wrapper build should succeed");
 			assertTrue(
-				wrapped->wrapper_func_name.find("__repl_expr_wrapper_101") != std::string::npos,
+				wrapped->wrapper_func_name.find("__repl_input_wrapper_101") != std::string::npos,
 				"Wrapper function name should include expression counter"
 			);
 		});
@@ -158,7 +174,7 @@ private:
 			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 202);
 			assertTrue(wrapped.has_value(), "Instruction wrapper build should succeed");
 			assertTrue(
-				wrapped->wrapper_func_name.find("__repl_instr_wrapper_202") != std::string::npos,
+				wrapped->wrapper_func_name.find("__repl_input_wrapper_202") != std::string::npos,
 				"Wrapper function name should include instruction counter"
 			);
 		});
@@ -181,6 +197,60 @@ private:
 		});
 	}
 
+	void testBuildWrapperRejectsVariable() {
+		auto module_id = createModule("var x = 1;");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto classified = repl::classifySingleStatement(ctx, module_id);
+			assertTrue(classified.has_value(), "Classification should succeed");
+
+			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 12);
+			assertTrue(!wrapped.has_value(), "Variable wrapper build should fail");
+			assertTrue(
+				wrapped.error().find("do not have executable wrappers") != std::string::npos,
+				"Expected non-executable-statement error"
+			);
+		});
+	}
+
+	void testBuildVariableWrapper() {
+		auto module_id = createModule("var x = 1;");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto classified = repl::classifySingleStatement(ctx, module_id);
+			assertTrue(classified.has_value(), "Classification should succeed");
+
+			auto variable_info
+				= std::get<repl::VariableSingleStatementInfo>(std::move(classified).value());
+			auto built = repl::buildVariableWrapper(ctx, variable_info, 404);
+			assertTrue(built.has_value(), "Variable wrapper build should succeed");
+
+			// The declaration contributes the storage of the variable, the construction of its
+			// initial value is a separate function the caller sequences in statement order.
+			ASSERT_EQUAL(1UL, built->hout_unit.glob_data.size());
+			assertTrue(
+				!built->hout_unit.functions.empty(),
+				"Variable HOUT unit should contain the initializer function"
+			);
+
+			auto initializer_name
+				= helios::mangler::getSimpleMangledName(ctx, built->initializer_function);
+			assertTrue(
+				std::string(initializer_name.strView()).find("__repl_input_wrapper_404")
+					!= std::string::npos,
+				"Initializer function name should include the wrapper counter"
+			);
+
+			auto variable_name = helios::mangler::getSimpleMangledName(
+				ctx, built->hout_unit.glob_data.at(0)->helios_symbol
+			);
+			auto original_name = helios::mangler::getSimpleMangledName(
+				ctx, repl::getVariableSymID(ctx, variable_info.variable_stmt)
+			);
+			ASSERT_EQUAL(std::string(variable_name.strView()), std::string(original_name.strView()));
+		});
+	}
+
 	void testMakeExecutableHOUTUnit() {
 		auto module_id = createModule("1 + 2;");
 
@@ -191,10 +261,11 @@ private:
 			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 303);
 			assertTrue(wrapped.has_value(), "Wrapper build should succeed");
 
-			auto hout_unit = repl::makeExecutableHOUTUnit(wrapped->wrapper_function);
-			ASSERT_EQUAL(1UL, hout_unit.functions.size());
+			auto hout_unit = repl::makeExecutableHOUTUnit(ctx, wrapped->wrapper_function);
+			assertTrue(hout_unit.has_value(), "Executable HOUT unit should be created");
+			assertTrue(!hout_unit->functions.empty(), "Executable HOUT unit should have a function");
 			ASSERT_EQUAL(
-				hout_unit.functions[0]->declaration->original_symbol,
+				hout_unit->functions[0]->declaration->original_symbol,
 				wrapped->wrapper_function.declaration->original_symbol
 			);
 		});
@@ -243,9 +314,10 @@ private:
 		auto module_id = createModule("fun foo() = {}");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto& hout = repl::getDefinitionHOUTUnit(ctx, module_id);
+			auto hout = repl::getDefinitionHOUTUnit(ctx, module_id);
+			assertTrue(hout.has_value(), "Definition HOUT should compile");
 			assertTrue(
-				!hout.functions.empty() || !hout.glob_data.empty(),
+				!hout.value()->functions.empty() || !hout.value()->glob_data.empty(),
 				"Definition HOUT should contain emitted elements"
 			);
 		});
