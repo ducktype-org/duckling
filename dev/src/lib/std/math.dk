@@ -323,13 +323,6 @@ namespace impl {
         These are the functions not provided by the C standard library.
     #}
 
-    # Computes the absolute value of a number
-    template(T: type)
-    fun abs(x: T) -> T = {
-        if (x < 0 as T) return -x;
-        return x;
-    }
-
     # Determines larger of two numbers
     template(T: type)
     fun max(x: T, y: T) -> T = {
@@ -360,6 +353,75 @@ namespace impl {
             y /= 2 as T;
             exp *= exp;
         }
+        return result;
+    }
+
+    # Computes the gratest common divisor of two integers
+    template(T: type)
+    fun gcd(x: T, y: T) -> T = {
+        var a: T = abs(x);
+        var b: T = abs(y);
+
+        while (b != 0 as T) {
+            var t: T = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
+    }
+
+    # Computes the least common multiple of two integers
+    template(T: type)
+    fun lcm(x: T, y: T) -> T = {
+        if (x == 0 as T || y == 0 as T) return 0 as T;
+        return abs(x) / gcd(x, y) * abs(y);
+    }
+
+    # Performs linear interpolation between a and b based on t.
+    fun lerpf(a: f32, b: f32, t: f32) -> f32 = a + (b - a) * t;
+    fun lerp(a: f64, b: f64, t: f64) -> f64 = a + (b - a) * t;
+
+    # Computes the number of ways to choose k items from n items without repetition and without order
+    template(T: type)
+    fun comb(n: T, k: T) -> T = {
+        if (k > n) return 0 as T;
+        if (k == 0 as T || k == n) return 1 as T;
+
+        var result: T = 1 as T;
+        while (k > 0 as T) {
+            result = result * (n - k + 1 as T);
+            result = result / k;
+            k = k - 1 as T;
+        }
+        return result;
+    }
+
+    # Computes the factorial of a non-negative integer n
+    template(T: type)
+    fun factorial(n: T) -> T = {
+        if (n < 0 as T) panic();
+        if (n == 0 as T) return 1 as T;
+
+        var result: T = 1 as T;
+        while (n > 1 as T) {
+            result = result * n;
+            n = n - 1 as T;
+        }
+        return result;
+    }
+
+    # Computes the number of ways to choose k items from n items without repetition and with order
+    template(T: type)
+    fun perm(n: T, k: T) -> T = {
+        if (k > n) return 0 as T;
+        if (k == 0 as T) return 1 as T;
+
+        var result: T = 1 as T;
+        while (k > 0 as T) {
+            result = result * (n - k + 1 as T);
+            k = k - 1 as T;
+        }
+
         return result;
     }
 }
