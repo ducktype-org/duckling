@@ -56,6 +56,8 @@ jobs:
           mkdir -p ${{ github.workspace }}
           echo "Workspace cleaned."
 
+      - name: Configure git
+        run: git config --global http.version HTTP/1.1
       - uses: actions/checkout@v6
 
       - name: Install gvc, LLVM and nlohmann_json
