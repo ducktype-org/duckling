@@ -109,6 +109,10 @@ jobs:
 
     needs: determine-runners
     runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[1] }}
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - name: Clean workspace (self-hosted only)
         if: contains(fromJson(needs.determine-runners.outputs.runners)[1].group, 'SelfHostedRunners')
@@ -133,13 +137,11 @@ jobs:
         working-directory: dev
         run: |
           python3 toolbox.py duck-linter --branch "$PR_BASE_SHA" --no-merge-base --verbose --no-fix
-        shell: bash
 
       - name: Run header checker
         working-directory: dev
         run: |
           python3 toolbox.py header-checker --branch "$PR_BASE_SHA" --no-merge-base
-        shell: bash
 
       - name: Run issue checker
         working-directory: dev
@@ -148,7 +150,6 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           python3 toolbox.py issue-checker --branch "$PR_BASE_SHA" --no-merge-base
-        shell: bash
 
       - name: Run TODO validation
         working-directory: dev
@@ -156,4 +157,3 @@ jobs:
           GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
         run: |
           python3 toolbox.py todo-validate --branch "$PR_BASE_SHA" --no-merge-base
-        shell: bash
