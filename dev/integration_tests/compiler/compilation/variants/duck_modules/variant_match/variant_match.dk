@@ -241,9 +241,9 @@ namespace maybe {
 
 	template(T: type)
 	fun value(m: Maybe(T)) -> T = {
-		return match(m) {
+		return match(move m) {
 			case _: () = panicking.panic() as T;
-			case v: ref T = builtins.move_out:{T}(ptrof(*v));
+			case v: T = move v;
 		}
 	}
 }
@@ -363,15 +363,6 @@ fun stealString(v: String | i32) -> String = {
 	};
 }
 
-# A trivially destructible variant is only borrowed by the match even when it is passed by value,
-# so its cases may still bind by reference and a bare wildcard stays allowed.
-fun borrowedByValue(v: i32 | f32) -> i64 = {
-	return match (v) {
-		case x : ref i32 = x as i64;
-		case _ = -1i64;
-	};
-}
-
 fun owningMatch() -> () = {
 	# A box payload: bound and destroyed by the case, dropped by the wildcard, or moved out.
 	check(takeBox(makeBoxVariant(5i32)), 5i64, 120i64);
@@ -389,9 +380,6 @@ fun owningMatch() -> () = {
 
 	var stolen_string: String = stealString(makeStringVariant("abc"));
 	check(stolen_string.length(), 3i64, 143i64);
-
-	check(borrowedByValue(41i32), 41i64, 160i64);
-	check(borrowedByValue(1.5 as f32), -1i64, 161i64);
 
 	# Both moved-out payloads are still owned here, so leaving this function frees them.
 }

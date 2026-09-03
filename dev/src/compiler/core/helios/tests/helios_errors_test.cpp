@@ -812,8 +812,8 @@ private:
 			// Only variants can be matched, and never through a box.
 			checkForErrorOnCompileModule(
 				"fun main(v: i64) -> i64 = { var r: i64 = match (v) { case _ = 0i64; }; return r; "
-			    "}",
-				{ "non-variant types are invalid to be passed to match. Got `i64`" },
+				"}",
+				{ "`match` on a non-variant type. Got `i64`." },
 				1
 			);
 			checkForErrorOnCompileModule(
@@ -822,14 +822,15 @@ private:
 					"fun main(v: box (Holder | f32)) -> i64 = "
 					"{ var r: i64 = match (v) { case _ = 0i64; }; return r; }"
 				),
-				{ "invalid to be passed to match. Got `box Variant (Class Holder, f32)`" },
+				{ "`match` cannot look through a box. Got `box Variant (Class Holder, f32)`." },
 				1
 			);
 
 			// A borrowing case cannot bind a box payload.
 			check_ref_match_error(
 				"match (v) { case b : box Holder = 1i64; case _ = 0i64; };",
-				{ "Box type in the match case is invalid." }
+				{ "This `match` only borrows its subject, so a case cannot take a `box` payload "
+			      "out of it." }
 			);
 
 			// The constraint has to name one of the alternatives.
@@ -871,7 +872,9 @@ private:
 			// A wildcard binds nothing, so the payloads it covers would never be destroyed.
 			check_owning_match_error(
 				"match (move v) { case _ = 0i64; };",
-				{ "among not-covered cases are not trivially destructible types" }
+				{ "A bare `case _` binds nothing, so the payload it covers would never be "
+			      "destroyed, "
+			      "and the alternative `Class Holder` it covers has a destructor." }
 			);
 
 			// Every case yields the match's value, so they all have to agree on its type, and

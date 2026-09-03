@@ -751,7 +751,7 @@ namespace compiler::mir {
 							return MIRValue{ payload_ptr.value() };
 						if (binding_ref != Direct && alternative_ref != Direct)
 							return { MIRPlace(payload_ptr.value()).withDeref() };
-						CORE_PANIC("Should coverall cases");
+						CORE_UNREACHABLE();
 					}(binding_local->type.getRefKind(), alternative_type.value().getRefKind());
 
 					case_entry->addInstruction(Instruction(
@@ -808,6 +808,31 @@ namespace compiler::mir {
 
 			auto       assign_subject = first_entry.value()->addHole();
 			const auto subject_local  = function.addTmp(subject_type, expr_scope);
+
+			// The subject temporary never runs a destructor. That is only sound when the payload
+			// is owned elsewhere (a reference subject), or when every alternative that has one is
+			// handed over to a case.
+			CORE_ASSERT(
+				[&] {
+					if (subject_type.getRefKind() != tsh::ReferenceKind::Direct) return true;
+
+					const auto        num_alternatives = variant_type.getUnderlyingTypes().size();
+					std::vector<bool> consumed(num_alternatives, false);
+					for (const auto& match_case: expr.cases) {
+						if_opt_some(match_case.alternative_index, index) {
+							consumed[index] = match_case.binding.has_value()
+						                   || match_case.shouldBindToTemporary(ctx);
+						}
+					}
+					for (usize i = 0; i < num_alternatives; i++)
+						if (not consumed[i]
+					        and not variant_type.getMember(i).isTriviallyDestructible(ctx))
+							return false;
+					return true;
+				}(),
+				"An owning `match` has to hand every alternative that has a destructor over to a "
+				"case, otherwise its payload would leak."
+			);
 			subject_local->lifetime_flags |= LifetimeFlag::NoDestructor;
 
 			// The subject goes into the block the chain starts at, which dominates every

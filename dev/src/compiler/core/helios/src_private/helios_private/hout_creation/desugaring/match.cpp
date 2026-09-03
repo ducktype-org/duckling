@@ -63,28 +63,30 @@ namespace compiler::helios::desugaring {
 
 		/**
 		 * @brief Validate if the match subject is correct.
-		 * @return Boolean flag with true if subject it is a direct and takes ownership, otherwise
-		 * false.
+		 * @return The validated subject: the (possibly coerced) expression, its type, its variant
+		 * type and whether the match takes the ownership of it.
 		 */
 		query::QResult<MatchSubject> validateMatchSubject(
 			query::Context& ctx, Box<code::Expr> expr, dia::StablePosition pos
 		) {
 			auto type = expr->expression_type.getSymbolType();
-			if (type.getType().getKind() != tsh::Kind::Variant
-			    or type.getRefKind() == tsh::ReferenceKind::Box) {
+			if (type.getRefKind() == tsh::ReferenceKind::Box) {
 				logError(
-					ctx,
-					pos,
-					"`Boxes and non-variant types are invalid to be passed to match. Got `",
-					type.toString(),
-					"`."
+					ctx, pos, "`match` cannot look through a box. Got `", type.toString(), "`."
 				);
 				return query::Failed();
 			}
+			if (type.getType().getKind() != tsh::Kind::Variant) {
+				logNYI(ctx, pos, "`match` on a non-variant type. Got `", type.toString(), "`.");
+				return query::Failed();
+			}
+			// The coercion into the subject's own type looks like a no-op, but it is the check that
+			// makes `match (v)` on an owning variant report "use `copy` or `move`" - it is the
+			// implicit copy of a `Direct` place that is rejected in there.
 			UNPACK_QRESULT_MOVE(auto return_expr =, coerceFromBox(ctx, std::move(expr), type, pos));
 
-			bool                     moves_ownership  = not type.isTriviallyDestructible(ctx);
-			tsh::VariantAbstractType variant_type     = type.getType();
+			bool moves_ownership                  = type.getRefKind() == tsh::ReferenceKind::Direct;
+			tsh::VariantAbstractType variant_type = type.getType();
 			usize                    num_alternatives = variant_type.getUnderlyingTypes().size();
 			return {
 				std::move(return_expr), type, moves_ownership, variant_type, num_alternatives,
@@ -103,7 +105,12 @@ namespace compiler::helios::desugaring {
 		) {
 			if (not match_subject.moves_ownership
 			    and constraint.getRefKind() == tsh::ReferenceKind::Box) {
-				logError(ctx, pos, "Box type in the match case is invalid.");
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					"This `match` only borrows its subject, so a case cannot take a `box` payload "
+					"out of it.",
+					pos,
+					"Bind it with `ref` instead, or hand the variant over with `move`."
+				));
 				return query::Failed();
 			}
 
@@ -114,27 +121,38 @@ namespace compiler::helios::desugaring {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				// If the subject moves ownership, the case type has to be exactly the same.
 				if (match_subject.moves_ownership) {
-					if (alternatives[i] == constraint) found_index = i;
-				} else {
-					if (alternatives[i].getType() == constraint.getType()) found_index = i;
+					if (alternatives[i] == constraint) {
+						found_index = i;
+						break;
+					}
+				} else if (alternatives[i].getType() == constraint.getType()) {
+					found_index = i;
+					break;
 				}
 			}
 
 			if (found_index.empty()) {
 				if (match_subject.moves_ownership) {
-					logError(
-						ctx,
-						pos,
-						"Failed to find the alternative of the variant for `",
-						constraint.toString(),
-						"`. The type has to match exactly the variant alternative."
+					auto error_msg = makeBox<dia::PlaceholderError>(
+						base::strConcat(
+							"Failed to find the alternative of the variant for `",
+							constraint.toString(),
+							"`. The type has to match exactly the variant alternative."
+						),
+						pos
 					);
+					error_msg->addAttachedMessage(makeBox<dia::PlaceholderNote>(
+						"You can also pass the expression by reference by adding `&` prefix.",
+						match_subject.expr->origin.getStablePosition()
+					));
+					ctx.logInt(std::move(error_msg));
 				} else {
 					logError(
 						ctx,
 						pos,
 						"Failed to find the alternative of the variant for `",
-						constraint.toString()
+						constraint.toString(),
+						"`."
 					);
 				}
 
@@ -143,24 +161,22 @@ namespace compiler::helios::desugaring {
 
 			auto index = found_index.value();
 
+			// Note: we don't do here an actual coercion of some expression (it is done in MIR
+			// by adding `derefs` manually) but we check here if the coercion done in MIR is
+			// valid, so we must construct a proxy expression type.
+			// @TODO: #1488 sorry Piotrek, we will have to check const-ness here someday, maybe
+			// it will be automatic by using a coercion.
+			auto source_type
+				= alternatives[index].withMutability(match_subject.whole_type.getMutability());
+			// If the subject moves ownership we keep the original ref kind of the variant
+			// alternative. If not, then the cases coerce from ref type (subject is also a
+			// reference) and we check here if adding "deref" will be valid. The "derefs" are
+			// added in MIR.
+			if (not match_subject.moves_ownership)
+				source_type = source_type.withReferenceKind(tsh::ReferenceKind::Ref);
 
-			// Note: we don't do here an actual coercion of some expression (it is done in MIR by
-			// adding `derefs` manually) but we check here if the coercion don in MIR is valid, so
-			// we must construct a proxy expression type. Check if we can do the coercion from the
-			// alternative into the constraint type. If the subject was passed by ref, then the
-			// cases also coerce from ref types in MIR. If the subject was passed by value, then we
-			// have to materialize the case by value in MIR
-			// - where the ownership will move from the variant into the case variable.
-			// @TODO: #1488 sorry Piotrek, we will have to check const-ness here someday, maybe it's
-			// automatic by using coercion.
-			auto source_type = match_subject.variant.getUnderlyingTypes()[index].withMutability(
-				match_subject.whole_type.getMutability()
-			);
 			tsh::ExpressionType<> expr_type{
-				match_subject.moves_ownership
-					? source_type
-					: source_type.withReferenceKind(tsh::ReferenceKind::Ref),
-				match_subject.expr->expression_type.getValueCategory()
+				source_type, match_subject.expr->expression_type.getValueCategory()
 			};
 
 			UNPACK_QRESULT(auto coercion =, canCoerce(ctx, expr_type, constraint));
@@ -273,25 +289,36 @@ namespace compiler::helios::desugaring {
 				}
 				covered[alternative_index.value()] = true;
 			} else {
-				has_wildcard                          = true;
-				wildcard_position                     = case_position;
-				auto has_destructor_among_not_covered = [&] {
+				has_wildcard                     = true;
+				wildcard_position                = case_position;
+				auto not_covered_with_destructor = [&] -> base::Optional<tsh::SymbolType<>> {
 					auto& alternatives = subject.variant.getUnderlyingTypes();
 					for (usize i{ 0 }; i < subject.num_alternatives; i++) {
 						if (covered[i]) continue;
 
-						if (not alternatives[i].isTriviallyDestructible(ctx)) return true;
+						if (not alternatives[i].isTriviallyDestructible(ctx))
+							return alternatives[i];
 					}
-					return false;
+					return {};
 				};
-				if (subject.moves_ownership and has_destructor_among_not_covered()) {
-					logError(
-						ctx,
-						case_position,
-						"The wildcard constraint in this case is invalid, as among not-covered "
-						"cases are not trivially destructible types."
-					);
-					return query::Failed();
+				if (subject.moves_ownership) {
+					if_opt_some(not_covered_with_destructor(), alternative) {
+						ctx.logInt(makeBox<dia::PlaceholderError>(
+							base::strConcat(
+								"A bare `case _` binds nothing, so the payload it covers would "
+								"never be destroyed, and the alternative `",
+								alternative.toString(),
+								"` it covers has a destructor."
+							),
+							case_position,
+							base::strConcat(
+								"Give it its own case, or constrain this one with `case _ : ",
+								alternative.toString(),
+								"`."
+							)
+						));
+						return query::Failed();
+					}
 				}
 			}
 			auto result_holder = branches.front().result.unlock(ctx);
