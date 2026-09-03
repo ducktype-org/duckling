@@ -47,6 +47,7 @@ def list_files(
     include_untracked: bool,
     branch: str,
     no_merge_base: bool,
+    filter_deleted: bool = False,
 ) -> None:
     """List files in the repository based on specified criteria.
 
@@ -65,6 +66,7 @@ def list_files(
         no_merge_base=no_merge_base,
         lines=lines,
         include_untracked=include_untracked,
+        filter_deleted=filter_deleted,
     )
 
     # Output files or files with line ranges

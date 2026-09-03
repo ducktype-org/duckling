@@ -11,9 +11,9 @@ PRAGMA_ONCE_PATTERN = re.compile(r"^\s*#\s*pragma\s+once\b")
 
 
 def header_checker_impl(
-    branch: str = "origin/main",
-    no_merge_base: bool = False,
     all_files: bool = False,
+    branch: str = "origin/main",
+    no_merge_base: bool = False
 ) -> bool:
     """
     Validates that:
@@ -26,6 +26,7 @@ def header_checker_impl(
         only_modified=not all_files,
         include_untracked=True,
         extensions=[".hpp"],
+        filter_deleted=True,
     )
 
     missing_pragma_once: list[str] = []
