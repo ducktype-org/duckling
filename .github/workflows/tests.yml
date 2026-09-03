@@ -276,10 +276,12 @@ jobs:
             --linker ${{ matrix.compiler.linker }} \
             --ccache \
             --strip-symbol-information
-        env:
-          GIT_CONFIG_COUNT: 1
+        env:  # Hot fix for GH issues:
+          GIT_CONFIG_COUNT: 2
           GIT_CONFIG_KEY_0: url.https://quacker-bot:${{ secrets.QUACKER_PAT }}@github.com/.insteadOf
           GIT_CONFIG_VALUE_0: https://github.com/
+          GIT_CONFIG_KEY_1: http.version
+          GIT_CONFIG_VALUE_1: HTTP/1.1
 
       # Build all tests.
       # We additionally build coverage targets in case of coverage enabled,
