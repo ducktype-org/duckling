@@ -2,6 +2,8 @@
 
 #include <vm/loader/parser/parser.hpp>
 
+#include <sstream>
+
 using namespace vm::loader;
 
 class BCParsingTests: public VmTestSuite {

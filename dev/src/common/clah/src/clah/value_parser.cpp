@@ -12,6 +12,7 @@
 
 #include <filesystem/file.hpp>
 
+#include <algorithm>
 #include <charconv>
 
 namespace clah {
