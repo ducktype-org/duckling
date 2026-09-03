@@ -245,17 +245,17 @@ private:
 		auto        llvm_module = getLLVMModuleFromPath("modules/static_arrays");
 		std::string ir          = llvm_module.dumpLLVMToString();
 
-		// Was [10 x i32] type found.
+		// Was [11 x i32] type found.
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(\[10\s+x\s+i32\])" }),
-			"Expected array type [10 x i32]"
+			std::regex_search(ir, std::regex{ R"(\[11\s+x\s+i32\])" }),
+			"Expected array type [11 x i32]"
 		);
 		assertTrue(
 			std::regex_search(
 				ir,
-				std::regex{ R"(call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+40,\s+i1\s+false)" }
+				std::regex{ R"(call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+44,\s+i1\s+false)" }
 			),
-			"Expected zero-initialization of i32[10]"
+			"Expected zero-initialization of i32[11]"
 		);
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(alloca\s+\[99000\s+x\s+i64\])" }),
@@ -277,7 +277,7 @@ private:
 		// arr[3]
 		assertTrue(
 			std::regex_search(
-				ir, std::regex{ R"(getelementptr.*\[10\s+x\s+i32\].*i32\s+0,\s+i64\s+%)" }
+				ir, std::regex{ R"(getelementptr.*\[11\s+x\s+i32\].*i32\s+0,\s+i64\s+%)" }
 			),
 			"Expected GEP instruction for array indexing arr[3]"
 		);

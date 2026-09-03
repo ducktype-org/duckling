@@ -4,7 +4,7 @@ class Point {
 }
 
 fun array_test() -> i32 = {
-    var arr: i32[10];
+    var arr: i32[11];
     arr[3] = 42;
     return arr[3];
 }
