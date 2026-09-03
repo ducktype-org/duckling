@@ -245,20 +245,39 @@ private:
 		auto        llvm_module = getLLVMModuleFromPath("modules/static_arrays");
 		std::string ir          = llvm_module.dumpLLVMToString();
 
-		// Was [10 x i32] type found.
+		// Was [11 x i32] type found.
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(\[10\s+x\s+i32\])" }),
-			"Expected array type [10 x i32]"
+			std::regex_search(ir, std::regex{ R"(\[11\s+x\s+i32\])" }),
+			"Expected array type [11 x i32]"
 		);
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(store\s+\[10\s+x\s+i32\]\s+zeroinitializer)" }),
-			"Expected zero-initialization of i32[10]"
+			std::regex_search(
+				ir,
+				std::regex{ R"(call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+44,\s+i1\s+false)" }
+			),
+			"Expected zero-initialization of i32[11]"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(alloca\s+\[99000\s+x\s+i64\])" }),
+			"Expected array type [99000 x i64]"
+		);
+		assertTrue(
+			std::regex_search(
+				ir,
+				std::regex{
+					R"(define[^\n]*large_array_test[\s\S]*?call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+792000,\s+i1\s+false)" }
+			),
+			"Expected zero-initialization of i64[99000] with memset"
+		);
+		assertFalse(
+			std::regex_search(ir, std::regex{ R"(store\s+\[99000\s+x\s+i64\]\s+zeroinitializer)" }),
+			"Large array must not be zero-initialized with an aggregate store"
 		);
 
 		// arr[3]
 		assertTrue(
 			std::regex_search(
-				ir, std::regex{ R"(getelementptr.*\[10\s+x\s+i32\].*i32\s+0,\s+i64\s+%)" }
+				ir, std::regex{ R"(getelementptr.*\[11\s+x\s+i32\].*i32\s+0,\s+i64\s+%)" }
 			),
 			"Expected GEP instruction for array indexing arr[3]"
 		);
@@ -314,18 +333,22 @@ private:
 			"Expected default initialization of f64 with 0.000000e+00"
 		);
 
-		// Point = zeroinitializer @class.point
-		assertTrue(
-			std::regex_search(ir, std::regex{ R"(store\s+%.+\s+zeroinitializer,\s+ptr\s+%\w+)" }),
-			"Expected default initialization of Point with zeroinitializer"
-		);
-
-		// i32[5] = zeroinitializer [5 x i32]
+		// Point occupies 8 bytes.
 		assertTrue(
 			std::regex_search(
-				ir, std::regex{ R"(store\s+\[5\s+x\s+i32\]\s+zeroinitializer,\s+ptr\s+%\w+)" }
+				ir,
+				std::regex{ R"(call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+8,\s+i1\s+false)" }
 			),
-			"Expected default initialization of i32[5] with zeroinitializer"
+			"Expected default initialization of Point with memset"
+		);
+
+		// i32[5] occupies 20 bytes.
+		assertTrue(
+			std::regex_search(
+				ir,
+				std::regex{ R"(call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+20,\s+i1\s+false)" }
+			),
+			"Expected default initialization of i32[5] with memset"
 		);
 	}
 
