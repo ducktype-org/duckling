@@ -178,17 +178,20 @@ namespace compiler::helios::mangler {
 			const auto symbol_module = module(scope(symbol_id));
 			const auto package_id
 				= compiler::frontend::getModuleRef(symbol_module)->getPackage().unlock(ctx).getID();
-			std::cerr << "@taw3e8 halo 1\n";
+
 			if (const auto package_ref_opt = global_state::getPackageRefOpt(package_id)) {
-				std::cerr << "@taw3e8 halo 2\n";
 				/* we're in a package */
 				auto raw_package_name = package_ref_opt.value()->getName().str();
+
 				// @todo: #3286 for now we allow '-' and just treat it as '_'
+				if (raw_package_name.contains('-') && raw_package_name.contains('_'))
+					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+						"Currently it is not allowed to mix '-' and '_' in package names."
+					));
 				std::ranges::replace(raw_package_name, '-', '_');
 				auto package_name = identifier(raw_package_name);
 
 				if (const auto c = findExtendedChar(package_name)) {
-					std::cerr << "@taw3e8 halo 3\n";
 					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(base::strConcat(
 						"Name of a package contains a character that is not allowed yet: ",
 						quoteExtendedChar(c.value())
