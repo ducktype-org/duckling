@@ -7,9 +7,6 @@
 # float -> f32
 # double -> f64
 
-import core.io.*;
-import core.builtins.*;
-
 namespace libm_forward {
     #{
         These are marked `fundecl` since the definition
@@ -305,49 +302,38 @@ namespace libm_forward {
 namespace constants {
     #{
         Mathematical constants.
-
-        The hex representations, precomputed using python's
-        mpmath library, are used to keep maximum precision.
     #}
     
-    # Ratio of a circle's circumference to its diameter
-    let PI: f64          = helpers.exact_float("0x1.921fb54442d18p+1");
-    let SQRT_PI: f64     = helpers.exact_float("0x1.c5bf891b4ef6bp+0");
-    let INV_PI: f64      = helpers.exact_float("0x1.45f306dc9c883p-2");
-    let INV_SQRT_PI: f64 = helpers.exact_float("0x1.20dd750429b6dp-1");
+    # Ratio of a circle's circumference to its diameter and derived constants
+    const PI:          f64 = 3.141592653589793238462643;
+    const SQRT_PI:     f64 = 1.772453850905516027298167;
+    const INV_PI:      f64 = 0.3183098861837906715377675;
+    const INV_SQRT_PI: f64 = 0.5641895835477562869480795;
 
     # Ratio of a circle's circumference to its radius
-    let TAU: f64 = helpers.exact_float("0x1.921fb54442d18p+2");
+    const TAU: f64 = 6.283185307179586476925287;
 
-    # Euler's number
-    let E: f64      = helpers.exact_float("0x1.5bf0a8b145769p+1");
-    let SQRT_E: f64 = helpers.exact_float("0x1.a61298e1e069cp+0");
-    let INV_E: f64  = helpers.exact_float("0x1.78b56362cef38p-2");
-    let LOG2E: f64  = helpers.exact_float("0x1.71547652b82fep+0");
-    let LOG10E: f64 = helpers.exact_float("0x1.bcb7b1526e50ep-2");
+    # Euler's number and derived constants
+    const E:      f64 = 2.718281828459045235360287;
+    const SQRT_E: f64 = 1.648721270700128146848651;
+    const INV_E:  f64 = 0.3678794411714423215955238;
+    const LOG2E:  f64 = 1.442695040888963407359925;
+    const LOG10E: f64 = 0.4342944819032518276511289;
 
     # Euler–Mascheroni constant
-    let EGAMMA: f64 = helpers.exact_float("0x1.2788cfc6fb619p-1");
+    const EGAMMA: f64 = 0.5772156649015328606065121;
 
-    # Golden ratio
-    let PHI: f64           = helpers.exact_float("0x1.9e3779b97f4a8p+0");
-    let SQRT_PHI: f64      = helpers.exact_float("0x1.45a3146a88456p+0");
-    let MINUS_INV_PHI: f64 = helpers.exact_float("-0x1.3c6ef372fe950p-1");
+    # Golden ratio and derived constants
+    const PHI:      f64 = 1.618033988749894848204587;
+    const SQRT_PHI: f64 = 1.272019649514068964252422;
+    const INV_PHI:  f64 = 0.6180339887498948482045868;
 
     # Other
-    let LN2: f64       = helpers.exact_float("0x1.62e42fefa39efp-1");
-    let LN10: f64      = helpers.exact_float("0x1.26bb1bbb55516p+1");
-    let SQRT2: f64     = helpers.exact_float("0x1.6a09e667f3bcdp+0");
-    let SQRT3: f64     = helpers.exact_float("0x1.bb67ae8584caap+0");
-    let INV_SQRT2: f64 = helpers.exact_float("0x1.6a09e667f3bcdp-1");
-    let INV_SQRT3: f64 = helpers.exact_float("0x1.279a74590331cp-1");
+    const LN2:       f64 = 0.6931471805599453094172321;
+    const LN10:      f64 = 2.302585092994045684017991;
+    const SQRT2:     f64 = 1.414213562373095048801689;
+    const SQRT3:     f64 = 1.732050807568877293527446;
+    const INV_SQRT2: f64 = 0.7071067811865475244008444;
+    const INV_SQRT3: f64 = 0.5773502691896257645091488;
 }
 
-namespace helpers {
-    #{
-        Helper functions
-    #}
-    
-    # Turns textual hex float literal into exact value
-    fun exact_float(repr: slice char) -> f64 = io.strtod(builtins.ptr_from_slice:{char}(repr));
-}
