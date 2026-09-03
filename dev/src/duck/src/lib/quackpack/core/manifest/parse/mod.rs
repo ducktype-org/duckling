@@ -170,7 +170,7 @@ fn stringify_unused_path(buffer: &mut String, path: &serde_ignored::Path<'_>) {
             if !buffer.is_empty() {
                 buffer.push('.');
             }
-            buffer.push_str(&format!("<index:{index}>"));
+            buffer.push_str(&format!("{index}"));
         }
         serde_ignored::Path::Map { parent, key } => {
             stringify_unused_path(buffer, parent);
