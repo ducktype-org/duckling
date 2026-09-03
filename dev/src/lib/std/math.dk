@@ -375,13 +375,13 @@ namespace impl {
     if (y < 0 as T) panic();
 
         var result: T = 1 as T;
-        var exp: T = x;
+        var exponent: T = x;
         while (y > 0 as T) {
             if (y % 2 as T == 1) {
-                result *= exp;
+                result = result * exponent;
             }
-            y /= 2 as T;
-            exp *= exp;
+            y = y / (2 as T);
+            exponent = exponent * exponent;
         }
         return result;
     }
