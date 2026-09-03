@@ -1,9 +1,5 @@
 #include "match.hpp"
 
-#include "helios/tsh/symbol_type.hpp"
-#include "helios_private/hout_creation/expressions/coercions/coercions.hpp"
-#include "helios_private/hout_creation/expressions/hout_of_subexpr.hpp"
-
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/match_case.hpp>
@@ -13,6 +9,8 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -20,7 +18,6 @@
 
 #include <base/collections/optional.hpp>
 
-#include "diagnostic/stable_position.hpp"
 #include <diagnostic/placeholder.hpp>
 
 #include <algorithm>
