@@ -56,7 +56,7 @@ Tests:
             info: running gathering
             info: starting the solver engine
             info: starting fetching 4 packages
-            info: fetched source codes of 4 packages, 0 were downloaded, 4 were alredy present
+            info: fetched source codes of 4 packages, 0 were downloaded, 4 were already present
             info: successfully synchronized venv \`root\`
             info: compiling \`baz\`...
             info: compiling \`foo\`...

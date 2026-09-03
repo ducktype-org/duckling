@@ -23,7 +23,7 @@ Tests:
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
             info: starting fetching 1 package
-            info: fetched source codes of 1 package, 0 downloaded, 1 was alredy present
+            info: fetched source codes of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
       pulling-feature:
@@ -36,6 +36,6 @@ Tests:
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
             info: starting fetching 1 package
-            info: fetched source code of 1 package, 0 were downloaded, 1 was alredy present
+            info: fetched source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."

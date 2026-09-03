@@ -20,7 +20,7 @@ Tests:
             info: running gathering
             info: starting the solver engine
             info: starting fetching 2 packages
-            info: fetched source codes of 2 packages, 0 were downloaded, 2 were alredy present
+            info: fetched source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
             info: compiling \`bar\`...
             info: compiling \`foo\`..."
