@@ -239,10 +239,7 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: |
           ./toolbox.py init
-        env:
-          GIT_CONFIG_COUNT: 1
-          GIT_CONFIG_KEY_0: url.https://quacker-bot:${{ secrets.QUACKER_PAT }}@github.com/.insteadOf
-          GIT_CONFIG_VALUE_0: https://github.com/
+        
 
       # Enables coverage only in case of Debug build.
       - name: Additional setup-build flags
@@ -279,6 +276,10 @@ jobs:
             --linker ${{ matrix.compiler.linker }} \
             --ccache \
             --strip-symbol-information
+        env:
+          GIT_CONFIG_COUNT: 1
+          GIT_CONFIG_KEY_0: url.https://quacker-bot:${{ secrets.QUACKER_PAT }}@github.com/.insteadOf
+          GIT_CONFIG_VALUE_0: https://github.com/
 
       # Build all tests.
       # We additionally build coverage targets in case of coverage enabled,
