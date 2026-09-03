@@ -23,7 +23,7 @@ pub trait DescriptionWithAnArticle {
     fn desc_with_article(&self) -> &'static str;
 }
 
-/// English Pluralize helper trait.
+/// English pluralization helper trait.
 pub trait Pluralize {
     /// Determine whether `self` is plural or singular.
     fn is_plural(&self) -> bool;

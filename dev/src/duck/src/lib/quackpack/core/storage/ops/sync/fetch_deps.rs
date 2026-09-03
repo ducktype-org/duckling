@@ -261,6 +261,7 @@ fn unpack_package_blob(pkg: PackageId, storage: &Storage, blob_path: &Path) -> Q
     Ok(())
 }
 
+/// Generate error message that the downloaded dependency is malformed (does not load).
 fn malformed_dependency_msg(pkg_id: PackageId, pkg_dir: &Path, url: InternedUrl) -> String {
     match pkg_id.kind() {
         FullKind::Registry => format!(
