@@ -179,8 +179,8 @@ private:
 				"Expected error message to contain: \"", fail_msg, "\", but got: ", err_str
 			));
 		}
-		const auto validation_result = vm::api::deinitAndValidate(result.pid);
-		ASSERT_HAS_VALUE(validation_result);
+
+		ASSERT_HAS_VALUE(vm::api::kill(result.pid));
 	}
 
 	/**
