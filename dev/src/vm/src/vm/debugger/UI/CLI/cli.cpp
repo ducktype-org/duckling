@@ -155,10 +155,15 @@ namespace vm::debugger::cli {
 			                                               ? debugger.mappedStep()
 			                                               : debugger.step();
 
-										 if (response)
-											 printCodePosition(*response);
-										 else
+										 if (!response) {
 											 printNL("Failed to obtain position!");
+											 return 0;
+										 }
+
+										 match_optional(*response) {
+											 opt_some(position) { printCodePosition(position); }
+											 opt_none { printNL("Program has finished."); }
+										 }
 
 										 return 0;
 									 }))

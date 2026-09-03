@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <ostream>
+#include <sstream>
 
 namespace compiler::mir {
 	/**

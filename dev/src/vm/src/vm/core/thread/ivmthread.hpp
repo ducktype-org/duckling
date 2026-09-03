@@ -223,6 +223,12 @@ namespace vm {
 		virtual void executeOneStep() = 0;
 
 		/**
+		 * @brief Returns true if the instruction the thread is paused on ends the execution (is an
+		 * MicroOpcode::Exit).
+		 */
+		[[nodiscard]] virtual bool isAtExecutionEnd() const = 0;
+
+		/**
 		 * @brief Calls `run` within a safe try-catch block, to catch any exceptions thrown by
 		 * the running code and commit the corresponding terminal transition (Kill/Panic).
 		 * @note `Spawn` is committed by the spawner before this runs (see `prepareSpawnLocked`).

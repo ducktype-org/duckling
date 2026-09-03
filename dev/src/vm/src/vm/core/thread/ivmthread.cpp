@@ -292,6 +292,14 @@ namespace vm {
 			}
 			case ThreadSignal::Request::Step: {
 				applyEvent(te::Resume{});
+				// If we're on `MicroOpcode::Exit` we release the paused loop and let the
+				// interpreter handle the program exit.
+				if (isAtExecutionEnd()) {
+					// Handle any termination requests that may have come before the step.
+					if (isTerminateRequested()) throw KillProcessException{};
+					return;
+				}
+
 				executeOneStep();
 				// A Stop posted while the step ran must win over re-pausing.
 				if (isTerminateRequested()) throw KillProcessException{};
