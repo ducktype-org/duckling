@@ -8,6 +8,9 @@
 #include <vector>
 
 namespace compiler::frontend::packages {
+	struct SharedDVMLibName {
+		std::string soname{};
+	};
 
 	/**
 	 * @brief A standard-library package: its id and the other standard-library packages it depends
@@ -17,6 +20,13 @@ namespace compiler::frontend::packages {
 	struct StandardLibraryPackage final {
 		base::StrID              id;
 		std::vector<base::StrID> dependencies;
+
+		/**
+		 * @brief Shared libs, only relevant for the DVM backend.
+		 */
+		std::vector<SharedDVMLibName> dvm_shared_libs{};
+
+		[[nodiscard]] std::vector<std::string> getSharedLibsAsStr() const;
 	};
 
 	/**

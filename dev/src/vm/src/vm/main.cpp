@@ -107,14 +107,18 @@ clah::Clah getVmClah() {
 	                     .addLongName("debug")
 	                     .addShortDesc("Start the VM CLI debugger")
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("args"))
+				.add(clah::ParamBuilder::ofValue(
+						 clah::StringListParser::make("args", clah::StringParser::make())
+				)
 	                     .addShortDesc(
 							 R"(Program arguments. To pass arguments such as "hello -n 5", enter them as a comma-separated list: "hello,-n,5".)"
 						 )
 	                     .addShortName('c')
 	                     .addLongName("args")
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("libs"))
+				.add(clah::ParamBuilder::ofValue(
+						 clah::StringListParser::make("libs", clah::StringParser::make())
+				)
 	                     .addShortDesc(
 							 R"(Shared libraries for `ffi function` symbol resolution, as a comma-separated list. A bare name (e.g. "libm.so.6") is searched in the system library paths, a path is loaded as given.)"
 						 )

@@ -7,9 +7,13 @@
 #pragma once
 
 #include <base/collections/optional.hpp>
+#include <base/misc/anycast.hpp>
 #include <base/pointers/box.hpp>
 
+#include <filesystem/file_fd.hpp>
+
 #include <any>
+#include <concepts>
 #include <regex>
 #include <utility>
 
@@ -70,6 +74,14 @@ namespace clah {
 	};
 
 	/**
+	 * A ValueParser that exposes the type of the value it produces, and thus can be used as
+	 * an element parser of ListParser.
+	 */
+	template<class P>
+	concept ElementValueParser
+		= std::derived_from<P, ValueParser> && requires { typename P::Result; };
+
+	/**
 	 * A value parser used for a string parsing.
 	 * Creates values of type std::string.
 	 */
@@ -89,6 +101,8 @@ namespace clah {
 		std::string getTypeName() const override {
 			return getCustomValueName().copyValueOr("string");
 		}
+
+		using Result = std::string;
 	};
 
 	/**
@@ -111,6 +125,8 @@ namespace clah {
 		std::string getTypeName() const override {
 			return getCustomValueName().copyValueOr("int");
 		}
+
+		using Result = i64;
 	};
 
 	/**
@@ -137,6 +153,8 @@ namespace clah {
 		std::string getTypeName() const override {
 			return getCustomValueName().copyValueOr("int..int");
 		}
+
+		using Result = Range;
 	};
 
 	/**
@@ -179,6 +197,8 @@ namespace clah {
 		std::string getTypeName() const override {
 			return getCustomValueName().copyValueOr("file");
 		}
+
+		using Result = fs::File;
 	};
 
 	/**
@@ -208,30 +228,10 @@ namespace clah {
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
-			return getCustomValueName().copyValueOr("filepath");
-		}
-	};
-
-	/**
-	 * A value parser used for a comma separated list of strings parsing. I.e. "str1, str2, str3".
-	 * Creates values of type std::vector<std::string>.
-	 */
-	class StringListParser final: public ValueParser {
-		using ValueParser::ValueParser;
-
-	public:
-		template<class... Args>
-		static Box<StringListParser> make(Args&&... args) {
-			return makeBox<StringListParser>(std::forward<Args>(args)...);
+			return getCustomValueName().copyValueOr("path");
 		}
 
-		[[nodiscard]]
-		ValueParsingResult parse(std::string_view argument) const override;
-
-		[[nodiscard]]
-		std::string getTypeName() const override {
-			return getCustomValueName().copyValueOr("string-list");
-		}
+		using Result = fs::FilePath;
 	};
 
 	/**
@@ -265,36 +265,57 @@ namespace clah {
 		}
 
 		static std::string debugPrintCategories(const std::vector<std::string>& categories);
+
+		using Result = std::string;
 	};
 
-	/**
-	 * A value parser used for comma separated category list parsing. I.e. "catA, catB".
-	 * Creates values of type std::vector<std::string>.
-	 */
-	class CategoryListParser final: public ValueParser {
-		using ValueParser::ValueParser;
+	namespace utils {
+		std::vector<std::string> splitCommaSeparated(std::string_view value);
+	}
 
-		std::vector<std::string> categories;
+	/**
+	 * A value parser used for a comma separated list of values parsing. I.e. "val1, val2, val3".
+	 * Each item is parsed by an element parser of type T.
+	 * Creates values of type std::vector<T::Result>.
+	 */
+	template<ElementValueParser T>
+	class ListParser final: public ValueParser {
+		using ElemType = T::Result;
+
+		Box<T> element_parser;
 
 	public:
-		explicit CategoryListParser(std::vector<std::string> categories):
-			  categories(std::move(categories)) {}
+		explicit ListParser(Box<T> element_parser): element_parser(std::move(element_parser)) {}
 
-		CategoryListParser(std::string_view name, std::vector<std::string> categories):
+		ListParser(std::string_view name, Box<T> element_parser):
 			  ValueParser(name),
-			  categories(std::move(categories)) {}
+			  element_parser(std::move(element_parser)) {}
 
 		template<class... Args>
-		static Box<CategoryListParser> make(Args&&... args) {
-			return makeBox<CategoryListParser>(std::forward<Args>(args)...);
+		static Box<ListParser> make(Args&&... args) {
+			return makeBox<ListParser>(std::forward<Args>(args)...);
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(std::string_view argument) const override;
+		ValueParsingResult parse(std::string_view argument) const override {
+			std::vector<ElemType> result;
+
+			for (const auto& value: utils::splitCommaSeparated(argument))
+				result.emplace_back(base::anyCast<ElemType>(element_parser->parse(value).value));
+
+			return { .value = std::move(result), .raw_source = std::string(argument) };
+		}
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
-			return getCustomValueName().copyValueOr("category-list");
+			return getCustomValueName().copyValueOr(element_parser->getTypeName() + "-list");
 		}
+
+		using Result = std::vector<ElemType>;
 	};
+
+	using StringListParser   = ListParser<StringParser>;
+	using CategoryListParser = ListParser<CategoryParser>;
+	using FilePathListParser = ListParser<FilePathParser>;
+	using FileListParser     = ListParser<FileParser>;
 }
