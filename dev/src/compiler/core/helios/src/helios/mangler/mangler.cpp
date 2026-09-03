@@ -175,13 +175,13 @@ namespace compiler::helios::mangler {
 			std::stringstream ret_ss;
 
 			// package/module prefix
-			const auto symbol_module = module(scope(symbol_id));
+			const auto module_id = module(scope(symbol_id));
 			const auto package_id
-				= compiler::frontend::getModuleRef(symbol_module)->getPackage().unlock(ctx).getID();
+				= ctx.query<compiler::frontend::QueryPackageOfModule>(module_id).unlock(ctx).getID();
 
 			if (const auto package_ref_opt = global_state::getPackageRefOpt(package_id)) {
 				/* we're in a package */
-				// @TODO: #3505 - currently changing package name doesn't invalidate old symbols
+				// @TODO: #3505 - currently changing package name/version doesn't invalidate old symbols
 				auto raw_package_name = package_ref_opt.value()->getName().str();
 
 				// @TODO: #3286 for now we allow '-' and just treat it as '_'
@@ -208,9 +208,9 @@ namespace compiler::helios::mangler {
 			// @future: templated modules
 			{
 				std::vector<std::string_view> modules;
-				modules.push_back(frontend::moduleName(symbol_module).strView());
+				modules.push_back(frontend::moduleName(module_id).strView());
 
-				for (auto current_module = symbol_module;
+				for (auto current_module = module_id;
 				     auto parent_module = ctx.query<frontend::QueryParentModule>(current_module);) {
 					current_module = parent_module.value();
 					modules.push_back(frontend::moduleName(current_module).strView());
