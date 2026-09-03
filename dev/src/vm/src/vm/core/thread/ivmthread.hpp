@@ -107,7 +107,11 @@ namespace vm {
 		void requestStop() noexcept;
 
 		/**
-		 * @brief Waits for the exec thread to finish and returns its exit value.
+		 * @brief Waits for the exec thread to finish, reaps it and returns its exit value.
+		 *
+		 * A successful join moves the VMThread into `thread_state::Joined`, which is what makes it
+		 * reusable by a next run and what allows the process to be deinitialized.
+		 *
 		 * @return The exit value of the thread if it completed normally, an API error otherwise
 		 * (the thread was never started, it panicked or it was stopped before completing).
 		 */
@@ -249,7 +253,9 @@ namespace vm {
 		void handleBreakpoint();
 
 		/**
-		 * @brief Joins the OS execution thread if there is one, then clears the handle.
+		 * @brief Joins the OS execution thread if there is one, clears the handle and commits the
+		 * `Join` event, which moves the VMThread into `thread_state::Joined`.
+		 * @note A no-op when there is no handle left to reap.
 		 */
 		void joinExecutionThread();
 

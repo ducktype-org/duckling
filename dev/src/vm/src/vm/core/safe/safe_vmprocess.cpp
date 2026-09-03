@@ -296,10 +296,8 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::deinitAndValidate() {
-		// We just `joinAllExecutionThreads` here as this endpoint assumes that the process is
-		// stopped already.
-		joinAllExecutionThreads();
-
+		// `validateProcessRequest` already refused the request unless every VMThread which ran is
+		// `Joined`, so no execution thread is alive here.
 		std::unique_lock lock(api_lock);
 		try {
 			getMainVMThread().execGlobalDestructors();
@@ -609,8 +607,10 @@ namespace vm {
 	std::vector<api::ThreadID> SafeVMProcess::unjoinedThreadIds() const {
 		std::lock_guard            lock(threads_pool_mutex);
 		std::vector<api::ThreadID> ids;
-		for (const auto& thread: vm_threads)
-			if (thread.hasActiveThread()) ids.push_back(thread.getThreadID());
+		for (const auto& thread: vm_threads) {
+			const ts::ThreadState state = thread.getThreadState();
+			if (ts::hasStarted(state) && !ts::isJoined(state)) ids.push_back(thread.getThreadID());
+		}
 		return ids;
 	}
 

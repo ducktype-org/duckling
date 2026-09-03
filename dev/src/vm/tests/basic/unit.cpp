@@ -6,6 +6,9 @@
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/interface_types.hpp>
 
+#include <chrono>
+#include <thread>
+
 class VmUnitTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmUnitTest
@@ -38,6 +41,7 @@ public:
 		TESTER_ADD_TEST(checkCastingInstructions);
 		TESTER_ADD_TEST(testSyncRun);
 		TESTER_ADD_TEST(joinReturnsExitValue);
+		TESTER_ADD_TEST(deinitNeedsJoinedThreads);
 		TESTER_ADD_TEST(structureOperations);
 		TESTER_ADD_TEST(fixedSizeTableOperations);
 		TESTER_ADD_TEST(nestedAggregateTypesCorrectness);
@@ -187,6 +191,40 @@ private:
 		ASSERT_EQUAL_PRINT(exit_values.at(0)->readBytes<i64>(), 1'337);
 
 		auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(validation_result);
+		ASSERT_TRUE(validation_result.value());
+	}
+
+	/**
+	 * @brief `join` is what reaps the execution thread and moves the VMThread to `Joined`, and only
+	 * a joined process may be deinitialized. So a deinit of a finished but unjoined run has to be
+	 * refused, and the very same deinit has to work right after the join.
+	 */
+	void deinitNeedsJoinedThreads() {
+		vm::PID pid = initProcess();
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("return_1337.dbc")) }));
+		ASSERT_HAS_VALUE(vm::api::run(pid));
+
+		// `run` is asynchronous, so we wait for the program to really finish. Only then is a
+		// refusal about the missing join and not about the process still executing.
+		vm::api::ProcStatus status = vm::api::NotStarted{};
+		for (usize tries = 0; tries < 1'000 && !vm::api::isStatusTerminal(status); tries++) {
+			const auto polled = vm::api::getExecutionStatus(pid);
+			ASSERT_HAS_VALUE(polled);
+			status = polled.value();
+			if (!vm::api::isStatusTerminal(status))
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionCompleted>(status));
+
+		// The run completed, but nobody reaped its execution thread yet.
+		const auto too_early = vm::api::deinitAndValidate(pid);
+		ASSERT_NO_VALUE(too_early);
+		ASSERT_TRUE(std::holds_alternative<vm::api::StateError>(too_early.error()));
+
+		ASSERT_HAS_VALUE(vm::api::join(pid));
+
+		const auto validation_result = vm::api::deinitAndValidate(pid);
 		ASSERT_HAS_VALUE(validation_result);
 		ASSERT_TRUE(validation_result.value());
 	}

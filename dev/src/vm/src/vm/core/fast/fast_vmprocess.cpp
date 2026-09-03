@@ -242,8 +242,11 @@ namespace vm::fast {
 
 	std::vector<api::ThreadID> FastVMProcess::unjoinedThreadIds() const {
 		std::vector<api::ThreadID> ids;
-		for (const auto& thread: vm_threads)
-			if (thread.hasActiveThread()) ids.push_back(thread.getThreadID());
+		for (const auto& thread: vm_threads) {
+			const thread_state::ThreadState state = thread.getThreadState();
+			if (thread_state::hasStarted(state) && !thread_state::isJoined(state))
+				ids.push_back(thread.getThreadID());
+		}
 		return ids;
 	}
 

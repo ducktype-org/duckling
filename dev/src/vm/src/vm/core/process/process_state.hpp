@@ -175,7 +175,7 @@ namespace vm {
 		 *   	5. Any VMThread is Sleeping                  			-> VMProcess Sleeping
 		 *   	6. Any VMThread is Paused 								-> VMProcess Paused
 		 *   	7. Every VMThread is either NotStarted or terminal:
-		 *   		- Main VMThread Completed (not Panicked/Stopped) 	-> VMProcess Completed{exit}
+		 *   		- Main VMThread Completed, or Joined after it completed	-> Completed{exit}
 		 *   		- Otherwise 										-> VMProcess Stopped
 		 */
 		[[nodiscard]] process_state::ProcessState aggregateState() const {
@@ -221,12 +221,17 @@ namespace vm {
 			});
 
 			// Nothing is active, so every thread is either NotStarted or terminal.
-			for (const auto& [tid, entry]: threads)
+			for (const auto& [tid, entry]: threads) {
 				// If Main thread completed, VMProcess does as well.
-				if (tid == main_tid)
-					v_if_matches(
-						entry.state, ts::Completed, completed
-					) return Completed{ completed->exit_value };
+				if (tid != main_tid) continue;
+				v_if_matches(
+					entry.state, ts::Completed, completed
+				) return Completed{ completed->exit_value };
+				// A joined main thread keeps the exit value of the run it completed.
+				v_if_matches(entry.state, ts::Joined, joined) {
+					if (joined->exit_value.has_value()) return Completed{ *joined->exit_value };
+				}
+			}
 			return Stopped{};
 		}
 	};

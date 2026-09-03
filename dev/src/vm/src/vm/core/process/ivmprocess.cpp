@@ -31,6 +31,26 @@ namespace vm {
 		const ProcessState          state = state_manager.aggregate();
 		base::Optional<std::string> invalid_reason;
 
+		// Every VMThread of the previous run must be joined before the process may be reused or
+		// torn down. Describes the ones which were not, if there are any.
+		const auto unjoined_reason = [this]() -> base::Optional<std::string> {
+			const std::vector<api::ThreadID> unjoined = unjoinedThreadIds();
+			if (unjoined.empty()) return std::nullopt;
+
+			std::string ids = base::strJoin(
+				unjoined | std::views::transform([](const api::ThreadID id) {
+					return std::to_string(id.asInt());
+				}),
+				", "
+			);
+			return base::strConcat(
+				unjoined.size() == 1 ? "thread " : "threads ",
+				ids,
+				unjoined.size() == 1 ? " of the previous run was never joined"
+									 : " of the previous run were never joined"
+			);
+		};
+
 		variant_match(event) {
 			variant_case_novalue(pe::Run) {
 				// Run can be performed only if the previous run was completed successfully. `Stopper`
@@ -39,22 +59,8 @@ namespace vm {
 					invalid_reason
 						= "the process must be freshly loaded or completed successfully in the "
 						  "previous run";
-				else if (const std::vector<api::ThreadID> unjoined = unjoinedThreadIds();
-				         !unjoined.empty()) {
-					// We also require every thread of the previous run to be joined.
-					std::string ids = base::strJoin(
-						unjoined | std::views::transform([](const api::ThreadID id) {
-							return std::to_string(id.asInt());
-						}),
-						", "
-					);
-					invalid_reason = base::strConcat(
-						unjoined.size() == 1 ? "thread " : "threads ",
-						ids,
-						unjoined.size() == 1 ? " of the previous run was never joined"
-											 : " of the previous run were never joined"
-					);
-				}
+				else
+					invalid_reason = unjoined_reason();
 			}
 			variant_case_novalue(pe::Stop) {}
 			variant_case_novalue(pe::DeinitAndValidate) {
@@ -64,6 +70,10 @@ namespace vm {
 					        ? "the process is still executing"
 					        : "the previous run did not complete cleanly. Use `api::kill` instead";
 				}
+				// Deinitializing a process whose execution threads are still alive would destroy
+				// them from under the OS threads, so they have to be joined first.
+				else
+					invalid_reason = unjoined_reason();
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}

@@ -117,6 +117,9 @@ namespace vm::api {
 	 * or panicked. Still executing process or one that was stopped or panicked will be refused with
 	 * a `StateError`. Such process should be killed.
 	 *
+	 * @note Every thread which ran must also be joined first (`api::join`). A process which still
+	 * owns an unjoined execution thread is refused with a `StateError` naming those threads.
+	 *
 	 * @note The process is removed from the internal structures whenever the deinitialization
 	 * actually ran. This includes a successful deinit and when a global destructor panicked during
 	 * execution.

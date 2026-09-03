@@ -65,15 +65,27 @@ namespace vm {
 			variant_case(ts::Panicked, panicked) {
 				return std::unexpected(api::ApiError(api::Panicked(panicked.err)));
 			}
+			// Another caller reaped the execution thread first, so there is nothing left to join.
+			variant_case_novalue(ts::Joined) {
+				return std::unexpected(api::ApiError{ api::JoinError{} });
+			}
 			variant_default { CORE_UNREACHABLE(); }
 		}
 		CORE_UNREACHABLE();
 	}
 
 	void IVMThread::joinExecutionThread() {
-		std::lock_guard lock(exec_thread_mutex);
-		if (exec_thread && exec_thread->joinable()) exec_thread->join();
-		exec_thread.reset();
+		{
+			std::lock_guard lock(exec_thread_mutex);
+			// Only the caller which takes the handle away commits the `Join`, so the event is
+			// applied exactly once even when two threads reap this VMThread at the same time.
+			if (!exec_thread.has_value()) return;
+			if (exec_thread->joinable()) exec_thread->join();
+			exec_thread.reset();
+		}
+		// Committed outside `exec_thread_mutex`: a state change runs the status listeners, and a
+		// listener may call back into `vm::api` and try to take this very mutex.
+		applyEvent(te::Join{});
 	}
 
 	void IVMThread::safeRun(const std::string& func_name, const RunArguments& run_arguments) {
@@ -129,6 +141,9 @@ namespace vm {
 			if (!prepareSpawnLocked()) return false;
 		}
 		safeRun(func_name, run_arguments);
+		// The function ran on the calling thread, so no OS thread handle was ever created. There
+		// is nothing left to reap and the VMThread goes straight to `Joined`.
+		applyEvent(te::Join{});
 		return true;
 	}
 

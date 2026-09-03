@@ -263,13 +263,10 @@ namespace vm {
 		virtual std::vector<api::ThreadID> getAllActiveThreadIDs() = 0;
 
 		/**
-		 * @brief True when a previous run left an `exec_thread` which was never joined.
+		 * @brief The threads which started but are not in the `Joined` state yet.
 		 *
-		 * An `api::run()` should always be followed by a `Join`. Without it the VMThread cannot be
-		 * reused.
-		 */
-		/**
-		 * @brief The threads of the previous run whose execution threads were never joined.
+		 * An `api::run()` must always be followed by a `join()`. Until that happens the VMThread
+		 * cannot be reused and the process cannot be deinitialized.
 		 *
 		 * @return The IDs of every such thread, empty when the previous run was fully joined.
 		 */
