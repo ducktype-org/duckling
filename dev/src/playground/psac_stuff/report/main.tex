@@ -1,4 +1,3 @@
-% TODOP: Dodaj odpowienie artefakty latexa go .gitignore
 \documentclass[11pt,a4paper]{article}
 
 \usepackage[T1]{fontenc}
@@ -6,7 +5,7 @@
 \usepackage[polish]{babel}
 \usepackage{lmodern}
 \usepackage{microtype}
-\usepackage[margin=2.4cm]{geometry}
+\usepackage[margin=2.2cm]{geometry}
 
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -28,14 +27,26 @@
 \newcommand{\todo}[1]{\textcolor{red}{\textbf{[DO UZUPEŁNIENIA: #1]}}}
 \newcommand{\dopisz}{\textcolor{red}{\textbf{[DO UZUPEŁNIENIA]}}}
 
+\definecolor{codekw}{RGB}{0,0,170}
+\definecolor{codetype}{RGB}{40,130,160}
+\definecolor{codestr}{RGB}{163,21,21}
+\definecolor{codecomment}{RGB}{0,120,40}
+\definecolor{codeframe}{RGB}{150,150,150}
+
+\renewcommand{\lstlistingname}{Fragment kodu}
+
 \lstset{
   basicstyle=\ttfamily\footnotesize,
-  keywordstyle=\bfseries,
-  commentstyle=\itshape\color{gray!80!black},
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecomment}\itshape,
+  stringstyle=\color{codestr},
+  emph={psac_function,psac_dynamic_context,DECLARE_QUERY_SIDE_INPUT},
+  emphstyle=\color{codetype}\bfseries,
   language=C++,
   columns=fullflexible,
   breaklines=true,
   frame=single,
+  rulecolor=\color{codeframe},
   framesep=4pt,
   xleftmargin=6pt,
   captionpos=b,
@@ -45,7 +56,7 @@
 
 \title{\vspace{-1.2cm}Porównanie modeli równoległych obliczeń inkrementalnych\\
        PSAC i Query w zastosowaniu do kompilatorów}
-\author{Piotr Oleszczuk \and Piotr Trzaskowski \and Jakub Bartmiński} % TODOP: Ustaw alfabetycznie
+\author{Jakub Bartmiński \and Piotr Oleszczuk \and Piotr Trzaskowski}
 \date{Projekt Badawczy, rok akademicki 2025/2026\\
       Wydział Matematyki, Informatyki i Mechaniki\\
       Uniwersytet Warszawski\\[2pt]
@@ -55,23 +66,25 @@
 \maketitle
 
 \begin{abstract}
-Kompilator inkrementalny musi jednocześnie korzystać z wielu rdzeni i szybko % TODOP: Wspóbieżny kompilator inkremantalny. Sam inkrementalny nie musi
-przeliczać wynik po drobnej edycji kodu. Porównaliśmy dwa modele obliczeń, które
-dają obie te rzeczy naraz: PSAC (\emph{Parallel Self-Adjusting Computation}),
-oparty na propagacji zmian po zapisanym śladzie wykonania, oraz Query, autorski
-framework zapytań zespołu duckling, oparty na grafie zapytań z cache'em wyników. % Używany przez język Duckling, rozwijany przez firme DuckType.
-Napisaliśmy dwa mikrobenchmarki, każdy celowo dopasowany do innego modelu, oraz
-dwa pełne kompilatory inkrementalne, które dzielą ten sam front end i ten sam
-generator kodu, a różnią się wyłącznie silnikiem inkrementalnym. Mikrobenchmarki
-dały wyraźny wynik: PSAC jest do 17 razy szybszy przy płytkich zależnościach
-drzewiastych, a Query do 2,5 raza szybsze przy gęstych zależnościach
-współdzielonych. W prawdziwym kompilatorze ta przewaga w dużej mierze zniknęła:
-różnice między silnikami zmieściły się w 5--20\% na zimno i były nieistotne na % TODOP: Sformuowania na ciepło, na zimno sa troche dziwne. mozna je jakos podmienic?
-ciepło. Zamiast tego o czasie przebudowy zdecydowała granularność śledzonych
+Współbieżny kompilator inkrementalny musi jednocześnie korzystać z wielu rdzeni
+i szybko przeliczać wynik po drobnej edycji kodu. Porównaliśmy dwa modele
+obliczeń, które dają obie te rzeczy naraz: PSAC (\emph{Parallel Self-Adjusting
+Computation}), oparty na propagacji zmian po zapisanym śladzie wykonania, oraz
+Query, autorski framework zapytań używany przez kompilator języka Duckling,
+rozwijanego przez firmę DuckType, oparty na grafie zapytań z cache'em wyników.
+Napisaliśmy dwa benchmarki syntetyczne, każdy celowo dopasowany do innego modelu,
+oraz dwa pełne kompilatory inkrementalne, które dzielą ten sam front end i ten
+sam generator kodu, a różnią się wyłącznie silnikiem inkrementalnym.
+W benchmarkach syntetycznych różnice były duże: PSAC okazał się do 17 razy
+szybszy przy płytkich zależnościach drzewiastych, a Query do 2,5 raza szybsze
+przy gęstych zależnościach współdzielonych. W prawdziwym kompilatorze ta przewaga
+w dużej mierze zniknęła, bo przy pełnej kompilacji różnice między silnikami
+zmieściły się w 5--20\%, a przy aktualizacji inkrementalnej były nieistotne.
+Znacznie większy wpływ na czas przebudowy miała granularność śledzonych
 zależności, której poprawa dała efekt o rząd wielkości większy niż jakakolwiek
-różnica między silnikami. Wnioski wykorzystaliśmy do optymalizacji produkcyjnego % TODOP: Produkcyjnego kompilatora Duckling
-kompilatora, gdzie zmiana alokatora pamięci i usunięcie globalnej blokady dały % TODOP: Jakiej globalnej blokady. Dopisz
-odpowiednio do 50\% i 10--20\% przyspieszenia.
+różnica między silnikami. Wnioski wykorzystaliśmy do optymalizacji kompilatora Duckling, gdzie
+zmiana alokatora pamięci i usunięcie globalnej blokady chroniącej tablicę
+internowanych napisów dały odpowiednio do 50\% i 10--20\% przyspieszenia.
 \end{abstract}
 
 \section{Wprowadzenie i pytania badawcze}
@@ -93,9 +106,9 @@ niej zależą. Model PSAC~\cite{psac2021} rozszerza to na programy równoległe
 i układa ślad w drzewo szeregowo-równoległe. Drugie podejście to \emph{grafy
 zapytań}: obliczenie dzieli się na nazwane, czyste zapytania, których wyniki
 trafiają do cache'u, a zależności odkrywane są w trakcie wykonania. Do tej grupy
-należy Query, framework używany w produkcyjnym kompilatorze języka Duckling. % TODOP: usuń to słowo produkcyjny, stad i z innych miejsc
-Autorska jest przy tym konkretna implementacja tego frameworka, a nie sam pomysł
-grafu zapytań z cache'em.
+należy Query, framework używany w kompilatorze języka Duckling. Autorska jest
+przy tym konkretna implementacja tego frameworka, a nie sam pomysł grafu zapytań
+z cache'em.
 
 Pytanie, które postawiliśmy sobie na początku, brzmiało prosto: który z tych
 dwóch modeli lepiej nadaje się na silnik kompilatora inkrementalnego? Rozbiliśmy
@@ -104,13 +117,11 @@ je na cztery pytania badawcze:
 \begin{description}
   \item[RQ1] Który silnik ma mniejszy narzut własny, w oderwaniu od realnej pracy?
   \item[RQ2] Jak oba skalują się wraz z liczbą wątków?
-  \item[RQ3] Czy przewaga zmierzona na mikrobenchmarkach przenosi się na
+  \item[RQ3] Czy przewaga zmierzona na benchmarkach syntetycznych przenosi się na
         prawdziwy kompilator?
   \item[RQ4] Co bardziej decyduje o czasie przebudowy inkrementalnej: wybór
         silnika czy granularność śledzonych zależności?
 \end{description}
-
-Odpowiedzi zbieramy w sekcjach~\ref{sec:dyskusja} i~\ref{sec:wnioski}. % TODOP: Usuń te linię
 
 \section{Dwa modele obliczeń inkrementalnych}
 \label{sec:modele}
@@ -183,9 +194,10 @@ Nieudane podobliczenie
 \section{Metodologia}
 \label{sec:metodologia}
 
-Eksperyment prowadziliśmy na dwóch poziomach.
+Eksperyment prowadziliśmy na dwóch poziomach: najpierw na syntetycznych
+obliczeniach, potem na dwóch napisanych przez nas kompilatorach.
 
-\paragraph{Poziom pierwszy: mikrobenchmarki.} Napisaliśmy dwa syntetyczne % TODOP: Nie podoba mi sie sformuowanie mikrobenchmarki. Zamień na benchmarki syntetyczne
+\paragraph{Benchmarki syntetyczne.} Napisaliśmy dwa syntetyczne
 obliczenia, każde celowo dopasowane do innego modelu, żeby zobaczyć, jak duża
 może być przewaga każdego z nich w najlepszym dla niego przypadku.
 
@@ -195,14 +207,15 @@ płytkie i drzewiaste, a każdy zakres \texttt{[l,r)} występuje dokładnie raz,
 nie ma współdzielonych poddrzew i cache Query nie ma czego ponownie użyć, wnosi
 tylko narzut. Aktualizacja zmienia zadany procent elementów tablicy, a zmiana
 propaguje się ścieżką od liścia do korzenia, dotykając logarytmicznie mało
-węzłów. To benchmark dopasowany do PSAC.
+węzłów. Jest to układ możliwie korzystny dla PSAC.
 
 \emph{DAG} to warstwowy graf skierowany: \(N\) warstw po \(M\) wierzchołków,
 krawędzie tylko między sąsiednimi warstwami, a wartość wierzchołka to jego waga
 plus suma wartości poprzedników. Zależności są gęste i współdzielone, bo jeden
 wierzchołek jest poprzednikiem wielu, więc jego zmiana wpływa na dużą część
 grafu. Cache Query sprawia, że każdy wierzchołek liczony jest dokładnie raz,
-podczas gdy PSAC wykonuje tu pracę podwójnie. To benchmark dopasowany do Query.
+podczas gdy PSAC wykonuje tu część pracy podwójnie. Ten układ jest z kolei
+korzystny dla Query.
 
 Oba mierzyliśmy w dwóch trybach: samo obliczenie oraz obliczenie wraz
 z aktualizacją inkrementalną. Parametrem \emph{workload} sterowaliśmy ilością
@@ -210,79 +223,94 @@ sztucznej pracy przypadającej na jeden węzeł. Ten parametr jest kluczowy: prz
 wartości zero mierzymy czysty narzut frameworka, a przy wyższych wartościach
 narzut rozmywa się w prawdziwej pracy, co odpowiada sytuacji w kompilatorze.
 
-\paragraph{Poziom drugi: prawdziwe kompilatory.} Napisaliśmy dwa kompilatory
+\paragraph{Kompilatory.} Napisaliśmy dwa kompilatory
 inkrementalne dla tego samego podzbioru języka Duckling: funkcje z rekurencją,
 podstawowe typy, klasy z polami, tablice w stylu C, przestrzenie nazw, stałe,
 zmienne globalne i import wielu plików. Oba kompilują każdą funkcję do osobnego
 pliku obiektowego, równolegle, i linkują wynik jednym wywołaniem systemowego
-linkera.
+linkera. Nazwaliśmy je \emph{psacklinger} (silnik PSAC) oraz \emph{querylinger}
+(silnik Query) i tych nazw używamy w całym raporcie.
 
-Najważniejsze w tym porównaniu jest to, że \emph{psacklinger} i % TODOP: Moze nie byc jasne co to za nazwy. Powiedz ze to te nasze zaimplentowane kompilatory
-\emph{querylinger} dzielą cały front end oraz cały generator kodu: ten sam
-parser, tę samą rejestrację deklaracji globalnych, te same tablice symboli i to
-samo generowanie kodu LLVM. Różnią się wyłącznie tym, jak decydują, co
-przekompilować. Dzięki temu każdą zmierzoną różnicę można przypisać silnikowi
-inkrementalnemu, a nie jakości implementacji front endu. Jako punkt odniesienia
-mierzyliśmy też \emph{duckc}, produkcyjny kompilator Ducklinga, oparty na Query,
-ale z własnym, znacznie bogatszym front endem i pełną inkrementalnością na
-poziomie drzewa składniowego.
+Najważniejsze w tym porównaniu jest to, że oba nasze kompilatory dzielą cały
+front end oraz cały generator kodu: ten sam parser, tę samą rejestrację
+deklaracji globalnych, te same tablice symboli i to samo generowanie kodu LLVM.
+Różnią się wyłącznie tym, jak decydują, co przekompilować. Dzięki temu każdą
+zmierzoną różnicę można przypisać silnikowi inkrementalnemu, a nie jakości
+implementacji front endu.
 
-To, że oba kompilatory zachowują się tak samo, potwierdza wspólny zestaw około
-108 testów typu end-to-end: każdy kompiluje program pełnym potokiem, uruchamia
-powstały plik wykonywalny i sprawdza kod wyjścia. Testy inkrementalne dodatkowo
-sprawdzają dokładne liczby przekompilowanych funkcji, więc porównanie
-granularności opiera się na zachowaniu, a nie na deklaracjach. % TODOP: Przeformuuj. Dziwnie brzmi to zdanie
+Jako punkt odniesienia mierzyliśmy też \emph{duckc}, czyli prawdziwy kompilator
+języka Duckling, również oparty na Query. Nie jest to przeciwnik w tej samej
+wadze: duckc obsługuje cały język, ma znacznie bogatszy front end, dwa backendy
+generujące kod, diagnostykę, obsługę pakietów i pełną inkrementalność na poziomie
+pojedynczych elementów drzewa składniowego, podczas gdy nasze dwa kompilatory to
+zabawki obsługujące wąski podzbiór języka. Porównanie z nim nie mówi więc nic
+o jakości implementacji, a jedynie pokazuje, ile da się wycisnąć, gdy zadanie
+zawęzi się do jednej fazy.
 
-Listingi~\ref{lst:psac} i~\ref{lst:query} pokazują, jak w obu implementacjach % TODOP: Nie nazywaj tego Listingi to jakies super dziwne. Nie ma bardziej polskiej nazwy?
-deklarowana jest zależność.
-% TODOP: Daj jakieś kolorowanie składni C++ tu i nizej. Wywal moze całe te listingi. Nikt nie jest w stanie powiedziec co tu w sumie sie dzieje
-\begin{lstlisting}[caption={Kompilacja jednej funkcji jako obliczenie PSAC.
-Zakres dynamiczny zbiera komórki odczytane w trakcie wykonania, więc zbiór
+Żeby porównanie granularności miało sens, oba nasze kompilatory muszą zachowywać
+się identycznie. Sprawdza to wspólny zestaw około 108 testów typu end-to-end:
+każdy kompiluje program pełnym potokiem, uruchamia powstały plik wykonywalny
+i sprawdza kod wyjścia. Testy inkrementalne dodatkowo sprawdzają, ile dokładnie
+funkcji zostało przekompilowanych po danej edycji.
+
+Fragmenty kodu~\ref{lst:psac} i~\ref{lst:query} pokazują, jak w obu
+implementacjach deklarowana jest zależność.
+
+\begin{lstlisting}[caption={Kompilacja jednej funkcji jako osobne obliczenie
+PSAC. Zakres dynamiczny zbiera komórki odczytane w trakcie wykonania, więc zbiór
 zależności wyliczany jest od nowa przy każdym przebiegu.},label={lst:psac}]
-psac_function(compileUnitPsac, State* s, FunctionUnit* unit, std::string link_name) {
-    psac_dynamic_context({
-        _psac_context_mods.push_back(&unit->body_mod);
-        _psac_context_mods.push_back(&s->structural_mod);
+psac_function(compileUnitPsac, State* s, FunctionUnit* unit) {
+    psac_dynamic_context({  // zakres dynamiczny, sledzi co obliczenie przeczytalo
+        _psac_context_mods.push_back(&unit->body_mod);       // hash ciala funkcji
+        _psac_context_mods.push_back(&s->structural_mod);    // hash importow i nazw
+        // Recorder dopisze komorki symboli, po ktore siegnie generator kodu.
         DynamicDepRecorder recorder(_psac_context_mods, *s, s->ctx);
-        compileOneFunction(s->ctx, item, unit->object_path, &recorder);
+        compileOneFunction(s->ctx, unit, &recorder);
     });
 }
 \end{lstlisting}
 
-\begin{lstlisting}[caption={Rejestracja zależności w wersji Query. Obserwator
-wywoływany jest w miejscu użycia symbolu, więc funkcja zależy dokładnie od tych
-sygnatur, stałych, klas i zmiennych globalnych, których naprawdę użyła.},
-label={lst:query}]
+\begin{lstlisting}[caption={Rejestracja zależności w wersji Query. Metoda
+\texttt{onFunctionUse} wywoływana jest w momencie, w którym generator kodu sięga
+po sygnaturę funkcji, więc zależność powstaje dokładnie tam, gdzie symbol jest
+naprawdę używany.}, label={lst:query}]
+// Side input, czyli lisc grafu zapytan. Jego kluczem jest hash wartosci.
 DECLARE_QUERY_SIDE_INPUT(SigInput, HashInputKey);
 
 void SymbolUseRecorder::onFunctionUse(const sym::Symbol& symbol) override {
+    // Odpytanie liscia zapisuje w grafie krawedz zaleznosci od tej sygnatury.
     query_ctx.query<SigInput>({ .hash = functionSigInputHash(program_ctx, symbol) });
 }
 \end{lstlisting}
 
-\paragraph{Środowisko pomiarowe.} Wszystkie pomiary, i mikrobenchmarki, i
-kompilatory, wykonaliśmy na tej samej maszynie: procesor Intel Core Ultra 7 165H
+\paragraph{Środowisko pomiarowe.} Wszystkie pomiary, i syntetyczne, i
+kompilatorów, wykonaliśmy na tej samej maszynie: procesor Intel Core Ultra 7 165H
 (22 procesory logiczne), 63719~MiB pamięci RAM, system Linux 6.19.6-arch1-1,
 kompilator g++-15, kompilacja z flagami \texttt{-O3 -DNDEBUG}. Czasy mierzyliśmy
 narzędziem \texttt{hyperfine}, które mierzy czas całego procesu, wykonuje
 przebiegi rozgrzewające, powtarza pomiar wielokrotnie dla każdego zestawu
-parametrów i podaje średnią wraz z odchyleniem standardowym. Mikrobenchmarki
-przeszły pełne przeszukiwanie siatki parametrów: 3 przebiegi rozgrzewające
-i około 48 powtórzeń na punkt pomiarowy, 384 punkty pomiarowe dla ArraySum i 192
-dla DAG. Benchmark kompilatorów używał 5 powtórzeń na wariant. Nie stosowaliśmy
-przypisywania wątków do konkretnych rdzeni, wyłączania trybu turbo ani % TODOP: Usuń ostatnie zdanie
-wymuszania trybu pracy procesora.
+parametrów i podaje średnią wraz z odchyleniem standardowym. Benchmarki
+syntetyczne przeszły pełne przeszukiwanie siatki parametrów: 3 przebiegi
+rozgrzewające i około 48 powtórzeń na punkt pomiarowy, 384 punkty pomiarowe dla
+ArraySum i 192 dla DAG. Benchmark kompilatorów używał 5 powtórzeń na wariant.
 
-\section{Wyniki: mikrobenchmarki}
+\section{Wyniki: benchmarki syntetyczne}
 \label{sec:mikro}
 
-Siatka parametrów obejmowała tryb (samo obliczenie albo obliczenie
-z aktualizacją), procent aktualizowanych wejść (1, 10, 50, 100), workload % TODOP: Powiedz ze to 1, 10, 50, 100 to procenty updateów
-(0, 50, 100) oraz liczbę wątków (1, 4, 8, 16). Tablica w ArraySum miała rozmiar % TODOP: i wytłumacz tu jak działa workload i co w ogole oznaczaja te liczby (0, 50, 100)
-65536 albo 262144, a graf w DAG-u 50 warstw po 100 wierzchołków i 10000 krawędzi.
-Wyniki podajemy jako stosunek średniego czasu Query do średniego czasu PSAC,
-więc wartość powyżej jedności oznacza, że PSAC jest szybszy. Pełne wyniki
-przedstawiają rysunki~\ref{fig:array} i~\ref{fig:dag}.
+Siatka parametrów obejmowała cztery wymiary. Pierwszy to tryb: samo obliczenie
+albo obliczenie wraz z aktualizacją. Drugi to procent zaktualizowanych wejść,
+czyli jaka część danych zmienia się przed przeliczeniem inkrementalnym: 1\%,
+10\%, 50\% albo 100\% elementów tablicy w ArraySum i wierzchołków w DAG-u.
+Trzeci to workload, czyli liczba jednostek sztucznej pracy wykonywanej w każdym
+węźle obliczenia, gdzie jedna jednostka to tysiąc obrotów pustej pętli. Wartość 0
+oznacza brak pracy, więc mierzony jest sam narzut frameworka, a wartości 50 i 100
+to pięćdziesiąt i sto tysięcy obrotów pętli na węzeł, czyli tyle pracy, że narzut
+przestaje dominować. Czwarty wymiar to liczba wątków: 1, 4, 8 albo 16. Tablica
+w ArraySum miała rozmiar 65536 albo 262144, a graf w DAG-u 50 warstw po 100
+wierzchołków i 10000 krawędzi. Wyniki podajemy jako stosunek średniego czasu
+Query do średniego czasu PSAC, więc wartość powyżej jedności oznacza, że PSAC
+jest szybszy. Pełne wyniki przedstawiają rysunki~\ref{fig:array}
+i~\ref{fig:dag}.
 
 \begin{sidewaysfigure}[p]
 \centering
@@ -310,9 +338,9 @@ prawie nie wpływa na wynik.}
 
 \paragraph{ArraySum.} Przy zerowym workloadzie, czyli na czystym narzucie
 frameworka, Query jest 4--5 razy wolniejsze od PSAC-a: stosunek wynosi 5,04 przy
-jednym wątku, 4,75 przy czterech, 4,22 przy ośmiu i 4,44 przy szesnastu.
-Maszyneria zapytań kosztuje po prostu więcej niż lekki ślad PSAC-a. Wraz ze
-wzrostem sztucznej pracy przewaga maleje: przy workloadzie 50 stosunek mieści się % TODOP: Nie uzywaj słowa maszyneria, mało formalne
+jednym wątku, 4,75 przy czterech, 4,22 przy ośmiu i 4,44 przy szesnastu. Sam graf
+zapytań kosztuje po prostu więcej niż lekki ślad PSAC-a. Wraz ze wzrostem
+sztucznej pracy przewaga maleje: przy workloadzie 50 stosunek mieści się
 w przedziale 1,11--1,64, a przy workloadzie 100 w przedziale 1,06--1,51. Oba
 silniki przyspieszają wraz z liczbą wątków.
 
@@ -326,15 +354,15 @@ jego czas tylko z 0,10~s na 0,12~s, podczas gdy Query przy tej samej zmianie
 przechodzi z 0,50~s na 1,68~s. Przy workloadzie 100 wyniki znów się wyrównują
 i Query jest wolniejsze 1,12--1,94 raza.
 
-\paragraph{DAG.} Tutaj obraz się odwraca. Na czystym narzucie PSAC dalej jest
-lżejszy, ale przewaga jest mała i maleje z liczbą wątków: 1,57 przy jednym
+\paragraph{DAG.} W tym benchmarku kolejność się zmienia. Na czystym narzucie PSAC
+dalej jest lżejszy, ale przewaga jest mała i maleje z liczbą wątków: 1,57 przy jednym
 wątku, 1,42 przy czterech, 1,33 przy ośmiu i 1,23 przy szesnastu. Gdy tylko
 pojawia się prawdziwa praca, wygrywa Query: przy workloadzie 50 stosunek spada do
 0,73--0,37, a przy workloadzie 100 do 0,62--0,39. Odpowiada za to cache: każdy
 wierzchołek liczony jest dokładnie raz, podczas gdy PSAC przy bardziej złożonej
 strukturze obliczeń robi tę samą pracę wielokrotnie.
 
-Osobno warto spojrzeć na skalowalność. Przy workloadzie 100 czas PSAC-a
+Skalowalność wygląda tu inaczej niż w ArraySum. Przy workloadzie 100 czas PSAC-a
 \emph{rośnie} z 0,27~s na jednym wątku do 0,43~s na szesnastu, podczas gdy czas
 Query zostaje praktycznie płaski, zmieniając się z 0,16~s na 0,17~s. Nasza
 hipoteza, której nie sprawdziliśmy pomiarowo, jest taka, że PSAC słabo radzi
@@ -350,10 +378,10 @@ jest wyraźny: w gęstym grafie nawet mała zmiana wejścia unieważnia dużą j
 część, więc oba frameworki i tak muszą przeliczyć sporo, przez co procent
 aktualizowanych wejść przestaje mieć znaczenie.
 
-\paragraph{Wniosek cząstkowy.} Dla płytkich i prostych zależności lepszy jest
-PSAC. Dla zależności gęstych i złożonych, a więc bardziej podobnych do tego, co
-dzieje się w kompilatorze, przewagę ma Query, i to tym wyraźniej, im więcej
-wątków i im więcej prawdziwej pracy.
+Zestawione razem, oba benchmarki pokazują, że PSAC wypada lepiej przy płytkich
+i prostych zależnościach, a Query przy gęstych i złożonych, czyli takich, jakie
+występują w kompilatorze. Przewaga Query rośnie przy tym z liczbą wątków
+i z ilością prawdziwej pracy przypadającej na węzeł.
 
 \section{Wyniki: kompilatory}
 \label{sec:kompilatory}
@@ -362,25 +390,23 @@ Korpusem były dwa pliki wygenerowane automatycznie generatorem kodu, po około
 8000 linii każdy. Plik \texttt{duck1} zawiera 352 funkcje, \texttt{duck2} 153
 funkcje. \todo{czym dokładnie różnią się duck1 i duck2 poza liczbą funkcji}
 
-\subsection{Kompilacja na zimno}
+\subsection{Pełna kompilacja}
 
-Wszystkie pomiary robiliśmy na zimno: cache inkrementalny i pliki pośrednie % TODOP: Te szczegoly chyba nie mają znaczenia ze czyścilismy pliki i cache inkrementalny. Mozna pominac
-kompilatora \texttt{duckc} czyściliśmy przed każdym przebiegiem. Wyniki zbiera
-tabela~\ref{tab:zimne}, a rysunek~\ref{fig:skalowanie} pokazuje je jako krzywe
-skalowania.
+Pierwszy pomiar to kompilacja całego pliku od zera, bez korzystania
+z jakichkolwiek wcześniejszych wyników. Zbiera go tabela~\ref{tab:zimne},
+a rysunek~\ref{fig:skalowanie} pokazuje te same liczby jako krzywe skalowania.
 
 \begin{table}[htbp]
 \centering
-\caption{Czas kompilacji na zimno w milisekundach, w zależności od liczby wątków
-roboczych. Dla \texttt{duckc} liczba ta oznacza liczbę wątków frameworka zapytań,
-dla pozostałych liczbę wątków roboczych kompilatora.}
-% TODOP: Dodaj do tabeli jednostke, bo nie wiadomo co to za cyferki
+\caption{Czas pełnej kompilacji w zależności od liczby wątków roboczych. Dla
+\texttt{duckc} liczba ta oznacza liczbę wątków frameworka zapytań, dla
+pozostałych liczbę wątków roboczych kompilatora.}
 \label{tab:zimne}
 \small
 \begin{tabular}{@{}r rrr c rrr@{}}
 \toprule
-& \multicolumn{3}{c}{\textbf{duck1} (352 funkcje)} & &
-  \multicolumn{3}{c}{\textbf{duck2} (153 funkcje)} \\
+& \multicolumn{3}{c}{\textbf{duck1} (352 funkcje), czas [ms]} & &
+  \multicolumn{3}{c}{\textbf{duck2} (153 funkcje), czas [ms]} \\
 \cmidrule(lr){2-4}\cmidrule(lr){6-8}
 \textbf{wątki} & duckc & psacklinger & querylinger & &
                  duckc & psacklinger & querylinger \\
@@ -426,35 +452,33 @@ dla pozostałych liczbę wątków roboczych kompilatora.}
 \addplot[teal!80!black,thick,mark=triangle*] coordinates {(1,437)(2,360)(4,315)(8,297)(16,302)};
 \end{groupplot}
 \end{tikzpicture}
-\caption{Skalowanie czasu kompilacji na zimno wraz z liczbą wątków roboczych,
-dla obu plików wejściowych. Oś pozioma w skali logarytmicznej o podstawie~2.}
+\caption{Skalowanie czasu pełnej kompilacji wraz z liczbą wątków roboczych, dla
+obu plików wejściowych. Oś pozioma w skali logarytmicznej o podstawie~2.}
 \label{fig:skalowanie}
 \end{figure}
 
-Z liczb wynikają cztery obserwacje.
+Oba nasze kompilatory biją \texttt{duckc} przy każdej liczbie
+wątków: około 2,4 raza na \texttt{duck1} i około 3,6 raza na \texttt{duck2} przy
+ośmiu wątkach. Jak zaznaczyliśmy w sekcji~\ref{sec:metodologia}, duckc robi przy
+tym nieporównanie więcej, a jego czas w dużej części zajmują fazy, które muszą
+wykonać się jedna po drugiej: budowa drzewa składniowego, a potem łańcuch zapytań
+rozwiązujących nazwy, w którym kolejne zapytanie czeka na poprzednie. Nasze
+kompilatory dzielą pracę na pojedyncze funkcje i takiego łańcucha nie mają.
 
-Po pierwsze, oba nasze kompilatory biją produkcyjny \texttt{duckc} przy każdej
-liczbie wątków: około 2,4 raza na \texttt{duck1} i około 3,6 raza na
-\texttt{duck2} przy ośmiu wątkach. Powodem jest to, że dzielimy pracę na
-pojedyncze funkcje, podczas gdy \texttt{duckc} wykonuje na jednym dużym module
-długi, w dużej części szeregowy łańcuch zadań. % TODOP: Co? Jaki szeregowy łańcuch zadań. Trzeba gdzieś wspomniec ze duckc to jest legitny wielki kompilator moloch ktory mma 100 razy wiecej featureów niz te zabawki
+Querylinger wypada lepiej od psacklingera przy każdej liczbie wątków, o 5--20\%.
+Pula zadań frameworka Query nie kosztuje przy tej granularności
+więcej niż osobne obliczenia PSAC dla każdej funkcji.
 
-Po drugie, querylinger jest szybszy od psacklingera przy każdej liczbie wątków,
-o 5--20\%. Pula zadań frameworka Query nie kosztuje przy tej granularności
-więcej niż osobne obliczenia PSAC dla każdej funkcji, a dodatkowo do binarki % TODOP: Wywal część po przecinku to nie ma znaczenia
-querylingera nie linkuje się nic ze schedulera PSAC-a, więc jego kręcące się
-w kółko wątki nie mogą zaburzyć fazy szeregowej.
-
-Po trzecie, \texttt{duckc} prawie nie zyskuje na dodatkowych wątkach.
-Znaleźliśmy przyczynę: budowa drzewa składniowego, czyli parsowanie wraz
+Osobnym pytaniem było, dlaczego \texttt{duckc} prawie nie zyskuje na dodatkowych
+wątkach. Przyczyną okazała się budowa drzewa składniowego, czyli parsowanie wraz
 z liczeniem stabilnych hashy SHA-256 dla każdego elementu, zajmuje około 232~ms
 i jest w całości szeregowa, co stanowi mniej więcej połowę czasu przy ośmiu
 wątkach. Zrównoleglenie liczenia tych hashy jest tu największą pojedynczą
 dźwignią: eksperyment z całkowitym wyłączeniem hashowania skrócił samo
 parsowanie z 202~ms do 67~ms.
 
-Po czwarte, rozbicie czasu psacklingera na fazy (\texttt{duck1}, osiem wątków)
-pokazuje, gdzie naprawdę schodzi czas: parsowanie 67~ms, rejestracja deklaracji
+Rozbicie czasu psacklingera na fazy (\texttt{duck1}, osiem wątków) pokazuje,
+gdzie naprawdę schodzi czas: parsowanie 67~ms, rejestracja deklaracji
 globalnych 1~ms, zbieranie jednostek pracy wraz z hashowaniem 22~ms, emisja
 obiektu ze zmiennymi globalnymi 2~ms, generowanie kodu funkcji 58~ms, linkowanie
 55~ms. Faza faktycznie zrównoleglona to więc mniej niż połowa całości, co jest
@@ -475,8 +499,8 @@ tabela~\ref{tab:cieple}.
 
 \begin{table}[htbp]
 \centering
-\caption{Czas aktualizacji inkrementalnej. Podano średni czas w milisekundach
-oraz liczbę faktycznie przekompilowanych funkcji.}
+\caption{Czas aktualizacji inkrementalnej. W każdej komórce podano średni czas
+w milisekundach oraz liczbę faktycznie przekompilowanych funkcji.}
 \label{tab:cieple}
 \small
 \begin{tabular}{@{}l cc c cc@{}}
@@ -485,6 +509,8 @@ oraz liczbę faktycznie przekompilowanych funkcji.}
   \multicolumn{2}{c}{\textbf{duck2} (153 funkcje)} \\
 \cmidrule(lr){2-3}\cmidrule(lr){5-6}
 \textbf{scenariusz} & psacklinger & querylinger & & psacklinger & querylinger \\
+ & \multicolumn{2}{c}{\footnotesize czas [ms] / funkcje} & &
+   \multicolumn{2}{c}{\footnotesize czas [ms] / funkcje} \\
 \midrule
 brak zmian                    & 109,0 / 0 & 118,4 / 0 & & 107,2 / 0 & 106,4 / 0 \\
 edycja ciała funkcji          & 149,8 / 1 & 160,1 / 1 & & 140,0 / 1 & 146,3 / 1 \\
@@ -499,27 +525,28 @@ parsuje oraz analizuje program od nowa. Jest on identyczny w obu kompilatorach
 i został zostawiony poza grafem zależności właśnie po to, żeby pomiar dotyczył
 samych silników.
 
-Wynik jest jasny, choć nie wskazuje zwycięzcy: przy równej granularności
-zależności oba silniki są nie do odróżnienia. Psacklinger jest minimalnie szybszy
-na ciepło, querylinger na zimno, a różnice rzędu kilku milisekund mieszczą się
-w odchyleniach tego samego rzędu. Nie ogłaszamy tu więc zwycięzcy, bo dane na to % TODOP: Usuń ostatnie zdanie
-nie pozwalają.
+Przy równej granularności zależności wyników obu silników nie da się od siebie
+odróżnić. Psacklinger jest minimalnie szybszy przy aktualizacji, querylinger przy
+pełnej kompilacji, ale różnice rzędu kilku milisekund mieszczą się w odchyleniach
+tego samego rzędu, więc nie traktujemy ich jako rozstrzygnięcia.
 
-Warto natomiast zestawić te liczby z historią samego psacklingera. Jego
-wcześniejszy, gruboziarnisty silnik przy zmianie inicjalizatora zmiennej % TODOP: Co to w ogole znaczy gruboziarnisty, może usun to 
-globalnej przekompilowywał 352 funkcje z 352, w czasie około 220~ms. Przejście na
-zależności śledzone dla pojedynczych symboli zbiło ten scenariusz do zera
-przekompilowanych funkcji. To zmiana o rząd wielkości większa niż jakakolwiek
-różnica, którą zmierzyliśmy między silnikami.
+Więcej mówi porównanie tych liczb z wcześniejszą wersją psacklingera. Jego pierwsza
+wersja śledziła zależności tylko na poziomie całego programu, więc przy zmianie
+inicjalizatora zmiennej globalnej przekompilowywała 352 funkcje z 352, w czasie
+około 220~ms. Przejście na zależności śledzone dla pojedynczych symboli zbiło ten
+scenariusz do zera przekompilowanych funkcji. Efekt tej jednej zmiany jest o rząd
+wielkości większy od wszystkich różnic, jakie zmierzyliśmy między silnikami.
 
 \subsection{Granularność zależności}
 
 Oba silniki doprowadziliśmy do tej samej, sprawdzonej testami granularności.
-Zbiera ją tabela~\ref{tab:granularnosc}. Mechanizmy są różne, a wynik ten sam:
-w PSAC każdy symbol dostaje własną modyfikowalną komórkę, a w Query własny side
-input, przy czym w obu przypadkach zależność zapisywana jest w miejscu, w którym
-symbol jest naprawdę używany, przez ten sam wspólny mechanizm obserwatora % TODOP: Nie wiem co to obserwator. Czytelnik tez nie bedzie wiedzial
-w generatorze kodu.
+Zbiera ją tabela~\ref{tab:granularnosc}. Osiągnęły ją innymi środkami: w PSAC
+każdy symbol dostaje własną modyfikowalną komórkę, a w Query własny side input.
+W obu przypadkach odpowiada za to wspólny mechanizm w generatorze kodu: za każdym razem, gdy
+generator sięga po stałą, sygnaturę funkcji, układ pól klasy albo zmienną
+globalną, zgłasza to silnikowi inkrementalnemu, a ten zapisuje zależność. Zbiór
+zależności nie jest więc deklarowany z góry, tylko powstaje jako produkt uboczny
+wykonania, dokładnie tam, gdzie symbol jest naprawdę używany.
 
 \begin{table}[htbp]
 \centering
@@ -544,23 +571,19 @@ zmiana importu lub przestrzeni nazw & wszystko, jako bezpieczne rozwiązanie zac
 \end{tabular}
 \end{table}
 
-Ostatni wiersz wymaga komentarza. Zmiana importu albo nazwy przestrzeni nazw może
-zmienić to, do czego odnosi się dowolna nazwa w programie, więc jedyną poprawną
-reakcją jest przekompilowanie wszystkiego. Podobnie zgrubna musi być reakcja na
-błąd kompilacji: nieudana kompilacja nigdy nie poznała swojego prawdziwego
-zbioru zależności, bo brakujący symbol nie ma jak pojawić się w grafie, więc
-jedyne, na czym może się zawiesić, to hash całego programu.
+Ostatnie dwa wiersze wymagają komentarza. Zmiana importu albo nazwy przestrzeni
+nazw może zmienić to, do czego odnosi się dowolna nazwa w programie, więc jedyną
+poprawną reakcją jest przekompilowanie wszystkiego. Podobnie zgrubna musi być
+reakcja na błąd kompilacji: nieudana kompilacja nigdy nie poznała swojego
+prawdziwego zbioru zależności, bo brakujący symbol nie ma jak pojawić się
+w grafie, więc jedyne, na czym może się zawiesić, to hash całego programu.
 
-Dodajmy, że hashe treści liczymy z wydruku elementów drzewa składniowego % TODOP: To chyba nie ma znaczenia w tym kontekście
-z usuniętymi pozycjami w pliku. Bez tego wstawienie jednej linii przesunęłoby
-pozycje wszystkich elementów poniżej edycji i unieważniło je wszystkie.
-
-\section{Optymalizacje produkcyjnego kompilatora}
+\section{Optymalizacje kompilatora Duckling}
 \label{sec:optymalizacje}
 
-Wnioski z projektu wykorzystaliśmy do optymalizacji produkcyjnego kompilatora
-\texttt{duckc}. Wąskie gardła szukaliśmy profilerem \texttt{perf}, nagrywając
-przebiegi kompilacji i patrząc, gdzie schodzi czas.
+Wnioski z projektu wykorzystaliśmy do optymalizacji kompilatora \texttt{duckc}.
+Wąskich gardeł szukaliśmy profilerem \texttt{perf}, nagrywając przebiegi
+kompilacji i patrząc, gdzie schodzi czas.
 
 Pierwszą zmianą była zamiana alokatora pamięci na mimalloc. Wpadliśmy na to,
 patrząc na konfigurację budowania samego PSAC-a, który go używa: pojawiło się
@@ -574,8 +597,8 @@ identyfikatora. Chronił go globalny rwlock, przy czym większość czasu schodz
 nie na blokadzie zapisu, ale na blokadzie odczytu na szybkiej ścieżce, czyli
 w przypadku, w którym identyfikator już istniał. Zastąpienie tego globalnym
 mutexem w połączeniu ze współbieżnymi hashmapami dało 10--20\% w scenariuszu
-wielowątkowym. Warto to zapamiętać: blokada odczytu wydaje się tania, ale przy % TODOP: Usuń '' warto to zapamietac
-wielu wątkach samo jej zakładanie staje się miejscem, o które wątki się biją.
+wielowątkowym. Pojedyncze założenie blokady odczytu jest tanie, ale przy wielu
+wątkach staje się punktem, o który wszystkie one konkurują.
 
 Trzeci obszar to hashmapy. Używamy własnej implementacji współbieżnej hashmapy
 z własnym alokatorem. Sprawdziliśmy alternatywę w postaci Google Swiss Table, ale
@@ -584,59 +607,61 @@ algorytmu haszującego przy wielu wątkach dodatkowo powoduje przerzucanie linii
 pamięci podręcznej między rdzeniami (cache-line bouncing), czyli koszt, którego
 w ogóle nie widać w pomiarach jednowątkowych.
 
-Zapisaliśmy też kierunki, których nie zdążyliśmy zrobić: wykrywanie cykli % TODOP: Optymalizacja wykrywania cykli
-w grafie zapytań, przyspieszenie haszowania wyników, dalsza walka
-z przerzucaniem linii pamięci podręcznej oraz wczytywanie danych z wyprzedzeniem
-(software prefetching).
+Zapisaliśmy też kierunki, których nie zdążyliśmy zrobić: optymalizacja
+wykrywania cykli w grafie zapytań, przyspieszenie haszowania wyników, dalsza
+walka z przerzucaniem linii pamięci podręcznej oraz wczytywanie danych
+z wyprzedzeniem (software prefetching).
 
 \section{Dyskusja i ograniczenia}
 \label{sec:dyskusja}
 
-\paragraph{Mikrobenchmarki a rzeczywistość (RQ3).} Mikrobenchmarki
+\paragraph{Benchmarki syntetyczne a rzeczywistość (RQ3).} Benchmarki syntetyczne
 przewidywały wyraźną przewagę Query na gęstych grafach, sięgającą 2,5 raza przy
 prawdziwej pracy. W kompilatorze wyszedł praktycznie remis: querylinger jest
-szybszy o 5--20\% na zimno, psacklinger minimalnie szybszy na ciepło.
-Przewidywanie sprawdziło się więc co do kierunku, ale nie co do skali. % TODOP: Usuń to zdanie
+szybszy o 5--20\% przy pełnej kompilacji, psacklinger minimalnie szybszy przy
+aktualizacji inkrementalnej.
 
-Naszym zdaniem powód jest taki. Mikrobenchmark z workloadem zero mierzy stosunek
-narzutów, ale kompilator nie pracuje w takich warunkach: wygenerowanie kodu
-jednej funkcji to milisekundy pracy, wobec których koszt zapisania kilkunastu
-zależności jest pomijalny. Do tego duża część czasu leży poza silnikiem
-inkrementalnym: w psacklingerze parsowanie i linkowanie to razem około 122~ms
-z 295~ms przy ośmiu wątkach. Innymi słowy, mikrobenchmark mierzy dokładnie to,
-czego w kompilatorze jest najmniej.
+Wynika to naszym zdaniem stąd, że benchmark syntetyczny z workloadem zero mierzy
+stosunek samych narzutów, a kompilator nie pracuje w takich warunkach: wygenerowanie
+kodu jednej funkcji to milisekundy pracy, wobec których koszt zapisania
+kilkunastu zależności jest pomijalny. Do tego duża część czasu leży poza
+silnikiem inkrementalnym: w psacklingerze parsowanie i linkowanie to razem około
+122~ms z 295~ms przy ośmiu wątkach. Benchmark syntetyczny mierzy więc głównie tę
+część kosztu, która w kompilatorze ma najmniejszy udział.
 
-\paragraph{Granularność bije silnik (RQ4).} To jest główny wynik tego projektu.
+\paragraph{Wpływ granularności zależności (RQ4).} Ten wynik uważamy za
+najważniejszy w całym projekcie.
 Przy równej granularności zależności dwa bardzo różne silniki dały wyniki nie do
 odróżnienia w granicach błędu pomiaru. Za to zmiana granularności w obrębie
-jednego silnika, z gruboziarnistej na śledzenie pojedynczych symboli, zmieniła
-jeden ze scenariuszy z 352 przekompilowanych funkcji w 220~ms na zero funkcji.
-Wniosek dla projektanta jest więc taki, że przy budowie kompilatora
-inkrementalnego wysiłek trzeba kierować najpierw na precyzję śledzenia
-zależności i na zmniejszanie tej części pracy, która zostaje poza grafem,
-a dopiero potem na wybór silnika.
+jednego silnika, ze śledzenia zależności na poziomie całego programu na śledzenie
+pojedynczych symboli, zmieniła jeden ze scenariuszy z 352 przekompilowanych
+funkcji w 220~ms na zero funkcji. Sugeruje to, że przy budowie kompilatora
+inkrementalnego warto zająć się najpierw precyzją śledzenia zależności oraz
+zmniejszaniem tej części pracy, która zostaje poza grafem, a wyborem silnika
+dopiero później.
 
-\paragraph{Kiedy wybór silnika jednak ma znaczenie.} Nie znaczy to, że modele są
+\paragraph{Przypadki, w których silnik ma znaczenie.} Modele nie są jednak
 wymienne. Przy bardzo lekkich węzłach obliczenia i płytkich zależnościach narzut
 Query jest nie do zignorowania, w skrajnym przypadku aż 17-krotny. Przy gęstych
-zależnościach i wielu wątkach PSAC przestaje skalować. Kompilator leży akurat
-pomiędzy tymi przypadkami, co tłumaczy remis.
+zależnościach i wielu wątkach PSAC przestaje skalować. Kompilator mieści się
+pomiędzy tymi przypadkami i prawdopodobnie właśnie dlatego wyniki wyszły
+tak zbliżone.
 
 \paragraph{Ograniczenia i zagrożenia dla trafności.} Wyniki trzeba czytać
 z następującymi zastrzeżeniami:
 
 \begin{itemize}
-  \item Mikrobenchmarki są syntetyczne i celowo dopasowane do przeciwnych modeli,
-        więc podane stosunki to wartości skrajne, a nie typowe.
+  \item Benchmarki syntetyczne są celowo dopasowane do przeciwnych modeli, więc
+        podane stosunki to wartości skrajne, a nie typowe.
   \item Wszystkie pomiary pochodzą z jednej maszyny i jednej serii pomiarowej.
-        Nie przypisywaliśmy wątków do konkretnych rdzeni ani nie kontrolowaliśmy
-        taktowania procesora, a użyty procesor ma rdzenie o różnej wydajności,
-        co przy szesnastu wątkach może zaburzać porównania.
+        Nie przypisywaliśmy wątków do rdzeni ani nie kontrolowaliśmy taktowania
+        procesora, a procesor ma rdzenie o różnej wydajności, co przy szesnastu
+        wątkach może zaburzać porównania.
   \item Korpus kompilatorów pochodzi z jednego generatora i obejmuje dwa pliki.
         Nie wiemy, na ile wygenerowany kod przypomina strukturę zależności
         prawdziwego projektu.
   \item Nieinkrementalny front end daje podłogę około 100~ms, która zasłania
-        różnice między silnikami w pomiarach na ciepło. Do zmierzonego czasu
+        różnice między silnikami przy aktualizacjach. Do zmierzonego czasu
         wliczone jest też linkowanie i operacje dyskowe, na które żaden silnik
         nie ma wpływu.
   \item Wyniki ArraySum są uśrednione po dwóch rozmiarach tablicy, rozmiar nie
@@ -650,16 +675,16 @@ z następującymi zastrzeżeniami:
         stronie Query.
   \item Nie robiliśmy testów istotności statystycznej. Przy różnicach rzędu kilku
         milisekund i odchyleniach tego samego rzędu to właśnie dlatego świadomie
-        nie rozstrzygamy porównania na ciepło.
+        nie rozstrzygamy porównania przy aktualizacjach.
 \end{itemize}
 
 \section{Wnioski i dalsze prace}
 \label{sec:wnioski}
 
-Odpowiadając wprost na postawione pytania badawcze:
+Wracamy na koniec do pytań postawionych we wstępie.
 
 \textbf{RQ1.} Mniejszy narzut własny ma PSAC. Na czystym narzucie jest lżejszy
-w obu mikrobenchmarkach, wyraźnie w ArraySum (4--5 razy) i umiarkowanie
+w obu benchmarkach syntetycznych, wyraźnie w ArraySum (4--5 razy) i umiarkowanie
 w DAG-u (1,2--1,6 raza).
 
 \textbf{RQ2.} Query skaluje się stabilniej. PSAC skaluje dobrze na płytkim
@@ -667,21 +692,21 @@ drzewie ArraySum, ale na gęstym DAG-u jego czas potrafi rosnąć wraz z liczbą
 wątków. W kompilatorze oba skalują podobnie i oba wyraźnie lepiej niż
 \texttt{duckc}.
 
-\textbf{RQ3.} Tylko częściowo. Kierunek przewagi się zgadza, skala już nie.
-Przewidywana przewaga rzędu 2,5 raza skurczyła się do 5--20\% na zimno i do
-nieistotnej różnicy na ciepło.
+\textbf{RQ3.} Tylko częściowo. Przewidywany kierunek różnicy się potwierdził, ale
+w prawdziwym kompilatorze okazała się ona znacznie mniejsza: zamiast 2,5 raza
+mamy 5--20\% przy pełnej kompilacji i różnicę nieistotną przy aktualizacjach.
 
-\textbf{RQ4.} Decyduje granularność. Przy równej granularności silniki są nie do
-odróżnienia, a poprawa granularności w obrębie jednego silnika dała efekt o rząd
-wielkości większy.
+\textbf{RQ4.} Większe znaczenie ma granularność. Przy jednakowej granularności
+wyników obu silników nie da się odróżnić, a jej poprawa w obrębie jednego silnika
+przyniosła efekt o rząd wielkości większy.
 
-Praktyczna rekomendacja dla kompilatora Duckling brzmi więc: zostać przy
-frameworku Query, bo jest już zintegrowany z produkcyjnym potokiem i nie kosztuje
-mierzalnie więcej przy tej wielkości zadań, a wysiłek kierować na precyzję
-zależności i na fazy leżące poza grafem.
+Dla kompilatora Duckling oznacza to, że nie widzimy powodu do zmiany frameworka.
+Query jest już zintegrowany z resztą potoku i przy tej wielkości zadań nie
+kosztuje mierzalnie więcej niż PSAC, więc dalszy wysiłek lepiej kierować na
+precyzję zależności i na fazy leżące poza grafem.
 
-Dalsze prace to przede wszystkim: uczynienie front endu inkrementalnym, co
-usunęłoby podłogę 100~ms i dopiero wtedy pozwoliłoby uczciwie zmierzyć same
+Wśród dalszych prac widzimy przede wszystkim uczynienie front endu
+inkrementalnym, co usunęłoby podłogę 100~ms i dopiero wtedy pozwoliłoby uczciwie zmierzyć same
 silniki; zrównoleglenie liczenia stabilnych hashy w \texttt{duckc} (eksperyment
 wskazał skrócenie parsowania z 202~ms do 67~ms); pomiar zużycia pamięci obu
 silników; oraz dokończenie listy z sekcji~\ref{sec:optymalizacje}.
@@ -697,9 +722,9 @@ silników; oraz dokończenie listy z sekcji~\ref{sec:optymalizacje}.
 \toprule
 \textbf{Osoba} & \textbf{Obszar odpowiedzialności} & \textbf{Wkład} \\
 \midrule
+Jakub Bartmiński   & \dopisz & \dopisz \\
 Piotr Oleszczuk    & \dopisz & \dopisz \\
 Piotr Trzaskowski  & \dopisz & \dopisz \\
-Jakub Bartmiński   & \dopisz & \dopisz \\
 \bottomrule
 \end{tabular}
 \end{table}
