@@ -181,6 +181,7 @@ namespace compiler::helios::mangler {
 
 			if (const auto package_ref_opt = global_state::getPackageRefOpt(package_id)) {
 				/* we're in a package */
+				// @todo: #3505 - currently changing package name doesn't invalidate old symbols
 				auto raw_package_name = package_ref_opt.value()->getName().str();
 
 				// @todo: #3286 for now we allow '-' and just treat it as '_'
