@@ -1,3 +1,5 @@
+#pragma once
+
 #include "jit_helper.hpp"
 
 #include <vm/core/safe/low_program/opcodes.hpp>
