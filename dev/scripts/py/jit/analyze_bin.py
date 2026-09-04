@@ -87,7 +87,7 @@ def split_shared_relocations(
         exit(2)
     return split_section_relocations(shared_section, stencils)
 
-def parse(llvm_readobj: str, binary: str, verbose: bool) -> list[Stencil]:
+def parse(llvm_readobj: str, binary: str, verbose: bool) -> list[ELFSection]:
     readobj_args = [
         "--elf-output-style=JSON",
         "--expand-relocs",
@@ -96,7 +96,7 @@ def parse(llvm_readobj: str, binary: str, verbose: bool) -> list[Stencil]:
         "--section-relocations",
         "--section-symbols",
         "--sections",
-        f"{binary.name}",
+        f"{binary}",
     ]
     readobj_output = run_llvm_tool(llvm_readobj, readobj_args, echo=verbose)
 
@@ -130,7 +130,7 @@ def generate_stencils(
     verbose: bool,
     shared: bool,
 ) -> list[Stencil]:
-    sections = parse(llvm_readobj, binary, verbose)
+    sections = parse(llvm_readobj, binary.name, verbose)
 
     function_sections = [section for section in sections if is_function_section(section)]
     function_names = [get_function_name(section) for section in function_sections]
