@@ -9,7 +9,13 @@
 
 namespace vm {
 
-	class Block;
+	template<typename EntryT>
+	class GenericBlock;
+
+	using Block = GenericBlock<std::byte>;
+
+	template<typename EntryT, typename BlockT>
+	class GenericMemory;
 
 	/**
 	 * @brief Basic pointer used in the VM.
@@ -24,12 +30,13 @@ namespace vm {
 		MRef<Block> block;
 		u64         offset;
 
-		Pointer(): block(nullptr), offset(0) {}
+		constexpr Pointer(): block(nullptr), offset(0) {}
 
-		friend class Memory;
+		template<typename E, typename B>
+		friend class GenericMemory;
 
 	public:
-		Pointer(Ref<Block> block, u64 offset): block(block.get()), offset(offset) {}
+		constexpr Pointer(Ref<Block> block, u64 offset): block(block.get()), offset(offset) {}
 
 		void movePointer(u64 move_by) {
 			if (block == nullptr) throw exceptions::VMNullPointerAccessException();
@@ -61,7 +68,7 @@ namespace vm {
 
 		operator bool() const { return !isNull(); }
 
-		static Pointer null() { return {}; }
+		static constexpr Pointer null() { return {}; }
 
 		constexpr bool operator==(const Pointer&) const = default;
 	};

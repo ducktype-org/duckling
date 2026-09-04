@@ -16,7 +16,7 @@ int main() {
 	std::cout << "{\n";
 #define HANDLE_MICRO_INSTR(opcode) PRINT(#opcode)
 
-#include "../../safe/low_program/micro_instruction_definitions.hpp"
+#include "../../safe/low_program/micro_instruction_definitions.def.hpp"
 #undef HANDLE_MICRO_INSTR
 
 	PRINT("special_return");

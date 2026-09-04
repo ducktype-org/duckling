@@ -7,5 +7,5 @@
  */
 
 #define DEBUG_OPCODES
-#include "opcodes_functions_impl_base.hpp"
+#include "opcodes_functions_impl_base.def.hpp"
 #undef DEBUG_OPCODES

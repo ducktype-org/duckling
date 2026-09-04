@@ -24,6 +24,7 @@ namespace lang_def {
 
 		precedence.put({ NamedOperator::DoublePlus, OperatorType::UnaryRight }, 1);
 		precedence.put({ NamedOperator::Minus, OperatorType::UnaryRight }, 1);
+		precedence.put({ NamedOperator::BitNot, OperatorType::UnaryRight }, 1);
 
 		precedence.put({ NamedOperator::Exponentiate, OperatorType::Binary }, 2);
 
@@ -34,7 +35,15 @@ namespace lang_def {
 		precedence.put({ NamedOperator::Plus, OperatorType::Binary }, 4);
 		precedence.put({ NamedOperator::Minus, OperatorType::Binary }, 4);
 
-		precedence.put({ NamedOperator::Assign, OperatorType::Binary }, 5);
+		precedence.put({ NamedOperator::LeftShift, OperatorType::Binary }, 5);
+		precedence.put({ NamedOperator::RightShift, OperatorType::Binary }, 5);
+
+
+		precedence.put({ NamedOperator::Ampersand, OperatorType::Binary }, 6);
+		precedence.put({ NamedOperator::BitXor, OperatorType::Binary }, 7);
+		precedence.put({ NamedOperator::Pipe, OperatorType::Binary }, 8);
+
+		precedence.put({ NamedOperator::Assign, OperatorType::Binary }, 9);
 
 		associativity.put(
 			{ NamedOperator::Period, OperatorType::Binary }, OperatorAssociativity::LeftToRight
@@ -47,7 +56,9 @@ namespace lang_def {
 		associativity.put(
 			{ NamedOperator::Minus, OperatorType::UnaryRight }, OperatorAssociativity::RightToLeft
 		);
-
+		associativity.put(
+			{ NamedOperator::BitNot, OperatorType::UnaryRight }, OperatorAssociativity::RightToLeft
+		);
 		associativity.put(
 			{ NamedOperator::Exponentiate, OperatorType::Binary }, OperatorAssociativity::RightToLeft
 		);
@@ -67,6 +78,23 @@ namespace lang_def {
 		);
 		associativity.put(
 			{ NamedOperator::Minus, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
+
+		associativity.put(
+			{ NamedOperator::LeftShift, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
+		associativity.put(
+			{ NamedOperator::RightShift, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
+
+		associativity.put(
+			{ NamedOperator::Ampersand, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
+		associativity.put(
+			{ NamedOperator::BitXor, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
+		associativity.put(
+			{ NamedOperator::Pipe, OperatorType::Binary }, OperatorAssociativity::LeftToRight
 		);
 
 		associativity.put(

@@ -7,6 +7,7 @@
 #include "utils/test_utils.hpp"
 
 #include <ctv/ctv.hpp>
+#include <driver/test_utils.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
@@ -14,6 +15,7 @@
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -42,6 +44,19 @@ public:
 		TESTER_ADD_TEST(lifetimeFlagsNestedBlocks);
 		TESTER_ADD_TEST(destructorInsertionTest);
 		TESTER_ADD_TEST(intermediateDestructorBlocksTest);
+	}
+
+protected:
+	/**
+	 * Some of the modules below hold a `box`, whose allocation and destruction go through the
+	 * `boxAlloc`/`boxFree` primitives of `core.containers`, so the standard library has to be
+	 * loaded. The modules themselves are still built as standalone trees by `getModule`.
+	 */
+	void beforeAll() override {
+		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		auto         init_result
+			= compiler::driver::test_utils::initializeCompilerForTests({}, artifacts_path);
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}
 
 private:
@@ -743,10 +758,10 @@ private:
 
 			ASSERT_EQUAL_PRINT(0, countOperation(ctor, Destruct));
 			ASSERT_TRUE(std::ranges::any_of(allInstructions(ctor), [&](const auto* instr) {
-				return instr->operation == Call && callsFunction(*instr, "box_alloc");
+				return instr->operation == Call && callsFunction(*instr, "boxAlloc");
 			}));
 			ASSERT_TRUE(std::ranges::any_of(allInstructions(dtor.value()), [&](const auto* instr) {
-				return instr->operation == Call && callsFunction(*instr, "box_destructor");
+				return instr->operation == Call && callsFunction(*instr, "boxFree");
 			}));
 		}
 

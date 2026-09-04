@@ -57,16 +57,24 @@ namespace {
 		CompTimeDVM(query::Context& ctx): code_builder(ctx, true) {
 			if (auto res = vm::api::spawn()) {
 				pid = res->pid;
-				if (!initializeCompTimeOps()) pid.reset();
+				if (!initializeCompTimeOps()) {
+					CORE_ASSERT(
+						vm::api::kill(pid.value()), "Failed to kill a freshly spawned comp time DVM"
+					);
+					pid.reset();
+				}
 			}
 		}
 
 		CompTimeDVM(const CompTimeDVM&)            = delete;
 		CompTimeDVM& operator=(const CompTimeDVM&) = delete;
 
-		// @TODO: #1222 Kill the CompTime VM process in the destructor once we get rid of the
-		// deadlock.
-		~CompTimeDVM() = default;
+		~CompTimeDVM() {
+			if (!pid.has_value()) return;
+			// Run the global destructors and validate the memory state after the last evaluation
+			// completed cleanly or force kill the process.
+			(void) vm::api::deinitOrKill(pid.value());
+		}
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
 
@@ -289,7 +297,8 @@ namespace {
 			}
 			variant_default {
 				throw base::NotYetImplemented(
-					"Conversion from ctv to VMValue for this type is not implemented yet"
+					"Conversion from ctv to VMValue for this type is not implemented yet: "
+					+ ctv.getTypeOfStoredValue(ctx).toString() + " " + ctv.toString()
 				);
 			}
 		}

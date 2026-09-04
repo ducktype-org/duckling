@@ -300,7 +300,7 @@ private:
 		);
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessed null CPointer");
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
 	}
 
 	// The same for the raw byte copy.
@@ -320,7 +320,7 @@ private:
 		);
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessed null CPointer");
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
 	}
 
 	// `cmpNull_pcptr` sets the flag on a null cpointer (default-initialized here) and clears it
@@ -1386,7 +1386,7 @@ private:
 		);
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessing null pointer");
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessing null pointer");
 	}
 
 	void duplicateFfiFunctionFails() {

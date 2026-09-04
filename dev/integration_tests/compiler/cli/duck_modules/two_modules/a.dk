@@ -1,0 +1,3 @@
+import b;
+
+fun main() -> i64 = { return b.foo(); }

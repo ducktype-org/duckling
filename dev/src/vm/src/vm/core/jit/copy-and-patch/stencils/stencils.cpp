@@ -47,7 +47,7 @@ namespace vm::jit::cnp {
 			CP_PASS_ARGS                                                                 \
 		);                                                                               \
 	}
-#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+#include <vm/core/safe/low_program/micro_instruction_definitions.def.hpp>
 #undef HANDLE_MICRO_INSTR
 
 	DECLARE_LINK_VARIABLE(jmp_fn);

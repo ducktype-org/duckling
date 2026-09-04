@@ -163,14 +163,14 @@ impl PackageLoader {
         script_folder: &Path,
         global: bool,
     ) -> QuackResult<PackageContext<'duck>> {
-        let associated_script = |package| {
+        let associated_script = |pcx: PackageContext<'_>| {
+            let (package, warnings) = pcx.into_package_and_warnings();
+            let package = package.unwrap_package();
             let script = PackageScript::new(package, script_path.to_path_buf())?;
-            Ok(PackageContext::new_script(script.into(), ctx))
+            Ok(PackageContext::new_script(script.into(), ctx, warnings))
         };
         let global_package = PackageLoader::global_package(ctx)
-            .context_internal("failed to load the global package")?
-            .into_package()
-            .unwrap_package();
+            .context_internal("failed to load the global package")?;
         let has_frontmatter = Script::has_frontmatter(script_path)?;
         // If this is `Ok(_)` then the script lies inside a package.
         let possible_package =
@@ -195,10 +195,7 @@ impl PackageLoader {
             // treat it as a script under the global package (the default of defaults).
             (false, Err(_), false) => associated_script(global_package),
             // Script under a package.
-            (false, Ok(pcx), false) => {
-                let package = pcx.into_package().unwrap_package();
-                associated_script(package)
-            }
+            (false, Ok(pcx), false) => associated_script(pcx),
         }
     }
 }

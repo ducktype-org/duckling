@@ -46,11 +46,16 @@ namespace compiler::driver {
 	 * @brief Config/metadata that needs to be saved in the generated DBC code,
 	 * in order to properly run the code.
 	 */
-	struct DVMRuntimeConfig {
+	struct DVMLinkingOptions {
 		/**
 		 * @brief Shared libraries that have to be loaded to run the code.
 		 */
 		std::vector<std::string> shared_libraries{};
+
+		/**
+		 * @brief DBC libraries paths to link to final executable.
+		 */
+		std::vector<fs::FilePath> link_libraries{};
 	};
 
 	/**
@@ -65,7 +70,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Runtime config of the DVM.
 		 */
-		DVMRuntimeConfig runtime_config = {};
+		DVMLinkingOptions dvm_linking_options = {};
 
 		/**
 		 * @brief If a value is present, use this artifact collection
@@ -84,15 +89,11 @@ namespace compiler::driver {
 		base::StrID output_file_name;
 
 		/**
-		 * @brief Whether to include in the final output the standard
-		 * library packages that the executable depends on.
-		 */
-		bool link_std_packages = false;
-
-		/**
 		 * @brief Runtime config of the DVM.
+		 * @note The standard library packages the executable depends on are added to
+		 * `link_libraries` by `mergeBuildTargetWithGlobalOptions`.
 		 */
-		DVMRuntimeConfig runtime_config = {};
+		DVMLinkingOptions dvm_linking_options = {};
 	};
 
 	/**
@@ -204,5 +205,15 @@ namespace compiler::driver {
 		const options_types::StdLibOptions&  stdlib_options
 	);
 
-	DVMRuntimeConfig constructDVMRuntimeConfig(const options_types::LinkingOptions& linking_options);
+	/**
+	 * @brief Construct DVM linking options for a given task, based on the task's build target and
+	 * the standard library options.
+	 * @param is_static_lib a static library does not link the standard library - that is left to
+	 * the executable depending on it.
+	 */
+	DVMLinkingOptions constructDVMLinkingOptions(
+		const options_types::LinkingOptions& linking_options,
+		const options_types::StdLibOptions&  stdlib_options,
+		bool                                 is_static_lib
+	);
 }
