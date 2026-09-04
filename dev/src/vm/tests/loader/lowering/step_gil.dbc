@@ -1,0 +1,30 @@
+# Fixture for the `stepGil` placement test.
+# `main` mixes plain straight line code with a loop and a call, so the test can check that a
+# `stepGil` is only lowered at the start of the function and in front of the instructions that
+# change the execution flow.
+
+function noop { } -> { } {
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
+	# arg0 -> argc
+	# arg1 -> *argv
+	init_pany_type			tmp, i64;
+	mov_p64_imm         	tmp, 0;
+	mov_p64_imm         	tmp, 1;
+	mov_p64_imm         	tmp, 2;
+
+	label Loop;
+		add_p64_imm			tmp, 1;
+		cmpEq_p64_imm		tmp, 0;
+		jmpIf_label 	  	Loop;
+
+	call_func           	noop;
+
+	deinit; # tmp
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}

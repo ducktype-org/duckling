@@ -127,6 +127,11 @@ namespace fs {
 			return std::filesystem::exists(path);
 	}
 
+	bool FilePath::isRegularFile() const {
+		if (type == PathType::Virtual) return vfs->isFile(path);
+		return std::filesystem::is_regular_file(path);
+	}
+
 	std::string FilePath::uri() const {
 		return filepath_utils::formatFileUri(path.generic_string());
 	}

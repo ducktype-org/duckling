@@ -8,7 +8,7 @@ from utilities import *
 
 expected_manifest = """metadata:
   name: foo
-  version: 1.0.0
+  version: '1.0.0'
 dependencies:
   a:
     source:

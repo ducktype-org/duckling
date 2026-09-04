@@ -29,8 +29,14 @@ cd "$(dirname "$0")"/../../ || exit 1
 # Gather the C++ files. A failed listing must not read as "nothing to format"
 listing=$(python3 toolbox.py list-files "${scope[@]}" "${untracked[@]}" --extensions .cpp --extensions .hpp --extensions .cc --extensions .cxx --extensions .h) || exit 1
 
-# One element per file, so a path with spaces and an empty listing both behave
-readarray -t files < <(printf '%s' "$listing")
+# One element per file, so a path with spaces and an empty listing both behave.
+# A read loop rather than `readarray`: the latter is a bash 4 builtin, and macOS ships bash 3.2,
+# where it silently leaves the array empty and the run looks like "nothing to format".
+files=()
+while IFS= read -r file; do
+    [[ -n $file ]] || continue
+    files+=("$file")
+done <<< "$listing"
 
 # Check if there is anything to format
 if [[ ${#files[@]} -eq 0 ]]; then

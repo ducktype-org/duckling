@@ -567,12 +567,6 @@ namespace compiler::helios::mangler {
 						// types such as i32), so we omit it. Any ambiguities are solved by the
 						// function type anyway.
 						switch (builtin.kind) {
-						case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
-							return "Hba" + func(ctx, symbol_id) + "E";
-						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
-							return "Hbf" + func(ctx, symbol_id) + "E";
-						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
-							return "Hbd" + func(ctx, symbol_id) + "E";
 						case defgen::BuiltinTemplatedSymbol::Kind::MoveIn:
 							return "Hmin" + func(ctx, symbol_id) + "E";
 						}

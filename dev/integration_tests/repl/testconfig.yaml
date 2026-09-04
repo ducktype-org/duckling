@@ -13,6 +13,9 @@ PostCase: "@{cleanup_tmp_env}"
 
 Run: "@{duckc_path} repl @{disable-bracketed-paste} --custom-std-artifacts-path @{case_std_artifacts}"
 
+# REPL tends to time-out, so we give it a nice, 8s legroom 
+timeout_default: 8
+
 prompt: "duckling> "
 welcome_message: "Duckling REPL\nType /help for available commands, /exit to quit.\nPress Enter to submit. Press Alt+Enter for new line.\n"
 beginning: "@{welcome_message}"

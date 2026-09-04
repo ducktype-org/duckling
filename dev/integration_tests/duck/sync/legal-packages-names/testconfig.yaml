@@ -25,7 +25,7 @@ Tests:
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
-            info: no need to run the solver engine
+            info: no need to run the gathering or the solver engine
             info: starting fetching 1 package
             info: successfully synchronized venv \`@{package-name}\`"
       dependency-can-contain-a-dash:

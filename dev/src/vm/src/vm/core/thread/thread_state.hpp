@@ -43,7 +43,7 @@
 #include <type_traits>
 #include <variant>
 
-namespace vm::thread_sm {
+namespace vm {
 	namespace thread_state {
 
 		struct NotStarted {};  ///< The thread object exists but its exec-thread was never spawned.
@@ -103,74 +103,74 @@ namespace vm::thread_sm {
 
 		using ThreadEvent
 			= std::variant<Spawn, Pause, Resume, EnterSleep, WakeUp, Finish, Kill, Panic>;
-	}
 
-	/**
-	 * @brief The transition function of the VMThread state machine.
-	 *
-	 * @return The new state if the `(state, event)` transition is allowed, `std::nullopt`
-	 * otherwise.
-	 */
-	[[nodiscard]] inline base::Optional<thread_state::ThreadState> applyThreadEvent(
-		const thread_state::ThreadState& state, const thread_event::ThreadEvent& event
-	) {
-		namespace st = thread_state;
-		namespace ev = thread_event;
-		using R      = base::Optional<st::ThreadState>;
+		/**
+		 * @brief The transition function of the VMThread state machine.
+		 *
+		 * @return The new state if the `(state, event)` transition is allowed, `std::nullopt`
+		 * otherwise.
+		 */
+		[[nodiscard]] inline base::Optional<thread_state::ThreadState> applyThreadEvent(
+			const thread_state::ThreadState& state, const ThreadEvent& event
+		) {
+			namespace ts = thread_state;
+			namespace te = thread_event;
+			using R      = base::Optional<ts::ThreadState>;
 
-		variant_match(event) {
-			variant_case_novalue(ev::Spawn) {
-				if (v_matches(state, st::NotStarted, st::Completed, st::Stopped, st::Panicked))
-					return R{ st::Running{} };
+			variant_match(event) {
+				variant_case_novalue(te::Spawn) {
+					if (v_matches(state, ts::NotStarted, ts::Completed, ts::Stopped, ts::Panicked))
+						return R{ ts::Running{} };
+				}
+				variant_case_novalue(te::Pause) {
+					if (v_matches(state, ts::Running)) return R{ ts::Paused{} };
+				}
+				variant_case_novalue(te::Resume) {
+					if (v_matches(state, ts::Paused)) return R{ ts::Running{} };
+				}
+				variant_case_novalue(te::EnterSleep) {
+					if (v_matches(state, ts::Running)) return R{ ts::Sleeping{} };
+				}
+				variant_case_novalue(te::WakeUp) {
+					if (v_matches(state, ts::Sleeping)) return R{ ts::Running{} };
+				}
+				variant_case(te::Finish, finish) {
+					if (v_matches(state, ts::Running, ts::Paused))
+						return R{ ts::Completed{ finish.exit_value } };
+				}
+				variant_case(te::Panic, panic) {
+					if (v_matches(state, ts::Running, ts::Sleeping, ts::Paused))
+						return R{ ts::Panicked{ panic.msg } };
+				}
+				variant_case_novalue(te::Kill) {
+					if (v_matches(state, ts::NotStarted, ts::Running, ts::Sleeping, ts::Paused))
+						return R{ ts::Stopped{} };
+				}
 			}
-			variant_case_novalue(ev::Pause) {
-				if (v_matches(state, st::Running)) return R{ st::Paused{} };
-			}
-			variant_case_novalue(ev::Resume) {
-				if (v_matches(state, st::Paused)) return R{ st::Running{} };
-			}
-			variant_case_novalue(ev::EnterSleep) {
-				if (v_matches(state, st::Running)) return R{ st::Sleeping{} };
-			}
-			variant_case_novalue(ev::WakeUp) {
-				if (v_matches(state, st::Sleeping)) return R{ st::Running{} };
-			}
-			variant_case(ev::Finish, finish) {
-				if (v_matches(state, st::Running, st::Paused))
-					return R{ st::Completed{ finish.exit_value } };
-			}
-			variant_case(ev::Panic, panic) {
-				if (v_matches(state, st::Running, st::Sleeping, st::Paused))
-					return R{ st::Panicked{ panic.msg } };
-			}
-			variant_case_novalue(ev::Kill) {
-				if (v_matches(state, st::NotStarted, st::Running, st::Sleeping, st::Paused))
-					return R{ st::Stopped{} };
-			}
+			return std::nullopt;
 		}
-		return std::nullopt;
 	}
 
 }
 
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::NotStarted, "NotStarted")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Running, "Running")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Sleeping, "Sleeping")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Paused, "Paused")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Stopped, "Stopped")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Completed, "Completed")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_state::Panicked, "Panicked")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::NotStarted, "NotStarted")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::Running, "Running")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::Sleeping, "Sleeping")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::Paused, "Paused")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::Stopped, "Stopped")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::Completed, "Completed")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_state::Panicked, "Panicked")
 
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Spawn, "Spawn")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Pause, "Pause")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Resume, "Resume")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::EnterSleep, "EnterSleep")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::WakeUp, "WakeUp")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Finish, "Finish")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Kill, "Kill")
-JSON_REGISTER_TYPE_WITH_NAME(vm::thread_sm::thread_event::Panic, "Panic")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Spawn, "Spawn")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Pause, "Pause")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Resume, "Resume")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::EnterSleep, "EnterSleep")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::WakeUp, "WakeUp")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Finish, "Finish")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Kill, "Kill")
+JSON_REGISTER_TYPE_WITH_NAME(vm::thread_event::Panic, "Panic")
 
-namespace vm::thread_sm {
+namespace vm {
 	namespace thread_state {
 		[[nodiscard]] inline std::string_view threadStateName(const ThreadState& state) {
 			return VISIT(state, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());

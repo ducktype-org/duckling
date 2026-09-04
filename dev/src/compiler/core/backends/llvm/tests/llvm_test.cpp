@@ -84,13 +84,23 @@ private:
 		});
 
 		// debug print for coverage only:
-		llvm_module_opt->debugPrint();
+		auto llvm_module_dprint = llvm_module_opt->dumpLLVMToString();
+
+		// clone for coverage:
+		auto cloned        = llvm_module_opt->clone();
+		auto cloned_dprint = cloned.dumpLLVMToString();
+
+		ASSERT_EQUAL(llvm_module_dprint, cloned_dprint);
 
 		// verify integrity, then return for further checks.
 		assertTrue(
 			llvm_module_opt->verify().isOk(),
 			"LLVM module verification failed (enable Backend dev logs to see details)"
 		);
+
+		assertTrue(cloned.verify().isOk(), "Cloned LLVM module verification failed");
+
+
 		return std::move(llvm_module_opt.value());
 	}
 
@@ -199,17 +209,34 @@ private:
 			return count;
 		};
 
-		std::regex alloc_re(R"(call ptr @builtin_alloc\(i64 4\))");
+		// The storage of a box comes from `core.containers`: `new` calls the `boxAlloc` language
+		// primitive, which on a native target ends up in libc `malloc`. Every step of that chain
+		// is emitted into this module, so both ends are visible here.
 		assertTrue(
-			std::regex_search(ir, alloc_re), "Expected @builtin_alloc with size 4 for 'box i32'"
+			count_matches(R"(define linkonce_odr ptr @\S*8boxAlloc)") == 1,
+			"Expected the baked 'boxAlloc' primitive to be emitted for 'box i32'"
 		);
-		std::regex store_re(R"(store i32 42, ptr)");
-		assertTrue(std::regex_search(ir, store_re), "Expected 'store i32 42' for box init");
-		std::regex dealloc_re(R"(call void @builtin_dealloc\(ptr)");
-		assertTrue(std::regex_search(ir, dealloc_re), "Expected @builtin_dealloc");
+		assertTrue(
+			count_matches(R"(define linkonce_odr void @\S*7boxFree)") == 1,
+			"Expected the baked 'boxFree' primitive to be emitted for 'box i32'"
+		);
 
-		int alloc_count   = count_matches(R"(call ptr @builtin_alloc)");
-		int dealloc_count = count_matches(R"(call void @builtin_dealloc)");
+		// `new 42` hands the boxed value to `boxAlloc`, which moves it into the fresh storage -
+		// so the literal shows up as a call argument now, not as a store here.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(call ptr @\S+\(i32 42\))" }),
+			"Expected the boxed value 42 to be passed to the box allocation"
+		);
+		// `box i32` asks for 4 bytes, which the primitive reads off this baked constant.
+		assertTrue(
+			std::regex_search(
+				ir, std::regex{ R"(@\S*LLVM_OBJECT_SIZE\S* = linkonce_odr constant i64 4)" }
+			),
+			"Expected the allocation size baked for 'box i32' to be 4"
+		);
+
+		int alloc_count   = count_matches(R"(call ptr @malloc\()");
+		int dealloc_count = count_matches(R"(call void @free\(ptr)");
 		ASSERT_EQUAL_PRINT(alloc_count, dealloc_count);
 		ASSERT_EQUAL_PRINT(alloc_count, 1);
 	}
@@ -218,20 +245,39 @@ private:
 		auto        llvm_module = getLLVMModuleFromPath("modules/static_arrays");
 		std::string ir          = llvm_module.dumpLLVMToString();
 
-		// Was [10 x i32] type found.
+		// Was [11 x i32] type found.
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(\[10\s+x\s+i32\])" }),
-			"Expected array type [10 x i32]"
+			std::regex_search(ir, std::regex{ R"(\[11\s+x\s+i32\])" }),
+			"Expected array type [11 x i32]"
 		);
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(store\s+\[10\s+x\s+i32\]\s+zeroinitializer)" }),
-			"Expected zero-initialization of i32[10]"
+			std::regex_search(
+				ir,
+				std::regex{ R"(call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+44,\s+i1\s+false)" }
+			),
+			"Expected zero-initialization of i32[11]"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(alloca\s+\[99000\s+x\s+i64\])" }),
+			"Expected array type [99000 x i64]"
+		);
+		assertTrue(
+			std::regex_search(
+				ir,
+				std::regex{
+					R"(define[^\n]*large_array_test[\s\S]*?call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+792000,\s+i1\s+false)" }
+			),
+			"Expected zero-initialization of i64[99000] with memset"
+		);
+		assertFalse(
+			std::regex_search(ir, std::regex{ R"(store\s+\[99000\s+x\s+i64\]\s+zeroinitializer)" }),
+			"Large array must not be zero-initialized with an aggregate store"
 		);
 
 		// arr[3]
 		assertTrue(
 			std::regex_search(
-				ir, std::regex{ R"(getelementptr.*\[10\s+x\s+i32\].*i32\s+0,\s+i64\s+%)" }
+				ir, std::regex{ R"(getelementptr.*\[11\s+x\s+i32\].*i32\s+0,\s+i64\s+%)" }
 			),
 			"Expected GEP instruction for array indexing arr[3]"
 		);
@@ -287,18 +333,22 @@ private:
 			"Expected default initialization of f64 with 0.000000e+00"
 		);
 
-		// Point = zeroinitializer @class.point
-		assertTrue(
-			std::regex_search(ir, std::regex{ R"(store\s+%.+\s+zeroinitializer,\s+ptr\s+%\w+)" }),
-			"Expected default initialization of Point with zeroinitializer"
-		);
-
-		// i32[5] = zeroinitializer [5 x i32]
+		// Point occupies 8 bytes.
 		assertTrue(
 			std::regex_search(
-				ir, std::regex{ R"(store\s+\[5\s+x\s+i32\]\s+zeroinitializer,\s+ptr\s+%\w+)" }
+				ir,
+				std::regex{ R"(call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+8,\s+i1\s+false)" }
 			),
-			"Expected default initialization of i32[5] with zeroinitializer"
+			"Expected default initialization of Point with memset"
+		);
+
+		// i32[5] occupies 20 bytes.
+		assertTrue(
+			std::regex_search(
+				ir,
+				std::regex{ R"(call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+20,\s+i1\s+false)" }
+			),
+			"Expected default initialization of i32[5] with memset"
 		);
 	}
 

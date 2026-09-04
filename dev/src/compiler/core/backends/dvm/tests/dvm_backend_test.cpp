@@ -5,6 +5,7 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
+#include <os_utils/system_libraries.hpp>
 #include <program_lowering_context.hpp>
 #include <tsl/queries.hpp>
 #include <vm_tester_utils.hpp>
@@ -20,14 +21,6 @@
 #include <utility>
 
 using namespace compiler::driver;
-
-namespace {
-#ifdef __APPLE__
-	const std::vector<std::string> SYSTEM_FFI_LIBS{ "libSystem.B.dylib" };
-#else
-	const std::vector<std::string> SYSTEM_FFI_LIBS{ "libc.so.6", "libm.so.6" };
-#endif
-}
 
 class DVMBackendTest final: public VmTestSuite {
 #undef TESTER_CLASS
@@ -51,6 +44,7 @@ public:
 		TESTER_ADD_TEST(backendDependentTest);
 		TESTER_ADD_TEST(allocTest);
 		TESTER_ADD_TEST(ffiTest);
+		TESTER_ADD_TEST(bitwiseOperationsTest);
 		TESTER_ADD_TEST(variantUnitAlternativeTest);
 	}
 
@@ -80,6 +74,7 @@ protected:
 			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
 			{ fs::FilePath(path("modules/alloc/")), "alloc" },
 			{ fs::FilePath(path("modules/ffi/")), "ffi" },
+			{ fs::FilePath(path("modules/bitwise_operations/")), "bitwise_operations" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -150,7 +145,7 @@ private:
 		i64                                exit_code = 0
 	) {
 		auto code         = getModuleFromPath(module_path, ALL_CORE_MODULES);
-		code.object_files = SYSTEM_FFI_LIBS;
+		code.object_files = { os_utils::systemSharedLibC(), os_utils::systemSharedLibM() };
 		runTestOnVm(code, {}, output, {}, exit_code);
 	}
 
@@ -184,8 +179,8 @@ private:
 				"Expected error message to contain: \"", fail_msg, "\", but got: ", err_str
 			));
 		}
-		const auto validation_result = vm::api::deinitAndValidate(result.pid);
-		ASSERT_HAS_VALUE(validation_result);
+
+		ASSERT_HAS_VALUE(vm::api::kill(result.pid));
 	}
 
 	/**
@@ -300,6 +295,8 @@ private:
 			"4\n50\n4\n"
 		);
 	}
+
+	void bitwiseOperationsTest() { runTest("bitwise_operations", {}, {}, {}, 0); }
 };
 
 

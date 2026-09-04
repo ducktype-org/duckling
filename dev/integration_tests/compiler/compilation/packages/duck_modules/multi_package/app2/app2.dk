@@ -1,6 +1,11 @@
 import lib_a;
 
+extern("C") {
+    fundecl c_helper_value() -> i64;
+}
+
 fun main() -> i64 = {
     builtin_output_i64(lib_a.a_value() * 2);
+    builtin_output_i64(c_helper_value());
     return 0;
 }
