@@ -383,9 +383,11 @@ namespace vm {
 				if (my_data.until_compilation[cfg_offset] == 0) {
 					// should be compiled with the first viable compiler
 	#if COMPILE_WITH_CNP
-					my_data.cp_memory
+					auto expected_compiled
 						= jit::compileCP(my_data.cfgs[cfg_offset], original_function.bc);
-					auto cp_compiled = my_data.cp_memory.value().intoFunc<jit::JitCPFunc>();
+					if (!expected_compiled) CORE_PANIC(std::move(expected_compiled).error());
+					my_data.cp_memory = std::move(expected_compiled).value();
+					auto cp_compiled  = my_data.cp_memory.value().intoFunc<jit::JitCPFunc>();
 					std::invoke(cp_compiled, CP_PASS_ARGS);
 					frame                                 = thread.runtime_data.frame_stack_current;
 					instr                                 = frame->instr;

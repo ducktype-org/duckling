@@ -84,7 +84,7 @@ namespace vm::jit {
 	/**
 	 * @brief Compile the function on the C1, Copy&Patch-based compiler.
 	 */
-	cnp::JitFuncMemory compileCP(
+	std::expected<cnp::JitFuncMemory, std::string> compileCP(
 		const vm::low::cf::ControlFlowGraph& cfg, const vm::low::MicroBytecode& bc
 	);
 }

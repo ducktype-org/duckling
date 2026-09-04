@@ -12,7 +12,7 @@
 #include <functional>
 
 namespace vm::jit {
-	cnp::JitFuncMemory compileCP(
+	std::expected<cnp::JitFuncMemory, std::string> compileCP(
 		const vm::low::cf::ControlFlowGraph& cfg, const vm::low::MicroBytecode& bc
 	) {
 		using namespace cnp;
@@ -64,8 +64,8 @@ namespace vm::jit {
 		}
 
 		auto memory_result = JitFuncMemory::allocate(block_offsets.back());
-		if (!memory_result) CORE_PANIC(memory_result.error());
-		auto  memory = std::move(*memory_result);
+		if (!memory_result) return std::unexpected{ std::move(memory_result).error() };
+		auto  memory = std::move(memory_result).value();
 		byte* next   = memory.addr;
 
 		auto patch_stencil = [&](u64 opcode, auto func) {
@@ -152,7 +152,9 @@ namespace vm::jit {
 			(memory.dump("compiled_function.cnp"),
 		     "Compiled function dumped to: compiled_function.cnp")
 		);
-		(void) memory.markExecutable();
+
+		if (auto mark_result = memory.markExecutable(); !mark_result)
+			return std::unexpected(std::move(mark_result).error());
 		return memory;
 	}
 }
