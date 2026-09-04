@@ -135,11 +135,12 @@ async fn fetch_source_code(
     // If the result is an error, tries to remove the malformed package from storage.
     macro_rules! rm_and_log {
         ($e:expr) => {{
+            let result = $e;
             let mut logger = logger.borrow_mut();
-            if $e.is_err() {
+            if result.is_err() {
                 logger.log_result(storage.try_remove_pkg(pkg_id));
             }
-            logger.log_result($e)?
+            logger.log_result(result)?
         }};
     }
     let url = pkg_id.url();
