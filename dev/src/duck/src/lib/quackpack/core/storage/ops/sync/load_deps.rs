@@ -38,7 +38,7 @@ pub struct SuccessfullyLoadedPackage {
 
 #[derive(Debug, Clone, Default)]
 /// A result of the procedure of loading dependencies.
-pub struct LoadedDependencies {
+pub struct LoadedFreezePackages {
     /// Pairing between dependencies and fetched contents viewed as packages.
     pub _pkgs: Vec<(PackageId, AnyPackage)>,
     /// Number of packages which source codes had to be downloaded, used for user messages.
@@ -47,7 +47,7 @@ pub struct LoadedDependencies {
     pub already_present_num: usize,
 }
 
-/// Load dependencies, firstly fetching them is they are not present on the machine.
+/// Load packages from the freeze, firstly fetching them is they are not present on the machine.
 /// This means downloading them if they have not yet been downloaded,
 /// and loading them from storage as packages.
 ///
@@ -55,18 +55,18 @@ pub struct LoadedDependencies {
 /// ----
 /// We use [`ErrorsLogger`] to delay bailing, downloading as many dependencies as possible.
 #[tracing::instrument(skip_all)]
-pub fn load_dependencies(
+pub fn load_packages_in_freeze(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
     pkgs: Vec<PackageId>,
-) -> QuackResult<LoadedDependencies> {
+) -> QuackResult<LoadedFreezePackages> {
     if pkgs.is_empty() {
         warn!("requested to load 0 packages");
-        return Ok(LoadedDependencies::default());
+        return Ok(LoadedFreezePackages::default());
     }
     let count = pkgs.len();
     fetcher.ctx().console().info(format!(
-        "starting fetching {count} package{}",
+        "starting loading {count} package{}",
         count.s_if_plural()
     ))?;
     let fetcher_lock = fetcher
@@ -76,7 +76,7 @@ pub fn load_dependencies(
     let max_connections = fetcher.ctx().max_open_connections();
     let logger = RefCell::new(ErrorsLogger::default());
     let fetches = stream::iter(pkgs)
-        .map(|pkg| load_dependency(storage, fetcher, pkg, &logger))
+        .map(|pkg| load_package(storage, fetcher, pkg, &logger))
         .buffer_unordered(max_connections)
         .collect::<Vec<_>>();
     let fetches = block_on(fetches);
@@ -93,7 +93,7 @@ pub fn load_dependencies(
         }
         pkgs.push((fetch.id, fetch.pkg));
     }
-    Ok(LoadedDependencies {
+    Ok(LoadedFreezePackages {
         _pkgs: pkgs,
         freshly_downloaded_num,
         already_present_num,
@@ -115,10 +115,10 @@ fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResu
     )
 }
 
-/// Helper for [`load_dependencies`].
-/// Fetches the source code of a package, downloading it if not present and loading the package from storage.
+/// Helper for [`load_packages_in_freeze`].
+/// Loads a package, downloading it if not present and loading it from storage (except for local packages).
 #[tracing::instrument(skip_all, fields(?pkg_id))]
-async fn load_dependency(
+async fn load_package(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
     pkg_id: PackageId,
@@ -138,7 +138,13 @@ async fn load_dependency(
             let result = $e;
             let mut logger = logger.borrow_mut();
             if result.is_err() {
-                logger.log_result(storage.try_remove_pkg(pkg_id));
+                logger.log_result(storage.try_remove_pkg(pkg_id).with_context(|| {
+                    format!(
+                        "when trying to remove a malformed dependency {} {} from its storage",
+                        pkg_id.name(),
+                        pkg_id.version()
+                    )
+                }));
             }
             logger.log_result(result)?
         }};
@@ -173,7 +179,7 @@ async fn load_dependency(
     })
 }
 
-/// Helper for [`load_dependency`].
+/// Helper for [`load_package`].
 /// Checks if the git package is stored in storage, if not clones it.
 /// Returns path to the package in storage and whether it had to be cloned.
 #[tracing::instrument(skip_all)]
@@ -213,7 +219,7 @@ fn mark_cloned_git_as_stored(pkg: PackageId, storage: &Storage) -> QuackResult<(
     Ok(())
 }
 
-/// Helper for [`load_dependency`].
+/// Helper for [`load_package`].
 /// Checks if the registry package is stored in storage, if not downloads it.
 /// Returns path to the package in storage and whether it had to be downloaded.
 async fn fetch_registry(
@@ -263,7 +269,7 @@ fn unpack_package_blob(pkg: PackageId, storage: &Storage, blob_path: &Path) -> Q
     Ok(())
 }
 
-/// Generate error message that the downloaded dependency is malformed (does not load).
+/// Generate error message that the downloaded dependency is malformed (fails to load).
 fn malformed_dependency_msg(pkg_id: PackageId, pkg_dir: &Path, url: InternedUrl) -> String {
     match pkg_id.kind() {
         FullKind::Registry => format!(

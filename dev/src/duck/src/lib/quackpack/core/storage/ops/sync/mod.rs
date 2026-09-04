@@ -17,7 +17,7 @@ use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::git_access::StorageGitAccess;
 use crate::quackpack::core::storage::locks::TrySyncLock;
 use crate::quackpack::core::storage::ops::sync::load_deps::{
-    LoadedDependencies, load_dependencies,
+    LoadedFreezePackages, load_packages_in_freeze,
 };
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
@@ -93,11 +93,11 @@ pub fn sync(
         .collect();
     let new_freeze = solver_answer.new_freeze.generate_storage_freeze()?;
 
-    let LoadedDependencies {
+    let LoadedFreezePackages {
         _pkgs,
         freshly_downloaded_num,
         already_present_num,
-    } = load_dependencies(&storage, &fetcher, pkgs)?;
+    } = load_packages_in_freeze(&storage, &fetcher, pkgs)?;
     make_after_fetch_message(pcx.ctx(), already_present_num, freshly_downloaded_num)?;
 
     let venv = update_venv(venv, venv_config, new_freeze, id, pcx);
