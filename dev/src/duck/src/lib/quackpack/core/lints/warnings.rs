@@ -14,10 +14,10 @@ impl<T: Warning + ?Sized> Warning for &mut T {}
 impl<T: Warning + ?Sized> Warning for Box<T> {}
 impl<T: Warning + ?Sized> Warning for Arc<T> {}
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 /// Warnings encountered when parsing the manifest.
 pub struct Warnings {
-    warnings: Vec<Arc<dyn Warning + 'static>>,
+    warnings: Vec<Box<dyn Warning + 'static>>,
 }
 
 impl Warnings {
@@ -28,7 +28,7 @@ impl Warnings {
 
     /// Register a new [`Warning`] to be emitted later.
     pub fn push<T: Warning + 'static>(&mut self, warning: T) {
-        self.warnings.push(Arc::new(warning));
+        self.warnings.push(Box::new(warning));
     }
 
     /// Emit all registered [`Warning`]s.

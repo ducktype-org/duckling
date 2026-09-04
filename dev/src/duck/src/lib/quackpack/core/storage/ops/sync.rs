@@ -16,6 +16,7 @@ use tracing::{debug, error, warn};
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
+use crate::quackpack::core::lints::{EmitLintBehaviour, emit_lints_and_warnings};
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
@@ -59,7 +60,7 @@ pub fn sync(
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     debug!(root = %pcx.package().root().display(), ?options);
-    pcx.emit_warnings()?;
+    emit_lints_and_warnings(pcx, EmitLintBehaviour::Default)?;
     pcx.ctx().console().info(format!(
         "starting synchronization of the {}",
         pcx.package().display()
