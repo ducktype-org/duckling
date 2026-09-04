@@ -92,6 +92,7 @@ public:
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testVoidReturnType);
 		TESTER_ADD_TEST(testStaticArrays);
+		TESTER_ADD_TEST(testStaticArraysOfBakedTemplate);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
 		TESTER_ADD_TEST(testTupleCoercion);
@@ -1802,6 +1803,123 @@ private:
 			auto static_arr_inner
 				= static_arr.getElementType().getType().as<compiler::tsh::StaticArrayAbstractType>();
 			ASSERT_EQUAL(static_arr_inner.getSize(), 2);
+		}
+	}
+
+	// Helper: find a HOUT function by its original name.
+	static const compiler::helios::HOUTFunction& findFunction(
+		const compiler::helios::HOUTUnit& hout, base::StrID name
+	) {
+		for (auto& function: hout.functions)
+			if (function->declaration->original_name == name) return *function;
+		CORE_PANIC("Function not found in HOUT unit: ", name);
+	}
+
+	void testStaticArraysOfBakedTemplate() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/static_arrays")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+		using namespace compiler::tsh;
+
+		// Every baked-template array spelling must lower to a static array of the expected size
+		// whose element is the baked class, not fail with "This symbol cannot be indexed.".
+		const std::vector<std::pair<base::StrID, usize>> array_functions{
+			{ base::StrID("test_baked_template_array"), 2 },                // MyBox:{Point}[2]
+			{ base::StrID("test_baked_template_array_const_size"), 3 },     // MyBox:{Point}[SIZE]
+			{ base::StrID("test_baked_template_array_comp_time_arg"), 2 },  // MyBox:{bakeArg()}[2]
+			{ base::StrID("test_baked_template_array_arith_size"), 6 },  // MyBox:{Point}[SIZE * 2]
+			{ base::StrID("test_baked_template_array_zero_size"), 0 },   // MyBox:{Point}[0]
+			{ base::StrID("test_baked_template_array_array_type_arg"), 2 },  // MyBox:{i64[3]}[2]
+			{ base::StrID("test_baked_template_array_two_params"),
+			  2 },                                                    // PairBox:{Point, Point}[2]
+			{ base::StrID("test_baked_template_array_return"), 2 },   // return type position
+			{ base::StrID("test_baked_template_array_identity"), 2 }  // same type via () and alias
+		};
+
+		for (const auto& [expected_name, expected_size]: array_functions) {
+			bool found = false;
+			for (auto& function: hout.functions) {
+				if (function->declaration->original_name != expected_name) continue;
+				found = true;
+
+				auto& statements = function->body->statements;
+				ASSERT_TRUE(not statements.empty());
+
+				// The first statement is the variable declaration with the baked array type.
+				auto& var_stmt
+					= dynamic_cast<const compiler::helios::code::VariableStmt&>(*statements.at(0));
+				auto arr_type = var_stmt.type.getType();
+				ASSERT_EQUAL(arr_type.getKind(), Kind::StaticArray);
+				auto static_arr = arr_type.as<StaticArrayAbstractType>();
+				ASSERT_EQUAL(expected_size, static_arr.getSize());
+				// The element type is the baked template class, not a namespace-like template
+				// symbol.
+				ASSERT_EQUAL(static_arr.getElementType().getType().getKind(), Kind::Class);
+			}
+			ASSERT_TRUE(found);
+		}
+
+		// Corner cases whose first statement is not a plain baked-array variable.
+
+		// MyBox:{Point}[2][3]: the outer array's element is itself a static array of the baked
+		// class.
+		{
+			auto& function
+				= findFunction(hout, base::StrID("test_baked_template_array_nested_square"));
+			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*function.body->statements.at(0)
+			);
+			auto outer_arr = var_stmt.type.getType().as<StaticArrayAbstractType>();
+			ASSERT_EQUAL(2, outer_arr.getSize());
+			auto inner_arr = outer_arr.getElementType().getType().as<StaticArrayAbstractType>();
+			ASSERT_EQUAL(3, inner_arr.getSize());
+			ASSERT_EQUAL(inner_arr.getElementType().getType().getKind(), Kind::Class);
+		}
+
+		// template(T: type) class Outer { f: MyBox:{T}[2]; }: the bake argument is the enclosing
+		// template's own type parameter.
+		{
+			auto& function
+				= findFunction(hout, base::StrID("test_baked_template_array_template_arg"));
+			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*function.body->statements.at(0)
+			);
+			ASSERT_EQUAL(var_stmt.type.getType().getKind(), Kind::Class);
+		}
+
+		// class Holder { holder_field: MyBox:{Point}[2]; }: the field declaration from the
+		// issue.
+		{
+			const auto holder_class = getChain("Holder", scope).back();
+			auto       holder_info
+				= query::entryPoint<compiler::helios::QueryClassSymbolData>(holder_class)
+			          ->valueOrThrow();
+			bool found_field = false;
+			for (auto member: holder_info.members) {
+				if (compiler::helios::name(member) != "holder_field") continue;
+				found_field     = true;
+				auto field_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(member)
+				                      ->valueOrThrow()
+				                      .getType();
+				ASSERT_EQUAL(field_type.getKind(), Kind::StaticArray);
+				auto static_arr = field_type.as<StaticArrayAbstractType>();
+				ASSERT_EQUAL(2, static_arr.getSize());
+				ASSERT_EQUAL(static_arr.getElementType().getType().getKind(), Kind::Class);
+			}
+			ASSERT_TRUE(found_field);
+		}
+
+		// Parameter position.
+		{
+			auto& function = findFunction(hout, base::StrID("test_baked_template_array_param"));
+			ASSERT_EQUAL(1, function.declaration->parameters.size());
+			auto param_type = function.declaration->parameters.at(0).type.getType();
+			ASSERT_EQUAL(param_type.getKind(), Kind::StaticArray);
+			ASSERT_EQUAL(
+				param_type.as<StaticArrayAbstractType>().getElementType().getType().getKind(),
+				Kind::Class
+			);
 		}
 	}
 

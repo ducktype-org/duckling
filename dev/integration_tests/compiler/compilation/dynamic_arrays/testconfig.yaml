@@ -47,14 +47,14 @@ Tests:
       all:
         backend: all
         Output:
-          String: "2\n3\n3\n4\n9\n10\n100\n0\n100\n2\n3\n4\n1\n5\n6\n7\n8\n9\n10\n"
+          String: "2\n3\n3\n4\n9\n10\n100\n0\n100\n2\n3\n4\n1\n5\n6\n7\n8\n9\n10\n11\n5\n2\n21\n31\n"
         ExitCode: 0
       llvm_valgrind:
         backend: llvm
         valgrind: "true"
         TimeOut: 3 # 1 second is often not enough on runners
         Output:
-          String: "2\n3\n3\n4\n9\n10\n100\n0\n100\n2\n3\n4\n1\n5\n6\n7\n8\n9\n10\n"
+          String: "2\n3\n3\n4\n9\n10\n100\n0\n100\n2\n3\n4\n1\n5\n6\n7\n8\n9\n10\n11\n5\n2\n21\n31\n"
         ExitCode: 0
 
   list_out_of_bounds:

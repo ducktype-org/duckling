@@ -526,8 +526,11 @@ namespace compiler::helios::code {
 				);
 				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
-				auto base_state_res
-					= processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
+				auto symbol = sym_list.back();
+				UNPACK_QRESULT(auto maybe_bake =, transformTemplateBake(query_ctx, symbol, ident));
+				if (maybe_bake.has_value()) symbol = maybe_bake.value();
+
+				auto base_state_res = processNamespaceOrValue(symbol, pstOrigin(ident), ident);
 				UNPACK_QRESULT_MOVE(auto base_state =, base_state_res);
 
 
@@ -915,10 +918,15 @@ namespace compiler::helios::code {
 										 );
 				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
+				auto symbol = sym_list.back();
+				UNPACK_QRESULT(
+					auto maybe_bake =, transformTemplateBake(query_ctx, symbol, expr_access)
+				);
+				if (maybe_bake.has_value()) symbol = maybe_bake.value();
+
 				auto whole_expr_origin
 					= pstOriginOrdered(current_state.getNamespaceLikePstOrigin(), expr_access);
-				auto state_res
-					= processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
+				auto state_res = processNamespaceOrValue(symbol, whole_expr_origin, expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, state_res);
 
 				if (access_state.isExpr()) {
