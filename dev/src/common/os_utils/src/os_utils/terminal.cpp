@@ -98,7 +98,7 @@ namespace os_utils {
 		);
 	})
 	IF_BUILD_TYPE_RELEASE(RawTerminalMode::~RawTerminalMode() noexcept {
-		(void) restore();  // best-effort cleanup in Release
+		std::ignore = restore();  // best-effort cleanup in Release
 	})
 }
 
@@ -214,7 +214,7 @@ namespace os_utils {
 		HANDLE hIn  = GetStdHandle(STD_INPUT_HANDLE);
 		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 		bool   ok   = SetConsoleMode(hIn, m_orig_in_mode);
-		ok          = SetConsoleMode(hOut, m_orig_out_mode) && ok;
+		ok &= SetConsoleMode(hOut, m_orig_out_mode);
 
 		FlushConsoleInputBuffer(hIn);
 		std::cin.sync();
@@ -231,7 +231,7 @@ namespace os_utils {
 		);
 	})
 	IF_BUILD_TYPE_RELEASE(RawTerminalMode::~RawTerminalMode() noexcept {
-		(void) restore();  // best-effort cleanup in Release
+		std::ignore = restore();  // best-effort cleanup in Release
 	})
 }
 
