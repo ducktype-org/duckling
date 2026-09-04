@@ -179,7 +179,7 @@ namespace vm {
 		variant_match(getProcessState()) {
 			variant_case(ps::Completed, completed) { return api::Response{ completed.exit_value }; }
 			variant_case(ps::Panicked, panicked) {
-				return std::unexpected(api::OtherError{ panicked.err });
+				return std::unexpected(api::Panicked{ panicked.err });
 			}
 			variant_default {
 				return std::unexpected(api::OtherError("Execution did not complete"));
@@ -324,10 +324,10 @@ namespace vm {
 		} catch (const exceptions::VMFoundMemoryLeakException&) {
 			return false;
 		} catch (const KillProcessException& e) {
-			return std::unexpected(api::ApiError{ api::OtherError{
+			return std::unexpected(api::ApiError{ api::Panicked{
 				base::strConcat("A global destructor was interrupted: ", e.what()) } });
 		} catch (const exceptions::VMRuntimeException& e) {
-			return std::unexpected(api::ApiError{ api::OtherError{
+			return std::unexpected(api::ApiError{ api::Panicked{
 				base::strConcat("The process could not be deinitialized: ", e.what()) } });
 		}
 		return memory.validateMemoryState();
