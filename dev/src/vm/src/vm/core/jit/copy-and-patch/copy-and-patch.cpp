@@ -69,9 +69,9 @@ namespace vm::jit {
 		byte* next   = memory.addr;
 
 		auto patch_stencil = [&](u64 opcode, auto func) {
-			auto stencil_data = stencilsData().at(opcode);
-			auto previous     = next;
-			next              = relocate(stencil_data, previous);
+			const auto& stencil_data = stencilsData().at(opcode);
+			auto        previous     = next;
+			next                     = relocate(stencil_data, previous);
 			stencil_data.patch(previous, func);
 		};
 

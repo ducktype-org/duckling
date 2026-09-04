@@ -30,7 +30,7 @@ namespace vm::jit::cnp {
 		/**
 		 * @brief Patch a stencil into a given address.
 		 */
-		void patch(byte* new_address, auto patch_values) {
+		void patch(byte* new_address, auto patch_values) const {
 			for (auto hole: to_patch) hole.patch(new_address, patch_values(hole.value));
 		}
 	};
