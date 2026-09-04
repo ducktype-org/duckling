@@ -1,5 +1,5 @@
 from click import command
-from .helpers import all_flag, branch, build_dir, no_merge_base
+from .helpers import all_flag, branch, no_merge_base
 from ..impl.header_checker import header_checker_impl
 from ..impl.helpers import exit_with_error
 

@@ -11,7 +11,7 @@ PRAGMA_ONCE_PATTERN = re.compile(r"^\s*#\s*pragma\s+once\b")
 
 
 def header_checker_impl(
-    all_files: bool = False,
+    all: bool = False,
     branch: str = "origin/main",
     no_merge_base: bool = False
 ) -> bool:
@@ -23,7 +23,7 @@ def header_checker_impl(
     files = list_files_impl(
         branch=branch,
         no_merge_base=no_merge_base,
-        only_modified=not all_files,
+        only_modified=not all,
         include_untracked=True,
         extensions=[".hpp"],
         filter_deleted=True,
@@ -65,7 +65,7 @@ def header_checker_impl(
                 f"Forbidden '#pragma once' in .def.hpp: {len(forbidden_pragma_once)} file(s)"
             )
         if unreadable_files:
-            log_info(f"Unreadable file(s): {len(unreadable_files)} file(s)")
+            log_info(f"Unreadable: {len(unreadable_files)} file(s)")
         return False
 
     log_good("All header '#pragma once' checks have passed")

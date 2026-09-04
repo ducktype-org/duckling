@@ -40,6 +40,12 @@ from ..impl.list_files import list_files_impl
     help="Compare against the latest commit on branch instead of the merge base. "
     "This feature allows running on a shallow clone.",
 )
+@option(
+    "--filter-deleted",
+    is_flag=True,
+    help="Filter out deleted files from the output.",
+    default=False,
+)
 def list_files(
     extensions: Tuple[str, ...],
     only_modified: bool,
@@ -47,7 +53,7 @@ def list_files(
     include_untracked: bool,
     branch: str,
     no_merge_base: bool,
-    filter_deleted: bool = False,
+    filter_deleted: bool,
 ) -> None:
     """List files in the repository based on specified criteria.
 
