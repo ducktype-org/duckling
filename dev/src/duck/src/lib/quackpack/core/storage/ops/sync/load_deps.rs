@@ -26,8 +26,8 @@ use tracing::{debug, warn};
 const MAX_BLOB_RETRY_COUNT: u32 = 2;
 
 #[derive(Debug, Clone)]
-/// A struct indicating a successful fetching of the source code of a package.
-pub struct SuccessfullyFetchedPackage {
+/// A struct indicating a successful load of a package.
+pub struct SuccessfullyLoadedPackage {
     /// Id of the package for which source code was fetched.
     pub id: PackageId,
     /// The fetched package.
@@ -37,8 +37,8 @@ pub struct SuccessfullyFetchedPackage {
 }
 
 #[derive(Debug, Clone, Default)]
-/// A result of the procedure of fetching source codes.
-pub struct FetchedDependencies {
+/// A result of the procedure of loading dependencies.
+pub struct LoadedDependencies {
     /// Pairing between dependencies and fetched contents viewed as packages.
     pub _pkgs: Vec<(PackageId, AnyPackage)>,
     /// Number of packages which source codes had to be downloaded, used for user messages.
@@ -47,7 +47,7 @@ pub struct FetchedDependencies {
     pub already_present_num: usize,
 }
 
-/// Fetch source codes of packages.
+/// Load dependencies, firstly fetching them is they are not present on the machine.
 /// This means downloading them if they have not yet been downloaded,
 /// and loading them from storage as packages.
 ///
@@ -55,14 +55,14 @@ pub struct FetchedDependencies {
 /// ----
 /// We use [`ErrorsLogger`] to delay bailing, downloading as many dependencies as possible.
 #[tracing::instrument(skip_all)]
-pub fn fetch_source_codes(
+pub fn load_dependencies(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
     pkgs: Vec<PackageId>,
-) -> QuackResult<FetchedDependencies> {
+) -> QuackResult<LoadedDependencies> {
     if pkgs.is_empty() {
-        warn!("requested a download of 0 packages");
-        return Ok(FetchedDependencies::default());
+        warn!("requested to load 0 packages");
+        return Ok(LoadedDependencies::default());
     }
     let count = pkgs.len();
     fetcher.ctx().console().info(format!(
@@ -76,7 +76,7 @@ pub fn fetch_source_codes(
     let max_connections = fetcher.ctx().max_open_connections();
     let logger = RefCell::new(ErrorsLogger::default());
     let fetches = stream::iter(pkgs)
-        .map(|pkg| fetch_source_code(storage, fetcher, pkg, &logger))
+        .map(|pkg| load_dependency(storage, fetcher, pkg, &logger))
         .buffer_unordered(max_connections)
         .collect::<Vec<_>>();
     let fetches = block_on(fetches);
@@ -93,7 +93,7 @@ pub fn fetch_source_codes(
         }
         pkgs.push((fetch.id, fetch.pkg));
     }
-    Ok(FetchedDependencies {
+    Ok(LoadedDependencies {
         _pkgs: pkgs,
         freshly_downloaded_num,
         already_present_num,
@@ -115,15 +115,15 @@ fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResu
     )
 }
 
-/// Helper for [`fetch_source_codes`].
+/// Helper for [`load_dependencies`].
 /// Fetches the source code of a package, downloading it if not present and loading the package from storage.
 #[tracing::instrument(skip_all, fields(?pkg_id))]
-async fn fetch_source_code(
+async fn load_dependency(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
     pkg_id: PackageId,
     logger: &RefCell<ErrorsLogger>,
-) -> Option<SuccessfullyFetchedPackage> {
+) -> Option<SuccessfullyLoadedPackage> {
     debug!("fetching package");
     // Logs a result into the `logger`.
     macro_rules! log {
@@ -148,7 +148,7 @@ async fn fetch_source_code(
         FullKind::Local => (
             log!(
                 url.to_path_buf()
-                    .context("when fetching a local dependency")
+                    .with_context(|| format!("when loading a local dependency {}", pkg_id.name()))
             ),
             true,
         ),
@@ -166,14 +166,14 @@ async fn fetch_source_code(
     )
     .into_package();
     rm_and_log!(check_metadata(pkg_id, &pkg));
-    Some(SuccessfullyFetchedPackage {
+    Some(SuccessfullyLoadedPackage {
         id: pkg_id,
         pkg,
         was_present,
     })
 }
 
-/// Helper for [`fetch_source_code`].
+/// Helper for [`load_dependency`].
 /// Checks if the git package is stored in storage, if not clones it.
 /// Returns path to the package in storage and whether it had to be cloned.
 #[tracing::instrument(skip_all)]
@@ -213,7 +213,7 @@ fn mark_cloned_git_as_stored(pkg: PackageId, storage: &Storage) -> QuackResult<(
     Ok(())
 }
 
-/// Helper for [`fetch_source_code`].
+/// Helper for [`load_dependency`].
 /// Checks if the registry package is stored in storage, if not downloads it.
 /// Returns path to the package in storage and whether it had to be downloaded.
 async fn fetch_registry(
@@ -289,26 +289,26 @@ fn check_metadata(id: PackageId, package: &AnyPackage) -> QuackResult<()> {
     if package.name() == *id.name() && package.version() == id.version() {
         return Ok(());
     }
-    let display_expected = format!("{} {}", id.name(), id.version());
-    let display_found = format!("{} {}", package.name(), package.version());
+    let expected_package_str = format_args!("{} {}", id.name(), id.version());
+    let found_package_str = format_args!("{} {}", package.name(), package.version());
     match id.kind() {
         FullKind::Registry => qp_bail!(
             "downloaded malformed dependency from `{}`: got name `{}`, expected `{}`",
             id.url(),
-            display_found,
-            display_expected
+            expected_package_str,
+            found_package_str
         ),
         FullKind::Git { commit: _ } => qp_bail!(
             "cloned malformed dependency from `{}`: got name `{}`, expected `{}`",
             id.url(),
-            display_found,
-            display_expected
+            expected_package_str,
+            found_package_str
         ),
         FullKind::Local => qp_bail!(
             "malformed local dependency at `{}`: got name `{}`, expected `{}`",
             id.url().to_path_buf()?.display(),
-            display_found,
-            display_expected
+            expected_package_str,
+            found_package_str
         ),
     }
 }

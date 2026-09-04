@@ -16,8 +16,8 @@ use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverAnswer, Solver
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::git_access::StorageGitAccess;
 use crate::quackpack::core::storage::locks::TrySyncLock;
-use crate::quackpack::core::storage::ops::sync::fetch_deps::{
-    FetchedDependencies, fetch_source_codes,
+use crate::quackpack::core::storage::ops::sync::load_deps::{
+    LoadedDependencies, load_dependencies,
 };
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
@@ -30,7 +30,7 @@ use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
-mod fetch_deps;
+mod load_deps;
 
 #[derive(Debug, Clone, Copy)]
 /// Options passed to [`sync`].
@@ -93,11 +93,11 @@ pub fn sync(
         .collect();
     let new_freeze = solver_answer.new_freeze.generate_storage_freeze()?;
 
-    let FetchedDependencies {
+    let LoadedDependencies {
         _pkgs,
         freshly_downloaded_num,
         already_present_num,
-    } = fetch_source_codes(&storage, &fetcher, pkgs)?;
+    } = load_dependencies(&storage, &fetcher, pkgs)?;
     make_after_fetch_message(pcx.ctx(), already_present_num, freshly_downloaded_num)?;
 
     let venv = update_venv(venv, venv_config, new_freeze, id, pcx);
