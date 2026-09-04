@@ -127,10 +127,7 @@ namespace os_utils {
 
 	void clearScreen() {
 		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-		if (hOut == INVALID_HANDLE_VALUE || hOut == nullptr) {
-			writeStr(CLEAR_SCREEN_SEQUENCE);
-			return;
-		}
+		if (hOut == INVALID_HANDLE_VALUE || hOut == nullptr) return;
 
 		CONSOLE_SCREEN_BUFFER_INFO buffer_info{};
 		if (!GetConsoleScreenBufferInfo(hOut, &buffer_info)) {
