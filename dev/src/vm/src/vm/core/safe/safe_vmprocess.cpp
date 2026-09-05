@@ -296,8 +296,6 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::deinitAndValidate() {
-		// `validateProcessRequest` already refused the request unless every VMThread which ran is
-		// `Joined`, so no execution thread is alive here.
 		std::unique_lock lock(api_lock);
 		try {
 			getMainVMThread().execGlobalDestructors();

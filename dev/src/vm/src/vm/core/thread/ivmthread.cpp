@@ -58,14 +58,13 @@ namespace vm {
 
 		variant_match(terminal) {
 			variant_case(ts::Completed, completed) { return api::Response(completed.exit_value); }
-			// A stopped thread never reached its `ret`, so there is no exit value to report.
 			variant_case_novalue(ts::Stopped) {
 				return std::unexpected(api::ApiError(api::StateError("Execution was stopped")));
 			}
 			variant_case(ts::Panicked, panicked) {
 				return std::unexpected(api::ApiError(api::Panicked(panicked.err)));
 			}
-			// Another caller reaped the execution thread first, so there is nothing left to join.
+			// Another caller joined the execution thread first, so there is nothing left to join.
 			variant_case_novalue(ts::Joined) {
 				return std::unexpected(api::ApiError{ api::JoinError{} });
 			}
@@ -83,8 +82,8 @@ namespace vm {
 			if (exec_thread->joinable()) exec_thread->join();
 			exec_thread.reset();
 		}
-		// Committed outside `exec_thread_mutex`: a state change runs the status listeners, and a
-		// listener may call back into `vm::api` and try to take this very mutex.
+		// Committed outside `exec_thread_mutex` since a state change can runs the listeners, and a
+		// listener may call back into `vm::api` and try to take this `exec_thread_mutex`.
 		applyEvent(te::Join{});
 	}
 
@@ -142,7 +141,7 @@ namespace vm {
 		}
 		safeRun(func_name, run_arguments);
 		// The function ran on the calling thread, so no OS thread handle was ever created. There
-		// is nothing left to reap and the VMThread goes straight to `Joined`.
+		// is nothing left to join, so the VMThread goes straight to `Joined`.
 		applyEvent(te::Join{});
 		return true;
 	}

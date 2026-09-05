@@ -70,7 +70,7 @@ namespace vm {
 		};
 
 		/**
-		 * @brief The thread finished and its execution thread was already reaped by a `join()`.
+		 * @brief The thread finished and its execution thread was already joined.
 		 *
 		 * This is the only state a VMThread may be deinitialized from, and the state a reused
 		 * VMThread is expected to be spawned from.
@@ -88,7 +88,6 @@ namespace vm {
 			return v_matches(state, Completed, Stopped, Panicked, Joined);
 		}
 
-		/// True once the thread finished AND its execution thread was reaped by a `join()`.
 		[[nodiscard]] inline bool isJoined(const ThreadState& state) {
 			return v_matches(state, Joined);
 		}

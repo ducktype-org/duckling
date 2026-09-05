@@ -196,9 +196,8 @@ private:
 	}
 
 	/**
-	 * @brief `join` is what reaps the execution thread and moves the VMThread to `Joined`, and only
-	 * a joined process may be deinitialized. So a deinit of a finished but unjoined run has to be
-	 * refused, and the very same deinit has to work right after the join.
+	 * Deinit of a finished but unjoined run has to be refused, and the very same deinit has to work
+	 * right after the join.
 	 */
 	void deinitNeedsJoinedThreads() {
 		vm::PID pid = initProcess();

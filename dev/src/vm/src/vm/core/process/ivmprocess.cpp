@@ -39,7 +39,7 @@ namespace vm {
 
 			std::string ids = base::strJoin(
 				unjoined | std::views::transform([](const api::ThreadID id) {
-					return std::to_string(id.asInt());
+					return base::toString(id.asInt());
 				}),
 				", "
 			);
@@ -60,6 +60,7 @@ namespace vm {
 						= "the process must be freshly loaded or completed successfully in the "
 						  "previous run";
 				else
+					// When a process is completed, we also require all threads to be joined.
 					invalid_reason = unjoined_reason();
 			}
 			variant_case_novalue(pe::Stop) {}
