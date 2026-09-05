@@ -139,7 +139,7 @@ void VmTestSuite::releaseUntilTerminal(vm::PID pid, const std::string& function_
 	));
 }
 
-void VmTestSuite::waitUntilEveryThreadRuns(vm::PID pid) {
+void VmTestSuite::waitUntilEveryThreadRuns(vm::PID pid, usize thread_count) {
 	namespace api = vm::api;
 
 	waitUntilStatus(pid, isRunning, "Running");
@@ -148,7 +148,7 @@ void VmTestSuite::waitUntilEveryThreadRuns(vm::PID pid) {
 	while (std::chrono::steady_clock::now() < deadline) {
 		auto paused = api::pauseAll(pid);
 		assertSucceeded(paused, "pauseAll while waiting for the workers to start");
-		const bool all_up = paused->thread_ids.size() == SPIN_THREAD_COUNT;
+		const bool all_up = paused->thread_ids.size() == thread_count;
 		for (const api::ThreadID tid: paused->thread_ids) (void) api::resume(pid, tid);
 		if (all_up) {
 			waitUntilStatus(pid, isRunning, "Running again after the readiness check");
@@ -156,7 +156,7 @@ void VmTestSuite::waitUntilEveryThreadRuns(vm::PID pid) {
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	fail("spin_threads.dbc never got all of its threads running");
+	fail(base::strConcat("The program never got all ", thread_count, " of its threads running"));
 }
 
 vm::PID VmTestSuite::initProcess(

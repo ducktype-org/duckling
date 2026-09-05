@@ -51,6 +51,9 @@ public:
 	~VmApiTest() override = default;
 
 private:
+	/// Thread count of `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
+	static constexpr usize SPIN_THREAD_COUNT = 4;
+
 	void spawnAndKillEndpoints() {
 		// A freshly spawned process is `NotStarted` and answers status calls. A killed one is gone
 		// from the supervisor, so every later request on it is refused.
@@ -453,7 +456,7 @@ private:
 			ScopedStatusLog scoped(*this, pid);
 
 			assertSucceeded(api::run(pid), "run of spin_threads.dbc");
-			waitUntilEveryThreadRuns(pid);
+			waitUntilEveryThreadRuns(pid, SPIN_THREAD_COUNT);
 			assertSucceeded(api::pause(pid, api::ThreadID{ 1 }), "pause of worker 1");
 			assertSucceeded(api::pause(pid, api::ThreadID{ 2 }), "pause of worker 2");
 
@@ -515,12 +518,12 @@ private:
 
 		kill_from("Running(4 threads)", "../debugger/spin_threads.dbc", [&](vm::PID pid) {
 			assertSucceeded(api::run(pid), "run");
-			waitUntilEveryThreadRuns(pid);
+			waitUntilEveryThreadRuns(pid, SPIN_THREAD_COUNT);
 		});
 
 		kill_from("Paused(4 threads)", "../debugger/spin_threads.dbc", [&](vm::PID pid) {
 			assertSucceeded(api::run(pid), "run");
-			waitUntilEveryThreadRuns(pid);
+			waitUntilEveryThreadRuns(pid, SPIN_THREAD_COUNT);
 			assertSucceeded(api::pauseAll(pid), "pauseAll");
 			waitUntilStatus(pid, isPaused, "Paused");
 		});

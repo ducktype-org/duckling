@@ -14,7 +14,5 @@ function main { } -> { i64 } {
 	deinit; # c
 	deinit; # b
 	deinit; # a
-	# Assigned explicitly, `exitValueEndpoint` asserts the exit value is 0.
-	mov_p64_imm 	ret0, 0;
 	ret;
 }

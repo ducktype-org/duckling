@@ -43,9 +43,6 @@ protected:
 	/// Highest instruction index `releaseUntilTerminal` clears breakpoints up to.
 	static constexpr u64 MAX_BREAKPOINT_INDEX = 12;
 
-	/// Thread count of `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
-	static constexpr usize SPIN_THREAD_COUNT = 4;
-
 	/**
 	 * @brief Spawns a process with the default configuration.
 	 */
@@ -94,13 +91,14 @@ protected:
 	void releaseUntilTerminal(vm::PID pid, const std::string& function_name = "main");
 
 	/**
-	 * @brief Waits until every thread of `spin_threads.dbc` is up, and leaves them all running.
+	 * @brief Waits until @p thread_count threads of the process are up, and leaves them all
+	 * running.
 	 *
 	 * `pauseAll` is the only way to count the live threads through the API, so it doubles as the
-	 * readiness check. It is retried because the workers are started one by one by the running
-	 * program.
+	 * readiness check. It is retried because a program starts its workers one by one, so a request
+	 * can arrive before they all exist. Fails the test if they never all show up.
 	 */
-	void waitUntilEveryThreadRuns(vm::PID pid);
+	void waitUntilEveryThreadRuns(vm::PID pid, usize thread_count);
 
 	/**
 	 * @brief Records every status the process emits, so the emitted sequence can be checked against
