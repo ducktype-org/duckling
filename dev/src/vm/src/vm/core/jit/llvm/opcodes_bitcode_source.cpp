@@ -50,6 +50,13 @@ std::unique_ptr<Module> parseOpcodesBitcode(LLVMContext& context) {
 
 	auto module = std::move(*mod_or_err);
 
+	// llvm.used markers only protect globals from DCE during the offline bitcode optimization;
+	// left in, they surface as unresolvable symbols when the cloned modules are JIT-linked.
+	for (auto name: { "llvm.used", "llvm.compiler.used" }) {
+		if (auto* used = module->getGlobalVariable(name, /*AllowInternal=*/true))
+			used->eraseFromParent();
+	}
+
 	CORE_ASSERT(module->isMaterialized(), "Opfuns module not fully materialized!");
 
 	return module;
