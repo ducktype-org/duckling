@@ -32,7 +32,7 @@ private:
 	void noRunTest() {
 		vm::debugger::Debugger debugger;
 		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("debugger_test.dbc")) }));
-		ASSERT_TRUE(std::holds_alternative<vm::api::NotStarted>(debugger.getStatus()));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::NotStarted);
 	}
 
 	/**
@@ -67,7 +67,7 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(v_matches(exit_value_variant, std::vector<Ref<vm::IVMValue>>));
+						ASSERT_MATCHES(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 						auto exit_value = v_get(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
@@ -219,7 +219,7 @@ private:
 			return status_counter == expected_statuses.size();
 		}));
 
-		ASSERT_TRUE(v_matches(debugger.getStatus(), vm::api::Paused));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::Paused);
 		ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter.load());
 	}
 
@@ -251,7 +251,7 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(v_matches(exit_value_variant, std::vector<Ref<vm::IVMValue>>));
+						ASSERT_MATCHES(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 						auto exit_value = v_get(exit_value_variant, std::vector<Ref<vm::IVMValue>>);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
@@ -299,7 +299,7 @@ private:
 			}));
 			ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter.load());
 		}
-		ASSERT_TRUE(v_matches(debugger.getStatus(), vm::api::ExecutionCompleted));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::ExecutionCompleted);
 		std::lock_guard lk(m);
 		ASSERT_EQUAL_PRINT(expected_values.size(), ret_val_counter.load());
 	}
@@ -321,7 +321,7 @@ private:
 
 		ASSERT_HAS_VALUE(debugger.resume());
 
-		ASSERT_TRUE(v_matches(debugger.getStatus(), vm::api::Running));
+		ASSERT_MATCHES(debugger.getStatus(), vm::api::Running);
 	}
 
 	/**

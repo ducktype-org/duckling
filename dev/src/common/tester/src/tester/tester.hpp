@@ -10,6 +10,7 @@
 #include "tester_config.hpp"
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>  // IWYU pragma: export
 #include <base/types/ints.hpp>
 
 #include <init/init.hpp>  // IWYU pragma: export
@@ -52,6 +53,44 @@
 #define ASSERT_HAS_VALUE(actual) ASSERT_EQUAL(true, tester::detail::hasValue(actual))
 
 #define ASSERT_NO_VALUE(actual) ASSERT_EQUAL(false, tester::detail::hasValue(actual))
+
+/**
+ * @brief Asserts that the variant `value` holds one of the listed alternatives.
+ * Same semantics as `v_matches`, so any number of types may be listed.
+ *
+ * Use instead of `ASSERT_TRUE(std::holds_alternative<T>(v))`.
+ */
+#define ASSERT_MATCHES(value, ... /*types*/)                                  \
+	assertTrue(                                                               \
+		v_matches(value, __VA_ARGS__),                                        \
+		base::strConcat(                                                      \
+			"Variant holds none of the expected alternatives:\n\t\tIn line ", \
+			__LINE__,                                                         \
+			": ",                                                             \
+			#value,                                                           \
+			" does not match ",                                               \
+			#__VA_ARGS__                                                      \
+		)                                                                     \
+	)
+
+/**
+ * @brief Asserts that the variant `value` holds none of the listed alternatives.
+ * Same semantics as `v_matches`, so any number of types may be listed.
+ *
+ * Use instead of `ASSERT_EQUAL(false, std::holds_alternative<T>(v))`.
+ */
+#define ASSERT_NOT_MATCHES(value, ... /*types*/)                      \
+	assertFalse(                                                      \
+		v_matches(value, __VA_ARGS__),                                \
+		base::strConcat(                                              \
+			"Variant holds an unexpected alternative:\n\t\tIn line ", \
+			__LINE__,                                                 \
+			": ",                                                     \
+			#value,                                                   \
+			" matches ",                                              \
+			#__VA_ARGS__                                              \
+		)                                                             \
+	)
 
 
 class SimpleTesterTest;

@@ -120,13 +120,8 @@ private:
 
 		// Check types
 		assertEqual(parsed.types.size(), original.types.size(), "Type count should match");
-		assertTrue(
-			std::holds_alternative<PrimitiveType>(parsed.types[0]),
-			"First type should be PrimitiveType"
-		);
-		assertTrue(
-			std::holds_alternative<DataType>(parsed.types[1]), "Second type should be DataType"
-		);
+		ASSERT_MATCHES(parsed.types[0], PrimitiveType);
+		ASSERT_MATCHES(parsed.types[1], DataType);
 
 		const auto& prim = std::get<PrimitiveType>(parsed.types[0]);
 		assertEqual(prim.name, base::StrID("i32"), "Primitive type name should be i32");

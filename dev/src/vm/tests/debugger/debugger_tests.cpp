@@ -175,7 +175,7 @@ private:
 
 		auto status = vm::api::getExecutionStatus(pid);
 		ASSERT_HAS_VALUE(status);
-		ASSERT_TRUE(v_matches(status.value(), vm::api::ExecutionCompleted));
+		ASSERT_MATCHES(status.value(), vm::api::ExecutionCompleted);
 
 		ASSERT_HAS_VALUE(vm::api::join(pid));
 
@@ -371,9 +371,7 @@ private:
 		{
 			auto exit_code_response = vm::api::getExitValue(pid);
 			ASSERT_HAS_VALUE(exit_code_response);
-			ASSERT_TRUE(
-				std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value())
-			);
+			ASSERT_MATCHES(exit_code_response.value(), std::vector<Ref<vm::IVMValue>>);
 			auto& exit_value_vec
 				= std::get<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value());
 			ASSERT_EQUAL(exit_value_vec.size(), 1);

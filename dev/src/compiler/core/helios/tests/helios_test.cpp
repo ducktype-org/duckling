@@ -2628,7 +2628,7 @@ private:
 										   base::Optional<std::string_view> expected_library
 									   ) {
 			auto abi_value = ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
-			ASSERT_TRUE(std::holds_alternative<compiler::helios::CAbi>(abi_value));
+			ASSERT_MATCHES(abi_value, compiler::helios::CAbi);
 			auto c_abi = std::get<compiler::helios::CAbi>(abi_value);
 			if (!expected_library.empty()) {
 				ASSERT_HAS_VALUE(c_abi.library);
@@ -2638,7 +2638,7 @@ private:
 
 		auto test_default_abi = [this](query::Context& ctx, compiler::helios::SymID symbol) {
 			auto abi_value = ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
-			ASSERT_TRUE(std::holds_alternative<compiler::helios::DefaultAbi>(abi_value));
+			ASSERT_MATCHES(abi_value, compiler::helios::DefaultAbi);
 		};
 		auto [module, root_scope] = getModule(fs::File(path("test_modules/stmt_specifiers")));
 

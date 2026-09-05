@@ -1088,15 +1088,15 @@ private:
 
 			// A field whose class defines a user copy constructor calls the user code, not a
 			// generated one.
-			ASSERT_TRUE(v_matches(
+			ASSERT_MATCHES(
 				getSymRef(callee_of(rhs_of("nested_user")))->other, PstImplementedSemantics
-			));
+			);
 
 			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
 			{
 				auto boxed = boxAllocArg(rhs_of("deep"));
 				ASSERT_TRUE(boxed != nullptr);
-				ASSERT_TRUE(v_matches(getSymRef(callee_of(boxed))->other, PstImplementedSemantics));
+				ASSERT_MATCHES(getSymRef(callee_of(boxed))->other, PstImplementedSemantics);
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {

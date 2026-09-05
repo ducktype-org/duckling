@@ -3,6 +3,8 @@
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
+#include <variant>
+
 class SimpleTesterTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleTesterTest
@@ -22,6 +24,9 @@ public:
 		TESTER_ADD_SHOULD_FAIL_TEST(throwException);
 		TESTER_ADD_SHOULD_FAIL_TEST(throwStdRuntimeError);
 		TESTER_ADD_SHOULD_FAIL_TEST(throwStdLogicError);
+		TESTER_ADD_TEST(assertMatchesPasses);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertMatchesFails);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertNotMatchesFails);
 		TESTER_ADD_TEST(verySimpleTestingUtilsTest);
 		TESTER_ADD_TEST(addSpacesTest);
 	}
@@ -86,6 +91,29 @@ private:
 	void assertEqualFails() {
 		message("Expected to fail: checks that assertEqual fails when values are not equal");
 		assertEqual(1, 2, "expected failure: assertEqual failed");
+	}
+
+	using TestVariant = std::variant<i32, char, bool>;
+
+	void assertMatchesPasses() {
+		TestVariant v = 'a';
+
+		ASSERT_MATCHES(v, char);
+		ASSERT_MATCHES(v, i32, char);
+		ASSERT_NOT_MATCHES(v, i32);
+		ASSERT_NOT_MATCHES(v, i32, bool);
+	}
+
+	void assertMatchesFails() {
+		message("Expected to fail: checks that ASSERT_MATCHES fails on a different alternative");
+		TestVariant v = 'a';
+		ASSERT_MATCHES(v, i32, bool);
+	}
+
+	void assertNotMatchesFails() {
+		message("Expected to fail: checks that ASSERT_NOT_MATCHES fails on a held alternative");
+		TestVariant v = 'a';
+		ASSERT_NOT_MATCHES(v, i32, char);
 	}
 
 	void verySimpleTestingUtilsTest() {

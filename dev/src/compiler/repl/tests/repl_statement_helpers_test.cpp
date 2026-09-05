@@ -44,10 +44,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
 			assertTrue(result.has_value(), "Expression classification should succeed");
-			assertTrue(
-				std::holds_alternative<repl::ExpressionSingleStatementInfo>(*result),
-				"Expected expression variant"
-			);
+			ASSERT_MATCHES(*result, repl::ExpressionSingleStatementInfo);
 		});
 	}
 
@@ -58,10 +55,7 @@ private:
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto result = repl::classifySingleStatement(ctx, module_id);
 				assertTrue(result.has_value(), "Assignment classification should succeed");
-				assertTrue(
-					std::holds_alternative<repl::InstructionSingleStatementInfo>(*result),
-					"Expected assignment ExprStmt to be routed as instruction"
-				);
+				ASSERT_MATCHES(*result, repl::InstructionSingleStatementInfo);
 			});
 		};
 
@@ -76,10 +70,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
 			assertTrue(result.has_value(), "Instruction classification should succeed");
-			assertTrue(
-				std::holds_alternative<repl::InstructionSingleStatementInfo>(*result),
-				"Expected instruction variant"
-			);
+			ASSERT_MATCHES(*result, repl::InstructionSingleStatementInfo);
 		});
 	}
 
@@ -89,10 +80,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
 			assertTrue(result.has_value(), "Definition classification should succeed");
-			assertTrue(
-				std::holds_alternative<repl::DefinitionSingleStatementInfo>(*result),
-				"Expected definition variant"
-			);
+			ASSERT_MATCHES(*result, repl::DefinitionSingleStatementInfo);
 		});
 	}
 
@@ -102,10 +90,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
 			assertTrue(result.has_value(), "Variable classification should succeed");
-			assertTrue(
-				std::holds_alternative<repl::VariableSingleStatementInfo>(*result),
-				"Expected variable variant"
-			);
+			ASSERT_MATCHES(*result, repl::VariableSingleStatementInfo);
 		});
 	}
 

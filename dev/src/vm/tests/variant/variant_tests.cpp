@@ -108,7 +108,7 @@ private:
 					+ ", reason: " + vm::api::errorToString(value.error())
 				);
 			}
-			ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(value.value()));
+			ASSERT_MATCHES(value.value(), std::vector<Ref<vm::IVMValue>>);
 			auto& value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(value.value());
 			ASSERT_EQUAL(value_vec.size(), 1);
 			const auto vm_value = value_vec.at(0);

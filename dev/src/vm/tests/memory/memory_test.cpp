@@ -60,11 +60,11 @@ private:
 
 		const auto deinit = vm::api::deinitAndValidate(result.pid);
 		ASSERT_NO_VALUE(deinit);
-		ASSERT_TRUE(v_matches(deinit.error(), vm::api::StateError));
+		ASSERT_MATCHES(deinit.error(), vm::api::StateError);
 
 		const auto status = vm::api::getExecutionStatus(result.pid);
 		ASSERT_HAS_VALUE(status);
-		ASSERT_TRUE(v_matches(status.value(), vm::api::ExecutionPanicked));
+		ASSERT_MATCHES(status.value(), vm::api::ExecutionPanicked);
 
 		ASSERT_HAS_VALUE(vm::api::kill(result.pid));
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(result.pid));
@@ -100,14 +100,14 @@ private:
 
 		const auto deinit = vm::api::deinitAndValidate(result.pid);
 		ASSERT_NO_VALUE(deinit);
-		ASSERT_TRUE(v_matches(deinit.error(), vm::api::Panicked));
+		ASSERT_MATCHES(deinit.error(), vm::api::Panicked);
 
 		// Process should be gone.
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(result.pid));
 		// Second deinit should not run.
 		const auto second = vm::api::deinitAndValidate(result.pid);
 		ASSERT_NO_VALUE(second);
-		ASSERT_TRUE(v_matches(second.error(), vm::api::ProcessNotFound));
+		ASSERT_MATCHES(second.error(), vm::api::ProcessNotFound);
 	}
 
 	void deinitOrKillHandlesAProcessKilledByItsFailedDeinit() {
