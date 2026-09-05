@@ -32,9 +32,9 @@ namespace vm::low::cf {
 	[[nodiscard]] std::vector<usize> basicBlockBeginnings(const low::MicroBytecode& bc);
 #ifdef ENABLE_JIT
 	/**
-	 * @brief Finds the first jitEntrypoint instruction in the bytecode.
+	 * @brief Finds the first jitFuncEntrypoint instruction in the bytecode.
 	 * @param bc Micro-bytecode of lowered function to analyze.
-	 * @return Offset of the function's jitEntrypoint instruction.
+	 * @return Offset of the function's jitFuncEntrypoint instruction.
 	 */
 	[[nodiscard]] usize functionEntrypointOffset(const MicroBytecode& bc);
 #endif
