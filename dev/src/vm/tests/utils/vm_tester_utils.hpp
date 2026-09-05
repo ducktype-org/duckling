@@ -62,6 +62,10 @@ protected:
 
 	static bool isSleeping(const vm::api::ProcStatus& s) { return v_matches(s, vm::api::Sleeping); }
 
+	static bool isPanicked(const vm::api::ProcStatus& s) {
+		return v_matches(s, vm::api::ExecutionPanicked);
+	}
+
 	static bool isTerminal(const vm::api::ProcStatus& s) { return vm::api::isStatusTerminal(s); }
 
 	/**
@@ -119,10 +123,11 @@ protected:
 		/**
 		 * @brief True if the given `vm::api::ProcStatus` alternative was ever emitted.
 		 */
-		[[nodiscard]] bool wasEmitted(usize status_index) const {
+		template<typename Alternative>
+		[[nodiscard]] bool wasEmitted() const {
 			std::lock_guard lock(mutex);
-			return std::ranges::any_of(statuses, [status_index](const vm::api::ProcStatus& s) {
-				return s.index() == status_index;
+			return std::ranges::any_of(statuses, [](const vm::api::ProcStatus& s) {
+				return v_matches(s, Alternative);
 			});
 		}
 
@@ -162,15 +167,14 @@ protected:
 		std::string_view                           what,
 		std::string_view                           expected_reason = ""
 	) {
-		if (result.has_value()) {
-			fail(base::strConcat(what, " was expected to be refused, but it succeeded"));
-			return;
-		}
+		ASSERT_NO_VALUE(result, what, " was expected to be refused, but it succeeded");
+
 		const std::string message = vm::api::errorToString(result.error());
-		if (!std::holds_alternative<ErrorAlternative>(result.error())) {
-			fail(base::strConcat(what, " was refused with an unexpected error kind: ", message));
-			return;
-		}
+		ASSERT_MATCHES_MSG(
+			result.error(),
+			base::strConcat(what, " was refused with an unexpected error kind: ", message),
+			ErrorAlternative
+		);
 		assertTrue(
 			expected_reason.empty() || message.find(expected_reason) != std::string::npos,
 			base::strConcat(
@@ -188,9 +192,8 @@ protected:
 	 */
 	template<typename T>
 	void assertSucceeded(const std::expected<T, vm::api::ApiError>& result, std::string_view what) {
-		assertTrue(
-			result.has_value(),
-			base::strConcat(what, " was expected to succeed, but failed with: ", errorOf(result))
+		ASSERT_HAS_VALUE(
+			result, what, " was expected to succeed, but failed with: ", errorOf(result)
 		);
 	}
 

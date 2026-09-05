@@ -24,12 +24,12 @@ public:
 private:
 	vm::PID loadProgram(std::string_view path_name) {
 		auto process_pid_response = vm::api::spawn();
-		assertTrue(process_pid_response.has_value(), "Spawn failed (loadProgram)");
+		ASSERT_HAS_VALUE(process_pid_response, "Spawn failed (loadProgram)");
 		auto pid = process_pid_response.value().pid;
 
 		fs::File file(path(std::string(path_name)));
 		auto     loaded_file_response = vm::api::loadFiles(pid, { file });
-		assertTrue(loaded_file_response.has_value(), "Load failed (loadProgram)");
+		ASSERT_HAS_VALUE(loaded_file_response, "Load failed (loadProgram)");
 		return pid;
 	}
 

@@ -58,8 +58,8 @@ private:
 		const vm::PID pid    = spawnProcess();
 		auto          status = api::getExecutionStatus(pid);
 		assertSucceeded(status, "getExecutionStatus on a fresh process");
-		assertTrue(
-			v_matches(status.value(), api::NotStarted), "A fresh process must report NotStarted"
+		ASSERT_MATCHES_MSG(
+			status.value(), "A fresh process must report NotStarted", api::NotStarted
 		);
 
 		assertSucceeded(api::kill(pid), "kill of a fresh process");
@@ -132,9 +132,8 @@ private:
 
 			auto status = api::getExecutionStatus(pid);
 			assertSucceeded(status, "getExecutionStatus after a refused run");
-			assertTrue(
-				v_matches(status.value(), api::NotStarted),
-				"A refused run must leave the process NotStarted"
+			ASSERT_MATCHES_MSG(
+				status.value(), "A refused run must leave the process NotStarted", api::NotStarted
 			);
 
 			assertSucceeded(api::loadFiles(pid, { fs::File(path("breakpoint.dbc")) }), "loadFiles");
@@ -247,11 +246,7 @@ private:
 		{  // Panicked: same as `join`
 			const vm::PID pid = spawnAndLoad("panic.dbc");
 			assertSucceeded(api::run(pid), "run");
-			waitUntilStatus(
-				pid,
-				[](const api::ProcStatus& s) { return v_matches(s, api::ExecutionPanicked); },
-				"Panicked"
-			);
+			waitUntilStatus(pid, isPanicked, "Panicked");
 
 			assertRefusedWith<api::StateError>(
 				api::run(pid), "a rerun right after a panic", "must be freshly loaded"
@@ -416,9 +411,10 @@ private:
 			assertSucceeded(api::stop(pid), "stop of a NotStarted process");
 			auto status = api::getExecutionStatus(pid);
 			assertSucceeded(status, "getExecutionStatus after a stop of a NotStarted process");
-			assertTrue(
-				v_matches(status.value(), api::NotStarted),
-				"A stop of a process that never ran must leave it NotStarted"
+			ASSERT_MATCHES_MSG(
+				status.value(),
+				"A stop of a process that never ran must leave it NotStarted",
+				api::NotStarted
 			);
 			assertSucceeded(api::run(pid), "run after a stop of a NotStarted process");
 			(void) api::kill(pid);
@@ -435,9 +431,7 @@ private:
 			assertSucceeded(api::stop(pid), "a second stop");
 
 			assertTrue(
-				scoped.log.wasEmitted(
-					base::variantTypeIndex<api::ProcStatus, api::ExecutionStopping>()
-				),
+				scoped.log.wasEmitted<api::ExecutionStopping>(),
 				"Stopping a Running program never emitted the ExecutionStopping status"
 			);
 			validateTransitions(scoped.log, "a stop of a running process");
@@ -540,11 +534,7 @@ private:
 		// Panicked by an integer division by zero.
 		kill_from("Panicked", "panic.dbc", [&](vm::PID pid) {
 			assertSucceeded(api::run(pid), "run");
-			waitUntilStatus(
-				pid,
-				[](const api::ProcStatus& s) { return v_matches(s, api::ExecutionPanicked); },
-				"Panicked"
-			);
+			waitUntilStatus(pid, isPanicked, "Panicked");
 		});
 
 		// A stopped process is kept in the table until it is killed.
@@ -672,9 +662,10 @@ private:
 
 		auto status = api::getExecutionStatus(result.pid);
 		assertSucceeded(status, "getExecutionStatus after the refused deinit");
-		assertTrue(
-			v_matches(status.value(), api::ExecutionPanicked),
-			"A refused deinit must leave the process panicked"
+		ASSERT_MATCHES_MSG(
+			status.value(),
+			"A refused deinit must leave the process panicked",
+			api::ExecutionPanicked
 		);
 
 		assertSucceeded(api::kill(result.pid), "kill after the refused deinit");
@@ -730,8 +721,8 @@ private:
 		ASSERT_HAS_VALUE(completed.run_result);
 		auto clean_teardown = api::deinitOrKill(completed.pid);
 		assertSucceeded(clean_teardown, "deinitOrKill of a completed process");
-		assertTrue(
-			clean_teardown->has_value(), "A completed process must be deinitialized, not killed"
+		ASSERT_HAS_VALUE(
+			clean_teardown.value(), "A completed process must be deinitialized, not killed"
 		);
 		ASSERT_TRUE(clean_teardown->value());
 
@@ -739,8 +730,8 @@ private:
 		ASSERT_NO_VALUE(panicked.run_result);
 		auto forced_teardown = api::deinitOrKill(panicked.pid);
 		assertSucceeded(forced_teardown, "deinitOrKill of a panicked process");
-		assertFalse(
-			forced_teardown->has_value(), "A panicked process must be killed, not deinitialized"
+		ASSERT_NO_VALUE(
+			forced_teardown.value(), "A panicked process must be killed, not deinitialized"
 		);
 
 		assertRefusedWith<api::ProcessNotFound>(
@@ -761,7 +752,7 @@ private:
 
 		auto teardown = api::deinitOrKill(aborting.pid);
 		assertSucceeded(teardown, "deinitOrKill of a process with an aborting destructor");
-		assertFalse(teardown->has_value(), "A failed deinit must be reported as a kill");
+		ASSERT_NO_VALUE(teardown.value(), "A failed deinit must be reported as a kill");
 		assertRefusedWith<api::ProcessNotFound>(
 			api::getExecutionStatus(aborting.pid), "getExecutionStatus after the failed deinit"
 		);
@@ -865,11 +856,11 @@ private:
 			assertSucceeded(api::join(pid), "join");
 
 			assertTrue(
-				scoped.log.wasEmitted(base::variantTypeIndex<api::ProcStatus, api::Running>()),
+				scoped.log.wasEmitted<api::Running>(),
 				"A started program never emitted the Running status"
 			);
 			assertTrue(
-				scoped.log.wasEmitted(base::variantTypeIndex<api::ProcStatus, api::Sleeping>()),
+				scoped.log.wasEmitted<api::Sleeping>(),
 				"A thread blocking on IO never emitted the Sleeping status"
 			);
 			validateTransitions(scoped.log, "a program blocking on IO");
@@ -949,7 +940,6 @@ private:
 					values.size() == 1,
 					base::strConcat(what, " returned ", values.size(), " values instead of one")
 				);
-				if (values.size() != 1) return;
 				ASSERT_EQUAL_PRINT(expected, values.at(0)->readBytes<i64>());
 			}
 		}

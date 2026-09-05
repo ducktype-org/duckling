@@ -103,24 +103,19 @@ VmTestSuite::ScopedStatusLog::ScopedStatusLog(VmTestSuite& test, vm::PID pid):
 
 void VmTestSuite::validateTransitions(const TransitionLog& log, std::string_view what) {
 	const auto illegal_edge = log.findIllegalEdge();
-	assertTrue(
-		!illegal_edge.has_value(),
-		illegal_edge.has_value() ? base::strConcat(*illegal_edge, " (", what, ")") : ""
-	);
+	ASSERT_NO_VALUE(illegal_edge, illegal_edge.has_value() ? *illegal_edge : "", " (", what, ")");
 }
 
 vm::PID VmTestSuite::spawnProcess() {
 	auto spawned = vm::api::spawn();
-	assertTrue(spawned.has_value(), "Spawn failed");
+	ASSERT_HAS_VALUE(spawned, "Spawn failed");
 	return spawned.value().pid;
 }
 
 vm::PID VmTestSuite::spawnAndLoad(const std::string& dbc_filename) {
 	const vm::PID pid    = spawnProcess();
 	auto          loaded = vm::api::loadFiles(pid, { fs::File(path(dbc_filename)) });
-	assertTrue(
-		loaded.has_value(), base::strConcat("Load of '", dbc_filename, "' failed: ", errorOf(loaded))
-	);
+	ASSERT_HAS_VALUE(loaded, "Load of '", dbc_filename, "' failed: ", errorOf(loaded));
 	return pid;
 }
 
@@ -243,7 +238,7 @@ void VmTestSuite::loadInvalidDbc(
 	ASSERT_NO_VALUE(loaded_file_response);
 
 	auto err = loaded_file_response.error();
-	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
+	ASSERT_MATCHES(err, vm::api::LoadProgramError);
 	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
 	std::cerr << err_str << '\n';
 	for (auto err_key: error_keywords) {
@@ -270,7 +265,7 @@ void VmTestSuite::loadThenLoadInvalidDbc(
 	ASSERT_NO_VALUE(second_response);
 
 	auto err = second_response.error();
-	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
+	ASSERT_MATCHES(err, vm::api::LoadProgramError);
 	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
 	std::cerr << err_str << '\n';
 	for (auto err_key: error_keywords) {
@@ -410,7 +405,7 @@ void VmTestSuite::assertRunFunctionRefusedWith(
 ) {
 	auto result = vm::api::runFunction(pid, func_name, args);
 	ASSERT_NO_VALUE(result);
-	ASSERT_TRUE(v_matches(result.error(), vm::api::RunError));
+	ASSERT_MATCHES(result.error(), vm::api::RunError);
 	const std::string why = v_get(result.error(), vm::api::RunError).error;
 	assertTrue(
 		why.find(expected_reason) != std::string::npos,
@@ -420,7 +415,7 @@ void VmTestSuite::assertRunFunctionRefusedWith(
 
 	auto status = vm::api::getExecutionStatus(pid);
 	ASSERT_HAS_VALUE(status);
-	ASSERT_TRUE(v_matches(status.value(), vm::api::NotStarted));
+	ASSERT_MATCHES(status.value(), vm::api::NotStarted);
 }
 
 auto VmTestSuite::runFunctionExpectPanic(

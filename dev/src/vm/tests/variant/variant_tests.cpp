@@ -85,9 +85,7 @@ private:
 		};
 
 		auto pid = initProcess();
-		ASSERT_TRUE(
-			vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) }).has_value()
-		);
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) }));
 
 		auto wanted_value   = std::numeric_limits<u64>::max();
 		auto vm_value_max64 = get_int_vm_value(pid, wanted_value);
@@ -97,9 +95,7 @@ private:
 				"getCustomVariant", type_tag_bits, "TypeTag", wanted_type_tag_value
 			);
 
-			ASSERT_TRUE(
-				vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }));
 			ASSERT_HAS_VALUE(vm::api::join(pid));
 			auto value = vm::api::getExitValue(pid);
 			if (!value.has_value()) {
@@ -108,7 +104,7 @@ private:
 					+ ", reason: " + vm::api::errorToString(value.error())
 				);
 			}
-			ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(value.value()));
+			ASSERT_MATCHES(value.value(), std::vector<Ref<vm::IVMValue>>);
 			auto& value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(value.value());
 			ASSERT_EQUAL(value_vec.size(), 1);
 			const auto vm_value = value_vec.at(0);

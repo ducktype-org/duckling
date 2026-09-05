@@ -30,7 +30,7 @@ private:
 		if (!load_result.has_value()) {
 			std::cerr << std::format("Error loading file: {}\n", errorToString(load_result.error()));
 		}
-		ASSERT_TRUE(load_result.has_value());
+		ASSERT_HAS_VALUE(load_result);
 		return pid;
 	}
 
