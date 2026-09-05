@@ -3,21 +3,14 @@
 //! [`manifest`]: crate::quackpack::core::parse
 
 use std::fmt;
-use std::sync::Arc;
 
+use super::Diagnostic;
 use crate::{DuckContext, QuackResult};
-
-pub trait Warning: fmt::Debug + fmt::Display + Sync + Send {}
-
-impl<T: Warning + ?Sized> Warning for &T {}
-impl<T: Warning + ?Sized> Warning for &mut T {}
-impl<T: Warning + ?Sized> Warning for Box<T> {}
-impl<T: Warning + ?Sized> Warning for Arc<T> {}
 
 #[derive(Debug, Default)]
 /// Warnings encountered when parsing the manifest.
 pub struct Warnings {
-    warnings: Vec<Box<dyn Warning + 'static>>,
+    warnings: Vec<Box<dyn Diagnostic + 'static>>,
 }
 
 impl Warnings {
@@ -27,7 +20,7 @@ impl Warnings {
     }
 
     /// Register a new [`Warning`] to be emitted later.
-    pub fn push<T: Warning + 'static>(&mut self, warning: T) {
+    pub fn push<T: Diagnostic + 'static>(&mut self, warning: T) {
         self.warnings.push(Box::new(warning));
     }
 
@@ -40,19 +33,19 @@ impl Warnings {
     }
 }
 
-/// Emit a single [`Warning`] to an appropriate [`Terminal`](crate::duck::util::terminal::Terminal).
-fn emit_warning(warning: &impl Warning, ctx: &DuckContext) -> QuackResult<()> {
+/// Emit a single [`Diagnostic`] to an appropriate [`Terminal`](crate::duck::util::terminal::Terminal).
+fn emit_warning(warning: &impl Diagnostic, ctx: &DuckContext) -> QuackResult<()> {
     ctx.console().warning(warning)
 }
 
 #[derive(Debug)]
-/// A [`Warning`] for an unused key.
+/// A [`Diagnostic`] for an unused key.
 pub struct UnusedKey {
     key: String,
 }
 
 impl UnusedKey {
-    /// Create a new [`UnusedKey`] [`Warning`] for the given key.
+    /// Create a new [`UnusedKey`] [`Diagnostic`] for the given key.
     pub fn new(key: String) -> Self {
         Self { key }
     }
@@ -64,7 +57,7 @@ impl fmt::Display for UnusedKey {
     }
 }
 
-impl Warning for UnusedKey {}
+impl Diagnostic for UnusedKey {}
 
 #[derive(Debug)]
 pub struct GitUrlIsPath {
@@ -91,4 +84,4 @@ impl fmt::Display for GitUrlIsPath {
     }
 }
 
-impl Warning for GitUrlIsPath {}
+impl Diagnostic for GitUrlIsPath {}
