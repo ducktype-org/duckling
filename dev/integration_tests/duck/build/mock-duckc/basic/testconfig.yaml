@@ -31,7 +31,7 @@ Tests:
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
             info: starting loading 1 package
-            info: loaded source codes of 1 package, 0 were downloaded, 1 was already present
+            info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
       release:
@@ -44,7 +44,7 @@ Tests:
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
             info: starting loading 1 package
-            info: loaded source codes of 1 package, 0 were downloaded, 1 was already present
+            info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."
       release2:
