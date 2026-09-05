@@ -252,7 +252,7 @@ fn make_after_fetch_message(
 ) -> QuackResult<()> {
     let total = already_present + downloaded;
     ctx.console().info(format!(
-        "fetched source code{} of {} package{}, {} {} downloaded, {} {} already present",
+        "loaded source code{} of {} package{}, {} {} downloaded, {} {} already present",
         total.s_if_plural(),
         total,
         total.s_if_plural(),

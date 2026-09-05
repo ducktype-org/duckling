@@ -18,8 +18,8 @@ Tests:
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
-            info: starting fetching 1 package
-            info: fetched source code of 1 package, 0 were downloaded, 1 was already present
+            info: starting loading 1 package
+            info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`"
         Err:
           String: |+
