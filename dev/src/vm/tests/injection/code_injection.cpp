@@ -103,12 +103,12 @@ private:
 	) {
 		match_optional(func_name) {
 			opt_some(func_name) {
-				ASSERT_TRUE(std::holds_alternative<vm::FunctionRunArguments>(args));
+				ASSERT_MATCHES(args, vm::FunctionRunArguments);
 				const auto& function_args = std::get<vm::FunctionRunArguments>(args);
 				ASSERT_HAS_VALUE(vm::api::runFunction(pid, func_name, function_args));
 			}
 			opt_none {
-				ASSERT_TRUE(std::holds_alternative<std::vector<std::string>>(args));
+				ASSERT_MATCHES(args, std::vector<std::string>);
 				auto program_args = std::get<std::vector<std::string>>(args);
 				ASSERT_HAS_VALUE(vm::api::run(pid, program_args));
 			}
@@ -127,7 +127,7 @@ private:
 		auto exit_code_response = vm::api::getExitValue(pid);
 		ASSERT_HAS_VALUE(exit_code_response);
 		const auto& exit_value = exit_code_response.value();
-		ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_value));
+		ASSERT_MATCHES(exit_value, std::vector<Ref<vm::IVMValue>>);
 		auto& exit_value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value);
 
 		match_optional(expected_return_values) {
