@@ -1,5 +1,14 @@
+file(GLOB analyze_deps "${CMAKE_SOURCE_DIR}/scripts/py/jit/*.py")
+
+add_executable(print_opcodes print_opcodes.cpp)
+add_custom_command(
+    OUTPUT opcodes.json
+    COMMAND print_opcodes >opcodes.json
+    DEPENDS print_opcodes
+)
+
 # Analyze and process the `binary_file`, preparing to embed in `destination_file`
-function(process_to_binary binary_file destination_file binary_artifact_prefix)
+function(process_to_binary binary_file destination_file binary_artifact_prefix analyze_arg)
     set(extra_deps ${ARGN})
     get_filename_component(
         destination_file_abs "${destination_file}"
@@ -17,7 +26,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
 # @TODO: #2296 This takes way too long, ccache/make targets to simplify.
     add_custom_command(
         OUTPUT ${linked_out}
-        COMMAND ${CMAKE_C_COMPILER}
+        COMMAND ${CMAKE_CXX_COMPILER}
         -O3
         -fno-plt
         -fPIC
@@ -27,9 +36,10 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         -c
         ${binary_file}
         -o ${linked_out}-1
-        COMMAND ${CMAKE_C_COMPILER}
+        COMMAND ${CMAKE_CXX_COMPILER}
         -fPIC
         -shared
+        -mcmodel=large
         ${linked_out}-1
         -o ${linked_out}
         DEPENDS ${binary_file} ${extra_deps}
@@ -43,8 +53,11 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         "${CMAKE_SOURCE_DIR}/scripts/py/jit/analyze_bin.py"
         "${linked_out}"
         "--output=${nm_out}"
+        ${analyze_arg}
+        # "--statistics"
+        "--shared"
         ${LLVM_TOOLS_ARGS}
-        DEPENDS ${linked_out} ${CMAKE_SOURCE_DIR}/scripts/py/jit/analyze_bin.py
+        DEPENDS ${linked_out} ${analyze_deps}
     )
 
     set_source_files_properties("${linked_out}" "${nm_out}"
@@ -88,7 +101,12 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     )
 endfunction()
 
-process_to_binary(${CMAKE_CURRENT_SOURCE_DIR}/tests/mock_stencils.c tests/jit_memory_test.cpp "mock_stencils")
+process_to_binary(
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/mock_stencils.cpp
+    tests/jit_memory_test.cpp 
+    "mock_stencils"
+    "--accept-all-sections"
+)
 
 add_library(Stencils OBJECT memory/memory.cpp ../../native/dynamic_library.cpp)
 make_module(Stencils USES Base)
@@ -100,7 +118,12 @@ add_library(cp-stencils_bc OBJECT stencils/stencils.cpp)
 target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
 target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
 
-process_to_binary($<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> copy-and-patch.cpp "stencils" $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
+process_to_binary(
+    $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> 
+    stencil_holder.cpp 
+    "stencils"
+    "--order=opcodes.json;--remove-jumps"
+    opcodes.json $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
 
 add_files(
     memory/memory.cpp
@@ -109,5 +132,10 @@ set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
 
 add_files(
     copy-and-patch.cpp
+)
+set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
+
+add_files(
+    stencil_holder.cpp
 )
 set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)

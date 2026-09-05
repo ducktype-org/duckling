@@ -24,6 +24,8 @@
 	[[maybe_unused]] const MicroInstruction *instr, [[maybe_unused]] std::byte *local_stack, \
 		[[maybe_unused]] Frame *frame, [[maybe_unused]] SafeVMThread &thread
 
+// There is a strong dependency in creating the instruction implementation type in LLVM JIT
+// compiler. (jit_data.cpp)
 #define OPFUN_REF_ARGS                                                                         \
 	[[maybe_unused]] const MicroInstruction *&instr, [[maybe_unused]] std::byte *&local_stack, \
 		[[maybe_unused]] Frame *&frame, [[maybe_unused]] SafeVMThread &thread

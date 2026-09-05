@@ -253,11 +253,9 @@ jobs:
       - name: Check should enable JIT
         id: check-jit
         run: |
-          echo jit-flag=--no-enable-jit >> $GITHUB_OUTPUT
-      # @TODO: #2780 fix JIT builds
-      #   echo jit-flag=$( [ "${{ matrix.build-type }}" = "DevOpt" ] &&
-      #                       [ "${{ matrix.compiler.name }}" = "clang" ] &&
-      #                        echo "--enable-jit" || echo "--no-enable-jit" ) >> $GITHUB_OUTPUT
+            echo jit-flag=$( [ "${{ matrix.build-type }}" = "DevOpt" ] && \
+                                [ "${{ matrix.compiler.name }}" = "clang" ] && \
+                                echo "--jit llvm-only" || echo "--jit no" ) >> $GITHUB_OUTPUT
 
       # Configure CMake. Using toolbox instead of direct command, because it
       # also enables CMake File API, which is necessary for integration tests.

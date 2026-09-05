@@ -31,11 +31,18 @@ set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_
 option(JIT_ENABLED "Enable JIT compilation" OFF)
 if(JIT_ENABLED)
     add_compile_definitions(ENABLE_JIT)
+    if (CNP_ENABLED)
+        add_compile_definitions(COMPILE_WITH_CNP=1)
+    else()
+        add_compile_definitions(COMPILE_WITH_CNP=0)
+    endif()
+
 
     set(LLVM_TOOLS_ARGS
         --llvm-opt=${LLVM_OPT}
         --llvm-link=${LLVM_LINK}
         --llvm-nm=${LLVM_NM}
+        --llvm-readobj=${LLVM_READOBJ}
         --llvm-cxxfilt=${LLVM_CXXFILT}
         --llvm-extract=${LLVM_EXTRACT}
     )

@@ -1,12 +1,24 @@
 #include "memory.hpp"
 
-#include <expected>
+#include <fstream>
+#include <utility>
+
+namespace vm::jit::cnp {
+	void JitFuncMemory::dump(const char* filename) {
+		std::ofstream file{ filename, std::ios::binary };
+
+		for (std::byte byte: span()) file << std::to_underlying(byte);
+	}
+}
 
 #if __unix__
 	#include <sys/mman.h>
 	#include <unistd.h>
 
 	#include <base/except/exceptions.hpp>
+
+	#include <cstddef>
+	#include <functional>
 
 namespace vm::jit::cnp {
 	namespace {
@@ -45,27 +57,6 @@ namespace vm::jit::cnp {
 		if (mprotect(addr, size, PROT_READ | PROT_EXEC) != 0)
 			return std::unexpected<std::string>("unable to mark memory as executable");
 		return {};
-	}
-
-	JitFuncMemory::JitFuncMemory(JitFuncMemory&& other) noexcept:
-		  addr{ other.addr },
-		  size{ other.size } {
-		other.addr = nullptr;
-		other.size = 0;
-	}
-
-	JitFuncMemory& JitFuncMemory::operator=(JitFuncMemory&& other) noexcept {
-		if (this != &other) {
-			if (addr != nullptr) {
-				int res = munmap(addr, size);
-				CORE_ASSERT_NOEXCEPT(res == 0, "unable to unmap memory");
-			}
-			addr       = other.addr;
-			size       = other.size;
-			other.addr = nullptr;
-			other.size = 0;
-		}
-		return *this;
 	}
 
 	JitFuncMemory::~JitFuncMemory() noexcept {

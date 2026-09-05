@@ -88,19 +88,31 @@ namespace vm {
 	low::MicroOpcode SafeVMThread::getCurrentOpcode() const {
 		const Frame*           frame  = runtime_data.frame_stack_current;
 		const low::MicroOpcode opcode = getInstructionOpcode(*frame->instr);
-		if (opcode != low::MicroOpcode::breakpoint) return opcode;
+		switch (opcode) {
+		case low::MicroOpcode::breakpoint:
+#ifdef ENABLE_JIT
+			[[fallthrough]];
+		case low::MicroOpcode::jitFuncEntrypoint:
+#endif
+		{
+			const auto* program_copy
+				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
+			CORE_ASSERT(
+				program_copy,
+				"Breakpoints and jit entrypoints should be only in LowVMProgramCopy."
+			);
 
-		const auto* program_copy
-			= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
-		CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
+			const auto original_instr
+				= program_copy->getOriginalProgram()
+			          ->getFunctions()
+			          .at(frame->current_function->name)
+			          ->bc[static_cast<usize>(frame->instr - &frame->current_function->bc[0])];
 
-		const auto original_instr
-			= program_copy->getOriginalProgram()
-		          ->getFunctions()
-		          .at(frame->current_function->name)
-		          ->bc[static_cast<usize>(frame->instr - &frame->current_function->bc[0])];
-
-		return getInstructionOpcode(original_instr);
+			return getInstructionOpcode(original_instr);
+		}
+		default:
+			return opcode;
+		}
 	}
 
 	bool SafeVMThread::isAtExecutionEnd() const {
@@ -120,9 +132,7 @@ namespace vm {
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
 
-		runtime_data.frame_stack_current = frame;
-		frame->local_stack               = local_stack;
-		frame->instr                     = instr;
+		OpFuns::save_execution_state(instr, local_stack, frame, *this);
 	}
 
 	/**
@@ -134,22 +144,34 @@ namespace vm {
 	low::LowFuncData SafeVMThread::createStartFunctionFor(
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
+		if (func_args.size() != func.parameters.size()) {
+			throw exceptions::VMRuntimeException(base::strConcat(
+				"Function '",
+				func.name.str(),
+				"' expects ",
+				func.parameters.size(),
+				" arguments, but ",
+				func_args.size(),
+				" were provided."
+			));
+		}
+
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
 			.id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+			                             // This is okay because we never JIT the start function.
+			                             .jit_func_entrypoint_offset = 0,
 #endif
-			.bc                  = {},
-			.local_stack_size    = 0,
-			.local_block_count   = func.result_types.size() + func.parameters.size(),
-			.arg_size            = 0,
-			.ret_size            = func.ret_size,
-			.parameters          = {},
-			.result_types        = func.result_types,
-			.instruction_mapping = {}
-		};
+			                             .bc               = {},
+			                             .local_stack_size = 0,
+			                             .local_block_count
+			                             = func.result_types.size() + func.parameters.size(),
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
@@ -220,22 +242,20 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{
-			.name = base::StrID("vm_start_function"),
-			.id   = START_FUNCTION_ID,
+		low::LowFuncData start_function{ .name = base::StrID("vm_start_function"),
+			                             .id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+			                             // This is okay because we never JIT the start function.
+			                             .jit_func_entrypoint_offset = 0,
 #endif
-			.bc                  = {},
-			.local_stack_size    = 72,
-			.local_block_count   = 7,
-			.arg_size            = 0,
-			.ret_size            = func.ret_size,
-			.parameters          = {},
-			.result_types        = func.result_types,
-			.instruction_mapping = {}
-		};
+			                             .bc                  = {},
+			                             .local_stack_size    = 72,
+			                             .local_block_count   = 7,
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);

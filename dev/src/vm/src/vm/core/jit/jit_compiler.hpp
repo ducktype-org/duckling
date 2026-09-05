@@ -7,26 +7,59 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <vm/core/jit/copy-and-patch/memory/memory.hpp>
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
 #ifdef BUILD_TYPE_RELEASE
-constexpr inline uint COMPILATION_THRESHOLD = 10;
+constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 10'000;
 #else
 // During testing compile always to check properly that jit integration works.
-constexpr inline uint COMPILATION_THRESHOLD = 0;
+constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 0;
 #endif
 
+#if COMPILE_WITH_CNP
+constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD = 0;
+#endif
+
+
 namespace vm::jit {
-	using JitOpFun
-		= void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
+	// There is a strong dependency in creating this type for LLVM. (jit_data.cpp)
+	using JitLLVMFunc
+		= i64(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
+
+
+#define CP_RETURN __attribute__((preserve_none)) void
+#define CP_ARGS                                                                \
+	[[maybe_unused]] ::byte *local_stack, [[maybe_unused]] ::vm::Frame *frame, \
+		[[maybe_unused]] ::vm::SafeVMThread &thread
+#define CP_PASS_ARGS local_stack, frame, thread
+	using JitCPFunc = CP_RETURN(CP_ARGS);
 
 	/**
 	 * @brief The data additionally stored per function, by the JIT compiler.
 	 */
 	struct JitFuncData {
-		MRef<JitOpFun> func_ptr          = nullptr;
-		uint           until_compilation = COMPILATION_THRESHOLD;
+		std::vector<low::cf::ControlFlowGraph> cfgs;
+		std::vector<uint>                      until_compilation;
+		std::vector<MRef<JitLLVMFunc>>         llvm_compiled_code_ptrs;
+#if COMPILE_WITH_CNP
+		std::optional<cnp::JitFuncMemory> cp_memory = std::nullopt;
+#endif
+
+		JitFuncData() = default;
+
+		JitFuncData(const low::LowFuncData& func):
+			  cfgs(func.bc.size()),
+			  until_compilation(cfgs.size(), 0),
+			  llvm_compiled_code_ptrs(cfgs.size(), nullptr) {
+			cfgs[func.jit_func_entrypoint_offset] = low::cf::ControlFlowGraph(func.bc);
+#if COMPILE_WITH_CNP
+			until_compilation[func.jit_func_entrypoint_offset] = CP_FUNC_COMPILATION_THRESHOLD;
+#else
+			until_compilation[func.jit_func_entrypoint_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;
+#endif
+		}
 	};
 
 	/**
@@ -35,14 +68,21 @@ namespace vm::jit {
 	using JitData = std::vector<JitFuncData>;
 
 	/**
-	 * @brief Compile the contiguous bytecode block (function or loop) on the C2, LLVM-based compiler.
-	 * @param cfg Control flow graph of the block to be compiled.
-	 * @param bc Bytecode of the compiled bytecode block.
-	 * @param name Identifier of the compiled block.
+	 * @brief Compile the function on the C2, LLVM-based compiler.
+	 * @param cfg Control flow graph of the function to be compiled.
+	 * @param bc Bytecode of the compiled function.
+	 * @param name Identifier of the compiled function.
 	 */
-	MRef<JitOpFun> compileLLVM(
+	MRef<JitLLVMFunc> compileLLVM(
 		const vm::low::cf::ControlFlowGraph& cfg,
 		const vm::low::MicroBytecode&        bc,
 		const base::StrID&                   name
+	);
+
+	/**
+	 * @brief Compile the function on the C1, Copy&Patch-based compiler.
+	 */
+	std::expected<cnp::JitFuncMemory, std::string> compileCP(
+		const vm::low::cf::ControlFlowGraph& cfg, const vm::low::MicroBytecode& bc
 	);
 }

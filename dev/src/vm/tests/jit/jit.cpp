@@ -22,21 +22,21 @@ public:
 		// Only the simplest operations
 		TESTER_ADD_TEST(testArithmetic);
 
-		// Executing code within a compiled function
-		TESTER_ADD_TEST(testUnconditionalJumps);
-		TESTER_ADD_TEST(testConditionalJumps);
-		TESTER_ADD_TEST(testJumps);
-
-		// Executing code outside of a compiled function
-		TESTER_ADD_TEST(testCalls);
-		TESTER_ADD_TEST(testVirtualCalls);
-		TESTER_ADD_TEST(testRecursiveCalls);
-
 		// Skipping exts
 		TESTER_ADD_TEST(testFixedArray);
 		TESTER_ADD_TEST(testDynamicArray);
 		TESTER_ADD_TEST(testVariant);
 
+		// Executing code outside of a compiled function
+		TESTER_ADD_TEST(testCalls);
+		TESTER_ADD_TEST(testVirtualCalls);
+
+		// Executing code within a compiled function
+		TESTER_ADD_TEST(testUnconditionalJumps);
+		TESTER_ADD_TEST(testConditionalJumps);
+		TESTER_ADD_TEST(testJumps);
+
+		TESTER_ADD_TEST(testRecursiveCalls);
 		// Many things combined
 		TESTER_ADD_TEST(testAll);
 	}

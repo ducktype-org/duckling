@@ -1,5 +1,8 @@
 add_subdirectory(llvm/)
-add_subdirectory(copy-and-patch/)
+
+if (CNP_ENABLED)
+    add_subdirectory(copy-and-patch/)
+endif()
 
 add_files(
     jit_helper.cpp

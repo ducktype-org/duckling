@@ -53,7 +53,7 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
 
     # Setup list of all bitcode dependencies (from outside of VM).
     set(vm_dep_bc_targets "") # Targets for dependency.
-    set(vm_dep_objects_bc "") # Actuall list.
+    set(vm_dep_objects_bc "") # Actual list.
 
     # Dummy source so header-only libraries (Events) do not fail
     set(DUMMY_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/dummy.c")
@@ -70,6 +70,11 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
             list(APPEND vm_dep_objects_bc $<TARGET_OBJECTS:${dep}_bc>)
         endif()
     endforeach()
+
+    if (CNP_ENABLED)
+        list(APPEND vm_dep_bc_targets cp-stencils_bc)
+        list(APPEND vm_dep_objects_bc $<TARGET_OBJECTS:cp-stencils_bc>)
+    endif()
 
     # Link llvm it will be ONLY used by JitDep.
     llvm_map_components_to_libnames(llvm_libs
@@ -112,25 +117,30 @@ function(add_vm_variant suffix compile_def)
     set(lib_thread_vm_name "LibThreadVM_${suffix}")
     set(lib_vm_name "LibVM_${suffix}")
     set(exec_name "VM_${suffix}")
+    set(lib_vm_sources
+        $<TARGET_OBJECTS:LibCommonVM>
+        $<TARGET_OBJECTS:${lib_thread_vm_name}>
+    )
 
     add_library(${lib_thread_vm_name} OBJECT ${vm_config_dependent_sources})
     target_compile_definitions(${lib_thread_vm_name} PRIVATE ${compile_def})
 
+    make_module(${lib_thread_vm_name} USES ${vm_dependencies})
     if (JIT_ENABLED)
-        # Additionall llvm dependecies.
-        make_module(${lib_thread_vm_name} USES llvm_helpers ${vm_dependencies})
+        # Additional llvm dependencies.
         target_include_directories(${lib_thread_vm_name} PRIVATE ${LLVM_INCLUDE_DIRS})
         target_link_libraries(${lib_thread_vm_name} ${llvm_libs})
 
         # Setup list of all bitcode dependencies (from inside of VM - dependant to VM variant).
         add_library(${lib_thread_vm_name}_bc OBJECT ${vm_config_dependent_sources})
-        make_module(${lib_thread_vm_name}_bc USES llvm_helpers ${vm_dependencies})
+        make_module(${lib_thread_vm_name}_bc USES ${vm_dependencies})
         target_include_directories(${lib_thread_vm_name}_bc PRIVATE ${LLVM_INCLUDE_DIRS})
         target_link_libraries(${lib_thread_vm_name}_bc ${llvm_libs})
         target_compile_options(${lib_thread_vm_name}_bc PRIVATE -emit-llvm)
         target_compile_definitions(${lib_thread_vm_name}_bc PRIVATE ${compile_def})
 
         set(common_bc ${CMAKE_CURRENT_BINARY_DIR}/common_${suffix}.bc)
+        set(common_bc_stripped ${CMAKE_CURRENT_BINARY_DIR}/common_${suffix}.stripped.bc)
         set(extracted_func_file ${CMAKE_CURRENT_BINARY_DIR}/extracted_function_${suffix}.txt)
 
         # Pipeline preparing opcodes definitions for JIT.
@@ -140,7 +150,6 @@ function(add_vm_variant suffix compile_def)
             COMMAND ${LLVM_LINK}
                 $<TARGET_OBJECTS:LibCommonVM_bc>
                 $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
-                $<TARGET_OBJECTS:cp-stencils_bc>
                 ${vm_dep_objects_bc}
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
@@ -151,30 +160,29 @@ function(add_vm_variant suffix compile_def)
                 ${LLVM_TOOLS_ARGS}
                 -i ${common_bc}
                 -o ${extracted_func_file}
-
-            # Strip global constructors, they are not necessery for jit.
-            COMMAND ${LLVM_EXTRACT} --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc}
+            
+            # Strip global constructors, they are not necessary for jit.
+            COMMAND ${LLVM_EXTRACT} --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc_stripped}
 
             # Passess used to shorten bytecode and reduce JIT startup. Public api list, represents all jitable opcodes.
             # globalopt removes unused global variables. It is crucial to do it first to clean up after global constcors
             # got stripped in the previous step.
             # Internalize marks all function not in api list as internal, so they possibly can be removed in dead code
             # elimination (part of O3)
-            # Other passess can improve bitcode (they are not part of O3).
+            # Other passes can improve bitcode (they are not part of O3).
             # O3 is duplicated, because it can possibly improve code after strip-dead-prototypes. It is important to generate
             # as short bitcode as possible, even at the cost of build time.
             COMMAND ${LLVM_OPT}
-                -passes=globalopt,internalize,attributor,simplifycfg,default<O3>,strip-dead-prototypes,default<O3>
+                -passes=globalopt,internalize,simplifycfg,default<O3>,strip-dead-prototypes,default<O3>
                 --internalize-public-api-file=${extracted_func_file}
-                ${common_bc}
+                ${common_bc_stripped}
                 -o ${common_bc}
 
             VERBATIM
             DEPENDS $<TARGET_OBJECTS:LibCommonVM_bc>
-                    cp-stencils_bc
                     ${CMAKE_SOURCE_DIR}/scripts/py/jit/jitable_interface.py
                     $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
-                    # Here dependency to both bc files and targets is necessery.
+                    # Here dependency to both bc files and targets is necessary.
                     ${vm_dep_objects_bc} # File dependency ensures each file will tracked and program will be rebuild if it changes.
                     ${vm_dep_bc_targets} # Target dependency says what should be build first.
         )
@@ -186,31 +194,32 @@ function(add_vm_variant suffix compile_def)
                 VM_COMMON_BC ${common_bc}
         )
 
-        add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> $<TARGET_OBJECTS:JitDep>)
-
-        target_link_libraries(${lib_vm_name} ${llvm_libs})
-
-        make_module(${lib_vm_name} USES llvm_helpers ${vm_dependencies})
+        list(APPEND lib_vm_sources $<TARGET_OBJECTS:JitDep>)
 
         target_compile_options(JitDep PRIVATE
             "--embed-dir=$<TARGET_PROPERTY:JitDep,BINARY_DIR>"
         )
+    endif()
 
-        add_executable(${exec_name} $<TARGET_OBJECTS:MainVM> $<TARGET_OBJECTS:JitDep>)
-        target_link_libraries(${exec_name} PRIVATE ${lib_vm_name})
-        target_link_options(${exec_name} PRIVATE -Wl,--export-dynamic)
-
+    add_library(${lib_vm_name} ${lib_vm_sources})
+    if (JIT_ENABLED)
+        target_link_libraries(${lib_vm_name} ${llvm_libs})
+        make_module(${lib_vm_name} USES llvm_helpers ${vm_dependencies})
     else()
-        make_module(${lib_thread_vm_name} USES ${vm_dependencies})
-
-        add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> )
-
         make_module(${lib_vm_name} USES ${vm_dependencies})
-        add_executable(${exec_name} $<TARGET_OBJECTS:MainVM>)
-        target_link_libraries(${exec_name} PRIVATE ${lib_vm_name})
+    endif()
+
+    add_executable(${exec_name} $<TARGET_OBJECTS:MainVM>)
+    target_link_libraries(${exec_name} PRIVATE ${lib_vm_name})
+    if (JIT_ENABLED)
+        target_link_options(${exec_name} PRIVATE -Wl,--export-dynamic)
     endif()
 
 endfunction()
+
+if (JIT_ENABLED)
+    list(APPEND vm_dependencies llvm_helpers)
+endif()
 
 # Define suffixes and their respective compile definitions
 add_vm_variant(tc "USE_TAIL_CALLS")
