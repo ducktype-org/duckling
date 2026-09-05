@@ -40,6 +40,12 @@ protected:
 	/// Budget for a single poll loop waiting for a process to reach a state.
 	static constexpr auto STATUS_WAIT_BUDGET = std::chrono::seconds(30);
 
+	/// How long a call that is expected to block is given to prove it is still blocked.
+	static constexpr auto BLOCKED_CALL_PROBE = std::chrono::milliseconds(300);
+
+	/// How long a call that is expected to return is given to do so.
+	static constexpr auto UNBLOCKED_CALL_BUDGET = std::chrono::seconds(15);
+
 	/// Highest instruction index `releaseUntilTerminal` clears breakpoints up to.
 	static constexpr u64 MAX_BREAKPOINT_INDEX = 12;
 
