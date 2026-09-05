@@ -43,11 +43,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(result.has_value(), "Expression classification should succeed");
-			assertTrue(
-				std::holds_alternative<repl::ExpressionSingleStatementInfo>(*result),
-				"Expected expression variant"
-			);
+			ASSERT_HAS_VALUE(result, "Expression classification should succeed");
+			ASSERT_MATCHES(*result, repl::ExpressionSingleStatementInfo);
 		});
 	}
 
@@ -57,11 +54,8 @@ private:
 
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto result = repl::classifySingleStatement(ctx, module_id);
-				assertTrue(result.has_value(), "Assignment classification should succeed");
-				assertTrue(
-					std::holds_alternative<repl::InstructionSingleStatementInfo>(*result),
-					"Expected assignment ExprStmt to be routed as instruction"
-				);
+				ASSERT_HAS_VALUE(result, "Assignment classification should succeed");
+				ASSERT_MATCHES(*result, repl::InstructionSingleStatementInfo);
 			});
 		};
 
@@ -75,11 +69,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(result.has_value(), "Instruction classification should succeed");
-			assertTrue(
-				std::holds_alternative<repl::InstructionSingleStatementInfo>(*result),
-				"Expected instruction variant"
-			);
+			ASSERT_HAS_VALUE(result, "Instruction classification should succeed");
+			ASSERT_MATCHES(*result, repl::InstructionSingleStatementInfo);
 		});
 	}
 
@@ -88,11 +79,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(result.has_value(), "Definition classification should succeed");
-			assertTrue(
-				std::holds_alternative<repl::DefinitionSingleStatementInfo>(*result),
-				"Expected definition variant"
-			);
+			ASSERT_HAS_VALUE(result, "Definition classification should succeed");
+			ASSERT_MATCHES(*result, repl::DefinitionSingleStatementInfo);
 		});
 	}
 
@@ -101,11 +89,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(result.has_value(), "Variable classification should succeed");
-			assertTrue(
-				std::holds_alternative<repl::VariableSingleStatementInfo>(*result),
-				"Expected variable variant"
-			);
+			ASSERT_HAS_VALUE(result, "Variable classification should succeed");
+			ASSERT_MATCHES(*result, repl::VariableSingleStatementInfo);
 		});
 	}
 
@@ -114,7 +99,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(!result.has_value(), "Expected error for non-single-statement input");
+			ASSERT_NO_VALUE(result, "Expected error for non-single-statement input");
 			assertTrue(
 				result.error().find("Expected exactly one classified statement")
 					!= std::string::npos,
@@ -129,7 +114,7 @@ private:
 
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto result = repl::classifySingleStatement(ctx, module_id);
-				assertTrue(!result.has_value(), "Expected action statement to be unclassified");
+				ASSERT_NO_VALUE(result, "Expected action statement to be unclassified");
 				assertTrue(
 					result.error().find("Unsupported single statement kind for REPL classification")
 						!= std::string::npos,
@@ -153,10 +138,10 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto classified = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(classified.has_value(), "Classification should succeed");
+			ASSERT_HAS_VALUE(classified, "Classification should succeed");
 
 			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 101);
-			assertTrue(wrapped.has_value(), "Expression wrapper build should succeed");
+			ASSERT_HAS_VALUE(wrapped, "Expression wrapper build should succeed");
 			assertTrue(
 				wrapped->wrapper_func_name.find("__repl_input_wrapper_101") != std::string::npos,
 				"Wrapper function name should include expression counter"
@@ -169,10 +154,10 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto classified = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(classified.has_value(), "Classification should succeed");
+			ASSERT_HAS_VALUE(classified, "Classification should succeed");
 
 			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 202);
-			assertTrue(wrapped.has_value(), "Instruction wrapper build should succeed");
+			ASSERT_HAS_VALUE(wrapped, "Instruction wrapper build should succeed");
 			assertTrue(
 				wrapped->wrapper_func_name.find("__repl_input_wrapper_202") != std::string::npos,
 				"Wrapper function name should include instruction counter"
@@ -185,10 +170,10 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto classified = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(classified.has_value(), "Classification should succeed");
+			ASSERT_HAS_VALUE(classified, "Classification should succeed");
 
 			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 11);
-			assertTrue(!wrapped.has_value(), "Definition wrapper build should fail");
+			ASSERT_NO_VALUE(wrapped, "Definition wrapper build should fail");
 			assertTrue(
 				wrapped.error().find("Definitions do not have executable wrappers")
 					!= std::string::npos,
@@ -202,10 +187,10 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto classified = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(classified.has_value(), "Classification should succeed");
+			ASSERT_HAS_VALUE(classified, "Classification should succeed");
 
 			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 12);
-			assertTrue(!wrapped.has_value(), "Variable wrapper build should fail");
+			ASSERT_NO_VALUE(wrapped, "Variable wrapper build should fail");
 			assertTrue(
 				wrapped.error().find("do not have executable wrappers") != std::string::npos,
 				"Expected non-executable-statement error"
@@ -218,12 +203,12 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto classified = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(classified.has_value(), "Classification should succeed");
+			ASSERT_HAS_VALUE(classified, "Classification should succeed");
 
 			auto variable_info
 				= std::get<repl::VariableSingleStatementInfo>(std::move(classified).value());
 			auto built = repl::buildVariableWrapper(ctx, variable_info, 404);
-			assertTrue(built.has_value(), "Variable wrapper build should succeed");
+			ASSERT_HAS_VALUE(built, "Variable wrapper build should succeed");
 
 			// The declaration contributes the storage of the variable, the construction of its
 			// initial value is a separate function the caller sequences in statement order.
@@ -256,13 +241,13 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto classified = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(classified.has_value(), "Classification should succeed");
+			ASSERT_HAS_VALUE(classified, "Classification should succeed");
 
 			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 303);
-			assertTrue(wrapped.has_value(), "Wrapper build should succeed");
+			ASSERT_HAS_VALUE(wrapped, "Wrapper build should succeed");
 
 			auto hout_unit = repl::makeExecutableHOUTUnit(ctx, wrapped->wrapper_function);
-			assertTrue(hout_unit.has_value(), "Executable HOUT unit should be created");
+			ASSERT_HAS_VALUE(hout_unit, "Executable HOUT unit should be created");
 			assertTrue(!hout_unit->functions.empty(), "Executable HOUT unit should have a function");
 			ASSERT_EQUAL(
 				hout_unit->functions[0]->declaration->original_symbol,
@@ -275,9 +260,8 @@ private:
 		auto first_ref = repl::createEphemeralChainedStatementModule("1 + 2;", {}, 7, "repl_");
 		assertTrue(first_ref->isReplModule(), "Chained module should be marked as a REPL module");
 		ASSERT_EQUAL("repl_7", first_ref->getName().strView());
-		assertTrue(
-			!first_ref->getReplModuleParent().has_value(),
-			"First chained module should not have REPL parent"
+		ASSERT_NO_VALUE(
+			first_ref->getReplModuleParent(), "First chained module should not have REPL parent"
 		);
 		assertTrue(first_ref->hasMainSourceFile(), "Chained module should have main source file");
 
@@ -286,9 +270,8 @@ private:
 		);
 		assertTrue(second_ref->isReplModule(), "Second module should be marked as a REPL module");
 		ASSERT_EQUAL("script_8", second_ref->getName().strView());
-		assertTrue(
-			second_ref->getReplModuleParent().has_value(),
-			"Second chained module should have REPL parent"
+		ASSERT_HAS_VALUE(
+			second_ref->getReplModuleParent(), "Second chained module should have REPL parent"
 		);
 		ASSERT_EQUAL(second_ref->getReplModuleParent().value(), first_ref->getModuleID());
 	}
@@ -315,7 +298,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto hout = repl::getDefinitionHOUTUnit(ctx, module_id);
-			assertTrue(hout.has_value(), "Definition HOUT should compile");
+			ASSERT_HAS_VALUE(hout, "Definition HOUT should compile");
 			assertTrue(
 				!hout.value()->functions.empty() || !hout.value()->glob_data.empty(),
 				"Definition HOUT should contain emitted elements"
