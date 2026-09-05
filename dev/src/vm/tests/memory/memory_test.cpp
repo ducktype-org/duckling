@@ -76,14 +76,14 @@ private:
 		ASSERT_HAS_VALUE(completed.run_result);
 		const auto clean_teardown = vm::api::deinitOrKill(completed.pid);
 		ASSERT_HAS_VALUE(clean_teardown);
-		ASSERT_TRUE(clean_teardown.value().has_value());
+		ASSERT_HAS_VALUE(clean_teardown.value());
 		ASSERT_TRUE(clean_teardown.value().value());
 
 		const auto panicked = runTestOnVmGetResult("local_leak.dbc", "", "");
 		ASSERT_NO_VALUE(panicked.run_result);
 		const auto forced_teardown = vm::api::deinitOrKill(panicked.pid);
 		ASSERT_HAS_VALUE(forced_teardown);
-		ASSERT_TRUE(!forced_teardown.value().has_value());
+		ASSERT_NO_VALUE(forced_teardown.value());
 
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(completed.pid));
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(panicked.pid));
@@ -120,7 +120,7 @@ private:
 		const auto teardown = vm::api::deinitOrKill(result.pid);
 		ASSERT_HAS_VALUE(teardown);
 		// Deinit or kill should report that the deinit failed.
-		ASSERT_TRUE(!teardown.value().has_value());
+		ASSERT_NO_VALUE(teardown.value());
 		// But the process should be gone either way.
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(result.pid));
 

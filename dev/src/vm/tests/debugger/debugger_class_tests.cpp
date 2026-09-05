@@ -99,8 +99,9 @@ private:
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 		for (u64 breakpoint: breakpoints)
-			ASSERT_TRUE(debugger.setBreakpoint(fs::File(path(std::string(path_name))), breakpoint)
-			                .has_value());
+			ASSERT_HAS_VALUE(
+				debugger.setBreakpoint(fs::File(path(std::string(path_name))), breakpoint)
+			);
 		ASSERT_HAS_VALUE(debugger.runMain());
 		std::unique_lock lk(m);
 		// timeout for the test

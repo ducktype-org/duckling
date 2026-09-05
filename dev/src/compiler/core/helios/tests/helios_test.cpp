@@ -1087,7 +1087,7 @@ private:
 			auto name = base::StrID(str);
 			for (auto& gb: hout.glob_data) {
 				if (gb->original_name == name) {
-					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb->value)) {
+					if (v_matches(gb->value, compiler::helios::HOUTGlobalConst)) {
 						auto ctv = std::get<compiler::helios::HOUTGlobalConst>(gb->value).value;
 						auto val = ctv.get<compiler::numeric_value::NumericValue>()->get<i64>();
 						if (!val.has_value()) {
@@ -1616,7 +1616,7 @@ private:
 				ASSERT_EQUAL(abc_param.type, st(int32_type));
 				ASSERT_EQUAL(second_param.type, st(int64_type));
 
-				assertTrue(abc_param.initial_value.has_value(), "Initial value expected");
+				ASSERT_HAS_VALUE(abc_param.initial_value, "Initial value expected");
 				assertTrue(second_param.initial_value.empty(), "No initial value expected");
 			}
 		});

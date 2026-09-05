@@ -100,7 +100,7 @@ private:
                 auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
                 auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
-                assertTrue(mir_unit.hasValue(), "MIR lowering failed");
+                ASSERT_HAS_VALUE(mir_unit, "MIR lowering failed");
 
                 auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
@@ -212,7 +212,7 @@ private:
 			ASSERT_HAS_VALUE(dvm_variant);
 
 			const auto& unit_dvm_type = program_ctx.getUnitType();
-			ASSERT_TRUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type).has_value());
+			ASSERT_HAS_VALUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type));
 			ASSERT_TRUE(std::ranges::contains(
 				dvm_variant.value().variant_alternatives, typeName(unit_dvm_type)
 			));

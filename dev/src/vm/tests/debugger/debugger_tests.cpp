@@ -30,12 +30,12 @@ public:
 private:
 	vm::PID loadProgram(std::string_view path_name) {
 		auto process_pid_response = vm::api::spawn();
-		assertTrue(process_pid_response.has_value(), "Spawn failed (loadProgram)");
+		ASSERT_HAS_VALUE(process_pid_response, "Spawn failed (loadProgram)");
 		auto pid = process_pid_response.value().pid;
 
 		fs::File file(path(std::string(path_name)));
 		auto     loaded_file_response = vm::api::loadFiles(pid, { file });
-		assertTrue(loaded_file_response.has_value(), "Load failed (loadProgram)");
+		ASSERT_HAS_VALUE(loaded_file_response, "Load failed (loadProgram)");
 		return pid;
 	}
 
@@ -46,12 +46,12 @@ private:
 		auto pid = loadProgram("vm_api_tests.dbc");
 
 		auto run_response = vm::api::run(pid);
-		assertTrue(run_response.has_value(), "Run failed (1)");
+		ASSERT_HAS_VALUE(run_response, "Run failed (1)");
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 		auto stop_response = vm::api::stop(pid);
-		assertTrue(stop_response.has_value(), "Stop failed (1)");
+		ASSERT_HAS_VALUE(stop_response, "Stop failed (1)");
 	}
 
 	/**
@@ -61,12 +61,12 @@ private:
 		auto pid = loadProgram("vm_api_tests.dbc");
 
 		auto run_response = vm::api::run(pid);
-		assertTrue(run_response.has_value(), "Run failed (1)");
+		ASSERT_HAS_VALUE(run_response, "Run failed (1)");
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 		auto kill_response = vm::api::kill(pid);
-		assertTrue(kill_response.has_value(), "Kill failed (1)");
+		ASSERT_HAS_VALUE(kill_response, "Kill failed (1)");
 	}
 
 	/**
@@ -76,9 +76,7 @@ private:
 	void pausesOnBreakpointAndResumes() {
 		auto pid = loadProgram("breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
-			ASSERT_TRUE(
-				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true));
 
 		vm::api::run(pid).value();  // "Run failed (1)"
 
@@ -104,9 +102,7 @@ private:
 	void notPausesOnRemovedBreakpoint() {
 		auto pid = loadProgram("breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
-			ASSERT_TRUE(
-				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true));
 
 		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 5, false));
 
@@ -127,9 +123,7 @@ private:
 	void executesStepByStep() {
 		auto pid = loadProgram("breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
-			ASSERT_TRUE(
-				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true));
 
 		vm::api::run(pid).value();  // "Run failed (1)"
 
@@ -202,7 +196,7 @@ private:
 	template<typename FieldDataType>
 	FieldDataType getVMValueRefData(const SharedBox<vm::IVMValueRef>& vmvalue_ref) {
 		auto data_opt = vmvalue_ref->readData();
-		assertTrue(data_opt.has_value(), "VMValueRef: Referenced memory is dead");
+		ASSERT_HAS_VALUE(data_opt, "VMValueRef: Referenced memory is dead");
 		return std::get<FieldDataType>(data_opt.value());
 	}
 
