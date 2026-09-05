@@ -8,25 +8,39 @@
 #include <base/pointers/ref.hpp>
 
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
+#include <vm/core/safe/low_program/cfg/loop_detector.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
 #ifdef BUILD_TYPE_RELEASE
-constexpr inline uint COMPILATION_THRESHOLD = 10;
+constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 10'000;
+constexpr inline uint LOOP_COMPILATION_THRESHOLD      = 10'000;
 #else
 // During testing compile always to check properly that jit integration works.
-constexpr inline uint COMPILATION_THRESHOLD = 0;
+constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 0;
+constexpr inline uint LOOP_COMPILATION_THRESHOLD      = 0;
 #endif
 
 namespace vm::jit {
-	using JitOpFun
-		= void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
+	// There is a strong dependency in creating this type for LLVM. (jit_data.cpp)
+	using JitLLVMFunc
+		= i64(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
 
 	/**
 	 * @brief The data additionally stored per function, by the JIT compiler.
 	 */
 	struct JitFuncData {
-		MRef<JitOpFun> func_ptr          = nullptr;
-		uint           until_compilation = COMPILATION_THRESHOLD;
+		std::vector<low::cf::ControlFlowGraph> cfgs;
+		std::vector<uint>                      until_compilation;
+		std::vector<MRef<JitLLVMFunc>>         llvm_compiled_code_ptrs;
+
+		JitFuncData() = default;
+
+		JitFuncData(const low::LowFuncData& func):
+			  cfgs(low::cf::detectLoopsInFunction(func)),
+			  until_compilation(cfgs.size(), LOOP_COMPILATION_THRESHOLD),
+			  llvm_compiled_code_ptrs(cfgs.size(), nullptr) {
+			until_compilation[func.jit_func_entrypoint_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;
+		}
 	};
 
 	/**
@@ -40,7 +54,7 @@ namespace vm::jit {
 	 * @param bc Bytecode of the compiled bytecode block.
 	 * @param name Identifier of the compiled block.
 	 */
-	MRef<JitOpFun> compileLLVM(
+	MRef<JitLLVMFunc> compileLLVM(
 		const vm::low::cf::ControlFlowGraph& cfg,
 		const vm::low::MicroBytecode&        bc,
 		const base::StrID&                   name

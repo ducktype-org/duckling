@@ -95,7 +95,9 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_jit_test jit/jit.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        if (NOT JIT_ENABLED)
+        if (JIT_ENABLED)
+                set_property(TEST ${test_set}_LowVMProgramCopy_test PROPERTY DISABLED TRUE)
+        else()
                 # This test does not directly invoke jit.
                 # When jit IS enabled it helps to test it.
                 set_property(TEST ${test_set}_jit_test PROPERTY DISABLED TRUE)

@@ -86,10 +86,13 @@ namespace vm::loader::compiler::safe::detail {
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		):
 			  compiler{ compiler },
-			  ctx{ ctx } {
+			  ctx{ ctx }
 #ifdef ENABLE_JIT
-			addLow<Op_jitEntrypoint>();
+			  ,
+			  next_instruction_index{ 1 },
+			  result{ makeLowInstruction(vm::low::MicroOpcode::jitFuncEntrypoint, 0, 0) }
 #endif
+		{
 		}
 
 		std::pair<low::MicroBytecode, decltype(label_id_to_offset)> build() {
@@ -154,14 +157,8 @@ namespace vm::loader::compiler::safe::detail {
 					makeLowInstruction(T::OPCODE, lowerLowArg<LowArgs>(std::forward<Args>(args))...)
 				);
 #if (BUILD_TYPE_DEV_DEBUG)
-	#ifdef ENABLE_JIT
-				if constexpr (!std::is_same_v<T, Op_jitEntrypoint>) {
-	#endif
-					result.back().opcode_id      = T::OPCODE;
-					result.back().representation = current_high_instruction_representation;
-	#ifdef ENABLE_JIT
-				}
-	#endif
+				result.back().opcode_id      = T::OPCODE;
+				result.back().representation = current_high_instruction_representation;
 #endif
 				next_instruction_index++;
 			}(static_cast<T::ArgTypes*>(nullptr));

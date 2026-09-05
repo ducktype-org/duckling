@@ -102,11 +102,16 @@ clah::Clah getVmClah() {
 							 "Fast mode for the VM, which does not perform certain runtime checks."
 						 )
 	                     .build())
+#ifndef ENABLE_JIT
+				// JIT and debugger are conflicting due to common usage of LowVMProgramCopy,
+	            // with both JIT and debugger assuming exclusive control of program copy opcode
+	            // modification.
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addShortName('d')
 	                     .addLongName("debug")
 	                     .addShortDesc("Start the VM CLI debugger")
 	                     .build())
+#endif  // ENABLE_JIT
 				.add(clah::ParamBuilder::ofValue(
 						 clah::StringListParser::make("args", clah::StringParser::make())
 				)
@@ -174,12 +179,15 @@ clah::Clah getVmClah() {
 						return cli(source_files, args, process_options, ffi_libs);
 				})
 		)
+#ifndef ENABLE_JIT
 	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();
 							   vm::debugger::debug_adapter::DebugAdapter::get().run();
 							   return 0;
-						   }));
+						   }))
+#endif  // ENABLE_JIT
+		;
 }
 
 int main(int argc, const char** argv) {

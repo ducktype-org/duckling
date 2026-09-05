@@ -6,6 +6,7 @@ from .helpers import (
     cc_compiler,
 )
 from ..impl.helpers import (
+    JIT_options,
     PromptForCoverageIfBuildNotOptimised,
     default_compiler_from_ctx,
     default_linker_from_ctx,
@@ -82,12 +83,14 @@ def configure_presets(ctx, param, value):
     ),
 )
 @option(
-    "--enable-jit/--no-enable-jit",
-    prompt="Enable JIT",
+    "--jit",
     help="Whether or not to enable JIT compilation.",
-    type=bool,
-    default=False,
-    is_flag=True,
+    default="No",
+    callback=lambda ctx, param, value: JIT_options[value.replace('-', '_').upper()],
+    type=Choice(
+        ["No", "LLVM-only"],
+        case_sensitive=False,
+    )
 )
 # @TODO check if it is necessary to get compiler path from context
 @cxx_compiler(

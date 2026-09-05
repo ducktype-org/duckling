@@ -9,6 +9,7 @@
 #include <vm/bytecode/bytecode.hpp>
 
 #include <array>
+#include <string>
 #include <vector>
 
 namespace vm::low {
@@ -36,8 +37,7 @@ namespace vm::low {
 				JmpIfNot,
 			};
 
-			OutEdges();
-
+			OutEdges()                           = default;
 			OutEdges(const OutEdges&)            = default;
 			OutEdges& operator=(const OutEdges&) = default;
 
@@ -92,20 +92,26 @@ namespace vm::low {
 			 */
 			const BasicBlockID& operator[](usize index) const;
 
+			/**
+			 * @brief Returns a compact string representation for debugging.
+			 */
+			[[nodiscard]] std::string toString() const;
+
 		private:
-			std::array<BasicBlockID, 2> to;
-			usize                       no_edges{ 0 };
-			Kind                        op_type{ Kind::End };
+			std::array<BasicBlockID, 2> to        = { 0, 0 };
+			usize                       no_edges  = 0;
+			Kind                        edge_kind = Kind::End;
 		};
 
 		/**
 		 * @brief Basic block metadata used by control-flow analyses.
 		 */
 		struct BasicBlock {
-			OutEdges           succ;
 			const BasicBlockID id;
 			const usize        start;
 			const usize        end;
+			OutEdges           succ;
+			i64                ret_value;  // Value only relevant for blocks without outgoing edges.
 
 			/**
 			 * @brief Creates a basic block descriptor.
@@ -116,6 +122,16 @@ namespace vm::low {
 			BasicBlock(BasicBlockID id, usize start, usize end);
 
 			BasicBlock() = delete;
+
+			[[nodiscard]] std::ranges::range auto instructions(const vm::low::MicroBytecode& bc
+			) const {
+				return std::span(bc).subspan(start, end - start);
+			}
+
+			/**
+			 * @brief Sets return value to block to specified value.
+			 */
+			void setRetValue(i64 value);
 
 			/**
 			 * @brief Returns the shape of outgoing edges.
@@ -136,6 +152,8 @@ namespace vm::low {
 			 * @brief Returns the failure successor for conditional branches.
 			 */
 			[[nodiscard]] BasicBlockID failTarget() const;
+
+			[[nodiscard]] bool isFallthrough() const;
 
 			/**
 			 * @brief Sets conditional successors.
@@ -161,6 +179,11 @@ namespace vm::low {
 			 * @brief Returns the number of outgoing edges.
 			 */
 			[[nodiscard]] usize edgeCount() const;
+
+			/**
+			 * @brief Returns a compact string representation for debugging.
+			 */
+			[[nodiscard]] std::string toString() const;
 		};
 
 		/**
@@ -175,7 +198,9 @@ namespace vm::low {
 			 * @param bc Micro-bytecode of lowered function.
 			 * @param block_beginnings Sorted block start instruction offsets.
 			 */
-			void createCFG(const low::MicroBytecode& bc, const std::vector<usize>& block_beginnings);
+			void createFuncCFG(
+				const low::MicroBytecode& bc, const std::vector<usize>& block_beginnings
+			);
 
 		public:
 			ControlFlowGraph() = default;
@@ -187,9 +212,16 @@ namespace vm::low {
 			ControlFlowGraph(const low::MicroBytecode& bc);
 
 			/**
+			 * @brief Returns whether the graph is empty.
+			 */
+			[[nodiscard]] bool empty() const;
+
+			/**
 			 * @brief Returns number of blocks in the graph.
 			 */
 			[[nodiscard]] usize size() const;
+
+			[[nodiscard]] std::ranges::range auto getBlocks() const { return std::span(blocks); }
 
 			/**
 			 * @brief Returns block metadata by identifier.
@@ -198,13 +230,23 @@ namespace vm::low {
 			[[nodiscard]] const BasicBlock& getBlock(BasicBlockID id) const;
 
 			/**
-			 * @brief Builds a CFG containing only selected blocks.
-			 * @param block_ids Block ids to keep in the resulting graph.
-			 * @return A remapped CFG subgraph with out-of-subset edges redirected.
-			 * @note Current implementation redirects external edges to a synthetic dummy block.
+			 * @brief Builds an induced subgraph with an entry block containing only chosen blocks.
+			 * @param entry_block_id Block that becomes the new entry (subgraph block 0).
+			 * @param other_block_ids Block ids to keep in the resulting graph.
+			 * @param dummy_exit_blocks If true, external edges are redirected to synthetic dummy
+			 * blocks. If false, all edges must point to blocks in the subgraph.
+			 * @return A standalone CFG representing the created induced subgraph.
 			 */
-			[[nodiscard]] ControlFlowGraph subgraph(const std::vector<BasicBlockID>& block_ids
+			[[nodiscard]] ControlFlowGraph inducedSubgraph(
+				BasicBlockID                     entry_block_id,
+				const std::vector<BasicBlockID>& other_block_ids,
+				bool                             dummy_exit_blocks
 			) const;
+
+			/**
+			 * @brief Returns a multi-line string representation of this CFG for debugging.
+			 */
+			[[nodiscard]] std::string toString() const;
 		};
 	}  // vm::low::cf
 

@@ -46,13 +46,12 @@ namespace vm::jit {
 		llvm::Value* frame_arg;
 		llvm::Value* thread_arg;
 
-		vm::low::cf::ControlFlowGraph  cfg;
 		std::vector<llvm::BasicBlock*> llvm_blocks;
 
 		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx): llvm_ctx(ctx), module(module) {
 			auto& llvm_data   = llvmData();
 			user_func_wrapper = llvm::Function::Create(
-				llvm_data.types.opfun.get(),
+				llvm_data.types.compiled.get(),
 				llvm::Function::ExternalLinkage,
 				module->getName(),
 				module
@@ -168,7 +167,7 @@ namespace vm::jit {
 			builder.CreateStore(bc_ptr, instr_arg);
 		}
 
-		void lowerBasicBlock(
+		void lowerBlockBody(
 			const low::MicroBytecode&        bc,
 			llvm::IRBuilder<>&               ir_builder,
 			usize                            start,
@@ -181,7 +180,10 @@ namespace vm::jit {
 				const vm::MicroInstruction& mi     = bc.at(instr_idx);
 				auto                        opcode = vm::getInstructionOpcode(mi);
 				switch (opcode) {
-				case vm::low::MicroOpcode::jitEntrypoint:
+				case vm::low::MicroOpcode::jitFuncEntrypoint:
+					[[fallthrough]];
+				case vm::low::MicroOpcode::jitLoopEntrypoint:
+					CORE_PANIC("We should always compile the original code, without entrypoints.");
 					continue;
 				case vm::low::MicroOpcode::call_func:
 				case vm::low::MicroOpcode::virtual_call_pptr_method: {
@@ -252,7 +254,7 @@ namespace vm::jit {
 			std::unordered_set<std::string>& used_opfuns
 		) {
 			llvm::IRBuilder<> ir_builder(llvm_blocks[block.id]);
-			lowerBasicBlock(bc, ir_builder, block.start, block.end, func_or_loop_name, used_opfuns);
+			lowerBlockBody(bc, ir_builder, block.start, block.end, func_or_loop_name, used_opfuns);
 
 			switch (block.edgeKind()) {
 			case vm::low::cf::OutEdges::Kind::Default: {
@@ -266,9 +268,29 @@ namespace vm::jit {
 			}
 			case vm::low::cf::OutEdges::Kind::End:
 			default: {
-				ir_builder.CreateRetVoid();
+				// We return the offset the interpreter needs to move it's instruction pointer by.
+				// This is necessary, because we made instr arguments to each opcode constant to
+				// allow for compiler to make better optimizaitons.
+				i64 final_offset = block.ret_value;
+				ir_builder.CreateRet(ir_builder.getInt64(final_offset));
 				break;
 			}
+			}
+		}
+
+		void emitEntryBlock(llvm::BasicBlock* first_cfg_block) {
+			llvm::BasicBlock* entry_block
+				= llvm::BasicBlock::Create(llvm_ctx, "entry", user_func_wrapper);
+
+			if (first_cfg_block != nullptr) entry_block->moveBefore(first_cfg_block);
+
+			llvm::IRBuilder<> entry_builder(entry_block);
+
+			if (first_cfg_block != nullptr) {
+				entry_builder.CreateBr(first_cfg_block);
+			} else {
+				// Safe fallback for entirely empty functions/CFGs
+				entry_builder.CreateRet(entry_builder.getInt64(0));
 			}
 		}
 
@@ -287,13 +309,15 @@ namespace vm::jit {
 				llvm_blocks.push_back(block);
 			}
 
-			// Helper structure to track called opfuns.
+			if (!llvm_blocks.empty())
+				emitEntryBlock(llvm_blocks[0]);
+			else
+				emitEntryBlock(nullptr);
+
 			std::unordered_set<std::string> used_opfuns;
 
 			for (usize block_idx = 0; block_idx < llvm_blocks.size(); ++block_idx)
-				lowerBlock(
-					func_or_loop_name, bc, cfg.getBlock(block_idx), used_opfuns
-				);  // lowerBlock(function_to_compile, block_idx, used_opfuns);
+				lowerBlock(func_or_loop_name, bc, cfg.getBlock(block_idx), used_opfuns);
 
 			auto used_opfuns_filter = [&](const llvm::GlobalValue* gv) -> bool {
 				return used_opfuns.contains(gv->getName().str());
