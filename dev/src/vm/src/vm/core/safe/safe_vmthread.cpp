@@ -98,8 +98,7 @@ namespace vm {
 			const auto* program_copy
 				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
 			CORE_ASSERT(
-				program_copy,
-				"Breakpoints and jit entrypoints should be only in LowVMProgramCopy."
+				program_copy, "Breakpoints and jit entrypoints should be only in LowVMProgramCopy."
 			);
 
 			const auto original_instr
@@ -156,9 +155,8 @@ namespace vm {
 			));
 		}
 
-		low::LowFuncData start_function{
-			.name = base::StrID("vm_start_function"),
-			.id   = START_FUNCTION_ID,
+		low::LowFuncData start_function{ .name = base::StrID("vm_start_function"),
+			                             .id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
 			                             // This is okay because we never JIT the start function.
 			                             .jit_func_entrypoint_offset = 0,
