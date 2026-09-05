@@ -1,8 +1,0 @@
-# Main thread is Sleeping on IO.
-function main { } -> { i64 } {
-	init_pany_type		x, i64;
-	input_p64			x;
-	deinit;
-
-	ret;
-}

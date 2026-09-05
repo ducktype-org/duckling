@@ -14,8 +14,7 @@ function main { } -> { i64 } {
 	deinit; # c
 	deinit; # b
 	deinit; # a
-	# Assigned explicitly: `exitValueEndpoint` asserts the exit value is 0, and without this it
-	# would only be checking that a fresh return slot happens to read as zero.
+	# Assigned explicitly, `exitValueEndpoint` asserts the exit value is 0.
 	mov_p64_imm 	ret0, 0;
 	ret;
 }

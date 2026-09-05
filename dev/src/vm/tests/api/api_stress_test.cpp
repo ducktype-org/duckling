@@ -9,23 +9,25 @@
 
 #include <array>
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <iostream>
+#include <mutex>
 #include <random>
 #include <string>
 #include <thread>
 #include <vector>
+
+namespace api = vm::api;
 
 /**
  * @brief Randomized API stress tests for the DVM.
  *
  * Clients may call ANY endpoint at ANY time, from any number of threads. Individual results are not
  * asserted - racing the program's progress may legally fail - the harness asserts the global
- * properties instead:
- * - nothing crashes, hangs or deadlocks,
- * - every status the process emits is a legal edge of the process-state model, so a broken
- * aggregation shows up as an illegal transition,
- * - a program that was allowed to complete cleanly still leaves a valid memory state.
- *
- * The seed of every failing scenario is part of the assertion message, so a failure is
+ * properties instead: nothing crashes or hangs, every status the process emits is a legal edge of
+ * the process-state model, and a program that was allowed to complete cleanly still leaves a valid
+ * memory state. The seed of every scenario is part of the assertion message, so a failure is
  * reproducible.
  *
  * What each endpoint is supposed to do on its own is covered by `api/api_test.cpp` and
@@ -46,6 +48,68 @@ public:
 	~VmApiStressTest() override = default;
 
 private:
+	/**
+	 * @brief Kills the process when the scope ends, however it ends.
+	 *
+	 * A failed assertion unwinds out of the test method, so without this a scenario that kills its
+	 * process on its last line leaves it running, and the `Supervisor` teardown then prints its own
+	 * warnings on top of the real failure. Killing an already dead process is a no-op.
+	 */
+	struct ScopedKill final {
+		vm::PID pid;
+
+		explicit ScopedKill(vm::PID pid): pid(pid) {}
+
+		~ScopedKill() { (void) vm::api::kill(pid); }
+
+		ScopedKill(const ScopedKill&)            = delete;
+		ScopedKill& operator=(const ScopedKill&) = delete;
+		ScopedKill(ScopedKill&&)                 = delete;
+		ScopedKill& operator=(ScopedKill&&)      = delete;
+	};
+
+	/**
+	 * @brief Aborts the binary (printing the scenario name) if a scenario does not finish in time.
+	 *
+	 * A client thread wedged in a blocking endpoint cannot be recovered from inside the process, so
+	 * failing hard with the seed of the scenario is the only useful outcome.
+	 */
+	class Watchdog final {
+	public:
+		explicit Watchdog(std::string what): what(std::move(what)) {
+			thread = std::thread([this] {
+				std::unique_lock lock(mutex);
+				if (!cv.wait_for(lock, TIME_BUDGET, [this] { return done; })) {
+					std::cerr << "DVM API WATCHDOG: '" << this->what
+							  << "' exceeded its time budget\n";
+					std::abort();
+				}
+			});
+		}
+
+		~Watchdog() {
+			{
+				std::lock_guard lock(mutex);
+				done = true;
+			}
+			cv.notify_all();
+			thread.join();
+		}
+
+		Watchdog(const Watchdog&)            = delete;
+		Watchdog& operator=(const Watchdog&) = delete;
+
+	private:
+		/// Generous, since this is a "something hung" detector and not a performance assertion.
+		static constexpr auto TIME_BUDGET = std::chrono::seconds(60);
+
+		std::string             what;
+		std::thread             thread;
+		std::mutex              mutex;
+		std::condition_variable cv;
+		bool                    done = false;
+	};
+
 	/// Fixed so a failure is reproducible without an environment variable. Bump it to shake out
 	/// new interleavings.
 	static constexpr u64 MASTER_SEED = 0x5D'EE'CE'66'D1'CE'20'40ULL;
@@ -53,11 +117,8 @@ private:
 	static constexpr u64 PARK_INSTRUCTION = 5;
 
 	void stressTerminatingProgram() {
-		/*
-		 * Runs a fast-terminating program to completion while hammering it with random requests,
-		 * then joins and validates the memory state.
-		 */
-		namespace api = vm::api;
+		// Runs a fast-terminating program to completion while hammering it with random requests,
+		// then joins and validates the memory state.
 
 		for (usize iter = 0; iter < 15; iter++) {
 			const u64       seed = MASTER_SEED + iter;
@@ -102,8 +163,7 @@ private:
 
 			validateTransitions(scoped.log, base::strConcat("seed=", seed));
 
-			// The program completed cleanly (no step or stop interrupted it), so guest-memory
-			// validity is a hard post-condition - an API error or a leak here is a regression.
+			// The program completed cleanly, so a leak here is a regression.
 			auto valid = api::deinitAndValidate(pid);
 			assertSucceeded(valid, base::strConcat("deinitAndValidate, seed=", seed));
 			ASSERT_TRUE(valid.value());
@@ -111,18 +171,15 @@ private:
 	}
 
 	void stressInfiniteProgram() {
-		/*
-		 * Random mix against a program that never terminates on its own, then stop and kill. A
-		 * pending pause must not prevent stopping.
-		 */
-		namespace api = vm::api;
+		// Random mix against a program that never terminates on its own, then stop and kill. A
+		// pending pause must not prevent stopping.
 
 		for (usize iter = 0; iter < 15; iter++) {
 			const u64       seed = MASTER_SEED + iter;
 			std::mt19937_64 rng(seed);
 			Watchdog        watchdog(base::strConcat("stressInfiniteProgram seed=", seed));
 
-			const vm::PID   pid = spawnAndLoad("while_true.dbc");
+			const vm::PID   pid = spawnAndLoad("../debugger/while_true.dbc");
 			ScopedKill      kill_guard(pid);
 			ScopedStatusLog scoped(*this, pid);
 
@@ -136,10 +193,8 @@ private:
 				base::strConcat("getExecutionStatus must succeed for a live process, seed=", seed)
 			);
 
-			// No `resume` before the `stop`: a pause left pending by the random mix is exactly
-			// what must not prevent stopping, and resuming first would remove it. `stop` itself
-			// is "always legal" and its only reachable error is `ProcessNotFound`, so the
-			// terminal state afterwards is what actually proves it worked.
+			// No `resume` before the `stop`: a pause left pending by the random mix is exactly what
+			// must not prevent stopping, and the terminal state afterwards is what proves it.
 			assertSucceeded(
 				api::stop(pid), base::strConcat("stop of an infinite program, seed=", seed)
 			);
@@ -151,17 +206,14 @@ private:
 	}
 
 	void stressConcurrentClients() {
-		/*
-		 * Several client threads hammer the same single-threaded process concurrently.
-		 */
-		namespace api                = vm::api;
+		// Several client threads hammer the same single-threaded process concurrently.
 		constexpr usize CLIENT_COUNT = 4;
 
 		for (usize iter = 0; iter < 8; iter++) {
 			const u64 seed = MASTER_SEED + iter;
 			Watchdog  watchdog(base::strConcat("stressConcurrentClients seed=", seed));
 
-			const vm::PID   pid = spawnAndLoad("while_true.dbc");
+			const vm::PID   pid = spawnAndLoad("../debugger/while_true.dbc");
 			ScopedKill      kill_guard(pid);
 			ScopedStatusLog scoped(*this, pid);
 
@@ -174,8 +226,7 @@ private:
 				clients.emplace_back([this, pid, seed, client, &status_ok] {
 					std::mt19937_64 rng(seed * CLIENT_COUNT + client);
 					// No `resume` in the mix: it can park a concurrent `api::pause` forever, see
-					// `randomOp`. Dropping `stop` from this scenario is what exposed it - another
-					// client's `stop` used to free the waiter by accident.
+					// `randomOp`.
 					for (usize op = 0; op < 20; op++) randomOp(pid, rng, false, false, status_ok);
 				});
 			}
@@ -185,8 +236,7 @@ private:
 				base::strConcat("getExecutionStatus must succeed for a live process, seed=", seed)
 			);
 
-			// Same as `stressInfiniteProgram`: whatever the clients left pending, including a
-			// pause, must not prevent the stop, and the terminal state is what proves it.
+			// Whatever the clients left pending, including a pause, must not prevent the stop.
 			assertSucceeded(
 				api::stop(pid), base::strConcat("stop after concurrent stress, seed=", seed)
 			);
@@ -198,11 +248,8 @@ private:
 	}
 
 	void stressConcurrentPerThreadClients() {
-		/*
-		 * Several client threads issue per-thread requests against several VMThreads at once,
-		 * including requests for thread ids that do not exist.
-		 */
-		namespace api                  = vm::api;
+		// Several client threads issue per-thread requests against several VMThreads at once,
+		// including requests for thread ids that do not exist.
 		constexpr usize CLIENT_COUNT   = 4;
 		constexpr usize OPS_PER_CLIENT = 40;
 
@@ -210,7 +257,7 @@ private:
 			const u64 seed = MASTER_SEED + iter;
 			Watchdog  watchdog(base::strConcat("stressConcurrentPerThreadClients seed=", seed));
 
-			const vm::PID   pid = spawnAndLoad("spin_threads.dbc");
+			const vm::PID   pid = spawnAndLoad("../debugger/spin_threads.dbc");
 			ScopedKill      kill_guard(pid);
 			ScopedStatusLog scoped(*this, pid);
 
@@ -246,38 +293,25 @@ private:
 		}
 	}
 
-	// ------------------------------------------------------------------
-	// The random operations
-	// ------------------------------------------------------------------
-
 	/**
 	 * @brief One random, non-blocking API call against the process.
 	 *
 	 * @p allow_lifecycle adds `stop`. It terminates the program, so every op drawn after it only
-	 * exercises the "illegal in a terminal state" path - which is worth covering, but only in one
-	 * place. `stressInfiniteProgram` is that place; the scenarios that assert guest-memory
-	 * validity or race a live process against several clients leave it off.
+	 * exercises the "illegal in a terminal state" path, which is worth covering in one place only:
+	 * `stressInfiniteProgram`.
 	 *
 	 * @p allow_resume gates the `resume` op, and it is off wherever several clients hit the same
-	 * thread. `IVMThread::awaitPause` waits on a *level* predicate - "is this thread `Paused`
-	 * right now" - so a `resume` landing between the thread parking and the waiter looking makes
-	 * `api::pause` miss that state and wait for the next pause, which for a spinning program
-	 * never comes. `resume` and `step` do not have the problem: they wait on a fresh state change
-	 * (`waitForFreshThreadState`), which cannot miss the event, so `step` stays in the mix.
-	 *
-	 * This is a defect in `api::pause`, not in the test, and this is what it looks like when it
-	 * fires: the stuck client never returns, `client.join()` blocks, and the 60 s `Watchdog`
-	 * aborts the whole binary with `DVM API WATCHDOG` - which in CI reads like an unrelated
-	 * failure rather than a pause that never came back. Measured at 4 hangs in 300 runs of
-	 * `stressConcurrentClients` with `resume` in the mix, and 0 in 300 without it.
+	 * thread. `IVMThread::awaitPause` waits on a *level* predicate, so a `resume` landing between
+	 * the thread parking and the waiter looking makes `api::pause` miss that state and wait for a
+	 * next pause that never comes for a spinning program. That is a defect in `api::pause`, not in
+	 * the test. `step` does not have the problem: it waits on a fresh state change.
 	 *
 	 * The endpoints that may block by design, tear the process down or spawn extra threads are
 	 * excluded here and covered by the dedicated tests: join, runFunctionAwait, output,
 	 * waitForBreakpoint, kill, deinitAndValidate, run and runFunction.
 	 *
-	 * @p status_ok is cleared instead of asserting on the spot, because this runs on client
-	 * `std::thread`s as well. `tester::TestSuite::fail` throws, and an exception escaping a
-	 * thread function calls `std::terminate`
+	 * @p status_ok is cleared instead of asserting on the spot, because this also runs on client
+	 * `std::thread`s, where `fail` throwing would call `std::terminate`.
 	 */
 	void randomOp(
 		vm::PID            pid,
@@ -286,7 +320,6 @@ private:
 		bool               allow_resume,
 		std::atomic<bool>& status_ok
 	) {
-		namespace api = vm::api;
 		static const std::array<std::string, 3> type_names{ "i64", "i32", "DoesNotExist" };
 		const auto                              rand_type
 			= [&] { return type_names.at(std::uniform_int_distribution<usize>(0, 2)(rng)); };
@@ -354,16 +387,10 @@ private:
 	/**
 	 * @brief One random per-thread request, aimed at a random thread id.
 	 *
-	 * `resume` is deliberately NOT in the mix, for the reason spelled out on `randomOp`: it can
-	 * make a concurrent `api::pause` wait forever. Measured here at 3 hangs in 30 runs with
-	 * `resume` in the mix and 0 in 30 without it. `resume` itself is covered by the deterministic
-	 * debugger tests, which drive one client at a time and cannot hit the race.
-	 *
-	 * @p status_ok is an out-parameter for the same reason as in `randomOp`: this runs on client
-	 * threads, where an assertion failure would abort the binary instead of failing the test.
+	 * `resume` is deliberately NOT in the mix, for the reason spelled out on `randomOp`. It is
+	 * covered by the deterministic debugger tests, which drive one client at a time.
 	 */
 	void randomPerThreadOp(vm::PID pid, std::mt19937_64& rng, std::atomic<bool>& status_ok) {
-		namespace api = vm::api;
 		const api::ThreadID tid{ std::uniform_int_distribution<usize>(0, SPIN_THREAD_COUNT)(rng) };
 
 		switch (std::uniform_int_distribution<int>(0, 5)(rng)) {

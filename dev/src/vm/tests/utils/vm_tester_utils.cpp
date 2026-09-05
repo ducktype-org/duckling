@@ -1,7 +1,5 @@
 #include "vm_tester_utils.hpp"
 
-#include <base/except/exceptions.hpp>
-
 #include <tester/tester.hpp>
 
 #include <vm/api/data/status.hpp>
@@ -20,28 +18,7 @@ namespace {
 	constexpr usize statusIndex() {
 		return base::variantTypeIndex<ProcStatus, Alternative>();
 	}
-}
 
-std::string_view VmTestSuite::TransitionLog::statusName(usize index) {
-	static constexpr std::array<std::string_view, STATUS_COUNT> NAMES = [] {
-		std::array<std::string_view, STATUS_COUNT> names{};
-		names[statusIndex<vm::api::NotStarted>()]         = "NotStarted";
-		names[statusIndex<vm::api::Running>()]            = "Running";
-		names[statusIndex<vm::api::Paused>()]             = "Paused";
-		names[statusIndex<vm::api::Sleeping>()]           = "Sleeping";
-		names[statusIndex<vm::api::ExecutionStopping>()]  = "ExecutionStopping";
-		names[statusIndex<vm::api::ExecutionCompleted>()] = "ExecutionCompleted";
-		names[statusIndex<vm::api::ExecutionStopped>()]   = "ExecutionStopped";
-		names[statusIndex<vm::api::ExecutionPanicked>()]  = "ExecutionPanicked";
-
-		for (const std::string_view name: names)
-			CORE_ASSERT(!name.empty(), "A ProcStatus alternative has no name");
-		return names;
-	}();
-	return NAMES.at(index);
-}
-
-bool VmTestSuite::TransitionLog::legalStatusEdge(usize from, usize to) {
 	constexpr usize NOT_STARTED = statusIndex<vm::api::NotStarted>();
 	constexpr usize RUNNING     = statusIndex<vm::api::Running>();
 	constexpr usize PAUSED      = statusIndex<vm::api::Paused>();
@@ -51,24 +28,70 @@ bool VmTestSuite::TransitionLog::legalStatusEdge(usize from, usize to) {
 	constexpr usize STOPPED     = statusIndex<vm::api::ExecutionStopped>();
 	constexpr usize PANICKED    = statusIndex<vm::api::ExecutionPanicked>();
 
-	static const auto matrix = [] {
-		std::array<std::array<bool, STATUS_COUNT>, STATUS_COUNT> m{};
-		const auto allow = [&m](usize f, std::initializer_list<usize> tos) {
-			for (usize t: tos) m.at(f).at(t) = true;
-		};
-		allow(NOT_STARTED, { RUNNING, PAUSED, SLEEPING, STOPPING, COMPLETED, STOPPED, PANICKED });
-		allow(RUNNING, { PAUSED, SLEEPING, STOPPING, COMPLETED, STOPPED, PANICKED });
-		// Paused and Sleeping reach each other directly in a multi-threaded process, without the
-		// aggregate passing through Running: the aggregate ranks Sleeping above Paused, so a
-		// process with one sleeping and one paused thread reports Sleeping, and it reports Paused
-		// the moment the sleeping thread terminates.
-		allow(PAUSED, { RUNNING, SLEEPING, STOPPING, COMPLETED, STOPPED, PANICKED });
-		allow(SLEEPING, { RUNNING, PAUSED, STOPPING, COMPLETED, STOPPED, PANICKED });
-		allow(STOPPING, { COMPLETED, STOPPED, PANICKED });
-		allow(COMPLETED, { NOT_STARTED });
-		return m;
-	}();
-	return matrix.at(from).at(to);
+	std::string_view statusName(usize index) {
+		switch (index) {
+		case NOT_STARTED:
+			return "NotStarted";
+		case RUNNING:
+			return "Running";
+		case PAUSED:
+			return "Paused";
+		case SLEEPING:
+			return "Sleeping";
+		case STOPPING:
+			return "ExecutionStopping";
+		case COMPLETED:
+			return "ExecutionCompleted";
+		case STOPPED:
+			return "ExecutionStopped";
+		case PANICKED:
+			return "ExecutionPanicked";
+		default:
+			return "<unknown>";
+		}
+	}
+
+	/**
+	 * @brief Legal directed edges of the emitted process-status sequence.
+	 */
+	bool legalStatusEdge(usize from, usize to) {
+		switch (from) {
+		case NOT_STARTED:
+			return to != NOT_STARTED;
+		case RUNNING:
+			return to != NOT_STARTED;
+		// Paused and Sleeping reach each other directly in a multi-threaded process: the aggregate
+		// ranks Sleeping above Paused, so a process with one sleeping and one paused thread reports
+		// Sleeping, and reports Paused the moment the sleeping thread terminates.
+		case PAUSED:
+		case SLEEPING:
+			return to != NOT_STARTED;
+		case STOPPING:
+			return to == COMPLETED || to == STOPPED || to == PANICKED;
+		// A rerun is only legal after a completed run.
+		case COMPLETED:
+			return to == NOT_STARTED;
+		default:
+			return false;
+		}
+	}
+}
+
+base::Optional<std::string> VmTestSuite::TransitionLog::findIllegalEdge() const {
+	std::lock_guard lock(mutex);
+	for (usize i = 1; i < statuses.size(); i++) {
+		const usize from = statuses[i - 1].index();
+		const usize to   = statuses[i].index();
+		if (from == to) continue;
+		if (!legalStatusEdge(from, to))
+			return base::strConcat(
+				"Illegal status transition emitted by the process: ",
+				statusName(from),
+				" -> ",
+				statusName(to)
+			);
+	}
+	return std::nullopt;
 }
 
 VmTestSuite::ScopedStatusLog::ScopedStatusLog(VmTestSuite& test, vm::PID pid):
@@ -112,8 +135,6 @@ void VmTestSuite::releaseUntilTerminal(vm::PID pid, const std::string& function_
 		(void) vm::api::resume(pid);
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	// Without a budget this spins until the scenario `Watchdog` aborts the whole binary, which
-	// says nothing about where the program got stuck.
 	fail(base::strConcat(
 		"The program never reached a terminal status. Only breakpoints in '",
 		function_name,

@@ -1,5 +1,3 @@
-# Keep in sync with tests/api/spin_threads.dbc - the two suites cannot share one
-# fixture, because `path()` resolves per suite directory.
 # Main plus three worker threads, all spinning forever. Nothing ever terminates on its own, so
 # every thread is Running until the test pauses, stops or kills the process.
 

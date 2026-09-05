@@ -13,6 +13,8 @@
 #include <mutex>
 #include <thread>
 
+namespace api = vm::api;
+
 /**
  * @brief Tests of the DVM debugger endpoints on a single-threaded process.
  *
@@ -44,12 +46,6 @@ public:
 	}
 
 private:
-	/// How long a call that is expected to block is given to prove it is still blocked.
-	static constexpr auto BLOCKED_CALL_PROBE = std::chrono::milliseconds(300);
-
-	/// How long a call that is expected to return is given to do so.
-	static constexpr auto UNBLOCKED_CALL_BUDGET = std::chrono::seconds(15);
-
 	/**
 	 * @brief Checks if the program will pause on breakpoint.
 	 * Checks if `api::waitForPause` and `api::resume` functions work correctly.
@@ -136,7 +132,7 @@ private:
 	}
 
 	void stepsUntilProgramTerminates() {
-		auto pid = loadProgram("breakpoint.dbc");
+		auto pid = spawnAndLoad("breakpoint.dbc");
 		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 2, true));
 		ASSERT_HAS_VALUE(vm::api::run(pid));
 		ASSERT_HAS_VALUE(vm::api::waitForBreakpoint(pid));
@@ -201,17 +197,9 @@ private:
 		return getVMValueRefData<FieldDataType>(field.value);
 	}
 
-	// ==================================================================
-	// Refusals and edge cases of the debugger endpoints
-	// ==================================================================
-
 	void pauseRefusals() {
-		/*
-		 * `pause` refuses a thread that never started, one that already terminated and one it does
-		 * not know. Pausing a thread that is already paused is a no-op, not an error.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("pauseRefusals");
+		// `pause` refuses a thread that never started, one that already terminated and one it does
+		// not know. Pausing a thread that is already paused is a no-op, not an error.
 
 		const vm::PID pid = spawnAndLoad("while_true.dbc");
 
@@ -239,14 +227,10 @@ private:
 	}
 
 	void pausesAThreadSleepingOnIo() {
-		/*
-		 * A thread sleeping on IO cannot park while it sleeps - `waitInterruptible` only looks at
-		 * the stop flag - so `pause` keeps waiting and takes effect once the IO completes. The
-		 * waiting `pause` must not lock the API out while it does: the `input` that ends the wait
-		 * comes from another client thread.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("pausesAThreadSleepingOnIo");
+		// A thread sleeping on IO cannot park while it sleeps - `waitInterruptible` only looks at
+		// the stop flag - so `pause` keeps waiting and takes effect once the IO completes. The
+		// waiting `pause` must not lock the API out while it does: the `input` that ends the wait
+		// comes from another client thread.
 
 		const vm::PID pid = spawnAndLoad("io_then_loop.dbc");
 		assertSucceeded(api::run(pid), "run of io_then_loop.dbc");
@@ -274,11 +258,7 @@ private:
 	}
 
 	void resumeRefusals() {
-		/*
-		 * `resume` only means something to a paused thread.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("resumeRefusals");
+		// `resume` only means something to a paused thread.
 
 		const vm::PID pid = spawnAndLoad("while_true.dbc");
 
@@ -300,11 +280,7 @@ private:
 	}
 
 	void stepRefusals() {
-		/*
-		 * A thread that is not paused has no position to step from.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("stepRefusals");
+		// A thread that is not paused has no position to step from.
 
 		const vm::PID pid = spawnAndLoad("while_true.dbc");
 
@@ -326,12 +302,8 @@ private:
 	}
 
 	void pauseAllEndpoint() {
-		/*
-		 * On a single-threaded process `pauseAll` is `pause` of the main thread, and it reports an
-		 * empty list when there is nothing to pause.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("pauseAllEndpoint");
+		// On a single-threaded process `pauseAll` is `pause` of the main thread, and it reports an
+		// empty list when there is nothing to pause.
 
 		const vm::PID pid = spawnAndLoad("while_true.dbc");
 
@@ -360,12 +332,8 @@ private:
 	}
 
 	void waitForBreakpointRefusals() {
-		/*
-		 * `waitForBreakpoint` says the thread terminated instead of hanging forever when no
-		 * breakpoint is ever hit.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("waitForBreakpointRefusals");
+		// `waitForBreakpoint` says the thread terminated instead of hanging forever when no
+		// breakpoint is ever hit.
 
 		const vm::PID pid = spawnAndLoad("breakpoint.dbc");
 		assertRefusedWith<api::OtherError>(
@@ -384,11 +352,7 @@ private:
 	}
 
 	void currentPositionEndpoint() {
-		/*
-		 * `getCurrentPosition` answers for a paused thread only, and bounds-checks the frame index.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("currentPositionEndpoint");
+		// `getCurrentPosition` answers for a paused thread only, and bounds-checks the frame index.
 
 		const vm::PID pid = spawnAndLoad("while_true.dbc");
 		assertRefusedWith<api::OtherError>(
@@ -420,13 +384,9 @@ private:
 	}
 
 	void stackFrameRefusals() {
-		/*
-		 * The two stack-frame endpoints read guest memory, so they refuse a process that is still
-		 * executing - before they even look at the thread id. What they return for a parked thread
-		 * is covered by `vmApiMemoryAllTypes`.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("stackFrameRefusals");
+		// The two stack-frame endpoints read guest memory, so they refuse a process that is still
+		// executing - before they even look at the thread id. What they return for a parked thread
+		// is covered by `vmApiMemoryAllTypes`.
 
 		const vm::PID pid = spawnAndLoad("while_true.dbc");
 		assertSucceeded(api::run(pid), "run");
@@ -462,11 +422,7 @@ private:
 	}
 
 	void setBreakpointRefusals() {
-		/*
-		 * `setBreakpoint` names why it refuses, and is idempotent in both directions.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("setBreakpointRefusals");
+		// `setBreakpoint` names why it refuses, and is idempotent in both directions.
 
 		const vm::PID pid = spawnAndLoad("breakpoint.dbc");
 

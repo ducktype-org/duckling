@@ -16,6 +16,8 @@
 #include <thread>
 #include <variant>
 
+namespace api = vm::api;
+
 /**
  * @brief Tests of the DVM debugger endpoints on a process with several VMThreads.
  */
@@ -45,20 +47,10 @@ private:
 	/// How many further writes a worker must produce to count as "still making progress".
 	static constexpr u64 WRITES_PROVING_PROGRESS = 5;
 
-	/// How long a call that is expected to block is given to prove it is still blocked.
-	static constexpr auto BLOCKED_CALL_PROBE = std::chrono::milliseconds(300);
-
-	/// How long a call that is expected to return is given to do so.
-	static constexpr auto UNBLOCKED_CALL_BUDGET = std::chrono::seconds(15);
-
 	void pauseOneThreadWhileOthersRun() {
-		/*
-		 * Pausing one thread must neither be refused because another thread is running, nor stop
-		 * the threads that were not asked. Before the per-thread API these requests were validated
-		 * against the process aggregate, which refused this outright.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("pauseOneThreadWhileOthersRun");
+		// Pausing one thread must neither be refused because another thread is running, nor stop
+		// the threads that were not asked. Before the per-thread API these requests were validated
+		// against the process aggregate, which refused this outright.
 
 		const vm::PID       pid = runSpinThreads();
 		const api::ThreadID target{ 1 };
@@ -89,13 +81,9 @@ private:
 	}
 
 	void pauseAllParksEveryThread() {
-		/*
-		 * `pauseAll` must park every thread, which it can only do if a thread that already parked
-		 * lets go of the GIL. A thread parking with the GIL still held starves the threads that
-		 * have not reached their pause point yet, and `pauseAll` never finishes.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("pauseAllParksEveryThread");
+		// `pauseAll` must park every thread, which it can only do if a thread that already parked
+		// lets go of the GIL. A thread parking with the GIL still held starves the threads that
+		// have not reached their pause point yet, and `pauseAll` never finishes.
 
 		const vm::PID pid = runSpinThreads();
 
@@ -127,14 +115,10 @@ private:
 	}
 
 	void pauseAllWaitsForASleepingThread() {
-		/*
-		 * A thread sleeping on IO cannot park while it sleeps - `waitInterruptible` only looks at
-		 * the stop flag - so the request stays pending and takes effect once the IO completes.
-		 * `pauseAll` waits for that, by design: it returns only when every thread it asked has
-		 * parked.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("pauseAllWaitsForASleepingThread");
+		// A thread sleeping on IO cannot park while it sleeps - `waitInterruptible` only looks at
+		// the stop flag - so the request stays pending and takes effect once the IO completes.
+		// `pauseAll` waits for that, by design: it returns only when every thread it asked has
+		// parked.
 
 		const vm::PID       pid = spawnAndLoad("sleeping_main.dbc");
 		const api::ThreadID worker{ 1 };
@@ -170,13 +154,9 @@ private:
 	}
 
 	void pauseAllWaitIsEndedByStop() {
-		/*
-		 * An IO read that never completes keeps `pauseAll` waiting forever, so `stop` has to be
-		 * able to end that wait. No endpoint may hold `api_lock` while it waits on an execution
-		 * thread, and this is the case that proves `pauseAll` does not.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("pauseAllWaitIsEndedByStop");
+		// An IO read that never completes keeps `pauseAll` waiting forever, so `stop` has to be
+		// able to end that wait. No endpoint may hold `api_lock` while it waits on an execution
+		// thread, and this is the case that proves `pauseAll` does not.
 
 		const vm::PID       pid = spawnAndLoad("sleeping_main.dbc");
 		const api::ThreadID worker{ 1 };
@@ -213,12 +193,8 @@ private:
 	}
 
 	void gilIsReleasedWhilePaused() {
-		/*
-		 * A paused thread must not keep the GIL, otherwise the rest of the program stops making
-		 * progress the moment the debugger parks one thread.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("gilIsReleasedWhilePaused");
+		// A paused thread must not keep the GIL, otherwise the rest of the program stops making
+		// progress the moment the debugger parks one thread.
 
 		const vm::PID    pid = spawnAndLoad("output_worker.dbc");
 		std::atomic<u64> writes{ 0 };
@@ -249,13 +225,9 @@ private:
 	}
 
 	void gilIsReleasedWhileSleepingOnIo() {
-		/*
-		 * Same for a thread blocked on IO. The IO opcodes report the thread as `Sleeping` and then
-		 * block, which they may only do with the GIL released - otherwise a program waiting for
-		 * input freezes every other thread of the process.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("gilIsReleasedWhileSleepingOnIo");
+		// Same for a thread blocked on IO. The IO opcodes report the thread as `Sleeping` and then
+		// block, which they may only do with the GIL released - otherwise a program waiting for
+		// input freezes every other thread of the process.
 
 		const vm::PID       pid = spawnAndLoad("sleeping_main.dbc");
 		const api::ThreadID worker{ 1 };
@@ -287,13 +259,9 @@ private:
 	}
 
 	void waitForBreakpointIsPerThread() {
-		/*
-		 * `waitForBreakpoint` waits on the thread it was asked about, not on the process. The
-		 * aggregate never reports Paused here, because `main` keeps running, so a wait on the
-		 * process state would never return.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("waitForBreakpointIsPerThread");
+		// `waitForBreakpoint` waits on the thread it was asked about, not on the process. The
+		// aggregate never reports Paused here, because `main` keeps running, so a wait on the
+		// process state would never return.
 
 		const vm::PID       pid = spawnAndLoad("worker_breakpoint.dbc");
 		const api::ThreadID worker{ 1 };
@@ -325,12 +293,8 @@ private:
 	}
 
 	void stepIsPerThread() {
-		/*
-		 * `step` advances the thread it was asked about. Its new position is read back with
-		 * `waitForBreakpoint`, which returns immediately for a thread that is already parked.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("stepIsPerThread");
+		// `step` advances the thread it was asked about. Its new position is read back with
+		// `waitForBreakpoint`, which returns immediately for a thread that is already parked.
 
 		const vm::PID       pid = spawnAndLoad("worker_breakpoint.dbc");
 		const api::ThreadID worker{ 1 };
@@ -373,12 +337,8 @@ private:
 	}
 
 	void perThreadEndpointsRejectUnknownThreads() {
-		/*
-		 * A thread id comes straight from an API client, so every per-thread endpoint has to reject
-		 * one it does not know instead of aborting the process.
-		 */
-		namespace api = vm::api;
-		Watchdog watchdog("perThreadEndpointsRejectUnknownThreads");
+		// A thread id comes straight from an API client, so every per-thread endpoint has to reject
+		// one it does not know instead of aborting the process.
 
 		const vm::PID       pid = runSpinThreads();
 		const api::ThreadID unknown{ 4'242 };
@@ -423,10 +383,6 @@ private:
 		assertSucceeded(api::stop(pid), "stop");
 		(void) api::kill(pid);
 	}
-
-	// ------------------------------------------------------------------
-	// Helpers
-	// ------------------------------------------------------------------
 
 	/**
 	 * @brief Runs `spin_threads.dbc` and waits until every one of its threads is up.
