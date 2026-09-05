@@ -7,7 +7,162 @@
 
 #include <nlohmann/json_fwd.hpp>
 
+#include <chrono>
+#include <thread>
 #include <variant>
+
+namespace {
+	using vm::api::ProcStatus;
+
+	template<typename Alternative>
+	constexpr usize statusIndex() {
+		return base::variantTypeIndex<ProcStatus, Alternative>();
+	}
+
+	constexpr usize NOT_STARTED = statusIndex<vm::api::NotStarted>();
+	constexpr usize RUNNING     = statusIndex<vm::api::Running>();
+	constexpr usize PAUSED      = statusIndex<vm::api::Paused>();
+	constexpr usize SLEEPING    = statusIndex<vm::api::Sleeping>();
+	constexpr usize STOPPING    = statusIndex<vm::api::ExecutionStopping>();
+	constexpr usize COMPLETED   = statusIndex<vm::api::ExecutionCompleted>();
+	constexpr usize STOPPED     = statusIndex<vm::api::ExecutionStopped>();
+	constexpr usize PANICKED    = statusIndex<vm::api::ExecutionPanicked>();
+
+	std::string_view statusName(usize index) {
+		switch (index) {
+		case NOT_STARTED:
+			return "NotStarted";
+		case RUNNING:
+			return "Running";
+		case PAUSED:
+			return "Paused";
+		case SLEEPING:
+			return "Sleeping";
+		case STOPPING:
+			return "ExecutionStopping";
+		case COMPLETED:
+			return "ExecutionCompleted";
+		case STOPPED:
+			return "ExecutionStopped";
+		case PANICKED:
+			return "ExecutionPanicked";
+		default:
+			return "<unknown>";
+		}
+	}
+
+	/**
+	 * @brief Legal directed edges of the emitted process-status sequence.
+	 */
+	bool legalStatusEdge(usize from, usize to) {
+		switch (from) {
+		case NOT_STARTED:
+			return to != NOT_STARTED;
+		case RUNNING:
+			return to != NOT_STARTED;
+		// Paused and Sleeping reach each other directly in a multi-threaded process: the aggregate
+		// ranks Sleeping above Paused, so a process with one sleeping and one paused thread reports
+		// Sleeping, and reports Paused the moment the sleeping thread terminates.
+		case PAUSED:
+		case SLEEPING:
+			return to != NOT_STARTED;
+		case STOPPING:
+			return to == COMPLETED || to == STOPPED || to == PANICKED;
+		// A rerun is only legal after a completed run.
+		case COMPLETED:
+			return to == NOT_STARTED;
+		default:
+			return false;
+		}
+	}
+}
+
+base::Optional<std::string> VmTestSuite::TransitionLog::findIllegalEdge() const {
+	std::lock_guard lock(mutex);
+	for (usize i = 1; i < statuses.size(); i++) {
+		const usize from = statuses[i - 1].index();
+		const usize to   = statuses[i].index();
+		if (from == to) continue;
+		if (!legalStatusEdge(from, to))
+			return base::strConcat(
+				"Illegal status transition emitted by the process: ",
+				statusName(from),
+				" -> ",
+				statusName(to)
+			);
+	}
+	return std::nullopt;
+}
+
+VmTestSuite::ScopedStatusLog::ScopedStatusLog(VmTestSuite& test, vm::PID pid):
+	  listener([this](const ProcStatus& status) { log.record(status); }) {
+	test.assertTrue(
+		vm::api::attachStatusListener(pid, &listener).has_value(), "Attach listener failed"
+	);
+}
+
+void VmTestSuite::validateTransitions(const TransitionLog& log, std::string_view what) {
+	const auto illegal_edge = log.findIllegalEdge();
+	assertTrue(
+		!illegal_edge.has_value(),
+		illegal_edge.has_value() ? base::strConcat(*illegal_edge, " (", what, ")") : ""
+	);
+}
+
+vm::PID VmTestSuite::spawnProcess() {
+	auto spawned = vm::api::spawn();
+	assertTrue(spawned.has_value(), "Spawn failed");
+	return spawned.value().pid;
+}
+
+vm::PID VmTestSuite::spawnAndLoad(const std::string& dbc_filename) {
+	const vm::PID pid    = spawnProcess();
+	auto          loaded = vm::api::loadFiles(pid, { fs::File(path(dbc_filename)) });
+	assertTrue(
+		loaded.has_value(), base::strConcat("Load of '", dbc_filename, "' failed: ", errorOf(loaded))
+	);
+	return pid;
+}
+
+void VmTestSuite::releaseUntilTerminal(vm::PID pid, const std::string& function_name) {
+	for (u64 instr = 0; instr <= MAX_BREAKPOINT_INDEX; instr++)
+		(void) vm::api::setBreakpoint(pid, base::StrID(function_name), instr, false);
+
+	const auto deadline = std::chrono::steady_clock::now() + STATUS_WAIT_BUDGET;
+	while (std::chrono::steady_clock::now() < deadline) {
+		auto status = vm::api::getExecutionStatus(pid);
+		if (!status.has_value() || vm::api::isStatusTerminal(status.value())) return;
+		(void) vm::api::resume(pid);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	fail(base::strConcat(
+		"The program never reached a terminal status. Only breakpoints in '",
+		function_name,
+		"' up to instruction ",
+		MAX_BREAKPOINT_INDEX,
+		" are cleared here, so a breakpoint outside that set keeps parking it."
+	));
+}
+
+void VmTestSuite::waitUntilEveryThreadRuns(vm::PID pid) {
+	namespace api = vm::api;
+
+	waitUntilStatus(pid, isRunning, "Running");
+
+	const auto deadline = std::chrono::steady_clock::now() + STATUS_WAIT_BUDGET;
+	while (std::chrono::steady_clock::now() < deadline) {
+		auto paused = api::pauseAll(pid);
+		assertSucceeded(paused, "pauseAll while waiting for the workers to start");
+		const bool all_up = paused->thread_ids.size() == SPIN_THREAD_COUNT;
+		for (const api::ThreadID tid: paused->thread_ids) (void) api::resume(pid, tid);
+		if (all_up) {
+			waitUntilStatus(pid, isRunning, "Running again after the readiness check");
+			return;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	fail("spin_threads.dbc never got all of its threads running");
+}
 
 vm::PID VmTestSuite::initProcess(
 	const vm::api::ProcessConfig& config, vm::api::ExecutionConfig execution_config
