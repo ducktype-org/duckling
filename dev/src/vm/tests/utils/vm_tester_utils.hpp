@@ -105,8 +105,6 @@ protected:
 	 * the process-state model.
 	 */
 	struct TransitionLog final {
-		static constexpr usize STATUS_COUNT = std::variant_size_v<vm::api::ProcStatus>;
-
 		void record(const vm::api::ProcStatus& status) {
 			std::lock_guard lock(mutex);
 			statuses.push_back(status);

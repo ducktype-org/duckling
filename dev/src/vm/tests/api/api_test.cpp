@@ -17,8 +17,10 @@
 namespace api = vm::api;
 
 /**
- * @brief Single-process, single-thread tests of the whole DVM API. Note that debugger API is not
- * tested here. It's tested in `debugger_tests.cpp`.
+ * @brief Single-process tests of the whole DVM API. Multi-threaded programs are used where a state
+ * needs several threads.
+ *
+ * The debugger endpoints are only used as setup here, they are covered in `debugger_tests.cpp`.
  */
 class VmApiTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -30,6 +32,7 @@ public:
 		TESTER_ADD_TEST(loadEndpoints);
 		TESTER_ADD_TEST(setExecutionConfigEndpoint);
 		TESTER_ADD_TEST(runEndpoint);
+		TESTER_ADD_TEST(runAwaitEndpoint);
 		TESTER_ADD_TEST(rerunEndpoint);
 		TESTER_ADD_TEST(runFunctionEndpoints);
 		TESTER_ADD_TEST(exitValueEndpoint);
@@ -53,6 +56,8 @@ public:
 private:
 	/// Thread count of `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
 	static constexpr usize SPIN_THREAD_COUNT = 4;
+	// The exit value of `breakpoint.dbc`.
+	static constexpr usize BREAKPOINT_EXIT_VALUE = 7;
 
 	void spawnAndKillEndpoints() {
 		// A freshly spawned process is `NotStarted` and answers status calls. A killed one is gone
@@ -93,7 +98,7 @@ private:
 
 		// The refused loads left the process runnable.
 		assertSucceeded(api::run(pid), "run after a refused load");
-		releaseUntilTerminal(pid);
+		waitUntilStatus(pid, isTerminal, "Completed");
 		assertSucceeded(api::join(pid), "join");
 		(void) api::kill(pid);
 
@@ -119,6 +124,19 @@ private:
 		assertSucceeded(api::stop(pid), "stop");
 		assertSucceeded(api::setExecutionConfig(pid, {}), "setExecutionConfig on a stopped process");
 		(void) api::kill(pid);
+
+		// The config is only read by the next load, which is where it has to take effect.
+		const vm::PID single_thread_pid = spawnProcess();
+		assertSucceeded(
+			api::setExecutionConfig(single_thread_pid, { .single_thread = true }),
+			"setExecutionConfig with single_thread"
+		);
+		assertRefusedWith<api::LoadProgramError>(
+			api::loadFiles(single_thread_pid, { fs::File(path("../debugger/spin_threads.dbc")) }),
+			"a load of a multi-threaded program into a single-threaded process",
+			"single_thread flag is set, but function uses multithreading"
+		);
+		(void) api::kill(single_thread_pid);
 	}
 
 	void runEndpoint() {
@@ -141,7 +159,7 @@ private:
 
 			assertSucceeded(api::loadFiles(pid, { fs::File(path("breakpoint.dbc")) }), "loadFiles");
 			assertSucceeded(api::run(pid), "run after loading a `main`");
-			releaseUntilTerminal(pid);
+			waitUntilStatus(pid, isTerminal, "Completed");
 			assertSucceeded(api::join(pid), "join");
 			(void) api::kill(pid);
 		}
@@ -158,6 +176,41 @@ private:
 			assertSucceeded(api::stop(pid), "stop");
 			(void) api::kill(pid);
 		}
+	}
+
+	void runAwaitEndpoint() {
+		// `runAwait` runs the program on the caller's thread and hands back its exit value, so it
+		// needs neither a wait nor a join.
+
+		const vm::PID pid    = spawnAndLoad("breakpoint.dbc");
+		auto          result = api::runAwait(pid);
+		assertSucceeded(result, "runAwait");
+		assertReturnedI64(result.value(), BREAKPOINT_EXIT_VALUE, "runAwait");
+
+		auto status = api::getExecutionStatus(pid);
+		assertSucceeded(status, "getExecutionStatus after runAwait");
+		ASSERT_MATCHES_MSG(
+			status.value(), "runAwait must leave the process completed", api::ExecutionCompleted
+		);
+		// The run is over, so its exit value is readable through the endpoint as well.
+		auto exit_value = api::getExitValue(pid);
+		assertSucceeded(exit_value, "getExitValue after runAwait");
+		assertReturnedI64(exit_value.value(), BREAKPOINT_EXIT_VALUE, "getExitValue after runAwait");
+		(void) api::kill(pid);
+
+		// A program that panics reports the panic instead of an exit value.
+		const vm::PID panicking_pid = spawnAndLoad("panic.dbc");
+		assertRefusedWith<api::Panicked>(
+			api::runAwait(panicking_pid), "runAwait of a panicking program", "Tried dividing by zero"
+		);
+		(void) api::kill(panicking_pid);
+
+		// There is no `main` to run without a loaded program.
+		const vm::PID empty_pid = spawnProcess();
+		assertRefusedWith<api::RunError>(
+			api::runAwait(empty_pid), "runAwait without any loaded code", "Called function 'main'"
+		);
+		(void) api::kill(empty_pid);
 	}
 
 	void rerunEndpoint() {
@@ -369,7 +422,9 @@ private:
 
 		auto exit_value = api::getExitValue(pid);
 		assertSucceeded(exit_value, "getExitValue after completion");
-		assertReturnedI64(exit_value.value(), 0, "getExitValue after completion");
+		assertReturnedI64(
+			exit_value.value(), BREAKPOINT_EXIT_VALUE, "getExitValue after completion"
+		);
 		(void) api::kill(pid);
 
 		// A stopped run never completed, so it has no exit value.
@@ -397,7 +452,7 @@ private:
 		assertRefusedWith<api::JoinError>(api::join(pid), "join before a run");
 
 		assertSucceeded(api::run(pid), "run");
-		releaseUntilTerminal(pid);
+		waitUntilStatus(pid, isTerminal, "Completed");
 		assertSucceeded(api::join(pid, api::MAIN_THREAD_ID), "join of a completed run");
 		// The handle is gone now, so a second join has nothing to reap.
 		assertRefusedWith<api::JoinError>(api::join(pid), "a second join");
@@ -530,7 +585,6 @@ private:
 
 		kill_from("Completed", "breakpoint.dbc", [&](vm::PID pid) {
 			assertSucceeded(api::run(pid), "run");
-			releaseUntilTerminal(pid);
 			waitUntilStatus(pid, isTerminal, "Terminal");
 		});
 
@@ -580,7 +634,7 @@ private:
 		{  // A clean run leaves a valid memory state, and the process is dropped.
 			const vm::PID pid = spawnAndLoad("breakpoint.dbc");
 			assertSucceeded(api::run(pid), "run");
-			releaseUntilTerminal(pid);
+			waitUntilStatus(pid, isTerminal, "Completed");
 			assertSucceeded(api::join(pid), "join");
 			auto valid = api::deinitAndValidate(pid);
 			assertSucceeded(valid, "deinitAndValidate after a clean run");
@@ -593,7 +647,7 @@ private:
 		{
 			const vm::PID pid = spawnAndLoad("../memory/global_leak.dbc");
 			assertSucceeded(api::run(pid), "run");
-			releaseUntilTerminal(pid);
+			waitUntilStatus(pid, isTerminal, "Completed");
 			assertSucceeded(api::join(pid), "join");
 			auto valid = api::deinitAndValidate(pid);
 			assertSucceeded(valid, "deinitAndValidate of a leaking program");
@@ -835,7 +889,7 @@ private:
 			"while program is running"
 		);
 
-		releaseUntilTerminal(pid);
+		waitUntilStatus(pid, isTerminal, "Completed");
 		assertSucceeded(api::join(pid), "join");
 		(void) api::kill(pid);
 	}
@@ -895,12 +949,14 @@ private:
 		check(api::loadFiles(pid, { fs::File(path("breakpoint.dbc")) }), "loadFiles");
 		check(api::loadCode(pid, vm::code::CodeCollection{}), "loadCode");
 		check(api::run(pid), "run");
+		check(api::runAwait(pid), "runAwait");
 		check(api::runFunction(pid, "main"), "runFunction");
 		check(api::runFunctionAwait(pid, "main"), "runFunctionAwait");
 		check(api::getExitValue(pid), "getExitValue");
 		check(api::join(pid), "join");
 		check(api::kill(pid), "kill");
 		check(api::deinitAndValidate(pid), "deinitAndValidate");
+		check(api::deinitOrKill(pid), "deinitOrKill");
 		check(api::pause(pid), "pause");
 		check(api::pauseAll(pid), "pauseAll");
 		check(api::resume(pid), "resume");

@@ -28,6 +28,11 @@ namespace {
 	constexpr usize STOPPED     = statusIndex<vm::api::ExecutionStopped>();
 	constexpr usize PANICKED    = statusIndex<vm::api::ExecutionPanicked>();
 
+	static_assert(
+		std::variant_size_v<ProcStatus> == 8,
+		"a new ProcStatus alternative needs an entry in statusName and legalStatusEdge"
+	);
+
 	std::string_view statusName(usize index) {
 		switch (index) {
 		case NOT_STARTED:
@@ -126,7 +131,8 @@ void VmTestSuite::releaseUntilTerminal(vm::PID pid, const std::string& function_
 	const auto deadline = std::chrono::steady_clock::now() + STATUS_WAIT_BUDGET;
 	while (std::chrono::steady_clock::now() < deadline) {
 		auto status = vm::api::getExecutionStatus(pid);
-		if (!status.has_value() || vm::api::isStatusTerminal(status.value())) return;
+		assertSucceeded(status, "getExecutionStatus while waiting for the program to finish");
+		if (vm::api::isStatusTerminal(status.value())) return;
 		(void) vm::api::resume(pid);
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
@@ -149,7 +155,11 @@ void VmTestSuite::waitUntilEveryThreadRuns(vm::PID pid, usize thread_count) {
 		auto paused = api::pauseAll(pid);
 		assertSucceeded(paused, "pauseAll while waiting for the workers to start");
 		const bool all_up = paused->thread_ids.size() == thread_count;
-		for (const api::ThreadID tid: paused->thread_ids) (void) api::resume(pid, tid);
+		for (const api::ThreadID tid: paused->thread_ids)
+			assertSucceeded(
+				api::resume(pid, tid),
+				base::strConcat("resume of thread ", tid.asInt(), " after the readiness check")
+			);
 		if (all_up) {
 			waitUntilStatus(pid, isRunning, "Running again after the readiness check");
 			return;
