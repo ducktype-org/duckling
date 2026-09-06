@@ -202,7 +202,6 @@ private:
 			);
 		}
 
-
 		// ============================ Function calls ============================
 		{
 			checkForErrorOnCompileModule(
