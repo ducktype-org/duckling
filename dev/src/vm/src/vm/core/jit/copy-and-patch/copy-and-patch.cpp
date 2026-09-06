@@ -18,7 +18,8 @@ namespace vm::jit {
 		using namespace cnp;
 		using namespace std::views;
 
-		auto transform_opcode = [](low::MicroOpcode opcode) {
+		// Maps non-jittable opcodes to special stencil CallAddr, does not change others.
+		auto nonjittable_to_calladdr = [](low::MicroOpcode opcode) -> i64 {
 			switch (opcode) {
 #define HANDLE_NONJITTABLE_INSTR(instr) \
 	case low::MicroOpcode::instr:      \
@@ -30,7 +31,7 @@ namespace vm::jit {
 			}
 		};
 
-		auto choose_edge = [](auto block) -> base::Optional<SpecialStencils> {
+		auto cf_edge_to_stencil = [](auto block) -> base::Optional<SpecialStencils> {
 			if (block.isFallthrough()) return std::nullopt;
 			switch (block.edgeKind()) {
 			case vm::low::cf::OutEdges::Kind::JmpIf:
@@ -56,10 +57,10 @@ namespace vm::jit {
 			for (const MicroInstruction& instr: block.instructions(bc)) {
 				auto opcode = getInstructionOpcode(instr);
 				if (low::isOpcodeNonExecutable(opcode)) continue;
-				current_offset += get_opfunc_size(transform_opcode(opcode));
+				current_offset += get_opfunc_size(nonjittable_to_calladdr(opcode));
 			}
 
-			if (auto stencil = choose_edge(block))
+			if (auto stencil = cf_edge_to_stencil(block))
 				current_offset += get_opfunc_size(std::to_underlying(stencil.value()));
 		}
 
@@ -90,7 +91,7 @@ namespace vm::jit {
 				auto opcode = getInstructionOpcode(instr);
 				if (low::isOpcodeNonExecutable(opcode)) continue;
 
-				patch_stencil(transform_opcode(opcode), [&](HoleValue value) {
+				patch_stencil(nonjittable_to_calladdr(opcode), [&](HoleValue value) {
 					switch (value) {
 					case HoleValue::InstrPtr:
 						return std::bit_cast<u64>(&instr);
@@ -121,7 +122,7 @@ namespace vm::jit {
 					}
 				});
 			}
-			if (auto stencil = choose_edge(block)) {
+			if (auto stencil = cf_edge_to_stencil(block)) {
 				patch_stencil(std::to_underlying(stencil.value()), [&](HoleValue value) {
 					switch (value) {
 					case HoleValue::ContinueFn:
