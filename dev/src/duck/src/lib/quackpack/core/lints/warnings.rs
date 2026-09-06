@@ -19,12 +19,12 @@ impl Warnings {
         Self::default()
     }
 
-    /// Register a new [`Warning`] to be emitted later.
+    /// Register a new [`Diagnostic`] to be emitted later.
     pub fn push<T: Diagnostic + 'static>(&mut self, warning: T) {
         self.warnings.push(Box::new(warning));
     }
 
-    /// Emit all registered [`Warning`]s.
+    /// Emit all registered [`Diagnostic`]s.
     pub fn emit_warnings(&self, ctx: &DuckContext) -> QuackResult<()> {
         for warning in &self.warnings {
             emit_warning(warning, ctx)?;
