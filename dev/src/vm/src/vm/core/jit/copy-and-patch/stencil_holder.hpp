@@ -18,7 +18,7 @@ namespace vm::jit::cnp {
 	[[nodiscard]] std::span<const byte> stencilsBinary(const StencilData& stencil_data);
 
 	enum class SpecialStencils : u64 {
-		JumpIf = low::microInstrCount() + 1,
+		JumpIf = low::microInstrCount(),
 		JumpIfNot,
 		Jump,
 		CallAddr,

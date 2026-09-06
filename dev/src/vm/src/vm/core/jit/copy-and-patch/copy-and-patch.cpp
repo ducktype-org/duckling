@@ -12,68 +12,83 @@
 #include <functional>
 
 namespace vm::jit {
-	std::expected<cnp::JitFuncMemory, std::string> compileCP(
-		const vm::low::cf::ControlFlowGraph& cfg, const vm::low::MicroBytecode& bc
-	) {
-		using namespace cnp;
-		using namespace std::views;
 
-		// Maps non-jittable opcodes to special stencil CallAddr, does not change others.
-		auto nonjittable_to_calladdr = [](low::MicroOpcode opcode) -> i64 {
+	namespace {
+		// Maps non-jittable opcodes to call_addr, other ones leaves unchanged.
+		[[nodiscard]] i64 nonjittable_to_calladdr(low::MicroOpcode opcode) {
 			switch (opcode) {
 #define HANDLE_NONJITTABLE_INSTR(instr) \
-	case low::MicroOpcode::instr:      \
-		return std::to_underlying(SpecialStencils::CallAddr);
+	case low::MicroOpcode::instr:       \
+		return std::to_underlying(jit::cnp::SpecialStencils::CallAddr);
 #include "../non_jittable.def.hpp"
 #undef HANDLE_NONJITTABLE_INSTR
 			default:
 				return std::to_underlying(opcode);
 			}
-		};
+		}
 
-		auto cf_edge_to_stencil = [](auto block) -> base::Optional<SpecialStencils> {
+		// Maps a cf out edge kind to an optional special stencil jump.
+		[[nodiscard]] base::Optional<jit::cnp::SpecialStencils> cf_edge_to_stencil(
+			const low::cf::BasicBlock& block
+		) {
 			if (block.isFallthrough()) return std::nullopt;
 			switch (block.edgeKind()) {
-			case vm::low::cf::OutEdges::Kind::JmpIf:
-				return SpecialStencils::JumpIf;
-			case vm::low::cf::OutEdges::Kind::JmpIfNot:
-				return SpecialStencils::JumpIfNot;
-			case vm::low::cf::OutEdges::Kind::End:
+			case low::cf::OutEdges::Kind::JmpIf:
+				return jit::cnp::SpecialStencils::JumpIf;
+			case low::cf::OutEdges::Kind::JmpIfNot:
+				return jit::cnp::SpecialStencils::JumpIfNot;
+			case low::cf::OutEdges::Kind::End:
 				return std::nullopt;
-			case vm::low::cf::OutEdges::Kind::Default:
-				return SpecialStencils::Jump;
+			case low::cf::OutEdges::Kind::Default:
+				return jit::cnp::SpecialStencils::Jump;
 			}
 			return std::nullopt;
-		};
-
-		auto get_opfunc_size = [&](u64 opcode) -> u64 { return stencilsData().at(opcode).size; };
-
-		std::vector<usize> block_offsets;
-		block_offsets.reserve(cfg.size() + 1);
-		block_offsets.push_back(0);
-		for (const low::cf::BasicBlock& block: cfg.getBlocks()) {
-			block_offsets.push_back(block_offsets.back());
-			usize& current_offset = block_offsets.back();
-			for (const MicroInstruction& instr: block.instructions(bc)) {
-				auto opcode = getInstructionOpcode(instr);
-				if (low::isOpcodeNonExecutable(opcode)) continue;
-				current_offset += get_opfunc_size(nonjittable_to_calladdr(opcode));
-			}
-
-			if (auto stencil = cf_edge_to_stencil(block))
-				current_offset += get_opfunc_size(std::to_underlying(stencil.value()));
 		}
+
+		// Calculates offsets from the compiled functions start, to each block's end.
+		[[nodiscard]] std::vector<usize> calculate_block_offsets(
+			const low::cf::ControlFlowGraph& cfg, const low::MicroBytecode& bc
+		) {
+			auto get_opfunc_size
+				= [&](u64 opcode) -> u64 { return cnp::stencilsData().at(opcode).size; };
+
+			std::vector<usize> block_offsets;
+			block_offsets.reserve(cfg.size() + 1);
+			block_offsets.push_back(0);
+			for (const low::cf::BasicBlock& block: cfg.getBlocks()) {
+				block_offsets.push_back(block_offsets.back());
+				usize& current_offset = block_offsets.back();
+				for (const MicroInstruction& instr: block.instructions(bc)) {
+					auto opcode = getInstructionOpcode(instr);
+					if (low::isOpcodeNonExecutable(opcode)) continue;
+					current_offset += get_opfunc_size(nonjittable_to_calladdr(opcode));
+				}
+
+				if (auto stencil = cf_edge_to_stencil(block))
+					current_offset += get_opfunc_size(std::to_underlying(stencil.value()));
+			}
+			return block_offsets;
+		}
+	}
+
+	std::expected<cnp::JitFuncMemory, std::string> compileCP(
+		const low::cf::ControlFlowGraph& cfg, const low::MicroBytecode& bc
+	) {
+		using namespace cnp;
+		using namespace std::views;
+
+		std::vector<usize> block_offsets = calculate_block_offsets(cfg, bc);
 
 		auto memory_result = JitFuncMemory::allocate(block_offsets.back());
 		if (!memory_result) return std::unexpected{ std::move(memory_result).error() };
-		auto  memory = std::move(memory_result).value();
-		byte* next   = memory.addr;
+		auto memory = std::move(memory_result).value();
 
-		auto patch_stencil = [&](u64 opcode, auto func) {
-			const auto& stencil_data = stencilsData().at(opcode);
-			auto        previous     = next;
-			next                     = relocate(stencil_data, previous);
-			stencil_data.patch(previous, func);
+		byte* next          = memory.addr;
+		auto  patch_stencil = [&](u64 opcode, auto func) {
+            const auto& stencil_data = stencilsData().at(opcode);
+            auto        previous     = next;
+            next                     = relocate(stencil_data, previous);
+            stencil_data.patch(previous, func);
 		};
 
 		for (auto [idx, block]: std::views::enumerate(cfg.getBlocks())) {
@@ -108,7 +123,7 @@ namespace vm::jit {
 						} else {
 							return std::bit_cast<u64>(
 								// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-								vm::OpFuns::DEBUG_OPFUNS[std::to_underlying(opcode)]
+								OpFuns::DEBUG_OPFUNS[std::to_underlying(opcode)]
 							);
 						}
 					case HoleValue::CallOpcode:
@@ -149,7 +164,7 @@ namespace vm::jit {
 		}
 
 		CORE_DEV_LOG(
-			DVMDetails,
+			DVMDetails,  // For future knowledge, this is where you print.
 			(memory.dump("compiled_function.cnp"),
 		     "Compiled function dumped to: compiled_function.cnp")
 		);
