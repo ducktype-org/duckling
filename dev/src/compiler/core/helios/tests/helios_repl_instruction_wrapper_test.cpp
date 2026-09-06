@@ -82,10 +82,7 @@ private:
 			ASSERT_EQUAL(counter.void_return_count, 1u);
 
 			auto sym_ref = helios::getSymRef(wrapper.declaration->original_symbol);
-			assertTrue(
-				std::holds_alternative<helios::defgen::ReplInputWrapper>(sym_ref->other),
-				"Expected ReplInputWrapper generated symbol kind"
-			);
+			ASSERT_MATCHES(sym_ref->other, helios::defgen::ReplInputWrapper);
 
 			auto mangled
 				= helios::mangler::getSimpleMangledName(ctx, wrapper.declaration->original_symbol);

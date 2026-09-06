@@ -75,18 +75,15 @@ private:
 	void simple() {
 		auto get_ext_func_program = [this]() {
 			auto pid = initProcess();
-			ASSERT_TRUE(vm::api::loadCode(
-							pid,
-							{ .functions   = {},
-			                  .types       = {},
-			                  .global_data = {},
-			                  .external_c_functions
-			                  = { VM_INSTANCE_EXT_C_FUNC(add, simple::add, pid) },
-			                  .ffi_functions = {},
-			                  .object_files  = {}
-
-			                }
-			).has_value());
+			ASSERT_HAS_VALUE(vm::api::loadCode(
+				pid,
+				{ .functions            = {},
+			      .types                = {},
+			      .global_data          = {},
+			      .external_c_functions = { VM_INSTANCE_EXT_C_FUNC(add, simple::add, pid) },
+			      .ffi_functions        = {},
+			      .object_files         = {} }
+			));
 			ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("extern_test.dbc")) }));
 			return pid;
 		};
@@ -98,25 +95,8 @@ private:
 	void cppVectorInVm() {
 		auto get_ext_func_program = [this]() {
 			auto pid = initProcess();
-			ASSERT_TRUE(
-				vm::api::loadCode(
-					pid,
-					{ .functions            = {},
-			          .types                = {},
-			          .global_data          = {},
-			          .external_c_functions = {
-						  VM_INSTANCE_EXT_C_FUNC(vecSpawn, cpp_vector::vecSpawn, pid),
-						  VM_INSTANCE_EXT_C_FUNC(vecPushBack, cpp_vector::vecPushBack, pid),
-						  VM_INSTANCE_EXT_C_FUNC(vecSize, cpp_vector::vecSize, pid),
-					  },
-								.ffi_functions = {},
-								.object_files = {}
-					 }
-				).has_value()
-			);
-			ASSERT_TRUE(
-				vm::api::loadFiles(pid, { fs::File(path("cpp_vector_in_vm.dbc")) }).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::loadCode( pid, { .functions = {}, .types = {}, .global_data = {}, .external_c_functions = { VM_INSTANCE_EXT_C_FUNC(vecSpawn, cpp_vector::vecSpawn, pid), VM_INSTANCE_EXT_C_FUNC(vecPushBack, cpp_vector::vecPushBack, pid), VM_INSTANCE_EXT_C_FUNC(vecSize, cpp_vector::vecSize, pid), }, .ffi_functions = {}, .object_files = {} } ));
+			ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("cpp_vector_in_vm.dbc")) }));
 			return pid;
 		};
 		runTestOnVm(get_ext_func_program(), { "123" }, { "1" });
@@ -127,23 +107,8 @@ private:
 	void globalOpaques() {
 		auto get_ext_func_program = [this]() {
 			auto pid = initProcess();
-			ASSERT_TRUE(
-				vm::api::loadCode(
-					pid,
-					{ .functions            = {},
-			          .types                = {},
-			          .global_data          = {},
-			          .external_c_functions = {
-						  VM_INSTANCE_EXT_C_FUNC(vecPushBack, global_opaque::vecPushBack, pid),
-						  VM_INSTANCE_EXT_C_FUNC(vecSize, global_opaque::vecSize, pid),
-					  },
-								.ffi_functions = {},
-								.object_files = {}
-					 }
-				).has_value()
-			);
-			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("global_opaque.dbc")) }).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::loadCode( pid, { .functions = {}, .types = {}, .global_data = {}, .external_c_functions = { VM_INSTANCE_EXT_C_FUNC(vecPushBack, global_opaque::vecPushBack, pid), VM_INSTANCE_EXT_C_FUNC(vecSize, global_opaque::vecSize, pid), }, .ffi_functions = {}, .object_files = {} } ));
+			ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("global_opaque.dbc")) }));
 			return pid;
 		};
 
@@ -157,8 +122,7 @@ private:
 		vm_value->writeBytes(vector_ptr);
 
 		// Initialize the global vector pointer
-		ASSERT_TRUE(vm::api::runFunction(pid, "initialize_vector", { vm_value.refMut() }).has_value()
-		);
+		ASSERT_HAS_VALUE(vm::api::runFunction(pid, "initialize_vector", { vm_value.refMut() }));
 		ASSERT_HAS_VALUE(vm::api::join(pid));
 
 		vm_value->freeData();
@@ -173,22 +137,8 @@ private:
 	void voidTest() {
 		auto get_ext_func_program = [this]() {
 			auto pid = initProcess();
-			ASSERT_TRUE(
-				vm::api::loadCode(
-					pid,
-					{ .functions            = {},
-			          .types                = {},
-			          .global_data          = {},
-			          .external_c_functions = {
-						  VM_INSTANCE_EXT_C_FUNC(void_tester, void_func::void_tester, pid),
-					  },
-
-								.ffi_functions = {}, .object_files = {}
-					}
-				).has_value()
-			);
-			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("void_func_test.dbc")) }).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::loadCode( pid, { .functions = {}, .types = {}, .global_data = {}, .external_c_functions = { VM_INSTANCE_EXT_C_FUNC(void_tester, void_func::void_tester, pid), }, .ffi_functions = {}, .object_files = {} } ));
+			ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("void_func_test.dbc")) }));
 			return pid;
 		};
 		runTestOnVm(get_ext_func_program(), { "456" }, {});
@@ -198,20 +148,7 @@ private:
 	void voidNoArgsTest() {
 		auto get_ext_func_program = [this]() {
 			auto pid = initProcess();
-			ASSERT_TRUE(
-				vm::api::loadCode(
-					pid,
-					{ .functions            = {},
-			          .types                = {},
-			          .global_data          = {},
-			          .external_c_functions = {
-						  VM_INSTANCE_EXT_C_FUNC(void_no_args, void_func::void_no_args, pid),
-					  },
-				
-								.ffi_functions = {}, .object_files = {}
-					}
-				).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::loadCode( pid, { .functions = {}, .types = {}, .global_data = {}, .external_c_functions = { VM_INSTANCE_EXT_C_FUNC(void_no_args, void_func::void_no_args, pid), }, .ffi_functions = {}, .object_files = {} } ));
 			ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("void_no_args.dbc")) }));
 			return pid;
 		};
