@@ -67,29 +67,19 @@ namespace vm::api {
 	std::expected<void, ApiError> executeRuntimeExpr(
 		PID pid, ThreadID thread_id, const code::Function& function
 	) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(
-				pid, request::ExecRuntimeExpr{ .thread_id = thread_id, .expr = function }
-			))
+		return REQUEST(ExecRuntimeExpr{ .thread_id = thread_id COMMA.expr = function })
 		    .transform(ignoreResponse);
 	}
 
 	std::expected<ExitValue, ApiError> executeRuntimeExprFromFile(
 		PID pid, ThreadID thread_id, fs::File file
 	) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(
-				pid,
-				request::ExecRuntimeExprFromFile{ .thread_id = thread_id, .file = std::move(file) }
-			))
+		return REQUEST(ExecRuntimeExprFromFile{ .thread_id = thread_id COMMA.file = file })
 		    .and_then(mapOrWrongResponse<ExitValue>);
 	}
 
 	std::expected<ExitValue, ApiError> getRuntimeExprResult(PID pid, ThreadID thread_id) {
-		return Supervisor::get()
-		    .doRequest(
-				SupervisorRequest(pid, request::GetRuntimeExprResult{ .thread_id = thread_id })
-			)
+		return REQUEST(GetRuntimeExprResult{ .thread_id = thread_id })
 		    .and_then(mapOrWrongResponse<ExitValue>);
 	}
 

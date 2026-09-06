@@ -2019,7 +2019,7 @@ class FunctionValidator {
 	void validateThreadStatus() {
 		bool is_expr = thread.has_value();
 
-		if (is_expr && !std::holds_alternative<api::Paused>((*thread)->getStatus()))
+		if (is_expr && !std::holds_alternative<thread_state::Paused>((*thread)->getThreadState()))
 			throw EvaluatingExprOnRunningThreadError();
 	}
 

@@ -219,7 +219,6 @@ namespace vm {
 		 */
 		virtual void execGlobalDestructors() = 0;
 
-		virtual bool waitForExprEvaluation();
 
 		/**
 		 * @brief Main debug function that executes one step of the program.
