@@ -337,7 +337,6 @@ namespace compiler::helios::code {
 						|| operatoriness == HOUTFunctionDeclaration::Operatoriness::Suffix,
 					"resolveUnaryOperator should only filter for prefix or suffix operators"
 				);
-
 				// Unary operator resolution happens in two steps:
 				// 1. If the argument is numeric (integral or float) and the operator is a built-in
 				//    numeric operator, we perform any needed coercion and emit a UnaryOperatorExpr.
