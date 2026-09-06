@@ -19,7 +19,6 @@ int main() {
 #include "../../safe/low_program/micro_instruction_definitions.def.hpp"
 #undef HANDLE_MICRO_INSTR
 
-	PRINT("special_return");
 	PRINT("special_jump_if");
 	PRINT("special_jump_if_not");
 	PRINT("special_jump");
