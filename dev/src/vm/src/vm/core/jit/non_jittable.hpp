@@ -16,7 +16,7 @@ namespace vm::jit {
 		std::pair{ "trampoline", &vm::jit::helpers::trampoline },
 	};
 
-	constexpr size_t HELPER_FUNCTIONS  = 1;
+	constexpr size_t HELPER_FUNCTIONS   = 1;
 	constexpr size_t NON_jittable_COUNT = HARD_SYMBOLS.size() - HELPER_FUNCTIONS;
 	constexpr size_t jittable_COUNT     = low::microInstrCount() - NON_jittable_COUNT;
 }
