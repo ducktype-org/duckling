@@ -82,7 +82,7 @@ private:
 			for (const auto& local: pre_mir.local_list)
 				if (local.parameter_index.has_value() && local.parameter_index.value() == 0)
 					a_id = local.id;
-			ASSERT_TRUE(a_id.has_value());
+			ASSERT_HAS_VALUE(a_id);
 
 			// Build predecessor lists, same as constructLifetimePassArgs does.
 			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
@@ -96,9 +96,9 @@ private:
 			// `a` is a parameter, so it is alive at the entry block.
 			auto entry     = pre_mir.block_order.front();
 			auto entry_map = move_states.block_in_move_state.atMaybe(entry);
-			ASSERT_TRUE(entry_map.has_value());
+			ASSERT_HAS_VALUE(entry_map);
 			auto a_at_entry = entry_map.value()->atMaybe(a_id.value());
-			ASSERT_TRUE(a_at_entry.has_value());
+			ASSERT_HAS_VALUE(a_at_entry);
 			ASSERT_TRUE(a_at_entry.value()->status == compiler::mir::MoveStatus::Alive);
 
 			// After the unconditional move in the entry block, at least one successor block must
@@ -702,11 +702,11 @@ private:
 						}
 						// var r = &p.x;
 						else if (arg.projection_chain.size() == 2) {
-							bool has_deref = std::holds_alternative<MIRPlace::DerefProjection>(
-								arg.projection_chain[0].storage
+							bool has_deref = v_matches(
+								arg.projection_chain[0].storage, MIRPlace::DerefProjection
 							);
-							bool has_field = std::holds_alternative<MIRPlace::FieldProjection>(
-								arg.projection_chain[1].storage
+							bool has_field = v_matches(
+								arg.projection_chain[1].storage, MIRPlace::FieldProjection
 							);
 							if (has_deref && has_field) {
 								auto field = std::get<MIRPlace::FieldProjection>(
@@ -724,12 +724,11 @@ private:
 						if (out_place.projection_chain.size() == 5) {
 							const auto& chain = out_place.projection_chain;
 							bool        pattern_ok
-								= std::holds_alternative<MIRPlace::DerefProjection>(chain[0].storage)
-							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage)
-							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[2].storage)
-							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[3].storage)
-							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[4].storage
-							   );
+								= v_matches(chain[0].storage, MIRPlace::DerefProjection)
+							   && v_matches(chain[1].storage, MIRPlace::FieldProjection)
+							   && v_matches(chain[2].storage, MIRPlace::DerefProjection)
+							   && v_matches(chain[3].storage, MIRPlace::FieldProjection)
+							   && v_matches(chain[4].storage, MIRPlace::DerefProjection);
 
 							if (pattern_ok) {
 								auto f_p = std::get<MIRPlace::FieldProjection>(chain[1].storage);
