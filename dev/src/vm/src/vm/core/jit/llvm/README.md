@@ -4,11 +4,11 @@ The second tier, optimizing compiler is based on the LLVM ORC API. For that purp
 
 ### Absolute symbols
 
-To support unjittable instructions, they are introduced as "Absolute symbols" to the LLVM compiler, meaning that those functions (instruction implementations) have constant address, in the running VM process.
+To support non-jittable instructions, they are introduced as "Absolute symbols" to the LLVM compiler, meaning that those functions (instruction implementations) have constant address, in the running VM process.
 
 ### Constant instructions
 
-To allow for better optimizations, the (compile-time) information about arguments of successive instructions have to be passed to the compiler. We achieve this by creating a constant list of instructions, and pointing the instruction pointer to it. This list should be largely optimized away, apart from some exceptions (eg. unjittable).
+To allow for better optimizations, the (compile-time) information about arguments of successive instructions have to be passed to the compiler. We achieve this by creating a constant list of instructions, and pointing the instruction pointer to it. This list should be largely optimized away, apart from some exceptions (eg. non-jittable).
 
 ### Returning the `*instr`
 

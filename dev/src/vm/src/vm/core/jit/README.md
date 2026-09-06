@@ -25,6 +25,6 @@ Since the compiled functions run a trampoline to execute a different function, t
 
 To generate quality implementation bitcode for the LLVM (and later the Copy-and-Patch compiler) we run an additional compilation process and perform manual link-time optimization, by joining the whole VM in a single `.bc` file. Before optimizing, only instruction implementations are marked as external, allowing for aggressive dead-code elimination.
 
-### Unjittable instructions
+### Non-jittable instructions
 
-Because some instruction implementations may be quite large (and take up more compilation time) or complex (and inhibit optimizations). They are marked as non-jittable and excluded from compilation. This reduces startup and compilation times as well, as actually speeds up the generated code. Currently this marking is quite restricted, and the JIT compiler would perhaps benefit from expanding the list of unjittable instructions to most non-arithmetic instructions.
+Because some instruction implementations may be quite large (and take up more compilation time) or complex (and inhibit optimizations). They are marked as non-jittable and excluded from compilation. This reduces startup and compilation times as well, as actually speeds up the generated code. Currently this marking is quite restricted, and the JIT compiler would perhaps benefit from expanding the list of non-jittable instructions to most non-arithmetic instructions.

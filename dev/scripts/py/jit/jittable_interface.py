@@ -14,7 +14,7 @@ def is_stencil(func_name: str) -> bool:
     return func_name.startswith("vm::jit::cnp::stencil")
 
 def nonjittable(func_name: str) -> bool:
-    unjittable_opfuncs = [
+    nonjittable_opfuncs = [
         "jitFuncEntrypoint",
         "jitLoopEntrypoint",
         "call_builtinfunc",
@@ -25,7 +25,7 @@ def nonjittable(func_name: str) -> bool:
         "breakpoint",
     ]
 
-    return any(op in func_name for op in unjittable_opfuncs)
+    return any(op in func_name for op in nonjittable_opfuncs)
 
 special_functions = {}
 def is_special_function(func_name: str) -> bool:

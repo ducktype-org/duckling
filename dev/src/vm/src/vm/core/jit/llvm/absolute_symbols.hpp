@@ -9,7 +9,7 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 /**
- * @brief Registers absolute symbols for unjittable opfunctions to work.
+ * @brief Registers absolute symbols for non-jittable opfunctions to work.
  * @details Absolute symbols are constants used by jit, that origin from VM.
  * For example addresses of VM functions or variables (not currently).
  * In most cases jit uses functions which are created and independent from
