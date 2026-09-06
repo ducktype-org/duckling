@@ -2,6 +2,8 @@
 
 #include <vm/loader/parser/parser.hpp>
 
+#include <sstream>
+
 using namespace vm::loader;
 
 class BCParsingTests: public VmTestSuite {
@@ -78,7 +80,7 @@ private:
 	void opcodeSourcePositions() {
 		fs::File file(path("source_positions.dbc"));
 		auto     parsing_result = parser::parse({ file });
-		assertTrue(parsing_result.has_value(), "Expected successful parse.");
+		ASSERT_HAS_VALUE(parsing_result, "Expected successful parse.");
 
 		const auto& opcodes = parsing_result->front().functions.front()->code->opcodes;
 

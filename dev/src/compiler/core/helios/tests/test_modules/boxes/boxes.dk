@@ -25,7 +25,7 @@ fun by_box(p: box Point) -> i32 = {
 }
 
 fun test_boxes() -> i32 = {
-    var b_int: box i32 = new 42;    # `box_alloc` should be inserted.
+    var b_int: box i32 = new 42;    # `boxAlloc` should be inserted.
 
     take_int_ref(&b_int);
 

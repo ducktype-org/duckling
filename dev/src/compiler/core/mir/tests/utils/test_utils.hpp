@@ -12,6 +12,8 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
+#include <sstream>
+
 namespace compiler::mir::test_utils {
 	inline CRef<mir::Function> getMIRFunctionByName(
 		frontend::ModuleID module_id, std::string_view name

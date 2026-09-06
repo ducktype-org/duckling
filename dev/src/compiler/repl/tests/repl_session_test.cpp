@@ -1046,8 +1046,8 @@ namespace compiler::repl {
 				updated_history_size >= initial_history_size,
 				"History size should increase or stay same after processing"
 			);
-			assertTrue(
-				session.m_lowering_context.has_value(),
+			ASSERT_HAS_VALUE(
+				session.m_lowering_context,
 				"Lowering context should be initialized for REPL execution"
 			);
 		}

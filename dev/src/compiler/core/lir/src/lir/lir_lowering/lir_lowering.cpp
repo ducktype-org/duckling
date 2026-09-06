@@ -192,6 +192,18 @@ namespace compiler::lir {
 		case mir::Operation::IntegerNeg:
 			return Operation::IntegerNeg;
 
+		case mir::Operation::IntegerBitAnd:
+			return Operation::IntegerBitAnd;
+		case mir::Operation::IntegerBitOr:
+			return Operation::IntegerBitOr;
+		case mir::Operation::IntegerBitXor:
+			return Operation::IntegerBitXor;
+		case mir::Operation::IntegerBitNot:
+			return Operation::IntegerBitNot;
+		case mir::Operation::IntegerShl:
+			return Operation::IntegerShl;
+		case mir::Operation::IntegerShr:
+			return Operation::IntegerShr;
 		// Integer Comparison
 		case mir::Operation::IntegerLt:
 			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
@@ -703,8 +715,8 @@ namespace compiler::lir {
 					call_instr.scope_flags.push_back(ScopeFlag{ .flag  = ScopeFlag::Flag::ScopeEnd,
 					                                            .local = addr_local });
 				} else if (type.getRefKind() == tsh::ReferenceKind::Box) {
-					// Box — call the destructor on it directly, as the destructor should take
-					// ref T, and box T == ref T in lower representation.
+					// Box — call the destructor on it directly. A box destructor is the `boxFree`
+					// primitive, which takes a `ptr T`, and box T == ptr T in lower representation.
 					block->instructions.emplace_back(
 						Operation::Call,
 						base::Optional<LIRPlace>{},
@@ -874,6 +886,12 @@ namespace compiler::lir {
 				case mir::Operation::IntegerMul:
 				case mir::Operation::IntegerDiv:
 				case mir::Operation::IntegerMod:
+				case mir::Operation::IntegerBitAnd:
+				case mir::Operation::IntegerBitOr:
+				case mir::Operation::IntegerBitXor:
+				case mir::Operation::IntegerBitNot:
+				case mir::Operation::IntegerShl:
+				case mir::Operation::IntegerShr:
 				case mir::Operation::IntegerLt:
 				case mir::Operation::IntegerGt:
 				case mir::Operation::IntegerLteq:

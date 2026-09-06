@@ -1,21 +1,20 @@
 //! Local manifest schemas.
 use std::collections::HashMap;
-use std::collections::hash_map::Entry;
 use std::fmt;
 use std::path::PathBuf;
 
 use itertools::Itertools;
-use serde::{Deserialize, Serialize, de, ser};
+use serde::{Deserialize, de};
 use serde_untagged::UntaggedEnumVisitor;
-use serde_with::skip_serializing_none;
+use yaml_edit::path::YamlPath;
+use yaml_edit::{Mapping, MappingBuilder, SequenceBuilder};
 
-use crate::quackpack::core::{DependencyKind, Version};
+use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
 
 pub type Dependencies = HashMap<String, Dependency>;
 
-#[skip_serializing_none]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the [`quackconfig.yaml`](crate::quackpack::core::PackageLoader::MANIFEST_NAME) file.
 /// Also used by script frontmatters.
@@ -64,81 +63,9 @@ impl Manifest {
         }
         result
     }
-
-    /// Remove a dependency.
-    pub fn remove_dependency(&mut self, name: &str, kind: DependencyKind) -> DependencyRemoved {
-        let dependencies_maps = [
-            (DependencyKind::Normal, &mut self.dependencies),
-            (DependencyKind::Dev, &mut self.dev_dependencies),
-        ];
-        let mut other_kind = None;
-        let mut removed = false;
-        for (dep_kind, dep_map) in dependencies_maps {
-            if dep_kind == kind {
-                if let Some(dep_map_inner) = dep_map {
-                    removed = dep_map_inner.remove(name).is_some();
-                    // If the map becomes empty after removal, change it to `None`.
-                    if dep_map_inner.is_empty() {
-                        *dep_map = None;
-                    }
-                }
-            } else if let Some(map) = dep_map
-                && map.contains_key(name)
-            {
-                other_kind = Some(dep_kind);
-            }
-        }
-        if removed {
-            DependencyRemoved::Yes
-        } else if let Some(other_kind) = other_kind {
-            DependencyRemoved::NoDependencyButKindExists(other_kind)
-        } else {
-            DependencyRemoved::NoDependency
-        }
-    }
-
-    /// Add a dependency.
-    pub fn add_dependency(
-        &mut self,
-        name: String,
-        dependency: Dependency,
-        kind: DependencyKind,
-    ) -> DependencyAdded {
-        let dependencies = match kind {
-            DependencyKind::Normal => self.dependencies.get_or_insert(Dependencies::new()),
-            DependencyKind::Dev => self.dev_dependencies.get_or_insert(Dependencies::new()),
-        };
-        match dependencies.entry(name) {
-            Entry::Occupied(_) => DependencyAdded::AlreadyExists,
-            Entry::Vacant(entry) => {
-                entry.insert(dependency);
-                DependencyAdded::Yes
-            }
-        }
-    }
 }
 
-/// Marker struct for a removal of a dependency.
-pub enum DependencyRemoved {
-    /// Dependency successfully removed.
-    Yes,
-    /// No such dependency found.
-    NoDependency,
-    /// No such dependency found for the given kind.
-    /// However there is a dependency with this name but of different kind.
-    NoDependencyButKindExists(DependencyKind),
-}
-
-/// Marker struct for an addition of a dependency.
-pub enum DependencyAdded {
-    /// Dependency successfully added.
-    Yes,
-    /// Dependency with such name and kind already exists.
-    AlreadyExists,
-}
-
-#[skip_serializing_none]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the `metadata:` table.
 pub struct Metadata {
@@ -156,8 +83,7 @@ pub struct Metadata {
     pub links: Option<String>,
 }
 
-#[skip_serializing_none]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Single dependency of the package.
 pub struct Dependency {
@@ -171,6 +97,89 @@ pub struct Dependency {
     pub pinned: Option<bool>,
     /// Dependency's conditions: any has to be true in order to enable this dependency.
     pub conditions: Option<DependencyCondition>,
+}
+
+impl From<Dependency> for Mapping {
+    fn from(value: Dependency) -> Self {
+        let result = Mapping::new();
+        if let Some(version) = value.version {
+            result.set("version", version.to_string());
+        }
+        if let Some(source) = value.source {
+            match source {
+                DependencySource::Simple(simple) => {
+                    result.set("source", simple);
+                }
+                // Desired code.
+                /* DependencySource::Detailed(detailed) => {
+                    result.set("source", Into::<Mapping>::into(detailed));
+                } */
+                // Temporary workaround over a bug in yaml-edit.
+                DependencySource::Detailed(detailed) => {
+                    if let Some(registry_url) = detailed.registry_url {
+                        result
+                            .try_set_path("source.registry-url", registry_url)
+                            .expect("malformed path");
+                    }
+                    if let Some(name) = detailed.name {
+                        result
+                            .try_set_path("source.name", name)
+                            .expect("malformed path");
+                    }
+                    if let Some(path) = detailed.path {
+                        result
+                            .try_set_path("source.path", path.display().to_string())
+                            .expect("malformed path");
+                    }
+                    if let Some(git_url) = detailed.git_url {
+                        result
+                            .try_set_path("source.git-url", git_url)
+                            .expect("malformed path");
+                    }
+                    if let Some(tag) = detailed.tag {
+                        result
+                            .try_set_path("source.tag", tag)
+                            .expect("malformed path");
+                    }
+                    if let Some(branch) = detailed.branch {
+                        result
+                            .try_set_path("source.branch", branch)
+                            .expect("malformed path");
+                    }
+                    if let Some(commit) = detailed.commit {
+                        result
+                            .try_set_path("source.commit", commit)
+                            .expect("malformed path");
+                    }
+                }
+            }
+        }
+        if let Some(features) = value.features {
+            let mut features_sequence = SequenceBuilder::new();
+            for dep_feature in features {
+                match dep_feature {
+                    DependencyFeature::Simple(simple) => {
+                        features_sequence = features_sequence.item(simple);
+                    }
+                    DependencyFeature::Detailed(detailed) => {
+                        features_sequence = features_sequence.item(Into::<Mapping>::into(detailed));
+                    }
+                }
+            }
+            let features_sequence = features_sequence
+                .build_document()
+                .as_sequence()
+                .expect("SequenceBuilder should produce a sequence");
+            result.set("features", features_sequence);
+        }
+        if let Some(pinned) = value.pinned {
+            result.set("pinned", pinned);
+        }
+        if let Some(conditions) = value.conditions {
+            result.set("conditions", Into::<Mapping>::into(conditions));
+        }
+        result
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -219,13 +228,9 @@ impl<'de> Deserialize<'de> for OredSemver {
     }
 }
 
-impl Serialize for OredSemver {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        let semver_string = self.0.iter().map(ToString::to_string).join(" or ");
-        serializer.serialize_str(&semver_string)
+impl fmt::Display for OredSemver {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.iter().map(ToString::to_string).join(" or "))
     }
 }
 
@@ -284,20 +289,7 @@ impl<'de> de::Deserialize<'de> for DependencySource {
     }
 }
 
-impl Serialize for DependencySource {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        match self {
-            DependencySource::Simple(s) => serializer.serialize_str(s),
-            DependencySource::Detailed(detailed_source) => detailed_source.serialize(serializer),
-        }
-    }
-}
-
-#[skip_serializing_none]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// A detailed source of a dependency.
 pub struct DetailedSource {
@@ -334,8 +326,35 @@ impl DetailedSource {
     }
 }
 
-#[skip_serializing_none]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+impl From<DetailedSource> for Mapping {
+    fn from(value: DetailedSource) -> Self {
+        let result = Mapping::new();
+        if let Some(registry_url) = value.registry_url {
+            result.set("registry-url", registry_url);
+        }
+        if let Some(name) = value.name {
+            result.set("name", name);
+        }
+        if let Some(path) = value.path {
+            result.set("path", path.display().to_string());
+        }
+        if let Some(git_url) = value.git_url {
+            result.set("git-url", git_url);
+        }
+        if let Some(tag) = value.tag {
+            result.set("tag", tag);
+        }
+        if let Some(branch) = value.branch {
+            result.set("branch", branch);
+        }
+        if let Some(commit) = value.commit {
+            result.set("commit", commit);
+        }
+        result
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Conditions, from which any has to be true, in order to enable this dependency.
 pub struct DependencyCondition {
@@ -344,10 +363,35 @@ pub struct DependencyCondition {
     pub package_features: Option<Vec<String>>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+impl From<DependencyCondition> for Mapping {
+    fn from(value: DependencyCondition) -> Self {
+        let mut result = MappingBuilder::new();
+        if let Some(package_features) = value.package_features {
+            let mut features = SequenceBuilder::new();
+            for feature in package_features {
+                features = features.item(feature);
+            }
+            result = result.insert_sequence("package-features", features);
+        }
+        result
+            .build_document()
+            .as_mapping()
+            .expect("MappingBuilder did not produce a Mapping")
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case", transparent)]
 /// A feature + its conditions.
 pub struct DetailedFeature(pub OneEntryMap<String, DependencyCondition>);
+
+impl From<DetailedFeature> for Mapping {
+    fn from(value: DetailedFeature) -> Self {
+        let result = Mapping::new();
+        result.set(value.0.key, Into::<Mapping>::into(value.0.value));
+        result
+    }
+}
 
 #[derive(Clone, Debug)]
 /// A general dependency feature.
@@ -371,20 +415,7 @@ impl<'de> de::Deserialize<'de> for DependencyFeature {
     }
 }
 
-impl Serialize for DependencyFeature {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        match self {
-            DependencyFeature::Simple(simple) => serializer.serialize_str(simple),
-            DependencyFeature::Detailed(detailed_feature) => detailed_feature.serialize(serializer),
-        }
-    }
-}
-
-#[skip_serializing_none]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// A single compilation profile.
 pub struct Profile {
@@ -419,20 +450,7 @@ impl<'de> de::Deserialize<'de> for OptLevel {
     }
 }
 
-impl Serialize for OptLevel {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        match self {
-            OptLevel::Number(n) => serializer.serialize_u32(*n),
-            OptLevel::String(s) => serializer.serialize_str(s),
-        }
-    }
-}
-
-#[skip_serializing_none]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 /// A venv's configuration.
 #[serde(rename_all = "kebab-case")]
 pub struct VenvConfig {
@@ -467,18 +485,17 @@ mod tests {
     }
 
     #[test]
-    fn test_ored_semver_serialization() {
-        let x =
-            serde_json::to_string::<OredSemver>(&OredSemver(vec![Version::new(1, 0, 0)])).unwrap();
-        assert_eq!(x, "\"1.0.0\"");
+    fn test_ored_semver_to_string() {
+        let x = OredSemver(vec![Version::new(1, 0, 0)]).to_string();
+        assert_eq!(x, "1.0.0");
 
-        let x = serde_json::to_string::<OredSemver>(&OredSemver(vec![
+        let x = OredSemver(vec![
             Version::new(1, 0, 0),
             Version::new(1, 1, 0),
             Version::new(2, 0, 0),
-        ]))
-        .unwrap();
-        assert_eq!(x, "\"1.0.0 or 1.1.0 or 2.0.0\"");
+        ])
+        .to_string();
+        assert_eq!(x, "1.0.0 or 1.1.0 or 2.0.0");
     }
 
     #[test]

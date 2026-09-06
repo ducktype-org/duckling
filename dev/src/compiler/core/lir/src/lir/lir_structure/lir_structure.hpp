@@ -52,6 +52,14 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerSDiv,
 	IntegerUMod,
 	IntegerSMod,
+	
+	/** Integer bitwise operations. */
+	IntegerBitAnd,
+	IntegerBitOr,
+	IntegerBitXor,
+	IntegerBitNot,
+	IntegerShl,
+	IntegerShr,
 
 	/** Floating point arithmetic. */
 	FloatAdd,
@@ -186,8 +194,6 @@ namespace compiler::lir {
 		DvmFreeArr,
 		DvmAlloc,
 		DvmFree,
-		BoxAlloc,
-		BoxFree,
 		DvmPtrParts,
 		DvmIsNullptr,
 		DvmNullptr

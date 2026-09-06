@@ -1,5 +1,5 @@
 /**
- * @file micro_instruction_definitions.hpp
+ * @file micro_instruction_definitions.def.hpp
  * @brief Contains definitions of all micro bytecode instructions. Can be used for generating
  * repetitive code based on list of instructions.
  *
@@ -9,7 +9,7 @@
  *  constexpr usize countMicroInstructions() {
  *  	usize count = 0;
  *		#define HANDLE_MICRO_INSTR(i) count++;
- * 		#include "micro_instruction_definitions.hpp"
+ * 		#include "micro_instruction_definitions.def.hpp"
  * 		#undef HANDLE_MICRO_INSTR
  * 		return count;
  * 	}
@@ -211,6 +211,60 @@ DEF_MICRO_INSTR(log_xor_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
 DEF_MICRO_INSTR(log_xor_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
 
 DEF_MICRO_INSTR(log_not_p8, vm::low::opargs::Place8)
+
+// ======== BITWISE OPERATIONS ========
+
+// 64-bit
+DEF_MICRO_INSTR(bit_and_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(bit_and_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_or_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(bit_or_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_xor_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(bit_xor_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shl_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(shl_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shr_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(shr_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_not_p64, vm::low::opargs::Place64)
+
+// 32-bit
+DEF_MICRO_INSTR(bit_and_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(bit_and_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_or_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(bit_or_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_xor_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(bit_xor_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shl_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(shl_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shr_p32_p32, vm::low::opargs::Place32, vm::low::opargs::Place32)
+DEF_MICRO_INSTR(shr_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_not_p32, vm::low::opargs::Place32)
+
+// 16-bit
+DEF_MICRO_INSTR(bit_and_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(bit_and_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_or_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(bit_or_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_xor_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(bit_xor_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shl_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(shl_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shr_p16_p16, vm::low::opargs::Place16, vm::low::opargs::Place16)
+DEF_MICRO_INSTR(shr_p16_imm, vm::low::opargs::Place16, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_not_p16, vm::low::opargs::Place16)
+
+// 8-bit
+DEF_MICRO_INSTR(bit_and_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(bit_and_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_or_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(bit_or_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_xor_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(bit_xor_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shl_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(shl_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(shr_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
+DEF_MICRO_INSTR(shr_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(bit_not_p8, vm::low::opargs::Place8)
 
 // ========= LOGICAL OPERATIONS ========
 

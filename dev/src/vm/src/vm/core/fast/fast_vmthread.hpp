@@ -13,6 +13,7 @@ namespace vm::fast {
 
 	class FastVMThread: public vm::IVMThread {
 		friend class FastExecutor;
+		friend class FastVMProcess;
 
 	public:
 		FastVMThread(
@@ -32,6 +33,8 @@ namespace vm::fast {
 		void run(const std::string& func_name, const RunArguments& run_arguments) override;
 
 		void executeOneStep() override;
+
+		[[nodiscard]] bool isAtExecutionEnd() const override;
 
 		void execGlobalDestructors() override;
 

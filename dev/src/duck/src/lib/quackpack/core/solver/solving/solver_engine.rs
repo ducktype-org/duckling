@@ -423,14 +423,13 @@ metadata:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests =
-            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
+        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
         let all_possible_features =
             HashMap::from([(pkg_a, HashSet::new()), (pkg_b, HashSet::new())]);
         let versions_for_identity = HashMap::from([
@@ -499,14 +498,13 @@ dependencies:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests =
-            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
+        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
         let all_possible_features = HashMap::from([
             (pkg_a, HashSet::from([FeatureName::new("xd")])),
             (pkg_b, HashSet::new()),
@@ -586,14 +584,13 @@ features:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests =
-            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
+        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
         let all_possible_features = HashMap::from([
             (pkg_a, HashSet::new()),
             (
@@ -660,14 +657,13 @@ features:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests =
-            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
+        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
         let all_possible_features = HashMap::from([
             (pkg_a, HashSet::new()),
             (
@@ -749,9 +745,9 @@ features:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
-        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let identity_c = FullIdentity::new("c".into(), registry_origin);
@@ -759,9 +755,9 @@ features:
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let gathered_manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a)),
-            (pkg_b, Box::new(manifest_b)),
-            (pkg_c, Box::new(manifest_c)),
+            (pkg_a, manifest_a),
+            (pkg_b, manifest_b),
+            (pkg_c, manifest_c),
         ]);
         let all_possible_features = HashMap::from([
             (pkg_a, HashSet::new()),
@@ -837,14 +833,13 @@ features:
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests =
-            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
+        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
         let all_possible_features = HashMap::from([
             (pkg_a, HashSet::new()),
             (pkg_b, ["f".into(), "g".into()].into()),

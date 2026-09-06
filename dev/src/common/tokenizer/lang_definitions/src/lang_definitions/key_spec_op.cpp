@@ -238,6 +238,7 @@ namespace lang_def {
 		{ NamedOperator::Pipe, "|" },
 		{ NamedOperator::Ampersand, "&" },
 		{ NamedOperator::BitXor, "^" },
+		{ NamedOperator::BitNot, "~" },
 
 		{ NamedOperator::LeftShift, "<<" },
 		{ NamedOperator::RightShift, ">>" },

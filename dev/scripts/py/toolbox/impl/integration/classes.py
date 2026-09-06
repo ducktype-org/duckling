@@ -22,6 +22,7 @@ class Case:
     expected_exitcode: int
     expected_output: Optional[IOData]
     expected_err: Optional[IOData]
+    needed_threads: int
     timeout: int
 
 

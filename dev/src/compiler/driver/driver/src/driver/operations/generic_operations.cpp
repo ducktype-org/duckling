@@ -220,16 +220,6 @@ namespace compiler::driver {
 			switch (key.backend_type) {
 			case BackendType::LLVM: {
 				auto llvm_module = compileLIRModuleToLLVM(ctx, &lir_data);
-				{
-					// compileLIRModuleToLLVM time is added on its own,
-					// but tracking time of the actual compilation to object file is done here
-					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
-
-					llvm_module.compile(
-						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
-					);
-				}
-
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(lir_data.module_id.str() + ".ll")
@@ -242,9 +232,22 @@ namespace compiler::driver {
 					auto asm_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(lir_data.module_id.str() + ".s")
 					);
-					llvm_module.compile(
+
+					// We create a copy here, since compiling the module to assembly might modify it.
+					auto llvm_module_copy = llvm_module.clone();
+
+					llvm_module_copy.compile(
 						asm_artifact.file.getFilePath().getPath(),
 						backend_llvm::CompilationOutputType::Assembly
+					);
+				}
+				{
+					// compileLIRModuleToLLVM time is added on its own,
+					// but tracking time of the actual compilation to object file is done here
+					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
+
+					llvm_module.compile(
+						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
 				break;
@@ -530,13 +533,6 @@ namespace compiler::driver {
 				);
 
 				auto llvm_module = compileLIRModuleToLLVM(ctx, &script_lir.value());
-				{
-					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
-					llvm_module.compile(
-						object_artifact.file.getFilePath(),
-						backend_llvm::CompilationOutputType::Object
-					);
-				}
 
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
@@ -550,13 +546,24 @@ namespace compiler::driver {
 					auto asm_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(base::strConcat(script_lir->module_id.strView(), ".s"))
 					);
-					llvm_module.compile(
+
+					// We create a copy here, since compiling the module to assembly might modify it.
+					auto llvm_module_copy = llvm_module.clone();
+
+					llvm_module_copy.compile(
 						asm_artifact.file.getFilePath().getPath(),
 						backend_llvm::CompilationOutputType::Assembly
 					);
 				}
 
-				// Link the script object with builtins to produce a runnable executable.
+				{
+					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
+					llvm_module.compile(
+						object_artifact.file.getFilePath(),
+						backend_llvm::CompilationOutputType::Object
+					);
+				}
+
 				auto output_name     = base::strConcat(script_context.script_file.stem(), ".exe");
 				auto output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(output_name.c_str())
@@ -564,7 +571,6 @@ namespace compiler::driver {
 
 				std::vector<artifacts::FileArtifact> objects;
 				objects.push_back(object_artifact);
-				objects.push_back(emitBuiltinLLVMObjectFile());
 
 				auto linking_result
 					= linker::linkExecutable(output_artifact, objects, linking_options);
@@ -587,7 +593,7 @@ namespace compiler::driver {
 			return base::OK;
 		}
 
-		base::OkBad compileScriptToDVMBytecode(bool link_std_lib) {
+		base::OkBad compileScriptToDVMBytecode(const DVMLinkingOptions& linking_options) {
 			base::Optional<std::string> error_message;
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto script_lir = compileScriptToLIRModuleData(ctx);
@@ -621,14 +627,11 @@ namespace compiler::driver {
                 );
 
 				std::vector<artifacts::FileArtifact> dvm_objs = { std::move(script_obj_artifact) };
-				if (link_std_lib)
-					for (auto&& dvm_std_obj: getStdLibDVMArtifacts())
-						dvm_objs.emplace_back(std::move(dvm_std_obj));
 
 
 				// Compiling a bare script has no build target, so there are no shared libraries
 				// to declare for the runtime.
-				if (linkDVMPackage(dvm_objs, {}, {}, output_file).isBad()) {
+				if (linkDVMPackage(dvm_objs, {}, linking_options, output_file).isBad()) {
 					error_message = "Linking of the DVM objects failed.";
 					return;
 				}
@@ -658,7 +661,9 @@ namespace compiler::driver {
 				constructNativeLinkerOptions(linking_opts, std_lib_opts)
 			);
 		case BackendType::DVM:
-			return compileScriptToDVMBytecode(std_lib_opts.stdActive());
+			return compileScriptToDVMBytecode(
+				constructDVMLinkingOptions(linking_opts, std_lib_opts, false)
+			);
 		default:
 			CORE_PANIC("bad backend type");
 		}
@@ -700,8 +705,14 @@ namespace compiler::driver {
 						  [&](vm::api::ProcessInfo process
 			              ) -> std::expected<RunOutput, vm::api::ApiError> {
 							  const vm::PID pid = process.pid;
-							  // Deinitialize the process and execute global destructors.
-							  defer((void) vm::api::deinitAndValidate(pid));
+
+							  // Deinitialize the process and execute global destructors if the
+				              // process finished cleanly or force kill it otherwise.
+							  defer({
+								  const auto res = vm::api::deinitOrKill(pid);
+								  if (not res)
+									  std::cerr << vm::api::errorToString(res.error()) << '\n';
+							  });
 
 							  return vm::api::loadCode(pid, dvm_module.code)
 				                  .and_then([&] {
@@ -885,10 +896,6 @@ namespace compiler::driver {
 						target_exe.output_file_name
 					);
 
-					llvm_objects_by_root_module.atMaybe(task.root_module)
-						.value()
-						->push_back(emitBuiltinLLVMObjectFile());
-
 					auto linking_result = linker::linkExecutable(
 						output_file,
 						llvm_objects_by_root_module.at(task.root_module),
@@ -955,18 +962,17 @@ namespace compiler::driver {
 							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
-							target_dvm.runtime_config,
+							target_dvm.dvm_linking_options,
 							output_file
 						)
 					        .isBad())
 						result = base::BAD;
 				}
 				variant_case(BuildTargetDVMExecutable, target_dvm) {
-					// If the `target_dvm.link_std_packages` is on, we link the std packages as well.
-					std::vector<artifacts::FileArtifact> dbc_arts
+					// The standard library (and any other dependency) is linked in through
+					// `dvm_linking_options.link_libraries`.
+					const std::vector<artifacts::FileArtifact>& dbc_arts
 						= *dvm_objects_by_root_module.atMaybe(task.root_module).value();
-					if (target_dvm.link_std_packages)
-						for (auto& art: getStdLibDVMArtifacts()) dbc_arts.push_back(std::move(art));
 
 					std::vector<artifacts::FileArtifact> debug_info_arts;
 
@@ -974,18 +980,13 @@ namespace compiler::driver {
 						debug_info_artifacts_by_root_module.atMaybe(task.root_module), debug_arts
 					) {
 						for (const auto& art: *debug_arts) debug_info_arts.push_back(art);
-						if (target_dvm.link_std_packages)
-							for (auto& art: getStdLibDVMDebugInfoArtifacts())
-								debug_info_arts.push_back(std::move(art));
 					}
 
 					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
 						target_dvm.output_file_name
 					);
-					// We may mix artifacts from different collections here (std
-					// artifacts can come from a separate collection).
 					if (linkDVMPackage(
-							dbc_arts, debug_info_arts, target_dvm.runtime_config, output_file
+							dbc_arts, debug_info_arts, target_dvm.dvm_linking_options, output_file
 						)
 					        .isBad())
 						result = base::BAD;

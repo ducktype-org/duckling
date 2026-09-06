@@ -310,7 +310,8 @@ namespace compiler::helios::code {
 			static bool isNumericOperator(const lexer::Operator op) {
 				// Only operators which allow their arguments to undergo numeric promotion.
 				static const std::set<std::string> numeric_ops
-					= { "+", "-", "*", "/", "%", "**", "<", "<=", ">", ">=", "==", "!=" };
+					= { "+",  "-",  "*",  "/", "%", "**", "<", "<=", ">",
+					    ">=", "==", "!=", "&", "|", "^",  "~", "<<", ">>" };
 				return numeric_ops.contains(op.str());
 			}
 
@@ -705,13 +706,16 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand());
+				if (lhs_res.hasFailed()) return;
+				auto lhs = std::move(lhs_res).valueOrThrow();
+
 				// Handle variant type construction
-				if (op->unwrap() == lang_def::NamedOperator::Pipe) {
+				if (op->unwrap() == lang_def::NamedOperator::Pipe
+				    && lhs->expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
-					// Expect all subexpressions in variant constructor to be Meta types or try to
-					// lift them if they aren't.
 					const auto meta_type = tsh::SymbolType<>{
 						tsh::getMetaType(),
 						tsh::ReferenceKind::Direct,
@@ -722,10 +726,7 @@ namespace compiler::helios::code {
 						auto sub_expr_hout = subExprFromPSTWithType(
 							ctx, sub_expr, meta_type, op->getStablePosition()
 						);
-						if (sub_expr_hout.hasFailed()) {
-							// Error has occurred.
-							return;
-						}
+						if (sub_expr_hout.hasFailed()) return;
 						all_subtypes.emplace_back(std::move(sub_expr_hout).valueOrThrow());
 					}
 					node = makeBox<VariantTypeConstructorExpr>(
@@ -734,11 +735,8 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				// Default case (typical operators, built-in or user-defined)
-				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand());
 				auto rhs_res = subExprFromPST(ctx, stmt->getRightOperand());
-
-				auto lhs = std::move(lhs_res).valueOrThrow();
+				if (rhs_res.hasFailed()) return;
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
 				node = resolveBinaryOperator(

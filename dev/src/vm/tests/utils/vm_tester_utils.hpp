@@ -105,7 +105,23 @@ protected:
 		vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
 	);
 
-	void assertExecutionPanickedWith(const TestResult& test_result, std::string_view err_piece);
+	/**
+	 * @brief Asserts the process panicked with @p err_piece in its message and kills it.
+	 */
+	void assertExecutionPanickedWithAndKill(
+		const TestResult& test_result, std::string_view err_piece
+	);
+
+	/**
+	 * @brief Asserts that `runFunction` refused the call and that the process is still runnable
+	 * after the rejected validation.
+	 */
+	void assertRunFunctionRefusedWith(
+		vm::PID                         pid,
+		const std::string&              func_name,
+		const vm::FunctionRunArguments& args,
+		std::string_view                expected_reason
+	);
 
 	/**
 	 * @brief Loads a file containing a program which violates syntactic or static verification

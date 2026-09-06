@@ -3,6 +3,7 @@ PreNode: ""
 SubDirs:
   - basic
   - basic-with-flags
+  - can-reuse-solution-with-local-deps
   - cycle-in-flags
   - dep
   - dep-and-conditions
@@ -13,3 +14,4 @@ SubDirs:
   - exposed-freezefile
   - exposed-freezefile-and-deps
   - legal-packages-names
+  - warnings

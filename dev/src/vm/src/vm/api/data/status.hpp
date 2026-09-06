@@ -72,6 +72,10 @@ namespace vm::api {
 	constexpr bool canRespond(const ProcStatus& status) {
 		return v_matches(status, NotStarted, Paused) || isStatusTerminal(status);
 	}
+
+	constexpr bool canDeinit(const ProcStatus& status) {
+		return v_matches(status, NotStarted, ExecutionCompleted);
+	}
 }
 
 

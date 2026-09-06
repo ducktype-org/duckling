@@ -14,6 +14,7 @@
 #include <cstdint>
 
 STRONG_TYPEDEF_INT(u8, uint8_t);
+
 using u16 = uint16_t;
 using u32 = uint32_t;
 #ifdef __APPLE__

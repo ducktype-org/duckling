@@ -7,6 +7,8 @@
 #include <lexer/token.hpp>
 #include <string_id/string_id.hpp>
 
+#include <sstream>
+
 namespace tpc {
 	/**
 	 * @brief Struct for storing identifiers
