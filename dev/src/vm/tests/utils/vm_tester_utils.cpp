@@ -88,7 +88,7 @@ void VmTestSuite::loadInvalidDbc(
 	ASSERT_NO_VALUE(loaded_file_response);
 
 	auto err = loaded_file_response.error();
-	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
+	ASSERT_MATCHES(err, vm::api::LoadProgramError);
 	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
 	std::cerr << err_str << '\n';
 	for (auto err_key: error_keywords) {
@@ -115,7 +115,7 @@ void VmTestSuite::loadThenLoadInvalidDbc(
 	ASSERT_NO_VALUE(second_response);
 
 	auto err = second_response.error();
-	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
+	ASSERT_MATCHES(err, vm::api::LoadProgramError);
 	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
 	std::cerr << err_str << '\n';
 	for (auto err_key: error_keywords) {
@@ -255,7 +255,7 @@ void VmTestSuite::assertRunFunctionRefusedWith(
 ) {
 	auto result = vm::api::runFunction(pid, func_name, args);
 	ASSERT_NO_VALUE(result);
-	ASSERT_TRUE(v_matches(result.error(), vm::api::RunError));
+	ASSERT_MATCHES(result.error(), vm::api::RunError);
 	const std::string why = v_get(result.error(), vm::api::RunError).error;
 	assertTrue(
 		why.find(expected_reason) != std::string::npos,
@@ -265,7 +265,7 @@ void VmTestSuite::assertRunFunctionRefusedWith(
 
 	auto status = vm::api::getExecutionStatus(pid);
 	ASSERT_HAS_VALUE(status);
-	ASSERT_TRUE(v_matches(status.value(), vm::api::NotStarted));
+	ASSERT_MATCHES(status.value(), vm::api::NotStarted);
 }
 
 auto VmTestSuite::runFunctionExpectPanic(

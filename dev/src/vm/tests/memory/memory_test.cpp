@@ -60,11 +60,11 @@ private:
 
 		const auto deinit = vm::api::deinitAndValidate(result.pid);
 		ASSERT_NO_VALUE(deinit);
-		ASSERT_TRUE(v_matches(deinit.error(), vm::api::StateError));
+		ASSERT_MATCHES(deinit.error(), vm::api::StateError);
 
 		const auto status = vm::api::getExecutionStatus(result.pid);
 		ASSERT_HAS_VALUE(status);
-		ASSERT_TRUE(v_matches(status.value(), vm::api::ExecutionPanicked));
+		ASSERT_MATCHES(status.value(), vm::api::ExecutionPanicked);
 
 		ASSERT_HAS_VALUE(vm::api::kill(result.pid));
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(result.pid));
@@ -76,14 +76,14 @@ private:
 		ASSERT_HAS_VALUE(completed.run_result);
 		const auto clean_teardown = vm::api::deinitOrKill(completed.pid);
 		ASSERT_HAS_VALUE(clean_teardown);
-		ASSERT_TRUE(clean_teardown.value().has_value());
+		ASSERT_HAS_VALUE(clean_teardown.value());
 		ASSERT_TRUE(clean_teardown.value().value());
 
 		const auto panicked = runTestOnVmGetResult("local_leak.dbc", "", "");
 		ASSERT_NO_VALUE(panicked.run_result);
 		const auto forced_teardown = vm::api::deinitOrKill(panicked.pid);
 		ASSERT_HAS_VALUE(forced_teardown);
-		ASSERT_TRUE(!forced_teardown.value().has_value());
+		ASSERT_NO_VALUE(forced_teardown.value());
 
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(completed.pid));
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(panicked.pid));
@@ -100,14 +100,14 @@ private:
 
 		const auto deinit = vm::api::deinitAndValidate(result.pid);
 		ASSERT_NO_VALUE(deinit);
-		ASSERT_TRUE(v_matches(deinit.error(), vm::api::Panicked));
+		ASSERT_MATCHES(deinit.error(), vm::api::Panicked);
 
 		// Process should be gone.
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(result.pid));
 		// Second deinit should not run.
 		const auto second = vm::api::deinitAndValidate(result.pid);
 		ASSERT_NO_VALUE(second);
-		ASSERT_TRUE(v_matches(second.error(), vm::api::ProcessNotFound));
+		ASSERT_MATCHES(second.error(), vm::api::ProcessNotFound);
 	}
 
 	void deinitOrKillHandlesAProcessKilledByItsFailedDeinit() {
@@ -120,7 +120,7 @@ private:
 		const auto teardown = vm::api::deinitOrKill(result.pid);
 		ASSERT_HAS_VALUE(teardown);
 		// Deinit or kill should report that the deinit failed.
-		ASSERT_TRUE(!teardown.value().has_value());
+		ASSERT_NO_VALUE(teardown.value());
 		// But the process should be gone either way.
 		ASSERT_NO_VALUE(vm::api::getExecutionStatus(result.pid));
 

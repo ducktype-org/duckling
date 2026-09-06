@@ -75,7 +75,7 @@ private:
 		                             .illegalAccess();
 
 		// First check is sumbodule exists
-		assertTrue(sub_module_locked.has_value(), "Submodule should exist");
+		ASSERT_HAS_VALUE(sub_module_locked, "Submodule should exist");
 
 		auto submodule_id = sub_module_locked.value().illegalAccess().getID();
 
