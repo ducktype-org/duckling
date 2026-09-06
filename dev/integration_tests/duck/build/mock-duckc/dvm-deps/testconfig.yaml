@@ -21,6 +21,7 @@ Tests:
             info: starting gathering the dependency graph
             info: running gathering
             info: starting the solver engine
-            info: starting fetching 2 packages
+            info: starting loading 2 packages
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`..."

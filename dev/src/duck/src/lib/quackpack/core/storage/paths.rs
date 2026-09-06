@@ -228,6 +228,17 @@ impl Storage {
         dir.join(OK_FILENAME).touch()?;
         Ok(())
     }
+
+    /// Attempts to remove a package from the storage,
+    /// does not fail if such package is not stored.
+    pub fn try_remove_pkg(&self, pkg_id: PackageId) -> QuackResult<()> {
+        let pkg_dir = match pkg_id.kind() {
+            FullKind::Git { commit } => self.git_dir(pkg_id.url(), &commit),
+            FullKind::Registry => self.registry_dir(&pkg_id.name(), pkg_id.version(), pkg_id.url()),
+            FullKind::Local => return Ok(()),
+        };
+        pkg_dir.rmtree()
+    }
 }
 
 /// Returns iterator over files in a directory.
