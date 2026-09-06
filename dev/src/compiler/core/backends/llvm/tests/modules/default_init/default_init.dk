@@ -6,8 +6,8 @@ class Point {
 fun defaults() -> i32 = {
     var a: i32;        # 0
     var b: f64;        # 0.0
-    var p: Point;      # zeroinitializer
-    var arr: i32[5];   # zeroinitializer
+    var p: Point;      # zero-initialized aggregate
+    var arr: i32[5];   # zero-initialized aggregate
     
     return a;
 }

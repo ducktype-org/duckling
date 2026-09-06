@@ -1,45 +1,36 @@
 //! Synchronize a given venv.
 //! This includes: creating a venv, resolving dependencies, downloading them.
-use std::cell::RefCell;
-use std::fs::File;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use chrono::Utc;
-use flate2::read::GzDecoder;
 use futures::executor::block_on;
-use futures::prelude::*;
-use futures::stream;
-use tar::Archive;
 use tracing::{debug, error, warn};
 
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::fetcher::types::PackageWithUrl;
-use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
+use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::script::Script;
-use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverAnswer, SolverGathererData};
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::git_access::StorageGitAccess;
 use crate::quackpack::core::storage::locks::TrySyncLock;
+use crate::quackpack::core::storage::ops::sync::load_deps::{
+    LoadedFreezePackages, load_packages_in_freeze,
+};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::{
-    AnyPackage, GitReference, Package, PackageContext, PackageId, PackageLoader, storage,
+    AnyPackage, Package, PackageContext, PackageId, PackageLoader, VenvConfig, storage,
 };
-use crate::util::error::{ErrorsLogger, MessageError};
+use crate::util::Pluralize;
+use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
-// We want at most 3 calls, therefore we retry 2 times.
-const MAX_BLOB_RETRY_COUNT: u32 = 2;
-
-#[derive(Debug, Clone, Copy)]
-/// A marker struct to indicate a successful fetch.
-struct SuccessfullyFetchedPackage;
+mod load_deps;
 
 #[derive(Debug, Clone, Copy)]
 /// Options passed to [`sync`].
@@ -59,6 +50,7 @@ pub fn sync(
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     debug!(root = %pcx.package().root().display(), ?options);
+    pcx.emit_warnings()?;
     pcx.ctx().console().info(format!(
         "starting synchronization of the {}",
         pcx.package().display()
@@ -101,26 +93,14 @@ pub fn sync(
         .collect();
     let new_freeze = solver_answer.new_freeze.generate_storage_freeze()?;
 
-    let _fetched_count = fetch_source_codes(&storage, &fetcher, git_access, pkgs)?;
+    let LoadedFreezePackages {
+        _pkgs,
+        freshly_downloaded_num,
+        already_present_num,
+    } = load_packages_in_freeze(&storage, &fetcher, pkgs)?;
+    make_after_fetch_message(pcx.ctx(), already_present_num, freshly_downloaded_num)?;
 
-    let now = Utc::now();
-    let venv = if let Some(mut venv) = venv {
-        let data = venv.data_mut();
-        data.set_last_synchronization(now);
-        data.set_freeze(new_freeze);
-        data.set_last_known_location(pcx.package().root().to_path_buf());
-        data.set_ephemeral(venv_config.ephemeral());
-        venv
-    } else {
-        let data = VenvData::new(
-            new_freeze,
-            venv_config.ephemeral(),
-            pcx.package().root().to_path_buf(),
-            now,
-            now,
-        );
-        Venv::new(id, data)
-    };
+    let venv = update_venv(venv, venv_config, new_freeze, id, pcx);
     venv.save_to(&storage, pcx.ctx())?;
 
     if expose_freezefile && !options.frozen {
@@ -265,160 +245,55 @@ fn get_solver_answer(
     }
 }
 
+fn make_after_fetch_message(
+    ctx: &DuckContext,
+    already_present: usize,
+    downloaded: usize,
+) -> QuackResult<()> {
+    let total = already_present + downloaded;
+    ctx.console().info(format!(
+        "loaded source code{} of {} package{}, {} {} downloaded, {} {} already present",
+        total.s_if_plural(),
+        total,
+        total.s_if_plural(),
+        downloaded,
+        downloaded.was_or_were(),
+        already_present,
+        already_present.was_or_were()
+    ))
+}
+
 /// Helper for [`sync`].
-/// Fetches source codes of packages which have been decided to be part of the freeze,
-/// but their source codes have not yet been fetched.
-/// Returns the number of fetched packages.
-#[tracing::instrument(skip_all)]
-fn fetch_source_codes(
-    storage: &Storage,
-    fetcher: &Fetcher<'_>,
-    git_access: StorageGitAccess<'_>,
-    pkgs: Vec<PackageId>,
-) -> QuackResult<usize> {
-    if pkgs.is_empty() {
-        warn!("requested a download of 0 packages");
-        return Ok(0);
-    }
-    let count = pkgs.len();
-    let suffix = if count == 1 { "" } else { "s" };
-    fetcher
-        .ctx()
-        .console()
-        .info(format!("starting fetching {count} package{suffix}"))?;
-    let fetcher_lock = fetcher
-        .ctx()
-        .duck_home()
-        .open_fetcher_lockfile(fetcher.ctx())?;
-    let max_connections = fetcher.ctx().max_open_connections();
-    let logger = RefCell::new(ErrorsLogger::default());
-    let fetches = stream::iter(pkgs)
-        .map(|pkg| fetch_source_code(storage, fetcher, git_access, pkg, &logger))
-        .buffer_unordered(max_connections)
-        .collect::<Vec<_>>();
-    let fetches = block_on(fetches);
-    drop(fetcher_lock);
-    bail_if_failed_to_fetch(fetcher.ctx(), logger.take())?;
-    Ok(fetches.into_iter().flatten().count())
-}
-
-/// Bail if we failed to download some package.
-fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResult<()> {
-    if logger.is_empty() {
-        return Ok(());
-    }
-    let failed_count = logger.logged_errors();
-    let failed_suffix = if failed_count == 1 { "" } else { "s" };
-    for fail in logger {
-        ctx.error_console().error(fail)?;
-    }
-    qp_bail!("failed to fetch {failed_count} package{failed_suffix}")
-}
-
-/// Helper for [`fetch_source_codes`].
-/// Fetches the source code of a package if it is not yet stored in the storage.
-#[tracing::instrument(skip_all, fields(?pkg))]
-async fn fetch_source_code(
-    storage: &Storage,
-    fetcher: &Fetcher<'_>,
-    git_access: StorageGitAccess<'_>,
-    pkg: PackageId,
-    logger: &RefCell<ErrorsLogger>,
-) -> Option<SuccessfullyFetchedPackage> {
-    debug!("fetching package");
-    macro_rules! log {
-        ($e:expr) => {
-            logger.borrow_mut().log_result($e)?
-        };
-    }
-    let url = pkg.url();
-    match pkg.kind() {
-        FullKind::Local => None,
-        FullKind::Git { commit } => {
-            if storage.is_stored_git(url, &commit) {
-                return None;
-            }
-            if git_access.is_stored(url, &commit) {
-                log!(storage.mark_as_stored(pkg).with_context(|| {
-                    format!(
-                        "failed to store a cloned repository of a package `{}`",
-                        pkg.value().as_identity()
-                    )
-                }));
-                return Some(SuccessfullyFetchedPackage);
-            }
-            log!(fetcher.clone_from_git_to_directory(
-                &url,
-                GitReference::Rev(commit),
-                &storage.git_dir(url, &commit),
-            ));
-            log!(mark_cloned_git_as_stored(pkg, storage).with_context(|| {
-                format!(
-                    "failed to store a cloned repository of a package `{}`",
-                    pkg.value().as_identity()
-                )
-            }));
-            Some(SuccessfullyFetchedPackage)
-        }
-        FullKind::Registry => {
-            if storage.is_package_stored(pkg) {
-                return None;
-            }
-            let fetcher_package = PackageWithUrl {
-                name: pkg.name(),
-                version: pkg.version(),
-                url: pkg.url(),
-            };
-            let maybe_blob_path = fetcher
-                .fetch_package_blob_with_retries(fetcher_package, MAX_BLOB_RETRY_COUNT)
-                .await;
-            let blob_path = log!(maybe_blob_path);
-            log!(
-                unpack_package_blob(pkg, storage, &blob_path).with_context(|| format!(
-                    "failed to unpack a compressed source code `{}` of a package `{}`",
-                    blob_path.display(),
-                    pkg.value().as_identity()
-                ))
-            );
-            Some(SuccessfullyFetchedPackage)
-        }
+/// Updates the data of the venv.
+fn update_venv(
+    venv: Option<Venv>,
+    venv_config: &VenvConfig,
+    new_freeze: VenvFreeze,
+    id: VenvId,
+    pcx: &PackageContext<'_>,
+) -> Venv {
+    let now = Utc::now();
+    if let Some(mut venv) = venv {
+        let data = venv.data_mut();
+        data.set_last_synchronization(now);
+        data.set_freeze(new_freeze);
+        data.set_last_known_location(pcx.package().root().to_path_buf());
+        data.set_ephemeral(venv_config.ephemeral());
+        venv
+    } else {
+        let data = VenvData::new(
+            new_freeze,
+            venv_config.ephemeral(),
+            pcx.package().root().to_path_buf(),
+            now,
+            now,
+        );
+        Venv::new(id, data)
     }
 }
 
-/// Unpack a fetched package blob.
-fn unpack_package_blob(pkg: PackageId, storage: &Storage, blob_path: &Path) -> QuackResult<()> {
-    let pkg_dir = storage.pkg_dir(pkg);
-    if pkg_dir.exists() {
-        pkg_dir.rm()?;
-    }
-    let file = File::open(blob_path)
-        .with_context(|| format!("failed to open `{}`", blob_path.display()))?;
-    let decompressed = GzDecoder::new(file);
-    let mut archive = Archive::new(decompressed);
-    archive.unpack(&pkg_dir).with_context(|| {
-        format!(
-            "failed to unpack `{}` to `{}`",
-            blob_path.display(),
-            pkg_dir.display()
-        )
-    })?;
-    storage.mark_as_stored(pkg)?;
-    pkg_dir.try_fsync_dir()?;
-    Ok(())
-}
-
-/// Mark a cloned git as stored.
-fn mark_cloned_git_as_stored(pkg: PackageId, storage: &Storage) -> QuackResult<()> {
-    let FullKind::Git { commit } = pkg.kind() else {
-        qp_bail_internal!("attempted to store not a git package: {pkg:?}")
-    };
-
-    let url = pkg.url();
-    storage.mark_as_stored(pkg)?;
-    storage.git_dir(url, &commit).try_fsync_dir()?;
-    Ok(())
-}
-
+/// Helper for [`sync`].
+/// Prints to the user a message that synchronization was successful.
 fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {
     match pcx.package() {
         AnyPackage::Script(Script::Standalone(script)) => pcx.ctx().console().info(format!(

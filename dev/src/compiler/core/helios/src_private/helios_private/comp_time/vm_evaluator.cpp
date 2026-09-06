@@ -71,9 +71,9 @@ namespace {
 
 		~CompTimeDVM() {
 			if (!pid.has_value()) return;
-			if (!vm::api::deinitAndValidate(pid.value()).has_value())
-				// Force kill if the process doesn't want to die.
-				(void) vm::api::kill(pid.value());
+			// Run the global destructors and validate the memory state after the last evaluation
+			// completed cleanly or force kill the process.
+			(void) vm::api::deinitOrKill(pid.value());
 		}
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
