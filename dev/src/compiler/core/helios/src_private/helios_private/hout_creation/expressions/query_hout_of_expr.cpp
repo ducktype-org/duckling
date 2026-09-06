@@ -338,6 +338,14 @@ namespace compiler::helios::code {
 					"resolveUnaryOperator should only filter for prefix or suffix operators"
 				);
 
+				// Unary operator resolution happens in two steps:
+				// 1. If the argument is numeric (integral or float) and the operator is a built-in
+				//    numeric operator, we perform any needed coercion and emit a UnaryOperatorExpr.
+				// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
+				//    a. The calling scope (a user can define a standalone function named `+`).
+				//    b. The type of the only argument (for an operator method).
+				// Next, we perform typical overload resolution.
+
 				// Step 1. — special path for numeric promotions
 				if (isNumericType(inner->expression_type.getType())
 				    && isNumericOperator(op->unwrap())) {
@@ -604,6 +612,15 @@ namespace compiler::helios::code {
 				const auto lhs_type = lhs->expression_type.getSymbolType();
 				const auto rhs_type = rhs->expression_type.getSymbolType();
 				Shorthand  s{ ctx };
+
+				// Binary operator resolution now happens in two steps:
+				// 1. If the arguments are both numeric (integral or float) and the operator is a
+				// built-in arithmetic operator, we look for promotions from left to right and from
+				// right to left, and then use the built-in operator on the promoted-to type.
+				// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
+				//    a. The calling scope (a user can define a standalone function named `+`).
+				//    b. The type of the left-hand side argument (for an operator method).
+				// Next, we perform typical overload resolution.
 
 				// Step 1. — special path for numeric promotions
 				if (isNumericType(lhs_type.getType()) && isNumericType(rhs_type.getType())
