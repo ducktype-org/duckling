@@ -13,8 +13,8 @@ def is_opfun(func_name: str) -> bool:
 def is_stencil(func_name: str) -> bool:
     return func_name.startswith("vm::jit::cnp::stencil")
 
-def nonjitable(func_name: str) -> bool:
-    unjitable_opfuncs = [
+def nonjittable(func_name: str) -> bool:
+    unjittable_opfuncs = [
         "jitFuncEntrypoint",
         "jitLoopEntrypoint",
         "call_builtinfunc",
@@ -25,7 +25,7 @@ def nonjitable(func_name: str) -> bool:
         "breakpoint",
     ]
 
-    return any(op in func_name for op in unjitable_opfuncs)
+    return any(op in func_name for op in unjittable_opfuncs)
 
 special_functions = {}
 def is_special_function(func_name: str) -> bool:
@@ -40,7 +40,7 @@ def is_special_function(func_name: str) -> bool:
 
 
 def should_remain(func_name: str) -> bool:
-    return is_special_function(func_name) or (is_opfun(func_name) or is_stencil(func_name)) and not nonjitable(func_name)
+    return is_special_function(func_name) or (is_opfun(func_name) or is_stencil(func_name)) and not nonjittable(func_name)
 
 
 @click.command()

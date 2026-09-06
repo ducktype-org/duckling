@@ -40,7 +40,7 @@ namespace vm::jit::cnp {
 	}
 
 // for now only a single(ext-less) instruction
-// jitable_interface.py depends on the exact fully-qualified name
+// jittable_interface.py depends on the exact fully-qualified name
 #define HANDLE_MICRO_INSTR(opcode_name)                                                  \
 	CP_RETURN stencil_##opcode_name(CP_ARGS) {                                           \
 		return baseStencil<vm::OpFuns::op_##opcode_name, low::MicroOpcode::opcode_name>( \
@@ -75,7 +75,7 @@ namespace vm::jit::cnp {
 	DECLARE_LINK_VARIABLE(call_opcode);
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
-	CP_RETURN stencil_special_call_non_jitable(CP_ARGS) {
+	CP_RETURN stencil_special_call_non_jittable(CP_ARGS) {
 		auto instr = GET_LINK_VARIABLE(instr_ptr, const MicroInstruction*, 64);
 		FORCE_ASSUME(instr->nontc_opcode == GET_LINK_VARIABLE(call_opcode, u64, 64));
 		FORCE_ASSUME(instr->arg0 == GET_LINK_VARIABLE(arg0, u64, 64));

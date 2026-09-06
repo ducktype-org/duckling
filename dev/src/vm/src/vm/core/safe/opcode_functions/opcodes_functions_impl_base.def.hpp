@@ -54,7 +54,7 @@
 #include <cmath>
 #include <limits>
 
-// jitable_interface.py depends on the instructions exact, fully-qualified names
+// jittable_interface.py depends on the instructions exact, fully-qualified names
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)   op_debug_##name
 	#define FUNCTION_ARGS       OPFUN_REF_ARGS

@@ -22,7 +22,7 @@ int main() {
 	PRINT("special_jump_if");
 	PRINT("special_jump_if_not");
 	PRINT("special_jump");
-	PRINT("special_call_non_jitable");
+	PRINT("special_call_non_jittable");
 
 	std::cout << "}\n";
 }

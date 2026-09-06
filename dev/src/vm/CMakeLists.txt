@@ -156,7 +156,7 @@ function(add_vm_variant suffix compile_def)
 
             # Get all microopcodes names to add them to api later. Heuristic used: contains "OpFuns", "op_" and not "debug"
             COMMAND /usr/bin/env python3
-                ${CMAKE_SOURCE_DIR}/scripts/py/jit/jitable_interface.py
+                ${CMAKE_SOURCE_DIR}/scripts/py/jit/jittable_interface.py
                 ${LLVM_TOOLS_ARGS}
                 -i ${common_bc}
                 -o ${extracted_func_file}
@@ -164,7 +164,7 @@ function(add_vm_variant suffix compile_def)
             # Strip global constructors, they are not necessary for jit.
             COMMAND ${LLVM_EXTRACT} --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc_stripped}
 
-            # Passess used to shorten bytecode and reduce JIT startup. Public api list, represents all jitable opcodes.
+            # Passess used to shorten bytecode and reduce JIT startup. Public api list, represents all jittable opcodes.
             # globalopt removes unused global variables. It is crucial to do it first to clean up after global constcors
             # got stripped in the previous step.
             # Internalize marks all function not in api list as internal, so they possibly can be removed in dead code
@@ -180,7 +180,7 @@ function(add_vm_variant suffix compile_def)
 
             VERBATIM
             DEPENDS $<TARGET_OBJECTS:LibCommonVM_bc>
-                    ${CMAKE_SOURCE_DIR}/scripts/py/jit/jitable_interface.py
+                    ${CMAKE_SOURCE_DIR}/scripts/py/jit/jittable_interface.py
                     $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
                     # Here dependency to both bc files and targets is necessary.
                     ${vm_dep_objects_bc} # File dependency ensures each file will tracked and program will be rebuild if it changes.

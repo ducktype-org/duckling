@@ -20,4 +20,4 @@ Before compilation, stencils are dynamically loaded in order to resolve runtime 
 
 ## Compilation process
 
-After allocating sufficient storage, all binary stencils corresponding to micro instructions in a basic block are copied and patched. At the end a special stencil is optionally added to ensure the correct control-flow. Non-jitable instructions are instead replaced with a special stencil as well.
+After allocating sufficient storage, all binary stencils corresponding to micro instructions in a basic block are copied and patched. At the end a special stencil is optionally added to ensure the correct control-flow. Non-jittable instructions are instead replaced with a special stencil as well.

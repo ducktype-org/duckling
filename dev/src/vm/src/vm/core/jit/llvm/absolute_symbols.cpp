@@ -1,6 +1,6 @@
 #include "absolute_symbols.hpp"
 
-#include "../non_jitable.hpp"
+#include "../non_jittable.hpp"
 
 #include <llvm_helpers/llvm_helpers.hpp>
 

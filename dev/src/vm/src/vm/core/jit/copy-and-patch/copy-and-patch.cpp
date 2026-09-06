@@ -20,11 +20,11 @@ namespace vm::jit {
 
 		auto transform_opcode = [](low::MicroOpcode opcode) {
 			switch (opcode) {
-#define HANDLE_NONJITABLE_INSTR(instr) \
+#define HANDLE_NONJITTABLE_INSTR(instr) \
 	case low::MicroOpcode::instr:      \
 		return std::to_underlying(SpecialStencils::CallAddr);
-#include "../non_jitable_def.hpp"
-#undef HANDLE_NONJITABLE_INSTR
+#include "../non_jittable_def.hpp"
+#undef HANDLE_NONJITTABLE_INSTR
 			default:
 				return std::to_underlying(opcode);
 			}
