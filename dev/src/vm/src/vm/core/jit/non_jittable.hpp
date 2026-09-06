@@ -11,7 +11,7 @@
 namespace vm::jit {
 	constexpr std::array HARD_SYMBOLS = {
 	#define HANDLE_NONJITTABLE_INSTR(instr) std::pair{ #instr, &vm::OpFuns::op_debug_##instr },
-	#include "non_jittable_def.hpp"
+	#include "non_jittable.def.hpp"
 	#undef HANDLE_NONJITTABLE_INSTR
 		std::pair{ "trampoline", &vm::jit::helpers::trampoline },
 	};

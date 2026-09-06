@@ -23,7 +23,7 @@ namespace vm::jit {
 #define HANDLE_NONJITTABLE_INSTR(instr) \
 	case low::MicroOpcode::instr:      \
 		return std::to_underlying(SpecialStencils::CallAddr);
-#include "../non_jittable_def.hpp"
+#include "../non_jittable.def.hpp"
 #undef HANDLE_NONJITTABLE_INSTR
 			default:
 				return std::to_underlying(opcode);
