@@ -17,7 +17,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix a
     )
 
     set(linked_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-so")
-    set(nm_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-nm")
+    set(nm_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-cpp")
 
 # The point here is to force out any relative dependencies between the functions,
 # as it would interfere with template jit-ing. This involves shrinking PLT 

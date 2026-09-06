@@ -27,11 +27,11 @@ POP_DIAGNOSTIC
 // NOLINTEND
 
 static auto stencils = Stencils{
-// Linter doesn't actually build mock_stencils-nm so it would be unavailable.
-#if __has_include(<mock_stencils-nm>)
+// Linter doesn't actually build mock_stencils-cpp so it would be unavailable.
+#if __has_include(<mock_stencils-cpp>)
 			.stencils_binary = std::bit_cast<std::array<std::byte, sizeof(binary)>>(binary),
 			.stencils_data =
-	#include <mock_stencils-nm>
+	#include <mock_stencils-cpp>
 #endif
 		}.load().value();
 

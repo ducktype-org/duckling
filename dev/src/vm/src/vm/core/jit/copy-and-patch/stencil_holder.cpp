@@ -6,7 +6,7 @@
 
 #include "stencil_holder.hpp"
 
-#define NOT_UNDER_LINTER __has_include(<stencils-nm>)
+#define NOT_UNDER_LINTER __has_include(<stencils-cpp>)
 
 namespace vm::jit::cnp {
 	[[nodiscard]] auto& getLoadedStencils() {
@@ -25,11 +25,11 @@ namespace vm::jit::cnp {
 		// NOLINTEND
 
 		static auto stencils = Stencils{
-// Linter doesn't actually build stencils-nm so it would be unavailable.
+// Linter doesn't actually build stencils-cpp so it would be unavailable.
 #if NOT_UNDER_LINTER
 			.stencils_binary = std::bit_cast<std::array<std::byte, sizeof(binary)>>(binary),
 			.stencils_data =
-	#include <stencils-nm>
+	#include <stencils-cpp>
 #endif
 		};
 
@@ -46,7 +46,7 @@ namespace vm::jit::cnp {
 	}
 
 	[[nodiscard]] const std::array<StencilData, STENCIL_COUNT>& stencilsData() {
-// Linter doesn't actually build stencils-nm so the array is empty.
+// Linter doesn't actually build stencils-cpp so the array is empty.
 #if NOT_UNDER_LINTER
 		return getLoadedStencils().stencilsData();
 #else
