@@ -54,7 +54,8 @@ private:
 			.resume()
 			.awaitBreakpoint(base::StrID("main"), 7)
 			.evalExprNormal(get_values_expr, { 2, 4 })
-			.finishAndAssertExitValue(2'137);
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
 	}
 
 	void test2RuntimeExpr() {
@@ -84,6 +85,7 @@ private:
 			simulator.evalExprNormal(expr, res);
 
 		simulator.finishAndAssertExitValue(0);
+		simulator.cleanup();
 	}
 
 	void test3RuntimeExpr() {
@@ -95,7 +97,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 5)
 			.evalExprNormal(call_foo_expr, { 7 })
-			.finishAndAssertExitValue(0);
+			.finishAndAssertExitValue(0)
+			.cleanup();
 	}
 
 	void test4RuntimeExpr() {
@@ -107,7 +110,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 2)
 			.evalExprNormal(modify_value_expr, { 42 })
-			.finishAndAssertExitValue(42);
+			.finishAndAssertExitValue(42)
+			.cleanup();
 	}
 
 	void test5RuntimeExpr() {
@@ -119,7 +123,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("foo"), 4)
 			.evalExprNormal(access_frame_2_expr, { 10 })
-			.finishAndAssertExitValue(7);
+			.finishAndAssertExitValue(7)
+			.cleanup();
 	}
 
 	void test6RuntimeExpr() {
@@ -131,7 +136,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("foo"), 4)
 			.evalExprNormal(compare_frames_expr, { 0 })
-			.finishAndAssertExitValue(7);
+			.finishAndAssertExitValue(7)
+			.cleanup();
 	}
 
 	void test7RuntimeExpr() {
@@ -145,7 +151,8 @@ private:
 			.awaitBreakpoint(base::StrID("main"), 2)
 			.evalExprNormal(create_value_expr, { 42 })
 			.evalExprNormal(use_value_expr, { 42 })
-			.finishAndAssertExitValue(10);
+			.finishAndAssertExitValue(10)
+			.cleanup();
 	}
 };
 

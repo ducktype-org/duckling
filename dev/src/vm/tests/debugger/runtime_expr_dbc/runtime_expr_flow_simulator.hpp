@@ -133,6 +133,14 @@ namespace vm::test {
 			return *this;
 		}
 
+		/// Kills the process spawned by this simulator. Must be called after every test's
+		/// command chain, otherwise the Supervisor destructor warns about leftover processes.
+		FlowSimulator& cleanup() {
+			auto kill_res = vm::api::kill(pid);
+			assertTrue(kill_res.has_value(), "Kill failed");
+			return *this;
+		}
+
 	private:
 		void assertExitValue(
 			const vm::api::ExitValue& exit_value, const std::vector<u64>& expected_result
