@@ -35,6 +35,8 @@ namespace vm::low {
 		cf::ControlFlowGraph cfg;
 #endif
 		MicroBytecode bc;
+		// the copy of original bytecode. Always has the same length as bc
+		// kept for debugging & JIT purposes
 		MicroBytecode orig_bc;
 
 		/// The maximum size of the local variables on stack required by the function frame.
@@ -65,6 +67,31 @@ namespace vm::low {
 		 * @note Vector indexes correspond to FatBytecode instruction indexes
 		 */
 		std::vector<InstructionRange> instruction_mapping;
+
+		/**
+		 * @brief method for setting the breakpoint in microbytecode
+		 * @note this is a fundemental property of the microbytecode representation
+		 */
+		std::expected<void, std::string> setBreakpoint(usize idx, bool enable) {
+			CORE_ASSERT(orig_bc.size() == bc.size(), "any edits made to bc cannot change length");
+
+			if (instruction_mapping.size() <= idx)
+				return std::unexpected{ "setBreakpoint: Function too short" };
+
+			usize micro_instruction_index = instruction_mapping[idx].begin;
+
+			if (bc.size() <= micro_instruction_index)
+				return std::unexpected("setBreakpoint: No code after breakpoint");
+
+			auto& instr = bc.at(micro_instruction_index);
+
+			if (enable)
+				instr = makeLowInstruction(low::MicroOpcode::breakpoint, instr.arg0, instr.arg1);
+			else
+				instr = orig_bc.at(micro_instruction_index);
+
+			return {};
+		}
 	};
 
 	struct LowCodePosition {

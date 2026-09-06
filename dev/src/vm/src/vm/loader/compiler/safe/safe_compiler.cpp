@@ -155,31 +155,7 @@ namespace vm::loader::compiler::safe {
 		if (!maybe_function) return std::unexpected{ "setBreakpoint: Function does not exist" };
 		auto& function = **maybe_function;
 
-		return setBreakpoint(function, idx, enable);
-	}
-
-	std::expected<void, std::string> SafeCompiler::setBreakpoint(
-		low::LowFuncData& function, usize idx, bool enable
-	) const {
-		// Try to obtain micro index
-		if (function.instruction_mapping.size() <= idx)
-			return std::unexpected{ "setBreakpoint: Function too short" };
-
-		usize micro_instruction_index = function.instruction_mapping[idx].begin;
-
-		if (function.bc.size() <= micro_instruction_index)
-			return std::unexpected("setBreakpoint: No code after breakpoint");
-
-		auto& instruction = function.bc.at(micro_instruction_index);
-
-		if (enable)
-			instruction = makeLowInstruction(
-				low::MicroOpcode::breakpoint, instruction.arg0, instruction.arg1
-			);
-		else
-			instruction = function.orig_bc.at(micro_instruction_index);
-
-		return {};
+		return function.setBreakpoint(idx, enable);
 	}
 
 	void SafeCompiler::linkLabelArguments(
@@ -247,6 +223,7 @@ namespace vm::loader::compiler::safe {
 #ifdef ENABLE_JIT
 			                      .cfg = vm::low::cf::ControlFlowGraph(bytecode),
 #endif
+			                      // we need two copies of the bytecode
 			                      .bc                  = bytecode,
 			                      .orig_bc             = std::move(bytecode),
 			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
