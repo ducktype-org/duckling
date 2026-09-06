@@ -12,7 +12,7 @@ use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
 use crate::quackpack::util::str_id::QpJoin;
 use crate::quackpack::util::with_version::WithVersion;
-use crate::util::IsPlural;
+use crate::util::Pluralize;
 use crate::util::error::ErrorsLogger;
 use crate::util::extend::QpExtend;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal, qp_err};
