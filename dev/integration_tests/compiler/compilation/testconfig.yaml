@@ -41,7 +41,9 @@ enable_conc_deterministic_tests: "true"
 duckc_worker_count: "3"
 # Each case occupies that many threads, so the scheduler runs fewer cases at
 # once instead of oversubscribing the machine (and blowing the `TimeOut`s).
-NeededThreads: "@{duckc_worker_count}"
+# However, most cases do not consume all "duckc_worker_count" threads consitently,
+# so this number is reduced so speed the tests up.
+NeededThreads: "2"
 
 # Path to the local helper script used by the deterministic pre-check.
 compile_determinism_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/concurrent_compile_determinism.py"
