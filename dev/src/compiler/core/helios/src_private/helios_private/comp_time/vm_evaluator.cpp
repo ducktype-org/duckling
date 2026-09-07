@@ -21,10 +21,10 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/vmvalue/ivmvalue.hpp>
 
+#include <algorithm>
 #include <expected>
 #include <iostream>
 #include <mutex>
-#include <algorithm>
 
 namespace {
 	using namespace compiler::helios;
@@ -91,12 +91,13 @@ namespace {
 			auto response = vm::api::output(pid.value());
 			if (!response.has_value() || response->output.empty()) return;
 
-			// Replace each \n with "[comp-time] \n" to prefix each line of output with the compile-time tag.
-			
+			// Replace each \n with "[comp-time] \n" to prefix each line of output with the
+			// compile-time tag.
+
 			response->output = "[comp-time] " + response->output;
 
 			constexpr static std::string_view PREFIX = "[comp-time] ";
-			std::string::size_type pos = 0;
+			std::string::size_type            pos    = 0;
 			while ((pos = response->output.find('\n', pos)) != std::string::npos) {
 				response->output.insert(pos + 1, PREFIX);
 				pos += PREFIX.length() + 1;

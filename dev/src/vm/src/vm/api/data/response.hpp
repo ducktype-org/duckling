@@ -24,7 +24,7 @@ namespace vm::api {
 			TypeCRef type;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, type);
 		};
-		
+
 		struct VMValue final {
 			Box<::vm::IVMValue> vm_value;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(VMValue, vm_value);
