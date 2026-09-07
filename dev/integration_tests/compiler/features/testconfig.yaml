@@ -13,13 +13,13 @@ case_build: "$DIT_TMP_DIR/build"
 case_std_artifacts: "$DIT_TMP_DIR/std_artifacts"
 copy_std_artifacts: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/null || true"
 
+# Backend the case is compiled and run with: dvm, llvm, llvm_valgrind (native run under
+# valgrind, checked for leaks) or all (both backends, outputs compared).
 backend: "nobackend"
-# If set to "true" the produced duckling executable will be run with valgrind and checked for leaks.
-valgrind: "false"
 
 # Skip valgrind cases on macOS (no valgrind on Apple Silicon). Inherited by every case;
 # non-valgrind cases are always enabled. Enabled iff not-a-valgrind-case OR not-macOS.
-Enabled: '[ "@{valgrind}" != "true" ] || [ "@{is_macos}" != "true" ]'
+Enabled: '[ "@{backend}" != "llvm_valgrind" ] || [ "@{is_macos}" != "true" ]'
 
 # Optional regexes matched against the run's stdout/stderr instead of a literal
 # `Output`/`Err` comparison, for cases whose output has volatile parts (e.g. a
@@ -46,9 +46,9 @@ duckc_worker_count: "3"
 NeededThreads: "2"
 
 # Path to the local helper script used by the deterministic pre-check.
-compile_determinism_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/concurrent_compile_determinism.py"
+compile_determinism_script: "@{dev_dir}/integration_tests/compiler/features/scripts/concurrent_compile_determinism.py"
 # Path to the helper script that runs multiple commands and asserts identical stdout/stderr/exit code.
-compare_runs_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/compare_runs.py"
+compare_runs_script: "@{dev_dir}/integration_tests/compiler/features/scripts/compare_runs.py"
 
 module_to_compile: "@{Name}"
 compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
@@ -69,8 +69,9 @@ PreNode: ""
 PostCase: "@{cleanup_tmp_env}"
 PreCase: "mkdir -p @{case_build}; @{copy_std_artifacts};
   case '@{backend}' in
-    dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
-    llvm)      @{compile_llvm_backend_cmd}                                                                               ;;
+    dvm)                @{compile_dvm_backend_cmd}                                                                                ;;
+    llvm)               @{compile_llvm_backend_cmd}                                                                               ;;
+    llvm_valgrind)      @{compile_llvm_backend_cmd}                                                                               ;;
     all)       @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd} &&
                @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd}           ;;
     nobackend) echo 'Backend undefined'; exit 1                                                                          ;;
@@ -87,13 +88,14 @@ Run: "
       fi
       ;;
     llvm)
-      if [ '@{valgrind}' = 'true' ]; then
-        valgrind --leak-check=full --error-exitcode=1 @{compiled_to_llvm};
-      elif [ -n \"@{stdout_regex}\" ] || [ -n \"@{stderr_regex}\" ]; then
+      if [ -n \"@{stdout_regex}\" ] || [ -n \"@{stderr_regex}\" ]; then
         @{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" -- @{compiled_to_llvm};
       else
         @{compiled_to_llvm};
       fi
+      ;;
+    llvm_valgrind)
+      valgrind --leak-check=full --error-exitcode=1 @{compiled_to_llvm};
       ;;
     all)
       _llvm=@{compiled_to_llvm};
@@ -104,42 +106,6 @@ Run: "
     *)         echo \"Unknown backend\";   exit 1 ;;
   esac;"
 
-Tests:
-  base:
-    Cases:
-      all:
-        backend: all
-        Output:
-          String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
-        ExitCode: 76
-
 SubDirs:
-  - expressions
-  - comp_time
-  - builtins
-  - copy_constructors
-  - destructors
-  - samples
-  - statements
-  - functions
-  - constants
-  - classes
-  - extern_c
-  - ffi
-  - static_arrays
-  - dynamic_arrays
-  - optimisations
-  - references
-  - boxes
-  - variants
-  - pointers
-  - globals
-  - tuples
-  - templates
-  - imports
-  - macros
-  - diagnostics
-  - packages
-  - custom_operators
-  - standard_library
-  - conditional_compilation
+  - rolling
+  - version_0_1

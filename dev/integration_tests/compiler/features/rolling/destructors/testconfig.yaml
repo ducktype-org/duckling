@@ -18,8 +18,7 @@ Tests:
           String: "1\n2\n4\n3\n5\n6\n7\n9\n8\n10\n11\n12\n13\n15\n14\n16\n18\n17\n16\n18\n17\n16\n18\n18\n16\n20\n21\n22\n23\n"
         ExitCode: 0
       llvm_valgrind:
-        backend: llvm
-        valgrind: "true"
+        backend: llvm_valgrind
         TimeOut: 3
         Output:
           String: "1\n2\n4\n3\n5\n6\n7\n9\n8\n10\n11\n12\n13\n15\n14\n16\n18\n17\n16\n18\n17\n16\n18\n18\n16\n20\n21\n22\n23\n"

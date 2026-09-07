@@ -9,8 +9,7 @@ Tests:
           String: "1\n3\n7\n42\n43\n30\n"
         ExitCode: 0
       llvm_valgrind:
-        backend: llvm
-        valgrind: "true"
+        backend: llvm_valgrind
         TimeOut: 3
         Output:
           String: "1\n3\n7\n42\n43\n30\n"
@@ -40,8 +39,7 @@ Tests:
           String: "10\n99\n"
         ExitCode: 0
       llvm_valgrind:
-        backend: llvm
-        valgrind: "true"
+        backend: llvm_valgrind
         TimeOut: 3
         Output:
           String: "10\n99\n"
