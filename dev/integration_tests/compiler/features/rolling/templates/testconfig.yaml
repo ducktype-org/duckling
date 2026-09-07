@@ -1,7 +1,3 @@
-# Templates instantiate the same bodies from several modules at once, which is
-# where duplicated copies put the most pressure on the workers.
-determinism_duplicate_sources: "true"
-
 
 Tests:
   simple_class_templates:

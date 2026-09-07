@@ -1,6 +1,3 @@
-# Macro expansion rewrites module contents while the workers run.
-determinism_duplicate_sources: "true"
-
 
 Tests:
   simple_expand_1:
