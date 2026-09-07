@@ -1,0 +1,12 @@
+output.dbc
+
+> "Debugger has started"
+> "+\n"
+> "+\n"
+
+timeout 0.1
+< "run\n"
+> "Running"
+
+timeout 0.5
+> "7" # Tests if return value is 7
