@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import subprocess
+from pathlib import Path
 
 class DAPTestClient:
     def __init__(self, program_name: str):
@@ -11,6 +12,25 @@ class DAPTestClient:
 
         build_dir = sys.argv[1]
         vm_binary_path = os.path.join(build_dir, "bin", "VM")
+        duckc_path = os.path.join(build_dir, "bin", "duckc")
+
+        if program_name.endswith(".dk"):
+            path_obj = Path(program_name)
+            package_dir = path_obj.parent
+
+            command = [
+                duckc_path,
+                "compile_package",
+                "-n", f"main",
+                ".",
+                "--dvm-backend"
+            ]
+
+            print(f"[TEST SETUP] Compiling {program_name} using duckc...")
+            result = subprocess.run(command, capture_output=True, text=True, cwd=str(package_dir))
+            if result.returncode != 0:
+                print(f"[TEST ERROR] Compilation failed:\n{result.stderr}")
+                sys.exit(1)
 
         self.current_seq = 1
         self.program_name = program_name
@@ -23,6 +43,7 @@ class DAPTestClient:
             text=False,  
             bufsize=0    
         )
+
     def start_session(self):
         self.send_initialize()
         self.send_configuration_done()

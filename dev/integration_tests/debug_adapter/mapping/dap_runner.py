@@ -1,7 +1,7 @@
 import sys
 from dap_client import DAPTestClient
 
-client = DAPTestClient(program_name="../examples/simple.dk")
+client = DAPTestClient(program_name="../examples/simple/simple.dk")
 
 try:
     init_seq = client.send_initialize()
