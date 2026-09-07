@@ -1,0 +1,26 @@
+Tests:
+  records:
+    Cases:
+      all:
+        Output:
+          String: "1\n3\n42\n54\n1\n3\n42\n54\n4\n"
+  record_default_values:
+    Cases:
+      all:
+        Output:
+          String: "0\n11\n1\n2\n13\n-1\n21\n1\n2\n23\n11\n1\n32\n13\n"
+  getter_setter:
+    Cases:
+      all:
+        Output:
+          String: "7\n6\n5\n0\n4\n5\n"
+  class_alignment:
+    Cases:
+      all:
+        Output:
+          String: "1\n2\n3\n4\n5\n10\n20\n30\n2\n99\n"
+  unit_fields:
+    Cases:
+      all:
+        Output:
+          String: "42\n69\n"

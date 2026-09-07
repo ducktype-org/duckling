@@ -199,22 +199,18 @@ private:
 		testModuleIDInSourceFile(getRef(mod_module));
 		testModuleIDInSourceFile(mt);
 
-		assertTrue(not mt->getParentModule().has_value(), "Root module has a parent");
-		assertTrue(
-			getRef(awe_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (1)"
+		ASSERT_NO_VALUE(mt->getParentModule(), "Root module has a parent");
+		ASSERT_HAS_VALUE(
+			getRef(awe_module)->getParentModule(), "Non-root module does not have a parent (1)"
 		);
-		assertTrue(
-			getRef(another_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (2)"
+		ASSERT_HAS_VALUE(
+			getRef(another_module)->getParentModule(), "Non-root module does not have a parent (2)"
 		);
-		assertTrue(
-			getRef(awesome_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (3)"
+		ASSERT_HAS_VALUE(
+			getRef(awesome_module)->getParentModule(), "Non-root module does not have a parent (3)"
 		);
-		assertTrue(
-			getRef(mod_module)->getParentModule().has_value(),
-			"Non-root module does not have a parent (4)"
+		ASSERT_HAS_VALUE(
+			getRef(mod_module)->getParentModule(), "Non-root module does not have a parent (4)"
 		);
 
 		ASSERT_EQUAL(
@@ -401,7 +397,7 @@ private:
 		ASSERT_TRUE(hasSubmodule(mt->getSubmodules().illegalAccess(), sub_mod->getName()));
 		// Remove parent
 		ModuleTreeModifier::removeParent(sub_mod);
-		ASSERT_EQUAL(false, sub_mod->getParentModule().has_value());
+		ASSERT_NO_VALUE(sub_mod->getParentModule());
 		// Set parent again
 		ModuleTreeModifier::setParent(sub_mod, mt);
 		ASSERT_EQUAL(mt, getRef(sub_mod->getParentModule().value()));

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - If `build/` exists, the repo is already initialized — do NOT run `./toolbox.py init`, `install-llvm`, or `setup-build` again.
 - First-time setup only (from `dev/`): `./toolbox.py init` (submodules, venv, binaries, deps), then `./toolbox.py setup-build` (press enter on prompts for defaults). Requires LLVM 19 and g++ 14+ or clang++ 19+. If the build fails on LLVM, `./toolbox.py install-llvm` fetches `19.1.7` locally into `scripts/downloads`.
 - The default build system is **Ninja**. Compiled binaries land in `build/bin/`; compiled test binaries land in `build/bin/tests/`.
-- Use `-j10` (10 threads) for all builds and parallel test runs.
+- Use `-jN` for all builds and parallel test runs, where N is the number of threads.
 
 ## Building — prefer direct ninja targets
 
@@ -20,7 +20,7 @@ ninja -j10 VM              # the DVM binary
 ```
 
 - A module test named `foo_test` builds with `ninja -j10 foo_test` and runs as `./bin/tests/foo_test`.
-- Full CMake docs on targets: @docs/developer-guides/building-the-repo.md and @docs/developer-guides/writing-tests-examples.md.
+- Full CMake docs on targets: docs/developer-guides/building-the-repo.md and docs/developer-guides/writing-tests-examples.md.
 
 ## Testing
 
@@ -56,7 +56,7 @@ Available ctest labels (`-L`): `base`, `common`, `compiler`, `vm`.
 ### Toolbox alternatives
 
 - `python3 toolbox.py test -b build -R <regex> -j10 --output-on-failure` — build + run.
-- `python3 toolbox.py itest -b build -t "integration_tests/<path>"` — integration tests (framework docs: @integration_tests/README.md).
+- `python3 toolbox.py itest -b build -t "integration_tests/<path>"` — integration tests (framework docs: integration_tests/README.md).
 
 ## Investigating bugs and problems
 
@@ -68,16 +68,7 @@ When hunting a bug, drive the compiler against a concrete example and inspect it
 ./bin/duckc compile_package -n main "<path_to_test>"
 ```
 
-Useful `compile_package` flags:
-
-- `--print-ir <categories>` — print IR to stdout. Categories: `hir`, `mir`, `lir`.
-- `--dump-ir <categories>` — dump IR to file. Categories: `asm`, `llvm`, `lir`, `mir`, `hir`.
-- `--print-graph` — print the query graph after compilation.
-- `--print-statistics` — print execution-time statistics.
-- `--dvm-backend` — compile to DVM bytecode instead of a native exe.
-- `--no-std` / `--custom-std-path <path>` — control the standard library.
-- `--no-incremental` — disable loading the previous query graph (rule out stale-cache effects).
-- `-O <level>` — LLVM opt level (`0`,`1`,`2`,`3`,`s`,`z`).
+Run `./bin/duckc compile_package --help` for the flag list.
 
 Example — dump MIR and HIR for a failing case:
 
@@ -93,20 +84,7 @@ Enable category-scoped logs with the global `--dev-logs <categories>` flag (comm
 ./bin/duckc --dev-logs Compiler,Query,Incremental compile_package -n main "<path>"
 ```
 
-Categories (from `src/common/logger/src/logger/logger.hpp`): `Lexer`, `Printer`, `Artifacts`, `Query`, `QueryStacktraces`, `NYIStacktraces`, `Command`, `Diagnostics`, `Compiler`, `Parser`, `Backend`, `Linker`, `DVM`, `DVMDetails`, `Incremental`, `REPL`. Enable `QueryStacktraces` / `NYIStacktraces` to get stacktraces on query errors and not-yet-implemented hits.
-
-### Other duckc subcommands
-
-`lex` (dump lexer output), `parse` (dump parse JSON), `compile_module`, `compile_packages` (JSON manifest), `compile_script`, `run` (compile a `.ds` and run on the DVM), `repl`, `dummy`. Run `./bin/duckc <cmd> --help` for options.
-
-### The DVM binary
-
-```bash
-./bin/VM run          # CLI mode
-./bin/VM server       # HTTP server
-./bin/VM debug_adapter
-./bin/VM -d ...       # enable DVM debug logs
-```
+Categories are enumerated in `src/common/logger/src/logger/logger.hpp`. Enable `QueryStacktraces` / `NYIStacktraces` to get stacktraces on query errors and not-yet-implemented hits.
 
 ## Linting and PR validation
 
@@ -118,13 +96,11 @@ Categories (from `src/common/logger/src/logger/logger.hpp`): `Lexer`, `Printer`,
 
 - Do not add unnecessary comments, it's often our convention to write the code like this and it is pretty visible to someone who has seen the code before the change, in such cases do not add additional comments explainin why the new lines there when added
 - **C++23.** clang-tidy enforces naming (warnings are errors): functions/methods `camelCase`, variables/members `snake_case`, constants `UPPER_CASE`, enums `PascalCase`.
-- Column limit 100. Indentation is tabs aligned with spaces (TabWidth 4) per `.clang-format`.
 - TODOs must be `@TODO: #<issue_number> description` (todo-validate gates PRs). Open an issue via `gh` and link it if needed.
-- Commit / PR titles: `[Area] (Ft. Feature) Character: short description (#PR)`. Areas: `Compiler`, `DVM`, `QuackPack`, `Duck`, `Base`, `GC`, `Docs`, `DevOps`, `[<common-submodule>]`. Characters: `Add`, `Fix`, `HotFix`, `Refactor`, `Delete`, `Update`, `Maintenance`, `Change`. Feature is optional. `squash and merge`; feature-branch commits may be meaningless. Full spec: @docs/developer-guides/how-to-commit.md.
+- Commit / PR titles: `[Area] (Ft. Feature) Character: short description (#PR)`. Areas: `Compiler`, `DVM`, `QuackPack`, `Duck`, `Base`, `GC`, `Docs`, `DevOps`, `[<common-submodule>]`. Characters: `Add`, `Fix`, `HotFix`, `Refactor`, `Delete`, `Update`, `Maintenance`, `Change`. Feature is optional. `squash and merge`; feature-branch commits may be meaningless. Full spec: docs/developer-guides/how-to-commit.md.
 - Add a test with `duck_add_test(<pack> <name> <source> USES <modules...>)` in CMake → binary `build/bin/tests/<name>`, ctest name `<name>`. Examples use `duck_add_example(...)`.
 
 ## Structure notes
 
-- `src/base/` utilities, `src/common/` cross-cutting (tokenizer, query framework, tester, diagnostics, logger), `src/compiler/` (frontend, MIR/LIR, LLVM + DVM backends, formatter, REPL, LSP), `src/vm/` the DVM, `src/duck/` Rust CLI + QuackPack.
 - `src/compiler/driver/driver/` nesting is intentional (driver + time_stats modules).
 - Compilation is **query-based and stateful (incremental)**, not traditional passes — be careful with query cache invalidation order. Use `--no-incremental` when a bug might be a stale-cache artifact, and `--print-graph` to inspect the query graph.

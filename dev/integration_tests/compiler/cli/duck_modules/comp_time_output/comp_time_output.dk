@@ -1,0 +1,12 @@
+# A print that happens while the compiler evaluates `const printed` at compile time.
+# The compile-time DVM buffers it, so the compiler has to dump it on its own stderr.
+fun printAtCompTime() -> i64 = {
+    print("3492");
+    return 1;
+}
+
+const printed = printAtCompTime();
+
+fun main() -> i64 = {
+    return printed;
+}
