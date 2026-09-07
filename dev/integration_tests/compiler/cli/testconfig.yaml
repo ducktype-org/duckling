@@ -9,7 +9,7 @@ case_build: "$DIT_TMP_DIR/build"
 
 # Private copy of the shared warm std artifacts (see the root testconfig).
 # duckc rewrites the artifacts directory on exit, so concurrent cases must not
-# point at the shared one - same reason as in compiler/compilation.
+# point at the shared one - same reason as in compiler/features.
 case_std_artifacts: "$DIT_TMP_DIR/std_artifacts"
 copy_std_artifacts: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/null || true"
 

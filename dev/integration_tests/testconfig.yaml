@@ -69,5 +69,4 @@ SubDirs:
     - debug_adapter
     - debugger_cli
     - scripts
-    - version_0_1
     - vm

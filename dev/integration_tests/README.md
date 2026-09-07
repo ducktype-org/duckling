@@ -271,7 +271,7 @@ the same script:
   scratch root for debugging and are swept once they age out.
 
 Often no files need copying at all: point the compiler's artifact option at
-`$DIT_TMP_DIR/build` (see `compiler/compilation/testconfig.yaml`) and keep
+`$DIT_TMP_DIR/build` (see `compiler/features/testconfig.yaml`) and keep
 reading sources from the test's directory, which is safe because it is
 read-only sharing.
 

@@ -1,0 +1,11 @@
+# Test configuration for first-class-typing
+# Tests type usage in function signatures, type inference, and type conversions
+
+Tests:
+  first_class_typing_test:
+    Description: Tests for first-class typing features.
+    Cases:
+      all:
+        Output:
+          String: "1\n1\nB1\nA0\nC8\n(true, 42)"
+        ExitCode: 0
