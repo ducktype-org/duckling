@@ -1,0 +1,26 @@
+# An operator method used from inside the class that declares it.
+#
+# Issue: the enclosing class scope is part of the parent chain of a method body,
+# so the ordinary scope lookup already yields the method. Appending the type
+# interface lookup on top of that makes the *same* symbol a candidate twice, and
+# overload resolution then reports a bogus "ambiguous overload resolution" for a
+# program that declares only one `+`.
+
+class Number {
+    val: i64 = 0;
+
+    fun +(rhs: Number) -> Number = {
+        return Number(self.val + rhs.val);
+    }
+
+    fun double() -> Number = {
+        return self + Number(self.val);
+    }
+}
+
+fun main() -> i64 = {
+    var a = Number(21);
+    let d = a.double();
+    builtin_output_i64(d.val);  # 42
+    return 0;
+}

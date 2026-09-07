@@ -1,0 +1,36 @@
+# A standalone operator taking its left operand by value, next to an operator
+# method that can never accept the right operand.
+#
+# Issue: the left operand is wrapped in a reference before overload resolution
+# runs, purely because the class declares a same-named method. That wrap outlives
+# the method candidate being rejected, so the standalone sees `ref L` instead of
+# `L`. For a non-trivially-copyable `L` the resulting `ref L -> L` read is not an
+# implicit copy, and the only viable candidate becomes non-viable:
+#   "Cannot implicitly copy a value of non-trivially-copyable type `Class L`
+#    out of `ref Class L`."
+# Without the `+` method below the very same call compiles and moves the
+# temporary into the by-value parameter.
+
+class L {
+    v: i64 = 0;
+
+    L.copy(other: const ref L) = {
+        return L(other.v);
+    }
+
+    fun +(rhs: L) -> L = {
+        return L(self.v + rhs.v);
+    }
+}
+
+fun +(lhs: L, rhs: i64) -> L = {
+    return L(lhs.v + rhs);
+}
+
+fun makeL() -> L = L(40);
+
+fun main() -> i64 = {
+    let r = makeL() + 2;
+    builtin_output_i64(r.v);  # 42
+    return 0;
+}

@@ -8,3 +8,33 @@ Tests:
         Output:
           String: "42\n42\n42\n42\n"
         ExitCode: 0
+
+  # Regression guard: an operator method named after a built-in operator is
+  # reachable at all (#3133).
+  operator_method_only:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "42\n"
+        ExitCode: 0
+
+  # An operator method used from inside its own class must not be reported as an
+  # ambiguous overload against itself (#3133).
+  operator_method_inside_class:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "42\n"
+        ExitCode: 0
+
+  # A same-named operator method must not change how a standalone operator
+  # receives its left operand (#3133).
+  operator_standalone_with_unrelated_method:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "42\n"
+        ExitCode: 0
