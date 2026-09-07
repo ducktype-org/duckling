@@ -247,20 +247,31 @@ Env:
     DIT_TMP_DIR: "@{new_tmp_dir}"
 ```
 
-Every case then gets a fresh directory under `/tmp/dit/`, visible to all of
-its commands as `$DIT_TMP_DIR`. The root config defines helpers around
-`integration_tests/helpers/tmp_env.py`:
+Every case then gets a fresh directory under the suite's scratch root, visible
+to all of its commands as `$DIT_TMP_DIR`. That root is `/tmp/dit-<user>`, so
+several accounts can run the suite on one machine without stepping on each
+other; set `$DIT_TMP_ROOT` to put it somewhere else.
 
+`helpers/tmp_env.py` is the only place that root is worked out - the config just
+asks it, so there is nothing to keep in sync. `python3
+integration_tests/helpers/tmp_env.py root` prints the root, and `root
+--resolved` prints it with symlinks followed. Use the resolved form whenever you
+compare it against a case directory: on macOS `/tmp` is really `/private/tmp`,
+and case directories come out that way. The root config defines helpers around
+the same script:
+
+- `@{new_tmp_dir}` - `tmp_env.py new`: creates a fresh case directory under the
+  root and prints it, symlinks already followed.
 - `@{make_tmp_env}` - copies the files listed in the `tmp_env_files` variable
   (paths relative to the test's directory, mirrored inside the tmp dir) and
   sweeps stale directories of past runs. Not needed if nothing is copied.
 - `@{at_tmp_env} CMD` - runs `CMD` inside the tmp dir.
 - `@{cleanup_tmp_env}` - removes the tmp dir; put it in `PostCase`, which only
-  runs for successful cases - directories of failed cases are kept in
-  `/tmp/dit/` for debugging and are swept once they age out.
+  runs for successful cases - directories of failed cases are kept in the
+  scratch root for debugging and are swept once they age out.
 
 Often no files need copying at all: point the compiler's artifact option at
-`$DIT_TMP_DIR/build` (see `compiler/compilation/testconfig.yaml`) and keep
+`$DIT_TMP_DIR/build` (see `compiler/features/testconfig.yaml`) and keep
 reading sources from the test's directory, which is safe because it is
 read-only sharing.
 

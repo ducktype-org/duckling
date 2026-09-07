@@ -1,6 +1,0 @@
-Tests:
-  sample_duck:
-    Cases:
-      all:
-        backend: all
-        ExitCode: 3
