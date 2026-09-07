@@ -3,7 +3,6 @@ Tests:
   simple_expand_1:
     Cases:
       all:
-        backend: all
         Output:
           String: "2\n"
         ExitCode: 0
@@ -11,7 +10,6 @@ Tests:
   simple_expand_2:
     Cases:
       all:
-        backend: all
         Output:
           String: "2\n2\n"
         ExitCode: 0
@@ -19,7 +17,6 @@ Tests:
   simple_expand_3:
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n2\n"
         ExitCode: 0
@@ -27,7 +24,6 @@ Tests:
   expand_expand:
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n2\n"
         ExitCode: 0
@@ -35,7 +31,6 @@ Tests:
   various_statements:
     Cases:
       all:
-        backend: all
         Output:
           String: "177\n"
         ExitCode: 0
@@ -43,7 +38,6 @@ Tests:
   expand_comp_time:
     Cases:
       all:
-        backend: all
         Output:
           String: "42\n1\n30\n20\nhello10\n"
         ExitCode: 0
@@ -51,7 +45,6 @@ Tests:
   mangling_in_expand:
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n2\n"
         ExitCode: 0

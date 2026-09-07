@@ -5,6 +5,5 @@ Tests:
   extern_c_class:
     Cases:
       all:
-        backend: all
         Output:
           String: "3\n17\n11\n22\n42\n7\n7\n9\n11\n"

@@ -3,12 +3,10 @@ Tests:
   simple_lists:
     Cases:
       all:
-        backend: all
         Output:
           String: "5\n8888888888888888888\n111\n222\n333\n444\n555\n8888888888888888888\n2\n8888888888888888888\n111\n222\n8888888888888888888\n8888888888888888888\n111\n222\n999\n8888888888888888888\n8888888888888888888\n111\n1\n999\n8888888888888888888\n8888888888888888888\n111\n1\n999\n8888888888888888888\n8888888888888888888\n112\n2\n1000\n8888888888888888888\n8888888888888888888\n112\n3\n1000\n8888888888888888888\n"
         ExitCode: 0
       llvm_valgrind:
-        backend: llvm_valgrind
         TimeOut: 3 # 1 second is often not enough on runners
         Output:
           String: "5\n8888888888888888888\n111\n222\n333\n444\n555\n8888888888888888888\n2\n8888888888888888888\n111\n222\n8888888888888888888\n8888888888888888888\n111\n222\n999\n8888888888888888888\n8888888888888888888\n111\n1\n999\n8888888888888888888\n8888888888888888888\n111\n1\n999\n8888888888888888888\n8888888888888888888\n112\n2\n1000\n8888888888888888888\n8888888888888888888\n112\n3\n1000\n8888888888888888888\n"
@@ -16,12 +14,10 @@ Tests:
   generic:
     Cases:
       all:
-        backend: all
         Output:
           String: "111\n222\n333\n3\n888888888888888\n1.1\n1.2\n1.3\n3\n888888888888888\n10\n20\n30\n40\n888888888888888\n100\n200\n300\n101\n201\n301\n101\n201\n301\n888888888888888\n2\n1\n1\n2\n3\n2\n1\n2\n3\n4\n2\n888888888888888\n2\n888888888888888\n1\n2\n3\n4\n888888888888888\n100\n2\n3\n300\n888888888888888\n3\n300\n999\n999\n888888888888888\n3\n888888888888888\n1\n2\n1\n2\n888888888888888\n100\n2\n1\n100\n888888888888888\n0\n3\n888888888888888\n1\n2\n3\n4\n5\n6\n888888888888888\n3\n888888888888888\n1\n2\n3\n4\n5\n6\n888888888888888\n"
           ExitCode: 0
       llvm_valgrind:
-        backend: llvm_valgrind
         TimeOut: 3 # 1 second is often not enough on runners
         Output:
           String: "111\n222\n333\n3\n888888888888888\n1.1\n1.2\n1.3\n3\n888888888888888\n10\n20\n30\n40\n888888888888888\n100\n200\n300\n101\n201\n301\n101\n201\n301\n888888888888888\n2\n1\n1\n2\n3\n2\n1\n2\n3\n4\n2\n888888888888888\n2\n888888888888888\n1\n2\n3\n4\n888888888888888\n100\n2\n3\n300\n888888888888888\n3\n300\n999\n999\n888888888888888\n3\n888888888888888\n1\n2\n1\n2\n888888888888888\n100\n2\n1\n100\n888888888888888\n0\n3\n888888888888888\n1\n2\n3\n4\n5\n6\n888888888888888\n3\n888888888888888\n1\n2\n3\n4\n5\n6\n888888888888888\n"
@@ -29,12 +25,10 @@ Tests:
   functionality:
     Cases:
       all:
-        backend: all
         Output:
           String: "100\n0\n49\n99\n5\n25\n0\n4\n100\n119\n0\n555\n"
           ExitCode: 0
       llvm_valgrind:
-        backend: llvm_valgrind
         TimeOut: 3 # 1 second is often not enough on runners
         Output:
           String: "100\n0\n49\n99\n5\n25\n0\n4\n100\n119\n0\n555\n"
@@ -42,12 +36,10 @@ Tests:
   array_of_lists:
     Cases:
       all:
-        backend: all
         Output:
           String: "2\n3\n3\n4\n9\n10\n100\n0\n100\n2\n3\n4\n1\n5\n6\n7\n8\n9\n10\n"
         ExitCode: 0
       llvm_valgrind:
-        backend: llvm_valgrind
         TimeOut: 3 # 1 second is often not enough on runners
         Output:
           String: "2\n3\n3\n4\n9\n10\n100\n0\n100\n2\n3\n4\n1\n5\n6\n7\n8\n9\n10\n"
@@ -57,10 +49,8 @@ Tests:
     Cases:
       llvm:
         TimeOut: 4
-        backend: llvm
         ExitCode: 134
       dvm:
-        backend: dvm
         stderr_regex: "VMThread has panicked: Program panicked"
         Output:
           String: "Program panicked!\n"
@@ -69,10 +59,8 @@ Tests:
     Cases:
       llvm:
         TimeOut: 4
-        backend: llvm
         ExitCode: 134
       dvm:
-        backend: dvm
         stderr_regex: "VMThread has panicked: Program panicked"
         Output:
           String: "Program panicked!\n"

@@ -6,7 +6,6 @@ Tests:
     Description: Tests for while loops with named loops, break, and continue.
     Cases:
       all:
-        backend: all
         Output:
           String: "5\n4\n5\n4\n5\n4\n5\n4\n2\n1\n5\n4\n2\n1\n5\n4\n2\n1\n"
         ExitCode: 0
@@ -14,7 +13,6 @@ Tests:
     Description: Performance test for while loops.
     Cases:
       all:
-        backend: all
         Output:
           String: "20\n100000001\n"
         ExitCode: 0

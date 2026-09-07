@@ -2,7 +2,6 @@ Tests:
   recursive_comp_time_eval:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -10,7 +9,6 @@ Tests:
   comp_time_references:
     Cases:
       all:
-        backend: all
         Output:
           String: "124\n"
         ExitCode: 0
@@ -18,7 +16,6 @@ Tests:
   class_type_eval:
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n2\n3\n1\n3\n4\n111\n111\n1\n"
         ExitCode: 0
@@ -26,7 +23,6 @@ Tests:
   type_eval:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -34,7 +30,6 @@ Tests:
   type_evaluation:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 42
@@ -42,7 +37,6 @@ Tests:
   classes_in_comp_time:
     Cases:
       all:
-        backend: all
         Output:
           String: "11\n"
         ExitCode: 0
@@ -50,7 +44,6 @@ Tests:
   arrays_in_comp_time:
     Cases:
       all:
-        backend: all
         Output:
           String: "6\n"
         ExitCode: 0
@@ -58,7 +51,6 @@ Tests:
   strings_in_comp_time:
     Cases:
       all:
-        backend: all
         Output:
           String: "String const\nslice const\n"
         ExitCode: 0

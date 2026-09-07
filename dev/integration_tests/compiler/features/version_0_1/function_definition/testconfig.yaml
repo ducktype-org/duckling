@@ -7,7 +7,6 @@ Tests:
     Description: Tests for function definitions.
     Cases:
       all:
-        backend: all
         Output:
           String: "42\n7\n8\n24\n1\n2\n99\n120\n"
         ExitCode: 0
@@ -16,7 +15,6 @@ Tests:
     Description: Tests for default parameters, static variables, and return type inference.
     Cases:
       all:
-        backend: all
         Output:
           String: "10\n30\n16\n13\n6\n1\n2\n3\n10\n15\n40\n50\n15\n1\n2\n"
         ExitCode: 0

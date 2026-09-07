@@ -3,8 +3,7 @@ Tests:
   default_std:
     module_to_compile: "uses_std"
     Cases:
-      uses_std:
-        backend: all
+      all:
         Output:
           String: "10\n42\n"
 
@@ -14,8 +13,7 @@ Tests:
     compile_dvm_options: "--no-std"
     compile_llvm_options: "--no-std"
     Cases:
-      all:
-        backend: all
+      all: {}
 
   # In custom std instead of the default one we have a different implementation
   # of builtin_output that output 20 for the same `no_std` user code.
@@ -26,7 +24,6 @@ Tests:
     std_artifacts_path_flag: ""
     Cases:
       all:
-        backend: all
         Output:
           String: "x\nx\n"
 
@@ -59,6 +56,5 @@ Tests:
     compile_llvm_only_cmd: "@{duckc_path} compile_packages duck_modules/@{module_to_compile}/manifest.json -a @{case_build}"
     Cases:
       all:
-        backend: all
         Output:
           String: "10\n42\n"

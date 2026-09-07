@@ -4,12 +4,10 @@ Tests:
   functions:
     Cases:
       llvm:
-        backend: llvm
         Output:
           String: "11\n20\n"
         ExitCode: 0
       dvm:
-        backend: dvm
         Output:
           String: "11\n10\n"
         ExitCode: 0

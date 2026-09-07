@@ -61,7 +61,6 @@ Tests:
       -55
     Cases:
       all:
-        backend: all
         Output:
           String: "@{expected_output}"
         ExitCode: 0
@@ -70,7 +69,6 @@ Tests:
   ffi_variadic:
     Cases:
       llvm:
-        backend: llvm
         Output:
           String: |
             6

@@ -6,7 +6,6 @@ Tests:
     Description: Tests for constant declarations.
     Cases:
       all:
-        backend: all
         Output:
           String: "100\n50\n42\n110\n57\n200\n1\n"
         ExitCode: 0
@@ -15,7 +14,6 @@ Tests:
     Description: Tests for namespace constants and computed const expressions.
     Cases:
       all:
-        backend: all
         Output:
           String: "255\n240\n63\n100\n200\n300\n600\n1024\n64\n512\n3\n2\n960\n25\n"
         ExitCode: 0

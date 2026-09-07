@@ -6,7 +6,6 @@ Tests:
     Description: Tests for first-class typing features.
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n1\nB1\nA0\nC8\n(true, 42)"
         ExitCode: 0

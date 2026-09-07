@@ -4,12 +4,10 @@ Tests:
   manyptr:
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n3\n7\n42\n43\n30\n"
         ExitCode: 0
       llvm_valgrind:
-        backend: llvm_valgrind
         TimeOut: 3
         Output:
           String: "1\n3\n7\n42\n43\n30\n"
@@ -18,7 +16,6 @@ Tests:
   nested_pointers:
     Cases:
       all:
-        backend: all
         Output:
           String: "100\n999\n10\n3\n"
         ExitCode: 0
@@ -26,7 +23,6 @@ Tests:
   ptr_deref_ref:
     Cases:
       all:
-        backend: all
         Output:
           String: "30\n"
         ExitCode: 0
@@ -34,12 +30,10 @@ Tests:
   ref_to_index:
     Cases:
       all:
-        backend: all
         Output:
           String: "10\n99\n"
         ExitCode: 0
       llvm_valgrind:
-        backend: llvm_valgrind
         TimeOut: 3
         Output:
           String: "10\n99\n"
@@ -50,22 +44,18 @@ Tests:
   dvm_use_after_free_local:
     Cases:
       dvm:
-        backend: dvm
         stderr_regex: "VMThread has panicked: Data was freed"
   dvm_use_after_free_box:
     Cases:
       dvm:
-        backend: dvm
         stderr_regex: "VMThread has panicked: Data was freed"
   dvm_uninitialized_access:
     Cases:
       dvm:
-        backend: dvm
         stderr_regex: "VMThread has panicked: Accessing null pointer"
   slices:
     Cases:
       all:
-        backend: all
         Output:
           String: "Hello from VM!\nl\n15\nHello from Duckling!\n"
         ExitCode: 0
@@ -75,10 +65,8 @@ Tests:
     NoParallel: true
     Cases:
       llvm:
-        backend: llvm
         ExitCode: 134
       dvm:
-        backend: dvm
         stderr_regex: "VMThread has panicked: Program panicked"
         Output:
           String: "Program panicked!\n"
@@ -86,8 +74,6 @@ Tests:
     NoParallel: true
     Cases:
       llvm:
-        backend: llvm
         ExitCode: 134
       dvm:
-        backend: dvm
         ExitCode: 1

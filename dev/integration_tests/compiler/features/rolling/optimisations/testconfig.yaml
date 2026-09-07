@@ -4,7 +4,6 @@ Tests:
   inlinable_function:
     Cases:
       llvm:
-        backend: llvm
         Output:
           String: "3\n"
         ExitCode: 0

@@ -6,7 +6,6 @@ Tests:
     Description: Tests for class declarations.
     Cases:
       all:
-        backend: all
         Output:
           String: "0\n0\n5\n10\n100\n200\n20\n30\n5\n10\n3\n4\n12\n0\n10\n"
         ExitCode: 0
@@ -14,7 +13,6 @@ Tests:
     Description: Tests for functions operating on classes.
     Cases:
       all:
-        backend: all
         Output:
           String: "25\n25\n4\n6\n6\n9\n10\n20\n8\n12\n32\n169\n"
         ExitCode: 0
@@ -22,7 +20,6 @@ Tests:
     Description: Tests for methods defined within classes.
     Cases:
       all:
-        backend: all
         Output:
           String: "-10\n4\n102\n-9\n2\n6\n"
         ExitCode: 0

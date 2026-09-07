@@ -5,7 +5,6 @@ Tests:
     Description: Test for using implicit value of () as a type.
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n2\n3\n4\n5\n6\n"
         ExitCode: 0

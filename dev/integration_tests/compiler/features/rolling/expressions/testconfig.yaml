@@ -4,14 +4,12 @@ Tests:
   ternary:
     Cases:
       all:
-        backend: all
         Output:
           String: "9\n9\n9\n18\n4\n2\n"
 
   single_comparison: # Any type of comparison between two values.
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -19,7 +17,6 @@ Tests:
   arithmetic:
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n1\n30\n200\n3\n2\n10\n7\n10\n-10\n"
         ExitCode: 0
@@ -27,7 +24,6 @@ Tests:
   comparison_chain:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -35,7 +31,6 @@ Tests:
   unit_simple:
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n1\n"
         ExitCode: 0
@@ -43,7 +38,6 @@ Tests:
   unit_simple_multiple_modules:
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n1\n"
         ExitCode: 0
@@ -51,7 +45,6 @@ Tests:
   casts:
     Cases:
       all:
-        backend: all
         Output:
           String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n0\n"
         ExitCode: 0
@@ -59,7 +52,6 @@ Tests:
   floating_point_arithmetic:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -67,7 +59,6 @@ Tests:
   floating_point_comparisons:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -75,7 +66,6 @@ Tests:
   unsigned_integers:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -83,7 +73,6 @@ Tests:
   signed_integers:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -91,7 +80,6 @@ Tests:
   float_32:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -99,7 +87,6 @@ Tests:
   coercions:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -107,7 +94,6 @@ Tests:
   no_output:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -115,7 +101,6 @@ Tests:
   strings:
     Cases:
       all:
-        backend: all
         Input:
           String: "Test"
         Output:
@@ -124,7 +109,6 @@ Tests:
   chars:
     Cases:
       all:
-        backend: all
         Input:
           String: "Xd;"
         Output:
@@ -133,7 +117,6 @@ Tests:
   bitwise:
     Cases:
       all:
-        backend: all
         Output:
           String: ""
         ExitCode: 0

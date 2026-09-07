@@ -6,7 +6,6 @@ Tests:
     Description: Tests for alias declarations on functions and variables.
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n10\n2\n40\n2\n67\n77\n9\n"
         ExitCode: 0
@@ -14,7 +13,6 @@ Tests:
     Description: Tests for using declarations to import symbols from namespaces.
     Cases:
       all:
-        backend: all
         Output:
           String: "10\n12\n9\n3\n11\n9\n8\n2\n"
         ExitCode: 0

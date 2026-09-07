@@ -13,9 +13,10 @@ case_build: "$DIT_TMP_DIR/build"
 case_std_artifacts: "$DIT_TMP_DIR/std_artifacts"
 copy_std_artifacts: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/null || true"
 
-# Backend the case is compiled and run with: dvm, llvm, llvm_valgrind (native run under
-# valgrind, checked for leaks) or all (both backends, outputs compared).
-backend: "nobackend"
+# Backend the case is compiled and run with, taken from the case's own name: dvm, llvm,
+# llvm_valgrind (native run under valgrind, checked for leaks) or all (both backends,
+# outputs compared). A case named anything else fails in `PreCase`.
+backend: "@{CaseName}"
 
 # Skip valgrind cases on macOS (no valgrind on Apple Silicon). Inherited by every case;
 # non-valgrind cases are always enabled. Enabled iff not-a-valgrind-case OR not-macOS.
@@ -74,7 +75,6 @@ PreCase: "mkdir -p @{case_build}; @{copy_std_artifacts};
     llvm_valgrind)      @{compile_llvm_backend_cmd}                                                                               ;;
     all)       @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd} &&
                @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd}           ;;
-    nobackend) echo 'Backend undefined'; exit 1                                                                          ;;
     *)         echo 'Unknown backend';   exit 1                                                                          ;;
   esac;"
 
@@ -102,7 +102,6 @@ Run: "
       _dvm=\"@{dvm_path} run @{compiled_to_dvm}\";
       python3 @{compare_runs_script} --cmd llvm \"$_llvm\" --cmd dvm \"$_dvm\";
       ;;
-    nobackend) echo \"Backend undefined\"; exit 1 ;;
     *)         echo \"Unknown backend\";   exit 1 ;;
   esac;"
 

@@ -3,12 +3,10 @@ Tests:
   simple_boxes:
     Cases:
       all:
-        backend: all
         Output:
           String: "42\n123\n1\n2\n99\n100\n"
         ExitCode: 0
       llvm_valgrind:
-        backend: llvm_valgrind
         TimeOut: 3 # 1 second is often not enough on runners
         Output:
           String: "42\n123\n1\n2\n99\n100\n"
@@ -16,12 +14,10 @@ Tests:
   box_coercions:
     Cases:
       all:
-        backend: all
         Output:
           String: "2\n1\n2\n777\n2\n"
         ExitCode: 0
       llvm_valgrind:
-        backend: llvm_valgrind
         TimeOut: 3 # 1 second is often not enough on runners
         Output:
           String: "2\n1\n2\n777\n2\n"
@@ -29,12 +25,10 @@ Tests:
   box_storage:
     Cases:
       all:
-        backend: all
         Output:
           String: "4950\n7\n11\n7\n"
         ExitCode: 0
       llvm_valgrind:
-        backend: llvm_valgrind
         TimeOut: 3 # 1 second is often not enough on runners
         Output:
           String: "4950\n7\n11\n7\n"
@@ -42,12 +36,10 @@ Tests:
   reference_kind_collapsing:
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n3\n"
         ExitCode: 0
       llvm_valgrind:
-        backend: llvm_valgrind
         TimeOut: 3 # 1 second is often not enough on runners
         Output:
           String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n3\n"

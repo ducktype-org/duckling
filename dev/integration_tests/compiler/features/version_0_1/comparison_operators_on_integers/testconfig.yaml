@@ -6,7 +6,6 @@ Tests:
     Description: Tests for comparison operators on integers.
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n3\n5\n7\n9\n11\n13\n14\n16\n"
         ExitCode: 0

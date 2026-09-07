@@ -5,7 +5,6 @@ Tests:
   new_builtins:
     Cases:
       dvm:
-        backend: dvm
         ExitCode: 0
         Output:
           String: "HELLO\nH0falsetruetrueptr(null)"
@@ -14,7 +13,6 @@ Tests:
   dvm_alloc_nested:
     Cases:
       dvm:
-        backend: dvm
         ExitCode: 0
         Output:
           String: "5\n"
@@ -23,7 +21,6 @@ Tests:
   numeric_io:
     Cases:
       all:
-        backend: all
         Input:
           String: "42\n-42\n18446744073709551615\n3.141\n-6.022e+23\n"
         Output:
@@ -31,13 +28,11 @@ Tests:
   to_string:
     Cases:
       all:
-        backend: all
         Output:
           String: "123.14dtrue()(John Smith,42,1.69)Person(John Smith,42,1.69)ptr()"
   format_strings:
     Cases:
       all:
-        backend: all
         Input:
           String: "John\n42\n69\n"
         Output:

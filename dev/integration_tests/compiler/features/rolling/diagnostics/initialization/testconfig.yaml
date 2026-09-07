@@ -6,7 +6,6 @@ Tests:
   no_main_source_file:
     Cases:
       llvm:
-        backend: llvm
         # @TODO: #2228 add better output handling here!
         Output:
           String: ""
