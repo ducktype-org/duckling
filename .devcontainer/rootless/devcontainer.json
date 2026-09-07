@@ -18,8 +18,7 @@
 
 	"mounts": [
 		"source=${localWorkspaceFolder}/dockling-dev/home/,target=/home/ubuntu/,type=bind",
-		"source=${localEnv:HOME}/.ssh,target=/home/ubuntu/.ssh,type=bind",
-		"source=${localEnv:HOME}/.claude/settings.json,target=/home/ubuntu/.claude/settings.json,type=bind"
+		"source=${localEnv:HOME}/.ssh,target=/home/ubuntu/.ssh,type=bind"
 	],
 
 	// A dev container never inherits the host's extensions -- it starts with its own
@@ -34,8 +33,7 @@
 				"ms-python.python",
 				"ms-python.vscode-pylance",
 				"ms-python.debugpy",
-				"github.vscode-github-actions",
-				"anthropic.claude-code"
+				"github.vscode-github-actions"
 			],
 
 			// Container-scoped, so a fresh clone works without anyone hand-editing their

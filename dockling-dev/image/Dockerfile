@@ -78,13 +78,6 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN chmod o+rx /root
 RUN chmod -R o+r /root/.cargo
 
-# install Claude Code
-ENV CLAUDE_CODE_DIR=/opt/claude-code
-RUN mkdir -p ${CLAUDE_CODE_DIR} && \
-    HOME=${CLAUDE_CODE_DIR} bash -c 'curl -fsSL https://claude.ai/install.sh | bash' && \
-    ln -s ${CLAUDE_CODE_DIR}/.local/bin/claude /usr/local/bin/claude && \
-    chmod -R a+rX ${CLAUDE_CODE_DIR}
-
 RUN echo 'source /usr/share/bash-completion/bash_completion' >> /etc/bash.bashrc
 COPY bash_completion/* /etc/bash_completion.d/
 COPY bin/* /bin/
