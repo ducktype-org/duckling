@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::duck::util::indent::indent;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::quackpack::core::storage::{self, CleanOutput, delete_venv};
-use crate::util::IsPlural;
+use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 /// Options for the clean-storage operation.

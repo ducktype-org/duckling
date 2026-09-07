@@ -105,7 +105,7 @@ private:
 		auto           manifest_opt  = driver::PackageCompilationManifest::fromJson(
             manifest_json, compiler::driver::diagnostics::makeGlobalLoggerReporter()
         );
-		assertTrue(manifest_opt.has_value(), "Failed to parse packages manifest");
+		ASSERT_HAS_VALUE(manifest_opt, "Failed to parse packages manifest");
 		assertTrue(
 			manifest_opt->verify(compiler::driver::diagnostics::makeGlobalLoggerReporter()).isOk(),
 			"Manifest verification failed"

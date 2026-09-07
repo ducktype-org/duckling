@@ -45,15 +45,7 @@ Tests:
         ExitCode: 1
 
   compile-modules:
-    # This is the only case in the subtree that really compiles something, so it
-    # is the only one that needs the warm std artifacts. Without them the case
-    # rebuilds all 18 std packages for both backends on every run, which leaves
-    # almost no room under the timeout: on CI run 33510672658 the very same
-    # commit measured 0.3 s, 1.3 s and 1.5 s on three matrix jobs, and timed out
-    # at 2.0 s on the fourth.
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
-    # Still a real compile plus a link, and the itests run several cases at
-    # once, so give it more than the 2 s default.
     TimeOut: 3
     Cases:
       two-modules:
@@ -61,11 +53,8 @@ Tests:
         ExitCode: 0
 
   comp-time-output:
-    # A `print` that runs while the compiler evaluates a `const` at compile time must show up on
-    # duckc's stderr. The rest of that stderr is a volatile progress line, so we match a
-    # regex instead of comparing the whole stream literally.
+    # Test compile time output to stderr
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
-    # A real compile plus a compile-time DVM evaluation, so more than the 2 s default.
     timeout_default: 5
     Run: "@{expect_output} --err-regex '\\[comp-time\\] 3492'
       -- @{duckc_path} compile_modules ./duck_modules/comp_time_output/comp_time_output.dk

@@ -61,9 +61,7 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 			variant_case(ts::Panicked, panicked) {
-				return std::unexpected(
-					api::ApiError(api::OtherError("Execution panicked with error: " + panicked.err))
-				);
+				return std::unexpected(api::ApiError(api::Panicked(panicked.err)));
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}

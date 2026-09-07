@@ -1,7 +1,7 @@
 # A print that happens while the compiler evaluates `const printed` at compile time.
 # The compile-time DVM buffers it, so the compiler has to dump it on its own stderr.
 fun printAtCompTime() -> i64 = {
-    builtin_output_i64(3492);
+    print("3492");
     return 1;
 }
 
