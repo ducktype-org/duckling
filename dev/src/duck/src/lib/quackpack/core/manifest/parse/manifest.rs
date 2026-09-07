@@ -6,6 +6,7 @@ use tracing::debug;
 
 use super::source::resolve_path_maybe_relative_to_dir;
 use super::{Scope, dependency};
+use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::manifest::VenvConfig;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
@@ -16,7 +17,7 @@ use crate::quackpack::schemas::manifest::{
     Manifest as ManifestSchema, Metadata as MetadataSchema, OptLevel as SchemaOptLevel,
     Profile as ProfileSchema, VenvConfig as VenvConfigSchema,
 };
-use crate::util::IsPlural;
+use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
@@ -26,6 +27,7 @@ pub(crate) fn parse(
     schema: &ManifestSchema,
     root: &Path,
     mode: ParseMode,
+    warnings: &mut Warnings,
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
     let mut scope = Scope::new();
@@ -36,6 +38,7 @@ pub(crate) fn parse(
         root,
         DependencyKind::Normal,
         &mut deps,
+        warnings,
         ctx,
         guard,
     )?;
@@ -46,6 +49,7 @@ pub(crate) fn parse(
         root,
         DependencyKind::Dev,
         &mut deps,
+        warnings,
         ctx,
         guard,
     )?;

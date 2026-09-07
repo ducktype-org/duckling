@@ -14,12 +14,14 @@
 
 #include <iostream>
 
-std::string convertError(const vm::api::ApiError& api_error) {
-	variant_match(api_error) {
-		variant_case(vm::api::LoadProgramError, load) { return load.why; }
+namespace {
+	std::string convertError(const vm::api::ApiError& api_error) {
+		variant_match(api_error) {
+			variant_case(vm::api::LoadProgramError, load) { return load.why; }
+		}
+		return vm::api::errorToString(api_error);
 	}
-	return vm::api::errorToString(api_error);
-}
+}  // namespace
 
 int cli(
 	const std::vector<fs::File>&    files,
@@ -33,10 +35,11 @@ int cli(
 		= vm::api::spawn(options)
 	          .and_then([&](vm::api::ProcessInfo info) -> std::expected<i64, vm::api::ApiError> {
 				  const vm::PID pid = info.pid;
-				  // Deinitialize the process and execute global destructors.
+				  // Deinitialize the process and execute global destructors if the process finished
+		          // cleanly or force kill it otherwise.
 				  defer({
-					  auto deinit = vm::api::deinitAndValidate(pid);
-					  if (!deinit.has_value()) std::cerr << convertError(deinit.error()) << '\n';
+					  const auto res = vm::api::deinitOrKill(pid);
+					  if (not res) std::cerr << convertError(res.error()) << '\n';
 				  });
 
 				  return std::expected<void, vm::api::ApiError>{}

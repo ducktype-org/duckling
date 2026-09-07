@@ -26,6 +26,8 @@
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
+#include <sstream>
+
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
 using namespace compiler::lir::test_utils;
@@ -320,9 +322,10 @@ private:
 			lir_global.global.type == lir::LIRGlobalType::Constant,
 			"Expected FIB_10 to be a constant"
 		);
-		assertTrue(
-			std::holds_alternative<ctv::CompileTimeValue>(lir_global.data_initialization),
-			"Expected FIB_10 to have a CTV initial value"
+		ASSERT_MATCHES_MSG(
+			lir_global.data_initialization,
+			"Expected FIB_10 to have a CTV initial value",
+			ctv::CompileTimeValue
 		);
 		auto const_numeric = lir_global.getConstValue().get<numeric_value::NumericValue>();
 		auto const_value   = const_numeric->get<i64>();
@@ -424,12 +427,9 @@ private:
 					if (arg.projection_chain.empty()) {
 						found_simple_address_of = true;
 					} else if (arg.projection_chain.size() == 2) {
-						bool pattern_ok = std::holds_alternative<LIRPlace::DerefProjection>(
-											  arg.projection_chain[0].storage
-										  )
-						               && std::holds_alternative<LIRPlace::FieldProjection>(
-											  arg.projection_chain[1].storage
-									   );
+						bool pattern_ok
+							= v_matches(arg.projection_chain[0].storage, LIRPlace::DerefProjection)
+						   && v_matches(arg.projection_chain[1].storage, LIRPlace::FieldProjection);
 
 						if (pattern_ok) {
 							auto field = std::get<LIRPlace::FieldProjection>(
@@ -447,12 +447,11 @@ private:
 					if (out_place.projection_chain.size() == 5) {
 						const auto& chain = out_place.projection_chain;
 
-						bool pattern_ok
-							= std::holds_alternative<LIRPlace::DerefProjection>(chain[0].storage)
-						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[1].storage)
-						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[2].storage)
-						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[3].storage)
-						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[4].storage);
+						bool pattern_ok = v_matches(chain[0].storage, LIRPlace::DerefProjection)
+						               && v_matches(chain[1].storage, LIRPlace::FieldProjection)
+						               && v_matches(chain[2].storage, LIRPlace::DerefProjection)
+						               && v_matches(chain[3].storage, LIRPlace::FieldProjection)
+						               && v_matches(chain[4].storage, LIRPlace::DerefProjection);
 
 						if (pattern_ok) {
 							auto f_p = std::get<LIRPlace::FieldProjection>(chain[1].storage);
@@ -527,18 +526,15 @@ private:
 
 					// a[5] -> IndexProjection
 					if (name == "a" && out.projection_chain.size() == 1) {
-						if (std::holds_alternative<LIRPlace::IndexProjection>(
-								out.projection_chain[0].storage
-							))
+						if (v_matches(out.projection_chain[0].storage, LIRPlace::IndexProjection))
 							found_index_proj = true;
 					}
 
 					// b[1].y -> Index, Field
 					if (name == "b" && out.projection_chain.size() == 2) {
 						const auto& chain = out.projection_chain;
-						bool        pattern_ok
-							= std::holds_alternative<LIRPlace::IndexProjection>(chain[0].storage)
-						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[1].storage);
+						bool pattern_ok   = v_matches(chain[0].storage, LIRPlace::IndexProjection)
+						               && v_matches(chain[1].storage, LIRPlace::FieldProjection);
 
 						if (pattern_ok) {
 							auto field = std::get<LIRPlace::FieldProjection>(chain[1].storage);
@@ -769,8 +765,7 @@ private:
 					if (!array_argument.is<lir::LIRPlace>()) continue;
 					const auto& candidate = array_argument.get<lir::LIRPlace>();
 					for (const auto& projection: candidate.projection_chain)
-						if (std::holds_alternative<lir::LIRPlace::IndexProjection>(projection.storage
-						    ))
+						if (v_matches(projection.storage, lir::LIRPlace::IndexProjection))
 							indexed_place.emplace(candidate);
 				}
 			}

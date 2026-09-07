@@ -202,12 +202,12 @@ private:
 						const auto& out_place = instr.output.value();
 						// b_point.y = 99;
 						if (out_place.projection_chain.size() == 2) {
-							bool is_deref = std::holds_alternative<MIRPlace::DerefProjection>(
-								out_place.projection_chain[0].storage
+							bool is_deref = v_matches(
+								out_place.projection_chain[0].storage, MIRPlace::DerefProjection
 							);
 							if (is_deref
-							    && std::holds_alternative<MIRPlace::FieldProjection>(
-									out_place.projection_chain[1].storage
+							    && v_matches(
+									out_place.projection_chain[1].storage, MIRPlace::FieldProjection
 								)) {
 								found_field_access_write = true;
 							}
@@ -215,12 +215,13 @@ private:
 							// var x: i32 = b_point.x;
 							const auto& arg_place = instr.arguments[0].get<MIRPlace>();
 							if (arg_place.projection_chain.size() == 2) {
-								bool is_deref = std::holds_alternative<MIRPlace::DerefProjection>(
-									arg_place.projection_chain[0].storage
+								bool is_deref = v_matches(
+									arg_place.projection_chain[0].storage, MIRPlace::DerefProjection
 								);
 								if (is_deref
-								    && std::holds_alternative<MIRPlace::FieldProjection>(
-										arg_place.projection_chain[1].storage
+								    && v_matches(
+										arg_place.projection_chain[1].storage,
+										MIRPlace::FieldProjection
 									)) {
 									found_field_access_read = true;
 								}
@@ -234,8 +235,8 @@ private:
 						if (callee_name == "by_val") {
 							const auto& arg_place = instr.arguments[1].get<MIRPlace>();
 							if (arg_place.projection_chain.size() == 1
-							    && std::holds_alternative<MIRPlace::DerefProjection>(
-									arg_place.projection_chain[0].storage
+							    && v_matches(
+									arg_place.projection_chain[0].storage, MIRPlace::DerefProjection
 								)) {
 								found_by_val_deref = true;
 							}
@@ -297,8 +298,7 @@ private:
 
 					// `ptrof m[1]`: the index projection survives into the addressed place.
 					const auto& chain = instr.arguments[0].get<MIRPlace>().projection_chain;
-					if (!chain.empty()
-					    && std::holds_alternative<MIRPlace::IndexProjection>(chain.back().storage))
+					if (!chain.empty() && v_matches(chain.back().storage, MIRPlace::IndexProjection))
 						found_indexed = true;
 				}
 

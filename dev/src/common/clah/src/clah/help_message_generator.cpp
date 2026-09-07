@@ -8,6 +8,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <ranges>
+#include <sstream>
 
 namespace {
 	constexpr int DEFAULT_PADDING = 27;

@@ -37,7 +37,7 @@ private:
 		});
 
 		for (auto& [filename, error]: invalid_filename_and_error)
-			assertExecutionPanickedWith(runTestOnVmGetResult(filename, "", ""), error);
+			assertExecutionPanickedWithAndKill(runTestOnVmGetResult(filename, "", ""), error);
 	}
 };
 

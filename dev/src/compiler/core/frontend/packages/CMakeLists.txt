@@ -5,6 +5,6 @@ add_library(Packages
 	src_private/queries.cpp
 )
 
-make_module(Packages USES ModuleTree JSON Base)
+make_module(Packages USES ModuleTree JSON Base OSUtils)
 
 duck_add_test(compiler packages tests/packages_test.cpp USES Packages)

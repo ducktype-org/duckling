@@ -13,6 +13,7 @@
 #include <base/extend_cpp/vector_utils.hpp>
 
 #include <iomanip>
+#include <sstream>
 #include <unordered_set>
 
 namespace compiler::lir {

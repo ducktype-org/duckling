@@ -3,6 +3,7 @@
 #include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <fstream>
 
@@ -546,14 +547,13 @@ private:
 		assertTrue(test_file.getFilePath().uri() != "", "URI should not be empty");
 		// Test getContentSafe
 		auto safe_content = test_file.getContentSafe();
-		assertTrue(safe_content.has_value(), "getContentSafe should succeed for existing file");
+		ASSERT_HAS_VALUE(safe_content, "getContentSafe should succeed for existing file");
 
 		// Delete file and test getContentSafe again
 		fs::FileManager::deleteFile(test_file);
 		auto safe_content_after_delete = test_file.getContentSafe();
-		assertTrue(
-			!safe_content_after_delete.has_value(),
-			"getContentSafe should fail for non-existent file"
+		ASSERT_NO_VALUE(
+			safe_content_after_delete, "getContentSafe should fail for non-existent file"
 		);
 
 		// Test getModifyTime for non-virtual file

@@ -46,6 +46,7 @@
 #include <algorithm>
 #include <any>
 #include <array>
+#include <sstream>
 
 using namespace compiler::helios::test_utils;
 
@@ -676,8 +677,8 @@ private:
 		auto check_var_init_expr_origin = [&](base::StrID name, bool is_generated) {
 			auto glob_opt = get_global_by_name(name);
 			auto var_opt  = get_pst_variable_by_name(name);
-			assertTrue(glob_opt.has_value(), "Global not found in HOUT");
-			assertTrue(var_opt.has_value(), "Variable not found in PST");
+			ASSERT_HAS_VALUE(glob_opt, "Global not found in HOUT");
+			ASSERT_HAS_VALUE(var_opt, "Variable not found in PST");
 			auto glob              = glob_opt.value();
 			auto var_pst           = var_opt.value();
 			auto initial_value_pst = var_pst->getValue().value().illegalAccess().value();
@@ -732,8 +733,8 @@ private:
 		auto check_function_origin = [&](base::StrID name) {
 			auto fun_opt     = get_hout_function_by_name(name);
 			auto pst_fun_opt = get_pst_function_by_name(name);
-			assertTrue(fun_opt.has_value(), "Function not found in HOUT");
-			assertTrue(pst_fun_opt.has_value(), "Function not found in PST");
+			ASSERT_HAS_VALUE(fun_opt, "Function not found in HOUT");
+			ASSERT_HAS_VALUE(pst_fun_opt, "Function not found in PST");
 			auto fun = fun_opt.value();
 
 
@@ -1087,15 +1088,15 @@ private:
 
 			// A field whose class defines a user copy constructor calls the user code, not a
 			// generated one.
-			ASSERT_TRUE(v_matches(
+			ASSERT_MATCHES(
 				getSymRef(callee_of(rhs_of("nested_user")))->other, PstImplementedSemantics
-			));
+			);
 
 			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
 			{
 				auto boxed = boxAllocArg(rhs_of("deep"));
 				ASSERT_TRUE(boxed != nullptr);
-				ASSERT_TRUE(v_matches(getSymRef(callee_of(boxed))->other, PstImplementedSemantics));
+				ASSERT_MATCHES(getSymRef(callee_of(boxed))->other, PstImplementedSemantics);
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {
@@ -1140,7 +1141,7 @@ private:
 				ASSERT_EQUAL_PRINT(1, aggregate.values.size());
 				assert_generated_copy(stripImplicitMove(aggregate.values.at(0).get()));
 
-				ASSERT_TRUE(aggregate.per_element_body.has_value());
+				ASSERT_HAS_VALUE(aggregate.per_element_body);
 				const auto& per_element = (*aggregate.per_element_body)->statements;
 				ASSERT_EQUAL_PRINT(1, per_element.size());
 				ASSERT_TRUE(dynamic_cast<const AssignmentStmt*>(per_element.at(0).get()) != nullptr);
@@ -1193,9 +1194,9 @@ private:
 				// variant with that same alternative index - no wildcard is needed.
 				for (usize i = 0; i < match->cases.size(); i++) {
 					const auto& match_case = match->cases.at(i);
-					ASSERT_TRUE(match_case.alternative_index.has_value());
+					ASSERT_HAS_VALUE(match_case.alternative_index);
 					ASSERT_EQUAL_PRINT(i, match_case.alternative_index.value());
-					ASSERT_TRUE(match_case.binding.has_value());
+					ASSERT_HAS_VALUE(match_case.binding);
 
 					auto construct = dynamic_cast<const VariantConstructExpr*>(
 						stripImplicitMove(match_case.result.get())
