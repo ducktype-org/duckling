@@ -13,19 +13,19 @@
 
 namespace vm::api {
 	namespace response {
-		struct Empty {};
+		struct Empty final {};
 
-		struct Output {
+		struct Output final {
 			std::string output;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Output, output);
 		};
 
-		struct Type {
+		struct Type final {
 			TypeCRef type;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, type);
 		};
-
-		struct VMValue {
+		
+		struct VMValue final {
 			Box<::vm::IVMValue> vm_value;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(VMValue, vm_value);
 		};
@@ -37,12 +37,12 @@ namespace vm::api {
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, function_name, instr_number);
 		};
 
-		struct NumberOfCurrentStackFrames {
+		struct NumberOfCurrentStackFrames final {
 			u64 number_of_stack_frames;
 		};
 
-		struct StackFrameData {
-			struct FrameVar {
+		struct StackFrameData final {
+			struct FrameVar final {
 				u64                          offset = 0;
 				base::Optional<base::StrID>  name;
 				base::Optional<base::StrID>  type;
@@ -53,7 +53,7 @@ namespace vm::api {
 			std::vector<FrameVar> frame_vars;
 		};
 
-		struct ThreadIDs {
+		struct ThreadIDs final {
 			std::vector<ThreadID> thread_ids;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(ThreadIDs, thread_ids);
 		};

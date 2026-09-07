@@ -24,6 +24,7 @@
 #include <expected>
 #include <iostream>
 #include <mutex>
+#include <algorithm>
 
 namespace {
 	using namespace compiler::helios;
@@ -89,8 +90,18 @@ namespace {
 			if (!pid.has_value()) return;
 			auto response = vm::api::output(pid.value());
 			if (!response.has_value() || response->output.empty()) return;
-			std::cerr << "[comp-time] " << response->output;
-			if (!response->output.ends_with('\n')) std::cerr << '\n';
+
+			// Replace each \n with "[comp-time] \n" to prefix each line of output with the compile-time tag.
+			
+			response->output = "[comp-time] " + response->output;
+
+			constexpr static std::string_view PREFIX = "[comp-time] ";
+			std::string::size_type pos = 0;
+			while ((pos = response->output.find('\n', pos)) != std::string::npos) {
+				response->output.insert(pos + 1, PREFIX);
+				pos += PREFIX.length() + 1;
+			}
+			std::cerr << response->output << "\n";
 		}
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
