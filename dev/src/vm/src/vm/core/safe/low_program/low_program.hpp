@@ -70,7 +70,7 @@ namespace vm::low {
 
 		/**
 		 * @brief method for setting the breakpoint in microbytecode
-		 * @note this is a fundemental property of the microbytecode representation
+		 * @note this is a fundamental property of the microbytecode representation
 		 */
 		std::expected<void, std::string> setBreakpoint(usize idx, bool enable) {
 			CORE_ASSERT(orig_bc.size() == bc.size(), "any edits made to bc cannot change length");
