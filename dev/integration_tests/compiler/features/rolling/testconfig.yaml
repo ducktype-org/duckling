@@ -1,13 +1,5 @@
-Tests:
-  base:
-    Cases:
-      all:
-        backend: all
-        Output:
-          String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
-        ExitCode: 76
-
 SubDirs:
+  - base
   - expressions
   - comp_time
   - builtins
