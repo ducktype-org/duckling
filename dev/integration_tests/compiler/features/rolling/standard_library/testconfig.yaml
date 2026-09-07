@@ -57,6 +57,9 @@ Tests:
     module_to_compile: "uses_std"
     compile_dvm_only_cmd: "@{duckc_path} compile_packages duck_modules/@{module_to_compile}/manifest.json -a @{case_build}"
     compile_llvm_only_cmd: "@{duckc_path} compile_packages duck_modules/@{module_to_compile}/manifest.json -a @{case_build}"
+    # The case builds through its own `compile_packages`, which the check cannot stand in
+    # for, so it keeps its plain compile and the check runs on duplicated copies.
+    determinism_duplicate_sources: "true"
     Cases:
       all:
         backend: all

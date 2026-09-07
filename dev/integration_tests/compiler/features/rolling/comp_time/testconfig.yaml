@@ -1,3 +1,7 @@
+# Compile-time evaluation runs inside the workers, so duplicated copies exercise it
+# concurrently.
+determinism_duplicate_sources: "true"
+
 Tests:
   recursive_comp_time_eval:
     Cases:

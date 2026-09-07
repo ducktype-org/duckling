@@ -50,6 +50,13 @@ import tempfile
 # The script supports two modes: single-package mode (--module-name selects a
 # package under duck_modules/), and manifest mode (--manifest points to a
 # compile_packages JSON manifest).
+#
+# `--no-duplicate` skips steps 1-2 and checks the package as it is written. The
+# concurrent pass then compiles exactly what a plain `compile_package` would, so
+# `--artifacts-out` can hand its artifacts to the caller as the binary under test
+# and the case needs two compiles instead of three. Duplicated sources link extra
+# copies of every module, whose module-level side effects change what the program
+# prints, so the two options are mutually exclusive.
 
 
 GENERATED_COPY_STEM_RE = re.compile(r"^concurrent_copy\d+_.+")
@@ -253,6 +260,18 @@ def parse_args() -> argparse.Namespace:
     # provided in manifest mode it is silently ignored.
     parser.add_argument("--backend", choices=["dvm", "llvm"])
     parser.add_argument("--copy-count", type=int, default=3)
+    parser.add_argument(
+        "--no-duplicate",
+        action="store_true",
+        help="Check the package as written, without duplicating its modules.",
+    )
+    parser.add_argument(
+        "--artifacts-out",
+        help=(
+            "Directory the concurrent pass compiles into, left in place for the caller "
+            "to run. Requires --no-duplicate."
+        ),
+    )
     # Manifest mode only: a manifest may hard-code artifact paths in its linking options
     # (e.g. a static library built by another task), which resolve only when the check
     # builds into the very directory those paths point at.
@@ -334,18 +353,20 @@ def run_manifest_mode(args: argparse.Namespace) -> int:
         return 1
 
     concurrent_workers = args.duckc_worker_count if args.duckc_worker_count > 1 else 3
-    # Manifest packages are still duplicated in place (their paths come from
-    # the manifest), so manifest mode is not safe under concurrent cases that
-    # share packages; only the build directory is private.
+    # With duplication on, manifest packages are duplicated in place (their paths
+    # come from the manifest), so manifest mode is then not safe under concurrent
+    # cases that share packages; only the build directory is private. With
+    # `--no-duplicate` the sources are left alone and that hazard is gone.
     work_dir = make_work_dir()
     build_dir = Path(args.build_dir) if args.build_dir else work_dir / "build"
     created_files: list[Path] = []
 
-    try:
-        created_files = duplicate_manifest_packages(manifest_path, args.copy_count)
-    except ValueError as error:
-        print(f"[determinism-check] {error}", file=sys.stderr)
-        return 1
+    if not args.no_duplicate:
+        try:
+            created_files = duplicate_manifest_packages(manifest_path, args.copy_count)
+        except ValueError as error:
+            print(f"[determinism-check] {error}", file=sys.stderr)
+            return 1
 
     try:
         ok_single, single_snapshot, single_error = run_once_manifest(
@@ -451,8 +472,13 @@ def run_once(
     compile_options: str,
     backend: str,
     build_dir: Path,
+    clean: bool = True,
+    suffixes: set[str] | None = None,
 ) -> tuple[bool, dict[str, str], str]:
-    clean_build_dir(build_dir)
+    if clean:
+        clean_build_dir(build_dir)
+    else:
+        build_dir.mkdir(parents=True, exist_ok=True)
     code, out, err = compile_package(
         duckc_path=duckc_path,
         package_dir=package_dir,
@@ -470,7 +496,7 @@ def run_once(
         )
         return False, {}, details
 
-    snapshot = collect_artifact_snapshot(build_dir)
+    snapshot = collect_artifact_snapshot(build_dir, suffixes)
     return True, snapshot, ""
 
 
@@ -483,6 +509,13 @@ def main() -> int:
         return 1
     if args.copy_count < 1:
         print("[determinism-check] Invalid copy count (must be >= 1).", file=sys.stderr)
+        return 1
+    if args.artifacts_out and not args.no_duplicate:
+        print(
+            "[determinism-check] --artifacts-out requires --no-duplicate: a binary linked "
+            "from duplicated modules does not behave like the package under test.",
+            file=sys.stderr,
+        )
         return 1
 
     if args.manifest:
@@ -505,15 +538,24 @@ def main() -> int:
 
     concurrent_workers = args.duckc_worker_count if args.duckc_worker_count > 1 else 3
 
-    # Work on a private copy of the package, so that the source tree is
-    # never mutated and concurrently running test cases cannot collide.
     work_dir = make_work_dir()
-    package_dir = work_dir / "duck_modules" / args.module_name
     build_dir = work_dir / "build"
+    # An `--artifacts-out` directory belongs to the caller: it may already hold the
+    # other backend's artifacts, so it is kept and only this backend's are compared.
+    concurrent_build_dir = Path(args.artifacts_out) if args.artifacts_out else build_dir
+    compared_suffixes = {".dbc"} if args.backend == "dvm" else {".o"}
+
+    if args.no_duplicate:
+        package_dir = source_package_dir
+    else:
+        # Work on a private copy of the package, so that the source tree is
+        # never mutated and concurrently running test cases cannot collide.
+        package_dir = work_dir / "duck_modules" / args.module_name
 
     try:
-        shutil.copytree(source_package_dir, package_dir)
-        duplicate_package_modules(package_dir, args.copy_count)
+        if not args.no_duplicate:
+            shutil.copytree(source_package_dir, package_dir)
+            duplicate_package_modules(package_dir, args.copy_count)
 
         ok_single, single_snapshot, single_error = run_once(
             duckc_path=args.duckc_path,
@@ -523,6 +565,7 @@ def main() -> int:
             compile_options=args.compile_options,
             backend=args.backend,
             build_dir=build_dir,
+            suffixes=compared_suffixes,
         )
         if not ok_single:
             print(
@@ -539,7 +582,9 @@ def main() -> int:
             workers=concurrent_workers,
             compile_options=args.compile_options,
             backend=args.backend,
-            build_dir=build_dir,
+            build_dir=concurrent_build_dir,
+            clean=args.artifacts_out is None,
+            suffixes=compared_suffixes,
         )
         if not ok_concurrent:
             print(
@@ -552,7 +597,8 @@ def main() -> int:
         if not single_snapshot and not concurrent_snapshot:
             print(
                 "[determinism-check] No compiled artifacts were produced; cannot perform determinism check.\n"
-                f"Expected at least one .o/.dbc artifact for backend '{args.backend}'.",
+                f"Expected at least one {'/'.join(sorted(compared_suffixes))} artifact "
+                f"for backend '{args.backend}'.",
                 file=sys.stderr,
             )
             return 1

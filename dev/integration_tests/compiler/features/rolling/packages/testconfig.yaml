@@ -27,12 +27,14 @@ case_manifest: "$DIT_TMP_DIR/manifest.json"
 make_manifest: 'sed "s|\([\" ]\)build|\1$DIT_TMP_DIR/build|g" duck_modules/@{Name}/manifest.json > @{case_manifest}'
 
 # The manifest's linking options name the libraries by their path in @{case_build}, so the
-# check has to build there too - see its `--build-dir`.
-compile_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --manifest @{case_manifest} --duckc-worker-count @{duckc_worker_count} --build-dir @{case_build}; else true; fi"
+# check has to build there too - see its `--build-dir`. It checks the packages as they are
+# written, so its concurrent pass leaves exactly the artifacts the case runs.
+compile_deterministically_cmd: "python3 @{compile_determinism_script} --duckc-path @{duckc_path} --manifest @{case_manifest} --duckc-worker-count @{duckc_worker_count} --build-dir @{case_build} --no-duplicate"
 compile_only_cmd:  "@{duckc_path} compile_packages @{case_manifest} -w @{duckc_worker_count} -a @{case_build}"
+compile_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then @{compile_deterministically_cmd}; else @{compile_only_cmd}; fi"
 
 
-PreCase: "mkdir -p @{case_build} && mkdir -p @{case_build_c} && @{copy_std_artifacts} && @{compile_c_object} && @{compile_c_shared} && @{make_manifest} && @{compile_deterministically_cmd} && @{compile_only_cmd}"
+PreCase: "mkdir -p @{case_build} && mkdir -p @{case_build_c} && @{copy_std_artifacts} && @{compile_c_object} && @{compile_c_shared} && @{make_manifest} && @{compile_cmd}"
 
 # Run the LLVM executables, plus the one DVM output that links its dependency.
 Run: "@{case_build}/app1.exe && @{case_build}/app2.exe && @{case_build}/app3.exe && @{case_build}/app3_alias.exe && @{dvm_path} run @{case_build}/app2_dvm_linked.dbc"

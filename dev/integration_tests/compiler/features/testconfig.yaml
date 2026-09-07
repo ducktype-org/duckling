@@ -33,10 +33,17 @@ stderr_regex: ""
 compile_dvm_options: ""
 compile_llvm_options: ""
 std_artifacts_path_flag: "--custom-std-artifacts-path @{case_std_artifacts}"
-# Runs an extra deterministic compile check before normal compile_package.
-# You can override this to "false" in any subtree/test when duplication-based checks fail
-# for test-specific reasons (for example repeated globals or intentionally conflicting symbols).
+# Compiles the package with 1 and with `duckc_worker_count` workers and compares the
+# artifacts. The concurrent pass produces the binary the case runs, so the check costs
+# one extra compile per backend, not two. Override to "false" in any subtree/test that
+# cannot be compiled twice (for example intentionally conflicting symbols).
 enable_conc_deterministic_tests: "true"
+# Duplicates every module x3 in the checked package, so worker threads process identical
+# function bodies in parallel and non-determinism has a chance to show. Such a build links
+# extra copies of every module, whose module-level side effects change what the program
+# prints, so the case binary then comes from its own plain compile - a third compile per
+# backend. Enabled only in the subtrees that carry the concurrency stress.
+determinism_duplicate_sources: "false"
 # Number of duckc worker threads used for compilation and determinism checks.
 duckc_worker_count: "3"
 # Each case occupies that many threads, so the scheduler runs fewer cases at
@@ -51,14 +58,22 @@ compile_determinism_script: "@{dev_dir}/integration_tests/compiler/features/scri
 compare_runs_script: "@{dev_dir}/integration_tests/compiler/features/scripts/compare_runs.py"
 
 module_to_compile: "@{Name}"
-compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
-compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
-
-compile_dvm_backend_cmd:  "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend && @{compile_dvm_backend_deterministically_cmd}"
-compile_llvm_backend_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_llvm_options} && @{compile_llvm_backend_deterministically_cmd}"
+determinism_check_cmd: "python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count}"
+# The check's concurrent pass builds into @{case_build}, so its output is the binary the
+# case runs. It keeps that directory (the other backend's artifacts may already be there)
+# and compares only the current backend's.
+determinism_reuse_flags: "--no-duplicate --artifacts-out @{case_build}"
+determinism_dup_flags: "--copy-count 3"
 
 compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend"
 compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_llvm_options}"
+
+compile_dvm_backend_cmd: "if [ '@{enable_conc_deterministic_tests}' != 'true' ]; then @{compile_dvm_only_cmd};
+  elif [ '@{determinism_duplicate_sources}' = 'true' ]; then @{compile_dvm_only_cmd} && @{determinism_check_cmd} --compile-options='@{compile_dvm_options}' --backend dvm @{determinism_dup_flags};
+  else @{determinism_check_cmd} --compile-options='@{compile_dvm_options}' --backend dvm @{determinism_reuse_flags}; fi"
+compile_llvm_backend_cmd: "if [ '@{enable_conc_deterministic_tests}' != 'true' ]; then @{compile_llvm_only_cmd};
+  elif [ '@{determinism_duplicate_sources}' = 'true' ]; then @{compile_llvm_only_cmd} && @{determinism_check_cmd} --compile-options='@{compile_llvm_options}' --backend llvm @{determinism_dup_flags};
+  else @{determinism_check_cmd} --compile-options='@{compile_llvm_options}' --backend llvm @{determinism_reuse_flags}; fi"
 
 compiled_to_llvm: "@{case_build}/package_llvm.exe"
 compiled_to_dvm: "@{case_build}/package_dvm.dbc"
@@ -72,8 +87,7 @@ PreCase: "mkdir -p @{case_build}; @{copy_std_artifacts};
     dvm)                @{compile_dvm_backend_cmd}                                                                                ;;
     llvm)               @{compile_llvm_backend_cmd}                                                                               ;;
     llvm_valgrind)      @{compile_llvm_backend_cmd}                                                                               ;;
-    all)       @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd} &&
-               @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd}           ;;
+    all)                @{compile_dvm_backend_cmd} && @{compile_llvm_backend_cmd}                                                 ;;
     nobackend) echo 'Backend undefined'; exit 1                                                                          ;;
     *)         echo 'Unknown backend';   exit 1                                                                          ;;
   esac;"
