@@ -160,12 +160,6 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `evalRuntimeExpr` is not implemented.");
 	}
 
-	std::expected<api::Response, api::ApiError> FastVMProcess::getRuntimeExprResult(
-		[[maybe_unused]] api::ThreadID thread_id
-	) {
-		throw vm::VMNotImplemented("Method `getRuntimeExprResult` is not implemented.");
-	}
-
 	std::expected<api::Response, api::StateError> FastVMProcess::getExitCode() {
 		return getMainVMThread().getExitValue();
 	}

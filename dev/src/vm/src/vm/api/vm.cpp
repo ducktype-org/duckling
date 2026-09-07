@@ -78,11 +78,6 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<ExitValue>);
 	}
 
-	std::expected<ExitValue, ApiError> getRuntimeExprResult(PID pid, ThreadID thread_id) {
-		return REQUEST(GetRuntimeExprResult{ .thread_id = thread_id })
-		    .and_then(mapOrWrongResponse<ExitValue>);
-	}
-
 	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args) {
 		return REQUEST(Run{ args }).transform(ignoreResponse);
 	}

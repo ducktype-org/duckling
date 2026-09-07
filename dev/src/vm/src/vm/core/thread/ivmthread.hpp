@@ -190,8 +190,6 @@ namespace vm {
 
 		[[nodiscard]] virtual u64 getNumberOfCurrentStackFrames() const = 0;
 
-		virtual std::expected<api::Response, api::ApiError> getRuntimeExprResult() = 0;
-
 		IVMProcess& getMyProcess() { return my_process; }
 
 		[[nodiscard]] const IVMProcess& getMyProcess() const { return my_process; }

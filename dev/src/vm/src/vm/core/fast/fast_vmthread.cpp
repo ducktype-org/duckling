@@ -30,10 +30,6 @@ vm::fast::FastVMThread::FastVMThread(
 	throw vm::VMNotImplemented("Method `getNumberOfCurrentStackFrames` is not implemented.");
 }
 
-std::expected<api::Response, api::ApiError> vm::fast::FastVMThread::getRuntimeExprResult() {
-	throw vm::VMNotImplemented("Method `getRuntimeExprResult` is not implemented.");
-}
-
 void vm::fast::FastVMThread::run(const std::string& func_name, const RunArguments& args) {
 	// The spawner already committed `Spawn` (see `IVMThread::prepareSpawnLocked`).
 	if (!program->functions.contains(base::StrID(func_name.data())))

@@ -66,10 +66,6 @@ namespace vm::api {
 			fs::File file;
 		};
 
-		struct GetRuntimeExprResult {
-			ThreadID thread_id;
-		};
-
 		struct Join {
 			ThreadID thread_id;
 		};
@@ -180,6 +176,5 @@ namespace vm::api {
 		request::SetBreakpoint,
 		request::MapFileLineToCodeCollectionPosition,
 		request::ExecRuntimeExpr,
-		request::ExecRuntimeExprFromFile,
-		request::GetRuntimeExprResult>;
+		request::ExecRuntimeExprFromFile>;
 }

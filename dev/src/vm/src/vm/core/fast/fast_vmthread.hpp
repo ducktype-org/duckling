@@ -25,8 +25,6 @@ namespace vm::fast {
 
 		[[nodiscard]] u64 getNumberOfCurrentStackFrames() const override;
 
-		std::expected<api::Response, api::ApiError> getRuntimeExprResult() override;
-
 		[[nodiscard]] i64 getExitValue() const;
 
 	protected:

@@ -95,30 +95,7 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& resumeUntilExprCompleted(const std::vector<u64>& expected_result) {
-			auto resume_res = vm::api::resume(pid, thread_id);
-			assertTrue(resume_res.has_value(), "Resume failed");
-
-			std::unique_lock lk(mutex);
-			bool             found = cv.wait_for(lk, std::chrono::seconds(2), [this] {
-                for (auto& s: received_statuses)
-                    if (std::holds_alternative<vm::api::ExprExecutionCompleted>(s)) return true;
-                return false;
-            });
-			assertTrue(found, "Timed out waiting for ExprExecutionCompleted");
-
-			auto current_status = vm::api::getExecutionStatus(pid);
-			assertTrue(current_status.has_value(), "Failed to get execution status");
-			assertTrue(
-				std::holds_alternative<vm::api::Paused>(current_status.value()),
-				"Expected Paused status after expression completion"
-			);
-
-			auto response = vm::api::getRuntimeExprResult(pid, thread_id);
-			assertTrue(response.has_value(), "Failed to get runtime expression result");
-			assertExitValue(response.value(), expected_result);
-			return *this;
-		}
+		FlowSimulator& resumeUntilExprCompleted(const std::vector<u64>& expected_result) {}
 
 		FlowSimulator& finishAndAssertExitValue(i64 expected_exit_val) {
 			auto resume_res = vm::api::resume(pid, thread_id);

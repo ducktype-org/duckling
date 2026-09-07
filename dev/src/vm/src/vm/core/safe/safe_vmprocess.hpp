@@ -192,9 +192,6 @@ namespace vm {
 			api::ThreadID thread_id, const std::variant<fs::File, code::Function>& expr
 		) override;
 
-		std::expected<api::Response, api::ApiError> getRuntimeExprResult(api::ThreadID thread_id
-		) override;
-
 		/**
 		 * @brief Updates the memory for globals of this process after loading a program with new
 		 * globals. Works in incremental way. Only supports adding new globals, not removing or
