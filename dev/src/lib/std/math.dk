@@ -9,7 +9,7 @@
 
 import core.panicking;
 
-# Type minimum is not supported
+# Type minimum is not supported for the integer overloads
 fun abs(x: i32) -> i32 = libm_forward.int_funcs.abs(x);
 fun abs(x: i64) -> i64 = libm_forward.int_funcs.labs(x);
 fun abs(x: f32) -> f32 = libm_forward.basic_ops.fabsf(x);
@@ -356,6 +356,7 @@ namespace impl {
     #}
 
     # Computes absolute value of an integral value
+    # Note that it returnes the same value for the most negative value of the type (e.g. -2^31 for i32)
     template(T: type)
     fun abs(x: T) -> T = {
         if (x < 0 as T) return -x;
@@ -398,8 +399,8 @@ namespace impl {
     # Computes the greatest common divisor of two integers
     template(T: type)
     fun gcd(x: T, y: T) -> T = {
-        var a: T = abs(x);
-        var b: T = abs(y);
+        var a: T = impl.abs:{T}(x);
+        var b: T = impl.abs:{T}(y);
 
         while (b != 0 as T) {
             var t: T = b;
@@ -413,7 +414,7 @@ namespace impl {
     template(T: type)
     fun lcm(x: T, y: T) -> T = {
         if ((x == 0 as T) or (y == 0 as T)) return 0 as T;
-        return abs(x) / gcd:{T}(x, y) * abs(y);
+        return impl.abs:{T}(x) / gcd:{T}(x, y) * impl.abs:{T}(y);
     }
 
     # Performs linear interpolation between a and b based on t.
@@ -421,6 +422,7 @@ namespace impl {
     fun lerp(a: f64, b: f64, t: f64) -> f64 = a + (b - a) * t;
 
     # Computes the number of ways to choose k items from n items without repetition and without order
+    # Wraps on overflow
     template(T: type)
     fun comb(n: T, k: T) -> T = {
         if (k > n or k < 0 as T) return 0 as T;
@@ -431,7 +433,7 @@ namespace impl {
         var result: T = 1 as T;
         var i: T = 1 as T;
         while (i <= k) {
-            result = result * (n - k + i as T);
+            result = result * (n - k + i);
             result = result / i;
             i = i + 1 as T;
         }
@@ -440,6 +442,7 @@ namespace impl {
 
     # Computes the factorial of a non-negative integer n
     # Wraps on overflow
+    # Panics on negative n
     template(T: type)
     fun factorial(n: T) -> T = {
         if (n < 0 as T) panicking.panic();
@@ -454,6 +457,7 @@ namespace impl {
     }
 
     # Computes the number of ways to choose k items from n items without repetition and with order
+    # Wraps on overflow
     template(T: type)
     fun perm(n: T, k: T) -> T = {
         if (k > n or k < 0 as T) return 0 as T;
