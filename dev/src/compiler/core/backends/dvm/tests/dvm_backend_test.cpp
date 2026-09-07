@@ -5,6 +5,7 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
+#include <os_utils/system_libraries.hpp>
 #include <program_lowering_context.hpp>
 #include <tsl/queries.hpp>
 #include <vm_tester_utils.hpp>
@@ -20,14 +21,6 @@
 #include <utility>
 
 using namespace compiler::driver;
-
-namespace {
-#ifdef __APPLE__
-	const std::vector<std::string> SYSTEM_FFI_LIBS{ "libSystem.B.dylib" };
-#else
-	const std::vector<std::string> SYSTEM_FFI_LIBS{ "libc.so.6", "libm.so.6" };
-#endif
-}
 
 class DVMBackendTest final: public VmTestSuite {
 #undef TESTER_CLASS
@@ -51,6 +44,7 @@ public:
 		TESTER_ADD_TEST(backendDependentTest);
 		TESTER_ADD_TEST(allocTest);
 		TESTER_ADD_TEST(ffiTest);
+		TESTER_ADD_TEST(bitwiseOperationsTest);
 		TESTER_ADD_TEST(variantUnitAlternativeTest);
 	}
 
@@ -80,6 +74,7 @@ protected:
 			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
 			{ fs::FilePath(path("modules/alloc/")), "alloc" },
 			{ fs::FilePath(path("modules/ffi/")), "ffi" },
+			{ fs::FilePath(path("modules/bitwise_operations/")), "bitwise_operations" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -99,21 +94,22 @@ private:
 		using namespace compiler;
 
 		vm::code::CodeCollection code;
-		auto                     append_module_to_code = [&](const std::string& module_path) {
-            auto module = driver::test_utils::getModuleIdFromPath(module_path);
-            query::utils::withContextDo([&](query::Context& ctx) {
-                auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-                auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
-                assertTrue(mir_unit.hasValue(), "MIR lowering failed");
+		auto append_module_to_code = [&](const std::string& module_path) {
+			auto module = driver::test_utils::getModuleIdFromPath(module_path);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-                auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
+				auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
+				ASSERT_HAS_VALUE(mir_unit, "MIR lowering failed");
 
-                backend_vm::DVMCodeBuilder m(ctx, base::StrID(module_path), false, false);
-                m.insertLIRUnit(lir_unit);
+				auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
-                code.mergeFrom(m.build());
-            });
+				backend_vm::DVMCodeBuilder m(ctx, base::StrID(module_path), false, false);
+				m.insertLIRUnit(lir_unit);
+
+				code.mergeFrom(m.build());
+			});
 		};
 		for (auto& module_path: module_paths_to_load) append_module_to_code(module_path);
 		append_module_to_code(main_module_path);
@@ -150,7 +146,7 @@ private:
 		i64                                exit_code = 0
 	) {
 		auto code         = getModuleFromPath(module_path, ALL_CORE_MODULES);
-		code.object_files = SYSTEM_FFI_LIBS;
+		code.object_files = { os_utils::systemSharedLibC(), os_utils::systemSharedLibM() };
 		runTestOnVm(code, {}, output, {}, exit_code);
 	}
 
@@ -184,8 +180,8 @@ private:
 				"Expected error message to contain: \"", fail_msg, "\", but got: ", err_str
 			));
 		}
-		const auto validation_result = vm::api::deinitAndValidate(result.pid);
-		ASSERT_HAS_VALUE(validation_result);
+
+		ASSERT_HAS_VALUE(vm::api::kill(result.pid));
 	}
 
 	/**
@@ -217,7 +213,7 @@ private:
 			ASSERT_HAS_VALUE(dvm_variant);
 
 			const auto& unit_dvm_type = program_ctx.getUnitType();
-			ASSERT_TRUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type).has_value());
+			ASSERT_HAS_VALUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type));
 			ASSERT_TRUE(std::ranges::contains(
 				dvm_variant.value().variant_alternatives, typeName(unit_dvm_type)
 			));
@@ -300,6 +296,8 @@ private:
 			"4\n50\n4\n"
 		);
 	}
+
+	void bitwiseOperationsTest() { runTest("bitwise_operations", {}, {}, {}, 0); }
 };
 
 

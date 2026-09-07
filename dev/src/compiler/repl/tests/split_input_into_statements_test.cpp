@@ -20,14 +20,14 @@ public:
 private:
 	void testEmptyInput() {
 		auto result = compiler::repl::splitInputIntoStatements("");
-		assertTrue(result.has_value(), "Expected success for empty input");
+		ASSERT_HAS_VALUE(result, "Expected success for empty input");
 		assertTrue(result->empty(), "Expected no statements for empty input");
 	}
 
 	void testSingleStatement() {
 		auto check_single = [&](std::string_view code) {
 			auto result = compiler::repl::splitInputIntoStatements(code);
-			assertTrue(result.has_value(), "Expected success");
+			ASSERT_HAS_VALUE(result, "Expected success");
 			ASSERT_EQUAL(1UL, result->size());
 			ASSERT_EQUAL(std::string(code), (*result)[0]);
 		};
@@ -47,7 +47,7 @@ private:
 		// two expression statements
 		{
 			auto result = compiler::repl::splitInputIntoStatements("1 + 5;\n2 * 3;");
-			assertTrue(result.has_value(), "Expected success");
+			ASSERT_HAS_VALUE(result, "Expected success");
 			ASSERT_EQUAL(2UL, result->size());
 			ASSERT_EQUAL(std::string("1 + 5;"), (*result)[0]);
 			ASSERT_EQUAL(std::string("2 * 3;"), (*result)[1]);
@@ -57,7 +57,7 @@ private:
 			auto result
 				= compiler::repl::splitInputIntoStatements("var x: i32 = 1;\n1 + 5;\nfun foo() = {}"
 			    );
-			assertTrue(result.has_value(), "Expected success");
+			ASSERT_HAS_VALUE(result, "Expected success");
 			ASSERT_EQUAL(3UL, result->size());
 			ASSERT_EQUAL(std::string("var x: i32 = 1;"), (*result)[0]);
 			ASSERT_EQUAL(std::string("1 + 5;"), (*result)[1]);
@@ -66,7 +66,7 @@ private:
 		// source order preserved for three calls
 		{
 			auto result = compiler::repl::splitInputIntoStatements("foo();\nbar();\nbaz();");
-			assertTrue(result.has_value(), "Expected success");
+			ASSERT_HAS_VALUE(result, "Expected success");
 			ASSERT_EQUAL(3UL, result->size());
 			ASSERT_EQUAL(std::string("foo();"), (*result)[0]);
 			ASSERT_EQUAL(std::string("bar();"), (*result)[1]);
@@ -76,7 +76,7 @@ private:
 		{
 			std::string code   = "fun foo() = {\n    var x: i32 = 1;\n}";
 			auto        result = compiler::repl::splitInputIntoStatements(code);
-			assertTrue(result.has_value(), "Expected success");
+			ASSERT_HAS_VALUE(result, "Expected success");
 			ASSERT_EQUAL(1UL, result->size());
 			ASSERT_EQUAL(code, (*result)[0]);
 		}
@@ -85,7 +85,7 @@ private:
 			auto result = compiler::repl::splitInputIntoStatements(
 				"class Foo {}\nnamespace Bar {}\nfun baz() = {}"
 			);
-			assertTrue(result.has_value(), "Expected success");
+			ASSERT_HAS_VALUE(result, "Expected success");
 			ASSERT_EQUAL(3UL, result->size());
 			ASSERT_EQUAL(std::string("class Foo {}"), (*result)[0]);
 			ASSERT_EQUAL(std::string("namespace Bar {}"), (*result)[1]);
@@ -95,7 +95,7 @@ private:
 		{
 			auto result
 				= compiler::repl::splitInputIntoStatements("const LIMIT: i32 = 100;\nLIMIT * 2;");
-			assertTrue(result.has_value(), "Expected success");
+			ASSERT_HAS_VALUE(result, "Expected success");
 			ASSERT_EQUAL(2UL, result->size());
 			ASSERT_EQUAL(std::string("const LIMIT: i32 = 100;"), (*result)[0]);
 			ASSERT_EQUAL(std::string("LIMIT * 2;"), (*result)[1]);
@@ -104,7 +104,7 @@ private:
 		{
 			std::string code   = "class Point {\n    var x: i32 = 0;\n    var y: i32 = 0;\n}";
 			auto        result = compiler::repl::splitInputIntoStatements(code);
-			assertTrue(result.has_value(), "Expected success");
+			ASSERT_HAS_VALUE(result, "Expected success");
 			ASSERT_EQUAL(1UL, result->size());
 			ASSERT_EQUAL(code, (*result)[0]);
 		}
@@ -116,22 +116,22 @@ private:
 		auto first  = compiler::repl::splitInputIntoStatements(code);
 		auto second = compiler::repl::splitInputIntoStatements(code);
 
-		assertTrue(first.has_value(), "First call must succeed");
-		assertTrue(second.has_value(), "Second call must succeed");
+		ASSERT_HAS_VALUE(first, "First call must succeed");
+		ASSERT_HAS_VALUE(second, "Second call must succeed");
 		ASSERT_EQUAL(first->size(), second->size());
 		for (usize i = 0; i < first->size(); ++i) ASSERT_EQUAL((*first)[i], (*second)[i]);
 
 		auto err1 = compiler::repl::splitInputIntoStatements("{\nfun broken() = {");
 		auto err2 = compiler::repl::splitInputIntoStatements("{\nfun broken() = {");
-		assertTrue(!err1.has_value(), "First error call must fail");
-		assertTrue(!err2.has_value(), "Second error call must fail");
+		ASSERT_NO_VALUE(err1, "First error call must fail");
+		ASSERT_NO_VALUE(err2, "Second error call must fail");
 		ASSERT_EQUAL(err1.error(), err2.error());
 	}
 
 	void testParseError() {
 		auto check_error = [&](std::string_view code, std::string_view label) {
 			auto result = compiler::repl::splitInputIntoStatements(code);
-			assertTrue(!result.has_value(), "Expected parse error: " + std::string(label));
+			ASSERT_NO_VALUE(result, "Expected parse error: " + std::string(label));
 			assertTrue(
 				!result.error().empty(), "Error message must be non-empty: " + std::string(label)
 			);

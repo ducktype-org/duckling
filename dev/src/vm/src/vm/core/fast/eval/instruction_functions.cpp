@@ -86,10 +86,10 @@ IMPL(output_p64) {
 }
 
 IMPL(input_p64) {
-	thread.setProcessStatus(api::Sleeping{});
+	thread.reportAsSleeping();
 	i64 io_value = thread.getMyProcess().getIO().getInput<i64>(thread);
 	WRITE_PLACE(instr.dst, io_value);
-	thread.setProcessStatus(api::Running{});
+	thread.reportAsRunning();
 	PROGRESS_BY(1);
 }
 

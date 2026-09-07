@@ -42,6 +42,8 @@ namespace compiler::repl {
 			bool bracketed_paste_enabled = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED
 		);
 
+		~ReplSession();
+
 		/**
 		 * @brief Load a script file and execute its statements in the current REPL session.
 		 *

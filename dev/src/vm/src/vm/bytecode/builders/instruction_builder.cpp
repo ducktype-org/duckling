@@ -53,7 +53,7 @@ namespace vm::code::builders {
 #define HANDLE_INSTR(opcode) \
 	std::make_pair(base::StrID(#opcode), fromArgs<VM_INSTR_FROM_NAME(opcode)>),
 		static std::unordered_map name_to_factory{
-#include <vm/bytecode/instruction_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.def.hpp>
 		};
 #undef HANDLE_INSTR
 

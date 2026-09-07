@@ -3,6 +3,8 @@
 
 #include <tester/tester.hpp>
 
+#include <sstream>
+
 class TimerTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS TimerTest
