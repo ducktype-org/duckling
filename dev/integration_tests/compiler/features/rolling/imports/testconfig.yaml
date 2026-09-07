@@ -1,0 +1,17 @@
+# Tests for imports
+
+Tests:
+  named_simple_imports:
+    Cases:
+      all:
+        Output:
+          String: "1\n"
+        ExitCode: 0
+
+  unnamed_simple_imports:
+    Cases:
+      all:
+        Output:
+          String: "1\n"
+        ExitCode: 0
+

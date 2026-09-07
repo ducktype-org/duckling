@@ -1,0 +1,18 @@
+# Test configuration for boolean-operators
+# Tests boolean operators (and, or, not, xor) with literals and variables
+
+Tests:
+  boolean_operators_explicit_test:
+    Description: Tests for boolean operators with explicit literals.
+    Cases:
+      all:
+        Output:
+          String: "1\n3\n5\n6\n7\n9\n11\n13\n15\n16\n17\n19\n"
+        ExitCode: 0
+  boolean_operators_variable_test:
+    Description: Tests for boolean operators with variables.
+    Cases:
+      all:
+        Output:
+          String: "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n"
+        ExitCode: 0
