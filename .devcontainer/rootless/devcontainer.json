@@ -18,6 +18,38 @@
 
 	"mounts": [
 		"source=${localWorkspaceFolder}/dockling-dev/home/,target=/home/ubuntu/,type=bind",
-		"source=${localEnv:HOME}/.ssh,target=/home/ubuntu/.ssh,type=bind"
-	]
+		"source=${localEnv:HOME}/.ssh,target=/home/ubuntu/.ssh,type=bind",
+		"source=${localEnv:HOME}/.claude/settings.json,target=/home/ubuntu/.claude/settings.json,type=bind"
+	],
+
+	// A dev container never inherits the host's extensions -- it starts with its own
+	// set -- so everything the toolchain needs has to be listed here. Keep this to what
+	// every engineer building this repo needs.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"llvm-vs-code-extensions.vscode-clangd",
+				"ms-vscode.cpptools",
+				"ms-vscode.cmake-tools",
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"ms-python.debugpy",
+				"github.vscode-github-actions",
+				"anthropic.claude-code"
+			],
+
+			// Container-scoped, so a fresh clone works without anyone hand-editing their
+			// personal settings.
+			"settings": {
+				"cmake.sourceDirectory": "${containerWorkspaceFolder}/dev",
+				"cmake.buildDirectory": "${containerWorkspaceFolder}/dev/build",
+				"clangd.path": "/usr/lib/llvm-19/bin/clangd",
+				"clangd.arguments": [
+					"--header-insertion=never",
+					"--header-insertion-decorators=0"
+				],
+				"C_Cpp.intelliSenseEngine": "disabled"
+			}
+		}
+	}
 }
