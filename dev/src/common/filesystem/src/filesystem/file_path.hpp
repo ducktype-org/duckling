@@ -13,7 +13,6 @@
 MAKE_STRINGIFYABLE_ENUM(fs, u64, PathType,
 	Physical,   ///< Physical path on the filesystem.
 	Virtual,    ///< Virtual path in the virtual filesystem.
-	Temporary,   ///< Temporary path in the system's temporary directory.
 	Relative   ///< Relative path.
 );
 
@@ -168,10 +167,16 @@ namespace fs {
 		[[nodiscard]] bool isPhysical() const noexcept { return type == PathType::Physical; }
 
 		/**
-		 * @brief Checks if this path is temporary.
-		 * @return True if the path is temporary, false otherwise.
+		 * @brief Checks if this path points inside the system's temporary directory.
+		 *
+		 * Being temporary is a property of *where* a path is, not of what kind of path it is:
+		 * the temp directory is an ordinary part of the physical filesystem, so such a path is
+		 * `PathType::Physical` and every physical operation works on it. Use this only to ask
+		 * whether the system may reclaim the file - never to decide how to create or write it.
+		 *
+		 * @return True if the path lies in the system temp directory, false otherwise.
 		 */
-		[[nodiscard]] bool isTemporary() const noexcept { return type == PathType::Temporary; }
+		[[nodiscard]] bool isTemporary() const;
 
 		/**
 		 * @brief Makes this path absolute without canonicalization.
@@ -183,14 +188,14 @@ namespace fs {
 
 		/**
 		 * @brief Checks if the path is absolute.
-		 * @note Virtual/Relative/Temporary paths are always considered absolute.
+		 * @note Virtual paths are always considered absolute; Relative ones never are.
 		 * @return True if the path is absolute, false otherwise.
 		 */
 		[[nodiscard]] bool isAbsolute() const noexcept;
 
 		/**
 		 * @brief Checks if the path is relative.
-		 * @note Virtual/Relative/Temporary paths are never considered relative.
+		 * @note Virtual paths are never considered relative.
 		 * @return True if the path is relative, false otherwise.
 		 */
 		[[nodiscard]] bool isRelative() const noexcept { return !isAbsolute(); }

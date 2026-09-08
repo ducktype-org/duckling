@@ -42,8 +42,6 @@ namespace fs {
 	PathType FilePath::determinePathType(const std::filesystem::path& path) {
 		if (VFS::isVirtualPath(path))
 			return PathType::Virtual;
-		else if (hasTemporaryPrefix(path))
-			return PathType::Temporary;
 		else if (!path.is_absolute())
 			return PathType::Relative;
 		else
@@ -56,6 +54,15 @@ namespace fs {
 			CORE_PANIC("Cannot canonicalize virtual path: " + path.string());
 		}
 		return std::filesystem::canonical(path);
+	}
+
+	bool FilePath::isTemporary() const {
+		if (type == PathType::Virtual) return false;
+		// A relative path is resolved against the working directory first: whether the file
+		// ends up in the temp directory is a question about the file, not about how the path
+		// happened to be spelled.
+		if (type == PathType::Relative) return hasTemporaryPrefix(std::filesystem::absolute(path));
+		return hasTemporaryPrefix(path);
 	}
 
 	bool FilePath::isSymlink() const {

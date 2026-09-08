@@ -4,7 +4,7 @@
 
 case_build_c: "$DIT_TMP_DIR/build_c"
 compile_gcc_sample: "gcc -c -o @{case_build_c}/c_lib.o c_lib.c"
-create_dirs: "mkdir -p @{case_build} && mkdir -p @{case_build_c}"
+create_dirs: "mkdir -p @{case_build_c}"
 PreCase: "@{create_dirs} && @{compile_gcc_sample} && @{duckc_path} compile_package duck_modules/ffi -a @{case_build} -n duck_modules/package_ffi --additional-link-options @{case_build_c}/c_lib.o"
 Run: "@{case_build}/package_llvm.exe"
 

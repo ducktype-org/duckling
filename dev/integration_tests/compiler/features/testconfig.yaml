@@ -68,7 +68,7 @@ compiled_to_dvm: "@{case_build}/package_dvm.dbc"
 PreNode: ""
 
 PostCase: "@{cleanup_tmp_env}"
-PreCase: "mkdir -p @{case_build}; @{copy_std_artifacts};
+PreCase: "@{copy_std_artifacts};
   case '@{backend}' in
     dvm)                @{compile_dvm_backend_cmd}                                                                                ;;
     llvm)               @{compile_llvm_backend_cmd}                                                                               ;;

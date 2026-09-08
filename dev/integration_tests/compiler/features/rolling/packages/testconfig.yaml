@@ -32,7 +32,7 @@ compile_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'tru
 compile_only_cmd:  "@{duckc_path} compile_packages @{case_manifest} -w @{duckc_worker_count} -a @{case_build}"
 
 
-PreCase: "mkdir -p @{case_build} && mkdir -p @{case_build_c} && @{copy_std_artifacts} && @{compile_c_object} && @{compile_c_shared} && @{make_manifest} && @{compile_deterministically_cmd} && @{compile_only_cmd}"
+PreCase: "mkdir -p @{case_build_c} && @{copy_std_artifacts} && @{compile_c_object} && @{compile_c_shared} && @{make_manifest} && @{compile_deterministically_cmd} && @{compile_only_cmd}"
 
 # Run the LLVM executables, plus the one DVM output that links its dependency.
 Run: "@{case_build}/app1.exe && @{case_build}/app2.exe && @{case_build}/app3.exe && @{case_build}/app3_alias.exe && @{dvm_path} run @{case_build}/app2_dvm_linked.dbc"

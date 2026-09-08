@@ -17,7 +17,7 @@ c_compiler: "$(command -v clang-19 || command -v clang)"
 # (no defensive re-extend), and duckc's optimized codegen is the path under test.
 compile_c_object: "@{c_compiler} -O3 -c -o @{case_build_c}/c_lib.o c_lib.c"
 compile_c_shared: "@{c_compiler} -O3 -shared -fPIC -o @{case_build_c}/libc_lib.so c_lib.c"
-create_dirs: "mkdir -p @{case_build} && mkdir -p @{case_build_c}"
+create_dirs: "mkdir -p @{case_build_c}"
 
 ffi_module: "@{Name}"
 compile_package_cmd: "@{duckc_path} compile_package duck_modules/@{ffi_module} -a @{case_build} -n duck_modules/package_@{ffi_module} @{std_artifacts_path_flag}"

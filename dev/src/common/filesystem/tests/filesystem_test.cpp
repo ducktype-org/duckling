@@ -270,8 +270,10 @@ private:
 		// Test default directory getters
 		fs::File temp_default = fs::FilePath::getDefaultTempDirectoryPath();
 		assertTrue(
-			temp_default.getType() == fs::FileType::Temporary, "Default temp dir should be temporary"
+			temp_default.getType() == fs::FileType::Physical,
+			"Default temp dir lives on the physical filesystem"
 		);
+		assertTrue(temp_default.isTemporary(), "Default temp dir should report itself as temporary");
 
 		fs::File virtual_default = fs::FilePath::getDefaultVirtualDirectoryPath();
 		assertTrue(
@@ -337,16 +339,18 @@ private:
 			virtual_folder2.isDirectory(), "Virtual folder should be recreated with override"
 		);
 
-		// Test temp folder creation with unique name
+		// A folder in the temp directory is created by the physical factory like any other:
+		// the temp directory has no factory of its own.
 		auto unique_temp_name
 			= "test_temp_folder_"
 		    + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 		fs::FilePath temp_folder_path = std::filesystem::temp_directory_path() / unique_temp_name;
-		auto         temp_folder      = fs::FileManager::createTempFolder(temp_folder_path);
+		auto         temp_folder      = fs::FileManager::createPhysicalFolder(temp_folder_path);
 		assertTrue(temp_folder.isDirectory(), "Temp folder should be created");
+		assertTrue(temp_folder.isTemporary(), "Folder in the temp dir should report as temporary");
 
 		// Test temp folder with override
-		auto temp_folder2 = fs::FileManager::createTempFolder(temp_folder_path, true);
+		auto temp_folder2 = fs::FileManager::createPhysicalFolder(temp_folder_path, true);
 		assertTrue(temp_folder2.isDirectory(), "Temp folder should be recreated with override");
 
 		// Test folderExists with path
@@ -377,12 +381,12 @@ private:
 			// Expected behavior
 		}
 
-		try {
-			std::ignore = temp_folder_path.toVirtualPath();
-			assertTrue(false, "Should fail to convert temp path to virtual path");
-		} catch (const base::Panic&) {
-			// Expected behavior
-		}
+		// A path in the temp directory is physical, so it virtualizes like any other; only a
+		// relative path has to be made absolute first.
+		assertTrue(
+			fs::VFS::isVirtualPath(temp_folder_path.toVirtualPath()),
+			"Should convert a temp path to a virtual path"
+		);
 
 		try {
 			std::ignore = simple_physical_path.toPhysicalPath();
@@ -492,7 +496,10 @@ private:
 		// Test writeToFile functionality
 		auto temp_file = fs::FileManager::createRandomTempFile("Initial content");
 		assertTrue(temp_file.isFile(), "Temp file was not created correctly");
-		assertTrue(temp_file.getType() == fs::FileType::Temporary, "File should be temporary");
+		assertTrue(
+			temp_file.getType() == fs::FileType::Physical, "Temp file should be a physical file"
+		);
+		assertTrue(temp_file.isTemporary(), "Temp file should report itself as temporary");
 
 		// Test reading content
 		auto content = temp_file.getContent();

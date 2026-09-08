@@ -45,7 +45,7 @@ Tests:
         ExitCode: 1
 
   compile-modules:
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     TimeOut: 3
     Cases:
       two-modules:
@@ -54,7 +54,7 @@ Tests:
 
   comp-time-output:
     # Test compile time output to stderr
-    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    PreCase: "@{copy_std_artifacts}"
     timeout_default: 5
     Run: "@{expect_output} --err-regex '\\[comp-time\\] 3492'
       -- @{duckc_path} compile_modules ./duck_modules/comp_time_output/comp_time_output.dk
