@@ -19,7 +19,10 @@
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
+#include <array>
+#include <set>
 #include <sstream>
+#include <string>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -36,6 +39,7 @@ public:
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
 		TESTER_ADD_TEST(simpleBools);
+		TESTER_ADD_TEST(blockDebugNamesTest);
 		TESTER_ADD_TEST(simpleFunctionCalls);
 		TESTER_ADD_TEST(numericLiteralsTest);
 		TESTER_ADD_TEST(functionParametersTest);
@@ -331,6 +335,73 @@ private:
 			auto& goo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->valueOrThrow();
 			ASSERT_TRUE(goo_mir.validateBlockIDs().isOk());
+		});
+	}
+
+	/**
+	 * @brief Blocks created by the lowering carry a debug name saying what they were generated
+	 * for, and `Function::debugPrint` shows that name right after the block id.
+	 */
+	void blockDebugNamesTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/booleans")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
+			ASSERT_EQUAL(2, functions.size());
+
+			auto collect_names = [](const compiler::mir::Function& function) {
+				std::set<std::string> names;
+				for (const auto block_id: function.block_order) {
+					const auto& block = function.blocks[block_id];
+					if (block.debug_name.has_value()) names.emplace(block.debug_name.value().str());
+				}
+				return names;
+			};
+
+			auto assert_has_name = [this](
+									   const std::set<std::string>& names,
+									   const std::string_view       expected,
+									   const std::string_view       function_name
+								   ) {
+				assertTrue(
+					names.contains(std::string{ expected }),
+					base::strConcat(
+						"Expected a block named `", expected, "` in `", function_name, "`"
+					)
+				);
+			};
+
+			// `foo` is two `if`s in a row, so it only has condition/then/else blocks plus the one
+			// holding `FunctionEnd`.
+			auto& foo_mir
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
+			const auto foo_names = collect_names(foo_mir);
+			for (const std::string_view expected:
+			     { "function_end", "if.cond", "if.then", "if.else" })
+				assert_has_name(foo_names, expected, "foo");
+
+			// Nothing but the lowering creates blocks here, so every block of `foo` is named.
+			for (const auto block_id: foo_mir.block_order)
+				ASSERT_HAS_VALUE(foo_mir.blocks[block_id].debug_name);
+
+			// `goo` ends with an `if ... then ... else` expression, which lowers as a ternary.
+			auto& goo_mir
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->valueOrThrow();
+			const auto                  goo_names = collect_names(goo_mir);
+			static constexpr std::array TERNARY_NAMES
+				= { "ternary.cond", "ternary.then", "ternary.else" };
+			for (const std::string_view expected: TERNARY_NAMES)
+				assert_has_name(goo_names, expected, "goo");
+
+			// The printed MIR shows the name in parentheses after the block id.
+			std::stringstream printed;
+			foo_mir.debugPrint(printed);
+			const auto printed_str = printed.str();
+			assertTrue(
+				printed_str.find("(if.then)") != std::string::npos,
+				base::strConcat("Block name missing from the printed MIR:\n", printed_str)
+			);
 		});
 	}
 
