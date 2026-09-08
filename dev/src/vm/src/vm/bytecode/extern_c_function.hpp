@@ -139,7 +139,7 @@ namespace vm::detail {
 		);                                                                                              \
 		static ResCType       call([[maybe_unused]] u64 _                                               \
 		                               FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_PARAMS, __VA_ARGS__)); \
-		constexpr static void wrapper(std::byte* storage, std::byte* data) {                            \
+		constexpr static void wrapper(byte* storage, byte* data) {                            \
 			/* A templated helper, that calls the function and type checks correctly */                 \
 			[&](auto f) {                                                                               \
 				if constexpr (std::is_void_v<ResCType>) {                                               \

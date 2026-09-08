@@ -440,14 +440,8 @@ namespace vm {
 				u64 block_ref_stack_count
 					= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 				u64 result_value_idx = block_ref_stack_count - arg_count - (is_void ? 0 : 1);
+				const auto result_pointer = frame->local_slot_stack_base[result_value_idx].data;
 
-
-				auto ext_result_destination
-					= OpFuns::readBlockRefFromArg(frame, thread, result_value_idx);
-				auto result_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
-
-				// Prepare arguments and call the function.
-				byte* result_pointer = result_view.getBegin();
 				byte* args_pointer
 					= result_pointer
 				    + (is_void ? 0 : ext_func->result_types.at(0)->getSize().asInt());

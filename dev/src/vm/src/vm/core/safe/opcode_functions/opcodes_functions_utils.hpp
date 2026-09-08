@@ -12,7 +12,7 @@
 namespace vm {
 	template<typename EntryT>
 	class GenericBlock;
-	using Block = GenericBlock<std::byte>;
+	using Block = GenericBlock<byte>;
 }
 
 /**
@@ -22,8 +22,8 @@ namespace vm {
  * @param arg - the mentioned argument
  */
 [[gnu::always_inline]]
-inline static std::byte* getBytePtrFromPlaceArg(
-	std::byte* local_stack, std::byte* global_buffer, u64 arg
+inline static byte* getBytePtrFromPlaceArg(
+	byte* local_stack, byte* global_buffer, u64 arg
 ) {
 	// Extract the highest bit.
 	bool is_global = (arg >> 63) != 0;
@@ -31,7 +31,7 @@ inline static std::byte* getBytePtrFromPlaceArg(
 	// Mask out the highest bit to get the offset.
 	u64 offset = arg & ~(1ULL << 63);
 	// The compiler will turn this ternary into a fast, branchless `cmov`.
-	std::byte* base = is_global ? global_buffer : local_stack;
+	byte* base = is_global ? global_buffer : local_stack;
 	return base + offset;
 }
 
@@ -41,7 +41,7 @@ inline static std::byte* getBytePtrFromPlaceArg(
  */
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
-inline static T readFromPlace(std::byte* local_stack, std::byte* global_buffer, u64 place_arg) {
+inline static T readFromPlace(byte* local_stack, byte* global_buffer, u64 place_arg) {
 	return vm::safeReadPointerBytes<T>(getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg)
 	);
 }
@@ -53,7 +53,7 @@ inline static T readFromPlace(std::byte* local_stack, std::byte* global_buffer, 
 template<typename T>
 [[gnu::always_inline]]
 inline static void writeToPlace(
-	std::byte* local_stack, std::byte* global_buffer, u64 place_arg, const T& value
+	byte* local_stack, byte* global_buffer, u64 place_arg, const T& value
 ) {
 	vm::safeWriteBytes<T>(getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg), value);
 }

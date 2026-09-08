@@ -249,7 +249,7 @@ namespace vm::loader::parser {
 			return { T{ 0 }, 0 };
 		}
 
-		std::pair<std::array<std::byte, 8>, Bits> parseHexLiteral(F8ParserState& state) {
+		std::pair<std::array<byte, 8>, Bits> parseHexLiteral(F8ParserState& state) {
 			const auto& token = state.tokens().peek();
 
 			if (!token.isNumLiteralGroup()) {
@@ -299,7 +299,7 @@ namespace vm::loader::parser {
 			}
 
 			usize                    bit_length = str.size() * 4;
-			std::array<std::byte, 8> bytes{};
+			std::array<byte, 8> bytes{};
 			std::memcpy(bytes.data(), &value, 8);
 
 			return { bytes, Bits(bit_length) };

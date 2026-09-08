@@ -524,7 +524,7 @@ DEF_MICRO_INSTR(output_p32, vm::low::opargs::Place32)
 DEF_MICRO_INSTR(setVTable_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
 // deinitialises vtable pointer
 DEF_MICRO_INSTR(resetVTable_pptr, vm::low::opargs::PlacePtr)
-// tries to cast pointed object to its subclass, requires that ext_64 is next
+// tries to cast pointed object to its subclass, requires that ext_type is next
 DEF_MICRO_INSTR(downcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
 // Requires `ext_imm` holding the local stack distance, see `call_func`

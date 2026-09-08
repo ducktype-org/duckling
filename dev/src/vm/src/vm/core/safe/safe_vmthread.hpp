@@ -60,15 +60,15 @@ namespace vm {
 		Frame* frame_stack_end;        /// Pointer to the first value not allocated.
 		Frame* frame_stack_current;    /// Pointer to the current frame - used only when debugging.
 
-		std::byte* local_stack_base;   /// Pointer to the start of `local_stack_reserved`.
-		std::byte* local_stack_end;    /// Pointer to the first value not allocated.
+		byte* local_stack_base;   /// Pointer to the start of `local_stack_reserved`.
+		byte* local_stack_end;    /// Pointer to the first value not allocated.
 
 		Block** block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
 		Block** block_ref_stack_end;   /// Pointer to the first value not allocated.
 
 		LocalSlot* slot_stack_base;    /// Pointer to the start of the local variable slot stack.
 
-		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
+		byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
 		RuntimeData(Ref<ThreadStack> stack, GlobalBufferPointersByte global_buffer_pointers):
@@ -287,6 +287,6 @@ namespace vm {
 	 * @param instr - the first instruction that to be executed
 	 */
 	void runInterpreter(
-		const MicroInstruction* instr, std::byte*& local_stack, Frame*& frame, SafeVMThread& thread
+		const MicroInstruction* instr, byte*& local_stack, Frame*& frame, SafeVMThread& thread
 	);
 }

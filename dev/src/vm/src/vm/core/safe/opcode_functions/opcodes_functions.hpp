@@ -101,7 +101,7 @@ namespace vm {
 		 * knowing it at compile time zeroes with a plain store instead of a call.
 		 */
 		static void pushLocalSlot(
-			Frame* frame, TypeCRef type, std::byte* data, u64 zeroed_size, Block* block
+			Frame* frame, TypeCRef type, byte* data, u64 zeroed_size, Block* block
 		) {
 			CORE_ASSERT(
 				zeroed_size == type->getSize().asInt(),
@@ -182,7 +182,7 @@ namespace vm {
 			void
 			performFunctionCall(
 				const MicroInstruction*& instr,
-				std::byte*&              local_stack,
+				byte*&              local_stack,
 				Frame*&                  frame,
 				SafeVMThread&            thread,
 				usize                    function_id,
@@ -260,7 +260,7 @@ namespace vm {
 #endif
 			void
 			performInit(
-				std::byte*&   local_stack,
+				byte*&   local_stack,
 				Frame*&       frame,
 				SafeVMThread& thread,
 				u64           byte_offset,

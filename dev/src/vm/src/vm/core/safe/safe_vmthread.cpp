@@ -91,7 +91,7 @@ namespace vm {
 		if (opcode != low::MicroOpcode::breakpoint) return opcode;
 
 		auto&      micro_func     = *frame->current_function;
-		const auto low_instr_idx  = (usize) (frame->return_address - micro_func.bc.data());
+		const auto low_instr_idx  = static_cast<usize>(frame->return_address - micro_func.bc.data());
 		const auto original_instr = micro_func.orig_bc[low_instr_idx];
 
 		return getInstructionOpcode(original_instr);
@@ -107,7 +107,7 @@ namespace vm {
 	void SafeVMThread::executeOneStep() {
 		Frame*     frame       = runtime_data.frame_stack_current;
 		auto*      instr       = frame->return_address;
-		std::byte* local_stack = frame->local_stack;
+		byte* local_stack = frame->local_stack;
 
 		const low::MicroOpcode opcode = getCurrentOpcode();
 
@@ -439,7 +439,7 @@ namespace vm {
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
 	void runInterpreter(
-		const MicroInstruction* instr, std::byte*& local_stack, Frame*& frame, SafeVMThread& thread
+		const MicroInstruction* instr, byte*& local_stack, Frame*& frame, SafeVMThread& thread
 	) {
 #ifdef USE_TAIL_CALLS
 		return instr->tc_opfun(instr, local_stack, frame, thread);
@@ -490,7 +490,7 @@ namespace vm {
 		Frame*     frame          = runtime_data.frame_stack_current;
 		Frame*     orig_frame_ptr = frame;
 		Frame      orig_frame_cpy = *runtime_data.frame_stack_current;
-		std::byte* local_stack    = frame->local_stack;
+		byte* local_stack    = frame->local_stack;
 		if (local_stack == nullptr) local_stack = runtime_data.local_stack_base;
 		auto orig_block_stack_size
 			= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);

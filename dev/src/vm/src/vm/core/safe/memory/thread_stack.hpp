@@ -50,5 +50,5 @@ namespace vm {
 		auto getSlotStack() -> Ref<std::vector<LocalSlot>> { return &slot_stack; }
 	};
 
-	using ThreadStack = GenericThreadStack<std::byte>;
+	using ThreadStack = GenericThreadStack<byte>;
 }

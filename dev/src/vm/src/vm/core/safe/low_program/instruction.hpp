@@ -21,11 +21,11 @@
  * in the main switch function we need to pass the pointers by reference.
  */
 #define OPFUN_TC_ARGS                                                                        \
-	[[maybe_unused]] const MicroInstruction *instr, [[maybe_unused]] std::byte *local_stack, \
+	[[maybe_unused]] const MicroInstruction *instr, [[maybe_unused]] byte *local_stack, \
 		[[maybe_unused]] Frame *frame, [[maybe_unused]] SafeVMThread &thread
 
 #define OPFUN_REF_ARGS                                                                         \
-	[[maybe_unused]] const MicroInstruction *&instr, [[maybe_unused]] std::byte *&local_stack, \
+	[[maybe_unused]] const MicroInstruction *&instr, [[maybe_unused]] byte *&local_stack, \
 		[[maybe_unused]] Frame *&frame, [[maybe_unused]] SafeVMThread &thread
 
 

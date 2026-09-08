@@ -332,7 +332,7 @@ namespace vm {
 		 * somewhere else.
 		 */
 		void runObjectDestructor(base::TypedModRawView<EntryT> data, TypeCRef type)
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			switch (type->getKind()) {
 			case Type::Kind::Pointer: {
 				const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
@@ -364,7 +364,7 @@ namespace vm {
 		 * somewhere else.
 		 */
 		void runObjectCopyConstructor(base::TypedModRawView<EntryT> data, TypeCRef type)
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			switch (type->getKind()) {
 			case Type::Kind::Pointer: {
 				const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
@@ -549,7 +549,7 @@ namespace vm {
 		 * what its slot recorded. Both the executor and the debug adapter go through here.
 		 */
 		auto createLocalSlotBlock(Frame& frame, u64 slot_index)
-			-> Ref<BlockT> requires std::is_same_v<EntryT, std::byte> {
+			-> Ref<BlockT> requires std::is_same_v<EntryT, byte> {
 			const LocalSlot& slot = frame.local_slot_stack_base[slot_index];
 
 			auto block = adoptDummy(slot.type, slot.data);
@@ -693,7 +693,7 @@ namespace vm {
 
 		[[nodiscard]]
 		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			increaseBlockRefcount(block);
 			return { block, offset };
 		}
@@ -701,7 +701,7 @@ namespace vm {
 		[[nodiscard]]
 		static constexpr
 			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 entry_count)
-				-> base::TypedModRawView<std::byte> requires std::is_same_v<EntryT, std::byte> {
+				-> base::TypedModRawView<byte> requires std::is_same_v<EntryT, byte> {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (pointer.offset + entry_count > pointer.block->data.view.size())
@@ -713,7 +713,7 @@ namespace vm {
 		[[nodiscard]]
 		static constexpr
 			__attribute__((always_inline)) auto getRemainingPointerData(Pointer pointer)
-				-> base::TypedModRawView<std::byte> requires std::is_same_v<EntryT, std::byte> {
+				-> base::TypedModRawView<byte> requires std::is_same_v<EntryT, byte> {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (pointer.offset > pointer.block->data.view.size())
@@ -728,7 +728,7 @@ namespace vm {
 		 * that it is the type of the blocks pointed-to by `dst` and `src`.
 		 */
 		auto copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
 			const usize entry_count = type->getSize().asInt();
@@ -761,12 +761,12 @@ namespace vm {
 		}
 
 		auto destroyBlockReference(Pointer pointer) -> void
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			if_opt_some(pointer.block.toOpt(), block) { decreaseBlockRefcount(block); }
 		}
 
 		auto updatePointerAssignment(Pointer dst, Pointer src) -> Pointer
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			if (dst.block != src.block) {
 				destroyBlockReference(dst);
 				if_opt_some(src.block.toOpt(), block) { increaseBlockRefcount(block); }
@@ -793,12 +793,12 @@ namespace vm {
 		}
 	};
 
-	using Memory                   = GenericMemory<std::byte>;
-	using GlobalBufferPointersByte = GlobalBufferPointers<std::byte>;
+	using Memory                   = GenericMemory<byte>;
+	using GlobalBufferPointersByte = GlobalBufferPointers<byte>;
 
 	// The member specialization is defined in initialization_from_const.cpp. It must be declared
 	// here so it is visible in every TU before the explicit instantiation of
-	// GenericMemory<std::byte> (in memory.cpp) and any implicit instantiation ([temp.expl.spec]).
+	// GenericMemory<byte> (in memory.cpp) and any implicit instantiation ([temp.expl.spec]).
 	template<>
 	void Memory::initializeBlockFromConstValue(
 		Ref<Block> block, const code::ConstantValue& const_value
@@ -807,5 +807,5 @@ namespace vm {
 	// Suppress implicit instantiation in every TU that uses `Memory`; the members are emitted once
 	// by the explicit instantiation definition in memory.cpp. Must come after the member
 	// specialization declaration above.
-	extern template class GenericMemory<std::byte>;
+	extern template class GenericMemory<byte>;
 }

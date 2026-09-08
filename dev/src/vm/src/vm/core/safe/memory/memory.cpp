@@ -50,5 +50,5 @@ namespace vm {
 	}
 
 	// Explicit instantiation for the real memory module
-	template class GenericMemory<std::byte>;
+	template class GenericMemory<byte>;
 }

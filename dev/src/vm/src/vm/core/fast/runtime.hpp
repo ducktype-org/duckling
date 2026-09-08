@@ -45,14 +45,14 @@ namespace vm::fast {
 		Frame* top_frame = frame_stack.data();
 
 	public:
-		std::byte* const local_stack_base
+		byte* const local_stack_base
 			= local_stack_memory->data.data();  /// Pointer to the start of the local stack.
-		std::byte* const local_stack_end
+		byte* const local_stack_end
 			= local_stack_memory->data.data()
 		    + LOCAL_STACK_SIZE;  /// Pointer to the end of the local stack.
 
 		// @TODO: #2729 This should be a valid pointer.
-		std::byte* const global_data_buffer_base = nullptr;
+		byte* const global_data_buffer_base = nullptr;
 
 		Frame* pushFrame(const exec::ExecFunction* function, byte* local_stack_base) {
 			top_frame++;
