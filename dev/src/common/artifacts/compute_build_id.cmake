@@ -54,6 +54,24 @@ endforeach()
 string(SHA256 ARTIFACTS_BUILD_ID "${ACCUMULATED}")
 
 file(MAKE_DIRECTORY "${GEN_DIR}/artifacts")
+
+# artifacts_build_id is an ALL target, so it re-runs on every build - and more
+# than one build tool can be working in the same build tree at the same time
+# (ctest runs the build_<pack>_tests targets in parallel). configure_file()
+# stages its output through a fixed `build_id.hpp.tmp` next to the header, so
+# without a lock one process removes that staging file while another is still
+# copying it and the build dies with `configure_file ... No such file or
+# directory`. Serialise the write; the id itself is the same in every process.
+file(LOCK "${GEN_DIR}/artifacts/build_id.lock"
+	GUARD PROCESS
+	TIMEOUT 120
+	RESULT_VARIABLE BUILD_ID_LOCK_ERROR
+)
+if(BUILD_ID_LOCK_ERROR)
+	message(FATAL_ERROR
+		"Could not lock ${GEN_DIR}/artifacts/build_id.lock: ${BUILD_ID_LOCK_ERROR}")
+endif()
+
 configure_file(
 	"${TEMPLATE}"
 	"${GEN_DIR}/artifacts/build_id.hpp"
