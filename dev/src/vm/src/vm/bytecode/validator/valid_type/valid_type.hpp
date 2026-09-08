@@ -159,6 +159,18 @@ namespace vm::code::valid_type {
 		 */
 		[[nodiscard]] bool isFFICompliant() const;
 
+		/**
+		 * @brief Whether an object of this type holds a pointer, directly or through a field or a
+		 * table element, and so has references to drop when it leaves scope. This is what decides
+		 * whether a scope exit is lowered to `deinit` or to `deinitDtor`.
+		 *
+		 * @note A variant reports `false`: it delegates its cleanup to its nested block, which
+		 * `Memory::runObjectDestructor` relies on. A dynamic table also reports `false` - it is
+		 * uninstantiable, so it can never be a local, and is only ever reached through a pointer.
+		 * @note HoldsPointerReferences != TriviallyCopyable != FFICompliant
+		 */
+		[[nodiscard]] bool holdsPointerReferences() const;
+
 	private:
 		/**
 		 * @brief Helper function for finalize. Sets is_instantiable.
@@ -189,6 +201,11 @@ namespace vm::code::valid_type {
 		 * @brief For more information read docs of `isFFICompliant`.
 		 */
 		bool is_ffi_compliant = false;
+
+		/**
+		 * @brief For more information read docs of `holdsPointerReferences`.
+		 */
+		bool holds_pointer_references = false;
 
 		TypeSize size = TypeSize(Bytes(0), 0);
 

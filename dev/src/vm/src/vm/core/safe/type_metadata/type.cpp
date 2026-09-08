@@ -173,18 +173,16 @@ namespace vm {
 		state = State::Finalizing;
 		defer(state = State::Finalized);
 
+		// Whether a type has references to release is decided by the validator, which is the
+		// source of truth for it, and read from there by the lowering.
 		variant_match(kind) {
-			variant_case(kind::Pointer, _) { this->has_destructors = true; }
 			variant_case(kind::FixedSizeTable, fixed_size_table) {
 				fixed_size_table.inner_type->finalize();
 				this->size
 					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
-				this->has_destructors = fixed_size_table.inner_type->hasDestructors();
 			}
 			variant_case(kind::Data, data) {
 				for (auto& field: data.fields) field.type->finalize();
-				for (auto& field: data.fields)
-					this->has_destructors |= field.type->hasDestructors();
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}

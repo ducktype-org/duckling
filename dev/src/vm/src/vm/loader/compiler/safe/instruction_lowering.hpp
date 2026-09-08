@@ -189,9 +189,14 @@ namespace vm::loader::compiler::safe::detail {
 		}
 
 		TypeCRef resolveTypeName(base::StrID type_name) const {
-			code::valid_type::ValidTypeID type_id
-				= compiler.high_program.getTypeContext().getCurrentTypes().at(type_name)->getID();
-			return compiler.getLowProgram()->getTypes().at(TypeID(type_id.asInt()));
+			return compiler.getLowProgram()->getTypes().at(
+				TypeID(validTypeName(type_name)->getID().asInt())
+			);
+		}
+
+		/// The validated type, which is where the per-type capability flags live.
+		CRef<code::valid_type::ValidType> validTypeName(base::StrID type_name) const {
+			return compiler.high_program.getTypeContext().getCurrentTypes().at(type_name);
 		}
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
@@ -255,7 +260,7 @@ namespace vm::loader::compiler::safe::detail {
 		void addDeinitOfVariable(usize idx) {
 			const auto& db = ctx.function.local_stack;
 
-			if (resolveTypeName(db.getTypeName(curr_state, idx).value())->hasDestructors())
+			if (validTypeName(db.getTypeName(curr_state, idx).value())->holdsPointerReferences())
 				addLow<Op_deinitDtor>();
 			else
 				addLow<Op_deinit>();

@@ -163,7 +163,8 @@ private:
 	}
 
 	/**
-	 * @brief `Type::hasDestructors` recurses into structures and tables, so a pointer held inside
+	 * @brief `ValidType::holdsPointerReferences` recurses into structures and tables, so a pointer
+	 * held inside
 	 * one still gets its scope exit lowered to `deinitDtor`.
 	 */
 	void pointersNestedInAggregatesAreFound() {
