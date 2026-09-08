@@ -1,0 +1,5 @@
+Tests:
+  sample_duck:
+    Cases:
+      all:
+        ExitCode: 3

@@ -1,5 +1,7 @@
 #include "vm.hpp"
 
+#include <base/extend_cpp/variant_match.hpp>
+
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/thread_id.hpp>
@@ -106,6 +108,9 @@ namespace vm::api {
 		return REQUEST(Input{ input }).transform(ignoreResponse);
 	}
 
+	/**
+	 * @brief Retrieves the output and clears it.
+	 */
 	std::expected<response::Output, ApiError> output(PID pid) {
 		return REQUEST(Output{}).and_then(mapOrWrongResponse<response::Output>);
 	}
@@ -158,6 +163,19 @@ namespace vm::api {
 
 	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid) {
 		return REQUEST(DeinitAndValidate{}).and_then(mapOrWrongResponse<response::Boolean>);
+	}
+
+	std::expected<base::Optional<response::Boolean>, ApiError> deinitOrKill(PID pid) {
+		// If the process was validated successfully we return the validation result.
+		const auto validated = deinitAndValidate(pid);
+		if (validated) return base::Optional<response::Boolean>{ validated.value() };
+
+		// A deinit which panicked in a global destructor already destroyed the process.
+		if (v_matches(validated.error(), Panicked)) return base::Optional<response::Boolean>{};
+
+		// Otherwise the deinit was refused, so we force kill it. The process might have
+		// been still running or finished with Stopped or Panicked.
+		return kill(pid).transform([] { return base::Optional<response::Boolean>{}; });
 	}
 
 	std::expected<void, ApiError> attachStatusListener(

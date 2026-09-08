@@ -33,7 +33,7 @@ private:
 	}
 
 	void tooLarge() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("too_large.dbc", "", "9223372036854775808"),
 			vm::exceptions::VMMemoryAllocationError::ERR_MSG
 		);
@@ -47,14 +47,14 @@ private:
 
 	void fstToDyn() {
 		runTestOnVm("fst_to_dyn.dbc", "0", "42", {});
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("fst_to_dyn.dbc", "1"),
 			vm::exceptions::VMOutOfBlockBoundsException::ERR_MSG
 		);
 	}
 
 	void reallocOnFst() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("realloc_on_fst.dbc", ""),
 			vm::exceptions::VMDynTableReAllocTypeMismatch::ERR_MSG
 		);

@@ -119,7 +119,7 @@ private:
 		auto file = writeTempDbc(name, bytecode);
 		auto load = vm::api::loadFiles(initProcess(), { file });
 		ASSERT_NO_VALUE(load);
-		ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(load.error()));
+		ASSERT_MATCHES(load.error(), vm::api::LoadProgramError);
 		auto why = std::get<vm::api::LoadProgramError>(load.error()).why;
 		std::cerr << why << '\n';
 		for (auto keyword: keywords)
@@ -300,7 +300,7 @@ private:
 		);
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessed null CPointer");
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
 	}
 
 	// The same for the raw byte copy.
@@ -320,7 +320,7 @@ private:
 		);
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessed null CPointer");
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
 	}
 
 	// `cmpNull_pcptr` sets the flag on a null cpointer (default-initialized here) and clears it
@@ -1386,7 +1386,7 @@ private:
 		);
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessing null pointer");
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessing null pointer");
 	}
 
 	void duplicateFfiFunctionFails() {
@@ -1399,7 +1399,7 @@ private:
 
 		auto second = vm::api::loadFiles(pid, { file });
 		ASSERT_NO_VALUE(second);
-		ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(second.error()));
+		ASSERT_MATCHES(second.error(), vm::api::LoadProgramError);
 		auto why = std::get<vm::api::LoadProgramError>(second.error()).why;
 		std::cerr << why << '\n';
 		assertTrue(
