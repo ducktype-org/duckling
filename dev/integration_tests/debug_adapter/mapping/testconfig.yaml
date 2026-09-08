@@ -1,6 +1,34 @@
+# Debugging a `.dk` program compiles its package in place: duckc writes
+# `duck_build/` next to the root module, and the debug adapter then looks for the
+# artifacts at exactly `dirname(program)/duck_build/` (see `loadDefault` in
+# vm/debugger/debugger.cpp), so `-a` cannot move them elsewhere. Compiling the
+# copy in `examples/` would therefore leave build artifacts in the source tree
+# and make concurrent cases share one `duck_build/`. Each case gets a private
+# copy of the package under its own scratch directory instead, and the runner is
+# handed that copy as its second argument.
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+
+example_package: "../examples/simple"
+case_package: "$DIT_TMP_DIR/simple"
+
+# `duck_build/` is created here, not by duckc: under /tmp the compiler's VFS calls the path
+# temporary rather than physical and panics when it has to create the artifacts folder itself
+# (#3398, `requirePhysicalPath` in common/filesystem/file.cpp). It only creates the folder when
+# it is missing, so pre-creating it side-steps that - the same trick the compiler tests use for
+# their `case_build`. The copy also must not carry a `duck_build/` that an older revision of
+# this test left in the source tree: the case compiles from scratch rather than inheriting some
+# other compiler's artifacts.
+PreCase: "cp -r @{example_package} @{case_package}
+  && rm -rf @{case_package}/duck_build && mkdir -p @{case_package}/duck_build"
+PostCase: "@{cleanup_tmp_env}"
+
+# The program the case debugs - the copy, never the original under `examples/`.
+program: "@{case_package}/simple.dk"
+
 Tests:
   debug_mapping:
-    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir}"
+    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir} @{program}"
     TimeOut: 3
     Cases:
       mapping: { }
