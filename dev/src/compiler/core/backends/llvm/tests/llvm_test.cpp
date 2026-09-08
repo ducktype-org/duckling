@@ -173,7 +173,7 @@ private:
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 7, 8); }
+	void classTest() { runTestForModule("modules/classes/records", 7, 9); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 
@@ -245,18 +245,21 @@ private:
 		auto        llvm_module = getLLVMModuleFromPath("modules/static_arrays");
 		std::string ir          = llvm_module.dumpLLVMToString();
 
-		// Was [11 x i32] type found.
-		assertTrue(
-			std::regex_search(ir, std::regex{ R"(\[11\s+x\s+i32\])" }),
-			"Expected array type [11 x i32]"
-		);
-		assertTrue(
-			std::regex_search(
-				ir,
-				std::regex{ R"(call\s+void\s+@llvm\.memset[^\n]*i8\s+0,\s+i64\s+44,\s+i1\s+false)" }
-			),
-			"Expected zero-initialization of i32[11]"
-		);
+		auto function_ir = [&](const std::string& name) -> std::string {
+			std::smatch      header_match;
+			const std::regex header_regex{ "define[^\\n]*" + name + "[^\\n]*\\{" };
+			if (not std::regex_search(ir, header_match, header_regex)) {
+				assertTrue(false, "Expected LLVM definition of " + name);
+				return {};
+			}
+
+			const auto begin = static_cast<std::string::size_type>(header_match.position());
+			const auto end   = ir.find("\n}", begin);
+			assertTrue(end != std::string::npos, "Expected end of LLVM definition of " + name);
+			return ir.substr(begin, end == std::string::npos ? 0 : end - begin + 2);
+		};
+
+		// Was [10 x i32] type found.
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(alloca\s+\[99000\s+x\s+i64\])" }),
 			"Expected array type [99000 x i64]"
@@ -304,6 +307,80 @@ private:
 				ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+%\w+,\s+i32\s+1)" }
 			),
 			"Expected GEP for struct field access in array: points[1].y"
+		);
+
+		const std::string large_copy_ir = function_ir("large_array_copy_test");
+		assertTrue(
+			std::regex_search(
+				large_copy_ir,
+				std::regex{ R"(call\s+void\s+@llvm\.memmove[^\n]*i64\s+792000,\s+i1\s+false)" }
+			),
+			"Expected the 99000-element array copy to use a 792000-byte memmove"
+		);
+		assertFalse(
+			std::regex_search(large_copy_ir, std::regex{ R"((load|store)\s+\[99000\s+x\s+i64\])" }),
+			"Large array copy must not use a whole-aggregate load or store"
+		);
+
+		const std::string large_sink_ir = function_ir("large_array_sink");
+		assertTrue(
+			std::regex_search(
+				large_sink_ir,
+				std::regex{
+					R"(define[^\n]*large_array_sink[^\n]*\(ptr[^,\n]*byval\(\[99000\s+x\s+i64\]\))" }
+			),
+			"Expected a large array parameter to use ptr byval([99000 x i64])"
+		);
+		assertFalse(
+			std::regex_search(large_sink_ir, std::regex{ R"(load\s+\[99000\s+x\s+i64\])" }),
+			"A byval array parameter must not be loaded as one aggregate"
+		);
+
+		const std::string large_identity_ir = function_ir("large_array_identity");
+		assertTrue(
+			std::regex_search(
+				large_identity_ir,
+				std::regex{
+					R"(define\s+void[^\n]*large_array_identity[^\n]*\(ptr[^,\n]*sret\(\[99000\s+x\s+i64\]\)[^,\n]*,\s*ptr[^,\n]*byval\(\[99000\s+x\s+i64\]\))" }
+			),
+			"Expected a hidden sret result followed by a byval array parameter"
+		);
+		assertTrue(
+			std::regex_search(
+				large_identity_ir,
+				std::regex{ R"(call\s+void\s+@llvm\.memmove[^\n]*i64\s+792000,\s+i1\s+false)" }
+			),
+			"Expected a large returned array to be copied into sret storage"
+		);
+		assertFalse(
+			std::regex_search(
+				large_identity_ir, std::regex{ R"((load|store)\s+\[99000\s+x\s+i64\])" }
+			),
+			"A large returned array must stay in memory"
+		);
+
+		const std::string large_forward_ir = function_ir("large_array_forward");
+		assertTrue(
+			std::regex_search(
+				large_forward_ir,
+				std::regex{
+					R"(define\s+void[^\n]*large_array_forward[^\n]*\(\s*ptr[^,\n]*sret\(\[99000\s+x\s+i64\]\)[^,%\n]*(%[-A-Za-z0-9$._]+),[^\n]*\)[^{]*\{[\s\S]*?call\s+void[^\n]*large_array_identity[^\n]*\(\s*ptr[^,\n]*sret\(\[99000\s+x\s+i64\]\)[^,%\n]*\1,\s*ptr[^,\n]*byval\(\[99000\s+x\s+i64\]\))" }
+			),
+			"Expected the nested call to receive the outer function's sret destination directly"
+		);
+		assertFalse(
+			std::regex_search(large_forward_ir, std::regex{ R"(alloca\s+\[99000\s+x\s+i64\])" }),
+			"Forwarding a large call result must not allocate an intermediate array"
+		);
+		assertFalse(
+			std::regex_search(
+				large_forward_ir, std::regex{ R"((load|store)\s+\[99000\s+x\s+i64\])" }
+			),
+			"A forwarded large result must not become an aggregate LLVM value"
+		);
+		assertFalse(
+			std::regex_search(large_forward_ir, std::regex{ R"(@llvm\.(memcpy|memmove))" }),
+			"Forwarding an sret destination must not copy the aggregate"
 		);
 	}
 
