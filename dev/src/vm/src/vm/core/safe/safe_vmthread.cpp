@@ -527,7 +527,8 @@ namespace vm {
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
 			const usize slot_index = orig_slot_stack_size + idx;
 			// A result the callee never took a block for still has to be handed out as a
-			// pointer, so it gets one here.
+			// pointer, so it gets one here. This is the common case, not a rare one -
+			// `vm_sc_unit_test` panics if the block is assumed to exist.
 			Block* block = frame->local_slot_stack_base[slot_index].block;
 			if (block == nullptr)
 				block = process_memory.createLocalSlotBlock(*frame, slot_index).get();
@@ -537,7 +538,9 @@ namespace vm {
 			);
 		}
 
-		// Free the remaining data on the stack
+		// Free the remaining data on the stack. The start functions emit their own
+		// instructions, so they can leave locals live above the return values; asserting that
+		// nothing is left deadlocks `vm_sc_threads_test`.
 		for (usize idx = orig_slot_stack_size;
 		     idx < usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
 		     idx++) {
