@@ -247,8 +247,17 @@ namespace vm::loader::compiler::safe::detail {
 			}(static_cast<T::ArgTypes*>(nullptr));
 		}
 
-		void addDeinitOfTopVariable() {
-			auto idx =
+		void addDeinitOfTopVariable() { addDeinitOfVariable(topSlotIndex()); }
+
+		usize topSlotIndex() const { return ctx.function.local_stack.size(curr_state) - 1; }
+
+		/**
+		 * @brief Emits the deinitialization of the variable in slot `idx`.
+		 *
+		 * @note Both deinit instructions act on whichever slot is on top when they run, so `idx`
+		 * only picks which one is emitted. Callers have to emit deinits from the top down.
+		 */
+		void addDeinitOfVariable(usize idx) {
 			const auto& db = ctx.function.local_stack;
 
 			if (validTypeName(db.getTypeName(curr_state, idx).value())->holdsPointerReferences())
@@ -256,10 +265,6 @@ namespace vm::loader::compiler::safe::detail {
 			else
 				addLow<Op_deinit>();
 		}
-
-		usize topSlotIndex() const { return ctx.function.local_stack.size(curr_state) - 1; }
-
-		void addDeinitOfVariable(usize idx) {}
 
 		void addLabel(opargs::Label label) {
 			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(
