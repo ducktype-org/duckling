@@ -1,0 +1,9 @@
+function main {} -> { i64 } {
+
+	init_pany_type 		var0, 	i64;
+	mov_p64_imm    		var0, 	7;
+    output_p64 			var0;
+
+	mov_p64_imm        	ret0,	42;
+	ret;
+}
