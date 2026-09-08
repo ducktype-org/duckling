@@ -30,31 +30,8 @@ namespace {
 
 	static_assert(
 		std::variant_size_v<ProcStatus> == 8,
-		"a new ProcStatus alternative needs an entry in statusName and legalStatusEdge"
+		"a new ProcStatus alternative needs an entry in legalStatusEdge"
 	);
-
-	std::string_view statusName(usize index) {
-		switch (index) {
-		case NOT_STARTED:
-			return "NotStarted";
-		case RUNNING:
-			return "Running";
-		case PAUSED:
-			return "Paused";
-		case SLEEPING:
-			return "Sleeping";
-		case STOPPING:
-			return "ExecutionStopping";
-		case COMPLETED:
-			return "ExecutionCompleted";
-		case STOPPED:
-			return "ExecutionStopped";
-		case PANICKED:
-			return "ExecutionPanicked";
-		default:
-			return "<unknown>";
-		}
-	}
 
 	/**
 	 * @brief Legal directed edges of the emitted process-status sequence.
@@ -85,15 +62,15 @@ namespace {
 base::Optional<std::string> VmTestSuite::TransitionLog::findIllegalEdge() const {
 	std::lock_guard lock(mutex);
 	for (usize i = 1; i < statuses.size(); i++) {
-		const usize from = statuses[i - 1].index();
-		const usize to   = statuses[i].index();
-		if (from == to) continue;
-		if (!legalStatusEdge(from, to))
+		const ProcStatus& from = statuses[i - 1];
+		const ProcStatus& to   = statuses[i];
+		if (from.index() == to.index()) continue;
+		if (!legalStatusEdge(from.index(), to.index()))
 			return base::strConcat(
 				"Illegal status transition emitted by the process: ",
-				statusName(from),
+				vm::api::statusName(from),
 				" -> ",
-				statusName(to)
+				vm::api::statusName(to)
 			);
 	}
 	return std::nullopt;
@@ -111,14 +88,8 @@ void VmTestSuite::validateTransitions(const TransitionLog& log, std::string_view
 	ASSERT_NO_VALUE(illegal_edge, illegal_edge.has_value() ? *illegal_edge : "", " (", what, ")");
 }
 
-vm::PID VmTestSuite::spawnProcess() {
-	auto spawned = vm::api::spawn();
-	ASSERT_HAS_VALUE(spawned, "Spawn failed");
-	return spawned.value().pid;
-}
-
 vm::PID VmTestSuite::spawnAndLoad(const std::string& dbc_filename) {
-	const vm::PID pid    = spawnProcess();
+	const vm::PID pid    = initProcess();
 	auto          loaded = vm::api::loadFiles(pid, { fs::File(path(dbc_filename)) });
 	ASSERT_HAS_VALUE(loaded, "Load of '", dbc_filename, "' failed: ", errorOf(loaded));
 	return pid;

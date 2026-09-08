@@ -11,14 +11,12 @@
 #include <vm/api/vm.hpp>
 
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <expected>
 #include <mutex>
 #include <string>
 #include <string_view>
 #include <thread>
-#include <variant>
 #include <vector>
 
 
@@ -44,11 +42,6 @@ protected:
 	static constexpr u64 MAX_BREAKPOINT_INDEX = 12;
 
 	/**
-	 * @brief Spawns a process with the default configuration.
-	 */
-	vm::PID spawnProcess();
-
-	/**
 	 * @brief Spawns a process and loads one bytecode file from the suite's test-file directory.
 	 */
 	vm::PID spawnAndLoad(const std::string& dbc_filename);
@@ -61,6 +54,14 @@ protected:
 
 	static bool isPanicked(const vm::api::ProcStatus& s) {
 		return v_matches(s, vm::api::ExecutionPanicked);
+	}
+
+	static bool isCompleted(const vm::api::ProcStatus& s) {
+		return v_matches(s, vm::api::ExecutionCompleted);
+	}
+
+	static bool isStopped(const vm::api::ProcStatus& s) {
+		return v_matches(s, vm::api::ExecutionStopped);
 	}
 
 	static bool isTerminal(const vm::api::ProcStatus& s) { return vm::api::isStatusTerminal(s); }

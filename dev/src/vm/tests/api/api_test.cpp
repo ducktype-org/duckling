@@ -56,14 +56,14 @@ public:
 private:
 	/// Thread count of `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
 	static constexpr usize SPIN_THREAD_COUNT = 4;
-	// The exit value of `breakpoint.dbc`.
-	static constexpr usize BREAKPOINT_EXIT_VALUE = 7;
+	/// The exit value of `breakpoint.dbc`.
+	static constexpr i64 BREAKPOINT_EXIT_VALUE = 7;
 
 	void spawnAndKillEndpoints() {
 		// A freshly spawned process is `NotStarted` and answers status calls. A killed one is gone
 		// from the supervisor, so every later request on it is refused.
 
-		const vm::PID pid    = spawnProcess();
+		const vm::PID pid    = initProcess();
 		auto          status = api::getExecutionStatus(pid);
 		assertSucceeded(status, "getExecutionStatus on a fresh process");
 		ASSERT_MATCHES_MSG(
@@ -81,7 +81,7 @@ private:
 		// `loadFiles` and `loadCode` accept valid bytecode and refuse anything else, without making
 		// the process unusable.
 
-		const vm::PID pid = spawnProcess();
+		const vm::PID pid = initProcess();
 
 		assertRefusedWith<api::LoadProgramError>(
 			api::loadFiles(pid, { fs::File(path("api_test.cpp")) }),
@@ -98,12 +98,12 @@ private:
 
 		// The refused loads left the process runnable.
 		assertSucceeded(api::run(pid), "run after a refused load");
-		waitUntilStatus(pid, isTerminal, "Completed");
+		waitUntilStatus(pid, isCompleted, "Completed");
 		assertSucceeded(api::join(pid), "join");
 		(void) api::kill(pid);
 
 		// An empty load is a legal no-op.
-		const vm::PID code_pid = spawnProcess();
+		const vm::PID code_pid = initProcess();
 		assertSucceeded(
 			api::loadCode(code_pid, vm::code::CodeCollection{}),
 			"loadCode of an empty code collection"
@@ -126,7 +126,7 @@ private:
 		(void) api::kill(pid);
 
 		// The config is only read by the next load, which is where it has to take effect.
-		const vm::PID single_thread_pid = spawnProcess();
+		const vm::PID single_thread_pid = initProcess();
 		assertSucceeded(
 			api::setExecutionConfig(single_thread_pid, { .single_thread = true }),
 			"setExecutionConfig with single_thread"
@@ -146,7 +146,7 @@ private:
 			// No code loaded at all - there is no `main` to run. The refusal comes from argument
 			// validation, which runs before anything touches the process state, so the process is
 			// left exactly as it was and stays runnable once a `main` is loaded.
-			const vm::PID pid = spawnProcess();
+			const vm::PID pid = initProcess();
 			assertRefusedWith<api::RunError>(
 				api::run(pid), "run without any loaded code", "Called function 'main' does not"
 			);
@@ -159,7 +159,7 @@ private:
 
 			assertSucceeded(api::loadFiles(pid, { fs::File(path("breakpoint.dbc")) }), "loadFiles");
 			assertSucceeded(api::run(pid), "run after loading a `main`");
-			waitUntilStatus(pid, isTerminal, "Completed");
+			waitUntilStatus(pid, isCompleted, "Completed");
 			assertSucceeded(api::join(pid), "join");
 			(void) api::kill(pid);
 		}
@@ -196,7 +196,28 @@ private:
 		auto exit_value = api::getExitValue(pid);
 		assertSucceeded(exit_value, "getExitValue after runAwait");
 		assertReturnedI64(exit_value.value(), BREAKPOINT_EXIT_VALUE, "getExitValue after runAwait");
+
+		// `runAwait` joins the thread it ran on, so it may be called again without a `join`.
+		for (usize call = 1; call <= 2; call++) {
+			auto repeated = api::runAwait(pid);
+			assertSucceeded(repeated, base::strConcat("runAwait number ", call + 1));
+			assertReturnedI64(
+				repeated.value(),
+				BREAKPOINT_EXIT_VALUE,
+				base::strConcat("runAwait number ", call + 1)
+			);
+		}
 		(void) api::kill(pid);
+
+		// `runAwait` reports the state of the whole process, not of the thread it ran on, so a
+		// worker that is still alive when `main` returns hides the exit value.
+		const vm::PID worker_pid = spawnAndLoad("worker_outlives_main.dbc");
+		assertRefusedWith<api::OtherError>(
+			api::runAwait(worker_pid),
+			"runAwait of a program whose worker outlives `main`",
+			"Execution did not complete"
+		);
+		(void) api::kill(worker_pid);
 
 		// A program that panics reports the panic instead of an exit value.
 		const vm::PID panicking_pid = spawnAndLoad("panic.dbc");
@@ -206,7 +227,7 @@ private:
 		(void) api::kill(panicking_pid);
 
 		// There is no `main` to run without a loaded program.
-		const vm::PID empty_pid = spawnProcess();
+		const vm::PID empty_pid = initProcess();
 		assertRefusedWith<api::RunError>(
 			api::runAwait(empty_pid), "runAwait without any loaded code", "Called function 'main'"
 		);
@@ -221,7 +242,7 @@ private:
 			ScopedStatusLog scoped(*this, pid);
 
 			assertSucceeded(api::run(pid), "the first run");
-			waitUntilStatus(pid, isTerminal, "Completed");
+			waitUntilStatus(pid, isCompleted, "Completed");
 
 			assertRefusedWith<api::StateError>(
 				api::run(pid),
@@ -232,7 +253,7 @@ private:
 			assertSucceeded(api::join(pid), "join of the main thread");
 			assertSucceeded(api::run(pid), "a rerun after the join");
 
-			waitUntilStatus(pid, isTerminal, "Completed again");
+			waitUntilStatus(pid, isCompleted, "Completed again");
 			assertSucceeded(api::join(pid), "join of the second run");
 
 			validateTransitions(scoped.log, "a rerun of a completed process");
@@ -247,7 +268,7 @@ private:
 			ScopedStatusLog scoped(*this, pid);
 
 			assertSucceeded(api::run(pid), "the first run");
-			waitUntilStatus(pid, isTerminal, "Completed");
+			waitUntilStatus(pid, isCompleted, "Completed");
 
 			// `main` is joined, its two workers are not.
 			assertSucceeded(api::join(pid), "join of the main thread");
@@ -267,7 +288,7 @@ private:
 			assertSucceeded(api::join(pid, api::ThreadID{ 2 }), "join of worker 2");
 			assertSucceeded(api::run(pid), "a rerun once every thread was joined");
 
-			waitUntilStatus(pid, isTerminal, "Completed again");
+			waitUntilStatus(pid, isCompleted, "Completed again");
 			for (usize tid = 0; tid < 3; tid++)
 				assertSucceeded(
 					api::join(pid, api::ThreadID{ tid }),
@@ -286,7 +307,7 @@ private:
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running");
 			assertSucceeded(api::stop(pid), "stop");
-			waitUntilStatus(pid, isTerminal, "Stopped");
+			waitUntilStatus(pid, isStopped, "Stopped");
 
 			assertRefusedWith<api::StateError>(
 				api::run(pid), "a rerun right after a stop", "must be freshly loaded"
@@ -417,7 +438,7 @@ private:
 		);
 
 		assertSucceeded(api::run(pid), "run");
-		waitUntilStatus(pid, isTerminal, "Completed");
+		waitUntilStatus(pid, isCompleted, "Completed");
 		assertSucceeded(api::join(pid), "join");
 
 		auto exit_value = api::getExitValue(pid);
@@ -452,7 +473,7 @@ private:
 		assertRefusedWith<api::JoinError>(api::join(pid), "join before a run");
 
 		assertSucceeded(api::run(pid), "run");
-		waitUntilStatus(pid, isTerminal, "Completed");
+		waitUntilStatus(pid, isCompleted, "Completed");
 		assertSucceeded(api::join(pid, api::MAIN_THREAD_ID), "join of a completed run");
 		// The handle is gone now, so a second join has nothing to reap.
 		assertRefusedWith<api::JoinError>(api::join(pid), "a second join");
@@ -485,7 +506,7 @@ private:
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running");
 			assertSucceeded(api::stop(pid), "stop of a running process");
-			waitUntilStatus(pid, isTerminal, "Stopped");
+			waitUntilStatus(pid, isStopped, "Stopped");
 			assertSucceeded(api::stop(pid), "a second stop");
 
 			assertTrue(
@@ -502,7 +523,7 @@ private:
 			waitUntilStatus(pid, isRunning, "Running");
 			assertSucceeded(api::pause(pid), "pause");
 			assertSucceeded(api::stop(pid), "stop of a paused process");
-			waitUntilStatus(pid, isTerminal, "Stopped from Paused");
+			waitUntilStatus(pid, isStopped, "Stopped from Paused");
 			(void) api::kill(pid);
 		}
 
@@ -516,7 +537,7 @@ private:
 			assertSucceeded(api::pause(pid, api::ThreadID{ 2 }), "pause of worker 2");
 
 			assertSucceeded(api::stop(pid), "stop of a process with parked and running threads");
-			waitUntilStatus(pid, isTerminal, "Stopped");
+			waitUntilStatus(pid, isStopped, "Stopped");
 
 			for (usize tid = 0; tid < SPIN_THREAD_COUNT; tid++)
 				assertRefusedWith<api::JoinError>(
@@ -634,7 +655,7 @@ private:
 		{  // A clean run leaves a valid memory state, and the process is dropped.
 			const vm::PID pid = spawnAndLoad("breakpoint.dbc");
 			assertSucceeded(api::run(pid), "run");
-			waitUntilStatus(pid, isTerminal, "Completed");
+			waitUntilStatus(pid, isCompleted, "Completed");
 			assertSucceeded(api::join(pid), "join");
 			auto valid = api::deinitAndValidate(pid);
 			assertSucceeded(valid, "deinitAndValidate after a clean run");
@@ -647,7 +668,7 @@ private:
 		{
 			const vm::PID pid = spawnAndLoad("../memory/global_leak.dbc");
 			assertSucceeded(api::run(pid), "run");
-			waitUntilStatus(pid, isTerminal, "Completed");
+			waitUntilStatus(pid, isCompleted, "Completed");
 			assertSucceeded(api::join(pid), "join");
 			auto valid = api::deinitAndValidate(pid);
 			assertSucceeded(valid, "deinitAndValidate of a leaking program");
@@ -664,7 +685,7 @@ private:
 			// destructor that did not run shows up as an invalid memory state.
 			const vm::PID pid = spawnAndLoad("global_destructor.dbc");
 			assertSucceeded(api::run(pid), "run");
-			waitUntilStatus(pid, isTerminal, "Completed");
+			waitUntilStatus(pid, isCompleted, "Completed");
 			assertSucceeded(api::join(pid), "join");
 
 			auto valid = api::deinitAndValidate(pid);
@@ -690,7 +711,7 @@ private:
 			assertSucceeded(api::run(pid), "run");
 			waitUntilStatus(pid, isRunning, "Running");
 			assertSucceeded(api::stop(pid), "stop");
-			waitUntilStatus(pid, isTerminal, "Stopped");
+			waitUntilStatus(pid, isStopped, "Stopped");
 
 			assertRefusedWith<api::StateError>(
 				api::deinitAndValidate(pid),
@@ -889,7 +910,7 @@ private:
 			"while program is running"
 		);
 
-		waitUntilStatus(pid, isTerminal, "Completed");
+		waitUntilStatus(pid, isCompleted, "Completed");
 		assertSucceeded(api::join(pid), "join");
 		(void) api::kill(pid);
 	}
