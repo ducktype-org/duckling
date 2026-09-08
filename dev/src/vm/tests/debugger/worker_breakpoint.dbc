@@ -1,0 +1,37 @@
+# A worker with a breakpointable prologue followed by an endless loop, plus an endlessly spinning
+# main thread. Breakpoints are per function, so a breakpoint in `worker` is only ever hit by the
+# worker thread.
+
+function worker {} -> {} {
+	init_pany_type			a, i64;
+	init_pany_type			b, i64;
+
+	mov_p64_imm				a, 0;
+	mov_p64_imm				b, 0;
+	add_p64_imm				a, 1;
+
+	# breakpoint 5;
+	add_p64_imm				b, 1;
+
+	label Loop;
+		cmpEq_p64_imm		a, 1;
+		jmpIf_label			Loop;
+
+	deinit; # b
+	deinit; # a
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type			t1, i64;
+	set_threadctx			worker;
+	call_builtinfunc		builtin_start_thread;
+
+	init_pany_type			tmp, i64;
+	mov_p64_imm				tmp, 0;
+	label MainLoop;
+		cmpEq_p64_imm		tmp, 0;
+		jmpIf_label			MainLoop;
+
+	ret;
+}
