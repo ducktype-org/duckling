@@ -18,8 +18,7 @@ constexpr inline uint COMPILATION_THRESHOLD = 0;
 #endif
 
 namespace vm::jit {
-	using JitOpFun
-		= void(const vm::MicroInstruction**, byte**, vm::Frame**, vm::SafeVMThread*);
+	using JitOpFun = void(const vm::MicroInstruction**, byte**, vm::Frame**, vm::SafeVMThread*);
 
 	/**
 	 * @brief The data additionally stored per function, by the JIT compiler.

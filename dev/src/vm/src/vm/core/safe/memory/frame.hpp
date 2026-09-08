@@ -22,8 +22,6 @@ namespace vm {
 		struct LowFuncData;
 	}
 
-	class Type;
-
 	/**
 	 * @brief Type and location of the variable living in one local variable slot, which is what
 	 * a block is made out of when something first refers to the variable through one.
@@ -51,10 +49,14 @@ namespace vm {
 		FlagData flags{};
 
 		/**
-		 * @brief Where to resume: the return address while a call is in progress, and the
-		 * instruction the frame stopped on while the thread is paused.
+		 * @brief Where the frame resumes from.
+		 *
+		 * While a call is in progress this is the caller's return address, set by
+		 * `performFunctionCall` and read back by `ret`. While the thread is paused it is the
+		 * instruction the frame stopped on, which is what `save_execution_state`,
+		 * `executeOneStep` and `getCurrentOpcode` write and read.
 		 */
-		const struct MicroInstruction* return_address = nullptr;
+		const struct MicroInstruction* instr = nullptr;
 
 		/**
 		 * @brief Memory array where the local variables are stored.

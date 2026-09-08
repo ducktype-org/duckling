@@ -25,6 +25,7 @@ public:
 		TESTER_ADD_TEST(reusedSlotDoesNotForceABlock);
 		TESTER_ADD_TEST(zeroingIsSpecializedBySize);
 		TESTER_ADD_TEST(pointersNestedInAggregatesAreFound);
+		TESTER_ADD_TEST(variantNestedInAnAggregateNeedsNoDestructors);
 	}
 
 private:
@@ -170,12 +171,16 @@ private:
 		assertInitCount(name, 2);
 		assertOpcodeCount(name, MicroOpcode::deinitDtor, 2);
 		assertOpcodeCount(name, MicroOpcode::deinit, 0);
+	}
 
-		// A variant behind a field brings no destructors with it - whatever its active
-		// alternative holds is released through the variant's nested block.
-		const auto wraps_variant = base::StrID("nests_a_variant");
-		assertInitCount(wraps_variant, 1);
-		assertOpcodeCount(wraps_variant, MicroOpcode::deinit, 1);
+	/**
+	 * @brief A variant behind a field brings no destructors with it - whatever its active
+	 * alternative holds is released through the variant's nested block.
+	 */
+	void variantNestedInAnAggregateNeedsNoDestructors() {
+		const auto name = base::StrID("nests_a_variant");
+		assertInitCount(name, 1);
+		assertOpcodeCount(name, MicroOpcode::deinit, 1);
 	}
 
 	/**

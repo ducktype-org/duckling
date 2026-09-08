@@ -28,6 +28,13 @@
 	#define RETURN_TYPE RETURN_TYPE_OPFUN_REF
 #endif
 
+// A dev-debug build leaves the opfun helpers out of line, so that they can be stepped into.
+#ifdef BUILD_TYPE_DEV_DEBUG
+	#define VM_OPFUN_INLINE
+#else
+	#define VM_OPFUN_INLINE __attribute__((always_inline))
+#endif
+
 namespace vm {
 	using DebugOpFun = void(OPFUN_REF_ARGS);
 	using OpFun      = void(OPFUN_ARGS);
@@ -131,8 +138,8 @@ namespace vm {
 			return frame->local_slot_stack_base[slot_index];
 		}
 
-		/// `Memory::createLocalSlotBlock`, kept out of line so it does not bloat the opfuns.
-
+		/// `Memory::createLocalSlotBlock`, kept out of line: it runs at most once per variable,
+		/// so it must not bloat the opfuns.
 		[[gnu::noinline]]
 		static Ref<Block> createLocalBlock(Frame* frame, SafeVMThread& thread, u64 slot_index) {
 			return thread.process_memory.createLocalSlotBlock(*frame, slot_index);
@@ -146,10 +153,9 @@ namespace vm {
 		 * one is needed.
 		 */
 		[[nodiscard]]
-#ifndef BUILD_TYPE_DEV_DEBUG
-		__attribute__((always_inline))
-#endif
-		static Ref<Block> readBlockRefFromArg(Frame* frame, SafeVMThread& thread, u64 arg) {
+		VM_OPFUN_INLINE static Ref<Block> readBlockRefFromArg(
+			Frame* frame, SafeVMThread& thread, u64 arg
+		) {
 			// The highest bit tells globals apart from locals, the rest is the index.
 			const bool is_global = (arg >> 63) != 0;
 			const u64  index     = arg & ~(1ULL << 63);
@@ -175,20 +181,15 @@ namespace vm {
 		 * @note The function has to be inlined since it's used by the `call_func` and
 		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
 		 */
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			void
-			performFunctionCall(
-				const MicroInstruction*& instr,
-				byte*&              local_stack,
-				Frame*&                  frame,
-				SafeVMThread&            thread,
-				usize                    function_id,
-				u64                      callee_stack_distance,
-				u64                      instruction_size
-			) {
+		static VM_OPFUN_INLINE void performFunctionCall(
+			const MicroInstruction*& instr,
+			byte*&                   local_stack,
+			Frame*&                  frame,
+			SafeVMThread&            thread,
+			usize                    function_id,
+			u64                      callee_stack_distance,
+			u64                      instruction_size
+		) {
 			auto& runtime_data = thread.runtime_data;
 			auto& called_func  = thread.process_program->getFunctions()[function_id];
 
@@ -209,17 +210,18 @@ namespace vm {
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
 			// Save current registers and flow.
-			frame->return_address = instr + instruction_size;
-			frame->local_stack    = local_stack;
+			frame->instr       = instr + instruction_size;
+			frame->local_stack = local_stack;
 
 			// Save the last frame
 			auto* prev_frame = frame;
 
 			frame++;
-			frame->current_function = &called_func;
 
 			if (frame + 1 >= runtime_data.frame_stack_end)
 				throw exceptions::VMStackOverflowException();
+
+			frame->current_function = &called_func;
 
 			// Update values passed as arguments.
 			instr = called_func.bc.data();
@@ -254,18 +256,15 @@ namespace vm {
 			prev_frame->local_block_ref_stack_end -= arg_count;
 		}
 
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			void
-			performInit(
-				byte*&   local_stack,
-				Frame*&       frame,
-				SafeVMThread& thread,
-				u64           byte_offset,
-				TypeCRef      type
-			) {
+		/**
+		 * @brief Initializes a local variable together with its block.
+		 *
+		 * Unlike `init_imm_type`, which leaves the slot blockless until something asks for a
+		 * block, this creates one up front - for variables whose block is needed from the start.
+		 */
+		static VM_OPFUN_INLINE void performInit(
+			byte*& local_stack, Frame*& frame, SafeVMThread& thread, u64 byte_offset, TypeCRef type
+		) {
 			auto data_ptr = local_stack + byte_offset;
 			// The variable is zeroed by `pushLocalSlot`, so the block only adopts its bytes.
 			auto block = thread.process_memory.adoptDummy(type, data_ptr);
@@ -276,12 +275,7 @@ namespace vm {
 			pushLocalSlot(frame, type, data_ptr, type->getSize().asInt(), block.get());
 		}
 
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			void
-			performDeinit(Frame*& frame, SafeVMThread& thread) {
+		static VM_OPFUN_INLINE void performDeinit(Frame*& frame, SafeVMThread& thread) {
 			// A variable that never needed a block has none to free.
 			if (Block* block = frame->local_block_ref_stack_end[-1]) {
 				thread.process_memory.freeBlockData(block);
@@ -291,17 +285,9 @@ namespace vm {
 			popLocalSlot(frame);
 		}
 
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			void
-			setVariantType(
-				SafeVMThread& thread,
-				Pointer       variant_pointer,
-				TypeCRef      wanted_type,
-				TypeCRef      variant_type
-			) {
+		static VM_OPFUN_INLINE void setVariantType(
+			SafeVMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
+		) {
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
 
 			// Set the view block
@@ -347,18 +333,9 @@ namespace vm {
 			}
 		}
 
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			Pointer
-			getVariantPtr(
-				SafeVMThread& thread,
-				Pointer       variant_pointer,
-				TypeCRef      wanted_type,
-				TypeCRef      variant_type
-			) {
-
+		static VM_OPFUN_INLINE Pointer getVariantPtr(
+			SafeVMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
+		) {
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
 				variant_pointer.getBlock(),
 				variant_pointer.getOffset() + variant_type->getTypeTagSizeBytes()->asInt(),
@@ -375,12 +352,7 @@ namespace vm {
 		/**
 		 * @brief A null cpointer (e.g. a default-initialized local) must not be dereferenced.
 		 */
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			void
-			assertCPtrNotNull(void* cptr) {
+		static VM_OPFUN_INLINE void assertCPtrNotNull(void* cptr) {
 			if (cptr == nullptr) throw vm::exceptions::VMFFIError("Accessed null CPointer");
 		}
 	};

@@ -22,9 +22,7 @@ namespace vm {
  * @param arg - the mentioned argument
  */
 [[gnu::always_inline]]
-inline static byte* getBytePtrFromPlaceArg(
-	byte* local_stack, byte* global_buffer, u64 arg
-) {
+inline static byte* getBytePtrFromPlaceArg(byte* local_stack, byte* global_buffer, u64 arg) {
 	// Extract the highest bit.
 	bool is_global = (arg >> 63) != 0;
 

@@ -392,7 +392,8 @@ namespace vm {
 		/**
 		 * @brief Executes destructors on a range of objects, that lay next to each other.
 		 */
-		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
+		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type)
+			requires std::is_same_v<EntryT, byte> {
 			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
 		}
 
@@ -680,6 +681,12 @@ namespace vm {
 			return block->data.element_type;
 		}
 
+		/// Whether the block's data has already been freed.
+		[[nodiscard]]
+		static bool isBlockDeallocated(Ref<BlockT> block) {
+			return block->deallocated;
+		}
+
 		// ======================== Pointers ========================
 
 		static void increaseBlockRefcount(Ref<BlockT> block) { block->refcount++; }
@@ -760,8 +767,7 @@ namespace vm {
 			runDataCopyConstructors(dst_view, type);
 		}
 
-		auto destroyBlockReference(Pointer pointer) -> void
-			requires std::is_same_v<EntryT, byte> {
+		auto destroyBlockReference(Pointer pointer) -> void requires std::is_same_v<EntryT, byte> {
 			if_opt_some(pointer.block.toOpt(), block) { decreaseBlockRefcount(block); }
 		}
 

@@ -546,7 +546,7 @@ namespace vm {
 					                     : memory.createLocalSlotBlock(frame, slot_index);
 
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
-						.offset = u64(slot.data - frame.local_stack),
+						.offset = base::safeIntConv<u64>(slot.data - frame.local_stack),
 						.name   = std::nullopt,
 						.type   = std::nullopt,
 						.value  = SafeVMValueRef::makeShared(

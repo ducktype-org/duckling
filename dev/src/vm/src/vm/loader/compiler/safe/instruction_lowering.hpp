@@ -16,7 +16,7 @@
 
 namespace vm::loader::compiler::safe {
 	inline usize getIntTypeSize(const code::valid_type::TypeSize& size) {
-		return static_cast<usize>(size.assumePointerSize(Bytes(16)));
+		return static_cast<usize>(size.assumePointerSize(vm::Type::POINTER_SIZE));
 	}
 }
 
@@ -177,6 +177,10 @@ namespace vm::loader::compiler::safe::detail {
 		 * @brief Distance between the caller's local stack base and the callee's one.
 		 */
 		vm::opargs::Immediate calleeStackDistance(u64 shared_stack_space_size) const {
+			CORE_ASSERT(
+				currentStackSize() >= shared_stack_space_size,
+				"Shared stack space cannot be bigger than the caller's stack"
+			);
 			return vm::opargs::Immediate{ currentStackSize() - shared_stack_space_size };
 		}
 

@@ -439,8 +439,8 @@ namespace vm {
 				// 		argN
 				u64 block_ref_stack_count
 					= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-				u64 result_value_idx = block_ref_stack_count - arg_count - (is_void ? 0 : 1);
-				const auto result_pointer = frame->local_slot_stack_base[result_value_idx].data;
+				u64        result_value_idx = block_ref_stack_count - arg_count - (is_void ? 0 : 1);
+				const auto result_pointer   = frame->local_slot_stack_base[result_value_idx].data;
 
 				byte* args_pointer
 					= result_pointer
@@ -583,7 +583,7 @@ namespace vm {
 			callee_frame->resetFrameData();
 
 			// Load previous frame.
-			instr       = frame->return_address;  // This is already a pointer to next instr.
+			instr       = frame->instr;  // This is already a pointer to next instr.
 			local_stack = frame->local_stack;
 		}
 		// Here the argument is `0` because of the convention defined in the op_call_func.
@@ -623,10 +623,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinitDtor)(FUNCTION_ARGS) {
 		{
-			if (Block* block = frame->local_block_ref_stack_end[-1]) {
-				thread.process_memory.freeBlockData(block);
-				thread.process_memory.decreaseBlockRefcount(block);
-			} else {
+			if (frame->local_block_ref_stack_end[-1] == nullptr) {
 				// Without a block there is nothing to run the destructors off, so they are run
 				// over the variable's bytes directly.
 				const LocalSlot& slot = topLocalSlot(frame);
@@ -635,7 +632,7 @@ namespace vm {
 				);
 			}
 
-			popLocalSlot(frame);
+			performDeinit(frame, thread);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -740,8 +737,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr)(FUNCTION_ARGS) {
 		{
-			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0))
+			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0)) {
+				if (Memory::isBlockDeallocated(ptr.getBlock()))
+					throw exceptions::VMDoubleFreeException();
 				thread.process_memory.freeBlockData(ptr.getBlock());
+			}
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1375,7 +1375,7 @@ namespace vm {
 			// Restore current flow.
 			// They can be changed when doing "step by step" execution.
 			frame       = thread.runtime_data.frame_stack_current;
-			instr       = frame->return_address;
+			instr       = frame->instr;
 			local_stack = frame->local_stack;
 		}
 

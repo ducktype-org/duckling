@@ -54,9 +54,7 @@ namespace vm::code {
 		 * @param content The raw bytes (only the first `size` bytes are meaningful).
 		 * @param size Number of meaningful bytes (1-8).
 		 */
-		ConstantImmediate(std::array<byte, 8> content, Bytes size):
-			  content(content),
-			  size(size) {}
+		ConstantImmediate(std::array<byte, 8> content, Bytes size): content(content), size(size) {}
 
 		/**
 		 * @brief Constructs an immediate from a numeric value via bit_cast.

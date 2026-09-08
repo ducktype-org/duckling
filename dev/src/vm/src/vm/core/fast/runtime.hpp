@@ -47,9 +47,8 @@ namespace vm::fast {
 	public:
 		byte* const local_stack_base
 			= local_stack_memory->data.data();  /// Pointer to the start of the local stack.
-		byte* const local_stack_end
-			= local_stack_memory->data.data()
-		    + LOCAL_STACK_SIZE;  /// Pointer to the end of the local stack.
+		byte* const local_stack_end = local_stack_memory->data.data()
+		                            + LOCAL_STACK_SIZE;  /// Pointer to the end of the local stack.
 
 		// @TODO: #2729 This should be a valid pointer.
 		byte* const global_data_buffer_base = nullptr;

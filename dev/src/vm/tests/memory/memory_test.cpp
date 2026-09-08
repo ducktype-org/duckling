@@ -17,6 +17,7 @@ public:
 		TESTER_ADD_TEST(noDoubleDestructorCalls);
 		TESTER_ADD_TEST(nestedLeaks);
 		TESTER_ADD_TEST(variantDestructor);
+		TESTER_ADD_TEST(doubleFreeIsRefused);
 		TESTER_ADD_TEST(deinitAfterPanicIsRefused);
 		TESTER_ADD_TEST(deinitOrKillTearsDownEitherWay);
 		TESTER_ADD_TEST(deinitKillsTheProcessWhenAGlobalDestructorPanics);
@@ -50,6 +51,13 @@ private:
 	}
 
 	void variantDestructor() { runTestOnVm("variant_destructor.dbc", "", ""); }
+
+	void doubleFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("double_free.dbc", "", ""),
+			vm::exceptions::VMDoubleFreeException::ERR_MSG
+		);
+	}
 
 	// Note: Those will be moved to `api_test` in the next PR. I just needed a place to put them in.
 

@@ -63,7 +63,7 @@ namespace vm {
 			// Restore current registers and flow, because
 			// they could be changed when doing "step by step" execution.
 			frame       = thread.runtime_data.frame_stack_current;
-			instr       = frame->return_address;
+			instr       = frame->instr;
 			local_stack = frame->local_stack;
 		}
 		OPFUN_CONT(0);
@@ -79,7 +79,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::save_execution_state(OPFUN_ARGS) {
 		{
 			// Save current registers and flow.
-			frame->return_address                   = instr;
+			frame->instr                            = instr;
 			frame->local_stack                      = local_stack;
 			thread.runtime_data.frame_stack_current = frame;
 		}
@@ -87,11 +87,11 @@ namespace vm {
 
 	low::MicroOpcode SafeVMThread::getCurrentOpcode() const {
 		const Frame*           frame  = runtime_data.frame_stack_current;
-		const low::MicroOpcode opcode = getInstructionOpcode(*frame->return_address);
+		const low::MicroOpcode opcode = getInstructionOpcode(*frame->instr);
 		if (opcode != low::MicroOpcode::breakpoint) return opcode;
 
 		auto&      micro_func     = *frame->current_function;
-		const auto low_instr_idx  = static_cast<usize>(frame->return_address - micro_func.bc.data());
+		const auto low_instr_idx  = static_cast<usize>(frame->instr - micro_func.bc.data());
 		const auto original_instr = micro_func.orig_bc[low_instr_idx];
 
 		return getInstructionOpcode(original_instr);
@@ -105,9 +105,9 @@ namespace vm {
 	 * @brief Main debug function that executes one step of the program.
 	 */
 	void SafeVMThread::executeOneStep() {
-		Frame*     frame       = runtime_data.frame_stack_current;
-		auto*      instr       = frame->return_address;
-		byte* local_stack = frame->local_stack;
+		Frame* frame       = runtime_data.frame_stack_current;
+		auto*  instr       = frame->instr;
+		byte*  local_stack = frame->local_stack;
 
 		const low::MicroOpcode opcode = getCurrentOpcode();
 
@@ -116,7 +116,7 @@ namespace vm {
 
 		runtime_data.frame_stack_current = frame;
 		frame->local_stack               = local_stack;
-		frame->return_address            = instr;
+		frame->instr                     = instr;
 	}
 
 	/**
@@ -487,10 +487,10 @@ namespace vm {
 		ScopedGilGuard gil_guard(*this);
 
 		// Frame of the called function.
-		Frame*     frame          = runtime_data.frame_stack_current;
-		Frame*     orig_frame_ptr = frame;
-		Frame      orig_frame_cpy = *runtime_data.frame_stack_current;
-		byte* local_stack    = frame->local_stack;
+		Frame* frame          = runtime_data.frame_stack_current;
+		Frame* orig_frame_ptr = frame;
+		Frame  orig_frame_cpy = *runtime_data.frame_stack_current;
+		byte*  local_stack    = frame->local_stack;
 		if (local_stack == nullptr) local_stack = runtime_data.local_stack_base;
 		auto orig_block_stack_size
 			= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
@@ -647,7 +647,9 @@ namespace vm {
 				auto frame = runtime_data.frame_stack_current;
 				// In caller frames, the instruction pointer rests on the return address (the
 				// instruction after the call). We must adjust it backward by 1 to point to the
-				// actual call site.
+				// actual call site. One word is enough even for a call lowered to several micro
+				// instructions - the adjustment only has to land inside the call's own range in
+				// `instruction_mapping`.
 				bool call_adjustment = false;
 				if_opt_some(frame_idx, frame_index) {
 					u64 frames = getNumberOfCurrentStackFrames();
@@ -662,10 +664,9 @@ namespace vm {
 				auto& func = *frame->current_function;
 
 				return low::LowCodePosition{
-					.function          = &func,
-					.instruction_index = static_cast<u64>(
-						frame->return_address - func.bc.data() - (call_adjustment ? 1 : 0)
-					),
+					.function = &func,
+					.instruction_index
+					= static_cast<u64>(frame->instr - func.bc.data() - (call_adjustment ? 1 : 0)),
 				};
 			}
 			variant_default {

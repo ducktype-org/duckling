@@ -298,7 +298,7 @@ namespace vm::loader::parser {
 				return { {}, Bits(0) };
 			}
 
-			usize                    bit_length = str.size() * 4;
+			usize               bit_length = str.size() * 4;
 			std::array<byte, 8> bytes{};
 			std::memcpy(bytes.data(), &value, 8);
 
