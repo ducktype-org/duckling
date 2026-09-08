@@ -107,7 +107,7 @@ namespace compiler::mir {
 		LocalVarCollectionVisitor visitor{ function_builder };
 		visitor.collect(function);
 
-		auto last_block = function_builder.newBlock();
+		auto last_block = function_builder.newBlock("function_end");
 		last_block->setTerminator(
 			{ Operation::FunctionEnd, {}, {}, {}, function_builder.getTopLevelScope() }
 		);
@@ -281,7 +281,7 @@ namespace compiler::mir {
 				is_ctor ? "constructor_of_" : "destructor_of_", global_data->original_name.strView()
 			)));
 
-			auto last_block = function_builder.newBlock();
+			auto last_block = function_builder.newBlock("function_end");
 			last_block->setTerminator(
 				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
 			);
