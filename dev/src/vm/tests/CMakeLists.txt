@@ -33,6 +33,9 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_unit_test basic/unit.cpp
                 USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_api_test api/api_test.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_disable_tc_when_not_opt(api_test ${test_set})
         duck_add_test_custom(vm ${test_set}_functions_test functions/functions.cpp
                 USES ${libvm} Tester ${vmtester})
 
