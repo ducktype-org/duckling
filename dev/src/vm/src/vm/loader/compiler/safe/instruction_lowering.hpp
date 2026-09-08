@@ -27,12 +27,16 @@ namespace vm::loader::compiler::safe::detail {
 	 *
 	 * A pair is valid when:
 	 * 1) the high arg type is listed in `LowArg::ConstructibleFrom`, and
-	 * 2) the high arg can be lowered by constructing `vm::opargs::OpCodeArg` from it
+	 * 2) the high arg can be lowered - either by constructing `vm::opargs::OpCodeArg` from it, or
+	 *    because it is a plain value the lowering computed itself, like a `low::StackOffset`
+	 *
+	 * The two cases mirror what `ASSERT_GOOD_SOURCE` accepts as a source type.
 	 */
 	template<typename LowArg, typename HighArg>
 	concept IsTranslatableInstructionArgumentPair
 		= base::IsTupleMember<std::remove_cvref_t<HighArg>, typename LowArg::ConstructibleFrom>
-	   && std::constructible_from<vm::opargs::OpCodeArg, std::remove_cvref_t<HighArg>>;
+	   && (std::constructible_from<vm::opargs::OpCodeArg, std::remove_cvref_t<HighArg>>
+	       || std::constructible_from<u64, std::remove_cvref_t<HighArg>>);
 
 	/**
 	 * @brief Type-level validation of translation for full argument lists.
@@ -131,10 +135,10 @@ namespace vm::loader::compiler::safe::detail {
 		/**
 		 * @brief Byte offset of a local variable in the frame's local stack.
 		 */
-		u64 byteOffsetOf(const opargs::ArgumentType auto p) const {
-			return getIntTypeSize(
+		vm::low::StackOffset byteOffsetOf(const opargs::ArgumentType auto p) const {
+			return vm::low::StackOffset{ getIntTypeSize(
 				ctx.function.local_stack.getByteOffset(curr_state, p.var_name).value()
-			);
+			) };
 		}
 
 		/**
@@ -176,12 +180,12 @@ namespace vm::loader::compiler::safe::detail {
 		/**
 		 * @brief Distance between the caller's local stack base and the callee's one.
 		 */
-		vm::opargs::Immediate calleeStackDistance(u64 shared_stack_space_size) const {
+		vm::low::StackOffset calleeStackDistance(u64 shared_stack_space_size) const {
 			CORE_ASSERT(
 				currentStackSize() >= shared_stack_space_size,
 				"Shared stack space cannot be bigger than the caller's stack"
 			);
-			return vm::opargs::Immediate{ currentStackSize() - shared_stack_space_size };
+			return vm::low::StackOffset{ currentStackSize() - shared_stack_space_size };
 		}
 
 		TypeCRef resolveTypeName(base::StrID type_name) const {
@@ -659,11 +663,10 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_ret>();
 			}
 			instr_case(high::Op_init_pany_type, i) {
-				const TypeCRef type   = getPlaceType(i.var);
-				const u64      offset = byteOffsetOf(i.var);
+				const TypeCRef type    = getPlaceType(i.var);
+				const auto     address = byteOffsetOf(i.var);
 
 				// Zeroed by a plain store where the size allows.
-				const auto address = vm::opargs::Immediate{ offset };
 				switch (type->getSize().asInt()) {
 				case 8:
 					addLow<Op_init64_imm_type>(address, i.type);
@@ -692,9 +695,11 @@ namespace vm::loader::compiler::safe::detail {
 			}
 			instr_case(high::Op_virtual_call_pptr_method, i) {
 				addLow<Op_virtual_call_pptr_method>(i.object_ptr, i.method);
-				addLow<Op_ext_imm>(
-					calleeStackDistance(sharedStackSpaceSizeOfMethod(i.object_ptr, i.method))
-				);
+				// The distance rides an `ext_imm`, whose single argument also carries byte sizes
+				// and plain constants elsewhere, so it cannot be an `Offset` without a second
+				// extension opcode.
+				addLow<Op_ext_imm>(vm::opargs::Immediate{
+					calleeStackDistance(sharedStackSpaceSizeOfMethod(i.object_ptr, i.method)) });
 			}
 			instr_case(high::Op_alloc_pptr_type, i) { addLow<Op_alloc_pptr_type>(i.ptr, i.type); }
 			instr_case(high::Op_free_pptr, i) { addLow<Op_free_pptr>(i.ptr); }

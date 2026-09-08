@@ -451,7 +451,7 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::low::opargs::Label)
  * The second argument is the distance between the caller's local stack base and the callee's
  * one, i.e. the caller's stack size at this point minus the space shared with the callee.
  */
-DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID, vm::low::opargs::Offset)
 #ifdef ENABLE_JIT
 // function prologue, potentially compiles the current function and executes the native version
 // mentioned in dev/scripts/jit/jitable_interface.py
@@ -493,12 +493,12 @@ DEF_MICRO_INSTR(ret)
  * @arg0 - byte offset of the variable in the frame's local stack.
  * @arg1 - type of the variable.
  */
-DEF_MICRO_INSTR(init_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
+DEF_MICRO_INSTR(init_imm_type, vm::low::opargs::Offset, vm::low::opargs::Type)
 
 /// `init_imm_type` for an 8-byte variable, which zeroes with a plain store.
-DEF_MICRO_INSTR(init64_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
+DEF_MICRO_INSTR(init64_imm_type, vm::low::opargs::Offset, vm::low::opargs::Type)
 /// 16-byte counterpart of `init64_imm_type`, the size of a `Pointer`.
-DEF_MICRO_INSTR(init128_imm_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
+DEF_MICRO_INSTR(init128_imm_type, vm::low::opargs::Offset, vm::low::opargs::Type)
 
 /// Pops the topmost local variable, freeing its block if one was created.
 DEF_MICRO_INSTR(deinit)
