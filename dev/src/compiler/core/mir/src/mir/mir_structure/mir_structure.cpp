@@ -130,6 +130,8 @@ namespace compiler::mir {
 			const auto& block = blocks[block_id];
 
 			os << "  Block " << u64(block.id);
+			if (block.debug_name.has_value())
+				os << " (" << block.debug_name.value().strView() << ")";
 			if (block.id == block_order[0]) os << " [entry]";
 			os << ":\n";
 			for (const auto& instruction: block.instructions) {

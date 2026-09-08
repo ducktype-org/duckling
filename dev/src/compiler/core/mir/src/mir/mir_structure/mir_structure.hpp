@@ -793,6 +793,14 @@ namespace compiler::mir {
 		 */
 		Instruction terminator;
 
+		/**
+		 * @brief Human readable name telling what the block was generated for,
+		 * for example `if.then` or `while.cond`.
+		 * @note It is only used for debugging (it is printed by @ref Function::debugPrint) and
+		 * it is empty for blocks that were not given a name.
+		 */
+		base::Optional<base::StrID> debug_name;
+
 		[[nodiscard]]
 		ScopeRef beginScope() const;
 

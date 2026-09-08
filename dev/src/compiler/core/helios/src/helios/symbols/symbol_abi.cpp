@@ -239,7 +239,7 @@ namespace compiler::helios {
 			}
 
 			// @TODO: #895 fix it when we add script based package targets
-			if (name(key) == "main" && isGlobalFun(key)) {
+			if (isGlobalMain(key)) {
 				// main is not mangled
 				return CAbi{};
 			}

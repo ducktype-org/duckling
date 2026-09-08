@@ -5,12 +5,16 @@ import subprocess
 from pathlib import Path
 
 class DAPTestClient:
-    def __init__(self, program_name: str):
-        if len(sys.argv) < 2:
-            sys.stderr.write("ERROR: Build directory path was not provided as an argument!\n")
+    def __init__(self):
+        if len(sys.argv) < 3:
+            sys.stderr.write(
+                "ERROR: usage: dap_runner.py <build_dir> <program> [scenario]\n"
+            )
             sys.exit(1)
 
-        build_dir = sys.argv[1]
+        build_dir    = sys.argv[1]
+        program_name = sys.argv[2]
+
         vm_binary_path = os.path.join(build_dir, "bin", "VM")
         duckc_path = os.path.join(build_dir, "bin", "duckc")
 
@@ -48,6 +52,14 @@ class DAPTestClient:
         self.send_initialize()
         self.send_configuration_done()
         self.send_launch()
+
+    @property
+    def scenario(self) -> str:
+        """The case's scenario name, for runners that branch on it."""
+        if len(sys.argv) < 4:
+            sys.stderr.write("ERROR: Missing scenario argument\n")
+            sys.exit(1)
+        return sys.argv[3]
 
     def send_request(self, command: str, arguments: dict = None) -> int:
         if arguments is None:
