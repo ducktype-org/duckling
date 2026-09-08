@@ -317,7 +317,7 @@ dependencies:
     let err = result.unwrap_err();
     assert_eq!(
         err.to_string(),
-        make_errors_message(&dir, ["missing the obligatory section `metadata`"])
+        make_errors_message(&dir, ["missing the obligatory key `metadata`"])
     )
 }
 

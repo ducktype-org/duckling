@@ -45,24 +45,6 @@ impl Manifest {
             && self.dev_dependencies.is_none()
             && self.profiles.is_none()
     }
-
-    /// Checks whether fields only allowed in frontmatters are present and that `import` field is absent.
-    pub fn fields_disallowed_in_expanded_frontmatter(&self) -> Vec<&'static str> {
-        let mut result = vec![];
-        if self.metadata.is_some() {
-            result.push("metadata");
-        }
-        if self.features.is_some() {
-            result.push("features");
-        }
-        if self.import.is_some() {
-            result.push("import");
-        }
-        if self.venv.is_some() {
-            result.push("venv");
-        }
-        result
-    }
 }
 
 #[derive(Clone, Debug, Deserialize)]

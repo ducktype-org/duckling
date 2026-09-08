@@ -535,6 +535,7 @@ dependencies = [
  "git2",
  "http",
  "httpmock",
+ "ident-str",
  "itertools 0.15.0",
  "libc",
  "libgit2-sys",
@@ -1138,6 +1139,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ident-str"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d60dc77a7f8f855334ac3d17a494c7c15bc2abda04052cf6ba8efc36d86e259"
+dependencies = [
+ "macro-string",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "idna"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1318,6 +1331,17 @@ name = "log"
 version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
+
+[[package]]
+name = "macro-string"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b27834086c65ec3f9387b096d66e99f221cf081c2b738042aa252bcd41204e3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
 
 [[package]]
 name = "matchers"

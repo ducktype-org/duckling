@@ -20,8 +20,47 @@ use crate::quackpack::schemas::manifest::{
 use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
+/// Get a single atribute from an object.
+macro_rules! get_single_key {
+    ($object:ident, $key:ident) => {{ $object.$key.as_ref() }};
+}
+
+/// Helper for [`get_key`].
+macro_rules! _get_key {
+    ($object:ident, $key:ident, $($previous:ident).*) => {{
+        get_single_key!($object, $key).with_context(|| {
+            let previous_list: Vec<&str> = vec![$(stringify!($previous)).*];
+            let previous_list_str = if previous_list.is_empty() { String::new() } else {
+                format!("{}.", previous_list.join("."))
+            };
+            format!("missing the obligatory key `{previous_list_str}{}`", stringify!($key))
+        })
+    }};
+    ($object:ident, $first:ident . $($rest:ident).*, $($previous:ident).*) => {{
+        let Some(object) = get_single_key!($object, $first) else {
+            let previous_list: Vec<&str> = vec![$(stringify!($previous)).*];
+            let previous_list_str = if previous_list.is_empty() { String::new() } else {
+                format!("{}.", previous_list.join("."))
+            };
+            qp_bail!("missing the obligatory key `{previous_list_str}{}`", stringify!($first))
+        };
+        _get_key!(object, $($rest)*, $($previous:ident).* $first)
+    }}
+}
+
+/// Get a nested atribute from an object.
+/// If at any point encounters [`Option::None`], bails.
+macro_rules! get_key {
+    ($object:ident, $key:ident) => {{
+        _get_key!($object, $key, )
+    }};
+    ($object:ident, $first:ident . $($rest:ident).*) => {{
+        _get_key!($object, $first . $($rest).*, )
+    }}
+}
+
 /// Parse [`Manifest`] from given [`ManifestSchema`].
-#[tracing::instrument(skip_all)]
+//#[tracing::instrument(skip_all)]
 #[track_caller]
 pub(crate) fn parse(
     schema: &ManifestSchema,
@@ -30,6 +69,7 @@ pub(crate) fn parse(
     warnings: &mut Warnings,
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
+    check_illegal_fields(schema, &mode, root)?;
     let mut scope = Scope::new();
     let mut deps = Vec::new();
     let guard = scope.push("dependencies".into());
@@ -59,20 +99,6 @@ pub(crate) fn parse(
     let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
     match mode {
         ParseMode::FrontMatter => {
-            let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
-            if !illegal_fields.is_empty() {
-                let mut err = qp_err!(
-                    "illegal field{} `{}` in the frontmatter at `{}`",
-                    illegal_fields.s_if_plural(),
-                    illegal_fields.join("`, `"),
-                    root.display()
-                );
-                err = err.add_hint(
-                    "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
-                );
-                qp_bail!(err);
-            }
-
             // NOTE: `script.rs::FrontMatter::name` relies on the fact that script name ==
             // manifest.name.
             let name = StrId::from(root.file_stem().unwrap());
@@ -98,20 +124,10 @@ pub(crate) fn parse(
             Ok(manifest)
         }
         ParseMode::Package => {
-            if schema.import.is_some() {
-                qp_bail!("`import` field is prohibited in manifests")
-            }
-            let Some(ref metadata) = schema.metadata else {
-                qp_bail!("missing the obligatory section `metadata`")
-            };
-            let Some(version) = metadata.version else {
-                qp_bail!("missing the obligatory key `metadata.version`")
-            };
-            let Some(ref name) = metadata.name else {
-                qp_bail!("missing the obligatory key `metadata.name`")
-            };
+            let metadata = get_key!(schema, metadata)?;
+            let name = get_key!(schema, metadata.name)?;
+            let version = *get_key!(schema, metadata.version)?;
             debug!(package_name = %name, package_version = %version);
-
             {
                 let mut guard1 = scope.push("metadata".to_string());
                 let guard2 = guard1.push("name".to_string());
@@ -124,15 +140,13 @@ pub(crate) fn parse(
             let features = parse_features(schema.features.as_ref())
                 .with_context(move || guard.make_context_string())?;
             let venv = parse_venv(schema.venv.as_ref(), root, ctx);
-            let authors = metadata
-                .authors
-                .as_ref()
-                .map(|vec| vec.iter().map(<&String>::into).collect())
+            let authors = get_key!(schema, metadata.authors)
+                .cloned()
                 .unwrap_or_default();
             let package_metadata = PackageMetadata {
                 authors,
-                license: metadata.license.as_ref().map(<&String>::into),
-                description: metadata.description.as_ref().map(<&String>::into),
+                license: get_key!(schema, metadata.license).ok().cloned(),
+                description: get_key!(schema, metadata.description).ok().cloned(),
             };
 
             let build_options = parse_build_options(metadata);
@@ -147,6 +161,49 @@ pub(crate) fn parse(
                 venv,
                 build_options,
             ))
+        }
+    }
+}
+
+/// Check that the [`ManifestSchema`] does not contain any fields disallowed in this [`ParseMode`].
+fn check_illegal_fields(schema: &ManifestSchema, mode: &ParseMode, root: &Path) -> QuackResult<()> {
+    match mode {
+        ParseMode::Package => {
+            if get_single_key!(schema, import).is_some() {
+                qp_bail!(
+                    "illegal field `import` in the manifest at `{}`",
+                    root.display()
+                )
+            }
+            Ok(())
+        }
+        ParseMode::FrontMatter => {
+            let mut found_illegal_fields = vec![];
+            if get_single_key!(schema, metadata).is_some() {
+                found_illegal_fields.push("metadata");
+            }
+            if get_single_key!(schema, features).is_some() {
+                found_illegal_fields.push("features");
+            }
+            if get_single_key!(schema, venv).is_some() {
+                found_illegal_fields.push("venv");
+            }
+            if get_single_key!(schema, import).is_some() {
+                found_illegal_fields.push("import");
+            }
+
+            if found_illegal_fields.is_empty() {
+                return Ok(());
+            }
+            let err = qp_err!(
+                "illegal field{} `{}` in the frontmatter at `{}`",
+                found_illegal_fields.s_if_plural(),
+                found_illegal_fields.join("`, `"),
+                root.display()
+            );
+            qp_bail!(err.add_hint(
+                "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`"
+            ));
         }
     }
 }
