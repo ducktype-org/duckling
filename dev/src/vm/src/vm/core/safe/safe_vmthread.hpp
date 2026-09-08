@@ -1,6 +1,10 @@
 #pragma once
 
+#include <events/emitter.hpp>
+
 #include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/api/data/api_error.hpp>
@@ -18,6 +22,7 @@
 
 #include <limits>
 #include <mutex>
+#include <utility>
 
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
@@ -91,11 +96,10 @@ namespace vm {
 	 */
 	class SafeVMThread final: public IVMThread {
 	private:
-		std::deque<code::valid_function::ValidFunction> runtime_expr_high;
-		std::deque<low::LowFuncData>                    runtime_expr_low;
+		std::deque<code::valid_function::ValidFunction>            runtime_expr_high;
+		std::deque<low::LowFuncData>                               runtime_expr_low;
+		std::deque<events::Emitter<std::vector<Ref<SafeVMValue>>>> runtime_expr_res_handler;
 
-		std::deque<std::vector<Ref<SafeVMValue>>> runtime_ret_value_storage;
-		std::mutex                                runtime_ret_value_storage_mutex;
 
 		RuntimeData runtime_data;
 
@@ -291,11 +295,10 @@ namespace vm {
 		base::Optional<CRef<code::valid_function::ValidFunction>> getFatBytecodeFunction(u64 frame_idx
 		) const;
 
-		base::Optional<std::vector<Ref<SafeVMValue>>> loadAndExecRuntimeExpr(
-			code::valid_function::ValidFunction&& expr
-		);
-
-		std::expected<api::Response, api::ApiError> getRuntimeExprResult() override;
+		std::expected<
+			std::vector<Ref<SafeVMValue>>,
+			std::pair<MRef<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
+			loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
 
 		[[nodiscard]]
 		Ref<SafeVMValue> getVMValue(u64 id) const;

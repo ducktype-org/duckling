@@ -657,16 +657,9 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 
-			{
-				std::unique_lock lock(thread.runtime_ret_value_storage_mutex);
-				thread.runtime_ret_value_storage.push_back(exit_value);
-			}
+			thread.runtime_expr_res_handler.back().emitEvent(exit_value);
 
-			thread.respondExecutionRequest(api::ExprExecutionCompleted{
-				.thread_id = thread.getThreadID().asInt(),
-				.expr_id   = thread.runtime_expr_low.size(),
-			});
-
+			thread.runtime_expr_res_handler.pop_back();
 			thread.runtime_expr_low.pop_back();
 			thread.runtime_expr_high.pop_back();
 		}

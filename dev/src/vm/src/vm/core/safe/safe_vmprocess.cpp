@@ -703,15 +703,6 @@ namespace vm {
 		};
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMProcess::getRuntimeExprResult(
-		api::ThreadID thread_id
-	) {
-		auto opt_thread = getVMThreadByID(thread_id);
-		if (!opt_thread)
-			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-		return (*opt_thread)->getRuntimeExprResult();
-	}
-
 	std::expected<api::Response, api::ApiError> SafeVMProcess::evalRuntimeExpr(
 		api::ThreadID thread_id, const std::variant<fs::File, code::Function>& source
 	) {
@@ -721,7 +712,7 @@ namespace vm {
 
 		auto thread_ref = *opt_thread;
 
-		std::unique_lock                                                         lock(rw_global);
+		std::unique_lock                                                         lock(api_lock);
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> valid_expr = [&] {
 			variant_match(source) {
 				variant_case(fs::File, files) { return loader.validateExpr(thread_ref, files); }
@@ -732,10 +723,11 @@ namespace vm {
 
 		if (valid_expr.has_value()) {
 			auto returned_value = thread_ref->loadAndExecRuntimeExpr(std::move(valid_expr).value());
-			if (!returned_value)
+			if (!returned_value.has_value()) {
+				auto [ref, msg] = returned_value.error();
 				return std::unexpected(api::ApiError{
-					api::OtherError{ "Couldn't execute the expression - either failed to resume or "
-				                     "got an unexpected status during evaluation!" } });
+					api::IncompleteExprEval{ .val = ref, .why = msg } });
+			}
 			std::vector<Ref<IVMValue>> transformed;
 			for (auto safe_ref: *returned_value) transformed.emplace_back(safe_ref.get());
 			return api::Response(vm::api::ExitValue(transformed));

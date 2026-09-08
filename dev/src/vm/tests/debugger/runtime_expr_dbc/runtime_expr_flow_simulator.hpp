@@ -95,8 +95,6 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& resumeUntilExprCompleted(const std::vector<u64>& expected_result) {}
-
 		FlowSimulator& finishAndAssertExitValue(i64 expected_exit_val) {
 			auto resume_res = vm::api::resume(pid, thread_id);
 			assertTrue(resume_res.has_value(), "Resume failed");

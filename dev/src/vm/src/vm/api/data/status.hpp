@@ -25,11 +25,6 @@ namespace vm::api {
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionCompleted, exit_value);
 	};
 
-	struct ExprExecutionCompleted {
-		u64 thread_id;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExprExecutionCompleted, thread_id);
-	};
-
 	struct ExecutionStopping {};
 
 	struct ExecutionStopped {};
@@ -46,7 +41,6 @@ namespace vm::api {
 		Sleeping,
 		ExecutionStopping,
 		ExecutionCompleted,
-		ExprExecutionCompleted,
 		ExecutionStopped,
 		ExecutionPanicked>;
 
@@ -86,5 +80,4 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::Running, "Running")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionStopping, "ExecutionStopping")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionPanicked, "ExecutionPanicked")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionCompleted, "ExecutionCompleted")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExprExecutionCompleted, "ExprExecutionCompleted")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionStopped, "ExecutionStopped")

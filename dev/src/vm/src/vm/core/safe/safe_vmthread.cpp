@@ -3,6 +3,8 @@
 #include "opcode_functions/opcodes_functions.hpp"
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
+#include <events/emitter.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
@@ -30,8 +32,13 @@
 #include <vm/module_flags/module_flags.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <condition_variable>
+#include <expected>
+#include <mutex>
+#include <optional>
 #include <ranges>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace vm {
@@ -724,15 +731,17 @@ namespace vm {
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
 	}
 
-	base::Optional<std::vector<Ref<SafeVMValue>>> SafeVMThread::loadAndExecRuntimeExpr(
-		code::valid_function::ValidFunction&& high_expr
-	) {
+	std::expected<
+		std::vector<Ref<SafeVMValue>>,
+		std::pair<MRef<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
+		SafeVMThread::loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& high_expr) {
 		CORE_ASSERT(
-			v_matches(getStatus(), api::Paused),
+			v_matches(getThreadState(), thread_state::Paused),
 			"To load and evaluate expr we need the thread to be paused"
 		);
 		runtime_expr_high.emplace_back(std::move(high_expr));
 		runtime_expr_low.emplace_back(safe_process.compileToLow(this, runtime_expr_high.back()));
+		runtime_expr_res_handler.emplace_back();
 
 		auto  frame       = runtime_data.frame_stack_current;
 		auto  prev_frame  = frame;
@@ -757,30 +766,28 @@ namespace vm {
 		prev_frame->local_block_ref_stack_end -= called_expr.result_types.size();
 		prev_frame->local_stack_head -= called_expr.ret_size;
 
-		bool resumed = resume();
-		if (!resumed) return std::nullopt;
+		std::condition_variable                       cv;
+		std::mutex                                    result_mutex;
+		base::Optional<std::vector<Ref<SafeVMValue>>> ret_val = std::nullopt;
 
-		bool completed_execution = waitForExprEvaluation();
-		if (!completed_execution) return std::nullopt;
+		events::Listener<std::vector<Ref<SafeVMValue>>> receiver([&](auto&& res) {
+			std::lock_guard lock(result_mutex);
+			ret_val = res;
+			cv.notify_all();
+		});
 
-		std::unique_lock lock(runtime_ret_value_storage_mutex);
-		auto             response = runtime_ret_value_storage.front();
-		runtime_ret_value_storage.pop_front();
+		runtime_expr_res_handler.back().attachListener(receiver);
 
-		return response;
-	}
+		auto resumed = resume();
+		if (!resumed.has_value())
+			return std::unexpected{ std::make_pair(nullptr, "resume failure: " + resumed.error()) };
 
-	std::expected<api::Response, api::ApiError> SafeVMThread::getRuntimeExprResult() {
-		std::unique_lock lock(runtime_ret_value_storage_mutex);
-		if (runtime_ret_value_storage.empty())
-			return std::unexpected(api::ApiError{
-				api::OtherError{ "No runtime expression result" } });
+		{
+			std::unique_lock lock(result_mutex);
+			cv.wait(lock, [&] { return ret_val.has_value(); });
+		}
 
-		std::vector<Ref<IVMValue>> transformed;
-		for (auto safe_ref: runtime_ret_value_storage.front())
-			transformed.emplace_back(safe_ref.get());
-		runtime_ret_value_storage.pop_front();
-		return api::Response(vm::api::ExitValue(std::move(transformed)));
+		return std::move(*ret_val);
 	}
 
 	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getCurrentHighPosition(u64 frame_index
