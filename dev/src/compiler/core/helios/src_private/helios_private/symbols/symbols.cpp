@@ -155,12 +155,6 @@ namespace compiler::helios {
 		return name(id) == "main" && isGlobalFun(id);
 	}
 
-	tsh::SymbolType<> requiredMainReturnType(query::Context& ctx) {
-		using enum tsh::IntegralAbstractType::Signedness;
-
-		return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(ctx, 64, Signed));
-	}
-
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 

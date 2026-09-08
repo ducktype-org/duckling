@@ -95,11 +95,6 @@ namespace compiler::helios {
 	bool isGlobalMain(SymID);
 
 	/**
-	 * @return the main return type required by the toolchain entry points.
-	 */
-	tsh::SymbolType<> requiredMainReturnType(query::Context& ctx);
-
-	/**
 	 * @return whether SymID is a global variable.
 	 * @note This function iterates through parents of the PST elements of the symbol to obtain this
 	 * information. It might be changed in the future, especially when more kinds of global

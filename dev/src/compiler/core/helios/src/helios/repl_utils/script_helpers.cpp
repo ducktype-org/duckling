@@ -3,8 +3,7 @@
 #include <frontend/module_tree/functors.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/queries/function_queries.hpp>
-#include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/type_interface.hpp>
+#include <helios/utils/main_return_type.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
