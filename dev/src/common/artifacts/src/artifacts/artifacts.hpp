@@ -5,6 +5,7 @@
 #include <base/collections/optional.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/box.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <filesystem/file.hpp>
 #include <string_id/string_id.hpp>
@@ -308,6 +309,27 @@ namespace artifacts {
 		void flushDown();
 
 		/**
+		 * @brief Writes this collection's blob cache to its `.artc` file, atomically.
+		 *
+		 * Goes through a sibling temporary file that is renamed into place, so a write that
+		 * fails or dies partway leaves the previous `.artc` intact rather than a torn one. A
+		 * failure is reported to the user and otherwise ignored - see
+		 * `reportCacheWriteFailure`.
+		 */
+		void writeArtcFile() const;
+
+		/**
+		 * @brief Tells the user that the artifacts cache could not be saved, and why.
+		 *
+		 * A failure here is not fatal: everything this build produced is already on disk, so
+		 * only the next build's incremental reuse is lost.
+		 *
+		 * @param path The cache file that could not be written.
+		 * @param reason Human-readable cause, e.g. an `std::error_code` message.
+		 */
+		static void reportCacheWriteFailure(const fs::FilePath& path, std::string_view reason);
+
+		/**
 		 * @brief Construct a new ArtifactCollection and sets the parent variable.
 		 */
 		ArtifactCollection(std::filesystem::path path, Ref<ArtifactCollection> parent);
@@ -320,6 +342,22 @@ namespace artifacts {
 		void validateOrWipeBuildId();
 
 		/**
+		 * @brief Removes everything inside `PATH`, leaving `PATH` itself, so that the next
+		 * build starts from an empty cache. Entries it fails to remove are reported as
+		 * warnings and skipped - a cache that cannot be cleared is not worth aborting over.
+		 */
+		void clearCacheFolder();
+
+		/**
+		 * @brief Gives up on the cache in `PATH`: tells the user why, drops the blobs loaded so
+		 * far and clears the folder, so the build carries on from an empty cache.
+		 *
+		 * @param what_is_wrong Fills in "Artifacts at '<path>' <what_is_wrong>.", e.g.
+		 * "is corrupted".
+		 */
+		void discardUnusableCache(std::string_view what_is_wrong);
+
+		/**
 		 * @brief Writes the current `artifacts::BUILD_ID` to `<PATH>/.build_id`.
 		 * This function should be called only on the root collection.
 		 */
@@ -327,9 +365,18 @@ namespace artifacts {
 
 		/**
 		 * @brief Parses blobs from `content` and inserts them to the collection.
+		 *
+		 * A `.artc` can be torn in half by a write that ran out of disk or a build that was
+		 * killed, and its tail then decodes into nonsense. That is a reason to drop the cache,
+		 * never to bring the compiler down, so every field is validated and a malformed file
+		 * is reported rather than asserted on.
+		 *
 		 * @note It is a helper method for `loadData()`.
+		 * @return `base::BAD` if `content` is not a whole, well-formed `.artc` body. Blobs
+		 * parsed before the failure may already be in the collection; the caller is expected
+		 * to discard them.
 		 */
-		void parseBlobsFromBytes(std::stringstream& content);
+		base::OkBad parseBlobsFromBytes(std::stringstream& content);
 
 		/**
 		 * @brief Iterates over `PATH` files and directories, attaches artifacts and sub-collections.

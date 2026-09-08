@@ -349,7 +349,7 @@ namespace lsp {
 			compiler::driver::collectQueryInputsFromPst(pst, previous_inputs);
 		}
 
-		file.writeToFile(content);
+		file.writeToFileUnsafe(content);
 		ModuleTreeModifier::fileModified(file);
 
 		std::vector<query::external::InputData> new_inputs;

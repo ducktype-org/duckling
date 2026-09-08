@@ -7,6 +7,7 @@
 #include <base/pointers/ref.hpp>
 
 #include <algorithm>
+#include <cerrno>
 #include <filesystem>
 #include <fstream>
 #include <random>
@@ -29,6 +30,14 @@ namespace {
 
 	void requireVirtualPath(const fs::FilePath& path) {
 		if (!path.isVirtual()) CORE_PANIC("Path is not a virtual path: " + path.string());
+	}
+
+	// Best-effort reason for a stream that would not open. `std::ofstream` reports no
+	// error_code, so errno - which the implementation sets on a failed open - is all there is.
+	std::string openFailureReason(const fs::FilePath& path) {
+		auto reason = errno != 0 ? std::error_code(errno, std::generic_category()).message()
+		                         : std::string("could not be opened for writing");
+		return path.string() + ": " + reason;
 	}
 
 	fs::FilePath randomName(const fs::FilePath& prefix_path, const size_t name_len = 16) {
@@ -105,33 +114,66 @@ namespace fs {
 
 	// --- FileManager static methods ---
 
-	File FileManager::createPhysicalFile(
+	std::expected<File, std::string> FileManager::createPhysicalFile(
+		const FilePath& path, std::string_view content, bool allow_overwrite
+	) {
+		if (!path.isPhysical())
+			return std::unexpected("path is not a physical file path: " + path.string());
+
+		auto            abs_path = path.absolute();
+		std::error_code ec;
+		if (std::filesystem::exists(abs_path.getPath(), ec) && !allow_overwrite)
+			return std::unexpected("physical file already exists: " + abs_path.string());
+
+		errno = 0;
+		std::ofstream ofs(abs_path.getPath(), allow_overwrite ? std::ios::trunc : std::ios::out);
+		// A stream carries no error_code, so the reason has to come from errno, which the
+		// implementation sets on a failed open. It is best effort: a zero errno just means the
+		// platform told us nothing more than "it failed".
+		if (!ofs) return std::unexpected(openFailureReason(abs_path));
+		ofs << content;
+		ofs.close();
+		if (!ofs) return std::unexpected("failed to write to " + abs_path.string());
+		return abs_path;
+	}
+
+	File FileManager::createPhysicalFileUnsafe(
 		const FilePath& path, std::string_view content, bool allow_overwrite
 	) {
 		requirePhysicalPath(path);
 
-		auto abs_path = path.absolute();
-		if (std::filesystem::exists(abs_path.getPath())) {
-			if (!allow_overwrite) CORE_PANIC("Physical file already exists: " + abs_path.string());
+		auto file = createPhysicalFile(path, content, allow_overwrite);
+		if (!file) CORE_PANIC("Failed to create physical file: " + file.error());
+		return *file;
+	}
+
+	std::expected<File, std::string> FileManager::createPhysicalFolder(
+		const FilePath& path, bool allow_overwrite
+	) {
+		if (!path.isPhysical())
+			return std::unexpected("path is not a physical folder path: " + path.string());
+
+		auto            abs_path = path.absolute();
+		std::error_code ec;
+		if (std::filesystem::exists(abs_path.getPath(), ec)) {
+			if (!allow_overwrite)
+				return std::unexpected("physical folder already exists: " + abs_path.string());
+			std::filesystem::remove_all(abs_path.getPath(), ec);
+			if (ec) return std::unexpected(ec.message());
 		}
-		std::ofstream ofs(abs_path.getPath(), allow_overwrite ? std::ios::trunc : std::ios::out);
-		if (!ofs) CORE_PANIC("Failed to create physical file: " + abs_path.string());
-		ofs << content;
-		ofs.close();
+		// The bool result only says whether a directory was created, which is false both for a
+		// path that already exists and for a failure; the error code is what distinguishes them.
+		std::filesystem::create_directories(abs_path.getPath(), ec);
+		if (ec) return std::unexpected(ec.message());
 		return abs_path;
 	}
 
-	File FileManager::createPhysicalFolder(const FilePath& path, bool allow_overwrite) {
+	File FileManager::createPhysicalFolderUnsafe(const FilePath& path, bool allow_overwrite) {
 		requirePhysicalPath(path);
 
-		auto abs_path = path.absolute();
-		if (std::filesystem::exists(abs_path.getPath())) {
-			if (!allow_overwrite)
-				CORE_PANIC("Physical folder already exists: " + abs_path.string());
-			std::filesystem::remove_all(abs_path.getPath());
-		}
-		std::filesystem::create_directories(abs_path.getPath());
-		return abs_path;
+		auto folder = createPhysicalFolder(path, allow_overwrite);
+		if (!folder) CORE_PANIC("Failed to create physical folder: " + folder.error());
+		return *folder;
 	}
 
 	File FileManager::createVirtualFile(
@@ -169,7 +211,7 @@ namespace fs {
 	File FileManager::createRandomTempDirectory() {
 		FilePath tmp_dir   = FilePath::getDefaultTempDirectoryPath();
 		auto     rand_path = randomName(tmp_dir);
-		return createPhysicalFolder(rand_path);
+		return createPhysicalFolderUnsafe(rand_path);
 	}
 
 	File FileManager::createRandomVirtualDirectory() {
@@ -192,7 +234,7 @@ namespace fs {
 	File FileManager::createRandomTempFile(std::string_view content) {
 		FilePath tmp_dir   = FilePath::getDefaultTempDirectoryPath();
 		auto     rand_path = randomName(tmp_dir);
-		return createPhysicalFile(rand_path, content);
+		return createPhysicalFileUnsafe(rand_path, content);
 	}
 
 	bool FileManager::deleteFile(const File& file) {
@@ -265,19 +307,29 @@ namespace fs {
 
 	std::string File::extension() const { return path.extension(); }
 
-	void File::writeToFile(std::string_view new_content, bool append) const {
+	std::expected<void, std::string> File::writeToFile(std::string_view new_content, bool append)
+		const {
 		requireFile(*this);
 
 		if (type == FileType::Virtual) {
-			if (!vfs->exists(path)) CORE_PANIC("Virtual file does not exist: " + path.string());
+			if (!vfs->exists(path))
+				return std::unexpected("virtual file does not exist: " + path.string());
 			vfs->writeFile(path, new_content, append);
-		} else {
-			std::ios::openmode mode = append ? (std::ios::out | std::ios::app) : std::ios::out;
-			std::ofstream      ofs(path.getPath(), mode);
-			if (!ofs) CORE_PANIC("Failed to open file for writing: " + path.string());
-			ofs << new_content;
-			if (ofs.fail()) CORE_PANIC("Failed to write to file: " + path.string());
+			return {};
 		}
+
+		errno                   = 0;
+		std::ios::openmode mode = append ? (std::ios::out | std::ios::app) : std::ios::out;
+		std::ofstream      ofs(path.getPath(), mode);
+		if (!ofs) return std::unexpected(openFailureReason(path));
+		ofs << new_content;
+		if (ofs.fail()) return std::unexpected("failed to write to " + path.string());
+		return {};
+	}
+
+	void File::writeToFileUnsafe(std::string_view new_content, bool append) const {
+		auto written = writeToFile(new_content, append);
+		if (!written) CORE_PANIC("Failed to write to file: " + written.error());
 	}
 
 	File File::createSubFile(std::string_view new_file_content, std::string_view custom_name) const {
@@ -289,7 +341,7 @@ namespace fs {
 			FileManager::createVirtualFile(file_path, new_file_content);
 			break;
 		case FileType::Physical:
-			FileManager::createPhysicalFile(file_path, new_file_content);
+			FileManager::createPhysicalFileUnsafe(file_path, new_file_content);
 			break;
 		default:
 			CORE_PANIC("Unsupported directory type for file creation");
@@ -306,7 +358,7 @@ namespace fs {
 			FileManager::createVirtualFolder(dir_path);
 			break;
 		case FileType::Physical:
-			FileManager::createPhysicalFolder(dir_path);
+			FileManager::createPhysicalFolderUnsafe(dir_path);
 			break;
 		default:
 			CORE_PANIC("Unsupported directory type for directory creation");

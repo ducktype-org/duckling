@@ -296,11 +296,13 @@ private:
 		// Ensure cleanup from any previous run
 		std::filesystem::remove_all(physical_folder_path);
 
-		auto physical_folder = fs::FileManager::createPhysicalFolder(physical_folder_path, false);
+		auto physical_folder
+			= fs::FileManager::createPhysicalFolderUnsafe(physical_folder_path, false);
 		assertTrue(physical_folder.isDirectory(), "Physical folder should be created");
 
 		// Test physical folder with override
-		auto physical_folder2 = fs::FileManager::createPhysicalFolder(physical_folder_path, true);
+		auto physical_folder2
+			= fs::FileManager::createPhysicalFolderUnsafe(physical_folder_path, true);
 		assertTrue(
 			physical_folder2.isDirectory(), "Physical folder should be recreated with override"
 		);
@@ -345,12 +347,12 @@ private:
 			= "test_temp_folder_"
 		    + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 		fs::FilePath temp_folder_path = std::filesystem::temp_directory_path() / unique_temp_name;
-		auto         temp_folder      = fs::FileManager::createPhysicalFolder(temp_folder_path);
+		auto         temp_folder = fs::FileManager::createPhysicalFolderUnsafe(temp_folder_path);
 		assertTrue(temp_folder.isDirectory(), "Temp folder should be created");
 		assertTrue(temp_folder.isTemporary(), "Folder in the temp dir should report as temporary");
 
 		// Test temp folder with override
-		auto temp_folder2 = fs::FileManager::createPhysicalFolder(temp_folder_path, true);
+		auto temp_folder2 = fs::FileManager::createPhysicalFolderUnsafe(temp_folder_path, true);
 		assertTrue(temp_folder2.isDirectory(), "Temp folder should be recreated with override");
 
 		// Test folderExists with path
@@ -455,12 +457,12 @@ private:
 		// Test physical file creation with override
 		fs::FilePath physical_file_path = current_dir / "test_physical.txt";
 		auto         physical_file1
-			= fs::FileManager::createPhysicalFile(physical_file_path, "content1", false);
+			= fs::FileManager::createPhysicalFileUnsafe(physical_file_path, "content1", false);
 		assertTrue(physical_file1.getType() == fs::FileType::Physical, "File should be physical");
 
 		// Test override functionality
 		auto physical_file2
-			= fs::FileManager::createPhysicalFile(physical_file_path, "content2", true);
+			= fs::FileManager::createPhysicalFileUnsafe(physical_file_path, "content2", true);
 		auto overridden_content = physical_file2.getContent();
 		assertTrue(
 			overridden_content.view().stringView() == "content2", "Content should be overridden"
@@ -468,11 +470,23 @@ private:
 
 		// Test trying to create without override (should fail)
 		try {
-			fs::FileManager::createPhysicalFile(physical_file_path, "content3", false);
+			fs::FileManager::createPhysicalFileUnsafe(physical_file_path, "content3", false);
 			assertTrue(false, "Should fail to create existing file without override");
 		} catch (const base::Panic&) {
 			// Expected behavior
 		}
+
+		// The default factories report an environment failure instead of panicking. A path whose
+		// parent is a regular file cannot become a folder or a file, and that is the machine
+		// talking, not a broken invariant - so a reason comes back and nothing aborts.
+		fs::FilePath blocked_folder = physical_file_path / "cannot_exist";
+		auto         folder_failure = fs::FileManager::createPhysicalFolder(blocked_folder);
+		assertTrue(!folder_failure.has_value(), "Creating a folder under a file should fail");
+		assertTrue(!folder_failure.error().empty(), "The failure should carry a reason");
+
+		auto file_failure = fs::FileManager::createPhysicalFile(blocked_folder, "content");
+		assertTrue(!file_failure.has_value(), "Creating a file under a file should fail");
+		assertTrue(!file_failure.error().empty(), "The failure should carry a reason");
 
 		// Test symlink detection
 		assertTrue(!physical_file_path.isSymlink(), "Physical file should not be symlink");

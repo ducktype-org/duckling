@@ -147,14 +147,30 @@ namespace fs {
 		bool isDirectory() const noexcept;
 
 		/**
-		 * @brief Writes content to the file.
+		 * @brief Writes content to the file, reporting failure instead of panicking.
+		 *
+		 * The default, for the same reason as `FileManager::createPhysicalFile`: a write that
+		 * fails usually says something about the machine - no space left, a read-only mount -
+		 * and that is for the user to hear, not for the compiler to abort on. Use
+		 * `writeToFileUnsafe` only where a failure would mean a broken invariant.
 		 *
 		 * This method works for both file types (physical and virtual).
 		 *
 		 * @param new_content The content to write to the file.
 		 * @param append If true, appends to the file; if false, overwrites the file.
+		 * @return Nothing on success, or a message describing why the write failed.
 		 */
-		void writeToFile(std::string_view new_content, bool append = false) const;
+		[[nodiscard]]
+		std::expected<void, std::string> writeToFile(
+			std::string_view new_content, bool append = false
+		) const;
+
+		/**
+		 * @brief `writeToFile` that panics instead of reporting failure.
+		 *
+		 * See `FileManager::createPhysicalFileUnsafe` for when opting in is justified.
+		 */
+		void writeToFileUnsafe(std::string_view new_content, bool append = false) const;
 
 		/**
 		 * @brief Returns the contents of a directory as a vector of FilePath objects.
@@ -255,31 +271,51 @@ namespace fs {
 		static File getVirtualRootDirectory();
 
 		/**
-		 * @brief Creates a physical file in the physical filesystem's root directory or at the
-		 * given absolute path. If the file already exists and override is false, throws an error.
-		 * If override is true, overwrites the file.
-		 * The path must be absolute and on disk; a path under the system temp directory counts
-		 * (physical and temporary are the same filesystem), a virtual one does not.
-		 * @param path The absolute or relative path to the file.
+		 * @brief Creates a physical file, reporting failure instead of panicking.
+		 *
+		 * This is the default because creating a file can fail for reasons that have nothing to
+		 * do with the caller being wrong: no write permission, a read-only mount, a full disk.
+		 * @param path The absolute on-disk path to the file.
 		 * @param content The content to write to the file.
 		 * @param allow_overwrite If true, overwrites the file if it exists.
-		 * @return The created File object.
+		 * @return The created File, or a message describing why it could not be created.
 		 */
-		static File createPhysicalFile(
+		static std::expected<File, std::string> createPhysicalFile(
 			const FilePath& path, std::string_view content = "", bool allow_overwrite = false
 		);
 
 		/**
-		 * @brief Creates a physical folder in the physical filesystem's root directory or at the
-		 * given absolute path. If the folder already exists and override is false, throws an error.
-		 * If override is true, recreates the folder.
-		 * The path must be absolute and on disk; a path under the system temp directory counts
-		 * (physical and temporary are the same filesystem), a virtual one does not.
-		 * @param path The absolute or relative path to the folder.
-		 * @param allow_overwrite If true, recreates the folder if it exists.
-		 * @return The created File object.
+		 * @brief `createPhysicalFile` that panics instead of reporting failure.
+		 *
+		 * Opt in to this only when a failure would mean the program's own assumptions are
+		 * broken, so that there is nothing useful to tell the user and no way to carry on -
+		 * creating the scratch space a test needs, for instance. Anywhere the environment can
+		 * plausibly say no, use `createPhysicalFile` and report the reason it gave.
 		 */
-		static File createPhysicalFolder(const FilePath& path, bool allow_overwrite = false);
+		static File createPhysicalFileUnsafe(
+			const FilePath& path, std::string_view content = "", bool allow_overwrite = false
+		);
+
+		/**
+		 * @brief Creates a physical folder, reporting failure instead of panicking.
+		 *
+		 * The default, for the same reason as `createPhysicalFile`: a folder that cannot be
+		 * created is usually a fact about the machine, not a bug in the caller.
+		 *
+		 * @param path The absolute on-disk path to the folder.
+		 * @param allow_overwrite If true, recreates the folder if it exists.
+		 * @return The created File, or a message describing why it could not be created.
+		 */
+		static std::expected<File, std::string> createPhysicalFolder(
+			const FilePath& path, bool allow_overwrite = false
+		);
+
+		/**
+		 * @brief `createPhysicalFolder` that panics instead of reporting failure.
+		 *
+		 * See `createPhysicalFileUnsafe` for when opting in is justified.
+		 */
+		static File createPhysicalFolderUnsafe(const FilePath& path, bool allow_overwrite = false);
 
 		/**
 		 * @brief Creates a virtual file in the virtual filesystem's root directory or at the given

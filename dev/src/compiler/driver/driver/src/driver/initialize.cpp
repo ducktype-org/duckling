@@ -53,19 +53,30 @@ namespace compiler::driver {
 			driver::print_ir_options.print_hir = debug_options.print_hir;
 		}
 
-		void handleArtifactsOptions(const options_types::ArtifactsOptions& art_options) {
+		// Creating the artifacts folder can fail for reasons that are not the compiler's fault -
+		// no write permission, a read-only mount, a full disk - so the failure is reported to the
+		// user and the compilation gives up cleanly, rather than panicking with a stack trace.
+		// Returning before `setRootCollection` is safe: `driver::exit()` flushes artifacts only
+		// `if (hasRootCollection())`, so nothing tries to write into the folder we could not make.
+		base::OkBad handleArtifactsOptions(const options_types::ArtifactsOptions& art_options) {
 			auto path = art_options.artifacts_path;
 			if (not path.exists()) {
-				if (path.isVirtual())
-					throw base::LogicError(
-						"Artifacts path must be on disk, but got a virtual one: " + path.string()
+				auto folder = fs::FileManager::createPhysicalFolder(path.absolute());
+				if (not folder.has_value()) {
+					CORE_USER_LOG(
+						"Error: cannot create the artifacts folder \"",
+						path.string(),
+						"\": ",
+						folder.error(),
+						"\n"
 					);
-				auto file = fs::FileManager::createPhysicalFolder(path.absolute());
-				CORE_ASSERT(file.exists(), "Failed to create artifacts folder: " + path.string());
+					return base::BAD;
+				}
 			}
 			global_state::setters::setRootCollection(
 				makeBox<artifacts::ArtifactCollection>(art_options.artifacts_path.getPath())
 			);
+			return base::OK;
 		}
 
 		base::OkBad handlePackageOptions(
@@ -95,15 +106,18 @@ namespace compiler::driver {
 
 			if_opt_some(stdlib_options.std_artifacts_path, path) {
 				if (not path.exists()) {
-					if (path.isVirtual())
-						throw base::LogicError(
-							"Std artifacts path must be on disk, but got a virtual one: "
-							+ path.string()
+					// Same as the artifacts folder above: an environment problem, not a bug.
+					auto folder = fs::FileManager::createPhysicalFolder(path.absolute());
+					if (not folder.has_value()) {
+						CORE_USER_LOG(
+							"Error: cannot create the standard library artifacts folder \"",
+							path.string(),
+							"\": ",
+							folder.error(),
+							"\n"
 						);
-					auto file = fs::FileManager::createPhysicalFolder(path.absolute());
-					CORE_ASSERT(
-						file.exists(), "Failed to create artifacts folder: " + path.string()
-					);
+						return base::BAD;
+					}
 				}
 				global_state::setters::setCustomStdArtifactsCollection(
 					makeBox<artifacts::ArtifactCollection>(path)
@@ -247,7 +261,8 @@ namespace compiler::driver {
 
 				handleDebugOptions(package_compilation_options.debug_options);
 				handleExecutionOptions(package_compilation_options.execution_options);
-				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
+				if (handleArtifactsOptions(package_compilation_options.compilation_artifacts).isBad())
+					return base::BAD;
 
 				auto package_success = handlePackageOptions(
 					package_compilation_options.packages_info,
@@ -274,7 +289,8 @@ namespace compiler::driver {
 
 				handleDebugOptions(script_options.debug_options);
 				handleExecutionOptions(script_options.execution_options);
-				handleArtifactsOptions(script_options.compilation_artifacts);
+				if (handleArtifactsOptions(script_options.compilation_artifacts).isBad())
+					return base::BAD;
 				auto package_success
 					= handlePackageOptions(repl_packages_info, script_options.stdlib_options);
 				if (package_success.isBad()) return base::BAD;

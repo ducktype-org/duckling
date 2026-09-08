@@ -8,14 +8,45 @@
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 
+#include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <utility>
 
 constexpr char ARTC_DELIM = ';';
+
+namespace {
+	/**
+	 * @brief Reads one `ARTC_DELIM`-terminated decimal field out of a `.artc` body.
+	 *
+	 * Fails on a missing, empty, non-numeric or too-large field - which is exactly what the
+	 * tail of a torn `.artc` looks like. `std::stoull` used to be called here instead, and it
+	 * answers such input by throwing, which took the whole compiler down.
+	 *
+	 * @return False if no well-formed field could be read; `out` is then untouched.
+	 */
+	bool readDelimitedU32(std::stringstream& content, u32& out) {
+		std::string buffer;
+		if (!std::getline(content, buffer, ARTC_DELIM)) return false;
+
+		const char* begin = buffer.data();
+		const char* end   = begin + buffer.size();
+
+		u64 value             = 0;
+		const auto [stop, ec] = std::from_chars(begin, end, value);
+		// The whole field has to be the number: a trailing character means the file is not
+		// what we think it is.
+		if (ec != std::errc{} || stop != end) return false;
+		if (value > std::numeric_limits<u32>::max()) return false;
+
+		out = static_cast<u32>(value);
+		return true;
+	}
+}
 
 void artifacts::BlobArtifact::setData(const byte* ptr, usize n_bytes) {
 	parent->setBlobData(*this, ptr, n_bytes);
@@ -68,6 +99,10 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 		);
 	}
 
+	clearCacheFolder();
+}
+
+void artifacts::ArtifactCollection::clearCacheFolder() {
 	std::error_code iter_ec;
 	for (const auto& entry: std::filesystem::directory_iterator(PATH, iter_ec)) {
 		std::error_code remove_ec;
@@ -97,7 +132,12 @@ void artifacts::ArtifactCollection::writeBuildIdFile() {
 	if (flush_build_id) {
 		const auto name     = base::StrID(std::string(BUILD_ID_FILE));
 		const auto artifact = fileArtifactAtOrNewNoLock(name);
-		artifact.file.writeToFile(BUILD_ID);
+		// Losing the marker is self-correcting rather than dangerous: the next build finds no
+		// build id, says so and clears the folder, which costs one full rebuild. So warn and
+		// let this build finish.
+		const auto written = artifact.file.writeToFile(BUILD_ID);
+		if (!written.has_value())
+			reportCacheWriteFailure(artifact.file.getFilePath(), written.error());
 	}
 }
 
@@ -210,32 +250,29 @@ artifacts::ArtifactCollection::ArtifactCollection(
 	loadData();
 }
 
-void artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream& content) {
-	std::string buffer;
-
+base::OkBad artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream& content) {
 	u32 blob_count = 0;
-	std::getline(content, buffer, ARTC_DELIM);
-	blob_count = base::safeIntConv<u32>(std::stoull(buffer));
+	if (!readDelimitedU32(content, blob_count)) return base::BAD;
 
 	u32 read_blobs = 0;
 	while (read_blobs < blob_count && content && !content.eof()) {
 		// Get name size.
 		u32 name_size = 0;
-		std::getline(content, buffer, ARTC_DELIM);
-		name_size = base::safeIntConv<u32>(std::stoull(buffer));
+		if (!readDelimitedU32(content, name_size)) return base::BAD;
 
-		// Get the name.
+		// Get the name. A short read means the file ends mid-name.
 		std::string blob_name(name_size, 'a');
 		content.read(blob_name.data(), name_size);
+		if (content.gcount() != std::streamsize(name_size)) return base::BAD;
 
 		// Get data size.
 		u32 blob_data_size = 0;
-		std::getline(content, buffer, ARTC_DELIM);
-		blob_data_size = base::safeIntConv<u32>(std::stoull(buffer));
+		if (!readDelimitedU32(content, blob_data_size)) return base::BAD;
 
 		// Get the data.
 		std::vector<byte> blob_data(blob_data_size);
 		content.read(reinterpret_cast<char*>(blob_data.data()), blob_data_size);
+		if (content.gcount() != std::streamsize(blob_data_size)) return base::BAD;
 
 		// Save the blob.
 		auto blob = blobArtifactNew(base::StrID(blob_name.data()));
@@ -243,33 +280,67 @@ void artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream& conte
 
 		read_blobs++;
 	}
-	CORE_ASSERT(blob_count == read_blobs, "Read invalid blob count");
+	// Fewer blobs than the header promised means the file was cut short.
+	return read_blobs == blob_count ? base::OK : base::BAD;
 }
 
 void artifacts::ArtifactCollection::loadData() {
 	// Read blob data.
 	auto artc_file_path = getArtcFile();
-	if (artc_file_path.exists()) {
-		std::ifstream     artc_file(artc_file_path.getPath());
-		std::stringstream content;
-		content << artc_file.rdbuf();
-		parseBlobsFromBytes(content);
-		artc_file.close();
+	if (!artc_file_path.exists()) return;
 
-		// Read file artifacts and other sub-collections.
-		for (const auto& inner_path: std::filesystem::directory_iterator(PATH)) {
-			const auto filename = inner_path.path().filename().string();
-			const auto name     = base::StrID(filename);
-			if (inner_path.is_directory())
-				subCollectionNew(name);
-			else if (inner_path.is_regular_file())
-				fileArtifactNew(name);
-		}
+	std::ifstream artc_file(artc_file_path.getPath());
+	if (!artc_file) {
+		discardUnusableCache("cannot be read");
+		return;
+	}
+
+	std::stringstream content;
+	content << artc_file.rdbuf();
+	const auto parsed = parseBlobsFromBytes(content);
+	artc_file.close();
+
+	if (parsed.isBad()) {
+		discardUnusableCache("is corrupted");
+		return;
+	}
+
+	// Read file artifacts and other sub-collections.
+	for (const auto& inner_path: std::filesystem::directory_iterator(PATH)) {
+		const auto filename = inner_path.path().filename().string();
+		const auto name     = base::StrID(filename);
+		if (inner_path.is_directory())
+			subCollectionNew(name);
+		else if (inner_path.is_regular_file())
+			fileArtifactNew(name);
 	}
 }
 
+void artifacts::ArtifactCollection::discardUnusableCache(std::string_view what_is_wrong) {
+	CORE_USER_LOG(
+		"Artifacts at '",
+		PATH.string(),
+		"' ",
+		what_is_wrong,
+		". Clearing whole cache folder and starting fresh.\n"
+	);
+	// Whatever was parsed before the failure describes a cache that is about to be deleted, so
+	// it must not stay in memory - it would be flushed straight back onto disk at exit.
+	blob_artifacts.clear();
+	blob_data.clear();
+	clearCacheFolder();
+}
+
 void artifacts::ArtifactCollection::flushDown() {
-	auto artc_file_path = getArtcFile();
+	writeArtcFile();
+
+	// Every sub-collection gets its turn whatever happened above: one directory we cannot write
+	// to must not cost the whole tree its cache.
+	for (auto&& [_, sub_collection]: sub_collections) sub_collection->flushDown();
+}
+
+void artifacts::ArtifactCollection::writeArtcFile() const {
+	const auto artc_file_path = getArtcFile();
 	CORE_DEV_LOG(
 		Artifacts,
 		"Flushing ArtifactCollection at: ",
@@ -277,7 +348,21 @@ void artifacts::ArtifactCollection::flushDown() {
 		"\n"
 	);
 
-	std::ofstream file(artc_file_path.getPath());
+	// The cache is written to a sibling temporary file and renamed into place. A rename inside
+	// one directory is atomic, so a reader sees either the previous cache or the new one, never
+	// a half of each - and a write that dies partway (a full disk, a killed build) leaves the
+	// old, valid `.artc` untouched instead of a torn one. That matters more than it looks: a
+	// torn `.artc` sitting next to a *matching* `.build_id` is not wiped by the build-id check,
+	// so it used to break every later build in that directory until someone deleted the folder
+	// by hand.
+	const auto tmp_file_path = fs::FilePath(artc_file_path.string() + ".tmp");
+
+	std::ofstream file(tmp_file_path.getPath(), std::ios::binary | std::ios::trunc);
+	if (!file) {
+		reportCacheWriteFailure(tmp_file_path, "could not be opened for writing");
+		return;
+	}
+
 	file << std::to_string(blob_artifacts.size()) << ARTC_DELIM;
 	for (const auto& [blob_name, blob]: blob_artifacts) {
 		const auto& data = blob_data[blob_name];
@@ -291,7 +376,38 @@ void artifacts::ArtifactCollection::flushDown() {
 	}
 	file.close();
 
-	for (auto&& [_, sub_collection]: sub_collections) sub_collection->flushDown();
+	// Only a fully written temporary file earns the rename; anything else is thrown away, which
+	// is what keeps the previous cache intact.
+	if (!file) {
+		reportCacheWriteFailure(tmp_file_path, "could not be written");
+		std::error_code remove_ec;
+		std::filesystem::remove(tmp_file_path.getPath(), remove_ec);
+		return;
+	}
+
+	std::error_code rename_ec;
+	std::filesystem::rename(tmp_file_path.getPath(), artc_file_path.getPath(), rename_ec);
+	if (rename_ec) {
+		reportCacheWriteFailure(artc_file_path, rename_ec.message());
+		std::error_code remove_ec;
+		std::filesystem::remove(tmp_file_path.getPath(), remove_ec);
+	}
+}
+
+void artifacts::ArtifactCollection::reportCacheWriteFailure(
+	const fs::FilePath& path, std::string_view reason
+) {
+	// Losing the cache costs the next build its incremental speed-up, nothing more: the
+	// artifacts this build produced are already on disk. So the user is told and the build is
+	// allowed to finish - but told loudly, because silence here used to be how a full disk
+	// turned into a mysteriously slow or broken project.
+	CORE_USER_LOG(
+		"Warning: could not save the artifacts cache '",
+		path.string(),
+		"': ",
+		reason,
+		". The next build will not be able to reuse it.\n"
+	);
 }
 
 fs::FilePath artifacts::ArtifactCollection::getArtcFile() const {

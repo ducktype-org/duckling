@@ -265,7 +265,7 @@ private:
 		);
 
 		// Modify file content
-		temp_file.writeToFile("new content");
+		temp_file.writeToFileUnsafe("new content");
 		// Call fileModified
 		ModuleTreeModifier::fileModified(temp_file);
 
