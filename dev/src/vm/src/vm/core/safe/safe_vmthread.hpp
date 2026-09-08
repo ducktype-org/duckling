@@ -56,17 +56,15 @@ namespace vm {
 	 * `local_stack_top` is kept to remember where the top of the stack currently is.
 	 */
 	struct RuntimeData {
-		Frame* frame_stack_base;       /// Pointer to the first frame from `frame_stack` vector.
-		Frame* frame_stack_end;        /// Pointer to the first value not allocated.
-		Frame* frame_stack_current;    /// Pointer to the current frame - used only when debugging.
+		Frame* frame_stack_base;     /// Pointer to the first frame from `frame_stack` vector.
+		Frame* frame_stack_end;      /// Pointer to the first value not allocated.
+		Frame* frame_stack_current;  /// Pointer to the current frame - used only when debugging.
 
-		byte* local_stack_base;        /// Pointer to the start of `local_stack_reserved`.
-		byte* local_stack_end;         /// Pointer to the first value not allocated.
+		byte* local_stack_base;      /// Pointer to the start of `local_stack_reserved`.
+		byte* local_stack_end;       /// Pointer to the first value not allocated.
 
-		Block** block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
-		Block** block_ref_stack_end;   /// Pointer to the first value not allocated.
-
-		LocalSlot* slot_stack_base;    /// Pointer to the start of the local variable slot stack.
+		LocalSlot* slot_stack_base;  /// Pointer to the start of the local variable slot stack.
+		LocalSlot* slot_stack_end;   /// Pointer to the first value not allocated.
 
 		byte*   global_data_buffer_base;       /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
@@ -77,11 +75,8 @@ namespace vm {
 			  frame_stack_current(stack->getFrameStack()->data()),
 			  local_stack_base(stack->getLocalStack()->data()),
 			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()),
-			  block_ref_stack_base(stack->getBlockRefStack()->data()),
-			  block_ref_stack_end(
-				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()
-			  ),
 			  slot_stack_base(stack->getSlotStack()->data()),
+			  slot_stack_end(stack->getSlotStack()->data() + stack->getSlotStack()->size()),
 			  global_data_buffer_base(global_buffer_pointers.data_buffer_base),
 			  global_block_ref_buffer_base(global_buffer_pointers.blocks_buffer_base) {}
 	};

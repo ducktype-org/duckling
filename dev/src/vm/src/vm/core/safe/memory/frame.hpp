@@ -23,13 +23,16 @@ namespace vm {
 	}
 
 	/**
-	 * @brief Type and location of the variable living in one local variable slot, which is what
-	 * a block is made out of when something first refers to the variable through one.
+	 * @brief One local variable slot: what the variable is, where it lives, and its block once
+	 * something refers to the variable through one.
 	 */
 	struct LocalSlot {
 		const Type* type = nullptr;
 		/// Absolute, so that a slot shared with the caller reads alike from both frames.
 		byte* data = nullptr;
+		/// Null until an instruction first needs a block, which is then built out of the two
+		/// fields above.
+		Block* block = nullptr;
 	};
 
 	struct FlagData {
@@ -64,18 +67,15 @@ namespace vm {
 		byte* local_stack = nullptr;
 
 		/**
-		 * @brief Base of the stack of block IDs used by the function created with init_type
-		 * and destroyed with deinit.
+		 * @brief Base of the stack of local variable slots, indexed by slot index. A slot is
+		 * pushed by init and dropped by deinit.
 		 */
-		Block** local_block_ref_stack_base = nullptr;
+		LocalSlot* local_slot_stack_base = nullptr;
 
 		/**
-		 * @brief The pointer to the first free position on the block stack.
+		 * @brief The pointer to the first free position on the slot stack.
 		 */
-		Block** local_block_ref_stack_end = nullptr;
-
-		/// Base of the stack of local variable slots, indexed by slot index.
-		LocalSlot* local_slot_stack_base = nullptr;
+		LocalSlot* local_slot_stack_end = nullptr;
 
 		/**
 		 * @brief Function linked to the frame.

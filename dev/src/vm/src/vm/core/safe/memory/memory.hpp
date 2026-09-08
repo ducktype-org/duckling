@@ -551,13 +551,13 @@ namespace vm {
 		 */
 		auto createLocalSlotBlock(Frame& frame, u64 slot_index)
 			-> Ref<BlockT> requires std::is_same_v<EntryT, byte> {
-			const LocalSlot& slot = frame.local_slot_stack_base[slot_index];
+			LocalSlot& slot = frame.local_slot_stack_base[slot_index];
 
 			auto block = adoptDummy(slot.type, slot.data);
 			// So that nobody can delete our block.
 			increaseBlockRefcount(block);
 
-			frame.local_block_ref_stack_base[slot_index] = block.get();
+			slot.block = block.get();
 			return block;
 		}
 

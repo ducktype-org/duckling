@@ -370,9 +370,9 @@ namespace vm {
 			auto arg_count          = function_signature->parameters.size();
 
 			std::vector<Box<SafeVMValue>> args;
-			auto                          block_ref_stack_count
-				= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-			u64 first_arg_idx = block_ref_stack_count - arg_count;
+			auto                          slot_stack_count
+				= usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
+			u64 first_arg_idx = slot_stack_count - arg_count;
 
 			// Create VMValue objects from local arguments. The argument's actual block type is
 			// used (verification guarantees it matches what the builtin expects).
@@ -437,9 +437,9 @@ namespace vm {
 				// 		arg1
 				// 		...
 				// 		argN
-				u64 block_ref_stack_count
-					= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-				u64        result_value_idx = block_ref_stack_count - arg_count - (is_void ? 0 : 1);
+				u64 slot_stack_count
+					= u64(frame->local_slot_stack_end - frame->local_slot_stack_base);
+				u64        result_value_idx = slot_stack_count - arg_count - (is_void ? 0 : 1);
 				const auto result_pointer   = frame->local_slot_stack_base[result_value_idx].data;
 
 				byte* args_pointer
@@ -467,10 +467,9 @@ namespace vm {
 
 			// Local stack layout is the same as for call_cfunc:
 			// [..., result_value (if any), arg0, ..., argN], each in its own block.
-			u64 block_ref_stack_count
-				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-			u64 first_block_idx = block_ref_stack_count - arg_count - (is_void ? 0 : 1);
-			u64 first_arg_idx   = first_block_idx + (is_void ? 0 : 1);
+			u64 slot_stack_count = u64(frame->local_slot_stack_end - frame->local_slot_stack_base);
+			u64 first_block_idx  = slot_stack_count - arg_count - (is_void ? 0 : 1);
+			u64 first_arg_idx    = first_block_idx + (is_void ? 0 : 1);
 
 			std::vector<void*> arg_values(arg_count);
 			for (u64 i = 0; i < arg_count; i++) {
@@ -564,14 +563,12 @@ namespace vm {
 			// Frame of the function we're returning from.
 			auto* callee_frame = frame;
 
-			// The function deinitialized its own locals, so the only entries left on its block
-			// reference stack are its return values, which the caller took care of and keeps using.
+			// The function deinitialized its own locals, so the only entries left on its slot
+			// stack are its return values, which the caller took care of and keeps using.
 			CORE_ASSERT(
-				usize(
-					callee_frame->local_block_ref_stack_end
-					- callee_frame->local_block_ref_stack_base
-				) == callee_frame->current_function->result_types.size(),
-				"On return only the function's return values may be left on the block stack"
+				usize(callee_frame->local_slot_stack_end - callee_frame->local_slot_stack_base)
+					== callee_frame->current_function->result_types.size(),
+				"On return only the function's return values may be left on the slot stack"
 			);
 
 			// Previous frame is just before current frame in the array, so that
@@ -623,7 +620,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinitDtor)(FUNCTION_ARGS) {
 		{
-			if (frame->local_block_ref_stack_end[-1] == nullptr) {
+			if (frame->local_slot_stack_end[-1].block == nullptr) {
 				// Without a block there is nothing to run the destructors off, so they are run
 				// over the variable's bytes directly.
 				const LocalSlot& slot = topLocalSlot(frame);
@@ -1391,7 +1388,7 @@ namespace vm {
 		{
 			const auto& safe_vm_value = *std::bit_cast<const SafeVMValue*>(instr->arg0);
 			performInit(local_stack, frame, thread, instr->arg1, safe_vm_value.type);
-			safe_vm_value.exportData({ Ref(frame->local_block_ref_stack_end[-1]), 0 });
+			safe_vm_value.exportData({ Ref(frame->local_slot_stack_end[-1].block), 0 });
 		}
 		FUNCTION_CONT(1);
 	}

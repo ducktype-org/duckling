@@ -225,7 +225,7 @@ namespace vm::loader::compiler::safe {
 			                      .bc                  = bytecode,
 			                      .orig_bc             = std::move(bytecode),
 			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
-			                      .local_block_count   = ctx.local_block_count,
+			                      .local_slot_count    = ctx.local_slot_count,
 			                      .arg_size            = getIntTypeSize(parameters_size),
 			                      .ret_size            = getIntTypeSize(ret_type_sum),
 			                      .parameters          = std::move(parameters),

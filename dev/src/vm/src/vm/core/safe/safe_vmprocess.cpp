@@ -532,7 +532,7 @@ namespace vm {
 				Frame& frame = thread->getStackFrame(frame_index);
 
 				const u64 slot_count = base::safeIntConv<u64>(
-					frame.local_block_ref_stack_end - frame.local_block_ref_stack_base
+					frame.local_slot_stack_end - frame.local_slot_stack_base
 				);
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
@@ -541,8 +541,8 @@ namespace vm {
 
 					// Variables are initialized without a block, and a value can only be read
 					// through one, so it is created here exactly as the executor does.
-					Ref<Block> block = frame.local_block_ref_stack_base[slot_index] != nullptr
-					                     ? Ref(frame.local_block_ref_stack_base[slot_index])
+					Ref<Block> block = slot.block != nullptr
+					                     ? Ref(slot.block)
 					                     : memory.createLocalSlotBlock(frame, slot_index);
 
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{

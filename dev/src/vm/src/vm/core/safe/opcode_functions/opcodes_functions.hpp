@@ -116,26 +116,20 @@ namespace vm {
 			);
 			std::memset(data, 0, zeroed_size);
 
-			const u64 slot_index
-				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-			frame->local_slot_stack_base[slot_index] = { .type = type.get(), .data = data };
-
-			*frame->local_block_ref_stack_end = block;
-			frame->local_block_ref_stack_end += 1;
+			*frame->local_slot_stack_end = { .type = type.get(), .data = data, .block = block };
+			frame->local_slot_stack_end += 1;
 		}
 
 		/**
 		 * @brief Drops the topmost local variable slot without touching its block.
 		 */
-		static void popLocalSlot(Frame* frame) { frame->local_block_ref_stack_end -= 1; }
+		static void popLocalSlot(Frame* frame) { frame->local_slot_stack_end -= 1; }
 
 		/**
 		 * @brief The topmost local variable slot.
 		 */
 		static const LocalSlot& topLocalSlot(Frame* frame) {
-			const u64 slot_index
-				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base) - 1;
-			return frame->local_slot_stack_base[slot_index];
+			return frame->local_slot_stack_end[-1];
 		}
 
 		/// `Memory::createLocalSlotBlock`, kept out of line: it runs at most once per variable,
@@ -162,10 +156,10 @@ namespace vm {
 
 			if (is_global) return { thread.runtime_data.global_block_ref_buffer_base[index] };
 
-			if (frame->local_block_ref_stack_base[index] == nullptr) [[unlikely]]
+			if (frame->local_slot_stack_base[index].block == nullptr) [[unlikely]]
 				return createLocalBlock(frame, thread, index);
 
-			return { frame->local_block_ref_stack_base[index] };
+			return { frame->local_slot_stack_base[index].block };
 		}
 
 		/**
@@ -206,8 +200,8 @@ namespace vm {
 			auto arg_count           = called_func.parameters.size();
 			auto ret_count           = called_func.result_types.size();
 			auto shared_blocks_count = arg_count + ret_count;
-			u64  prev_frame_block_ref_count
-				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+			u64  prev_frame_slot_count
+				= u64(frame->local_slot_stack_end - frame->local_slot_stack_base);
 
 			// Save current registers and flow.
 			frame->instr       = instr + instruction_size;
@@ -228,10 +222,8 @@ namespace vm {
 			// The callee's local stack starts where the space shared with the caller (its return
 			// values followed by its arguments) begins.
 			local_stack += callee_stack_distance;
-			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
-			                                  + (prev_frame_block_ref_count - shared_blocks_count);
-			frame->local_slot_stack_base = prev_frame->local_slot_stack_base
-			                             + (prev_frame_block_ref_count - shared_blocks_count);
+			frame->local_slot_stack_base
+				= prev_frame->local_slot_stack_base + (prev_frame_slot_count - shared_blocks_count);
 
 			// Cross-checks the distance, computed at lowering time, against the address the
 			// caller's own `init` recorded for the first slot they share.
@@ -243,17 +235,17 @@ namespace vm {
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
-			if (frame->local_block_ref_stack_base + called_func.local_block_count
-			    >= runtime_data.block_ref_stack_end)
+			if (frame->local_slot_stack_base + called_func.local_slot_count
+			    >= runtime_data.slot_stack_end)
 				throw exceptions::VMStackOverflowException();
 
-			frame->local_block_ref_stack_end = prev_frame->local_block_ref_stack_end;
+			frame->local_slot_stack_end = prev_frame->local_slot_stack_end;
 
-			// Remove the argument blocks from caller's block stack. Only the return value stays in
-			// the block stack.
+			// Remove the argument slots from the caller's slot stack. Only the return value stays
+			// there.
 			// @note: We require that the callee can't deinitialize the return value passed by the
 			// caller.
-			prev_frame->local_block_ref_stack_end -= arg_count;
+			prev_frame->local_slot_stack_end -= arg_count;
 		}
 
 		/**
@@ -277,7 +269,7 @@ namespace vm {
 
 		static VM_OPFUN_INLINE void performDeinit(Frame*& frame, SafeVMThread& thread) {
 			// A variable that never needed a block has none to free.
-			if (Block* block = frame->local_block_ref_stack_end[-1]) {
+			if (Block* block = frame->local_slot_stack_end[-1].block) {
 				thread.process_memory.freeBlockData(block);
 				thread.process_memory.decreaseBlockRefcount(block);
 			}

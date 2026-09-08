@@ -138,7 +138,7 @@ namespace vm {
 			.bc                  = {},
 			.orig_bc             = {},
 			.local_stack_size    = 0,
-			.local_block_count   = func.result_types.size() + func.parameters.size(),
+			.local_slot_count    = func.result_types.size() + func.parameters.size(),
 			.arg_size            = 0,
 			.ret_size            = func.ret_size,
 			.parameters          = {},
@@ -236,7 +236,7 @@ namespace vm {
 			.bc                  = {},
 			.orig_bc             = {},
 			.local_stack_size    = 72,
-			.local_block_count   = 7,
+			.local_slot_count    = 7,
 			.arg_size            = 0,
 			.ret_size            = func.ret_size,
 			.parameters          = {},
@@ -492,13 +492,12 @@ namespace vm {
 		Frame  orig_frame_cpy = *runtime_data.frame_stack_current;
 		byte*  local_stack    = frame->local_stack;
 		if (local_stack == nullptr) local_stack = runtime_data.local_stack_base;
-		auto orig_block_stack_size
-			= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+		auto orig_slot_stack_size
+			= usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
 
-		frame->current_function           = &start_function;
-		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
-		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
-		frame->local_slot_stack_base      = runtime_data.slot_stack_base;
+		frame->current_function      = &start_function;
+		frame->local_slot_stack_base = runtime_data.slot_stack_base;
+		frame->local_slot_stack_end  = runtime_data.slot_stack_base;
 
 		const auto* instr = start_function.bc.data();
 
@@ -515,21 +514,21 @@ namespace vm {
 			frame == orig_frame_ptr,
 			"After executing function we have to return to original place in call stack"
 		);
-		// @note: The return value is the only block left on the block stack.
+		// @note: The return value is the only slot left on the slot stack.
 		CORE_ASSERT(
-			frame->local_block_ref_stack_end - frame->local_block_ref_stack_base
-				>= orig_block_stack_size + func.result_types.size(),
-			"After function execution, there should be enough blocks on the stack to retrieve "
+			frame->local_slot_stack_end - frame->local_slot_stack_base
+				>= orig_slot_stack_size + func.result_types.size(),
+			"After function execution, there should be enough slots on the stack to retrieve "
 			"result."
 		);
 
 		// Copy the exit values
 		exit_value_storage = { std::vector<Ref<SafeVMValue>>{} };
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
-			const usize slot_index = orig_block_stack_size + idx;
+			const usize slot_index = orig_slot_stack_size + idx;
 			// A result the callee never took a block for still has to be handed out as a
 			// pointer, so it gets one here.
-			Block* block = frame->local_block_ref_stack_base[slot_index];
+			Block* block = frame->local_slot_stack_base[slot_index].block;
 			if (block == nullptr)
 				block = process_memory.createLocalSlotBlock(*frame, slot_index).get();
 
@@ -539,10 +538,10 @@ namespace vm {
 		}
 
 		// Free the remaining data on the stack
-		for (usize idx = orig_block_stack_size;
-		     idx < usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+		for (usize idx = orig_slot_stack_size;
+		     idx < usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
 		     idx++) {
-			if (Block* block = frame->local_block_ref_stack_base[idx]) {
+			if (Block* block = frame->local_slot_stack_base[idx].block) {
 				process_memory.freeBlockData(block);
 				process_memory.decreaseBlockRefcount(block);
 				continue;
