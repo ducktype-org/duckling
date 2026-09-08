@@ -493,12 +493,12 @@ DEF_MICRO_INSTR(ret)
  * @arg0 - byte offset of the variable in the frame's local stack.
  * @arg1 - type of the variable.
  */
-DEF_MICRO_INSTR(init_imm_type, vm::low::opargs::Offset, vm::low::opargs::Type)
+DEF_MICRO_INSTR(init_off_type, vm::low::opargs::Offset, vm::low::opargs::Type)
 
-/// `init_imm_type` for an 8-byte variable, which zeroes with a plain store.
-DEF_MICRO_INSTR(init64_imm_type, vm::low::opargs::Offset, vm::low::opargs::Type)
-/// 16-byte counterpart of `init64_imm_type`, the size of a `Pointer`.
-DEF_MICRO_INSTR(init128_imm_type, vm::low::opargs::Offset, vm::low::opargs::Type)
+/// `init_off_type` for an 8-byte variable, which zeroes with a plain store.
+DEF_MICRO_INSTR(init64_off_type, vm::low::opargs::Offset, vm::low::opargs::Type)
+/// 16-byte counterpart of `init64_off_type`, the size of a `Pointer`.
+DEF_MICRO_INSTR(init128_off_type, vm::low::opargs::Offset, vm::low::opargs::Type)
 
 /// Pops the topmost local variable, freeing its block if one was created.
 DEF_MICRO_INSTR(deinit)

@@ -75,9 +75,9 @@ private:
 	 * together.
 	 */
 	usize countInits(base::StrID function_name) {
-		return countOpcode(function_name, MicroOpcode::init_imm_type)
-		     + countOpcode(function_name, MicroOpcode::init64_imm_type)
-		     + countOpcode(function_name, MicroOpcode::init128_imm_type);
+		return countOpcode(function_name, MicroOpcode::init_off_type)
+		     + countOpcode(function_name, MicroOpcode::init64_off_type)
+		     + countOpcode(function_name, MicroOpcode::init128_off_type);
 	}
 
 	void assertInitCount(base::StrID function_name, usize expected) {
@@ -191,12 +191,12 @@ private:
 	void zeroingIsSpecializedBySize() {
 		// `counter` is an `i64`, `flag` an `i8` - only the first has a specialized size.
 		const auto mixed_sizes = base::StrID("simple");
-		assertOpcodeCount(mixed_sizes, MicroOpcode::init64_imm_type, 1);
-		assertOpcodeCount(mixed_sizes, MicroOpcode::init_imm_type, 1);
+		assertOpcodeCount(mixed_sizes, MicroOpcode::init64_off_type, 1);
+		assertOpcodeCount(mixed_sizes, MicroOpcode::init_off_type, 1);
 
 		// A pointer and a pair of `i64`s are both 16 bytes wide.
 		const auto both_16_bytes = base::StrID("holds_pointer");
-		assertOpcodeCount(both_16_bytes, MicroOpcode::init128_imm_type, 2);
+		assertOpcodeCount(both_16_bytes, MicroOpcode::init128_off_type, 2);
 	}
 
 	/**

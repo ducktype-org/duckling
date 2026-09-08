@@ -40,25 +40,6 @@
 		constexpr bool operator==(const NAME& other) const noexcept = default; \
 	}
 
-namespace vm::low {
-	/**
-	 * @brief A byte offset into the frame's local stack, or a distance between two frames' stacks.
-	 *
-	 * Computed by the lowering rather than spelled in the bytecode, and kept apart from
-	 * `opargs::Immediate` so that an offset cannot be passed where a raw immediate is expected,
-	 * or the other way around.
-	 */
-	struct StackOffset final {
-		u64 value = 0;
-
-		constexpr StackOffset() = default;
-
-		constexpr explicit StackOffset(const u64 value): value(value) {}
-
-		constexpr operator u64() const noexcept { return value; }
-	};
-}
-
 /**
  * @brief This namespace encapsulates types of micro instruction arguments.
  * @note All types should be default constructible.
@@ -131,8 +112,13 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(MethodName, "method", vm::opargs::MethodName);
 	/** @brief Stores relative instruction jump offset after label linking. */
 	DEFINE_MICRO_ARG_TYPE(Label, "label", vm::opargs::Label);
-	/** @brief Stores a byte offset in the local stack, or a distance between two frames' stacks. */
-	DEFINE_MICRO_ARG_TYPE(Offset, "off", vm::low::StackOffset);
+	/**
+	 * @brief Stores a byte offset in the local stack, or a distance between two frames' stacks.
+	 *
+	 * Computed by the lowering rather than spelled in the bytecode, hence the plain `u64` source:
+	 * it keeps an offset apart from `Immediate`, which only accepts an `opargs::Immediate`.
+	 */
+	DEFINE_MICRO_ARG_TYPE(Offset, "off", u64);
 
 	/**
 	 * @brief Storage class for any kind of micro instruction argument.

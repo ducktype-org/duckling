@@ -28,7 +28,7 @@ namespace vm::loader::compiler::safe::detail {
 	 * A pair is valid when:
 	 * 1) the high arg type is listed in `LowArg::ConstructibleFrom`, and
 	 * 2) the high arg can be lowered - either by constructing `vm::opargs::OpCodeArg` from it, or
-	 *    because it is a plain value the lowering computed itself, like a `low::StackOffset`
+	 *    because it is a plain value the lowering computed itself, like a byte offset
 	 *
 	 * The two cases mirror what `ASSERT_GOOD_SOURCE` accepts as a source type.
 	 */
@@ -135,10 +135,10 @@ namespace vm::loader::compiler::safe::detail {
 		/**
 		 * @brief Byte offset of a local variable in the frame's local stack.
 		 */
-		vm::low::StackOffset byteOffsetOf(const opargs::ArgumentType auto p) const {
-			return vm::low::StackOffset{ getIntTypeSize(
+		u64 byteOffsetOf(const opargs::ArgumentType auto p) const {
+			return getIntTypeSize(
 				ctx.function.local_stack.getByteOffset(curr_state, p.var_name).value()
-			) };
+			);
 		}
 
 		/**
@@ -180,12 +180,12 @@ namespace vm::loader::compiler::safe::detail {
 		/**
 		 * @brief Distance between the caller's local stack base and the callee's one.
 		 */
-		vm::low::StackOffset calleeStackDistance(u64 shared_stack_space_size) const {
+		u64 calleeStackDistance(u64 shared_stack_space_size) const {
 			CORE_ASSERT(
 				currentStackSize() >= shared_stack_space_size,
 				"Shared stack space cannot be bigger than the caller's stack"
 			);
-			return vm::low::StackOffset{ currentStackSize() - shared_stack_space_size };
+			return currentStackSize() - shared_stack_space_size;
 		}
 
 		TypeCRef resolveTypeName(base::StrID type_name) const {
@@ -247,17 +247,8 @@ namespace vm::loader::compiler::safe::detail {
 			}(static_cast<T::ArgTypes*>(nullptr));
 		}
 
-		void addDeinitOfTopVariable() { addDeinitOfVariable(topSlotIndex()); }
-
-		usize topSlotIndex() const { return ctx.function.local_stack.size(curr_state) - 1; }
-
-		/**
-		 * @brief Emits the deinitialization of the variable in slot `idx`.
-		 *
-		 * @note Both deinit instructions act on whichever slot is on top when they run, so `idx`
-		 * only picks which one is emitted. Callers have to emit deinits from the top down.
-		 */
-		void addDeinitOfVariable(usize idx) {
+		void addDeinitOfTopVariable() {
+			auto idx =
 			const auto& db = ctx.function.local_stack;
 
 			if (validTypeName(db.getTypeName(curr_state, idx).value())->holdsPointerReferences())
@@ -265,6 +256,10 @@ namespace vm::loader::compiler::safe::detail {
 			else
 				addLow<Op_deinit>();
 		}
+
+		usize topSlotIndex() const { return ctx.function.local_stack.size(curr_state) - 1; }
+
+		void addDeinitOfVariable(usize idx) {}
 
 		void addLabel(opargs::Label label) {
 			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(
@@ -674,13 +669,13 @@ namespace vm::loader::compiler::safe::detail {
 				// Zeroed by a plain store where the size allows.
 				switch (type->getSize().asInt()) {
 				case 8:
-					addLow<Op_init64_imm_type>(address, i.type);
+					addLow<Op_init64_off_type>(address, i.type);
 					break;
 				case 16:
-					addLow<Op_init128_imm_type>(address, i.type);
+					addLow<Op_init128_off_type>(address, i.type);
 					break;
 				default:
-					addLow<Op_init_imm_type>(address, i.type);
+					addLow<Op_init_off_type>(address, i.type);
 				}
 			}
 			instr_case(high::Op_deinit, i) { addDeinitOfTopVariable(); }

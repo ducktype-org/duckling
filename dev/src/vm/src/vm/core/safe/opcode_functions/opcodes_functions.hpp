@@ -251,7 +251,7 @@ namespace vm {
 		/**
 		 * @brief Initializes a local variable together with its block.
 		 *
-		 * Unlike `init_imm_type`, which leaves the slot blockless until something asks for a
+		 * Unlike `init_off_type`, which leaves the slot blockless until something asks for a
 		 * block, this creates one up front - for variables whose block is needed from the start.
 		 */
 		static VM_OPFUN_INLINE void performInit(

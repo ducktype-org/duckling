@@ -587,7 +587,7 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init_imm_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_off_type)(FUNCTION_ARGS) {
 		{
 			// No block: one is created only if something ends up needing it.
 			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
@@ -596,7 +596,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init64_imm_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init64_off_type)(FUNCTION_ARGS) {
 		{
 			// A size known here zeroes with a plain store instead of a call to `memset`.
 			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
@@ -605,7 +605,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init128_imm_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init128_off_type)(FUNCTION_ARGS) {
 		{
 			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 			pushLocalSlot(frame, type, local_stack + instr->arg0, 16, nullptr);
