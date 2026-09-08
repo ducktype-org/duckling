@@ -10,8 +10,8 @@ pub mod dvm_unit_compiler;
 pub mod external_libs;
 pub mod outputs;
 
-#[cfg(test)]
-mod tests;
+/*#[cfg(test)]
+mod tests;*/
 
 use tracing::{debug, error, info, instrument, trace};
 

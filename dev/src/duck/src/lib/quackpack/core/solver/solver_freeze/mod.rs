@@ -102,24 +102,24 @@ impl SolverFreeze {
     }
 
     #[tracing::instrument(skip_all)]
-    pub fn generate_storage_freeze(self) -> QuackResult<VenvFreeze> {
+    pub fn generate_storage_freeze(&self) -> QuackResult<VenvFreeze> {
         debug!(root = ?self.main_pkg, freeze = ?self.package_freezes);
         let mut pkg_freezes = vec![];
         let Some(root_freeze) = self.package_freezes.get(&self.main_pkg).cloned() else {
             qp_bail_internal!("no main freeze: {self:#?}")
         };
-        for (pkg, freeze) in self.package_freezes {
-            if pkg == self.main_pkg {
+        for (pkg, freeze) in self.package_freezes.iter() {
+            if *pkg == self.main_pkg {
                 continue;
             }
             let mut dependencies = vec![];
-            for (_, realization) in freeze.dependencies_realization {
+            for (_, realization) in freeze.dependencies_realization.iter() {
                 dependencies.push((realization.identity()).into());
             }
             pkg_freezes.push(FreezePackage::new(
                 pkg.identity(),
                 pkg.version(),
-                freeze.features.into_iter().collect::<Vec<_>>(),
+                freeze.features.iter().cloned().collect::<Vec<_>>(),
                 dependencies,
             ));
         }

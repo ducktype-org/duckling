@@ -40,7 +40,7 @@ pub struct SuccessfullyLoadedPackage {
 /// A result of the procedure of loading dependencies.
 pub struct LoadedFreezePackages {
     /// Pairing between dependencies and fetched contents viewed as packages.
-    pub _pkgs: Vec<(PackageId, AnyPackage)>,
+    pub pkgs: Vec<(PackageId, AnyPackage)>,
     /// Number of packages which source codes had to be downloaded, used for user messages.
     pub freshly_downloaded_num: usize,
     /// Number of packages which were already downloaded.
@@ -94,7 +94,7 @@ pub fn load_packages_in_freeze(
         pkgs.push((fetch.id, fetch.pkg));
     }
     Ok(LoadedFreezePackages {
-        _pkgs: pkgs,
+        pkgs,
         freshly_downloaded_num,
         already_present_num,
     })

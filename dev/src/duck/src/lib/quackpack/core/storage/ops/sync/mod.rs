@@ -32,6 +32,9 @@ use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 mod load_deps;
 
+#[cfg(test)]
+pub use load_deps::load_packages_in_freeze as load_packages;
+
 #[derive(Debug, Clone, Copy)]
 /// Options passed to [`sync`].
 pub struct StorageSyncOptions {
@@ -43,12 +46,18 @@ pub struct StorageSyncOptions {
     pub strict_errors: bool,
 }
 
+#[derive(Debug)]
+pub struct SyncOutput {
+    pub new_freeze: SolverFreeze,
+    pub loaded_packages: Vec<(PackageId, AnyPackage)>,
+    pub sync_lock: TrySyncLock,
+    pub new_venv: Venv,
+    pub storage: Storage,
+}
+
 /// Synchronize virtual environment for package, and return information required to build it.
 #[tracing::instrument(skip_all)]
-pub fn sync(
-    pcx: &PackageContext<'_>,
-    options: StorageSyncOptions,
-) -> QuackResult<(TrySyncLock, Venv, Storage)> {
+pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResult<SyncOutput> {
     debug!(root = %pcx.package().root().display(), ?options);
     pcx.emit_warnings()?;
     pcx.ctx().console().info(format!(
@@ -94,7 +103,7 @@ pub fn sync(
     let new_freeze = solver_answer.new_freeze.generate_storage_freeze()?;
 
     let LoadedFreezePackages {
-        _pkgs,
+        pkgs,
         freshly_downloaded_num,
         already_present_num,
     } = load_packages_in_freeze(&storage, &fetcher, pkgs)?;
@@ -113,7 +122,13 @@ pub fn sync(
         .write(json)?;
     }
     make_success_message(pcx, id)?;
-    Ok((_sync_lock, venv, storage))
+    Ok(SyncOutput {
+        new_freeze: solver_answer.new_freeze,
+        loaded_packages: pkgs,
+        sync_lock: _sync_lock,
+        new_venv: venv,
+        storage,
+    })
 }
 
 /// Helper for [`sync`].
