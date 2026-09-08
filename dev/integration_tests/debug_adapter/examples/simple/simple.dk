@@ -1,0 +1,14 @@
+import core.builtins.*;
+
+fun f() -> i64 = {
+    var x: i64;
+    return 3;
+}
+
+fun main() -> i64 = {
+    var a: i64;
+    a = f();
+    a = a + 3;
+    builtin_output_i64(a);
+    return 0;
+}

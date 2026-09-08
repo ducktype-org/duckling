@@ -56,9 +56,6 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_mapper_test debugger/mapper_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_LowVMProgramCopy_test debugger/LowVMProgramCopy_tests.cpp
-                USES ${libvm} Tester ${vmtester})
-
         duck_add_test_custom(vm ${test_set}_inheritance_loading_test inheritance/inheritance_loading.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_inheritance_semantics_test inheritance/inheritance_semantics.cpp

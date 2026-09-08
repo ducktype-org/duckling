@@ -13,6 +13,7 @@
 #include <helios/tsh/deductions.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/utils/main_return_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -466,9 +467,7 @@ namespace compiler::helios {
 					};
 				}
 				variant_case_novalue(defgen::ScriptMainWrapper) {
-					const auto return_type = tsh::SymbolType<>::withDefaults(
-						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
-					);
+					const auto return_type = requiredMainReturnType(ctx);
 					const auto function_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
 					                                          .result_type     = return_type });
