@@ -12,7 +12,15 @@ Tests:
     Cases:
       basic:
         test-cmd: duck -C foo build --features foo
+        Err:
+          String: ""
+        Output:
+          String: ""
         features: "foo"
       pulling-feature:
         test-cmd: duck -C foo build --features bar
+        Err:
+          String: ""
+        Output:
+          String: ""
         features: bar foo

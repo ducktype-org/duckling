@@ -62,11 +62,4 @@ timeout_default: 2
 TimeOut: "$([ \"$(@{is_jit_enabled})\" = \"ON\" ] && echo @{timeout_jit} || echo @{timeout_default})"
 
 SubDirs:
-    - dit
-    - compiler
     - duck
-    - repl
-    - debug_adapter
-    - debugger_cli
-    - scripts
-    - vm

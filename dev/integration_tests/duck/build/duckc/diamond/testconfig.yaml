@@ -48,3 +48,7 @@ Tests:
     Cases:
       build:
         test-cmd: duck -C root build
+        Err:
+          String: ""
+        Output:
+          String: ""

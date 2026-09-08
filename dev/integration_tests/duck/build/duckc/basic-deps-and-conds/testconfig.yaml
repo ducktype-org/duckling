@@ -21,6 +21,14 @@ Tests:
     Cases:
       without-bar:
         test-cmd: duck -C foo build
+        Err:
+          String: ""
+        Output:
+          String: ""
       with-bar:
         test-cmd: duck -C foo build --features use-bar
         features: use-bar
+        Err:
+          String: ""
+        Output:
+          String: ""

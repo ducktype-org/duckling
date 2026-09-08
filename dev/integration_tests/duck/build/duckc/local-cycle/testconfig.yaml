@@ -13,3 +13,7 @@ Tests:
     Cases:
       build:
         test-cmd: duck -C foo build
+        Err:
+          String: ""
+        Output:
+          String: ""

@@ -12,3 +12,7 @@ Tests:
         workers: 0
       in-between:
         workers: 2
+        Err:
+          String: ""
+        Output:
+          String: ""

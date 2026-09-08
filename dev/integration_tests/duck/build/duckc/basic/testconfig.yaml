@@ -21,39 +21,83 @@ Tests:
     Cases:
       dev:
         test-cmd: duck -C foo build
+        Err:
+          String: ""
+        Output:
+          String: ""
         profile-name: dev
       release:
         test-cmd: duck -C foo build --release
+        Err:
+          String: ""
+        Output:
+          String: ""
         profile-name: release
       release2:
         profile-name: release
         test-cmd: duck -C foo build --profile=release
+        Err:
+          String: ""
+        Output:
+          String: ""
       relase3:
         profile-name: release
         test-cmd: duck --color=never -C foo build --profile release
+        Err:
+          String: ""
+        Output:
+          String: ""
       custom-profile:
         test-cmd: duck -C foo build --profile my-profile
+        Err:
+          String: ""
+        Output:
+          String: ""
         profile-name: my-profile
       overridden-builtin-profile:
         test-cmd: duck -C foo build --profile bench
+        Err:
+          String: ""
+        Output:
+          String: ""
         profile-name: bench
       custom-profile-inherited:
         test-cmd: duck -C foo build --profile my-profile2
+        Err:
+          String: ""
+        Output:
+          String: ""
         profile-name: my-profile2
       # @TODO: #3023 Reenable verbose itests
       verbose:
         test-cmd: duck -C foo build --verbose
+        Err:
+          String: ""
+        Output:
+          String: ""
         profile-name: dev
         Enabled: "false"
       verbose-release:
         test-cmd: duck -C foo build --release --verbose
+        Err:
+          String: ""
+        Output:
+          String: ""
         profile-name: release
         Enabled: "false"
       verbose-release2:
         test-cmd: duck -C foo build --profile=release --verbose
+        Err:
+          String: ""
+        Output:
+          String: ""
         profile-name: release
         Enabled: "false"
       verbose-release3:
         test-cmd: duck -C foo build --profile release --verbose
+        Err:
+          String: ""
+        Output:
+          String: ""
         profile-name: release
         Enabled: "false"

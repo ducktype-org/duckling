@@ -16,3 +16,7 @@ Tests:
     Cases:
       build:
         test-cmd: duck -C foo build --profile=dvm
+        Err:
+          String: ""
+        Output:
+          String: ""

@@ -14,3 +14,7 @@ Tests:
     Cases:
       build:
         test-cmd: duck -C my-cool-root build
+        Err:
+          String: ""
+        Output:
+          String: ""

@@ -59,6 +59,10 @@ Tests:
           duck -C tmp1 add --local ../tmp2 tmp2 &&
           duck -C root1 build --shared-artifacts &&
           duck -C root2 build --shared-artifacts
+        Err:
+          String: ""
+        Output:
+          String: ""
       different-subgraphs:
         # This should produce two subfolders in build folder of tmp1.
         # We change the dependency subgraph of `tmp1`.
@@ -71,3 +75,7 @@ Tests:
           echo "@{src_tmp1}" > tmp1/src/src.dk &&
           duck -C root1 build --shared-artifacts
         
+        Err:
+          String: ""
+        Output:
+          String: ""
