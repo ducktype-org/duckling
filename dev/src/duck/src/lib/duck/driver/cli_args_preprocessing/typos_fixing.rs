@@ -10,7 +10,7 @@ use crate::duck::driver::cli_args_preprocessing::builtin::{
     get_builtin_alias_expansion, get_builtin_aliases, is_builtin_subcommand,
 };
 use crate::duck::driver::cli_args_preprocessing::levenshtein;
-use crate::duck::driver::deferred_external_subcommands::DeferredExternalSubcommands;
+use crate::duck::driver::external_subcommands::ExternalSubcommands;
 use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd;
 use crate::duck::driver::subcommands::subcommands;
 use crate::{DuckContext, QuackResult, qp_bail};
@@ -21,7 +21,7 @@ use crate::{DuckContext, QuackResult, qp_bail};
 pub fn fix_typos(
     args: ArgMatches,
     ctx: &DuckContext,
-    external_cmds: &DeferredExternalSubcommands,
+    external_cmds: &ExternalSubcommands,
 ) -> QuackResult<ArgMatches> {
     // No subcommand.
     let Some((name, subcmd_args)) = args.subcommand() else {
@@ -63,21 +63,13 @@ pub fn fix_typos(
 fn is_valid_subcmd(
     ctx: &DuckContext,
     name: &str,
-    external_cmds: &DeferredExternalSubcommands,
+    external_cmds: &ExternalSubcommands,
 ) -> QuackResult<bool> {
-    if is_builtin_subcommand(name) {
-        return Ok(true);
-    }
-    if get_builtin_alias_expansion(name).is_some() {
-        return Ok(true);
-    }
-    if ctx.duck_cfg().alias_for(name)?.is_some() {
-        return Ok(true);
-    }
-    if is_name_possible_script_path_subcmd(name) {
-        return Ok(true);
-    }
-    Ok(external_cmds.load(ctx).contains_key(name))
+    Ok(is_builtin_subcommand(name)
+        || get_builtin_alias_expansion(name).is_some()
+        || ctx.duck_cfg().alias_for(name)?.is_some()
+        || is_name_possible_script_path_subcmd(name)
+        || external_cmds.load(ctx).contains_key(name))
 }
 
 /// Get all known and valid subcommands.
@@ -85,7 +77,7 @@ fn is_valid_subcmd(
 /// This is a list containing all values for which [`is_valid_subcmd`] returns true.
 fn possible_targets(
     ctx: &DuckContext,
-    external_cmds: &DeferredExternalSubcommands,
+    external_cmds: &ExternalSubcommands,
 ) -> QuackResult<Vec<String>> {
     let mut targets = subcommands()
         .into_iter()
@@ -225,7 +217,7 @@ mod tests {
     fn test_fixes() {
         let args_matches = cli().try_get_matches_from(["duck", "buil"]).unwrap();
         let (ctx, _dir) = setup_test(|| setup_duck_home_with_a_given_max_fix_distance(1));
-        let external_cmds = DeferredExternalSubcommands::default();
+        let external_cmds = ExternalSubcommands::default();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
         assert_eq!(result.subcommand_name(), Some("build"));
     }
@@ -234,7 +226,7 @@ mod tests {
     fn test_multiple_targets() {
         let args_matches = cli().try_get_matches_from(["duck", "inaa"]).unwrap();
         let (ctx, _dir) = setup_test(|| setup_duck_home_with_a_given_max_fix_distance(100));
-        let external_cmds = DeferredExternalSubcommands::default();
+        let external_cmds = ExternalSubcommands::default();
         let result = fix_typos(args_matches, &ctx, &external_cmds).expect_err(
             "There are two equally distant targets (`info` and `init`), so fixing should fail.",
         );
@@ -250,7 +242,7 @@ mod tests {
     fn test_single_closest_target() {
         let args_matches = cli().try_get_matches_from(["duck", "ini", "f"]).unwrap();
         let (ctx, _dir) = setup_test(|| setup_duck_home_with_a_given_max_fix_distance(100));
-        let external_cmds = DeferredExternalSubcommands::default();
+        let external_cmds = ExternalSubcommands::default();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
         assert_eq!(result.subcommand_name(), Some("init"));
     }
@@ -265,7 +257,7 @@ mod tests {
         let args_matches = cli().try_get_matches_from(["duck", "ny_aias"]).unwrap();
         let (mut ctx, _dir) = setup_test(|| setup_duck_home_with_a_given_max_fix_distance(2));
         ctx.duck_cfg_mut().set_aliases(fake_aliases);
-        let external_cmds = DeferredExternalSubcommands::default();
+        let external_cmds = ExternalSubcommands::default();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
         assert_eq!(result.subcommand_name(), Some("my_alias"));
     }
@@ -274,10 +266,9 @@ mod tests {
     fn test_tries_fixing_to_builtin_alias() {
         let args_matches = cli().try_get_matches_from(["duck", "a"]).unwrap();
         let (ctx, _dir) = setup_test(|| setup_duck_home_with_a_given_max_fix_distance(1));
-        let result = fix_typos(args_matches, &ctx, &DeferredExternalSubcommands::default())
-            .expect_err(
-                "There are two equally distant targets (`b` and `r`), so fixing should fail.",
-            );
+        let result = fix_typos(args_matches, &ctx, &ExternalSubcommands::default()).expect_err(
+            "There are two equally distant targets (`b` and `r`), so fixing should fail.",
+        );
         assert_eq!(
             result.to_string(),
             "no such command as `a`; did you mean:\n- `b`\n- `r`?"

@@ -11,7 +11,7 @@ use super::cli_args_preprocessing::typos_fixing::fix_typos;
 use super::global_options::GlobalOptions;
 use super::subcommands::exec_for;
 use super::subcommands::run_script::{check_is_script, possible_script_path_subcmd};
-use crate::duck::driver::deferred_external_subcommands::DeferredExternalSubcommands;
+use crate::duck::driver::external_subcommands::ExternalSubcommands;
 use crate::quackpack::core::compile::duckc::Duckc;
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::command_ext::CommandExt;
@@ -20,7 +20,7 @@ use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 /// Run the duck with the given [`DuckContext`].
 pub(crate) fn run(ctx: &mut DuckContext) -> QuackResult<()> {
-    let external = DeferredExternalSubcommands::default();
+    let external = ExternalSubcommands::default();
     let cli = cli();
 
     let matches = cli.try_get_matches()?;
@@ -91,7 +91,7 @@ pub(super) fn gather_external_subcmds(ctx: &DuckContext) -> HashMap<String, Path
 fn run_subcmd(
     ctx: &DuckContext,
     args: ArgMatches,
-    external: &DeferredExternalSubcommands,
+    external: &ExternalSubcommands,
 ) -> QuackResult<()> {
     let Some((name, args)) = args.subcommand() else {
         // No subcommand provided, start REPL.
