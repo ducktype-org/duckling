@@ -14,6 +14,9 @@
 \usepackage{xcolor}
 \usepackage{listings}
 \usepackage[font=small,labelfont=bf]{caption}
+\usepackage{titlesec}
+\titlespacing*{\section}{0pt}{2.0ex plus .2ex minus .2ex}{1.2ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1.6ex plus .2ex minus .2ex}{0.9ex plus .2ex}
 
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
@@ -25,7 +28,6 @@
 \usepackage[hidelinks]{hyperref}
 
 \newcommand{\todo}[1]{\textcolor{red}{\textbf{[DO UZUPEŁNIENIA: #1]}}}
-\newcommand{\dopisz}{\textcolor{red}{\textbf{[DO UZUPEŁNIENIA]}}}
 
 \definecolor{codekw}{RGB}{0,0,170}
 \definecolor{codetype}{RGB}{40,130,160}
@@ -386,9 +388,11 @@ i z ilością prawdziwej pracy przypadającej na węzeł.
 \section{Wyniki: kompilatory}
 \label{sec:kompilatory}
 
-Korpusem były dwa pliki wygenerowane automatycznie generatorem kodu, po około
-8000 linii każdy. Plik \texttt{duck1} zawiera 352 funkcje, \texttt{duck2} 153
-funkcje. \todo{czym dokładnie różnią się duck1 i duck2 poza liczbą funkcji}
+Korpusem były dwa pliki wygenerowane automatycznie tym samym generatorem kodu,
+po około 8000 linii każdy. Różnią się wyłącznie liczbą funkcji: \texttt{duck1}
+zawiera ich 352, a \texttt{duck2} 153, więc przy zbliżonej łącznej długości
+funkcje w \texttt{duck2} są średnio ponad dwukrotnie dłuższe i jednostek pracy
+do zrównoleglenia jest w nim mniej.
 
 \subsection{Pełna kompilacja}
 
@@ -484,11 +488,11 @@ obiektu ze zmiennymi globalnymi 2~ms, generowanie kodu funkcji 58~ms, linkowanie
 55~ms. Faza faktycznie zrównoleglona to więc mniej niż połowa całości, co jest
 ważnym kontekstem dla wszystkich powyższych porównań.
 
-Odnotujmy jeszcze jedną obserwację o samym PSAC-u. Jego scheduler tworzy pulę
-wątków zanim program wejdzie do funkcji \texttt{main}, a wolne wątki kręcą się
-w pętli zamiast spać, przez co szesnaście z nich psuło zawartość pamięci
-podręcznej przez całą szeregową fazę front endu. Zatrzymanie puli na jednym wątku
-poza fazami równoległymi skróciło pełną kompilację mniej więcej o połowę.
+Osobnej uwagi wymaga sam PSAC. Jego scheduler tworzy pulę wątków jeszcze przed
+wejściem do funkcji \texttt{main}, a wolne wątki kręcą się w pętli zamiast spać,
+przez co szesnaście z nich psuło zawartość pamięci podręcznej przez całą
+szeregową fazę front endu. Zatrzymanie puli na jednym wątku poza fazami
+równoległymi skróciło pełną kompilację mniej więcej o połowę.
 
 \subsection{Aktualizacje inkrementalne}
 
@@ -586,10 +590,10 @@ Wąskich gardeł szukaliśmy profilerem \texttt{perf}, nagrywając przebiegi
 kompilacji i patrząc, gdzie schodzi czas.
 
 Pierwszą zmianą była zamiana alokatora pamięci na mimalloc. Wpadliśmy na to,
-patrząc na konfigurację budowania samego PSAC-a, który go używa: pojawiło się
-pytanie, ile z jego lekkości bierze się z modelu obliczeń, a ile po prostu
-z tańszych alokacji. Zmiana dała powtarzalne przyspieszenie od 10\% do nawet
-50\%. Zużycia pamięci nie zmierzyliśmy.
+patrząc na konfigurację budowania PSAC-a, który go używa: pojawiło się pytanie,
+ile z jego lekkości bierze się z modelu obliczeń, a ile z tańszych alokacji.
+Zmiana dała powtarzalne przyspieszenie od 10\% do nawet 50\%. Zużycia pamięci
+nie zmierzyliśmy.
 
 Po włączeniu mimalloc profil się przesunął i nowym wąskim gardłem okazało się
 internowanie napisów, czyli mechanizm, który trzyma jedną kopię każdego
@@ -642,10 +646,9 @@ dopiero później.
 
 \paragraph{Przypadki, w których silnik ma znaczenie.} Modele nie są jednak
 wymienne. Przy bardzo lekkich węzłach obliczenia i płytkich zależnościach narzut
-Query jest nie do zignorowania, w skrajnym przypadku aż 17-krotny. Przy gęstych
+Query jest nie do zignorowania, w skrajnym przypadku aż 17-krotny, a przy gęstych
 zależnościach i wielu wątkach PSAC przestaje skalować. Kompilator mieści się
-pomiędzy tymi przypadkami i prawdopodobnie właśnie dlatego wyniki wyszły
-tak zbliżone.
+pomiędzy tymi przypadkami i prawdopodobnie dlatego wyniki wyszły tak zbliżone.
 
 \paragraph{Ograniczenia i zagrożenia dla trafności.} Wyniki trzeba czytać
 z następującymi zastrzeżeniami:
@@ -674,8 +677,8 @@ z następującymi zastrzeżeniami:
         komórek i wpisy po usuniętych symbolach po stronie PSAC-a, węzły grafu po
         stronie Query.
   \item Nie robiliśmy testów istotności statystycznej. Przy różnicach rzędu kilku
-        milisekund i odchyleniach tego samego rzędu to właśnie dlatego świadomie
-        nie rozstrzygamy porównania przy aktualizacjach.
+        milisekund i odchyleniach tego samego rzędu właśnie dlatego nie
+        rozstrzygamy porównania przy aktualizacjach.
 \end{itemize}
 
 \section{Wnioski i dalsze prace}
@@ -687,10 +690,9 @@ Wracamy na koniec do pytań postawionych we wstępie.
 w obu benchmarkach syntetycznych, wyraźnie w ArraySum (4--5 razy) i umiarkowanie
 w DAG-u (1,2--1,6 raza).
 
-\textbf{RQ2.} Query skaluje się stabilniej. PSAC skaluje dobrze na płytkim
+\textbf{RQ2.} Query skaluje się stabilniej. PSAC radzi sobie dobrze na płytkim
 drzewie ArraySum, ale na gęstym DAG-u jego czas potrafi rosnąć wraz z liczbą
-wątków. W kompilatorze oba skalują podobnie i oba wyraźnie lepiej niż
-\texttt{duckc}.
+wątków. W kompilatorze oba skalują podobnie i wyraźnie lepiej niż \texttt{duckc}.
 
 \textbf{RQ3.} Tylko częściowo. Przewidywany kierunek różnicy się potwierdził, ale
 w prawdziwym kompilatorze okazała się ona znacznie mniejsza: zamiast 2,5 raza
@@ -702,14 +704,14 @@ przyniosła efekt o rząd wielkości większy.
 
 Dla kompilatora Duckling oznacza to, że nie widzimy powodu do zmiany frameworka.
 Query jest już zintegrowany z resztą potoku i przy tej wielkości zadań nie
-kosztuje mierzalnie więcej niż PSAC, więc dalszy wysiłek lepiej kierować na
-precyzję zależności i na fazy leżące poza grafem.
+kosztuje więcej niż PSAC, więc dalszy wysiłek lepiej kierować na precyzję
+zależności i na fazy poza grafem.
 
 Wśród dalszych prac widzimy przede wszystkim uczynienie front endu
-inkrementalnym, co usunęłoby podłogę 100~ms i dopiero wtedy pozwoliłoby uczciwie zmierzyć same
-silniki; zrównoleglenie liczenia stabilnych hashy w \texttt{duckc} (eksperyment
-wskazał skrócenie parsowania z 202~ms do 67~ms); pomiar zużycia pamięci obu
-silników; oraz dokończenie listy z sekcji~\ref{sec:optymalizacje}.
+inkrementalnym, co usunęłoby podłogę 100~ms i pozwoliłoby zmierzyć same silniki;
+zrównoleglenie liczenia stabilnych hashy w \texttt{duckc} (skrócenie parsowania
+z 202~ms do 67~ms); pomiar zużycia pamięci obu silników; oraz dokończenie listy
+z sekcji~\ref{sec:optymalizacje}.
 
 \section{Podział pracy}
 
@@ -718,13 +720,22 @@ silników; oraz dokończenie listy z sekcji~\ref{sec:optymalizacje}.
 \caption{Podział pracy w projekcie.}
 \label{tab:podzial}
 \small
-\begin{tabular}{@{}p{3.6cm}p{6.4cm}p{4.2cm}@{}}
+\begin{tabular}{@{}p{3.4cm}p{10.8cm}@{}}
 \toprule
-\textbf{Osoba} & \textbf{Obszar odpowiedzialności} & \textbf{Wkład} \\
+\textbf{Osoba} & \textbf{Zakres prac} \\
 \midrule
-Jakub Bartmiński   & \dopisz & \dopisz \\
-Piotr Oleszczuk    & \dopisz & \dopisz \\
-Piotr Trzaskowski  & \dopisz & \dopisz \\
+Jakub Bartmiński
+  & Analiza modelu PSAC wraz z wizualizacją jego działania. Implementacja
+    i pomiary benchmarków syntetycznych oraz skrypt rysujący z nich mapy cieplne.
+    Poprawki i rozszerzenia psacklingera, w tym rozbudowa testów. \\
+Piotr Oleszczuk
+  & Implementacja psacklingera: instrukcje sterujące, klasy, przypisania, dostęp
+    do pól i testy. Implementacja, parametryzacja i pomiary benchmarków
+    syntetycznych. \\
+Piotr Trzaskowski
+  & Analiza frameworka Query. Optymalizacje \texttt{duckc}: profilowanie, zmiana
+    alokatora pamięci, usunięcie globalnej blokady przy internowaniu napisów
+    i praca nad hashmapami. Implementacja psacklingera. \\
 \bottomrule
 \end{tabular}
 \end{table}
