@@ -1,10 +1,9 @@
 #include "operations.hpp"
 
-#include "frontend/module_tree/functors.hpp"
-
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/debug_artifacts.hpp>
 #include <driver_private/lir_unit_with_name.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
@@ -45,10 +44,12 @@ namespace compiler::driver {
 		base::StrID             module_id,
 		base::StrID             module_id_human
 	) {
-		auto dump_stem = module_id_human.strView();
+#define DEBUG_DUMP_ARTIFACT(str_id_name, ext) \
+	getDebugDumpArtifact(base::StrID(base::strConcat(str_id_name.strView(), ext)))
+
 		if (driver::print_ir_options.print_hir) hout_unit.debugPrint(ctx, std::cout);
 		if (driver::dump_ir_options.dump_hir) {
-			auto ofstream = getDebugDumpArtifact(base::StrID(base::strConcat(dump_stem, ".hir")));
+			auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".hir");
 			hout_unit.debugPrint(ctx, ofstream);
 		}
 
@@ -58,7 +59,7 @@ namespace compiler::driver {
 
 		if (driver::print_ir_options.print_mir) mir_unit.debugPrint(ctx, std::cout);
 		if (driver::dump_ir_options.dump_mir) {
-			auto ofstream = getDebugDumpArtifact(base::StrID(base::strConcat(dump_stem, ".mir")));
+			auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".mir");
 			mir_unit.debugPrint(ctx, ofstream);
 		}
 
@@ -70,7 +71,7 @@ namespace compiler::driver {
 
 		if (driver::print_ir_options.print_lir) lir_module.debugPrint(ctx, std::cout);
 		if (driver::dump_ir_options.dump_lir) {
-			auto ofstream = getDebugDumpArtifact(base::StrID(base::strConcat(dump_stem, ".lir")));
+			auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".lir");
 			lir_module.debugPrint(ctx, ofstream);
 		}
 

@@ -338,7 +338,7 @@ namespace debug_options {
 										))
 				.addLongName("dump-ir")
 				.addShortDesc("Dump to file the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: asm, llvm, dbc, lir, mir, hir.")
+				.addLongDesc("Possible values are: asm, llvm, dbc, lir, mir, hir.\nNote: dbc requires --dvm-backend.")
 				.build(),
 			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
 											"categories",

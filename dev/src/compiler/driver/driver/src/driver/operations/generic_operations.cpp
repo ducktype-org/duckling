@@ -406,8 +406,9 @@ namespace compiler::driver {
 			);
 
 			LIRUnitWithBackendName merged{
-				.module_id = repl::getScriptModuleID(script_context.script_file),
-				.lir_unit  = lir::LIRUnit{},
+				.module_id       = repl::getScriptModuleID(script_context.script_file),
+				.module_id_human = repl::getScriptModuleID(script_context.script_file),
+				.lir_unit        = lir::LIRUnit{},
 			};
 
 			// Track wrapper symbols to build the synthetic main that runs them in order.
