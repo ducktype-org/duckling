@@ -49,10 +49,10 @@ pub fn emit_warnings_and_run_lint_passes(pcx: &PackageContext<'_>) -> QuackResul
 
 /// Emit lints for the given package.
 pub fn run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
-    let mut lint_context = LintBuffer::new();
+    let mut buffer = LintBuffer::new();
 
     for pass in PASSES {
-        run_single_pass(pcx, *pass, &mut lint_context)?;
+        run_single_pass(pcx, *pass, &mut buffer)?;
     }
-    lint_context.emit(pcx.ctx())
+    buffer.emit(pcx.ctx())
 }

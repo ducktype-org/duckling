@@ -39,22 +39,22 @@ pub(super) const PASSES: &[LintPass] = &[];
 pub(super) fn run_single_pass(
     pcx: &PackageContext<'_>,
     pass: LintPass,
-    context: &mut LintBuffer,
+    buffer: &mut LintBuffer,
 ) -> QuackResult<()> {
     match pass {
-        LintPass::General(general_fn) => general_fn(pcx, context)?,
+        LintPass::General(general_fn) => general_fn(pcx, buffer)?,
         LintPass::Package(package_fn) => {
             if let Some(package) = pcx.package().try_get_package() {
-                package_fn(package, pcx.ctx(), context)?;
+                package_fn(package, pcx.ctx(), buffer)?;
             };
         }
         LintPass::Script(script_fn) => {
             if let Some(script) = pcx.package().try_get_script() {
-                script_fn(script, pcx.ctx(), context)?;
+                script_fn(script, pcx.ctx(), buffer)?;
             };
         }
         LintPass::Manifest(manifest_fn) => {
-            manifest_fn(pcx.package().manifest(), pcx.ctx(), context)?
+            manifest_fn(pcx.package().manifest(), pcx.ctx(), buffer)?
         }
     }
     Ok(())
