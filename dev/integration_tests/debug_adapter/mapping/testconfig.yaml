@@ -1,6 +1,19 @@
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+
+example_package: "../examples/simple"
+case_package: "$DIT_TMP_DIR/simple"
+
+PreCase: "cp -r @{example_package} @{case_package}
+  && rm -rf @{case_package}/duck_build && mkdir -p @{case_package}/duck_build"
+PostCase: "@{cleanup_tmp_env}"
+
+# The program the case debugs - the copy, never the original under `examples/`.
+program: "@{case_package}/simple.dk"
+
 Tests:
   debug_mapping:
-    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir}"
+    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir} @{program}"
     TimeOut: 3
     Cases:
       mapping: { }
