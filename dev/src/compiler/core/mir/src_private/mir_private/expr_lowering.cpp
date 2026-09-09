@@ -197,6 +197,57 @@ namespace compiler::mir {
 			valueOutput(lowered_inner.begin, target_location);
 		}
 
+		void doLazyBinaryEvaluation(const hc::BinaryOperatorExpr& expr) {
+			CORE_ASSERT(
+				expr.operation == hc::BuiltinBinary::BooleanOr
+					or expr.operation == hc::BuiltinBinary::BooleanAnd,
+				"Invalid call."
+			);
+			bool        is_and       = expr.operation == hc::BuiltinBinary::BooleanAnd;
+			std::string debug_prefix = is_and ? "and" : "or";
+
+			auto       boolean_type = expr.expression_type.getSymbolType();
+			const auto result       = function.addTmp(boolean_type, expr_scope);
+
+			auto rhs_block = function.newBlock(debug_prefix + ".rhs");
+			rhs_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+			);
+			auto rhs_store_result_hole = rhs_block->addHole();
+			auto lowered_right         = lowerSubExpr(*expr.rhs, rhs_block);
+			lowered_right.storeResultInGivenPlace(
+				MIRPlace(result),
+				rhs_store_result_hole,
+				{ flagReinit(result) },
+				expr_scope,
+				{ expr.getPosition() }
+			);
+
+			auto lhs_block     = function.newBlock(debug_prefix + ".lhs");
+			auto rhs_entry     = lowered_right.begin->getID();
+			auto if_true_cont  = is_and ? rhs_entry : continuation->getID();
+			auto if_false_cont = is_and ? continuation->getID() : rhs_entry;
+			lhs_block->setTerminator({
+				Operation::Branch,
+				{},
+				{ MIRPlace(result), if_true_cont, if_false_cont },
+				{},
+				expr_scope,
+			});
+
+			auto lhs_store_result_hole = lhs_block->addHole();
+			auto lowered_left          = lowerSubExpr(*expr.lhs, lhs_block);
+			lowered_left.storeResultInGivenPlace(
+				MIRPlace(result),
+				lhs_store_result_hole,
+				{ flagConstruct(result) },
+				expr_scope,
+				{ expr.getPosition() }
+			);
+
+			valueOutput(lowered_left.begin, result);
+		}
+
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			IF_BUILD_TYPE_DEV({
 				const bool lhs_trivial
@@ -215,6 +266,10 @@ namespace compiler::mir {
 					"`getResultAndTakeOwnership()` to `getResult()`"
 				);
 			})
+
+			if (expr.operation == hc::BuiltinBinary::BooleanOr
+			    or expr.operation == hc::BuiltinBinary::BooleanAnd)
+				return doLazyBinaryEvaluation(expr);
 
 
 			// Construct the result of the expression in reverse.

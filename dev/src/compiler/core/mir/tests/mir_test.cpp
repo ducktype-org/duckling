@@ -2,6 +2,8 @@
  * @file mir_tests.cpp
  */
 
+#include "utils/test_utils.hpp"
+
 #include <ctv/ctv.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
@@ -51,6 +53,8 @@ public:
 		TESTER_ADD_TEST(tupleTypeCoercionTest);
 		TESTER_ADD_TEST(moveStateMapTest);
 		TESTER_ADD_TEST(sliceTest);
+		TESTER_ADD_TEST(lazyBooleanShortCircuitTest);
+		TESTER_ADD_TEST(lazyBooleanChainsTest);
 	}
 
 protected:
@@ -944,6 +948,95 @@ private:
 				"Expected the unit element of a materialised tuple to be lifted to a type."
 			);
 		});
+	}
+
+	/**
+	 * @brief `and` / `or` lower lazily: the right-hand side sits in its own block, which only one
+	 * of the two outcomes of the left-hand side leads to.
+	 */
+	void lazyBooleanShortCircuitTest() {
+		using compiler::mir::Operation;
+		namespace test_utils = compiler::mir::test_utils;
+
+		test_utils::checkLoweredModule(
+			R"(fun probe() -> bool = { return true; }
+               fun lazyOr(a: bool) -> bool = { return a or probe(); }
+               fun lazyAnd(a: bool) -> bool = { return a and probe(); })",
+			[this](query::Context&, const compiler::mir::MIRUnit& unit) {
+				for (const std::string_view name: { "lazyOr", "lazyAnd" }) {
+					const auto& function = *test_utils::functionOfUnit(unit, name);
+
+					const auto rhs_blocks
+						= test_utils::blocksWithOperation(function, Operation::Call);
+					const auto rhs_block = *rhs_blocks.begin();
+
+					// The left-hand side has to decide where to go, so its block branches.
+					assertEqual(
+						1u,
+						test_utils::countTerminators(function, Operation::Branch),
+						base::strConcat("Expected a single branch in `", name, "`")
+					);
+
+					bool evaluating_path = false;
+					bool skipping_path   = false;
+					for (const auto& path: test_utils::pathsFromEntry(function))
+						if (std::ranges::find(path, rhs_block) != path.end())
+							evaluating_path = true;
+						else
+							skipping_path = true;
+
+					assertTrue(
+						evaluating_path,
+						base::strConcat("No path of `", name, "` evaluates the right-hand side")
+					);
+					assertTrue(
+						skipping_path,
+						base::strConcat("Every path of `", name, "` evaluates the right-hand side")
+					);
+				}
+			}
+		);
+	}
+
+	/**
+	 * @brief Chained `and` / `or` lower to a chain of branches, and the temporary holding the
+	 * result is initialized on every path.
+	 */
+	void lazyBooleanChainsTest() {
+		using compiler::mir::Operation;
+		namespace test_utils = compiler::mir::test_utils;
+
+		test_utils::checkLoweredModule(
+			R"(fun probe() -> bool = { return true; }
+               fun orChain(a: bool) -> bool = { return a or probe() or probe(); }
+               fun andChain(a: bool) -> bool = { return a and probe() and probe(); }
+               fun mixedChain(a: bool) -> bool = { return a and probe() or probe(); })",
+			[this](query::Context&, const compiler::mir::MIRUnit& unit) {
+				for (const std::string_view name: { "orChain", "andChain", "mixedChain" }) {
+					const auto& function = *test_utils::functionOfUnit(unit, name);
+
+					ASSERT_TRUE(function.validateBlockIDs().isOk());
+
+					// Three operands, so the first two each branch on their own value.
+					assertEqual(
+						2u,
+						test_utils::countTerminators(function, Operation::Branch),
+						base::strConcat("Expected two branches in `", name, "`")
+					);
+
+					// Every block of a lowered function is reachable; an operand block that lost
+				    // its incoming edge would show up here.
+					const auto reachable = test_utils::reachableBlocks(function);
+					for (const auto block_id: function.block_order)
+						assertTrue(
+							reachable.contains(block_id),
+							base::strConcat(
+								"Block ", u64(block_id), " of `", name, "` is not reachable"
+							)
+						);
+				}
+			}
+		);
 	}
 
 	void sliceTest() {
