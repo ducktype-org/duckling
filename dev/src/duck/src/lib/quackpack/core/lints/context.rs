@@ -17,7 +17,7 @@ pub struct LintContext {
 
 #[expect(dead_code)]
 impl LintContext {
-    /// Generate a new [`LintContext`], with none emitted lints.
+    /// Generate a new [`LintContext`], with none lints emitted.
     pub fn new() -> Self {
         Self {
             warnings: vec![],

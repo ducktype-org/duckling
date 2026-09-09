@@ -7,7 +7,7 @@ use crate::quackpack::core::script::Script;
 use crate::quackpack::core::{Manifest, Package, PackageContext};
 use crate::{DuckContext, QuackResult};
 
-/// A general lint, which works on any package.
+/// A general lint, which works on both packages and scripts.
 pub(super) type LintFn = fn(&PackageContext<'_>, &mut LintContext) -> QuackResult<()>;
 
 /// A  lint which fires only on packages.
