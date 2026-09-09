@@ -1,23 +1,26 @@
 //! Lints passes.
 //!
-//! Each pass is a function which takes a [`LintContext`], and some package abstraction.
+//! Each pass is a function which takes a [`LintBuffer`], and some package abstraction.
+//!
+//! The goal of each function is to check whether some bad pattern occurs, and register that
+//! information in [`LintBuffer`].
 
-use super::context::LintContext;
+use super::buffer::LintBuffer;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::{Manifest, Package, PackageContext};
 use crate::{DuckContext, QuackResult};
 
 /// A general lint, which works on both packages and scripts.
-pub(super) type LintFn = fn(&PackageContext<'_>, &mut LintContext) -> QuackResult<()>;
+pub(super) type LintFn = fn(&PackageContext<'_>, &mut LintBuffer) -> QuackResult<()>;
 
 /// A  lint which fires only on packages.
-pub(super) type PackageLintFn = fn(&Package, &DuckContext, &mut LintContext) -> QuackResult<()>;
+pub(super) type PackageLintFn = fn(&Package, &DuckContext, &mut LintBuffer) -> QuackResult<()>;
 
 /// A  lint which fires only on scripts.
-pub(super) type ScriptLintFn = fn(&Script, &DuckContext, &mut LintContext) -> QuackResult<()>;
+pub(super) type ScriptLintFn = fn(&Script, &DuckContext, &mut LintBuffer) -> QuackResult<()>;
 
 /// A  lint which always fires, but checks only manifests.
-pub(super) type ManifestLintFn = fn(&Manifest, &DuckContext, &mut LintContext) -> QuackResult<()>;
+pub(super) type ManifestLintFn = fn(&Manifest, &DuckContext, &mut LintBuffer) -> QuackResult<()>;
 
 #[derive(Debug, Clone, Copy)]
 #[expect(dead_code)]
@@ -36,7 +39,7 @@ pub(super) const PASSES: &[LintPass] = &[];
 pub(super) fn run_single_pass(
     pcx: &PackageContext<'_>,
     pass: LintPass,
-    context: &mut LintContext,
+    context: &mut LintBuffer,
 ) -> QuackResult<()> {
     match pass {
         LintPass::General(general_fn) => general_fn(pcx, context)?,

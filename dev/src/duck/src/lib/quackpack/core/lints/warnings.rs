@@ -1,6 +1,10 @@
 //! Various warnings created when parsing the [`manifest`].
 //!
+//! They are simple diagnostics, not associated with any lint, and are not checked when running
+//! [`run_lint_passes`].
+//!
 //! [`manifest`]: crate::quackpack::core::parse
+//! [`run_lint_passes`]: super::run_lint_passes
 
 use std::fmt;
 

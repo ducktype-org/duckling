@@ -1,13 +1,13 @@
 //! This module contains logic for emitting lints and warnings in QuackPack.
 
-mod context;
+mod buffer;
 mod passes;
 pub mod warnings;
 
 use std::fmt;
 use std::sync::Arc;
 
-use context::LintContext;
+use buffer::LintBuffer;
 use passes::{PASSES, run_single_pass};
 
 use super::PackageContext;
@@ -26,9 +26,9 @@ impl<T: Diagnostic + ?Sized> Diagnostic for Arc<T> {}
 pub enum LintLevel {
     /// This lint can be allowed, and therefore ignored in printing.
     Allow,
-    /// This level is a warning. It will not cause [`LintContext::emit`] to bail.
+    /// This level is a warning. It will not cause [`LintBuffer::emit`] to bail.
     Warning,
-    /// This level is an error. It will cause [`LintContext::emit`] to fail at the end.
+    /// This level is an error. It will cause [`LintBuffer::emit`] to fail at the end.
     Error,
 }
 
@@ -36,6 +36,9 @@ pub enum LintLevel {
 pub struct Lint {
     /// Name of the lint.
     pub name: &'static str,
+    /// Description of this lint. Should explain, what the lint does, give an example, and
+    /// give a reason why it's bad.
+    pub description: &'static str,
 }
 
 /// A shorthand for emitting warnings and lints.
@@ -46,7 +49,7 @@ pub fn emit_warnings_and_run_lint_passes(pcx: &PackageContext<'_>) -> QuackResul
 
 /// Emit lints for the given package.
 pub fn run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
-    let mut lint_context = LintContext::new();
+    let mut lint_context = LintBuffer::new();
 
     for pass in PASSES {
         run_single_pass(pcx, *pass, &mut lint_context)?;
