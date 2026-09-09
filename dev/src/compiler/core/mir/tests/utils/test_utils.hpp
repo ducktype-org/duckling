@@ -115,7 +115,7 @@ namespace compiler::mir::test_utils {
 	 * @param check Callable taking `(query::Context&, const MIRUnit&)`.
 	 */
 	template<typename Check>
-	inline void checkLoweredModule(std::string_view module_content, Check&& check) { //NOLINT
+	inline void checkLoweredModule(std::string_view module_content, Check&& check) {  // NOLINT
 		frontend::ModuleID module_id
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
 
