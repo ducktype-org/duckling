@@ -883,7 +883,7 @@ private:
 		// `getType` and `getVMValue` answer for loaded types only, and only while the process can
 		// respond.
 
-		const vm::PID pid = spawnAndLoad("breakpoint.dbc");
+		const vm::PID pid = spawnAndLoad("../debugger/while_true.dbc");
 
 		assertSucceeded(api::getType(pid, "i64"), "getType(i64)");
 		assertRefusedWith<api::OtherError>(
@@ -910,8 +910,7 @@ private:
 			"while program is running"
 		);
 
-		waitUntilStatus(pid, isCompleted, "Completed");
-		assertSucceeded(api::join(pid), "join");
+		assertSucceeded(api::stop(pid), "stop");
 		(void) api::kill(pid);
 	}
 
