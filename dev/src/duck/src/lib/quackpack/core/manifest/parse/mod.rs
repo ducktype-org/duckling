@@ -41,11 +41,39 @@ pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, W
     })
 }
 
-/// Different utilites in which manifests occur.
+/// Different utilities in which manifests occur.
 /// Used to perform appropriate checks on presence/absence of certain fields.
-pub enum ParseMode {
-    Package,
-    FrontMatter,
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum ParseMode<'a> {
+    Package { package_root: &'a Path },
+    FrontMatter { frontmatter_path: &'a Path },
+    GitFastPath,
+}
+
+impl<'a> ParseMode<'a> {
+    /// Get the path to the root directory of this [`ParseMode`].
+    pub fn package_root(self) -> Option<&'a Path> {
+        match self {
+            Self::Package { package_root } => Some(package_root),
+            Self::FrontMatter { frontmatter_path } => Some(
+                frontmatter_path
+                    .parent()
+                    .expect("frontmatter path without a parent"),
+            ),
+            Self::GitFastPath => None,
+        }
+    }
+
+    /// Get the name of this mode.
+    pub fn mode_name(self) -> &'static str {
+        match self {
+            Self::Package { package_root: _ } => "package",
+            Self::FrontMatter {
+                frontmatter_path: _,
+            } => "frontmatter",
+            Self::GitFastPath => "git fast path",
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -139,8 +167,7 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings
     let schema = parse_schema(&content, &mut warnings)?;
     let manifest = manifest::parse(
         &schema,
-        package_root,
-        ParseMode::Package,
+        ParseMode::Package { package_root },
         &mut warnings,
         ctx,
     )?;

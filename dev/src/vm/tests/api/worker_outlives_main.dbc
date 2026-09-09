@@ -1,0 +1,20 @@
+function spinner {} -> {} {
+	init_pany_type			tmp, i64;
+
+	mov_p64_imm				tmp, 0;
+	label Loop;
+		cmpEq_p64_imm		tmp, 0;
+		jmpIf_label			Loop;
+
+	deinit; # tmp
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type			t1, i64;
+	set_threadctx			spinner;
+	call_builtinfunc		builtin_start_thread;
+
+	mov_p64_imm				ret0, 0;
+	ret;
+}

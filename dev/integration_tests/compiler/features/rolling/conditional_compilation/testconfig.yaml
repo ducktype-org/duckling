@@ -1,0 +1,13 @@
+# Tests for conditional (backend-dependent) compilation
+
+Tests:
+  functions:
+    Cases:
+      llvm:
+        Output:
+          String: "11\n20\n"
+        ExitCode: 0
+      dvm:
+        Output:
+          String: "11\n10\n"
+        ExitCode: 0
