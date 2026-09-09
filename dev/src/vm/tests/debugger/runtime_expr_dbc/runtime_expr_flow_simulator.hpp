@@ -1,9 +1,16 @@
 #pragma once
 
+#include "events/emitter.hpp"
+
+#include "base/except/exceptions.hpp"
+#include "base/extend_cpp/variant_match.hpp"
+#include "base/pointers/ref.hpp"
 #include <base/misc/int_conv.hpp>
 
 #include <tester/tester.hpp>
 
+#include "vm/api/data/api_error.hpp"
+#include "vm/core/safe/vmvalue/safe_vmvalue.hpp"
 #include <vm/api/vm.hpp>
 
 #include <condition_variable>
@@ -23,15 +30,7 @@ namespace vm::test {
 		):
 			  assert_true_fn(std::move(assert_true_fn)),
 			  pid(pid),
-			  thread_id(thread_id),
-			  status_listener([this](const vm::api::ProcStatus& status) {
-				  std::lock_guard lk(mutex);
-				  received_statuses.push_back(status);
-				  cv.notify_all();
-			  }) {
-			auto attach_res = vm::api::attachStatusListener(pid, &status_listener);
-			assertTrue(attach_res.has_value(), "Attach status listener failed");
-		}
+			  thread_id(thread_id) {}
 
 		FlowSimulator& putBreakpoint(base::StrID func_name, u64 instr_index) {
 			auto bp_res = vm::api::setBreakpoint(pid, func_name, instr_index, true);
@@ -75,6 +74,28 @@ namespace vm::test {
 
 			assertExitValue(response.value(), expected_result);
 			return *this;
+		}
+
+		FlowSimulator& evalExprExpectPause(
+			const fs::File& file, base::StrID expected_func, u64 expected_instr
+		) {
+			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			assertTrue(!response, "The expression should stop prior to the completion");
+
+			v_if_matches(response.error(), api::IncompleteExprEval, error) {
+				auto [emitter_ref, _] = *error;
+
+				listeners.emplace_back([&](auto&& res) {
+					results.push_back(res);
+					cv.notify_all();
+				});
+
+				emitter_ref->attachListener(listeners.back());
+
+				return *this;
+			}
+
+			CORE_UNREACHABLE();
 		}
 
 		FlowSimulator& evalExprExpectBreakpoint(
@@ -162,9 +183,11 @@ namespace vm::test {
 		std::function<void(bool, std::string_view)> assert_true_fn;
 		vm::PID                                     pid;
 		vm::api::ThreadID                           thread_id;
-		events::Listener<vm::api::ProcStatus>       status_listener;
 		std::deque<vm::api::ProcStatus>             received_statuses;
 		std::mutex                                  mutex;
 		std::condition_variable                     cv;
+
+		std::deque<events::Listener<std::vector<Ref<SafeVMValue>>>> listeners;
+		std::deque<std::vector<Ref<SafeVMValue>>>                   results;
 	};
 }

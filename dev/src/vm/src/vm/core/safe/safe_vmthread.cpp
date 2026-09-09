@@ -32,6 +32,7 @@
 #include <vm/module_flags/module_flags.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <atomic>
 #include <condition_variable>
 #include <expected>
 #include <mutex>
@@ -768,26 +769,50 @@ namespace vm {
 
 		std::condition_variable                       cv;
 		std::mutex                                    result_mutex;
-		base::Optional<std::vector<Ref<SafeVMValue>>> ret_val = std::nullopt;
+		std::atomic<bool>                             result_ready = false;
+		base::Optional<std::vector<Ref<SafeVMValue>>> ret_val      = std::nullopt;
+		base::Optional<ThreadState>                   thread_state = std::nullopt;
 
 		events::Listener<std::vector<Ref<SafeVMValue>>> receiver([&](auto&& res) {
-			std::lock_guard lock(result_mutex);
-			ret_val = res;
+			// Only the first completion wins; CAS makes the wake-up idempotent.
+			bool expected = false;
+			if (!result_ready.compare_exchange_strong(expected, true)) return;
+			ret_val = std::move(res);
+			cv.notify_all();
+		});
+
+		events::Listener<ThreadState> interrupter([&](auto&& new_state) {
+			v_if_matches(new_state, thread_state::Running, _) return;
+			// Only the first completion wins; CAS makes the wake-up idempotent.
+			bool expected = false;
+			if (!result_ready.compare_exchange_strong(expected, true)) return;
+			thread_state = new_state;
 			cv.notify_all();
 		});
 
 		runtime_expr_res_handler.back().attachListener(receiver);
+		getProcessStateManager().attachThreadStatusListener(getThreadID(), interrupter);
 
 		auto resumed = resume();
 		if (!resumed.has_value())
-			return std::unexpected{ std::make_pair(nullptr, "resume failure: " + resumed.error()) };
+			return std::unexpected{ std::make_pair(
+				&runtime_expr_res_handler.back(), "resume failure: " + resumed.error()
+			) };
 
 		{
 			std::unique_lock lock(result_mutex);
-			cv.wait(lock, [&] { return ret_val.has_value(); });
+			cv.wait(lock, [&] { return result_ready.load(); });
 		}
 
-		return std::move(*ret_val);
+		if (ret_val.has_value()) return *ret_val;
+
+		CORE_ASSERT(thread_state.has_value(), "something had to wake us up");
+
+		std::string err_msg = "status failure: encountered ";
+		err_msg += thread_state::threadStateName(*thread_state);
+		err_msg += " during evaluation";
+
+		return std::unexpected{ std::make_pair(&runtime_expr_res_handler.back(), err_msg) };
 	}
 
 	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getCurrentHighPosition(u64 frame_index

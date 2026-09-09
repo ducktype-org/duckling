@@ -252,13 +252,13 @@ namespace vm {
 		 */
 		void joinExecutionThread();
 
-	private:
 		/**
 		 * @brief The process's state manager (this thread's state lives there).
 		 */
 		[[nodiscard]] ProcessStateManager&       getProcessStateManager();
 		[[nodiscard]] const ProcessStateManager& getProcessStateManager() const;
 
+	private:
 		/**
 		 * @brief Spawn preparation, called under `exec_thread_mutex` while the thread is
 		 * non-active. Rejects a busy thread, clears the signal slot and commits `Spawn` (the one
