@@ -3,14 +3,12 @@
 
 #include <string>
 
-// NOTE: The Windows drive-letter path (file:///C:/path) is not tested here
-// because this test runs on Linux where _WIN32 is not defined. The Windows
-// branch in formatFileUri is a one-line #ifdef that prepends an extra '/'
-// before the drive letter. This is an accepted, documented blind spot: the
-// contract is absolute paths only (see file_uri.hpp), and the planned
-// coverage is a Windows CI runner (@TODO: #3343 Add Windows CI coverage for
-// os_utils/filepath_utils platform branches); until then, review of
-// file_uri.cpp is the only check for that branch.
+// NOTE: The Windows drive-letter path (file:///C:/path) is not tested here because this test runs
+// on Linux where BASE_TARGET_OS_WINDOWS is 0. The Windows branch in formatFileUri is a
+// one-line #if that prepends an extra '/' before the drive letter. This is an accepted, documented
+// blind spot: the contract is absolute paths only (see file_uri.hpp), and the planned coverage is a
+// Windows CI runner (@TODO: #3343 Add Windows CI coverage for os_utils/filepath_utils platform
+// branches); until then, review of file_uri.cpp is the only check for that branch.
 
 class FilepathUtilsTest: public tester::TestSuite {
 #undef TESTER_CLASS

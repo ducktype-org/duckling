@@ -1,5 +1,7 @@
 #include <vm_tester_utils.hpp>
 
+#include <os_utils/system_libraries.hpp>
+
 #include <vm/api/vm.hpp>
 
 #include <filesystem>
@@ -16,11 +18,7 @@ namespace {
 	std::string ffiObjectHeader() { return "ffi object \"" + SO_PATH + "\";\n"; }
 
 	// Bare soname of the system math library, resolved via the platform's dynamic loader search.
-#ifdef __APPLE__
-	const std::string SYSTEM_MATH_LIB = "libm.dylib";
-#else
-	const std::string SYSTEM_MATH_LIB = "libm.so.6";
-#endif
+	const std::string SYSTEM_MATH_LIB = os_utils::systemSharedLibM();
 }
 
 class VmFfiTest: public VmTestSuite {

@@ -1,6 +1,8 @@
 #pragma once
 
-#ifndef _WIN32
+#include <base/config/target_info.hpp>
+
+#if !BASE_TARGET_OS_WINDOWS
 	#include <termios.h>
 #else
 	#include <windows.h>
@@ -60,7 +62,7 @@ namespace os_utils {
 	private:
 		RawTerminalMode() = default;
 
-#ifndef _WIN32
+#if !BASE_TARGET_OS_WINDOWS
 		termios m_orig_term{};
 #else
 		DWORD m_orig_in_mode{};
