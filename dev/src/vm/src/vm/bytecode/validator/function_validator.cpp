@@ -119,7 +119,7 @@ struct LocalStackEntry {
 class LocalStack {
 	// the following are CRefs instead of const& to allow copy/move.
 
-	base::Optional<CRef<SafeVMThread>>                         thread;
+	detail::ValidationMode                                     mode = detail::Normal{};
 	CRef<valid_type::ValidTypeMap>                             types_ctx;
 	std::variant<CRef<LocalStackDb>, Ref<LocalStackDbBuilder>> source;
 	StackStateID                                               stack_state_id;
@@ -132,13 +132,13 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(
-		const valid_type::ValidTypeMap&    types_ctx,
-		Ref<LocalStackDbBuilder>           src,
-		StackStateID                       state,
-		usize                              number_of_rets,
-		base::Optional<CRef<SafeVMThread>> thread = std::nullopt
+		const valid_type::ValidTypeMap& types_ctx,
+		Ref<LocalStackDbBuilder>        src,
+		StackStateID                    state,
+		usize                           number_of_rets,
+		detail::ValidationMode          mode = detail::Normal{}
 	):
-		  thread(thread),
+		  mode(mode),
 		  types_ctx(&types_ctx),
 		  source(src),
 		  stack_state_id(state),
@@ -239,9 +239,10 @@ public:
 	bool contains(const PlaceT& place) const {
 		if_opt_some(place.frame, frame_idx) {
 			CORE_ASSERT(
-				thread.has_value(), "we should be checking that there is a thread beforehand"
+				v_matches(mode, detail::Expr),
+				"we should be checking that there is a thread beforehand"
 			);
-			auto pos = (*thread)->getCurrentHighPosition(frame_idx);
+			auto pos = v_get(mode, detail::Expr).thread->getCurrentHighPosition(frame_idx);
 			if_opt_none(pos) return false;
 
 			return pos->contains(place.var_name);
@@ -258,9 +259,12 @@ public:
 		match_optional(place.frame) {
 			opt_some(frame_idx) {
 				CORE_ASSERT(
-					thread.has_value(), "we should be checking that there is a thread beforehand"
+					v_matches(mode, detail::Expr),
+					"we should be checking that there is a thread beforehand"
 				);
-				name_of_type = *(*thread)->getCurrentHighPosition(frame_idx)->getTypeName(name);
+				name_of_type = *v_get(mode, detail::Expr)
+				                    .thread->getCurrentHighPosition(frame_idx)
+				                    ->getTypeName(name);
 			}
 
 			opt_none { VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, name)); }
@@ -297,7 +301,7 @@ class FunctionValidator {
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
 	const ObjIdNameMap<FFIFunction>&                 ffi_signatures;
 	const Function&                                  function;
-	base::Optional<CRef<SafeVMThread>>               thread;
+	detail::ValidationMode                           mode;
 
 	std::vector<base::Optional<StackStateID>>            stack_before_instr;
 	base::HashMap<base::StrID, usize>                    index_of_label;
@@ -456,7 +460,8 @@ class FunctionValidator {
 		bool from_prev_frame = place.frame.has_value();
 		bool is_local        = current_stack.contains(place);
 		bool is_global       = globals.contains(place.var_name);
-		if (from_prev_frame && !thread) throw FrameSpecifierWithoutRuntimeThread(place);
+		if (from_prev_frame && !v_matches(mode, detail::Expr))
+			throw FrameSpecifierWithoutRuntimeThread(place);
 		if (is_local && is_global) throw DuplicatedLocalNameError(place);
 		if (!is_local && !is_global) throw UnknownLocalNameError(place);
 		return is_local ? current_stack.at(place) : types_ctx.at(globals.at(place.var_name)->type);
@@ -477,7 +482,7 @@ class FunctionValidator {
 	 * @param instruction Instruction that is validated.
 	 */
 	void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const {
-		bool is_expr = thread.has_value();
+		bool is_expr = v_matches(mode, detail::Expr);
 		for (auto arg: instruction.args()) {
 			variant_match(arg) {
 #define PLACE_CASE(PLACE_T)                                   \
@@ -518,7 +523,7 @@ class FunctionValidator {
 					bool from_prev_frame = place->frame.has_value();
 					bool is_local        = current_stack.contains(*place);
 					bool is_global       = globals.contains(place->var_name);
-					if (from_prev_frame && !thread)
+					if (from_prev_frame && !v_matches(mode, detail::Expr))
 						throw FrameSpecifierWithoutRuntimeThread(*place);
 					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
 					instr_match(instruction) {
@@ -634,7 +639,11 @@ class FunctionValidator {
 				}
 
 				variant_case(CRef<opargs::VMValueIdentifier>, vm_val) {
-					auto& thr = *thread;
+					CORE_ASSERT(
+						v_matches(mode, detail::Expr),
+						"validator has to check that we are compiling expr"
+					);
+					auto& thr = v_get(mode, detail::Expr).thread;
 
 					if (!thr->isValidVMValueID(vm_val->id)) throw InvalidVMValueIDError(*vm_val);
 					CRef<valid_type::ValidType> type = thr->getVMValue(vm_val->id)->getType();
@@ -1787,7 +1796,7 @@ class FunctionValidator {
 		if (!reached_end) return;
 
 		auto last_opcode = function.body.back().opcode();
-		bool is_expr     = thread.has_value();
+		bool is_expr     = v_matches(mode, detail::Expr);
 
 		if (is_expr && !std::ranges::contains(VALID_LAST_OPCODES_FOR_EXPR, last_opcode))
 			throw PathWithoutEndError(function.name);
@@ -1822,7 +1831,7 @@ class FunctionValidator {
 	}
 
 	LocalStackDb traverseControlFlowGraph() {
-		bool                is_expr = thread.has_value();
+		using detail::Expr, detail::Normal;
 		LocalStackDbBuilder builder(types_ctx);
 
 		auto start_state = LocalStackDbBuilder::EMPTY;
@@ -1842,7 +1851,7 @@ class FunctionValidator {
 			Ref<LocalStackDbBuilder>{ &builder },
 			start_state,
 			function.signature.result_types.size(),
-			thread
+			mode
 		);
 
 		stack_before_instr.resize(function.body.size(), std::nullopt);
@@ -1870,7 +1879,7 @@ class FunctionValidator {
 				}
 				instr_case(Op_initFromVMValue, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
-					auto& thr                 = **thread;
+					auto& thr                 = *v_get(mode, Expr).thread;
 					auto  name = thr.getVMValue(instr.vm_val.id)->getType()->getName();
 					local_stack.push(instr.var, opargs::Type(name));
 					index++;
@@ -1969,8 +1978,20 @@ class FunctionValidator {
 			}
 		}
 
-		Bytes bytes_offset = is_expr ? (*thread)->getCurrentStackBytesSize() : Bytes{ 0 };
-		u64   block_offset = is_expr ? (*thread)->getCurrentStackBlockSize() : 0;
+		Bytes bytes_offset{};
+		u64   block_offset{};
+
+		variant_match(mode) {
+			variant_case(Expr, expr) {
+				bytes_offset = expr.thread->getCurrentStackBytesSize();
+				block_offset = expr.thread->getCurrentStackBlockSize();
+			}
+			variant_case_novalue(Normal) {
+				bytes_offset = Bytes{ 0 };
+				block_offset = 0;
+			}
+			variant_default { CORE_UNREACHABLE(); }
+		}
 
 		auto tp_size = valid_type::TypeSize(bytes_offset, bytes_offset);
 
@@ -1985,7 +2006,7 @@ class FunctionValidator {
 	}
 
 	void validateSignature() {
-		bool is_expr = thread.has_value();
+		bool is_expr = v_matches(mode, detail::Expr);
 
 		if (is_expr && function.signature.parameters.size())
 			throw InvalidRuntimeExprSignature(function.signature);
@@ -2017,19 +2038,22 @@ class FunctionValidator {
 	}
 
 	void validateThreadStatus() {
-		bool is_expr = thread.has_value();
-
-		if (is_expr && !std::holds_alternative<thread_state::Paused>((*thread)->getThreadState()))
-			throw EvaluatingExprOnRunningThreadError();
+		v_if_matches(mode, detail::Expr, expr) {
+			if (!std::holds_alternative<thread_state::Paused>((expr->thread->getThreadState())))
+				throw EvaluatingExprOnRunningThreadError();
+		}
 	}
 
 	void validateIllegalInstructions(const Instruction& instr) {
-		bool is_expr = thread.has_value();
-
-		if (is_expr)
-			throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(instr);
-		else
-			throwOnForbiddenOpcode<OpCode::Op_ret_from_expr, OpCode::Op_initFromVMValue>(instr);
+		variant_match(mode) {
+			variant_case_novalue(detail::Expr) {
+				throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(instr);
+			}
+			variant_case_novalue(detail::Normal) {
+				throwOnForbiddenOpcode<OpCode::Op_ret_from_expr, OpCode::Op_initFromVMValue>(instr);
+			}
+			variant_default { CORE_UNREACHABLE(); }
+		}
 	}
 
 public:
@@ -2039,8 +2063,8 @@ public:
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 		const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
-		base::Optional<CRef<SafeVMThread>>               thread,
-		const Function&                                  function
+		const Function&                                  function,
+		detail::ValidationMode                           mode
 	):
 		  types_ctx(types_ctx),
 		  globals(globals),
@@ -2048,7 +2072,7 @@ public:
 		  ext_c_signatures(ext_c_signatures),
 		  ffi_signatures(ffi_signatures),
 		  function(function),
-		  thread(thread) {}
+		  mode(mode) {}
 
 	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb> validateAndExtractReachableCode(
 	) {
@@ -2071,10 +2095,10 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	const FlagContext&                               flag_context,
 	const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
 	const Function&                                  function,
-	base::Optional<CRef<SafeVMThread>>               thread
+	ValidationMode                                   mode
 ) {
 	FunctionValidator validator(
-		types, globals_map, signatures, ext_c_signatures, ffi_signatures, thread, function
+		types, globals_map, signatures, ext_c_signatures, ffi_signatures, function, mode
 	);
 
 
@@ -2084,8 +2108,9 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
 	new_function.signature    = function.signature;
-	new_function.flags
-		= thread ? InstructionFlag{} : flag_context.getFlagsForFunction(function.name.str);
+	new_function.flags        = v_matches(mode, Expr)
+	                              ? InstructionFlag{}
+	                              : flag_context.getFlagsForFunction(function.name.str);
 
 	return new_function;
 }

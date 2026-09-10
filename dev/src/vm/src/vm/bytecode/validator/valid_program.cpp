@@ -53,7 +53,7 @@ vm::code::valid_function::ValidFunction vm::code::ValidProgram::validateExpr(
 		flag_context,
 		ffi_function_map,
 		expr,
-		thread
+		detail::Expr{ thread }
 	);
 }
 

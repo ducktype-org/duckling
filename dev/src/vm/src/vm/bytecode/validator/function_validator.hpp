@@ -9,6 +9,15 @@
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 
 namespace vm::code::detail {
+
+	struct Normal {};
+
+	struct Expr {
+		CRef<SafeVMThread> thread;
+	};
+
+	using ValidationMode = std::variant<Normal, Expr>;
+
 	/**
 	 * @brief Performs function code validation in the given context and extracts reachable code.
 	 */
@@ -20,6 +29,6 @@ namespace vm::code::detail {
 		const FlagContext&                               flag_context,
 		const ObjIdNameMap<FFIFunction>&                 ffi_functions,
 		const Function&                                  function,
-		base::Optional<CRef<SafeVMThread>>               thread = std::nullopt
+		ValidationMode                                   mode = Normal{}
 	);
 }
