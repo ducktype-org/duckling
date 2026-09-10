@@ -2,12 +2,8 @@ import sys
 import time
 from dap_client import DAPTestClient
 
-if len(sys.argv) < 3:
-    sys.stderr.write("Error: Missing scenario argument\n")
-    sys.exit(1)
-
-scenario = sys.argv[2]
-client = DAPTestClient(program_name="../examples/simple.dbc")
+client = DAPTestClient()
+scenario = client.scenario
 
 try:
     client.send_initialize()

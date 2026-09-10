@@ -94,21 +94,22 @@ private:
 		using namespace compiler;
 
 		vm::code::CodeCollection code;
-		auto                     append_module_to_code = [&](const std::string& module_path) {
-            auto module = driver::test_utils::getModuleIdFromPath(module_path);
-            query::utils::withContextDo([&](query::Context& ctx) {
-                auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-                auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
-                assertTrue(mir_unit.hasValue(), "MIR lowering failed");
+		auto append_module_to_code = [&](const std::string& module_path) {
+			auto module = driver::test_utils::getModuleIdFromPath(module_path);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-                auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
+				auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
+				ASSERT_HAS_VALUE(mir_unit, "MIR lowering failed");
 
-                backend_vm::DVMCodeBuilder m(ctx, base::StrID(module_path), false, false);
-                m.insertLIRUnit(lir_unit);
+				auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
-                code.mergeFrom(m.build());
-            });
+				backend_vm::DVMCodeBuilder m(ctx, base::StrID(module_path), false, false);
+				m.insertLIRUnit(lir_unit);
+
+				code.mergeFrom(m.build());
+			});
 		};
 		for (auto& module_path: module_paths_to_load) append_module_to_code(module_path);
 		append_module_to_code(main_module_path);
@@ -212,7 +213,7 @@ private:
 			ASSERT_HAS_VALUE(dvm_variant);
 
 			const auto& unit_dvm_type = program_ctx.getUnitType();
-			ASSERT_TRUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type).has_value());
+			ASSERT_HAS_VALUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type));
 			ASSERT_TRUE(std::ranges::contains(
 				dvm_variant.value().variant_alternatives, typeName(unit_dvm_type)
 			));

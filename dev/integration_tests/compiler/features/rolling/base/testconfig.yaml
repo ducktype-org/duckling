@@ -1,0 +1,9 @@
+# Smoke test covering the basics of every backend at once.
+
+Tests:
+  base:
+    Cases:
+      all:
+        Output:
+          String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
+        ExitCode: 76

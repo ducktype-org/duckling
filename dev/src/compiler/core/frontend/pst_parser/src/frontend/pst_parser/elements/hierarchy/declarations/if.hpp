@@ -45,7 +45,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		AccessLocked<ExprHolder> getCondition() const;
+		base::Optional<AccessLocked<ExprHolder>> getCondition() const;
 
 		[[nodiscard]]
 		AccessLocked<CodeBlockOrStmt> getThenBody() const {

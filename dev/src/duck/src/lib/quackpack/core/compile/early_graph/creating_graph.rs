@@ -172,7 +172,7 @@ impl EarlyGraph {
             let compiler_package = parse_dependency(dep, &bcx.storage, bcx.pcx.ctx(), pkg_type)?;
             let package = compiler_package.package();
             if package.name() != dep.name() || package.version() != dep.version() {
-                return Err(error_for_metadata_mismtach(package, dep)?);
+                return Err(error_for_metadata_mismatch(package, dep)?);
             }
             let overwritten_entry = packages
                 .insert(dep.as_identity(), compiler_package)
@@ -192,7 +192,7 @@ impl EarlyGraph {
 }
 
 /// Get the error message emitted when parsed package has different version (or name), than in the freeze.
-fn error_for_metadata_mismtach(
+fn error_for_metadata_mismatch(
     package: &AnyPackage,
     dep: &FreezePackage,
 ) -> QuackResult<QuackError> {
@@ -318,7 +318,7 @@ fn reverse_graph(graph: &HashMap<Identity, DependencyNode>) -> HashMap<Identity,
     reversed
 }
 
-/// Create a fully-ready [`EarlyGraph`] form the [`BuildContext`].
+/// Create a fully-ready [`EarlyGraph`] from the [`BuildContext`].
 pub fn create_early_graph_from_bcx(bcx: &BuildContext<'_, '_>) -> QuackResult<EarlyGraph> {
     let mut graph = EarlyGraph::new_early(bcx)?;
     graph.populate_features(&bcx.used_features)?;

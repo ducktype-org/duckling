@@ -1,0 +1,26 @@
+# Test configuration for variable-simple-declaration
+# Tests var declarations with values and default initialization
+
+Tests:
+  variable_declaration_value_test:
+    Description: Test variable simple declaration with initial value.
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+  variable_default_int_test:
+    Description: Test int variable declaration with default value.
+    Cases:
+      all:
+        ExitCode: 0
+  variable_default_uint_test:
+    Description: Test uint variable declaration with default value.
+    Cases:
+      all:
+        ExitCode: 0
+  variable_assignment_test:
+    Description: Test variable assignment.
+    Cases:
+      all:
+        ExitCode: 0

@@ -69,16 +69,12 @@ private:
 		// f80 (x87 long double) is present on x86_64 (16/16) but absent on
 		// aarch64; f128 (IEEE quad) is present on both.
 		const auto x_f80 = x.data_layout.float_layouts.atMaybeCopy(u64(80));
-		assertTrue(x_f80.has_value(), "x86_64 has an f80 entry");
+		ASSERT_HAS_VALUE(x_f80, "x86_64 has an f80 entry");
 		assertTrue(usize(x_f80.value().size) == 16, "x86_64 f80 size");
 		assertTrue(usize(x_f80.value().alignment) == 16, "x86_64 f80 align");
-		assertTrue(
-			!a.data_layout.float_layouts.atMaybeCopy(u64(80)).has_value(), "aarch64 has no f80"
-		);
-		assertTrue(x.data_layout.float_layouts.atMaybeCopy(u64(128)).has_value(), "x86_64 has f128");
-		assertTrue(
-			a.data_layout.float_layouts.atMaybeCopy(u64(128)).has_value(), "aarch64 has f128"
-		);
+		ASSERT_NO_VALUE(a.data_layout.float_layouts.atMaybeCopy(u64(80)), "aarch64 has no f80");
+		ASSERT_HAS_VALUE(x.data_layout.float_layouts.atMaybeCopy(u64(128)), "x86_64 has f128");
+		ASSERT_HAS_VALUE(a.data_layout.float_layouts.atMaybeCopy(u64(128)), "aarch64 has f128");
 	}
 
 	static void expectLayout(
