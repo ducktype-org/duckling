@@ -20,7 +20,7 @@ pub fn main() {
         }
     };
     if let Err(e) = crate::duck::driver::run::run(&mut ctx) {
-        print_error_and_exit(e, ctx.console(), ctx.error_console())
+        print_error_and_exit(e, ctx.stdout(), ctx.stderr())
     }
 }
 
