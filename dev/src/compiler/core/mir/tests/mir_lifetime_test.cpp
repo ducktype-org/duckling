@@ -90,7 +90,7 @@ private:
 	void lifetimeFlagsRepeatedBlocks() {
 		auto [module, scope]
 			= getModule(fs::File(path("modules/lifetime_flags/repeated_blocks.dk")));
-		auto            foo_mir = getMIRFunctionByName(module, "main");
+		auto            foo_mir = getMIRFunctionByName(module, "function");
 		LifetimeChecker checker;
 		checker.expectConstruct("a")
 			.expectScopeStart("a")

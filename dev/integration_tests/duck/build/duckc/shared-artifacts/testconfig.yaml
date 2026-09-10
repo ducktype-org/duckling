@@ -28,7 +28,7 @@ src_root: |+
   import core.builtins.*;
   import tmp1.*;
 
-  fun main() -> i64 = {
+  fun main() = {
     return xd();
   }
 

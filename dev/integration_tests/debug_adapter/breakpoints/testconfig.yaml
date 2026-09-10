@@ -1,6 +1,9 @@
+# The program every case in this tree debugs.
+program: "../examples/simple.dbc"
+
 Tests:
   debug_breakpoints:
-    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir} @{scenario}"
+    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir} @{program} @{scenario}"
     TimeOut: 1
     Cases:
       launch_set_conf:

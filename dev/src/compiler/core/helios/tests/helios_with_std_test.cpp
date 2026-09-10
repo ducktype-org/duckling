@@ -35,6 +35,8 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/extend_cpp/defer.hpp>
+
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <query_framework/context/context.hpp>
@@ -46,6 +48,7 @@
 #include <algorithm>
 #include <any>
 #include <array>
+#include <iostream>
 #include <sstream>
 
 using namespace compiler::helios::test_utils;
@@ -63,6 +66,7 @@ public:
 		TESTER_ADD_TEST(testStringClassProperties);
 		TESTER_ADD_TEST(testDefaultInitializers);
 		TESTER_ADD_TEST(testCompTimeStrings);
+		TESTER_ADD_TEST(testCompTimeOutput);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testCopy);
@@ -80,7 +84,8 @@ protected:
 		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
 			{ fs::FilePath(path("test_modules/builtins")), "builtins" },
 			{ fs::FilePath(path("test_modules/strings")), "strings" },
-			{ fs::FilePath(path("test_modules/comp_time_strings")), "comp_time_strings" }
+			{ fs::FilePath(path("test_modules/comp_time_strings")), "comp_time_strings" },
+			{ fs::FilePath(path("test_modules/comp_time_output")), "comp_time_output" }
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -485,6 +490,24 @@ private:
 		ASSERT_TRUE(!getChain("expanded.fromSlice", root_scope).empty());
 	}
 
+	/**
+	 * The compile-time DVM buffers whatever the evaluated code prints, so a `print` inside a
+	 * compile-time evaluation used to be dropped. It now ends up on `std::cerr` instead.
+	 */
+	void testCompTimeOutput() {
+		auto module     = compiler::driver::test_utils::getModuleIdFromPath("comp_time_output");
+		auto root_scope = getModuleScope(module);
+
+		std::ostringstream captured_cerr;
+		auto*              real_cerr_buffer = std::cerr.rdbuf(captured_cerr.rdbuf());
+		defer(std::cerr.rdbuf(real_cerr_buffer));
+
+		// Evaluating the const runs `printAtCompTime` on the compile-time DVM.
+		ASSERT_EQUAL(1, getConstValueAs<i64>("printed_at_comp_time", root_scope));
+
+		ASSERT_TRUE(captured_cerr.str().contains("[comp-time] 3492"));
+	}
+
 	void testStrings() {
 		auto  module = compiler::driver::test_utils::getModuleIdFromPath("strings");
 		auto  scope  = getModuleScope(module);
@@ -677,8 +700,8 @@ private:
 		auto check_var_init_expr_origin = [&](base::StrID name, bool is_generated) {
 			auto glob_opt = get_global_by_name(name);
 			auto var_opt  = get_pst_variable_by_name(name);
-			assertTrue(glob_opt.has_value(), "Global not found in HOUT");
-			assertTrue(var_opt.has_value(), "Variable not found in PST");
+			ASSERT_HAS_VALUE(glob_opt, "Global not found in HOUT");
+			ASSERT_HAS_VALUE(var_opt, "Variable not found in PST");
 			auto glob              = glob_opt.value();
 			auto var_pst           = var_opt.value();
 			auto initial_value_pst = var_pst->getValue().value().illegalAccess().value();
@@ -733,8 +756,8 @@ private:
 		auto check_function_origin = [&](base::StrID name) {
 			auto fun_opt     = get_hout_function_by_name(name);
 			auto pst_fun_opt = get_pst_function_by_name(name);
-			assertTrue(fun_opt.has_value(), "Function not found in HOUT");
-			assertTrue(pst_fun_opt.has_value(), "Function not found in PST");
+			ASSERT_HAS_VALUE(fun_opt, "Function not found in HOUT");
+			ASSERT_HAS_VALUE(pst_fun_opt, "Function not found in PST");
 			auto fun = fun_opt.value();
 
 
@@ -1088,15 +1111,15 @@ private:
 
 			// A field whose class defines a user copy constructor calls the user code, not a
 			// generated one.
-			ASSERT_TRUE(v_matches(
+			ASSERT_MATCHES(
 				getSymRef(callee_of(rhs_of("nested_user")))->other, PstImplementedSemantics
-			));
+			);
 
 			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
 			{
 				auto boxed = boxAllocArg(rhs_of("deep"));
 				ASSERT_TRUE(boxed != nullptr);
-				ASSERT_TRUE(v_matches(getSymRef(callee_of(boxed))->other, PstImplementedSemantics));
+				ASSERT_MATCHES(getSymRef(callee_of(boxed))->other, PstImplementedSemantics);
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {
@@ -1141,7 +1164,7 @@ private:
 				ASSERT_EQUAL_PRINT(1, aggregate.values.size());
 				assert_generated_copy(stripImplicitMove(aggregate.values.at(0).get()));
 
-				ASSERT_TRUE(aggregate.per_element_body.has_value());
+				ASSERT_HAS_VALUE(aggregate.per_element_body);
 				const auto& per_element = (*aggregate.per_element_body)->statements;
 				ASSERT_EQUAL_PRINT(1, per_element.size());
 				ASSERT_TRUE(dynamic_cast<const AssignmentStmt*>(per_element.at(0).get()) != nullptr);
@@ -1201,9 +1224,9 @@ private:
 				// variant with that same alternative index - no wildcard is needed.
 				for (usize i = 0; i < match->cases.size(); i++) {
 					const auto& match_case = match->cases.at(i);
-					ASSERT_TRUE(match_case.alternative_index.has_value());
+					ASSERT_HAS_VALUE(match_case.alternative_index);
 					ASSERT_EQUAL_PRINT(i, match_case.alternative_index.value());
-					ASSERT_TRUE(match_case.binding.has_value());
+					ASSERT_HAS_VALUE(match_case.binding);
 
 					// The subject is borrowed, so the constraint is the type the payload is
 					// bound with: a mutable reference to the alternative.
