@@ -1,0 +1,52 @@
+import core.containers;
+import core.primitive_io as io;
+
+#{
+    Print functions for various types.
+#}
+
+fun print(v: str) -> i64 = io.writeStr(v);
+
+fun print(v: ref containers.String) -> i64 = io.writeString(v);
+
+fun print(s: containers.String) -> i64 = {
+    let result = io.writeString(&s);
+    return result;
+}
+
+fun print(v: char) -> i64 = io.writeChar(v);
+
+#{ Bytes are currently unsupported.
+fun print(b: byte) -> i64 = {
+    let n = b as u8;
+    let n1 = n >> 4u8;
+    let n2 = n & 15u8;
+    let c1 = if n1 < 10u8 then '0' + n1 else 'A' + (n1 - 10u8);
+    let c2 = if n2 < 10u8 then '0' + n2 else 'A' + (n2 - 10u8);
+
+    var result = 0;
+    result = result + io.writeChar('0');
+    result = result + io.writeChar('x');
+    result = result + io.writeChar(c1);
+    result = result + io.writeChar(c2);
+    return result;
+}
+#}
+
+fun print(v: i64) -> i64 = io.writeI64(v);
+fun print(v: i32) -> i64 = io.writeI64(v);
+fun print(v: i16) -> i64 = io.writeI64(v);
+fun print(v: i8) -> i64 = io.writeI64(v);
+
+fun print(v: u64) -> i64 = io.writeU64(v);
+fun print(v: u32) -> i64 = io.writeU64(v);
+fun print(v: u16) -> i64 = io.writeU64(v);
+fun print(v: u8) -> i64 = io.writeU64(v);
+
+fun print(v: f64) -> i64 = io.writeF64(v);
+fun print(v: f32) -> i64 = io.writeF64(v);
+# fun print(v: f16) -> i64 = io.writeF64(v);
+# fun print(v: f8) -> i64 = io.writeF64(v);
+
+fun print(v: bool) -> i64 = print(v.toString());
+fun print(v: ()) -> i64 = print(v.toString());
