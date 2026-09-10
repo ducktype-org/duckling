@@ -4,6 +4,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <base/config/target_info.hpp>
+
 #include <os_utils/dynamic_library.hpp>
 #include <os_utils/exec_self.hpp>
 #include <os_utils/executable_path.hpp>
@@ -21,8 +23,8 @@
 #include <string_view>
 #include <vector>
 
-#if !defined(_WIN32)
-	#if defined(__APPLE__)
+#if !BASE_TARGET_OS_WINDOWS
+	#if BASE_TARGET_OS_MACOS
 		#include <util.h>
 	#else
 		#include <pty.h>
@@ -109,7 +111,7 @@ public:
 		TESTER_ADD_TEST(findSymbolBadName);
 		TESTER_ADD_TEST(closeLibraryDefaultConstructed);
 		TESTER_ADD_TEST(freeNullPages);
-#if !defined(_WIN32)
+#if !BASE_TARGET_OS_WINDOWS
 		TESTER_ADD_TEST(writeStrWritesToStdout);
 		TESTER_ADD_TEST(writeCharWritesToStdout);
 		TESTER_ADD_TEST(readCharReadsFromStdin);
@@ -306,7 +308,7 @@ private:
 		os_utils::freePages(nullptr, 4'096);
 	}
 
-#if !defined(_WIN32)
+#if !BASE_TARGET_OS_WINDOWS
 	void writeStrWritesToStdout() {
 		auto pty = PtyPair::create();
 		assertTrue(pty.master != -1 && pty.slave != -1, "PTY creation should succeed");
@@ -525,9 +527,8 @@ private:
 		os_utils::clearAbandonedLock(mutex);  // unlocked; must not crash
 		mutex.lock();
 		os_utils::clearAbandonedLock(mutex);  // no-op on Linux, clears the lock on macOS
-#ifndef __APPLE__
-		mutex.unlock();                       // on Linux the lock is still held by us
-#endif
+		if constexpr (not base::IS_TARGET_OS_MACOS)
+			mutex.unlock();                   // on Linux the lock is still held by us
 	}
 };
 

@@ -4,6 +4,7 @@
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
 #include <base/collections/optional.hpp>
+#include <base/config/target_info.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -420,9 +421,9 @@ namespace vm {
 		thread.reportAsRunning();
 	}
 
-#if defined(__clang__)
+#if BASE_TARGET_COMPILER_CLANG
 // @TODO: #2582 suppress code deduplication in Clang
-#elif defined(__GNUG__)
+#elif BASE_TARGET_COMPILER_GCC
 	#pragma GCC push_options
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
@@ -465,9 +466,9 @@ namespace vm {
 	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
 	// NOLINTEND(cppcoreguidelines-avoid-goto)
 
-#if defined(__clang__)
+#if BASE_TARGET_COMPILER_CLANG
 // @TODO: #2582 suppress code deduplication in Clang
-#elif defined(__GNUG__)
+#elif BASE_TARGET_COMPILER_GCC
 	#pragma GCC pop_options
 #endif
 
