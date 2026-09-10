@@ -776,19 +776,25 @@ namespace vm {
 		base::Optional<ThreadState>                   thread_state = std::nullopt;
 
 		events::Listener<std::vector<Ref<SafeVMValue>>> receiver([&](auto&& res) {
-			// Only the first completion wins; CAS makes the wake-up idempotent.
-			bool expected = false;
-			if (!result_ready.compare_exchange_strong(expected, true)) return;
-			ret_val = std::move(res);
+			// Payload and flag must be published under the same mutex the waiter checks with,
+			// otherwise it can observe the flag before the value is visible.
+			{
+				std::lock_guard lock(result_mutex);
+				if (result_ready.load()) return;
+				ret_val = std::move(res);
+				result_ready.store(true);
+			}
 			cv.notify_all();
 		});
 
 		events::Listener<ThreadState> interrupter([&](auto&& new_state) {
 			v_if_matches(new_state, thread_state::Running, _) return;
-			// Only the first completion wins; CAS makes the wake-up idempotent.
-			bool expected = false;
-			if (!result_ready.compare_exchange_strong(expected, true)) return;
-			thread_state = new_state;
+			{
+				std::lock_guard lock(result_mutex);
+				if (result_ready.load()) return;
+				thread_state = new_state;
+				result_ready.store(true);
+			}
 			cv.notify_all();
 		});
 
