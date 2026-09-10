@@ -258,7 +258,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetDVMLibrary>(result->build_target));
+		ASSERT_MATCHES(result->build_target, BuildTargetDVMLibrary);
 		const auto& target = std::get<BuildTargetDVMLibrary>(result->build_target);
 		ASSERT_EQUAL(target.output_file_name.str(), std::string("bin/mylib_dvm"));
 		ASSERT_EQUAL(result->package_id.str(), std::string("mylib"));
@@ -282,7 +282,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetDVMExecutable>(result->build_target));
+		ASSERT_MATCHES(result->build_target, BuildTargetDVMExecutable);
 		const auto& target = std::get<BuildTargetDVMExecutable>(result->build_target);
 		ASSERT_EQUAL(
 			(std::vector<std::string>{ "libm.so.6", "libfoo.so" }),
@@ -309,7 +309,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetDVMLibrary>(result->build_target));
+		ASSERT_MATCHES(result->build_target, BuildTargetDVMLibrary);
 		const auto& target = std::get<BuildTargetDVMLibrary>(result->build_target);
 		ASSERT_EQUAL(
 			(std::vector<std::string>{ "libm.so.6" }), target.dvm_linking_options.shared_libraries
@@ -361,7 +361,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetLLVMExecutable>(result->build_target));
+		ASSERT_MATCHES(result->build_target, BuildTargetLLVMExecutable);
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
 		ASSERT_EQUAL(target.linking_options.additional_link_options, std::string("-lm"));
 	}
@@ -402,7 +402,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetLLVMExecutable>(result->build_target));
+		ASSERT_MATCHES(result->build_target, BuildTargetLLVMExecutable);
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
 		ASSERT_EQUAL(target.linking_options.linker_path, std::string("ld"));
 		ASSERT_EQUAL(target.linking_options.additional_link_options, std::string("-lfoo"));

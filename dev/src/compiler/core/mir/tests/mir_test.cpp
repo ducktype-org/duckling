@@ -2,6 +2,8 @@
  * @file mir_tests.cpp
  */
 
+#include "utils/test_utils.hpp"
+
 #include <ctv/ctv.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
@@ -19,7 +21,10 @@
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
+#include <array>
+#include <set>
 #include <sstream>
+#include <string>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -36,6 +41,7 @@ public:
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
 		TESTER_ADD_TEST(simpleBools);
+		TESTER_ADD_TEST(blockDebugNamesTest);
 		TESTER_ADD_TEST(simpleFunctionCalls);
 		TESTER_ADD_TEST(numericLiteralsTest);
 		TESTER_ADD_TEST(functionParametersTest);
@@ -47,6 +53,8 @@ public:
 		TESTER_ADD_TEST(tupleTypeCoercionTest);
 		TESTER_ADD_TEST(moveStateMapTest);
 		TESTER_ADD_TEST(sliceTest);
+		TESTER_ADD_TEST(lazyBooleanShortCircuitTest);
+		TESTER_ADD_TEST(lazyBooleanChainsTest);
 	}
 
 protected:
@@ -82,7 +90,7 @@ private:
 			for (const auto& local: pre_mir.local_list)
 				if (local.parameter_index.has_value() && local.parameter_index.value() == 0)
 					a_id = local.id;
-			ASSERT_TRUE(a_id.has_value());
+			ASSERT_HAS_VALUE(a_id);
 
 			// Build predecessor lists, same as constructLifetimePassArgs does.
 			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
@@ -96,9 +104,9 @@ private:
 			// `a` is a parameter, so it is alive at the entry block.
 			auto entry     = pre_mir.block_order.front();
 			auto entry_map = move_states.block_in_move_state.atMaybe(entry);
-			ASSERT_TRUE(entry_map.has_value());
+			ASSERT_HAS_VALUE(entry_map);
 			auto a_at_entry = entry_map.value()->atMaybe(a_id.value());
-			ASSERT_TRUE(a_at_entry.has_value());
+			ASSERT_HAS_VALUE(a_at_entry);
 			ASSERT_TRUE(a_at_entry.value()->status == compiler::mir::MoveStatus::Alive);
 
 			// After the unconditional move in the entry block, at least one successor block must
@@ -275,7 +283,6 @@ private:
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 
-
 			ASSERT_EQUAL_PRINT(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL_PRINT(foo_mir.block_order.size(), 7);
 			ASSERT_EQUAL_PRINT(foo_mir.local_list.size(), 5);
@@ -289,7 +296,6 @@ private:
 			using BlockList = std::vector<BlockID>;
 			ASSERT_EQUAL(get_block_successors(1), BlockList{});
 			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
-
 
 			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
 
@@ -331,6 +337,73 @@ private:
 			auto& goo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->valueOrThrow();
 			ASSERT_TRUE(goo_mir.validateBlockIDs().isOk());
+		});
+	}
+
+	/**
+	 * @brief Blocks created by the lowering carry a debug name saying what they were generated
+	 * for, and `Function::debugPrint` shows that name right after the block id.
+	 */
+	void blockDebugNamesTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/booleans")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
+			ASSERT_EQUAL(2, functions.size());
+
+			auto collect_names = [](const compiler::mir::Function& function) {
+				std::set<std::string> names;
+				for (const auto block_id: function.block_order) {
+					const auto& block = function.blocks[block_id];
+					if (block.debug_name.has_value()) names.emplace(block.debug_name.value().str());
+				}
+				return names;
+			};
+
+			auto assert_has_name = [this](
+									   const std::set<std::string>& names,
+									   const std::string_view       expected,
+									   const std::string_view       function_name
+								   ) {
+				assertTrue(
+					names.contains(std::string{ expected }),
+					base::strConcat(
+						"Expected a block named `", expected, "` in `", function_name, "`"
+					)
+				);
+			};
+
+			// `foo` is two `if`s in a row, so it only has condition/then/else blocks plus the one
+			// holding `FunctionEnd`.
+			auto& foo_mir
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
+			const auto foo_names = collect_names(foo_mir);
+			for (const std::string_view expected:
+			     { "function_end", "if.cond", "if.then", "if.else" })
+				assert_has_name(foo_names, expected, "foo");
+
+			// Nothing but the lowering creates blocks here, so every block of `foo` is named.
+			for (const auto block_id: foo_mir.block_order)
+				ASSERT_HAS_VALUE(foo_mir.blocks[block_id].debug_name);
+
+			// `goo` ends with an `if ... then ... else` expression, which lowers as a ternary.
+			auto& goo_mir
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->valueOrThrow();
+			const auto                  goo_names = collect_names(goo_mir);
+			static constexpr std::array TERNARY_NAMES
+				= { "ternary.cond", "ternary.then", "ternary.else" };
+			for (const std::string_view expected: TERNARY_NAMES)
+				assert_has_name(goo_names, expected, "goo");
+
+			// The printed MIR shows the name in parentheses after the block id.
+			std::stringstream printed;
+			foo_mir.debugPrint(printed);
+			const auto printed_str = printed.str();
+			assertTrue(
+				printed_str.find("(if.then)") != std::string::npos,
+				base::strConcat("Block name missing from the printed MIR:\n", printed_str)
+			);
 		});
 	}
 
@@ -523,7 +596,6 @@ private:
 				last_block.terminator.operation, compiler::mir::Operation::ReturnVoid
 			);
 
-
 			auto& unreachable_end_fun
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
 			ASSERT_TRUE(unreachable_end_fun.validateBlockIDs().isOk());
@@ -702,11 +774,11 @@ private:
 						}
 						// var r = &p.x;
 						else if (arg.projection_chain.size() == 2) {
-							bool has_deref = std::holds_alternative<MIRPlace::DerefProjection>(
-								arg.projection_chain[0].storage
+							bool has_deref = v_matches(
+								arg.projection_chain[0].storage, MIRPlace::DerefProjection
 							);
-							bool has_field = std::holds_alternative<MIRPlace::FieldProjection>(
-								arg.projection_chain[1].storage
+							bool has_field = v_matches(
+								arg.projection_chain[1].storage, MIRPlace::FieldProjection
 							);
 							if (has_deref && has_field) {
 								auto field = std::get<MIRPlace::FieldProjection>(
@@ -724,12 +796,11 @@ private:
 						if (out_place.projection_chain.size() == 5) {
 							const auto& chain = out_place.projection_chain;
 							bool        pattern_ok
-								= std::holds_alternative<MIRPlace::DerefProjection>(chain[0].storage)
-							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage)
-							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[2].storage)
-							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[3].storage)
-							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[4].storage
-							   );
+								= v_matches(chain[0].storage, MIRPlace::DerefProjection)
+							   && v_matches(chain[1].storage, MIRPlace::FieldProjection)
+							   && v_matches(chain[2].storage, MIRPlace::DerefProjection)
+							   && v_matches(chain[3].storage, MIRPlace::FieldProjection)
+							   && v_matches(chain[4].storage, MIRPlace::DerefProjection);
 
 							if (pattern_ok) {
 								auto f_p = std::get<MIRPlace::FieldProjection>(chain[1].storage);
@@ -874,6 +945,95 @@ private:
 				"Expected the unit element of a materialised tuple to be lifted to a type."
 			);
 		});
+	}
+
+	/**
+	 * @brief `and` / `or` lower lazily: the right-hand side sits in its own block, which only one
+	 * of the two outcomes of the left-hand side leads to.
+	 */
+	void lazyBooleanShortCircuitTest() {
+		using compiler::mir::Operation;
+		namespace test_utils = compiler::mir::test_utils;
+
+		test_utils::checkLoweredModule(
+			R"(fun probe() -> bool = { return true; }
+               fun lazyOr(a: bool) -> bool = { return a or probe(); }
+               fun lazyAnd(a: bool) -> bool = { return a and probe(); })",
+			[this](query::Context&, const compiler::mir::MIRUnit& unit) {
+				for (const std::string_view name: { "lazyOr", "lazyAnd" }) {
+					const auto& function = *test_utils::functionOfUnit(unit, name);
+
+					const auto rhs_blocks
+						= test_utils::blocksWithOperation(function, Operation::Call);
+					const auto rhs_block = *rhs_blocks.begin();
+
+					// The left-hand side has to decide where to go, so its block branches.
+					assertEqual(
+						1u,
+						test_utils::countTerminators(function, Operation::Branch),
+						base::strConcat("Expected a single branch in `", name, "`")
+					);
+
+					bool evaluating_path = false;
+					bool skipping_path   = false;
+					for (const auto& path: test_utils::pathsFromEntry(function))
+						if (std::ranges::find(path, rhs_block) != path.end())
+							evaluating_path = true;
+						else
+							skipping_path = true;
+
+					assertTrue(
+						evaluating_path,
+						base::strConcat("No path of `", name, "` evaluates the right-hand side")
+					);
+					assertTrue(
+						skipping_path,
+						base::strConcat("Every path of `", name, "` evaluates the right-hand side")
+					);
+				}
+			}
+		);
+	}
+
+	/**
+	 * @brief Chained `and` / `or` lower to a chain of branches, and the temporary holding the
+	 * result is initialized on every path.
+	 */
+	void lazyBooleanChainsTest() {
+		using compiler::mir::Operation;
+		namespace test_utils = compiler::mir::test_utils;
+
+		test_utils::checkLoweredModule(
+			R"(fun probe() -> bool = { return true; }
+               fun orChain(a: bool) -> bool = { return a or probe() or probe(); }
+               fun andChain(a: bool) -> bool = { return a and probe() and probe(); }
+               fun mixedChain(a: bool) -> bool = { return a and probe() or probe(); })",
+			[this](query::Context&, const compiler::mir::MIRUnit& unit) {
+				for (const std::string_view name: { "orChain", "andChain", "mixedChain" }) {
+					const auto& function = *test_utils::functionOfUnit(unit, name);
+
+					ASSERT_TRUE(function.validateBlockIDs().isOk());
+
+					// Three operands, so the first two each branch on their own value.
+					assertEqual(
+						2u,
+						test_utils::countTerminators(function, Operation::Branch),
+						base::strConcat("Expected two branches in `", name, "`")
+					);
+
+					// Every block of a lowered function is reachable; an operand block that lost
+				    // its incoming edge would show up here.
+					const auto reachable = test_utils::reachableBlocks(function);
+					for (const auto block_id: function.block_order)
+						assertTrue(
+							reachable.contains(block_id),
+							base::strConcat(
+								"Block ", u64(block_id), " of `", name, "` is not reachable"
+							)
+						);
+				}
+			}
+		);
 	}
 
 	void sliceTest() {

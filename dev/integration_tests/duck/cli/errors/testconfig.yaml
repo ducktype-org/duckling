@@ -7,7 +7,7 @@ Tests:
         ExitCode: 1
         Err:
           String: |
-            error: No such command as \`x\`. Did you mean:
+            error: no such command as \`x\`; did you mean:
                    - \`b\`
                    - \`r\`?
 
@@ -15,7 +15,7 @@ Tests:
         test-cmd: duck not-a-subcmd
         ExitCode: 1
         Err:
-          String: 'error: No such command: \`not-a-subcmd\`\n'
+          String: 'error: no such command as \`not-a-subcmd\`\n'
 
       invalid-config:
         PreCase: |+

@@ -1,14 +1,16 @@
 #include "system_libraries.hpp"
 
+#include <base/config/target_info.hpp>
+
 namespace os_utils {
-#ifdef __APPLE__
+#if BASE_TARGET_OS_MACOS
 	const std::string& systemSharedLibC() {
 		static constexpr std::string LIBRARY = "libSystem.B.dylib";
 		return LIBRARY;
 	}
 
 	const std::string& systemSharedLibM() { return systemSharedLibC(); }
-#elif defined(_WIN32)
+#elif BASE_TARGET_OS_WINDOWS
 	#error "systemSharedLibC/systemSharedLibM are not supported on Windows"
 #else
 	const std::string& systemSharedLibC() {

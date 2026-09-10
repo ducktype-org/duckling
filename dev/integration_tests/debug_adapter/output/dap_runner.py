@@ -1,7 +1,6 @@
-import sys
 from dap_client import DAPTestClient
 
-client = DAPTestClient(program_name="../examples/output.dbc")
+client = DAPTestClient()
 
 try:
     client.start_session()
