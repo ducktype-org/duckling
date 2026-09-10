@@ -1,8 +1,4 @@
 # An operator method named after a built-in operator must be found.
-#
-# Regression guard for #3133: the method lookup used to be skipped whenever the
-# candidate list was non-empty, and it is always seeded with the built-in `+`
-# overloads, so operator methods named `+` were unreachable.
 
 class Number {
     val: i64 = 0;

@@ -28,7 +28,6 @@ fun main() -> i64 = {
     let y = -* 7;
     builtin_output_i64(y);
 
-    # @TODO: #3133 Have the methods have the same names as the standalone operators.
     var fu = Foo(7);
     let u = fu +/ 5;
     builtin_output_i64(u);
