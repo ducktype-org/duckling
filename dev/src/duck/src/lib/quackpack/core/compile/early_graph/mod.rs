@@ -2,10 +2,10 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crate::QuackResult;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::missing_depenendcy_in_graph;
 use crate::quackpack::core::identity::Identity;
-use crate::{QuackError, QuackResult};
 
 pub mod creating_graph;
 pub mod modifying_graph;
