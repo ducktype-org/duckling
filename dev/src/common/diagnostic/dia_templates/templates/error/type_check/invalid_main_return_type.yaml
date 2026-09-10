@@ -1,0 +1,34 @@
+metadata:
+  type: "error"
+  family: "type_check"
+  name: "invalid_main_return_type"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  given_type:
+    description: "The declared return type of the main function."
+  code:
+    description: "The code snippet."
+  code_location:
+    description: "The location."
+
+header_message:
+  - "The `main` function must return `i64`, not `"
+  - param: "given_type"
+  - "`."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "expected `i64`"

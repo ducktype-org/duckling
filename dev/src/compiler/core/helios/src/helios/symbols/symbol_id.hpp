@@ -11,6 +11,7 @@
 #include <helios/scope_id.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <base/pointers/ref.hpp>
 
@@ -84,6 +85,14 @@ namespace compiler::helios {
 	 * @note This function iterates through parents of the PST elements of the symbol.
 	 */
 	bool isGlobalFun(SymID);
+
+	/**
+	 * @return whether the symbol is the global function named `main`.
+	 *
+	 * Unlike isGlobalFun(), this function can safely be called for symbols
+	 * that are not functions.
+	 */
+	bool isGlobalMain(SymID);
 
 	/**
 	 * @return whether SymID is a global variable.
