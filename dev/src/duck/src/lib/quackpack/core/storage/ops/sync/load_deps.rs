@@ -3,6 +3,12 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
+use flate2::read::GzDecoder;
+use futures::executor::block_on;
+use futures::{StreamExt, stream};
+use tar::Archive;
+use tracing::{debug, warn};
+
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
 use crate::quackpack::core::full_identity::FullKind;
@@ -15,11 +21,6 @@ use crate::util::Pluralize;
 use crate::util::error::ErrorsLogger;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
-use flate2::read::GzDecoder;
-use futures::executor::block_on;
-use futures::{StreamExt, stream};
-use tar::Archive;
-use tracing::{debug, warn};
 
 // We want at most 3 calls, therefore we retry 2 times.
 /// The maximal number of retries when trying to download a package blob from registry.

@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::pin::Pin;
 
 use crate::quackpack::core::fetcher::git::fast_path::GitFastPathExt;
@@ -72,8 +71,7 @@ impl<'duck> GitFastPathExt for GithubClient<'duck> {
             let manifest_schema = parse_schema(&deserialized_manifest, &mut warnings)?;
             let manifest = manifest::parse(
                 &manifest_schema,
-                Path::new(""), // Dummy path.
-                ParseMode::Package,
+                ParseMode::GitFastPath,
                 &mut warnings,
                 self.client.ctx(),
             )?;

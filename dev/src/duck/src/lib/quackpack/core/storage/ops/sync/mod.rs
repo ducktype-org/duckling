@@ -5,10 +5,12 @@ use std::path::PathBuf;
 
 use chrono::Utc;
 use futures::executor::block_on;
+use load_deps::{LoadedFreezePackages, load_packages_in_freeze};
 use tracing::{debug, error, warn};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::lints::emit_warnings_and_run_lint_passes;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
@@ -16,9 +18,6 @@ use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverAnswer, Solver
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::git_access::StorageGitAccess;
 use crate::quackpack::core::storage::locks::TrySyncLock;
-use crate::quackpack::core::storage::ops::sync::load_deps::{
-    LoadedFreezePackages, load_packages_in_freeze,
-};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
@@ -50,7 +49,7 @@ pub fn sync(
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     debug!(root = %pcx.package().root().display(), ?options);
-    pcx.emit_warnings()?;
+    emit_warnings_and_run_lint_passes(pcx)?;
     pcx.ctx().console().info(format!(
         "starting synchronization of the {}",
         pcx.package().display()
