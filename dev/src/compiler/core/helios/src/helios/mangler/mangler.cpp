@@ -176,9 +176,11 @@ namespace compiler::helios::mangler {
 
 			// package/module prefix
 			const auto module_id = module(scope(symbol_id));
+			// @TODO: #3505 - currently changing package name/version doesn't invalidate old symbols
 			const auto package_id
 				= ctx.query<compiler::frontend::QueryPackageOfModule>(module_id).unlock(ctx).getID();
 
+			// @TODO: #3505 - currently changing package name/version doesn't invalidate old symbols
 			if (const auto package_ref_opt = global_state::getPackageRefOpt(package_id)) {
 				/* we're in a package */
 				// @TODO: #3505 - currently changing package name/version doesn't invalidate old symbols

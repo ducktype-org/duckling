@@ -920,6 +920,8 @@ namespace compiler::frontend {
 	 ************************/
 	struct IMPLEMENT_QUERY(QueryPackageOfModule, packages::PackageAccessLocked) {
 		static auto provide(Context&, QKey key) -> PResult {
+			// @TODO: #3505 - currently changing package name/version doesn't invalidate stuff that
+			// depends on those values
 			return GetModuleID_Functor::get(key)->getPackage();
 		}
 
