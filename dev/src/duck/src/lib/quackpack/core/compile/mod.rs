@@ -53,6 +53,9 @@ pub struct BuildContext<'duck, 'ctx> {
 }
 
 /// Compile project inside the [`BuildContext`].
+/// Note:
+/// -----
+/// `pkgs` should be all packages present in the freeze, including the root package.
 #[tracing::instrument(skip_all)]
 pub fn compile(
     bcx: BuildContext<'_, '_>,

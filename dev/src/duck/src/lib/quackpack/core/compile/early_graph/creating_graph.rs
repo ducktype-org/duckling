@@ -4,11 +4,11 @@ use itertools::Itertools;
 use tracing::debug;
 
 use super::*;
+use crate::qp_bail;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::compiler_package::PackageType;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::{AnyPackage, PackageId};
-use crate::{qp_bail, qp_bail_internal};
 
 impl DependencyGraph {
     /// Create new [`DependencyGraph`] from the given freeze.
@@ -26,36 +26,11 @@ impl DependencyGraph {
             graph.insert(pkg_id.identity().into(), DependencyNode::new(pkg_deps));
         }
         let root_identity = freeze.main_pkg.identity().into();
-        Self::check_is_complete_graph(root_identity, &graph)?;
         Self::check_cycles_only_on_local_deps(root_identity, &graph)?;
         Ok(Self {
             root: root_identity,
             graph,
         })
-    }
-
-    /// Checks, whether `graph` rooted at `root` is complete.
-    #[tracing::instrument(skip_all)]
-    fn check_is_complete_graph(
-        root: Identity,
-        graph: &HashMap<Identity, DependencyNode>,
-    ) -> QuackResult<()> {
-        debug!(%root, ?graph, "checking completeness");
-        for (k, v) in graph {
-            for dep in v.dependencies() {
-                if !graph.contains_key(dep) {
-                    let dep_type = if *k == root {
-                        PackageType::DirectDependency
-                    } else {
-                        PackageType::TransitiveDependency
-                    };
-                    qp_bail_internal!(
-                        "malformed freezefile: missing {dep_type} `{dep}`; {graph:#?}"
-                    )
-                }
-            }
-        }
-        Ok(())
     }
 
     /// Checks that only cycles of dependencies are of local dependencies.

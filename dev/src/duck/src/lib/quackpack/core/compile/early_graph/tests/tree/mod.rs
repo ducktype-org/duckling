@@ -11,7 +11,7 @@ use crate::quackpack::core::compile::early_graph::tests::{
 use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::storage::load_packages;
+use crate::quackpack::core::storage::load_deps::load_packages_in_freeze as load_packages;
 use crate::quackpack::core::storage::paths::Storage;
 
 #[test]

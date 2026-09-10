@@ -30,10 +30,7 @@ use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
-mod load_deps;
-
-#[cfg(test)]
-pub use load_deps::load_packages_in_freeze as load_packages;
+pub mod load_deps;
 
 #[derive(Debug, Clone, Copy)]
 /// Options passed to [`sync`].

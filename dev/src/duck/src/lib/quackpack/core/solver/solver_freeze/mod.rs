@@ -37,7 +37,6 @@ impl Default for SolverPackageFreeze {
 }
 
 impl SolverFreeze {
-    // @TODO: #2076 Fix issues with storage's freeze.
     #[tracing::instrument(skip_all)]
     pub fn try_from_venv_freeze(root: PackageId, value: &VenvFreeze) -> QuackResult<Self> {
         debug!(?root, freeze = ?value);
@@ -113,7 +112,7 @@ impl SolverFreeze {
                 continue;
             }
             let mut dependencies = vec![];
-            for (_, realization) in freeze.dependencies_realization.iter() {
+            for realization in freeze.dependencies_realization.values() {
                 dependencies.push((realization.identity()).into());
             }
             pkg_freezes.push(FreezePackage::new(

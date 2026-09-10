@@ -12,7 +12,7 @@ use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::identity::Identity;
-use crate::quackpack::core::storage::load_packages;
+use crate::quackpack::core::storage::load_deps::load_packages_in_freeze as load_packages;
 use crate::quackpack::core::storage::paths::Storage;
 
 #[test]
@@ -49,9 +49,6 @@ fn creates_valid_initial_graph() {
     };
     let graph = EarlyGraph::new_early(&bcx, packages.pkgs).unwrap();
     assert_eq!(graph.graph.root, mock_local_identity(root.path(), "root"));
-    for (pkg, deps) in graph.graph.graph.iter() {
-        println!("{pkg}\n{deps:?}");
-    }
     assert_eq!(
         graph.graph.graph,
         HashMap::from_iter([

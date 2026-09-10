@@ -42,10 +42,7 @@ const METADATA_FILENAME: &str = "metadata";
 const BACKUP_METADATA_FILENAME: &str = "metadata.old";
 const PKGS_DIR_NAME: &str = "pkg";
 
-#[cfg(test)]
 pub const OK_FILENAME: &str = ".ok";
-#[cfg(not(test))]
-const OK_FILENAME: &str = ".ok";
 
 #[derive(Debug, Clone)]
 /// Provides paths of the storage components, hiding the implementation details of the directory layout.
