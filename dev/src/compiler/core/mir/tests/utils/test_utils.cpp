@@ -1,4 +1,4 @@
-#include "mir_test_utils.hpp"
+#include "test_utils.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/queries.hpp>

@@ -2,6 +2,8 @@
  * @file mir_tests.cpp
  */
 
+#include "utils/test_utils.hpp"
+
 #include <ctv/ctv.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
@@ -12,7 +14,6 @@
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <mir/test_utils/mir_test_utils.hpp>
 
 #include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
