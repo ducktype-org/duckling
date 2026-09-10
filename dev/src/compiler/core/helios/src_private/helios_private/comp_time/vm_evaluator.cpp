@@ -21,7 +21,9 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/vmvalue/ivmvalue.hpp>
 
+#include <algorithm>
 #include <expected>
+#include <iostream>
 #include <mutex>
 
 namespace {
@@ -38,7 +40,7 @@ namespace {
 	 * Handles the deduplication of the code being loaded into the VM.
 	 * Kills the VMProcess when compilation ends.
 	 */
-	class CompTimeDVM {
+	class CompTimeDVM final {
 		base::Optional<vm::PID> pid{};
 
 		/**
@@ -71,9 +73,36 @@ namespace {
 
 		~CompTimeDVM() {
 			if (!pid.has_value()) return;
-			if (!vm::api::deinitAndValidate(pid.value()).has_value())
-				// Force kill if the process doesn't want to die.
-				(void) vm::api::kill(pid.value());
+			dumpOutput();
+			// Run the global destructors and validate the memory state after the last evaluation
+			// completed cleanly or force kill the process.
+			(void) vm::api::deinitOrKill(pid.value());
+		}
+
+		/**
+		 * @brief Prints everything the compile-time code has printed so far on `std::cerr`.
+		 *
+		 * The DVM buffers the output of a program instead of writing it out, so a `print` inside a
+		 * compile-time evaluation would otherwise be lost. Draining that buffer onto `std::cerr`
+		 * makes such prints visible without mixing them into the compiler's own standard output.
+		 */
+		void dumpOutput() {
+			if (!pid.has_value()) return;
+			auto response = vm::api::output(pid.value());
+			if (!response.has_value() || response->output.empty()) return;
+
+			// Replace each \n with "[comp-time] \n" to prefix each line of output with the
+			// compile-time tag.
+
+			response->output = "[comp-time] " + response->output;
+
+			constexpr static std::string_view PREFIX = "[comp-time] ";
+			std::string::size_type            pos    = 0;
+			while ((pos = response->output.find('\n', pos)) != std::string::npos) {
+				response->output.insert(pos + 1, PREFIX);
+				pos += PREFIX.length() + 1;
+			}
+			std::cerr << response->output << "\n";
 		}
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
@@ -533,6 +562,9 @@ namespace compiler::helios {
 				VmEvaluationError::Kind::VmInitializationFailed,
 				"Failed to initialize the comptime DVM process."
 			));
+
+		// Show what the evaluated code printed, whether or not the evaluation itself succeeded.
+		defer(comptime_dvm.dumpOutput());
 
 		if (auto res = comptime_dvm.loadCode(ctx, lir_unit); !res)
 			return std::unexpected(res.error());

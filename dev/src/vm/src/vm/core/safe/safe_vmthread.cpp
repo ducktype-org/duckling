@@ -4,7 +4,9 @@
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
 #include <base/collections/optional.hpp>
+#include <base/config/target_info.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/types/ints.hpp>
@@ -89,15 +91,9 @@ namespace vm {
 		const low::MicroOpcode opcode = getInstructionOpcode(*frame->instr);
 		if (opcode != low::MicroOpcode::breakpoint) return opcode;
 
-		const auto* program_copy
-			= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
-		CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
-
-		const auto original_instr
-			= program_copy->getOriginalProgram()
-		          ->getFunctions()
-		          .at(frame->current_function->name)
-		          ->bc[static_cast<usize>(frame->instr - &frame->current_function->bc[0])];
+		auto& micro_func     = *frame->current_function;
+		auto  low_instr_idx  = (usize) (frame->instr - micro_func.bc.data());
+		auto  original_instr = micro_func.orig_bc[low_instr_idx];
 
 		return getInstructionOpcode(original_instr);
 	}
@@ -141,6 +137,7 @@ namespace vm {
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
 #endif
 			.bc                  = {},
+			.orig_bc             = {},
 			.local_stack_size    = 0,
 			.local_block_count   = func.result_types.size() + func.parameters.size(),
 			.arg_size            = 0,
@@ -187,6 +184,8 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
+		start_function.orig_bc = start_function.bc;
+
 		return start_function;
 	}
 
@@ -227,6 +226,7 @@ namespace vm {
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
 #endif
 			.bc                  = {},
+			.orig_bc             = {},
 			.local_stack_size    = 72,
 			.local_block_count   = 7,
 			.arg_size            = 0,
@@ -397,6 +397,9 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
+
+		start_function.orig_bc = start_function.bc;
+
 		return start_function;
 	}
 
@@ -418,9 +421,9 @@ namespace vm {
 		thread.reportAsRunning();
 	}
 
-#if defined(__clang__)
+#if BASE_TARGET_COMPILER_CLANG
 // @TODO: #2582 suppress code deduplication in Clang
-#elif defined(__GNUG__)
+#elif BASE_TARGET_COMPILER_GCC
 	#pragma GCC push_options
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
@@ -463,9 +466,9 @@ namespace vm {
 	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
 	// NOLINTEND(cppcoreguidelines-avoid-goto)
 
-#if defined(__clang__)
+#if BASE_TARGET_COMPILER_CLANG
 // @TODO: #2582 suppress code deduplication in Clang
-#elif defined(__GNUG__)
+#elif BASE_TARGET_COMPILER_GCC
 	#pragma GCC pop_options
 #endif
 
@@ -488,6 +491,13 @@ namespace vm {
 		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
 
 		const auto* instr = start_function.bc.data();
+
+		// Make sure the frame will be moved back after the interpreter runs. Even if it throws a
+		// `KillProcessException` so the state stays valid.
+		defer({
+			*orig_frame_ptr                  = orig_frame_cpy;
+			runtime_data.frame_stack_current = orig_frame_ptr;
+		});
 
 		runInterpreter(instr, local_stack, frame, *this);
 
@@ -518,8 +528,6 @@ namespace vm {
 			process_memory.freeBlockData(block);
 			process_memory.decreaseBlockRefcount(block);
 		}
-		*orig_frame_ptr                  = orig_frame_cpy;
-		runtime_data.frame_stack_current = orig_frame_ptr;
 
 		return exit_value_storage.value();
 	}
@@ -586,16 +594,21 @@ namespace vm {
 		// keeping teardown safe and logically consistent.
 		for (const auto& [global, id, name]: std::ranges::reverse_view(globals)) {
 			auto* ctor_dtor = std::get_if<low::GlobalCtorDtor>(&global->init);
-			if (ctor_dtor && ctor_dtor->dtor_name.has_value()) {
-				const auto& func = *executing_program->getFunctions()
-				                        .atMaybe(ctor_dtor->dtor_name.value())
-				                        .expect(
-											"Called function does not exist: "
-											+ ctor_dtor->dtor_name.value().str()
-										);
-				low::LowFuncData start_function = createStartFunctionFor(func, {});
-				executeFunction(start_function, func);
-			}
+			if (!ctor_dtor || !ctor_dtor->dtor_name.has_value()) continue;
+
+			// A global which was never constructed has nothing to destroy.
+			auto block_ref
+				= Ref(runtime_data.global_block_ref_buffer_base[global->global_block_idx]);
+			if (not process_memory.isGlobalInitialized(block_ref)) continue;
+
+			const auto& func
+				= *executing_program->getFunctions()
+			           .atMaybe(ctor_dtor->dtor_name.value())
+			           .expect(
+						   "Called function does not exist: " + ctor_dtor->dtor_name.value().str()
+					   );
+			low::LowFuncData start_function = createStartFunctionFor(func, {});
+			executeFunction(start_function, func);
 		}
 	}
 

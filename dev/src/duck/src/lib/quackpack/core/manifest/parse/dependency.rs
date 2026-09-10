@@ -1,9 +1,7 @@
 //! Parsing of the {dev-,}dependencies fields in a manifest.
-use std::path::Path;
-
 use tracing::debug;
 
-use super::{ScopeGuard, source};
+use super::{ParseMode, ScopeGuard, source};
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{Conditions, Dependency, DependencyFeature, DependencyKind};
@@ -21,7 +19,7 @@ use crate::{DuckContext, QuackResult, StrId};
 #[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
-    package_root: &Path,
+    mode: ParseMode<'_>,
     kind: DependencyKind,
     dependencies: &mut Vec<Dependency>,
     warnings: &mut Warnings,
@@ -36,7 +34,7 @@ pub(crate) fn parse(
         dependencies.push(parse_single_dependency(
             name.into(),
             dep_schema,
-            package_root,
+            mode,
             kind,
             warnings,
             ctx,
@@ -51,7 +49,7 @@ pub(crate) fn parse(
 fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
-    package_root: &Path,
+    mode: ParseMode<'_>,
     kind: DependencyKind,
     warnings: &mut Warnings,
     ctx: &DuckContext,
@@ -79,7 +77,7 @@ fn parse_single_dependency(
             .with_context(|| scope.make_context_string())?;
     }
     let guard = scope.push("source".into());
-    let source = source::parse(schema, package_root, warnings, ctx, guard)?;
+    let source = source::parse(schema, mode, warnings, ctx, guard)?;
 
     let versions = schema
         .version

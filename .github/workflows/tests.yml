@@ -22,6 +22,8 @@ env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
   BUILD_SYSTEM: Ninja
+  # How much the line coverage may drop compared to main before the check fails.
+  COVERAGE_TOLERANCE: "0.01"
 
 jobs:
   # Determines the build matrix based on the event type.
@@ -239,7 +241,7 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: |
           ./toolbox.py init
-        
+
 
       # Enables coverage only in case of Debug build.
       - name: Additional setup-build flags
@@ -496,7 +498,13 @@ jobs:
 
       - name: Check coverage status
         id: check-coverage-status
-        run: echo success=${{ needs.build.outputs.coverage-value >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
+        # Github expressions cannot do arithmetic, so the tolerance is applied by awk.
+        env:
+          CURRENT_COVERAGE: ${{ needs.build.outputs.coverage-value }}
+          MAIN_COVERAGE: ${{ steps.read-main-coverage.outputs.value }}
+        run: |
+          awk -v cur="$CURRENT_COVERAGE" -v base="$MAIN_COVERAGE" -v tol="$COVERAGE_TOLERANCE" \
+              'BEGIN { print "success=" ((cur + tol >= base) ? "true" : "false") }' > $GITHUB_OUTPUT
 
       - name: Hide previous bot comments
         if: ${{ env.IF_MAIN_PR == 'true' }}
@@ -509,7 +517,7 @@ jobs:
         uses: actions/github-script@v9
         if: ${{ env.IF_MAIN_PR == 'true' }}
         env:
-          COV_FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
+          COV_FAIL_MSG: '❌❌❌ - **You have to write some more tests! The coverage may not drop by more than ${{ env.COVERAGE_TOLERANCE }}% below the main branch.** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
           COV_SUCC_MSG: "✅✅✅ - **Great job writing tests!**"
           TODO_FAIL_MSG: "🙈🙈🙈 - You have **added ${{ steps.calc-todo-diff.outputs.value }}** TODO(s) to the repo! 🥴❌🥴"
           TODO_SINGLE_GOOD_MSG: "👍👍👍 - You have **solved ${{ steps.calc-todo-diff-neg.outputs.value }}** TODO!"

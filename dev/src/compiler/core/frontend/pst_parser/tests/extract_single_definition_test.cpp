@@ -32,102 +32,83 @@ private:
 		return result;
 	}
 
-	void testEmptyInput() {
-		assertFalse(extract("").has_value(), "Expected empty for empty input");
-	}
+	void testEmptyInput() { ASSERT_NO_VALUE(extract(""), "Expected empty for empty input"); }
 
 	void testSingleVariableDefinition() {
-		assertTrue(
-			extract("var x: i32 = 5;").has_value(), "Variable declaration should be returned"
+		ASSERT_HAS_VALUE(extract("var x: i32 = 5;"), "Variable declaration should be returned");
+		ASSERT_HAS_VALUE(
+			extract("var foo: String = \"hello\";"), "Variable with string should be returned"
 		);
-		assertTrue(
-			extract("var foo: String = \"hello\";").has_value(),
-			"Variable with string should be returned"
-		);
-		assertTrue(
-			extract("var data: Array<i32> = [];").has_value(),
-			"Variable with complex type should be returned"
+		ASSERT_HAS_VALUE(
+			extract("var data: Array<i32> = [];"), "Variable with complex type should be returned"
 		);
 	}
 
 	void testSingleConstDefinition() {
-		assertTrue(extract("const X: W = 5;").has_value(), "Const declaration should be returned");
-		assertTrue(
-			extract("const MAX: i32 = 100;").has_value(), "Const with value should be returned"
-		);
+		ASSERT_HAS_VALUE(extract("const X: W = 5;"), "Const declaration should be returned");
+		ASSERT_HAS_VALUE(extract("const MAX: i32 = 100;"), "Const with value should be returned");
 	}
 
 	void testSingleFunctionDefinition() {
-		assertTrue(extract("fun foo() = {}").has_value(), "Function declaration should be returned");
-		assertTrue(
-			extract("fun bar(x: i32): i32 = { x + 1 }").has_value(),
+		ASSERT_HAS_VALUE(extract("fun foo() = {}"), "Function declaration should be returned");
+		ASSERT_HAS_VALUE(
+			extract("fun bar(x: i32): i32 = { x + 1 }"),
 			"Function with parameters and body should be returned"
 		);
-		assertTrue(
-			extract("fun baz(a: i32, b: String) = {}").has_value(),
+		ASSERT_HAS_VALUE(
+			extract("fun baz(a: i32, b: String) = {}"),
 			"Function with multiple parameters should be returned"
 		);
 	}
 
 	void testSingleClassDefinition() {
-		assertTrue(extract("class Foo {}").has_value(), "Class declaration should be returned");
-		assertTrue(
-			extract("class Bar { var x: i32; }").has_value(), "Class with members should be returned"
+		ASSERT_HAS_VALUE(extract("class Foo {}"), "Class declaration should be returned");
+		ASSERT_HAS_VALUE(
+			extract("class Bar { var x: i32; }"), "Class with members should be returned"
 		);
-		assertTrue(
-			extract("class Baz<T> { fun method() = {} }").has_value(),
-			"Generic class should be returned"
+		ASSERT_HAS_VALUE(
+			extract("class Baz<T> { fun method() = {} }"), "Generic class should be returned"
 		);
 	}
 
 	void testSingleNamespaceDefinition() {
-		assertTrue(
-			extract("namespace Foo {}").has_value(), "Namespace declaration should be returned"
-		);
-		assertTrue(
-			extract("namespace Bar { var x: i32 = 1; }").has_value(),
-			"Namespace with content should be returned"
+		ASSERT_HAS_VALUE(extract("namespace Foo {}"), "Namespace declaration should be returned");
+		ASSERT_HAS_VALUE(
+			extract("namespace Bar { var x: i32 = 1; }"), "Namespace with content should be returned"
 		);
 	}
 
 	void testSingleUsingStatement() {
-		assertTrue(extract("using X;").has_value(), "Using statement should be returned");
-		assertTrue(
-			extract("using MyNamespace;").has_value(), "Using with namespace should be returned"
-		);
+		ASSERT_HAS_VALUE(extract("using X;"), "Using statement should be returned");
+		ASSERT_HAS_VALUE(extract("using MyNamespace;"), "Using with namespace should be returned");
 	}
 
 	void testSingleAliasDefinition() {
-		assertTrue(extract("alias y = x;").has_value(), "Simple alias to symbol should be returned");
-		assertTrue(
-			extract("alias foo = obj.member;").has_value(), "Alias to dotted name should be returned"
+		ASSERT_HAS_VALUE(extract("alias y = x;"), "Simple alias to symbol should be returned");
+		ASSERT_HAS_VALUE(
+			extract("alias foo = obj.member;"), "Alias to dotted name should be returned"
 		);
-		assertTrue(
-			extract("alias nested = outer.inner.core.foo;").has_value(),
+		ASSERT_HAS_VALUE(
+			extract("alias nested = outer.inner.core.foo;"),
 			"Alias to nested dotted name should be returned"
 		);
 	}
 
 	void testMultipleStatements() {
-		assertFalse(
-			extract("var x: i32 = 5; var y: i32 = 10;").has_value(),
+		ASSERT_NO_VALUE(
+			extract("var x: i32 = 5; var y: i32 = 10;"),
 			"Expected empty for two variable declarations"
 		);
-		assertFalse(
-			extract("fun foo() = {}; fun bar() = {}").has_value(),
-			"Expected empty for two function declarations"
+		ASSERT_NO_VALUE(
+			extract("fun foo() = {}; fun bar() = {}"), "Expected empty for two function declarations"
 		);
-		assertFalse(
-			extract("class Foo {}; class Bar {}").has_value(),
-			"Expected empty for two class declarations"
+		ASSERT_NO_VALUE(
+			extract("class Foo {}; class Bar {}"), "Expected empty for two class declarations"
 		);
-		assertFalse(
-			extract("var x: i32 = 5; fun foo() = {}").has_value(),
-			"Expected empty for variable and function"
+		ASSERT_NO_VALUE(
+			extract("var x: i32 = 5; fun foo() = {}"), "Expected empty for variable and function"
 		);
-		assertFalse(
-			extract("const X: i32 = 1; using Y;").has_value(), "Expected empty for const and using"
-		);
+		ASSERT_NO_VALUE(extract("const X: i32 = 1; using Y;"), "Expected empty for const and using");
 	}
 
 public:

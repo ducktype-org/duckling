@@ -89,7 +89,7 @@ private:
 	void lifetimeFlagsRepeatedBlocks() {
 		auto [module, scope]
 			= getModule(fs::File(path("modules/lifetime_flags/repeated_blocks.dk")));
-		auto            foo_mir = getMIRFunctionByName(module, "main");
+		auto            foo_mir = getMIRFunctionByName(module, "function");
 		LifetimeChecker checker;
 		checker.expectConstruct("a")
 			.expectScopeStart("a")
@@ -490,7 +490,6 @@ private:
 		using Flag = compiler::mir::OperationFlag::Flag;
 
 		auto [module, scope] = getModule(fs::File(path("modules/move_ownership")));
-
 
 		// The `Call` reading `a` marks it as moved out. No `Assign` into a temporary is built for
 		// the move, `a` is not destructed here any more.

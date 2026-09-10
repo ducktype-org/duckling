@@ -59,18 +59,12 @@ namespace vm {
 				auto res = getProcess(pid).and_then([](Ref<IVMProcess> process) {
 					return process->doRequest(api::request::DeinitAndValidate{});
 				});
-				// Don't erase the process iff the process didn't exist or it's still running.
-				const bool still_executing
-					= getProcess(pid)
-				          .and_then([](Ref<IVMProcess> process) {
-							  return process->doRequest(api::request::StatusRequest{});
-						  })
-				          .transform([](const api::Response& response) {
-							  return isExecuting(v_get(response, api::ProcStatus));
-						  })
-				          .value_or(false);
 
-				if (!still_executing) (void) killProcess(pid);
+				// If the deinit was successful or it ran but a global destructor panicked, we
+				// destroy the process here. Otherwise, if it was refused because the process is
+				// still executing, we leave it and let someone kill by hand.
+				if (res.has_value() || v_matches(res.error(), api::Panicked))
+					(void) killProcess(pid);
 				return res;
 			}
 			variant_default {
@@ -103,24 +97,15 @@ namespace vm {
 	}
 
 	Supervisor::~Supervisor() {
+		// Every process left here is force killed.
 		for (auto& [pid, proc]: process_table) {
-			// Every process must be stopped or finished before the Supervisor is destroyed.
 			auto status = proc->doRequest(api::request::StatusRequest{});
-			if (status && isExecuting(v_get(*status, api::ProcStatus))) {
+			if (status)
 				std::cerr << "Supervisor destroyed while process " << pid
-						  << " is still executing. Processes must be stopped or finished before "
+						  << " still exists. Processes should be deinitialized before "
 							 "the Supervisor is destroyed.\n";
-				// `DeinitAndValidate` expects the process to be non-active, so we stop it before
-				// the deinit. If it was already stopped this won't change anything.
-				(void) proc->doRequest(api::request::Stop{});
-			}
-			const auto deinit = proc->doRequest(api::request::DeinitAndValidate{});
-			if (!deinit.has_value())
-				std::cerr << "Process " << pid << " failed to deinitialize during Supervisor "
-						  << "teardown: " << api::errorToString(deinit.error()) << "\n";
-			else if (v_matches(*deinit, bool) && !v_get(*deinit, bool))
-				std::cerr << "Process " << pid
-						  << " failed validation during Supervisor teardown.\n";
+			(void) proc->doRequest(api::request::Stop{});
 		}
+		process_table.clear();
 	}
 }

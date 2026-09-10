@@ -79,6 +79,12 @@ namespace vm {
 		[[nodiscard]] inline bool canRespond(const ProcessState& state) {
 			return v_matches(state, NotStarted, Paused) || isTerminal(state);
 		}
+
+		/// True when `deinitAndValidate` is legal in the current state (the process is NotStarted
+		/// or Completed nicely). Panicked or Stopped states forbid the deinit.
+		[[nodiscard]] inline bool canDeinit(const ProcessState& state) {
+			return v_matches(state, NotStarted, Completed);
+		}
 	}
 
 	/**
