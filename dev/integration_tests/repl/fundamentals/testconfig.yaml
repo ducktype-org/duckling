@@ -3,6 +3,25 @@
 ans:  => 4\n
 
 Tests:
+  plain_output:
+    Run: "@{duckc_path} repl --plain-output --custom-std-artifacts-path @{case_std_artifacts}"
+    Cases:
+      expression-result:
+        Input:
+          File: "simple_numeric/simple_numeric1.rtf"
+        Output:
+          String: "4\n"
+      unit-result:
+        Input:
+          File: "standard_library/std.rtf"
+        Output:
+          String: "42\n"
+      exit-command:
+        Input:
+          String: "/exit\n"
+        Output:
+          String: ""
+
   simple_numeric:
     Cases:
       with_semicolon:
@@ -16,7 +35,7 @@ Tests:
         Output:
           String: "@{beginning}\n=> 17878\n@{end}"
       
-      # @TODO: #2245 future test we need to add a flag to ignore errors in checking out.    
+      # @TODO: we need to add a flag to ignore errors in checking out.
       # resilience:
       #   Input:
       #     File: "simple_numeric/resilience.rtf"

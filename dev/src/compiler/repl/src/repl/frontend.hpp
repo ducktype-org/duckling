@@ -59,9 +59,10 @@ namespace compiler::repl {
 		/**
 		 * @brief Blocks and waits for the user to enter next piece of input.
 		 *
+		 * @param decorative_output_enabled Whether to display the interactive prompt.
 		 * @return The string of input provided by the user.
 		 */
-		std::string readLine();
+		std::string readLine(bool decorative_output_enabled);
 
 		/**
 		 * @brief Prints the history of previously entered inputs.

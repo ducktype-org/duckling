@@ -369,8 +369,9 @@ namespace compiler::repl {
 		std::cout << "Press Enter to submit. Press Alt+Enter for new line.\n\n";
 	}
 
-	std::string FrontendReplxxImplementation::readLine() {
-		const char* input = m_replxx.input(ReplConfig::PROMPT);
+	std::string FrontendReplxxImplementation::readLine(bool decorative_output_enabled) {
+		const char* prompt = decorative_output_enabled ? ReplConfig::PROMPT.c_str() : "";
+		const char* input  = m_replxx.input(prompt);
 
 		if (input == nullptr) {
 			// EOF (Ctrl-D) or error.

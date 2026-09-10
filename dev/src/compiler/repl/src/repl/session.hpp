@@ -38,8 +38,9 @@ namespace compiler::repl {
 	class ReplSession final {
 	public:
 		explicit ReplSession(
-			bool completions_enabled     = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
-			bool bracketed_paste_enabled = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED
+			bool completions_enabled       = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
+			bool bracketed_paste_enabled   = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED,
+			bool decorative_output_enabled = FRONTEND_DEFAULT_DECORATIVE_OUTPUT
 		);
 
 		~ReplSession();
@@ -298,6 +299,7 @@ namespace compiler::repl {
 		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
 		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
 		ReplFrontend m_frontend;      ///< Frontend for user interaction
+		bool         m_decorative_output_enabled;  ///< Whether to print interactive UI decorations.
 		/**
 		 * @brief Persistent lowering context for REPL statement compilation.
 		 *

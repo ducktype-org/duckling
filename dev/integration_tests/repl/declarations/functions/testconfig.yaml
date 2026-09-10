@@ -1,6 +1,5 @@
 # Tests for declaration of functions in REPL
-# @TODO: #2245 add option to not print "=>" or duckling,
-# add eventual error ignore.
+# @TODO: Add an option to ignore eventual error.
 
 Tests:
   basic_declarations:

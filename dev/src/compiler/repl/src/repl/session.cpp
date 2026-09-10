@@ -432,11 +432,14 @@ namespace compiler::repl {
 		std::cout << "\n";
 	}
 
-	ReplSession::ReplSession(bool completions_enabled, bool bracketed_paste_enabled):
+	ReplSession::ReplSession(
+		bool completions_enabled, bool bracketed_paste_enabled, bool decorative_output_enabled
+	):
 		  m_should_exit(false),
 		  m_line_counter(0),
 		  m_dvm_pid(0),
 		  m_frontend(completions_enabled, bracketed_paste_enabled),
+		  m_decorative_output_enabled(decorative_output_enabled),
 		  m_lowering_context() {
 		initDVM();
 	}
@@ -758,10 +761,12 @@ namespace compiler::repl {
 					= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
 				if (run_result.has_value()) {
 					if (!m_suppress_repl) {
-						if (return_type.toString() == "()")
-							std::cout << "Function executed.\n";
-						else
-							std::cout << "=> " << run_result.value() << "\n";
+						if (return_type.toString() == "()") {
+							if (m_decorative_output_enabled) std::cout << "Function executed.\n";
+						} else {
+							if (m_decorative_output_enabled) std::cout << "=> ";
+							std::cout << run_result.value() << "\n";
+						}
 					}
 				} else {
 					error_message = "Runtime error: " + run_result.error();
@@ -978,12 +983,12 @@ namespace compiler::repl {
 	}
 
 	ReplResult ReplSession::run(bool is_reset) {
-		if (!is_reset) m_frontend.printWelcome();
+		if (!is_reset && m_decorative_output_enabled) m_frontend.printWelcome();
 		while (!m_should_exit) {
-			std::string line = m_frontend.readLine();
+			std::string line = m_frontend.readLine(m_decorative_output_enabled);
 
 			if (line.empty() && std::cin.eof()) {
-				std::cout << "\nGoodbye!\n";
+				if (m_decorative_output_enabled) std::cout << "\nGoodbye!\n";
 				return ReplResult::exit();
 			}
 
@@ -1002,7 +1007,8 @@ namespace compiler::repl {
 			}
 
 			if (result.status == ReplResult::Status::Exit) {
-				std::cout << result.message << "\n";
+				if (m_decorative_output_enabled && !result.message.empty())
+					std::cout << result.message << "\n";
 				return result;
 			}
 		}

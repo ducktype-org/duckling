@@ -10,7 +10,9 @@ namespace compiler::repl {
 
 	void ReplFrontend::printWelcome() const { m_impl.printWelcome(); }
 
-	std::string ReplFrontend::readLine() { return m_impl.readLine(); }
+	std::string ReplFrontend::readLine(bool decorative_output_enabled) {
+		return m_impl.readLine(decorative_output_enabled);
+	}
 
 	void ReplFrontend::printHistory() const { m_impl.printHistory(); }
 

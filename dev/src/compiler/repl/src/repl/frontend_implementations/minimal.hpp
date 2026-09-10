@@ -44,7 +44,7 @@ namespace compiler::repl {
 		~FrontendMinImplementation() = default;
 
 		void        printWelcome() const;
-		std::string readLine();
+		std::string readLine(bool decorative_output_enabled);
 		void        printHistory() const;
 		void        addHistoryEntry(std::string_view entry);
 		void        clearHistory();

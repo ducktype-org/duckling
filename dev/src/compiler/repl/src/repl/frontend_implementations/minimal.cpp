@@ -217,9 +217,11 @@ namespace compiler::repl {
 		std::cout << "Type /help for available commands, /exit to quit.\n\n";
 	}
 
-	std::string FrontendMinImplementation::readLine() {
-		std::cout << ReplConfig::PROMPT;
-		std::cout.flush();
+	std::string FrontendMinImplementation::readLine(bool decorative_output_enabled) {
+		if (decorative_output_enabled) {
+			std::cout << ReplConfig::PROMPT;
+			std::cout.flush();
+		}
 
 		if (m_bracketed_paste_enabled) writeStr(ENABLE_BRACKETED_PASTE_SEQ);
 
