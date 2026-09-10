@@ -27,6 +27,7 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMoveErrors);
 		TESTER_ADD_TEST(testUseBeforeInit);
+		TESTER_ADD_TEST(testShortCircuitMoveState);
 	}
 
 private:
@@ -67,6 +68,23 @@ private:
                    eat(a);
                })",
 			{ "is used after it has been moved out of.", "Value moved here." },
+			1
+		);
+	}
+
+	/**
+	 * @brief The right-hand side of a lazily evaluated `or` runs on only one of the paths, so a
+	 * move performed there reaches the later use on some paths only.
+	 */
+	void testShortCircuitMoveState() {
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun eat(x: i64) = x;
+               fun movedInRhs(a: bool, x: i64) -> bool = {
+                   let c = a or eat(move x) == 0;
+                   eat(x);
+                   return c;
+               })",
+			{ "may have been moved out of on some", "Value moved here." },
 			1
 		);
 	}
