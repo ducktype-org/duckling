@@ -14,6 +14,10 @@ namespace compiler::mir {
 		for (auto& local: fun.local_list) {
 			if (local.helios_id.empty()) continue;
 
+			// Compiler-generated locals have no PST position, so they cannot meaningfully shadow
+			// user code and take no part in the check.
+			if (not helios::maybeSymbolPst(*local.helios_id).has_value()) continue;
+
 			auto name = helios::name(*local.helios_id);
 			match_optional(named_locals.atMaybe(name)) {
 				opt_some(prev_defs) {
@@ -25,33 +29,21 @@ namespace compiler::mir {
 							                               ? std::tuple{ base::Ref(&local), def }
 							                               : std::tuple{ def, base::Ref(&local) };
 
-							auto get_pos = [&](auto local_ref) {
+							auto pos_of = [&](auto local_ref) {
+								// Generated locals were filtered out above, so the position is
+								// always available for the locals reaching this point.
 								return helios::maybeSymbolPst(local_ref->helios_id.value())
-								    .map([&](const auto& pst) {
-										return pst.unlock(ctx)->getStablePosition();
-									});
+								    .value()
+								    .unlock(ctx)
+								    ->getStablePosition();
 							};
-							auto shadowing_pos = get_pos(shadowing);
-							auto shadowed_pos  = get_pos(shadowed);
 
-							if (shadowing_pos && shadowed_pos) {
-								auto msg = makeBox<VariableShadowingError>(*shadowing_pos);
-								msg->addAttachedMessage(
-									makeBox<ShadowedDeclarationNote>(*shadowed_pos)
-								);
-								ctx.logInt(std::move(msg));
-							} else {
-								ctx.logInt(makeBox<dia::PlaceholderError>(
-									"Variable declaration shadows a previous declaration.",
-									base::strConcat(
-										"The exact code location is unavailable because the "
-										"variable is compiler generated. ",
-										"The shadowing happened for the symbol `",
-										shadowing->getName(),
-										"`."
-									)
-								));
-							}
+							auto shadowing_pos = pos_of(shadowing);
+							auto shadowed_pos  = pos_of(shadowed);
+
+							auto msg = makeBox<VariableShadowingError>(shadowing_pos);
+							msg->addAttachedMessage(makeBox<ShadowedDeclarationNote>(shadowed_pos));
+							ctx.logInt(std::move(msg));
 							return base::BAD;
 						}
 					}
