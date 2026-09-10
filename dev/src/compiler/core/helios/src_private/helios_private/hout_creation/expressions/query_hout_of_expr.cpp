@@ -41,6 +41,8 @@
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <algorithm>
+
 namespace compiler::helios::code {
 
 	namespace {
@@ -368,7 +370,8 @@ namespace compiler::helios::code {
 				const auto lookup_result
 					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
 				// @TODO: #1412 fix dealias
-				auto all_candidates = lookup_result->valueOrThrow().leaves;
+				auto               all_candidates = lookup_result->valueOrThrow().leaves;
+				std::vector<SymID> method_candidates;
 				for (const auto [builtin_operator_sym, _]:
 				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
 					if (name(builtin_operator_sym) == op->unwrap().value)
@@ -381,19 +384,21 @@ namespace compiler::helios::code {
 				if (inner_type.getKind() == tsh::Kind::Class) {
 					const auto method_lookup_result
 						= HInterface::ofTypeInstance(inner_type).lookup(ctx, op->unwrap().value);
-					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
+					method_candidates = method_lookup_result->valueOrThrow().leaves;
 					filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
 
-					all_candidates.insert(
-						all_candidates.end(), method_candidates.begin(), method_candidates.end()
-					);
-
-					if (!method_candidates.empty())
-						inner = Shorthand{ ctx }.prepToPassSelf(std::move(inner));
+					for (const auto method_candidate: method_candidates)
+						if (not std::ranges::contains(all_candidates, method_candidate))
+							all_candidates.push_back(method_candidate);
 				}
 
 				return processUnaryOperatorCall(
-						   ctx, all_candidates, std::move(inner), pstOrigin(op), operatoriness
+						   ctx,
+						   all_candidates,
+						   method_candidates,
+						   std::move(inner),
+						   pstOrigin(op),
+						   operatoriness
 				)
 				    .valueOrThrow();
 			}
@@ -610,7 +615,6 @@ namespace compiler::helios::code {
 			) const {
 				const auto lhs_type = lhs->expression_type.getSymbolType();
 				const auto rhs_type = rhs->expression_type.getSymbolType();
-				Shorthand  s{ ctx };
 
 				// Binary operator resolution now happens in two steps:
 				// 1. If the arguments are both numeric (integral or float) and the operator is a
@@ -642,7 +646,8 @@ namespace compiler::helios::code {
 				const auto lookup_result
 					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
 				// @TODO: #1412 fix dealias
-				auto all_candidates = lookup_result->valueOrThrow().leaves;
+				auto               all_candidates = lookup_result->valueOrThrow().leaves;
+				std::vector<SymID> method_candidates;
 				for (const auto [builtin_operator_sym, _]:
 				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
 					if (name(builtin_operator_sym) == op->unwrap().value)
@@ -658,20 +663,23 @@ namespace compiler::helios::code {
 				if (lhs_abstract_type.getKind() == tsh::Kind::Class) {
 					const auto method_lookup_result = HInterface::ofTypeInstance(lhs_abstract_type)
 					                                      .lookup(ctx, op->unwrap().value);
-					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
+					method_candidates = method_lookup_result->valueOrThrow().leaves;
 					filterFunctionsByOperatoriness(
 						ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 					);
 
-					all_candidates.insert(
-						all_candidates.end(), method_candidates.begin(), method_candidates.end()
-					);
-
-					if (!method_candidates.empty()) lhs = s.prepToPassSelf(std::move(lhs));
+					for (const auto method_candidate: method_candidates)
+						if (not std::ranges::contains(all_candidates, method_candidate))
+							all_candidates.push_back(method_candidate);
 				}
 
 				return processBinaryOperatorCall(
-						   ctx, all_candidates, std::move(lhs), std::move(rhs), pstOrigin(op)
+						   ctx,
+						   all_candidates,
+						   method_candidates,
+						   std::move(lhs),
+						   std::move(rhs),
+						   pstOrigin(op)
 				)
 				    .valueOrThrow();
 			}

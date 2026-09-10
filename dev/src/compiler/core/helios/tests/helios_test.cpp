@@ -3264,9 +3264,13 @@ private:
 		auto get_return_call = [&](compiler::helios::SymID fn_sym) -> const CallExpr& {
 			const auto& fn_hout
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ fn_sym })->valueOrPanic();
-			ASSERT_EQUAL(2, fn_hout.body->statements.size());
-			const auto* ret_stmt
-				= dynamic_cast<const ReturnStmt*>(fn_hout.body->statements.at(1).get());
+			const ReturnStmt* ret_stmt = nullptr;
+			for (auto stmt = fn_hout.body->statements.rbegin();
+			     stmt != fn_hout.body->statements.rend();
+			     ++stmt) {
+				ret_stmt = dynamic_cast<const ReturnStmt*>(stmt->get());
+				if (ret_stmt != nullptr) break;
+			}
 			ASSERT_TRUE(ret_stmt != nullptr);
 			const auto* call_expr
 				= dynamic_cast<const CallExpr*>(stripImplicitMove(ret_stmt->value.get()));
@@ -3291,6 +3295,13 @@ private:
 		ASSERT_EQUAL(prefix_method_sym, prefix_callee->symbol);
 		ASSERT_EQUAL(1, prefix_call.arguments.size());
 		ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(prefix_call.arguments.at(0).get()) != nullptr);
+
+		// Integration tests cover the binary case; keep a direct guard for the unary path.
+		const auto& recursive_prefix_call = get_return_call(prefix_method_sym);
+		const auto* recursive_prefix_callee
+			= dynamic_cast<const IdentifierExpr*>(recursive_prefix_call.callee.get());
+		ASSERT_TRUE(recursive_prefix_callee != nullptr);
+		ASSERT_EQUAL(prefix_method_sym, recursive_prefix_callee->symbol);
 
 		// @TODO: #3131 Add case for suffix operator.
 	}
