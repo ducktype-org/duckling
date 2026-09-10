@@ -2,8 +2,6 @@
  * @file mir_tests.cpp
  */
 
-#include "utils/test_utils.hpp"
-
 #include <ctv/ctv.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
@@ -14,6 +12,7 @@
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <mir/test_utils/mir_test_utils.hpp>
 
 #include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
@@ -283,7 +282,6 @@ private:
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 
-
 			ASSERT_EQUAL_PRINT(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL_PRINT(foo_mir.block_order.size(), 7);
 			ASSERT_EQUAL_PRINT(foo_mir.local_list.size(), 5);
@@ -297,7 +295,6 @@ private:
 			using BlockList = std::vector<BlockID>;
 			ASSERT_EQUAL(get_block_successors(1), BlockList{});
 			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
-
 
 			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
 
@@ -597,7 +594,6 @@ private:
 			ASSERT_EQUAL_PRINT(
 				last_block.terminator.operation, compiler::mir::Operation::ReturnVoid
 			);
-
 
 			auto& unreachable_end_fun
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();

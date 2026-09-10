@@ -1,26 +1,19 @@
-#pragma once
+#include "mir_test_utils.hpp"
 
-#include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <mir/mir_lowering/mir_unit.hpp>
-#include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/except/exceptions.hpp>
 
-#include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
 #include <algorithm>
-#include <set>
+#include <iostream>
 #include <sstream>
-#include <vector>
 
 namespace compiler::mir::test_utils {
-	inline CRef<mir::Function> getMIRFunctionByName(
-		frontend::ModuleID module_id, std::string_view name
-	) {
+	CRef<mir::Function> getMIRFunctionByName(frontend::ModuleID module_id, std::string_view name) {
 		auto result = query::utils::withContextCompute([&](query::Context& ctx) {
 			auto& unit
 				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
@@ -36,13 +29,7 @@ namespace compiler::mir::test_utils {
 		return std::any_cast<CRef<mir::Function>>(result);
 	}
 
-	/**
-	 * @brief The set of blocks reachable from the entry block by following the terminators.
-	 *
-	 * `LowerToMIRFunction` already drops unreachable blocks, so a block of a lowered function
-	 * that this does not return means the CFG lost an edge somewhere.
-	 */
-	inline std::set<BlockID> reachableBlocks(const mir::Function& function) {
+	std::set<BlockID> reachableBlocks(const mir::Function& function) {
 		std::set<BlockID>    reachable;
 		std::vector<BlockID> stack{ function.block_order.front() };
 		while (not stack.empty()) {
@@ -55,15 +42,7 @@ namespace compiler::mir::test_utils {
 		return reachable;
 	}
 
-	/**
-	 * @brief Enumerates the control-flow paths from the entry block to the blocks that end the
-	 * function.
-	 *
-	 * A block is never visited twice on the same path, so a loop contributes the paths that go
-	 * around it at most once. Used instead of hardcoded block ids, which change whenever the
-	 * lowering emits blocks in a different order.
-	 */
-	inline std::vector<std::vector<BlockID>> pathsFromEntry(const mir::Function& function) {
+	std::vector<std::vector<BlockID>> pathsFromEntry(const mir::Function& function) {
 		std::vector<std::vector<BlockID>> paths;
 
 		auto walk = [&](auto& self, std::vector<BlockID>& path) -> void {
@@ -85,10 +64,7 @@ namespace compiler::mir::test_utils {
 		return paths;
 	}
 
-	/**
-	 * @brief The blocks whose instructions (terminator excluded) contain the given operation.
-	 */
-	inline std::set<BlockID> blocksWithOperation(const mir::Function& function, Operation operation) {
+	std::set<BlockID> blocksWithOperation(const mir::Function& function, Operation operation) {
 		std::set<BlockID> result;
 		for (auto block_id: function.block_order)
 			for (const auto& instruction: function.blocks[block_id].instructions)
@@ -96,26 +72,17 @@ namespace compiler::mir::test_utils {
 		return result;
 	}
 
-	/**
-	 * @brief Counts the blocks terminated by the given operation.
-	 */
-	inline u64 countTerminators(const mir::Function& function, Operation operation) {
+	u64 countTerminators(const mir::Function& function, Operation operation) {
 		u64 count = 0;
 		for (auto block_id: function.block_order)
 			if (function.blocks[block_id].terminator.operation == operation) count++;
 		return count;
 	}
 
-	/**
-	 * @brief Positive counterpart of @ref checkForErrorOnCompileModule: lowers a module built
-	 * from `module_content` to a MIR unit, asserts that nothing logged an error and hands the
-	 * unit to `check`.
-	 *
-	 * @param module_content The content of the module main source file.
-	 * @param check Callable taking `(query::Context&, const MIRUnit&)`.
-	 */
-	template<typename Check>
-	inline void checkLoweredModule(std::string_view module_content, Check&& check) {  // NOLINT
+	void checkLoweredModule(
+		std::string_view                                            module_content,
+		const std::function<void(query::Context&, const MIRUnit&)>& check
+	) {
 		frontend::ModuleID module_id
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
 
@@ -148,27 +115,13 @@ namespace compiler::mir::test_utils {
 		});
 	}
 
-	/**
-	 * @brief The MIR function of the given name in an already lowered unit.
-	 */
-	inline CRef<mir::Function> functionOfUnit(const mir::MIRUnit& unit, std::string_view name) {
+	CRef<mir::Function> functionOfUnit(const mir::MIRUnit& unit, std::string_view name) {
 		for (const auto& function: unit.mir_functions)
 			if (function->name.strView() == name) return function;
 		CORE_PANIC(base::strConcat("Function with name '", name, "' not found in the MIR unit."));
 	}
 
-	/**
-	 * @brief Helper function that check for MIR compilation
-	 * errors in a module with given content. Requires that the HELIOS step passes.
-	 *
-	 * It creates a virtual file from the `module_content` argument
-	 * and creates a module tree from it every function call.
-
-	 * @param module_content The content of the module main source file.
-	 * @param present_phrases List of phrases that should be present in the logged errors.
-	 * @param logged_msg_count Expected number of logged error messages.
-	 */
-	inline void checkForErrorOnCompileModule(
+	void checkForErrorOnCompileModule(
 		std::string_view                     module_content,
 		const std::vector<std::string_view>& present_phrases,
 		u64                                  logged_msg_count

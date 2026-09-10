@@ -1,11 +1,10 @@
-#include "utils/test_utils.hpp"
-
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
+#include <mir/test_utils/mir_test_utils.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>

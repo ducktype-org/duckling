@@ -4,7 +4,6 @@
  */
 
 #include "utils/lifetime_checker.hpp"
-#include "utils/test_utils.hpp"
 
 #include <ctv/ctv.hpp>
 #include <driver/test_utils.hpp>
@@ -14,6 +13,7 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <mir/test_utils/mir_test_utils.hpp>
 
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
@@ -490,7 +490,6 @@ private:
 		using Flag = compiler::mir::OperationFlag::Flag;
 
 		auto [module, scope] = getModule(fs::File(path("modules/move_ownership")));
-
 
 		// The `Call` reading `a` marks it as moved out. No `Assign` into a temporary is built for
 		// the move, `a` is not destructed here any more.

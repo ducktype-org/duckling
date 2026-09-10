@@ -197,6 +197,9 @@ namespace compiler::mir {
 			valueOutput(lowered_inner.begin, target_location);
 		}
 
+		// @TODO: #1333 The result is always materialized in a temporary, even when the expression
+		// only feeds a branch (`if a and b`). A jumping visitor would lower the operands straight
+		// into the terminators of the enclosing control flow instead.
 		void doLazyBinaryEvaluation(const hc::BinaryOperatorExpr& expr) {
 			CORE_ASSERT(
 				expr.operation == hc::BuiltinBinary::BooleanOr
@@ -206,8 +209,12 @@ namespace compiler::mir {
 			bool        is_and       = expr.operation == hc::BuiltinBinary::BooleanAnd;
 			std::string debug_prefix = is_and ? "and" : "or";
 
-			auto       boolean_type = expr.expression_type.getSymbolType();
-			const auto result       = function.addTmp(boolean_type, expr_scope);
+			auto boolean_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				boolean_type.getType().getKind() == tsh::Kind::Bool,
+				"Lazily evaluated binary operators are boolean."
+			);
+			const auto result = function.addTmp(boolean_type, expr_scope);
 
 			auto rhs_block = function.newBlock(debug_prefix + ".rhs");
 			rhs_block->setTerminator(
