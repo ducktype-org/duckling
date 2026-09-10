@@ -9,7 +9,7 @@
 
 import core.panicking;
 
-# Type minimum is not supported for the integer overloads
+# Integer type minimum causes overflow when negated, hence it is not suported.
 fun abs(x: i32) -> i32 = libm_forward.int_funcs.abs(x);
 fun abs(x: i64) -> i64 = libm_forward.int_funcs.labs(x);
 fun abs(x: f32) -> f32 = libm_forward.basic_ops.fabsf(x);
@@ -70,7 +70,7 @@ namespace libm_forward {
         }
 
         # Computes absolute value of an integral value
-        # Note that it is undefined for the most negative value of the type (e.g. -2^31 for i32)
+        # Note that it is undefined for the most negative value of the type (e.g. -2^31 for i32) since the positive value does not fit in the type.
         fundecl abs(x: i32) -> i32;
         fundecl labs(x: i64) -> i64;
 
@@ -408,6 +408,56 @@ namespace impl {
             a = t;
         }
         return a;
+    }
+
+    # Extended Euclidean algorithm
+    # Returns a and b such that ax + by = gcd(x, y)
+    template(T: type)
+    fun extended_euclid(x: T, y: T) -> (T, T) = {
+        var old_r: T = impl.abs:{T}(x);
+        var r: T = impl.abs:{T}(y);
+
+        var old_s: T = 1;
+        var s: T = 0;
+
+        var old_t: T = 0;
+        var t: T = 1;
+
+        while (r != 0 as T) {
+            var quotient: T = old_r / r;
+
+            var temp_r: T = r;
+            r = old_r - quotient * temp_r;
+            old_r = temp_r;
+
+            var temp_s: T = s;
+            s = old_s - quotient * temp_s;
+            old_s = temp_s;
+
+            var temp_t: T = t;
+            t = old_t - quotient * temp_t;
+            old_t = temp_t;
+        }
+
+        # Adjust coefficient signs based on original input signs
+        if (x < 0 as T) {
+            old_s = -old_s;
+        }
+        if (y < 0 as T) {
+            old_t = -old_t;
+        }
+
+        # Returns coefficients (a, b) corresponding to ax + by = gcd(x, y)
+        return (old_s, old_t);
+    }
+
+    # Computes the modulo inverse using the Extended Euclidean Algorithm
+    # Returns y such that (x * y) % m == 1, it assumes that x and m are coprime
+    template(T: type)
+    fun mod_inverse(x: T, m: T) -> T = {
+        var coefs = extended_euclid:{T}(x, m);
+        # a is the modular inverse of x modulo m
+        return (coefs._1 % m + m) % m;  # Ensure the result is positive
     }
 
     # Computes the least common multiple of two integers
