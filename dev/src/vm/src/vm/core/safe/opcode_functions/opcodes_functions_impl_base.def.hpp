@@ -639,19 +639,23 @@ namespace vm {
 
 			std::vector<Ref<SafeVMValue>> exit_value = {};
 
-			while (callee_frame->local_block_ref_stack_end > caller_block_ref_stack_end) {
-				auto block = Ref(callee_frame->local_block_ref_stack_end[-1]);
-				u64  block_ref_relative_idx
-					= u64(callee_frame->local_block_ref_stack_end - 1 - caller_block_ref_stack_end);
-
-				if (block_ref_relative_idx < ret_count) {
-					exit_value.emplace_back(thread.safe_process.createVMValue(
-						expr.result_types[block_ref_relative_idx], Pointer(block, 0)
-					));
-				}
-
+			while (callee_frame->local_block_ref_stack_end > caller_block_ref_stack_end + ret_count)
 				performDeinit(callee_frame, thread);
+
+			CORE_ASSERT(
+				callee_frame->local_block_ref_stack_end == caller_block_ref_stack_end + ret_count,
+				"This must hold"
+			);
+
+			for (u64 i = 0; i < ret_count; i++) {
+				auto block = Ref(caller_block_ref_stack_end[i]);
+				exit_value.emplace_back(
+					thread.safe_process.createVMValue(expr.result_types[i], Pointer(block, 0))
+				);
 			}
+
+			for (u64 i = 0; i < ret_count; i++) performDeinit(callee_frame, thread);
+
 			callee_frame->resetFrameData();
 
 			instr       = frame->instr;

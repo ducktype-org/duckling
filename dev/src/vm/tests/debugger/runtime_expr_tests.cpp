@@ -50,10 +50,10 @@ private:
 			.evalExprNormal(get_values_expr, { 0, 0 })
 			.resume()
 			.awaitBreakpoint(base::StrID("main"), 5)
-			.evalExprNormal(get_values_expr, { 0, 4 })
+			.evalExprNormal(get_values_expr, { 4, 0 })
 			.resume()
 			.awaitBreakpoint(base::StrID("main"), 7)
-			.evalExprNormal(get_values_expr, { 2, 4 })
+			.evalExprNormal(get_values_expr, { 4, 2 })
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
 	}
@@ -67,10 +67,10 @@ private:
 			fs::File(path("runtime_expr_dbc/test_2/expr/divide.dbc")),
 		};
 		const std::array expected_results = {
-			std::vector<u64>{ 128, 64, 32, 16 },
-			std::vector<u64>{ 66, 34, 18, 10 },
-			std::vector<u64>{ 62, 30, 14, 6 },
-			std::vector<u64>{ 32, 16, 8, 4 },
+			std::vector<u64>{ 16, 32, 64, 128 },
+			std::vector<u64>{ 10, 18, 34, 66 },
+			std::vector<u64>{ 6, 14, 30, 62 },
+			std::vector<u64>{ 4, 8, 16, 32 },
 		};
 
 		static_assert(expected_results.size() == expressions.size(), "match those");
