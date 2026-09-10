@@ -42,6 +42,8 @@ namespace compiler::repl {
 			bool bracketed_paste_enabled = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED
 		);
 
+		~ReplSession();
+
 		/**
 		 * @brief Load a script file and execute its statements in the current REPL session.
 		 *
@@ -55,7 +57,7 @@ namespace compiler::repl {
 		 * @note Loading is non-transactional: execution stops at the first error and statements
 		 * that finished successfully before that error remain applied in the session.
 		 *
-		 * @param file_path Path to a .ds file
+		 * @param file_path Path to a .dks file
 		 * @return ReplResult indicating success or an error message
 		 */
 		ReplResult loadScriptFile(std::string_view file_path);

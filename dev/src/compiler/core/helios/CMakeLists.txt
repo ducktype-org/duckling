@@ -20,7 +20,10 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/expressions/query_hout_of_expr.cpp
 	src_private/helios_private/hout_creation/expressions/builtin_operators.cpp
 	src_private/helios_private/hout_creation/expressions/numeric_literals.cpp
-	src_private/helios_private/hout_creation/expressions/coercions.cpp
+	src_private/helios_private/hout_creation/expressions/coercions/coercions.cpp
+	src_private/helios_private/hout_creation/expressions/coercions/errors.cpp
+	src_private/helios_private/hout_creation/expressions/coercions/passing.cpp
+	src_private/helios_private/hout_creation/expressions/casts.cpp
 	src_private/helios_private/comp_time/comp_time.cpp
 	src_private/helios_private/comp_time/vm_evaluator.cpp
 	src_private/helios_private/comp_time/comptime_type_operations.cpp
@@ -30,14 +33,16 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/definition_generation/copy_constructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_destructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/length_methods.cpp
-	src_private/helios_private/hout_creation/definition_generation/list_methods.cpp
 	src_private/helios_private/hout_creation/definition_generation/to_string_methods.cpp
 	src_private/helios_private/hout_creation/desugaring/for.cpp
+	src_private/helios_private/hout_creation/desugaring/match.cpp
 	src_private/helios_private/hout_creation/hout_stmt_compilation.cpp
 	src_private/helios_private/errors/dia_interactive_elements.cpp
 	src_private/helios_private/errors/duplicated_definition.cpp
 	src_private/helios_private/tsh/abstract_type_impl.cpp
 	src_private/helios_private/tsh/queries.cpp
+	src_private/helios_private/templates/templates.cpp
+	src/helios/utils/main_return_type.cpp
 
 	src/helios/errors/extern_c_class_empty.cpp
 	src/helios/errors/field_not_c_compatible.cpp
@@ -72,6 +77,7 @@ add_library(HELIOS STATIC
 	src/helios/tsh/queries/types.cpp
 	src/helios/tsh/abstract_type.cpp
 	src/helios/tsh/deductions.cpp
+	src/helios/tsh/coercions/reference_coercion.cpp
 	src/helios/tsh/symbol_type.cpp
 	src/helios/tsh/types.cpp
 	src/helios/tsh/type_interface.cpp
@@ -97,6 +103,10 @@ duck_add_test(compiler helios_stmt_compilation tests/helios_stmt_compilation_tes
 	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
+duck_add_test(compiler helios_shorthands tests/helios_shorthands_test.cpp
+	USES Base PstParser HELIOS Driver
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
 duck_add_test(compiler helios_repl_instruction_wrapper tests/helios_repl_instruction_wrapper_test.cpp
 	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
@@ -110,6 +120,7 @@ duck_add_test(compiler helios_pst_layer tests/helios_pst_layer_test.cpp
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler tsh_simple tests/tsh_simple_test.cpp USES HELIOS)
+duck_add_test(compiler tsh_coercion tests/tsh_coercion_test.cpp USES HELIOS)
 
 duck_add_test(compiler tsh_error tests/tsh_error_test.cpp USES HELIOS)
 

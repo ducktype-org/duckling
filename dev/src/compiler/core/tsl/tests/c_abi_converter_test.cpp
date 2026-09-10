@@ -19,7 +19,7 @@
 using namespace compiler::tsh;
 using namespace compiler::tsl;
 using query::utils::withContextDo;
-namespace ats = abi::type_system;
+namespace ats = abi::types;
 
 namespace {
 
@@ -62,7 +62,7 @@ public:
 
 private:
 	void expectInt(const CAbiConversionResult& r, usize width, bool is_signed) {
-		ASSERT_TRUE(r.has_value());
+		ASSERT_HAS_VALUE(r);
 		ASSERT_TRUE(base::holds<ats::IntType>(r->value));
 		const auto& i = std::get<ats::IntType>(r->value);
 		assertTrue(usize(i.width_bits) == width, "width mismatch");
@@ -70,14 +70,14 @@ private:
 	}
 
 	void expectFloat(const CAbiConversionResult& r, usize width) {
-		ASSERT_TRUE(r.has_value());
+		ASSERT_HAS_VALUE(r);
 		ASSERT_TRUE(base::holds<ats::FloatType>(r->value));
 		assertTrue(usize(std::get<ats::FloatType>(r->value).width_bits) == width, "width mismatch");
 	}
 
 	void expectRejected(query::Context& ctx, SymbolType<> st, const std::string& what) {
 		const auto& r = queryConv(ctx, st);
-		assertFalse(r.has_value(), what + " should be rejected");
+		ASSERT_NO_VALUE(r, what + " should be rejected");
 	}
 
 	void integersTest() {
@@ -108,27 +108,27 @@ private:
 			// aarch64 has no such format and must reject it.
 			const auto  f80_type = getFloatType(ctx, 80);
 			const auto& r        = queryConv(ctx, directOf(f80_type));
-			if (compilerTargetABI().data_layout.float_layouts.contains(u8(80)))
+			if (compilerTargetABI().data_layout.float_layouts.contains(80))
 				expectFloat(r, 80);
 			else
-				assertFalse(r.has_value(), "f80 should be rejected without an x87 unit");
+				ASSERT_NO_VALUE(r, "f80 should be rejected without an x87 unit");
 		});
 	}
 
 	void boolCharPointerTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const auto& bool_conv = queryConv(ctx, directOf(getBoolType()));
-			ASSERT_TRUE(bool_conv.has_value());
+			ASSERT_HAS_VALUE(bool_conv);
 			assertTrue(base::holds<ats::BoolType>(bool_conv->value), "expected BoolType");
 
 			const auto& char_conv = queryConv(ctx, directOf(getCharType()));
-			ASSERT_TRUE(char_conv.has_value());
+			ASSERT_HAS_VALUE(char_conv);
 			assertTrue(base::holds<ats::CharType>(char_conv->value), "expected CharType");
 
 			const CPointerAbstractType c_pointer
 				= ctx.query<QueryCPointerType>({ directOf(i32Of(ctx)) });
 			const auto& ptr_conv = queryConv(ctx, directOf(c_pointer));
-			ASSERT_TRUE(ptr_conv.has_value());
+			ASSERT_HAS_VALUE(ptr_conv);
 			assertTrue(base::holds<ats::PointerType>(ptr_conv->value), "expected PointerType");
 		});
 	}
@@ -140,7 +140,7 @@ private:
 			const StaticArrayAbstractType arr_type
 				= ctx.query<QueryStaticArrayType>({ directOf(i32Of(ctx)), 4 });
 			const auto& r = queryConv(ctx, directOf(arr_type));
-			ASSERT_TRUE(r.has_value());
+			ASSERT_HAS_VALUE(r);
 			ASSERT_TRUE(base::holds<ats::ArrayType>(r->value));
 			const auto& a = std::get<ats::ArrayType>(r->value);
 			assertTrue(a.count == 4, "array should have 4 elements");
@@ -177,8 +177,6 @@ private:
 				= ctx.query<QueryPointerType>({ directOf(i32_type) });
 			const ManyPointerAbstractType many_pointer
 				= ctx.query<QueryManyPointerType>({ directOf(i32_type) });
-			const DynamicArrayAbstractType dynamic_array
-				= ctx.query<QueryDynamicArrayType>(directOf(i32_type));
 			const TupleAbstractType tuple
 				= ctx.query<QueryTupleType>({ { directOf(i32_type), directOf(i32_type) } });
 			const FunctionAbstractType function
@@ -192,7 +190,6 @@ private:
 				{ refOf(i32_type), "ref" },
 				{ boxOf(i32_type), "box" },
 				{ directOf(getUnitType()), "unit" },
-				{ directOf(dynamic_array), "dynamic array" },
 				{ directOf(tuple), "tuple" },
 				{ directOf(function), "function" },
 			};

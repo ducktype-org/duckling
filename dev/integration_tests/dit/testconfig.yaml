@@ -1,3 +1,6 @@
+# The toolchain is built by the root PreNode; do not inherit it here.
+PreNode: ""
+
 Name: dit
 Description: "Self-tests of the DIT framework and its tmp-env helpers."
 
@@ -28,6 +31,72 @@ Tests:
                 PostCase: "@{cleanup_tmp_env}"
                 Output:
                     String: "second\n"
+    tmp_root:
+        Description: "Checks that the scratch root is per-user and overridable."
+        Cases:
+            # /tmp is shared between accounts, so a fixed root would be owned by
+            # whoever ran the suite first and unusable for everybody else. This
+            # is the one place the expected default is spelled out by hand: it
+            # is the rule being tested, not a second copy of the code.
+            default_root_is_per_user:
+                Run: |+
+                    [ "$(env -u DIT_TMP_ROOT @{tmp_env_tool} root)" = "/tmp/dit-$(id -un)" ] &&
+                        echo ok
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "ok\n"
+            # Every case is handed a directory of its own, and it has to be
+            # inside the root. `new` follows symlinks, and on macOS /tmp really
+            # is /private/tmp, so compare against the resolved root.
+            case_dir_lives_under_the_root:
+                Run: |+
+                    case "$DIT_TMP_DIR/" in
+                        "$(@{tmp_env_tool} root --resolved)"/*) echo ok ;;
+                        *) echo "$DIT_TMP_DIR" ;;
+                    esac
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "ok\n"
+            # The same symlink story from the other side: a root reached through
+            # a symlink stays valid once resolved. That is /tmp -> /private/tmp
+            # on macOS; making the symlink by hand reproduces it anywhere.
+            symlinked_root_is_accepted:
+                Run: |+
+                    real=$(cd "$(mktemp -d)" && pwd -P) && link="$real.link" &&
+                        ln -s "$real" "$link" && export DIT_TMP_ROOT="$link" &&
+                        DIT_TMP_DIR="$(@{tmp_env_tool} new)" && export DIT_TMP_DIR &&
+                        [ "$DIT_TMP_DIR" = "$(cd "$DIT_TMP_DIR" && pwd -P)" ] &&
+                        @{tmp_env_tool} make && @{tmp_env_tool} clean &&
+                        rm "$link" && rmdir "$real" && echo ok
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "ok\n"
+            # $DIT_TMP_ROOT has to reach every part of the helper, so let the
+            # tool create the case directory too instead of guessing its path.
+            # The override is made symlink-free up front, so the directory the
+            # tool hands back can be compared against it on any platform.
+            env_override_is_used_end_to_end:
+                Run: |+
+                    export DIT_TMP_ROOT="$(cd "$(mktemp -d)" && pwd -P)" &&
+                        DIT_TMP_DIR="$(@{tmp_env_tool} new)" && export DIT_TMP_DIR &&
+                        case "$DIT_TMP_DIR/" in
+                            "$DIT_TMP_ROOT"/*) ;;
+                            *) echo "outside the override: $DIT_TMP_DIR" ; exit 1 ;;
+                        esac &&
+                        @{tmp_env_tool} make &&
+                        @{tmp_env_tool} exec -- "echo quack > out.txt && cat out.txt" &&
+                        @{tmp_env_tool} clean && [ ! -d "$DIT_TMP_DIR" ] &&
+                        rmdir "$DIT_TMP_ROOT" && echo done
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "quack\ndone\n"
+            rejects_dir_outside_the_root:
+                Run: |+
+                    DIT_TMP_DIR=/tmp/not-the-dit-root/case @{tmp_env_tool} make 2>&1 >/dev/null |
+                        grep -c 'must live under'
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "1\n"
     env_key:
         Description: "Checks the Env config key: ordered evaluation and derived variables."
         Cases:

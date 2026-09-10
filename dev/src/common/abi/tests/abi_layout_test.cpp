@@ -1,15 +1,14 @@
 #include <abi/layout/compute_c_layout.hpp>
-#include <abi/layout/target.hpp>
+#include <abi/target.hpp>
 #include <abi/type_system/type.hpp>
 
 #include <base/except/exceptions.hpp>
 
 #include <tester/tester.hpp>
 
-#include <string>
 #include <vector>
 
-namespace at = abi::type_system;
+namespace at = abi::types;
 namespace al = abi::layout;
 
 namespace {
@@ -57,27 +56,25 @@ public:
 
 private:
 	void presetsTest() {
-		al::TargetABI x = al::x86_64Linux();
-		assertTrue(x.triple.arch == al::Arch::X86_64, "x86_64 arch");
+		abi::TargetABI x = abi::x86_64Linux();
+		assertTrue(x.triple.arch == abi::Arch::X86_64, "x86_64 arch");
 		assertTrue(usize(x.data_layout.pointer_size) == 8, "pointer size on x86_64");
 		assertTrue(usize(x.data_layout.pointer_alignment) == 8, "pointer align on x86_64");
 
-		al::TargetABI a = al::aarch64Linux();
-		assertTrue(a.triple.arch == al::Arch::AArch64, "aarch64 arch");
+		abi::TargetABI a = abi::aarch64Linux();
+		assertTrue(a.triple.arch == abi::Arch::AArch64, "aarch64 arch");
 		assertTrue(usize(a.data_layout.pointer_size) == 8, "pointer size on aarch64");
 		assertTrue(usize(a.data_layout.pointer_alignment) == 8, "pointer align on aarch64");
 
 		// f80 (x87 long double) is present on x86_64 (16/16) but absent on
 		// aarch64; f128 (IEEE quad) is present on both.
-		const auto x_f80 = x.data_layout.float_layouts.atMaybeCopy(u8(80));
-		assertTrue(x_f80.has_value(), "x86_64 has an f80 entry");
+		const auto x_f80 = x.data_layout.float_layouts.atMaybeCopy(u64(80));
+		ASSERT_HAS_VALUE(x_f80, "x86_64 has an f80 entry");
 		assertTrue(usize(x_f80.value().size) == 16, "x86_64 f80 size");
 		assertTrue(usize(x_f80.value().alignment) == 16, "x86_64 f80 align");
-		assertTrue(
-			!a.data_layout.float_layouts.atMaybeCopy(u8(80)).has_value(), "aarch64 has no f80"
-		);
-		assertTrue(x.data_layout.float_layouts.atMaybeCopy(u8(128)).has_value(), "x86_64 has f128");
-		assertTrue(a.data_layout.float_layouts.atMaybeCopy(u8(128)).has_value(), "aarch64 has f128");
+		ASSERT_NO_VALUE(a.data_layout.float_layouts.atMaybeCopy(u64(80)), "aarch64 has no f80");
+		ASSERT_HAS_VALUE(x.data_layout.float_layouts.atMaybeCopy(u64(128)), "x86_64 has f128");
+		ASSERT_HAS_VALUE(a.data_layout.float_layouts.atMaybeCopy(u64(128)), "aarch64 has f128");
 	}
 
 	static void expectLayout(
@@ -101,145 +98,141 @@ private:
 	}
 
 	void singleI8Test() {
-		auto layout = al::computeCLayout(al::x86_64Linux(), fieldsOf(at::intType(u8(8), true)));
+		auto layout = al::computeCLayout(abi::x86_64Linux(), fieldsOf(at::intType(8, true)));
 		expectLayout(std::move(layout), 1, 1, { 0 });
 	}
 
 	void i8ThenI32Test() {
 		auto layout = al::computeCLayout(
-			al::x86_64Linux(), fieldsOf(at::intType(u8(8), true), at::intType(u8(32), true))
+			abi::x86_64Linux(), fieldsOf(at::intType(8, true), at::intType(32, true))
 		);
 		expectLayout(std::move(layout), 8, 4, { 0, 4 });
 	}
 
 	void i32ThenI8Test() {
 		auto layout = al::computeCLayout(
-			al::x86_64Linux(), fieldsOf(at::intType(u8(32), true), at::intType(u8(8), true))
+			abi::x86_64Linux(), fieldsOf(at::intType(32, true), at::intType(8, true))
 		);
 		expectLayout(std::move(layout), 8, 4, { 0, 4 });
 	}
 
 	void i8ThenI64Test() {
 		auto layout = al::computeCLayout(
-			al::x86_64Linux(), fieldsOf(at::intType(u8(8), true), at::intType(u8(64), true))
+			abi::x86_64Linux(), fieldsOf(at::intType(8, true), at::intType(64, true))
 		);
 		expectLayout(std::move(layout), 16, 8, { 0, 8 });
 	}
 
 	void i8ThenPointerTest() {
 		auto layout = al::computeCLayout(
-			al::x86_64Linux(), fieldsOf(at::intType(u8(8), true), at::pointerType())
+			abi::x86_64Linux(), fieldsOf(at::intType(8, true), at::pointerType())
 		);
 		expectLayout(std::move(layout), 16, 8, { 0, 8 });
 	}
 
 	void pointerThenI8Test() {
 		auto layout = al::computeCLayout(
-			al::x86_64Linux(), fieldsOf(at::pointerType(), at::intType(u8(8), true))
+			abi::x86_64Linux(), fieldsOf(at::pointerType(), at::intType(8, true))
 		);
 		expectLayout(std::move(layout), 16, 8, { 0, 8 });
 	}
 
 	void singleFloatTest() {
-		auto layout = al::computeCLayout(al::x86_64Linux(), fieldsOf(at::floatType(u8(32))));
+		auto layout = al::computeCLayout(abi::x86_64Linux(), fieldsOf(at::floatType(32)));
 		expectLayout(std::move(layout), 4, 4, { 0 });
 	}
 
 	void floatThenDoubleTest() {
 		// float@0..4, pad 4..8, double@8..16 → total 16, align 8.
-		auto layout = al::computeCLayout(
-			al::x86_64Linux(), fieldsOf(at::floatType(u8(32)), at::floatType(u8(64)))
-		);
+		auto layout
+			= al::computeCLayout(abi::x86_64Linux(), fieldsOf(at::floatType(32), at::floatType(64)));
 		expectLayout(std::move(layout), 16, 8, { 0, 8 });
 	}
 
 	void i8ThenDoubleTest() {
 		auto layout = al::computeCLayout(
-			al::x86_64Linux(), fieldsOf(at::intType(u8(8), true), at::floatType(u8(64)))
+			abi::x86_64Linux(), fieldsOf(at::intType(8, true), at::floatType(64))
 		);
 		expectLayout(std::move(layout), 16, 8, { 0, 8 });
 	}
 
 	void quadFloatTest() {
 		// f128 (IEEE binary128) is 16/16 and identical across targets.
-		auto x86 = al::computeCLayout(al::x86_64Linux(), fieldsOf(at::floatType(u8(128))));
+		auto x86 = al::computeCLayout(abi::x86_64Linux(), fieldsOf(at::floatType(128)));
 		expectLayout(std::move(x86), 16, 16, { 0 });
-		auto arm = al::computeCLayout(al::aarch64Linux(), fieldsOf(at::floatType(u8(128))));
+		auto arm = al::computeCLayout(abi::aarch64Linux(), fieldsOf(at::floatType(128)));
 		expectLayout(std::move(arm), 16, 16, { 0 });
 	}
 
 	void x87LongDoubleTest() {
 		// f80 on x86_64: 80 bits of data stored in 16 bytes, align 16.
-		auto layout = al::computeCLayout(al::x86_64Linux(), fieldsOf(at::floatType(u8(80))));
+		auto layout = al::computeCLayout(abi::x86_64Linux(), fieldsOf(at::floatType(80)));
 		expectLayout(std::move(layout), 16, 16, { 0 });
 	}
 
 	void i8ThenLongDoubleTest() {
 		auto layout = al::computeCLayout(
-			al::x86_64Linux(), fieldsOf(at::intType(u8(8), true), at::floatType(u8(80)))
+			abi::x86_64Linux(), fieldsOf(at::intType(8, true), at::floatType(80))
 		);
 		expectLayout(std::move(layout), 32, 16, { 0, 16 });
 	}
 
 	void singleBoolTest() {
 		// C `_Bool` is a 1-byte type.
-		auto layout = al::computeCLayout(al::x86_64Linux(), fieldsOf(at::boolType()));
+		auto layout = al::computeCLayout(abi::x86_64Linux(), fieldsOf(at::boolType()));
 		expectLayout(std::move(layout), 1, 1, { 0 });
 	}
 
 	void boolCharThenI16Test() {
 		// bool@0 (1/1), char@1 (1/1), i16 align 2 → @2..4. Total 4, align 2.
 		auto layout = al::computeCLayout(
-			al::x86_64Linux(), fieldsOf(at::boolType(), at::charType(), at::intType(u8(16), true))
+			abi::x86_64Linux(), fieldsOf(at::boolType(), at::charType(), at::intType(16, true))
 		);
 		expectLayout(std::move(layout), 4, 2, { 0, 1, 2 });
 	}
 
 	void arrayOfI32Test() {
 		auto layout = al::computeCLayout(
-			al::x86_64Linux(),
-			fieldsOf(at::arrayType(at::makeBoxAbiType(at::intType(u8(32), true)), 3))
+			abi::x86_64Linux(), fieldsOf(at::arrayType(at::makeBoxAbiType(at::intType(32, true)), 3))
 		);
 		expectLayout(std::move(layout), 12, 4, { 0 });
 	}
 
 	void i8ThenArrayOfI32Test() {
 		auto layout = al::computeCLayout(
-			al::x86_64Linux(),
+			abi::x86_64Linux(),
 			fieldsOf(
-				at::intType(u8(8), true),
-				at::arrayType(at::makeBoxAbiType(at::intType(u8(32), true)), 3)
+				at::intType(8, true), at::arrayType(at::makeBoxAbiType(at::intType(32, true)), 3)
 			)
 		);
 		expectLayout(std::move(layout), 16, 4, { 0, 4 });
 	}
 
 	void nestedStructTest() {
-		at::AbiType inner
-			= at::structType(fieldsOf(at::intType(u8(8), true), at::intType(u8(64), true)));
-		auto layout = al::computeCLayout(
-			al::x86_64Linux(),
-			fieldsOf(at::intType(u8(32), true), std::move(inner), at::intType(u8(8), true))
-		);
+		at::AbiType inner  = at::structType(fieldsOf(at::intType(8, true), at::intType(64, true)));
+		auto        layout = al::computeCLayout(
+            abi::x86_64Linux(),
+            fieldsOf(at::intType(32, true), std::move(inner), at::intType(8, true))
+        );
 		// Layout: i32@0..4, pad 4..8, inner{i8,i64}@8..24, i8@24..25, pad 25..32.
 		expectLayout(std::move(layout), 32, 8, { 0, 8, 24 });
 	}
 
 	void threePointersTest() {
 		auto layout = al::computeCLayout(
-			al::x86_64Linux(), fieldsOf(at::pointerType(), at::pointerType(), at::pointerType())
+			abi::x86_64Linux(), fieldsOf(at::pointerType(), at::pointerType(), at::pointerType())
 		);
 		expectLayout(std::move(layout), 24, 8, { 0, 8, 16 });
 	}
 
 	void aarch64MatchesX86Test() {
 		auto x86 = al::computeCLayout(
-			al::x86_64Linux(),
-			fieldsOf(at::intType(u8(8), true), at::pointerType(), at::intType(u8(32), true))
+			abi::x86_64Linux(),
+			fieldsOf(at::intType(8, true), at::pointerType(), at::intType(32, true))
 		);
 		auto arm = al::computeCLayout(
-			al::aarch64Linux(),
-			fieldsOf(at::intType(u8(8), true), at::pointerType(), at::intType(u8(32), true))
+			abi::aarch64Linux(),
+			fieldsOf(at::intType(8, true), at::pointerType(), at::intType(32, true))
 		);
 		assertTrue(usize(x86.size) == usize(arm.size), "size matches across targets");
 		assertTrue(usize(x86.alignment) == usize(arm.alignment), "align matches across targets");
@@ -253,9 +246,9 @@ private:
 	void rejectsZeroLengthArrayTest() {
 		assertThrows<base::Panic>(
 			[]() {
-				(void) al::computeCLayout(
-					al::x86_64Linux(),
-					fieldsOf(at::arrayType(at::makeBoxAbiType(at::intType(u8(32), true)), 0))
+				al::computeCLayout(
+					abi::x86_64Linux(),
+					fieldsOf(at::arrayType(at::makeBoxAbiType(at::intType(32, true)), 0))
 				);
 			},
 			"zero-length array should panic"
@@ -264,14 +257,14 @@ private:
 
 	void rejectsEmptyStructTest() {
 		assertThrows<base::Panic>(
-			[]() { (void) al::computeCLayout(al::x86_64Linux(), fieldsOf(at::structType({}))); },
+			[]() { al::computeCLayout(abi::x86_64Linux(), fieldsOf(at::structType({}))); },
 			"empty nested struct should panic"
 		);
 	}
 
 	void rejectsEmptyFieldListTest() {
 		assertThrows<base::Panic>(
-			[]() { (void) al::computeCLayout(al::x86_64Linux(), {}); },
+			[]() { al::computeCLayout(abi::x86_64Linux(), {}); },
 			"empty top-level field list should panic"
 		);
 	}

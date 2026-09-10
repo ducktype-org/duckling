@@ -13,6 +13,7 @@ namespace pst::expr {
 
 		i64 fwd = 1;
 		if (state[0].is(Keyword::Lambda)) fwd = 2;  // Skip ()
+		if (state[0].is(Keyword::Match)) fwd = 3;   // Skip () and the case block
 		PST_WHILE(!state[fwd].is(Token::Type::Sentinel)) {
 			if (state[fwd].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
 			    ).copyValueOr(false)

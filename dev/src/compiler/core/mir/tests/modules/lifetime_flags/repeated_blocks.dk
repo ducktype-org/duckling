@@ -1,0 +1,20 @@
+class R {
+    a: i32 = 0;
+    R.destroy() = { var t: i32 = a; }
+}
+
+fun function() -> R = {
+    var a: R;
+    {
+        var b: R;
+    };
+    block {
+        var c: R;
+    }
+
+    if (a.a > 30) {
+        return R();
+    }
+
+    return a;
+}

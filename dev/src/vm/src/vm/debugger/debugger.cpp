@@ -2,6 +2,8 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <filesystem/file_path.hpp>
+
 #include <vm/api/vm.hpp>
 
 namespace {
@@ -27,7 +29,7 @@ namespace vm::debugger {
 			  }
 		  }),
 		  vm_output([&](const std::string& str) { on_output.emitEvent(str); }) {
-		(void) api::spawn()
+		api::spawn()
 			.and_then([&](const api::ProcessInfo& info) {
 				pid = info.pid;
 				return api::attachStatusListener(pid, &updater);
@@ -41,18 +43,10 @@ namespace vm::debugger {
 	Debugger::~Debugger() {
 		updater.detach();
 
-		// @TODO: #1222 Remove checking status and always kill after fixing kill
-
-		(void) api::getExecutionStatus(pid)
-			.and_then([&](const api::ProcStatus& status) {
-				if (!std::holds_alternative<api::NotStarted>(status)) return api::kill(pid);
-
-				return std::expected<void, api::ApiError>{};
-			})
-			.transform_error([&](const api::ApiError& api_error) {
-				on_error.emitEvent(api::errorToString(api_error));
-				return api_error;
-			});
+		(void) api::kill(pid).transform_error([&](const api::ApiError& api_error) {
+			on_error.emitEvent(api::errorToString(api_error));
+			return api_error;
+		});
 	}
 
 	void Debugger::attachOnStatusChangedListener(events::Listener<api::ProcStatus>& listener) {
@@ -65,6 +59,16 @@ namespace vm::debugger {
 
 	void Debugger::attachOnOutputListener(events::Listener<std::string>& listener) {
 		on_output.attachListener(listener);
+	}
+
+	CodePosition Debugger::mapCodePosition(const api::response::CodePosition& pos) {
+		CodePosition cp;
+		cp.function_name   = pos.function_name;
+		cp.instr_number    = pos.instr_number;
+		cp.source_position = pos.source_position;
+		cp.mapped_position
+			= mapper.mapCodePositionToSourcePosition(pos.function_name, pos.instr_number);
+		return cp;
 	}
 
 	std::expected<void, api::ApiError> Debugger::runMain() {
@@ -96,6 +100,27 @@ namespace vm::debugger {
 		return api::loadFiles(pid, files);
 	}
 
+	std::expected<void, std::variant<api::ApiError, std::string>> Debugger::loadDefault(
+		base::Optional<fs::FilePath> prefix
+	) {
+		fs::FilePath fp = "duck_build/package_dvm.dbc";
+		if (prefix.has_value()) fp = prefix.value() / fp;
+		if (!fp.exists())
+			return std::unexpected(api::OtherError{
+				"No compiled program in the current directory." });
+
+		fs::FilePath fp_map = "duck_build/package_dvm.di.json";
+		if (prefix.has_value()) fp_map = prefix.value() / fp_map;
+		if (!fp_map.exists())
+			return std::unexpected(api::OtherError{
+				"No compiled program mapping in the current directory." });
+
+		auto resp = mapper.loadMapping(fp_map);
+		if (!resp) return resp;
+
+		return loadFiles({ fp });
+	}
+
 	void Debugger::setProgramArguments(const ProgramRunArguments& args) { main_args = args; }
 
 	std::expected<u64, api::ApiError> Debugger::getNumberOfStackFrames(api::ThreadID thread_id) {
@@ -111,16 +136,18 @@ namespace vm::debugger {
 		return api::debuggerGetStackFrameData(pid, thread_id, frame_index);
 	}
 
-	std::expected<api::response::CodePosition, api::ApiError> Debugger::pause() {
-		return api::getExecutionStatus(pid).and_then(
-			[&](const api::ProcStatus& status
-		    ) -> std::expected<api::response::CodePosition, api::ApiError> {
-				if (std::holds_alternative<api::Running>(status)) return api::pause(pid);
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "Wrong VM state to pause: got " + statusToString(status)
-			                         + ", allowed state is Running." } });
-			}
-		);
+	std::expected<CodePosition, api::ApiError> Debugger::pause() {
+		return api::getExecutionStatus(pid)
+		    .and_then(
+				[&](const api::ProcStatus& status
+		        ) -> std::expected<api::response::CodePosition, api::ApiError> {
+					if (std::holds_alternative<api::Running>(status)) return api::pause(pid);
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "Wrong VM state to pause: got " + statusToString(status)
+			                             + ", allowed state is Running." } });
+				}
+			)
+		    .transform(std::bind_front(&Debugger::mapCodePosition, this));
 	}
 
 	std::expected<void, api::ApiError> Debugger::resume() {
@@ -135,8 +162,11 @@ namespace vm::debugger {
 		    .and_then([&] { return api::resume(pid); });
 	}
 
-	std::expected<api::response::CodePosition, api::ApiError> Debugger::getCurrentPosition() {
-		return api::getCurrentPosition(pid);
+	std::expected<CodePosition, api::ApiError> Debugger::getCurrentPosition(
+		base::Optional<usize> frame_idx
+	) {
+		return api::getCurrentPosition(pid, frame_idx)
+		    .transform(std::bind_front(&Debugger::mapCodePosition, this));
 	}
 
 	std::expected<void, api::ApiError> Debugger::setBreakpoint(
@@ -148,15 +178,55 @@ namespace vm::debugger {
 	std::expected<void, api::ApiError> Debugger::setBreakpoint(
 		fs::File file, usize line, bool enabled
 	) {
+		if_opt_some(mapper.mapSourcePositionToCodePosition(file.getFilePath(), line), pos) {
+			return setBreakpoint(pos.first, pos.second, enabled);
+		}
+
 		return api::mapFileLineToCodeCollectionPosition(pid, std::move(file), line)
 		    .and_then([&](const api::response::CodePosition& pos) {
-				return api::setBreakpoint(pid, pos.function_name, pos.instr_number, enabled);
+				return setBreakpoint(pos.function_name, pos.instr_number, enabled);
 			});
 	}
 
-	std::expected<void, api::ApiError> Debugger::step() { return api::step(pid); }
+	std::expected<base::Optional<CodePosition>, api::ApiError> Debugger::step() {
+		auto step_response = api::step(pid);
+		if (!step_response) return std::unexpected(step_response.error());
+
+		// The step may have ended a program, so we don't report any position.
+		if (api::isStatusTerminal(getStatus())) return base::Optional<CodePosition>();
+
+		return getCurrentPosition().transform([](const CodePosition& position) {
+			return base::Optional<CodePosition>(position);
+		});
+	}
+
+	std::expected<base::Optional<CodePosition>, api::ApiError> Debugger::mappedStep() {
+		auto response = step();
+
+		for (usize guard = 1'024; response && response->has_value() && guard;
+		     response    = step(), guard--) {
+			const CodePosition& position = response->value();
+
+			if (!position.mapped_position) return response;
+			auto mapped = *position.mapped_position;
+
+			auto unmapped = mapper.mapSourcePositionToCodePosition(
+				mapped.getLocation()->getSourceFile().getFilePath(),
+				mapped.getStartLineColumn().first
+			);
+
+			if (!unmapped) return response;
+			if (unmapped->first == position.function_name
+			    && unmapped->second == position.instr_number)
+				return response;
+		}
+
+		return response;
+	}
 
 	std::expected<void, api::ApiError> Debugger::sendInput(const std::string& msg) {
 		return api::input(pid, msg);
 	}
+
+	const Mapper& Debugger::getMapper() { return mapper; }
 }

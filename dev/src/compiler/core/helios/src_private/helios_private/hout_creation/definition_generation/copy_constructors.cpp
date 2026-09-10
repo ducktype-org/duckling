@@ -1,6 +1,5 @@
 #include "copy_constructors.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <helios/attributes/builtins.hpp>
@@ -11,15 +10,19 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <ranges>
 
 namespace compiler::helios::defgen {
+	using namespace code::shorthands;
+
 	bool isUserDefinedCopyConstructor(query::Context& ctx, const SymID sym) {
 		if (kind(sym) != SymbolKind::Constructor) return false;
 		const auto maybe_pst = maybeSymbolPst(sym);
@@ -52,77 +55,104 @@ namespace compiler::helios::defgen {
 	}
 
 	namespace {
-		/**
-		 * @brief Build `(*source).<member>` - a dereference of the `source` parameter followed by a
-		 * field access.
-		 * @TODO: #2776 Move this somewhere
-		 */
-		Box<code::Expr> derefSourceField(query::Context& ctx, SymID source_symbol, SymID field) {
-			return makeBox<code::AccessExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::DerefExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), source_symbol)
-				),
-				field
-			);
-		}
-
 		// Builds the copy-constructor body for a class or tuple.
 		std::vector<Box<code::Stmt>> buildAggregateCopyBody(
-			query::Context&          ctx,
-			const tsh::AbstractType& owner_type,
-			const SymID              copy_sym,
-			const SymID              source_symbol,
-			const tsh::SymbolType<>& result_symbol_type
+			query::Context& ctx, const tsh::AbstractType& owner_type, const SymID source_symbol
 		) {
-			using Variable = GeneratedFunctionVariable;
-
 			const std::vector<tsh::InterfaceElement> fields
 				= owner_type.getInterface(ctx)->getFieldsView() | std::ranges::to<std::vector>();
 
+			const Shorthand s{ ctx };
+
+			// One value per field, in declaration order: a copy of the source's field.
+			std::vector<Box<code::Expr>> field_values;
+			field_values.reserve(fields.size());
+			for (const auto& field: fields)
+				field_values.emplace_back(
+					s.copyValue(s.access(s.deref(s.ident(source_symbol)), field.getSymbol()))
+				);
+
+			// The whole value is built in place by a single expression:
+			// `return create_aggregate(T) { <copy of (*source).field>... };`
 			std::vector<Box<code::Stmt>> body;
-			body.reserve(1 + fields.size() + 1);
+			body.emplace_back(s.ret(s.createAggregate(owner_type, std::move(field_values))));
 
-			// var __result: T = <zero>;
-			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID("__result"),
-				.generated_symbol_data = Variable{ .function_symbol = copy_sym,
-			                                       .variable_index  = 0,
-			                                       .type            = result_symbol_type },
-			});
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				result_symbol
-			));
+			return body;
+		}
 
-			// __result.field = <copy of (*source).field>;
-			for (const auto& field: fields) {
-				auto field_copy
-					= makeCopyExpr(ctx, derefSourceField(ctx, source_symbol, field.getSymbol()));
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::AccessExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-						field.getSymbol()
-					),
-					std::move(field_copy)
+		/**
+		 * @brief Builds the copy-constructor body for a variant: copies the active alternative.
+		 *
+		 * Every alternative gets a case, so the match is exhaustive without a wildcard. Each case
+		 * binds the payload and rebuilds the variant around a copy of it, which keeps the tag of
+		 * the source.
+		 */
+		std::vector<Box<code::Stmt>> buildVariantCopyBody(
+			query::Context&                 ctx,
+			const tsh::VariantAbstractType& variant_type,
+			const SymID                     copy_sym,
+			const SymID                     source_symbol,
+			const tsh::SymbolType<>&        result_symbol_type
+		) {
+			using Variable = GeneratedFunctionVariable;
+
+			const Shorthand s{ ctx };
+			const auto&     alternatives = variant_type.getUnderlyingTypes();
+
+			std::vector<code::MatchExpr::Case> cases;
+			for (usize i = 0; i < alternatives.size(); i++) {
+				// A binding is always a reference to the payload, which for a reference-like
+				// alternative is the stored reference itself.
+				const auto payload_type = alternatives[i]
+				                              .withReferenceKind(tsh::ReferenceKind::Ref)
+				                              .withMutability(tsh::Mutability::Mutable);
+
+				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
+					.name                  = base::StrID(base::strConcat("__alternative_", i)),
+					.generated_symbol_data = Variable{ .function_symbol = copy_sym,
+				                                       .variable_index  = i,
+				                                       .type            = payload_type },
+				});
+
+				auto copy_through = [&](const tsh::SymbolType<>& value_type) -> Box<code::Expr> {
+					if (value_type.isTriviallyCopyable(ctx)) return s.deref(s.ident(payload_sym));
+					return s.call(
+						s.ident(copyConstructorSymForType(ctx, value_type.getType())),
+						s.ident(payload_sym)
+					);
+				};
+
+				auto payload_value = [&]() -> Box<code::Expr> {
+					switch (alternatives[i].getRefKind()) {
+					case tsh::ReferenceKind::Direct:
+						return copy_through(alternatives[i]);
+					case tsh::ReferenceKind::Ref:
+						// Copying a reference copies the reference, and the binding already is it.
+						return s.ident(payload_sym);
+					case tsh::ReferenceKind::Box:
+						// A box is deep-copied into a fresh allocation holding a copy of the
+						// pointee.
+						return makeBoxAllocCall(
+							ctx,
+							code::generatedOrigin(),
+							copy_through(alternatives[i].getPointeeSymbolType())
+						);
+					}
+					CORE_UNREACHABLE();
+				}();
+
+				cases.emplace_back(Shorthand::matchCase(
+					i,
+					payload_sym,
+					makeBox<code::VariantConstructExpr>(
+						ctx, code::generatedOrigin(), std::move(payload_value), result_symbol_type, i
+					)
 				));
 			}
 
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
-			));
-
+			// `source` is already a reference to the variant, which is what the match wants.
+			std::vector<Box<code::Stmt>> body;
+			body.emplace_back(s.ret(s.matchExpr(s.ident(source_symbol), std::move(cases))));
 			return body;
 		}
 
@@ -130,242 +160,57 @@ namespace compiler::helios::defgen {
 			query::Context&                     ctx,
 			const tsh::StaticArrayAbstractType& array_type,
 			const SymID                         copy_sym,
-			const SymID                         source_symbol,
-			const tsh::SymbolType<>&            result_symbol_type
+			const SymID                         source_symbol
 		) {
 			using Variable = GeneratedFunctionVariable;
-
-			const usize size = array_type.getSize();
+			using enum code::BuiltinBinary;
 
 			std::vector<Box<code::Stmt>> body;
 
-			// var __result: T[N] = <zero>;
-			const SymID res_sym = ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID("__result"),
-				.generated_symbol_data = Variable{ .function_symbol = copy_sym,
-			                                       .variable_index  = 0,
-			                                       .type            = result_symbol_type },
-			});
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				res_sym
-			));
+			const Shorthand s{ ctx };
 
-			// Generate the copy loop only if the static array is not empty.
-			if (size > 0) {
-				const auto u64_abs_type
-					= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-				const auto u64_type = tsh::SymbolType<>{ u64_abs_type,
-					                                     tsh::ReferenceKind::Direct,
-					                                     tsh::Mutability::Mutable };
-
-				// var __i: u64 = 0;
-				const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
-					   .name = base::StrID("__i"),
-					   .generated_symbol_data
-                    = Variable{ .function_symbol = copy_sym, .variable_index = 1, .type = u64_type },
-                });
-				auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-				                    .expect("u64 creation failed");
-				body.emplace_back(makeBox<code::VariableStmt>(
-					code::generatedOrigin(),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
-					u64_type,
-					i_sym
-				));
-
-				// while (__i < size) {
-				// 		__result[__i] = <copy of (*source)[__i]>;
-				// 		__i = __i + 1;
-				// }
-				auto size_val = numeric_value::NumericValue::createOfType(u64_abs_type, size)
-				                    .expect("u64 creation failed");
-				auto condition = makeBox<code::BinaryOperatorExpr>(
-					ctx,
-					code::generatedOrigin(),
-					code::BuiltinBinary::IntegerLt,
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), size_val)
-				);
-
-				code::CodeBlock loop_body{};
-
-				// __result[__i] = <copy of (*source)[__i]>;
-				auto source_element = makeBox<code::IndexExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::DerefExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), source_symbol)
-					),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
-				);
-				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IndexExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
-					),
-					makeCopyExpr(ctx, std::move(source_element))
-				));
-
-				// __i = __i + 1;
-				auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
-				                   .expect("u64 creation failed");
-				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::BinaryOperatorExpr>(
-						ctx,
-						code::generatedOrigin(),
-						code::BuiltinBinary::IntegerAdd,
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-						makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
-					)
-				));
-
-				body.emplace_back(makeBox<code::WhileStmt>(
-					code::generatedOrigin(), std::move(condition), std::move(loop_body)
-				));
+			if (array_type.getSize() == 0) {
+				// There is no element to copy, so there is nothing for an aggregate to build.
+				// `return zero_initialized T[0];`
+				body.emplace_back(s.ret(s.defaultValue(array_type)));
+				return body;
 			}
 
-			// return __result;
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
-			));
-
-			return body;
-		}
-
-		std::vector<Box<code::Stmt>> buildDynamicArrayCopyBody(
-			query::Context&                      ctx,
-			const tsh::DynamicArrayAbstractType& array_type,
-			const SymID                          copy_sym,
-			const SymID                          source_symbol,
-			const tsh::SymbolType<>&             result_symbol_type
-		) {
-			using Variable = GeneratedFunctionVariable;
-
-			std::vector<Box<code::Stmt>> body;
-
-			// var __result: List[T] = <zero>;
-			const SymID res_sym = ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID("__result"),
-				.generated_symbol_data = Variable{ .function_symbol = copy_sym,
-			                                       .variable_index  = 0,
-			                                       .type            = result_symbol_type },
-			});
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				res_sym
-			));
-
-			const auto u64_abs_type
-				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-			const auto u64_type = tsh::SymbolType<>{ u64_abs_type,
+			const auto i64_abs_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			const auto i64_type = tsh::SymbolType<>{ i64_abs_type,
 				                                     tsh::ReferenceKind::Direct,
 				                                     tsh::Mutability::Mutable };
 
-			// var __i: u64 = 0;
+			// The elements of the aggregate differ only in the index they copy, so the whole array
+			// is built by a single value that reads the index off a variable, advanced once per
+			// element by the per-element statements.
+			// var __i: i64 = 0;
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
 				   .name = base::StrID("__i"),
 				   .generated_symbol_data
-                = Variable{ .function_symbol = copy_sym, .variable_index = 1, .type = u64_type },
+                = Variable{ .function_symbol = copy_sym, .variable_index = 0, .type = i64_type },
             });
-			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-			                    .expect("u64 creation failed");
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
-				u64_type,
-				i_sym
-			));
+			auto        zero_val = numeric_value::NumericValue::createOfType(i64_abs_type)
+			                    .expect("i64 creation failed");
+			body.emplace_back(s.var(i_sym, i64_type, s.litNum(zero_val)));
 
+			auto one_val = numeric_value::NumericValue::createOfType(i64_abs_type, 1)
+			                   .expect("i64 creation failed");
 
-			// while (__i < source.length()) {
-			// 		__result += <copy of (*source)[__i]>;
-			// 		__i = __i + 1;
-			// }
-			SymID length_method_sym = defgen::lengthMethodForType(ctx, array_type);
-
-			std::vector<Box<code::Expr>> length_args;
-			length_args.emplace_back(
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), source_symbol)
+			std::vector<Box<code::Expr>> element_values;
+			element_values.emplace_back(
+				s.copyValue(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
 			);
 
-			Box<code::Expr> len_expr = makeBox<code::CallExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), length_method_sym),
-				std::move(length_args)
-			);
-
-			auto condition = makeBox<code::BinaryOperatorExpr>(
-				ctx,
-				code::generatedOrigin(),
-				code::BuiltinBinary::IntegerLt,
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-				std::move(len_expr)
-			);
-
-			code::CodeBlock loop_body{};
-
-			// __result += <copy of (*source)[__i]>;
-			auto source_element = makeBox<code::IndexExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::DerefExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), source_symbol)
-				),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
-			);
-			loop_body.statements.emplace_back(makeBox<code::ExprStmt>(
-				code::generatedOrigin(),
-				makeBox<code::ListPushExpr>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
-					makeCopyExpr(ctx, std::move(source_element))
-				)
-			));
-
-			// __i = __i + 1;
-			auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
-			                   .expect("u64 creation failed");
-			loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-				makeBox<code::BinaryOperatorExpr>(
-					ctx,
-					code::generatedOrigin(),
-					code::BuiltinBinary::IntegerAdd,
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
-				)
-			));
-
-			body.emplace_back(makeBox<code::WhileStmt>(
-				code::generatedOrigin(), std::move(condition), std::move(loop_body)
-			));
-
-			// return __result;
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
-			));
+			// return create_aggregate(T[N]) [ <copy of (*source)[__i]> ] per_element { __i = __i + 1; };
+			body.emplace_back(s.ret(s.createAggregate(
+				array_type,
+				std::move(element_values),
+				{
+					s.assign(s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))),
+				}
+			)));
 
 			return body;
 		}
@@ -382,30 +227,24 @@ namespace compiler::helios::defgen {
 			switch (owner_type.getKind()) {
 			case tsh::Kind::Class:
 			case tsh::Kind::Tuple:
-				body = buildAggregateCopyBody(
-					ctx, owner_type, copy_sym, source_symbol, result_symbol_type
-				);
+				body = buildAggregateCopyBody(ctx, owner_type, source_symbol);
 				break;
 			case tsh::Kind::StaticArray:
 				body = buildStaticArrayCopyBody(
-					ctx,
-					owner_type.as<tsh::StaticArrayAbstractType>(),
-					copy_sym,
-					source_symbol,
-					result_symbol_type
+					ctx, owner_type.as<tsh::StaticArrayAbstractType>(), copy_sym, source_symbol
 				);
 				break;
-			case tsh::Kind::DynamicArray:
-				body = buildDynamicArrayCopyBody(
+			case tsh::Kind::Variant:
+				body = buildVariantCopyBody(
 					ctx,
-					owner_type.as<tsh::DynamicArrayAbstractType>(),
+					owner_type.as<tsh::VariantAbstractType>(),
 					copy_sym,
 					source_symbol,
 					result_symbol_type
 				);
 				break;
 			default:
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"Default copy constructor for type `", owner_type.toString(), "`."
 					),
@@ -427,44 +266,4 @@ namespace compiler::helios::defgen {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultCopyConstructor);
-
-	Box<code::Expr> makeCopyExpr(query::Context& ctx, Box<code::Expr> source) {
-		const tsh::SymbolType<> type = source->expression_type.getSymbolType();
-
-		if (type.isTriviallyCopyable(ctx)) return source;
-
-		// A `box T` is deep-copied. Allocate a new box holding a copy of the pointee
-		// `box(<copy of *source>)`. For a trivially-copyable pointee this collapses to
-		// `box(*source)`.
-		if (type.getRefKind() == tsh::ReferenceKind::Box) {
-			// Produce a copy of the underlying type.
-			auto pointee_copy = makeCopyExpr(
-				ctx, makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(source))
-			);
-
-			// Now wrap it in a heap allocation.
-			return makeBoxAllocCall(ctx, code::generatedOrigin(), std::move(pointee_copy));
-		}
-
-		// Now we have a direct value which should be copied.
-		const auto abstract_type = type.getType();
-		CORE_ASSERT(
-			abstract_type.getKind() == tsh::Kind::Class
-				or abstract_type.getKind() == tsh::Kind::StaticArray
-				or abstract_type.getKind() == tsh::Kind::Tuple
-				or abstract_type.getKind() == tsh::Kind::DynamicArray,
-			"Tried to generate a copy constructor for a type which shouldn't need it"
-		);
-
-		const SymID                  copy_sym = copyConstructorSymForType(ctx, abstract_type);
-		std::vector<Box<code::Expr>> args;
-		args.emplace_back(makeBox<code::RefOfExpr>(ctx, code::generatedOrigin(), std::move(source)));
-
-		return makeBox<code::CallExpr>(
-			ctx,
-			code::generatedOrigin(),
-			makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), copy_sym),
-			std::move(args)
-		);
-	}
 }

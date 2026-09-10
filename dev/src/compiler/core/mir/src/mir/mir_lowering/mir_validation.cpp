@@ -34,14 +34,24 @@ namespace compiler::mir {
 							auto shadowing_pos = get_pos(shadowing);
 							auto shadowed_pos  = get_pos(shadowed);
 
-							// If either variable is compiler-generated (no PST position),
-							// skip the shadowing check. Generated symbols are internal
-							// implementation details and can't meaningfully shadow user code.
-							if (!shadowing_pos.has_value() || !shadowed_pos.has_value()) continue;
-
-							auto msg = makeBox<VariableShadowingError>(*shadowing_pos);
-							msg->addAttachedMessage(makeBox<ShadowedDeclarationNote>(*shadowed_pos));
-							ctx.logInt(std::move(msg));
+							if (shadowing_pos && shadowed_pos) {
+								auto msg = makeBox<VariableShadowingError>(*shadowing_pos);
+								msg->addAttachedMessage(
+									makeBox<ShadowedDeclarationNote>(*shadowed_pos)
+								);
+								ctx.logInt(std::move(msg));
+							} else {
+								ctx.logInt(makeBox<dia::PlaceholderError>(
+									"Variable declaration shadows a previous declaration.",
+									base::strConcat(
+										"The exact code location is unavailable because the "
+										"variable is compiler generated. ",
+										"The shadowing happened for the symbol `",
+										shadowing->getName(),
+										"`."
+									)
+								));
+							}
 							return base::BAD;
 						}
 					}

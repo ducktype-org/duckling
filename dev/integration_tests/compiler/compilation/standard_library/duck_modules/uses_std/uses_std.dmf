@@ -1,8 +1,0 @@
-import core.builtins.*;
-import core.*; # for a();
-
-fun main() -> i64 = {
-    builtin_output_i64(10);
-    a(); # outputs 42
-    return 0;
-}

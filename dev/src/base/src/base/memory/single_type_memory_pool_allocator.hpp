@@ -1,3 +1,5 @@
+#pragma once
+
 #include <base/memory/manual_lifetime_storage.hpp>
 #include <base/misc/noexcept.hpp>
 #include <base/pointers/box.hpp>

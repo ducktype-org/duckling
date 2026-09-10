@@ -10,14 +10,21 @@
 #include <vm/core/safe/type_metadata/type.hpp>
 
 namespace vm {
-	class DummyAllocator final: public AllocatorABC {
+	template<typename EntryT>
+	class DummyAllocator final: public IAllocator<EntryT> {
 	public:
-		BlockData allocate(TypeCRef type, Ref<byte> data) {
-			auto size = type->getSize().asInt();
-			return BlockData{ type, base::ModRawView{ data.get(), size }, this };
+		// @TODO: #3447 Same bytes-vs-entries conflation as `HeapAllocator::allocate`: `size` is a
+		// byte count from `Type::getSize()` but is used as the entry count of the view below.
+		// Correct only while `sizeof(EntryT) == 1`, which the `static_assert` pins.
+		BlockData<EntryT> allocate(TypeCRef type, Ref<EntryT> data) {
+			static_assert(sizeof(EntryT) == 1);
+			usize size = type->getSize().asInt();
+			return BlockData<EntryT>{ type,
+				                      base::TypedModRawView<EntryT>{ data.get(), size },
+				                      this };
 		}
 
-		void deallocate(Ref<BlockData>) final {
+		void deallocate(Ref<BlockData<EntryT>>) final {
 			// Nothing here..
 		}
 	};

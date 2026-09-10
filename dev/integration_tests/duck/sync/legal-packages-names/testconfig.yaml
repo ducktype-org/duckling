@@ -1,0 +1,43 @@
+package-name: 'foo'
+add-dep: 'false'
+test-cmd: duck sync
+PreCase: |+
+  @{cd-tmp-dir}
+  echo "metadata:
+    name: '@{package-name}'
+    version: 1.0.0" > quackconfig.yaml
+
+  if [ '@{add-dep}' == 'true' ]; then
+    echo "dependencies:
+      foo-bar:
+        source:
+          path: foo-bar" >> quackconfig.yaml
+    @{duck-exe} init foo-bar
+  fi
+Tests:
+  package-names:
+    Description: Validates package's and dependencies' names
+    Cases:
+      package-name-can-contain-a-dash:
+        package-name: foo-bar
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the gathering or the solver engine
+            info: starting loading 1 package
+            info: loaded source code of 1 package, 0 were downloaded, 1 was already present
+            info: successfully synchronized venv \`@{package-name}\`"
+      dependency-can-contain-a-dash:
+        add-dep: 'true'
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: running gathering
+            info: starting the solver engine
+            info: starting loading 2 packages
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
+            info: successfully synchronized venv \`@{package-name}\`"

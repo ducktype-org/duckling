@@ -3,10 +3,9 @@
 #include "location_types.hpp"
 #include "source_position.hpp"
 
-#include <diagnostic_interactive/stable_position.hpp>
-
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>
 #include <printer/printer_content.hpp>
 
@@ -89,12 +88,12 @@ namespace dia {
 			return LocationType::MacroLocationType;
 		}
 
-		MacroLocation(const dia_int::StablePosition& parent, Ref<tokenizer::TokenSource> source);
+		MacroLocation(const dia::StablePosition& parent, Ref<tokenizer::TokenSource> source);
 
-		[[nodiscard]] dia_int::StablePosition getMacroParentNode() const;
+		[[nodiscard]] dia::StablePosition getMacroParentNode() const;
 
 	private:
-		dia_int::StablePosition     parent;
+		dia::StablePosition         parent;
 		Ref<tokenizer::TokenSource> source;  ///< Source of tokens.
 		fs::File                    path;    ///< Path to original file
 	};

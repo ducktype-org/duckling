@@ -14,10 +14,12 @@
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/loader/compiler/safe/safe_compiler.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <expected>
+#include <shared_mutex>
 #include <string>
 #include <variant>
 #include <vector>
@@ -31,11 +33,11 @@ namespace vm {
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
 	class SafeVMProcess final: public IVMProcess {
-		friend class VmValue;
-		friend class VMValueRef;
+		friend class SafeVMValue;
+		friend class SafeVMValueRef;
 
 	private:
-		std::shared_mutex rw_global;
+		mutable std::shared_mutex api_lock;
 
 		/**
 		 * @brief A loader instance for this SafeVMProcess. Stores the high level and low level
@@ -51,8 +53,6 @@ namespace vm {
 		 */
 		CRef<low::ILowVMProgram> loaded_program;
 
-		low::LowVMProgramCopy loaded_program_copy;
-
 		Memory memory;
 
 		base::Optional<DeadlockDetector> deadlock_detector;
@@ -60,12 +60,17 @@ namespace vm {
 		SynchronizationPrimitives        synchronization_primitives;
 
 		/**
-		 * @brief Storage for all VmValues which belong to this process.
-		 * @note Lifetime of these VmValues is controlled by this process. They will be destructed
+		 * @brief Storage for all VMValues which belong to this process.
+		 * @note Lifetime of these VMValues is controlled by this process. They will be destructed
 		 * when process is deinitialized.
 		 */
-		std::vector<Box<VmValue>> owned_vm_values;
+		std::vector<Box<SafeVMValue>> owned_vm_values;
 
+		/**
+		 * @brief Protects the thread pool which can be modified by `builtin_start_thread` and has
+		 * to be serialized with it.
+		 */
+		mutable std::mutex threads_pool_mutex;
 		/**
 		 * @brief Pool of threads in this process.
 		 * @note Thread with ID 0 is the main thread, it is created together with the process.
@@ -87,10 +92,29 @@ namespace vm {
 		/**
 		 * @brief Returns reference to either existing empty thread or
 		 * creates new thread without worker and returns it
+		 *
+		 * @note Call with `threads_pool_mutex`.
 		 */
-		SafeVMThread& getEmptyThread();
+		SafeVMThread& getEmptyThreadLocked();
 
-		base::Optional<api::ApiError> assertProcessCanRespond();
+		/**
+		 * @brief Joins the exec thread of every VMThread. Every thread must already be non-active.
+		 */
+		void joinAllExecutionThreads();
+
+		/**
+		 * @brief Helper used by `runFunction` and `startNewThreadFromExecutionThread`. Takes no
+		 * `api_lock`, only `threads_pool_mutex`.
+		 */
+		std::expected<api::Response, api::ApiError> spawnThread(
+			const std::string& func_name, const RunArguments& run_arguments
+		);
+
+		std::expected<void, api::ApiError> assertProcessCanRespond();
+
+		[[nodiscard]] std::expected<void, api::ApiError> validateRunArguments(
+			const std::string& func_name, const RunArguments& run_arguments
+		) const override;
 
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
@@ -112,18 +136,23 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
 
-		base::Optional<api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
 
-		base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> requestPauseOfVMThread(api::ThreadID thread_id) override;
 
-		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
+		std::expected<void, api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
 
-		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
+		std::expected<void, api::ApiError> stepVMThread(api::ThreadID thread_id) override;
+
+		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
+			api::ThreadID thread_id, base::Optional<usize> frame_idx = {}
 		) override;
 
-		void notifyPausedVMThread(api::ThreadID thread_id) override;
+		void notifyVMThreadWaiters(api::ThreadID thread_id) override;
 
-		void waitForBreakpoint() override;
+		std::expected<api::Response, api::ApiError> waitForBreakpointAndReportPosition(
+			api::ThreadID thread_id
+		) override;
 
 		std::expected<api::Response, api::ApiError> setExecutionConfig(
 			const api::ExecutionConfig& config
@@ -143,11 +172,12 @@ namespace vm {
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
-		api::ThreadID getMainThreadID() override;
+		std::vector<api::ThreadID> getAllActiveThreadIDs() override;
 
-		std::vector<api::ThreadID> getAllThreadIDs() override;
+		[[nodiscard]] std::vector<api::ThreadID> unjoinedThreadIds() const override;
 
-		void onTerminalStatus(const api::ProcStatus& status) noexcept override;
+		void requestStopAllThreads() noexcept override;
+
 		std::expected<api::Response, api::ApiError> setBreakpoint(
 			base::StrID function_name, usize instruction_index, bool enable
 		) override;
@@ -175,15 +205,44 @@ namespace vm {
 
 		Memory& getMemory();
 
-		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
+		/**
+		 * @brief Spawns a thread running @p func_name, for `builtin_start_thread` only.
+		 *
+		 * @note Called from an exec thread, so it must NOT take `api_lock`. Look at the impl for
+		 * more info.
+		 */
+		std::expected<api::ThreadID, api::ApiError> startNewThreadFromExecutionThread(
+			const std::string& func_name
+		);
 
-		Ref<VmValue> createVmValue(TypeCRef type) override;
 
-		Ref<VmValue> createVmValue(TypeCRef type, Pointer src) override;
+		Ref<IVMValue> createVMValue(code::valid_type::ValidTypeID type_id) override;
 
-		Box<VmValue> createOwnedVmValue(TypeCRef type) override;
+		Box<IVMValue> createOwnedVMValue(code::valid_type::ValidTypeID type_id) override;
 
-		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) override;
+		/**
+		 * @brief Creates an empty, process-owned SafeVMValue from safe type metadata.
+		 * Safe-VM-internal counterpart of the interface factory.
+		 */
+		Ref<SafeVMValue> createVMValue(TypeCRef type);
+
+		/**
+		 * @brief Creates a process-owned SafeVMValue from safe type metadata, filled with the
+		 * bytes pointed to by `src`. Safe-VM-internal only.
+		 */
+		Ref<SafeVMValue> createVMValue(TypeCRef type, Pointer src);
+
+		/**
+		 * @brief Creates an empty, caller-owned SafeVMValue from safe type metadata.
+		 * Safe-VM-internal counterpart of the interface factory.
+		 */
+		Box<SafeVMValue> createOwnedVMValue(TypeCRef type);
+
+		/**
+		 * @brief Creates a caller-owned SafeVMValue from safe type metadata, filled with the
+		 * bytes pointed to by `src`. Safe-VM-internal only.
+		 */
+		Box<SafeVMValue> createOwnedVMValue(TypeCRef type, Pointer src);
 
 		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
 

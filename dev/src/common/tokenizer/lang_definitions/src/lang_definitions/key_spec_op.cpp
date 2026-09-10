@@ -78,7 +78,6 @@ namespace lang_def {
 	          KeywordFlagsOptions::IsStmtStart | KeywordFlagsOptions::IsAction },
 
 			// These Keywords also indicate start of a statement.
-			{ Keyword::Test, "test", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Public, "public", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Private, "private", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Protected, "protected", KeywordFlagsOptions::IsSpecifier },
@@ -95,13 +94,16 @@ namespace lang_def {
 			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::New, "new", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ptr, "ptr", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::CPtr, "cptr", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::ManyPtr, "manyptr", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Slice, "slice", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Copyof, "copyof", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Ptrof, "ptrof", KeywordFlagsOptions::IsGenPrefixOp },
 
 			// `not` isn't a general prefix operator,
 			// it has specific handling together with the other boolean operators
@@ -147,8 +149,8 @@ namespace lang_def {
 			{ Keyword::Bool, "bool", KeywordFlags() },
 			{ Keyword::Str, "str", KeywordFlags() },
 			{ Keyword::Type, "type", KeywordFlags() },
+			{ Keyword::Void, "void", KeywordFlags() },
 
-			{ Keyword::List, "List", KeywordFlags() },
 			{ Keyword::Set, "Set", KeywordFlags() },
 			{ Keyword::Dict, "Dict", KeywordFlags() },
 			{ Keyword::Array, "Array", KeywordFlags() },
@@ -234,6 +236,7 @@ namespace lang_def {
 		{ NamedOperator::Pipe, "|" },
 		{ NamedOperator::Ampersand, "&" },
 		{ NamedOperator::BitXor, "^" },
+		{ NamedOperator::BitNot, "~" },
 
 		{ NamedOperator::LeftShift, "<<" },
 		{ NamedOperator::RightShift, ">>" },

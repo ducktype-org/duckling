@@ -3,9 +3,6 @@
 #include "options.hpp"
 
 #include <concurrent/module_flags/worker_count.hpp>
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
 #include <driver/module_flags/module_flags.hpp>
@@ -23,6 +20,9 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
+#include <diagnostic/logger.hpp>
+#include <diagnostic/module_flags/module_flags.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
@@ -44,10 +44,12 @@ namespace compiler::driver {
 
 			driver::dump_ir_options.dump_asm  = debug_options.dump_asm;
 			driver::dump_ir_options.dump_llvm = debug_options.dump_llvm;
+			driver::dump_ir_options.dump_dbc  = debug_options.dump_dbc;
 			driver::dump_ir_options.dump_lir  = debug_options.dump_lir;
 			driver::dump_ir_options.dump_mir  = debug_options.dump_mir;
 			driver::dump_ir_options.dump_hir  = debug_options.dump_hir;
 
+			driver::print_ir_options.print_dbc = debug_options.print_dbc;
 			driver::print_ir_options.print_lir = debug_options.print_lir;
 			driver::print_ir_options.print_mir = debug_options.print_mir;
 			driver::print_ir_options.print_hir = debug_options.print_hir;
@@ -222,7 +224,8 @@ namespace compiler::driver {
 	 * @TODO: #2762 probably remove this
 	 */
 	std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
-		auto package_root_file = fs::FileManager::createRandomVirtualFile("", ".dmf");
+		auto package_root_file
+			= fs::FileManager::createRandomVirtualFile("", compiler::frontend::LANG_MODULE_FILE);
 		std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
 			compiler::frontend::packages::RawPackageInfo{
 				.package_id   = base::StrID("repl_session"),
@@ -304,9 +307,9 @@ namespace compiler::driver {
 
 	void initializeGlobalLogger() {
 		// We might want to configure it differently in the future:
-		dia_int::configureImmediatePrint(&std::cerr);
-		dia_int::configureTerminalPrinterColors(true);
+		dia::configureImmediatePrint(&std::cerr);
+		dia::configureTerminalPrinterColors(true);
 
-		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
+		global_state::setters::setGlobalLogger(makeBox<dia::Logger>());
 	}
 }

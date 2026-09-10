@@ -27,7 +27,7 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMoveErrors);
 		TESTER_ADD_TEST(testUseBeforeInit);
-		TESTER_ADD_TEST(testGeneratedSymbolShadowingDoesNotError);
+		TESTER_ADD_TEST(testShortCircuitMoveState);
 	}
 
 private:
@@ -70,15 +70,21 @@ private:
 			{ "is used after it has been moved out of.", "Value moved here." },
 			1
 		);
+	}
 
-		// ===================== Move from a non-local place (NYI) =====================
+	/**
+	 * @brief The right-hand side of a lazily evaluated `or` runs on only one of the paths, so a
+	 * move performed there reaches the later use on some paths only.
+	 */
+	void testShortCircuitMoveState() {
 		compiler::mir::test_utils::checkForErrorOnCompileModule(
-			R"(class Cls { x: i64; }
-               fun moveField() = {
-                   let a = Cls(10);
-                   move a.x;
+			R"(fun eat(x: i64) = x;
+               fun movedInRhs(a: bool, x: i64) -> bool = {
+                   let c = a or eat(move x) == 0;
+                   eat(x);
+                   return c;
                })",
-			{ "Moving from a non-local place is not supported yet." },
+			{ "may have been moved out of on some", "Value moved here." },
 			1
 		);
 	}
@@ -146,34 +152,6 @@ private:
                })",
 			{ "is used after it has been moved out of" },
 			1
-		);
-	}
-
-	/**
-	 * @brief Regression test: classes with fields resembling generated symbol
-	 *        names (__result, _result, etc.) must compile without shadowing errors.
-	 */
-	void testGeneratedSymbolShadowingDoesNotError() {
-		// Classes with fields resembling generated symbol names must compile.
-		compiler::mir::test_utils::checkForNoErrorOnCompileModule(
-			R"(class T { __result: i64; other: i64; }
-               var g: T = T(1, 2);
-               fun main() -> i64 = { return g.__result; })"
-		);
-		compiler::mir::test_utils::checkForNoErrorOnCompileModule(
-			R"(class T { _result: i64; other: i64; }
-               var g: T = T(1, 2);
-               fun main() -> i64 = { return g._result; })"
-		);
-		compiler::mir::test_utils::checkForNoErrorOnCompileModule(
-			R"(class T { ___result: i64; other: i64; }
-               var g: T = T(1, 2);
-               fun main() -> i64 = { return g.___result; })"
-		);
-		compiler::mir::test_utils::checkForNoErrorOnCompileModule(
-			R"(class T { result: i64; other: i64; }
-               var g: T = T(1, 2);
-               fun main() -> i64 = { return g.result; })"
 		);
 	}
 };

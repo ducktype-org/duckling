@@ -11,6 +11,7 @@
 #include <helios/scope_id.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <base/pointers/ref.hpp>
 
@@ -86,6 +87,14 @@ namespace compiler::helios {
 	bool isGlobalFun(SymID);
 
 	/**
+	 * @return whether the symbol is the global function named `main`.
+	 *
+	 * Unlike isGlobalFun(), this function can safely be called for symbols
+	 * that are not functions.
+	 */
+	bool isGlobalMain(SymID);
+
+	/**
 	 * @return whether SymID is a global variable.
 	 * @note This function iterates through parents of the PST elements of the symbol to obtain this
 	 * information. It might be changed in the future, especially when more kinds of global
@@ -126,7 +135,7 @@ namespace compiler::helios {
 		OwnerOnly,
 		Replicated,
 	};
-	EmissionPolicy emissionPolicy(SymID id);
+	EmissionPolicy emissionPolicy(query::Context& ctx, SymID id);
 
 	/**
 	 * @brief Whether the symbol can be called
@@ -149,6 +158,13 @@ namespace compiler::helios {
 	 */
 	template<typename Attribute>
 	bool hasAttribute(SymID);
+
+	/**
+	 * Get the attribute of the given type applied to a symbol,
+	 * or an empty optional when the symbol does not have it.
+	 */
+	template<typename Attribute>
+	base::Optional<CRef<Attribute>> getAttribute(SymID);
 
 	/**
 	 * @return PST Stmt element symbol was created from.

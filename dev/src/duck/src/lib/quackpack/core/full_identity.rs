@@ -7,8 +7,9 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize, de};
 
+use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::identity::{Identity, Kind, Origin};
-use crate::quackpack::core::{GitReference, SourceKind};
+use crate::quackpack::core::{GitReference, Source, SourceKind};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
@@ -30,22 +31,22 @@ impl FullIdentity {
     }
 
     /// Get the name.
-    pub fn name(&self) -> StrId {
+    pub fn name(self) -> StrId {
         self.name
     }
 
     /// Get the [`FullOrigin`].
-    pub fn origin(&self) -> FullOrigin {
+    pub fn origin(self) -> FullOrigin {
         self.origin
     }
 
     /// Convert this [`FullIdentity`] into a [`Identity`].
-    pub fn as_identity(&self) -> Identity {
+    pub fn as_identity(self) -> Identity {
         Identity::new(self.name(), self.origin().as_origin())
     }
 
     /// Generate a human-readable description of [`self`].
-    pub fn descriptive_name(&self) -> String {
+    pub fn descriptive_name(self) -> String {
         match self.origin.kind {
             FullKind::Registry => format!("`{}`", self.name),
             FullKind::Git { .. } => format!("cloned from `{}`", self.origin.url),
@@ -57,6 +58,18 @@ impl FullIdentity {
                 }
             }
         }
+    }
+
+    pub fn is_local(self) -> bool {
+        self.origin().is_local()
+    }
+
+    pub fn is_git(self) -> bool {
+        self.origin().is_git()
+    }
+
+    pub fn is_registry(self) -> bool {
+        self.origin().is_registry()
     }
 }
 
@@ -106,18 +119,107 @@ impl FullOrigin {
     }
 
     /// Get an [`InternedUrl`] of this [`FullOrigin`].
-    pub fn url(&self) -> InternedUrl {
+    pub fn url(self) -> InternedUrl {
         self.url
     }
 
     /// Get a [`FullKind`] of this [`FullOrigin`].
-    pub fn kind(&self) -> FullKind {
+    pub fn kind(self) -> FullKind {
         self.kind
     }
 
     /// Convert this [`FullOrigin`] into a [`Origin`].
-    pub fn as_origin(&self) -> Origin {
+    pub fn as_origin(self) -> Origin {
         Origin::new(self.url, self.kind.as_kind())
+    }
+
+    /// Check if this is a local identity.
+    pub fn is_local(self) -> bool {
+        matches!(self.kind(), FullKind::Local)
+    }
+
+    /// Check if this is a git identity.
+    pub fn is_git(self) -> bool {
+        matches!(self.kind(), FullKind::Git { commit: _ })
+    }
+
+    /// Check if this is a registry identity.
+    pub fn is_registry(self) -> bool {
+        matches!(self.kind(), FullKind::Registry)
+    }
+
+    /// Checks that [`self`] satisfies the requirenments of some [`Source`].
+    /// This returns [`OriginSatisfiesSource`],
+    /// which gives either a decisive answer or a conditional answer,
+    /// which requires more work to verify.
+    pub fn satisfies_source(self, source: Source) -> OriginSatisfiesSource {
+        if self.url() != source.url() {
+            return OriginSatisfiesSource::No;
+        }
+        match (self.kind(), source.kind()) {
+            (FullKind::Local, SourceKind::Local) => OriginSatisfiesSource::Yes,
+            (FullKind::Git { commit }, SourceKind::Git(reference)) => {
+                if let GitReference::Rev(required_commit) = reference
+                    && commit == *required_commit
+                {
+                    OriginSatisfiesSource::Yes
+                } else {
+                    OriginSatisfiesSource::IfGitReferencePointsToCommit {
+                        url: source.url(),
+                        commit,
+                        reference,
+                    }
+                }
+            }
+            (FullKind::Registry, SourceKind::Registry) => OriginSatisfiesSource::Yes,
+            _ => OriginSatisfiesSource::No,
+        }
+    }
+}
+
+/// Response to [`FullOrigin::satisfies_source`].
+/// The branch [`Self::IfGitReferencePointsToCommit`] signalizes that the origin satisfies source
+/// if and only if `reference` in the git repository at `url` points to `commit`.
+pub enum OriginSatisfiesSource {
+    Yes,
+    No,
+    IfGitReferencePointsToCommit {
+        url: InternedUrl,
+        commit: StrId,
+        reference: GitReference,
+    },
+}
+
+impl OriginSatisfiesSource {
+    /// Detemine the conditional answer given by [`Self::IfGitReferencePointsToCommit`].
+    /// This is done by performing network requests.
+    ///
+    /// Errors:
+    /// -------
+    /// We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
+    /// as it is well ... a fast path.
+    pub async fn finish_check(self, fetcher: &Fetcher<'_>) -> QuackResult<bool> {
+        match self {
+            Self::Yes => Ok(true),
+            Self::No => Ok(false),
+            Self::IfGitReferencePointsToCommit {
+                url,
+                commit,
+                reference,
+            } => {
+                let Some(fast_path_client) = fetcher.try_get_fastpath(url) else {
+                    return Ok(false);
+                };
+                let reference_commit = match fast_path_client.get_commit_hash(reference).await {
+                    Ok(commit) => commit,
+                    Err(e) => {
+                        fetcher.ctx().console().warning(e)?;
+                        return Ok(false);
+                    }
+                };
+                Ok(commit == reference_commit)
+            }
+        }
     }
 }
 
@@ -226,7 +328,7 @@ pub enum FullKind {
 
 impl FullKind {
     /// Get a human-like display.
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             Self::Registry => "registry",
             Self::Git { .. } => "git",
@@ -235,46 +337,26 @@ impl FullKind {
     }
 
     /// Check, whether this [`FullKind`] is a registry kind.
-    pub fn is_registry(&self) -> bool {
+    pub fn is_registry(self) -> bool {
         matches!(self, FullKind::Registry)
     }
 
     /// Check, whether this [`FullKind`] is a git kind.
-    pub fn is_git(&self) -> bool {
+    pub fn is_git(self) -> bool {
         matches!(self, FullKind::Git { .. })
     }
 
     /// Check, whether this [`FullKind`] is a local kind.
-    pub fn is_local(&self) -> bool {
+    pub fn is_local(self) -> bool {
         matches!(self, FullKind::Local)
     }
 
     /// Convert this [`FullKind`] into a [`Kind`].
-    pub fn as_kind(&self) -> Kind {
+    pub fn as_kind(self) -> Kind {
         match self {
             Self::Registry => Kind::Registry,
             Self::Git { .. } => Kind::Git,
             Self::Local => Kind::Local,
-        }
-    }
-
-    /// Checks that [`self`] satisfies the requirenments of some [`SourceKind`].
-    pub fn satisfies_source_kind(&self, source_kind: SourceKind) -> bool {
-        match (self, source_kind) {
-            (Self::Local, SourceKind::Local) => true,
-            (Self::Git { commit }, SourceKind::Git(reference)) => {
-                // If the git dependency specifies tag, branch or nothing (default branch),
-                // some new commits may have appeared.
-                if let GitReference::Rev(required_commit) = reference
-                    && *commit == required_commit
-                {
-                    true
-                } else {
-                    false
-                }
-            }
-            (Self::Registry, SourceKind::Registry) => true,
-            _ => false,
         }
     }
 }

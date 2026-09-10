@@ -7,7 +7,7 @@ use tracing::{debug, instrument};
 use super::{ArtifactsType, Unit};
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
-use crate::quackpack::core::compile::{BuildContext, missing_depenendcy_in_graph_message};
+use crate::quackpack::core::compile::{BuildContext, missing_depenendcy_in_graph};
 use crate::quackpack::core::identity::Identity;
 
 #[derive(Debug)]
@@ -21,7 +21,7 @@ impl UnitGraph {
     /// Create a new [`UnitGraph`].
     pub fn new(root_id: u64, units: Vec<Unit>) -> Self {
         let ids = units.iter().map(Unit::unit_id);
-        debug_assert!(ids.is_sorted(), "Units should be sorted by IDs");
+        debug_assert!(ids.is_sorted(), "Units should be sorted by IDs; {units:?}");
         // Leaving `root_id` as a variable/member, since it might change in the future.
         debug_assert_eq!(root_id, 0, "root Unit should have an ID == 0");
         for (index, unit) in units.iter().enumerate() {
@@ -61,21 +61,20 @@ impl UnitGraph {
 #[instrument(skip_all)]
 pub fn lower_early_graph(graph: EarlyGraph, bcx: &BuildContext<'_, '_>) -> UnitGraph {
     let (identity_to_id, sorted_identities) = build_ids_map(&graph);
-    debug!(?identity_to_id);
-    debug!(?sorted_identities);
+    debug!(?identity_to_id, ?sorted_identities);
 
     let (packages, graph) = graph.into_inner();
     let mut packages = packages.into_inner();
     let root_identity = graph.root();
     let root_id = *identity_to_id
         .get(&root_identity)
-        .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(root_identity)));
+        .unwrap_or_else(|| missing_depenendcy_in_graph(root_identity, &identity_to_id));
 
     let mut units = vec![];
     for identity in sorted_identities {
         let package = packages
             .remove(&identity)
-            .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(identity)));
+            .unwrap_or_else(|| missing_depenendcy_in_graph(identity, &identity_to_id));
         let node = graph.dependencies_for_package(&identity);
         let unit = create_single_unit(identity, root_identity, &identity_to_id, package, node, bcx);
         units.push(unit)
@@ -139,13 +138,13 @@ fn create_single_unit(
         .map(|dep| {
             *ids_map
                 .get(dep)
-                .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(*dep)))
+                .unwrap_or_else(|| missing_depenendcy_in_graph(*dep, ids_map))
         })
         .collect::<Vec<_>>();
     dependencies.sort();
     let unit_id = *ids_map
         .get(&unit_identity)
-        .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(unit_identity)));
+        .unwrap_or_else(|| missing_depenendcy_in_graph(unit_identity, ids_map));
     Unit::new(
         unit_id,
         package,

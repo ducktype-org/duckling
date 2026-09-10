@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from typing import Callable
 from .helpers import (
     BashCommandError,
+    log_good,
     log_info,
     log_warning,
     bash_command_get_output,
@@ -132,7 +133,7 @@ def check_issue_exists_and_open(issue_number: str) -> bool:
 def todo_validate_impl(
     branch: str = "origin/main",
     no_merge_base: bool = False,
-    exclude_files: list[str] = None,  # None here is on purpose
+    exclude_files: list[str] | None = None,  # None here is on purpose
     all: bool = False,
     print_todos: bool = False,
 ) -> bool:
@@ -149,9 +150,9 @@ def todo_validate_impl(
     Returns:
         bool: True if all TODOs are properly formatted, False if any violations are found.
     """
-    
+
     if exclude_files is None:
-        exclude_files = []
+        exclude_files = ["todo_validate.py", "todo_counter.py", "CLAUDE.md"]
 
     files_and_lines: dict[str, list[tuple[int, int]]] = list_files_impl(
         only_modified=not all, lines=True, branch=branch, no_merge_base=no_merge_base
@@ -237,7 +238,7 @@ def todo_validate_impl(
         log_info("Example: // @TODO: #0123 Implement this feature")
         log_info("The issue number must reference an open GitHub issue.")
     else:
-        log_info(
+        log_good(
             "All TODO/FIXME comments are properly formatted with valid issue numbers"
         )
 
@@ -247,9 +248,9 @@ def todo_validate_impl(
 def get_todos_from_lines(files_and_lines: dict[str, list[tuple[int, int]]]) -> list[str]:
     """
     Returns newly added TODOs with issue numbers in modified files.
-    
+
     Scans modified files for TODO/FIXME comments that contain issue numbers.
-    
+
     Args:
         files_and_lines: Dictionary mapping file paths to line ranges to scan
     """
@@ -269,4 +270,3 @@ def get_todos_from_lines(files_and_lines: dict[str, list[tuple[int, int]]]) -> l
                 found_issues.add(match.group(1))
     sorted_issues = sorted(found_issues, key=int)
     return sorted_issues
-

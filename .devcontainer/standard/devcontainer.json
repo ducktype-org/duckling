@@ -6,7 +6,7 @@
 		"context": "../../dockling-dev/image",
 		"args": {
 			"UID": "${localEnv:UID:1000}",
-			"GID": "${localEnv:UID:1000}",  // This is not an error. There is no unified env var for gid, gid is usually equal to uid, and it doesn't really matter anyway.
+			"GID": "${localEnv:GID}",
 			"DEFAULT_USER": "ubuntu"
 		}
 	},
@@ -21,5 +21,35 @@
 	"mounts": [
 		"source=${localWorkspaceFolder}/dockling-dev/home/,target=/home/ubuntu/,type=bind",
 		"source=${localEnv:HOME}/.ssh,target=/home/ubuntu/.ssh,type=bind"
-	]
+	],
+
+	// A dev container never inherits the host's extensions -- it starts with its own
+	// set -- so everything the toolchain needs has to be listed here. Keep this to what
+	// every engineer building this repo needs.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"llvm-vs-code-extensions.vscode-clangd",
+				"ms-vscode.cpptools",
+				"ms-vscode.cmake-tools",
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"ms-python.debugpy",
+				"github.vscode-github-actions"
+			],
+
+			// Container-scoped, so a fresh clone works without anyone hand-editing their
+			// personal settings.
+			"settings": {
+				"cmake.sourceDirectory": "${containerWorkspaceFolder}/dev",
+				"cmake.buildDirectory": "${containerWorkspaceFolder}/dev/build",
+				"clangd.path": "/usr/lib/llvm-19/bin/clangd",
+				"clangd.arguments": [
+					"--header-insertion=never",
+					"--header-insertion-decorators=0"
+				],
+				"C_Cpp.intelliSenseEngine": "disabled"
+			}
+		}
+	}
 }

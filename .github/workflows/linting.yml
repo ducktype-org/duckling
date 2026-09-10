@@ -16,6 +16,24 @@ env:
   TIDY_VERSION: 19
 
 jobs:
+  # GitHub silently stops creating runs for a workflow whose file does not
+  # parse, so this check must live outside tests.yml to report its breakage.
+  # Runs on drafts too - broken workflows should surface as early as possible.
+  workflows-lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install click and PyYAML
+        run: sudo pip install click pyyaml --break-system-packages --no-input
+
+      - name: Validate workflow YAML
+        run: |
+          cd dev
+          python3 toolbox.py workflows-lint
+        shell: bash
+
   determine-runners:
     if: github.event.pull_request.draft == false
     uses: ./.github/workflows/determine-runners.yml
@@ -48,22 +66,27 @@ jobs:
 
       - name: Create compile_commands
         run: |
-         cd dev
-         cmake -DCMAKE_CXX_COMPILER=${{ env.CLANGXX_COMPILER }} -DCMAKE_C_COMPILER=${{ env.CLANG_COMPILER }} -DJIT_ENABLED=ON -DBUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-         cd ..
-        shell: bash
+          cd dev
+          cmake -DCMAKE_CXX_COMPILER=${{ env.CLANGXX_COMPILER }} -DCMAKE_C_COMPILER=${{ env.CLANG_COMPILER }} -DJIT_ENABLED=ON -DBUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cd ..
+        env: # Hot fix for GH issues:
+          GIT_CONFIG_COUNT: 2
+          GIT_CONFIG_KEY_0: url.https://quacker-bot:${{ secrets.QUACKER_PAT }}@github.com/.insteadOf
+          GIT_CONFIG_VALUE_0: https://github.com/
+          GIT_CONFIG_KEY_1: http.version
+          GIT_CONFIG_VALUE_1: HTTP/1.1
 
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
           GITHUB_TOKEN: ${{ secrets.QUACKER_PAT }}
         with:
-          style: 'file'
-          tidy-checks: ''
+          style: "file"
+          tidy-checks: ""
           version: ${{ env.TIDY_VERSION }}
           lines-changed-only: true
-          database: 'dev'
-          ignore: '**/*.c'
+          database: "dev"
+          ignore: "**/*.c"
 
           # Note that tidy-checks: '', means it uses .clang-tidy file
           # according to the cpp-linter action docs.
@@ -76,7 +99,6 @@ jobs:
           # in a pull request's thread. Set it to false to disable the comment.
           # Set it to true to post a new comment (and delete the old comment).
           step-summary: true
-
 
       - name: Fail fast?!
         if: steps.linter.outputs.checks-failed > 0
@@ -101,12 +123,12 @@ jobs:
       # Fetch origin/main for the following steps, because by default repo on the runners contains just the bare-minimum.
       - name: Fetch origin/main
         run: |
-         git fetch origin main
+          git fetch origin main
 
       - name: Run duck linter
         run: |
-         cd dev
-         python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose --no-fix
+          cd dev
+          python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose --no-fix
         shell: bash
 
       - name: Run issue checker
@@ -114,14 +136,14 @@ jobs:
           GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-         cd dev
-         python3 toolbox.py issue-checker --branch origin/main --no-merge-base
+          cd dev
+          python3 toolbox.py issue-checker --branch origin/main --no-merge-base
         shell: bash
 
       - name: Run TODO validation
         env:
           GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
         run: |
-         cd dev
-         python3 toolbox.py todo-validate --branch origin/main --no-merge-base
+          cd dev
+          python3 toolbox.py todo-validate --branch origin/main --no-merge-base
         shell: bash

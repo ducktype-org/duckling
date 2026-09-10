@@ -26,8 +26,8 @@ namespace {
 		os.add(printer::PrinterContent(typeToString(status)));
 		if (v_matches(status, vm::api::ExecutionCompleted)) {
 			const auto& exit_value = std::get<vm::api::ExecutionCompleted>(status).exit_value;
-			if (v_matches(exit_value, std::vector<Ref<vm::VmValue>>)) {
-				for (auto val: std::get<std::vector<Ref<vm::VmValue>>>(exit_value)) {
+			if (v_matches(exit_value, std::vector<Ref<vm::IVMValue>>)) {
+				for (auto val: std::get<std::vector<Ref<vm::IVMValue>>>(exit_value)) {
 					if_opt_some(val->readData(), data) {
 						variant_match(data) {
 							variant_case(vm::interpreted_data_variant::Primitive, primitive) {
@@ -68,12 +68,14 @@ namespace vm::debugger::cli {
 		return {};
 	}
 
-	std::expected<void, api::ApiError> CLIDebugger::loadDefault() {
-		fs::FilePath fp = "duck_build/package_dvm.dbc";
-		if (!fp.exists())
-			return std::unexpected(api::OtherError{
-				"No compiled program in the current directory." });
-		return load(fp);
+	std::expected<void, std::variant<api::ApiError, std::string>> CLIDebugger::loadDefault() {
+		auto response = debugger.loadDefault();
+		if (!response) return std::unexpected(response.error());
+
+		if_opt_some(debugger.getMapper().mainFile(), main_filepath) selected_file
+			= fs::File(main_filepath);
+
+		return {};
 	}
 
 	void CLIDebugger::setProgramArguments(const ProgramRunArguments& args) {
@@ -102,6 +104,8 @@ namespace vm::debugger::cli {
 
 		bool running = true;
 
+		// @TODO: #3179 Add vm run -d flag and/or debugger command for explicite mapping loading
+		// @TODO: #3180 Add possibility for switching selected file in debugger CLI
 		clah::Clah cmds
 			= clah::Clah("debug", "Debugger CLI Command Parser")
 		          .addSubcommand(clah::Clah("exit", "exits the debugger")
@@ -136,35 +140,42 @@ namespace vm::debugger::cli {
 		          .addSubcommand(clah::Clah("position", "writes current position")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
 										 auto response = debugger.getCurrentPosition();
-										 if (response) {
-											 auto pos = response.value();
-											 printNL(
-												 "Function `",
-												 pos.function_name.strView(),
-												 "` instruction ",
-												 pos.instr_number
-											 );
-											 if_opt_some(pos.source_position, sp) {
-												 printer::PrinterOStream out;
-												 dia::printHighlightedPositions(out, { sp }, 1);
-												 print(out.getContents());
-											 }
-										 } else {
-											 printError("Faild to obtain position!");
-										 }
+										 if (response)
+											 printCodePosition(*response);
+										 else
+											 printNL("Failed to obtain position!");
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("step", "executes one step")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
-										 debugger.step();
+										 auto response = (selected_file
+			                                              && debugger.getMapper().containsFile(
+															  selected_file->getFilePath()
+														  ))
+			                                               ? debugger.mappedStep()
+			                                               : debugger.step();
+
+										 if (!response) {
+											 printNL("Failed to obtain position!");
+											 return 0;
+										 }
+
+										 match_optional(*response) {
+											 opt_some(position) { printCodePosition(position); }
+											 opt_none { printNL("Program has finished."); }
+										 }
+
 										 return 0;
 									 }))
 		          .addSubcommand(
 					  clah::Clah("break", "sets or unsets the breakpoint")
-						  .addPositional(clah::CategoryParser::make(
-							  "option", std::vector<std::string>{ "set", "del" }
-						  ))
-						  .addPositional(clah::IntParser::make("line"))
+						  .addPositional(
+							  clah::CategoryParser::make(
+								  "option", std::vector<std::string>{ "set", "del" }
+							  ),
+							  "Breakpoint operation. Possible values are: set, del."
+						  )
+						  .addPositional(clah::IntParser::make("line"), "Source line number.")
 						  .setHandler([&](const clah::ParsingResult& options) -> int {
 							  auto option = options.getPositional<std::string>(0);
 							  auto line   = base::safeIntConv<usize>(options.getPositional<i64>(1));
@@ -205,6 +216,22 @@ namespace vm::debugger::cli {
 
 		printNL("Exiting debugger.");
 		return 0;
+	}
+
+	void CLIDebugger::printCodePosition(const CodePosition& position) {
+		printNL(
+			"Function `", position.function_name.strView(), "` instruction ", position.instr_number
+		);
+		if_opt_some(position.source_position, sp) {
+			printer::PrinterOStream out;
+			dia::printHighlightedPositions(out, { sp }, 1);
+			print(out.getContents());
+		}
+		if_opt_some(position.mapped_position, sp) {
+			printer::PrinterOStream out;
+			dia::printHighlightedPositions(out, { sp }, 1);
+			print(out.getContents());
+		}
 	}
 
 	void CLIDebugger::print(const printer::PrinterContentsSeq& content) {

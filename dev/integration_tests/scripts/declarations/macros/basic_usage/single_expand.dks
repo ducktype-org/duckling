@@ -1,0 +1,2 @@
+expand "fun f() -> i64 = 40 + 4";
+builtin_output_i64(f())

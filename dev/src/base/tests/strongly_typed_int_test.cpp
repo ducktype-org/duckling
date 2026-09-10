@@ -5,6 +5,7 @@
 STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, i64);
 STRONG_TYPEDEF_INT_DIMENSIONAL(TestU8, std::uint8_t);
 STRONG_TYPEDEF_INT_DIMENSIONAL(TestU64, u64);
+STRONG_TYPEDEF_INT(TestBits, std::uint8_t);
 
 class StronglyTypedIntTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -14,6 +15,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(stronglyTypedInt);
 		TESTER_ADD_TEST(castingTest);
+		TESTER_ADD_TEST(bitwiseTest);
 	}
 
 	void stronglyTypedInt() {
@@ -42,6 +44,33 @@ public:
 		assertTrue(m2 == Meters(12), "Basic math failed (16)");
 		m2 -= Meters(20);
 		assertTrue(m2 == Meters(-8), "Basic math failed (17)");
+	}
+
+	void bitwiseTest() {
+		const TestBits a(0b1100);
+		const TestBits b(0b1010);
+
+		assertTrue((a & b) == TestBits(0b1000), "Bitwise failed (1)");
+		assertTrue((a | b) == TestBits(0b1110), "Bitwise failed (2)");
+		assertTrue((a ^ b) == TestBits(0b0110), "Bitwise failed (3)");
+		assertTrue(~TestBits(0) == TestBits(0xFF), "Bitwise failed (4)");
+
+		assertTrue((TestBits(1) << TestBits(3)) == TestBits(8), "Bitwise failed (5)");
+		assertTrue((TestBits(1) << 3) == TestBits(8), "Bitwise failed (6)");
+		assertTrue((TestBits(8) >> TestBits(2)) == TestBits(2), "Bitwise failed (7)");
+		assertTrue((TestBits(8) >> 2) == TestBits(2), "Bitwise failed (8)");
+
+		TestBits c(0b0011);
+		c |= TestBits(0b0100);
+		assertTrue(c == TestBits(0b0111), "Bitwise failed (9)");
+		c &= TestBits(0b1110);
+		assertTrue(c == TestBits(0b0110), "Bitwise failed (10)");
+		c ^= TestBits(0b0011);
+		assertTrue(c == TestBits(0b0101), "Bitwise failed (11)");
+		c <<= 1;
+		assertTrue(c == TestBits(0b1010), "Bitwise failed (12)");
+		c >>= TestBits(1);
+		assertTrue(c == TestBits(0b0101), "Bitwise failed (13)");
 	}
 
 	void castingTest() {

@@ -49,7 +49,7 @@ namespace query {
 
 			/**
 			 * Whether query result is cached on disk and can be loaded from there in incremental
-			 * compilation. Queries cached on disk must use stable hashing and provide loadFromDisc
+			 * compilation. Queries cached on disk must use stable hashing and provide loadFromDisk
 			 * function.
 			 */
 			bool can_be_loaded_from_disk = false;
@@ -81,16 +81,27 @@ namespace query {
 		};
 
 		/**
+		 * @brief Default erase hook that panics when invoked.
+		 */
+		bool panicUnwiredErase(QueryStableHash);
+
+		/**
 		 * @brief Struct holding all the data related to query caching, like erase function pointer.
 		 */
 		struct QueryCacheData final {
 			using InternalEraseFunctionType = bool (*)(QueryStableHash);
 
 			/**
-			 * Pointer to the function that can erase the query result from its cache based on the
-			 * key hash.
+			 * Pointer to the function that can erase the query result from its in-memory cache
+			 * based on the key hash. Defaults to a panic so an unset hook is never a silent no-op.
 			 */
-			InternalEraseFunctionType erase_function;
+			InternalEraseFunctionType erase_function = panicUnwiredErase;
+
+			/**
+			 * Pointer to the function that can erase the query result from its on-disk cache based
+			 * on the key hash. Defaults to a panic so an unset hook is never a silent no-op.
+			 */
+			InternalEraseFunctionType disk_erase_function = panicUnwiredErase;
 		};
 
 		/**

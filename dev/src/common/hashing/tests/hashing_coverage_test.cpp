@@ -321,8 +321,8 @@ private:
 		char*            ptr1 = nullptr;
 		const int* const ptr2 = nullptr;
 		S                s{};
-		addToHash(h, ptr1);
-		addToHash(h, ptr2);
+		addToHash(h, HashByAddress{ ptr1 });
+		addToHash(h, HashByAddress{ ptr2 });
 		addToHash(h, nullptr);
 		addToHash(h, std::tuple{ 1, 2, 3 });
 		addToHash(h, std::pair{ 1, 3 });
@@ -351,7 +351,7 @@ private:
 		addToHash(h2, std::span{ "wertyuiop" });  // can hash directly
 		addToHash(h2, 123.0f);                    // hashing floating point
 		X* xptr = nullptr;
-		addToHash(h2, xptr);                      // hashing pointer
+		addToHash(h2, HashByAddress{ xptr });     // hashing pointer by address
 		addToHash(h2, nullptr);                   // hashing nullptr
 		auto range = std::vector{ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }
 		           | std::views::take(10);

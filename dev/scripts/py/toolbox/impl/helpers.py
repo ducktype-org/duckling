@@ -1,9 +1,12 @@
+from dataclasses import dataclass
 from typing import NoReturn
 import click
+import os
 import pathlib
 import platform
 import re
 import shutil
+import signal
 import subprocess as sp
 import sys
 
@@ -27,17 +30,33 @@ def exit_with_error(msg: str) -> NoReturn:
     exit(1)
 
 
+@dataclass
+class WrongExitcode:
+    expected: int
+    got: int
+
+@dataclass
+class Timeout:
+    timeout: float
+
 class BashCommandError(Exception):
     def __init__(
-        self, command: str, exit_code, stdout, stderr, at: pathlib.Path = None
+        self, command: str, exit_status: WrongExitcode | Timeout, stdout: str, stderr: str, at: pathlib.Path = None
     ):
+        self.reason_string = ""
+        match exit_status:
+            case WrongExitcode(expected, got):
+                self.reason_string = f"failed, because exited with `{got}`, expected `{expected}`"
+            case Timeout(v):
+                self.reason_string = f"timed out after {v} second(s)"
+
         super().__init__(
-            f"\n\tBash command `{command}` {f'\n\texecuted at `{at.absolute()}` ' if at else ''}\n\thas failed with an exit code: {exit_code}, because:\n"
+            f"\n\tBash command `{command}` {f'\n\texecuted at `{at.absolute()}` ' if at else ''}\n\thas {self.reason_string}\n"
             + f"[STDOUT]:{"\n" + stdout if stdout else ""}\n"
             + f"[STDERR]:{"\n" + stderr if stderr else ""}"
         )
         self.command = command
-        self.exit_code = exit_code
+        self.exit_status = exit_status
         self.stdout = stdout
         self.stderr = stderr
         self.at = at
@@ -46,20 +65,24 @@ class BashCommandError(Exception):
 def exec_bash_command(
     command: str,
     cwd: str | pathlib.Path,
-    capture_output=False,
+    capture_output: bool =False,
     input: bytes | None = None,
-    exitcode=0,
+    exitcode: int =0,
     dry: bool = False,
     verbose: bool = False,
     decode: bool = True,
     log_to_file=sys.stdout,
     env: dict[str, str] | None = None,
+    timeout: float | None = None,
 ) -> tuple[bytes | str, bytes | str]:
     """
     This is the lowest level access to calling a bash command in toolbox.
 
     `env` replaces the environment of the spawned process; `None` inherits
     the toolbox's environment.
+
+    When `timeout` (seconds) expires, the command's process group is
+    killed and a `BashCommandError` is raised.
     """
     if isinstance(cwd, str):
         cwd = pathlib.Path(cwd)
@@ -77,10 +100,19 @@ def exec_bash_command(
         stdin=sp.PIPE if input else None,
         stdout=sp.PIPE if capture_output else None,
         stderr=sp.PIPE if capture_output else None,
+        # A separate process group, so a timeout can kill the whole tree.
+        start_new_session=timeout is not None,
     )
-    stdout, stderr = proc.communicate(input=input)
-
-    status = proc.wait()
+    try:
+        stdout, stderr = proc.communicate(input=input, timeout=timeout)
+        status = proc.wait()
+    except sp.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        stdout, stderr = proc.communicate()
+        status = Timeout(timeout)
 
     # Check if there's a need for decoding
     if status != exitcode or decode:
@@ -90,6 +122,8 @@ def exec_bash_command(
             stderr = stderr.decode("UTF-8")
 
     if status != exitcode:
+        if type(status) is int:
+            status = WrongExitcode(exitcode, status)
         raise BashCommandError(command, status, stdout, stderr, at=cwd)
 
     return stdout, stderr
@@ -117,6 +151,15 @@ def click_log(prefix, msg, fg, bold=False, nl=True, file=sys.stdout):
 
 def log_info(msg: str, file=sys.stdout) -> None:
     click_log("INFO", msg, fg="yellow", file=file)
+
+
+def log_good(msg: str, file=sys.stdout) -> None:
+    """
+    Reports a success. Use it instead of `log_info` whenever the message
+    tells the user that something has *passed* - `log_info` is reserved for
+    neutral, informational output.
+    """
+    click_log("GOOD", msg, fg="green", file=file)
 
 
 def log_bash(msg: str, file=sys.stdout) -> None:

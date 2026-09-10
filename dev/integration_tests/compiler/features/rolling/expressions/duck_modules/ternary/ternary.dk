@@ -1,0 +1,77 @@
+# The unusual style of this test so to use as little of the duckling language 
+# as possible, in order to test only the correctness of the ternary operator
+# and not fail when some other functionality is being worked on.
+# Unfortunately had to use printing, as the result was larger then 255.
+
+# Subsequent values are binary, so by looking at the binary representation of 
+# the printed values one can deduce which cases where evaluated. 
+
+
+fun localVariableAsCondition() -> i64 = {
+    var a: bool = true;
+    let sub1: i64 = if a then 1i64   else 2i64; # sub1 = 1
+
+    a = false;
+    let sub2: i64 = if a then 4i64   else 8i64; # sub2 = 8
+
+    return sub1 + sub2; # 9    (1001)
+}
+
+fun literalAsCondition() -> i64 = {
+    let sub1 = if true  then 1i64  else 2i64;  # sub1 = 1
+    let sub2 = if false then 4i64  else 8i64;  # sub2 = 8
+
+    return sub1 + sub2; # 9    (1001)
+}
+
+fun localVariableAsValue() -> i64 = {
+    var b: i64 = 1i64;
+    let sub1: i64 = if true  then b   else 2i64; # sub1 = 1
+    b = 4i64;
+    let sub2: i64 = if false then b   else 8i64; # sub2 = 8
+
+    return sub1 + sub2; # 9   (1001)
+}
+
+fun expressionAsValue() -> i64 = {
+    let sub1: i64 = if true  then 1i64 + 1i64 else 4i64;  # sub1 = 2
+    let sub2: i64 = if false then 4i64 + 4i64 else 16i64; # sub2 = 16
+
+    return sub1 + sub2; # 18  (10010)
+}
+
+fun conditionCoercions() -> i64 = {
+    var a: i64 = 1;
+    let sub1: i64 = if a then 1i64 + 1i64 else 4i64;  # sub1 = 2
+    return sub1; # 2
+}
+
+fun nestedTernaryValue() -> i64 = {
+    let sub1: i64 = 
+    if true then (
+        if false then
+            1i64
+        else (
+            if false then (
+                2i64
+            ) else (
+                4i64          # sub1 = 4           
+            )
+        )
+    ) else (
+        8i64
+    );
+
+    return sub1;       # 4 (10)
+}
+
+fun main() -> i64 = {
+    builtin_output_i64(localVariableAsCondition());
+    builtin_output_i64(literalAsCondition());
+    builtin_output_i64(localVariableAsValue());
+    builtin_output_i64(expressionAsValue());
+    builtin_output_i64(nestedTernaryValue());
+    builtin_output_i64(conditionCoercions());
+
+    return 0i64;
+}

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
@@ -11,11 +12,10 @@ use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverGathererData};
-use crate::quackpack::core::{PackageContext, PackageLoader, Version};
+use crate::quackpack::core::{PackageContext, PackageId, PackageLoader, Version};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::quackpack::util::with_version::WithVersion;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
@@ -30,7 +30,7 @@ impl GitAccess for MockGitAccess {
     }
 
     fn store(
-        &mut self,
+        &self,
         _url: InternedUrl,
         _commit: &str,
         _source_path: &std::path::Path,
@@ -78,9 +78,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -92,9 +92,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: [("a".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -106,9 +106,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -149,7 +149,7 @@ fn new_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -175,13 +175,13 @@ dependencies:
     let origin_registry = FullOrigin::for_registry(url);
 
     let identity_root = FullIdentity::new("root".into(), origin_root);
-    let pkg_root = WithVersion::new(identity_root, Version::new(0, 1, 0));
+    let pkg_root = PackageId::new(identity_root, Version::new(0, 1, 0));
 
     let identity_a = FullIdentity::new("a".into(), origin_registry);
-    let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
+    let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
 
     let identity_b = FullIdentity::new("b".into(), origin_registry);
-    let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+    let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
 
     let previous_freeze = SolverFreeze {
         main_pkg: pkg_root,
@@ -205,13 +205,12 @@ dependencies:
     };
 
     let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
-    let ShouldRunSolverEngine::Yes(solver) = solver
-        .prepare_solving(&mut fetcher, &mut MockGitAccess())
-        .unwrap()
+    let ShouldRunSolverEngine::Yes(solver) =
+        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {
         panic!()
     };
-    let new_freeze = solver.solve().unwrap().new_freeze;
+    let new_freeze = solver.solve(&ctx).unwrap().new_freeze;
     assert_eq!(new_freeze.main_pkg, pkg_root);
     assert_eq!(
         new_freeze.package_freezes,
@@ -250,7 +249,7 @@ fn remove_unnecessary_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -272,13 +271,13 @@ dependencies:
     let origin_registry = FullOrigin::for_registry(url);
 
     let identity_root = FullIdentity::new("root".into(), origin_root);
-    let pkg_root = WithVersion::new(identity_root, Version::new(0, 1, 0));
+    let pkg_root = PackageId::new(identity_root, Version::new(0, 1, 0));
 
     let identity_a = FullIdentity::new("a".into(), origin_registry);
-    let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
+    let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
 
     let identity_b = FullIdentity::new("b".into(), origin_registry);
-    let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+    let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
 
     let previous_freeze = SolverFreeze {
         main_pkg: pkg_root,
@@ -309,9 +308,8 @@ dependencies:
     };
 
     let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
-    let ShouldRunSolverEngine::No(answer) = solver
-        .prepare_solving(&mut fetcher, &mut MockGitAccess())
-        .unwrap()
+    let ShouldRunSolverEngine::No(answer) =
+        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {
         panic!()
     };
@@ -351,7 +349,7 @@ fn no_longer_working_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -374,11 +372,11 @@ dependencies:
     let origin_registry = FullOrigin::for_registry(url);
 
     let identity_root = FullIdentity::new("root".into(), origin_root);
-    let pkg_root = WithVersion::new(identity_root, Version::new(0, 1, 0));
+    let pkg_root = PackageId::new(identity_root, Version::new(0, 1, 0));
 
     let identity_a = FullIdentity::new("a".into(), origin_registry);
-    let pkg_a1 = WithVersion::new(identity_a, Version::new(1, 0, 0));
-    let pkg_a2 = WithVersion::new(identity_a, Version::new(2, 0, 0));
+    let pkg_a1 = PackageId::new(identity_a, Version::new(1, 0, 0));
+    let pkg_a2 = PackageId::new(identity_a, Version::new(2, 0, 0));
 
     let previous_freeze = SolverFreeze {
         main_pkg: pkg_root,
@@ -406,13 +404,12 @@ dependencies:
         frozen: false,
     };
     let solver = SolverGathererData::new(&pcx, previous_freeze, mode).unwrap();
-    let ShouldRunSolverEngine::Yes(solver) = solver
-        .prepare_solving(&mut fetcher, &mut MockGitAccess())
-        .unwrap()
+    let ShouldRunSolverEngine::Yes(solver) =
+        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {
         panic!()
     };
-    let new_freeze = solver.solve().unwrap().new_freeze;
+    let new_freeze = solver.solve(&ctx).unwrap().new_freeze;
     assert_eq!(new_freeze.main_pkg, pkg_root);
     assert_eq!(
         new_freeze.package_freezes,

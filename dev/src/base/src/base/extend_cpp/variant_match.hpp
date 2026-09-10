@@ -70,7 +70,7 @@ namespace base {
 	 * @brief Helper function for filtering variants
 	 */
 	template<typename T, typename U>
-	static bool holds(const U& el) {
+	bool holds(const U& el) {
 		return std::holds_alternative<T>(el);
 	}
 
@@ -79,7 +79,7 @@ namespace base {
 	 * @TODO: #3073 change to ref
 	 */
 	template<typename T, typename U>
-	static T choose(const U& el) {
+	T choose(const U& el) {
 		return std::get<T>(el);
 	}
 
@@ -148,7 +148,7 @@ namespace base {
 /**
  * @brief An `if` clause called when `v` holds `type`. The inner type is accessible through `name`.
  */
-#define v_if_matches(v, type, name) if (const auto* name = std::get_if<type>(&v))
+#define v_if_matches(v, type, name) if (auto* name = std::get_if<type>(&v))
 
 /**
  * @brief Use instead of `std::visit` with multiple choices.

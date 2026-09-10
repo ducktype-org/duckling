@@ -6,6 +6,6 @@ add_library(TPC STATIC
 	src/token_parser_core/automatic.cpp
 )
 
-make_module(TPC USES Printer Base Lexer Diagnostic DiagnosticInteractive Hashing)
+make_module(TPC USES Printer Base Lexer Diagnostic Hashing)
 
 duck_add_test(compiler parsing_errors tests/parsing_errors_test.cpp USES TPC)

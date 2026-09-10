@@ -7,8 +7,7 @@ use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
-use crate::quackpack::core::storage::package_id::RegistryId;
-use crate::quackpack::core::{PackageLoader, Version};
+use crate::quackpack::core::{PackageId, PackageLoader, Version};
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
@@ -35,10 +34,12 @@ pub fn setup_mock_storage() -> (DuckContext, TempDir) {
 
 pub fn setup_mock_packages(root: &Path) {
     for (name, manifest) in packages_names_and_manifests() {
-        let pkg_id = RegistryId::new(
-            (*name).into(),
+        let pkg_id = PackageId::new(
+            FullIdentity::new(
+                (*name).into(),
+                FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap()),
+            ),
             Version::new(1, 0, 0),
-            Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
         );
         root.join("pkg")
             .join(pkg_id.storage_name())

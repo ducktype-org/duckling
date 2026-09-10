@@ -5,21 +5,19 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
-use crate::quackpack::core::FeatureName;
-use crate::quackpack::core::full_identity::FullIdentity;
 use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
-use crate::quackpack::util::with_version::WithVersion;
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::quackpack::core::{FeatureName, PackageId};
+use crate::{QuackResult, StrId, qp_bail_internal};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolverFreeze {
-    pub package_freezes: HashMap<WithVersion<FullIdentity>, SolverPackageFreeze>,
-    pub main_pkg: WithVersion<FullIdentity>,
+    pub package_freezes: HashMap<PackageId, SolverPackageFreeze>,
+    pub main_pkg: PackageId,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolverPackageFreeze {
-    pub dependencies_realization: HashMap<StrId, WithVersion<FullIdentity>>,
+    pub dependencies_realization: HashMap<StrId, PackageId>,
     pub features: HashSet<FeatureName>,
 }
 
@@ -41,26 +39,23 @@ impl Default for SolverPackageFreeze {
 impl SolverFreeze {
     // @TODO: #2076 Fix issues with storage's freeze.
     #[tracing::instrument(skip_all)]
-    pub fn try_from_venv_freeze(
-        root: WithVersion<FullIdentity>,
-        value: &VenvFreeze,
-    ) -> QuackResult<Self> {
-        debug!(root = ?root, freeze = ?value);
+    pub fn try_from_venv_freeze(root: PackageId, value: &VenvFreeze) -> QuackResult<Self> {
+        debug!(?root, freeze = ?value);
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
-            let pkg = WithVersion::new(*pkg_freeze.identity(), pkg_freeze.version());
+            let pkg = PackageId::new(pkg_freeze.identity(), pkg_freeze.version());
             expanded_pkgs_by_name.insert(pkg_freeze.name(), pkg);
         }
         let mut pkg_freezes = HashMap::new();
         for pkg_freeze in value.dependencies() {
-            let pkg = expanded_pkgs_by_name
-                .get(&pkg_freeze.name())
-                .context_internal("No package with given name")?;
+            let Some(pkg) = expanded_pkgs_by_name.get(&pkg_freeze.name()) else {
+                qp_bail_internal!("no package {pkg_freeze:?} in {expanded_pkgs_by_name:#?}")
+            };
             let mut dependencies = HashMap::new();
             for dep in pkg_freeze.dependencies() {
-                let realization = expanded_pkgs_by_name
-                    .get(&dep.name())
-                    .context_internal("No package with given name")?;
+                let Some(realization) = expanded_pkgs_by_name.get(&dep.name()) else {
+                    qp_bail_internal!("no package {dep:?} in {expanded_pkgs_by_name:#?}")
+                };
                 dependencies.insert(dep.name(), *realization);
             }
             pkg_freezes.insert(
@@ -74,9 +69,9 @@ impl SolverFreeze {
 
         let mut main_dependencies = HashMap::new();
         for dep in value.root().dependencies() {
-            let realization = expanded_pkgs_by_name
-                .get(&dep.name())
-                .context_internal("No package with given name")?;
+            let Some(realization) = expanded_pkgs_by_name.get(&dep.name()) else {
+                qp_bail_internal!("no package {dep:?} in {expanded_pkgs_by_name:#?}")
+            };
             if *realization != root {
                 main_dependencies.insert(dep.name(), *realization);
             }
@@ -98,7 +93,7 @@ impl SolverFreeze {
 
 impl SolverFreeze {
     #[tracing::instrument(skip_all)]
-    pub fn empty_with_root(root: WithVersion<FullIdentity>) -> QuackResult<Self> {
+    pub fn empty_with_root(root: PackageId) -> QuackResult<Self> {
         debug!(?root);
         Ok(Self {
             main_pkg: root,
@@ -110,21 +105,19 @@ impl SolverFreeze {
     pub fn generate_storage_freeze(self) -> QuackResult<VenvFreeze> {
         debug!(root = ?self.main_pkg, freeze = ?self.package_freezes);
         let mut pkg_freezes = vec![];
-        let root_freeze = self
-            .package_freezes
-            .get(&self.main_pkg)
-            .context_internal("No main freeze")?
-            .clone();
+        let Some(root_freeze) = self.package_freezes.get(&self.main_pkg).cloned() else {
+            qp_bail_internal!("no main freeze: {self:#?}")
+        };
         for (pkg, freeze) in self.package_freezes {
             if pkg == self.main_pkg {
                 continue;
             }
             let mut dependencies = vec![];
             for (_, realization) in freeze.dependencies_realization {
-                dependencies.push((*realization.value()).into());
+                dependencies.push((realization.identity()).into());
             }
             pkg_freezes.push(FreezePackage::new(
-                *pkg.value(),
+                pkg.identity(),
                 pkg.version(),
                 freeze.features.into_iter().collect::<Vec<_>>(),
                 dependencies,
@@ -132,10 +125,10 @@ impl SolverFreeze {
         }
         let mut root_deps = vec![];
         for (_, realization) in root_freeze.dependencies_realization {
-            root_deps.push((*realization.value()).into());
+            root_deps.push(realization.identity().into());
         }
         let root = RootPackage::new(
-            self.main_pkg.value().name(),
+            self.main_pkg.name(),
             self.main_pkg.version(),
             root_freeze.features.into_iter().collect::<Vec<_>>(),
             root_deps,
@@ -150,7 +143,7 @@ mod test {
 
     use super::*;
     use crate::quackpack::core::Version;
-    use crate::quackpack::core::full_identity::FullOrigin;
+    use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
     use crate::quackpack::core::identity::{Identity, Origin};
     use crate::quackpack::util::to_url::ToUrl;
 
@@ -163,8 +156,8 @@ mod test {
         let origin_b = FullOrigin::for_local(&PathBuf::from("/xdd")).unwrap();
         let identity_a = FullIdentity::new("a".into(), origin_a);
         let identity_b = FullIdentity::new("b".into(), origin_b);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let freeze_pkg_a = FreezePackage::new(
             FullIdentity::new(
                 "a".into(),
@@ -212,7 +205,7 @@ mod test {
         #[cfg(not(windows))]
         let origin_root = FullOrigin::for_local(&PathBuf::from("/")).unwrap();
         let identity_root = FullIdentity::new("root".into(), origin_root);
-        let pkg_root = WithVersion::new(identity_root, Version::new(3, 0, 0));
+        let pkg_root = PackageId::new(identity_root, Version::new(3, 0, 0));
         let storage_freeze = VenvFreeze::new(root, vec![freeze_pkg_a, freeze_pkg_b]);
         let solver_freeze = SolverFreeze::try_from_venv_freeze(pkg_root, &storage_freeze).unwrap();
         assert_eq!(solver_freeze.main_pkg, pkg_root);
@@ -260,9 +253,9 @@ mod test {
         let identity_root = FullIdentity::new("root".into(), origin_root);
         let identity_a = FullIdentity::new("a".into(), origin_a);
         let identity_b = FullIdentity::new("b".into(), origin_b);
-        let pkg_root = WithVersion::new(identity_root, Version::new(3, 0, 0));
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_root = PackageId::new(identity_root, Version::new(3, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let solver_freeze = SolverFreeze {
             main_pkg: pkg_root,
             package_freezes: HashMap::from([

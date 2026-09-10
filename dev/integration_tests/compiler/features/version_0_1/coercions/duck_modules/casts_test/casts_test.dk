@@ -1,0 +1,93 @@
+fun main() -> i64 = {
+
+    # 1) i32 -> i64 (widening)
+    var a32: i32 = (-1) as i32;  # explicit narrow from i64 literal
+    var a64: i64 = a32 as i64;   # explicit widen
+    builtin_output_i64(a64);     # -1
+
+    # 1) f32 -> f64 (widening)
+    var t32: f32 = (-1.0) as f32;      # explicit narrow from f64 literal
+    var t64: f64 = t32 as f64;     # explicit widen
+    builtin_output_f64(t64);     # -1
+
+    # 2) i32 -> i64 (positive)
+    var b32: i32 = 255 as i32;
+    var b64: i64 = b32 as i64;
+    builtin_output_i64(b64);     # 255
+
+    # 3) i64 -> i32 -> i64 (narrow then extend; wrap)
+    var big: i64 = 4294967295;   # 0x00000000_FFFFFFFF -> -1 when truncated to i32
+    var c32: i32 = big as i32;
+    var c64: i64 = c32 as i64;
+    builtin_output_i64(c64);     # -1
+
+    # 4) i32 -> f64 -> i32 (round trip, value in range, no saturation)
+    var d32: i32 = (-42) as i32;
+    var dflt: f64 = d32 as f64;       # int -> float
+    var d32b: i32 = dflt as i32;      # float -> int
+    var d64: i64 = d32b as i64;
+    builtin_output_i64(d64);     # -42
+
+    # 5) large positive -> f64 -> i32 (saturate to INT32_MAX)
+    var bigpos: i64 = 3000000000;    # > INT32_MAX
+    var bigposf: f64 = bigpos as f64;
+    var satpos32: i32 = bigposf as i32;     # saturating
+    var satpos64: i64 = satpos32 as i64;
+    builtin_output_i64(satpos64);    # 2147483647
+
+    # 6) large negative -> f64 -> i32 (saturate to INT32_MIN)
+    var bigneg: i64 = -3000000000i64;   # < INT32_MIN
+    var bignegf: f64 = bigneg as f64;
+    var satneg32: i32 = bignegf as i32;     # saturating
+    var satneg64: i64 = satneg32 as i64;
+    builtin_output_i64(satneg64);    # -2147483648
+
+    # 7) Implicit widening casts should still work (i16 -> i64 and i32 -> i64)
+    var w16: i16 = 7 as i16;
+    var w64a: i64 = w16;             # implicit widen
+    builtin_output_i64(w64a);        # 7
+
+    var w32: i32 = 9 as i32;
+    var w64b: i64 = w32;             # implicit widen
+    builtin_output_i64(w64b);        # 9
+
+    var bool_i64: i64 = 64;
+    var bool_val: bool = bool_i64;
+    var bool_i64b: i64 = bool_val;
+    builtin_output_i64(bool_i64b);   # 1
+
+    # 8) f64 and f32 literal parsing and output
+    var lit_f64: f64 = 123.456;
+    builtin_output_f64(lit_f64);     # 123.456
+
+    var lit_f32: f32 = 789.25f32;
+    builtin_output_f64(lit_f32);     # 789.25
+
+    # 9) Casts between ints and floats
+    var i_val: i64 = 42;
+    var f_val: f64 = i_val as f64;
+    builtin_output_f64(f_val);       # 42.0
+
+    var i_val2: i32 = 99;
+    var f_val2: f32 = i_val2 as f32;
+    builtin_output_f64(f_val2);      # 99.0
+
+    var f64_val: f64 = 3.14;
+    var i64_val: i64 = f64_val as i64;
+    builtin_output_i64(i64_val);     # 3
+
+    var f32_val: f32 = 2.99f32;
+    var i32_val: i32 = f32_val as i32;
+    builtin_output_i64(i32_val);     # 2
+
+    # 10) Negative float to int
+    var neg_f64: f64 = -7.8;
+    var neg_i64: i64 = neg_f64 as i64;
+    builtin_output_i64(neg_i64);     # -7
+
+    var neg_f32: f32 = -8.9f32;
+    var neg_i32: i32 = neg_f32 as i32;
+    builtin_output_i64(neg_i32);     # -8
+
+    return 0;
+}

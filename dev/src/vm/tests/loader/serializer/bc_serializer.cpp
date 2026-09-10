@@ -72,6 +72,20 @@ private:
 		global.initial_value = ConstantValue::fromData(std::move(constant_array));
 		code.global_data.push_back(std::move(global));
 
+		// FFI: a bare library name is handed to `dlopen` untouched, so it survives the round-trip
+		// verbatim (a relative path would be resolved against the source file).
+		code.object_files.emplace_back("libm.so.6");
+
+		FFIFunction ffi_func;
+		ffi_func.name = Identifier(base::StrID("sqrt"));
+		ffi_func.signature.parameters.emplace_back(base::StrID("f64"));
+		ffi_func.signature.result_types.emplace_back(base::StrID("f64"));
+		code.ffi_functions.push_back(std::move(ffi_func));
+
+		FFIFunction ffi_void_func;
+		ffi_void_func.name = Identifier(base::StrID("abort"));
+		code.ffi_functions.push_back(std::move(ffi_void_func));
+
 		Function func;
 		func.name = Identifier(base::StrID("main"));
 		func.signature.parameters.emplace_back(base::StrID("i64"));
@@ -101,18 +115,13 @@ private:
 		fs::File vfile  = fs::FileManager::createRandomVirtualFile(serialized, ".dbc");
 		auto     result = Loader::parseCodeCollectionFromFiles({ vfile });
 
-		assertTrue(result.has_value(), "Parsing round-trip should succeed");
+		ASSERT_HAS_VALUE(result, "Parsing round-trip should succeed");
 		const CodeCollection& parsed = result.value();
 
 		// Check types
 		assertEqual(parsed.types.size(), original.types.size(), "Type count should match");
-		assertTrue(
-			std::holds_alternative<PrimitiveType>(parsed.types[0]),
-			"First type should be PrimitiveType"
-		);
-		assertTrue(
-			std::holds_alternative<DataType>(parsed.types[1]), "Second type should be DataType"
-		);
+		ASSERT_MATCHES(parsed.types[0], PrimitiveType);
+		ASSERT_MATCHES(parsed.types[1], DataType);
 
 		const auto& prim = std::get<PrimitiveType>(parsed.types[0]);
 		assertEqual(prim.name, base::StrID("i32"), "Primitive type name should be i32");
@@ -135,9 +144,7 @@ private:
 		);
 		const auto& void_cptr = std::get<CPointerType>(parsed.types[4]);
 		assertEqual(void_cptr.name, base::StrID("raw_ptr"), "C pointer name should survive");
-		assertTrue(
-			!void_cptr.inner.has_value(), "An absent C pointer inner should survive round-trip"
-		);
+		ASSERT_NO_VALUE(void_cptr.inner, "An absent C pointer inner should survive round-trip");
 
 		// Check global data
 		assertEqual(
@@ -147,7 +154,7 @@ private:
 		assertEqual(g.name.str, base::StrID("answers"), "Global name should be answer");
 		assertEqual(g.type.str, base::StrID("points"), "Global type should be i64");
 		assertTrue(g.is_constant, "Global should be constant");
-		assertTrue(g.initial_value.has_value(), "Global should have initial_value");
+		ASSERT_HAS_VALUE(g.initial_value, "Global should have initial_value");
 		auto initial_value = *g.initial_value;
 		auto cfst = dynamic_cast<vm::code::ConstantFixedSizeTable*>(initial_value.data.get());
 		assertTrue(cfst, "Pointer has null value");
@@ -159,6 +166,32 @@ private:
 		int decoded_value = 0;
 		std::memcpy(&decoded_value, cimm->content.data(), 4);
 		ASSERT_EQUAL_PRINT(decoded_value, 1);
+
+		// Check FFI declarations
+		assertEqual(
+			parsed.object_files.size(),
+			original.object_files.size(),
+			"Object file count should match"
+		);
+		assertEqual(
+			parsed.object_files[0], std::string("libm.so.6"), "Object file path should match"
+		);
+
+		assertEqual(
+			parsed.ffi_functions.size(), original.ffi_functions.size(), "FFI count should match"
+		);
+		const FFIFunction& ffi = parsed.ffi_functions[0];
+		assertEqual(ffi.name.str, base::StrID("sqrt"), "FFI function name should be sqrt");
+		assertTrue(
+			ffi.signature == original.ffi_functions[0].signature,
+			"FFI function signature should survive round-trip"
+		);
+		const FFIFunction& void_ffi = parsed.ffi_functions[1];
+		assertEqual(void_ffi.name.str, base::StrID("abort"), "FFI function name should be abort");
+		assertTrue(
+			void_ffi.signature.parameters.empty() && void_ffi.signature.result_types.empty(),
+			"An empty FFI signature should survive round-trip"
+		);
 
 		// Check function
 		assertEqual(
@@ -192,6 +225,9 @@ global_data answers point_arr {
     initial_value: fixed_size_table [ class { x: 0x12345678, y: 0x87654321, is_ok: 0xFF }, class { x: 0x00000001, y: 0xFFFFFFFF, is_ok: 0x0A } ]
 }
 
+ffi object "libm.so.6";
+ffi function sqrt { i64 } -> { i64 };
+
 function main { i64, ptr_argv } -> { i64 } {
     mov_p64_imm                ret0,        0;
     ret                   ;
@@ -203,7 +239,7 @@ function main { i64, ptr_argv } -> { i64 } {
 		fs::File vfile  = fs::FileManager::createRandomVirtualFile(content, ".dbc");
 		auto     result = Loader::parseCodeCollectionFromFiles({ vfile });
 
-		assertTrue(result.has_value(), "Parsing round-trip should succeed");
+		ASSERT_HAS_VALUE(result, "Parsing round-trip should succeed");
 		const CodeCollection& parsed = result.value();
 
 		std::ostringstream oss;

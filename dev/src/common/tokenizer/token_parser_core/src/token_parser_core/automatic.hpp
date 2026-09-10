@@ -26,8 +26,7 @@
 #include "base_element.hpp"
 #include "common_elements.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
+#include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 
@@ -184,8 +183,8 @@ namespace tpc {
 		}
 	};
 
-	class BadKeywordError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadKeywordError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -195,12 +194,12 @@ namespace tpc {
 	public:
 		BadKeywordError(dia::SourcePosition pos, Keyword key):
 			  MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia_int::TextArgument>("keyword", lang_def::keywordToStr(key).str());
+			addArgument<dia::TextArgument>("keyword", lang_def::keywordToStr(key).str());
 		}
 	};
 
-	class BadSpecialError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadSpecialError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -210,12 +209,12 @@ namespace tpc {
 	public:
 		BadSpecialError(dia::SourcePosition pos, Special spec):
 			  MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia_int::TextArgument>("special", lang_def::specialToStr(spec).str());
+			addArgument<dia::TextArgument>("special", lang_def::specialToStr(spec).str());
 		}
 	};
 
-	class BadOperatorError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadOperatorError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -225,12 +224,12 @@ namespace tpc {
 	public:
 		BadOperatorError(dia::SourcePosition pos, Operator opr):
 			  MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia_int::TextArgument>("operator", opr.str());
+			addArgument<dia::TextArgument>("operator", opr.str());
 		}
 	};
 
-	class NoIdentifierError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NoIdentifierError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return {
 				.template_type = "message",
 				.type          = "error",
@@ -243,8 +242,8 @@ namespace tpc {
 		NoIdentifierError(dia::SourcePosition pos, std::string_view but_got);
 	};
 
-	class NoKeywordError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NoKeywordError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return {
 				.template_type = "message",
 				.type          = "error",
@@ -257,8 +256,8 @@ namespace tpc {
 		NoKeywordError(dia::SourcePosition pos, std::string_view but_got);
 	};
 
-	class NoOperatorError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NoOperatorError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return {
 				.template_type = "message",
 				.type          = "error",
@@ -271,8 +270,8 @@ namespace tpc {
 		NoOperatorError(dia::SourcePosition pos, std::string_view but_got);
 	};
 
-	class NoStringError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NoStringError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -283,8 +282,8 @@ namespace tpc {
 		NoStringError(dia::SourcePosition pos): MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class NoNumericValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NoNumericValueError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",

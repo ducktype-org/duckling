@@ -1,5 +1,18 @@
 # CLI tests
 
+# Every case gets a private scratch directory for its build artifacts,
+# so cases can run concurrently and never dirty the source tree.
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+
+case_build: "$DIT_TMP_DIR/build"
+
+# Private copy of the shared warm std artifacts (see the root testconfig).
+# duckc rewrites the artifacts directory on exit, so concurrent cases must not
+# point at the shared one - same reason as in compiler/features.
+case_std_artifacts: "$DIT_TMP_DIR/std_artifacts"
+copy_std_artifacts: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/null || true"
+
 Run: "@{duckc_path} @{run_args}"
 
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
@@ -30,3 +43,23 @@ Tests:
       bad-dev-logs:
         run_args: "--dev-logs \"\"  dummy "
         ExitCode: 1
+
+  compile-modules:
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    TimeOut: 3
+    Cases:
+      two-modules:
+        run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
+        ExitCode: 0
+
+  comp-time-output:
+    # Test compile time output to stderr
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    timeout_default: 5
+    Run: "@{expect_output} --err-regex '\\[comp-time\\] 3492'
+      -- @{duckc_path} compile_modules ./duck_modules/comp_time_output/comp_time_output.dk
+      -O 0 --no-incremental --dvm-backend -a @{case_build}
+      --custom-std-artifacts-path @{case_std_artifacts}"
+    Cases:
+      dvm-backend:
+        ExitCode: 0

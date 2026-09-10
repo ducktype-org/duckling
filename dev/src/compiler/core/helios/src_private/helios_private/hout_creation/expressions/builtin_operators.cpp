@@ -42,21 +42,15 @@ namespace {
 		auto lhs_to_rhs = canCoerce(ctx, lhs->expression_type, rhs_direct).valueOrThrow();
 		auto rhs_to_rhs = canCoerce(ctx, rhs->expression_type, rhs_direct).valueOrThrow();
 
-		if (lhs_to_rhs.isValid() && rhs_to_rhs.isValid()) {
-			return std::make_tuple(
-				rhs_direct, std::move(lhs_to_rhs).getCoercion(), std::move(rhs_to_rhs).getCoercion()
-			);
-		}
+		if (lhs_to_rhs.isValid() && rhs_to_rhs.isValid())
+			return std::make_tuple(rhs_direct, std::move(lhs_to_rhs), std::move(rhs_to_rhs));
 
 		// Try to coerce both values to the lhs direct type.
 		auto lhs_to_lhs = canCoerce(ctx, lhs->expression_type, lhs_direct).valueOrThrow();
 		auto rhs_to_lhs = canCoerce(ctx, rhs->expression_type, lhs_direct).valueOrThrow();
 
-		if (lhs_to_lhs.isValid() && rhs_to_lhs.isValid()) {
-			return std::make_tuple(
-				lhs_direct, std::move(lhs_to_lhs).getCoercion(), std::move(rhs_to_lhs).getCoercion()
-			);
-		}
+		if (lhs_to_lhs.isValid() && rhs_to_lhs.isValid())
+			return std::make_tuple(lhs_direct, std::move(lhs_to_lhs), std::move(rhs_to_lhs));
 
 		// Invalid coercion.
 		return {};
@@ -78,12 +72,13 @@ namespace compiler::helios::code {
 				  /// Negations ///
 				  { { base::StrID("-"), tsh::Kind::Integral }, BuiltinUnary::IntegerNegation },
 				  { { base::StrID("-"), tsh::Kind::Float }, BuiltinUnary::FloatNegation },
+
+				  /// Bitwise negation ///
+				  { { base::StrID("~"), tsh::Kind::Integral }, BuiltinUnary::IntegerBitNot },
 			  };
 
 		if (numeric_operators.contains({ op, operation_kind }))
-			return std::make_tuple(
-				numeric_operators.at({ op, operation_kind }), coercion.getCoercion()
-			);
+			return std::make_tuple(numeric_operators.at({ op, operation_kind }), coercion);
 
 		return {};
 	}
@@ -107,6 +102,13 @@ namespace compiler::helios::code {
 				  { { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
 				  { { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
 				  { { base::StrID("**"), tsh::Kind::Integral }, BuiltinBinary::IntegerPow },
+
+				  /// Bitwise operations ///
+				  { { base::StrID("&"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitAnd },
+				  { { base::StrID("|"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitOr },
+				  { { base::StrID("^"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitXor },
+				  { { base::StrID("<<"), tsh::Kind::Integral }, BuiltinBinary::IntegerShl },
+				  { { base::StrID(">>"), tsh::Kind::Integral }, BuiltinBinary::IntegerShr },
 
 				  /// Integer comparisons ///
 				  { { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },

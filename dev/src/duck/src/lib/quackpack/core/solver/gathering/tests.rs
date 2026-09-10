@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::Duration;
 
+use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
@@ -11,12 +12,11 @@ use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::{Source, Version, parse_manifest};
+use crate::quackpack::core::{PackageId, Source, Version, parse_manifest};
 use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::quackpack::util::with_version::WithVersion;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
@@ -31,7 +31,7 @@ impl GitAccess for MockGitAccess {
     }
 
     fn store(
-        &mut self,
+        &self,
         _url: InternedUrl,
         _commit: &str,
         _source_path: &std::path::Path,
@@ -79,6 +79,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -94,9 +95,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![foo_bar_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -108,9 +109,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -122,9 +123,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -136,9 +137,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -152,6 +153,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![DependencyFeature::Detailed(OneEntryMap {
             key: "dx".into(),
             value: DependencyCondition {
@@ -172,9 +174,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "xd".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: [("dx".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -186,9 +188,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "dx".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![dx_xd_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [("root".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -202,6 +204,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![DependencyFeature::Simple("f".into())],
         pinned: true,
         conditions: registry::DependencyCondition {
@@ -218,6 +221,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -233,9 +237,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![a_c_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [("f".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -247,9 +251,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: [].into(),
         profiles: HashMap::new(),
     };
@@ -261,9 +265,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![b_a_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [].into(),
         profiles: HashMap::new(),
     };
@@ -275,9 +279,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "c".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: [].into(),
         profiles: HashMap::new(),
     };
@@ -291,6 +295,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![DependencyFeature::Simple("u".into())],
         pinned: true,
         conditions: registry::DependencyCondition {
@@ -307,6 +312,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![DependencyFeature::Simple("v".into())],
         pinned: true,
         conditions: registry::DependencyCondition {
@@ -320,11 +326,11 @@ fn create_mock_server() -> MockServer {
             version: Version::new(1, 0, 0),
             authors: vec!["Carly Shillingford".into()],
             license: "MIT".into(),
-            name: "a".into(),
+            name: "u".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![u_v_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [("v".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -334,11 +340,11 @@ fn create_mock_server() -> MockServer {
             version: Version::new(1, 0, 0),
             authors: vec!["Carly Shillingford".into()],
             license: "MIT".into(),
-            name: "a".into(),
+            name: "v".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![v_u_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [("u".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -352,6 +358,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: server.base_url(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: true,
         conditions: registry::DependencyCondition {
@@ -365,11 +372,11 @@ fn create_mock_server() -> MockServer {
             version: Version::new(1, 0, 0),
             authors: vec!["Carly Shillingford".into()],
             license: "MIT".into(),
-            name: "a".into(),
+            name: "n".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![n_m_dep],
-        dev_dependencies: registry::Dependencies::new(),
         features: [
             ("expandable".into(), vec!["expanded".into()]),
             ("expanded".into(), vec![]),
@@ -383,11 +390,11 @@ fn create_mock_server() -> MockServer {
             version: Version::new(1, 0, 0),
             authors: vec!["Carly Shillingford".into()],
             license: "MIT".into(),
-            name: "a".into(),
+            name: "m".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![],
-        dev_dependencies: registry::Dependencies::new(),
         features: [].into(),
         profiles: HashMap::new(),
     };
@@ -505,7 +512,7 @@ fn not_pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -522,17 +529,16 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest.manifest().clone(),
-            HashSet::new(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        HashSet::new(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_foo = FullIdentity::new("foo".into(), FullOrigin::for_registry(url));
     let identity_bar = FullIdentity::new("bar".into(), FullOrigin::for_registry(url));
@@ -551,11 +557,11 @@ dependencies:
         ])
     );
     let packages = HashSet::from([
-        WithVersion::new(identity_root, root_version),
-        WithVersion::new(identity_foo, Version::new(1, 0, 0)),
-        WithVersion::new(identity_foo, Version::new(2, 0, 0)),
-        WithVersion::new(identity_bar, Version::new(3, 0, 0)),
-        WithVersion::new(identity_bar, Version::new(4, 1, 1)),
+        PackageId::new(identity_root, root_version),
+        PackageId::new(identity_foo, Version::new(1, 0, 0)),
+        PackageId::new(identity_foo, Version::new(2, 0, 0)),
+        PackageId::new(identity_bar, Version::new(3, 0, 0)),
+        PackageId::new(identity_bar, Version::new(4, 1, 1)),
     ]);
     assert_eq!(
         packages,
@@ -563,7 +569,7 @@ dependencies:
             .gathered_manifests
             .keys()
             .copied()
-            .collect::<HashSet<WithVersion<FullIdentity>>>()
+            .collect::<HashSet<PackageId>>()
     );
     assert_eq!(
         packages,
@@ -571,7 +577,7 @@ dependencies:
             .possible_features
             .keys()
             .copied()
-            .collect::<HashSet<WithVersion<FullIdentity>>>()
+            .collect::<HashSet<PackageId>>()
     );
     for (_, features) in gathered_info.possible_features {
         assert!(features.is_empty());
@@ -599,7 +605,7 @@ fn pinned_registry() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -622,17 +628,16 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest.manifest().clone(),
-            HashSet::new(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        HashSet::new(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_xd = FullIdentity::new("xd".into(), FullOrigin::for_registry(url));
     let identity_dx = FullIdentity::new("dx".into(), FullOrigin::for_registry(url));
@@ -657,7 +662,7 @@ fn features() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -686,17 +691,16 @@ features:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest.manifest().clone(),
-            ["my_feature".into()].into(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        ["my_feature".into()].into(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_xd = FullIdentity::new("xd".into(), FullOrigin::for_registry(url));
     let identity_dx = FullIdentity::new("dx".into(), FullOrigin::for_registry(url));
@@ -704,15 +708,15 @@ features:
         gathered_info.possible_features,
         HashMap::from([
             (
-                WithVersion::new(identity_root, root_version),
+                PackageId::new(identity_root, root_version),
                 ["my_feature".into()].into()
             ),
             (
-                WithVersion::new(identity_xd, Version::new(1, 0, 0)),
+                PackageId::new(identity_xd, Version::new(1, 0, 0)),
                 ["dx".into()].into()
             ),
             (
-                WithVersion::new(identity_dx, Version::new(2, 0, 0)),
+                PackageId::new(identity_dx, Version::new(2, 0, 0)),
                 ["root".into()].into()
             ),
         ])
@@ -739,7 +743,7 @@ fn pinned_request_while_pending_not_pinned() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -760,17 +764,16 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest.manifest().clone(),
-            [].into(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        [].into(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_a = FullIdentity::new("a".into(), FullOrigin::for_registry(url));
     let identity_b = FullIdentity::new("b".into(), FullOrigin::for_registry(url));
@@ -790,23 +793,14 @@ dependencies:
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
-            (WithVersion::new(identity_root, root_version), [].into()),
+            (PackageId::new(identity_root, root_version), [].into()),
             (
-                WithVersion::new(identity_a, Version::new(1, 0, 0)),
+                PackageId::new(identity_a, Version::new(1, 0, 0)),
                 ["f".into()].into()
             ),
-            (
-                WithVersion::new(identity_a, Version::new(2, 0, 0)),
-                [].into()
-            ),
-            (
-                WithVersion::new(identity_b, Version::new(1, 0, 0)),
-                [].into()
-            ),
-            (
-                WithVersion::new(identity_c, Version::new(1, 0, 0)),
-                [].into()
-            ),
+            (PackageId::new(identity_a, Version::new(2, 0, 0)), [].into()),
+            (PackageId::new(identity_b, Version::new(1, 0, 0)), [].into()),
+            (PackageId::new(identity_c, Version::new(1, 0, 0)), [].into()),
         ])
     )
 }
@@ -822,7 +816,7 @@ fn cycle() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -840,17 +834,16 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest.manifest().clone(),
-            [].into(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        [].into(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_u = FullIdentity::new("u".into(), FullOrigin::for_registry(url));
     let identity_v = FullIdentity::new("v".into(), FullOrigin::for_registry(url));
@@ -865,13 +858,13 @@ dependencies:
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
-            (WithVersion::new(identity_root, root_version), [].into()),
+            (PackageId::new(identity_root, root_version), [].into()),
             (
-                WithVersion::new(identity_u, Version::new(1, 0, 0)),
+                PackageId::new(identity_u, Version::new(1, 0, 0)),
                 ["v".into()].into()
             ),
             (
-                WithVersion::new(identity_v, Version::new(1, 0, 0)),
+                PackageId::new(identity_v, Version::new(1, 0, 0)),
                 ["u".into()].into()
             ),
         ])
@@ -888,7 +881,7 @@ fn features_expansion() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -907,17 +900,16 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest.manifest().clone(),
-            [].into(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        [].into(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_n = FullIdentity::new("n".into(), FullOrigin::for_registry(url));
     let identity_m = FullIdentity::new("m".into(), FullOrigin::for_registry(url));
@@ -932,15 +924,12 @@ dependencies:
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
-            (WithVersion::new(identity_root, root_version), [].into()),
+            (PackageId::new(identity_root, root_version), [].into()),
             (
-                WithVersion::new(identity_n, Version::new(1, 0, 0)),
+                PackageId::new(identity_n, Version::new(1, 0, 0)),
                 ["expandable".into(), "expanded".into()].into()
             ),
-            (
-                WithVersion::new(identity_m, Version::new(1, 0, 0)),
-                [].into()
-            ),
+            (PackageId::new(identity_m, Version::new(1, 0, 0)), [].into()),
         ])
     )
 }

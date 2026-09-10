@@ -2,6 +2,7 @@
 
 #include <json/diagnostics.hpp>
 #include <json/extract.hpp>
+#include <json/type_parse.hpp>
 
 #include <array>
 #include <string_view>
@@ -174,19 +175,15 @@ private:
 		ASSERT_NO_VALUE(js::getArray(json, "array", "bad", reporter.callback()));
 		ASSERT_NO_VALUE(js::getObject(json, "obj", "bad", reporter.callback()));
 		ASSERT_NO_VALUE(js::getObjectIfPresent(json, "obj", "bad", reporter.callback()));
-		ASSERT_TRUE(
-			!js::getStringValue(nlohmann::json::parse("123"), "value", "bad", reporter.callback())
-				 .has_value()
+		ASSERT_NO_VALUE(
+			js::getStringValue(nlohmann::json::parse("123"), "value", "bad", reporter.callback())
 		);
 
 		auto warn_json = nlohmann::json::parse(R"({"missing": 1, "items": ["ok", 2]})");
-		ASSERT_TRUE(!js::getStringWarning(warn_json, "nope", "warn", reporter.callback()).has_value()
-		);
+		ASSERT_NO_VALUE(js::getStringWarning(warn_json, "nope", "warn", reporter.callback()));
 		ASSERT_NO_VALUE(js::getBoolWarning(warn_json, "nope", "warn", reporter.callback()));
-		ASSERT_TRUE(!js::getArrayWarning(warn_json, "nope", "warn", reporter.callback()).has_value()
-		);
-		ASSERT_TRUE(!js::getObjectWarning(warn_json, "nope", "warn", reporter.callback()).has_value()
-		);
+		ASSERT_NO_VALUE(js::getArrayWarning(warn_json, "nope", "warn", reporter.callback()));
+		ASSERT_NO_VALUE(js::getObjectWarning(warn_json, "nope", "warn", reporter.callback()));
 
 		auto elem_warn
 			= js::getStringFromArrayWarning(warn_json["items"][1], "items", reporter.callback());

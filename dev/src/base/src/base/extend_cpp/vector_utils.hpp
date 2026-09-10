@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <functional>
 #include <unordered_set>
 #include <vector>
@@ -41,5 +42,31 @@ namespace base {
 			auto key = std::invoke(key_func, val);
 			return seen.insert(key).second;
 		});
+	}
+
+	/**
+	 * @brief Checks whether a vector contains all the elements of another one.
+	 * @param vec The vector that is expected to contain the elements.
+	 * @param elements The elements that have to be present in `vec`.
+	 * @tparam T The type of elements in the vectors.
+	 */
+	template<typename T>
+	bool containsAllOf(const std::vector<T>& vec, const std::vector<T>& elements) {
+		return std::ranges::all_of(elements, [&vec](const T& element) {
+			return std::ranges::find(vec, element) != vec.end();
+		});
+	}
+
+	/**
+	 * @brief Moves a pack of items into a `std::vector<Element>`, preserving order.
+	 * The element type is explicit — it cannot be deduced when items are, e.g., derived-type.
+	 */
+	template<typename Element, typename... Items>
+	requires(std::is_constructible_v<Element, Items &&> && ...)
+	std::vector<Element> packToVector(Items&&... items) {
+		std::vector<Element> result;
+		result.reserve(sizeof...(items));
+		(result.emplace_back(std::forward<Items>(items)), ...);
+		return result;
 	}
 }

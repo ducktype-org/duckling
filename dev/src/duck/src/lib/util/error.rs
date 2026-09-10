@@ -64,7 +64,7 @@ impl QuackError {
     where
         T: Error + Send + Sync + 'static,
     {
-        let dyn_err: &dyn Error = &err;
+        let dyn_err = &err as &dyn Error;
         let display_place = if let Some(clap_err) = dyn_err.downcast_ref::<clap::Error>()
             && !clap_err.use_stderr()
         {
@@ -523,6 +523,91 @@ impl ErrorExt for dyn Error + Send + Sync + 'static {
     fn context_aware_downcast_ref<T: Error + 'static>(&self) -> Option<&T> {
         <dyn Error + 'static>::context_aware_downcast_ref(self)
     }
+}
+
+/// Structure for gathering errors.
+/// Should be used in situations when encountering many errors should not end the execution of the program.
+#[derive(Debug)]
+pub struct ErrorsLogger(Vec<QuackError>);
+
+impl ErrorsLogger {
+    /// Create a new [`ErrorsLogger`].
+    pub fn new(errors: Vec<QuackError>) -> Self {
+        Self(errors)
+    }
+
+    /// Check if an [`ErrorsLogger`] logged any errors.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Check if an [`ErrorsLogger`] logged any errors.
+    pub fn has_errors(&self) -> bool {
+        !self.is_empty()
+    }
+
+    /// If `result` is `Ok(t)`, returns `Some(t)`.
+    ///
+    /// Otherwise logs [`QuackError`] from `result` and returns [`None`].
+    pub fn log_result<T>(&mut self, result: QuackResult<T>) -> Option<T> {
+        match result {
+            Ok(t) => Some(t),
+            Err(err) => {
+                self.log(err);
+                None
+            }
+        }
+    }
+
+    /// Get the number of logged [`QuackError`]s.
+    pub fn logged_errors(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Add an error to the [`ErrorsLogger`].
+    pub fn log(&mut self, error: QuackError) {
+        self.0.push(error);
+    }
+
+    /// Get the first error of the [`ErrorsLogger`].
+    ///
+    /// Panics
+    /// ------
+    /// Panics when there are no errors logged.
+    pub fn unwrap_first(self) -> QuackError {
+        self.0.into_iter().next().unwrap()
+    }
+}
+
+impl Default for ErrorsLogger {
+    fn default() -> Self {
+        Self::new(vec![])
+    }
+}
+
+impl IntoIterator for ErrorsLogger {
+    type Item = QuackError;
+
+    type IntoIter = std::vec::IntoIter<QuackError>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+/// Split an iterator of `QuackResult<T>` into vectors of `T`s and [`QuackError`]s.
+pub fn split_results<T>(
+    results: impl IntoIterator<Item = QuackResult<T>>,
+) -> (Vec<T>, Vec<QuackError>) {
+    let mut oks = vec![];
+    let mut errors = vec![];
+    for result in results {
+        match result {
+            Ok(ok) => oks.push(ok),
+            Err(err) => errors.push(err),
+        }
+    }
+    (oks, errors)
 }
 
 #[cfg(test)]
