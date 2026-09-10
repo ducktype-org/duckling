@@ -59,7 +59,14 @@ pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMa
 fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(FrontMatter, Warnings)> {
     let mut warnings = Warnings::default();
     let schema = generate_schema(path, &mut warnings)?;
-    let frontmatter = parse(&schema, path, ParseMode::FrontMatter, &mut warnings, ctx)?;
+    let frontmatter = parse(
+        &schema,
+        ParseMode::FrontMatter {
+            frontmatter_path: path,
+        },
+        &mut warnings,
+        ctx,
+    )?;
     FrontMatter::new(path.to_path_buf(), schema, Box::new(frontmatter))
         .map(|frontmatter| (frontmatter, warnings))
 }

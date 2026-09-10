@@ -1,7 +1,6 @@
-import sys
 from dap_client import DAPTestClient
 
-client = DAPTestClient(program_name="../examples/input.dbc")
+client = DAPTestClient()
 
 try:
     # Startup phase
