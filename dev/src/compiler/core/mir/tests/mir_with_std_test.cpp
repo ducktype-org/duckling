@@ -39,6 +39,7 @@ public:
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(generatedLocalShadowingTest);
 	}
 
 protected:
@@ -306,6 +307,107 @@ private:
 			ASSERT_EQUAL(usize(3), address_of_count);
 			ASSERT_TRUE(found_indexed);
 		});
+	}
+
+	/**
+	 * @brief A `for` loop desugars into compiler-generated index/length locals, named `__index` and
+	 *        `__len`. A user variable may be spelled the same way, and such a pair must not be
+	 *        reported as shadowing: the generated local is an implementation detail, not a
+	 *        declaration the user could know about.
+	 *
+	 * @note Lowered here rather than in `mir_errors_test`, because indexing a static array emits a
+	 *       bounds check whose `panic` is a standard-library language primitive.
+	 */
+	void generatedLocalShadowingTest() {
+		namespace test_utils = compiler::mir::test_utils;
+
+		constexpr std::string_view MODULE_HEAD = R"(fun main() -> i64 = {
+    var coll: i64[10];
+    var sum: i64 = 0;
+)";
+		constexpr std::string_view LOOP_HEAD   = R"(    for (x in coll) {
+)";
+		constexpr std::string_view MODULE_TAIL = R"(        sum = sum + x;
+    }
+    return sum;
+})";
+
+		const std::string probe
+			= std::string(MODULE_HEAD) + std::string(LOOP_HEAD) + std::string(MODULE_TAIL);
+
+		std::string generated_name;
+		test_utils::checkLoweredModule(
+			probe,
+			[&](query::Context&, const compiler::mir::MIRUnit& unit) {
+				for (const auto& local: test_utils::functionOfUnit(unit, "main")->local_list) {
+					if (local.helios_id.empty()) continue;
+
+					const auto name = compiler::helios::name(*local.helios_id);
+					if (not name.strView().starts_with("__index")) continue;
+
+					generated_name = name.str();
+					ASSERT_TRUE(!compiler::helios::maybeSymbolPst(*local.helios_id).has_value());
+				}
+			}
+		);
+		ASSERT_TRUE(!generated_name.empty());
+
+		// The user declares a variable under the generated name inside the loop body.
+		const std::string shadowing = std::string(MODULE_HEAD) + std::string(LOOP_HEAD)
+		                            + "        let " + generated_name + ": i64 = 20;\n"
+		                            + std::string(MODULE_TAIL);
+		test_utils::checkLoweredModule(
+			shadowing, [](query::Context&, const compiler::mir::MIRUnit&) {}
+		);
+		assertUserAndGeneratedLocalShareName(shadowing, generated_name);
+
+		// The same, with the user's variable actually read. The name has to resolve to the user's
+		// local; the generated one is an implementation detail and stays out of the lookup.
+		const std::string used = std::string(MODULE_HEAD) + std::string(LOOP_HEAD) + "        let "
+		                       + generated_name + ": i64 = 20;\n        sum = sum + "
+		                       + generated_name + ";\n" + std::string(MODULE_TAIL);
+		test_utils::checkLoweredModule(used, [](query::Context&, const compiler::mir::MIRUnit&) {});
+		assertUserAndGeneratedLocalShareName(used, generated_name);
+
+		// The mirror case: the generated local shadows a user variable of the enclosing scope. The
+		// user's variable is read after the loop, where only it is in scope.
+		const std::string shadowed = std::string(MODULE_HEAD) + "    var " + generated_name
+		                           + ": i64 = 7;\n" + std::string(LOOP_HEAD)
+		                           + "        sum = sum + x;\n    }\n    return sum + "
+		                           + generated_name + ";\n}";
+		test_utils::checkLoweredModule(
+			shadowed, [](query::Context&, const compiler::mir::MIRUnit&) {}
+		);
+		assertUserAndGeneratedLocalShareName(shadowed, generated_name);
+	}
+
+	/**
+	 * @brief Keeps the checks above from silently losing their subject: the module has to contain a
+	 *        user local and a compiler-generated local that share `name`.
+	 */
+	void assertUserAndGeneratedLocalShareName(
+		std::string_view module_content, std::string_view name
+	) {
+		namespace test_utils = compiler::mir::test_utils;
+
+		test_utils::checkLoweredModule(
+			module_content,
+			[&](query::Context&, const compiler::mir::MIRUnit& unit) {
+				u64 total     = 0;
+				u64 generated = 0;
+				for (const auto& local: test_utils::functionOfUnit(unit, "main")->local_list) {
+					if (local.helios_id.empty()) continue;
+					if (compiler::helios::name(*local.helios_id).strView() != name) continue;
+
+					total++;
+					if (not compiler::helios::maybeSymbolPst(*local.helios_id).has_value())
+						generated++;
+				}
+
+				ASSERT_EQUAL(u64(2), total);
+				ASSERT_EQUAL(u64(1), generated);
+			}
+		);
 	}
 };
 

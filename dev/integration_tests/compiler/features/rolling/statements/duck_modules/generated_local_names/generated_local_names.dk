@@ -1,0 +1,31 @@
+fun main() -> i64 = {
+    var coll: i64[3];
+
+    # The `for` desugaring creates locals named `__index` / `__len`. A user variable spelled the same
+    # way has to resolve to itself, and no shadowing error may be reported.
+    var sum: i64 = 0;
+    for (x in coll) {
+        let __index: i64 = 20;
+        sum = sum + __index;
+    }
+    builtin_output_i64(sum);
+
+    # The mirror direction: the generated local shadows a user variable of the enclosing scope.
+    var shadowed: i64 = 0;
+    for (y in coll) {
+        var __index: i64 = 1;
+        shadowed = shadowed + __index;
+    }
+    builtin_output_i64(shadowed);
+
+    # Every loop's locals share that name, so nested loops already exercise the collision case.
+    var repeated: i64 = 0;
+    for (z in coll) {
+        for (w in coll) {
+            repeated = repeated + 1;
+        }
+    }
+    builtin_output_i64(repeated);
+
+    return 0;
+}
