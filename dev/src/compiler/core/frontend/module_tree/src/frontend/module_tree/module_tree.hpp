@@ -201,6 +201,20 @@ namespace compiler::frontend {
 		static const hashing::ComponentHash::HashType& getModuleHash(ModuleID module_id);
 
 		/**
+		 * Builds a dotted, human-readable identification of this module, walking up from the
+		 * package ID at the root down to this module.
+		 * For a module tree like:
+		 * /root
+		 *   /sub1
+		 *     /sub2
+		 * belonging to package `pkg`, `sub2` identifies as `pkg.root.sub1.sub2`.
+		 * @note This is meant for logging and diagnostics only, but it's a stable identifier.
+		 * @param ctx Query context, used to unlock the access to the parent module.
+		 */
+		[[nodiscard]]
+		std::string humanReadableID(query::Context& ctx) const;
+
+		/**
 		 * Creates a nice, human-readable representation of this module tree.
 		 * @param indentation For regular printing, leave 0.
 		 * @return std::string with the representation.
