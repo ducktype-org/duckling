@@ -34,13 +34,12 @@ Tests:
           File: "simple_numeric/simple_numeric2.rtf"
         Output:
           String: "@{beginning}\n=> 17878\n@{end}"
-      
-      # @TODO: we need to add a flag to ignore errors in checking out.
-      # resilience:
-      #   Input:
-      #     File: "simple_numeric/resilience.rtf"
-      #   Output:
-      #     String: "@{beginning}\n => 4\n => 42\n@{end}"
+      resilience:
+        Run: "@{duckc_path} repl --plain-output --custom-std-artifacts-path @{case_std_artifacts}"
+        Input:
+          File: "simple_numeric/resilience.rtf"
+        Output:
+          String: "4\n42\n"
   multiple_numeric:
     Cases:
       manymen:

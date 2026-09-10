@@ -1,5 +1,4 @@
 # Tests for declaration of variables in REPL
-# TODO: add eventual error ignore.
 ans: => 42\n
 ans2: => 30\n
 ans2small: => 30\n
