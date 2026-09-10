@@ -6,7 +6,7 @@ class Foo {
     }
 
     fun -*() -> i64 = {
-        return -*self;
+        return x;
     }
 }
 
