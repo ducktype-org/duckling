@@ -7,7 +7,7 @@ use itertools::Itertools;
 use tracing::debug;
 use url::Url;
 
-use super::{Scope, ScopeGuard};
+use super::{ParseMode, Scope, ScopeGuard};
 use crate::quackpack::core::lints::warnings::{GitUrlIsPath, Warnings};
 use crate::quackpack::core::{GitReference, Source};
 use crate::quackpack::schemas::manifest::{
@@ -24,7 +24,7 @@ use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, q
 #[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: &DependencySchema,
-    package_root: &Path,
+    mode: ParseMode<'_>,
     warnings: &mut Warnings,
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
@@ -99,6 +99,9 @@ pub(crate) fn parse(
             check_no_git(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
             debug!(path_in_manifest = %root.display(), "path specified in the manifest");
+            let package_root = mode.package_root().with_context(|| {
+                format!("local dependencies are disallowed in {}", mode.mode_name())
+            })?;
             let dir_root = resolve_path_maybe_relative_to_dir(root, package_root, ctx);
             Source::for_local(&dir_root)?
         }
@@ -107,6 +110,7 @@ pub(crate) fn parse(
             check_no_local(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
             let reference = resolve_git_reference(source, &scope)?;
+            let package_root = mode.package_root();
             let git_url = parse_git_url(manifest_git_url, package_root, warnings, &scope, ctx)?;
             Source::for_git(git_url, reference)
         }
@@ -266,7 +270,7 @@ pub(super) fn resolve_path_maybe_relative_to_dir(
 /// Parse a url of a git dependency.
 fn parse_git_url(
     manifest_git_url: &str,
-    package_root: &Path,
+    package_root: Option<&Path>,
     warnings: &mut Warnings,
     scope: &Scope,
     ctx: &DuckContext,
@@ -281,8 +285,11 @@ fn parse_git_url(
     };
     // We are building error messages from the bottom to the top.
     // If an original URL points to a file, mention it to the user. Also, ignore any errors.
-    let path = resolve_path_maybe_relative_to_dir(Path::new(manifest_git_url), package_root, ctx);
-    if path.exists() {
+    if let Some(package_root) = package_root
+        && let path =
+            resolve_path_maybe_relative_to_dir(Path::new(manifest_git_url), package_root, ctx)
+        && path.exists()
+    {
         // If we can construct a URL from the path, use it (less likely that user will have to run
         // `sync` again, because our manual hint was wrong).
         // But keep it as a "best effort".

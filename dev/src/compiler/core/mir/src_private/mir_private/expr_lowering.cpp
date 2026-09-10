@@ -285,32 +285,33 @@ namespace compiler::mir {
 			const auto result_type     = ternary_expr.expression_type.getSymbolType();
 			const auto target_location = function.addTmp(result_type, expr_scope);
 
-			auto build_case_block = [this, &target_location](hc::Expr& case_expr) {
-				auto block = function.newBlock();
-				block->setTerminator(
-					{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
-				);
-				auto assign_hole = block->addHole();
+			auto build_case_block
+				= [this, &target_location](hc::Expr& case_expr, const std::string_view block_name) {
+					  auto block = function.newBlock(block_name);
+					  block->setTerminator(
+						  { Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+					  );
+					  auto assign_hole = block->addHole();
 
-				auto lowered_block = lowerSubExpr(case_expr, block);
+					  auto lowered_block = lowerSubExpr(case_expr, block);
 
-				lowered_block.storeResultInGivenPlace(
-					MIRPlace(target_location),
-					assign_hole,
-					{ flagConstruct(target_location) },
-					expr_scope,
-					{}
-				);
+					  lowered_block.storeResultInGivenPlace(
+						  MIRPlace(target_location),
+						  assign_hole,
+						  { flagConstruct(target_location) },
+						  expr_scope,
+						  {}
+					  );
 
 
-				return lowered_block.begin;
-			};
+					  return lowered_block.begin;
+				  };
 
-			auto else_block = build_case_block(*ternary_expr.if_false);
-			auto then_block = build_case_block(*ternary_expr.if_true);
+			auto else_block = build_case_block(*ternary_expr.if_false, "ternary.else");
+			auto then_block = build_case_block(*ternary_expr.if_true, "ternary.then");
 
 			// Build branching.
-			auto condition_block   = function.newBlock();
+			auto condition_block   = function.newBlock("ternary.cond");
 			auto lowered_condition = lowerSubExpr(*ternary_expr.condition, condition_block);
 
 
@@ -435,8 +436,8 @@ namespace compiler::mir {
 					                           .expect("i64 numeric value creation failed") } } };
 			};
 
-			auto cond_block = function.newBlock();
-			auto body_block = function.newBlock();
+			auto cond_block = function.newBlock("array_fill.cond");
+			auto body_block = function.newBlock("array_fill.body");
 
 			// The body is assembled in reverse execution order, so the increment goes in first.
 			body_block->setTerminator(
@@ -493,7 +494,7 @@ namespace compiler::mir {
 				Operation::Nop, {}, {}, { flagConstruct(dest) }, expr_scope, {}, { position }
 			));
 
-			auto entry_block = function.newBlock();
+			auto entry_block = function.newBlock("array_fill.entry");
 			entry_block->addInstruction(Instruction(
 				Operation::Assign,
 				MIRPlace(counter),
@@ -675,7 +676,7 @@ namespace compiler::mir {
 
 				// Result block: evaluate the case's value into the shared result, then join.
 				auto case_scope = function.newScope(expr_scope);
-				auto body_end   = function.newBlock();
+				auto body_end   = function.newBlock("match.case.result");
 				body_end->setTerminator(
 					{ Operation::Jump, {}, { continuation->getID() }, {}, case_scope }
 				);
@@ -699,7 +700,7 @@ namespace compiler::mir {
 
 				bool projects_payload = tests_alternative || match_case.binding.has_value();
 
-				auto test_block = function.newBlock();
+				auto test_block = function.newBlock("match.case.test");
 
 				base::Optional<MIRLocalMutRef>    payload_ptr;
 				base::Optional<tsh::SymbolType<>> alternative_type;
@@ -898,9 +899,9 @@ namespace compiler::mir {
 			};
 
 			// Now, before the index projection, perform the bounds check.
-			auto bounds_check_fail_block = function.newBlock();
-			auto bounds_check_cond_block = function.newBlock();
-			auto entry_block             = function.newBlock();
+			auto bounds_check_fail_block = function.newBlock("bounds_check.fail");
+			auto bounds_check_cond_block = function.newBlock("bounds_check.cond");
+			auto entry_block             = function.newBlock("bounds_check.entry");
 			entry_block->setTerminator(Instruction{
 				Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope });
 
@@ -941,7 +942,7 @@ namespace compiler::mir {
 				  };
 
 			// Place for a comparison instruction
-			auto last_comparison_block = function.newBlock();
+			auto last_comparison_block = function.newBlock("chain_cmp.end");
 
 			// After the last comparison, continue regardless of the result.
 			last_comparison_block->setTerminator(Instruction{
@@ -960,7 +961,7 @@ namespace compiler::mir {
 				// If the comparison is the last one (next_block == continuation), we jump to the
 				// continuation regardless of the result. Otherwise, we branch to the next comparison
 				// if the result is true, and to the continuation if the results is false.
-				auto comparison_block = function.newBlock();
+				auto comparison_block = function.newBlock("chain_cmp");
 				if (next_block->getID() == continuation->getID()) {
 					comparison_block->setTerminator(Instruction{
 						Operation::Jump,
@@ -1008,7 +1009,7 @@ namespace compiler::mir {
 				= expr.expression_type.getSymbolType().getType().getKind() == tsh::Kind::Void;
 
 			if (never_returns) {
-				auto call_block = function.newBlock();
+				auto call_block = function.newBlock("call.diverging");
 				call_block->setTerminator({ Operation::Unreachable, {}, {}, {}, expr_scope, {}, {} }
 				);
 				continuation = call_block;
