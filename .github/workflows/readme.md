@@ -64,6 +64,59 @@ Each job is containerized, and sharing data between jobs in not trivial, which i
 
 `runs-on` property defines image of OS the job will run on.
 
+#### The build matrix and the macOS runner
+
+`setup-build-matrix.py` decides which configurations `tests.yml`'s `build` job runs. It returns a
+matrix spelled out as an `include` list rather than a `build-type` x `compiler` product, because
+the configurations are not a product: macOS is one of them, not all of them.
+
+* **unapproved PR** -- `Dev` / gcc only.
+* **`main`, `dev`, `workflow_dispatch`, an approved PR, or the `Run All Workflows` label** -- four
+  jobs: `Dev`/gcc (the coverage job), `DevOpt`/gcc, `DevOpt`/clang, and `Dev`/clang on macOS.
+  Approval adds the label through `add-run-all-workflows-label.yml`, whose `labeled` event is what
+  actually re-triggers `tests.yml`.
+
+The macOS job **replaced** Linux `Dev`/clang instead of being added beside it, so the full matrix
+is still four jobs. Nothing goes unchecked: clang at `-O3` with libstdc++ and mold stays in
+`DevOpt`/clang, gcc keeps both build types, and coverage is untouched. What the macOS job adds is a
+second standard library (libc++), the Apple arm64 ABI, `ld64` and a far newer clang.
+
+Three things about that runner are worth knowing before editing those steps.
+
+**Its accounts have no `sudo`**, so a workflow cannot install anything there. The toolchain is
+whatever is already on the machine -- Homebrew's `llvm@23` to compile, `llvm@19` to link against,
+ICU, cmake, ninja, ccache, plus a per-account rustup in `~/.cargo` -- which is why every
+`apt`/`pip` step in `build` is guarded with `if: ${{ env.IS_MACOS != 'true' }}`. A new build
+dependency has to be installed on the machine by hand first.
+
+**Its caches never travel through `actions/cache`.** On the Linux runners the ccache and sccache
+directories are uploaded and downloaded per run, and old entries have to be pruned with `gh` so
+they do not snowball. On the mac there is only one machine, it is not containerised, and its disk
+persists between jobs -- so the caches simply live there, under `/Users/Shared/duckling-ci`, and
+every cache step in `build` is Linux-only. Two consequences:
+
+* ccache is **shared** by `runner1` and `runner2`. Concurrent access is what ccache is built for,
+  so nothing has to be synchronised between the accounts, but three non-default settings are what
+  make the sharing actually work: `CCACHE_UMASK=000`, without which each account's cache files land
+  at `0644` and the other account can neither reuse nor evict them, and `CCACHE_BASEDIR` +
+  `CCACHE_NOHASHDIR`, without which the two accounts' differing checkout paths
+  (`/Users/runner1/actions-runner/_work/...` vs `runner2`) go into the hash and the two runners
+  share a directory while never taking a hit from each other. The cache is reached through a
+  symlink, because `main_cmake_files/ConfigureCCache.cmake` hardcodes `cache_dir=<dev>/.ccache`
+  into the compiler launcher and that overrides `$CCACHE_DIR`.
+* sccache gets a directory **per account**. Unlike ccache it is not a passive directory: each
+  account runs its own sccache server with its own in-memory LRU index, and two servers evicting
+  from one directory corrupt each other's accounting.
+* Nothing in a workflow run expires either of them, so a weekly `launchd` job on the machine
+  (`org.ducktype.duckling-ci.prune`) evicts ccache entries older than two weeks and enforces the
+  size cap. Note that the cap the CLI sees comes from `$CCACHE_MAXSIZE`, not from the
+  `max_size=1` that `ConfigureCCache.cmake` puts on the compiler launcher - the two have to be
+  kept in step by hand.
+
+**Rust comes from rustup, not Homebrew.** `integration_tests/duck/testconfig.yaml` sources
+`${CARGO_HOME:-$HOME/.cargo}/env` before `cargo build`, and that file is written by rustup only --
+a `brew install rust` would leave the `duck` integration tests failing on a missing `env`.
+
 ### Job timeout
 
 `timeout-minutes` property defines timeout in minutes per configuration run.

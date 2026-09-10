@@ -98,11 +98,13 @@ jobs:
     timeout-minutes: 60 # (Per matrix run)
     runs-on:
       group: SelfHostedRunners
-      labels: ${{ matrix.build-type == 'Dev' && 'debug' || 'release' }}
+      labels: ${{ matrix.compiler.platform == 'macos' && 'macOS' || (matrix.build-type == 'Dev' && 'debug' || 'release') }}
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' }}
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' && matrix.compiler.name == 'gcc' }}
+      # The mac runner accounts have no sudo, so a workflow cannot install anything there
+      IS_MACOS: ${{ matrix.compiler.platform == 'macos' }}
 
     steps:
       - name: Set self-hosted placeholder
@@ -112,8 +114,13 @@ jobs:
       - name: Set number of threads
         id: set-jobs
         run: |
-          read -r quota period < /sys/fs/cgroup/cpu.max
-          cpus=$((quota / period + 1))
+          if [ -r /sys/fs/cgroup/cpu.max ]; then
+            read -r quota period < /sys/fs/cgroup/cpu.max
+            cpus=$((quota / period + 1))
+          else
+            # This branch will be taken on macOS
+            cpus=10
+          fi
           echo "jobs=$cpus" >> $GITHUB_OUTPUT
 
       - name: Clean workspace
@@ -127,51 +134,110 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Setup macOS toolchain
+        if: ${{ env.IS_MACOS == 'true' }}
+        run: |
+          eval "$(/opt/homebrew/bin/brew shellenv)"
+          echo "CMAKE_PREFIX_PATH=$HOMEBREW_PREFIX/opt/llvm@19" >> "$GITHUB_ENV"
+          # The ICU bundled with the macOS SDK is a C-only subset, so CMake must be pointed at
+          # the Homebrew one.
+          echo "ICU_ROOT=$HOMEBREW_PREFIX/opt/icu4c" >> "$GITHUB_ENV"
+          # Apple's `ar` stamps a timestamp into every archive member unless this is set, so
+          # without it the same sources produce byte-different archives on every build.
+          echo "ZERO_AR_DATE=1" >> "$GITHUB_ENV"
+          echo "$HOMEBREW_PREFIX/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Rust (macOS)
+        if: ${{ env.IS_MACOS == 'true' }}
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          if [ ! -f "$HOME/.cargo/env" ] || [ ! -d "$HOME/.rustup/toolchains" ]; then
+            echo "::error::$(id -un) has no per-account rustup ($HOME/.cargo/env + $HOME/.rustup)."
+            exit 1
+          fi
+          # PATH from $GITHUB_PATH only applies to LATER steps, hence the explicit paths here.
+          "$HOME/.cargo/bin/cargo" --version
+          # RUSTC_WRAPPER is set below, and a missing wrapper fails cargo with no useful message.
+          "$HOME/.cargo/bin/sccache" --version
+
+      # The mac keeps its compiler caches ON the machine
+      - name: Point caches at local storage (macOS)
+        if: ${{ env.IS_MACOS == 'true' }}
+        run: |
+          shared=/Users/Shared/duckling-ci
+          mkdir -p "$shared/ccache" "$shared/sccache-$(id -un)"
+          chmod 0777 "$shared" "$shared/ccache" 2>/dev/null || true
+          ln -sfn "$shared/ccache" "${{ env.CCACHE_DIR }}"
+          echo "CCACHE_UMASK=000" >> "$GITHUB_ENV"
+          echo "CCACHE_BASEDIR=${{ github.workspace }}" >> "$GITHUB_ENV"
+          echo "CCACHE_NOHASHDIR=1" >> "$GITHUB_ENV"
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          echo "SCCACHE_DIR=$shared/sccache-$(id -un)" >> "$GITHUB_ENV"
+          echo "SCCACHE_CACHE_SIZE=1G" >> "$GITHUB_ENV"
+
+      - name: Bootstrap python venv (macOS)
+        if: ${{ env.IS_MACOS == 'true' }}
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          base_python=$(command -v python3.14 || command -v python3.13 || command -v python3.12)
+          "$base_python" -m venv .venv
+          ./.venv/bin/python3 -m pip install --quiet --upgrade pip
+          ./.venv/bin/python3 -m pip install --quiet -r requirements.txt
+          echo "${{ env.WORKSPACE }}/.venv/bin" >> "$GITHUB_PATH"
+
       - name: Update apt
+        if: ${{ env.IS_MACOS != 'true' }}
         run: sudo apt update
 
       - name: Install lcov
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
+        if: ${{ env.IS_MACOS != 'true' && env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov
 
       - name: Install fastcov
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
+        if: ${{ env.IS_MACOS != 'true' && env.COVERAGE_ENABLED == 'true' }}
         run: sudo pip install fastcov --break-system-packages --no-input
 
       - name: Install graphviz
-        if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
+        if: ${{ env.IS_MACOS != 'true' && env.BUILD_DEPLOYABLES == 'true' }}
         run: sudo apt -y install libgraphviz-dev
 
       - name: Install LLVM
+        if: ${{ env.IS_MACOS != 'true' }}
         run: sudo apt -y install llvm-19 llvm-19-dev
 
       - name: Install clang
+        if: ${{ env.IS_MACOS != 'true' }}
         # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
         # Must be the same version as llvm
         run: sudo apt -y install clang-19 clang-tools-19
 
       - name: Install xxd
+        if: ${{ env.IS_MACOS != 'true' }}
         # Necessary to embed LLVM bitcode into duckc source files.
         run: sudo apt -y install xxd
 
       - name: Install mold
-        if: ${{ matrix.compiler.linker == 'mold' }}
+        if: ${{ env.IS_MACOS != 'true' && matrix.compiler.linker == 'mold' }}
         run: sudo apt -y install mold
 
       - name: Install GCC 14 and gcov-14
-        if: ${{ matrix.compiler.name == 'gcc' }}
+        if: ${{ env.IS_MACOS != 'true' && matrix.compiler.name == 'gcc' }}
         run: sudo apt install -y ${{ matrix.compiler.cc }} ${{ matrix.compiler.cxx }} # gcov is included in gcc package
 
       - name: Install Ninja
+        if: ${{ env.IS_MACOS != 'true' }}
         run: sudo apt -y install ninja-build
 
       - name: Install Valgrind
+        if: ${{ env.IS_MACOS != 'true' }}
         run: sudo apt -y install valgrind
 
       - name: Install pkg-config + libffi
+        if: ${{ env.IS_MACOS != 'true' }}
         run: sudo apt -y install pkg-config libffi-dev
 
       - name: Setup duck dependencies
+        if: ${{ env.IS_MACOS != 'true' }}
         uses: ./.github/actions/setup-duck-dependencies/
 
       - name: Check installations
@@ -181,6 +247,7 @@ jobs:
           ${{ matrix.compiler.name == 'gcc' && format('{0} --version', matrix.compiler.gcov) || 'echo "No gcov for clang"' }}
 
       - name: Install ccache
+        if: ${{ env.IS_MACOS != 'true' }}
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py download-binaries -s ccache
 
@@ -190,6 +257,8 @@ jobs:
       # recent hash.
       - name: Prepare cache timestamp
         id: cache-timestamp
+        # Only the actions/cache keys consume this, and those steps are Linux-only.
+        if: ${{ env.IS_MACOS != 'true' }}
         shell: cmake -P {0}
         run: |
           string(TIMESTAMP current_date "%Y-%m-%d-%H::%M::%S" UTC)
@@ -199,6 +268,8 @@ jobs:
       # main branch misses, fallback to any branch's cache.
       - name: Restore build cache
         id: restore-build-cache
+        # macOS keeps its ccache on the machine - see "Point caches at local storage".
+        if: ${{ env.IS_MACOS != 'true' }}
         uses: actions/cache/restore@v5
         with:
           path: |
@@ -213,8 +284,10 @@ jobs:
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
 
+      # macOS keeps its sccache on the machine as well - see "Point caches at local storage".
       - name: Restore sccache cache
         id: restore-sccache-cache
+        if: ${{ env.IS_MACOS != 'true' }}
         uses: actions/cache/restore@v5
         with:
           path: |
@@ -226,14 +299,16 @@ jobs:
             ${{ runner.os }}-sccache-
 
       # Remove ccache folder to prevent cache snowball growth
+      # Only the uploaded cache snowballs; the local macOS one is bounded by ccache's own
+      # max_size and is the whole point of keeping it, so it is not wiped on main.
       - name: Remove ccache on main
-        if: ${{ env.BRANCH_NAME == 'main' }}
+        if: ${{ env.IS_MACOS != 'true' && env.BRANCH_NAME == 'main' }}
         id: ccache-main-rm
         run: rm -rf ${CCACHE_DIR}
 
       # Remove sccache folder to prevent cache snowball growth
       - name: Remove sccache on main
-        if: ${{ env.BRANCH_NAME == 'main' }}
+        if: ${{ env.IS_MACOS != 'true' && env.BRANCH_NAME == 'main' }}
         id: sccache-main-rm
         run: rm -rf ${SCCACHE_DIR}
 
@@ -277,7 +352,7 @@ jobs:
             ${{ steps.setup-build-flags.outputs.flags }} \
             --linker ${{ matrix.compiler.linker }} \
             --ccache \
-            --strip-symbol-information
+            ${{ env.IS_MACOS == 'true' && '--no-strip-symbol-information' || '--strip-symbol-information' }}
         env:  # Hot fix for GH issues:
           GIT_CONFIG_COUNT: 2
           GIT_CONFIG_KEY_0: url.https://quacker-bot:${{ secrets.QUACKER_PAT }}@github.com/.insteadOf
@@ -325,7 +400,11 @@ jobs:
           du -hs ${{ env.CCACHE_DIR }}
 
           echo "sccache:"
-          du -hs ${{ env.SCCACHE_DIR }} || echo 0
+          [ -n "${SCCACHE_DIR:-}" ] && du -hs "$SCCACHE_DIR" || echo 0
+
+      - name: Show ccache statistics (macOS)
+        if: ${{ env.IS_MACOS == 'true' }}
+        run: ccache --show-stats --verbose | head -30
 
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
       # This step deletes all the cache entries that are related to this branch,
@@ -333,6 +412,7 @@ jobs:
       # upload of the current build happens after everything
       # else has finished, so there will be a cache entry ready for pulling.
       - name: Cleanup previous Cache entries for this branch
+        if: ${{ env.IS_MACOS != 'true' }}
         run: |
           gh extension install actions/gh-actions-cache
 
@@ -358,6 +438,7 @@ jobs:
       # Manually cache the build before testing, but **after** cleaning.
       - name: Save build cache
         id: save-build-cache
+        if: ${{ env.IS_MACOS != 'true' }}
         uses: actions/cache/save@v5
         with:
           path: |
@@ -388,12 +469,20 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         # Coverage-instrumented binaries are much slower, and concurrent duckc
         # processes serialize on .gcda profile writes.
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }}
+        run: |
+          # One log directory per account.
+          log_dir="/tmp/dit-log-$(id -un)"
+          mkdir -p "$log_dir"
+          ITEST_LOG="$log_dir/dit.log"
+          rm -f "$ITEST_LOG"
+          echo "ITEST_LOG=$ITEST_LOG" >> "$GITHUB_ENV"
+          ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --log-file "$ITEST_LOG" --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }}
 
       # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
       # so we have to save sccache after that, otherwise we'd have nothing to save.
       - name: Save sccache cache
         id: save-sccache-cache
+        if: ${{ env.IS_MACOS != 'true' }}
         uses: actions/cache/save@v5
         with:
           path: |
@@ -406,7 +495,7 @@ jobs:
       # runs when at least one of the integration test steps actually failed.
       - name: Cat itests log file on failure
         if: ${{ failure() && (steps.integration-tests.outcome == 'failure') }}
-        run: cat /tmp/dit.log
+        run: cat "${{ env.ITEST_LOG }}"
 
       - name: Test Coverage After Integration Tests
         id: test-coverage-itests
