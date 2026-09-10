@@ -21,9 +21,11 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/utils/main_return_type.hpp>
 #include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
@@ -146,8 +148,12 @@ namespace compiler::helios {
 				if (stmt->isConst()) {
 					// Only the taken branch takes part in the return type deduction, the other
 					// one is never compiled.
-					auto taken = getBoolCTVFromPST(ctx, stmt->getCondition().unlock(ctx)->getExpr())
-					                 .valueOrThrow();
+					auto condition_holder = stmt->getCondition();
+					if (!condition_holder.has_value()) query::throwFailed();
+
+					auto taken
+						= getBoolCTVFromPST(ctx, condition_holder.value().unlock(ctx)->getExpr())
+					          .valueOrThrow();
 
 					if (taken)
 						visitRecursion(stmt->getThenBody());
@@ -248,6 +254,13 @@ namespace compiler::helios {
 		}
 	}
 
+	static bool isValidMainReturnType(query::Context& ctx, const tsh::SymbolType<>& return_type) {
+		const auto required_type = requiredMainReturnType(ctx);
+
+		return return_type.getType() == required_type.getType()
+		    && return_type.getRefKind() == required_type.getRefKind();
+	}
+
 	struct IMPLEMENT_QUERY(QueryDeclOfFun, query::QResult<HOUTFunctionDeclaration>) {
 		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
 			query::Context& ctx;
@@ -264,6 +277,9 @@ namespace compiler::helios {
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret,
 				HOUTFunctionDeclaration::Operatoriness             operatoriness
 			) {
+				const bool global_main_definition = isGlobalMain(original_symbol)
+				                                 && kind(original_symbol) == SymbolKind::Function;
+
 				// Default return type is a direct unit.
 				auto ret_type = tsh::SymbolType<>{
 					tsh::getUnitType(),
@@ -276,11 +292,28 @@ namespace compiler::helios {
 				if (ret.has_value()) {
 					const auto ret_type_ctv
 						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
+
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
-					origin   = code::multiplePstOriginOrdered({ param_list.unlock(ctx),
-					                                            ret.value().unlock(ctx) });
+
+					if (global_main_definition && not isValidMainReturnType(ctx, ret_type)) {
+						ctx.logInt(makeBox<InvalidMainReturnTypeError>(
+							ret.value().unlock(ctx)->getStablePosition(),
+							makeBox<InteractiveType>(ctx, ret_type)
+						));
+						query::throwFailed();
+					}
+
+					origin = code::multiplePstOriginOrdered({
+						param_list.unlock(ctx),
+						ret.value().unlock(ctx),
+					});
 				}
-				// Deduce return type if not provided.
+				// A global main without an explicit return type is treated as `main -> i64`.
+				else if (global_main_definition) {
+					ret_type = requiredMainReturnType(ctx);
+					origin   = code::pstOrigin(param_list.unlock(ctx));
+				}
+				// Deduce return type for ordinary functions.
 				else {
 					ret_type = ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
 					origin   = code::pstOrigin(param_list.unlock(ctx));

@@ -30,12 +30,6 @@ from scripts.py.toolbox.commands.todo_counter import todo_counter
 from scripts.py.toolbox.commands.todo_validate import todo_validate
 from scripts.py.toolbox.commands.workflows_lint import workflows_lint
 
-
-DATA_USER = "dev"
-# @FUTURE: change this password and hide it:
-DATA_PASS = "7ocwXWOAwg="
-
-
 @click.group()
 def cli():
     pass

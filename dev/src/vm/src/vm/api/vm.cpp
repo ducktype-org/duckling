@@ -108,6 +108,9 @@ namespace vm::api {
 		return REQUEST(Input{ input }).transform(ignoreResponse);
 	}
 
+	/**
+	 * @brief Retrieves the output and clears it.
+	 */
 	std::expected<response::Output, ApiError> output(PID pid) {
 		return REQUEST(Output{}).and_then(mapOrWrongResponse<response::Output>);
 	}
