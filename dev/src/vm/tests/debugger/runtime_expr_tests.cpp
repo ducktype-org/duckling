@@ -24,6 +24,7 @@ public:
 		TESTER_ADD_TEST(test5RuntimeExpr);
 		TESTER_ADD_TEST(test6RuntimeExpr);
 		TESTER_ADD_TEST(test7RuntimeExpr);
+		TESTER_ADD_TEST(test8RuntimeExpr);
 	}
 
 private:
@@ -33,7 +34,8 @@ private:
 		auto pid = process_pid_response.value().pid;
 
 		auto loaded_file_response = vm::api::loadFiles(pid, { file });
-		assertTrue(loaded_file_response.has_value(), "Load failed");
+		if (!loaded_file_response)
+			assertTrue(false, vm::api::errorToString(loaded_file_response.error()));
 		return { [this](bool cond, std::string_view err) { assertTrue(cond, err); }, pid };
 	}
 
@@ -152,6 +154,21 @@ private:
 			.evalExprNormal(create_value_expr, { 42 })
 			.evalExprNormal(use_value_expr, { 42 })
 			.finishAndAssertExitValue(10)
+			.cleanup();
+	}
+
+	void test8RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_8/main.dbc"));
+		const fs::File expr(path("runtime_expr_dbc/test_8/expr.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("foo"), 0)
+			.runMain()
+			.awaitBreakpoint(base::StrID("foo"), 0)
+			.evalExprExpectBreakpoint(expr, base::StrID("foo"), 0)
+			.resume()
+			.awaitExprCompletion({ 13 })
+			.finishAndAssertExitValue(2)
 			.cleanup();
 	}
 };

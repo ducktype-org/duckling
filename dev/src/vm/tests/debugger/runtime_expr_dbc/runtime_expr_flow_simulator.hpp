@@ -1,17 +1,17 @@
 #pragma once
 
-#include "events/emitter.hpp"
+#include <events/emitter.hpp>
 
-#include "base/except/exceptions.hpp"
-#include "base/extend_cpp/variant_match.hpp"
-#include "base/pointers/ref.hpp"
-#include <base/misc/int_conv.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <tester/tester.hpp>
 
-#include "vm/api/data/api_error.hpp"
-#include "vm/core/safe/vmvalue/safe_vmvalue.hpp"
+#include <vm/api/data/api_error.hpp>
 #include <vm/api/vm.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 
 #include <condition_variable>
 #include <deque>
@@ -22,6 +22,38 @@
 
 namespace vm::test {
 	class FlowSimulator {
+		struct LateEvaluation;
+
+		std::deque<LateEvaluation> late_evals;
+		using ResT = std::vector<Ref<SafeVMValue>>;
+
+		std::deque<std::pair<ResT, u64>> late_result;
+
+		std::condition_variable cv;
+		std::mutex              mt;
+
+		struct LateEvaluation {
+			events::Listener<ResT> listener;
+
+			LateEvaluation(FlowSimulator& simulator, Ref<events::Emitter<ResT>> emitter):
+				  listener([&simulator, self = this](ResT res) {
+					  CORE_ASSERT(
+						  simulator.late_evals.size(), "there must be some evaluation not completed"
+					  );
+					  CORE_ASSERT(
+						  &simulator.late_evals.back() == self,
+						  "I am at the highest evaluation to be performed"
+					  );
+
+					  size_t my_idx = simulator.late_evals.size();
+					  simulator.late_result.emplace_back(res, my_idx);
+					  simulator.cv.notify_all();
+					  simulator.late_evals.pop_back();
+				  }) {
+				emitter->attachListener(this->listener);
+			}
+		};
+
 	public:
 		FlowSimulator(
 			std::function<void(bool, std::string_view)> assert_true_fn,
@@ -58,44 +90,12 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& assertAtBreakpoint(base::StrID expected_func, u64 expected_instr) {
-			auto pos_res = vm::api::getCurrentPosition(pid);
-			assertTrue(pos_res.has_value(), "Get current position failed");
-			assertEqual(expected_func, pos_res->function_name, "Current position function mismatch");
-			assertEqual(
-				expected_instr, pos_res->instr_number, "Current position instruction mismatch"
-			);
-			return *this;
-		}
-
 		FlowSimulator& evalExprNormal(const fs::File& file, const std::vector<u64>& expected_result) {
 			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
 			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
 
 			assertExitValue(response.value(), expected_result);
 			return *this;
-		}
-
-		FlowSimulator& evalExprExpectPause(
-			const fs::File& file, base::StrID expected_func, u64 expected_instr
-		) {
-			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
-			assertTrue(!response, "The expression should stop prior to the completion");
-
-			v_if_matches(response.error(), api::IncompleteExprEval, error) {
-				auto [emitter_ref, _] = *error;
-
-				listeners.emplace_back([&](auto&& res) {
-					results.push_back(res);
-					cv.notify_all();
-				});
-
-				emitter_ref->attachListener(listeners.back());
-
-				return *this;
-			}
-
-			CORE_UNREACHABLE();
 		}
 
 		FlowSimulator& evalExprExpectBreakpoint(
@@ -107,7 +107,27 @@ namespace vm::test {
 				"Expected expression evaluation to pause on breakpoint, but it completed"
 			);
 
-			return assertAtBreakpoint(expected_func, expected_instr);
+			auto [ref, reason] = v_get(response.error(), vm::api::IncompleteExprEval);
+
+			CORE_ASSERT(ref, "we should get a valid ref to the eventual emitter of the response");
+
+			late_evals.emplace_back(*this, *ref.toOpt());
+
+			return awaitBreakpoint(expected_func, expected_instr);
+		}
+
+		FlowSimulator& awaitExprCompletion(const std::vector<u64>& expected) {
+			std::unique_lock lock(mt);
+			cv.wait(lock, [&] { return bool(late_result.size()); });
+			auto res = late_result.front().first;
+			late_result.pop_front();
+
+			using ApiResT          = std::vector<Ref<IVMValue>>;
+			api::ExitValue api_res = ApiResT{};
+			for (auto safe_ref: res) v_get(api_res, ApiResT).emplace_back(safe_ref.get());
+
+			assertExitValue(api_res, expected);
+			return *this;
 		}
 
 		FlowSimulator& resume() {
@@ -183,11 +203,5 @@ namespace vm::test {
 		std::function<void(bool, std::string_view)> assert_true_fn;
 		vm::PID                                     pid;
 		vm::api::ThreadID                           thread_id;
-		std::deque<vm::api::ProcStatus>             received_statuses;
-		std::mutex                                  mutex;
-		std::condition_variable                     cv;
-
-		std::deque<events::Listener<std::vector<Ref<SafeVMValue>>>> listeners;
-		std::deque<std::vector<Ref<SafeVMValue>>>                   results;
 	};
 }
