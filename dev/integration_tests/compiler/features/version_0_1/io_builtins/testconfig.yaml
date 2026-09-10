@@ -14,7 +14,6 @@ Tests:
     Description: printing all primitive types.
     Cases:
       all:
-        backend: all
         Output:
           String: "1\n2\n3\n4\n6\n7\n8\n9\n3.14\n2.718\n()trueAHelloWorld"
         ExitCode: 0

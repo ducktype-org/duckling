@@ -83,8 +83,8 @@ protected:
 
 private:
 	static inline const std::vector<std::string> ALL_CORE_MODULES{
-		"core/builtins", "core/io",        "core/containers",
-		"core/runtime",  "core/panicking", "core/clib",
+		"core/builtins", "core/primitive_io", "core/containers",
+		"core/runtime",  "core/panicking",    "core/clib",
 	};
 
 	auto getModuleFromPath(
