@@ -140,6 +140,17 @@ namespace compiler::frontend {
 
 	base::StrID ModuleTree::getName() const { return m_name; }
 
+	std::string ModuleTree::humanReadableID(query::Context& ctx) const {
+		const auto own_name
+			= getName().isBad() ? std::string_view("<unnamed>") : getName().strView();
+
+		auto parent = getParentModule();
+		if (parent.empty()) return base::strConcat(m_package_id.strView(), ".", own_name);
+
+		const auto parent_id = parent.value().unlock(ctx).getID();
+		return base::strConcat(getModuleRef(parent_id)->humanReadableID(ctx), ".", own_name);
+	}
+
 	std::string ModuleTree::prettyPrint(u32 indentation) const {
 		std::stringstream output;
 

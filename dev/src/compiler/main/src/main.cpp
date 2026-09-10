@@ -306,14 +306,15 @@ namespace debug_options {
 	auto getDebugDumpIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
 		static base::HashMap<std::string, bool DebugOptions::*> dump_field_mapping{
 			{ "asm", &DebugOptions::dump_asm }, { "llvm", &DebugOptions::dump_llvm },
-			{ "lir", &DebugOptions::dump_lir }, { "mir", &DebugOptions::dump_mir },
-			{ "hir", &DebugOptions::dump_hir },
+			{ "dbc", &DebugOptions::dump_dbc }, { "lir", &DebugOptions::dump_lir },
+			{ "mir", &DebugOptions::dump_mir }, { "hir", &DebugOptions::dump_hir },
 		};
 		return dump_field_mapping;
 	}
 
 	auto getDebugPrintIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
 		static base::HashMap<std::string, bool DebugOptions::*> print_field_mapping{
+			{ "dbc", &DebugOptions::print_dbc },
 			{ "lir", &DebugOptions::print_lir },
 			{ "mir", &DebugOptions::print_mir },
 			{ "hir", &DebugOptions::print_hir },
@@ -337,7 +338,8 @@ namespace debug_options {
 										))
 				.addLongName("dump-ir")
 				.addShortDesc("Dump to file the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: asm, llvm, lir, mir, hir.")
+				.addLongDesc("Possible values are: asm, llvm, dbc, lir, mir, hir.\nNote: dbc "
+			                 "requires --dvm-backend.")
 				.build(),
 			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
 											"categories",
@@ -345,7 +347,7 @@ namespace debug_options {
 										))
 				.addLongName("print-ir")
 				.addShortDesc("Print to stdout the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: lir, mir, hir.")
+				.addLongDesc("Possible values are: dbc, lir, mir, hir.")
 				.build(),
 		};
 	}
