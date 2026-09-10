@@ -310,10 +310,8 @@ private:
 	}
 
 	/**
-	 * @brief A `for` loop desugars into compiler-generated index/length locals, named `__index` and
-	 *        `__len`. A user variable may be spelled the same way, and such a pair must not be
-	 *        reported as shadowing: the generated local is an implementation detail, not a
-	 *        declaration the user could know about.
+	 * @brief A user variable spelled like the generated `for` locals (`__index`, `__len`) must not
+	 *        be reported as shadowing them.
 	 *
 	 * @note Lowered here rather than in `mir_errors_test`, because indexing a static array emits a
 	 *       bounds check whose `panic` is a standard-library language primitive.
@@ -352,7 +350,7 @@ private:
 		);
 		ASSERT_TRUE(!generated_name.empty());
 
-		// The user declares a variable under the generated name inside the loop body.
+		// Declared in the loop body, then the same with the variable actually read.
 		const std::string shadowing = std::string(MODULE_HEAD) + std::string(LOOP_HEAD)
 		                            + "        let " + generated_name + ": i64 = 20;\n"
 		                            + std::string(MODULE_TAIL);
@@ -361,16 +359,14 @@ private:
 		);
 		assertUserAndGeneratedLocalShareName(shadowing, generated_name);
 
-		// The same, with the user's variable actually read. The name has to resolve to the user's
-		// local; the generated one is an implementation detail and stays out of the lookup.
 		const std::string used = std::string(MODULE_HEAD) + std::string(LOOP_HEAD) + "        let "
 		                       + generated_name + ": i64 = 20;\n        sum = sum + "
 		                       + generated_name + ";\n" + std::string(MODULE_TAIL);
 		test_utils::checkLoweredModule(used, [](query::Context&, const compiler::mir::MIRUnit&) {});
 		assertUserAndGeneratedLocalShareName(used, generated_name);
 
-		// The mirror case: the generated local shadows a user variable of the enclosing scope. The
-		// user's variable is read after the loop, where only it is in scope.
+		// Mirror direction: the generated local shadows a user variable of the enclosing scope,
+		// which is read after the loop, where only it is in scope.
 		const std::string shadowed = std::string(MODULE_HEAD) + "    var " + generated_name
 		                           + ": i64 = 7;\n" + std::string(LOOP_HEAD)
 		                           + "        sum = sum + x;\n    }\n    return sum + "
@@ -382,8 +378,8 @@ private:
 	}
 
 	/**
-	 * @brief Keeps the checks above from silently losing their subject: the module has to contain a
-	 *        user local and a compiler-generated local that share `name`.
+	 * @brief Guards the checks above: the module has to contain a user and a generated local that
+	 *        share `name`, so that they cannot silently stop testing a collision.
 	 */
 	void assertUserAndGeneratedLocalShareName(
 		std::string_view module_content, std::string_view name

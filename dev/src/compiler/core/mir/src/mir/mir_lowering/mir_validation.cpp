@@ -14,8 +14,7 @@ namespace compiler::mir {
 		for (auto& local: fun.local_list) {
 			if (local.helios_id.empty()) continue;
 
-			// Compiler-generated locals have no PST position, so they cannot meaningfully shadow
-			// user code and take no part in the check.
+			// Generated locals cannot shadow user code and have no position of their own.
 			if (not helios::maybeSymbolPst(*local.helios_id).has_value()) continue;
 
 			auto name = helios::name(*local.helios_id);
@@ -30,8 +29,6 @@ namespace compiler::mir {
 							                               : std::tuple{ def, base::Ref(&local) };
 
 							auto pos_of = [&](auto local_ref) {
-								// Generated locals were filtered out above, so the position is
-								// always available for the locals reaching this point.
 								return helios::maybeSymbolPst(local_ref->helios_id.value())
 								    .value()
 								    .unlock(ctx)

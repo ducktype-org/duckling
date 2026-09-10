@@ -233,12 +233,8 @@ namespace compiler::helios::desugaring {
 		ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
 		auto get_generated_local = [&](base::StrID role, tsh::SymbolType<> type) {
-			// The name carries no discriminator: these locals are told apart by their generated
-			// data, they are invisible to lookup, and they take no part in the shadowing check, so
-			// the name only has to be stable. Every discriminator derived from the loop moves, and
-			// since the name is part of the query key, a moving name invalidates the module: a scope
-			// id is a counter and differs per compilation, a source position changes whenever an
-			// unrelated line is added, and a hash of the loop mixes in a per-compilation context.
+			// No discriminator in the name: it is part of the query key, so anything derived from
+			// the loop (scope id, position, hash) would differ per compilation or move on edits.
 			auto name = role;
 
 			// @TODO: #2799 Reconsider the generated symbols scope.
