@@ -695,7 +695,7 @@ namespace vm {
 			valid_expr.error().dump(ss);
 			return std::unexpected(api::LoadProgramError{ ss.str() });
 		}
-		
+
 		auto returned_value = thread_ref->loadAndExecRuntimeExpr(std::move(valid_expr).value());
 		if (!returned_value.has_value()) {
 			auto [ref, msg] = returned_value.error();

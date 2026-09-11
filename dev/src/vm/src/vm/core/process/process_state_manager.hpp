@@ -1,10 +1,10 @@
 #pragma once
 
+#include <events/emitter.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
-
-#include <events/emitter.hpp>
 
 #include <vm/api/data/thread_id.hpp>
 #include <vm/core/process/process_state.hpp>
