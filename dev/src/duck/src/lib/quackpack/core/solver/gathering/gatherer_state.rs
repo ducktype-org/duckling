@@ -512,7 +512,7 @@ impl GathererState {
                 .or_default()
                 .insert(pkg.version());
             self.pkgs_data.entry(pkg).or_insert_with(|| PackageData {
-                manifest: manifest,
+                manifest,
                 requested_features: HashSet::new(),
                 referenced_by_requests: false,
             });

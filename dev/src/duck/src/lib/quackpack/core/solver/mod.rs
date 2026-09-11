@@ -229,11 +229,10 @@ impl SolverEngineData {
     #[tracing::instrument(skip_all)]
     pub fn solve(self, ctx: &DuckContext) -> QuackResult<SolverAnswer> {
         ctx.console().info("starting the solver engine")?;
-        let manifests = self.input.get_manifests();
-        let solver_output =
+        let (solution, manifests) =
             SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
-        debug!(?solver_output);
-        let new_freeze = self.current_freeze.new_freeze(&manifests, solver_output)?;
+        debug!(?solution);
+        let new_freeze = self.current_freeze.new_freeze(&manifests, solution)?;
         Ok(SolverAnswer {
             new_freeze,
             pkgs_manifests: manifests,

@@ -1,4 +1,6 @@
 //! Module containing a wrapper over [`Model`], with utilities related to dependency resolving.
+//! Note:
+//! -----
 //! By `child` in the context of a given dependency relation we mean the package realising that dependency.
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -20,12 +22,12 @@ fn package_var_name(pkg: PackageId) -> StrId {
     StrId::new(format!("{:?}@{:?}", pkg.identity(), pkg.version()))
 }
 
-/// Creates a unique mapping of pairs of form (package, feature) to its variable name.
+/// Creates a unique mapping of pairs of form (package, feature) to their variable name.
 fn package_with_feature_var_name(pkg: PackageId, feature: FeatureName) -> StrId {
     StrId::new(format!("{}@{}", package_var_name(pkg), feature))
 }
 
-/// Creates a unique mapping of a pair of form (dependency relation, child feature) to its variable name.
+/// Creates a unique mapping of a pairs of form (dependency relation, child feature) to their variable name.
 fn dependency_feature_var_name(dep: DependencyEdge, feature: FeatureName) -> StrId {
     StrId::new(format!(
         "{}->{:?}@_@{}",
@@ -35,7 +37,7 @@ fn dependency_feature_var_name(dep: DependencyEdge, feature: FeatureName) -> Str
     ))
 }
 
-/// Creates a unique mapping of a pair of form (dependency relation, child version) to its variable name.
+/// Creates a unique mapping of a pairs of form (dependency relation, child version) to their variable name.
 fn dependency_version_var_name(dep: DependencyEdge, version: Version) -> StrId {
     StrId::new(format!(
         "{}->{:?}@{:?}@_",
@@ -64,9 +66,7 @@ pub struct SolverModel<'a, State> {
 
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Creates an empty model, given packages already placed in the previous freeze and their features.
-    pub fn new(
-        input: &'a SolverInput,
-    ) -> Self {
+    pub fn new(input: &'a SolverInput) -> Self {
         SolverModel {
             model: Model::default().hide_output(),
             input,
@@ -140,11 +140,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 
     /// Creates the variable associated with the package and adds it to the model.
     pub fn add_package_var(&mut self, pkg: PackageId) {
-        let objective_coef = if self.input.preexists(pkg) {
-            0.0
-        } else {
-            1.0
-        };
+        let objective_coef = if self.input.preexists(pkg) { 0.0 } else { 1.0 };
         let var_name = package_var_name(pkg);
         self.package_vars.entry(pkg).or_insert_with(|| {
             Rc::new(
@@ -165,7 +161,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Creates a variable associated with the (dependency, child feature) pair and adds it to the model.
-    pub fn add_dependency_feature_realisation_var(
+    pub fn add_dependency_feature_realization_var(
         &mut self,
         dep: DependencyEdge,
         feature: FeatureName,
@@ -179,7 +175,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Creates a variable associated with the (dependency, child version) pair and adds it to the model.
-    pub fn add_dependency_version_realisation_var(
+    pub fn add_dependency_version_realization_var(
         &mut self,
         dep: DependencyEdge,
         version: Version,
@@ -210,12 +206,14 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
+    /// Add a constraint that this package can never be present.
     pub fn forbid_package(&mut self, pkg: PackageId) -> QuackResult<()> {
         let var = self.get_package_variable(pkg, None)?;
         self.model.add(cons().coef(&var, 1.0).eq(0.0));
         Ok(())
     }
 
+    /// Add a constraint that this package can never be present with the given feature.
     pub fn forbid_package_with_feature(
         &mut self,
         pkg: PackageId,
@@ -244,7 +242,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 
     /// For each pair (parent_feature, forced_child_features) adds a condition that
     /// presence of the parent package with parent feature forces presence of the child with all the forced features.
-    /// Note: Use only for scenarios where both parent and child have belonged to the previous freeze.
+    /// Important:
+    /// ----------
+    /// Use only for scenarios where both parent and child have belonged to the previous freeze.
     pub fn require_satisfying_dep_feature_for_preexisting(
         &mut self,
         parent: PackageId,
@@ -299,9 +299,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         &mut self,
         dep: DependencyEdge,
         solver_input: &SolverInput,
-        possible_dep_realisations: &[PackageId],
+        possible_dep_realizations: &[PackageId],
     ) -> QuackResult<()> {
-        for pkg in possible_dep_realisations {
+        for pkg in possible_dep_realizations {
             let version_realization_var =
                 self.get_dependency_version_variable(dep, pkg.version())?;
             for (feature, feature_realization_var) in
@@ -371,7 +371,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             &self.package_to_feature_vars,
             &new_packages,
             &preexisting_packages,
-            &self.input,
+            self.input,
             &solution,
         );
         let new_edges = new_edges(self.dependency_to_version_vars, &solution);
@@ -443,7 +443,7 @@ fn new_features(
     new_features
 }
 
-/// Helper for determining what new realisations of any dependencies have been chosen by the model.
+/// Helper for determining what new realizations of any dependencies have been chosen by the model.
 #[tracing::instrument(skip_all)]
 fn new_edges(
     dependency_to_version_vars: HashMap<DependencyEdge, ChildVersionsToVars>,
@@ -451,7 +451,7 @@ fn new_edges(
 ) -> HashMap<DependencyEdge, Version> {
     let mut new_edges = HashMap::new();
     for (edge, version_to_var_map) in dependency_to_version_vars {
-        if let Some(chosen_realisation) = version_to_var_map
+        if let Some(chosen_realization) = version_to_var_map
             .iter()
             .filter_map(|(version, var)| {
                 if is_one(var, solution) {
@@ -462,7 +462,7 @@ fn new_edges(
             })
             .next()
         {
-            new_edges.insert(edge, chosen_realisation);
+            new_edges.insert(edge, chosen_realization);
         }
     }
     new_edges

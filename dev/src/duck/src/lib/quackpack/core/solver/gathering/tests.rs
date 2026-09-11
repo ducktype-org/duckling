@@ -7,6 +7,7 @@ use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
 use crate::DuckContext;
+use crate::quackpack::core::FeatureName;
 use crate::quackpack::core::fetcher::{Fetcher, types};
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
@@ -566,20 +567,16 @@ dependencies:
     assert_eq!(
         packages,
         gathered_info
-            .gathered_manifests
+            .packages_data
             .keys()
             .copied()
             .collect::<HashSet<PackageId>>()
     );
-    assert_eq!(
-        packages,
-        gathered_info
-            .possible_features
-            .keys()
-            .copied()
-            .collect::<HashSet<PackageId>>()
-    );
-    for (_, features) in gathered_info.possible_features {
+    for features in gathered_info
+        .packages_data
+        .values()
+        .map(|data| &data.requested_features)
+    {
         assert!(features.is_empty());
     }
     assert_eq!(
@@ -705,7 +702,11 @@ features:
     let identity_xd = FullIdentity::new("xd".into(), FullOrigin::for_registry(url));
     let identity_dx = FullIdentity::new("dx".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (
                 PackageId::new(identity_root, root_version),
@@ -791,7 +792,11 @@ dependencies:
         ])
     );
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (PackageId::new(identity_root, root_version), [].into()),
             (
@@ -856,7 +861,11 @@ dependencies:
         ])
     );
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (PackageId::new(identity_root, root_version), [].into()),
             (
@@ -922,7 +931,11 @@ dependencies:
         ])
     );
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (PackageId::new(identity_root, root_version), [].into()),
             (

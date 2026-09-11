@@ -1,3 +1,6 @@
+//! Main logic for solving dependencies.
+//! Contains [`SolverEngine`] struct, which transforms the problem into an integer linear programming instance and solves it.
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::iter::once;
 
@@ -12,82 +15,65 @@ use crate::quackpack::core::solver::util::get_possible_realizations;
 use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Source, Version};
 use crate::{QuackResult, QuackResultContext, StrId};
 
-#[derive(Clone, Debug)]
-pub struct PackageData {
-    manifest: Box<Manifest>,
-    necessary_features: HashSet<FeatureName>,
-    preexistance: Option<PreexistanceData>,
-}
-
-impl PackageData {
-    /// Create a [`PackageData`] without features and preexistance info.
-    /// Should be used as an intermediate step when constructing [`PackageData`] instances.
-    fn empty_with_manifest(manifest: Box<Manifest>) -> PackageData {
-        Self {
-            manifest: manifest.into(),
-            necessary_features: [].into(),
-            preexistance: None,
-        }
-    }
-
-    /// Check if a given feature was present in the previous freeze.
-    fn feature_preexists(&self, feature: FeatureName) -> bool {
-        self.preexistance.as_ref().is_some_and(|data| data.features.contains(&feature))
-    }
-
-    /// Check whether a given dependency was present in the previous freeze and get the realization.
-    fn dependency_preexists(&self, edge: DependencyEdge) -> Option<Version> {
-        self.preexistance.as_ref()?.dependencies.get(&edge).copied()
-    }
-
-    /// Get the [`HashSet`] which could occur in the solution.
-    pub fn features(&self) -> &HashSet<FeatureName> {
-        &self.necessary_features
-    }
-}
-
-impl From<gatherer_state::PackageData> for PackageData {
-    fn from(value: gatherer_state::PackageData) -> Self {
-        Self {
-            manifest: value.manifest,
-            necessary_features: value.requested_features,
-            preexistance: None,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PreexistanceData {
-    features: HashSet<FeatureName>,
-    dependencies: HashMap<DependencyEdge, Version>,
-}
-
 /// Struct with all the necessary information for the solver to be run.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SolverInput {
     pub packages_data: HashMap<PackageId, PackageData>,
     pub versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
     pub source_to_origin_resolver: HashMap<Source, FullOrigin>,
 }
 
+/// All necessacry information for a singular package.
+#[derive(Clone, Debug)]
+pub struct PackageData {
+    /// Manifest of the package.
+    manifest: Box<Manifest>,
+    /// All features which can potentially occur in the solution.
+    features: HashSet<FeatureName>,
+    /// Whether and how the package was present in the previous freeze.
+    preexistance: Option<PreexistanceData>,
+}
+
+/// Information about a package in the previous freeze.
+#[derive(Clone, Debug, Default)]
+pub struct PreexistanceData {
+    features: HashSet<FeatureName>,
+    realized_dependencies: HashMap<StrId, PackageId>,
+}
+
 impl SolverInput {
-    /// Creates the solver input, based on the previous freeze, its packages' manifests and information gathered
-    /// in the gathering phase.
+    /// Creates the [`SolverInput`], based on the previous freeze, its packages' manifests
+    /// and information gathered in the gathering phase.
     #[tracing::instrument(skip_all)]
     pub fn from_freeze_and_gathered_info(
         prev_freeze: &SolverFreeze,
         mut prev_freeze_manifests: HashMap<PackageId, Box<Manifest>>,
         gathered_info: GatheredInfo,
     ) -> QuackResult<Self> {
-        let mut packages_data: HashMap<PackageId, PackageData> = gathered_info.packages_data.into_iter().map(|(k, v)| (k, v.into())).collect();
+        let mut packages_data: HashMap<PackageId, PackageData> = gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(k, v)| (k, v.into()))
+            .collect();
         let mut versions_for_identity = gathered_info.versions_for_identity;
         let mut source_to_origin_resolver = gathered_info.source_to_origin_resolver;
         for (pkg, freeze) in prev_freeze.package_freezes.iter() {
-            let manifest = prev_freeze_manifests.remove(pkg)
-                .context_internal("previous freeze package without fetched manifest")?;
-            let pkg_data = packages_data.entry(*pkg)
-                .or_insert_with(|| PackageData::empty_with_manifest(manifest));
-            pkg_data.necessary_features.extend(freeze.features.iter().copied());
+            let manifest = prev_freeze_manifests
+                .remove(pkg)
+                .with_context_internal(|| {
+                    format!("previous freeze package {pkg:?} without fetched manifest")
+                })?;
+            let pkg_data = match packages_data.entry(*pkg) {
+                Entry::Occupied(data) => {
+                    // Remember that for gathering we modified the root packages manifest.
+                    // To revert that change now, we overwrite manifests from gathering with manifests from diagnosing previous freeze.
+                    let data = data.into_mut();
+                    data.manifest = manifest;
+                    data
+                }
+                Entry::Vacant(vacant) => vacant.insert(PackageData::empty_with_manifest(manifest)),
+            };
+            pkg_data.features.extend(freeze.features.iter().copied());
             versions_for_identity
                 .entry(pkg.identity())
                 .or_default()
@@ -98,55 +84,103 @@ impl SolverInput {
             );
             let mut preexistance_data = PreexistanceData::default();
             preexistance_data.features.extend(freeze.features.clone());
-            for (dep_name, realization) in freeze.dependencies_realization.iter() {
-                preexistance_data.dependencies.insert(
-                    DependencyEdge {
-                        parent: *pkg,
-                        dep_identity: realization.identity(),
-                        manifest_child_name: *dep_name,
-                    },
-                    realization.version(),
-                );
-            }
+            preexistance_data
+                .realized_dependencies
+                .extend(freeze.dependencies_realization.clone());
             pkg_data.preexistance = Some(preexistance_data);
         }
         Ok(Self {
             packages_data,
             versions_for_identity,
-            source_to_origin_resolver
+            source_to_origin_resolver,
         })
     }
 
-    // TODO: Shopuldn't be needed.
-    pub fn get_manifests(&self) -> HashMap<PackageId, Box<Manifest>> {
-        self.packages_data.iter().map(|(pkg, data)| (*pkg, data.manifest.clone())).collect()
+    /// Transform [`SolverInput`] into a mapping from packages to manifests.
+    fn into_manifests(self) -> HashMap<PackageId, Box<Manifest>> {
+        self.packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.manifest))
+            .collect()
     }
 
     /// Check if package existed in the previous freeze.
     pub fn preexists(&self, pkg: PackageId) -> bool {
-        self.packages_data.get(&pkg).is_some_and(|data| data.preexistance.is_some())
+        self.packages_data
+            .get(&pkg)
+            .is_some_and(|data| data.preexistance.is_some())
     }
 
     /// Get a [`HashSet`] of preexisting features if the package preexisted in the previous freeze.
     pub fn preexisting_features_for_pkg(&self, pkg: PackageId) -> Option<&HashSet<FeatureName>> {
-        self.packages_data.get(&pkg).map(|data| data.preexistance.as_ref().map(|pre| &pre.features)).flatten()
+        self.packages_data
+            .get(&pkg)
+            .and_then(|data| data.preexistance.as_ref().map(|pre| &pre.features))
     }
 
     /// Get a [`HashSet`] of all packages preexisting in the previous freeze.
     pub fn all_preexisting_pkgs(&self) -> HashSet<PackageId> {
-        self.packages_data.iter().filter_map(|(pkg, data)| {
-            if data.preexistance.is_some() {
-                Some(*pkg)
-            } else {
-                None
-            }
-        }).collect()
+        self.packages_data
+            .iter()
+            .filter_map(|(pkg, data)| {
+                if data.preexistance.is_some() {
+                    Some(*pkg)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     /// Get the [`PackageData`] associated with the package.
     /// Returns internal error if no data is found.
     pub fn package_data(&self, pkg: PackageId) -> QuackResult<&PackageData> {
-        self.packages_data.get(&pkg).with_context_internal(|| format!("package {pkg:?} not present in packages to package data map"))
+        self.packages_data.get(&pkg).with_context_internal(|| {
+            format!("package {pkg:?} not present in packages to package data map")
+        })
+    }
+}
+
+impl PackageData {
+    /// Create a [`PackageData`] without features and preexistance info.
+    /// Should be used as an intermediate step when constructing [`PackageData`] instances.
+    fn empty_with_manifest(manifest: Box<Manifest>) -> PackageData {
+        Self {
+            manifest,
+            features: [].into(),
+            preexistance: None,
+        }
+    }
+
+    /// Check if a given feature was present in the previous freeze.
+    fn feature_preexists(&self, feature: FeatureName) -> bool {
+        self.preexistance
+            .as_ref()
+            .is_some_and(|data| data.features.contains(&feature))
+    }
+
+    /// Check whether a given dependency was present in the previous freeze and get the realization.
+    fn dependency_preexists(&self, name: StrId) -> Option<PackageId> {
+        self.preexistance
+            .as_ref()?
+            .realized_dependencies
+            .get(&name)
+            .copied()
+    }
+
+    /// Get the [`HashSet`] which could occur in the solution.
+    pub fn features(&self) -> &HashSet<FeatureName> {
+        &self.features
+    }
+}
+
+impl From<gatherer_state::PackageData> for PackageData {
+    fn from(value: gatherer_state::PackageData) -> Self {
+        Self {
+            manifest: value.manifest,
+            features: value.requested_features,
+            preexistance: None,
+        }
     }
 }
 
@@ -164,9 +198,11 @@ impl<'a> SolverEngine<'a> {
     pub fn run_engine(
         input: SolverInput,
         main_pkg: &(PackageId, HashSet<FeatureName>),
-    ) -> QuackResult<FoundSolution> {
+    ) -> QuackResult<(FoundSolution, HashMap<PackageId, Box<Manifest>>)> {
         let engine = SolverEngine::new(&input);
-        engine.run(main_pkg)
+        let solution = engine.run(main_pkg)?;
+        let manifests = input.into_manifests();
+        Ok((solution, manifests))
     }
 
     /// Creates a new [`SolverEngine`] from the given [`SolverInput`] reference.
@@ -182,12 +218,13 @@ impl<'a> SolverEngine<'a> {
         self.create_package_variables();
         for (package, data) in self.input.packages_data.iter() {
             for dependency in data.manifest.dependencies().all_dependencies() {
-                if dependency.is_enabled_for(data.necessary_features.iter().cloned()) {
+                if dependency.is_enabled_for(data.features.iter().cloned()) {
                     self.construct_for_single_dependency(*package, dependency)?;
                 }
             }
         }
 
+        // Root has to be present in the solution with all its requested features.
         self.model.require_package(main_pkg.0)?;
         for feature in main_pkg.1.iter() {
             self.model
@@ -201,8 +238,7 @@ impl<'a> SolverEngine<'a> {
     fn create_package_variables(&mut self) {
         for (pkg, data) in self.input.packages_data.iter() {
             self.model.add_package_var(*pkg);
-            for feature in data.necessary_features.iter().copied()
-            {
+            for feature in data.features.iter().copied() {
                 self.model.add_package_with_feature_var(*pkg, feature);
             }
         }
@@ -220,28 +256,27 @@ impl<'a> SolverEngine<'a> {
             &self.input.source_to_origin_resolver,
         ) else {
             // We could not translate the manifest entry into an identity of the dependency,
-            // so there are no possible realizations and we must forbid the parent package/its features
-            // forcing the dependency.
-            // This can happen due to merciful mode.
-            return self.forbid_forcing_features(parent, manifest_dependency);
+            // so there are no possible realizations and we must forbid the dependency.
+            // This can happen due to merciful mode (we failed to fetch any realizations).
+            return self.forbid_dependency(parent, manifest_dependency);
         };
 
         let parent_data = self.input.package_data(parent)?;
-
         // If this edge was not resolved in the previous freeze, we fallback to adding all constraints.
-        let Some(realization_ver) = parent_data.dependency_preexists(edge) else {
+        let Some(realization) = parent_data.dependency_preexists(edge.manifest_child_name) else {
             return self.add_constraints_for_edge(edge, manifest_dependency);
         };
-        let realisation = PackageId::new(edge.dep_identity, realization_ver);
-        let realisation_data = self.input.package_data(realisation)?;
+        // Below we assume that the dependency was realized in the previous freeze.
+        let realization_data = self.input.package_data(realization)?;
 
         // Each feature of the parent may force some additional features of the child,
         // not present in the previous freeze.
-        // We try to add them to the chosen realisation.
+        // We try to add them to the chosen realization.
+
+        // Mapping not-preexisting parent feature -> realization features forced by it.
         let mut forcing = vec![];
-        let possible_child_features = &realisation_data.necessary_features;
-        for parent_feature in parent_data.necessary_features.iter().copied()
-        {
+        let realization_features = &realization_data.features;
+        for parent_feature in parent_data.features.iter().copied() {
             if parent_data.feature_preexists(parent_feature) {
                 // Parent feature belonged to the previous freeze, so whatever it forced, has been already taken care of.
                 continue;
@@ -249,21 +284,25 @@ impl<'a> SolverEngine<'a> {
             let forced = manifest_dependency.enabled_features(vec![parent_feature]);
             if forced
                 .iter()
-                .any(|feature| !possible_child_features.contains(feature))
+                .any(|feature| !realization_features.contains(feature))
             {
-                // (*) Previously chosen realisation of the dependency does not support some of the forced flags,
-                // so we have to treat the dependency normally and add all the constraints.
+                // (*) Previously chosen realization of the dependency does not support some of the forced flags,
+                // so we have to treat the dependency normally and add all the constraints normally.
                 return self.add_constraints_for_edge(edge, manifest_dependency);
             } else {
                 forcing.push((parent_feature, forced));
             }
         }
-        // If (*) never happened, we just add conditions that parent feature forces some new realisation features.
+        // If (*) never happened, we just add conditions that parent feature forces some new realization features.
         self.model
-            .require_satisfying_dep_feature_for_preexisting(parent, realisation, forcing)
+            .require_satisfying_dep_feature_for_preexisting(parent, realization, forcing)
     }
 
-    /// Creates all standard constraints for a dependency edge.
+    /// Creates all standard constraints for a dependency edge:
+    /// 1. If parent is present then this specific dependency has to have a realization chosen.
+    /// 2. If parent is present (without or with features) then this dependency may force some features.
+    /// 3. If for this dependency a realization was chosen, then the package of realization has to be present.
+    /// 4. If some forced features were determined, then the realization has to be present with them.
     fn add_constraints_for_edge(
         &mut self,
         edge: DependencyEdge,
@@ -282,11 +321,8 @@ impl<'a> SolverEngine<'a> {
         )?;
         self.create_dependency_feature_realization_conditions(edge, manifest_dependency)?;
         self.model.require_substantiate_dep(edge)?;
-        self.model.require_substantiate_dep_features(
-            edge,
-            &self.input,
-            &possible_realizations,
-        )?;
+        self.model
+            .require_substantiate_dep_features(edge, self.input, &possible_realizations)?;
         Ok(())
     }
 
@@ -299,7 +335,7 @@ impl<'a> SolverEngine<'a> {
     ) -> QuackResult<()> {
         for realization in possible_realizations {
             self.model
-                .add_dependency_version_realisation_var(edge, realization.version());
+                .add_dependency_version_realization_var(edge, realization.version());
         }
 
         let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
@@ -325,13 +361,16 @@ impl<'a> SolverEngine<'a> {
         let enabled_always = HashSet::from_iter(manifest_dependency.enabled_features(vec![]));
         let mut tmp_hash_set;
         for parent_feature in parent_features {
+            // Features forced by the parent feature but not forced by default,
+            // or features forced by default if parent_feature is None.
             let forced = match parent_feature {
                 None => &enabled_always,
                 Some(feature) => {
+                    // We use this trick so that forced is a reference and we do not need to clone `enabled_always`.
                     tmp_hash_set =
                         HashSet::from_iter(manifest_dependency.enabled_features(vec![feature]))
                             .difference(&enabled_always)
-                            .cloned()
+                            .copied()
                             .collect();
                     &tmp_hash_set
                 }
@@ -341,7 +380,7 @@ impl<'a> SolverEngine<'a> {
             }
             for feature in forced.iter() {
                 self.model
-                    .add_dependency_feature_realisation_var(edge, *feature);
+                    .add_dependency_feature_realization_var(edge, *feature);
             }
             self.model
                 .require_satisfying_dep_feature(edge, parent_feature, forced)?;
@@ -349,15 +388,18 @@ impl<'a> SolverEngine<'a> {
         Ok(())
     }
 
-    fn forbid_forcing_features(
+    /// Assure that this dependency is never realized.
+    fn forbid_dependency(
         &mut self,
         parent: PackageId,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
         let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
         if is_dep_forced_default {
+            // The dependency is enabled by default, so `parent` can never be chosen.
             self.model.forbid_package(parent)?;
         } else {
+            // Forbid features of `parent` which enable this dependency.
             for dep_forcing_feature in manifest_dependency.enabling_features() {
                 self.model
                     .forbid_package_with_feature(parent, *dep_forcing_feature)?;
@@ -368,10 +410,12 @@ impl<'a> SolverEngine<'a> {
 
     /// For all not previous-freeze present features adds constraints for features expansion
     /// (the presence of expandable feature forces the presence of expanded feature).
-    /// Note: The constraints are added only if the feature expands to something more than itself.
+    /// Note:
+    /// -----
+    /// The constraints are added only if the feature expands to something more than itself.
     fn force_features_expansion(&mut self) -> QuackResult<()> {
         for (pkg, data) in self.input.packages_data.iter() {
-            for feature in data.necessary_features.iter() {
+            for feature in data.features.iter() {
                 if data.feature_preexists(*feature) {
                     continue;
                 }
@@ -384,7 +428,7 @@ impl<'a> SolverEngine<'a> {
                             "package `{pkg:?}` does not have a feature `{feature:?}`; {manifest:#?}"
                         )
                     })?;
-                expanded.remove(&feature);
+                expanded.remove(feature);
                 if !expanded.is_empty() {
                     self.model
                         .require_features_expansion(*pkg, *feature, expanded)?;
@@ -408,7 +452,7 @@ fn parent_features_to_consider(
         .packages_data
         .get(&edge.parent)
         .into_iter()
-        .flat_map(|data| data.necessary_features.iter().copied())
+        .flat_map(|data| data.features.iter().copied())
         .map(Some)
         .chain(once(None))
 }
@@ -465,27 +509,26 @@ metadata:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
-        let all_possible_features =
-            HashMap::from([(pkg_a, HashSet::new()), (pkg_b, HashSet::new())]);
         let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
         let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
+        let packages_data = [
+            (pkg_a, PackageData::empty_with_manifest(manifest_a)),
+            (pkg_b, PackageData::empty_with_manifest(manifest_b)),
+        ]
+        .into();
+
         let input = SolverInput {
-            gathered_manifests,
-            all_possible_features,
+            packages_data,
             versions_for_identity,
             source_to_origin_resolver,
-            preexisting_packages: HashSet::new(),
-            preexisting_features: HashMap::new(),
-            preexisting_dependencies: HashMap::new(),
         };
 
         let main_pkg = (pkg_a, HashSet::new());
-        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
         assert_eq!(output.new_packages, HashSet::from([pkg_a, pkg_b]));
         assert!(output.new_features.is_empty());
         assert_eq!(
@@ -540,28 +583,29 @@ dependencies:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
-        let all_possible_features = HashMap::from([
-            (pkg_a, HashSet::from([FeatureName::new("xd")])),
-            (pkg_b, HashSet::new()),
-        ]);
         let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
         let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
+        let data_a = PackageData {
+            manifest: manifest_a,
+            features: ["xd".into()].into(),
+            preexistance: None,
+        };
+        let packages_data = [
+            (pkg_a, data_a),
+            (pkg_b, PackageData::empty_with_manifest(manifest_b)),
+        ]
+        .into();
         let input = SolverInput {
-            gathered_manifests,
-            all_possible_features,
+            packages_data,
             versions_for_identity,
             source_to_origin_resolver,
-            preexisting_packages: HashSet::new(),
-            preexisting_features: HashMap::new(),
-            preexisting_dependencies: HashMap::new(),
         };
 
         let main_pkg = (pkg_a, HashSet::new());
-        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
         assert_eq!(output.new_packages, HashSet::from([pkg_a, pkg_b]));
         assert_eq!(
             output.new_features,
@@ -626,36 +670,33 @@ features:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
-        let all_possible_features = HashMap::from([
-            (pkg_a, HashSet::new()),
-            (
-                pkg_b,
-                HashSet::from([FeatureName::new("xd"), FeatureName::new("xdd")]),
-            ),
-        ]);
+        let data_b = PackageData {
+            manifest: manifest_b,
+            features: ["xd".into(), "xdd".into()].into(),
+            preexistance: Some(PreexistanceData {
+                features: ["xdd".into()].into(),
+                realized_dependencies: [].into(),
+            }),
+        };
+        let packages_data = [
+            (pkg_a, PackageData::empty_with_manifest(manifest_a)),
+            (pkg_b, data_b),
+        ]
+        .into();
         let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
         let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
-        let preexisting_packages = HashSet::from([pkg_b]);
-        let preexisting_features =
-            HashMap::from([(pkg_b, HashSet::from([FeatureName::new("xdd")]))]);
-
         let input = SolverInput {
-            gathered_manifests,
-            all_possible_features,
+            packages_data,
             versions_for_identity,
             source_to_origin_resolver,
-            preexisting_packages,
-            preexisting_features,
-            preexisting_dependencies: HashMap::new(),
         };
 
         let main_pkg = (pkg_a, HashSet::new());
-        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
         assert_eq!(output.new_packages, HashSet::from([pkg_a]));
         assert_eq!(
             output.new_features,
@@ -699,34 +740,30 @@ features:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
-        let all_possible_features = HashMap::from([
-            (pkg_a, HashSet::new()),
-            (
-                pkg_b,
-                HashSet::from([FeatureName::new("xd"), FeatureName::new("xdd")]),
-            ),
-        ]);
+        let data_b = PackageData {
+            manifest: manifest_b,
+            features: ["xd".into(), "xdd".into()].into(),
+            preexistance: Some(PreexistanceData::default()),
+        };
+        let packages_data = [
+            (pkg_a, PackageData::empty_with_manifest(manifest_a)),
+            (pkg_b, data_b),
+        ]
+        .into();
         let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
         let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
-        let preexisting_packages = HashSet::from([pkg_b]);
-
         let input = SolverInput {
-            gathered_manifests,
-            all_possible_features,
+            packages_data,
             versions_for_identity,
             source_to_origin_resolver,
-            preexisting_packages,
-            preexisting_features: HashMap::new(),
-            preexisting_dependencies: HashMap::new(),
         };
 
         let main_pkg = (pkg_a, HashSet::new());
-        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
         assert_eq!(output.new_packages, HashSet::from([pkg_a]));
         assert_eq!(
             output.new_features,
@@ -790,16 +827,25 @@ features:
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
-        let gathered_manifests = HashMap::from([
-            (pkg_a, manifest_a),
-            (pkg_b, manifest_b),
-            (pkg_c, manifest_c),
-        ]);
-        let all_possible_features = HashMap::from([
-            (pkg_a, HashSet::new()),
-            (pkg_b, HashSet::from([FeatureName::new("xd")])),
-            (pkg_c, HashSet::from([FeatureName::new("xdd")])),
-        ]);
+        let data_b = PackageData {
+            manifest: manifest_b,
+            features: ["xd".into()].into(),
+            preexistance: Some(PreexistanceData {
+                features: [].into(),
+                realized_dependencies: [("c".into(), pkg_c)].into(),
+            }),
+        };
+        let data_c = PackageData {
+            manifest: manifest_c,
+            features: ["xdd".into()].into(),
+            preexistance: Some(PreexistanceData::default()),
+        };
+        let packages_data = [
+            (pkg_a, PackageData::empty_with_manifest(manifest_a)),
+            (pkg_b, data_b),
+            (pkg_c, data_c),
+        ]
+        .into();
         let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
@@ -807,28 +853,14 @@ features:
         ]);
         let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
-        let preexisting_packages = HashSet::from([pkg_b, pkg_c]);
-        let preexisting_dependencies = HashMap::from([(
-            DependencyEdge {
-                parent: pkg_b,
-                dep_identity: identity_c,
-                manifest_child_name: StrId::new("c"),
-            },
-            Version::new(3, 0, 0),
-        )]);
-
         let input = SolverInput {
-            gathered_manifests,
-            all_possible_features,
+            packages_data,
             versions_for_identity,
             source_to_origin_resolver,
-            preexisting_packages,
-            preexisting_features: HashMap::new(),
-            preexisting_dependencies,
         };
 
         let main_pkg = (pkg_a, HashSet::new());
-        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
         assert_eq!(output.new_packages, HashSet::from([pkg_a]));
         assert_eq!(
             output.new_features,
@@ -875,11 +907,16 @@ features:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let gathered_manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
-        let all_possible_features = HashMap::from([
-            (pkg_a, HashSet::new()),
-            (pkg_b, ["f".into(), "g".into()].into()),
-        ]);
+        let data_b = PackageData {
+            manifest: manifest_b,
+            features: ["f".into(), "g".into()].into(),
+            preexistance: None,
+        };
+        let packages_data = [
+            (pkg_a, PackageData::empty_with_manifest(manifest_a)),
+            (pkg_b, data_b),
+        ]
+        .into();
         let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
@@ -887,17 +924,13 @@ features:
         let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let input = SolverInput {
-            gathered_manifests,
-            all_possible_features,
+            packages_data,
             versions_for_identity,
             source_to_origin_resolver,
-            preexisting_packages: HashSet::new(),
-            preexisting_features: HashMap::new(),
-            preexisting_dependencies: HashMap::new(),
         };
 
         let main_pkg = (pkg_a, HashSet::new());
-        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
         assert_eq!(output.new_packages, HashSet::from([pkg_a, pkg_b]));
         assert_eq!(
             output.new_features,
