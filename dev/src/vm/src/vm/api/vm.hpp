@@ -298,7 +298,7 @@ namespace vm::api {
 		PID pid, fs::File file, usize line_number
 	);
 
-	std::expected<void, ApiError> executeRuntimeExpr(
+	std::expected<ExitValue, ApiError> executeRuntimeExpr(
 		PID pid, ThreadID thread_id, const code::Function& function
 	);
 
