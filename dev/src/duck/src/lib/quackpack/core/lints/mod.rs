@@ -2,6 +2,7 @@
 
 mod buffer;
 mod passes;
+pub mod rules;
 pub mod warnings;
 
 use std::fmt;

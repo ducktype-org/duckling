@@ -10,7 +10,7 @@ struct DiagnosticWithLint {
     lint: Lint,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 /// Buffer for registered [`Lint`]s with [`Diagnostic`]s.
 ///
 /// Whenever [`register_warning`] or [`register_error`] is called, the message isn't emitted, but
@@ -26,14 +26,10 @@ pub struct LintBuffer {
     errors: Vec<DiagnosticWithLint>,
 }
 
-#[expect(dead_code)]
 impl LintBuffer {
     /// Generate a new [`LintBuffer`], with none lints emitted.
     pub fn new() -> Self {
-        Self {
-            warnings: vec![],
-            errors: vec![],
-        }
+        Self::default()
     }
 
     /// Register a new warning to be emitted later.
