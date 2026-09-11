@@ -4,7 +4,6 @@
 
 #include <base/preproc/for_each.hpp>
 
-#include "vm/bytecode/instructions.hpp"
 #include <vm/core/builtin_functions.hpp>
 
 namespace vm::code {
