@@ -213,7 +213,7 @@ impl OriginSatisfiesSource {
                 let reference_commit = match fast_path_client.get_commit_hash(reference).await {
                     Ok(commit) => commit,
                     Err(e) => {
-                        fetcher.ctx().console().warning(e)?;
+                        fetcher.ctx().warning(e)?;
                         return Ok(false);
                     }
                 };

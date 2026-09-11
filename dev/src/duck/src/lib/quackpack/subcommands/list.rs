@@ -86,7 +86,7 @@ pub fn list(opts: ListOptions<'_>) -> QuackResult<()> {
         venvs_list.reverse();
     }
 
-    ctx.console().print(format!(
+    ctx.print(format!(
         "Found {} venv{}",
         venvs_list.len(),
         venvs_list.s_if_plural(),

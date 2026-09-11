@@ -233,13 +233,9 @@ fn compile_and_print(
     mut builder: process_builder::DuckcProcessBuilder,
     name: impl fmt::Display,
 ) -> QuackResult<ExitStatus> {
+    bcx.pcx.ctx().info(format!("compiling `{name}`..."))?;
     bcx.pcx
         .ctx()
-        .console()
-        .info(format!("compiling `{name}`..."))?;
-    bcx.pcx
-        .ctx()
-        .console()
         .info_verbose(format!("Running `{}`", builder))?;
     builder.execute()
 }
