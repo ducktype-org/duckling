@@ -412,8 +412,8 @@ namespace vm {
 			std::vector<usize>    global_data_offsets;
 			std::vector<usize>    global_blocks_idxs;
 			std::vector<TypeCRef> global_types;
-			Bytes                 total_global_data_size;
-			usize                 global_count;
+			Bytes                 total_global_data_size = Bytes(0);
+			usize                 global_count           = 0;
 		};
 
 		/**
