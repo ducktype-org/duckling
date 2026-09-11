@@ -5,6 +5,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <filepath_utils/file_uri.hpp>
+
 namespace {
 	Ref<fs::VFS> vfs = fs::VFS::getInstance();
 
@@ -131,11 +133,7 @@ namespace fs {
 	}
 
 	std::string FilePath::uri() const {
-		std::string p = path.generic_string();
-#ifdef _WIN32
-		if (!p.empty() && p[1] == ':') return "file:///" + p;
-#endif
-		return "file://" + p;
+		return filepath_utils::formatFileUri(path.generic_string());
 	}
 
 	FilePath FilePath::getDefaultTempDirectoryPath() {

@@ -1,0 +1,110 @@
+# Compilation tests
+
+# Every case gets a private scratch directory for its build artifacts,
+# so cases can run concurrently and never dirty the source tree.
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+    DUCKC_STD_ARTIFACTS_PATH: "echo @{case_std_artifacts}"
+
+case_build: "$DIT_TMP_DIR/build"
+# Private copy of the shared warm std artifacts (see the root testconfig).
+# duckc rewrites the artifacts directory on exit (#3169), so concurrent cases
+# must not point at the shared one.
+case_std_artifacts: "$DIT_TMP_DIR/std_artifacts"
+copy_std_artifacts: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/null || true"
+
+# Backend the case is compiled and run with, taken from the case's own name: dvm, llvm,
+# llvm_valgrind (native run under valgrind, checked for leaks) or all (both backends,
+# outputs compared). A case named anything else fails in `PreCase`.
+backend: "@{CaseName}"
+
+# Skip valgrind cases on macOS (no valgrind on Apple Silicon). Inherited by every case;
+# non-valgrind cases are always enabled. Enabled iff not-a-valgrind-case OR not-macOS.
+Enabled: '[ "@{backend}" != "llvm_valgrind" ] || [ "@{is_macos}" != "true" ]'
+
+# Optional regexes matched against the run's stdout/stderr instead of a literal
+# `Output`/`Err` comparison, for cases whose output has volatile parts (e.g. a
+# DVM panic's `BlockID=N`). When either is set the dvm and (non-valgrind) llvm
+# runs are wrapped with the `expect_output` helper, which asserts the regexes,
+# forwards stdout, and swallows the volatile stderr. See
+# integration_tests/helpers/expect_output.py.
+stdout_regex: ""
+stderr_regex: ""
+
+compile_dvm_options: ""
+compile_llvm_options: ""
+std_artifacts_path_flag: "--custom-std-artifacts-path @{case_std_artifacts}"
+# Runs an extra deterministic compile check before normal compile_package.
+# You can override this to "false" in any subtree/test when duplication-based checks fail
+# for test-specific reasons (for example repeated globals or intentionally conflicting symbols).
+enable_conc_deterministic_tests: "true"
+# Number of duckc worker threads used for compilation and determinism checks.
+duckc_worker_count: "3"
+# Each case occupies that many threads, so the scheduler runs fewer cases at
+# once instead of oversubscribing the machine (and blowing the `TimeOut`s).
+# However, most cases do not consume all "duckc_worker_count" threads consitently,
+# so this number is reduced so speed the tests up.
+NeededThreads: "2"
+
+# Path to the local helper script used by the deterministic pre-check.
+compile_determinism_script: "@{dev_dir}/integration_tests/compiler/features/scripts/concurrent_compile_determinism.py"
+# Path to the helper script that runs multiple commands and asserts identical stdout/stderr/exit code.
+compare_runs_script: "@{dev_dir}/integration_tests/compiler/features/scripts/compare_runs.py"
+
+module_to_compile: "@{Name}"
+compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
+compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
+
+compile_dvm_backend_cmd:  "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend && @{compile_dvm_backend_deterministically_cmd}"
+compile_llvm_backend_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_llvm_options} && @{compile_llvm_backend_deterministically_cmd}"
+
+compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend"
+compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_llvm_options}"
+
+compiled_to_llvm: "@{case_build}/package_llvm.exe"
+compiled_to_dvm: "@{case_build}/package_dvm.dbc"
+
+# Deliberately empty, so as not to recompile duckc and dvm for each test.
+PreNode: ""
+
+PostCase: "@{cleanup_tmp_env}"
+PreCase: "mkdir -p @{case_build}; @{copy_std_artifacts};
+  case '@{backend}' in
+    dvm)                @{compile_dvm_backend_cmd}                                                                                ;;
+    llvm)               @{compile_llvm_backend_cmd}                                                                               ;;
+    llvm_valgrind)      @{compile_llvm_backend_cmd}                                                                               ;;
+    all)       @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd} &&
+               @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd}           ;;
+    *)         echo 'Unknown backend';   exit 1                                                                          ;;
+  esac;"
+
+Run: "
+  case '@{backend}' in
+    dvm)
+      if [ -n \"@{stdout_regex}\" ] || [ -n \"@{stderr_regex}\" ]; then
+        @{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" -- @{dvm_path} run @{compiled_to_dvm};
+      else
+        @{dvm_path} run @{compiled_to_dvm};
+      fi
+      ;;
+    llvm)
+      if [ -n \"@{stdout_regex}\" ] || [ -n \"@{stderr_regex}\" ]; then
+        @{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" -- @{compiled_to_llvm};
+      else
+        @{compiled_to_llvm};
+      fi
+      ;;
+    llvm_valgrind)
+      valgrind --leak-check=full --error-exitcode=1 @{compiled_to_llvm};
+      ;;
+    all)
+      _llvm=@{compiled_to_llvm};
+      _dvm=\"@{dvm_path} run @{compiled_to_dvm}\";
+      python3 @{compare_runs_script} --cmd llvm \"$_llvm\" --cmd dvm \"$_dvm\";
+      ;;
+    *)         echo \"Unknown backend\";   exit 1 ;;
+  esac;"
+
+SubDirs:
+  - rolling
+  - version_0_1

@@ -1,0 +1,32 @@
+# Tests for reference types
+Tests:
+  simple_refs:
+    Cases: 
+      all:
+        Output:
+          String: "42\n11\n13\n11\n123\n234\n357\n-123\n357\n-357\n"
+        ExitCode: 0
+  not_so_simple_refs:
+    Cases: 
+      all:
+        Output:
+          String: "10\n20\n20\n20\n345\n345\n456\n123\n"
+        ExitCode: 0
+  global_refs:
+    Cases: 
+      all:
+        Output:
+          String: "999\n999\n888\n888\n999\n888\n"
+        ExitCode: 0
+  records:
+    Cases: 
+      all:
+        Output:
+          String: "1\n42\n123\n456\n0\n1\n10\n20\n777\n888\n"
+        ExitCode: 0
+  overload_resolution:
+    Cases: 
+      all:
+        Output:
+          String: "2\n"
+        ExitCode: 0

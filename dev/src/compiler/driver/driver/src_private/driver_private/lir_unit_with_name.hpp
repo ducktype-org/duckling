@@ -19,7 +19,12 @@ namespace compiler::driver {
 		/**
 		 * @brief The module ID is more or less a module name that will be used by the backend.
 		 */
-		base::StrID  module_id;
+		base::StrID module_id;
+		/**
+		 * @brief This is a unique module identifier, but human-readable.
+		 */
+		base::StrID module_id_human;
+
 		lir::LIRUnit lir_unit;
 
 		void debugPrint(query::Context& ctx, std::ostream& os) const;

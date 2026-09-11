@@ -37,6 +37,9 @@ namespace vm::low {
 		cf::ControlFlowGraph cfg;
 #endif
 		MicroBytecode bc;
+		// the copy of original bytecode. Always has the same length as bc
+		// kept for debugging & JIT purposes
+		MicroBytecode orig_bc;
 
 		/// The maximum size of the local variables on stack required by the function frame.
 		usize local_stack_size;
@@ -66,6 +69,31 @@ namespace vm::low {
 		 * @note Vector indexes correspond to FatBytecode instruction indexes
 		 */
 		std::vector<InstructionRange> instruction_mapping;
+
+		/**
+		 * @brief method for setting the breakpoint in microbytecode
+		 * @note this is a fundamental property of the microbytecode representation
+		 */
+		std::expected<void, std::string> setBreakpoint(usize idx, bool enable) {
+			CORE_ASSERT(orig_bc.size() == bc.size(), "any edits made to bc cannot change length");
+
+			if (instruction_mapping.size() <= idx)
+				return std::unexpected{ "setBreakpoint: Function too short" };
+
+			usize micro_instruction_index = instruction_mapping[idx].begin;
+
+			if (bc.size() <= micro_instruction_index)
+				return std::unexpected("setBreakpoint: No code after breakpoint");
+
+			auto& instr = bc.at(micro_instruction_index);
+
+			if (enable)
+				instr = makeLowInstruction(low::MicroOpcode::breakpoint, instr.arg0, instr.arg1);
+			else
+				instr = orig_bc.at(micro_instruction_index);
+
+			return {};
+		}
 	};
 
 	struct LowCodePosition {
@@ -244,87 +272,5 @@ namespace vm::low {
 		// names of called functions.
 		// @TODO: #2685 This is redundant, u64 is as fast as base::StrID.
 		base::HashMap<u64, base::StrID> method_name_pool{};
-	};
-
-	/**
-	 * @brief Overlay over `LowVMProgram` with its own and therefore modifiable copy of functions.
-	 * @note Only the functions can be copied and modified, the types and extern C
-	 * functions are shared with the original program and are not modifiable through this structure
-	 * because of the way instruction arguments are currently being lowered - they contain direct
-	 * pointers to types.
-	 *
-	 * @note Needs updating via `selfUpdate()` to make new functions visible.
-	 * @note Program with current everything except functions is still a valid program.
-	 *
-	 * @note Lookup in `getMethodNamePool()` may give false-positive if program is not updated.
-	 */
-	class LowVMProgramCopy final: public ILowVMProgram {
-		CRef<LowVMProgram>               original_program;
-		ObjIdNameMap<LowFuncData, usize> functions{};
-
-	public:
-		const TypeMetadata& getTypes() const override { return original_program->getTypes(); }
-
-		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
-
-		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
-			return original_program->getExternCFunctions();
-		}
-
-		const StableObjIdNameMap<LowFFIFunction>& getFFIFunctions() const override {
-			return original_program->getFFIFunctions();
-		}
-
-		const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const override {
-			return original_program->getGlobals();
-		}
-
-		const base::HashMap<u64, base::StrID>& getMethodNamePool() const override {
-			return original_program->getMethodNamePool();
-		}
-
-		GlobalBufferConfig getGlobalBufferConfig() const override {
-			return original_program->getGlobalBufferConfig();
-		}
-
-		CRef<LowVMProgram> getOriginalProgram() const { return original_program; }
-
-		LowVMProgramCopy(CRef<LowVMProgram> original_program): original_program(original_program) {}
-
-		/**
-		 * @brief Updates itself to reflect original `LowVMProgram` state
-		 */
-		LowVMProgramCopy& selfUpdate() {
-			auto to_add = std::views::drop(
-				original_program->getFunctions().allData(), static_cast<ssize_t>(functions.size())
-			);
-
-			for (auto& [low_func_data, oid, sid]: to_add)
-				functions.insert(*low_func_data.get(), sid);
-
-			return *this;
-		}
-
-		/**
-		 * @brief Replaces opcode in provided function at provided index with provided opcode.
-		 * @returns Original opcode from provided location on success and `nullopt` if location does
-		 * not exist.
-		 */
-		template<typename FID>
-		base::Optional<MicroOpcode> replaceOpcode(
-			FID function_id, usize instruction_index, MicroOpcode opcode
-		) {
-			if (!functions.contains(function_id)) return std::nullopt;
-
-			auto& microbytecode = functions.at(function_id)->bc;
-			if (microbytecode.size() <= instruction_index) return std::nullopt;
-
-			auto&       instruction     = microbytecode[instruction_index];
-			MicroOpcode original_opcode = getInstructionOpcode(instruction);
-
-			instruction = makeLowInstruction(opcode, instruction.arg0, instruction.arg1);
-
-			return original_opcode;
-		}
 	};
 }

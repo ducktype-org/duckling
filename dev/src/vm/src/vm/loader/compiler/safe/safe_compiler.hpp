@@ -59,6 +59,17 @@ namespace vm::loader::compiler::safe {
 		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
 			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
 
+		/**
+		 * @brief Sets breakpoint at given FatBytecode instruction
+		 * @note this has to be in compiler. Otherwise we couldn't modify the low program
+		 * @note microbytecode of the function doesn't have to be inside the compiler
+		 * @returns nothing on success, or a message describing why the breakpoint could not be set
+		 */
+		[[nodiscard]]
+		std::expected<void, std::string> setBreakpoint(
+			const base::StrID& func_name, usize idx, bool enable
+		);
+
 	protected:
 		[[nodiscard]] ProgramSize getCurrentProgramSize() const override;
 

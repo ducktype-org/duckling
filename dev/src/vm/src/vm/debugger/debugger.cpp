@@ -2,6 +2,8 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <filesystem/file_path.hpp>
+
 #include <vm/api/vm.hpp>
 
 namespace {
@@ -98,13 +100,17 @@ namespace vm::debugger {
 		return api::loadFiles(pid, files);
 	}
 
-	std::expected<void, std::variant<api::ApiError, std::string>> Debugger::loadDefault() {
+	std::expected<void, std::variant<api::ApiError, std::string>> Debugger::loadDefault(
+		base::Optional<fs::FilePath> prefix
+	) {
 		fs::FilePath fp = "duck_build/package_dvm.dbc";
+		if (prefix.has_value()) fp = prefix.value() / fp;
 		if (!fp.exists())
 			return std::unexpected(api::OtherError{
 				"No compiled program in the current directory." });
 
 		fs::FilePath fp_map = "duck_build/package_dvm.di.json";
+		if (prefix.has_value()) fp_map = prefix.value() / fp_map;
 		if (!fp_map.exists())
 			return std::unexpected(api::OtherError{
 				"No compiled program mapping in the current directory." });

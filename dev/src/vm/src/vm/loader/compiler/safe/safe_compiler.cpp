@@ -180,6 +180,16 @@ namespace vm::loader::compiler::safe {
 		);
 	}
 
+	std::expected<void, std::string> SafeCompiler::setBreakpoint(
+		const base::StrID& func_name, usize idx, bool enable
+	) {
+		auto maybe_function = low_program.functions.atMaybe(func_name);
+		if (!maybe_function) return std::unexpected{ "setBreakpoint: Function does not exist" };
+		auto& function = **maybe_function;
+
+		return function.setBreakpoint(idx, enable);
+	}
+
 	void SafeCompiler::linkLabelArguments(
 		low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
 	) const {

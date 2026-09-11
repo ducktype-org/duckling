@@ -94,6 +94,7 @@ public:
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
+		TESTER_ADD_TEST(testMainReturnHandling);
 		TESTER_ADD_TEST(testTupleCoercion);
 		TESTER_ADD_TEST(testMethodCalls);
 		TESTER_ADD_TEST(testMangler);
@@ -189,6 +190,13 @@ private:
 		const auto* move = dynamic_cast<const code::MoveExpr*>(expr);
 		if (move == nullptr || move->kind != code::MoveExpr::MoveKind::Implicit) return expr;
 		return move->inner.get();
+	}
+
+	/**
+	 * @brief Simple wrapper for querying mangled name of a symbol without context
+	 */
+	static auto mangle(const compiler::helios::mangler::KeyOf_MangledSymbol& key) {
+		return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(key);
 	}
 
 	void testConstants() {
@@ -1816,6 +1824,95 @@ private:
 			ASSERT_EQUAL(function->declaration->return_type.getType(), i64_type);
 	}
 
+	void testMainReturnHandling() {
+		using namespace compiler::helios;
+		using namespace compiler::helios::code;
+
+		const auto check_main = [&](std::string_view source,
+		                            usize            expected_statement_count,
+		                            i64              expected_first_return,
+		                            i64              expected_last_return) {
+			const auto  module   = compiler::frontend::createModuleTreeFromContents(source);
+			const auto  scope    = getModuleScope(module);
+			const auto  symbol   = getChain("main", scope).back();
+			const auto& function = query::entryPoint<QueryCodeOfFun>({ symbol })->valueOrPanic();
+
+			ASSERT_EQUAL(
+				function.declaration->return_type.getType(), getIntegralTypeNoContext(64, Signed)
+			);
+			ASSERT_EQUAL(
+				function.declaration->return_type.getRefKind(), compiler::tsh::ReferenceKind::Direct
+			);
+			ASSERT_EQUAL(function.body->statements.size(), expected_statement_count);
+
+			const auto get_return_value = [&](usize statement_index) {
+				const auto* return_stmt = dynamic_cast<const ReturnStmt*>(
+					function.body->statements.at(statement_index).get()
+				);
+				assertTrue(return_stmt != nullptr, "Expected a return statement.");
+
+				const auto value
+					= query::entryPoint<QueryEvaluateHOUTExpression>({ return_stmt->value.get() })
+				          .valueOrThrow()
+				          .get<compiler::numeric_value::NumericValue>()
+				          ->get<i64>();
+				assertTrue(value.has_value(), "Expected an i64 return value.");
+				return value.value();
+			};
+
+			ASSERT_EQUAL(get_return_value(0), expected_first_return);
+			ASSERT_EQUAL(
+				get_return_value(function.body->statements.size() - 1), expected_last_return
+			);
+		};
+
+		// A block-bodied main gets a generated `return 0`, regardless of whether i64 was
+		// written explicitly.
+		check_main(R"(fun main() = {})", 1, 0, 0);
+		check_main(R"(fun main() -> i64 = {})", 1, 0, 0);
+
+		// An expression-bodied main already lowers to a return and needs no trailing zero.
+		check_main(R"(fun main() = 9;)", 1, 9, 9);
+
+		// An explicit trailing return needs no generated return.
+		check_main(R"(fun main() = { return 7; })", 1, 7, 7);
+
+		// A generated `return 0` covers a path that reaches the end of main.
+		{
+			const auto module = compiler::frontend::createModuleTreeFromContents(
+				R"(
+					fun main() = {
+						if (false) {
+							return 31;
+						}
+					}
+				)"
+			);
+			const auto  scope    = getModuleScope(module);
+			const auto  symbol   = getChain("main", scope).back();
+			const auto& function = query::entryPoint<QueryCodeOfFun>({ symbol })->valueOrPanic();
+
+			ASSERT_EQUAL(function.body->statements.size(), 2);
+			assertTrue(
+				dynamic_cast<const IfStmt*>(function.body->statements.front().get()) != nullptr,
+				"Expected the first statement to be an if statement."
+			);
+
+			const auto* return_stmt
+				= dynamic_cast<const ReturnStmt*>(function.body->statements.back().get());
+			assertTrue(return_stmt != nullptr, "Expected a generated return statement.");
+
+			const auto value
+				= query::entryPoint<QueryEvaluateHOUTExpression>({ return_stmt->value.get() })
+			          .valueOrThrow()
+			          .get<compiler::numeric_value::NumericValue>()
+			          ->get<i64>();
+
+			assertTrue(value.has_value(), "Expected an i64 return value.");
+			ASSERT_EQUAL(value.value(), 0);
+		}
+	}
+
 	void testFunctionReturnTypeCheckAndCoercion() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/return_coercion")));
 		auto& hout
@@ -2078,147 +2175,98 @@ private:
 	}
 
 	void testMangler() {
-		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
-		const auto& hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
+		using namespace compiler::helios;
+		using Kind = mangler::ManglingSymbolKind;
 
-		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                     ) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {
-			for (const auto& fun: unit.functions)
-				if (fun->declaration->original_name == name) return fun;
-			fail(base::strConcat("Function ", name.strView(), " not found"));
-			return {};
-		};
+		const auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling")));
 
-		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
-			for (const auto& glob: unit.glob_data)
-				if (glob->original_name == name) return glob;
-			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
-			return {};
-		};
+		const auto goo_id      = getChain("Mspc.Ooo.goooo", root_scope).back();
+		const auto mangled_goo = mangle({ .symbol_key              = goo_id,
+		                                  .kind                    = Kind::Standard,
+		                                  .mangling_scheme_version = 123,
+		                                  .additional_metadata     = "metadata_v123" });
 
-		auto goo = find_function(hout_unit, base::StrID("goooo")).value();
-		std::cerr << "\nFunction name: " << goo->declaration->original_name.strView() << '\n';
-		auto mangled_goo = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = goo->declaration->original_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 123,
-		      .additional_metadata     = "metadata_v123" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_goo.strView() << '\n';
+		const auto glob_a_id      = getChain("A", root_scope).back();
+		const auto mangled_glob_a = mangle({ .symbol_key = glob_a_id });
 
-		auto glob_a = find_global(hout_unit, base::StrID("A")).value();
-		std::cerr << "\nGlobal variable name: " << glob_a->original_name.strView() << '\n';
-		auto mangled_glob_a = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = glob_a->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 0,
-		      .additional_metadata     = std::nullopt }
-		);
-		std::cerr << "Mangled symbol: " << mangled_glob_a.strView() << '\n';
+		const auto glob_b_id      = getChain("Nmspc.B", root_scope).back();
+		const auto mangled_glob_b = mangle({ .symbol_key              = glob_b_id,
+		                                     .kind                    = Kind::Standard,
+		                                     .mangling_scheme_version = 321,
+		                                     .additional_metadata     = "metadata_v321" });
+
+		const auto g_const_id      = getChain("Mspc.Ooo.Cnst", root_scope).back();
+		const auto mangled_g_const = mangle({ .symbol_key              = g_const_id,
+		                                      .kind                    = Kind::Standard,
+		                                      .mangling_scheme_version = 321,
+		                                      .additional_metadata     = "metadata_v321" });
+
 		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
-
-		auto glob_b = find_global(hout_unit, base::StrID("B")).value();
-		std::cerr << "\nGlobal Variable name: " << glob_b->original_name.strView() << '\n';
-		auto mangled_glob_b = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = glob_b->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 321,
-		      .additional_metadata     = "metadata_v321" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_glob_b.strView() << '\n';
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
-
-		auto g_const = find_global(hout_unit, base::StrID("Cnst")).value();
-		std::cerr << "\nConst name: " << g_const->original_name.strView() << '\n';
-		auto mangled_g_const = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = g_const->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 321,
-		      .additional_metadata     = "metadata_v321" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_g_const.strView() << '\n';
-
-
-		auto sub_module_a = query::utils::withContextCompute([&](query::Context& ctx) {
-			return compiler::frontend::getModuleRef(module)
-			    ->getSubmoduleByName(base::StrID{ "sub" })
-			    .unlock(ctx)
-			    ->unlock(ctx)
-			    .getID();
-		});
-		auto sub_module   = std::any_cast<compiler::frontend::ModuleID>(sub_module_a);
-
-		const auto& sub_hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module)->valueOrPanic();
-
-		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
-		std::cerr << "\nSub function name: " << sub_fun->declaration->original_name.strView()
-				  << '\n';
-		auto mangled_sub_fun = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = sub_fun->declaration->original_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 5,
-		      .additional_metadata     = "metadata_v5" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_sub_fun.strView() << '\n';
-
-		auto sub_cnst = find_global(sub_hout_unit, base::StrID("subConst")).value();
-		std::cerr << "\nSub constant name: " << sub_cnst->original_name.strView() << '\n';
-		auto mangled_sub_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = sub_cnst->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 5,
-		      .additional_metadata     = "metadata_v5" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
-
 		ASSERT_EQUAL(
 			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFididdE1a1bE$metadata_v123", mangled_goo.str()
 		);
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
-
 		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
-
 		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.str());
+
+
+		const auto sub_root_scope_any = query::utils::withContextCompute([&](query::Context& ctx) {
+			const auto sub_module = compiler::frontend::getModuleRef(module)
+			                            ->getSubmoduleByName(base::StrID{ "sub" })
+			                            .unlock(ctx)
+			                            ->unlock(ctx)
+			                            .getID();
+			return queryRootScopeOfMainModuleFile(ctx, sub_module);
+		});
+		const auto sub_root_scope     = std::any_cast<ScopeID>(sub_root_scope_any);
+
+		const auto sub_fun_id      = getChain("inSub.subFun", sub_root_scope).back();
+		const auto mangled_sub_fun = mangle({ .symbol_key              = sub_fun_id,
+		                                      .kind                    = Kind::Standard,
+		                                      .mangling_scheme_version = 5,
+		                                      .additional_metadata     = "metadata_v5" });
+
+		const auto sub_cnst_id      = getChain("inSub.subConst", sub_root_scope).back();
+		const auto mangled_sub_cnst = mangle({ .symbol_key              = sub_cnst_id,
+		                                       .kind                    = Kind::Standard,
+		                                       .mangling_scheme_version = 5,
+		                                       .additional_metadata     = "metadata_v5" });
 
 		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub6subFunEFidEE$metadata_v5", mangled_sub_fun.str());
 		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
 	}
 
 	void testManglerSpecialMembers() {
-		std::cerr << "--- testManglerSpecialMembers ---\n";
+		using namespace compiler::helios::mangler;
 
-		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling_special_mem")));
+		const auto [module, root_scope]
+			= getModule(fs::File(path("test_modules/mangling_special_mem")));
 
-		auto variable_a       = getChain("A", root_scope);
-		auto variable_b       = getChain("M.B", root_scope);
-		auto mangled_a_constr = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key = variable_a.back(),
-		      .kind = compiler::helios::mangler::ManglingSymbolKind::GlobalVariableConstructor,
-		      .mangling_scheme_version = 5,
-		      .additional_metadata     = std::nullopt }
-		);
-		auto mangled_a_destr = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key = variable_a.back(),
-		      .kind       = compiler::helios::mangler::ManglingSymbolKind::GlobalVariableDestructor,
-		      .mangling_scheme_version = 5,
-		      .additional_metadata     = std::nullopt }
-		);
+		const auto variable_a = getChain("A", root_scope);
+		const auto variable_b = getChain("M.B", root_scope);
+		const auto mangled_a_constr
+			= mangle({ .symbol_key              = variable_a.back(),
+		               .kind                    = ManglingSymbolKind::GlobalVariableConstructor,
+		               .mangling_scheme_version = 5,
+		               .additional_metadata     = std::nullopt });
+		const auto mangled_a_destr = mangle({ .symbol_key = variable_a.back(),
+		                                      .kind = ManglingSymbolKind::GlobalVariableDestructor,
+		                                      .mangling_scheme_version = 5,
+		                                      .additional_metadata     = std::nullopt });
 		ASSERT_EQUAL("_Q4_M20mangling_special_memG1Agc", mangled_a_constr.str());
 		ASSERT_EQUAL("_Q4_M20mangling_special_memG1Agd", mangled_a_destr.str());
 
 		// Using the "getSpecialMangledName" aliases:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto mangled_b_constr = compiler::helios::mangler::getSpecialMangledName<
-				compiler::helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
-				ctx, variable_b.back()
-			);
-			auto mangled_b_destr = compiler::helios::mangler::getSpecialMangledName<
-				compiler::helios::mangler::ManglingSymbolKind::GlobalVariableDestructor>(
-				ctx, variable_b.back()
-			);
+			const auto mangled_b_constr
+				= getSpecialMangledName<ManglingSymbolKind::GlobalVariableConstructor>(
+					ctx, variable_b.back()
+				);
+			const auto mangled_b_destr
+				= getSpecialMangledName<ManglingSymbolKind::GlobalVariableDestructor>(
+					ctx, variable_b.back()
+				);
 
 			ASSERT_EQUAL("_Q_M20mangling_special_memN1M1BEgc", mangled_b_constr.str());
 			ASSERT_EQUAL("_Q_M20mangling_special_memN1M1BEgd", mangled_b_destr.str());
@@ -2226,35 +2274,26 @@ private:
 	}
 
 	void testManglerOperators() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
+		const auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
 
-		auto mangle = [&](compiler::helios::SymID sym) {
-			return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-				{ .symbol_key = sym,
-			      .kind       = compiler::helios::mangler::ManglingSymbolKind::Standard,
-			      .mangling_scheme_version = 0,
-			      .additional_metadata     = std::nullopt }
-			);
-		};
+		const auto infix_free   = mangle({ .symbol_key = getChain("+*", root_scope).back() });
+		const auto prefix_free  = mangle({ .symbol_key = getChain("-*", root_scope).back() });
+		const auto unicode_free = mangle({ .symbol_key = getChain("+×", root_scope).back() });
 
-		auto infix_free   = mangle(getChain("+*", root_scope).back());
-		auto prefix_free  = mangle(getChain("-*", root_scope).back());
-		auto unicode_free = mangle(getChain("+×", root_scope).back());
-
-		auto foo_class = getChain("Foo", root_scope).back();
-		auto foo_class_info
+		const auto foo_class = getChain("Foo", root_scope).back();
+		const auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
 		ASSERT_EQUAL(2, foo_class_info.methods.size());
 
-		auto find_method = [&](std::string_view name) {
+		const auto find_method = [&](std::string_view name) {
 			for (const auto& method: foo_class_info.methods)
 				if (compiler::helios::name(method) == base::StrID(name)) return method;
 			fail(base::strConcat("Method ", name, " not found"));
 			return foo_class_info.methods.at(0);
 		};
 
-		auto infix_method  = mangle(find_method("+*"));
-		auto prefix_method = mangle(find_method("-*"));
+		const auto infix_method  = mangle({ .symbol_key = find_method("+*") });
+		const auto prefix_method = mangle({ .symbol_key = find_method("-*") });
 
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFiqiqiqE1a1bE", infix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFiqiqE1aE", prefix_free.str());
@@ -2268,8 +2307,8 @@ private:
 			prefix_method.str()
 		);
 
-		// Suffix has no declaration syntax yet (see testOperatoriness) -- nothing to mangle here
-		// until fixity keywords exist. Once they do, add e.g.:
+		// @todo: #3131 Suffix has no declaration syntax yet (see testOperatoriness)
+		// nothing to mangle here until fixity keywords exist. Once they do, add e.g.:
 		// ASSERT_EQUAL("...", mangle(.../* a suffix-declared operator */).str());
 	}
 
@@ -2277,54 +2316,55 @@ private:
 		using namespace compiler::ctv;
 		using compiler::numeric_value::NumericValue;
 
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling")));
-		auto symbol_1        = getSymbolTypeOf("Mspc.Ooo.Cnst", root_scope);
-		auto symbol_2        = getSymbolTypeOf("Mspc.Ooo.r", root_scope);
+		const auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling")));
+		const auto symbol_1        = getSymbolTypeOf("Mspc.Ooo.Cnst", root_scope);
+		const auto symbol_2        = getSymbolTypeOf("Mspc.Ooo.r", root_scope);
 
 		std::string result;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto unit      = CompileTimeValue::UnitCTV{};
-			auto f_1       = NumericValue{ f32{ 1.0f } };
-			auto d_1       = NumericValue{ f64{ 1.0 } };
-			auto i8_n7     = NumericValue{ int8_t{ -7 } };
-			auto u8_7      = NumericValue{ uint8_t{ 7 } };
-			auto i16_n42   = NumericValue{ i16{ -42 } };
-			auto u16_42    = NumericValue{ u16{ 42 } };
-			auto i32_n137  = NumericValue{ i32{ -137 } };
-			auto u32_137   = NumericValue{ u32{ 137 } };
-			auto i64_n1234 = NumericValue{ i64{ -1'234 } };
-			auto u64_1234  = NumericValue{ u64{ 1'234 } };
-			auto int_min   = NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
-			auto str1
+			constexpr auto UNIT      = CompileTimeValue::UnitCTV{};
+			constexpr auto F_1       = NumericValue{ f32{ 1.0f } };
+			constexpr auto D_1       = NumericValue{ f64{ 1.0 } };
+			constexpr auto I8_N7     = NumericValue{ int8_t{ -7 } };
+			constexpr auto U8_7      = NumericValue{ uint8_t{ 7 } };
+			constexpr auto I16_N42   = NumericValue{ i16{ -42 } };
+			constexpr auto U16_42    = NumericValue{ u16{ 42 } };
+			constexpr auto I32_N137  = NumericValue{ i32{ -137 } };
+			constexpr auto U32_137   = NumericValue{ u32{ 137 } };
+			constexpr auto I64_N1234 = NumericValue{ i64{ -1'234 } };
+			constexpr auto U64_1234  = NumericValue{ u64{ 1'234 } };
+			constexpr auto MIN_INT64_VAL
+				= NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
+			const auto str1
 				= CompileTimeValue{ CompileTimeValue::CharSliceValue{ base::StrID{ "strABC" } } };
-			auto str2  = CompileTimeValue{ CompileTimeValue::StringClassValue{
-                base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
-			auto tuple = CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
+			const auto str2 = CompileTimeValue{ CompileTimeValue::StringClassValue{
+				base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
+			const auto tuple
+				= CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
 
-			std::vector<CompileTimeValue> ctvs = {
-				false,  true,     f_1,     d_1,       i8_n7,    u8_7,     i16_n42,
-				u16_42, i32_n137, u32_137, i64_n1234, u64_1234, int_min,  'B',
-				'^',    str1,     str2,    unit,      tuple,    symbol_1, symbol_2,
-			};
+			const std::vector<CompileTimeValue> ctvs
+				= { false,  true,     F_1,     D_1,       I8_N7,    U8_7,          I16_N42,
+				    U16_42, I32_N137, U32_137, I64_N1234, U64_1234, MIN_INT64_VAL, 'B',
+				    '^',    str1,     str2,    UNIT,      tuple,    symbol_1,      symbol_2 };
 
 			for (auto&& it: ctvs) result += compiler::helios::mangler::mangleCTV(ctx, it) + ' ';
 			return result;
 		});
 
-		std::cerr << result << '\n';
-
-		std::string expected
+		constexpr std::string_view EXPECTED
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
 			  "jq1234_ iqn9223372036854775808_ c66_ c94_ r6_737472414243 "
 			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u Tb1b0E tNid "
 			  "tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
 
-		ASSERT_EQUAL(expected, result);
+		ASSERT_EQUAL(EXPECTED, result);
 	}
 
 	void testManglingOfTemplates() {
 		using namespace std::string_view_literals;
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/template_mangling")));
+		using compiler::helios::mangler::getSimpleMangledName;
+
+		const auto [_, root_scope] = getModule(fs::File(path("test_modules/template_mangling")));
 
 		const auto tmpl_foo  = getChain("Name.foo", root_scope).back();
 		const auto cls       = getChain("Name.Cls", root_scope).back();
@@ -2336,13 +2376,13 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			namespace tmpl = compiler::helios::templates;
 
-			auto        val42         = compiler::numeric_value::NumericValue{ i64{ 42 } };
-			auto        val_f         = compiler::numeric_value::NumericValue{ f32{ 1.0f } };
-			const auto& i64_type      = st(compiler::tsh::getIntegralType(
+			constexpr auto VAL42         = compiler::numeric_value::NumericValue{ i64{ 42 } };
+			constexpr auto VAL_F         = compiler::numeric_value::NumericValue{ f32{ 1.0f } };
+			const auto&    i64_type      = st(compiler::tsh::getIntegralType(
                 ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
             ));
-			const auto& cls_type      = st(ctx.query<compiler::tsh::QueryClassType>(cls));
-			const auto& glob_cls_type = st(ctx.query<compiler::tsh::QueryClassType>(glob_cls));
+			const auto&    cls_type      = st(ctx.query<compiler::tsh::QueryClassType>(cls));
+			const auto&    glob_cls_type = st(ctx.query<compiler::tsh::QueryClassType>(glob_cls));
 
 			const auto bake = [&](const auto& tmpl, const auto&... t_params) {
 				tmpl::TemplateBakeKey key{ .template_sym_id    = tmpl,
@@ -2350,68 +2390,43 @@ private:
 				return ctx.query<tmpl::QueryBakeTemplateSymID>(key).valueOrThrow();
 			};
 
-			std::cerr << std::left;
 
-			auto baked_foo_1 = bake(tmpl_foo, val42, i64_type);
-			auto name_foo_1
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_1 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_1:" << name_foo_1 << '\n';
+			const auto baked_foo_1 = bake(tmpl_foo, VAL42, i64_type);
+			const auto name_foo_1  = getSimpleMangledName(ctx, baked_foo_1).strView();
 
-			auto baked_foo_2 = bake(tmpl_foo, val42, cls_type);
-			auto name_foo_2
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_2 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_2:" << name_foo_2 << '\n';
+			const auto baked_foo_2 = bake(tmpl_foo, VAL42, cls_type);
+			const auto name_foo_2  = getSimpleMangledName(ctx, baked_foo_2).strView();
 
-			auto baked_tcls      = bake(tmpl_tcls, val_f);
-			auto baked_tcls_type = st(ctx.query<compiler::tsh::QueryClassType>(baked_tcls));
-			auto baked_foo_3     = bake(tmpl_foo, val42, baked_tcls_type);
-			auto name_foo_3
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_3 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_3:" << name_foo_3 << '\n';
+			const auto baked_tcls      = bake(tmpl_tcls, VAL_F);
+			const auto baked_tcls_type = st(ctx.query<compiler::tsh::QueryClassType>(baked_tcls));
+			const auto baked_foo_3     = bake(tmpl_foo, VAL42, baked_tcls_type);
+			const auto name_foo_3      = getSimpleMangledName(ctx, baked_foo_3).strView();
 
-			auto baked_foo_4 = bake(tmpl_foo, val42, glob_cls_type);
-			auto name_foo_4
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_4 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_4:" << name_foo_4 << '\n';
+			const auto baked_foo_4 = bake(tmpl_foo, VAL42, glob_cls_type);
+			const auto name_foo_4  = getSimpleMangledName(ctx, baked_foo_4).strView();
 
-			auto name_hoo
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key = hoo })
-			          .strView();
-			std::cerr << std::setw(16) << "name_hoo:" << name_hoo << '\n';
+			const auto name_hoo = getSimpleMangledName(ctx, hoo).strView();
 
-			auto baked_goo = bake(tmpl_goo, val42);
-			auto name_goo
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_goo })
-			          .strView();
-			std::cerr << std::setw(16) << "name_goo:" << name_goo << '\n';
+			const auto baked_goo = bake(tmpl_goo, VAL42);
+			const auto name_goo  = getSimpleMangledName(ctx, baked_goo).strView();
 
-			std::cerr << std::right;
 
-			const auto efoo1 = "_Q_M17template_manglingN4Name3fooIiq42_tiqEEFiqiqE5paramE"sv;
-			const auto efoo2
+			constexpr auto EFOO1 = "_Q_M17template_manglingN4Name3fooIiq42_tiqEEFiqiqE5paramE"sv;
+			constexpr auto EFOO2
 				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingN4Name3ClsEEEF_Q_CM17template_manglingN4Name3ClsEiqE5paramE"sv;
-			const auto efoo3
+			constexpr auto EFOO3
 				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingN4Name4TclsIf0000803fEEEEF_Q_CM17template_manglingN4Name4TclsIf0000803fEEiqE5paramE"sv;
-			const auto efoo4
+			constexpr auto EFOO4
 				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingG7GlobClsEEF_Q_CM17template_manglingG7GlobClsiqE5paramE"sv;
-			const auto ehoo = "_Q_M17template_manglingG3hooFiqiqE1jE"sv;
-			const auto egoo = "_Q_M17template_manglingG3gooIiq42_EFiqiqE1jE"sv;
+			constexpr auto EHOO = "_Q_M17template_manglingG3hooFiqiqE1jE"sv;
+			constexpr auto EGOO = "_Q_M17template_manglingG3gooIiq42_EFiqiqE1jE"sv;
 
-			ASSERT_EQUAL(efoo1, name_foo_1);
-			ASSERT_EQUAL(efoo2, name_foo_2);
-			ASSERT_EQUAL(efoo3, name_foo_3);
-			ASSERT_EQUAL(efoo4, name_foo_4);
-			ASSERT_EQUAL(ehoo, name_hoo);
-			ASSERT_EQUAL(egoo, name_goo);
+			ASSERT_EQUAL(EFOO1, name_foo_1);
+			ASSERT_EQUAL(EFOO2, name_foo_2);
+			ASSERT_EQUAL(EFOO3, name_foo_3);
+			ASSERT_EQUAL(EFOO4, name_foo_4);
+			ASSERT_EQUAL(EHOO, name_hoo);
+			ASSERT_EQUAL(EGOO, name_goo);
 		});
 	}
 

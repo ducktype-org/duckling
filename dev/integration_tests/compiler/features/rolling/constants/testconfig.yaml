@@ -1,0 +1,15 @@
+# Tests for constants
+
+Tests:
+  simple:
+    Cases: 
+      all:
+        Output:
+          String: "5\n5\n5\n55\n55\n123123\n42\n42\n314\n0\n0\n-100\n"
+        ExitCode: 0
+  local:
+    Cases:
+      all:
+        Output:
+          String: "2\n"
+        ExitCode: 0

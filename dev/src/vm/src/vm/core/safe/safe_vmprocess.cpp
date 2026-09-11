@@ -54,8 +54,7 @@ namespace vm {
 
 		if (code_result.has_value()) {
 			compiler.recompile();
-			loaded_program_copy.selfUpdate();
-			updateGlobalDataMemory(&loaded_program_copy);
+			updateGlobalDataMemory(loaded_program);
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -278,8 +277,7 @@ namespace vm {
 
 	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
 		  IVMProcess(my_pid),
-		  loaded_program(&loaded_program_copy),
-		  loaded_program_copy(compiler.getLowProgram()) {
+		  loaded_program(compiler.getLowProgram()) {
 		if (enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
 	}
@@ -648,37 +646,8 @@ namespace vm {
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
 		std::unique_lock lock(api_lock);
-
-		// Try to obtain original function
-		auto maybe_original_function
-			= loaded_program_copy.getOriginalProgram()->getFunctions().atMaybe(function_name);
-		if (!maybe_original_function)
-			return std::unexpected(api::OtherError{ "setBreakpoint: Function does not exist" });
-		auto original_function = *maybe_original_function;
-
-		// Obtain function copy (should never fail)
-		auto function_copy = loaded_program_copy.getFunctions().at(function_name);
-
-		// Try to obtain micro index
-		if (original_function->instruction_mapping.size() <= instruction_index)
-			return std::unexpected(api::OtherError{ "setBreakpoint: Function too short" });
-		usize micro_instruction_index
-			= original_function->instruction_mapping[instruction_index].begin;
-
-		// Ensure micro index is in range (can happen when last FatBC instruction compiles to nothing)
-		if (original_function->bc.size() <= micro_instruction_index
-		    || function_copy->bc.size() <= micro_instruction_index)
-			return std::unexpected(api::OtherError{ "setBreakpoint: No code after breakpoint" });
-
-		auto new_opcode = enable
-		                    ? vm::low::MicroOpcode::breakpoint
-		                    : getInstructionOpcode(original_function->bc[micro_instruction_index]);
-
-		// Try to replace the opcode
-		auto maybe_old_opcode
-			= loaded_program_copy.replaceOpcode(function_name, micro_instruction_index, new_opcode);
-		if (!maybe_old_opcode) [[unlikely]]
-			return std::unexpected(api::OtherError{ "setBreakpoint: Failed to set breakpoint" });
+		auto response = compiler.setBreakpoint(function_name, instruction_index, enable);
+		if (!response) return std::unexpected(api::OtherError{ response.error() });
 
 		return api::response::Empty{};
 	}

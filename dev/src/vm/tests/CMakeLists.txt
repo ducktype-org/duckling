@@ -33,6 +33,9 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_unit_test basic/unit.cpp
                 USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_api_test api/api_test.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_disable_tc_when_not_opt(api_test ${test_set})
         duck_add_test_custom(vm ${test_set}_functions_test functions/functions.cpp
                 USES ${libvm} Tester ${vmtester})
 
@@ -51,9 +54,6 @@ function(duck_add_vm_tests suffix)
         duck_disable_tc_when_not_opt("debugger_infinite_test" ${test_set})
 
         duck_add_test_custom(vm ${test_set}_mapper_test debugger/mapper_tests.cpp
-                USES ${libvm} Tester ${vmtester})
-
-        duck_add_test_custom(vm ${test_set}_LowVMProgramCopy_test debugger/LowVMProgramCopy_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
         duck_add_test_custom(vm ${test_set}_runtime_expr_test debugger/runtime_expr_tests.cpp
