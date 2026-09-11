@@ -92,7 +92,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         if !logger.borrow().is_empty() {
             if mode.suppress_foreign_manifests_errors {
                 for e in logger.take() {
-                    self.fetcher.ctx().error_console().info_verbose(format!(
+                    self.fetcher.ctx().info_verbose(format!(
                         "error\n{e}\nsuppressed due to the Merciful mode of the solver",
                     ))?;
                 }
@@ -583,9 +583,9 @@ fn display_git_fast_path_failure_warning(
     let identifier = request.id;
     let name = identifier.name;
     let source = identifier.source;
-    ctx.console().warning(format!(
+    ctx.warning(format!(
         "git fast path for `{name} {source}` failed: {error}"
     ))?;
-    ctx.console().info("switching to cloning git repository")?;
+    ctx.info("switching to cloning git repository")?;
     Ok(())
 }

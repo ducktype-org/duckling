@@ -66,7 +66,7 @@ pub fn load_packages_in_freeze(
         return Ok(LoadedFreezePackages::default());
     }
     let count = pkgs.len();
-    fetcher.ctx().console().info(format!(
+    fetcher.ctx().info(format!(
         "starting loading {count} package{}",
         count.s_if_plural()
     ))?;
@@ -108,7 +108,7 @@ fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResu
     }
     let failed_count = logger.logged_errors();
     for fail in logger {
-        ctx.error_console().error(fail)?;
+        ctx.error(fail)?;
     }
     qp_bail!(
         "failed to fetch {failed_count} package{}",

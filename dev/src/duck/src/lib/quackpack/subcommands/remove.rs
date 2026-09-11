@@ -34,7 +34,7 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     remove_dep(&editable_manifest, name, kind, pkg_name, &pkg_root)?;
     editable_manifest.save()?;
 
-    ctx.console().info(format!(
+    ctx.info(format!(
         "successfully removed {kind} dependency `{name}` from the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;
