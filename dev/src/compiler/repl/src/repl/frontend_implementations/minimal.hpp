@@ -1,39 +1,10 @@
 #pragma once
 
-#ifndef _WIN32
-	#include <termios.h>
-#else
-	#include <windows.h>
-#endif
-
 #include <base/types/ints.hpp>
 
 #include <string>
 #include <string_view>
 #include <vector>
-
-/**
- * @brief RawTerminalMode
- *
- * Changes the operating mode of the terminal. Uses RAII to ensure terminal settings are untouched
- * upon exiting repl.
- */
-namespace {
-	class RawTerminalMode {
-	public:
-		RawTerminalMode();
-		~RawTerminalMode();
-
-	private:
-#ifndef _WIN32
-		struct termios m_orig_term{};
-#else
-		DWORD m_orig_in_mode{};
-		DWORD m_orig_out_mode{};
-#endif
-		bool m_raw_mode_set = false;
-	};
-}
 
 namespace compiler::repl {
 	class FrontendMinImplementation final {

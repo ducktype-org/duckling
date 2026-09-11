@@ -12,7 +12,7 @@ use crate::quackpack::core::storage::tests::{
 };
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
-use crate::quackpack::core::storage::{self, StorageSyncOptions, ops};
+use crate::quackpack::core::storage::{self, StorageSyncOptions, SyncOutput, ops};
 use crate::quackpack::core::{PackageLoader, Version};
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -293,7 +293,13 @@ fn save_trims_files() {
 fn sync() {
     let (ctx, _home, storage_root) = setup_mock_storage();
     let (root, pcx) = create_mock_package_at_tmpdir(&ctx, "my-package");
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx,
         StorageSyncOptions {
             overwrite: false,
@@ -372,7 +378,13 @@ fn sync_overwrite_success() {
     // Create a second package at a different directory.
     let (root2, pcx2) = create_mock_package_at_tmpdir(&ctx, "my-package");
 
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx2,
         StorageSyncOptions {
             overwrite: true,
@@ -440,7 +452,13 @@ fn can_sync_after_clean() {
 
     storage::ops::delete_venv(&ctx, &storage_root, "my-package").unwrap();
 
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx2,
         StorageSyncOptions {
             overwrite: false,
@@ -478,7 +496,13 @@ fn sync_with_deps() {
         let origin = FullOrigin::for_local(&path).unwrap();
         FullIdentity::new(name.into(), origin)
     };
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx,
         StorageSyncOptions {
             overwrite: false,
@@ -533,7 +557,13 @@ fn sync_with_deps_and_expose_freezefile() {
     // Reload venv config changes
     let pcx = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
 
-    let (_lock, venv, storage) = ops::sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: _lock,
+        new_venv: venv,
+        storage,
+    } = ops::sync(
         &pcx,
         StorageSyncOptions {
             overwrite: false,

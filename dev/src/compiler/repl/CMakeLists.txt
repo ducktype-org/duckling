@@ -21,7 +21,8 @@ make_module(Repl USES Base
         Driver
         HELIOS
         ModuleTree
-        DVMBackend)
+        DVMBackend
+        OSUtils)
 
 duck_add_test(compiler extract_statement_sources tests/extract_statement_sources_test.cpp USES Repl)
 duck_add_test(compiler split_input_into_statements tests/split_input_into_statements_test.cpp USES Repl)

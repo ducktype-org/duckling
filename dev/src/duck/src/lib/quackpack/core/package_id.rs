@@ -1,6 +1,7 @@
 use crate::StrId;
 use crate::quackpack::core::Version;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::with_version::WithVersion;
 use crate::util::hash::sha256_string;
@@ -44,6 +45,12 @@ impl PackageId {
             FullKind::Git { commit } => storage_name_for_git(self.url(), &commit),
             FullKind::Local => unreachable!("local packages do not have storage names `{self:?}`"),
         }
+    }
+}
+
+impl From<PackageId> for WithVersion<Identity> {
+    fn from(pkg_id: PackageId) -> Self {
+        Self::new(pkg_id.identity().into(), pkg_id.version())
     }
 }
 
