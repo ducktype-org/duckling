@@ -3,6 +3,12 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
+use flate2::read::GzDecoder;
+use futures::executor::block_on;
+use futures::{StreamExt, stream};
+use tar::Archive;
+use tracing::{debug, warn};
+
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
 use crate::quackpack::core::full_identity::FullKind;
@@ -15,11 +21,6 @@ use crate::util::Pluralize;
 use crate::util::error::ErrorsLogger;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
-use flate2::read::GzDecoder;
-use futures::executor::block_on;
-use futures::{StreamExt, stream};
-use tar::Archive;
-use tracing::{debug, warn};
 
 // We want at most 3 calls, therefore we retry 2 times.
 /// The maximal number of retries when trying to download a package blob from registry.
@@ -40,7 +41,7 @@ pub struct SuccessfullyLoadedPackage {
 /// A result of the procedure of loading dependencies.
 pub struct LoadedFreezePackages {
     /// Pairing between dependencies and fetched contents viewed as packages.
-    pub _pkgs: Vec<(PackageId, AnyPackage)>,
+    pub pkgs: Vec<(PackageId, AnyPackage)>,
     /// Number of packages which source codes had to be downloaded, used for user messages.
     pub freshly_downloaded_num: usize,
     /// Number of packages which were already downloaded.
@@ -65,7 +66,7 @@ pub fn load_packages_in_freeze(
         return Ok(LoadedFreezePackages::default());
     }
     let count = pkgs.len();
-    fetcher.ctx().console().info(format!(
+    fetcher.ctx().info(format!(
         "starting loading {count} package{}",
         count.s_if_plural()
     ))?;
@@ -94,7 +95,7 @@ pub fn load_packages_in_freeze(
         pkgs.push((fetch.id, fetch.pkg));
     }
     Ok(LoadedFreezePackages {
-        _pkgs: pkgs,
+        pkgs,
         freshly_downloaded_num,
         already_present_num,
     })
@@ -107,7 +108,7 @@ fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResu
     }
     let failed_count = logger.logged_errors();
     for fail in logger {
-        ctx.error_console().error(fail)?;
+        ctx.error(fail)?;
     }
     qp_bail!(
         "failed to fetch {failed_count} package{}",

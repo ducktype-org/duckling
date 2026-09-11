@@ -5,33 +5,40 @@ use setup::*;
 
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
+use crate::quackpack::core::compile::early_graph::tests::{
+    mock_local_identity, mock_local_pkg, mock_registry_identity, mock_registry_pkg,
+};
 use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::identity::{Identity, Origin};
+use crate::quackpack::core::identity::Identity;
+use crate::quackpack::core::storage::load_deps::load_packages_in_freeze as load_packages;
 use crate::quackpack::core::storage::paths::Storage;
-use crate::quackpack::util::to_url::ToUrl;
 
 #[test]
 fn creates_valid_initial_graph() {
     let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -40,31 +47,34 @@ fn creates_valid_initial_graph() {
         shared: false,
         jobs: 1,
     };
-    let graph = EarlyGraph::new_early(&bcx).unwrap();
-    assert_eq!(graph.graph.root, identity_for("root"));
+    let graph = EarlyGraph::new_early(&bcx, packages.pkgs).unwrap();
+    assert_eq!(graph.graph.root, mock_local_identity(root.path(), "root"));
     assert_eq!(
         graph.graph.graph,
         HashMap::from_iter([
             (
-                identity_for("root"),
+                mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    fetcher_identity_for("foo"),
-                    fetcher_identity_for("bar"),
-                    identity_for("cycle"),
+                    mock_local_identity(root.path(), "cycle").into(),
+                    mock_registry_identity("foo").into(),
+                    mock_registry_identity("bar").into(),
                 ])
             ),
             (
-                fetcher_identity_for("foo"),
-                DependencyNode::new(vec![fetcher_identity_for("baz")])
+                mock_registry_identity("foo").into(),
+                DependencyNode::new(vec![mock_registry_identity("baz").into()])
             ),
             (
-                fetcher_identity_for("bar"),
-                DependencyNode::new(vec![fetcher_identity_for("baz")])
+                mock_registry_identity("bar").into(),
+                DependencyNode::new(vec![mock_registry_identity("baz").into()])
             ),
-            (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
             (
-                identity_for("cycle"),
-                DependencyNode::new(vec![identity_for("root")]),
+                mock_registry_identity("baz").into(),
+                DependencyNode::new(vec![])
+            ),
+            (
+                mock_local_identity(root.path(), "cycle").into(),
+                DependencyNode::new(vec![mock_local_identity(root.path(), "root").into()]),
             ),
         ])
     );
@@ -73,22 +83,27 @@ fn creates_valid_initial_graph() {
 #[test]
 fn expands_valid_features1() {
     let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
+
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -97,25 +112,25 @@ fn expands_valid_features1() {
         shared: false,
         jobs: 1,
     };
-    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx, packages.pkgs).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
-        .package(&identity_for("root"))
+        .package(&mock_local_identity(root.path(), "root").into())
         .enabled_features()
         .clone();
 
     let foo_features = graph
-        .package(&fetcher_identity_for("foo"))
+        .package(&mock_registry_identity("foo").into())
         .enabled_features()
         .clone();
 
     let bar_features = graph
-        .package(&fetcher_identity_for("bar"))
+        .package(&mock_registry_identity("bar").into())
         .enabled_features()
         .clone();
 
     let baz_features = graph
-        .package(&fetcher_identity_for("baz"))
+        .package(&mock_registry_identity("baz").into())
         .enabled_features()
         .clone();
     assert_eq!(root_features, HashSet::from(["use_foo_with_baz".into()]));
@@ -127,22 +142,27 @@ fn expands_valid_features1() {
 #[test]
 fn expands_valid_features2() {
     let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
+
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -151,25 +171,25 @@ fn expands_valid_features2() {
         shared: false,
         jobs: 1,
     };
-    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx, packages.pkgs).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
-        .package(&identity_for("root"))
+        .package(&mock_local_identity(root.path(), "root").into())
         .enabled_features()
         .clone();
 
     let foo_features = graph
-        .package(&fetcher_identity_for("foo"))
+        .package(&mock_registry_identity("foo").into())
         .enabled_features()
         .clone();
 
     let bar_features = graph
-        .package(&fetcher_identity_for("bar"))
+        .package(&mock_registry_identity("bar").into())
         .enabled_features()
         .clone();
 
     let baz_features = graph
-        .package(&fetcher_identity_for("baz"))
+        .package(&mock_registry_identity("baz").into())
         .enabled_features()
         .clone();
     assert_eq!(root_features, HashSet::from(["use_bar_with_baz".into()]));
@@ -181,22 +201,27 @@ fn expands_valid_features2() {
 #[test]
 fn expands_valid_features3() {
     let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
+
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -205,25 +230,25 @@ fn expands_valid_features3() {
         shared: false,
         jobs: 1,
     };
-    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx, packages.pkgs).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
-        .package(&identity_for("root"))
+        .package(&mock_local_identity(root.path(), "root").into())
         .enabled_features()
         .clone();
 
     let foo_features = graph
-        .package(&fetcher_identity_for("foo"))
+        .package(&mock_registry_identity("foo").into())
         .enabled_features()
         .clone();
 
     let bar_features = graph
-        .package(&fetcher_identity_for("bar"))
+        .package(&mock_registry_identity("bar").into())
         .enabled_features()
         .clone();
 
     let baz_features = graph
-        .package(&fetcher_identity_for("baz"))
+        .package(&mock_registry_identity("baz").into())
         .enabled_features()
         .clone();
     assert_eq!(
@@ -242,13 +267,27 @@ fn expands_valid_features3() {
 #[test]
 fn errors_with_nonexistent_features() {
     let (ctx, root) = setup_mock_storage();
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
+
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -257,7 +296,7 @@ fn errors_with_nonexistent_features() {
         shared: false,
         jobs: 1,
     };
-    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx, packages.pkgs).unwrap();
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -269,22 +308,27 @@ there is no such feature as `nonexistent`"
 #[test]
 fn removes_inactive_deps1() {
     let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
+
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -293,61 +337,77 @@ fn removes_inactive_deps1() {
         shared: false,
         jobs: 1,
     };
-    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx, packages.pkgs).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.graph.root, identity_for("root"));
+    assert_eq!(graph.graph.root, mock_local_identity(root.path(), "root"));
     assert_eq!(
         graph.graph.graph,
         HashMap::from_iter([
             (
-                identity_for("root"),
+                mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    fetcher_identity_for("foo"),
-                    fetcher_identity_for("bar")
+                    mock_registry_identity("foo").into(),
+                    mock_registry_identity("bar").into()
                 ])
             ),
-            (fetcher_identity_for("foo"), DependencyNode::new(vec![])),
-            (fetcher_identity_for("bar"), DependencyNode::new(vec![])),
+            (
+                mock_registry_identity("foo").into(),
+                DependencyNode::new(vec![])
+            ),
+            (
+                mock_registry_identity("bar").into(),
+                DependencyNode::new(vec![])
+            ),
         ])
     );
 
     // Check that graph is in sync with `PackagesSet`.
     assert_eq!(graph.packages.inner.len(), 3);
-    assert!(graph.packages.inner.contains_key(&identity_for("root")));
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("foo"))
+            .contains_key(&mock_local_identity(root.path(), "root").into())
     );
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("bar"))
+            .contains_key(&mock_registry_identity("foo").into())
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&mock_registry_identity("bar").into())
     );
 }
 
 #[test]
 fn removes_inactive_deps2() {
     let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
+
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -356,71 +416,87 @@ fn removes_inactive_deps2() {
         shared: false,
         jobs: 1,
     };
-    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx, packages.pkgs).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.graph.root, identity_for("root"));
+    assert_eq!(graph.graph.root, mock_local_identity(root.path(), "root"));
     assert_eq!(
         graph.graph.graph,
         HashMap::from_iter([
             (
-                identity_for("root"),
+                mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    fetcher_identity_for("foo"),
-                    fetcher_identity_for("bar")
+                    mock_registry_identity("foo").into(),
+                    mock_registry_identity("bar").into()
                 ])
             ),
             (
-                fetcher_identity_for("foo"),
-                DependencyNode::new(vec![fetcher_identity_for("baz")])
+                mock_registry_identity("foo").into(),
+                DependencyNode::new(vec![mock_registry_identity("baz").into()])
             ),
-            (fetcher_identity_for("bar"), DependencyNode::new(vec![])),
-            (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
+            (
+                mock_registry_identity("bar").into(),
+                DependencyNode::new(vec![])
+            ),
+            (
+                mock_registry_identity("baz").into(),
+                DependencyNode::new(vec![])
+            ),
         ])
     );
 
     // Check that graph is in sync with `PackagesSet`.
     assert_eq!(graph.packages.inner.len(), 4);
-    assert!(graph.packages.inner.contains_key(&identity_for("root")));
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("foo"))
+            .contains_key(&mock_local_identity(root.path(), "root").into())
     );
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("bar"))
+            .contains_key(&mock_registry_identity("foo").into())
     );
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("baz"))
+            .contains_key(&mock_registry_identity("bar").into())
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&mock_registry_identity("baz").into())
     );
 }
 
 #[test]
 fn removes_inactive_deps3() {
     let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
+
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -429,71 +505,87 @@ fn removes_inactive_deps3() {
         shared: false,
         jobs: 1,
     };
-    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx, packages.pkgs).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.graph.root, identity_for("root"));
+    assert_eq!(graph.graph.root, mock_local_identity(root.path(), "root"));
     assert_eq!(
         graph.graph.graph,
         HashMap::from_iter([
             (
-                identity_for("root"),
+                mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    fetcher_identity_for("foo"),
-                    fetcher_identity_for("bar")
+                    mock_registry_identity("foo").into(),
+                    mock_registry_identity("bar").into()
                 ])
             ),
-            (fetcher_identity_for("foo"), DependencyNode::new(vec![])),
             (
-                fetcher_identity_for("bar"),
-                DependencyNode::new(vec![fetcher_identity_for("baz")])
+                mock_registry_identity("foo").into(),
+                DependencyNode::new(vec![])
             ),
-            (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
+            (
+                mock_registry_identity("bar").into(),
+                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+            ),
+            (
+                mock_registry_identity("baz").into(),
+                DependencyNode::new(vec![])
+            ),
         ])
     );
 
     // Check that graph is in sync with `PackagesSet`.
     assert_eq!(graph.packages.inner.len(), 4);
-    assert!(graph.packages.inner.contains_key(&identity_for("root")));
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("foo"))
+            .contains_key(&mock_local_identity(root.path(), "root").into())
     );
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("bar"))
+            .contains_key(&mock_registry_identity("foo").into())
     );
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("baz"))
+            .contains_key(&mock_registry_identity("bar").into())
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&mock_registry_identity("baz").into())
     );
 }
 
 #[test]
 fn removes_inactive_deps4() {
     let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
+
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -502,74 +594,87 @@ fn removes_inactive_deps4() {
         shared: false,
         jobs: 1,
     };
-    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx, packages.pkgs).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.graph.root, identity_for("root"));
+    assert_eq!(graph.graph.root, mock_local_identity(root.path(), "root"));
     assert_eq!(
         graph.graph.graph,
         HashMap::from_iter([
             (
-                identity_for("root"),
+                mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    fetcher_identity_for("foo"),
-                    fetcher_identity_for("bar")
+                    mock_registry_identity("foo").into(),
+                    mock_registry_identity("bar").into()
                 ])
             ),
             (
-                fetcher_identity_for("foo"),
-                DependencyNode::new(vec![fetcher_identity_for("baz")])
+                mock_registry_identity("foo").into(),
+                DependencyNode::new(vec![mock_registry_identity("baz").into()])
             ),
             (
-                fetcher_identity_for("bar"),
-                DependencyNode::new(vec![fetcher_identity_for("baz")])
+                mock_registry_identity("bar").into(),
+                DependencyNode::new(vec![mock_registry_identity("baz").into()])
             ),
-            (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
+            (
+                mock_registry_identity("baz").into(),
+                DependencyNode::new(vec![])
+            ),
         ])
     );
 
     // Check that graph is in sync with `PackagesSet`.
     assert_eq!(graph.packages.inner.len(), 4);
-    assert!(graph.packages.inner.contains_key(&identity_for("root")));
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("foo"))
+            .contains_key(&mock_local_identity(root.path(), "root").into())
     );
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("bar"))
+            .contains_key(&mock_registry_identity("foo").into())
     );
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("baz"))
+            .contains_key(&mock_registry_identity("bar").into())
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&mock_registry_identity("baz").into())
     );
 }
 
 #[test]
 fn cycle() {
     let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
+
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -578,110 +683,63 @@ fn cycle() {
         shared: false,
         jobs: 1,
     };
-    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx, packages.pkgs).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.graph.root, identity_for("root"));
+    assert_eq!(
+        graph.graph.root,
+        Into::<Identity>::into(mock_local_identity(root.path(), "root"))
+    );
     assert_eq!(
         graph.graph.graph,
         HashMap::from_iter([
             (
-                identity_for("root"),
+                mock_local_identity(root.path(), "root").into(),
                 DependencyNode::new(vec![
-                    fetcher_identity_for("foo"),
-                    fetcher_identity_for("bar"),
-                    identity_for("cycle"),
+                    mock_registry_identity("foo").into(),
+                    mock_registry_identity("bar").into(),
+                    mock_local_identity(root.path(), "cycle").into(),
                 ])
             ),
-            (fetcher_identity_for("foo"), DependencyNode::new(vec![])),
-            (fetcher_identity_for("bar"), DependencyNode::new(vec![])),
             (
-                identity_for("cycle"),
-                DependencyNode::new(vec![identity_for("root")])
+                mock_registry_identity("foo").into(),
+                DependencyNode::new(vec![])
+            ),
+            (
+                mock_registry_identity("bar").into(),
+                DependencyNode::new(vec![])
+            ),
+            (
+                mock_local_identity(root.path(), "cycle").into(),
+                DependencyNode::new(vec![mock_local_identity(root.path(), "root").into()])
             )
         ])
     );
 
     // Check that graph is in sync with `PackagesSet`.
     assert_eq!(graph.packages.inner.len(), 4);
-    assert!(graph.packages.inner.contains_key(&identity_for("root")));
-    assert!(graph.packages.inner.contains_key(&identity_for("cycle")));
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("foo"))
+            .contains_key(&mock_local_identity(root.path(), "root").into())
     );
     assert!(
         graph
             .packages
             .inner
-            .contains_key(&fetcher_identity_for("bar"))
+            .contains_key(&mock_local_identity(root.path(), "cycle").into())
     );
-}
-
-#[test]
-fn missing_direct_dep_in_freeze() {
-    let (ctx, root) = setup_mock_storage();
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
-    let bcx = BuildContext {
-        pcx: &package,
-        root_identity,
-        freeze: freeze_without_direct_dep(),
-        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
-        used_features: vec![],
-        profile,
-        shared: false,
-        jobs: 1,
-    };
-    let err = EarlyGraph::new_early(&bcx).unwrap_err();
-    let err = err.to_string();
     assert!(
-        err.starts_with(&format!(
-            "malformed freezefile: missing direct dependency `{}`",
-            fetcher_identity_for("foo")
-        )),
-        "{err}"
+        graph
+            .packages
+            .inner
+            .contains_key(&mock_registry_identity("foo").into())
     );
-}
-
-#[test]
-fn missing_transitive_dep_in_freeze() {
-    let (ctx, root) = setup_mock_storage();
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
-    let bcx = BuildContext {
-        pcx: &package,
-        root_identity,
-        freeze: freeze_without_transitive_dep(),
-        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
-        used_features: vec![],
-        profile,
-        shared: false,
-        jobs: 1,
-    };
-    let err = EarlyGraph::new_early(&bcx).unwrap_err();
-    let err = err.to_string();
     assert!(
-        err.starts_with(&format!(
-            "malformed freezefile: missing transitive dependency `{}`",
-            fetcher_identity_for("baz")
-        )),
-        "{err}"
+        graph
+            .packages
+            .inner
+            .contains_key(&mock_registry_identity("bar").into())
     );
 }

@@ -3,6 +3,7 @@
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/debug_artifacts.hpp>
 #include <driver_private/lir_unit_with_name.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
@@ -38,12 +39,17 @@ namespace compiler::driver {
 	}
 
 	query::QResult<LIRUnitWithBackendName> compileHOUTUnitToLIRModuleData(
-		query::Context& ctx, const helios::HOUTUnit& hout_unit, base::StrID module_name
+		query::Context&         ctx,
+		const helios::HOUTUnit& hout_unit,
+		base::StrID             module_id,
+		base::StrID             module_id_human
 	) {
+#define DEBUG_DUMP_ARTIFACT(str_id_name, ext) \
+	getDebugDumpArtifact(base::StrID(base::strConcat(str_id_name.strView(), ext)))
+
 		if (driver::print_ir_options.print_hir) hout_unit.debugPrint(ctx, std::cout);
 		if (driver::dump_ir_options.dump_hir) {
-			auto ofstream
-				= getDebugDumpArtifact(base::StrID(base::strConcat(module_name.strView(), ".hir")));
+			auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".hir");
 			hout_unit.debugPrint(ctx, ofstream);
 		}
 
@@ -53,20 +59,19 @@ namespace compiler::driver {
 
 		if (driver::print_ir_options.print_mir) mir_unit.debugPrint(ctx, std::cout);
 		if (driver::dump_ir_options.dump_mir) {
-			auto ofstream
-				= getDebugDumpArtifact(base::StrID(base::strConcat(module_name.strView(), ".mir")));
+			auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".mir");
 			mir_unit.debugPrint(ctx, ofstream);
 		}
 
 		auto lir_module = LIRUnitWithBackendName{
-			.module_id = module_name,
-			.lir_unit  = lir::lowerToLIRUnit(ctx, mir_unit),
+			.module_id       = module_id,
+			.module_id_human = module_id_human,
+			.lir_unit        = lir::lowerToLIRUnit(ctx, mir_unit),
 		};
 
 		if (driver::print_ir_options.print_lir) lir_module.debugPrint(ctx, std::cout);
 		if (driver::dump_ir_options.dump_lir) {
-			auto ofstream
-				= getDebugDumpArtifact(base::StrID(base::strConcat(module_name.strView(), ".lir")));
+			auto ofstream = DEBUG_DUMP_ARTIFACT(module_id_human, ".lir");
 			lir_module.debugPrint(ctx, ofstream);
 		}
 
@@ -79,11 +84,14 @@ namespace compiler::driver {
 		const auto& hout_unit_qr = ctx.query<helios::QueryModuleHOUT>(module_id);
 		if (hout_unit_qr->hasFailed()) return query::Failed();
 
-		auto module_name = base::StrID(base::strConcat(
-			"module_",
-			compiler::frontend::ModuleTree::getPathComponentHash(module_id).hash.toStringHex()
-		));
+		auto module_str_id   = base::StrID(base::strConcat(
+            "module_",
+            compiler::frontend::ModuleTree::getPathComponentHash(module_id).hash.toStringHex()
+        ));
+		auto module_id_human = base::StrID(frontend::getModuleRef(module_id)->humanReadableID(ctx));
 
-		return compileHOUTUnitToLIRModuleData(ctx, hout_unit_qr->valueOrPanic(), module_name);
+		return compileHOUTUnitToLIRModuleData(
+			ctx, hout_unit_qr->valueOrPanic(), module_str_id, module_id_human
+		);
 	}
 }

@@ -5,3 +5,9 @@ fun a_value() -> i64 = {
 fun hello() -> i64 = {
     return 73;
 }
+
+fun foo() -> i64 | () = ();
+
+namespace Name {
+    fun foo() -> i64 | () = ();
+}

@@ -5,10 +5,12 @@ use std::path::PathBuf;
 
 use chrono::Utc;
 use futures::executor::block_on;
+use load_deps::{LoadedFreezePackages, load_packages_in_freeze};
 use tracing::{debug, error, warn};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::lints::emit_warnings_and_run_lint_passes;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
@@ -16,9 +18,6 @@ use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverAnswer, Solver
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::git_access::StorageGitAccess;
 use crate::quackpack::core::storage::locks::TrySyncLock;
-use crate::quackpack::core::storage::ops::sync::load_deps::{
-    LoadedFreezePackages, load_packages_in_freeze,
-};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
@@ -30,7 +29,7 @@ use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
-mod load_deps;
+pub mod load_deps;
 
 #[derive(Debug, Clone, Copy)]
 /// Options passed to [`sync`].
@@ -43,15 +42,21 @@ pub struct StorageSyncOptions {
     pub strict_errors: bool,
 }
 
+#[derive(Debug)]
+pub struct SyncOutput {
+    pub new_freeze: SolverFreeze,
+    pub loaded_packages: Vec<(PackageId, AnyPackage)>,
+    pub sync_lock: TrySyncLock,
+    pub new_venv: Venv,
+    pub storage: Storage,
+}
+
 /// Synchronize virtual environment for package, and return information required to build it.
 #[tracing::instrument(skip_all)]
-pub fn sync(
-    pcx: &PackageContext<'_>,
-    options: StorageSyncOptions,
-) -> QuackResult<(TrySyncLock, Venv, Storage)> {
+pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResult<SyncOutput> {
     debug!(root = %pcx.package().root().display(), ?options);
-    pcx.emit_warnings()?;
-    pcx.ctx().console().info(format!(
+    emit_warnings_and_run_lint_passes(pcx)?;
+    pcx.ctx().info(format!(
         "starting synchronization of the {}",
         pcx.package().display()
     ))?;
@@ -94,7 +99,7 @@ pub fn sync(
     let new_freeze = solver_answer.new_freeze.generate_storage_freeze()?;
 
     let LoadedFreezePackages {
-        _pkgs,
+        pkgs,
         freshly_downloaded_num,
         already_present_num,
     } = load_packages_in_freeze(&storage, &fetcher, pkgs)?;
@@ -113,7 +118,13 @@ pub fn sync(
         .write(json)?;
     }
     make_success_message(pcx, id)?;
-    Ok((_sync_lock, venv, storage))
+    Ok(SyncOutput {
+        new_freeze: solver_answer.new_freeze,
+        loaded_packages: pkgs,
+        sync_lock: _sync_lock,
+        new_venv: venv,
+        storage,
+    })
 }
 
 /// Helper for [`sync`].
@@ -223,9 +234,7 @@ fn get_solver_answer(
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
     debug!(?mode);
-    pcx.ctx()
-        .console()
-        .info("starting solving the dependency graph")?;
+    pcx.ctx().info("starting solving the dependency graph")?;
     let root_origin = FullOrigin::for_local(pcx.package().root())?;
     let root_identity = FullIdentity::new(pcx.package().name(), root_origin);
     let root_pkg = PackageId::new(root_identity, pcx.package().version());
@@ -251,7 +260,7 @@ fn make_after_fetch_message(
     downloaded: usize,
 ) -> QuackResult<()> {
     let total = already_present + downloaded;
-    ctx.console().info(format!(
+    ctx.info(format!(
         "loaded source code{} of {} package{}, {} {} downloaded, {} {} already present",
         total.s_if_plural(),
         total,
@@ -296,13 +305,12 @@ fn update_venv(
 /// Prints to the user a message that synchronization was successful.
 fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {
     match pcx.package() {
-        AnyPackage::Script(Script::Standalone(script)) => pcx.ctx().console().info(format!(
+        AnyPackage::Script(Script::Standalone(script)) => pcx.ctx().info(format!(
             "successfully synchronized the venv of the script with a frontmatter at `{}`",
             script.frontmatter().script_file().display()
         )),
         AnyPackage::Package(_) | AnyPackage::Script(Script::Associated(_)) => pcx
             .ctx()
-            .console()
             .info(format!("successfully synchronized venv `{id}`")),
     }
 }

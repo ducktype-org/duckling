@@ -59,7 +59,7 @@ httpmock = { version = "0.8.3", default-features = false }
 
 [features]
 # Hack around https://github.com/scipopt/scip-sys/issues/39
-default = ["bundled-scip"]
+default = ["bundled-scip", "shell-completion"]
 
 shell-completion = ["dep:clap_complete"]
 

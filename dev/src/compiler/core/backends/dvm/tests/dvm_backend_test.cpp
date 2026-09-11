@@ -5,13 +5,13 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
-#include <os_utils/system_libraries.hpp>
 #include <program_lowering_context.hpp>
 #include <tsl/queries.hpp>
 #include <vm_tester_utils.hpp>
 
 #include <base/extend_cpp/vector_utils.hpp>
 
+#include <os_utils/system_libraries.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 

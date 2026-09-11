@@ -8,3 +8,9 @@ fun b_value() -> i64 = {
 fun hello() -> i64 = {
     return 22 + lib_c.c_value();
 }
+
+fun foo() -> i64 | () = 1i64;
+
+namespace Name {
+    fun foo() -> i64 | () = 1i64;
+}
