@@ -512,7 +512,7 @@ impl GathererState {
                 .or_default()
                 .insert(pkg.version());
             self.pkgs_data.entry(pkg).or_insert_with(|| PackageData {
-                manifest,
+                manifest: manifest,
                 requested_features: HashSet::new(),
                 referenced_by_requests: false,
             });
@@ -571,11 +571,7 @@ impl GathererState {
 /// A struct containing all the information gathered by the gatherer.
 #[derive(Debug)]
 pub struct GatheredInfo {
-    /// The gathered manifests of the packages referenced in requests.
-    pub gathered_manifests: HashMap<PackageId, Box<Manifest>>,
-    /// The intersection of the manifest defined features and features referenced in the requests.
-    pub possible_features: HashMap<PackageId, HashSet<FeatureName>>,
-    /// The set of the possible versions of the packages with a given identity.
+    pub packages_data: HashMap<PackageId, PackageData>,
     pub versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
     /// The translation from [`Source`] to [`FullIdentity`].
     pub source_to_origin_resolver: HashMap<Source, FullOrigin>,
@@ -585,17 +581,14 @@ impl TryFrom<GathererState> for GatheredInfo {
     type Error = QuackError;
 
     fn try_from(mut value: GathererState) -> QuackResult<Self> {
-        let mut gathered_manifests = HashMap::new();
-        let mut possible_features = HashMap::new();
         let mut unnecessary_pkgs = Vec::new();
-        for (pkg, data) in value.pkgs_data {
-            if data.referenced_by_requests {
-                gathered_manifests.insert(pkg, data.manifest);
-                possible_features.insert(pkg, data.requested_features);
-            } else {
-                unnecessary_pkgs.push(pkg);
+        value.pkgs_data.retain(|pkg, data| {
+            if !data.referenced_by_requests {
+                unnecessary_pkgs.push(*pkg);
+                return false;
             }
-        }
+            true
+        });
         for pkg in unnecessary_pkgs {
             let Some(versions) = value.versions_for_identity.get_mut(&pkg.identity()) else {
                 qp_bail_internal!(
@@ -606,8 +599,7 @@ impl TryFrom<GathererState> for GatheredInfo {
             versions.remove(&pkg.version());
         }
         Ok(GatheredInfo {
-            gathered_manifests,
-            possible_features,
+            packages_data: value.pkgs_data,
             versions_for_identity: value.versions_for_identity,
             source_to_origin_resolver: value.source_to_origin_resolver,
         })

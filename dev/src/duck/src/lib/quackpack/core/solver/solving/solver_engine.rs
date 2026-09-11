@@ -5,24 +5,69 @@ use russcip::ProblemCreated;
 
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
-use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
+use crate::quackpack::core::solver::gathering::gatherer_state::{self, GatheredInfo};
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
 use crate::quackpack::core::solver::util::get_possible_realizations;
 use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Source, Version};
-use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext, StrId};
+
+#[derive(Clone, Debug)]
+pub struct PackageData {
+    manifest: Box<Manifest>,
+    necessary_features: HashSet<FeatureName>,
+    preexistance: Option<PreexistanceData>,
+}
+
+impl PackageData {
+    /// Create a [`PackageData`] without features and preexistance info.
+    /// Should be used as an intermediate step when constructing [`PackageData`] instances.
+    fn empty_with_manifest(manifest: Box<Manifest>) -> PackageData {
+        Self {
+            manifest: manifest.into(),
+            necessary_features: [].into(),
+            preexistance: None,
+        }
+    }
+
+    /// Check if a given feature was present in the previous freeze.
+    fn feature_preexists(&self, feature: FeatureName) -> bool {
+        self.preexistance.as_ref().is_some_and(|data| data.features.contains(&feature))
+    }
+
+    /// Check whether a given dependency was present in the previous freeze and get the realization.
+    fn dependency_preexists(&self, edge: DependencyEdge) -> Option<Version> {
+        self.preexistance.as_ref()?.dependencies.get(&edge).copied()
+    }
+
+    /// Get the [`HashSet`] which could occur in the solution.
+    pub fn features(&self) -> &HashSet<FeatureName> {
+        &self.necessary_features
+    }
+}
+
+impl From<gatherer_state::PackageData> for PackageData {
+    fn from(value: gatherer_state::PackageData) -> Self {
+        Self {
+            manifest: value.manifest,
+            necessary_features: value.requested_features,
+            preexistance: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct PreexistanceData {
+    features: HashSet<FeatureName>,
+    dependencies: HashMap<DependencyEdge, Version>,
+}
 
 /// Struct with all the necessary information for the solver to be run.
 #[derive(Debug)]
 pub struct SolverInput {
-    pub gathered_manifests: HashMap<PackageId, Box<Manifest>>,
-    pub all_possible_features: HashMap<PackageId, HashSet<FeatureName>>,
+    pub packages_data: HashMap<PackageId, PackageData>,
     pub versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
     pub source_to_origin_resolver: HashMap<Source, FullOrigin>,
-
-    pub preexisting_packages: HashSet<PackageId>,
-    pub preexisting_features: HashMap<PackageId, HashSet<FeatureName>>,
-    pub preexisting_dependencies: HashMap<DependencyEdge, Version>,
 }
 
 impl SolverInput {
@@ -31,26 +76,18 @@ impl SolverInput {
     #[tracing::instrument(skip_all)]
     pub fn from_freeze_and_gathered_info(
         prev_freeze: &SolverFreeze,
-        prev_freeze_manifests: HashMap<PackageId, Box<Manifest>>,
+        mut prev_freeze_manifests: HashMap<PackageId, Box<Manifest>>,
         gathered_info: GatheredInfo,
-    ) -> Self {
-        let mut gathered_manifests = gathered_info.gathered_manifests;
-        for (pkg, manifest) in prev_freeze_manifests {
-            if prev_freeze.package_freezes.contains_key(&pkg) {
-                gathered_manifests.insert(pkg, manifest);
-            }
-        }
-        let mut all_possible_features = gathered_info.possible_features;
+    ) -> QuackResult<Self> {
+        let mut packages_data: HashMap<PackageId, PackageData> = gathered_info.packages_data.into_iter().map(|(k, v)| (k, v.into())).collect();
         let mut versions_for_identity = gathered_info.versions_for_identity;
         let mut source_to_origin_resolver = gathered_info.source_to_origin_resolver;
-        let mut preexisting_packages = HashSet::new();
-        let mut preexisting_features = HashMap::new();
-        let mut preexisting_dependencies = HashMap::new();
         for (pkg, freeze) in prev_freeze.package_freezes.iter() {
-            all_possible_features
-                .entry(*pkg)
-                .or_default()
-                .extend(freeze.features.iter().copied());
+            let manifest = prev_freeze_manifests.remove(pkg)
+                .context_internal("previous freeze package without fetched manifest")?;
+            let pkg_data = packages_data.entry(*pkg)
+                .or_insert_with(|| PackageData::empty_with_manifest(manifest));
+            pkg_data.necessary_features.extend(freeze.features.iter().copied());
             versions_for_identity
                 .entry(pkg.identity())
                 .or_default()
@@ -59,10 +96,10 @@ impl SolverInput {
                 Source::canonical_source_for_origin(pkg.origin()),
                 pkg.origin(),
             );
-            preexisting_packages.insert(*pkg);
-            preexisting_features.insert(*pkg, freeze.features.clone());
+            let mut preexistance_data = PreexistanceData::default();
+            preexistance_data.features.extend(freeze.features.clone());
             for (dep_name, realization) in freeze.dependencies_realization.iter() {
-                preexisting_dependencies.insert(
+                preexistance_data.dependencies.insert(
                     DependencyEdge {
                         parent: *pkg,
                         dep_identity: realization.identity(),
@@ -71,16 +108,45 @@ impl SolverInput {
                     realization.version(),
                 );
             }
+            pkg_data.preexistance = Some(preexistance_data);
         }
-        Self {
-            gathered_manifests,
-            all_possible_features,
+        Ok(Self {
+            packages_data,
             versions_for_identity,
-            source_to_origin_resolver,
-            preexisting_packages,
-            preexisting_features,
-            preexisting_dependencies,
-        }
+            source_to_origin_resolver
+        })
+    }
+
+    // TODO: Shopuldn't be needed.
+    pub fn get_manifests(&self) -> HashMap<PackageId, Box<Manifest>> {
+        self.packages_data.iter().map(|(pkg, data)| (*pkg, data.manifest.clone())).collect()
+    }
+
+    /// Check if package existed in the previous freeze.
+    pub fn preexists(&self, pkg: PackageId) -> bool {
+        self.packages_data.get(&pkg).is_some_and(|data| data.preexistance.is_some())
+    }
+
+    /// Get a [`HashSet`] of preexisting features if the package preexisted in the previous freeze.
+    pub fn preexisting_features_for_pkg(&self, pkg: PackageId) -> Option<&HashSet<FeatureName>> {
+        self.packages_data.get(&pkg).map(|data| data.preexistance.as_ref().map(|pre| &pre.features)).flatten()
+    }
+
+    /// Get a [`HashSet`] of all packages preexisting in the previous freeze.
+    pub fn all_preexisting_pkgs(&self) -> HashSet<PackageId> {
+        self.packages_data.iter().filter_map(|(pkg, data)| {
+            if data.preexistance.is_some() {
+                Some(*pkg)
+            } else {
+                None
+            }
+        }).collect()
+    }
+
+    /// Get the [`PackageData`] associated with the package.
+    /// Returns internal error if no data is found.
+    pub fn package_data(&self, pkg: PackageId) -> QuackResult<&PackageData> {
+        self.packages_data.get(&pkg).with_context_internal(|| format!("package {pkg:?} not present in packages to package data map"))
     }
 }
 
@@ -107,22 +173,16 @@ impl<'a> SolverEngine<'a> {
     fn new(input: &'a SolverInput) -> Self {
         Self {
             input,
-            model: SolverModel::new(&input.preexisting_packages, &input.preexisting_features),
+            model: SolverModel::new(input),
         }
     }
 
     /// Runs the engine, building the underlying solver model, solving it and returning the output.
     fn run(mut self, main_pkg: &(PackageId, HashSet<FeatureName>)) -> QuackResult<FoundSolution> {
         self.create_package_variables();
-        let empty_hash_set: HashSet<FeatureName> = HashSet::new();
-        for (package, manifest) in self.input.gathered_manifests.iter() {
-            let possible_features = self
-                .input
-                .all_possible_features
-                .get(package)
-                .unwrap_or(&empty_hash_set);
-            for dependency in manifest.dependencies().all_dependencies() {
-                if dependency.is_enabled_for(possible_features.iter().cloned()) {
+        for (package, data) in self.input.packages_data.iter() {
+            for dependency in data.manifest.dependencies().all_dependencies() {
+                if dependency.is_enabled_for(data.necessary_features.iter().cloned()) {
                     self.construct_for_single_dependency(*package, dependency)?;
                 }
             }
@@ -139,17 +199,11 @@ impl<'a> SolverEngine<'a> {
 
     /// Creates necessary variables for all the packages.
     fn create_package_variables(&mut self) {
-        for pkg in self.input.gathered_manifests.keys() {
+        for (pkg, data) in self.input.packages_data.iter() {
             self.model.add_package_var(*pkg);
-            for feature in self
-                .input
-                .all_possible_features
-                .get(pkg)
-                .iter()
-                .copied()
-                .flatten()
+            for feature in data.necessary_features.iter().copied()
             {
-                self.model.add_package_with_feature_var(*pkg, *feature);
+                self.model.add_package_with_feature_var(*pkg, feature);
             }
         }
     }
@@ -168,41 +222,31 @@ impl<'a> SolverEngine<'a> {
             // We could not translate the manifest entry into an identity of the dependency,
             // so there are no possible realizations and we must forbid the parent package/its features
             // forcing the dependency.
+            // This can happen due to merciful mode.
             return self.forbid_forcing_features(parent, manifest_dependency);
         };
 
+        let parent_data = self.input.package_data(parent)?;
+
         // If this edge was not resolved in the previous freeze, we fallback to adding all constraints.
-        let Some(realization_ver) = self.input.preexisting_dependencies.get(&edge) else {
+        let Some(realization_ver) = parent_data.dependency_preexists(edge) else {
             return self.add_constraints_for_edge(edge, manifest_dependency);
         };
-        let realisation = PackageId::new(edge.dep_identity, *realization_ver);
+        let realisation = PackageId::new(edge.dep_identity, realization_ver);
+        let realisation_data = self.input.package_data(realisation)?;
 
         // Each feature of the parent may force some additional features of the child,
         // not present in the previous freeze.
         // We try to add them to the chosen realisation.
         let mut forcing = vec![];
-        let Some(possible_child_features) = self.input.all_possible_features.get(&realisation)
-        else {
-            qp_bail_internal!(
-                "possible features map does not contain looked up package: `{realisation:?}`, {:#?}",
-                self.input.all_possible_features
-            )
-        };
-        for parent_feature in self
-            .input
-            .all_possible_features
-            .get(&parent)
-            .iter()
-            .cloned()
-            .flatten()
+        let possible_child_features = &realisation_data.necessary_features;
+        for parent_feature in parent_data.necessary_features.iter().copied()
         {
-            if let Some(parent_preexisting) = self.input.preexisting_features.get(&parent)
-                && parent_preexisting.contains(parent_feature)
-            {
+            if parent_data.feature_preexists(parent_feature) {
                 // Parent feature belonged to the previous freeze, so whatever it forced, has been already taken care of.
                 continue;
             }
-            let forced = manifest_dependency.enabled_features(vec![*parent_feature]);
+            let forced = manifest_dependency.enabled_features(vec![parent_feature]);
             if forced
                 .iter()
                 .any(|feature| !possible_child_features.contains(feature))
@@ -211,7 +255,7 @@ impl<'a> SolverEngine<'a> {
                 // so we have to treat the dependency normally and add all the constraints.
                 return self.add_constraints_for_edge(edge, manifest_dependency);
             } else {
-                forcing.push((*parent_feature, forced));
+                forcing.push((parent_feature, forced));
             }
         }
         // If (*) never happened, we just add conditions that parent feature forces some new realisation features.
@@ -240,7 +284,7 @@ impl<'a> SolverEngine<'a> {
         self.model.require_substantiate_dep(edge)?;
         self.model.require_substantiate_dep_features(
             edge,
-            &self.input.all_possible_features,
+            &self.input,
             &possible_realizations,
         )?;
         Ok(())
@@ -326,19 +370,12 @@ impl<'a> SolverEngine<'a> {
     /// (the presence of expandable feature forces the presence of expanded feature).
     /// Note: The constraints are added only if the feature expands to something more than itself.
     fn force_features_expansion(&mut self) -> QuackResult<()> {
-        for (pkg, features) in self.input.all_possible_features.iter() {
-            for feature in features {
-                if let Some(preexisting) = self.input.preexisting_features.get(pkg)
-                    && preexisting.contains(feature)
-                {
+        for (pkg, data) in self.input.packages_data.iter() {
+            for feature in data.necessary_features.iter() {
+                if data.feature_preexists(*feature) {
                     continue;
                 }
-                let Some(manifest) = self.input.gathered_manifests.get(pkg) else {
-                    qp_bail_internal!(
-                        "package `{pkg:?}` without a manifest, {:#?}",
-                        self.input.gathered_manifests
-                    )
-                };
+                let manifest = &data.manifest;
                 let mut expanded = manifest
                     .features()
                     .expand_features(once(*feature))
@@ -347,7 +384,7 @@ impl<'a> SolverEngine<'a> {
                             "package `{pkg:?}` does not have a feature `{feature:?}`; {manifest:#?}"
                         )
                     })?;
-                expanded.remove(feature);
+                expanded.remove(&feature);
                 if !expanded.is_empty() {
                     self.model
                         .require_features_expansion(*pkg, *feature, expanded)?;
@@ -368,11 +405,10 @@ fn parent_features_to_consider(
     edge: DependencyEdge,
 ) -> impl Iterator<Item = Option<StrId>> {
     input
-        .all_possible_features
+        .packages_data
         .get(&edge.parent)
         .into_iter()
-        .flatten()
-        .copied()
+        .flat_map(|data| data.necessary_features.iter().copied())
         .map(Some)
         .chain(once(None))
 }

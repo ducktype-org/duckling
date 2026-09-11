@@ -103,7 +103,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         })
     }
 
-    /// Determines if all the transitive dependencies of the root package are satisfied.
+    /// Determines if all the direct and transitive dependencies of the root package are satisfied.
     /// If not, prepares the [`SolverEngineData`] for running the engine by constructing [`SolverInput`].
     #[tracing::instrument(skip_all)]
     pub async fn prepare_solving<Access: GitAccess>(
@@ -165,7 +165,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             &maximal_valid_freeze,
             prev_freeze_manifests,
             gathered_info,
-        );
+        )?;
         Ok(ShouldRunSolverEngine::Yes(Box::new(SolverEngineData {
             root_pkg: self.root_pkg,
             root_pkg_features: self.root_pkg_features,
@@ -229,7 +229,7 @@ impl SolverEngineData {
     #[tracing::instrument(skip_all)]
     pub fn solve(self, ctx: &DuckContext) -> QuackResult<SolverAnswer> {
         ctx.console().info("starting the solver engine")?;
-        let manifests = self.input.gathered_manifests.clone();
+        let manifests = self.input.get_manifests();
         let solver_output =
             SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
         debug!(?solver_output);

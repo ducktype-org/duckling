@@ -9,8 +9,9 @@ use tracing::debug;
 
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solving::scip_ext::BinModelExt;
+use crate::quackpack::core::solver::solving::solver_engine::SolverInput;
 use crate::quackpack::core::{FeatureName, PackageId, Version};
-use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext, StrId};
 
 type PresentFeature = Option<FeatureName>;
 
@@ -53,10 +54,7 @@ type ChildFeaturesToVars = HashMap<FeatureName, Rc<Variable>>;
 pub struct SolverModel<'a, State> {
     model: Model<State>,
 
-    // Packages already placed in the previous freeze.
-    preexisting_packages: &'a HashSet<PackageId>,
-    // With what features they were placed there.
-    preexisting_features: &'a HashMap<PackageId, HashSet<FeatureName>>,
+    input: &'a SolverInput,
 
     package_vars: HashMap<PackageId, Rc<Variable>>,
     package_to_feature_vars: HashMap<PackageId, FeaturesToVars>,
@@ -67,13 +65,11 @@ pub struct SolverModel<'a, State> {
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Creates an empty model, given packages already placed in the previous freeze and their features.
     pub fn new(
-        preexisting_packages: &'a HashSet<PackageId>,
-        preexisting_features: &'a HashMap<PackageId, HashSet<FeatureName>>,
+        input: &'a SolverInput,
     ) -> Self {
         SolverModel {
             model: Model::default().hide_output(),
-            preexisting_packages,
-            preexisting_features,
+            input,
             package_vars: HashMap::new(),
             package_to_feature_vars: HashMap::new(),
             dependency_to_version_vars: HashMap::new(),
@@ -144,7 +140,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 
     /// Creates the variable associated with the package and adds it to the model.
     pub fn add_package_var(&mut self, pkg: PackageId) {
-        let objective_coef = if self.preexisting_packages.contains(&pkg) {
+        let objective_coef = if self.input.preexists(pkg) {
             0.0
         } else {
             1.0
@@ -302,7 +298,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     pub fn require_substantiate_dep_features(
         &mut self,
         dep: DependencyEdge,
-        possible_features: &HashMap<PackageId, HashSet<FeatureName>>,
+        solver_input: &SolverInput,
         possible_dep_realisations: &[PackageId],
     ) -> QuackResult<()> {
         for pkg in possible_dep_realisations {
@@ -311,11 +307,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             for (feature, feature_realization_var) in
                 self.get_feature_to_var_map_for_dep(dep).clone()
             {
-                let Some(pkg_features) = possible_features.get(pkg) else {
-                    qp_bail_internal!(
-                        "possible_features does not containt package `{pkg:?}`, {possible_features:#?}"
-                    )
-                };
+                let pkg_features = solver_input.package_data(*pkg)?.features();
                 if !pkg_features.contains(&feature) {
                     self.model.all_implies_any(
                         vec![
@@ -373,12 +365,13 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         let solve = self.model.minimize().solve();
         let solution = solve.best_sol().context("Failed to find a solution")?;
         debug!(?solution);
-        let new_packages = new_packages(self.package_vars, self.preexisting_packages, &solution);
+        let preexisting_packages = self.input.all_preexisting_pkgs();
+        let new_packages = new_packages(self.package_vars, &preexisting_packages, &solution);
         let new_features = new_features(
             &self.package_to_feature_vars,
             &new_packages,
-            self.preexisting_packages,
-            self.preexisting_features,
+            &preexisting_packages,
+            &self.input,
             &solution,
         );
         let new_edges = new_edges(self.dependency_to_version_vars, &solution);
@@ -421,7 +414,7 @@ fn new_features(
     package_to_feature_vars: &HashMap<PackageId, FeaturesToVars>,
     new_packages: &HashSet<PackageId>,
     preexisting_packages: &HashSet<PackageId>,
-    preexisting_features: &HashMap<PackageId, HashSet<FeatureName>>,
+    input: &SolverInput,
     solution: &Solution,
 ) -> HashMap<PackageId, HashSet<FeatureName>> {
     let mut new_features = HashMap::new();
@@ -440,7 +433,7 @@ fn new_features(
                 .cloned()
                 .collect();
         }
-        if let Some(features) = preexisting_features.get(pkg) {
+        if let Some(features) = input.preexisting_features_for_pkg(*pkg) {
             pkg_features = pkg_features.difference(features).cloned().collect();
         }
         if !pkg_features.is_empty() {
