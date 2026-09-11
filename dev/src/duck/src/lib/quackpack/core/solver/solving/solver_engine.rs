@@ -133,6 +133,8 @@ impl SolverInput {
     }
 
     /// Get the [`PackageData`] associated with the package.
+    /// Important:
+    /// ----------
     /// Returns internal error if no data is found.
     pub fn package_data(&self, pkg: PackageId) -> QuackResult<&PackageData> {
         self.packages_data.get(&pkg).with_context_internal(|| {
@@ -288,6 +290,7 @@ impl<'a> SolverEngine<'a> {
             {
                 // (*) Previously chosen realization of the dependency does not support some of the forced flags,
                 // so we have to treat the dependency normally and add all the constraints normally.
+                // This can happen only in the merciful mode.
                 return self.add_constraints_for_edge(edge, manifest_dependency);
             } else {
                 forcing.push((parent_feature, forced));
