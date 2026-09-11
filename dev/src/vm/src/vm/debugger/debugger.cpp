@@ -256,7 +256,10 @@ namespace vm::debugger {
 					if (!first) std::cout << ", ";
 					first        = false;
 					auto mb_data = val->readData();
-					if_opt_none(mb_data) { std::cout << "[unreadable]"; }
+					if_opt_none(mb_data) {
+						std::cout << "[unreadable]";
+						continue;
+					}
 					auto& data = *mb_data;
 
 					variant_match(data) {
