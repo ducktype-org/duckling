@@ -690,23 +690,21 @@ namespace vm {
 			CORE_UNREACHABLE();
 		}();
 
-		if (valid_expr.has_value()) {
-			auto returned_value = thread_ref->loadAndExecRuntimeExpr(std::move(valid_expr).value());
-			if (!returned_value.has_value()) {
-				auto [ref, msg] = returned_value.error();
-				return std::unexpected(api::ApiError{
-					api::IncompleteExprEval{ .val = ref, .why = msg } });
-			}
-			std::vector<Ref<IVMValue>> transformed;
-			for (auto safe_ref: *returned_value) transformed.emplace_back(safe_ref.get());
-			return api::Response(vm::api::ExitValue(transformed));
-		} else {
+		if (!valid_expr.has_value()) {
 			std::stringstream ss;
 			valid_expr.error().dump(ss);
 			return std::unexpected(api::LoadProgramError{ ss.str() });
 		}
-
-		return api::Response(api::response::Empty());
+		
+		auto returned_value = thread_ref->loadAndExecRuntimeExpr(std::move(valid_expr).value());
+		if (!returned_value.has_value()) {
+			auto [ref, msg] = returned_value.error();
+			return std::unexpected(api::ApiError{
+				api::IncompleteExprEval{ .val = ref, .why = msg } });
+		}
+		std::vector<Ref<IVMValue>> transformed;
+		for (auto safe_ref: *returned_value) transformed.emplace_back(safe_ref.get());
+		return api::Response(vm::api::ExitValue(transformed));
 	}
 
 	low::LowFuncData SafeVMProcess::compileToLow(
