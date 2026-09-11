@@ -449,7 +449,8 @@ namespace vm::loader::compiler::safe {
 #ifdef ENABLE_JIT
 			.cfg = vm::low::cf::ControlFlowGraph(bytecode),
 #endif
-			.bc                  = std::move(bytecode),
+			.bc                  = bytecode,
+			.orig_bc             = std::move(bytecode),
 			.local_stack_size    = getIntTypeSize(ctx.local_stack_size),
 			.local_block_count   = ctx.local_block_count,
 			.arg_size            = getIntTypeSize(parameters_size),
