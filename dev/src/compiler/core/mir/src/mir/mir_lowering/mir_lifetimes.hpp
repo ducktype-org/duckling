@@ -112,5 +112,10 @@ namespace compiler::mir {
 		void run(query::Context&, Function&, const LifetimePassArgs&) final;
 	};
 
+	/**
+	 * @brief Groups the locals of @p function by their lifetime scope.
+	 */
+	LocalsByScopeMap collectLocalsByScope(const Function& function);
+
 	Function runAllLifetimePasses(query::Context& ctx, Function function);
 }

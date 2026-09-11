@@ -1,8 +1,9 @@
 #pragma once
 
-#include <base/collections/maps.hpp>
 #include <mir/mir_structure/mir_lifetime_scope.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
+
+#include <base/collections/maps.hpp>
 
 #include <vector>
 

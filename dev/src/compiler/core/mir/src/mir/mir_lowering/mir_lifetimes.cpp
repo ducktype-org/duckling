@@ -53,7 +53,9 @@ namespace compiler::mir {
 		}
 	}
 
-	void AddLifetimeFlagsLocalsPass::run(query::Context&, Function& function, const LifetimePassArgs&) {
+	void AddLifetimeFlagsLocalsPass::run(
+		query::Context&, Function& function, const LifetimePassArgs& args
+	) {
 		// Get the local that is destructed by a DestructIf.
 		auto conditionally_destructed_local
 			= [](const Instruction& instr) -> base::Optional<MIRLocalRef> {
@@ -105,6 +107,9 @@ namespace compiler::mir {
 			};
 		};
 
+		// Flags of the parameters, in the order their scope is opened in the entry block.
+		std::vector<MIRLocalRef> parameter_flags;
+
 		for (auto block_id: function.block_order) {
 			auto& block = *function.blocks.at(block_id);
 
@@ -114,14 +119,13 @@ namespace compiler::mir {
 			// In the first block, set all parameter lifetime flags to true.
 			if (block_id == function.block_order.front()) {
 				for (auto local: tracked_locals)
-					if (local->parameter_index.has_value())
-						new_instructions.push_back(
-							flag_write(flag_of.at(local), true, block.firstInstruction())
-						);
-					else
-						new_instructions.push_back(
-							flag_write(flag_of.at(local), false, block.firstInstruction())
-						);
+					if (local->parameter_index.has_value()) {
+						auto flag = flag_of.at(local);
+						new_instructions.push_back(flag_write(flag, true, block.firstInstruction()));
+						new_instructions.back().flags.push_back(OperationFlag{
+							.flag = OperationFlag::Flag::ScopeStart, .local = flag });
+						parameter_flags.push_back(flag);
+					}
 			}
 
 			auto append_flag_writes = [&](const Instruction& instr) {
@@ -129,7 +133,62 @@ namespace compiler::mir {
 					new_instructions.push_back(flag_write(flag, alive, instr));
 			};
 
-			for (const auto& instr: block.instructions) {
+			// The flag locals are created after `AddScopeFlagsPass`, so they have no scope flags of
+			// their own yet. DVM pairs `init`/`deinit` on a stack, so a flag has to be opened and
+			// closed right next to the local it guards: its `ScopeStart` goes directly after the
+			// `ScopeStart` of that local, and its `ScopeEnd` directly before the `ScopeEnd` of it.
+			//
+			// The flag also has to be cleared where its scope starts, and a local is `init`-ed for
+			// DVM before the instruction its `ScopeStart` sits on, so the write cannot sit on that
+			// instruction nor after it. Instead the whole `ScopeStart` list moves onto a generated
+			// write pushed before the instruction, which then both opens the scopes and clears the
+			// flags of the scopes it opens.
+			auto adjust_scopes = [&](Instruction& instr) {
+				std::vector<OperationFlag> scope_starts;
+				std::vector<OperationFlag> other_flags;
+				std::vector<Instruction>   flag_inits;
+				other_flags.reserve(instr.flags.size());
+
+				for (const auto& flag: instr.flags) {
+					auto flag_local = flag_of.atMaybe(flag.local);
+
+					switch (flag.flag) {
+						using enum OperationFlag::Flag;
+					case ScopeStart:
+						scope_starts.push_back(flag);
+						if (flag_local.has_value()) {
+							scope_starts.push_back(OperationFlag{ .flag  = ScopeStart,
+							                                      .local = *flag_local.value() });
+							flag_inits.push_back(flag_write(*flag_local.value(), false, instr));
+						}
+						break;
+					case ScopeEnd:
+						if (flag_local.has_value())
+							other_flags.push_back(OperationFlag{ .flag  = ScopeEnd,
+							                                     .local = *flag_local.value() });
+						other_flags.push_back(flag);
+						break;
+					default:
+						other_flags.push_back(flag);
+						break;
+					}
+				}
+
+				instr.flags = std::move(other_flags);
+
+				if (flag_inits.empty()) {
+					for (auto& flag: scope_starts) instr.flags.push_back(flag);
+					return;
+				}
+
+				// The first generated write takes over every scope that started on this
+				// instruction, so all of the locals are alive by the time any of the writes runs.
+				flag_inits.front().flags = std::move(scope_starts);
+				for (auto& init: flag_inits) new_instructions.push_back(std::move(init));
+			};
+
+			for (auto& instr: block.instructions) {
+				adjust_scopes(instr);
 				new_instructions.push_back(instr);
 
 				// The flag the LIR lowering branches on becomes the last argument of the drop.
@@ -139,9 +198,22 @@ namespace compiler::mir {
 				append_flag_writes(instr);
 			}
 
+			adjust_scopes(block.terminator);
+
 			append_flag_writes(block.terminator);
 
 			block.instructions = std::move(new_instructions);
+		}
+
+		// The parameter flags are opened before anything else, so they are closed on every path
+		// leaving the function, after every other scope of that path has ended.
+		for (auto block_id: function.block_order) {
+			auto& terminator = function.blocks.at(block_id)->terminator;
+			if (not getTerminatorSuccessors(terminator).empty()) continue;
+
+			for (auto flag: parameter_flags | std::views::reverse)
+				terminator.flags.push_back(OperationFlag{ .flag  = OperationFlag::Flag::ScopeEnd,
+				                                          .local = flag });
 		}
 	}
 
@@ -287,7 +359,8 @@ namespace compiler::mir {
 			for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
 				args.block_predecessors.put(succ).first->second.push_back(block_id);
 
-		args.move_states = calculateGlobalInMoveStateMap(function, args.block_predecessors);
+		args.move_states
+			= calculateGlobalInMoveStateMap(function, args.block_predecessors, args.locals_by_scope);
 
 		return args;
 	}
@@ -300,12 +373,8 @@ namespace compiler::mir {
 		InvalidUseCheck{}.run(ctx, function, args);
 		AddAssignmentDestructorsPass{}.run(ctx, function, args);
 		AddDestructorsPass{}.run(ctx, function, args);
-		AddLifetimeFlagsLocalsPass{}.run(ctx, function, args);
-		// Update `locals_by_scope` since `AddLifetimeFlagsLocalsPass` may have added new locals
-		// which need ScopeFlags as well. Other `args` don't have to be updated since
-		// `AddScopeFlags` only uses `locals_by_scope`.
-		args.locals_by_scope = collectLocalsByScope(function);
 		AddScopeFlagsPass{}.run(ctx, function, args);
+		AddLifetimeFlagsLocalsPass{}.run(ctx, function, args);
 
 		return function;
 	}

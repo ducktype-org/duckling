@@ -352,8 +352,8 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
 
 		{
-			// `a` is constructed, then its flag is set, the `if` branch moves `a` and clears the
-			// flag, and the drop at the scope end reads it.
+			// The flag is cleared when the scope of `a` starts, set when `a` is constructed, the
+			// `if` branch moves `a` and clears the flag, and the drop at the scope end reads it.
 			auto maybe_move = getMIRFunctionByName(module, "maybeMove");
 			LifetimeChecker{}
 				.expectConstruct("a")
@@ -365,7 +365,7 @@ private:
 
 			auto drop = conditionalDropOf(maybe_move, "a");
 			auto flag = drop->arguments.at(2).get<MIRPlace>().getBase<MIRLocalRef>();
-			ASSERT_EQUAL_PRINT(std::string("TF"), lifetimeFlagWrites(maybe_move, flag));
+			ASSERT_EQUAL_PRINT(std::string("FTF"), lifetimeFlagWrites(maybe_move, flag));
 
 			auto dropped = drop->arguments.at(1).get<MIRPlace>().getBase<MIRLocalRef>();
 			ASSERT_EQUAL(compiler::tsh::Kind::Bool, flag->type.getType().getKind());

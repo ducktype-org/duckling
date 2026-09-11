@@ -9,6 +9,7 @@
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
+#include <mir/mir_lowering/mir_lifetimes.hpp>
 #include <mir/mir_lowering/mir_liveness.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
@@ -99,7 +100,9 @@ private:
 				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
 					preds.put(succ).first->second.push_back(block_id);
 
-			auto move_states = compiler::mir::calculateGlobalInMoveStateMap(pre_mir, preds);
+			auto locals_by_scope = compiler::mir::collectLocalsByScope(pre_mir);
+			auto move_states
+				= compiler::mir::calculateGlobalInMoveStateMap(pre_mir, preds, locals_by_scope);
 
 			// `a` is a parameter, so it is alive at the entry block.
 			auto entry     = pre_mir.block_order.front();

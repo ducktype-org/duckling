@@ -1,10 +1,11 @@
 
 #pragma once
 
+#include "mir/mir_lowering/mir_destructors.hpp"
+
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <diagnostic/stable_position.hpp>
-#include "mir/mir_lowering/mir_destructors.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -33,8 +34,8 @@ namespace compiler::mir {
 		MIRLocalRef local;
 
 		/**
-		 * @brief 
-		 * 
+		 * @brief
+		 *
 		 */
 		MoveStatus status;
 		/**
@@ -70,7 +71,9 @@ namespace compiler::mir {
 	 * of @ref LocalMoveStateMap and builds it through its private data-flow interface.
 	 */
 	MoveStateData calculateGlobalInMoveStateMap(
-		const Function& fun, const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors
+		const Function&                                     fun,
+		const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors,
+		const LocalsByScopeMap&                             locals_by_scope
 	);
 
 	/**
@@ -93,13 +96,17 @@ namespace compiler::mir {
 		 * @brief Mark @p local as alive with no reaching move sites.
 		 */
 		void markAlive(MIRLocalRef local) {
-			map.insertOrAssign(local->id, MoveState{.local = local, .status = MoveStatus::Alive, .move_sites = {} });
+			map.insertOrAssign(
+				local->id, MoveState{ .local = local, .status = MoveStatus::Alive, .move_sites = {} }
+			);
 		}
 
 		/**
 		 * @brief Merge two maps coming from two control-flow paths.
 		 */
-		static LocalMoveStateMap join(const LocalMoveStateMap& a, const LocalMoveStateMap& b, ScopeRef into);
+		static LocalMoveStateMap join(
+			const LocalMoveStateMap& a, const LocalMoveStateMap& b, ScopeRef into
+		);
 
 		/**
 		 * @brief Two maps are equal when they hold the same state for the same locals.
@@ -120,13 +127,16 @@ namespace compiler::mir {
 		 * For example the instruction that moves a variable updates the map, so that the
 		 * new state for the variable is moved.
 		 */
-		void updateMoveStateMapByInstr(const Instruction& instr, const LocalsByScopeMap& locals_by_scope);
+		void updateMoveStateMapByInstr(
+			const Instruction& instr, const LocalsByScopeMap& locals_by_scope
+		);
 
 		void debugPrint(std::ostream& out) const;
 
 		friend MoveStateData calculateGlobalInMoveStateMap(
 			const Function&                                     fun,
-			const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors
+			const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors,
+			const LocalsByScopeMap&                             locals_by_scope
 		);
 	};
 

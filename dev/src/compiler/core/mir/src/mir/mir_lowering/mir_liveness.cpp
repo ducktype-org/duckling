@@ -101,6 +101,10 @@ namespace compiler::mir {
 		for (const auto& [local, status]: a.map)
 			if (auto joined = joinStatus(status, b.map.atMaybeCopy(local), into_scope))
 				result.map.insertOrAssign(local, *joined);
+		for (const auto& [local, status]: b.map)
+			if (not a.map.contains(local))
+				if (auto joined = joinStatus({}, status, into_scope))
+					result.map.insertOrAssign(local, *joined);
 		return result;
 	}
 
@@ -174,7 +178,9 @@ namespace compiler::mir {
 	}
 
 	MoveStateData calculateGlobalInMoveStateMap(
-		const Function& fun, const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors
+		const Function&                                     fun,
+		const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors,
+		const LocalsByScopeMap&                             locals_by_scope
 	) {
 		if (fun.block_order.empty()) return {};
 		CORE_DEV_LOG(Compiler, "Calculating global move-state map for function `", fun.name, "`.\n");
@@ -205,10 +211,9 @@ namespace compiler::mir {
 				for (auto pred: *preds.value()) {
 					auto pred_out = out_status.atMaybe(pred);
 					if (not pred_out) continue;  // not yet reachable/processed
-					acc = acc ? LocalMoveStateMap::join(
-									*acc, *pred_out.value(), block->firstInstruction().scope
-								)
-					          : *pred_out.value();
+					acc = acc
+					        ? LocalMoveStateMap::join(*acc, *pred_out.value(), block->beginScope())
+					        : *pred_out.value();
 				}
 			return acc ? std::move(*acc) : LocalMoveStateMap{};
 		};
@@ -222,7 +227,7 @@ namespace compiler::mir {
 			auto block_id = worklist.pop();
 			auto block    = fun.blocks.at(block_id);
 			auto new_in   = compute_in(block);
-			auto new_out  = transferBlock(*block, new_in);
+			auto new_out  = transferBlock(*block, new_in, locals_by_scope);
 
 			// The in-state is recorded even when the out-state did not change, because a block can
 			// hide a changed in-state from its successors.

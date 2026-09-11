@@ -44,10 +44,8 @@ namespace compiler::mir {
 	}
 
 	std::vector<ScopeRef> getStartingScopes(ScopeRef begin, ScopeRef end) {
-		return getEndingScopes(end, begin) | std::views::reverse
-		     | std::ranges::to<std::vector>();
+		return getEndingScopes(end, begin) | std::views::reverse | std::ranges::to<std::vector>();
 	}
-
 
 	bool isAliveInScope(MIRLocalRef local, ScopeRef scope) {
 		return lca(*local->scope, scope) == *local->scope;
@@ -203,7 +201,7 @@ namespace compiler::mir {
 				                           : block.terminator;
 
 				new_instructions.push_back(instr);
-				move_state_info.updateMoveStateMapByInstr(instr);
+				move_state_info.updateMoveStateMapByInstr(instr, args.locals_by_scope);
 
 				auto ending_scopes = getEndingScopes(instr.scope, next_instr.scope);
 
@@ -367,7 +365,7 @@ namespace compiler::mir {
 				}
 
 				new_instructions.push_back(instr);
-				move_state_info.updateMoveStateMapByInstr(instr);
+				move_state_info.updateMoveStateMapByInstr(instr, args.locals_by_scope);
 			}
 
 			block.instructions = std::move(new_instructions);
