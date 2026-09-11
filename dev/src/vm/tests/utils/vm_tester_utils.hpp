@@ -329,18 +329,4 @@ protected:
 	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
 	 */
 	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {});
-
-	/**
-	 * @brief Executes a runtime expression from file on a paused thread and asserts that the
-	 * returned value matches the expected vector of values.
-	 * Currently expects primitive 64-bit values.
-	 * @TODO: Support other InterpretedDataVariant alternatives (Pointer, Table, Data, Variant,
-	 * Function, Opaque).
-	 */
-	void executeRuntimeExprAndAssertResult(
-		vm::PID                 pid,
-		vm::api::ThreadID       thread_id,
-		std::string_view        expr_filename,
-		const std::vector<u64>& expected
-	);
 };
