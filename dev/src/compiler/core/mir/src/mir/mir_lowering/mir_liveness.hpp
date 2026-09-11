@@ -4,6 +4,7 @@
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <diagnostic/stable_position.hpp>
+#include "mir/mir_lowering/mir_destructors.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -27,7 +28,13 @@ namespace compiler::mir {
 	 */
 	struct MoveState {
 		/**
-		 * @brief Status of the local.
+		 * @brief Reference to the local.
+		 */
+		MIRLocalRef local;
+
+		/**
+		 * @brief 
+		 * 
 		 */
 		MoveStatus status;
 		/**
@@ -54,7 +61,74 @@ namespace compiler::mir {
 		}
 	};
 
-	using LocalMoveStateMap = base::HashMap<LocalID, MoveState>;
+	struct MoveStateData;
+
+	/**
+	 * @brief Calculate the MoveStateData of the function.
+	 *
+	 * This is the only place where the whole-function move-state is calculated, so it is a friend
+	 * of @ref LocalMoveStateMap and builds it through its private data-flow interface.
+	 */
+	MoveStateData calculateGlobalInMoveStateMap(
+		const Function& fun, const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors
+	);
+
+	/**
+	 * @brief Move state of all tracked locals at a program point, together with the scope of the
+	 * last instruction that was applied to it.
+	 *
+	 * The map is updated instruction by instruction with @ref updateMoveStateMapByInstr, which also
+	 * records the scope of that instruction in @ref prevInstrScope. A local absent from the map is
+	 * uninitialized on this path.
+	 */
+	class LocalMoveStateMap final {
+		base::HashMap<LocalID, MoveState> map;
+		/**
+		 * @brief Scope of the last instruction passed to @ref updateMoveStateMapByInstr, or none
+		 * when no instruction has been applied yet.
+		 */
+		base::Optional<ScopeRef> prev_instr_scope;
+
+		/**
+		 * @brief Mark @p local as alive with no reaching move sites.
+		 */
+		void markAlive(MIRLocalRef local) {
+			map.insertOrAssign(local->id, MoveState{.local = local, .status = MoveStatus::Alive, .move_sites = {} });
+		}
+
+		/**
+		 * @brief Merge two maps coming from two control-flow paths.
+		 */
+		static LocalMoveStateMap join(const LocalMoveStateMap& a, const LocalMoveStateMap& b, ScopeRef into);
+
+		/**
+		 * @brief Two maps are equal when they hold the same state for the same locals.
+		 *
+		 * @note @ref prevInstrScope is not part of the comparison, as it is not a part of the
+		 * data-flow state.
+		 */
+		bool operator==(const LocalMoveStateMap& other) const;
+
+	public:
+		/**
+		 * @brief Move state of @p local, or none when it is uninitialized at this point.
+		 */
+		base::Optional<CRef<MoveState>> stateOf(LocalID local) const { return map.atMaybe(local); }
+
+		/**
+		 * @brief Given an instruction, update the move-state info by the new instruction.
+		 * For example the instruction that moves a variable updates the map, so that the
+		 * new state for the variable is moved.
+		 */
+		void updateMoveStateMapByInstr(const Instruction& instr, const LocalsByScopeMap& locals_by_scope);
+
+		void debugPrint(std::ostream& out) const;
+
+		friend MoveStateData calculateGlobalInMoveStateMap(
+			const Function&                                     fun,
+			const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors
+		);
+	};
 
 	struct MoveStateData {
 		/**
@@ -65,17 +139,4 @@ namespace compiler::mir {
 		void debugPrint(std::ostream& out);
 	};
 
-	/**
-	 * @brief Calculate the MoveStateData of the function.
-	 */
-	MoveStateData calculateGlobalInMoveStateMap(
-		const Function& fun, const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors
-	);
-
-	/**
-	 * @brief Given an instruction, update move-state info map by the new instruction.
-	 * For example the instruction that moves a variable updates the map, so that the
-	 * new state for the variable is moved.
-	 */
-	void updateMoveStateMapByInstr(LocalMoveStateMap& map, const Instruction& instr);
 }

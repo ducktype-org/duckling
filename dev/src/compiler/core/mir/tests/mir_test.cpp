@@ -105,7 +105,7 @@ private:
 			auto entry     = pre_mir.block_order.front();
 			auto entry_map = move_states.block_in_move_state.atMaybe(entry);
 			ASSERT_HAS_VALUE(entry_map);
-			auto a_at_entry = entry_map.value()->atMaybe(a_id.value());
+			auto a_at_entry = entry_map.value()->stateOf(a_id.value());
 			ASSERT_HAS_VALUE(a_at_entry);
 			ASSERT_TRUE(a_at_entry.value()->status == compiler::mir::MoveStatus::Alive);
 
@@ -113,7 +113,7 @@ private:
 			// observe `a` as `Moved` with exactly one reaching move site.
 			bool found_moved = false;
 			for (const auto& [block_id, map]: move_states.block_in_move_state) {
-				auto state = map.atMaybe(a_id.value());
+				auto state = map.stateOf(a_id.value());
 				if (state.has_value() && state.value()->status == compiler::mir::MoveStatus::Moved
 				    && state.value()->move_sites.size() == 1)
 					found_moved = true;

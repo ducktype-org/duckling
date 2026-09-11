@@ -1,5 +1,6 @@
 #include "mir_liveness.hpp"
 
+#include "mir/mir_lowering/mir_destructors.hpp"
 #include "mir_lifetimes.hpp"
 
 #include <frontend/pst_parser/lang_parser_element.hpp>
@@ -61,13 +62,25 @@ namespace compiler::mir {
 	 * This is valid as it means that the destructor will be inserted on blocks with the initialized
 	 * values, but at this point we don't have destructors inserted.
 	 */
-	base::Optional<MoveState> joinStatus(base::Optional<MoveState> a, base::Optional<MoveState> b) {
-		// Missing on one of the incoming paths -> treated as uninitialized in the merge.
-		if (not a.has_value() || not b.has_value()) return {};
+	base::Optional<MoveState> joinStatus(
+		base::Optional<MoveState> a, base::Optional<MoveState> b, ScopeRef into_scope
+	) {
+		if (a.has_value() && not isAliveInScope(a->local, into_scope)) a = {};
+		if (b.has_value() && not isAliveInScope(b->local, into_scope)) b = {};
+
+		if (a.empty() and b.empty()) return {};
+		if (a.empty() or b.empty()) {
+			auto& state = a.empty() ? b.value() : a.value();
+			return MoveState{
+				.local      = state.local,
+				.status     = MoveStatus::MaybeMoved,
+				.move_sites = {},
+			};
+		}
 
 		MoveStatus kind = (a->status == b->status) ? a->status : MoveStatus::MaybeMoved;
 
-		MoveState result{ .status = kind, .move_sites = {} };
+		MoveState result{ .local = a->local, .status = kind, .move_sites = {} };
 		// Collect the reaching move sites from every path that considers the value moved.
 		if (kind != MoveStatus::Alive) {
 			if (a->status != MoveStatus::Alive) mergeMoveSites(result.move_sites, a->move_sites);
@@ -80,30 +93,49 @@ namespace compiler::mir {
 	 * @brief If the value is not present in one of the maps, then we assume that is it
 	 * uninitialized in the merge, as we don't have the destructors inserted there yet.
 	 */
-	LocalMoveStateMap joinMaps(const LocalMoveStateMap& a, const LocalMoveStateMap& b) {
+
+	LocalMoveStateMap LocalMoveStateMap::join(
+		const LocalMoveStateMap& a, const LocalMoveStateMap& b, ScopeRef into_scope
+	) {
 		LocalMoveStateMap result;
-		for (const auto& [local, status]: a)
-			if (auto joined = joinStatus(status, b.atMaybeCopy(local)))
-				result.insertOrAssign(local, *joined);
+		for (const auto& [local, status]: a.map)
+			if (auto joined = joinStatus(status, b.map.atMaybeCopy(local), into_scope))
+				result.map.insertOrAssign(local, *joined);
 		return result;
 	}
 
-	bool sameMap(const LocalMoveStateMap& a, const LocalMoveStateMap& b) {
-		if (a.size() != b.size()) return false;
-		for (const auto& [local, status]: a) {
-			auto other = b.atMaybe(local);
-			if (not other || *other.value() != status) return false;
+	bool LocalMoveStateMap::operator==(const LocalMoveStateMap& other) const {
+		if (map.size() != other.map.size()) return false;
+		for (const auto& [local, status]: map) {
+			auto other_status = other.map.atMaybe(local);
+			if (not other_status || *other_status.value() != status) return false;
 		}
 		return true;
 	}
 
-	void updateMoveStateMapByInstr(LocalMoveStateMap& map, const Instruction& instr) {
+	void LocalMoveStateMap::updateMoveStateMapByInstr(
+		const Instruction& instr, const LocalsByScopeMap& locals_by_scope
+	) {
+		// Mark as uninitialized the locals where the scope ends.
+		if_opt_some(prev_instr_scope, prev_scope) {
+			for (auto scope: getEndingScopes(prev_scope, instr.scope)) {
+				auto locals = locals_by_scope.atMaybe(scope);
+				if (locals.empty()) continue;
+				for (auto local: *locals.value()) map.erase(local->id);
+			}
+		}
+
 		for (const auto& flag: instr.flags) {
 			switch (flag.flag) {
 			case OperationFlag::Flag::Construct:
 			case OperationFlag::Flag::Reinit:
 				map.insertOrAssign(
-					flag.local->id, MoveState{ .status = MoveStatus::Alive, .move_sites = {} }
+					flag.local->id,
+					MoveState{
+						.local      = flag.local,
+						.status     = MoveStatus::Alive,
+						.move_sites = {},
+					}
 				);
 				break;
 			case OperationFlag::Flag::Move: {
@@ -113,7 +145,11 @@ namespace compiler::mir {
 					sites.push_back(instr.metadata.position.value());
 				map.insertOrAssign(
 					flag.local->id,
-					MoveState{ .status = MoveStatus::Moved, .move_sites = std::move(sites) }
+					MoveState{
+						.local      = flag.local,
+						.status     = MoveStatus::Moved,
+						.move_sites = std::move(sites),
+					}
 				);
 				break;
 			}
@@ -121,15 +157,19 @@ namespace compiler::mir {
 				break;
 			}
 		}
+		prev_instr_scope = instr.scope;
 	}
 
 	/**
 	 * @brief Given LocalMoveStateMap valid at the start of the block,
 	 * return the LocalMoveStateMap valid at the end of the block.
 	 */
-	LocalMoveStateMap transferBlock(const Block& block, LocalMoveStateMap map) {
-		for (const auto& instr: block.instructions) updateMoveStateMapByInstr(map, instr);
-		updateMoveStateMapByInstr(map, block.terminator);
+	LocalMoveStateMap transferBlock(
+		const Block& block, LocalMoveStateMap map, const LocalsByScopeMap& locals_by_scope
+	) {
+		for (const auto& instr: block.instructions)
+			map.updateMoveStateMapByInstr(instr, locals_by_scope);
+		map.updateMoveStateMapByInstr(block.terminator, locals_by_scope);
 		return map;
 	}
 
@@ -149,9 +189,7 @@ namespace compiler::mir {
 		for (const auto& local: fun.local_list) {
 			MIRLocalRef ref = base::Ref(&local);
 			if (ref->parameter_index.has_value() && is_tracked(ref))
-				in_map_from_params.insertOrAssign(
-					ref->id, MoveState{ .status = MoveStatus::Alive, .move_sites = {} }
-				);
+				in_map_from_params.markAlive(ref);
 		}
 
 
@@ -160,14 +198,17 @@ namespace compiler::mir {
 
 		auto entry = fun.block_order.front();
 
-		auto compute_in = [&](BlockID block_id) {
+		auto compute_in = [&](CRef<Block> block) {
 			base::Optional<LocalMoveStateMap> acc;
-			if (block_id == entry) acc = in_map_from_params;
-			if (auto preds = block_predecessors.atMaybe(block_id))
+			if (block->id == entry) acc = in_map_from_params;
+			if (auto preds = block_predecessors.atMaybe(block->id))
 				for (auto pred: *preds.value()) {
 					auto pred_out = out_status.atMaybe(pred);
 					if (not pred_out) continue;  // not yet reachable/processed
-					acc = acc ? joinMaps(*acc, *pred_out.value()) : *pred_out.value();
+					acc = acc ? LocalMoveStateMap::join(
+									*acc, *pred_out.value(), block->firstInstruction().scope
+								)
+					          : *pred_out.value();
 				}
 			return acc ? std::move(*acc) : LocalMoveStateMap{};
 		};
@@ -179,8 +220,9 @@ namespace compiler::mir {
 		worklist.push(entry);
 		while (not worklist.empty()) {
 			auto block_id = worklist.pop();
-			auto new_in   = compute_in(block_id);
-			auto new_out  = transferBlock(*fun.blocks.at(block_id), new_in);
+			auto block    = fun.blocks.at(block_id);
+			auto new_in   = compute_in(block);
+			auto new_out  = transferBlock(*block, new_in);
 
 			// The in-state is recorded even when the out-state did not change, because a block can
 			// hide a changed in-state from its successors.
@@ -202,7 +244,7 @@ namespace compiler::mir {
 			in_status.insertOrAssign(block_id, std::move(new_in));
 
 			auto prev_out = out_status.atMaybe(block_id);
-			if (prev_out && sameMap(*prev_out.value(), new_out)) continue;
+			if (prev_out && *prev_out.value() == new_out) continue;
 			out_status.insertOrAssign(block_id, std::move(new_out));
 
 			for (auto succ: getTerminatorSuccessors(fun.blocks.at(block_id)->terminator))
@@ -290,8 +332,8 @@ namespace compiler::mir {
 			for (auto local: instructionReads(instr)) {
 				if (not is_tracked(local)) continue;
 
-				auto state = map.atMaybeCopy(local->id);
-				if (state.has_value() && state->status == MoveStatus::Alive) continue;
+				auto state = map.stateOf(local->id);
+				if (state.has_value() && state.value()->status == MoveStatus::Alive) continue;
 
 				const bool uninitialized = not state.has_value();
 
@@ -299,7 +341,7 @@ namespace compiler::mir {
 					"The variable `",
 					local->getName(),
 					uninitialized ? "` is used before it is initialized."
-					: state->status == MoveStatus::Moved
+					: state.value()->status == MoveStatus::Moved
 						? "` is used after it has been moved out of."
 						: "` may have been moved out of on some "
 						  "control-flow paths reaching this use."
@@ -311,7 +353,7 @@ namespace compiler::mir {
 				// Point a note at every move instruction that reaches this use. If both
 				// branches of an if/else move the value, both move sites are reported here.
 				if (not uninitialized)
-					for (const auto& site: state->move_sites)
+					for (const auto& site: state.value()->move_sites)
 						msg->addAttachedMessage(
 							makeBox<dia::PlaceholderNote>("Value moved here.", site)
 						);
@@ -330,7 +372,7 @@ namespace compiler::mir {
 			}
 			for (auto& local: instructionReinitDirectWrites(instr)) {
 				if (not is_tracked(local)) continue;
-				auto state = map.atMaybeCopy(local->id);
+				auto state = map.stateOf(local->id);
 				if (state.has_value()) continue;
 				// State is uninitialized
 				auto msg = makeBox<dia::PlaceholderError>(
@@ -350,7 +392,7 @@ namespace compiler::mir {
 				failed = true;
 			}
 
-			updateMoveStateMapByInstr(map, instr);
+			map.updateMoveStateMapByInstr(instr, args.locals_by_scope);
 		};
 
 		for (auto block_id: fun.block_order) {
@@ -365,7 +407,7 @@ namespace compiler::mir {
 		if (failed) query::throwFailed();
 	}
 
-	void MoveStateData::debugPrint(std::ostream& out) {
+	void LocalMoveStateMap::debugPrint(std::ostream& out) const {
 		auto status_name = [](MoveStatus status) -> std::string_view {
 			switch (status) {
 			case MoveStatus::Alive:
@@ -379,15 +421,19 @@ namespace compiler::mir {
 			}
 		};
 
+		for (const auto& [local, state]: map) {
+			out << "    local " << local.asInt() << " -> " << status_name(state.status);
+			if (not state.move_sites.empty())
+				out << " (moved at " << state.move_sites.size() << " site(s))";
+			out << "\n";
+		}
+	}
+
+	void MoveStateData::debugPrint(std::ostream& out) {
 		out << "MoveStateData (in-status per block):\n";
 		for (const auto& [block_id, map]: block_in_move_state) {
 			out << "  block " << block_id.asInt() << ":\n";
-			for (const auto& [local, state]: map) {
-				out << "    local " << local.asInt() << " -> " << status_name(state.status);
-				if (not state.move_sites.empty())
-					out << " (moved at " << state.move_sites.size() << " site(s))";
-				out << "\n";
-			}
+			map.debugPrint(out);
 		}
 	}
 }

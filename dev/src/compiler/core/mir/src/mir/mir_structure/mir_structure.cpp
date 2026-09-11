@@ -395,7 +395,12 @@ namespace compiler::mir {
 		return base::OK;
 	}
 
-	Instruction& Block::firstInstruction() {
+	const Instruction& Block::firstInstruction() const {
+		if (instructions.empty()) return terminator;
+		return instructions.front();
+	}
+
+	Instruction& Block::firstInstruction()  {
 		if (instructions.empty()) return terminator;
 		return instructions.front();
 	}

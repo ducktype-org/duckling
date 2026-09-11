@@ -809,7 +809,8 @@ namespace compiler::mir {
 		 * It may be the terminator instruction if the block is empty,
 		 * but it always exists, because every block has to have a terminator instruction.
 		 */
-		[[nodiscard]] Instruction& firstInstruction();
+		[[nodiscard]] const Instruction& firstInstruction() const;
+		[[nodiscard]] Instruction&       firstInstruction();
 	};
 
 	/**
