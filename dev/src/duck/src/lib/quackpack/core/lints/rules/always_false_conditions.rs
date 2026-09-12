@@ -1,7 +1,7 @@
 //! Home of
 use std::fmt;
 
-use super::util::filter_conditions;
+use super::util::walk_conditions;
 use crate::quackpack::core::Manifest;
 use crate::quackpack::core::lints::buffer::LintBuffer;
 use crate::quackpack::core::lints::rules::util::MatchedConditions;
@@ -10,7 +10,7 @@ use crate::{DuckContext, QuackResult, StrId};
 
 pub const LINT: Lint = Lint {
     name: "always_false_conditions",
-    description: r#" # Always false conditions
+    description: r#"# Always false conditions
 ## What this lint does?
 
 It checks for conditions which are always false.
@@ -33,21 +33,23 @@ dependencies:
 
 /// Run the pass for [`LINT`].
 pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> QuackResult<()> {
-    let filtered_conds = filter_conditions(manifest, |conds| {
-        conds
+    walk_conditions(manifest, |conds| {
+        if conds
+            .conds()
             .required_root_package_features()
-            .is_some_and(|slice| slice.is_empty())
-    });
-    for cond in filtered_conds {
-        match cond {
-            MatchedConditions::Dep { dep, _conds } => {
+            .is_none_or(|features| !features.is_empty())
+        {
+            return;
+        }
+        match conds {
+            MatchedConditions::Dep { dep, conds: _ } => {
                 let diag = DependencyWithEmptyConditionsDiagnostic { dep: dep.name() };
                 buffer.register_warning(diag, LINT);
             }
             MatchedConditions::Feature {
                 feature,
                 dep,
-                _conds,
+                conds: _,
             } => {
                 let diag = DependencyFeatureWithEmptyConditionsDiagnostic {
                     dep: dep.name(),
@@ -56,7 +58,7 @@ pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> Qu
                 buffer.register_warning(diag, LINT);
             }
         }
-    }
+    });
     Ok(())
 }
 
