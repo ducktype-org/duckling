@@ -1,190 +1,16 @@
 //! Main logic for solving dependencies.
 //! Contains [`SolverEngine`] struct, which transforms the problem into an integer linear programming instance and solves it.
-use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::iter::once;
 
 use russcip::ProblemCreated;
 
-use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
-use crate::quackpack::core::solver::gathering::gatherer_state::{self, GatheredInfo};
-use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
+use crate::quackpack::core::solver::solving::input::SolverInput;
 use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
 use crate::quackpack::core::solver::util::get_possible_realizations;
-use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Source, Version};
+use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId};
 use crate::{QuackResult, QuackResultContext, StrId};
-
-/// Struct with all the necessary information for the solver to be run.
-#[derive(Clone, Debug)]
-pub struct SolverInput {
-    pub packages_data: HashMap<PackageId, PackageData>,
-    pub versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
-    pub source_to_origin_resolver: HashMap<Source, FullOrigin>,
-}
-
-/// All necessacry information for a singular package.
-#[derive(Clone, Debug)]
-pub struct PackageData {
-    /// Manifest of the package.
-    manifest: Box<Manifest>,
-    /// All features which can potentially occur in the solution.
-    features: HashSet<FeatureName>,
-    /// Whether and how the package was present in the previous freeze.
-    preexistance: Option<PreexistanceData>,
-}
-
-/// Information about a package in the previous freeze.
-#[derive(Clone, Debug, Default)]
-pub struct PreexistanceData {
-    features: HashSet<FeatureName>,
-    realized_dependencies: HashMap<StrId, PackageId>,
-}
-
-impl SolverInput {
-    /// Creates the [`SolverInput`], based on the previous freeze, its packages' manifests
-    /// and information gathered in the gathering phase.
-    #[tracing::instrument(skip_all)]
-    pub fn from_freeze_and_gathered_info(
-        prev_freeze: &SolverFreeze,
-        mut prev_freeze_manifests: HashMap<PackageId, Box<Manifest>>,
-        gathered_info: GatheredInfo,
-    ) -> QuackResult<Self> {
-        let mut packages_data: HashMap<PackageId, PackageData> = gathered_info
-            .packages_data
-            .into_iter()
-            .map(|(k, v)| (k, v.into()))
-            .collect();
-        let mut versions_for_identity = gathered_info.versions_for_identity;
-        let mut source_to_origin_resolver = gathered_info.source_to_origin_resolver;
-        for (pkg, freeze) in prev_freeze.package_freezes.iter() {
-            let manifest = prev_freeze_manifests
-                .remove(pkg)
-                .with_context_internal(|| {
-                    format!("previous freeze package {pkg:?} without fetched manifest")
-                })?;
-            let pkg_data = match packages_data.entry(*pkg) {
-                Entry::Occupied(data) => {
-                    // Remember that for gathering we modified the root packages manifest.
-                    // To revert that change now, we overwrite manifests from gathering with manifests from diagnosing previous freeze.
-                    let data = data.into_mut();
-                    data.manifest = manifest;
-                    data
-                }
-                Entry::Vacant(vacant) => vacant.insert(PackageData::empty_with_manifest(manifest)),
-            };
-            pkg_data.features.extend(freeze.features.iter().copied());
-            versions_for_identity
-                .entry(pkg.identity())
-                .or_default()
-                .insert(pkg.version());
-            source_to_origin_resolver.insert(
-                Source::canonical_source_for_origin(pkg.origin()),
-                pkg.origin(),
-            );
-            let mut preexistance_data = PreexistanceData::default();
-            preexistance_data.features.extend(freeze.features.clone());
-            preexistance_data
-                .realized_dependencies
-                .extend(freeze.dependencies_realization.clone());
-            pkg_data.preexistance = Some(preexistance_data);
-        }
-        Ok(Self {
-            packages_data,
-            versions_for_identity,
-            source_to_origin_resolver,
-        })
-    }
-
-    /// Transform [`SolverInput`] into a mapping from packages to manifests.
-    fn into_manifests(self) -> HashMap<PackageId, Box<Manifest>> {
-        self.packages_data
-            .into_iter()
-            .map(|(pkg, data)| (pkg, data.manifest))
-            .collect()
-    }
-
-    /// Check if package existed in the previous freeze.
-    pub fn preexists(&self, pkg: PackageId) -> bool {
-        self.packages_data
-            .get(&pkg)
-            .is_some_and(|data| data.preexistance.is_some())
-    }
-
-    /// Get a [`HashSet`] of preexisting features if the package preexisted in the previous freeze.
-    pub fn preexisting_features_for_pkg(&self, pkg: PackageId) -> Option<&HashSet<FeatureName>> {
-        self.packages_data
-            .get(&pkg)
-            .and_then(|data| data.preexistance.as_ref().map(|pre| &pre.features))
-    }
-
-    /// Get a [`HashSet`] of all packages preexisting in the previous freeze.
-    pub fn all_preexisting_pkgs(&self) -> HashSet<PackageId> {
-        self.packages_data
-            .iter()
-            .filter_map(|(pkg, data)| {
-                if data.preexistance.is_some() {
-                    Some(*pkg)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
-    /// Get the [`PackageData`] associated with the package.
-    /// Important:
-    /// ----------
-    /// Returns internal error if no data is found.
-    pub fn package_data(&self, pkg: PackageId) -> QuackResult<&PackageData> {
-        self.packages_data.get(&pkg).with_context_internal(|| {
-            format!("package {pkg:?} not present in packages to package data map")
-        })
-    }
-}
-
-impl PackageData {
-    /// Create a [`PackageData`] without features and preexistance info.
-    /// Should be used as an intermediate step when constructing [`PackageData`] instances.
-    fn empty_with_manifest(manifest: Box<Manifest>) -> PackageData {
-        Self {
-            manifest,
-            features: [].into(),
-            preexistance: None,
-        }
-    }
-
-    /// Check if a given feature was present in the previous freeze.
-    fn feature_preexists(&self, feature: FeatureName) -> bool {
-        self.preexistance
-            .as_ref()
-            .is_some_and(|data| data.features.contains(&feature))
-    }
-
-    /// Check whether a given dependency was present in the previous freeze and get the realization.
-    fn dependency_preexists(&self, name: StrId) -> Option<PackageId> {
-        self.preexistance
-            .as_ref()?
-            .realized_dependencies
-            .get(&name)
-            .copied()
-    }
-
-    /// Get the [`HashSet`] which could occur in the solution.
-    pub fn features(&self) -> &HashSet<FeatureName> {
-        &self.features
-    }
-}
-
-impl From<gatherer_state::PackageData> for PackageData {
-    fn from(value: gatherer_state::PackageData) -> Self {
-        Self {
-            manifest: value.manifest,
-            features: value.requested_features,
-            preexistance: None,
-        }
-    }
-}
 
 #[derive(Debug)]
 /// Struct performing dependencies resolving.
@@ -197,7 +23,7 @@ impl<'a> SolverEngine<'a> {
     /// Main entry point.
     /// Creates an engine and runs it.
     #[tracing::instrument(skip_all)]
-    pub fn run_engine(
+    pub(in crate::quackpack::core::solver) fn run_engine(
         input: SolverInput,
         main_pkg: &(PackageId, HashSet<FeatureName>),
     ) -> QuackResult<(FoundSolution, HashMap<PackageId, Box<Manifest>>)> {
@@ -219,8 +45,8 @@ impl<'a> SolverEngine<'a> {
     fn run(mut self, main_pkg: &(PackageId, HashSet<FeatureName>)) -> QuackResult<FoundSolution> {
         self.create_package_variables();
         for (package, data) in self.input.packages_data.iter() {
-            for dependency in data.manifest.dependencies().all_dependencies() {
-                if dependency.is_enabled_for(data.features.iter().cloned()) {
+            for dependency in data.manifest().dependencies().all_dependencies() {
+                if dependency.is_enabled_for(data.features().iter().cloned()) {
                     self.construct_for_single_dependency(*package, dependency)?;
                 }
             }
@@ -240,7 +66,7 @@ impl<'a> SolverEngine<'a> {
     fn create_package_variables(&mut self) {
         for (pkg, data) in self.input.packages_data.iter() {
             self.model.add_package_var(*pkg);
-            for feature in data.features.iter().copied() {
+            for feature in data.features().iter().copied() {
                 self.model.add_package_with_feature_var(*pkg, feature);
             }
         }
@@ -277,8 +103,8 @@ impl<'a> SolverEngine<'a> {
 
         // Mapping not-preexisting parent feature -> realization features forced by it.
         let mut forcing = vec![];
-        let realization_features = &realization_data.features;
-        for parent_feature in parent_data.features.iter().copied() {
+        let realization_features = &realization_data.features();
+        for parent_feature in parent_data.features().iter().copied() {
             if parent_data.feature_preexists(parent_feature) {
                 // Parent feature belonged to the previous freeze, so whatever it forced, has been already taken care of.
                 continue;
@@ -418,11 +244,11 @@ impl<'a> SolverEngine<'a> {
     /// The constraints are added only if the feature expands to something more than itself.
     fn force_features_expansion(&mut self) -> QuackResult<()> {
         for (pkg, data) in self.input.packages_data.iter() {
-            for feature in data.features.iter() {
+            for feature in data.features().iter() {
                 if data.feature_preexists(*feature) {
                     continue;
                 }
-                let manifest = &data.manifest;
+                let manifest = data.manifest();
                 let mut expanded = manifest
                     .features()
                     .expand_features(once(*feature))
@@ -455,7 +281,7 @@ fn parent_features_to_consider(
         .packages_data
         .get(&edge.parent)
         .into_iter()
-        .flat_map(|data| data.features.iter().copied())
+        .flat_map(|data| data.features().iter().copied())
         .map(Some)
         .chain(once(None))
 }
@@ -468,7 +294,9 @@ mod test {
 
     use super::*;
     use crate::DuckContext;
-    use crate::quackpack::core::parse_manifest;
+    use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+    use crate::quackpack::core::solver::solving::input::{PackageData, PreexistanceData};
+    use crate::quackpack::core::{Source, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
     use crate::util::path_ops_ext::PathOpsExt;
 
@@ -519,8 +347,8 @@ metadata:
         let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let packages_data = [
-            (pkg_a, PackageData::empty_with_manifest(manifest_a)),
-            (pkg_b, PackageData::empty_with_manifest(manifest_b)),
+            (pkg_a, PackageData::new_empty(manifest_a)),
+            (pkg_b, PackageData::new_empty(manifest_b)),
         ]
         .into();
 
@@ -591,16 +419,8 @@ dependencies:
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
         let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
-        let data_a = PackageData {
-            manifest: manifest_a,
-            features: ["xd".into()].into(),
-            preexistance: None,
-        };
-        let packages_data = [
-            (pkg_a, data_a),
-            (pkg_b, PackageData::empty_with_manifest(manifest_b)),
-        ]
-        .into();
+        let data_a = PackageData::new(manifest_a, ["xd".into()].into(), None);
+        let packages_data = [(pkg_a, data_a), (pkg_b, PackageData::new_empty(manifest_b))].into();
         let input = SolverInput {
             packages_data,
             versions_for_identity,
@@ -673,19 +493,12 @@ features:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let data_b = PackageData {
-            manifest: manifest_b,
-            features: ["xd".into(), "xdd".into()].into(),
-            preexistance: Some(PreexistanceData {
-                features: ["xdd".into()].into(),
-                realized_dependencies: [].into(),
-            }),
-        };
-        let packages_data = [
-            (pkg_a, PackageData::empty_with_manifest(manifest_a)),
-            (pkg_b, data_b),
-        ]
-        .into();
+        let data_b = PackageData::new(
+            manifest_b,
+            ["xd".into(), "xdd".into()].into(),
+            Some(PreexistanceData::new(["xdd".into()].into(), [].into())),
+        );
+        let packages_data = [(pkg_a, PackageData::new_empty(manifest_a)), (pkg_b, data_b)].into();
         let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
@@ -743,16 +556,12 @@ features:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let data_b = PackageData {
-            manifest: manifest_b,
-            features: ["xd".into(), "xdd".into()].into(),
-            preexistance: Some(PreexistanceData::default()),
-        };
-        let packages_data = [
-            (pkg_a, PackageData::empty_with_manifest(manifest_a)),
-            (pkg_b, data_b),
-        ]
-        .into();
+        let data_b = PackageData::new(
+            manifest_b,
+            ["xd".into(), "xdd".into()].into(),
+            Some(PreexistanceData::default()),
+        );
+        let packages_data = [(pkg_a, PackageData::new_empty(manifest_a)), (pkg_b, data_b)].into();
         let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
@@ -830,21 +639,21 @@ features:
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
-        let data_b = PackageData {
-            manifest: manifest_b,
-            features: ["xd".into()].into(),
-            preexistance: Some(PreexistanceData {
-                features: [].into(),
-                realized_dependencies: [("c".into(), pkg_c)].into(),
-            }),
-        };
-        let data_c = PackageData {
-            manifest: manifest_c,
-            features: ["xdd".into()].into(),
-            preexistance: Some(PreexistanceData::default()),
-        };
+        let data_b = PackageData::new(
+            manifest_b,
+            ["xd".into()].into(),
+            Some(PreexistanceData::new(
+                [].into(),
+                [("c".into(), pkg_c)].into(),
+            )),
+        );
+        let data_c = PackageData::new(
+            manifest_c,
+            ["xdd".into()].into(),
+            Some(PreexistanceData::default()),
+        );
         let packages_data = [
-            (pkg_a, PackageData::empty_with_manifest(manifest_a)),
+            (pkg_a, PackageData::new_empty(manifest_a)),
             (pkg_b, data_b),
             (pkg_c, data_c),
         ]
@@ -910,16 +719,8 @@ features:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let data_b = PackageData {
-            manifest: manifest_b,
-            features: ["f".into(), "g".into()].into(),
-            preexistance: None,
-        };
-        let packages_data = [
-            (pkg_a, PackageData::empty_with_manifest(manifest_a)),
-            (pkg_b, data_b),
-        ]
-        .into();
+        let data_b = PackageData::new(manifest_b, ["f".into(), "g".into()].into(), None);
+        let packages_data = [(pkg_a, PackageData::new_empty(manifest_a)), (pkg_b, data_b)].into();
         let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),

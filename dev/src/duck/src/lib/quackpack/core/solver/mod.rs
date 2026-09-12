@@ -40,7 +40,8 @@ use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::solver::solving::solver_engine::{SolverEngine, SolverInput};
+use crate::quackpack::core::solver::solving::input::SolverInput;
+use crate::quackpack::core::solver::solving::solver_engine::SolverEngine;
 use crate::quackpack::core::{FeatureName, Manifest, PackageContext, PackageId};
 use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
 

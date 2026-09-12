@@ -10,8 +10,8 @@ use russcip::{Model, ProblemCreated, Solution, Variable, WithSolutions};
 use tracing::debug;
 
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
+use crate::quackpack::core::solver::solving::input::SolverInput;
 use crate::quackpack::core::solver::solving::scip_ext::BinModelExt;
-use crate::quackpack::core::solver::solving::solver_engine::SolverInput;
 use crate::quackpack::core::{FeatureName, PackageId, Version};
 use crate::{QuackResult, QuackResultContext, StrId};
 

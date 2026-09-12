@@ -7,13 +7,12 @@ use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
 use crate::DuckContext;
-use crate::quackpack::core::FeatureName;
 use crate::quackpack::core::fetcher::{Fetcher, types};
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::{PackageId, Source, Version, parse_manifest};
+use crate::quackpack::core::{FeatureName, PackageId, Source, Version, parse_manifest};
 use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
 use crate::quackpack::util::interned_url::InternedUrl;
