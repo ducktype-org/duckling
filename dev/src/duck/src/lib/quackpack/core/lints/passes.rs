@@ -34,7 +34,10 @@ pub(super) enum LintPass {
 }
 
 /// Registered lints' passes.
-pub(super) const PASSES: &[LintPass] = &[LintPass::Manifest(rules::always_false_conditions::pass)];
+pub(super) const PASSES: &[LintPass] = &[
+    LintPass::Manifest(rules::always_false_conditions::pass),
+    LintPass::Manifest(rules::undeclared_features::pass),
+];
 
 /// Runs a single pass on the package.
 pub(super) fn run_single_pass(

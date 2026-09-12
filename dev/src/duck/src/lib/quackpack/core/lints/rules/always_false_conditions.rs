@@ -1,4 +1,4 @@
-//! Home of
+//! Home of "always_false_conditions" lint.
 use std::fmt;
 
 use super::util::walk_conditions;
@@ -17,7 +17,7 @@ It checks for conditions which are always false.
 
 ## Why is this bad?
 
-The dependency (or a dependency's feature) becomes effectively unused.
+A dependency (or a dependency's feature) becomes effectively always disabled.
 
 ## Example
 

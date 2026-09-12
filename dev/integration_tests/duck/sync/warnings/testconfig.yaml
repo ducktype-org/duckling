@@ -1,3 +1,4 @@
 SubDirs:
   - always_false_conditions
+  - undeclared_features
   - unused-keys
