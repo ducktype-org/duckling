@@ -6,7 +6,7 @@ use std::iter::once;
 use russcip::ProblemCreated;
 
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
-use crate::quackpack::core::solver::solving::input::SolverInput;
+use crate::quackpack::core::solver::solving::input::{PackageData, SolverInput};
 use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
 use crate::quackpack::core::solver::util::get_possible_realizations;
 use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId};
@@ -47,7 +47,7 @@ impl<'a> SolverEngine<'a> {
         for (package, data) in self.input.packages_data.iter() {
             for dependency in data.manifest().dependencies().all_dependencies() {
                 if dependency.is_enabled_for(data.features().iter().cloned()) {
-                    self.construct_for_single_dependency(*package, dependency)?;
+                    self.construct_for_single_dependency(*package, data, dependency)?;
                 }
             }
         }
@@ -76,6 +76,7 @@ impl<'a> SolverEngine<'a> {
     fn construct_for_single_dependency(
         &mut self,
         parent: PackageId,
+        parent_data: &PackageData,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
         let Some(edge) = DependencyEdge::from_manifest_and_parent(
@@ -89,7 +90,6 @@ impl<'a> SolverEngine<'a> {
             return self.forbid_dependency(parent, manifest_dependency);
         };
 
-        let parent_data = self.input.package_data(parent)?;
         // If this edge was not resolved in the previous freeze, we fallback to adding all constraints.
         let Some(realization) = parent_data.dependency_preexists(edge.manifest_child_name) else {
             return self.add_constraints_for_edge(edge, manifest_dependency);
