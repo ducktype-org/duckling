@@ -9,10 +9,7 @@ fun print(v: str) -> i64 = io.writeStr(v);
 
 fun print(v: ref containers.String) -> i64 = io.writeString(v);
 
-fun print(s: containers.String) -> i64 = {
-    let result = io.writeString(&s);
-    return result;
-}
+fun print(s: containers.String) -> i64 = io.writeString(&s);
 
 fun print(v: char) -> i64 = io.writeChar(v);
 
