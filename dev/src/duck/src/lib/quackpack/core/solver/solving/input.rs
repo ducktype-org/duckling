@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::gatherer_state::{self, GatheredInfo};
-use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
+use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
 use crate::{QuackResult, QuackResultContext, StrId};
 
@@ -31,6 +31,15 @@ pub(in crate::quackpack::core::solver) struct PackageData {
 pub(in crate::quackpack::core::solver) struct PreexistanceData {
     features: HashSet<FeatureName>,
     realized_dependencies: HashMap<StrId, PackageId>,
+}
+
+impl From<SolverPackageFreeze> for PreexistanceData {
+    fn from(value: SolverPackageFreeze) -> Self {
+        Self {
+            features: value.features,
+            realized_dependencies: value.dependencies_realization,
+        }
+    }
 }
 
 impl SolverInput {
@@ -66,10 +75,7 @@ impl SolverInput {
                 Entry::Vacant(vacant) => vacant.insert(PackageData::new_empty(manifest)),
             };
             pkg_data.features.extend(freeze.features.iter().copied());
-            let mut preexistance_data = PreexistanceData::default();
-            preexistance_data.features = freeze.features.clone();
-            preexistance_data.realized_dependencies = freeze.dependencies_realization.clone();
-            pkg_data.preexistance = Some(preexistance_data);
+            pkg_data.preexistance = Some(freeze.clone().into());
             versions_for_identity
                 .entry(pkg.identity())
                 .or_default()
