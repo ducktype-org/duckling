@@ -41,8 +41,6 @@
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
-#include <algorithm>
-
 namespace compiler::helios::code {
 
 	namespace {

@@ -1,15 +1,4 @@
-# A standalone operator taking its left operand by value, next to an operator
-# method that can never accept the right operand.
-#
-# Issue: the left operand is wrapped in a reference before overload resolution
-# runs, purely because the class declares a same-named method. That wrap outlives
-# the method candidate being rejected, so the standalone sees `ref L` instead of
-# `L`. For a non-trivially-copyable `L` the resulting `ref L -> L` read is not an
-# implicit copy, and the only viable candidate becomes non-viable:
-#   "Cannot implicitly copy a value of non-trivially-copyable type `Class L`
-#    out of `ref Class L`."
-# Without the `+` method below the very same call compiles and moves the
-# temporary into the by-value parameter.
+# We check that overload resolution works well between methods and standalone functions.
 
 class L {
     v: i64 = 0;

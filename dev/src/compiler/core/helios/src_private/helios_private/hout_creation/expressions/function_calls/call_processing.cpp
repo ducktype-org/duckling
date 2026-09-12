@@ -504,8 +504,9 @@ namespace compiler::helios::code {
 		= std::tuple<SymID, std::vector<ArgumentOrigin>, base::Optional<std::vector<Coercion>>>;
 
 	/**
-	 * A group of overload candidates that must be matched against a different representation of
-	 * the call arguments.
+	 * Associates a subset of overload candidates with an alternate representation of the call
+	 * arguments. Operator methods need their operand prepared as `self`, while standalone and
+	 * builtin operators must retain the operand's original value category.
 	 */
 	struct CandidateArgumentsOverride final {
 		const std::vector<SymID>& candidates;
@@ -524,11 +525,11 @@ namespace compiler::helios::code {
 	 * @return The function symbol, the argument origins, and the coercions.
 	 */
 	query::QResult<OverloadResolutionResult> doOverloadResolution(
-		query::Context&                         ctx,
-		const std::vector<SymID>&               candidates,
-		const CallArguments&                    call_arguments,
-		const CallPstOrigin&                    pst_origin,
-		const CandidateArgumentsOverride* const arguments_override = nullptr
+		query::Context&                            ctx,
+		const std::vector<SymID>&                  candidates,
+		const CallArguments&                       call_arguments,
+		const CallPstOrigin&                       pst_origin,
+		base::Optional<CandidateArgumentsOverride> arguments_override = {}
 	) {
 		if (candidates.empty()) {
 			ctx.logInt(makeBox<NoCandidatesFoundError>(
@@ -543,9 +544,9 @@ namespace compiler::helios::code {
 
 		for (const auto candidate: candidates) {
 			const auto& candidate_call_arguments
-				= arguments_override != nullptr
-			           && std::ranges::contains(arguments_override->candidates, candidate)
-			        ? arguments_override->arguments
+				= arguments_override.has_value()
+			           && std::ranges::contains(arguments_override.value().candidates, candidate)
+			        ? arguments_override.value().arguments
 			        : call_arguments;
 			MatchResult match = matchOverloadCandidate(
 				ctx,
@@ -769,6 +770,9 @@ namespace compiler::helios::code {
 		CallArguments call_arguments{};
 		call_arguments.positional_arguments.emplace_back(std::move(lhs));
 		call_arguments.positional_arguments.emplace_back(std::move(rhs));
+		// Keep the original arguments for standalone and builtin operators. Method operators
+		// require a separate expression tree whose left operand is prepared as `self`; the winning
+		// candidate must later be constructed with the same representation used to match it.
 		CallArguments method_call_arguments{};
 		if (not method_candidates.empty()) {
 			method_call_arguments.positional_arguments.emplace_back(
@@ -780,18 +784,16 @@ namespace compiler::helios::code {
 				call_arguments.positional_arguments.at(1)->clone()
 			);
 		}
-		const CandidateArgumentsOverride method_arguments_override{
-			.candidates = method_candidates,
-			.arguments  = method_call_arguments,
-		};
+		base::Optional<CandidateArgumentsOverride> method_arguments_override{};
+		if (not method_candidates.empty())
+			method_arguments_override.emplace(CandidateArgumentsOverride{
+				.candidates = method_candidates,
+				.arguments  = method_call_arguments,
+			});
 
 		// Resolve overloads and construct call expression
 		auto overload_resolution_qresult = doOverloadResolution(
-			ctx,
-			candidates,
-			call_arguments,
-			pst_origin,
-			method_candidates.empty() ? nullptr : &method_arguments_override
+			ctx, candidates, call_arguments, pst_origin, method_arguments_override
 		);
 		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
 		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
@@ -845,6 +847,8 @@ namespace compiler::helios::code {
 		};
 		CallArguments call_arguments{};
 		call_arguments.positional_arguments.emplace_back(std::move(inner));
+		// As for binary operators, only method candidates may see the operand prepared as `self`.
+		// Preserve both trees so resolution and construction use the same representation.
 		CallArguments method_call_arguments{};
 		if (not method_candidates.empty()) {
 			method_call_arguments.positional_arguments.emplace_back(
@@ -853,18 +857,16 @@ namespace compiler::helios::code {
 				)
 			);
 		}
-		const CandidateArgumentsOverride method_arguments_override{
-			.candidates = method_candidates,
-			.arguments  = method_call_arguments,
-		};
+		base::Optional<CandidateArgumentsOverride> method_arguments_override{};
+		if (not method_candidates.empty())
+			method_arguments_override.emplace(CandidateArgumentsOverride{
+				.candidates = method_candidates,
+				.arguments  = method_call_arguments,
+			});
 
 		// Resolve overloads and construct call expression
 		auto overload_resolution_qresult = doOverloadResolution(
-			ctx,
-			candidates,
-			call_arguments,
-			pst_origin,
-			method_candidates.empty() ? nullptr : &method_arguments_override
+			ctx, candidates, call_arguments, pst_origin, method_arguments_override
 		);
 		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
 		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);

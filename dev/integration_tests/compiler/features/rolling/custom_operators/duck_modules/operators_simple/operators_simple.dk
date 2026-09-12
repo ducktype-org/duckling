@@ -11,11 +11,11 @@ fun -*(a: i64) -> i64 = {
 class Foo {
     x: i64 = 0;
 
-    fun +/(a: i64) -> i64 = {
+    fun +(a: i64) -> i64 = {
         return x * a + x;
     }
 
-    fun -/() -> i64 = {
+    fun -() -> i64 = {
         return x * 6;
     }
 
@@ -29,10 +29,10 @@ fun main() -> i64 = {
     builtin_output_i64(y);
 
     var fu = Foo(7);
-    let u = fu +/ 5;
+    let u = fu + 5;
     builtin_output_i64(u);
     var fv = Foo(7);
-    let v = -/fv;
+    let v = -fv;
     builtin_output_i64(v);
 
     return 0;

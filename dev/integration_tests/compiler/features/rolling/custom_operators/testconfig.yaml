@@ -11,7 +11,6 @@ Tests:
   operator_method_only:
     Cases:
       all:
-        backend: all
         Output:
           String: "42\n"
         ExitCode: 0
@@ -19,7 +18,6 @@ Tests:
   operator_method_inside_class:
     Cases:
       all:
-        backend: all
         Output:
           String: "42\n"
         ExitCode: 0
@@ -27,7 +25,6 @@ Tests:
   operator_standalone_with_unrelated_method:
     Cases:
       all:
-        backend: all
         Output:
           String: "42\n"
         ExitCode: 0
