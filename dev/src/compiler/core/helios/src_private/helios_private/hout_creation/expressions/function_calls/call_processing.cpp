@@ -545,8 +545,8 @@ namespace compiler::helios::code {
 		for (const auto candidate: candidates) {
 			const auto& candidate_call_arguments
 				= arguments_override.has_value()
-			           && std::ranges::contains(arguments_override.value().candidates, candidate)
-			        ? arguments_override.value().arguments
+			           && std::ranges::contains(arguments_override->candidates, candidate)
+			        ? arguments_override->arguments
 			        : call_arguments;
 			MatchResult match = matchOverloadCandidate(
 				ctx,
