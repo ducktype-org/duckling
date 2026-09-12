@@ -1264,7 +1264,7 @@ namespace compiler::backend_llvm {
 
 				// The tag lives at offset 0.
 				builder.CreateStore(
-					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
+					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index + 1)),
 					variant_ptr
 				);
 
@@ -1295,7 +1295,7 @@ namespace compiler::backend_llvm {
 					= builder.CreateLoad(builder.getInt8Ty(), variant_ptr, "variant_tag");
 				llvm::Value* tag_matches = builder.CreateICmpEQ(
 					tag,
-					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
+					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index + 1)),
 					"tag_matches"
 				);
 				llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(

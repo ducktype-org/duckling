@@ -238,14 +238,19 @@ namespace vm {
 				nested_data_ptr.getBlock(), nested_data_ptr.getOffset(), wanted_type
 			);
 
-			// Find type index
-			auto  alternatives      = variant_type->getVariantAlternatives().value();
-			usize alternative_index = 0;
+			// Find the type tag. Zero is reserved for a variant with no active alternative.
+			auto  alternatives         = variant_type->getVariantAlternatives().value();
+			usize alternative_type_tag = 0;
 
-			// @TODO: #3374 - Make usage of type 0 be accounted here as well
-			// Also, optimize this...
 			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
-				if (alt == wanted_type) alternative_index = static_cast<usize>(idx);
+				if (alt == wanted_type) {
+					alternative_type_tag = static_cast<usize>(idx) + 1;
+					break;
+				}
+
+			CORE_ASSERT(
+				alternative_type_tag != 0, "The variant must contain the requested alternative type"
+			);
 
 			// Write the type tag
 			auto variant_block_data_view
@@ -258,16 +263,16 @@ namespace vm {
 			switch (variant_type_tag_size.asInt()) {
 			case 1:
 				// byte, using uint8_t below since byte is not std::integral
-				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_type_tag));
 				break;
 			case 2:
-				writeToView(variant_data_view, base::safeIntConv<u16>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u16>(alternative_type_tag));
 				break;
 			case 4:
-				writeToView(variant_data_view, base::safeIntConv<u32>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u32>(alternative_type_tag));
 				break;
 			case 8:
-				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_index));
+				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_type_tag));
 				break;
 			default:
 				CORE_PANIC("Invalid variant size: ", variant_type_tag_size.asInt());

@@ -435,7 +435,8 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 				variant.alternatives.size() >= 2, "Variant must have at least 2 alternatives"
 			);
 			const auto num_alternatives = variant.alternatives.size();
-			const auto needed_bits      = static_cast<usize>(std::bit_width(num_alternatives - 1));
+			// Zero denotes no active alternative, so the largest tag is num_alternatives.
+			const auto needed_bits = static_cast<usize>(std::bit_width(num_alternatives));
 			// Add 7 so we round up to the nearest byte, because we cannot have sub-byte sizes.
 			const auto needed_bytes          = (needed_bits + 7) / 8;
 			const auto rounded_to_power_of_2 = std::bit_ceil(needed_bytes);

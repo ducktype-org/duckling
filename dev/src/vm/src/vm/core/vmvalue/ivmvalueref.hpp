@@ -135,6 +135,7 @@ namespace vm {
 		};
 
 		struct Variant final {
+			// Zero-based alternative index decoded from the non-zero runtime type tag.
 			u64                    type_tag = 0;
 			SharedBox<IVMValueRef> referenced;
 		};

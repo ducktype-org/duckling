@@ -286,6 +286,8 @@ namespace compiler::tsl {
 
 	/**
 	 * @brief Layout of a variant type.
+	 * @note Alternative indices are zero-based. At runtime, tag 0 denotes no active alternative,
+	 * and an alternative with index `i` is encoded as tag `i + 1`.
 	 */
 	class VariantTypeLayout final: public TypeLayoutABC {
 		Bytes tag_offset;
@@ -332,7 +334,7 @@ namespace compiler::tsl {
 
 		/**
 		 * @param key One of the options of the variant.
-		 * @return The index (tag value) of the given option.
+		 * @return The zero-based logical index of the given option.
 		 */
 		[[nodiscard]]
 		usize getIndexOfType(const tsh::SymbolType<> key) const {
@@ -340,7 +342,7 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @param index An in-bounds index (tag value) of the variant.
+		 * @param index An in-bounds, zero-based logical index of the variant.
 		 * @return The type layout corresponding to that index.
 		 */
 		[[nodiscard]]

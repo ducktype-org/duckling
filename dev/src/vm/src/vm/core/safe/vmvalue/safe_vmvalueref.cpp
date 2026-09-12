@@ -115,32 +115,36 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVMValueRef::readData() const 
 		}
 
 		variant_case(vm::kind::Variant, variant_kind) {
-			u64  alternative_index  = 0;
-			auto type_tag_data_view = memory->getPointerData(
-				pointed_data, static_cast<usize>(variant_kind.type_tag_size)
-			);
+			u64  alternative_type_tag = 0;
+			auto type_tag_data_view   = memory->getPointerData(
+                pointed_data, static_cast<usize>(variant_kind.type_tag_size)
+            );
 			switch (static_cast<usize>(variant_kind.type_tag_size)) {
 			case 1:
-				alternative_index
+				alternative_type_tag
 					= static_cast<u64>(safeReadPointerBytes<u8>(type_tag_data_view.getBegin(), 0));
 				break;
 			case 2:
-				alternative_index
+				alternative_type_tag
 					= static_cast<u64>(safeReadPointerBytes<u16>(type_tag_data_view.getBegin(), 0));
 				break;
 			case 4:
-				alternative_index
+				alternative_type_tag
 					= static_cast<u64>(safeReadPointerBytes<u32>(type_tag_data_view.getBegin(), 0));
 				break;
 			case 8:
-				alternative_index
+				alternative_type_tag
 					= static_cast<u64>(safeReadPointerBytes<u64>(type_tag_data_view.getBegin(), 0));
 				break;
 			default:
 				throw "Invalid variant type tag size!";
 			}
 
-			TypeCRef inner_type = variant_kind.alternatives.at(alternative_index);
+			if (alternative_type_tag == 0 || alternative_type_tag > variant_kind.alternatives.size())
+				return std::nullopt;
+
+			const u64 alternative_index = alternative_type_tag - 1;
+			TypeCRef  inner_type        = variant_kind.alternatives.at(alternative_index);
 
 			auto view_block_ref = memory->getNestedViewBlock(
 				pointed_data.getBlock(),
