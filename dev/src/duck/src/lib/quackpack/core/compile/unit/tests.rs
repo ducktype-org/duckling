@@ -7,11 +7,13 @@ use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::creating_graph::create_early_graph_from_bcx;
 use crate::quackpack::core::compile::early_graph::tests::cycling::setup::*;
+use crate::quackpack::core::compile::early_graph::tests::{
+    mock_local_identity, mock_local_pkg, mock_registry_identity, mock_registry_pkg,
+};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::identity::{Identity, Origin};
+use crate::quackpack::core::storage::load_deps::load_packages_in_freeze as load_packages;
 use crate::quackpack::core::storage::paths::Storage;
-use crate::quackpack::util::to_url::ToUrl;
 
 // **IMPORTANT**
 // Some notes on the tests' structure:
@@ -35,23 +37,27 @@ impl UnitVisitor for IdOrder {
 #[test]
 fn lowers_early_graph() {
     let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -60,7 +66,7 @@ fn lowers_early_graph() {
         shared: false,
         jobs: 1,
     };
-    let graph = create_early_graph_from_bcx(&bcx).unwrap();
+    let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
 
     let root_id = 0;
@@ -69,52 +75,59 @@ fn lowers_early_graph() {
     let baz_id = 3;
     assert_eq!(unit_graph.units_sorted_by_id().len(), 4);
 
-    let root = unit_graph.unit_for(root_id);
-    assert_eq!(root, unit_graph.root_unit());
-    assert_eq!(root.artifacts_type(), ArtifactsType::Binary);
-    assert_eq!(root.unit_id(), root_id);
-    assert_eq!(root.deps_sorted_by_unit_id(), [bar_id, foo_id]);
-    assert_eq!(root.identity(), identity_for("root"));
+    let root_unit = unit_graph.unit_for(root_id);
+    assert_eq!(root_unit, unit_graph.root_unit());
+    assert_eq!(root_unit.artifacts_type(), ArtifactsType::Binary);
+    assert_eq!(root_unit.unit_id(), root_id);
+    assert_eq!(root_unit.deps_sorted_by_unit_id(), [bar_id, foo_id]);
+    assert_eq!(
+        root_unit.identity(),
+        mock_local_identity(root.path(), "root")
+    );
 
     let foo = unit_graph.unit_for(foo_id);
     assert_eq!(foo.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(foo.unit_id(), foo_id);
     assert_eq!(foo.deps_sorted_by_unit_id(), [baz_id]);
-    assert_eq!(foo.identity(), fetcher_identity_for("foo"));
+    assert_eq!(foo.identity(), mock_registry_identity("foo"));
 
     let bar = unit_graph.unit_for(bar_id);
     assert_eq!(bar.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(bar.unit_id(), bar_id);
     assert_eq!(bar.deps_sorted_by_unit_id(), [baz_id]);
-    assert_eq!(bar.identity(), fetcher_identity_for("bar"));
+    assert_eq!(bar.identity(), mock_registry_identity("bar"));
 
     let baz = unit_graph.unit_for(baz_id);
     assert_eq!(baz.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(baz.unit_id(), baz_id);
     assert_eq!(baz.deps_sorted_by_unit_id(), [0u64; 0]);
-    assert_eq!(baz.identity(), fetcher_identity_for("baz"));
+    assert_eq!(baz.identity(), mock_registry_identity("baz"));
 }
 
 #[test]
 fn lowers_early_graph_with_cycle() {
     let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
 
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -123,7 +136,7 @@ fn lowers_early_graph_with_cycle() {
         shared: false,
         jobs: 1,
     };
-    let graph = create_early_graph_from_bcx(&bcx).unwrap();
+    let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
 
     let root_id = 0;
@@ -132,42 +145,62 @@ fn lowers_early_graph_with_cycle() {
     let cycle_id = 2;
     assert_eq!(unit_graph.units_sorted_by_id().len(), 4);
 
-    let root = unit_graph.unit_for(root_id);
-    assert_eq!(root, unit_graph.root_unit());
-    assert_eq!(root.artifacts_type(), ArtifactsType::Binary);
-    assert_eq!(root.unit_id(), root_id);
-    assert_eq!(root.identity(), identity_for("root"));
-    assert_eq!(root.deps_sorted_by_unit_id(), [bar_id, cycle_id, foo_id]);
+    let root_unit = unit_graph.unit_for(root_id);
+    assert_eq!(root_unit, unit_graph.root_unit());
+    assert_eq!(root_unit.artifacts_type(), ArtifactsType::Binary);
+    assert_eq!(root_unit.unit_id(), root_id);
+    assert_eq!(
+        root_unit.identity(),
+        mock_local_identity(root.path(), "root")
+    );
+    assert_eq!(
+        root_unit.deps_sorted_by_unit_id(),
+        [bar_id, cycle_id, foo_id]
+    );
 
     let foo = unit_graph.unit_for(foo_id);
     assert_eq!(foo.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(foo.unit_id(), foo_id);
     assert_eq!(foo.deps_sorted_by_unit_id(), [0u64; 0]);
-    assert_eq!(foo.identity(), fetcher_identity_for("foo"));
+    assert_eq!(foo.identity(), mock_registry_identity("foo"));
 
     let bar = unit_graph.unit_for(bar_id);
     assert_eq!(bar.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(bar.unit_id(), bar_id);
     assert_eq!(bar.deps_sorted_by_unit_id(), [0u64; 0]);
-    assert_eq!(bar.identity(), fetcher_identity_for("bar"));
+    assert_eq!(bar.identity(), mock_registry_identity("bar"));
 
     let cycle = unit_graph.unit_for(cycle_id);
     assert_eq!(cycle.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(cycle.unit_id(), cycle_id);
     assert_eq!(cycle.deps_sorted_by_unit_id(), [root_id]);
-    assert_eq!(cycle.identity(), identity_for("cycle"));
+    assert_eq!(cycle.identity(), mock_local_identity(root.path(), "cycle"));
 }
 
 #[test]
 fn basic_visitor_order_cycle() {
     let (ctx, root) = setup_mock_storage();
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
+
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -176,7 +209,7 @@ fn basic_visitor_order_cycle() {
         shared: false,
         jobs: 1,
     };
-    let graph = create_early_graph_from_bcx(&bcx).unwrap();
+    let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
     let root_id = 0;
     let foo_id = 3;
@@ -211,13 +244,27 @@ fn basic_visitor_order_cycle() {
 #[test]
 fn basic_visitor_order() {
     let (ctx, root) = setup_mock_storage();
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let storage = Storage::new(root.path().join("storage"));
+    let fetcher = Fetcher::new(&ctx).unwrap();
+
+    let packages = load_packages(
+        &storage,
+        &fetcher,
+        vec![
+            mock_local_pkg(root.path(), "root"),
+            mock_local_pkg(root.path(), "cycle"),
+            mock_registry_pkg("foo"),
+            mock_registry_pkg("bar"),
+            mock_registry_pkg("baz"),
+        ],
+    )
+    .unwrap();
+    let root_pkg = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
+        Profile::construct_profile("dev".into(), root_pkg.package().manifest().profiles()).unwrap();
+    let root_identity = mock_local_identity(root.path(), "root").into();
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &root_pkg,
         root_identity,
         freeze: freeze(root.path()),
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
@@ -226,7 +273,7 @@ fn basic_visitor_order() {
         shared: false,
         jobs: 1,
     };
-    let graph = create_early_graph_from_bcx(&bcx).unwrap();
+    let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
 
     let root_id = 0;

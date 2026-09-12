@@ -35,6 +35,7 @@
  */
 #pragma once
 
+#include <base/config/target_info.hpp>
 #include <base/types/ints.hpp>
 
 #include <limits>
@@ -255,17 +256,17 @@ namespace base {
 	constexpr auto typeName() {
 		std::string_view name, prefix, suffix;
 
-#ifdef __clang__
+#if BASE_TARGET_COMPILER_CLANG
 		name   = __PRETTY_FUNCTION__;
 		prefix = "auto base::typeName() [T = ";
 		suffix = "]";
-#elif defined(__GNUC__)
+#elif BASE_TARGET_COMPILER_GCC
 		name   = __PRETTY_FUNCTION__;
 		prefix = "constexpr auto base::typeName() [with T = ";
 		suffix = "]";
-#elif defined(_MSC_VER)
+#elif BASE_TARGET_COMPILER_MSVC
 		name   = __FUNCSIG__;
-		prefix = "auto __cdecl base::type_name<";
+		prefix = "auto __cdecl base::typeName<";
 		suffix = ">(void)";
 #endif
 
