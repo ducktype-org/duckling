@@ -1,12 +1,14 @@
 #include "dynamic_library.hpp"
 
+#include <base/config/target_info.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <cerrno>
+#include <cstdlib>
 #include <expected>
 #include <string>
 
-#if defined(__unix__) || defined(__APPLE__)
+#if BASE_TARGET_PLATFORM_POSIX
 
 	#include <dlfcn.h>
 	#include <sys/mman.h>
@@ -34,7 +36,7 @@ namespace os_utils {
 	std::expected<NativeLibrary, std::string> openLibraryFromMemory(
 		std::span<const byte> library_bytes
 	) {
-	#if defined(__APPLE__)
+	#if BASE_TARGET_OS_MACOS
 		// No memfd or /proc/self/fd on macOS; use a temp file, unlinked after load.
 		std::string tmp_path = "/tmp/duckling_lib_XXXXXX";
 		int         fd       = mkstemp(tmp_path.data());
@@ -52,7 +54,7 @@ namespace os_utils {
 				if (ret == -1) {
 					if (errno == EINTR) continue;  // interrupted by a signal, retry
 					// Clean up before returning: the fd is no longer usable.
-	#if defined(__APPLE__)
+	#if BASE_TARGET_OS_MACOS
 					unlink(tmp_path.c_str());
 	#endif
 					close(fd);
@@ -66,7 +68,7 @@ namespace os_utils {
 		};
 
 		return write_n().and_then([&]() -> std::expected<NativeLibrary, std::string> {
-	#if defined(__APPLE__)
+	#if BASE_TARGET_OS_MACOS
 			// dlopen reads from the path, not the fd; no lseek needed.
 			void* handle = dlopen(tmp_path.c_str(), RTLD_NOW);  // NOLINT(concurrency-mt-unsafe)
 			// The loaded image stays valid without the temp file; clean up before checking the result.

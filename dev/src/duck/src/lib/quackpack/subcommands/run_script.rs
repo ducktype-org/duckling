@@ -7,7 +7,7 @@ use tracing::debug;
 use crate::duck::driver::cli_ext::jobs_from_matches;
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Profile};
-use crate::quackpack::core::storage::{StorageSyncOptions, sync};
+use crate::quackpack::core::storage::{StorageSyncOptions, SyncOutput, sync};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 pub struct RunScriptOptions<'duck, 'matches> {
@@ -112,7 +112,13 @@ pub fn run_script<'duck, 'matches>(
 
     let package = PackageLoader::load_script(ctx, path, folder_path, global)?;
     let root_identity = package.package().as_a_local_identity()?;
-    let (lock, venv, storage) = sync(
+    let SyncOutput {
+        new_freeze: _freeze,
+        loaded_packages: _pkgs,
+        sync_lock: lock,
+        new_venv: _,
+        storage,
+    } = sync(
         &package,
         StorageSyncOptions {
             overwrite,

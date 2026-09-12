@@ -3,11 +3,11 @@ use std::path::Path;
 use tempfile::TempDir;
 
 use crate::DuckContext;
+use crate::quackpack::core::compile::early_graph::tests::{mock_local_pkg, mock_registry_pkg};
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
-use crate::quackpack::core::identity::{Identity, Origin};
-use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
-use crate::quackpack::core::{PackageId, PackageLoader, Version};
+use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+use crate::quackpack::core::{PackageId, PackageLoader, Version, storage};
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
@@ -52,6 +52,12 @@ pub fn setup_mock_packages(root: &Path) {
             .join(pkg_id.storage_name())
             .join(PackageLoader::MANIFEST_NAME)
             .write(manifest)
+            .unwrap();
+
+        root.join("pkg")
+            .join(pkg_id.storage_name())
+            .join(storage::paths::OK_FILENAME)
+            .touch()
             .unwrap();
     }
     root.try_fsync_dir().unwrap();
@@ -157,76 +163,37 @@ features:
     root.try_fsync_dir().unwrap();
 }
 
-/// Generate mock [`VenvFreeze`].
+/// Generate mock [`SolverFreeze`].
 ///
 /// This function should be generally used in order to create
 /// [`BuildContext`](super::BuildContext).
-pub fn freeze() -> VenvFreeze {
-    let full_origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let mock_identity = |name: &str| Identity::new(name.into(), origin);
-    let mock_full_identity = |name: &str| FullIdentity::new(name.into(), full_origin);
-    VenvFreeze::new(
-        RootPackage::new(
-            "root".into(),
-            Version::new(1, 0, 0),
-            vec!["use_bar".into(), "full".into(), "nonexistent".into()],
-            vec![mock_identity("foo")],
-        ),
-        vec![
-            FreezePackage::new(
-                mock_full_identity("foo"),
-                Version::new(1, 0, 0),
-                vec!["use_bar".into(), "use_bar_with_baz".into()],
-                vec![mock_identity("bar")],
+pub fn freeze(root: &Path) -> SolverFreeze {
+    SolverFreeze {
+        main_pkg: mock_local_pkg(root, "root"),
+        package_freezes: [
+            (
+                mock_local_pkg(root, "root"),
+                SolverPackageFreeze {
+                    features: ["use_bar".into(), "full".into(), "nonexistent".into()].into(),
+                    dependencies_realization: [("foo".into(), mock_registry_pkg("foo"))].into(),
+                },
             ),
-            FreezePackage::new(
-                mock_full_identity("bar"),
-                Version::new(1, 0, 0),
-                vec!["use_baz".into()],
-                vec![mock_identity("baz")],
+            (
+                mock_registry_pkg("foo"),
+                SolverPackageFreeze {
+                    features: ["use_bar".into(), "use_bar_with_baz".into()].into(),
+                    dependencies_realization: [("bar".into(), mock_registry_pkg("bar"))].into(),
+                },
             ),
-            FreezePackage::new(
-                mock_full_identity("baz"),
-                Version::new(1, 0, 0),
-                vec![],
-                vec![],
+            (
+                mock_registry_pkg("bar"),
+                SolverPackageFreeze {
+                    features: ["use_baz".into()].into(),
+                    dependencies_realization: [("baz".into(), mock_registry_pkg("baz"))].into(),
+                },
             ),
-        ],
-    )
-}
-
-pub fn freeze_without_direct_dep() -> VenvFreeze {
-    let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let mock_identity = |name: &str| Identity::new(name.into(), origin);
-    VenvFreeze::new(
-        RootPackage::new(
-            "root".into(),
-            Version::new(1, 0, 0),
-            vec!["use_bar".into(), "full".into(), "nonexistent".into()],
-            vec![mock_identity("foo")],
-        ),
-        vec![],
-    )
-}
-
-pub fn freeze_without_transitive_dep() -> VenvFreeze {
-    let full_origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let mock_identity = |name: &str| Identity::new(name.into(), origin);
-    let mock_full_identity = |name: &str| FullIdentity::new(name.into(), full_origin);
-    VenvFreeze::new(
-        RootPackage::new(
-            "root".into(),
-            Version::new(1, 0, 0),
-            vec!["use_bar".into(), "full".into(), "nonexistent".into()],
-            vec![mock_identity("foo")],
-        ),
-        vec![FreezePackage::new(
-            mock_full_identity("foo"),
-            Version::new(1, 0, 0),
-            vec!["use_bar".into(), "use_bar_with_baz".into()],
-            vec![mock_identity("bar")],
-        )],
-    )
+            (mock_registry_pkg("baz"), SolverPackageFreeze::new()),
+        ]
+        .into(),
+    }
 }

@@ -491,7 +491,6 @@ private:
 
 		auto [module, scope] = getModule(fs::File(path("modules/move_ownership")));
 
-
 		// The `Call` reading `a` marks it as moved out. No `Assign` into a temporary is built for
 		// the move, `a` is not destructed here any more.
 		{

@@ -280,7 +280,6 @@ fn lock(
         return Ok(());
     }
     debug!(path = %path.display(), "locking blocking");
-    ctx.console()
-        .info(format!("waiting for file lock `{}`", path.display()))?;
+    ctx.info(format!("waiting for file lock `{}`", path.display()))?;
     blocking().with_context(|| format!("failed to lock `{}`", path.display()))
 }

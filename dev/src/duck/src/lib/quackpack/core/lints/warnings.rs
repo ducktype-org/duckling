@@ -39,7 +39,7 @@ impl Warnings {
 
 /// Emit a single [`Diagnostic`] to an appropriate [`Terminal`](crate::duck::util::terminal::Terminal).
 fn emit_warning(warning: &impl Diagnostic, ctx: &DuckContext) -> QuackResult<()> {
-    ctx.console().warning(warning)
+    ctx.warning(warning)
 }
 
 #[derive(Debug)]
