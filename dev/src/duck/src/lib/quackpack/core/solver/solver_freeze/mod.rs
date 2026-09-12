@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
 use crate::quackpack::core::{FeatureName, PackageId};
 use crate::{QuackResult, StrId, qp_bail_internal};
@@ -36,9 +37,23 @@ impl Default for SolverPackageFreeze {
     }
 }
 
+#[derive(Debug)]
+pub enum MalformedFreezeError<'a> {
+    MissingRootDependency {
+        dep: Identity,
+    },
+    MissingPackageDependency {
+        package: &'a FreezePackage,
+        dep: Identity,
+    },
+}
+
 impl SolverFreeze {
     #[tracing::instrument(skip_all)]
-    pub fn try_from_venv_freeze(root: PackageId, value: &VenvFreeze) -> QuackResult<Self> {
+    pub fn try_from_venv_freeze<'a>(
+        root: PackageId,
+        value: &'a VenvFreeze,
+    ) -> Result<Self, MalformedFreezeError<'a>> {
         debug!(?root, freeze = ?value);
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
@@ -47,13 +62,16 @@ impl SolverFreeze {
         }
         let mut pkg_freezes = HashMap::new();
         for pkg_freeze in value.dependencies() {
-            let Some(pkg) = expanded_pkgs_by_name.get(&pkg_freeze.name()) else {
-                qp_bail_internal!("no package {pkg_freeze:?} in {expanded_pkgs_by_name:#?}")
-            };
+            let pkg = expanded_pkgs_by_name
+                .get(&pkg_freeze.name())
+                .expect("we've just added them above");
             let mut dependencies = HashMap::new();
             for dep in pkg_freeze.dependencies() {
                 let Some(realization) = expanded_pkgs_by_name.get(&dep.name()) else {
-                    qp_bail_internal!("no package {dep:?} in {expanded_pkgs_by_name:#?}")
+                    return Err(MalformedFreezeError::MissingPackageDependency {
+                        package: pkg_freeze,
+                        dep: *dep,
+                    });
                 };
                 dependencies.insert(dep.name(), *realization);
             }
@@ -69,7 +87,7 @@ impl SolverFreeze {
         let mut main_dependencies = HashMap::new();
         for dep in value.root().dependencies() {
             let Some(realization) = expanded_pkgs_by_name.get(&dep.name()) else {
-                qp_bail_internal!("no package {dep:?} in {expanded_pkgs_by_name:#?}")
+                return Err(MalformedFreezeError::MissingRootDependency { dep: *dep });
             };
             if *realization != root {
                 main_dependencies.insert(dep.name(), *realization);
