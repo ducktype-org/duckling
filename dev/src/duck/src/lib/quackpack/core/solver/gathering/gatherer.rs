@@ -149,6 +149,9 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             format!("failed to generate url from a path `{root_path:?}`")
         })?;
         let root_source = Source::for_local_with_url(root_url);
+        if does_package_depend_on_itself(&[root_source], &root_manifest) {
+            return Err(self_dependent_root_package_error());
+        }
         let root_request = NotPinnedRequest {
             id: RequestIdentifier {
                 name: root_name,
@@ -395,6 +398,18 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 return Ok(FetchResponse::failed_not_pinned(request.id));
             }
         };
+        let sources: &[Source] =
+            if let Ok(path_source) = Source::for_local(path_where_cloned.path()) {
+                &[path_source, request.id.source]
+            } else {
+                &[request.id.source]
+            };
+        if does_package_depend_on_itself(sources, &manifest) {
+            errors
+                .borrow_mut()
+                .log(self_dependent_dependency_error(request.id));
+            return Ok(FetchResponse::failed_not_pinned(request.id));
+        }
         let answer_identity = FullIdentity::new(
             request.id.name,
             FullOrigin::for_git(url, cloned_pkg.commit_hash),
@@ -475,8 +490,12 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         let Some(fast_path_client) = self.fetcher.try_get_fastpath(url) else {
             return Ok(None);
         };
+        let source = Source::for_git(url, reference);
         let commit = fast_path_client.get_commit_hash(reference).await?;
         let manifest = fast_path_client.download_manifest(commit).await?;
+        if does_package_depend_on_itself(&[source], &manifest) {
+            return Err(self_dependent_dependency_error(request.id));
+        }
         let answer_identity = FullIdentity::new(request.id.name, FullOrigin::for_git(url, commit));
         let pkg_id = PackageId::new(answer_identity, manifest.version());
         Ok(Some(NotPinnedSuccess {
@@ -500,6 +519,12 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 return FetchResponse::failed_not_pinned(request.id);
             }
         };
+        if does_package_depend_on_itself(&[request.id.source], pcx.package().manifest()) {
+            errors
+                .borrow_mut()
+                .log(self_dependent_dependency_error(request.id));
+            return FetchResponse::failed_not_pinned(request.id);
+        }
         let root = pcx.package().root();
         let Ok(answer_origin) = FullOrigin::for_local(root) else {
             return FetchResponse::failed_not_pinned(request.id);
@@ -588,4 +613,29 @@ fn display_git_fast_path_failure_warning(
     ))?;
     ctx.info("switching to cloning git repository")?;
     Ok(())
+}
+
+/// Check whether a given package depends on itself.
+///
+/// `sources` is a slice of this package's sources.
+///
+/// It accepts multiple sources (but in practice it's 1 or 2), because a git dependency can be
+/// self-dependent either as a local dependency with a path `.`, or as a git dependency with the
+/// same URL.
+///
+/// Local and registry dependencies don't have such struggles.
+fn does_package_depend_on_itself(sources: &[Source], manifest: &Manifest) -> bool {
+    manifest
+        .dependencies()
+        .all_dependencies()
+        .iter()
+        .any(|dep| sources.contains(&dep.source()))
+}
+
+fn self_dependent_root_package_error() -> QuackError {
+    qp_err!("root package depends on itself")
+}
+
+fn self_dependent_dependency_error(id: RequestIdentifier) -> QuackError {
+    qp_err!("dependency `{} {}` depends on itself", id.name, id.source)
 }
