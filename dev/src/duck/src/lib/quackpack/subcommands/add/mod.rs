@@ -52,7 +52,8 @@ pub fn add(ctx: &DuckContext, options: AddOptions) -> QuackResult<()> {
         &pkg_root,
     )?;
     editable_manifest.save()?;
-    ctx.console().info(format!(
+    ctx.info(
+        format!(
         "successfully added {kind} dependency `{effective_name}` to the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;

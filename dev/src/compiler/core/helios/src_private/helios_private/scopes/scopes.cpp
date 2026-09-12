@@ -787,6 +787,7 @@ namespace compiler::helios {
 			static const std::vector<PreludeImport> imports{
 				{ .package = base::StrID("core"), .path = { base::StrID("builtins") } },
 				{ .package = base::StrID("core"), .path = { base::StrID("containers") } },
+				{ .package = base::StrID("core"), .path = { base::StrID("prints") } },
 			};
 			return imports;
 		}

@@ -81,10 +81,9 @@ impl LintBuffer {
 fn emit_diag(diag: DiagnosticWithLint, is_error: bool, ctx: &DuckContext) -> QuackResult<()> {
     let DiagnosticWithLint { diagnostic, lint } = diag;
     let msg = format!("{diagnostic} [{}]", lint.name);
-    let term = ctx.error_console();
     if is_error {
-        term.error(msg)
+        ctx.error(msg)
     } else {
-        term.warning(msg)
+        ctx.warning(msg)
     }
 }
