@@ -50,23 +50,23 @@ impl GlobalOptions {
             qp_bail!("cannot specify both `--verbose` and `--quiet`")
         }
         if self.verbose {
-            ctx.console_mut().set_verbosity(Verbosity::Verbose);
-            ctx.error_console_mut().set_verbosity(Verbosity::Verbose);
+            ctx.stdout_mut().set_verbosity(Verbosity::Verbose);
+            ctx.stderr_mut().set_verbosity(Verbosity::Verbose);
         } else if self.quiet {
-            ctx.console_mut().set_verbosity(Verbosity::Quiet);
-            ctx.error_console_mut().set_verbosity(Verbosity::Quiet);
+            ctx.stdout_mut().set_verbosity(Verbosity::Quiet);
+            ctx.stderr_mut().set_verbosity(Verbosity::Quiet);
         }
 
         if matches!(self.color, Color::Never) {
             console::set_colors_enabled(false);
             console::set_colors_enabled_stderr(false);
-            ctx.console_mut().set_color(false);
-            ctx.error_console_mut().set_color(false);
+            ctx.stdout_mut().set_color(false);
+            ctx.stderr_mut().set_color(false);
         } else if matches!(self.color, Color::Always) {
             console::set_colors_enabled(true);
             console::set_colors_enabled_stderr(true);
-            ctx.console_mut().set_color(true);
-            ctx.error_console_mut().set_color(true);
+            ctx.stdout_mut().set_color(true);
+            ctx.stderr_mut().set_color(true);
         }
         ctx.set_offline(self.offline);
         Ok(())
