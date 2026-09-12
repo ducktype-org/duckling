@@ -1,0 +1,136 @@
+name: Setup macOS build environment
+description: >
+  Points the build at what the mac mini already has. Installs NOTHING: the runner accounts there
+  have no sudo, so every dependency is put on the machine by hand and this action only wires it
+  up. A missing dependency has to fail here with a clear message rather than halfway through a
+  build - see the Rust step.
+
+inputs:
+  dev-dir:
+    description: Absolute path of the repository's dev/ directory.
+    required: true
+  ccache-dir:
+    description: >
+      Where the workflow expects the ccache directory. Replaced with a symlink to the machine's
+      shared cache, because ConfigureCCache.cmake hardcodes this path into the compiler launcher.
+    required: true
+  shared-dir:
+    description: Directory on the machine holding the caches that outlive a job.
+    required: false
+    default: /Users/Shared/duckling-ci
+
+runs:
+  using: composite
+  steps:
+    # The choices follow dev/docs/developer-guides/building-the-repo.md, "MacOS (clang)":
+    # llvm@23 compiles (addressed by absolute path in the build matrix, because Homebrew keeps it
+    # unlinked so it cannot shadow Apple clang), llvm@19 is the LLVM the project links against,
+    # and the linker stays ld64 - mold and lld only handle ELF, not Mach-O.
+    #
+    # Homebrew goes on the FRONT of PATH deliberately: one of the two mac runners was registered
+    # with /opt/homebrew/bin at the END of its .path, and there `python3` resolves to the macOS
+    # system python 3.9, on which the toolbox does not run at all.
+    - name: Setup toolchain
+      shell: bash
+      run: |
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+        echo "CMAKE_PREFIX_PATH=$HOMEBREW_PREFIX/opt/llvm@19" >> "$GITHUB_ENV"
+        # The ICU bundled with the macOS SDK is a C-only subset, so CMake must be pointed at
+        # the Homebrew one.
+        echo "ICU_ROOT=$HOMEBREW_PREFIX/opt/icu4c" >> "$GITHUB_ENV"
+        # Apple's `ar` stamps a timestamp into every archive member unless this is set, so
+        # without it the same sources produce byte-different archives on every build.
+        echo "ZERO_AR_DATE=1" >> "$GITHUB_ENV"
+        echo "$HOMEBREW_PREFIX/bin" >> "$GITHUB_PATH"
+
+    # rustup lives in each runner account's own ~/.cargo + ~/.rustup, the same layout rust.yml
+    # assumes on the Linux runners and the one integration_tests/duck/testconfig.yaml needs: it
+    # sources `${CARGO_HOME:-$HOME/.cargo}/env`, a file only rustup writes (a Homebrew `rust`
+    # would not).
+    #
+    # The assertions are not ceremony. This machine was first set up with ONE shared toolchain in
+    # /opt/rust, reached through `export RUSTUP_HOME=/opt/rust/rustup` in /etc/zshenv - which only
+    # zsh reads. Over ssh `cargo --version` answered fine; in a step like this one, which runs
+    # under bash, the same shims died with "rustup could not choose a version of cargo to run".
+    # Checking here costs a second and names the problem; not checking it means finding out
+    # somewhere inside the duck integration tests, three quarters of an hour in.
+    # The mac keeps its compiler caches ON the machine: no actions/cache upload, no download, no
+    # eviction against the Linux runners' entries. The workspace is wiped at the start of every
+    # job, so the caches live outside it, under a world-writable /Users/Shared.
+    #
+    # ccache is SHARED by runner1 and runner2. Concurrent access is what ccache is built for and
+    # needs no synchronisation between the accounts - entries are written to a temporary file and
+    # renamed into place, and the per-subdirectory counters and the eviction pass both take a
+    # lock. `hard_link` and `file_clone`, the two settings the ccache manual warns against for a
+    # shared cache, are off by default and are not turned on anywhere here.
+    #
+    # Three settings are what actually make the sharing work, and none of them are defaults:
+    #
+    #   * CCACHE_UMASK - without it each account's cache files land at 0644, and the other account
+    #     can read them (so hits still work) but cannot evict them, so the cache silently grows
+    #     past max_size.
+    #   * CCACHE_BASEDIR + CCACHE_NOHASHDIR - the two accounts check out to DIFFERENT absolute
+    #     paths (/Users/runner1/actions-runner/_work/... vs runner2), and those paths reach both
+    #     the hash and the debug info. Left alone, the two runners would share a directory and
+    #     never take a single hit from each other (measured: 0/2 vs 1/2 on a two-path repro).
+    #     BASEDIR makes ccache rewrite workspace-absolute paths to relative before hashing;
+    #     NOHASHDIR stops the working directory itself from entering the hash. The trade is
+    #     relative paths in the debug info of cached objects, which for a CI build is a fair
+    #     price for a warm cache.
+    #
+    # sccache is set up by the setup-rust action instead, under the same shared directory.
+    #
+    # Nothing in a workflow run expires either cache - a weekly launchd job on the machine
+    # (org.ducktype.duckling-ci.prune) does that.
+    - name: Point caches at local storage
+      shell: bash
+      run: |
+        shared='${{ inputs.shared-dir }}'
+        mkdir -p "$shared/ccache"
+        chmod 0777 "$shared" "$shared/ccache" 2>/dev/null || true
+        ln -sfn "$shared/ccache" '${{ inputs.ccache-dir }}'
+        echo "CCACHE_UMASK=000" >> "$GITHUB_ENV"
+        echo "CCACHE_BASEDIR=${{ github.workspace }}" >> "$GITHUB_ENV"
+        echo "CCACHE_NOHASHDIR=1" >> "$GITHUB_ENV"
+
+    # toolbox.py imports click, so the venv has to exist before the toolbox runs at all. Putting
+    # it on PATH also fixes the integration tests: integration_tests/testconfig.yaml invokes its
+    # helpers as a bare `python3`, and the macOS system python cannot even parse them.
+    #
+    # It lives in $HOME, not in the workspace, because the workspace is wiped at the start of
+    # every job - a venv inside it means re-downloading every requirement each run. Nothing about
+    # it depends on the checkout: its only input is requirements.txt, so that file's hash is the
+    # whole cache key.
+    #
+    # `dev/.venv` is then a SYMLINK to it, and that is load-bearing: toolbox.py's setup_venv_impl
+    # skips its own venv creation on `Path(".venv").exists()`, so without the link the
+    # "Initialize project" step in tests.yml would build a second venv inside the workspace and
+    # undo all of this.
+    #
+    # $PATH gets the real path rather than the link. A venv records its own location in
+    # pyvenv.cfg and in its scripts' shebangs, so it wants to be reached where it was created.
+    - name: Bootstrap python venv
+      shell: bash
+      working-directory: ${{ inputs.dev-dir }}
+      run: |
+        venv="$HOME/duckling-ci/venv"
+        stamp="$HOME/duckling-ci/venv.requirements.sha256"
+        want=$(shasum -a 256 requirements.txt | cut -d' ' -f1)
+
+        if [ ! -x "$venv/bin/python3" ] || [ "$(cat "$stamp" 2>/dev/null)" != "$want" ]; then
+          echo "building the venv: missing, or requirements.txt changed"
+          rm -rf "$venv"
+          mkdir -p "$(dirname "$venv")"
+          base_python=$(command -v python3.14 || command -v python3.13 || command -v python3.12)
+          "$base_python" -m venv "$venv"
+          "$venv/bin/python3" -m pip install --quiet --upgrade pip
+          "$venv/bin/python3" -m pip install --quiet -r requirements.txt
+          # Written only after the install succeeds, so a failed run rebuilds next time instead
+          # of being remembered as good.
+          printf '%s' "$want" > "$stamp"
+        else
+          echo "reusing the venv at $venv"
+        fi
+
+        ln -sfn "$venv" .venv
+        echo "$venv/bin" >> "$GITHUB_PATH"

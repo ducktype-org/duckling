@@ -56,8 +56,11 @@ jobs:
         run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
 
       # This has to be before restoring cache, so the env is set.
-      - name: Setup duck dependencies
-        uses: ./.github/actions/setup-duck-dependencies/
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust/
+        with:
+          platform: linux
+          linux-sccache-dir: ${{ github.workspace }}/.cache/sccache
 
       - name: Restore sccache cache
         uses: actions/cache/restore@v5
@@ -144,8 +147,11 @@ jobs:
         run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
 
       # This has to be before restoring cache, so the env is set.
-      - name: Setup duck dependencies
-        uses: ./.github/actions/setup-duck-dependencies/
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust/
+        with:
+          platform: linux
+          linux-sccache-dir: ${{ github.workspace }}/.cache/sccache
 
       - name: Restore sccache cache
         uses: actions/cache/restore@v5

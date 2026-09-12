@@ -134,122 +134,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Setup macOS toolchain
+      - name: Setup Linux build environment
+        if: ${{ env.IS_MACOS != 'true' }}
+        uses: ./.github/actions/setup-linux-build-env/
+        with:
+          cc: ${{ matrix.compiler.cc }}
+          cxx: ${{ matrix.compiler.cxx }}
+          compiler-name: ${{ matrix.compiler.name }}
+          linker: ${{ matrix.compiler.linker }}
+          coverage-enabled: ${{ env.COVERAGE_ENABLED }}
+          build-deployables: ${{ env.BUILD_DEPLOYABLES }}
+          dev-dir: ${{ env.WORKSPACE }}
+
+      - name: Setup macOS build environment
         if: ${{ env.IS_MACOS == 'true' }}
-        run: |
-          eval "$(/opt/homebrew/bin/brew shellenv)"
-          echo "CMAKE_PREFIX_PATH=$HOMEBREW_PREFIX/opt/llvm@19" >> "$GITHUB_ENV"
-          # The ICU bundled with the macOS SDK is a C-only subset, so CMake must be pointed at
-          # the Homebrew one.
-          echo "ICU_ROOT=$HOMEBREW_PREFIX/opt/icu4c" >> "$GITHUB_ENV"
-          # Apple's `ar` stamps a timestamp into every archive member unless this is set, so
-          # without it the same sources produce byte-different archives on every build.
-          echo "ZERO_AR_DATE=1" >> "$GITHUB_ENV"
-          echo "$HOMEBREW_PREFIX/bin" >> "$GITHUB_PATH"
+        uses: ./.github/actions/setup-macos-build-env/
+        with:
+          dev-dir: ${{ env.WORKSPACE }}
+          ccache-dir: ${{ env.CCACHE_DIR }}
 
-      - name: Setup Rust (macOS)
-        if: ${{ env.IS_MACOS == 'true' }}
-        run: |
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-          if [ ! -f "$HOME/.cargo/env" ] || [ ! -d "$HOME/.rustup/toolchains" ]; then
-            echo "::error::$(id -un) has no per-account rustup ($HOME/.cargo/env + $HOME/.rustup)."
-            exit 1
-          fi
-          # PATH from $GITHUB_PATH only applies to LATER steps, hence the explicit paths here.
-          "$HOME/.cargo/bin/cargo" --version
-          # RUSTC_WRAPPER is set below, and a missing wrapper fails cargo with no useful message.
-          "$HOME/.cargo/bin/sccache" --version
-
-      # The mac keeps its compiler caches ON the machine
-      - name: Point caches at local storage (macOS)
-        if: ${{ env.IS_MACOS == 'true' }}
-        run: |
-          shared=/Users/Shared/duckling-ci
-          mkdir -p "$shared/ccache" "$shared/sccache-$(id -un)"
-          chmod 0777 "$shared" "$shared/ccache" 2>/dev/null || true
-          ln -sfn "$shared/ccache" "${{ env.CCACHE_DIR }}"
-          echo "CCACHE_UMASK=000" >> "$GITHUB_ENV"
-          echo "CCACHE_BASEDIR=${{ github.workspace }}" >> "$GITHUB_ENV"
-          echo "CCACHE_NOHASHDIR=1" >> "$GITHUB_ENV"
-          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-          echo "SCCACHE_DIR=$shared/sccache-$(id -un)" >> "$GITHUB_ENV"
-          echo "SCCACHE_CACHE_SIZE=1G" >> "$GITHUB_ENV"
-
-      - name: Bootstrap python venv (macOS)
-        if: ${{ env.IS_MACOS == 'true' }}
-        working-directory: ${{ env.WORKSPACE }}
-        run: |
-          base_python=$(command -v python3.14 || command -v python3.13 || command -v python3.12)
-          "$base_python" -m venv .venv
-          ./.venv/bin/python3 -m pip install --quiet --upgrade pip
-          ./.venv/bin/python3 -m pip install --quiet -r requirements.txt
-          echo "${{ env.WORKSPACE }}/.venv/bin" >> "$GITHUB_PATH"
-
-      - name: Update apt
-        if: ${{ env.IS_MACOS != 'true' }}
-        run: sudo apt update
-
-      - name: Install lcov
-        if: ${{ env.IS_MACOS != 'true' && env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov
-
-      - name: Install fastcov
-        if: ${{ env.IS_MACOS != 'true' && env.COVERAGE_ENABLED == 'true' }}
-        run: sudo pip install fastcov --break-system-packages --no-input
-
-      - name: Install graphviz
-        if: ${{ env.IS_MACOS != 'true' && env.BUILD_DEPLOYABLES == 'true' }}
-        run: sudo apt -y install libgraphviz-dev
-
-      - name: Install LLVM
-        if: ${{ env.IS_MACOS != 'true' }}
-        run: sudo apt -y install llvm-19 llvm-19-dev
-
-      - name: Install clang
-        if: ${{ env.IS_MACOS != 'true' }}
-        # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
-        # Must be the same version as llvm
-        run: sudo apt -y install clang-19 clang-tools-19
-
-      - name: Install xxd
-        if: ${{ env.IS_MACOS != 'true' }}
-        # Necessary to embed LLVM bitcode into duckc source files.
-        run: sudo apt -y install xxd
-
-      - name: Install mold
-        if: ${{ env.IS_MACOS != 'true' && matrix.compiler.linker == 'mold' }}
-        run: sudo apt -y install mold
-
-      - name: Install GCC 14 and gcov-14
-        if: ${{ env.IS_MACOS != 'true' && matrix.compiler.name == 'gcc' }}
-        run: sudo apt install -y ${{ matrix.compiler.cc }} ${{ matrix.compiler.cxx }} # gcov is included in gcc package
-
-      - name: Install Ninja
-        if: ${{ env.IS_MACOS != 'true' }}
-        run: sudo apt -y install ninja-build
-
-      - name: Install Valgrind
-        if: ${{ env.IS_MACOS != 'true' }}
-        run: sudo apt -y install valgrind
-
-      - name: Install pkg-config + libffi
-        if: ${{ env.IS_MACOS != 'true' }}
-        run: sudo apt -y install pkg-config libffi-dev
-
-      - name: Setup duck dependencies
-        if: ${{ env.IS_MACOS != 'true' }}
-        uses: ./.github/actions/setup-duck-dependencies/
+      # Rust is one action for both platforms - it is the same dependency either way, and only
+      # the way it arrives differs. No `if:` here: the action takes the platform and branches
+      # inside, so there is one place to look when the Rust build breaks.
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust/
+        with:
+          platform: ${{ matrix.compiler.platform }}
+          linux-sccache-dir: ${{ github.workspace }}/.cache/sccache
 
       - name: Check installations
         run: |
           ${{ matrix.compiler.cxx }} --version
           ${{ matrix.compiler.cc }} --version
           ${{ matrix.compiler.name == 'gcc' && format('{0} --version', matrix.compiler.gcov) || 'echo "No gcov for clang"' }}
-
-      - name: Install ccache
-        if: ${{ env.IS_MACOS != 'true' }}
-        working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py download-binaries -s ccache
 
       # Generate a timestamp and save it to a variable.
       # Timestamp is appended to the key in caching, so each cache has a unique key.
@@ -406,39 +323,12 @@ jobs:
         if: ${{ env.IS_MACOS == 'true' }}
         run: ccache --show-stats --verbose | head -30
 
-      # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
-      # This step deletes all the cache entries that are related to this branch,
-      # and it is done in this moment in the script, right after building, because
-      # upload of the current build happens after everything
-      # else has finished, so there will be a cache entry ready for pulling.
-      - name: Cleanup previous Cache entries for this branch
-        if: ${{ env.IS_MACOS != 'true' }}
-        run: |
-          gh extension install actions/gh-actions-cache
-
-          echo "Fetching list of cache key"
-          cacheKeysForPR=$(gh actions-cache list -R $REPO -L 100 | cut -f 1 )
-
-          ## Setting this to not fail the workflow while deleting cache keys.
-          set +e
-          echo "Deleting caches..."
-          for cacheKey in $cacheKeysForPR
-          do
-            if [[ $cacheKey == ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}* ||
-                  $cacheKey == ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}* ]]; then
-              echo "Deleting cache $cacheKey..."
-              gh actions-cache delete $cacheKey -R $REPO --confirm
-            fi
-          done
-          echo "Done"
-        env:
-          GH_TOKEN: ${{ secrets.CACHE_DEL_PAT }} # This env variable is used by the GH tool.
-          REPO: ${{ github.repository }}
-
-      # Manually cache the build before testing, but **after** cleaning.
+      # Uploaded in the BACKGROUND (GitHub shipped this 2026-06-25): the tests below start
+      # immediately instead of waiting out the upload.
       - name: Save build cache
         id: save-build-cache
         if: ${{ env.IS_MACOS != 'true' }}
+        background: true
         uses: actions/cache/save@v5
         with:
           path: |
@@ -480,9 +370,12 @@ jobs:
 
       # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
       # so we have to save sccache after that, otherwise we'd have nothing to save.
+      # Backgrounded for the same reason as the build cache above; the coverage and TODO steps
+      # that follow do not touch $SCCACHE_DIR.
       - name: Save sccache cache
         id: save-sccache-cache
         if: ${{ env.IS_MACOS != 'true' }}
+        background: true
         uses: actions/cache/save@v5
         with:
           path: |
@@ -514,6 +407,34 @@ jobs:
       - name: Fail if deployables failed to build
         if: ${{ env.BUILD_DEPLOYABLES == 'true' && steps.build-deployables.outcome != 'success' }}
         run: exit 1
+
+  # Every run saves a new timestamped entry, so without pruning the branch's caches grow without
+  # bound.
+  #
+  # This groups the entries by the key they share and keeps the newest of each. It also collects entries
+  # left behind by runs that were cancelled mid-flight.
+  prune-caches:
+    needs: [build]
+    # Pruning is worth doing whether or not the build passed; `needs` already skips this when
+    # `build` never ran.
+    if: ${{ !cancelled() && needs.build.result != 'skipped' }}
+
+    runs-on: ubuntu-24.04 # github runner
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v6
+
+      # The grouping this does is fiddly enough to be worth reading as code rather than as shell,
+      # and worth being a pure function that can be tested without an API. It also talks to the
+      # REST API directly, so `gh` and its actions-cache extension are no longer needed.
+      - name: Delete superseded cache entries for this branch
+        env:
+          CACHE_DELETE_TOKEN: ${{ secrets.CACHE_DEL_PAT }}
+        run: |
+          python3 .github/workflows/prune-caches.py \
+            --repo "${{ github.repository }}" \
+            --branch "${{ env.BRANCH_NAME }}"
 
   code-statistics:
     needs: [build]

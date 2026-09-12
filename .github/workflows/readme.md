@@ -72,7 +72,10 @@ the configurations are not a product: macOS is one of them, not all of them.
 
 * **unapproved PR** -- `Dev` / gcc only.
 * **`main`, `dev`, `workflow_dispatch`, an approved PR, or the `Run All Workflows` label** -- four
-  jobs: `Dev`/gcc (the coverage job), `DevOpt`/gcc, `DevOpt`/clang, and `Dev`/clang on macOS.
+  jobs: `Dev / gcc` (the coverage job), `DevOpt / gcc`, `DevOpt / clang` and
+  `Dev / clang-23-macos`. Those strings are also the status-check names the `main` ruleset
+  requires -- the check name is the JOB name, so renaming a matrix entry means editing the
+  ruleset in the same breath, or PRs wait forever on a check nobody reports any more.
   Approval adds the label through `add-run-all-workflows-label.yml`, whose `labeled` event is what
   actually re-triggers `tests.yml`.
 
@@ -81,19 +84,44 @@ is still four jobs. Nothing goes unchecked: clang at `-O3` with libstdc++ and mo
 `DevOpt`/clang, gcc keeps both build types, and coverage is untouched. What the macOS job adds is a
 second standard library (libc++), the Apple arm64 ABI, `ld64` and a far newer clang.
 
-Three things about that runner are worth knowing before editing those steps.
+The two platforms prepare a build so differently that neither preparation is in `tests.yml` at
+all. It lives in `.github/actions/`, in three composite actions:
 
-**Its accounts have no `sudo`**, so a workflow cannot install anything there. The toolchain is
-whatever is already on the machine -- Homebrew's `llvm@23` to compile, `llvm@19` to link against,
-ICU, cmake, ninja, ccache, plus a per-account rustup in `~/.cargo` -- which is why every
-`apt`/`pip` step in `build` is guarded with `if: ${{ env.IS_MACOS != 'true' }}`. A new build
-dependency has to be installed on the machine by hand first.
+| | |
+|---|---|
+| `setup-linux-build-env/` | the `apt` wall and the ccache binary -- `if`-ed out on macOS |
+| `setup-macos-build-env/` | Homebrew toolchain env, the machine-local ccache, the python venv -- `if`-ed out on Linux |
+| `setup-rust/` | **both platforms**, branching inside on its `platform` input |
+
+The first two are picked by an `if:` on the caller. `setup-rust` is not: Rust is the same
+dependency on either platform and only the way it arrives differs -- apt packages on Linux,
+already-on-the-machine plus a per-account rustup on macOS -- so it is one action with the
+branching inside it, and one place to look when the Rust build breaks. It replaced
+`setup-duck-dependencies`, whose contents were exactly this and which `rust.yml` now calls too.
+
+That is what keeps the steps after them readable as "build, then test" instead of a column of
+`if: ${{ env.IS_MACOS != 'true' }}`. All three take everything they need through `with:`, because
+secrets are not inherited by a composite action and the `env` context is not dependable inside
+one -- and every `run` in a composite action needs an explicit `shell:`.
+
+`toolbox.py workflows-lint` parses these alongside the workflow files. A broken composite action
+does surface on the runner, unlike a broken workflow file, but there is no reason to learn from a
+job what a YAML parse says locally.
+
+Three things about the mac runner are worth knowing before editing any of it.
+
+**Its accounts have no `sudo`**, so nothing there can install anything. The toolchain is whatever
+is already on the machine -- Homebrew's `llvm@23` to compile, `llvm@19` to link against, ICU,
+cmake, ninja, ccache, plus a per-account rustup in `~/.cargo`. `setup-macos-build-env` therefore
+only ever *points at* things, and asserts the ones whose absence would otherwise surface much
+later. A new build dependency has to be put on the machine by hand first.
 
 **Its caches never travel through `actions/cache`.** On the Linux runners the ccache and sccache
-directories are uploaded and downloaded per run, and old entries have to be pruned with `gh` so
-they do not snowball. On the mac there is only one machine, it is not containerised, and its disk
+directories are uploaded and downloaded per run, and old entries have to be pruned so they do not
+snowball -- that is the `prune-caches` job, which runs `prune-caches.py` once after the whole
+matrix rather than once per matrix entry, and talks to the REST API rather than to `gh`. On the mac there is only one machine, it is not containerised, and its disk
 persists between jobs -- so the caches simply live there, under `/Users/Shared/duckling-ci`, and
-every cache step in `build` is Linux-only. Two consequences:
+every `actions/cache` step in `build` is Linux-only. Two consequences:
 
 * ccache is **shared** by `runner1` and `runner2`. Concurrent access is what ccache is built for,
   so nothing has to be synchronised between the accounts, but three non-default settings are what
@@ -115,7 +143,37 @@ every cache step in `build` is Linux-only. Two consequences:
 
 **Rust comes from rustup, not Homebrew.** `integration_tests/duck/testconfig.yaml` sources
 `${CARGO_HOME:-$HOME/.cargo}/env` before `cargo build`, and that file is written by rustup only --
-a `brew install rust` would leave the `duck` integration tests failing on a missing `env`.
+a `brew install rust` would leave the `duck` integration tests failing on a missing `env`. It is
+installed per account, which is why `setup-rust` asserts it rather than assuming it.
+
+**The python venv and the downloaded binaries are not rebuilt every run.** The workspace is wiped
+at the start of every job, so anything inside it is re-fetched each time. The venv's only input is
+`requirements.txt`, so on macOS it lives in `$HOME` keyed by that file's hash, with `dev/.venv` a
+symlink to it -- the symlink is what makes `toolbox.py`'s `setup_venv_impl` skip building a second
+one in the workspace. Separately, `toolbox.py download-binaries` is now platform-aware: it used to
+fetch a `linux-x86_64` ccache unconditionally, so a mac downloaded a binary it could not run
+(harmlessly -- `find_program` searches `PATHS` after `PATH`, so Homebrew's ccache was picked and
+the download simply sat unused).
+
+### Background steps
+
+Since 2026-06-25 a step may carry `background: true`, which starts it and moves straight on to the
+next step; `wait` / `wait-all` block on named background steps, and `parallel` is shorthand for a
+group of them with a `wait` at the end. Both `run:` and `uses:` steps can be backgrounded.
+
+`tests.yml` uses it for the two `actions/cache/save` steps, so the tests do not sit waiting for an
+upload. Three things decided how:
+
+* **There is no explicit `wait`.** A `wait` step does not support `if:`, and both saves are
+  skipped on macOS. The implicit `wait-all` that runs before post-job cleanup covers them, and a
+  failed upload still fails the job there.
+* **Position still matters.** A cache save must not overlap anything writing into the directory it
+  is reading, which is why the build cache is saved after the last step that compiles through
+  ccache rather than as early as possible.
+* **Not available inside a composite action** -- `background` and `parallel` are workflow-level
+  only, so `setup-linux-build-env` and `setup-macos-build-env` cannot use them.
+
+A self-hosted runner has to be new enough to understand the keyword.
 
 ### Job timeout
 
