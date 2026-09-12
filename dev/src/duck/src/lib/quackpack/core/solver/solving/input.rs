@@ -66,6 +66,10 @@ impl SolverInput {
                 Entry::Vacant(vacant) => vacant.insert(PackageData::new_empty(manifest)),
             };
             pkg_data.features.extend(freeze.features.iter().copied());
+            let mut preexistance_data = PreexistanceData::default();
+            preexistance_data.features = freeze.features.clone();
+            preexistance_data.realized_dependencies = freeze.dependencies_realization.clone();
+            pkg_data.preexistance = Some(preexistance_data);
             versions_for_identity
                 .entry(pkg.identity())
                 .or_default()
@@ -74,12 +78,6 @@ impl SolverInput {
                 Source::canonical_source_for_origin(pkg.origin()),
                 pkg.origin(),
             );
-            let mut preexistance_data = PreexistanceData::default();
-            preexistance_data.features.extend(freeze.features.clone());
-            preexistance_data
-                .realized_dependencies
-                .extend(freeze.dependencies_realization.clone());
-            pkg_data.preexistance = Some(preexistance_data);
         }
         Ok(Self {
             packages_data,
