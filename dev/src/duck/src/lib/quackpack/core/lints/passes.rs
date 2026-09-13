@@ -6,6 +6,7 @@
 //! information in [`LintBuffer`].
 
 use super::buffer::LintBuffer;
+use super::rules;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::{Manifest, Package, PackageContext};
 use crate::{DuckContext, QuackResult};
@@ -33,7 +34,10 @@ pub(super) enum LintPass {
 }
 
 /// Registered lints' passes.
-pub(super) const PASSES: &[LintPass] = &[];
+pub(super) const PASSES: &[LintPass] = &[
+    LintPass::Manifest(rules::always_false_conditions::pass),
+    LintPass::Manifest(rules::nonexistent_features::pass),
+];
 
 /// Runs a single pass on the package.
 pub(super) fn run_single_pass(

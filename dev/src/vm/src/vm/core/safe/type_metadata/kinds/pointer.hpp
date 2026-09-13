@@ -3,7 +3,7 @@
 #include "../definitions.hpp"
 
 namespace vm::kind {
-	struct Pointer {
+	struct Pointer final {
 		TypeCRef inner_type;
 	};
 }
