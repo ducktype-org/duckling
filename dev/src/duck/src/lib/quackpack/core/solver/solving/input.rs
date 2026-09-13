@@ -21,6 +21,7 @@ pub(in crate::quackpack::core::solver) struct PackageData {
     /// Manifest of the package.
     manifest: Box<Manifest>,
     /// All features which can potentially occur in the solution.
+    /// This is the intersection of the manifest defined features and features referenced in the requests or previous freeze.
     features: HashSet<FeatureName>,
     /// Whether and how the package was present in the previous freeze.
     preexistance: Option<PreexistanceData>,
@@ -29,7 +30,10 @@ pub(in crate::quackpack::core::solver) struct PackageData {
 /// Information about a package in the previous freeze.
 #[derive(Clone, Debug, Default)]
 pub(in crate::quackpack::core::solver) struct PreexistanceData {
+    /// Features of the package present in the previous freeze.
     features: HashSet<FeatureName>,
+    /// Dependencies of the package present in the previous freeze.
+    /// This is a mapping `effective name` -> `id of realization`.
     realized_dependencies: HashMap<StrId, PackageId>,
 }
 
@@ -150,6 +154,7 @@ impl PackageData {
         }
     }
 
+    /// Get the [`Manifest`] of this package.
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
     }

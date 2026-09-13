@@ -298,7 +298,6 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     pub fn require_substantiate_dep_features(
         &mut self,
         dep: DependencyEdge,
-        solver_input: &SolverInput,
         possible_dep_realizations: &[PackageId],
     ) -> QuackResult<()> {
         for pkg in possible_dep_realizations {
@@ -307,7 +306,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             for (feature, feature_realization_var) in
                 self.get_feature_to_var_map_for_dep(dep).clone()
             {
-                let pkg_features = solver_input.package_data(*pkg)?.features();
+                let pkg_features = self.input.package_data(*pkg)?.features();
                 if !pkg_features.contains(&feature) {
                     self.model.all_implies_any(
                         vec![

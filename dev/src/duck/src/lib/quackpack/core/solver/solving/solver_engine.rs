@@ -151,7 +151,7 @@ impl<'a> SolverEngine<'a> {
         self.create_dependency_feature_realization_conditions(edge, manifest_dependency)?;
         self.model.require_substantiate_dep(edge)?;
         self.model
-            .require_substantiate_dep_features(edge, self.input, &possible_realizations)?;
+            .require_substantiate_dep_features(edge, &possible_realizations)?;
         Ok(())
     }
 

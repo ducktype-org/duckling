@@ -20,8 +20,13 @@ use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal, qp_er
 /// Gathered information about a particular package.
 #[derive(Debug)]
 pub struct PackageData {
+    /// Fetched manifest of the package.
     pub manifest: Box<Manifest>,
+    /// The intersection of the manifest defined features and features referenced in the requests.
     pub requested_features: HashSet<FeatureName>,
+    /// Whether any manifest request referenced this package or not.
+    /// This being false can happen due to not pinned registry requests.
+    /// For such a request we fetch all manifests, not only those with compatible versions.
     pub referenced_by_requests: bool,
 }
 
@@ -571,7 +576,9 @@ impl GathererState {
 /// A struct containing all the information gathered by the gatherer.
 #[derive(Debug)]
 pub struct GatheredInfo {
+    /// Mapping from packages to gathered data about each package.
     pub packages_data: HashMap<PackageId, PackageData>,
+    /// The set of the possible versions of the packages with a given identity.
     pub versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
     /// The translation from [`Source`] to [`FullIdentity`].
     pub source_to_origin_resolver: HashMap<Source, FullOrigin>,
