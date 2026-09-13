@@ -4,7 +4,7 @@ use crate::quackpack::core::{Conditions, Dependency, DependencyFeature, FeatureN
 
 #[derive(Debug, Clone, Copy)]
 /// An input to [`walk_conditions`].
-/// Indicates what type of [`Conditions`] are matched.
+/// Indicates what type of [`Conditions`] is matched.
 pub enum MatchedConditions<'a> {
     Dep {
         dep: &'a Dependency,
@@ -78,7 +78,7 @@ pub fn walk_conditions<'a>(
     }
 }
 
-/// Filter the features, returning only the undeclared ones.
+/// Filter the features, returning only the nonexistent ones.
 pub fn nonexistent_features<'a>(
     manifest: &'a Manifest,
     required_features: &'a [FeatureName],
@@ -89,7 +89,7 @@ pub fn nonexistent_features<'a>(
         .filter(|feature| is_nonexistent_feature(manifest, *feature))
 }
 
-/// Check whether a feature is undeclared.
+/// Check whether a feature is nonexistent.
 pub fn is_nonexistent_feature(manifest: &Manifest, feature: FeatureName) -> bool {
     !manifest.features().has_feature(feature)
 }
