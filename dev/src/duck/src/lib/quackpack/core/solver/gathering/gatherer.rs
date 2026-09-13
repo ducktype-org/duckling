@@ -502,17 +502,16 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 error!(error = %e, "fast path failed");
                 // We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
                 // as it is well ... a fast path.
-                display_git_fast_path_failure_warning(&e, request, self.fetcher.ctx())?;
+                display_git_fast_path_failure_warning(&e, request, self.fetcher.ctx()).map(|_| None)
             }
             Ok(Some(fast_path_git)) => {
                 debug!("git fast path worked");
-                return Ok(Some(FetchResponse::Success(FetchSuccess::NotPinned(
+                Ok(Some(FetchResponse::Success(FetchSuccess::NotPinned(
                     fast_path_git,
-                ))));
+                ))))
             }
-            Ok(None) => {}
-        };
-        Ok(None)
+            Ok(None) => Ok(None),
+        }
     }
 
     /// Tries to use git fast path, to get the manifests without performing clone.
