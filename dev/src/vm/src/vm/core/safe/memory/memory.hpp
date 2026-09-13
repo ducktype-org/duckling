@@ -26,7 +26,7 @@ namespace vm {
 	 * @brief Helper structure that holds pointers to the global data buffer and global blocks buffer.
 	 */
 	template<typename EntryT, typename BlockT = GenericBlock<EntryT>>
-	struct GlobalBufferPointers {
+	struct GlobalBufferPointers final {
 		EntryT*  data_buffer_base;    /// Base pointer to the global data buffer.
 		BlockT** blocks_buffer_base;  /// Base pointer to the global blocks buffer.
 	};
@@ -408,12 +408,12 @@ namespace vm {
 		 */
 		void deinitGlobals();
 
-		struct GlobalBlocksConfig {
+		struct GlobalBlocksConfig final {
 			std::vector<usize>    global_data_offsets;
 			std::vector<usize>    global_blocks_idxs;
 			std::vector<TypeCRef> global_types;
-			Bytes                 total_global_data_size;
-			usize                 global_count;
+			Bytes                 total_global_data_size = Bytes(0);
+			usize                 global_count           = 0;
 		};
 
 		/**

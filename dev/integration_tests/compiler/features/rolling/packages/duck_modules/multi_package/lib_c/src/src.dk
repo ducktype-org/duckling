@@ -7,3 +7,9 @@ fun c_value() -> i64 = {
 fun hello() -> i64 = {
     return lib_b.hello();
 }
+
+fun foo() -> i64 | () = 2i64;
+
+namespace Name {
+    fun foo() -> i64 | () = 2i64;
+}
