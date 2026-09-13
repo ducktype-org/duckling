@@ -1,6 +1,6 @@
 # Test for the print function
 
-class Point = {
+class Point {
     x: i64;
     y: i64;
 }
@@ -8,7 +8,6 @@ class Point = {
 fun main() -> i64 = {
     # Test printing integers
     print(123);
-    print("\n");
     print(f"{123}\n");
     
 
@@ -30,8 +29,7 @@ fun main() -> i64 = {
 
     # Test printing custom classes
     let p = Point(3,4);
-    print(p);
-    print("\n");
+    print(f"{p}\n");
 
     return 0;
 }

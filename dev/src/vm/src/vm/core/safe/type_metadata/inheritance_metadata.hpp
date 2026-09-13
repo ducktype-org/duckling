@@ -11,13 +11,13 @@
 #include <variant>
 
 namespace vm {
-	struct InheritanceMetadata {
-		struct Class {
+	struct InheritanceMetadata final {
+		struct Class final {
 			bool                     is_abstract;
 			base::Optional<TypeCRef> extends;
 		};
 
-		struct Interface {};
+		struct Interface final {};
 
 		using Kind = std::variant<Interface, Class>;
 

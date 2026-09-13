@@ -19,7 +19,7 @@ namespace {
 		return static_cast<usize>(size.assumePointerSize(Bytes(8)));
 	}
 
-	struct Context {
+	struct Context final {
 		const vm::code::ValidProgram&       high_program;
 		const vm::fast::ProgramBase&        program;
 		const detail::FunctionStackContext& stack_ctx;
