@@ -38,6 +38,11 @@ impl Default for SolverPackageFreeze {
 }
 
 #[derive(Debug)]
+/// An error returned by [`try_from_venv_freeze`].
+///
+/// Since freezes can be directly edited by a user, we shouldn't use `?` there, but recover from errors.
+///
+/// [`try_from_venv_freeze`]: SolverFreeze::try_from_venv_freeze
 pub enum MalformedFreezeError<'a> {
     MissingRootDependency {
         dep: Identity,

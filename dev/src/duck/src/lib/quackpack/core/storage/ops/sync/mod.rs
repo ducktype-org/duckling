@@ -243,6 +243,8 @@ fn get_solver_answer(
             Ok(freeze) => freeze,
             Err(malformed) => {
                 warn!(error = ?malformed, "previous storage freeze is malformed");
+                pcx.ctx()
+                    .warning("previous freezefile was malformed, ignoring it")?;
                 SolverFreeze::empty_with_root(root_pkg)?
             }
         },
