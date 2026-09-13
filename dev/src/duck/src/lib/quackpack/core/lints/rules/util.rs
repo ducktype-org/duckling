@@ -1,6 +1,6 @@
 //! Various utilities designed to help with detecting and emitting lints.
 
-use crate::quackpack::core::{Conditions, Dependency, DependencyFeature, Manifest};
+use crate::quackpack::core::{Conditions, Dependency, DependencyFeature, FeatureName, Manifest};
 
 #[derive(Debug, Clone, Copy)]
 pub enum MatchedConditions<'a> {
@@ -74,4 +74,20 @@ pub fn walk_conditions<'a>(
             }
         }
     }
+}
+
+/// Filter the features, returning only the undeclared ones.
+pub fn nonexistent_features<'a>(
+    manifest: &'a Manifest,
+    required_features: &'a [FeatureName],
+) -> impl Iterator<Item = FeatureName> + 'a {
+    required_features
+        .iter()
+        .copied()
+        .filter(|feature| is_nonexistent_feature(manifest, *feature))
+}
+
+/// Check whether a feature is undeclared.
+pub fn is_nonexistent_feature(manifest: &Manifest, feature: FeatureName) -> bool {
+    !manifest.features().has_feature(feature)
 }

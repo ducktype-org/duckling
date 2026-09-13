@@ -1,8 +1,8 @@
 //! Buffer for emitted lints.
 
-use super::{Diagnostic, Lint};
+use super::{Diagnostic, Lint, LintLevel};
 use crate::util::Pluralize;
-use crate::{DuckContext, QuackResult, qp_bail};
+use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
 
 #[derive(Debug)]
 struct DiagnosticWithLint {
@@ -46,6 +46,23 @@ impl LintBuffer {
             diagnostic: Box::new(diag),
             lint,
         });
+    }
+
+    /// Register a new lint with the given level to be emitted later.
+    pub fn register<T: Diagnostic + 'static>(
+        &mut self,
+        diag: T,
+        lint: Lint,
+        level: LintLevel,
+    ) -> QuackResult<()> {
+        match level {
+            LintLevel::Warning => self.register_warning(diag, lint),
+            LintLevel::Error => self.register_error(diag, lint),
+            LintLevel::Allow => {
+                qp_bail_internal!("attempted to register lint with level {level:?}")
+            }
+        }
+        Ok(())
     }
 
     /// Emit all collected warnings and errors.
