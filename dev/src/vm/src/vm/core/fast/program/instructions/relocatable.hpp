@@ -49,7 +49,7 @@ namespace vm::fast::reloc {
 #undef MAKE_INSTRUCTION_UNION
 #undef MAKE_MAKERS_FULL
 
-	struct RelocFunction {
+	struct RelocFunction final {
 		std::vector<Instruction> data;
 	};
 

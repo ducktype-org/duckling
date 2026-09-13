@@ -1,5 +1,5 @@
 #pragma once
 
 namespace vm::kind {
-	struct Primitive {};
+	struct Primitive final {};
 }
