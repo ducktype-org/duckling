@@ -3,6 +3,8 @@
 use crate::quackpack::core::{Conditions, Dependency, DependencyFeature, FeatureName, Manifest};
 
 #[derive(Debug, Clone, Copy)]
+/// An input to [`walk_conditions`].
+/// Indicates what type of [`Conditions`] are matched.
 pub enum MatchedConditions<'a> {
     Dep {
         dep: &'a Dependency,
