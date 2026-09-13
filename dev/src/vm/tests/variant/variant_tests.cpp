@@ -90,12 +90,11 @@ private:
 		auto wanted_value   = std::numeric_limits<u64>::max();
 		auto vm_value_max64 = get_int_vm_value(pid, wanted_value);
 
-		const auto assert_type_tag = [&](usize type_tag_bits,
-		                                 usize alternative_index,
-		                                 usize wanted_type_tag_value) {
-			std::string function_name = base::strConcat(
-				"getCustomVariant", type_tag_bits, "Alternative", alternative_index
-			);
+		const auto assert_type_tag = [&](usize type_tag_bits, usize alternative_index) {
+			const usize wanted_type_tag_value = alternative_index + 1;
+			std::string function_name         = base::strConcat(
+                "getCustomVariant", type_tag_bits, "Alternative", alternative_index
+            );
 
 			ASSERT_HAS_VALUE(vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }));
 			ASSERT_HAS_VALUE(vm::api::join(pid));
@@ -137,11 +136,11 @@ private:
 		ASSERT_NO_VALUE(empty_variant->readData<vm::interpreted_data_variant::Variant>());
 		empty_variant->freeData();
 
-		assert_type_tag(8, 0, 1);
-		assert_type_tag(8, 1, 2);
-		assert_type_tag(16, 0, 1);
-		assert_type_tag(16, 1, 2);
-		assert_type_tag(16, 255, 256);
+		assert_type_tag(8, 0);
+		assert_type_tag(8, 1);
+		assert_type_tag(16, 0);
+		assert_type_tag(16, 1);
+		assert_type_tag(16, 255);
 		vm_value_max64->freeData();
 		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
