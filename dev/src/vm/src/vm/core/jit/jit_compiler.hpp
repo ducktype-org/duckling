@@ -24,7 +24,7 @@ namespace vm::jit {
 	/**
 	 * @brief The data additionally stored per function, by the JIT compiler.
 	 */
-	struct JitFuncData {
+	struct JitFuncData final {
 		MRef<JitOpFun> func_ptr          = nullptr;
 		uint           until_compilation = COMPILATION_THRESHOLD;
 	};

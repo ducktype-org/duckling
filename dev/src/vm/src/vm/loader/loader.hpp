@@ -11,7 +11,7 @@
 #include <expected>
 
 namespace vm::loader {
-	struct FatBytecodePosition {
+	struct FatBytecodePosition final {
 		base::StrID function_name;
 		usize       instruction_index;
 	};

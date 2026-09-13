@@ -5,7 +5,7 @@
 #include <vector>
 
 namespace vm::kind {
-	struct Function {
+	struct Function final {
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
 	};
