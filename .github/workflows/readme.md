@@ -85,22 +85,31 @@ is still four jobs. Nothing goes unchecked: clang at `-O3` with libstdc++ and mo
 second standard library (libc++), the Apple arm64 ABI, `ld64` and a far newer clang.
 
 The two platforms prepare a build so differently that neither preparation is in `tests.yml` at
-all. It lives in `.github/actions/`, in three composite actions:
+all. It lives in `.github/actions/`, in four composite actions, one per platform per concern:
 
 | | |
 |---|---|
-| `setup-linux-build-env/` | the `apt` wall and the ccache binary -- `if`-ed out on macOS |
-| `setup-macos-build-env/` | Homebrew toolchain env, the machine-local ccache, the python venv -- `if`-ed out on Linux |
-| `setup-rust/` | **both platforms**, branching inside on its `platform` input |
+| `setup-linux-build-env/` | the `apt` wall and the ccache binary |
+| `setup-macos-build-env/` | Homebrew toolchain env, the machine-local ccache, the python venv |
+| `setup-linux-rust/` | the `apt` wall for the crates' native libraries, and the sccache wrapper |
+| `setup-macos-rust/` | asserts the per-account rustup, and points sccache at the shared directory |
 
-The first two are picked by an `if:` on the caller. `setup-rust` is not: Rust is the same
-dependency on either platform and only the way it arrives differs -- apt packages on Linux,
-already-on-the-machine plus a per-account rustup on macOS -- so it is one action with the
-branching inside it, and one place to look when the Rust build breaks. It replaced
-`setup-duck-dependencies`, whose contents were exactly this and which `rust.yml` now calls too.
+All four are picked by an `if:` on the caller, and none contains a platform check. Rust briefly
+did it the other way -- one `setup-rust/` taking a `platform` input and branching inside, on the
+grounds that Rust is the same dependency either way and only its delivery differs. In practice
+every step in it carried `if: ${{ inputs.platform != 'macos' }}`, and the two halves shared one
+line of actual behaviour, so the branching was the action. Splitting it is what the two
+build-env actions were already doing. (`setup-rust/` had in turn replaced
+`setup-duck-dependencies/`, which `rust.yml` had grown its own copy of.)
+
+Both Rust actions put the toolchain on `PATH` themselves -- rustup installs per account into
+`~/.cargo` on either platform. The entry is written `$HOME/.cargo/bin` rather than `~/.cargo/bin`,
+because `GITHUB_PATH` lines are taken verbatim and nothing expands a tilde inside `PATH`. One job
+does not use either action: `cargo fmt` parses the sources and compiles nothing, so it wants
+neither the native libraries nor the sccache wrapper, and that one `PATH` line is its whole setup.
 
 That is what keeps the steps after them readable as "build, then test" instead of a column of
-`if: ${{ env.IS_MACOS != 'true' }}`. All three take everything they need through `with:`, because
+`if: ${{ env.IS_MACOS != 'true' }}`. All four take everything they need through `with:`, because
 secrets are not inherited by a composite action and the `env` context is not dependable inside
 one -- and every `run` in a composite action needs an explicit `shell:`.
 
@@ -144,7 +153,7 @@ every `actions/cache` step in `build` is Linux-only. Two consequences:
 **Rust comes from rustup, not Homebrew.** `integration_tests/duck/testconfig.yaml` sources
 `${CARGO_HOME:-$HOME/.cargo}/env` before `cargo build`, and that file is written by rustup only --
 a `brew install rust` would leave the `duck` integration tests failing on a missing `env`. It is
-installed per account, which is why `setup-rust` asserts it rather than assuming it.
+installed per account, which is why `setup-macos-rust` asserts it rather than assuming it.
 
 **The python venv and the downloaded binaries are not rebuilt every run.** The workspace is wiped
 at the start of every job, so anything inside it is re-fetched each time. The venv's only input is
@@ -154,6 +163,41 @@ one in the workspace. Separately, `toolbox.py download-binaries` is now platform
 fetch a `linux-x86_64` ccache unconditionally, so a mac downloaded a binary it could not run
 (harmlessly -- `find_program` searches `PATHS` after `PATH`, so Homebrew's ccache was picked and
 the download simply sat unused).
+
+#### Which Rust jobs run where
+
+`rust.yml`'s `cargo test` runs on **both** platforms. `cargo clippy` and `cargo fmt` stay on Linux
+alone: both read the same sources through the same pinned toolchain wherever they run, so a second
+copy would report the same lints twice. What the mac adds is the Apple arm64 target, `ld64` and the
+macOS halves of the `#[cfg]`s -- and only compiling and running the tests exercises those.
+
+Its `runs-on` deliberately does **not** go through `determine-runners` the way the Linux jobs do.
+That workflow falls back to a GitHub-hosted runner when the self-hosted one is busy, and a
+GitHub-hosted mac would fail in `setup-macos-rust`, which asserts a per-account rustup with an `sccache`
+next to it -- something this machine has only because it was put there by hand. So the macOS entry
+names `{group: SelfHostedRunners, labels: macOS}` directly, exactly as `tests.yml`'s `build` does,
+and queues for the machine rather than running somewhere unprepared.
+
+The Linux entry keeps the job name it had when the job had no platform axis at all, and the macOS
+entry is `cargo test / (duck & quackpack, dev/src/duck/, macOS)`. The same rule as for the build
+matrix applies, for the same reason: the check name is the JOB name, so the Linux required check is
+the string it always was and the mac is one new required check beside it.
+
+Every `actions/cache` step in the job is Linux-only, for the reason given above -- on the mac
+sccache lives in `/Users/Shared/duckling-ci/sccache-<account>` and simply stays there. It does not
+need a longer `timeout-minutes` for that, though: measured on the machine, `cargo --locked test`
+takes 32s with the sccache directory deleted (540 compilations, not one hit) and 19s with it warm,
+against the same ten minutes Linux gets. Only an account's very first run, which also fetches the
+toolchain and the crates, is anywhere near it.
+
+Nothing had to be installed on the mac for this, which was checked by running the job's `cargo
+--locked test` there by hand, with `PATH` cut down to what `setup-macos-rust` alone guarantees -- 225
+tests, no Homebrew on `PATH`. The crates that would need a system library find one on their own:
+`rusqlite` and `russcip` are bundled (`scip-sys` ships a prebuilt `macos-arm` SCIP), `libgit2-sys`
+and `libssh2-sys` fall back to their vendored sources, `curl-sys` uses the system libcurl, and
+`openssl-sys` resolves Homebrew's keg-only `openssl@3` through its own `/opt/homebrew/opt` lookup
+without needing `PKG_CONFIG_PATH`. `rust-toolchain.toml` is honoured the same way as on Linux:
+rustup on the mac had only `stable` installed and fetched 1.90.0 on its own.
 
 ### Background steps
 

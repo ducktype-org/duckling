@@ -153,14 +153,16 @@ jobs:
           dev-dir: ${{ env.WORKSPACE }}
           ccache-dir: ${{ env.CCACHE_DIR }}
 
-      # Rust is one action for both platforms - it is the same dependency either way, and only
-      # the way it arrives differs. No `if:` here: the action takes the platform and branches
-      # inside, so there is one place to look when the Rust build breaks.
-      - name: Setup Rust
-        uses: ./.github/actions/setup-rust/
+      # Rust setup is splitted by platform the same way the build environment above is.
+      - name: Setup Rust (Linux)
+        if: ${{ env.IS_MACOS != 'true' }}
+        uses: ./.github/actions/setup-linux-rust/
         with:
-          platform: ${{ matrix.compiler.platform }}
-          linux-sccache-dir: ${{ github.workspace }}/.cache/sccache
+          sccache-dir: ${{ github.workspace }}/.cache/sccache
+
+      - name: Setup Rust (macOS)
+        if: ${{ env.IS_MACOS == 'true' }}
+        uses: ./.github/actions/setup-macos-rust/
 
       - name: Check installations
         run: |

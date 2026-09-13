@@ -78,7 +78,7 @@ runs:
     #     relative paths in the debug info of cached objects, which for a CI build is a fair
     #     price for a warm cache.
     #
-    # sccache is set up by the setup-rust action instead, under the same shared directory.
+    # sccache is set up by the setup-macos-rust action instead, under the same shared directory.
     #
     # Nothing in a workflow run expires either cache - a weekly launchd job on the machine
     # (org.ducktype.duckling-ci.prune) does that.
