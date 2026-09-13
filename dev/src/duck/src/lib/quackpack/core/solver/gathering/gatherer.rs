@@ -1,3 +1,9 @@
+//! > [!NOTE]
+//! > We check if packages are self dependent here. Why? Because:
+//! > 1. it's likely a user's mistake,
+//! > 2. generating storage freeze (currently) breaks if there are any self dependent packages.
+//! > Therefore we have to check self dependence before. Gatherer seemed the easiest place to add
+//! > this checks.
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -5,6 +11,7 @@ use std::pin::Pin;
 
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
+use tempfile::TempDir;
 use tracing::{debug, error, trace};
 
 use crate::quackpack::core::fetcher::Fetcher;
@@ -346,36 +353,13 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         errors: &RefCell<ErrorsLogger>,
     ) -> QuackResult<FetchResponse> {
         trace!("fetching git");
-        // We create a temporary logger to check if `try_get_cached_git` produced any errors.
-        let mut cache_logger = ErrorsLogger::default();
-        if let Some(cached_git) =
-            self.try_get_cached_git(request, url, reference, &mut cache_logger)
+        if let Some(cached_response) = self.try_get_cached_git(request, url, reference, errors) {
+            return Ok(cached_response);
+        }
+        if let Some(git_fast_path_response) = self.try_git_fastpath(request, url, reference).await?
         {
-            debug!("git request was cached");
-            return Ok(FetchResponse::Success(FetchSuccess::NotPinned(cached_git)));
+            return Ok(git_fast_path_response);
         }
-        if !cache_logger.is_empty() {
-            let err = cache_logger.unwrap_first();
-            errors.borrow_mut().log(err.context(MessageError::new(
-                "when trying to get cached git or during fastpath",
-            )));
-            return Ok(FetchResponse::failed_not_pinned(request.id));
-        }
-        match self.try_git_fastpath(request, url, reference).await {
-            Err(e) => {
-                error!(error = %e, "fast path failed");
-                // We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
-                // as it is well ... a fast path.
-                display_git_fast_path_failure_warning(&e, request, self.fetcher.ctx())?;
-            }
-            Ok(Some(fast_path_git)) => {
-                debug!("git fast path worked");
-                return Ok(FetchResponse::Success(FetchSuccess::NotPinned(
-                    fast_path_git,
-                )));
-            }
-            Ok(None) => {}
-        };
         if self.fetcher.ctx().is_offline() {
             return Ok(FetchResponse::failed_not_pinned(request.id));
         }
@@ -398,17 +382,10 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 return Ok(FetchResponse::failed_not_pinned(request.id));
             }
         };
-        let sources: &[Source] =
-            if let Ok(path_source) = Source::for_local(path_where_cloned.path()) {
-                &[path_source, request.id.source]
-            } else {
-                &[request.id.source]
-            };
-        if does_package_depend_on_itself(sources, &manifest) {
-            errors
-                .borrow_mut()
-                .log(self_dependent_dependency_error(request.id));
-            return Ok(FetchResponse::failed_not_pinned(request.id));
+        if let Some(emitted_response_because_depends) =
+            log_if_git_is_self_dependent(&path_where_cloned, request, &manifest, errors)
+        {
+            return Ok(emitted_response_because_depends);
         }
         let answer_identity = FullIdentity::new(
             request.id.name,
@@ -434,8 +411,40 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
 
     /// Helper for [`Gatherer::fetch_git`].
     /// Searches for cached git satisfying the given request and loads the found package with [`PackageLoader`].
-    /// If it cannot find a cached git, returns [`None`].
+    ///
+    /// # Returns
+    /// `Some` if package was found, or an error has been encountered. The response should be
+    /// propagated upwards.
+    /// `None` otherwise.
     fn try_get_cached_git(
+        &self,
+        request: &NotPinnedRequest,
+        url: InternedUrl,
+        reference: GitReference,
+        errors: &RefCell<ErrorsLogger>,
+    ) -> Option<FetchResponse> {
+        // We create a temporary logger to check if `try_get_cached_git` produced any errors.
+        let mut cache_logger = ErrorsLogger::default();
+        if let Some(cached_git) =
+            self.try_get_cached_git_inner(request, url, reference, &mut cache_logger)
+        {
+            debug!("git request was cached");
+            return Some(FetchResponse::Success(FetchSuccess::NotPinned(cached_git)));
+        }
+        if !cache_logger.is_empty() {
+            let err = cache_logger.unwrap_first();
+            errors.borrow_mut().log(err.context(MessageError::new(
+                "when trying to get cached git or during fastpath",
+            )));
+            return Some(FetchResponse::failed_not_pinned(request.id));
+        }
+        None
+    }
+
+    /// Helper for [`Gatherer::try_get_cached_git`].
+    /// Searches for cached git satisfying the given request and loads the found package with [`PackageLoader`].
+    /// If it cannot find a cached git, returns [`None`].
+    fn try_get_cached_git_inner(
         &self,
         request: &NotPinnedRequest,
         url: InternedUrl,
@@ -481,7 +490,33 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     }
 
     /// Tries to use git fast path, to get the manifests without performing clone.
+    /// This version also handles any errors ([`QuackResult`] is because we try to print the error).
     async fn try_git_fastpath(
+        &self,
+        request: &NotPinnedRequest,
+        url: InternedUrl,
+        reference: GitReference,
+    ) -> QuackResult<Option<FetchResponse>> {
+        match self.try_git_fastpath_inner(request, url, reference).await {
+            Err(e) => {
+                error!(error = %e, "fast path failed");
+                // We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
+                // as it is well ... a fast path.
+                display_git_fast_path_failure_warning(&e, request, self.fetcher.ctx())?;
+            }
+            Ok(Some(fast_path_git)) => {
+                debug!("git fast path worked");
+                return Ok(Some(FetchResponse::Success(FetchSuccess::NotPinned(
+                    fast_path_git,
+                ))));
+            }
+            Ok(None) => {}
+        };
+        Ok(None)
+    }
+
+    /// Tries to use git fast path, to get the manifests without performing clone.
+    async fn try_git_fastpath_inner(
         &self,
         request: &NotPinnedRequest,
         url: InternedUrl,
@@ -638,4 +673,29 @@ fn self_dependent_root_package_error() -> QuackError {
 
 fn self_dependent_dependency_error(id: RequestIdentifier) -> QuackError {
     qp_err!("dependency `{} {}` depends on itself", id.name, id.source)
+}
+
+/// Check if the cloned git is self dependent.
+///
+/// # Returns
+/// `Some` if git was self dependent (and the response should be propagated upwards), `None` otherwise.
+fn log_if_git_is_self_dependent(
+    path_where_cloned: &TempDir,
+    request: &NotPinnedRequest,
+    manifest: &Manifest,
+    errors: &RefCell<ErrorsLogger>,
+) -> Option<FetchResponse> {
+    let sources: &[Source] = if let Ok(path_source) = Source::for_local(path_where_cloned.path()) {
+        &[path_source, request.id.source]
+    } else {
+        &[request.id.source]
+    };
+    if does_package_depend_on_itself(sources, manifest) {
+        errors
+            .borrow_mut()
+            .log(self_dependent_dependency_error(request.id));
+        Some(FetchResponse::failed_not_pinned(request.id))
+    } else {
+        None
+    }
 }

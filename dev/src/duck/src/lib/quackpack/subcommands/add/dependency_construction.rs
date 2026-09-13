@@ -363,7 +363,7 @@ fn disallow_adding_itself(root: &Path, dep_source: Source) -> QuackResult<()> {
     if let Ok(dep_path) = dep_source.url().to_path_buf()
         && root == dep_path
     {
-        qp_bail!("tried to add root as its own dependency")
+        qp_bail!("tried to add root package as its own dependency")
     }
     Ok(())
 }

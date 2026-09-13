@@ -10,4 +10,4 @@ Tests:
         ExitCode: 1
         Err:
           String: |+
-            error: tried to add root as its own dependency
+            error: tried to add root package as its own dependency
