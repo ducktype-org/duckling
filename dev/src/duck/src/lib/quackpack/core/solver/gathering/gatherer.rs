@@ -423,7 +423,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         reference: GitReference,
         errors: &RefCell<ErrorsLogger>,
     ) -> Option<FetchResponse> {
-        // We create a temporary logger to check if `try_get_cached_git` produced any errors.
+        // We create a temporary logger to check if `try_get_cached_git_inner` produced any errors.
         let mut cache_logger = ErrorsLogger::default();
         if let Some(cached_git) =
             self.try_get_cached_git_inner(request, url, reference, &mut cache_logger)
