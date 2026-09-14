@@ -13,7 +13,7 @@ namespace compiler::helios {
 
 	u64 SymID::queryUnstablePerfectHash() const { return ref->id.asInt(); }
 
-	tsh::ClassAbstractType classOfMember(const SymID member) {
+	tsh::ClassAbstractType classMemberOwner(const SymID member) {
 		CORE_ASSERT(isClassMember(kind(member)), "Expected a member of a class symbol.");
 
 		auto member_data = getSymRef(member)->getDataOpt<ClassMemberSemantics>();
@@ -25,11 +25,11 @@ namespace compiler::helios {
 	bool isStaticField(query::Context& ctx, const SymID symbol) {
 		if (kind(symbol) != SymbolKind::Field) return false;
 
-		auto element = typeOfMember(symbol).getInterface(ctx)->getElementBySym(symbol);
+		auto element = typeMemberOwner(symbol).getInterface(ctx)->getElementBySym(symbol);
 		return element.has_value() and element.value()->isStaticField();
 	}
 
-	tsh::AbstractType typeOfMember(const SymID member) {
+	tsh::AbstractType typeMemberOwner(const SymID member) {
 		variant_match(getSymRef(member)->other) {
 			variant_case(ClassMemberSemantics, member_data) { return member_data.owner_class; }
 			variant_case(defgen::Field, field) { return field.parent_type; }

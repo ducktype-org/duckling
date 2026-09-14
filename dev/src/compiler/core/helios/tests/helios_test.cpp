@@ -622,9 +622,9 @@ private:
 
 			// A member declared directly in the class body and one declared inside a specifier
 			// block both know the class they belong to.
-			ASSERT_EQUAL(members_type, compiler::tsh::AbstractType(classOfMember(inst_sym)));
-			ASSERT_EQUAL(members_type, compiler::tsh::AbstractType(classOfMember(copy_sym)));
-			ASSERT_EQUAL(members_type, typeOfMember(inst_sym));
+			ASSERT_EQUAL(members_type, compiler::tsh::AbstractType(classMemberOwner(inst_sym)));
+			ASSERT_EQUAL(members_type, compiler::tsh::AbstractType(classMemberOwner(copy_sym)));
+			ASSERT_EQUAL(members_type, typeMemberOwner(inst_sym));
 
 			ASSERT_TRUE(isStaticField(ctx, counter_sym));
 			ASSERT_TRUE(not isStaticField(ctx, inst_sym));
@@ -634,7 +634,7 @@ private:
 			// The generated members answer as well, and the type they belong to is not always a
 			// class.
 			const auto destruct_sym = defgen::generatedDestructSymForType(ctx, members_type);
-			ASSERT_EQUAL(members_type, typeOfMember(destruct_sym));
+			ASSERT_EQUAL(members_type, typeMemberOwner(destruct_sym));
 
 			// A class that declares a copy constructor is copied with it, a class that does not
 			// is copied with the generated one.
@@ -648,7 +648,7 @@ private:
 			auto       pair_fields = pair_type.getInterface(ctx)->getFieldsView();
 			ASSERT_TRUE(not std::ranges::empty(pair_fields));
 			for (const auto& field: pair_fields)
-				ASSERT_EQUAL(pair_type, typeOfMember(field.getSymbol()));
+				ASSERT_EQUAL(pair_type, typeMemberOwner(field.getSymbol()));
 		});
 	}
 

@@ -365,7 +365,11 @@ namespace compiler::helios {
 			);
 
 			const auto class_type = ctx.query<tsh::QueryClassType>(class_sym);
-			auto       interface  = class_type.getInterface(ctx);
+			// The interface of a class we could not resolve is already diagnosed by the query
+			// that builds it, and `provide` must not let its failure escape as an exception.
+			Ref interface_result = class_type.getInterfaceResult(ctx);
+			if (interface_result->hasFailed()) return base::BAD;
+			Ref interface = &interface_result->valueOrPanic();
 
 
 			for (const auto& method: interface->getAnyMethodsView()) {

@@ -7,7 +7,7 @@ class Base {
     public pub_field: i64 = 1;
     protected prot_field: i64 = 2;
     private priv_field: i64 = 3;
-    unspecified: f32 = 4.0;
+    private unspecified: f32 = 4.0;
 
     public static counter: i64 = 5;
 

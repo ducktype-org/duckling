@@ -160,7 +160,7 @@ namespace compiler::helios {
 			void validateConstructorSource(
 				pst::Access<ConstructorElement> stmt, const HOUTFunctionDeclaration& decl
 			) {
-				const auto class_type = classOfMember(original_symbol);
+				const auto class_type = classMemberOwner(original_symbol);
 
 				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
 

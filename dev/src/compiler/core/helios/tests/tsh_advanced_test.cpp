@@ -254,7 +254,7 @@ private:
 			ASSERT_EQUAL(counter.getSymbol(), by_sym.value()->getSymbol());
 			ASSERT_NO_VALUE(interface->getElementBySym(members_sym));
 
-			// A class that declares any visibility specifier makes every other member private.
+			// A class declares the visibility of every member, or of none of them.
 			ASSERT_EQUAL(MemberVisibility::Public, inst.getVisibility());
 			ASSERT_EQUAL(MemberVisibility::Private, single("priv_field").getVisibility());
 			ASSERT_EQUAL(MemberVisibility::Protected, single("prot_field").getVisibility());

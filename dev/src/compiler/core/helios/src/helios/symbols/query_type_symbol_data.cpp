@@ -10,6 +10,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -18,6 +19,18 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
+	class ClassMixedMemberVisibilityError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "class_mixed_member_visibility" };
+		}
+
+	public:
+		ClassMixedMemberVisibilityError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
 
 	ClassMemberSpecifiersResult getClassMemberSpecifiers(query::Context& ctx, SymID sym) {
 		auto                                  specifiers = ctx.query<QuerySpecifiersOfSymbol>(sym);
@@ -53,7 +66,7 @@ namespace compiler::helios {
 				visibility_opt = tsh::MemberVisibility::Private;
 			if (keyword == lang_def::Keyword::Static) is_static = true;
 		}
-		return { .visibility_opt = visibility_opt, .is_static = is_static };
+		return { .sym = sym, .visibility_opt = visibility_opt, .is_static = is_static };
 	}
 
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
@@ -75,14 +88,35 @@ namespace compiler::helios {
 			}
 		};
 
-		static tsh::MemberVisibility getDefaultMemberVisibility(
-			std::vector<ClassMemberSpecifiersResult> members_specifiers
+		static bool hasVisibility(const ClassMemberSpecifiersResult& spec) {
+			return spec.visibility_opt.has_value();
+		}
+
+		/**
+		 * @return the visibility used by the members that declare no visibility specifier, or an
+		 * empty optional if every member declares one.
+		 */
+		static base::Optional<tsh::MemberVisibility> getDefaultMemberVisibility(
+			query::Context&                                 ctx,
+			pst::Access<pst::Stmt>                          class_stmt,
+			const std::vector<ClassMemberSpecifiersResult>& members_specifiers
 		) {
-			if (std::ranges::any_of(members_specifiers, [](ClassMemberSpecifiersResult spec) {
-					return spec.visibility_opt.has_value();
-				}))
-				return tsh::MemberVisibility::Private;
-			return tsh::MemberVisibility::Public;
+			using namespace std::ranges;
+			if (all_of(members_specifiers, hasVisibility)) return {};
+			if (none_of(members_specifiers, hasVisibility)) return tsh::MemberVisibility::Public;
+
+			auto class_name = class_stmt.dynamicCast<pst::Class>().value()->getName().unlock(ctx);
+			auto error = makeBox<ClassMixedMemberVisibilityError>(class_name->getStablePosition());
+			for (const auto& spec: members_specifiers) {
+				if (hasVisibility(spec)) continue;
+				if_opt_some(maybeSymbolPst(spec.sym), member_pst)
+					error->addAttachedMessage(makeBox<dia::PlaceholderNote>(
+						"Member declared without a visibility specifier.",
+						member_pst.unlock(ctx)->getStablePosition()
+					));
+			}
+			ctx.logInt(std::move(error));
+			query::throwFailed();
 		}
 
 		static tsh::InterfaceElement::InterfaceElementKind getElementKind(
@@ -303,7 +337,8 @@ namespace compiler::helios {
 				  })
 			    | std::ranges::to<std::vector>();
 
-			auto default_visiblity = getDefaultMemberVisibility(members_specifiers);
+			auto default_visiblity
+				= getDefaultMemberVisibility(ctx, class_stmt, members_specifiers);
 
 			ClassSymbolData    class_info;
 			UserDefinedMembers user_members;
@@ -311,7 +346,9 @@ namespace compiler::helios {
 				auto member_sym          = (*class_symbols)[i];
 				auto specifiers          = members_specifiers[i];
 				auto interface_elem_kind = getElementKind(kind(member_sym), specifiers);
-				auto member_visibility   = specifiers.visibility_opt.copyValueOr(default_visiblity);
+				auto member_visibility   = specifiers.visibility_opt.empty()
+				                             ? default_visiblity.value()
+				                             : specifiers.visibility_opt.value();
 				auto member_special_kind = specialKind(ctx, member_sym);
 
 				collectUserDefinedMember(member_special_kind, user_members);

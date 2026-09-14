@@ -22,7 +22,7 @@ namespace compiler::helios {
 		 * the whole program instead of once per instance of its class.
 		 */
 		static bool isStaticField(Context& ctx, SymID symbol) {
-			auto element = typeOfMember(symbol).getInterface(ctx)->getElementBySym(symbol);
+			auto element = typeMemberOwner(symbol).getInterface(ctx)->getElementBySym(symbol);
 			return element.has_value() and element.value()->isStaticField();
 		}
 

@@ -60,6 +60,13 @@ namespace compiler::tsh {
 		CRef<TypeInterface> getInterface(query::Context& ctx) const;
 
 		/**
+		 * Same as @ref getInterface, but gives the caller the failure instead of throwing it, for
+		 * the queries that cannot let a query-failure exception escape their `provide`.
+		 */
+		[[nodiscard]]
+		CRef<query::QResult<TypeInterface>> getInterfaceResult(query::Context& ctx) const;
+
+		/**
 		 * @brief Check if the type is a simple type, which correlates heavily with the type being
 		 * more efficient to be passed by copy instead of by reference.
 		 * @return Whether the type is a simple type.

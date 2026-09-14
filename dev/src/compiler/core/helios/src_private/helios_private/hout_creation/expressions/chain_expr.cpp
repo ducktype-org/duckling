@@ -49,8 +49,8 @@ namespace compiler::helios::code {
 		/**
 		 * @brief Helper to get the interface element of a symbol that is a type member.
 		 */
-		CRef<tsh::InterfaceElement> getInterfaceElement(query::Context& ctx, SymID sym) {
-			return typeOfMember(sym).getInterface(ctx)->getElementBySym(sym).value();
+		CRef<tsh::InterfaceElement> getInterfaceElementOfMemberSym(query::Context& ctx, SymID sym) {
+			return typeMemberOwner(sym).getInterface(ctx)->getElementBySym(sym).value();
 		}
 	}
 
@@ -479,7 +479,7 @@ namespace compiler::helios::code {
 					return kind(symbol) == SymbolKind::Method;
 				})) {
 				// Make sure that all of the found methods are either static methods or instance methods.
-				auto type      = typeOfMember(looked_up_callees.at(0));
+				auto type      = typeMemberOwner(looked_up_callees.at(0));
 				auto interface = type.getInterface(query_ctx);
 				auto elements  = looked_up_callees | std::views::transform([&](SymID symbol) {
                                     return interface->getElementBySym(symbol).value();
@@ -930,7 +930,7 @@ namespace compiler::helios::code {
 
 				base::Optional<base::Box<Expr>> expr{};
 				if (callees.size() > 0
-				    and getInterfaceElement(query_ctx, callees.at(0))->isMethod()) {
+				    and getInterfaceElementOfMemberSym(query_ctx, callees.at(0))->isMethod()) {
 					// The self expression may be passed by copy or by reference,
 					// depending on whether the type is simple or composite, respectively.
 					auto self_expr = current_expr->expression_type.getType().isSimple()

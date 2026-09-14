@@ -415,7 +415,7 @@ namespace compiler::helios {
 					return param_symbol_type;
 				}
 				variant_case(defgen::SelfParameter, param) {
-					const auto class_type        = classOfMember(param.method_symbol);
+					const auto class_type        = classMemberOwner(param.method_symbol);
 					auto       param_symbol_type = tsh::SymbolType{
                         class_type,
                         tsh::ReferenceKind::Ref,

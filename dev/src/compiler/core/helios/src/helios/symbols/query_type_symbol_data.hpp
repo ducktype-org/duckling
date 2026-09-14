@@ -11,6 +11,7 @@
 
 namespace compiler::helios {
 	struct ClassMemberSpecifiersResult {
+		SymID                                 sym;
 		base::Optional<tsh::MemberVisibility> visibility_opt;
 		bool                                  is_static;
 	};

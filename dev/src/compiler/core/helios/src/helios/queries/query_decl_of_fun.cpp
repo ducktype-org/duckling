@@ -369,7 +369,7 @@ namespace compiler::helios {
 					stmt->getParams(), {}, HOUTFunctionDeclaration::Operatoriness::None
 				);
 
-				const auto class_type  = classOfMember(original_symbol);
+				const auto class_type  = classMemberOwner(original_symbol);
 				this->out->return_type = tsh::SymbolType<>{
 					class_type,
 					tsh::ReferenceKind::Direct,

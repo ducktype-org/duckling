@@ -191,20 +191,16 @@ namespace compiler::helios {
 	/**
 	 * @return the class that a class member symbol is declared in.
 	 * Panics if the given symbol is not a class member created from the PST.
-	 *
-	 * @note The owning class is stored in the symbol data, so this is a plain lookup.
 	 */
-	tsh::ClassAbstractType classOfMember(SymID member);
+	tsh::ClassAbstractType classMemberOwner(SymID member);
 
 	/**
 	 * @return the type that a member symbol belongs to.
 	 * Panics for a symbol that is not a member of a type.
 	 *
-	 * Unlike @ref classOfMember it also answers for the compiler-generated members, which is why
+	 * Unlike @ref classMemberOwner it also answers for the compiler-generated members, which is why
 	 * the type it returns is not necessarily a class. A generated field of a tuple belongs to
 	 * that tuple, and a generated destructor belongs to whatever type it destroys.
-	 *
-	 * @note The owning type is stored in the symbol data, so this is a plain lookup.
 	 */
-	tsh::AbstractType typeOfMember(SymID member);
+	tsh::AbstractType typeMemberOwner(SymID member);
 }
