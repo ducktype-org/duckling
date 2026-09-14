@@ -1308,23 +1308,24 @@ namespace compiler::helios::code {
 		base::Optional<query::Failed> step() {
 			auto current_element_value = currentElem().value().dynamicCast<T1>().value();
 			auto next_element_value    = nextElem().value().dynamicCast<T2>().value();
-			auto res                   = [&]() -> query::QResult<ChainState> {
-                if (this->current_state.isExpr()) {
-                    auto expr = this->current_state.getExpr();
-                    return processPSTExpr(
-                        std::move(expr), current_element_value, next_element_value
-                    );
-                } else if (this->current_state.isNamespaceLike()) {
-                    auto namespace_like_symbol = this->current_state.getNamespaceLikeSymbol();
-                    return processPSTExpr(
-                        namespace_like_symbol, current_element_value, next_element_value
-                    );
-                } else if (this->current_state.isType()) {
-                    return processPSTExpr(
-                        this->current_state.getType(), current_element_value, next_element_value
-                    );
-                }
-                CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
+
+			auto res = [&]() -> query::QResult<ChainState> {
+				if (this->current_state.isExpr()) {
+					auto expr = this->current_state.getExpr();
+					return processPSTExpr(
+						std::move(expr), current_element_value, next_element_value
+					);
+				} else if (this->current_state.isNamespaceLike()) {
+					auto namespace_like_symbol = this->current_state.getNamespaceLikeSymbol();
+					return processPSTExpr(
+						namespace_like_symbol, current_element_value, next_element_value
+					);
+				} else if (this->current_state.isType()) {
+					return processPSTExpr(
+						this->current_state.getType(), current_element_value, next_element_value
+					);
+				}
+				CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
 			}();
 			UNPACK_QRESULT_MOVE(this->current_state =, std::move(res));
 			return {};
