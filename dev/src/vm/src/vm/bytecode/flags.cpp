@@ -106,27 +106,25 @@ namespace vm::code {
 		// Per-shape `instr_case` shorthands. Cover the common patterns where the
 		// instruction's name and arg shape uniquely determine the read/write set.
 		// Defined locally so they don't leak to other translation units.
-#define FLAGS_W(NAME) \
-	instr_case(ins::Op_##NAME, i) { wr(i.dst); }
-#define FLAGS_W_R(NAME)             \
-	instr_case(ins::Op_##NAME, i) { \
-		wr(i.dst);                  \
-		rd(i.src);                  \
-	}
-#define FLAGS_RW(NAME) \
-	instr_case(ins::Op_##NAME, i) { rdwr(i.dst); }
-#define FLAGS_RW_R(NAME)            \
-	instr_case(ins::Op_##NAME, i) { \
-		rdwr(i.dst);                \
-		rd(i.src);                  \
-	}
-#define FLAGS_CMP(NAME)             \
-	instr_case(ins::Op_##NAME, i) { \
-		rd(i.lhs);                  \
-		rd(i.rhs);                  \
-	}
-#define FLAGS_CMP_IMM(NAME) \
-	instr_case(ins::Op_##NAME, i) { rd(i.lhs); }
+#define FLAGS_RW(op)                                         \
+	auto dst = VISIT(op, instr, return instr->dst.var_name); \
+	if (is_global(dst)) flags |= GlobalRead | GlobalWrite;
+
+#define FLAGS_RW_R(op)                                       \
+	auto dst = VISIT(op, instr, return instr->dst.var_name); \
+	auto src = VISIT(op, instr, return instr->src.var_name); \
+	if (is_global(dst)) flags |= GlobalRead | GlobalWrite;   \
+	if (is_global(src)) flags |= GlobalRead;
+
+#define FLAGS_CMP(op)                                        \
+	auto lhs = VISIT(op, instr, return instr->lhs.var_name); \
+	auto rhs = VISIT(op, instr, return instr->rhs.var_name); \
+	if (is_global(lhs)) flags |= GlobalRead;                 \
+	if (is_global(rhs)) flags |= GlobalRead;
+
+#define FLAGS_CMP_IMM(op)                                    \
+	auto lhs = VISIT(op, instr, return instr->lhs.var_name); \
+	if (is_global(lhs)) flags |= GlobalRead;
 
 		// UNHANDLED_ENUM suppresses the switch-exhaustiveness warning, so adding a new
 		// instruction still compiles. Any instruction that lacks a case below therefore reaches
@@ -136,294 +134,382 @@ namespace vm::code {
 		UNHANDLED_ENUM
 		instr_match(instruction) {
 			// ===== Pure moves: dst written, src (place) read =====
-			FLAGS_W(mov_p8_imm)
-			FLAGS_W(mov_p16_imm)
-			FLAGS_W(mov_p32_imm)
-			FLAGS_W(mov_p64_imm)
-			FLAGS_W(setNull_pptr)
+			instr_case_many(
+				mov_p_imm,
+				ins::Op_mov_p8_imm,
+				ins::Op_mov_p16_imm,
+				ins::Op_mov_p32_imm,
+				ins::Op_mov_p64_imm,
+				ins::Op_setNull_pptr
+			) {
+				auto dst = VISIT(mov_p_imm, instr, return instr->dst.var_name);
+				if (is_global(dst)) flags |= GlobalWrite;
+			}
 
-			FLAGS_W_R(mov_p8_p8)
-			FLAGS_W_R(mov_p16_p16)
-			FLAGS_W_R(mov_p32_p32)
-			FLAGS_W_R(mov_p64_p64)
-			FLAGS_W_R(mov_pptr_pptr)
-			FLAGS_W_R(mov_pcptr_pcptr)
-			FLAGS_W_R(mov_pste_pste)
-			FLAGS_W_R(mov_pfst_pfst)
-			FLAGS_W_R(mov_popq_popq)
-			FLAGS_W_R(mov_pvnt_pvnt)
+			instr_case_many(
+				mov_p_p,
+				ins::Op_mov_p8_p8,
+				ins::Op_mov_p16_p16,
+				ins::Op_mov_p32_p32,
+				ins::Op_mov_p64_p64,
+				ins::Op_mov_pptr_pptr,
+				ins::Op_mov_pcptr_pcptr,
+				ins::Op_mov_pste_pste,
+				ins::Op_mov_pfst_pfst,
+				ins::Op_mov_popq_popq,
+				ins::Op_mov_pvnt_pvnt
+			) {
+				auto dst = VISIT(mov_p_p, instr, return instr->dst.var_name);
+				auto src = VISIT(mov_p_p, instr, return instr->src.var_name);
+				if (is_global(dst)) flags |= GlobalWrite;
+				if (is_global(src)) flags |= GlobalRead;
+			}
 
 			// ===== Conditional moves: dst is read (kept conditionally) and written =====
-			FLAGS_RW_R(cmov_p8_p8)
-			FLAGS_RW_R(cmov_p16_p16)
-			FLAGS_RW_R(cmov_p32_p32)
-			FLAGS_RW_R(cmov_p64_p64)
-			FLAGS_RW(cmov_p8_imm)
-			FLAGS_RW(cmov_p16_imm)
-			FLAGS_RW(cmov_p32_imm)
-			FLAGS_RW(cmov_p64_imm)
+			instr_case_many(
+				cmov_p_p,
+				ins::Op_cmov_p8_p8,
+				ins::Op_cmov_p16_p16,
+				ins::Op_cmov_p32_p32,
+				ins::Op_cmov_p64_p64
+			){ FLAGS_RW_R(cmov_p_p) }
+
+			instr_case_many(
+				cmov_p_imm,
+				ins::Op_cmov_p8_imm,
+				ins::Op_cmov_p16_imm,
+				ins::Op_cmov_p32_imm,
+				ins::Op_cmov_p64_imm
+			){ FLAGS_RW(cmov_p_imm) }
 
 			// ===== Binary arithmetic: dst = dst op src =====
-			FLAGS_RW_R(add_p64_p64)
-			FLAGS_RW(add_p64_imm)
-			FLAGS_RW_R(add_p32_p32)
-			FLAGS_RW(add_p32_imm)
-			FLAGS_RW_R(add_p16_p16)
-			FLAGS_RW(add_p16_imm)
-			FLAGS_RW_R(add_p8_p8)
-			FLAGS_RW(add_p8_imm)
-			FLAGS_RW_R(sub_p64_p64)
-			FLAGS_RW(sub_p64_imm)
-			FLAGS_RW_R(sub_p32_p32)
-			FLAGS_RW(sub_p32_imm)
-			FLAGS_RW_R(sub_p16_p16)
-			FLAGS_RW(sub_p16_imm)
-			FLAGS_RW_R(sub_p8_p8)
-			FLAGS_RW(sub_p8_imm)
-			FLAGS_RW_R(mul_p64_p64)
-			FLAGS_RW(mul_p64_imm)
-			FLAGS_RW_R(mul_p32_p32)
-			FLAGS_RW(mul_p32_imm)
-			FLAGS_RW_R(mul_p16_p16)
-			FLAGS_RW(mul_p16_imm)
-			FLAGS_RW_R(mul_p8_p8)
-			FLAGS_RW(mul_p8_imm)
-			FLAGS_RW_R(div_p64_p64)
-			FLAGS_RW(div_p64_imm)
-			FLAGS_RW_R(div_p32_p32)
-			FLAGS_RW(div_p32_imm)
-			FLAGS_RW_R(div_p16_p16)
-			FLAGS_RW(div_p16_imm)
-			FLAGS_RW_R(div_p8_p8)
-			FLAGS_RW(div_p8_imm)
-			FLAGS_RW_R(mod_p64_p64)
-			FLAGS_RW(mod_p64_imm)
-			FLAGS_RW_R(mod_p32_p32)
-			FLAGS_RW(mod_p32_imm)
-			FLAGS_RW_R(mod_p16_p16)
-			FLAGS_RW(mod_p16_imm)
-			FLAGS_RW_R(mod_p8_p8)
-			FLAGS_RW(mod_p8_imm)
+			instr_case_many(
+				bin_arith,
+				ins::Op_add_p64_p64,
+				ins::Op_add_p32_p32,
+				ins::Op_add_p16_p16,
+				ins::Op_add_p8_p8,
+				ins::Op_sub_p64_p64,
+				ins::Op_sub_p32_p32,
+				ins::Op_sub_p16_p16,
+				ins::Op_sub_p8_p8,
+				ins::Op_mul_p64_p64,
+				ins::Op_mul_p32_p32,
+				ins::Op_mul_p16_p16,
+				ins::Op_mul_p8_p8,
+				ins::Op_div_p64_p64,
+				ins::Op_div_p32_p32,
+				ins::Op_div_p16_p16,
+				ins::Op_div_p8_p8,
+				ins::Op_mod_p64_p64,
+				ins::Op_mod_p32_p32,
+				ins::Op_mod_p16_p16,
+				ins::Op_mod_p8_p8
+			){ FLAGS_RW_R(bin_arith) }
+
+			instr_case_many(
+				arith_imm,
+				ins::Op_add_p64_imm,
+				ins::Op_add_p32_imm,
+				ins::Op_add_p16_imm,
+				ins::Op_add_p8_imm,
+				ins::Op_sub_p64_imm,
+				ins::Op_sub_p32_imm,
+				ins::Op_sub_p16_imm,
+				ins::Op_sub_p8_imm,
+				ins::Op_mul_p64_imm,
+				ins::Op_mul_p32_imm,
+				ins::Op_mul_p16_imm,
+				ins::Op_mul_p8_imm,
+				ins::Op_div_p64_imm,
+				ins::Op_div_p32_imm,
+				ins::Op_div_p16_imm,
+				ins::Op_div_p8_imm,
+				ins::Op_mod_p64_imm,
+				ins::Op_mod_p32_imm,
+				ins::Op_mod_p16_imm,
+				ins::Op_mod_p8_imm
+			) {
+				auto dst = VISIT(arith_imm, instr, return instr->dst.var_name);
+				if (is_global(dst)) flags |= GlobalRead | GlobalWrite;
+			}
 
 			// Unsigned arith
-			FLAGS_RW_R(umul_p64_p64)
-			FLAGS_RW(umul_p64_imm)
-			FLAGS_RW_R(umul_p32_p32)
-			FLAGS_RW(umul_p32_imm)
-			FLAGS_RW_R(umul_p16_p16)
-			FLAGS_RW(umul_p16_imm)
-			FLAGS_RW_R(umul_p8_p8)
-			FLAGS_RW(umul_p8_imm)
-			FLAGS_RW_R(umod_p64_p64)
-			FLAGS_RW(umod_p64_imm)
-			FLAGS_RW_R(umod_p32_p32)
-			FLAGS_RW(umod_p32_imm)
-			FLAGS_RW_R(umod_p16_p16)
-			FLAGS_RW(umod_p16_imm)
-			FLAGS_RW_R(umod_p8_p8)
-			FLAGS_RW(umod_p8_imm)
-			FLAGS_RW_R(udiv_p64_p64)
-			FLAGS_RW(udiv_p64_imm)
-			FLAGS_RW_R(udiv_p32_p32)
-			FLAGS_RW(udiv_p32_imm)
-			FLAGS_RW_R(udiv_p16_p16)
-			FLAGS_RW(udiv_p16_imm)
-			FLAGS_RW_R(udiv_p8_p8)
-			FLAGS_RW(udiv_p8_imm)
+			instr_case_many(
+				uarith_p_p,
+				ins::Op_umul_p64_p64,
+				ins::Op_umul_p32_p32,
+				ins::Op_umul_p16_p16,
+				ins::Op_umul_p8_p8,
+				ins::Op_umod_p64_p64,
+				ins::Op_umod_p32_p32,
+				ins::Op_umod_p16_p16,
+				ins::Op_umod_p8_p8,
+				ins::Op_udiv_p64_p64,
+				ins::Op_udiv_p32_p32,
+				ins::Op_udiv_p16_p16,
+				ins::Op_udiv_p8_p8
+			){ FLAGS_RW_R(uarith_p_p) }
+
+			instr_case_many(
+				uarith_p_imm,
+				ins::Op_umul_p64_imm,
+				ins::Op_umul_p32_imm,
+				ins::Op_umul_p16_imm,
+				ins::Op_umul_p8_imm,
+				ins::Op_umod_p64_imm,
+				ins::Op_umod_p32_imm,
+				ins::Op_umod_p16_imm,
+				ins::Op_umod_p8_imm,
+				ins::Op_udiv_p64_imm,
+				ins::Op_udiv_p32_imm,
+				ins::Op_udiv_p16_imm,
+				ins::Op_udiv_p8_imm
+			){ FLAGS_RW(uarith_p_imm) }
 
 			// Floating point
-			FLAGS_RW_R(fadd_p64_p64)
-			FLAGS_RW(fadd_p64_imm)
-			FLAGS_RW_R(fadd_p32_p32)
-			FLAGS_RW(fadd_p32_imm)
-			FLAGS_RW_R(fsub_p64_p64)
-			FLAGS_RW(fsub_p64_imm)
-			FLAGS_RW_R(fsub_p32_p32)
-			FLAGS_RW(fsub_p32_imm)
-			FLAGS_RW_R(fmul_p64_p64)
-			FLAGS_RW(fmul_p64_imm)
-			FLAGS_RW_R(fmul_p32_p32)
-			FLAGS_RW(fmul_p32_imm)
-			FLAGS_RW_R(fdiv_p64_p64)
-			FLAGS_RW(fdiv_p64_imm)
-			FLAGS_RW_R(fdiv_p32_p32)
-			FLAGS_RW(fdiv_p32_imm)
+			instr_case_many(
+				farith_p_p,
+				ins::Op_fadd_p64_p64,
+				ins::Op_fadd_p32_p32,
+				ins::Op_fsub_p64_p64,
+				ins::Op_fsub_p32_p32,
+				ins::Op_fmul_p64_p64,
+				ins::Op_fmul_p32_p32,
+				ins::Op_fdiv_p64_p64,
+				ins::Op_fdiv_p32_p32
+			){ FLAGS_RW_R(farith_p_p) }
+
+			instr_case_many(
+				farith_p_imm,
+				ins::Op_fadd_p64_imm,
+				ins::Op_fadd_p32_imm,
+				ins::Op_fsub_p64_imm,
+				ins::Op_fsub_p32_imm,
+				ins::Op_fmul_p64_imm,
+				ins::Op_fmul_p32_imm,
+				ins::Op_fdiv_p64_imm,
+				ins::Op_fdiv_p32_imm
+			){ FLAGS_RW(farith_p_imm) }
 
 			// Unary arith / negation / logical-not
-			FLAGS_RW(neg_p64)
-			FLAGS_RW(neg_p32)
-			FLAGS_RW(neg_p16)
-			FLAGS_RW(neg_p8)
-			FLAGS_RW(fneg_p64)
-			FLAGS_RW(fneg_p32)
-			FLAGS_RW(log_not_p8)
+			instr_case_many(
+				unary_p,
+				ins::Op_neg_p64,
+				ins::Op_neg_p32,
+				ins::Op_neg_p16,
+				ins::Op_neg_p8,
+				ins::Op_fneg_p64,
+				ins::Op_fneg_p32,
+				ins::Op_log_not_p8
+			){ FLAGS_RW(unary_p) }
 
 			// Logical (and/or/xor)
-			FLAGS_RW_R(log_and_p8_p8)
-			FLAGS_RW(log_and_p8_imm)
-			FLAGS_RW_R(log_or_p8_p8)
-			FLAGS_RW(log_or_p8_imm)
-			FLAGS_RW_R(log_xor_p8_p8)
-			FLAGS_RW(log_xor_p8_imm)
+			instr_case_many(
+				log_p_p, ins::Op_log_and_p8_p8, ins::Op_log_or_p8_p8, ins::Op_log_xor_p8_p8
+			){ FLAGS_RW_R(log_p_p) }
+
+			instr_case_many(
+				log_p_imm, ins::Op_log_and_p8_imm, ins::Op_log_or_p8_imm, ins::Op_log_xor_p8_imm
+			){ FLAGS_RW(log_p_imm) }
 
 			// ===== Bitwise (and / or / xor / shl / shr / not) =====
 			// 64-bit
-			FLAGS_RW_R(bit_and_p64_p64)
-			FLAGS_RW(bit_and_p64_imm)
-			FLAGS_RW_R(bit_or_p64_p64)
-			FLAGS_RW(bit_or_p64_imm)
-			FLAGS_RW_R(bit_xor_p64_p64)
-			FLAGS_RW(bit_xor_p64_imm)
-			FLAGS_RW_R(shl_p64_p64)
-			FLAGS_RW(shl_p64_imm)
-			FLAGS_RW_R(shr_p64_p64)
-			FLAGS_RW(shr_p64_imm)
-			FLAGS_RW(bit_not_p64)
+			instr_case_many(
+				bit64_p_p,
+				ins::Op_bit_and_p64_p64,
+				ins::Op_bit_or_p64_p64,
+				ins::Op_bit_xor_p64_p64,
+				ins::Op_shl_p64_p64,
+				ins::Op_shr_p64_p64
+			){ FLAGS_RW_R(bit64_p_p) }
+
+			instr_case_many(
+				bit64_p_imm,
+				ins::Op_bit_and_p64_imm,
+				ins::Op_bit_or_p64_imm,
+				ins::Op_bit_xor_p64_imm,
+				ins::Op_shl_p64_imm,
+				ins::Op_shr_p64_imm,
+				ins::Op_bit_not_p64
+			){ FLAGS_RW(bit64_p_imm) }
 
 			// 32-bit
-			FLAGS_RW_R(bit_and_p32_p32)
-			FLAGS_RW(bit_and_p32_imm)
-			FLAGS_RW_R(bit_or_p32_p32)
-			FLAGS_RW(bit_or_p32_imm)
-			FLAGS_RW_R(bit_xor_p32_p32)
-			FLAGS_RW(bit_xor_p32_imm)
-			FLAGS_RW_R(shl_p32_p32)
-			FLAGS_RW(shl_p32_imm)
-			FLAGS_RW_R(shr_p32_p32)
-			FLAGS_RW(shr_p32_imm)
-			FLAGS_RW(bit_not_p32)
+			instr_case_many(
+				bit32_p_p,
+				ins::Op_bit_and_p32_p32,
+				ins::Op_bit_or_p32_p32,
+				ins::Op_bit_xor_p32_p32,
+				ins::Op_shl_p32_p32,
+				ins::Op_shr_p32_p32
+			){ FLAGS_RW_R(bit32_p_p) }
+
+			instr_case_many(
+				bit32_p_imm,
+				ins::Op_bit_and_p32_imm,
+				ins::Op_bit_or_p32_imm,
+				ins::Op_bit_xor_p32_imm,
+				ins::Op_shl_p32_imm,
+				ins::Op_shr_p32_imm,
+				ins::Op_bit_not_p32
+			){ FLAGS_RW(bit32_p_imm) }
 
 			// 16-bit
-			FLAGS_RW_R(bit_and_p16_p16)
-			FLAGS_RW(bit_and_p16_imm)
-			FLAGS_RW_R(bit_or_p16_p16)
-			FLAGS_RW(bit_or_p16_imm)
-			FLAGS_RW_R(bit_xor_p16_p16)
-			FLAGS_RW(bit_xor_p16_imm)
-			FLAGS_RW_R(shl_p16_p16)
-			FLAGS_RW(shl_p16_imm)
-			FLAGS_RW_R(shr_p16_p16)
-			FLAGS_RW(shr_p16_imm)
-			FLAGS_RW(bit_not_p16)
+			instr_case_many(
+				bit16_p_p,
+				ins::Op_bit_and_p16_p16,
+				ins::Op_bit_or_p16_p16,
+				ins::Op_bit_xor_p16_p16,
+				ins::Op_shl_p16_p16,
+				ins::Op_shr_p16_p16
+			){ FLAGS_RW_R(bit16_p_p) }
+
+			instr_case_many(
+				bit16_p_imm,
+				ins::Op_bit_and_p16_imm,
+				ins::Op_bit_or_p16_imm,
+				ins::Op_bit_xor_p16_imm,
+				ins::Op_shl_p16_imm,
+				ins::Op_shr_p16_imm,
+				ins::Op_bit_not_p16
+			){ FLAGS_RW(bit16_p_imm) }
 
 			// 8-bit
-			FLAGS_RW_R(bit_and_p8_p8)
-			FLAGS_RW(bit_and_p8_imm)
-			FLAGS_RW_R(bit_or_p8_p8)
-			FLAGS_RW(bit_or_p8_imm)
-			FLAGS_RW_R(bit_xor_p8_p8)
-			FLAGS_RW(bit_xor_p8_imm)
-			FLAGS_RW_R(shl_p8_p8)
-			FLAGS_RW(shl_p8_imm)
-			FLAGS_RW_R(shr_p8_p8)
-			FLAGS_RW(shr_p8_imm)
-			FLAGS_RW(bit_not_p8)
+			instr_case_many(
+				bit8_p_p,
+				ins::Op_bit_and_p8_p8,
+				ins::Op_bit_or_p8_p8,
+				ins::Op_bit_xor_p8_p8,
+				ins::Op_shl_p8_p8,
+				ins::Op_shr_p8_p8
+			){ FLAGS_RW_R(bit8_p_p) }
+
+			instr_case_many(
+				bit8_p_imm,
+				ins::Op_bit_and_p8_imm,
+				ins::Op_bit_or_p8_imm,
+				ins::Op_bit_xor_p8_imm,
+				ins::Op_shl_p8_imm,
+				ins::Op_shr_p8_imm,
+				ins::Op_bit_not_p8
+			){ FLAGS_RW(bit8_p_imm) }
 
 			// ===== Comparisons: lhs/rhs are read =====
-			FLAGS_CMP(cmpEq_p64_p64)
-			FLAGS_CMP_IMM(cmpEq_p64_imm)
-			FLAGS_CMP(cmpNeq_p64_p64)
-			FLAGS_CMP_IMM(cmpNeq_p64_imm)
-			FLAGS_CMP(cmpGt_p64_p64)
-			FLAGS_CMP_IMM(cmpGt_p64_imm)
-			FLAGS_CMP(cmpGe_p64_p64)
-			FLAGS_CMP_IMM(cmpGe_p64_imm)
-			FLAGS_CMP(ucmpGt_p64_p64)
-			FLAGS_CMP_IMM(ucmpGt_p64_imm)
-			FLAGS_CMP(ucmpGe_p64_p64)
-			FLAGS_CMP_IMM(ucmpGe_p64_imm)
-			FLAGS_CMP(cmpLt_p64_p64)
-			FLAGS_CMP_IMM(cmpLt_p64_imm)
-			FLAGS_CMP(cmpLe_p64_p64)
-			FLAGS_CMP_IMM(cmpLe_p64_imm)
-			FLAGS_CMP(ucmpLt_p64_p64)
-			FLAGS_CMP_IMM(ucmpLt_p64_imm)
-			FLAGS_CMP(ucmpLe_p64_p64)
-			FLAGS_CMP_IMM(ucmpLe_p64_imm)
-			FLAGS_CMP(cmpEq_p32_p32)
-			FLAGS_CMP_IMM(cmpEq_p32_imm)
-			FLAGS_CMP(cmpNeq_p32_p32)
-			FLAGS_CMP_IMM(cmpNeq_p32_imm)
-			FLAGS_CMP(cmpGt_p32_p32)
-			FLAGS_CMP_IMM(cmpGt_p32_imm)
-			FLAGS_CMP(cmpGe_p32_p32)
-			FLAGS_CMP_IMM(cmpGe_p32_imm)
-			FLAGS_CMP(ucmpGt_p32_p32)
-			FLAGS_CMP_IMM(ucmpGt_p32_imm)
-			FLAGS_CMP(ucmpGe_p32_p32)
-			FLAGS_CMP_IMM(ucmpGe_p32_imm)
-			FLAGS_CMP(cmpLt_p32_p32)
-			FLAGS_CMP_IMM(cmpLt_p32_imm)
-			FLAGS_CMP(cmpLe_p32_p32)
-			FLAGS_CMP_IMM(cmpLe_p32_imm)
-			FLAGS_CMP(ucmpLt_p32_p32)
-			FLAGS_CMP_IMM(ucmpLt_p32_imm)
-			FLAGS_CMP(ucmpLe_p32_p32)
-			FLAGS_CMP_IMM(ucmpLe_p32_imm)
-			FLAGS_CMP(cmpEq_p16_p16)
-			FLAGS_CMP_IMM(cmpEq_p16_imm)
-			FLAGS_CMP(cmpNeq_p16_p16)
-			FLAGS_CMP_IMM(cmpNeq_p16_imm)
-			FLAGS_CMP(cmpGt_p16_p16)
-			FLAGS_CMP_IMM(cmpGt_p16_imm)
-			FLAGS_CMP(cmpGe_p16_p16)
-			FLAGS_CMP_IMM(cmpGe_p16_imm)
-			FLAGS_CMP(ucmpGt_p16_p16)
-			FLAGS_CMP_IMM(ucmpGt_p16_imm)
-			FLAGS_CMP(ucmpGe_p16_p16)
-			FLAGS_CMP_IMM(ucmpGe_p16_imm)
-			FLAGS_CMP(cmpLt_p16_p16)
-			FLAGS_CMP_IMM(cmpLt_p16_imm)
-			FLAGS_CMP(cmpLe_p16_p16)
-			FLAGS_CMP_IMM(cmpLe_p16_imm)
-			FLAGS_CMP(ucmpLt_p16_p16)
-			FLAGS_CMP_IMM(ucmpLt_p16_imm)
-			FLAGS_CMP(ucmpLe_p16_p16)
-			FLAGS_CMP_IMM(ucmpLe_p16_imm)
-			FLAGS_CMP(cmpEq_p8_p8)
-			FLAGS_CMP_IMM(cmpEq_p8_imm)
-			FLAGS_CMP(cmpNeq_p8_p8)
-			FLAGS_CMP_IMM(cmpNeq_p8_imm)
-			FLAGS_CMP(cmpGt_p8_p8)
-			FLAGS_CMP_IMM(cmpGt_p8_imm)
-			FLAGS_CMP(cmpGe_p8_p8)
-			FLAGS_CMP_IMM(cmpGe_p8_imm)
-			FLAGS_CMP(ucmpGt_p8_p8)
-			FLAGS_CMP_IMM(ucmpGt_p8_imm)
-			FLAGS_CMP(ucmpGe_p8_p8)
-			FLAGS_CMP_IMM(ucmpGe_p8_imm)
-			FLAGS_CMP(cmpLt_p8_p8)
-			FLAGS_CMP_IMM(cmpLt_p8_imm)
-			FLAGS_CMP(cmpLe_p8_p8)
-			FLAGS_CMP_IMM(cmpLe_p8_imm)
-			FLAGS_CMP(ucmpLt_p8_p8)
-			FLAGS_CMP_IMM(ucmpLt_p8_imm)
-			FLAGS_CMP(ucmpLe_p8_p8)
-			FLAGS_CMP_IMM(ucmpLe_p8_imm)
-			FLAGS_CMP(fcmpEq_p64_p64)
-			FLAGS_CMP_IMM(fcmpEq_p64_imm)
-			FLAGS_CMP(fcmpNeq_p64_p64)
-			FLAGS_CMP_IMM(fcmpNeq_p64_imm)
-			FLAGS_CMP(fcmpGt_p64_p64)
-			FLAGS_CMP_IMM(fcmpGt_p64_imm)
-			FLAGS_CMP(fcmpGe_p64_p64)
-			FLAGS_CMP_IMM(fcmpGe_p64_imm)
-			FLAGS_CMP(fcmpLt_p64_p64)
-			FLAGS_CMP_IMM(fcmpLt_p64_imm)
-			FLAGS_CMP(fcmpLe_p64_p64)
-			FLAGS_CMP_IMM(fcmpLe_p64_imm)
-			FLAGS_CMP(fcmpEq_p32_p32)
-			FLAGS_CMP_IMM(fcmpEq_p32_imm)
-			FLAGS_CMP(fcmpNeq_p32_p32)
-			FLAGS_CMP_IMM(fcmpNeq_p32_imm)
-			FLAGS_CMP(fcmpGt_p32_p32)
-			FLAGS_CMP_IMM(fcmpGt_p32_imm)
-			FLAGS_CMP(fcmpGe_p32_p32)
-			FLAGS_CMP_IMM(fcmpGe_p32_imm)
-			FLAGS_CMP(fcmpLt_p32_p32)
-			FLAGS_CMP_IMM(fcmpLt_p32_imm)
-			FLAGS_CMP(fcmpLe_p32_p32)
-			FLAGS_CMP_IMM(fcmpLe_p32_imm) instr_case(ins::Op_cmpNull_pptr, i) { rd(i.ptr); }
+			instr_case_many(
+				cmp_p_p,
+				ins::Op_cmpEq_p64_p64,
+				ins::Op_cmpNeq_p64_p64,
+				ins::Op_cmpGt_p64_p64,
+				ins::Op_cmpGe_p64_p64,
+				ins::Op_ucmpGt_p64_p64,
+				ins::Op_ucmpGe_p64_p64,
+				ins::Op_cmpLt_p64_p64,
+				ins::Op_cmpLe_p64_p64,
+				ins::Op_ucmpLt_p64_p64,
+				ins::Op_ucmpLe_p64_p64,
+				ins::Op_cmpEq_p32_p32,
+				ins::Op_cmpNeq_p32_p32,
+				ins::Op_cmpGt_p32_p32,
+				ins::Op_cmpGe_p32_p32,
+				ins::Op_ucmpGt_p32_p32,
+				ins::Op_ucmpGe_p32_p32,
+				ins::Op_cmpLt_p32_p32,
+				ins::Op_cmpLe_p32_p32,
+				ins::Op_ucmpLt_p32_p32,
+				ins::Op_ucmpLe_p32_p32,
+				ins::Op_cmpEq_p16_p16,
+				ins::Op_cmpNeq_p16_p16,
+				ins::Op_cmpGt_p16_p16,
+				ins::Op_cmpGe_p16_p16,
+				ins::Op_ucmpGt_p16_p16,
+				ins::Op_ucmpGe_p16_p16,
+				ins::Op_cmpLt_p16_p16,
+				ins::Op_cmpLe_p16_p16,
+				ins::Op_ucmpLt_p16_p16,
+				ins::Op_ucmpLe_p16_p16,
+				ins::Op_cmpEq_p8_p8,
+				ins::Op_cmpNeq_p8_p8,
+				ins::Op_cmpGt_p8_p8,
+				ins::Op_cmpGe_p8_p8,
+				ins::Op_ucmpGt_p8_p8,
+				ins::Op_ucmpGe_p8_p8,
+				ins::Op_cmpLt_p8_p8,
+				ins::Op_cmpLe_p8_p8,
+				ins::Op_ucmpLt_p8_p8,
+				ins::Op_ucmpLe_p8_p8,
+				ins::Op_fcmpEq_p64_p64,
+				ins::Op_fcmpNeq_p64_p64,
+				ins::Op_fcmpGt_p64_p64,
+				ins::Op_fcmpGe_p64_p64,
+				ins::Op_fcmpLt_p64_p64,
+				ins::Op_fcmpLe_p64_p64,
+				ins::Op_fcmpEq_p32_p32,
+				ins::Op_fcmpNeq_p32_p32,
+				ins::Op_fcmpGt_p32_p32,
+				ins::Op_fcmpGe_p32_p32,
+				ins::Op_fcmpLt_p32_p32,
+				ins::Op_fcmpLe_p32_p32
+			){ FLAGS_CMP(cmp_p_p) }
+
+			instr_case_many(
+				cmp_p_imm,
+				ins::Op_cmpEq_p64_imm,
+				ins::Op_cmpNeq_p64_imm,
+				ins::Op_cmpGt_p64_imm,
+				ins::Op_cmpGe_p64_imm,
+				ins::Op_ucmpGt_p64_imm,
+				ins::Op_ucmpGe_p64_imm,
+				ins::Op_cmpLt_p64_imm,
+				ins::Op_cmpLe_p64_imm,
+				ins::Op_ucmpLt_p64_imm,
+				ins::Op_ucmpLe_p64_imm,
+				ins::Op_cmpEq_p32_imm,
+				ins::Op_cmpNeq_p32_imm,
+				ins::Op_cmpGt_p32_imm,
+				ins::Op_cmpGe_p32_imm,
+				ins::Op_ucmpGt_p32_imm,
+				ins::Op_ucmpGe_p32_imm,
+				ins::Op_cmpLt_p32_imm,
+				ins::Op_cmpLe_p32_imm,
+				ins::Op_ucmpLt_p32_imm,
+				ins::Op_ucmpLe_p32_imm,
+				ins::Op_cmpEq_p16_imm,
+				ins::Op_cmpNeq_p16_imm,
+				ins::Op_cmpGt_p16_imm,
+				ins::Op_cmpGe_p16_imm,
+				ins::Op_ucmpGt_p16_imm,
+				ins::Op_ucmpGe_p16_imm,
+				ins::Op_cmpLt_p16_imm,
+				ins::Op_cmpLe_p16_imm,
+				ins::Op_ucmpLt_p16_imm,
+				ins::Op_ucmpLe_p16_imm,
+				ins::Op_cmpEq_p8_imm,
+				ins::Op_cmpNeq_p8_imm,
+				ins::Op_cmpGt_p8_imm,
+				ins::Op_cmpGe_p8_imm,
+				ins::Op_ucmpGt_p8_imm,
+				ins::Op_ucmpGe_p8_imm,
+				ins::Op_cmpLt_p8_imm,
+				ins::Op_cmpLe_p8_imm,
+				ins::Op_ucmpLt_p8_imm,
+				ins::Op_ucmpLe_p8_imm,
+				ins::Op_fcmpEq_p64_imm,
+				ins::Op_fcmpNeq_p64_imm,
+				ins::Op_fcmpGt_p64_imm,
+				ins::Op_fcmpGe_p64_imm,
+				ins::Op_fcmpLt_p64_imm,
+				ins::Op_fcmpLe_p64_imm,
+				ins::Op_fcmpEq_p32_imm,
+				ins::Op_fcmpNeq_p32_imm,
+				ins::Op_fcmpGt_p32_imm,
+				ins::Op_fcmpGe_p32_imm,
+				ins::Op_fcmpLt_p32_imm,
+				ins::Op_fcmpLe_p32_imm
+			){ FLAGS_CMP_IMM(cmp_p_imm) }
+
+			instr_case(ins::Op_cmpNull_pptr, i) {
+				rd(i.ptr);
+			}
 			instr_case(ins::Op_cmpNull_pcptr, i) { rd(i.ptr); }
 
 			// ===== Variants =====
@@ -713,62 +799,77 @@ namespace vm::code {
 			instr_case(ins::Op_cast_p64_type, i) { rdwr(i.value); }
 
 			// ===== Sign / zero extension =====
-			FLAGS_W_R(sext_p16_p8)
-			FLAGS_W_R(sext_p32_p8)
-			FLAGS_W_R(sext_p64_p8)
-			FLAGS_W_R(sext_p32_p16)
-			FLAGS_W_R(sext_p64_p16)
-			FLAGS_W_R(sext_p64_p32)
-			FLAGS_W_R(zext_p16_p8)
-			FLAGS_W_R(zext_p32_p8)
-			FLAGS_W_R(zext_p64_p8)
-			FLAGS_W_R(zext_p32_p16)
-			FLAGS_W_R(zext_p64_p16)
-			FLAGS_W_R(zext_p64_p32)
+			instr_case_many(
+				sext_p_p,
+				ins::Op_sext_p16_p8,
+				ins::Op_sext_p32_p8,
+				ins::Op_sext_p64_p8,
+				ins::Op_sext_p32_p16,
+				ins::Op_sext_p64_p16,
+				ins::Op_sext_p64_p32,
+				ins::Op_zext_p16_p8,
+				ins::Op_zext_p32_p8,
+				ins::Op_zext_p64_p8,
+				ins::Op_zext_p32_p16,
+				ins::Op_zext_p64_p16,
+				ins::Op_zext_p64_p32
+			) {
+				FLAGS_RW_R(sext_p_p);
+			}
 
 			// ===== Truncation =====
-			FLAGS_W_R(trunc_p8_p16)
-			FLAGS_W_R(trunc_p8_p32)
-			FLAGS_W_R(trunc_p8_p64)
-			FLAGS_W_R(trunc_p16_p32)
-			FLAGS_W_R(trunc_p16_p64)
-			FLAGS_W_R(trunc_p32_p64)
+			instr_case_many(
+				trunc_p_p,
+				ins::Op_trunc_p8_p16,
+				ins::Op_trunc_p8_p32,
+				ins::Op_trunc_p8_p64,
+				ins::Op_trunc_p16_p32,
+				ins::Op_trunc_p16_p64,
+				ins::Op_trunc_p32_p64
+			) {
+				FLAGS_RW_R(trunc_p_p);
+			}
 
 			// ===== Int/Float conversions =====
-			FLAGS_W_R(sitofp_p32_p8)
-			FLAGS_W_R(sitofp_p64_p8)
-			FLAGS_W_R(uitofp_p32_p8)
-			FLAGS_W_R(uitofp_p64_p8)
-			FLAGS_W_R(sitofp_p32_p16)
-			FLAGS_W_R(sitofp_p64_p16)
-			FLAGS_W_R(uitofp_p32_p16)
-			FLAGS_W_R(uitofp_p64_p16)
-			FLAGS_W_R(sitofp_p32_p32)
-			FLAGS_W_R(sitofp_p64_p32)
-			FLAGS_W_R(uitofp_p32_p32)
-			FLAGS_W_R(uitofp_p64_p32)
-			FLAGS_W_R(sitofp_p32_p64)
-			FLAGS_W_R(sitofp_p64_p64)
-			FLAGS_W_R(uitofp_p32_p64)
-			FLAGS_W_R(uitofp_p64_p64)
-			FLAGS_W_R(fptosi_p8_p32)
-			FLAGS_W_R(fptoui_p8_p32)
-			FLAGS_W_R(fptosi_p16_p32)
-			FLAGS_W_R(fptoui_p16_p32)
-			FLAGS_W_R(fptosi_p32_p32)
-			FLAGS_W_R(fptoui_p32_p32)
-			FLAGS_W_R(fptosi_p64_p32)
-			FLAGS_W_R(fptoui_p64_p32)
-			FLAGS_W_R(fptosi_p8_p64)
-			FLAGS_W_R(fptoui_p8_p64)
-			FLAGS_W_R(fptosi_p16_p64)
-			FLAGS_W_R(fptoui_p16_p64)
-			FLAGS_W_R(fptosi_p32_p64)
-			FLAGS_W_R(fptoui_p32_p64)
-			FLAGS_W_R(fptosi_p64_p64)
-			FLAGS_W_R(fptoui_p64_p64)
-			FLAGS_W_R(fptrunc_p32_p64)
-			FLAGS_W_R(fpext_p64_p32)
+			instr_case_many(
+				itofp_p_p,
+				ins::Op_sitofp_p32_p8,
+				ins::Op_sitofp_p64_p8,
+				ins::Op_uitofp_p32_p8,
+				ins::Op_uitofp_p64_p8,
+				ins::Op_sitofp_p32_p16,
+				ins::Op_sitofp_p64_p16,
+				ins::Op_uitofp_p32_p16,
+				ins::Op_uitofp_p64_p16,
+				ins::Op_sitofp_p32_p32,
+				ins::Op_sitofp_p64_p32,
+				ins::Op_uitofp_p32_p32,
+				ins::Op_uitofp_p64_p32,
+				ins::Op_sitofp_p32_p64,
+				ins::Op_sitofp_p64_p64,
+				ins::Op_uitofp_p32_p64,
+				ins::Op_uitofp_p64_p64,
+				ins::Op_fptosi_p8_p32,
+				ins::Op_fptoui_p8_p32,
+				ins::Op_fptosi_p16_p32,
+				ins::Op_fptoui_p16_p32,
+				ins::Op_fptosi_p32_p32,
+				ins::Op_fptoui_p32_p32,
+				ins::Op_fptosi_p64_p32,
+				ins::Op_fptoui_p64_p32,
+				ins::Op_fptosi_p8_p64,
+				ins::Op_fptoui_p8_p64,
+				ins::Op_fptosi_p16_p64,
+				ins::Op_fptoui_p16_p64,
+				ins::Op_fptosi_p32_p64,
+				ins::Op_fptoui_p32_p64,
+				ins::Op_fptosi_p64_p64,
+				ins::Op_fptoui_p64_p64,
+				ins::Op_fptrunc_p32_p64,
+				ins::Op_fpext_p64_p32
+			) {
+				FLAGS_RW_R(itofp_p_p);
+			}
 
 			// ===== Misc =====
 			instr_case(ins::Op_nop, i) {}
@@ -779,8 +880,6 @@ namespace vm::code {
 		}
 		POP_DIAGNOSTIC
 
-#undef FLAGS_W
-#undef FLAGS_W_R
 #undef FLAGS_RW
 #undef FLAGS_RW_R
 #undef FLAGS_CMP
