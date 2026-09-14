@@ -1,4 +1,5 @@
 SubDirs:
   - always_false_conditions
+  - feature_pulls_itself
   - nonexistent_features
   - unused-keys

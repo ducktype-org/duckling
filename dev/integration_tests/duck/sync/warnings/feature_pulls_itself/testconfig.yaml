@@ -1,0 +1,25 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "features:
+    xd: [xd]" >> foo/quackconfig.yaml
+
+Tests:
+  feature_pulls_itself:
+    Description: checks "feature_pulls_itself" lint
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        Err:
+          String: |+
+            warning: feature \`xd\` pulls itself [feature_pulls_itself]
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the gathering or the solver engine
+            info: starting loading 1 package
+            info: loaded source code of 1 package, 0 were downloaded, 1 was already present
+            info: successfully synchronized venv \`foo\`"
+        
