@@ -714,43 +714,6 @@ namespace compiler::backend_llvm {
 			return current_ptr;
 		}
 
-		void copyPlaceToPointer(
-			const lir::LIRPlace& source,
-			llvm::Value*         destination_ptr,
-			llvm::Type*          destination_type,
-			llvm::Align          destination_alignment,
-			llvm::IRBuilder<>&   builder,
-			const bool           may_overlap
-		) {
-			llvm::Value* source_ptr  = gepPointerFromLIRPlace(source, builder);
-			llvm::Type*  source_type = typeFromLayout(module, source.layout);
-
-			const llvm::DataLayout& data_layout = module->getDataLayout();
-			CORE_ASSERT(
-				data_layout.getTypeAllocSize(source_type)
-					== data_layout.getTypeAllocSize(destination_type),
-				"Aggregate copy size mismatch"
-			);
-
-			if (source_ptr == destination_ptr) return;
-
-			const auto size = data_layout.getTypeAllocSize(destination_type);
-			// A projected place may point into byte-oriented storage (notably a variant payload),
-			// so only claim the aggregate's ABI alignment for an unprojected base place.
-			const auto source_alignment = source.hasProjections()
-			                                ? llvm::Align(1)
-			                                : data_layout.getABITypeAlign(source_type);
-
-			if (may_overlap)
-				builder.CreateMemMove(
-					destination_ptr, destination_alignment, source_ptr, source_alignment, size
-				);
-			else
-				builder.CreateMemCpy(
-					destination_ptr, destination_alignment, source_ptr, source_alignment, size
-				);
-		}
-
 		/**
 		 * @brief Maps LIRValue to an LLVM Value.
 		 *
@@ -801,17 +764,25 @@ namespace compiler::backend_llvm {
 		 *
 		 * @param lir_location The LIRValue to obtain a pointer for.
 		 * @param builder The LLVM IRBuilder to use for generating instructions.
+		 * @param temporary_ptr Optional storage in which a non-place value should be materialized.
+		 * If omitted, this function allocates its own temporary.
 		 * @return `llvm::Value*` with the pointer to the data.
 		 */
-		auto loadLIRValueToPointer(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
-			-> llvm::Value* {
+		auto loadLIRValueToPointer(
+			const lir::LIRValue&         lir_location,
+			llvm::IRBuilder<>&           builder,
+			base::Optional<llvm::Value*> temporary_ptr = {}
+		) -> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(lir::LIRPlace, place) {
 					return gepPointerFromLIRPlace(place, builder);
 				}
 				variant_case(lir::LIRConstant, constant) {
 					llvm::Value* val = loadLIRValue(lir_location, builder);
-					auto* alloca = builder.CreateAlloca(val->getType(), nullptr, "tmp_const_ptr");
+					llvm::Value* tmp
+						= temporary_ptr.has_value()
+					        ? temporary_ptr.value()
+					        : builder.CreateAlloca(val->getType(), nullptr, "tmp_const_ptr");
 					if (val->getType()->isAggregateType()) {
 						auto* llvm_constant = llvm::cast<llvm::Constant>(val);
 						auto* storage       = new llvm::GlobalVariable(
@@ -828,26 +799,71 @@ namespace compiler::backend_llvm {
 						const auto  alignment   = data_layout.getABITypeAlign(val->getType());
 						storage->setAlignment(alignment);
 						builder.CreateMemCpy(
-							alloca,
-							alignment,
+							tmp,
+							temporary_ptr.has_value() ? llvm::Align(1) : alignment,
 							storage,
 							alignment,
 							data_layout.getTypeAllocSize(val->getType())
 						);
 					} else {
-						builder.CreateStore(val, alloca);
+						auto* store = builder.CreateStore(val, tmp);
+						if (temporary_ptr.has_value()) store->setAlignment(llvm::Align(1));
 					}
-					return alloca;
+					return tmp;
 				}
 				variant_case(lir::FunctionLiteral, func) {
 					llvm::Value* val = loadLIRValue(lir_location, builder);
-					auto* alloca = builder.CreateAlloca(val->getType(), nullptr, "tmp_func_ptr");
-					builder.CreateStore(val, alloca);
-					return alloca;
+					llvm::Value* tmp
+						= temporary_ptr.has_value()
+					        ? temporary_ptr.value()
+					        : builder.CreateAlloca(val->getType(), nullptr, "tmp_func_ptr");
+					auto* store = builder.CreateStore(val, tmp);
+					if (temporary_ptr.has_value()) store->setAlignment(llvm::Align(1));
+					return tmp;
 				}
 				variant_default { CORE_PANIC("Cannot get pointer to BlockRef"); }
 			}
 			CORE_UNREACHABLE();
+		}
+
+		auto layoutOfLIRValue(const lir::LIRValue& value) -> CRef<tsl::TypeLayout> {
+			variant_match(value.getVariant()) {
+				variant_case(lir::LIRPlace, place) { return place.layout; }
+				variant_case(lir::LIRConstant, constant) { return constant.layout; }
+				variant_default { CORE_PANIC("Cannot get the layout of this LIR value"); }
+			}
+			CORE_UNREACHABLE();
+		}
+
+		void copyLIRValueToPointer(
+			const lir::LIRValue& source,
+			llvm::Value*         destination_ptr,
+			llvm::Type*          destination_type,
+			llvm::Align          destination_alignment,
+			llvm::IRBuilder<>&   builder
+		) {
+			const auto& data_layout = module->getDataLayout();
+			llvm::Type* source_type = typeFromLayout(module, layoutOfLIRValue(source));
+			CORE_ASSERT(
+				data_layout.getTypeAllocSize(source_type)
+					== data_layout.getTypeAllocSize(destination_type),
+				"LIR value copy size mismatch"
+			);
+
+			llvm::Value* source_ptr = loadLIRValueToPointer(source, builder, destination_ptr);
+			if (source_ptr == destination_ptr) return;
+
+			const auto source_alignment
+				= source.is<lir::LIRPlace>() && source.get<lir::LIRPlace>().hasProjections()
+			        ? llvm::Align(1)
+			        : data_layout.getABITypeAlign(source_type);
+			builder.CreateMemMove(
+				destination_ptr,
+				destination_alignment,
+				source_ptr,
+				source_alignment,
+				data_layout.getTypeAllocSize(destination_type)
+			);
 		}
 
 		/**
@@ -863,42 +879,15 @@ namespace compiler::backend_llvm {
 		 * @param builder The LLVM IRBuilder to use for generating instructions.
 		 * @return `llvm::Value*` with the pointer to the data.
 		 */
-		auto loadLIRValueToPointerCopy(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
-			-> llvm::Value* {
-			variant_match(lir_location.getVariant()) {
-				variant_case(lir::LIRPlace, place) {
-					// Alloca the temporary and copy the projected place pointer into the temporary
-					// and return the temporary.
-					llvm::Type* place_type = typeFromLayout(module, place.layout);
-					auto* alloca = builder.CreateAlloca(place_type, nullptr, "tmp_place_copy");
-					if (place_type->isAggregateType())
-						copyPlaceToPointer(
-							place,
-							alloca,
-							place_type,
-							module->getDataLayout().getABITypeAlign(place_type),
-							builder,
-							false
-						);
-					else {
-						llvm::Value* place_ptr = gepPointerFromLIRPlace(place, builder);
-						llvm::Value* value     = builder.CreateLoad(place_type, place_ptr);
-						builder.CreateStore(value, alloca);
-					}
-					return alloca;
-				}
-				variant_case(lir::LIRConstant, constant) {
-					return loadLIRValueToPointer(lir_location, builder);
-				}
-				variant_case(lir::FunctionLiteral, func) {
-					llvm::Value* val = loadLIRValue(lir_location, builder);
-					auto* alloca = builder.CreateAlloca(val->getType(), nullptr, "tmp_func_ptr");
-					builder.CreateStore(val, alloca);
-					return alloca;
-				}
-				variant_default { CORE_PANIC("Cannot get pointer to BlockRef"); }
-			}
-			CORE_UNREACHABLE();
+		llvm::AllocaInst* loadLIRValueToPointerCopy(
+			const lir::LIRValue& source, llvm::IRBuilder<>& builder
+		) {
+			llvm::Type* type = typeFromLayout(module, layoutOfLIRValue(source));
+			auto*       tmp  = builder.CreateAlloca(type, nullptr, "tmp_copy");
+			copyLIRValueToPointer(
+				source, tmp, type, module->getDataLayout().getABITypeAlign(type), builder
+			);
+			return tmp;
 		}
 
 		void storeOutput(
@@ -1337,27 +1326,9 @@ namespace compiler::backend_llvm {
 					const auto& source = lir_instruction.arguments.at(0);
 					llvm::Type* return_type
 						= typeFromLayout(module, lir_function->return_type_layout);
-
-					if (source.is<lir::LIRPlace>()) {
-						copyPlaceToPointer(
-							source.get<lir::LIRPlace>(),
-							default_sret_pointer,
-							return_type,
-							llvm::Align(1),
-							builder,
-							true
-						);
-					} else {
-						llvm::Value* source_ptr  = loadLIRValueToPointer(source, builder);
-						const auto&  data_layout = module->getDataLayout();
-						builder.CreateMemCpy(
-							default_sret_pointer,
-							llvm::Align(1),
-							source_ptr,
-							data_layout.getABITypeAlign(return_type),
-							data_layout.getTypeAllocSize(return_type)
-						);
-					}
+					copyLIRValueToPointer(
+						source, default_sret_pointer, return_type, llvm::Align(1), builder
+					);
 					builder.CreateRetVoid();
 				} else {
 					builder.CreateRet(loadLIRValue(lir_instruction.arguments.at(0), builder));
@@ -1392,31 +1363,13 @@ namespace compiler::backend_llvm {
 
 				if (output_type->isAggregateType()) {
 					llvm::Value* output_ptr = gepPointerFromLIRPlace(output, builder);
-					if (source.is<lir::LIRPlace>()) {
-						copyPlaceToPointer(
-							source.get<lir::LIRPlace>(),
-							output_ptr,
-							output_type,
-							output.hasProjections()
-								? llvm::Align(1)
-								: module->getDataLayout().getABITypeAlign(output_type),
-							builder,
-							true
-						);
-					} else {
-						llvm::Value* source_ptr  = loadLIRValueToPointer(source, builder);
-						const auto&  data_layout = module->getDataLayout();
-						const auto   destination_alignment
-							= output.hasProjections() ? llvm::Align(1)
-						                              : data_layout.getABITypeAlign(output_type);
-						builder.CreateMemCpy(
-							output_ptr,
-							destination_alignment,
-							source_ptr,
-							data_layout.getABITypeAlign(output_type),
-							data_layout.getTypeAllocSize(output_type)
-						);
-					}
+					const auto   destination_alignment
+						= output.hasProjections()
+					        ? llvm::Align(1)
+					        : module->getDataLayout().getABITypeAlign(output_type);
+					copyLIRValueToPointer(
+						source, output_ptr, output_type, destination_alignment, builder
+					);
 				} else {
 					llvm::Value* value = loadLIRValue(source, builder);
 					storeOutput(output, value, builder);
@@ -1476,27 +1429,9 @@ namespace compiler::backend_llvm {
 					const auto& payload_source = lir_instruction.arguments.at(0);
 					llvm::Type* payload_type   = typeFromLayout(module, params.alternative_layout);
 					if (payload_type->isAggregateType()) {
-						if (payload_source.is<lir::LIRPlace>())
-							copyPlaceToPointer(
-								payload_source.get<lir::LIRPlace>(),
-								data_ptr,
-								payload_type,
-								llvm::Align(1),
-								builder,
-								true
-							);
-						else {
-							llvm::Value* source_ptr
-								= loadLIRValueToPointer(payload_source, builder);
-							const auto& data_layout = module->getDataLayout();
-							builder.CreateMemCpy(
-								data_ptr,
-								llvm::Align(1),
-								source_ptr,
-								data_layout.getABITypeAlign(payload_type),
-								data_layout.getTypeAllocSize(payload_type)
-							);
-						}
+						copyLIRValueToPointer(
+							payload_source, data_ptr, payload_type, llvm::Align(1), builder
+						);
 					} else {
 						llvm::Value* payload = loadLIRValue(payload_source, builder);
 						builder.CreateStore(payload, data_ptr);
@@ -1689,6 +1624,8 @@ namespace compiler::backend_llvm {
 				);
 				default_return_indirect    = signature.return_indirect;
 				default_parameter_indirect = std::move(signature.parameter_indirect);
+			} else {
+				CORE_PANIC("Implementing functions with not default abi is not supported yet.");
 			}
 
 			const Ref fun = llvm::cast<llvm::Function>(
