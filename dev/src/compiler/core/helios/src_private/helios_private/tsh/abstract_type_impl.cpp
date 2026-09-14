@@ -3,18 +3,11 @@
 #include "queries.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/tsh/type_interface.hpp>
-
-// @TODO: #2331 Remove these includes
-#include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
