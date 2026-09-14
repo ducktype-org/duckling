@@ -137,12 +137,6 @@ namespace compiler::mir {
 			// their own yet. DVM pairs `init`/`deinit` on a stack, so a flag has to be opened and
 			// closed right next to the local it guards: its `ScopeStart` goes directly after the
 			// `ScopeStart` of that local, and its `ScopeEnd` directly before the `ScopeEnd` of it.
-			//
-			// The flag also has to be cleared where its scope starts, and a local is `init`-ed for
-			// DVM before the instruction its `ScopeStart` sits on, so the write cannot sit on that
-			// instruction nor after it. Instead the whole `ScopeStart` list moves onto a generated
-			// write pushed before the instruction, which then both opens the scopes and clears the
-			// flags of the scopes it opens.
 			auto adjust_scopes = [&](Instruction& instr) {
 				std::vector<OperationFlag> scope_starts;
 				std::vector<OperationFlag> other_flags;
