@@ -5,7 +5,7 @@ use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
-use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
+use crate::quackpack::core::storage::freeze::{DepIdWithAlias, FreezePackage, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::tests::{
     create_mock_package_at_tmpdir, create_mock_package_with_deps_at_tmpdir,
@@ -486,10 +486,10 @@ fn sync_with_deps() {
     let (mut ctx, _home, storage_root) = setup_mock_storage();
     let (root, pcx) = create_mock_package_with_deps_at_tmpdir(&mut ctx, "my-package");
 
-    let mock_simple_identity = |name: &str| {
+    let mock_simple_dep_identity = |name: &str| {
         let path = root.path().join(name).normalize();
         let simple_origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), simple_origin)
+        DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin))
     };
     let mock_identity = |name: &str| {
         let path = root.path().join(name).normalize();
@@ -521,7 +521,7 @@ fn sync_with_deps() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(root_package.dependencies(), [mock_simple_identity("dep")],);
+    assert_eq!(root_package.dependencies(), [mock_simple_dep_identity("dep")],);
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(
@@ -537,10 +537,10 @@ fn sync_with_deps() {
 fn sync_with_deps_and_expose_freezefile() {
     let (mut ctx, _home, storage_root) = setup_mock_storage();
     let (root, _) = create_mock_package_with_deps_at_tmpdir(&mut ctx, "my-package");
-    let mock_simple_identity = |name: &str| {
+    let mock_simple_dep_identity = |name: &str| {
         let path = root.path().join(name).normalize();
         let simple_origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), simple_origin)
+        DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin))
     };
     let mock_identity = |name: &str| {
         let path = root.path().join(name).normalize();
@@ -582,7 +582,7 @@ fn sync_with_deps_and_expose_freezefile() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(root_package.dependencies(), [mock_simple_identity("dep")],);
+    assert_eq!(root_package.dependencies(), [mock_simple_dep_identity("dep")],);
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(
