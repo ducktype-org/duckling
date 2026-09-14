@@ -66,7 +66,7 @@ namespace compiler::helios {
 		// later if needed.
 		// @TODO: #2996 change it to a better implementation.
 		// Symbol should just know this!
-		auto pstEmissionPolicy = [&ctx](pst::AccessLocked<pst::LangElement> pst_element) {
+		auto pst_emission_policy = [&ctx](pst::AccessLocked<pst::LangElement> pst_element) {
 			auto pst_element_ancestor = getPSTElementParent(ctx, pst_element.unlock(ctx));
 			while (pst_element_ancestor.isLangElement()) {
 				auto element = pst_element_ancestor.getAsLangElement().unlock(ctx);
@@ -82,10 +82,10 @@ namespace compiler::helios {
 
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstImplementedSemantics, pst_data) {
-				return pstEmissionPolicy(pst_data.getElement());
+				return pst_emission_policy(pst_data.getElement());
 			}
 			variant_case(ClassMemberSemantics, member_data) {
-				return pstEmissionPolicy(member_data.getElement());
+				return pst_emission_policy(member_data.getElement());
 			}
 			variant_case(BuiltinSemantics, data) {
 				// Only if HOUT implements the builtin we want to replicate it.

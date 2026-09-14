@@ -89,5 +89,4 @@ namespace compiler::tsh {
 	}
 
 	TypeInterface TypeInterfaceBuilder::build() const { return TypeInterface(interface_elements); }
-
 }
