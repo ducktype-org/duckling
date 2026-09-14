@@ -6,13 +6,13 @@ PreCase: |+
 
 Tests:
   feature_pulls_itself:
-    Description: checks "feature_pulls_itself" lint
+    Description: checks "self_implying_features" lint
     Cases:
       sync:
         test-cmd: duck -C foo sync
         Err:
           String: |+
-            warning: feature \`xd\` pulls itself [feature_pulls_itself]
+            warning: feature \`xd\` implies itself [self_implying_features]
         Output:
           Run: |+
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`

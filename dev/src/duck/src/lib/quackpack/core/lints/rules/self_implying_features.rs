@@ -7,11 +7,11 @@ use crate::quackpack::core::lints::{Diagnostic, Lint, LintLevel};
 use crate::{DuckContext, QuackResult, StrId};
 
 pub const LINT: Lint = Lint {
-    name: "feature_pulls_itself",
-    description: r#"# Feature pulls itself
+    name: "self_implying_features",
+    description: r#"# Self implying features
 ## What this lint does?
 
-It checks for features which pull (imply) themselves.
+It checks for features which imply (pull) themselves.
 
 ## Why is this bad?
 
@@ -38,21 +38,21 @@ features:
 pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> QuackResult<()> {
     for (feature, expands_to) in manifest.features().all_features() {
         if expands_to.contains(feature) {
-            buffer.register_warning(FeaturePullsItselfDiagnostic { feature: *feature }, LINT);
+            buffer.register_warning(SelfImplyingFeatureDiagnostic { feature: *feature }, LINT);
         }
     }
     Ok(())
 }
 
 #[derive(Debug)]
-struct FeaturePullsItselfDiagnostic {
+struct SelfImplyingFeatureDiagnostic {
     feature: StrId,
 }
 
-impl fmt::Display for FeaturePullsItselfDiagnostic {
+impl fmt::Display for SelfImplyingFeatureDiagnostic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "feature `{}` pulls itself", self.feature)
+        write!(f, "feature `{}` implies itself", self.feature)
     }
 }
 
-impl Diagnostic for FeaturePullsItselfDiagnostic {}
+impl Diagnostic for SelfImplyingFeatureDiagnostic {}
