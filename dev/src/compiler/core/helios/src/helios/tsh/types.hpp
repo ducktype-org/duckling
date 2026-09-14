@@ -516,15 +516,6 @@ namespace compiler::tsh {
 		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
 		) const;
 
-		/**
-		 * Gets the type of a member.
-		 * @param sym The member, the type of which is requested.
-		 * @param ctx The Query Context necessary to refer to the definition of the class.
-		 * @return The type of the member.
-		 */
-		[[nodiscard]]
-		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const;
-
 		CONSTRUCT_WITH_CHECKED_CAST(ClassAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(ClassAbstractType)
