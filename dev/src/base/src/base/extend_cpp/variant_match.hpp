@@ -120,6 +120,21 @@ namespace base {
 	case (::base::variantTypeIndex<decltype(internal_value), type>()): \
 		if ([[maybe_unused]] auto&& name = std::get<type>(internal_value); true) POP_DIAGNOSTIC
 
+#define variant_match_value_extra_case(name, type)                     \
+	case (::base::variantTypeIndex<decltype(internal_value), type>()): \
+		name = &std::get<type>(internal_value);                        \
+		goto label_##name;
+
+
+#define MAKE_PTR(type) , type*
+
+#define variant_case_many(name, type, ...)                                       \
+	PUSH_DIAGNOSTIC                                             NO_SHADOW break; \
+	static std::variant<type * FOR_EACH(MAKE_PTR, __VA_ARGS__)> name{};          \
+	FOR_EACH_ARG(variant_match_value_extra_case, name, type, __VA_ARGS__)        \
+	label_##name:
+
+
 #define variant_match_novalue_extra_case(type) \
 	[[fallthrough]];                           \
 	case (::base::variantTypeIndex<decltype(internal_value), type>()):

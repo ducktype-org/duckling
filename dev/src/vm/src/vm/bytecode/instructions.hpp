@@ -260,6 +260,18 @@ namespace vm::code {
 	FOR_EACH(instr_case_novalue_extra_case, type, __VA_ARGS__) \
 	if (true)
 
+#define instr_match_value_extra_case(name, type) \
+	case (type::OPCODE):                         \
+		name = &internal_value.get<type>();      \
+		goto label_##name;
+
+#define instr_case_many(name, type, ...)                                         \
+	PUSH_DIAGNOSTIC                                             NO_SHADOW break; \
+	static std::variant<type * FOR_EACH(MAKE_PTR, __VA_ARGS__)> name{};          \
+	FOR_EACH_ARG(instr_match_value_extra_case, name, type, __VA_ARGS__)          \
+	label_##name:
+
+
 #define instr_default \
 	break;            \
 	default:          \
