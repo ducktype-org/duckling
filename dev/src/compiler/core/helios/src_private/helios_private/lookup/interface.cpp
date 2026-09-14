@@ -49,10 +49,10 @@ namespace compiler::helios {
 	}
 
 	query::QResult<SymbolList> HInterface::lookupExpectUnique(
-		const pst::ResolvesToPosition& error_position,
-		query::Context&                ctx,
-		base::StrID                    name,
-		AdditionalLookupParameters     params
+		const dia::StablePosition  error_position,
+		query::Context&            ctx,
+		base::StrID                name,
+		AdditionalLookupParameters params
 	) const {
 		UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup(ctx, name, params));
 
@@ -72,7 +72,7 @@ namespace compiler::helios {
 				return dealiased_result;
 			}
 			variant_case(errors::Ambiguity, _) {
-				auto msg = makeBox<ShadowedVariableLookupError>(error_position.resolve(ctx));
+				auto msg = makeBox<ShadowedVariableLookupError>(error_position);
 				for (auto& leaf: lookup_result->leaves) {
 					if_opt_some(getSymRef(leaf)->maybePstElement(), pst_elem) {
 						auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
@@ -83,7 +83,7 @@ namespace compiler::helios {
 				return query::Failed();
 			}
 			variant_case(errors::Inaccessible, _) {
-				auto msg = makeBox<InaccessibleSymbolLookupError>(error_position.resolve(ctx));
+				auto msg = makeBox<InaccessibleSymbolLookupError>(error_position);
 				for (auto& hidden: lookup_result->inaccessible) {
 					if_opt_some(getSymRef(hidden)->maybePstElement(), pst_elem) {
 						auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
@@ -96,7 +96,7 @@ namespace compiler::helios {
 			variant_case(errors::SymbolNotFound, _) {
 				ctx.logInt(makeBox<dia::PlaceholderError>(
 					base::strConcat("Symbol '", name, "' not found in lookup"),
-					error_position.resolve(ctx),
+					error_position,
 					"",
 					"symbol lookup here"
 				));

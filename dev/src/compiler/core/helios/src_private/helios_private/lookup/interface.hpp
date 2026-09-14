@@ -145,9 +145,9 @@ namespace compiler::helios {
 		 * that we might one day change to custom code for better compilation errors or logic.
 		 */
 		query::QResult<SymbolList> lookupExpectUnique(
-			const pst::ResolvesToPosition& error_position,
-			query::Context&                ctx,
-			base::StrID                    name,
+			dia::StablePosition error_position,
+			query::Context&     ctx,
+			base::StrID         name,
 			AdditionalLookupParameters = {}
 		) const;
 

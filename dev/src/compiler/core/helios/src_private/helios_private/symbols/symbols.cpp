@@ -410,15 +410,11 @@ namespace compiler::helios {
 	/**
 	 * @brief Return the name, kind and lookup flags of the symbol declared by the given statement,
 	 * that is everything about the symbol that depends on the kind of the statement.
-	 * @todo in the future this function should not use dynamic_casts,
-	 * and should be merged with makeSymbolFromPSTElement.
 	 * It should use a visitor, or only depend on StmtKind and virtual methods.
 	 */
 	query::QResult<CommonSymbolData> commonSymbolDataFromStatement(
 		query::Context& ctx, pst::Access<pst::Stmt> stmt
 	) {
-		// @TODO: change this function to visitor to avoid dynamic_casts
-
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
 			auto function = stmt.dynamicCast<pst::Fun>().value();
@@ -852,12 +848,12 @@ namespace compiler::helios {
 			}
 
 			void visitUsing(pst::Access<pst::Using> using_stmt) final {
-				auto                         pointed = using_stmt->getPointed().unlock(ctx);
-				usize                        size    = pointed->numberOfNames();
-				std::vector<tpc::Identifier> pointed_to_names(size);
+				auto  pointed = using_stmt->getPointed().unlock(ctx);
+				usize size    = pointed->numberOfNames();
+				std::vector<pst::AccessLocked<pst::IdentifierWrapper>> pointed_to_names;
+				pointed_to_names.reserve(size);
 				for (usize i = 0; i < size; i++)
-					pointed_to_names[i]
-						= { .value = pointed->getNameByIndex(i).unlock(ctx)->unwrap() };
+					pointed_to_names.push_back(pointed->getNameByIndex(i));
 
 				auto lookup_res = lookupChain(
 					ctx,
@@ -963,7 +959,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryDealias, QueryDealias_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<tpc::Identifier> pointed_chain;
+			std::vector<pst::AccessLocked<pst::IdentifierWrapper>> pointed_chain;
 			if (kind(key) == SymbolKind::Using) {
 				auto dotted = getSymRef(key)
 				                  ->maybePstElement()
@@ -973,9 +969,9 @@ namespace compiler::helios {
 				                  .value()
 				                  ->getPointed()
 				                  .unlock(ctx);
-				pointed_chain.resize(dotted->numberOfNames());
+				pointed_chain.reserve(dotted->numberOfNames());
 				for (usize i = 0; i < dotted->numberOfNames(); i++)
-					pointed_chain[i] = { .value = dotted->getNameByIndex(i).unlock(ctx)->unwrap() };
+					pointed_chain.push_back(dotted->getNameByIndex(i));
 			} else if (kind(key) == SymbolKind::Alias) {
 				auto dotted = getSymRef(key)
 				                  ->maybePstElement()
@@ -985,9 +981,9 @@ namespace compiler::helios {
 				                  .value()
 				                  ->getPointed()
 				                  .unlock(ctx);
-				pointed_chain.resize(dotted->numberOfNames());
+				pointed_chain.reserve(dotted->numberOfNames());
 				for (usize i = 0; i < dotted->numberOfNames(); i++)
-					pointed_chain[i] = { .value = dotted->getNameByIndex(i).unlock(ctx)->unwrap() };
+					pointed_chain.push_back(dotted->getNameByIndex(i));
 			} else {
 				return SymbolList{ { key } };
 			}

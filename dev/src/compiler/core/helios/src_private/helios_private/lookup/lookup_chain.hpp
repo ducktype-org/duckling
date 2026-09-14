@@ -2,19 +2,19 @@
 
 #include "interface.hpp"
 
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 #include <query_framework/query_result.hpp>
-#include <token_parser_core/common_elements.hpp>
 
 namespace compiler::helios {
 
 	struct LookupChainKey final {
-		std::vector<tpc::Identifier> names;
-		ScopeID                      begin_scope;
-		AdditionalLookupParameters   params;
+		std::vector<pst::AccessLocked<pst::IdentifierWrapper>> names;
+		ScopeID                                                begin_scope;
+		AdditionalLookupParameters                             params;
 	};
 
 	/**
