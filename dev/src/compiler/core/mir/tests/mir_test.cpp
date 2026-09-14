@@ -102,8 +102,9 @@ private:
 					preds.put(succ).first->second.push_back(block_id);
 
 			auto locals_by_scope = compiler::mir::collectLocalsByScope(pre_mir);
-			auto move_states
-				= compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(pre_mir, preds, locals_by_scope);
+			auto move_states     = compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(
+                pre_mir, preds, locals_by_scope
+            );
 
 			// `a` is a parameter, so it is alive at the entry block.
 			auto entry     = pre_mir.block_order.front();
@@ -154,8 +155,9 @@ private:
 					preds.put(succ).first->second.push_back(block_id);
 
 			auto locals_by_scope = compiler::mir::collectLocalsByScope(pre_mir);
-			auto move_states
-				= compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(pre_mir, preds, locals_by_scope);
+			auto move_states     = compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(
+                pre_mir, preds, locals_by_scope
+            );
 
 			// The `R` temporary holding the result of `makeR(1)`.
 			base::Optional<compiler::mir::LocalID> tmp_id;
