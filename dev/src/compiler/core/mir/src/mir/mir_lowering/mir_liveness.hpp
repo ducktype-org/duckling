@@ -128,7 +128,10 @@ namespace compiler::mir {
 		 * @brief Move state of the local variables at the beginning of each block.
 		 */
 		base::HashMap<BlockID, LocalMoveStateMap> block_in_move_state;
-
+		
+		/**
+		* @brief Calculate the MoveStateData of the function.
+		*/
 		static MoveStateData calculateGlobalInMoveStateMap(
 			const Function&                                     fun,
 			const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors,
