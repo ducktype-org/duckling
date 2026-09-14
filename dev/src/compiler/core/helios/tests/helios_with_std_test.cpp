@@ -17,7 +17,6 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/mutability.hpp>
@@ -189,7 +188,9 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
-				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow();
+				return compiler::tsh::SymbolType<>::withDefaults(
+					ctx.query<compiler::tsh::QueryClassType>(sym_id)
+				);
 			};
 
 			auto i32_st = st(compiler::tsh::getIntegralType(
@@ -968,9 +969,8 @@ private:
 		auto mega_sym    = getChain("FinalBoss", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto get_class_type = [&](SymID sym_id) {
-				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
-			};
+			auto get_class_type
+				= [&](SymID sym_id) { return ctx.query<compiler::tsh::QueryClassType>(sym_id); };
 
 			// Classes, tuples and static arrays are copied by a single `create_aggregate` that the
 			// body returns, with one value per copied element.
@@ -1111,15 +1111,13 @@ private:
 
 			// A field whose class defines a user copy constructor calls the user code, not a
 			// generated one.
-			ASSERT_MATCHES(
-				getSymRef(callee_of(rhs_of("nested_user")))->other, PstImplementedSemantics
-			);
+			ASSERT_MATCHES(getSymRef(callee_of(rhs_of("nested_user")))->other, ClassMemberSemantics);
 
 			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
 			{
 				auto boxed = boxAllocArg(rhs_of("deep"));
 				ASSERT_TRUE(boxed != nullptr);
-				ASSERT_MATCHES(getSymRef(callee_of(boxed))->other, PstImplementedSemantics);
+				ASSERT_MATCHES(getSymRef(callee_of(boxed))->other, ClassMemberSemantics);
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {
@@ -1257,9 +1255,8 @@ private:
 		auto boss_sym         = getChain("FinalBoss", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto get_class_type = [&](SymID sym_id) {
-				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
-			};
+			auto get_class_type
+				= [&](SymID sym_id) { return ctx.query<compiler::tsh::QueryClassType>(sym_id); };
 
 			auto is_method_call = [&](const Stmt* stmt, Method::Kind kind) -> bool {
 				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
@@ -1335,10 +1332,13 @@ private:
 				const auto type = get_class_type(user_sym);
 				ASSERT_TRUE(!type.isTriviallyDestructible(ctx));
 
-				const auto user_dtor = userDestructorOf(ctx, user_sym);
-				ASSERT_HAS_VALUE(user_dtor);
-				ASSERT_TRUE(isUserDefinedDestructor(ctx, user_dtor.value()));
-				ctx.query<QueryCodeOfFun>(user_dtor.value())->valueOrThrow();
+				const auto user_dtor_element = type.getInterface(ctx)->getSpecialElement(
+					compiler::tsh::MemberSpecialKind::UserDestructor
+				);
+				ASSERT_HAS_VALUE(user_dtor_element);
+				const auto user_dtor = user_dtor_element.value()->getSymbol();
+				ASSERT_TRUE(isUserDefinedDestructor(ctx, user_dtor));
+				ctx.query<QueryCodeOfFun>(user_dtor)->valueOrThrow();
 
 				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
 				const auto& stmts = dtor.body->statements;
@@ -1348,7 +1348,7 @@ private:
 				ASSERT_TRUE(expr_stmt != nullptr);
 				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
 				ASSERT_TRUE(call != nullptr);
-				ASSERT_EQUAL(user_dtor.value(), getIdentifierExprSymID(call->callee.ref()).value());
+				ASSERT_EQUAL(user_dtor, getIdentifierExprSymID(call->callee.ref()).value());
 			}
 
 			// A class with a user destructor and non-trivial members should call the user code
@@ -1360,10 +1360,14 @@ private:
 				ASSERT_EQUAL_PRINT(3, stmts.size());
 
 				// [0] user destructor call.
-				const auto user_dtor = userDestructorOf(ctx, user_members_sym).value();
-				auto       user_call = dynamic_cast<const CallExpr*>(
-                    dynamic_cast<const ExprStmt*>(stmts.at(0).get())->expr.get()
-                );
+				const auto user_dtor
+					= type.getInterface(ctx)
+				          ->getSpecialElement(compiler::tsh::MemberSpecialKind::UserDestructor)
+				          .value()
+				          ->getSymbol();
+				auto user_call = dynamic_cast<const CallExpr*>(
+					dynamic_cast<const ExprStmt*>(stmts.at(0).get())->expr.get()
+				);
 				ASSERT_TRUE(user_call != nullptr);
 				ASSERT_EQUAL(user_dtor, getIdentifierExprSymID(user_call->callee.ref()).value());
 
