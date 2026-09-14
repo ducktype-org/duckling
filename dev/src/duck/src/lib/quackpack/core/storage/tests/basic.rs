@@ -521,7 +521,10 @@ fn sync_with_deps() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(root_package.dependencies(), [mock_simple_dep_identity("dep")],);
+    assert_eq!(
+        root_package.dependencies(),
+        [mock_simple_dep_identity("dep")],
+    );
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(
@@ -582,7 +585,10 @@ fn sync_with_deps_and_expose_freezefile() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(root_package.dependencies(), [mock_simple_dep_identity("dep")],);
+    assert_eq!(
+        root_package.dependencies(),
+        [mock_simple_dep_identity("dep")],
+    );
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(

@@ -5,10 +5,10 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize, de};
 
-use crate::{QuackError, QuackResultContext, StrId, qp_bail};
 use crate::quackpack::core::full_identity::FullIdentity;
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::{FeatureName, PackageId, Version};
+use crate::{QuackError, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
 /// General storage/venv freezefile.
@@ -231,7 +231,7 @@ impl From<FreezePackage> for PackageId {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// How dependencies are described in freeze.
 pub struct DepIdWithAlias {
     /// Whether and how the dependency is aliased.
@@ -246,12 +246,12 @@ impl DepIdWithAlias {
         if effective_name != identity.name() {
             Self {
                 alias: Some(effective_name),
-                id: identity
+                id: identity,
             }
         } else {
             Self {
                 alias: None,
-                id: identity
+                id: identity,
             }
         }
     }
@@ -297,12 +297,6 @@ impl Display for DepIdWithAlias {
     }
 }
 
-impl PartialEq<DepIdWithAlias> for DepIdWithAlias {
-    fn eq(&self, other: &DepIdWithAlias) -> bool {
-        self.name() == other.name() && self.origin() == other.origin() && self.alias == other.alias
-    }
-}
-
 // DepIdWithAlias serialiazes as:
 // * `<name>#<alias> <origin>` if there is an alias,
 // * `<name> <origin>` if there is no alias.
@@ -311,7 +305,9 @@ impl FromStr for DepIdWithAlias {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let Some((name, origin)) = s.split_once(' ') else {
-            qp_bail!("expected a simple identity with alias in format `<name>(#<maybe alias>) <origin>`")
+            qp_bail!(
+                "expected a simple identity with alias in format `<name>(#<maybe alias>) <origin>`"
+            )
         };
         let origin = origin
             .parse()

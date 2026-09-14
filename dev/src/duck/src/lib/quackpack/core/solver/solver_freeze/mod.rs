@@ -6,7 +6,9 @@ use std::collections::{HashMap, HashSet};
 use tracing::debug;
 
 use crate::quackpack::core::identity::Identity;
-use crate::quackpack::core::storage::freeze::{DepIdWithAlias, FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::storage::freeze::{
+    DepIdWithAlias, FreezePackage, RootPackage, VenvFreeze,
+};
 use crate::quackpack::core::{FeatureName, PackageId};
 use crate::{QuackResult, StrId, qp_bail_internal};
 
@@ -92,7 +94,9 @@ impl SolverFreeze {
         let mut main_dependencies = HashMap::new();
         for dep in value.root().dependencies() {
             let Some(realization) = expanded_pkgs_by_name.get(&dep.name()) else {
-                return Err(MalformedFreezeError::MissingRootDependency { dep: dep.identity() });
+                return Err(MalformedFreezeError::MissingRootDependency {
+                    dep: dep.identity(),
+                });
             };
             if *realization != root {
                 main_dependencies.insert(dep.effective_name(), *realization);
@@ -180,12 +184,7 @@ mod test {
         let identity_b = FullIdentity::new("b".into(), origin_b);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let freeze_pkg_a = FreezePackage::new(
-            identity_a,
-            1.into(),
-            vec!["f_a".into()],
-            vec![],
-        );
+        let freeze_pkg_a = FreezePackage::new(identity_a, 1.into(), vec!["f_a".into()], vec![]);
         let freeze_pkg_b = FreezePackage::new(
             identity_b,
             2.into(),
