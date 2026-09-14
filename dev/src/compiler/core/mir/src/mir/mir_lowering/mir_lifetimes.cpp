@@ -353,8 +353,9 @@ namespace compiler::mir {
 			for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
 				args.block_predecessors.put(succ).first->second.push_back(block_id);
 
-		args.move_states
-			= calculateGlobalInMoveStateMap(function, args.block_predecessors, args.locals_by_scope);
+		args.move_states = MoveStateData::calculateGlobalInMoveStateMap(
+			function, args.block_predecessors, args.locals_by_scope
+		);
 
 		return args;
 	}

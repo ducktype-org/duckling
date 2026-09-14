@@ -1,9 +1,9 @@
 #include "mir_liveness.hpp"
 
-#include "mir/mir_lowering/mir_destructors.hpp"
 #include "mir_lifetimes.hpp"
 
 #include <frontend/pst_parser/lang_parser_element.hpp>
+#include <mir/mir_lowering/mir_destructors.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <diagnostic/placeholder.hpp>
@@ -177,7 +177,7 @@ namespace compiler::mir {
 		return map;
 	}
 
-	MoveStateData calculateGlobalInMoveStateMap(
+	MoveStateData MoveStateData::calculateGlobalInMoveStateMap(
 		const Function&                                     fun,
 		const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors,
 		const LocalsByScopeMap&                             locals_by_scope

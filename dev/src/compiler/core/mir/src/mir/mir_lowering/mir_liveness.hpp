@@ -1,8 +1,7 @@
 
 #pragma once
 
-#include "mir/mir_lowering/mir_destructors.hpp"
-
+#include <mir/mir_lowering/mir_destructors.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <diagnostic/stable_position.hpp>
@@ -65,18 +64,6 @@ namespace compiler::mir {
 	struct MoveStateData;
 
 	/**
-	 * @brief Calculate the MoveStateData of the function.
-	 *
-	 * This is the only place where the whole-function move-state is calculated, so it is a friend
-	 * of @ref LocalMoveStateMap and builds it through its private data-flow interface.
-	 */
-	MoveStateData calculateGlobalInMoveStateMap(
-		const Function&                                     fun,
-		const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors,
-		const LocalsByScopeMap&                             locals_by_scope
-	);
-
-	/**
 	 * @brief Move state of all tracked locals at a program point, together with the scope of the
 	 * last instruction that was applied to it.
 	 *
@@ -133,11 +120,7 @@ namespace compiler::mir {
 
 		void debugPrint(std::ostream& out) const;
 
-		friend MoveStateData calculateGlobalInMoveStateMap(
-			const Function&                                     fun,
-			const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors,
-			const LocalsByScopeMap&                             locals_by_scope
-		);
+		friend MoveStateData;
 	};
 
 	struct MoveStateData {
@@ -146,6 +129,11 @@ namespace compiler::mir {
 		 */
 		base::HashMap<BlockID, LocalMoveStateMap> block_in_move_state;
 
+		static MoveStateData calculateGlobalInMoveStateMap(
+			const Function&                                     fun,
+			const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors,
+			const LocalsByScopeMap&                             locals_by_scope
+		);
 		void debugPrint(std::ostream& out);
 	};
 
