@@ -19,7 +19,7 @@ namespace vm::jit::cf {
 	/**
 	 * @brief Subgraph of a control-flow graph representing a natural loop.
 	 */
-	struct Loop {
+	struct Loop final {
 		/**
 		 * @brief Constructs a loop subgraph from the original CFG and member block IDs.
 		 * @param start_block Loop header block ID.

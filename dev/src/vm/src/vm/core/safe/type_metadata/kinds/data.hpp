@@ -11,12 +11,12 @@
 
 namespace vm::kind {
 
-	struct FieldDesc {
+	struct FieldDesc final {
 		Offset  offset;
 		TypeRef type;
 	};
 
-	struct Data {
+	struct Data final {
 		// @todo: change to strongly typed when it will be in utils
 		using FieldID = u64;
 

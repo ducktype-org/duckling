@@ -11,7 +11,7 @@ namespace vm::code {
 	 * we can check that each class has the VTable pointer
 	 * as its first member without relying on type names.
 	 */
-	struct SpecialTypes {
+	struct SpecialTypes final {
 		TypeOfData vtable_ptr;
 
 		static const SpecialTypes& get();

@@ -22,7 +22,7 @@ namespace vm {
 		struct LowFuncData;
 	}
 
-	struct FlagData {
+	struct FlagData final {
 		// CRITICAL: Field flag must be defined first due to rules of field accessing in LLVM (used
 		// for JIT purposes)
 		bool flag;
@@ -33,7 +33,7 @@ namespace vm {
 	 *
 	 * It stores the state of the one function call during the program execution.
 	 */
-	struct Frame {
+	struct Frame final {
 		// CRITICAL: Field flags must be defined first due to rules of field accessing in LLVM (used
 		// for JIT purposes)
 		FlagData flags{};
