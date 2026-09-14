@@ -1,5 +1,6 @@
 SubDirs:
   - absent-flag
+  - gatherer-checks-self-dependence
   - illegal-packages-names
   - nonexistent-dep-feature
   - nonexistent-local-dep
