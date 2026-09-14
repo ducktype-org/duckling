@@ -11,6 +11,7 @@
 #include <helios/tsh/deductions.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/utils/main_return_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -40,6 +41,15 @@ namespace compiler::helios {
 				if (symbol_type_qresult.hasValue())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
 				symbol_type_qresult = tsh::SymbolType<>::withDefaults(type);
+			}
+
+			void setSymbolTypeByTypeExpr(const pst::Access<pst::ExprElement> expr) {
+				const auto type_ctv = getTypeCTVFromPST(ctx, expr);
+				if (type_ctv.hasFailed()) {
+					setFailed();
+					return;
+				}
+				setTypeOfSymbol(type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value());
 			}
 
 			void setSymbolTypeByTypeExpr(
@@ -188,9 +198,7 @@ namespace compiler::helios {
 					return;
 				}
 
-				setSymbolTypeByTypeExpr(
-					constraint.value().unlock(ctx)->getExpr().unlock(ctx), tsh::Mutability::Immutable
-				);
+				setSymbolTypeByTypeExpr(constraint.value().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
 			void handleForIterator(pst::Access<pst::For> stmt) {
@@ -368,20 +376,9 @@ namespace compiler::helios {
 					};
 				}
 				variant_case(defgen::BuiltinTemplatedSymbol, builtin) {
-					// `box_alloc(value: T) -> box T` and `box_free(b: box T) -> ()`.
-					const auto box_type = builtin.type.withReferenceKind(tsh::ReferenceKind::Box);
-
 					auto [arg_types, return_type]
 						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
 						switch (builtin.kind) {
-						case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
-							return { { builtin.type }, box_type };
-						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
-							return { { builtin.type.withReferenceKind(tsh::ReferenceKind::Ref) },
-								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
-						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
-							return { { builtin.type.withReferenceKind(tsh::ReferenceKind::Ref) },
-								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
 						case defgen::BuiltinTemplatedSymbol::Kind::MoveIn: {
 							const auto ptr_type = tsh::SymbolType<>::withDefaults(
 								ctx.query<tsh::QueryPointerType>({ builtin.type })
@@ -469,9 +466,7 @@ namespace compiler::helios {
 					};
 				}
 				variant_case_novalue(defgen::ScriptMainWrapper) {
-					const auto return_type = tsh::SymbolType<>::withDefaults(
-						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
-					);
+					const auto return_type = requiredMainReturnType(ctx);
 					const auto function_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
 					                                          .result_type     = return_type });

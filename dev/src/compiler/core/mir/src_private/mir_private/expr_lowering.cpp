@@ -200,6 +200,64 @@ namespace compiler::mir {
 			valueOutput(lowered_inner.begin, target_location);
 		}
 
+		// @TODO: #1333 The result is always materialized in a temporary, even when the expression
+		// only feeds a branch (`if a and b`). A jumping visitor would lower the operands straight
+		// into the terminators of the enclosing control flow instead.
+		void doLazyBinaryEvaluation(const hc::BinaryOperatorExpr& expr) {
+			CORE_ASSERT(
+				expr.operation == hc::BuiltinBinary::BooleanOr
+					or expr.operation == hc::BuiltinBinary::BooleanAnd,
+				"Invalid call."
+			);
+			bool        is_and       = expr.operation == hc::BuiltinBinary::BooleanAnd;
+			std::string debug_prefix = is_and ? "and" : "or";
+
+			auto boolean_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				boolean_type.getType().getKind() == tsh::Kind::Bool,
+				"Lazily evaluated binary operators are boolean."
+			);
+			const auto result = function.addTmp(boolean_type, expr_scope);
+
+			auto rhs_block = function.newBlock(debug_prefix + ".rhs");
+			rhs_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+			);
+			auto rhs_store_result_hole = rhs_block->addHole();
+			auto lowered_right         = lowerSubExpr(*expr.rhs, rhs_block);
+			lowered_right.storeResultInGivenPlace(
+				MIRPlace(result),
+				rhs_store_result_hole,
+				{ flagReinit(result) },
+				expr_scope,
+				{ expr.getPosition() }
+			);
+
+			auto lhs_block     = function.newBlock(debug_prefix + ".lhs");
+			auto rhs_entry     = lowered_right.begin->getID();
+			auto if_true_cont  = is_and ? rhs_entry : continuation->getID();
+			auto if_false_cont = is_and ? continuation->getID() : rhs_entry;
+			lhs_block->setTerminator({
+				Operation::Branch,
+				{},
+				{ MIRPlace(result), if_true_cont, if_false_cont },
+				{},
+				expr_scope,
+			});
+
+			auto lhs_store_result_hole = lhs_block->addHole();
+			auto lowered_left          = lowerSubExpr(*expr.lhs, lhs_block);
+			lowered_left.storeResultInGivenPlace(
+				MIRPlace(result),
+				lhs_store_result_hole,
+				{ flagConstruct(result) },
+				expr_scope,
+				{ expr.getPosition() }
+			);
+
+			valueOutput(lowered_left.begin, result);
+		}
+
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			IF_BUILD_TYPE_DEV({
 				const bool lhs_trivial
@@ -218,6 +276,10 @@ namespace compiler::mir {
 					"`getResultAndTakeOwnership()` to `getResult()`"
 				);
 			})
+
+			if (expr.operation == hc::BuiltinBinary::BooleanOr
+			    or expr.operation == hc::BuiltinBinary::BooleanAnd)
+				return doLazyBinaryEvaluation(expr);
 
 
 			// Construct the result of the expression in reverse.
@@ -288,32 +350,33 @@ namespace compiler::mir {
 			const auto result_type     = ternary_expr.expression_type.getSymbolType();
 			const auto target_location = function.addTmp(result_type, expr_scope);
 
-			auto build_case_block = [this, &target_location](hc::Expr& case_expr) {
-				auto block = function.newBlock();
-				block->setTerminator(
-					{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
-				);
-				auto assign_hole = block->addHole();
+			auto build_case_block
+				= [this, &target_location](hc::Expr& case_expr, const std::string_view block_name) {
+					  auto block = function.newBlock(block_name);
+					  block->setTerminator(
+						  { Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+					  );
+					  auto assign_hole = block->addHole();
 
-				auto lowered_block = lowerSubExpr(case_expr, block);
+					  auto lowered_block = lowerSubExpr(case_expr, block);
 
-				lowered_block.storeResultInGivenPlace(
-					MIRPlace(target_location),
-					assign_hole,
-					{ flagConstruct(target_location) },
-					expr_scope,
-					{}
-				);
+					  lowered_block.storeResultInGivenPlace(
+						  MIRPlace(target_location),
+						  assign_hole,
+						  { flagConstruct(target_location) },
+						  expr_scope,
+						  {}
+					  );
 
 
-				return lowered_block.begin;
-			};
+					  return lowered_block.begin;
+				  };
 
-			auto else_block = build_case_block(*ternary_expr.if_false);
-			auto then_block = build_case_block(*ternary_expr.if_true);
+			auto else_block = build_case_block(*ternary_expr.if_false, "ternary.else");
+			auto then_block = build_case_block(*ternary_expr.if_true, "ternary.then");
 
 			// Build branching.
-			auto condition_block   = function.newBlock();
+			auto condition_block   = function.newBlock("ternary.cond");
 			auto lowered_condition = lowerSubExpr(*ternary_expr.condition, condition_block);
 
 
@@ -438,8 +501,8 @@ namespace compiler::mir {
 					                           .expect("i64 numeric value creation failed") } } };
 			};
 
-			auto cond_block = function.newBlock();
-			auto body_block = function.newBlock();
+			auto cond_block = function.newBlock("array_fill.cond");
+			auto body_block = function.newBlock("array_fill.body");
 
 			// The body is assembled in reverse execution order, so the increment goes in first.
 			body_block->setTerminator(
@@ -496,7 +559,7 @@ namespace compiler::mir {
 				Operation::Nop, {}, {}, { flagConstruct(dest) }, expr_scope, {}, { position }
 			));
 
-			auto entry_block = function.newBlock();
+			auto entry_block = function.newBlock("array_fill.entry");
 			entry_block->addInstruction(Instruction(
 				Operation::Assign,
 				MIRPlace(counter),
@@ -678,7 +741,7 @@ namespace compiler::mir {
 
 				// Result block: evaluate the case's value into the shared result, then join.
 				auto case_scope = function.newScope(expr_scope);
-				auto body_end   = function.newBlock();
+				auto body_end   = function.newBlock("match.case.result");
 				body_end->setTerminator(
 					{ Operation::Jump, {}, { continuation->getID() }, {}, case_scope }
 				);
@@ -702,7 +765,7 @@ namespace compiler::mir {
 
 				bool projects_payload = tests_alternative || match_case.binding.has_value();
 
-				auto test_block = function.newBlock();
+				auto test_block = function.newBlock("match.case.test");
 
 				base::Optional<MIRLocalMutRef>    payload_ptr;
 				base::Optional<tsh::SymbolType<>> alternative_type;
@@ -901,9 +964,9 @@ namespace compiler::mir {
 			};
 
 			// Now, before the index projection, perform the bounds check.
-			auto bounds_check_fail_block = function.newBlock();
-			auto bounds_check_cond_block = function.newBlock();
-			auto entry_block             = function.newBlock();
+			auto bounds_check_fail_block = function.newBlock("bounds_check.fail");
+			auto bounds_check_cond_block = function.newBlock("bounds_check.cond");
+			auto entry_block             = function.newBlock("bounds_check.entry");
 			entry_block->setTerminator(Instruction{
 				Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope });
 
@@ -944,7 +1007,7 @@ namespace compiler::mir {
 				  };
 
 			// Place for a comparison instruction
-			auto last_comparison_block = function.newBlock();
+			auto last_comparison_block = function.newBlock("chain_cmp.end");
 
 			// After the last comparison, continue regardless of the result.
 			last_comparison_block->setTerminator(Instruction{
@@ -963,7 +1026,7 @@ namespace compiler::mir {
 				// If the comparison is the last one (next_block == continuation), we jump to the
 				// continuation regardless of the result. Otherwise, we branch to the next comparison
 				// if the result is true, and to the continuation if the results is false.
-				auto comparison_block = function.newBlock();
+				auto comparison_block = function.newBlock("chain_cmp");
 				if (next_block->getID() == continuation->getID()) {
 					comparison_block->setTerminator(Instruction{
 						Operation::Jump,
@@ -1007,6 +1070,16 @@ namespace compiler::mir {
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {
+			bool never_returns
+				= expr.expression_type.getSymbolType().getType().getKind() == tsh::Kind::Void;
+
+			if (never_returns) {
+				auto call_block = function.newBlock("call.diverging");
+				call_block->setTerminator({ Operation::Unreachable, {}, {}, {}, expr_scope, {}, {} }
+				);
+				continuation = call_block;
+			}
+
 			auto call = continuation->addHole();
 
 			auto                  sub_continuation = continuation;
@@ -1029,13 +1102,24 @@ namespace compiler::mir {
 			}
 			std::reverse(args.begin() + 1, args.end());
 
-			return noValueOutput(
+			auto result = ExprLowerRes(
 				sub_continuation,
-				call,
-				Instruction{
-					Operation::Call, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
-				expr.expression_type.getSymbolType()
+				ExprLowerRes::Finalizer(
+					call,
+					Instruction{
+						Operation::Call, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
+					expr.expression_type.getSymbolType()
+				)
 			);
+
+			if (never_returns)
+				// This is needed, because the consumer may assign the result (void) to a value
+				// (non-void) But if we create a value, we fills this assignment hole with our
+				// assigment to void tempoarary, then the consumer assignment to non-void type is
+				// after the panic, unreachable.
+				valueOutput(sub_continuation, result.getResult(function));
+			else
+				output(std::move(result));
 		}
 
 		bool isEmptyCast(const hc::CastExpr& expr) {
@@ -1055,7 +1139,25 @@ namespace compiler::mir {
 				return true;
 			}
 
+			if (expr.source_expr->expression_type.getType().getKind() == tsh::Kind::Void)
+				return true;
+
 			return false;
+		}
+
+		/**
+		 * @brief Whether the cast hands a `ptr T` over to a `box T`.
+		 *
+		 * A box is represented by the pointer to its storage, so no bits change - but the box
+		 * owns that storage from here on, and only a place typed `box T` is given a destructor.
+		 * That makes it a re-typing move rather than an empty cast. Only the generated box
+		 * construction does this, `as` cannot express it in the source language.
+		 */
+		bool isBoxFromPointerCast(const hc::CastExpr& expr) {
+			const auto source_type = expr.source_expr->expression_type.getSymbolType();
+			return source_type.getRefKind() == tsh::ReferenceKind::Direct
+			    && source_type.getType().getKind() == tsh::Kind::Pointer
+			    && expr.target_type.getRefKind() == tsh::ReferenceKind::Box;
 		}
 
 		void visitCastExpr(const hc::CastExpr& expr) override {
@@ -1064,6 +1166,24 @@ namespace compiler::mir {
 				// If the cast doesn't change the representation, simply ignore it.
 				output(lowerSubExpr(*expr.source_expr, continuation));
 				return;
+			}
+
+			if (isBoxFromPointerCast(expr)) {
+				auto       assign   = continuation->addHole();
+				auto       lowered  = lowerSubExpr(*expr.source_expr, continuation);
+				const auto res_move = lowered.getResult(function);
+				return noValueOutput(
+					lowered.begin,
+					assign,
+					Instruction{ Operation::Assign,
+				                 {},
+				                 { res_move },
+				                 {},
+				                 expr_scope,
+				                 {},
+				                 { expr.getPosition() } },
+					expr.expression_type.getSymbolType()
+				);
 			}
 
 			auto       cast        = continuation->addHole();
@@ -1313,6 +1433,16 @@ namespace compiler::mir {
 				// @TODO: #1610 Implement exponentiation as a function call.
 				throw base::NotYetImplemented("Exponentiation on variables");
 
+			case IntegerBitAnd:
+				return { Operation::IntegerBitAnd };
+			case IntegerBitOr:
+				return { Operation::IntegerBitOr };
+			case IntegerBitXor:
+				return { Operation::IntegerBitXor };
+			case IntegerShl:
+				return { Operation::IntegerShl };
+			case IntegerShr:
+				return { Operation::IntegerShr };
 			/// Integer comparisons ///
 			case IntegerLt:
 				return { Operation::IntegerLt };
@@ -1373,6 +1503,8 @@ namespace compiler::mir {
 			switch (builtin) {
 			case IntegerNegation:
 				return { Operation::IntegerNeg };
+			case IntegerBitNot:
+				return { Operation::IntegerBitNot };
 			case FloatNegation:
 				return { Operation::FloatNeg };
 			case BooleanNot:

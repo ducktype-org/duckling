@@ -310,7 +310,8 @@ namespace compiler::helios::code {
 			static bool isNumericOperator(const lexer::Operator op) {
 				// Only operators which allow their arguments to undergo numeric promotion.
 				static const std::set<std::string> numeric_ops
-					= { "+", "-", "*", "/", "%", "**", "<", "<=", ">", ">=", "==", "!=" };
+					= { "+",  "-",  "*",  "/", "%", "**", "<", "<=", ">",
+					    ">=", "==", "!=", "&", "|", "^",  "~", "<<", ">>" };
 				return numeric_ops.contains(op.str());
 			}
 
@@ -367,7 +368,8 @@ namespace compiler::helios::code {
 				const auto lookup_result
 					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
 				// @TODO: #1412 fix dealias
-				auto all_candidates = lookup_result->valueOrThrow().leaves;
+				auto               all_candidates = lookup_result->valueOrThrow().leaves;
+				std::vector<SymID> method_candidates;
 				for (const auto [builtin_operator_sym, _]:
 				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
 					if (name(builtin_operator_sym) == op->unwrap().value)
@@ -375,30 +377,26 @@ namespace compiler::helios::code {
 				}
 				filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
 
-				// Step 2b. — If nothing was found in the calling scope or among builtins, fall
-				// back to an operator method declared on the operand's own type.
-				// @TODO: #3133 This should be unified.
-				if (all_candidates.empty()) {
-					const auto inner_type = inner->expression_type.getType();
+				// Step 2b. — Look for operator methods declared on the operand's own type (classes only)
+				const auto inner_type = inner->expression_type.getType();
+				if (inner_type.getKind() == tsh::Kind::Class) {
 					const auto method_lookup_result
 						= HInterface::ofTypeInstance(inner_type).lookup(ctx, op->unwrap().value);
-					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
+					method_candidates = method_lookup_result->valueOrThrow().leaves;
 					filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
-					if (!method_candidates.empty()) {
-						auto self_expr = Shorthand{ ctx }.prepToPassSelf(std::move(inner));
-						return processUnaryOperatorCall(
-								   ctx,
-								   method_candidates,
-								   std::move(self_expr),
-								   pstOrigin(op),
-								   operatoriness
-						)
-						    .valueOrThrow();
-					}
+
+					for (const auto method_candidate: method_candidates)
+						if (not std::ranges::contains(all_candidates, method_candidate))
+							all_candidates.push_back(method_candidate);
 				}
 
 				return processUnaryOperatorCall(
-						   ctx, all_candidates, std::move(inner), pstOrigin(op), operatoriness
+						   ctx,
+						   all_candidates,
+						   method_candidates,
+						   std::move(inner),
+						   pstOrigin(op),
+						   operatoriness
 				)
 				    .valueOrThrow();
 			}
@@ -473,9 +471,10 @@ namespace compiler::helios::code {
 
 				// Handle dereferencing
 				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
-					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
+					if (not(tsh::isPointerKind(inner_type.getType().getKind())
+					        or inner_type.getRefKind() != tsh::ReferenceKind::Direct)) {
 						ctx.logInt(makeBox<dia::PlaceholderError>(
-							"Tried to dereference a non-pointer type", stmt->getStablePosition()
+							"Tried to dereference an invalid type", stmt->getStablePosition()
 						));
 						return;
 					}
@@ -614,7 +613,6 @@ namespace compiler::helios::code {
 			) const {
 				const auto lhs_type = lhs->expression_type.getSymbolType();
 				const auto rhs_type = rhs->expression_type.getSymbolType();
-				Shorthand  s{ ctx };
 
 				// Binary operator resolution now happens in two steps:
 				// 1. If the arguments are both numeric (integral or float) and the operator is a
@@ -646,7 +644,8 @@ namespace compiler::helios::code {
 				const auto lookup_result
 					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
 				// @TODO: #1412 fix dealias
-				auto all_candidates = lookup_result->valueOrThrow().leaves;
+				auto               all_candidates = lookup_result->valueOrThrow().leaves;
+				std::vector<SymID> method_candidates;
 				for (const auto [builtin_operator_sym, _]:
 				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
 					if (name(builtin_operator_sym) == op->unwrap().value)
@@ -656,32 +655,29 @@ namespace compiler::helios::code {
 					ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 				);
 
-				// Step 2b. — if nothing was found in the calling scope or among builtins, fall
-				// back to an operator method declared on the left-hand side's own type.
-				// @TODO: #3133 This should be unified.
-				if (all_candidates.empty()) {
-					const auto lhs_abstract_type    = lhs_type.getType();
+				// Step 2b. — Look for operator methods declared on the left-hand side's type
+				// (classes only)
+				const auto lhs_abstract_type = lhs_type.getType();
+				if (lhs_abstract_type.getKind() == tsh::Kind::Class) {
 					const auto method_lookup_result = HInterface::ofTypeInstance(lhs_abstract_type)
 					                                      .lookup(ctx, op->unwrap().value);
-					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
+					method_candidates = method_lookup_result->valueOrThrow().leaves;
 					filterFunctionsByOperatoriness(
 						ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 					);
-					if (!method_candidates.empty()) {
-						auto self_expr = s.prepToPassSelf(std::move(lhs));
-						return processBinaryOperatorCall(
-								   ctx,
-								   method_candidates,
-								   std::move(self_expr),
-								   std::move(rhs),
-								   pstOrigin(op)
-						)
-						    .valueOrThrow();
-					}
+
+					for (const auto method_candidate: method_candidates)
+						if (not std::ranges::contains(all_candidates, method_candidate))
+							all_candidates.push_back(method_candidate);
 				}
 
 				return processBinaryOperatorCall(
-						   ctx, all_candidates, std::move(lhs), std::move(rhs), pstOrigin(op)
+						   ctx,
+						   all_candidates,
+						   method_candidates,
+						   std::move(lhs),
+						   std::move(rhs),
+						   pstOrigin(op)
 				)
 				    .valueOrThrow();
 			}
@@ -704,13 +700,16 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand());
+				if (lhs_res.hasFailed()) return;
+				auto lhs = std::move(lhs_res).valueOrThrow();
+
 				// Handle variant type construction
-				if (op->unwrap() == lang_def::NamedOperator::Pipe) {
+				if (op->unwrap() == lang_def::NamedOperator::Pipe
+				    && lhs->expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
-					// Expect all subexpressions in variant constructor to be Meta types or try to
-					// lift them if they aren't.
 					const auto meta_type = tsh::SymbolType<>{
 						tsh::getMetaType(),
 						tsh::ReferenceKind::Direct,
@@ -721,10 +720,7 @@ namespace compiler::helios::code {
 						auto sub_expr_hout = subExprFromPSTWithType(
 							ctx, sub_expr, meta_type, op->getStablePosition()
 						);
-						if (sub_expr_hout.hasFailed()) {
-							// Error has occurred.
-							return;
-						}
+						if (sub_expr_hout.hasFailed()) return;
 						all_subtypes.emplace_back(std::move(sub_expr_hout).valueOrThrow());
 					}
 					node = makeBox<VariantTypeConstructorExpr>(
@@ -733,11 +729,8 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				// Default case (typical operators, built-in or user-defined)
-				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand());
 				auto rhs_res = subExprFromPST(ctx, stmt->getRightOperand());
-
-				auto lhs = std::move(lhs_res).valueOrThrow();
+				if (rhs_res.hasFailed()) return;
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
 				node = resolveBinaryOperator(
@@ -785,6 +778,10 @@ namespace compiler::helios::code {
 
 				case pst::Keyword::Type:
 					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getMetaType());
+					break;
+
+				case pst::Keyword::Void:
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getVoidType());
 					break;
 
 				case pst::Keyword::i128:

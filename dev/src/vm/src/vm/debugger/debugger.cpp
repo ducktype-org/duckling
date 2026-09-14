@@ -2,6 +2,8 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <filesystem/file_path.hpp>
+
 #include <vm/api/vm.hpp>
 
 namespace {
@@ -41,18 +43,10 @@ namespace vm::debugger {
 	Debugger::~Debugger() {
 		updater.detach();
 
-		// @TODO: #1222 Remove checking status and always kill after fixing kill
-
-		api::getExecutionStatus(pid)
-			.and_then([&](const api::ProcStatus& status) {
-				if (!std::holds_alternative<api::NotStarted>(status)) return api::kill(pid);
-
-				return std::expected<void, api::ApiError>{};
-			})
-			.transform_error([&](const api::ApiError& api_error) {
-				on_error.emitEvent(api::errorToString(api_error));
-				return api_error;
-			});
+		(void) api::kill(pid).transform_error([&](const api::ApiError& api_error) {
+			on_error.emitEvent(api::errorToString(api_error));
+			return api_error;
+		});
 	}
 
 	void Debugger::attachOnStatusChangedListener(events::Listener<api::ProcStatus>& listener) {
@@ -106,13 +100,17 @@ namespace vm::debugger {
 		return api::loadFiles(pid, files);
 	}
 
-	std::expected<void, std::variant<api::ApiError, std::string>> Debugger::loadDefault() {
+	std::expected<void, std::variant<api::ApiError, std::string>> Debugger::loadDefault(
+		base::Optional<fs::FilePath> prefix
+	) {
 		fs::FilePath fp = "duck_build/package_dvm.dbc";
+		if (prefix.has_value()) fp = prefix.value() / fp;
 		if (!fp.exists())
 			return std::unexpected(api::OtherError{
 				"No compiled program in the current directory." });
 
 		fs::FilePath fp_map = "duck_build/package_dvm.di.json";
+		if (prefix.has_value()) fp_map = prefix.value() / fp_map;
 		if (!fp_map.exists())
 			return std::unexpected(api::OtherError{
 				"No compiled program mapping in the current directory." });
@@ -190,25 +188,27 @@ namespace vm::debugger {
 			});
 	}
 
-	std::expected<CodePosition, api::ApiError> Debugger::step() {
+	std::expected<base::Optional<CodePosition>, api::ApiError> Debugger::step() {
 		auto step_response = api::step(pid);
 		if (!step_response) return std::unexpected(step_response.error());
 
-		auto pos = getCurrentPosition();
-		if (pos && pos->function_name == "vm_start_function") {
-			auto resume_response = resume();
-			if (!resume_response) return std::unexpected(resume_response.error());
-		}
+		// The step may have ended a program, so we don't report any position.
+		if (api::isStatusTerminal(getStatus())) return base::Optional<CodePosition>();
 
-		return pos;
+		return getCurrentPosition().transform([](const CodePosition& position) {
+			return base::Optional<CodePosition>(position);
+		});
 	}
 
-	std::expected<CodePosition, api::ApiError> Debugger::mappedStep() {
+	std::expected<base::Optional<CodePosition>, api::ApiError> Debugger::mappedStep() {
 		auto response = step();
 
-		for (usize guard = 1'024; response && guard; response = step(), guard--) {
-			if (!response->mapped_position) return response;
-			auto mapped = *response->mapped_position;
+		for (usize guard = 1'024; response && response->has_value() && guard;
+		     response    = step(), guard--) {
+			const CodePosition& position = response->value();
+
+			if (!position.mapped_position) return response;
+			auto mapped = *position.mapped_position;
 
 			auto unmapped = mapper.mapSourcePositionToCodePosition(
 				mapped.getLocation()->getSourceFile().getFilePath(),
@@ -216,8 +216,8 @@ namespace vm::debugger {
 			);
 
 			if (!unmapped) return response;
-			if (unmapped->first == response->function_name
-			    && unmapped->second == response->instr_number)
+			if (unmapped->first == position.function_name
+			    && unmapped->second == position.instr_number)
 				return response;
 		}
 

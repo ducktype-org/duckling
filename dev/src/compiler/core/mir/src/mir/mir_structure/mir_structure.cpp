@@ -67,6 +67,7 @@ namespace compiler::mir {
 		switch (op) {
 		case Operation::ReturnVoid:
 		case Operation::ReturnValue:
+		case Operation::Unreachable:
 		case Operation::Jump:
 		case Operation::Branch:
 		case Operation::BranchIfNull:
@@ -90,6 +91,7 @@ namespace compiler::mir {
 
 		case ReturnVoid:
 		case ReturnValue:
+		case Unreachable:
 		case FunctionEnd:
 			return {};
 
@@ -128,6 +130,8 @@ namespace compiler::mir {
 			const auto& block = blocks[block_id];
 
 			os << "  Block " << u64(block.id);
+			if (block.debug_name.has_value())
+				os << " (" << block.debug_name.value().strView() << ")";
 			if (block.id == block_order[0]) os << " [entry]";
 			os << ":\n";
 			for (const auto& instruction: block.instructions) {

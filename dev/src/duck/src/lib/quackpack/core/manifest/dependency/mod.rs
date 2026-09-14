@@ -41,6 +41,13 @@ impl DependencyKind {
     pub fn is_dev(self) -> bool {
         matches!(self, Self::Dev)
     }
+
+    pub fn key_in_manifest(self) -> &'static str {
+        match self {
+            DependencyKind::Normal => "dependencies",
+            DependencyKind::Dev => "dev-dependencies",
+        }
+    }
 }
 
 impl fmt::Display for DependencyKind {
@@ -206,6 +213,11 @@ impl Dependency {
     pub fn kind(&self) -> DependencyKind {
         self.kind
     }
+
+    /// Get the [`Conditions`] of this dependency.
+    pub fn conditions(&self) -> Option<&Conditions> {
+        self.conditions.as_ref()
+    }
 }
 
 impl TryFrom<registry::Dependency> for Dependency {
@@ -245,7 +257,7 @@ impl TryFrom<registry::Dependency> for Dependency {
             source.try_into()?,
             features,
             pinned,
-            Some(conditions.try_into()?),
+            Some(conditions.into()),
             alias,
             kind.into(),
         )

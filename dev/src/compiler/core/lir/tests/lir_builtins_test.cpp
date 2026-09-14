@@ -59,7 +59,7 @@ private:
 	void functionCallTest() {
 		auto module  = getLIROfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
-		withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(ctx, std::cerr); });
+		withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(std::cerr, Ref{ &ctx }); });
 	}
 
 	/**
@@ -73,9 +73,7 @@ private:
 
 		auto is_deref = [](const LIRPlace& place) {
 			return place.projection_chain.size() == 1
-			    && std::holds_alternative<LIRPlace::DerefProjection>(
-					   place.projection_chain.front().storage
-				);
+			    && v_matches(place.projection_chain.front().storage, LIRPlace::DerefProjection);
 		};
 
 		auto first_instruction = [](CRef<Function> function) {
@@ -119,8 +117,8 @@ private:
 							<< source_start << ", " << source_end << "]\n";
 			  };
 
-		assertTrue(
-			foo_lir->metadata.position.has_value(), "Expected function metadata position in LIR foo"
+		ASSERT_HAS_VALUE(
+			foo_lir->metadata.position, "Expected function metadata position in LIR foo"
 		);
 		print_stable_position(foo_lir->metadata.position, "foo.function");
 		ASSERT_EQUAL(foo_lir->metadata.source_code_name.value(), base::StrID("foo"));

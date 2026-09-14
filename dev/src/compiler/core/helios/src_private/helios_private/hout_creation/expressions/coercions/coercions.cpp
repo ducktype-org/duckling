@@ -7,6 +7,7 @@
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/tsh/coercions/reference_coercion.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -133,7 +134,8 @@ namespace compiler::helios {
 			const auto alternatives
 				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
 			for (usize i = 0; i < alternatives.size(); i++)
-				if (tsh::isRefKindCoercible(from.getRefKind(), alternatives[i].getRefKind())
+				if (tsh::referenceCoercionRule(from.getRefKind(), alternatives[i].getRefKind())
+				        .isLegal()
 				    && alternatives[i].getType() == from.getType())
 					return std::pair{ i, alternatives[i] };
 
@@ -178,6 +180,12 @@ namespace compiler::helios {
 		if (source_type == to.getType()) {
 			// No coercion
 			return current_expr;
+		} else if (source_type.getKind() == tsh::Kind::Void) {
+			// We have to wrap the expression in CastExpr to change the inner type,
+			// the cast itself is lowered to no-op.
+			return makeBox<code::CastExpr>(
+				ctx, current_expr->origin.generatedFrom(), std::move(current_expr), to
+			);
 		} else if ((is_source_numeric and is_target_numeric)
 		           or (is_source_bool and is_target_numeric)) {
 			// Numeric type promotion

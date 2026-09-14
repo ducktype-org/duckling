@@ -35,6 +35,7 @@ namespace {
                     "Comparison between different numeric types is not supported"
                 );
                 auto rhs_num = rhs_num_opt.value();
+                // clang-format off
                 switch (operation) {
                 case OpKind::cmpEq:
                 case OpKind::fcmpEq:
@@ -59,8 +60,9 @@ namespace {
                 case OpKind::ucmpLe:
                     return lhs_num <= rhs_num;
                 default:
-                    CORE_PANIC("Unhandled comparison operation");
+                    CORE_PANIC("Unhandled comparison operation in compTimeEvaluateComparison");
                 }
+                // clang-format on
             },
             lhs_numeric.getStorage()
         );
@@ -83,11 +85,13 @@ namespace {
 		case OpKind::ucmpGe: 	return OpKind::ucmpLe;
 		case OpKind::cmpLt: 	return OpKind::cmpGt;
 		case OpKind::cmpLe: 	return OpKind::cmpGe;
+		case OpKind::ucmpLt: 	return OpKind::ucmpGt;
+		case OpKind::ucmpLe: 	return OpKind::ucmpGe;
 		case OpKind::fcmpGt: 	return OpKind::fcmpLt;
 		case OpKind::fcmpGe: 	return OpKind::fcmpLe;
 		case OpKind::fcmpLt: 	return OpKind::fcmpGt;
 		case OpKind::fcmpLe: 	return OpKind::fcmpGe;
-		default: 				CORE_PANIC("Unhandled comparison operation");
+		default: 				CORE_PANIC("Unhandled comparison operation in getComparisonOppositeDirection");
 		}
 		// clang-format on
 	}

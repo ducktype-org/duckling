@@ -31,8 +31,9 @@ namespace vm {
 		// not synchronize usage of each of the processes. Each process synchronizes its resources
 		// by itself
 		std::expected<PID, api::ApiError> newProcess(const api::ProcessConfig& options = {});
-		std::expected<api::response::Boolean, api::ApiError> deinitAndValidate(PID pid);
-		std::expected<api::Response, api::ApiError> doRequest(const api::SupervisorRequest& request);
+		std::expected<api::Response, api::ApiError> doRequest(
+			PID pid, const api::RequestVariant& request
+		);
 		std::expected<void, api::ApiError> killProcess(PID pid);
 	};
 }

@@ -19,7 +19,7 @@ public:
 
 private:
 	void localLeakTest() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("local_leak.dbc", "", ""),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);
@@ -36,7 +36,7 @@ private:
 	void noDoubleDestructorCalls() { runTestOnVm("no_double_destructor.dbc", "", ""); }
 
 	void nestedLeaks() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("nested_leaks.dbc", "", ""),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);

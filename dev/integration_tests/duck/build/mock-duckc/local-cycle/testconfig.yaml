@@ -20,7 +20,8 @@ Tests:
             info: starting gathering the dependency graph
             info: running gathering
             info: starting the solver engine
-            info: starting fetching 3 packages
+            info: starting loading 3 packages
+            info: loaded source codes of 3 packages, 0 were downloaded, 3 were already present
             info: successfully synchronized venv \`foo\`
             info: compiling \`baz\`...
             info: compiling \`bar\`...

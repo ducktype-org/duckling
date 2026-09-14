@@ -1,0 +1,13 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+
+Tests:
+  errors:
+    Cases:
+      adding-itself:
+        test-cmd: duck -C foo add foo --local .
+        ExitCode: 1
+        Err:
+          String: |+
+            error: tried to add root package as its own dependency

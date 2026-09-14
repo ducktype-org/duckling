@@ -149,6 +149,7 @@ namespace lang_def {
 			{ Keyword::Bool, "bool", KeywordFlags() },
 			{ Keyword::Str, "str", KeywordFlags() },
 			{ Keyword::Type, "type", KeywordFlags() },
+			{ Keyword::Void, "void", KeywordFlags() },
 
 			{ Keyword::Set, "Set", KeywordFlags() },
 			{ Keyword::Dict, "Dict", KeywordFlags() },
@@ -235,6 +236,7 @@ namespace lang_def {
 		{ NamedOperator::Pipe, "|" },
 		{ NamedOperator::Ampersand, "&" },
 		{ NamedOperator::BitXor, "^" },
+		{ NamedOperator::BitNot, "~" },
 
 		{ NamedOperator::LeftShift, "<<" },
 		{ NamedOperator::RightShift, ">>" },

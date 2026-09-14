@@ -2,12 +2,14 @@
 #include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/errors.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
@@ -23,6 +25,8 @@
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
 
+#include <sstream>
+
 using namespace compiler;
 
 class HeliosErrorsTests: public tester::TestSuite {
@@ -32,6 +36,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
 		TESTER_ADD_TEST(testClassErrors);
 
@@ -48,7 +53,7 @@ public:
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
-
+		TESTER_ADD_TEST(testManglingErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
@@ -62,6 +67,47 @@ protected:
 	}
 
 private:
+	/**
+	 * @brief Helper function that check for HELIOS compilation
+	 * errors.
+	 *
+	 * The `present_phrases` are checked to be present in the logged
+	 * error messages in the given order.
+	 *
+	 * @TODO: #2213 Add PST errors handling here.
+	 *
+	 * @param logged_msg_count Expected number of logged error messages.
+	 * @param present_phrases List of phrases that should be present in the logged errors in order.
+	 */
+	void checkForError(const std::vector<std::string_view>& present_phrases, u64 logged_msg_count) {
+		auto logger = query::Context::dumpToOneLoggerAndClear();
+
+		// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
+		// query errors is ok:
+		assertTrue(logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged.");
+
+		std::stringstream logged_messages;
+		logger->terminalPrint(logged_messages);
+		// std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
+		auto msg_count = logger->messageCount();
+		assertEqual(
+			msg_count,
+			logged_msg_count,
+			"Expected logged message count to be " + std::to_string(logged_msg_count) + ", but got "
+				+ std::to_string(msg_count)
+		);
+		size_t      current_pos = 0;
+		std::string logged_str  = logged_messages.str();
+		for (const auto& phrase: present_phrases) {
+			size_t found_pos = logged_str.find(phrase, current_pos);
+			assertTrue(
+				found_pos != std::string::npos,
+				"Expected logged messages to contain phrase in order: " + std::string(phrase)
+			);
+			if (found_pos != std::string::npos) current_pos = found_pos + phrase.length();
+		}
+	}
+
 	/**
 	 * @brief Helper function that check for HELIOS compilation
 	 * errors in a module with given content, when compiling it to HOUT module.
@@ -89,32 +135,7 @@ private:
 
 		if (expect_failure)
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
-		auto logger = query::Context::dumpToOneLoggerAndClear();
-
-		// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
-		// query errors is ok:
-		assertTrue(logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged.");
-
-		std::stringstream logged_messages;
-		logger->terminalPrint(logged_messages);
-		// std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
-		auto msg_count = logger->messageCount();
-		assertEqual(
-			msg_count,
-			logged_msg_count,
-			"Expected logged message count to be " + std::to_string(logged_msg_count) + ", but got "
-				+ std::to_string(msg_count)
-		);
-		size_t      current_pos = 0;
-		std::string logged_str  = logged_messages.str();
-		for (const auto& phrase: present_phrases) {
-			size_t found_pos = logged_str.find(phrase, current_pos);
-			assertTrue(
-				found_pos != std::string::npos,
-				"Expected logged messages to contain phrase in order: " + std::string(phrase)
-			);
-			if (found_pos != std::string::npos) current_pos = found_pos + phrase.length();
-		}
+		checkForError(present_phrases, logged_msg_count);
 	}
 
 	/**
@@ -154,6 +175,51 @@ private:
 				}
 			)",
 				{ "Call failed because no matching functions were found." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+                class Number {
+                    val: i64;
+                    fun +(rhs: Number) -> Number = {
+                        return Number(self.val + rhs.val);
+                    }
+                }
+
+                fun +(lhs: Number, rhs: Number) -> Number = {
+                    return Number(lhs.val + rhs.val);
+                }
+
+                fun main() -> i64 = {
+                    let a = Number(10);
+                    let b = Number(20);
+                    let c = a + b;
+                    return c.val;
+                }
+            )",
+				{ "Call failed due to ambiguous overload resolution" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+                class Number {
+                    val: i64;
+                    fun -() -> Number = {
+                        return Number(-self.val);
+                    }
+                }
+
+                fun -(n: Number) -> Number = {
+                    return Number(-n.val);
+                }
+
+                fun main() -> i64 = {
+                    let a = Number(10);
+                    let c = -a;
+                    return c.val;
+                }
+            )",
+				{ "Call failed due to ambiguous overload resolution" },
 				1
 			);
 		}
@@ -581,6 +647,17 @@ private:
 				fun main() = {
 					if Loop <= 1 { # no parenthesis around condition
 					
+					}
+				}
+			)",
+			{},
+			0
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					while true { # no parenthesis around condition
 					}
 				}
 			)",
@@ -1339,6 +1416,26 @@ private:
 		}
 	}
 
+	void testMainReturnErrors() {
+		checkForErrorOnCompileModule(
+			R"(fun main() -> i32 = { return 0; })", { "main` function must return `i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() -> () = {})", { "main` function must return `i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() -> ref i64 = {})", { "main` function must return `i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() = { return; })", { "return` without a value", "i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() = { return "bad"; })",
+			{ "slice char", "cannot be converted to type `i64`" },
+			1
+		);
+	}
+
 	void testCopyabilityErrors() {
 		const std::string_view msg
 			= "Cannot implicitly copy a value of non-trivially-copyable type `Class L`";
@@ -1898,7 +1995,7 @@ private:
 					var y = *x;
 				}
 			)",
-			{ "Tried to dereference a non-pointer type" },
+			{ "Tried to dereference an invalid type" },
 			1
 		);
 
@@ -1935,6 +2032,8 @@ private:
 			= "Division by zero in compile-time expression evaluation.";
 		const std::string_view mod_by_zero
 			= "Modulo by zero in compile-time expression evaluation.";
+		const std::string_view invalid_shift
+			= "Invalid shift amount in compile-time expression evaluation.";
 
 		// ======================= Failing arithmetic in tree eval =======================
 		{
@@ -1942,25 +2041,40 @@ private:
 			checkForErrorOnCompileModule(R"(const A: i64 = 1 % 0;)", { mod_by_zero }, 1);
 			checkForErrorOnCompileModule(R"(const A: f64 = 1.0 % 0.0;)", { mod_by_zero }, 1);
 			checkForErrorOnCompileModule(R"(const A: i64 = -(1 / 0);)", { div_by_zero }, 1);
+
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 << 32;)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 << 64;)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i64 = 1i64 >> 64;)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 >> 32;)", { invalid_shift }, 1);
+
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 << (-1);)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i64 = 10i64 >> (-5);)", { invalid_shift }, 1);
 		}
 
 		// ======================= Failure propagation through sub-expressions =======================
 		{
 			// Parenthesis expression.
 			checkForErrorOnCompileModule(R"(const A: i64 = (1 / 0);)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A: i32 = (1i32 << 32);)", { invalid_shift }, 1);
 
 			// Tuple element.
 			checkForErrorOnCompileModule(R"(const A = (1 / 0, 2);)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", { invalid_shift }, 1);
 
 			// Cast source expression.
 			checkForErrorOnCompileModule(R"(const A = (1 / 0) as f64;)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A = (1i32 << 32) as f64;)", { invalid_shift }, 1);
 
 			// Static array size.
 			checkForErrorOnCompileModule(R"(const A = i64[1 / 0];)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A = i64[1i32 << 32];)", { invalid_shift }, 1);
 
 			// Taken ternary branch (the untaken one is never evaluated).
 			checkForErrorOnCompileModule(
 				R"(const A: i64 = if true then 1 / 0 else 2;)", { div_by_zero }, 1
+			);
+			checkForErrorOnCompileModule(
+				R"(const A: i32 = if true then 1i32 << 32 else 2;)", { invalid_shift }, 1
 			);
 		}
 
@@ -2022,6 +2136,41 @@ private:
 				1
 			);
 		}
+	}
+
+	void testManglingErrors() {
+		using namespace compiler::helios;
+		constexpr char PRINTABLE     = '@';
+		constexpr char NON_PRINTABLE = '\x07f';
+
+		const auto [_, root_scope_prt] = test_utils::getModule(fs::File(
+			path(base::strConcat("test_modules/error_generating/mod_w_prt_char_", PRINTABLE, "_"))
+		));
+		const auto id_prt              = test_utils::getChain("foo", root_scope_prt).back();
+
+		// note: `Delete` is not-printable on win/linux/mac but it's allowed in filenames
+		ASSERT_TRUE(not std::isprint(static_cast<unsigned char>(NON_PRINTABLE)));
+		const auto [dummy, root_scope_nprt] = test_utils::getModule(fs::File(path(
+			base::strConcat("test_modules/error_generating/mod_w_non_prt_char_", NON_PRINTABLE, "_")
+		)));
+		std::ignore                         = dummy;  // @todo: #761 replace `dummy` with `_`
+		const auto id_nprt                  = test_utils::getChain("foo", root_scope_nprt).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_prt });
+			checkForError(
+				{ "[Feature not implemented] Name of a module contains a character that is not "
+			      "allowed yet: '@' (int: 64)" },
+				1
+			);
+
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_nprt });
+			checkForError(
+				{ "[Feature not implemented] Name of a module contains a character that is not "
+			      "allowed yet: [not-printable] (int: 127)" },
+				1
+			);
+		});
 	}
 
 	void testErrorBadExpr() {

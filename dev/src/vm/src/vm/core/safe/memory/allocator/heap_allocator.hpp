@@ -14,25 +14,38 @@
 
 namespace vm {
 
-	inline std::byte* heapAllocOrThrow(u64 size) {
+	template<typename EntryT>
+	inline EntryT* heapAllocOrThrow(u64 size) {
 		try {
-			return new std::byte[size];
+			return new EntryT[size];
 		} catch (const std::bad_alloc&) { throw exceptions::VMMemoryAllocationError(); }
 	}
 
+	template<typename EntryT>
 	struct BlockData;
 
-	class HeapAllocator final: public AllocatorABC {
+	template<typename EntryT>
+	class HeapAllocator final: public IAllocator<EntryT> {
 		// It's a mock, it should be replaced with something faster.
-		std::deque<base::OwningView> allocated;
+		std::deque<base::TypedOwningView<EntryT>> allocated;
 
 	public:
-		BlockData allocate(TypeCRef type) {
-			auto             size = type->getSize().asInt();
-			auto             ptr  = heapAllocOrThrow(size);
-			base::OwningView view{ ptr, size };
-			allocated.push_back(std::move(view));
-			return BlockData{ type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>{ this } };
+		// @TODO: #3447 Resolve the bytes-vs-entries unit conflation below before instantiating
+		// the memory module with a non-byte `EntryT`, then drop the `static_assert`.
+		// @note `size` here is a byte count (from Type::getSize()) but is passed to
+		// heapAllocOrThrow<EntryT>(size) -> new EntryT[size], where the argument is an element
+		// count. The two only coincide while sizeof(EntryT) == 1, which the static_assert below
+		// enforces. This path is intentionally byte-only for now; widening EntryT will need the
+		// bytes-vs-entries distinction resolved here deliberately, instead of silently
+		// over-allocating.
+		BlockData<EntryT> allocate(TypeCRef type) {
+			static_assert(sizeof(EntryT) == 1);
+			usize size = type->getSize().asInt();
+			auto  ptr  = heapAllocOrThrow<EntryT>(size);
+			allocated.emplace_back(ptr, size);
+			return BlockData<EntryT>{ type,
+				                      base::TypedModRawView<EntryT>{ ptr, size },
+				                      Ref<IAllocator<EntryT>>{ this } };
 		}
 
 		/**
@@ -40,18 +53,22 @@ namespace vm {
 		 * `inner_type`.
 		 * @note Assumes that `table_type` is a dynamic table type with inner type `inner_type`,
 		 *  to assign the correct type to the new `BlockData` object.
+		 * @note Same byte-count/element-count aliasing as `allocate()` above, see its note.
 		 */
-		BlockData dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
-			auto       size = inner_type->getSize().asInt() * n;
-			std::byte* ptr  = heapAllocOrThrow(size);
+		BlockData<EntryT> dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
+			static_assert(sizeof(EntryT) == 1);
+			usize   size = inner_type->getSize().asInt() * n;
+			EntryT* ptr  = heapAllocOrThrow<EntryT>(size);
 			allocated.emplace_back(ptr, size);
-			return BlockData{ table_type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>(this) };
+			return BlockData<EntryT>{ table_type,
+				                      base::TypedModRawView<EntryT>{ ptr, size },
+				                      Ref<IAllocator<EntryT>>(this) };
 		}
 
-		void deallocate(Ref<BlockData> data) final {
+		void deallocate(Ref<BlockData<EntryT>> data) final {
 			auto ptr = data->view.getBegin();
 			for (auto it = allocated.begin(); it != allocated.end(); ++it) {
-				if (it->view().getBegin() == ptr) {
+				if (it->getBegin() == ptr) {
 					allocated.erase(it);
 					return;
 				}

@@ -38,14 +38,4 @@ namespace compiler::helios::defgen {
 	DECLARE_QUERY(
 		QueryDefaultDestructor, tsh::AbstractType, CRef<query::QResult<HOUTFunction>>, ({})
 	);
-
-	/**
-	 * @brief Build the compiler-generated HOUT representation of the `box T` destructor.
-	 *
-	 * Takes a `self: box T` parameter and returns unit. Destroys the pointee (via its own
-	 * destructor) and then frees the box storage with the `box_free` builtin.
-	 *
-	 * @param pointee_type The pointee type `T`.
-	 */
-	HOUTFunction buildBoxDestructor(query::Context& ctx, tsh::AbstractType pointee_type);
 }

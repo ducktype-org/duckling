@@ -2,6 +2,7 @@
 
 use tracing::instrument;
 
+use super::external_libs::validate_external_libraries;
 use super::{UnitCompiler, outputs};
 use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
@@ -16,7 +17,7 @@ pub struct DefaultUnitCompiler;
 impl UnitCompiler for DefaultUnitCompiler {
     #[instrument(skip_all)]
     #[track_caller]
-    fn pre_compilation(&self, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) {
+    fn pre_compilation(&self, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> QuackResult<()> {
         let root = graph.root_unit();
         assert_eq!(
             root.artifacts_type(),
@@ -24,6 +25,8 @@ impl UnitCompiler for DefaultUnitCompiler {
             "debug executor supports only compiling to the binary; got {:?}",
             root.artifacts_type(),
         );
+        validate_external_libraries(root, graph)?;
+        Ok(())
     }
 
     #[instrument(skip_all)]

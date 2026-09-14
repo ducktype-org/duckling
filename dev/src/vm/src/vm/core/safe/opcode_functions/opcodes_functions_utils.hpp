@@ -10,7 +10,9 @@
 #include <vm/utils/interpret.hpp>
 
 namespace vm {
-	class Block;
+	template<typename EntryT>
+	class GenericBlock;
+	using Block = GenericBlock<std::byte>;
 }
 
 /**

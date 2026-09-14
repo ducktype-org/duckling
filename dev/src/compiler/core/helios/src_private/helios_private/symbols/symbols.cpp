@@ -140,7 +140,6 @@ namespace compiler::helios {
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
-	// @TODO: #895 Reevaluate this helper when entry points become explicit.
 	bool isGlobalFun(SymID id) {
 		CORE_ASSERT(
 			getSymRef(id)->common.kind == SymbolKind::FunctionDeclaration
@@ -149,6 +148,16 @@ namespace compiler::helios {
 		);
 
 		return scopeDepth(scope(id)) == 1;
+	}
+
+	// @TODO: #895 Reevaluate this helper when entry points become explicit.
+	bool isGlobalMain(SymID id) {
+		const SymbolKind symbol_kind = kind(id);
+
+		if (symbol_kind != SymbolKind::Function && symbol_kind != SymbolKind::FunctionDeclaration)
+			return false;
+
+		return name(id) == "main" && isGlobalFun(id);
 	}
 
 	bool isGlobalVar(query::Context& ctx, SymID id) {

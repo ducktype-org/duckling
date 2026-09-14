@@ -11,6 +11,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/anycast.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -55,8 +56,7 @@ namespace compiler::helios::test_utils {
 
 			auto symbol_path_variant = symbol->getAsSingle().valueOrPanic();
 			CORE_ASSERT(
-				std::holds_alternative<SymbolList>(symbol_path_variant),
-				"Expected single symbol in chain lookup"
+				v_matches(symbol_path_variant, SymbolList), "Expected single symbol in chain lookup"
 			);
 			auto symbol_path = std::get<SymbolList>(symbol_path_variant);
 

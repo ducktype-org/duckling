@@ -13,18 +13,18 @@ public:
 private:
 	void simpleRun() {
 		auto process_pid_response = vm::api::spawn();
-		assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
+		ASSERT_HAS_VALUE(process_pid_response, "Spawn failed (1)");
 		auto pid = process_pid_response.value().pid;  // "Spawn failed (2)"
 
 		fs::File file(path("working_dbc.dbc"));
 		auto     loaded_file_response = vm::api::loadFiles(pid, { file });
-		assertTrue(loaded_file_response.has_value(), "Load failed (1)");
+		ASSERT_HAS_VALUE(loaded_file_response, "Load failed (1)");
 
 		auto run_response = vm::api::run(pid);
-		assertTrue(run_response.has_value(), "Run failed (1)");
+		ASSERT_HAS_VALUE(run_response, "Run failed (1)");
 
 		auto join_response = vm::api::join(pid);
-		assertTrue(join_response.has_value(), "Join failed (1)");
+		ASSERT_HAS_VALUE(join_response, "Join failed (1)");
 	}
 };
 

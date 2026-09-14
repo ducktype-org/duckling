@@ -43,6 +43,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/tsh/abstract_type_impl.cpp
 	src_private/helios_private/tsh/queries.cpp
 	src_private/helios_private/templates/templates.cpp
+	src/helios/utils/main_return_type.cpp
 
 	src/helios/errors/extern_c_class_empty.cpp
 	src/helios/errors/field_not_c_compatible.cpp
@@ -75,6 +76,7 @@ add_library(HELIOS STATIC
 	src/helios/tsh/queries/types.cpp
 	src/helios/tsh/abstract_type.cpp
 	src/helios/tsh/deductions.cpp
+	src/helios/tsh/coercions/reference_coercion.cpp
 	src/helios/tsh/symbol_type.cpp
 	src/helios/tsh/types.cpp
 	src/helios/tsh/type_interface.cpp
@@ -121,6 +123,7 @@ duck_add_test(compiler helios_pst_layer tests/helios_pst_layer_test.cpp
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler tsh_simple tests/tsh_simple_test.cpp USES HELIOS)
+duck_add_test(compiler tsh_coercion tests/tsh_coercion_test.cpp USES HELIOS)
 
 duck_add_test(compiler tsh_error tests/tsh_error_test.cpp USES HELIOS)
 

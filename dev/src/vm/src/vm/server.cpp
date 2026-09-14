@@ -14,13 +14,16 @@ PUSH_DIAGNOSTIC
 #include <crow/http_response.h>
 POP_DIAGNOSTIC
 
-crow::response convertError(const vm::api::ApiError& api_error) {
-	if (std::holds_alternative<vm::api::WrongResponse>(api_error)) return { 500, "Wrong response" };
-	return {
-		400,
-		nlohmann::json(api_error),
-	};
-}
+namespace {
+	crow::response convertError(const vm::api::ApiError& api_error) {
+		if (std::holds_alternative<vm::api::WrongResponse>(api_error))
+			return { 500, "Wrong response" };
+		return {
+			400,
+			nlohmann::json(api_error),
+		};
+	}
+}  // namespace
 
 template<class T, class E>
 crow::response toResponse(const std::expected<T, E>& x) {

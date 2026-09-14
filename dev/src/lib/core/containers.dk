@@ -3,53 +3,110 @@ import core.panicking as panicking;
 import core.runtime as runtime;
 import core.clib as clib;
 
+#{
+    Storage for `T`s. `alloc`/`free` hand out a `ptr T` holding exactly one `T`, which is what
+    a `box T` owns; the `many_` counterparts work on a buffer of `len` elements and hand out a
+    `manyptr T`.
+
+    On the DVM a block (or a dynamic table for the `many_` variants) is allocated. On native
+    targets it is a plain `malloc`/`free` pair.
+#}
 template(T: type)
 namespace allocation {
-    const LLVM_ELEM_SIZE = builtins.size_of(T);
+    const LLVM_OBJECT_SIZE = builtins.size_of(T);
 
     @backend_dependent
-    fundecl alloc(len: i64) -> manyptr T;
+    fundecl alloc() -> ptr T;
 
     @dvm_only_impl
-    fun alloc(len: i64) -> manyptr T = {
-        return builtins.dvm_alloc_arr:{T}(len);
+    fun alloc() -> ptr T = {
+        return builtins.dvm_alloc:{T}();
+    }
+
+    #{
+        `malloc` answers a failed allocation with a null pointer. Nothing downstream can do
+        anything useful with it, so the program stops right here instead of dereferencing it.
+    #}
+    @native_only_impl
+    fun alloc() -> ptr T = {
+        let p = clib.malloc(LLVM_OBJECT_SIZE as u64) as ptr T;
+        if (p as u64 == 0) panicking.panic();
+        return p;
+    }
+
+    @backend_dependent
+    fundecl free(p: ptr T) -> ();
+
+    @dvm_only_impl
+    fun free(p: ptr T) -> () = {
+        builtins.dvm_free:{T}(p);
     }
 
     @native_only_impl
-    fun alloc(len: i64) -> manyptr T = {
-        return clib.malloc((len * LLVM_ELEM_SIZE) as u64) as manyptr T;
-    }
-
-    @backend_dependent
-    fundecl free(p: manyptr T) -> ();
-
-    @dvm_only_impl
-    fun free(p: manyptr T) -> () = {
-        builtins.dvm_free_arr:{T}(p);
-    }
-
-    @native_only_impl
-    fun free(p: manyptr T) -> () = {
+    fun free(p: ptr T) -> () = {
         clib.free(p as cptr u8);
     }
 
     @backend_dependent
-    fundecl realloc(p: manyptr T, new_size: i64) -> manyptr T;
+    fundecl many_alloc(len: i64) -> manyptr T;
+
+    @dvm_only_impl
+    fun many_alloc(len: i64) -> manyptr T = {
+        return builtins.dvm_alloc_arr:{T}(len);
+    }
+
+    @native_only_impl
+    fun many_alloc(len: i64) -> manyptr T = {
+        return clib.malloc((len * LLVM_OBJECT_SIZE) as u64) as manyptr T;
+    }
+
+    @backend_dependent
+    fundecl many_free(p: manyptr T) -> ();
+
+    @dvm_only_impl
+    fun many_free(p: manyptr T) -> () = {
+        builtins.dvm_free_arr:{T}(p);
+    }
+
+    @native_only_impl
+    fun many_free(p: manyptr T) -> () = {
+        clib.free(p as cptr u8);
+    }
+
+    @backend_dependent
+    fundecl many_realloc(p: manyptr T, new_size: i64) -> manyptr T;
 
     #{
         `dvm_realloc_arr` resizes the dynamic table in place and reseats the
         handle held by `p`, so the parameter itself is the reallocated buffer.
     #}
     @dvm_only_impl
-    fun realloc(p: manyptr T, new_size: i64) -> manyptr T = {
+    fun many_realloc(p: manyptr T, new_size: i64) -> manyptr T = {
         builtins.dvm_realloc_arr:{T}(p, new_size);
         return p;
     }
 
     @native_only_impl
-    fun realloc(p: manyptr T, new_size: i64) -> manyptr T = {
-        return clib.realloc(p as cptr u8, (new_size * LLVM_ELEM_SIZE) as u64) as manyptr T;
+    fun many_realloc(p: manyptr T, new_size: i64) -> manyptr T = {
+        return clib.realloc(p as cptr u8, (new_size * LLVM_OBJECT_SIZE) as u64) as manyptr T;
     }
+}
+
+#{
+    The two halves of `box T`'s storage management, as the compiler sees them.
+#}
+template(T: type)
+fun boxAlloc(value: T) -> ptr T = {
+    let storage = allocation:{T}.alloc();
+    builtins.move_in:{T}(storage, move value);
+    return storage;
+}
+
+template(T: type)
+fun boxFree(p: ptr T) -> () = {
+    # Moving the pointee out and dropping the result on the floor runs `T`'s destructor.
+    builtins.move_out:{T}(p);
+    allocation:{T}.free(p);
 }
 
 class String {
@@ -69,8 +126,8 @@ class String {
             if (new_cap == 0i64) new_cap = 1i64;
             while (new_cap < required) new_cap = new_cap * 2i64;
 
-            if (cap == 0i64) pointer = allocation:{char}.alloc(new_cap);
-            else pointer = allocation:{char}.realloc(pointer, new_cap);
+            if (cap == 0i64) pointer = allocation:{char}.many_alloc(new_cap);
+            else pointer = allocation:{char}.many_realloc(pointer, new_cap);
             cap = new_cap;
         }
     }
@@ -152,7 +209,7 @@ class String {
     }
 
     String.destroy() = {
-        allocation:{char}.free(pointer);   
+        allocation:{char}.many_free(pointer);   
     }
 }
 
@@ -454,8 +511,8 @@ class List {
             if (new_cap == 0i64) new_cap = 1i64;
             while (new_cap < required) new_cap = new_cap * 2i64;
 
-            if (cap == 0i64) pointer = allocation:{T}.alloc(new_cap);
-            else pointer = allocation:{T}.realloc(pointer, new_cap);
+            if (cap == 0i64) pointer = allocation:{T}.many_alloc(new_cap);
+            else pointer = allocation:{T}.many_realloc(pointer, new_cap);
             cap = new_cap;
         }
     }
@@ -523,7 +580,7 @@ class List {
 
     List.destroy() = {
         clear();
-        if (cap > 0i64) allocation:{T}.free(pointer);
+        if (cap > 0i64) allocation:{T}.many_free(pointer);
     }
 }
 

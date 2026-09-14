@@ -1,0 +1,11 @@
+# Test configuration for comparison-operators-on-integers
+# Tests ==, !=, <, >, <=, >= and comparison chaining (a < b < c)
+
+Tests:
+  comparing_integers:
+    Description: Tests for comparison operators on integers.
+    Cases:
+      all:
+        Output:
+          String: "1\n3\n5\n7\n9\n11\n13\n14\n16\n"
+        ExitCode: 0
