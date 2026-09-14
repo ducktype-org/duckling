@@ -80,7 +80,7 @@ private:
 		}
 		std::cerr << "Green nodes: " << green_count << ", Red nodes: " << red_count << '\n';
 		ASSERT_TRUE(green_count > 0);
-		// functions_1/functions_1.dmf there is a change in variable name a -> c in function main()
+		// functions_1/functions_1.dk there is a change in variable name a -> c in function main()
 		// this should result in only one red node in the previous graph
 		ASSERT_TRUE(red_count == 1);
 
@@ -114,8 +114,8 @@ private:
 
 		// Validate that .o file from previous compilation is present before we run the compilation
 		// with changed source code
-		assertTrue(
-			output_maybe.has_value(), "Output file should be present in artifacts before compilation"
+		ASSERT_HAS_VALUE(
+			output_maybe, "Output file should be present in artifacts before compilation"
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -152,9 +152,8 @@ private:
 
 		// Validate that .o file from previous compilation is present before we run the compilation
 		// with changed source code
-		assertFalse(
-			output_maybe2.has_value(),
-			"Output file should be deleted from artifacts after failed compilation"
+		ASSERT_NO_VALUE(
+			output_maybe2, "Output file should be deleted from artifacts after failed compilation"
 		);
 		driver::exit();
 

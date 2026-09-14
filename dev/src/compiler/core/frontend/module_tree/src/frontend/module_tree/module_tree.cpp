@@ -140,6 +140,17 @@ namespace compiler::frontend {
 
 	base::StrID ModuleTree::getName() const { return m_name; }
 
+	std::string ModuleTree::humanReadableID(query::Context& ctx) const {
+		const auto own_name
+			= getName().isBad() ? std::string_view("<unnamed>") : getName().strView();
+
+		auto parent = getParentModule();
+		if (parent.empty()) return base::strConcat(m_package_id.strView(), ".", own_name);
+
+		const auto parent_id = parent.value().unlock(ctx).getID();
+		return base::strConcat(getModuleRef(parent_id)->humanReadableID(ctx), ".", own_name);
+	}
+
 	std::string ModuleTree::prettyPrint(u32 indentation) const {
 		std::stringstream output;
 
@@ -854,8 +865,8 @@ namespace compiler::frontend {
 	ModuleID createModuleTreeFromContents(
 		std::string_view contents, base::Optional<base::StrID> package_id
 	) {
-		// createModuleTree function expects .dmf extension.
-		auto virtual_file = fs::FileManager::createRandomVirtualFile(contents, ".dmf");
+		// createModuleTree function expects .dk extension.
+		auto virtual_file = fs::FileManager::createRandomVirtualFile(contents, LANG_MODULE_FILE);
 
 		if (!package_id.has_value())
 			return createModuleTreeWithRandomPackageID(virtual_file);
@@ -914,6 +925,21 @@ namespace compiler::frontend {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryParentModule);
+
+	/************************
+	 * QueryPackageOfModule *
+	 ************************/
+	struct IMPLEMENT_QUERY(QueryPackageOfModule, packages::PackageAccessLocked) {
+		static auto provide(Context&, QKey key) -> PResult {
+			// @TODO: #3505 - currently changing package name/version doesn't invalidate stuff that
+			// depends on those values
+			return GetModuleID_Functor::get(key)->getPackage();
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPackageOfModule);
 
 	/***********************
 	 * QueryMainSourceFile *

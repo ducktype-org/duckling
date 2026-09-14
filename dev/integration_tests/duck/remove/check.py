@@ -21,7 +21,7 @@ dev-dependencies:
 
 expected_manifest_only_b = """metadata:
   name: foo
-  version: 1.0.0
+  version: '1.0.0'
 dev-dependencies:
   b:
     source:
@@ -30,7 +30,7 @@ dev-dependencies:
 
 expected_manifest_only_a = """metadata:
   name: foo
-  version: 1.0.0
+  version: '1.0.0'
 dependencies:
   a:
     source:

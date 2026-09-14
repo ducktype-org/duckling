@@ -99,7 +99,7 @@ namespace {
 /**
  * @brief Represents a local stack variable.
  */
-struct LocalStackEntry {
+struct LocalStackEntry final {
 	base::StrID                 local_name;
 	CRef<valid_type::ValidType> type;
 
@@ -741,7 +741,9 @@ class FunctionValidator {
 				const auto c_inner = derefCPtrType(cptr, types_ctx, instr);
 				if (ptr->inner != c_inner) throw CPtrPointeeMismatchError(instr);
 			}
-			instr_case_novalue(Op_movCast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr) {}
+			instr_case_novalue(
+				Op_ptrParts_p64_p64_pptr, Op_cast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr
+			) {}
 
 			instr_case(Op_add_pcptr_p64, instr) {
 				if (current_stack.at(instr.offset.var_name)->getName() != "i64")
@@ -753,6 +755,9 @@ class FunctionValidator {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case(Op_mov_pfst_pfst, instr) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case(Op_mov_pvnt_pvnt, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 
@@ -1246,8 +1251,90 @@ class FunctionValidator {
 			}
 			instr_case_novalue(Op_log_xor_p8_imm) {}
 			instr_case_novalue(Op_log_not_p8) {}
-
-
+			instr_case_novalue(Op_bit_and_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_and_p64_imm) {}
+			instr_case_novalue(Op_bit_or_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_or_p64_imm) {}
+			instr_case_novalue(Op_bit_xor_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_xor_p64_imm) {}
+			instr_case_novalue(Op_shl_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shl_p64_imm) {}
+			instr_case_novalue(Op_shr_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shr_p64_imm) {}
+			instr_case_novalue(Op_bit_not_p64) {}
+			instr_case_novalue(Op_bit_and_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_and_p32_imm) {}
+			instr_case_novalue(Op_bit_or_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_or_p32_imm) {}
+			instr_case_novalue(Op_bit_xor_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_xor_p32_imm) {}
+			instr_case_novalue(Op_shl_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shl_p32_imm) {}
+			instr_case_novalue(Op_shr_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shr_p32_imm) {}
+			instr_case_novalue(Op_bit_not_p32) {}
+			instr_case_novalue(Op_bit_and_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_and_p16_imm) {}
+			instr_case_novalue(Op_bit_or_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_or_p16_imm) {}
+			instr_case_novalue(Op_bit_xor_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_xor_p16_imm) {}
+			instr_case_novalue(Op_shl_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shl_p16_imm) {}
+			instr_case_novalue(Op_shr_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shr_p16_imm) {}
+			instr_case_novalue(Op_bit_not_p16) {}
+			instr_case_novalue(Op_bit_and_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_and_p8_imm) {}
+			instr_case_novalue(Op_bit_or_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_or_p8_imm) {}
+			instr_case_novalue(Op_bit_xor_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_bit_xor_p8_imm) {}
+			instr_case_novalue(Op_shl_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shl_p8_imm) {}
+			instr_case_novalue(Op_shr_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_shr_p8_imm) {}
+			instr_case_novalue(Op_bit_not_p8) {}
 			instr_case(Op_variantSetInner_pvnt_type, instr) {
 				const auto variant_type = getPlaceType(instr.variant, current_stack)
 				                              ->getKindAs<valid_type::finalized::Variant>();

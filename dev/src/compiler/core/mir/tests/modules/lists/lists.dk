@@ -1,0 +1,7 @@
+fun list_test() -> () = {
+    var l: List:{i64};
+    l.push(1);
+    let len_l = l.length();
+    l.pop();
+    l.at(0) = 42;
+}

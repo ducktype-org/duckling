@@ -28,21 +28,9 @@ src_root: |+
   import core.builtins.*;
   import tmp1.*;
 
-  fun main() -> i64 = {
+  fun main() = {
     return xd();
   }
-
-tmp1_deps: |+
-  dependencies:
-    tmp2:
-      source:
-        path: ../tmp2
-
-root_deps: |+
-  dependencies:
-    tmp1:
-      source:
-        path: ../tmp1
 
 PreCase: |+
   @{cd-tmp-dir}
@@ -50,12 +38,13 @@ PreCase: |+
   @{duck-exe} init root2
   @{duck-exe} init tmp1
   @{duck-exe} init tmp2
-  echo "@{src_root}" > root1/src/src.dmf
-  echo "@{src_root}" > root2/src/src.dmf
-  echo "@{src_tmp1}" > tmp1/src/src.dmf
-  echo "@{src_tmp2}" > tmp2/src/src.dmf
-  echo "@{root_deps}" >> root1/quackconfig.yaml
-  echo "@{root_deps}" >> root2/quackconfig.yaml
+  echo "@{src_root}" > root1/src/src.dk
+  echo "@{src_root}" > root2/src/src.dk
+  echo "@{src_tmp1}" > tmp1/src/src.dk
+  echo "@{src_tmp2}" > tmp2/src/src.dk
+  @{duck-exe} -C root1 add --local ../tmp1 tmp1
+  @{duck-exe} -C root2 add --local ../tmp1 tmp1
+
 PostCase: python3 check.py @{expected-subfolders}
 
 Tests:
@@ -67,7 +56,7 @@ Tests:
         # Compilations of `root1` and `root2` should reuse the same subfolder in the build folder of `tmp1`.
         expected-subfolders: 1
         test-cmd: |+
-          echo "@{tmp1_deps}" >> tmp1/quackconfig.yaml &&
+          duck -C tmp1 add --local ../tmp2 tmp2 &&
           duck -C root1 build --shared-artifacts &&
           duck -C root2 build --shared-artifacts
       different-subgraphs:
@@ -76,9 +65,9 @@ Tests:
         # Thus the first and second compilation should have different subfolders.
         expected-subfolders: 2
         test-cmd: |+
-          echo "@{src_tmp1_new}" > tmp1/src/src.dmf &&
+          echo "@{src_tmp1_new}" > tmp1/src/src.dk &&
           duck -C root1 build --shared-artifacts &&
-          echo "@{tmp1_deps}" >> tmp1/quackconfig.yaml &&
-          echo "@{src_tmp1}" > tmp1/src/src.dmf &&
+          duck -C tmp1 add --local ../tmp2 tmp2 &&
+          echo "@{src_tmp1}" > tmp1/src/src.dk &&
           duck -C root1 build --shared-artifacts
         

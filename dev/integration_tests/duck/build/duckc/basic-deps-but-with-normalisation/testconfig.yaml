@@ -5,14 +5,9 @@ PreCase: |+
   @{duck-exe} init my-cool-root
   @{duck-exe} init my-cool-dep
   @{duck-exe} init my-cool-dep2
-  echo "dependencies:
-    my-cool-dep:
-      source:
-        path: ../my-cool-dep
-    my-cool-dep-but-aliased:
-      source:
-        path: ../my-cool-dep2
-        name: my-cool-dep2" >> my-cool-root/quackconfig.yaml
+  @{duck-exe} -C my-cool-root add --local ../my-cool-dep my-cool-dep
+  @{duck-exe} -C my-cool-root add --local ../my-cool-dep2 my-cool-dep2 --alias my-cool-dep-but-aliased
+  
 Tests:
   normalises-names-and-aliases:
     Description: can build a project with aliases and normalised names

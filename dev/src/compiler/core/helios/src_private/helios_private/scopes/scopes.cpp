@@ -17,6 +17,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
+#include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
@@ -149,6 +150,17 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassSpecial:
 			return ElementScopeKind::Standard;
 
+		// The match owns the generated subject local; each case owns the symbols bound
+		// by its pattern.
+		case pst::ElementKind::Match:
+		case pst::ElementKind::MatchCase:
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::FlowPattern:
+		case pst::ElementKind::BindingPattern:
+		case pst::ElementKind::WildcardPattern:
+			return ElementScopeKind::Transparent;
+
 		case pst::ElementKind::ClassConstructor:
 		case pst::ElementKind::ClassDestructor:
 			return ElementScopeKind::Standard;
@@ -172,6 +184,13 @@ namespace compiler::helios {
 			    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
 				// This is a special case.
 				// Elements in macro expansions should have their scope parent be the grandparent.
+				return ElementScopeKind::ParentTransparent;
+			}
+			if (expr_parent.has_value()
+			    && expr_parent.value()->getElementKind() == pst::ElementKind::Match) {
+				// The match subject resolves in the scope surrounding the match. Resolving it
+				// inside the match's own scope would create a query cycle: enumerating the
+				// match scope's symbols requires compiling the subject.
 				return ElementScopeKind::ParentTransparent;
 			}
 			return ElementScopeKind::Transparent;
@@ -554,7 +573,7 @@ namespace compiler::helios {
 				// parsed but nothing compiles them yet, so report it instead of falling through
 				// to the panicky visitor default. Leaving `out` unset fails the query.
 				// @TODO: #1290 grab the parameter symbols here once constructors are supported.
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"User-defined constructors are not yet supported",
 					ctor->getStablePosition(),
 					"`T(...)` and `T.name(...)` declare a constructor.\n"
@@ -658,6 +677,23 @@ namespace compiler::helios {
 
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
+			} else if (base_element->getElementKind() == pst::ElementKind::Match) {
+				// A match introduces no symbols of its own; its subject is lowered straight to
+				// MIR without a generated local.
+				return {};
+			} else if (base_element->getElementKind() == pst::ElementKind::MatchCase) {
+				// The only symbol a match case may introduce is its pattern binding.
+				auto match_case = base_element.dynamicCast<pst::MatchCase>().value();
+				auto flow       = match_case->getPattern().unlock(ctx);
+
+				std::vector<SymID> out;
+				if (auto binding
+				    = flow->getPattern().unlock(ctx).dynamicCast<pst::BindingPattern>()) {
+					out.emplace_back(
+						ctx.query<QuerySymbolOfSTMT>({ binding.value()->getName() }).valueOrThrow()
+					);
+				}
+				return out;
 			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
 				// @TODO: #3071 maybe modify this assertion or add a new else-if branch for template
@@ -746,6 +782,8 @@ namespace compiler::helios {
 		const std::vector<PreludeImport>& preludeImports() {
 			static const std::vector<PreludeImport> imports{
 				{ .package = base::StrID("core"), .path = { base::StrID("builtins") } },
+				{ .package = base::StrID("core"), .path = { base::StrID("containers") } },
+				{ .package = base::StrID("core"), .path = { base::StrID("prints") } },
 			};
 			return imports;
 		}
@@ -782,7 +820,15 @@ namespace compiler::helios {
 				auto prelude_qresult = HInterface::ofScope(prelude_scope)
 				                           .lookup(ctx, name, { .with_wildcards = with_wildcards });
 				UNPACK_QRESULT_CREF(CRef<LookupResult> prelude_result = &, prelude_qresult);
-				result.merge(*prelude_result);
+
+				// The prelude re-exports the contents of the module, but not the modules it
+				// imports itself - otherwise every `import` written in a prelude module would
+				// collide with the same import written by the user.
+				LookupResult exported{ .leaves = {}, .children = prelude_result->children };
+				for (const SymID sym: prelude_result->leaves)
+					if (kind(sym) != SymbolKind::Import) exported.leaves.push_back(sym);
+
+				result.merge(exported);
 			}
 			return result;
 		}

@@ -1,0 +1,14 @@
+class R {
+    a: i32 = 0;
+    R.destroy() = { var t: i32 = a; }
+}
+
+fun main()  = {
+    var x: R;
+    {
+        var y: R;
+        {
+            var z: R;
+        }
+    }
+}

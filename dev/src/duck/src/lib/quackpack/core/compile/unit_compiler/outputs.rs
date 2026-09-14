@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::ops::ControlFlow;
 use std::path::PathBuf;
 
@@ -5,6 +6,7 @@ use itertools::Itertools;
 use tracing::{debug, instrument, trace};
 
 use super::CompilationOutput;
+use super::external_libs::gather_external_libraries;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
@@ -67,7 +69,7 @@ pub fn collect_packages(
     impl TryUnitVisitor for PackageVisitor<'_> {
         type Err = QuackError;
 
-        type Break = ();
+        type Break = Infallible;
 
         fn try_visit(&mut self, unit: &Unit) -> Result<ControlFlow<Self::Break>, Self::Err> {
             self.packages
@@ -98,10 +100,9 @@ pub fn get_linker_options(
 ) -> QuackResult<Option<multipackage_schema::LinkerOptions>> {
     trace!("getting linker options");
     let outputs = get_deps_outputs(unit, graph, layout)?;
-    if outputs.is_empty() {
-        debug!("no deps output");
-        return Ok(None);
-    }
+    let external_libs = gather_external_libraries(unit, graph)
+        .into_iter()
+        .map(|x| x.to_string());
     let string = outputs
         .into_iter()
         .filter_map(|(unit, output)| {
@@ -112,6 +113,7 @@ pub fn get_linker_options(
             }
         })
         .map(|output| output.display().to_string())
+        .chain(external_libs)
         .join(" ");
     debug!(args = %string, "raw linker args");
     if string.is_empty() {
@@ -141,7 +143,7 @@ fn get_deps_outputs(
     impl TryUnitVisitor for UnitOutputVisitor<'_> {
         type Err = QuackError;
 
-        type Break = ();
+        type Break = Infallible;
 
         fn try_visit(&mut self, unit: &Unit) -> Result<ControlFlow<Self::Break>, Self::Err> {
             if self.root != unit {

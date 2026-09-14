@@ -19,13 +19,18 @@ namespace compiler::tsh {
 	}
 
 	[[nodiscard]]
+	CRef<query::QResult<TypeInterface>> AbstractType::getInterfaceResult(query::Context& ctx) const {
+		return pimpl->getInterfaceResult(ctx);
+	}
+
+	[[nodiscard]]
 	bool AbstractType::isSimple() const {
 		return pimpl->isSimple();
 	}
 
 	[[nodiscard]]
-	bool AbstractType::hasNoOpDestructor(query::Context& ctx) const {
-		return pimpl->hasNoOpDestructor(ctx);
+	bool AbstractType::isTriviallyDestructible(query::Context& ctx) const {
+		return pimpl->isTriviallyDestructible(ctx);
 	}
 
 	[[nodiscard]]

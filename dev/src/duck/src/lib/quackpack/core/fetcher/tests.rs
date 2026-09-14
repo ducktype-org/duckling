@@ -37,6 +37,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -53,6 +54,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -69,6 +71,7 @@ fn create_mock_server() -> MockServer {
                 registry_url: "https://google.com".into(),
             },
         },
+        kind: registry::DependencyKind::Normal,
         features: vec![],
         pinned: false,
         conditions: registry::DependencyCondition {
@@ -84,9 +87,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![pkg1],
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -98,9 +101,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: vec![pkg2, pkg3],
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -112,9 +115,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: registry::Dependencies::new(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -188,7 +191,7 @@ fn all_metadata_adds_to_cache() {
     };
     assert_eq!(response.packages_metadata.len(), 2);
     let FetcherResponse::Some(fetched_from_cache) =
-        block_on(fetcher.get_package_metadata(&types::PackageWithUrl {
+        block_on(fetcher.get_package_metadata(types::PackageWithUrl {
             name: "foo".into(),
             version: Version::new(1, 2, 5),
             url: server.base_url().parse().unwrap(),
@@ -206,7 +209,7 @@ fn without_cache_fetch_fails() {
     let (ctx, _dir) = setup_duck_ctx();
     let server = create_mock_server();
     let fetcher = Fetcher::new(&ctx).unwrap();
-    let err = block_on(fetcher.get_package_metadata(&types::PackageWithUrl {
+    let err = block_on(fetcher.get_package_metadata(types::PackageWithUrl {
         name: "foo".into(),
         version: Version::new(1, 2, 5),
         url: server.base_url().parse().unwrap(),
@@ -215,7 +218,7 @@ fn without_cache_fetch_fails() {
     assert_eq!(
         err.to_string(),
         format!(
-            "while getting a metadata of `foo` version `1.2.5`
+            "while getting a metadata of `foo` version 1.2.5
 HTTP status client error (404) for url `{}/packages/foo/1.2.5`",
             server.base_url(),
         )
@@ -229,7 +232,8 @@ fn create_sample_metadata() -> registry::Manifest {
         "version": "1.2.3",
         "name": "quackpack",
         "license": "GPS",
-        "description": ""
+        "description": "",
+        "links": null
     },
     "dependencies": [
         {
@@ -241,6 +245,7 @@ fn create_sample_metadata() -> registry::Manifest {
                     "registry-url": "xd"
                 }
             },
+            "kind": "normal",
             "features": [],
             "pinned": false,
             "conditions": {
@@ -248,7 +253,6 @@ fn create_sample_metadata() -> registry::Manifest {
             }
         }
     ],
-    "dev-dependencies": [],
     "features": {},
     "profiles": {
       "dev": {

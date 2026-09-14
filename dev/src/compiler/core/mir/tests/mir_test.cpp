@@ -2,8 +2,9 @@
  * @file mir_tests.cpp
  */
 
+#include "utils/test_utils.hpp"
+
 #include <ctv/ctv.hpp>
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -14,10 +15,16 @@
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
+
+#include <array>
+#include <set>
+#include <sstream>
+#include <string>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -34,28 +41,30 @@ public:
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
 		TESTER_ADD_TEST(simpleBools);
+		TESTER_ADD_TEST(blockDebugNamesTest);
 		TESTER_ADD_TEST(simpleFunctionCalls);
 		TESTER_ADD_TEST(numericLiteralsTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(functionEndTest);
+		TESTER_ADD_TEST(voidCallTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(referencesTest);
-		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(tupleTypeCoercionTest);
-		TESTER_ADD_TEST(livenessMapTest);
+		TESTER_ADD_TEST(moveStateMapTest);
 		TESTER_ADD_TEST(sliceTest);
-		TESTER_ADD_TEST(pointersTest);
+		TESTER_ADD_TEST(lazyBooleanShortCircuitTest);
+		TESTER_ADD_TEST(lazyBooleanChainsTest);
 	}
 
 protected:
-	void beforeAll() override { dia_int::configureImmediatePrint(&std::cerr); }
+	void beforeAll() override { dia::configureImmediatePrint(&std::cerr); }
 
 private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
 
 	/**
-	 * @brief Unit test for the global in-liveness map produced by `calculateGlobalInLivenessMap`.
+	 * @brief Unit test for the global in-move-state map produced by `calculateGlobalInMoveStateMap`.
 	 *
 	 * Uses `moveParamThenBlock(a, c)`, which moves the parameter `a` in the entry block and then
 	 * branches. The map is computed on the pre-lifetime MIR (so the move flag is present but no
@@ -63,7 +72,7 @@ private:
 	 *  - `a` is alive on entry (it is a parameter),
 	 *  - some successor block sees `a` as `Moved` with exactly one reaching move site.
 	 */
-	void livenessMapTest() {
+	void moveStateMapTest() {
 		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
 
 		withContextDo([&](query::Context& ctx) {
@@ -81,7 +90,7 @@ private:
 			for (const auto& local: pre_mir.local_list)
 				if (local.parameter_index.has_value() && local.parameter_index.value() == 0)
 					a_id = local.id;
-			ASSERT_TRUE(a_id.has_value());
+			ASSERT_HAS_VALUE(a_id);
 
 			// Build predecessor lists, same as constructLifetimePassArgs does.
 			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
@@ -90,22 +99,22 @@ private:
 				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
 					preds.put(succ).first->second.push_back(block_id);
 
-			auto liveness = compiler::mir::calculateGlobalInLivenessMap(pre_mir, preds);
+			auto move_states = compiler::mir::calculateGlobalInMoveStateMap(pre_mir, preds);
 
 			// `a` is a parameter, so it is alive at the entry block.
 			auto entry     = pre_mir.block_order.front();
-			auto entry_map = liveness.block_in_liveness.atMaybe(entry);
-			ASSERT_TRUE(entry_map.has_value());
+			auto entry_map = move_states.block_in_move_state.atMaybe(entry);
+			ASSERT_HAS_VALUE(entry_map);
 			auto a_at_entry = entry_map.value()->atMaybe(a_id.value());
-			ASSERT_TRUE(a_at_entry.has_value());
-			ASSERT_TRUE(a_at_entry.value()->kind == compiler::mir::LivenessStatus::Alive);
+			ASSERT_HAS_VALUE(a_at_entry);
+			ASSERT_TRUE(a_at_entry.value()->status == compiler::mir::MoveStatus::Alive);
 
 			// After the unconditional move in the entry block, at least one successor block must
 			// observe `a` as `Moved` with exactly one reaching move site.
 			bool found_moved = false;
-			for (const auto& [block_id, map]: liveness.block_in_liveness) {
+			for (const auto& [block_id, map]: move_states.block_in_move_state) {
 				auto state = map.atMaybe(a_id.value());
-				if (state.has_value() && state.value()->kind == compiler::mir::LivenessStatus::Moved
+				if (state.has_value() && state.value()->status == compiler::mir::MoveStatus::Moved
 				    && state.value()->move_sites.size() == 1)
 					found_moved = true;
 			}
@@ -170,8 +179,10 @@ private:
 
 			auto& c_data
 				= ctx.query<compiler::mir::LowerGlobalData>({ globals.at(0) })->valueOrThrow();
-			auto c_ctor = std::get<CRef<compiler::mir::Function>>(c_data.initial_value);
-			ASSERT_TRUE(c_ctor->name.strView() == "constructor_of_c");
+			auto c_ctor_dtor = std::get<compiler::mir::MIRCtorDtorPair>(c_data.initial_value);
+			ASSERT_TRUE(c_ctor_dtor.constructor->name.strView() == "constructor_of_c");
+			// `c` is an i64, it is trivially destructible, so it gets no destructor.
+			ASSERT_TRUE(c_ctor_dtor.destructor.empty());
 
 			auto foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
@@ -272,7 +283,6 @@ private:
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 
-
 			ASSERT_EQUAL_PRINT(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL_PRINT(foo_mir.block_order.size(), 7);
 			ASSERT_EQUAL_PRINT(foo_mir.local_list.size(), 5);
@@ -286,7 +296,6 @@ private:
 			using BlockList = std::vector<BlockID>;
 			ASSERT_EQUAL(get_block_successors(1), BlockList{});
 			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
-
 
 			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
 
@@ -331,13 +340,80 @@ private:
 		});
 	}
 
+	/**
+	 * @brief Blocks created by the lowering carry a debug name saying what they were generated
+	 * for, and `Function::debugPrint` shows that name right after the block id.
+	 */
+	void blockDebugNamesTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/booleans")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
+			ASSERT_EQUAL(2, functions.size());
+
+			auto collect_names = [](const compiler::mir::Function& function) {
+				std::set<std::string> names;
+				for (const auto block_id: function.block_order) {
+					const auto& block = function.blocks[block_id];
+					if (block.debug_name.has_value()) names.emplace(block.debug_name.value().str());
+				}
+				return names;
+			};
+
+			auto assert_has_name = [this](
+									   const std::set<std::string>& names,
+									   const std::string_view       expected,
+									   const std::string_view       function_name
+								   ) {
+				assertTrue(
+					names.contains(std::string{ expected }),
+					base::strConcat(
+						"Expected a block named `", expected, "` in `", function_name, "`"
+					)
+				);
+			};
+
+			// `foo` is two `if`s in a row, so it only has condition/then/else blocks plus the one
+			// holding `FunctionEnd`.
+			auto& foo_mir
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
+			const auto foo_names = collect_names(foo_mir);
+			for (const std::string_view expected:
+			     { "function_end", "if.cond", "if.then", "if.else" })
+				assert_has_name(foo_names, expected, "foo");
+
+			// Nothing but the lowering creates blocks here, so every block of `foo` is named.
+			for (const auto block_id: foo_mir.block_order)
+				ASSERT_HAS_VALUE(foo_mir.blocks[block_id].debug_name);
+
+			// `goo` ends with an `if ... then ... else` expression, which lowers as a ternary.
+			auto& goo_mir
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->valueOrThrow();
+			const auto                  goo_names = collect_names(goo_mir);
+			static constexpr std::array TERNARY_NAMES
+				= { "ternary.cond", "ternary.then", "ternary.else" };
+			for (const std::string_view expected: TERNARY_NAMES)
+				assert_has_name(goo_names, expected, "goo");
+
+			// The printed MIR shows the name in parentheses after the block id.
+			std::stringstream printed;
+			foo_mir.debugPrint(printed);
+			const auto printed_str = printed.str();
+			assertTrue(
+				printed_str.find("(if.then)") != std::string::npos,
+				base::strConcat("Block name missing from the printed MIR:\n", printed_str)
+			);
+		});
+	}
+
 	void simpleFunctionCalls() {
 		auto [module, scope] = getModule(fs::File(path("modules/function_calls")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
-			ASSERT_EQUAL(3, functions.size());
+			ASSERT_EQUAL(4, functions.size());
 
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
@@ -520,7 +596,6 @@ private:
 				last_block.terminator.operation, compiler::mir::Operation::ReturnVoid
 			);
 
-
 			auto& unreachable_end_fun
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
 			ASSERT_TRUE(unreachable_end_fun.validateBlockIDs().isOk());
@@ -530,6 +605,38 @@ private:
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->valueOrThrow();
 			ASSERT_EQUAL(empty.block_order.size(), 1);
+		});
+	}
+
+	/**
+	 * @brief A call to a `-> void` function never returns, so its block ends with `Unreachable`
+	 * and everything the source wrote after the call (here `return 42`) is unreachable and gets
+	 * eliminated.
+	 */
+	void voidCallTest() {
+		auto [module, _] = getModule(fs::File(path("modules/function_calls")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
+			for (const auto& fn: unit.functions)
+				if (fn->declaration->original_name.strView() == "callDiverges") target = fn;
+			ASSERT_HAS_VALUE(target);
+
+			auto& function
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ target.value() })->valueOrThrow();
+
+			auto& last_block = function.blocks[function.block_order.back()];
+			ASSERT_EQUAL_PRINT(
+				last_block.terminator.operation, compiler::mir::Operation::Unreachable
+			);
+
+			for (auto block_id: function.block_order)
+				ASSERT_TRUE(
+					function.blocks[block_id].terminator.operation
+					!= compiler::mir::Operation::ReturnValue
+				);
 		});
 	}
 
@@ -667,11 +774,11 @@ private:
 						}
 						// var r = &p.x;
 						else if (arg.projection_chain.size() == 2) {
-							bool has_deref = std::holds_alternative<MIRPlace::DerefProjection>(
-								arg.projection_chain[0].storage
+							bool has_deref = v_matches(
+								arg.projection_chain[0].storage, MIRPlace::DerefProjection
 							);
-							bool has_field = std::holds_alternative<MIRPlace::FieldProjection>(
-								arg.projection_chain[1].storage
+							bool has_field = v_matches(
+								arg.projection_chain[1].storage, MIRPlace::FieldProjection
 							);
 							if (has_deref && has_field) {
 								auto field = std::get<MIRPlace::FieldProjection>(
@@ -689,12 +796,11 @@ private:
 						if (out_place.projection_chain.size() == 5) {
 							const auto& chain = out_place.projection_chain;
 							bool        pattern_ok
-								= std::holds_alternative<MIRPlace::DerefProjection>(chain[0].storage)
-							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage)
-							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[2].storage)
-							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[3].storage)
-							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[4].storage
-							   );
+								= v_matches(chain[0].storage, MIRPlace::DerefProjection)
+							   && v_matches(chain[1].storage, MIRPlace::FieldProjection)
+							   && v_matches(chain[2].storage, MIRPlace::DerefProjection)
+							   && v_matches(chain[3].storage, MIRPlace::FieldProjection)
+							   && v_matches(chain[4].storage, MIRPlace::DerefProjection);
 
 							if (pattern_ok) {
 								auto f_p = std::get<MIRPlace::FieldProjection>(chain[1].storage);
@@ -717,111 +823,6 @@ private:
 			ASSERT_TRUE(found_simple_address_of);
 			ASSERT_TRUE(found_address_of_with_deref);
 			ASSERT_TRUE(found_complex_assignment);
-		});
-	}
-
-	void boxesTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/boxes")));
-
-		withContextDo([&](query::Context& ctx) {
-			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-			auto& mir_func = (compiler::mir::Function&) ctx
-			                     .query<compiler::mir::LowerToMIRFunction>({ unit.functions.at(3) })
-			                     ->valueOrThrow();
-
-			auto i64_type = getIntegralType(ctx, 64, Signed);
-
-			bool found_alloc_box_int      = false;
-			bool found_alloc_box_point    = false;
-			bool found_field_access_read  = false;
-			bool found_field_access_write = false;
-			bool found_by_val_deref       = false;
-			bool found_by_ref_passthrough = false;
-
-			using namespace compiler::mir;
-			for (const auto& block_id: mir_func.block_order) {
-				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					const auto callee_builtin
-						= instr.operation == Operation::Call
-					        ? compiler::helios::isBuiltin(
-								  instr.arguments[0].get<MIRFunctionLiteral>().helios_id
-							  )
-					        : base::Optional<compiler::helios::BuiltinKind>{};
-					const bool is_box_alloc
-						= callee_builtin.has_value()
-					   && callee_builtin.value() == compiler::helios::BuiltinKind::BoxAlloc;
-					if (is_box_alloc) {
-						// var b_int: box i32 = 42;
-						// var b_point: box Point = Point(10, 20);
-						const auto& arg = instr.arguments[1];
-						if (arg.isConstant())
-							found_alloc_box_int = true;
-						else
-							found_alloc_box_point = true;
-					} else if (instr.operation == Operation::Assign) {
-						const auto& out_place = instr.output.value();
-						// b_point.y = 99;
-						if (out_place.projection_chain.size() == 2) {
-							bool is_deref = std::holds_alternative<MIRPlace::DerefProjection>(
-								out_place.projection_chain[0].storage
-							);
-							if (is_deref
-							    && std::holds_alternative<MIRPlace::FieldProjection>(
-									out_place.projection_chain[1].storage
-								)) {
-								found_field_access_write = true;
-							}
-						} else {
-							// var x: i32 = b_point.x;
-							const auto& arg_place = instr.arguments[0].get<MIRPlace>();
-							if (arg_place.projection_chain.size() == 2) {
-								bool is_deref = std::holds_alternative<MIRPlace::DerefProjection>(
-									arg_place.projection_chain[0].storage
-								);
-								if (is_deref
-								    && std::holds_alternative<MIRPlace::FieldProjection>(
-										arg_place.projection_chain[1].storage
-									)) {
-									found_field_access_read = true;
-								}
-							}
-						}
-					} else if (instr.operation == Operation::Call) {
-						// by_val(b_point);
-						// by_ref(&b_point);
-						const auto& callee      = instr.arguments[0].get<MIRFunctionLiteral>();
-						const auto  callee_name = compiler::helios::name(callee.helios_id);
-						if (callee_name == "by_val") {
-							const auto& arg_place = instr.arguments[1].get<MIRPlace>();
-							if (arg_place.projection_chain.size() == 1
-							    && std::holds_alternative<MIRPlace::DerefProjection>(
-									arg_place.projection_chain[0].storage
-								)) {
-								found_by_val_deref = true;
-							}
-						} else if (callee_name == "by_ref") {
-							const auto& arg_place = instr.arguments[1].get<MIRPlace>();
-
-							if (arg_place.projection_chain.empty()) found_by_ref_passthrough = true;
-						}
-					}
-				}
-			}
-
-			// return b_int;
-			const auto& last_block = mir_func.blocks[mir_func.block_order.back()];
-			if (last_block.terminator.operation == Operation::ReturnValue) {
-				const auto& ret_val = last_block.terminator.arguments[0].get<MIRPlace>();
-				ASSERT_EQUAL(ret_val.type.getType(), i64_type);
-				ASSERT_TRUE(ret_val.type.getRefKind() == ReferenceKind::Direct);
-			}
-
-			ASSERT_TRUE(found_alloc_box_int);
-			ASSERT_TRUE(found_alloc_box_point);
-			ASSERT_TRUE(found_field_access_read);
-			ASSERT_TRUE(found_field_access_write);
-			ASSERT_TRUE(found_by_val_deref);
-			ASSERT_TRUE(found_by_ref_passthrough);
 		});
 	}
 
@@ -946,6 +947,95 @@ private:
 		});
 	}
 
+	/**
+	 * @brief `and` / `or` lower lazily: the right-hand side sits in its own block, which only one
+	 * of the two outcomes of the left-hand side leads to.
+	 */
+	void lazyBooleanShortCircuitTest() {
+		using compiler::mir::Operation;
+		namespace test_utils = compiler::mir::test_utils;
+
+		test_utils::checkLoweredModule(
+			R"(fun probe() -> bool = { return true; }
+               fun lazyOr(a: bool) -> bool = { return a or probe(); }
+               fun lazyAnd(a: bool) -> bool = { return a and probe(); })",
+			[this](query::Context&, const compiler::mir::MIRUnit& unit) {
+				for (const std::string_view name: { "lazyOr", "lazyAnd" }) {
+					const auto& function = *test_utils::functionOfUnit(unit, name);
+
+					const auto rhs_blocks
+						= test_utils::blocksWithOperation(function, Operation::Call);
+					const auto rhs_block = *rhs_blocks.begin();
+
+					// The left-hand side has to decide where to go, so its block branches.
+					assertEqual(
+						1u,
+						test_utils::countTerminators(function, Operation::Branch),
+						base::strConcat("Expected a single branch in `", name, "`")
+					);
+
+					bool evaluating_path = false;
+					bool skipping_path   = false;
+					for (const auto& path: test_utils::pathsFromEntry(function))
+						if (std::ranges::find(path, rhs_block) != path.end())
+							evaluating_path = true;
+						else
+							skipping_path = true;
+
+					assertTrue(
+						evaluating_path,
+						base::strConcat("No path of `", name, "` evaluates the right-hand side")
+					);
+					assertTrue(
+						skipping_path,
+						base::strConcat("Every path of `", name, "` evaluates the right-hand side")
+					);
+				}
+			}
+		);
+	}
+
+	/**
+	 * @brief Chained `and` / `or` lower to a chain of branches, and the temporary holding the
+	 * result is initialized on every path.
+	 */
+	void lazyBooleanChainsTest() {
+		using compiler::mir::Operation;
+		namespace test_utils = compiler::mir::test_utils;
+
+		test_utils::checkLoweredModule(
+			R"(fun probe() -> bool = { return true; }
+               fun orChain(a: bool) -> bool = { return a or probe() or probe(); }
+               fun andChain(a: bool) -> bool = { return a and probe() and probe(); }
+               fun mixedChain(a: bool) -> bool = { return a and probe() or probe(); })",
+			[this](query::Context&, const compiler::mir::MIRUnit& unit) {
+				for (const std::string_view name: { "orChain", "andChain", "mixedChain" }) {
+					const auto& function = *test_utils::functionOfUnit(unit, name);
+
+					ASSERT_TRUE(function.validateBlockIDs().isOk());
+
+					// Three operands, so the first two each branch on their own value.
+					assertEqual(
+						2u,
+						test_utils::countTerminators(function, Operation::Branch),
+						base::strConcat("Expected two branches in `", name, "`")
+					);
+
+					// Every block of a lowered function is reachable; an operand block that lost
+				    // its incoming edge would show up here.
+					const auto reachable = test_utils::reachableBlocks(function);
+					for (const auto block_id: function.block_order)
+						assertTrue(
+							reachable.contains(block_id),
+							base::strConcat(
+								"Block ", u64(block_id), " of `", name, "` is not reachable"
+							)
+						);
+				}
+			}
+		);
+	}
+
 	void sliceTest() {
 		// Test that without STD library, slice type access will not work.
 		auto [module, scope] = getModule(fs::File(path("modules/slices")));
@@ -954,49 +1044,6 @@ private:
 			auto hout_unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto mir_unit  = compiler::mir::lowerToMIRUnit(ctx, &hout_unit->valueOrPanic());
 			ASSERT_TRUE(mir_unit.hasFailed());
-		});
-	}
-
-	/**
-	 * @brief `ptrof` lowers to an unconditional `Operation::AddressOf`.
-	 *
-	 * Unlike `&`, which forwards a `box`/`ref` operand unchanged and only emits an `AddressOf` for
-	 * a direct one, `ptrof` takes the address of the place itself in every case. The operand keeps
-	 * its projection chain, so `ptrof m[1]` addresses the indexed element.
-	 */
-	void pointersTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/pointers")));
-
-		withContextDo([&](query::Context& ctx) {
-			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-
-			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
-			for (const auto& fn: unit.functions)
-				if (fn->declaration->original_name.strView() == "ptr_of") target = fn;
-			ASSERT_HAS_VALUE(target);
-
-			auto& mir_func = (compiler::mir::Function&) ctx
-			                     .query<compiler::mir::LowerToMIRFunction>({ target.value() })
-			                     ->valueOrThrow();
-
-			using namespace compiler::mir;
-			usize address_of_count = 0;
-			bool  found_indexed    = false;
-			for (const auto& block_id: mir_func.block_order)
-				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					if (instr.operation != Operation::AddressOf) continue;
-					address_of_count++;
-
-					// `ptrof m[1]`: the index projection survives into the addressed place.
-					const auto& chain = instr.arguments[0].get<MIRPlace>().projection_chain;
-					if (!chain.empty()
-					    && std::holds_alternative<MIRPlace::IndexProjection>(chain.back().storage))
-						found_indexed = true;
-				}
-
-			// One per `ptrof`, the `box` operand included — `&b` would forward it instead.
-			ASSERT_EQUAL(usize(3), address_of_count);
-			ASSERT_TRUE(found_indexed);
 		});
 	}
 };

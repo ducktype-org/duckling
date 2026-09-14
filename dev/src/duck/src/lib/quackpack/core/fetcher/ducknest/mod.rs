@@ -36,10 +36,10 @@ impl<'duck> DucknestClient<'duck> {
     #[tracing::instrument(skip(self))]
     pub async fn get_exact_metadata(
         &self,
-        package: &types::PackageWithUrl,
+        package: types::PackageWithUrl,
     ) -> QuackResult<registry::Manifest> {
         debug!("fetching");
-        let url = package.url.for_exact_metadata(&package.into())?;
+        let url = package.url.for_exact_metadata(package.into())?;
         let request = create_get_request(&url)?;
 
         let response = self.client.request(request).await?;
@@ -82,16 +82,16 @@ impl<'duck> DucknestClient<'duck> {
     #[tracing::instrument(skip(self))]
     pub async fn fetch_blob(
         &self,
-        package: &types::PackageWithUrl,
-        mut target: LockedFile,
+        package: types::PackageWithUrl,
+        mut target: &LockedFile,
     ) -> QuackResult<()> {
         debug!("fetching");
-        let url = package.url.for_blob(&package.into())?;
+        let url = package.url.for_blob(package.into())?;
         let request = create_get_request(&url)?;
 
         let response = self.client.request(request).await?;
 
-        info!("fetched");
+        info!(len = %response.body().len(), "fetched");
         debug!("saving response to file");
         target
             .write_all(response.body())

@@ -1,0 +1,11 @@
+import core.builtins.*;
+
+# `builtin_output_i64` called during a compile-time evaluation prints inside the compile-time DVM,
+# which buffers its program output instead of writing it out. The evaluator drains that buffer onto
+# `std::cerr` so such prints stay visible.
+fun printAtCompTime() -> i64 = {
+	builtin_output_i64(3492);
+	return 1;
+}
+
+const printed_at_comp_time = printAtCompTime();

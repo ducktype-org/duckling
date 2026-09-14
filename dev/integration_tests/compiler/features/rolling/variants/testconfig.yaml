@@ -1,0 +1,14 @@
+# Tests for variant types
+Tests:
+  variant_match:
+    Cases:
+      all:
+        TimeOut: 3 # 1 second is often not enough on runners
+        Output:
+          String: ""
+        ExitCode: 0
+      llvm_valgrind:
+        TimeOut: 3 # 1 second is often not enough on runners
+        Output:
+          String: ""
+        ExitCode: 0

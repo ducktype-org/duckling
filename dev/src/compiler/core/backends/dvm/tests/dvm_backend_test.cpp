@@ -1,13 +1,17 @@
 #include <backends/dvm/dvm_backend.hpp>
 #include <driver/test_utils.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
+#include <program_lowering_context.hpp>
+#include <tsl/queries.hpp>
 #include <vm_tester_utils.hpp>
 
 #include <base/extend_cpp/vector_utils.hpp>
 
+#include <os_utils/system_libraries.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
@@ -39,6 +43,9 @@ public:
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(backendDependentTest);
 		TESTER_ADD_TEST(allocTest);
+		TESTER_ADD_TEST(ffiTest);
+		TESTER_ADD_TEST(bitwiseOperationsTest);
+		TESTER_ADD_TEST(variantUnitAlternativeTest);
 	}
 
 protected:
@@ -66,6 +73,8 @@ protected:
 			{ fs::FilePath(path("modules/pointers/")), "pointers" },
 			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
 			{ fs::FilePath(path("modules/alloc/")), "alloc" },
+			{ fs::FilePath(path("modules/ffi/")), "ffi" },
+			{ fs::FilePath(path("modules/bitwise_operations/")), "bitwise_operations" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -74,8 +83,8 @@ protected:
 
 private:
 	static inline const std::vector<std::string> ALL_CORE_MODULES{
-		"core/builtins", "core/io",        "core/containers",
-		"core/runtime",  "core/panicking", "core/clib",
+		"core/builtins", "core/primitive_io", "core/containers",
+		"core/runtime",  "core/panicking",    "core/clib",
 	};
 
 	auto getModuleFromPath(
@@ -85,21 +94,22 @@ private:
 		using namespace compiler;
 
 		vm::code::CodeCollection code;
-		auto                     append_module_to_code = [&](const std::string& module_path) {
-            auto module = driver::test_utils::getModuleIdFromPath(module_path);
-            query::utils::withContextDo([&](query::Context& ctx) {
-                auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-                auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
-                assertTrue(mir_unit.hasValue(), "MIR lowering failed");
+		auto append_module_to_code = [&](const std::string& module_path) {
+			auto module = driver::test_utils::getModuleIdFromPath(module_path);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-                auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
+				auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
+				ASSERT_HAS_VALUE(mir_unit, "MIR lowering failed");
 
-                backend_vm::DVMCodeBuilder m(ctx, base::StrID(module_path), false, false);
-                m.insertLIRUnit(lir_unit);
+				auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
-                code.mergeFrom(m.build());
-            });
+				backend_vm::DVMCodeBuilder m(ctx, base::StrID(module_path), false, false);
+				m.insertLIRUnit(lir_unit);
+
+				code.mergeFrom(m.build());
+			});
 		};
 		for (auto& module_path: module_paths_to_load) append_module_to_code(module_path);
 		append_module_to_code(main_module_path);
@@ -122,6 +132,22 @@ private:
 		// for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
 		// for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		runTestOnVm(code, input, output, args, exit_code);
+	}
+
+	/**
+	 * @brief Runs a module whose `extern("C")` calls are resolved from the system libraries.
+	 * The compiler emits the `ffi function` declarations, but the shared objects to resolve them
+	 * from come from the driver (`--dvm-shared-libs`), which is not part of this test, so they
+	 * are declared here directly on the collection.
+	 */
+	void runFFITest(
+		const std::string&                 module_path,
+		const base::Optional<std::string>& output    = {},
+		i64                                exit_code = 0
+	) {
+		auto code         = getModuleFromPath(module_path, ALL_CORE_MODULES);
+		code.object_files = { os_utils::systemSharedLibC(), os_utils::systemSharedLibM() };
+		runTestOnVm(code, {}, output, {}, exit_code);
 	}
 
 	void runTest(
@@ -154,8 +180,44 @@ private:
 				"Expected error message to contain: \"", fail_msg, "\", but got: ", err_str
 			));
 		}
-		const auto validation_result = vm::api::deinitAndValidate(result.pid);
-		ASSERT_HAS_VALUE(validation_result);
+
+		ASSERT_HAS_VALUE(vm::api::kill(result.pid));
+	}
+
+	/**
+	 * @brief A variant alternative carrying no information (`()`) has no DVM type of its own, but
+	 * the DVM names alternatives by type name, so the lowering must name it with the stand-in
+	 * `unit` opaque type instead of dropping it.
+	 */
+	void variantUnitAlternativeTest() {
+		using namespace compiler;
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto unit_type = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+			const auto i64_type  = tsh::SymbolType<>::withDefaults(
+                tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
+            );
+			const tsh::VariantAbstractType variant_type
+				= ctx.query<tsh::QueryVariantType>({ { unit_type, i64_type } });
+
+			CRef<tsl::TypeLayout> layout
+				= &ctx.query<tsl::QueryAbstractTypeLayout>(variant_type)->valueOrThrow();
+
+			backend_vm::internal::ProgramLoweringContext program_ctx(
+				ctx, base::StrID("variant_unit_alternative_test"), false, false
+			);
+			const auto dvm_type = program_ctx.lowerAndKeepTslType(layout);
+			ASSERT_HAS_VALUE(dvm_type);
+
+			const auto dvm_variant = vm::code::getTypeKind<vm::code::VariantType>(**dvm_type);
+			ASSERT_HAS_VALUE(dvm_variant);
+
+			const auto& unit_dvm_type = program_ctx.getUnitType();
+			ASSERT_HAS_VALUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type));
+			ASSERT_TRUE(std::ranges::contains(
+				dvm_variant.value().variant_alternatives, typeName(unit_dvm_type)
+			));
+		});
 	}
 
 	void simpleTest() { runTest("simple", {}, {}, {}, 42); }
@@ -206,7 +268,9 @@ private:
 	// The pointer casts (including the `manyptr T` -> `ptr T` narrowing) run first and print their
 	// results; the module then dereferences a null many-pointer, which must fail the process.
 	void pointersTest() {
-		runFailTest("pointers", "Accessing null pointer", {}, "11\n44\n22\n", {}, ALL_CORE_MODULES);
+		runFailTest(
+			"pointers", "Accessing null pointer", {}, "11\n44\n22\n0\n0\n1\n", {}, ALL_CORE_MODULES
+		);
 	}
 
 	void initsDeinitsTest() { runTest("inits_deinits", {}, { "100\n" }, {}, 0); }
@@ -216,8 +280,24 @@ private:
 	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
 
 	void allocTest() {
-		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n", {}, 42);
+		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n10\n", {}, 42);
 	}
+
+	// Calls into libc/libm through libffi: scalars, a struct returned by value, `cptr char`
+	// strings, and `cptr`s to a struct, to a field, and to a static array element - both
+	// projected by the DVM itself and written through by C.
+	void ffiTest() {
+		runFFITest(
+			"ffi",
+			"8\n0\n"
+			"7\n33\n9\n33\n9\n4\n21\n21\n15\n33\n"
+			"100\n2\n50\n0\n0\n3\n3\n"
+			"5\n6\n7\n"
+			"4\n50\n4\n"
+		);
+	}
+
+	void bitwiseOperationsTest() { runTest("bitwise_operations", {}, {}, {}, 0); }
 };
 
 

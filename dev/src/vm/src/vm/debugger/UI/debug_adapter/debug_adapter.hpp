@@ -52,7 +52,7 @@ namespace vm::debugger::debug_adapter {
 
 		u64 total_frames = 0;
 
-		struct VarInfo {
+		struct VarInfo final {
 			SharedBox<IVMValueRef> var;
 			// reference to childs, 0 if not necessary
 			u64 var_ref{};
@@ -63,7 +63,7 @@ namespace vm::debugger::debug_adapter {
 		// vector of variables references
 		std::vector<VariablesReferenceState> variables;
 
-		struct SourcePositionInfo {
+		struct SourcePositionInfo final {
 			std::string file_path;
 			u64         start_line   = 0;
 			u64         start_column = 0;
@@ -71,7 +71,7 @@ namespace vm::debugger::debug_adapter {
 			u64         end_column   = 0;
 		};
 
-		std::expected<SourcePositionInfo, std::string> getSourcePositionInfo();
+		std::expected<SourcePositionInfo, std::string> getSourcePositionInfo(usize frame_idx);
 
 		/**
 		 * @brief Retrieves the variables map and function identifier for a specific stack frame.

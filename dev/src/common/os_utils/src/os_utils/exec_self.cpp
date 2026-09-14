@@ -1,8 +1,10 @@
 #include "exec_self.hpp"
 
+#include <base/config/target_info.hpp>
+
 #include <cerrno>
 
-#ifdef _WIN32
+#if BASE_TARGET_OS_WINDOWS
 	#include <process.h>
 #else
 	#include <unistd.h>
@@ -10,14 +12,13 @@
 
 namespace os_utils {
 
-	// @TODO: #2308 Once implemented, maybe use it here.
 	ExecSelfResult execSelf(std::vector<std::string>& g_argv) {
 		std::vector<char*> args;
 		args.reserve(g_argv.size() + 1);
 		for (auto& arg: g_argv) args.push_back(arg.data());
 		args.push_back(nullptr);
 
-#ifdef _WIN32
+#if BASE_TARGET_OS_WINDOWS
 		intptr_t result = _spawnvp(_P_WAIT, args[0], args.data());
 		if (result == -1) {
 			std::perror("_spawnvp");

@@ -6,7 +6,6 @@ use std::path::{Path, PathBuf};
 
 use git2::Repository;
 
-use crate::duck::util::terminal::Terminal;
 use crate::quackpack::core::valid_package_name::{
     is_duckling_keyword, is_duckling_std_name, validate_package_name,
 };
@@ -15,12 +14,12 @@ use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Options for initializing a new project.
-pub struct InitOptions<'duck, 'a> {
+pub struct InitOptions<'duck, 'matches> {
     pub ctx: &'duck DuckContext,
     /// Root of the project.
     pub at: PathBuf,
     /// Name of the project.
-    pub explicit_name: Option<&'a str>,
+    pub explicit_name: Option<&'matches str>,
     /// Initialize a venv instead of a project (do not create the `src` folder).
     pub as_venv: bool,
     /// Make the project expose freezefile.
@@ -61,7 +60,7 @@ impl Display for VenvConfigBuilder {
     }
 }
 
-const DEFAULT_SOURCE_FILENAME: &str = "src.dmf";
+const DEFAULT_SOURCE_FILENAME: &str = "src.dk";
 
 const DEFAULT_SOURCE_CONTENTS: &str = "\
 import core.builtins.*;
@@ -104,7 +103,7 @@ pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
     if opts.git {
         init_git(opts.ctx, &opts.at)?;
     }
-    opts.ctx.console().info(format!(
+    opts.ctx.info(format!(
         "successfully created a new project `{}` at `{}`",
         name,
         opts.at.display()
@@ -124,12 +123,12 @@ fn validate_new_package_name(ctx: &DuckContext, name: &str, inferred: bool) -> Q
         }
     })?;
     if is_duckling_std_name(name) {
-        ctx.console().warning(format!(
+        ctx.warning(format!(
             "initializing a project with name `{name}` can have weird effects, as it's one of the packages from the Duckling standard library"
         ))?;
     }
     if is_duckling_keyword(name) {
-        ctx.console().warning(format!(
+        ctx.warning(format!(
             "initializing a project with name `{name}` can have weird effects, as it's a Duckling keyword"
         ))?;
     }
@@ -145,7 +144,7 @@ fn create_manifest_file(
 ) -> QuackResult<()> {
     let manifest_path = root_path.join(PackageLoader::MANIFEST_NAME);
     let manifest_contents = if full {
-        manifest_with_user_prompts(ctx.console(), name)?
+        manifest_with_user_prompts(ctx, name)?
     } else {
         make_default_manifest_for_name(name)
     };
@@ -180,14 +179,14 @@ metadata:
 }
 
 /// Create custom manifest from user prompts.
-fn manifest_with_user_prompts(terminal: &Terminal, name: &str) -> QuackResult<String> {
-    if terminal.verbosity().is_quiet() {
+fn manifest_with_user_prompts(ctx: &DuckContext, name: &str) -> QuackResult<String> {
+    if ctx.verbosity().is_quiet() {
         qp_bail!("cannot create manifest from user input on quiet verbosity");
     }
-    let name = terminal.prompt_once_with_default("Enter the project's name", name.to_owned())?;
-    let author = terminal.prompt_once("Enter the project's author")?;
-    let version = terminal
-        .prompt_until_valid_with_default("Enter the version of the project", Version::default());
+    let name = ctx.prompt_once_with_default("Enter the project's name", name.to_owned())?;
+    let author = ctx.prompt_once("Enter the project's author")?;
+    let version =
+        ctx.prompt_until_valid_with_default("Enter the version of the project", Version::default());
     Ok(format!(
         "\
 metadata:
@@ -264,8 +263,8 @@ fn generate_venv_config(
 /// Add a package structure to the project.
 /// Note:
 /// -----
-/// Currently makes the project's main entry point a `.dmf` file with a `main()` function.
-/// In the future an option should be added to initialize the project's entry point as a script (`main.ds`).
+/// Currently makes the project's main entry point a `.dk` file with a `main()` function.
+/// In the future an option should be added to initialize the project's entry point as a script (`main.dks`).
 fn add_package_structure(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
     let source_file_path = root_path.join("src").join(DEFAULT_SOURCE_FILENAME);
     if let Some(parent) = source_file_path.parent() {
@@ -274,7 +273,7 @@ fn add_package_structure(ctx: &DuckContext, root_path: &Path) -> QuackResult<()>
     let mut source_file = match File::create_new(&source_file_path) {
         Err(err) => {
             if matches!(err.kind(), ErrorKind::AlreadyExists) {
-                ctx.console().note_verbose(format!(
+                ctx.note_verbose(format!(
                     "the source file {} already exists, not overwriting it",
                     source_file_path.display()
                 ))?;
@@ -301,7 +300,7 @@ fn init_git(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
     let mut gitignore_file = match File::create_new(&gitignore_path) {
         Err(err) => {
             if matches!(err.kind(), ErrorKind::AlreadyExists) {
-                ctx.console().note_verbose(format!(
+                ctx.note_verbose(format!(
                     "the file {} already exists, not overwriting it",
                     gitignore_path.display()
                 ))?;

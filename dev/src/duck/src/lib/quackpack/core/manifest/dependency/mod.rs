@@ -1,4 +1,6 @@
 //! Managing a single dependency abstraction.
+use std::fmt;
+
 use crate::quackpack::core::valid_package_name::{normalise_package_name, validate_package_name};
 use crate::quackpack::core::{FeatureName, Source, Version};
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
@@ -6,11 +8,56 @@ use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 mod conditions;
 mod dependencies;
 mod dependency_feature;
+mod selector;
 pub use conditions::*;
 pub use dependencies::*;
 pub use dependency_feature::*;
+pub use selector::*;
 
 use crate::quackpack::schemas::registry;
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+/// A [`Dependency`] kind.
+pub enum DependencyKind {
+    /// A normal dependency, comes from `dependencies:` map.
+    Normal,
+    /// A dev dependency, comes from `dev-dependencies:` map.
+    Dev,
+}
+
+impl DependencyKind {
+    /// Returns `true` if the dependency kind is [`Normal`].
+    ///
+    /// [`Normal`]: DependencyKind::Normal
+    #[must_use]
+    pub fn is_normal(self) -> bool {
+        matches!(self, Self::Normal)
+    }
+
+    /// Returns `true` if the dependency kind is [`Dev`].
+    ///
+    /// [`Dev`]: DependencyKind::Dev
+    #[must_use]
+    pub fn is_dev(self) -> bool {
+        matches!(self, Self::Dev)
+    }
+
+    pub fn key_in_manifest(self) -> &'static str {
+        match self {
+            DependencyKind::Normal => "dependencies",
+            DependencyKind::Dev => "dev-dependencies",
+        }
+    }
+}
+
+impl fmt::Display for DependencyKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Normal => write!(f, "normal"),
+            Self::Dev => write!(f, "dev"),
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 /// High level abstraction on a package's dependency.
@@ -29,6 +76,8 @@ pub struct Dependency {
     versions: Vec<Version>,
     /// Source of this dependency.
     source: Source,
+    /// Type of this dependency.
+    kind: DependencyKind,
 }
 
 impl Dependency {
@@ -37,6 +86,7 @@ impl Dependency {
     /// This function will fail if and only if:
     /// 1. `is_pinned` is true and `desc` doesn't have a [`Registry`](super::Registry) source.
     /// 2. `is_pinned` is true and `desc.versions()` doesn't have a length 1.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: StrId,
         versions: Vec<Version>,
@@ -45,6 +95,7 @@ impl Dependency {
         is_pinned: bool,
         conditions: Option<Conditions>,
         alias: Option<StrId>,
+        kind: DependencyKind,
     ) -> QuackResult<Self> {
         debug_assert_ne!(
             Some(name),
@@ -68,6 +119,7 @@ impl Dependency {
             alias,
             versions,
             source,
+            kind,
         })
     }
 
@@ -146,8 +198,8 @@ impl Dependency {
     }
 
     /// Get the source of this package.
-    pub fn source(&self) -> &Source {
-        &self.source
+    pub fn source(&self) -> Source {
+        self.source
     }
 
     /// Get the effective name of this dependency.
@@ -155,6 +207,16 @@ impl Dependency {
     /// Helper for `self.alias().unwrap_or(self.name())`.
     pub fn effective_name(&self) -> StrId {
         self.alias.unwrap_or(self.name)
+    }
+
+    /// Get [`DependencyKind`] of this dependency.
+    pub fn kind(&self) -> DependencyKind {
+        self.kind
+    }
+
+    /// Get the [`Conditions`] of this dependency.
+    pub fn conditions(&self) -> Option<&Conditions> {
+        self.conditions.as_ref()
     }
 }
 
@@ -170,6 +232,7 @@ impl TryFrom<registry::Dependency> for Dependency {
             pinned,
             conditions,
             alias,
+            kind,
         } = value;
         validate_package_name(&name)
             .context("registry responded with a dependency with an invalid name")?;
@@ -194,8 +257,9 @@ impl TryFrom<registry::Dependency> for Dependency {
             source.try_into()?,
             features,
             pinned,
-            Some(conditions.try_into()?),
+            Some(conditions.into()),
             alias,
+            kind.into(),
         )
     }
 }
@@ -212,6 +276,7 @@ impl TryFrom<Dependency> for registry::Dependency {
             alias,
             versions,
             source,
+            kind,
         } = value;
         let features = features.into_iter().map(Into::into).collect();
         let conditions = match conditions {
@@ -228,6 +293,25 @@ impl TryFrom<Dependency> for registry::Dependency {
             conditions,
             alias: alias.map(Into::into),
             name: name.into(),
+            kind: kind.into(),
         })
+    }
+}
+
+impl From<registry::DependencyKind> for DependencyKind {
+    fn from(value: registry::DependencyKind) -> Self {
+        match value {
+            registry::DependencyKind::Normal => Self::Normal,
+            registry::DependencyKind::Dev => Self::Dev,
+        }
+    }
+}
+
+impl From<DependencyKind> for registry::DependencyKind {
+    fn from(value: DependencyKind) -> Self {
+        match value {
+            DependencyKind::Normal => Self::Normal,
+            DependencyKind::Dev => Self::Dev,
+        }
     }
 }

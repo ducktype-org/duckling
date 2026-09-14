@@ -13,7 +13,10 @@ namespace compiler::driver {
 	 * @note It also prints and/or saves in artifacts IR representations if requested by options.
 	 */
 	query::QResult<LIRUnitWithBackendName> compileHOUTUnitToLIRModuleData(
-		query::Context& ctx, const helios::HOUTUnit& hout_unit, base::StrID module_name
+		query::Context&         ctx,
+		const helios::HOUTUnit& hout_unit,
+		base::StrID             module_id,
+		base::StrID             module_id_human
 	);
 
 	/**

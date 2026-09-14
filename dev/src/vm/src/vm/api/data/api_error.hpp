@@ -6,46 +6,62 @@
 #include <variant>
 
 namespace vm::api {
-	struct ResumeError {};
+	struct ResumeError final {
+		std::string why;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ResumeError, why);
+	};
 
-	struct PauseError {};
+	struct PauseError final {
+		std::string why;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(PauseError, why);
+	};
 
-	struct RunError {
+	struct RunError final {
 		std::string error;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(RunError, error);
 	};
 
-	struct JoinError {};
+	struct JoinError final {};
 
-	struct AttachDetachError {};
+	struct AttachDetachError final {};
 
-	struct OtherError {
+	struct OtherError final {
 		std::string error;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(OtherError, error);
 	};
 
-	struct IOError {
+	struct IOError final {
 		std::string error;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(IOError, error);
 	};
 
-	struct LoadProgramError {
+	struct LoadProgramError final {
 		std::string why;
 
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(LoadProgramError, why);
 	};
 
-	struct ProcessNotFound {};
+	struct ProcessNotFound final {};
 
-	struct WrongResponse {};
+	struct WrongResponse final {};
 
-	struct StateError {
+	struct StateError final {
 		std::string why;
 
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(StateError, why);
 	};
 
-	struct UnsupportedOperation {
+	/**
+	 * @brief A computation which run panicked. Returned by every endpoint executing bytecode when
+	 * an evaluation fails.
+	 */
+	struct Panicked final {
+		std::string why;
+
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Panicked, why);
+	};
+
+	struct UnsupportedOperation final {
 		std::string why;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(UnsupportedOperation, why);
 	};
@@ -53,7 +69,7 @@ namespace vm::api {
 	/**
 	 * @brief Represents an error indicating that a feature is not yet implemented.
 	 */
-	struct NotImplementedError {
+	struct NotImplementedError final {
 		std::string why;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(NotImplementedError, why);
 	};
@@ -70,6 +86,7 @@ namespace vm::api {
 		ProcessNotFound,
 		WrongResponse,
 		StateError,
+		Panicked,
 		NotImplementedError,
 		UnsupportedOperation>;
 
@@ -98,5 +115,6 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::LoadProgramError, "LoadProgramError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ProcessNotFound, "ProcessNotFound");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::WrongResponse, "WrongResponse");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::StateError, "StateError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Panicked, "Panicked");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotImplementedError, "NotImplementedError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::UnsupportedOperation, "UnsupportedOperation");

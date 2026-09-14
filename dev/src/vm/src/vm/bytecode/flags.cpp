@@ -151,6 +151,7 @@ namespace vm::code {
 			FLAGS_W_R(mov_pste_pste)
 			FLAGS_W_R(mov_pfst_pfst)
 			FLAGS_W_R(mov_popq_popq)
+			FLAGS_W_R(mov_pvnt_pvnt)
 
 			// ===== Conditional moves: dst is read (kept conditionally) and written =====
 			FLAGS_RW_R(cmov_p8_p8)
@@ -264,6 +265,59 @@ namespace vm::code {
 			FLAGS_RW(log_or_p8_imm)
 			FLAGS_RW_R(log_xor_p8_p8)
 			FLAGS_RW(log_xor_p8_imm)
+
+			// ===== Bitwise (and / or / xor / shl / shr / not) =====
+			// 64-bit
+			FLAGS_RW_R(bit_and_p64_p64)
+			FLAGS_RW(bit_and_p64_imm)
+			FLAGS_RW_R(bit_or_p64_p64)
+			FLAGS_RW(bit_or_p64_imm)
+			FLAGS_RW_R(bit_xor_p64_p64)
+			FLAGS_RW(bit_xor_p64_imm)
+			FLAGS_RW_R(shl_p64_p64)
+			FLAGS_RW(shl_p64_imm)
+			FLAGS_RW_R(shr_p64_p64)
+			FLAGS_RW(shr_p64_imm)
+			FLAGS_RW(bit_not_p64)
+
+			// 32-bit
+			FLAGS_RW_R(bit_and_p32_p32)
+			FLAGS_RW(bit_and_p32_imm)
+			FLAGS_RW_R(bit_or_p32_p32)
+			FLAGS_RW(bit_or_p32_imm)
+			FLAGS_RW_R(bit_xor_p32_p32)
+			FLAGS_RW(bit_xor_p32_imm)
+			FLAGS_RW_R(shl_p32_p32)
+			FLAGS_RW(shl_p32_imm)
+			FLAGS_RW_R(shr_p32_p32)
+			FLAGS_RW(shr_p32_imm)
+			FLAGS_RW(bit_not_p32)
+
+			// 16-bit
+			FLAGS_RW_R(bit_and_p16_p16)
+			FLAGS_RW(bit_and_p16_imm)
+			FLAGS_RW_R(bit_or_p16_p16)
+			FLAGS_RW(bit_or_p16_imm)
+			FLAGS_RW_R(bit_xor_p16_p16)
+			FLAGS_RW(bit_xor_p16_imm)
+			FLAGS_RW_R(shl_p16_p16)
+			FLAGS_RW(shl_p16_imm)
+			FLAGS_RW_R(shr_p16_p16)
+			FLAGS_RW(shr_p16_imm)
+			FLAGS_RW(bit_not_p16)
+
+			// 8-bit
+			FLAGS_RW_R(bit_and_p8_p8)
+			FLAGS_RW(bit_and_p8_imm)
+			FLAGS_RW_R(bit_or_p8_p8)
+			FLAGS_RW(bit_or_p8_imm)
+			FLAGS_RW_R(bit_xor_p8_p8)
+			FLAGS_RW(bit_xor_p8_imm)
+			FLAGS_RW_R(shl_p8_p8)
+			FLAGS_RW(shl_p8_imm)
+			FLAGS_RW_R(shr_p8_p8)
+			FLAGS_RW(shr_p8_imm)
+			FLAGS_RW(bit_not_p8)
 
 			// ===== Comparisons: lhs/rhs are read =====
 			FLAGS_CMP(cmpEq_p64_p64)
@@ -535,13 +589,19 @@ namespace vm::code {
 				rd(i.src_ptr);
 				deref_read();
 			}
-			instr_case(ins::Op_movCast_pcptr_pcptr, i) {
+			instr_case(ins::Op_cast_pcptr_pcptr, i) {
 				wr(i.dst);
 				rd(i.src);
 			}
 			// Taking an address only reads the pointer operand, like the ref/lea ops above.
 			instr_case(ins::Op_cast_pcptr_pptr, i) {
 				wr(i.dst);
+				rd(i.src_ptr);
+			}
+			// Decomposing a pointer only reads it, like the cast above.
+			instr_case(ins::Op_ptrParts_p64_p64_pptr, i) {
+				wr(i.dst_id);
+				wr(i.dst_offset);
 				rd(i.src_ptr);
 			}
 			instr_case(ins::Op_add_pcptr_p64, i) {

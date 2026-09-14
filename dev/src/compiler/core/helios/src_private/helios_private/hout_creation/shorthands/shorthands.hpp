@@ -26,7 +26,8 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/passing.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
@@ -402,10 +403,35 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<CastExpr>(*ctx, generatedOrigin(), std::move(source), target_type);
 		}
 
+		/**
+		 * @brief A match case, optionally binding the tested alternative's payload.
+		 * An empty `alternative_index` makes it a wildcard case.
+		 */
+		[[nodiscard]]
+		static MatchExpr::Case matchCase(
+			base::Optional<usize> alternative_index, base::Optional<SymID> binding, Box<Expr> result
+		) {
+			return MatchExpr::Case{ .alternative_index = alternative_index,
+				                    .binding           = binding,
+				                    .result            = std::move(result) };
+		}
+
+		/** @brief A `match (subject) { cases }`. Cases are tried in order. */
+		[[nodiscard]]
+		Box<MatchExpr> matchExpr(Box<Expr> subject, std::vector<MatchExpr::Case> cases) const {
+			return makeBox<MatchExpr>(*ctx, generatedOrigin(), std::move(subject), std::move(cases));
+		}
+
 		/** @brief A reference creation `refof inner`. */
 		[[nodiscard]]
 		Box<RefOfExpr> refOf(Box<Expr> inner) const {
 			return makeBox<RefOfExpr>(*ctx, generatedOrigin(), std::move(inner));
+		}
+
+		/** @brief A pointer creation `ptrof inner`. */
+		[[nodiscard]]
+		Box<PtrOfExpr> ptrOf(Box<Expr> inner) const {
+			return makeBox<PtrOfExpr>(*ctx, generatedOrigin(), std::move(inner));
 		}
 
 		/** @brief An explicit move `move inner`. Named `move` to avoid clashing with `std::move`. */
@@ -445,27 +471,6 @@ namespace compiler::helios::code::shorthands {
 		[[nodiscard]]
 		Box<BlockExpr> blockExpr(StmtPack body) const {
 			return makeBox<BlockExpr>(*ctx, generatedOrigin(), block(std::move(body)));
-		}
-
-		/************
-		 *   LIST   *
-		 ************/
-
-
-		/** @brief A push `list += element`. The element is consumed into the list. */
-		[[nodiscard]]
-		Box<ListPushExpr> listPush(Box<Expr> list, Box<Expr> element) const {
-			return makeBox<ListPushExpr>(
-				generatedOrigin(), std::move(list), consume(std::move(element))
-			);
-		}
-
-		// @note ListPopExpr is the only HOUT node which doesn't need the query::Context, thus it's
-		// static. ListPushExpr still needs it to determine how to pass the value into the list.
-		/** @brief A pop of `count` elements from `list`. */
-		[[nodiscard]]
-		static Box<ListPopExpr> listPop(Box<Expr> list, Box<Expr> count) {
-			return makeBox<ListPopExpr>(generatedOrigin(), std::move(list), std::move(count));
 		}
 
 		/******************
@@ -618,12 +623,15 @@ namespace compiler::helios::code::shorthands {
 		 * - `ref T` is byte-copied, meaning the reference is copied
 		 * - `box T` is deep-copied into a fresh allocation holding a copy of the pointee
 		 *
-		 * @warning This does not match the semantics of the language `copy` operator. The operator
-		 * always creates a direct value (`ref T -> T` and `box T -> T`), while this just copies the
-		 * value directly.
+		 * These are the semantics of the language `copyof` operator, which lowers to this. The
+		 * `copy` operator differs: it always creates a direct value (`ref T -> T` and
+		 * `box T -> T`), while this keeps the reference kind of `source`.
+		 *
+		 * `origin` is used for the nodes this builds. The trivially-copyable case builds no node
+		 * and keeps the origin of `source`.
 		 */
 		[[nodiscard]]
-		Box<Expr> copyValue(Box<Expr> source) const {
+		Box<Expr> copyValue(Box<Expr> source, ElementOrigin origin = generatedOrigin()) const {
 			const tsh::SymbolType<> type = source->expression_type.getSymbolType();
 			if (type.isTriviallyCopyable(*ctx)) return source;
 
@@ -632,9 +640,9 @@ namespace compiler::helios::code::shorthands {
 			// `box(*source)`.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
 				// Produce a copy of the underlying type.
-				auto pointee_copy = copyValue(deref(std::move(source)));
+				auto pointee_copy = copyValue(withOrigin(origin, deref(std::move(source))), origin);
 				// Now wrap it in a heap allocation.
-				return makeBoxAllocCall(*ctx, generatedOrigin(), std::move(pointee_copy));
+				return makeBoxAllocCall(*ctx, origin, std::move(pointee_copy));
 			}
 
 			// Now we have a direct value which should be copied.
@@ -643,12 +651,12 @@ namespace compiler::helios::code::shorthands {
 				abstract_type.getKind() == tsh::Kind::Class
 					or abstract_type.getKind() == tsh::Kind::StaticArray
 					or abstract_type.getKind() == tsh::Kind::Tuple
-					or abstract_type.getKind() == tsh::Kind::DynamicArray,
+					or abstract_type.getKind() == tsh::Kind::Variant,
 				"Tried to generate a copy constructor for a type which shouldn't need it"
 			);
 
 			const SymID copy_sym = defgen::copyConstructorSymForType(*ctx, abstract_type);
-			return call(ident(copy_sym), refOf(std::move(source)));
+			return withOrigin(origin, call(ident(copy_sym), refOf(std::move(source))));
 		}
 	};
 }

@@ -1,6 +1,5 @@
 #include "function_queries.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
@@ -15,16 +14,17 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/utils/main_return_type.hpp>
 #include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
@@ -39,6 +39,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <lexer/token_common.hpp>
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -143,6 +144,24 @@ namespace compiler::helios {
 			}
 
 			void visitIf(pst::Access<pst::If> stmt) final {
+				if (stmt->isConst()) {
+					// Only the taken branch takes part in the return type deduction, the other
+					// one is never compiled.
+					auto condition_holder = stmt->getCondition();
+					if (!condition_holder.has_value()) query::throwFailed();
+
+					auto taken
+						= getBoolCTVFromPST(ctx, condition_holder.value().unlock(ctx)->getExpr())
+					          .valueOrThrow();
+
+					if (taken)
+						visitRecursion(stmt->getThenBody());
+					else if (stmt->getElseBody().has_value())
+						visitRecursion(stmt->getElseBody().value());
+
+					return;
+				}
+
 				visitRecursion(stmt->getThenBody());
 
 				if (stmt->getElseBody().has_value()) visitRecursion(stmt->getElseBody().value());
@@ -171,7 +190,7 @@ namespace compiler::helios {
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Function declared with no explicit return type and inconsistent return "
 					"statements.",
 					fun->getStablePosition()
@@ -234,6 +253,13 @@ namespace compiler::helios {
 		}
 	}
 
+	static bool isValidMainReturnType(query::Context& ctx, const tsh::SymbolType<>& return_type) {
+		const auto required_type = requiredMainReturnType(ctx);
+
+		return return_type.getType() == required_type.getType()
+		    && return_type.getRefKind() == required_type.getRefKind();
+	}
+
 	struct IMPLEMENT_QUERY(QueryDeclOfFun, query::QResult<HOUTFunctionDeclaration>) {
 		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
 			query::Context& ctx;
@@ -250,6 +276,9 @@ namespace compiler::helios {
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret,
 				HOUTFunctionDeclaration::Operatoriness             operatoriness
 			) {
+				const bool global_main_definition = isGlobalMain(original_symbol)
+				                                 && kind(original_symbol) == SymbolKind::Function;
+
 				// Default return type is a direct unit.
 				auto ret_type = tsh::SymbolType<>{
 					tsh::getUnitType(),
@@ -262,11 +291,28 @@ namespace compiler::helios {
 				if (ret.has_value()) {
 					const auto ret_type_ctv
 						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
+
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
-					origin   = code::multiplePstOriginOrdered({ param_list.unlock(ctx),
-					                                            ret.value().unlock(ctx) });
+
+					if (global_main_definition && not isValidMainReturnType(ctx, ret_type)) {
+						ctx.logInt(makeBox<InvalidMainReturnTypeError>(
+							ret.value().unlock(ctx)->getStablePosition(),
+							makeBox<InteractiveType>(ctx, ret_type)
+						));
+						query::throwFailed();
+					}
+
+					origin = code::multiplePstOriginOrdered({
+						param_list.unlock(ctx),
+						ret.value().unlock(ctx),
+					});
 				}
-				// Deduce return type if not provided.
+				// A global main without an explicit return type is treated as `main -> i64`.
+				else if (global_main_definition) {
+					ret_type = requiredMainReturnType(ctx);
+					origin   = code::pstOrigin(param_list.unlock(ctx));
+				}
+				// Deduce return type for ordinary functions.
 				else {
 					ret_type = ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
 					origin   = code::pstOrigin(param_list.unlock(ctx));
@@ -330,10 +376,20 @@ namespace compiler::helios {
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
-				// +1 for the implicit `self` parameter.
+				// We can't use the interface directly because the interface
+				// can use the declaration of function query, and we could get a cycle.
+				auto specifiers = getClassMemberSpecifiers(ctx, original_symbol);
+				if (specifiers.is_static) {
+					const auto operatoriness = operatorinessFromNameAndArity(
+						name(original_symbol), stmt->getParams().unlock(ctx)->size()
+					);
+					emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+					return;
+				}
 				const auto operatoriness = operatorinessFromNameAndArity(
 					name(original_symbol), stmt->getParams().unlock(ctx)->size() + 1
 				);
+				// +1 for the implicit `self` parameter.
 				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
@@ -360,8 +416,7 @@ namespace compiler::helios {
 					stmt->getParams(), {}, HOUTFunctionDeclaration::Operatoriness::None
 				);
 
-				const auto class_type
-					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+				const auto class_type  = classMemberOwner(original_symbol);
 				this->out->return_type = tsh::SymbolType<>{
 					class_type,
 					tsh::ReferenceKind::Direct,
@@ -562,7 +617,9 @@ namespace compiler::helios {
 			case SymbolKind::Constructor:
 			case SymbolKind::Destructor: {
 				variant_match(getSymRef(key)->other) {
-					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
+					variant_case_novalue(
+						PstImplementedSemantics, ClassMemberSemantics, BuiltinSemantics
+					) {
 						DeclarationVisitor decl_maker(ctx, key);
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
 						auto result = std::move(decl_maker.out).value();
@@ -596,8 +653,7 @@ namespace compiler::helios {
 					variant_case_novalue(
 						defgen::Method,
 						defgen::BuiltinTemplatedSymbol,
-						defgen::ReplExpressionWrapper,
-						defgen::ReplInstructionWrapper,
+						defgen::ReplInputWrapper,
 						defgen::ScriptMainWrapper
 					) {
 						return funDeclFromType(

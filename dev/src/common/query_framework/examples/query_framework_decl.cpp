@@ -1,11 +1,10 @@
-#include "query_framework_decl.hpp"  // query declaration
-
-#include <diagnostic_interactive/message.hpp>
+#include "query_framework_decl.hpp"       // query declaration
 
 #include <base/collections/maps.hpp>      // base::Map
 #include <base/collections/optional.hpp>  // base::Optional
 #include <base/str/str_utils.hpp>         // base::strConcat
 
+#include <diagnostic/message.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 /**
@@ -22,8 +21,8 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 	 * Search in editor for the `error/misc/example.yaml` to see how the message is defined in the
 	 * `yaml` template file.
 	 */
-	class ExampleError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class ExampleError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return {
 				.template_type = "message", .type = "error", .family = "misc", .name = "example"
 			};
@@ -32,7 +31,7 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 	public:
 		ExampleError(dia::SourcePosition source_pos, std::string argument):
 			  MessageWithCodeFragmentAndCause(source_pos) {
-			addArgument<dia_int::TextArgument>("argument", std::move(argument));
+			addArgument<dia::TextArgument>("argument", std::move(argument));
 		}
 	};
 

@@ -10,6 +10,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(linkedListTest);
 		TESTER_ADD_TEST(linkedListNoStructLoadStoreTest);
+		TESTER_ADD_TEST(ptrPartsTest);
 	}
 
 private:
@@ -17,6 +18,14 @@ private:
 
 	void linkedListNoStructLoadStoreTest() {
 		runTestOnVm("linked_list_no_struct_load_store.dbc", "3 11 22 33", "332211");
+	}
+
+	// The offsets of the struct and of its second field, the two ids being equal, and then the
+	// null pointer failing to decompose the way a dereference does.
+	void ptrPartsTest() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("ptr_parts.dbc", "", "080"), "Accessing null pointer"
+		);
 	}
 };
 

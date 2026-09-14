@@ -1,8 +1,17 @@
+//! > [!NOTE]
+//! > We check if packages are self dependent here. Why? Because:
+//! > 1. it's likely a user's mistake,
+//! > 2. generating storage freeze (currently) breaks if there are any self dependent packages.
+//! > Therefore we have to check self dependence before. Gatherer seemed the easiest place to add
+//! > this checks.
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 
-use futures::future::select_all;
+use futures::StreamExt;
+use futures::stream::FuturesUnordered;
+use tempfile::TempDir;
 use tracing::{debug, error, trace};
 
 use crate::quackpack::core::fetcher::Fetcher;
@@ -22,7 +31,12 @@ use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::{ErrorsLogger, MessageError};
-use crate::{QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal, qp_err};
+use crate::{
+    DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal,
+    qp_err,
+};
+
+type FetchFuture<'a> = Pin<Box<dyn Future<Output = QuackResult<FetchResponse>> + 'a>>;
 
 /// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
 pub struct Gatherer<'duck, 'a, Access: GitAccess> {
@@ -46,7 +60,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     pub async fn explore(
         &self,
         root_path: PathBuf,
-        root_manifest: Manifest,
+        root_manifest: Box<Manifest>,
         root_features: HashSet<FeatureName>,
         mode: SolverMode,
     ) -> QuackResult<GatheredInfo> {
@@ -60,37 +74,64 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             &mut errors.borrow_mut(),
         )?;
 
-        let mut fetches = vec![];
-        let mut requests =
-            state.handle_fetch_response(root_fetch_result, &mut errors.borrow_mut())?;
-        while !fetches.is_empty() || !requests.is_empty() {
-            if let Some(request) = requests.pop() {
-                let action = state.get_request_action(request.clone(), &mut errors.borrow_mut())?;
-                match action {
-                    RequestAction::Fetch => fetches.push(Box::pin(self.fetch(request, &errors))),
-                    RequestAction::More {
-                        requests: new_requests,
-                    } => requests.extend(new_requests),
-                }
-            }
-            if !fetches.is_empty() {
-                let (response, _, remaining) = select_all(fetches).await;
-                requests.extend(state.handle_fetch_response(response?, &mut errors.borrow_mut())?);
-                fetches = remaining;
-            }
+        self.explore_deps(root_fetch_result, &mut state, mode, errors)
+            .await?;
+        state.try_into()
+    }
+
+    #[tracing::instrument(skip_all, fields(mode, offline = self.fetcher.ctx().is_offline()))]
+    async fn explore_deps(
+        &self,
+        root_fetch_response: FetchResponse,
+        state: &mut GathererState,
+        mode: SolverMode,
+        logger: RefCell<ErrorsLogger>,
+    ) -> QuackResult<()> {
+        let mut fetches = FuturesUnordered::new();
+        let requests =
+            state.handle_fetch_response(root_fetch_response, &mut logger.borrow_mut())?;
+        self.recursively_push_requests(&fetches, requests, state, &logger)?;
+        while let Some(response) = fetches.next().await {
+            let response = response?;
+            let new_requests = state.handle_fetch_response(response, &mut logger.borrow_mut())?;
+            self.recursively_push_requests(&fetches, new_requests, state, &logger)?;
         }
-        if !errors.borrow().is_empty() {
+        if !logger.borrow().is_empty() {
             if mode.suppress_foreign_manifests_errors {
-                for e in errors.take() {
-                    self.fetcher.ctx().error_console().info_verbose(format!(
+                for e in logger.take() {
+                    self.fetcher.ctx().info_verbose(format!(
                         "error\n{e}\nsuppressed due to the Merciful mode of the solver",
                     ))?;
                 }
             } else {
-                return Err(errors.take().unwrap_first());
+                return Err(logger.take().unwrap_first());
             }
         }
-        state.try_into()
+        Ok(())
+    }
+
+    /// Push `requests` recursively to `fetches`.
+    ///
+    /// Any [`RequestAction::More`] turns into a recursive call.
+    ///
+    /// We process [`ManifestsRequest`]s until only [`RequestAction::Fetch`]es are left.
+    fn recursively_push_requests<'b>(
+        &'b self,
+        fetches: &FuturesUnordered<FetchFuture<'b>>,
+        requests: Vec<ManifestsRequest>,
+        state: &mut GathererState,
+        errors: &'b RefCell<ErrorsLogger>,
+    ) -> QuackResult<()> {
+        for request in requests {
+            let action = state.get_request_action(request.clone(), &mut errors.borrow_mut())?;
+            match action {
+                RequestAction::Fetch => fetches.push(Box::pin(self.fetch(request, errors))),
+                RequestAction::More { requests } => {
+                    self.recursively_push_requests(fetches, requests, state, errors)?
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Helper for [`Gatherer::explore()`], creates a dummy [`ManifestsRequest`] for the root package to update the state
@@ -101,7 +142,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     fn fetch_root(
         &self,
         root_path: PathBuf,
-        root_manifest: Manifest,
+        root_manifest: Box<Manifest>,
         root_features: HashSet<FeatureName>,
         state: &mut GathererState,
         errors: &mut ErrorsLogger,
@@ -115,6 +156,9 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             format!("failed to generate url from a path `{root_path:?}`")
         })?;
         let root_source = Source::for_local_with_url(root_url);
+        if does_package_depend_on_itself(&[root_source], &root_manifest) {
+            return Err(self_dependent_root_package_error());
+        }
         let root_request = NotPinnedRequest {
             id: RequestIdentifier {
                 name: root_name,
@@ -141,7 +185,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                         ),
                         root_version,
                     ),
-                    Box::new(root_manifest),
+                    root_manifest,
                 )]),
             },
         )))
@@ -177,7 +221,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                     }
                     SourceKind::Git(git_ref) => {
                         let url = not_pinned_request.id.source.url();
-                        self.fetch_git(&not_pinned_request, url, *git_ref, errors)
+                        self.fetch_git(&not_pinned_request, url, git_ref, errors)
                             .await
                     }
                     SourceKind::Local => {
@@ -208,7 +252,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             version: request.version,
             url: request.id.source.url(),
         };
-        let fetcher_response = match self.fetcher.get_package_metadata(&pkg_to_fetch).await {
+        let fetcher_response = match self.fetcher.get_package_metadata(pkg_to_fetch).await {
             Ok(response) => response,
             Err(e) => {
                 errors.borrow_mut().log(e);
@@ -300,6 +344,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
 
     /// Helper for [`Gatherer::explore()`], performs a git fetch
     /// (fetch from an external git repository).
+    #[tracing::instrument(skip_all, fields(?request, %url, ?reference))]
     async fn fetch_git(
         &self,
         request: &NotPinnedRequest,
@@ -308,35 +353,13 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         errors: &RefCell<ErrorsLogger>,
     ) -> QuackResult<FetchResponse> {
         trace!("fetching git");
-        // We create a temporary logger to check if `try_get_cached_git` produced any errors.
-        let mut cache_logger = ErrorsLogger::default();
-        if let Some(cached_git) =
-            self.try_get_cached_git(request, url, reference, &mut cache_logger)
+        if let Some(cached_response) = self.try_get_cached_git(request, url, reference, errors) {
+            return Ok(cached_response);
+        }
+        if let Some(git_fast_path_response) = self.try_git_fastpath(request, url, reference).await?
         {
-            debug!("git request was cached");
-            return Ok(FetchResponse::Success(FetchSuccess::NotPinned(cached_git)));
+            return Ok(git_fast_path_response);
         }
-        if !cache_logger.is_empty() {
-            let err = cache_logger.unwrap_first();
-            errors.borrow_mut().log(err.context(MessageError::new(
-                "when trying to get cached git or during fastpath",
-            )));
-            return Ok(FetchResponse::failed_not_pinned(request.id));
-        }
-        match self.try_git_fastpath(request, url, reference).await {
-            Err(e) => {
-                // We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
-                // as it is well ... a fast path.
-                self.fetcher.ctx().console().warning(e)?;
-            }
-            Ok(Some(fast_path_git)) => {
-                debug!("git fast path worked");
-                return Ok(FetchResponse::Success(FetchSuccess::NotPinned(
-                    fast_path_git,
-                )));
-            }
-            Ok(None) => {}
-        };
         if self.fetcher.ctx().is_offline() {
             return Ok(FetchResponse::failed_not_pinned(request.id));
         }
@@ -359,6 +382,11 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 return Ok(FetchResponse::failed_not_pinned(request.id));
             }
         };
+        if let Some(emitted_response_because_depends) =
+            log_if_git_is_self_dependent(&path_where_cloned, request, &manifest, errors)
+        {
+            return Ok(emitted_response_because_depends);
+        }
         let answer_identity = FullIdentity::new(
             request.id.name,
             FullOrigin::for_git(url, cloned_pkg.commit_hash),
@@ -383,8 +411,40 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
 
     /// Helper for [`Gatherer::fetch_git`].
     /// Searches for cached git satisfying the given request and loads the found package with [`PackageLoader`].
-    /// If it cannot find a cached git, returns [`None`].
+    ///
+    /// # Returns
+    /// `Some` if package was found, or an error has been encountered. The response should be
+    /// propagated upwards.
+    /// `None` otherwise.
     fn try_get_cached_git(
+        &self,
+        request: &NotPinnedRequest,
+        url: InternedUrl,
+        reference: GitReference,
+        errors: &RefCell<ErrorsLogger>,
+    ) -> Option<FetchResponse> {
+        // We create a temporary logger to check if `try_get_cached_git_inner` produced any errors.
+        let mut cache_logger = ErrorsLogger::default();
+        if let Some(cached_git) =
+            self.try_get_cached_git_inner(request, url, reference, &mut cache_logger)
+        {
+            debug!("git request was cached");
+            return Some(FetchResponse::Success(FetchSuccess::NotPinned(cached_git)));
+        }
+        if !cache_logger.is_empty() {
+            let err = cache_logger.unwrap_first();
+            errors.borrow_mut().log(err.context(MessageError::new(
+                "when trying to get cached git or during fastpath",
+            )));
+            return Some(FetchResponse::failed_not_pinned(request.id));
+        }
+        None
+    }
+
+    /// Helper for [`Gatherer::try_get_cached_git`].
+    /// Searches for cached git satisfying the given request and loads the found package with [`PackageLoader`].
+    /// If it cannot find a cached git, returns [`None`].
+    fn try_get_cached_git_inner(
         &self,
         request: &NotPinnedRequest,
         url: InternedUrl,
@@ -430,7 +490,32 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     }
 
     /// Tries to use git fast path, to get the manifests without performing clone.
+    /// This version also handles any errors ([`QuackResult`] is because we try to print the error).
     async fn try_git_fastpath(
+        &self,
+        request: &NotPinnedRequest,
+        url: InternedUrl,
+        reference: GitReference,
+    ) -> QuackResult<Option<FetchResponse>> {
+        match self.try_git_fastpath_inner(request, url, reference).await {
+            Err(e) => {
+                error!(error = %e, "fast path failed");
+                // We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
+                // as it is well ... a fast path.
+                display_git_fast_path_failure_warning(&e, request, self.fetcher.ctx()).map(|_| None)
+            }
+            Ok(Some(fast_path_git)) => {
+                debug!("git fast path worked");
+                Ok(Some(FetchResponse::Success(FetchSuccess::NotPinned(
+                    fast_path_git,
+                ))))
+            }
+            Ok(None) => Ok(None),
+        }
+    }
+
+    /// Tries to use git fast path, to get the manifests without performing clone.
+    async fn try_git_fastpath_inner(
         &self,
         request: &NotPinnedRequest,
         url: InternedUrl,
@@ -439,8 +524,12 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         let Some(fast_path_client) = self.fetcher.try_get_fastpath(url) else {
             return Ok(None);
         };
+        let source = Source::for_git(url, reference);
         let commit = fast_path_client.get_commit_hash(reference).await?;
         let manifest = fast_path_client.download_manifest(commit).await?;
+        if does_package_depend_on_itself(&[source], &manifest) {
+            return Err(self_dependent_dependency_error(request.id));
+        }
         let answer_identity = FullIdentity::new(request.id.name, FullOrigin::for_git(url, commit));
         let pkg_id = PackageId::new(answer_identity, manifest.version());
         Ok(Some(NotPinnedSuccess {
@@ -464,6 +553,12 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 return FetchResponse::failed_not_pinned(request.id);
             }
         };
+        if does_package_depend_on_itself(&[request.id.source], pcx.package().manifest()) {
+            errors
+                .borrow_mut()
+                .log(self_dependent_dependency_error(request.id));
+            return FetchResponse::failed_not_pinned(request.id);
+        }
         let root = pcx.package().root();
         let Ok(answer_origin) = FullOrigin::for_local(root) else {
             return FetchResponse::failed_not_pinned(request.id);
@@ -525,6 +620,7 @@ impl Manifest {
     }
 }
 
+#[track_caller]
 fn assert_root_features_are_expanded(
     root_manifest: &Manifest,
     root_features: &HashSet<FeatureName>,
@@ -536,4 +632,69 @@ fn assert_root_features_are_expanded(
             .unwrap(),
         *root_features
     );
+}
+
+fn display_git_fast_path_failure_warning(
+    error: &QuackError,
+    request: &NotPinnedRequest,
+    ctx: &DuckContext,
+) -> QuackResult<()> {
+    let identifier = request.id;
+    let name = identifier.name;
+    let source = identifier.source;
+    ctx.warning(format!(
+        "git fast path for `{name} {source}` failed: {error}"
+    ))?;
+    ctx.info("switching to cloning git repository")?;
+    Ok(())
+}
+
+/// Check whether a given package depends on itself.
+///
+/// `sources` is a slice of this package's sources.
+///
+/// It accepts multiple sources (but in practice it's 1 or 2), because a git dependency can be
+/// self-dependent either as a local dependency with a path `.`, or as a git dependency with the
+/// same URL.
+///
+/// Local and registry dependencies don't have such struggles.
+fn does_package_depend_on_itself(sources: &[Source], manifest: &Manifest) -> bool {
+    manifest
+        .dependencies()
+        .all_dependencies()
+        .iter()
+        .any(|dep| sources.contains(&dep.source()))
+}
+
+fn self_dependent_root_package_error() -> QuackError {
+    qp_err!("root package depends on itself")
+}
+
+fn self_dependent_dependency_error(id: RequestIdentifier) -> QuackError {
+    qp_err!("dependency `{} {}` depends on itself", id.name, id.source)
+}
+
+/// Check if the cloned git is self dependent.
+///
+/// # Returns
+/// `Some` if git was self dependent (and the response should be propagated upwards), `None` otherwise.
+fn log_if_git_is_self_dependent(
+    path_where_cloned: &TempDir,
+    request: &NotPinnedRequest,
+    manifest: &Manifest,
+    errors: &RefCell<ErrorsLogger>,
+) -> Option<FetchResponse> {
+    let sources: &[Source] = if let Ok(path_source) = Source::for_local(path_where_cloned.path()) {
+        &[path_source, request.id.source]
+    } else {
+        &[request.id.source]
+    };
+    if does_package_depend_on_itself(sources, manifest) {
+        errors
+            .borrow_mut()
+            .log(self_dependent_dependency_error(request.id));
+        Some(FetchResponse::failed_not_pinned(request.id))
+    } else {
+        None
+    }
 }

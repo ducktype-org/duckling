@@ -468,6 +468,7 @@ private:
 		using namespace compiler;
 
 		compiler::driver::dump_ir_options.dump_asm  = true;
+		compiler::driver::dump_ir_options.dump_dbc  = true;
 		compiler::driver::dump_ir_options.dump_llvm = true;
 		compiler::driver::dump_ir_options.dump_lir  = true;
 		compiler::driver::dump_ir_options.dump_mir  = true;
@@ -485,27 +486,32 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
 			ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
+			ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM, false });
 
-			auto                  module_name = base::StrID(base::strConcat(
-                "module_",
-                compiler::frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
-            ));
-			std::filesystem::path base_path   = artifacts_path / "duck_debug_artifacts";
-
-
-			auto asm_art  = base_path / (module_name.str() + ".s");
-			auto llvm_art = base_path / (module_name.str() + ".ll");
-			auto lir_art  = base_path / (module_name.str() + ".lir");
-			auto mir_art  = base_path / (module_name.str() + ".mir");
-			auto hir_art  = base_path / (module_name.str() + ".hir");
+			auto module_name = base::strConcat(
+				"module_",
+				compiler::frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
+			);
+			auto human_module_name = compiler::frontend::getModuleRef(module)->humanReadableID(ctx);
+			std::filesystem::path base_path = artifacts_path / "duck_debug_artifacts";
 
 
+			auto dbc_art  = base_path / (human_module_name + ".dbc");
+			auto asm_art  = base_path / (human_module_name + ".s");
+			auto llvm_art = base_path / (human_module_name + ".ll");
+			auto lir_art  = base_path / (human_module_name + ".lir");
+			auto mir_art  = base_path / (human_module_name + ".mir");
+			auto hir_art  = base_path / (human_module_name + ".hir");
+
+
+			assertTrue(std::filesystem::exists(dbc_art), "DBC file does not exist");
 			assertTrue(std::filesystem::exists(asm_art), "Assembly file does not exist");
 			assertTrue(std::filesystem::exists(llvm_art), "LLVM IR file does not exist");
 			assertTrue(std::filesystem::exists(lir_art), "LIR file does not exist");
 			assertTrue(std::filesystem::exists(mir_art), "MIR file does not exist");
 			assertTrue(std::filesystem::exists(hir_art), "HIR file does not exist");
 
+			std::filesystem::remove(dbc_art);
 			std::filesystem::remove(asm_art);
 			std::filesystem::remove(llvm_art);
 			std::filesystem::remove(lir_art);
@@ -704,7 +710,7 @@ private:
 		// We should not depend on unrelated submodules when resolving imports by name.
 		ASSERT_TRUE(!found_unexpected_module);
 		// but we do not depend of the module file, because we are reading only correct
-		// "submodule.dmf" file.
+		// "submodule.dk" file.
 		ASSERT_TRUE(!found_unexpected_file);
 	}
 
@@ -844,7 +850,7 @@ private:
 
 		// ================================================================================
 		// Test Module B's ChildSideInput dependencies
-		// B.dmf imports: imports_complicated.bar.D
+		// B.dk imports: imports_complicated.bar.D
 		// Expected: B -> imports_complicated (false), imports_complicated -> bar (true), bar ->
 		// D (true)
 		// ================================================================================
@@ -859,7 +865,7 @@ private:
 
 		// ================================================================================
 		// Test Module foo's ChildSideInput dependencies
-		// foo.dmf imports: imports_complicated.bar, A, B
+		// foo.dk imports: imports_complicated.bar, A, B
 		// Expected: foo -> A (true), foo -> B (true), foo -> imports_complicated (false),
 		//           imports_complicated -> bar (true), B -> imports_complicated (false),
 		//           bar -> D (true), bar -> C (true)
@@ -883,7 +889,7 @@ private:
 
 		// ================================================================================
 		// Test Module A's ChildSideInput dependencies
-		// A.dmf imports: foo
+		// A.dk imports: foo
 		// Expected: A -> foo (false) and nothing else
 		// ================================================================================
 
@@ -892,7 +898,7 @@ private:
 
 		// ================================================================================
 		// Test Module imports_complicated's ChildSideInput dependencies
-		// imports_complicated.dmf imports: bar
+		// imports_complicated.dk imports: bar
 		// Expected: imports_complicated -> bar (true), bar -> C (true)
 		// ================================================================================
 
@@ -906,7 +912,7 @@ private:
 
 		// ================================================================================
 		// Test Module bar's ChildSideInput dependencies
-		// bar.dmf imports: C
+		// bar.dk imports: C
 		// Expected: bar -> C (true) only
 		// ================================================================================
 
@@ -914,7 +920,7 @@ private:
 		ASSERT_EQUAL_PRINT(1, count_child_side_inputs(bar_deps));
 		// ================================================================================
 		// Test Module C's ChildSideInput dependencies
-		// C.dmf has no imports
+		// C.dk has no imports
 		// Expected: no ChildSideInput dependencies
 		// ================================================================================
 
@@ -922,7 +928,7 @@ private:
 
 		// ================================================================================
 		// Test Module D's ChildSideInput dependencies
-		// D.dmf has no imports
+		// D.dk has no imports
 		// Expected: no ChildSideInput dependencies
 		// ================================================================================
 

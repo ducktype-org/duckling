@@ -441,10 +441,19 @@ namespace compiler::repl {
 		initDVM();
 	}
 
+	ReplSession::~ReplSession() {
+		const auto teardown = vm::api::deinitOrKill(m_dvm_pid);
+		if (!teardown.has_value())
+			std::cerr << "Failed to teardown the DVM process: "
+					  << vm::api::errorToString(teardown.error()) << "\n";
+		else if (teardown->has_value() && !teardown->value())
+			std::cerr << "The DVM process failed its memory validation.\n";
+	}
+
 	ReplResult ReplSession::loadScriptFile(std::string_view file_path) {
 		auto trimmed_path = base::strTrim(file_path);
 		if (trimmed_path.empty())
-			return ReplResult::error("Missing script path. Usage: /load <path-to-script.ds>");
+			return ReplResult::error("Missing script path. Usage: /load <path-to-script.dks>");
 
 		try {
 			m_suppress_repl = true;
@@ -533,6 +542,16 @@ namespace compiler::repl {
 			auto instruction_info = std::get<InstructionSingleStatementInfo>(stmt_info.value());
 			CORE_DEV_LOG(REPL, "Processing statement as instruction\n");
 			return handleInstruction(instruction_info.instruction_stmt);
+		}
+
+		// A REPL statement is executed the moment it is entered, so a global variable is already
+		// constructed in statement order by the module it was declared in. Only scripts, where
+		// every statement is merged into one program, need the initializer split out of the
+		// declaration.
+		if (std::holds_alternative<VariableSingleStatementInfo>(stmt_info.value())) {
+			auto variable_info = std::get<VariableSingleStatementInfo>(stmt_info.value());
+			CORE_DEV_LOG(REPL, "Processing statement as variable declaration\n");
+			return handleDefinition(variable_info.variable_stmt);
 		}
 
 		CORE_DEV_LOG(REPL, "Processing statement as definition\n");
@@ -665,6 +684,7 @@ namespace compiler::repl {
 		std::string error_message;
 
 		base::Optional<helios::HOUTFunction> expr_wrapper;
+		base::Optional<helios::HOUTUnit>     hout_unit;
 		std::string                          wrapper_func_name;
 
 		CORE_DEV_LOG(REPL, "Starting handleExpression\n");
@@ -691,8 +711,20 @@ namespace compiler::repl {
 
 		if (!error_message.empty()) return failWithMessage(error_message);
 
-		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
-		auto hout_unit = makeExecutableHOUTUnit(expr_wrapper.value());
+		runWithContextErrorHandling(
+			"Unexpected error during expression compilation: ",
+			[&](query::Context& ctx) {
+				CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
+				auto hout_unit_opt = makeExecutableHOUTUnit(ctx, expr_wrapper.value());
+				if (!hout_unit_opt.has_value()) {
+					error_message = hout_unit_opt.error();
+					return;
+				}
+				hout_unit = std::move(hout_unit_opt).value();
+			},
+			error_message
+		);
+
 
 		runWithContextErrorHandling(
 			"Unexpected error: ",
@@ -705,14 +737,14 @@ namespace compiler::repl {
 				defer(m_lowering_context->invalidateContext());
 
 				std::stringstream ss;
-				hout_unit.debugPrint(ctx, ss);
+				hout_unit->debugPrint(ctx, ss);
 				CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
 
 				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
 				auto eval_module_id = getCurrentModuleID();
 				auto module_name    = getStatementModuleName(eval_module_id);
 				auto load_result    = compileAndLoad(
-                    ctx, hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
+                    ctx, *hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
                 );
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();
@@ -721,7 +753,7 @@ namespace compiler::repl {
 
 				CORE_DEV_LOG(REPL, "Expression compiled and loaded to DVM\n");
 
-				auto return_type = hout_unit.functions[0]->declaration->return_type;
+				auto return_type = hout_unit->functions[0]->declaration->return_type;
 				auto run_result
 					= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
 				if (run_result.has_value()) {
@@ -749,6 +781,7 @@ namespace compiler::repl {
 		std::string error_message;
 
 		base::Optional<helios::HOUTFunction> instr_wrapper;
+		base::Optional<helios::HOUTUnit>     hout_unit;
 		std::string                          wrapper_func_name;
 
 		CORE_DEV_LOG(REPL, "Starting handleInstruction\n");
@@ -776,8 +809,19 @@ namespace compiler::repl {
 
 		if (!error_message.empty()) return failWithMessage(error_message);
 
-		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
-		auto hout_unit = makeExecutableHOUTUnit(instr_wrapper.value());
+		runWithContextErrorHandling(
+			"Unexpected error during expression compilation: ",
+			[&](query::Context& ctx) {
+				CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
+				auto hout_unit_opt = makeExecutableHOUTUnit(ctx, instr_wrapper.value());
+				if (!hout_unit_opt.has_value()) {
+					error_message = hout_unit_opt.error();
+					return;
+				}
+				hout_unit = std::move(hout_unit_opt).value();
+			},
+			error_message
+		);
 
 		runWithContextErrorHandling(
 			"Unexpected error: ",
@@ -790,13 +834,13 @@ namespace compiler::repl {
 				defer(m_lowering_context->invalidateContext());
 
 				std::stringstream ss;
-				hout_unit.debugPrint(ctx, ss);
+				hout_unit->debugPrint(ctx, ss);
 				CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
 				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
 				auto eval_module_id = getCurrentModuleID();
 				auto module_name    = getStatementModuleName(eval_module_id);
 				auto load_result    = compileAndLoad(
-                    ctx, hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
+                    ctx, *hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
                 );
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();

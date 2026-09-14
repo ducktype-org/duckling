@@ -23,7 +23,7 @@ namespace vm::loader::compiler::safe {
 
 #define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...)                                   \
 	template<FAMILY_CONCEPT ToType>                                                                  \
-	struct LowerArgumentImpl<ToType> {                                                               \
+	struct LowerArgumentImpl<ToType> final {                                                         \
 		template<opargs::ArgumentType FromType>                                                      \
 		static u64 lower(                                                                            \
 			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
@@ -38,7 +38,7 @@ namespace vm::loader::compiler::safe {
 
 #define DEFINE_LOWER_ARGUMENT_IMPL(LOW_TO_TYPE, HIGH_FROM_TYPE, ...)                                 \
 	template<>                                                                                       \
-	struct LowerArgumentImpl<LOW_TO_TYPE> {                                                          \
+	struct LowerArgumentImpl<LOW_TO_TYPE> final {                                                    \
 		static u64 lower(                                                                            \
 			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
@@ -148,6 +148,16 @@ namespace vm::loader::compiler::safe {
 		);
 	}
 
+	std::expected<void, std::string> SafeCompiler::setBreakpoint(
+		const base::StrID& func_name, usize idx, bool enable
+	) {
+		auto maybe_function = low_program.functions.atMaybe(func_name);
+		if (!maybe_function) return std::unexpected{ "setBreakpoint: Function does not exist" };
+		auto& function = **maybe_function;
+
+		return function.setBreakpoint(idx, enable);
+	}
+
 	void SafeCompiler::linkLabelArguments(
 		low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
 	) {
@@ -213,7 +223,9 @@ namespace vm::loader::compiler::safe {
 #ifdef ENABLE_JIT
 			                      .cfg = vm::low::cf::ControlFlowGraph(bytecode),
 #endif
-			                      .bc                  = std::move(bytecode),
+			                      // we need two copies of the bytecode
+			                      .bc                  = bytecode,
+			                      .orig_bc             = std::move(bytecode),
 			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
 			                      .local_block_count   = ctx.local_block_count,
 			                      .arg_size            = getIntTypeSize(parameters_size),

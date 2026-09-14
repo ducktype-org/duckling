@@ -19,14 +19,14 @@ pub trait UrlExt: Sized {
     }
 
     /// Get the URL for querying exact metadata of the package `package`.
-    fn for_exact_metadata(&self, package: &types::Package) -> QuackResult<Self> {
+    fn for_exact_metadata(&self, package: types::Package) -> QuackResult<Self> {
         self._join(&format!("/packages/{}/{}", package.name, package.version))
     }
 
     /// Get the URL for downloading a blob of the package `package`.
     ///
     /// A blob is a tar gunziped directory with a package's source code.
-    fn for_blob(&self, package: &types::Package) -> QuackResult<Self> {
+    fn for_blob(&self, package: types::Package) -> QuackResult<Self> {
         self._join(&format!(
             "/packages/{}/{}/download",
             package.name, package.version
@@ -49,7 +49,7 @@ pub trait UrlExt: Sized {
 
     #[allow(dead_code)]
     /// Get the URL for uploading a package's blob.
-    fn for_new_blob(&self, package: &types::Package) -> QuackResult<Self> {
+    fn for_new_blob(&self, package: types::Package) -> QuackResult<Self> {
         self._join(&format!("/packages/{}/{}", package.name, package.version))
     }
 }
@@ -87,12 +87,12 @@ mod tests {
         );
 
         assert_eq!(
-            url.for_exact_metadata(&package).unwrap().as_str(),
+            url.for_exact_metadata(package).unwrap().as_str(),
             format!("{base}/packages/{package_name}/{package_version}")
         );
 
         assert_eq!(
-            url.for_blob(&package).unwrap().as_str(),
+            url.for_blob(package).unwrap().as_str(),
             format!("{base}/packages/{package_name}/{package_version}/download")
         );
 
@@ -109,7 +109,7 @@ mod tests {
         assert_eq!(url.for_new_package().as_str(), format!("{base}/packages"));
 
         assert_eq!(
-            url.for_new_blob(&package).unwrap().as_str(),
+            url.for_new_blob(package).unwrap().as_str(),
             format!("{base}/packages/{package_name}/{package_version}")
         );
     }

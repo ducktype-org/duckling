@@ -1,0 +1,44 @@
+class Point {
+    x: i32;
+    y: i32;
+}
+
+class InitializedPoint {
+    x: i32 = 0;
+    y: i32 = 1;
+}
+
+fun by_ref(p : ref Point) -> i32 = {
+    return p.x;
+}
+
+fun by_val(p : Point) -> i32 = {
+    return p.x;
+}
+
+fun take_int_ref(x: ref i32) -> i64 = {
+    return x;
+}
+
+fun by_box(p: box Point) -> i32 = {
+    return p.x;
+}
+
+fun test_boxes() -> i32 = {
+    var b_int: box i32 = new 42;    # `boxAlloc` should be inserted.
+
+    take_int_ref(&b_int);
+
+    var b_point: box Point = new Point(10, 20);
+    var b2_point: box InitializedPoint = new InitializedPoint();
+
+    var x: i32 = b_point.x;
+    var y: i32 = b2_point.y;
+    
+    b_point.y = 99;             # Deref on the lhs.
+
+    by_val(b_point);            # Box -> Direct coercion. Should copy
+    by_ref(&b_point);      # Box -> Ref coercion.
+
+    return b_int;               # Box i32 -> i32 coercion;
+}

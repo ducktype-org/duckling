@@ -2,13 +2,14 @@
 
 #include "lookup_result.hpp"
 
-#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/pst_parser/source_position_locked.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <query_framework/query_result.hpp>
 
 #include <variant>
@@ -22,7 +23,13 @@ namespace compiler::helios {
 
 	struct AdditionalLookupParameters final {
 		bool with_wildcards = true;
-		// @TODO: public/private/protected?
+
+		/**
+		 * @brief The scope the lookup is written in.
+		 *
+		 * It decides which private and protected members of a class are visible.
+		 */
+		base::Optional<ScopeID> accessing_scope{};
 	};
 
 	/**
@@ -138,9 +145,9 @@ namespace compiler::helios {
 		 * that we might one day change to custom code for better compilation errors or logic.
 		 */
 		query::QResult<SymbolList> lookupExpectUnique(
-			const pst::ResolvesToPosition& error_position,
-			query::Context&                ctx,
-			base::StrID                    name,
+			dia::StablePosition error_position,
+			query::Context&     ctx,
+			base::StrID         name,
 			AdditionalLookupParameters = {}
 		) const;
 

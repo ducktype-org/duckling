@@ -2,7 +2,6 @@
 
 #include "symbol_abi.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -23,6 +22,7 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -53,7 +53,7 @@ namespace compiler::helios {
 
 		match_optional(str_lit_opt) {
 			opt_none {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Expected string literal in extern() call argument",
 					arg.unlock(ctx)->getStablePosition()
 				));
@@ -102,7 +102,7 @@ namespace compiler::helios {
 			query::Context& ctx, const HOUTFunctionDeclaration& decl, u64 fixed_params
 		) {
 			if (fixed_params == 0) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Variadic function declaration should have at least one fixed parameter.",
 					decl.origin
 				));
@@ -110,7 +110,7 @@ namespace compiler::helios {
 			}
 
 			if (fixed_params >= decl.parameters.size()) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Variadic function declaration should have at least one variadic parameter.",
 					decl.origin
 				));
@@ -122,7 +122,7 @@ namespace compiler::helios {
 			for (auto& param: std::span(decl.parameters).subspan(fixed_params)) {
 				auto param_result = validateVariadicArgType(ctx, param.type.getType());
 				if (not param_result.has_value()) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Variadic function parameter has to be promoted. Got ",
 							"`",
@@ -149,7 +149,7 @@ namespace compiler::helios {
 			for (auto& param: decl.parameters) {
 				UNPACK_QRESULT_CREF(auto& result =, ctx.query<tsl::QueryCAbiTypeOf>(param.type));
 				if (not result.has_value()) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					ctx.logInt(makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"CABI function declaration has invalid parameter. Reason: `",
 							result.error(),
@@ -171,7 +171,7 @@ namespace compiler::helios {
 			                                                    extern_args.unlock(ctx)->end() };
 
 		if (args.empty()) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				"extern() requires at least one argument specifying the ABI",
 				extern_args.unlock(ctx)->getStablePosition()
 			));
@@ -184,7 +184,7 @@ namespace compiler::helios {
 			CAbi result;
 
 			if (args.size() > 2) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				ctx.logInt(makeBox<dia::PlaceholderError>(
 					"Too many arguments for C ABI in extern()",
 					extern_args.unlock(ctx)->getStablePosition()
 				));
@@ -215,13 +215,13 @@ namespace compiler::helios {
 		} else if (first_arg == base::StrID("DVM")) {
 			if (args.size() == 1)  // `extern("DVM")` case
 				return DVMAbi{};
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				"Too many arguments for DVM ABI in extern()",
 				extern_args.unlock(ctx)->getStablePosition()
 			));
 			return query::Failed();
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				"Unsupported ABI specified in extern()", extern_args.unlock(ctx)->getStablePosition()
 			));
 			return query::Failed();
@@ -239,7 +239,7 @@ namespace compiler::helios {
 			}
 
 			// @TODO: #895 fix it when we add script based package targets
-			if (name(key) == "main" && isGlobalFun(key)) {
+			if (isGlobalMain(key)) {
 				// main is not mangled
 				return CAbi{};
 			}
@@ -251,7 +251,7 @@ namespace compiler::helios {
 					match_optional(specifier.unlock(ctx)->getArgs()) {
 						opt_some(args) { return getSymbolABI(ctx, key, args); }
 						opt_none {
-							ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							ctx.logInt(makeBox<dia::PlaceholderError>(
 								"extern symbol requires ABI specification passed as an argument",
 								specifier.unlock(ctx)->getStablePosition()
 							));

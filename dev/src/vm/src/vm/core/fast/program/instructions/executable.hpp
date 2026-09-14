@@ -29,7 +29,7 @@ namespace vm::fast::exec {
 		using Type            = const Type*;
 
 #define HANDLE_ARG_DEF(arg) VALIDATE_ARG_EXISTS(arg)
-#include "argument_definitions.hpp"  // Validates all needed arguments are defined
+#include "argument_definitions.def.hpp"  // Validates all needed arguments are defined
 #undef HANDLE_ARG_DEF
 	}
 
@@ -44,7 +44,7 @@ namespace vm::fast::exec {
 	#define MAKE_MAKERS_FULL
 #endif
 
-#include "instr_structures.hpp"
+#include "instr_structures.def.hpp"
 #undef ARG_NAMESPACE
 #undef MAKE_INSTR_STRUCTS
 #undef MAKE_INSTRUCTION_UNION
@@ -52,7 +52,7 @@ namespace vm::fast::exec {
 #undef MAKE_MAKERS_JUST_DEF
 #undef MAKE_MAKERS_FULL
 
-	struct ExecFunction {
+	struct ExecFunction final {
 		std::vector<Instruction> data;
 		const FunctionInfo*      info;
 	};

@@ -6,17 +6,18 @@ use tracing::debug;
 
 use super::source::resolve_path_maybe_relative_to_dir;
 use super::{Scope, dependency};
+use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::manifest::VenvConfig;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
-    Features, Manifest, OptLevel, PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard,
-    Version,
+    BuildOptions, Dependencies, DependencyKind, Features, Manifest, OptLevel, PackageMetadata,
+    ParseMode, Profile, Profiles, ScopeGuard, Version,
 };
 use crate::quackpack::schemas::manifest::{
-    Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
-    VenvConfig as VenvConfigSchema,
+    Manifest as ManifestSchema, Metadata as MetadataSchema, OptLevel as SchemaOptLevel,
+    Profile as ProfileSchema, VenvConfig as VenvConfigSchema,
 };
-use crate::util::IsPlural;
+use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
@@ -24,28 +25,46 @@ use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err
 #[track_caller]
 pub(crate) fn parse(
     schema: &ManifestSchema,
-    root: &Path,
-    mode: ParseMode,
+    mode: ParseMode<'_>,
+    warnings: &mut Warnings,
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
     let mut scope = Scope::new();
+    let mut deps = Vec::new();
     let guard = scope.push("dependencies".into());
-    let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, guard)?;
+    dependency::parse(
+        schema.dependencies.as_ref(),
+        mode,
+        DependencyKind::Normal,
+        &mut deps,
+        warnings,
+        ctx,
+        guard,
+    )?;
 
     let guard = scope.push("dev-dependencies".into());
-    let dev_dependencies = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, guard)?;
+    dependency::parse(
+        schema.dev_dependencies.as_ref(),
+        mode,
+        DependencyKind::Dev,
+        &mut deps,
+        warnings,
+        ctx,
+        guard,
+    )?;
+    let dependencies = Dependencies::new(deps)?;
 
     let guard = scope.push("profiles".into());
     let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
     match mode {
-        ParseMode::FrontMatter => {
+        ParseMode::FrontMatter { frontmatter_path } => {
             let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
             if !illegal_fields.is_empty() {
                 let mut err = qp_err!(
                     "illegal field{} `{}` in the frontmatter at `{}`",
                     illegal_fields.s_if_plural(),
                     illegal_fields.join("`, `"),
-                    root.display()
+                    frontmatter_path.display()
                 );
                 err = err.add_hint(
                     "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
@@ -55,12 +74,12 @@ pub(crate) fn parse(
 
             // NOTE: `script.rs::FrontMatter::name` relies on the fact that script name ==
             // manifest.name.
-            let name = StrId::from(root.file_stem().unwrap());
+            let name = StrId::from(frontmatter_path.file_stem().unwrap());
 
             validate_package_name(&name).with_context(|| {
                 format!(
                     "script at `{}` has an invalid script name (file stem)",
-                    root.display()
+                    frontmatter_path.display()
                 )
             })?;
 
@@ -71,13 +90,13 @@ pub(crate) fn parse(
                 Features::default(),
                 PackageMetadata::default(),
                 dependencies,
-                dev_dependencies,
                 profiles,
                 VenvConfig::default_for_script(ctx),
+                BuildOptions::default(),
             );
             Ok(manifest)
         }
-        ParseMode::Package => {
+        ParseMode::Package { package_root: _ } | ParseMode::GitFastPath => {
             if schema.import.is_some() {
                 qp_bail!("`import` field is prohibited in manifests")
             }
@@ -103,7 +122,11 @@ pub(crate) fn parse(
             let guard = scope.push("features".into());
             let features = parse_features(schema.features.as_ref())
                 .with_context(move || guard.make_context_string())?;
-            let venv = parse_venv(schema.venv.as_ref(), root, ctx);
+            let venv = if let Some(root) = mode.package_root() {
+                parse_venv(schema.venv.as_ref(), root, ctx)
+            } else {
+                VenvConfig::default_for_package(ctx)
+            };
             let authors = metadata
                 .authors
                 .as_ref()
@@ -115,15 +138,17 @@ pub(crate) fn parse(
                 description: metadata.description.as_ref().map(<&String>::into),
             };
 
+            let build_options = parse_build_options(metadata);
+
             Ok(Manifest::new(
                 name.into(),
                 version,
                 features,
                 package_metadata,
                 dependencies,
-                dev_dependencies,
                 profiles,
                 venv,
+                build_options,
             ))
         }
     }
@@ -220,4 +245,10 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
         .unwrap_or(default_config.expose_freezefile());
     let ephemeral = input.ephemeral.unwrap_or(default_config.ephemeral());
     VenvConfig::new(storage_root, expose_freezefile, ephemeral)
+}
+
+/// Parse a [`BuildOptions`] from the schema.
+fn parse_build_options(input: &MetadataSchema) -> BuildOptions {
+    let links = input.links.as_ref().map(StrId::from);
+    BuildOptions { links }
 }
