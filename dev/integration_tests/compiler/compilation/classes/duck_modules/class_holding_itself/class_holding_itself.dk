@@ -1,0 +1,5 @@
+class T {
+   t: T = T();
+}
+
+let t = T();
