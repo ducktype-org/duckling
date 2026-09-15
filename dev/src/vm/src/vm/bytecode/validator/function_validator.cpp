@@ -459,7 +459,7 @@ class FunctionValidator {
 	) const {
 		bool from_prev_frame = place.frame.has_value();
 		bool is_local        = current_stack.contains(place);
-		bool is_global       = globals.contains(place.var_name);
+		bool is_global       = globals.contains(place.var_name) && !from_prev_frame;
 		if (from_prev_frame && !v_matches(mode, detail::Expr))
 			throw FrameSpecifierWithoutRuntimeThread(place);
 		if (is_local && is_global) throw DuplicatedLocalNameError(place);
@@ -522,7 +522,7 @@ class FunctionValidator {
 				variant_case(CRef<opargs::PlaceAny>, place) {
 					bool from_prev_frame = place->frame.has_value();
 					bool is_local        = current_stack.contains(*place);
-					bool is_global       = globals.contains(place->var_name);
+					bool is_global       = globals.contains(place->var_name) && !from_prev_frame;
 					if (from_prev_frame && !v_matches(mode, detail::Expr))
 						throw FrameSpecifierWithoutRuntimeThread(*place);
 					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
@@ -2047,7 +2047,9 @@ class FunctionValidator {
 	void validateIllegalInstructions(const Instruction& instr) {
 		variant_match(mode) {
 			variant_case_novalue(detail::Expr) {
-				throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(instr);
+				throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_ret, OpCode::Op_exit>(
+					instr
+				);
 			}
 			variant_case_novalue(detail::Normal) {
 				throwOnForbiddenOpcode<OpCode::Op_ret_from_expr, OpCode::Op_initFromVMValue>(instr);
