@@ -661,7 +661,7 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 
-			thread.runtime_expr_res_handler.back().emitEvent(exit_value);
+			thread.runtime_expr_res_handler.back()->emitEvent(exit_value);
 
 			thread.runtime_expr_res_handler.pop_back();
 			thread.runtime_expr_low.pop_back();

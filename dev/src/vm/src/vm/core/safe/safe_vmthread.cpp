@@ -34,6 +34,7 @@
 #include <vm/utils/interpret.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <expected>
 #include <mutex>
@@ -736,7 +737,7 @@ namespace vm {
 
 	std::expected<
 		std::vector<Ref<SafeVMValue>>,
-		std::pair<MRef<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
+		std::pair<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
 		SafeVMThread::loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& high_expr) {
 		CORE_ASSERT(
 			v_matches(getThreadState(), thread_state::Paused),
@@ -744,7 +745,9 @@ namespace vm {
 		);
 		runtime_expr_high.emplace_back(std::move(high_expr));
 		runtime_expr_low.emplace_back(safe_process.compileToLow(this, runtime_expr_high.back()));
-		runtime_expr_res_handler.emplace_back();
+		runtime_expr_res_handler.emplace_back(
+			makeSharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>()
+		);
 
 		auto  frame       = runtime_data.frame_stack_current;
 		auto  prev_frame  = frame;
@@ -788,7 +791,8 @@ namespace vm {
 		});
 
 		events::Listener<ThreadState> interrupter([&](auto&& new_state) {
-			v_if_matches(new_state, thread_state::Running, _) return;
+			if (!v_matches(new_state, thread_state::Paused) && !thread_state::isTerminal(new_state))
+				return;
 			{
 				std::lock_guard lock(result_mutex);
 				if (result_ready.load()) return;
@@ -798,29 +802,33 @@ namespace vm {
 			cv.notify_all();
 		});
 
-		runtime_expr_res_handler.back().attachListener(receiver);
+		runtime_expr_res_handler.back()->attachListener(receiver);
 		getProcessStateManager().attachThreadStatusListener(getThreadID(), interrupter);
 
 		auto resumed = resume();
 		if (!resumed.has_value())
 			return std::unexpected{ std::make_pair(
-				&runtime_expr_res_handler.back(), "resume failure: " + resumed.error()
+				runtime_expr_res_handler.back(), "resume failure: " + resumed.error()
 			) };
 
 		{
 			std::unique_lock lock(result_mutex);
-			cv.wait(lock, [&] { return result_ready.load(); });
+			cv.wait_for(lock, std::chrono::milliseconds(500), [&] { return result_ready.load(); });
+			result_ready.store(true);
 		}
 
 		if (ret_val.has_value()) return *ret_val;
 
-		CORE_ASSERT(thread_state.has_value(), "something had to wake us up");
+		std::string err_msg = "";
+		if (thread_state.has_value()) {
+			err_msg += "status failure: ";
+			err_msg += thread_state::threadStateName(*thread_state);
+			err_msg += " during evaluation";
+		} else {
+			err_msg = "timout: evaluation of expr took more then 0,5 s";
+		}
 
-		std::string err_msg = "status failure: encountered ";
-		err_msg += thread_state::threadStateName(*thread_state);
-		err_msg += " during evaluation";
-
-		return std::unexpected{ std::make_pair(&runtime_expr_res_handler.back(), err_msg) };
+		return std::unexpected{ std::make_pair(runtime_expr_res_handler.back(), err_msg) };
 	}
 
 	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getCurrentHighPosition(u64 frame_index

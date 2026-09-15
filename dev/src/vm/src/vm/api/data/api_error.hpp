@@ -3,6 +3,7 @@
 #include <events/emitter.hpp>
 
 #include <base/pointers/ref.hpp>
+#include <base/pointers/shared_box.hpp>
 
 #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 
@@ -74,8 +75,8 @@ namespace vm::api {
 	};
 
 	struct IncompleteExprEval {
-		base::MRef<events::Emitter<std::vector<Ref<SafeVMValue>>>> val;
-		std::string                                                why;
+		SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>> val;
+		std::string                                               why;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(IncompleteExprEval, why);
 	};
 

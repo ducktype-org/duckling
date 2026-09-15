@@ -5,6 +5,7 @@
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/api/data/api_error.hpp>
@@ -96,9 +97,10 @@ namespace vm {
 	 */
 	class SafeVMThread final: public IVMThread {
 	private:
-		std::deque<code::valid_function::ValidFunction>            runtime_expr_high;
-		std::deque<low::LowFuncData>                               runtime_expr_low;
-		std::deque<events::Emitter<std::vector<Ref<SafeVMValue>>>> runtime_expr_res_handler;
+		std::deque<code::valid_function::ValidFunction> runtime_expr_high;
+		std::deque<low::LowFuncData>                    runtime_expr_low;
+		std::deque<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>
+		>                                               runtime_expr_res_handler;
 
 
 		RuntimeData runtime_data;
@@ -297,7 +299,7 @@ namespace vm {
 
 		std::expected<
 			std::vector<Ref<SafeVMValue>>,
-			std::pair<MRef<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
+			std::pair<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
 			loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
 
 		[[nodiscard]]
