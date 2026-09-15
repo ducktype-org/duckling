@@ -1,4 +1,4 @@
-//! Home of "feature pulls itself" lint.
+//! Home of "aliases equal to names" lint.
 use std::fmt;
 
 use crate::QuackResult;
