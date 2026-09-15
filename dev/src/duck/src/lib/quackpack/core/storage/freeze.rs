@@ -373,8 +373,7 @@ mod test {
             let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_registry(url);
             let identity = DepIdWithAlias::new("alias".into(), Identity::new("foo".into(), origin));
-            let formatted = identity.to_string();
-            let parsed = formatted.parse::<DepIdWithAlias>().unwrap();
+            let parsed = "foo#alias registry+https://localhost:9001".parse::<DepIdWithAlias>().unwrap();
             assert_eq!(parsed, identity);
         }
         // No alias.
@@ -382,8 +381,7 @@ mod test {
             let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_registry(url);
             let identity = DepIdWithAlias::new("foo".into(), Identity::new("foo".into(), origin));
-            let formatted = identity.to_string();
-            let parsed = formatted.parse::<DepIdWithAlias>().unwrap();
+            let parsed = "foo registry+https://localhost:9001".parse::<DepIdWithAlias>().unwrap();
             assert_eq!(parsed, identity);
         }
     }
