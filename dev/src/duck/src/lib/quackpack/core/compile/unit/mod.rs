@@ -67,6 +67,13 @@ pub enum ArtifactsType {
     IsADependencyArtifact,
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// How each [`Unit`] should be executed/treated?
+pub enum BuildKind {
+    /// This [`Unit`] should be compiled.
+    Compile,
+}
+
 struct UnitInner {
     /// An internal, but unique identifier.
     unit_id: u64,
@@ -78,6 +85,8 @@ struct UnitInner {
     dependencies_by_id: Vec<u64>,
     /// What artifacts should this unit produce.
     package_type: ArtifactsType,
+    /// [`BuildKind`] of this [`Unit`].
+    build_kind: BuildKind,
 }
 
 impl Unit {
@@ -88,6 +97,7 @@ impl Unit {
         identity: Identity,
         dependencies: Vec<u64>,
         package_type: ArtifactsType,
+        build_kind: BuildKind,
     ) -> Self {
         assert!(
             dependencies.is_sorted(),
@@ -101,6 +111,7 @@ impl Unit {
                 identity,
                 dependencies_by_id: dependencies,
                 package_type,
+                build_kind,
             }),
         }
     }
@@ -128,6 +139,11 @@ impl Unit {
     /// Get the [`Identity`] of this [`Unit`].
     pub fn identity(&self) -> Identity {
         self.inner.identity
+    }
+
+    /// Get the [`BuildKind`] of this [`Unit`].
+    pub fn build_kind(&self) -> BuildKind {
+        self.inner.build_kind
     }
 
     /// Get a unique (in terms of the current compilation graph) name, which can be used as a directory
