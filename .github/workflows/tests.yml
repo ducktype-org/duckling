@@ -157,8 +157,6 @@ jobs:
       - name: Setup Rust (Linux)
         if: ${{ env.IS_MACOS != 'true' }}
         uses: ./.github/actions/setup-linux-rust/
-        with:
-          sccache-dir: ${{ github.workspace }}/.cache/sccache
 
       - name: Setup Rust (macOS)
         if: ${{ env.IS_MACOS == 'true' }}
@@ -206,21 +204,6 @@ jobs:
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
-
-      # macOS keeps its sccache on the machine as well - see "Point caches at local storage".
-      - name: Restore sccache cache
-        id: restore-sccache-cache
-        if: ${{ env.IS_MACOS != 'true' }}
-        uses: actions/cache/restore@v5
-        with:
-          lookup-only: ${{ env.BRANCH_NAME == 'main' }}
-          path: |
-            ${{ env.SCCACHE_DIR }}
-          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
-          restore-keys: |
-            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
-            ${{ runner.os }}-sccache-main-
-            ${{ runner.os }}-sccache-
 
       - name: Initialize project
         working-directory: ${{ env.WORKSPACE }}
@@ -310,7 +293,8 @@ jobs:
           du -hs ${{ env.CCACHE_DIR }}
 
           echo "sccache:"
-          [ -n "${SCCACHE_DIR:-}" ] && du -hs "$SCCACHE_DIR" || echo 0
+          # Only macOS still keeps a directory; on Linux sccache writes into the Actions cache.
+          [ -n "${SCCACHE_DIR:-}" ] && du -hs "$SCCACHE_DIR" || sccache --show-stats | head -20
 
       - name: Show ccache statistics (macOS)
         if: ${{ env.IS_MACOS == 'true' }}
@@ -360,21 +344,6 @@ jobs:
           rm -f "$ITEST_LOG"
           echo "ITEST_LOG=$ITEST_LOG" >> "$GITHUB_ENV"
           ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --log-file "$ITEST_LOG" --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }}
-
-      # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
-      # so we have to save sccache after that, otherwise we'd have nothing to save.
-      # Backgrounded for the same reason as the build cache above; the coverage and TODO steps
-      # that follow do not touch $SCCACHE_DIR.
-      - name: Save sccache cache
-        id: save-sccache-cache
-        if: ${{ env.IS_MACOS != 'true' }}
-        background: true
-        uses: actions/cache/save@v5
-        with:
-          path: |
-            ${{ env.SCCACHE_DIR }}
-          key: ${{ steps.restore-sccache-cache.outputs.cache-primary-key }}
-
 
       # failure() makes this step run even when a previous step has failed (which would otherwise
       # cause all subsequent steps to be skipped). The additional conditions ensure this step only

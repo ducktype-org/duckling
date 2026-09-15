@@ -1,18 +1,8 @@
 name: Setup Rust (Linux)
 description: >
   Everything the Rust half of the repo (dev/src/duck) needs on a Linux runner: the toolchain on
-  PATH, the native libraries it links against, the sccache wrapper, and the cache directory
-  sccache writes to.
-inputs:
-  sccache-dir:
-    description: >
-      Where sccache caches. Inside the workspace, because here the cache is carried between runs
-      by actions/cache.
-    required: true
-  sccache-size:
-    description: Disk budget for the sccache cache.
-    required: false
-    default: 1G
+  PATH, the native libraries it links against, and the sccache wrapper, which caches straight into
+  the GitHub Actions cache instead of into a directory.
 
 runs:
   using: composite
@@ -40,14 +30,27 @@ runs:
       shell: bash
       run: sudo apt -y install libgfortran5
 
+    # NOT `apt -y install sccache`: noble ships 0.7.7, and the GitHub Actions cache backend needs
+    # 0.10 or newer.
     - name: Download sccache
-      shell: bash
-      run: sudo apt -y install sccache
+      uses: mozilla-actions/sccache-action@v0.0.11
+      with:
+        version: v0.17.0
 
+    # The backend reaches the cache service with these two, and they are handed to actions rather
+    # than to `run:` steps -- so an action has to copy them into the job environment.
+    - name: Hand sccache the cache service credentials
+      uses: actions/github-script@v9
+      with:
+        script: |
+          core.exportVariable('ACTIONS_RESULTS_URL', process.env.ACTIONS_RESULTS_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+    # sccache stores one entry per compilation rather than one archive per run, so there is nothing
+    # to restore before the build or upload after it, and nothing for `prune-caches` to group:
+    # GitHub expires these entries itself. ccache still goes through actions/cache.
     - name: Setup sccache environment
       shell: bash
       run: |
-        mkdir -p '${{ inputs.sccache-dir }}'
         echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-        echo "SCCACHE_DIR=${{ inputs.sccache-dir }}" >> "$GITHUB_ENV"
-        echo "SCCACHE_CACHE_SIZE=${{ inputs.sccache-size }}" >> "$GITHUB_ENV"
+        echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
