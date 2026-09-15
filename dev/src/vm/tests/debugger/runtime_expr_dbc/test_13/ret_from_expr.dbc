@@ -1,0 +1,4 @@
+function ret_from_expr_in_normal { i64 } -> { i64 } {
+	mov_p64_p64 ret0, arg0;
+	ret_from_expr;
+}

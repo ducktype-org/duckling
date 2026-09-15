@@ -13,11 +13,13 @@
 #include <vm/api/vm.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 
+#include <chrono>
 #include <condition_variable>
 #include <deque>
 #include <functional>
 #include <mutex>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 namespace vm::test {
@@ -98,9 +100,7 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& evalExprExpectBreakpoint(
-			const fs::File& file, base::StrID expected_func, u64 expected_instr
-		) {
+		FlowSimulator& evalExprExpectBreakpoint(const fs::File& file) {
 			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
 			assertTrue(
 				!response.has_value(),
@@ -111,9 +111,139 @@ namespace vm::test {
 
 			CORE_ASSERT(ref, "we should get a valid ref to the eventual emitter of the response");
 
-			late_evals.emplace_back(*this, *ref.toOpt());
+			late_evals.emplace_back(*this, ref.get());
 
-			return awaitBreakpoint(expected_func, expected_instr);
+			return *this;
+		}
+
+		FlowSimulator& evalExprExpectLoadError(
+			const fs::File& file, std::string_view expected_error_piece = ""
+		) {
+			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			assertTrue(
+				!response.has_value(),
+				"Expected expression to be rejected at load time, but it evaluated successfully"
+			);
+
+			const std::string message = vm::api::errorToString(response.error());
+			assertTrue(
+				std::holds_alternative<vm::api::LoadProgramError>(response.error()),
+				base::strConcat("Expected LoadProgramError, got: ", message)
+			);
+			assertTrue(
+				expected_error_piece.empty()
+					|| message.find(expected_error_piece) != std::string::npos,
+				base::strConcat(
+					"Load error does not mention '", expected_error_piece, "'. The error was: ", message
+				)
+			);
+			return *this;
+		}
+
+		FlowSimulator& evalExprProvideInputAfter(
+			const fs::File&         file,
+			const std::string&      input,
+			usize                   delay_ms,
+			const std::vector<u64>& expected_result
+		) {
+			std::thread poster([this, &input, delay_ms] {
+				std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+				auto posted = vm::api::input(pid, input);
+				assertTrue(posted.has_value(), "Posting input failed");
+			});
+
+			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			poster.join();
+
+			assertTrue(
+				response.has_value(),
+				"Expected the expression to complete after the input was posted, but it failed"
+			);
+			assertExitValue(response.value(), expected_result);
+			return *this;
+		}
+
+		FlowSimulator& evalExprExpectTimeout(const fs::File& file) {
+			const auto start    = std::chrono::steady_clock::now();
+			auto       response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			const auto elapsed  = std::chrono::steady_clock::now() - start;
+
+			assertTrue(
+				!response.has_value(), "Expected the expression to time out, but it completed"
+			);
+
+			auto [ref, reason] = v_get(response.error(), vm::api::IncompleteExprEval);
+			assertTrue(
+				reason.find("timout") != std::string::npos,
+				base::strConcat("Expected a timeout error, got: ", reason)
+			);
+			assertTrue(
+				elapsed >= std::chrono::milliseconds(450),
+				"Evaluation terminated before the 0,5 s budget elapsed"
+			);
+			assertTrue(
+				elapsed <= std::chrono::milliseconds(700),
+				"Evaluation took much longer than the 0,5 s budget"
+			);
+
+			CORE_ASSERT(ref, "we should get a valid ref to the eventual emitter of the response");
+			late_evals.emplace_back(*this, ref.get());
+			return *this;
+		}
+
+		FlowSimulator& provideInput(const std::string& input) {
+			auto posted = vm::api::input(pid, input);
+			assertTrue(posted.has_value(), "Posting input failed");
+			return *this;
+		}
+
+		/// Evaluates an expression that is expected to be rejected by the validator while
+		/// consulting the live state of the thread (e.g. evaluating on a running thread).
+		/// Such errors surface through the very same `LoadProgramError` channel as regular
+		/// load-time validation errors.
+		FlowSimulator& evalExprExpectEvalError(
+			const fs::File& file, std::string_view expected_error_piece = ""
+		) {
+			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			assertTrue(
+				!response.has_value(),
+				"Expected expression to be rejected by the validator, but it evaluated successfully"
+			);
+
+			const std::string message = vm::api::errorToString(response.error());
+			assertTrue(
+				std::holds_alternative<vm::api::LoadProgramError>(response.error()),
+				base::strConcat("Expected LoadProgramError, got: ", message)
+			);
+			assertTrue(
+				expected_error_piece.empty()
+					|| message.find(expected_error_piece) != std::string::npos,
+				base::strConcat(
+					"Evaluation error does not mention '",
+					expected_error_piece,
+					"'. The error was: ",
+					message
+				)
+			);
+			return *this;
+		}
+
+		/// Pauses the thread (blocking until it is actually `Paused`) and asserts the pause
+		/// happened at the expected position.
+		FlowSimulator& pause(base::StrID expected_func, u64 expected_instr) {
+			auto pause_res = vm::api::pause(pid, thread_id);
+			assertTrue(pause_res.has_value(), "Pause failed");
+			assertEqual(expected_func, pause_res->function_name, "Pause function mismatch");
+			assertEqual(expected_instr, pause_res->instr_number, "Pause instruction mismatch");
+			return *this;
+		}
+
+		/// Stops the thread. After this call the process is not usable for evaluation anymore,
+		/// and the test should call `cleanup()` immediately.
+		FlowSimulator& stop() {
+			auto stop_res = vm::api::stop(pid);
+			assertTrue(stop_res.has_value(), "Stop failed");
+			return *this;
 		}
 
 		FlowSimulator& awaitExprCompletion(const std::vector<u64>& expected) {

@@ -1,0 +1,4 @@
+function add_five { } -> { i64 } {
+	mov_p64_imm ret0, 5;
+	ret_from_expr;
+}

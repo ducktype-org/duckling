@@ -1,0 +1,9 @@
+function level3 { } -> { i64 } {
+	# `frame 1` is the paused `level2` expression frame; its `l2_local` has value 20 here.
+	mov_p64_imm frame 1 l2_local, 30;
+	mov_p64_p64 ret0, frame 1 l2_local;
+	add_p64_p64 ret0, frame 1 l1_local;
+	add_p64_p64 ret0, frame 1 a;
+	add_p64_p64 ret0, frame 1 b;
+	ret_from_expr;
+}

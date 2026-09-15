@@ -1,0 +1,11 @@
+function outer { } -> { i64 } {
+	init_pany_type outer_local, i64;
+	mov_p64_imm outer_local, 5;
+	# The breakpoint set on `pause_here` instruction 0 lands here; while paused, the inner
+	# expression is evaluated and sees `outer_local` = 5.
+	call_func pause_here;
+	mov_p64_p64 ret0, frame 1 a;
+	add_p64_p64 ret0, outer_local;
+	add_p64_p64 ret0, outer_local;
+	ret_from_expr;
+}

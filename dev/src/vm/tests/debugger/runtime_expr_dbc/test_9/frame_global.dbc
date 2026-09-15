@@ -1,0 +1,4 @@
+function frame_global { } -> { i64 } {
+	mov_p64_p64 ret0, frame 1 g;
+	ret_from_expr;
+}

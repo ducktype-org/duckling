@@ -1,0 +1,17 @@
+# A valid tail-call target for expressions: its signature matches the expression's signature,
+# so the only reason an expression using it gets rejected is the forbidden opcode itself.
+function tail_target { } -> { i64 } {
+	mov_p64_imm ret0, 7;
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type a, i64;
+	init_pany_type b, i64;
+	mov_p64_imm a, 0;
+	mov_p64_imm b, 0;
+	mov_p64_imm a, 4;
+	mov_p64_imm b, 2;
+	mov_p64_imm ret0, 2137;
+	ret;
+}
