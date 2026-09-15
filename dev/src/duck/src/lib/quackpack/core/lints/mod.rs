@@ -62,8 +62,72 @@ pub fn run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
 }
 
 pub(crate) mod macros {
-    /// A helper macro for declaring a struct which implements [`Diagnostic`](super::Diagnostic), with the given
-    /// [`Dispay`](std::fmt::Display) implementation.
+    /// A helper macro for declaring a struct which implements [`Diagnostic`], with the given
+    /// [`Display`] implementation.
+    ///
+    /// # Usage
+    ///
+    /// This macro takes a normal struct declaration, with visibilites.
+    ///
+    /// Next, it takes [`Display`] impl in some special form.
+    ///
+    /// For example:
+    /// ```rust,ignore (illustrative)
+    /// make_diagnostic! {
+    ///     struct Foo {},
+    ///     display("")
+    /// }
+    /// ```
+    /// generates:
+    /// ```rust,ignore (illustrative)
+    /// #[derive(Debug)]
+    /// struct Foo {}
+    ///
+    /// impl ::std::fmt::Display for Foo {
+    ///     fn fmt(&self, ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+    ///         write!(f, "")
+    ///     }
+    /// }
+    ///
+    /// impl Diagnostic for Foo {}
+    /// ```
+    ///
+    /// You can also make more advanced structs and impls.
+    ///
+    /// ```rust,ignore (illustrative)
+    /// make_diagnostic! {
+    ///     pub struct Foo {
+    ///         private: i32,
+    ///         pub(crate) krate: String,
+    ///         pub(super) foo: Vec<()>,
+    ///         pub tag: bool,
+    ///     },
+    ///     display("private: {}, krate: {}, tag: {}", private, krate, tag)
+    /// }
+    /// ```
+    /// generates:
+    /// ```rust,ignore (illustrative)
+    /// #[derive(Debug)]
+    /// pub struct Foo {
+    ///     private: i32,
+    ///     pub(crate) krate: String,
+    ///     pub(super) foo: Vec<()>,
+    ///     pub tag: bool,
+    /// }
+    ///
+    /// impl ::std::fmt::Display for Foo {
+    ///     fn fmt(&self, ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+    ///         write!(f, "private: {}, krate: {}, tag: {}", self.private, self.krate, self.tag)
+    ///     }
+    /// }
+    ///
+    /// impl Diagnostic for Foo {}
+    /// ```
+    ///
+    /// As You can see, `self.` is prepend to the arguments to [`Display`].
+    ///
+    /// [`Display`]: std::fmt::Display
+    /// [`Diagnostic`]: super::Diagnostic
     macro_rules! make_diagnostic {
     (
         $struct_vis:vis struct $name:ident {
