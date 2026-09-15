@@ -1,9 +1,8 @@
 //! Home of "feature pulls itself" lint.
-use std::fmt;
 
 use crate::quackpack::core::Manifest;
 use crate::quackpack::core::lints::buffer::LintBuffer;
-use crate::quackpack::core::lints::{Diagnostic, Lint, LintLevel};
+use crate::quackpack::core::lints::{Lint, LintLevel, macros};
 use crate::{DuckContext, QuackResult, StrId};
 
 pub const LINT: Lint = Lint {
@@ -44,15 +43,11 @@ pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> Qu
     Ok(())
 }
 
-#[derive(Debug)]
-struct SelfImplyingFeatureDiagnostic {
-    feature: StrId,
-}
-
-impl fmt::Display for SelfImplyingFeatureDiagnostic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "feature `{}` implies itself", self.feature)
+macros::make_diagnostic! {
+    struct SelfImplyingFeatureDiagnostic {
+        feature: StrId,
     }
+    display(
+        "feature `{}` implies itself", feature
+    )
 }
-
-impl Diagnostic for SelfImplyingFeatureDiagnostic {}
