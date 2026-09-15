@@ -5,7 +5,7 @@
 #include <vector>
 
 namespace vm::kind {
-	struct Variant {
+	struct Variant final {
 		Bytes type_tag_size;  /// Numer of bytes needed for the type tag - e.g. 1, 2, 4, 8
 		std::vector<TypeRef> alternatives;
 	};

@@ -102,7 +102,7 @@ namespace {
 /**
  * @brief Represents a local stack variable.
  */
-struct LocalStackEntry {
+struct LocalStackEntry final {
 	base::StrID                 local_name;
 	CRef<valid_type::ValidType> type;
 

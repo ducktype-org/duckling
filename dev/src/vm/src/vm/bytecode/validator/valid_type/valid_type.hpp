@@ -199,17 +199,17 @@ namespace vm::code::valid_type {
 		base::StrID name;
 		ValidTypeID id;
 
-		struct Declared {};
+		struct Declared final {};
 
-		struct Defined {
+		struct Defined final {
 			DefinedTypeVariant kind;
 		};
 
-		struct Finalizing {
+		struct Finalizing final {
 			DefinedTypeVariant kind;
 		};
 
-		struct Finalized {
+		struct Finalized final {
 			FinalizedTypeVariant kind;
 		};
 

@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testClassErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -125,13 +126,15 @@ private:
 	void checkForErrorOnCompileModule(
 		std::string_view                     module_content,
 		const std::vector<std::string_view>& present_phrases,
-		u64                                  logged_msg_count
+		u64                                  logged_msg_count,
+		bool                                 expect_failure = true
 	) {
 		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
 
 		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
 
-		assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
+		if (expect_failure)
+			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		checkForError(present_phrases, logged_msg_count);
 	}
 
@@ -172,6 +175,51 @@ private:
 				}
 			)",
 				{ "Call failed because no matching functions were found." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+                class Number {
+                    val: i64;
+                    fun +(rhs: Number) -> Number = {
+                        return Number(self.val + rhs.val);
+                    }
+                }
+
+                fun +(lhs: Number, rhs: Number) -> Number = {
+                    return Number(lhs.val + rhs.val);
+                }
+
+                fun main() -> i64 = {
+                    let a = Number(10);
+                    let b = Number(20);
+                    let c = a + b;
+                    return c.val;
+                }
+            )",
+				{ "Call failed due to ambiguous overload resolution" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+                class Number {
+                    val: i64;
+                    fun -() -> Number = {
+                        return Number(-self.val);
+                    }
+                }
+
+                fun -(n: Number) -> Number = {
+                    return Number(-n.val);
+                }
+
+                fun main() -> i64 = {
+                    let a = Number(10);
+                    let c = -a;
+                    return c.val;
+                }
+            )",
+				{ "Call failed due to ambiguous overload resolution" },
 				1
 			);
 		}
@@ -438,21 +486,6 @@ private:
 			)",
 				{ "A copy constructor must declare exactly one parameter: a reference to the "
 			      "object being copied." },
-				1
-			);
-
-
-			checkForErrorOnCompileModule(
-				R"(
-				class MyClass {
-					x:i64 = 0;
-
-					MyClass.abc(a: i64) = {
-						return MyClass(1);
-					}
-				}
-			)",
-				{ "User-defined constructors are not yet supported" },
 				1
 			);
 		}
@@ -1222,6 +1255,162 @@ private:
 				}
 			)",
 				{ "Symbol", "not found" },
+				1
+			);
+		}
+	}
+
+	/**
+	 * @brief Errors of the members of a class: their specifiers, their visibility and the names
+	 * that a class does not declare at all.
+	 */
+	void testClassErrors() {
+		// ==================== Duplicated member specifiers ====================
+		{
+			// A member carries at most one visibility specifier.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public private x: i64 = 0;
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Class visibility specifier is duplicated with another one." },
+				1,
+				false
+			);
+
+			// A member is either static or not, so `static` cannot be repeated either.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public static static y: i64 = 0;
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Class static specifier is duplicated with another one." },
+				1,
+				false
+			);
+		}
+
+		// ==================== Members hidden by their visibility ====================
+		{
+			// Reached through the type, which is the path that reports the declaration as well.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						private static hidden: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.hidden;
+						return 0;
+					} )",
+				{ "Accessed value is not visible from here.", "Found declaration:" },
+				1
+			);
+
+			// Reached through a value of the type.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						private hidden: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var c: C = C(1, 2);
+						var x: i64 = c.hidden;
+						return 0;
+					} )",
+				// The access through a value does not point at the declaration yet.
+				{ "Accessed value is not visible from here." },
+				1
+			);
+
+			// A protected member is hidden from a class that does not inherit from the declaring
+			// one.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						protected shared: i64 = 2;
+					}
+					class Unrelated {
+						public other: i64 = 3;
+
+						public fun reach(c: const ref C) -> i64 = {
+							var x: i64 = c.shared;
+							return 0;
+						}
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Accessed value is not visible from here." },
+				1
+			);
+		}
+
+		// ==================== Names a class does not declare ====================
+		{
+			// A field reached through a value of the class.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+					}
+					fun main() -> i64 = {
+						var c: C = C(1);
+						var x: i64 = c.nope;
+						return 0;
+					} )",
+				{ "Accessed value not found." },
+				1
+			);
+
+			// A static field reached through the class itself.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						public static s: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.nope;
+						return 0;
+					} )",
+				{ "Symbol 'nope' not found in lookup" },
+				1
+			);
+
+			// A static method called on the class itself.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+
+						public static fun sm() -> i64 = {
+							return 2;
+						}
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.nope();
+						return 0;
+					} )",
+				{ "Call failed because no matching functions were found." },
+				1
+			);
+
+			// A method called on a value of the class.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+
+						public fun m() -> i64 = {
+							return v;
+						}
+					}
+					fun main() -> i64 = {
+						var c: C = C(1);
+						var x: i64 = c.nope();
+						return 0;
+					} )",
+				{ "Call failed because no matching functions were found." },
 				1
 			);
 		}

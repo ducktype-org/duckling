@@ -10,7 +10,7 @@ namespace vm::api {
 	int errorToErrno(const ApiError& api_error) {
 		using namespace std;
 
-		struct Visitor {
+		struct Visitor final {
 			int operator()(const ResumeError&) const noexcept { return EINVAL; }
 
 			int operator()(const PauseError&) const noexcept { return EINVAL; }

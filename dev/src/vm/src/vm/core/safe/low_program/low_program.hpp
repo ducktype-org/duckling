@@ -29,7 +29,7 @@ namespace vm::low {
 	/**
 	 * @brief Micro bytecode representation of function data.
 	 */
-	struct LowFuncData {
+	struct LowFuncData final {
 		base::StrID                                    name;
 		usize                                          id;
 		MCRef<vm::code::valid_function::ValidFunction> high_func;
@@ -56,7 +56,7 @@ namespace vm::low {
 		 * @brief Range of instructions
 		 * @note Represents inclusive-exclusive range [`begin`, `end`)
 		 */
-		struct InstructionRange {
+		struct InstructionRange final {
 			usize begin, end;
 			auto  operator<=>(const InstructionRange&) const = default;
 
@@ -96,7 +96,7 @@ namespace vm::low {
 		}
 	};
 
-	struct LowCodePosition {
+	struct LowCodePosition final {
 		CRef<LowFuncData> function;
 		usize             instruction_index;
 	};
@@ -105,12 +105,12 @@ namespace vm::low {
 	 * @brief Initialization strategy for a global variable.
 	 * Either initialized via constructor/destructor functions or via a constant initial value.
 	 */
-	struct GlobalCtorDtor {
+	struct GlobalCtorDtor final {
 		base::Optional<base::StrID> ctor_name;
 		base::Optional<base::StrID> dtor_name;
 	};
 
-	struct GlobalInitialValue {
+	struct GlobalInitialValue final {
 		code::ConstantValue value;
 	};
 
@@ -119,7 +119,7 @@ namespace vm::low {
 	/**
 	 * @brief Micro bytecode representation of global data.
 	 */
-	struct LowGlobalData {
+	struct LowGlobalData final {
 		/// Type
 		TypeCRef type;
 
@@ -136,7 +136,7 @@ namespace vm::low {
 	/**
 	 * @brief Micro bytecode representation of an extern C function.
 	 */
-	struct LowExternCFunction {
+	struct LowExternCFunction final {
 		base::StrID name;
 		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
 		usize                 parameter_size_sum;
@@ -150,7 +150,7 @@ namespace vm::low {
 	 * mutated after `ffi_prep_cif` was performed on them (moving the whole object is fine, as
 	 * the pointed-to storage lives on the heap).
 	 */
-	struct LowFFIFunction {
+	struct LowFFIFunction final {
 		base::StrID name;
 
 		/// Native symbol address resolved from one of the loaded object files.
@@ -201,7 +201,7 @@ namespace vm::low {
 		 *
 		 * Used mainly by the VMProcess to determine the amount of memory to allocate for the globals.
 		 */
-		struct GlobalBufferConfig {
+		struct GlobalBufferConfig final {
 			Bytes buffer_size;   /// The sum of sizes of all the global variables in the program.
 			usize global_count;  /// The count of global variables in the program
 		};
