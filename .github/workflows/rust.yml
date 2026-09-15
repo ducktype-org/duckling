@@ -49,7 +49,7 @@ jobs:
           echo "Workspace cleaned."
 
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       # This has to be before restoring cache, so the env is set. It also puts the toolchain on
       # PATH.
@@ -98,7 +98,7 @@ jobs:
           echo "Workspace cleaned."
 
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       # The only job here that does not go through a setup-*-rust action.
       - name: Put the toolchain on PATH
@@ -135,7 +135,7 @@ jobs:
           echo "Workspace cleaned."
 
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       # This has to be before restoring cache, so the env is set. It also puts the toolchain on
       # PATH.
