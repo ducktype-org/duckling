@@ -1,11 +1,10 @@
 //! Home of "nonexistent_features" lint.
-use std::fmt;
 
 use super::util::{nonexistent_features, walk_conditions};
 use crate::quackpack::core::Manifest;
 use crate::quackpack::core::lints::buffer::LintBuffer;
 use crate::quackpack::core::lints::rules::util::MatchedConditions;
-use crate::quackpack::core::lints::{Diagnostic, Lint, LintLevel};
+use crate::quackpack::core::lints::{Lint, LintLevel, macros};
 use crate::{DuckContext, QuackResult, StrId};
 
 pub const LINT: Lint = Lint {
@@ -65,38 +64,25 @@ pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> Qu
     Ok(())
 }
 
-#[derive(Debug)]
-struct DependencyConditionedOnNonexistentFeatureDiagnostic {
-    dep: StrId,
-    undeclared_feature_name: StrId,
-}
-
-#[derive(Debug)]
-struct DependencyFeatureConditionedOnNonexistentFeatureDiagnostic {
-    dep: StrId,
-    feature: StrId,
-    undeclared_feature_name: StrId,
-}
-
-impl fmt::Display for DependencyConditionedOnNonexistentFeatureDiagnostic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "dependency `{}` is conditioned on a nonexistent feature `{}`",
-            self.dep, self.undeclared_feature_name
-        )
+macros::make_diagnostic! {
+    struct DependencyConditionedOnNonexistentFeatureDiagnostic {
+        dep: StrId,
+        undeclared_feature_name: StrId,
     }
+    display(
+       "dependency `{}` is conditioned on a nonexistent feature `{}`",
+       dep, undeclared_feature_name
+    )
 }
 
-impl fmt::Display for DependencyFeatureConditionedOnNonexistentFeatureDiagnostic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "feature `{}` of dependency `{}` is conditioned on a nonexistent feature `{}`",
-            self.feature, self.dep, self.undeclared_feature_name
-        )
+macros::make_diagnostic! {
+    struct DependencyFeatureConditionedOnNonexistentFeatureDiagnostic {
+        dep: StrId,
+        feature: StrId,
+        undeclared_feature_name: StrId,
     }
+    display(
+       "feature `{}` of dependency `{}` is conditioned on a nonexistent feature `{}`",
+       feature, dep, undeclared_feature_name
+    )
 }
-
-impl Diagnostic for DependencyFeatureConditionedOnNonexistentFeatureDiagnostic {}
-impl Diagnostic for DependencyConditionedOnNonexistentFeatureDiagnostic {}

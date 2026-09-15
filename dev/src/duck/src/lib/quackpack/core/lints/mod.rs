@@ -60,3 +60,28 @@ pub fn run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
     }
     buffer.emit(pcx.ctx())
 }
+
+pub(crate) mod macros {
+    macro_rules! make_diagnostic {
+    (
+        $struct_vis:vis struct $name:ident {
+            $(
+                $field_vis:vis $field:ident: $type:ty,
+            )*
+        }
+        display($fmt:literal $(, $arg:ident)* $(,)?)
+    ) => {
+        #[derive(Debug)]
+        $struct_vis struct $name {
+            $($field_vis $field: $type,)*
+        }
+        impl ::std::fmt::Display for $name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                write!(f, $fmt $(, self.$arg)*)
+            }
+        }
+        impl crate::quackpack::core::lints::Diagnostic for $name {}
+    };
+}
+    pub(crate) use make_diagnostic;
+}
