@@ -1624,8 +1624,6 @@ namespace compiler::backend_llvm {
 				);
 				default_return_indirect    = signature.return_indirect;
 				default_parameter_indirect = std::move(signature.parameter_indirect);
-			} else {
-				CORE_PANIC("Implementing functions with not default abi is not supported yet.");
 			}
 
 			const Ref fun = llvm::cast<llvm::Function>(
