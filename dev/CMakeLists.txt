@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
-project(Duckling)
+project(Duckling VERSION 0.0.2)
+
+# `project()` rejects anything that is not a number, so the pre-release suffix lives here instead
+# and the two are composed into the string every binary prints. Set it to "" for a final release.
+set(DUCKLING_VERSION_PRERELEASE "alpha")
+if(DUCKLING_VERSION_PRERELEASE)
+	set(DUCKLING_VERSION_STRING "${Duckling_VERSION}-${DUCKLING_VERSION_PRERELEASE}")
+else()
+	set(DUCKLING_VERSION_STRING "${Duckling_VERSION}")
+endif()
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(USE_REPLXX "Use replxx library for REPL frontend" ON)

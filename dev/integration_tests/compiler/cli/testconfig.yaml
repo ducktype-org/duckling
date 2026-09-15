@@ -63,3 +63,29 @@ Tests:
     Cases:
       dvm-backend:
         ExitCode: 0
+
+  cli-version:
+    # --version / --version-verbose must print to stdout and exit 0 on every binary.
+    # The values depend on how the build was configured, so the patterns only pin the shape:
+    # a "<tool> <semver>" first line, then one aligned "label: value" row per build fact.
+    Cases:
+      duckc-version:
+        Run: '@{expect_output} --out-regex "^duckc [0-9]+\.[0-9]+\.[0-9]+" -- @{duckc_path} --version'
+
+      duckc-version-verbose:
+        Run: '@{expect_output} --out-regex "^duckc [0-9]+\.[0-9]+\.[0-9]+"
+          --out-regex "build-type: +[A-Za-z]"
+          --out-regex "host: +[A-Za-z]+ +[^ ]"
+          --out-regex "compiler: +[A-Za-z]+ +[0-9]+\."
+          --out-regex "LLVM: +[0-9]+\."
+          --out-regex "JIT: +(enabled|disabled)"
+          -- @{duckc_path} --version-verbose'
+
+      vm-version:
+        Run: '@{expect_output} --out-regex "^VM [0-9]+\.[0-9]+\.[0-9]+" -- @{dvm_path} --version'
+
+      vm-version-verbose:
+        Run: '@{expect_output} --out-regex "^VM [0-9]+\.[0-9]+\.[0-9]+"
+          --out-regex "build-type: +[A-Za-z]"
+          --out-regex "dispatch: +[A-Za-z]"
+          -- @{dvm_path} --version-verbose'

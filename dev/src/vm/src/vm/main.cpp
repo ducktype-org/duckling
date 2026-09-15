@@ -1,6 +1,8 @@
 #include "cli.hpp"
 #include "server.hpp"
 
+#include <version/version.hpp>
+
 #include <clah/clah.hpp>
 #include <clah/clah_class.hpp>
 #include <clah/param_builder.hpp>
@@ -14,13 +16,22 @@
 #include <vm/debugger/UI/CLI/cli.hpp>
 #include <vm/debugger/UI/debug_adapter/debug_adapter.hpp>
 
+#include <array>
 #include <exception>
 #include <expected>
 
-void showVersion() {
-	std::cout << "VM version 0.0.\n";
-	std::cout << "Configuration: \n";
-	std::cout << vm::getInstructionConfig() << '\n';
+/**
+ * @brief Prints the verbose version block, including the opcode dispatch the VM was built with.
+ *
+ * The dispatch strategy is a VM-only fact, so it travels as an extra row rather than moving into
+ * the Version module.
+ */
+void showVerboseVersion() {
+	const std::string                        dispatch = vm::getInstructionConfig();
+	const std::array<version::ExtraField, 1> extra{
+		version::ExtraField{ "dispatch", dispatch },
+	};
+	std::cout << version::renderVerbose("VM", extra) << '\n';
 }
 
 clah::Clah getVmClah() {
@@ -28,21 +39,32 @@ clah::Clah getVmClah() {
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
-	             .addShortDesc("Shows version and config")
+	             .addShortDesc("Print version and exit")
 	             .build())
-	    .setPreHandler([](const clah::ParsingResult& options) {
-			if (options.isFlag("version")) {
-				showVersion();
-				throw clah::exceptions::SuccessExitException(options);
-			}
-		})
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addLongName("version-verbose")
+	             .addShortDesc("Print version together with build information and exit")
+	             .build())
 #ifdef BUILD_TYPE_DEV_DEBUG
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('d')
 	             .addLongName("debug-logs")
 	             .addShortDesc("Enables DVM debug logs.")
 	             .build())
+#endif
+	    // One pre-handler for everything: `setPreHandler` replaces the callback it was given last
+	    // time rather than chaining, so a second call here would silently drop the flags handled
+	    // by the first one.
 	    .setPreHandler([](const clah::ParsingResult& options) {
+			if (options.isFlag("version-verbose")) {
+				showVerboseVersion();
+				throw clah::exceptions::SuccessExitException(options);
+			}
+			if (options.isFlag("version")) {
+				std::cout << version::renderShort("VM") << '\n';
+				throw clah::exceptions::SuccessExitException(options);
+			}
+#ifdef BUILD_TYPE_DEV_DEBUG
 			if (options.isFlag("debug-logs")) {
 				std::cerr << "Debug logs enabled.\n";
 				logger::enable_dev_logs = true;
@@ -50,8 +72,8 @@ clah::Clah getVmClah() {
 				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
 				logger::setDevLogOutputStreamCurrentDate();
 			}
-		})
 #endif
+		})
 	    .addSubcommand(clah::Clah("server", "Launch DVM as a http server.")
 	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
 	                                .addShortName('p')
