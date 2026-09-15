@@ -80,7 +80,6 @@ private:
 		);
 	}
 
-
 	void fileParserTest() {
 		ASSERT_EQUAL(
 			"awesome_content\n",
