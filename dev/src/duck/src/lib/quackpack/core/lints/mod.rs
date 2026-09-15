@@ -62,6 +62,8 @@ pub fn run_lint_passes(pcx: &PackageContext<'_>) -> QuackResult<()> {
 }
 
 pub(crate) mod macros {
+    /// A helper macro for declaring a struct which implements [`Diagnostic`](super::Diagnostic), with the given
+    /// [`Dispay`](std::fmt::Display) implementation.
     macro_rules! make_diagnostic {
     (
         $struct_vis:vis struct $name:ident {
