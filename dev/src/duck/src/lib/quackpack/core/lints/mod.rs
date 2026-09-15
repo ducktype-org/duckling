@@ -2,6 +2,7 @@
 
 mod buffer;
 mod passes;
+pub mod rules;
 pub mod warnings;
 
 use std::fmt;
@@ -39,6 +40,9 @@ pub struct Lint {
     /// Description of this lint. Should explain, what the lint does, give an example, and
     /// give a reason why it's bad.
     pub description: &'static str,
+    /// The default level of this lint.
+    // Adding it as a member, since in the future maybe we want to configure levels.
+    pub level: LintLevel,
 }
 
 /// A shorthand for emitting warnings and lints.

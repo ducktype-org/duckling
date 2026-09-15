@@ -12,6 +12,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/pst_layer/pst_parent.cpp
 	src_private/helios_private/lookup/lookup_result.cpp
 	src_private/helios_private/lookup/interface.cpp
+	src_private/helios_private/lookup/lookup_in_type_interface.cpp
 	src_private/helios_private/lookup/lookup_chain.cpp
 	src_private/helios_private/hout_creation/expressions/function_calls/call_processing.cpp
 	src_private/helios_private/hout_creation/expressions/function_calls/square_call_processing.cpp
@@ -60,8 +61,6 @@ add_library(HELIOS STATIC
 	src/helios/symbols/lang_primitives.cpp
 	src/helios/symbols/query_type_of_symbol.cpp
 	src/helios/symbols/query_type_symbol_data.cpp
-	src/helios/symbols/query_type_from_definition.cpp
-	src/helios/symbols/query_class_of_member.cpp
 	src/helios/symbols/attributes.cpp
 	src/helios/symbols/symbol_abi.cpp
 	src/helios/symbols/symbol_id.cpp
@@ -112,6 +111,10 @@ duck_add_test(compiler helios_repl_instruction_wrapper tests/helios_repl_instruc
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_repl_expression_wrapper tests/helios_repl_expression_wrapper_test.cpp
+	USES Base PstParser HELIOS
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
+duck_add_test(compiler helios_lookup tests/helios_lookup_test.cpp
 	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
