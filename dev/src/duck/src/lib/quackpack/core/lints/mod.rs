@@ -135,7 +135,7 @@ pub(crate) mod macros {
                 $field_vis:vis $field:ident: $type:ty,
             )*
         }
-        display($fmt:literal $(, $arg:ident)* $(,)?)
+        display($fmt:literal $(, $arg:tt)* $(,)?)
     ) => {
         #[derive(Debug)]
         $struct_vis struct $name {

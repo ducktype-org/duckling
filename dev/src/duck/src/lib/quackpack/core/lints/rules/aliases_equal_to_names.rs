@@ -1,9 +1,8 @@
 //! Home of "aliases equal to names" lint.
-use std::fmt;
 
 use crate::QuackResult;
 use crate::quackpack::core::lints::buffer::LintBuffer;
-use crate::quackpack::core::lints::{Diagnostic, Lint, LintLevel};
+use crate::quackpack::core::lints::{Lint, LintLevel, macros};
 use crate::quackpack::core::{DependencyKind, PackageContext};
 use crate::quackpack::schemas::manifest::DependencySource;
 
@@ -59,6 +58,7 @@ pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()
                     AliasEqualsNameDiagnostic {
                         name: name.clone(),
                         dep_kind,
+                        key_in_manifest: dep_kind.key_in_manifest(),
                     },
                     LINT,
                 );
@@ -68,23 +68,17 @@ pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()
     Ok(())
 }
 
-#[derive(Debug)]
-struct AliasEqualsNameDiagnostic {
-    name: String,
-    dep_kind: DependencyKind,
-}
-
-impl fmt::Display for AliasEqualsNameDiagnostic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} dependency's alias `{}` is equal to its name specified at `{}.{}.source.name`",
-            self.dep_kind,
-            self.name,
-            self.dep_kind.key_in_manifest(),
-            self.name
-        )
+macros::make_diagnostic! {
+    struct AliasEqualsNameDiagnostic {
+        name: String,
+        dep_kind: DependencyKind,
+        key_in_manifest: &'static str,
     }
+    display(
+        "{} dependency's alias `{}` is equal to its name specified at `{}.{}.source.name`",
+        dep_kind,
+        name,
+        key_in_manifest,
+        name
+    )
 }
-
-impl Diagnostic for AliasEqualsNameDiagnostic {}
