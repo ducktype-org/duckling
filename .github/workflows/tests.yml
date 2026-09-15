@@ -293,8 +293,10 @@ jobs:
           du -hs ${{ env.CCACHE_DIR }}
 
           echo "sccache:"
-          # Only macOS still keeps a directory; on Linux sccache writes into the Actions cache.
-          [ -n "${SCCACHE_DIR:-}" ] && du -hs "$SCCACHE_DIR" || sccache --show-stats | head -20
+          # Only macOS still keeps a directory. On Linux sccache writes into the Actions cache and
+          # has compiled nothing at all by this point -- the Rust build happens in the integration
+          # tests below, so its numbers are read in "sccache diagnostics" instead.
+          [ -n "${SCCACHE_DIR:-}" ] && du -hs "$SCCACHE_DIR" || echo "(GitHub Actions cache)"
 
       - name: Show ccache statistics (macOS)
         if: ${{ env.IS_MACOS == 'true' }}
@@ -348,6 +350,30 @@ jobs:
       # failure() makes this step run even when a previous step has failed (which would otherwise
       # cause all subsequent steps to be skipped). The additional conditions ensure this step only
       # runs when at least one of the integration test steps actually failed.
+      # TEMPORARY, while the GHA backend is on trial. This is the first point where sccache has
+      # compiled anything, so it is the first point where its counters mean something. `always()`
+      # because a failed itest run is exactly when the log is worth having.
+      - name: sccache diagnostics
+        if: ${{ always() && env.IS_MACOS != 'true' }}
+        continue-on-error: true
+        run: |
+          sccache --show-adv-stats || sccache --show-stats || true
+
+          log="${SCCACHE_ERROR_LOG:-}"
+          if [ -n "$log" ] && [ -f "$log" ]; then
+            echo "=== how big the server log got ==="
+            wc -l "$log"
+            echo "=== every distinct error line, with counts ==="
+            grep -iE "\berror\b|\bwarn\b" "$log" \
+              | sed -E 's/[0-9a-f]{16,}/<hash>/g; s/^[^ ]+ +//' \
+              | sort | uniq -c | sort -rn | head -30
+            echo "=== last 100 lines ==="
+            tail -100 "$log"
+          else
+            echo "no server log at '${log:-<unset>}' -- the server was already running, so it"
+            echo "kept the environment it was started with and never picked up SCCACHE_LOG."
+          fi
+
       - name: Cat itests log file on failure
         if: ${{ failure() && (steps.integration-tests.outcome == 'failure') }}
         run: cat "${{ env.ITEST_LOG }}"

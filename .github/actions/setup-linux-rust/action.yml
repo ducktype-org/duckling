@@ -54,3 +54,15 @@ runs:
       run: |
         echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
         echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+
+        # TEMPORARY, while the GHA backend is on trial: nearly every write to it is failing and
+        # `Cache write errors` does not say why. The server writes this log, and only the server
+        # knows what the cache service answered.
+        echo "SCCACHE_ERROR_LOG=${RUNNER_TEMP:-/tmp}/sccache-server.log" >> "$GITHUB_ENV"
+        echo "SCCACHE_LOG=sccache=debug,opendal=debug" >> "$GITHUB_ENV"
+
+        # The server is a daemon that outlives a job on a self-hosted runner, and it keeps the
+        # environment it was STARTED with -- so a server left behind by an earlier job would
+        # ignore both lines above. The next `sccache` call then starts a fresh one, and that call
+        # happens inside the integration tests, where these variables are already in effect.
+        sccache --stop-server || true
