@@ -80,43 +80,39 @@ private:
 		);
 	}
 
+	static fs::File makeParsedFile() {
+		return fs::FileManager::createRandomTempDirectory().createSubFile(
+			"awesome_content\n", "test_file.txt"
+		);
+	}
+
 	void fileParserTest() {
-		auto                  initial_path = std::filesystem::current_path();
-		std::filesystem::path path         = __FILE__;
-		path.remove_filename();
-		std::filesystem::current_path(path);
+		const auto path = makeParsedFile().getFilePath().native();
 
 		ASSERT_EQUAL(
 			"awesome_content\n",
-			parseFile("test_file.txt", std::regex(".*\\.txt")).getContent().view().stdString()
+			parseFile(path, std::regex(".*\\.txt")).getContent().view().stdString()
 		);
 
 		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseFile("test_file.txt", std::regex(".*\\.cpp")); },
-			"Regex should make it invalid"
+			[&]() { parseFile(path, std::regex(".*\\.cpp")); }, "Regex should make it invalid"
 		);
-
-		std::filesystem::current_path(initial_path);
 	}
 
 	void filePathParserTest() {
-		std::filesystem::path path = __FILE__;
-		path.remove_filename();
-		std::string path_str = path.string();
+		const auto path = makeParsedFile().getFilePath().native();
 
 		ASSERT_EQUAL(
 			"awesome_content\n",
-			fs::File(parseFilePath(path_str + "test_file.txt", std::regex(".*\\.txt")))
-				.getContent()
-				.view()
-				.stdString()
+			fs::File(parseFilePath(path, std::regex(".*\\.txt"))).getContent().view().stdString()
 		);
 
-		parseFilePath(path_str + "no_file.txt", std::regex(".*\\.txt"));
+		// The parser accepts a path that does not exist yet.
+		const auto missing = (std::filesystem::path(path).parent_path() / "no_file.txt").string();
+		parseFilePath(missing, std::regex(".*\\.txt"));
 
 		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseFilePath(path_str + "test_file.txt", std::regex(".*\\.cpp")); },
-			"Regex should make it invalid"
+			[&]() { parseFilePath(path, std::regex(".*\\.cpp")); }, "Regex should make it invalid"
 		);
 	}
 
