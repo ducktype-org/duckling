@@ -24,6 +24,18 @@ add_custom_target(VersionCommitInfo
 add_dependencies(Version VersionCommitInfo)
 target_include_directories(Version PRIVATE ${version_generated_dir})
 
+# The build-time target only runs when something is actually built, but the compile database is
+# complete as soon as the directory is configured. Anything that reads it without building - the
+# `cpp-linter` CI job, `clangd`, an IDE - would then fail to open `version/commit_info.hpp`. So
+# write the header once at configure time as well; the target above still refreshes it on every
+# build, which is what keeps the date honest.
+execute_process(
+	COMMAND ${CMAKE_COMMAND}
+		-D OUTPUT_FILE=${version_commit_info_header}
+		-D GIT_WORK_DIR=${CMAKE_CURRENT_LIST_DIR}
+		-P ${CMAKE_CURRENT_LIST_DIR}/GenerateCommitInfo.cmake
+)
+
 # Everything that is fixed for a given configuration is baked in here, so that only the commit date
 # needs a generated header.
 target_compile_definitions(Version PRIVATE
@@ -42,3 +54,5 @@ target_compile_definitions(Version PRIVATE
 	DUCKLING_LICENSE_NAME=""
 	DUCKLING_COPYRIGHT_LINE=""
 )
+
+duck_add_test(common version tests/version_test.cpp USES Version)
