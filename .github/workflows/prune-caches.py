@@ -9,17 +9,6 @@ other branch.
 
 Entries are grouped by the key they would share if the timestamp were removed;
 the most recently accessed member of each group is kept and the rest deleted.
-Grouping, rather than "delete everything matching this prefix", is what lets
-this run once after the whole build matrix instead of once per matrix entry:
-deleting by prefix after the builds have uploaded would delete what they just
-saved.
-
-This talks to the REST API directly, so it needs neither `gh` nor the
-`actions/gh-actions-cache` extension -- the mac runners have no `gh` and their
-accounts cannot install one.
-
-The token comes from the environment rather than a flag: a command line is
-visible to anything that can list processes, and these runners are shared.
 """
 
 import argparse
@@ -31,8 +20,6 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-API_ROOT = "https://api.github.com"
-
 # The suffix "Prepare cache timestamp" in tests.yml appends to every key:
 # cmake's "%Y-%m-%d-%H::%M::%S". It is the only part of a key that differs
 # between two runs of the same configuration on the same branch.
@@ -41,6 +28,26 @@ TIMESTAMP_SUFFIX = re.compile(r"-\d{4}-\d{2}-\d{2}-\d{2}::\d{2}::\d{2}$")
 # Stop rather than page forever if the API keeps returning full pages.
 MAX_PAGES = 20
 PER_PAGE = 100
+
+# The whole REST surface this needs
+API_ROOT = "https://api.github.com"
+
+# Each version stays supported for at least 24 months
+# after the next one lands.
+API_VERSION = "2026-03-10"
+
+def list_caches_url(repo: str, page: int) -> str:
+    """GET: one page of the repository's cache entries, most recently accessed first."""
+    return (
+        f"{API_ROOT}/repos/{repo}/actions/caches"
+        f"?per_page={PER_PAGE}&page={page}"
+        f"&sort=last_accessed_at&direction=desc"
+    )
+
+
+def delete_cache_url(repo: str, cache_id: int) -> str:
+    """DELETE: one cache entry, addressed by the id its listing gave it."""
+    return f"{API_ROOT}/repos/{repo}/actions/caches/{cache_id}"
 
 
 def parse_args() -> argparse.Namespace:
@@ -62,7 +69,7 @@ def api(method: str, url: str, token: str) -> Any:
         headers={
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {token}",
-            "X-GitHub-Api-Version": "2022-11-28",
+            "X-GitHub-Api-Version": API_VERSION,
         },
     )
     with urllib.request.urlopen(request) as response:
@@ -74,17 +81,26 @@ def list_caches(repo: str, token: str) -> list[dict[str, Any]]:
     """
     Every cache entry in the repository, most recently accessed first.
 
-    Collected in full before anything is deleted: deleting while paging would
-    shift the later pages and skip entries.
+    A page of the listing looks like
+
+        {"total_count": 57,
+         "actions_caches": [
+             {"id": 505,
+              "ref": "refs/heads/main",
+              "key": "Linux-gcc-Debug-main-2026-09-13-08::11::02",
+              "version": "<hash of the paths that were cached>",
+              "last_accessed_at": "2026-09-13T08:19:36.000Z",
+              "created_at": "2026-09-13T08:11:02.000Z",
+              "size_in_bytes": 1073741824},
+             ...]}
+
+    and this returns those inner objects concatenated, hence `dict[str, Any]`:
+    they are whatever the API hands over. Only two fields are ever read -- `key`,
+    to group by, and `id`, to address the DELETE.
     """
     caches: list[dict[str, Any]] = []
     for page in range(1, MAX_PAGES + 1):
-        url = (
-            f"{API_ROOT}/repos/{repo}/actions/caches"
-            f"?per_page={PER_PAGE}&page={page}"
-            f"&sort=last_accessed_at&direction=desc"
-        )
-        batch = api("GET", url, token).get("actions_caches", [])
+        batch = api("GET", list_caches_url(repo, page), token).get("actions_caches", [])
         caches += batch
         if len(batch) < PER_PAGE:
             break
@@ -100,8 +116,7 @@ def plan(
     caches: list[dict[str, Any]], branch: str
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """
-    Split the entries into (keep, delete). Pure, so it can be reasoned about
-    and tested without touching the API.
+    Split the entries into (keep, delete).
 
     `caches` must already be ordered newest-accessed first; the first entry seen
     for a group is the one kept.
@@ -109,8 +124,8 @@ def plan(
     An entry belongs to this branch when its group ENDS WITH the branch name --
     not merely contains it. Every key is built as
     `<os>-<prefix>-<build-type>-<branch>-<timestamp>` or
-    `<os>-sccache-<branch>-<timestamp>`, so the branch is always last once the
-    timestamp is gone. A substring test would let branch `foo` claim the entries
+    `<os>-sccache-<branch>-<timestamp>`.
+    A substring test would let branch `foo` claim the entries
     of `foo-bar`, and delete them.
     """
     keep: list[dict[str, Any]] = []
@@ -150,11 +165,7 @@ def main() -> int:
             print(f"  WOULD DELETE {cache['key']}")
             continue
         try:
-            api(
-                "DELETE",
-                f"{API_ROOT}/repos/{args.repo}/actions/caches/{cache['id']}",
-                token,
-            )
+            api("DELETE", delete_cache_url(args.repo, cache["id"]), token)
             print(f"  delete {cache['key']}")
         except urllib.error.URLError as error:
             # Losing a cache entry is not worth failing a build over, and a

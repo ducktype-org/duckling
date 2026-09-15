@@ -191,6 +191,10 @@ jobs:
         if: ${{ env.IS_MACOS != 'true' }}
         uses: actions/cache/restore@v5
         with:
+          # main builds from an empty cache on purpose: the entry it saves is what every branch
+          # falls back to, so it holds one fresh build rather than every object ever compiled
+          # on main. Not downloading is what keeps it that way.
+          lookup-only: ${{ env.BRANCH_NAME == 'main' }}
           path: |
             ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
@@ -209,6 +213,7 @@ jobs:
         if: ${{ env.IS_MACOS != 'true' }}
         uses: actions/cache/restore@v5
         with:
+          lookup-only: ${{ env.BRANCH_NAME == 'main' }}
           path: |
             ${{ env.SCCACHE_DIR }}
           key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
@@ -216,20 +221,6 @@ jobs:
             ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
             ${{ runner.os }}-sccache-main-
             ${{ runner.os }}-sccache-
-
-      # Remove ccache folder to prevent cache snowball growth
-      # Only the uploaded cache snowballs; the local macOS one is bounded by ccache's own
-      # max_size and is the whole point of keeping it, so it is not wiped on main.
-      - name: Remove ccache on main
-        if: ${{ env.IS_MACOS != 'true' && env.BRANCH_NAME == 'main' }}
-        id: ccache-main-rm
-        run: rm -rf ${CCACHE_DIR}
-
-      # Remove sccache folder to prevent cache snowball growth
-      - name: Remove sccache on main
-        if: ${{ env.IS_MACOS != 'true' && env.BRANCH_NAME == 'main' }}
-        id: sccache-main-rm
-        run: rm -rf ${SCCACHE_DIR}
 
       - name: Initialize project
         working-directory: ${{ env.WORKSPACE }}
@@ -427,9 +418,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # The grouping this does is fiddly enough to be worth reading as code rather than as shell,
-      # and worth being a pure function that can be tested without an API. It also talks to the
-      # REST API directly, so `gh` and its actions-cache extension are no longer needed.
       - name: Delete superseded cache entries for this branch
         env:
           CACHE_DELETE_TOKEN: ${{ secrets.CACHE_DEL_PAT }}
