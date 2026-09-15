@@ -189,7 +189,7 @@ mod test {
             identity_b,
             2.into(),
             vec!["f_b1".into(), "f_b2".into()],
-            vec![DepIdWithAlias::new("a".into(), identity_b.into())],
+            vec![DepIdWithAlias::new("a".into(), identity_a.into())],
         );
         let root = RootPackage::new(
             "root".into(),
