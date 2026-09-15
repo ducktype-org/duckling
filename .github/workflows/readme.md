@@ -98,6 +98,9 @@ second standard library (libc++), the Apple arm64 ABI, `ld64` and a far newer cl
 The two platforms prepare a build so differently that neither preparation is in `tests.yml` at
 all. It lives in `.github/actions/`, in four composite actions, one per platform per concern.
 
+The launchd jobs starting the mac runners must set `ProcessType: Interactive`; without it launchd
+throttles the whole job chain to utility QoS, which stretches a 10 ms sleep to ~70 ms.
+
 ### Job timeout
 
 `timeout-minutes` property defines timeout in minutes per configuration run.
