@@ -1,10 +1,9 @@
 //! Home of "always_false_conditions" lint.
-use std::fmt;
 
 use super::util::{is_nonexistent_feature, walk_conditions};
 use crate::quackpack::core::lints::buffer::LintBuffer;
 use crate::quackpack::core::lints::rules::util::MatchedConditions;
-use crate::quackpack::core::lints::{Diagnostic, Lint, LintLevel};
+use crate::quackpack::core::lints::{Lint, LintLevel, macros};
 use crate::quackpack::core::{FeatureName, Manifest};
 use crate::{DuckContext, QuackResult, StrId};
 
@@ -94,70 +93,44 @@ fn emit_only_nonexistent_features_diag(conds: MatchedConditions<'_>, buffer: &mu
     }
 }
 
-#[derive(Debug)]
-struct DependencyWithEmptyConditionsDiagnostic {
-    dep: StrId,
-}
-
-#[derive(Debug)]
-struct DependencyFeatureWithEmptyConditionsDiagnostic {
-    dep: StrId,
-    feature: StrId,
-}
-
-impl fmt::Display for DependencyWithEmptyConditionsDiagnostic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "dependency `{}` is disabled, because it is conditioned on an empty features list",
-            self.dep
-        )
+macros::make_diagnostic! {
+    struct DependencyWithEmptyConditionsDiagnostic {
+        dep: StrId,
     }
+    display(
+       "dependency `{}` is disabled, because it is conditioned on an empty features list",
+       dep
+    )
 }
 
-impl fmt::Display for DependencyFeatureWithEmptyConditionsDiagnostic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "feature `{}` of dependency `{}` is disabled, because it is conditioned on an empty features list",
-            self.feature, self.dep
-        )
+macros::make_diagnostic! {
+    struct DependencyFeatureWithEmptyConditionsDiagnostic {
+        dep: StrId,
+        feature: StrId,
     }
+    display(
+       "feature `{}` of dependency `{}` is disabled, because it is conditioned on an empty features list",
+       feature, dep
+    )
 }
 
-impl Diagnostic for DependencyFeatureWithEmptyConditionsDiagnostic {}
-impl Diagnostic for DependencyWithEmptyConditionsDiagnostic {}
-
-#[derive(Debug)]
-struct DependencyWithOnlyNonexistentFeaturesDiagnostic {
-    dep: StrId,
+macros::make_diagnostic! {
+    struct DependencyWithOnlyNonexistentFeaturesDiagnostic {
+        dep: StrId,
+    }
+    display(
+        "dependency `{}` is disabled, because it is conditioned only on nonexistent features",
+        dep
+    )
 }
 
-#[derive(Debug)]
+macros::make_diagnostic! {
 struct DependencyFeatureWithOnlyNonexistentFeaturesDiagnostic {
     dep: StrId,
     feature: StrId,
 }
-
-impl fmt::Display for DependencyWithOnlyNonexistentFeaturesDiagnostic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "dependency `{}` is disabled, because it is conditioned only on nonexistent features",
-            self.dep
-        )
-    }
+    display(
+        "feature `{}` of dependency `{}` is disabled, because it is conditioned only on nonexistent features",
+        feature, dep
+    )
 }
-
-impl fmt::Display for DependencyFeatureWithOnlyNonexistentFeaturesDiagnostic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "feature `{}` of dependency `{}` is disabled, because it is conditioned only on nonexistent features",
-            self.feature, self.dep
-        )
-    }
-}
-
-impl Diagnostic for DependencyFeatureWithOnlyNonexistentFeaturesDiagnostic {}
-impl Diagnostic for DependencyWithOnlyNonexistentFeaturesDiagnostic {}
