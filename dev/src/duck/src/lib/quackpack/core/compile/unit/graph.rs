@@ -4,7 +4,7 @@ use std::collections::{HashMap, VecDeque};
 
 use tracing::{debug, instrument};
 
-use super::{ArtifactsType, Unit};
+use super::{ArtifactsType, BuildKind, Unit};
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
 use crate::quackpack::core::compile::{BuildContext, missing_depenendcy_in_graph};
@@ -151,6 +151,7 @@ fn create_single_unit(
         unit_identity,
         dependencies,
         artifacts_type,
+        BuildKind::Compile,
     )
 }
 

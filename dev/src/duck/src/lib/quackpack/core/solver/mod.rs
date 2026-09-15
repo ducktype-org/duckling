@@ -40,7 +40,8 @@ use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::solver::solving::solver_engine::{SolverEngine, SolverInput};
+use crate::quackpack::core::solver::solving::input::SolverInput;
+use crate::quackpack::core::solver::solving::solver_engine::SolverEngine;
 use crate::quackpack::core::{FeatureName, Manifest, PackageContext, PackageId};
 use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
 
@@ -103,7 +104,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         })
     }
 
-    /// Determines if all the transitive dependencies of the root package are satisfied.
+    /// Determines if all the direct and transitive dependencies of the root package are satisfied.
     /// If not, prepares the [`SolverEngineData`] for running the engine by constructing [`SolverInput`].
     #[tracing::instrument(skip_all)]
     pub async fn prepare_solving<Access: GitAccess>(
@@ -163,7 +164,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             &maximal_valid_freeze,
             prev_freeze_manifests,
             gathered_info,
-        );
+        )?;
         Ok(ShouldRunSolverEngine::Yes(Box::new(SolverEngineData {
             root_pkg: self.root_pkg,
             root_pkg_features: self.root_pkg_features,
@@ -227,11 +228,10 @@ impl SolverEngineData {
     #[tracing::instrument(skip_all)]
     pub fn solve(self, ctx: &DuckContext) -> QuackResult<SolverAnswer> {
         ctx.info("starting the solver engine")?;
-        let manifests = self.input.gathered_manifests.clone();
-        let solver_output =
+        let (solution, manifests) =
             SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
-        debug!(?solver_output);
-        let new_freeze = self.current_freeze.new_freeze(&manifests, solver_output)?;
+        debug!(?solution);
+        let new_freeze = self.current_freeze.new_freeze(&manifests, solution)?;
         Ok(SolverAnswer {
             new_freeze,
             pkgs_manifests: manifests,

@@ -239,7 +239,15 @@ fn get_solver_answer(
     let root_identity = FullIdentity::new(pcx.package().name(), root_origin);
     let root_pkg = PackageId::new(root_identity, pcx.package().version());
     let solver_freeze = match input_freeze {
-        Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
+        Some(freeze) => match SolverFreeze::try_from_venv_freeze(root_pkg, freeze) {
+            Ok(freeze) => freeze,
+            Err(malformed) => {
+                warn!(error = ?malformed, "previous storage freeze is malformed");
+                pcx.ctx()
+                    .warning("previous freezefile was malformed, ignoring it")?;
+                SolverFreeze::empty_with_root(root_pkg)?
+            }
+        },
         None => SolverFreeze::empty_with_root(root_pkg)?,
     };
     let solver = SolverGathererData::new(pcx, solver_freeze, mode)

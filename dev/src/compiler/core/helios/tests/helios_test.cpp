@@ -16,8 +16,8 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -72,6 +72,8 @@ public:
 		TESTER_ADD_TEST(testMetaCompTime);
 		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
+		TESTER_ADD_TEST(testClassMemberSymbols);
+		TESTER_ADD_TEST(testStaticFieldGlobalData);
 		TESTER_ADD_TEST(testClassInteractions);
 		TESTER_ADD_TEST(testTypeInstanceInterface);
 		TESTER_ADD_TEST(testTupleInterface);
@@ -487,22 +489,34 @@ private:
 	void testClassSymbolData() {
 		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
 
-		const auto first_class = getChain("FirstClassEver", root_scope).back();
+		const auto first_class = getChain("Base", root_scope).back();
 		const auto first_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)->valueOrThrow();
 		const auto first_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(first_class);
 
-		ASSERT_EQUAL(2, first_class_info.members.size());
-		ASSERT_EQUAL(2, first_class_info.methods.size());
-		ASSERT_EQUAL(1, first_class_info.constructors.size());
-		ASSERT_HAS_VALUE(first_class_info.destructor);
+		using compiler::tsh::MemberSpecialKind;
+		const auto& first_class_interface = first_class_info.declared_interface;
+
+		ASSERT_EQUAL(5, std::ranges::distance(first_class_interface.getAnyFieldsView()));
+		ASSERT_EQUAL(1, first_class_interface.getElementsWithName(base::StrID("getPub")).size());
+		ASSERT_EQUAL(1, first_class_interface.getElementsWithName(base::StrID("setPub")).size());
+		ASSERT_HAS_VALUE(first_class_interface.getSpecialElement(MemberSpecialKind::CopyConstructor)
+		);
+		ASSERT_HAS_VALUE(first_class_interface.getSpecialElement(MemberSpecialKind::UserDestructor));
+		ASSERT_HAS_VALUE(first_class_interface.getSpecialElement(MemberSpecialKind::Constructor));
+		// The properties precomputed once with the class data: it declares a destructor and a
+		// copy constructor, and its fields have initial values.
+		ASSERT_TRUE(not first_class_info.is_trivially_destructible);
+		ASSERT_TRUE(first_class_info.is_default_constructible);
+		ASSERT_TRUE(not first_class_info.is_trivially_zero_initializable);
+		ASSERT_TRUE(first_class_info.is_copyable);
+		ASSERT_TRUE(not first_class_info.is_trivially_copyable);
+		ASSERT_TRUE(first_class_info.carries_information);
+
 		ASSERT_NO_VALUE(first_class_info.base);
 		ASSERT_EQUAL(0, first_class_info.implements.size());
-		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
+		ASSERT_EQUAL("Base", first_class_info.name);
 
 		const auto& first_ctor
 			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
@@ -511,30 +525,38 @@ private:
 		          ->valueOrPanic();
 		ASSERT_EQUAL(first_ctor.declaration->return_type.getType(), first_class_abstract_type);
 
-		const auto second_class = getChain("SecondClass", root_scope).back();
+		const auto second_class = getChain("Empty", root_scope).back();
 		auto       second_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class)->valueOrThrow();
 
-		ASSERT_EQUAL(0, second_class_info.members.size());
-		ASSERT_EQUAL(0, second_class_info.methods.size());
-		ASSERT_EQUAL(0, second_class_info.constructors.size());
-		ASSERT_NO_VALUE(second_class_info.destructor);
+		const auto& second_class_interface = second_class_info.declared_interface;
+
+		ASSERT_EQUAL(0, std::ranges::distance(second_class_interface.getAnyFieldsView()));
+		ASSERT_EQUAL(0, std::ranges::distance(second_class_interface.getMethodsView()));
+		ASSERT_NO_VALUE(second_class_interface.getSpecialElement(MemberSpecialKind::UserDestructor));
+		// An empty class holds nothing, so it is as trivial as a class gets.
+		ASSERT_TRUE(second_class_info.is_trivially_destructible);
+		ASSERT_TRUE(second_class_info.is_default_constructible);
+		ASSERT_TRUE(second_class_info.is_trivially_zero_initializable);
+		ASSERT_TRUE(second_class_info.is_copyable);
+		ASSERT_TRUE(second_class_info.is_trivially_copyable);
+		ASSERT_TRUE(not second_class_info.carries_information);
+
 		ASSERT_HAS_VALUE(second_class_info.base);
 		ASSERT_EQUAL(first_class_abstract_type, second_class_info.base);
-		ASSERT_EQUAL("SecondClass", second_class_info.name);
+		ASSERT_EQUAL("Empty", second_class_info.name);
 
 		const auto class_with_member = getChain("ClassWithMember", root_scope).back();
 		auto       class_with_member_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(class_with_member)
 		          ->valueOrThrow();
 		auto class_with_member_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(class_with_member)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(class_with_member);
 
-		ASSERT_EQUAL(1, class_with_member_info.members.size());
-		ASSERT_EQUAL(1, class_with_member_info.methods.size());
+		const auto& class_with_member_interface = class_with_member_info.declared_interface;
+
+		ASSERT_EQUAL(1, std::ranges::distance(class_with_member_interface.getAnyFieldsView()));
+		ASSERT_EQUAL(1, std::ranges::distance(class_with_member_interface.getMethodsView()));
 
 		const auto& class_with_members_ctor
 			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
@@ -554,20 +576,134 @@ private:
 		          .valueOrPanic();
 	}
 
+	void testClassMemberSymbols() {
+		using namespace compiler::helios;
+
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
+
+		const auto members_sym   = getChain("Base", root_scope).back();
+		const auto free_func_sym = getChain("freeFunction", root_scope).back();
+		const auto global_sym    = getChain("global_counter", root_scope).back();
+		const auto pair_sym      = getChain("pair", root_scope).back();
+
+		const compiler::tsh::AbstractType members_type
+			= query::entryPoint<compiler::tsh::QueryClassType>(members_sym);
+		// A class that declares no copy constructor of its own.
+		const compiler::tsh::AbstractType no_copy_type
+			= query::entryPoint<compiler::tsh::QueryClassType>(
+				getChain("ClassWithMember", root_scope).back()
+			);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto member_sym = [&](std::string_view member_name) {
+				const auto& with_name
+					= members_type.getInterface(ctx)->getElementsWithName(base::StrID(member_name));
+				assertEqual(1u, with_name.size(), "Expected exactly one member of that name");
+				return with_name.front().getSymbol();
+			};
+
+			const auto inst_sym    = member_sym("pub_field");
+			const auto counter_sym = member_sym("counter");
+			const auto get_sym     = member_sym("getPub");
+			const auto copy_sym    = member_sym("copy");
+
+			ASSERT_TRUE(isClassMember(kind(inst_sym)));
+			ASSERT_TRUE(isClassMember(kind(get_sym)));
+			ASSERT_TRUE(isClassMember(kind(copy_sym)));
+			ASSERT_TRUE(not isClassMember(kind(free_func_sym)));
+			ASSERT_TRUE(not isClassMember(kind(members_sym)));
+
+			// A member declared directly in the class body and one declared inside a specifier
+			// block both know the class they belong to.
+			ASSERT_EQUAL(members_type, compiler::tsh::AbstractType(classMemberOwner(inst_sym)));
+			ASSERT_EQUAL(members_type, compiler::tsh::AbstractType(classMemberOwner(copy_sym)));
+			ASSERT_EQUAL(members_type, typeMemberOwner(inst_sym));
+
+			ASSERT_TRUE(isStaticField(ctx, counter_sym));
+			ASSERT_TRUE(not isStaticField(ctx, inst_sym));
+			ASSERT_TRUE(not isStaticField(ctx, get_sym));
+			ASSERT_TRUE(not isStaticField(ctx, global_sym));
+
+			// The generated members answer as well, and the type they belong to is not always a
+			// class.
+			const auto destruct_sym = defgen::generatedDestructSymForType(ctx, members_type);
+			ASSERT_EQUAL(members_type, typeMemberOwner(destruct_sym));
+
+			// A class that declares a copy constructor is copied with it, a class that does not
+			// is copied with the generated one.
+			ASSERT_EQUAL(copy_sym, defgen::copyConstructorSymForType(ctx, members_type));
+			ASSERT_EQUAL(
+				defgen::generatedCopyConstructorSymForType(ctx, no_copy_type),
+				defgen::copyConstructorSymForType(ctx, no_copy_type)
+			);
+
+			const auto pair_type = ctx.query<QueryTypeOfSymbol>(pair_sym)->valueOrThrow().getType();
+			auto       pair_fields = pair_type.getInterface(ctx)->getFieldsView();
+			ASSERT_TRUE(not std::ranges::empty(pair_fields));
+			for (const auto& field: pair_fields)
+				ASSERT_EQUAL(pair_type, typeMemberOwner(field.getSymbol()));
+		});
+	}
+
+	void testStaticFieldGlobalData() {
+		using namespace compiler::helios;
+
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
+
+		const auto members_sym = getChain("Base", root_scope).back();
+		const auto global_sym  = getChain("global_counter", root_scope).back();
+
+		const compiler::tsh::AbstractType members_type
+			= query::entryPoint<compiler::tsh::QueryClassType>(members_sym);
+
+		base::Optional<SymID> counter_sym_opt;
+
+		auto mangle = [](SymID sym) {
+			return query::entryPoint<mangler::QueryMangledSymbol>(
+					   { .symbol_key              = sym,
+			             .kind                    = mangler::ManglingSymbolKind::Standard,
+			             .mangling_scheme_version = 0,
+			             .additional_metadata     = std::nullopt }
+			)
+			    .str();
+		};
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto& with_name
+				= members_type.getInterface(ctx)->getElementsWithName(base::StrID("counter"));
+			assertEqual(1u, with_name.size(), "Expected exactly one `counter` member");
+			const auto counter_sym = with_name.front().getSymbol();
+			counter_sym_opt        = counter_sym;
+
+			// A static field is stored in the program, exactly like a global variable is.
+			const auto& global_data = ctx.query<QueryHOUTGlobalData>(counter_sym)->valueOrThrow();
+
+			ASSERT_EQUAL(HOUTGlobalDataType::Variable, global_data.data_type);
+			ASSERT_EQUAL("counter", global_data.original_name);
+			ASSERT_EQUAL(counter_sym, global_data.helios_symbol);
+			ASSERT_TRUE(std::holds_alternative<HOUTGlobalVariable>(global_data.value));
+			ASSERT_EQUAL(
+				ctx.query<QueryTypeOfSymbol>(counter_sym)->valueOrThrow(), global_data.type
+			);
+		});
+
+		// The class the static field is declared in is part of its mangled name, so it never
+		// collides with a global variable of the same name.
+		const auto mangled_counter = mangle(counter_sym_opt.value());
+		ASSERT_TRUE(mangled_counter.find("Base") != std::string::npos);
+		ASSERT_TRUE(mangled_counter != mangle(global_sym));
+	}
+
 	void testClassInteractions() {
-		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes_3")));
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
 
 		const auto class_with_member = getChain("ClassWithMember", root_scope).back();
 		const auto class_with_member_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(class_with_member)
-		          ->valueOrThrow()
-		          .getType();
+			= query::entryPoint<compiler::tsh::QueryClassType>(class_with_member);
 
-		const auto first_class = getChain("FirstClass", root_scope).back();
+		const auto first_class = getChain("Base", root_scope).back();
 		const auto first_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
-		          ->valueOrThrow()
-		          .getType();
+			= query::entryPoint<compiler::tsh::QueryClassType>(first_class);
 
 		auto c_symbol = getChain("c", root_scope).back();
 		auto c_type
@@ -580,7 +716,7 @@ private:
 
 		ASSERT_EQUAL(c_member_type, st(first_class_abstract_type));
 
-		auto c_member_a_symbol = getChain("c_member_a", root_scope).back();
+		auto c_member_a_symbol = getChain("c_member_pub", root_scope).back();
 		auto c_member_a_type
 			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_a_symbol)
 		          ->valueOrThrow();
@@ -600,14 +736,11 @@ private:
 	 * @note For now only checks interfaces of class types.
 	 */
 	void testTypeInstanceInterface() {
-		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes_2")));
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
 
-		const auto simple_class = getChain("SimpleClass", root_scope).back();
+		const auto simple_class = getChain("Base", root_scope).back();
 		const auto simple_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(simple_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(simple_class);
 
 		const auto h_interface
 			= compiler::helios::HInterface::ofTypeInstance(simple_class_abstract_type);
@@ -615,14 +748,14 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using compiler::helios::LookupResult;
 			CRef<LookupResult> a_result
-				= &h_interface.lookup(ctx, base::StrID("a"))->valueOrPanic();
+				= &h_interface.lookup(ctx, base::StrID("pub_field"))->valueOrPanic();
 			ASSERT_TRUE(a_result->isSingle());
 			auto a_symbol = a_result->leaves.at(0);
 
 			ASSERT_EQUAL(kind(a_symbol), compiler::helios::SymbolKind::Field);
 
 			CRef<LookupResult> get_a_result
-				= &h_interface.lookup(ctx, base::StrID("getA"))->valueOrPanic();
+				= &h_interface.lookup(ctx, base::StrID("getPub"))->valueOrPanic();
 			ASSERT_TRUE(get_a_result->isSingle());
 			auto get_a_symbol = get_a_result->leaves.at(0);
 			ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
@@ -2115,15 +2248,14 @@ private:
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(example_class)
 		          ->valueOrThrow();
 		auto example_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(example_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
-		ASSERT_EQUAL(3, example_class_info.methods.size());
+			= query::entryPoint<compiler::tsh::QueryClassType>(example_class);
+		auto example_class_info_methods = example_class_info.declared_interface.getMethodsView();
+		ASSERT_EQUAL(3, std::ranges::distance(example_class_info_methods));
 
-		for (auto& method: example_class_info.methods) {
+		for (const auto& method: example_class_info_methods) {
 			auto method_hout
-				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
+			          ->valueOrPanic();
 			ASSERT_EQUAL(
 				refst(example_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
@@ -2134,15 +2266,14 @@ private:
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(wrapper_class)
 		          ->valueOrThrow();
 		auto wrapper_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(wrapper_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
-		ASSERT_EQUAL(4, wrapper_class_info.methods.size());
+			= query::entryPoint<compiler::tsh::QueryClassType>(wrapper_class);
+		auto wrapper_class_info_methods = wrapper_class_info.declared_interface.getMethodsView();
+		ASSERT_EQUAL(4, std::ranges::distance(wrapper_class_info_methods));
 
-		for (auto& method: wrapper_class_info.methods) {
+		for (const auto& method: wrapper_class_info_methods) {
 			auto method_hout
-				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
+			          ->valueOrPanic();
 			ASSERT_EQUAL(
 				refst(wrapper_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
@@ -2152,15 +2283,14 @@ private:
 		auto point_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(point_class)->valueOrThrow();
 		auto point_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(point_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
-		ASSERT_EQUAL(6, point_class_info.methods.size());
+			= query::entryPoint<compiler::tsh::QueryClassType>(point_class);
+		auto point_class_info_methods = point_class_info.declared_interface.getMethodsView();
+		ASSERT_EQUAL(6, std::ranges::distance(point_class_info_methods));
 
-		for (auto& method: point_class_info.methods) {
+		for (const auto& method: point_class_info_methods) {
 			auto method_hout
-				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
+			          ->valueOrPanic();
 			ASSERT_EQUAL(
 				refst(point_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
@@ -2283,13 +2413,17 @@ private:
 		const auto foo_class = getChain("Foo", root_scope).back();
 		const auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
-		ASSERT_EQUAL(2, foo_class_info.methods.size());
+		const auto foo_methods
+			= foo_class_info.declared_interface.getMethodsView()
+		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
+		    | std::ranges::to<std::vector>();
+		ASSERT_EQUAL(2, foo_methods.size());
 
-		const auto find_method = [&](std::string_view name) {
-			for (const auto& method: foo_class_info.methods)
+		auto find_method = [&](std::string_view name) {
+			for (const auto& method: foo_methods)
 				if (compiler::helios::name(method) == base::StrID(name)) return method;
 			fail(base::strConcat("Method ", name, " not found"));
-			return foo_class_info.methods.at(0);
+			return foo_methods.at(0);
 		};
 
 		const auto infix_method  = mangle({ .symbol_key = find_method("+*") });
@@ -3233,13 +3367,17 @@ private:
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
-		ASSERT_EQUAL(2, foo_class_info.methods.size());
+		const auto foo_methods
+			= foo_class_info.declared_interface.getMethodsView()
+		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
+		    | std::ranges::to<std::vector>();
+		ASSERT_EQUAL(2, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
-			for (const auto& method: foo_class_info.methods)
+			for (const auto& method: foo_methods)
 				if (compiler::helios::name(method) == base::StrID(name)) return method;
 			fail(base::strConcat("Method ", name, " not found"));
-			return foo_class_info.methods.at(0);
+			return foo_methods.at(0);
 		};
 
 		ASSERT_EQUAL(
@@ -3265,13 +3403,17 @@ private:
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
-		ASSERT_EQUAL(2, foo_class_info.methods.size());
+		const auto foo_methods
+			= foo_class_info.declared_interface.getMethodsView()
+		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
+		    | std::ranges::to<std::vector>();
+		ASSERT_EQUAL(2, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
-			for (const auto& method: foo_class_info.methods)
+			for (const auto& method: foo_methods)
 				if (compiler::helios::name(method) == base::StrID(name)) return method;
 			fail(base::strConcat("Method ", name, " not found"));
-			return foo_class_info.methods.at(0);
+			return foo_methods.at(0);
 		};
 		auto infix_method_sym  = find_method("+*");
 		auto prefix_method_sym = find_method("-*");
