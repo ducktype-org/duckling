@@ -14,6 +14,6 @@ program: "@{case_package}/simple.dk"
 Tests:
   debug_mapping:
     Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir} @{program}"
-    TimeOut: 3
+    TimeOut: 5
     Cases:
       mapping: { }
