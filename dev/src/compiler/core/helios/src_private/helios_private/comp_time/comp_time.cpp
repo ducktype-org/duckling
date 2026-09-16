@@ -11,7 +11,6 @@
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
@@ -280,8 +279,9 @@ namespace compiler::helios {
 					result                = const_val_result.valueOrThrow();
 				} else if (kind(expr.symbol) == SymbolKind::Class) {
 					// Special case for type definitions.
-					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
-					result    = type->valueOrThrow();
+					result = tsh::SymbolType<>::withDefaults(
+						ctx.query<tsh::QueryClassType>({ expr.symbol })
+					);
 				} else {
 					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {

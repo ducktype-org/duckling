@@ -26,6 +26,7 @@ use super::duckc::{Duckc, multipackage_schema, process_builder};
 use super::profiles::Profile;
 use super::unit::Unit;
 use super::unit::graph::UnitGraph;
+use crate::quackpack::core::compile::unit::BuildKind;
 use crate::util::file_locks::LockedFile;
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
@@ -114,7 +115,9 @@ fn compile_all_needed_units(
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<()> {
     for unit in compiler.units_to_compile(graph, bcx) {
-        compile_unit(compiler, unit, graph, layout, bcx)?;
+        match unit.build_kind() {
+            BuildKind::Compile => compile_unit(compiler, unit, graph, layout, bcx)?,
+        }
     }
     Ok(())
 }

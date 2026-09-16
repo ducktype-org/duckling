@@ -13,8 +13,6 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -148,6 +146,13 @@ namespace compiler::helios {
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
 
+			void visitConstructor(pst::Access<pst::Constructor>) final {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					"Support for user defined constructors will be deleted."
+				));
+				query::throwFailed();
+			}
+
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
 				// declaration:
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
@@ -174,8 +179,7 @@ namespace compiler::helios {
 			void validateConstructorSource(
 				pst::Access<ConstructorElement> stmt, const HOUTFunctionDeclaration& decl
 			) {
-				const auto class_type
-					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+				const auto class_type = classMemberOwner(original_symbol);
 
 				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
 
@@ -216,7 +220,7 @@ namespace compiler::helios {
 
 			// Generated symbol data.
 			variant_match(sym_ref->other) {
-				variant_case(PstImplementedSemantics, data) {
+				variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
 					CORE_ASSERT(
 						isFunctionLike(kind(key)),
 						"Function creation called on non-function, non-method and non-constructor "
@@ -224,6 +228,9 @@ namespace compiler::helios {
 					);
 					HOUTFunctionMaker func_maker(ctx, key);
 					stmt(ctx, key).value()->acceptVisitor(func_maker);
+
+					// A visitor that could not build the function has reported why.
+					if_opt_none(func_maker.out) return query::Failed();
 
 					return func_maker.out.value();
 				}
