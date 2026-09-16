@@ -47,13 +47,8 @@ impl UnitCompiler for DvmUnitCompiler {
         Ok(vec![task])
     }
 
-    #[instrument(skip_all)]
-    fn units_to_compile<'a>(
-        &self,
-        graph: &'a UnitGraph,
-        _bcx: &BuildContext<'_, '_>,
-    ) -> Vec<&'a Unit> {
-        vec![graph.root_unit()]
+    fn should_compile(&self, unit: &Unit, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> bool {
+        graph.is_root(unit)
     }
 }
 

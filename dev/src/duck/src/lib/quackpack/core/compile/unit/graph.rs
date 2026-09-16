@@ -51,6 +51,11 @@ impl UnitGraph {
         &self.units
     }
 
+    /// Get the compilation order.
+    pub fn compilation_order(&self) -> impl Iterator<Item = &'_ Unit> {
+        self.units_sorted_by_id().iter().rev()
+    }
+
     /// Check if the given [`Unit`] is the root [`Unit`].
     pub fn is_root(&self, unit: &Unit) -> bool {
         unit == self.root_unit()
