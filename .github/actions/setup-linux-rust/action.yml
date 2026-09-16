@@ -66,11 +66,18 @@ runs:
         echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
 
         # TEMPORARY, while the GHA backend is on trial.
-        echo "SCCACHE_ERROR_LOG=${RUNNER_TEMP:-/tmp}/sccache-server.log" >> "$GITHUB_ENV"
-        echo "SCCACHE_LOG=sccache=debug,opendal=debug" >> "$GITHUB_ENV"
+        #
+        # Debug goes to the SERVER ONLY, never into $GITHUB_ENV: `sccache` is also a client, run
+        # once per compilation, and a client that sees SCCACHE_LOG prints its startup chatter to
+        # stderr, which cargo folds into the build log -- one harmless "Couldn't open config
+        # file" per crate reads like a wall of failures. Starting the server here is what makes
+        # that possible: a daemon keeps the environment it was started with. Which is also why
+        # the stale one has to go, since on a self-hosted runner it outlives the job.
+        log="${RUNNER_TEMP:-/tmp}/sccache-server.log"
+        echo "SCCACHE_SERVER_LOG=$log" >> "$GITHUB_ENV"   # read by "sccache diagnostics"
 
-        # The server is a daemon that outlives a job on a self-hosted runner, and it keeps the
-        # environment it was STARTED with -- so a server left behind by an earlier job would
-        # ignore both lines above. The next `sccache` call then starts a fresh one, and that call
-        # happens inside the integration tests, where these variables are already in effect.
         sccache --stop-server || true
+        SCCACHE_GHA_ENABLED=true \
+        SCCACHE_ERROR_LOG="$log" \
+        SCCACHE_LOG=sccache=debug,opendal=debug \
+          sccache --start-server

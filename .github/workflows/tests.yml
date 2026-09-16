@@ -359,7 +359,7 @@ jobs:
         run: |
           sccache --show-adv-stats || sccache --show-stats || true
 
-          log="${SCCACHE_ERROR_LOG:-}"
+          log="${SCCACHE_SERVER_LOG:-}"
           if [ -n "$log" ] && [ -f "$log" ]; then
             echo "=== how big the server log got ==="
             wc -l "$log"
@@ -370,8 +370,8 @@ jobs:
             echo "=== last 100 lines ==="
             tail -100 "$log"
           else
-            echo "no server log at '${log:-<unset>}' -- the server was already running, so it"
-            echo "kept the environment it was started with and never picked up SCCACHE_LOG."
+            echo "no server log at '${log:-<unset>}' -- setup could not start a fresh server,"
+            echo "so an older one is serving this job with the environment it was started with."
           fi
 
       - name: Cat itests log file on failure
