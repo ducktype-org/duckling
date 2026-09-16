@@ -36,6 +36,7 @@ public:
 		TESTER_ADD_TEST(test16RuntimeExpr);
 		TESTER_ADD_TEST(test17RuntimeExpr);
 		TESTER_ADD_TEST(test18RuntimeExpr);
+		TESTER_ADD_TEST(test19RuntimeExpr);
 	}
 
 private:
@@ -348,6 +349,24 @@ private:
 				add_five_expr, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG
 			)
 			.stop()
+			.cleanup();
+	}
+
+	void test19RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_19/main.dbc"));
+		const fs::File spin_expr(path("runtime_expr_dbc/test_19/spin.dbc"));
+		const fs::File break_loop_expr(path("runtime_expr_dbc/test_19/break_loop.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 4)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.evalExprExpectTimeout(spin_expr)
+			.pause()
+			.evalExprNormal(break_loop_expr, { 1 })
+			.awaitExprCompletion({ 0 })
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.finishAndAssertExitValue(2'137)
 			.cleanup();
 	}
 };

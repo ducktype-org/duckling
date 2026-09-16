@@ -238,6 +238,12 @@ namespace vm::test {
 			return *this;
 		}
 
+		FlowSimulator& pause() {
+			auto pause_res = vm::api::pause(pid, thread_id);
+			assertTrue(pause_res.has_value(), "Pause failed");
+			return *this;
+		}
+
 		/// Stops the thread. After this call the process is not usable for evaluation anymore,
 		/// and the test should call `cleanup()` immediately.
 		FlowSimulator& stop() {

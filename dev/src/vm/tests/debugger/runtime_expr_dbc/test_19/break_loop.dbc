@@ -1,0 +1,8 @@
+function break_loop { } -> { i64 } {
+	# Frame stack at compile time: start(0), main(1), spin(2).
+	# Write `x = 0` into the paused `spin` expression frame, so its loop condition is false.
+
+	mov_p64_imm frame 2 x, 0;
+	mov_p64_imm ret0, 1;
+	ret_from_expr;
+}
