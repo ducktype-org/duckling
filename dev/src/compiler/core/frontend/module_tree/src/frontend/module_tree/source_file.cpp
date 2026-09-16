@@ -19,13 +19,20 @@ namespace {
 	 * @brief A value pair storing the information about a file.
 	 */
 	struct PathState final {
-		/// List of all SourceFile instances associated with this path.
+		/**
+		 * List of all SourceFile instances associated with this path.
+		 */
 		std::vector<base::Ref<compiler::frontend::SourceFile>> instances;
-		/// Cached view of the file's content (used for deduplication and fast access).
+		
+		/**
+		 * Cached view of the file's content (used for deduplication and fast access).
+		 */
 		base::Optional<base::SharedView> content;
 	};
 
-	// Map that stores all SourceFile instanced and the content cache by their file path.
+	/**
+	 * @brief Map that stores all SourceFile instanced and the content cache by their file path.
+	 */
 	concurrent::ConHashMap<std::filesystem::path, PathState> path_registry;
 
 	/**
