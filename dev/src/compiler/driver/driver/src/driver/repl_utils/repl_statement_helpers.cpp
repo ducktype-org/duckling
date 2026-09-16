@@ -31,9 +31,7 @@ namespace compiler::repl {
 		auto module_name = base::strConcat(module_name_prefix, std::to_string(line_counter));
 		builder->setName(base::StrID(module_name));
 
-		frontend::ReplData repl_data;
-		if (parent_module_id.has_value()) repl_data.m_repl_module_parent = parent_module_id.value();
-		builder->setReplModule(repl_data);
+		builder->setReplModule(parent_module_id);
 
 		return builder->finalize();
 	}

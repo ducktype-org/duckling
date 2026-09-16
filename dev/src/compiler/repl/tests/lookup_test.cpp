@@ -32,9 +32,7 @@ private:
 		builder->setMainSourceFile(virtual_file);
 		builder->setName(base::StrID("test_repl_module"));
 
-		frontend::ReplData repl_data;
-		if (parent.has_value()) repl_data.m_repl_module_parent = parent.value();
-		builder->setReplModule(repl_data);
+		builder->setReplModule(parent);
 
 		return builder->finalize()->getModuleID();
 	}

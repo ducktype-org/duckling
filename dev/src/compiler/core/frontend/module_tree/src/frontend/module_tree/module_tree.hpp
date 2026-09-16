@@ -17,6 +17,8 @@
 #include <regex>
 #include <string>
 #include <string_view>
+#include <variant>
+#include <vector>
 
 namespace compiler::frontend::packages {
 	class PackageAccessLocked;
@@ -42,8 +44,6 @@ namespace compiler::frontend {
 	class ModuleTreeBuilder;
 	class ModuleTreeModifier;
 	struct GetModuleID_Functor;
-
-	
 
 	/**
 	 * @brief Represents a single module in the Duckling project tree.
@@ -81,7 +81,7 @@ namespace compiler::frontend {
 		 * @brief Standard module specific data.
 		 */
 		struct ModuleModuleData final {
-			base::Optional<SourceFile> m_main_source_file;
+			base::Optional<base::Ref<SourceFile>> m_main_source_file;
 		};
 
 		/**
@@ -96,7 +96,11 @@ namespace compiler::frontend {
 			*/
 			base::Optional<ModuleID> m_repl_module_parent;
 
-			base::Optional<SourceFile> m_synthetic_source_file;
+			/**
+			 * The synthetic source file this chain link was created from.
+			 * It plays the role of the main source file of a standard module.
+			 */
+			base::Optional<base::Ref<SourceFile>> m_synthetic_source_file;
 		};
 
 		/**
@@ -114,7 +118,13 @@ namespace compiler::frontend {
 			std::vector<SyntheticReplChainModuleData> m_synthetic_repl_module_chain;
 		};
 
-		
+		/**
+		 * @brief Module type specific data of a module.
+		 *
+		 * @note The alternative held decides the kind of the module, see isReplModule().
+		 */
+		using ModuleTypeData
+			= std::variant<ModuleModuleData, ModuleScriptData, SyntheticReplChainModuleData>;
 
 		ModuleID getModuleID() const;
 
@@ -260,6 +270,26 @@ namespace compiler::frontend {
 	private:
 		ModuleTree();
 
+		/**
+		 * @brief Access the slot holding the source file that acts as the main source file of this
+		 * module.
+		 *
+		 * For a standard module this is ModuleModuleData::m_main_source_file, for a synthetic REPL
+		 * chain module it is SyntheticReplChainModuleData::m_synthetic_source_file.
+		 * @return nullptr for module types that have no main source file (scripts).
+		 */
+		[[nodiscard]]
+		base::Optional<base::Ref<SourceFile>>* mainSourceFileSlot();
+
+		[[nodiscard]]
+		const base::Optional<base::Ref<SourceFile>>* mainSourceFileSlot() const;
+
+		/**
+		 * @brief Collects every SourceFile owned by this module, regardless of its type.
+		 * @note For scripts this returns the source files of the whole synthetic module chain.
+		 */
+		[[nodiscard]]
+		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const;
 
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes
@@ -356,7 +386,7 @@ namespace compiler::frontend {
 		\* * * * * * * * * * * * * * * * * * * */
 
 
-		std::variant<ModuleModuleData, ModuleScriptData, SyntheticReplChainModuleData> m_module_type_data;
+		ModuleTypeData m_module_type_data;
 
 
 		template<class T>
@@ -459,10 +489,11 @@ namespace compiler::frontend {
 		void setParent(base::Ref<ModuleTree> parent);
 
 		/**
-		 * Sets REPL-specific module data.
-		 * @param repl_data The ReplData struct.
+		 * Marks the module being built as a synthetic REPL chain module.
+		 * The file passed to setMainSourceFile() becomes the synthetic source file of the module.
+		 * @param repl_module_parent Previous module in the REPL chain, empty for the first one.
 		 */
-		void setReplModule(const ReplData& repl_data);
+		void setReplModule(base::Optional<ModuleID> repl_module_parent = {});
 
 		/**
 		 * Builds the module tree from a single file (single-file module).
@@ -520,7 +551,12 @@ namespace compiler::frontend {
 		base::StrID m_name;
 		bool        m_finalized;
 
-		base::Optional<ReplData> m_repl_data;
+		/**
+		 * Set only for synthetic REPL chain modules, holds the parent of the built module in the
+		 * REPL chain (which itself is optional - the first module of a chain has no parent).
+		 */
+		bool                     m_is_repl_module;
+		base::Optional<ModuleID> m_repl_module_parent;
 	};
 
 	/**
