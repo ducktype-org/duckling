@@ -110,19 +110,23 @@ namespace compiler::frontend {
 	}
 
 	MRef<base::Optional<base::Ref<SourceFile>>> ModuleTree::mainSourceFileSlot() {
-		v_if_matches(m_module_type_data, ModuleModuleData, module_data)
-			return &module_data->m_main_source_file;
-		v_if_matches(m_module_type_data, SyntheticReplChainModuleData, repl_data)
-			return &repl_data->m_synthetic_source_file;
+		v_if_matches(
+			m_module_type_data, ModuleModuleData, module_data
+		) return &module_data->m_main_source_file;
+		v_if_matches(
+			m_module_type_data, SyntheticReplChainModuleData, repl_data
+		) return &repl_data->m_synthetic_source_file;
 		// Scripts have no main source file, their content lives in the synthetic module chain.
 		return nullptr;
 	}
 
 	MCRef<base::Optional<base::Ref<SourceFile>>> ModuleTree::mainSourceFileSlot() const {
-		v_if_matches(m_module_type_data, ModuleModuleData, module_data)
-			return &module_data->m_main_source_file;
-		v_if_matches(m_module_type_data, SyntheticReplChainModuleData, repl_data)
-			return &repl_data->m_synthetic_source_file;
+		v_if_matches(
+			m_module_type_data, ModuleModuleData, module_data
+		) return &module_data->m_main_source_file;
+		v_if_matches(
+			m_module_type_data, SyntheticReplChainModuleData, repl_data
+		) return &repl_data->m_synthetic_source_file;
 		// Scripts have no main source file, their content lives in the synthetic module chain.
 		return nullptr;
 	}
@@ -478,7 +482,7 @@ namespace compiler::frontend {
 	void ModuleTreeBuilder::setReplModule(base::Optional<ModuleID> repl_module_parent) {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 		CORE_ASSERT(not m_is_repl_module, "REPL module already set for this builder");
-		
+
 		m_is_repl_module     = true;
 		m_repl_module_parent = repl_module_parent;
 	}

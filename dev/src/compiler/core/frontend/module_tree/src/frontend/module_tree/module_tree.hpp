@@ -85,15 +85,15 @@ namespace compiler::frontend {
 		};
 
 		/**
-		* @brief REPL-specific data structure.
-		*
-		* Only used for repl modules.
-		*/
+		 * @brief REPL-specific data structure.
+		 *
+		 * Only used for repl modules.
+		 */
 		struct SyntheticReplChainModuleData final {
 			/**
-			* Parent REPL module in chronological order.
-			* Optional - only empty for first REPL module.
-			*/
+			 * Parent REPL module in chronological order.
+			 * Optional - only empty for first REPL module.
+			 */
 			base::Optional<ModuleID> m_repl_module_parent;
 
 			/**
@@ -213,9 +213,7 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]]
 		base::Optional<ModuleID> getReplModuleParent() const {
-			CORE_ASSERT(
-				isReplModule(), "repl data of a node with parent should have value!"
-			);
+			CORE_ASSERT(isReplModule(), "repl data of a node with parent should have value!");
 			return getModuleTypeData<SyntheticReplChainModuleData>().m_repl_module_parent;
 		}
 
@@ -387,7 +385,6 @@ namespace compiler::frontend {
 
 
 		ModuleTypeData m_module_type_data;
-
 
 		template<class T>
 		T& getModuleTypeData() {
