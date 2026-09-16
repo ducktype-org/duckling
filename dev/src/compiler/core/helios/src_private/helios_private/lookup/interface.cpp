@@ -2,6 +2,7 @@
 
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/lookup/errors.hpp>
+#include <helios_private/lookup/lookup_in_type_interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -14,52 +15,6 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
-
-	struct KeyOf_LookupInTypeInstance final {
-		tsh::AbstractType type;
-		base::StrID       name;
-
-		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const {
-			return { type.queryUnstablePerfectHash(), static_cast<u64>(name), 0, 0 };
-		}
-	};
-
-
-	/**
-	 * This query is placed here, to keep it close to HInterface::lookup.
-	 * In #1477 and/or #1392 it should be placed in a more appropriate location.
-	 *
-	 * See https://docs.duckling.pl/duckling/lookup/name_lookup.html
-	 * for more info on type-instance lookups.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(
-		QueryLookupInTypeInstance,
-		KeyOf_LookupInTypeInstance,
-		CRef<query::QResult<LookupResult>>,
-		({})
-	)
-
-	struct IMPLEMENT_QUERY(QueryLookupInTypeInstance, query::QResult<LookupResult>) {
-		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
-			// @TODO: #1412 #1531 this a mock that works for now, make it better
-
-			auto        interface = key.type.getInterface(ctx);
-			const auto& elements  = interface->getElementsWithName(key.name);
-
-			LookupResult result;
-			for (const auto& element: elements) result.leaves.emplace_back(element.getSymbol());
-
-			return result;
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInTypeInstance);
-
 	CRef<query::QResult<LookupResult>> HInterface::lookup(
 		query::Context& ctx, base::StrID name, AdditionalLookupParameters params
 	) const {
@@ -77,14 +32,14 @@ namespace compiler::helios {
 				);
 			}
 			variant_case(TypeInstanceInterface, type) {
-				return ctx.query<QueryLookupInTypeInstance>({ type.type, name });
+				return ctx.query<QueryLookupInType>(
+					{ type.type, name, TypeAccessMode::Instance, params.accessing_scope }
+				);
 			}
 			variant_case(TypeMetaInterface, type) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Type meta lookups are not implemented yet", ""
-				));
-				static query::QResult<LookupResult> failed_result = query::Failed();
-				return &failed_result;
+				return ctx.query<QueryLookupInType>(
+					{ type.type, name, TypeAccessMode::Meta, params.accessing_scope }
+				);
 			}
 			variant_case(CustomInterface, custom) {
 				return custom.custom->lookup(ctx, name, params);
@@ -94,10 +49,10 @@ namespace compiler::helios {
 	}
 
 	query::QResult<SymbolList> HInterface::lookupExpectUnique(
-		const pst::ResolvesToPosition& error_position,
-		query::Context&                ctx,
-		base::StrID                    name,
-		AdditionalLookupParameters     params
+		const dia::StablePosition  error_position,
+		query::Context&            ctx,
+		base::StrID                name,
+		AdditionalLookupParameters params
 	) const {
 		UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup(ctx, name, params));
 
@@ -117,7 +72,7 @@ namespace compiler::helios {
 				return dealiased_result;
 			}
 			variant_case(errors::Ambiguity, _) {
-				auto msg = makeBox<ShadowedVariableLookupError>(error_position.resolve(ctx));
+				auto msg = makeBox<ShadowedVariableLookupError>(error_position);
 				for (auto& leaf: lookup_result->leaves) {
 					if_opt_some(getSymRef(leaf)->maybePstElement(), pst_elem) {
 						auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
@@ -127,10 +82,21 @@ namespace compiler::helios {
 				ctx.logInt(std::move(msg));
 				return query::Failed();
 			}
+			variant_case(errors::Inaccessible, _) {
+				auto msg = makeBox<InaccessibleSymbolLookupError>(error_position);
+				for (auto& hidden: lookup_result->inaccessible) {
+					if_opt_some(getSymRef(hidden)->maybePstElement(), pst_elem) {
+						auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
+						msg->addAttachedMessage(makeBox<InaccessibleDeclarationNote>(decl_pos));
+					}
+				}
+				ctx.logInt(std::move(msg));
+				return query::Failed();
+			}
 			variant_case(errors::SymbolNotFound, _) {
 				ctx.logInt(makeBox<dia::PlaceholderError>(
 					base::strConcat("Symbol '", name, "' not found in lookup"),
-					error_position.resolve(ctx),
+					error_position,
 					"",
 					"symbol lookup here"
 				));

@@ -16,19 +16,19 @@
 /// Tags for use as template parameters.
 namespace vm::low::instruction_tags {
 #define HANDLE_MICRO_INSTR_0ARGS(INSTR)                           \
-	struct Op_##INSTR {                                           \
+	struct Op_##INSTR final {                                     \
 		using ArgTypes                      = std::tuple<>;       \
 		static constexpr MicroOpcode OPCODE = MicroOpcode::INSTR; \
 	};
 
 #define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0)                     \
-	struct Op_##INSTR {                                           \
+	struct Op_##INSTR final {                                     \
 		using ArgTypes                      = std::tuple<ARG0>;   \
 		static constexpr MicroOpcode OPCODE = MicroOpcode::INSTR; \
 	};
 
 #define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1)                   \
-	struct Op_##INSTR {                                               \
+	struct Op_##INSTR final {                                         \
 		using ArgTypes                      = std::tuple<ARG0, ARG1>; \
 		static constexpr MicroOpcode OPCODE = MicroOpcode::INSTR;     \
 	};

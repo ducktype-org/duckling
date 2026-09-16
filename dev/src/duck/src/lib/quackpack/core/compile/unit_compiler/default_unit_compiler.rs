@@ -41,13 +41,13 @@ impl UnitCompiler for DefaultUnitCompiler {
         Ok(vec![task])
     }
 
-    #[instrument(skip_all)]
-    fn units_to_compile<'a>(
+    fn should_compile(
         &self,
-        graph: &'a UnitGraph,
+        _unit: &Unit,
+        _graph: &UnitGraph,
         _bcx: &BuildContext<'_, '_>,
-    ) -> Vec<&'a Unit> {
-        graph.units_sorted_by_id().iter().rev().collect()
+    ) -> bool {
+        true
     }
 }
 

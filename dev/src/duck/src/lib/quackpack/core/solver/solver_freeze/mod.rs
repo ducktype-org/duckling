@@ -5,7 +5,10 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
-use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::identity::Identity;
+use crate::quackpack::core::storage::freeze::{
+    DepIdWithAlias, FreezePackage, RootPackage, VenvFreeze,
+};
 use crate::quackpack::core::{FeatureName, PackageId};
 use crate::{QuackResult, StrId, qp_bail_internal};
 
@@ -36,9 +39,28 @@ impl Default for SolverPackageFreeze {
     }
 }
 
+#[derive(Debug)]
+/// An error returned by [`try_from_venv_freeze`].
+///
+/// Since freezes can be directly edited by a user, we shouldn't use `?` there, but recover from errors.
+///
+/// [`try_from_venv_freeze`]: SolverFreeze::try_from_venv_freeze
+pub enum MalformedFreezeError<'a> {
+    MissingRootDependency {
+        dep: Identity,
+    },
+    MissingPackageDependency {
+        package: &'a FreezePackage,
+        dep: Identity,
+    },
+}
+
 impl SolverFreeze {
     #[tracing::instrument(skip_all)]
-    pub fn try_from_venv_freeze(root: PackageId, value: &VenvFreeze) -> QuackResult<Self> {
+    pub fn try_from_venv_freeze<'a>(
+        root: PackageId,
+        value: &'a VenvFreeze,
+    ) -> Result<Self, MalformedFreezeError<'a>> {
         debug!(?root, freeze = ?value);
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
@@ -47,15 +69,18 @@ impl SolverFreeze {
         }
         let mut pkg_freezes = HashMap::new();
         for pkg_freeze in value.dependencies() {
-            let Some(pkg) = expanded_pkgs_by_name.get(&pkg_freeze.name()) else {
-                qp_bail_internal!("no package {pkg_freeze:?} in {expanded_pkgs_by_name:#?}")
-            };
+            let pkg = expanded_pkgs_by_name
+                .get(&pkg_freeze.name())
+                .expect("we've just added them above");
             let mut dependencies = HashMap::new();
             for dep in pkg_freeze.dependencies() {
                 let Some(realization) = expanded_pkgs_by_name.get(&dep.name()) else {
-                    qp_bail_internal!("no package {dep:?} in {expanded_pkgs_by_name:#?}")
+                    return Err(MalformedFreezeError::MissingPackageDependency {
+                        package: pkg_freeze,
+                        dep: dep.identity(),
+                    });
                 };
-                dependencies.insert(dep.name(), *realization);
+                dependencies.insert(dep.effective_name(), *realization);
             }
             pkg_freezes.insert(
                 *pkg,
@@ -69,10 +94,12 @@ impl SolverFreeze {
         let mut main_dependencies = HashMap::new();
         for dep in value.root().dependencies() {
             let Some(realization) = expanded_pkgs_by_name.get(&dep.name()) else {
-                qp_bail_internal!("no package {dep:?} in {expanded_pkgs_by_name:#?}")
+                return Err(MalformedFreezeError::MissingRootDependency {
+                    dep: dep.identity(),
+                });
             };
             if *realization != root {
-                main_dependencies.insert(dep.name(), *realization);
+                main_dependencies.insert(dep.effective_name(), *realization);
             }
         }
         pkg_freezes.insert(
@@ -112,8 +139,8 @@ impl SolverFreeze {
                 continue;
             }
             let mut dependencies = vec![];
-            for realization in freeze.dependencies_realization.values() {
-                dependencies.push((realization.identity()).into());
+            for (name, realization) in freeze.dependencies_realization.iter() {
+                dependencies.push(DepIdWithAlias::new(*name, realization.identity().into()));
             }
             pkg_freezes.push(FreezePackage::new(
                 pkg.identity(),
@@ -123,8 +150,8 @@ impl SolverFreeze {
             ));
         }
         let mut root_deps = vec![];
-        for (_, realization) in root_freeze.dependencies_realization {
-            root_deps.push(realization.identity().into());
+        for (name, realization) in root_freeze.dependencies_realization {
+            root_deps.push(DepIdWithAlias::new(name, realization.identity().into()));
         }
         let root = RootPackage::new(
             self.main_pkg.name(),
@@ -157,46 +184,20 @@ mod test {
         let identity_b = FullIdentity::new("b".into(), origin_b);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let freeze_pkg_a = FreezePackage::new(
-            FullIdentity::new(
-                "a".into(),
-                FullOrigin::for_registry("https://example.net".to_url().unwrap()),
-            ),
-            1.into(),
-            vec!["f_a".into()],
-            vec![],
-        );
+        let freeze_pkg_a = FreezePackage::new(identity_a, 1.into(), vec!["f_a".into()], vec![]);
         let freeze_pkg_b = FreezePackage::new(
-            FullIdentity::new(
-                "b".into(),
-                #[cfg(not(windows))]
-                FullOrigin::for_local(&PathBuf::from("/xdd")).unwrap(),
-                #[cfg(windows)]
-                FullOrigin::for_local(&PathBuf::from("C:\\xdd")).unwrap(),
-            ),
+            identity_b,
             2.into(),
             vec!["f_b1".into(), "f_b2".into()],
-            vec![Identity::new(
-                "a".into(),
-                Origin::for_registry("https://example.net".to_url().unwrap()),
-            )],
+            vec![DepIdWithAlias::new("a".into(), identity_a.into())],
         );
         let root = RootPackage::new(
             "root".into(),
             3.into(),
             vec!["f_root".into()],
             vec![
-                Identity::new(
-                    "a".into(),
-                    Origin::for_registry("https://example.net".to_url().unwrap()),
-                ),
-                Identity::new(
-                    "b".into(),
-                    #[cfg(not(windows))]
-                    Origin::for_local(&PathBuf::from("/xdd")).unwrap(),
-                    #[cfg(windows)]
-                    Origin::for_local(&PathBuf::from("C:\\xdd")).unwrap(),
-                ),
+                DepIdWithAlias::new("a".into(), identity_a.into()),
+                DepIdWithAlias::new("b".into(), identity_b.into()),
             ],
         );
         #[cfg(windows)]
@@ -288,6 +289,7 @@ mod test {
             .dependencies()
             .iter()
             .copied()
+            .map(DepIdWithAlias::identity)
             .collect();
         assert_eq!(
             root_deps,
@@ -328,10 +330,7 @@ mod test {
             ),
             2.into(),
             vec!["f_b".into()],
-            vec![Identity::new(
-                "a".into(),
-                Origin::for_registry("https://example.net".to_url().unwrap()),
-            )],
+            vec![DepIdWithAlias::new("a".into(), identity_a.into())],
         );
         assert_eq!(storage_freeze.dependencies().len(), 2);
         if storage_freeze.dependencies()[0] == pkg_freeze_a {

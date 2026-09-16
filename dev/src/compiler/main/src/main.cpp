@@ -25,6 +25,7 @@
 #include <linker/link.hpp>
 #include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
+#include <version/version.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/ranges_utils.hpp>
@@ -50,6 +51,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <iostream>
 #include <ranges>
@@ -106,12 +108,28 @@ namespace {
 	}
 }
 
+/**
+ * @brief The version facts only duckc can report.
+ */
+constexpr std::array<version::ExtraField, 2> DUCKC_VERSION_FIELDS{
+	version::ExtraField{ "LLVM", DUCKC_LLVM_VERSION },
+#ifdef ENABLE_JIT
+	version::ExtraField{ "JIT", "enabled" },
+#else
+	version::ExtraField{ "JIT", "disabled" },
+#endif
+};
+
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
 	             .addShortDesc("Print version and exit")
+	             .build())
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addLongName("version-verbose")
+	             .addShortDesc("Print version together with build information and exit")
 	             .build())
 	    // Note that dev-logs options are not handled in pre-handler below,
 	    // they should be handled in each command by debug_options::getDebugOptionsFromClah and
@@ -123,8 +141,12 @@ clah::Clah getStandardDucklingOptions() {
 	             .addShortDesc("Enable developer logs for given categories.")
 	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
+			if (options.isFlag("version-verbose")) {
+				std::cout << version::renderVerbose("duckc", DUCKC_VERSION_FIELDS) << '\n';
+				throw clah::exceptions::SuccessExitException(options);
+			}
 			if (options.isFlag("version")) {
-				std::cout << "Duckling version: 0.0.1 pre-alpha\n";
+				std::cout << version::renderShort("duckc") << '\n';
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		});

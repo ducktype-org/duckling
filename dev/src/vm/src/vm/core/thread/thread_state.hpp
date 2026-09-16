@@ -46,21 +46,23 @@
 namespace vm {
 	namespace thread_state {
 
-		struct NotStarted {};  ///< The thread object exists but its exec-thread was never spawned.
+		struct NotStarted final {
+		};  ///< The thread object exists but its exec-thread was never spawned.
 
-		struct Running {};     ///< The interpreter loop is actively executing.
+		struct Running final {};   ///< The interpreter loop is actively executing.
 
-		struct Sleeping {};    ///< The thread is sleeping i.e. waiting on IO.
+		struct Sleeping final {};  ///< The thread is sleeping i.e. waiting on IO.
 
-		struct Paused {};      ///< Thread is paused by the debugger.
+		struct Paused final {};    ///< Thread is paused by the debugger.
 
-		struct Stopped {};     ///< Terminated by an explicit Stop/Kill before completing normally.
+		struct Stopped final {
+		};  ///< Terminated by an explicit Stop/Kill before completing normally.
 
-		struct Completed {     ///< Finished executing normally.
+		struct Completed final {  ///< Finished executing normally.
 			api::ExitValue exit_value;
 		};
 
-		struct Panicked {  ///< Finished by an unrecoverable runtime error.
+		struct Panicked final {  ///< Finished by an unrecoverable runtime error.
 			std::string err;
 		};
 
@@ -81,25 +83,25 @@ namespace vm {
 	}
 
 	namespace thread_event {
-		struct Spawn {};
+		struct Spawn final {};
 
-		struct Pause {};
+		struct Pause final {};
 
-		struct Resume {};
+		struct Resume final {};
 
-		struct EnterSleep {};
+		struct EnterSleep final {};
 
-		struct WakeUp {};
+		struct WakeUp final {};
 
-		struct Finish {
+		struct Finish final {
 			api::ExitValue exit_value;
 		};
 
-		struct Panic {
+		struct Panic final {
 			std::string msg;
 		};
 
-		struct Kill {};
+		struct Kill final {};
 
 		using ThreadEvent
 			= std::variant<Spawn, Pause, Resume, EnterSleep, WakeUp, Finish, Kill, Panic>;

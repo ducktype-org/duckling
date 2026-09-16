@@ -19,6 +19,11 @@ namespace compiler::tsh {
 	}
 
 	[[nodiscard]]
+	CRef<query::QResult<TypeInterface>> AbstractType::getInterfaceResult(query::Context& ctx) const {
+		return pimpl->getInterfaceResult(ctx);
+	}
+
+	[[nodiscard]]
 	bool AbstractType::isSimple() const {
 		return pimpl->isSimple();
 	}
