@@ -1,8 +1,18 @@
 name: Setup Rust (Linux)
 description: >
   Everything the Rust half of the repo (dev/src/duck) needs on a Linux runner: the toolchain on
-  PATH, the native libraries it links against, and the sccache wrapper, which caches straight into
-  the GitHub Actions cache instead of into a directory.
+  PATH, the native libraries it links against, the sccache wrapper, and the cache directory
+  sccache writes to.
+inputs:
+  sccache-dir:
+    description: >
+      Where sccache caches. Inside the workspace, because here the cache is carried between runs
+      by actions/cache.
+    required: true
+  sccache-size:
+    description: Disk budget for the sccache cache.
+    required: false
+    default: 1G
 
 runs:
   using: composite
@@ -30,54 +40,14 @@ runs:
       shell: bash
       run: sudo apt -y install libgfortran5
 
-    # NOT `apt -y install sccache`: noble ships 0.7.7, and the GitHub Actions cache backend needs
-    # 0.10 or newer.
     - name: Download sccache
-      uses: mozilla-actions/sccache-action@v0.0.11
-      with:
-        version: v0.17.0
+      shell: bash
+      run: sudo apt -y install sccache
 
-    # The backend reaches the cache service with these two, and they are handed to actions rather
-    # than to `run:` steps -- so an action has to copy them into the job environment.
-    - name: Hand sccache the cache service credentials
-      uses: actions/github-script@v9
-      with:
-        script: |
-          core.exportVariable('ACTIONS_RESULTS_URL', process.env.ACTIONS_RESULTS_URL || '');
-          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
-    # sccache stores one entry per compilation rather than one archive per run, so there is nothing
-    # to restore before the build or upload after it, and nothing for `prune-caches` to group:
-    # GitHub expires these entries itself. ccache still goes through actions/cache.
     - name: Setup sccache environment
       shell: bash
       run: |
-        # Rust goes through sccache, C does NOT -- through a wrapper script rather than through
-        # `sccache` itself. Cc-rs introspects RUSTC_WRAPPER and
-        # adopts it for the crates' vendored C as well, but only when the file STEM is one of
-        # "sccache", "cachepot", "buildcache", "kache". A stem outside that list leaves C alone
-        # while cargo still wraps rustc with it.
-
-        wrapper="${RUNNER_TEMP:-/tmp}/rustc-only-sccache"
-        printf '#!/bin/sh\nexec "${SCCACHE_PATH:-sccache}" "$@"\n' > "$wrapper"
-        chmod +x "$wrapper"
-
-        echo "RUSTC_WRAPPER=$wrapper" >> "$GITHUB_ENV"
-        echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
-
-        # TEMPORARY, while the GHA backend is on trial.
-        #
-        # Debug goes to the SERVER ONLY, never into $GITHUB_ENV: `sccache` is also a client, run
-        # once per compilation, and a client that sees SCCACHE_LOG prints its startup chatter to
-        # stderr, which cargo folds into the build log -- one harmless "Couldn't open config
-        # file" per crate reads like a wall of failures. Starting the server here is what makes
-        # that possible: a daemon keeps the environment it was started with. Which is also why
-        # the stale one has to go, since on a self-hosted runner it outlives the job.
-        log="${RUNNER_TEMP:-/tmp}/sccache-server.log"
-        echo "SCCACHE_SERVER_LOG=$log" >> "$GITHUB_ENV"   # read by "sccache diagnostics"
-
-        sccache --stop-server || true
-        SCCACHE_GHA_ENABLED=true \
-        SCCACHE_ERROR_LOG="$log" \
-        SCCACHE_LOG=sccache=debug,opendal=debug \
-          sccache --start-server
+        mkdir -p '${{ inputs.sccache-dir }}'
+        echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+        echo "SCCACHE_DIR=${{ inputs.sccache-dir }}" >> "$GITHUB_ENV"
+        echo "SCCACHE_CACHE_SIZE=${{ inputs.sccache-size }}" >> "$GITHUB_ENV"

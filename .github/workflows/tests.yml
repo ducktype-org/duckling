@@ -157,6 +157,8 @@ jobs:
       - name: Setup Rust (Linux)
         if: ${{ env.IS_MACOS != 'true' }}
         uses: ./.github/actions/setup-linux-rust/
+        with:
+          sccache-dir: ${{ github.workspace }}/.cache/sccache
 
       - name: Setup Rust (macOS)
         if: ${{ env.IS_MACOS == 'true' }}
@@ -204,6 +206,21 @@ jobs:
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
+
+      # macOS keeps its sccache on the machine as well - see "Point caches at local storage".
+      - name: Restore sccache cache
+        id: restore-sccache-cache
+        if: ${{ env.IS_MACOS != 'true' }}
+        uses: actions/cache/restore@v5
+        with:
+          lookup-only: ${{ env.BRANCH_NAME == 'main' }}
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-sccache-main-
+            ${{ runner.os }}-sccache-
 
       - name: Initialize project
         working-directory: ${{ env.WORKSPACE }}
@@ -293,10 +310,7 @@ jobs:
           du -hs ${{ env.CCACHE_DIR }}
 
           echo "sccache:"
-          # Only macOS still keeps a directory. On Linux sccache writes into the Actions cache and
-          # has compiled nothing at all by this point -- the Rust build happens in the integration
-          # tests below, so its numbers are read in "sccache diagnostics" instead.
-          [ -n "${SCCACHE_DIR:-}" ] && du -hs "$SCCACHE_DIR" || echo "(GitHub Actions cache)"
+          [ -n "${SCCACHE_DIR:-}" ] && du -hs "$SCCACHE_DIR" || echo 0
 
       - name: Show ccache statistics (macOS)
         if: ${{ env.IS_MACOS == 'true' }}
@@ -347,33 +361,24 @@ jobs:
           echo "ITEST_LOG=$ITEST_LOG" >> "$GITHUB_ENV"
           ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --log-file "$ITEST_LOG" --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }}
 
+      # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
+      # so we have to save sccache after that, otherwise we'd have nothing to save.
+      # Backgrounded for the same reason as the build cache above; the coverage and TODO steps
+      # that follow do not touch $SCCACHE_DIR.
+      - name: Save sccache cache
+        id: save-sccache-cache
+        if: ${{ env.IS_MACOS != 'true' }}
+        background: true
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ steps.restore-sccache-cache.outputs.cache-primary-key }}
+
+
       # failure() makes this step run even when a previous step has failed (which would otherwise
       # cause all subsequent steps to be skipped). The additional conditions ensure this step only
       # runs when at least one of the integration test steps actually failed.
-      # TEMPORARY, while the GHA backend is on trial. This is the first point where sccache has
-      # compiled anything, so it is the first point where its counters mean something. `always()`
-      # because a failed itest run is exactly when the log is worth having.
-      - name: sccache diagnostics
-        if: ${{ always() && env.IS_MACOS != 'true' }}
-        continue-on-error: true
-        run: |
-          sccache --show-adv-stats || sccache --show-stats || true
-
-          log="${SCCACHE_SERVER_LOG:-}"
-          if [ -n "$log" ] && [ -f "$log" ]; then
-            echo "=== how big the server log got ==="
-            wc -l "$log"
-            echo "=== every distinct error line, with counts ==="
-            grep -iE "\berror\b|\bwarn\b" "$log" \
-              | sed -E 's/[0-9a-f]{16,}/<hash>/g; s/^[^ ]+ +//' \
-              | sort | uniq -c | sort -rn | awk 'NR <= 30'
-            echo "=== last 100 lines ==="
-            tail -100 "$log"
-          else
-            echo "no server log at '${log:-<unset>}' -- setup could not start a fresh server,"
-            echo "so an older one is serving this job with the environment it was started with."
-          fi
-
       - name: Cat itests log file on failure
         if: ${{ failure() && (steps.integration-tests.outcome == 'failure') }}
         run: cat "${{ env.ITEST_LOG }}"

@@ -55,6 +55,19 @@ jobs:
       # PATH.
       - name: Setup Rust
         uses: ./.github/actions/setup-linux-rust/
+        with:
+          sccache-dir: ${{ github.workspace }}/.cache/sccache
+
+      - name: Restore sccache cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-sccache-main-
+            ${{ runner.os }}-sccache-
 
       - name: Run cargo clippy
         working-directory: ${{ matrix.project.path }}
@@ -129,10 +142,25 @@ jobs:
       - name: Setup Rust (Linux)
         if: ${{ matrix.platform != 'macos' }}
         uses: ./.github/actions/setup-linux-rust/
+        with:
+          sccache-dir: ${{ github.workspace }}/.cache/sccache
 
       - name: Setup Rust (macOS)
         if: ${{ matrix.platform == 'macos' }}
         uses: ./.github/actions/setup-macos-rust/
+
+      # macOS keeps its sccache on the machine instead.
+      - name: Restore sccache cache
+        if: ${{ matrix.platform != 'macos' }}
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-sccache-main-
+            ${{ runner.os }}-sccache-
 
       - name: Run cargo test
         working-directory: ${{ matrix.project.path }}

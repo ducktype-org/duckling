@@ -17,7 +17,6 @@ import os
 import re
 import sys
 import urllib.error
-import urllib.parse
 import urllib.request
 from typing import Any
 
@@ -30,10 +29,6 @@ TIMESTAMP_SUFFIX = re.compile(r"-\d{4}-\d{2}-\d{2}-\d{2}::\d{2}::\d{2}$")
 MAX_PAGES = 20
 PER_PAGE = 100
 
-# Every key this prunes is built by tests.yml as `<runner.os>-...`, so the listing
-# asks for these prefixes rather than for the whole repository.
-KEY_PREFIXES = ("Linux-", "macOS-")
-
 # The whole REST surface this needs
 API_ROOT = "https://api.github.com"
 
@@ -41,12 +36,11 @@ API_ROOT = "https://api.github.com"
 # after the next one lands.
 API_VERSION = "2026-03-10"
 
-def list_caches_url(repo: str, page: int, key_prefix: str) -> str:
-    """GET: a page of the entries under `key_prefix`, most recently accessed first."""
+def list_caches_url(repo: str, page: int) -> str:
+    """GET: one page of the repository's cache entries, most recently accessed first."""
     return (
         f"{API_ROOT}/repos/{repo}/actions/caches"
         f"?per_page={PER_PAGE}&page={page}"
-        f"&key={urllib.parse.quote(key_prefix, safe='')}"
         f"&sort=last_accessed_at&direction=desc"
     )
 
@@ -85,7 +79,7 @@ def api(method: str, url: str, token: str) -> Any:
 
 def list_caches(repo: str, token: str) -> list[dict[str, Any]]:
     """
-    Every cache entry under one of KEY_PREFIXES, most recently accessed first.
+    Every cache entry in the repository, most recently accessed first.
 
     A page of the listing looks like
 
@@ -105,13 +99,11 @@ def list_caches(repo: str, token: str) -> list[dict[str, Any]]:
     to group by, and `id`, to address the DELETE.
     """
     caches: list[dict[str, Any]] = []
-    for key_prefix in KEY_PREFIXES:
-        for page in range(1, MAX_PAGES + 1):
-            url = list_caches_url(repo, page, key_prefix)
-            batch = api("GET", url, token).get("actions_caches", [])
-            caches += batch
-            if len(batch) < PER_PAGE:
-                break
+    for page in range(1, MAX_PAGES + 1):
+        batch = api("GET", list_caches_url(repo, page), token).get("actions_caches", [])
+        caches += batch
+        if len(batch) < PER_PAGE:
+            break
     return caches
 
 
