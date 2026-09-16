@@ -95,15 +95,17 @@ private:
 		const std::string head = "duckc " + std::string(version::semver());
 		ASSERT_TRUE(line.starts_with(head));
 
+		// Hash and date come from the same probe, so either both are known or neither is.
+		ASSERT_EQUAL(version::commitHash().empty(), version::commitDate().empty());
+
 		if (version::commitDate().empty()) {
 			// No git worktree: the whole parenthesised group disappears.
 			ASSERT_EQUAL_PRINT(head, line);
 			return;
 		}
 
-		std::string tail = " (" + std::string(version::commitDate());
-		if (version::isDirty()) tail += "-dirty";
-		tail += ")";
+		const std::string tail = " (" + std::string(version::commitHash()) + " "
+		                       + std::string(version::commitDate()) + ")";
 		ASSERT_EQUAL_PRINT(head + tail, line);
 	}
 

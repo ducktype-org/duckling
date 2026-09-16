@@ -10,20 +10,6 @@
 #include <vector>
 
 namespace {
-	constexpr std::string_view SEMVER{ DUCKLING_SEMVER };
-	constexpr std::string_view SEMVER_MAJOR{ DUCKLING_SEMVER_MAJOR };
-	constexpr std::string_view SEMVER_MINOR{ DUCKLING_SEMVER_MINOR };
-	constexpr std::string_view SEMVER_PATCH{ DUCKLING_SEMVER_PATCH };
-	constexpr std::string_view PRERELEASE{ DUCKLING_PRERELEASE };
-	constexpr std::string_view COMMIT_DATE{ DUCKLING_COMMIT_DATE };
-	constexpr std::string_view BUILD_TYPE{ DUCKLING_BUILD_TYPE };
-	constexpr std::string_view HOST_SYSTEM{ DUCKLING_HOST_SYSTEM };
-	constexpr std::string_view HOST_PROCESSOR{ DUCKLING_HOST_PROCESSOR };
-	constexpr std::string_view COMPILER_ID{ DUCKLING_COMPILER_ID };
-	constexpr std::string_view COMPILER_VERSION{ DUCKLING_COMPILER_VERSION };
-	constexpr std::string_view LICENSE_NAME{ DUCKLING_LICENSE_NAME };
-	constexpr std::string_view COPYRIGHT_LINE{ DUCKLING_COPYRIGHT_LINE };
-
 	/** @brief Joins two views with a single space, skipping the space when one of them is empty. */
 	std::string joinWithSpace(std::string_view left, std::string_view right) {
 		if (left.empty()) return std::string(right);
@@ -33,45 +19,85 @@ namespace {
 }  // namespace
 
 namespace version {
+	std::string_view semver() {
+		static constexpr std::string_view VALUE{ DUCKLING_SEMVER };
+		return VALUE;
+	}
 
-	std::string_view semver() { return SEMVER; }
+	std::string_view semverMajor() {
+		static constexpr std::string_view VALUE{ DUCKLING_SEMVER_MAJOR };
+		return VALUE;
+	}
 
-	std::string_view semverMajor() { return SEMVER_MAJOR; }
+	std::string_view semverMinor() {
+		static constexpr std::string_view VALUE{ DUCKLING_SEMVER_MINOR };
+		return VALUE;
+	}
 
-	std::string_view semverMinor() { return SEMVER_MINOR; }
+	std::string_view semverPatch() {
+		static constexpr std::string_view VALUE{ DUCKLING_SEMVER_PATCH };
+		return VALUE;
+	}
 
-	std::string_view semverPatch() { return SEMVER_PATCH; }
+	std::string_view prerelease() {
+		static constexpr std::string_view VALUE{ DUCKLING_PRERELEASE };
+		return VALUE;
+	}
 
-	std::string_view prerelease() { return PRERELEASE; }
+	bool isPrerelease() { return not prerelease().empty(); }
 
-	bool isPrerelease() { return not PRERELEASE.empty(); }
+	std::string_view commitHash() {
+		static constexpr std::string_view VALUE{ DUCKLING_COMMIT_HASH };
+		return VALUE;
+	}
 
-	std::string_view commitDate() { return COMMIT_DATE; }
+	std::string_view commitDate() {
+		static constexpr std::string_view VALUE{ DUCKLING_COMMIT_DATE };
+		return VALUE;
+	}
 
-	bool isDirty() { return DUCKLING_IS_DIRTY; }
+	std::string_view buildType() {
+		static constexpr std::string_view VALUE{ DUCKLING_BUILD_TYPE };
+		return VALUE;
+	}
 
-	std::string_view buildType() { return BUILD_TYPE; }
+	std::string_view hostSystem() {
+		static constexpr std::string_view VALUE{ DUCKLING_HOST_SYSTEM };
+		return VALUE;
+	}
 
-	std::string_view hostSystem() { return HOST_SYSTEM; }
+	std::string_view hostProcessor() {
+		static constexpr std::string_view VALUE{ DUCKLING_HOST_PROCESSOR };
+		return VALUE;
+	}
 
-	std::string_view hostProcessor() { return HOST_PROCESSOR; }
+	std::string_view compilerId() {
+		static constexpr std::string_view VALUE{ DUCKLING_COMPILER_ID };
+		return VALUE;
+	}
 
-	std::string_view compilerId() { return COMPILER_ID; }
+	std::string_view compilerVersion() {
+		static constexpr std::string_view VALUE{ DUCKLING_COMPILER_VERSION };
+		return VALUE;
+	}
 
-	std::string_view compilerVersion() { return COMPILER_VERSION; }
+	std::string_view licenseName() {
+		static constexpr std::string_view VALUE{ DUCKLING_LICENSE_NAME };
+		return VALUE;
+	}
 
-	std::string_view licenseName() { return LICENSE_NAME; }
-
-	std::string_view copyrightLine() { return COPYRIGHT_LINE; }
+	std::string_view copyrightLine() {
+		static constexpr std::string_view VALUE{ DUCKLING_COPYRIGHT_LINE };
+		return VALUE;
+	}
 
 	std::string renderShort(std::string_view tool_name) {
 		std::string result = joinWithSpace(tool_name, semver());
 
-		// Without git there is no date and no way to be dirty, so the whole group goes away.
-		if (not commitDate().empty()) {
+		const std::string commit = joinWithSpace(commitHash(), commitDate());
+		if (not commit.empty()) {
 			result += " (";
-			result += commitDate();
-			if (isDirty()) result += "-dirty";
+			result += commit;
 			result += ')';
 		}
 
@@ -79,12 +105,11 @@ namespace version {
 	}
 
 	std::string renderVerbose(std::string_view tool_name, std::span<const ExtraField> extra) {
-		// host and compiler are composed from two getters each, so they need storage that
-		// outlives the views collected below.
 		const std::string host     = joinWithSpace(hostSystem(), hostProcessor());
 		const std::string compiler = joinWithSpace(compilerId(), compilerVersion());
 
 		std::vector<ExtraField> rows{
+			{ "commit-hash", commitHash() },
 			{ "commit-date", commitDate() },
 			{ "build-type", buildType() },
 			{ "host", host },
@@ -94,21 +119,19 @@ namespace version {
 		};
 		rows.insert(rows.end(), extra.begin(), extra.end());
 
-		// A fact we do not have (no licence chosen yet, no git worktree) is left out entirely
-		// rather than printed as an empty line.
 		std::erase_if(rows, [](const ExtraField& row) { return row.second.empty(); });
 
 		usize label_width = 0;
-		for (const auto& [label, value]: rows) label_width = std::max(label_width, label.size());
+		for (const auto& [label, VALUE]: rows) label_width = std::max(label_width, label.size());
 
 		std::string result = renderShort(tool_name);
-		for (const auto& [label, value]: rows) {
+		for (const auto& [label, VALUE]: rows) {
 			result += '\n';
 			result += label;
 			result += ':';
-			// +1 so that even the longest label keeps one space before its value.
+			// +1 so that even the longest label keeps one space before its VALUE.
 			result.append(label_width - label.size() + 1, ' ');
-			result += value;
+			result += VALUE;
 		}
 
 		return result;

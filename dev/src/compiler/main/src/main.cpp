@@ -109,9 +109,7 @@ namespace {
 }
 
 /**
- * @brief The version facts only duckc can report: the LLVM it was built against and whether the
- * JIT went into this build. They live here rather than in the Version module so that VM and
- * duck_ls, which share that module, never grow an LLVM dependency.
+ * @brief The version facts only duckc can report.
  */
 constexpr std::array<version::ExtraField, 2> DUCKC_VERSION_FIELDS{
 	version::ExtraField{ "LLVM", DUCKC_LLVM_VERSION },

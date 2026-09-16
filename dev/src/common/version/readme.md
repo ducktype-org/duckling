@@ -13,7 +13,7 @@ just to be able to say which build they are.
   `DUCKLING_VERSION_PRERELEASE` and the two are composed into `DUCKLING_VERSION_STRING`.
 - **Fixed build facts** (build type, host, compiler, licence) — `target_compile_definitions` on the
   `Version` target, evaluated when the build directory is configured.
-- **Commit date and dirty flag** — `GenerateCommitInfo.cmake`, run on every build by the
+- **Commit hash and date** — `GenerateCommitInfo.cmake`, run on every build by the
   `VersionCommitInfo` target. It has to run at build time: a date captured at configure time would
   claim the wrong commit for every build after the next commit. The header is written through
   `copy_if_different`, so only `version.cpp` recompiles and only when the values really changed.

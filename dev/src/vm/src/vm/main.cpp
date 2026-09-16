@@ -21,18 +21,17 @@
 #include <expected>
 
 /**
- * @brief Prints the verbose version block, including the opcode dispatch the VM was built with.
- *
- * The dispatch strategy is a VM-only fact, so it travels as an extra row rather than moving into
- * the Version module.
+ * @brief The version facts only duckc can report.
  */
-void showVerboseVersion() {
-	const std::string                        dispatch = vm::getInstructionConfig();
-	const std::array<version::ExtraField, 1> extra{
-		version::ExtraField{ "dispatch", dispatch },
-	};
-	std::cout << version::renderVerbose("VM", extra) << '\n';
-}
+const std::array<version::ExtraField, 2> EXTRA_VERSION_FIELDS{
+	version::ExtraField{ "dispatch", vm::getInstructionConfig() },
+#ifdef ENABLE_JIT
+	version::ExtraField{ "JIT", "enabled" },
+#else
+	version::ExtraField{ "JIT", "disabled" },
+#endif
+};
+
 
 clah::Clah getVmClah() {
 	return clah::Clah("VM", "The Duckling Virtual Machine.")
@@ -52,16 +51,13 @@ clah::Clah getVmClah() {
 	             .addShortDesc("Enables DVM debug logs.")
 	             .build())
 #endif
-	    // One pre-handler for everything: `setPreHandler` replaces the callback it was given last
-	    // time rather than chaining, so a second call here would silently drop the flags handled
-	    // by the first one.
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version-verbose")) {
-				showVerboseVersion();
+				std::cout << version::renderVerbose("DVM", EXTRA_VERSION_FIELDS) << '\n';
 				throw clah::exceptions::SuccessExitException(options);
 			}
 			if (options.isFlag("version")) {
-				std::cout << version::renderShort("VM") << '\n';
+				std::cout << version::renderShort("DVM") << '\n';
 				throw clah::exceptions::SuccessExitException(options);
 			}
 #ifdef BUILD_TYPE_DEV_DEBUG

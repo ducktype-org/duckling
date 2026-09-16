@@ -19,84 +19,92 @@ namespace version {
 
 	/**
 	 * @brief One extra `label: value` row for renderVerbose().
-	 *
-	 * This is how a binary adds a fact only it knows about (duckc adds its LLVM version, for
-	 * example) without the Version module having to depend on that fact.
 	 */
 	using ExtraField = std::pair<std::string_view, std::string_view>;
 
 	/**
-	 * @name Semantic version
-	 * @{
+	 * @brief The full semantic version, including the pre-release suffix, e.g. "0.0.2-alpha".
 	 */
-	/** @brief The full semantic version, including the pre-release suffix, e.g. "0.0.2-alpha". */
 	[[nodiscard]]
 	std::string_view semver();
-	/** @brief The major component of the semantic version. */
+	/**
+	 * @brief The major component of the semantic version.
+	 */
 	[[nodiscard]]
 	std::string_view semverMajor();
-	/** @brief The minor component of the semantic version. */
+	/**
+	 * @brief The minor component of the semantic version.
+	 */
 	[[nodiscard]]
 	std::string_view semverMinor();
-	/** @brief The patch component of the semantic version. */
+	/**
+	 * @brief The patch component of the semantic version.
+	 */
 	[[nodiscard]]
 	std::string_view semverPatch();
-	/** @brief The pre-release suffix without its dash, e.g. "alpha". Empty on a final release. */
+	/**
+	 * @brief The pre-release suffix without its dash, e.g. "alpha". Empty on a final release.
+	 */
 	[[nodiscard]]
 	std::string_view prerelease();
-	/** @brief Whether this is a pre-release build, i.e. whether prerelease() is non-empty. */
+	/**
+	 * @brief Whether this is a pre-release build, i.e. whether prerelease() is non-empty.
+	 */
 	[[nodiscard]]
 	bool isPrerelease();
-	/**@}*/
 
 	/**
-	 * @name Build identity
-	 * @{
+	 * @brief Abbreviated hash of the commit the binary was built from, e.g. "1159e78c4".
 	 */
+	[[nodiscard]]
+	std::string_view commitHash();
 	/**
 	 * @brief Date of the commit the binary was built from, as "YYYY-MM-DD".
-	 * @return An empty view when the sources were not built from a git worktree.
 	 */
 	[[nodiscard]]
 	std::string_view commitDate();
-	/** @brief Whether tracked files were modified relative to that commit when the build ran. */
-	[[nodiscard]]
-	bool isDirty();
-	/**@}*/
 
 	/**
-	 * @name Fixed build facts
-	 * @{
+	 * @brief The CMake build type the binary was configured with, e.g. "DevDebug".
 	 */
-	/** @brief The CMake build type the binary was configured with, e.g. "DevDebug". */
 	[[nodiscard]]
 	std::string_view buildType();
-	/** @brief The operating system the binary was built on, e.g. "Linux". */
+	/**
+	 * @brief The operating system the binary was built on, e.g. "Linux".
+	 */
 	[[nodiscard]]
 	std::string_view hostSystem();
-	/** @brief The processor the binary was built on, e.g. "x86_64". */
+	/**
+	 * @brief The processor the binary was built on, e.g. "x86_64".
+	 */
 	[[nodiscard]]
 	std::string_view hostProcessor();
-	/** @brief The compiler the binary was built with, e.g. "GNU". */
+	/**
+	 * @brief The compiler the binary was built with, e.g. "GNU".
+	 */
 	[[nodiscard]]
 	std::string_view compilerId();
-	/** @brief The version of that compiler, e.g. "14.2.0". */
+	/**
+	 * @brief The version of that compiler, e.g. "14.2.0".
+	 */
 	[[nodiscard]]
 	std::string_view compilerVersion();
-	/** @brief The name of the licence Duckling ships under. Empty until one is chosen. */
+	/**
+	 * @brief The name of the licence Duckling ships under. Empty until one is chosen.
+	 */
 	[[nodiscard]]
 	std::string_view licenseName();
-	/** @brief The copyright line to show next to the licence. Empty until one is chosen. */
+	/**
+	 * @brief The copyright line to show next to the licence. Empty until one is chosen.
+	 */
 	[[nodiscard]]
 	std::string_view copyrightLine();
-	/**@}*/
 
 	/**
 	 * @brief Renders the single line printed by `--version`.
 	 *
-	 * The shape is `<tool_name> <semver> (<commit date>)`, for example
-	 * `duckc 0.0.2-alpha (2026-09-15)`. The parenthesised group is left out when the commit date
-	 * is unknown, and the date carries a `-dirty` suffix when the worktree was modified.
+	 * The shape is `<tool_name> <semver> (<commit hash> <commit date>)`, for example
+	 * `duckc 0.0.2-alpha (1d3bb3942 2026-09-15)`.
 	 *
 	 * @param tool_name The name of the binary, e.g. "duckc".
 	 * @return The rendered line, without a trailing newline.
