@@ -2,7 +2,7 @@
 
 use std::sync::LockResult;
 
-use tracing::error;
+use tracing::warn;
 
 pub trait Extract<T> {
     /// Extract a value.
@@ -14,7 +14,7 @@ impl<T> Extract<T> for LockResult<T> {
         match self {
             Self::Ok(value) => value,
             Self::Err(poison) => {
-                error!("{poison} ({poison:?}");
+                warn!(error = %poison, "poisoned");
                 poison.into_inner()
             }
         }

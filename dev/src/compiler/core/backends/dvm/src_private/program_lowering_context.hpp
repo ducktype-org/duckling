@@ -93,13 +93,27 @@ namespace compiler::backend_vm::internal {
 		 * @brief Creates and inserts a pointer type into the program lowering context.
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */
-		const vm::code::TypeOfData& getOrInsertPointerType(const vm::code::TypeOfData& pointee_type);
+		const vm::code::TypeOfData& getOrInsertPointerType(
+			const vm::code::TypeOfData&         pointee_type,
+			tsl::PointerTypeLayout::PointerKind kind
+			= tsl::PointerTypeLayout::PointerKind::SinglePointer
+		);
 
 		/**
-		 * @brief Creates and inserts a pointer type based on the type name.
-		 * It caches the result, so inserts the type into the program only if needed.
+		 * @brief Returns the builtin `cptr` type - a cpointer with an unknown pointee, the DVM
+		 * counterpart of C's `void*`. Inserts it into the module on first use.
 		 */
-		const vm::code::TypeOfData& getOrInsertPointerType(base::StrID pointee_type_name);
+		const vm::code::TypeOfData& getVoidCPointerType();
+
+		/**
+		 * @brief Returns the DVM type standing in for an information-less type (`()`).
+		 *
+		 * Such a type has no representation of its own, but the DVM identifies variant
+		 * alternatives by type name, so the alternative still needs a name to be set and tested.
+		 * It is a distinct opaque type rather than a one-byte primitive, so that it never
+		 * collides with a `bool` or `i8` alternative of the same variant.
+		 */
+		const vm::code::TypeOfData& getUnitType();
 
 		/**
 		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
@@ -167,6 +181,14 @@ namespace compiler::backend_vm::internal {
 		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
 
 		/**
+		 * @brief Declares a native function called through libffi (`call_ffifunc`).
+		 *
+		 * Declaring the same function twice is a no-op; in dev builds a conflicting signature for
+		 * an already declared name is an assertion failure.
+		 */
+		void insertFFIFunction(vm::code::FFIFunction ffi_function);
+
+		/**
 		 * @brief Insert raw bytecode into program context.
 		 */
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
@@ -208,6 +230,13 @@ namespace compiler::backend_vm::internal {
 	private:
 		base::Optional<vm::code::TypeOfData> lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
+		/**
+		 * @brief Actualy constructs the VM pointer type, internal.
+		 */
+		const vm::code::TypeOfData lowerPointerType(
+			const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
+		);
+
 		/// Whether we are lowering the code to be loaded by the VM for compile time evaluation,
 		/// or for the final output module. This affects how certain compile time values (e.g.
 		/// symbol types) are lowered.
@@ -232,15 +261,19 @@ namespace compiler::backend_vm::internal {
 		std::vector<base::StrID> lowered_function_order;
 		// Maintains insertion order for globals so REPL can emit only new globals.
 		std::vector<base::StrID> lowered_global_order;
+		// Maintains insertion order for FFI functions so REPL can emit only new declarations.
+		std::vector<base::StrID> lowered_ffi_function_order;
 
 		// Counter used to make synthetic static-data global names (string literals) unique.
 		usize static_data_global_counter{ 0 };
 
-		base::Map<CRef<lir::Function>, base::StrID> lir_function_to_name;
-		base::Map<base::StrID, vm::code::Function>  dvm_functions_by_name;
+		base::Map<base::StrID, vm::code::Function> dvm_functions_by_name;
 
 		// Extern function name to definition.
 		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;
+
+		// FFI (libffi-called, C ABI) function name to declaration.
+		base::Map<base::StrID, vm::code::FFIFunction> ffi_functions;
 
 		// Additional, non-lir functions loaded into a module. Used in CTE.
 		std::vector<vm::code::Function> extra_bytecode_functions;

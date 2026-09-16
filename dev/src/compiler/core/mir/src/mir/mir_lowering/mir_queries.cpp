@@ -3,13 +3,16 @@
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
+#include <helios/hout/elements/expr.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/utils/hout_walker_generic.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
@@ -18,6 +21,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -37,80 +41,61 @@ namespace compiler::mir {
 	}
 
 	/**
-	 * @brief Visitor that collects all local variables in the function and adds them directly
-	 * to the FunctionBuilder. It sets variable scopes for parameters, but doesn't set it for
-	 * other local variables. Scope of other local variables is set when visiting VariableStmt
-	 * in StmtBlockVisitor, since only then is the scope of the variable known.
+	 * @brief Collects every local variable in the function and adds it to the FunctionBuilder.
+	 *
+	 * Scopes are only set for parameters here; a local's scope is only known once the statement
+	 * declaring it is lowered, so `StmtBlockVisitor` sets it then.
+	 *
+	 * Locals come from two places: `VariableStmt` declarations, and the bindings of a match's
+	 * cases. The latter sit inside an expression, which is why the whole tree is walked rather
+	 * than just the statements.
 	 */
-	struct LocalVarCollectionVisitor: public hc::HoutStmtVisitorPanicky {
+	struct LocalVarCollectionVisitor final {
 		FunctionBuilder& function;
 
-		LocalVarCollectionVisitor(FunctionBuilder& function): function(function) {}
+		void operator()(const hc::VariableStmt& stmt) { function.addLocal(stmt.helios_symbol); }
 
-		/**
-		 * Helper function that recursively goes over the code block and collects all local
-		 * variables.
-		 */
-		void goOverCodeBlock(const hc::CodeBlock& code_block) {
-			// This order is important for the correct order of the destructors and
-			// scoping flags.
-			for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
+		void operator()(const hc::MatchExpr& expr) {
+			for (const auto& match_case: expr.cases)
+				if (match_case.binding.has_value()) function.addLocal(match_case.binding.value());
 		}
 
-		/**
-		 * @brief Collects all local variables in the function and adds them directly to the
-		 * FunctionBuilder.
-		 */
-		void collect(CRef<helios::HOUTFunction> hout_function) {
-			auto function_helios_symbol = function.getHeliosSymbol();
-			variant_match(function_helios_symbol) {
-				variant_case(FunctionSymID, function_sym) {
-					CORE_ASSERT(
-						function_sym.id == hout_function->declaration->original_symbol,
-						"Bad function passed to LocalVarCollectionVisitor"
-					);
-				}
+		/** Everything else introduces no locals. */
+		template<typename T>
+		void operator()(const T&) {}
 
-				variant_default {
-					CORE_PANIC(
-						"The Function wasn't created from HOUTFunction, so you should not use "
-						"collect."
-					);
-				}
-			}
-
-			u64 parameter_index = 0;
-			for (const auto& parameter: hout_function->declaration->parameters) {
-				auto local = function.addParameter(parameter.helios_symbol, parameter_index);
-				local->setLifetimeScope(function.getTopLevelScope());
-				parameter_index++;
-			}
-			goOverCodeBlock(*hout_function->body);
-		}
-
-		void visitVariableStmt(const hc::VariableStmt& stmt) override {
-			function.addLocal(stmt.helios_symbol);
-		}
-
-		void visitIfStmt(const hc::IfStmt& stmt) override {
-			goOverCodeBlock(stmt.then_body);
-			goOverCodeBlock(stmt.else_body);
-		}
-
-		void visitWhileStmt(const hc::WhileStmt& stmt) override { goOverCodeBlock(stmt.body); }
-
-		void visitBlockStmt(const hc::BlockStmt& stmt) override { goOverCodeBlock(stmt.body); }
-
-		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
-
-		void visitReturnStmt(const hc::ReturnStmt&) override {}
-
-		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override {}
-
-		void visitExprStmt(const hc::ExprStmt&) override {}
-
-		void visitAssignmentStmt(const hc::AssignmentStmt&) override {}
+		void collect(CRef<helios::HOUTFunction> hout_function);
 	};
+
+	void LocalVarCollectionVisitor::collect(CRef<helios::HOUTFunction> hout_function) {
+		auto function_helios_symbol = function.getHeliosSymbol();
+		variant_match(function_helios_symbol) {
+			variant_case(FunctionSymID, function_sym) {
+				CORE_ASSERT(
+					function_sym.id == hout_function->declaration->original_symbol,
+					"Bad function passed to LocalVarCollectionVisitor"
+				);
+			}
+
+			variant_default {
+				CORE_PANIC(
+					"The Function wasn't created from HOUTFunction, so you should not use collect."
+				);
+			}
+		}
+
+		u64 parameter_index = 0;
+		for (const auto& parameter: hout_function->declaration->parameters) {
+			auto local = function.addParameter(parameter.helios_symbol, parameter_index);
+			local->setLifetimeScope(function.getTopLevelScope());
+			parameter_index++;
+		}
+
+		// The walk order matches declaration order, which the destructor ordering and the
+		// scoping flags rely on.
+		hc::HoutTreeWalker<LocalVarCollectionVisitor> walker{ *this };
+		walker.walkBlock(*hout_function->body);
+	}
 
 	Function lowerToPreMIRFunction(query::Context& ctx, CRef<helios::HOUTFunction> function) {
 		FunctionBuilder function_builder{
@@ -122,7 +107,7 @@ namespace compiler::mir {
 		LocalVarCollectionVisitor visitor{ function_builder };
 		visitor.collect(function);
 
-		auto last_block = function_builder.newBlock();
+		auto last_block = function_builder.newBlock("function_end");
 		last_block->setTerminator(
 			{ Operation::FunctionEnd, {}, {}, {}, function_builder.getTopLevelScope() }
 		);
@@ -202,7 +187,7 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"The function `",
 					function.name,
@@ -241,25 +226,39 @@ namespace compiler::mir {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMIRFunction);
 
+	struct KeyOf_LowerGlobalDataToMIRCtorDtor {
+		CRef<helios::HOUTGlobalData> global_data;
+
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const {
+			return global_data->helios_symbol.queryUnstablePerfectHash();
+		}
+	};
+
+	struct CtorDtorResult {
+		Function                 ctor;
+		base::Optional<Function> dtor;
+	};
+
 	/**
-	 * @brief Creates a ctor function for a global data.
+	 * @brief Creates the ctor or the dtor function for a global data, depending on `type` in the
+	 * key. Both are a single expression (the in-place initialization / the destructor call) lowered
+	 * into a function taking and returning nothing, so they share the whole lowering.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		LowerGlobalDataToMIRCtor, KeyOf_LowerGlobalData, CRef<query::QResult<Function>>, ({})
+		LowerGlobalDataToMIRCtorDtor,
+		KeyOf_LowerGlobalDataToMIRCtorDtor,
+		CRef<query::QResult<CtorDtorResult>>,
+		({})
 	)
 
-	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtor, query::QResult<Function>) {
-		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data->value))
-				CORE_PANIC(
-					"Creating ctors for constant variables does not work, they should use CTVs "
-					"instead."
-				);
-
-			auto global_init_expr
-				= std::get<helios::HOUTGlobalVariable>(key.global_data->value).initial_value.ref();
+	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtorDtor, query::QResult<CtorDtorResult>) {
+		static auto lowerFunction(
+			Context& ctx, CRef<helios::HOUTGlobalData> global_data, GlobalVariableCtorDtor::Type type
+		) -> query::QResult<Function> {
+			const bool is_ctor = type == GlobalVariableCtorDtor::Type::Ctor;
 
 			auto function_type = ctx.query<tsh::QueryFunctionType>({
 				{},
@@ -272,43 +271,40 @@ namespace compiler::mir {
 
 			// first step: lowering to pre-mir (cfg+quad)
 			// create function builder
-			FunctionBuilder function_builder{ ctx,
-				                              GlobalVariableCTOR{ key.global_data->helios_symbol },
-				                              function_type };
-			function_builder.setName(base::StrID(
-				base::strConcat("constructor_of_", key.global_data->original_name.strView()).c_str()
-			));
+			FunctionBuilder function_builder{
+				ctx,
+				is_ctor ? GlobalVariableCtorDtor::ctor(global_data->helios_symbol)
+						: GlobalVariableCtorDtor::dtor(global_data->helios_symbol),
+				function_type
+			};
+			function_builder.setName(base::StrID(base::strConcat(
+				is_ctor ? "constructor_of_" : "destructor_of_", global_data->original_name.strView()
+			)));
 
-			auto last_block = function_builder.newBlock();
+			auto last_block = function_builder.newBlock("function_end");
 			last_block->setTerminator(
 				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
 			);
 
-			auto assign_instr = last_block->addHole();
+			// A trivially destructible global has no destructor to call, so its dtor stays empty.
+			base::Optional<Box<hc::Expr>> body_expr;
+			if (is_ctor)
+				body_expr.emplace(helios::getGlobalConstructorExpr(ctx, global_data));
+			else
+				body_expr = helios::getGlobalDestructorExpr(ctx, global_data);
 
-			auto lowerexpr_res = lowerExpr(
-				*global_init_expr.get(),
-				last_block,
-				function_builder,
-				function_builder.getTopLevelScope()
-			);
+			match_optional(body_expr) {
+				opt_some(expr) {
+					auto expr_scope
+						= function_builder.newScope(function_builder.getTopLevelScope());
+					auto lowerexpr_res
+						= lowerExpr(*expr.get(), last_block, function_builder, expr_scope);
 
-			assign_instr.fill(Instruction{
-				Operation::Assign,
-				// Note: we know its a variable here, since this query only works for variables,
-				{
-					MIRGlobal({ key.global_data->helios_symbol,
-			                    key.global_data->type,
-			                    MIRGlobal::Kind::Variable }),
-				},
-				{
-					lowerexpr_res.getResult(function_builder),
-				},
-				{},
-				function_builder.getTopLevelScope(),
-			});
-
-			function_builder.setEntry(lowerexpr_res.begin);
+					std::ignore = lowerexpr_res.getResult(function_builder);
+					function_builder.setEntry(lowerexpr_res.begin);
+				}
+				opt_none { function_builder.setEntry(last_block); }
+			}
 
 			auto function_no_lifetime = function_builder.build();
 
@@ -324,10 +320,33 @@ namespace compiler::mir {
 			return function_reachable;
 		}
 
+		static auto provide(Context& ctx, QKey key) -> query::QResult<CtorDtorResult> {
+			if (v_matches(key.global_data->value, helios::HOUTGlobalConst))
+				CORE_PANIC(
+					"Creating ctors for constant variables does not work, they should use CTVs "
+					"instead."
+				);
+
+			UNPACK_QRESULT_MOVE(
+				auto ctor_fun =,
+				lowerFunction(ctx, key.global_data, GlobalVariableCtorDtor::Type::Ctor)
+			);
+			base::Optional<Function> dtor_fun_opt{};
+			if (not key.global_data->type.isTriviallyDestructible(ctx)) {
+				UNPACK_QRESULT_MOVE(
+					auto dtor_fun =,
+					lowerFunction(ctx, key.global_data, GlobalVariableCtorDtor::Type::Dtor)
+				);
+				return CtorDtorResult{ .ctor = std::move(ctor_fun), .dtor = std::move(dtor_fun) };
+			} else {
+				return CtorDtorResult{ .ctor = std::move(ctor_fun), .dtor = {} };
+			}
+		}
+
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRCtor)
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRCtorDtor)
 
 	struct IMPLEMENT_QUERY(LowerGlobalData, query::QResult<MIRGlobalData>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
@@ -348,15 +367,19 @@ namespace compiler::mir {
 					};
 				}
 				variant_case(helios::HOUTGlobalVariable, hout_expr_initial_value) {
-					CRef mir_ctor_function
-						= &ctx.query<mir::LowerGlobalDataToMIRCtor>(key)->valueOrThrow();
+					CRef ctor_dtor
+						= &ctx.query<mir::LowerGlobalDataToMIRCtorDtor>({ key.global_data })
+					           ->valueOrThrow();
 					return MIRGlobalData{
 						.global = MIRGlobal{
 							key.global_data->helios_symbol,
 							key.global_data->type,
 							MIRGlobal::Kind::Variable,
 						},
-						.initial_value = mir_ctor_function,
+						.initial_value = MIRCtorDtorPair{
+							.constructor = &ctor_dtor->ctor, 
+							.destructor = ctor_dtor->dtor.map([] (auto& fun) { return CRef(&fun);}),
+						},
 					};
 				}
 			}
@@ -425,6 +448,8 @@ namespace compiler::mir {
 					instruction.output.value(), out, seen_functions, seen_globals
 				);
 
+			// `Destruct`/`DestructIf` carry their destructor as a function-literal argument, so it
+			// is collected by the loop below like any other called function.
 			for (const auto& argument: instruction.arguments)
 				collectUsedSymbolsFromValue(argument, out, seen_functions, seen_globals);
 		}
@@ -469,8 +494,12 @@ namespace compiler::mir {
 		std::unordered_set<helios::SymID> seen_globals;
 
 		variant_match(mir_global_data.initial_value) {
-			variant_case(CRef<mir::Function>, function) {
-				usedSymbolsFromBody(function, result, seen_functions, seen_globals);
+			variant_case(MIRCtorDtorPair, ctor_dtor_pair) {
+				usedSymbolsFromBody(
+					ctor_dtor_pair.constructor, result, seen_functions, seen_globals
+				);
+				if_opt_some(ctor_dtor_pair.destructor, dtor)
+					usedSymbolsFromBody(dtor, result, seen_functions, seen_globals);
 			}
 		}
 		return result;

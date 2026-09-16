@@ -1,14 +1,16 @@
 #include "debug_adapter.hpp"
 
 #include <base/collections/optional.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
+#include <filesystem/file_path.hpp>
 #include <string_id/string_id.hpp>
 #include <token_source/source.hpp>
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/data/thread_id.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/debugger/UI/debug_adapter/protocol.hpp>
 
 #include <iostream>
@@ -41,12 +43,12 @@ namespace vm::debugger::debug_adapter {
 
 					  // status.exit_value
 					  CORE_ASSERT(
-						  std::holds_alternative<std::vector<Ref<vm::VmValue>>>(status.exit_value),
+						  std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(status.exit_value),
 						  "Wrong variant member"
 					  );
 					  const auto& exit_value
-						  = std::get<std::vector<Ref<vm::VmValue>>>(status.exit_value);
-					  for (CRef<VmValue> val: exit_value) {
+						  = std::get<std::vector<Ref<vm::IVMValue>>>(status.exit_value);
+					  for (CRef<IVMValue> val: exit_value) {
 						  std::string rendered_value     = "";
 						  bool        has_rendered_value = false;
 
@@ -326,14 +328,22 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	void DebugAdapter::handleLaunch(const nlohmann::json& req) {
-		std::string program     = req["arguments"]["program"];
-		auto        load_result = debugger.loadFiles({ fs::File(program) });
+		std::string  program = req["arguments"]["program"];
+		fs::FilePath program_path(program);
+		fs::FilePath base_dir = program_path.parentPath();
+		std::expected<void, std::variant<api::ApiError, std::string>> load_result;
+		if (program.ends_with(".dk"))
+			load_result = debugger.loadDefault(base_dir);
+		else
+			load_result = debugger.loadFiles({ fs::File(program) });
 
 		if (!load_result.has_value()) {
-			sendErrorResponse(
-				req,
-				"Failed to load file '" + program + "': " + api::errorToString(load_result.error())
-			);
+			std::string err_msg = "Failed to load file '" + program + "': ";
+			variant_match(load_result.error()) {
+				variant_case(api::ApiError, error) { err_msg += api::errorToString(error); }
+				variant_case(std::string, error_str) { err_msg += error_str; }
+			}
+			sendErrorResponse(req, err_msg);
 			return;
 		}
 
@@ -379,8 +389,9 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	std::expected<DebugAdapter::SourcePositionInfo, std::string> DebugAdapter::getSourcePositionInfo(
+		usize frame_idx
 	) {
-		auto pos_result = debugger.getCurrentPosition();
+		auto pos_result = debugger.getCurrentPosition(frame_idx);
 
 		if (!pos_result.has_value()) {
 			return std::unexpected(
@@ -391,8 +402,10 @@ namespace vm::debugger::debug_adapter {
 		const auto&        pos = pos_result.value();
 		SourcePositionInfo info;
 
-		if (pos.source_position.has_value()) {
-			auto src          = pos.source_position.value();
+		auto source_position = pos.source_position;
+		if (pos.mapped_position.has_value()) source_position = pos.mapped_position;
+		if (source_position.has_value()) {
+			auto src          = source_position.value();
 			auto [sl, sc]     = src.getStartLineColumn();
 			auto [el, ec]     = src.getEndLineColumn();
 			info.start_line   = sl;
@@ -414,10 +427,10 @@ namespace vm::debugger::debug_adapter {
 		auto frame_result = debugger.getStackFrameData(thread_id, frame_id);
 		if (!frame_result.has_value()) return std::unexpected("Failed to get frame variables");
 
-		auto&                          data = frame_result.value();
-		std::map<std::string, VarInfo> children_map;
-		std::vector<VMValueRef>        complex_children_to_register;
-		u64                            next_ref = variables.size() + 1;
+		auto&                               data = frame_result.value();
+		std::map<std::string, VarInfo>      children_map;
+		std::vector<SharedBox<IVMValueRef>> complex_children_to_register;
+		u64                                 next_ref = variables.size() + 1;
 
 
 		for (const auto& var: data.frame_vars) {
@@ -425,7 +438,7 @@ namespace vm::debugger::debug_adapter {
 			if_opt_some(var.name, n) name_str = n.str();
 			VarInfo info{ .var = var.value, .var_ref = 0 };
 
-			if (var.value.isComplex()) {
+			if (var.value->isComplex()) {
 				complex_children_to_register.push_back(var.value);
 
 				info.var_ref = next_ref;
@@ -444,22 +457,22 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	std::expected<std::map<std::string, DebugAdapter::VarInfo>, std::string> DebugAdapter::varRefFromVMValueRef(
-		VMValueRef& value
+		SharedBox<IVMValueRef>& value
 	) {
-		auto opt_data = value.readData();
+		auto opt_data = value->readData();
 		if (!opt_data) return std::unexpected("Failed to read data");
 
 
 		namespace idv = interpreted_data_variant;
 		std::map<std::string, VarInfo> children_map;
 
-		std::vector<VMValueRef> complex_children_to_register;
-		u64                     next_ref = variables.size() + 1;
+		std::vector<SharedBox<IVMValueRef>> complex_children_to_register;
+		u64                                 next_ref = variables.size() + 1;
 
-		auto process_child = [&](const std::string& name, VMValueRef child) {
+		auto process_child = [&](const std::string& name, const SharedBox<IVMValueRef>& child) {
 			VarInfo info{ .var = child, .var_ref = 0 };
 
-			if (child.isComplex()) {
+			if (child->isComplex()) {
 				complex_children_to_register.push_back(child);
 				info.var_ref = next_ref;
 				next_ref++;
@@ -518,7 +531,7 @@ namespace vm::debugger::debug_adapter {
 			auto [refs, fun_name] = var_ref_frame.value();
 			variables[i]          = refs;
 
-			auto pos_info = getSourcePositionInfo();
+			auto pos_info = getSourcePositionInfo(i);
 			if (!pos_info.has_value()) {
 				sendErrorResponse(req, pos_info.error());
 				return;
@@ -585,7 +598,7 @@ namespace vm::debugger::debug_adapter {
 
 					variables[var_ref - 1] = var_ref_frame.value().first;
 				}
-				variant_case(VMValueRef, value) {
+				variant_case(SharedBox<IVMValueRef>, value) {
 					auto var_ref_value = varRefFromVMValueRef(value);
 					if (!var_ref_value.has_value()) {
 						sendErrorResponse(req, var_ref_value.error());
@@ -601,8 +614,8 @@ namespace vm::debugger::debug_adapter {
 			for (const auto& [key, var_info]: variables_map) {
 				nlohmann::json variable_item
 					= { { "name", key },
-					    { "value", var_info.var.str() },
-					    { "type", var_info.var.getType()->getName().str() },
+					    { "value", var_info.var->str() },
+					    { "type", var_info.var->getType()->getName().str() },
 					    { "variablesReference", var_info.var_ref } };
 				variables_json.push_back(variable_item);
 			}
@@ -648,7 +661,7 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	void DebugAdapter::handleNext(const nlohmann::json& req) {
-		auto result = debugger.step();
+		auto result = debugger.mappedStep();
 		if (!result.has_value()) {
 			sendErrorResponse(req, "Failed to step: " + api::errorToString(result.error()));
 			return;

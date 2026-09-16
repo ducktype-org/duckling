@@ -1,4 +1,3 @@
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -7,6 +6,7 @@
 
 #include <base/types/ints.hpp>
 
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -75,7 +75,7 @@ namespace compiler::repl {
 		}
 
 		void beforeAll() override {
-			dia_int::configureImmediatePrint(&std::cerr);
+			dia::configureImmediatePrint(&std::cerr);
 			// enable if needed
 			// logger::enable_dev_logs = true;
 			// logger::enableDevCategoryByStringName("REPL");
@@ -1046,8 +1046,8 @@ namespace compiler::repl {
 				updated_history_size >= initial_history_size,
 				"History size should increase or stay same after processing"
 			);
-			assertTrue(
-				session.m_lowering_context.has_value(),
+			ASSERT_HAS_VALUE(
+				session.m_lowering_context,
 				"Lowering context should be initialized for REPL execution"
 			);
 		}

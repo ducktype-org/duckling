@@ -120,22 +120,12 @@ namespace compiler::tsh {
 
 	bool FunctionAbstractType::isFree() const { return toCPimpl(pimpl)->isFree(); }
 
-	SymbolType<> DynamicArrayAbstractType::getElementType() const {
-		return toCPimpl(pimpl)->getElementType();
-	}
-
 	SymbolType<> StaticArrayAbstractType::getElementType() const {
 		return toCPimpl(pimpl)->getElementType();
 	}
 
 	TypeTemplateAbstractType::Source TypeTemplateAbstractType::getSource() const {
 		return toCPimpl(pimpl)->getSource();
-	}
-
-	AbstractType TypeTemplateAbstractType::instantiate(
-		query::Context& ctx, const SymbolType<>& element_type
-	) const {
-		return toCPimpl(pimpl)->instantiate(ctx, element_type);
 	}
 
 	usize StaticArrayAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
@@ -181,12 +171,6 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getImplementedInterfaceSymbols(ctx);
 	}
 
-	SymbolType<> ClassAbstractType::getMemberType(
-		const compiler::helios::SymID sym, query::Context& ctx
-	) const {
-		return toCPimpl(pimpl)->getMemberType(sym, ctx);
-	}
-
 	template<std::derived_from<AbstractType> TYPE_AbstractType>
 	typename TYPE_AbstractType::CPimpl checkDynamicCast(const AbstractType::CPimpl pimpl) {
 		auto result = dynamic_cast<const typename TYPE_AbstractType::Impl*>(pimpl.get());
@@ -217,7 +201,6 @@ namespace compiler::tsh {
 	INSTANTIATE_CHECKED_CAST(SliceAbstractType)
 	INSTANTIATE_CHECKED_CAST(TupleAbstractType)
 	INSTANTIATE_CHECKED_CAST(FunctionAbstractType)
-	INSTANTIATE_CHECKED_CAST(DynamicArrayAbstractType)
 	INSTANTIATE_CHECKED_CAST(StaticArrayAbstractType)
 	INSTANTIATE_CHECKED_CAST(VariantAbstractType)
 	INSTANTIATE_CHECKED_CAST(ClassAbstractType)

@@ -17,8 +17,7 @@ namespace compiler::helios::code {
 	 *   this function treats the call as creating a static array type (e.g., `i32[10]`).
 	 * - Type template baking - if the base expression evaluates to a type template type,
 	 *   this function expects the argument to be coercible to meta and treats the call as
-	 * 	 specializing a type template (currently only used for specializing the builtin `List[T]`
-	 * type).
+	 * 	 specializing a type template.
 	 * - Index Access - if the base expression is an array-like type, this function treats
 	 *   the call as an access to an element by its index (`my_array[0]`).
 	 *

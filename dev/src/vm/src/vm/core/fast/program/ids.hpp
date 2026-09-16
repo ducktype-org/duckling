@@ -12,7 +12,7 @@ namespace vm::fast {
 	 */
 	enum class InstrID : u64 {
 #define HANDLE_INSTR(NAME) NAME,
-#include "instructions/instruction_definitions.hpp"
+#include "instructions/instruction_definitions.def.hpp"
 #undef HANDLE_INSTR
 	};
 }

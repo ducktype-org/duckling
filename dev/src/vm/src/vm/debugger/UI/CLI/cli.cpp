@@ -26,8 +26,8 @@ namespace {
 		os.add(printer::PrinterContent(typeToString(status)));
 		if (v_matches(status, vm::api::ExecutionCompleted)) {
 			const auto& exit_value = std::get<vm::api::ExecutionCompleted>(status).exit_value;
-			if (v_matches(exit_value, std::vector<Ref<vm::VmValue>>)) {
-				for (auto val: std::get<std::vector<Ref<vm::VmValue>>>(exit_value)) {
+			if (v_matches(exit_value, std::vector<Ref<vm::IVMValue>>)) {
+				for (auto val: std::get<std::vector<Ref<vm::IVMValue>>>(exit_value)) {
 					if_opt_some(val->readData(), data) {
 						variant_match(data) {
 							variant_case(vm::interpreted_data_variant::Primitive, primitive) {
@@ -155,19 +155,27 @@ namespace vm::debugger::cli {
 			                                               ? debugger.mappedStep()
 			                                               : debugger.step();
 
-										 if (response)
-											 printCodePosition(*response);
-										 else
+										 if (!response) {
 											 printNL("Failed to obtain position!");
+											 return 0;
+										 }
+
+										 match_optional(*response) {
+											 opt_some(position) { printCodePosition(position); }
+											 opt_none { printNL("Program has finished."); }
+										 }
 
 										 return 0;
 									 }))
 		          .addSubcommand(
 					  clah::Clah("break", "sets or unsets the breakpoint")
-						  .addPositional(clah::CategoryParser::make(
-							  "option", std::vector<std::string>{ "set", "del" }
-						  ))
-						  .addPositional(clah::IntParser::make("line"))
+						  .addPositional(
+							  clah::CategoryParser::make(
+								  "option", std::vector<std::string>{ "set", "del" }
+							  ),
+							  "Breakpoint operation. Possible values are: set, del."
+						  )
+						  .addPositional(clah::IntParser::make("line"), "Source line number.")
 						  .setHandler([&](const clah::ParsingResult& options) -> int {
 							  auto option = options.getPositional<std::string>(0);
 							  auto line   = base::safeIntConv<usize>(options.getPositional<i64>(1));

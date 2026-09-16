@@ -91,6 +91,63 @@ namespace {
 		);
 	}
 
+	/// Number of fields of the `String` class: pointer, length, capacity and offset.
+	constexpr unsigned STRING_FIELD_COUNT = 4;
+	/// Number of fields of a char slice: pointer and length.
+	constexpr unsigned CHAR_SLICE_FIELD_COUNT = 2;
+
+	/**
+	 * @brief Converts a char backed CTV (a char slice or a `String`) into its corresponding
+	 * llvm::Constant representation.
+	 *
+	 * Both are structs starting with a pointer to the characters and their length, so they share
+	 * the private constant global holding the bytes. `String` additionally stores the capacity,
+	 * which equals the length because the buffer is exactly as long as its content, and the
+	 * offset, which is zero.
+	 *
+	 * @param content The characters of the value.
+	 * @param is_string_class True for a `String`, false for a char slice.
+	 * @param llvm_type The expected type.
+	 * @param llvm_module The LLVM module into which the character global should be injected.
+	 * @return The created llvm::Constant*.
+	 */
+	llvm::Constant* charBackedCtvToLLVMConstant(
+		const base::StrID content,
+		const bool        is_string_class,
+		Ref<llvm::Type>   llvm_type,
+		Ref<llvm::Module> llvm_module
+	) {
+		const auto string_constant = llvm::ConstantDataArray::getString(
+			llvm_type->getContext(), content.strView(), /*AddNull=*/false
+		);
+		const auto string_global = new llvm::GlobalVariable(
+			*llvm_module,
+			string_constant->getType(),
+			/*isConstant=*/true,
+			llvm::GlobalValue::PrivateLinkage,
+			string_constant
+		);
+
+		const auto struct_type = llvm::cast<llvm::StructType>(llvm_type.get());
+		CORE_ASSERT(
+			struct_type->getNumElements()
+				== (is_string_class ? STRING_FIELD_COUNT : CHAR_SLICE_FIELD_COUNT),
+			"LLVM lowering: unexpected layout of a char backed compile time value."
+		);
+
+		const u64 length = content.strView().size();
+		auto      field  = [&](const unsigned index, const u64 value) {
+            return llvm::ConstantInt::get(struct_type->getElementType(index), value);
+		};
+
+		std::vector<llvm::Constant*> fields{ string_global, field(1, length) };
+		if (is_string_class) {
+			fields.push_back(field(2, length));
+			fields.push_back(field(3, 0));
+		}
+		return llvm::ConstantStruct::get(struct_type, fields);
+	}
+
 	/**
 	 * @brief Converts a CTV into its corresponding llvm::Constant representation.
 	 * @param ctv The CTV to convert.
@@ -124,29 +181,15 @@ namespace {
 			variant_case(char, c) {
 				return llvm::ConstantInt::get(llvm_type.get(), u64((unsigned char) c));
 			}
-			variant_case(base::StrID, str) {
-				// First, create a global constant for the string data
-				const auto string_constant = llvm::ConstantDataArray::getString(
-					llvm_type->getContext(), str.strView(), /*AddNull=*/false
+			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, char_slice) {
+				return charBackedCtvToLLVMConstant(
+					char_slice.value, /*is_string_class=*/false, llvm_type, llvm_module
 				);
-				const auto string_global = new llvm::GlobalVariable(
-					*llvm_module,
-					string_constant->getType(),
-					/*isConstant=*/true,
-					llvm::GlobalValue::PrivateLinkage,
-					string_constant
+			}
+			variant_case(compiler::ctv::CompileTimeValue::StringClassValue, string_value) {
+				return charBackedCtvToLLVMConstant(
+					string_value.value, /*is_string_class=*/true, llvm_type, llvm_module
 				);
-
-				// Prepare the char slice struct
-				const u64                          length = str.strView().size();
-				const std::vector<llvm::Constant*> fields{
-					string_global,
-					// length is length
-					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, length))
-				};
-				const auto struct_type     = llvm::cast<llvm::StructType>(llvm_type.get());
-				const auto struct_constant = llvm::ConstantStruct::get(struct_type, fields);
-				return struct_constant;
 			}
 			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
 				// @TODO: #2506 Implement this
@@ -341,6 +384,23 @@ namespace compiler::backend_llvm {
 					llvm_context, base::safeIntConv<unsigned>(static_cast<usize>(layout->getSize()))
 				);
 			}
+			variant_case(tsl::VariantTypeLayout, variant_layout) {
+				// Variants lower to a packed literal struct (structurally uniqued by LLVM):
+				// { i8 tag, [pad x i8], [payload x i8] }, mirroring the TSL layout.
+				const usize data_offset = variant_layout.getDataOffset().asInt();
+				const usize total_bytes = base::bits2bytes(layout->getSize()).asInt();
+				const usize data_bytes  = total_bytes - data_offset;
+
+				llvm::Type* i8_type = llvm::Type::getInt8Ty(llvm_context);
+
+				std::vector<llvm::Type*> members;
+				members.push_back(i8_type);  // The tag.
+				if (data_offset > 1)
+					members.push_back(llvm::ArrayType::get(i8_type, data_offset - 1));
+				members.push_back(llvm::ArrayType::get(i8_type, data_bytes));
+
+				return llvm::StructType::get(llvm_context, members, /*isPacked=*/true);
+			}
 			variant_default {
 				CORE_PANIC(
 					base::strConcat("Type not handled yet: ", layout->toStringIdentification())
@@ -381,7 +441,10 @@ namespace compiler::backend_llvm {
 
 		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
 
-		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
+		global->setLinkage(
+			lir_global.global.link_once ? llvm::GlobalValue::LinkOnceODRLinkage
+										: llvm::GlobalValue::ExternalLinkage
+		);
 		global->setConstant(lir_global.global.type == lir::LIRGlobalType::Constant);
 
 		// We set null initialization for all globals by default to keep potential uninitialized
@@ -898,17 +961,6 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		/**
-		 * @brief Retrieves or inserts a built-in function prototype in the LLVM module.
-		 */
-		auto loadBuiltin(
-			const std::string_view             name,
-			llvm::Type*                        ret_type,
-			std::initializer_list<llvm::Type*> args
-		) -> llvm::FunctionCallee {
-			return module->getOrInsertFunction(name, llvm::FunctionType::get(ret_type, args, false));
-		}
-
 		llvm::Value* lowerCallCAbiInstruction(
 			const lir::Instruction&  lir_instruction,
 			llvm::IRBuilder<>&       builder,
@@ -1098,31 +1150,6 @@ namespace compiler::backend_llvm {
 				"Non default abi lowering."
 			);
 
-			if_opt_some(function_literal.builtin_kind_opt, builtin_kind) {
-				if (builtin_kind == lir::BuiltinFunctionKind::BoxAlloc) {
-					const auto value_to_box
-						= loadLIRValue(lir_instruction.arguments.at(1), builder);
-					const usize size
-						= module->getDataLayout().getTypeAllocSize(value_to_box->getType());
-					auto alloc_func
-						= loadBuiltin("builtin_alloc", builder.getPtrTy(), { builder.getInt64Ty() });
-					llvm::Value* allocated_ptr
-						= builder.CreateCall(alloc_func, { builder.getInt64(size) }, "box_ptr");
-					// @TODO: #1895 This is suboptimal. In the future class constructors should
-					// take the allocated memory pointer as a parameter and construct it
-					// in-place.
-					builder.CreateStore(value_to_box, allocated_ptr);
-					return allocated_ptr;
-				} else if (builtin_kind == lir::BuiltinFunctionKind::BoxFree) {
-					const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(1), builder);
-					auto       free_func   = loadBuiltin(
-                        "builtin_dealloc", builder.getVoidTy(), { builder.getPtrTy() }
-                    );
-					builder.CreateCall(free_func, { ptr_to_free });
-					return nullptr;
-				}
-			}
-
 			std::vector<llvm::Value*> args;
 			args.reserve(lir_instruction.arguments.size() - 1);
 			for (usize i = 1; i < lir_instruction.arguments.size(); i++)
@@ -1152,6 +1179,13 @@ namespace compiler::backend_llvm {
 		storeOutput(lir_instruction.output.value(), value, builder);               \
 		break;                                                                     \
 	}
+#define LIR_2_LLVM_UNARY_OPERATION_CASE(op)                                           \
+	{                                                                                 \
+		const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder); \
+		const auto value    = builder.Create##op(argument);                           \
+		storeOutput(lir_instruction.output.value(), value, builder);                  \
+		break;                                                                        \
+	}
 
 		/**
 		 * @brief Lowers LIRInstruction to LLVM instructions and appends them
@@ -1168,6 +1202,10 @@ namespace compiler::backend_llvm {
 			}
 			case ReturnValue: {
 				builder.CreateRet(loadLIRValue(lir_instruction.arguments.at(0), builder));
+				break;
+			}
+			case Unreachable: {
+				builder.CreateUnreachable();
 				break;
 			}
 			case Jump: {
@@ -1203,62 +1241,89 @@ namespace compiler::backend_llvm {
 				llvm::Value* ptr    = gepPointerFromLIRPlace(output, builder);
 				llvm::Type*  type   = typeFromLayout(module, output.layout);
 
-				builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
+				if (type->isAggregateType()) {
+					const llvm::DataLayout& data_layout = module->getDataLayout();
+					builder.CreateMemSet(
+						ptr,
+						builder.getInt8(0),
+						data_layout.getTypeAllocSize(type).getFixedValue(),
+						data_layout.getABITypeAlign(type)
+					);
+				} else {
+					builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
+				}
 				break;
 			}
-			case ListPush:
-			case ListPop:
-			case ListFree: {
-				llvm::Value* list_ptr
-					= loadLIRValueToPointer(lir_instruction.arguments.at(0), builder);
+			case VariantConstruct: {
+				const auto& params = std::get<lir::VariantParameters>(lir_instruction.extra_params);
+				const auto& variant_layout
+					= std::get<tsl::VariantTypeLayout>(params.variant_layout->getVariant());
 
-				// Get the size of the List element. Needed to pass to the generic
-				// `builtin_list_push`/'builtin_list_pop' builtins.
-				auto get_elem_size = [&]() {
-					const auto& params
-						= std::get<lir::ListOperationParameters>(lir_instruction.extra_params);
-					return builder.getInt64(
-						static_cast<u64>(base::bits2bytes(params.element_layout->getSize()))
+				llvm::Value* variant_ptr
+					= gepPointerFromLIRPlace(lir_instruction.output.value(), builder);
+
+				// The tag lives at offset 0.
+				builder.CreateStore(
+					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
+					variant_ptr
+				);
+
+				// An alternative whose payload carries no information (e.g. `()`) has no value to
+				// store, so the tag alone identifies it.
+				if (not lir_instruction.arguments.empty()) {
+					llvm::Value* payload  = loadLIRValue(lir_instruction.arguments.at(0), builder);
+					llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
+						builder.getInt8Ty(),
+						variant_ptr,
+						variant_layout.getDataOffset().asInt(),
+						"variant_data"
 					);
-				};
-
-				switch (lir_instruction.operation) {
-				case ListPush: {
-					llvm::Value* element_ptr
-						= loadLIRValueToPointer(lir_instruction.arguments.at(1), builder);
-
-					auto push_func = loadBuiltin(
-						"builtin_list_push",
-						builder.getVoidTy(),
-						{ builder.getPtrTy(), builder.getPtrTy(), builder.getInt64Ty() }
-					);
-
-					builder.CreateCall(push_func, { list_ptr, element_ptr, get_elem_size() });
-					break;
+					builder.CreateStore(payload, data_ptr);
 				}
-				case ListPop: {
-					llvm::Value* count_val = loadLIRValue(lir_instruction.arguments.at(1), builder);
+				break;
+			}
+			case VariantTryProject: {
+				const auto& params = std::get<lir::VariantParameters>(lir_instruction.extra_params);
+				const auto& variant_layout
+					= std::get<tsl::VariantTypeLayout>(params.variant_layout->getVariant());
 
-					auto pop_func = loadBuiltin(
-						"builtin_list_pop",
-						builder.getVoidTy(),
-						{ builder.getPtrTy(), builder.getInt64Ty(), builder.getInt64Ty() }
-					);
+				// The argument is a reference to the variant, so the pointer is the value held
+				// in the place rather than the place's own address.
+				llvm::Value* variant_ptr = loadLIRValue(lir_instruction.arguments.at(0), builder);
 
-					builder.CreateCall(pop_func, { list_ptr, count_val, get_elem_size() });
-					break;
-				}
-				case ListFree: {
-					auto free_func = loadBuiltin(
-						"builtin_list_free", builder.getVoidTy(), { builder.getPtrTy() }
-					);
+				llvm::Value* tag
+					= builder.CreateLoad(builder.getInt8Ty(), variant_ptr, "variant_tag");
+				llvm::Value* tag_matches = builder.CreateICmpEQ(
+					tag,
+					builder.getInt8(base::safeIntConv<std::uint8_t>(params.alternative_index)),
+					"tag_matches"
+				);
+				llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
+					builder.getInt8Ty(),
+					variant_ptr,
+					variant_layout.getDataOffset().asInt(),
+					"variant_data"
+				);
+				llvm::Value* result = builder.CreateSelect(
+					tag_matches,
+					data_ptr,
+					llvm::ConstantPointerNull::get(builder.getPtrTy()),
+					"variant_proj"
+				);
+				storeOutput(lir_instruction.output.value(), result, builder);
+				break;
+			}
+			case BranchIfNull: {
+				const auto pointer = loadLIRValue(lir_instruction.arguments.at(0), builder);
+				const auto null_block
+					= block_mapping[lir_instruction.arguments.at(1).get<lir::BlockRef>()];
+				const auto not_null_block
+					= block_mapping[lir_instruction.arguments.at(2).get<lir::BlockRef>()];
 
-					builder.CreateCall(free_func, { list_ptr });
-					break;
-				}
-				default:
-					CORE_UNREACHABLE();
-				}
+				llvm::Value* is_null = builder.CreateICmpEQ(
+					pointer, llvm::ConstantPointerNull::get(builder.getPtrTy()), "is_null"
+				);
+				builder.CreateCondBr(is_null, null_block.get(), not_null_block.get());
 				break;
 			}
 			/// Integer arithmetic ///
@@ -1276,13 +1341,8 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(URem)
 			case IntegerSMod:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(SRem)
-			case IntegerNeg: {
-				const auto output   = lir_instruction.output.value();
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateNeg(argument);
-				storeOutput(output, value, builder);
-				break;
-			}
+			case IntegerNeg:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Neg)
 
 			/// Floatin point arithmetic ///
 			case FloatAdd:
@@ -1293,13 +1353,8 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FMul)
 			case FloatDiv:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FDiv)
-			case FloatNeg: {
-				const auto output   = lir_instruction.output.value();
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateFNeg(argument);
-				storeOutput(output, value, builder);
-				break;
-			}
+			case FloatNeg:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(FNeg)
 
 			/// Integer comparisons ///
 			case IntegerULt:
@@ -1345,12 +1400,21 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalAnd)
 			case BooleanOr:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalOr)
-			case BooleanNot: {
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateNot(argument);
-				storeOutput(lir_instruction.output.value(), value, builder);
-				break;
-			}
+			case BooleanNot:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Not)
+			/// Integer bitwise operations ///
+			case IntegerBitAnd:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(And)
+			case IntegerBitOr:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Or)
+			case IntegerBitXor:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Xor)
+			case IntegerShl:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Shl)
+			case IntegerShr:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(LShr)
+			case IntegerBitNot:
+				LIR_2_LLVM_UNARY_OPERATION_CASE(Not)
 			case Cast: {
 				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				const auto output   = lir_instruction.output.value();

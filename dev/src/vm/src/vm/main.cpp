@@ -107,14 +107,18 @@ clah::Clah getVmClah() {
 	                     .addLongName("debug")
 	                     .addShortDesc("Start the VM CLI debugger")
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("args"))
+				.add(clah::ParamBuilder::ofValue(
+						 clah::StringListParser::make("args", clah::StringParser::make())
+				)
 	                     .addShortDesc(
 							 R"(Program arguments. To pass arguments such as "hello -n 5", enter them as a comma-separated list: "hello,-n,5".)"
 						 )
 	                     .addShortName('c')
 	                     .addLongName("args")
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("libs"))
+				.add(clah::ParamBuilder::ofValue(
+						 clah::StringListParser::make("libs", clah::StringParser::make())
+				)
 	                     .addShortDesc(
 							 R"(Shared libraries for `ffi function` symbol resolution, as a comma-separated list. A bare name (e.g. "libm.so.6") is searched in the system library paths, a path is loaded as given.)"
 						 )
@@ -140,10 +144,10 @@ clah::Clah getVmClah() {
 						process_options.mode = vm::api::ProcessMode::Fast;
 
 					if (options.isFlag("debug")) {
-						auto cli = vm::debugger::cli::CLIDebugger();
+						auto debugger = vm::debugger::cli::CLIDebugger();
 
-						auto result
-							= source_files.size() ? cli.load(source_files[0]) : cli.loadDefault();
+						auto result = source_files.size() ? debugger.load(source_files[0])
+			                                              : debugger.loadDefault();
 						if (!result) {
 							std::string error_string;
 							variant_match(result.error()) {
@@ -163,9 +167,9 @@ clah::Clah getVmClah() {
 							return 1;
 						}
 
-						cli.setProgramArguments(args);
+						debugger.setProgramArguments(args);
 
-						return cli.run();
+						return debugger.run();
 					} else
 						return cli(source_files, args, process_options, ffi_libs);
 				})
@@ -181,6 +185,11 @@ clah::Clah getVmClah() {
 int main(int argc, const char** argv) {
 	init::InitObject _;
 	auto             clah = getVmClah();
+
+	// NOLINTNEXTLINE(concurrency-mt-unsafe) - runs before any thread is spawned
+	if (const char* unbuffered = std::getenv("DUCK_VM_UNBUFFERED")) {
+		if (std::string_view(unbuffered) == "1") std::cout << std::unitbuf;
+	}
 
 	try {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);

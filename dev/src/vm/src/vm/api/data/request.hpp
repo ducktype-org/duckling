@@ -10,8 +10,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/safe/memory/pointer.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <json/json.hpp>
 
@@ -21,103 +20,115 @@
 
 namespace vm::api {
 	namespace request {
-		struct LoadFiles {
+		struct LoadFiles final {
 			std::vector<fs::File> filenames;
 		};
 
-		struct LoadCode {
+		struct LoadCode final {
 			code::CodeCollection code_collection;
 		};
 
-		struct Pause {
+		struct Pause final {
 			ThreadID thread_id;
 		};
 
-		struct Resume {
+		struct Resume final {
 			ThreadID thread_id;
 		};
 
-		struct Stop {};
+		struct Stop final {};
 
-		struct Run {
+		struct Run final {
 			ProgramRunArguments program_args;
 		};
 
-		struct RunFunction {
+		struct RunAwait final {
+			ProgramRunArguments program_args;
+		};
+
+		struct RunFunction final {
 			std::string          func_name;
 			FunctionRunArguments func_args;
 		};
 
-		struct Join {
+		struct RunFunctionAwait final {
+			std::string          func_name;
+			FunctionRunArguments func_args;
+		};
+
+		struct Join final {
 			ThreadID thread_id;
 		};
 
-		struct RunFunctionAwait {
-			std::string          func_name;
-			FunctionRunArguments func_args;
+		struct Step final {
+			ThreadID thread_id;
 		};
 
-		struct Step {};
+		struct PauseAll final {};
 
-		struct WaitForBreakpoint {};
+		struct WaitForBreakpoint final {
+			ThreadID thread_id;
+		};
 
-		struct ExecutionPosition {};
+		struct ExecutionPosition final {
+			base::Optional<usize> frame_idx;
+		};
 
-		struct TypeMetadata {
+		struct TypeMetadata final {
 			std::string type_name;
 		};
 
-		struct VmValue {
+		struct VMValue final {
 			std::string type_name;
 		};
 
-		struct StatusRequest {};
+		struct StatusRequest final {};
 
-		struct Input {
+		struct Input final {
 			std::string input;
 		};
 
-		struct Output {};
+		struct Output final {};
 
-		struct Attach {
+		struct Attach final {
 			std::istream& istream;
 			std::ostream& ostream;
 		};
 
-		struct Detach {};
+		struct Detach final {};
 
-		struct ExitCodeRequest {};
+		struct ExitCodeRequest final {};
 
-		struct DeinitAndValidate {};
+		struct DeinitAndValidate final {};
 
-		struct DebuggerGetNumberOfCurrentStackFrames {
+		struct DebuggerGetNumberOfCurrentStackFrames final {
 			ThreadID thread_id;
 		};
 
-		struct DebuggerGetStackFrameData {
+		struct DebuggerGetStackFrameData final {
 			ThreadID thread_id;
 			u64      frame_index;
 		};
 
-		struct AttachStatusListener {
+		struct AttachStatusListener final {
 			Ref<events::Listener<ProcStatus>> listener;
 		};
 
-		struct SetExecutionConfig {
+		struct SetExecutionConfig final {
 			api::ExecutionConfig config;
 		};
 
-		struct AttachOutputListener {
+		struct AttachOutputListener final {
 			Ref<events::Listener<std::string>> listener;
 		};
 
-		struct SetBreakpoint {
+		struct SetBreakpoint final {
 			base::StrID function_name;
 			u64         instruction_index;
 			bool        enable;
 		};
 
-		struct MapFileLineToCodeCollectionPosition {
+		struct MapFileLineToCodeCollectionPosition final {
 			fs::File file;
 			u64      line_number;
 		};
@@ -127,9 +138,11 @@ namespace vm::api {
 		request::LoadFiles,
 		request::LoadCode,
 		request::Pause,
+		request::PauseAll,
 		request::Resume,
 		request::Stop,
 		request::Run,
+		request::RunAwait,
 		request::RunFunction,
 		request::RunFunctionAwait,
 		request::Join,
@@ -137,7 +150,7 @@ namespace vm::api {
 		request::WaitForBreakpoint,
 		request::ExecutionPosition,
 		request::TypeMetadata,
-		request::VmValue,
+		request::VMValue,
 		request::StatusRequest,
 		request::DebuggerGetNumberOfCurrentStackFrames,
 		request::DebuggerGetStackFrameData,
@@ -152,10 +165,4 @@ namespace vm::api {
 		request::AttachOutputListener,
 		request::SetBreakpoint,
 		request::MapFileLineToCodeCollectionPosition>;
-
-	struct SupervisorRequest {
-		PID            pid;
-		RequestVariant request;
-	};
-
 }

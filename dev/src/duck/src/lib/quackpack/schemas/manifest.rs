@@ -3,8 +3,11 @@ use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 
+use itertools::Itertools;
 use serde::{Deserialize, de};
 use serde_untagged::UntaggedEnumVisitor;
+use yaml_edit::path::YamlPath;
+use yaml_edit::{Mapping, MappingBuilder, SequenceBuilder};
 
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
@@ -29,6 +32,8 @@ pub struct Manifest {
     /// `import:` root field.
     /// Only used by frontmatters.
     pub import: Option<PathBuf>,
+    /// `venv:` root field.
+    pub venv: Option<VenvConfig>,
 }
 
 impl Manifest {
@@ -53,6 +58,9 @@ impl Manifest {
         if self.import.is_some() {
             result.push("import");
         }
+        if self.venv.is_some() {
+            result.push("venv");
+        }
         result
     }
 }
@@ -61,16 +69,18 @@ impl Manifest {
 #[serde(rename_all = "kebab-case")]
 /// Schema of the `metadata:` table.
 pub struct Metadata {
+    /// Package's name.
+    pub name: Option<String>,
     /// Version of the package.
     pub version: Option<Version>,
     /// Package's authors.
     pub authors: Option<Vec<String>>,
     /// Package's license.
     pub license: Option<String>,
-    /// Package's name.
-    pub name: Option<String>,
     /// Package's description.
     pub description: Option<String>,
+    /// External library to link against.
+    pub links: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -87,6 +97,89 @@ pub struct Dependency {
     pub pinned: Option<bool>,
     /// Dependency's conditions: any has to be true in order to enable this dependency.
     pub conditions: Option<DependencyCondition>,
+}
+
+impl From<Dependency> for Mapping {
+    fn from(value: Dependency) -> Self {
+        let result = Mapping::new();
+        if let Some(version) = value.version {
+            result.set("version", version.to_string());
+        }
+        if let Some(source) = value.source {
+            match source {
+                DependencySource::Simple(simple) => {
+                    result.set("source", simple);
+                }
+                // Desired code.
+                /* DependencySource::Detailed(detailed) => {
+                    result.set("source", Into::<Mapping>::into(detailed));
+                } */
+                // Temporary workaround over a bug in yaml-edit.
+                DependencySource::Detailed(detailed) => {
+                    if let Some(registry_url) = detailed.registry_url {
+                        result
+                            .try_set_path("source.registry-url", registry_url)
+                            .expect("malformed path");
+                    }
+                    if let Some(name) = detailed.name {
+                        result
+                            .try_set_path("source.name", name)
+                            .expect("malformed path");
+                    }
+                    if let Some(path) = detailed.path {
+                        result
+                            .try_set_path("source.path", path.display().to_string())
+                            .expect("malformed path");
+                    }
+                    if let Some(git_url) = detailed.git_url {
+                        result
+                            .try_set_path("source.git-url", git_url)
+                            .expect("malformed path");
+                    }
+                    if let Some(tag) = detailed.tag {
+                        result
+                            .try_set_path("source.tag", tag)
+                            .expect("malformed path");
+                    }
+                    if let Some(branch) = detailed.branch {
+                        result
+                            .try_set_path("source.branch", branch)
+                            .expect("malformed path");
+                    }
+                    if let Some(commit) = detailed.commit {
+                        result
+                            .try_set_path("source.commit", commit)
+                            .expect("malformed path");
+                    }
+                }
+            }
+        }
+        if let Some(features) = value.features {
+            let mut features_sequence = SequenceBuilder::new();
+            for dep_feature in features {
+                match dep_feature {
+                    DependencyFeature::Simple(simple) => {
+                        features_sequence = features_sequence.item(simple);
+                    }
+                    DependencyFeature::Detailed(detailed) => {
+                        features_sequence = features_sequence.item(Into::<Mapping>::into(detailed));
+                    }
+                }
+            }
+            let features_sequence = features_sequence
+                .build_document()
+                .as_sequence()
+                .expect("SequenceBuilder should produce a sequence");
+            result.set("features", features_sequence);
+        }
+        if let Some(pinned) = value.pinned {
+            result.set("pinned", pinned);
+        }
+        if let Some(conditions) = value.conditions {
+            result.set("conditions", Into::<Mapping>::into(conditions));
+        }
+        result
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -132,6 +225,12 @@ impl<'de> Deserialize<'de> for OredSemver {
         // SAFETY: `visit_seq` manually checks for empty vectors, and `visit_str` implementation combined
         // with `Version::from_str` implementation assumes, that it's not empty.
         deserializer.deserialize_any(SeqOrSplit).map(Self)
+    }
+}
+
+impl fmt::Display for OredSemver {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.iter().map(ToString::to_string).join(" or "))
     }
 }
 
@@ -199,7 +298,7 @@ pub struct DetailedSource {
     /// This dependency is actually an alias; download package pointed by `name`.
     pub name: Option<String>,
     /// Path to the local dependency.
-    pub path: Option<String>,
+    pub path: Option<PathBuf>,
     /// Url for the git dependency.
     pub git_url: Option<String>,
     /// Git's tag.
@@ -227,6 +326,34 @@ impl DetailedSource {
     }
 }
 
+impl From<DetailedSource> for Mapping {
+    fn from(value: DetailedSource) -> Self {
+        let result = Mapping::new();
+        if let Some(registry_url) = value.registry_url {
+            result.set("registry-url", registry_url);
+        }
+        if let Some(name) = value.name {
+            result.set("name", name);
+        }
+        if let Some(path) = value.path {
+            result.set("path", path.display().to_string());
+        }
+        if let Some(git_url) = value.git_url {
+            result.set("git-url", git_url);
+        }
+        if let Some(tag) = value.tag {
+            result.set("tag", tag);
+        }
+        if let Some(branch) = value.branch {
+            result.set("branch", branch);
+        }
+        if let Some(commit) = value.commit {
+            result.set("commit", commit);
+        }
+        result
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Conditions, from which any has to be true, in order to enable this dependency.
@@ -236,10 +363,35 @@ pub struct DependencyCondition {
     pub package_features: Option<Vec<String>>,
 }
 
+impl From<DependencyCondition> for Mapping {
+    fn from(value: DependencyCondition) -> Self {
+        let mut result = MappingBuilder::new();
+        if let Some(package_features) = value.package_features {
+            let mut features = SequenceBuilder::new();
+            for feature in package_features {
+                features = features.item(feature);
+            }
+            result = result.insert_sequence("package-features", features);
+        }
+        result
+            .build_document()
+            .as_mapping()
+            .expect("MappingBuilder did not produce a Mapping")
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case", transparent)]
 /// A feature + its conditions.
 pub struct DetailedFeature(pub OneEntryMap<String, DependencyCondition>);
+
+impl From<DetailedFeature> for Mapping {
+    fn from(value: DetailedFeature) -> Self {
+        let result = Mapping::new();
+        result.set(value.0.key, Into::<Mapping>::into(value.0.value));
+        result
+    }
+}
 
 #[derive(Clone, Debug)]
 /// A general dependency feature.
@@ -298,6 +450,15 @@ impl<'de> de::Deserialize<'de> for OptLevel {
     }
 }
 
+#[derive(Clone, Debug, Deserialize)]
+/// A venv's configuration.
+#[serde(rename_all = "kebab-case")]
+pub struct VenvConfig {
+    pub storage_path: Option<PathBuf>,
+    pub ephemeral: Option<bool>,
+    pub expose_freezefile: Option<bool>,
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json;
@@ -321,6 +482,20 @@ mod tests {
 
         let y = serde_json::from_str::<OredSemver>(r#"["1.0.0", "1.1.0", "2.0.0"]"#).unwrap();
         assert_eq!(x.0, y.0);
+    }
+
+    #[test]
+    fn test_ored_semver_to_string() {
+        let x = OredSemver(vec![Version::new(1, 0, 0)]).to_string();
+        assert_eq!(x, "1.0.0");
+
+        let x = OredSemver(vec![
+            Version::new(1, 0, 0),
+            Version::new(1, 1, 0),
+            Version::new(2, 0, 0),
+        ])
+        .to_string();
+        assert_eq!(x, "1.0.0 or 1.1.0 or 2.0.0");
     }
 
     #[test]

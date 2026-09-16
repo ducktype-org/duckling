@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
@@ -29,7 +30,7 @@ impl GitAccess for MockGitAccess {
     }
 
     fn store(
-        &mut self,
+        &self,
         _url: InternedUrl,
         _commit: &str,
         _source_path: &std::path::Path,
@@ -77,9 +78,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -91,9 +92,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: [("a".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -105,9 +106,9 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
+            links: None,
         },
         dependencies: [].into(),
-        dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -148,7 +149,7 @@ fn new_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -204,13 +205,12 @@ dependencies:
     };
 
     let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
-    let ShouldRunSolverEngine::Yes(solver) = solver
-        .prepare_solving(&mut fetcher, &mut MockGitAccess())
-        .unwrap()
+    let ShouldRunSolverEngine::Yes(solver) =
+        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {
         panic!()
     };
-    let new_freeze = solver.solve().unwrap().new_freeze;
+    let new_freeze = solver.solve(&ctx).unwrap().new_freeze;
     assert_eq!(new_freeze.main_pkg, pkg_root);
     assert_eq!(
         new_freeze.package_freezes,
@@ -249,7 +249,7 @@ fn remove_unnecessary_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -308,9 +308,8 @@ dependencies:
     };
 
     let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
-    let ShouldRunSolverEngine::No(answer) = solver
-        .prepare_solving(&mut fetcher, &mut MockGitAccess())
-        .unwrap()
+    let ShouldRunSolverEngine::No(answer) =
+        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {
         panic!()
     };
@@ -350,7 +349,7 @@ fn no_longer_working_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -405,13 +404,12 @@ dependencies:
         frozen: false,
     };
     let solver = SolverGathererData::new(&pcx, previous_freeze, mode).unwrap();
-    let ShouldRunSolverEngine::Yes(solver) = solver
-        .prepare_solving(&mut fetcher, &mut MockGitAccess())
-        .unwrap()
+    let ShouldRunSolverEngine::Yes(solver) =
+        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {
         panic!()
     };
-    let new_freeze = solver.solve().unwrap().new_freeze;
+    let new_freeze = solver.solve(&ctx).unwrap().new_freeze;
     assert_eq!(new_freeze.main_pkg, pkg_root);
     assert_eq!(
         new_freeze.package_freezes,

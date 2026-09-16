@@ -1,6 +1,7 @@
 use crate::StrId;
 use crate::quackpack::core::Version;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::with_version::WithVersion;
 use crate::util::hash::sha256_string;
@@ -10,40 +11,46 @@ pub type PackageId = WithVersion<FullIdentity>;
 
 impl PackageId {
     /// Get the [`FullIdentity`] of the package.
-    pub fn identity(&self) -> FullIdentity {
+    pub fn identity(self) -> FullIdentity {
         *self.value()
     }
 
     /// Get the name of the package.
-    pub fn name(&self) -> StrId {
+    pub fn name(self) -> StrId {
         self.identity().name()
     }
 
     /// Get the [`FullOrigin`] of the package.
-    pub fn origin(&self) -> FullOrigin {
+    pub fn origin(self) -> FullOrigin {
         self.identity().origin()
     }
 
     /// Get the url of the package.
-    pub fn url(&self) -> InternedUrl {
+    pub fn url(self) -> InternedUrl {
         self.origin().url()
     }
 
     /// Get the package's kind.
-    pub fn kind(&self) -> FullKind {
+    pub fn kind(self) -> FullKind {
         self.origin().kind()
     }
 
     #[track_caller]
     /// Get storage name of a package.
-    pub fn storage_name(&self) -> String {
+    pub fn storage_name(self) -> String {
         match self.kind() {
             FullKind::Registry => {
                 storage_name_for_registry(&self.name(), self.version(), self.url())
             }
             FullKind::Git { commit } => storage_name_for_git(self.url(), &commit),
-            FullKind::Local => unreachable!("local packages do not have storage names"),
+            FullKind::Local => unreachable!("local packages do not have storage names `{self:?}`"),
         }
+    }
+}
+
+impl From<PackageId> for WithVersion<Identity> {
+    fn from(pkg_id: PackageId) -> Self {
+        Self::new(pkg_id.identity().into(), pkg_id.version())
     }
 }
 

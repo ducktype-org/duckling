@@ -1,14 +1,14 @@
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
+#include <diagnostic/message.hpp>
 
 namespace pst {
 	/**
 	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
 	 * some situation where only a number value will be accepted in an expression.
 	 */
-	class BadValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadValueError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -16,11 +16,11 @@ namespace pst {
 		}
 
 	public:
-		BadValueError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadValueError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MoreThanValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class MoreThanValueError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -28,12 +28,11 @@ namespace pst {
 		}
 
 	public:
-		MoreThanValueError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		MoreThanValueError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class BadUnitExprError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadUnitExprError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -41,11 +40,11 @@ namespace pst {
 		}
 
 	public:
-		BadUnitExprError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadUnitExprError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MultipleTernaryError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class MultipleTernaryError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -53,12 +52,11 @@ namespace pst {
 		}
 
 	public:
-		MultipleTernaryError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		MultipleTernaryError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class PartialTernaryError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class PartialTernaryError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -66,12 +64,11 @@ namespace pst {
 		}
 
 	public:
-		PartialTernaryError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		PartialTernaryError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class ImproperTernaryError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class ImproperTernaryError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -79,12 +76,11 @@ namespace pst {
 		}
 
 	public:
-		ImproperTernaryError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		ImproperTernaryError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class BadTemplateError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadTemplateError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -92,15 +88,15 @@ namespace pst {
 		}
 
 	public:
-		BadTemplateError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadTemplateError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	/**
 	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
 	 * some situation where only a string value will be accepted in an expression.
 	 */
-	class BadStrValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadStrValueError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -108,11 +104,11 @@ namespace pst {
 		}
 
 	public:
-		BadStrValueError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadStrValueError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MoreThanStrValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class MoreThanStrValueError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -120,12 +116,11 @@ namespace pst {
 		}
 
 	public:
-		MoreThanStrValueError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		MoreThanStrValueError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class BadRoundExprError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadRoundExprError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -133,11 +128,11 @@ namespace pst {
 		}
 
 	public:
-		BadRoundExprError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadRoundExprError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MatchRoundBracketError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class MatchRoundBracketError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -146,11 +141,11 @@ namespace pst {
 
 	public:
 		MatchRoundBracketError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class NotACaseExpression final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NotACaseExpression final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -158,12 +153,11 @@ namespace pst {
 		}
 
 	public:
-		NotACaseExpression(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		NotACaseExpression(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MatchCurlyBracketError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class MatchCurlyBracketError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -172,11 +166,11 @@ namespace pst {
 
 	public:
 		MatchCurlyBracketError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class OnlyPrefixError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class OnlyPrefixError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -184,15 +178,15 @@ namespace pst {
 		}
 
 	public:
-		OnlyPrefixError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		OnlyPrefixError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	/**
 	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
 	 * some situation where only a string value will be accepted in an expression.
 	 */
-	class BadCharValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadCharValueError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -200,11 +194,11 @@ namespace pst {
 		}
 
 	public:
-		BadCharValueError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadCharValueError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MoreThanCharValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class MoreThanCharValueError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -213,11 +207,11 @@ namespace pst {
 
 	public:
 		MoreThanCharValueError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class BadChainExprError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadChainExprError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -225,11 +219,11 @@ namespace pst {
 		}
 
 	public:
-		BadChainExprError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadChainExprError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class BadCallError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadCallError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -237,11 +231,11 @@ namespace pst {
 		}
 
 	public:
-		BadCallError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadCallError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class BadBlockError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadBlockError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -249,11 +243,11 @@ namespace pst {
 		}
 
 	public:
-		BadBlockError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadBlockError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class NoAtomError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NoAtomError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -261,11 +255,11 @@ namespace pst {
 		}
 
 	public:
-		NoAtomError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		NoAtomError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MultipleAssignmentError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class MultipleAssignmentError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -274,11 +268,11 @@ namespace pst {
 
 	public:
 		MultipleAssignmentError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class BadAccessError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class BadAccessError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -286,7 +280,7 @@ namespace pst {
 		}
 
 	public:
-		BadAccessError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadAccessError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 }

@@ -6,7 +6,7 @@ use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageF
 use crate::quackpack::core::solver::solving::FoundSolution;
 use crate::quackpack::core::{FeatureName, Manifest, PackageId};
 use crate::util::extend::QpExtend;
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 impl SolverFreeze {
     /// Generates a new freeze from the previous one and the solution found by solver.
@@ -19,14 +19,13 @@ impl SolverFreeze {
         solver_output: FoundSolution,
     ) -> QuackResult<Self> {
         self.add_solver_output(solver_output)?;
-        let main_features = manifests
-            .get(&self.main_pkg)
-            .context_internal("Main package without manifest")?
-            .features()
-            .all_features()
-            .keys()
-            .copied()
-            .collect();
+        let Some(main_pkg) = manifests.get(&self.main_pkg) else {
+            qp_bail_internal!(
+                "main package `{:?}` without a manifest: {manifests:#?}",
+                self.main_pkg
+            )
+        };
+        let main_features = main_pkg.features().all_features().keys().copied().collect();
         self.find_minimal_dep_solution(manifests, main_features)
     }
 
@@ -37,16 +36,25 @@ impl SolverFreeze {
                 .insert(new_pkg, SolverPackageFreeze::default());
         }
         for (pkg, new_features) in solver_output.new_features {
-            self.package_freezes.get_mut(&pkg)
-            .context_internal("Feature added to a package absent in the previous freeze and in the new packages set")?
-            .features
-            .extend(new_features);
+            let Some(pkg) = self.package_freezes.get_mut(&pkg) else {
+                qp_bail_internal!(
+                    "feature added to a package absent in the previous freeze and in the new packages set: {pkg:?}, {:#?}",
+                    self.package_freezes
+                )
+            };
+            pkg.features.extend(new_features);
         }
         for (dependency_edge, destination) in solver_output.new_edges {
-            self.package_freezes.get_mut(&dependency_edge.parent)
-            .context_internal("New dependency realization added to a package absent in the previous freeze and in the new packages set")?
-            .dependencies_realization
-            .insert(dependency_edge.manifest_child_name, PackageId::new(dependency_edge.dep_identity, destination));
+            let Some(parent) = self.package_freezes.get_mut(&dependency_edge.parent) else {
+                qp_bail_internal!(
+                    "new dependency realization added to a package absent in the previous freeze and in the new packages set: {dependency_edge:?}, {:#?}",
+                    self.package_freezes,
+                )
+            };
+            parent.dependencies_realization.insert(
+                dependency_edge.manifest_child_name,
+                PackageId::new(dependency_edge.dep_identity, destination),
+            );
         }
         Ok(())
     }
@@ -88,10 +96,10 @@ impl SolverFreeze {
         manifests: &HashMap<PackageId, Box<Manifest>>,
         new_pkg_freezes: &mut HashMap<PackageId, SolverPackageFreeze>,
     ) -> QuackResult<()> {
-        let base_manifest = manifests
-            .get(&base_pkg)
-            .context_internal("Freeze package with no manifest")?;
-        let base_pkg_features = self.current_pkg_features(new_pkg_freezes, &base_pkg)?;
+        let Some(base_manifest) = manifests.get(&base_pkg) else {
+            qp_bail_internal!("freeze package `{base_pkg:?}` without a manifest: {manifests:#?}")
+        };
+        let base_pkg_features = self.current_pkg_features(new_pkg_freezes, base_pkg)?;
         debug!(?base_pkg);
 
         for dependency in base_manifest.dependencies().all_dependencies() {
@@ -100,17 +108,20 @@ impl SolverFreeze {
                 continue;
             }
             let dep_name = dependency.effective_name();
-            let realization = self.get_realization(&base_pkg, dep_name)?;
-            let dep_manifest = manifests
-                .get(realization)
-                .context_internal("Freeze package with no manifest")?;
-            Self::add_realization(new_pkg_freezes, &base_pkg, dep_name, realization)?;
+            let realization = self.get_realization(base_pkg, dep_name)?;
+            let Some(dep_manifest) = manifests.get(&realization) else {
+                qp_bail_internal!(
+                    "freeze package `{realization:?}` with no manifest: {manifests:#?}"
+                )
+            };
+            Self::add_realization(new_pkg_freezes, base_pkg, dep_name, realization)?;
+            let enabled_features = dependency.enabled_features(base_pkg_features.clone());
             let forced_features = dep_manifest
                 .features()
-                .expand_features(dependency.enabled_features(base_pkg_features.clone()))
-                .context_internal("Unknown dependency feature")?;
-            let was_realization_present = new_pkg_freezes.contains_key(realization);
-            let child_new_freeze = new_pkg_freezes.entry(*realization).or_default();
+                .expand_features(enabled_features.iter().copied())
+                .with_context_internal(|| format!("unknown dependency feature while expanding features `{enabled_features:?}` in {dep_manifest:#?}"))?;
+            let was_realization_present = new_pkg_freezes.contains_key(&realization);
+            let child_new_freeze = new_pkg_freezes.entry(realization).or_default();
 
             if child_new_freeze
                 .features
@@ -121,7 +132,7 @@ impl SolverFreeze {
                 // We trigger the recursive search, only if either:
                 //  * `realization` was only now marked as necessary,
                 //  * we marked some new features of `realization` as necessary.
-                self.mark_children_as_necessary(*realization, manifests, new_pkg_freezes)?;
+                self.mark_children_as_necessary(realization, manifests, new_pkg_freezes)?;
             }
         }
 
@@ -133,42 +144,47 @@ impl SolverFreeze {
     fn current_pkg_features(
         &self,
         new_pkg_freezes: &mut HashMap<PackageId, SolverPackageFreeze>,
-        pkg: &PackageId,
+        pkg: PackageId,
     ) -> QuackResult<Vec<FeatureName>> {
-        Ok(new_pkg_freezes
-            .get(pkg)
-            .context_internal("Current package does not appear in the new package freezes map")?
-            .features
-            .iter()
-            .cloned()
-            .collect())
+        let Some(pkg) = new_pkg_freezes.get(&pkg) else {
+            qp_bail_internal!(
+                "current package `{pkg:?}` does not appear in the new package freezes map: {new_pkg_freezes:#?}"
+            )
+        };
+        Ok(pkg.features.iter().cloned().collect())
     }
 
     /// Helper for [`SolverFreeze::mark_children_as_necessary`].
     /// Finds how a dependency is realized.
-    fn get_realization(&self, pkg: &PackageId, dep_name: StrId) -> QuackResult<&PackageId> {
-        self.package_freezes
-            .get(pkg)
-            .context_internal("Current package does not appear in the freeze")?
-            .dependencies_realization
-            .get(&dep_name)
-            .context_internal("No realisation for package")
+    fn get_realization(&self, pkg: PackageId, dep_name: StrId) -> QuackResult<PackageId> {
+        let Some(pkg) = self.package_freezes.get(&pkg) else {
+            qp_bail_internal!(
+                "current package `{pkg:?}` does not appear in the freeze: {:#?}",
+                self.package_freezes
+            )
+        };
+        let Some(realization) = pkg.dependencies_realization.get(&dep_name) else {
+            qp_bail_internal!("no realisation for `{dep_name}` in {:#?}", pkg)
+        };
+        Ok(*realization)
     }
 
     /// Helper for [`SolverFreeze::mark_children_as_necessary`].
     /// Adds the realization of the dependency to the package's freeze.
     fn add_realization(
         new_pkg_freezes: &mut HashMap<PackageId, SolverPackageFreeze>,
-        pkg: &PackageId,
+        pkg: PackageId,
         dep_name: StrId,
-        realization: &PackageId,
+        realization: PackageId,
     ) -> QuackResult<()> {
-        new_pkg_freezes
-            .get_mut(pkg)
-            .context_internal("Current package does not appear in the new package freezes map")?
-            .dependencies_realization
+        let Some(pkg) = new_pkg_freezes.get_mut(&pkg) else {
+            qp_bail_internal!(
+                "current package `{pkg:?}` does not appear in the new package freezes map: {new_pkg_freezes:#?}"
+            )
+        };
+        pkg.dependencies_realization
             .entry(dep_name)
-            .or_insert(*realization);
+            .or_insert(realization);
         Ok(())
     }
 }
@@ -232,9 +248,9 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0.into_manifest();
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
@@ -243,9 +259,9 @@ metadata:
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.manifest().clone())),
-            (pkg_b, Box::new(manifest_b.manifest().clone())),
-            (pkg_c, Box::new(manifest_c.manifest().clone())),
+            (pkg_a, manifest_a),
+            (pkg_b, manifest_b),
+            (pkg_c, manifest_c),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -320,9 +336,9 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0.into_manifest();
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
@@ -331,9 +347,9 @@ metadata:
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.manifest().clone())),
-            (pkg_b, Box::new(manifest_b.manifest().clone())),
-            (pkg_c, Box::new(manifest_c.manifest().clone())),
+            (pkg_a, manifest_a),
+            (pkg_b, manifest_b),
+            (pkg_c, manifest_c),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([
@@ -411,9 +427,9 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0.into_manifest();
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
@@ -422,9 +438,9 @@ metadata:
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.manifest().clone())),
-            (pkg_b, Box::new(manifest_b.manifest().clone())),
-            (pkg_c, Box::new(manifest_c.manifest().clone())),
+            (pkg_a, manifest_a),
+            (pkg_b, manifest_b),
+            (pkg_c, manifest_c),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([
@@ -502,9 +518,9 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0.into_manifest();
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
@@ -513,9 +529,9 @@ metadata:
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.manifest().clone())),
-            (pkg_b, Box::new(manifest_b.manifest().clone())),
-            (pkg_c, Box::new(manifest_c.manifest().clone())),
+            (pkg_a, manifest_a),
+            (pkg_b, manifest_b),
+            (pkg_c, manifest_c),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -587,17 +603,14 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
         let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.manifest().clone())),
-            (pkg_b, Box::new(manifest_b.manifest().clone())),
-        ]);
+        let manifests = HashMap::from([(pkg_a, manifest_a), (pkg_b, manifest_b)]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
             features: HashSet::new(),

@@ -1,12 +1,8 @@
 import sys
 from dap_client import DAPTestClient
 
-if len(sys.argv) < 3:
-    sys.stderr.write("Error: Missing scenario argument\n")
-    sys.exit(1)
-
-scenario = sys.argv[2]
-client = DAPTestClient(program_name="../examples/all_types_test.dbc")
+client = DAPTestClient()
+scenario = client.scenario
 
 try:
     init_seq = client.send_initialize()
@@ -131,7 +127,7 @@ try:
         sys.stdout.write("SUCCESS: Complex structures, cyclic pointers, tables and variants verified perfectly.\n")
 
     # =========================================================================
-    # Scenario 2: Double request for the same variables refernce
+    # Scenario 2: Double request for the same variables reference
     # =========================================================================
     elif scenario == "test_double_expansion":
         st_seq = client.send_stack_trace()

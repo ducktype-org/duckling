@@ -1,8 +1,5 @@
 #include "errors.hpp"
 
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/message.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
@@ -11,17 +8,21 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/hout_creation/expressions/coercions/errors.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <diagnostic/core/diagnostic_arguments.hpp>
+#include <diagnostic/message.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <diagnostic/source_position.hpp>
 
 namespace compiler::helios::code {
-	using namespace dia_int;
+	using namespace dia;
 
-	class PositionalAfterNamedArgumentError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class PositionalAfterNamedArgumentError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -29,12 +30,12 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		PositionalAfterNamedArgumentError(dia_int::StablePosition source_position):
+		PositionalAfterNamedArgumentError(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class RepeatedNamedArgumentError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class RepeatedNamedArgumentError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -42,13 +43,13 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		RepeatedNamedArgumentError(dia_int::StablePosition source_position):
+		RepeatedNamedArgumentError(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class ArgumentIncompatibleTypeError final: public dia_int::MessageWithCodeFragmentAndCause {
+	class ArgumentIncompatibleTypeError final: public dia::MessageWithCodeFragmentAndCause {
 		// show given type and expected type
-		dia_int::Metadata getMetadata() const final {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -57,24 +58,24 @@ namespace compiler::helios::code {
 
 	public:
 		ArgumentIncompatibleTypeError(
-			dia_int::StablePosition                  source_position,
+			dia::StablePosition                      source_position,
 			Box<InteractiveType>                     expected_type,
 			Box<InteractiveType>                     actual_type,
 			base::Optional<Box<InteractiveFunction>> function_name
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
-			addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type));
-			addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
+			addArgument<dia::InteractiveArgument>("expected_type", std::move(expected_type));
+			addArgument<dia::InteractiveArgument>("given_type", std::move(actual_type));
 			if (function_name.has_value())
-				addArgument<dia_int::InteractiveArgument>(
+				addArgument<dia::InteractiveArgument>(
 					"function_name", std::move(function_name.value())
 				);
 		}
 	};
 
 	class NamedArgumentProvidedByPositionalError final:
-		  public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+		  public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -83,19 +84,19 @@ namespace compiler::helios::code {
 
 	public:
 		NamedArgumentProvidedByPositionalError(
-			dia_int::StablePosition                  source_position,
+			dia::StablePosition                      source_position,
 			base::Optional<Box<InteractiveFunction>> function_name
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			if (function_name.has_value())
-				addArgument<dia_int::InteractiveArgument>(
+				addArgument<dia::InteractiveArgument>(
 					"function_name", std::move(function_name.value())
 				);
 		}
 	};
 
-	class CallMissingArgumentError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class CallMissingArgumentError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -104,8 +105,8 @@ namespace compiler::helios::code {
 
 	public:
 		CallMissingArgumentError(
-			dia_int::StablePosition                 call_position,
-			base::Optional<dia_int::StablePosition> missing_arg_position_opt
+			dia::StablePosition                 call_position,
+			base::Optional<dia::StablePosition> missing_arg_position_opt
 		):
 			  MessageWithCodeFragmentAndCause(call_position) {
 			if_opt_some(missing_arg_position_opt, missing_arg_position) {
@@ -116,8 +117,8 @@ namespace compiler::helios::code {
 		}
 	};
 
-	class TooManyCallArgumentsError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class TooManyCallArgumentsError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -126,19 +127,19 @@ namespace compiler::helios::code {
 
 	public:
 		TooManyCallArgumentsError(
-			dia_int::StablePosition                  source_position,
+			dia::StablePosition                      source_position,
 			base::Optional<Box<InteractiveFunction>> function_name
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			if (function_name.has_value())
-				addArgument<dia_int::InteractiveArgument>(
+				addArgument<dia::InteractiveArgument>(
 					"function_name", std::move(function_name.value())
 				);
 		}
 	};
 
-	class UnknownNamedArgumentError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class UnknownNamedArgumentError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
@@ -147,19 +148,17 @@ namespace compiler::helios::code {
 
 	public:
 		UnknownNamedArgumentError(
-			dia_int::StablePosition                  source_position,
+			dia::StablePosition                      source_position,
 			std::string                              argument_name,
 			base::Optional<Box<InteractiveFunction>> function_name
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
-			addArgument<dia_int::InteractiveArgument>(
-				"function_name", std::move(function_name.value())
-			);
-			addArgument<dia_int::TextArgument>("argument_name", std::move(argument_name));
+			addArgument<dia::InteractiveArgument>("function_name", std::move(function_name.value()));
+			addArgument<dia::TextArgument>("argument_name", std::move(argument_name));
 		}
 	};
 
-	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
+	Box<dia::MessageBase> createDetailedCallErrorMessage(
 		query::Context&            ctx,
 		ElementOrigin              whole_call_origin,
 		std::vector<ElementOrigin> arguments_origin,
@@ -205,7 +204,7 @@ namespace compiler::helios::code {
 						);
 					}
 					variant_case(ArgumentCoercionFailure, data) {
-						dia_int::StablePosition pos = [&] {
+						dia::StablePosition pos = [&] {
 							if_opt_some(
 								arguments_origin[data.argument_index].getStablePosition(), pos
 							) {
@@ -214,20 +213,19 @@ namespace compiler::helios::code {
 							return whole_call_origin.getStablePosition().value();
 						}();
 
-						if (data.reason == helios::InvalidCoercionReason::IncompatibleTypes) {
+						if (data.failed.getInvalidReason()
+						    == helios::InvalidCoercionReason::IncompatibleTypes) {
 							base::Optional<Box<InteractiveFunction>> function_name
 								= get_interactive_function(data.function);
 							return makeBox<ArgumentIncompatibleTypeError>(
 								pos,
-								makeBox<InteractiveType>(ctx, data.expected_type),
-								makeBox<InteractiveType>(ctx, data.given_type),
+								makeBox<InteractiveType>(ctx, data.failed.to),
+								makeBox<InteractiveType>(ctx, data.failed.validated_from),
 								std::move(function_name)
 							);
 						}
 
-						return helios::makeDefaultCoercionErrorMessage(
-							ctx, data.reason, data.given_type, data.expected_type, pos
-						);
+						return helios::getCoercionError(ctx, data.failed, pos);
 					}
 					variant_case(MissingCallArgument, data) {
 						auto& decl = ctx.query<QueryDeclOfFun>(data.function)->valueOrThrow();
@@ -261,41 +259,38 @@ namespace compiler::helios::code {
 	}
 
 	void AmbiguousMatchesError::addExploreExactCandidates(
-		usize no_candidates, Box<dia_int::MessageBase> candidate_list
+		usize no_candidates, Box<dia::MessageBase> candidate_list
 	) {
-		auto id = dia_int::MessageBase::getUniqueID();
+		auto id = dia::MessageBase::getUniqueID();
 		this->addLinkedMessage(id, std::move(candidate_list));
-		std::vector<Box<dia_int::Argument>> args;
-		args.emplace_back(
-			makeBox<dia_int::TextArgument>("no_candidates", std::to_string(no_candidates))
+		std::vector<Box<dia::Argument>> args;
+		args.emplace_back(makeBox<dia::TextArgument>("no_candidates", std::to_string(no_candidates))
 		);
-		args.emplace_back(makeBox<dia_int::TextArgument>("message_id", id));
+		args.emplace_back(makeBox<dia::TextArgument>("message_id", id));
 		this->addExploreLink("exact_candidates", std::move(args));
 	}
 
 	void AmbiguousMatchesError::addExploreCoercibleCandidates(
-		usize no_candidates, Box<dia_int::MessageBase> candidate_list
+		usize no_candidates, Box<dia::MessageBase> candidate_list
 	) {
-		auto id = dia_int::MessageBase::getUniqueID();
+		auto id = dia::MessageBase::getUniqueID();
 		this->addLinkedMessage(id, std::move(candidate_list));
-		std::vector<Box<dia_int::Argument>> args;
-		args.emplace_back(
-			makeBox<dia_int::TextArgument>("no_candidates", std::to_string(no_candidates))
+		std::vector<Box<dia::Argument>> args;
+		args.emplace_back(makeBox<dia::TextArgument>("no_candidates", std::to_string(no_candidates))
 		);
-		args.emplace_back(makeBox<dia_int::TextArgument>("message_id", id));
+		args.emplace_back(makeBox<dia::TextArgument>("message_id", id));
 		this->addExploreLink("coercible_candidates", std::move(args));
 	}
 
 	void AmbiguousMatchesError::addExploreFailedCandidates(
-		usize no_candidates, Box<dia_int::MessageBase> candidate_list
+		usize no_candidates, Box<dia::MessageBase> candidate_list
 	) {
-		auto id = dia_int::MessageBase::getUniqueID();
+		auto id = dia::MessageBase::getUniqueID();
 		this->addLinkedMessage(id, std::move(candidate_list));
-		std::vector<Box<dia_int::Argument>> args;
-		args.emplace_back(
-			makeBox<dia_int::TextArgument>("no_candidates", std::to_string(no_candidates))
+		std::vector<Box<dia::Argument>> args;
+		args.emplace_back(makeBox<dia::TextArgument>("no_candidates", std::to_string(no_candidates))
 		);
-		args.emplace_back(makeBox<dia_int::TextArgument>("message_id", id));
+		args.emplace_back(makeBox<dia::TextArgument>("message_id", id));
 		this->addExploreLink("failed_candidates", std::move(args));
 	}
 }

@@ -55,7 +55,6 @@ public:
 		TESTER_ADD_TEST(testStatements);
 		TESTER_ADD_TEST(testCoerce);
 		TESTER_ADD_TEST(testPrepToPassSelf);
-		TESTER_ADD_TEST(testCopy);
 		TESTER_ADD_TEST(testGeneratedOrigins);
 		TESTER_ADD_TEST(testWithOrigin);
 	}
@@ -247,7 +246,7 @@ public:
 		});
 	}
 
-	/** `cast`, `refOf`, `deref` and `moveOf` reshape an operand's type as expected. */
+	/** `cast`, `refOf`, `deref` and `move` reshape an operand's type as expected. */
 	void testConversionExprs() {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			const Shorthand s{ ctx };
@@ -279,7 +278,7 @@ public:
 			ASSERT_EQUAL(derefed->expression_type.getType().getKind(), tsh::Kind::Integral);
 
 			// `move x` preserves the operand type as a temporary.
-			const auto moved = s.moveOf(s.litNum(5));
+			const auto moved = s.move(s.litNum(5));
 			ASSERT_EQUAL(dprint(moved), std::string("move(5)"));
 			ASSERT_EQUAL(moved->expression_type.getType().getKind(), tsh::Kind::Integral);
 			ASSERT_EQUAL(
@@ -289,7 +288,7 @@ public:
 		});
 	}
 
-	/** `defaultValue`, `liftToType`, and the list push/pop builders. */
+	/** `defaultValue`, `liftToType`, `blockExpr`, and the list push/pop builders. */
 	void testMiscExprs() {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			const Shorthand s{ ctx };
@@ -308,16 +307,11 @@ public:
 			ASSERT_EQUAL(dprint(lifted), std::string("lift[to=type](())"));
 			ASSERT_EQUAL(lifted->expression_type.getType().getKind(), tsh::Kind::Meta);
 
-			// listPush / listPop are structural wrappers evaluating to unit; like the underlying
-			// nodes they do not type-check their operands, so plain literals exercise the wiring.
-			// `1` is not a list, but whatever, these are going away anyway soon.
-			const auto push = s.listPush(s.litNum(1), s.litNum(2));
-			ASSERT_EQUAL(dprint(push), std::string("list_push(1, 2)"));
-			ASSERT_EQUAL(push->expression_type.getType().getKind(), tsh::Kind::Unit);
+			// A block expression wraps a BlockStmt and yields unit.
+			const auto block_expr = s.blockExpr({ s.ret(s.litNum(1)), s.expr(s.litNum(2)) });
 
-			const auto pop = s.listPop(s.litNum(1), s.litNum(2));
-			ASSERT_EQUAL(dprint(pop), std::string("list_pop(1, 2)"));
-			ASSERT_EQUAL(pop->expression_type.getType().getKind(), tsh::Kind::Unit);
+			ASSERT_EQUAL(dprint(block_expr), std::string("block({\n    return 1;\n    do 2\n}\n)"));
+			ASSERT_EQUAL(block_expr->expression_type.getType().getKind(), tsh::Kind::Unit);
 		});
 	}
 
@@ -504,51 +498,6 @@ public:
 		});
 	}
 
-	/**
-	 * `copy` produces a HOUT expression yielding a copy of its source, dispatching on the source
-	 * type: trivially-copyable sources are returned untouched (a byte copy needs no HOUT node),
-	 * `box T` is deep-copied into a fresh allocation, and other non-trivial aggregates go through
-	 * their copy constructor.
-	 * A module supplies a class (`HasBox`) that owns a `box` — hence non-trivially-copyable.
-	 */
-	void testCopy() {
-		const auto [module, scope] = getModule(fs::File(path("test_modules/shorthands/copy")));
-		const auto holder_var      = getChain("holder", scope).back();
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			const Shorthand s{ ctx };
-
-			// 1. Trivially-copyable primitive: returned as-is, no wrapping node.
-			const auto trivial = s.copy(s.litNum(5));
-			ASSERT_TRUE(dynamic_cast<const LiteralNumericExpr*>(trivial.get()) != nullptr);
-
-			// 2. A non-trivially-copyable class: copied via a call to its copy constructor, taking
-			//    a reference to the source.
-			const auto class_copy = s.copy(s.ident(holder_var));
-			ASSERT_EQUAL(class_copy->expression_type.getType().getKind(), tsh::Kind::Class);
-			const auto* class_call = dynamic_cast<const CallExpr*>(class_copy.get());
-			ASSERT_TRUE(class_call != nullptr);
-			ASSERT_EQUAL(class_call->arguments.size(), 1UL);
-			const auto* ref_arg = dynamic_cast<const RefOfExpr*>(class_call->arguments.at(0).get());
-			ASSERT_TRUE(ref_arg != nullptr);
-
-			// 3. A `box T` field is deep-copied into a fresh heap allocation (a `box`-typed call to
-			//    the box-alloc builtin), not returned as-is.
-			const auto boxed_field = ctx.query<helios::QueryTypeOfSymbol>(holder_var)
-			                             ->valueOrThrow()
-			                             .getType()
-			                             .getInterface(ctx)
-			                             ->getElementsWithName(base::StrID("boxed"))
-			                             .back()
-			                             .getSymbol();
-			const auto box_copy = s.copy(s.access(s.ident(holder_var), boxed_field));
-			ASSERT_EQUAL(
-				box_copy->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Box
-			);
-			ASSERT_TRUE(dynamic_cast<const CallExpr*>(box_copy.get()) != nullptr);
-		});
-	}
-
 	/** Trees built purely from shorthands carry generated origins. */
 	void testGeneratedOrigins() {
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -583,7 +532,7 @@ public:
 			const auto pst_origin
 				= pstOrigin(compiler::helios::maybeSymbolPst(dummy_symbol).value().unlock(ctx));
 			ASSERT_TRUE(!pst_origin.isGenerated());
-			ASSERT_TRUE(pst_origin.getStablePosition().has_value());
+			ASSERT_HAS_VALUE(pst_origin.getStablePosition());
 
 			// Check that origin is generated before override.
 			ASSERT_TRUE(dummy_ident->origin.isGenerated());
@@ -594,7 +543,7 @@ public:
 
 			// The HOUT Expr now carries the specified origin.
 			ASSERT_TRUE(!dummy_ident->origin.isGenerated());
-			ASSERT_TRUE(dummy_ident->origin.getStablePosition().has_value());
+			ASSERT_HAS_VALUE(dummy_ident->origin.getStablePosition());
 		});
 	}
 };

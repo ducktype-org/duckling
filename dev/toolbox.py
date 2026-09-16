@@ -8,6 +8,7 @@ import click
 from scripts.py.toolbox.impl.helpers import exit_with_error
 
 from scripts.py.toolbox.commands.clean_init import clean_init
+from scripts.py.toolbox.commands.cloc import cloc
 from scripts.py.toolbox.commands.coverage import coverage
 from scripts.py.toolbox.commands.cpp_linter import cpp_linter
 from scripts.py.toolbox.commands.docs import docs
@@ -29,18 +30,13 @@ from scripts.py.toolbox.commands.todo_counter import todo_counter
 from scripts.py.toolbox.commands.todo_validate import todo_validate
 from scripts.py.toolbox.commands.workflows_lint import workflows_lint
 
-
-DATA_USER = "dev"
-# @FUTURE: change this password and hide it:
-DATA_PASS = "7ocwXWOAwg="
-
-
 @click.group()
 def cli():
     pass
 
 
 cli.add_command(clean_init)
+cli.add_command(cloc)
 cli.add_command(coverage)
 cli.add_command(cpp_linter)
 cli.add_command(docs)

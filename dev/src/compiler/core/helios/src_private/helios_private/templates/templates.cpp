@@ -62,7 +62,7 @@ namespace compiler::helios::templates {
 			);
 
 			if (param_unlocked->getValue().has_value()) {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					"Default values for template parameters are not yet supported",
 					param_unlocked->getStablePosition()
 				));

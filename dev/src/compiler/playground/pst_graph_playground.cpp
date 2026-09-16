@@ -8,6 +8,7 @@
 #include <graphviz/gvc.h>
 
 #include <iostream>
+#include <sstream>
 
 // Linting is turned off because the graph api uses c-style pointers for text.
 // NOLINTBEGIN(-avoid-c-arrays)

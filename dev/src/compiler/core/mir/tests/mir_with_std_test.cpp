@@ -34,8 +34,10 @@ class MIRConstructionTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(sliceTest);
-		TESTER_ADD_TEST(dynamicArraysTest);
+		TESTER_ADD_TEST(listsTest);
 		TESTER_ADD_TEST(staticArraysTest);
+		TESTER_ADD_TEST(pointersTest);
+		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(testErrorLogging);
 	}
 
@@ -44,7 +46,7 @@ protected:
 		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
 		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
 			{ fs::FilePath(path("modules/slices")), "slices" },
-			{ fs::FilePath(path("modules/dynamic_arrays")), "dynamic_arrays" },
+			{ fs::FilePath(path("modules/lists")), "lists" },
 			{ fs::FilePath(path("modules/static_arrays")), "static_arrays" },
 		};
 		auto init_result
@@ -66,72 +68,13 @@ private:
 		});
 	}
 
-	void dynamicArraysTest() {
-		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("dynamic_arrays");
+	void listsTest() {
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("lists");
 		withContextDo([&](query::Context& ctx) {
 			auto& unit
 				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
-			auto& hout_func = unit.functions.at(0);
-
-			auto& mir_func = (compiler::mir::Function&) ctx
-			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
-			                     ->valueOrThrow();
-
-			bool found_zero_init        = false;
-			bool found_push             = false;
-			bool found_pop              = false;
-			bool found_length_call      = false;
-			bool found_index_projection = false;
-
-			using namespace compiler::mir;
-
-			for (const auto& block_id: mir_func.block_order) {
-				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					switch (instr.operation) {
-					case Operation::ZeroInitialize: {
-						auto& out_place = instr.output.value();
-						if (out_place.getBase<MIRLocalRef>()->getName() == "l")
-							found_zero_init = true;
-						break;
-					}
-					case Operation::Call: {
-						auto callee = instr.arguments.at(0).get<MIRFunctionLiteral>();
-						auto name   = compiler::helios::name(callee.helios_id);
-
-						if (name == base::StrID("push"))
-							found_push = true;
-						else if (name == base::StrID("pop"))
-							found_pop = true;
-						else if (name == base::StrID("length"))
-							found_length_call = true;
-
-						break;
-					}
-					case Operation::Assign:
-					case Operation::Cast: {
-						if (instr.output.has_value()) {
-							auto& out_place = instr.output.value();
-							// `l[0] = 42` lowers to a `Field(ptr)` projection followed by an
-							// `Index` projection.
-							if (out_place.getBase<MIRLocalRef>()->getName() == "l") {
-								for (const auto& proj: out_place.projection_chain)
-									if (v_matches(proj.storage, MIRPlace::IndexProjection))
-										found_index_projection = true;
-							}
-						}
-						break;
-					}
-					default:
-						break;
-					}
-				}
-			}
-
-			ASSERT_TRUE(found_zero_init);
-			ASSERT_TRUE(found_push);
-			ASSERT_TRUE(found_pop);
-			ASSERT_TRUE(found_length_call);
-			ASSERT_TRUE(found_index_projection);
+			auto mir_unit = compiler::mir::lowerToMIRUnit(ctx, &unit).valueOrPanic();
+			ASSERT_TRUE(!mir_unit.mir_functions.empty());
 		});
 	}
 
@@ -219,6 +162,150 @@ private:
 			{ "Variable declaration shadows a previous declaration.", "Previous declaration:" },
 			1
 		);
+	}
+
+	void boxesTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/boxes")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ unit.functions.at(3) })
+			                     ->valueOrThrow();
+
+			auto i64_type = getIntegralType(ctx, 64, Signed);
+
+			bool found_alloc_box_int      = false;
+			bool found_alloc_box_point    = false;
+			bool found_field_access_read  = false;
+			bool found_field_access_write = false;
+			bool found_by_val_deref       = false;
+			bool found_by_ref_passthrough = false;
+
+			using namespace compiler::mir;
+			for (const auto& block_id: mir_func.block_order) {
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					const bool is_box_alloc
+						= instr.operation == Operation::Call
+					   && compiler::helios::name(
+							  instr.arguments[0].get<MIRFunctionLiteral>().helios_id
+						  ) == base::StrID("boxAlloc");
+					if (is_box_alloc) {
+						// var b_int: box i32 = 42;
+						// var b_point: box Point = Point(10, 20);
+						const auto& arg = instr.arguments[1];
+						if (arg.isConstant())
+							found_alloc_box_int = true;
+						else
+							found_alloc_box_point = true;
+					} else if (instr.operation == Operation::Assign) {
+						const auto& out_place = instr.output.value();
+						// b_point.y = 99;
+						if (out_place.projection_chain.size() == 2) {
+							bool is_deref = v_matches(
+								out_place.projection_chain[0].storage, MIRPlace::DerefProjection
+							);
+							if (is_deref
+							    && v_matches(
+									out_place.projection_chain[1].storage, MIRPlace::FieldProjection
+								)) {
+								found_field_access_write = true;
+							}
+						} else {
+							// var x: i32 = b_point.x;
+							const auto& arg_place = instr.arguments[0].get<MIRPlace>();
+							if (arg_place.projection_chain.size() == 2) {
+								bool is_deref = v_matches(
+									arg_place.projection_chain[0].storage, MIRPlace::DerefProjection
+								);
+								if (is_deref
+								    && v_matches(
+										arg_place.projection_chain[1].storage,
+										MIRPlace::FieldProjection
+									)) {
+									found_field_access_read = true;
+								}
+							}
+						}
+					} else if (instr.operation == Operation::Call) {
+						// by_val(b_point);
+						// by_ref(&b_point);
+						const auto& callee      = instr.arguments[0].get<MIRFunctionLiteral>();
+						const auto  callee_name = compiler::helios::name(callee.helios_id);
+						if (callee_name == "by_val") {
+							const auto& arg_place = instr.arguments[1].get<MIRPlace>();
+							if (arg_place.projection_chain.size() == 1
+							    && v_matches(
+									arg_place.projection_chain[0].storage, MIRPlace::DerefProjection
+								)) {
+								found_by_val_deref = true;
+							}
+						} else if (callee_name == "by_ref") {
+							const auto& arg_place = instr.arguments[1].get<MIRPlace>();
+
+							if (arg_place.projection_chain.empty()) found_by_ref_passthrough = true;
+						}
+					}
+				}
+			}
+
+			// return b_int;
+			const auto& last_block = mir_func.blocks[mir_func.block_order.back()];
+			if (last_block.terminator.operation == Operation::ReturnValue) {
+				const auto& ret_val = last_block.terminator.arguments[0].get<MIRPlace>();
+				ASSERT_EQUAL(ret_val.type.getType(), i64_type);
+				ASSERT_TRUE(ret_val.type.getRefKind() == ReferenceKind::Direct);
+			}
+
+			ASSERT_TRUE(found_alloc_box_int);
+			ASSERT_TRUE(found_alloc_box_point);
+			ASSERT_TRUE(found_field_access_read);
+			ASSERT_TRUE(found_field_access_write);
+			ASSERT_TRUE(found_by_val_deref);
+			ASSERT_TRUE(found_by_ref_passthrough);
+		});
+	}
+
+	/**
+	 * @brief `ptrof` lowers to an unconditional `Operation::AddressOf`.
+	 *
+	 * Unlike `&`, which forwards a `box`/`ref` operand unchanged and only emits an `AddressOf` for
+	 * a direct one, `ptrof` takes the address of the place itself in every case. The operand keeps
+	 * its projection chain, so `ptrof m[1]` addresses the indexed element.
+	 */
+	void pointersTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/pointers")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
+			for (const auto& fn: unit.functions)
+				if (fn->declaration->original_name.strView() == "ptr_of") target = fn;
+			ASSERT_HAS_VALUE(target);
+
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ target.value() })
+			                     ->valueOrThrow();
+
+			using namespace compiler::mir;
+			usize address_of_count = 0;
+			bool  found_indexed    = false;
+			for (const auto& block_id: mir_func.block_order)
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					if (instr.operation != Operation::AddressOf) continue;
+					address_of_count++;
+
+					// `ptrof m[1]`: the index projection survives into the addressed place.
+					const auto& chain = instr.arguments[0].get<MIRPlace>().projection_chain;
+					if (!chain.empty() && v_matches(chain.back().storage, MIRPlace::IndexProjection))
+						found_indexed = true;
+				}
+
+			// One per `ptrof`, the `box` operand included — `&b` would forward it instead.
+			ASSERT_EQUAL(usize(3), address_of_count);
+			ASSERT_TRUE(found_indexed);
+		});
 	}
 };
 

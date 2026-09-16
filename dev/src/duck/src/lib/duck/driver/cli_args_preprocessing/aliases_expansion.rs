@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 use std::ffi::OsString;
-use std::path::PathBuf;
 
 use clap::ArgMatches;
 use itertools::chain;
 use serde::{Deserialize, de};
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::duck::driver::cli;
 use crate::duck::driver::cli_args_preprocessing::builtin::{
@@ -58,59 +57,32 @@ pub struct Aliases(pub HashMap<String, Alias>);
 pub fn expand_aliases(
     args: ArgMatches,
     ctx: &DuckContext,
-    external_cmds: &HashMap<String, PathBuf>,
     mut visited: Vec<String>,
 ) -> QuackResult<ArgMatches> {
     // User hasn't provided a subcommand, ignore...
     let Some((subcmd, subcmd_args)) = args.subcommand() else {
+        debug!("no subcommand");
         return Ok(args);
     };
-    let is_builtin = is_builtin_subcommand(subcmd);
+    debug!(?subcmd);
+    if is_builtin_subcommand(subcmd) {
+        debug!("builtin subcommand");
+        return Ok(args);
+    }
+    if let Some(builtin) = get_builtin_alias_expansion(subcmd) {
+        debug!(?builtin, "got builtin alias");
+        return expand_builtin_alias(builtin, subcmd_args);
+    }
     let alias = ctx.duck_cfg().alias_for(subcmd)?;
-    let is_external = external_cmds.contains_key(subcmd);
-    let builtin_alias = get_builtin_alias_expansion(subcmd);
-    match (is_builtin, &alias, is_external, builtin_alias) {
-        (false, None, true, Some(builtin)) => {
-            ctx.error_console().warning(format!(
-                "builtin alias `{subcmd}` shadows an external subcommand"
-            ))?;
-            expand_builtin_alias(builtin, subcmd_args)
-        }
-        (false, Some(_), false, Some(builtin)) => {
-            ctx.error_console().warning(format!(
-                "builtin alias `{subcmd}` shadows a user-defined alias"
-            ))?;
-            expand_builtin_alias(builtin, subcmd_args)
-        }
-        (false, Some(_), true, Some(builtin)) => {
-            ctx.error_console().warning(format!(
-                "builtin alias `{subcmd}` shadows a user-defined alias and an external subcommand"
-            ))?;
-            expand_builtin_alias(builtin, subcmd_args)
-        }
-        (false, None, false, Some(builtin)) => expand_builtin_alias(builtin, subcmd_args),
-        (true, Some(_), false, None) => {
-            ctx.error_console().warning(format!(
-                "builtin subcommand `{subcmd}` shadows a user-defined alias"
-            ))?;
-            Ok(args)
-        }
-        (false, Some(_), true, None) => {
-            ctx.error_console().warning(format!(
-                "external subcommand `{subcmd}` shadows a user-defined alias"
-            ))?;
-            Ok(args)
-        }
-        (false, Some(new), false, None) => {
+    match alias {
+        Some(new) => {
+            debug!(expanded = ?new, "expanding user alias");
             // This is the actually interesting part.
-            let new_args = expand_single_alias(subcmd, subcmd_args, new, &mut visited)?;
-            expand_aliases(new_args, ctx, external_cmds, visited)
+            let new_args = expand_single_alias(subcmd, subcmd_args, &new, &mut visited)?;
+            expand_aliases(new_args, ctx, visited)
         }
-        _ => {
-            debug!(
-                "expanding aliases: default branch with `{:?}`",
-                (is_builtin, alias, is_external, builtin_alias)
-            );
+        None => {
+            debug!("no alias");
             Ok(args)
         }
     }
@@ -120,7 +92,9 @@ pub fn expand_aliases(
 ///
 /// `builtin` is __expanded__ builtin alias (for example, for alias `b` we expect `build` to be
 /// passed as `builtin`), and `args` are parsed [`ArgMatches`] __with the builtin subcommand__.
+#[tracing::instrument(skip_all)]
 fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatches> {
+    debug!(%builtin);
     let builtin = OsString::from(builtin);
     Ok(cli().no_binary_name(true).try_get_matches_from(chain(
         [&builtin],
@@ -133,14 +107,15 @@ fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatc
 /// `alias` is alias we're expanding, `alias_args` are [`ArgMatches`] for that `alias`, `alias_expansion`
 /// is expanded alias (taken from [`DuckContext`]), and `visited` is a vector of already expanded
 /// aliases (in order to detect cycles).
+#[tracing::instrument(skip_all, fields(%alias, ?alias_expansion))]
 fn expand_single_alias(
     alias: &str,
     alias_args: &ArgMatches,
     alias_expansion: &Alias,
     visited: &mut Vec<String>,
 ) -> QuackResult<ArgMatches> {
+    debug!(?visited);
     let new_cli_args = args_from_alias(alias_expansion, alias_args);
-    debug!("replaced the alias `{alias}` with `{alias_expansion:?}`");
     let parsed = parse_alias_args(new_cli_args)?;
     let Some(new_subcmd) = parsed.subcommand_name() else {
         qp_bail!("user-defined alias `{alias}` does not have a subcommand")
@@ -173,7 +148,9 @@ fn parse_alias_args(new_cli_args: impl Iterator<Item = OsString>) -> QuackResult
 }
 
 /// Check for an aliases cycle.
+#[tracing::instrument]
 fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResult<()> {
+    trace!("checking alias cycle");
     if visited.contains(&next.into()) {
         qp_bail!(
             "user-defined alias `{current}` cycles: {} -> {next}",
@@ -202,18 +179,12 @@ mod tests {
         let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
         let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_aliases(fake_aliases);
-        let external_cmds = HashMap::new();
         let visited = Vec::new();
-        let result = expand_aliases(args_matches, &ctx, &external_cmds, visited);
-        match result {
-            Ok(_) => panic!(""),
-            Err(err) => {
-                assert_eq!(
-                    err.to_string(),
-                    "user-defined alias `z` cycles: x -> y -> z -> x"
-                );
-            }
-        }
+        let err = expand_aliases(args_matches, &ctx, visited).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "user-defined alias `z` cycles: x -> y -> z -> x"
+        );
     }
 
     #[test]
@@ -227,14 +198,8 @@ mod tests {
         let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
         let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_aliases(fake_aliases);
-        let external_cmds = HashMap::new();
         let visited = Vec::new();
-        let result = expand_aliases(args_matches, &ctx, &external_cmds, visited);
-        match result {
-            Ok(new_args_matches) => {
-                assert_eq!(new_args_matches.subcommand_name().unwrap(), "build");
-            }
-            Err(_) => panic!(""),
-        }
+        let new_args_matches = expand_aliases(args_matches, &ctx, visited).unwrap();
+        assert_eq!(new_args_matches.subcommand_name().unwrap(), "build");
     }
 }

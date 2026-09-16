@@ -5,10 +5,11 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -23,114 +24,158 @@
 
 namespace compiler::repl {
 
-	base::Bit256 QueryReplExpressionWrapper_Key::queryUnstablePerfectHash() const {
-		auto expr_hash = expr_stmt.illegalAccess().value()->getHash();
+	helios::HOUTFunction getReplInputFunction(
+		query::Context& ctx, const helios::defgen::ReplInputWrapper& input
+	) {
+		CORE_DEV_LOG(REPL, "getReplInputFunction: Starting\n");
 
-		return hashing::justHash<hashing::SHA256>(expr_hash, counter);
-	}
+		auto element = pst::LangElement::getByStableHash(input.pst_element_hash);
 
-	struct IMPLEMENT_QUERY(QueryReplExpressionWrapper, query::QResult<helios::HOUTFunction>) {
-		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			auto expr_stmt = key.expr_stmt.unlock(ctx);
+		auto code_block = std::make_shared<helios::code::CodeBlock>();
 
+		// Inputs that boil down to a single expression (a bare expression and a global initializer)
+		// share the way the body is built: the expression is returned when the wrapper has a
+		// meaningful result, and executed as a plain statement otherwise.
+		auto emplace_expression_body
+			= [&code_block](BoxOrCRef<helios::code::Expr> expr, bool returns_value) {
+				  if (returns_value) {
+					  CORE_DEV_LOG(REPL, "Creating ReturnStmt for value expression\n");
+					  code_block->statements.emplace_back(base::makeBox<helios::code::ReturnStmt>(
+						  helios::code::generatedOrigin(), std::move(expr)
+					  ));
+				  } else {
+					  CORE_DEV_LOG(REPL, "Creating ExprStmt for expression without a result\n");
+					  code_block->statements.emplace_back(base::makeBox<helios::code::ExprStmt>(
+						  helios::code::generatedOrigin(), std::move(expr)
+					  ));
+				  }
+			  };
+
+		switch (input.type) {
+		case helios::defgen::ReplInputWrapper::Type::Expression: {
+			auto expr_stmt   = element.dynamicCast<pst::ExprStmt>().unlock(ctx);
 			auto expr_holder = expr_stmt->getExpr().unlock(ctx);
 
 			CORE_DEV_LOG(REPL, "Converting expression to HOUT...\n");
-			auto hout_expr_result = ctx.query<helios::QueryHoutOfExpr>(expr_holder->getExpr());
-			if (hout_expr_result->hasFailed()) return query::Failed();
+			auto hout_expr
+				= ctx.query<helios::QueryHoutOfExpr>(expr_holder->getExpr())->valueOrThrow().ref();
 
-			auto hout_expr   = hout_expr_result->valueOrPanic().ref();
-			auto return_type = hout_expr->expression_type.getSymbolType();
-
-			CORE_DEV_LOG(REPL, "Expression return type: ", return_type.toString(), "\n");
-
-			auto code_block = std::make_shared<helios::code::CodeBlock>();
-
-			// @TODO: #1817 Instead of returning the value, we should call a generic
-			// print() function here that works for any type. This would eliminate the need
-			// to return values and manually convert them based on type in repl_dvm_helpers.cpp
-			if (return_type.toString() == "void") {
-				CORE_DEV_LOG(REPL, "Creating ExprStmt for void expression\n");
-				auto void_expr_stmt = base::makeBox<helios::code::ExprStmt>(
-					helios::code::generatedOrigin(), hout_expr
-				);
-				code_block->statements.emplace_back(std::move(void_expr_stmt));
-			} else {
-				CORE_DEV_LOG(REPL, "Creating ReturnStmt for value expression\n");
-				auto return_stmt = base::makeBox<helios::code::ReturnStmt>(
-					helios::code::generatedOrigin(), hout_expr
-				);
-				code_block->statements.emplace_back(std::move(return_stmt));
-			}
-
-			// This below is just to create a unique symbol for the REPL expression wrapper
-			CORE_DEV_LOG(REPL, "Creating synthetic symbol for wrapper function\n");
-			auto synthetic_symbol = ctx.query<helios::defgen::QueryGeneratedSymbol>(
-				{ .name = base::StrID("__repl_expr_wrapper__"),
-			      .generated_symbol_data
-			      = helios::defgen::ReplExpressionWrapper{ .counter     = key.counter,
-			                                               .return_type = return_type } }
+			emplace_expression_body(
+				hout_expr, hout_expr->expression_type.getSymbolType().toString() != "void"
 			);
-
-			CORE_DEV_LOG(REPL, "Creating function declaration\n");
-			auto& decl = ctx.query<helios::QueryDeclOfFun>(synthetic_symbol)->valueOrThrow();
-
-			CORE_DEV_LOG(REPL, "QueryReplExpressionWrapper completed successfully\n");
-			helios::HOUTFunction wrapper{ helios::code::generatedOrigin(), &decl, code_block };
-			return wrapper;
+			break;
 		}
+		case helios::defgen::ReplInputWrapper::Type::GlobalInitializer: {
+			CORE_DEV_LOG(REPL, "Building the initializer of a global variable\n");
 
-		QUERY_AUTO_CACHE_COPY
-	};
+			auto var_stmt = element.dynamicCast<pst::Variable>();
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplExpressionWrapper)
+			auto symbol = ctx.query<helios::QuerySymbolOfSTMT>({ var_stmt }).valueOrThrow();
 
-	base::Bit256 QueryReplInstructionWrapper_Key::queryUnstablePerfectHash() const {
-		auto stmt_hash = stmt.illegalAccess().value()->getHash();
-		return hashing::justHash<hashing::SHA256>(stmt_hash, counter);
-	}
+			const auto& global_data
+				= ctx.query<helios::QueryHOUTGlobalData>(symbol)->valueOrThrow();
 
-	struct IMPLEMENT_QUERY(QueryReplInstructionWrapper, query::QResult<helios::HOUTFunction>) {
-		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			CORE_DEV_LOG(REPL, "QueryReplInstructionWrapper: Starting\n");
-
-			// Unit (not Void) is the correct return type for procedures.
-			// Per the language spec: "void ... cannot be the type of a variable, or cannot
-			// be returned from a function".
-			// Unit is "the return type of a procedure, i.e. a function without a
-			// meaningful result" and is properly lowered to ReturnVoid by MIR/LIR.
-			auto void_type = tsh::SymbolType<>{
-				tsh::getUnitType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
-
-			CORE_DEV_LOG(REPL, "Compiling instruction into HOUT code block\n");
-			auto code_block = std::make_shared<helios::code::CodeBlock>(
-				helios::compileSingleStatement(ctx, key.stmt, void_type)
+			CORE_ASSERT(
+				global_data.data_type == helios::HOUTGlobalDataType::Variable,
+				"A global initializer wrapper expects a variable declaration"
 			);
 
-			// Void functions require an explicit return statement at the end.
+			emplace_expression_body(helios::getGlobalConstructorExpr(ctx, &global_data), false);
+
 			code_block->statements.emplace_back(
 				base::makeBox<helios::code::VoidReturnStmt>(helios::code::generatedOrigin())
 			);
+			break;
+		}
+		case helios::defgen::ReplInputWrapper::Type::Instruction: {
+			CORE_DEV_LOG(REPL, "Compiling instruction into HOUT code block\n");
 
-			CORE_DEV_LOG(REPL, "Creating synthetic symbol for instruction wrapper\n");
-			auto synthetic_symbol = ctx.query<helios::defgen::QueryGeneratedSymbol>(
-				{ .name = base::StrID("__repl_instr_wrapper__"),
-			      .generated_symbol_data
-			      = helios::defgen::ReplInstructionWrapper{ .counter = key.counter } }
+			code_block = std::make_shared<helios::code::CodeBlock>(helios::compileSingleStatement(
+				ctx,
+				element.dynamicCast<pst::Stmt>(),
+				tsh::SymbolType<>::withDefaults(tsh::getUnitType())
+			));
+
+			code_block->statements.emplace_back(
+				base::makeBox<helios::code::VoidReturnStmt>(helios::code::generatedOrigin())
 			);
-
-			CORE_DEV_LOG(REPL, "Creating function declaration\n");
-			auto& decl = ctx.query<helios::QueryDeclOfFun>(synthetic_symbol)->valueOrThrow();
-
-			CORE_DEV_LOG(REPL, "QueryReplInstructionWrapper completed successfully\n");
-			return helios::HOUTFunction{ helios::code::generatedOrigin(), &decl, code_block };
+			break;
+		}
 		}
 
-		QUERY_AUTO_CACHE_COPY
-	};
+		CORE_DEV_LOG(REPL, "Creating function declaration\n");
+		auto  symbol = ctx.query<helios::defgen::QueryGeneratedSymbol>({
+			 .name                  = base::StrID("__repl_input_wrapper__"),
+			 .generated_symbol_data = input,
+        });
+		auto& decl   = ctx.query<helios::QueryDeclOfFun>(symbol)->valueOrThrow();
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplInstructionWrapper)
+		CORE_DEV_LOG(REPL, "getReplInputFunction completed successfully\n");
+		return helios::HOUTFunction{ helios::code::generatedOrigin(), &decl, code_block };
+	}
+
+	query::QResult<helios::SymID> queryReplExpressionWrapperSymbol(
+		query::Context& ctx, pst::AccessLocked<pst::ExprStmt> expr_stmt, u64 counter
+	) {
+		auto unlocked    = expr_stmt.unlock(ctx);
+		auto expr_holder = unlocked->getExpr().unlock(ctx);
+
+		auto hout_expr_result = ctx.query<helios::QueryHoutOfExpr>(expr_holder->getExpr());
+		if (hout_expr_result->hasFailed()) return query::Failed();
+
+		auto return_type = hout_expr_result->valueOrPanic().ref()->expression_type.getSymbolType();
+		CORE_DEV_LOG(REPL, "Expression return type: ", return_type.toString(), "\n");
+
+		// The wrappers are told apart by their ReplInputWrapper data, the name only has to be
+		// stable, so that the symbol can be looked up again from the data alone.
+		return ctx.query<helios::defgen::QueryGeneratedSymbol>({
+			.name                  = base::StrID("__repl_input_wrapper__"),
+			.generated_symbol_data = helios::defgen::ReplInputWrapper(
+				helios::defgen::ReplInputWrapper::Type::Expression,
+				counter,
+				return_type,
+				unlocked->getHash()
+			),
+		});
+	}
+
+	helios::SymID getVariableSymID(query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt) {
+		return ctx.query<helios::QuerySymbolOfSTMT>({ var_stmt }).valueOrThrow();
+	}
+
+	helios::SymID queryReplInstructionWrapperSymbol(
+		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, u64 counter
+	) {
+		return ctx.query<helios::defgen::QueryGeneratedSymbol>({
+			.name                  = base::StrID("__repl_input_wrapper__"),
+			.generated_symbol_data = helios::defgen::ReplInputWrapper(
+				helios::defgen::ReplInputWrapper::Type::Instruction,
+				counter,
+				tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
+				stmt.unlock(ctx)->getHash()
+			),
+		});
+	}
+
+	helios::SymID queryReplGlobalInitializerWrapperSymbol(
+		query::Context& ctx, pst::AccessLocked<pst::Variable> var_stmt, u64 counter
+	) {
+		return ctx.query<helios::defgen::QueryGeneratedSymbol>({
+			.name                  = base::StrID("__repl_input_wrapper__"),
+			.generated_symbol_data = helios::defgen::ReplInputWrapper(
+				helios::defgen::ReplInputWrapper::Type::GlobalInitializer,
+				counter,
+				tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
+				var_stmt.unlock(ctx)->getHash()
+			),
+		});
+	}
+
+	helios::SymID queryReplEmptyVariableSymbol(query::Context& ctx, helios::SymID variable_symbol) {
+		return ctx.query<helios::defgen::QueryGeneratedSymbol>({
+			.name = helios::name(variable_symbol),
+			.generated_symbol_data
+			= helios::defgen::ReplEmptyVariable{ .original_variable = variable_symbol },
+		});
+	}
 }  // namespace compiler::repl

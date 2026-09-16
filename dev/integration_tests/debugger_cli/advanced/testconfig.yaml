@@ -1,0 +1,17 @@
+Tests:
+  debugger_cli_advanced:
+    Run: "python3 runner.py @{build_dir}"
+    TimeOut: 2
+    Cases:
+      simple:
+        Input:
+          File: "simple.test"
+      position:
+        Input:
+          File: "position.test"
+      return_value:
+        Input:
+          File: "return_value.test"
+      output:
+        Input:
+          File: "output.test"

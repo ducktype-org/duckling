@@ -3,7 +3,7 @@ use std::fs::{File, OpenOptions, TryLockError};
 use std::io::{self, Read, Seek, Write};
 use std::path::{Display, Path, PathBuf};
 
-use tracing::{debug, trace};
+use tracing::{debug, error};
 
 use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
@@ -56,12 +56,39 @@ impl Seek for LockedFile {
     }
 }
 
+impl Read for &LockedFile {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let mut file = &self.file;
+        file.read(buf)
+    }
+}
+
+impl Write for &LockedFile {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let mut file = &self.file;
+        file.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        let mut file = &self.file;
+        file.flush()
+    }
+}
+
+impl Seek for &LockedFile {
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+        let mut file = &self.file;
+        file.seek(pos)
+    }
+}
+
 impl Drop for LockedFile {
     fn drop(&mut self) {
         if let Err(e) = self.file.unlock() {
-            debug!(
-                "failed to unlock the file `{}`: {e} ({e:?})",
-                self.path.display(),
+            error!(
+                error = %e,
+                path = %self.path.display(),
+                "failed to unlock"
             );
         }
     }
@@ -231,7 +258,7 @@ impl FileLockManager {
 
 /// Try to acquire a non-blocking lock.
 fn try_lock(path: &Path, f: impl FnOnce() -> Result<(), TryLockError>) -> QuackResult<bool> {
-    trace!(path = %path.display(), "trying to lock");
+    debug!(path = %path.display(), "trying to lock");
     match f() {
         Ok(()) => Ok(true),
         Err(TryLockError::WouldBlock) => Ok(false),
@@ -249,11 +276,10 @@ fn lock(
     blocking: impl FnOnce() -> io::Result<()>,
 ) -> QuackResult<()> {
     if try_lock(path, non_blocking)? {
-        trace!(path = %path.display(), "locked non-blocking");
+        debug!(path = %path.display(), "locked non-blocking");
         return Ok(());
     }
-    trace!(path = %path.display(), "locking blocking");
-    ctx.console()
-        .info(format!("waiting for file lock `{}`", path.display()))?;
+    debug!(path = %path.display(), "locking blocking");
+    ctx.info(format!("waiting for file lock `{}`", path.display()))?;
     blocking().with_context(|| format!("failed to lock `{}`", path.display()))
 }

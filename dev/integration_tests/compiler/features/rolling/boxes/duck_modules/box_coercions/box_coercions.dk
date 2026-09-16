@@ -1,0 +1,32 @@
+class Point {
+    x: i32;
+    y: i32;
+}
+
+fun by_value(p: Point) -> i32 = {
+    p.x = 999; # This should not affect the passed box.
+    return p.y;
+}
+
+fun by_ref(p: ref Point) -> () = {
+    p.x = 777; # This should modify the passed box.
+}
+
+fun main() -> i64 = {
+    var b_point: box Point = new Point(1, 2);
+
+    var res = by_value(b_point);
+    builtin_output_i64(res);
+    
+    # Original box should not be affected.
+    builtin_output_i64(b_point.x);
+    builtin_output_i64(b_point.y);
+    
+    by_ref(&b_point);
+    
+    # Original box should be affected.
+    builtin_output_i64(b_point.x);
+    builtin_output_i64(b_point.y);
+
+    return 0;
+}

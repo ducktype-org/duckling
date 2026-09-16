@@ -1,8 +1,6 @@
 #include "symbol_data.hpp"
 
 #include <helios/scope_id.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -35,9 +33,9 @@ namespace compiler::helios {
 			);
 		}
 
-		base::Bit256 BoxBuiltin::queryUnstablePerfectHash() const {
+		base::Bit256 BuiltinTemplatedSymbol::queryUnstablePerfectHash() const {
 			return hashing::justHash<hashing::SHA256>(
-				pointee_type.queryUnstablePerfectHash(), static_cast<u64>(kind)
+				type.queryUnstablePerfectHash(), static_cast<u64>(kind)
 			);
 		}
 
@@ -61,14 +59,16 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(owning_scope.queryUnstablePerfectHash(), role);
 		}
 
-		// Hash includes both counter and return_type to ensure different wrappers are distinguished.
-		// However, the mangled name (used for linker symbols) is based only on counter.
-		base::Bit256 ReplExpressionWrapper::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(return_type, counter);
+		// Hash includes the return type, the wrapped PST element and the kind of the input, next to
+		// the counter. The mangled name (used for linker symbols) is based only on the counter.
+		base::Bit256 ReplInputWrapper::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(
+				return_type, counter, pst_element_hash, static_cast<u64>(type)
+			);
 		}
 
-		base::Bit256 ReplInstructionWrapper::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(counter);
+		base::Bit256 ReplEmptyVariable::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(original_variable.queryUnstablePerfectHash());
 		}
 
 		base::Bit256 ScriptMainWrapper::queryUnstablePerfectHash() const {
@@ -110,19 +110,29 @@ namespace compiler::helios {
 		return { std::move(common_data), pst_data };
 	}
 
+	SymbolData SymbolData::makeClassMemberSymbolData(
+		CommonSymbolData common_data, ClassMemberSemantics class_member_data
+	) {
+		return { std::move(common_data), class_member_data };
+	}
+
 	SymbolData SymbolData::makeGeneratedSymbolData(
 		const base::StrID name, defgen::GeneratedSymbolDataVariant generated_data
 	) {
 		SymbolKind kind{};
 		variant_match(generated_data) {
-			variant_case_novalue(defgen::BuiltinOperator, defgen::BoxBuiltin) {
+			variant_case_novalue(defgen::BuiltinOperator) {
+				kind = SymbolKind::FunctionDeclaration;
+			}
+			variant_case_novalue(defgen::BuiltinTemplatedSymbol) {
+				// `MoveIn` is a LIR builtin: its call is replaced by an instruction, so it never
+				// gets a body.
 				kind = SymbolKind::FunctionDeclaration;
 			}
 			variant_case_novalue(
 				defgen::Constructor,
 				defgen::Method,
-				defgen::ReplExpressionWrapper,
-				defgen::ReplInstructionWrapper,
+				defgen::ReplInputWrapper,
 				defgen::ScriptMainWrapper
 			) {
 				kind = SymbolKind::Function;
@@ -131,7 +141,11 @@ namespace compiler::helios {
 				kind = SymbolKind::Parameter;
 			}
 			variant_case_novalue(defgen::Field) { kind = SymbolKind::Field; }
-			variant_case_novalue(defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal) {
+			variant_case_novalue(
+				defgen::GeneratedFunctionVariable,
+				defgen::ControlFlowLocal,
+				defgen::ReplEmptyVariable
+			) {
 				kind = SymbolKind::Variable;
 			}
 			variant_case_novalue(defgen::GeneratedConstant) { kind = SymbolKind::Const; }
@@ -154,6 +168,7 @@ namespace compiler::helios {
 		// @TODO: #3099 a lot of scopes could be removed from generated symbols.
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
+			variant_case(ClassMemberSemantics, member_data) { return member_data.scope; }
 			variant_case(BuiltinSemantics, data) { return data.scope; }
 			variant_case(defgen::SelfParameter, param) { return param.scope; }
 			variant_case(defgen::ControlFlowLocal, local) { return local.owning_scope; }
@@ -164,9 +179,15 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
+	bool SymbolData::isPstImplemented() const {
+		return std::holds_alternative<PstImplementedSemantics>(other)
+		    or std::holds_alternative<ClassMemberSemantics>(other);
+	}
+
 	base::Optional<pst::AccessLocked<pst::LangElement>> SymbolData::maybePstElement() const {
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, data) { return data.getElement(); }
+			variant_case(ClassMemberSemantics, data) { return data.getElement(); }
 			variant_case(BuiltinSemantics, data) { return data.getElement(); }
 			variant_default { return {}; }
 		}

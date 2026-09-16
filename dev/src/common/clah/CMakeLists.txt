@@ -9,6 +9,7 @@ add_library(Clah
 	src/clah/parsing_result.hpp
 	src/clah/parsing_state.cpp
 	src/clah/parsing_state.hpp
+	src/clah/positional_parameter.hpp
 	src/clah/param_builder.hpp
 	src/clah/param_builder.cpp
 	src/clah/exceptions.cpp

@@ -3,6 +3,7 @@ add_library(QueryFramework
 	src/query_framework/internal/query_graph/active_graph.cpp
 	src/query_framework/internal/query_graph/query_state.cpp
 	src/query_framework/internal/query_data/query_id.cpp
+	src/query_framework/internal/query_data/query_data.cpp
 	src/query_framework/internal/query_graph/node_marking.cpp
 	src/query_framework/internal/task_pool/task_pool.cpp
 	
@@ -24,7 +25,7 @@ add_library(QueryFramework
 	src/query_framework/internal/query_metadata/metadata_registry.cpp
 )
 
-make_module(QueryFramework USES Base Diagnostic DiagnosticInteractive Timer Logger CompilerTimeStats Concurrent)
+make_module(QueryFramework USES Base Diagnostic Timer Logger CompilerTimeStats Concurrent)
 
 add_example(query_example examples/example.cpp USES QueryFramework)
 
@@ -32,5 +33,6 @@ duck_add_test(common query_framework tests/query_framework_test.cpp USES QueryFr
 duck_add_test(common active_graph tests/active_graph_test.cpp USES QueryFramework)
 duck_add_test(common concurrent_metadata_storage tests/concurrent_metadata_storage_test.cpp USES QueryFramework)
 duck_add_test(common query_invalidation tests/query_invalidation_test.cpp USES QueryFramework)
+duck_add_test(common query_disk_cache tests/query_disk_cache_test.cpp USES QueryFramework)
 duck_add_test(common task_pool tests/task_pool_test.cpp USES QueryFramework)
 duck_add_test(common cycle_detection_race tests/cycle_detection_race_test.cpp USES QueryFramework)

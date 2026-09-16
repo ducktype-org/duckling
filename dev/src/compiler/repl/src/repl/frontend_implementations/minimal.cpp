@@ -5,39 +5,35 @@
 
 #include <base/types/ints.hpp>
 
+#include <os_utils/terminal.hpp>
+
 #include <algorithm>
 #include <cstddef>
 #include <format>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
-
-#ifndef _WIN32
-	#include <unistd.h>
-#else
-	#include <io.h>
-#endif
 
 #define ESC "\x1b"
 
 namespace {
 	inline constexpr std::string_view CURSOR_LEFT_SEQ
 		= ESC "[D";  // \x1b is start of ANSI escape sequence - needed to control terminal.
-	inline constexpr std::string_view CURSOR_RIGHT_SEQ        = ESC "[C";
-	inline constexpr std::string_view CURSOR_UP_SEQ           = ESC "[A";
-	inline constexpr char             BACKSPACE_CHAR          = 0x7f;  // DEL
-	inline constexpr char             NEWLINE_CHAR            = '\n';
-	inline constexpr char             CARRIAGE_RETURN_CHAR    = '\r';
-	inline constexpr char             ESC_CHAR                = 0x1b;
-	inline constexpr char             ARROW_SEQ_LEAD          = '[';
-	inline constexpr char             ARROW_UP_CODE           = 'A';
-	inline constexpr char             ARROW_DOWN_CODE         = 'B';
-	inline constexpr char             ARROW_LEFT_CODE         = 'D';
-	inline constexpr char             ARROW_RIGHT_CODE        = 'C';
-	inline constexpr char             PRINTABLE_MIN           = 0x20;  // Space
-	inline constexpr char             PRINTABLE_MAX           = 0x7e;  // ~
-	inline constexpr std::string_view CLEAR_ENTIRE_SCREEN_SEQ = "\033c\033[H\033[2J\033[0m";
+	inline constexpr std::string_view CURSOR_RIGHT_SEQ     = ESC "[C";
+	inline constexpr std::string_view CURSOR_UP_SEQ        = ESC "[A";
+	inline constexpr char             BACKSPACE_CHAR       = 0x7f;  // DEL
+	inline constexpr char             NEWLINE_CHAR         = '\n';
+	inline constexpr char             CARRIAGE_RETURN_CHAR = '\r';
+	inline constexpr char             ESC_CHAR             = 0x1b;
+	inline constexpr char             ARROW_SEQ_LEAD       = '[';
+	inline constexpr char             ARROW_UP_CODE        = 'A';
+	inline constexpr char             ARROW_DOWN_CODE      = 'B';
+	inline constexpr char             ARROW_LEFT_CODE      = 'D';
+	inline constexpr char             ARROW_RIGHT_CODE     = 'C';
+	inline constexpr char             PRINTABLE_MIN        = 0x20;  // Space
+	inline constexpr char             PRINTABLE_MAX        = 0x7e;  // ~
 
 	// ANSI escape sequences for bracketed paste mode (https://en.wikipedia.org/wiki/Bracketed-paste)
 	inline constexpr std::string_view ENABLE_BRACKETED_PASTE_SEQ  = ESC "[?2004h";
@@ -53,92 +49,6 @@ namespace {
 	inline constexpr char EXTENDED_KEY_SEPARATOR = ';';
 	inline constexpr char MODIFIER_CTRL          = '5';
 	inline constexpr char MODIFIER_ALT           = '3';
-
-#ifndef _WIN32
-	void writeStr(std::string_view str) { ::write(STDOUT_FILENO, str.data(), str.size()); }
-
-	void writeChar(char c) { ::write(STDOUT_FILENO, &c, 1); }
-
-	bool readChar(char& c) { return ::read(STDIN_FILENO, &c, 1) > 0; }
-
-	RawTerminalMode::RawTerminalMode() {
-		// Save original terminal settings.
-		if (tcgetattr(STDIN_FILENO, &m_orig_term) == -1)
-			throw std::runtime_error("Failed to get terminal attributes");
-
-		m_raw_mode_set = true;
-		auto new_term  = m_orig_term;
-		auto flags_mask
-			= static_cast<tcflag_t>(static_cast<tcflag_t>(ECHO) | static_cast<tcflag_t>(ICANON));
-		new_term.c_lflag &= static_cast<tcflag_t>(~flags_mask);
-		new_term.c_cc[VMIN]  = 1;
-		new_term.c_cc[VTIME] = 0;
-		if (tcsetattr(STDIN_FILENO, TCSANOW, &new_term) == -1)
-			throw std::runtime_error("Failed to set raw terminal mode");
-	}
-
-	RawTerminalMode::~RawTerminalMode() {
-		if (m_raw_mode_set) {
-			tcsetattr(STDIN_FILENO, TCSANOW, &m_orig_term);
-
-			tcflush(STDIN_FILENO, TCIFLUSH);
-			std::cin.sync();
-			std::cin.clear();
-		}
-	}
-#else
-	void writeStr(std::string_view str) {
-		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-		DWORD  written;
-		WriteFile(hOut, str.data(), static_cast<DWORD>(str.size()), &written, NULL);
-	}
-
-	void writeChar(char c) {
-		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-		DWORD  written;
-		WriteFile(hOut, &c, 1, &written, NULL);
-	}
-
-	bool readChar(char& c) {
-		HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
-		DWORD  read;
-		return ReadFile(hIn, &c, 1, &read, NULL) && read > 0;
-	}
-
-	RawTerminalMode::RawTerminalMode() {
-		HANDLE hIn  = GetStdHandle(STD_INPUT_HANDLE);
-		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-		if (hIn == INVALID_HANDLE_VALUE || hOut == INVALID_HANDLE_VALUE) return;
-
-		GetConsoleMode(hIn, &m_orig_in_mode);
-		GetConsoleMode(hOut, &m_orig_out_mode);
-
-		// Added ENABLE_VIRTUAL_TERMINAL_INPUT here
-		DWORD new_in_mode = m_orig_in_mode & ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT);
-		new_in_mode |= ENABLE_VIRTUAL_TERMINAL_INPUT;
-
-		SetConsoleMode(hIn, new_in_mode);
-
-		DWORD new_out_mode
-			= m_orig_out_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
-		SetConsoleMode(hOut, new_out_mode);
-
-		m_raw_mode_set = true;
-	}
-
-	RawTerminalMode::~RawTerminalMode() {
-		if (m_raw_mode_set) {
-			HANDLE hIn  = GetStdHandle(STD_INPUT_HANDLE);
-			HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-			SetConsoleMode(hIn, m_orig_in_mode);
-			SetConsoleMode(hOut, m_orig_out_mode);
-
-			FlushConsoleInputBuffer(hIn);
-			std::cin.sync();
-			std::cin.clear();
-		}
-	}
-#endif
 
 	std::string concatLines(const std::vector<std::string>& lines, std::string_view new_line_indent) {
 		std::string multiline_content;
@@ -221,12 +131,13 @@ namespace compiler::repl {
 		std::cout << ReplConfig::PROMPT;
 		std::cout.flush();
 
-		if (m_bracketed_paste_enabled) writeStr(ENABLE_BRACKETED_PASTE_SEQ);
+		if (m_bracketed_paste_enabled) os_utils::writeStr(ENABLE_BRACKETED_PASTE_SEQ);
 
-		RawTerminalMode terminal_guard;
-		auto            line = internalReadLine();
+		auto terminal_guard = os_utils::RawTerminalMode::create();
+		if (!terminal_guard) throw std::runtime_error(terminal_guard.error());
+		auto line = internalReadLine();
 
-		if (m_bracketed_paste_enabled) writeStr(DISABLE_BRACKETED_PASTE_SEQ);
+		if (m_bracketed_paste_enabled) os_utils::writeStr(DISABLE_BRACKETED_PASTE_SEQ);
 
 		return line;
 	}
@@ -277,19 +188,21 @@ namespace compiler::repl {
 		std::cout << '\n';
 	}
 
-	void FrontendMinImplementation::moveCursorLeft() const { writeStr(CURSOR_LEFT_SEQ); }
+	void FrontendMinImplementation::moveCursorLeft() const { os_utils::writeStr(CURSOR_LEFT_SEQ); }
 
-	void FrontendMinImplementation::moveCursorRight() const { writeStr(CURSOR_RIGHT_SEQ); }
+	void FrontendMinImplementation::moveCursorRight() const {
+		os_utils::writeStr(CURSOR_RIGHT_SEQ);
+	}
 
-	void FrontendMinImplementation::moveCursorUp() const { writeStr(CURSOR_UP_SEQ); }
+	void FrontendMinImplementation::moveCursorUp() const { os_utils::writeStr(CURSOR_UP_SEQ); }
 
 	void FrontendMinImplementation::moveCursorFromEndToPos(u64 pos, std::string& line) const {
 		for (u64 i = pos; i < line.size(); ++i) moveCursorLeft();
 	}
 
 	void FrontendMinImplementation::moveCursorToNewLine() const {
-		writeChar(NEWLINE_CHAR);
-		writeStr(ReplConfig::CONTINUATION);
+		os_utils::writeChar(NEWLINE_CHAR);
+		os_utils::writeStr(ReplConfig::CONTINUATION);
 	}
 
 	std::string FrontendMinImplementation::internalReadLine() {
@@ -299,7 +212,7 @@ namespace compiler::repl {
 
 		while (true) {
 			char c = 0;
-			if (!readChar(c)) break;
+			if (!os_utils::readChar(c)) break;
 			if (c == ESC_CHAR) {
 				onEscapeSequence();
 			} else if (m_in_bracketed_paste) {
@@ -320,7 +233,7 @@ namespace compiler::repl {
 		}
 
 		saveToHistory();
-		writeChar(NEWLINE_CHAR);
+		os_utils::writeChar(NEWLINE_CHAR);
 		return m_editor_state.rawContent();
 	}
 
@@ -365,12 +278,12 @@ namespace compiler::repl {
 
 	void FrontendMinImplementation::onEscapeSequence() {
 		char seq1 = 0;
-		if (!readChar(seq1)) return;
+		if (!os_utils::readChar(seq1)) return;
 		if (seq1 == NEWLINE_CHAR || seq1 == CARRIAGE_RETURN_CHAR) {  // Activated on ALT + ENTER
 			onNewLine();
 		} else if (seq1 == ARROW_SEQ_LEAD) {
 			char seq2 = 0;
-			if (!readChar(seq2)) return;
+			if (!os_utils::readChar(seq2)) return;
 			if (seq2 == ARROW_UP_CODE)
 				onArrowUp();
 			else if (seq2 == ARROW_DOWN_CODE)
@@ -381,23 +294,23 @@ namespace compiler::repl {
 				onArrowRight();
 			else if (seq2 == BRACKETED_PASTE_PREFIX1) {
 				char seq3 = 0, seq4 = 0, seq5 = 0;
-				if (!readChar(seq3)) return;
+				if (!os_utils::readChar(seq3)) return;
 				if (seq3 == BRACKETED_PASTE_PREFIX2) {
-					if (!readChar(seq4)) return;
+					if (!os_utils::readChar(seq4)) return;
 					if (seq4 == BRACKETED_PASTE_START_CODE) {
-						if (!readChar(seq5)) return;
+						if (!os_utils::readChar(seq5)) return;
 						if (seq5 == BRACKETED_PASTE_SUFFIX) m_in_bracketed_paste = true;
 					} else if (seq4 == BRACKETED_PASTE_END_CODE) {
-						if (!readChar(seq5)) return;
+						if (!os_utils::readChar(seq5)) return;
 						if (seq5 == BRACKETED_PASTE_SUFFIX) m_in_bracketed_paste = false;
 					}
 				}
 			} else if (seq2 == EXTENDED_KEY_PREFIX) {
 				char seq3 = 0, seq4 = 0, seq5 = 0;
-				if (!readChar(seq3)) return;
+				if (!os_utils::readChar(seq3)) return;
 				if (seq3 == EXTENDED_KEY_SEPARATOR) {
-					if (!readChar(seq4)) return;
-					if (!readChar(seq5)) return;
+					if (!os_utils::readChar(seq4)) return;
+					if (!os_utils::readChar(seq5)) return;
 					if (seq4 == MODIFIER_CTRL
 					    || seq4 == MODIFIER_ALT) {  // Alt or Ctrl - depends on the terminal.
 						if (seq5 == ARROW_UP_CODE)
@@ -512,7 +425,7 @@ namespace compiler::repl {
 		std::string buffered_sequence_to_send = clearScreenSequence();
 		buffered_sequence_to_send += m_editor_state.print();
 		buffered_sequence_to_send += sequenceToMoveCursorFromEndToCurrentPosition();
-		writeStr(buffered_sequence_to_send);
+		os_utils::writeStr(buffered_sequence_to_send);
 
 		updatePrevState();
 	}
@@ -526,38 +439,5 @@ namespace compiler::repl {
 		m_editor_state.prev_state_col = m_editor_state.col;
 	}
 
-	void FrontendMinImplementation::clearScreen() {
-#ifndef _WIN32
-		writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
-#else
-		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-		if (hOut == INVALID_HANDLE_VALUE || hOut == nullptr) {
-			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
-			return;
-		}
-
-		CONSOLE_SCREEN_BUFFER_INFO buffer_info{};
-		if (!GetConsoleScreenBufferInfo(hOut, &buffer_info)) {
-			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
-			return;
-		}
-
-		const DWORD cells_count
-			= static_cast<DWORD>(buffer_info.dwSize.X) * static_cast<DWORD>(buffer_info.dwSize.Y);
-		const COORD home{ 0, 0 };
-		DWORD       written = 0;
-
-		if (!FillConsoleOutputCharacterA(hOut, ' ', cells_count, home, &written)) {
-			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
-			return;
-		}
-
-		if (!FillConsoleOutputAttribute(hOut, buffer_info.wAttributes, cells_count, home, &written)) {
-			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
-			return;
-		}
-
-		SetConsoleCursorPosition(hOut, home);
-#endif
-	}
+	void FrontendMinImplementation::clearScreen() { os_utils::clearScreen(); }
 }  // namespace compiler::repl

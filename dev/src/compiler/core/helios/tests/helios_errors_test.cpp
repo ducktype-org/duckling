@@ -1,20 +1,22 @@
 
-#include <diagnostic_interactive/stable_position.hpp>
 #include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/errors.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -22,6 +24,8 @@
 #include <query_framework/internal/query_errors.hpp>
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
+
+#include <sstream>
 
 using namespace compiler;
 
@@ -32,7 +36,9 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testClassErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -42,9 +48,12 @@ public:
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testErrorLoggingTemplates);
 		TESTER_ADD_TEST(testPointerCastErrors);
+		TESTER_ADD_TEST(testPtrOfErrors);
+		TESTER_ADD_TEST(testMoveOperandErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
+		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
-
+		TESTER_ADD_TEST(testManglingErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
@@ -60,29 +69,17 @@ protected:
 private:
 	/**
 	 * @brief Helper function that check for HELIOS compilation
-	 * errors in a module with given content, when compiling it to HOUT module.
+	 * errors.
 	 *
-	 * It creates a virtual file from the `module_content` argument
-	 * and creates a module tree from it every function call.
 	 * The `present_phrases` are checked to be present in the logged
 	 * error messages in the given order.
 	 *
 	 * @TODO: #2213 Add PST errors handling here.
 	 *
-	 * @param module_content The content of the module main source file.
 	 * @param logged_msg_count Expected number of logged error messages.
 	 * @param present_phrases List of phrases that should be present in the logged errors in order.
 	 */
-	void checkForErrorOnCompileModule(
-		std::string_view                     module_content,
-		const std::vector<std::string_view>& present_phrases,
-		u64                                  logged_msg_count
-	) {
-		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
-
-		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
-
-		assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
+	void checkForError(const std::vector<std::string_view>& present_phrases, u64 logged_msg_count) {
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 
 		// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
@@ -109,6 +106,36 @@ private:
 			);
 			if (found_pos != std::string::npos) current_pos = found_pos + phrase.length();
 		}
+	}
+
+	/**
+	 * @brief Helper function that check for HELIOS compilation
+	 * errors in a module with given content, when compiling it to HOUT module.
+	 *
+	 * It creates a virtual file from the `module_content` argument
+	 * and creates a module tree from it every function call.
+	 * The `present_phrases` are checked to be present in the logged
+	 * error messages in the given order.
+	 *
+	 * @TODO: #2213 Add PST errors handling here.
+	 *
+	 * @param module_content The content of the module main source file.
+	 * @param logged_msg_count Expected number of logged error messages.
+	 * @param present_phrases List of phrases that should be present in the logged errors in order.
+	 */
+	void checkForErrorOnCompileModule(
+		std::string_view                     module_content,
+		const std::vector<std::string_view>& present_phrases,
+		u64                                  logged_msg_count,
+		bool                                 expect_failure = true
+	) {
+		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
+
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+
+		if (expect_failure)
+			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
+		checkForError(present_phrases, logged_msg_count);
 	}
 
 	/**
@@ -148,6 +175,51 @@ private:
 				}
 			)",
 				{ "Call failed because no matching functions were found." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+                class Number {
+                    val: i64;
+                    fun +(rhs: Number) -> Number = {
+                        return Number(self.val + rhs.val);
+                    }
+                }
+
+                fun +(lhs: Number, rhs: Number) -> Number = {
+                    return Number(lhs.val + rhs.val);
+                }
+
+                fun main() -> i64 = {
+                    let a = Number(10);
+                    let b = Number(20);
+                    let c = a + b;
+                    return c.val;
+                }
+            )",
+				{ "Call failed due to ambiguous overload resolution" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+                class Number {
+                    val: i64;
+                    fun -() -> Number = {
+                        return Number(-self.val);
+                    }
+                }
+
+                fun -(n: Number) -> Number = {
+                    return Number(-n.val);
+                }
+
+                fun main() -> i64 = {
+                    let a = Number(10);
+                    let c = -a;
+                    return c.val;
+                }
+            )",
+				{ "Call failed due to ambiguous overload resolution" },
 				1
 			);
 		}
@@ -528,6 +600,29 @@ private:
 				{ "Type `i64` cannot be converted to type `u64`." },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					var a: i32 = 42;
+					var b: box i32 = a; # `new` should be here
+				}
+			)",
+				{ "Type `i32` cannot be converted to type `box i32`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					var a: i32 = 42;
+					var r: ref i32 = &a;
+					var b: box i32 = r; # `new` should be here
+				}
+			)",
+				{ "Type `ref i32` cannot be converted to type `box i32`." },
+				1
+			);
 		}
 
 		// ========================== Lexer errors ==========================
@@ -559,6 +654,17 @@ private:
 			0
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					while true { # no parenthesis around condition
+					}
+				}
+			)",
+			{},
+			0
+		);
+
 		// ========================== Comp time errors ==========================
 		{
 			checkForErrorOnCompileModule(
@@ -579,6 +685,23 @@ private:
 				}
 			)",
 				{ "cannot be evaluated at compile-time", "const y = x" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class S {
+					x: i64;
+					S.copy(other: const ref S) = {
+						return S(10);
+					}
+				}
+				
+				fun takeS(x: S) = 10;
+
+				const ctvS = takeS(S(1));
+			)",
+				{ "cannot be evaluated at compile time" },
 				1
 			);
 		}
@@ -636,12 +759,15 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
+				template(T: type)
+				class L { v: T; }
+
 				fun main() = {
-					var l: List;
-					l[0] = 123;
+					var l: L;
+					l.v = 123;
 				}
 			)",
-				{ "Type `List` cannot be default initialized" },
+				{ "cannot be converted to type `type`" },
 				1
 			);
 
@@ -682,37 +808,52 @@ private:
 				{ "Left side of assignment can't be immutable." },
 				1
 			);
+		}
 
+		// ============================ Variant errors ============================
+		{
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
-    				var dyn_const_arr: List[const i32];
-    				for (x in dyn_const_arr) { x = 2; }
+					var v: i32 | i32 = 1;
+					return 0i64;
 				}
 			)",
-				{ "Left side of assignment can't be immutable." },
+				{ "Variant type lists type `i32` more than once." },
+				1
+			);
+
+			// Alternatives are told apart by their underlying type alone, so differing only in
+			// the reference kind is a duplicate too.
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var v: i32 | ref i32 = 1;
+					return 0i64;
+				}
+			)",
+				{ "Variant type lists type `i32` more than once." },
 				1
 			);
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun main() -> i64 = {
-    				var dyn_arr: List[i32];
-    				for (x: const i32 in dyn_arr) { x = 2; }
+				class Holder {
+					p: box i32;
 				}
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
 
-			checkForErrorOnCompileModule(
-				R"(
 				fun main() -> i64 = {
-    				var dyn_arr: List[i32];
-					for (let x in dyn_arr) { x = 123; }
+					var v: Holder | f32 = Holder(new 1i32);
+					var r: i64 = match (v) {
+						case x : Holder = 1i64;
+						case _ = -1i64;
+					};
+					return 0i64;
 				}
 			)",
-				{ "Left side of assignment can't be immutable." },
+				{ "Alternative `Class Holder` cannot be bound by value because it is not "
+			      "trivially copyable. Bind it by reference instead: `case x : ref Class "
+			      "Holder`." },
 				1
 			);
 		}
@@ -773,20 +914,6 @@ private:
 				const ARR = NOT_A_TYPE[5];
 			)",
 				{ "Index operator base must be indexable." },
-				1
-			);
-		}
-
-		// ============================ Dynamic Arrays ============================
-		{
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
-					var l1: List[i64];
-					var l2: List[f64] = l1;
-				}
-			)",
-				{ "Type `List[i64]` cannot be converted to type `List[f64]`" },
 				1
 			);
 		}
@@ -898,30 +1025,21 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
 				fun main() -> i64 = {
-					var a: List[i32];
+					var a: L;
 					var b = a;
 					return 0;
 				};
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
 				1
 			);
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun main() -> i64 = {
-					var dyn_matrix: List[List[i64]];
-					for (row in dyn_matrix) {} # `row` creates a copy.
-				}
-			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i64]`" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class U { list: List[i32]; }
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class U { list: L; }
 				class T { u: U; }
 
 				fun main() -> i64 = {
@@ -936,56 +1054,41 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun foo() -> List[i32] = {
-				    var a: List[i32];
-				    return a;
-				}
-				fun main() -> i64 = {
-				    var list = foo();
-				    return 0;
-				}
-			)",
-				// `return a` implicitly copies the owned local `a`; `var list = foo()` moves the
-			    // temporary and is fine. @TODO: #858 `return` should implicitly move owned locals.
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`",
-			      "return a" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun foo(list: List[i32]) -> i32 = {
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				fun foo(list: L) -> i32 = {
 				    return 1;
 				}
 				fun main() -> i64 = {
-					var list: List[i32];
+					var list: L;
 				    foo(list);
 				    return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
 				1
 			);
 
 			checkForErrorOnCompileModule(
 				R"(
-				fun foo(list: ref List[i32]) -> i32 = {
-				    var list_copy: List[i32] = list;
-				    return list[0];
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				fun foo(list: ref L) -> i32 = {
+				    var list_copy: L = list;
+				    return 0;
 				}
 				fun main() -> i64 = {
-				    var list: List[i32];
+				    var list: L;
 				    foo(&list);
 				    return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
 				1
 			);
 
 			checkForErrorOnCompileModule(
 				R"(
-				class U { list: List[i32]; }
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class U { list: L; }
 				class T { u: U }
 				fun main() -> i64 = {
 					var a: T;
@@ -993,34 +1096,22 @@ private:
 					return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
 				1
 			);
 
 			checkForErrorOnCompileModule(
 				R"(
-				class U { list: List[i32]; }
+				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class U { list: L; }
 				class T { u: U }
 				fun main() -> i64 = {
-					var list: List[i32];
+					var list: L;
 					var a: T = T(U(&list));
 					return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-    				var nested: List[List[i32]];
-    				var inner: List[i32];
-    				nested.push(inner);    
-    				return 0;
-				}
-			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
 				1
 			);
 
@@ -1169,14 +1260,191 @@ private:
 		}
 	}
 
+	/**
+	 * @brief Errors of the members of a class: their specifiers, their visibility and the names
+	 * that a class does not declare at all.
+	 */
+	void testClassErrors() {
+		// ==================== Duplicated member specifiers ====================
+		{
+			// A member carries at most one visibility specifier.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public private x: i64 = 0;
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Class visibility specifier is duplicated with another one." },
+				1,
+				false
+			);
+
+			// A member is either static or not, so `static` cannot be repeated either.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public static static y: i64 = 0;
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Class static specifier is duplicated with another one." },
+				1,
+				false
+			);
+		}
+
+		// ==================== Members hidden by their visibility ====================
+		{
+			// Reached through the type, which is the path that reports the declaration as well.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						private static hidden: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.hidden;
+						return 0;
+					} )",
+				{ "Accessed value is not visible from here.", "Found declaration:" },
+				1
+			);
+
+			// Reached through a value of the type.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						private hidden: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var c: C = C(1, 2);
+						var x: i64 = c.hidden;
+						return 0;
+					} )",
+				// The access through a value does not point at the declaration yet.
+				{ "Accessed value is not visible from here." },
+				1
+			);
+
+			// A protected member is hidden from a class that does not inherit from the declaring
+			// one.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						protected shared: i64 = 2;
+					}
+					class Unrelated {
+						public other: i64 = 3;
+
+						public fun reach(c: const ref C) -> i64 = {
+							var x: i64 = c.shared;
+							return 0;
+						}
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Accessed value is not visible from here." },
+				1
+			);
+		}
+
+		// ==================== Names a class does not declare ====================
+		{
+			// A field reached through a value of the class.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+					}
+					fun main() -> i64 = {
+						var c: C = C(1);
+						var x: i64 = c.nope;
+						return 0;
+					} )",
+				{ "Accessed value not found." },
+				1
+			);
+
+			// A static field reached through the class itself.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						public static s: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.nope;
+						return 0;
+					} )",
+				{ "Symbol 'nope' not found in lookup" },
+				1
+			);
+
+			// A static method called on the class itself.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+
+						public static fun sm() -> i64 = {
+							return 2;
+						}
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.nope();
+						return 0;
+					} )",
+				{ "Call failed because no matching functions were found." },
+				1
+			);
+
+			// A method called on a value of the class.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+
+						public fun m() -> i64 = {
+							return v;
+						}
+					}
+					fun main() -> i64 = {
+						var c: C = C(1);
+						var x: i64 = c.nope();
+						return 0;
+					} )",
+				{ "Call failed because no matching functions were found." },
+				1
+			);
+		}
+	}
+
+	void testMainReturnErrors() {
+		checkForErrorOnCompileModule(
+			R"(fun main() -> i32 = { return 0; })", { "main` function must return `i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() -> () = {})", { "main` function must return `i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() -> ref i64 = {})", { "main` function must return `i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() = { return; })", { "return` without a value", "i64" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun main() = { return "bad"; })",
+			{ "slice char", "cannot be converted to type `i64`" },
+			1
+		);
+	}
+
 	void testCopyabilityErrors() {
 		const std::string_view msg
-			= "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`";
+			= "Cannot implicitly copy a value of non-trivially-copyable type `Class L`";
 
 		checkForErrorOnCompileModule(
-			R"( fun main() -> i64 = {
-				var a: List[i32];
-				var b: List[i32] = a;
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var a: L;
+				var b: L = a;
 				return 0;
 			} )",
 			{ msg },
@@ -1184,8 +1452,9 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( fun main() -> i64 = {
-				var a: List[i32];
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var a: L;
 				var b = a;
 				return 0;
 			} )",
@@ -1194,10 +1463,11 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class H { l: List[i32]; }
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			class H { l: L; }
 			fun main() -> i64 = {
 				var h: H;
-				var b: List[i32] = h.l;
+				var b: L = h.l;
 				return 0;
 			} )",
 			{ msg },
@@ -1205,47 +1475,52 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( fun main() -> i64 = {
-				var arr: List[i32][2];
-				var b: List[i32] = arr[0];
-				return 0;
-			} )",
-			{ msg },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"( fun main() -> i64 = {
-				var a: List[i32];
-				var b: box List[i32] = a;
-				return 0;
-			} )",
-			{ msg },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"( fun f(r: ref List[i32]) -> i32 = {
-				var b: List[i32] = r;
-				return 0;
-			})",
-			{ msg },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"( fun f(bl: box List[i32]) -> i32 = {
-				var x: List[i32] = bl;
-				return 0;
-			})",
-			{ msg },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"( fun foo(x: List[i32]) -> i32 = 0;
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
-				var a: List[i32];
+				var arr: L[2];
+				var b: L = arr[0];
+				return 0;
+			} )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var a: L;
+				var b: box L = new a;
+				return 0;
+			} )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun f(r: ref L) -> i32 = {
+				var b: L = r;
+				return 0;
+			})",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun f(bl: box L) -> i32 = {
+				var x: L = bl;
+				return 0;
+			})",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun foo(x: L) -> i32 = 0;
+			fun main() -> i64 = {
+				var a: L;
 				foo(a);
 				return 0;
 			} )",
@@ -1254,13 +1529,14 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( fun main() -> i64 = {
-				var t: (i32, List[i32]);
-				var b: (i32, List[i32]) = t;
+			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			fun main() -> i64 = {
+				var t: (i32, L);
+				var b: (i32, L) = t;
 				return 0;
 			} )",
 			{ "Cannot implicitly copy a value of non-trivially-copyable type "
-		      "`Tuple(i32, List[i32])`" },
+		      "`Tuple(i32, Class L)`" },
 			1
 		);
 	}
@@ -1330,7 +1606,7 @@ private:
 			R"(
 				expand 1;
 			)",
-			{ "i32", "const slice char" },
+			{ "i32", "cannot be converted to any of the accepted types", "slice char", "String" },
 			1
 		);
 
@@ -1406,15 +1682,15 @@ private:
 			{
 				"Call failed",
 				"Found exact candidate.",
-				".dmf:5:6",
+				".dk:5:6",
 				"Code expanded from here.",
-				".dmf:5:6",
+				".dk:5:6",
 				"Code expanded from here.",
-				".dmf:5:6",
+				".dk:5:6",
 				"Found exact candidate.",
-				".dmf:6:6",
+				".dk:6:6",
 				"Code expanded from here.",
-				".dmf:6:6",
+				".dk:6:6",
 			},
 			1
 		);
@@ -1442,6 +1718,15 @@ private:
 				fun bar() = {
 					return foo();
 				}
+			)",
+			{ "cycle" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const X = xWithAdded(10);
+				fun xWithAdded(v: i64) = X + v;
 			)",
 			{ "cycle" },
 			1
@@ -1548,6 +1833,82 @@ private:
 		);
 	}
 
+	/// @brief `move` only accepts values that own themselves, i.e. locals and temporaries.
+	void testMoveOperandErrors() {
+		const std::string_view msg = "`move` can only be applied to an owned local variable.";
+
+		// A field is a projection of a value the class owns, so it cannot be moved out of on its
+		// own.
+		checkForErrorOnCompileModule(
+			R"(
+				class Cls { x: i64; }
+				fun moveField() = {
+					let a = Cls(10);
+					move a.x;
+				}
+			)",
+			{ msg },
+			1
+		);
+
+		// The same for an element of an array.
+		checkForErrorOnCompileModule(
+			R"(
+				fun moveElement() = {
+					var arr: i64[2];
+					move arr[0];
+				}
+			)",
+			{ msg },
+			1
+		);
+
+		// A global is not owned by the moving scope.
+		checkForErrorOnCompileModule(
+			R"(
+				var g: i64 = 5;
+				fun moveGlobal() = {
+					move g;
+				}
+			)",
+			{ msg },
+			1
+		);
+	}
+
+	/// @brief `ptrof` rejects the same operands `&` rejects, and cannot be evaluated at comp time.
+	void testPtrOfErrors() {
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var p = ptrof 10;
+				}
+			)",
+			{ "Tried to take a pointer to a temporary" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var u = ();
+					var p = ptrof u;
+				}
+			)",
+			{ "does not carry information" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				var g: i32 = 5;
+				const A = ptrof g;
+			)",
+			{ "Feature not implemented" },
+			1
+		);
+	}
+
 	void testPointerCastErrors() {
 		checkForErrorOnCompileModule(
 			R"(
@@ -1575,7 +1936,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() = {
-					var b: box i32 = 10;
+					var b: box i32 = new 10;
 					var m = b as manyptr i32;
 				}
 			)",
@@ -1620,7 +1981,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() = {
-					var x: box i32 = 10;
+					var x: box i32 = new 10;
 					var p = x as ptr i64;
 				}
 			)",
@@ -1634,9 +1995,182 @@ private:
 					var y = *x;
 				}
 			)",
-			{ "Tried to dereference a non-pointer type" },
+			{ "Tried to dereference an invalid type" },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var a: i32 = 1;
+					var r: ref i32 = &a;
+					var r2: ref i64 = r;
+				}
+			)",
+			{ "Type `ref i32` cannot be converted to type `ref i64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var b: box i32 = new 1;
+					var b2: box i64 = b;
+				}
+			)",
+			{ "Type `box i32` cannot be converted to type `box i64`." },
+			1
+		);
+	}
+
+	/**
+	 * Test error reporting for expressions that are well-typed (so they pass HOUT creation)
+	 * but fail later, during the compile-time evaluation itself.
+	 */
+	void testCompTimeEvaluationErrors() {
+		const std::string_view div_by_zero
+			= "Division by zero in compile-time expression evaluation.";
+		const std::string_view mod_by_zero
+			= "Modulo by zero in compile-time expression evaluation.";
+		const std::string_view invalid_shift
+			= "Invalid shift amount in compile-time expression evaluation.";
+
+		// ======================= Failing arithmetic in tree eval =======================
+		{
+			checkForErrorOnCompileModule(R"(const A: i64 = 1 / 0;)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A: i64 = 1 % 0;)", { mod_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A: f64 = 1.0 % 0.0;)", { mod_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A: i64 = -(1 / 0);)", { div_by_zero }, 1);
+
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 << 32;)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 << 64;)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i64 = 1i64 >> 64;)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 >> 32;)", { invalid_shift }, 1);
+
+			checkForErrorOnCompileModule(R"(const A: i32 = 1i32 << (-1);)", { invalid_shift }, 1);
+			checkForErrorOnCompileModule(R"(const A: i64 = 10i64 >> (-5);)", { invalid_shift }, 1);
+		}
+
+		// ======================= Failure propagation through sub-expressions =======================
+		{
+			// Parenthesis expression.
+			checkForErrorOnCompileModule(R"(const A: i64 = (1 / 0);)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A: i32 = (1i32 << 32);)", { invalid_shift }, 1);
+
+			// Tuple element.
+			checkForErrorOnCompileModule(R"(const A = (1 / 0, 2);)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A = (1i32 << 32, 2);)", { invalid_shift }, 1);
+
+			// Cast source expression.
+			checkForErrorOnCompileModule(R"(const A = (1 / 0) as f64;)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A = (1i32 << 32) as f64;)", { invalid_shift }, 1);
+
+			// Static array size.
+			checkForErrorOnCompileModule(R"(const A = i64[1 / 0];)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A = i64[1i32 << 32];)", { invalid_shift }, 1);
+
+			// Taken ternary branch (the untaken one is never evaluated).
+			checkForErrorOnCompileModule(
+				R"(const A: i64 = if true then 1 / 0 else 2;)", { div_by_zero }, 1
+			);
+			checkForErrorOnCompileModule(
+				R"(const A: i32 = if true then 1i32 << 32 else 2;)", { invalid_shift }, 1
+			);
+		}
+
+		// ======================= Failing comparison chains =======================
+		{
+			// The chain is well-typed, so it fails during evaluation and not on HOUT creation.
+			// Chains are evaluated lazily, so the failure has to be in a comparison that is
+			// actually reached.
+			checkForErrorOnCompileModule(R"(const A: bool = 1 < 2 / 0 < 3;)", { div_by_zero }, 1);
+
+			checkForErrorOnCompileModule(
+				R"(const A: bool = if 1 < 2 / 0 < 3 then true else false;)", { div_by_zero }, 1
+			);
+
+			// A chain over a value that is only known at runtime.
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var x = 1;
+					const c: bool = 0 < x < 3;
+					return 0;
+				}
+			)",
+				{ "Expression cannot be evaluated at compile-time." },
+				1
+			);
+		}
+
+		// ======================= Not-yet-implemented evaluations =======================
+		{
+			// Indexing a non-meta, non-type-template base.
+			checkForErrorOnCompileModule(
+				R"(
+				const S = "abc";
+				const A = S[0];
+			)",
+				{ "Feature not implemented",
+			      "Evaluating index expressions with non-meta and non-type-template base at "
+			      "compile time." },
+				1
+			);
+
+			// Access expressions.
+			checkForErrorOnCompileModule(
+				R"(const A: i64 = (1, 5)._2;)",
+				{ "Feature not implemented", "Evaluating access expressions at compile time." },
+				1
+			);
+
+			// A call that has to go through the DVM, but fails while being evaluated there.
+			checkForErrorOnCompileModule(
+				R"(
+				fun f(x: i64) -> i64 = x / 0;
+				const A: i64 = f(10);
+			)",
+				{ "Feature not implemented",
+			      "Compile time evaluation of this function call failed or returned unsupported "
+			      "result." },
+				1
+			);
+		}
+	}
+
+	void testManglingErrors() {
+		using namespace compiler::helios;
+		constexpr char PRINTABLE     = '@';
+		constexpr char NON_PRINTABLE = '\x07f';
+
+		const auto [_, root_scope_prt] = test_utils::getModule(fs::File(
+			path(base::strConcat("test_modules/error_generating/mod_w_prt_char_", PRINTABLE, "_"))
+		));
+		const auto id_prt              = test_utils::getChain("foo", root_scope_prt).back();
+
+		// note: `Delete` is not-printable on win/linux/mac but it's allowed in filenames
+		ASSERT_TRUE(not std::isprint(static_cast<unsigned char>(NON_PRINTABLE)));
+		const auto [dummy, root_scope_nprt] = test_utils::getModule(fs::File(path(
+			base::strConcat("test_modules/error_generating/mod_w_non_prt_char_", NON_PRINTABLE, "_")
+		)));
+		std::ignore                         = dummy;  // @todo: #761 replace `dummy` with `_`
+		const auto id_nprt                  = test_utils::getChain("foo", root_scope_nprt).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_prt });
+			checkForError(
+				{ "[Feature not implemented] Name of a module contains a character that is not "
+			      "allowed yet: '@' (int: 64)" },
+				1
+			);
+
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_nprt });
+			checkForError(
+				{ "[Feature not implemented] Name of a module contains a character that is not "
+			      "allowed yet: [not-printable] (int: 127)" },
+				1
+			);
+		});
 	}
 
 	void testErrorBadExpr() {
@@ -1647,7 +2181,7 @@ private:
 
 
 		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+		// `CHAIN_EVAL_FAILURE` below covers the failing compile-time evaluation of a chain.
 
 		ASSERT_TRUE(query::entryPoint<QueryConstValueOf>(
 						test_utils::getChain("InvalidExpr", root_scope).back()
@@ -1669,7 +2203,6 @@ private:
 		}
 
 		// This fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
 		try {
 			test_utils::getConstValueAs<bool>("InvalidCompMiddle", root_scope);
 			CORE_PANIC("Should throw.");
@@ -1697,12 +2230,21 @@ private:
 		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
+
+		// Unlike the chains above, this one is well-typed, so it only fails during the
+		// compile-time evaluation of the chain itself.
+		try {
+			test_utils::getConstValueAs<bool>("CHAIN_EVAL_FAILURE", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (query::internal::QueryFailedException& err) {
+			// Since this branch was chosen, everything worked well.
+		}
 	}
 
 	void testDiagnosticErrorsCorrectness() {
 		using namespace helios::code;
 		using namespace helios;
-		using dia_int::testDiagnosticMessage;
+		using dia::testDiagnosticMessage;
 
 		std::stringstream ss;
 
@@ -1719,7 +2261,7 @@ private:
 			// UndefinedBinaryOperatorError
 			testDiagnosticMessage<UndefinedBinaryOperatorError>(
 				ss,
-				dia_int::StablePosition::fakePosition(),
+				dia::StablePosition::fakePosition(),
 				"+",
 				makeBox<InteractiveType>(ctx, st),
 				makeBox<InteractiveType>(ctx, st)
@@ -1727,32 +2269,32 @@ private:
 
 			// UndefinedUnaryOperatorError
 			testDiagnosticMessage<UndefinedUnaryOperatorError>(
-				ss, dia_int::StablePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
+				ss, dia::StablePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
 			);
 
 			// InvalidNumericLiteralError
 			testDiagnosticMessage<InvalidNumericLiteralError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 
 			// NumericLiteralTooLargeError
 			testDiagnosticMessage<NumericLiteralTooLargeError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 
 			// LiteralDoesNotFitError
 			testDiagnosticMessage<LiteralDoesNotFitError>(
-				ss, dia_int::StablePosition::fakePosition(), "signed integer"
+				ss, dia::StablePosition::fakePosition(), "signed integer"
 			);
 
 			// SingleStmtFunctionMustBeExprError
 			testDiagnosticMessage<SingleStmtFunctionMustBeExprError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 
 			// ImmutableVariableNoInitError
 			testDiagnosticMessage<ImmutableVariableNoInitError>(
-				ss, dia_int::StablePosition::fakePosition()
+				ss, dia::StablePosition::fakePosition()
 			);
 		});
 	}
@@ -1786,6 +2328,32 @@ private:
             )",
 			{ "Symbol 'a' is already defined.", "Previous declaration here." },
 			1
+		);
+
+		// Duplicated class field.
+		checkForErrorOnCompileModule(
+			R"(
+                class T {
+                    y: i64 = 0;
+                    y: i64 = 0;
+                }
+            )",
+			{ "Symbol 'y' is already defined.", "Previous declaration here." },
+			1
+		);
+
+		// Every redefinition of a field is reported, not only the first one.
+		checkForErrorOnCompileModule(
+			R"(
+                class T {
+                    y: i64 = 0;
+                    y: i64 = 0;
+                    x: i64 = 0;
+                    x: i64 = 0;
+                }
+            )",
+			{ "Symbol 'y' is already defined.", "Symbol 'x' is already defined." },
+			2
 		);
 	}
 

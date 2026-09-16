@@ -1,5 +1,7 @@
 #include <vm_tester_utils.hpp>
 
+#include <os_utils/system_libraries.hpp>
+
 #include <vm/api/vm.hpp>
 
 #include <filesystem>
@@ -16,11 +18,7 @@ namespace {
 	std::string ffiObjectHeader() { return "ffi object \"" + SO_PATH + "\";\n"; }
 
 	// Bare soname of the system math library, resolved via the platform's dynamic loader search.
-#ifdef __APPLE__
-	const std::string SYSTEM_MATH_LIB = "libm.dylib";
-#else
-	const std::string SYSTEM_MATH_LIB = "libm.so.6";
-#endif
+	const std::string SYSTEM_MATH_LIB = os_utils::systemSharedLibM();
 }
 
 class VmFfiTest: public VmTestSuite {
@@ -32,10 +30,29 @@ public:
 		TESTER_ADD_TEST(addPrimitives);
 		TESTER_ADD_TEST(voidAndStateReadback);
 		TESTER_ADD_TEST(smallIntReturnWidening);
-		TESTER_ADD_TEST(cptrCopyBuiltins);
+		TESTER_ADD_TEST(cptrRawReadWrite);
 		TESTER_ADD_TEST(cptrStructField);
 		TESTER_ADD_TEST(cptrCopyIntoStructField);
-		TESTER_ADD_TEST(cptrCopySizeTooLargeFails);
+		TESTER_ADD_TEST(cptrNullTypedLoadFails);
+		TESTER_ADD_TEST(cptrNullRawReadFails);
+		TESTER_ADD_TEST(cptrNullCompare);
+		TESTER_ADD_TEST(cptrTypedLoadStoreMallocWorkflow);
+		TESTER_ADD_TEST(cptrAddOffsetArrayWalk);
+		TESTER_ADD_TEST(cptrLoadThroughVoidCPtrFails);
+		TESTER_ADD_TEST(cptrLoadPointeeMismatchFails);
+		TESTER_ADD_TEST(cptrLoadPackedPointeeFails);
+		TESTER_ADD_TEST(cptrStoreThroughVoidCPtrFails);
+		TESTER_ADD_TEST(cptrStorePointeeMismatchFails);
+		TESTER_ADD_TEST(cptrStorePackedPointeeFails);
+		TESTER_ADD_TEST(cptrReadThroughVoidCPtrFails);
+		TESTER_ADD_TEST(cptrReadPointeeMismatchFails);
+		TESTER_ADD_TEST(cptrWriteThroughVoidCPtrFails);
+		TESTER_ADD_TEST(cptrWritePointeeMismatchFails);
+		TESTER_ADD_TEST(cptrReadIntoPointerPointeeFails);
+		TESTER_ADD_TEST(cptrWriteFromPointerPointeeFails);
+		TESTER_ADD_TEST(cptrCastFromPointer);
+		TESTER_ADD_TEST(cptrCastKeepsPointerOffset);
+		TESTER_ADD_TEST(cptrCastOfNullPointerFails);
 		TESTER_ADD_TEST(floatArgsAndReturn);
 		TESTER_ADD_TEST(doubleArgsAndReturn);
 		TESTER_ADD_TEST(mixedIntFloatArgs);
@@ -63,7 +80,7 @@ public:
 		TESTER_ADD_TEST(typedCPointerStructFieldThroughC);
 		TESTER_ADD_TEST(forwardDeclaredPointee);
 		TESTER_ADD_TEST(cpointerToUnknownTypeFails);
-		TESTER_ADD_TEST(movPcptStrictnessFails);
+		TESTER_ADD_TEST(movPCptrStrictnessFails);
 		TESTER_ADD_TEST(duplicateFfiFunctionFails);
 		TESTER_ADD_TEST(assertSizeMatches);
 		TESTER_ADD_TEST(assertSizeMismatchFails);
@@ -100,7 +117,7 @@ private:
 		auto file = writeTempDbc(name, bytecode);
 		auto load = vm::api::loadFiles(initProcess(), { file });
 		ASSERT_NO_VALUE(load);
-		ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(load.error()));
+		ASSERT_MATCHES(load.error(), vm::api::LoadProgramError);
 		auto why = std::get<vm::api::LoadProgramError>(load.error()).why;
 		std::cerr << why << '\n';
 		for (auto keyword: keywords)
@@ -163,39 +180,30 @@ private:
 		);
 	}
 
-	void cptrCopyBuiltins() {
+	// Byte copies between native memory and the VM memory under a pointer, via the
+	// write/read instructions. Both sides must agree on the pointee type.
+	void cptrRawReadWrite() {
 		runProgram(
-			"cptr_copy",
+			"cptr_raw_copy",
 			ffiObjectHeader()
-				+ "ffi function ffi_alloc8 { } -> { cptr };\n"
-				  "ffi function ffi_free8 { cptr } -> { };\n"
+				+ "type cpointer: I64Ptr i64\n"
+				  "ffi function ffi_alloc8 { } -> { I64Ptr };\n"
+				  "ffi function ffi_free8 { I64Ptr } -> { };\n"
 				  "function main { i64, ptr_argv } -> { i64 } {\n"
-				  "    init_pany_type buf, cptr;\n"
+				  "    init_pany_type buf, I64Ptr;\n"
 				  "    call_ffifunc ffi_alloc8;\n"
 				  "    init_pany_type v, i64;\n"
 				  "    mov_p64_imm v, 555;\n"
 				  "    init_pany_type vp, ptr_i64;\n"
 				  "    ref_pptr_pany vp, v;\n"
-				  "    init_pany_type buf_w, cptr;\n"
-				  "    mov_pcpt_pcpt buf_w, buf;\n"
-				  "    init_pany_type vp2, ptr_i64;\n"
-				  "    mov_pptr_pptr vp2, vp;\n"
-				  "    init_pany_type sz_w, i64;\n"
-				  "    mov_p64_imm sz_w, 8;\n"
-				  "    call_builtinfunc builtin_cptr_write_pptr;\n"
+				  "    write_pcptr_pptr buf, vp;\n"
 				  "    init_pany_type out, i64;\n"
 				  "    init_pany_type op, ptr_i64;\n"
 				  "    ref_pptr_pany op, out;\n"
-				  "    init_pany_type buf_r, cptr;\n"
-				  "    mov_pcpt_pcpt buf_r, buf;\n"
-				  "    init_pany_type op2, ptr_i64;\n"
-				  "    mov_pptr_pptr op2, op;\n"
-				  "    init_pany_type sz_r, i64;\n"
-				  "    mov_p64_imm sz_r, 8;\n"
-				  "    call_builtinfunc builtin_cptr_read_pptr;\n"
+				  "    read_pptr_pcptr op, buf;\n"
 				  "    output_p64 out;\n"
-				  "    init_pany_type buf_f, cptr;\n"
-				  "    mov_pcpt_pcpt buf_f, buf;\n"
+				  "    init_pany_type buf_f, I64Ptr;\n"
+				  "    mov_pcptr_pcptr buf_f, buf;\n"
 				  "    call_ffifunc ffi_free8;\n"
 				  "    ret;\n"
 				  "}\n",
@@ -217,12 +225,12 @@ private:
 				  "    init_pany_type buf, cptr;\n"
 				  "    call_ffifunc ffi_alloc8;\n"
 				  "    init_pany_type buf2, cptr;\n"
-				  "    mov_pcpt_pcpt buf2, buf;\n"
+				  "    mov_pcptr_pcptr buf2, buf;\n"
 				  "    init_pany_type v, i64;\n"
 				  "    mov_p64_imm v, 30;\n"
 				  "    call_ffifunc ffi_fill8;\n"
 				  "    init_pany_type bufc, cptr;\n"
-				  "    mov_pcpt_pcpt bufc, buf;\n"
+				  "    mov_pcptr_pcptr bufc, buf;\n"
 				  "    init_pany_type v2, i64;\n"
 				  "    mov_p64_imm v2, 12;\n"
 				  "    init_pany_type res, i64;\n"
@@ -232,7 +240,7 @@ private:
 				  "    call_ffifunc ffi_cpair_sum;\n"
 				  "    output_p64 res;\n"
 				  "    init_pany_type buf_f, cptr;\n"
-				  "    mov_pcpt_pcpt buf_f, buf;\n"
+				  "    mov_pcptr_pcptr buf_f, buf;\n"
 				  "    call_ffifunc ffi_free8;\n"
 				  "    ret;\n"
 				  "}\n",
@@ -240,39 +248,34 @@ private:
 		);
 	}
 
-	// A mid-block pointer (here: a struct field) is a valid copy destination as long as the
-	// explicit byte count fits within the block.
+	// A mid-block pointer (here: a struct field) is a valid copy destination; the copy is
+	// bounded by the field's own type.
 	void cptrCopyIntoStructField() {
 		runProgram(
 			"copy_into_field",
 			ffiObjectHeader()
 				+ "type data: Pair { a: i64, b: i64 }\n"
-				  "ffi function ffi_alloc8 { } -> { cptr };\n"
-				  "ffi function ffi_fill8 { cptr, i64 } -> { };\n"
-				  "ffi function ffi_free8 { cptr } -> { };\n"
+				  "type cpointer: I64Ptr i64\n"
+				  "ffi function ffi_alloc8 { } -> { I64Ptr };\n"
+				  "ffi function ffi_fill8 { I64Ptr, i64 } -> { };\n"
+				  "ffi function ffi_free8 { I64Ptr } -> { };\n"
 				  "function main { i64, ptr_argv } -> { i64 } {\n"
-				  "    init_pany_type buf, cptr;\n"
+				  "    init_pany_type buf, I64Ptr;\n"
 				  "    call_ffifunc ffi_alloc8;\n"
-				  "    init_pany_type buf2, cptr;\n"
-				  "    mov_pcpt_pcpt buf2, buf;\n"
+				  "    init_pany_type buf2, I64Ptr;\n"
+				  "    mov_pcptr_pcptr buf2, buf;\n"
 				  "    init_pany_type v, i64;\n"
 				  "    mov_p64_imm v, 4242;\n"
 				  "    call_ffifunc ffi_fill8;\n"
 				  "    init_pany_type s, Pair;\n"
 				  "    init_pany_type bp, ptr_i64;\n"
 				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
-				  "    init_pany_type buf_r, cptr;\n"
-				  "    mov_pcpt_pcpt buf_r, buf;\n"
-				  "    init_pany_type bp2, ptr_i64;\n"
-				  "    mov_pptr_pptr bp2, bp;\n"
-				  "    init_pany_type sz, i64;\n"
-				  "    mov_p64_imm sz, 8;\n"
-				  "    call_builtinfunc builtin_cptr_read_pptr;\n"
+				  "    read_pptr_pcptr bp, buf;\n"
 				  "    init_pany_type out, i64;\n"
 				  "    structLoad_pany_pste_field out, s, Pair.b;\n"
 				  "    output_p64 out;\n"
-				  "    init_pany_type buf_f, cptr;\n"
-				  "    mov_pcpt_pcpt buf_f, buf;\n"
+				  "    init_pany_type buf_f, I64Ptr;\n"
+				  "    mov_pcptr_pcptr buf_f, buf;\n"
 				  "    call_ffifunc ffi_free8;\n"
 				  "    ret;\n"
 				  "}\n",
@@ -280,35 +283,72 @@ private:
 		);
 	}
 
-	// A byte count reaching past the end of the pointed-to block must raise a runtime
-	// exception. The pointer targets the last field of the struct, so 16 bytes overflow it.
-	void cptrCopySizeTooLargeFails() {
-		auto pid = initProcess();
+	// A default-initialized cpointer is null; a typed load must fail cleanly, not crash.
+	void cptrNullTypedLoadFails() {
+		auto pid  = initProcess();
 		auto file = writeTempDbc(
-			"copy_too_large",
-			ffiObjectHeader()
-				+ "type data: Pair { a: i64, b: i64 }\n"
-				  "ffi function ffi_alloc8 { } -> { cptr };\n"
-				  "function main { i64, ptr_argv } -> { i64 } {\n"
-				  "    init_pany_type buf, cptr;\n"
-				  "    call_ffifunc ffi_alloc8;\n"
-				  "    init_pany_type s, Pair;\n"
-				  "    init_pany_type bp, ptr_i64;\n"
-				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
-				  "    init_pany_type buf_w, cptr;\n"
-				  "    mov_pcpt_pcpt buf_w, buf;\n"
-				  "    init_pany_type bp2, ptr_i64;\n"
-				  "    mov_pptr_pptr bp2, bp;\n"
-				  "    init_pany_type sz, i64;\n"
-				  "    mov_p64_imm sz, 16;\n"
-				  "    call_builtinfunc builtin_cptr_write_pptr;\n"
-				  "    ret;\n"
-				  "}\n"
+			"null_typed_load",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, I64Ptr;\n"
+			"    init_pany_type v, i64;\n"
+			"    load_pany_pcptr v, p;\n"
+			"    ret;\n"
+			"}\n"
 		);
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(
-			runTestOnVmGetResult(pid), "copy region exceeds the pointed-to block"
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
+	}
+
+	// The same for the raw byte copy.
+	void cptrNullRawReadFails() {
+		auto pid  = initProcess();
+		auto file = writeTempDbc(
+			"null_raw_read",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, I64Ptr;\n"
+			"    init_pany_type out, i64;\n"
+			"    init_pany_type op, ptr_i64;\n"
+			"    ref_pptr_pany op, out;\n"
+			"    read_pptr_pcptr op, c;\n"
+			"    ret;\n"
+			"}\n"
+		);
+		auto load = vm::api::loadFiles(pid, { file });
+		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
+	}
+
+	// `cmpNull_pcptr` sets the flag on a null cpointer (default-initialized here) and clears it
+	// on a live allocation; `cmov` materializes the flag as 1/0.
+	void cptrNullCompare() {
+		runProgram(
+			"cptr_null_compare",
+			ffiObjectHeader()
+				+ "ffi function ffi_alloc8 { } -> { cptr };\n"
+				  "ffi function ffi_free8 { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type nul, cptr;\n"
+				  "    init_pany_type a, i64;\n"
+				  "    mov_p64_imm a, 0;\n"
+				  "    cmpNull_pcptr nul;\n"
+				  "    cmov_p64_imm a, 1;\n"
+				  "    output_p64 a;\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type b, i64;\n"
+				  "    mov_p64_imm b, 0;\n"
+				  "    cmpNull_pcptr buf;\n"
+				  "    cmov_p64_imm b, 1;\n"
+				  "    output_p64 b;\n"
+				  "    init_pany_type buf_f, cptr;\n"
+				  "    mov_pcptr_pcptr buf_f, buf;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    ret;\n"
+				  "}\n",
+			"10"
 		);
 	}
 
@@ -888,7 +928,7 @@ private:
 				  "    init_pany_type buf, I64Ptr;\n"
 				  "    call_ffifunc ffi_alloc8;\n"
 				  "    init_pany_type bufc, I64Ptr;\n"
-				  "    mov_pcpt_pcpt bufc, buf;\n"
+				  "    mov_pcptr_pcptr bufc, buf;\n"
 				  "    init_pany_type tag, i64;\n"
 				  "    mov_p64_imm tag, 42;\n"
 				  "    init_pany_type t, Tagged;\n"
@@ -897,11 +937,11 @@ private:
 				  "    call_ffifunc ffi_tagged_store;\n"
 				  "    init_pany_type res, i64;\n"
 				  "    init_pany_type buf2, I64Ptr;\n"
-				  "    mov_pcpt_pcpt buf2, buf;\n"
+				  "    mov_pcptr_pcptr buf2, buf;\n"
 				  "    call_ffifunc ffi_read8;\n"
 				  "    output_p64 res;\n"
 				  "    init_pany_type buf3, I64Ptr;\n"
-				  "    mov_pcpt_pcpt buf3, buf;\n"
+				  "    mov_pcptr_pcptr buf3, buf;\n"
 				  "    call_ffifunc ffi_free8;\n"
 				  "    ret;\n"
 				  "}\n",
@@ -926,7 +966,7 @@ private:
 				  "    init_pany_type h, HandlePtr;\n"
 				  "    call_ffifunc ffi_alloc8;\n"
 				  "    init_pany_type h2, HandlePtr;\n"
-				  "    mov_pcpt_pcpt h2, h;\n"
+				  "    mov_pcptr_pcptr h2, h;\n"
 				  "    call_ffifunc ffi_free8;\n"
 				  "    init_pany_type ok, i64;\n"
 				  "    mov_p64_imm ok, 1;\n"
@@ -945,10 +985,10 @@ private:
 		);
 	}
 
-	// `mov_pcpt_pcpt` requires identical types on both sides: no implicit pointee change, no
+	// `mov_pcptr_pcptr` requires identical types on both sides: no implicit pointee change, no
 	// mixing the builtin `cptr` (unknown pointee) with a typed cpointer, distinct names stay
 	// distinct even with the same pointee, and non-cpointer operands are rejected outright.
-	void movPcptStrictnessFails() {
+	void movPCptrStrictnessFails() {
 		auto expect_mov_error = [&](const std::string& name,
 		                            const std::string& types,
 		                            const std::string& a_type,
@@ -959,36 +999,392 @@ private:
 				types + "function main { i64, ptr_argv } -> { i64 } {\n"
 				      + "    init_pany_type a, " + a_type + ";\n"
 				      + "    init_pany_type b, " + b_type + ";\n"
-				      + "    mov_pcpt_pcpt a, b;\n"
+				      + "    mov_pcptr_pcptr a, b;\n"
 				        "    ret;\n"
 				        "}\n",
 				{ keyword }
 			);
 		};
 		expect_mov_error(
-			"mov_pcpt_across_types",
+			"mov_pcptr_across_types",
 			"type cpointer: APtr i64\ntype cpointer: BPtr i32\n",
 			"APtr",
 			"BPtr",
 			"C pointer type does not match"
 		);
 		expect_mov_error(
-			"mov_pcpt_cptr_to_typed",
+			"mov_pcptr_cptr_to_typed",
 			"type cpointer: APtr i64\n",
 			"APtr",
 			"cptr",
 			"C pointer type does not match"
 		);
 		expect_mov_error(
-			"mov_pcpt_same_pointee",
+			"mov_pcptr_same_pointee",
 			"type cpointer: APtr i64\ntype cpointer: BPtr i64\n",
 			"APtr",
 			"BPtr",
 			"C pointer type does not match"
 		);
 		expect_mov_error(
-			"mov_pcpt_non_cpointer", "", "i64", "i64", "Invalid instruction argument type"
+			"mov_pcptr_non_cpointer", "", "i64", "i64", "Invalid instruction argument type"
 		);
+	}
+
+	// The malloc workflow: allocate raw C memory, cast the `void*` to a typed cpointer, then
+	// move a whole struct across the boundary with the typed load/store instructions.
+	void cptrTypedLoadStoreMallocWorkflow() {
+		runProgram(
+			"typed_load_store",
+			ffiObjectHeader()
+				+ "type data: Pair { a: i64, b: i64 } assert_size 16\n"
+				  "type cpointer: PairPtr Pair\n"
+				  "ffi function ffi_alloc { i64 } -> { cptr };\n"
+				  "ffi function ffi_free { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    init_pany_type n, i64;\n"
+				  "    mov_p64_imm n, 16;\n"
+				  "    call_ffifunc ffi_alloc;\n"
+				  "    init_pany_type pp, PairPtr;\n"
+				  "    cast_pcptr_pcptr pp, buf;\n"
+				  "    init_pany_type v, i64;\n"
+				  "    init_pany_type s, Pair;\n"
+				  "    mov_p64_imm v, 30;\n"
+				  "    structStore_pste_pany_field s, v, Pair.a;\n"
+				  "    mov_p64_imm v, 12;\n"
+				  "    structStore_pste_pany_field s, v, Pair.b;\n"
+				  "    store_pcptr_pany pp, s;\n"
+				  "    init_pany_type s2, Pair;\n"
+				  "    load_pany_pcptr s2, pp;\n"
+				  "    init_pany_type x, i64;\n"
+				  "    init_pany_type sum, i64;\n"
+				  "    structLoad_pany_pste_field sum, s2, Pair.a;\n"
+				  "    structLoad_pany_pste_field x, s2, Pair.b;\n"
+				  "    add_p64_p64 sum, x;\n"
+				  "    output_p64 sum;\n"
+				  "    init_pany_type buf_f, cptr;\n"
+				  "    mov_pcptr_pcptr buf_f, buf;\n"
+				  "    call_ffifunc ffi_free;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// Walks a C array with byte-wise pointer arithmetic. Both offset forms advance the cpointer
+	// in place, so each step works on its own copy of the base pointer.
+	void cptrAddOffsetArrayWalk() {
+		runProgram(
+			"add_offset_walk",
+			ffiObjectHeader()
+				+ "type cpointer: I64Ptr i64\n"
+				  "ffi function ffi_alloc { i64 } -> { cptr };\n"
+				  "ffi function ffi_free { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    init_pany_type n, i64;\n"
+				  "    mov_p64_imm n, 24;\n"
+				  "    call_ffifunc ffi_alloc;\n"
+				  "    init_pany_type p, I64Ptr;\n"
+				  "    cast_pcptr_pcptr p, buf;\n"
+				  "    init_pany_type v, i64;\n"
+				  "    mov_p64_imm v, 20;\n"
+				  "    store_pcptr_pany p, v;\n"
+				  "    init_pany_type off, i64;\n"
+				  "    mov_p64_imm off, 8;\n"
+				  "    init_pany_type p2, I64Ptr;\n"
+				  "    mov_pcptr_pcptr p2, p;\n"
+				  "    add_pcptr_p64 p2, off;\n"
+				  "    mov_p64_imm v, 2;\n"
+				  "    store_pcptr_pany p2, v;\n"
+				  "    init_pany_type p3, I64Ptr;\n"
+				  "    mov_pcptr_pcptr p3, p;\n"
+				  "    add_pcptr_imm p3, 16;\n"
+				  "    mov_p64_imm v, 20;\n"
+				  "    store_pcptr_pany p3, v;\n"
+				  "    init_pany_type x0, i64;\n"
+				  "    load_pany_pcptr x0, p;\n"
+				  "    init_pany_type x1, i64;\n"
+				  "    load_pany_pcptr x1, p2;\n"
+				  "    init_pany_type x2, i64;\n"
+				  "    load_pany_pcptr x2, p3;\n"
+				  "    add_p64_p64 x0, x1;\n"
+				  "    add_p64_p64 x0, x2;\n"
+				  "    output_p64 x0;\n"
+				  "    init_pany_type buf_f, cptr;\n"
+				  "    mov_pcptr_pcptr buf_f, buf;\n"
+				  "    call_ffifunc ffi_free;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// The builtin `cptr` has no pointee, so it cannot be dereferenced with a typed load.
+	void cptrLoadThroughVoidCPtrFails() {
+		expectLoadError(
+			"load_through_void",
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, cptr;\n"
+			"    init_pany_type v, i64;\n"
+			"    load_pany_pcptr v, c;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	void cptrLoadPointeeMismatchFails() {
+		expectLoadError(
+			"load_pointee_mismatch",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, I64Ptr;\n"
+			"    init_pany_type v, i32;\n"
+			"    load_pany_pcptr v, p;\n"
+			"    ret;\n"
+			"}\n",
+			{ "does not match the C pointer's pointee" }
+		);
+	}
+
+	// A packed pointee is not FFI-compliant, so its native layout cannot be assumed.
+	void cptrLoadPackedPointeeFails() {
+		expectLoadError(
+			"load_packed_pointee",
+			"type data: P { a: i8, b: i64 } packed\n"
+			"type cpointer: PPtr P\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, PPtr;\n"
+			"    init_pany_type s, P;\n"
+			"    load_pany_pcptr s, p;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	// The store-side mirror of cptrLoadThroughVoidCPtrFails.
+	void cptrStoreThroughVoidCPtrFails() {
+		expectLoadError(
+			"store_through_void",
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, cptr;\n"
+			"    init_pany_type v, i64;\n"
+			"    store_pcptr_pany c, v;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	// The store-side mirror of cptrLoadPointeeMismatchFails.
+	void cptrStorePointeeMismatchFails() {
+		expectLoadError(
+			"store_pointee_mismatch",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, I64Ptr;\n"
+			"    init_pany_type v, i32;\n"
+			"    store_pcptr_pany p, v;\n"
+			"    ret;\n"
+			"}\n",
+			{ "does not match the C pointer's pointee" }
+		);
+	}
+
+	// The store-side mirror of cptrLoadPackedPointeeFails.
+	void cptrStorePackedPointeeFails() {
+		expectLoadError(
+			"store_packed_pointee",
+			"type data: P { a: i8, b: i64 } packed\n"
+			"type cpointer: PPtr P\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, PPtr;\n"
+			"    init_pany_type s, P;\n"
+			"    store_pcptr_pany p, s;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	// The builtin `cptr` has no pointee, so the byte count of a raw copy is unknown.
+	void cptrReadThroughVoidCPtrFails() {
+		expectLoadError(
+			"read_through_void",
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, cptr;\n"
+			"    init_pany_type v, i64;\n"
+			"    init_pany_type vp, ptr_i64;\n"
+			"    ref_pptr_pany vp, v;\n"
+			"    read_pptr_pcptr vp, c;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	// Both sides of a raw copy must agree on the pointee type.
+	void cptrReadPointeeMismatchFails() {
+		expectLoadError(
+			"read_pointee_mismatch",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, I64Ptr;\n"
+			"    init_pany_type v, i32;\n"
+			"    init_pany_type vp, ptr_i32;\n"
+			"    ref_pptr_pany vp, v;\n"
+			"    read_pptr_pcptr vp, p;\n"
+			"    ret;\n"
+			"}\n",
+			{ "does not match the C pointer's pointee" }
+		);
+	}
+
+	// The write-side mirror of cptrReadThroughVoidCPtrFails.
+	void cptrWriteThroughVoidCPtrFails() {
+		expectLoadError(
+			"write_through_void",
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, cptr;\n"
+			"    init_pany_type v, i64;\n"
+			"    init_pany_type vp, ptr_i64;\n"
+			"    ref_pptr_pany vp, v;\n"
+			"    write_pcptr_pptr c, vp;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	// The write-side mirror of cptrReadPointeeMismatchFails.
+	void cptrWritePointeeMismatchFails() {
+		expectLoadError(
+			"write_pointee_mismatch",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, I64Ptr;\n"
+			"    init_pany_type v, i32;\n"
+			"    init_pany_type vp, ptr_i32;\n"
+			"    ref_pptr_pany vp, v;\n"
+			"    write_pcptr_pptr p, vp;\n"
+			"    ret;\n"
+			"}\n",
+			{ "does not match the C pointer's pointee" }
+		);
+	}
+
+	// A raw copy must not overwrite VM-managed data: a struct holding a VM pointer is not
+	// FFI-compliant, so a cpointer to it is not dereferenceable.
+	void cptrReadIntoPointerPointeeFails() {
+		expectLoadError(
+			"read_into_pointer_pointee",
+			"type data: Holder { p: ptr_i64, v: i64 }\n"
+			"type pointer: HolderPtr Holder\n"
+			"type cpointer: HolderCPtr Holder\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, HolderCPtr;\n"
+			"    init_pany_type hp, HolderPtr;\n"
+			"    read_pptr_pcptr hp, c;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	// A raw copy must not leak raw block addresses to native memory either.
+	void cptrWriteFromPointerPointeeFails() {
+		expectLoadError(
+			"write_from_pointer_pointee",
+			"type data: Holder { p: ptr_i64, v: i64 }\n"
+			"type pointer: HolderPtr Holder\n"
+			"type cpointer: HolderCPtr Holder\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, HolderCPtr;\n"
+			"    init_pany_type hp, HolderPtr;\n"
+			"    write_pcptr_pptr c, hp;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	// Hands the native address of a VM local to C, which writes through it. The VM sees the
+	// updated value because the cpointer addresses the block's data directly.
+	void cptrCastFromPointer() {
+		runProgram(
+			"cptr_cast_from_pointer",
+			ffiObjectHeader()
+				+ "type cpointer: I64Ptr i64\n"
+				  "ffi function ffi_fill8 { I64Ptr, i64 } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type v, i64;\n"
+				  "    mov_p64_imm v, 0;\n"
+				  "    init_pany_type vp, ptr_i64;\n"
+				  "    ref_pptr_pany vp, v;\n"
+				  "    init_pany_type c, I64Ptr;\n"
+				  "    cast_pcptr_pptr c, vp;\n"
+				  "    init_pany_type x, i64;\n"
+				  "    mov_p64_imm x, 42;\n"
+				  "    call_ffifunc ffi_fill8;\n"
+				  "    output_p64 v;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// The cast keeps the pointer's offset, so a field address computed in the VM stays a field
+	// address on the native side.
+	void cptrCastKeepsPointerOffset() {
+		runProgram(
+			"cptr_cast_offset",
+			ffiObjectHeader()
+				+ "type data: Pair { a: i64, b: i64 } assert_size 16\n"
+				  "type pointer: PairPtr Pair\n"
+				  "type cpointer: I64CPtr i64\n"
+				  "ffi function ffi_read8 { I64CPtr } -> { i64 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type s, Pair;\n"
+				  "    init_pany_type v, i64;\n"
+				  "    mov_p64_imm v, 7;\n"
+				  "    structStore_pste_pany_field s, v, Pair.a;\n"
+				  "    mov_p64_imm v, 42;\n"
+				  "    structStore_pste_pany_field s, v, Pair.b;\n"
+				  "    init_pany_type sp, PairPtr;\n"
+				  "    ref_pptr_pany sp, s;\n"
+				  "    init_pany_type fp, ptr_i64;\n"
+				  "    structLea_pptr_pptr_field fp, sp, Pair.b;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type c, I64CPtr;\n"
+				  "    cast_pcptr_pptr c, fp;\n"
+				  "    call_ffifunc ffi_read8;\n"
+				  "    output_p64 res;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// A null VM pointer has no block, so there is no address to take.
+	void cptrCastOfNullPointerFails() {
+		auto pid  = initProcess();
+		auto file = writeTempDbc(
+			"cptr_cast_null",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, ptr_i64;\n"
+			"    setNull_pptr p;\n"
+			"    init_pany_type c, I64Ptr;\n"
+			"    cast_pcptr_pptr c, p;\n"
+			"    ret;\n"
+			"}\n"
+		);
+		auto load = vm::api::loadFiles(pid, { file });
+		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessing null pointer");
 	}
 
 	void duplicateFfiFunctionFails() {
@@ -1001,7 +1397,7 @@ private:
 
 		auto second = vm::api::loadFiles(pid, { file });
 		ASSERT_NO_VALUE(second);
-		ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(second.error()));
+		ASSERT_MATCHES(second.error(), vm::api::LoadProgramError);
 		auto why = std::get<vm::api::LoadProgramError>(second.error()).why;
 		std::cerr << why << '\n';
 		assertTrue(
