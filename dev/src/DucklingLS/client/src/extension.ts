@@ -35,6 +35,11 @@ export function activate(context: ExtensionContext) {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
 			fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
 			configurationSection: 'DucklingLanguageSupport'
+		},
+		// Passed along with `initialize` so the server can read the duck_ls version before
+		// configuration requests become legal, and report it back as serverInfo.
+		initializationOptions: {
+			executablePath: workspace.getConfiguration('DucklingLanguageSupport').get<string>('executablePath')
 		}
 	};
 
