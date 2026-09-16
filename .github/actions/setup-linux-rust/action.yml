@@ -52,12 +52,20 @@ runs:
     - name: Setup sccache environment
       shell: bash
       run: |
-        echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+        # Rust goes through sccache, C does NOT -- through a wrapper script rather than through
+        # `sccache` itself. Cc-rs introspects RUSTC_WRAPPER and
+        # adopts it for the crates' vendored C as well, but only when the file STEM is one of
+        # "sccache", "cachepot", "buildcache", "kache". A stem outside that list leaves C alone
+        # while cargo still wraps rustc with it.
+
+        wrapper="${RUNNER_TEMP:-/tmp}/rustc-only-sccache"
+        printf '#!/bin/sh\nexec "${SCCACHE_PATH:-sccache}" "$@"\n' > "$wrapper"
+        chmod +x "$wrapper"
+
+        echo "RUSTC_WRAPPER=$wrapper" >> "$GITHUB_ENV"
         echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
 
-        # TEMPORARY, while the GHA backend is on trial: nearly every write to it is failing and
-        # `Cache write errors` does not say why. The server writes this log, and only the server
-        # knows what the cache service answered.
+        # TEMPORARY, while the GHA backend is on trial.
         echo "SCCACHE_ERROR_LOG=${RUNNER_TEMP:-/tmp}/sccache-server.log" >> "$GITHUB_ENV"
         echo "SCCACHE_LOG=sccache=debug,opendal=debug" >> "$GITHUB_ENV"
 

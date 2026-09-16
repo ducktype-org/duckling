@@ -366,7 +366,7 @@ jobs:
             echo "=== every distinct error line, with counts ==="
             grep -iE "\berror\b|\bwarn\b" "$log" \
               | sed -E 's/[0-9a-f]{16,}/<hash>/g; s/^[^ ]+ +//' \
-              | sort | uniq -c | sort -rn | head -30
+              | sort | uniq -c | sort -rn | awk 'NR <= 30'
             echo "=== last 100 lines ==="
             tail -100 "$log"
           else
