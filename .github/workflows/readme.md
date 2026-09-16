@@ -96,7 +96,14 @@ What the macOS job adds is a
 second standard library (libc++), the Apple arm64 ABI, `ld64` and a far newer clang.
 
 The two platforms prepare a build so differently that neither preparation is in `tests.yml` at
-all. It lives in `.github/actions/`, in four composite actions, one per platform per concern.
+all. It lives in `.github/actions/`, in four composite actions, one per platform per concern:
+`setup-{linux,macos}-build-env` and `setup-{linux,macos}-rust`.
+
+Workflows do not call those directly. They call `setup-build-env` and `setup-rust`, which take a
+`platform` input and dispatch to the pair above, so a job has one setup step per concern instead
+of one per platform, and an unhandled platform fails there with a clear message. `tests.yml`
+passes `env.PLATFORM` (the matrix's `compiler.platform`) -- compared against by value rather than
+reduced to an `IS_MACOS` boolean, so adding Windows means adding a value, not a second flag.
 
 The launchd jobs starting the mac runners must set `ProcessType: Interactive`; without it launchd
 throttles the whole job chain to utility QoS, which stretches a 10 ms sleep to ~70 ms.

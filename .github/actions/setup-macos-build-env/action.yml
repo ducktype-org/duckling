@@ -57,9 +57,6 @@ runs:
         # The ICU bundled with the macOS SDK is a C-only subset, so CMake must be pointed at
         # the Homebrew one.
         echo "ICU_ROOT=$HOMEBREW_PREFIX/opt/icu4c" >> "$GITHUB_ENV"
-        # Apple's `ar` stamps a timestamp into every archive member unless this is set, so
-        # without it the same sources produce byte-different archives on every build.
-        echo "ZERO_AR_DATE=1" >> "$GITHUB_ENV"
         echo "$HOMEBREW_PREFIX/bin" >> "$GITHUB_PATH"
 
     # On mac the caches are kept on the machine, not in the workspace. This is a symlink to the machine's

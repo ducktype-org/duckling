@@ -54,8 +54,10 @@ jobs:
       # This has to be before restoring cache, so the env is set. It also puts the toolchain on
       # PATH.
       - name: Setup Rust
-        uses: ./.github/actions/setup-linux-rust/
+        uses: ./.github/actions/setup-rust/
         with:
+          # This job is Linux-only: clippy runs once, not per platform.
+          platform: linux
           sccache-dir: ${{ github.workspace }}/.cache/sccache
 
       - name: Restore sccache cache
@@ -139,15 +141,12 @@ jobs:
 
       # This has to be before restoring cache, so the env is set. It also puts the toolchain on
       # PATH.
-      - name: Setup Rust (Linux)
-        if: ${{ matrix.platform != 'macos' }}
-        uses: ./.github/actions/setup-linux-rust/
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust/
         with:
+          platform: ${{ matrix.platform }}
+          # macOS ignores this: there the cache lives on the machine, outside the workspace.
           sccache-dir: ${{ github.workspace }}/.cache/sccache
-
-      - name: Setup Rust (macOS)
-        if: ${{ matrix.platform == 'macos' }}
-        uses: ./.github/actions/setup-macos-rust/
 
       # macOS keeps its sccache on the machine instead.
       - name: Restore sccache cache

@@ -103,8 +103,7 @@ jobs:
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' }}
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' && matrix.compiler.name == 'gcc' }}
-      # The mac runner accounts have no sudo, so a workflow cannot install anything there
-      IS_MACOS: ${{ matrix.compiler.platform == 'macos' }}
+      PLATFORM: ${{ matrix.compiler.platform }}
 
     steps:
       - name: Set self-hosted placeholder
@@ -134,10 +133,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Setup Linux build environment
-        if: ${{ env.IS_MACOS != 'true' }}
-        uses: ./.github/actions/setup-linux-build-env/
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env/
         with:
+          platform: ${{ env.PLATFORM }}
           cc: ${{ matrix.compiler.cc }}
           cxx: ${{ matrix.compiler.cxx }}
           compiler-name: ${{ matrix.compiler.name }}
@@ -145,24 +144,13 @@ jobs:
           coverage-enabled: ${{ env.COVERAGE_ENABLED }}
           build-deployables: ${{ env.BUILD_DEPLOYABLES }}
           dev-dir: ${{ env.WORKSPACE }}
-
-      - name: Setup macOS build environment
-        if: ${{ env.IS_MACOS == 'true' }}
-        uses: ./.github/actions/setup-macos-build-env/
-        with:
-          dev-dir: ${{ env.WORKSPACE }}
           ccache-dir: ${{ env.CCACHE_DIR }}
 
-      # Rust setup is splitted by platform the same way the build environment above is.
-      - name: Setup Rust (Linux)
-        if: ${{ env.IS_MACOS != 'true' }}
-        uses: ./.github/actions/setup-linux-rust/
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust/
         with:
+          platform: ${{ env.PLATFORM }}
           sccache-dir: ${{ github.workspace }}/.cache/sccache
-
-      - name: Setup Rust (macOS)
-        if: ${{ env.IS_MACOS == 'true' }}
-        uses: ./.github/actions/setup-macos-rust/
 
       - name: Check installations
         run: |
@@ -177,7 +165,7 @@ jobs:
       - name: Prepare cache timestamp
         id: cache-timestamp
         # Only the actions/cache keys consume this, and those steps are Linux-only.
-        if: ${{ env.IS_MACOS != 'true' }}
+        if: ${{ env.PLATFORM != 'macos' }}
         shell: cmake -P {0}
         run: |
           string(TIMESTAMP current_date "%Y-%m-%d-%H::%M::%S" UTC)
@@ -188,7 +176,7 @@ jobs:
       - name: Restore build cache
         id: restore-build-cache
         # macOS keeps its ccache on the machine - see "Point caches at local storage".
-        if: ${{ env.IS_MACOS != 'true' }}
+        if: ${{ env.PLATFORM != 'macos' }}
         uses: actions/cache/restore@v5
         with:
           # main builds from an empty cache on purpose: the entry it saves is what every branch
@@ -210,7 +198,7 @@ jobs:
       # macOS keeps its sccache on the machine as well - see "Point caches at local storage".
       - name: Restore sccache cache
         id: restore-sccache-cache
-        if: ${{ env.IS_MACOS != 'true' }}
+        if: ${{ env.PLATFORM != 'macos' }}
         uses: actions/cache/restore@v5
         with:
           lookup-only: ${{ env.BRANCH_NAME == 'main' }}
@@ -262,7 +250,7 @@ jobs:
             ${{ steps.setup-build-flags.outputs.flags }} \
             --linker ${{ matrix.compiler.linker }} \
             --ccache \
-            ${{ env.IS_MACOS == 'true' && '--no-strip-symbol-information' || '--strip-symbol-information' }}
+            --strip-symbol-information
         env:  # Hot fix for GH issues:
           GIT_CONFIG_COUNT: 2
           GIT_CONFIG_KEY_0: url.https://quacker-bot:${{ secrets.QUACKER_PAT }}@github.com/.insteadOf
@@ -274,8 +262,8 @@ jobs:
       # We additionally build coverage targets in case of coverage enabled,
       # so they are nicely parallelized and cached.
       #
-      # duckc and VM are built here too, although no test links them.background.
-      # We built it just for ccache presence
+      # duckc and VM are built here too, although no test links them: we build them just so their
+      # objects land in the ccache entry saved below.
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
         run: |
@@ -317,15 +305,16 @@ jobs:
           echo "sccache:"
           [ -n "${SCCACHE_DIR:-}" ] && du -hs "$SCCACHE_DIR" || echo 0
 
-      - name: Show ccache statistics (macOS)
-        if: ${{ env.IS_MACOS == 'true' }}
-        run: ccache --show-stats --verbose | head -30
+      - name: Show ccache statistics
+        run: |
+          ccache_bin=$(command -v ccache || echo '${{ env.WORKSPACE }}/scripts/downloads/ccache')
+          "$ccache_bin" --show-stats --verbose | head -30
 
       # Uploaded in the BACKGROUND (GitHub shipped this 2026-06-25): the tests below start
       # immediately instead of waiting out the upload.
       - name: Save build cache
         id: save-build-cache
-        if: ${{ env.IS_MACOS != 'true' }}
+        if: ${{ env.PLATFORM != 'macos' }}
         background: true
         uses: actions/cache/save@v5
         with:
@@ -372,7 +361,7 @@ jobs:
       # that follow do not touch $SCCACHE_DIR.
       - name: Save sccache cache
         id: save-sccache-cache
-        if: ${{ env.IS_MACOS != 'true' }}
+        if: ${{ env.PLATFORM != 'macos' }}
         background: true
         uses: actions/cache/save@v5
         with:
