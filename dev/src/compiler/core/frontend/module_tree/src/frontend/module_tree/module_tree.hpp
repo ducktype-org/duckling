@@ -25,7 +25,7 @@ namespace compiler::frontend::packages {
 namespace compiler::frontend {
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
-	 * it is a single file module.
+	 * it is a module file.
 	 */
 	constexpr std::string_view LANG_MODULE_FILE = ".dk";
 
@@ -56,11 +56,14 @@ namespace compiler::frontend {
 		base::Optional<ModuleID> m_repl_module_parent;
 	};
 
+
+
 	/**
 	 * @brief Represents a single module in the Duckling project tree.
+	 * @note Each module is either a module-module (normal module) or script module (created from a script file).
 	 *
 	 * ModuleTree provides a hierarchical, in-memory representation of a module,
-	 * including its source files, submodules, and other files.
+	 * including its main source file, submodules, and other files.
 	 * The ModuleTree is the first instance of module in duckling compiling process
 	 * the main use case is to build a module tree form existing folder, and then
 	 * extract the pst from source files
@@ -154,28 +157,30 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]] packages::PackageAccessLocked getPackage() const;
 
-		/**
-		 * Check if this module is a REPL-generated module.
-		 * REPL modules have special cross-module lookup behavior.
-		 * @return true if this is a REPL module, false otherwise
-		 */
-		[[nodiscard]]
-		bool isReplModule() const {
-			return m_repl_data.has_value();
-		}
+		// PR TODO
+		// /**
+		//  * Check if this module is a REPL-generated module.
+		//  * REPL modules have special cross-module lookup behavior.
+		//  * @return true if this is a REPL module, false otherwise
+		//  */
+		// [[nodiscard]]
+		// bool isReplModule() const {
+		// 	return m_repl_data.has_value();
+		// }
 
-		/**
-		 * Get the parent REPL module.
-		 * Only valid for REPL modules.
-		 * @return ModuleID of the parent REPL module, or empty if this is the first REPL module
-		 */
-		[[nodiscard]]
-		base::Optional<ModuleID> getReplModuleParent() const {
-			CORE_ASSERT(
-				m_repl_data.has_value(), "repl data of a node with parent should have value!"
-			);
-			return m_repl_data->m_repl_module_parent;
-		}
+		// PR TODO
+		// /**
+		//  * Get the parent REPL module.
+		//  * Only valid for REPL modules.
+		//  * @return ModuleID of the parent REPL module, or empty if this is the first REPL module
+		//  */
+		// [[nodiscard]]
+		// base::Optional<ModuleID> getReplModuleParent() const {
+		// 	CORE_ASSERT(
+		// 		m_repl_data.has_value(), "repl data of a node with parent should have value!"
+		// 	);
+		// 	return m_repl_data->m_repl_module_parent;
+		// }
 
 		/**
 		 * Returns the ComponentHash of the module.
@@ -265,27 +270,50 @@ namespace compiler::frontend {
 		 */
 		static void checkDanglingReference(const base::Ref<ModuleTree>& candidate);
 
-		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
+
+		/* * * * * * * * * * * * * * *\
+		|  Universal data members:   *|
+		\* * * * * * * * * * * * * * */
+
+		/**
+		 * This is essentially a self pointer, it is necessary to get the ModuleID from the const ModuleTree
+		 */
 		base::Optional<ModuleID> m_id;
-
+		
 		base::StrID m_name;
-
+		
 		base::Optional<base::Ref<ModuleTree>> m_parent;
-
-		base::Optional<base::Ref<SourceFile>>             m_main_source_file;
+		
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
-		base::HashMap<base::StrID, std::vector<fs::File>>
-			m_other_files;  //< Other files in the module (not SourceFiles) currently nothing is
-		                    // happening with them. Do not use this in query unless AccessLocked is
-		                    // implemented for this
 
-		base::Optional<usize> m_storage_handle;  //< Key to support removal from static storage
+		
+		/**
+		 * Other files in the module (not SourceFiles) currently nothing is
+		 * happening with them. Do not use this in query unless AccessLocked is
+		 * implemented for this
+		 */
+		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
 
-		base::Optional<hashing::ComponentHash>
-			m_path_component_hash;  //< ComponentHash of the module's logical path: eg
-		                            // package_name/root/submodule1/sub2
-		base::Optional<hashing::ComponentHash::HashType>
-			m_hash;                 //< This is the actual hash for the Module used in SideInput
+
+		/**
+		 * Key to support removal from static storage
+		 */
+		base::Optional<usize> m_storage_handle;
+
+
+		/**
+		 * ComponentHash of the module's logical path: eg
+		 * package_name/root/submodule1/sub2
+		 */
+		base::Optional<hashing::ComponentHash> m_path_component_hash;  
+
+
+		/**
+		 * The actual hash for the Module used in SideInput
+		 */
+		base::Optional<hashing::ComponentHash::HashType> m_hash;
+
+
 		/**
 		 * @brief Synchronizes lazy module hash/path-hash recomputation for this module.
 		 * @note Hold this lock while reading/writing m_path_component_hash or m_hash during lazy
@@ -299,12 +327,51 @@ namespace compiler::frontend {
 		 */
 		base::StrID m_package_id;
 
+
+		/* * * * * * * * * * * * * * * * * * * *\
+		|  Module type specific data members:   |
+		\* * * * * * * * * * * * * * * * * * * */
+
+		// this is the simple case, that already works
+		struct ModuleModuleData final {
+			base::Optional<SourceFile> m_main_source_file;
+		};
+
+		struct ModuleScriptData final {
+			// a dummy module script will be created for each script and for repl 
+
+			// We don't store the SourceFile for script modules (?)
+			base::Optional<fs::File> m_script_file;
+
+			// child module: SyntheticScriptReplChainModule?
+		};
+
+		// yay, this makes sense:
+		struct SyntheticScriptReplChainModule final {
+			// This has paren<->child mapping
+			// dynamic extension will be done by the modifier, and the parent will be set to the previous module in the chain
+			// This is a special case, we need dynamic extend only for REPL like execution
+
+			// base::Optional<ModuleID> m_repl_module_parent;
+			// This will be a special case, we need dynamic extend
+			// unify with script, maybe repl is just a ModuleScriptData with magic bool allow_extend = true?
+		};
+
+
+		std::variant<ModuleModuleData, ModuleScriptData, SyntheticScriptReplChainModule> m_module_type_data;
+
+
+
+
+
+
+		// PR TODO
 		/**
 		 * REPL-specific data.
 		 * Optional - only set for modules created in REPL sessions.
 		 * Presence of this optional indicates the module is a REPL module.
 		 */
-		base::Optional<ReplData> m_repl_data;
+		// base::Optional<ReplData> m_repl_data;
 	};
 
 	/**
@@ -397,7 +464,7 @@ namespace compiler::frontend {
 		 * Sets REPL-specific module data.
 		 * @param repl_data The ReplData struct.
 		 */
-		void setReplModule(const ReplData& repl_data);
+		void setReplModule(const ReplData& repl_data); // HMMMMMMM
 
 		/**
 		 * Builds the module tree from a single file (single-file module).

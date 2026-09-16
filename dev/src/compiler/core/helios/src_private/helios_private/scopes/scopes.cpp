@@ -891,6 +891,9 @@ namespace compiler::helios {
 
 				return parent_result;
 			}
+			
+			// HMM: here we could iterate instead on some kind of repl-chain, to separate this from the module tree structure maybe?
+			
 
 			// At root scope.
 			auto current_module_id = key.scope.ref->parent_module;
