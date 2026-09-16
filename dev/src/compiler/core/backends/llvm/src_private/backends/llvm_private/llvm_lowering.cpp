@@ -869,15 +869,14 @@ namespace compiler::backend_llvm {
 		/**
 		 * @brief Gets a LLVM pointer to the copy of a given LIRValue.
 		 *
-		 * - For `LIRPlace`, it returns the calculated address via `gepPointerFromLIRPlace` for the
-		 * copied value.
-		 * - For `LIRConstant`, it loads the constant value into a created temporary and returns the
-		 * address of the temporary.
+		 * - For `LIRPlace`, place is copied from its existing storage.
+		 * - For `LIRConstant`, constant is materialized
+		 * directly in the new allocation.
 		 * - Panics for other LIRValue variants (like BlockRef or FunctionLiteral).
 		 *
-		 * @param lir_location The LIRValue to obtain a pointer for.
+		 * @param source The LIRValue to obtain a pointer for.
 		 * @param builder The LLVM IRBuilder to use for generating instructions.
-		 * @return `llvm::Value*` with the pointer to the data.
+		 * @return The new stack allocation containing the copy.
 		 */
 		llvm::AllocaInst* loadLIRValueToPointerCopy(
 			const lir::LIRValue& source, llvm::IRBuilder<>& builder
