@@ -10,6 +10,7 @@ import bisect
 
 from _stencils import HoleValue, Stencil, Hole, symbol_to_value, stencils_to_c, StencilType
 from _schema import ELFRelocation, ELFSection
+from jittable_interface import nonjittable
 
 from llvm_tools import llvm_tools_version_options, run_llvm_tool
 
@@ -149,13 +150,15 @@ def generate_stencils(
 
     return stencils
 
+# Dev utility, not used by the build: enable with --statistics to inspect stencil sizes
+# and jump-removal results when working on the stencil pipeline.
 def gather_statistics(stencils, failed_removal = None):
     removed_jumps = failed_removal is not None
     def count_jumps(stencil: Stencil):
         is_removed = 1 if removed_jumps and stencil.unmangled_name not in failed_removal else 0
         continue_holes = len([hole for hole in stencil.holes if hole.value == HoleValue.CONTINUE_FN])
         return continue_holes - is_removed
-    
+
     stencil_jumps = [(stencil.unmangled_name, count_jumps(stencil)) for stencil in stencils]
     failed_jumps = {name: remained for name, remained in stencil_jumps if remained != 0}
 
@@ -179,7 +182,7 @@ def gather_statistics(stencils, failed_removal = None):
 @click.option("-s", "--shared", is_flag=True)
 @click.option("-r", "--remove-jumps", is_flag=True)
 @click.option("--statistics", is_flag=True)
-@click.option("--order", type=click.File("r")) 
+@click.option("--order", type=click.File("r"))
 @click.argument("binary", type=click.File("rb"))
 @llvm_tools_version_options
 def main(
@@ -199,12 +202,23 @@ def main(
         failed_stencils = [stencil.unmangled_name for stencil in stencils if not stencil.remove_jump(binary_contents)]
     else:
         failed_stencils = None
-            
+
     if statistics:
         print(json.dumps(gather_statistics(stencils, failed_stencils), indent=4))
 
     if order:
-        stencils = order_stencils(stencils, json.loads(order.read()))
+        order_dict = json.loads(order.read())
+        stencils = order_stencils(stencils, order_dict)
+        # Non-jittable opcodes intentionally have no stencil; their slots only pad the array so
+        # that indices line up with opcode values, and are never read at runtime.
+        missing = [
+            name
+            for name, idx in order_dict.items()
+            if stencils[idx].type == StencilType.NO_STENCIL and not nonjittable(name)
+        ]
+        if missing:
+            print(f"Stencils missing from the binary: {', '.join(sorted(missing))}")
+            exit(5)
     if output:
         output.write(stencils_to_c(stencils))
 

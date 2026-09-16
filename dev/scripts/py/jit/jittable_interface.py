@@ -27,20 +27,8 @@ def nonjittable(func_name: str) -> bool:
 
     return any(op in func_name for op in nonjittable_opfuncs)
 
-special_functions = {}
-def is_special_function(func_name: str) -> bool:
-    global special_functions
-
-    for special_function in special_functions:
-        if special_function in func_name:
-            special_functions[special_function] = True
-            return True
-    else:
-        return False
-
-
 def should_remain(func_name: str) -> bool:
-    return is_special_function(func_name) or (is_opfun(func_name) or is_stencil(func_name)) and not nonjittable(func_name)
+    return (is_opfun(func_name) or is_stencil(func_name)) and not nonjittable(func_name)
 
 
 @click.command()
@@ -76,11 +64,6 @@ def main(llvm_nm, llvm_cxxfilt, input_path, output_file, **kwargs):
     for mangled, unmangled in zip(mangled_names, unmangled_names):
         if should_remain(unmangled):
             write(mangled)
-
-    global special_functions
-    for func_name, used in special_functions.items():
-        if not used:
-            print(f"Function: '{func_name}' not found")
 
 
 if __name__ == "__main__":

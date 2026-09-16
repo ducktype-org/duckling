@@ -24,8 +24,7 @@ namespace vm::jit::cnp {
 		const char*              name;
 		usize                    place;
 		usize                    size;
-		std::vector<StencilHole> to_patch   = {};
-		std::vector<StencilHole> relocation = {};
+		std::vector<StencilHole> to_patch = {};
 
 		/**
 		 * @brief Patch a stencil into a given address.

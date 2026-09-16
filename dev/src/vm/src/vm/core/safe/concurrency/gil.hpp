@@ -53,5 +53,21 @@ namespace vm {
 		 * checking release_requested_flag.
 		 */
 		bool shouldRelease();
+
+		/**
+		 * @brief RAII guard acquiring the GIL for the scope. For use outside exec threads
+		 * (e.g. by SafeVMProcess), where SafeVMThread::ScopedGilGuard does not apply.
+		 */
+		class ScopedLock {
+		public:
+			explicit ScopedLock(GIL& gil): gil(gil) { gil.acquire(); }
+			~ScopedLock() { gil.release(); }
+
+			ScopedLock(const ScopedLock&)            = delete;
+			ScopedLock& operator=(const ScopedLock&) = delete;
+
+		private:
+			GIL& gil;
+		};
 	};
 }

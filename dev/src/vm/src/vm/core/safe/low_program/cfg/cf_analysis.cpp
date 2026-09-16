@@ -62,15 +62,11 @@ namespace vm::low::cf {
 	}
 
 #ifdef ENABLE_JIT
-	/**
-	 * @brief Finds the first jitFunctionEntrypoint instruction in the bytecode.
-	 * @param bc Micro-bytecode of lowered function to analyze.
-	 * @return Offset of the function's jitFunctionEntrypoint instruction.
-	 */
 	usize functionEntrypointOffset(const MicroBytecode& bc) {
 		for (usize i = 0; i < bc.size(); ++i)
 			if (getInstructionOpcode(bc[i]) == MicroOpcode::jitFuncEntrypoint) return i;
-		CORE_UNREACHABLE();
+		// A missing entrypoint means the lowering and this scan have drifted apart.
+		CORE_PANIC("No jitFuncEntrypoint instruction found in the bytecode");
 	}
 #endif
 }  // namespace vm::low::cf

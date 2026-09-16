@@ -56,8 +56,8 @@ namespace vm::low::cf {
 				while (stack_ptr < stack.size()) {
 					BasicBlockID curr = stack[stack_ptr++];
 
-					// If block is it's own predecessor, that means we have found a loop. However,
-					// we don't want to look through it's predecesors, as it doesn't dominate them.
+					// If block is its own predecessor, that means we have found a loop. However,
+					// we don't want to look through its predecessors, as it doesn't dominate them.
 					if (curr == bid) continue;
 
 					for (auto next: predecessors[curr]) {
@@ -201,7 +201,9 @@ namespace vm::low::cf {
 		 * @param time Running DFS timestamp.
 		 */
 		void domTreeTimestampDfs(BasicBlockID bid, u32& time) {
-			if (dom_tree_timestamps[bid].first != 0) return;  // Already visited
+			CORE_ASSERT(
+				dom_tree_timestamps[bid].second == 0, "dominator tree is not a tree: revisited a block"
+			);
 			dom_tree_timestamps[bid].first = time++;
 			for (BasicBlockID child_id: dom_tree[bid]) domTreeTimestampDfs(child_id, time);
 			dom_tree_timestamps[bid].second = time++;

@@ -95,7 +95,6 @@ class Stencil:
                 + list_quote(
                     hole.to_c() for hole in self.holes if hole.value != HoleValue.NONE
                 ),
-                ".relocation = {}",
             ]
         )
 

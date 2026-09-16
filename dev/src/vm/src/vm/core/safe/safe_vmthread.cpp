@@ -146,15 +146,9 @@ namespace vm {
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
 		if (func_args.size() != func.parameters.size()) {
-			throw exceptions::VMRuntimeException(base::strConcat(
-				"Function '",
-				func.name.str(),
-				"' expects ",
-				func.parameters.size(),
-				" arguments, but ",
-				func_args.size(),
-				" were provided."
-			));
+			throw exceptions::VMRuntimeException(
+				argumentCountMismatchMessage(func, func_args.size())
+			);
 		}
 
 		low::LowFuncData start_function{ .name = base::StrID("vm_start_function"),

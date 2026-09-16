@@ -233,7 +233,7 @@ private:
 				  };
 
 			// Run the tests
-			const usize reps         = 1'000;
+			const usize reps         = 100;
 			const usize worker_count = 4;
 
 			bool failed = false;

@@ -448,7 +448,7 @@ namespace vm {
 					MRef<jit::JitLLVMFunc> compiled = jit::compileLLVM(
 						my_data.cfgs[cfg_offset], original_function.bc, current_func_obj.name
 					);
-					CORE_ASSERT(compiled, "Compiled function pointer shoulnd't be nullptr");
+					CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 					llvm_compiled_code_ptr              = compiled;
 					const MicroInstruction* saved_instr = instr;
 					const Frame*            saved_frame = frame;

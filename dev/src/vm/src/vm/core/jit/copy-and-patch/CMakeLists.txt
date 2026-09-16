@@ -7,8 +7,10 @@ add_custom_command(
     DEPENDS print_opcodes
 )
 
-# Analyze and process the `binary_file`, preparing to embed in `destination_file`
-function(process_to_binary binary_file destination_file binary_artifact_prefix analyze_arg)
+# Analyze and process the `binary_file`, preparing to embed in `destination_file`.
+# `analyze_input_deps` are dependencies of only the analyze step (e.g. opcodes.json);
+# anything in ARGN is a dependency of the compile+link step.
+function(process_to_binary binary_file destination_file binary_artifact_prefix analyze_arg analyze_input_deps)
     set(extra_deps ${ARGN})
     get_filename_component(
         destination_file_abs "${destination_file}"
@@ -54,10 +56,10 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix a
         "${linked_out}"
         "--output=${nm_out}"
         ${analyze_arg}
-        # "--statistics"
+        # "--statistics" — opt-in dev stats about stencil sizes and jump removal
         "--shared"
         ${LLVM_TOOLS_ARGS}
-        DEPENDS ${linked_out} ${analyze_deps}
+        DEPENDS ${linked_out} ${analyze_deps} ${analyze_input_deps}
     )
 
     set_source_files_properties("${linked_out}" "${nm_out}"
@@ -103,9 +105,10 @@ endfunction()
 
 process_to_binary(
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/mock_stencils.cpp
-    tests/jit_memory_test.cpp 
+    tests/jit_memory_test.cpp
     "mock_stencils"
     "--accept-all-sections"
+    ""
 )
 
 add_library(Stencils OBJECT memory/memory.cpp ../../native/dynamic_library.cpp)
@@ -119,11 +122,12 @@ target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
 target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
 
 process_to_binary(
-    $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> 
-    stencil_holder.cpp 
+    $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>
+    stencil_holder.cpp
     "stencils"
     "--order=opcodes.json;--remove-jumps"
-    opcodes.json $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
+    opcodes.json
+    $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
 
 add_files(
     memory/memory.cpp

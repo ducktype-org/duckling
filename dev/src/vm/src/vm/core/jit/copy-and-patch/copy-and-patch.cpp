@@ -38,6 +38,9 @@ namespace vm::jit {
 			case low::cf::OutEdges::Kind::JmpIfNot:
 				return jit::cnp::SpecialStencils::JumpIfNot;
 			case low::cf::OutEdges::Kind::End:
+				// @TODO: #3584 compileCP cannot return from a loop: an End edge gets no stencil,
+				// so a compiled loop could not exit. Latent while compileCP is only called for
+				// function entrypoints (op_jitFuncEntrypoint).
 				return std::nullopt;
 			case low::cf::OutEdges::Kind::Default:
 				return jit::cnp::SpecialStencils::Jump;

@@ -268,9 +268,9 @@ namespace vm::jit {
 			}
 			case vm::low::cf::OutEdges::Kind::End:
 			default: {
-				// We return the offset the interpreter needs to move it's instruction pointer by.
+				// We return the offset the interpreter needs to move its instruction pointer by.
 				// This is necessary, because we made instr arguments to each opcode constant to
-				// allow for compiler to make better optimizaitons.
+				// allow for compiler to make better optimizations.
 				i64 final_offset = block.ret_value;
 				ir_builder.CreateRet(ir_builder.getInt64(final_offset));
 				break;

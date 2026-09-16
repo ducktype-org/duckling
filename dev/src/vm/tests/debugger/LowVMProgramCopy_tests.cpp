@@ -56,7 +56,7 @@ private:
 			maybe_opcode.value(),
 			expected_opcode,
 			base::strConcat(
-				"Main first istruction was not `",
+				"Main first instruction was not `",
 				vm::low::OPCODE_NAMES[static_cast<usize>(expected_opcode)],
 				"` but `",
 				vm::low::OPCODE_NAMES[static_cast<usize>(maybe_opcode.value())],

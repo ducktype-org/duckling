@@ -56,7 +56,7 @@ namespace vm::jit {
 		llvm::ModuleAnalysisManager   mam;
 
 		// For maximum optimization:
-		// Register all available module analyses passess.
+		// Register all available module analyses passes.
 		pb.registerModuleAnalyses(mam);
 		// Registers all available CGSCC (Call Graph Strongly Connected Component) passes.
 		pb.registerCGSCCAnalyses(cgam);

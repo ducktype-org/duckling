@@ -16,7 +16,7 @@ Currently those are restricted to the exact values (eg. `local_stack`, `instr`, 
 
 ## Importing stencils
 
-Before compilation, stencils are dynamically loaded in order to resolve runtime addresses (eg. to VM and libc). This is requires specific compilation flags (eg. `-mmodel=large`), which prohibit optimizations, and fail to resolve error handling. Thus it should be replaced with a better solution.
+Before compilation, stencils are dynamically loaded in order to resolve runtime addresses (eg. to VM and libc). This requires specific compilation flags (eg. `-mcmodel=large`), which prohibit optimizations, and fail to resolve error handling. Thus it should be replaced with a better solution.
 
 ## Compilation process
 

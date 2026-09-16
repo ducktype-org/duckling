@@ -277,10 +277,17 @@ namespace vm {
 		SynchronizationPrimitives& getSynchronizationPrimitives();
 
 #ifdef ENABLE_JIT
-		// Thanks to GIL, storing JIT data in process instead of thread is safe.
+		// GIL is held while jit_data is updated in loadProgram, so storing JIT data in the
+		// process instead of the thread is safe.
 		jit::JitData& getJitData() { return jit_data; }
 
 		const jit::JitData& getJitData() const { return jit_data; }
 #endif
 	};
+
+	/**
+	 * @brief Shared wording for the function-argument-count mismatch error, used both when
+	 * validating a Run request and as a hard check when building the start function.
+	 */
+	std::string argumentCountMismatchMessage(const low::LowFuncData& func, usize provided);
 }

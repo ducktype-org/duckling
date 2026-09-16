@@ -35,6 +35,18 @@ namespace vm {
 
 	Memory& SafeVMProcess::getMemory() { return memory; }
 
+	std::string argumentCountMismatchMessage(const low::LowFuncData& func, usize provided) {
+		return base::strConcat(
+			"Function '",
+			func.name.str(),
+			"' expects ",
+			func.parameters.size(),
+			" arguments, but ",
+			provided,
+			" were provided."
+		);
+	}
+
 	std::expected<api::Response, api::LoadProgramError> SafeVMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
@@ -56,7 +68,12 @@ namespace vm {
 			[[maybe_unused]] auto new_functions = loaded_program_copy.selfUpdate();
 			updateGlobalDataMemory(&loaded_program_copy);
 #ifdef ENABLE_JIT
-			updateJitData(&new_functions);
+			{
+				// Exec threads never take api_lock; the GIL is what excludes them, and it must
+				// be held while growing jit_data and replacing opcodes in loaded_program_copy.
+				GIL::ScopedLock gil_lock(gil);
+				updateJitData(&new_functions);
+			}
 #endif
 			return api::Response(api::response::Empty());
 		} else {
@@ -87,15 +104,7 @@ namespace vm {
 		const auto& func_args = v_get(run_arguments, FunctionRunArguments);
 
 		if (func_args.size() != func.parameters.size())
-			return refuse(base::strConcat(
-				"Function '",
-				func.name.str(),
-				"' expects ",
-				func.parameters.size(),
-				" arguments, but ",
-				func_args.size(),
-				" were provided."
-			));
+			return refuse(argumentCountMismatchMessage(func, func_args.size()));
 
 		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {
 			if (arg_value->getPID() != getPID())
@@ -642,6 +651,9 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::setBreakpoint(
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
+		// @TODO: #3585 In JIT builds this can clobber or incorrectly restore the
+		// jitFuncEntrypoint/jitLoopEntrypoint opcodes written by updateJitData: disabling a
+		// breakpoint restores the opcode from the original program, losing the JIT entrypoint.
 		std::unique_lock lock(api_lock);
 
 		// Try to obtain original function
