@@ -62,8 +62,10 @@ Then the only thing that can happen is that in the new freeze `P` may appear wit
 
 For each possible feature `F_i` of `P`, if it was not in the previous freeze and it forces some features `G_1, ..., G_n` of `Q`, not present in the previous freeze, there are two cases.
 
-1. Some `G_i` is not a valid feature of `Q`.
-In such case, we have to choose a different realisation of the dependency than `Q`, so we resort to the general case.
+1. Some `G_j` is not a valid feature of `Q`.
+In such case we have to forbid `P` with `F_i`.
+We could try to choose another realization but then we would have two versions of the realization
+(for simplicity we assume that all preexisting packages are still present), which is forbidden.
 2. Otherwise we simply add a condition that `P` with `F_i` forces `G_1, ..., G_n` on `Q`:
 ```
 n * var(P, F_i) - var(Q, G_1) - ... - var(Q, G_n) <= 0
@@ -73,9 +75,17 @@ n * var(P, F_i) - var(Q, G_1) - ... - var(Q, G_n) <= 0
 For every package `P` and every its feature `F` such that either `P` or `F` is not present in the previous freeze,
 if `F` expands to some features `F_1`, ..., `F_n != F` we add that `F` implies `F_1`, ..., `F_n` to the linear program.
 
+### At most one version
+To cricumvent weird errors, QuackPack disallows packages with same identities (but different versions) from occuring in one build graph.
+
+If, for a given identity, we have a preexisting package, all other versions are prohibited.
+Otherwise we add a constraint that at most one version is present.
+
 Outcome
 -------
 The [``solver engine``](solver_engine.rs) yields which new packages (outside of `Prev`) have to be added, with what features (and what features to add to `Prev`) and what new dependencies have been realised and how.
 It is the case that `Prev` union'd with this output is a correct resolution, but it may be possible to trim it, since we have accounted for the added/changed dependencies, but haven't removed dependencies removed from the manifest since the last compilation.
 
 So for example, if our project depended on `a` and `b`, and then we have removed the dependency on `b` and added the dependency on `c`, `a` and `b` belong to `Prev` and [``solver engine``](solver_engine.rs) finds a solution to the dependency on `c`, reusing as many packages added for `a` and `b` as needed. But now, the packages used only to satisfy the dependencies of `b` can be simply removed, and this is done in the `new_freeze_generation` module.
+
+Note that we create variables for preexisting packages (just in case) but do not care whether they are set to `1` or `0`.
