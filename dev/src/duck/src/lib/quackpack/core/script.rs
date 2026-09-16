@@ -85,6 +85,14 @@ impl Script {
         }
     }
 
+    /// Get the original schema.
+    pub fn original_schema(&self) -> &ManifestSchema {
+        match self {
+            Self::Standalone(standalone_script) => standalone_script.original_schema(),
+            Self::Associated(package_script) => package_script.package().original_schema(),
+        }
+    }
+
     /// Get the dependencies.
     pub fn dependencies(&self) -> &Dependencies {
         self.manifest().dependencies()
@@ -373,6 +381,12 @@ impl StandaloneScript {
         self.frontmatter().manifest()
     }
 
+    /// Get the schema of the frontmatter.
+    /// If the frontmatter was imported, this is the schema of the imported one.
+    pub fn original_schema(&self) -> &ManifestSchema {
+        self.frontmatter().original_schema()
+    }
+
     /// Get the dependencies specified in the frontmatter.
     pub fn dependencies(&self) -> &Dependencies {
         self.manifest().dependencies()
@@ -480,6 +494,7 @@ impl FrontMatter {
     }
 
     /// Get the schema of the script's frontmatter.
+    /// If the frontmatter was imported, this is the schema of the imported one.
     pub fn original_schema(&self) -> &ManifestSchema {
         &self.original_schema
     }
