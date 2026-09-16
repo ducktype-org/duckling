@@ -2,8 +2,10 @@
 
 #include "file_path.hpp"
 
+#include <base/misc/anycast.hpp>
 #include <base/misc/shared_view.hpp>
 
+#include <any>
 #include <expected>
 #include <filesystem>
 #include <string>
@@ -149,6 +151,62 @@ namespace fs {
 		 * @param append If true, appends to the file; if false, overwrites the file.
 		 */
 		void writeToFile(std::string_view new_content, bool append = false) const;
+
+		/**
+		 * @brief Attaches arbitrary metadata to this file.
+		 *
+		 * The metadata lets a user of the filesystem — the language server, for instance — keep
+		 * its own bookkeeping next to a file without holding a second map keyed by path. It is
+		 * stored independently of the content, so `writeToFile` does not clear it, and it
+		 * disappears together with the file when the file is deleted.
+		 *
+		 * @note Only virtual files carry metadata.
+		 * @param new_metadata The metadata to store. An empty `std::any` clears it.
+		 * @throws CORE_PANIC if this is not an existing virtual file.
+		 */
+		void writeMetadata(std::any new_metadata) const;
+
+		/**
+		 * @brief Reads the metadata attached to this file.
+		 *
+		 * @note Only virtual files carry metadata.
+		 * @return The stored metadata, or an empty `std::any` if none was attached.
+		 * @throws CORE_PANIC if this is not an existing virtual file.
+		 */
+		[[nodiscard]]
+		std::any getMetadata() const;
+
+		/**
+		 * @brief Reads the metadata attached to this file and casts it to `T`.
+		 *
+		 * @tparam T The type the metadata was stored as.
+		 * @return The stored metadata as a `T`.
+		 * @throws base::LogicError if the metadata is empty or holds a different type.
+		 * @throws CORE_PANIC if this is not an existing virtual file.
+		 */
+		template<typename T>
+		[[nodiscard]]
+		T getMetadataAs() const {
+			return base::anyCast<T>(getMetadata());
+		}
+
+		/**
+		 * @brief Checks whether this file has metadata attached.
+		 *
+		 * @note Only virtual files carry metadata.
+		 * @return True if metadata was attached, false otherwise.
+		 * @throws CORE_PANIC if this is not an existing virtual file.
+		 */
+		[[nodiscard]]
+		bool hasMetadata() const;
+
+		/**
+		 * @brief Removes the metadata attached to this file.
+		 *
+		 * @note Only virtual files carry metadata.
+		 * @throws CORE_PANIC if this is not an existing virtual file.
+		 */
+		void clearMetadata() const;
 
 		/**
 		 * @brief Returns the contents of a directory as a vector of FilePath objects.

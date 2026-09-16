@@ -68,7 +68,7 @@ namespace fs {
 		auto& children = std::get<DirectoryData>(parent_ref->data).children;
 		if (children.find(filename.string()) != children.end()) return false;
 
-		children.emplace(filename.string(), makeBox<VFSNode>(filename.string(), FileData{ "" }));
+		children.emplace(filename.string(), makeBox<VFSNode>(filename.string(), FileData{}));
 		return true;
 	}
 
@@ -92,6 +92,37 @@ namespace fs {
 			CORE_PANIC(std::string("virtual path exists but is not a file: ") + path.string());
 
 		return std::get<FileData>(node->data).content;
+	}
+
+	bool VFS::writeFileMetadata(const std::filesystem::path& path, std::any metadata) {
+		if (!isVirtualPath(path)) throw base::LogicError("Path is not a vfs path!");
+		MRef<VFSNode> node = findNode(path);
+		if (!node || !node->isFile()) return false;
+
+		std::get<FileData>(node->data).metadata = std::move(metadata);
+		return true;
+	}
+
+	std::any VFS::readFileMetadata(const std::filesystem::path& path) {
+		if (!isVirtualPath(path)) throw base::LogicError("Path is not a vfs path!");
+		MRef<VFSNode> node = findNode(path);
+		if (!node) CORE_PANIC(std::string("virtual file does not exist: ") + path.string());
+		if (!node->isFile())
+			CORE_PANIC(std::string("virtual path exists but is not a file: ") + path.string());
+
+		return std::get<FileData>(node->data).metadata;
+	}
+
+	bool VFS::hasFileMetadata(const std::filesystem::path& path) {
+		if (!isVirtualPath(path)) throw base::LogicError("Path is not a vfs path!");
+		MRef<VFSNode> node = findNode(path);
+		if (!node || !node->isFile()) return false;
+
+		return std::get<FileData>(node->data).metadata.has_value();
+	}
+
+	bool VFS::clearFileMetadata(const std::filesystem::path& path) {
+		return writeFileMetadata(path, std::any{});
 	}
 
 	bool VFS::createDirectory(const std::filesystem::path& path) {

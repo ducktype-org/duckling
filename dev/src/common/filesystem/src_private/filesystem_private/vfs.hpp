@@ -3,6 +3,7 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <any>
 #include <filesystem>
 #include <map>
 #include <string>
@@ -56,6 +57,38 @@ namespace fs {
 		 * @return The content of the file
 		 */
 		std::string readFile(const std::filesystem::path& path);
+
+		/**
+		 * @brief Attaches arbitrary metadata to a virtual file, the file must already exist.
+		 * @details The metadata is stored next to the content and is independent of it: writing
+		 * the file's content leaves the metadata untouched. Passing an empty `std::any` clears it.
+		 * @param path The virtual path of the file.
+		 * @param metadata The metadata to store.
+		 * @return True if the metadata was stored, false if the path is not an existing file.
+		 */
+		bool writeFileMetadata(const std::filesystem::path& path, std::any metadata);
+
+		/**
+		 * @brief Reads the metadata attached to a virtual file.
+		 * @details If the file does not exist or is a directory, an exception is thrown.
+		 * @param path The virtual path of the file.
+		 * @return The stored metadata, or an empty `std::any` if none was attached.
+		 */
+		std::any readFileMetadata(const std::filesystem::path& path);
+
+		/**
+		 * @brief Checks whether a virtual file has metadata attached.
+		 * @param path The virtual path of the file.
+		 * @return True if the path is an existing file holding metadata, false otherwise.
+		 */
+		bool hasFileMetadata(const std::filesystem::path& path);
+
+		/**
+		 * @brief Removes the metadata attached to a virtual file.
+		 * @param path The virtual path of the file.
+		 * @return True if the path is an existing file, false otherwise.
+		 */
+		bool clearFileMetadata(const std::filesystem::path& path);
 
 		/**
 		 * @brief Creates a virtual directory at the specified path.
@@ -133,7 +166,8 @@ namespace fs {
 		 * @brief Represents data specific to a file in the virtual file system.
 		 */
 		struct FileData {
-			std::string content;  ///< The content of the file.
+			std::string content;   ///< The content of the file.
+			std::any    metadata;  ///< Arbitrary metadata attached to the file, empty by default.
 		};
 
 		/**

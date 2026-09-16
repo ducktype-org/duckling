@@ -4,6 +4,7 @@
 #include <tester/tester.hpp>
 
 #include <algorithm>
+#include <any>
 #include <chrono>
 #include <fstream>
 
@@ -16,6 +17,7 @@ public:
 		TESTER_ADD_TEST(getSimpleContentTest);
 		TESTER_ADD_TEST(filePathTest);
 		TESTER_ADD_TEST(vfsTest);
+		TESTER_ADD_TEST(vfsMetadataTest);
 		TESTER_ADD_TEST(virtualFileTest);
 		TESTER_ADD_TEST(fileOperationsTest);
 		TESTER_ADD_TEST(fileManagerTest);
@@ -176,6 +178,113 @@ private:
 
 		assertTrue(
 			!vfs->exists("vfs:/virtualDir"), "Directory still exists after deletion with force"
+		);
+	}
+
+	/// A stand-in for what a user of the filesystem (the language server, say) would attach.
+	struct FileInfo {
+		std::string language_id;
+		i32         version;
+	};
+
+	void vfsMetadataTest() {
+		Ref<fs::VFS> vfs = fs::VFS::getInstance();
+
+		// A directory of our own, so the shared VFS singleton cannot leak state between tests.
+		auto dir       = fs::FileManager::createRandomVirtualDirectory();
+		auto dir_path  = dir.getFilePath().getPath();
+		auto file_path = dir_path / "metadata_file.dk";
+		assertTrue(vfs->createFile(file_path), "Failed to create virtual file");
+
+		// A fresh file has no metadata.
+		assertTrue(!vfs->hasFileMetadata(file_path), "A fresh virtual file has no metadata");
+		assertTrue(!vfs->readFileMetadata(file_path).has_value(), "Metadata starts out empty");
+
+		// Write, then read it back.
+		assertTrue(vfs->writeFileMetadata(file_path, i32(7)), "Failed to write metadata");
+		assertTrue(vfs->hasFileMetadata(file_path), "Metadata should be present after writing");
+		assertEqual(i32(7), base::anyCast<i32>(vfs->readFileMetadata(file_path)), "Wrong metadata");
+
+		// Writing again replaces the old value, type included.
+		assertTrue(
+			vfs->writeFileMetadata(file_path, std::string("duckling")), "Failed to rewrite metadata"
+		);
+		assertEqual(
+			std::string("duckling"),
+			base::anyCast<std::string>(vfs->readFileMetadata(file_path)),
+			"Metadata was not replaced"
+		);
+
+		// Content and metadata are independent.
+		assertTrue(vfs->writeFile(file_path, "let x = 1"), "Failed to write file content");
+		assertEqual(
+			std::string("duckling"),
+			base::anyCast<std::string>(vfs->readFileMetadata(file_path)),
+			"Writing content should not touch the metadata"
+		);
+
+		// Clearing leaves the file in place.
+		assertTrue(vfs->clearFileMetadata(file_path), "Failed to clear metadata");
+		assertTrue(!vfs->hasFileMetadata(file_path), "Metadata should be gone after clearing");
+		assertTrue(vfs->isFile(file_path), "Clearing metadata should not delete the file");
+
+		// Directories and missing files have no metadata to write.
+		assertTrue(
+			!vfs->writeFileMetadata(dir_path, i32(1)), "A directory should not accept metadata"
+		);
+		assertTrue(!vfs->hasFileMetadata(dir_path), "A directory should never report metadata");
+		assertTrue(
+			!vfs->writeFileMetadata(dir_path / "nope.dk", i32(1)),
+			"A missing file should not accept metadata"
+		);
+		assertThrows<base::Panic>(
+			[&] { std::ignore = vfs->readFileMetadata(dir_path / "nope.dk"); },
+			"Reading metadata of a missing file should panic"
+		);
+		assertThrows<base::Panic>(
+			[&] { std::ignore = vfs->readFileMetadata(dir_path); },
+			"Reading metadata of a directory should panic"
+		);
+		assertThrows<base::LogicError>(
+			[&] { std::ignore = vfs->readFileMetadata("/tmp/not_virtual.dk"); },
+			"Reading metadata of a non-virtual path should throw"
+		);
+
+		// The same thing through the public `fs::File` API.
+		auto file = dir.createSubFile("let y = 2", "through_file_api.dk");
+		assertTrue(!file.hasMetadata(), "A fresh file should have no metadata");
+		file.writeMetadata(FileInfo{ .language_id = "duckling", .version = 3 });
+		assertTrue(file.hasMetadata(), "Metadata should be present after writing");
+
+		auto info = file.getMetadataAs<FileInfo>();
+		assertEqual(std::string("duckling"), info.language_id, "Wrong language id in metadata");
+		assertEqual(i32(3), info.version, "Wrong version in metadata");
+
+		// Asking for the wrong type reports it instead of silently succeeding.
+		assertThrows<base::LogicError>(
+			[&] { std::ignore = file.getMetadataAs<i32>(); },
+			"Casting metadata to the wrong type should throw"
+		);
+
+		file.clearMetadata();
+		assertTrue(!file.hasMetadata(), "Metadata should be gone after clearing");
+
+		// Metadata is a VFS-only feature.
+		auto temp_file = fs::FileManager::createRandomTempFile("content");
+		assertThrows<base::Panic>(
+			[&] { temp_file.writeMetadata(i32(1)); }, "A temporary file should not accept metadata"
+		);
+		assertThrows<base::Panic>(
+			[&] { std::ignore = temp_file.getMetadata(); },
+			"A temporary file should have no metadata to read"
+		);
+
+		// Deleting the file drops its metadata with it.
+		file.writeMetadata(i32(42));
+		assertTrue(fs::FileManager::deleteFile(file), "Failed to delete virtual file");
+		assertTrue(vfs->createFile(file.getFilePath().getPath()), "Failed to recreate the file");
+		assertTrue(
+			!file.hasMetadata(), "A recreated file must not inherit the deleted file's metadata"
 		);
 	}
 

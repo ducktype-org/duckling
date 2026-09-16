@@ -23,6 +23,18 @@ namespace {
 		if (!file.isFile()) CORE_PANIC("Path is not a file");
 	}
 
+	// Metadata lives in the VFS node, so only virtual files can carry it.
+	void requireVirtualFile(const fs::File& file) {
+		requireFile(file);
+		if (file.getType() != fs::FileType::Virtual)
+			CORE_PANIC(
+				"Only virtual files can carry metadata, but this one is not: "
+				+ file.getFilePath().string()
+			);
+		if (!file.exists())
+			CORE_PANIC("Virtual file does not exist: " + file.getFilePath().string());
+	}
+
 	void requirePhysicalPath(const fs::FilePath& path) {
 		// @TODO: #3398 make this work in tmp/
 		if (!path.isPhysical()) CORE_PANIC("Path is not a physical file: " + path.string());
@@ -306,6 +318,26 @@ namespace fs {
 			ofs << new_content;
 			if (ofs.fail()) CORE_PANIC("Failed to write to file: " + path.string());
 		}
+	}
+
+	void File::writeMetadata(std::any new_metadata) const {
+		requireVirtualFile(*this);
+		vfs->writeFileMetadata(path, std::move(new_metadata));
+	}
+
+	std::any File::getMetadata() const {
+		requireVirtualFile(*this);
+		return vfs->readFileMetadata(path);
+	}
+
+	bool File::hasMetadata() const {
+		requireVirtualFile(*this);
+		return vfs->hasFileMetadata(path);
+	}
+
+	void File::clearMetadata() const {
+		requireVirtualFile(*this);
+		vfs->clearFileMetadata(path);
 	}
 
 	File File::createSubFile(std::string_view new_file_content, std::string_view custom_name) const {

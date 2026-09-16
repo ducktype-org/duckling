@@ -88,6 +88,40 @@ for (const auto& file : files) {
 2. **Add files at specific paths**: Place files exactly where needed in the virtual structure
 4. **Modify file content**: Update file contents dynamically
 5. **Legitimate filesystem operations**: The VFS supports real filesystem queries and operations
+6. **Attach metadata**: Store arbitrary per-file data next to the content
+
+### File Metadata
+
+A virtual file can also carry arbitrary metadata, held as a `std::any`. This is meant for code that
+needs its own bookkeeping per file — the language server, for example, tracks the editor's document
+version and language id. Without it you would need a second map keyed by path and kept in sync by
+hand.
+
+```cpp
+struct DocumentInfo {
+    std::string language_id;
+    i32         version;
+};
+
+auto file = fs::FileManager::createRandomVirtualFile("let x = 1", ".dk");
+
+file.writeMetadata(DocumentInfo{ .language_id = "duckling", .version = 1 });
+
+if (file.hasMetadata()) {
+    auto info = file.getMetadataAs<DocumentInfo>();  // throws if it holds another type
+    std::cout << "version: " << info.version << std::endl;
+}
+
+file.clearMetadata();
+```
+
+Three things to know about it:
+- **Only virtual files carry metadata.** Calling these methods on a physical or temporary file
+  panics, because there is nowhere on disk to put it.
+- **Content and metadata are independent.** `writeToFile` leaves the metadata alone, and
+  `writeMetadata` leaves the content alone.
+- **Metadata dies with the file.** Deleting the file drops it, so a file recreated under the same
+  path starts out with no metadata.
 
 ## Path Conversion Utilities
 
