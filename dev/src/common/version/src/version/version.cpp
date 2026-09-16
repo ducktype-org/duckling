@@ -109,12 +109,9 @@ namespace version {
 		const std::string compiler = joinWithSpace(compilerId(), compilerVersion());
 
 		std::vector<ExtraField> rows{
-			{ "commit-hash", commitHash() },
-			{ "commit-date", commitDate() },
-			{ "build-type", buildType() },
-			{ "host", host },
-			{ "compiler", compiler },
-			{ "license", licenseName() },
+			{ "commit-hash", commitHash() },  { "commit-date", commitDate() },
+			{ "build-type", buildType() },    { "host", host },
+			{ "compiler", compiler },         { "license", licenseName() },
 			{ "copyright", copyrightLine() },
 		};
 		rows.insert(rows.end(), extra.begin(), extra.end());

@@ -15,6 +15,10 @@ copy_std_artifacts: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/nul
 
 Run: "@{duckc_path} @{run_args}"
 
+# `<tool> <major>.<minor>[.<patch>...][-<prerelease>]`, followed by the commit group when the
+# build came from a git worktree - so the regex must not be anchored at the end of the line.
+version_regex: "[0-9]+(\\.[0-9]+)+(-[a-z]+)?"
+
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
 PreNode: ""
 
@@ -65,27 +69,22 @@ Tests:
         ExitCode: 0
 
   cli-version:
-    # --version / --version-verbose must print to stdout and exit 0 on every binary.
-    # The values depend on how the build was configured, so the patterns only pin the shape:
-    # a "<tool> <semver>" first line, then one aligned "label: value" row per build fact.
+    # The shared rows are the Version module's job and are unit-tested there. What only the real
+    # binary can prove is that it names itself correctly and contributes its own extra rows.
     Cases:
       duckc-version:
-        Run: '@{expect_output} --out-regex "^duckc [0-9]+\.[0-9]+\.[0-9]+" -- @{duckc_path} --version'
+        Run: '@{expect_output} --out-regex "^duckc @{version_regex}" -- @{duckc_path} --version'
 
       duckc-version-verbose:
-        Run: '@{expect_output} --out-regex "^duckc [0-9]+\.[0-9]+\.[0-9]+"
-          --out-regex "build-type: +[A-Za-z]"
-          --out-regex "host: +[A-Za-z]+ +[^ ]"
-          --out-regex "compiler: +[A-Za-z]+ +[0-9]+\."
+        Run: '@{expect_output} --out-regex "^duckc @{version_regex}"
           --out-regex "LLVM: +[0-9]+\."
           --out-regex "JIT: +(enabled|disabled)"
           -- @{duckc_path} --version-verbose'
 
       vm-version:
-        Run: '@{expect_output} --out-regex "^VM [0-9]+\.[0-9]+\.[0-9]+" -- @{dvm_path} --version'
+        Run: '@{expect_output} --out-regex "^DVM @{version_regex}" -- @{dvm_path} --version'
 
       vm-version-verbose:
-        Run: '@{expect_output} --out-regex "^VM [0-9]+\.[0-9]+\.[0-9]+"
-          --out-regex "build-type: +[A-Za-z]"
+        Run: '@{expect_output} --out-regex "^DVM @{version_regex}"
           --out-regex "dispatch: +[A-Za-z]"
           -- @{dvm_path} --version-verbose'
