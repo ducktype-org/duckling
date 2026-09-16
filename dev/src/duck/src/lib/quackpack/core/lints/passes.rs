@@ -38,6 +38,7 @@ pub(super) const PASSES: &[LintPass] = &[
     LintPass::Manifest(rules::always_false_conditions::pass),
     LintPass::Manifest(rules::nonexistent_features::pass),
     LintPass::Manifest(rules::self_implying_features::pass),
+    LintPass::General(rules::aliases_equal_to_names::pass),
 ];
 
 /// Runs a single pass on the package.
