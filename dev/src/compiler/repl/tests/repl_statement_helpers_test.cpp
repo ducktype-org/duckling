@@ -28,7 +28,7 @@ public:
 		TESTER_ADD_TEST(testBuildWrapperRejectsVariable);
 		TESTER_ADD_TEST(testBuildVariableWrapper);
 		TESTER_ADD_TEST(testMakeExecutableHOUTUnit);
-		TESTER_ADD_TEST(testCreateEphemeralChainedStatementModule);
+		TESTER_ADD_TEST(testcreateSyntheticChainedStatementModule);
 		TESTER_ADD_TEST(testGetStatementModuleName);
 		TESTER_ADD_TEST(testGetDefinitionHOUTUnit);
 	}
@@ -256,8 +256,8 @@ private:
 		});
 	}
 
-	void testCreateEphemeralChainedStatementModule() {
-		auto first_ref = repl::createEphemeralChainedStatementModule("1 + 2;", {}, 7, "repl_");
+	void testcreateSyntheticChainedStatementModule() {
+		auto first_ref = repl::createSyntheticChainedStatementModule("1 + 2;", {}, 7, "repl_");
 		assertTrue(first_ref->isReplModule(), "Chained module should be marked as a REPL module");
 		ASSERT_EQUAL("repl_7", first_ref->getName().strView());
 		ASSERT_NO_VALUE(
@@ -265,7 +265,7 @@ private:
 		);
 		assertTrue(first_ref->hasMainSourceFile(), "Chained module should have main source file");
 
-		auto second_ref = repl::createEphemeralChainedStatementModule(
+		auto second_ref = repl::createSyntheticChainedStatementModule(
 			"3 + 4;", first_ref->getModuleID(), 8, "script_"
 		);
 		assertTrue(second_ref->isReplModule(), "Second module should be marked as a REPL module");

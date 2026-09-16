@@ -17,7 +17,7 @@ namespace compiler::repl {
 	 * in that chain represents the full accumulated script context.
 	 *
 	 * Even though these modules are ephemeral, each of them still has a real main source file:
-	 * createEphemeralChainedStatementModule() assigns one via createRandomVirtualFile(input).
+	 * createSyntheticChainedStatementModule() assigns one via createRandomVirtualFile(input).
 	 * That virtual file is parsed into PST just like regular files, so querying
 	 * queryRootScopeOfMainModuleFile() is the correct way to obtain the module's top-level scope.
 	 *
