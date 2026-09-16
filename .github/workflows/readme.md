@@ -145,10 +145,11 @@ Outside actions we use:
   If cache is restored by exactly matching it's key, then no cache will be uploaded in spite of making changes. This is why in `tests.yml` we generate a unique key each time.
 
   The two halves are used separately rather than as the combined `actions/cache`, because the
-  restore and the save want different conditions and different positions: the save is backgrounded,
-  has to sit after the last step that writes into the directory, and on `main` the restore is
-  skipped while the save is not. `rust.yml` only ever restores -- the entries it reads are the ones
-  `tests.yml` saved.
+  restore and the save want different conditions and different positions. Both saves are
+  backgrounded, and they sit in different places: the build cache is saved right after the build,
+  the sccache one only after the integration tests, because that is where `duck` itself gets built.
+  On `main` the restore still runs, it only looks the entry up and does not download it (see below).
+  `rust.yml` only ever restores -- the entries it reads are the ones `tests.yml` saved.
 
   > [!IMPORTANT]
   > `main` deliberately builds from an **empty** cache. Its restore carries

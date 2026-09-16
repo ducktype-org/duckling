@@ -273,6 +273,9 @@ jobs:
       # Build all tests.
       # We additionally build coverage targets in case of coverage enabled,
       # so they are nicely parallelized and cached.
+      #
+      # duckc and VM are built here too, although no test links them.background.
+      # We built it just for ccache presence
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
         run: |
@@ -281,6 +284,8 @@ jobs:
           -j ${{ steps.set-jobs.outputs.jobs }} \
           --                                    \
           build_all_tests                       \
+          duckc                                 \
+          VM                                    \
           ${{ env.COVERAGE_ENABLED == 'true' && 'build_all_coverage_targets' || '' }}
 
       # Check against regressions in target applications.

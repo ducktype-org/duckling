@@ -226,11 +226,15 @@ private:
 	//    library lives:
 	//
 	//    * Linux: libc is both, and every process has it mapped, so dladdr on `strlen` finds it.
-	//    * macOS: libc is neither. Homebrew's libzstd is a
-	//     file with no dependencies, and exports a C symbol whose name does not
-	//      depend on the compiler.
-#if BASE_TARGET_OS_MACOS
+	//    * macOS: libc is neither. Homebrew's libzstd is a file with no dependencies, and
+	//      exports a C symbol whose name does not depend on the compiler. Its prefix is
+	//      architecture-specific: /opt/homebrew on Apple silicon, /usr/local on Intel.
+#if BASE_TARGET_OS_MACOS && BASE_TARGET_ARCH_ARM
 	static constexpr const char* MEMORY_LIB_SYMBOL = "ZSTD_versionNumber";
+	static constexpr const char* MEMORY_LIB_PATH   = "/opt/homebrew/lib/libzstd.dylib";
+#elif BASE_TARGET_OS_MACOS && BASE_TARGET_ARCH_X86
+	static constexpr const char* MEMORY_LIB_SYMBOL = "ZSTD_versionNumber";
+	static constexpr const char* MEMORY_LIB_PATH   = "/usr/local/lib/libzstd.dylib";
 #else
 	static constexpr const char* MEMORY_LIB_SYMBOL = "strlen";
 #endif
@@ -238,7 +242,7 @@ private:
 	// Absolute path of the library named above, or an error explaining what could not be found.
 	std::expected<std::string, std::string> memoryLibPath() {
 #if BASE_TARGET_OS_MACOS
-		return std::string{ "/opt/homebrew/lib/libzstd.dylib" };
+		return std::string{ MEMORY_LIB_PATH };
 #else
 		auto main_handle = os_utils::openLibrary(nullptr);
 		if (!main_handle) return std::unexpected(main_handle.error());
@@ -255,11 +259,15 @@ private:
 
 	void openLibraryFromMemoryTest() {
 		auto lib_path = memoryLibPath();
-		assertTrue(lib_path.has_value(), "the library to load from memory must be locatable");
+		assertTrue(
+			lib_path.has_value(),
+			lib_path ? std::string{}
+					 : "cannot locate the library to load from memory: " + lib_path.error()
+		);
 
 		// 2. Read the library file into memory.
 		std::ifstream file(*lib_path, std::ios::binary | std::ios::ate);
-		assertTrue(file.is_open(), "must be able to open the located library");
+		assertTrue(file.is_open(), "must be able to open the located library: " + *lib_path);
 		auto file_size = static_cast<usize>(file.tellg());
 		file.seekg(0, std::ios::beg);
 		std::vector<byte> buffer(file_size);

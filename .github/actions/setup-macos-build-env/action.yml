@@ -20,6 +20,31 @@ inputs:
 runs:
   using: composite
   steps:
+    # Everything below points at things the mac is expected to already have. Checked here.
+    - name: Check the machine's toolchain
+      shell: bash
+      run: |
+        # The macOS runner is an Apple Silicon, so Homebrew's prefix is /opt/homebrew.
+        # setup-build-matrix.py hardcodes that same prefix into the matrix's compiler paths, so an
+        # Intel mac (prefix /usr/local) is not a supported runner - said plainly here, because
+        # otherwise a missing brew leaves HOMEBREW_PREFIX empty and the loop below complains about
+        # paths like "/opt/llvm@19" instead.
+        brew=/opt/homebrew/bin/brew
+        if [ ! -x "$brew" ]; then
+          echo "::error::$brew not found - the macOS runner must be an Apple Silicon mac with Homebrew"
+          exit 1
+        fi
+        eval "$("$brew" shellenv)"
+        # llvm@23 is checked even though nothing here points at it: setup-build-matrix.py
+        # hardcodes its compiler paths straight into the matrix.
+        for p in "$HOMEBREW_PREFIX/opt/llvm@19" "$HOMEBREW_PREFIX/opt/llvm@23" \
+                 "$HOMEBREW_PREFIX/opt/icu4c" "$HOMEBREW_PREFIX/bin/ccache"; do
+          if [ ! -e "$p" ]; then
+            echo "::error::missing $p - install it on the runner with brew"
+            exit 1
+          fi
+        done
+
     # The choices follow dev/docs/developer-guides/building-the-repo.md, "MacOS (clang)"
     # Homebrew goes on the FRONT of PATH deliberately this ensures that python resolves
     # to the correct version.
@@ -44,12 +69,10 @@ runs:
       run: |
         shared='${{ inputs.shared-dir }}'
         mkdir -p "$shared/ccache"
-        # make sure every runner can write to the shared cache
-        chmod 0777 "$shared" "$shared/ccache" 2>/dev/null || true
         # replace the workspace's ccache dir with a link to the shared one
         ln -sfn "$shared/ccache" '${{ inputs.ccache-dir }}'
-        # cache entries stay world-writable, so a job running as another user can still update them
-        echo "CCACHE_UMASK=000" >> "$GITHUB_ENV"
+        # group-writable, so the other runner account can update entries this one wrote.
+        echo "CCACHE_UMASK=002" >> "$GITHUB_ENV"
         # paths under the workspace are hashed relative to it, so a different checkout path still hits
         echo "CCACHE_BASEDIR=${{ github.workspace }}" >> "$GITHUB_ENV"
         # keep the compiler's absolute CWD out of the hash (it is hashed for -g builds), so a
