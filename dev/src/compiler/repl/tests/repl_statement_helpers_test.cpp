@@ -28,7 +28,7 @@ public:
 		TESTER_ADD_TEST(testBuildWrapperRejectsVariable);
 		TESTER_ADD_TEST(testBuildVariableWrapper);
 		TESTER_ADD_TEST(testMakeExecutableHOUTUnit);
-		TESTER_ADD_TEST(testcreateSyntheticChainedStatementModule);
+		TESTER_ADD_TEST(testCreateSyntheticChainedStatementModule);
 		TESTER_ADD_TEST(testGetStatementModuleName);
 		TESTER_ADD_TEST(testGetDefinitionHOUTUnit);
 	}
@@ -256,7 +256,7 @@ private:
 		});
 	}
 
-	void testcreateSyntheticChainedStatementModule() {
+	void testCreateSyntheticChainedStatementModule() {
 		auto first_ref = repl::createSyntheticChainedStatementModule("1 + 2;", {}, 7, "repl_");
 		assertTrue(first_ref->isReplModule(), "Chained module should be marked as a REPL module");
 		ASSERT_EQUAL("repl_7", first_ref->getName().strView());
