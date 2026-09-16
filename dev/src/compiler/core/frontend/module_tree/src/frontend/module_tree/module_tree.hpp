@@ -25,13 +25,13 @@ namespace compiler::frontend::packages {
 namespace compiler::frontend {
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
-	 * it is a single file module.
+	 * it is a module file.
 	 */
 	constexpr std::string_view LANG_MODULE_FILE = ".dk";
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
-	 * it is a single file script.
+	 * it is a script file.
 	 */
 	constexpr std::string_view LANG_SCRIPT_FILE = ".dks";
 
@@ -43,30 +43,21 @@ namespace compiler::frontend {
 	class ModuleTreeModifier;
 	struct GetModuleID_Functor;
 
-	/**
-	 * @brief REPL-specific data structure.
-	 *
-	 * Only used for repl modules.
-	 */
-	struct ReplData final {
-		/**
-		 * Parent REPL module in chronological order.
-		 * Optional - only empty for first REPL module.
-		 */
-		base::Optional<ModuleID> m_repl_module_parent;
-	};
+	
 
 	/**
 	 * @brief Represents a single module in the Duckling project tree.
 	 *
+	 * @note Each module is either a standard module or script module (created from a script file).
+	 *
 	 * ModuleTree provides a hierarchical, in-memory representation of a module,
-	 * including its source files, submodules, and other files.
+	 * including its main source file, submodules, and other files.
 	 * The ModuleTree is the first instance of module in duckling compiling process
 	 * the main use case is to build a module tree form existing folder, and then
 	 * extract the pst from source files
 	 * But module tree can be also created manually.
 	 *
-	 * - Tracks main source file, additional source files, submodules, and other files.
+	 * - Tracks main source file, submodules, and other files.
 	 * - Supports pretty-printing for debugging and inspection.
 	 * - Immutable after construction; use ModuleTreeModifier for changes.
 	 * - Submodules form a tree structure, each with a parent reference.
@@ -86,6 +77,45 @@ namespace compiler::frontend {
 		friend struct ModuleID;
 
 	public:
+		/**
+		 * @brief Standard module specific data.
+		 */
+		struct ModuleModuleData final {
+			base::Optional<SourceFile> m_main_source_file;
+		};
+
+		/**
+		* @brief REPL-specific data structure.
+		*
+		* Only used for repl modules.
+		*/
+		struct SyntheticReplModuleData final {
+			/**
+			* Parent REPL module in chronological order.
+			* Optional - only empty for first REPL module.
+			*/
+			base::Optional<ModuleID> m_repl_module_parent;
+
+			base::Optional<SourceFile> m_synthetic_source_file;
+		};
+
+		/**
+		 * Script specific data.
+		 *
+		 * @note Scripts dont have a main source file like standard modules.
+		 * Instead, a synthetic module chain is created to represent the script module.
+		 */
+		struct ModuleScriptData final {
+			base::Optional<fs::File> m_script_file;
+
+			/**
+			 * @note: For REPL like execution this can be edited or extended via ModuleTreeModifier.
+			 */
+			std::vector<SyntheticReplModuleData> m_synthetic_repl_module_chain;
+		};
+
+		
+
 		ModuleID getModuleID() const;
 
 		/**
@@ -265,27 +295,53 @@ namespace compiler::frontend {
 		 */
 		static void checkDanglingReference(const base::Ref<ModuleTree>& candidate);
 
-		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
+
+		/* * * * * * * * * * * * * * *\
+		|  Universal data members:   *|
+		\* * * * * * * * * * * * * * */
+
+		/**
+		 * this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
+		 */
 		base::Optional<ModuleID> m_id;
+
+		/**
+		 * Package ID associated with this module tree.
+		 * Used for component hash calculation.
+		 */
+		base::StrID m_package_id;
 
 		base::StrID m_name;
 
 		base::Optional<base::Ref<ModuleTree>> m_parent;
 
-		base::Optional<base::Ref<SourceFile>>             m_main_source_file;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
-		base::HashMap<base::StrID, std::vector<fs::File>>
-			m_other_files;  //< Other files in the module (not SourceFiles) currently nothing is
-		                    // happening with them. Do not use this in query unless AccessLocked is
-		                    // implemented for this
 
-		base::Optional<usize> m_storage_handle;  //< Key to support removal from static storage
+		/**
+		 * Other files in the module (not SourceFiles) currently nothing is
+		 * happening with them. Do not use this in query unless AccessLocked is
+		 * implemented for this
+		 */
+		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
 
-		base::Optional<hashing::ComponentHash>
-			m_path_component_hash;  //< ComponentHash of the module's logical path: eg
-		                            // package_name/root/submodule1/sub2
-		base::Optional<hashing::ComponentHash::HashType>
-			m_hash;                 //< This is the actual hash for the Module used in SideInput
+
+		/**
+		 * Key to support removal from static storage
+		 */
+		base::Optional<usize> m_storage_handle;
+
+		/**
+		 * ComponentHash of the module's logical path: eg
+		 * package_name/root/submodule1/sub2
+		 */
+		base::Optional<hashing::ComponentHash> m_path_component_hash;
+
+		/**
+		 * This is the actual hash for the Module used in SideInput
+		 */
+		base::Optional<hashing::ComponentHash::HashType> m_hash;
+
+
 		/**
 		 * @brief Synchronizes lazy module hash/path-hash recomputation for this module.
 		 * @note Hold this lock while reading/writing m_path_component_hash or m_hash during lazy
@@ -293,11 +349,11 @@ namespace compiler::frontend {
 		 */
 		mutable base::Box<std::mutex> m_hash_recompute_mutex;
 
-		/**
-		 * Package ID associated with this module tree.
-		 * Used for component hash calculation.
-		 */
-		base::StrID m_package_id;
+		/* * * * * * * * * * * * * * * * * * * *\
+		|  Module type specific data members:   |
+		\* * * * * * * * * * * * * * * * * * * */
+
+		base::Optional<base::Ref<SourceFile>> m_main_source_file;
 
 		/**
 		 * REPL-specific data.
