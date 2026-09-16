@@ -38,7 +38,8 @@ runs:
         # llvm@23 is checked even though nothing here points at it: setup-build-matrix.py
         # hardcodes its compiler paths straight into the matrix.
         for p in "$HOMEBREW_PREFIX/opt/llvm@19" "$HOMEBREW_PREFIX/opt/llvm@23" \
-                 "$HOMEBREW_PREFIX/opt/icu4c" "$HOMEBREW_PREFIX/bin/ccache"; do
+                 "$HOMEBREW_PREFIX/opt/icu4c" "$HOMEBREW_PREFIX/bin/ccache" \
+                 "$HOMEBREW_PREFIX/bin/ld64.lld"; do
           if [ ! -e "$p" ]; then
             echo "::error::missing $p - install it on the runner with brew"
             exit 1

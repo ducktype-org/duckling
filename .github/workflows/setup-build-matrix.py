@@ -28,8 +28,7 @@ MACOS_CLANG: dict[str, Any] = {
     "name": "clang-23-macos",
     "cxx": "/opt/homebrew/opt/llvm@23/bin/clang++",
     "cc": "/opt/homebrew/opt/llvm@23/bin/clang",
-    # (ld64) by default on macOS
-    "linker": "default",
+    "linker": "lld",
     "cache-prefix": "clang-build",
     "platform": "macos",
 }
