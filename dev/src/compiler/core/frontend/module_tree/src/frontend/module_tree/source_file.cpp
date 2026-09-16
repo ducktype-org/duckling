@@ -26,7 +26,7 @@ namespace {
 	};
 
 	// Map that stores all SourceFile instanced and the content cache by their file path.
-	concurrent::ConHashMap<std::filesystem::path, PathState> path_registry;
+	concurrent::ConHashMap<fs::FilePath, PathState> path_registry;
 
 	/**
 	 * Concurrent Stable HashMap that stores all SourceFile instances.
@@ -42,12 +42,10 @@ namespace compiler::frontend {
 		  file(std::move(file)),
 		  linked_module(linked_module) {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
-		// Add or replace file content in cache
-		auto abs_path = this->file.getFilePath().absolute().getPath();
 	}
 
 	Ref<SourceFile> SourceFile::create(fs::File file, ModuleID linked_module) {
-		auto abs_path = file.getFilePath().absolute().getPath();
+		auto abs_path = file.getFilePath().absolute();
 
 		const auto storage_key = next_storage_key.fetch_add(1);
 		auto       inserted    = files.put(storage_key, SourceFile(std::move(file), linked_module));
@@ -60,12 +58,11 @@ namespace compiler::frontend {
 			PathState{ .instances = {}, .content = std::nullopt },
 			[&](Ref<PathState> state) { state->instances.push_back(created_ref); }
 		);
-
 		return created_ref;
 	}
 
 	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesFromFile(const fs::File& file) {
-		auto abs_path = file.getFilePath().absolute().getPath();
+		auto abs_path = file.getFilePath().absolute();
 
 		auto state = path_registry.atMaybeCopy(abs_path);
 		if (state.has_value()) return state->instances;
@@ -75,7 +72,7 @@ namespace compiler::frontend {
 	void SourceFile::update() {
 		std::scoped_lock lock(*state_lock);
 
-		auto abs_path = this->file.getFilePath().absolute().getPath();
+		auto abs_path = this->file.getFilePath().absolute();
 
 		// Update content in cache
 		path_registry.maybePutAndUpdate(abs_path, PathState{}, [&](Ref<PathState> state) {
@@ -125,7 +122,7 @@ namespace compiler::frontend {
 	}
 
 	base::SharedView SourceFile::getCachedContentIllegalAccess() {
-		auto abs_path = this->file.getFilePath().absolute().getPath();
+		auto abs_path = this->file.getFilePath().absolute();
 
 		path_registry.maybePutAndUpdate(
 			abs_path,
@@ -157,7 +154,7 @@ namespace compiler::frontend {
 	}
 
 	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
-		auto abs_path = source_file->file.getFilePath().absolute().getPath();
+		auto abs_path = source_file->file.getFilePath().absolute();
 
 		// Remove the `Path -> (SourceFiles, SharedView)` if the value vector is empty.
 		path_registry.eraseIf(abs_path, [&](Ref<PathState> state) {
@@ -174,8 +171,7 @@ namespace compiler::frontend {
 		CORE_ASSERT(erased, "Failed to remove SourceFile from storage");
 	}
 
-	void SourceFile::checkDanglingReference([[maybe_unused]] const base::Ref<SourceFile>& candidate
-	) {
+	void SourceFile::checkDanglingReference([[maybe_unused]] const base::Ref<SourceFile>& candidate) {
 		IF_BUILD_TYPE_DEV({
 			// If we are not using module modifier, skip the check
 			if (!use_module_modifier_remove) return;

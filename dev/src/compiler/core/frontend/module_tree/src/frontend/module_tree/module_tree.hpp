@@ -13,6 +13,7 @@
 #include <filesystem/file.hpp>
 #include <hashing/component_hash.hpp>
 
+#include <functional>
 #include <mutex>
 #include <regex>
 #include <string>
@@ -36,6 +37,19 @@ namespace compiler::frontend {
 	constexpr std::string_view LANG_SCRIPT_FILE = ".dks";
 
 	// Regexes to reject files/directories starting with '.' or '$'
+	/**
+	 * @brief Turns a path found while walking the disk into the file the compiler should read.
+	 *
+	 * The default reads the path itself; the language server substitutes an editor buffer for
+	 * the files it holds open.
+	 */
+	using FileResolver = std::function<fs::File(const fs::FilePath& disk_path)>;
+
+	/**
+	 * @brief The resolver that simply reads what is on disk.
+	 */
+	const FileResolver& identityFileResolver();
+
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
 	const std::regex DEFAULT_REJECT_DIRECTORY_REGEX = std::regex(R"((\$.*|\..*))");
 
@@ -336,10 +350,11 @@ namespace compiler::frontend {
 		 * @return A valid pointer with the root.
 		 */
 		static Ref<ModuleTree> create(
-			const fs::File&   root,
-			base::StrID       package_id,
-			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
-			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
+			const fs::File&     root,
+			base::StrID         package_id,
+			const std::regex&   file_reject   = DEFAULT_REJECT_FILE_REGEX,
+			const std::regex&   dir_reject    = DEFAULT_REJECT_DIRECTORY_REGEX,
+			const FileResolver& file_resolver = identityFileResolver()
 		);
 
 		/**
@@ -433,10 +448,11 @@ namespace compiler::frontend {
 		 * @param dir_reject Regex for rejecting directories.
 		 */
 		void buildFromDirectory(
-			const fs::File&   directory,
-			base::StrID       package_id,
-			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
-			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
+			const fs::File&     directory,
+			base::StrID         package_id,
+			const std::regex&   file_reject   = DEFAULT_REJECT_FILE_REGEX,
+			const std::regex&   dir_reject    = DEFAULT_REJECT_DIRECTORY_REGEX,
+			const FileResolver& file_resolver = identityFileResolver()
 		);
 
 		/**
@@ -567,6 +583,23 @@ namespace compiler::frontend {
 	 * for more details see ModuleTreeBuilder::create
 	 */
 	ModuleID createModuleTree(const fs::File& file, base::StrID package_id);
+
+	/**
+	 * @brief Creates a module tree by walking the real filesystem, with every file it finds
+	 * passed through `file_resolver` first.
+	 *
+	 * @param root File representing the root of the module tree
+	 * @param package_id The package ID to associate with the module tree
+	 * @param file_resolver Substitutes the file the compiler reads for a given path
+	 * @return The ModuleID of the created module tree
+	 */
+	ModuleID createModuleTreeFromFS(
+		const fs::File&     root,
+		base::StrID         package_id,
+		const FileResolver& file_resolver,
+		const std::regex&   file_reject = DEFAULT_REJECT_FILE_REGEX,
+		const std::regex&   dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
+	);
 
 	/**
 	 * @brief: Concurrently parses all source files in the module tree and their submodules

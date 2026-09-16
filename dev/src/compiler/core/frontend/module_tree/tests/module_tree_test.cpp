@@ -70,6 +70,7 @@ public:
 		TESTER_ADD_TEST(testModuleRecursiveRemoval);
 		TESTER_ADD_TEST(testComponentHash);
 		TESTER_ADD_TEST(testPrintModuleTree);
+		TESTER_ADD_TEST(testFileResolverSubstitution);
 	}
 
 protected:
@@ -108,6 +109,57 @@ private:
 			tree_str2.find(hash_str) != std::string::npos, "Output should contain module hash"
 		);
 		fs::FileManager::deleteFile(temp_file2);
+	}
+
+	void testFileResolverSubstitution() {
+		auto root = fs::File(path("test_module"));
+
+		// Substitute a buffer for awe.dk, leaving every other file on disk untouched. The twin
+		// keeps the file name, exactly as the editor overlay does.
+		auto substitute = fs::FileManager::createVirtualFile(
+			fs::FilePath(path("test_module/awe.dk")).toVirtualPath(), "fn substituted() {}\n", true
+		);
+
+		std::vector<std::string> resolved;
+		auto                     resolver = [&](const fs::FilePath& disk_path) -> fs::File {
+            resolved.push_back(disk_path.name());
+            if (disk_path.name() == "awe.dk") return substitute;
+            return fs::File(disk_path);
+		};
+
+		auto module_id = createModuleTreeFromFS(
+			root, base::StrID("resolver_package_id"), resolver, test_regex, test_regex
+		);
+		auto mt = getModuleRef(module_id);
+
+		assertTrue(
+			std::ranges::find(resolved, std::string("awe.dk")) != resolved.end(),
+			"The resolver must see every file the walk finds"
+		);
+
+		ASSERT_TRUE(mt->hasMainSourceFile());
+		ASSERT_EQUAL(2, mt->getSubmodules().illegalAccess().size());
+
+		auto awe = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("awe"));
+		ASSERT_TRUE(getRef(awe)->hasMainSourceFile());
+		assertTrue(
+			getFileRef(getRef(awe)->getMainSourceFile().illegalAccess().getID())
+					->getFileIllegalAccess()
+					.getFilePath()
+				== substitute.getFilePath(),
+			"The substituted file must back the module, not the one on disk"
+		);
+
+		auto another = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("another"));
+		assertTrue(
+			getFileRef(getRef(another)->getMainSourceFile().illegalAccess().getID())
+				->getFileIllegalAccess()
+				.getFilePath()
+				.isPhysical(),
+			"Files the resolver passed through must still come from disk"
+		);
+
+		fs::FileManager::deleteFile(substitute);
 	}
 
 	void parseModule() {
@@ -496,14 +548,16 @@ private:
 		ModuleTreeModifier::addSubmodule(child, grand_child);
 		ModuleTreeModifier::addSubmodule(root, child);
 
-		ASSERT_TRUE(hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_child"))
+		ASSERT_TRUE(
+			hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_child"))
 		);
 		auto child_id       = child->getModuleID();
 		auto grand_child_id = grand_child->getModuleID();
 
 		ModuleTreeModifier::removeSingleModule(child);
 
-		ASSERT_TRUE(hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_grand"))
+		ASSERT_TRUE(
+			hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_grand"))
 		);
 		ASSERT_EQUAL(
 			false, hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_child"))
@@ -515,10 +569,12 @@ private:
 			root->getModuleID(), getRef(getRef(promoted)->getParentModule().value())->getModuleID()
 		);
 
-		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
-							  [&]() { std::ignore = GetModuleID_Functor::get(child_id); },
-							  "Dangling ModuleTree should panic after removeModule"
-		);)
+		IF_BUILD_TYPE_DEV(
+			assertThrows<base::Panic>(
+				[&]() { std::ignore = GetModuleID_Functor::get(child_id); },
+				"Dangling ModuleTree should panic after removeModule"
+			);
+		)
 
 		auto grand_ref = GetModuleID_Functor::get(grand_child_id);
 		ASSERT_EQUAL(base::StrID("removal_grand"), grand_ref->getName());
@@ -567,14 +623,16 @@ private:
 		);
 		ASSERT_TRUE(root->getSubmodules().illegalAccess().empty());
 
-		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
-							  [&]() { std::ignore = GetModuleID_Functor::get(child_id); },
-							  "Dangling ModuleTree should panic after removeModuleRecursive"
-		);
-		                  assertThrows<base::Panic>(
-							  [&]() { std::ignore = GetModuleID_Functor::get(grand_child_id); },
-							  "Recursive removal should also invalidate grandchildren"
-						  );)
+		IF_BUILD_TYPE_DEV(
+			assertThrows<base::Panic>(
+				[&]() { std::ignore = GetModuleID_Functor::get(child_id); },
+				"Dangling ModuleTree should panic after removeModuleRecursive"
+			);
+			assertThrows<base::Panic>(
+				[&]() { std::ignore = GetModuleID_Functor::get(grand_child_id); },
+				"Recursive removal should also invalidate grandchildren"
+			);
+		)
 
 		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
 	}
@@ -739,11 +797,8 @@ private:
 			ModuleTreeModifier::setParent(mt1, getRef(subsub));
 			ASSERT_TRUE(
 				(ModuleTree::getPathComponentHash(getRef(sub2)->getModuleID()).elements
-			     == std::vector<std::string>{ "root_package_id11e3",
-			                                  "sub1",
-			                                  "subsub",
-			                                  "root",
-			                                  "sub2" })
+			     == std::vector<std::string>{
+					 "root_package_id11e3", "sub1", "subsub", "root", "sub2" })
 			);
 			ASSERT_TRUE(
 				(ModuleTree::getPathComponentHash(mt2->getModuleID()).elements

@@ -15,17 +15,16 @@ PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst wa
 #include <crow/http_response.h>
 POP_DIAGNOSTIC;
 
-#include "export_keywords.hpp"
-#include "files_managment.hpp"
-#include "go_to_definition.hpp"
-#include "semantic_tokens.hpp"
-#include "utils.hpp"
-#include "validation.hpp"
-
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <lsp_interface/export_keywords.hpp>
+#include <lsp_interface/files_managment.hpp>
+#include <lsp_interface/go_to_definition.hpp>
+#include <lsp_interface/semantic_tokens.hpp>
+#include <lsp_interface/utils.hpp>
+#include <lsp_interface/validation.hpp>
 
 #include <clah/clah.hpp>
 #include <filesystem/file.hpp>
@@ -248,29 +247,35 @@ void showVersion() {
 
 clah::Clah getLspDaemonCLI() {
 	return clah::Clah("duck_ls", "The Duckling Language Server daemon.")
-	    .add(clah::ParamBuilder::ofFlag()
-	             .addShortName('v')
-	             .addLongName("version")
-	             .addShortDesc("Show version information and exit")
-	             .build())
+	    .add(
+			clah::ParamBuilder::ofFlag()
+				.addShortName('v')
+				.addLongName("version")
+				.addShortDesc("Show version information and exit")
+				.build()
+		)
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version")) {
 				showVersion();
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		})
-	    .addSubcommand(clah::Clah("start", "Starts the LSP server on a given port")
-	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("port"))
-	                                .addShortName('p')
-	                                .addLongName("port")
-	                                .addShortDesc("The port for the server to listen on.")
-	                                .required()
-	                                .build())
-	                       .setHandler([](const clah::ParsingResult& options) {
-							   auto port = options.getValue<i64>("port").value();
-							   server(i32(port));
-							   return 0;
-						   }));
+	    .addSubcommand(
+			clah::Clah("start", "Starts the LSP server on a given port")
+				.add(
+					clah::ParamBuilder::ofValue(clah::IntParser::make("port"))
+						.addShortName('p')
+						.addLongName("port")
+						.addShortDesc("The port for the server to listen on.")
+						.required()
+						.build()
+				)
+				.setHandler([](const clah::ParsingResult& options) {
+					auto port = options.getValue<i64>("port").value();
+					server(i32(port));
+					return 0;
+				})
+		);
 }
 
 /**
@@ -299,20 +304,24 @@ int main(int argc, const char** argv) {
 		// Parse the command-line arguments
 		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
-		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::Red },
-			{ "Exception was caught with message:\n", printer::Color::Default },
-			{ e.what(), printer::Color::Default },
-			{ "\nAborting\n", printer::Color::Default },
-		});
+		printer::StreamPrinter::print(
+			{
+				{ "[ERROR] ", printer::Color::Red },
+				{ "Exception was caught with message:\n", printer::Color::Default },
+				{ e.what(), printer::Color::Default },
+				{ "\nAborting\n", printer::Color::Default },
+			}
+		);
 		return 1;
 	} catch (const std::exception& e) {
-		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::Red },
-			{ "Unexpected Exception was caught with message:\n", printer::Color::Default },
-			{ e.what(), printer::Color::Default },
-			{ "\nAborting\n", printer::Color::Default },
-		});
+		printer::StreamPrinter::print(
+			{
+				{ "[ERROR] ", printer::Color::Red },
+				{ "Unexpected Exception was caught with message:\n", printer::Color::Default },
+				{ e.what(), printer::Color::Default },
+				{ "\nAborting\n", printer::Color::Default },
+			}
+		);
 		return 1;
 	}
 }

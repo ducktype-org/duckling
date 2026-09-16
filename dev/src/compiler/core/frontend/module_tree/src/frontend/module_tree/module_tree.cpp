@@ -77,16 +77,23 @@ namespace compiler::frontend {
 		return module->m_hash.value();
 	}
 
+	const FileResolver& identityFileResolver() {
+		static const FileResolver resolver
+			= [](const fs::FilePath& disk_path) { return fs::File(disk_path); };
+		return resolver;
+	}
+
 	Ref<ModuleTree> ModuleTreeBuilder::create(
-		const fs::File&   root,
-		base::StrID       package_id,
-		const std::regex& file_reject,
-		const std::regex& dir_reject
+		const fs::File&     root,
+		base::StrID         package_id,
+		const std::regex&   file_reject,
+		const std::regex&   dir_reject,
+		const FileResolver& file_resolver
 	) {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
 
 		if (root.isDirectory())
-			builder->buildFromDirectory(root, package_id, file_reject, dir_reject);
+			builder->buildFromDirectory(root, package_id, file_reject, dir_reject, file_resolver);
 		else
 			builder->buildFromSingleFile(root, package_id);
 
@@ -283,8 +290,7 @@ namespace compiler::frontend {
 		CORE_ASSERT(erased, "Failed to remove ModuleTree from storage");
 	}
 
-	void ModuleTree::checkDanglingReference([[maybe_unused]] const base::Ref<ModuleTree>& candidate
-	) {
+	void ModuleTree::checkDanglingReference([[maybe_unused]] const base::Ref<ModuleTree>& candidate) {
 		IF_BUILD_TYPE_DEV({
 			// If we are not using module modifier, skip the check
 			if (!use_module_modifier_remove) return;
@@ -301,10 +307,11 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeBuilder::buildFromDirectory(
-		const fs::File&   directory,
-		base::StrID       package_id,
-		const std::regex& file_reject,
-		const std::regex& dir_reject
+		const fs::File&     directory,
+		base::StrID         package_id,
+		const std::regex&   file_reject,
+		const std::regex&   dir_reject,
+		const FileResolver& file_resolver
 	) {
 		CORE_ASSERT(
 			directory.isDirectory(),
@@ -319,7 +326,7 @@ namespace compiler::frontend {
 			// Skip symlinks to avoid cycles
 			if (path.isSymlink()) continue;
 
-			fs::File file(path);
+			fs::File file = file_resolver(path);
 
 			if (file.isDirectory()) {
 				// Handle subdirectory
@@ -327,7 +334,9 @@ namespace compiler::frontend {
 
 				// build sub-module from directory
 				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
-				submodule_builder->buildFromDirectory(file, package_id, file_reject, dir_reject);
+				submodule_builder->buildFromDirectory(
+					file, package_id, file_reject, dir_reject, file_resolver
+				);
 				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(
 					submodule->getName() == base::StrID(file.name()), "Submodule name does not match"
@@ -856,6 +865,17 @@ namespace compiler::frontend {
 		// frame. Wait until every worker is idle before returning, otherwise that frame gets
 		// destroyed underneath them -> rare segfault.
 		manager.waitForAllWorkersFree();
+	}
+
+	ModuleID createModuleTreeFromFS(
+		const fs::File&     root,
+		base::StrID         package_id,
+		const FileResolver& file_resolver,
+		const std::regex&   file_reject,
+		const std::regex&   dir_reject
+	) {
+		return ModuleTreeBuilder::create(root, package_id, file_reject, dir_reject, file_resolver)
+		    ->getModuleID();
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {

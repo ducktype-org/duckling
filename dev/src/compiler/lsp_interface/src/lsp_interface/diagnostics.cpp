@@ -1,10 +1,10 @@
-#include "validation.hpp"
-
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/queries/queries.hpp>
+#include <lsp_interface/diagnostics.hpp>
+#include <lsp_interface/uri_conversion.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 
 #include <diagnostic/core/common_classes.hpp>
@@ -18,8 +18,19 @@
 
 #include <sstream>
 
-namespace lsp {
+namespace duck_ls {
 	using namespace compiler;
+
+	namespace {
+		/**
+		 * @brief The path of a file as it exists on disk, whichever side of the swap it is on.
+		 */
+		std::string physicalPathString(const fs::FilePath& path) {
+			if (path.isVirtual()) return path.toPhysicalPath().string();
+			return path.string();
+		}
+
+	}
 
 	base::CRef<frontend::ModuleTree> getRootModule(frontend::ModuleID module_id) {
 		base::CRef<frontend::ModuleTree> module = frontend::getModuleRef(module_id);
@@ -83,87 +94,33 @@ namespace lsp {
 		return all_submodules_parsed_successfully;
 	}
 
-	void jsonSerializeDiagnostics(
-		const std::vector<CRef<dia::dia_args::Diagnostic>>& diagnostics,
-		const dia::lsp::EvaluationContext&                  ctx,
-		std::ostream&                                       out
+	std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> collectDiagnostics(
+		const fs::File& file, const OpenDocuments& documents
 	) {
-		static base::Optional<base::HashMap<base::StrID, std::vector<Box<dia::lsp::Diagnostic>>>>
-			previous_diag_by_file_opt{};
+		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> by_file;
 
-		base::HashMap<base::StrID, std::vector<Box<dia::lsp::Diagnostic>>> diagnostics_by_file;
-
-		// We always want to have at least an entry for the queried file for better experience
-		diagnostics_by_file.emplace(ctx.queried_file_uri, std::vector<Box<dia::lsp::Diagnostic>>{});
-
-		// Iterate over diagnostics and group them by file URI
-		for (const auto& diag: diagnostics) {
-			dia::lsp::LSPDiagnosticResult lsp_diag
-				= dia::lsp::evaluateToLanguageServerMessage(diag, ctx);
-			auto file_uri = base::StrID(lsp_diag.file_uri);
-
-			if (not diagnostics_by_file.contains(file_uri))
-				diagnostics_by_file.emplace(file_uri, std::vector<Box<dia::lsp::Diagnostic>>{});
-			diagnostics_by_file.at(file_uri).push_back(std::move(lsp_diag.diagnostic));
-		}
-
-
-		// Serialize them
-		out << "{\n";
-		bool first_list_elem = true;
-		for (const auto& [file_uri, diags]: diagnostics_by_file) {
-			if (not first_list_elem) out << ",\n";
-			first_list_elem = false;
-
-			out << "\"" << file_uri.strView() << "\": [\n";
-			for (usize i = 0; i < diags.size(); i++) {
-				dia::lsp::LSPDiagnosticResult::jsonSerializeDiagnostic(diags[i].ref(), out);
-				if (i + 1 < diags.size()) out << ",\n";
-			}
-			out << "]";
-			out << "\n";
-		}
-
-		// We have to send empty arrays for files that had diagnostics previously
-		// but do not have any diagnostics now, to clear them in the client.
-		if_opt_some(previous_diag_by_file_opt, previous_diag_by_file) {
-			for (const auto& [old_file_uri, old_diags]: previous_diag_by_file) {
-				if (not diagnostics_by_file.contains(old_file_uri)) {
-					if (not first_list_elem) out << ",\n";
-					first_list_elem = false;
-
-					out << "\"" << old_file_uri.strView() << "\": []\n";
-				}
-			}
-		}
-		out << "}\n";
-
-		previous_diag_by_file_opt = std::move(diagnostics_by_file);
-	}
-
-	std::string getDiagnosticJsonFromCompiler(const fs::File& file) {
 		auto source_files = frontend::SourceFile::getSourceFilesFromFile(file);
-		if (source_files.empty()) return "{}";
+		if (source_files.empty()) return by_file;
 
 		auto root_module = getRootModule(
 			source_files[source_files.size() - 1]->getModule().illegalAccess().getID()
 		);
 		auto main_source_file
 			= getFileRef(root_module->getMainSourceFile().illegalAccess().getID());
-		auto main_path    = main_source_file->getFileIllegalAccess().getFilePath().toPhysicalPath();
-		auto queried_path = file.getFilePath().toPhysicalPath();
+
+		auto queried_path = file.getFilePath();
+		auto main_path    = main_source_file->getFileIllegalAccess().getFilePath();
 
 		std::vector<CRef<dia::dia_args::Diagnostic>> diagnostics
 			= getParserDiagnosticsFromModuleTree(root_module);
 
-		// We run the semantic analysis if there is no parsing errors.
-
+		// Semantic analysis only runs once the whole package parses.
 		if (isModuleTreeParsedSuccessfully(root_module)) {
 			query::utils::withContextDo([&](query::Context& ctx) -> void {
 				auto hout
 					= ctx.query<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
-				// Since MIR lowering can produce errors, we have to run MIR lowering as well.
+				// MIR lowering can produce errors, so it has to run as well.
 				if (hout.hasValue())
 					for (const auto& item: hout.valueOrPanic()) mir::lowerToMIRUnit(ctx, item);
 			});
@@ -173,10 +130,42 @@ namespace lsp {
 			diagnostics, updatePositionWithHashCodeLocation
 		);
 
-		dia::lsp::EvaluationContext ctx(main_path.uri(), queried_path.uri());
+		dia::lsp::EvaluationContext ctx(
+			physicalPathString(main_path),
+			physicalPathString(queried_path),
+			[&documents](const std::string& path) {
+				return toDocumentUri(fs::FilePath(path), documents);
+			}
+		);
 
-		std::stringstream out;
-		jsonSerializeDiagnostics(diagnostics, ctx, out);
-		return out.str();
+		// The queried file always gets an entry, so that fixing its last error clears it.
+		by_file.emplace(ctx.resolve(ctx.queried_file), std::vector<lsp::Diagnostic>{});
+
+		for (const auto& diag: diagnostics) {
+			dia::lsp::LSPDiagnosticResult result
+				= dia::lsp::evaluateToLanguageServerMessage(diag, ctx);
+			by_file[result.uri].push_back(std::move(result.diagnostic));
+		}
+
+		return by_file;
+	}
+
+	void publishDiagnostics(
+		lsp::ServerEndpoint& endpoint, ServerSession& session, const fs::FilePath& path
+	) {
+		auto cache_twin = session.cachePath(path);
+		auto file       = cache_twin.exists() ? fs::File(cache_twin) : fs::File(path);
+
+		auto published = collectDiagnostics(file, session.documents);
+
+		// Files that had diagnostics before and have none now must be cleared explicitly.
+		for (const auto& [uri, previous]: session.last_published_diagnostics)
+			if (!previous.empty() && !published.contains(uri))
+				published.emplace(uri, std::vector<lsp::Diagnostic>{});
+
+		for (const auto& [uri, diagnostics]: published)
+			endpoint.textDocumentPublishDiagnostics({ .uri = uri, .diagnostics = diagnostics });
+
+		session.last_published_diagnostics = std::move(published);
 	}
 }
