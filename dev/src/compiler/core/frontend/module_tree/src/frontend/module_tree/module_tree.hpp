@@ -121,7 +121,7 @@ namespace compiler::frontend {
 		/**
 		 * @brief Module type specific data of a module.
 		 *
-		 * @note The alternative held decides the kind of the module, see isReplModule().
+		 * @note The alternative held decides the kind of the module.
 		 */
 		using ModuleTypeData
 			= std::variant<ModuleModuleData, ModuleScriptData, SyntheticReplChainModuleData>;
@@ -279,10 +279,10 @@ namespace compiler::frontend {
 		 * @return nullptr for module types that have no main source file (scripts).
 		 */
 		[[nodiscard]]
-		base::Optional<base::Ref<SourceFile>>* mainSourceFileSlot();
+		MRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot();
 
 		[[nodiscard]]
-		const base::Optional<base::Ref<SourceFile>>* mainSourceFileSlot() const;
+		MCRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const;
 
 		/**
 		 * @brief Collects every SourceFile owned by this module, regardless of its type.
@@ -493,7 +493,7 @@ namespace compiler::frontend {
 		 * The file passed to setMainSourceFile() becomes the synthetic source file of the module.
 		 * @param repl_module_parent Previous module in the REPL chain, empty for the first one.
 		 */
-		void setReplModule(base::Optional<ModuleID> repl_module_parent = {});
+		void setReplModule(base::Optional<ModuleID> repl_module_parent);
 
 		/**
 		 * Builds the module tree from a single file (single-file module).
@@ -561,6 +561,9 @@ namespace compiler::frontend {
 
 	/**
 	 * @brief Modifier class for making changes to ModuleTree instances.
+	 *
+	 * @note The API is designed to operate on Script Module/Standard Module layer
+	 * and don't go into synthetic REPL chain modules unless explicitly stated.
 	 *
 	 * ModuleTreeModifier provides static methods to add, remove, and update source files,
 	 * submodules, parent relationships, and other files within a ModuleTree.

@@ -109,7 +109,7 @@ namespace compiler::frontend {
 		return {};
 	}
 
-	base::Optional<base::Ref<SourceFile>>* ModuleTree::mainSourceFileSlot() {
+	MRef<base::Optional<base::Ref<SourceFile>>> ModuleTree::mainSourceFileSlot() {
 		v_if_matches(m_module_type_data, ModuleModuleData, module_data)
 			return &module_data->m_main_source_file;
 		v_if_matches(m_module_type_data, SyntheticReplChainModuleData, repl_data)
@@ -118,7 +118,7 @@ namespace compiler::frontend {
 		return nullptr;
 	}
 
-	const base::Optional<base::Ref<SourceFile>>* ModuleTree::mainSourceFileSlot() const {
+	MCRef<base::Optional<base::Ref<SourceFile>>> ModuleTree::mainSourceFileSlot() const {
 		v_if_matches(m_module_type_data, ModuleModuleData, module_data)
 			return &module_data->m_main_source_file;
 		v_if_matches(m_module_type_data, SyntheticReplChainModuleData, repl_data)
@@ -140,18 +140,18 @@ namespace compiler::frontend {
 			return source_files;
 		}
 
-		const auto* slot = mainSourceFileSlot();
+		auto slot = mainSourceFileSlot();
 		if (slot != nullptr) collect(*slot);
 		return source_files;
 	}
 
 	bool ModuleTree::hasMainSourceFile() const {
-		const auto* slot = mainSourceFileSlot();
+		auto slot = mainSourceFileSlot();
 		return slot != nullptr && slot->has_value();
 	}
 
 	FileAccessLocked ModuleTree::getMainSourceFile() const {
-		const auto* slot = mainSourceFileSlot();
+		auto slot = mainSourceFileSlot();
 		CORE_ASSERT(slot != nullptr && slot->has_value(), "Main source file does not exist!");
 		return FileAccessLocked(slot->value()->getFileID());
 	}
@@ -281,8 +281,8 @@ namespace compiler::frontend {
 		// If a Module has a main source file
 		hashing::addToHash(partial, hasMainSourceFile());
 
-		// REPL metadata affects module semantics and therefore must affect module hash.
-		hashing::addToHash(partial, isReplModule());
+		// Module kind affects module semantics and therefore must affect module hash.
+		hashing::addToHash(partial, m_module_type_data.index());
 
 		v_if_matches(m_module_type_data, SyntheticReplChainModuleData, repl_data) {
 			hashing::addToHash(partial, repl_data->m_repl_module_parent.has_value());
@@ -477,6 +477,8 @@ namespace compiler::frontend {
 
 	void ModuleTreeBuilder::setReplModule(base::Optional<ModuleID> repl_module_parent) {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		CORE_ASSERT(not m_is_repl_module, "REPL module already set for this builder");
+		
 		m_is_repl_module     = true;
 		m_repl_module_parent = repl_module_parent;
 	}
@@ -524,7 +526,7 @@ namespace compiler::frontend {
 
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value()) {
-			auto* main_source_file_slot = module_ref->mainSourceFileSlot();
+			auto main_source_file_slot = module_ref->mainSourceFileSlot();
 			CORE_ASSERT(
 				main_source_file_slot != nullptr, "This module type cannot have a main source file!"
 			);
@@ -543,7 +545,7 @@ namespace compiler::frontend {
 
 
 	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
-		auto* main_source_file_slot = module->mainSourceFileSlot();
+		auto main_source_file_slot = module->mainSourceFileSlot();
 		CORE_ASSERT(
 			main_source_file_slot != nullptr,
 			base::strConcat(
@@ -637,9 +639,9 @@ namespace compiler::frontend {
 		CORE_ASSERT(
 			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
 		);
-		auto* main_source_file_slot = module->mainSourceFileSlot();
+		auto main_source_file_slot = module->mainSourceFileSlot();
 		CORE_ASSERT(
-			main_source_file_slot != nullptr && main_source_file_slot->has_value(),
+			main_source_file_slot->has_value(),
 			base::strConcat(
 				"Module ", module->getName().strView(), " does not have a main source file"
 			)
