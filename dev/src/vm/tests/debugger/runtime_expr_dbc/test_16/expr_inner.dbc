@@ -1,7 +1,7 @@
 function inner { } -> { i64 } {
 	# `frame 1` is the paused `outer` expression frame; its `outer_local` has value 5 here.
-	mov_p64_imm frame 1 outer_local, 100;
-	mov_p64_p64 ret0, frame 1 outer_local;
+	mov_p64_imm frame 2 outer_local, 100;
+	mov_p64_p64 ret0, frame 2 outer_local;
 	add_p64_p64 ret0, frame 1 a;
 	add_p64_p64 ret0, frame 1 b;
 	ret_from_expr;

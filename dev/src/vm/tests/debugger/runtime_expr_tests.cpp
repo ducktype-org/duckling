@@ -322,7 +322,8 @@ private:
 			.evalExprNormal(level3_expr, { 46 })
 			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
 			.resume()
-			.awaitExprCompletion({ 60 })
+			// `level2`: paused `l1_local` (10) + overwritten `l2_local` (30) + `l2_local` (30).
+			.awaitExprCompletion({ 70 })
 			.awaitBreakpoint(base::StrID("pause_here"), 0)
 			.resume()
 			.awaitExprCompletion({ 24 })
