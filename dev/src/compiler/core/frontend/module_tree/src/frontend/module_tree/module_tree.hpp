@@ -89,7 +89,7 @@ namespace compiler::frontend {
 		*
 		* Only used for repl modules.
 		*/
-		struct SyntheticReplModuleData final {
+		struct SyntheticReplChainModuleData final {
 			/**
 			* Parent REPL module in chronological order.
 			* Optional - only empty for first REPL module.
@@ -111,7 +111,7 @@ namespace compiler::frontend {
 			/**
 			 * @note: For REPL like execution this can be edited or extended via ModuleTreeModifier.
 			 */
-			std::vector<SyntheticReplModuleData> m_synthetic_repl_module_chain;
+			std::vector<SyntheticReplChainModuleData> m_synthetic_repl_module_chain;
 		};
 
 		
@@ -188,10 +188,12 @@ namespace compiler::frontend {
 		 * Check if this module is a REPL-generated module.
 		 * REPL modules have special cross-module lookup behavior.
 		 * @return true if this is a REPL module, false otherwise
+		 *
+		 * @TODO: #2762 change to more ADT like approach
 		 */
 		[[nodiscard]]
 		bool isReplModule() const {
-			return m_repl_data.has_value();
+			return std::holds_alternative<SyntheticReplChainModuleData>(m_module_type_data);
 		}
 
 		/**
@@ -202,9 +204,9 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		base::Optional<ModuleID> getReplModuleParent() const {
 			CORE_ASSERT(
-				m_repl_data.has_value(), "repl data of a node with parent should have value!"
+				isReplModule(), "repl data of a node with parent should have value!"
 			);
-			return m_repl_data->m_repl_module_parent;
+			return getModuleTypeData<SyntheticReplChainModuleData>().m_repl_module_parent;
 		}
 
 		/**
@@ -353,14 +355,21 @@ namespace compiler::frontend {
 		|  Module type specific data members:   |
 		\* * * * * * * * * * * * * * * * * * * */
 
-		base::Optional<base::Ref<SourceFile>> m_main_source_file;
 
-		/**
-		 * REPL-specific data.
-		 * Optional - only set for modules created in REPL sessions.
-		 * Presence of this optional indicates the module is a REPL module.
-		 */
-		base::Optional<ReplData> m_repl_data;
+		std::variant<ModuleModuleData, ModuleScriptData, SyntheticReplChainModuleData> m_module_type_data;
+
+
+		template<class T>
+		T& getModuleTypeData() {
+			CORE_ASSERT(std::holds_alternative<T>(m_module_type_data), "Module type mismatch");
+			return std::get<T>(m_module_type_data);
+		}
+
+		template<class T>
+		const T& getModuleTypeData() const {
+			CORE_ASSERT(std::holds_alternative<T>(m_module_type_data), "Module type mismatch");
+			return std::get<T>(m_module_type_data);
+		}
 	};
 
 	/**
