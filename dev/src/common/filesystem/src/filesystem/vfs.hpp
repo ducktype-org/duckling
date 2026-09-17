@@ -22,17 +22,16 @@ namespace fs {
 	 */
 	class VFS {
 	public:
+		/**
+		 * @brief Builds an empty VFS, holding nothing but its root.
+		 *
+		 * Public so that an owner can keep a VFS of its own as a member; every instance stays
+		 * unique, and a path is bound to the one it was made against.
+		 */
 		VFS();
 
-		/**
-		 * @brief Deep-copies the whole node tree of `other`.
-		 */
-		VFS(const VFS& other);
-		VFS& operator=(const VFS& other);
-
-		VFS(VFS&&)            = default;
-		VFS& operator=(VFS&&) = default;
-		~VFS()                = default;
+		VFS(const VFS&)            = delete;
+		VFS& operator=(const VFS&) = delete;
 
 		/**
 		 * @brief Provides access to the singleton instance of the VFS.
@@ -182,12 +181,6 @@ namespace fs {
 		};
 
 		Box<VFSNode> root;  ///< The root node of the virtual file system.
-
-		/**
-		 * @brief Recursively clones a node and all of its children.
-		 */
-		static Box<VFSNode> cloneNode(const VFSNode& node);
-
 		/**
 		 * @brief Splits a virtual path into its components.
 		 * @param path The virtual path to split.

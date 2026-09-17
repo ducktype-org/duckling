@@ -13,23 +13,6 @@ namespace fs {
 	// VFS implementation
 	VFS::VFS(): root(makeBox<VFSNode>("vfs:", DirectoryData{ {} })) {}
 
-	Box<VFS::VFSNode> VFS::cloneNode(const VFSNode& node) {
-		if (node.isFile()) return makeBox<VFSNode>(node.name, std::get<FileData>(node.data));
-
-		DirectoryData copy;
-		for (const auto& [name, child]: std::get<DirectoryData>(node.data).children)
-			copy.children.emplace(name, cloneNode(*child));
-
-		return makeBox<VFSNode>(node.name, std::move(copy));
-	}
-
-	VFS::VFS(const VFS& other): root(cloneNode(*other.root)) {}
-
-	VFS& VFS::operator=(const VFS& other) {
-		if (this != &other) root = cloneNode(*other.root);
-		return *this;
-	}
-
 	std::vector<std::string> VFS::splitPath(const std::filesystem::path& path) {
 		std::vector<std::string> parts;
 		for (const auto& part: path)

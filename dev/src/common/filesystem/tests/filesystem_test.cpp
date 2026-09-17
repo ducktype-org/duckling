@@ -611,16 +611,6 @@ private:
 			"lexicallyNormal must keep the VFS binding"
 		);
 
-		// A copied VFS is independent of its source.
-		fs::VFS      copy = other;
-		fs::FilePath in_copy("vfs:/binding/a.dk", &copy);
-		assertTrue(in_copy.exists(), "Copy must carry over the source contents");
-		fs::File(in_copy).writeToFile("changed");
-		assertTrue(
-			fs::File(in_other).getContent().view().stringView() == "other content",
-			"Writing to the copy must not affect the source"
-		);
-
 		// Physical paths carry no binding and hash on the path alone.
 		fs::FilePath physical(path("a_file.txt"));
 		assertTrue(physical.getVfs().empty(), "Physical paths must carry no VFS binding");

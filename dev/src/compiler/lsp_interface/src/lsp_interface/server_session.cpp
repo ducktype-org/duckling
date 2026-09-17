@@ -2,11 +2,22 @@
 #include <lsp_interface/compiler.hpp>
 #include <lsp_interface/server_session.hpp>
 
+#include <base/str/str_utils.hpp>
+
+#include <version/version.hpp>
+
 #include <iostream>
 
 namespace duck_ls {
 
 	namespace {
+		/**
+		 * @brief What the server reports as its version when it greets the client.
+		 */
+		std::string serverVersion() {
+			return base::strConcat(version::semver(), " (", version::commitHash(), ")");
+		}
+
 		void collectWorkspaceRoots(const lsp::InitializeParams& params, Compiler& compiler) {
 			if (params.workspaceFolders.has_value() && !params.workspaceFolders->isNull())
 				for (const auto& folder: params.workspaceFolders->value())
@@ -48,7 +59,7 @@ namespace duck_ls {
 						},
 						.serverInfo = lsp::ServerInfo{
 							.name    = "duck_ls",
-							.version = "0.1.0",
+							.version = serverVersion(),
 						},
 					};
 			})
