@@ -8,7 +8,7 @@
 #include <optional>
 
 namespace vm::debugger {
-	struct CodePosition: public api::response::CodePosition {
+	struct CodePosition final: public api::response::CodePosition {
 		base::Optional<dia::SourcePosition> mapped_position;
 	};
 

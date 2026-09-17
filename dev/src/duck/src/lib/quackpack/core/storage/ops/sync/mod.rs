@@ -56,7 +56,7 @@ pub struct SyncOutput {
 pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResult<SyncOutput> {
     debug!(root = %pcx.package().root().display(), ?options);
     emit_warnings_and_run_lint_passes(pcx)?;
-    pcx.ctx().console().info(format!(
+    pcx.ctx().info(format!(
         "starting synchronization of the {}",
         pcx.package().display()
     ))?;
@@ -234,14 +234,20 @@ fn get_solver_answer(
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
     debug!(?mode);
-    pcx.ctx()
-        .console()
-        .info("starting solving the dependency graph")?;
+    pcx.ctx().info("starting solving the dependency graph")?;
     let root_origin = FullOrigin::for_local(pcx.package().root())?;
     let root_identity = FullIdentity::new(pcx.package().name(), root_origin);
     let root_pkg = PackageId::new(root_identity, pcx.package().version());
     let solver_freeze = match input_freeze {
-        Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
+        Some(freeze) => match SolverFreeze::try_from_venv_freeze(root_pkg, freeze) {
+            Ok(freeze) => freeze,
+            Err(malformed) => {
+                warn!(error = ?malformed, "previous storage freeze is malformed");
+                pcx.ctx()
+                    .warning("previous freezefile was malformed, ignoring it")?;
+                SolverFreeze::empty_with_root(root_pkg)?
+            }
+        },
         None => SolverFreeze::empty_with_root(root_pkg)?,
     };
     let solver = SolverGathererData::new(pcx, solver_freeze, mode)
@@ -262,7 +268,7 @@ fn make_after_fetch_message(
     downloaded: usize,
 ) -> QuackResult<()> {
     let total = already_present + downloaded;
-    ctx.console().info(format!(
+    ctx.info(format!(
         "loaded source code{} of {} package{}, {} {} downloaded, {} {} already present",
         total.s_if_plural(),
         total,
@@ -307,13 +313,12 @@ fn update_venv(
 /// Prints to the user a message that synchronization was successful.
 fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {
     match pcx.package() {
-        AnyPackage::Script(Script::Standalone(script)) => pcx.ctx().console().info(format!(
+        AnyPackage::Script(Script::Standalone(script)) => pcx.ctx().info(format!(
             "successfully synchronized the venv of the script with a frontmatter at `{}`",
             script.frontmatter().script_file().display()
         )),
         AnyPackage::Package(_) | AnyPackage::Script(Script::Associated(_)) => pcx
             .ctx()
-            .console()
             .info(format!("successfully synchronized venv `{id}`")),
     }
 }

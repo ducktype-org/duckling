@@ -3,8 +3,9 @@ use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::creating_graph::create_early_graph_from_bcx;
 use crate::quackpack::core::compile::early_graph::tests::cycling::setup::*;
-use crate::quackpack::core::compile::early_graph::tests::mock_local_identity;
-use crate::quackpack::core::compile::early_graph::tests::{mock_local_pkg, mock_registry_pkg};
+use crate::quackpack::core::compile::early_graph::tests::{
+    mock_local_identity, mock_local_pkg, mock_registry_pkg,
+};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::Unit;
 use crate::quackpack::core::compile::unit::graph::{UnitGraph, lower_early_graph};

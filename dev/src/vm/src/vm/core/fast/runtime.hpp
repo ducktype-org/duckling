@@ -12,7 +12,7 @@ namespace vm::fast {
 		struct Instruction;
 	}
 
-	struct Frame {
+	struct Frame final {
 		bool flag = false;
 		/// Instruction pointer, has to live in frame for easy function calls
 		const exec::Instruction* ip = nullptr;
@@ -32,7 +32,7 @@ namespace vm::fast {
 		constexpr static usize LOCAL_STACK_SIZE = 8 * 1'024 * 1'024;  // 8 MB
 
 	private:
-		struct AlignedStackMemory {
+		struct AlignedStackMemory final {
 			alignas(8) std::array<byte, LOCAL_STACK_SIZE> data;
 		};
 
