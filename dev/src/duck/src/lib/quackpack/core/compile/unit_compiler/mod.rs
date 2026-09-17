@@ -26,6 +26,7 @@ use super::duckc::{Duckc, multipackage_schema, process_builder};
 use super::profiles::Profile;
 use super::unit::Unit;
 use super::unit::graph::UnitGraph;
+use crate::quackpack::core::compile::unit::BuildKind;
 use crate::util::file_locks::LockedFile;
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
@@ -49,15 +50,11 @@ pub trait UnitCompiler: Debug {
         bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<Vec<multipackage_schema::Task>>;
 
-    /// Get the list of [`Unit`]s to compile.
+    /// Whether the given [`Unit`] should be compiled.
     ///
-    /// [`Unit`]s will be compiled in order determined by the returned vector, starting from the
-    /// index 0.
-    fn units_to_compile<'a>(
-        &self,
-        graph: &'a UnitGraph,
-        bcx: &BuildContext<'_, '_>,
-    ) -> Vec<&'a Unit>;
+    /// Note that, in the future, some [`Unit`]s (mainly build scripts) will _always_ be compiled,
+    /// no matter what this function returns.
+    fn should_compile(&self, unit: &Unit, graph: &UnitGraph, bcx: &BuildContext<'_, '_>) -> bool;
 }
 
 #[derive(Debug)]
@@ -113,8 +110,13 @@ fn compile_all_needed_units(
     layout: &dyn ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<()> {
-    for unit in compiler.units_to_compile(graph, bcx) {
-        compile_unit(compiler, unit, graph, layout, bcx)?;
+    for unit in graph.compilation_order() {
+        if !compiler.should_compile(unit, graph, bcx) {
+            continue;
+        }
+        match unit.build_kind() {
+            BuildKind::Compile => compile_unit(compiler, unit, graph, layout, bcx)?,
+        }
     }
     Ok(())
 }
