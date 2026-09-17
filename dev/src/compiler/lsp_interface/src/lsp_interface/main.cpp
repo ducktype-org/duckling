@@ -1,9 +1,8 @@
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <lsp/io/standard_io.h>
-#include <lsp_interface/compiler_files_management.hpp>
-#include <lsp_interface/handlers.hpp>
-
-#include <base/pointers/box.hpp>
+#include <lsp_interface/compiler.hpp>
+#include <lsp_interface/files_cache.hpp>
+#include <lsp_interface/server_session.hpp>
 
 #include <init/init.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
@@ -16,12 +15,14 @@ int main() {
 
 	init::InitObject _;
 
-	duck_ls::ServerSession session;
-	session.setFiles(base::makeBox<duck_ls::CompilerFilesManagement>(base::Ref(&session)));
-
 	lsp::ServerEndpoint endpoint(lsp::io::standardIO());
 
-	duck_ls::registerHandlers(endpoint, session);
+	duck_ls::ServerSession session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
+	duck_ls::FilesCache    files;
+	duck_ls::Compiler      compiler{ base::Ref<duck_ls::ServerSession>(&session),
+		                             base::Ref<duck_ls::FilesCache>(&files) };
+
+	session.registerHandlers(compiler);
 
 	try {
 		endpoint.runMessageLoop();

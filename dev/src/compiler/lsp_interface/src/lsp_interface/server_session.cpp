@@ -1,53 +1,88 @@
+#include <lsp/error.h>
+#include <lsp_interface/compiler.hpp>
 #include <lsp_interface/server_session.hpp>
 
-#include <algorithm>
+#include <iostream>
 
 namespace duck_ls {
 
 	namespace {
-		/**
-		 * @brief Whether `path` is `root` itself or lies below it, matched component by component.
-		 */
-		bool isUnderRoot(const fs::FilePath& path, const fs::FilePath& root) {
-			auto path_it  = path.getPath().begin();
-			auto path_end = path.getPath().end();
+		void collectWorkspaceRoots(const lsp::InitializeParams& params, Compiler& compiler) {
+			if (params.workspaceFolders.has_value() && !params.workspaceFolders->isNull())
+				for (const auto& folder: params.workspaceFolders->value())
+					compiler.addWorkspace(folder.uri);
 
-			for (const auto& root_part: root.getPath()) {
-				if (path_it == path_end) return false;
-				if (*path_it != root_part) return false;
-				++path_it;
+			if (!params.rootUri.isNull()) compiler.addWorkspace(params.rootUri.value());
+		}
+
+		void publish(Compiler& compiler, const lsp::Uri& uri) {
+			try {
+				compiler.publishDiagnostics(uri);
+			} catch (const std::exception& e) {
+				std::cerr << "duck_ls: diagnostics failed for " << uri.toString() << ": "
+						  << e.what() << "\n";
 			}
-
-			return true;
 		}
 	}
 
-	void ServerSession::setFiles(base::Box<IFilesManagement> files_management) {
-		files = std::move(files_management);
+	ServerSession::ServerSession(base::Ref<lsp::ServerEndpoint> endpoint): endpoint(endpoint) {}
+
+	void ServerSession::pushDiagnostics(
+		const lsp::Uri& uri, const std::vector<lsp::Diagnostic>& diagnostics
+	) {
+		endpoint->textDocumentPublishDiagnostics({ .uri = uri, .diagnostics = diagnostics });
 	}
 
-	IFilesManagement& ServerSession::filesManagement() {
-		return *files.expect("The files management of the session was never installed");
-	}
+	void ServerSession::registerHandlers(Compiler& compiler) {
+		endpoint
+			->onInitialize([this, &compiler](const lsp::InitializeParams& params) -> auto {
+				collectWorkspaceRoots(params, compiler);
 
-	fs::FilePath ServerSession::cachePath(const fs::FilePath& source) {
-		// A test builds its "disk" in the singleton VFS, so the source can already be virtual;
-		// rebinding it keeps the same spelling, which the module walk relies on.
-		if (source.isVirtual()) return source.withVfs(base::Ref<fs::VFS>(&cache_vfs));
-		return source.toVirtualPath(base::Ref<fs::VFS>(&cache_vfs));
-	}
-
-	void ServerSession::addWorkspaceRoot(const fs::FilePath& root) {
-		if (std::ranges::find(workspace_roots, root) != workspace_roots.end()) return;
-		workspace_roots.push_back(root);
-	}
-
-	base::Optional<fs::FilePath> ServerSession::workspaceRootFor(const fs::FilePath& path) const {
-		auto it = std::ranges::find_if(workspace_roots, [&](const fs::FilePath& root) {
-			return isUnderRoot(path, root);
-		});
-		if (it == workspace_roots.end()) return {};
-		return *it;
+				return lsp::InitializeResult{
+						.capabilities = {
+							.positionEncoding = position_encoding,
+							.textDocumentSync = lsp::TextDocumentSyncOptions{
+								.openClose = true,
+								.change    = lsp::TextDocumentSyncKind::Incremental,
+							},
+						},
+						.serverInfo = lsp::ServerInfo{
+							.name    = "duck_ls",
+							.version = "0.1.0",
+						},
+					};
+			})
+			.onInitialized([](auto&&) {})
+			.onTextDocumentDidOpen([&compiler](lsp::DidOpenTextDocumentParams&& params) {
+				const std::string language_id = params.textDocument.languageId;
+				compiler.openDocument(
+					params.textDocument.uri,
+					language_id,
+					params.textDocument.version,
+					params.textDocument.text
+				);
+				publish(compiler, params.textDocument.uri);
+			})
+			.onTextDocumentDidChange([&compiler](lsp::DidChangeTextDocumentParams&& params) {
+				compiler.updateDocument(
+					params.textDocument.uri, params.textDocument.version, params.contentChanges
+				);
+				publish(compiler, params.textDocument.uri);
+			})
+			.onTextDocumentDidClose([&compiler](lsp::DidCloseTextDocumentParams&& params) {
+				compiler.closeDocument(params.textDocument.uri);
+				publish(compiler, params.textDocument.uri);
+			})
+			.onWorkspaceDidChangeWatchedFiles([&compiler](lsp::DidChangeWatchedFilesParams&& params
+		                                      ) {
+				for (const auto& change: params.changes) {
+					if (change.type == lsp::FileChangeType::Changed) continue;
+					compiler.fileCreatedOrDeletedOnDisk(change.uri);
+					publish(compiler, change.uri);
+				}
+			})
+			.onShutdown([]() -> lsp::ShutdownResult { return {}; })
+			.onExit([]() {});
 	}
 
 }
