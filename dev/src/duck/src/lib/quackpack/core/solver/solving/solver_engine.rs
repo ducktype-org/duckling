@@ -282,6 +282,11 @@ impl<'a> SolverEngine<'a> {
     }
 
     /// Make sure that the package described by `identity` is present in at most one version.
+    /// Note:
+    /// -----
+    /// This has a different workflow, depending on whether any version is preexisting.
+    /// This is necessary, since for preexisting packages we do not care whether their variables will evaluate to 0 or 1,
+    /// so we can't just always add a constraint that more than many versions are prohibited.
     fn force_singular_version(
         &mut self,
         identity: FullIdentity,
