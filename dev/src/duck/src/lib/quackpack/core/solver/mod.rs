@@ -184,7 +184,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         freeze: &SolverFreeze,
         mode: SolverMode,
     ) -> QuackResult<GatheredInfo> {
-        Self::prepare_root_manifest_for_gathering(&mut root_manifest, &root_features, freeze)?;
+        Self::prepare_root_manifest_for_gathering(&mut root_manifest, freeze)?;
         gatherer
             .explore(root_path, root_manifest, root_features, mode)
             .await
@@ -194,19 +194,11 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     /// Retains only unsatisfied dependencies in the root package's manifest, so that it can be used in gathering.
     fn prepare_root_manifest_for_gathering(
         root_manifest: &mut Manifest,
-        root_features: &HashSet<FeatureName>,
         freeze: &SolverFreeze,
     ) -> QuackResult<()> {
         let Some(root_freeze) = freeze.package_freezes.get(&freeze.main_pkg) else {
             qp_bail_internal!("maximal valid freeze without main package freeze {freeze:#?}")
         };
-        if !root_freeze.features.is_superset(root_features) {
-            // Root has some features which were not present in the previous freeze.
-            // This means that even dependencies that were realized in the previous freeze might have some more features forced,
-            // which itself might enable some dependencies etc.
-            // To do not care about this mess, we just gather everything again.
-            return Ok(());
-        }
         root_manifest
             .dependencies_mut()
             .all_dependencies_mut()
