@@ -26,6 +26,7 @@ POP_DIAGNOSTIC;
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <version/version.hpp>
 
 #include <clah/clah.hpp>
 #include <filesystem/file.hpp>
@@ -238,14 +239,6 @@ void server(i32 port) {
 	app.port(base::safeIntConv<u16>(port)).concurrency(1).run();
 }
 
-/**
- * @brief Displays the version of the DucklingLS daemon.
- */
-void showVersion() {
-	std::cout << std::boolalpha;
-	std::cout << "DucklingLS daemon version 0.0.\n";
-}
-
 clah::Clah getLspDaemonCLI() {
 	return clah::Clah("duck_ls", "The Duckling Language Server daemon.")
 	    .add(clah::ParamBuilder::ofFlag()
@@ -253,9 +246,17 @@ clah::Clah getLspDaemonCLI() {
 	             .addLongName("version")
 	             .addShortDesc("Show version information and exit")
 	             .build())
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addLongName("version-verbose")
+	             .addShortDesc("Show version together with build information and exit")
+	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
+			if (options.isFlag("version-verbose")) {
+				std::cout << version::renderVerbose("duck_ls") << '\n';
+				throw clah::exceptions::SuccessExitException(options);
+			}
 			if (options.isFlag("version")) {
-				showVersion();
+				std::cout << version::renderShort("duck_ls") << '\n';
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		})

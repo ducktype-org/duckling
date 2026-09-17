@@ -12,10 +12,7 @@ try:
     client.send_configuration_done()
     client.wait_for(events=["stopped"])
 
-    st_seq = client.send_stack_trace(thread_id=0, start_frame=0, levels=1)
-    st_resp = client.wait_for_response(st_seq, "Getting stack trace", expect_success=True)
-    
-    frames = st_resp.get("body", {}).get("stackFrames", [])
+    frames = client.get_frames()
     
     if len(frames) != 1:
         client.fail_test(f"Expected 1 stack frames, got {len(frames)}")
@@ -31,10 +28,7 @@ try:
     next_seq = client.send_next()
     client.wait_for(responses=[next_seq])
 
-    st_seq = client.send_stack_trace(thread_id=0, start_frame=0, levels=1)
-    st_resp = client.wait_for_response(st_seq, "Getting stack trace", expect_success=True)
-    
-    frames = st_resp.get("body", {}).get("stackFrames", [])
+    frames = client.get_frames()
     
     if len(frames) != 1:
         client.fail_test(f"Expected 1 stack frames, got {len(frames)}")
