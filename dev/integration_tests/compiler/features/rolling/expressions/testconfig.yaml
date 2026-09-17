@@ -31,8 +31,6 @@ Tests:
   complex_operators:
     Cases:
       all:
-        # @TODO: #Uncomment 
-        backend: llvm
         Output:
           String: "9\n729\n0.137313\n0.167472\n7\n343\n15\n20\n"
         ExitCode: 0

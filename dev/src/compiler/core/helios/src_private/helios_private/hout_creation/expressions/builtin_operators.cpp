@@ -112,7 +112,7 @@ namespace {
 			);
 		};
 
-		auto logIfLangPrimitiveNotPresent = [&](LanguagePrimitive lang_primitive) -> void {
+		auto log_if_lang_primitive_not_present = [&](LanguagePrimitive lang_primitive) -> void {
 			if (!isLanguagePrimitivePresent(ctx, lang_primitive)) {
 				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
 					"Calling an operator that requires '",
@@ -148,7 +148,7 @@ namespace {
 			return make_bin_op_eq_expr(BuiltinBinary::FloatDiv);
 		}
 		case IntegerPow: {
-			logIfLangPrimitiveNotPresent(LanguagePrimitive::PowInt);
+			log_if_lang_primitive_not_present(LanguagePrimitive::PowInt);
 			auto callee = bakeLanguagePrimitiveWithTypes(
 				ctx, LanguagePrimitive::PowInt, { lhs->expression_type.getSymbolType() }
 			);
@@ -165,7 +165,7 @@ namespace {
 					return {};
 			}();
 			if_opt_none(lang_primitive) return {};
-			logIfLangPrimitiveNotPresent(lang_primitive.value());
+			log_if_lang_primitive_not_present(lang_primitive.value());
 			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })
 			                  ->valueOrThrow();
 			return withOrigin(new_origin, s.call(s.ident(callee), std::move(lhs), std::move(rhs)));
