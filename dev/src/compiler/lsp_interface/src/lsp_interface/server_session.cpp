@@ -15,7 +15,7 @@ namespace duck_ls {
 			if (!params.rootUri.isNull()) compiler.addWorkspace(params.rootUri.value());
 		}
 
-		void publish(Compiler& compiler, const lsp::Uri& uri) {
+		void publishDiagnostics(Compiler& compiler, const lsp::Uri& uri) {
 			try {
 				compiler.publishDiagnostics(uri);
 			} catch (const std::exception& e) {
@@ -61,24 +61,24 @@ namespace duck_ls {
 					params.textDocument.version,
 					params.textDocument.text
 				);
-				publish(compiler, params.textDocument.uri);
+				publishDiagnostics(compiler, params.textDocument.uri);
 			})
 			.onTextDocumentDidChange([&compiler](lsp::DidChangeTextDocumentParams&& params) {
 				compiler.updateDocument(
 					params.textDocument.uri, params.textDocument.version, params.contentChanges
 				);
-				publish(compiler, params.textDocument.uri);
+				publishDiagnostics(compiler, params.textDocument.uri);
 			})
 			.onTextDocumentDidClose([&compiler](lsp::DidCloseTextDocumentParams&& params) {
 				compiler.closeDocument(params.textDocument.uri);
-				publish(compiler, params.textDocument.uri);
+				publishDiagnostics(compiler, params.textDocument.uri);
 			})
 			.onWorkspaceDidChangeWatchedFiles([&compiler](lsp::DidChangeWatchedFilesParams&& params
 		                                      ) {
 				for (const auto& change: params.changes) {
 					if (change.type == lsp::FileChangeType::Changed) continue;
 					compiler.fileCreatedOrDeletedOnDisk(change.uri);
-					publish(compiler, change.uri);
+					publishDiagnostics(compiler, change.uri);
 				}
 			})
 			.onShutdown([]() -> lsp::ShutdownResult { return {}; })

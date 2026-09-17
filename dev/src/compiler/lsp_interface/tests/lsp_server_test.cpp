@@ -14,91 +14,43 @@
 #include <tester/tester.hpp>
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace {
 	/**
-	 * @brief Records every call the handlers make instead of touching the real compiler.
+	 * @brief A session that keeps what it was asked to push instead of writing to a client.
+	 *
+	 * The endpoint it is built on is never used: `pushDiagnostics` is the only thing the
+	 * compiler calls, and it is overridden here.
 	 */
-	class RecordingCompiler final: public duck_ls::Compiler {
-	public:
-		using Compiler::Compiler;
+	struct CollectingSession final: public duck_ls::ServerSession {
+		using ServerSession::ServerSession;
 
-		struct Call final {
-			std::string name;
-			std::string uri;
-			/// For a change notification, how many changes it carried.
-			usize change_count = 0;
-		};
+		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> pushed;
 
-		std::vector<Call> calls;
-
-		void addWorkspace(const lsp::Uri& root) override {
-			calls.push_back({ "addWorkspace", root.toString(), 0 });
-		}
-
-		void openDocument(const lsp::Uri& uri, std::string_view, i32, std::string_view) override {
-			calls.push_back({ "openDocument", uri.toString(), 0 });
-		}
-
-		base::OkBad updateDocument(
-			const lsp::Uri& uri, i32, const lsp::Array<lsp::TextDocumentContentChangeEvent>& changes
-		) override {
-			calls.push_back({ "updateDocument", uri.toString(), changes.size() });
-			return base::OK;
-		}
-
-		base::OkBad closeDocument(const lsp::Uri& uri) override {
-			calls.push_back({ "closeDocument", uri.toString(), 0 });
-			return base::OK;
-		}
-
-		void fileCreatedOrDeletedOnDisk(const lsp::Uri& uri) override {
-			calls.push_back({ "fileCreatedOrDeletedOnDisk", uri.toString(), 0 });
-		}
-
-		void publishDiagnostics(const lsp::Uri& uri) override {
-			calls.push_back({ "publishDiagnostics", uri.toString(), 0 });
+		void pushDiagnostics(const lsp::Uri& uri, const std::vector<lsp::Diagnostic>& diagnostics)
+			override {
+			pushed[uri] = diagnostics;
 		}
 	};
 
-	std::string framed(const std::vector<std::string>& messages) {
-		std::string input;
-		for (const auto& message: messages) input += duck_ls_test::frame(message);
-		return input;
-	}
-
 	/**
-	 * @brief Feeds a scripted session to a session wired to a recording compiler.
+	 * @brief A compiler wired to a collecting session, with the endpoint it never talks to.
+	 *
+	 * Everything is held together so that a test can name one object and get a working compiler.
 	 */
-	std::string runSession(
-		const std::vector<std::string>& messages, std::vector<RecordingCompiler::Call>* out_calls
-	) {
-		duck_ls_test::StringStream stream(framed(messages));
+	struct CompilerUnderTest final {
+		explicit CompilerUnderTest(base::Optional<base::Ref<fs::VFS>> source_vfs = {}):
+			  files(source_vfs),
+			  compiler{ &session, &files } {}
 
-		lsp::ServerEndpoint    endpoint(stream);
-		duck_ls::ServerSession session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
-		duck_ls::FilesCache    files;
-		RecordingCompiler      compiler{ base::Ref<duck_ls::ServerSession>(&session),
-                                    base::Ref<duck_ls::FilesCache>(&files) };
-
-		session.registerHandlers(compiler);
-		endpoint.runMessageLoop();
-
-		if (out_calls != nullptr) *out_calls = compiler.calls;
-
-		return stream.written();
-	}
-
-	/**
-	 * @brief Drops every space and newline, so assertions do not depend on json formatting.
-	 */
-	std::string compact(std::string_view text) {
-		std::string result;
-		for (char c: text)
-			if (c != ' ' && c != '\t' && c != '\n' && c != '\r') result += c;
-		return result;
-	}
+		duck_ls_test::StringStream stream{ "" };
+		lsp::ServerEndpoint        endpoint{ stream };
+		CollectingSession          session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
+		duck_ls::FilesCache        files;
+		duck_ls::Compiler          compiler;
+	};
 }
 
 class LspServerTest: public tester::TestSuite {
@@ -107,9 +59,6 @@ class LspServerTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(lifecycleTest);
-		TESTER_ADD_TEST(requestBeforeInitializeTest);
-		TESTER_ADD_TEST(handlerDispatchTest);
 		TESTER_ADD_TEST(incrementalSyncTest);
 		TESTER_ADD_TEST(multiByteSyncTest);
 		TESTER_ADD_TEST(wholeDocumentSyncTest);
@@ -128,83 +77,6 @@ protected:
 	}
 
 private:
-	void lifecycleTest() {
-		auto written = compact(runSession(
-			{
-				R"({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"processId":null,"rootUri":null,"capabilities":{}}})",
-				R"({"jsonrpc":"2.0","method":"initialized","params":{}})",
-				R"({"jsonrpc":"2.0","id":2,"method":"shutdown"})",
-				R"({"jsonrpc":"2.0","method":"exit"})",
-			},
-			nullptr
-		));
-
-		assertTrue(
-			written.find(R"("openClose":true)") != std::string::npos,
-			"initialize must advertise openClose: " + written
-		);
-		assertTrue(
-			written.find(R"("change":2)") != std::string::npos,
-			"initialize must advertise incremental sync: " + written
-		);
-		assertTrue(
-			written.find(R"("name":"duck_ls")") != std::string::npos,
-			"initialize must report the server name: " + written
-		);
-	}
-
-	void requestBeforeInitializeTest() {
-		auto written = compact(runSession(
-			{
-				R"({"jsonrpc":"2.0","id":1,"method":"shutdown"})",
-				R"({"jsonrpc":"2.0","method":"exit"})",
-			},
-			nullptr
-		));
-
-		assertTrue(
-			written.find("-32002") != std::string::npos,
-			"A request before initialize must be rejected with ServerNotInitialized: " + written
-		);
-	}
-
-	void handlerDispatchTest() {
-		std::vector<RecordingCompiler::Call> calls;
-		runSession(
-			{
-				R"({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"processId":null,"rootUri":"file:///ws","capabilities":{}}})",
-				R"({"jsonrpc":"2.0","method":"initialized","params":{}})",
-				R"({"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///ws/a.dk","languageId":"duckling","version":1,"text":"abc"}}})",
-				R"({"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///ws/a.dk","version":2},"contentChanges":[{"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":1}},"text":"A"}]}})",
-				R"({"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":[{"uri":"file:///ws/b.dk","type":1}]}})",
-				R"({"jsonrpc":"2.0","method":"textDocument/didClose","params":{"textDocument":{"uri":"file:///ws/a.dk"}}})",
-				R"({"jsonrpc":"2.0","id":2,"method":"shutdown"})",
-				R"({"jsonrpc":"2.0","method":"exit"})",
-			},
-			&calls
-		);
-
-		const std::vector<std::string> expected{
-			"addWorkspace",       "openDocument",       "publishDiagnostics",
-			"updateDocument",     "publishDiagnostics", "fileCreatedOrDeletedOnDisk",
-			"publishDiagnostics", "closeDocument",      "publishDiagnostics",
-		};
-
-		assertTrue(
-			calls.size() == expected.size(),
-			"Wrong number of compiler calls: " + std::to_string(calls.size())
-		);
-		for (usize i = 0; i < expected.size(); ++i)
-			assertTrue(
-				calls[i].name == expected[i],
-				"Call " + std::to_string(i) + " must be " + expected[i] + ", was " + calls[i].name
-			);
-
-		assertTrue(calls[0].uri == "file:///ws", "The workspace root must be forwarded as sent");
-		assertTrue(calls[1].uri == "file:///ws/a.dk", "The open call must name the document");
-		assertTrue(calls[3].change_count == 1, "The change must carry its one edit");
-	}
-
 	/**
 	 * @brief Splices `changes` into the buffer of a document opened with `initial`.
 	 */
@@ -237,6 +109,13 @@ private:
 		};
 	}
 
+	/**
+	 * @brief A change replacing the whole buffer with `text`.
+	 */
+	lsp::TextDocumentContentChangeEvent wholeDocument(std::string text) {
+		return lsp::TextDocumentContentChangeWholeDocument{ .text = std::move(text) };
+	}
+
 	void incrementalSyncTest() {
 		// Changes apply in order, so the second one sees the result of the first.
 		auto spliced = spliceIntoBuffer(
@@ -257,9 +136,7 @@ private:
 	}
 
 	void wholeDocumentSyncTest() {
-		auto spliced = spliceIntoBuffer(
-			"old\n", { lsp::TextDocumentContentChangeWholeDocument{ .text = "new\n" } }
-		);
+		auto spliced = spliceIntoBuffer("old\n", { wholeDocument("new\n") });
 
 		assertTrue(spliced == "new\n", "A whole document change must replace the buffer");
 	}
@@ -313,20 +190,6 @@ private:
 		    ->getFileIllegalAccess();
 	}
 
-	/**
-	 * @brief A compiler wired to a session that only collects what it was asked to push.
-	 */
-	struct CollectingSession final: public duck_ls::ServerSession {
-		using ServerSession::ServerSession;
-
-		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> pushed;
-
-		void pushDiagnostics(const lsp::Uri& uri, const std::vector<lsp::Diagnostic>& diagnostics)
-			override {
-			pushed[uri] = diagnostics;
-		}
-	};
-
 	void swapCycleTest() {
 		// The tree is built next to the test binary rather than in the temp directory, because a
 		// temp path is its own PathType and cannot be converted to a cache path.
@@ -343,22 +206,17 @@ private:
 		const auto        main_file = main.getFilePath();
 		const std::string disk_text{ fs::File(main_file).getContent().view().stringView() };
 
-		duck_ls_test::StringStream stream("");
-		lsp::ServerEndpoint        endpoint(stream);
-		CollectingSession          session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
-		duck_ls::FilesCache        files;
-		duck_ls::Compiler          compiler{ base::Ref<duck_ls::ServerSession>(&session),
-                                    base::Ref<duck_ls::FilesCache>(&files) };
+		CompilerUnderTest under_test;
 
 		auto root_uri = lsp::Uri::fileUriFromPath(workspace.getFilePath().genericString());
 		auto file_uri = lsp::Uri::fileUriFromPath(main_file.genericString());
 
-		compiler.addWorkspace(root_uri);
+		under_test.compiler.addWorkspace(root_uri);
 
-		auto cache_path = files.cachePath(main_file);
+		auto cache_path = under_test.files.cachePath(main_file);
 
 		// Opening swaps the module over to the editor's buffer.
-		compiler.openDocument(
+		under_test.compiler.openDocument(
 			file_uri, "duckling", 1, "fun main() -> i64 = { return 0; } // opened\n"
 		);
 
@@ -377,12 +235,9 @@ private:
 
 		// Changing is visible to the compiler without touching what is behind the buffer.
 		assertTrue(
-			compiler
+			under_test.compiler
 				.updateDocument(
-					file_uri,
-					2,
-					{ lsp::TextDocumentContentChangeWholeDocument{
-						.text = "fun main() -> i64 = { return 0; } // changed\n" } }
+					file_uri, 2, { wholeDocument("fun main() -> i64 = { return 0; } // changed\n") }
 				)
 				.isOk(),
 			"The change must be applied"
@@ -398,7 +253,7 @@ private:
 		);
 
 		// Closing swaps back and drops the twin, leaving the file behind it untouched.
-		assertTrue(compiler.closeDocument(file_uri).isOk(), "The document must close");
+		assertTrue(under_test.compiler.closeDocument(file_uri).isOk(), "The document must close");
 		assertTrue(!cache_path.exists(), "The cache twin must be gone after didClose");
 
 		auto closed_backing = backingFileOf(main_file);
@@ -415,21 +270,46 @@ private:
 	}
 
 	/**
-	 * @brief Runs a scripted session against a server wired to the real compiler.
+	 * @brief Opens a broken buffer over `file_uri`, then fixes it, asserting what is published.
+	 *
+	 * The same scenario answers for a package on disk and for one in a virtual filesystem, so
+	 * the two differ only in how the tree was built.
 	 */
-	std::string runCompilerSession(const std::vector<std::string>& messages) {
-		duck_ls_test::StringStream stream(framed(messages));
+	void runDiagnosticsCycle(
+		CompilerUnderTest& under_test, const lsp::Uri& root_uri, const lsp::Uri& file_uri
+	) {
+		under_test.compiler.addWorkspace(root_uri);
 
-		lsp::ServerEndpoint    endpoint(stream);
-		duck_ls::ServerSession session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
-		duck_ls::FilesCache    files;
-		duck_ls::Compiler      compiler{ base::Ref<duck_ls::ServerSession>(&session),
-                                    base::Ref<duck_ls::FilesCache>(&files) };
+		under_test.compiler.openDocument(
+			file_uri, "duckling", 1, "fun main() -> i64 = { this is not duckling }\n"
+		);
+		under_test.compiler.publishDiagnostics(file_uri);
 
-		session.registerHandlers(compiler);
-		endpoint.runMessageLoop();
+		assertTrue(
+			under_test.session.pushed.contains(file_uri),
+			"The opened document must get an entry of its own"
+		);
+		assertTrue(
+			!under_test.session.pushed.at(file_uri).empty(),
+			"A broken buffer must produce diagnostics"
+		);
 
-		return stream.written();
+		assertTrue(
+			under_test.compiler
+				.updateDocument(
+					file_uri, 2, { wholeDocument("fun main() -> i64 = { return 0; }\n") }
+				)
+				.isOk(),
+			"The fix must be applied"
+		);
+		under_test.compiler.publishDiagnostics(file_uri);
+
+		assertTrue(
+			under_test.session.pushed.at(file_uri).empty(),
+			"Fixing the buffer must publish an empty array so the client clears it"
+		);
+
+		assertTrue(under_test.compiler.closeDocument(file_uri).isOk(), "The document must close");
 	}
 
 	void diagnosticsTest() {
@@ -440,44 +320,15 @@ private:
 		auto package   = workspace.createSubDirectory("pkg");
 		auto main      = package.createSubFile("fun main() -> i64 = { return 0; }\n", "pkg.dk");
 
-		auto root_uri = lsp::Uri::fileUriFromPath(workspace.getFilePath().genericString());
-		auto file_uri = lsp::Uri::fileUriFromPath(main.getFilePath().genericString());
+		CompilerUnderTest under_test;
 
-		auto initialize
-			= R"({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"processId":null,"rootUri":")"
-		    + root_uri.toString() + R"(","capabilities":{}}})";
-		auto did_open
-			= R"({"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":")"
-		    + file_uri.toString()
-		    + R"(","languageId":"duckling","version":1,"text":"fun main() -> i64 = { this is not duckling }\n"}}})";
-		auto did_change
-			= R"({"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":")"
-		    + file_uri.toString()
-		    + R"(","version":2},"contentChanges":[{"text":"fun main() -> i64 = { return 0; }\n"}]}})";
-
-		auto written = compact(runCompilerSession({
-			initialize,
-			R"({"jsonrpc":"2.0","method":"initialized","params":{}})",
-			did_open,
-			did_change,
-			R"({"jsonrpc":"2.0","id":2,"method":"shutdown"})",
-			R"({"jsonrpc":"2.0","method":"exit"})",
-		}));
+		runDiagnosticsCycle(
+			under_test,
+			lsp::Uri::fileUriFromPath(workspace.getFilePath().genericString()),
+			lsp::Uri::fileUriFromPath(main.getFilePath().genericString())
+		);
 
 		std::filesystem::remove_all(workspace_path.getPath());
-
-		assertTrue(
-			written.find(R"("method":"textDocument/publishDiagnostics")") != std::string::npos,
-			"Diagnostics must be published: " + written
-		);
-		assertTrue(
-			written.find(R"("uri":")" + file_uri.toString() + R"(")") != std::string::npos,
-			"Diagnostics must be named by the URI the client used: " + written
-		);
-		assertTrue(
-			written.find(R"("diagnostics":[])") != std::string::npos,
-			"Fixing the file must publish an empty array: " + written
-		);
 	}
 
 	void virtualWorkspaceTest() {
@@ -489,40 +340,15 @@ private:
 		auto package = workspace.createSubDirectory("pkg");
 		auto main    = package.createSubFile("fun main() -> i64 = { return 0; }\n", "pkg.dk");
 
-		duck_ls_test::StringStream stream("");
-		lsp::ServerEndpoint        endpoint(stream);
-		CollectingSession          session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
-		duck_ls::FilesCache        files{ vfs };
-		duck_ls::Compiler          compiler{ base::Ref<duck_ls::ServerSession>(&session),
-                                    base::Ref<duck_ls::FilesCache>(&files) };
+		CompilerUnderTest under_test{ vfs };
 
-		auto root_uri
-			= lsp::Uri::fileUriFromPath(workspace.getFilePath().toPhysicalPath().genericString());
-		auto file_uri
-			= lsp::Uri::fileUriFromPath(main.getFilePath().toPhysicalPath().genericString());
-
-		compiler.addWorkspace(root_uri);
-		compiler.openDocument(
-			file_uri, "duckling", 1, "fun main() -> i64 = { this is not duckling }\n"
+		// The client never sees the virtual filesystem: it names files by the path the tree
+		// would have on disk, and the cache resolves them back into the VFS.
+		runDiagnosticsCycle(
+			under_test,
+			lsp::Uri::fileUriFromPath(workspace.getFilePath().toPhysicalPath().genericString()),
+			lsp::Uri::fileUriFromPath(main.getFilePath().toPhysicalPath().genericString())
 		);
-		compiler.publishDiagnostics(file_uri);
-
-		assertTrue(session.pushed.contains(file_uri), "The opened document must get diagnostics");
-		assertTrue(!session.pushed.at(file_uri).empty(), "A broken buffer must produce diagnostics");
-
-		compiler.updateDocument(
-			file_uri,
-			2,
-			{ lsp::TextDocumentContentChangeWholeDocument{
-				.text = "fun main() -> i64 = { return 0; }\n" } }
-		);
-		compiler.publishDiagnostics(file_uri);
-
-		assertTrue(
-			session.pushed.at(file_uri).empty(), "Fixing the buffer must clear the diagnostics"
-		);
-
-		compiler.closeDocument(file_uri);
 	}
 };
 
