@@ -141,13 +141,39 @@ namespace compiler::helios {
 
 			return {};
 		}
+
+		tsh::SymbolType<> copyTargetFor(const tsh::SymbolType<>& from, const tsh::SymbolType<>& to) {
+			return variantAlternativeFor(from, to)
+			    .map([](const auto& alternative) { return alternative.second; })
+			    .copyValueOr(to);
+		}
+
+		bool transfersOwnership(
+			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
+		) {
+			const tsh::SymbolType<> copy_target = copyTargetFor(from.getSymbolType(), to);
+			if (not requiresValueCopy(from.getSymbolType().getRefKind(), copy_target.getRefKind()))
+				return false;
+
+			return passingMethod(ctx, valueBeingCopied(from, copy_target))
+			    == PassingMethod::ImplicitMove;
+		}
+	}
+
+	bool Coercion::isEmptyCoercion(query::Context& ctx) const {
+		CORE_ASSERT(isValid(), "An invalid coercion cannot be empty.");
+		// The implicit `MoveExpr` still has to be inserted, even when the symbol types match.
+		if (transfersOwnership(ctx, validated_from, to)) return false;
+
+		const tsh::SymbolType<>& from = validated_from.getSymbolType();
+		return from == to || from.withMutability(tsh::Mutability::Immutable) == to;
 	}
 
 	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
 
 		// An owned rvalue passed to a new owner is implicitly moved.
-		if (transfers_ownership)
+		if (transfersOwnership(ctx, validated_from, to))
 			from = makeBox<code::MoveExpr>(
 				ctx, from->origin.generatedFrom(), std::move(from), code::MoveExpr::MoveKind::Implicit
 			);
@@ -233,28 +259,26 @@ namespace compiler::helios {
 		const bool coercible
 			= ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from_type, to });
 		if (!coercible)
-			return Coercion::invalid(from_type, to, InvalidCoercionReason::IncompatibleTypes);
+			return Coercion::invalid(from, to, InvalidCoercionReason::IncompatibleTypes);
 
 		// Wrapping into a variant copies the value into one alternative, so that alternative is
 		// what the copy is analysed against.
-		const tsh::SymbolType<> copy_target = variantAlternativeFor(from_type, to)
-		                                          .map([](const auto& alt) { return alt.second; })
-		                                          .copyValueOr(to);
+		const tsh::SymbolType<> copy_target = copyTargetFor(from_type, to);
 
 		// A coercion that only rebinds a reference never copies, so it is always fine.
 		if (not requiresValueCopy(from_type.getRefKind(), copy_target.getRefKind()))
-			return Coercion::valid(from_type, to, false);
+			return Coercion::valid(from, to);
 
 		// Otherwise a value has to be copied.
 		switch (passingMethod(ctx, valueBeingCopied(from, copy_target))) {
 		case PassingMethod::ByteCopy:
-			return Coercion::valid(from_type, to, false);
+			return Coercion::valid(from, to);
 		case PassingMethod::ImplicitMove:
-			return Coercion::valid(from_type, to, true);
+			return Coercion::valid(from, to);
 		case PassingMethod::ExplicitCopyOrMove:
-			return Coercion::invalid(from_type, to, InvalidCoercionReason::RequiresExplicitCopyMove);
+			return Coercion::invalid(from, to, InvalidCoercionReason::RequiresExplicitCopyMove);
 		case PassingMethod::NotCopyable:
-			return Coercion::invalid(from_type, to, InvalidCoercionReason::TypeNotCopyable);
+			return Coercion::invalid(from, to, InvalidCoercionReason::TypeNotCopyable);
 		}
 		CORE_UNREACHABLE();
 	}
@@ -273,7 +297,7 @@ namespace compiler::helios {
 
 	BoxOrCRef<code::Expr> Coercion::coerceFromRef(query::Context& ctx, CRef<code::Expr> from) const {
 		CORE_ASSERT(isValidFor(from), "Invalid expression for this coercion.");
-		if (isEmptyCoercion()) return from;
+		if (isEmptyCoercion(ctx)) return from;
 
 		Box<code::Expr> from_box = from->clone();
 		return coerce(ctx, std::move(from_box));

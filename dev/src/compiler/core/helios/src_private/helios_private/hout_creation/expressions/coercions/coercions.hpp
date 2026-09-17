@@ -8,6 +8,7 @@
 #include "errors.hpp"
 
 #include <helios/hout/elements/expr.hpp>
+#include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
 #include <base/pointers/box_or_ref.hpp>
@@ -26,9 +27,9 @@ namespace compiler::helios {
 	class Coercion final {
 	public:
 		/**
-		 * The symbol type that was validated to be coercible.
+		 * The expression type that was validated to be coercible.
 		 */
-		const tsh::SymbolType<> validated_from;
+		const tsh::ExpressionType<> validated_from;
 
 		/**
 		 * The target type of the coercion.
@@ -36,12 +37,6 @@ namespace compiler::helios {
 		const tsh::SymbolType<> to;  // target type
 
 		base::Optional<InvalidCoercionReason> invalid_reason;
-
-		/**
-		 * Whether this coercion moves the source value to the new owner implicitly. This has to be
-		 * wrapped by an implicit `MoveExpr`.
-		 */
-		const bool transfers_ownership;
 
 		[[nodiscard]]
 		constexpr bool isValid() const noexcept {
@@ -57,15 +52,10 @@ namespace compiler::helios {
 		 * Check if the provided expression has the same type as the one validated.
 		 */
 		[[nodiscard]] bool isValidFor(CRef<code::Expr> expr) const noexcept {
-			return isValid() && expr->expression_type.getSymbolType() == validated_from;
+			return isValid() && expr->expression_type == validated_from;
 		}
 
-		[[nodiscard]] bool isEmptyCoercion() const noexcept {
-			// The implicit `MoveExpr` still has to be inserted, even when the types match.
-			if (transfers_ownership) return false;
-			return validated_from == to
-			    || validated_from.withMutability(tsh::Mutability::Immutable) == to;
-		}
+		[[nodiscard]] bool isEmptyCoercion(query::Context& ctx) const;
 
 		[[nodiscard]]
 		InvalidCoercionReason getInvalidReason() const {
@@ -89,41 +79,33 @@ namespace compiler::helios {
 			query::Context& ctx, CRef<code::Expr> from
 		) const;
 
-		static Coercion emptyCoercion(tsh::SymbolType<> from_and_to) {
-			return { from_and_to, from_and_to, {}, false };
+		static Coercion emptyCoercion(tsh::ExpressionType<> from_and_to) {
+			return { from_and_to, from_and_to.getSymbolType(), {} };
 		}
 
 	private:
 		Coercion(
-			tsh::SymbolType<>                     validated_from,
+			tsh::ExpressionType<>                 validated_from,
 			tsh::SymbolType<>                     to,
-			base::Optional<InvalidCoercionReason> invalid,
-			bool                                  transfers_ownership
+			base::Optional<InvalidCoercionReason> invalid
 		):
 			  validated_from(validated_from),
 			  to(to),
-			  invalid_reason(invalid),
-			  transfers_ownership(transfers_ownership) {}
+			  invalid_reason(invalid) {}
 
 		friend query::QResult<Coercion> canCoerce(
 			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 		);
 
 		static Coercion invalid(
-			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, InvalidCoercionReason invalid
+			tsh::ExpressionType<> validated_from, tsh::SymbolType<> to, InvalidCoercionReason invalid
 		) {
-			return { validated_from, to, invalid, false };
+			return { validated_from, to, invalid };
 		}
 
-		static Coercion valid(
-			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, bool transfers_ownership
-		) {
-			return { validated_from, to, {}, transfers_ownership };
+		static Coercion valid(tsh::ExpressionType<> validated_from, tsh::SymbolType<> to) {
+			return { validated_from, to, {} };
 		}
-
-		friend query::QResult<Coercion> canCoerce(
-			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
-		);
 	};
 
 	/**

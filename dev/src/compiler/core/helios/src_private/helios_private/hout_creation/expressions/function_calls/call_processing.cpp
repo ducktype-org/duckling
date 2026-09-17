@@ -141,7 +141,7 @@ namespace compiler::helios::code {
                                 } };
 			}
 
-			bool is_empty = coercion.isEmptyCoercion();
+			bool is_empty = coercion.isEmptyCoercion(ctx);
 			if (not is_empty) coercion_present = true;
 
 			// Position in the parameter list is the same as in the positional arguments list.
@@ -191,7 +191,7 @@ namespace compiler::helios::code {
                                 } };
 			}
 
-			bool is_empty = coercion.isEmptyCoercion();
+			bool is_empty = coercion.isEmptyCoercion(ctx);
 			if (not is_empty) coercion_present = true;
 
 			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i,
@@ -206,7 +206,7 @@ namespace compiler::helios::code {
 					argument_origin[i].emplace(DefaultArgumentOrigin{
 						decl.parameters[i].initial_value.value().ref() });
 					coercions[i].emplace(Coercion::emptyCoercion(
-						decl.parameters[i].initial_value.value()->expression_type.getSymbolType()
+						decl.parameters[i].initial_value.value()->expression_type
 					));
 				} else
 					return NoMatch{ .function = fun,
@@ -425,12 +425,13 @@ namespace compiler::helios::code {
 				auto result = makeBox<CoercibleCandidateNote>(decl_pos);
 				for (usize i{ 0 }; i < match.coercions.size(); i++) {
 					auto& coercion = match.coercions[i];
-					if (not coercion.isEmptyCoercion()) {
+					if (not coercion.isEmptyCoercion(ctx)) {
 						if_opt_none(decl.parameters[i].origin.getStablePosition()) continue;
 						auto param_pos = decl.parameters[i].origin.getStablePosition().value();
 
 						auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
-							coercion.to.toString(), coercion.validated_from.toString()
+							coercion.to.toString(),
+							coercion.validated_from.getSymbolType().toString()
 						);
 						auto pm_message_id = dia::MessageBase::getUniqueID();
 						result->addLinkedMessage(pm_message_id, std::move(pm));

@@ -55,39 +55,41 @@ namespace compiler::helios {
 		case InvalidCoercionReason::IncompatibleTypes:
 			return makeBox<IncompatibleTypesError>(
 				source_position,
-				makeBox<InteractiveType>(ctx, failed.validated_from),
+				makeBox<InteractiveType>(ctx, failed.validated_from.getSymbolType()),
 				makeBox<InteractiveType>(ctx, failed.to),
 				coercion_expects_pos
 			);
-		case InvalidCoercionReason::TypeNotCopyable:
+		case InvalidCoercionReason::TypeNotCopyable: {
+			const tsh::SymbolType<> copied_type
+				= valueBeingCopied(failed.validated_from, failed.to).getSymbolType();
 			return makeBox<dia::PlaceholderError>(
-				base::strConcat(
-					"Type `",
-					copiedValueType(failed.validated_from, failed.to).toString(),
-					"` cannot be copied."
-				),
+				base::strConcat("Type `", copied_type.toString(), "` cannot be copied."),
 				source_position
 			);
+		}
 		case InvalidCoercionReason::RequiresExplicitCopyMove: {
 			// Reading a value out of a `ref`/`box` copies the pointee. `move` out of ref/box isn't
 			// possible, so suggesting it here is misleading.
-			const bool reads_through
-				= readsThroughReference(failed.validated_from.getRefKind(), failed.to.getRefKind());
+			const bool reads_through = readsThroughReference(
+				failed.validated_from.getSymbolType().getRefKind(), failed.to.getRefKind()
+			);
 
 			const std::string message
 				= reads_through
 			        ? base::strConcat(
 						  "` out of `",
-						  failed.validated_from.toString(),
+						  failed.validated_from.getSymbolType().toString(),
 						  "`. Use `copy` to copy it out, `move` cannot move a value out of a "
 						  "reference."
 					  )
 			        : std::string("`. Use `copy` to copy it or `move` to move it.");
 
+			const tsh::SymbolType<> copied_type
+				= valueBeingCopied(failed.validated_from, failed.to).getSymbolType();
 			return makeBox<dia::PlaceholderError>(
 				base::strConcat(
 					"Cannot implicitly copy a value of non-trivially-copyable type `",
-					copiedValueType(failed.validated_from, failed.to).toString(),
+					copied_type.toString(),
 					message
 				),
 				source_position
@@ -135,7 +137,8 @@ namespace compiler::helios {
 		CORE_ASSERT(not failed_coercions.empty(), "Called with empty failed coercions.");
 
 		auto error = makeBox<NoMatchingExpectedTypeError>(
-			source_position, makeBox<InteractiveType>(ctx, failed_coercions.at(0).validated_from)
+			source_position,
+			makeBox<InteractiveType>(ctx, failed_coercions.at(0).validated_from.getSymbolType())
 		);
 
 		// Every accepted type was tried, so each of them gets an explore link pointing to the error
