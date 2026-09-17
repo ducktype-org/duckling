@@ -446,7 +446,12 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::low::opargs::Label)
 
 // ========= FUNCTION OPERATIONS ========
 
-DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID)
+/**
+ * @brief Calls a function.
+ * The second argument is the distance between the caller's local stack base and the callee's
+ * one, i.e. the caller's stack size at this point minus the space shared with the callee.
+ */
+DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID, vm::low::opargs::Offset)
 #ifdef ENABLE_JIT
 // function prologue, potentially compiles the current function and executes the native version
 // mentioned in dev/scripts/jit/jitable_interface.py
@@ -469,15 +474,41 @@ DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionID)
 
 // return while performing a tail call
 DEF_MICRO_INSTR(ret_tailcall_func, vm::low::opargs::FunctionID)
-// return
+/**
+ * @brief Returns from the function.
+ * @note Does no cleanup of its own: the function's own `deinit`s already ran, so the only
+ * entries left on its local slot stack are its return values, which belong to the caller.
+ */
 DEF_MICRO_INSTR(ret)
 
 // ========= STACK OPERATIONS ========
 
-// initialize local variable on local stack with given type
-DEF_MICRO_INSTR(init_bany_type, vm::low::opargs::PlaceBlockAny, vm::low::opargs::Type)
-// pop variable from local stack
+/**
+ * @brief Initializes a local variable: zeroes it and records its type and address in the frame's
+ * slot stack.
+ *
+ * A block is only needed once something refers to the variable through it, and is then created
+ * out of the recorded slot.
+ *
+ * @arg0 - byte offset of the variable in the frame's local stack.
+ * @arg1 - type of the variable.
+ */
+DEF_MICRO_INSTR(init_off_type, vm::low::opargs::Offset, vm::low::opargs::Type)
+
+/// Same semantics as `init_off_type`, split out purely for speed: an 8-byte variable zeroes with
+/// a plain store instead of a `memset` call. Emitting the wrong one is slower, never incorrect.
+DEF_MICRO_INSTR(init64_off_type, vm::low::opargs::Offset, vm::low::opargs::Type)
+/// 16-byte counterpart of `init64_off_type`, the size of a `Pointer`.
+DEF_MICRO_INSTR(init128_off_type, vm::low::opargs::Offset, vm::low::opargs::Type)
+
+/// Pops the topmost local variable, freeing its block if one was created.
 DEF_MICRO_INSTR(deinit)
+
+/**
+ * @brief `deinit` for a variable holding pointers, whose reference to the blocks they point at
+ * has to be released even when the variable itself never got a block.
+ */
+DEF_MICRO_INSTR(deinitDtor)
 
 // ========= IO OPERATIONS ========
 
@@ -494,9 +525,10 @@ DEF_MICRO_INSTR(output_p32, vm::low::opargs::Place32)
 DEF_MICRO_INSTR(setVTable_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
 // deinitialises vtable pointer
 DEF_MICRO_INSTR(resetVTable_pptr, vm::low::opargs::PlacePtr)
-// tries to cast pointed object to its subclass, requires that ext_64 is next
+// tries to cast pointed object to its subclass, requires that ext_type is next
 DEF_MICRO_INSTR(downcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
+// Requires `ext_imm` holding the local stack distance, see `call_func`
 DEF_MICRO_INSTR(virtual_call_pptr_method, vm::low::opargs::PlacePtr, vm::low::opargs::MethodName)
 
 // ========= GENERAL POINTER OPERATIONS ========
@@ -769,7 +801,7 @@ DEF_MICRO_INSTR(stepGil)
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
  * It is a helper for start functions.
  * @arg0 - pointer to a VMValue.
- * @arg1 - n/a.
+ * @arg1 - byte offset of the initialized variable in the frame's local stack.
  */
 DEF_MICRO_INSTR(initFromVMValue)
 
