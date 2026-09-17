@@ -286,7 +286,7 @@ impl<'a> SolverEngine<'a> {
     /// -----
     /// This has a different workflow, depending on whether any version is preexisting.
     /// This is necessary, since for preexisting packages we do not care whether their variables will evaluate to 0 or 1,
-    /// so we can't just always add a constraint that more than many versions are prohibited.
+    /// so we can't just always add a constraint that many versions are prohibited.
     fn force_singular_version(
         &mut self,
         identity: FullIdentity,
