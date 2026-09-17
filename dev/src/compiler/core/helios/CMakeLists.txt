@@ -12,6 +12,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/pst_layer/pst_parent.cpp
 	src_private/helios_private/lookup/lookup_result.cpp
 	src_private/helios_private/lookup/interface.cpp
+	src_private/helios_private/lookup/lookup_in_type_interface.cpp
 	src_private/helios_private/lookup/lookup_chain.cpp
 	src_private/helios_private/hout_creation/expressions/function_calls/call_processing.cpp
 	src_private/helios_private/hout_creation/expressions/function_calls/square_call_processing.cpp
@@ -42,6 +43,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/tsh/abstract_type_impl.cpp
 	src_private/helios_private/tsh/queries.cpp
 	src_private/helios_private/templates/templates.cpp
+	src/helios/utils/main_return_type.cpp
 
 	src/helios/errors/extern_c_class_empty.cpp
 	src/helios/errors/field_not_c_compatible.cpp
@@ -59,8 +61,6 @@ add_library(HELIOS STATIC
 	src/helios/symbols/lang_primitives.cpp
 	src/helios/symbols/query_type_of_symbol.cpp
 	src/helios/symbols/query_type_symbol_data.cpp
-	src/helios/symbols/query_type_from_definition.cpp
-	src/helios/symbols/query_class_of_member.cpp
 	src/helios/symbols/attributes.cpp
 	src/helios/symbols/symbol_abi.cpp
 	src/helios/symbols/symbol_id.cpp
@@ -76,6 +76,7 @@ add_library(HELIOS STATIC
 	src/helios/tsh/queries/types.cpp
 	src/helios/tsh/abstract_type.cpp
 	src/helios/tsh/deductions.cpp
+	src/helios/tsh/coercions/reference_coercion.cpp
 	src/helios/tsh/symbol_type.cpp
 	src/helios/tsh/types.cpp
 	src/helios/tsh/type_interface.cpp
@@ -113,11 +114,16 @@ duck_add_test(compiler helios_repl_expression_wrapper tests/helios_repl_expressi
 	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
+duck_add_test(compiler helios_lookup tests/helios_lookup_test.cpp
+	USES Base PstParser HELIOS
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
 duck_add_test(compiler helios_pst_layer tests/helios_pst_layer_test.cpp
 	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler tsh_simple tests/tsh_simple_test.cpp USES HELIOS)
+duck_add_test(compiler tsh_coercion tests/tsh_coercion_test.cpp USES HELIOS)
 
 duck_add_test(compiler tsh_error tests/tsh_error_test.cpp USES HELIOS)
 

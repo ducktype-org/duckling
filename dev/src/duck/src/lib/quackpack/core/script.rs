@@ -85,6 +85,14 @@ impl Script {
         }
     }
 
+    /// Get the original schema.
+    pub fn original_schema(&self) -> &ManifestSchema {
+        match self {
+            Self::Standalone(standalone_script) => standalone_script.original_schema(),
+            Self::Associated(package_script) => package_script.package().original_schema(),
+        }
+    }
+
     /// Get the dependencies.
     pub fn dependencies(&self) -> &Dependencies {
         self.manifest().dependencies()
@@ -197,7 +205,7 @@ impl Script {
     }
 
     /// Transform into the underlying manifest.
-    pub fn into_manifest(self) -> Manifest {
+    pub fn into_manifest(self) -> Box<Manifest> {
         match self {
             Self::Standalone(standalone_script) => standalone_script.into_manifest(),
             Self::Associated(package_script) => package_script.into_manifest(),
@@ -292,7 +300,7 @@ impl PackageScript {
     }
 
     /// Transform into the underlying manifest.
-    pub fn into_manifest(self) -> Manifest {
+    pub fn into_manifest(self) -> Box<Manifest> {
         self.into_package().into_manifest()
     }
 
@@ -373,6 +381,12 @@ impl StandaloneScript {
         self.frontmatter().manifest()
     }
 
+    /// Get the schema of the frontmatter.
+    /// If the frontmatter was imported, this is the schema of the imported one.
+    pub fn original_schema(&self) -> &ManifestSchema {
+        self.frontmatter().original_schema()
+    }
+
     /// Get the dependencies specified in the frontmatter.
     pub fn dependencies(&self) -> &Dependencies {
         self.manifest().dependencies()
@@ -391,7 +405,7 @@ impl StandaloneScript {
     }
 
     /// Transform into the underlying manifest.
-    pub fn into_manifest(self) -> Manifest {
+    pub fn into_manifest(self) -> Box<Manifest> {
         self.into_frontmatter().into_manifest()
     }
 
@@ -425,7 +439,7 @@ pub struct FrontMatter {
     /// Original schema of the frontmatter.
     original_schema: ManifestSchema,
     /// Manifest constructed from the frontmatter.
-    manifest: Manifest,
+    manifest: Box<Manifest>,
     /// Where the build artifacts should be located.
     artifacts_dir: PathBuf,
 }
@@ -435,7 +449,7 @@ impl FrontMatter {
     pub fn new(
         path: PathBuf,
         original_schema: ManifestSchema,
-        manifest: Manifest,
+        manifest: Box<Manifest>,
     ) -> QuackResult<Self> {
         let script_folder = path
             .parent()
@@ -480,6 +494,7 @@ impl FrontMatter {
     }
 
     /// Get the schema of the script's frontmatter.
+    /// If the frontmatter was imported, this is the schema of the imported one.
     pub fn original_schema(&self) -> &ManifestSchema {
         &self.original_schema
     }
@@ -512,7 +527,7 @@ impl FrontMatter {
     }
 
     /// Transform into the underlying manifest.
-    pub fn into_manifest(self) -> Manifest {
+    pub fn into_manifest(self) -> Box<Manifest> {
         self.manifest
     }
 }

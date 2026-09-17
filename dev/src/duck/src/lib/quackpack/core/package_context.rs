@@ -1,6 +1,7 @@
 //! A context of a package  parsed from the disk.
 use std::path::{Path, PathBuf};
 
+use super::lints::warnings::Warnings;
 use super::script::Script;
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::package_loader::PackageLoader;
@@ -13,16 +14,21 @@ use crate::{DuckContext, QuackResult, qp_bail};
 pub struct PackageContext<'duck> {
     package: AnyPackage,
     ctx: &'duck DuckContext,
+
+    /// Warnings created while this package had been parsed.
+    warnings: Warnings,
 }
 
 impl<'duck> PackageContext<'duck> {
     /// Create new [`PackageContext`].
     #[tracing::instrument(skip_all)]
     pub fn new(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
-        let package = core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
+        let (package, warnings) =
+            core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
         Ok(Self {
             package: AnyPackage::Package(package),
             ctx,
+            warnings,
         })
     }
 
@@ -41,16 +47,17 @@ impl<'duck> PackageContext<'duck> {
     /// Create a new [`PackageContext`] for a standalone script.
     #[tracing::instrument(skip_all)]
     pub fn new_standalone_script(path: &Path, ctx: &'duck DuckContext) -> QuackResult<Self> {
-        let frontmatter = core::parse_frontmatter(path, ctx)?;
+        let (frontmatter, warnings) = core::parse_frontmatter(path, ctx)?;
         let script = StandaloneScript::new(frontmatter);
-        Ok(Self::new_script(script.into(), ctx))
+        Ok(Self::new_script(script.into(), ctx, warnings))
     }
 
     /// Create a new [`PackageContext`] for a script.
-    pub fn new_script(script: Script, ctx: &'duck DuckContext) -> Self {
+    pub fn new_script(script: Script, ctx: &'duck DuckContext, warnings: Warnings) -> Self {
         Self {
             package: AnyPackage::Script(script),
             ctx,
+            warnings,
         }
     }
 
@@ -59,9 +66,14 @@ impl<'duck> PackageContext<'duck> {
         &self.package
     }
 
-    /// Transform into the underlying [`AnyPackage`].
+    /// Transform into the underlying [`AnyPackage`], discarding any warnings.
     pub fn into_package(self) -> AnyPackage {
         self.package
+    }
+
+    /// Transform into the underlying [`AnyPackage`] and keep the warnings.
+    pub fn into_package_and_warnings(self) -> (AnyPackage, Warnings) {
+        (self.package, self.warnings)
     }
 
     /// Get [`DuckContext`] used to create this [`PackageContext`]
@@ -77,5 +89,10 @@ impl<'duck> PackageContext<'duck> {
     /// Get the path to the storage.
     pub fn storage_path(&self) -> &Path {
         self.package().venv().storage_path()
+    }
+
+    /// Emit collected warnings.
+    pub fn emit_warnings(&self) -> QuackResult<()> {
+        self.warnings.emit_warnings(self.ctx())
     }
 }

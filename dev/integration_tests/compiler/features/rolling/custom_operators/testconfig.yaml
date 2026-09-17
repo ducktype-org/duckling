@@ -1,0 +1,30 @@
+# Tests for user-defined custom operators
+
+Tests:
+  operators_simple:
+    Cases:
+      all:
+        Output:
+          String: "42\n42\n42\n42\n"
+        ExitCode: 0
+
+  operator_method_only:
+    Cases:
+      all:
+        Output:
+          String: "42\n"
+        ExitCode: 0
+
+  operator_method_inside_class:
+    Cases:
+      all:
+        Output:
+          String: "42\n"
+        ExitCode: 0
+
+  operator_standalone_with_unrelated_method:
+    Cases:
+      all:
+        Output:
+          String: "42\n"
+        ExitCode: 0

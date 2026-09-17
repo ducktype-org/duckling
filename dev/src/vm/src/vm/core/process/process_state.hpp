@@ -32,19 +32,19 @@ namespace vm {
 	using ThreadState = thread_state::ThreadState;
 
 	namespace process_state {
-		struct NotStarted {};  ///< All VMThreads are in the `NotStarted` state.
+		struct NotStarted final {};  ///< All VMThreads are in the `NotStarted` state.
 
-		struct Running {};     ///< At least one VMThread is actively executing.
+		struct Running final {};     ///< At least one VMThread is actively executing.
 
-		struct Paused {};      ///< All active VMThreads are paused, none are running or sleeping.
+		struct Paused final {};  ///< All active VMThreads are paused, none are running or sleeping.
 
-		struct Sleeping {
+		struct Sleeping final {
 		};  ///< No VMThread is running - at least one is sleeping, none are running.
 
-		struct Stopping {};  ///< A stop has been requested and at least one VMThread has not yet
-		                     ///< reached a terminal state.
+		struct Stopping final {};  ///< A stop has been requested and at least one VMThread
+		                           ///< has not yet reached a terminal state.
 
-		struct Completed {
+		struct Completed final {
 			api::ExitValue exit_value;
 		};  ///< No VMThread is active any more and the main thread finished normally.
 
@@ -53,9 +53,9 @@ namespace vm {
 		 * requested, or the main VMThread never finished (it was stopped, killed or never
 		 * started).
 		 */
-		struct Stopped {};
+		struct Stopped final {};
 
-		struct Panicked {
+		struct Panicked final {
 			std::string err;
 		};  ///< At least one VMThread panicked.
 
@@ -79,6 +79,12 @@ namespace vm {
 		[[nodiscard]] inline bool canRespond(const ProcessState& state) {
 			return v_matches(state, NotStarted, Paused) || isTerminal(state);
 		}
+
+		/// True when `deinitAndValidate` is legal in the current state (the process is NotStarted
+		/// or Completed nicely). Panicked or Stopped states forbid the deinit.
+		[[nodiscard]] inline bool canDeinit(const ProcessState& state) {
+			return v_matches(state, NotStarted, Completed);
+		}
 	}
 
 	/**
@@ -86,11 +92,11 @@ namespace vm {
 	 * they are handled per-thread, so they don't appear here.
 	 */
 	namespace process_event {
-		struct Run {};   ///< Start or re-run the process.
+		struct Run final {};   ///< Start or re-run the process.
 
-		struct Stop {};  ///< Request an orderly stop of all threads.
+		struct Stop final {};  ///< Request an orderly stop of all threads.
 
-		struct DeinitAndValidate {
+		struct DeinitAndValidate final {
 		};  ///< Deinitialize the process down and validate its memory state.
 
 		using ProcessEvent = std::variant<Run, Stop, DeinitAndValidate>;
@@ -101,8 +107,8 @@ namespace vm {
 	 *
 	 * This is the only state a VMProcess has - everything else is derived from it by `aggregate()`.
 	 */
-	struct ProcessStateAggregation {
-		struct ThreadEntry {
+	struct ProcessStateAggregation final {
+		struct ThreadEntry final {
 			ThreadState state;
 
 			/// Incremented on every state change of this thread. Enables to distinguish two

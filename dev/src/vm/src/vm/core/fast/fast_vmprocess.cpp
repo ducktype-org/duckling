@@ -5,6 +5,8 @@
 #include <vm/loader/logger.hpp>
 #include <vm/utils/vm_not_implemented.hpp>
 
+#include <sstream>
+
 namespace vm::fast {
 	FastVMProcess::FastVMProcess(PID pid): IVMProcess(pid) {
 		vm_threads.add(*this, compiler.getProgramBase(), &functions);
@@ -157,6 +159,13 @@ namespace vm::fast {
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::deinitAndValidate() { return true; }
 
+	std::expected<void, api::ApiError> FastVMProcess::requestPauseOfVMThread(
+		[[maybe_unused]] api::ThreadID thread_id
+	) {
+		// @TODO: #2102 Implement this pure virtual method.
+		throw vm::VMNotImplemented("Method `requestPauseOfVMThread` is not implemented.");
+	}
+
 	std::expected<void, api::ApiError> FastVMProcess::pauseVMThread(
 		[[maybe_unused]] api::ThreadID thread_id
 	) {
@@ -205,9 +214,12 @@ namespace vm::fast {
 		if (opt_thread) opt_thread.value()->notifyWaiters();
 	}
 
-	void FastVMProcess::waitForBreakpoint() {
+	std::expected<api::Response, api::ApiError> FastVMProcess::waitForBreakpointAndReportPosition(
+		[[maybe_unused]] api::ThreadID thread_id
+	) {
 		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `waitForBreakpoint` is not implemented.");
+		throw vm::VMNotImplemented("Method `waitForBreakpointAndReportPosition` is not implemented."
+		);
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::setExecutionConfig(

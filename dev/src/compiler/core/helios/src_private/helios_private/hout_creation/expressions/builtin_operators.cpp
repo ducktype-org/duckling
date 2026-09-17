@@ -113,10 +113,12 @@ namespace {
 		};
 
 		auto logIfLangPrimitiveNotPresent = [&](LanguagePrimitive lang_primitive) -> void {
-			if(!isLanguagePrimitivePresent(ctx, lang_primitive)) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
-					base::strConcat("Calling an operator that requires '", base::enumToStr(lang_primitive), "' language primitive, but no such primitive was found.")
-				));
+			if (!isLanguagePrimitivePresent(ctx, lang_primitive)) {
+				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+					"Calling an operator that requires '",
+					base::enumToStr(lang_primitive),
+					"' language primitive, but no such primitive was found."
+				)));
 			}
 		};
 
@@ -164,8 +166,8 @@ namespace {
 			}();
 			if_opt_none(lang_primitive) return {};
 			logIfLangPrimitiveNotPresent(lang_primitive.value());
-			auto callee
-				= ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })->valueOrThrow();
+			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })
+			                  ->valueOrThrow();
 			return withOrigin(new_origin, s.call(s.ident(callee), std::move(lhs), std::move(rhs)));
 		}
 		}
@@ -188,6 +190,9 @@ namespace compiler::helios::code {
 				  /// Negations ///
 				  { { base::StrID("-"), tsh::Kind::Integral }, BuiltinUnary::IntegerNegation },
 				  { { base::StrID("-"), tsh::Kind::Float }, BuiltinUnary::FloatNegation },
+
+				  /// Bitwise negation ///
+				  { { base::StrID("~"), tsh::Kind::Integral }, BuiltinUnary::IntegerBitNot },
 			  };
 
 		if (numeric_operators.contains({ op, operation_kind }))
@@ -224,6 +229,13 @@ namespace compiler::helios::code {
 				{ { base::StrID("*="), tsh::Kind::Integral },
 			      PreDesugarOperator::IntegerMultiplyEq },
 				{ { base::StrID("/="), tsh::Kind::Integral }, PreDesugarOperator::IntegerDivideEq },
+
+				/// Bitwise operations ///
+				{ { base::StrID("&"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitAnd },
+				{ { base::StrID("|"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitOr },
+				{ { base::StrID("^"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitXor },
+				{ { base::StrID("<<"), tsh::Kind::Integral }, BuiltinBinary::IntegerShl },
+				{ { base::StrID(">>"), tsh::Kind::Integral }, BuiltinBinary::IntegerShr },
 
 				/// Integer comparisons ///
 				{ { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },

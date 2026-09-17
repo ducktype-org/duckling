@@ -61,9 +61,7 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 			variant_case(ts::Panicked, panicked) {
-				return std::unexpected(
-					api::ApiError(api::OtherError("Execution panicked with error: " + panicked.err))
-				);
+				return std::unexpected(api::ApiError(api::Panicked(panicked.err)));
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}
@@ -273,7 +271,16 @@ namespace vm {
 		applyEvent(te::Pause{});
 
 		while (true) {
-			switch (signal.waitForRequest()) {
+			// Release the GIL if it's held since we're paused, to give other threads a chance to
+			// execute.
+			releaseGilIfHeld();
+
+			const ThreadSignal::Request request = signal.waitForRequest();
+
+			// Reacquire when performing the request.
+			acquireGilIfNotHeld();
+
+			switch (request) {
 			case ThreadSignal::Request::Resume: {
 				applyEvent(te::Resume{});
 				return;
@@ -283,6 +290,14 @@ namespace vm {
 			}
 			case ThreadSignal::Request::Step: {
 				applyEvent(te::Resume{});
+				// If we're on `MicroOpcode::Exit` we release the paused loop and let the
+				// interpreter handle the program exit.
+				if (isAtExecutionEnd()) {
+					// Handle any termination requests that may have come before the step.
+					if (isTerminateRequested()) throw KillProcessException{};
+					return;
+				}
+
 				executeOneStep();
 				// A Stop posted while the step ran must win over re-pausing.
 				if (isTerminateRequested()) throw KillProcessException{};

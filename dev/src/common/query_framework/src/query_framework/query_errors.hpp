@@ -25,5 +25,5 @@ namespace query {
 	/**
 	 * A simple wrapper to throw QueryFailedException that can be caught by the query framework.
 	 */
-	void throwFailed(std::string_view reason = "Query failure");
+	[[noreturn]] void throwFailed(std::string_view reason = "Query failure");
 }

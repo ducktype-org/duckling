@@ -25,10 +25,18 @@ impl AnyPackage {
     }
 
     /// Transform into the underlying manifest.
-    pub fn into_manifest(self) -> Manifest {
+    pub fn into_manifest(self) -> Box<Manifest> {
         match self {
             Self::Package(package) => package.into_manifest(),
             Self::Script(script) => script.into_manifest(),
+        }
+    }
+
+    /// Get the original schema.
+    pub fn original_schema(&self) -> &ManifestSchema {
+        match self {
+            Self::Package(package) => package.original_schema(),
+            Self::Script(script) => script.original_schema(),
         }
     }
 
@@ -222,7 +230,7 @@ pub struct Package {
     /// Original schema of the manifest.
     original_schema: ManifestSchema,
     /// Manifest of the package.
-    manifest: Manifest,
+    manifest: Box<Manifest>,
     /// Path to the root folder of the package.
     root: PathBuf,
     /// Path to the manifest of the package.
@@ -238,7 +246,7 @@ impl Package {
     pub fn new(
         original_content: String,
         original_schema: ManifestSchema,
-        manifest: Manifest,
+        manifest: Box<Manifest>,
         root: PathBuf,
         manifest_path: PathBuf,
     ) -> Self {
@@ -293,7 +301,7 @@ impl Package {
     }
 
     /// Transform into the underlying manifest.
-    pub fn into_manifest(self) -> Manifest {
+    pub fn into_manifest(self) -> Box<Manifest> {
         self.manifest
     }
 

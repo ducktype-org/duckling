@@ -12,7 +12,7 @@ use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::{PackageId, Source, Version, parse_manifest};
+use crate::quackpack::core::{FeatureName, PackageId, Source, Version, parse_manifest};
 use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
 use crate::quackpack::util::interned_url::InternedUrl;
@@ -529,7 +529,7 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
@@ -566,20 +566,16 @@ dependencies:
     assert_eq!(
         packages,
         gathered_info
-            .gathered_manifests
+            .packages_data
             .keys()
             .copied()
             .collect::<HashSet<PackageId>>()
     );
-    assert_eq!(
-        packages,
-        gathered_info
-            .possible_features
-            .keys()
-            .copied()
-            .collect::<HashSet<PackageId>>()
-    );
-    for (_, features) in gathered_info.possible_features {
+    for features in gathered_info
+        .packages_data
+        .values()
+        .map(|data| &data.requested_features)
+    {
         assert!(features.is_empty());
     }
     assert_eq!(
@@ -628,7 +624,7 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
@@ -691,7 +687,7 @@ features:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
@@ -705,7 +701,11 @@ features:
     let identity_xd = FullIdentity::new("xd".into(), FullOrigin::for_registry(url));
     let identity_dx = FullIdentity::new("dx".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (
                 PackageId::new(identity_root, root_version),
@@ -764,7 +764,7 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
@@ -791,7 +791,11 @@ dependencies:
         ])
     );
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (PackageId::new(identity_root, root_version), [].into()),
             (
@@ -834,7 +838,7 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
@@ -856,7 +860,11 @@ dependencies:
         ])
     );
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (PackageId::new(identity_root, root_version), [].into()),
             (
@@ -900,7 +908,7 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
     let git_access = MockGitAccess();
     let gatherer = Gatherer::new(&fetcher, &git_access);
     let gathered_info = block_on(gatherer.explore(
@@ -922,7 +930,11 @@ dependencies:
         ])
     );
     assert_eq!(
-        gathered_info.possible_features,
+        gathered_info
+            .packages_data
+            .into_iter()
+            .map(|(pkg, data)| (pkg, data.requested_features))
+            .collect::<HashMap<PackageId, HashSet<FeatureName>>>(),
         HashMap::from([
             (PackageId::new(identity_root, root_version), [].into()),
             (

@@ -106,6 +106,16 @@ namespace compiler::helios {
 				    .path       = { "containers" },
 				    .namespaces = { "stringification" },
 				    .element    = "stringifyStaticArray" } },
+				{ LanguagePrimitive::BoxAlloc,
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "boxAlloc" } },
+				{ LanguagePrimitive::BoxFree,
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "boxFree" } },
 			};
 			return paths;
 		}

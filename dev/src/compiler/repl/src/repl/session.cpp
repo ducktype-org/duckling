@@ -441,6 +441,15 @@ namespace compiler::repl {
 		initDVM();
 	}
 
+	ReplSession::~ReplSession() {
+		const auto teardown = vm::api::deinitOrKill(m_dvm_pid);
+		if (!teardown.has_value())
+			std::cerr << "Failed to teardown the DVM process: "
+					  << vm::api::errorToString(teardown.error()) << "\n";
+		else if (teardown->has_value() && !teardown->value())
+			std::cerr << "The DVM process failed its memory validation.\n";
+	}
+
 	ReplResult ReplSession::loadScriptFile(std::string_view file_path) {
 		auto trimmed_path = base::strTrim(file_path);
 		if (trimmed_path.empty())

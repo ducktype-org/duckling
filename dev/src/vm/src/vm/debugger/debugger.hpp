@@ -8,7 +8,7 @@
 #include <optional>
 
 namespace vm::debugger {
-	struct CodePosition: public api::response::CodePosition {
+	struct CodePosition final: public api::response::CodePosition {
 		base::Optional<dia::SourcePosition> mapped_position;
 	};
 
@@ -94,7 +94,9 @@ namespace vm::debugger {
 		 */
 		std::expected<void, api::ApiError> loadFiles(const std::vector<fs::File>& files);
 
-		std::expected<void, std::variant<api::ApiError, std::string>> loadDefault();
+		std::expected<void, std::variant<api::ApiError, std::string>> loadDefault(
+			base::Optional<fs::FilePath> prefix = std::nullopt
+		);
 
 		void setProgramArguments(const ProgramRunArguments& args);
 
@@ -155,14 +157,20 @@ namespace vm::debugger {
 
 		/**
 		 * @brief Execute one FatByteCode step in the VM
+		 *
+		 * @return The position the VM stopped at, or nothing when the step ended the program, or an
+		 * API error.
 		 */
-		std::expected<CodePosition, api::ApiError> step();
+		std::expected<base::Optional<CodePosition>, api::ApiError> step();
 
 		/**
 		 * @brief Execute multiple FatByteCode steps in the VM until next position in source file is
-		 * reached (or just steps if there is no mapping avaliable)
+		 * reached (or just steps if there is no mapping available)
+		 *
+		 * @return The position the VM stopped at, or nothing when the steps ended the program, or
+		 * an API error.
 		 */
-		std::expected<CodePosition, api::ApiError> mappedStep();
+		std::expected<base::Optional<CodePosition>, api::ApiError> mappedStep();
 
 		/**
 		 * @brief Send input to the VM

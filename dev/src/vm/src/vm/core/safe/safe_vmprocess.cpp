@@ -53,8 +53,7 @@ namespace vm {
 
 		if (code_result.has_value()) {
 			compiler.recompile();
-			loaded_program_copy.selfUpdate();
-			updateGlobalDataMemory(&loaded_program_copy);
+			updateGlobalDataMemory(loaded_program);
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -179,10 +178,10 @@ namespace vm {
 		variant_match(getProcessState()) {
 			variant_case(ps::Completed, completed) { return api::Response{ completed.exit_value }; }
 			variant_case(ps::Panicked, panicked) {
-				return std::unexpected(api::StateError{ panicked.err });
+				return std::unexpected(api::Panicked{ panicked.err });
 			}
 			variant_default {
-				return std::unexpected(api::StateError("Execution did not complete"));
+				return std::unexpected(api::OtherError("Execution did not complete"));
 			}
 		}
 		CORE_UNREACHABLE();
@@ -271,8 +270,7 @@ namespace vm {
 
 	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
 		  IVMProcess(my_pid),
-		  loaded_program(&loaded_program_copy),
-		  loaded_program_copy(compiler.getLowProgram()) {
+		  loaded_program(compiler.getLowProgram()) {
 		if (enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
 	}
@@ -324,13 +322,25 @@ namespace vm {
 		} catch (const exceptions::VMFoundMemoryLeakException&) {
 			return false;
 		} catch (const KillProcessException& e) {
-			return std::unexpected(api::ApiError{ api::OtherError{
+			return std::unexpected(api::ApiError{ api::Panicked{
 				base::strConcat("A global destructor was interrupted: ", e.what()) } });
 		} catch (const exceptions::VMRuntimeException& e) {
-			return std::unexpected(api::ApiError{ api::OtherError{
+			return std::unexpected(api::ApiError{ api::Panicked{
 				base::strConcat("The process could not be deinitialized: ", e.what()) } });
 		}
 		return memory.validateMemoryState();
+	}
+
+	std::expected<void, api::ApiError> SafeVMProcess::requestPauseOfVMThread(api::ThreadID thread_id
+	) {
+		std::unique_lock lock(api_lock);
+		auto             opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+
+		if (auto requested = opt_thread.value()->requestPause(); !requested.has_value())
+			return std::unexpected(api::ApiError{ api::PauseError{ requested.error() } });
+		return {};
 	}
 
 	std::expected<void, api::ApiError> SafeVMProcess::pauseVMThread(api::ThreadID thread_id) {
@@ -407,6 +417,10 @@ namespace vm {
 			if (!response)
 				return std::unexpected(api::ApiError{ api::OtherError{ response.error() } });
 
+			// `getCurrentPosition` only works in `Paused` state, so if this step ended the
+			// execution we return early.
+			if (ts::isTerminal(thread->getThreadState())) return {};
+
 			auto maybe_new_lp = thread->getCurrentPosition();
 			if (!maybe_new_lp) return std::unexpected(maybe_new_lp.error());
 			low_position = maybe_new_lp.value();
@@ -453,10 +467,23 @@ namespace vm {
 		return code_position;
 	}
 
-	void SafeVMProcess::waitForBreakpoint() {
-		(void) waitForProcessState([](const ProcessState& s) {
-			return v_matches(s, ps::Paused) || ps::isTerminal(s);
-		});
+	std::expected<api::Response, api::ApiError> SafeVMProcess::waitForBreakpointAndReportPosition(
+		api::ThreadID thread_id
+	) {
+		if (!getVMThreadByID(thread_id))
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+
+		const ts::ThreadState state
+			= state_manager.waitForThreadState(thread_id, [](const ts::ThreadState& s) {
+				  return v_matches(s, ts::Paused) || ts::isTerminal(s);
+			  });
+
+		if (!v_matches(state, ts::Paused))
+			return std::unexpected(api::ApiError{ api::StateError{ base::strConcat(
+				"Thread ", thread_id.asInt(), " reached a terminal state instead of a breakpoint"
+			) } });
+
+		return getVMThreadCurrentPosition(thread_id);
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::setExecutionConfig(
@@ -611,37 +638,8 @@ namespace vm {
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
 		std::unique_lock lock(api_lock);
-
-		// Try to obtain original function
-		auto maybe_original_function
-			= loaded_program_copy.getOriginalProgram()->getFunctions().atMaybe(function_name);
-		if (!maybe_original_function)
-			return std::unexpected(api::OtherError{ "setBreakpoint: Function does not exist" });
-		auto original_function = *maybe_original_function;
-
-		// Obtain function copy (should never fail)
-		auto function_copy = loaded_program_copy.getFunctions().at(function_name);
-
-		// Try to obtain micro index
-		if (original_function->instruction_mapping.size() <= instruction_index)
-			return std::unexpected(api::OtherError{ "setBreakpoint: Function too short" });
-		usize micro_instruction_index
-			= original_function->instruction_mapping[instruction_index].begin;
-
-		// Ensure micro index is in range (can happen when last FatBC instruction compiles to nothing)
-		if (original_function->bc.size() <= micro_instruction_index
-		    || function_copy->bc.size() <= micro_instruction_index)
-			return std::unexpected(api::OtherError{ "setBreakpoint: No code after breakpoint" });
-
-		auto new_opcode = enable
-		                    ? vm::low::MicroOpcode::breakpoint
-		                    : getInstructionOpcode(original_function->bc[micro_instruction_index]);
-
-		// Try to replace the opcode
-		auto maybe_old_opcode
-			= loaded_program_copy.replaceOpcode(function_name, micro_instruction_index, new_opcode);
-		if (!maybe_old_opcode) [[unlikely]]
-			return std::unexpected(api::OtherError{ "setBreakpoint: Failed to set breakpoint" });
+		auto response = compiler.setBreakpoint(function_name, instruction_index, enable);
+		if (!response) return std::unexpected(api::OtherError{ response.error() });
 
 		return api::response::Empty{};
 	}

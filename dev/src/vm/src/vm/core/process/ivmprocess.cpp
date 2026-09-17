@@ -11,6 +11,7 @@
 namespace vm {
 	namespace ps = process_state;
 	namespace pe = process_event;
+	namespace ts = thread_state;
 
 	IVMProcess::IVMProcess(const PID my_pid): my_pid(my_pid) {
 		state_manager.setOnStatusChangedCallback([this](const ProcessState& state) {
@@ -57,7 +58,12 @@ namespace vm {
 			}
 			variant_case_novalue(pe::Stop) {}
 			variant_case_novalue(pe::DeinitAndValidate) {
-				if (ps::isExecuting(state)) invalid_reason = "the process is still executing";
+				if (not ps::canDeinit(state)) {
+					invalid_reason
+						= ps::isExecuting(state)
+					        ? "the process is still executing"
+					        : "the previous run did not complete cleanly. Use `api::kill` instead";
+				}
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}
@@ -83,6 +89,36 @@ namespace vm {
 
 	api::ProcStatus IVMProcess::getStatus() { return toApiStatus(getProcessState()); }
 
+	std::vector<api::ThreadID> IVMProcess::pauseAllVMThreads() {
+		using ThreadState = thread_state::ThreadState;
+
+		std::vector<api::ThreadID> paused;
+		std::vector<api::ThreadID> awaited;
+
+		// First ask all threads to pause.
+		for (const api::ThreadID tid: getAllActiveThreadIDs()) {
+			const ThreadState state = state_manager.threadState(tid);
+			// Already paused.
+			if (v_matches(state, ts::Paused)) {
+				paused.push_back(tid);
+				continue;
+			}
+
+			// Thread can't be paused, so we skip it.
+			if (requestPauseOfVMThread(tid).has_value()) awaited.push_back(tid);
+		}
+
+		// Now wait for all threads that need awaiting to be paused.
+		for (const api::ThreadID tid: awaited) {
+			const ThreadState state
+				= state_manager.waitForThreadState(tid, [](const ThreadState& s) {
+					  return v_matches(s, ts::Paused) || ts::isTerminal(s);
+				  });
+			if (v_matches(state, ts::Paused)) paused.push_back(tid);
+		}
+		return paused;
+	}
+
 	ProcIO& IVMProcess::getIO() { return io; }
 
 	PID IVMProcess::getPID() const { return my_pid; }
@@ -99,30 +135,18 @@ namespace vm {
 		return std::unexpected(validation.error());
 
 		variant_match(request) {
-			variant_case(api::request::Run, run_request) {
-				VALIDATE_REQUEST(pe::Run{});
-				VALIDATE_RUN_ARGUMENTS("main", run_request.program_args);
-				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
-				return runFunction("main", run_request.program_args);
-			}
+#define HANDLE_RUN_CASE(REQUEST, FUN_NAME, CALLBACK, ARGS)                            \
+	variant_case(api::request::REQUEST, req) {                                        \
+		VALIDATE_REQUEST(pe::Run{});                                                  \
+		VALIDATE_RUN_ARGUMENTS(FUN_NAME, ARGS);                                       \
+		if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error()); \
+		return CALLBACK(FUN_NAME, ARGS);                                              \
+	}
 
-			variant_case(api::request::RunFunction, run_func_request) {
-				VALIDATE_REQUEST(pe::Run{});
-				VALIDATE_RUN_ARGUMENTS(run_func_request.func_name, run_func_request.func_args);
-				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
-				return runFunction(run_func_request.func_name, run_func_request.func_args);
-			}
-
-			variant_case(api::request::RunFunctionAwait, run_func_await_request) {
-				VALIDATE_REQUEST(pe::Run{});
-				VALIDATE_RUN_ARGUMENTS(
-					run_func_await_request.func_name, run_func_await_request.func_args
-				);
-				if (auto e = prepareRun(); !e.has_value()) return std::unexpected(e.error());
-				return runFunctionAwait(
-					run_func_await_request.func_name, run_func_await_request.func_args
-				);
-			}
+			HANDLE_RUN_CASE(Run, "main", runFunction, req.program_args);
+			HANDLE_RUN_CASE(RunAwait, "main", runFunctionAwait, req.program_args);
+			HANDLE_RUN_CASE(RunFunction, req.func_name, runFunction, req.func_args);
+			HANDLE_RUN_CASE(RunFunctionAwait, req.func_name, runFunctionAwait, req.func_args);
 
 			variant_case(api::request::Join, join_request) { return join(join_request.thread_id); }
 
@@ -134,6 +158,11 @@ namespace vm {
 				return getVMThreadCurrentPosition(pause_request.thread_id);
 			}
 
+			variant_case_novalue(api::request::PauseAll) {
+				// Per-thread operation. Its validity is decided by the target thread not the process.
+				return api::Response(api::response::ThreadIDs{ pauseAllVMThreads() });
+			}
+
 			variant_case(api::request::Resume, resume_request) {
 				// Per-thread operation. Its validity is decided by the target thread not the process.
 				auto response = resumeVMThread(resume_request.thread_id);
@@ -141,13 +170,19 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 
-			variant_case_novalue(api::request::Step) {
-				// Per-thread operation. Its validity is decided by the target thread not the
-				// process.
-				// @TODO: #2967 For now steps the main thread. This should be done per-thread as well.
-				auto response = stepVMThread(api::MAIN_THREAD_ID);
+			variant_case(api::request::Step, step_request) {
+				// Per-thread operation. Its validity is decided by the target thread not the process.
+				auto response = stepVMThread(step_request.thread_id);
 				if (!response) return std::unexpected(response.error());
-				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID);
+				// If this step finished the program.
+				if (ts::isTerminal(state_manager.threadState(step_request.thread_id)))
+					return api::Response(api::response::Empty());
+				return getVMThreadCurrentPosition(step_request.thread_id);
+			}
+
+			variant_case(api::request::WaitForBreakpoint, wait_request) {
+				// Per-thread operation. Its validity is decided by the target thread not the process.
+				return waitForBreakpointAndReportPosition(wait_request.thread_id);
 			}
 
 			variant_case_novalue(api::request::DeinitAndValidate) {
@@ -160,14 +195,6 @@ namespace vm {
 				return stop();
 			}
 
-			variant_case_novalue(api::request::WaitForBreakpoint) {
-				waitForBreakpoint();
-				if (!v_matches(getProcessState(), ps::Paused))
-					return std::unexpected(api::ApiError{
-						api::OtherError{ "Unexpected status response" } });
-
-				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID);
-			}
 
 			// The following are read-only and don't change the state.
 			variant_case(api::request::LoadFiles, load_request) {
@@ -245,6 +272,7 @@ namespace vm {
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 #undef VALIDATE_REQUEST
+#undef HANDLE_RUN_CASE
 		CORE_UNREACHABLE();
 	}
 

@@ -369,6 +369,11 @@ namespace compiler::helios::code {
 		case IntegerMul:
 		case IntegerDiv:
 		case IntegerMod:
+		case IntegerBitAnd:
+		case IntegerBitOr:
+		case IntegerBitXor:
+		case IntegerShl:
+		case IntegerShr:
 		case FloatAdd:
 		case FloatSub:
 		case FloatMul:
@@ -821,6 +826,7 @@ namespace compiler::helios::code {
 		switch (operation) {
 		case BuiltinUnary::IntegerNegation:
 		case BuiltinUnary::FloatNegation:
+		case BuiltinUnary::IntegerBitNot:
 		case BuiltinUnary::BooleanNot:
 		case BuiltinUnary::Ref:
 		case BuiltinUnary::Box:

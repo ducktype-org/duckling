@@ -1,7 +1,6 @@
-import sys
 from dap_client import DAPTestClient
 
-client = DAPTestClient(program_name="../examples/simple.dbc")
+client = DAPTestClient()
 
 try:
     in_seq = client.send_initialize()

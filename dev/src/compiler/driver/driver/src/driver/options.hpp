@@ -30,11 +30,13 @@ namespace compiler::driver {
 			// Debug dumping to file options
 			bool dump_llvm = false;
 			bool dump_asm  = false;
+			bool dump_dbc  = false;
 			bool dump_lir  = false;
 			bool dump_mir  = false;
 			bool dump_hir  = false;
 
 			// Debug printing to stdout options
+			bool print_dbc = false;
 			bool print_lir = false;
 			bool print_mir = false;
 			bool print_hir = false;
@@ -117,6 +119,11 @@ namespace compiler::driver {
 			 * @brief The libraries that needs to be loaded by the VM to run the code.
 			 */
 			std::vector<std::string> dvm_shared_libraries;
+
+			/**
+			 * @brief The paths of the DBC libraries to link into the output.
+			 */
+			std::vector<fs::FilePath> dvm_link_libraries;
 		};
 	}
 

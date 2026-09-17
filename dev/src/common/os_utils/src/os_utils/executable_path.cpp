@@ -1,15 +1,27 @@
-
 #include "executable_path.hpp"
 
+#include <base/config/target_info.hpp>
 #include <base/misc/int_conv.hpp>
 
 #include <array>
 #include <string>
 
+// Platform includes; the body chain below mirrors this ladder.
+#if BASE_TARGET_OS_WINDOWS
+	#include <windows.h>
+#elif BASE_TARGET_OS_MACOS
+	#include <mach-o/dyld.h>
+#elif BASE_TARGET_OS_LINUX
+	#include <unistd.h>
+
+	#include <climits>
+#else
+	#error "Unsupported target operating system."
+#endif
+
 namespace os_utils {
 
-#if defined(_WIN32)
-	#include <windows.h>
+#if BASE_TARGET_OS_WINDOWS
 
 	std::string getExecutablePathStr() {
 		std::array<char, MAX_PATH> buffer{};
@@ -20,8 +32,7 @@ namespace os_utils {
 		return std::string(buffer.data(), len);
 	}
 
-#elif defined(__APPLE__)
-	#include <mach-o/dyld.h>
+#elif BASE_TARGET_OS_MACOS
 
 	std::string getExecutablePathStr() {
 		std::array<char, 1'024> buffer{};
@@ -33,10 +44,7 @@ namespace os_utils {
 		return std::string(buffer.data());
 	}
 
-#else  // Linux
-	#include <unistd.h>
-
-	#include <climits>
+#elif BASE_TARGET_OS_LINUX
 
 	std::string getExecutablePathStr() {
 		std::array<char, PATH_MAX> buffer{};
@@ -48,6 +56,8 @@ namespace os_utils {
 		return { buffer.data() };
 	}
 
+#else
+	#error "Unsupported target operating system."
 #endif
 
 	fs::FilePath getExecutablePath() { return { getExecutablePathStr() }; }

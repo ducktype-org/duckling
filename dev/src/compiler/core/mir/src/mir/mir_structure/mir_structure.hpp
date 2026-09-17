@@ -51,6 +51,13 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerDiv,
 	IntegerMod,
 
+	IntegerBitAnd,
+    IntegerBitOr,
+    IntegerBitXor,
+    IntegerBitNot,
+    IntegerShl,
+    IntegerShr,
+
 	IntegerLt,    // Less than
 	IntegerGt,    // Greater than
 	IntegerLteq,  // Less than or equal to
@@ -785,6 +792,14 @@ namespace compiler::mir {
 		 * It has to be terminating instruction (branch, return, etc).
 		 */
 		Instruction terminator;
+
+		/**
+		 * @brief Human readable name telling what the block was generated for,
+		 * for example `if.then` or `while.cond`.
+		 * @note It is only used for debugging (it is printed by @ref Function::debugPrint) and
+		 * it is empty for blocks that were not given a name.
+		 */
+		base::Optional<base::StrID> debug_name;
 
 		[[nodiscard]]
 		ScopeRef beginScope() const;

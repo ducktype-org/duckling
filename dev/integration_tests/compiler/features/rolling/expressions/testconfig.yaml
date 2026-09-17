@@ -1,0 +1,139 @@
+# Expression tests
+
+Tests:
+  ternary:
+    Cases:
+      all:
+        Output:
+          String: "9\n9\n9\n18\n4\n2\n"
+
+  single_comparison: # Any type of comparison between two values.
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+
+  arithmetic:
+    Cases:
+      all:
+        Output:
+          String: "1\n1\n30\n200\n3\n2\n10\n7\n10\n-10\n"
+        ExitCode: 0
+
+  comparison_chain:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+
+  complex_operators:
+    Cases:
+      all:
+        # @TODO: #Uncomment 
+        backend: llvm
+        Output:
+          String: "9\n729\n0.137313\n0.167472\n7\n343\n15\n20\n"
+        ExitCode: 0
+
+  unit_simple:
+    Cases:
+      all:
+        Output:
+          String: "1\n1\n"
+        ExitCode: 0
+
+  unit_simple_multiple_modules:
+    Cases:
+      all:
+        Output:
+          String: "1\n1\n"
+        ExitCode: 0
+
+  casts:
+    Cases:
+      all:
+        Output:
+          String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n0\n"
+        ExitCode: 0
+
+  floating_point_arithmetic:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+
+  floating_point_comparisons:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+
+  unsigned_integers:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+
+  signed_integers:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+
+  float_32:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+
+  coercions:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+
+  no_output:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+
+  strings:
+    Cases:
+      all:
+        Input:
+          String: "Test"
+        Output:
+          String: "Test\nHello, world!\nab\nbcd\nHello, world!\n"
+
+  chars:
+    Cases:
+      all:
+        Input:
+          String: "Xd;"
+        Output:
+          String: "Enter a character: The provided character is uppercase.\nIts lowercase counterpart is: x\nEnter a character: The provided character is lowercase.\nIts uppercase counterpart is: D\nEnter a character: The provided character is not a letter.\n"
+          
+  short_circuit:
+    Description: Lazy evaluation of `and` / `or`, including chains of three operands.
+    Cases:
+      all:
+        Output:
+          String: "0\n1\n2\n0\n3\n1\n11\n12\n1\n21\n22\n0\n31\n32\n1\n"
+        ExitCode: 0
+
+  bitwise:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0

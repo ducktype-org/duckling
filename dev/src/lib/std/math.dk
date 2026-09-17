@@ -327,7 +327,58 @@ namespace impl {
 }
 
 namespace constants {
-#{
-    Mathematical constants.
-#}
+    #{
+        Mathematical constants.
+    #}
+    
+    # Ratio of a circle's circumference to its diameter and derived constants
+    const PI:             f64 = 3.141592653589793238462643;
+    const SQRT_PI:        f64 = 1.772453850905516027298167;
+    const FRAC_1_PI:      f64 = 0.3183098861837906715377675;
+    const FRAC_1_SQRT_PI: f64 = 0.5641895835477562869480795;
+
+    const FRAC_PI_2: f64 = 1.570796326794896619231322;
+    const FRAC_PI_3: f64 = 1.047197551196597746154214;
+    const FRAC_PI_4: f64 = 0.7853981633974483096156608;
+    const FRAC_PI_6: f64 = 0.5235987755982988730771072;
+    const FRAC_PI_8: f64 = 0.3926990816987241548078304;
+
+    const FRAC_1_SQRT_2PI: f64 = 0.3989422804014326779399461;
+    const FRAC_2_SQRT_PI:  f64 = 1.128379167095512573896159;
+
+    # Ratio of a circle's circumference to its radius
+    const TAU: f64 = 6.283185307179586476925287;
+
+    # Euler's number and derived constants
+    const E:         f64 = 2.718281828459045235360287;
+    const SQRT_E:    f64 = 1.648721270700128146848651;
+    const FRAC_1_E:  f64 = 0.3678794411714423215955238;
+    const LOG2_E:    f64 = 1.442695040888963407359925;
+    const LOG10_E:   f64 = 0.4342944819032518276511289;
+
+    # Euler–Mascheroni constant
+    const EGAMMA: f64 = 0.5772156649015328606065121;
+
+    # Golden ratio and derived constants
+    const PHI:         f64 = 1.618033988749894848204587;
+    const SQRT_PHI:    f64 = 1.272019649514068964252422;
+    const FRAC_1_PHI:  f64 = 0.6180339887498948482045868;
+    const LN_PHI:      f64 = 0.4812118250596034474977589;
+
+    # Radians and degrees conversion
+    const RAD_TO_DEG: f64 = 57.29577951308232087679815;
+    const DEG_TO_RAD: f64 = 0.01745329251994329576923691;
+
+    # Other
+    const LN_2:    f64 = 0.6931471805599453094172321;
+    const LN_10:   f64 = 2.302585092994045684017991;
+    const LOG2_10: f64 = 3.321928094887362347870319;
+
+    const SQRT2:        f64 = 1.414213562373095048801689;
+    const SQRT3:        f64 = 1.732050807568877293527446;
+    const SQRT5:        f64 = 2.236067977499789696409174;
+    const FRAC_1_SQRT2: f64 = 0.7071067811865475244008444;
+    const FRAC_1_SQRT3: f64 = 0.5773502691896257645091488;
+    const FRAC_1_SQRT5: f64 = 0.4472135954999579392818347;
 }
+

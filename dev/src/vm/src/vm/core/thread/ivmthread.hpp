@@ -166,6 +166,21 @@ namespace vm {
 		void breakActiveExecution();
 
 		/**
+		 * @brief Releases the GIL if it's taken.
+		 *
+		 * @note Used to release the GIL when this thread pauses, so others may go.
+		 */
+		virtual void releaseGilIfHeld() {}
+
+		/**
+		 * @brief Reacquires the GIL if it's not taken.
+		 *
+		 * @note Used to reacquire the GIL when this thread performs a `step`, `stop`, `resume` in
+		 * the debugger loop.
+		 */
+		virtual void acquireGilIfNotHeld() {}
+
+		/**
 		 * @brief Wakes this thread if it is blocked in `waitInterruptible` - i.e. re-evaluates
 		 * the condition it is waiting for without posting any control request.
 		 *
@@ -206,6 +221,12 @@ namespace vm {
 		 * @brief Main debug function that executes one step of the program.
 		 */
 		virtual void executeOneStep() = 0;
+
+		/**
+		 * @brief Returns true if the instruction the thread is paused on ends the execution (is an
+		 * MicroOpcode::Exit).
+		 */
+		[[nodiscard]] virtual bool isAtExecutionEnd() const = 0;
 
 		/**
 		 * @brief Calls `run` within a safe try-catch block, to catch any exceptions thrown by
