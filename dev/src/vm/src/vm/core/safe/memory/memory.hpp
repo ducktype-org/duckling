@@ -56,6 +56,16 @@ namespace vm {
 
 		base::StableObjectPool<BlockT, BlockID, true, true> blocks_pool;
 
+		/**
+		 * @brief Registers a block over `data` without touching the data itself.
+		 * @note Only for data that already holds a live value, see `adoptDummy`.
+		 */
+		[[nodiscard]]
+		Ref<BlockT> adoptBlock(BlockData<EntryT> data) {
+			auto id = blocks_pool.add(data);
+			return blocks_pool.get(id);
+		}
+
 		[[nodiscard]]
 		Ref<BlockT> createBlock(BlockData<EntryT> data) {
 			if constexpr (std::is_trivially_default_constructible_v<EntryT>)
@@ -63,8 +73,7 @@ namespace vm {
 			else
 				std::fill(data.view.getBegin(), data.view.getBegin() + data.view.size(), EntryT{});
 
-			auto id = blocks_pool.add(data);
-			return blocks_pool.get(id);
+			return adoptBlock(data);
 		}
 
 		[[nodiscard]]
@@ -208,13 +217,6 @@ namespace vm {
 		}
 
 		/**
-		 * @brief Executes destructors on a range of objects, that lay next to each other.
-		 */
-		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
-			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
-		}
-
-		/**
 		 * @brief Executes copy constructors on individual objects that are in the block.
 		 * @param block The block to source the data from.
 		 */
@@ -330,7 +332,7 @@ namespace vm {
 		 * somewhere else.
 		 */
 		void runObjectDestructor(base::TypedModRawView<EntryT> data, TypeCRef type)
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			switch (type->getKind()) {
 			case Type::Kind::Pointer: {
 				const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
@@ -362,7 +364,7 @@ namespace vm {
 		 * somewhere else.
 		 */
 		void runObjectCopyConstructor(base::TypedModRawView<EntryT> data, TypeCRef type)
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			switch (type->getKind()) {
 			case Type::Kind::Pointer: {
 				const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
@@ -387,6 +389,14 @@ namespace vm {
 		}
 
 	public:
+		/**
+		 * @brief Executes destructors on a range of objects, that lay next to each other.
+		 */
+		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type)
+			requires std::is_same_v<EntryT, byte> {
+			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
+		}
+
 		GenericMemory() = default;
 
 		// =================== Used by the process ===================
@@ -407,6 +417,11 @@ namespace vm {
 		 * @brief Frees all the global data
 		 */
 		void deinitGlobals();
+
+		/**
+		 * @brief Free left-over block data, so that VM does not leak memory :)
+		 */
+		void freeAllocatedBlockData();
 
 		struct GlobalBlocksConfig final {
 			std::vector<usize>    global_data_offsets;
@@ -521,6 +536,16 @@ namespace vm {
 		}
 
 		/**
+		 * @brief Like `allocateDummy`, but leaves the pointed data untouched.
+		 *
+		 * Used when a block is created for a local variable that was already initialized
+		 * without one - zeroing it would destroy the value it holds.
+		 */
+		auto adoptDummy(TypeCRef type, Ref<EntryT> data_pointer) -> Ref<BlockT> {
+			return adoptBlock(dummy_allocator.allocate(type, data_pointer));
+		}
+
+		/**
 		 * @brief Dynamically reallocates block data.
 		 * @note Assumes that type is a dynamic table type and reallocates it to
 		   a table of size n with elements of type equal to type's inner type.
@@ -550,7 +575,9 @@ namespace vm {
 			if (block->parent) {
 				block->deallocated = true;
 				decreaseBlockRefcount(block);
-			} else {
+			} else if (!block->deallocated) {
+				// Guarded: the opcodes refuse a second free, but internal paths can reach a block
+				// whose data is already gone, and the allocator deallocates unconditionally.
 				block->data.allocator->deallocate(&block->data);
 				block->deallocated = true;
 			}
@@ -640,6 +667,12 @@ namespace vm {
 			return block->data.element_type;
 		}
 
+		/// Whether the block's data has already been freed.
+		[[nodiscard]]
+		static bool isBlockDeallocated(Ref<BlockT> block) {
+			return block->deallocated;
+		}
+
 		// ======================== Pointers ========================
 
 		static void increaseBlockRefcount(Ref<BlockT> block) { block->refcount++; }
@@ -653,7 +686,7 @@ namespace vm {
 
 		[[nodiscard]]
 		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			increaseBlockRefcount(block);
 			return { block, offset };
 		}
@@ -661,7 +694,7 @@ namespace vm {
 		[[nodiscard]]
 		static constexpr
 			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 entry_count)
-				-> base::TypedModRawView<std::byte> requires std::is_same_v<EntryT, std::byte> {
+				-> base::TypedModRawView<byte> requires std::is_same_v<EntryT, byte> {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (pointer.offset + entry_count > pointer.block->data.view.size())
@@ -673,7 +706,7 @@ namespace vm {
 		[[nodiscard]]
 		static constexpr
 			__attribute__((always_inline)) auto getRemainingPointerData(Pointer pointer)
-				-> base::TypedModRawView<std::byte> requires std::is_same_v<EntryT, std::byte> {
+				-> base::TypedModRawView<byte> requires std::is_same_v<EntryT, byte> {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (pointer.offset > pointer.block->data.view.size())
@@ -688,7 +721,7 @@ namespace vm {
 		 * that it is the type of the blocks pointed-to by `dst` and `src`.
 		 */
 		auto copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
 			const usize entry_count = type->getSize().asInt();
@@ -720,13 +753,12 @@ namespace vm {
 			runDataCopyConstructors(dst_view, type);
 		}
 
-		auto destroyBlockReference(Pointer pointer) -> void
-			requires std::is_same_v<EntryT, std::byte> {
+		auto destroyBlockReference(Pointer pointer) -> void requires std::is_same_v<EntryT, byte> {
 			if_opt_some(pointer.block.toOpt(), block) { decreaseBlockRefcount(block); }
 		}
 
 		auto updatePointerAssignment(Pointer dst, Pointer src) -> Pointer
-			requires std::is_same_v<EntryT, std::byte> {
+			requires std::is_same_v<EntryT, byte> {
 			if (dst.block != src.block) {
 				destroyBlockReference(dst);
 				if_opt_some(src.block.toOpt(), block) { increaseBlockRefcount(block); }
@@ -753,12 +785,12 @@ namespace vm {
 		}
 	};
 
-	using Memory                   = GenericMemory<std::byte>;
-	using GlobalBufferPointersByte = GlobalBufferPointers<std::byte>;
+	using Memory                   = GenericMemory<byte>;
+	using GlobalBufferPointersByte = GlobalBufferPointers<byte>;
 
 	// The member specialization is defined in initialization_from_const.cpp. It must be declared
 	// here so it is visible in every TU before the explicit instantiation of
-	// GenericMemory<std::byte> (in memory.cpp) and any implicit instantiation ([temp.expl.spec]).
+	// GenericMemory<byte> (in memory.cpp) and any implicit instantiation ([temp.expl.spec]).
 	template<>
 	void Memory::initializeBlockFromConstValue(
 		Ref<Block> block, const code::ConstantValue& const_value
@@ -767,5 +799,5 @@ namespace vm {
 	// Suppress implicit instantiation in every TU that uses `Memory`; the members are emitted once
 	// by the explicit instantiation definition in memory.cpp. Must come after the member
 	// specialization declaration above.
-	extern template class GenericMemory<std::byte>;
+	extern template class GenericMemory<byte>;
 }

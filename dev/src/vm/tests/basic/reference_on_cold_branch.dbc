@@ -1,0 +1,30 @@
+# A local whose address is only taken on a path that is not executed.
+#
+# Blocks are created on demand, so `target`'s one is never created here - and the memory
+# validation at the end of the process still has to come out clean.
+
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
+	# arg0 -> argc
+	# arg1 -> *argv
+
+	init_pany_type		target, i64;
+	init_pany_type		ptr, ptr_i64;
+
+	mov_p64_imm			target, 42;
+
+	# Never taken.
+	cmpGt_p64_imm		target, 100;
+	jmpIfNot_label		Skip;
+		ref_pptr_pany	ptr, target;
+		store_pptr_pany	ptr, target;
+	label Skip;
+
+	output_p64			target;
+
+	deinit; # ptr
+	deinit; # target
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}
