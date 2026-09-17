@@ -120,7 +120,8 @@ namespace duck_ls {
 		);
 
 		/**
-		 * @brief Splices the client's changes into the buffer of an already open document.
+		 * @brief Applies the client's changes to the buffer of an already open document,
+		 * replacing each range they name with the text they carry.
 		 *
 		 * @return Bad when the URI names no file, when the document is not open, when the
 		 * version went backwards, or when a change named a range the buffer does not contain,

@@ -59,7 +59,7 @@ namespace duck_ls {
 		);
 
 		/**
-		 * @brief Splices the client's changes into the buffer and reparses what depended on it.
+		 * @brief Applies the client's changes to the buffer and reparses what depended on it.
 		 *
 		 * @return Bad when the document was not open, so nothing was recompiled.
 		 */

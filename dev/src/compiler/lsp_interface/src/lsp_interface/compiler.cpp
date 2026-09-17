@@ -19,7 +19,12 @@
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/external/api.hpp>
 
+#include <cctype>
+#include <functional>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
+#include <string>
 
 namespace duck_ls {
 
@@ -107,8 +112,22 @@ namespace duck_ls {
 		}
 	}
 
+	/**
+	 * @brief Create a package ID from the path of the package root.
+	 * 
+	 * @param package_root 
+	 * @return base::StrID 
+	 */
 	base::StrID packageIdForRoot(const fs::FilePath& package_root) {
-		return base::StrID(package_root.absolute().genericString());
+		std::string name;
+		for (const char c: package_root.name())
+			name += std::isalnum(static_cast<unsigned char>(c)) != 0 ? c : '_';
+
+		std::ostringstream id;
+		id << name << '_' << std::hex << std::setw(16) << std::setfill('0')
+		   << std::hash<std::string>{}(package_root.absolute().genericString());
+
+		return base::StrID(id.str());
 	}
 
 	Compiler::Compiler(base::Ref<ServerSession> session, base::Ref<FilesCache> files):

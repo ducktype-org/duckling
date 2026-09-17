@@ -1,6 +1,5 @@
 #include <frontend/module_tree/module_flags/module_flags.hpp>
-#include <lsp/io/socket.h>
-#include <lsp/io/standard_io.h>
+#include <lsp/io/stream.h>
 #include <lsp_interface/compiler.hpp>
 #include <lsp_interface/files_cache.hpp>
 #include <lsp_interface/server_session.hpp>
@@ -9,13 +8,71 @@
 #include <clah/clah.hpp>
 #include <clah/clah_class.hpp>
 #include <clah/param_builder.hpp>
-#include <clah/value_parser.hpp>
 #include <init/init.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
 
+#include <unistd.h>
+
+#include <cerrno>
+#include <cstdio>
+#include <cstring>
 #include <iostream>
 
 namespace {
+
+	/**
+	 * @brief The protocol channel: reads from stdin, writes to a private handle on stdout.
+	 *
+	 * `lsp::io::standardIO()` writes through `stdout` itself, which is the one thing that must
+	 * stop carrying the protocol, so the stream is built here instead.
+	 */
+	class ProtocolStream final: public lsp::io::Stream {
+	public:
+		explicit ProtocolStream(FILE* out): out(out) {}
+
+		void read(char* buffer, std::size_t size) override {
+			if (std::fread(buffer, size, 1, stdin) < 1 && std::ferror(stdin) != 0)
+				throw lsp::io::Error(std::strerror(errno));
+		}
+
+		void write(const char* buffer, std::size_t size) override {
+			if (std::fwrite(buffer, size, 1, out) < 1) throw lsp::io::Error(std::strerror(errno));
+			std::fflush(out);
+		}
+
+	private:
+		FILE* out;
+	};
+
+	/**
+	 * @brief Takes stdout away from the rest of the program and points it at stderr.
+	 *
+	 * The protocol shares stdout with every `printf` and `std::cout` linked into this binary,
+	 * and a single stray line corrupts the framing for the rest of the session. Claiming the
+	 * descriptor before anything can write to it turns that whole class of bug into a log line.
+	 *
+	 * @return The handle the protocol writes to. On failure stdout is left exactly as it was and
+	 * returned unchanged, so the server still runs with the original risk rather than not at all.
+	 */
+	FILE* claimStdout() {
+		const int protocol_fd = dup(STDOUT_FILENO);
+		if (protocol_fd < 0) return stdout;
+
+		FILE* protocol_out = fdopen(protocol_fd, "wb");
+		if (protocol_out == nullptr) {
+			close(protocol_fd);
+			return stdout;
+		}
+
+		std::fflush(stdout);
+
+		if (dup2(STDERR_FILENO, STDOUT_FILENO) < 0) {
+			std::fclose(protocol_out);
+			return stdout;
+		}
+
+		return protocol_out;
+	}
 
 	/**
 	 * @brief Serves one client over `stream` until it disconnects.
@@ -40,23 +97,6 @@ namespace {
 		return 0;
 	}
 
-	/**
-	 * @brief Waits on localhost for the one client this server is started for.
-	 *
-	 * A language server instance belongs to a single client, so the listener is closed as soon
-	 * as that client is accepted rather than kept open for more.
-	 */
-	int serveOverSocket(u16 port) {
-		lsp::io::SocketListener listener(port);
-		std::cerr << "duck_ls: listening on " << lsp::io::Socket::Localhost << ":"
-				  << listener.port() << "\n";
-
-		auto socket = listener.accept();
-		listener.close();
-
-		return serve(socket.stream());
-	}
-
 	clah::Clah getDuckLsClah() {
 		return clah::Clah("duck_ls", "The Duckling language server.")
 		    .add(clah::ParamBuilder::ofFlag()
@@ -68,9 +108,10 @@ namespace {
 		             .addLongName("version-verbose")
 		             .addShortDesc("Print version together with build information and exit")
 		             .build())
-		    .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
-		             .addLongName("socket")
-		             .addShortDesc("Serve one client on 127.0.0.1:<port> instead of stdio.")
+		    .add(clah::ParamBuilder::ofFlag()
+		             .addLongName("stdio")
+		             .addShortDesc("Serve on stdio. The only transport, accepted for the clients "
+		                           "that pass it explicitly.")
 		             .build())
 		    .setPreHandler([](const clah::ParsingResult& options) {
 				if (options.isFlag("version-verbose")) {
@@ -82,27 +123,12 @@ namespace {
 					throw clah::exceptions::SuccessExitException(options);
 				}
 			})
-		    .addCustomVerification(
-				[](const clah::ParsingResult& options) -> clah::VerificationResult {
-					auto port = options.getValue<i64>("socket");
-					if (port.empty()) return {};
-
-					if (port.value() < 1 || port.value() > 65'535)
-						return std::unexpected<std::string>(
-							"--socket must name a port between 1 and 65535"
-						);
-
-					return {};
-				}
-			)
-		    .setHandler([](const clah::ParsingResult& options) -> int {
+		    .setHandler([](const clah::ParsingResult&) -> int {
 				query::setTrackReverseGraph(true);
 				compiler::frontend::use_module_modifier_remove = true;
 
-				auto port = options.getValue<i64>("socket");
-				if (port.empty()) return serve(lsp::io::standardIO());
-
-				return serveOverSocket(static_cast<u16>(port.value()));
+				ProtocolStream stream(claimStdout());
+				return serve(stream);
 			});
 	}
 

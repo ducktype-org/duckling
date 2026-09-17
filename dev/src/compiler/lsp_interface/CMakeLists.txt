@@ -10,5 +10,6 @@ make_module(LspInterface USES Base Init Lexer PstParser Clah Version HELIOS Quer
 add_executable(duck_ls src/lsp_interface/main.cpp)
 target_link_libraries(duck_ls PUBLIC LspInterface)
 
+duck_add_test(compiler lsp_files_cache tests/lsp_files_cache_test.cpp USES LspInterface)
 duck_add_test(compiler lsp_server tests/lsp_server_test.cpp USES LspInterface)
 duck_add_test(compiler lsp_session tests/lsp_session_test.cpp USES LspInterface)

@@ -1,7 +1,7 @@
 /**
  * @file export_keywords.hpp
  * @brief LSP Interface
- * @note currently unused
+ * @note Currently unused.
  */
 
 #pragma once

@@ -1,7 +1,7 @@
 /**
  * @file go_to_definition.hpp
  * @brief Go to definition definition
- * @note currently unused
+ * @note Currently unused.
  */
 
 #pragma once
