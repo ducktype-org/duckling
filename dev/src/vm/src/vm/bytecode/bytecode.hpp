@@ -16,7 +16,7 @@ namespace vm::code {
 	 * @brief Represents an identifier (e.g. symbol name) as string with ElementBase
 	 * (SourcePosition).
 	 */
-	struct Identifier: ElementBase {
+	struct Identifier final: ElementBase {
 		Identifier() = default;
 
 		Identifier(base::StrID str): str(str) {}

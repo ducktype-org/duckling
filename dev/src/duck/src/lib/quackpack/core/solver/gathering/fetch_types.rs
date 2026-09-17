@@ -61,6 +61,13 @@ impl ManifestsRequest {
             features,
         })
     }
+
+    pub fn request_identifier(&self) -> RequestIdentifier {
+        match self {
+            Self::Pinned(pinned_request) => pinned_request.id,
+            Self::NotPinned(not_pinned_request) => not_pinned_request.id,
+        }
+    }
 }
 
 /// Type representing non-error results of a fetch.

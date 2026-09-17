@@ -1,0 +1,20 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} -C foo add bar --local=../bar
+  echo "    conditions:
+        package-features: [undeclared]" >> foo/quackconfig.yaml
+
+Tests:
+  nonexistent-features:
+    Description: checks "nonexistent_features" lint
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          String: |+
+            warning: dependency \`bar\` is disabled, because it is conditioned only on nonexistent features [always_false_conditions]
+            error: dependency \`bar\` is conditioned on a nonexistent feature \`undeclared\` [nonexistent_features]
+            error: emitted 1 error

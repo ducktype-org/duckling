@@ -55,7 +55,7 @@ namespace vm {
 	 * own chunk. It also behaves like a stack, but can be moved forward by many bytes, so
 	 * `local_stack_top` is kept to remember where the top of the stack currently is.
 	 */
-	struct RuntimeData {
+	struct RuntimeData final {
 		Frame* frame_stack_base;     /// Pointer to the first frame from `frame_stack` vector.
 		Frame* frame_stack_end;      /// Pointer to the first value not allocated.
 		Frame* frame_stack_current;  /// Pointer to the current frame - used only when debugging.
@@ -134,7 +134,7 @@ namespace vm {
 		/**
 		 * @brief RAII object guaranteeing the release of the GIL lock.
 		 */
-		struct ScopedGilGuard {
+		struct ScopedGilGuard final {
 			SafeVMThread& thread;
 			explicit ScopedGilGuard(SafeVMThread& t);
 			ScopedGilGuard(const ScopedGilGuard&)            = delete;
@@ -149,7 +149,7 @@ namespace vm {
 		 *
 		 * @note The thread must be `Running` when the guard is created.
 		 */
-		struct ScopedBlockingWait {
+		struct ScopedBlockingWait final {
 			SafeVMThread& thread;
 			explicit ScopedBlockingWait(SafeVMThread& t);
 			ScopedBlockingWait(const ScopedBlockingWait&)            = delete;

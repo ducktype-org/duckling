@@ -26,7 +26,7 @@ namespace vm {
 	 * @brief One local variable slot: what the variable is, where it lives, and its block once
 	 * something refers to the variable through one.
 	 */
-	struct LocalSlot {
+	struct LocalSlot final {
 		const Type* type = nullptr;
 		/// Absolute, so that a slot shared with the caller reads alike from both frames.
 		byte* data = nullptr;
@@ -35,7 +35,7 @@ namespace vm {
 		Block* block = nullptr;
 	};
 
-	struct FlagData {
+	struct FlagData final {
 		// CRITICAL: Field flag must be defined first due to rules of field accessing in LLVM (used
 		// for JIT purposes)
 		bool flag;
@@ -46,7 +46,7 @@ namespace vm {
 	 *
 	 * It stores the state of the one function call during the program execution.
 	 */
-	struct Frame {
+	struct Frame final {
 		// CRITICAL: Field flags must be defined first due to rules of field accessing in LLVM (used
 		// for JIT purposes)
 		FlagData flags{};

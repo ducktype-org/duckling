@@ -15,7 +15,7 @@ namespace vm::exceptions {
 	};
 
 #define VM_RUNTIME_EXCEPTION(name, msg)                     \
-	struct name: public VMRuntimeException {                \
+	struct name final: public VMRuntimeException {          \
 		constexpr static std::string_view ERR_MSG = msg;    \
 		name(): VMRuntimeException(std::string(ERR_MSG)) {} \
 	}
@@ -41,7 +41,7 @@ namespace vm::exceptions {
 	);
 
 #define VM_RUNTIME_EXCEPTION_WITH_PARAM(name, msg, type)                 \
-	struct name: public VMRuntimeException {                             \
+	struct name final: public VMRuntimeException {                       \
 		type                              value;                         \
 		constexpr static std::string_view ERR_MSG = msg;                 \
 		name(const type& value):                                         \

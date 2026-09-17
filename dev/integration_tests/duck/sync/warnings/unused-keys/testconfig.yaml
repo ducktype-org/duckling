@@ -11,11 +11,13 @@ Tests:
     Cases:
       sync:
         test-cmd: duck -C foo sync
+        Err:
+          String: |+
+            warning: the key \`metadata.unused-under-metadata\` is unused
+            warning: the key \`unused-top-level\` is unused
         Output:
           Run: |+
-            echo "warning: the key \`metadata.unused-under-metadata\` is unused
-            warning: the key \`unused-top-level\` is unused
-            info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine

@@ -1,6 +1,5 @@
 //! Required features of a dependency.
 use super::Conditions;
-use crate::QuackError;
 use crate::quackpack::core::FeatureName;
 use crate::quackpack::schemas::{OneEntryMap, registry};
 
@@ -30,18 +29,21 @@ impl DependencyFeature {
             .as_ref()
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
     }
+
+    /// Get the [`Conditions`] of this feature.
+    pub fn conditions(&self) -> Option<&Conditions> {
+        self.conditions.as_ref()
+    }
 }
 
-impl TryFrom<registry::DependencyFeature> for DependencyFeature {
-    type Error = QuackError;
-
-    fn try_from(value: registry::DependencyFeature) -> Result<Self, Self::Error> {
+impl From<registry::DependencyFeature> for DependencyFeature {
+    fn from(value: registry::DependencyFeature) -> Self {
         match value {
-            registry::DependencyFeature::Simple(name) => Ok(Self::new(name.into(), None)),
+            registry::DependencyFeature::Simple(name) => Self::new(name.into(), None),
             registry::DependencyFeature::Detailed(OneEntryMap {
                 key: name,
                 value: conditions,
-            }) => Ok(Self::new(name.into(), Some(conditions.try_into()?))),
+            }) => Self::new(name.into(), Some(conditions.into())),
         }
     }
 }

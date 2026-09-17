@@ -1,5 +1,0 @@
-# Three simple errors, to test parsing error recovery.
-
-if;
-while if;
-if 3 {while};

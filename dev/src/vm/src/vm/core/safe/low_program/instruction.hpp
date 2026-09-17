@@ -100,5 +100,5 @@ namespace vm {
 	 * @brief For main purposes only.
 	 * Returns human-readable instruction config.
 	 */
-	std::string getInstructionConfig();
+	std::string_view getInstructionConfig();
 }

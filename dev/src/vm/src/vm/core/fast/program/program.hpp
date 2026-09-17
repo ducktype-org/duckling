@@ -7,7 +7,7 @@
 
 namespace vm::fast {
 
-	struct ExternCFunction {
+	struct ExternCFunction final {
 		base::StrID name;
 		void (*function_pointer)(byte*, byte*) = nullptr;
 		Bytes                    parameter_size_sum;
@@ -15,7 +15,7 @@ namespace vm::fast {
 		base::Optional<TypeCRef> result_type;
 	};
 
-	struct FunctionInfo {
+	struct FunctionInfo final {
 		base::StrID name;
 		FunctionID  id;
 
@@ -26,7 +26,7 @@ namespace vm::fast {
 		std::vector<TypeID> return_types;
 	};
 
-	struct GlobalData {
+	struct GlobalData final {
 		/// The name of the global variable.
 		base::StrID name;
 		/// The type of the global variable.
@@ -41,7 +41,7 @@ namespace vm::fast {
 	 * @note Relocated representation contains pointers to this structure, so after modifications it
 	 * has to be re-relocated.
 	 */
-	struct ProgramBase {
+	struct ProgramBase final {
 		ObjIdNameMap<GlobalData, GlobalDataID> global_data{};
 		TypeCollection                         types{};
 		ObjIdNameMap<ExternCFunction>          extern_c_functions{};

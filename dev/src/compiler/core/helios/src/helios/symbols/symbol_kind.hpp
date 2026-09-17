@@ -42,4 +42,16 @@ namespace compiler::helios {
 			return false;
 		}
 	}
+
+	[[nodiscard]] inline bool isClassMember(SymbolKind kind) {
+		switch (kind) {
+		case SymbolKind::Method:
+		case SymbolKind::Field:
+		case SymbolKind::Constructor:
+		case SymbolKind::Destructor:
+			return true;
+		default:
+			return false;
+		}
+	}
 }

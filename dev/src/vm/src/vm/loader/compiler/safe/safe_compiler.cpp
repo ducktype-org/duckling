@@ -19,7 +19,7 @@ namespace vm::loader::compiler::safe {
 
 #define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...)                                   \
 	template<FAMILY_CONCEPT ToType>                                                                  \
-	struct LowerArgumentImpl<ToType> {                                                               \
+	struct LowerArgumentImpl<ToType> final {                                                         \
 		template<opargs::ArgumentType FromType>                                                      \
 		static u64 lower(                                                                            \
 			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
@@ -34,7 +34,7 @@ namespace vm::loader::compiler::safe {
 
 #define DEFINE_LOWER_ARGUMENT_IMPL(LOW_TO_TYPE, HIGH_FROM_TYPE, ...)                                 \
 	template<>                                                                                       \
-	struct LowerArgumentImpl<LOW_TO_TYPE> {                                                          \
+	struct LowerArgumentImpl<LOW_TO_TYPE> final {                                                    \
 		static u64 lower(                                                                            \
 			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \

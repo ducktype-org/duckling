@@ -23,9 +23,9 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
-#include <os_utils/exec_self.hpp>
 #include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
+#include <version/version.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/ranges_utils.hpp>
@@ -42,6 +42,7 @@
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
 #include <logger/logger.hpp>
+#include <os_utils/exec_self.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -50,6 +51,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <iostream>
 #include <ranges>
@@ -106,12 +108,28 @@ namespace {
 	}
 }
 
+/**
+ * @brief The version facts only duckc can report.
+ */
+constexpr std::array<version::ExtraField, 2> DUCKC_VERSION_FIELDS{
+	version::ExtraField{ "LLVM", DUCKC_LLVM_VERSION },
+#ifdef ENABLE_JIT
+	version::ExtraField{ "JIT", "enabled" },
+#else
+	version::ExtraField{ "JIT", "disabled" },
+#endif
+};
+
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
 	             .addShortDesc("Print version and exit")
+	             .build())
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addLongName("version-verbose")
+	             .addShortDesc("Print version together with build information and exit")
 	             .build())
 	    // Note that dev-logs options are not handled in pre-handler below,
 	    // they should be handled in each command by debug_options::getDebugOptionsFromClah and
@@ -123,8 +141,12 @@ clah::Clah getStandardDucklingOptions() {
 	             .addShortDesc("Enable developer logs for given categories.")
 	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
+			if (options.isFlag("version-verbose")) {
+				std::cout << version::renderVerbose("duckc", DUCKC_VERSION_FIELDS) << '\n';
+				throw clah::exceptions::SuccessExitException(options);
+			}
 			if (options.isFlag("version")) {
-				std::cout << "Duckling version: 0.0.1 pre-alpha\n";
+				std::cout << version::renderShort("duckc") << '\n';
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		});
@@ -306,14 +328,15 @@ namespace debug_options {
 	auto getDebugDumpIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
 		static base::HashMap<std::string, bool DebugOptions::*> dump_field_mapping{
 			{ "asm", &DebugOptions::dump_asm }, { "llvm", &DebugOptions::dump_llvm },
-			{ "lir", &DebugOptions::dump_lir }, { "mir", &DebugOptions::dump_mir },
-			{ "hir", &DebugOptions::dump_hir },
+			{ "dbc", &DebugOptions::dump_dbc }, { "lir", &DebugOptions::dump_lir },
+			{ "mir", &DebugOptions::dump_mir }, { "hir", &DebugOptions::dump_hir },
 		};
 		return dump_field_mapping;
 	}
 
 	auto getDebugPrintIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
 		static base::HashMap<std::string, bool DebugOptions::*> print_field_mapping{
+			{ "dbc", &DebugOptions::print_dbc },
 			{ "lir", &DebugOptions::print_lir },
 			{ "mir", &DebugOptions::print_mir },
 			{ "hir", &DebugOptions::print_hir },
@@ -337,7 +360,8 @@ namespace debug_options {
 										))
 				.addLongName("dump-ir")
 				.addShortDesc("Dump to file the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: asm, llvm, lir, mir, hir.")
+				.addLongDesc("Possible values are: asm, llvm, dbc, lir, mir, hir.\nNote: dbc "
+			                 "requires --dvm-backend.")
 				.build(),
 			clah::ParamBuilder::ofValue(clah::CategoryListParser::make(
 											"categories",
@@ -345,7 +369,7 @@ namespace debug_options {
 										))
 				.addLongName("print-ir")
 				.addShortDesc("Print to stdout the comma separated intermediate representations.")
-				.addLongDesc("Possible values are: lir, mir, hir.")
+				.addLongDesc("Possible values are: dbc, lir, mir, hir.")
 				.build(),
 		};
 	}

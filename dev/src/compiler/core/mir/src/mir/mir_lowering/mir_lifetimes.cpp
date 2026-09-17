@@ -370,6 +370,7 @@ namespace compiler::mir {
 								.id           = new_block_id,
 								.instructions = std::move(new_block_instructions),
 								.terminator   = std::move(new_block_terminator),
+								.debug_name   = base::StrID("scope_end.destructors"),
 							}
 						);
 

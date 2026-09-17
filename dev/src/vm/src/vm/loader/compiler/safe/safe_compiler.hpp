@@ -16,7 +16,7 @@ namespace vm::loader::compiler::safe {
 		/**
 		 * @brief Stores the shared, global state required for the entire compilation process.
 		 */
-		struct SafeProgramCompilationContext {
+		struct SafeProgramCompilationContext final {
 			/**
 			 * @brief A mapping from a method's string name (`StrID`) to its unique numeric ID.
 			 * This is a crucial lookup table used during the instruction lowering phase to
