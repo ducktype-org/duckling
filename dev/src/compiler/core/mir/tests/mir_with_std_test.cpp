@@ -317,73 +317,56 @@ private:
 	 *       bounds check whose `panic` is a standard-library language primitive.
 	 */
 	void generatedLocalShadowingTest() {
-		namespace test_utils = compiler::mir::test_utils;
-
-		constexpr std::string_view MODULE_HEAD = R"(fun main() -> i64 = {
+		// Declared in the loop body and left unused.
+		checkUserAndGeneratedLocalShareName(
+			R"(fun main() -> i64 = {
     var coll: i64[10];
     var sum: i64 = 0;
-)";
-		constexpr std::string_view LOOP_HEAD   = R"(    for (x in coll) {
-)";
-		constexpr std::string_view MODULE_TAIL = R"(        sum = sum + x;
+    for (x in coll) {
+        let __index: i64 = 20;
+        sum = sum + x;
     }
     return sum;
-})";
-
-		const std::string probe
-			= std::string(MODULE_HEAD) + std::string(LOOP_HEAD) + std::string(MODULE_TAIL);
-
-		std::string generated_name;
-		test_utils::checkLoweredModule(
-			probe,
-			[&](query::Context&, const compiler::mir::MIRUnit& unit) {
-				for (const auto& local: test_utils::functionOfUnit(unit, "main")->local_list) {
-					if (local.helios_id.empty()) continue;
-
-					const auto name = compiler::helios::name(*local.helios_id);
-					if (not name.strView().starts_with("__index")) continue;
-
-					generated_name = name.str();
-					ASSERT_TRUE(!compiler::helios::maybeSymbolPst(*local.helios_id).has_value());
-				}
-			}
+})",
+			"__index"
 		);
-		ASSERT_TRUE(!generated_name.empty());
 
-		// Declared in the loop body, then the same with the variable actually read.
-		const std::string shadowing = std::string(MODULE_HEAD) + std::string(LOOP_HEAD)
-		                            + "        let " + generated_name + ": i64 = 20;\n"
-		                            + std::string(MODULE_TAIL);
-		test_utils::checkLoweredModule(
-			shadowing, [](query::Context&, const compiler::mir::MIRUnit&) {}
+		// The same, with the user's variable actually read.
+		checkUserAndGeneratedLocalShareName(
+			R"(fun main() -> i64 = {
+    var coll: i64[10];
+    var sum: i64 = 0;
+    for (x in coll) {
+        let __index: i64 = 20;
+        sum = sum + __index;
+    }
+    return sum;
+})",
+			"__index"
 		);
-		assertUserAndGeneratedLocalShareName(shadowing, generated_name);
-
-		const std::string used = std::string(MODULE_HEAD) + std::string(LOOP_HEAD) + "        let "
-		                       + generated_name + ": i64 = 20;\n        sum = sum + "
-		                       + generated_name + ";\n" + std::string(MODULE_TAIL);
-		test_utils::checkLoweredModule(used, [](query::Context&, const compiler::mir::MIRUnit&) {});
-		assertUserAndGeneratedLocalShareName(used, generated_name);
 
 		// Mirror direction: the generated local shadows a user variable of the enclosing scope,
 		// which is read after the loop, where only it is in scope.
-		const std::string shadowed = std::string(MODULE_HEAD) + "    var " + generated_name
-		                           + ": i64 = 7;\n" + std::string(LOOP_HEAD)
-		                           + "        sum = sum + x;\n    }\n    return sum + "
-		                           + generated_name + ";\n}";
-		test_utils::checkLoweredModule(
-			shadowed, [](query::Context&, const compiler::mir::MIRUnit&) {}
+		checkUserAndGeneratedLocalShareName(
+			R"(fun main() -> i64 = {
+    var coll: i64[10];
+    var sum: i64 = 0;
+    var __index: i64 = 7;
+    for (x in coll) {
+        sum = sum + x;
+    }
+    return sum + __index;
+})",
+			"__index"
 		);
-		assertUserAndGeneratedLocalShareName(shadowed, generated_name);
 	}
 
 	/**
-	 * @brief Guards the checks above: the module has to contain a user and a generated local that
-	 *        share `name`, so that they cannot silently stop testing a collision.
+	 * @brief Lowers `module_content`, which has to compile without errors, and asserts that a user
+	 *        and a generated local share `name`, so that a test cannot silently stop testing a
+	 *        collision.
 	 */
-	void assertUserAndGeneratedLocalShareName(
-		std::string_view module_content, std::string_view name
-	) {
+	void checkUserAndGeneratedLocalShareName(std::string_view module_content, std::string_view name) {
 		namespace test_utils = compiler::mir::test_utils;
 
 		test_utils::checkLoweredModule(

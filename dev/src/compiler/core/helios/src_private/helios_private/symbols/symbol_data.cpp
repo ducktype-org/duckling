@@ -116,9 +116,7 @@ namespace compiler::helios {
 		const base::StrID name, defgen::GeneratedSymbolDataVariant generated_data
 	) {
 		SymbolKind kind{};
-		// Desugaring locals end up in a scope the user can look into, where a user variable spelled
-		// the same way would resolve to them instead of to itself.
-		bool ignored_by_lookup = false;
+		bool       ignored_by_lookup = false;
 		variant_match(generated_data) {
 			variant_case_novalue(defgen::BuiltinOperator) {
 				kind = SymbolKind::FunctionDeclaration;
