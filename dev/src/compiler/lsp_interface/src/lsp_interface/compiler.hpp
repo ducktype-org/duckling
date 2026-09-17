@@ -55,10 +55,7 @@ namespace duck_ls {
 		 * @brief Makes the document resolve to the editor's buffer instead of its own content.
 		 */
 		virtual void openDocument(
-			const lsp::Uri&  uri,
-			std::string_view language_id,
-			i32              version,
-			std::string_view text
+			const lsp::Uri& uri, std::string_view language_id, i32 version, std::string_view text
 		);
 
 		/**

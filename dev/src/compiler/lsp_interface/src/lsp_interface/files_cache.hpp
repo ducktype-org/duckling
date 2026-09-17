@@ -116,10 +116,7 @@ namespace duck_ls {
 		 * @return The cache path the buffer was created at, or empty when the URI is unsupported.
 		 */
 		base::Optional<fs::FilePath> openDocument(
-			const lsp::Uri&  uri,
-			std::string_view language_id,
-			i32              version,
-			std::string_view text
+			const lsp::Uri& uri, std::string_view language_id, i32 version, std::string_view text
 		);
 
 		/**
@@ -148,7 +145,7 @@ namespace duck_ls {
 		base::Optional<base::Ref<OpenDocument>> find(const fs::FilePath& cache_path);
 
 	private:
-		/// Test only, if set, the FilesCache teats this fs::VFS like the physical one. 
+		/// Test only, if set, the FilesCache teats this fs::VFS like the physical one.
 		base::Optional<base::Ref<fs::VFS>>             source_vfs;
 		fs::VFS                                        cache_vfs;
 		std::unordered_map<fs::FilePath, OpenDocument> documents;

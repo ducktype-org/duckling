@@ -521,8 +521,7 @@ namespace lsp {
 		return getSemanticTokens(std::vector{ file });
 	}
 
-	std::string getSemanticTokens(
-		const std::vector<base::Ref<compiler::frontend::SourceFile>>& files
+	std::string getSemanticTokens(const std::vector<base::Ref<compiler::frontend::SourceFile>>& files
 	) {
 		std::vector<SemanticToken> tokens;
 		for (auto& file: files) {

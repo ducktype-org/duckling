@@ -54,15 +54,14 @@ namespace duck_ls {
 			return module;
 		}
 
-		base::Optional<base::CRef<ModuleTree>> findPackageOf(const fs::File& file) {
+		base::Optional<base::CRef<ModuleTree>> findLoadedPackageOf(const fs::File& file) {
 			auto source_files = SourceFile::getSourceFilesFromFile(file);
 			if (source_files.empty()) return {};
 
 			return getRootModule(source_files.back()->getModule().illegalAccess().getID());
 		}
 
-		dia::CodeLocation updatePositionWithHashCodeLocation(
-			dia::HashCodeLocation hash_code_location
+		dia::CodeLocation updatePositionWithHashCodeLocation(dia::HashCodeLocation hash_code_location
 		) {
 			dia::StablePosition stable_position(
 				pst::LangElement::getActiveSourcePosition,
@@ -206,8 +205,8 @@ namespace duck_ls {
 			return;
 		}
 
-		auto source_file = fs::File(source);
-		auto module_ref_opt  = findModuleForFile(source_file);
+		auto source_file    = fs::File(source);
+		auto module_ref_opt = findModuleForFile(source_file);
 
 		if_opt_some(module_ref_opt, module_ref) {
 			swapMainSourceFile(module_ref, source_file, fs::File(cache_path.value()));
@@ -288,7 +287,7 @@ namespace duck_ls {
 
 		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> published;
 
-		if_opt_some(findPackageOf(file), root_module) {
+		if_opt_some(findLoadedPackageOf(file), root_module) {
 			auto main_source_file
 				= getFileRef(root_module->getMainSourceFile().illegalAccess().getID());
 			auto main_path = main_source_file->getFileIllegalAccess().getFilePath();

@@ -42,9 +42,7 @@ namespace {
 		}
 
 		base::OkBad updateDocument(
-			const lsp::Uri&                                        uri,
-			i32,
-			const lsp::Array<lsp::TextDocumentContentChangeEvent>& changes
+			const lsp::Uri& uri, i32, const lsp::Array<lsp::TextDocumentContentChangeEvent>& changes
 		) override {
 			calls.push_back({ "updateDocument", uri.toString(), changes.size() });
 			return base::OK;
@@ -82,7 +80,7 @@ namespace {
 		duck_ls::ServerSession session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
 		duck_ls::FilesCache    files;
 		RecordingCompiler      compiler{ base::Ref<duck_ls::ServerSession>(&session),
-		                                 base::Ref<duck_ls::FilesCache>(&files) };
+                                    base::Ref<duck_ls::FilesCache>(&files) };
 
 		session.registerHandlers(compiler);
 		endpoint.runMessageLoop();
@@ -187,11 +185,9 @@ private:
 		);
 
 		const std::vector<std::string> expected{
-			"addWorkspace",   "openDocument",
-			"publishDiagnostics", "updateDocument",
-			"publishDiagnostics", "fileCreatedOrDeletedOnDisk",
-			"publishDiagnostics", "closeDocument",
-			"publishDiagnostics",
+			"addWorkspace",       "openDocument",       "publishDiagnostics",
+			"updateDocument",     "publishDiagnostics", "fileCreatedOrDeletedOnDisk",
+			"publishDiagnostics", "closeDocument",      "publishDiagnostics",
 		};
 
 		assertTrue(
@@ -325,9 +321,8 @@ private:
 
 		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> pushed;
 
-		void pushDiagnostics(
-			const lsp::Uri& uri, const std::vector<lsp::Diagnostic>& diagnostics
-		) override {
+		void pushDiagnostics(const lsp::Uri& uri, const std::vector<lsp::Diagnostic>& diagnostics)
+			override {
 			pushed[uri] = diagnostics;
 		}
 	};
@@ -345,15 +340,15 @@ private:
 		auto helper = package.createSubFile("fun helper() -> i64 = { return 1; }\n", "helper.dk");
 		(void) helper;
 
-		const auto  main_file = main.getFilePath();
+		const auto        main_file = main.getFilePath();
 		const std::string disk_text{ fs::File(main_file).getContent().view().stringView() };
 
 		duck_ls_test::StringStream stream("");
 		lsp::ServerEndpoint        endpoint(stream);
 		CollectingSession          session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
 		duck_ls::FilesCache        files;
-		duck_ls::Compiler   compiler{ base::Ref<duck_ls::ServerSession>(&session),
-		                              base::Ref<duck_ls::FilesCache>(&files) };
+		duck_ls::Compiler          compiler{ base::Ref<duck_ls::ServerSession>(&session),
+                                    base::Ref<duck_ls::FilesCache>(&files) };
 
 		auto root_uri = lsp::Uri::fileUriFromPath(workspace.getFilePath().genericString());
 		auto file_uri = lsp::Uri::fileUriFromPath(main_file.genericString());
@@ -363,7 +358,9 @@ private:
 		auto cache_path = files.cachePath(main_file);
 
 		// Opening swaps the module over to the editor's buffer.
-		compiler.openDocument(file_uri, "duckling", 1, "fun main() -> i64 = { return 0; } // opened\n");
+		compiler.openDocument(
+			file_uri, "duckling", 1, "fun main() -> i64 = { return 0; } // opened\n"
+		);
 
 		assertTrue(cache_path.exists(), "The cache twin must exist after didOpen");
 		// Once open, the module is keyed by the cache path, not by the file behind it.
@@ -381,13 +378,13 @@ private:
 		// Changing is visible to the compiler without touching what is behind the buffer.
 		assertTrue(
 			compiler
-			    .updateDocument(
+				.updateDocument(
 					file_uri,
 					2,
 					{ lsp::TextDocumentContentChangeWholeDocument{
 						.text = "fun main() -> i64 = { return 0; } // changed\n" } }
 				)
-			    .isOk(),
+				.isOk(),
 			"The change must be applied"
 		);
 		assertTrue(
@@ -427,7 +424,7 @@ private:
 		duck_ls::ServerSession session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
 		duck_ls::FilesCache    files;
 		duck_ls::Compiler      compiler{ base::Ref<duck_ls::ServerSession>(&session),
-		                                 base::Ref<duck_ls::FilesCache>(&files) };
+                                    base::Ref<duck_ls::FilesCache>(&files) };
 
 		session.registerHandlers(compiler);
 		endpoint.runMessageLoop();
@@ -458,16 +455,14 @@ private:
 		    + file_uri.toString()
 		    + R"(","version":2},"contentChanges":[{"text":"fun main() -> i64 = { return 0; }\n"}]}})";
 
-		auto written = compact(runCompilerSession(
-			{
-				initialize,
-				R"({"jsonrpc":"2.0","method":"initialized","params":{}})",
-				did_open,
-				did_change,
-				R"({"jsonrpc":"2.0","id":2,"method":"shutdown"})",
-				R"({"jsonrpc":"2.0","method":"exit"})",
-			}
-		));
+		auto written = compact(runCompilerSession({
+			initialize,
+			R"({"jsonrpc":"2.0","method":"initialized","params":{}})",
+			did_open,
+			did_change,
+			R"({"jsonrpc":"2.0","id":2,"method":"shutdown"})",
+			R"({"jsonrpc":"2.0","method":"exit"})",
+		}));
 
 		std::filesystem::remove_all(workspace_path.getPath());
 
@@ -498,22 +493,22 @@ private:
 		lsp::ServerEndpoint        endpoint(stream);
 		CollectingSession          session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
 		duck_ls::FilesCache        files{ vfs };
-		duck_ls::Compiler   compiler{ base::Ref<duck_ls::ServerSession>(&session),
-		                              base::Ref<duck_ls::FilesCache>(&files) };
+		duck_ls::Compiler          compiler{ base::Ref<duck_ls::ServerSession>(&session),
+                                    base::Ref<duck_ls::FilesCache>(&files) };
 
-		auto root_uri = lsp::Uri::fileUriFromPath(workspace.getFilePath().toPhysicalPath().genericString());
-		auto file_uri = lsp::Uri::fileUriFromPath(main.getFilePath().toPhysicalPath().genericString());
+		auto root_uri
+			= lsp::Uri::fileUriFromPath(workspace.getFilePath().toPhysicalPath().genericString());
+		auto file_uri
+			= lsp::Uri::fileUriFromPath(main.getFilePath().toPhysicalPath().genericString());
 
 		compiler.addWorkspace(root_uri);
-		compiler.openDocument(file_uri, "duckling", 1, "fun main() -> i64 = { this is not duckling }\n");
+		compiler.openDocument(
+			file_uri, "duckling", 1, "fun main() -> i64 = { this is not duckling }\n"
+		);
 		compiler.publishDiagnostics(file_uri);
 
-		assertTrue(
-			session.pushed.contains(file_uri), "The opened document must get diagnostics"
-		);
-		assertTrue(
-			!session.pushed.at(file_uri).empty(), "A broken buffer must produce diagnostics"
-		);
+		assertTrue(session.pushed.contains(file_uri), "The opened document must get diagnostics");
+		assertTrue(!session.pushed.at(file_uri).empty(), "A broken buffer must produce diagnostics");
 
 		compiler.updateDocument(
 			file_uri,

@@ -548,16 +548,14 @@ private:
 		ModuleTreeModifier::addSubmodule(child, grand_child);
 		ModuleTreeModifier::addSubmodule(root, child);
 
-		ASSERT_TRUE(
-			hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_child"))
+		ASSERT_TRUE(hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_child"))
 		);
 		auto child_id       = child->getModuleID();
 		auto grand_child_id = grand_child->getModuleID();
 
 		ModuleTreeModifier::removeSingleModule(child);
 
-		ASSERT_TRUE(
-			hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_grand"))
+		ASSERT_TRUE(hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_grand"))
 		);
 		ASSERT_EQUAL(
 			false, hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_child"))
@@ -569,12 +567,10 @@ private:
 			root->getModuleID(), getRef(getRef(promoted)->getParentModule().value())->getModuleID()
 		);
 
-		IF_BUILD_TYPE_DEV(
-			assertThrows<base::Panic>(
-				[&]() { std::ignore = GetModuleID_Functor::get(child_id); },
-				"Dangling ModuleTree should panic after removeModule"
-			);
-		)
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() { std::ignore = GetModuleID_Functor::get(child_id); },
+							  "Dangling ModuleTree should panic after removeModule"
+		);)
 
 		auto grand_ref = GetModuleID_Functor::get(grand_child_id);
 		ASSERT_EQUAL(base::StrID("removal_grand"), grand_ref->getName());
@@ -623,16 +619,14 @@ private:
 		);
 		ASSERT_TRUE(root->getSubmodules().illegalAccess().empty());
 
-		IF_BUILD_TYPE_DEV(
-			assertThrows<base::Panic>(
-				[&]() { std::ignore = GetModuleID_Functor::get(child_id); },
-				"Dangling ModuleTree should panic after removeModuleRecursive"
-			);
-			assertThrows<base::Panic>(
-				[&]() { std::ignore = GetModuleID_Functor::get(grand_child_id); },
-				"Recursive removal should also invalidate grandchildren"
-			);
-		)
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() { std::ignore = GetModuleID_Functor::get(child_id); },
+							  "Dangling ModuleTree should panic after removeModuleRecursive"
+		);
+		                  assertThrows<base::Panic>(
+							  [&]() { std::ignore = GetModuleID_Functor::get(grand_child_id); },
+							  "Recursive removal should also invalidate grandchildren"
+						  );)
 
 		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
 	}
@@ -797,8 +791,11 @@ private:
 			ModuleTreeModifier::setParent(mt1, getRef(subsub));
 			ASSERT_TRUE(
 				(ModuleTree::getPathComponentHash(getRef(sub2)->getModuleID()).elements
-			     == std::vector<std::string>{
-					 "root_package_id11e3", "sub1", "subsub", "root", "sub2" })
+			     == std::vector<std::string>{ "root_package_id11e3",
+			                                  "sub1",
+			                                  "subsub",
+			                                  "root",
+			                                  "sub2" })
 			);
 			ASSERT_TRUE(
 				(ModuleTree::getPathComponentHash(mt2->getModuleID()).elements

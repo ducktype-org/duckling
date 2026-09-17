@@ -77,8 +77,7 @@ namespace duck_ls {
 		}
 	}
 
-	FilesCache::FilesCache(base::Optional<base::Ref<fs::VFS>> source_vfs):
-		  source_vfs(source_vfs) {}
+	FilesCache::FilesCache(base::Optional<base::Ref<fs::VFS>> source_vfs): source_vfs(source_vfs) {}
 
 	base::Optional<fs::FilePath> FilesCache::sourcePathFor(const lsp::Uri& uri) {
 		if (!uri.isValid() || !uri.isFileUri()) return {};
@@ -178,8 +177,8 @@ namespace duck_ls {
 
 		auto document = find(cache_path);
 		if (document.empty()) {
-			std::cerr << "duck_ls: change for a document that is not open: "
-					  << cache_path.strView() << "\n";
+			std::cerr << "duck_ls: change for a document that is not open: " << cache_path.strView()
+					  << "\n";
 			return base::BAD;
 		}
 

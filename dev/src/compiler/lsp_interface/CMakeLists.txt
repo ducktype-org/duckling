@@ -4,7 +4,7 @@ add_library(LspInterface
 	src/lsp_interface/compiler.cpp
 )
 
-make_module(LspInterface USES Base Init Lexer PstParser Clah HELIOS QueryFramework
+make_module(LspInterface USES Base Init Lexer PstParser Clah Version HELIOS QueryFramework
 	DiagnosticLspUI Driver GlobalState lsp)
 
 add_executable(duck_ls src/lsp_interface/main.cpp)

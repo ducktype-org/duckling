@@ -79,14 +79,12 @@ namespace {
 
 			if ((type == fs::FileType::Virtual && vfsOf(candidate)->exists(candidate.getPath()))
 			    || (type != fs::FileType::Virtual && exists(candidate.getPath())))
-				CORE_PANIC(
-					base::strConcat(
-						"Cannot create a file/dir with name \"",
-						custom_name,
-						"\", because there already is a file/dir with this name in "
-							+ directory.getFilePath().native()
-					)
-				);
+				CORE_PANIC(base::strConcat(
+					"Cannot create a file/dir with name \"",
+					custom_name,
+					"\", because there already is a file/dir with this name in "
+						+ directory.getFilePath().native()
+				));
 			return candidate;
 		}
 	}
@@ -284,11 +282,9 @@ namespace fs {
 
 	std::expected<base::SharedView, std::string> File::getContentSafe() const {
 		if (!exists()) {
-			return std::unexpected(
-				base::strConcat(
-					"Error: cannot get content of file `", path.native(), "` - file does not exist"
-				)
-			);
+			return std::unexpected(base::strConcat(
+				"Error: cannot get content of file `", path.native(), "` - file does not exist"
+			));
 		}
 		return getContent();
 	}

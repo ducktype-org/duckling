@@ -120,13 +120,10 @@ namespace dia::lsp {
 						if (content.empty()) continue;
 						SectionLocation section_loc = extractLocation(section);
 
-						related_information.push_back(
-							DiagnosticRelatedInformation{
-								.location
-								= Location{ .uri   = evaluation_ctx.resolve(section_loc.file),
-						                    .range = section_loc.range },
-								.message = content }
-						);
+						related_information.push_back(DiagnosticRelatedInformation{
+							.location = Location{ .uri   = evaluation_ctx.resolve(section_loc.file),
+						                          .range = section_loc.range },
+							.message  = content });
 						content = "";
 					}
 				}
@@ -187,12 +184,10 @@ namespace dia::lsp {
 			std::vector<DiagnosticRelatedInformation> message_related;
 			SectionLocation msg_loc = getMessageLocation(msg, message_related, evaluation_ctx);
 
-			related_information.push_back(
-				DiagnosticRelatedInformation{
-					.location = Location{ .uri   = evaluation_ctx.resolve(msg_loc.file),
-			                              .range = msg_loc.range },
-					.message  = msg.header }
-			);
+			related_information.push_back(DiagnosticRelatedInformation{
+				.location
+				= Location{ .uri = evaluation_ctx.resolve(msg_loc.file), .range = msg_loc.range },
+				.message = msg.header });
 
 			related_information.insert(
 				related_information.end(),
