@@ -256,6 +256,14 @@ namespace lang_def {
 		EqMinus,
 		EqMultiply,
 		EqDivide,
+		EqRemainder,
+		EqExponentiate,
+
+		EqPipe,       // | for variants and bitwise or.
+		EqAmpersand,  // & for references and bitwise and.
+		EqBitXor,
+		EqLeftShift,
+		EqRightShift,
 	};
 
 	enum class NumericLiteralTypeSpecifier {

@@ -70,14 +70,23 @@ namespace {
 		IntegerMinusEq,
 		IntegerMultiplyEq,
 		IntegerDivideEq,
+		IntegerRemainderEq,
+		IntegerExponentiateEq,
 
 		FloatPlusEq,
 		FloatMinusEq,
 		FloatMultiplyEq,
 		FloatDivideEq,
+		FloatExponentiateEq,
 
 		IntegerPow,
 		FloatPow,
+
+		BitwiseAndEq,
+		BitwiseOrEq,
+		BitwiseXorEq,
+		BitwiseLeftShiftEq,
+		BitwiseRightShiftEq,
 	};
 
 	/**
@@ -135,6 +144,25 @@ namespace {
 		case IntegerDivideEq: {
 			return make_bin_op_eq_expr(BuiltinBinary::IntegerDiv);
 		}
+		case IntegerRemainderEq: {
+			return make_bin_op_eq_expr(BuiltinBinary::IntegerMod);
+		}
+		case IntegerExponentiateEq: {
+			log_if_lang_primitive_not_present(LanguagePrimitive::PowInt);
+			auto callee = bakeLanguagePrimitiveWithTypes(
+				ctx, LanguagePrimitive::PowInt, { lhs->expression_type.getSymbolType() }
+			);
+
+			auto materialized_lhs = s.reusable(s.refOf(std::move(lhs)));
+			auto next_lhs         = materialized_lhs->nextUse();
+			return withOrigin(
+				new_origin,
+				s.blockExpr(StmtPack{ s.assign(
+					s.deref(std::move(materialized_lhs)),
+					s.call(s.ident(callee), s.deref(std::move(next_lhs)), std::move(rhs))
+				) })
+			);
+		}
 		case FloatPlusEq: {
 			return make_bin_op_eq_expr(BuiltinBinary::FloatAdd);
 		}
@@ -146,6 +174,31 @@ namespace {
 		}
 		case FloatDivideEq: {
 			return make_bin_op_eq_expr(BuiltinBinary::FloatDiv);
+		}
+		case FloatExponentiateEq: {
+			auto lang_primitive = [&] -> base::Optional<LanguagePrimitive> {
+				auto type = lhs->expression_type.getType();
+				if (type == tsh::getFloatType(ctx, 32))
+					return LanguagePrimitive::PowF32;
+				else if (type == tsh::getFloatType(ctx, 64))
+					return LanguagePrimitive::PowF64;
+				else
+					return {};
+			}();
+			if_opt_none(lang_primitive) return {};
+			log_if_lang_primitive_not_present(lang_primitive.value());
+			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })
+			                  ->valueOrThrow();
+
+			auto materialized_lhs = s.reusable(s.refOf(std::move(lhs)));
+			auto next_lhs         = materialized_lhs->nextUse();
+			return withOrigin(
+				new_origin,
+				s.blockExpr(StmtPack{ s.assign(
+					s.deref(std::move(materialized_lhs)),
+					s.call(s.ident(callee), s.deref(std::move(next_lhs)), std::move(rhs))
+				) })
+			);
 		}
 		case IntegerPow: {
 			log_if_lang_primitive_not_present(LanguagePrimitive::PowInt);
@@ -169,6 +222,21 @@ namespace {
 			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })
 			                  ->valueOrThrow();
 			return withOrigin(new_origin, s.call(s.ident(callee), std::move(lhs), std::move(rhs)));
+		}
+		case BitwiseAndEq: {
+			return make_bin_op_eq_expr(BuiltinBinary::IntegerBitAnd);
+		}
+		case BitwiseOrEq: {
+			return make_bin_op_eq_expr(BuiltinBinary::IntegerBitOr);
+		}
+		case BitwiseXorEq: {
+			return make_bin_op_eq_expr(BuiltinBinary::IntegerBitXor);
+		}
+		case BitwiseLeftShiftEq: {
+			return make_bin_op_eq_expr(BuiltinBinary::IntegerShl);
+		}
+		case BitwiseRightShiftEq: {
+			return make_bin_op_eq_expr(BuiltinBinary::IntegerShr);
 		}
 		}
 		CORE_UNREACHABLE();
@@ -229,6 +297,10 @@ namespace compiler::helios::code {
 				{ { base::StrID("*="), tsh::Kind::Integral },
 			      PreDesugarOperator::IntegerMultiplyEq },
 				{ { base::StrID("/="), tsh::Kind::Integral }, PreDesugarOperator::IntegerDivideEq },
+				{ { base::StrID("%="), tsh::Kind::Integral },
+			      PreDesugarOperator::IntegerRemainderEq },
+				{ { base::StrID("**="), tsh::Kind::Integral },
+			      PreDesugarOperator::IntegerExponentiateEq },
 
 				/// Bitwise operations ///
 				{ { base::StrID("&"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitAnd },
@@ -236,6 +308,13 @@ namespace compiler::helios::code {
 				{ { base::StrID("^"), tsh::Kind::Integral }, BuiltinBinary::IntegerBitXor },
 				{ { base::StrID("<<"), tsh::Kind::Integral }, BuiltinBinary::IntegerShl },
 				{ { base::StrID(">>"), tsh::Kind::Integral }, BuiltinBinary::IntegerShr },
+				{ { base::StrID("&="), tsh::Kind::Integral }, PreDesugarOperator::BitwiseAndEq },
+				{ { base::StrID("|="), tsh::Kind::Integral }, PreDesugarOperator::BitwiseOrEq },
+				{ { base::StrID("^="), tsh::Kind::Integral }, PreDesugarOperator::BitwiseXorEq },
+				{ { base::StrID("<<="), tsh::Kind::Integral },
+			      PreDesugarOperator::BitwiseLeftShiftEq },
+				{ { base::StrID(">>="), tsh::Kind::Integral },
+			      PreDesugarOperator::BitwiseRightShiftEq },
 
 				/// Integer comparisons ///
 				{ { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },
@@ -256,6 +335,8 @@ namespace compiler::helios::code {
 				{ { base::StrID("-="), tsh::Kind::Float }, PreDesugarOperator::FloatMinusEq },
 				{ { base::StrID("*="), tsh::Kind::Float }, PreDesugarOperator::FloatMultiplyEq },
 				{ { base::StrID("/="), tsh::Kind::Float }, PreDesugarOperator::FloatDivideEq },
+				{ { base::StrID("**="), tsh::Kind::Float },
+			      PreDesugarOperator::FloatExponentiateEq },
 
 				/// Floating point comparisons ///
 				{ { base::StrID("<"), tsh::Kind::Float }, BuiltinBinary::FloatLt },

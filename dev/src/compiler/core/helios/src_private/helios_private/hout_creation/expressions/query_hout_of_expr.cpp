@@ -311,8 +311,9 @@ namespace compiler::helios::code {
 			static bool isNumericOperator(const lexer::Operator op) {
 				// Only operators which allow their arguments to undergo numeric promotion.
 				static const std::set<std::string> numeric_ops
-					= { "+",  "-", "*",  "/",  "%",  "**", "+=", "-=", "*=", "/=", "<",
-					    "<=", ">", ">=", "==", "!=", "&",  "|",  "^",  "~",  "<<", ">>" };
+					= { "+",  "-",   "*",  "/",  "%",  "**", "+=", "-=",  "*=", "/=",
+					    "%=", "**=", "<",  "<=", ">",  ">=", "==", "!=",  "&",  "|",
+					    "^",  "~",   "<<", ">>", "&=", "|=", "^=", "<<=", ">>=" };
 				return numeric_ops.contains(op.str());
 			}
 
