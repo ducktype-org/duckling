@@ -21,6 +21,7 @@
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/opcodes.hpp>
+#include <vm/core/safe/memory/local_slot_block.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
@@ -532,7 +533,7 @@ namespace vm {
 			// `vm_sc_unit_test` panics if the block is assumed to exist.
 			Block* block = frame->local_slot_stack_base[slot_index].block;
 			if (block == nullptr)
-				block = process_memory.createLocalSlotBlock(*frame, slot_index).get();
+				block = createLocalSlotBlock(*frame, process_memory, slot_index).get();
 
 			exit_value_storage.value().emplace_back(
 				safe_process.createVMValue(func.result_types[idx], Pointer(block, 0))

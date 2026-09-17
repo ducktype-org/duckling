@@ -27,6 +27,10 @@ namespace vm {
 	 * something refers to the variable through one.
 	 */
 	struct LocalSlot final {
+		/// Never null on a live slot: every entry below `local_slot_stack_end` is written by
+		/// `pushLocalSlot`, which always takes a real `TypeCRef`, and nobody reads past that end.
+		/// A raw pointer rather than a `TypeCRef` only because the slot stack is default
+		/// constructed whole.
 		const Type* type = nullptr;
 		/// Absolute, so that a slot shared with the caller reads alike from both frames.
 		byte* data = nullptr;

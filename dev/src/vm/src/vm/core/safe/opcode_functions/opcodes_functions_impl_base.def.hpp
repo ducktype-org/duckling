@@ -466,26 +466,23 @@ namespace vm {
 			);
 
 			// Local stack layout is the same as for call_cfunc:
-			// [..., result_value (if any), arg0, ..., argN], each in its own block.
+			// [..., result_value (if any), arg0, ..., argN]. Only the first byte of each is
+			// wanted, which the slot records, so none of them has to be given a block.
 			u64 slot_stack_count = u64(frame->local_slot_stack_end - frame->local_slot_stack_base);
-			u64 first_block_idx  = slot_stack_count - arg_count - (is_void ? 0 : 1);
-			u64 first_arg_idx    = first_block_idx + (is_void ? 0 : 1);
+			u64 first_slot_idx   = slot_stack_count - arg_count - (is_void ? 0 : 1);
+			u64 first_arg_idx    = first_slot_idx + (is_void ? 0 : 1);
 
 			std::vector<void*> arg_values(arg_count);
-			for (u64 i = 0; i < arg_count; i++) {
-				auto block    = OpFuns::readBlockRefFromArg(frame, thread, first_arg_idx + i);
-				arg_values[i] = thread.process_memory.getBlockViewUnsafe(block).getBegin();
-			}
+			for (u64 i = 0; i < arg_count; i++)
+				arg_values[i] = frame->local_slot_stack_base[first_arg_idx + i].data;
 
 			auto* cif = &ffi_func->cif;
 
 			if (is_void) {
 				ffi_call(cif, ffi_func->symbol, nullptr, arg_values.data());
 			} else {
-				auto  result_block = OpFuns::readBlockRefFromArg(frame, thread, first_block_idx);
-				byte* result_pointer
-					= thread.process_memory.getBlockViewUnsafe(result_block).getBegin();
-				usize result_size = ffi_func->result_types.at(0)->getSize().asInt();
+				byte* result_pointer = frame->local_slot_stack_base[first_slot_idx].data;
+				usize result_size    = ffi_func->result_types.at(0)->getSize().asInt();
 
 				if (result_size >= sizeof(ffi_arg)) {
 					ffi_call(cif, ffi_func->symbol, result_pointer, arg_values.data());
@@ -1227,6 +1224,8 @@ namespace vm {
 					auto tbl_block = tbl_pointer.getBlock();
 					if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
 						throw exceptions::VMDynTableReAllocTypeMismatch();
+					if (Memory::isBlockDeallocated(tbl_block))
+						throw exceptions::VMUseAfterFreeException();
 					thread.process_memory.freeBlockData(tbl_block);
 					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 						tbl_pointer, Pointer::null()
@@ -1243,6 +1242,8 @@ namespace vm {
 				auto tbl_block = tbl_pointer.getBlock();
 				if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
 					throw exceptions::VMDynTableReAllocTypeMismatch();
+				if (Memory::isBlockDeallocated(tbl_block))
+					throw exceptions::VMUseAfterFreeException();
 				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
 			}
 		}

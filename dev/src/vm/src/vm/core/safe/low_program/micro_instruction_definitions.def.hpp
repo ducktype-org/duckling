@@ -477,7 +477,7 @@ DEF_MICRO_INSTR(ret_tailcall_func, vm::low::opargs::FunctionID)
 /**
  * @brief Returns from the function.
  * @note Does no cleanup of its own: the function's own `deinit`s already ran, so the only
- * entries left on its block reference stack are its return values, which belong to the caller.
+ * entries left on its local slot stack are its return values, which belong to the caller.
  */
 DEF_MICRO_INSTR(ret)
 
@@ -495,7 +495,8 @@ DEF_MICRO_INSTR(ret)
  */
 DEF_MICRO_INSTR(init_off_type, vm::low::opargs::Offset, vm::low::opargs::Type)
 
-/// `init_off_type` for an 8-byte variable, which zeroes with a plain store.
+/// Same semantics as `init_off_type`, split out purely for speed: an 8-byte variable zeroes with
+/// a plain store instead of a `memset` call. Emitting the wrong one is slower, never incorrect.
 DEF_MICRO_INSTR(init64_off_type, vm::low::opargs::Offset, vm::low::opargs::Type)
 /// 16-byte counterpart of `init64_off_type`, the size of a `Pointer`.
 DEF_MICRO_INSTR(init128_off_type, vm::low::opargs::Offset, vm::low::opargs::Type)

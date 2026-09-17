@@ -164,8 +164,7 @@ private:
 
 	/**
 	 * @brief `ValidType::holdsPointerReferences` recurses into structures and tables, so a pointer
-	 * held inside
-	 * one still gets its scope exit lowered to `deinitDtor`.
+	 * held inside one still gets its scope exit lowered to `deinitDtor`.
 	 */
 	void pointersNestedInAggregatesAreFound() {
 		const auto name = base::StrID("nests_pointers");

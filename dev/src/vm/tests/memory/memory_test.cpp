@@ -16,6 +16,8 @@ public:
 		TESTER_ADD_TEST(nestedLeaks);
 		TESTER_ADD_TEST(variantDestructor);
 		TESTER_ADD_TEST(doubleFreeIsRefused);
+		TESTER_ADD_TEST(dynTableReAllocAfterFreeIsRefused);
+		TESTER_ADD_TEST(dynTableFreeAfterFreeIsRefused);
 	}
 
 private:
@@ -49,6 +51,20 @@ private:
 		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("double_free.dbc", "", ""),
 			vm::exceptions::VMDoubleFreeException::ERR_MSG
+		);
+	}
+
+	void dynTableReAllocAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("dyn_table_realloc_after_free.dbc", "", ""),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
+		);
+	}
+
+	void dynTableFreeAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("dyn_table_free_after_free.dbc", "", ""),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
 		);
 	}
 };

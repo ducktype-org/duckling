@@ -10,6 +10,7 @@
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/utils.hpp>
+#include <vm/core/safe/memory/local_slot_block.hpp>
 #include <vm/core/safe/opcode_functions/opcodes_functions_utils.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
@@ -104,8 +105,9 @@ namespace vm {
 		/**
 		 * @brief Zeroes a freshly initialized local variable and reserves its slot.
 		 *
-		 * @param zeroed_size Always the size of `type`, taken separately so that a caller
-		 * knowing it at compile time zeroes with a plain store instead of a call.
+		 * @param zeroed_size Purely an optimization: always the size of `type`, which the
+		 * assertion below pins. It is taken separately so that a caller knowing it at compile time
+		 * zeroes with a plain store instead of reading the size back out of the type.
 		 */
 		static void pushLocalSlot(
 			Frame* frame, TypeCRef type, byte* data, u64 zeroed_size, Block* block
@@ -132,16 +134,16 @@ namespace vm {
 			return frame->local_slot_stack_end[-1];
 		}
 
-		/// `Memory::createLocalSlotBlock`, kept out of line: it runs at most once per variable,
+		/// `createLocalSlotBlock`, kept out of line: it runs at most once per variable,
 		/// so it must not bloat the opfuns.
 		[[gnu::noinline]]
 		static Ref<Block> createLocalBlock(Frame* frame, SafeVMThread& thread, u64 slot_index) {
-			return thread.process_memory.createLocalSlotBlock(*frame, slot_index);
+			return createLocalSlotBlock(*frame, thread.process_memory, slot_index);
 		}
 
 		/**
-		 * @brief Resolves a block place argument - an index into the frame's block reference
-		 * stack, or into the global block buffer when the highest bit is set - to a block.
+		 * @brief Resolves a block place argument - an index into the frame's local slot stack,
+		 * or into the global block buffer when the highest bit is set - to a block.
 		 *
 		 * Globals always have their blocks; a local gets one created on the spot the first time
 		 * one is needed.
@@ -252,7 +254,8 @@ namespace vm {
 		 * @brief Initializes a local variable together with its block.
 		 *
 		 * Unlike `init_off_type`, which leaves the slot blockless until something asks for a
-		 * block, this creates one up front - for variables whose block is needed from the start.
+		 * block, this creates one up front. Nothing the lowering emits takes this path any more;
+		 * the only caller left is `initFromVMValue`, i.e. the hand-built start functions.
 		 */
 		static VM_OPFUN_INLINE void performInit(
 			byte*& local_stack, Frame*& frame, SafeVMThread& thread, u64 byte_offset, TypeCRef type

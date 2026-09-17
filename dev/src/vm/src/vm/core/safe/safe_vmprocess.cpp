@@ -14,6 +14,7 @@
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
+#include <vm/core/safe/memory/local_slot_block.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalueref.hpp>
@@ -23,6 +24,7 @@
 #include <vm/loader/logger.hpp>
 
 #include <expected>
+#include <iostream>
 #include <mutex>
 #include <ranges>
 #include <shared_mutex>
@@ -273,6 +275,20 @@ namespace vm {
 		  loaded_program(compiler.getLowProgram()) {
 		if (enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
+	}
+
+	SafeVMProcess::~SafeVMProcess() {
+		// A destructor is `noexcept`, and `freeAllocatedBlockData` runs a virtual `deallocate` per
+		// block, so anything escaping it would terminate the process.
+		try {
+			memory.freeAllocatedBlockData();
+		} catch (const std::exception& e) {
+			std::cerr << "Failed to free the block data of process " << my_pid << ": " << e.what()
+					  << "\n";
+		} catch (...) {
+			std::cerr << "Failed to free the block data of process " << my_pid
+					  << ": unknown error\n";
+		}
 	}
 
 	SafeVMThread& SafeVMProcess::getMainVMThread() {
@@ -543,7 +559,7 @@ namespace vm {
 					// through one, so it is created here exactly as the executor does.
 					Ref<Block> block = slot.block != nullptr
 					                     ? Ref(slot.block)
-					                     : memory.createLocalSlotBlock(frame, slot_index);
+					                     : createLocalSlotBlock(frame, memory, slot_index);
 
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset = base::safeIntConv<u64>(slot.data - frame.local_stack),

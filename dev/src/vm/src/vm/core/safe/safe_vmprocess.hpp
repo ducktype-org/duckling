@@ -199,7 +199,14 @@ namespace vm {
 	public:
 		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
 
-		~SafeVMProcess() override { memory.freeAllocatedBlockData(); }
+		/**
+		 * @brief Frees what the blocks still hold.
+		 *
+		 * @note A destructor body runs before any member is destroyed, so `vm_threads` is still
+		 * alive here. The process is killed or deinitialized before it gets destroyed, so no exec
+		 * thread is left running on the memory this frees - keep the members in this order.
+		 */
+		~SafeVMProcess() override;
 
 		DeadlockDetector* getDeadlockDetector() {
 			return deadlock_detector ? &*deadlock_detector : nullptr;

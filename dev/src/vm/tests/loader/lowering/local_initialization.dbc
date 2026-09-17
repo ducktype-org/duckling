@@ -52,7 +52,8 @@ function holds_pointer { } -> { } {
 	ret;
 }
 
-# A variant owns nested blocks, so it gets its own block right away.
+# A variant owns nested blocks, but it still gets none upfront: they are only reachable through
+# a block place argument, which creates the variant's own block first.
 function owns_nested_blocks { } -> { } {
 	init_pany_type		choice, maybe;
 	deinit; # choice
@@ -71,8 +72,8 @@ function reuses_a_slot { } -> { } {
 	ret;
 }
 
-# `typeCleanup` recurses into aggregates, so a pointer or a variant reached through a field or
-# a table element still decides how the variable is initialized and deinitialized.
+# `ValidType::holdsPointerReferences` recurses into aggregates, so a pointer reached through a
+# field or a table element still decides how the variable is deinitialized.
 function nests_pointers { } -> { } {
 	init_pany_type		in_a_struct, pair_with_pointer;
 	init_pany_type		in_a_table, pointer_table;
