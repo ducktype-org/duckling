@@ -74,7 +74,7 @@ namespace vm::api {
 	std::expected<ExitValue, ApiError> executeRuntimeExprFromFile(
 		PID pid, ThreadID thread_id, fs::File file
 	) {
-		return REQUEST(ExecRuntimeExprFromFile{ .thread_id = thread_id COMMA.file = file })
+		return REQUEST(ExecRuntimeExprFromFile{ .thread_id = thread_id COMMA.file = std::move(file) })
 		    .and_then(mapOrWrongResponse<ExitValue>);
 	}
 
