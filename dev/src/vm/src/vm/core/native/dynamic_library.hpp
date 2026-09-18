@@ -24,8 +24,8 @@ namespace vm::native {
 		DynamicLibrary& operator=(DynamicLibrary&&) noexcept;
 		~DynamicLibrary() noexcept;
 
-		std::byte*                                        findSymbol(const char* name) const;
-		base::Optional<std::byte*>                        maybeFindSymbol(const char* name) const;
+		byte*                                             findSymbol(const char* name) const;
+		base::Optional<byte*>                             maybeFindSymbol(const char* name) const;
 		static std::expected<DynamicLibrary, std::string> fromMemory(
 			std::span<const byte> library_bytes
 		);

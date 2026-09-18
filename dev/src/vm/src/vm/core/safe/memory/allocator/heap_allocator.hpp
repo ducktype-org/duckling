@@ -10,8 +10,6 @@
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type.hpp>
 
-#include <deque>
-
 namespace vm {
 
 	template<typename EntryT>
@@ -26,9 +24,6 @@ namespace vm {
 
 	template<typename EntryT>
 	class HeapAllocator final: public IAllocator<EntryT> {
-		// It's a mock, it should be replaced with something faster.
-		std::deque<base::TypedOwningView<EntryT>> allocated;
-
 	public:
 		// @TODO: #3447 Resolve the bytes-vs-entries unit conflation below before instantiating
 		// the memory module with a non-byte `EntryT`, then drop the `static_assert`.
@@ -42,7 +37,6 @@ namespace vm {
 			static_assert(sizeof(EntryT) == 1);
 			usize size = type->getSize().asInt();
 			auto  ptr  = heapAllocOrThrow<EntryT>(size);
-			allocated.emplace_back(ptr, size);
 			return BlockData<EntryT>{ type,
 				                      base::TypedModRawView<EntryT>{ ptr, size },
 				                      Ref<IAllocator<EntryT>>{ this } };
@@ -59,7 +53,6 @@ namespace vm {
 			static_assert(sizeof(EntryT) == 1);
 			usize   size = inner_type->getSize().asInt() * n;
 			EntryT* ptr  = heapAllocOrThrow<EntryT>(size);
-			allocated.emplace_back(ptr, size);
 			return BlockData<EntryT>{ table_type,
 				                      base::TypedModRawView<EntryT>{ ptr, size },
 				                      Ref<IAllocator<EntryT>>(this) };
@@ -67,12 +60,7 @@ namespace vm {
 
 		void deallocate(Ref<BlockData<EntryT>> data) final {
 			auto ptr = data->view.getBegin();
-			for (auto it = allocated.begin(); it != allocated.end(); ++it) {
-				if (it->getBegin() == ptr) {
-					allocated.erase(it);
-					return;
-				}
-			}
+			delete[] ptr;
 		}
 	};
 }
