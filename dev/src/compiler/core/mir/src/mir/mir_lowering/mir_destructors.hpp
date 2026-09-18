@@ -38,5 +38,8 @@ namespace compiler::mir {
 	 */
 	std::vector<ScopeRef> getStartingScopes(ScopeRef begin, ScopeRef end);
 
+	/**
+	 * @brief Check if @param local is alive in the scope @param scope.
+	 */
 	bool isAliveInScope(MIRLocalRef local, ScopeRef scope);
 }

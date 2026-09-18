@@ -54,7 +54,7 @@ namespace compiler::mir {
 	}
 
 	void AddLifetimeFlagsLocalsPass::run(
-		query::Context&, Function& function, const LifetimePassArgs& args
+		query::Context&, Function& function, const LifetimePassArgs&
 	) {
 		// Get the local that is destructed by a DestructIf.
 		auto conditionally_destructed_local

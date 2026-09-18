@@ -33,10 +33,11 @@ namespace compiler::mir {
 		MIRLocalRef local;
 
 		/**
-		 * @brief
+		 * @brief Actual move status of the local.
 		 *
 		 */
 		MoveStatus status;
+		
 		/**
 		 * @brief The list of move instructions that "reach" this point
 		 * (reaching-definitions style). This lets diagnostics point at every place a value was
@@ -66,10 +67,6 @@ namespace compiler::mir {
 	/**
 	 * @brief Move state of all tracked locals at a program point, together with the scope of the
 	 * last instruction that was applied to it.
-	 *
-	 * The map is updated instruction by instruction with @ref updateMoveStateMapByInstr, which also
-	 * records the scope of that instruction in @ref prevInstrScope. A local absent from the map is
-	 * uninitialized on this path.
 	 */
 	class LocalMoveStateMap final {
 		base::HashMap<LocalID, MoveState> map;
