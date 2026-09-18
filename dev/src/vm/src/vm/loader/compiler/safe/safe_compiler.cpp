@@ -441,7 +441,7 @@ namespace vm::loader::compiler::safe {
 
 		code::valid_type::TypeSize ret_type_sum = {};
 		std::vector<TypeCRef>      result_types;
-		parameters.reserve(signature.result_types.size());
+		result_types.reserve(signature.result_types.size());
 
 		for (auto& ret: signature.result_types) {
 			ret_type_sum += high_program.getTypeContext().getCurrentTypes().at(ret)->getSize();
