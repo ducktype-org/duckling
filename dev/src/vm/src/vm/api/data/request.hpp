@@ -56,17 +56,17 @@ namespace vm::api {
 			FunctionRunArguments func_args;
 		};
 
-		struct ExecRuntimeExpr {
+		struct ExecRuntimeExpr final {
 			ThreadID       thread_id;
 			code::Function expr;
 		};
 
-		struct ExecRuntimeExprFromFile {
+		struct ExecRuntimeExprFromFile final {
 			ThreadID thread_id;
 			fs::File file;
 		};
 
-		struct Join {
+		struct Join final {
 			ThreadID thread_id;
 		};
 
