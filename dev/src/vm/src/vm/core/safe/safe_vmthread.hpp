@@ -144,6 +144,8 @@ namespace vm {
 		 */
 		std::string thread_ctx;
 
+		static constexpr u64 EXPR_EXECUTION_TIMEOUT_MS = 500;
+
 #ifdef ENABLE_JIT
 		jit::JitData jit_data;
 #endif

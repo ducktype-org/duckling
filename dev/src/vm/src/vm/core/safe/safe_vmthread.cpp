@@ -813,7 +813,7 @@ namespace vm {
 
 		{
 			std::unique_lock lock(result_mutex);
-			cv.wait_for(lock, std::chrono::milliseconds(500), [&] { return result_ready.load(); });
+			cv.wait_for(lock, std::chrono::milliseconds(EXPR_EXECUTION_TIMEOUT_MS), [&] { return result_ready.load(); });
 			result_ready.store(true);
 		}
 
@@ -825,7 +825,7 @@ namespace vm {
 			err_msg += thread_state::threadStateName(*thread_state);
 			err_msg += " during evaluation";
 		} else {
-			err_msg = "timout: evaluation of expr took more then 0,5 s";
+			err_msg = "timout: evaluation of expr took more than " + std::to_string(EXPR_EXECUTION_TIMEOUT_MS) + " ms";
 		}
 
 		return std::unexpected{ std::make_pair(runtime_expr_res_handler.back(), err_msg) };
