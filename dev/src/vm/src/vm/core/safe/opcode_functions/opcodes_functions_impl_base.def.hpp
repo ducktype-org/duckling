@@ -321,7 +321,6 @@ namespace vm {
 			);
 
 			auto& called_func = thread.process_program->getFunctions()[function_id];
-			instr += 1;
 
 			performFunctionCall(instr, local_stack, frame, thread, called_func, instr->arg1, 1);
 		}
@@ -538,7 +537,6 @@ namespace vm {
 			);
 
 			auto& called_func = thread.process_program->getFunctions()[function_id];
-			instr += 1;
 
 			performFunctionCall(instr, local_stack, frame, thread, called_func, instr[1].arg0, 2);
 		}
@@ -613,22 +611,25 @@ namespace vm {
 			auto* callee_frame = frame;
 			u64   ret_count    = frame->current_function->result_types.size();
 			frame--;
-			auto* caller_block_ref_stack_end = frame->local_block_ref_stack_end;
+			auto* caller_block_ref_stack_end = frame->local_slot_stack_end;
 
 			std::vector<Ref<SafeVMValue>> exit_value = {};
 
-			while (callee_frame->local_block_ref_stack_end > caller_block_ref_stack_end + ret_count)
+			while (callee_frame->local_slot_stack_end > caller_block_ref_stack_end + ret_count)
 				performDeinit(callee_frame, thread);
 
 			CORE_ASSERT(
-				callee_frame->local_block_ref_stack_end == caller_block_ref_stack_end + ret_count,
+				callee_frame->local_slot_stack_end == caller_block_ref_stack_end + ret_count,
 				"This must hold"
 			);
 
-			for (u64 i = 0; i < ret_count; i++) {
-				auto block = Ref(caller_block_ref_stack_end[i]);
+			for (u64 idx = 0; idx < ret_count; idx++) {
+				Block* block = frame->local_slot_stack_base[idx].block;
+				if (block == nullptr)
+					block = createLocalSlotBlock(*frame, thread.process_memory, idx).get();
+
 				exit_value.emplace_back(
-					thread.safe_process.createVMValue(expr.result_types[i], Pointer(block, 0))
+					thread.safe_process.createVMValue(expr.result_types[idx], Pointer(block, 0))
 				);
 			}
 

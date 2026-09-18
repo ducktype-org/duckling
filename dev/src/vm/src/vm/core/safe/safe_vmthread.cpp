@@ -740,14 +740,14 @@ namespace vm {
 	}
 
 	Bytes SafeVMThread::getCurrentStackBytesSize() const {
-		Frame*     frame     = runtime_data.frame_stack_current;
-		std::byte* stack_top = frame->local_stack + frame->local_stack_head;
-		return Bytes{ u64(stack_top - runtime_data.local_stack_base) };
+		return getCurrentHighPosition(getNumberOfCurrentStackFrames() - 1)
+		    ->byteSize()
+		    ->assumePointerSize(Bytes{ 16 });
 	}
 
 	u64 SafeVMThread::getCurrentStackBlockSize() const {
 		Frame* frame = runtime_data.frame_stack_current;
-		return u64(frame->local_block_ref_stack_end - runtime_data.block_ref_stack_base);
+		return u64(frame->local_slot_stack_end - runtime_data.slot_stack_base);
 	}
 
 	Ref<SafeVMValue> SafeVMThread::getVMValue(u64 id) const {
@@ -789,21 +789,28 @@ namespace vm {
 		auto& called_expr = runtime_expr_low.back();
 
 		u64 orig_stack_size = getCurrentStackBytesSize().asInt();
+		u64 prev_summed     = 0;
 
-		for (auto type: called_expr.result_types)
-			OpFuns::performInit(instr, local_stack, frame, *this, type);
-		OpFuns::performFunctionCall(instr, local_stack, frame, *this, called_expr);
+		for (auto type: called_expr.result_types) {
+			auto size = type->getSize().asInt();
+			OpFuns::pushLocalSlot(
+				frame, type, local_stack + orig_stack_size + prev_summed, size, nullptr
+			);
+			prev_summed += size;
+		}
+		OpFuns::performFunctionCall(
+			instr, local_stack, frame, *this, called_expr, orig_stack_size, 0
+		);
 		OpFuns::save_execution_state(instr, local_stack, frame, *this);
 
 		// we modify the frame so that the base is the global base of the stacks
-		frame->local_stack                = runtime_data.local_stack_base;
-		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
-		frame->local_stack_head += orig_stack_size;
+		frame->local_stack           = runtime_data.local_stack_base;
+		frame->local_slot_stack_base = runtime_data.slot_stack_base;
 
 		// updating the previous frame, because result variables
 		// will not be returned to the caller
-		prev_frame->local_block_ref_stack_end -= called_expr.result_types.size();
-		prev_frame->local_stack_head -= called_expr.ret_size;
+		prev_frame->local_slot_stack_base -= called_expr.result_types.size();
+		prev_frame->local_stack -= called_expr.ret_size;
 
 		std::condition_variable                       cv;
 		std::mutex                                    result_mutex;
@@ -846,7 +853,9 @@ namespace vm {
 
 		{
 			std::unique_lock lock(result_mutex);
-			cv.wait_for(lock, std::chrono::milliseconds(EXPR_EXECUTION_TIMEOUT_MS), [&] { return result_ready.load(); });
+			cv.wait_for(lock, std::chrono::milliseconds(EXPR_EXECUTION_TIMEOUT_MS), [&] {
+				return result_ready.load();
+			});
 			result_ready.store(true);
 		}
 
@@ -858,7 +867,8 @@ namespace vm {
 			err_msg += thread_state::threadStateName(*thread_state);
 			err_msg += " during evaluation";
 		} else {
-			err_msg = "timout: evaluation of expr took more than " + std::to_string(EXPR_EXECUTION_TIMEOUT_MS) + " ms";
+			err_msg = "timout: evaluation of expr took more than "
+			        + std::to_string(EXPR_EXECUTION_TIMEOUT_MS) + " ms";
 		}
 
 		return std::unexpected{ std::make_pair(runtime_expr_res_handler.back(), err_msg) };
