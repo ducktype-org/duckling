@@ -6,6 +6,8 @@
 #include <mir/mir_lowering/mir_destructors.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <base/except/exceptions.hpp>
+
 #include <diagnostic/placeholder.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/query_errors.hpp>
@@ -58,13 +60,18 @@ namespace compiler::mir {
 	 * at the beginning of the successor block. If the value is not present in the map,
 	 * it should be represented by an empty optional, it means that value is uninitialized.
 	 *
-	 * @warning Merging one uninitialized and one initialized gives unitinitialized by default.
-	 * This is valid as it means that the destructor will be inserted on blocks with the initialized
-	 * values, but at this point we don't have destructors inserted.
+	 * Merging one uninitialized and one initialized path gives @ref MoveStatus::MaybeMoved with
+	 * no move sites: the value is not usable after the join, but it may still own a resource on
+	 * one of the paths, so the destructor has to be emitted conditionally (`DestructIf`).
 	 */
 	base::Optional<MoveState> joinStatus(
 		base::Optional<MoveState> a, base::Optional<MoveState> b, ScopeRef into_scope
 	) {
+		CORE_ASSERT(
+			a.empty() or b.empty() or a->local == b->local,
+			"Joining move states of two different locals"
+		);
+
 		if (a.has_value() && not isAliveInScope(a->local, into_scope)) a = {};
 		if (b.has_value() && not isAliveInScope(b->local, into_scope)) b = {};
 
@@ -89,11 +96,6 @@ namespace compiler::mir {
 		return result;
 	}
 
-	/**
-	 * @brief If the value is not present in one of the maps, then we assume that is it
-	 * uninitialized in the merge, as we don't have the destructors inserted there yet.
-	 */
-
 	LocalMoveStateMap LocalMoveStateMap::join(
 		const LocalMoveStateMap& a, const LocalMoveStateMap& b, ScopeRef into_scope
 	) {
@@ -108,7 +110,7 @@ namespace compiler::mir {
 		return result;
 	}
 
-	bool LocalMoveStateMap::operator==(const LocalMoveStateMap& other) const {
+	bool LocalMoveStateMap::hasSameDataFlowState(const LocalMoveStateMap& other) const {
 		if (map.size() != other.map.size()) return false;
 		for (const auto& [local, status]: map) {
 			auto other_status = other.map.atMaybe(local);
@@ -249,7 +251,7 @@ namespace compiler::mir {
 			in_status.insertOrAssign(block_id, std::move(new_in));
 
 			auto prev_out = out_status.atMaybe(block_id);
-			if (prev_out && *prev_out.value() == new_out) continue;
+			if (prev_out && prev_out.value()->hasSameDataFlowState(new_out)) continue;
 			out_status.insertOrAssign(block_id, std::move(new_out));
 
 			for (auto succ: getTerminatorSuccessors(fun.blocks.at(block_id)->terminator))
@@ -341,11 +343,18 @@ namespace compiler::mir {
 				if (state.has_value() && state.value()->status == MoveStatus::Alive) continue;
 
 				const bool uninitialized = not state.has_value();
+				// A `MaybeMoved` state with no reaching move sites does not come from a move:
+				// it is a local that is simply uninitialized on some of the incoming paths.
+				const bool maybe_uninitialized = not uninitialized
+				                              && state.value()->status == MoveStatus::MaybeMoved
+				                              && state.value()->move_sites.empty();
 
 				auto title = base::strConcat(
 					"The variable `",
 					local->getName(),
-					uninitialized ? "` is used before it is initialized."
+					uninitialized         ? "` is used before it is initialized."
+					: maybe_uninitialized ? "` is not initialized on some "
+											"control-flow paths reaching this use."
 					: state.value()->status == MoveStatus::Moved
 						? "` is used after it has been moved out of."
 						: "` may have been moved out of on some "
@@ -362,7 +371,7 @@ namespace compiler::mir {
 						msg->addAttachedMessage(
 							makeBox<dia::PlaceholderNote>("Value moved here.", site)
 						);
-				if (uninitialized) {
+				if (uninitialized || maybe_uninitialized) {
 					if_opt_some(local->helios_id, sym_id) {
 						if_opt_some(helios::maybeSymbolPst(sym_id), pst_elem) {
 							msg->addAttachedMessage(makeBox<dia::PlaceholderNote>(

@@ -39,7 +39,10 @@ namespace compiler::mir {
 	std::vector<ScopeRef> getStartingScopes(ScopeRef begin, ScopeRef end);
 
 	/**
-	 * @brief Check if @param local is alive in the scope @param scope.
+	 * @brief Check whether @p local is still in scope at @p scope, i.e. whether the lifetime
+	 * scope of @p local is an ancestor of (or equal to) @p scope.
+	 *
+	 * This is a pure query on the scope tree, it does not modify @p local.
 	 */
 	bool isAliveInScope(MIRLocalRef local, ScopeRef scope);
 }

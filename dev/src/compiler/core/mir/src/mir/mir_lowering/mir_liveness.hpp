@@ -37,7 +37,7 @@ namespace compiler::mir {
 		 *
 		 */
 		MoveStatus status;
-		
+
 		/**
 		 * @brief The list of move instructions that "reach" this point
 		 * (reaching-definitions style). This lets diagnostics point at every place a value was
@@ -87,18 +87,24 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Merge two maps coming from two control-flow paths.
+		 *
+		 * @p into is the scope the joined program point lives in,
+		 * i.e. the beginning scope of the successor block (where the maps are
+		 * predecessors).
 		 */
 		static LocalMoveStateMap join(
 			const LocalMoveStateMap& a, const LocalMoveStateMap& b, ScopeRef into
 		);
 
 		/**
-		 * @brief Two maps are equal when they hold the same state for the same locals.
+		 * @brief Whether both maps hold the same data-flow state, i.e. the same move state for
+		 * the same locals.
 		 *
-		 * @note @ref prevInstrScope is not part of the comparison, as it is not a part of the
-		 * data-flow state.
+		 * @note This is deliberately not an `operator==`: @ref prev_instr_scope is not part of
+		 * the comparison, as it is not a part of the data-flow state, so two maps that compare
+		 * the same here are not interchangeable.
 		 */
-		bool operator==(const LocalMoveStateMap& other) const;
+		bool hasSameDataFlowState(const LocalMoveStateMap& other) const;
 
 	public:
 		/**
