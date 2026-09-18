@@ -368,6 +368,8 @@ namespace vm::loader::parser {
 		return { arg };                                          \
 	}
 
+	// when we are specifying frames we go from the bottom of the call stack
+	// frame 0 is `vm_start_function` (usually not used); frame 1 is `main` etc. 
 #define HANDLE_PLACE_ARG(TYPE)                                      \
 	template<>                                                      \
 	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {       \
