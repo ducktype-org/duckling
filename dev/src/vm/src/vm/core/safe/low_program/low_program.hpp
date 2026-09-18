@@ -43,8 +43,8 @@ namespace vm::low {
 
 		/// The maximum size of the local variables on stack required by the function frame.
 		usize local_stack_size;
-		/// The maximum count of blocks required by the function frame.
-		usize local_block_count;
+		/// The maximum count of local variable slots required by the function frame.
+		usize local_slot_count;
 
 		usize arg_size;
 		// The total summed size of all return values.
@@ -138,7 +138,7 @@ namespace vm::low {
 	 */
 	struct LowExternCFunction final {
 		base::StrID name;
-		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
+		void (*function_pointer)(byte*, byte*) = nullptr;
 		usize                 parameter_size_sum;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;

@@ -15,10 +15,6 @@
 
 namespace vm::loader::compiler::safe {
 
-	static usize getIntTypeSize(const code::valid_type::TypeSize& size) {
-		return static_cast<usize>(size.assumePointerSize(Bytes(16)));
-	}
-
 	namespace detail {
 
 #define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...)                                   \
@@ -209,8 +205,9 @@ namespace vm::loader::compiler::safe {
 		}
 	}
 
-	std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> SafeCompiler::
-		lowerInstructions(const vm::loader::compiler::detail::FunctionStackContext& ctx) const {
+	SafeCompiler::LoweredFunction SafeCompiler::lowerInstructions(
+		const vm::loader::compiler::detail::FunctionStackContext& ctx
+	) {
 		detail::SafeMicroBytecodeBuilder                    builder{ *this, ctx };
 		std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
 
@@ -223,7 +220,8 @@ namespace vm::loader::compiler::safe {
 		auto [micro_bytecode, label_map] = builder.build();
 		linkLabelArguments(micro_bytecode, label_map);
 
-		return { std::move(micro_bytecode), std::move(instruction_mapping) };
+		return { .bytecode            = std::move(micro_bytecode),
+			     .instruction_mapping = std::move(instruction_mapping) };
 	}
 
 	void SafeCompiler::compileNewFunctions(
