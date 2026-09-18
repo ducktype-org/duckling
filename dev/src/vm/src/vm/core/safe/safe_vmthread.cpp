@@ -792,9 +792,8 @@ namespace vm {
 		auto  local_stack = frame->local_stack;
 		auto& called_expr = runtime_expr_low.back();
 
-		u64 top_offset = getCurrentStackBytesSize().asInt();
 		u64 callee_stack_distance
-			= top_offset - u64(local_stack - runtime_data.local_stack_base);
+			= getCurrentHighPosition(getNumberOfCurrentStackFrames() - 1)->byteSize()->assumePointerSize(Bytes{16}).asInt();
 
 		u64 prev_summed = 0;
 
