@@ -12,7 +12,7 @@ namespace vm {
 	template<typename EntryT>
 	class GenericBlock;
 
-	using Block = GenericBlock<std::byte>;
+	using Block = GenericBlock<byte>;
 
 	template<typename EntryT, typename BlockT>
 	class GenericMemory;

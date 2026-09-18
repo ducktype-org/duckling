@@ -67,7 +67,7 @@ pub(crate) mod macros {
     ///
     /// # Usage
     ///
-    /// This macro takes a normal struct declaration, with visibilites.
+    /// This macro takes a normal struct declaration, with visibilities.
     ///
     /// Next, it takes [`Display`] impl in some special form.
     ///
@@ -146,7 +146,7 @@ pub(crate) mod macros {
                 write!(f, $fmt $(, self.$arg)*)
             }
         }
-        impl crate::quackpack::core::lints::Diagnostic for $name {}
+        impl $crate::quackpack::core::lints::Diagnostic for $name {}
     };
 }
     pub(crate) use make_diagnostic;
