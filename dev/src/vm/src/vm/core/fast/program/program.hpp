@@ -9,7 +9,7 @@ namespace vm::fast {
 
 	struct ExternCFunction final {
 		base::StrID name;
-		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
+		void (*function_pointer)(byte*, byte*) = nullptr;
 		Bytes                    parameter_size_sum;
 		std::vector<TypeCRef>    parameter_types;
 		base::Optional<TypeCRef> result_type;
