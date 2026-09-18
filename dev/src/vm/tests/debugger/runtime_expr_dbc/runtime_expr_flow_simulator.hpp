@@ -38,7 +38,7 @@ namespace vm::test {
 			events::Listener<ResT> listener;
 
 			LateEvaluation(FlowSimulator& simulator, Ref<events::Emitter<ResT>> emitter):
-				  listener([&simulator, self = this](ResT res) {
+				  listener([&simulator, self = this](const ResT& res) {
 					  CORE_ASSERT(
 						  simulator.late_evals.size(), "there must be some evaluation not completed"
 					  );
