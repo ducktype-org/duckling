@@ -138,6 +138,13 @@ namespace vm::api {
 			bool        enable;
 		};
 
+		struct SetBreakpointAtFrame final {
+			ThreadID thread_id;
+			u64      frame_idx;
+			u64      instruction_index;
+			bool     enable;
+		};
+
 		struct MapFileLineToCodeCollectionPosition final {
 			fs::File file;
 			u64      line_number;
@@ -174,6 +181,7 @@ namespace vm::api {
 		request::SetExecutionConfig,
 		request::AttachOutputListener,
 		request::SetBreakpoint,
+		request::SetBreakpointAtFrame,
 		request::MapFileLineToCodeCollectionPosition,
 		request::ExecRuntimeExpr,
 		request::ExecRuntimeExprFromFile>;

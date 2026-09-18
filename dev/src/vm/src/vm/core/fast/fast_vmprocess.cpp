@@ -153,6 +153,15 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `setBreakpoint` is not implemented.");
 	}
 
+	std::expected<api::Response, api::ApiError> FastVMProcess::setBreakpointAtFrame(
+		[[maybe_unused]] api::ThreadID thread_id,
+		[[maybe_unused]] usize         frame_idx,
+		[[maybe_unused]] usize         instruction_index,
+		[[maybe_unused]] bool          enable
+	) {
+		throw vm::VMNotImplemented("Method `setBreakpointAtFrame` is not implemented.");
+	}
+
 	std::expected<api::Response, api::ApiError> FastVMProcess::evalRuntimeExpr(
 		[[maybe_unused]] api::ThreadID                                 thread_id,
 		[[maybe_unused]] const std::variant<fs::File, code::Function>& expr

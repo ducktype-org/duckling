@@ -879,6 +879,21 @@ namespace vm {
 		return std::unexpected{ std::make_pair(runtime_expr_res_handler.back(), err_msg) };
 	}
 
+	std::expected<void, std::string> SafeVMThread::setBreakpointAtFrame(usize frame_idx, usize idx, bool enable) const {
+		if (!v_matches(getThreadState(), vm::thread_state::Paused)) {
+			return std::unexpected{"error: breakpoint can be set only when thread is paused"};
+		}
+		if (frame_idx >= getNumberOfCurrentStackFrames()) {
+			return std::unexpected{"error: frame index is out of bounds"};
+		}
+
+		auto func_ref = runtime_data.frame_stack_base[frame_idx].current_function;
+		CORE_ASSERT(func_ref, "When we access the stack frame it has to yield non-nulL function ref");
+
+		auto& func = const_cast<low::LowFuncData&>(*func_ref);
+		return func.setBreakpoint(idx, enable);
+	}
+
 	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getCurrentHighPosition(u64 frame_index
 	) const {
 		auto opt_low_pos = getCurrentPosition(frame_index);

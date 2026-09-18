@@ -302,6 +302,8 @@ namespace vm {
 			std::pair<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
 			loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
 
+		std::expected<void, std::string> setBreakpointAtFrame(usize frame_idx, usize idx, bool enable) const;
+
 		[[nodiscard]]
 		Ref<SafeVMValue> getVMValue(u64 id) const;
 
