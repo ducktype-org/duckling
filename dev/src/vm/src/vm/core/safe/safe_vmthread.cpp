@@ -740,9 +740,13 @@ namespace vm {
 	}
 
 	Bytes SafeVMThread::getCurrentStackBytesSize() const {
-		return getCurrentHighPosition(getNumberOfCurrentStackFrames() - 1)
-		    ->byteSize()
-		    ->assumePointerSize(Bytes{ 16 });
+		Frame* frame = runtime_data.frame_stack_current;
+		byte*  top   = frame->local_stack;
+		if (frame->local_slot_stack_end != frame->local_slot_stack_base) {
+			const LocalSlot& slot = frame->local_slot_stack_end[-1];
+			top = slot.data + slot.type->getSize().asInt();
+		}
+		return Bytes{ u64(top - runtime_data.local_stack_base) };
 	}
 
 	u64 SafeVMThread::getCurrentStackBlockSize() const {
@@ -788,18 +792,21 @@ namespace vm {
 		auto  local_stack = frame->local_stack;
 		auto& called_expr = runtime_expr_low.back();
 
-		u64 orig_stack_size = getCurrentStackBytesSize().asInt();
-		u64 prev_summed     = 0;
+		u64 top_offset = getCurrentStackBytesSize().asInt();
+		u64 callee_stack_distance
+			= top_offset - u64(local_stack - runtime_data.local_stack_base);
+
+		u64 prev_summed = 0;
 
 		for (auto type: called_expr.result_types) {
 			auto size = type->getSize().asInt();
 			OpFuns::pushLocalSlot(
-				frame, type, local_stack + orig_stack_size + prev_summed, size, nullptr
+				frame, type, local_stack + callee_stack_distance + prev_summed, size, nullptr
 			);
 			prev_summed += size;
 		}
 		OpFuns::performFunctionCall(
-			instr, local_stack, frame, *this, called_expr, orig_stack_size, 0
+			instr, local_stack, frame, *this, called_expr, callee_stack_distance, 0
 		);
 		OpFuns::save_execution_state(instr, local_stack, frame, *this);
 
@@ -809,8 +816,7 @@ namespace vm {
 
 		// updating the previous frame, because result variables
 		// will not be returned to the caller
-		prev_frame->local_slot_stack_base -= called_expr.result_types.size();
-		prev_frame->local_stack -= called_expr.ret_size;
+		prev_frame->local_slot_stack_end -= called_expr.result_types.size();
 
 		std::condition_variable                       cv;
 		std::mutex                                    result_mutex;

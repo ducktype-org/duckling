@@ -1878,10 +1878,10 @@ class FunctionValidator {
 					index++;
 				}
 				instr_case(Op_initFromVMValue, instr) {
-					stack_before_instr[index] = local_stack.getStateID();
 					auto& thr                 = *v_get(mode, Expr).thread;
 					auto  name = thr.getVMValue(instr.vm_val.id)->getType()->getName();
 					local_stack.push(instr.var, opargs::Type(name));
+					stack_before_instr[index] = local_stack.getStateID();
 					index++;
 				}
 				instr_case(Op_deinit, instr) {
