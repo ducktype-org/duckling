@@ -68,11 +68,6 @@ namespace compiler::helios {
 		    || (from_kind == tsh::ReferenceKind::Box && to_kind == tsh::ReferenceKind::Direct);
 	}
 
-	tsh::SymbolType<> copiedValueType(const tsh::SymbolType<>& from, const tsh::SymbolType<>& to) {
-		if (!readsThroughReference(from.getRefKind(), to.getRefKind())) return from;
-		return from.getPointeeSymbolType();
-	}
-
 	tsh::ExpressionType<> valueBeingCopied(
 		const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 	) {

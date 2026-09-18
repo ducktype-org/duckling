@@ -220,7 +220,9 @@ namespace compiler::helios::code {
 							return makeBox<ArgumentIncompatibleTypeError>(
 								pos,
 								makeBox<InteractiveType>(ctx, data.failed.to),
-								makeBox<InteractiveType>(ctx, data.failed.validated_from),
+								makeBox<InteractiveType>(
+									ctx, data.failed.validated_from.getSymbolType()
+								),
 								std::move(function_name)
 							);
 						}

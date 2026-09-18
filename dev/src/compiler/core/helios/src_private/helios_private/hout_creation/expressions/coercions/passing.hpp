@@ -49,14 +49,6 @@ namespace compiler::helios {
 	bool readsThroughReference(tsh::ReferenceKind from_kind, tsh::ReferenceKind to_kind);
 
 	/**
-	 * @brief The type of the value a copying coercion actually copies.
-	 *
-	 * A `var a: box T = box_T` copies the box itself, reading a `box T` into a `T` copies the
-	 * pointee.
-	 */
-	tsh::SymbolType<> copiedValueType(const tsh::SymbolType<>& from, const tsh::SymbolType<>& to);
-
-	/**
 	 * @brief The value a copying coercion actually copies.
 	 */
 	tsh::ExpressionType<> valueBeingCopied(
