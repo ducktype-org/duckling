@@ -146,7 +146,7 @@ namespace vm::loader::compiler::safe::detail {
 		 * callee's return values followed by its arguments.
 		 */
 		u64 sharedStackSpaceSize(base::StrID function_name) const {
-			const auto& signature = compiler.high_program.functions().at(function_name)->signature;
+			const auto& signature = compiler.high_program.functions().at(function_name)->get()->signature;
 
 			// Summed over the low types, the same ones `sharedStackSpaceSizeOfMethod` and the
 			// executor measure, so there is a single answer to how big a variable is.

@@ -78,8 +78,8 @@ namespace vm::loader::compiler::safe {
 				auto& thread = **stack_ctx.thread_evaluating_expr;
 
 				auto relative_offset = *thread.getCurrentHighPosition(frame_idx)->getBlockIdx(opcode_arg.var_name);
-				auto prev_frame_base = thread.getStackFrame(frame_idx).local_block_ref_stack_base;
-				auto stack_base = thread.getRuntimeData().block_ref_stack_base;
+				auto prev_frame_base = thread.getStackFrame(frame_idx).local_slot_stack_base;
+				auto stack_base = thread.getRuntimeData().slot_stack_base;
 				
 				usize frame_offset = usize(prev_frame_base - stack_base);
 
@@ -207,7 +207,7 @@ namespace vm::loader::compiler::safe {
 
 	SafeCompiler::LoweredFunction SafeCompiler::lowerInstructions(
 		const vm::loader::compiler::detail::FunctionStackContext& ctx
-	) {
+	) const {
 		detail::SafeMicroBytecodeBuilder                    builder{ *this, ctx };
 		std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
 
@@ -456,7 +456,7 @@ namespace vm::loader::compiler::safe {
 			.bc                  = bytecode,
 			.orig_bc             = std::move(bytecode),
 			.local_stack_size    = getIntTypeSize(ctx.local_stack_size),
-			.local_block_count   = ctx.local_block_count,
+			.local_slot_count   = ctx.local_slot_count,
 			.arg_size            = getIntTypeSize(parameters_size),
 			.ret_size            = getIntTypeSize(ret_type_sum),
 			.parameters          = std::move(parameters),

@@ -648,63 +648,6 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ret_from_expr)(FUNCTION_ARGS) {
-		{
-			CORE_ASSERT(
-				thread.runtime_expr_low.size(),
-				"Some expression must be evaluated when executing `ret_from_expr`"
-			);
-
-			auto& expr = thread.runtime_expr_low.back();
-
-			CORE_ASSERT(
-				instr >= expr.bc.data() && instr < expr.bc.data() + expr.bc.size(),
-				"We must be evaluating the latest expression when executing `ret_from_expr`"
-			);
-
-			CORE_ASSERT(
-				frame > thread.runtime_data.frame_stack_base,
-				"The expression must have another frame underneath intself"
-			);
-
-			auto* callee_frame = frame;
-			u64   ret_count    = frame->current_function->result_types.size();
-			frame--;
-			auto* caller_block_ref_stack_end = frame->local_block_ref_stack_end;
-
-			std::vector<Ref<SafeVMValue>> exit_value = {};
-
-			while (callee_frame->local_block_ref_stack_end > caller_block_ref_stack_end + ret_count)
-				performDeinit(callee_frame, thread);
-
-			CORE_ASSERT(
-				callee_frame->local_block_ref_stack_end == caller_block_ref_stack_end + ret_count,
-				"This must hold"
-			);
-
-			for (u64 i = 0; i < ret_count; i++) {
-				auto block = Ref(caller_block_ref_stack_end[i]);
-				exit_value.emplace_back(
-					thread.safe_process.createVMValue(expr.result_types[i], Pointer(block, 0))
-				);
-			}
-
-			for (u64 i = 0; i < ret_count; i++) performDeinit(callee_frame, thread);
-
-			callee_frame->resetFrameData();
-
-			instr       = frame->instr;
-			local_stack = frame->local_stack;
-
-			thread.runtime_expr_res_handler.back()->emitEvent(exit_value);
-
-			thread.runtime_expr_res_handler.pop_back();
-			thread.runtime_expr_low.pop_back();
-			thread.runtime_expr_high.pop_back();
-		}
-		FUNCTION_CONT(0);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_off_type)(FUNCTION_ARGS) {
 		{
 			// No block: one is created only if something ends up needing it.
