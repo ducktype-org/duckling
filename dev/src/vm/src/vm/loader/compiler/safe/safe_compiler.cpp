@@ -63,7 +63,10 @@ namespace vm::loader::compiler::safe {
 				
 				usize frame_offset = usize(prev_frame_base - stack_base);
 
-				return (frame_offset + relative_offset) & (~(1ULL << 63));
+				usize final_offset = (frame_offset + relative_offset);
+				CORE_ASSERT ((final_offset & (1ULL << 63)) == 0, "final offset should have top bit off");
+
+				return final_offset;
 			}
 
 			if (auto&& maybe_offset = stack_ctx.function.local_stack.getByteOffset(stack_state_id, opcode_arg.var_name); maybe_offset.has_value()) {
@@ -84,7 +87,10 @@ namespace vm::loader::compiler::safe {
 				
 				usize frame_offset = usize(prev_frame_base - stack_base);
 
-				return (frame_offset + relative_offset) & (~(1ULL << 63));
+				usize final_offset = (frame_offset + relative_offset);
+				CORE_ASSERT ((final_offset & (1ULL << 63)) == 0, "final offset should have top bit off");
+
+				return final_offset;
 			}
 
 			if(auto maybe_val = stack_ctx.function.local_stack.getBlockIdx(stack_state_id, opcode_arg.var_name)) {
