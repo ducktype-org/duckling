@@ -2,6 +2,21 @@ use std::process::Command;
 
 /// Simple build script for local development of duck.
 fn main() {
+    let git_root = {
+        let mut command = Command::new("git");
+        let output = command
+            .args(["rev-parse", "--show-toplevel"])
+            .output()
+            .expect("`git` failed");
+        if !output.status.success() {
+            panic!("`git rev-parse --show-toplevel` failed: {output:?}");
+        }
+        let path = String::from_utf8(output.stdout).expect("path not a utf8");
+        path.trim().to_string()
+    };
+    println!("cargo:rerun-if-changed={git_root}/.git/HEAD");
+    println!("cargo:rerun-if-changed={git_root}/.git/refs");
+    println!("cargo:rerun-if-changed=build.rs");
     add_rpath_for_bundled_scip();
     let info = get_duck_version_info();
     emit_duck_version_info(info);
