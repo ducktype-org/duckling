@@ -15,9 +15,6 @@ namespace duck_ls {
 	/**
 	 * @brief The protocol side of the server: it owns no state beyond the endpoint, it only
 	 * turns notifications into compiler calls and compiler results into messages.
-	 *
-	 * The methods are virtual and already implemented; a test subclasses and overrides only the
-	 * ones it wants to observe.
 	 */
 	class ServerSession {
 	public:

@@ -86,9 +86,9 @@ namespace compiler::frontend {
 	Ref<ModuleTree> ModuleTreeBuilder::create(
 		const fs::File&     root,
 		base::StrID         package_id,
+		const FileResolver& file_resolver,
 		const std::regex&   file_reject,
-		const std::regex&   dir_reject,
-		const FileResolver& file_resolver
+		const std::regex&   dir_reject
 	) {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
 
@@ -103,7 +103,7 @@ namespace compiler::frontend {
 	Ref<ModuleTree> ModuleTreeBuilder::createWithRandomPackageID(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
-		return create(root, base::StrID(base::generateRandomString(32)), file_reject, dir_reject);
+		return create(root, base::StrID(base::generateRandomString(32)), identityFileResolver(), file_reject, dir_reject);
 	}
 
 	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
@@ -867,17 +867,6 @@ namespace compiler::frontend {
 		// frame. Wait until every worker is idle before returning, otherwise that frame gets
 		// destroyed underneath them -> rare segfault.
 		manager.waitForAllWorkersFree();
-	}
-
-	ModuleID createModuleTreeFromFS(
-		const fs::File&     root,
-		base::StrID         package_id,
-		const FileResolver& file_resolver,
-		const std::regex&   file_reject,
-		const std::regex&   dir_reject
-	) {
-		return ModuleTreeBuilder::create(root, package_id, file_reject, dir_reject, file_resolver)
-		    ->getModuleID();
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {

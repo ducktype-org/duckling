@@ -233,6 +233,11 @@ private:
 
 		assertTrue(under_test.session.hasErrors(helper_uri), "Invalid helper.dk");
 		assertTrue(under_test.session.noErrors(main_uri), "Invalid main.dk");
+
+		workspace.remove("pkg/helper.dk");
+		under_test.compiler.fileCreatedOrDeletedOnDisk()
+
+		
 	}
 };
 

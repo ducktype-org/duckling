@@ -127,9 +127,11 @@ private:
             return fs::File(disk_path);
 		};
 
-		auto module_id = createModuleTreeFromFS(
-			root, base::StrID("resolver_package_id"), resolver, test_regex, test_regex
-		);
+		auto module_id
+			= ModuleTreeBuilder::create(
+				  root, base::StrID("resolver_package_id"), resolver, test_regex, test_regex
+			)
+		          ->getModuleID();
 		auto mt = getModuleRef(module_id);
 
 		assertTrue(
@@ -164,8 +166,9 @@ private:
 
 	void parseModule() {
 		auto pth = fs::File(path("test_module"));
-		auto mt
-			= ModuleTreeBuilder::create(pth, base::StrID("test_package_id"), test_regex, test_regex);
+		auto mt  = ModuleTreeBuilder::create(
+            pth, base::StrID("test_package_id"), identityFileResolver(), test_regex, test_regex
+        );
 
 		ASSERT_TRUE(mt->hasMainSourceFile());
 		ASSERT_EQUAL(2, mt->getSubmodules().illegalAccess().size());
@@ -298,7 +301,11 @@ private:
 		// This test is adapted from the old FsTree parseDirectory test.
 		const auto root = fs::File(path("test_directory_tree"));
 		auto       mt   = ModuleTreeBuilder::create(
-            root, base::StrID("test_package_id23423423"), test_regex, test_regex
+            root,
+            base::StrID("test_package_id23423423"),
+            identityFileResolver(),
+            test_regex,
+            test_regex
         );
 
 		// Only files with valid names/extensions are included as source or other files.

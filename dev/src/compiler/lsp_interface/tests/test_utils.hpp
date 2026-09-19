@@ -80,6 +80,11 @@ namespace duck_ls_test {
 			return *this;
 		}
 
+		VfsWorkspace& remove(std::string_view relative) {
+			fs::FileManager::deleteFile(fs::File(root_path.join(std::string(relative))));
+			return *this;
+		}
+
 		[[nodiscard]] lsp::Uri uriOf(std::string_view relative = "") const {
 			const auto path = relative.empty() ? root_path : root_path.join(std::string(relative));
 			return lsp::Uri::fileUriFromPath(path.toPhysicalPath().genericString());

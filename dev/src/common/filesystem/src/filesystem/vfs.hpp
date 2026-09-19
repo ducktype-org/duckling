@@ -24,9 +24,6 @@ namespace fs {
 	public:
 		/**
 		 * @brief Builds an empty VFS, holding nothing but its root.
-		 *
-		 * Public so that an owner can keep a VFS of its own as a member; every instance stays
-		 * unique, and a path is bound to the one it was made against.
 		 */
 		VFS();
 

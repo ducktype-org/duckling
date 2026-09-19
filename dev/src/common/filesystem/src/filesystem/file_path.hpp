@@ -34,7 +34,7 @@ namespace fs {
 	private:
 		std::filesystem::path path;
 		PathType              type;
-		/// The VFS this path resolves against; set iff `type == PathType::Virtual`.
+		/// The VFS this path resolves against; set if and only if `type == PathType::Virtual`.
 		base::Optional<base::Ref<VFS>> vfs;
 
 		/**
@@ -55,7 +55,7 @@ namespace fs {
 		FilePath(std::filesystem::path path, PathType type, base::Optional<base::Ref<VFS>> vfs):
 			  path(std::move(path)),
 			  type(type),
-			  vfs(std::move(vfs)) {}
+			  vfs(vfs) {}
 
 	public:
 		FilePath(const FilePath&)            = default;
@@ -65,37 +65,22 @@ namespace fs {
 		~FilePath()                          = default;
 
 		/**
-		 * @brief Constructor accepting any type convertible to std::filesystem::path.
+		 * @brief Constructor binding a virtual path to an explicit VFS instance.
 		 * @note FilePath itself is excluded: it converts to std::filesystem::path, so without
 		 * this the template would outrank the copy constructor for a non-const lvalue and
-		 * silently reclassify the path.
-		 * @tparam T Type that is convertible to std::filesystem::path.
-		 * @param path_like The path-like object to construct from.
-		 */
-		template<typename T>
-		requires std::is_convertible_v<T, std::filesystem::path>
-		          && (!std::is_same_v<std::remove_cvref_t<T>, FilePath>) FilePath(T&& path_like):
-			  path(std::forward<T>(path_like)),
-			  type(determinePathType(path)),
-			  vfs(defaultVfsFor(type)) {}
-
-		/**
-		 * @brief Constructor binding a virtual path to an explicit VFS instance.
+		 * silently change the VFS of the path for example.
 		 * @param path_like The path-like object to construct from; must be a virtual path.
-		 * @param vfs The VFS the path resolves against.
+		 * @param vfs The vfs of the path. If empty and the path is virtual,
+		 * then chooses the default VFS instance.
 		 */
 		template<typename T>
 		requires std::is_convertible_v<T, std::filesystem::path>
 		          && (!std::is_same_v<std::remove_cvref_t<T>, FilePath>)
-		FilePath(T&& path_like, base::Ref<VFS> vfs):
+		FilePath(T&& path_like, base::Optional<base::Ref<VFS>> vfs = {}):
 			  path(std::forward<T>(path_like)),
 			  type(determinePathType(path)),
-			  vfs(vfs) {
-			CORE_ASSERT(
-				type == PathType::Virtual,
-				"Only virtual paths can be bound to an explicit VFS: " + path.string()
-			);
-		}
+			  vfs(type == PathType::Virtual ? vfs.copyValueOr(VFS::getInstance())
+		                                    : base::Optional<base::Ref<VFS>>{}) {}
 
 		/**
 		 * @brief Gets the VFS this path resolves against, empty for non-virtual paths.

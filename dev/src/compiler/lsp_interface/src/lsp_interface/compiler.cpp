@@ -159,9 +159,10 @@ namespace duck_ls {
 			return { source_path };
 		};
 
-		auto module_id = createModuleTreeFromFS(
-			fs::File(package_root), packageIdForRoot(package_root), resolver
-		);
+		auto module_id = ModuleTreeBuilder::create(
+							 fs::File(package_root), packageIdForRoot(package_root), resolver
+		)
+		                     ->getModuleID();
 		global_state::setters::addPackage(module_id);
 
 		std::cerr << "duck_ls: loaded package " << package_root.strView() << "\n";

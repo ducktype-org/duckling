@@ -34,9 +34,6 @@ namespace duck_ls {
 	 * @brief Everything the protocol handlers ask of the compiler: it keeps the module tree in
 	 * step with what the editor holds open, and answers with the diagnostics of the resulting
 	 * compilation.
-	 *
-	 * The methods are virtual and already implemented; a test subclasses and overrides only the
-	 * ones it wants to record. Hover, semantic tokens and go to definition land here later.
 	 */
 	class Compiler {
 	public:

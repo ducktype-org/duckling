@@ -345,6 +345,8 @@ namespace compiler::frontend {
 		/**
 		 * Factory method to create ModuleTree from filesystem tree.
 		 * @param root Pre-constructed fs::File with a module structure.
+		 * @param file_resolver Lambda, given a path to the file on disk, may open a different file
+		 * (useful in the LS)
 		 * @param file_reject Regex for rejecting files.
 		 * @param dir_reject Regex for rejecting directories.
 		 * @return A valid pointer with the root.
@@ -352,9 +354,9 @@ namespace compiler::frontend {
 		static Ref<ModuleTree> create(
 			const fs::File&     root,
 			base::StrID         package_id,
+			const FileResolver& file_resolver = identityFileResolver(),
 			const std::regex&   file_reject   = DEFAULT_REJECT_FILE_REGEX,
-			const std::regex&   dir_reject    = DEFAULT_REJECT_DIRECTORY_REGEX,
-			const FileResolver& file_resolver = identityFileResolver()
+			const std::regex&   dir_reject    = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
 
 		/**
@@ -583,23 +585,6 @@ namespace compiler::frontend {
 	 * for more details see ModuleTreeBuilder::create
 	 */
 	ModuleID createModuleTree(const fs::File& file, base::StrID package_id);
-
-	/**
-	 * @brief Creates a module tree by walking the real filesystem, with every file it finds
-	 * passed through `file_resolver` first.
-	 *
-	 * @param root File representing the root of the module tree
-	 * @param package_id The package ID to associate with the module tree
-	 * @param file_resolver Substitutes the file the compiler reads for a given path
-	 * @return The ModuleID of the created module tree
-	 */
-	ModuleID createModuleTreeFromFS(
-		const fs::File&     root,
-		base::StrID         package_id,
-		const FileResolver& file_resolver,
-		const std::regex&   file_reject = DEFAULT_REJECT_FILE_REGEX,
-		const std::regex&   dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
-	);
 
 	/**
 	 * @brief: Concurrently parses all source files in the module tree and their submodules
