@@ -68,7 +68,7 @@ namespace vm {
 			[[maybe_unused]] auto new_functions = loaded_program_copy.selfUpdate();
 			updateGlobalDataMemory(&loaded_program_copy);
 #ifdef ENABLE_JIT
-			{
+			if (jit_enabled) {
 				// Exec threads never take api_lock; the GIL is what excludes them, and it must
 				// be held while growing jit_data and replacing opcodes in loaded_program_copy.
 				GIL::ScopedLock gil_lock(gil);
@@ -281,11 +281,16 @@ namespace vm {
 		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
+	SafeVMProcess::SafeVMProcess(
+		const PID my_pid, bool enable_deadlock_detection, [[maybe_unused]] bool enable_jit
+	):
 		  IVMProcess(my_pid),
 		  loaded_program(&loaded_program_copy),
 		  loaded_program_copy(compiler.getLowProgram()) {
 		if (enable_deadlock_detection) deadlock_detector.emplace();
+#ifdef ENABLE_JIT
+		jit_enabled = enable_jit;
+#endif
 		vm_threads.add(*this);
 	}
 

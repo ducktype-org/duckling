@@ -21,6 +21,10 @@ The entrypoints are instructions inserted under the loop or function head. Due t
 
 Since the compiled functions run a trampoline to execute a different function, they can trigger the compilation as well as execute the previously optimized code of functions (including itself).
 
+### Disabling the JIT at runtime
+
+A JIT-enabled VM accepts `VM run --jit off` (`ProcessConfig::enable_jit` through the API), which skips patching the entrypoints into the loaded program entirely. The entrypoint instructions are then never reached, so no compilation happens and the lazy JIT initialization (LLVM context, embedded stencils) never runs — the process runs purely interpreted.
+
 ## Bitcode generation
 
 To generate quality implementation bitcode for the LLVM (and later the Copy-and-Patch compiler) we run an additional compilation process and perform manual link-time optimization, by joining the whole VM in a single `.bc` file. Before optimizing, only instruction implementations are marked as external, allowing for aggressive dead-code elimination.

@@ -111,6 +111,13 @@ clah::Clah getVmClah() {
 	                     .addLongName("debug")
 	                     .addShortDesc("Start the VM CLI debugger")
 	                     .build())
+#else
+				.add(clah::ParamBuilder::ofValue(
+						 clah::CategoryParser::make("on|off", std::vector<std::string>{ "on", "off" })
+				)
+	                     .addLongName("jit")
+	                     .addShortDesc("Enable or disable the JIT at runtime (default: on).")
+	                     .build())
 #endif  // ENABLE_JIT
 				.add(clah::ParamBuilder::ofValue(
 						 clah::StringListParser::make("args", clah::StringParser::make())
@@ -147,6 +154,10 @@ clah::Clah getVmClah() {
 					vm::api::ProcessConfig process_options{};
 					if (options.isFlag("fast-mode"))
 						process_options.mode = vm::api::ProcessMode::Fast;
+#ifdef ENABLE_JIT
+					process_options.enable_jit
+						= options.getValue<std::string>("jit").copyValueOr("on") == "on";
+#endif
 
 					if (options.isFlag("debug")) {
 						auto debugger = vm::debugger::cli::CLIDebugger();

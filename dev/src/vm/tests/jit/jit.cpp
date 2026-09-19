@@ -2,6 +2,9 @@
 
 #include <tester/tester.hpp>
 
+#include <vm/api/vm.hpp>
+#include <vm/core/safe/safe_vmprocess.hpp>
+
 /**
  * @brief Tests here invoke another function multiple times, inducing the
  * necessary threshold, and allowing for it to be jit-compiled.
@@ -39,6 +42,10 @@ public:
 		TESTER_ADD_TEST(testRecursiveCalls);
 		// Many things combined
 		TESTER_ADD_TEST(testAll);
+
+#ifdef ENABLE_JIT
+		TESTER_ADD_TEST(testJitDisabled);
+#endif
 	}
 
 private:
@@ -71,6 +78,31 @@ private:
 	void testAll() {
 		runTestOnVm("mega_test.dbc", "10", "3333333333333333666666666666121212121212121212121212");
 	}
+
+#ifdef ENABLE_JIT
+	/// A JIT-built VM with JIT disabled at runtime must run purely interpreted: no entrypoints
+	/// patched into the executed program copy and no jit_data gathered, yet correct output.
+	void testJitDisabled() {
+		vm::SafeVMProcess process(vm::PID::fromU64(0), false, false);
+		ASSERT_HAS_VALUE(process.doRequest(
+			vm::api::request::LoadFiles{ { fs::File(path("mega_test.dbc")) } }
+		));
+		ASSERT_TRUE(process.getJitData().empty());
+		for (const auto& func: process.getLoadedProgram()->getFunctions()) {
+			for (const auto& instr: func.bc) {
+				const auto opcode = vm::getInstructionOpcode(instr);
+				ASSERT_TRUE(opcode != vm::low::MicroOpcode::jitFuncEntrypoint);
+				ASSERT_TRUE(opcode != vm::low::MicroOpcode::jitLoopEntrypoint);
+			}
+		}
+
+		vm::api::ProcessConfig config{};
+		config.enable_jit = false;
+		const auto pid = initProcess(config);
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("mega_test.dbc")) }));
+		runTestOnVm(pid, "10", "3333333333333333666666666666121212121212121212121212");
+	}
+#endif
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/jit/");

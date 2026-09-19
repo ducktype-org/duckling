@@ -63,6 +63,9 @@ namespace vm {
 
 #ifdef ENABLE_JIT
 		jit::JitData jit_data;
+		/// When false, loadProgram skips patching JIT entrypoints into the executed program
+		/// copy, so nothing ever triggers compilation (and lazy JIT init never runs).
+		bool jit_enabled = true;
 #endif
 
 		/**
@@ -217,7 +220,9 @@ namespace vm {
 #endif
 
 	public:
-		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
+		SafeVMProcess(
+			PID my_pid, bool enable_deadlock_detection = false, bool enable_jit = true
+		);
 
 		DeadlockDetector* getDeadlockDetector() {
 			return deadlock_detector ? &*deadlock_detector : nullptr;
