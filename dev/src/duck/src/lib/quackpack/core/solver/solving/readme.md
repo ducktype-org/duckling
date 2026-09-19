@@ -76,7 +76,7 @@ For every package `P` and every its feature `F` such that either `P` or `F` is n
 if `F` expands to some features `F_1`, ..., `F_n != F` we add that `F` implies `F_1`, ..., `F_n` to the linear program.
 
 ### At most one version
-To cricumvent weird errors, QuackPack disallows packages with same identities (but different versions) from occuring in one build graph.
+To circumvent weird errors, QuackPack disallows packages with same identities (but different versions) from occuring in one build graph.
 
 If, for a given identity, we have a preexisting package, all other versions are prohibited.
 Otherwise we add a constraint that at most one version is present.
