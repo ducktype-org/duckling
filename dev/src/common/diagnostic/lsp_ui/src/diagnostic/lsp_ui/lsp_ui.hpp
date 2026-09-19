@@ -19,10 +19,10 @@ namespace dia::lsp {
 	 */
 	struct LSPDiagnosticResult final {
 		/// The diagnostic, ready to send.
-		::lsp::Diagnostic diagnostic;
+		::lsp::Diagnostic diagnostic{};
 
 		/// The file the diagnostic belongs to.
-		::lsp::Uri uri;
+		::lsp::Uri uri{};
 	};
 
 	/**
@@ -58,13 +58,13 @@ namespace dia::lsp {
 		}
 
 		/// The default file path to use for diagnostics without location.
-		std::string default_error_location;
+		std::string default_error_location{};
 
 		/// The path of the file we are querying diagnostics for.
-		std::string queried_file;
+		std::string queried_file{};
 
 		/// Turns a path into the URI to answer the client with.
-		UriResolver to_uri;
+		UriResolver to_uri{};
 	};
 
 	/**

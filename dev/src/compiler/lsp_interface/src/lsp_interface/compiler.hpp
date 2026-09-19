@@ -119,6 +119,6 @@ namespace duck_ls {
 		std::vector<compiler::frontend::ModuleID> tracked_packages{};
 
 		/// The last diagnostics pushed per URI, so that stale ones can be cleared.
-		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> last_published_diagnostics;
+		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> last_published_diagnostics{};
 	};
 }

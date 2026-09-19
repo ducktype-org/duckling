@@ -76,6 +76,11 @@ jobs:
           GIT_CONFIG_KEY_1: http.version
           GIT_CONFIG_VALUE_1: HTTP/1.1
 
+      # lspgen runs as a build step, so configuring alone leaves lsp/types.h and the rest of the
+      # generated headers missing and every file that reaches them fails to parse.
+      - name: Generate the lsp-framework headers
+        run: cmake --build dev --target lsp -j "$(nproc)"
+
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:

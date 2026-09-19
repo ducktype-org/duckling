@@ -29,7 +29,7 @@ namespace duck_ls {
 		/// The document's place in the cache, its identity for the whole server.
 		fs::FilePath cache_path;
 		/// The client's language id, currently unused.
-		std::string language_id;
+		std::string language_id{};
 		/// The version the client last sent.
 		i32 version = 0;
 		/// Whether a file backed the document when it was opened, deciding what didClose restores.
@@ -147,10 +147,10 @@ namespace duck_ls {
 
 	private:
 		/// Test only, if set, the FilesCache teats this fs::VFS like the physical one.
-		base::Optional<base::Ref<fs::VFS>>             source_vfs;
-		fs::VFS                                        cache_vfs;
-		std::unordered_map<fs::FilePath, OpenDocument> documents;
-		std::vector<fs::FilePath>                      workspace_roots;
+		base::Optional<base::Ref<fs::VFS>>             source_vfs{};
+		fs::VFS                                        cache_vfs{};
+		std::unordered_map<fs::FilePath, OpenDocument> documents{};
+		std::vector<fs::FilePath>                      workspace_roots{};
 	};
 
 }

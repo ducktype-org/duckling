@@ -14,8 +14,8 @@
 
 #include <cerrno>
 #include <cstdio>
-#include <cstring>
 #include <iostream>
+#include <system_error>
 
 namespace {
 
@@ -31,11 +31,12 @@ namespace {
 
 		void read(char* buffer, std::size_t size) override {
 			if (std::fread(buffer, size, 1, stdin) < 1 && std::ferror(stdin) != 0)
-				throw lsp::io::Error(std::strerror(errno));
+				throw lsp::io::Error(std::system_category().message(errno));
 		}
 
 		void write(const char* buffer, std::size_t size) override {
-			if (std::fwrite(buffer, size, 1, out) < 1) throw lsp::io::Error(std::strerror(errno));
+			if (std::fwrite(buffer, size, 1, out) < 1)
+				throw lsp::io::Error(std::system_category().message(errno));
 			std::fflush(out);
 		}
 
