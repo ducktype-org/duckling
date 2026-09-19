@@ -1,5 +1,5 @@
 use clap::builder::ValueParser;
-use clap::{Command, ValueHint, crate_name, crate_version};
+use clap::{Command, ValueHint};
 
 pub mod cli_args_preprocessing;
 pub(crate) mod cli_ext;
@@ -18,8 +18,8 @@ fn cli() -> Command {
     let after_help = format!(
         "To run a script you can also use syntax `{style}duck [OPTIONS] <path-to-script>{style:#}`"
     );
-    Command::new(crate_name!())
-        .version(crate_version!())
+    Command::new("duck")
+        .arg(flag("version", "Print version and exit").short('V'))
         .arg(
             flag("verbose", "Use more verbose output")
                 .conflicts_with("quiet")
