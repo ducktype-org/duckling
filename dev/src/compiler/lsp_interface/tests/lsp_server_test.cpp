@@ -71,7 +71,9 @@ namespace {
 		duck_ls::Compiler          compiler;
 	};
 
-	std::string_view content(const fs::File& file) { return file.getContent().view().stringView(); }
+	std::string content(const fs::File& file) {
+		return std::string(file.getContent().view().stringView());
+	}
 }
 
 class LspServerTest: public tester::TestSuite {
@@ -106,7 +108,7 @@ private:
 	void assertHasModuleLoadedFor(const fs::FilePath& path) {
 		using namespace compiler::frontend;
 
-		auto source_files = SourceFile::getSourceFilesFromFile(fs::File(path));
+		auto source_files = SourceFile::getSourceFilesFromPath(path);
 		assertTrue(!source_files.empty(), "No source file is registered for " + path.string());
 
 		auto module_id  = source_files.back()->getModule().illegalAccess().getID();
@@ -126,8 +128,8 @@ private:
 	void assertNoModuleLoadedFor(const fs::FilePath& path) {
 		using namespace compiler::frontend;
 
-		auto source_files = SourceFile::getSourceFilesFromFile(fs::File(path));
-		assertTrue(source_files.empty(), "Has source file");
+		auto source_files = SourceFile::getSourceFilesFromPath(path);
+		assertTrue(source_files.empty(), "A source file is still registered for " + path.string());
 	}
 
 	/**
@@ -153,7 +155,8 @@ private:
 
 		under_test.compiler.openDocument(file_uri, "duckling", 1, OPENED_CONTENT);
 		assertTrue(cache_path.exists(), "The cache twin must exist after didOpen");
-		auto cache_file = fs::File(cache_path);
+
+		const auto cache_file = fs::File(cache_path);
 		assertHasModuleLoadedFor(cache_path);
 		assertNoModuleLoadedFor(main_file.getFilePath());
 
@@ -170,7 +173,7 @@ private:
 		assertTrue(!cache_path.exists(), "The cache twin must be gone after didClose");
 
 		assertHasModuleLoadedFor(main_file.getFilePath());
-		assertHasModuleLoadedFor(cache_path);
+		assertNoModuleLoadedFor(cache_path);
 	}
 
 	/**

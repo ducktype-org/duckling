@@ -3,6 +3,7 @@
 #include <lsp_interface/compiler.hpp>
 #include <lsp_interface/files_cache.hpp>
 #include <lsp_interface/server_session.hpp>
+#include <unistd.h>
 #include <version/version.hpp>
 
 #include <clah/clah.hpp>
@@ -10,8 +11,6 @@
 #include <clah/param_builder.hpp>
 #include <init/init.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
-
-#include <unistd.h>
 
 #include <cerrno>
 #include <cstdio>

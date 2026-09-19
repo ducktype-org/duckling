@@ -3,11 +3,11 @@
 #include <lsp_interface/compiler.hpp>
 #include <lsp_interface/files_cache.hpp>
 #include <lsp_interface/server_session.hpp>
+#include <version/version.hpp>
 
 #include <base/types/ok_bad.hpp>
 
 #include <tester/tester.hpp>
-#include <version/version.hpp>
 
 #include <string>
 #include <vector>
@@ -212,8 +212,8 @@ private:
 		);
 		assertTrue(
 			written.find(expected_version) != std::string::npos,
-			"initialize must report the build version, expected " + expected_version + " in: "
-				+ written
+			"initialize must report the build version, expected " + expected_version
+				+ " in: " + written
 		);
 	}
 

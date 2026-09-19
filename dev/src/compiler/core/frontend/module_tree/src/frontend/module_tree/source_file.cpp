@@ -61,8 +61,8 @@ namespace compiler::frontend {
 		return created_ref;
 	}
 
-	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesFromFile(const fs::File& file) {
-		auto abs_path = file.getFilePath().absolute();
+	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesFromPath(const fs::FilePath& path) {
+		auto abs_path = path.absolute();
 
 		auto state = path_registry.atMaybeCopy(abs_path);
 		if (state.has_value()) return state->instances;

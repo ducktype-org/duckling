@@ -1,7 +1,7 @@
 #pragma once
 
-#include <lsp/uri.h>
 #include <lsp/io/stream.h>
+#include <lsp/uri.h>
 
 #include <base/pointers/ref.hpp>
 
@@ -62,7 +62,6 @@ namespace duck_ls_test {
 		return "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n" + std::string(body);
 	}
 
-
 	/**
 	 * @brief Builds a source tree in the singleton VFS, standing in for the hard drive.
 	 */
@@ -77,9 +76,7 @@ namespace duck_ls_test {
 		 * @brief Creates a file at `relative` below the root, with every directory above it.
 		 */
 		VfsWorkspace& add(std::string_view relative, std::string_view content) {
-			fs::FileManager::createVirtualFile(
-				root_path.join(std::string(relative)), content, true
-			);
+			fs::FileManager::createVirtualFile(root_path.join(std::string(relative)), content, true);
 			return *this;
 		}
 

@@ -1,10 +1,9 @@
 #include <lsp/error.h>
 #include <lsp_interface/compiler.hpp>
 #include <lsp_interface/server_session.hpp>
+#include <version/version.hpp>
 
 #include <base/str/str_utils.hpp>
-
-#include <version/version.hpp>
 
 #include <iostream>
 

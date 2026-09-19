@@ -38,12 +38,12 @@ namespace duck_ls {
 		}
 
 		void collectInputsFor(const fs::File& file, std::vector<query::external::InputData>& out) {
-			for (auto& source_file: SourceFile::getSourceFilesFromFile(file))
+			for (auto& source_file: SourceFile::getSourceFilesFromPath(file.getFilePath()))
 				compiler::driver::collectQueryInputsFromPst(source_file->getPST(), out);
 		}
 
 		base::Optional<base::Ref<ModuleTree>> findModuleForFile(const fs::File& file) {
-			auto source_files = SourceFile::getSourceFilesFromFile(file);
+			auto source_files = SourceFile::getSourceFilesFromPath(file.getFilePath());
 			if (source_files.empty()) return {};
 
 			auto module_id = source_files.back()->getModule().illegalAccess().getID();
@@ -60,7 +60,7 @@ namespace duck_ls {
 		}
 
 		base::Optional<base::CRef<ModuleTree>> findLoadedPackageOf(const fs::File& file) {
-			auto source_files = SourceFile::getSourceFilesFromFile(file);
+			auto source_files = SourceFile::getSourceFilesFromPath(file.getFilePath());
 			if (source_files.empty()) return {};
 
 			return getRootModule(source_files.back()->getModule().illegalAccess().getID());
@@ -114,9 +114,9 @@ namespace duck_ls {
 
 	/**
 	 * @brief Create a package ID from the path of the package root.
-	 * 
-	 * @param package_root 
-	 * @return base::StrID 
+	 *
+	 * @param package_root
+	 * @return base::StrID
 	 */
 	base::StrID packageIdForRoot(const fs::FilePath& package_root) {
 		std::string name;

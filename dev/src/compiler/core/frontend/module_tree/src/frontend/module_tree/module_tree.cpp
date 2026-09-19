@@ -780,7 +780,8 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
-		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesFromFile(file);
+		std::vector<Ref<SourceFile>> source_files
+			= SourceFile::getSourceFilesFromPath(file.getFilePath());
 		for (auto& source_file: source_files) source_file->update();
 	}
 
