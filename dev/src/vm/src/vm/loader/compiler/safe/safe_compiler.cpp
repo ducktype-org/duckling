@@ -212,8 +212,23 @@ namespace vm::loader::compiler::safe {
 		std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
 
 		for (usize i = 0; i < ctx.function.body.size(); i++) {
-			builder.curr_state     = ctx.function.stack_states[i];
-			auto instruction_range = builder.add(ctx.function.body[i]);
+			const auto& instruction = ctx.function.body[i];
+			builder.curr_state      = ctx.function.stack_states[i];
+
+			// `init` pushes a new variable on top of the stack, but its recorded state is the one
+			// before the push. Ask about the variable at the state after the instruction, where
+			// it already exists.
+			using namespace code::instructions;
+			const auto opcode = instruction.opcode();
+			if (opcode == Op_init_pany_type::OPCODE || opcode == Op_initFromVMValue::OPCODE) {
+				CORE_ASSERT(
+					i + 1 < ctx.function.stack_states.size(),
+					"function can't end with the initialization instruction"
+				);
+				builder.curr_state = ctx.function.stack_states[i + 1];
+			}
+
+			auto instruction_range = builder.add(instruction);
 			instruction_mapping.push_back(instruction_range);
 		}
 

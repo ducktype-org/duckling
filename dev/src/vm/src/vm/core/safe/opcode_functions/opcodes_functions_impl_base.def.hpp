@@ -625,7 +625,7 @@ namespace vm {
 			);
 
 			for (u64 idx = 0; idx < ret_count; idx++) {
-				Block* block = frame->local_slot_stack_base[idx].block;
+				Block* block = callee_frame->local_slot_stack_base[ret_slot_index + idx].block;
 				if (block == nullptr)
 					block = createLocalSlotBlock(*callee_frame, thread.process_memory, ret_slot_index + idx).get();
 

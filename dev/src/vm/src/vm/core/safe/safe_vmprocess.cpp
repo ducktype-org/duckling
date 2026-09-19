@@ -583,7 +583,11 @@ namespace vm {
 				) {
 					auto func_opt
 						= loader.getHighProgram()->functions().atMaybe(high_pos.function_name);
-					CORE_ASSERT(func_opt, "We mapped low position to high, high-func should exist");
+					if (!func_opt) {
+						return api::Response(api::response::StackFrameData{
+							.function_name = frame.current_function->name,
+							.frame_vars    = frame_vars });
+					}
 					auto  func_shared_box = **func_opt;
 					auto  func_ref        = func_shared_box.ref();
 					auto  stack_state     = func_ref->stack_states.at(high_pos.instruction_index);

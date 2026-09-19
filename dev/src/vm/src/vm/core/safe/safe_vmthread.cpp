@@ -823,6 +823,8 @@ namespace vm {
 		base::Optional<std::vector<Ref<SafeVMValue>>> ret_val      = std::nullopt;
 		base::Optional<ThreadState>                   thread_state = std::nullopt;
 
+		auto res_handler = runtime_expr_res_handler.back();
+
 		events::Listener<std::vector<Ref<SafeVMValue>>> receiver([&](auto&& res) {
 			// Payload and flag must be published under the same mutex the waiter checks with,
 			// otherwise it can observe the flag before the value is visible.
@@ -847,13 +849,13 @@ namespace vm {
 			cv.notify_all();
 		});
 
-		runtime_expr_res_handler.back()->attachListener(receiver);
+		res_handler->attachListener(receiver);
 		getProcessStateManager().attachThreadStatusListener(getThreadID(), interrupter);
 
 		auto resumed = resume();
 		if (!resumed.has_value())
 			return std::unexpected{ std::make_pair(
-				runtime_expr_res_handler.back(), "resume failure: " + resumed.error()
+				res_handler, "resume failure: " + resumed.error()
 			) };
 
 		{
@@ -876,7 +878,7 @@ namespace vm {
 			        + std::to_string(EXPR_EXECUTION_TIMEOUT_MS) + " ms";
 		}
 
-		return std::unexpected{ std::make_pair(runtime_expr_res_handler.back(), err_msg) };
+		return std::unexpected{ std::make_pair(res_handler, err_msg) };
 	}
 
 	std::expected<void, std::string> SafeVMThread::setBreakpointAtFrame(usize frame_idx, usize idx, bool enable) const {
