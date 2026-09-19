@@ -856,6 +856,24 @@ private:
 			      "Holder`." },
 				1
 			);
+
+			// A case that never produces a value is excused from agreeing on a type, but two
+			// cases that do produce one still have to agree: there is no common-type inference.
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var v: i32 | f32 = 1i32;
+					var r: i64 = match (v) {
+						case x : i32 = x;
+						case _ = 1i64;
+					};
+					return 0i64;
+				}
+			)",
+				{ "All `match` cases have to be of the same type, but this one is `i64` while "
+			      "an earlier one is `i32`." },
+				1
+			);
 		}
 
 		// ============================ Static Arrays ============================

@@ -9,6 +9,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -46,6 +47,27 @@ namespace compiler::helios::desugaring {
 
 			return {};
 		}
+
+		/**
+		 * @brief A lowered case, kept until the type the cases agree on is known.
+		 */
+		struct LoweredCase final {
+			base::Optional<usize> alternative_index;
+			base::Optional<SymID> binding;
+			Box<code::Expr>       result;
+			dia::StablePosition   position;
+		};
+
+		/**
+		 * @brief Whether a case result never produces a value.
+		 *
+		 * Such a result has type `void`, which is uninhabited: control never reaches the point
+		 * where the value would exist. It therefore fits wherever a value is expected, and in
+		 * particular it agrees with whatever type the remaining cases carry.
+		 */
+		bool divergesToVoid(const tsh::SymbolType<>& type) {
+			return type.getType().getKind() == tsh::Kind::Void;
+		}
 	}
 
 	query::QResult<Box<code::Expr>> desugarMatch(
@@ -71,11 +93,12 @@ namespace compiler::helios::desugaring {
 		const tsh::VariantAbstractType variant_type     = subject_type.getType();
 		const usize                    num_alternatives = variant_type.getUnderlyingTypes().size();
 
-		// Lower all cases.
-		std::vector<code::MatchExpr::Case> cases;
-		base::Optional<tsh::SymbolType<>>  common_type;
-		std::set<usize>                    covered;
-		bool                               has_wildcard = false;
+		// Lower all cases. The results are kept aside until every case has been lowered,
+		// because the type the cases agree on is only known once all of them are in.
+		std::vector<LoweredCase>          lowered_cases;
+		base::Optional<tsh::SymbolType<>> common_type;
+		std::set<usize>                   covered;
+		bool                              has_wildcard = false;
 
 		for (auto match_case: match_expr->getCases()) {
 			const auto case_position = match_case.unlock(ctx)->getStablePosition();
@@ -188,24 +211,32 @@ namespace compiler::helios::desugaring {
 
 			// A match yields one value, so every case has to agree on its type. There is no
 			// common-type inference, so anything else is an error the user has to resolve.
+			//
+			// A case that never produces a value is the one exception: it carries no type of its
+			// own to agree on, so it is left out of the vote and coerced to whatever the others
+			// settle on once they all have been seen.
 			const auto result_type = result->expression_type.getSymbolType();
-			if (!common_type.has_value()) common_type = result_type;
-			if (common_type.value() != result_type) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
-					base::strConcat(
-						"All `match` cases have to be of the same type, but this one is `",
-						result_type.toString(),
-						"` while an earlier one is `",
-						common_type.value().toString(),
-						"`."
-					),
-					case_position
-				));
-				return query::Failed();
+			if (!divergesToVoid(result_type)) {
+				if (!common_type.has_value()) common_type = result_type;
+				if (common_type.value() != result_type) {
+					ctx.logInt(makeBox<dia::PlaceholderError>(
+						base::strConcat(
+							"All `match` cases have to be of the same type, but this one is `",
+							result_type.toString(),
+							"` while an earlier one is `",
+							common_type.value().toString(),
+							"`."
+						),
+						case_position
+					));
+					return query::Failed();
+				}
 			}
 
-			cases.emplace_back(Shorthand::matchCase(alternative_index, binding_sym, result->clone())
-			);
+			lowered_cases.push_back(LoweredCase{ .alternative_index = alternative_index,
+			                                     .binding           = binding_sym,
+			                                     .result            = result->clone(),
+			                                     .position          = case_position });
 		}
 
 		if (!has_wildcard && covered.size() < num_alternatives) {
@@ -220,6 +251,30 @@ namespace compiler::helios::desugaring {
 				match_position
 			));
 			return query::Failed();
+		}
+
+		// Every case diverged, so the match itself never produces a value either and its type is
+		// the `void` they all carry.
+		if (!common_type.has_value() && !lowered_cases.empty())
+			common_type = lowered_cases.front().result->expression_type.getSymbolType();
+
+		// The cases that never produce a value are coerced to the type the others agreed on, so
+		// that the match has one result type to fill in. `void` is uninhabited, so the coercion
+		// only reconciles the types: it lowers to nothing at all, as control never reaches it.
+		std::vector<code::MatchExpr::Case> cases;
+		cases.reserve(lowered_cases.size());
+		for (auto& lowered: lowered_cases) {
+			auto result = std::move(lowered.result);
+			if (result->expression_type.getSymbolType() != common_type.value()) {
+				auto coerced
+					= coerceFromBox(ctx, std::move(result), common_type.value(), lowered.position);
+				if (coerced.empty()) return query::Failed();
+				result = std::move(coerced.value());
+			}
+
+			cases.emplace_back(
+				Shorthand::matchCase(lowered.alternative_index, lowered.binding, std::move(result))
+			);
 		}
 
 		// The subject is handed over as a reference and evaluated once by the MIR lowering.

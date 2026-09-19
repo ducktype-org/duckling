@@ -1,0 +1,28 @@
+# When every case of a `match` diverges, the match produces no value at all and carries type
+# `void` itself. It is still an expression, so it has to fit wherever it is written: here the
+# `void` stands in for the `i32` the function returns, and for the `()` of a discarded one.
+
+import core.panicking;
+
+# The match is the whole function body, so its `void` has to coerce to the returned `i32`.
+fun asReturnedValue(v: i32|f64) -> i32 = match(v) {
+    case i: i32 = panicking.panic();
+    case f: f64 = panicking.panic();
+}
+
+# Here the match stands alone as a statement and its value is discarded, so nothing coerces it.
+# It is never called - reaching it would panic - but it is still type checked.
+fun asStatement(v: i32|f64) -> () = {
+    match(v) {
+        case i: i32 = panicking.panic();
+        case f: f64 = panicking.panic();
+    };
+}
+
+fun main() -> i64 = {
+    var v: i32|f64 = 7;
+
+    print(1i64);                # reached, so the panic below is the match's doing
+    print(asReturnedValue(v));  # panics, so nothing past this point runs
+    return 0i64;
+}
