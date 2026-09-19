@@ -207,8 +207,8 @@ private:
 		// Asking the same source the server does, rather than repeating a literal that goes
 		// stale on the next release.
 		const auto expected_version = compact(
-			"\"version\":\"" + std::string(version::semver()) + " ("
-			+ std::string(version::commitHash()) + ")\""
+			R"X("version":")X" + std::string(version::semver()) + " ("
+			+ std::string(version::commitHash()) + R"X()")X"
 		);
 		assertTrue(
 			written.find(expected_version) != std::string::npos,

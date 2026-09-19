@@ -50,8 +50,8 @@ namespace duck_ls_test {
 		[[nodiscard]] const std::string& written() const { return output; }
 
 	private:
-		std::string input;
-		std::string output;
+		std::string input{};
+		std::string output{};
 		std::size_t read_position = 0;
 	};
 

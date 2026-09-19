@@ -103,7 +103,13 @@ namespace compiler::frontend {
 	Ref<ModuleTree> ModuleTreeBuilder::createWithRandomPackageID(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
-		return create(root, base::StrID(base::generateRandomString(32)), identityFileResolver(), file_reject, dir_reject);
+		return create(
+			root,
+			base::StrID(base::generateRandomString(32)),
+			identityFileResolver(),
+			file_reject,
+			dir_reject
+		);
 	}
 
 	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
