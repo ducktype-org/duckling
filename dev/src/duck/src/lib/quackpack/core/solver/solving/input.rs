@@ -24,12 +24,12 @@ pub(in crate::quackpack::core::solver) struct PackageData {
     /// This is the intersection of the manifest defined features and features referenced in the requests or previous freeze.
     features: HashSet<FeatureName>,
     /// Whether and how the package was present in the previous freeze.
-    preexistance: Option<PreexistanceData>,
+    preexistence: Option<PreexistenceData>,
 }
 
 /// Information about a package in the previous freeze.
 #[derive(Clone, Debug, Default)]
-pub(in crate::quackpack::core::solver) struct PreexistanceData {
+pub(in crate::quackpack::core::solver) struct PreexistenceData {
     /// Features of the package present in the previous freeze.
     features: HashSet<FeatureName>,
     /// Dependencies of the package present in the previous freeze.
@@ -37,7 +37,7 @@ pub(in crate::quackpack::core::solver) struct PreexistanceData {
     realized_dependencies: HashMap<StrId, PackageId>,
 }
 
-impl From<SolverPackageFreeze> for PreexistanceData {
+impl From<SolverPackageFreeze> for PreexistenceData {
     fn from(value: SolverPackageFreeze) -> Self {
         Self {
             features: value.features,
@@ -79,7 +79,7 @@ impl SolverInput {
                 Entry::Vacant(vacant) => vacant.insert(PackageData::new_empty(manifest)),
             };
             pkg_data.features.extend(freeze.features.iter().copied());
-            pkg_data.preexistance = Some(freeze.clone().into());
+            pkg_data.preexistence = Some(freeze.clone().into());
             versions_for_identity
                 .entry(pkg.identity())
                 .or_default()
@@ -108,14 +108,14 @@ impl SolverInput {
     pub fn preexists(&self, pkg: PackageId) -> bool {
         self.packages_data
             .get(&pkg)
-            .is_some_and(|data| data.preexistance.is_some())
+            .is_some_and(|data| data.preexistence.is_some())
     }
 
     /// Get a [`HashSet`] of preexisting features if the package preexisted in the previous freeze.
     pub fn preexisting_features_for_pkg(&self, pkg: PackageId) -> Option<&HashSet<FeatureName>> {
         self.packages_data
             .get(&pkg)
-            .and_then(|data| data.preexistance.as_ref().map(|pre| &pre.features))
+            .and_then(|data| data.preexistence.as_ref().map(|pre| &pre.features))
     }
 
     /// Get a [`HashSet`] of all packages preexisting in the previous freeze.
@@ -123,7 +123,7 @@ impl SolverInput {
         self.packages_data
             .iter()
             .filter_map(|(pkg, data)| {
-                if data.preexistance.is_some() {
+                if data.preexistence.is_some() {
                     Some(*pkg)
                 } else {
                     None
@@ -144,13 +144,13 @@ impl SolverInput {
 }
 
 impl PackageData {
-    /// Create a [`PackageData`] without features and preexistance info.
+    /// Create a [`PackageData`] without features and preexistence info.
     /// Should be used as an intermediate step when constructing [`PackageData`] instances.
     pub fn new_empty(manifest: Box<Manifest>) -> PackageData {
         Self {
             manifest,
             features: [].into(),
-            preexistance: None,
+            preexistence: None,
         }
     }
 
@@ -166,14 +166,14 @@ impl PackageData {
 
     /// Check if a given feature was present in the previous freeze.
     pub fn feature_preexists(&self, feature: FeatureName) -> bool {
-        self.preexistance
+        self.preexistence
             .as_ref()
             .is_some_and(|data| data.features.contains(&feature))
     }
 
     /// Check whether a given dependency was present in the previous freeze and get the realization.
     pub fn dependency_preexists(&self, name: StrId) -> Option<PackageId> {
-        self.preexistance
+        self.preexistence
             .as_ref()?
             .realized_dependencies
             .get(&name)
@@ -184,12 +184,12 @@ impl PackageData {
     pub fn new(
         manifest: Box<Manifest>,
         features: HashSet<FeatureName>,
-        preexistance: Option<PreexistanceData>,
+        preexistence: Option<PreexistenceData>,
     ) -> Self {
         Self {
             manifest,
             features,
-            preexistance,
+            preexistence,
         }
     }
 }
@@ -199,13 +199,13 @@ impl From<gatherer_state::PackageData> for PackageData {
         Self {
             manifest: value.manifest,
             features: value.requested_features,
-            preexistance: None,
+            preexistence: None,
         }
     }
 }
 
 #[cfg(test)]
-impl PreexistanceData {
+impl PreexistenceData {
     pub fn new(features: HashSet<FeatureName>, depedencies: HashMap<StrId, PackageId>) -> Self {
         Self {
             features,
