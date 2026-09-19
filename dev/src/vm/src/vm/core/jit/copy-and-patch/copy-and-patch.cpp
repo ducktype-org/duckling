@@ -15,7 +15,7 @@ namespace vm::jit {
 
 	namespace {
 		// Maps non-jittable opcodes to call_addr, other ones leaves unchanged.
-		[[nodiscard]] i64 nonjittable_to_calladdr(low::MicroOpcode opcode) {
+		[[nodiscard]] i64 nonjittableToCallAddr(low::MicroOpcode opcode) {
 			switch (opcode) {
 #define HANDLE_NONJITTABLE_INSTR(instr) \
 	case low::MicroOpcode::instr:       \
@@ -23,12 +23,12 @@ namespace vm::jit {
 #include "../non_jittable.def.hpp"
 #undef HANDLE_NONJITTABLE_INSTR
 			default:
-				return std::to_underlying(opcode);
+				return static_cast<i64>(std::to_underlying(opcode));
 			}
 		}
 
 		// Maps a cf out edge kind to an optional special stencil jump.
-		[[nodiscard]] base::Optional<jit::cnp::SpecialStencils> cf_edge_to_stencil(
+		[[nodiscard]] base::Optional<jit::cnp::SpecialStencils> cfEdgeToStencil(
 			const low::cf::BasicBlock& block
 		) {
 			if (block.isFallthrough()) return std::nullopt;
@@ -49,7 +49,7 @@ namespace vm::jit {
 		}
 
 		// Calculates offsets from the compiled functions start, to each block's end.
-		[[nodiscard]] std::vector<usize> calculate_block_offsets(
+		[[nodiscard]] std::vector<usize> calculateBlockOffsets(
 			const low::cf::ControlFlowGraph& cfg, const low::MicroBytecode& bc
 		) {
 			auto get_opfunc_size
@@ -64,10 +64,10 @@ namespace vm::jit {
 				for (const MicroInstruction& instr: block.instructions(bc)) {
 					auto opcode = getInstructionOpcode(instr);
 					if (low::isOpcodeNonExecutable(opcode)) continue;
-					current_offset += get_opfunc_size(nonjittable_to_calladdr(opcode));
+					current_offset += get_opfunc_size(nonjittableToCallAddr(opcode));
 				}
 
-				if (auto stencil = cf_edge_to_stencil(block))
+				if (auto stencil = cfEdgeToStencil(block))
 					current_offset += get_opfunc_size(std::to_underlying(stencil.value()));
 			}
 			return block_offsets;
@@ -80,7 +80,7 @@ namespace vm::jit {
 		using namespace cnp;
 		using namespace std::views;
 
-		std::vector<usize> block_offsets = calculate_block_offsets(cfg, bc);
+		std::vector<usize> block_offsets = calculateBlockOffsets(cfg, bc);
 
 		auto memory_result = JitFuncMemory::allocate(block_offsets.back());
 		if (!memory_result) return std::unexpected{ std::move(memory_result).error() };
@@ -109,7 +109,7 @@ namespace vm::jit {
 				auto opcode = getInstructionOpcode(instr);
 				if (low::isOpcodeNonExecutable(opcode)) continue;
 
-				patch_stencil(nonjittable_to_calladdr(opcode), [&](HoleValue value) {
+				patch_stencil(nonjittableToCallAddr(opcode), [&](HoleValue value) {
 					switch (value) {
 					case HoleValue::InstrPtr:
 						return std::bit_cast<u64>(&instr);
@@ -140,7 +140,7 @@ namespace vm::jit {
 					}
 				});
 			}
-			if (auto stencil = cf_edge_to_stencil(block)) {
+			if (auto stencil = cfEdgeToStencil(block)) {
 				patch_stencil(std::to_underlying(stencil.value()), [&](HoleValue value) {
 					switch (value) {
 					case HoleValue::ContinueFn:

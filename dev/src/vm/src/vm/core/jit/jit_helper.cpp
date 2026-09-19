@@ -26,10 +26,10 @@ namespace vm::jit::helpers {
 		);
 
 		std::array<vm::MicroInstruction, 3> buffer{};
-		for (usize i = 0; i < slot_count; ++i) buffer[i] = instr[i];
+		for (usize i = 0; i < slot_count; ++i) buffer.at(i) = instr[i];
 		// The exit bounds interpretation to this one instruction: a called function returns into
 		// it, which stops the interpreter instead of continuing with whatever follows in bytecode.
-		buffer[slot_count] = vm::makeLowInstruction(vm::low::MicroOpcode::exit, 0, 0);
+		buffer.at(slot_count) = vm::makeLowInstruction(vm::low::MicroOpcode::exit, 0, 0);
 		instr += slot_count;
 
 		return runInterpreter(buffer.data(), local_stack, frame, thread);

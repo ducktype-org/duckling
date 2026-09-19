@@ -138,7 +138,7 @@ private:
 			else
 				CORE_PANIC("Unexpected relocation");
 		});
-		memory.markExecutable();
+		ASSERT_HAS_VALUE(memory.markExecutable());
 
 		auto must_patch = memory.intoFunc<int(int)>();
 		for (int i = 0; i < 100; ++i) ASSERT_EQUAL_PRINT(std::invoke(must_patch, i), i + 9);
@@ -176,7 +176,7 @@ private:
 			}
 		});
 
-		memory.markExecutable();
+		ASSERT_HAS_VALUE(memory.markExecutable());
 		auto build_func = memory.intoFunc<int(int, int)>();  // (a + b) * b
 		for (int a = 0; a < 10; ++a) {
 			for (int b = 0; b < 10; ++b) {
