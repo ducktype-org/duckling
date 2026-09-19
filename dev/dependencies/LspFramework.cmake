@@ -8,6 +8,8 @@ FetchContent_Declare(lsp-framework
     GIT_REPOSITORY https://github.com/leon-bckl/lsp-framework.git
     GIT_TAG        ${LSP_FRAMEWORK_TAG}
 	GIT_SUBMODULES ""
+	# Its headers come in as -isystem, so our -Werror flags do not fire on code we do not own.
+	SYSTEM
 )
 FetchContent_MakeAvailable(lsp-framework)
 
