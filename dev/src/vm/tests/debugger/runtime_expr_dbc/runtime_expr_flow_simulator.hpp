@@ -284,7 +284,7 @@ namespace vm::test {
 				cv.wait(lock, [&] { return bool(late_result.size()); });
 
 				auto& [result, evaluation] = late_result.front();
-				res                       = std::move(result);
+				res                        = std::move(result);
 
 				CORE_ASSERT(
 					!pending_late_evals.empty() && pending_late_evals.back() == evaluation,

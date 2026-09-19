@@ -756,6 +756,20 @@ namespace vm {
 		return compiler.lowerExpr(expr, thread);
 	}
 
+	code::valid_function::ValidFunction SafeVMProcess::validateStartFunction(
+		Ref<SafeVMThread> thread, const code::Function& start_function
+	) const {
+		auto valid = loader.validateStartFunction(thread, start_function);
+		CORE_ASSERT(valid.has_value(), "the synthetic start function must always pass validation");
+		return std::move(*valid);
+	}
+
+	base::Optional<u64> SafeVMProcess::findVMValueId(const SafeVMValue* value) const {
+		for (u64 id = 0; id < owned_vm_values.size(); id++)
+			if (owned_vm_values.at(id).get() == value) return id;
+		return std::nullopt;
+	}
+
 	void SafeVMProcess::updateGlobalDataMemory(CRef<low::ILowVMProgram> program) {
 		using namespace std::ranges;
 		auto global_buffer_config = program->getGlobalBufferConfig();

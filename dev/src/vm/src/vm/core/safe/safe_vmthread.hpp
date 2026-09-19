@@ -97,8 +97,8 @@ namespace vm {
 	private:
 		std::deque<code::valid_function::ValidFunction> runtime_expr_high;
 		std::deque<low::LowFuncData>                    runtime_expr_low;
-		std::deque<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>
-		>                                               runtime_expr_res_handler;
+		std::deque<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>>
+			runtime_expr_res_handler;
 
 
 		RuntimeData runtime_data;
@@ -179,17 +179,26 @@ namespace vm {
 		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
 		 * perform the call and deinitialize the argv table when main returns.
 		 */
-		[[nodiscard]] low::LowFuncData createProgramStartFunction(
+		[[nodiscard]] code::Function createProgramStartFunction(
 			const low::LowFuncData& func, const ProgramRunArguments& args
 		) const;
 
 		/**
-		 * @brief Creates a list of instructions, which push the passed `func_args` onto the local
-		 * stack and perform a call to `func`.
+		 * @brief Creates a high-level function, which pushes the passed `func_args` onto the local
+		 * stack and performs a call to `func`. It is validated and lowered like a runtime
+		 * expression before it can be executed.
 		 */
-		[[nodiscard]] low::LowFuncData createStartFunctionFor(
+		[[nodiscard]] code::Function createStartFunctionFor(
 			const low::LowFuncData& func, const FunctionRunArguments& func_args
 		) const;
+
+		/**
+		 * @brief Validates the high-level `vm_start_function` and lowers it to low bytecode.
+		 * @note Both the high and low representations are stored in `runtime_expr_high` /
+		 * `runtime_expr_low`, so the address kept in `LowFuncData::high_func` stays valid for the
+		 * lowered function's whole lifetime.
+		 */
+		[[nodiscard]] low::LowFuncData compileStartFunction(code::Function&& start_function);
 
 		/**
 		 * @brief This is the primary function to call to start execution on the VM.
@@ -302,7 +311,9 @@ namespace vm {
 			std::pair<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
 			loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
 
-		std::expected<void, std::string> setBreakpointAtFrame(usize frame_idx, usize idx, bool enable) const;
+		std::expected<void, std::string> setBreakpointAtFrame(
+			usize frame_idx, usize idx, bool enable
+		) const;
 
 		[[nodiscard]]
 		Ref<SafeVMValue> getVMValue(u64 id) const;

@@ -348,3 +348,33 @@ std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::val
 	}
 	return std::unexpected(std::move(log));
 }
+
+std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::validateStartFunction(
+	Ref<SafeVMThread> thread, const code::Function& start_function
+) const {
+	LoaderLogger log;
+	try {
+		return validated_high_program.validateStartFunction(thread, start_function);
+	} catch (code::StackStructureMismatchError& e) {
+		log.logMap(
+			e.label,
+			[&](Box<dia::PlaceholderError>& err) {
+				for (const auto& instruction: e.jumps)
+					instruction.visit([&](auto&& i) {
+						log.addNote(
+							err,
+							static_cast<const code::ElementBase&>(i),
+							code::StackStructureMismatchError::NOTE_MSG
+						);
+					});
+			},
+			e.what()
+		);
+	} catch (code::ValidationError& e) {
+		match_optional(e.maybeElement()) {
+			opt_some(elem) log.log(*elem, e.what());
+			opt_none log.logSimple(e.what());
+		}
+	}
+	return std::unexpected(std::move(log));
+}

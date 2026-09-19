@@ -62,6 +62,10 @@ namespace vm::code {
 			CRef<SafeVMThread> thread, const code::Function& expr
 		) const;
 
+		valid_function::ValidFunction validateStartFunction(
+			CRef<SafeVMThread> thread, const code::Function& start_function
+		) const;
+
 		const ObjIdNameMap<FFIFunction>& ffiFunctions() const;
 
 		const std::vector<std::pair<std::string, std::shared_ptr<native::DynamicLibrary>>>& objectFiles(

@@ -84,5 +84,9 @@ namespace vm::loader {
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateExpr(
 			Ref<SafeVMThread> thread, const code::Function& expr
 		) const;
+
+		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateStartFunction(
+			Ref<SafeVMThread> thread, const code::Function& start_function
+		) const;
 	};
 }

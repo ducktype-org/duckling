@@ -284,5 +284,21 @@ namespace vm {
 		low::LowFuncData compileToLow(
 			base::CRef<vm::SafeVMThread> thread, const code::valid_function::ValidFunction& func
 		) const;
+
+		/**
+		 * @brief Validates a synthetic `vm_start_function`.
+		 * @note The caller must keep the returned `ValidFunction` alive (at a stable address) for
+		 * as long as any `LowFuncData` lowered from it is used - `LowFuncData` stores a pointer to
+		 * it in `high_func`.
+		 */
+		code::valid_function::ValidFunction validateStartFunction(
+			base::Ref<vm::SafeVMThread> thread, const code::Function& start_function
+		) const;
+
+		/**
+		 * @returns the id of a process-owned VM value, or nullopt when the value is not owned by
+		 * this process.
+		 */
+		base::Optional<u64> findVMValueId(const SafeVMValue* value) const;
 	};
 }

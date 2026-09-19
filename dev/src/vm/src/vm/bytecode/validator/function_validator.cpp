@@ -37,13 +37,16 @@ namespace {
 
 	constexpr std::array VALID_LAST_OPCODES_FOR_EXPR
 		= { OpCode::Op_ret_from_expr, OpCode::Op_jmp_label };
-	using DeinitializingInstructions = std::tuple<
-		Op_deinit,
-		Op_call_func,
-		Op_call_builtinfunc,
-		Op_call_cfunc,
-		Op_call_ffifunc,
-		Op_virtual_call_pptr_method>;
+
+	// The synthetic start functions never return normally - they end the program with `exit`.
+	constexpr std::array VALID_LAST_OPCODES_FOR_START = { OpCode::Op_exit, OpCode::Op_jmp_label };
+	using DeinitializingInstructions                  = std::tuple<
+						 Op_deinit,
+						 Op_call_func,
+						 Op_call_builtinfunc,
+						 Op_call_cfunc,
+						 Op_call_ffifunc,
+						 Op_virtual_call_pptr_method>;
 	using CallingInstructions
 		= std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc>;
 
@@ -306,6 +309,21 @@ class FunctionValidator {
 	std::vector<base::Optional<StackStateID>>            stack_before_instr;
 	base::HashMap<base::StrID, usize>                    index_of_label;
 	base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
+
+	/// Whether the mode carries a live thread (`Expr` or `StartFunction`).
+	bool hasValidationThread() const {
+		return v_matches(mode, detail::Expr, detail::StartFunction);
+	}
+
+	/// The live thread the mode validates against. Precondition: `hasValidationThread()`.
+	CRef<SafeVMThread> validationThread() const {
+		variant_match(mode) {
+			variant_case(detail::Expr, expr) { return expr.thread; }
+			variant_case(detail::StartFunction, start) { return start.thread; }
+			variant_default { CORE_UNREACHABLE(); }
+		}
+		CORE_UNREACHABLE();
+	}
 
 	template<CallingInstruction CallInstructionType>
 	void validateCallAndPop(LocalStack& local_stack, const CallInstructionType& instr) {
@@ -640,10 +658,10 @@ class FunctionValidator {
 
 				variant_case(CRef<opargs::VMValueIdentifier>, vm_val) {
 					CORE_ASSERT(
-						v_matches(mode, detail::Expr),
-						"validator has to check that we are compiling expr"
+						hasValidationThread(),
+						"validator has to check that we are compiling expr or start function"
 					);
-					auto& thr = v_get(mode, detail::Expr).thread;
+					auto thr = validationThread();
 
 					if (!thr->isValidVMValueID(vm_val->id)) throw InvalidVMValueIDError(*vm_val);
 					CRef<valid_type::ValidType> type = thr->getVMValue(vm_val->id)->getType();
@@ -1796,13 +1814,21 @@ class FunctionValidator {
 		if (!reached_end) return;
 
 		auto last_opcode = function.body.back().opcode();
-		bool is_expr     = v_matches(mode, detail::Expr);
 
-		if (is_expr && !std::ranges::contains(VALID_LAST_OPCODES_FOR_EXPR, last_opcode))
-			throw PathWithoutEndError(function.name);
-
-		if (!is_expr && !std::ranges::contains(VALID_LAST_OPCODES, last_opcode))
-			throw PathWithoutEndError(function.name);
+		variant_match(mode) {
+			variant_case_novalue(detail::Expr) {
+				if (!std::ranges::contains(VALID_LAST_OPCODES_FOR_EXPR, last_opcode))
+					throw PathWithoutEndError(function.name);
+			}
+			variant_case_novalue(detail::StartFunction) {
+				if (!std::ranges::contains(VALID_LAST_OPCODES_FOR_START, last_opcode))
+					throw PathWithoutEndError(function.name);
+			}
+			variant_case_novalue(detail::Normal) {
+				if (!std::ranges::contains(VALID_LAST_OPCODES, last_opcode))
+					throw PathWithoutEndError(function.name);
+			}
+		}
 	}
 
 	usize getLabelTarget(const opargs::Label& label) const {
@@ -1877,7 +1903,7 @@ class FunctionValidator {
 				}
 				instr_case(Op_initFromVMValue, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
-					auto& thr                 = *v_get(mode, Expr).thread;
+					auto& thr                 = *validationThread();
 					auto  name = thr.getVMValue(instr.vm_val.id)->getType()->getName();
 					local_stack.push(instr.var, opargs::Type(name));
 					index++;
@@ -1980,15 +2006,14 @@ class FunctionValidator {
 		u64   block_offset{};
 
 		variant_match(mode) {
-			variant_case(Expr, expr) {
+			variant_case(detail::Expr, expr) {
 				bytes_offset = expr.thread->getCurrentStackBytesSize();
 				block_offset = expr.thread->getCurrentStackBlockSize();
 			}
-			variant_case_novalue(Normal) {
+			variant_case_novalue(detail::Normal, detail::StartFunction) {
 				bytes_offset = Bytes{ 0 };
 				block_offset = 0;
 			}
-			variant_default { CORE_UNREACHABLE(); }
 		}
 
 		auto tp_size = valid_type::TypeSize(bytes_offset, bytes_offset);
@@ -2004,17 +2029,21 @@ class FunctionValidator {
 	}
 
 	void validateSignature() {
-		bool is_expr = v_matches(mode, detail::Expr);
-
-		if (is_expr && function.signature.parameters.size())
-			throw InvalidRuntimeExprSignature(function.signature);
-
-		if (!is_expr && function.name.str == base::StrID("main")) {
-			if (function.signature.result_types.size() != 1)
-				throw InvalidMainReturnType(function.signature, false);
-			if (function.signature.result_types[0].str != base::StrID("i64"))
-				throw InvalidMainReturnType(function.signature, true);
+		variant_match(mode) {
+			variant_case_novalue(detail::Expr, detail::StartFunction) {
+				if (function.signature.parameters.size())
+					throw InvalidRuntimeExprSignature(function.signature);
+			}
+			variant_case_novalue(detail::Normal) {
+				if (function.name.str == base::StrID("main")) {
+					if (function.signature.result_types.size() != 1)
+						throw InvalidMainReturnType(function.signature, false);
+					if (function.signature.result_types[0].str != base::StrID("i64"))
+						throw InvalidMainReturnType(function.signature, true);
+				}
+			}
 		}
+
 		for (const auto& param_type: function.signature.parameters)
 			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
 
@@ -2048,6 +2077,12 @@ class FunctionValidator {
 				throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_ret, OpCode::Op_exit>(
 					instr
 				);
+			}
+			variant_case_novalue(detail::StartFunction) {
+				throwOnForbiddenOpcode<
+					OpCode::Op_ret_tailcall_func,
+					OpCode::Op_ret,
+					OpCode::Op_ret_from_expr>(instr);
 			}
 			variant_case_novalue(detail::Normal) {
 				throwOnForbiddenOpcode<OpCode::Op_ret_from_expr, OpCode::Op_initFromVMValue>(instr);
@@ -2108,7 +2143,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
 	new_function.signature    = function.signature;
-	new_function.flags        = v_matches(mode, Expr)
+	new_function.flags        = (v_matches(mode, Expr, StartFunction))
 	                              ? InstructionFlag{}
 	                              : flag_context.getFlagsForFunction(function.name.str);
 

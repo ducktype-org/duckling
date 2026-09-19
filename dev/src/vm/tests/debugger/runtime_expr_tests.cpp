@@ -8,8 +8,10 @@
 #include <vm/bytecode/validator/errors.hpp>
 
 #include <array>
+#include <chrono>
 #include <ranges>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 class VmRuntimeExprTest: public VmTestSuite {
@@ -544,6 +546,10 @@ private:
 		simulator.evalExprExpectEvalError(
 			add_five_expr, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG
 		);
+
+		// Give the thread time to enter `main`'s infinite loop. Without this the pause request can
+		// be serviced while the thread is still in the synthetic start function.
+		std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
 		simulator.pause(base::StrID("main"), 4)
 			.resume()

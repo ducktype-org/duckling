@@ -612,7 +612,8 @@ namespace vm {
 			u64   ret_count    = frame->current_function->getResultTypes().size();
 			frame--;
 			auto* caller_block_ref_stack_end = frame->local_slot_stack_end;
-			u64   ret_slot_index = u64(caller_block_ref_stack_end - thread.runtime_data.slot_stack_base);
+			u64   ret_slot_index
+				= u64(caller_block_ref_stack_end - thread.runtime_data.slot_stack_base);
 
 			std::vector<Ref<SafeVMValue>> exit_value = {};
 
@@ -627,7 +628,10 @@ namespace vm {
 			for (u64 idx = 0; idx < ret_count; idx++) {
 				Block* block = callee_frame->local_slot_stack_base[ret_slot_index + idx].block;
 				if (block == nullptr)
-					block = createLocalSlotBlock(*callee_frame, thread.process_memory, ret_slot_index + idx).get();
+					block = createLocalSlotBlock(
+								*callee_frame, thread.process_memory, ret_slot_index + idx
+					)
+					            .get();
 
 				exit_value.emplace_back(
 					thread.safe_process.createVMValue(expr.getResultTypes()[idx], Pointer(block, 0))

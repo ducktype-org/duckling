@@ -18,6 +18,9 @@
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/bytecode/builders/instruction_builder.hpp>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/opcode_args.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
@@ -137,77 +140,56 @@ namespace vm {
 	 *
 	 * @note For more detailed explanation go to `createProgramStartFunction`.
 	 */
-	low::LowFuncData SafeVMThread::createStartFunctionFor(
+	code::Function SafeVMThread::createStartFunctionFor(
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
-		low::LowFuncData start_function;
-		start_function.name      = base::StrID("vm_start_function");
-		start_function.id        = START_FUNCTION_ID;
-		start_function.high_func = nullptr;
-#ifdef ENABLE_JIT
-		// This is okay because we never JIT the start function.
-		start_function.cfg = low::cf::ControlFlowGraph();
-#endif
-		start_function.bc                  = {};
-		start_function.orig_bc             = {};
-		start_function.local_stack_size    = 0;
-		start_function.local_slot_count
-			= func.getResultTypes().size() + func.getParameters().size();
-		start_function.arg_size            = 0;
-		start_function.ret_size            = func.getRetSize();
-		start_function.parameters          = {};
-		start_function.result_types        = func.getResultTypes();
-		start_function.instruction_mapping = {};
+		auto high_func = func.getHighFunc();
+		CORE_ASSERT(high_func, "the start function can only wrap a compiled high-level function");
 
-		const u64 called_function_id = process_program->getFunctions().idOf(func.getName()).value();
+		code::Function start_function;
+		start_function.name      = code::Identifier{ base::StrID("vm_start_function") };
+		start_function.signature = code::FuncSignature{ .result_types = {}, .parameters = {} };
 
-		// Byte offset of the next variable initialized on the start function's local stack.
-		u64 stack_offset = 0;
-
-		for (const auto& res: func.getResultTypes()) {
-			// Initialize an exit code/return value spot. In case of non-void functions the
-			// exit_code is the return value of the function. Void functions always return with the
-			// exit_code = 0.
-			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				init_off_type, stack_offset, safeReadObjectBytes<u64>(res)
+		for (auto [idx, result_type]: std::views::enumerate(high_func->signature.result_types)) {
+			auto slot_name = base::StrID(base::strConcat("ret_value", idx).c_str());
+			start_function.body.push_back(code::builders::makeInstructionFromArgs(
+				base::StrID("init_pany_type"),
+				{ opargs::OpCodeArg{ opargs::PlaceAny{ slot_name } },
+			      opargs::OpCodeArg{ opargs::Type{ base::StrID(result_type.str) } } }
 			));
-			stack_offset += res->getSize().asInt();
 		}
 
-		start_function.local_stack_size += func.getRetSize();
+		for (auto [idx, arg_value]: std::views::enumerate(func_args)) {
+			auto* safe_value = dynamic_cast<const SafeVMValue*>(&*arg_value);
+			CORE_ASSERT(safe_value != nullptr, "run argument must be a safe VM value");
 
-		// Argument validity was already checked when validating the API call.
-		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {
-			const auto& arg_type = func.getParameters()[i];
+			auto vm_value_id = safe_process.findVMValueId(safe_value);
+			CORE_ASSERT(vm_value_id.has_value(), "run argument must be owned by the process");
 
-			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				initFromVMValue,
-				std::bit_cast<u64>(dynamic_cast<const SafeVMValue*>(&*arg_value)),
-				stack_offset
+			auto arg_name = base::StrID(base::strConcat("arg", idx).c_str());
+			start_function.body.push_back(code::builders::makeInstructionFromArgs(
+				base::StrID("initFromVMValue"),
+				{ opargs::OpCodeArg{ opargs::PlaceAny{ arg_name } },
+			      opargs::OpCodeArg{ opargs::VMValueIdentifier{ *vm_value_id } } }
 			));
-			stack_offset += arg_type->getSize().asInt();
-			start_function.local_stack_size += arg_type->getSize().asInt();
-			start_function.parameters.push_back(arg_type);
-			start_function.arg_size += arg_type->getSize().asInt();
 		}
 
+		start_function.body.push_back(code::builders::makeInstructionFromArgs(
+			base::StrID("call_func"), { opargs::OpCodeArg{ opargs::FunctionName{ func.getName() } } }
+		));
 
-		start_function.bc.insert(
-			start_function.bc.end(),
-			{
-				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				// The start function's whole local stack is the space shared with the callee,
-		        // so the callee's local stack starts at the very same address.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
-				// @note: Only one block is left on the stack in this place, so there is no need for
-		        // any deinits. It's being deinitialized by the thread after obtaining the return
-		        // value/exit_code.
-				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
-			}
+		start_function.body.push_back(
+			code::builders::makeInstructionFromArgs(base::StrID("exit"), {})
 		);
-		start_function.orig_bc = start_function.bc;
 
 		return start_function;
+	}
+
+	low::LowFuncData SafeVMThread::compileStartFunction(code::Function&& start_function) {
+		runtime_expr_high.emplace_back(safe_process.validateStartFunction(this, start_function));
+		runtime_expr_low.emplace_back(safe_process.compileToLow(this, runtime_expr_high.back()));
+		runtime_expr_low.back().id = START_FUNCTION_ID;
+		return runtime_expr_low.back();
 	}
 
 	/**
@@ -223,204 +205,116 @@ namespace vm {
 	 * loading phase is not possible. This also results in the need to create the function in the
 	 * micro-bytecode right away.
 	 */
-	low::LowFuncData SafeVMThread::createProgramStartFunction(
+	code::Function SafeVMThread::createProgramStartFunction(
 		const low::LowFuncData& func, const ProgramRunArguments& args
 	) const {
-		// Types
-		// @note: All the following are guaranteed to exist or their existence was checked
-		// during code loading.
+		auto high_func = func.getHighFunc();
+		CORE_ASSERT(high_func, "the program start function can only wrap a high-level `main`");
 
-		auto        main_return_type = func.getResultTypes();
-		const auto& types            = process_program->getTypes();
-		auto        argv_type        = types.at(base::StrID("argv"));
-		auto        argv_ptr_type    = types.at(base::StrID("ptr_argv"));
-		auto        i64_type         = types.at(base::StrID("i64"));
-		auto        str_type         = types.at(base::StrID("string"));
-		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
-		auto        byte_type        = types.at(base::StrID("byte"));
+		code::Function start_function;
+		start_function.name      = code::Identifier{ base::StrID("vm_start_function") };
+		start_function.signature = code::FuncSignature{ .result_types = {}, .parameters = {} };
 
-		low::LowFuncData start_function;
-		start_function.name      = base::StrID("vm_start_function");
-		start_function.id        = START_FUNCTION_ID;
-		start_function.high_func = nullptr;
-#ifdef ENABLE_JIT
-		// This is okay because we never JIT the start function.
-		start_function.cfg = low::cf::ControlFlowGraph();
-#endif
-		start_function.bc                  = {};
-		start_function.orig_bc             = {};
-		start_function.local_stack_size    = 72;
-		start_function.local_slot_count    = 7;
-		start_function.arg_size            = 0;
-		start_function.ret_size            = func.getRetSize();
-		start_function.parameters          = {};
-		start_function.result_types        = func.getResultTypes();
-		start_function.instruction_mapping = {};
+		auto emit = [&](std::string_view opcode, std::vector<opargs::OpCodeArg> op_args) {
+			start_function.body.push_back(
+				code::builders::makeInstructionFromArgs(base::StrID(opcode.data()), op_args)
+			);
+		};
+		auto any  = [](base::StrID n) { return opargs::OpCodeArg{ opargs::PlaceAny{ n } }; };
+		auto p8   = [](base::StrID n) { return opargs::OpCodeArg{ opargs::Place8{ n } }; };
+		auto p64  = [](base::StrID n) { return opargs::OpCodeArg{ opargs::Place64{ n } }; };
+		auto ptr  = [](base::StrID n) { return opargs::OpCodeArg{ opargs::PlacePtr{ n } }; };
+		auto imm  = [](u64 v) { return opargs::OpCodeArg{ opargs::Immediate{ v } }; };
+		auto type = [](std::string_view t) {
+			return opargs::OpCodeArg{ opargs::Type{ base::StrID(t.data()) } };
+		};
 
-		// TypeIDs to pass to opcodes.
-		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
-		u64 argv_ptr_type_arg = safeReadObjectBytes<u64>(argv_ptr_type);
-		u64 i64_type_arg      = safeReadObjectBytes<u64>(i64_type);
-		u64 str_type_arg      = safeReadObjectBytes<u64>(str_type);
-		u64 str_ptr_type_arg  = safeReadObjectBytes<u64>(str_ptr_type);
-		u64 byte_type_arg     = safeReadObjectBytes<u64>(byte_type);
+		const auto ret_value      = base::StrID("ret_value");
+		const auto argv_internal  = base::StrID("argv_internal");
+		const auto argc_internal  = base::StrID("argc_internal");
+		const auto ix             = base::StrID("ix");
+		const auto ptr_tmp_store  = base::StrID("ptr_tmp_store");
+		const auto char_tmp_store = base::StrID("char_tmp_store");
+		const auto main_ret_val   = base::StrID("main_ret_val");
 
-		const u64  called_function_id = process_program->getFunctions().idOf(func.getName()).value();
-		const bool main_has_args      = !func.getParameters().empty();
+		const bool main_has_args = !func.getParameters().empty();
 
-		// Initialize the needed data first - argc and argv dynamic table.
-		// Note that `argv` and `argc` are always initialized even if `main` takes no arguments.
-		// This is for the offsets to not get changed when generating the start function.
-		start_function.bc.insert(
-			start_function.bc.end(),
-			{
-				// Program return value is fixes to return `i64`.
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 0, i64_type_arg
-				),  // stack [0, 8), block idx 0 program ret_val
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 8, argv_ptr_type_arg
-				),  // stack [8, 24) block idx 1 *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 24, i64_type_arg
-				),  // stack  [24, 32) block idx 2 argc_internal
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 32, i64_type_arg
-				),  // stack [32, 40) block idx 3 ix
-				MAKE_BYTECODE_INSTRUCTION(
-					mov_p64_imm, 24, args.size()
-				),  // argc_internal := args.size()
-				MAKE_BYTECODE_INSTRUCTION(
-					dynTableReAlloc_pptr_type, 8, argv_type_arg
-				),  // alloc *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(ext_p64, 24, 0),
-			}
+		// Initialize the argc/argv bookkeeping. It is always materialized, so that the offsets
+		// do not depend on whether `main` takes arguments.
+		emit("init_pany_type", { any(ret_value), type("i64") });
+		emit("init_pany_type", { any(argv_internal), type("ptr_argv") });
+		emit("init_pany_type", { any(argc_internal), type("i64") });
+		emit("init_pany_type", { any(ix), type("i64") });
+		emit("mov_p64_imm", { p64(argc_internal), imm(args.size()) });
+		emit(
+			"dynTableReAlloc_pptr_type_p64", { ptr(argv_internal), type("argv"), p64(argc_internal) }
 		);
 
 		// Now fill in the argv table.
 		if (main_has_args) {
 			for (const auto& [argv_index, arg]:
 			     std::views::zip(std::ranges::views::iota(0u), args)) {
-				start_function.bc.insert(
-					start_function.bc.end(),
-					{
-						MAKE_BYTECODE_INSTRUCTION(
-							init_off_type, 40, str_ptr_type_arg
-						),  // stack [40, 56) block idx 4 ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(
-							init_off_type, 56, byte_type_arg
-						),  // stack [56, 57) block idx 5 char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(
-							mov_p64_imm, 24, arg.size() + 1
-						),  // argc_internal := arg.size() + 1 (for the \0 character)
-						MAKE_BYTECODE_INSTRUCTION(
-							dynTableReAlloc_pptr_type, 40, str_type_arg
-						),                                              // alloc ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64, 24, 0),
-						MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
-					}
+				emit("init_pany_type", { any(ptr_tmp_store), type("ptr_string") });
+				emit("init_pany_type", { any(char_tmp_store), type("byte") });
+				// `arg.size() + 1` accounts for the terminating `\0`.
+				emit("mov_p64_imm", { p64(argc_internal), imm(arg.size() + 1) });
+				emit(
+					"dynTableReAlloc_pptr_type_p64",
+					{ ptr(ptr_tmp_store), type("string"), p64(argc_internal) }
 				);
+				emit("mov_p64_imm", { p64(ix), imm(0) });
 				for (auto c: arg) {
-					start_function.bc.insert(
-						start_function.bc.end(),
-						{ MAKE_BYTECODE_INSTRUCTION(
-							  mov_p8_imm, 56, static_cast<u64>(c)
-						  ),  // char_tmp_store := c
-					      MAKE_BYTECODE_INSTRUCTION(
-							  anyArrayStore_pptr_bany, 40, 5
-						  ),  // ptr_tmp_store[ix] := char_tmp_store
-					      MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, byte_type_arg),
-					      MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1) }
+					emit("mov_p8_imm", { p8(char_tmp_store), imm(static_cast<u64>(c)) });
+					emit(
+						"dynTableStore_pptr_pany_p64",
+						{ ptr(ptr_tmp_store), any(char_tmp_store), p64(ix) }
 					);
+					emit("add_p64_imm", { p64(ix), imm(1) });
 				}
-				start_function.bc.insert(
-					start_function.bc.end(),
-					{
-						// At this point ix == arg.size().
-						MAKE_BYTECODE_INSTRUCTION(mov_p8_imm, 56, 0),  // char_tmp_store := \0
-						MAKE_BYTECODE_INSTRUCTION(
-							anyArrayStore_pptr_bany, 40, 5
-						),  // ptr_tmp_store[ix] := char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, byte_type_arg),
-						MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, argv_index),  // ix := argv_index
-						MAKE_BYTECODE_INSTRUCTION(
-							anyArrayStore_pptr_bany, 8, 4
-						),  // argv_internal[ix] := ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
-						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit ptr_tmp_store
-					}
+				// At this point `ix == arg.size()` - store the terminating `\0`.
+				emit("mov_p8_imm", { p8(char_tmp_store), imm(0) });
+				emit(
+					"dynTableStore_pptr_pany_p64",
+					{ ptr(ptr_tmp_store), any(char_tmp_store), p64(ix) }
 				);
+				emit("mov_p64_imm", { p64(ix), imm(argv_index) });
+				emit(
+					"dynTableStore_pptr_pany_p64",
+					{ ptr(argv_internal), any(ptr_tmp_store), p64(ix) }
+				);
+				emit("deinit", {});
+				emit("deinit", {});
 			}
 		}
 
-
-		// Now actually prepare to call 'main'.
-		start_function.bc.push_back(
-			MAKE_BYTECODE_INSTRUCTION(init_off_type, 40, i64_type_arg)  // [40, 48) main ret_val
-		);
-
-		// Pass the command line arguments only if main signature specifies it.
+		// Now actually prepare to call 'main'. Its return value is the first shared slot.
+		emit("init_pany_type", { any(main_ret_val), type("i64") });
 		if (main_has_args) {
-			start_function.bc.insert(
-				start_function.bc.end(),
-				{
-					MAKE_BYTECODE_INSTRUCTION(init_off_type, 48, i64_type_arg),  // [48, 56) argc
-					MAKE_BYTECODE_INSTRUCTION(
-						init_off_type, 56, argv_ptr_type_arg
-					),                                                        // [56, 72) *argv
-					MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 48, args.size()),  // argc := args.size()
-					MAKE_BYTECODE_INSTRUCTION(mov_pptr_pptr, 56, 8),  // argv := argv_internal
-				}
-			);
+			const auto argc = base::StrID("argc");
+			const auto argv = base::StrID("argv");
+			emit("init_pany_type", { any(argc), type("i64") });
+			emit("init_pany_type", { any(argv), type("ptr_argv") });
+			emit("mov_p64_imm", { p64(argc), imm(args.size()) });
+			emit("mov_pptr_pptr", { ptr(argv), ptr(argv_internal) });
 		}
 
-		start_function.bc.insert(
-			start_function.bc.end(),
-			{
-				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				// `main`'s frame begins at its return value, which the layout above puts at 40.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 40),  // call main
-				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
-				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 48, str_ptr_type_arg
-				),  // [48, 64) ptr_tmp_store
-			}
-		);
+		emit("call_func", { opargs::OpCodeArg{ opargs::FunctionName{ func.getName() } } });
+		emit("mov_p64_p64", { p64(ret_value), p64(main_ret_val) });
+		emit("mov_p64_imm", { p64(ix), imm(0) });
+		emit("init_pany_type", { any(ptr_tmp_store), type("ptr_string") });
 
 		// After 'main' returned, free all the allocated strings in the argv table.
 		for ([[maybe_unused]] const auto& arg: args) {
-			start_function.bc.insert(
-				start_function.bc.end(),
-				{
-					MAKE_BYTECODE_INSTRUCTION(
-						anyArrayLoad_bany_pptr, 5, 8
-					),  // ptr_tmp_store := argv_internal[ix]
-					MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
-					MAKE_BYTECODE_INSTRUCTION(free_pptr, 48, 0),    // free ptr_tmp_store
-					MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1),  // ++ix
-				}
-			);
+			emit("dynTableLoad_pany_pptr_p64", { any(ptr_tmp_store), ptr(argv_internal), p64(ix) });
+			emit("free_pptr", { ptr(ptr_tmp_store) });
+			emit("add_p64_imm", { p64(ix), imm(1) });
 		}
 
-		// Lastly, free all the data allocated by the start function.
-		start_function.bc.insert(
-			start_function.bc.end(),
-			{
-				MAKE_BYTECODE_INSTRUCTION(free_pptr, 8, 0),   // free *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit ptr_tmp_store
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit main_ret_val
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit ix
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit argc_internal
-				MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit *argv_internal
-				// At this point only the start function return value (which is the program exit
-		        // code) remains on the stack.
-				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
-			}
-		);
-
-		start_function.orig_bc = start_function.bc;
+		// Lastly, free all the data allocated by the start function and pop the remaining locals,
+		// leaving only the program's return value on the stack.
+		emit("free_pptr", { ptr(argv_internal) });
+		for (usize i = 0; i < 5; i++) emit("deinit", {});
+		emit("exit", {});
 
 		return start_function;
 	}
@@ -590,7 +484,8 @@ namespace vm {
 							const auto& func = *process_program->getFunctions()
 							                        .atMaybe(ctor_dtor.ctor_name.value())
 							                        .value();
-							low::LowFuncData start_function = createStartFunctionFor(func, {});
+							low::LowFuncData start_function
+								= compileStartFunction(createStartFunctionFor(func, {}));
 							executeFunction(start_function, func);
 						}
 					}
@@ -615,10 +510,12 @@ namespace vm {
 		low::LowFuncData start_function = [&]() {
 			variant_match(run_arguments) {
 				variant_case(ProgramRunArguments, program_run_arguments) {
-					return createProgramStartFunction(func, program_run_arguments);
+					return compileStartFunction(
+						createProgramStartFunction(func, program_run_arguments)
+					);
 				}
 				variant_case(FunctionRunArguments, function_run_data) {
-					return createStartFunctionFor(func, function_run_data);
+					return compileStartFunction(createStartFunctionFor(func, function_run_data));
 				}
 			}
 			CORE_UNREACHABLE();
@@ -649,7 +546,8 @@ namespace vm {
 			           .expect(
 						   "Called function does not exist: " + ctor_dtor->dtor_name.value().str()
 					   );
-			low::LowFuncData start_function = createStartFunctionFor(func, {});
+			low::LowFuncData start_function
+				= compileStartFunction(createStartFunctionFor(func, {}));
 			executeFunction(start_function, func);
 		}
 	}
@@ -678,11 +576,11 @@ namespace vm {
 
 				auto& func = *frame->current_function;
 
-				return low::LowCodePosition{
-					.function = &func,
-					.instruction_index
-					= static_cast<u64>(frame->instr - func.getBc().data() - (call_adjustment ? 1 : 0)),
-				};
+				return low::LowCodePosition{ .function          = &func,
+					                         .instruction_index = static_cast<u64>(
+												 frame->instr - func.getBc().data()
+												 - (call_adjustment ? 1 : 0)
+											 ) };
 			}
 			variant_default {
 				return std::unexpected(api::ApiError{
@@ -743,7 +641,7 @@ namespace vm {
 		byte*  top   = frame->local_stack;
 		if (frame->local_slot_stack_end != frame->local_slot_stack_base) {
 			const LocalSlot& slot = frame->local_slot_stack_end[-1];
-			top = slot.data + slot.type->getSize().asInt();
+			top                   = slot.data + slot.type->getSize().asInt();
 		}
 		return Bytes{ u64(top - runtime_data.local_stack_base) };
 	}
@@ -791,8 +689,10 @@ namespace vm {
 		auto  local_stack = frame->local_stack;
 		auto& called_expr = runtime_expr_low.back();
 
-		u64 callee_stack_distance
-			= getCurrentHighPosition(getNumberOfCurrentStackFrames() - 1)->byteSize()->assumePointerSize(Bytes{16}).asInt();
+		u64 callee_stack_distance = getCurrentHighPosition(getNumberOfCurrentStackFrames() - 1)
+		                                ->byteSize()
+		                                ->assumePointerSize(Bytes{ 16 })
+		                                .asInt();
 
 		u64 prev_summed = 0;
 
@@ -853,9 +753,9 @@ namespace vm {
 
 		auto resumed = resume();
 		if (!resumed.has_value())
-			return std::unexpected{ std::make_pair(
-				res_handler, "resume failure: " + resumed.error()
-			) };
+			return std::unexpected{
+				std::make_pair(res_handler, "resume failure: " + resumed.error())
+			};
 
 		{
 			std::unique_lock lock(result_mutex);
@@ -880,16 +780,18 @@ namespace vm {
 		return std::unexpected{ std::make_pair(res_handler, err_msg) };
 	}
 
-	std::expected<void, std::string> SafeVMThread::setBreakpointAtFrame(usize frame_idx, usize idx, bool enable) const {
-		if (!v_matches(getThreadState(), vm::thread_state::Paused)) {
-			return std::unexpected{"error: breakpoint can be set only when thread is paused"};
-		}
-		if (frame_idx >= getNumberOfCurrentStackFrames()) {
-			return std::unexpected{"error: frame index is out of bounds"};
-		}
+	std::expected<void, std::string> SafeVMThread::setBreakpointAtFrame(
+		usize frame_idx, usize idx, bool enable
+	) const {
+		if (!v_matches(getThreadState(), vm::thread_state::Paused))
+			return std::unexpected{ "error: breakpoint can be set only when thread is paused" };
+		if (frame_idx >= getNumberOfCurrentStackFrames())
+			return std::unexpected{ "error: frame index is out of bounds" };
 
 		auto func_ref = runtime_data.frame_stack_base[frame_idx].current_function;
-		CORE_ASSERT(func_ref, "When we access the stack frame it has to yield non-nulL function ref");
+		CORE_ASSERT(
+			func_ref, "When we access the stack frame it has to yield non-nulL function ref"
+		);
 
 		auto& func = const_cast<low::LowFuncData&>(*func_ref);
 		return func.setBreakpoint(idx, enable);

@@ -57,6 +57,21 @@ vm::code::valid_function::ValidFunction vm::code::ValidProgram::validateExpr(
 	);
 }
 
+vm::code::valid_function::ValidFunction vm::code::ValidProgram::validateStartFunction(
+	CRef<SafeVMThread> thread, const code::Function& start_function
+) const {
+	return detail::validateAndExtractReachableCode(
+		type_context.getCurrentTypes(),
+		globals_map,
+		function_signatures,
+		ext_c_function_map,
+		flag_context,
+		ffi_function_map,
+		start_function,
+		detail::StartFunction{ thread }
+	);
+}
+
 const vm::code::valid_type::ValidTypeMap& vm::code::ValidProgram::types() const {
 	return type_context.getCurrentTypes();
 }
