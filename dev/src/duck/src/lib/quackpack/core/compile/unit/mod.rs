@@ -13,6 +13,7 @@ use self::unit_visitor::{TryUnitVisitor, UnitVisitor};
 use super::compiler_package::CompilerPackage;
 use super::duckc::multipackage_schema;
 use crate::quackpack::core::identity::Identity;
+use crate::quackpack::core::{AnyPackage, FeatureName};
 use crate::util::hash::sha256_string;
 use crate::{QuackResult, qp_bail_internal};
 
@@ -41,8 +42,8 @@ impl fmt::Debug for Unit {
         let inner = &*self.inner;
         f.debug_struct("Unit")
             .field("unit_id", &inner.unit_id)
-            .field("name", &inner.package.package().name())
-            .field("version", &inner.package.package().version())
+            .field("name", &inner.package.name())
+            .field("version", &inner.package.version())
             .field("identity", &inner.identity)
             .field("package_type", &inner.package_type)
             .finish()
@@ -79,7 +80,9 @@ struct UnitInner {
     /// An internal, but unique identifier.
     unit_id: UnitId,
     /// Which package we're compiling.
-    package: CompilerPackage,
+    package: AnyPackage,
+    /// Enabled features of this [`Unit`].
+    enabled_features: HashSet<FeatureName>,
     /// How have we got this package.
     identity: Identity,
     /// What artifacts should this unit produce.
@@ -97,10 +100,12 @@ impl Unit {
         package_type: ArtifactsType,
         build_kind: BuildKind,
     ) -> Self {
+        let (package, enabled_features, _) = package.decompose();
         Self {
             inner: Arc::new(UnitInner {
                 unit_id,
                 package,
+                enabled_features,
                 identity,
                 package_type,
                 build_kind,
@@ -114,8 +119,13 @@ impl Unit {
     }
 
     /// Get the root package of this [`Unit`].
-    pub fn root_package(&self) -> &CompilerPackage {
+    pub fn root_package(&self) -> &AnyPackage {
         &self.inner.package
+    }
+
+    /// Get the root package of this [`Unit`].
+    pub fn enabled_features(&self) -> &HashSet<FeatureName> {
+        &self.inner.enabled_features
     }
 
     /// Get the type of produced artifacts by this [`Unit`].
@@ -138,8 +148,8 @@ impl Unit {
     pub fn unique_name(&self) -> String {
         // Can we trim this hash?
         let id = sha256_string(self.identity().origin().to_string());
-        let name = self.root_package().package().name();
-        let version = self.root_package().package().version();
+        let name = self.root_package().name();
+        let version = self.root_package().version();
         format!("{}-{}-{}", name, version, id)
     }
 
@@ -147,14 +157,14 @@ impl Unit {
     ///
     /// It's a _nice_ name, which can be displayed to the user.
     pub fn descriptive_name(&self) -> String {
-        let name = self.root_package().package().name();
-        let version = self.root_package().package().version();
+        let name = self.root_package().name();
+        let version = self.root_package().version();
         format!("{name} version {version}")
     }
 
     /// Get the filename of the output of this [`Unit`].
     pub fn output_file_name(&self) -> String {
-        let name = self.root_package().package().name();
+        let name = self.root_package().name();
         match self.artifacts_type() {
             ArtifactsType::Binary => format!("{}{}", name, EXE_SUFFIX),
             ArtifactsType::Library => format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX),
@@ -170,16 +180,11 @@ impl Unit {
         &self,
         graph: &UnitGraph,
     ) -> QuackResult<multipackage_schema::Package> {
-        let package = self.root_package().package();
+        let package = self.root_package();
         let import_name = package.normalised_name();
         let version = package.version();
         let features = {
-            let mut features = self
-                .root_package()
-                .enabled_features()
-                .iter()
-                .copied()
-                .collect::<Vec<_>>();
+            let mut features = self.enabled_features().iter().copied().collect::<Vec<_>>();
             features.sort();
             features
         };
@@ -187,7 +192,7 @@ impl Unit {
             let mut result = vec![];
             for dep_id in graph.deps_for(self.unit_id()) {
                 let unit_dep = graph.unit_for(*dep_id);
-                let dep_name = unit_dep.root_package().package().name();
+                let dep_name = unit_dep.root_package().name();
                 let dep = package
                     .manifest()
                     .dependencies()

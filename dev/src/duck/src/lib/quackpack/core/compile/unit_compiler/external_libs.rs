@@ -43,12 +43,7 @@ pub fn has_external_libraries(unit: &Unit, graph: &UnitGraph) -> Option<External
         type Break = ExternalLibrariesFound;
 
         fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
-            let links = &unit
-                .root_package()
-                .package()
-                .manifest()
-                .build_options()
-                .links;
+            let links = &unit.root_package().manifest().build_options().links;
             match links {
                 Some(links) => ControlFlow::Break(ExternalLibrariesFound {
                     unit: unit.clone(),
@@ -76,7 +71,6 @@ pub fn validate_external_libraries(unit: &Unit, graph: &UnitGraph) -> QuackResul
         fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
             let links = unit
                 .root_package()
-                .package()
                 .manifest()
                 .build_options()
                 .links
@@ -117,7 +111,6 @@ pub fn gather_external_libraries(unit: &Unit, graph: &UnitGraph) -> Vec<StrId> {
         fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
             let links = unit
                 .root_package()
-                .package()
                 .manifest()
                 .build_options()
                 .links

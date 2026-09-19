@@ -77,7 +77,7 @@ impl BuildContext<'_, '_> {
 
     /// Get an appropriate [`ArtifactsLayout`] implementation.
     pub fn artifacts_layout(&self, graph: &UnitGraph) -> Box<dyn ArtifactsLayout> {
-        let root_package = graph.root_unit().root_package().package().get_package();
+        let root_package = graph.root_unit().root_package().get_package();
         let root_package_artifacts = root_package.artifacts_directory().to_path_buf();
         debug!(uses_shared_artifacts = %self.shared);
         if self.shared {
@@ -121,7 +121,7 @@ fn compile_all_needed_units(
     Ok(())
 }
 
-#[instrument(skip_all, fields(id = %unit.unit_id(), name = %unit.root_package().package().name(), version = %unit.root_package().package().version(), identity = %unit.identity()))]
+#[instrument(skip_all, fields(id = %unit.unit_id(), name = %unit.root_package().name(), version = %unit.root_package().version(), identity = %unit.identity()))]
 /// Compile a single [`Unit`].
 /// May panic, if this [`Unit`] is not in the [`units_to_compile`](Self::units_to_compile) list.
 fn compile_unit(
@@ -161,7 +161,7 @@ fn compile_unit_with_schema(
     bcx: &BuildContext<'_, '_>,
     schema: multipackage_schema::MultiPackage,
 ) -> QuackResult<()> {
-    let name = unit.root_package().package().name();
+    let name = unit.root_package().name();
     let status = (|| {
         let unit_layout = layout.for_dependency(unit, graph)?;
         let builder = finished_builder_for_layout_and_profile(bcx, &*unit_layout, bcx.profile);
