@@ -5,6 +5,7 @@
 
 #include <base/str/str_utils.hpp>
 
+#include <cstdlib>
 #include <iostream>
 
 namespace duck_ls {
@@ -15,6 +16,52 @@ namespace duck_ls {
 		 */
 		std::string serverVersion() {
 			return base::strConcat(version::semver(), " (", version::commitHash(), ")");
+		}
+
+		/**
+		 * @brief Tells the client the server is going down, and why, before it does.
+		 */
+		void reportFatal(
+			lsp::ServerEndpoint& endpoint, std::string_view method, std::string_view what
+		) noexcept {
+			try {
+				std::cerr << "duck_ls: fatal while handling " << method << ":\n" << what << "\n";
+
+				endpoint.windowLogMessage({
+					.type = lsp::MessageType::Error,
+					.message
+					= base::strConcat("duck_ls failed while handling ", method, ":\n", what),
+				});
+				endpoint.windowShowMessage({
+					.type    = lsp::MessageType::Error,
+					.message = base::strConcat(
+						"The Duckling language server failed while handling ",
+						method,
+						" and is shutting down. See the Duckling Language Server output for the "
+						"details."
+					),
+				});
+			} catch (...) {
+				// The connection is the only way to reach the client, so when it is the thing
+				// that broke there is nowhere left to report to.
+			}
+		}
+
+		/**
+		 * @brief Runs a handler, ending the process on anything it throws.
+		 */
+		template<class Operation>
+		auto orAbort(lsp::ServerEndpoint& endpoint, std::string_view method, Operation&& operation)
+			-> decltype(operation()) {
+			try {
+				return std::forward<Operation>(operation)();
+			} catch (const lsp::RequestError&) { throw; } catch (const std::exception& e) {
+				reportFatal(endpoint, method, e.what());
+				std::abort();
+			} catch (...) {
+				reportFatal(endpoint, method, "an exception that is not a std::exception");
+				std::abort();
+			}
 		}
 
 		void collectWorkspaceRoots(const lsp::InitializeParams& params, Compiler& compiler) {
@@ -38,9 +85,10 @@ namespace duck_ls {
 	void ServerSession::registerHandlers(Compiler& compiler) {
 		endpoint
 			->onInitialize([this, &compiler](const lsp::InitializeParams& params) -> auto {
-				collectWorkspaceRoots(params, compiler);
+				return orAbort(*endpoint, "initialize", [&] {
+					collectWorkspaceRoots(params, compiler);
 
-				return lsp::InitializeResult{
+					return lsp::InitializeResult{
 						.capabilities = {
 							.positionEncoding = position_encoding,
 							.textDocumentSync = lsp::TextDocumentSyncOptions{
@@ -53,37 +101,50 @@ namespace duck_ls {
 							.version = serverVersion(),
 						},
 					};
+				});
 			})
 			.onInitialized([](auto&&) {})
-			.onTextDocumentDidOpen([&compiler](lsp::DidOpenTextDocumentParams&& params) {
-				const std::string language_id = params.textDocument.languageId;
-				compiler.openDocument(
-					params.textDocument.uri,
-					language_id,
-					params.textDocument.version,
-					params.textDocument.text
-				);
+			.onTextDocumentDidOpen([this, &compiler](lsp::DidOpenTextDocumentParams&& params) {
+				orAbort(*endpoint, "textDocument/didOpen", [&] {
+					const std::string language_id = params.textDocument.languageId;
+					compiler.openDocument(
+						params.textDocument.uri,
+						language_id,
+						params.textDocument.version,
+						params.textDocument.text
+					);
 
-				compiler.publishDiagnostics(params.textDocument.uri);
+					compiler.publishDiagnostics(params.textDocument.uri);
+				});
 			})
-			.onTextDocumentDidChange([&compiler](lsp::DidChangeTextDocumentParams&& params) {
-				compiler.updateDocument(
-					params.textDocument.uri, params.textDocument.version, params.contentChanges
-				);
-				compiler.publishDiagnostics(params.textDocument.uri);
+			.onTextDocumentDidChange([this, &compiler](lsp::DidChangeTextDocumentParams&& params) {
+				orAbort(*endpoint, "textDocument/didChange", [&] {
+					compiler.updateDocument(
+						params.textDocument.uri, params.textDocument.version, params.contentChanges
+					);
+					compiler.publishDiagnostics(params.textDocument.uri);
+				});
 			})
-			.onTextDocumentDidClose([&compiler](lsp::DidCloseTextDocumentParams&& params) {
-				compiler.closeDocument(params.textDocument.uri);
-				compiler.publishDiagnostics(params.textDocument.uri);
+			.onTextDocumentDidClose([this, &compiler](lsp::DidCloseTextDocumentParams&& params) {
+				orAbort(*endpoint, "textDocument/didClose", [&] {
+					compiler.closeDocument(params.textDocument.uri);
+					compiler.publishDiagnostics(params.textDocument.uri);
+				});
 			})
-			.onWorkspaceDidChangeWatchedFiles([&compiler](lsp::DidChangeWatchedFilesParams&& params
-		                                      ) {
-				for (const auto& change: params.changes) {
-					if (change.type == lsp::FileChangeType::Changed) continue;
-					compiler.fileCreatedOrDeletedOnDisk(change.uri);
-					compiler.publishDiagnostics(change.uri);
+			.onWorkspaceDidChangeWatchedFiles(
+				[this, &compiler](lsp::DidChangeWatchedFilesParams&& params) {
+					orAbort(*endpoint, "workspace/didChangeWatchedFiles", [&] {
+						bool touched = false;
+						for (const auto& change: params.changes) {
+							if (change.type == lsp::FileChangeType::Changed) continue;
+							compiler.fileCreatedOrDeletedOnDisk(change.uri);
+							touched = true;
+						}
+
+						if (touched) compiler.publishDiagnostics({});
+					});
 				}
-			})
+			)
 			.onShutdown([]() -> lsp::ShutdownResult { return {}; })
 			.onExit([]() {});
 	}

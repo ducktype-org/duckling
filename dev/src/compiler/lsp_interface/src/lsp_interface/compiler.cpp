@@ -59,8 +59,8 @@ namespace duck_ls {
 			return module;
 		}
 
-		base::Optional<base::CRef<ModuleTree>> findLoadedPackageOf(const fs::File& file) {
-			auto source_files = SourceFile::getSourceFilesFromPath(file.getFilePath());
+		base::Optional<base::CRef<ModuleTree>> findLoadedPackageOf(const fs::FilePath& path) {
+			auto source_files = SourceFile::getSourceFilesFromPath(path);
 			if (source_files.empty()) return {};
 
 			return getRootModule(source_files.back()->getModule().illegalAccess().getID());
@@ -164,6 +164,7 @@ namespace duck_ls {
 		)
 		                     ->getModuleID();
 		global_state::setters::addPackage(module_id);
+		tracked_packages.push_back(module_id);
 
 		std::cerr << "duck_ls: loaded package " << package_root.strView() << "\n";
 	}
@@ -183,6 +184,7 @@ namespace duck_ls {
 		if_opt_some(findModuleForFile(root_file), module_ref) {
 			global_state::setters::removePackage(module_ref->getModuleID());
 			ModuleTreeModifier::removeModuleRecursive(module_ref);
+			std::erase(tracked_packages, module_ref->getModuleID());
 		}
 
 		loadPackage(package_root.value());
@@ -296,18 +298,28 @@ namespace duck_ls {
 		if_opt_some(files->sourcePathFor(uri), source) reloadPackageOwning(source);
 	}
 
-	void Compiler::publishDiagnostics(const lsp::Uri& uri) {
-		auto cache_path = files->cachePathFor(uri);
-		if (cache_path.empty()) return;
+	void Compiler::publishDiagnostics(const base::Optional<lsp::Uri>& queried_uri_opt) {
+		base::Optional<fs::FilePath>        queried_file_opt;
+		std::vector<base::CRef<ModuleTree>> modules;
 
-		// The module tree is keyed by the cache path while the document is open, and by the file
-		// behind it once it has been closed and swapped back.
-		auto file = files->isOpened(uri) ? fs::File(cache_path.value())
-		                                 : fs::File(files->sourcePath(cache_path.value()));
+		if_opt_some(queried_uri_opt, uri) {
+			auto cache_path = files->cachePathFor(uri);
+			// Cache path is invalid only if and only if the URI type is not supported.
+			if (cache_path.empty()) return;
+
+			queried_file_opt
+				= files->isOpened(uri) ? cache_path.value() : files->sourcePath(cache_path.value());
+
+			if_opt_some(findLoadedPackageOf(queried_file_opt.value()), root_module)
+				modules.push_back(root_module);
+		}
+		if_opt_none(queried_file_opt) {
+			for (auto id: tracked_packages) modules.push_back(getModuleRef(id));
+		}
 
 		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> published;
 
-		if_opt_some(findLoadedPackageOf(file), root_module) {
+		for (auto root_module: modules) {
 			auto main_source_file
 				= getFileRef(root_module->getMainSourceFile().illegalAccess().getID());
 			auto main_path = main_source_file->getFileIllegalAccess().getFilePath();
@@ -332,7 +344,7 @@ namespace duck_ls {
 
 			dia::lsp::EvaluationContext ctx(
 				main_path.string(),
-				file.getFilePath().string(),
+				queried_file_opt.copyValueOr(main_path).genericString(),
 				[this](const std::string& path) { return files->uriFor(fs::FilePath(path)); }
 			);
 

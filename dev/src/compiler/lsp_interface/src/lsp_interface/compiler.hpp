@@ -1,5 +1,6 @@
 #pragma once
 
+#include <frontend/module_tree/module_id.hpp>
 #include <lsp/types.h>
 #include <lsp/uri.h>
 #include <lsp_interface/files_cache.hpp>
@@ -15,10 +16,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
-
-namespace compiler::frontend {
-	class ModuleTree;
-}
 
 namespace duck_ls {
 
@@ -82,10 +79,9 @@ namespace duck_ls {
 		 * @brief Compiles the package the document belongs to and pushes its diagnostics.
 		 *
 		 * The URI only says which package to compile: the diagnostics come from all of it, not
-		 * just from that one document. Files that had diagnostics before and have none now are
-		 * pushed with an empty array so that the client clears them.
+		 * just from that one document.
 		 */
-		virtual void publishDiagnostics(const lsp::Uri& uri);
+		virtual void publishDiagnostics(const base::Optional<lsp::Uri>& queried_file_opt);
 
 	private:
 		/**
@@ -119,6 +115,9 @@ namespace duck_ls {
 
 		base::Ref<ServerSession> session;
 		base::Ref<FilesCache>    files;
+
+		std::vector<compiler::frontend::ModuleID> tracked_packages{};
+
 		/// The last diagnostics pushed per URI, so that stale ones can be cleared.
 		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> last_published_diagnostics;
 	};

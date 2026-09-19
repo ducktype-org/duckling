@@ -75,8 +75,12 @@ namespace {
 			calls.push_back(Call{ .name = "fileCreatedOrDeletedOnDisk", .uri = uri.toString() });
 		}
 
-		void publishDiagnostics(const lsp::Uri& uri) override {
-			calls.push_back(Call{ .name = "publishDiagnostics", .uri = uri.toString() });
+		void publishDiagnostics(const base::Optional<lsp::Uri>& queried_uri_opt) override {
+			calls.push_back(Call{
+				.name = "publishDiagnostics",
+				.uri
+				= queried_uri_opt.has_value() ? queried_uri_opt.value().toString() : std::string{},
+			});
 		}
 	};
 
@@ -161,6 +165,7 @@ public:
 		TESTER_ADD_TEST(didChangeTest);
 		TESTER_ADD_TEST(didCloseTest);
 		TESTER_ADD_TEST(didChangeWatchedFilesTest);
+		TESTER_ADD_TEST(didChangeWatchedFilesWithNothingToDoTest);
 		TESTER_ADD_TEST(unsupportedUriIsNotFatalTest);
 	}
 
@@ -286,18 +291,31 @@ private:
 		}));
 
 		// A file whose content changed is already covered by the buffer or by the next open, so
-		// only appearing and disappearing files reach the compiler.
+		// only appearing and disappearing files reach the compiler. The batch is published once
+		// at the end: a deleted file has no module to be asked about, and one batch can reach
+		// several packages.
 		assertMethodCalls(
 			run,
-			{ "fileCreatedOrDeletedOnDisk",
-		      "publishDiagnostics",
-		      "fileCreatedOrDeletedOnDisk",
-		      "publishDiagnostics" },
+			{ "fileCreatedOrDeletedOnDisk", "fileCreatedOrDeletedOnDisk", "publishDiagnostics" },
 			"didChangeWatchedFiles"
 		);
 
 		assertTrue(run.calls[0].uri == "file:///ws/created.dk", "The created file must be first");
-		assertTrue(run.calls[2].uri == "file:///ws/deleted.dk", "The deleted file must be second");
+		assertTrue(run.calls[1].uri == "file:///ws/deleted.dk", "The deleted file must be second");
+		assertTrue(
+			run.calls[2].uri.empty(),
+			"The batch must be published for every tracked package, not for one file"
+		);
+	}
+
+	void didChangeWatchedFilesWithNothingToDoTest() {
+		auto run = runSession(session({
+			R"({"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":[)"
+			R"({"uri":"file:///ws/changed.dk","type":2}]}})",
+		}));
+
+		// Nothing appeared or disappeared, so there is nothing to recompile and nothing to say.
+		assertMethodCalls(run, {}, "didChangeWatchedFiles with only a content change");
 	}
 
 	void unsupportedUriIsNotFatalTest() {
