@@ -1,44 +1,44 @@
 //! [`UnitGraph`] is a lowered version of [`EarlyGraph`].
 
+use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 
-use tracing::{debug, instrument};
+use tracing::instrument;
 
-use super::{ArtifactsType, BuildKind, Unit};
+use super::{ArtifactsType, BuildKind, Unit, UnitId};
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
-use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
+use crate::quackpack::core::compile::early_graph::{DependencyGraph, DependencyNode, EarlyGraph};
 use crate::quackpack::core::compile::{BuildContext, missing_depenendcy_in_graph};
 use crate::quackpack::core::identity::Identity;
 
 #[derive(Debug)]
 /// A lowered version of the [`EarlyGraph`].
 pub struct UnitGraph {
-    root_id: u64,
-    units: Vec<Unit>,
+    root_id: UnitId,
+    units: Vec<(Unit, Vec<UnitId>)>,
 }
+
+pub type UnitIdsIter<'a> =
+    core::iter::Map<core::slice::Iter<'a, (Unit, Vec<UnitId>)>, fn(&(Unit, Vec<UnitId>)) -> &Unit>;
 
 impl UnitGraph {
     /// Create a new [`UnitGraph`].
-    pub fn new(root_id: u64, units: Vec<Unit>) -> Self {
-        let ids = units.iter().map(Unit::unit_id);
-        debug_assert!(ids.is_sorted(), "Units should be sorted by IDs; {units:?}");
-        // Leaving `root_id` as a variable/member, since it might change in the future.
-        debug_assert_eq!(root_id, 0, "root Unit should have an ID == 0");
-        for (index, unit) in units.iter().enumerate() {
-            debug_assert_eq!(
-                index as u64,
-                unit.unit_id(),
-                "{index}-th Unit({}) should have ID == {index}, but has {}",
-                unit.identity(),
-                unit.unit_id(),
-            );
+    pub fn new(root_id: UnitId, units: Vec<(Unit, Vec<UnitId>)>) -> Self {
+        if cfg!(debug_assertions) {
+            assert_valid_units_order(&units);
         }
+        debug_assert_eq!(root_id, 0, "root Unit should have an ID == 0");
         Self { root_id, units }
     }
 
     /// Get the dependency for the given id.
-    pub fn unit_for(&self, id: u64) -> &Unit {
-        &self.units[id as usize]
+    pub fn unit_for(&self, id: UnitId) -> &Unit {
+        &self.units[id as usize].0
+    }
+
+    /// Get the dependency for the given id.
+    pub fn deps_for(&self, id: UnitId) -> &[UnitId] {
+        &self.units[id as usize].1
     }
 
     /// Get the root [`Unit`].
@@ -47,13 +47,14 @@ impl UnitGraph {
     }
 
     /// Get [`Unit`]s sorted by their IDs.
-    pub fn units_sorted_by_id(&self) -> &[Unit] {
-        &self.units
+    // NOTE: We need the entire type so implemented traits propagate.
+    pub fn units_sorted_by_id(&self) -> UnitIdsIter<'_> {
+        self.units.iter().map(|(unit, _)| unit)
     }
 
     /// Get the compilation order.
     pub fn compilation_order(&self) -> impl Iterator<Item = &'_ Unit> {
-        self.units_sorted_by_id().iter().rev()
+        self.units_sorted_by_id().rev()
     }
 
     /// Check if the given [`Unit`] is the root [`Unit`].
@@ -62,29 +63,127 @@ impl UnitGraph {
     }
 }
 
+fn assert_valid_units_order(units: &[(Unit, Vec<UnitId>)]) {
+    for (index, (unit, unit_deps)) in units.iter().enumerate() {
+        assert_eq!(
+            index as UnitId,
+            unit.unit_id(),
+            "{index}-th Unit({}) should have ID == {index}, but has {}",
+            unit.identity(),
+            unit.unit_id(),
+        );
+        assert!(
+            unit_deps.is_sorted(),
+            "unit deps should be sorted {unit:?}, {unit_deps:?}"
+        );
+    }
+}
+
 /// Lower an [`EarlyGraph`] to the [`UnitGraph`].
 #[instrument(skip_all)]
 pub fn lower_early_graph(graph: EarlyGraph, bcx: &BuildContext<'_, '_>) -> UnitGraph {
-    let (identity_to_id, sorted_identities) = build_ids_map(&graph);
-    debug!(?identity_to_id, ?sorted_identities);
+    let builder = UnitGraphBuilder::new(graph);
+    builder.lower(bcx)
+}
 
-    let (packages, graph) = graph.into_inner();
-    let mut packages = packages.into_inner();
-    let root_identity = graph.root();
-    let root_id = *identity_to_id
-        .get(&root_identity)
-        .unwrap_or_else(|| missing_depenendcy_in_graph(root_identity, &identity_to_id));
+#[derive(Debug)]
+struct UnitGraphBuilder {
+    topo_sorted_identities: HashMap<Identity, u64>,
+    sorted_identities: Vec<Identity>,
+    packages: RefCell<HashMap<Identity, CompilerPackage>>,
+    graph: DependencyGraph,
+    created_units_with_deps: RefCell<HashMap<Unit, Vec<UnitId>>>,
+}
 
-    let mut units = vec![];
-    for identity in sorted_identities {
-        let package = packages
-            .remove(&identity)
-            .unwrap_or_else(|| missing_depenendcy_in_graph(identity, &identity_to_id));
-        let node = graph.dependencies_for_package(&identity);
-        let unit = create_single_unit(identity, root_identity, &identity_to_id, package, node, bcx);
-        units.push(unit)
+impl UnitGraphBuilder {
+    fn new(graph: EarlyGraph) -> Self {
+        let (topo_sorted_identities, sorted_identities) = build_ids_map(&graph);
+        let (packages, graph) = graph.into_inner();
+        let packages = packages.into_inner();
+        Self {
+            topo_sorted_identities,
+            sorted_identities,
+            packages: RefCell::new(packages),
+            graph,
+            created_units_with_deps: RefCell::default(),
+        }
     }
-    UnitGraph::new(root_id, units)
+
+    fn next_available_id(&self) -> UnitId {
+        self.created_units_with_deps.borrow().len() as UnitId
+    }
+
+    fn lower(self, bcx: &BuildContext<'_, '_>) -> UnitGraph {
+        self.populate_units(bcx);
+        self.finish_lowering()
+    }
+
+    fn finish_lowering(self) -> UnitGraph {
+        let units = self.created_units_with_deps.take();
+        let mut units = units.into_iter().collect::<Vec<_>>();
+        units.iter_mut().for_each(|(_, deps)| {
+            deps.sort();
+            deps.dedup();
+        });
+        let root_id = units
+            .iter()
+            .find_map(|(unit, _)| (unit.identity() == self.root_identity()).then(|| unit.unit_id()))
+            .expect("missing root");
+        units.sort_by_key(|(unit, _)| unit.unit_id());
+        UnitGraph::new(root_id, units)
+    }
+
+    fn root_identity(&self) -> Identity {
+        self.graph.root()
+    }
+
+    fn populate_units(&self, bcx: &BuildContext<'_, '_>) {
+        for identity in self.sorted_identities.iter().copied() {
+            let package = self
+                .packages
+                .borrow_mut()
+                .remove(&identity)
+                .unwrap_or_else(|| {
+                    missing_depenendcy_in_graph(identity, &self.topo_sorted_identities)
+                });
+            let node = self.graph.dependencies_for_package(&identity);
+            let unit = self.create_single_unit(identity, package, bcx);
+            self.populate_unit_deps(&unit, node);
+        }
+    }
+
+    fn create_single_unit(
+        &self,
+        unit_identity: Identity,
+        package: CompilerPackage,
+        bcx: &BuildContext<'_, '_>,
+    ) -> Unit {
+        let artifacts_type = infer_artifacts_type(unit_identity, self.root_identity(), bcx);
+        let unit_id = self.next_available_id();
+        let unit = Unit::new(
+            unit_id,
+            package,
+            unit_identity,
+            // dependencies,
+            artifacts_type,
+            BuildKind::Compile,
+        );
+        self.created_units_with_deps
+            .borrow_mut()
+            .entry(unit.clone())
+            .or_default();
+        unit
+    }
+
+    fn populate_unit_deps(&self, unit: &Unit, node: &DependencyNode) {
+        let mut map = self.created_units_with_deps.borrow_mut();
+        let deps = map.get_mut(unit).unwrap();
+        node.dependencies().iter().for_each(|dep| {
+            deps.push(*self.topo_sorted_identities.get(dep).unwrap_or_else(|| {
+                missing_depenendcy_in_graph(*dep, &self.topo_sorted_identities)
+            }));
+        });
+    }
 }
 
 /// Create a map of `Identity -> UnitId`.
@@ -125,39 +224,6 @@ fn build_ids_map(graph: &EarlyGraph) -> (HashMap<Identity, u64>, Vec<Identity>) 
 fn stable_sort_identities(mut identities: Vec<Identity>) -> Vec<Identity> {
     identities.sort_by(|lhs, rhs| Identity::stable_compare(*lhs, *rhs));
     identities
-}
-
-/// Lower [`EarlyGraph`] information into a single [`Unit`].
-fn create_single_unit(
-    unit_identity: Identity,
-    root_identity: Identity,
-    ids_map: &HashMap<Identity, u64>,
-    package: CompilerPackage,
-    node: &DependencyNode,
-    bcx: &BuildContext<'_, '_>,
-) -> Unit {
-    let artifacts_type = infer_artifacts_type(unit_identity, root_identity, bcx);
-    let mut dependencies = node
-        .dependencies()
-        .iter()
-        .map(|dep| {
-            *ids_map
-                .get(dep)
-                .unwrap_or_else(|| missing_depenendcy_in_graph(*dep, ids_map))
-        })
-        .collect::<Vec<_>>();
-    dependencies.sort();
-    let unit_id = *ids_map
-        .get(&unit_identity)
-        .unwrap_or_else(|| missing_depenendcy_in_graph(unit_identity, ids_map));
-    Unit::new(
-        unit_id,
-        package,
-        unit_identity,
-        dependencies,
-        artifacts_type,
-        BuildKind::Compile,
-    )
 }
 
 /// Infer an appropriate [`ArtifactsType`].
