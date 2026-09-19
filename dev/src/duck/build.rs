@@ -45,6 +45,7 @@ fn add_rpath_for_bundled_scip() {
         let libscip_dir = std::env::var("DEP_SCIP_LIBDIR")
             .expect("`scip-sys` is not a direct dependency in Cargo.toml");
         println!("cargo:rustc-link-arg=-Wl,-rpath,{}", libscip_dir);
+        println!("cargo:rerun-if-changed={libscip_dir}");
     }
 }
 
