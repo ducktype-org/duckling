@@ -5,14 +5,14 @@
 #include <string>
 
 namespace compiler::repl {
-	ReplFrontend::ReplFrontend(bool completions_enabled, bool bracketed_paste_enabled):
-		  m_impl(completions_enabled, bracketed_paste_enabled) {}
+	ReplFrontend::ReplFrontend(
+		bool completions_enabled, bool bracketed_paste_enabled, bool decorative_output
+	):
+		  m_impl(completions_enabled, bracketed_paste_enabled, decorative_output) {}
 
 	void ReplFrontend::printWelcome() const { m_impl.printWelcome(); }
 
-	std::string ReplFrontend::readLine(bool decorative_output_enabled) {
-		return m_impl.readLine(decorative_output_enabled);
-	}
+	std::string ReplFrontend::readLine() { return m_impl.readLine(); }
 
 	void ReplFrontend::printHistory() const { m_impl.printHistory(); }
 

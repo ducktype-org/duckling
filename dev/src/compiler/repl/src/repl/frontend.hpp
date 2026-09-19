@@ -46,8 +46,9 @@ namespace compiler::repl {
 	class ReplFrontend final {
 	public:
 		explicit ReplFrontend(
-			bool completions_enabled     = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
-			bool bracketed_paste_enabled = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED
+			bool completions_enabled       = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
+			bool bracketed_paste_enabled   = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED,
+			bool decorative_output_enabled = FRONTEND_DEFAULT_DECORATIVE_OUTPUT
 		);
 		~ReplFrontend() = default;
 
@@ -59,10 +60,9 @@ namespace compiler::repl {
 		/**
 		 * @brief Blocks and waits for the user to enter next piece of input.
 		 *
-		 * @param decorative_output_enabled Whether to display the interactive prompt.
 		 * @return The string of input provided by the user.
 		 */
-		std::string readLine(bool decorative_output_enabled);
+		std::string readLine();
 
 		/**
 		 * @brief Prints the history of previously entered inputs.

@@ -21,6 +21,13 @@ Tests:
           String: "/exit\n"
         Output:
           String: ""
+      reset-replay:
+        TimeOut: 40
+        Run: "cd \"$DIT_TMP_DIR\" && @{duckc_path} repl --plain-output --custom-std-artifacts-path @{case_std_artifacts}"
+        Input:
+          String: "2 + 2\n3 + 3\n/reset 1\n"
+        Output:
+          String: "4\n6\n4\n"
 
   simple_numeric:
     Cases:

@@ -1367,6 +1367,7 @@ clah::Clah getClahForMain() {
 					}
 					compiler::driver::exit();
 					if (repl_result.status == compiler::repl::ReplResult::Status::Reset) {
+						std::cout.flush();
 						setReplRestartArgs(reset_replay_count.copyValueOr(0), reset_replay_silent);
 						auto exec_result = os_utils::execSelf(g_argv);
 						if (exec_result.status == os_utils::ExecSelfStatus::Error) return 1;

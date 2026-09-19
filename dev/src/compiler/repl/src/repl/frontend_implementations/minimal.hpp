@@ -10,17 +10,20 @@ namespace compiler::repl {
 	class FrontendMinImplementation final {
 	public:
 		explicit FrontendMinImplementation(
-			bool completions_enabled = false, bool bracketed_paste_enabled = false
+			bool completions_enabled     = false,
+			bool bracketed_paste_enabled = false,
+			bool decorative_output       = true
 		);
 		~FrontendMinImplementation() = default;
 
 		void        printWelcome() const;
-		std::string readLine(bool decorative_output_enabled);
+		std::string readLine();
 		void        printHistory() const;
 		void        addHistoryEntry(std::string_view entry);
 		void        clearHistory();
 		void        clearScreen();
 		void        printHelp() const;
+		void        printCompletions(std::string_view prefix) const;
 
 	private:
 		struct EditorState {
@@ -75,6 +78,7 @@ namespace compiler::repl {
 		EditorState              m_stashed_editor_state;
 		const std::string        m_sequence_to_align_cursor_to_multiline_start;
 		bool                     m_bracketed_paste_enabled;
+		bool                     m_decorative_output;
 		bool                     m_in_bracketed_paste = false;
 	};
 }

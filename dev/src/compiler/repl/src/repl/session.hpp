@@ -299,7 +299,7 @@ namespace compiler::repl {
 		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
 		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
 		ReplFrontend m_frontend;      ///< Frontend for user interaction
-		bool         m_decorative_output_enabled;  ///< Whether to print interactive UI decorations.
+		bool         m_decorative_output;
 		/**
 		 * @brief Persistent lowering context for REPL statement compilation.
 		 *

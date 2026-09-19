@@ -12,12 +12,14 @@ namespace compiler::repl {
 	class FrontendReplxxImplementation final {
 	public:
 		explicit FrontendReplxxImplementation(
-			bool completions_enabled = true, bool bracketed_paste_enabled = true
+			bool completions_enabled     = true,
+			bool bracketed_paste_enabled = true,
+			bool decorative_output       = true
 		);
 		~FrontendReplxxImplementation();
 
 		void        printWelcome() const;
-		std::string readLine(bool decorative_output_enabled);
+		std::string readLine();
 		void        printHistory() const;
 		void        addHistoryEntry(std::string_view entry);
 		void        clearHistory();
@@ -40,6 +42,7 @@ namespace compiler::repl {
 
 		replxx::Replxx m_replxx{};
 		bool           m_completions_enabled;
+		bool           m_decorative_output;
 
 		/// Set of user-defined identifiers collected from previous inputs (for completion).
 		std::set<std::string> m_user_words{};
