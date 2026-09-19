@@ -1,7 +1,7 @@
 /**
  * @file semantic_tokens.hpp
  * @brief Semantic tokens definition
- * @note Currently unused.
+ * @TODO: #3604 bring this back
  */
 
 #pragma once

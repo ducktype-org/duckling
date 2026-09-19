@@ -170,6 +170,7 @@ namespace duck_ls {
 	}
 
 	void Compiler::reloadPackageOwning(const fs::FilePath& path) {
+		// @TODO: #3607 fix when main package file is deleted or added
 		auto package_root = walkToPackageRoot(path);
 		if (package_root.empty()) return;
 

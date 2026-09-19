@@ -1,7 +1,7 @@
 /**
  * @file export_keywords.hpp
  * @brief LSP Interface
- * @note Currently unused.
+ * @TODO: #3604 bring this back
  */
 
 #pragma once
