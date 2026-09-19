@@ -85,12 +85,12 @@ namespace vm {
 		const auto& func      = *maybe_func.value();
 		const auto& func_args = v_get(run_arguments, FunctionRunArguments);
 
-		if (func_args.size() != func.parameters.size())
+		if (func_args.size() != func.getParameters().size())
 			return refuse(base::strConcat(
 				"Function '",
-				func.name.str(),
+				func.getName().str(),
 				"' expects ",
-				func.parameters.size(),
+				func.getParameters().size(),
 				" arguments, but ",
 				func_args.size(),
 				" were provided."
@@ -111,13 +111,13 @@ namespace vm {
 
 			// Safe TypeIDs are asserted (in the type builder) to be numerically equal to
 			// ValidTypeIDs, so the interface-level type ID can be compared with the safe one.
-			const auto& arg_type = func.parameters[i];
+			const auto& arg_type = func.getParameters()[i];
 			if (arg_value->getTypeID() != code::valid_type::ValidTypeID(arg_type->getID().asInt()))
 				return refuse(base::strConcat(
 					"Type mismatch for argument ",
 					i,
 					" of function '",
-					func.name.str(),
+					func.getName().str(),
 					"': expected ",
 					arg_type->getName().str(),
 					", got ",
@@ -413,7 +413,7 @@ namespace vm {
 		auto low_position = maybe_lp.value();
 
 		auto function = low_position.function;
-		auto mapping  = function->instruction_mapping;
+		auto mapping  = function->getInstructionMapping();
 
 		// Default instruction range to step over is the whole function, in case we fail to obtain
 		// high position
@@ -468,7 +468,7 @@ namespace vm {
 		auto low_position = maybe_lp.value();
 
 		api::response::CodePosition code_position = {
-			.function_name   = low_position.function->name,
+			.function_name   = low_position.function->getName(),
 			.instr_number    = 0,
 			.source_position = std::nullopt,
 		};
@@ -585,7 +585,7 @@ namespace vm {
 						= loader.getHighProgram()->functions().atMaybe(high_pos.function_name);
 					if (!func_opt) {
 						return api::Response(api::response::StackFrameData{
-							.function_name = frame.current_function->name,
+							.function_name = frame.current_function->getName(),
 							.frame_vars    = frame_vars });
 					}
 					auto  func_shared_box = **func_opt;
@@ -603,7 +603,7 @@ namespace vm {
 				}
 
 				return api::Response(api::response::StackFrameData{
-					.function_name = frame.current_function->name, .frame_vars = frame_vars });
+					.function_name = frame.current_function->getName(), .frame_vars = frame_vars });
 			}
 		}
 		CORE_UNREACHABLE();

@@ -59,7 +59,7 @@ private:
 		);
 
 		std::vector<MicroOpcode> opcodes;
-		for (const auto& instruction: low_program->getFunctions().at(*function_id)->bc)
+		for (const auto& instruction: low_program->getFunctions().at(*function_id)->getBc())
 			opcodes.push_back(vm::getInstructionOpcode(instruction));
 		return opcodes;
 	}

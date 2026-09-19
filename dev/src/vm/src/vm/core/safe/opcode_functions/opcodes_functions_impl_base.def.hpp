@@ -337,7 +337,7 @@ namespace vm {
 		{
 			auto& jit_data         = thread.jit_data;
 			auto& current_func_obj = *frame->current_function;
-			auto  current_func_id  = current_func_obj.id;
+			auto  current_func_id  = current_func_obj.getId();
 
 			// @TODO: #2858 manage the size when inserting new code
 			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
@@ -353,7 +353,7 @@ namespace vm {
 			} else {
 				// should be compiled now
 				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
-					current_func_obj.cfg, current_func_obj.bc, current_func_obj.name
+					current_func_obj.getCfg(), current_func_obj.getBc(), current_func_obj.getName()
 				);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
@@ -507,7 +507,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
 		{
 			auto& called_func = thread.process_program->getFunctions()[instr->arg0];
-			thread.setThreadCtx(called_func.name.str());
+			thread.setThreadCtx(called_func.getName().str());
 		}
 		FUNCTION_CONT(1);
 	}
@@ -551,10 +551,10 @@ namespace vm {
 				"Start function should not be called in the runtime!"
 			);
 			auto& function          = thread.process_program->getFunctions()[function_id];
-			instr                   = function.bc.data();
+			instr                   = function.getBc().data();
 			frame->current_function = &function;
 
-			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
+			if (local_stack + function.getLocalStackSize() > thread.runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
 		}
 		FUNCTION_CONT(0);
@@ -569,7 +569,7 @@ namespace vm {
 			// stack are its return values, which the caller took care of and keeps using.
 			CORE_ASSERT(
 				usize(callee_frame->local_slot_stack_end - callee_frame->local_slot_stack_base)
-					== callee_frame->current_function->result_types.size(),
+					== callee_frame->current_function->getResultTypes().size(),
 				"On return only the function's return values may be left on the slot stack"
 			);
 
@@ -599,7 +599,7 @@ namespace vm {
 			auto& expr = thread.runtime_expr_low.back();
 
 			CORE_ASSERT(
-				instr >= expr.bc.data() && instr < expr.bc.data() + expr.bc.size(),
+				instr >= expr.getBc().data() && instr < expr.getBc().data() + expr.getBc().size(),
 				"We must be evaluating the latest expression when executing `ret_from_expr`"
 			);
 
@@ -609,7 +609,7 @@ namespace vm {
 			);
 
 			auto* callee_frame = frame;
-			u64   ret_count    = frame->current_function->result_types.size();
+			u64   ret_count    = frame->current_function->getResultTypes().size();
 			frame--;
 			auto* caller_block_ref_stack_end = frame->local_slot_stack_end;
 			u64   ret_slot_index = u64(caller_block_ref_stack_end - thread.runtime_data.slot_stack_base);
@@ -630,7 +630,7 @@ namespace vm {
 					block = createLocalSlotBlock(*callee_frame, thread.process_memory, ret_slot_index + idx).get();
 
 				exit_value.emplace_back(
-					thread.safe_process.createVMValue(expr.result_types[idx], Pointer(block, 0))
+					thread.safe_process.createVMValue(expr.getResultTypes()[idx], Pointer(block, 0))
 				);
 			}
 

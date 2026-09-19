@@ -23,6 +23,10 @@ namespace vm::loader::compiler::safe {
 	class SafeCompiler;
 }
 
+namespace vm {
+	class SafeVMThread;
+}
+
 namespace vm::low {
 	using MicroBytecode = std::vector<MicroInstruction>;
 
@@ -30,6 +34,10 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData final {
+		friend class vm::loader::compiler::safe::SafeCompiler;
+		friend class vm::SafeVMThread;
+
+	private:
 		base::StrID                                    name;
 		usize                                          id;
 		MCRef<vm::code::valid_function::ValidFunction> high_func;
@@ -52,6 +60,7 @@ namespace vm::low {
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
 
+	public:
 		/**
 		 * @brief Range of instructions
 		 * @note Represents inclusive-exclusive range [`begin`, `end`)
@@ -63,12 +72,44 @@ namespace vm::low {
 			[[nodiscard]] bool contains(usize index) const { return begin <= index && index < end; }
 		};
 
+	private:
 		/**
 		 * @brief Mapping of fatbytecode instruction indexes to microbytecode instruction indexes
 		 * ranges.
 		 * @note Vector indexes correspond to FatBytecode instruction indexes
 		 */
 		std::vector<InstructionRange> instruction_mapping;
+
+	public:
+		base::StrID getName() const { return name; }
+
+		usize getId() const { return id; }
+
+		MCRef<vm::code::valid_function::ValidFunction> getHighFunc() const { return high_func; }
+
+#ifdef ENABLE_JIT
+		const cf::ControlFlowGraph& getCfg() const { return cfg; }
+#endif
+
+		const MicroBytecode& getBc() const { return bc; }
+
+		const MicroBytecode& getOrigBc() const { return orig_bc; }
+
+		usize getLocalStackSize() const { return local_stack_size; }
+
+		usize getLocalSlotCount() const { return local_slot_count; }
+
+		usize getArgSize() const { return arg_size; }
+
+		usize getRetSize() const { return ret_size; }
+
+		const std::vector<TypeCRef>& getParameters() const { return parameters; }
+
+		const std::vector<TypeCRef>& getResultTypes() const { return result_types; }
+
+		const std::vector<InstructionRange>& getInstructionMapping() const {
+			return instruction_mapping;
+		}
 
 		/**
 		 * @brief method for setting the breakpoint in microbytecode

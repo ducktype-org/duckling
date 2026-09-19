@@ -400,7 +400,7 @@ namespace vm::loader::compiler::safe {
 
 	std::expected<vm::loader::FatBytecodePosition, vm::loader::MappingException> SafeCompiler::
 		mapLowVMProgramPositionToCodeCollectionPosition(vm::low::LowCodePosition position) const {
-		auto& mapping = position.function->instruction_mapping;
+		auto& mapping = position.function->getInstructionMapping();
 
 		// We need to find the first instruction range that starts after the given instruction
 		// index, then check if the previous one contains it
@@ -419,7 +419,7 @@ namespace vm::loader::compiler::safe {
 			return std::unexpected(MappingException::MissingMapping);
 
 		return FatBytecodePosition{
-			.function_name     = position.function->name,
+			.function_name     = position.function->getName(),
 			.instruction_index = usize(candidate - mapping.begin()),
 		};
 	}
@@ -461,24 +461,25 @@ namespace vm::loader::compiler::safe {
 			result_types.emplace_back(low_program.types->at(ret));
 		}
 
-		return low::LowFuncData{
-			.name      = function.name,
-			.id        = 0,  // placeholder, replaced if function is not a volatile expression
-			.high_func = &function,
+		low::LowFuncData func;
+		func.name      = function.name;
+		func.id        = 0;  // placeholder, replaced if function is not a volatile expression
+		func.high_func = &function;
 #ifdef ENABLE_JIT
-			.cfg = vm::low::cf::ControlFlowGraph(bytecode),
+		func.cfg = vm::low::cf::ControlFlowGraph(bytecode);
 #endif
-			// we need two copies of the bytecode
-			.bc                  = bytecode,
-			.orig_bc             = std::move(bytecode),
-			.local_stack_size    = getIntTypeSize(ctx.local_stack_size),
-			.local_slot_count    = ctx.local_slot_count,
-			.arg_size            = getIntTypeSize(parameters_size),
-			.ret_size            = getIntTypeSize(ret_type_sum),
-			.parameters          = std::move(parameters),
-			.result_types        = std::move(result_types),
-			.instruction_mapping = std::move(instruction_mapping),
-		};
+		// we need two copies of the bytecode
+		func.bc                  = bytecode;
+		func.orig_bc             = std::move(bytecode);
+		func.local_stack_size    = getIntTypeSize(ctx.local_stack_size);
+		func.local_slot_count    = ctx.local_slot_count;
+		func.arg_size            = getIntTypeSize(parameters_size);
+		func.ret_size            = getIntTypeSize(ret_type_sum);
+		func.parameters          = std::move(parameters);
+		func.result_types        = std::move(result_types);
+		func.instruction_mapping = std::move(instruction_mapping);
+
+		return func;
 	}
 
 }

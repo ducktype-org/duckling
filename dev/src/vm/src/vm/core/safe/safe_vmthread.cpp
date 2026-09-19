@@ -103,8 +103,8 @@ namespace vm {
 		if (opcode != low::MicroOpcode::breakpoint) return opcode;
 
 		auto&      micro_func     = *frame->current_function;
-		const auto low_instr_idx  = static_cast<usize>(frame->instr - micro_func.bc.data());
-		const auto original_instr = micro_func.orig_bc[low_instr_idx];
+		const auto low_instr_idx  = static_cast<usize>(frame->instr - micro_func.getBc().data());
+		const auto original_instr = micro_func.getOrigBc()[low_instr_idx];
 
 		return getInstructionOpcode(original_instr);
 	}
@@ -140,31 +140,31 @@ namespace vm {
 	low::LowFuncData SafeVMThread::createStartFunctionFor(
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
-		low::LowFuncData start_function{
-			.name      = base::StrID("vm_start_function"),
-			.id        = START_FUNCTION_ID,
-			.high_func = nullptr,
+		low::LowFuncData start_function;
+		start_function.name      = base::StrID("vm_start_function");
+		start_function.id        = START_FUNCTION_ID;
+		start_function.high_func = nullptr;
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+		// This is okay because we never JIT the start function.
+		start_function.cfg = low::cf::ControlFlowGraph();
 #endif
-			.bc                  = {},
-			.orig_bc             = {},
-			.local_stack_size    = 0,
-			.local_slot_count    = func.result_types.size() + func.parameters.size(),
-			.arg_size            = 0,
-			.ret_size            = func.ret_size,
-			.parameters          = {},
-			.result_types        = func.result_types,
-			.instruction_mapping = {}
-		};
+		start_function.bc                  = {};
+		start_function.orig_bc             = {};
+		start_function.local_stack_size    = 0;
+		start_function.local_slot_count
+			= func.getResultTypes().size() + func.getParameters().size();
+		start_function.arg_size            = 0;
+		start_function.ret_size            = func.getRetSize();
+		start_function.parameters          = {};
+		start_function.result_types        = func.getResultTypes();
+		start_function.instruction_mapping = {};
 
-		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
+		const u64 called_function_id = process_program->getFunctions().idOf(func.getName()).value();
 
 		// Byte offset of the next variable initialized on the start function's local stack.
 		u64 stack_offset = 0;
 
-		for (const auto& res: func.result_types) {
+		for (const auto& res: func.getResultTypes()) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
 			// exit_code is the return value of the function. Void functions always return with the
 			// exit_code = 0.
@@ -174,11 +174,11 @@ namespace vm {
 			stack_offset += res->getSize().asInt();
 		}
 
-		start_function.local_stack_size += func.ret_size;
+		start_function.local_stack_size += func.getRetSize();
 
 		// Argument validity was already checked when validating the API call.
 		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {
-			const auto& arg_type = func.parameters[i];
+			const auto& arg_type = func.getParameters()[i];
 
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
 				initFromVMValue,
@@ -230,7 +230,7 @@ namespace vm {
 		// @note: All the following are guaranteed to exist or their existence was checked
 		// during code loading.
 
-		auto        main_return_type = func.result_types;
+		auto        main_return_type = func.getResultTypes();
 		const auto& types            = process_program->getTypes();
 		auto        argv_type        = types.at(base::StrID("argv"));
 		auto        argv_ptr_type    = types.at(base::StrID("ptr_argv"));
@@ -239,24 +239,23 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{
-			.name      = base::StrID("vm_start_function"),
-			.id        = START_FUNCTION_ID,
-			.high_func = nullptr,
+		low::LowFuncData start_function;
+		start_function.name      = base::StrID("vm_start_function");
+		start_function.id        = START_FUNCTION_ID;
+		start_function.high_func = nullptr;
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+		// This is okay because we never JIT the start function.
+		start_function.cfg = low::cf::ControlFlowGraph();
 #endif
-			.bc                  = {},
-			.orig_bc             = {},
-			.local_stack_size    = 72,
-			.local_slot_count    = 7,
-			.arg_size            = 0,
-			.ret_size            = func.ret_size,
-			.parameters          = {},
-			.result_types        = func.result_types,
-			.instruction_mapping = {}
-		};
+		start_function.bc                  = {};
+		start_function.orig_bc             = {};
+		start_function.local_stack_size    = 72;
+		start_function.local_slot_count    = 7;
+		start_function.arg_size            = 0;
+		start_function.ret_size            = func.getRetSize();
+		start_function.parameters          = {};
+		start_function.result_types        = func.getResultTypes();
+		start_function.instruction_mapping = {};
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
@@ -266,8 +265,8 @@ namespace vm {
 		u64 str_ptr_type_arg  = safeReadObjectBytes<u64>(str_ptr_type);
 		u64 byte_type_arg     = safeReadObjectBytes<u64>(byte_type);
 
-		const u64  called_function_id = process_program->getFunctions().idOf(func.name).value();
-		const bool main_has_args      = !func.parameters.empty();
+		const u64  called_function_id = process_program->getFunctions().idOf(func.getName()).value();
+		const bool main_has_args      = !func.getParameters().empty();
 
 		// Initialize the needed data first - argc and argv dynamic table.
 		// Note that `argv` and `argc` are always initialized even if `main` takes no arguments.
@@ -513,7 +512,7 @@ namespace vm {
 		frame->local_slot_stack_base = runtime_data.slot_stack_base;
 		frame->local_slot_stack_end  = runtime_data.slot_stack_base;
 
-		const auto* instr = start_function.bc.data();
+		const auto* instr = start_function.getBc().data();
 
 		// Make sure the frame will be moved back after the interpreter runs. Even if it throws a
 		// `KillProcessException` so the state stays valid.
@@ -531,14 +530,14 @@ namespace vm {
 		// @note: The return value is the only slot left on the slot stack.
 		CORE_ASSERT(
 			frame->local_slot_stack_end - frame->local_slot_stack_base
-				>= orig_slot_stack_size + func.result_types.size(),
+				>= orig_slot_stack_size + func.getResultTypes().size(),
 			"After function execution, there should be enough slots on the stack to retrieve "
 			"result."
 		);
 
 		// Copy the exit values
 		exit_value_storage = { std::vector<Ref<SafeVMValue>>{} };
-		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
+		for (u64 idx = 0; idx < func.getResultTypes().size(); idx++) {
 			const usize slot_index = orig_slot_stack_size + idx;
 			// A result the callee never took a block for still has to be handed out as a
 			// pointer, so it gets one here. This is the common case, not a rare one -
@@ -548,7 +547,7 @@ namespace vm {
 				block = createLocalSlotBlock(*frame, process_memory, slot_index).get();
 
 			exit_value_storage.value().emplace_back(
-				safe_process.createVMValue(func.result_types[idx], Pointer(block, 0))
+				safe_process.createVMValue(func.getResultTypes()[idx], Pointer(block, 0))
 			);
 		}
 
@@ -682,7 +681,7 @@ namespace vm {
 				return low::LowCodePosition{
 					.function = &func,
 					.instruction_index
-					= static_cast<u64>(frame->instr - func.bc.data() - (call_adjustment ? 1 : 0)),
+					= static_cast<u64>(frame->instr - func.getBc().data() - (call_adjustment ? 1 : 0)),
 				};
 			}
 			variant_default {
@@ -797,7 +796,7 @@ namespace vm {
 
 		u64 prev_summed = 0;
 
-		for (auto type: called_expr.result_types) {
+		for (auto type: called_expr.getResultTypes()) {
 			auto size = type->getSize().asInt();
 			OpFuns::pushLocalSlot(
 				frame, type, local_stack + callee_stack_distance + prev_summed, size, nullptr
@@ -815,7 +814,7 @@ namespace vm {
 
 		// updating the previous frame, because result variables
 		// will not be returned to the caller
-		prev_frame->local_slot_stack_end -= called_expr.result_types.size();
+		prev_frame->local_slot_stack_end -= called_expr.getResultTypes().size();
 
 		std::condition_variable                       cv;
 		std::mutex                                    result_mutex;
@@ -917,6 +916,6 @@ namespace vm {
 		if (frame_idx >= getNumberOfCurrentStackFrames()) return std::nullopt;
 
 		auto& frame = getStackFrame(frame_idx);
-		return frame.current_function->high_func.toOpt();
+		return frame.current_function->getHighFunc().toOpt();
 	}
 }

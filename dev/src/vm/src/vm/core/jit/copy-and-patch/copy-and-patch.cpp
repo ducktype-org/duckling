@@ -41,7 +41,7 @@ namespace vm::jit::cnp {
 		if (!loaded) return std::unexpected(std::move(loaded).error());
 		auto& loaded_stencils = loaded.value();
 
-		auto opcodes         = func_data.bc | std::views::transform(getInstructionOpcode);
+		auto opcodes         = func_data.getBc() | std::views::transform(getInstructionOpcode);
 		auto get_opfunc_size = [&](low::MicroOpcode opcode) {
 			return loaded_stencils.stencilsData().at(static_cast<u64>(opcode)).size;
 		};
