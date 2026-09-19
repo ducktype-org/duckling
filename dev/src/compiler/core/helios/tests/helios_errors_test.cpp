@@ -590,6 +590,23 @@ private:
 				1
 			);
 
+			// `void` is uninhabited, so a function returning it must never return. Reaching the
+			// end of the body contradicts that, and the error says which annotation was meant.
+			checkForErrorOnCompileModule(
+				R"(
+				fun neverReturns() -> void = {
+					if (true) return neverReturns();
+				}
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+				{ "has return type `void`, so it must never return, "
+			      "but it can reach the end of its body" },
+				1
+			);
+
 			checkForErrorOnCompileModule(
 				R"(
 					fun main() = {

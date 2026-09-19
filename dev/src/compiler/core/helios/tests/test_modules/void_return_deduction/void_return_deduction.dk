@@ -1,0 +1,72 @@
+# This file contains a lot of functions which may or may not return `void`
+# depending on control flow and return type deduction.
+
+fundecl neverReturns() -> void;
+
+# The bare `return` provides `()` and wins the vote.
+fun deducesUnit(x: i64) = {
+    if (x > 0) return;
+    else return neverReturns();
+}
+
+# A real value type wins over void.
+fun deducesI64(x: i64) = {
+    if (x > 0) return x;
+    else return neverReturns();
+}
+
+# Every return neverReturns and every path returns, so this deduces to void.
+fun deducesVoid(x: i64) = {
+    if (x > 0) return neverReturns();
+    else return neverReturns();
+}
+
+# The body expression is the returned value, so this never returns either.
+fun deducesVoidFromBodyExpr() = neverReturns();
+
+# A path falls off the end of the body, so the implicit `()` wins over void.
+fun deducesUnitOnFallThrough(x: i64) = {
+    if (x > 0) return neverReturns();
+}
+
+# Only one branch of the `if` returns, so a path still reaches the end of the body and the
+# implicit `()` wins.
+fun deducesUnitOnOneSidedIf(x: i64) = {
+    if (x > 0) return neverReturns();
+    else { }
+}
+
+# The branch that does not decide whether every path returns still contributes the type it
+# returns, so this deduces `i64` and not `()`, despite the possible fallthrough.
+fun deducesI64FromElseOnly(x: i64) = {
+    if (x > 0) { }
+    else return x;
+}
+
+# A loop is never taken to end a path, even when its body always returns, so the implicit `()` wins.
+fun deducesUnitOnLoop(x: i64) = {
+    while (x > 0) { return neverReturns(); }
+}
+
+# Only the taken branch of a `const if` is compiled, so only it has a say. In this case, void.
+fun deducesVoidThroughConstIf(x: i64) = {
+    if const (1 == 1) return neverReturns();
+    else return x;
+}
+
+# Only the taken branch of a `const if` is compiled, so only it has a say. In this case, i64.
+fun deducesI64ThroughConstIf(x: i64) = {
+    if const (1 != 1) return neverReturns();
+    else return x;
+}
+
+# A deduced `void` still coerces, so it stands in for the `i64` these have to return.
+fun usesDeducedVoid(x: i64) -> i64 = {
+    if (x > 0) return x;
+    return deducesVoid(x);
+}
+
+fun usesDeducedVoidFromBodyExpr(x: i64) -> i64 = {
+    if (x > 0) return x;
+    return deducesVoidFromBodyExpr();
+}
