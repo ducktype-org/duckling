@@ -7,7 +7,7 @@ set(LSP_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(lsp-framework
     GIT_REPOSITORY https://github.com/leon-bckl/lsp-framework.git
     GIT_TAG        ${LSP_FRAMEWORK_TAG}
-    SYSTEM
+	GIT_SUBMODULES ""
 )
 FetchContent_MakeAvailable(lsp-framework)
 
