@@ -9,11 +9,15 @@ case_build: "$DIT_TMP_DIR/build"
 
 # Private copy of the shared warm std artifacts (see the root testconfig).
 # duckc rewrites the artifacts directory on exit, so concurrent cases must not
-# point at the shared one - same reason as in compiler/compilation.
+# point at the shared one - same reason as in compiler/features.
 case_std_artifacts: "$DIT_TMP_DIR/std_artifacts"
 copy_std_artifacts: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/null || true"
 
 Run: "@{duckc_path} @{run_args}"
+
+# `<tool> <major>.<minor>[.<patch>...][-<prerelease>]`, followed by the commit group when the
+# build came from a git worktree - so the regex must not be anchored at the end of the line.
+version_regex: "[0-9]+(\\.[0-9]+)+(-[a-z]+)?"
 
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
 PreNode: ""
@@ -45,17 +49,42 @@ Tests:
         ExitCode: 1
 
   compile-modules:
-    # This is the only case in the subtree that really compiles something, so it
-    # is the only one that needs the warm std artifacts. Without them the case
-    # rebuilds all 18 std packages for both backends on every run, which leaves
-    # almost no room under the timeout: on CI run 33510672658 the very same
-    # commit measured 0.3 s, 1.3 s and 1.5 s on three matrix jobs, and timed out
-    # at 2.0 s on the fourth.
     PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
-    # Still a real compile plus a link, and the itests run several cases at
-    # once, so give it more than the 2 s default.
     TimeOut: 3
     Cases:
       two-modules:
         run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
         ExitCode: 0
+
+  comp-time-output:
+    # Test compile time output to stderr
+    PreCase: "mkdir -p @{case_build} && @{copy_std_artifacts}"
+    timeout_default: 5
+    Run: "@{expect_output} --err-regex '\\[comp-time\\] 3492'
+      -- @{duckc_path} compile_modules ./duck_modules/comp_time_output/comp_time_output.dk
+      -O 0 --no-incremental --dvm-backend -a @{case_build}
+      --custom-std-artifacts-path @{case_std_artifacts}"
+    Cases:
+      dvm-backend:
+        ExitCode: 0
+
+  cli-version:
+    # The shared rows are the Version module's job and are unit-tested there. What only the real
+    # binary can prove is that it names itself correctly and contributes its own extra rows.
+    Cases:
+      duckc-version:
+        Run: '@{expect_output} --out-regex "^duckc @{version_regex}" -- @{duckc_path} --version'
+
+      duckc-version-verbose:
+        Run: '@{expect_output} --out-regex "^duckc @{version_regex}"
+          --out-regex "LLVM: +[0-9]+\."
+          --out-regex "JIT: +(enabled|disabled)"
+          -- @{duckc_path} --version-verbose'
+
+      vm-version:
+        Run: '@{expect_output} --out-regex "^DVM @{version_regex}" -- @{dvm_path} --version'
+
+      vm-version-verbose:
+        Run: '@{expect_output} --out-regex "^DVM @{version_regex}"
+          --out-regex "dispatch: +[A-Za-z]"
+          -- @{dvm_path} --version-verbose'

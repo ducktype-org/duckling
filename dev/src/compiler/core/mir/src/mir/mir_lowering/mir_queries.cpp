@@ -57,7 +57,10 @@ namespace compiler::mir {
 
 		void operator()(const hc::MatchExpr& expr) {
 			for (const auto& match_case: expr.cases)
-				if (match_case.binding.has_value()) function.addLocal(match_case.binding.value());
+				if (match_case.binding.has_value()) {
+					auto local_ref = function.addLocal(match_case.binding.value());
+					local_ref->lifetime_flags |= LifetimeFlag::NoShadowingValidation;
+				}
 		}
 
 		/** Everything else introduces no locals. */
@@ -107,7 +110,7 @@ namespace compiler::mir {
 		LocalVarCollectionVisitor visitor{ function_builder };
 		visitor.collect(function);
 
-		auto last_block = function_builder.newBlock();
+		auto last_block = function_builder.newBlock("function_end");
 		last_block->setTerminator(
 			{ Operation::FunctionEnd, {}, {}, {}, function_builder.getTopLevelScope() }
 		);
@@ -281,7 +284,7 @@ namespace compiler::mir {
 				is_ctor ? "constructor_of_" : "destructor_of_", global_data->original_name.strView()
 			)));
 
-			auto last_block = function_builder.newBlock();
+			auto last_block = function_builder.newBlock("function_end");
 			last_block->setTerminator(
 				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
 			);

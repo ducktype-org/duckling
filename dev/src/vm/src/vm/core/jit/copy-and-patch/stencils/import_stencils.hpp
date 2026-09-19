@@ -20,7 +20,7 @@ namespace vm::jit::cnp {
 	/**
 	 * @brief All informations used for future patching of the copied stencil.
 	 */
-	struct StencilData {
+	struct StencilData final {
 		const char*              name;
 		usize                    place;
 		usize                    size;
@@ -40,8 +40,8 @@ namespace vm::jit::cnp {
 	template<usize BinarySize, usize NumFunctions>
 	struct LoadedStencils;
 
-	template<usize BinarySize = 0, usize NumFunctions = 0>
-	struct Stencils {
+	template<usize BinarySize, usize NumFunctions>
+	struct Stencils final {
 		using LoadedStencilsT = LoadedStencils<BinarySize, NumFunctions>;
 
 		std::array<byte, BinarySize>          stencils_binary;
@@ -54,7 +54,7 @@ namespace vm::jit::cnp {
 	};
 
 	template<usize BinarySize, usize NumFunctions>
-	struct LoadedStencils {
+	struct LoadedStencils final {
 		using StencilsT = Stencils<BinarySize, NumFunctions>;
 
 		LoadedStencils()                                 = delete;

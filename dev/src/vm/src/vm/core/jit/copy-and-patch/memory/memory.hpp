@@ -9,7 +9,7 @@
 
 namespace vm::jit::cnp {
 
-	struct JitFuncMemory {
+	struct JitFuncMemory final {
 		JitFuncMemory(const JitFuncMemory&)            = delete;
 		JitFuncMemory& operator=(const JitFuncMemory&) = delete;
 

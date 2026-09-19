@@ -105,7 +105,7 @@ process_to_binary(
 )
 
 add_library(Stencils OBJECT memory/memory.cpp ../../native/dynamic_library.cpp)
-make_module(Stencils USES Base)
+make_module(Stencils USES Base OSUtils)
 
 duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES Base Stencils Tester)
 

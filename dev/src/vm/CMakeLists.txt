@@ -31,7 +31,7 @@ set(exec_sources
 # as they depend on each other.
 
 set(vm_internal_deps
-    Base Clah Events Filesystem TPC Init Logger Diagnostic DebugInfo
+	Base Clah Events Filesystem TPC Init Logger Diagnostic DebugInfo OSUtils Version
 )
 
 set(vm_external_deps
@@ -96,7 +96,7 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
     add_library(JitDep OBJECT
         ${jit_dependency}
     )
-    make_module(JitDep USES llvm_helpers Base Diagnostic)
+    make_module(JitDep USES llvm_helpers Base Diagnostic OSUtils)
     target_compile_options(JitDep PRIVATE
         --embed-dir=${CMAKE_BINARY_DIR}
     )

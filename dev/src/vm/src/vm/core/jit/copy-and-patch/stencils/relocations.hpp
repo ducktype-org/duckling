@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/config/target_info.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/types/ints.hpp>
 
@@ -18,7 +19,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::jit::cnp, u32, HoleValue,
 );
 
 namespace vm::jit::cnp {
-	struct StencilHole {
+	struct StencilHole final {
 		int       offset;
 		HoleValue value;
 
@@ -26,7 +27,7 @@ namespace vm::jit::cnp {
 		inline void patch(byte* new_addr, T value) const;
 	};
 
-#ifdef __x86_64__
+#if BASE_TARGET_ARCH_X86 && BASE_TARGET_ARCH_64
 	template<std::integral T>
 	void StencilHole::patch(byte* new_addr, T value) const {
 		*reinterpret_cast<T*>(new_addr + offset) += value;

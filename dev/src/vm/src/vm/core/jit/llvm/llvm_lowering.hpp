@@ -35,7 +35,7 @@ LLVM_INCLUDE_END()
 
 namespace vm::jit {
 
-	struct LLVMBuilder {
+	struct LLVMBuilder final {
 		llvm::LLVMContext& llvm_ctx;
 		llvm::Module*      module;
 

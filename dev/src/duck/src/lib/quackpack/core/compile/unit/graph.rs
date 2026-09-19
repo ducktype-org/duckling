@@ -4,7 +4,7 @@ use std::collections::{HashMap, VecDeque};
 
 use tracing::{debug, instrument};
 
-use super::{ArtifactsType, Unit};
+use super::{ArtifactsType, BuildKind, Unit};
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
 use crate::quackpack::core::compile::{BuildContext, missing_depenendcy_in_graph};
@@ -49,6 +49,11 @@ impl UnitGraph {
     /// Get [`Unit`]s sorted by their IDs.
     pub fn units_sorted_by_id(&self) -> &[Unit] {
         &self.units
+    }
+
+    /// Get the compilation order.
+    pub fn compilation_order(&self) -> impl Iterator<Item = &'_ Unit> {
+        self.units_sorted_by_id().iter().rev()
     }
 
     /// Check if the given [`Unit`] is the root [`Unit`].
@@ -151,6 +156,7 @@ fn create_single_unit(
         unit_identity,
         dependencies,
         artifacts_type,
+        BuildKind::Compile,
     )
 }
 

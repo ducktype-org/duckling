@@ -45,7 +45,7 @@ namespace vm::jit {
 	 * bytecode (size == number of instructions), not by basic block. Only loop headers and
 	 * the function entrypoint carry meaningful values; other slots stay empty/default.
 	 */
-	struct JitFuncData {
+	struct JitFuncData final {
 		// CFG of the loop for each loop header; full-function CFG at the entrypoint offset.
 		std::vector<low::cf::ControlFlowGraph> cfgs;
 		// Executions left before the loop/function starting at this offset gets compiled.

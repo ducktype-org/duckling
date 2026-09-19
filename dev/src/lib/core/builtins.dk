@@ -3,7 +3,7 @@
     These are temporary and to be removed in the future.
 #}
 import core.containers;
-import core.io;
+import core.primitive_io as io;
 
 template(T: type)
 @builtin("ptr_from_slice")
@@ -109,12 +109,3 @@ fun builtin_output_i64(v: i64) -> i64 = io.writeI64(v);
 fun builtin_output_u64(v: u64) -> i64 = io.writeU64(v);
 fun builtin_output_f64(v: f64) -> i64 = io.writeF64(v);
 fun builtin_output_str(v: str) -> i64 = io.writeStr(v);
-
-fun print(v: str) -> i64 = io.writeStr(v);
-
-fun print(v: ref containers.String) -> i64 = io.writeString(v);
-
-fun print(s: containers.String) -> i64 = {
-    let result = io.writeString(&s);
-    return result;
-}

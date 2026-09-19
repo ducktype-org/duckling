@@ -11,11 +11,18 @@
 #include <helios/scope_id.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <base/pointers/ref.hpp>
 
 #include <hashing/add_to_hash.hpp>
 #include <string_id/string_id.hpp>
+
+namespace compiler::tsh {
+	// Forwards:
+	class AbstractType;
+	class ClassAbstractType;
+}
 
 namespace compiler::helios {
 	// Forwards:
@@ -86,6 +93,14 @@ namespace compiler::helios {
 	bool isGlobalFun(SymID);
 
 	/**
+	 * @return whether the symbol is the global function named `main`.
+	 *
+	 * Unlike isGlobalFun(), this function can safely be called for symbols
+	 * that are not functions.
+	 */
+	bool isGlobalMain(SymID);
+
+	/**
 	 * @return whether SymID is a global variable.
 	 * @note This function iterates through parents of the PST elements of the symbol to obtain this
 	 * information. It might be changed in the future, especially when more kinds of global
@@ -93,6 +108,13 @@ namespace compiler::helios {
 	 */
 	bool isGlobalVar(query::Context&, SymID);
 
+	/**
+	 * @return whether the symbol is a static field of a class, that is a field stored once for
+	 * the whole program instead of once per instance of its class.
+	 *
+	 * False for every symbol that is not a field.
+	 */
+	bool isStaticField(query::Context&, SymID symbol);
 
 	/**
 	 * Check if a symbol is a builtin. If so, return the BuiltinKind.
@@ -174,4 +196,20 @@ namespace compiler::helios {
 	 * @brief Pretty prints the symbol.
 	 */
 	std::string prettyDebugPrint(SymID, query::Context&);
+
+	/**
+	 * @return the class that a class member symbol is declared in.
+	 * Panics if the given symbol is not a class member created from the PST.
+	 */
+	tsh::ClassAbstractType classMemberOwner(SymID member);
+
+	/**
+	 * @return the type that a member symbol belongs to.
+	 * Panics for a symbol that is not a member of a type.
+	 *
+	 * Unlike @ref classMemberOwner it also answers for the compiler-generated members, which is why
+	 * the type it returns is not necessarily a class. A generated field of a tuple belongs to
+	 * that tuple, and a generated destructor belongs to whatever type it destroys.
+	 */
+	tsh::AbstractType typeMemberOwner(SymID member);
 }

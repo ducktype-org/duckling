@@ -11,6 +11,7 @@
 #include <base/except/exceptions.hpp>
 
 #include <algorithm>
+#include <ranges>
 #include <sstream>
 #include <string_view>
 
@@ -168,6 +169,49 @@ namespace compiler::repl {
 		}
 
 		/**
+		 * @brief Collect the symbols of the interface elements the given view yields.
+		 * @note Taken by a forwarding reference, because a filtered view is not const-iterable.
+		 */
+		std::vector<helios::SymID> symbolsOf(auto&& elements) {
+			return elements | std::views::transform([](const tsh::InterfaceElement& element) {
+					   return element.getSymbol();
+				   })
+			     | std::ranges::to<std::vector>();
+		}
+
+		/**
+		 * @brief Whether the interface element constructs a value of the type, rather than being
+		 * a method called on one.
+		 */
+		bool isConstructorLike(const tsh::InterfaceElement& element) {
+			using enum tsh::MemberSpecialKind;
+			switch (element.specialKind()) {
+			case Constructor:
+			case ParameterlessConstructor:
+			case CopyConstructor:
+				return true;
+			default:
+				return false;
+			}
+		}
+
+		/**
+		 * @brief The constructors the class declares itself.
+		 *
+		 * The compiler-generated ones are left out, as they are reported separately as the
+		 * implicit constructors, and they are told apart by having no PST element of their own.
+		 */
+		std::vector<helios::SymID> declaredConstructorSymbols(const tsh::TypeInterface& interface) {
+			return symbolsOf(
+				interface.getAnyMethodsView()
+				| std::views::filter([](const tsh::InterfaceElement& element) {
+					  return isConstructorLike(element)
+				         and helios::maybeSymbolPst(element.getSymbol()).has_value();
+				  })
+			);
+		}
+
+		/**
 		 * @brief Return symbols declared directly inside a namespace body.
 		 */
 		std::vector<helios::SymID> queryNamespaceMembers(query::Context& ctx, helios::SymID symbol) {
@@ -185,17 +229,18 @@ namespace compiler::repl {
 			query::Context& ctx, std::stringstream& out, const helios::ClassSymbolData& class_data
 		) {
 			out << "implicit constructors:\n";
-			if (class_data.members.empty()) {
+			auto fields = class_data.declared_interface.getFieldsView();
+			if (fields.begin() == fields.end()) {
 				out << "  none\n";
 				return;
 			}
 
 			out << "  - " << class_data.name.strView() << "(";
 			bool first = true;
-			for (auto member: class_data.members) {
+			for (const auto& field: fields) {
 				if (!first) out << ", ";
-				out << helios::name(member).strView();
-				const auto type = querySymbolDetails(ctx, member);
+				out << helios::name(field.getSymbol()).strView();
+				const auto type = querySymbolDetails(ctx, field.getSymbol());
 				if (!type.empty()) out << ": " << type;
 				first = false;
 			}
@@ -221,14 +266,30 @@ namespace compiler::repl {
 					out << "  - " << interface.toString() << "\n";
 			}
 
-			printMemberSection(ctx, out, "fields", class_data.members);
-			printMemberSection(ctx, out, "declared constructors", class_data.constructors);
+			const auto& interface = class_data.declared_interface;
+
+			printMemberSection(ctx, out, "fields", symbolsOf(interface.getAnyFieldsView()));
+			printMemberSection(
+				ctx, out, "declared constructors", declaredConstructorSymbols(interface)
+			);
 			printImplicitFieldConstructor(ctx, out, class_data);
-			printMemberSection(ctx, out, "methods", class_data.methods);
+			printMemberSection(
+				ctx,
+				out,
+				"methods",
+				symbolsOf(
+					interface.getAnyMethodsView()
+					| std::views::filter([](const tsh::InterfaceElement& element) {
+						  return not isConstructorLike(element);
+					  })
+				)
+			);
 
 			out << "declared destructor:\n";
-			if (class_data.destructor.has_value())
-				out << "  - " << formatSymbolSummary(ctx, class_data.destructor.value()) << "\n";
+			const auto destructor
+				= interface.getSpecialElement(tsh::MemberSpecialKind::UserDestructor);
+			if (destructor.has_value())
+				out << "  - " << formatSymbolSummary(ctx, destructor.value()->getSymbol()) << "\n";
 			else
 				out << "  none\n";
 		}

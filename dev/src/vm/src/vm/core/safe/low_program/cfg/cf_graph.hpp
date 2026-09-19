@@ -107,7 +107,7 @@ namespace vm::low {
 		/**
 		 * @brief Basic block metadata used by control-flow analyses.
 		 */
-		struct BasicBlock {
+		struct BasicBlock final {
 			const BasicBlockID id;
 			const usize        start;
 			const usize        end;

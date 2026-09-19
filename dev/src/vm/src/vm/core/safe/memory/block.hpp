@@ -61,7 +61,7 @@ namespace vm {
 		GenericBlock(BlockID id, BlockData<EntryT> data): id(id), data(data) {}
 	};
 
-	using Block = GenericBlock<std::byte>;
+	using Block = GenericBlock<byte>;
 }
 
 ID_STD_HASH(vm::BlockID);

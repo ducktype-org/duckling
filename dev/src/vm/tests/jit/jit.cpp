@@ -84,9 +84,8 @@ private:
 	/// patched into the executed program copy and no jit_data gathered, yet correct output.
 	void testJitDisabled() {
 		vm::SafeVMProcess process(vm::PID::fromU64(0), false, false);
-		ASSERT_HAS_VALUE(process.doRequest(
-			vm::api::request::LoadFiles{ { fs::File(path("mega_test.dbc")) } }
-		));
+		ASSERT_HAS_VALUE(process.doRequest(vm::api::request::LoadFiles{
+			{ fs::File(path("mega_test.dbc")) } }));
 		ASSERT_TRUE(process.getJitData().empty());
 		for (const auto& func: process.getLoadedProgram()->getFunctions()) {
 			for (const auto& instr: func.bc) {
@@ -98,7 +97,7 @@ private:
 
 		vm::api::ProcessConfig config{};
 		config.enable_jit = false;
-		const auto pid = initProcess(config);
+		const auto pid    = initProcess(config);
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("mega_test.dbc")) }));
 		runTestOnVm(pid, "10", "3333333333333333666666666666121212121212121212121212");
 	}

@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-MAKE_STRINGIFYABLE_ENUM(vm::code, std::uint8_t, ConstValueType, 
+MAKE_STRINGIFYABLE_ENUM(vm::code, std::uint8_t, ConstValueType,
 	Immediate, Class, FixedSizeTable
 );
 
@@ -40,7 +40,7 @@ namespace vm::code {
 	 */
 	class ConstantImmediate final: public ConstantBase {
 	public:
-		alignas(8) std::array<std::byte, 8> content{};
+		alignas(8) std::array<byte, 8> content{};
 		Bytes size{ 0 };
 
 		[[nodiscard]] Box<ConstantBase> clone() const override;
@@ -54,9 +54,7 @@ namespace vm::code {
 		 * @param content The raw bytes (only the first `size` bytes are meaningful).
 		 * @param size Number of meaningful bytes (1-8).
 		 */
-		ConstantImmediate(std::array<std::byte, 8> content, Bytes size):
-			  content(content),
-			  size(size) {}
+		ConstantImmediate(std::array<byte, 8> content, Bytes size): content(content), size(size) {}
 
 		/**
 		 * @brief Constructs an immediate from a numeric value via bit_cast.

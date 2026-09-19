@@ -80,6 +80,26 @@ namespace compiler::driver {
 		return partial.finalize();
 	}
 
+	namespace {
+		/**
+		 * @brief Handles the `--print-ir=dbc` and `--dump-ir=dbc` debug options for a module
+		 * compiled to DVM bytecode. The dump is written to the `duck_debug_artifacts` directory.
+		 */
+		void checkDBCDebugPrint(const vm::code::CodeCollection& code, base::StrID stem) {
+			if (driver::print_ir_options.print_dbc) vm::code::serializeCode(code, std::cout);
+			if (driver::dump_ir_options.dump_dbc) {
+				auto dbc_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
+					base::StrID(base::strConcat(stem.strView(), ".dbc"))
+				);
+				std::ofstream output_file(
+					dbc_artifact.file.getFilePath().getPath(), std::ios::binary
+				);
+				if (!output_file.is_open()) CORE_PANIC("Failed to open file for writing");
+				vm::code::serializeCode(code, output_file);
+			}
+		}
+	}
+
 	struct IMPLEMENT_QUERY(CompileModule, query::QResult<CompileModuleResult>) {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_CREF
@@ -222,7 +242,7 @@ namespace compiler::driver {
 				auto llvm_module = compileLIRModuleToLLVM(ctx, &lir_data);
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
-						base::StrID(lir_data.module_id.str() + ".ll")
+						base::StrID(lir_data.module_id_human.str() + ".ll")
 					);
 					llvm_module.dumpLLVMToFile(
 						base::StrID(llvm_ir_artifact.file.getFilePath().string())
@@ -230,7 +250,7 @@ namespace compiler::driver {
 				}
 				if (driver::dump_ir_options.dump_asm) {
 					auto asm_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
-						base::StrID(lir_data.module_id.str() + ".s")
+						base::StrID(lir_data.module_id_human.str() + ".s")
 					);
 
 					// We create a copy here, since compiling the module to assembly might modify it.
@@ -269,6 +289,8 @@ namespace compiler::driver {
 				};
 
 				auto dvm_module_data = compileLIRModuleToDVM(&lir_data, ctx, key.build_debug_info);
+
+				checkDBCDebugPrint(dvm_module_data.code, lir_data.module_id_human);
 
 				serialize_to_artifact(code_output, dvm_module_data.code, vm::code::serializeCode);
 
@@ -384,8 +406,9 @@ namespace compiler::driver {
 			);
 
 			LIRUnitWithBackendName merged{
-				.module_id = repl::getScriptModuleID(script_context.script_file),
-				.lir_unit  = lir::LIRUnit{},
+				.module_id       = repl::getScriptModuleID(script_context.script_file),
+				.module_id_human = repl::getScriptModuleID(script_context.script_file),
+				.lir_unit        = lir::LIRUnit{},
 			};
 
 			// Track wrapper symbols to build the synthetic main that runs them in order.
@@ -432,7 +455,7 @@ namespace compiler::driver {
 
 						if (not hout_unit.has_value()) return std::unexpected(hout_unit.error());
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, *hout_unit.value(), module_name_id
+							ctx, *hout_unit.value(), module_name_id, module_name_id
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile definition statement to LIR");
@@ -458,7 +481,7 @@ namespace compiler::driver {
 							return std::unexpected(hout_unit_result.error());
 
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, std::move(hout_unit_result).value(), module_name_id
+							ctx, std::move(hout_unit_result).value(), module_name_id, module_name_id
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile executable statement to LIR");
@@ -476,7 +499,7 @@ namespace compiler::driver {
 						wrapper_symbols.push_back(wrapper_result->initializer_function);
 
 						auto lir_result = compileHOUTUnitToLIRModuleData(
-							ctx, wrapper_result->hout_unit, module_name_id
+							ctx, wrapper_result->hout_unit, module_name_id, module_name_id
 						);
 						if (lir_result.hasFailed())
 							return std::unexpected("Failed to compile variable statement to LIR");
@@ -500,7 +523,9 @@ namespace compiler::driver {
 				= repl::buildScriptMainWrapper(ctx, merged.module_id, main_scope, wrapper_symbols);
 			helios::HOUTUnit main_unit;
 			main_unit.functions.emplace_back(&main_fun);
-			auto main_lir = compileHOUTUnitToLIRModuleData(ctx, main_unit, merged.module_id);
+			auto main_lir = compileHOUTUnitToLIRModuleData(
+				ctx, main_unit, merged.module_id, merged.module_id_human
+			);
 			if (main_lir.hasFailed())
 				return std::unexpected("Failed to compile script main to LIR");
 			repl::appendScriptLIRModuleData(merged, main_lir.valueOrPanic());
@@ -604,6 +629,8 @@ namespace compiler::driver {
 
 				auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
 
+				checkDBCDebugPrint(dvm_module.code, script_lir->module_id_human);
+
 				auto script_obj_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(base::strConcat(script_lir->module_id, ".o.dbc"))
 				);
@@ -681,6 +708,8 @@ namespace compiler::driver {
 			}
 
 			auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
+
+			checkDBCDebugPrint(dvm_module.code, script_lir->module_id_human);
 
 			if (load_stdlib) {
 				using std::ranges::to;

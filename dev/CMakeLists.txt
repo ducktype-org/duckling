@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
-project(Duckling)
+project(Duckling VERSION 0.2)
+
+set(DUCKLING_VERSION_PRERELEASE "alpha")
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(USE_REPLXX "Use replxx library for REPL frontend" ON)
