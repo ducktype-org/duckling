@@ -2,6 +2,7 @@ use std::process::Command;
 
 /// Simple build script for local development of duck.
 fn main() {
+    println!("cargo::rerun-if-changed=build.rs");
     add_rpath_for_bundled_scip();
     let info = get_duck_version_info();
     emit_duck_version_info(info);
