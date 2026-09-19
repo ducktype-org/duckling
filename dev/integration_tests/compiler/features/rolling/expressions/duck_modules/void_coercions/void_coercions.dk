@@ -1,14 +1,10 @@
-# `void` is uninhabited, so an expression of that type never produces a value: control never
-# reaches the point where one would exist. Such an expression therefore stands in wherever a
-# value of any type is expected, with no cast written by hand, and the coercion lowers to
-# nothing at all.
+# Check that a match expression correctly coerces a `void` expression to the expected type.
 
 import core.panicking;
 
 fun getI32(v: i32|f64) -> i32 = match(v) {
     case i: i32 = i;
-    # This case diverges instead of yielding an `i32`, so it needs no `as i32` to agree with
-    # the case above.
+    # `void` is coerced to `i32`.
     case f: f64 = panicking.panic();
 }
 

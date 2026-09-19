@@ -211,10 +211,8 @@ namespace compiler::helios::desugaring {
 
 			// A match yields one value, so every case has to agree on its type. There is no
 			// common-type inference, so anything else is an error the user has to resolve.
-			//
-			// A case that never produces a value is the one exception: it carries no type of its
-			// own to agree on, so it is left out of the vote and coerced to whatever the others
-			// settle on once they all have been seen.
+			// A case that never produces a value is an exception: it carries no type of its own,
+			// so it is left out of the vote and coerced to whatever the others settle on.
 			const auto result_type = result->expression_type.getSymbolType();
 			if (!divergesToVoid(result_type)) {
 				if (!common_type.has_value()) common_type = result_type;
@@ -253,14 +251,13 @@ namespace compiler::helios::desugaring {
 			return query::Failed();
 		}
 
-		// Every case diverged, so the match itself never produces a value either and its type is
-		// the `void` they all carry.
+		// Every case returns void, so the match itself never produces a value either.
 		if (!common_type.has_value() && !lowered_cases.empty())
 			common_type = lowered_cases.front().result->expression_type.getSymbolType();
 
-		// The cases that never produce a value are coerced to the type the others agreed on, so
-		// that the match has one result type to fill in. `void` is uninhabited, so the coercion
-		// only reconciles the types: it lowers to nothing at all, as control never reaches it.
+		// The cases that never produce a value (`void`) are coerced to the type the others
+		// agreed on. Type `void` is uninhabited, so the coercion only reconciles the types:
+		// it lowers to nothing at all, and control never reaches it.
 		std::vector<code::MatchExpr::Case> cases;
 		cases.reserve(lowered_cases.size());
 		for (auto& lowered: lowered_cases) {

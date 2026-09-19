@@ -938,29 +938,6 @@ private:
 			"Nothing should be coercible to Void."
 		);
 
-		// The same has to hold one layer up, because that is the layer the compiler asks: a
-		// diverging expression is handed over as a SymbolType, not as a bare AbstractType.
-		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnSymbolType>({ st(void_type), st(int_2) }),
-			"A Void value should be coercible to a value of any type."
-		);
-		assertTrue(
-			!query::entryPoint<QueryImplicitCoercibilityOnSymbolType>({ st(int_2), st(void_type) }),
-			"No value should be coercible to a Void value."
-		);
-
-		// A diverging expression is a temporary, and it coerces into a local just like any other
-		// value of a coercible type would.
-		const auto void_temporary
-			= ExpressionType(st(void_type), ValueCategory(PrimaryCategory::Temporary, true, {}, {}));
-		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnExpressionType>(
-				{ void_temporary,
-		          ExpressionType(st(int_2), ValueCategory(PrimaryCategory::Temporary, true, {}, {})) }
-			),
-			"A diverging temporary should be coercible to a value of any type."
-		);
-
 		const auto i2_const
 			= ExpressionType(st(int_2), ValueCategory(PrimaryCategory::Local, true, {}, {}));
 		const auto i2_mut

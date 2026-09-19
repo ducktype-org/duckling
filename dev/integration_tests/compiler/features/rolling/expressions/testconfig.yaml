@@ -91,12 +91,8 @@ Tests:
           String: ""
         ExitCode: 0
 
-  # A diverging expression (type `void`) coerces to any type, so a `match` case may panic
-  # instead of yielding a value. Taking that case panics, so the backends part ways here:
-  # the DVM reports it and exits 1, the native binary aborts (SIGABRT) with its stdout
-  # still buffered. The DVM panic stderr carries a volatile `BlockID=N`, hence
-  # `stderr_regex` (see compiler/features/testconfig.yaml).
   void_coercions:
+    NoParallel: true
     Cases:
       llvm:
         ExitCode: 134
@@ -105,10 +101,8 @@ Tests:
         Output:
           String: "-4\nProgram panicked!\n"
 
-  # When every case diverges the match yields no value at all and is itself of type `void`,
-  # which then coerces to whatever the match was written into. Reaching it always panics, so
-  # this splits per backend for the same reason as `void_coercions` above.
   void_diverging_match:
+    NoParallel: true
     Cases:
       llvm:
         ExitCode: 134

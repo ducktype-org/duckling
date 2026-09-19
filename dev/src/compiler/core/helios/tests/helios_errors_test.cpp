@@ -857,8 +857,6 @@ private:
 				1
 			);
 
-			// A case that never produces a value is excused from agreeing on a type, but two
-			// cases that do produce one still have to agree: there is no common-type inference.
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
@@ -870,8 +868,8 @@ private:
 					return 0i64;
 				}
 			)",
-				{ "All `match` cases have to be of the same type, but this one is `i64` while "
-			      "an earlier one is `i32`." },
+				{ "All `match` cases have to be of the same type,"
+			      " but this one is `i64` while an earlier one is `i32`." },
 				1
 			);
 		}
