@@ -9,7 +9,7 @@
 #include <lsp_interface/files_cache.hpp>
 #include <lsp_interface/server_session.hpp>
 
-#include "base/except/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <query_framework/module_flags/module_flags.hpp>

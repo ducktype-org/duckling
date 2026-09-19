@@ -165,7 +165,7 @@ public:
 		TESTER_ADD_TEST(didChangeTest);
 		TESTER_ADD_TEST(didCloseTest);
 		TESTER_ADD_TEST(didChangeWatchedFilesTest);
-		TESTER_ADD_TEST(didChangeWatchedFilesWithNothingToDoTest);
+		TESTER_ADD_TEST(didChangeWatchedFilesWithNothingElseTest);
 		TESTER_ADD_TEST(unsupportedUriIsNotFatalTest);
 	}
 
@@ -308,7 +308,7 @@ private:
 		);
 	}
 
-	void didChangeWatchedFilesWithNothingToDoTest() {
+	void didChangeWatchedFilesWithNothingElseTest() {
 		auto run = runSession(session({
 			R"({"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":[)"
 			R"({"uri":"file:///ws/changed.dk","type":2}]}})",
