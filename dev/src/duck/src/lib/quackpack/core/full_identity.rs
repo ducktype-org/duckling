@@ -1,4 +1,8 @@
-//! A package identity, a unique identifier in the dependencies' graph.
+//! A full package identity.
+//!
+//! This type is a suptype of [`Identity`], with additional information.
+//! Note, that uniqueness of [`FullIdentity`] (which is _not_ required) does not imply uniqueness of
+//! [`Identity`]: many [`FullIdentity`]ies can map to the same [`Identity`].
 //!
 //! For differences between [`FullIdentity`] and [`Identity`], see the `readme.md` under the `core/` directory.
 

@@ -13,9 +13,9 @@ In fact, in many places that come after solving (storage, compilation), we do no
 That's why we have `Identity` (and `FullIdentity`); firstly, their names tell us that they __are__ unique in the resolved dependencies' graph (which is not true for `Source`s, as we could have a `GitReference` pointing at the default branch, and another, pointing explicitly at `branch: main`).
 
 > [!IMPORTANT]
-> In the build graph/freeze, `Identity` has to be a unique identifier. Therefore, `FullIdentity`
-> is _also_ a unique identifier, though it should not be used/relied on (it exists only to store commits
-> for resolved git dependencies).
+> In the build graph/freeze, `Identity` has to be a unique identifier. However, `FullIdentity`
+> is _not a unique identifier. Many `FullIdentity`ies can map to the same `Identity`. `FullIdentity`
+> is needed only to store resolved git hash.
 
 Now let's talk about differences between `Identity` and `FullIdentity`.
 Firstly, they are differences in how these structures behave when (de)-serializing.
