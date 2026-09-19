@@ -164,7 +164,6 @@ impl UnitGraphBuilder {
             unit_id,
             package,
             unit_identity,
-            // dependencies,
             artifacts_type,
             BuildKind::Compile,
         );
