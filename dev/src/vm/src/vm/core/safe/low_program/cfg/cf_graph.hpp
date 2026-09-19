@@ -9,7 +9,7 @@
 #include <vm/bytecode/bytecode.hpp>
 
 #include <array>
-#include <string>
+#include <ostream>
 #include <vector>
 
 namespace vm::low {
@@ -93,9 +93,10 @@ namespace vm::low {
 			const BasicBlockID& operator[](usize index) const;
 
 			/**
-			 * @brief Returns a compact string representation for debugging.
+			 * @brief Prints a compact representation of the edges for debugging.
+			 * @param os Stream to write to.
 			 */
-			[[nodiscard]] std::string toString() const;
+			void deprint(std::ostream& os) const;
 
 		private:
 			std::array<BasicBlockID, 2> to        = { 0, 0 };
@@ -123,6 +124,10 @@ namespace vm::low {
 
 			BasicBlock() = delete;
 
+			/**
+			 * @brief Returns the block's instructions as a view into the function's bytecode.
+			 * @param bc Micro-bytecode of the lowered function this block belongs to.
+			 */
 			[[nodiscard]] std::ranges::range auto instructions(const vm::low::MicroBytecode& bc
 			) const {
 				return std::span(bc).subspan(start, end - start);
@@ -153,6 +158,9 @@ namespace vm::low {
 			 */
 			[[nodiscard]] BasicBlockID failTarget() const;
 
+			/**
+			 * @brief Returns whether the block unconditionally falls through to the next one.
+			 */
 			[[nodiscard]] bool isFallthrough() const;
 
 			/**
@@ -181,9 +189,10 @@ namespace vm::low {
 			[[nodiscard]] usize edgeCount() const;
 
 			/**
-			 * @brief Returns a compact string representation for debugging.
+			 * @brief Prints a compact representation of the block for debugging.
+			 * @param os Stream to write to.
 			 */
-			[[nodiscard]] std::string toString() const;
+			void deprint(std::ostream& os) const;
 		};
 
 		/**
@@ -221,6 +230,9 @@ namespace vm::low {
 			 */
 			[[nodiscard]] usize size() const;
 
+			/**
+			 * @brief Returns a view of all blocks in the graph, indexed by block id.
+			 */
 			[[nodiscard]] std::ranges::range auto getBlocks() const { return std::span(blocks); }
 
 			/**
@@ -244,9 +256,10 @@ namespace vm::low {
 			) const;
 
 			/**
-			 * @brief Returns a multi-line string representation of this CFG for debugging.
+			 * @brief Prints a multi-line representation of this CFG for debugging.
+			 * @param os Stream to write to.
 			 */
-			[[nodiscard]] std::string toString() const;
+			void deprint(std::ostream& os) const;
 		};
 	}  // vm::low::cf
 

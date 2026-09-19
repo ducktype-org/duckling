@@ -100,6 +100,8 @@ namespace vm::jit {
 
 		LLVMBuilder(new_module.get(), ctx).lowerCFG(cfg, bc, name);
 
+		// Deliberately inside CORE_ASSERT: verification runs only in DEV builds, so the JIT
+		// hot path in release builds doesn't pay for it.
 		CORE_ASSERT(
 			!llvm::verifyModule(*new_module, &llvm::errs()), "Module invalid BEFORE optimization"
 		);

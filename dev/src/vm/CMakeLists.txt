@@ -142,6 +142,9 @@ function(add_vm_variant suffix compile_def)
         set(common_bc ${CMAKE_CURRENT_BINARY_DIR}/common_${suffix}.bc)
         set(common_bc_stripped ${CMAKE_CURRENT_BINARY_DIR}/common_${suffix}.stripped.bc)
         set(extracted_func_file ${CMAKE_CURRENT_BINARY_DIR}/extracted_function_${suffix}.txt)
+        # Opcode metadata JSON generated from C++ (print_opcodes), so that the python filtering
+        # below shares that single source of truth (its non-jittable list).
+        get_property(opcodes_json GLOBAL PROPERTY OPCODES_JSON_PATH)
 
         # Pipeline preparing opcodes definitions for JIT.
         add_custom_command(
@@ -160,6 +163,7 @@ function(add_vm_variant suffix compile_def)
                 ${LLVM_TOOLS_ARGS}
                 -i ${common_bc}
                 -o ${extracted_func_file}
+                --opcodes ${opcodes_json}
             
             # Strip global constructors, they are not necessary for jit.
             COMMAND ${LLVM_EXTRACT} --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc_stripped}
@@ -181,6 +185,8 @@ function(add_vm_variant suffix compile_def)
             VERBATIM
             DEPENDS $<TARGET_OBJECTS:LibCommonVM_bc>
                     ${CMAKE_SOURCE_DIR}/scripts/py/jit/jittable_interface.py
+                    ${opcodes_json}
+                    PrintOpcodesJson # Target dependency, the file dependency above is cross-directory.
                     $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
                     # Here dependency to both bc files and targets is necessary.
                     ${vm_dep_objects_bc} # File dependency ensures each file will tracked and program will be rebuild if it changes.

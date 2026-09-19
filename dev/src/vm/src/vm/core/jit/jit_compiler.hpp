@@ -41,11 +41,16 @@ namespace vm::jit {
 
 	/**
 	 * @brief The data additionally stored per function, by the JIT compiler.
+	 * @details The vectors below are indexed by instruction offset within the function's
+	 * bytecode (size == number of instructions), not by basic block. Only loop headers and
+	 * the function entrypoint carry meaningful values; other slots stay empty/default.
 	 */
 	struct JitFuncData {
+		// CFG of the loop for each loop header; full-function CFG at the entrypoint offset.
 		std::vector<low::cf::ControlFlowGraph> cfgs;
-		std::vector<uint>                      until_compilation;
-		std::vector<MRef<JitLLVMFunc>>         llvm_compiled_code_ptrs;
+		// Executions left before the loop/function starting at this offset gets compiled.
+		std::vector<uint>              until_compilation;
+		std::vector<MRef<JitLLVMFunc>> llvm_compiled_code_ptrs;
 #if COMPILE_WITH_CNP
 		std::optional<cnp::JitFuncMemory> cp_memory = std::nullopt;
 #endif
@@ -53,7 +58,7 @@ namespace vm::jit {
 		JitFuncData() = default;
 
 		JitFuncData(const low::LowFuncData& func):
-			  cfgs(low::cf::detectLoopsInFunction(func)),
+			  cfgs(low::cf::LoopDetector::detectLoopsInFunction(func)),
 			  until_compilation(cfgs.size(), LOOP_COMPILATION_THRESHOLD),
 			  llvm_compiled_code_ptrs(cfgs.size(), nullptr) {
 #if COMPILE_WITH_CNP
@@ -65,7 +70,7 @@ namespace vm::jit {
 	};
 
 	/**
-	 * @brief The data additionally stored by the JIT compiler.
+	 * @brief The data additionally stored by the JIT compiler, indexed by function id.
 	 */
 	using JitData = std::vector<JitFuncData>;
 

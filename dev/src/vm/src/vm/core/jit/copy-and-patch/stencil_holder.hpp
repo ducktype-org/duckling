@@ -14,6 +14,9 @@
 #include <span>
 
 namespace vm::jit::cnp {
+	// These wrappers are deliberately defined out-of-line in stencil_holder.cpp: they form the
+	// opaque boundary that keeps the embedded stencil binary confined to that single TU, instead
+	// of being compiled into every includer of this header.
 	byte* relocate(const StencilData& stencil_data, byte* new_address);
 	[[nodiscard]] std::span<const byte> stencilsBinary(const StencilData& stencil_data);
 

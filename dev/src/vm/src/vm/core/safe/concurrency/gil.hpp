@@ -61,6 +61,7 @@ namespace vm {
 		class ScopedLock {
 		public:
 			explicit ScopedLock(GIL& gil): gil(gil) { gil.acquire(); }
+
 			~ScopedLock() { gil.release(); }
 
 			ScopedLock(const ScopedLock&)            = delete;

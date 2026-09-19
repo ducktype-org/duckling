@@ -182,7 +182,11 @@ def gather_statistics(stencils, failed_removal = None):
 @click.option("-s", "--shared", is_flag=True)
 @click.option("-r", "--remove-jumps", is_flag=True)
 @click.option("--statistics", is_flag=True)
-@click.option("--order", type=click.File("r"))
+@click.option(
+    "--order",
+    type=click.File("r"),
+    help="JSON opcode metadata from print_opcodes (opcode order + non-jittable list).",
+)
 @click.argument("binary", type=click.File("rb"))
 @llvm_tools_version_options
 def main(
@@ -207,14 +211,16 @@ def main(
         print(json.dumps(gather_statistics(stencils, failed_stencils), indent=4))
 
     if order:
-        order_dict = json.loads(order.read())
+        order_json = json.loads(order.read())
+        order_dict = order_json["opcodes"]
+        nonjittable_names = order_json["nonjittable"]
         stencils = order_stencils(stencils, order_dict)
         # Non-jittable opcodes intentionally have no stencil; their slots only pad the array so
         # that indices line up with opcode values, and are never read at runtime.
         missing = [
             name
             for name, idx in order_dict.items()
-            if stencils[idx].type == StencilType.NO_STENCIL and not nonjittable(name)
+            if stencils[idx].type == StencilType.NO_STENCIL and not nonjittable(name, nonjittable_names)
         ]
         if missing:
             print(f"Stencils missing from the binary: {', '.join(sorted(missing))}")

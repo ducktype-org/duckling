@@ -84,6 +84,18 @@ namespace vm::low::cf {
 			return cfgs;
 		}
 
+		/**
+		 * @brief Detects natural loops in a function CFG using dominator relations.
+		 * @param func Function data containing bytecode to analyze.
+		 * @return CFG for each instruction in function opcode.
+		 * @details For function entrypoint, full function CFG is returned. For loop headers,
+		 * CFG of the loop is returned. For other instructions, empty CFG is returned.
+		 */
+		static std::vector<ControlFlowGraph> detectLoopsInFunction(const LowFuncData& func) {
+			LoopDetector detector;
+			return detector.findLoops(func);
+		}
+
 	private:
 		/**
 		 * @brief Sentinel value for undefined block identifiers.
@@ -202,7 +214,8 @@ namespace vm::low::cf {
 		 */
 		void domTreeTimestampDfs(BasicBlockID bid, u32& time) {
 			CORE_ASSERT(
-				dom_tree_timestamps[bid].second == 0, "dominator tree is not a tree: revisited a block"
+				dom_tree_timestamps[bid].second == 0,
+				"dominator tree is not a tree: revisited a block"
 			);
 			dom_tree_timestamps[bid].first = time++;
 			for (BasicBlockID child_id: dom_tree[bid]) domTreeTimestampDfs(child_id, time);
@@ -240,16 +253,4 @@ namespace vm::low::cf {
 			    && dom_tree_timestamps[bid].second <= dom_tree_timestamps[domid].second;
 		}
 	};
-
-	/**
-	 * @brief Detects natural loops in a function CFG using dominator relations.
-	 * @param func Function data containing bytecode to analyze.
-	 * @return CFG for each instruction in function opcode.
-	 * @details For function entrypoint, full function CFG is returned. For loop headers,
-	 * CFG of the loop is returned. For other instructions, empty CFG is returned.
-	 */
-	inline std::vector<ControlFlowGraph> detectLoopsInFunction(const LowFuncData& func) {
-		LoopDetector detector;
-		return detector.findLoops(func);
-	}
 }  // namespace vm::low::cf

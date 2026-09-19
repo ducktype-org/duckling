@@ -27,4 +27,6 @@ To generate quality implementation bitcode for the LLVM (and later the Copy-and-
 
 ### Non-jittable instructions
 
-Because some instruction implementations may be quite large (and take up more compilation time) or complex (and inhibit optimizations). They are marked as non-jittable and excluded from compilation. This reduces startup and compilation times as well, as actually speeds up the generated code. Currently this marking is quite restricted, and the JIT compiler would perhaps benefit from expanding the list of non-jittable instructions to most non-arithmetic instructions.
+Some instruction implementations are quite large (and take up more compilation time) or complex (and inhibit optimizations) — the prime example being function calls, which transfer control back to the interpreter anyway. These are marked as non-jittable: the JIT tiers never compile their bodies and instead emit a plain call to the debug-mode implementation (via the `special_call_non_jittable` stencil in Copy-and-Patch, or an absolute symbol in the LLVM tier). This reduces startup and compilation times, and can actually speed up the generated code.
+
+The list lives in [non_jittable.def.hpp](./non_jittable.def.hpp) and is the single source of truth: C++ includes it directly, while the python build scripts receive it as JSON (inside `opcodes.json`, produced by `print_opcodes`). Currently this marking is quite restricted, and the JIT compiler would perhaps benefit from expanding the list of non-jittable instructions to most non-arithmetic instructions.

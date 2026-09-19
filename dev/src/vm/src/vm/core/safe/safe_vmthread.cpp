@@ -146,8 +146,7 @@ namespace vm {
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
 		if (func_args.size() != func.parameters.size()) {
-			throw exceptions::VMRuntimeException(
-				argumentCountMismatchMessage(func, func_args.size())
+			throw exceptions::VMRuntimeException(argumentCountMismatchMessage(func, func_args.size())
 			);
 		}
 
@@ -181,7 +180,7 @@ namespace vm {
 		start_function.local_stack_size += func.ret_size;
 
 		// Argument validity was already checked when validating the API call.
-		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {
+		for (const auto& [i, arg_value]: std::views::enumerate(func_args)) {
 			const auto& arg_type = func.parameters[i];
 
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
@@ -192,15 +191,14 @@ namespace vm {
 			start_function.arg_size += arg_type->getSize().asInt();
 		}
 
-
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
-				// @note: Only one block is left on the stack in this place, so there is no need for
-		        // any deinits. It's being deinitialized by the thread after obtaining the return
-		        // value/exit_code.
+				// @note: Only one block is left on the stack in this place, so there is no need
+		        // for any deinits. It's being deinitialized by the thread after obtaining the
+		        // return value/exit_code.
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);

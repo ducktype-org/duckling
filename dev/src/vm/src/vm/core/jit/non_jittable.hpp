@@ -17,7 +17,7 @@ namespace vm::jit {
 	};
 
 	// Currently unused; kept for sizing jittable/non-jittable-indexed arrays.
-	constexpr size_t HELPER_FUNCTIONS  = 1;
+	constexpr size_t HELPER_FUNCTIONS   = 1;
 	constexpr size_t NON_JITTABLE_COUNT = HARD_SYMBOLS.size() - HELPER_FUNCTIONS;
 	constexpr size_t JITTABLE_COUNT     = low::microInstrCount() - NON_JITTABLE_COUNT;
 }

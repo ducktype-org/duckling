@@ -6,9 +6,6 @@
 
 #include "cf_analysis.hpp"
 
-#include <sstream>
-#include <string>
-
 namespace vm::low::cf {
 	usize OutEdges::size() const { return no_edges; }
 
@@ -255,46 +252,43 @@ namespace vm::low::cf {
 		return subgraph;
 	}
 
-	/* Debug string conversions */
+	/* Debug printing */
 
-	std::string OutEdges::toString() const {
-		std::ostringstream oss;
+	void OutEdges::deprint(std::ostream& os) const {
 		switch (edge_kind) {
 		case Kind::End:
-			oss << "End{}";
+			os << "End{}";
 			break;
 		case Kind::Default:
-			oss << "Default{next -> " << to[0] << "}";
+			os << "Default{next -> " << to[0] << "}";
 			break;
 		case Kind::JmpIf:
-			oss << "JmpIf{condition: T -> " << to[0] << ", F -> " << to[1] << "}";
+			os << "JmpIf{condition: T -> " << to[0] << ", F -> " << to[1] << "}";
 			break;
 		case Kind::JmpIfNot:
-			oss << "JmpIfNot{condition: T -> " << to[1] << ", F -> " << to[0] << "}";
+			os << "JmpIfNot{condition: T -> " << to[1] << ", F -> " << to[0] << "}";
 			break;
 		}
-		return oss.str();
 	}
 
 	bool BasicBlock::isFallthrough() const {
 		return edgeKind() == OutEdges::Kind::Default && next() == id + 1;
 	}
 
-	std::string BasicBlock::toString() const {
-		std::ostringstream oss;
-		oss << "Block{bid = " << id << ", range = [" << start << ", " << end
-			<< "), ret = " << ret_value << ", edge = " << succ.toString() << "}";
-		return oss.str();
+	void BasicBlock::deprint(std::ostream& os) const {
+		os << "Block{bid = " << id << ", range = [" << start << ", " << end
+		   << "), ret = " << ret_value << ", edge = ";
+		succ.deprint(os);
+		os << "}";
 	}
 
-	std::string ControlFlowGraph::toString() const {
-		std::ostringstream oss;
-		oss << "ControlFlowGraph{blocks = [\n";
+	void ControlFlowGraph::deprint(std::ostream& os) const {
+		os << "ControlFlowGraph{blocks = [\n";
 		for (usize i = 0; i < blocks.size(); ++i) {
-			oss << "  " << blocks[i].toString();
-			if (i + 1 < blocks.size()) oss << ",\n";
+			os << "  ";
+			blocks[i].deprint(os);
+			if (i + 1 < blocks.size()) os << ",\n";
 		}
-		oss << "\n]}";
-		return oss.str();
+		os << "\n]}";
 	}
 }  // namespace vm::low::cf

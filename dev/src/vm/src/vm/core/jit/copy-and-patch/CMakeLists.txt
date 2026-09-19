@@ -1,12 +1,5 @@
 file(GLOB analyze_deps "${CMAKE_SOURCE_DIR}/scripts/py/jit/*.py")
 
-add_executable(print_opcodes print_opcodes.cpp)
-add_custom_command(
-    OUTPUT opcodes.json
-    COMMAND print_opcodes >opcodes.json
-    DEPENDS print_opcodes
-)
-
 # Analyze and process the `binary_file`, preparing to embed in `destination_file`.
 # `analyze_input_deps` are dependencies of only the analyze step (e.g. opcodes.json);
 # anything in ARGN is a dependency of the compile+link step.
@@ -125,8 +118,8 @@ process_to_binary(
     $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>
     stencil_holder.cpp
     "stencils"
-    "--order=opcodes.json;--remove-jumps"
-    opcodes.json
+    "--order=${opcodes_json};--remove-jumps"
+    "${opcodes_json}"
     $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
 
 add_files(
@@ -139,6 +132,9 @@ add_files(
 )
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
 
+# jit_dependency holds the C++ translation units that embed the generated stencil data and
+# instructions (via #embed / generated headers), so they must be rebuilt when the binary
+# artifacts above change.
 add_files(
     stencil_holder.cpp
 )

@@ -21,3 +21,14 @@ Before compilation, stencils are dynamically loaded in order to resolve runtime 
 ## Compilation process
 
 After allocating sufficient storage, all binary stencils corresponding to micro instructions in a basic block are copied and patched. At the end a special stencil is optionally added to ensure the correct control-flow. Non-jittable instructions are instead replaced with a special stencil as well.
+
+## Inspecting the generated artifacts
+
+When working on the stencil pipeline, the intermediate artifacts (the linked `-so` with stencil sections and the generated `stencils-cpp`) can be inspected with the LLVM tools the build scripts themselves use:
+
+- `llvm-readobj --elf-output-style=JSON --expand-relocs --section-data --section-relocations --section-symbols --sections <binary>` — how [`analyze_bin.py`](../../../../../../../scripts/py/jit/analyze_bin.py) reads stencil sections and relocations.
+- `llvm-nm --portability <bitcode>` — how [`jittable_interface.py`](../../../../../../../scripts/py/jit/jittable_interface.py) lists the opcode symbols.
+- `llvm-cxxfilt` — demangling the section/symbol names back to C++ function signatures.
+
+`analyze_bin.py` also accepts `--statistics` to dump per-stencil sizes and jump-removal results, and `-v` to echo the exact tool invocations.
+
