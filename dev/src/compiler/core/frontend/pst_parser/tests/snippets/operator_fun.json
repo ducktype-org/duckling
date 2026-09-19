@@ -654,6 +654,7 @@
 								"sourceEnd": 206
 							},
 							"Class Method": {
+								"is_const": false,
 								"name": {
 									"position": {
 										"sourceStart": 168,

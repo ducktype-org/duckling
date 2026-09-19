@@ -9,7 +9,7 @@ namespace pst {
 	 * @brief Class method element.
 	 */
 	class Method final: public Stmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Method, Stmt);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Method, Stmt, is_const);
 		CLONE_SUBELEMENTS();
 
 	protected:
@@ -17,6 +17,7 @@ namespace pst {
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrStmt);
+		bool is_const = false;
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
@@ -48,6 +49,11 @@ namespace pst {
 		[[nodiscard]]
 		AccessLocked<CodeBlockOrStmt> getBody() const {
 			return body.give();
+		}
+
+		[[nodiscard]]
+		bool isConst() const {
+			return is_const;
 		}
 
 		[[nodiscard]]

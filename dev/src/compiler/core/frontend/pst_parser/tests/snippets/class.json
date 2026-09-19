@@ -1,13 +1,13 @@
 {
 	"position": {
 		"sourceStart": 2,
-		"sourceEnd": 367
+		"sourceEnd": 460
 	},
 	"Top Level": [
 		{
 			"position": {
 				"sourceStart": 2,
-				"sourceEnd": 367
+				"sourceEnd": 460
 			},
 			"Class": {
 				"name": {
@@ -105,7 +105,7 @@
 				"body": {
 					"position": {
 						"sourceStart": 45,
-						"sourceEnd": 367
+						"sourceEnd": 460
 					},
 					"Code Block": [
 						{
@@ -236,6 +236,7 @@
 								"sourceEnd": 118
 							},
 							"Class Method": {
+								"is_const": false,
 								"name": {
 									"position": {
 										"sourceStart": 83,
@@ -474,6 +475,7 @@
 								},
 							],
 							"Class Method": {
+								"is_const": false,
 								"name": {
 									"position": {
 										"sourceStart": 133,
@@ -678,20 +680,314 @@
 						{
 							"position": {
 								"sourceStart": 182,
-								"sourceEnd": 196
+								"sourceEnd": 222
+							},
+							"Class Method": {
+								"is_const": true,
+								"name": {
+									"position": {
+										"sourceStart": 186,
+										"sourceEnd": 188
+									},
+									"Identifier Wrapper": {
+										"value": "hoo"
+									}
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 189,
+										"sourceEnd": 190
+									},
+									"function parameter list": [
+									]
+								},
+								"return": {
+									"position": {
+										"sourceStart": 201,
+										"sourceEnd": 203
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 201,
+												"sourceEnd": 203
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 201,
+														"sourceEnd": 203
+													},
+													"Keyword Wrapper": {
+														"value": "i64"
+													}
+												}
+											}
+										}
+									}
+								},
+								"body": {
+									"position": {
+										"sourceStart": 207,
+										"sourceEnd": 222
+									},
+									"Code Block or Statement": {
+										"position": {
+											"sourceStart": 207,
+											"sourceEnd": 222
+										},
+										"Code Block": [
+											{
+												"position": {
+													"sourceStart": 211,
+													"sourceEnd": 219
+												},
+												"Action": {
+													"kind": "Return",
+													"value": {
+														"position": {
+															"sourceStart": 218,
+															"sourceEnd": 218
+														},
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 218,
+																	"sourceEnd": 218
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"position": {
+																			"sourceStart": 218,
+																			"sourceEnd": 218
+																		},
+																		"Identifier Wrapper": {
+																			"value": "y"
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											},
+										]
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 226,
+								"sourceEnd": 271
+							},
+							"specifiers": [
+								{
+									"position": {
+										"sourceStart": 226,
+										"sourceEnd": 232
+									},
+									"StmtSpecifier": {
+										"specifier": {
+											"position": {
+												"sourceStart": 226,
+												"sourceEnd": 232
+											},
+											"Keyword Wrapper": {
+												"value": "private"
+											}
+										},
+									}
+								},
+							],
+							"Class Method": {
+								"is_const": true,
+								"name": {
+									"position": {
+										"sourceStart": 238,
+										"sourceEnd": 240
+									},
+									"Identifier Wrapper": {
+										"value": "ioo"
+									}
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 241,
+										"sourceEnd": 248
+									},
+									"function parameter list": [
+										{
+											"position": {
+												"sourceStart": 242,
+												"sourceEnd": 247
+											},
+											"Parameter": {
+												"Parameter": {
+													"name": {
+														"position": {
+															"sourceStart": 242,
+															"sourceEnd": 242
+														},
+														"Identifier Wrapper": {
+															"value": "z"
+														}
+													},
+													"type": {
+														"position": {
+															"sourceStart": 245,
+															"sourceEnd": 247
+														},
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 245,
+																	"sourceEnd": 247
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 245,
+																			"sourceEnd": 247
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i64"
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										},
+									]
+								},
+								"return": "unit",
+								"body": {
+									"position": {
+										"sourceStart": 258,
+										"sourceEnd": 271
+									},
+									"Code Block or Statement": {
+										"position": {
+											"sourceStart": 258,
+											"sourceEnd": 271
+										},
+										"Code Block": [
+											{
+												"position": {
+													"sourceStart": 262,
+													"sourceEnd": 268
+												},
+												"Expr Stmt": {
+													"position": {
+														"sourceStart": 262,
+														"sourceEnd": 267
+													},
+													"Top Level Expression": {
+														"expr": {
+															"position": {
+																"sourceStart": 262,
+																"sourceEnd": 267
+															},
+															"Chain Expression": {
+																"atom": {
+																	"position": {
+																		"sourceStart": 262,
+																		"sourceEnd": 264
+																	},
+																	"Identifier Expression": {
+																		"name": {
+																			"position": {
+																				"sourceStart": 262,
+																				"sourceEnd": 264
+																			},
+																			"Identifier Wrapper": {
+																				"value": "goo"
+																			}
+																		}
+																	}
+																},
+																"chain": [
+																	{
+																		"position": {
+																			"sourceStart": 265,
+																			"sourceEnd": 267
+																		},
+																		"Call Expression": {
+																			"type": "()",
+																			"arguments": {
+																				"position": {
+																					"sourceStart": 266,
+																					"sourceEnd": 266
+																				},
+																				"call list": [
+																					{
+																						"position": {
+																							"sourceStart": 266,
+																							"sourceEnd": 266
+																						},
+																						"Call argument": {
+																							"value": {
+																								"position": {
+																									"sourceStart": 266,
+																									"sourceEnd": 266
+																								},
+																								"Expression Holder": {
+																									"expr": {
+																										"position": {
+																											"sourceStart": 266,
+																											"sourceEnd": 266
+																										},
+																										"Identifier Expression": {
+																											"name": {
+																												"position": {
+																													"sourceStart": 266,
+																													"sourceEnd": 266
+																												},
+																												"Identifier Wrapper": {
+																													"value": "z"
+																												}
+																											}
+																										}
+																									}
+																								}
+																							}
+																						}
+																					},
+																				]
+																			}
+																		}
+																	}
+																]
+															}
+														}
+													}
+												}
+											},
+										]
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 275,
+								"sourceEnd": 289
 							},
 							"Using": {
 								"position": {
-									"sourceStart": 188,
-									"sourceEnd": 195
+									"sourceStart": 281,
+									"sourceEnd": 288
 								},
 								"Dotted Name": {
 									"star": "false",
 									"names": [
 										{
 											"position": {
-												"sourceStart": 188,
-												"sourceEnd": 190
+												"sourceStart": 281,
+												"sourceEnd": 283
 											},
 											"Identifier Wrapper": {
 												"value": "std"
@@ -699,8 +995,8 @@
 										},
 										{
 											"position": {
-												"sourceStart": 192,
-												"sourceEnd": 195
+												"sourceStart": 285,
+												"sourceEnd": 288
 											},
 											"Identifier Wrapper": {
 												"value": "math"
@@ -712,20 +1008,20 @@
 						},
 						{
 							"position": {
-								"sourceStart": 200,
-								"sourceEnd": 365
+								"sourceStart": 293,
+								"sourceEnd": 458
 							},
 							"specifiers": [
 								{
 									"position": {
-										"sourceStart": 200,
-										"sourceEnd": 205
+										"sourceStart": 293,
+										"sourceEnd": 298
 									},
 									"StmtSpecifier": {
 										"specifier": {
 											"position": {
-												"sourceStart": 200,
-												"sourceEnd": 205
+												"sourceStart": 293,
+												"sourceEnd": 298
 											},
 											"Keyword Wrapper": {
 												"value": "public"
@@ -737,20 +1033,20 @@
 							"Specifier block": {
 								"block": {
 									"position": {
-										"sourceStart": 207,
-										"sourceEnd": 365
+										"sourceStart": 300,
+										"sourceEnd": 458
 									},
 									"Code Block": [
 										{
 											"position": {
-												"sourceStart": 211,
-												"sourceEnd": 235
+												"sourceStart": 304,
+												"sourceEnd": 328
 											},
 											"Alias": {
 												"name": {
 													"position": {
-														"sourceStart": 217,
-														"sourceEnd": 220
+														"sourceStart": 310,
+														"sourceEnd": 313
 													},
 													"Identifier Wrapper": {
 														"value": "sqrt"
@@ -758,16 +1054,16 @@
 												},
 												"points_to": {
 													"position": {
-														"sourceStart": 222,
-														"sourceEnd": 234
+														"sourceStart": 315,
+														"sourceEnd": 327
 													},
 													"Dotted Name": {
 														"star": "false",
 														"names": [
 															{
 																"position": {
-																	"sourceStart": 222,
-																	"sourceEnd": 224
+																	"sourceStart": 315,
+																	"sourceEnd": 317
 																},
 																"Identifier Wrapper": {
 																	"value": "std"
@@ -775,8 +1071,8 @@
 															},
 															{
 																"position": {
-																	"sourceStart": 226,
-																	"sourceEnd": 229
+																	"sourceStart": 319,
+																	"sourceEnd": 322
 																},
 																"Identifier Wrapper": {
 																	"value": "math"
@@ -784,8 +1080,8 @@
 															},
 															{
 																"position": {
-																	"sourceStart": 231,
-																	"sourceEnd": 234
+																	"sourceStart": 324,
+																	"sourceEnd": 327
 																},
 																"Identifier Wrapper": {
 																	"value": "sqrt"
@@ -798,28 +1094,28 @@
 										},
 										{
 											"position": {
-												"sourceStart": 240,
-												"sourceEnd": 274
+												"sourceStart": 333,
+												"sourceEnd": 367
 											},
 											"Class Constructor": {
 												"name": "create",
 												"params": {
 													"position": {
-														"sourceStart": 250,
-														"sourceEnd": 256
+														"sourceStart": 343,
+														"sourceEnd": 349
 													},
 													"function parameter list": [
 														{
 															"position": {
-																"sourceStart": 251,
-																"sourceEnd": 255
+																"sourceStart": 344,
+																"sourceEnd": 348
 															},
 															"Parameter": {
 																"Parameter": {
 																	"name": {
 																		"position": {
-																			"sourceStart": 251,
-																			"sourceEnd": 251
+																			"sourceStart": 344,
+																			"sourceEnd": 344
 																		},
 																		"Identifier Wrapper": {
 																			"value": "c"
@@ -827,20 +1123,20 @@
 																	},
 																	"type": {
 																		"position": {
-																			"sourceStart": 253,
-																			"sourceEnd": 255
+																			"sourceStart": 346,
+																			"sourceEnd": 348
 																		},
 																		"Top Level Expression": {
 																			"expr": {
 																				"position": {
-																					"sourceStart": 253,
-																					"sourceEnd": 255
+																					"sourceStart": 346,
+																					"sourceEnd": 348
 																				},
 																				"Keyword Expression": {
 																					"keyword": {
 																						"position": {
-																							"sourceStart": 253,
-																							"sourceEnd": 255
+																							"sourceStart": 346,
+																							"sourceEnd": 348
 																						},
 																						"Keyword Wrapper": {
 																							"value": "i64"
@@ -857,37 +1153,37 @@
 												},
 												"body": {
 													"position": {
-														"sourceStart": 260,
-														"sourceEnd": 274
+														"sourceStart": 353,
+														"sourceEnd": 367
 													},
 													"Code Block": [
 														{
 															"position": {
-																"sourceStart": 265,
-																"sourceEnd": 270
+																"sourceStart": 358,
+																"sourceEnd": 363
 															},
 															"Expr Stmt": {
 																"position": {
-																	"sourceStart": 265,
-																	"sourceEnd": 269
+																	"sourceStart": 358,
+																	"sourceEnd": 362
 																},
 																"Top Level Expression": {
 																	"expr": {
 																		"position": {
-																			"sourceStart": 265,
-																			"sourceEnd": 269
+																			"sourceStart": 358,
+																			"sourceEnd": 362
 																		},
 																		"Assignment Expr": {
 																			"assigned variables": {
 																				"position": {
-																					"sourceStart": 265,
-																					"sourceEnd": 265
+																					"sourceStart": 358,
+																					"sourceEnd": 358
 																				},
 																				"Identifier Expression": {
 																					"name": {
 																						"position": {
-																							"sourceStart": 265,
-																							"sourceEnd": 265
+																							"sourceStart": 358,
+																							"sourceEnd": 358
 																						},
 																						"Identifier Wrapper": {
 																							"value": "x"
@@ -897,8 +1193,8 @@
 																			},
 																			"assignment type": {
 																				"position": {
-																					"sourceStart": 267,
-																					"sourceEnd": 267
+																					"sourceStart": 360,
+																					"sourceEnd": 360
 																				},
 																				"Operator Wrapper": {
 																					"value": "="
@@ -906,14 +1202,14 @@
 																			},
 																			"assigned value": {
 																				"position": {
-																					"sourceStart": 269,
-																					"sourceEnd": 269
+																					"sourceStart": 362,
+																					"sourceEnd": 362
 																				},
 																				"Identifier Expression": {
 																					"name": {
 																						"position": {
-																							"sourceStart": 269,
-																							"sourceEnd": 269
+																							"sourceStart": 362,
+																							"sourceEnd": 362
 																						},
 																						"Identifier Wrapper": {
 																							"value": "c"
@@ -932,56 +1228,57 @@
 										},
 										{
 											"position": {
-												"sourceStart": 280,
-												"sourceEnd": 308
+												"sourceStart": 373,
+												"sourceEnd": 401
 											},
 											"Copy Constructor": {
 												"name": "copy",
 												"params": {
 													"position": {
-														"sourceStart": 288,
-														"sourceEnd": 289
+														"sourceStart": 381,
+														"sourceEnd": 382
 													},
-													"function parameter list": []
+													"function parameter list": [
+													]
 												},
 												"body": {
 													"position": {
-														"sourceStart": 293,
-														"sourceEnd": 308
+														"sourceStart": 386,
+														"sourceEnd": 401
 													},
 													"Code Block or Statement": {
 														"position": {
-															"sourceStart": 293,
-															"sourceEnd": 308
+															"sourceStart": 386,
+															"sourceEnd": 401
 														},
 														"Code Block": [
 															{
 																"position": {
-																	"sourceStart": 298,
-																	"sourceEnd": 304
+																	"sourceStart": 391,
+																	"sourceEnd": 397
 																},
 																"Expr Stmt": {
 																	"position": {
-																		"sourceStart": 298,
-																		"sourceEnd": 303
+																		"sourceStart": 391,
+																		"sourceEnd": 396
 																	},
 																	"Top Level Expression": {
 																		"expr": {
 																			"position": {
-																				"sourceStart": 298,
-																				"sourceEnd": 303
+																				"sourceStart": 391,
+																				"sourceEnd": 396
 																			},
 																			"Assignment Expr": {
 																				"assigned variables": {
 																					"position": {
-																						"sourceStart": 298,
-																						"sourceEnd": 298
+																						"sourceStart": 391,
+																						"sourceEnd": 391
 																					},
 																					"Identifier Expression": {
 																						"name": {
 																							"position": {
-																								"sourceStart": 298,
-																								"sourceEnd": 298
+																								"sourceStart": 391,
+																								"sourceEnd": 391
 																							},
 																							"Identifier Wrapper": {
 																								"value": "x"
@@ -991,8 +1288,8 @@
 																				},
 																				"assignment type": {
 																					"position": {
-																						"sourceStart": 300,
-																						"sourceEnd": 300
+																						"sourceStart": 393,
+																						"sourceEnd": 393
 																					},
 																					"Operator Wrapper": {
 																						"value": "="
@@ -1000,8 +1297,8 @@
 																				},
 																				"assigned value": {
 																					"position": {
-																						"sourceStart": 302,
-																						"sourceEnd": 303
+																						"sourceStart": 395,
+																						"sourceEnd": 396
 																					},
 																					"Numeric Value Expr": {
 																						"number": "81"
@@ -1019,51 +1316,52 @@
 										},
 										{
 											"position": {
-												"sourceStart": 313,
-												"sourceEnd": 340
+												"sourceStart": 406,
+												"sourceEnd": 433
 											},
 											"Class Constructor": {
 												"name": "abc",
 												"params": {
 													"position": {
-														"sourceStart": 320,
-														"sourceEnd": 321
+														"sourceStart": 413,
+														"sourceEnd": 414
 													},
-													"function parameter list": []
+													"function parameter list": [
+													]
 												},
 												"body": {
 													"position": {
-														"sourceStart": 325,
-														"sourceEnd": 340
+														"sourceStart": 418,
+														"sourceEnd": 433
 													},
 													"Code Block": [
 														{
 															"position": {
-																"sourceStart": 330,
-																"sourceEnd": 336
+																"sourceStart": 423,
+																"sourceEnd": 429
 															},
 															"Expr Stmt": {
 																"position": {
-																	"sourceStart": 330,
-																	"sourceEnd": 335
+																	"sourceStart": 423,
+																	"sourceEnd": 428
 																},
 																"Top Level Expression": {
 																	"expr": {
 																		"position": {
-																			"sourceStart": 330,
-																			"sourceEnd": 335
+																			"sourceStart": 423,
+																			"sourceEnd": 428
 																		},
 																		"Assignment Expr": {
 																			"assigned variables": {
 																				"position": {
-																					"sourceStart": 330,
-																					"sourceEnd": 330
+																					"sourceStart": 423,
+																					"sourceEnd": 423
 																				},
 																				"Identifier Expression": {
 																					"name": {
 																						"position": {
-																							"sourceStart": 330,
-																							"sourceEnd": 330
+																							"sourceStart": 423,
+																							"sourceEnd": 423
 																						},
 																						"Identifier Wrapper": {
 																							"value": "x"
@@ -1073,8 +1371,8 @@
 																			},
 																			"assignment type": {
 																				"position": {
-																					"sourceStart": 332,
-																					"sourceEnd": 332
+																					"sourceStart": 425,
+																					"sourceEnd": 425
 																				},
 																				"Operator Wrapper": {
 																					"value": "="
@@ -1082,8 +1380,8 @@
 																			},
 																			"assigned value": {
 																				"position": {
-																					"sourceStart": 334,
-																					"sourceEnd": 335
+																					"sourceStart": 427,
+																					"sourceEnd": 428
 																				},
 																				"Numeric Value Expr": {
 																					"number": "81"
@@ -1100,16 +1398,17 @@
 										},
 										{
 											"position": {
-												"sourceStart": 345,
-												"sourceEnd": 362
+												"sourceStart": 438,
+												"sourceEnd": 455
 											},
 											"Class Destructor": {
 												"body": {
 													"position": {
-														"sourceStart": 361,
-														"sourceEnd": 362
+														"sourceStart": 454,
+														"sourceEnd": 455
 													},
-													"Code Block": []
+													"Code Block": [
+													]
 												}
 											}
 										},

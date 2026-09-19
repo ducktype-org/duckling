@@ -14,6 +14,7 @@ namespace pst {
 		PARSE().all(Keyword::Fun);
 		PARSE().with(&out->name, IdentifierWrapper::parseFunctionName);
 		PARSE().one(&out->params);
+		if (PARSE().tryEat(Keyword::Const)) out->is_const = true;
 		if (PARSE().tryEat(NamedOperator::SingleArrow)) PARSE().one(&out->ret);
 
 		PST_NEW_CONTEXT({
@@ -27,6 +28,7 @@ namespace pst {
 
 	void Method::dprint(std::ostream& out) const {
 		out << "{";
+		out << R"("is_const": )" << (is_const ? "true" : "false") << ",";
 		out << "\"name\":";
 		nullAwareDprint(name, out);
 		out << ",\"parameters\":";
@@ -47,6 +49,7 @@ namespace pst {
 
 	HashAlg& Method::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, ret.has_value());
+		addToHash(partial_hash, is_const);
 		return partial_hash;
 	}
 

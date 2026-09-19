@@ -39,7 +39,7 @@ class Counter {
         self.value = self.value + amount;
     }
 
-    fun getValue() -> i64 = {
+    fun getValue() const -> i64 = {
         return self.value;
     }
 }
@@ -51,7 +51,7 @@ class CounterManager {
         self.mainCounter.value = 0;
     }
 
-    fun getMainCounterValue() -> i64 = {
+    fun getMainCounterValue() const -> i64 = {
         return self.mainCounter.getValue();
     }
     
