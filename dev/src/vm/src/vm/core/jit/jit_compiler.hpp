@@ -10,7 +10,6 @@
 #include <vm/core/jit/copy-and-patch/memory/memory.hpp>
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/cfg/loop_detector.hpp>
-#include <vm/core/safe/low_program/low_program.hpp>
 
 #ifdef BUILD_TYPE_RELEASE
 constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 10'000;
@@ -26,10 +25,14 @@ constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD = 0;
 #endif
 
 
+namespace vm {
+	struct Frame;
+	class SafeVMThread;
+}
+
 namespace vm::jit {
 	// There is a strong dependency in creating this type for LLVM. (jit_data.cpp)
-	using JitLLVMFunc
-		= i64(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
+	using JitLLVMFunc = i64(const vm::MicroInstruction**, byte**, vm::Frame**, vm::SafeVMThread*);
 
 
 #define CP_RETURN __attribute__((preserve_none)) void
@@ -57,22 +60,17 @@ namespace vm::jit {
 
 		JitFuncData() = default;
 
-		JitFuncData(const low::LowFuncData& func):
-			  cfgs(low::cf::LoopDetector::detectLoopsInFunction(func)),
+		JitFuncData(const low::MicroBytecode& bc, usize entrypoint_offset):
+			  cfgs(low::cf::LoopDetector::detectLoopsInFunction(bc, entrypoint_offset)),
 			  until_compilation(cfgs.size(), LOOP_COMPILATION_THRESHOLD),
 			  llvm_compiled_code_ptrs(cfgs.size(), nullptr) {
 #if COMPILE_WITH_CNP
-			until_compilation[func.jit_func_entrypoint_offset] = CP_FUNC_COMPILATION_THRESHOLD;
+			until_compilation[entrypoint_offset] = CP_FUNC_COMPILATION_THRESHOLD;
 #else
-			until_compilation[func.jit_func_entrypoint_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;
+			until_compilation[entrypoint_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;
 #endif
 		}
 	};
-
-	/**
-	 * @brief The data additionally stored by the JIT compiler, indexed by function id.
-	 */
-	using JitData = std::vector<JitFuncData>;
 
 	/**
 	 * @brief Compile the contiguous bytecode block (function or loop) on the C2, LLVM-based compiler.

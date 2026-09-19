@@ -68,14 +68,6 @@ namespace vm {
 		if (code_result.has_value()) {
 			compiler.recompile();
 			updateGlobalDataMemory(loaded_program);
-#ifdef ENABLE_JIT
-			if (jit_enabled) {
-				// Exec threads never take api_lock; the GIL is what excludes them, and it must
-				// be held while growing jit_data and replacing opcodes in the loaded program.
-				GIL::ScopedLock gil_lock(gil);
-				updateJitData();
-			}
-#endif
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -286,11 +278,9 @@ namespace vm {
 		const PID my_pid, bool enable_deadlock_detection, [[maybe_unused]] bool enable_jit
 	):
 		  IVMProcess(my_pid),
+		  compiler(*loader.getHighProgram(), enable_jit),
 		  loaded_program(compiler.getLowProgram()) {
 		if (enable_deadlock_detection) deadlock_detector.emplace();
-#ifdef ENABLE_JIT
-		jit_enabled = enable_jit;
-#endif
 		vm_threads.add(*this);
 	}
 
@@ -678,7 +668,7 @@ namespace vm {
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
 		// @TODO: #3585 In JIT builds this can clobber or incorrectly restore the
-		// jitFuncEntrypoint/jitLoopEntrypoint opcodes written by updateJitData: disabling a
+		// jitFuncEntrypoint/jitLoopEntrypoint opcodes patched in by the compiler: disabling a
 		// breakpoint restores the opcode from the original program, losing the JIT entrypoint.
 		std::unique_lock lock(api_lock);
 		auto response = compiler.setBreakpoint(function_name, instruction_index, enable);
@@ -739,28 +729,4 @@ namespace vm {
 		return synchronization_primitives;
 	}
 
-#ifdef ENABLE_JIT
-	void SafeVMProcess::updateJitData() {
-		// Functions are appended to the program one-by-one and jit_data holds one entry per
-		// function, so the new ones are exactly the suffix beyond jit_data.size().
-		auto new_functions = compiler.getLowProgram()->getFunctions().dataSuffix(jit_data.size());
-		for (auto& [func_data, func_id, func_name]: new_functions) {
-			jit_data.emplace_back(*func_data.get());
-			for (usize i = 0; i < jit_data.back().cfgs.size(); i++) {
-				auto& cfg = jit_data.back().cfgs[i];
-				if (cfg.empty()) continue;  // Not an entrypoint
-				auto maybe_old_opcode = compiler.replaceOpcode(
-					func_id,
-					i,
-					(i == func_data->jit_func_entrypoint_offset
-				         ? vm::low::MicroOpcode::jitFuncEntrypoint
-				         : vm::low::MicroOpcode::jitLoopEntrypoint)
-				);
-				CORE_ASSERT(
-					maybe_old_opcode.has_value(), "Failed to replace opcode with jit entrypoint"
-				);
-			}
-		}
-	}
-#endif
 }

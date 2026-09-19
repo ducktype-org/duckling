@@ -33,17 +33,18 @@ public:
 		// Executing code outside of a compiled function
 		TESTER_ADD_TEST(testCalls);
 		TESTER_ADD_TEST(testVirtualCalls);
+		TESTER_ADD_TEST(testRecursiveCalls);
 
 		// Executing code within a compiled function
 		TESTER_ADD_TEST(testUnconditionalJumps);
 		TESTER_ADD_TEST(testConditionalJumps);
 		TESTER_ADD_TEST(testJumps);
 
-		TESTER_ADD_TEST(testRecursiveCalls);
 		// Many things combined
 		TESTER_ADD_TEST(testAll);
 
 #ifdef ENABLE_JIT
+		// Running with the JIT disabled at runtime
 		TESTER_ADD_TEST(testJitDisabled);
 #endif
 	}
@@ -81,13 +82,13 @@ private:
 
 #ifdef ENABLE_JIT
 	/// A JIT-built VM with JIT disabled at runtime must run purely interpreted: no entrypoints
-	/// patched into the executed program copy and no jit_data gathered, yet correct output.
+	/// patched into the executed bytecode and no JIT data (CFGs) built, yet correct output.
 	void testJitDisabled() {
 		vm::SafeVMProcess process(vm::PID::fromU64(0), false, false);
 		ASSERT_HAS_VALUE(process.doRequest(vm::api::request::LoadFiles{
 			{ fs::File(path("mega_test.dbc")) } }));
-		ASSERT_TRUE(process.getJitData().empty());
 		for (const auto& func: process.getLoadedProgram()->getFunctions()) {
+			ASSERT_TRUE(func.jit_data.cfgs.empty());
 			for (const auto& instr: func.bc) {
 				const auto opcode = vm::getInstructionOpcode(instr);
 				ASSERT_TRUE(opcode != vm::low::MicroOpcode::jitFuncEntrypoint);

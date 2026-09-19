@@ -282,16 +282,14 @@ namespace vm::jit {
 			llvm::BasicBlock* entry_block
 				= llvm::BasicBlock::Create(llvm_ctx, "entry", user_func_wrapper);
 
-			if (first_cfg_block != nullptr) entry_block->moveBefore(first_cfg_block);
-
 			llvm::IRBuilder<> entry_builder(entry_block);
 
-			if (first_cfg_block != nullptr) {
-				entry_builder.CreateBr(first_cfg_block);
-			} else {
-				// Safe fallback for entirely empty functions/CFGs
-				entry_builder.CreateRet(entry_builder.getInt64(0));
-			}
+			// Empty CFGs never reach here: JitFuncData construction only stores non-empty CFGs
+			// at entrypoint offsets, and createFuncCFG always keeps at least the entry block.
+			if (first_cfg_block == nullptr) CORE_PANIC("Empty CFG should never reach JIT lowering");
+
+			entry_block->moveBefore(first_cfg_block);
+			entry_builder.CreateBr(first_cfg_block);
 		}
 
 		void lowerCFG(
@@ -309,10 +307,7 @@ namespace vm::jit {
 				llvm_blocks.push_back(block);
 			}
 
-			if (!llvm_blocks.empty())
-				emitEntryBlock(llvm_blocks[0]);
-			else
-				emitEntryBlock(nullptr);
+			emitEntryBlock(llvm_blocks.empty() ? nullptr : llvm_blocks[0]);
 
 			std::unordered_set<std::string> used_opfuns;
 

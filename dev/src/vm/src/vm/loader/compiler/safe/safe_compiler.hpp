@@ -41,8 +41,13 @@ namespace vm::loader::compiler::safe {
 		friend struct detail::LowerArgumentImpl;
 
 	public:
-		SafeCompiler(const code::ValidProgram& high_program):
-			  vm::loader::compiler::IVMCompiler(high_program) {
+		SafeCompiler(const code::ValidProgram& high_program, bool enable_jit = true):
+			  vm::loader::compiler::IVMCompiler(high_program)
+#ifdef ENABLE_JIT
+			  ,
+			  jit_enabled(enable_jit)
+#endif
+		{
 			recompile();
 		}
 
@@ -66,19 +71,6 @@ namespace vm::loader::compiler::safe {
 			const base::StrID& func_name, usize idx, bool enable
 		);
 
-#ifdef ENABLE_JIT
-		/**
-		 * @brief Replaces the opcode of a microbytecode instruction in the compiled program.
-		 * @note Like setBreakpoint, this lives in the compiler because only it can modify the
-		 * low program. Used by the JIT to patch in its entrypoint opcodes.
-		 * @returns The original opcode on success, `nullopt` if the location does not exist.
-		 */
-		[[nodiscard]]
-		base::Optional<low::MicroOpcode> replaceOpcode(
-			usize func_id, usize instruction_index, low::MicroOpcode opcode
-		);
-#endif
-
 	protected:
 		[[nodiscard]] ProgramSize getCurrentProgramSize() const override;
 
@@ -95,6 +87,14 @@ namespace vm::loader::compiler::safe {
 		 * @brief The microbytecode program representation being built and managed by the compiler.
 		 */
 		vm::low::LowVMProgram low_program;
+
+#ifdef ENABLE_JIT
+		/**
+		 * @brief Whether to build JIT data (CFGs, loop detection) and patch in JIT entrypoint
+		 * opcodes for newly compiled functions. Disabled by `--jit off`.
+		 */
+		bool jit_enabled = true;
+#endif
 
 		detail::SafeProgramCompilationContext program_ctx;
 

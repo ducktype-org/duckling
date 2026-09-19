@@ -2,11 +2,14 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <logger/logger.hpp>
+
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/opcodes.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
 
 #include <array>
+#include <limits>
 
 namespace vm::jit::helpers {
 	void trampoline(OPFUN_REF_ARGS) {
@@ -30,5 +33,22 @@ namespace vm::jit::helpers {
 		instr += slot_count;
 
 		return runInterpreter(buffer.data(), local_stack, frame, thread);
+	}
+
+	void disableEntrypointAfterFailure(
+		JitFuncData& data, usize cfg_offset, std::string_view func_name, std::string_view error
+	) {
+		CORE_USER_LOG(
+			"JIT compilation failed for '",
+			func_name,
+			"' entrypoint at offset ",
+			cfg_offset,
+			": ",
+			error,
+			". Falling back to the interpreter for it from now on.\n"
+		);
+		// The guarded decrement (0 < x) never reaches 0 from here, so compilation of this
+		// entrypoint is never retried.
+		data.until_compilation[cfg_offset] = std::numeric_limits<uint>::max();
 	}
 }

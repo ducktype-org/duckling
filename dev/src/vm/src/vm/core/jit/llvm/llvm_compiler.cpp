@@ -108,20 +108,19 @@ namespace vm::jit {
 
 		CORE_DEV_LOG(
 			DVMDetails,
-			(printModule(new_module.get(), "compiled_function-before.llvm"),
-		     "Compiled function dumped")
+			(printModule(new_module.get(), symbol_name + "-before.llvm"), "Compiled function dumped")
 		);
 
 		optimizeModule(*new_module);
 
+		// Same as above: verification is deliberately dev-only.
 		CORE_ASSERT(
 			!llvm::verifyModule(*new_module, &llvm::errs()), "Module invalid AFTER optimization"
 		);
 
 		CORE_DEV_LOG(
 			DVMDetails,
-			(printModule(new_module.get(), "compiled_function-after.llvm"),
-		     "Compiled function dumped")
+			(printModule(new_module.get(), symbol_name + "-after.llvm"), "Compiled function dumped")
 		);
 
 		auto&                       lljit = *llvm_data.lljit_instance;

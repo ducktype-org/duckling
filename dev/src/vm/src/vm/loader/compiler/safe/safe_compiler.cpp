@@ -159,16 +159,6 @@ namespace vm::loader::compiler::safe {
 		return function.setBreakpoint(idx, enable);
 	}
 
-#ifdef ENABLE_JIT
-	base::Optional<low::MicroOpcode> SafeCompiler::replaceOpcode(
-		usize func_id, usize instruction_index, low::MicroOpcode opcode
-	) {
-		if (!low_program.functions.contains(func_id)) return std::nullopt;
-
-		return low_program.functions.at(func_id)->replaceOpcode(instruction_index, opcode);
-	}
-#endif
-
 	void SafeCompiler::linkLabelArguments(
 		low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
 	) {
@@ -233,7 +223,7 @@ namespace vm::loader::compiler::safe {
 #ifdef ENABLE_JIT
 			// Done before LowFuncData construction so both bc and orig_bc carry the guard:
 			// the function-level entrypoint is never jumped to, so it must be a nop until the
-			// JIT patches it (updateJitData patches only bc, keeping orig_bc pristine).
+			// JIT patches it (the patching below rewrites only bc, keeping orig_bc pristine).
 			usize function_jit_entrypoint     = low::cf::functionEntrypointOffset(bytecode);
 			bytecode[function_jit_entrypoint] = makeLowInstruction(low::MicroOpcode::nop, 0, 0);
 #endif
@@ -258,6 +248,23 @@ namespace vm::loader::compiler::safe {
 			// This may look awkward, but it allows `LowFuncData` to know its own stable ID in the
 			// map, which makes it possible to avoid hashmap lookups on function calls with JIT.
 			low_program.functions[new_func_id].id = new_func_id;
+
+#ifdef ENABLE_JIT
+			if (jit_enabled) {
+				auto& func    = low_program.functions[new_func_id];
+				func.jit_data = jit::JitFuncData(func.bc, func.jit_func_entrypoint_offset);
+				// Patch entrypoint opcodes into bc; orig_bc stays pristine.
+				for (usize i = 0; i < func.jit_data.cfgs.size(); i++) {
+					if (func.jit_data.cfgs[i].empty()) continue;  // Not an entrypoint
+					auto maybe_old_opcode = func.replaceOpcode(
+						i,
+						i == func.jit_func_entrypoint_offset ? low::MicroOpcode::jitFuncEntrypoint
+															 : low::MicroOpcode::jitLoopEntrypoint
+					);
+					CORE_ASSERT(maybe_old_opcode.has_value(), "JIT entrypoint offset out of bounds");
+				}
+			}
+#endif
 		}
 	}
 

@@ -12,7 +12,7 @@ namespace vm::jit::cnp {
 	void JitFuncMemory::dump(const char* filename) {
 		std::ofstream file{ filename, std::ios::binary };
 
-		for (std::byte byte: span()) file << std::to_underlying(byte);
+		for (byte b: span()) file << std::to_underlying(b);
 	}
 
 	std::expected<JitFuncMemory, std::string> JitFuncMemory::allocate(usize size) {

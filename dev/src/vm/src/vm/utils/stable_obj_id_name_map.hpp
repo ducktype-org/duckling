@@ -131,6 +131,8 @@ namespace vm {
 
 			std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> dataSuffix(usize start) const {
 				std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> data;
+				// Guard against unsigned wraparound in size() - start below.
+				if (start >= size()) return data;
 				data.reserve(size() - start);
 				for (usize id = start; id < size(); id++) {
 					ObjID tid = ObjID(id);

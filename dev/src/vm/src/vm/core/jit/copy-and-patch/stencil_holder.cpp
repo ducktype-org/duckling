@@ -27,7 +27,7 @@ namespace vm::jit::cnp {
 		static auto stencils = Stencils{
 // Linter doesn't actually build stencils-cpp so it would be unavailable.
 #if NOT_UNDER_LINTER
-			.stencils_binary = std::bit_cast<std::array<std::byte, sizeof(binary)>>(binary),
+			.stencils_binary = std::bit_cast<std::array<byte, sizeof(binary)>>(binary),
 			.stencils_data =
 	#include <stencils-cpp>
 #endif

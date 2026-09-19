@@ -29,7 +29,7 @@ POP_DIAGNOSTIC
 static auto stencils = Stencils{
 // Linter doesn't actually build mock_stencils-cpp so it would be unavailable.
 #if __has_include(<mock_stencils-cpp>)
-			.stencils_binary = std::bit_cast<std::array<std::byte, sizeof(binary)>>(binary),
+			.stencils_binary = std::bit_cast<std::array<byte, sizeof(binary)>>(binary),
 			.stencils_data =
 	#include <mock_stencils-cpp>
 #endif

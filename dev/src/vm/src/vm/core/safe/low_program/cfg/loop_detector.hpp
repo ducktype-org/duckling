@@ -4,7 +4,6 @@
  */
 #pragma once
 
-#include "../low_program.hpp"
 #include "cf_graph.hpp"
 
 #include <limits>
@@ -22,16 +21,16 @@ namespace vm::low::cf {
 
 		/**
 		 * @brief Detects natural loops in a function CFG using dominator relations.
-		 * @param func Bytecode of the function to analyze.
+		 * @param bc Bytecode of the function to analyze.
+		 * @param function_entrypoint Instruction offset of the function entrypoint.
 		 * @return CFG for each instruction in function opcode.
 		 * @details For function entrypoint, full function CFG is returned. For loop headers,
 		 * CFG of the loop is returned. For other instructions, empty CFG is returned.
 		 */
-		std::vector<ControlFlowGraph> findLoops(const LowFuncData& func) {
-			std::vector<ControlFlowGraph> cfgs(func.bc.size());
-			usize                         function_entrypoint = func.jit_func_entrypoint_offset;
+		std::vector<ControlFlowGraph> findLoops(const MicroBytecode& bc, usize function_entrypoint) {
+			std::vector<ControlFlowGraph> cfgs(bc.size());
 
-			ControlFlowGraph cfg(func.bc);
+			ControlFlowGraph cfg(bc);
 
 			calcPredecessors(cfg);
 			calcDominators(cfg);
@@ -86,14 +85,17 @@ namespace vm::low::cf {
 
 		/**
 		 * @brief Detects natural loops in a function CFG using dominator relations.
-		 * @param func Function data containing bytecode to analyze.
+		 * @param bc Bytecode of the function to analyze.
+		 * @param function_entrypoint Instruction offset of the function entrypoint.
 		 * @return CFG for each instruction in function opcode.
 		 * @details For function entrypoint, full function CFG is returned. For loop headers,
 		 * CFG of the loop is returned. For other instructions, empty CFG is returned.
 		 */
-		static std::vector<ControlFlowGraph> detectLoopsInFunction(const LowFuncData& func) {
+		static std::vector<ControlFlowGraph> detectLoopsInFunction(
+			const MicroBytecode& bc, usize function_entrypoint
+		) {
 			LoopDetector detector;
-			return detector.findLoops(func);
+			return detector.findLoops(bc, function_entrypoint);
 		}
 
 	private:

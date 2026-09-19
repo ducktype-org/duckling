@@ -16,6 +16,10 @@
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#ifdef ENABLE_JIT
+	#include <vm/core/jit/jit_compiler.hpp>
+#endif
+
 #include <variant>
 
 namespace vm::loader::compiler::safe {
@@ -34,6 +38,11 @@ namespace vm::low {
 #ifdef ENABLE_JIT
 		/// Offset of the JIT function entrypoint in the bytecode (guarded by a `nop` in `bc`).
 		usize jit_func_entrypoint_offset;
+		/// Per-function JIT state (CFGs, compilation thresholds, compiled code).
+		/// Default-constructed empty; filled in by the compiler only when the JIT is enabled.
+		/// Mutable because opcode functions only hold a const reference to the function
+		/// (same precedent as LowFFIFunction::cif).
+		mutable jit::JitFuncData jit_data{};
 #endif
 		MicroBytecode bc;
 		// the copy of original bytecode. Always has the same length as bc
