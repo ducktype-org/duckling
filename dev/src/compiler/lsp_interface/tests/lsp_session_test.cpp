@@ -1,4 +1,4 @@
-#include "string_stream.hpp"
+#include "test_utils.hpp"
 
 #include <lsp_interface/compiler.hpp>
 #include <lsp_interface/files_cache.hpp>
