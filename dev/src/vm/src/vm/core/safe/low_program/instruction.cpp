@@ -29,7 +29,7 @@ namespace vm {
 #endif
 	}
 
-	std::string getInstructionConfig() {
+	std::string_view getInstructionConfig() {
 #ifdef USE_SWITCH_CASE
 		return "Switch case";
 #endif

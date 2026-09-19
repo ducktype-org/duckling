@@ -22,7 +22,24 @@ namespace vm {
 		struct LowFuncData;
 	}
 
-	struct FlagData {
+	/**
+	 * @brief One local variable slot: what the variable is, where it lives, and its block once
+	 * something refers to the variable through one.
+	 */
+	struct LocalSlot final {
+		/// Never null on a live slot: every entry below `local_slot_stack_end` is written by
+		/// `pushLocalSlot`, which always takes a real `TypeCRef`, and nobody reads past that end.
+		/// A raw pointer rather than a `TypeCRef` only because the slot stack is default
+		/// constructed whole.
+		const Type* type = nullptr;
+		/// Absolute, so that a slot shared with the caller reads alike from both frames.
+		byte* data = nullptr;
+		/// Null until an instruction first needs a block, which is then built out of the two
+		/// fields above.
+		Block* block = nullptr;
+	};
+
+	struct FlagData final {
 		// CRITICAL: Field flag must be defined first due to rules of field accessing in LLVM (used
 		// for JIT purposes)
 		bool flag;
@@ -33,38 +50,36 @@ namespace vm {
 	 *
 	 * It stores the state of the one function call during the program execution.
 	 */
-	struct Frame {
+	struct Frame final {
 		// CRITICAL: Field flags must be defined first due to rules of field accessing in LLVM (used
 		// for JIT purposes)
 		FlagData flags{};
 
 		/**
-		 * @brief  Current instruction in the stack frame.
-		 * It is only updated when the new function is called.
+		 * @brief Where the frame resumes from.
+		 *
+		 * While a call is in progress this is the caller's return address, set by
+		 * `performFunctionCall` and read back by `ret`. While the thread is paused it is the
+		 * instruction the frame stopped on, which is what `save_execution_state`,
+		 * `executeOneStep` and `getCurrentOpcode` write and read.
 		 */
 		const struct MicroInstruction* instr = nullptr;
 
 		/**
 		 * @brief Memory array where the local variables are stored.
 		 */
-		std::byte* local_stack = nullptr;
+		byte* local_stack = nullptr;
 
 		/**
-		 * @brief Base of the stack of block IDs used by the function created with init_type
-		 * and destroyed with deinit.
+		 * @brief Base of the stack of local variable slots, indexed by slot index. A slot is
+		 * pushed by init and dropped by deinit.
 		 */
-		Block** local_block_ref_stack_base = nullptr;
+		LocalSlot* local_slot_stack_base = nullptr;
 
 		/**
-		 * @brief The pointer to the first free position on the block stack.
+		 * @brief The pointer to the first free position on the slot stack.
 		 */
-		Block** local_block_ref_stack_end = nullptr;
-
-		/**
-		 * @brief First free byte in the local stack.
-		 * Used when new block is created on the local stack.
-		 */
-		u64 local_stack_head = 0;
+		LocalSlot* local_slot_stack_end = nullptr;
 
 		/**
 		 * @brief Function linked to the frame.

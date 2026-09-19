@@ -6,9 +6,7 @@
 //! [`manifest`]: crate::quackpack::core::parse
 //! [`run_lint_passes`]: super::run_lint_passes
 
-use std::fmt;
-
-use super::Diagnostic;
+use super::{Diagnostic, macros};
 use crate::{DuckContext, QuackResult};
 
 #[derive(Debug, Default)]
@@ -42,10 +40,11 @@ fn emit_warning(warning: &impl Diagnostic, ctx: &DuckContext) -> QuackResult<()>
     ctx.warning(warning)
 }
 
-#[derive(Debug)]
-/// A [`Diagnostic`] for an unused key.
-pub struct UnusedKey {
-    key: String,
+macros::make_diagnostic! {
+    pub struct UnusedKey {
+        key: String,
+    }
+    display("the key `{}` is unused", key)
 }
 
 impl UnusedKey {
@@ -55,18 +54,15 @@ impl UnusedKey {
     }
 }
 
-impl fmt::Display for UnusedKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "the key `{}` is unused", self.key)
+macros::make_diagnostic! {
+    pub struct GitUrlIsPath {
+        url: String,
+        path_to_dep: String,
     }
-}
-
-impl Diagnostic for UnusedKey {}
-
-#[derive(Debug)]
-pub struct GitUrlIsPath {
-    url: String,
-    path_to_dep: String,
+    display(
+        "git url `{}` of a dependency `{}` is a path; it can cause surprising effects",
+        url, path_to_dep
+    )
 }
 
 impl GitUrlIsPath {
@@ -77,15 +73,3 @@ impl GitUrlIsPath {
         }
     }
 }
-
-impl fmt::Display for GitUrlIsPath {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "git url `{}` of a dependency `{}` is a path; it can cause surprising effects",
-            self.url, self.path_to_dep
-        )
-    }
-}
-
-impl Diagnostic for GitUrlIsPath {}

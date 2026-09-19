@@ -32,6 +32,14 @@ impl AnyPackage {
         }
     }
 
+    /// Get the original schema.
+    pub fn original_schema(&self) -> &ManifestSchema {
+        match self {
+            Self::Package(package) => package.original_schema(),
+            Self::Script(script) => script.original_schema(),
+        }
+    }
+
     /// Get the root directory of the package / path of the script.
     pub fn root(&self) -> &Path {
         match self {

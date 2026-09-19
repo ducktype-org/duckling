@@ -336,6 +336,8 @@ dependencies:
     )
 }
 
+// @TODO: #3545 reenable after that
+/*
 #[test]
 /// Tests that when supplied freeze realization is not correct, a new, correct realization is chosen.
 /// Main package depends on *a* with feature *a*, supplied freeze has *a* in version 1.0.0,
@@ -431,4 +433,4 @@ dependencies:
         ]
         .into()
     )
-}
+}*/

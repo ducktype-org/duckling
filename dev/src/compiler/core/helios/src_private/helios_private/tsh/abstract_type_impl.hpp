@@ -15,6 +15,11 @@
 #include <utility>
 #include <vector>
 
+namespace compiler::helios {
+	// Forwards:
+	struct ClassSymbolData;
+}
+
 namespace compiler::tsh {
 	/**
 	 * @brief The AbstractTypeImpl class and its subclasses are a heavy type implementation
@@ -53,6 +58,13 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const;
+
+		/**
+		 * Same as @ref getInterface, but gives the caller the failure instead of throwing it, for
+		 * the queries that cannot let a query-failure exception escape their `provide`.
+		 */
+		[[nodiscard]]
+		CRef<query::QResult<TypeInterface>> getInterfaceResult(query::Context& ctx) const;
 
 		/**
 		 * @brief Check if the type is a simple type, which correlates heavily with the type being
@@ -918,29 +930,20 @@ namespace compiler::tsh {
 		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
 		) const;
 
-		[[nodiscard]]
-		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
-			const auto& elements_with_same_name
-				= getDeclaredInterface(ctx)->getElementsByName().at(name(sym));
-			for (const auto& element: elements_with_same_name)
-				if (element.getSymbol() == sym) return element.getType(ctx);
-			CORE_PANIC("Element not found.");
-		}
-
 		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
-
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override;
 		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override;
 		[[nodiscard]] bool isCopyable(query::Context&) const override;
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override;
+		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override;
 
-		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
-			// this should probably be changed/expanded in the future:
-			u64 fields_count = 0;
-			for (const auto& element: getDeclaredInterface(ctx)->getElements())
-				if (element.isField()) fields_count++;
-			return fields_count != 0;
-		}
+	private:
+		/**
+		 * @brief The data of the class the type describes, holding its interface and the
+		 * properties precomputed from it.
+		 */
+		[[nodiscard]]
+		CRef<compiler::helios::ClassSymbolData> classSymbolData(query::Context& ctx) const;
 	};
 
 	class NamespaceAbstractTypeImpl final: public AbstractTypeImpl {

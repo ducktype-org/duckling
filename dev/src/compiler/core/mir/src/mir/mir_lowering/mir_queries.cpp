@@ -57,7 +57,10 @@ namespace compiler::mir {
 
 		void operator()(const hc::MatchExpr& expr) {
 			for (const auto& match_case: expr.cases)
-				if (match_case.binding.has_value()) function.addLocal(match_case.binding.value());
+				if (match_case.binding.has_value()) {
+					auto local_ref = function.addLocal(match_case.binding.value());
+					local_ref->lifetime_flags |= LifetimeFlag::NoShadowingValidation;
+				}
 		}
 
 		/** Everything else introduces no locals. */
