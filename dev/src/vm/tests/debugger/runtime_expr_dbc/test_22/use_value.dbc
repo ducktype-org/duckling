@@ -1,0 +1,8 @@
+function use_value { } -> { i64 } {
+	init_pany_type pause_here_ret0, i64;
+	call_func pause_here;
+
+	initFromVMValue value, $ 0;
+	mov_p64_p64 ret0, value;
+	ret_from_expr;
+}

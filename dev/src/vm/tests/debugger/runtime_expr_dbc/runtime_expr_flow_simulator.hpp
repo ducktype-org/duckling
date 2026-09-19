@@ -27,9 +27,12 @@ namespace vm::test {
 		struct LateEvaluation;
 
 		std::deque<LateEvaluation> late_evals;
+
+		std::deque<LateEvaluation*> pending_late_evals;
+
 		using ResT = std::vector<Ref<SafeVMValue>>;
 
-		std::deque<std::pair<ResT, u64>> late_result;
+		std::deque<std::pair<ResT, LateEvaluation*>> late_result;
 
 		std::condition_variable cv;
 		std::mutex              mt;
@@ -38,23 +41,21 @@ namespace vm::test {
 			events::Listener<ResT> listener;
 
 			LateEvaluation(FlowSimulator& simulator, Ref<events::Emitter<ResT>> emitter):
-				  listener([&simulator, self = this](const ResT& res) {
-					  CORE_ASSERT(
-						  simulator.late_evals.size(), "there must be some evaluation not completed"
-					  );
-					  CORE_ASSERT(
-						  &simulator.late_evals.back() == self,
-						  "I am at the highest evaluation to be performed"
-					  );
-
-					  size_t my_idx = simulator.late_evals.size();
-					  simulator.late_result.emplace_back(res, my_idx);
+				  listener([&simulator, self = this](ResT res) {
+					  {
+						  std::lock_guard lock(simulator.mt);
+						  simulator.late_result.emplace_back(std::move(res), self);
+					  }
 					  simulator.cv.notify_all();
-					  simulator.late_evals.pop_back();
 				  }) {
 				emitter->attachListener(this->listener);
 			}
 		};
+
+		void registerLateEvaluation(Ref<events::Emitter<ResT>> emitter) {
+			late_evals.emplace_back(*this, emitter);
+			pending_late_evals.push_back(&late_evals.back());
+		}
 
 	public:
 		FlowSimulator(
@@ -89,6 +90,28 @@ namespace vm::test {
 			assertTrue(bp_res.has_value(), "Wait for breakpoint failed");
 			assertEqual(expected_func, bp_res->function_name, "Breakpoint function mismatch");
 			assertEqual(expected_instr, bp_res->instr_number, "Breakpoint instruction mismatch");
+
+			return *this;
+		}
+
+		FlowSimulator& enforceCallStack(const std::vector<base::StrID>& expected) {
+			auto frames = vm::api::debuggerGetNumberOfStackFrames(pid, thread_id);
+			if (!frames) assertTrue(false, vm::api::errorToString(frames.error()));
+
+			assertEqual(
+				expected.size(), usize(frames->number_of_stack_frames), "Call stack size mismatch"
+			);
+
+			for (u64 frame_index = 0; frame_index < frames->number_of_stack_frames; frame_index++) {
+				auto data = vm::api::debuggerGetStackFrameData(pid, thread_id, frame_index);
+				if (!data) assertTrue(false, vm::api::errorToString(data.error()));
+
+				assertEqual(
+					expected.at(usize(frame_index)),
+					data->function_name,
+					base::strConcat("Call stack mismatch at frame ", frame_index)
+				);
+			}
 			return *this;
 		}
 
@@ -111,7 +134,7 @@ namespace vm::test {
 
 			CORE_ASSERT(ref, "we should get a valid ref to the eventual emitter of the response");
 
-			late_evals.emplace_back(*this, ref.get());
+			registerLateEvaluation(ref.get());
 
 			return *this;
 		}
@@ -187,7 +210,7 @@ namespace vm::test {
 			);
 
 			CORE_ASSERT(ref, "we should get a valid ref to the eventual emitter of the response");
-			late_evals.emplace_back(*this, ref.get());
+			registerLateEvaluation(ref.get());
 			return *this;
 		}
 
@@ -253,12 +276,24 @@ namespace vm::test {
 		}
 
 		FlowSimulator& awaitExprCompletion(const std::vector<u64>& expected) {
-			std::unique_lock lock(mt);
-			cv.wait(lock, [&] { return bool(late_result.size()); });
-			auto res = late_result.front().first;
-			late_result.pop_front();
+			using ApiResT = std::vector<Ref<IVMValue>>;
 
-			using ApiResT          = std::vector<Ref<IVMValue>>;
+			ResT res;
+			{
+				std::unique_lock lock(mt);
+				cv.wait(lock, [&] { return bool(late_result.size()); });
+
+				auto& [result, evaluation] = late_result.front();
+				res                       = std::move(result);
+
+				CORE_ASSERT(
+					!pending_late_evals.empty() && pending_late_evals.back() == evaluation,
+					"Evaluations must complete in LIFO order"
+				);
+				late_result.pop_front();
+				pending_late_evals.pop_back();
+			}
+
 			api::ExitValue api_res = ApiResT{};
 			for (auto safe_ref: res) v_get(api_res, ApiResT).emplace_back(safe_ref.get());
 

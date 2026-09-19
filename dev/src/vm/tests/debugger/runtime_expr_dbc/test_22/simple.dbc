@@ -1,0 +1,4 @@
+function simple { } -> { i64 } {
+	mov_p64_imm ret0, 7;
+	ret_from_expr;
+}
