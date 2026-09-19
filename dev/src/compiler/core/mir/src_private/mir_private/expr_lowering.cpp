@@ -740,7 +740,7 @@ namespace compiler::mir {
 				const bool is_last_case = !first_entry.has_value();
 
 				// Result block: evaluate the case's value into the shared result, then join.
-				auto case_scope = function.newScope(expr_scope);
+				auto case_scope = expr_scope;
 				auto body_end   = function.newBlock("match.case.result");
 				body_end->setTerminator(
 					{ Operation::Jump, {}, { continuation->getID() }, {}, case_scope }

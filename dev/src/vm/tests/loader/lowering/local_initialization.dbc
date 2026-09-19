@@ -1,0 +1,101 @@
+# Fixture for the local variable initialization lowering test.
+
+type pointer: ptr_i64 i64
+type data: pair {
+	first: i64,
+	second: i64
+}
+type variant: maybe { i64, i8 }
+type data: pair_with_pointer {
+	first: ptr_i64,
+	second: i64
+}
+type fixed_size_table: pointer_table ptr_i64 2
+type data: holds_a_variant {
+	tag: i64,
+	choice: maybe
+}
+
+function noop { } -> { } {
+	ret;
+}
+
+# Every local here is only ever touched through data places, so none of them needs a block.
+function simple { } -> { } {
+	init_pany_type		counter, i64;
+	init_pany_type		flag, i8;
+	mov_p64_imm			counter, 7;
+	mov_p8_imm			flag, 1;
+	deinit; # flag
+	deinit; # counter
+	ret;
+}
+
+# `target` has its address taken, but only when the block is actually needed - the `init` itself
+# still does not create one.
+function referenced { } -> { } {
+	init_pany_type		target, i64;
+	init_pany_type		ptr, ptr_i64;
+	ref_pptr_pany		ptr, target;
+	deinit; # ptr
+	deinit; # target
+	ret;
+}
+
+# A pointer holds a reference to a block, so leaving its scope must release it even when the
+# variable itself never got a block of its own.
+function holds_pointer { } -> { } {
+	init_pany_type		ptr, ptr_i64;
+	init_pany_type		plain, pair;
+	deinit; # plain
+	deinit; # ptr
+	ret;
+}
+
+# A variant owns nested blocks, but it still gets none upfront: they are only reachable through
+# a block place argument, which creates the variant's own block first.
+function owns_nested_blocks { } -> { } {
+	init_pany_type		choice, maybe;
+	deinit; # choice
+	ret;
+}
+
+# The same slot index holds variables of different types at different points, which used to force
+# both of them to get a block eagerly. The type is recorded in the frame's slot stack instead.
+function reuses_a_slot { } -> { } {
+	init_pany_type		first, i64;
+	deinit; # first
+	init_pany_type		second, i8;
+	deinit; # second
+	init_pany_type		third, pair;
+	deinit; # third
+	ret;
+}
+
+# `ValidType::holdsPointerReferences` recurses into aggregates, so a pointer reached through a
+# field or a table element still decides how the variable is deinitialized.
+function nests_pointers { } -> { } {
+	init_pany_type		in_a_struct, pair_with_pointer;
+	init_pany_type		in_a_table, pointer_table;
+	deinit; # in_a_table
+	deinit; # in_a_struct
+	ret;
+}
+
+function nests_a_variant { } -> { } {
+	init_pany_type		wrapper, holds_a_variant;
+	deinit; # wrapper
+	ret;
+}
+
+# Returns with a live local, which the lowering has to deinitialize before `ret`.
+function returns_with_live_locals { } -> { i64 } {
+	init_pany_type		leftover, i64;
+	mov_p64_imm			ret0, 1;
+	ret;
+}
+
+function main { } -> { i64 } {
+	call_func			noop;
+	ret;
+}
