@@ -3,5 +3,6 @@
 pub mod driver;
 mod main;
 pub mod util;
+pub mod version;
 
 pub use main::{main, setup_logger};
