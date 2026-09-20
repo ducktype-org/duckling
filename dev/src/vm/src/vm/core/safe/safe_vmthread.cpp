@@ -160,17 +160,13 @@ namespace vm {
 		}
 
 		for (auto [idx, arg_value]: std::views::enumerate(func_args)) {
-			auto* safe_value = dynamic_cast<const SafeVMValue*>(&*arg_value);
-			CORE_ASSERT(safe_value != nullptr, "run argument must be a safe VM value");
-
-			auto vm_value_id = safe_process.findVMValueId(safe_value);
-			CORE_ASSERT(vm_value_id.has_value(), "run argument must be owned by the process");
+			opargs::VMValueIdentifier val_id;
+			val_id.id = arg_value.get();
 
 			auto arg_name = base::StrID(base::strConcat("arg", idx).c_str());
 			start_function.body.push_back(code::builders::makeInstructionFromArgs(
 				base::StrID("initFromVMValue"),
-				{ opargs::OpCodeArg{ opargs::PlaceAny{ arg_name } },
-			      opargs::OpCodeArg{ opargs::VMValueIdentifier{ *vm_value_id } } }
+				{ opargs::OpCodeArg{ opargs::PlaceAny{ arg_name } }, opargs::OpCodeArg{ val_id } }
 			));
 		}
 
@@ -651,12 +647,14 @@ namespace vm {
 		return u64(frame->local_slot_stack_end - runtime_data.slot_stack_base);
 	}
 
-	Ref<SafeVMValue> SafeVMThread::getVMValue(u64 id) const {
-		return safe_process.accessVMValue(id);
+	CRef<IVMValue> SafeVMThread::getVMValue(CRef<opargs::VMValueIdentifier> vm_val) const {
+		v_if_matches(vm_val->id, u64, id) return safe_process.accessVMValue(*id);
+		return std::get<const IVMValue*>(vm_val->id);
 	}
 
-	bool SafeVMThread::isValidVMValueID(u64 id) const {
-		return id < safe_process.numberOfOwnedVMValues();
+	bool SafeVMThread::isValidVMValueID(CRef<opargs::VMValueIdentifier> vm_val) const {
+		v_if_matches(vm_val->id, u64, id) return *id < safe_process.numberOfOwnedVMValues();
+		return true;  // we need to trust that the pointer is valid
 	}
 
 	const Frame& SafeVMThread::getStackFrame(u64 frame_index) const {

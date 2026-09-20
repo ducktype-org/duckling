@@ -316,10 +316,10 @@ namespace vm {
 		) const;
 
 		[[nodiscard]]
-		Ref<SafeVMValue> getVMValue(u64 id) const;
+		CRef<IVMValue> getVMValue(CRef<opargs::VMValueIdentifier> vm_val) const;
 
 		[[nodiscard]]
-		bool isValidVMValueID(u64 id) const;
+		bool isValidVMValueID(CRef<opargs::VMValueIdentifier> vm_val) const;
 
 		[[nodiscard]]
 		const RuntimeData& getRuntimeData() const {

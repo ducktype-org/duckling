@@ -663,8 +663,8 @@ class FunctionValidator {
 					);
 					auto thr = validationThread();
 
-					if (!thr->isValidVMValueID(vm_val->id)) throw InvalidVMValueIDError(*vm_val);
-					CRef<valid_type::ValidType> type = thr->getVMValue(vm_val->id)->getType();
+					if (!thr->isValidVMValueID(vm_val)) throw InvalidVMValueIDError(*vm_val);
+					CRef<valid_type::ValidType> type = thr->getVMValue(vm_val)->getType();
 					if (!types_ctx.contains(type->getName()))
 						throw UnknownTypeOfVMValueError(*vm_val);
 				}
@@ -1904,7 +1904,7 @@ class FunctionValidator {
 				instr_case(Op_initFromVMValue, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
 					auto& thr                 = *validationThread();
-					auto  name = thr.getVMValue(instr.vm_val.id)->getType()->getName();
+					auto  name                = thr.getVMValue(&instr.vm_val)->getType()->getName();
 					local_stack.push(instr.var, opargs::Type(name));
 					index++;
 				}

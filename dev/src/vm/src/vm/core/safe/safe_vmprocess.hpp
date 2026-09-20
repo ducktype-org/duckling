@@ -294,11 +294,5 @@ namespace vm {
 		code::valid_function::ValidFunction validateStartFunction(
 			base::Ref<vm::SafeVMThread> thread, const code::Function& start_function
 		) const;
-
-		/**
-		 * @returns the id of a process-owned VM value, or nullopt when the value is not owned by
-		 * this process.
-		 */
-		base::Optional<u64> findVMValueId(const SafeVMValue* value) const;
 	};
 }

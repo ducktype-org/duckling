@@ -161,7 +161,7 @@ namespace vm::loader::compiler::safe {
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::VMValPtr,
 			opargs::VMValueIdentifier,
-			return std::bit_cast<u64>((**stack_ctx.thread_evaluating_expr).getVMValue(opcode_arg.id).get());
+			return std::bit_cast<u64>((**stack_ctx.thread_evaluating_expr).getVMValue(&opcode_arg).get());
 		);
 		// clang-format on
 

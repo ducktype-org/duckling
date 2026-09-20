@@ -6,6 +6,7 @@
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/element_base.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <string_view>
 #include <variant>
@@ -57,10 +58,20 @@ namespace vm::opargs {
 
 		VMValueIdentifier(const u64 id): id(id) {}
 
-		u64 id = 0;
+		std::variant<u64, const IVMValue*> id;
 
 		constexpr bool operator==(const VMValueIdentifier& other) const noexcept {
-			return id == other.id;
+			if (id.index() != other.id.index()) return false;
+
+			variant_match(id) {
+				variant_case(u64, my_id) { return std::get<u64>(other.id) == my_id; }
+
+				variant_case(const IVMValue*, ptr) {
+					return std::get<const IVMValue*>(other.id) == ptr;
+				}
+			}
+			// cannot use CORE_UNREACHABLE because this is noexcept function
+			return false;
 		}
 	};
 
