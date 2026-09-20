@@ -25,12 +25,12 @@ impl Conditions {
     /// Check, if conditions are met for the given enabled features.
     /// This checks `any(system) and any(arch) and any(flags)`.
     //  Connected with @TODO: #3384 in `are_features_enabled`.
-    pub fn is_enabled_for(&self, enabled_features: HashSet<FeatureName>) -> bool {
+    pub fn is_enabled_for(&self, enabled_features: &HashSet<FeatureName>) -> bool {
         self.are_features_enabled(enabled_features)
     }
 
     /// Check, if enabled features for this package enable this dependency.
-    fn are_features_enabled(&self, enabled_features: HashSet<FeatureName>) -> bool {
+    fn are_features_enabled(&self, enabled_features: &HashSet<FeatureName>) -> bool {
         let Some(ref features) = self.required_root_package_features else {
             return true;
         };
@@ -71,23 +71,23 @@ mod tests {
     //  We will probably need to do some conditional logic (make sure it runs on CI!).
     fn enabled_conditions() {
         let empty_condition = Conditions::new(None);
-        assert!(empty_condition.is_enabled_for([].into()));
-        assert!(empty_condition.is_enabled_for(["a".into()].into()));
+        assert!(empty_condition.is_enabled_for(&[].into()));
+        assert!(empty_condition.is_enabled_for(&["a".into()].into()));
 
         let a_b_condition = Conditions::new(Some(["a".into(), "b".into()].into()));
 
-        assert!(a_b_condition.is_enabled_for(["a".into(), "c".into()].into()));
+        assert!(a_b_condition.is_enabled_for(&["a".into(), "c".into()].into()));
 
-        assert!(!a_b_condition.is_enabled_for(["c".into(), "d".into()].into()));
+        assert!(!a_b_condition.is_enabled_for(&["c".into(), "d".into()].into()));
 
-        assert!(a_b_condition.is_enabled_for(["a".into(), "b".into(), "c".into()].into()));
+        assert!(a_b_condition.is_enabled_for(&["a".into(), "b".into(), "c".into()].into()));
 
         let a_condition = Conditions::new(Some(["a".into()].into()));
 
-        assert!(!a_condition.is_enabled_for([].into()));
+        assert!(!a_condition.is_enabled_for(&[].into()));
 
-        assert!(a_condition.is_enabled_for(["a".into()].into()));
+        assert!(a_condition.is_enabled_for(&["a".into()].into()));
 
-        assert!(!a_condition.is_enabled_for(["b".into()].into()));
+        assert!(!a_condition.is_enabled_for(&["b".into()].into()));
     }
 }

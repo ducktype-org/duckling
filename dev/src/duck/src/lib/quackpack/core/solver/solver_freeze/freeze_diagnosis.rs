@@ -188,8 +188,7 @@ impl SolverFreeze {
             debug!("was satisfied before, but now is not");
             return Ok(false);
         }
-        let forced_child_features =
-            dep.enabled_features(HashSet::from_iter(freeze.features.iter().copied()));
+        let forced_child_features = dep.enabled_features(&freeze.features);
         // Check whether features forced by the dependency on the realisation are all present in its freeze.
         // We do not have to expand them, since we have already checked in `get_manifest_and_check_features_exist`,
         // that freeze-present features are closed under expansion.

@@ -26,7 +26,7 @@ impl DependencyFeature {
     }
 
     /// Check, if this feature is enabled for the given features.
-    pub fn is_enabled_for(&self, enabled_features: HashSet<FeatureName>) -> bool {
+    pub fn is_enabled_for(&self, enabled_features: &HashSet<FeatureName>) -> bool {
         self.conditions
             .as_ref()
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))

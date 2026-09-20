@@ -113,7 +113,7 @@ impl<'a> SolverEngine<'a> {
                 // Parent feature belonged to the previous freeze, so whatever it forced, has been already taken care of.
                 continue;
             }
-            let forced = manifest_dependency.enabled_features([parent_feature].into());
+            let forced = manifest_dependency.enabled_features(&[parent_feature].into());
             if forced
                 .iter()
                 .any(|feature| !realization_features.contains(feature))
@@ -175,7 +175,7 @@ impl<'a> SolverEngine<'a> {
                 .add_dependency_version_realization_var(edge, realization.version());
         }
 
-        let is_dep_forced_default = manifest_dependency.is_enabled_for([].into());
+        let is_dep_forced_default = manifest_dependency.is_enabled_for(&[].into());
         if is_dep_forced_default {
             self.model.require_satisfying_dep_version(edge, None)?;
         } else {
@@ -195,7 +195,7 @@ impl<'a> SolverEngine<'a> {
     ) -> QuackResult<()> {
         let parent_features = parent_features_to_consider(self.input, edge);
 
-        let enabled_always = HashSet::from_iter(manifest_dependency.enabled_features([].into()));
+        let enabled_always = HashSet::from_iter(manifest_dependency.enabled_features(&[].into()));
         let mut tmp_hash_set;
         for parent_feature in parent_features {
             // Features forced by the parent feature but not forced by default,
@@ -205,7 +205,7 @@ impl<'a> SolverEngine<'a> {
                 Some(feature) => {
                     // We use this trick so that forced is a reference and we do not need to clone `enabled_always`.
                     tmp_hash_set =
-                        HashSet::from_iter(manifest_dependency.enabled_features([feature].into()))
+                        HashSet::from_iter(manifest_dependency.enabled_features(&[feature].into()))
                             .difference(&enabled_always)
                             .copied()
                             .collect();
@@ -231,7 +231,7 @@ impl<'a> SolverEngine<'a> {
         parent: PackageId,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
-        let is_dep_forced_default = manifest_dependency.is_enabled_for([].into());
+        let is_dep_forced_default = manifest_dependency.is_enabled_for(&[].into());
         if is_dep_forced_default {
             // The dependency is enabled by default, so `parent` can never be chosen.
             self.model.forbid_package(parent)?;

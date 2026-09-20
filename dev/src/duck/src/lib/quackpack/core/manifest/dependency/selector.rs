@@ -24,7 +24,7 @@ impl<'a> Selector<'a> {
             Self::Name(name) => dependency.name() == *name,
             Self::Alias(alias) => dependency.alias() == Some(*alias),
             Self::EffectiveName(effective_name) => dependency.effective_name() == *effective_name,
-            Self::EnabledBy(features) => dependency.is_enabled_for((*features).clone()),
+            Self::EnabledBy(features) => dependency.is_enabled_for(features),
             Self::Kind(kind) => dependency.kind() == *kind,
             Self::All(selectors) => selectors
                 .iter()

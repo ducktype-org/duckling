@@ -99,7 +99,9 @@ impl SolverFreeze {
         let Some(base_manifest) = manifests.get(&base_pkg) else {
             qp_bail_internal!("freeze package `{base_pkg:?}` without a manifest: {manifests:#?}")
         };
-        let base_pkg_features = self.current_pkg_features(new_pkg_freezes, base_pkg)?;
+        let base_pkg_features = self
+            .current_pkg_features(new_pkg_freezes, base_pkg)?
+            .clone();
         debug!(?base_pkg);
 
         for dependency in
@@ -118,7 +120,7 @@ impl SolverFreeze {
             };
             Self::add_realization(new_pkg_freezes, base_pkg, dep_name, realization)?;
             let enabled_features =
-                dependency.enabled_features(HashSet::from_iter(base_pkg_features.iter().copied()));
+                dependency.enabled_features(&HashSet::from_iter(base_pkg_features.iter().copied()));
             let forced_features = dep_manifest
                 .features()
                 .expand_features(enabled_features.iter().copied())
@@ -144,17 +146,17 @@ impl SolverFreeze {
 
     /// Helper for [`SolverFreeze::mark_children_as_necessary`].
     /// Finds with what features the package is currently listed in the new package freezes map.
-    fn current_pkg_features(
+    fn current_pkg_features<'a>(
         &self,
-        new_pkg_freezes: &mut HashMap<PackageId, SolverPackageFreeze>,
+        new_pkg_freezes: &'a mut HashMap<PackageId, SolverPackageFreeze>,
         pkg: PackageId,
-    ) -> QuackResult<Vec<FeatureName>> {
+    ) -> QuackResult<&'a HashSet<FeatureName>> {
         let Some(pkg) = new_pkg_freezes.get(&pkg) else {
             qp_bail_internal!(
                 "current package `{pkg:?}` does not appear in the new package freezes map: {new_pkg_freezes:#?}"
             )
         };
-        Ok(pkg.features.iter().cloned().collect())
+        Ok(&pkg.features)
     }
 
     /// Helper for [`SolverFreeze::mark_children_as_necessary`].

@@ -45,7 +45,7 @@ impl PackageData {
         {
             let source = dependency.source();
             let features: HashSet<FeatureName> =
-                HashSet::from_iter(dependency.enabled_features(self.requested_features.clone()));
+                HashSet::from_iter(dependency.enabled_features(&self.requested_features));
             if dependency.is_pinned() {
                 let version = dependency
                     .versions()

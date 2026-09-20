@@ -691,7 +691,7 @@ dependencies:
     assert!(feature_names.contains(&"a".to_string()));
     assert!(feature_names.contains(&"b".to_string()));
 
-    let enabled = dep.enabled_features([].into());
+    let enabled = dep.enabled_features(&[].into());
     assert_eq!(enabled.len(), 2);
 }
 
@@ -731,7 +731,7 @@ dependencies:
     assert!(feature_names.contains(&"b".to_string()));
     assert!(feature_names.contains(&"c".to_string()));
 
-    let enabled_features = dep.enabled_features([].into());
+    let enabled_features = dep.enabled_features(&[].into());
 
     assert!(enabled_features.contains(&StrId::new("a")));
 }
