@@ -122,11 +122,11 @@ private:
 		runTestForModule("modules/variables");
 	}
 
-	void booleansTest() { runTestForModule("modules/booleans", 2); }
+	void booleansTest() { runTestForModule("modules/booleans", 2, 3); }
 
 	void arithmeticTest() { runTestForModule("modules/arithmetic"); }
 
-	void comparisonTest() { runTestForModule("modules/comparison", 1, 2); }
+	void comparisonTest() { runTestForModule("modules/comparison", 1, 3); }
 
 	void functionCalls() {
 		runTestForModule("modules/calls_simple", 3);
@@ -161,7 +161,7 @@ private:
 
 	// Both globals are trivially destructible, so they only get a ctor each, and the module gets a
 	// ctor calling them.
-	void globalVariablesTest() { runTestForModule("modules/global-variables", 4, 4); }
+	void globalVariablesTest() { runTestForModule("modules/global-variables", 4, 5); }
 
 	void unitsTest() {
 		runTestForModule("modules/units/unit1", 2, 2);
