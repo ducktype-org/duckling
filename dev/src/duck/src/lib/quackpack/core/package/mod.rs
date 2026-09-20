@@ -1,10 +1,25 @@
-//! A general package abstraction.
+//! Module containing abstraction over packages.
+//!
+//! A package is a folder containing a [`Manifest`](crate::quackpack::core::Manifest).
+//! Plain packages are described by [`Package`].
+//! There are also situations when we want to compile/run a single script from the package,
+//! this additional context is captured by [`PackageScript`](script::PackageScript).
+//! Finally there are scripts with frontmatters, which are singular files with a preambule similar to a manifest.
+//! Those are described by [`StandaloneScript`](script::StandaloneScript).
+//!
+//! The module also introduces a joint wrapper --- an enum [`AnyPackage`], abstracting over all the cases described above.
+
+mod package_context;
+pub mod script;
+
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use super::identity::{Identity, Origin};
-use super::script::Script;
-use super::{Manifest, VenvConfig, Version};
+pub use package_context::*;
+use script::Script;
+
+use crate::quackpack::core::identity::{Identity, Origin};
+use crate::quackpack::core::{Manifest, VenvConfig, Version};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::{QuackResult, StrId};
 

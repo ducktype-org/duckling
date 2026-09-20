@@ -5,7 +5,7 @@
 //!
 //! In particular, [`Identity`] and [`Origin`] implement [`FromStr`].
 //!
-//! For differences between [`FullIdentity`] and [`Identity`], see the `readme.md` under the `core/` directory.
+//! For differences between [`FullIdentity`] and [`Identity`], see the `readme.md` under the `package_identifiers/` directory.
 
 use std::cmp::Ordering;
 use std::fmt::Display;
