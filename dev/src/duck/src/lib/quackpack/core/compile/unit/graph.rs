@@ -63,8 +63,11 @@ impl UnitGraph {
     }
 }
 
+/// Check that the input to [`UnitGraph::new`] is valid.
+///
+/// This should be executed only under `cfg!(debug_assertions)`.
 fn assert_valid_units_order(units: &[(Unit, Vec<UnitId>)]) {
-    for (index, (unit, unit_deps)) in units.iter().enumerate() {
+    for (index, (unit, deps)) in units.iter().enumerate() {
         assert_eq!(
             index as UnitId,
             unit.unit_id(),
@@ -73,9 +76,11 @@ fn assert_valid_units_order(units: &[(Unit, Vec<UnitId>)]) {
             unit.unit_id(),
         );
         assert!(
-            unit_deps.is_sorted(),
-            "unit deps should be sorted {unit:?}, {unit_deps:?}"
+            deps.is_sorted(),
+            "unit `{unit:?}` deps are not sorted {deps:#?}"
         );
+        let has_dups = deps.windows(2).any(|window| window[0] == window[1]);
+        assert!(!has_dups, "unit `{unit:?}` deps have duplicates {deps:#?}");
     }
 }
 
