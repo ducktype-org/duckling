@@ -123,7 +123,7 @@ impl Unit {
         &self.inner.package
     }
 
-    /// Get the root package of this [`Unit`].
+    /// Get the enabled features of this [`Unit`].
     pub fn enabled_features(&self) -> &HashSet<FeatureName> {
         &self.inner.enabled_features
     }

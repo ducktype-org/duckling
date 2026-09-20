@@ -27,7 +27,7 @@ impl UnitGraph {
         if cfg!(debug_assertions) {
             assert_valid_units_order(&units);
         }
-        debug_assert_eq!(root_id, 0, "root Unit should have an ID == 0");
+        debug_assert_eq!(root_id, 0, "invalid root unit id");
         Self { root_id, units }
     }
 
@@ -53,7 +53,7 @@ impl UnitGraph {
     }
 
     /// Get the compilation order.
-    pub fn compilation_order(&self) -> impl Iterator<Item = &'_ Unit> {
+    pub fn compilation_order(&self) -> core::iter::Rev<UnitIdsIter<'_>> {
         self.units_sorted_by_id().rev()
     }
 
@@ -87,37 +87,74 @@ pub fn lower_early_graph(graph: EarlyGraph, bcx: &BuildContext<'_, '_>) -> UnitG
 }
 
 #[derive(Debug)]
-struct UnitGraphBuilder {
-    topo_sorted_identities: HashMap<Identity, u64>,
-    sorted_identities: Vec<Identity>,
+/// Helper for lowering an [`EarlyGraph`] to the [`UnitGraph`].
+/// NOTE: `pub(crate)` indicates API to be used in [`lower_early_graph`], other functions are helpers.
+pub(crate) struct UnitGraphBuilder {
+    /// Map [`Identity`] -> unique id.
+    /// It's guaranteed that ids are from range `(0..identities.len())`.
+    /// For the order of ids and more details, see [`build_ids_map`].
+    identity_to_id: HashMap<Identity, u64>,
+    /// Map unique id -> [`Identity`].
+    /// Because ids are from contiguous range, we store them in a vector.
+    id_to_identity: Vec<Identity>,
+    /// Map [`Identity`] -> [`CompilerPackage`].
     packages: RefCell<HashMap<Identity, CompilerPackage>>,
     graph: DependencyGraph,
+    /// Created [`Unit`]s with their dependencies up to some point.
+    /// The key-value pair is [`Unit`] -> ids of its dependencies.
+    ///
+    /// Some details about populating dependencies:
+    /// * ids can be put in any order,
+    /// * you can duplicate ids.
+    ///
+    /// In [`finish_lowering`] we sort everything + deduplicate.
+    /// Note, that we __don't__ deduplicate [`Unit`]s.
+    /// Each call to [`create_single_unit`] _always_ creates a new [`Unit`].
+    ///
+    /// [`finish_lowering`]: Self::finish_lowering
+    /// [`create_single_unit`]: Self::create_single_unit
     created_units_with_deps: RefCell<HashMap<Unit, Vec<UnitId>>>,
 }
 
 impl UnitGraphBuilder {
-    fn new(graph: EarlyGraph) -> Self {
-        let (topo_sorted_identities, sorted_identities) = build_ids_map(&graph);
+    /// Create a new [`UnitGraphBuilder`] from the [`EarlyGraph`].
+    pub(crate) fn new(graph: EarlyGraph) -> Self {
+        let (identity_to_id, id_to_identity) = build_ids_map(&graph);
         let (packages, graph) = graph.into_inner();
         let packages = packages.into_inner();
         Self {
-            topo_sorted_identities,
-            sorted_identities,
+            identity_to_id,
+            id_to_identity,
             packages: RefCell::new(packages),
             graph,
             created_units_with_deps: RefCell::default(),
         }
     }
 
-    fn next_available_id(&self) -> UnitId {
-        self.created_units_with_deps.borrow().len() as UnitId
-    }
-
-    fn lower(self, bcx: &BuildContext<'_, '_>) -> UnitGraph {
+    /// Lower (essentially) decomposed [`EarlyGraph`] (from [`new`]) to the [`UnitGraph`].
+    ///
+    /// [`new`]: Self::new
+    pub(crate) fn lower(self, bcx: &BuildContext<'_, '_>) -> UnitGraph {
         self.populate_units(bcx);
         self.finish_lowering()
     }
 
+    /// Get the next free for the next [`Unit`].
+    fn next_available_id(&self) -> UnitId {
+        self.created_units_with_deps.borrow().len() as UnitId
+    }
+
+    /// We have fully populated all fields (i.e. created all [`Unit`]s and added their
+    /// dependencies).
+    ///
+    /// Transform this information into a [`UnitGraph`].
+    ///
+    /// This function will, additionally:
+    /// * convert [`created_units_with_deps`] from a `HashMap` into a vector of pairs,
+    /// * sort that vector by the key/first element of pair ([`Unit`]) by [`UnitId`],
+    /// * sort and deduplicate every second element of tuple (dependencies of a [`Unit`]).
+    ///
+    /// [`created_units_with_deps`]: Self::created_units_with_deps
     fn finish_lowering(self) -> UnitGraph {
         let units = self.created_units_with_deps.take();
         let mut units = units.into_iter().collect::<Vec<_>>();
@@ -133,25 +170,38 @@ impl UnitGraphBuilder {
         UnitGraph::new(root_id, units)
     }
 
+    /// Get the [`Identity`] of the root of the graph.
     fn root_identity(&self) -> Identity {
         self.graph.root()
     }
 
+    /// Populate [`created_units_with_deps`] with [`Unit`]s and their dependencies.
+    ///
+    /// [`created_units_with_deps`]: Self::created_units_with_deps
     fn populate_units(&self, bcx: &BuildContext<'_, '_>) {
-        for identity in self.sorted_identities.iter().copied() {
+        for identity in self.id_to_identity.iter().copied() {
             let package = self
                 .packages
                 .borrow_mut()
                 .remove(&identity)
-                .unwrap_or_else(|| {
-                    missing_depenendcy_in_graph(identity, &self.topo_sorted_identities)
-                });
+                .unwrap_or_else(|| missing_depenendcy_in_graph(identity, &self.identity_to_id));
             let node = self.graph.dependencies_for_package(&identity);
             let unit = self.create_single_unit(identity, package, bcx);
             self.populate_unit_deps(&unit, node);
         }
     }
 
+    /// Create a new [`Unit`].
+    ///
+    /// This will use [`next_available_id`] as the [`UnitId`] of this [`Unit`].
+    ///
+    /// This function will:
+    /// * _always_ create a new [`Unit`],
+    /// * put that new [`Unit`] into [`created_units_with_deps`] with an empty vector as
+    ///   dependencies.
+    ///
+    /// [`next_available_id`]: Self::next_available_id
+    /// [`created_units_with_deps`]: Self::created_units_with_deps
     fn create_single_unit(
         &self,
         unit_identity: Identity,
@@ -167,27 +217,38 @@ impl UnitGraphBuilder {
             artifacts_type,
             BuildKind::Compile,
         );
-        self.created_units_with_deps
+        let previous = self
+            .created_units_with_deps
             .borrow_mut()
-            .entry(unit.clone())
-            .or_default();
+            .insert(unit.clone(), vec![]);
+        debug_assert_eq!(
+            previous, None,
+            "we've inserted a new Unit, it shouldn't overwrite anything"
+        );
         unit
     }
 
+    /// Populate [`created_units_with_deps`] of the `unit` with its direct dependencies from `node`.
+    ///
+    /// [`created_units_with_deps`]: Self::created_units_with_deps
     fn populate_unit_deps(&self, unit: &Unit, node: &DependencyNode) {
         let mut map = self.created_units_with_deps.borrow_mut();
-        let deps = map.get_mut(unit).unwrap();
+        let deps = map
+            .get_mut(unit)
+            .expect("`create_single_unit` always inserts unit in the map; we don't create units any other way");
         node.dependencies().iter().for_each(|dep| {
-            deps.push(*self.topo_sorted_identities.get(dep).unwrap_or_else(|| {
-                missing_depenendcy_in_graph(*dep, &self.topo_sorted_identities)
-            }));
+            deps.push(
+                *self
+                    .identity_to_id
+                    .get(dep)
+                    .unwrap_or_else(|| missing_depenendcy_in_graph(*dep, &self.identity_to_id)),
+            );
         });
     }
 }
 
-/// Create a map of `Identity -> UnitId`.
+/// Create a map of [`Identity`] -> [`UnitId`].
 /// We have to do it __before__ creating any [`Unit`], since:
-/// * [`Unit::new`] takes ID's of all its dependencies,
 /// * we allow cycles, therefore we must obtain all ID's before.
 ///
 /// IDs are assigned in the following order:
