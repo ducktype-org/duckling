@@ -26,7 +26,7 @@ namespace compiler::backend_llvm {
 	struct LoweredDefaultAbiSignature {
 		llvm::FunctionType*                          type;
 		bool                                         return_indirect;
-		std::vector<bool>                            parameter_indirect;
+		std::vector<bool>                            parameter_is_indirect;
 		std::vector<std::pair<u32, llvm::Attribute>> attributes;
 	};
 

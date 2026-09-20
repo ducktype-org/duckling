@@ -153,7 +153,7 @@ namespace compiler::backend_llvm {
 		auto& ctx = module->getContext();
 
 		std::vector<llvm::Type*>                     llvm_parameters;
-		std::vector<bool>                            parameter_indirect;
+		std::vector<bool>                            parameter_is_indirect;
 		std::vector<std::pair<u32, llvm::Attribute>> parameter_attributes;
 
 		const bool  return_indirect  = shouldPassDefaultAbiIndirectly(module, return_type);
@@ -167,14 +167,14 @@ namespace compiler::backend_llvm {
 			llvm_return_type = llvm::Type::getVoidTy(ctx);
 		}
 
-		parameter_indirect.reserve(parameters.size());
+		parameter_is_indirect.reserve(parameters.size());
 		llvm_parameters.reserve(llvm_parameters.size() + parameters.size());
 
 		for (const auto& parameter: parameters) {
 			llvm::Type* parameter_type = typeFromLayout(module, parameter);
 			const bool  indirect       = shouldPassDefaultAbiIndirectly(module, parameter);
 
-			parameter_indirect.push_back(indirect);
+			parameter_is_indirect.push_back(indirect);
 			if (indirect) {
 				const auto llvm_index = base::safeIntConv<u32>(llvm_parameters.size());
 				parameter_attributes.emplace_back(
@@ -187,10 +187,10 @@ namespace compiler::backend_llvm {
 		}
 
 		return LoweredDefaultAbiSignature{
-			.type               = llvm::FunctionType::get(llvm_return_type, llvm_parameters, false),
-			.return_indirect    = return_indirect,
-			.parameter_indirect = std::move(parameter_indirect),
-			.attributes         = std::move(parameter_attributes)
+			.type            = llvm::FunctionType::get(llvm_return_type, llvm_parameters, false),
+			.return_indirect = return_indirect,
+			.parameter_is_indirect = std::move(parameter_is_indirect),
+			.attributes            = std::move(parameter_attributes)
 		};
 	}
 

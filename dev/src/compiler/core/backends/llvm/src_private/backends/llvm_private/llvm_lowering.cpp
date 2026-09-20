@@ -511,7 +511,7 @@ namespace compiler::backend_llvm {
 		base::Map<lir::LIRLocalRef, Ref<llvm::Value>> local_register_map;
 
 		bool              default_return_indirect = false;
-		std::vector<bool> default_parameter_indirect;
+		std::vector<bool> default_parameter_is_indirect;
 		llvm::Value*      default_sret_pointer = nullptr;
 
 		/**
@@ -550,7 +550,7 @@ namespace compiler::backend_llvm {
 
 				if_opt_some(var.parameter_index, parameter_index) {
 					const auto source_index = base::safeIntConv<usize>(parameter_index);
-					if (is_default_abi && default_parameter_indirect.at(source_index)) {
+					if (is_default_abi && default_parameter_is_indirect.at(source_index)) {
 						const auto llvm_index = base::safeIntConv<unsigned>(
 							parameter_index + (default_return_indirect ? 1 : 0)
 						);
@@ -766,12 +766,15 @@ namespace compiler::backend_llvm {
 		 * @param builder The LLVM IRBuilder to use for generating instructions.
 		 * @param temporary_ptr Optional storage in which a non-place value should be materialized.
 		 * If omitted, this function allocates its own temporary.
+		 * @param temporary_alignment Guaranteed alignment of `temporary_ptr`. Ignored when
+		 * `temporary_ptr` is not provided.
 		 * @return `llvm::Value*` with the pointer to the data.
 		 */
 		auto loadLIRValueToPointer(
 			const lir::LIRValue&         lir_location,
 			llvm::IRBuilder<>&           builder,
-			base::Optional<llvm::Value*> temporary_ptr = {}
+			base::Optional<llvm::Value*> temporary_ptr       = {},
+			llvm::Align                  temporary_alignment = llvm::Align(1)
 		) -> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(lir::LIRPlace, place) {
@@ -783,6 +786,10 @@ namespace compiler::backend_llvm {
 						= temporary_ptr.has_value()
 					        ? temporary_ptr.value()
 					        : builder.CreateAlloca(val->getType(), nullptr, "tmp_const_ptr");
+					const auto& data_layout      = module->getDataLayout();
+					const auto  source_alignment = data_layout.getABITypeAlign(val->getType());
+					const auto  target_alignment
+						= temporary_ptr.has_value() ? temporary_alignment : source_alignment;
 					if (val->getType()->isAggregateType()) {
 						auto* llvm_constant = llvm::cast<llvm::Constant>(val);
 						auto* storage       = new llvm::GlobalVariable(
@@ -795,19 +802,16 @@ namespace compiler::backend_llvm {
                         );
 						storage->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
-						const auto& data_layout = module->getDataLayout();
-						const auto  alignment   = data_layout.getABITypeAlign(val->getType());
-						storage->setAlignment(alignment);
+						storage->setAlignment(source_alignment);
 						builder.CreateMemCpy(
 							tmp,
-							temporary_ptr.has_value() ? llvm::Align(1) : alignment,
+							target_alignment,
 							storage,
-							alignment,
+							source_alignment,
 							data_layout.getTypeAllocSize(val->getType())
 						);
 					} else {
-						auto* store = builder.CreateStore(val, tmp);
-						if (temporary_ptr.has_value()) store->setAlignment(llvm::Align(1));
+						builder.CreateAlignedStore(val, tmp, target_alignment);
 					}
 					return tmp;
 				}
@@ -1265,7 +1269,7 @@ namespace compiler::backend_llvm {
 
 			for (usize i = 0; i < function_literal.parameter_layouts->size(); ++i) {
 				const auto& argument = lir_instruction.arguments.at(i + 1);
-				if (signature.parameter_indirect.at(i))
+				if (signature.parameter_is_indirect.at(i))
 					args.push_back(loadLIRValueToPointer(argument, builder));
 				else
 					args.push_back(loadLIRValue(argument, builder));
@@ -1358,21 +1362,17 @@ namespace compiler::backend_llvm {
 				const auto& source = lir_instruction.arguments.at(0);
 				const auto& output = lir_instruction.output.value();
 
-				llvm::Type* output_type = typeFromLayout(module, output.layout);
+				llvm::Type*  output_type = typeFromLayout(module, output.layout);
+				llvm::Value* output_ptr  = gepPointerFromLIRPlace(output, builder);
 
-				if (output_type->isAggregateType()) {
-					llvm::Value* output_ptr = gepPointerFromLIRPlace(output, builder);
-					const auto   destination_alignment
-						= output.hasProjections()
-					        ? llvm::Align(1)
-					        : module->getDataLayout().getABITypeAlign(output_type);
-					copyLIRValueToPointer(
-						source, output_ptr, output_type, destination_alignment, builder
-					);
-				} else {
-					llvm::Value* value = loadLIRValue(source, builder);
-					storeOutput(output, value, builder);
-				}
+				const auto destination_alignment
+					= output.hasProjections()
+				        ? llvm::Align(1)
+				        : module->getDataLayout().getABITypeAlign(output_type);
+
+				copyLIRValueToPointer(
+					source, output_ptr, output_type, destination_alignment, builder
+				);
 
 				break;
 			}
@@ -1427,14 +1427,9 @@ namespace compiler::backend_llvm {
 
 					const auto& payload_source = lir_instruction.arguments.at(0);
 					llvm::Type* payload_type   = typeFromLayout(module, params.alternative_layout);
-					if (payload_type->isAggregateType()) {
-						copyLIRValueToPointer(
-							payload_source, data_ptr, payload_type, llvm::Align(1), builder
-						);
-					} else {
-						llvm::Value* payload = loadLIRValue(payload_source, builder);
-						builder.CreateStore(payload, data_ptr);
-					}
+					copyLIRValueToPointer(
+						payload_source, data_ptr, payload_type, llvm::Align(1), builder
+					);
 				}
 				break;
 			}
@@ -1621,8 +1616,8 @@ namespace compiler::backend_llvm {
 				auto signature = lowerDefaultAbiSignature(
 					module, lir_function->parameter_layouts, lir_function->return_type_layout
 				);
-				default_return_indirect    = signature.return_indirect;
-				default_parameter_indirect = std::move(signature.parameter_indirect);
+				default_return_indirect       = signature.return_indirect;
+				default_parameter_is_indirect = std::move(signature.parameter_is_indirect);
 			}
 
 			const Ref fun = llvm::cast<llvm::Function>(
