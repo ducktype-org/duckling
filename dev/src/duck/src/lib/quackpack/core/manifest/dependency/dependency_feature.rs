@@ -1,4 +1,6 @@
 //! Required features of a dependency.
+use std::collections::HashSet;
+
 use super::Conditions;
 use crate::quackpack::core::FeatureName;
 use crate::quackpack::schemas::{OneEntryMap, registry};
@@ -24,7 +26,7 @@ impl DependencyFeature {
     }
 
     /// Check, if this feature is enabled for the given features.
-    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = FeatureName>) -> bool {
+    pub fn is_enabled_for(&self, enabled_features: HashSet<FeatureName>) -> bool {
         self.conditions
             .as_ref()
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))

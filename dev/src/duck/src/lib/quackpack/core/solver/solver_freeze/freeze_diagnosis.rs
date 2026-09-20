@@ -189,7 +189,7 @@ impl SolverFreeze {
             return Ok(false);
         }
         let forced_child_features =
-            dep.enabled_features(Vec::from_iter(freeze.features.iter().copied()));
+            dep.enabled_features(HashSet::from_iter(freeze.features.iter().copied()));
         // Check whether features forced by the dependency on the realisation are all present in its freeze.
         // We do not have to expand them, since we have already checked in `get_manifest_and_check_features_exist`,
         // that freeze-present features are closed under expansion.

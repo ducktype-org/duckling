@@ -4,7 +4,7 @@ use tracing::debug;
 
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::solver::solving::FoundSolution;
-use crate::quackpack::core::{FeatureName, Manifest, PackageId};
+use crate::quackpack::core::{FeatureName, Manifest, PackageId, Selector};
 use crate::util::extend::QpExtend;
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
@@ -102,11 +102,13 @@ impl SolverFreeze {
         let base_pkg_features = self.current_pkg_features(new_pkg_freezes, base_pkg)?;
         debug!(?base_pkg);
 
-        for dependency in base_manifest.dependencies().all_dependencies() {
-            if !dependency.is_enabled_for(base_pkg_features.clone()) {
-                debug!(dep = %dependency.name(), root = ?base_pkg, root_features = ?base_pkg_features, "is not enabled");
-                continue;
-            }
+        for dependency in
+            base_manifest
+                .dependencies()
+                .select(&Selector::EnabledBy(&HashSet::from_iter(
+                    base_pkg_features.iter().copied(),
+                )))
+        {
             let dep_name = dependency.effective_name();
             let realization = self.get_realization(base_pkg, dep_name)?;
             let Some(dep_manifest) = manifests.get(&realization) else {
@@ -115,7 +117,8 @@ impl SolverFreeze {
                 )
             };
             Self::add_realization(new_pkg_freezes, base_pkg, dep_name, realization)?;
-            let enabled_features = dependency.enabled_features(base_pkg_features.clone());
+            let enabled_features =
+                dependency.enabled_features(HashSet::from_iter(base_pkg_features.iter().copied()));
             let forced_features = dep_manifest
                 .features()
                 .expand_features(enabled_features.iter().copied())

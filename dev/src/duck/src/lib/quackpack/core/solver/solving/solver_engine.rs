@@ -10,7 +10,7 @@ use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solving::input::{PackageData, SolverInput};
 use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
 use crate::quackpack::core::solver::util::get_possible_realizations;
-use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Version};
+use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Selector, Version};
 use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Debug)]
@@ -46,10 +46,12 @@ impl<'a> SolverEngine<'a> {
     fn run(mut self, main_pkg: &(PackageId, HashSet<FeatureName>)) -> QuackResult<FoundSolution> {
         self.create_package_variables();
         for (package, data) in self.input.packages_data.iter() {
-            for dependency in data.manifest().dependencies().all_dependencies() {
-                if dependency.is_enabled_for(data.features().iter().cloned()) {
-                    self.construct_for_single_dependency(*package, data, dependency)?;
-                }
+            for dependency in data
+                .manifest()
+                .dependencies()
+                .select(&Selector::EnabledBy(data.features()))
+            {
+                self.construct_for_single_dependency(*package, data, dependency)?;
             }
         }
 
@@ -111,7 +113,7 @@ impl<'a> SolverEngine<'a> {
                 // Parent feature belonged to the previous freeze, so whatever it forced, has been already taken care of.
                 continue;
             }
-            let forced = manifest_dependency.enabled_features(vec![parent_feature]);
+            let forced = manifest_dependency.enabled_features([parent_feature].into());
             if forced
                 .iter()
                 .any(|feature| !realization_features.contains(feature))
@@ -173,7 +175,7 @@ impl<'a> SolverEngine<'a> {
                 .add_dependency_version_realization_var(edge, realization.version());
         }
 
-        let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
+        let is_dep_forced_default = manifest_dependency.is_enabled_for([].into());
         if is_dep_forced_default {
             self.model.require_satisfying_dep_version(edge, None)?;
         } else {
@@ -193,7 +195,7 @@ impl<'a> SolverEngine<'a> {
     ) -> QuackResult<()> {
         let parent_features = parent_features_to_consider(self.input, edge);
 
-        let enabled_always = HashSet::from_iter(manifest_dependency.enabled_features(vec![]));
+        let enabled_always = HashSet::from_iter(manifest_dependency.enabled_features([].into()));
         let mut tmp_hash_set;
         for parent_feature in parent_features {
             // Features forced by the parent feature but not forced by default,
@@ -203,7 +205,7 @@ impl<'a> SolverEngine<'a> {
                 Some(feature) => {
                     // We use this trick so that forced is a reference and we do not need to clone `enabled_always`.
                     tmp_hash_set =
-                        HashSet::from_iter(manifest_dependency.enabled_features(vec![feature]))
+                        HashSet::from_iter(manifest_dependency.enabled_features([feature].into()))
                             .difference(&enabled_always)
                             .copied()
                             .collect();
@@ -229,7 +231,7 @@ impl<'a> SolverEngine<'a> {
         parent: PackageId,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
-        let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
+        let is_dep_forced_default = manifest_dependency.is_enabled_for([].into());
         if is_dep_forced_default {
             // The dependency is enabled by default, so `parent` can never be chosen.
             self.model.forbid_package(parent)?;
