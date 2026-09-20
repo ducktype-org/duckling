@@ -118,8 +118,8 @@ impl Unit {
         self.inner.unit_id
     }
 
-    /// Get the root package of this [`Unit`].
-    pub fn root_package(&self) -> &AnyPackage {
+    /// Get the package of this [`Unit`].
+    pub fn package(&self) -> &AnyPackage {
         &self.inner.package
     }
 
@@ -148,8 +148,8 @@ impl Unit {
     pub fn unique_name(&self) -> String {
         // Can we trim this hash?
         let id = sha256_string(self.identity().origin().to_string());
-        let name = self.root_package().name();
-        let version = self.root_package().version();
+        let name = self.package().name();
+        let version = self.package().version();
         format!("{}-{}-{}", name, version, id)
     }
 
@@ -157,14 +157,14 @@ impl Unit {
     ///
     /// It's a _nice_ name, which can be displayed to the user.
     pub fn descriptive_name(&self) -> String {
-        let name = self.root_package().name();
-        let version = self.root_package().version();
+        let name = self.package().name();
+        let version = self.package().version();
         format!("{name} version {version}")
     }
 
     /// Get the filename of the output of this [`Unit`].
     pub fn output_file_name(&self) -> String {
-        let name = self.root_package().name();
+        let name = self.package().name();
         match self.artifacts_type() {
             ArtifactsType::Binary => format!("{}{}", name, EXE_SUFFIX),
             ArtifactsType::Library => format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX),
@@ -180,7 +180,7 @@ impl Unit {
         &self,
         graph: &UnitGraph,
     ) -> QuackResult<multipackage_schema::Package> {
-        let package = self.root_package();
+        let package = self.package();
         let import_name = package.normalised_name();
         let version = package.version();
         let features = {
@@ -192,7 +192,7 @@ impl Unit {
             let mut result = vec![];
             for dep_id in graph.deps_for(self.unit_id()) {
                 let unit_dep = graph.unit_for(*dep_id);
-                let dep_name = unit_dep.root_package().name();
+                let dep_name = unit_dep.package().name();
                 let dep = package
                     .manifest()
                     .dependencies()
