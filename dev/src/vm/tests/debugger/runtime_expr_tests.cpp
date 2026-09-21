@@ -44,6 +44,8 @@ public:
 		TESTER_ADD_TEST(test22RuntimeExpr);
 		TESTER_ADD_TEST(test23RuntimeExpr);
 		TESTER_ADD_TEST(test24RuntimeExpr);
+		TESTER_ADD_TEST(test25RuntimeExpr);
+		TESTER_ADD_TEST(test26RuntimeExpr);
 	}
 
 private:
@@ -780,6 +782,73 @@ private:
 			})
 			.awaitExprCompletion({ 70 })
 			.awaitExprCompletion({ 24 })
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+	}
+
+	void test25RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_25/main.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 4)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			.putBreakpointAtFrame(0, 12)
+			.resume()
+			.awaitBreakpoint(base::StrID("vm_start_function"), 12)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+			})
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+	}
+
+	void test26RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_26/main.dbc"));
+		const fs::File level1_expr(path("runtime_expr_dbc/test_26/expr_level1.dbc"));
+
+		const vm::test::FlowSimulator::FrameVars level1_vars{
+			{ base::StrID("ret0"), base::StrID("i64") },
+			{ base::StrID("l1_local"), base::StrID("i64") },
+		};
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 4)
+			.putBreakpoint(base::StrID("pause_here"), 0)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			.evalExprExpectBreakpoint(level1_expr)
+			.awaitBreakpoint(base::StrID("pause_here"), 0)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("level1"), level1_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
+			})
+			.putBreakpointAtFrame(2, 3)
+			.resume()
+			.awaitBreakpoint(base::StrID("level1"), 3)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("level1"), level1_vars },
+			})
+			.disableBreakpointAtFrame(2, 3)
+			.resume()
+			.awaitExprCompletion({ 24 })
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
 	}

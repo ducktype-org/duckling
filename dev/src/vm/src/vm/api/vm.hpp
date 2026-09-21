@@ -290,6 +290,18 @@ namespace vm::api {
 	);
 
 	/**
+	 * @brief Enables or disables a breakpoint on a given instruction of the function running in a
+	 * given stack frame.
+	 * @return Nothing if the breakpoint was set successfully or an API error otherwise.
+	 * @note Unlike `setBreakpoint`, this addresses the function through the live stack frame, so it
+	 * also works for functions that are not part of the loaded program (the synthetic
+	 * `vm_start_function` and runtime expressions). The thread must be paused.
+	 */
+	std::expected<void, ApiError> setBreakpointAtFrame(
+		PID pid, ThreadID thread_id, u64 frame_index, u64 instruction_index, bool enable
+	);
+
+	/**
 	 * @brief Gets the first code collection instruction that starts in the provided file line.
 	 * @return Either the mapped `CodePosition` on success, or a nullopt if no such instruction
 	 * exists.

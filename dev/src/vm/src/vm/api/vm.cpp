@@ -218,6 +218,20 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
+	std::expected<void, ApiError> setBreakpointAtFrame(
+		PID pid, ThreadID thread_id, u64 frame_index, u64 instruction_index, bool enable
+	) {
+		return Supervisor::get()
+		    .doRequest(
+				pid,
+				request::SetBreakpointAtFrame{ .thread_id         = thread_id,
+		                                       .frame_idx         = frame_index,
+		                                       .instruction_index = instruction_index,
+		                                       .enable            = enable }
+			)
+		    .transform(ignoreResponse);
+	}
+
 	std::expected<response::CodePosition, ApiError> mapFileLineToCodeCollectionPosition(
 		PID pid, fs::File file, usize line_number
 	) {
