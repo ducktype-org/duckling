@@ -900,7 +900,7 @@ metadata:
 
         let main_pkg = (pkg_a, HashSet::new());
         let err = SolverEngine::run_engine(input, &main_pkg).unwrap_err();
-        assert_eq!(err.to_string(), "failed to find a solution");
+        assert_eq!(err.to_string(), "no dependency resolution found");
     }
 
     #[test]
@@ -963,6 +963,6 @@ metadata:
 
         let main_pkg = (pkg_a, ["new".into()].into());
         let err = SolverEngine::run_engine(input, &main_pkg).unwrap_err();
-        assert_eq!(err.to_string(), "failed to find a solution");
+        assert_eq!(err.to_string(), "no dependency resolution found");
     }
 }
