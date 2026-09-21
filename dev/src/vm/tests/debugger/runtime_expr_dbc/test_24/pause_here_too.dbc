@@ -1,0 +1,4 @@
+# Breakpoint anchor for the inner expression: called by `level2` so it can pause mid-evaluation.
+function pause_here_too { } -> { } {
+	ret;
+}

@@ -43,6 +43,7 @@ public:
 		TESTER_ADD_TEST(test21RuntimeExpr);
 		TESTER_ADD_TEST(test22RuntimeExpr);
 		TESTER_ADD_TEST(test23RuntimeExpr);
+		TESTER_ADD_TEST(test24RuntimeExpr);
 	}
 
 private:
@@ -66,7 +67,11 @@ private:
 
 	vm::test::FlowSimulator createSimulator(const std::vector<fs::File>& files) {
 		auto process_pid_response = vm::api::spawn();
-		assertTrue(process_pid_response.has_value(), "Spawn failed");
+		if (!process_pid_response)
+			assertTrue(
+				false,
+				base::strConcat("Spawn failed: ", vm::api::errorToString(process_pid_response.error()))
+			);
 		auto pid = process_pid_response.value().pid;
 
 		auto loaded_file_response = vm::api::loadFiles(pid, files);
@@ -717,6 +722,64 @@ private:
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
 			})
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+	}
+
+	void test24RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_24/main.dbc"));
+		const fs::File level1_expr(path("runtime_expr_dbc/test_24/expr_level1.dbc"));
+		const fs::File level2_expr(path("runtime_expr_dbc/test_24/expr_level2.dbc"));
+		const fs::File level3_expr(path("runtime_expr_dbc/test_24/expr_level3.dbc"));
+		const fs::File pause_too_file(path("runtime_expr_dbc/test_24/pause_here_too.dbc"));
+
+		const vm::test::FlowSimulator::FrameVars level1_vars{
+			{ base::StrID("ret0"), base::StrID("i64") },
+			{ base::StrID("l1_local"), base::StrID("i64") },
+		};
+		const vm::test::FlowSimulator::FrameVars level2_vars{
+			{ base::StrID("ret0"), base::StrID("i64") },
+			{ base::StrID("l2_local"), base::StrID("i64") },
+		};
+
+		createSimulator({ main_file, pause_too_file })
+			.putBreakpoint(base::StrID("main"), 4)
+			.putBreakpoint(base::StrID("pause_here"), 0)
+			.putBreakpoint(base::StrID("pause_here_too"), 0)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			.evalExprExpectBreakpoint(level1_expr)
+			.awaitBreakpoint(base::StrID("pause_here"), 0)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("level1"), level1_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
+			})
+			.evalExprExpectBreakpoint(level2_expr)
+			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("level1"), level1_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
+				{ base::StrID("level2"), level2_vars },
+				{ base::StrID("pause_here_too"), vm::test::FlowSimulator::FrameVars{} },
+			})
+			.disableBreakpoint(base::StrID("pause_here"), 0)
+			.disableBreakpoint(base::StrID("pause_here_too"), 0)
+			.evalExprNormal(level3_expr, { 46 })
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			.awaitExprCompletion({ 70 })
+			.awaitExprCompletion({ 24 })
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
 	}

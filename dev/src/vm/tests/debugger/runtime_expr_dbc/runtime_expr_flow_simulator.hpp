@@ -82,13 +82,23 @@ namespace vm::test {
 
 		FlowSimulator& runMain() {
 			auto run_res = vm::api::run(pid);
-			assertTrue(run_res.has_value(), "Run failed");
+			if (!run_res)
+				assertTrue(
+					false,
+					base::strConcat("Run failed: ", vm::api::errorToString(run_res.error()))
+				);
 			return *this;
 		}
 
 		FlowSimulator& awaitBreakpoint(base::StrID expected_func, u64 expected_instr) {
 			auto bp_res = vm::api::waitForBreakpoint(pid);
-			assertTrue(bp_res.has_value(), "Wait for breakpoint failed");
+			if (!bp_res)
+				assertTrue(
+					false,
+					base::strConcat(
+						"Wait for breakpoint failed: ", vm::api::errorToString(bp_res.error())
+					)
+				);
 			assertEqual(expected_func, bp_res->function_name, "Breakpoint function mismatch");
 			assertEqual(expected_instr, bp_res->instr_number, "Breakpoint instruction mismatch");
 
@@ -229,16 +239,27 @@ namespace vm::test {
 			std::thread poster([this, &input, delay_ms] {
 				std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
 				auto posted = vm::api::input(pid, input);
-				assertTrue(posted.has_value(), "Posting input failed");
+				if (!posted)
+					assertTrue(
+						false,
+						base::strConcat(
+							"Posting input failed: ", vm::api::errorToString(posted.error())
+						)
+					);
 			});
 
 			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
 			poster.join();
 
-			assertTrue(
-				response.has_value(),
-				"Expected the expression to complete after the input was posted, but it failed"
-			);
+			if (!response)
+				assertTrue(
+					false,
+					base::strConcat(
+						"Expected the expression to complete after the input was posted, but it "
+						"failed: ",
+						vm::api::errorToString(response.error())
+					)
+				);
 			assertExitValue(response.value(), expected_result);
 			return *this;
 		}
@@ -273,7 +294,10 @@ namespace vm::test {
 
 		FlowSimulator& provideInput(const std::string& input) {
 			auto posted = vm::api::input(pid, input);
-			assertTrue(posted.has_value(), "Posting input failed");
+			if (!posted)
+				assertTrue(
+					false, base::strConcat("Posting input failed: ", vm::api::errorToString(posted.error()))
+				);
 			return *this;
 		}
 
@@ -312,7 +336,11 @@ namespace vm::test {
 		/// happened at the expected position.
 		FlowSimulator& pause(base::StrID expected_func, u64 expected_instr) {
 			auto pause_res = vm::api::pause(pid, thread_id);
-			assertTrue(pause_res.has_value(), "Pause failed");
+			if (!pause_res)
+				assertTrue(
+					false,
+					base::strConcat("Pause failed: ", vm::api::errorToString(pause_res.error()))
+				);
 			assertEqual(expected_func, pause_res->function_name, "Pause function mismatch");
 			assertEqual(expected_instr, pause_res->instr_number, "Pause instruction mismatch");
 			return *this;
@@ -320,7 +348,11 @@ namespace vm::test {
 
 		FlowSimulator& pause() {
 			auto pause_res = vm::api::pause(pid, thread_id);
-			assertTrue(pause_res.has_value(), "Pause failed");
+			if (!pause_res)
+				assertTrue(
+					false,
+					base::strConcat("Pause failed: ", vm::api::errorToString(pause_res.error()))
+				);
 			return *this;
 		}
 
@@ -328,7 +360,10 @@ namespace vm::test {
 		/// and the test should call `cleanup()` immediately.
 		FlowSimulator& stop() {
 			auto stop_res = vm::api::stop(pid);
-			assertTrue(stop_res.has_value(), "Stop failed");
+			if (!stop_res)
+				assertTrue(
+					false, base::strConcat("Stop failed: ", vm::api::errorToString(stop_res.error()))
+				);
 			return *this;
 		}
 
@@ -360,19 +395,36 @@ namespace vm::test {
 
 		FlowSimulator& resume() {
 			auto resume_res = vm::api::resume(pid, thread_id);
-			assertTrue(resume_res.has_value(), "Resume failed");
+			if (!resume_res)
+				assertTrue(
+					false,
+					base::strConcat("Resume failed: ", vm::api::errorToString(resume_res.error()))
+				);
 			return *this;
 		}
 
 		FlowSimulator& finishAndAssertExitValue(i64 expected_exit_val) {
 			auto resume_res = vm::api::resume(pid, thread_id);
-			assertTrue(resume_res.has_value(), "Resume failed");
+			if (!resume_res)
+				assertTrue(
+					false,
+					base::strConcat("Resume failed: ", vm::api::errorToString(resume_res.error()))
+				);
 
 			auto join_res = vm::api::join(pid, thread_id);
-			assertTrue(join_res.has_value(), "Join failed");
+			if (!join_res)
+				assertTrue(
+					false, base::strConcat("Join failed: ", vm::api::errorToString(join_res.error()))
+				);
 
 			auto exit_val_res = vm::api::getExitValue(pid);
-			assertTrue(exit_val_res.has_value(), "Failed to get exit value");
+			if (!exit_val_res)
+				assertTrue(
+					false,
+					base::strConcat(
+						"Failed to get exit value: ", vm::api::errorToString(exit_val_res.error())
+					)
+				);
 			assertExitValue(exit_val_res.value(), { u64(expected_exit_val) });
 			return *this;
 		}
@@ -381,7 +433,10 @@ namespace vm::test {
 		/// command chain, otherwise the Supervisor destructor warns about leftover processes.
 		FlowSimulator& cleanup() {
 			auto kill_res = vm::api::kill(pid);
-			assertTrue(kill_res.has_value(), "Kill failed");
+			if (!kill_res)
+				assertTrue(
+					false, base::strConcat("Kill failed: ", vm::api::errorToString(kill_res.error()))
+				);
 			return *this;
 		}
 

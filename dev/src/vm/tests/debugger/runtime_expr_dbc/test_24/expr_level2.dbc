@@ -1,0 +1,15 @@
+function level2 { } -> { i64 } {
+	init_pany_type l2_local, i64;
+	mov_p64_imm l2_local, 20;
+	
+	# The breakpoint set on `pause_here_too` instruction 0 lands here; while paused, `level3`
+	# is evaluated and sees `l2_local` = 20.
+	call_func pause_here_too;
+
+	# Frame stack at compile time: start(0), main(1), level1(2), pause_here(3).
+	# `l1_local` lives in the paused `level1` expression frame (index 2).
+	mov_p64_p64 ret0, frame 2 l1_local;
+	add_p64_p64 ret0, l2_local;
+	add_p64_p64 ret0, l2_local;
+	ret_from_expr;
+}
