@@ -93,7 +93,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
     }
 
     async fn rerun_if_nonempty_input(self, e: QuackError, empty_input: bool) -> QuackResult<SolverAnswer> {
-
+        if e.has_in_chain()
     }
 }
 
