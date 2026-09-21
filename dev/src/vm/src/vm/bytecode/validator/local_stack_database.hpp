@@ -105,6 +105,8 @@ namespace vm::code {
 		 */
 		usize size(StackStateID state) const;
 
+		usize absoluteSize(StackStateID state) const;
+
 		/**
 		 * @returns sum of sizes for all variables on the stack (size of the stack in bytes) at
 		 * given state

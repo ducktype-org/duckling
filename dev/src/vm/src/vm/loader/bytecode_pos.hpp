@@ -62,6 +62,11 @@ namespace vm::loader {
 		}
 
 		[[nodiscard]]
+		base::Optional<usize> absoluteSize() const {
+			return valid_function->local_stack.absoluteSize(state);
+		}
+
+		[[nodiscard]]
 		base::Optional<code::valid_type::TypeSize> byteSize() const {
 			return valid_function->local_stack.byteSize(state);
 		}

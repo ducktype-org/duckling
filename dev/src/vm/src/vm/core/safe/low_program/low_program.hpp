@@ -38,27 +38,29 @@ namespace vm::low {
 		friend class vm::SafeVMThread;
 
 	private:
-		base::StrID                                    name;
-		usize                                          id;
-		MCRef<vm::code::valid_function::ValidFunction> high_func;
+		base::StrID name{};
+		usize       id{};
+		// each LowFuncData needs to have the valid counterpart in fat-bytecode
+		// the counterpart remains valid for entire existance of the micro version
+		CRef<vm::code::valid_function::ValidFunction> high_func;
 #ifdef ENABLE_JIT
-		cf::ControlFlowGraph cfg;
+		cf::ControlFlowGraph cfg{};
 #endif
-		MicroBytecode bc;
+		MicroBytecode bc{};
 		// the copy of original bytecode. Always has the same length as bc
 		// kept for debugging & JIT purposes
-		MicroBytecode orig_bc;
+		MicroBytecode orig_bc{};
 
 		/// The maximum size of the local variables on stack required by the function frame.
-		usize local_stack_size;
+		usize local_stack_size{};
 		/// The maximum count of local variable slots required by the function frame.
-		usize local_slot_count;
+		usize local_slot_count{};
 
-		usize arg_size;
+		usize arg_size{};
 		// The total summed size of all return values.
-		usize                 ret_size;
-		std::vector<TypeCRef> parameters;
-		std::vector<TypeCRef> result_types;
+		usize                 ret_size{};
+		std::vector<TypeCRef> parameters{};
+		std::vector<TypeCRef> result_types{};
 
 	public:
 		/**
@@ -80,33 +82,69 @@ namespace vm::low {
 		 */
 		std::vector<InstructionRange> instruction_mapping;
 
+		LowFuncData(CRef<vm::code::valid_function::ValidFunction> ref): high_func(ref) {}
+
 	public:
-		base::StrID getName() const { return name; }
+		[[nodiscard]]
+		base::StrID getName() const {
+			return name;
+		}
 
-		usize getId() const { return id; }
+		[[nodiscard]]
+		usize getId() const {
+			return id;
+		}
 
-		MCRef<vm::code::valid_function::ValidFunction> getHighFunc() const { return high_func; }
+		[[nodiscard]]
+		MCRef<vm::code::valid_function::ValidFunction> getHighFunc() const {
+			return high_func;
+		}
 
 #ifdef ENABLE_JIT
 		const cf::ControlFlowGraph& getCfg() const { return cfg; }
 #endif
 
-		const MicroBytecode& getBc() const { return bc; }
+		[[nodiscard]]
+		const MicroBytecode& getBc() const {
+			return bc;
+		}
 
-		const MicroBytecode& getOrigBc() const { return orig_bc; }
+		[[nodiscard]]
+		const MicroBytecode& getOrigBc() const {
+			return orig_bc;
+		}
 
-		usize getLocalStackSize() const { return local_stack_size; }
+		[[nodiscard]]
+		usize getLocalStackSize() const {
+			return local_stack_size;
+		}
 
-		usize getLocalSlotCount() const { return local_slot_count; }
+		[[nodiscard]]
+		usize getLocalSlotCount() const {
+			return local_slot_count;
+		}
 
-		usize getArgSize() const { return arg_size; }
+		[[nodiscard]]
+		usize getArgSize() const {
+			return arg_size;
+		}
 
-		usize getRetSize() const { return ret_size; }
+		[[nodiscard]]
+		usize getRetSize() const {
+			return ret_size;
+		}
 
-		const std::vector<TypeCRef>& getParameters() const { return parameters; }
+		[[nodiscard]]
+		const std::vector<TypeCRef>& getParameters() const {
+			return parameters;
+		}
 
-		const std::vector<TypeCRef>& getResultTypes() const { return result_types; }
+		[[nodiscard]]
+		const std::vector<TypeCRef>& getResultTypes() const {
+			return result_types;
+		}
 
+		[[nodiscard]]
 		const std::vector<InstructionRange>& getInstructionMapping() const {
 			return instruction_mapping;
 		}

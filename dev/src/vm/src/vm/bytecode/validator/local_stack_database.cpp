@@ -112,6 +112,11 @@ usize ls_db::size(StackStateID state) const {
 	return namestack_entries.at(name_state_id).depth;
 }
 
+usize ls_db::absoluteSize(StackStateID state) const {
+	auto name_state_id = validateState(state).first;
+	return namestack_entries.at(name_state_id).size_in_blocks;
+}
+
 base::Optional<base::StrID> ls_db::getName(StackStateID state, usize idx) const {
 	match_optional(getNameEntryByIdx(state, idx)) {
 		opt_some(entry) { return entry.name_of_last; }

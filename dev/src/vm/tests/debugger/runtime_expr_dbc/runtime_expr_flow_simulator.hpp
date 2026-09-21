@@ -10,6 +10,7 @@
 #include <tester/tester.hpp>
 
 #include <vm/api/data/api_error.hpp>
+#include <vm/api/data/response.hpp>
 #include <vm/api/vm.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 
@@ -94,7 +95,11 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& enforceCallStack(const std::vector<base::StrID>& expected) {
+		using FrameVar = std::pair<base::StrID, base::StrID>;
+		using FrameVars = std::vector<FrameVar>;
+		using FrameExpectation = std::pair<base::StrID, base::Optional<FrameVars>>;
+
+		FlowSimulator& enforceCallStack(const std::vector<FrameExpectation>& expected) {
 			auto frames = vm::api::debuggerGetNumberOfStackFrames(pid, thread_id);
 			if (!frames) assertTrue(false, vm::api::errorToString(frames.error()));
 
@@ -106,11 +111,63 @@ namespace vm::test {
 				auto data = vm::api::debuggerGetStackFrameData(pid, thread_id, frame_index);
 				if (!data) assertTrue(false, vm::api::errorToString(data.error()));
 
+				const auto& [expected_name, expected_vars] = expected.at(usize(frame_index));
+
 				assertEqual(
-					expected.at(usize(frame_index)),
+					expected_name,
 					data->function_name,
 					base::strConcat("Call stack mismatch at frame ", frame_index)
 				);
+
+				if (!expected_vars) continue;
+
+				assertEqual(
+					expected_vars->size(),
+					data->frame_vars.size(),
+					base::strConcat(
+						"Frame var count mismatch at frame ",
+						frame_index,
+						" (",
+						data->function_name,
+						"): expected ",
+						expected_vars->size(),
+						", got ",
+						data->frame_vars.size()
+					)
+				);
+
+				for (usize var_index = 0; var_index < expected_vars->size(); var_index++) {
+					const auto& [expected_var_name, expected_var_type] = expected_vars->at(var_index);
+					const auto& actual_var = data->frame_vars.at(var_index);
+
+					assertTrue(
+						actual_var.name.has_value(),
+						base::strConcat(
+							"Frame var ", var_index, " at frame ", frame_index, " has no name"
+						)
+					);
+					assertTrue(
+						actual_var.type.has_value(),
+						base::strConcat(
+							"Frame var ", var_index, " at frame ", frame_index, " has no type"
+						)
+					);
+
+					assertEqual(
+						expected_var_name,
+						*actual_var.name,
+						base::strConcat(
+							"Frame var name mismatch at frame ", frame_index, " index ", var_index
+						)
+					);
+					assertEqual(
+						expected_var_type,
+						*actual_var.type,
+						base::strConcat(
+							"Frame var type mismatch at frame ", frame_index, " index ", var_index
+						)
+					);
+				}
 			}
 			return *this;
 		}

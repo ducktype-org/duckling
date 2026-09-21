@@ -46,6 +46,20 @@ public:
 	}
 
 private:
+	/// The local variables always materialized by the synthetic `vm_start_function`. Once the
+	/// thread is paused inside a call, only these five slots are still owned by the frame: the
+	/// two argument slots (`argc`, `argv`) have been handed over to `main`.
+	static const vm::test::FlowSimulator::FrameVars& startFunctionVars() {
+		static const vm::test::FlowSimulator::FrameVars vars{
+			{ base::StrID("ret_value"), base::StrID("i64") },
+			{ base::StrID("argv_internal"), base::StrID("ptr_argv") },
+			{ base::StrID("argc_internal"), base::StrID("i64") },
+			{ base::StrID("ix"), base::StrID("i64") },
+			{ base::StrID("main_ret_val"), base::StrID("i64") },
+		};
+		return vars;
+	}
+
 	vm::test::FlowSimulator createSimulator(const fs::File& file) {
 		return createSimulator(std::vector<fs::File>{ file });
 	}
@@ -72,38 +86,38 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprNormal(get_values_expr, { 0, 0 })
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.resume()
 			.awaitBreakpoint(base::StrID("main"), 5)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprNormal(get_values_expr, { 4, 0 })
 			.awaitBreakpoint(base::StrID("main"), 5)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.resume()
 			.awaitBreakpoint(base::StrID("main"), 7)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprNormal(get_values_expr, { 4, 2 })
 			.awaitBreakpoint(base::StrID("main"), 7)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
@@ -131,8 +145,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 16)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			});
 
 		using namespace std::views;
@@ -140,8 +154,8 @@ private:
 			simulator.evalExprNormal(expr, res)
 				.awaitBreakpoint(base::StrID("main"), 16)
 				.enforceCallStack({
-					base::StrID("vm_start_function"),
-					base::StrID("main"),
+					{ base::StrID("vm_start_function"), startFunctionVars() },
+					{ base::StrID("main"), std::nullopt },
 				});
 
 		simulator.finishAndAssertExitValue(0);
@@ -157,14 +171,14 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 5)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprNormal(call_foo_expr, { 7 })
 			.awaitBreakpoint(base::StrID("main"), 5)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(0)
 			.cleanup();
@@ -179,14 +193,14 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 2)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprNormal(modify_value_expr, { 42 })
 			.awaitBreakpoint(base::StrID("main"), 2)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(42)
 			.cleanup();
@@ -201,16 +215,16 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("foo"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("foo"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("foo"), std::nullopt },
 			})
 			.evalExprNormal(access_frame_2_expr, { 10 })
 			.awaitBreakpoint(base::StrID("foo"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("foo"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("foo"), std::nullopt },
 			})
 			.finishAndAssertExitValue(7)
 			.cleanup();
@@ -225,16 +239,16 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("foo"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("foo"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("foo"), std::nullopt },
 			})
 			.evalExprNormal(compare_frames_expr, { 0 })
 			.awaitBreakpoint(base::StrID("foo"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("foo"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("foo"), std::nullopt },
 			})
 			.finishAndAssertExitValue(7)
 			.cleanup();
@@ -250,20 +264,20 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 2)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprNormal(create_value_expr, { 42 })
 			.awaitBreakpoint(base::StrID("main"), 2)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprNormal(use_value_expr, { 42 })
 			.awaitBreakpoint(base::StrID("main"), 2)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(10)
 			.cleanup();
@@ -278,26 +292,26 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("foo"), 0)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("foo"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("foo"), std::nullopt },
 			})
 			.evalExprExpectBreakpoint(expr)
 			.awaitBreakpoint(base::StrID("foo"), 0)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("foo"),
-				base::StrID("call_foo"),
-				base::StrID("foo"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("foo"), std::nullopt },
+				{ base::StrID("call_foo"), std::nullopt },
+				{ base::StrID("foo"), std::nullopt },
 			})
 			.resume()
 			.awaitExprCompletion({ 13 })
 			.awaitBreakpoint(base::StrID("foo"), 0)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("foo"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("foo"), std::nullopt },
 			})
 			.finishAndAssertExitValue(2)
 			.cleanup();
@@ -312,8 +326,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprExpectLoadError(frame_global_expr, vm::code::UnknownLocalNameError::ERR_MSG)
 			.cleanup();
@@ -328,8 +342,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprExpectLoadError(frame_oob_expr, vm::code::UnknownLocalNameError::ERR_MSG)
 			.cleanup();
@@ -344,8 +358,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprExpectLoadError(tail_rec_expr, vm::code::ForbiddenOpcodePresent::ERR_MSG)
 			.cleanup();
@@ -360,8 +374,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprExpectLoadError(exit_expr, vm::code::ForbiddenOpcodePresent::ERR_MSG)
 			.cleanup();
@@ -376,8 +390,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprExpectLoadError(ret_expr, vm::code::ForbiddenOpcodePresent::ERR_MSG)
 			.cleanup();
@@ -399,8 +413,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprProvideInputAfter(input_expr, "42\n", 10, { 42 })
 			.cleanup();
@@ -415,16 +429,16 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprExpectTimeout(sleep_expr)
 			.provideInput("42\n")
 			.awaitExprCompletion({ 42 })
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
@@ -441,31 +455,31 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprExpectBreakpoint(outer_expr)
 			.awaitBreakpoint(base::StrID("pause_here"), 0)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("outer"),
-				base::StrID("pause_here"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("outer"), std::nullopt },
+				{ base::StrID("pause_here"), std::nullopt },
 			})
 			.evalExprNormal(inner_expr, { 106 })
 			.awaitBreakpoint(base::StrID("pause_here"), 0)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("outer"),
-				base::StrID("pause_here"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("outer"), std::nullopt },
+				{ base::StrID("pause_here"), std::nullopt },
 			})
 			.resume()
 			.awaitExprCompletion({ 204 })
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
@@ -485,53 +499,53 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprExpectBreakpoint(level1_expr)
 			.awaitBreakpoint(base::StrID("pause_here"), 0)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("level1"),
-				base::StrID("pause_here"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("level1"), std::nullopt },
+				{ base::StrID("pause_here"), std::nullopt },
 			})
 			.evalExprExpectBreakpoint(level2_expr)
 			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("level1"),
-				base::StrID("pause_here"),
-				base::StrID("level2"),
-				base::StrID("pause_here_too"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("level1"), std::nullopt },
+				{ base::StrID("pause_here"), std::nullopt },
+				{ base::StrID("level2"), std::nullopt },
+				{ base::StrID("pause_here_too"), std::nullopt },
 			})
 			.evalExprNormal(level3_expr, { 46 })
 			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("level1"),
-				base::StrID("pause_here"),
-				base::StrID("level2"),
-				base::StrID("pause_here_too"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("level1"), std::nullopt },
+				{ base::StrID("pause_here"), std::nullopt },
+				{ base::StrID("level2"), std::nullopt },
+				{ base::StrID("pause_here_too"), std::nullopt },
 			})
 			.resume()
 			// `level2`: paused `l1_local` (10) + overwritten `l2_local` (30) + `l2_local` (30).
 			.awaitExprCompletion({ 70 })
 			.awaitBreakpoint(base::StrID("pause_here"), 0)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("level1"),
-				base::StrID("pause_here"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("level1"), std::nullopt },
+				{ base::StrID("pause_here"), std::nullopt },
 			})
 			.resume()
 			.awaitExprCompletion({ 24 })
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
@@ -570,8 +584,8 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprExpectTimeout(spin_expr)
 			.pause()
@@ -579,8 +593,8 @@ private:
 			.awaitExprCompletion({ 0 })
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
@@ -596,21 +610,21 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 0)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprExpectLoadError(reads_local_expr, vm::code::UnknownLocalNameError::ERR_MSG)
 			.resume()
 			.awaitBreakpoint(base::StrID("main"), 2)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprNormal(reads_local_expr, { 7 })
 			.awaitBreakpoint(base::StrID("main"), 2)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
@@ -628,40 +642,40 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprNormal(create_value_expr, { 42 })
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprExpectBreakpoint(use_value_expr)
 			.awaitBreakpoint(base::StrID("pause_here"), 0)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
-				base::StrID("use_value"),
-				base::StrID("pause_here"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("use_value"), std::nullopt },
+				{ base::StrID("pause_here"), std::nullopt },
 			});
 
 		for (u64 i = 0; i < 1'000; i++)
 			simulator.evalExprNormal(simple_expr, { 7 })
 				.awaitBreakpoint(base::StrID("pause_here"), 0)
 				.enforceCallStack({
-					base::StrID("vm_start_function"),
-					base::StrID("main"),
-					base::StrID("use_value"),
-					base::StrID("pause_here"),
+					{ base::StrID("vm_start_function"), startFunctionVars() },
+					{ base::StrID("main"), std::nullopt },
+					{ base::StrID("use_value"), std::nullopt },
+					{ base::StrID("pause_here"), std::nullopt },
 				});
 
 		simulator.resume()
 			.awaitExprCompletion({ 42 })
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
@@ -676,14 +690,14 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 5)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprNormal(multi_expr, { 11, 22, 33, 44 })
 			.awaitBreakpoint(base::StrID("main"), 5)
 			.enforceCallStack({
-				base::StrID("vm_start_function"),
-				base::StrID("main"),
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(2'137)
 			.cleanup();

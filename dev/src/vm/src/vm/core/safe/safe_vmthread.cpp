@@ -797,12 +797,20 @@ namespace vm {
 
 	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getCurrentHighPosition(u64 frame_index
 	) const {
-		auto opt_low_pos = getCurrentPosition(frame_index);
-		if_opt_none(opt_low_pos) return std::nullopt;
+		if (frame_index >= getNumberOfCurrentStackFrames()) return std::nullopt;
+		const Frame& frame = getStackFrame(frame_index);
 
-		auto fat_pos = safe_process.getCompiler()->mapLowVMProgramPositionToCodeCollectionPosition(
-			*opt_low_pos
-		);
+		// we don't use getCurrentPosition on purpose
+		// we aren't interested from where the function was called
+		// we want to know where thread will be once it continue
+		auto& func = *frame.current_function;
+		auto  low_pos
+			= low::LowCodePosition{ .function = &func,
+			                        .instruction_index
+			                        = static_cast<u64>(frame.instr - func.getBc().data()) };
+
+		auto fat_pos
+			= safe_process.getCompiler()->mapLowVMProgramPositionToCodeCollectionPosition(low_pos);
 		if_opt_none(fat_pos) return std::nullopt;
 
 		return loader::ValidFuncPosition(

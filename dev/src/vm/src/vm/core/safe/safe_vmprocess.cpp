@@ -548,15 +548,18 @@ namespace vm {
 				if (!opt_thread)
 					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
 				auto thread        = opt_thread.value();
-				auto maybe_low_pos = thread->getCurrentPosition(frame_index);
-				if (!maybe_low_pos) return std::unexpected(maybe_low_pos.error());
-				const low::LowCodePosition low_pos = maybe_low_pos.value();
+				auto maybe_pos = thread->getCurrentHighPosition(frame_index);
+				if (!maybe_pos) return std::unexpected(api::OtherError{"Frame not found"});
 
 				const Frame& frame = thread->getStackFrame(frame_index);
 
 				const u64 slot_count = base::safeIntConv<u64>(
 					frame.local_slot_stack_end - frame.local_slot_stack_base
 				);
+				
+				auto& valid_pos = *maybe_pos;
+				auto expected = *valid_pos.absoluteSize();
+				CORE_ASSERT(slot_count == expected, "Compile metadata must always be consistent with runtime: " + std::to_string(slot_count) + " != " + std::to_string(*valid_pos.size()));
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
 				for (u64 slot_index = 0; slot_index < slot_count; slot_index++) {
@@ -570,36 +573,12 @@ namespace vm {
 
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset = base::safeIntConv<u64>(slot.data - frame.local_stack),
-						.name   = std::nullopt,
-						.type   = std::nullopt,
+						.name   = valid_pos.getName(slot_index),
+						.type   = valid_pos.getTypeName(slot_index),
 						.value  = SafeVMValueRef::makeShared(
                             *this, memory.getBlockType(block), Pointer(block, 0)
                         ),
 					});
-				}
-
-				if_opt_some(
-					compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_pos), high_pos
-				) {
-					auto func_opt
-						= loader.getHighProgram()->functions().atMaybe(high_pos.function_name);
-					if (!func_opt) {
-						return api::Response(api::response::StackFrameData{
-							.function_name = frame.current_function->getName(),
-							.frame_vars    = frame_vars });
-					}
-					auto  func_shared_box = **func_opt;
-					auto  func_ref        = func_shared_box.ref();
-					auto  stack_state     = func_ref->stack_states.at(high_pos.instruction_index);
-					auto& ls_db           = func_ref->local_stack;
-
-					using namespace std::views;
-					for (auto&& [block_idx, frame_var]: zip(iota(0u), frame_vars)) {
-						frame_var.name = ls_db.getName(stack_state, block_idx);
-						frame_var.type = ls_db.getTypeName(stack_state, block_idx);
-						CORE_ASSERT(frame_var.type, "we should have a type of a variable on stack");
-						CORE_ASSERT(frame_var.name, "we should have a name of a variable on stack");
-					}
 				}
 
 				return api::Response(api::response::StackFrameData{
