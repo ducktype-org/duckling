@@ -1,11 +1,10 @@
 //! A simple package identity, a unique identifier in the dependencies' graph.
-//! Difference between [`Identity`] and [`FullIdentity`] is that [`Identity`] doesn't have commits inside.
+//! If you want to validate build graph (f.e. check that we don't have duplicates) this is the type
+//! you are looking for. Do __not__ use [`FullIdentity`] for that.
 //!
+//! For differences between [`FullIdentity`] and [`Identity`], see the `readme.md` under the `package_identifiers/` directory.
 //! Also, they have different [`Display`], [`Serialize`], and [`Deserialize`] impls.
-//!
 //! In particular, [`Identity`] and [`Origin`] implement [`FromStr`].
-//!
-//! For differences between [`FullIdentity`] and [`Identity`], see the `readme.md` under the `core/` directory.
 
 use std::cmp::Ordering;
 use std::fmt::Display;

@@ -9,6 +9,7 @@
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
+#include <mir/mir_lowering/mir_lifetimes.hpp>
 #include <mir/mir_lowering/mir_liveness.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
@@ -52,6 +53,7 @@ public:
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(tupleTypeCoercionTest);
 		TESTER_ADD_TEST(moveStateMapTest);
+		TESTER_ADD_TEST(conditionalTemporaryMoveStateTest);
 		TESTER_ADD_TEST(sliceTest);
 		TESTER_ADD_TEST(lazyBooleanShortCircuitTest);
 		TESTER_ADD_TEST(lazyBooleanChainsTest);
@@ -99,13 +101,16 @@ private:
 				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
 					preds.put(succ).first->second.push_back(block_id);
 
-			auto move_states = compiler::mir::calculateGlobalInMoveStateMap(pre_mir, preds);
+			auto locals_by_scope = compiler::mir::collectLocalsByScope(pre_mir);
+			auto move_states     = compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(
+                pre_mir, preds, locals_by_scope
+            );
 
 			// `a` is a parameter, so it is alive at the entry block.
 			auto entry     = pre_mir.block_order.front();
 			auto entry_map = move_states.block_in_move_state.atMaybe(entry);
 			ASSERT_HAS_VALUE(entry_map);
-			auto a_at_entry = entry_map.value()->atMaybe(a_id.value());
+			auto a_at_entry = entry_map.value()->stateOf(a_id.value());
 			ASSERT_HAS_VALUE(a_at_entry);
 			ASSERT_TRUE(a_at_entry.value()->status == compiler::mir::MoveStatus::Alive);
 
@@ -113,12 +118,65 @@ private:
 			// observe `a` as `Moved` with exactly one reaching move site.
 			bool found_moved = false;
 			for (const auto& [block_id, map]: move_states.block_in_move_state) {
-				auto state = map.atMaybe(a_id.value());
+				auto state = map.stateOf(a_id.value());
 				if (state.has_value() && state.value()->status == compiler::mir::MoveStatus::Moved
 				    && state.value()->move_sites.size() == 1)
 					found_moved = true;
 			}
 			ASSERT_TRUE(found_moved);
+		});
+	}
+
+	/**
+	 * @brief A temporary built on only one control-flow path is `MaybeMoved` where the paths merge.
+	 *
+	 * `condTemporary(c)` lowers `c or makeR(1).a == 0` lazily, so the `R` temporary of the
+	 * right-hand side is constructed on one path and never touched on the other. It lives in the
+	 * scope of the whole expression, so the join has to report it as `MaybeMoved` (which is what
+	 * gives it a conditional destructor) instead of treating it as uninitialized.
+	 */
+	void conditionalTemporaryMoveStateTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
+			for (const auto& fn: unit.functions)
+				if (fn->declaration->original_name.strView() == "condTemporary") target = fn;
+			ASSERT_HAS_VALUE(target);
+
+			auto pre_mir = compiler::mir::lowerToPreMIRFunction(ctx, target.value());
+
+			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
+			for (auto block_id: pre_mir.block_order)
+				for (auto succ:
+				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
+					preds.put(succ).first->second.push_back(block_id);
+
+			auto locals_by_scope = compiler::mir::collectLocalsByScope(pre_mir);
+			auto move_states     = compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(
+                pre_mir, preds, locals_by_scope
+            );
+
+			// The `R` temporary holding the result of `makeR(1)`.
+			base::Optional<compiler::mir::LocalID> tmp_id;
+			for (const auto& local: pre_mir.local_list)
+				if (local.type.getType().getKind() == compiler::tsh::Kind::Class) {
+					ASSERT_TRUE(tmp_id.empty());
+					tmp_id = local.id;
+				}
+			ASSERT_HAS_VALUE(tmp_id);
+
+			// Both paths reach the merge block, and there the temporary is only maybe-initialized.
+			bool found_maybe_moved = false;
+			for (const auto& [block_id, map]: move_states.block_in_move_state) {
+				auto state = map.stateOf(tmp_id.value());
+				if (state.has_value()
+				    && state.value()->status == compiler::mir::MoveStatus::MaybeMoved)
+					found_maybe_moved = true;
+			}
+			ASSERT_TRUE(found_maybe_moved);
 		});
 	}
 
