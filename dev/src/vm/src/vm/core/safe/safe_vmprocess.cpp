@@ -548,7 +548,7 @@ namespace vm {
 				if (!opt_thread)
 					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
 				auto thread        = opt_thread.value();
-				auto maybe_pos = thread->getCurrentHighPosition(frame_index);
+				auto maybe_pos = thread->getUpcommingPosition(frame_index);
 				if (!maybe_pos) return std::unexpected(api::OtherError{"Frame not found"});
 
 				const Frame& frame = thread->getStackFrame(frame_index);
