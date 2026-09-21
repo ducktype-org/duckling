@@ -4,7 +4,7 @@
 //! Plain packages are described by [`Package`].
 //! There are also situations when we want to compile/run a single script from the package,
 //! this additional context is captured by [`PackageScript`](script::PackageScript).
-//! Finally there are scripts with frontmatters, which are singular files with a preambule similar to a manifest.
+//! Finally there are scripts outside packages, which are singular files with a potential preambule (called frontmatter) similar to a manifest.
 //! Those are described by [`StandaloneScript`](script::StandaloneScript).
 //!
 //! The module also introduces a joint wrapper --- an enum [`AnyPackage`], abstracting over all the cases described above.
