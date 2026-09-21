@@ -11,6 +11,7 @@ use super::cli_args_preprocessing::typos_fixing::fix_typos;
 use super::global_options::GlobalOptions;
 use super::subcommands::exec_for;
 use super::subcommands::run_script::{check_is_script, possible_script_path_subcmd};
+use crate::duck::driver::cli_ext::ArgMatchesExt;
 use crate::duck::driver::external_subcommands::ExternalSubcommands;
 use crate::quackpack::core::compile::duckc::Duckc;
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
@@ -38,6 +39,11 @@ pub(crate) fn run(ctx: &mut DuckContext) -> QuackResult<()> {
     let args = fix_typos(matches, ctx, &external)?;
     let args = expand_aliases(args, ctx, vec![])?;
     global_opts.update_with_subcommand_matches(&args);
+    if args.safe_get_flag("version") {
+        let version = crate::duck::version::Version::get();
+        version.print(ctx, global_opts.verbose)?;
+        return Ok(());
+    }
     global_opts.update_context(ctx)?;
     debug!(
         subcommand = ?args.subcommand_name(),
