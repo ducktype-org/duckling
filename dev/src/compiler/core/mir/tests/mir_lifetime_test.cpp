@@ -12,6 +12,7 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
@@ -44,6 +45,7 @@ public:
 		TESTER_ADD_TEST(lifetimeFlagsNestedBlocks);
 		TESTER_ADD_TEST(destructorInsertionTest);
 		TESTER_ADD_TEST(intermediateDestructorBlocksTest);
+		TESTER_ADD_TEST(conditionalExpressionTemporariesTest);
 	}
 
 protected:
@@ -89,7 +91,7 @@ private:
 	void lifetimeFlagsRepeatedBlocks() {
 		auto [module, scope]
 			= getModule(fs::File(path("modules/lifetime_flags/repeated_blocks.dk")));
-		auto            foo_mir = getMIRFunctionByName(module, "main");
+		auto            foo_mir = getMIRFunctionByName(module, "function");
 		LifetimeChecker checker;
 		checker.expectConstruct("a")
 			.expectScopeStart("a")
@@ -352,8 +354,8 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
 
 		{
-			// `a` is constructed, then its flag is set, the `if` branch moves `a` and clears the
-			// flag, and the drop at the scope end reads it.
+			// The flag is cleared when the scope of `a` starts, set when `a` is constructed, the
+			// `if` branch moves `a` and clears the flag, and the drop at the scope end reads it.
 			auto maybe_move = getMIRFunctionByName(module, "maybeMove");
 			LifetimeChecker{}
 				.expectConstruct("a")
@@ -365,7 +367,7 @@ private:
 
 			auto drop = conditionalDropOf(maybe_move, "a");
 			auto flag = drop->arguments.at(2).get<MIRPlace>().getBase<MIRLocalRef>();
-			ASSERT_EQUAL_PRINT(std::string("TF"), lifetimeFlagWrites(maybe_move, flag));
+			ASSERT_EQUAL_PRINT(std::string("FTF"), lifetimeFlagWrites(maybe_move, flag));
 
 			auto dropped = drop->arguments.at(1).get<MIRPlace>().getBase<MIRLocalRef>();
 			ASSERT_EQUAL(compiler::tsh::Kind::Bool, flag->type.getType().getKind());
@@ -402,6 +404,95 @@ private:
 				ASSERT_TRUE(instr->operation != Operation::DestructIf);
 			ASSERT_EQUAL_PRINT(no_move->next_local_id, static_cast<u64>(no_move->local_list.size()));
 		}
+	}
+
+	/**
+	 * @brief A temporary built inside a conditionally evaluated part of an expression lives in the
+	 * scope of the whole expression, so it is destructed where that expression ends, conditionally.
+	 *
+	 * The three forms that evaluate a part of an expression conditionally are a lazy `or` / `and`,
+	 * a ternary and a match. In all of them the temporary of the branch that builds one is
+	 * initialized on one path only, so it gets a single `DestructIf` at the end of the expression,
+	 * guarded by a lifetime flag that is cleared where its scope starts and set right after the
+	 * temporary is constructed.
+	 */
+	void conditionalExpressionTemporariesTest() {
+		using namespace compiler::mir;
+		namespace test_utils = compiler::mir::test_utils;
+
+		test_utils::checkLoweredModule(
+			R"(class Res {
+                   id: i32 = 0;
+                   Res.destroy() = { var t: i32 = id; }
+               }
+               fun make(id: i32) -> Res = Res(id);
+               fun lazyOr(c: bool) -> bool = { return c or make(1).id == 0; }
+               fun ternary(c: bool) -> i32 = { return if c then make(2).id else 0; }
+               fun matchExpr(v: i32 | f32) -> i32 = {
+                   return match (v) {
+                       case x : i32 = make(3).id;
+                       case _ = 0;
+                   };
+               })",
+			[this](query::Context&, const MIRUnit& unit) {
+				for (const std::string_view name: { "lazyOr", "ternary", "matchExpr" }) {
+					auto function = test_utils::functionOfUnit(unit, name);
+
+					// The temporary is only maybe-initialized at the end of the expression, so it
+				    // is never destructed unconditionally.
+					assertEqual(
+						0u,
+						countOperation(function, Operation::Destruct),
+						base::strConcat("Unconditional destructor in `", name, "`")
+					);
+					assertEqual(
+						1u,
+						countOperation(function, Operation::DestructIf),
+						base::strConcat("Expected a single conditional destructor in `", name, "`")
+					);
+
+					// The `Res` temporary is the only local that owns a value here, so it is the
+				    // only one whose lifetime ends.
+					const auto* drop
+						= onlyInstructionWithOperation(function, Operation::DestructIf);
+					auto dropped = drop->arguments.at(1).get<MIRPlace>().getBase<MIRLocalRef>();
+					assertEqual(
+						1u,
+						countFlag(
+							function, OperationFlag::Flag::Destruct, dropped->getName().strView()
+						),
+						base::strConcat("Expected one ended lifetime in `", name, "`")
+					);
+
+					// The flag is cleared where the scope of the temporary starts and set once the
+				    // temporary has been constructed, so exactly the path that built it destructs
+				    // it.
+					auto flag = drop->arguments.at(2).get<MIRPlace>().getBase<MIRLocalRef>();
+					assertEqual(
+						std::string("FT"),
+						lifetimeFlagWrites(function, flag),
+						base::strConcat("Unexpected lifetime flag writes in `", name, "`")
+					);
+					ASSERT_TRUE(flag->scope.value() == dropped->scope.value());
+				}
+			}
+		);
+	}
+
+	/**
+	 * @brief The only instruction of the function using the given operation.
+	 */
+	const compiler::mir::Instruction* onlyInstructionWithOperation(
+		CRef<compiler::mir::Function> func, compiler::mir::Operation operation
+	) {
+		const compiler::mir::Instruction* found = nullptr;
+		for (const auto* instr: allInstructions(func))
+			if (instr->operation == operation) {
+				ASSERT_TRUE(found == nullptr);
+				found = instr;
+			}
+		ASSERT_TRUE(found != nullptr);
+		return found;
 	}
 
 	/**
@@ -490,7 +581,6 @@ private:
 		using Flag = compiler::mir::OperationFlag::Flag;
 
 		auto [module, scope] = getModule(fs::File(path("modules/move_ownership")));
-
 
 		// The `Call` reading `a` marks it as moved out. No `Assign` into a temporary is built for
 		// the move, `a` is not destructed here any more.

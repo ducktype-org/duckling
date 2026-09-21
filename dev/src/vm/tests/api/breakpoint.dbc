@@ -11,10 +11,9 @@ function main { } -> { i64 } {
 	mov_p64_imm 	c, 0;
 
 	# breakpoint 8;
+	mov_p64_imm 	ret0, 7;
 	deinit; # c
 	deinit; # b
 	deinit; # a
-	# Assigned explicitly, `exitValueEndpoint` asserts the exit value is 0.
-	mov_p64_imm 	ret0, 0;
 	ret;
 }

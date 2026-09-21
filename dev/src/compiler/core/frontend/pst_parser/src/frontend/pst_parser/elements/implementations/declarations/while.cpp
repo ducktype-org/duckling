@@ -38,7 +38,13 @@ namespace pst {
 
 	HashAlg& While::addElementDataToStableHash(HashAlg& partial_hash) const { return partial_hash; }
 
-	AccessLocked<ExprHolder> While::getCondition() const { return condition.internal()->getExpr(); }
+	base::Optional<AccessLocked<ExprHolder>> While::getCondition() const {
+		const auto condition_group = condition.internal().toOpt();
+
+		if (!condition_group.has_value()) return {};
+
+		return condition_group.value()->getExpr();
+	}
 
 	void While::acceptVisitor(PstVisitor& visitor) const { visitor.visitWhile(*this); }
 }

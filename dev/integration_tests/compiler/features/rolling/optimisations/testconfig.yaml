@@ -1,0 +1,9 @@
+compile_llvm_options: "-O=3"
+
+Tests:
+  inlinable_function:
+    Cases:
+      llvm:
+        Output:
+          String: "3\n"
+        ExitCode: 0

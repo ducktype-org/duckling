@@ -390,7 +390,7 @@ private:
 	vm::PID runSpinThreads() {
 		const vm::PID pid = spawnAndLoad("spin_threads.dbc");
 		assertSucceeded(vm::api::run(pid), "run of spin_threads.dbc");
-		waitUntilEveryThreadRuns(pid);
+		waitUntilEveryThreadRuns(pid, SPIN_THREAD_COUNT);
 		return pid;
 	}
 

@@ -11,14 +11,12 @@
 #include <vm/api/vm.hpp>
 
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <expected>
 #include <mutex>
 #include <string>
 #include <string_view>
 #include <thread>
-#include <variant>
 #include <vector>
 
 
@@ -40,22 +38,17 @@ protected:
 	/// Budget for a single poll loop waiting for a process to reach a state.
 	static constexpr auto STATUS_WAIT_BUDGET = std::chrono::seconds(30);
 
+	/// Highest instruction index `releaseUntilTerminal` clears breakpoints up to.
+	static constexpr u64 MAX_BREAKPOINT_INDEX = 12;
+
 	/// How long a call that is expected to block is given to prove it is still blocked.
 	static constexpr auto BLOCKED_CALL_PROBE = std::chrono::milliseconds(300);
 
 	/// How long a call that is expected to return is given to do so.
 	static constexpr auto UNBLOCKED_CALL_BUDGET = std::chrono::seconds(15);
 
-	/// Highest instruction index `releaseUntilTerminal` clears breakpoints up to.
-	static constexpr u64 MAX_BREAKPOINT_INDEX = 12;
-
 	/// Thread count of `spin_threads.dbc`: `main` plus three workers, all in an endless loop.
 	static constexpr usize SPIN_THREAD_COUNT = 4;
-
-	/**
-	 * @brief Spawns a process with the default configuration.
-	 */
-	vm::PID spawnProcess();
 
 	/**
 	 * @brief Spawns a process and loads one bytecode file from the suite's test-file directory.
@@ -67,6 +60,18 @@ protected:
 	static bool isPaused(const vm::api::ProcStatus& s) { return v_matches(s, vm::api::Paused); }
 
 	static bool isSleeping(const vm::api::ProcStatus& s) { return v_matches(s, vm::api::Sleeping); }
+
+	static bool isPanicked(const vm::api::ProcStatus& s) {
+		return v_matches(s, vm::api::ExecutionPanicked);
+	}
+
+	static bool isCompleted(const vm::api::ProcStatus& s) {
+		return v_matches(s, vm::api::ExecutionCompleted);
+	}
+
+	static bool isStopped(const vm::api::ProcStatus& s) {
+		return v_matches(s, vm::api::ExecutionStopped);
+	}
 
 	static bool isTerminal(const vm::api::ProcStatus& s) { return vm::api::isStatusTerminal(s); }
 
@@ -96,21 +101,20 @@ protected:
 	void releaseUntilTerminal(vm::PID pid, const std::string& function_name = "main");
 
 	/**
-	 * @brief Waits until every thread of `spin_threads.dbc` is up, and leaves them all running.
+	 * @brief Waits until @p thread_count threads of the process are up, and leaves them all
+	 * running.
 	 *
 	 * `pauseAll` is the only way to count the live threads through the API, so it doubles as the
-	 * readiness check. It is retried because the workers are started one by one by the running
-	 * program.
+	 * readiness check. It is retried because a program starts its workers one by one, so a request
+	 * can arrive before they all exist. Fails the test if they never all show up.
 	 */
-	void waitUntilEveryThreadRuns(vm::PID pid);
+	void waitUntilEveryThreadRuns(vm::PID pid, usize thread_count);
 
 	/**
 	 * @brief Records every status the process emits, so the emitted sequence can be checked against
 	 * the process-state model.
 	 */
 	struct TransitionLog final {
-		static constexpr usize STATUS_COUNT = std::variant_size_v<vm::api::ProcStatus>;
-
 		void record(const vm::api::ProcStatus& status) {
 			std::lock_guard lock(mutex);
 			statuses.push_back(status);
@@ -125,10 +129,11 @@ protected:
 		/**
 		 * @brief True if the given `vm::api::ProcStatus` alternative was ever emitted.
 		 */
-		[[nodiscard]] bool wasEmitted(usize status_index) const {
+		template<typename Alternative>
+		[[nodiscard]] bool wasEmitted() const {
 			std::lock_guard lock(mutex);
-			return std::ranges::any_of(statuses, [status_index](const vm::api::ProcStatus& s) {
-				return s.index() == status_index;
+			return std::ranges::any_of(statuses, [](const vm::api::ProcStatus& s) {
+				return v_matches(s, Alternative);
 			});
 		}
 
@@ -168,15 +173,14 @@ protected:
 		std::string_view                           what,
 		std::string_view                           expected_reason = ""
 	) {
-		if (result.has_value()) {
-			fail(base::strConcat(what, " was expected to be refused, but it succeeded"));
-			return;
-		}
+		ASSERT_NO_VALUE(result, what, " was expected to be refused, but it succeeded");
+
 		const std::string message = vm::api::errorToString(result.error());
-		if (!std::holds_alternative<ErrorAlternative>(result.error())) {
-			fail(base::strConcat(what, " was refused with an unexpected error kind: ", message));
-			return;
-		}
+		ASSERT_MATCHES_MSG(
+			result.error(),
+			base::strConcat(what, " was refused with an unexpected error kind: ", message),
+			ErrorAlternative
+		);
 		assertTrue(
 			expected_reason.empty() || message.find(expected_reason) != std::string::npos,
 			base::strConcat(
@@ -194,9 +198,8 @@ protected:
 	 */
 	template<typename T>
 	void assertSucceeded(const std::expected<T, vm::api::ApiError>& result, std::string_view what) {
-		assertTrue(
-			result.has_value(),
-			base::strConcat(what, " was expected to succeed, but failed with: ", errorOf(result))
+		ASSERT_HAS_VALUE(
+			result, what, " was expected to succeed, but failed with: ", errorOf(result)
 		);
 	}
 

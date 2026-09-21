@@ -2,7 +2,7 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
-  @{duck-exe} -C foo add --local ../bar bar
+  @{duck-exe} -C foo add --local ../bar @{alias_bar} bar
   # Make sure we have freezefile
   @{duck-exe} -C foo sync
 
@@ -12,6 +12,7 @@ Tests:
     Cases:
       dep-with-empty-versions-list:
         test-cmd: duck -C foo sync
+        alias_bar: ""
         Output:
           # This checks two things:
           # 1. Absence of `running gathering` means we don't even enter gathering,
@@ -21,6 +22,19 @@ Tests:
             info: starting solving the dependency graph
             info: starting gathering the dependency graph
             info: no need to run the gathering or the solver engine
-            info: starting fetching 2 packages
+            info: starting loading 2 packages
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`"
-        
+      alias:
+        # Aliases are stored in storage freeze and recovered by solver.
+        test-cmd: duck -C foo sync
+        alias_bar: --alias alias
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the gathering or the solver engine
+            info: starting loading 2 packages
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
+            info: successfully synchronized venv \`foo\`"

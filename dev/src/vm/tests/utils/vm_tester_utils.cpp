@@ -28,28 +28,10 @@ namespace {
 	constexpr usize STOPPED     = statusIndex<vm::api::ExecutionStopped>();
 	constexpr usize PANICKED    = statusIndex<vm::api::ExecutionPanicked>();
 
-	std::string_view statusName(usize index) {
-		switch (index) {
-		case NOT_STARTED:
-			return "NotStarted";
-		case RUNNING:
-			return "Running";
-		case PAUSED:
-			return "Paused";
-		case SLEEPING:
-			return "Sleeping";
-		case STOPPING:
-			return "ExecutionStopping";
-		case COMPLETED:
-			return "ExecutionCompleted";
-		case STOPPED:
-			return "ExecutionStopped";
-		case PANICKED:
-			return "ExecutionPanicked";
-		default:
-			return "<unknown>";
-		}
-	}
+	static_assert(
+		std::variant_size_v<ProcStatus> == 8,
+		"a new ProcStatus alternative needs an entry in legalStatusEdge"
+	);
 
 	/**
 	 * @brief Legal directed edges of the emitted process-status sequence.
@@ -80,15 +62,15 @@ namespace {
 base::Optional<std::string> VmTestSuite::TransitionLog::findIllegalEdge() const {
 	std::lock_guard lock(mutex);
 	for (usize i = 1; i < statuses.size(); i++) {
-		const usize from = statuses[i - 1].index();
-		const usize to   = statuses[i].index();
-		if (from == to) continue;
-		if (!legalStatusEdge(from, to))
+		const ProcStatus& from = statuses[i - 1];
+		const ProcStatus& to   = statuses[i];
+		if (from.index() == to.index()) continue;
+		if (!legalStatusEdge(from.index(), to.index()))
 			return base::strConcat(
 				"Illegal status transition emitted by the process: ",
-				statusName(from),
+				vm::api::statusName(from),
 				" -> ",
-				statusName(to)
+				vm::api::statusName(to)
 			);
 	}
 	return std::nullopt;
@@ -103,24 +85,13 @@ VmTestSuite::ScopedStatusLog::ScopedStatusLog(VmTestSuite& test, vm::PID pid):
 
 void VmTestSuite::validateTransitions(const TransitionLog& log, std::string_view what) {
 	const auto illegal_edge = log.findIllegalEdge();
-	assertTrue(
-		!illegal_edge.has_value(),
-		illegal_edge.has_value() ? base::strConcat(*illegal_edge, " (", what, ")") : ""
-	);
-}
-
-vm::PID VmTestSuite::spawnProcess() {
-	auto spawned = vm::api::spawn();
-	assertTrue(spawned.has_value(), "Spawn failed");
-	return spawned.value().pid;
+	ASSERT_NO_VALUE(illegal_edge, illegal_edge.has_value() ? *illegal_edge : "", " (", what, ")");
 }
 
 vm::PID VmTestSuite::spawnAndLoad(const std::string& dbc_filename) {
-	const vm::PID pid    = spawnProcess();
+	const vm::PID pid    = initProcess();
 	auto          loaded = vm::api::loadFiles(pid, { fs::File(path(dbc_filename)) });
-	assertTrue(
-		loaded.has_value(), base::strConcat("Load of '", dbc_filename, "' failed: ", errorOf(loaded))
-	);
+	ASSERT_HAS_VALUE(loaded, "Load of '", dbc_filename, "' failed: ", errorOf(loaded));
 	return pid;
 }
 
@@ -131,7 +102,8 @@ void VmTestSuite::releaseUntilTerminal(vm::PID pid, const std::string& function_
 	const auto deadline = std::chrono::steady_clock::now() + STATUS_WAIT_BUDGET;
 	while (std::chrono::steady_clock::now() < deadline) {
 		auto status = vm::api::getExecutionStatus(pid);
-		if (!status.has_value() || vm::api::isStatusTerminal(status.value())) return;
+		assertSucceeded(status, "getExecutionStatus while waiting for the program to finish");
+		if (vm::api::isStatusTerminal(status.value())) return;
 		(void) vm::api::resume(pid);
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
@@ -144,7 +116,7 @@ void VmTestSuite::releaseUntilTerminal(vm::PID pid, const std::string& function_
 	));
 }
 
-void VmTestSuite::waitUntilEveryThreadRuns(vm::PID pid) {
+void VmTestSuite::waitUntilEveryThreadRuns(vm::PID pid, usize thread_count) {
 	namespace api = vm::api;
 
 	waitUntilStatus(pid, isRunning, "Running");
@@ -153,15 +125,19 @@ void VmTestSuite::waitUntilEveryThreadRuns(vm::PID pid) {
 	while (std::chrono::steady_clock::now() < deadline) {
 		auto paused = api::pauseAll(pid);
 		assertSucceeded(paused, "pauseAll while waiting for the workers to start");
-		const bool all_up = paused->thread_ids.size() == SPIN_THREAD_COUNT;
-		for (const api::ThreadID tid: paused->thread_ids) (void) api::resume(pid, tid);
+		const bool all_up = paused->thread_ids.size() == thread_count;
+		for (const api::ThreadID tid: paused->thread_ids)
+			assertSucceeded(
+				api::resume(pid, tid),
+				base::strConcat("resume of thread ", tid.asInt(), " after the readiness check")
+			);
 		if (all_up) {
 			waitUntilStatus(pid, isRunning, "Running again after the readiness check");
 			return;
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	fail("spin_threads.dbc never got all of its threads running");
+	fail(base::strConcat("The program never got all ", thread_count, " of its threads running"));
 }
 
 vm::PID VmTestSuite::initProcess(
@@ -243,7 +219,7 @@ void VmTestSuite::loadInvalidDbc(
 	ASSERT_NO_VALUE(loaded_file_response);
 
 	auto err = loaded_file_response.error();
-	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
+	ASSERT_MATCHES(err, vm::api::LoadProgramError);
 	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
 	std::cerr << err_str << '\n';
 	for (auto err_key: error_keywords) {
@@ -270,7 +246,7 @@ void VmTestSuite::loadThenLoadInvalidDbc(
 	ASSERT_NO_VALUE(second_response);
 
 	auto err = second_response.error();
-	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
+	ASSERT_MATCHES(err, vm::api::LoadProgramError);
 	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
 	std::cerr << err_str << '\n';
 	for (auto err_key: error_keywords) {
@@ -410,7 +386,7 @@ void VmTestSuite::assertRunFunctionRefusedWith(
 ) {
 	auto result = vm::api::runFunction(pid, func_name, args);
 	ASSERT_NO_VALUE(result);
-	ASSERT_TRUE(v_matches(result.error(), vm::api::RunError));
+	ASSERT_MATCHES(result.error(), vm::api::RunError);
 	const std::string why = v_get(result.error(), vm::api::RunError).error;
 	assertTrue(
 		why.find(expected_reason) != std::string::npos,
@@ -420,7 +396,7 @@ void VmTestSuite::assertRunFunctionRefusedWith(
 
 	auto status = vm::api::getExecutionStatus(pid);
 	ASSERT_HAS_VALUE(status);
-	ASSERT_TRUE(v_matches(status.value(), vm::api::NotStarted));
+	ASSERT_MATCHES(status.value(), vm::api::NotStarted);
 }
 
 auto VmTestSuite::runFunctionExpectPanic(

@@ -6,30 +6,32 @@
 
 #include <json/json.hpp>
 
+#include <string_view>
+#include <type_traits>
 #include <variant>
 
 namespace vm::api {
-	struct Running {};
+	struct Running final {};
 
-	struct Paused {};
+	struct Paused final {};
 
-	struct Sleeping {};
+	struct Sleeping final {};
 
-	struct NotStarted {};
+	struct NotStarted final {};
 
 	// @TODO: #2720 Change it back to std::vector
 	using ExitValue = std::variant<i64, std::vector<Ref<IVMValue>>>;
 
-	struct ExecutionCompleted {
+	struct ExecutionCompleted final {
 		ExitValue exit_value;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionCompleted, exit_value);
 	};
 
-	struct ExecutionStopping {};
+	struct ExecutionStopping final {};
 
-	struct ExecutionStopped {};
+	struct ExecutionStopped final {};
 
-	struct ExecutionPanicked {
+	struct ExecutionPanicked final {
 		std::string error_message;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionPanicked, error_message);
 	};
@@ -81,3 +83,12 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionStopping, "ExecutionStopping")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionPanicked, "ExecutionPanicked")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionCompleted, "ExecutionCompleted")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionStopped, "ExecutionStopped")
+
+namespace vm::api {
+	/**
+	 * @brief Name of the held `ProcStatus` alternative
+	 */
+	[[nodiscard]] inline std::string_view statusName(const ProcStatus& status) {
+		return VISIT(status, held, return js::typeName<std::remove_cvref_t<decltype(held)>>());
+	}
+}

@@ -16,8 +16,8 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -72,6 +72,8 @@ public:
 		TESTER_ADD_TEST(testMetaCompTime);
 		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
+		TESTER_ADD_TEST(testClassMemberSymbols);
+		TESTER_ADD_TEST(testStaticFieldGlobalData);
 		TESTER_ADD_TEST(testClassInteractions);
 		TESTER_ADD_TEST(testTypeInstanceInterface);
 		TESTER_ADD_TEST(testTupleInterface);
@@ -94,6 +96,7 @@ public:
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
+		TESTER_ADD_TEST(testMainReturnHandling);
 		TESTER_ADD_TEST(testTupleCoercion);
 		TESTER_ADD_TEST(testMethodCalls);
 		TESTER_ADD_TEST(testMangler);
@@ -189,6 +192,13 @@ private:
 		const auto* move = dynamic_cast<const code::MoveExpr*>(expr);
 		if (move == nullptr || move->kind != code::MoveExpr::MoveKind::Implicit) return expr;
 		return move->inner.get();
+	}
+
+	/**
+	 * @brief Simple wrapper for querying mangled name of a symbol without context
+	 */
+	static auto mangle(const compiler::helios::mangler::KeyOf_MangledSymbol& key) {
+		return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(key);
 	}
 
 	void testConstants() {
@@ -479,22 +489,34 @@ private:
 	void testClassSymbolData() {
 		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
 
-		const auto first_class = getChain("FirstClassEver", root_scope).back();
+		const auto first_class = getChain("Base", root_scope).back();
 		const auto first_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)->valueOrThrow();
 		const auto first_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(first_class);
 
-		ASSERT_EQUAL(2, first_class_info.members.size());
-		ASSERT_EQUAL(2, first_class_info.methods.size());
-		ASSERT_EQUAL(1, first_class_info.constructors.size());
-		ASSERT_HAS_VALUE(first_class_info.destructor);
+		using compiler::tsh::MemberSpecialKind;
+		const auto& first_class_interface = first_class_info.declared_interface;
+
+		ASSERT_EQUAL(5, std::ranges::distance(first_class_interface.getAnyFieldsView()));
+		ASSERT_EQUAL(1, first_class_interface.getElementsWithName(base::StrID("getPub")).size());
+		ASSERT_EQUAL(1, first_class_interface.getElementsWithName(base::StrID("setPub")).size());
+		ASSERT_HAS_VALUE(first_class_interface.getSpecialElement(MemberSpecialKind::CopyConstructor)
+		);
+		ASSERT_HAS_VALUE(first_class_interface.getSpecialElement(MemberSpecialKind::UserDestructor));
+		ASSERT_HAS_VALUE(first_class_interface.getSpecialElement(MemberSpecialKind::Constructor));
+		// The properties precomputed once with the class data: it declares a destructor and a
+		// copy constructor, and its fields have initial values.
+		ASSERT_TRUE(not first_class_info.is_trivially_destructible);
+		ASSERT_TRUE(first_class_info.is_default_constructible);
+		ASSERT_TRUE(not first_class_info.is_trivially_zero_initializable);
+		ASSERT_TRUE(first_class_info.is_copyable);
+		ASSERT_TRUE(not first_class_info.is_trivially_copyable);
+		ASSERT_TRUE(first_class_info.carries_information);
+
 		ASSERT_NO_VALUE(first_class_info.base);
 		ASSERT_EQUAL(0, first_class_info.implements.size());
-		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
+		ASSERT_EQUAL("Base", first_class_info.name);
 
 		const auto& first_ctor
 			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
@@ -503,30 +525,38 @@ private:
 		          ->valueOrPanic();
 		ASSERT_EQUAL(first_ctor.declaration->return_type.getType(), first_class_abstract_type);
 
-		const auto second_class = getChain("SecondClass", root_scope).back();
+		const auto second_class = getChain("Empty", root_scope).back();
 		auto       second_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class)->valueOrThrow();
 
-		ASSERT_EQUAL(0, second_class_info.members.size());
-		ASSERT_EQUAL(0, second_class_info.methods.size());
-		ASSERT_EQUAL(0, second_class_info.constructors.size());
-		ASSERT_NO_VALUE(second_class_info.destructor);
+		const auto& second_class_interface = second_class_info.declared_interface;
+
+		ASSERT_EQUAL(0, std::ranges::distance(second_class_interface.getAnyFieldsView()));
+		ASSERT_EQUAL(0, std::ranges::distance(second_class_interface.getMethodsView()));
+		ASSERT_NO_VALUE(second_class_interface.getSpecialElement(MemberSpecialKind::UserDestructor));
+		// An empty class holds nothing, so it is as trivial as a class gets.
+		ASSERT_TRUE(second_class_info.is_trivially_destructible);
+		ASSERT_TRUE(second_class_info.is_default_constructible);
+		ASSERT_TRUE(second_class_info.is_trivially_zero_initializable);
+		ASSERT_TRUE(second_class_info.is_copyable);
+		ASSERT_TRUE(second_class_info.is_trivially_copyable);
+		ASSERT_TRUE(not second_class_info.carries_information);
+
 		ASSERT_HAS_VALUE(second_class_info.base);
 		ASSERT_EQUAL(first_class_abstract_type, second_class_info.base);
-		ASSERT_EQUAL("SecondClass", second_class_info.name);
+		ASSERT_EQUAL("Empty", second_class_info.name);
 
 		const auto class_with_member = getChain("ClassWithMember", root_scope).back();
 		auto       class_with_member_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(class_with_member)
 		          ->valueOrThrow();
 		auto class_with_member_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(class_with_member)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(class_with_member);
 
-		ASSERT_EQUAL(1, class_with_member_info.members.size());
-		ASSERT_EQUAL(1, class_with_member_info.methods.size());
+		const auto& class_with_member_interface = class_with_member_info.declared_interface;
+
+		ASSERT_EQUAL(1, std::ranges::distance(class_with_member_interface.getAnyFieldsView()));
+		ASSERT_EQUAL(1, std::ranges::distance(class_with_member_interface.getMethodsView()));
 
 		const auto& class_with_members_ctor
 			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
@@ -546,20 +576,134 @@ private:
 		          .valueOrPanic();
 	}
 
+	void testClassMemberSymbols() {
+		using namespace compiler::helios;
+
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
+
+		const auto members_sym   = getChain("Base", root_scope).back();
+		const auto free_func_sym = getChain("freeFunction", root_scope).back();
+		const auto global_sym    = getChain("global_counter", root_scope).back();
+		const auto pair_sym      = getChain("pair", root_scope).back();
+
+		const compiler::tsh::AbstractType members_type
+			= query::entryPoint<compiler::tsh::QueryClassType>(members_sym);
+		// A class that declares no copy constructor of its own.
+		const compiler::tsh::AbstractType no_copy_type
+			= query::entryPoint<compiler::tsh::QueryClassType>(
+				getChain("ClassWithMember", root_scope).back()
+			);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto member_sym = [&](std::string_view member_name) {
+				const auto& with_name
+					= members_type.getInterface(ctx)->getElementsWithName(base::StrID(member_name));
+				assertEqual(1u, with_name.size(), "Expected exactly one member of that name");
+				return with_name.front().getSymbol();
+			};
+
+			const auto inst_sym    = member_sym("pub_field");
+			const auto counter_sym = member_sym("counter");
+			const auto get_sym     = member_sym("getPub");
+			const auto copy_sym    = member_sym("copy");
+
+			ASSERT_TRUE(isClassMember(kind(inst_sym)));
+			ASSERT_TRUE(isClassMember(kind(get_sym)));
+			ASSERT_TRUE(isClassMember(kind(copy_sym)));
+			ASSERT_TRUE(not isClassMember(kind(free_func_sym)));
+			ASSERT_TRUE(not isClassMember(kind(members_sym)));
+
+			// A member declared directly in the class body and one declared inside a specifier
+			// block both know the class they belong to.
+			ASSERT_EQUAL(members_type, compiler::tsh::AbstractType(classMemberOwner(inst_sym)));
+			ASSERT_EQUAL(members_type, compiler::tsh::AbstractType(classMemberOwner(copy_sym)));
+			ASSERT_EQUAL(members_type, typeMemberOwner(inst_sym));
+
+			ASSERT_TRUE(isStaticField(ctx, counter_sym));
+			ASSERT_TRUE(not isStaticField(ctx, inst_sym));
+			ASSERT_TRUE(not isStaticField(ctx, get_sym));
+			ASSERT_TRUE(not isStaticField(ctx, global_sym));
+
+			// The generated members answer as well, and the type they belong to is not always a
+			// class.
+			const auto destruct_sym = defgen::generatedDestructSymForType(ctx, members_type);
+			ASSERT_EQUAL(members_type, typeMemberOwner(destruct_sym));
+
+			// A class that declares a copy constructor is copied with it, a class that does not
+			// is copied with the generated one.
+			ASSERT_EQUAL(copy_sym, defgen::copyConstructorSymForType(ctx, members_type));
+			ASSERT_EQUAL(
+				defgen::generatedCopyConstructorSymForType(ctx, no_copy_type),
+				defgen::copyConstructorSymForType(ctx, no_copy_type)
+			);
+
+			const auto pair_type = ctx.query<QueryTypeOfSymbol>(pair_sym)->valueOrThrow().getType();
+			auto       pair_fields = pair_type.getInterface(ctx)->getFieldsView();
+			ASSERT_TRUE(not std::ranges::empty(pair_fields));
+			for (const auto& field: pair_fields)
+				ASSERT_EQUAL(pair_type, typeMemberOwner(field.getSymbol()));
+		});
+	}
+
+	void testStaticFieldGlobalData() {
+		using namespace compiler::helios;
+
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
+
+		const auto members_sym = getChain("Base", root_scope).back();
+		const auto global_sym  = getChain("global_counter", root_scope).back();
+
+		const compiler::tsh::AbstractType members_type
+			= query::entryPoint<compiler::tsh::QueryClassType>(members_sym);
+
+		base::Optional<SymID> counter_sym_opt;
+
+		auto mangle = [](SymID sym) {
+			return query::entryPoint<mangler::QueryMangledSymbol>(
+					   { .symbol_key              = sym,
+			             .kind                    = mangler::ManglingSymbolKind::Standard,
+			             .mangling_scheme_version = 0,
+			             .additional_metadata     = std::nullopt }
+			)
+			    .str();
+		};
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto& with_name
+				= members_type.getInterface(ctx)->getElementsWithName(base::StrID("counter"));
+			assertEqual(1u, with_name.size(), "Expected exactly one `counter` member");
+			const auto counter_sym = with_name.front().getSymbol();
+			counter_sym_opt        = counter_sym;
+
+			// A static field is stored in the program, exactly like a global variable is.
+			const auto& global_data = ctx.query<QueryHOUTGlobalData>(counter_sym)->valueOrThrow();
+
+			ASSERT_EQUAL(HOUTGlobalDataType::Variable, global_data.data_type);
+			ASSERT_EQUAL("counter", global_data.original_name);
+			ASSERT_EQUAL(counter_sym, global_data.helios_symbol);
+			ASSERT_TRUE(std::holds_alternative<HOUTGlobalVariable>(global_data.value));
+			ASSERT_EQUAL(
+				ctx.query<QueryTypeOfSymbol>(counter_sym)->valueOrThrow(), global_data.type
+			);
+		});
+
+		// The class the static field is declared in is part of its mangled name, so it never
+		// collides with a global variable of the same name.
+		const auto mangled_counter = mangle(counter_sym_opt.value());
+		ASSERT_TRUE(mangled_counter.find("Base") != std::string::npos);
+		ASSERT_TRUE(mangled_counter != mangle(global_sym));
+	}
+
 	void testClassInteractions() {
-		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes_3")));
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
 
 		const auto class_with_member = getChain("ClassWithMember", root_scope).back();
 		const auto class_with_member_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(class_with_member)
-		          ->valueOrThrow()
-		          .getType();
+			= query::entryPoint<compiler::tsh::QueryClassType>(class_with_member);
 
-		const auto first_class = getChain("FirstClass", root_scope).back();
+		const auto first_class = getChain("Base", root_scope).back();
 		const auto first_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
-		          ->valueOrThrow()
-		          .getType();
+			= query::entryPoint<compiler::tsh::QueryClassType>(first_class);
 
 		auto c_symbol = getChain("c", root_scope).back();
 		auto c_type
@@ -572,7 +716,7 @@ private:
 
 		ASSERT_EQUAL(c_member_type, st(first_class_abstract_type));
 
-		auto c_member_a_symbol = getChain("c_member_a", root_scope).back();
+		auto c_member_a_symbol = getChain("c_member_pub", root_scope).back();
 		auto c_member_a_type
 			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_a_symbol)
 		          ->valueOrThrow();
@@ -592,14 +736,11 @@ private:
 	 * @note For now only checks interfaces of class types.
 	 */
 	void testTypeInstanceInterface() {
-		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes_2")));
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
 
-		const auto simple_class = getChain("SimpleClass", root_scope).back();
+		const auto simple_class = getChain("Base", root_scope).back();
 		const auto simple_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(simple_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
+			= query::entryPoint<compiler::tsh::QueryClassType>(simple_class);
 
 		const auto h_interface
 			= compiler::helios::HInterface::ofTypeInstance(simple_class_abstract_type);
@@ -607,14 +748,14 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using compiler::helios::LookupResult;
 			CRef<LookupResult> a_result
-				= &h_interface.lookup(ctx, base::StrID("a"))->valueOrPanic();
+				= &h_interface.lookup(ctx, base::StrID("pub_field"))->valueOrPanic();
 			ASSERT_TRUE(a_result->isSingle());
 			auto a_symbol = a_result->leaves.at(0);
 
 			ASSERT_EQUAL(kind(a_symbol), compiler::helios::SymbolKind::Field);
 
 			CRef<LookupResult> get_a_result
-				= &h_interface.lookup(ctx, base::StrID("getA"))->valueOrPanic();
+				= &h_interface.lookup(ctx, base::StrID("getPub"))->valueOrPanic();
 			ASSERT_TRUE(get_a_result->isSingle());
 			auto get_a_symbol = get_a_result->leaves.at(0);
 			ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
@@ -1087,7 +1228,7 @@ private:
 			auto name = base::StrID(str);
 			for (auto& gb: hout.glob_data) {
 				if (gb->original_name == name) {
-					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb->value)) {
+					if (v_matches(gb->value, compiler::helios::HOUTGlobalConst)) {
 						auto ctv = std::get<compiler::helios::HOUTGlobalConst>(gb->value).value;
 						auto val = ctv.get<compiler::numeric_value::NumericValue>()->get<i64>();
 						if (!val.has_value()) {
@@ -1616,7 +1757,7 @@ private:
 				ASSERT_EQUAL(abc_param.type, st(int32_type));
 				ASSERT_EQUAL(second_param.type, st(int64_type));
 
-				assertTrue(abc_param.initial_value.has_value(), "Initial value expected");
+				ASSERT_HAS_VALUE(abc_param.initial_value, "Initial value expected");
 				assertTrue(second_param.initial_value.empty(), "No initial value expected");
 			}
 		});
@@ -1814,6 +1955,95 @@ private:
 
 		for (auto& function: hout.functions)
 			ASSERT_EQUAL(function->declaration->return_type.getType(), i64_type);
+	}
+
+	void testMainReturnHandling() {
+		using namespace compiler::helios;
+		using namespace compiler::helios::code;
+
+		const auto check_main = [&](std::string_view source,
+		                            usize            expected_statement_count,
+		                            i64              expected_first_return,
+		                            i64              expected_last_return) {
+			const auto  module   = compiler::frontend::createModuleTreeFromContents(source);
+			const auto  scope    = getModuleScope(module);
+			const auto  symbol   = getChain("main", scope).back();
+			const auto& function = query::entryPoint<QueryCodeOfFun>({ symbol })->valueOrPanic();
+
+			ASSERT_EQUAL(
+				function.declaration->return_type.getType(), getIntegralTypeNoContext(64, Signed)
+			);
+			ASSERT_EQUAL(
+				function.declaration->return_type.getRefKind(), compiler::tsh::ReferenceKind::Direct
+			);
+			ASSERT_EQUAL(function.body->statements.size(), expected_statement_count);
+
+			const auto get_return_value = [&](usize statement_index) {
+				const auto* return_stmt = dynamic_cast<const ReturnStmt*>(
+					function.body->statements.at(statement_index).get()
+				);
+				assertTrue(return_stmt != nullptr, "Expected a return statement.");
+
+				const auto value
+					= query::entryPoint<QueryEvaluateHOUTExpression>({ return_stmt->value.get() })
+				          .valueOrThrow()
+				          .get<compiler::numeric_value::NumericValue>()
+				          ->get<i64>();
+				assertTrue(value.has_value(), "Expected an i64 return value.");
+				return value.value();
+			};
+
+			ASSERT_EQUAL(get_return_value(0), expected_first_return);
+			ASSERT_EQUAL(
+				get_return_value(function.body->statements.size() - 1), expected_last_return
+			);
+		};
+
+		// A block-bodied main gets a generated `return 0`, regardless of whether i64 was
+		// written explicitly.
+		check_main(R"(fun main() = {})", 1, 0, 0);
+		check_main(R"(fun main() -> i64 = {})", 1, 0, 0);
+
+		// An expression-bodied main already lowers to a return and needs no trailing zero.
+		check_main(R"(fun main() = 9;)", 1, 9, 9);
+
+		// An explicit trailing return needs no generated return.
+		check_main(R"(fun main() = { return 7; })", 1, 7, 7);
+
+		// A generated `return 0` covers a path that reaches the end of main.
+		{
+			const auto module = compiler::frontend::createModuleTreeFromContents(
+				R"(
+					fun main() = {
+						if (false) {
+							return 31;
+						}
+					}
+				)"
+			);
+			const auto  scope    = getModuleScope(module);
+			const auto  symbol   = getChain("main", scope).back();
+			const auto& function = query::entryPoint<QueryCodeOfFun>({ symbol })->valueOrPanic();
+
+			ASSERT_EQUAL(function.body->statements.size(), 2);
+			assertTrue(
+				dynamic_cast<const IfStmt*>(function.body->statements.front().get()) != nullptr,
+				"Expected the first statement to be an if statement."
+			);
+
+			const auto* return_stmt
+				= dynamic_cast<const ReturnStmt*>(function.body->statements.back().get());
+			assertTrue(return_stmt != nullptr, "Expected a generated return statement.");
+
+			const auto value
+				= query::entryPoint<QueryEvaluateHOUTExpression>({ return_stmt->value.get() })
+			          .valueOrThrow()
+			          .get<compiler::numeric_value::NumericValue>()
+			          ->get<i64>();
+
+			assertTrue(value.has_value(), "Expected an i64 return value.");
+			ASSERT_EQUAL(value.value(), 0);
+		}
 	}
 
 	void testFunctionReturnTypeCheckAndCoercion() {
@@ -2018,15 +2248,14 @@ private:
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(example_class)
 		          ->valueOrThrow();
 		auto example_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(example_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
-		ASSERT_EQUAL(3, example_class_info.methods.size());
+			= query::entryPoint<compiler::tsh::QueryClassType>(example_class);
+		auto example_class_info_methods = example_class_info.declared_interface.getMethodsView();
+		ASSERT_EQUAL(3, std::ranges::distance(example_class_info_methods));
 
-		for (auto& method: example_class_info.methods) {
+		for (const auto& method: example_class_info_methods) {
 			auto method_hout
-				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
+			          ->valueOrPanic();
 			ASSERT_EQUAL(
 				refst(example_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
@@ -2037,15 +2266,14 @@ private:
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(wrapper_class)
 		          ->valueOrThrow();
 		auto wrapper_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(wrapper_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
-		ASSERT_EQUAL(4, wrapper_class_info.methods.size());
+			= query::entryPoint<compiler::tsh::QueryClassType>(wrapper_class);
+		auto wrapper_class_info_methods = wrapper_class_info.declared_interface.getMethodsView();
+		ASSERT_EQUAL(4, std::ranges::distance(wrapper_class_info_methods));
 
-		for (auto& method: wrapper_class_info.methods) {
+		for (const auto& method: wrapper_class_info_methods) {
 			auto method_hout
-				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
+			          ->valueOrPanic();
 			ASSERT_EQUAL(
 				refst(wrapper_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
@@ -2055,15 +2283,14 @@ private:
 		auto point_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(point_class)->valueOrThrow();
 		auto point_class_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(point_class)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::ClassAbstractType>();
-		ASSERT_EQUAL(6, point_class_info.methods.size());
+			= query::entryPoint<compiler::tsh::QueryClassType>(point_class);
+		auto point_class_info_methods = point_class_info.declared_interface.getMethodsView();
+		ASSERT_EQUAL(6, std::ranges::distance(point_class_info_methods));
 
-		for (auto& method: point_class_info.methods) {
+		for (const auto& method: point_class_info_methods) {
 			auto method_hout
-				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
+			          ->valueOrPanic();
 			ASSERT_EQUAL(
 				refst(point_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
@@ -2078,147 +2305,98 @@ private:
 	}
 
 	void testMangler() {
-		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
-		const auto& hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
+		using namespace compiler::helios;
+		using Kind = mangler::ManglingSymbolKind;
 
-		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                     ) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {
-			for (const auto& fun: unit.functions)
-				if (fun->declaration->original_name == name) return fun;
-			fail(base::strConcat("Function ", name.strView(), " not found"));
-			return {};
-		};
+		const auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling")));
 
-		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
-			for (const auto& glob: unit.glob_data)
-				if (glob->original_name == name) return glob;
-			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
-			return {};
-		};
+		const auto goo_id      = getChain("Mspc.Ooo.goooo", root_scope).back();
+		const auto mangled_goo = mangle({ .symbol_key              = goo_id,
+		                                  .kind                    = Kind::Standard,
+		                                  .mangling_scheme_version = 123,
+		                                  .additional_metadata     = "metadata_v123" });
 
-		auto goo = find_function(hout_unit, base::StrID("goooo")).value();
-		std::cerr << "\nFunction name: " << goo->declaration->original_name.strView() << '\n';
-		auto mangled_goo = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = goo->declaration->original_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 123,
-		      .additional_metadata     = "metadata_v123" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_goo.strView() << '\n';
+		const auto glob_a_id      = getChain("A", root_scope).back();
+		const auto mangled_glob_a = mangle({ .symbol_key = glob_a_id });
 
-		auto glob_a = find_global(hout_unit, base::StrID("A")).value();
-		std::cerr << "\nGlobal variable name: " << glob_a->original_name.strView() << '\n';
-		auto mangled_glob_a = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = glob_a->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 0,
-		      .additional_metadata     = std::nullopt }
-		);
-		std::cerr << "Mangled symbol: " << mangled_glob_a.strView() << '\n';
+		const auto glob_b_id      = getChain("Nmspc.B", root_scope).back();
+		const auto mangled_glob_b = mangle({ .symbol_key              = glob_b_id,
+		                                     .kind                    = Kind::Standard,
+		                                     .mangling_scheme_version = 321,
+		                                     .additional_metadata     = "metadata_v321" });
+
+		const auto g_const_id      = getChain("Mspc.Ooo.Cnst", root_scope).back();
+		const auto mangled_g_const = mangle({ .symbol_key              = g_const_id,
+		                                      .kind                    = Kind::Standard,
+		                                      .mangling_scheme_version = 321,
+		                                      .additional_metadata     = "metadata_v321" });
+
 		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
-
-		auto glob_b = find_global(hout_unit, base::StrID("B")).value();
-		std::cerr << "\nGlobal Variable name: " << glob_b->original_name.strView() << '\n';
-		auto mangled_glob_b = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = glob_b->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 321,
-		      .additional_metadata     = "metadata_v321" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_glob_b.strView() << '\n';
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
-
-		auto g_const = find_global(hout_unit, base::StrID("Cnst")).value();
-		std::cerr << "\nConst name: " << g_const->original_name.strView() << '\n';
-		auto mangled_g_const = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = g_const->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 321,
-		      .additional_metadata     = "metadata_v321" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_g_const.strView() << '\n';
-
-
-		auto sub_module_a = query::utils::withContextCompute([&](query::Context& ctx) {
-			return compiler::frontend::getModuleRef(module)
-			    ->getSubmoduleByName(base::StrID{ "sub" })
-			    .unlock(ctx)
-			    ->unlock(ctx)
-			    .getID();
-		});
-		auto sub_module   = std::any_cast<compiler::frontend::ModuleID>(sub_module_a);
-
-		const auto& sub_hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module)->valueOrPanic();
-
-		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
-		std::cerr << "\nSub function name: " << sub_fun->declaration->original_name.strView()
-				  << '\n';
-		auto mangled_sub_fun = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = sub_fun->declaration->original_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 5,
-		      .additional_metadata     = "metadata_v5" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_sub_fun.strView() << '\n';
-
-		auto sub_cnst = find_global(sub_hout_unit, base::StrID("subConst")).value();
-		std::cerr << "\nSub constant name: " << sub_cnst->original_name.strView() << '\n';
-		auto mangled_sub_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = sub_cnst->helios_symbol,
-		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
-		      .mangling_scheme_version = 5,
-		      .additional_metadata     = "metadata_v5" }
-		);
-		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
-
 		ASSERT_EQUAL(
 			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFididdE1a1bE$metadata_v123", mangled_goo.str()
 		);
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
-
 		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
-
 		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.str());
+
+
+		const auto sub_root_scope_any = query::utils::withContextCompute([&](query::Context& ctx) {
+			const auto sub_module = compiler::frontend::getModuleRef(module)
+			                            ->getSubmoduleByName(base::StrID{ "sub" })
+			                            .unlock(ctx)
+			                            ->unlock(ctx)
+			                            .getID();
+			return queryRootScopeOfMainModuleFile(ctx, sub_module);
+		});
+		const auto sub_root_scope     = std::any_cast<ScopeID>(sub_root_scope_any);
+
+		const auto sub_fun_id      = getChain("inSub.subFun", sub_root_scope).back();
+		const auto mangled_sub_fun = mangle({ .symbol_key              = sub_fun_id,
+		                                      .kind                    = Kind::Standard,
+		                                      .mangling_scheme_version = 5,
+		                                      .additional_metadata     = "metadata_v5" });
+
+		const auto sub_cnst_id      = getChain("inSub.subConst", sub_root_scope).back();
+		const auto mangled_sub_cnst = mangle({ .symbol_key              = sub_cnst_id,
+		                                       .kind                    = Kind::Standard,
+		                                       .mangling_scheme_version = 5,
+		                                       .additional_metadata     = "metadata_v5" });
 
 		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub6subFunEFidEE$metadata_v5", mangled_sub_fun.str());
 		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
 	}
 
 	void testManglerSpecialMembers() {
-		std::cerr << "--- testManglerSpecialMembers ---\n";
+		using namespace compiler::helios::mangler;
 
-		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling_special_mem")));
+		const auto [module, root_scope]
+			= getModule(fs::File(path("test_modules/mangling_special_mem")));
 
-		auto variable_a       = getChain("A", root_scope);
-		auto variable_b       = getChain("M.B", root_scope);
-		auto mangled_a_constr = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key = variable_a.back(),
-		      .kind = compiler::helios::mangler::ManglingSymbolKind::GlobalVariableConstructor,
-		      .mangling_scheme_version = 5,
-		      .additional_metadata     = std::nullopt }
-		);
-		auto mangled_a_destr = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key = variable_a.back(),
-		      .kind       = compiler::helios::mangler::ManglingSymbolKind::GlobalVariableDestructor,
-		      .mangling_scheme_version = 5,
-		      .additional_metadata     = std::nullopt }
-		);
+		const auto variable_a = getChain("A", root_scope);
+		const auto variable_b = getChain("M.B", root_scope);
+		const auto mangled_a_constr
+			= mangle({ .symbol_key              = variable_a.back(),
+		               .kind                    = ManglingSymbolKind::GlobalVariableConstructor,
+		               .mangling_scheme_version = 5,
+		               .additional_metadata     = std::nullopt });
+		const auto mangled_a_destr = mangle({ .symbol_key = variable_a.back(),
+		                                      .kind = ManglingSymbolKind::GlobalVariableDestructor,
+		                                      .mangling_scheme_version = 5,
+		                                      .additional_metadata     = std::nullopt });
 		ASSERT_EQUAL("_Q4_M20mangling_special_memG1Agc", mangled_a_constr.str());
 		ASSERT_EQUAL("_Q4_M20mangling_special_memG1Agd", mangled_a_destr.str());
 
 		// Using the "getSpecialMangledName" aliases:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto mangled_b_constr = compiler::helios::mangler::getSpecialMangledName<
-				compiler::helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
-				ctx, variable_b.back()
-			);
-			auto mangled_b_destr = compiler::helios::mangler::getSpecialMangledName<
-				compiler::helios::mangler::ManglingSymbolKind::GlobalVariableDestructor>(
-				ctx, variable_b.back()
-			);
+			const auto mangled_b_constr
+				= getSpecialMangledName<ManglingSymbolKind::GlobalVariableConstructor>(
+					ctx, variable_b.back()
+				);
+			const auto mangled_b_destr
+				= getSpecialMangledName<ManglingSymbolKind::GlobalVariableDestructor>(
+					ctx, variable_b.back()
+				);
 
 			ASSERT_EQUAL("_Q_M20mangling_special_memN1M1BEgc", mangled_b_constr.str());
 			ASSERT_EQUAL("_Q_M20mangling_special_memN1M1BEgd", mangled_b_destr.str());
@@ -2226,35 +2404,30 @@ private:
 	}
 
 	void testManglerOperators() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
+		const auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
 
-		auto mangle = [&](compiler::helios::SymID sym) {
-			return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-				{ .symbol_key = sym,
-			      .kind       = compiler::helios::mangler::ManglingSymbolKind::Standard,
-			      .mangling_scheme_version = 0,
-			      .additional_metadata     = std::nullopt }
-			);
-		};
+		const auto infix_free   = mangle({ .symbol_key = getChain("+*", root_scope).back() });
+		const auto prefix_free  = mangle({ .symbol_key = getChain("-*", root_scope).back() });
+		const auto unicode_free = mangle({ .symbol_key = getChain("+×", root_scope).back() });
 
-		auto infix_free   = mangle(getChain("+*", root_scope).back());
-		auto prefix_free  = mangle(getChain("-*", root_scope).back());
-		auto unicode_free = mangle(getChain("+×", root_scope).back());
-
-		auto foo_class = getChain("Foo", root_scope).back();
-		auto foo_class_info
+		const auto foo_class = getChain("Foo", root_scope).back();
+		const auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
-		ASSERT_EQUAL(2, foo_class_info.methods.size());
+		const auto foo_methods
+			= foo_class_info.declared_interface.getMethodsView()
+		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
+		    | std::ranges::to<std::vector>();
+		ASSERT_EQUAL(2, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
-			for (const auto& method: foo_class_info.methods)
+			for (const auto& method: foo_methods)
 				if (compiler::helios::name(method) == base::StrID(name)) return method;
 			fail(base::strConcat("Method ", name, " not found"));
-			return foo_class_info.methods.at(0);
+			return foo_methods.at(0);
 		};
 
-		auto infix_method  = mangle(find_method("+*"));
-		auto prefix_method = mangle(find_method("-*"));
+		const auto infix_method  = mangle({ .symbol_key = find_method("+*") });
+		const auto prefix_method = mangle({ .symbol_key = find_method("-*") });
 
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFiqiqiqE1a1bE", infix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFiqiqE1aE", prefix_free.str());
@@ -2268,8 +2441,8 @@ private:
 			prefix_method.str()
 		);
 
-		// Suffix has no declaration syntax yet (see testOperatoriness) -- nothing to mangle here
-		// until fixity keywords exist. Once they do, add e.g.:
+		// @todo: #3131 Suffix has no declaration syntax yet (see testOperatoriness)
+		// nothing to mangle here until fixity keywords exist. Once they do, add e.g.:
 		// ASSERT_EQUAL("...", mangle(.../* a suffix-declared operator */).str());
 	}
 
@@ -2277,54 +2450,55 @@ private:
 		using namespace compiler::ctv;
 		using compiler::numeric_value::NumericValue;
 
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling")));
-		auto symbol_1        = getSymbolTypeOf("Mspc.Ooo.Cnst", root_scope);
-		auto symbol_2        = getSymbolTypeOf("Mspc.Ooo.r", root_scope);
+		const auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling")));
+		const auto symbol_1        = getSymbolTypeOf("Mspc.Ooo.Cnst", root_scope);
+		const auto symbol_2        = getSymbolTypeOf("Mspc.Ooo.r", root_scope);
 
 		std::string result;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto unit      = CompileTimeValue::UnitCTV{};
-			auto f_1       = NumericValue{ f32{ 1.0f } };
-			auto d_1       = NumericValue{ f64{ 1.0 } };
-			auto i8_n7     = NumericValue{ int8_t{ -7 } };
-			auto u8_7      = NumericValue{ uint8_t{ 7 } };
-			auto i16_n42   = NumericValue{ i16{ -42 } };
-			auto u16_42    = NumericValue{ u16{ 42 } };
-			auto i32_n137  = NumericValue{ i32{ -137 } };
-			auto u32_137   = NumericValue{ u32{ 137 } };
-			auto i64_n1234 = NumericValue{ i64{ -1'234 } };
-			auto u64_1234  = NumericValue{ u64{ 1'234 } };
-			auto int_min   = NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
-			auto str1
+			constexpr auto UNIT      = CompileTimeValue::UnitCTV{};
+			constexpr auto F_1       = NumericValue{ f32{ 1.0f } };
+			constexpr auto D_1       = NumericValue{ f64{ 1.0 } };
+			constexpr auto I8_N7     = NumericValue{ int8_t{ -7 } };
+			constexpr auto U8_7      = NumericValue{ uint8_t{ 7 } };
+			constexpr auto I16_N42   = NumericValue{ i16{ -42 } };
+			constexpr auto U16_42    = NumericValue{ u16{ 42 } };
+			constexpr auto I32_N137  = NumericValue{ i32{ -137 } };
+			constexpr auto U32_137   = NumericValue{ u32{ 137 } };
+			constexpr auto I64_N1234 = NumericValue{ i64{ -1'234 } };
+			constexpr auto U64_1234  = NumericValue{ u64{ 1'234 } };
+			constexpr auto MIN_INT64_VAL
+				= NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
+			const auto str1
 				= CompileTimeValue{ CompileTimeValue::CharSliceValue{ base::StrID{ "strABC" } } };
-			auto str2  = CompileTimeValue{ CompileTimeValue::StringClassValue{
-                base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
-			auto tuple = CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
+			const auto str2 = CompileTimeValue{ CompileTimeValue::StringClassValue{
+				base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
+			const auto tuple
+				= CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
 
-			std::vector<CompileTimeValue> ctvs = {
-				false,  true,     f_1,     d_1,       i8_n7,    u8_7,     i16_n42,
-				u16_42, i32_n137, u32_137, i64_n1234, u64_1234, int_min,  'B',
-				'^',    str1,     str2,    unit,      tuple,    symbol_1, symbol_2,
-			};
+			const std::vector<CompileTimeValue> ctvs
+				= { false,  true,     F_1,     D_1,       I8_N7,    U8_7,          I16_N42,
+				    U16_42, I32_N137, U32_137, I64_N1234, U64_1234, MIN_INT64_VAL, 'B',
+				    '^',    str1,     str2,    UNIT,      tuple,    symbol_1,      symbol_2 };
 
 			for (auto&& it: ctvs) result += compiler::helios::mangler::mangleCTV(ctx, it) + ' ';
 			return result;
 		});
 
-		std::cerr << result << '\n';
-
-		std::string expected
+		constexpr std::string_view EXPECTED
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
 			  "jq1234_ iqn9223372036854775808_ c66_ c94_ r6_737472414243 "
 			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u Tb1b0E tNid "
 			  "tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
 
-		ASSERT_EQUAL(expected, result);
+		ASSERT_EQUAL(EXPECTED, result);
 	}
 
 	void testManglingOfTemplates() {
 		using namespace std::string_view_literals;
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/template_mangling")));
+		using compiler::helios::mangler::getSimpleMangledName;
+
+		const auto [_, root_scope] = getModule(fs::File(path("test_modules/template_mangling")));
 
 		const auto tmpl_foo  = getChain("Name.foo", root_scope).back();
 		const auto cls       = getChain("Name.Cls", root_scope).back();
@@ -2336,13 +2510,13 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			namespace tmpl = compiler::helios::templates;
 
-			auto        val42         = compiler::numeric_value::NumericValue{ i64{ 42 } };
-			auto        val_f         = compiler::numeric_value::NumericValue{ f32{ 1.0f } };
-			const auto& i64_type      = st(compiler::tsh::getIntegralType(
+			constexpr auto VAL42         = compiler::numeric_value::NumericValue{ i64{ 42 } };
+			constexpr auto VAL_F         = compiler::numeric_value::NumericValue{ f32{ 1.0f } };
+			const auto&    i64_type      = st(compiler::tsh::getIntegralType(
                 ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
             ));
-			const auto& cls_type      = st(ctx.query<compiler::tsh::QueryClassType>(cls));
-			const auto& glob_cls_type = st(ctx.query<compiler::tsh::QueryClassType>(glob_cls));
+			const auto&    cls_type      = st(ctx.query<compiler::tsh::QueryClassType>(cls));
+			const auto&    glob_cls_type = st(ctx.query<compiler::tsh::QueryClassType>(glob_cls));
 
 			const auto bake = [&](const auto& tmpl, const auto&... t_params) {
 				tmpl::TemplateBakeKey key{ .template_sym_id    = tmpl,
@@ -2350,68 +2524,43 @@ private:
 				return ctx.query<tmpl::QueryBakeTemplateSymID>(key).valueOrThrow();
 			};
 
-			std::cerr << std::left;
 
-			auto baked_foo_1 = bake(tmpl_foo, val42, i64_type);
-			auto name_foo_1
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_1 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_1:" << name_foo_1 << '\n';
+			const auto baked_foo_1 = bake(tmpl_foo, VAL42, i64_type);
+			const auto name_foo_1  = getSimpleMangledName(ctx, baked_foo_1).strView();
 
-			auto baked_foo_2 = bake(tmpl_foo, val42, cls_type);
-			auto name_foo_2
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_2 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_2:" << name_foo_2 << '\n';
+			const auto baked_foo_2 = bake(tmpl_foo, VAL42, cls_type);
+			const auto name_foo_2  = getSimpleMangledName(ctx, baked_foo_2).strView();
 
-			auto baked_tcls      = bake(tmpl_tcls, val_f);
-			auto baked_tcls_type = st(ctx.query<compiler::tsh::QueryClassType>(baked_tcls));
-			auto baked_foo_3     = bake(tmpl_foo, val42, baked_tcls_type);
-			auto name_foo_3
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_3 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_3:" << name_foo_3 << '\n';
+			const auto baked_tcls      = bake(tmpl_tcls, VAL_F);
+			const auto baked_tcls_type = st(ctx.query<compiler::tsh::QueryClassType>(baked_tcls));
+			const auto baked_foo_3     = bake(tmpl_foo, VAL42, baked_tcls_type);
+			const auto name_foo_3      = getSimpleMangledName(ctx, baked_foo_3).strView();
 
-			auto baked_foo_4 = bake(tmpl_foo, val42, glob_cls_type);
-			auto name_foo_4
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_foo_4 })
-			          .strView();
-			std::cerr << std::setw(16) << "name_foo_4:" << name_foo_4 << '\n';
+			const auto baked_foo_4 = bake(tmpl_foo, VAL42, glob_cls_type);
+			const auto name_foo_4  = getSimpleMangledName(ctx, baked_foo_4).strView();
 
-			auto name_hoo
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key = hoo })
-			          .strView();
-			std::cerr << std::setw(16) << "name_hoo:" << name_hoo << '\n';
+			const auto name_hoo = getSimpleMangledName(ctx, hoo).strView();
 
-			auto baked_goo = bake(tmpl_goo, val42);
-			auto name_goo
-				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
-			                                                                 = baked_goo })
-			          .strView();
-			std::cerr << std::setw(16) << "name_goo:" << name_goo << '\n';
+			const auto baked_goo = bake(tmpl_goo, VAL42);
+			const auto name_goo  = getSimpleMangledName(ctx, baked_goo).strView();
 
-			std::cerr << std::right;
 
-			const auto efoo1 = "_Q_M17template_manglingN4Name3fooIiq42_tiqEEFiqiqE5paramE"sv;
-			const auto efoo2
+			constexpr auto EFOO1 = "_Q_M17template_manglingN4Name3fooIiq42_tiqEEFiqiqE5paramE"sv;
+			constexpr auto EFOO2
 				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingN4Name3ClsEEEF_Q_CM17template_manglingN4Name3ClsEiqE5paramE"sv;
-			const auto efoo3
+			constexpr auto EFOO3
 				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingN4Name4TclsIf0000803fEEEEF_Q_CM17template_manglingN4Name4TclsIf0000803fEEiqE5paramE"sv;
-			const auto efoo4
+			constexpr auto EFOO4
 				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingG7GlobClsEEF_Q_CM17template_manglingG7GlobClsiqE5paramE"sv;
-			const auto ehoo = "_Q_M17template_manglingG3hooFiqiqE1jE"sv;
-			const auto egoo = "_Q_M17template_manglingG3gooIiq42_EFiqiqE1jE"sv;
+			constexpr auto EHOO = "_Q_M17template_manglingG3hooFiqiqE1jE"sv;
+			constexpr auto EGOO = "_Q_M17template_manglingG3gooIiq42_EFiqiqE1jE"sv;
 
-			ASSERT_EQUAL(efoo1, name_foo_1);
-			ASSERT_EQUAL(efoo2, name_foo_2);
-			ASSERT_EQUAL(efoo3, name_foo_3);
-			ASSERT_EQUAL(efoo4, name_foo_4);
-			ASSERT_EQUAL(ehoo, name_hoo);
-			ASSERT_EQUAL(egoo, name_goo);
+			ASSERT_EQUAL(EFOO1, name_foo_1);
+			ASSERT_EQUAL(EFOO2, name_foo_2);
+			ASSERT_EQUAL(EFOO3, name_foo_3);
+			ASSERT_EQUAL(EFOO4, name_foo_4);
+			ASSERT_EQUAL(EHOO, name_hoo);
+			ASSERT_EQUAL(EGOO, name_goo);
 		});
 	}
 
@@ -2628,7 +2777,7 @@ private:
 										   base::Optional<std::string_view> expected_library
 									   ) {
 			auto abi_value = ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
-			ASSERT_TRUE(std::holds_alternative<compiler::helios::CAbi>(abi_value));
+			ASSERT_MATCHES(abi_value, compiler::helios::CAbi);
 			auto c_abi = std::get<compiler::helios::CAbi>(abi_value);
 			if (!expected_library.empty()) {
 				ASSERT_HAS_VALUE(c_abi.library);
@@ -2638,7 +2787,7 @@ private:
 
 		auto test_default_abi = [this](query::Context& ctx, compiler::helios::SymID symbol) {
 			auto abi_value = ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
-			ASSERT_TRUE(std::holds_alternative<compiler::helios::DefaultAbi>(abi_value));
+			ASSERT_MATCHES(abi_value, compiler::helios::DefaultAbi);
 		};
 		auto [module, root_scope] = getModule(fs::File(path("test_modules/stmt_specifiers")));
 
@@ -3218,13 +3367,17 @@ private:
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
-		ASSERT_EQUAL(2, foo_class_info.methods.size());
+		const auto foo_methods
+			= foo_class_info.declared_interface.getMethodsView()
+		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
+		    | std::ranges::to<std::vector>();
+		ASSERT_EQUAL(2, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
-			for (const auto& method: foo_class_info.methods)
+			for (const auto& method: foo_methods)
 				if (compiler::helios::name(method) == base::StrID(name)) return method;
 			fail(base::strConcat("Method ", name, " not found"));
-			return foo_class_info.methods.at(0);
+			return foo_methods.at(0);
 		};
 
 		ASSERT_EQUAL(
@@ -3250,13 +3403,17 @@ private:
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
-		ASSERT_EQUAL(2, foo_class_info.methods.size());
+		const auto foo_methods
+			= foo_class_info.declared_interface.getMethodsView()
+		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
+		    | std::ranges::to<std::vector>();
+		ASSERT_EQUAL(2, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
-			for (const auto& method: foo_class_info.methods)
+			for (const auto& method: foo_methods)
 				if (compiler::helios::name(method) == base::StrID(name)) return method;
 			fail(base::strConcat("Method ", name, " not found"));
-			return foo_class_info.methods.at(0);
+			return foo_methods.at(0);
 		};
 		auto infix_method_sym  = find_method("+*");
 		auto prefix_method_sym = find_method("-*");

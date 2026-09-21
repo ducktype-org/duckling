@@ -5,12 +5,13 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/round_group_expression.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/anycast.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -55,8 +56,7 @@ namespace compiler::helios::test_utils {
 
 			auto symbol_path_variant = symbol->getAsSingle().valueOrPanic();
 			CORE_ASSERT(
-				std::holds_alternative<SymbolList>(symbol_path_variant),
-				"Expected single symbol in chain lookup"
+				v_matches(symbol_path_variant, SymbolList), "Expected single symbol in chain lookup"
 			);
 			auto symbol_path = std::get<SymbolList>(symbol_path_variant);
 
@@ -82,8 +82,9 @@ namespace compiler::helios::test_utils {
 	}
 
 	tsh::SymbolType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
-		return query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back())
-		    ->valueOrThrow();
+		return tsh::SymbolType<>::withDefaults(
+			query::entryPoint<tsh::QueryClassType>(getChain(chain, scope).back())
+		);
 	}
 
 	Box<code::Expr> getExprOfConst(SymID sym) {

@@ -1,0 +1,26 @@
+simple.dbc
+
+> "Debugger has started"
+> "+\n"
+> "+\n"
+
+timeout 0.1
+< "break set 4\n"
+> "Breakpoint in simple.dbc line 4 set."
+
+< "run\n"
+> "Running"
+
+timeout 0.5
+> "Paused"
+
+timeout 0.1
+< "position\n"
+> "Function `main` instruction 1" # check the name of the function and instruction number
+> "File:"
+> "simple.dbc" # check the file
+> "Lines: 3-5" # check lines of the file
+
+timeout 0.5
+< "continue\n"
+> "ExecutionCompleted (return value = 0)"

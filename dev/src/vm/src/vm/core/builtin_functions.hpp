@@ -39,7 +39,7 @@ namespace vm {
 
 namespace vm::builtins {
 
-	struct NoValue {};
+	struct NoValue final {};
 
 	// Because VMThread stores values on the local stack as bytes,
 	// there was a question of where the conversion from bytes to
@@ -80,7 +80,7 @@ namespace vm::builtins {
 	/**
 	 * @brief Full description of a builtin function: its bytecode-visible name and its signature.
 	 */
-	struct BuiltinFunction {
+	struct BuiltinFunction final {
 		base::StrID         name;
 		code::FuncSignature signature;
 

@@ -265,7 +265,7 @@ impl<'duck> Fetcher<'duck> {
         retries: u32,
     ) -> QuackResult<PathBuf> {
         debug!("fetching with retries");
-        self.ctx.console().info(format!(
+        self.ctx.info(format!(
             "starting a download of `{}` version {} from `{}`",
             pkg.name, pkg.version, pkg.url
         ))?;
@@ -282,7 +282,7 @@ impl<'duck> Fetcher<'duck> {
                     if will_retry {
                         debug!(%attempt, "retrying fetch");
                     }
-                    self.ctx.console().warning(format!(
+                    self.ctx.warning(format!(
                         "failed to download `{}` version {} from `{}`: {e}",
                         pkg.name, pkg.version, pkg.url
                     ))?;

@@ -29,7 +29,7 @@ sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g+
 #### Arch linux
 
 ```bash
-sudo pacman -S python python-pip python-click doxygen graphviz lcov pkgconf libffi --noconfirm
+sudo pacman -S python python-pip gcc clang lld mold python-click python-requests python-yaml ninja cmake doxygen graphviz lcov pkgconf libffi --noconfirm
 ```
 
 > **Note**  

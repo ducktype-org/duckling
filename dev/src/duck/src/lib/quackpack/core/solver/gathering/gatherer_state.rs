@@ -12,7 +12,7 @@ use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
 use crate::quackpack::util::str_id::QpJoin;
 use crate::quackpack::util::with_version::WithVersion;
-use crate::util::IsPlural;
+use crate::util::Pluralize;
 use crate::util::error::ErrorsLogger;
 use crate::util::extend::QpExtend;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal, qp_err};
@@ -20,8 +20,13 @@ use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal, qp_er
 /// Gathered information about a particular package.
 #[derive(Debug)]
 pub struct PackageData {
+    /// Fetched manifest of the package.
     pub manifest: Box<Manifest>,
+    /// The intersection of the manifest defined features and features referenced in the requests.
     pub requested_features: HashSet<FeatureName>,
+    /// Whether any manifest request referenced this package or not.
+    /// This being false can happen due to not pinned registry requests.
+    /// For such a request we fetch all manifests, not only those with compatible versions.
     pub referenced_by_requests: bool,
 }
 
@@ -571,10 +576,8 @@ impl GathererState {
 /// A struct containing all the information gathered by the gatherer.
 #[derive(Debug)]
 pub struct GatheredInfo {
-    /// The gathered manifests of the packages referenced in requests.
-    pub gathered_manifests: HashMap<PackageId, Box<Manifest>>,
-    /// The intersection of the manifest defined features and features referenced in the requests.
-    pub possible_features: HashMap<PackageId, HashSet<FeatureName>>,
+    /// Mapping from packages to gathered data about each package.
+    pub packages_data: HashMap<PackageId, PackageData>,
     /// The set of the possible versions of the packages with a given identity.
     pub versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
     /// The translation from [`Source`] to [`FullIdentity`].
@@ -585,17 +588,14 @@ impl TryFrom<GathererState> for GatheredInfo {
     type Error = QuackError;
 
     fn try_from(mut value: GathererState) -> QuackResult<Self> {
-        let mut gathered_manifests = HashMap::new();
-        let mut possible_features = HashMap::new();
         let mut unnecessary_pkgs = Vec::new();
-        for (pkg, data) in value.pkgs_data {
-            if data.referenced_by_requests {
-                gathered_manifests.insert(pkg, data.manifest);
-                possible_features.insert(pkg, data.requested_features);
-            } else {
-                unnecessary_pkgs.push(pkg);
+        value.pkgs_data.retain(|pkg, data| {
+            if !data.referenced_by_requests {
+                unnecessary_pkgs.push(*pkg);
+                return false;
             }
-        }
+            true
+        });
         for pkg in unnecessary_pkgs {
             let Some(versions) = value.versions_for_identity.get_mut(&pkg.identity()) else {
                 qp_bail_internal!(
@@ -606,8 +606,7 @@ impl TryFrom<GathererState> for GatheredInfo {
             versions.remove(&pkg.version());
         }
         Ok(GatheredInfo {
-            gathered_manifests,
-            possible_features,
+            packages_data: value.pkgs_data,
             versions_for_identity: value.versions_for_identity,
             source_to_origin_resolver: value.source_to_origin_resolver,
         })

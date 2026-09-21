@@ -8,7 +8,7 @@
 #include <optional>
 
 namespace vm::debugger {
-	struct CodePosition: public api::response::CodePosition {
+	struct CodePosition final: public api::response::CodePosition {
 		base::Optional<dia::SourcePosition> mapped_position;
 	};
 
@@ -94,7 +94,9 @@ namespace vm::debugger {
 		 */
 		std::expected<void, api::ApiError> loadFiles(const std::vector<fs::File>& files);
 
-		std::expected<void, std::variant<api::ApiError, std::string>> loadDefault();
+		std::expected<void, std::variant<api::ApiError, std::string>> loadDefault(
+			base::Optional<fs::FilePath> prefix = std::nullopt
+		);
 
 		void setProgramArguments(const ProgramRunArguments& args);
 

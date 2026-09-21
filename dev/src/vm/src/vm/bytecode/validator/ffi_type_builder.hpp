@@ -15,7 +15,7 @@ namespace vm::code::ffi_detail {
 	 * @brief Owning storage for libffi struct type descriptors. Must outlive any `ffi_cif`
 	 * prepared with types built by `buildFFIType`.
 	 */
-	struct FFITypeStorage {
+	struct FFITypeStorage final {
 		std::vector<Box<ffi_type>>               struct_types;
 		std::vector<Box<std::vector<ffi_type*>>> struct_elements;
 	};

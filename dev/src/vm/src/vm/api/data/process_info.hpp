@@ -12,7 +12,7 @@ namespace vm {
 	STRONG_TYPEDEF_ID_DIRECT_CREATION(PID);
 
 	namespace api {
-		struct ProcessInfo {
+		struct ProcessInfo final {
 			PID pid;
 
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(ProcessInfo, pid);
@@ -21,7 +21,7 @@ namespace vm {
 }
 
 template<>
-struct nlohmann::adl_serializer<vm::PID> {
+struct nlohmann::adl_serializer<vm::PID> final {
 	// NOLINTBEGIN(readability-identifier-naming)
 	static void to_json(nlohmann::json& j, const vm::PID& pid) { j = pid.asInt(); }
 
