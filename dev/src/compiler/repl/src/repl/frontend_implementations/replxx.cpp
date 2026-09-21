@@ -373,8 +373,8 @@ namespace compiler::repl {
 	}
 
 	std::string FrontendReplxxImplementation::readLine() {
-		const char* prompt = m_decorative_output ? ReplConfig::PROMPT.c_str() : "";
-		const char* input  = m_replxx.input(prompt);
+		const std::string prompt = m_decorative_output ? ReplConfig::PROMPT : "";
+		const char*       input  = m_replxx.input(prompt);
 
 		if (input == nullptr) {
 			// EOF (Ctrl-D) or error.
