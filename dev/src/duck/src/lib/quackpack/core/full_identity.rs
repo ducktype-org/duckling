@@ -1,4 +1,11 @@
-//! A package identity, a unique identifier in the dependencies' graph.
+//! A full package identity.
+//!
+//! This type is a supertype of [`Identity`], with additional information (mainly, for
+//! [`FullKind::Git`] we also store commits).
+//!
+//! This type exists only because solver and storage look at the commits.
+//! Build graph uniqueness should __not__ be checked against [`FullIdentity`]. Use [`Identity`] for
+//! that.
 //!
 //! For differences between [`FullIdentity`] and [`Identity`], see the `readme.md` under the `core/` directory.
 
