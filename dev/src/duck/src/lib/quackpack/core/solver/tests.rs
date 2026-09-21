@@ -11,7 +11,7 @@ use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverGathererData};
+use crate::quackpack::core::solver::{ShouldRunSolverEngine, DependencyGraphFinder};
 use crate::quackpack::core::{PackageContext, PackageId, PackageLoader, Version};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
@@ -204,7 +204,7 @@ dependencies:
         .into(),
     };
 
-    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
+    let solver = DependencyGraphFinder::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
     let ShouldRunSolverEngine::Yes(solver) =
         block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {
@@ -307,7 +307,7 @@ dependencies:
         .into(),
     };
 
-    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
+    let solver = DependencyGraphFinder::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
     let ShouldRunSolverEngine::No(answer) =
         block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {
@@ -405,7 +405,7 @@ dependencies:
         suppress_foreign_manifests_errors: true,
         frozen: false,
     };
-    let solver = SolverGathererData::new(&pcx, previous_freeze, mode).unwrap();
+    let solver = DependencyGraphFinder::new(&pcx, previous_freeze, mode).unwrap();
     let ShouldRunSolverEngine::Yes(solver) =
         block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {

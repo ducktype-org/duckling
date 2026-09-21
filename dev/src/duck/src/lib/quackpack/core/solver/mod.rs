@@ -1,4 +1,4 @@
-//! This module contains a [`SolverGathererData`] and [`SolverEngineData`] structs, which are designated
+//! This module contains a [`DependencyGraphFinder`] and [`SolverEngineData`] structs, which are designated
 //! to finding the dependency resolution of a given package.
 //! By *dependency resolution* we mean a set of packages, each with a designated set of features,
 //! so that each package's dependencies are satisfied inside that set.
@@ -40,12 +40,15 @@ use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
+use crate::quackpack::core::solver::solving::NoSolutionError;
 use crate::quackpack::core::solver::solving::input::SolverInput;
 use crate::quackpack::core::solver::solving::solver_engine::SolverEngine;
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::{FeatureName, Manifest, PackageContext, PackageId};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal};
 
+/// Main entry point.
+/// Performs the whole solving process.
 pub struct Solver<'duck, 'ctx, Access: GitAccess> {
     root_pcx: &'ctx PackageContext<'duck>,
     previous_freeze: Option<&'ctx VenvFreeze>,
@@ -54,13 +57,38 @@ pub struct Solver<'duck, 'ctx, Access: GitAccess> {
     mode: SolverMode,
 }
 
+/// Dependency realization returned by the solving process.
+/// Contains the new, currently valid [`SolverFreeze`] and its packages' manifests.
+pub struct SolverAnswer {
+    pub new_freeze: SolverFreeze,
+    pub pkgs_manifests: HashMap<PackageId, Box<Manifest>>,
+}
+
 impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
+    /// Create a new [`Solver`].
+    pub fn new(
+        root_pcx: &'ctx PackageContext<'duck>,
+        previous_freeze: Option<&'ctx VenvFreeze>,
+        fetcher: &'ctx Fetcher<'duck>,
+        git_access: Access,
+        mode: SolverMode
+    ) -> Self {
+        Self {
+            root_pcx,
+            previous_freeze,
+            fetcher,
+            git_access,
+            mode
+        }
+    }
+
+    /// Perform the whole solving process.
     pub async fn solve(self) -> QuackResult<SolverAnswer> {
         self.root_pcx.ctx().info("starting solving the dependency graph")?;
         let root_pkg = self.root_pcx.package_id()?;
 
         let (initial_freeze, empty_input) = self.get_initial_freeze(root_pkg)?;
-        let gatherer = SolverGathererData::new(self.root_pcx, initial_freeze, self.mode)
+        let gatherer = DependencyGraphFinder::new(self.root_pcx, initial_freeze, self.mode)
             .context("failed to start gathering packages")?;
 
         let fetcher_lock = self.root_pcx.ctx().duck_home().open_fetcher_lockfile(self.root_pcx.ctx())?;
@@ -77,6 +105,8 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
         }
     }
 
+    /// Create the initial [`SolverFreeze`], which serves as an entry point to the solving process.
+    /// It is used as apriori knowledge and is modified by later steps.
     fn get_initial_freeze(&self, root_pkg: PackageId) -> QuackResult<(SolverFreeze, bool)> {
         match self.previous_freeze {
             Some(freeze) => match SolverFreeze::try_from_venv_freeze(root_pkg, freeze) {
@@ -92,13 +122,27 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
         }
     }
 
-    async fn rerun_if_nonempty_input(self, e: QuackError, empty_input: bool) -> QuackResult<SolverAnswer> {
-        if e.has_in_chain()
+    /// If there was a (well-formed) previous freeze, and we got [`NoSolutionError`],
+    /// then it might be because because of the assumtpion that previous freeze packages must be present.
+    /// Thus we retry with no input freeze, hoping that it allows for an existence of a solution.
+    async fn rerun_if_nonempty_input(mut self, e: QuackError, empty_input: bool) -> QuackResult<SolverAnswer> {
+        if !e.has_in_chain::<NoSolutionError>() || empty_input {
+            return Err(e);
+        }
+        self.root_pcx.ctx().info("no solution found, retrying without previous freeze")?;
+        self.remove_previous_freeze();
+        self.solve().await
+    }
+
+    /// Helper for [`Self::rerun_if_nonempty_input`].
+    /// Changes previous freeze to [`None`].
+    fn remove_previous_freeze(&mut self) {
+        self.previous_freeze = None;
     }
 }
 
 /// A struct designated to finding the full dependency graph of a given package.
-pub struct SolverGathererData<'duck, 'ctx> {
+pub struct DependencyGraphFinder<'duck, 'ctx> {
     root_pcx: &'ctx PackageContext<'duck>,
     root_pkg: PackageId,
     root_pkg_features: HashSet<FeatureName>,
@@ -106,15 +150,7 @@ pub struct SolverGathererData<'duck, 'ctx> {
     mode: SolverMode,
 }
 
-/// Dependency realization returned by [`solve`](SolverEngineData::solve).
-/// Contains the new, currently valid [`SolverFreeze`]
-/// and its packages manifests to generate a serializable freeze.
-pub struct SolverAnswer {
-    pub new_freeze: SolverFreeze,
-    pub pkgs_manifests: HashMap<PackageId, Box<Manifest>>,
-}
-
-/// [`prepare_solving`](SolverGathererData::prepare_solving) response describing whether we should
+/// [`prepare_solving`](DependencyGraphFinder::prepare_solving) response describing whether we should
 /// run the rest of the solver engine.
 pub enum ShouldRunSolverEngine {
     No(SolverAnswer),
@@ -131,8 +167,8 @@ impl fmt::Display for ShouldRunSolverEngine {
     }
 }
 
-impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
-    /// Creates a new [`SolverGathererData`] instance.
+impl<'duck, 'ctx> DependencyGraphFinder<'duck, 'ctx> {
+    /// Creates a new [`DependencyGraphFinder`] instance.
     pub fn new(
         pcx: &'ctx PackageContext<'duck>,
         current_freeze: SolverFreeze,
@@ -266,7 +302,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
 #[derive(Debug)]
 /// A struct designated to finding the dependency resolution of a given package.
 ///
-/// It can be created by [`prepare_solving`](SolverGathererData::prepare_solving).
+/// It can be created by [`prepare_solving`](DependencyGraphFinder::prepare_solving).
 pub struct SolverEngineData {
     input: SolverInput,
     root_pkg: PackageId,
