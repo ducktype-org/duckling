@@ -17,6 +17,7 @@ using vm::ShadowEntry;
 using vm::VectorClock;
 using vm::api::ThreadID;
 using vm::exceptions::VMDataRaceException;
+using vm::exceptions::VMFastTrackLimitException;
 
 namespace {
 	constexpr ThreadID T0{ 0 };
@@ -58,6 +59,17 @@ namespace {
 		} catch (const VMDataRaceException&) { return true; }
 	}
 
+	/**
+	 * @brief Runs `operation` and tells whether it hit an engine limit. Anything else propagates.
+	 */
+	template<typename Operation>
+	bool limitExceeded(Operation&& operation) {
+		try {
+			std::forward<Operation>(operation)();
+			return false;
+		} catch (const VMFastTrackLimitException&) { return true; }
+	}
+
 	void read(ShadowEntry& entry, const Thread& thread) {
 		entry.processRead(thread.id, thread.clock(), thread.vc);
 	}
@@ -81,9 +93,11 @@ public:
 		TESTER_ADD_TEST(testVectorClockPartialOrder);
 		TESTER_ADD_TEST(testVectorClockEquality);
 		TESTER_ADD_TEST(testVectorClockIncrement);
+		TESTER_ADD_TEST(testVectorClockRefusesThreadIdOutOfRange);
+		TESTER_ADD_TEST(testVectorClockRefusesClockOverflow);
 		TESTER_ADD_TEST(testEpochInitialState);
 		TESTER_ADD_TEST(testEpochHappensBeforeVectorClock);
-		TESTER_ADD_TEST(testEpochHappensBeforeEpoch);
+		TESTER_ADD_TEST(testEpochPacksThreadIdAndClock);
 		TESTER_ADD_TEST(testFreshEntryNeverRaces);
 		TESTER_ADD_TEST(testSameThreadAccessesNeverRace);
 		TESTER_ADD_TEST(testOrderedReadStaysExclusive);
@@ -99,6 +113,7 @@ public:
 		TESTER_ADD_TEST(testResetForgetsHistory);
 		TESTER_ADD_TEST(testRaceReportNamesBothEpochs);
 		TESTER_ADD_TEST(testShadowLayoutOfNestedDataTypes);
+		TESTER_ADD_TEST(testShadowLayoutOfVariants);
 	}
 
 	// ---- VectorClock ----
@@ -192,6 +207,28 @@ public:
 		ASSERT_EQUAL(0U, vc[T0]);
 	}
 
+	void testVectorClockRefusesThreadIdOutOfRange() {
+		VectorClock    vc;
+		const ThreadID past_the_last{ Epoch::MAX_TID + 1 };
+		// Reading past the end is 0, whatever the ID.
+		ASSERT_EQUAL(Epoch::Clock(0), std::as_const(vc)[ThreadID::bad()]);
+		ASSERT_EQUAL(Epoch::Clock(0), std::as_const(vc)[past_the_last]);
+		// Writing grows the clock, which only an ID an epoch can name may do.
+		ASSERT_TRUE(limitExceeded([&] { vc[ThreadID::bad()] = 1; }));
+		ASSERT_TRUE(limitExceeded([&] { vc[past_the_last] = 1; }));
+		ASSERT_TRUE(limitExceeded([&] { vc.increment(ThreadID::bad()); }));
+		ASSERT_EQUAL(usize(0), vc.size());
+	}
+
+	void testVectorClockRefusesClockOverflow() {
+		VectorClock vc;
+		vc[T0] = Epoch::MAX_CLOCK - 1;
+		vc.increment(T0);
+		ASSERT_EQUAL(Epoch::MAX_CLOCK, vc[T0]);
+		ASSERT_TRUE(limitExceeded([&] { vc.increment(T0); }));
+		ASSERT_EQUAL(Epoch::MAX_CLOCK, vc[T0]);
+	}
+
 	// ---- Epoch ----
 
 	void testEpochInitialState() {
@@ -212,11 +249,22 @@ public:
 		ASSERT_TRUE(Epoch() <= VectorClock());
 	}
 
-	void testEpochHappensBeforeEpoch() {
-		ASSERT_TRUE(Epoch(T1, 2) <= Epoch(T1, 2));
-		ASSERT_TRUE(Epoch(T1, 2) <= Epoch(T1, 3));
-		ASSERT_TRUE(!(Epoch(T1, 3) <= Epoch(T1, 2)));
-		ASSERT_TRUE(!(Epoch(T1, 2) <= Epoch(T2, 5)));
+	void testEpochPacksThreadIdAndClock() {
+		ASSERT_EQUAL(sizeof(u64), sizeof(Epoch));
+
+		const Epoch epoch(T2, 7);
+		ASSERT_TRUE(epoch.tid() == T2);
+		ASSERT_EQUAL(Epoch::Clock(7), epoch.clock());
+
+		const ThreadID last_tid{ Epoch::MAX_TID };
+		const Epoch    largest(last_tid, Epoch::MAX_CLOCK);
+		ASSERT_TRUE(largest.tid() == last_tid);
+		ASSERT_EQUAL(Epoch::MAX_CLOCK, largest.clock());
+		ASSERT_TRUE(largest != Epoch());
+
+		ASSERT_TRUE(Epoch().tid().isBad());
+		ASSERT_EQUAL(Epoch::Clock(0), Epoch().clock());
+		ASSERT_TRUE(Epoch(ThreadID::bad(), 0) == Epoch());
 	}
 
 	// ---- ShadowEntry ----
@@ -463,6 +511,34 @@ public:
 
 		ASSERT_EQUAL(4U, table.getShadowSize());
 		ASSERT_EQUAL(3U, table.getShadowEntryIndex(24));
+	}
+
+	void testShadowLayoutOfVariants() {
+		using vm::Type;
+		Type byte_type = Type::declareType(base::StrID("u8"));
+		byte_type.definePrimitive(Bytes(1), 1);
+		Type word_type = Type::declareType(base::StrID("u64"));
+		word_type.definePrimitive(Bytes(8), 1);
+		Type pair = Type::declareType(base::StrID("pair"));
+		pair.defineData(
+			{ { base::StrID("a"), &word_type, Bytes(0), 0 },
+		      { base::StrID("b"), &word_type, Bytes(8), 1 } },
+			Bytes(16),
+			{},
+			2
+		);
+		// variant { u8, pair }: a 1-byte tag and a 16-byte payload, 1 + 2 shadow entries.
+		Type variant = Type::declareType(base::StrID("variant"));
+		variant.defineVariant(Bytes(1), { &byte_type, &pair }, 3);
+		variant.finalize();
+
+		ASSERT_EQUAL(3U, variant.getShadowSize());
+		ASSERT_EQUAL(0U, variant.getShadowEntryIndex(0));
+		// Every payload byte maps to the first payload entry; the nested block of the active
+		// alternative is the only way to entry 2.
+		ASSERT_EQUAL(1U, variant.getShadowEntryIndex(1));
+		ASSERT_EQUAL(1U, variant.getShadowEntryIndex(9));
+		ASSERT_EQUAL(1U, variant.getShadowEntryIndex(16));
 	}
 
 	void testRaceReportNamesBothEpochs() {

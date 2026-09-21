@@ -64,4 +64,13 @@ namespace vm::exceptions {
 
 	VM_RUNTIME_EXCEPTION_WITH_PARAM(VMResourceDoesNotExist, "Resource does not exist", std::string);
 	VM_RUNTIME_EXCEPTION_WITH_PARAM(VMFFIError, "FFI error", std::string);
+
+	/**
+	 * @brief Thrown by the Fast Track engine when a program needs more than an `Epoch` can
+	 * represent: a thread ID past `Epoch::MAX_TID`, or a vector clock component past
+	 * `Epoch::MAX_CLOCK`.
+	 */
+	VM_RUNTIME_EXCEPTION_WITH_PARAM(
+		VMFastTrackLimitException, "[FastTrack] Engine limit exceeded", std::string
+	);
 }

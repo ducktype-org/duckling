@@ -3,6 +3,7 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -404,8 +405,10 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		variant_case(defined::DefinedFixedSizeTable, fixed_size_table) {
 			auto inner_type = types.at(fixed_size_table.inner);
 			inner_type->finalize(types);
-			this->size        = inner_type->getSize() * fixed_size_table.element_count;
-			this->shadow_size = static_cast<ShadowSize>(
+			this->size = inner_type->getSize() * fixed_size_table.element_count;
+			// Like `Type::getShadowEntryIndex`, fail loudly on a table whose shadow layout does
+			// not fit `ShadowSize` instead of wrapping it to a small (or zero) size.
+			this->shadow_size = base::safeIntConv<ShadowSize>(
 				inner_type->getShadowSize() * fixed_size_table.element_count
 			);
 			this->alignment             = inner_type->getAlignment();

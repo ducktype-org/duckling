@@ -8,12 +8,20 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <vm/core/safe/exceptions.hpp>
+
 #include <algorithm>
 
 namespace vm {
 	void VectorClock::ensureCapacity(api::ThreadID thread_id) {
-		CORE_ASSERT(thread_id.isGood(), "Vector clock indexed with a bad thread ID");
-		u64 id = thread_id.asInt();
+		// A check rather than an assert: outside dev builds an assert vanishes, and a bad ID would
+		// resize the clock to nothing and then index far past its end. The bad ID is `u64(-1)`,
+		// so one comparison covers it and every ID an epoch cannot name.
+		const u64 id = thread_id.asInt();
+		if (id > Epoch::MAX_TID) [[unlikely]]
+			throw exceptions::VMFastTrackLimitException(
+				base::strConcat("vector clock indexed with a thread ID out of range: ", id)
+			);
 		if (id >= clocks.size()) clocks.resize(id + 1, 0);
 	}
 
@@ -52,7 +60,12 @@ namespace vm {
 		return true;
 	}
 
-	void VectorClock::increment(api::ThreadID thread_id) { ++(*this)[thread_id]; }
+	void VectorClock::increment(api::ThreadID thread_id) {
+		Epoch::Clock& component = (*this)[thread_id];
+		if (component == Epoch::MAX_CLOCK) [[unlikely]]
+			throw exceptions::VMFastTrackLimitException("vector clock overflow");
+		++component;
+	}
 
 	bool VectorClock::operator==(const VectorClock& other) const {
 		usize max_size = std::max(clocks.size(), other.clocks.size());

@@ -10,6 +10,7 @@
 #include <vm/core/safe/type_metadata/definitions.hpp>
 
 #include <algorithm>
+#include <iterator>
 
 namespace vm {
 	using base::Optional;
@@ -183,6 +184,15 @@ namespace vm {
 		kind        = kind::Opaque{};
 	}
 
+	namespace {
+		u64 fieldOffset(const kind::FieldDesc& field) { return field.offset.asInt(); }
+
+		/// `shadowEntryIndexOrPadding` searches the fields of a data type by offset.
+		bool fieldsInOffsetOrder(const kind::Data& data) {
+			return std::ranges::is_sorted(data.fields, {}, fieldOffset);
+		}
+	}
+
 	void Type::finalize() {
 		// @TODO: #1971 Delete these checks
 		if (state == State::Finalizing)
@@ -201,9 +211,12 @@ namespace vm {
 			}
 			variant_case(kind::Data, data) {
 				for (auto& field: data.fields) field.type->finalize();
+				CORE_ASSERT(
+					fieldsInOffsetOrder(data),
+					"Fields of a data type have to be laid out in offset order"
+				);
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
-				buildByteToShadow(data);
 			}
 			variant_case(kind::Variant, variant) {
 				// calculate size
@@ -215,18 +228,6 @@ namespace vm {
 				this->size = variant.type_tag_size + data_size;
 				isInstantiableImpl(variant);
 			}
-		}
-	}
-
-	void Type::buildByteToShadow(kind::Data& data) {
-		data.byte_to_shadow.assign(size.asInt(), NO_SHADOW_ENTRY);
-		for (const auto& field: data.fields) {
-			const usize field_begin = field.offset.asInt();
-			const usize field_size  = field.type->getSize().asInt();
-			for (usize byte = 0; byte < field_size; ++byte)
-				if_opt_some(field.type->shadowEntryIndexOrPadding(byte), entry) {
-					data.byte_to_shadow[field_begin + byte] = field.shadow_offset + entry;
-				}
 		}
 	}
 
@@ -261,11 +262,17 @@ namespace vm {
 			CORE_ASSERT(byte_offset < size.asInt(), "Byte offset outside of the object");
 			return 0;
 		case Kind::Data: {
-			const auto& byte_to_shadow = get<kind::Data>().value()->byte_to_shadow;
-			CORE_ASSERT(byte_offset < byte_to_shadow.size(), "Byte offset outside of the object");
-			const ShadowOffset entry = byte_to_shadow[byte_offset];
-			if (entry == NO_SHADOW_ENTRY) return {};
-			return entry;
+			CORE_ASSERT(byte_offset < size.asInt(), "Byte offset outside of the object");
+			const auto& fields = get<kind::Data>().value()->fields;
+			// The fields are in offset order (`finalize` checks), so the one holding the byte is
+			// the last that starts at or before it - unless the byte lies past that field's end.
+			const auto after = std::ranges::upper_bound(fields, byte_offset, {}, fieldOffset);
+			if (after == fields.begin()) return {};
+			const kind::FieldDesc& field           = *std::prev(after);
+			const u64              offset_in_field = byte_offset - field.offset.asInt();
+			if (offset_in_field >= field.type->getSize().asInt()) return {};
+			return field.type->shadowEntryIndexOrPadding(offset_in_field)
+			    .map([&](ShadowOffset entry) { return field.shadow_offset + entry; });
 		}
 		case Kind::FixedSizeTable:
 			CORE_ASSERT(byte_offset < size.asInt(), "Byte offset outside of the object");

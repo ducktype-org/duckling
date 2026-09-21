@@ -39,8 +39,9 @@ namespace vm {
 		[[nodiscard]] Epoch::Clock operator[](api::ThreadID thread_id) const;
 
 		/**
-		 * @brief Access/Modify component: VC(t). Grows the clock, so `thread_id` must be a good
-		 * ID.
+		 * @brief Access/Modify component: VC(t). Grows the clock, so `thread_id` has to be one an
+		 * epoch can name.
+		 * @throws exceptions::VMFastTrackLimitException for a bad ID or one past `Epoch::MAX_TID`.
 		 */
 		[[nodiscard]] Epoch::Clock& operator[](api::ThreadID thread_id);
 
@@ -67,6 +68,7 @@ namespace vm {
 
 		/**
 		 * @brief Increment clock for thread t: VC(t) += 1.
+		 * @throws exceptions::VMFastTrackLimitException instead of going past `Epoch::MAX_CLOCK`.
 		 */
 		void increment(api::ThreadID thread_id);
 

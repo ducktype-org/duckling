@@ -21,7 +21,7 @@ namespace vm {
 	 * the map from data blocks to their shadow blocks. Meant to be owned by the Fast Track flavour
 	 * of the process, so that a plain `SafeVMProcess` carries no Fast Track overhead.
 	 *
-	 * Nothing in the VM drives it yet: the process, thread and opcode wiring lands with #3122.
+	 * Nothing in the VM drives it yet: the process, thread and opcode wiring lands with #3559.
 	 */
 	class FastTrackGlobals final {
 		ShadowMemory shadow_data_memory;

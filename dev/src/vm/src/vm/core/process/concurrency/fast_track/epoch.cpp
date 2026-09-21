@@ -7,5 +7,5 @@
 #include "vc.hpp"
 
 namespace vm {
-	bool Epoch::operator<=(const VectorClock& vc) const { return clock_value <= vc[thread_id]; }
+	bool Epoch::operator<=(const VectorClock& vc) const { return clock() <= vc[tid()]; }
 }

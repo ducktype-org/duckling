@@ -81,11 +81,6 @@ namespace vm {
 		 */
 		void inheritsFromImpl(InheritanceMetadata& inheritance_metadata);
 
-		/**
-		 * @brief Fills `kind::Data::byte_to_shadow` of a data type whose fields are finalized.
-		 */
-		void buildByteToShadow(kind::Data& data);
-
 	public:
 		// Type declaration:
 		static Type declareType(base::StrID name);
@@ -157,10 +152,16 @@ namespace vm {
 		 *
 		 * Scalars (primitives, pointers, functions, opaques) occupy a single entry, so every byte
 		 * maps to entry 0. Tables map through their element type. Data types map through their
-		 * fields; padding bytes belong to no field and must not be asked about. A variant's tag
-		 * maps to entry 0; its payload layout depends on the active alternative, which is tracked
-		 * by the nested block of that alternative, so from the variant itself every payload byte
-		 * maps to the first payload entry.
+		 * fields, found by a binary search on the field offsets; padding bytes belong to no field
+		 * and must not be asked about.
+		 *
+		 * A variant's tag maps to entry 0. Its payload layout depends on the active alternative,
+		 * so from the variant itself every payload byte maps to entry 1, the first payload entry:
+		 * only an access that treats the whole payload as one value may map through the variant.
+		 * An access to a field of the active alternative has to go through the nested shadow
+		 * block of that alternative, which starts at entry 1 and is the only way to reach entries
+		 * 2 and up; such an access is therefore ordered against a whole-payload access only where
+		 * it touches entry 1.
 		 *
 		 * @note `byte_offset` has to be inside the object. A dynamic table has no size of its own,
 		 * so there the offset is only checked against the element size.
