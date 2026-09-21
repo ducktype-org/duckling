@@ -1795,6 +1795,8 @@ class FunctionValidator {
 		const Instruction&                instruction,
 		const LocalStack&                 current_stack
 	) const {
+		VISIT(local, l, if (l.frame.has_value()) throw CannotCastPreviousFrameVariableError(l));
+
 		// These are guaranteed to exist by `validateArgTypes`.
 		const auto curr_type      = VISIT(local, l, return getPlaceType(l, current_stack));
 		const auto new_type       = types_ctx.at(type.type_name);

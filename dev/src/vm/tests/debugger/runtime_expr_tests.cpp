@@ -47,6 +47,8 @@ public:
 		TESTER_ADD_TEST(test25RuntimeExpr);
 		TESTER_ADD_TEST(test26RuntimeExpr);
 		TESTER_ADD_TEST(test27RuntimeExpr);
+		TESTER_ADD_TEST(test28RuntimeExpr);
+		TESTER_ADD_TEST(test29RuntimeExpr);
 	}
 
 private:
@@ -868,6 +870,37 @@ private:
 			.evalExprNormal(freed_expr, { 7 })
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.evalExprExpectPanic(leaky_expr, vm::exceptions::VMFoundMemoryLeakException::ERR_MSG)
+			.cleanup();
+	}
+
+	void test28RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_28/main.dbc"));
+		const fs::File read_base_expr(path("runtime_expr_dbc/test_28/read_base.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 1)
+			.putBreakpoint(base::StrID("main"), 3)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 1)
+			.evalExprExpectLoadError(read_base_expr, vm::code::ArgumentMismatchError::ERR_MSG)
+			.resume()
+			.awaitBreakpoint(base::StrID("main"), 3)
+			.evalExprNormal(read_base_expr, { 7 })
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+	}
+
+	void test29RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_29/main.dbc"));
+		const fs::File cast_prev_expr(path("runtime_expr_dbc/test_29/cast_prev.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 1)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 1)
+			.evalExprExpectLoadError(
+				cast_prev_expr, vm::code::CannotCastPreviousFrameVariableError::ERR_MSG
+			)
 			.cleanup();
 	}
 };

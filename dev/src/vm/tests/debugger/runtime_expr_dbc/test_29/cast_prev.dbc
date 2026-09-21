@@ -1,0 +1,6 @@
+# Casting the type of a variable that lives in a previous frame is not allowed.
+function cast_prev { } -> { i64 } {
+	cast_p64_type frame 1 base, my_64;
+	mov_p64_imm ret0, 7;
+	ret_from_expr;
+}

@@ -507,6 +507,10 @@ namespace vm::code {
 	);
 	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitialized.");
 	DEFINE_INSTRUCTION_ERROR(CastSizeMismatchError, "Cannot cast to type of different size.");
+	DEFINE_ARGUMENT_ERROR(
+		CannotCastPreviousFrameVariableError,
+		"Cannot in-place cast a variable from a previous frame: "
+	);
 	DEFINE_ARGUMENT_ERROR(UnknownTypeError, "Unknown type: ");
 	DEFINE_ARGUMENT_ERROR(UnknownTypeOfVMValueError, "Unknown type for VM value: ");
 	DEFINE_ARGUMENT_ERROR(InvalidVMValueIDError, "Given id for vm value isn't valid: ");

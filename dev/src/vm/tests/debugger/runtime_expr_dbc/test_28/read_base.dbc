@@ -1,0 +1,7 @@
+# `mine` is `my_64`, so reading `frame 1 base` only type-checks once `main` has cast it.
+function read_base { } -> { i64 } {
+	init_pany_type mine, my_64;
+	mov_p64_p64 mine, frame 1 base;
+	mov_p64_imm ret0, 7;
+	ret_from_expr;
+}
