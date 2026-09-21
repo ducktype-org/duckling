@@ -8,7 +8,6 @@ function main { i64, ptr_argv } -> { i64 } {
 }
 
 # Breakpoint anchor: the outer expression calls it to pause mid-evaluation.
-function pause_here { } -> { i64 } {
-	mov_p64_imm ret0, 7;
+function pause_here { } -> { } {
 	ret;
 }

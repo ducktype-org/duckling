@@ -4,7 +4,6 @@ function outer { } -> { i64 } {
 
 	# The breakpoint set on `pause_here` instruction 0 lands here; while paused, the inner
 	# expression is evaluated and sees `outer_local` = 5.
-	init_pany_type pause_here_ret0, i64;
 	call_func pause_here;
 
 	mov_p64_p64 ret0, frame 1 a;

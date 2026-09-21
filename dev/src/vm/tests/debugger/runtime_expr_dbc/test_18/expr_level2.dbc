@@ -4,7 +4,6 @@ function level2 { } -> { i64 } {
 	
 	# The breakpoint set on `pause_here_too` instruction 0 lands here; while paused, `level3`
 	# is evaluated and sees `l2_local` = 20.
-	init_pany_type pause_here_too_ret0, i64;
 	call_func pause_here_too;
 
 	# Frame stack at compile time: start(0), main(1), level1(2), pause_here(3).

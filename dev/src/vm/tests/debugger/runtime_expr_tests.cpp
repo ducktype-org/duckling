@@ -449,6 +449,11 @@ private:
 		const fs::File outer_expr(path("runtime_expr_dbc/test_17/expr_outer.dbc"));
 		const fs::File inner_expr(path("runtime_expr_dbc/test_17/expr_inner.dbc"));
 
+		const vm::test::FlowSimulator::FrameVars outer_vars{
+			{ base::StrID("ret0"), base::StrID("i64") },
+			{ base::StrID("outer_local"), base::StrID("i64") },
+		};
+
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
 			.putBreakpoint(base::StrID("pause_here"), 0)
@@ -463,16 +468,16 @@ private:
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("outer"), std::nullopt },
-				{ base::StrID("pause_here"), std::nullopt },
+				{ base::StrID("outer"), outer_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
 			})
 			.evalExprNormal(inner_expr, { 106 })
 			.awaitBreakpoint(base::StrID("pause_here"), 0)
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("outer"), std::nullopt },
-				{ base::StrID("pause_here"), std::nullopt },
+				{ base::StrID("outer"), outer_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
 			})
 			.resume()
 			.awaitExprCompletion({ 204 })
@@ -492,6 +497,15 @@ private:
 		const fs::File level3_expr(path("runtime_expr_dbc/test_18/expr_level3.dbc"));
 		const fs::File pause_too_file(path("runtime_expr_dbc/test_18/pause_here_too.dbc"));
 
+		const vm::test::FlowSimulator::FrameVars level1_vars{
+			{ base::StrID("ret0"), base::StrID("i64") },
+			{ base::StrID("l1_local"), base::StrID("i64") },
+		};
+		const vm::test::FlowSimulator::FrameVars level2_vars{
+			{ base::StrID("ret0"), base::StrID("i64") },
+			{ base::StrID("l2_local"), base::StrID("i64") },
+		};
+
 		createSimulator({ main_file, pause_too_file })
 			.putBreakpoint(base::StrID("main"), 4)
 			.putBreakpoint(base::StrID("pause_here"), 0)
@@ -507,28 +521,28 @@ private:
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("level1"), std::nullopt },
-				{ base::StrID("pause_here"), std::nullopt },
+				{ base::StrID("level1"), level1_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
 			})
 			.evalExprExpectBreakpoint(level2_expr)
 			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("level1"), std::nullopt },
-				{ base::StrID("pause_here"), std::nullopt },
-				{ base::StrID("level2"), std::nullopt },
-				{ base::StrID("pause_here_too"), std::nullopt },
+				{ base::StrID("level1"), level1_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
+				{ base::StrID("level2"), level2_vars },
+				{ base::StrID("pause_here_too"), vm::test::FlowSimulator::FrameVars{} },
 			})
 			.evalExprNormal(level3_expr, { 46 })
 			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("level1"), std::nullopt },
-				{ base::StrID("pause_here"), std::nullopt },
-				{ base::StrID("level2"), std::nullopt },
-				{ base::StrID("pause_here_too"), std::nullopt },
+				{ base::StrID("level1"), level1_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
+				{ base::StrID("level2"), level2_vars },
+				{ base::StrID("pause_here_too"), vm::test::FlowSimulator::FrameVars{} },
 			})
 			.resume()
 			// `level2`: paused `l1_local` (10) + overwritten `l2_local` (30) + `l2_local` (30).
@@ -537,8 +551,8 @@ private:
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("level1"), std::nullopt },
-				{ base::StrID("pause_here"), std::nullopt },
+				{ base::StrID("level1"), level1_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
 			})
 			.resume()
 			.awaitExprCompletion({ 24 })
@@ -636,6 +650,10 @@ private:
 		const fs::File use_value_expr(path("runtime_expr_dbc/test_22/use_value.dbc"));
 		const fs::File simple_expr(path("runtime_expr_dbc/test_22/simple.dbc"));
 
+		const vm::test::FlowSimulator::FrameVars use_value_vars{
+			{ base::StrID("ret0"), base::StrID("i64") },
+		};
+
 		auto simulator = createSimulator(main_file);
 		simulator.putBreakpoint(base::StrID("main"), 4)
 			.putBreakpoint(base::StrID("pause_here"), 0)
@@ -656,8 +674,8 @@ private:
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("use_value"), std::nullopt },
-				{ base::StrID("pause_here"), std::nullopt },
+				{ base::StrID("use_value"), use_value_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
 			});
 
 		for (u64 i = 0; i < 1'000; i++)
@@ -666,8 +684,8 @@ private:
 				.enforceCallStack({
 					{ base::StrID("vm_start_function"), startFunctionVars() },
 					{ base::StrID("main"), std::nullopt },
-					{ base::StrID("use_value"), std::nullopt },
-					{ base::StrID("pause_here"), std::nullopt },
+					{ base::StrID("use_value"), use_value_vars },
+					{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
 				});
 
 		simulator.resume()
