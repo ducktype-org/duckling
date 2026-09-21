@@ -63,7 +63,7 @@ void vm::SafeVMValue::importDataFrom(const IVMValue& source) {
 vm::SafeVMValueRef vm::SafeVMValue::asRef() const { return { *my_process.get(), type, pointer }; }
 
 void vm::SafeVMValue::freeData() {
-	memory->freeBlockData(pointer.getBlock());
+	memory->releaseBlockData(pointer.getBlock());
 	memory->decreaseBlockRefcount(pointer.getBlock());
 	pointer = Pointer::null();
 }

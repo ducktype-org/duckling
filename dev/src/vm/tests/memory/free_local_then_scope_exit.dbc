@@ -1,0 +1,18 @@
+type primitive: i8 1
+type variant: simple_variant { i64, i8 }
+type pointer: ptr_simple_variant simple_variant
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type v1, simple_variant;
+    # Gives the variant a nested child block.
+    variantSetInner_pvnt_type v1, i64;
+
+    init_pany_type ptr, ptr_simple_variant;
+    ref_pptr_pany ptr, v1;
+
+    # Frees the local's own block along with the nested child.
+    free_pptr ptr;
+
+    # Scope exit reaches both of them a second time, and has to tolerate it.
+    ret;
+}

@@ -10,7 +10,7 @@
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/utils.hpp>
-#include <vm/core/safe/memory/local_slot_block.hpp>
+#include <vm/core/safe/memory/memory.hpp>
 #include <vm/core/safe/opcode_functions/opcodes_functions_utils.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
@@ -273,7 +273,7 @@ namespace vm {
 		static VM_OPFUN_INLINE void performDeinit(Frame*& frame, SafeVMThread& thread) {
 			// A variable that never needed a block has none to free.
 			if (Block* block = frame->local_slot_stack_end[-1].block) {
-				thread.process_memory.freeBlockData(block);
+				thread.process_memory.releaseBlockData(block);
 				thread.process_memory.decreaseBlockRefcount(block);
 			}
 

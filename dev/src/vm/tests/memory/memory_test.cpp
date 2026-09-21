@@ -18,6 +18,7 @@ public:
 		TESTER_ADD_TEST(doubleFreeIsRefused);
 		TESTER_ADD_TEST(dynTableReAllocAfterFreeIsRefused);
 		TESTER_ADD_TEST(dynTableFreeAfterFreeIsRefused);
+		TESTER_ADD_TEST(scopeExitToleratesAFreedLocal);
 	}
 
 private:
@@ -64,9 +65,12 @@ private:
 	void dynTableFreeAfterFreeIsRefused() {
 		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("dyn_table_free_after_free.dbc", "", ""),
-			vm::exceptions::VMUseAfterFreeException::ERR_MSG
+			vm::exceptions::VMDoubleFreeException::ERR_MSG
 		);
 	}
+
+	/// Scope exit frees what the program already freed through a pointer, nested block included.
+	void scopeExitToleratesAFreedLocal() { runTestOnVm("free_local_then_scope_exit.dbc", "", ""); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/memory/");

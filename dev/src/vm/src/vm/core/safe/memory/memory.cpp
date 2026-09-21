@@ -38,7 +38,7 @@ namespace vm {
 			// order we might throw a false-positive exception. This solution avoids this
 			// problem.
 
-			for (const auto& block_ptr: global_data_blocks) freeBlockData(Ref(block_ptr));
+			for (const auto& block_ptr: global_data_blocks) releaseBlockData(Ref(block_ptr));
 
 			for (const auto& block_ptr: global_data_blocks) decreaseBlockRefcount(Ref(block_ptr));
 		} catch (exceptions::VMFoundMemoryLeakException&) {

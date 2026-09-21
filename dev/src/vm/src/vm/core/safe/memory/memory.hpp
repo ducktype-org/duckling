@@ -128,7 +128,7 @@ namespace vm {
 			for (auto child_it = children_blocks.lower_bound(entries_to_move);
 			     child_it != children_blocks.end();
 			     child_it = children_blocks.erase(child_it)) {
-				freeBlockData(child_it->second);
+				releaseBlockData(child_it->second);
 			}
 
 			// Run the destructors - e.g. pointers don't have their own blocks, but need
@@ -551,6 +551,8 @@ namespace vm {
 		   a table of size n with elements of type equal to type's inner type.
 		 */
 		auto dynTableReallocateBlockDataN(Ref<BlockT> block, u64 n) -> void {
+			if (block->deallocated) throw exceptions::VMUseAfterFreeException();
+
 			TypeCRef tbl_type   = block->data.element_type;
 			TypeCRef inner_type = tbl_type->getInnerType().value();
 
@@ -561,12 +563,25 @@ namespace vm {
 		}
 
 		/**
-		 * @brief Frees block's data, but not the block structure itself.
-		 * For the block to be freed, use deleteBlock.
+		 * @brief Frees block's data, but not the block structure itself, on the program's
+		 * request. For the block to be freed, use deleteBlock.
+		 *
+		 * @throws VMDoubleFreeException if the data is already gone.
 		 */
 		void freeBlockData(Ref<BlockT> block) {
+			if (block->deallocated) throw exceptions::VMDoubleFreeException();
+			releaseBlockData(block);
+		}
+
+		/**
+		 * @brief `freeBlockData` for the paths that tear memory down rather than act on the
+		 * program's request, and so meet blocks whose data the program already freed.
+		 */
+		void releaseBlockData(Ref<BlockT> block) {
+			if (block->deallocated) return;
+
 			for (const auto child: block->children_blocks | std::views::values)
-				freeBlockData(child);
+				releaseBlockData(child);
 
 			runDataDestructors(block);
 
@@ -575,9 +590,7 @@ namespace vm {
 			if (block->parent) {
 				block->deallocated = true;
 				decreaseBlockRefcount(block);
-			} else if (!block->deallocated) {
-				// Guarded: the opcodes refuse a second free, but internal paths can reach a block
-				// whose data is already gone, and the allocator deallocates unconditionally.
+			} else {
 				block->data.allocator->deallocate(&block->data);
 				block->deallocated = true;
 			}
@@ -642,7 +655,7 @@ namespace vm {
 		void setNestedViewBlock(Ref<BlockT> parent_block, u64 offset, TypeCRef type) {
 			auto& children = parent_block->children_blocks;
 			if_opt_some(children.atMaybe(offset), nested) {
-				freeBlockData(*nested);
+				releaseBlockData(*nested);
 				children.erase(offset);
 			}
 
@@ -665,12 +678,6 @@ namespace vm {
 		[[nodiscard]]
 		static auto getBlockType(Ref<BlockT> block) -> TypeCRef {
 			return block->data.element_type;
-		}
-
-		/// Whether the block's data has already been freed.
-		[[nodiscard]]
-		static bool isBlockDeallocated(Ref<BlockT> block) {
-			return block->deallocated;
 		}
 
 		// ======================== Pointers ========================
@@ -731,7 +738,7 @@ namespace vm {
 			for (auto iter = dst_child_blocks.lower_bound(dst.offset);
 			     iter != dst_child_blocks.end() && iter->first < dst.offset + entry_count;
 			     iter = dst_child_blocks.erase(iter)) {
-				freeBlockData(iter->second);
+				releaseBlockData(iter->second);
 			}
 
 			const auto dst_view = getPointerData(dst, entry_count);
@@ -800,4 +807,22 @@ namespace vm {
 	// by the explicit instantiation definition in memory.cpp. Must come after the member
 	// specialization declaration above.
 	extern template class GenericMemory<byte>;
+
+	/**
+	 * @brief Creates the block of a local variable that was initialized without one, out of what
+	 * its slot recorded. Both the executor and the debug adapter go through here.
+	 *
+	 * A free function rather than a `Memory` member: it needs nothing but `Memory`'s public API,
+	 * and `Memory` itself has no business knowing about frames.
+	 */
+	inline auto createLocalSlotBlock(Frame& frame, Memory& memory, u64 slot_index) -> Ref<Block> {
+		LocalSlot& slot = frame.local_slot_stack_base[slot_index];
+
+		auto block = memory.adoptDummy(slot.type, slot.data);
+		// So that nobody can delete our block.
+		Memory::increaseBlockRefcount(block);
+
+		slot.block = block.get();
+		return block;
+	}
 }
