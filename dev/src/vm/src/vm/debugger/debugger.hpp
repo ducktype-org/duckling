@@ -3,8 +3,10 @@
 #include <events/emitter.hpp>
 
 #include <vm/api/vm.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/debugger/mapper.hpp>
 
+#include <deque>
 #include <optional>
 
 namespace vm::debugger {
@@ -48,6 +50,13 @@ namespace vm::debugger {
 		 * @brief Emits the output from the VM when VM outputs
 		 */
 		events::Emitter<std::string> on_output;
+
+		/**
+		 * @brief Listeners for expressions that paused on a breakpoint and did not finish yet.
+		 * They stay attached to their result emitter and print the values once the expression
+		 * completes. Kept alive here, because an emitter only holds raw pointers to its listeners.
+		 */
+		std::deque<events::Listener<std::vector<Ref<SafeVMValue>>>> pending_expr_result_listeners;
 
 		CodePosition mapCodePosition(const api::response::CodePosition& pos);
 

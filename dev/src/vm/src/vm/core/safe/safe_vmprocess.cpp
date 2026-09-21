@@ -260,12 +260,14 @@ namespace vm {
 	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type) {
 		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
 		owned_vm_values.emplace_back(std::move(value));
+		owned_vm_values.back()->id = numberOfOwnedVMValues() - 1;
 		return owned_vm_values.back().refMut();
 	}
 
 	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type, Pointer src) {
 		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
 		owned_vm_values.emplace_back(std::move(value));
+		owned_vm_values.back()->id = numberOfOwnedVMValues() - 1;
 		return owned_vm_values.back().refMut();
 	}
 

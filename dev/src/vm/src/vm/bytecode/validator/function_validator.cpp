@@ -478,8 +478,6 @@ class FunctionValidator {
 		bool from_prev_frame = place.frame.has_value();
 		bool is_local        = current_stack.contains(place);
 		bool is_global       = globals.contains(place.var_name) && !from_prev_frame;
-		if (from_prev_frame && !v_matches(mode, detail::Expr))
-			throw FrameSpecifierWithoutRuntimeThread(place);
 		if (is_local && is_global) throw DuplicatedLocalNameError(place);
 		if (!is_local && !is_global) throw UnknownLocalNameError(place);
 		return is_local ? current_stack.at(place) : types_ctx.at(globals.at(place.var_name)->type);

@@ -16,6 +16,30 @@ namespace {
 			status
 		);
 	}
+
+	template<typename ValueRef>
+	void printExprResult(const std::vector<ValueRef>& ret_vals) {
+		std::cout << "{ ";
+		bool first = true;
+		for (auto val: ret_vals) {
+			if (!first) std::cout << ", ";
+			first        = false;
+			auto mb_data = val->readData();
+			if_opt_none(mb_data) {
+				std::cout << "[unreadable]";
+				continue;
+			}
+			auto& data = *mb_data;
+
+			variant_match(data) {
+				variant_case(vm::interpreted_data_variant::Primitive, primitive) {
+					std::cout << " (primitive value : " << std::to_string(primitive.value) << ")";
+				}
+				variant_default { std::cout << " (unsupported type : ?)"; }
+			}
+		}
+		std::cout << " }\n";
+	}
 }
 
 namespace vm::debugger {
@@ -248,29 +272,19 @@ namespace vm::debugger {
 					v_matches(expr_completed_vnt, std::vector<Ref<IVMValue>>),
 					"we receive vector values not single int"
 				);
-				auto& ret_vals = v_get(expr_completed_vnt, std::vector<Ref<IVMValue>>);
+				printExprResult(v_get(expr_completed_vnt, std::vector<Ref<IVMValue>>));
+				return {};
+			})
+		    .or_else([&](api::ApiError error) -> std::expected<void, api::ApiError> {
+				auto* incomplete = std::get_if<api::IncompleteExprEval>(&error);
+				if (incomplete == nullptr) return std::unexpected(std::move(error));
 
-				std::cout << "{ ";
-				bool first = true;
-				for (auto val: ret_vals) {
-					if (!first) std::cout << ", ";
-					first        = false;
-					auto mb_data = val->readData();
-					if_opt_none(mb_data) {
-						std::cout << "[unreadable]";
-						continue;
-					}
-					auto& data = *mb_data;
-
-					variant_match(data) {
-						variant_case(vm::interpreted_data_variant::Primitive, primitive) {
-							std::cout << " (primitive value : " << std::to_string(primitive.value)
-									  << ")";
-						}
-						variant_default { std::cout << " (unsupported type : ?)"; }
-					}
-				}
-				std::cout << " }\n";
+				std::cout << "expression paused on a breakpoint; its result will be printed when it "
+				             "completes.\n";
+				pending_expr_result_listeners.emplace_back(
+					[](const std::vector<Ref<SafeVMValue>>& res) { printExprResult(res); }
+				);
+				incomplete->val->attachListener(pending_expr_result_listeners.back());
 				return {};
 			});
 	}

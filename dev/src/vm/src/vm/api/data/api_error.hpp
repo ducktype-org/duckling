@@ -5,13 +5,15 @@
 #include <base/pointers/ref.hpp>
 #include <base/pointers/shared_box.hpp>
 
-#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
-
 #include <json/json.hpp>
 
 #include <string>
 #include <variant>
 #include <vector>
+
+namespace vm {
+	class SafeVMValue;
+}
 
 namespace vm::api {
 	struct ResumeError final {

@@ -33,7 +33,7 @@ vm::SafeVMValue::SafeVMValue(SafeVMProcess& process, TypeCRef type):
 	  data(type->getSize()),
 	  my_process(&process),
 	  memory(&process.getMemory()),
-	  id(process.numberOfOwnedVMValues()),
+	  id(UNREGISTERED_ID),
 	  type(type),
 	  pointer(memory->allocateDummy(type, data.data()), 0) {
 	memory->increaseBlockRefcount(pointer.getBlock());

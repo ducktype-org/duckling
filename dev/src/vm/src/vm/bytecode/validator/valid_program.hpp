@@ -7,10 +7,13 @@
 #include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/core/native/dynamic_library.hpp>
-#include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <memory>
+
+namespace vm {
+	class SafeVMThread;
+}
 
 namespace vm::code {
 	/**

@@ -8,6 +8,7 @@
 #include <vm/utils/interpret.hpp>
 
 #include <ostream>
+#include <limits>
 
 namespace vm {
 	class SafeVMProcess;
@@ -45,6 +46,8 @@ namespace vm {
 		Ref<SafeVMProcess> my_process;  /// The process for which the SafeVMValue exists.
 		Ref<Memory>        memory;
 		u64                id;
+
+		static constexpr u64 UNREGISTERED_ID = std::numeric_limits<u64>::max();
 
 	public:
 		SafeVMValue(const SafeVMValue&)            = delete;

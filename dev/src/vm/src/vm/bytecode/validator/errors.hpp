@@ -63,7 +63,7 @@ namespace vm::code {
 	class EvaluatingExprOnRunningThreadError: public ValidationError {
 	public:
 		constexpr static const std::string_view ERR_MSG
-			= "Trying to evaluate expression while the thread is running : ";
+			= "Trying to evaluate expression while the thread is running";
 
 		EvaluatingExprOnRunningThreadError(): ValidationError(std::string(ERR_MSG)) {}
 	};
@@ -319,7 +319,7 @@ namespace vm::code {
 	class InvalidRuntimeExprSignature: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG
-			= "It's required for the runtime expressions don't take any parameters";
+			= "Runtime expressions must not take any parameters";
 		const code::FuncSignature signature;
 
 		InvalidRuntimeExprSignature(code::FuncSignature expr_signature):
