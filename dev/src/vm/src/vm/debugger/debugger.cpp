@@ -279,8 +279,9 @@ namespace vm::debugger {
 				auto* incomplete = std::get_if<api::IncompleteExprEval>(&error);
 				if (incomplete == nullptr) return std::unexpected(std::move(error));
 
-				std::cout << "expression paused on a breakpoint; its result will be printed when it "
-				             "completes.\n";
+				std::cout
+					<< "expression paused on a breakpoint; its result will be printed when it "
+					   "completes.\n";
 				pending_expr_result_listeners.emplace_back(
 					[](const std::vector<Ref<SafeVMValue>>& res) { printExprResult(res); }
 				);

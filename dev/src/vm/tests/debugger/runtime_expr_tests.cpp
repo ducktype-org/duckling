@@ -73,7 +73,9 @@ private:
 		if (!process_pid_response)
 			assertTrue(
 				false,
-				base::strConcat("Spawn failed: ", vm::api::errorToString(process_pid_response.error()))
+				base::strConcat(
+					"Spawn failed: ", vm::api::errorToString(process_pid_response.error())
+				)
 			);
 		auto pid = process_pid_response.value().pid;
 

@@ -549,22 +549,26 @@ namespace vm {
 				auto opt_thread = getVMThreadByID(thread_id);
 				if (!opt_thread)
 					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-				auto thread        = opt_thread.value();
+				auto thread    = opt_thread.value();
 				auto maybe_pos = thread->getUpcommingHighPosition(frame_index);
-				if (!maybe_pos) return std::unexpected(api::OtherError{"Frame not found"});
+				if (!maybe_pos) return std::unexpected(api::OtherError{ "Frame not found" });
 
 				const Frame& frame = thread->getStackFrame(frame_index);
 
 				const u64 slot_count = base::safeIntConv<u64>(
 					frame.local_slot_stack_end - frame.local_slot_stack_base
 				);
-				
+
 				auto& valid_pos = *maybe_pos;
-				auto expected = *valid_pos.absoluteSize();
-				CORE_ASSERT(slot_count == expected, "Compile metadata must always be consistent with runtime: " + std::to_string(slot_count) + " != " + std::to_string(*valid_pos.size()));
+				auto  expected  = *valid_pos.absoluteSize();
+				CORE_ASSERT(
+					slot_count == expected,
+					"Compile metadata must always be consistent with runtime: "
+						+ std::to_string(slot_count) + " != " + std::to_string(*valid_pos.size())
+				);
 
 				auto relative_size = *valid_pos.size();
-				u64 base_offset = valid_pos.getBaseOffset().first;
+				u64  base_offset   = valid_pos.getBaseOffset().first;
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
 				for (u64 slot_index = 0; slot_index < relative_size; slot_index++) {
 					const LocalSlot& slot = frame.local_slot_stack_base[base_offset + slot_index];

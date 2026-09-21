@@ -7,8 +7,8 @@
 #include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <ostream>
 #include <limits>
+#include <ostream>
 
 namespace vm {
 	class SafeVMProcess;

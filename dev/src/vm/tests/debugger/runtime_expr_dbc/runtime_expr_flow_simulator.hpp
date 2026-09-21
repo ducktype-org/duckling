@@ -99,8 +99,7 @@ namespace vm::test {
 			auto run_res = vm::api::run(pid);
 			if (!run_res)
 				assertTrue(
-					false,
-					base::strConcat("Run failed: ", vm::api::errorToString(run_res.error()))
+					false, base::strConcat("Run failed: ", vm::api::errorToString(run_res.error()))
 				);
 			return *this;
 		}
@@ -120,8 +119,8 @@ namespace vm::test {
 			return *this;
 		}
 
-		using FrameVar = std::pair<base::StrID, base::StrID>;
-		using FrameVars = std::vector<FrameVar>;
+		using FrameVar         = std::pair<base::StrID, base::StrID>;
+		using FrameVars        = std::vector<FrameVar>;
 		using FrameExpectation = std::pair<base::StrID, base::Optional<FrameVars>>;
 
 		FlowSimulator& enforceCallStack(const std::vector<FrameExpectation>& expected) {
@@ -162,7 +161,8 @@ namespace vm::test {
 				);
 
 				for (usize var_index = 0; var_index < expected_vars->size(); var_index++) {
-					const auto& [expected_var_name, expected_var_type] = expected_vars->at(var_index);
+					const auto& [expected_var_name, expected_var_type]
+						= expected_vars->at(var_index);
 					const auto& actual_var = data->frame_vars.at(var_index);
 
 					assertTrue(
@@ -311,7 +311,8 @@ namespace vm::test {
 			auto posted = vm::api::input(pid, input);
 			if (!posted)
 				assertTrue(
-					false, base::strConcat("Posting input failed: ", vm::api::errorToString(posted.error()))
+					false,
+					base::strConcat("Posting input failed: ", vm::api::errorToString(posted.error()))
 				);
 			return *this;
 		}
@@ -352,9 +353,7 @@ namespace vm::test {
 		/// the process in the `Panicked` state, which is where the message is read from.
 		FlowSimulator& evalExprExpectPanic(const fs::File& file, std::string_view expected_piece) {
 			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
-			assertTrue(
-				!response.has_value(), "Expected the expression to panic, but it completed"
-			);
+			assertTrue(!response.has_value(), "Expected the expression to panic, but it completed");
 
 			auto status = vm::api::getExecutionStatus(pid);
 			if (!status)

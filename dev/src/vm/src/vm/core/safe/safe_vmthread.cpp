@@ -795,7 +795,8 @@ namespace vm {
 		return func.setBreakpoint(idx, enable);
 	}
 
-	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getUpcommingHighPosition(u64 frame_index
+	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getUpcommingHighPosition(
+		u64 frame_index
 	) const {
 		if (frame_index >= getNumberOfCurrentStackFrames()) return std::nullopt;
 		const Frame& frame = getStackFrame(frame_index);
