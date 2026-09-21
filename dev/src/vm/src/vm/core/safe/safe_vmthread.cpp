@@ -687,7 +687,7 @@ namespace vm {
 		auto  local_stack = frame->local_stack;
 		auto& called_expr = runtime_expr_low.back();
 
-		u64 callee_stack_distance = getUpcommingPosition(getNumberOfCurrentStackFrames() - 1)
+		u64 callee_stack_distance = getUpcommingHighPosition(getNumberOfCurrentStackFrames() - 1)
 		                                ->byteSize()
 		                                ->assumePointerSize(Bytes{ 16 })
 		                                .asInt();
@@ -795,7 +795,7 @@ namespace vm {
 		return func.setBreakpoint(idx, enable);
 	}
 
-	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getUpcommingPosition(u64 frame_index
+	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getUpcommingHighPosition(u64 frame_index
 	) const {
 		if (frame_index >= getNumberOfCurrentStackFrames()) return std::nullopt;
 		const Frame& frame = getStackFrame(frame_index);

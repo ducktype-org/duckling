@@ -245,7 +245,7 @@ public:
 				v_matches(mode, detail::Expr),
 				"we should be checking that there is a thread beforehand"
 			);
-			auto pos = v_get(mode, detail::Expr).thread->getUpcommingPosition(frame_idx);
+			auto pos = v_get(mode, detail::Expr).thread->getUpcommingHighPosition(frame_idx);
 			if_opt_none(pos) return false;
 
 			return pos->contains(place.var_name);
@@ -266,7 +266,7 @@ public:
 					"we should be checking that there is a thread beforehand"
 				);
 				name_of_type = *v_get(mode, detail::Expr)
-				                    .thread->getUpcommingPosition(frame_idx)
+				                    .thread->getUpcommingHighPosition(frame_idx)
 				                    ->getTypeName(name);
 			}
 
