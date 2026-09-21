@@ -668,7 +668,14 @@ namespace vm::loader::compiler::safe::detail {
 
 				addLow<Op_ret>();
 			}
-			instr_case(high::Op_ret_from_expr, i) { addLow<Op_ret_from_expr>(); }
+			instr_case(high::Op_ret_from_expr, i) {
+				const usize ret_count = ctx.function.signature.result_types.size();
+				for (usize live = ctx.function.local_stack.size(curr_state); live > ret_count;
+				     live--)
+					addDeinitOfVariable(live - 1);
+
+				addLow<Op_ret_from_expr>();
+			}
 			instr_case(high::Op_init_pany_type, i) {
 				const TypeCRef type    = getPlaceType(i.var);
 				const auto     address = byteOffsetOf(i.var);

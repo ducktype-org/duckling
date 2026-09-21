@@ -1,0 +1,9 @@
+function leaky { } -> { i64 } {
+	init_pany_type ptr, ptr_i64;
+	init_pany_type value, i64;
+	alloc_pptr_type ptr, i64;
+	mov_p64_imm value, 5;
+	store_pptr_pany ptr, value;
+	mov_p64_imm ret0, 7;
+	ret_from_expr;
+}

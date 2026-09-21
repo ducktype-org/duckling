@@ -46,6 +46,7 @@ public:
 		TESTER_ADD_TEST(test24RuntimeExpr);
 		TESTER_ADD_TEST(test25RuntimeExpr);
 		TESTER_ADD_TEST(test26RuntimeExpr);
+		TESTER_ADD_TEST(test27RuntimeExpr);
 	}
 
 private:
@@ -850,6 +851,21 @@ private:
 				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(2'137)
+			.cleanup();
+	}
+
+	void test27RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_27/main.dbc"));
+		const fs::File freed_expr(path("runtime_expr_dbc/test_27/freed.dbc"));
+		const fs::File leaky_expr(path("runtime_expr_dbc/test_27/leaky.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 4)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.evalExprNormal(freed_expr, { 7 })
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.evalExprExpectPanic(leaky_expr, vm::exceptions::VMFoundMemoryLeakException::ERR_MSG)
 			.cleanup();
 	}
 };

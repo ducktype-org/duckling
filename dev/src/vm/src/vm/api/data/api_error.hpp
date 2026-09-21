@@ -74,7 +74,7 @@ namespace vm::api {
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(UnsupportedOperation, why);
 	};
 
-	struct IncompleteExprEval {
+	struct IncompleteExprEval final {
 		SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>> val;
 		std::string                                               why;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(IncompleteExprEval, why);

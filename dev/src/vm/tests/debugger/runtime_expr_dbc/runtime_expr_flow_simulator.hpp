@@ -11,6 +11,7 @@
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/response.hpp>
+#include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 
@@ -341,6 +342,40 @@ namespace vm::test {
 					expected_error_piece,
 					"'. The error was: ",
 					message
+				)
+			);
+			return *this;
+		}
+
+		/// Evaluates an expression that is expected to panic while it runs, and asserts the panic
+		/// message contains @p expected_piece. Unlike a load-time rejection, a runtime panic leaves
+		/// the process in the `Panicked` state, which is where the message is read from.
+		FlowSimulator& evalExprExpectPanic(const fs::File& file, std::string_view expected_piece) {
+			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			assertTrue(
+				!response.has_value(), "Expected the expression to panic, but it completed"
+			);
+
+			auto status = vm::api::getExecutionStatus(pid);
+			if (!status)
+				assertTrue(
+					false,
+					base::strConcat(
+						"Failed to read the execution status: ",
+						vm::api::errorToString(status.error())
+					)
+				);
+
+			auto* panicked = std::get_if<vm::api::ExecutionPanicked>(&status.value());
+			assertTrue(panicked != nullptr, "Expected the process to have panicked");
+			assertTrue(
+				panicked->error_message.find(expected_piece) != std::string::npos,
+				base::strConcat(
+					"Panic message '",
+					panicked->error_message,
+					"' does not mention '",
+					expected_piece,
+					"'"
 				)
 			);
 			return *this;
