@@ -19,6 +19,7 @@ public:
 		TESTER_ADD_TEST(dynTableReAllocAfterFreeIsRefused);
 		TESTER_ADD_TEST(dynTableFreeAfterFreeIsRefused);
 		TESTER_ADD_TEST(scopeExitToleratesAFreedLocal);
+		TESTER_ADD_TEST(readingANestedBlockAfterFreeIsRefused);
 	}
 
 private:
@@ -71,6 +72,14 @@ private:
 
 	/// Scope exit frees what the program already freed through a pointer, nested block included.
 	void scopeExitToleratesAFreedLocal() { runTestOnVm("free_local_then_scope_exit.dbc", "", ""); }
+
+	/// A freed variant must not hand out its nested block, whose pool slot is already reusable.
+	void readingANestedBlockAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("read_nested_after_free.dbc", "", ""),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
+		);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/memory/");

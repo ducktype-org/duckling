@@ -582,6 +582,9 @@ namespace vm {
 
 			for (const auto child: block->children_blocks | std::views::values)
 				releaseBlockData(child);
+			// The parent holds the last reference to each child, so they are gone now; leaving
+			// them in the map would leave `Ref`s to pool slots that get handed out again.
+			block->children_blocks.clear();
 
 			runDataDestructors(block);
 
@@ -641,6 +644,8 @@ namespace vm {
 		 * `Pointer` get a `VMNullPointerAccessException` from `Pointer::getBlock()` on null.
 		 */
 		static MRef<BlockT> getNestedViewBlock(Ref<BlockT> parent_block, u64 offset, TypeCRef type) {
+			if (parent_block->deallocated) throw exceptions::VMUseAfterFreeException();
+
 			if_opt_some(parent_block->children_blocks.atMaybe(offset), nested) {
 				if ((*nested)->data.element_type == type) return *nested;
 			}
