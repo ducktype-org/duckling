@@ -15,11 +15,21 @@ use crate::quackpack::core::identity::Identity;
 /// A lowered version of the [`EarlyGraph`].
 pub struct UnitGraph {
     root_id: UnitId,
-    units: Vec<(Unit, Vec<UnitId>)>,
+    /// All known [`Unit`]s.
+    ///
+    /// Unit with [`UnitId`] == `i` is at i-th index in the vector.
+    units: Vec<Unit>,
+    /// All dependencies of [`Unit`]s.
+    ///
+    /// At index `i` we have dependencies of the [`Unit`] with [`UnitId`] == i.
+    ///
+    /// It has the same length as [`units`], which is guaranteed by [`new`] (we take vector of pairs
+    /// and decompose it).
+    ///
+    /// [`units`]: Self::units
+    /// [`new`]: Self::new
+    dependencies: Vec<Vec<UnitId>>,
 }
-
-pub type UnitIdsIter<'a> =
-    core::iter::Map<core::slice::Iter<'a, (Unit, Vec<UnitId>)>, fn(&(Unit, Vec<UnitId>)) -> &Unit>;
 
 impl UnitGraph {
     /// Create a new [`UnitGraph`].
@@ -28,17 +38,22 @@ impl UnitGraph {
             assert_valid_units_order(&units);
         }
         debug_assert_eq!(root_id, 0, "invalid root unit id");
-        Self { root_id, units }
+        let (units, dependencies) = decompose_units(units);
+        Self {
+            root_id,
+            units,
+            dependencies,
+        }
     }
 
     /// Get the dependency for the given id.
     pub fn unit_for(&self, id: UnitId) -> &Unit {
-        &self.units[id as usize].0
+        &self.units[id as usize]
     }
 
     /// Get the dependency for the given id.
     pub fn deps_for(&self, id: UnitId) -> &[UnitId] {
-        &self.units[id as usize].1
+        &self.dependencies[id as usize]
     }
 
     /// Get the root [`Unit`].
@@ -47,14 +62,13 @@ impl UnitGraph {
     }
 
     /// Get [`Unit`]s sorted by their IDs.
-    // NOTE: We need the entire type so implemented traits propagate.
-    pub fn units_sorted_by_id(&self) -> UnitIdsIter<'_> {
-        self.units.iter().map(|(unit, _)| unit)
+    pub fn units_sorted_by_id(&self) -> &[Unit] {
+        &self.units
     }
 
     /// Get the compilation order.
-    pub fn compilation_order(&self) -> core::iter::Rev<UnitIdsIter<'_>> {
-        self.units_sorted_by_id().rev()
+    pub fn compilation_order(&self) -> core::iter::Rev<core::slice::Iter<'_, Unit>> {
+        self.units_sorted_by_id().iter().rev()
     }
 
     /// Check if the given [`Unit`] is the root [`Unit`].
@@ -82,6 +96,10 @@ fn assert_valid_units_order(units: &[(Unit, Vec<UnitId>)]) {
         let has_dups = deps.windows(2).any(|window| window[0] == window[1]);
         assert!(!has_dups, "unit `{unit:?}` deps have duplicates {deps:#?}");
     }
+}
+
+fn decompose_units(units: Vec<(Unit, Vec<UnitId>)>) -> (Vec<Unit>, Vec<Vec<UnitId>>) {
+    units.into_iter().unzip()
 }
 
 /// Lower an [`EarlyGraph`] to the [`UnitGraph`].
