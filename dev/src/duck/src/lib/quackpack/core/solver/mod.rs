@@ -93,7 +93,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
         self.root_pcx
             .ctx()
             .info("starting solving the dependency graph")?;
-        let root_pkg = self.root_pcx.package_id()?;
+        let root_pkg = self.root_pcx.local_package_id()?;
 
         let (initial_freeze, empty_input) = self.get_initial_freeze(root_pkg)?;
         let preparer = SolvingPreparer::new(self.root_pcx, initial_freeze, self.mode)

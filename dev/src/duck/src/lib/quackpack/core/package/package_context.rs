@@ -97,7 +97,8 @@ impl<'duck> PackageContext<'duck> {
         self.warnings.emit_warnings(self.ctx())
     }
 
-    pub fn package_id(&self) -> QuackResult<PackageId> {
+    /// Returns the [`PackageId`] associated with this package treated as a local one.
+    pub fn local_package_id(&self) -> QuackResult<PackageId> {
         let origin = FullOrigin::for_local(self.package().root())?;
         let identity = FullIdentity::new(self.package().name(), origin);
         Ok(PackageId::new(identity, self.package().version()))
