@@ -9,7 +9,7 @@ use crate::quackpack::core::solver::gathering::fetch_types::{
     RequestIdentifier,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
+use crate::quackpack::core::{FeatureName, Manifest, PackageId, Selector, Source, Version};
 use crate::quackpack::util::str_id::QpJoin;
 use crate::quackpack::util::with_version::WithVersion;
 use crate::util::Pluralize;
@@ -38,14 +38,14 @@ impl PackageData {
             return Ok(vec![]);
         }
         let mut result = vec![];
-        for dependency in self.manifest.dependencies().all_dependencies() {
-            if !dependency.is_enabled_for(self.requested_features.iter().copied()) {
-                continue;
-            }
+        for dependency in self
+            .manifest
+            .dependencies()
+            .select(&Selector::EnabledBy(&self.requested_features))
+        {
             let source = dependency.source();
-            let features: HashSet<FeatureName> = HashSet::from_iter(
-                dependency.enabled_features(self.requested_features.iter().copied()),
-            );
+            let features: HashSet<FeatureName> =
+                HashSet::from_iter(dependency.enabled_features(&self.requested_features));
             if dependency.is_pinned() {
                 let version = dependency
                     .versions()
