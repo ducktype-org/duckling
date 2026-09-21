@@ -290,7 +290,7 @@ namespace vm::test {
 
 			auto [ref, reason] = v_get(response.error(), vm::api::IncompleteExprEval);
 			assertTrue(
-				reason.find("timout") != std::string::npos,
+				reason.find("timeout") != std::string::npos,
 				base::strConcat("Expected a timeout error, got: ", reason)
 			);
 			assertTrue(

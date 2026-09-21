@@ -771,7 +771,7 @@ namespace vm {
 			err_msg += thread_state::threadStateName(*thread_state);
 			err_msg += " during evaluation";
 		} else {
-			err_msg = "timout: evaluation of expr took more than "
+			err_msg = "timeout: evaluation of expr took more than "
 			        + std::to_string(EXPR_EXECUTION_TIMEOUT_MS) + " ms";
 		}
 
