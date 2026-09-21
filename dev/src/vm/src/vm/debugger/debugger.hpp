@@ -132,10 +132,12 @@ namespace vm::debugger {
 		std::expected<void, api::ApiError> resume();
 
 		/**
-		 * @brief Resumes the VM
+		 * @brief Evaluates a runtime expression read from `file` on the given thread and prints
+		 * the returned values. If the expression stops on a breakpoint, its result is printed once
+		 * it completes instead.
 		 */
 		std::expected<void, api::ApiError> evaluate(
-			const fs::File&, api::ThreadID thread_id = vm::api::ThreadID(0)
+			const fs::File& file, api::ThreadID thread_id = vm::api::ThreadID(0)
 		);
 
 		/**
