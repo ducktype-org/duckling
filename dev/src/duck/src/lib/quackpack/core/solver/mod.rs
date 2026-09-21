@@ -31,7 +31,7 @@ use core::fmt;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
@@ -42,8 +42,60 @@ use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::solver::solving::input::SolverInput;
 use crate::quackpack::core::solver::solving::solver_engine::SolverEngine;
+use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::{FeatureName, Manifest, PackageContext, PackageId};
-use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal};
+
+pub struct Solver<'duck, 'ctx, Access: GitAccess> {
+    root_pcx: &'ctx PackageContext<'duck>,
+    previous_freeze: Option<&'ctx VenvFreeze>,
+    fetcher: &'ctx Fetcher<'duck>,
+    git_access: Access,
+    mode: SolverMode,
+}
+
+impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
+    pub async fn solve(self) -> QuackResult<SolverAnswer> {
+        self.root_pcx.ctx().info("starting solving the dependency graph")?;
+        let root_pkg = self.root_pcx.package_id()?;
+
+        let (initial_freeze, empty_input) = self.get_initial_freeze(root_pkg)?;
+        let gatherer = SolverGathererData::new(self.root_pcx, initial_freeze, self.mode)
+            .context("failed to start gathering packages")?;
+
+        let fetcher_lock = self.root_pcx.ctx().duck_home().open_fetcher_lockfile(self.root_pcx.ctx())?;
+        let should_run_engine = gatherer.prepare_solving(self.fetcher, &self.git_access).await?;
+        drop(fetcher_lock);
+
+        let solver_engine = match should_run_engine {
+            ShouldRunSolverEngine::No(answer) => { return Ok(answer); },
+            ShouldRunSolverEngine::Yes(solver_engine) => solver_engine,
+        };
+        match solver_engine.solve(self.root_pcx.ctx()) {
+            Ok(answer) => Ok(answer),
+            Err(e) => self.rerun_if_nonempty_input(e, empty_input).await,
+        }
+    }
+
+    fn get_initial_freeze(&self, root_pkg: PackageId) -> QuackResult<(SolverFreeze, bool)> {
+        match self.previous_freeze {
+            Some(freeze) => match SolverFreeze::try_from_venv_freeze(root_pkg, freeze) {
+                Ok(freeze) => Ok((freeze, false)),
+                Err(malformed) => {
+                    warn!(error = ?malformed, "previous storage freeze is malformed");
+                    self.root_pcx.ctx()
+                        .warning("previous freezefile was malformed, ignoring it")?;
+                    Ok((SolverFreeze::empty_with_root(root_pkg)?, true))
+                }
+            },
+            None => Ok((SolverFreeze::empty_with_root(root_pkg)?, true)),
+        }
+    }
+
+    async fn rerun_if_nonempty_input(self, e: QuackError, empty_input: bool) -> QuackResult<SolverAnswer> {
+
+    }
+}
 
 /// A struct designated to finding the full dependency graph of a given package.
 pub struct SolverGathererData<'duck, 'ctx> {
