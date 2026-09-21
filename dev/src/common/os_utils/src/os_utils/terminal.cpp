@@ -1,6 +1,7 @@
 #include "terminal.hpp"
 
 #include <base/config/build_type.hpp>
+#include <base/config/target_info.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
@@ -13,7 +14,7 @@ namespace {
 	constexpr std::string_view CLEAR_SCREEN_SEQUENCE = "\033c\033[H\033[2J\033[0m";
 }
 
-#if defined(__unix__) || defined(__APPLE__)
+#if BASE_TARGET_PLATFORM_POSIX
 	#include <unistd.h>
 
 namespace os_utils {
@@ -102,7 +103,7 @@ namespace os_utils {
 	})
 }
 
-#elif defined(_WIN32)
+#elif BASE_TARGET_OS_WINDOWS
 	#include <io.h>
 
 namespace os_utils {

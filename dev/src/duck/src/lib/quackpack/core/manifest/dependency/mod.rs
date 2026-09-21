@@ -1,4 +1,5 @@
 //! Managing a single dependency abstraction.
+use std::collections::HashSet;
 use std::fmt;
 
 use crate::quackpack::core::valid_package_name::{normalise_package_name, validate_package_name};
@@ -139,7 +140,7 @@ impl Dependency {
     }
 
     /// Check if this dependency is enabled for the given features.
-    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = FeatureName>) -> bool {
+    pub fn is_enabled_for(&self, enabled_features: &HashSet<FeatureName>) -> bool {
         self.conditions
             .as_ref()
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
@@ -162,16 +163,11 @@ impl Dependency {
     }
 
     /// Get an iterator over features that are enabled for the given features.
-    pub fn enabled_features<I>(&self, enabled_features: I) -> Vec<FeatureName>
-    where
-        I: IntoIterator<Item = FeatureName>,
-        <I as IntoIterator>::IntoIter: Clone,
-    {
-        let iter = enabled_features.into_iter();
+    pub fn enabled_features(&self, enabled_features: &HashSet<FeatureName>) -> Vec<FeatureName> {
         self.features
             .iter()
             .filter_map(|feature| {
-                if feature.is_enabled_for(iter.clone()) {
+                if feature.is_enabled_for(enabled_features) {
                     Some(feature.name())
                 } else {
                     None
@@ -213,6 +209,11 @@ impl Dependency {
     pub fn kind(&self) -> DependencyKind {
         self.kind
     }
+
+    /// Get the [`Conditions`] of this dependency.
+    pub fn conditions(&self) -> Option<&Conditions> {
+        self.conditions.as_ref()
+    }
 }
 
 impl TryFrom<registry::Dependency> for Dependency {
@@ -252,7 +253,7 @@ impl TryFrom<registry::Dependency> for Dependency {
             source.try_into()?,
             features,
             pinned,
-            Some(conditions.try_into()?),
+            Some(conditions.into()),
             alias,
             kind.into(),
         )

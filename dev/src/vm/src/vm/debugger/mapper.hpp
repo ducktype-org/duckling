@@ -12,7 +12,7 @@ namespace vm::debugger {
 			base::CRef<debug_info::InstructionMetadata>,
 			base::CRef<debug_info::VariableMetadata>>;
 
-		struct FunctionDI {
+		struct FunctionDI final {
 			base::CRef<debug_info::FunctionMetadata> metadata;
 			base::Map<usize, InstrOrVarMetadata>     instr_offsets;
 		};

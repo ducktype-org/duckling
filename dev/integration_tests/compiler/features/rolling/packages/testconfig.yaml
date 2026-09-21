@@ -35,12 +35,12 @@ compile_only_cmd:  "@{duckc_path} compile_packages @{case_manifest} -w @{duckc_w
 PreCase: "mkdir -p @{case_build} && mkdir -p @{case_build_c} && @{copy_std_artifacts} && @{compile_c_object} && @{compile_c_shared} && @{make_manifest} && @{compile_deterministically_cmd} && @{compile_only_cmd}"
 
 # Run the LLVM executables, plus the one DVM output that links its dependency.
-Run: "@{case_build}/app1.exe && @{case_build}/app2.exe && @{case_build}/app3.exe && @{case_build}/app3_alias.exe && @{dvm_path} run @{case_build}/app2_dvm_linked.dbc"
+Run: "@{case_build}/app1.exe && @{case_build}/app2.exe && @{case_build}/app3.exe && @{case_build}/app3_alias.exe && @{dvm_path} run @{case_build}/app2_dvm_linked.dbc && @{case_build}/app4.exe"
 
 Tests:
   multi_package:
     Cases:
       all:
         Output:
-          String: "10\n42\n20\n17\n73\n42\n42\n73\n20\n17\n"
+          String: "10\n42\n20\n17\n73\n42\n42\n73\n20\n17\n1\n2006\n"
         ExitCode: 0

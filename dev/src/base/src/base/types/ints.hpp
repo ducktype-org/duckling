@@ -8,6 +8,7 @@
  */
 #pragma once
 
+#include <base/config/target_info.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
 #include <cstddef>
@@ -17,7 +18,7 @@ STRONG_TYPEDEF_INT(u8, uint8_t);
 
 using u16 = uint16_t;
 using u32 = uint32_t;
-#ifdef __APPLE__
+#if BASE_TARGET_OS_MACOS
 // On macOS `std::size_t` is `unsigned long` while `uint64_t` is `unsigned long long` —
 // two distinct 64-bit types. The codebase treats `u64` and `usize` as interchangeable
 // (they are the same type on Linux), so alias `u64` to `size_t` to keep that invariant.

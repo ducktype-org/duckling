@@ -14,13 +14,15 @@ namespace compiler::helios {
 
 		bool       first_symbol = true;
 		SymbolList result;
-		for (auto pointed: key.names) {
+		for (auto pointed_locked: key.names) {
 			auto lookup_interface = first_symbol ? HInterface::ofScopeWithParents(key.begin_scope)
 			                                     : HInterface::ofSymbol(result.back());
 
+			auto pointed = pointed_locked.unlock(ctx);
+
 			UNPACK_QRESULT_MOVE(auto lookup =,
 			                    lookup_interface.lookupExpectUnique(
-									pointed.position, ctx, pointed.value, key.params
+									pointed->getStablePosition(), ctx, pointed->unwrap(), key.params
 								););
 			result.appendList(lookup);
 

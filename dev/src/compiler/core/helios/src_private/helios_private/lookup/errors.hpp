@@ -14,8 +14,35 @@ namespace compiler::helios {
 		}
 
 	public:
-		// @TODO: #2521 change this to stable position after fix
-		ShadowedVariableLookupError(dia::SourcePosition source_position):
+		ShadowedVariableLookupError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	// Used when the looked-up name exists in the interface of a type, but its visibility hides it
+	// from the scope the lookup was written in.
+	class InaccessibleSymbolLookupError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lookup",
+				     .name          = "inaccessible_symbol_lookup" };
+		}
+
+	public:
+		InaccessibleSymbolLookupError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	class InaccessibleDeclarationNote final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "note",
+				     .family        = "lookup",
+				     .name          = "lookup_inaccessible_declaration" };
+		}
+
+	public:
+		InaccessibleDeclarationNote(dia::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 

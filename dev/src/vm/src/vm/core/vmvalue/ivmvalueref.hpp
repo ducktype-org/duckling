@@ -125,7 +125,7 @@ namespace vm {
 		};
 
 		struct Data final {
-			struct FieldDesc {
+			struct FieldDesc final {
 				Bytes                  offset = Bytes(0);
 				SharedBox<IVMValueRef> value;
 			};

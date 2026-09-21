@@ -1,8 +1,9 @@
 #include "memory.hpp"
 
+#include <base/config/target_info.hpp>
 #include <base/except/exceptions.hpp>
 
-#if defined(__unix__) || defined(__APPLE__)
+#if BASE_TARGET_PLATFORM_POSIX
 	#include <sys/mman.h>
 	#include <unistd.h>
 
