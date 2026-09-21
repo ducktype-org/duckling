@@ -482,26 +482,22 @@ namespace impl {
         if ((k == 0 as T) or (k == n)) return 1 as T;
         if (k > n - k) k = n - k;
 
-        builtins.print("TUTAJ\n");
-
         var dp: containers.listType:{T}();
         dp.reserve(n);
-        dp.at(0) = 1 as T;
+        dp.push(1 as T);
 
-        builtins.print("TUTAJ TEŻ\n");
-
-        var result: T = 1 as T;
-        var i: T = 1 as T;
+        var i: T = 1;
         while (i <= n) {
-            var j: T = impl.min:{T}(i, k);
-            while (j > 0 as T) {
-                dp.at(j) = dp.at(j) + dp.at(j - 1 as T);
-                j = j -1 as T;
+            if (i <= k) {
+                dp.push(0 as T);
             }
-            i = i + 1 as T;
+            var j: T = impl.min:{T}(i, k);
+            while (j > 0) {
+                dp.at(j) = dp.at(j) + dp.at(j - 1);
+                j = j - 1;
+            }
+            i = i + 1;
         }
-
-        builtins.print("I TUTAJ\n");
 
         return dp.at(k);
     }
