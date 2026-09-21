@@ -123,8 +123,7 @@ impl ProfileLayout for SharedProfileLayout {
             self.root_directory().join(unit.unique_name())
         } else {
             let hash = hash_subgraph_and_profile(unit, graph, self.profile)?;
-            unit.root_package()
-                .package()
+            unit.package()
                 .artifacts_directory()
                 .join(format!("shared-{hash}"))
         };

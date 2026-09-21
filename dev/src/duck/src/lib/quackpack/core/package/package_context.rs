@@ -1,10 +1,10 @@
 //! A context of a package  parsed from the disk.
 use std::path::{Path, PathBuf};
 
-use super::lints::warnings::Warnings;
 use super::script::Script;
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::package_loader::PackageLoader;
 use crate::quackpack::core::script::StandaloneScript;
 use crate::quackpack::core::{self, AnyPackage, PackageId};
