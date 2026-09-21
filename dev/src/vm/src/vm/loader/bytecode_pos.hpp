@@ -62,6 +62,11 @@ namespace vm::loader {
 		}
 
 		[[nodiscard]]
+		std::pair<u64, code::valid_type::TypeSize> getBaseOffset() const {
+			return valid_function->local_stack.getBaseOffset();
+		}
+
+		[[nodiscard]]
 		base::Optional<usize> absoluteSize() const {
 			return valid_function->local_stack.absoluteSize(state);
 		}

@@ -144,6 +144,10 @@ bool ls_db::eqNames(StackStateID state_1, StackStateID state_2) const {
 	return typestack_id_1 == typestack_id_2;
 }
 
+std::pair<u64, vm::code::valid_type::TypeSize> ls_db::getBaseOffset() const {
+	return { namestack_entries.at(0).size_in_blocks, namestack_entries.at(0).size_in_bytes };
+}
+
 ls_db::LocalStackDb() = default;
 
 /**

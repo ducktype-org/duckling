@@ -132,6 +132,8 @@ namespace vm::code {
 
 		LocalStackDb();
 
+		std::pair<u64, valid_type::TypeSize> getBaseOffset() const;
+
 	private:
 		using NameMap = std::map<Lifetime, NameStackID>;
 		base::HashMap<base::StrID, NameMap>              name_to_namestack{};

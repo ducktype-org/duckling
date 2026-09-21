@@ -561,9 +561,11 @@ namespace vm {
 				auto expected = *valid_pos.absoluteSize();
 				CORE_ASSERT(slot_count == expected, "Compile metadata must always be consistent with runtime: " + std::to_string(slot_count) + " != " + std::to_string(*valid_pos.size()));
 
+				auto relative_size = *valid_pos.size();
+				u64 base_offset = valid_pos.getBaseOffset().first;
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
-				for (u64 slot_index = 0; slot_index < slot_count; slot_index++) {
-					const LocalSlot& slot = frame.local_slot_stack_base[slot_index];
+				for (u64 slot_index = 0; slot_index < relative_size; slot_index++) {
+					const LocalSlot& slot = frame.local_slot_stack_base[base_offset + slot_index];
 
 					// Variables are initialized without a block, and a value can only be read
 					// through one, so it is created here exactly as the executor does.
