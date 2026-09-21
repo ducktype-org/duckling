@@ -791,7 +791,7 @@ namespace vm {
 			func_ref, "When we access the stack frame it has to yield non-nulL function ref"
 		);
 
-		auto& func = const_cast<low::LowFuncData&>(*func_ref); //NOLINT
+		auto& func = const_cast<low::LowFuncData&>(*func_ref);  // NOLINT
 		return func.setBreakpoint(idx, enable);
 	}
 
