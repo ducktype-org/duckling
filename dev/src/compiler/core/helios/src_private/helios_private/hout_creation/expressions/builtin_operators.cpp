@@ -361,6 +361,7 @@ namespace compiler::helios::code {
 					);
 				}
 				variant_case(PreDesugarOperator, op) {
+					// @TODO: #3621 Assignement operators like `+=` should not allow coetions on the lhs
 					return desugarOperatorToExpr(
 							   ctx, op, std::move(coerced_lhs), std::move(coerced_rhs)
 					)
