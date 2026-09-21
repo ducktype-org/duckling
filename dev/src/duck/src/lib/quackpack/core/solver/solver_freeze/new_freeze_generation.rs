@@ -104,12 +104,9 @@ impl SolverFreeze {
             .clone();
         debug!(?base_pkg);
 
-        for dependency in
-            base_manifest
-                .dependencies()
-                .select(&Selector::EnabledBy(&HashSet::from_iter(
-                    base_pkg_features.iter().copied(),
-                )))
+        for dependency in base_manifest
+            .dependencies()
+            .select(&Selector::EnabledBy(&base_pkg_features))
         {
             let dep_name = dependency.effective_name();
             let realization = self.get_realization(base_pkg, dep_name)?;
@@ -119,8 +116,7 @@ impl SolverFreeze {
                 )
             };
             Self::add_realization(new_pkg_freezes, base_pkg, dep_name, realization)?;
-            let enabled_features =
-                dependency.enabled_features(&HashSet::from_iter(base_pkg_features.iter().copied()));
+            let enabled_features = dependency.enabled_features(&base_pkg_features);
             let forced_features = dep_manifest
                 .features()
                 .expand_features(enabled_features.iter().copied())
@@ -148,7 +144,7 @@ impl SolverFreeze {
     /// Finds with what features the package is currently listed in the new package freezes map.
     fn current_pkg_features<'a>(
         &self,
-        new_pkg_freezes: &'a mut HashMap<PackageId, SolverPackageFreeze>,
+        new_pkg_freezes: &'a HashMap<PackageId, SolverPackageFreeze>,
         pkg: PackageId,
     ) -> QuackResult<&'a HashSet<FeatureName>> {
         let Some(pkg) = new_pkg_freezes.get(&pkg) else {
