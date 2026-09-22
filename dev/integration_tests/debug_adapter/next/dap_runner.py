@@ -1,4 +1,5 @@
 import sys
+import time
 from dap_client import DAPTestClient
 
 client = DAPTestClient()
@@ -12,6 +13,10 @@ try:
     client.send_next()
     client.wait_for_text("Failed", "Failed output - next while running")
 
+    # Give the VM a moment to leave the synthetic `vm_start_function` and enter `main`'s loop,
+    # so pausing stops inside `main` rather than in the start function.
+    time.sleep(0.01)
+
     # Request Pause and wait for all interleaved facts
     pause_seq = client.send_pause()
     client.wait_for(
@@ -23,16 +28,6 @@ try:
     sys.stderr.flush()
 
     frames = client.get_frames()
-
-    step_out_steps = 0
-    while frames[0].get("name") == "vm_start_function":
-        step_out_steps += 1
-        if step_out_steps > 100:
-            client.fail_test("Did not step out of 'vm_start_function' into 'main'")
-        step_out_seq = client.send_next()
-        client.wait_for(responses=[step_out_seq])
-        frames = client.get_frames()
-
     f0 = frames[0]
     line = f0.get("line")
 
