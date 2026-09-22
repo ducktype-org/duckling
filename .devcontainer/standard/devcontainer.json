@@ -14,7 +14,7 @@
 	"workspaceMount": "source=${localWorkspaceFolder},target=/duckling,type=bind,consistency=cached",
 	"workspaceFolder": "/duckling",
 
-	"runArgs": [ "--cap-add=SYS_PTRACE", "--hostname", "dockling"],
+	"runArgs": [ "--cap-add=SYS_PTRACE", "--cap-add=PERFMON", "--hostname", "dockling"],
 
 	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/dockling-dev/home",
 
@@ -35,7 +35,8 @@
 				"ms-python.python",
 				"ms-python.vscode-pylance",
 				"ms-python.debugpy",
-				"github.vscode-github-actions"
+				"github.vscode-github-actions",
+				"rust-lang.rust-analyzer"
 			],
 
 			// Container-scoped, so a fresh clone works without anyone hand-editing their
@@ -43,12 +44,67 @@
 			"settings": {
 				"cmake.sourceDirectory": "${containerWorkspaceFolder}/dev",
 				"cmake.buildDirectory": "${containerWorkspaceFolder}/dev/build",
+
+				// `./toolbox.py setup-build` owns the CMake cache; CMake Tools must only read it,
+				// otherwise it reconfigures `dev/build` with its own arguments.
+				"cmake.skipConfigureIfCachePresent": true,
+				"cmake.configureOnOpen": false,
+				"cmake.configureOnEdit": false,
+				"cmake.automaticReconfigure": false,
+				"cmake.buildBeforeRun": true,
+				"cmake.ctest.testExplorerIntegrationEnabled": true,
+				"cmake.parallelJobs": 0,
+				"cmake.clearOutputBeforeBuild": true,
+				"cmake.options.statusBarVisibility": "compact",
+				"cmake.showConfigureWithDebuggerNotification": false,
+
+				// clangd finds `dev/build/compile_commands.json` on its own; other build dirs
+				// are deliberately not picked up.
 				"clangd.path": "/usr/lib/llvm-19/bin/clangd",
 				"clangd.arguments": [
 					"--header-insertion=never",
-					"--header-insertion-decorators=0"
+					"--header-insertion-decorators=0",
+					"--background-index",
+					"--background-index-priority=low",
+					"--all-scopes-completion",
+					"--completion-style=detailed",
+					"--pch-storage=memory",
+					"-j=8"
 				],
-				"C_Cpp.intelliSenseEngine": "disabled"
+				"clangd.onConfigChanged": "restart",
+				"clangd.checkUpdates": false,
+
+				// cpptools stays only for the gdb debugger (`cppdbg`).
+				"C_Cpp.intelliSenseEngine": "disabled",
+				"C_Cpp.autocomplete": "disabled",
+				"C_Cpp.errorSquiggles": "disabled",
+				"C_Cpp.formatting": "disabled",
+
+				// Matches `dev/.clang-format`; formats only modified lines to avoid noisy diffs.
+				"[cpp]": {
+					"editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+					"editor.formatOnSave": true,
+					"editor.formatOnSaveMode": "modifications",
+					"editor.rulers": [100]
+				},
+				"files.insertFinalNewline": true,
+				"files.eol": "\n",
+
+				// Build trees, ccache and the bind-mounted container $HOME are huge.
+				"files.watcherExclude": {
+					"**/dev/build/**": true,
+					"**/dev/.ccache/**": true,
+					"**/dev/scripts/downloads/**": true,
+					"**/node_modules/**": true,
+					"**/dockling-dev/home/**": true
+				},
+				"search.exclude": {
+					"**/dev/build/**": true,
+					"**/dev/.ccache/**": true,
+					"**/dev/coverage/**": true,
+					"**/dev/scripts/downloads/**": true,
+					"**/dockling-dev/home/**": true
+				}
 			}
 		}
 	}

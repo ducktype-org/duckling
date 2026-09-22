@@ -63,12 +63,22 @@ RUN apt-get update -y && \
     nlohmann-json3-dev \
     nano \
     gdb \
+    # Profiling & diagnostics
+    linux-tools-common \
+    linux-tools-generic \
+    heaptrack \
+    strace \
+    htop \
     && \
     # Make g++-14 default
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# The /usr/bin/perf wrapper refuses to run when the host kernel (e.g. WSL2, Docker Desktop)
+# has no matching linux-tools package, so expose the generic perf binary directly.
+RUN ln -sf "$(ls -d /usr/lib/linux-tools/*/perf | head -1)" /usr/local/bin/perf
 
 # install rust
 ENV RUSTUP_HOME=/var/rustup
