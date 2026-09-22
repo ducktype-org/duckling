@@ -126,9 +126,8 @@ if(STRIP_SYMBOL_INFORMATION)
 		message(FATAL_ERROR "Error: STRIP_SYMBOL_INFORMATION will likely fail (as is) compilers other then GCC and Clang. Fix or validate it first.")
 	endif()
 	if(APPLE)
-		# ld64 still honours -s but prints "warning: -s is obsolete" on every link (78 of them for
-		# the common test pack alone). `-x -S` is the supported spelling and, measured here,
-		# produces a byte-identical result: same size, same 36 remaining symbols.
+		# ld64 still honours -s but prints "warning: -s is obsolete" on every link.
+		# Instead, `-x -S` is the supported spelling and should produce the same result.
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-x,-S")
 	else()
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")
