@@ -16,6 +16,11 @@ def coverage_impl(build_dir, thread_count):
 
     # Rebuild, retest, recompute coverage
     bash_command(f"cmake --build {build_dir} -j {thread_count} -- build_all_tests")
+
+    # The integration test profiles are a merge pool: a second run merges into the
+    # first rather than replacing it, so clear them before the tests, not after.
+    bash_command(f"cmake --build {build_dir} -- coverage_reset")
+
     bash_command(f"cmake --build {build_dir} -j {thread_count} -- test")
 
     bash_command(f"cmake --build {build_dir} -- coverage")

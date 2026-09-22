@@ -102,7 +102,7 @@ jobs:
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' }}
-      COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' && matrix.compiler.name == 'gcc' }}
+      COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' && matrix.compiler.name == 'clang' }}
 
     steps:
       - name: Set self-hosted placeholder
@@ -130,13 +130,10 @@ jobs:
       - name: Update apt
         run: sudo apt update
 
-      - name: Install lcov
+      # lcov for genhtml, libclang-rt for the profile runtime that coverage builds link against
+      - name: Install coverage tooling
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov
-
-      - name: Install fastcov
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo pip install fastcov --break-system-packages --no-input
+        run: sudo apt -y install lcov libclang-rt-19-dev
 
       - name: Install graphviz
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
@@ -158,9 +155,9 @@ jobs:
         if: ${{ matrix.compiler.linker == 'mold' }}
         run: sudo apt -y install mold
 
-      - name: Install GCC 14 and gcov-14
+      - name: Install GCC 14
         if: ${{ matrix.compiler.name == 'gcc' }}
-        run: sudo apt install -y ${{ matrix.compiler.cc }} ${{ matrix.compiler.cxx }} # gcov is included in gcc package
+        run: sudo apt install -y ${{ matrix.compiler.cc }} ${{ matrix.compiler.cxx }}
 
       - name: Install Ninja
         run: sudo apt -y install ninja-build
@@ -178,7 +175,6 @@ jobs:
         run: |
           ${{ matrix.compiler.cxx }} --version
           ${{ matrix.compiler.cc }} --version
-          ${{ matrix.compiler.name == 'gcc' && format('{0} --version', matrix.compiler.gcov) || 'echo "No gcov for clang"' }}
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
@@ -248,7 +244,7 @@ jobs:
         id: setup-build-flags
         # Env here is used for readability only
         env:
-          flags: ${{ env.COVERAGE_ENABLED == 'true' && format('--coverage --gcov-version {0}', matrix.compiler.gcov) || '--no-coverage' }}
+          flags: ${{ env.COVERAGE_ENABLED == 'true' && '--coverage' || '--no-coverage' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
         # JIT should be enabled if build type is DevOpt and compiler is clang, otherwise it should be disabled.
@@ -376,19 +372,22 @@ jobs:
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
-      - name: Delete coverage data files
+      # The integration test binaries merge into a shared profile pool, so anything
+      # already in it (from building, or from a previous run) would be counted as
+      # integration test coverage. The unit test profiles are named per test and
+      # simply overwritten, but coverage_reset clears both.
+      - name: Reset coverage profiles before integration tests
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         working-directory: ${{ env.WORKSPACE }}
-        run: |
-          # Remove only .gcda files, so that .gcno files are still present for integration tests
-          find ${{ env.BUILD_DIR }} -name '*.gcda' -type f -delete
+        run: cmake --build ${{ env.BUILD_DIR }} -- coverage_reset
 
       - name: Integration Tests
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
-        # Coverage-instrumented binaries are much slower, and concurrent duckc
-        # processes serialize on .gcda profile writes.
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }}
+        # Coverage-instrumented binaries are still slower than plain ones, but clang
+        # writes one profile per process into a small merge pool rather than a .gcda
+        # per translation unit, so concurrent duckc processes no longer serialize.
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 2' || '' }}
 
       # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
       # so we have to save sccache after that, otherwise we'd have nothing to save.
@@ -413,8 +412,8 @@ jobs:
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
-          cmake --build ${{ env.BUILD_DIR }} -- coverage
-          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
+          cmake --build ${{ env.BUILD_DIR }} -- coverage_itests
+          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage-itests/index.html) > $GITHUB_OUTPUT
 
       - name: Test TODO Count
         id: todo-counter

@@ -12,7 +12,6 @@ FULL_MATRIX: dict[str, list[Any]] = {
             "name": "gcc",
             "cxx": "g++-14",
             "cc": "gcc-14",
-            "gcov": "gcov-14",
             "linker": "mold",
             "cache-prefix": "gcc-build",
         },
@@ -26,16 +25,18 @@ FULL_MATRIX: dict[str, list[Any]] = {
     ],
 }
 
+# Clang, because this is the job that produces the coverage numbers the PR is
+# gated on, and coverage is clang source-based. gcc is still covered by the full
+# matrix, which runs on push to main/dev and on approved or labelled PRs.
 PR_MATRIX: dict[str, list[Any]] = {
     "build-type": ["Dev"],
     "compiler": [
         {
-            "name": "gcc",
-            "cxx": "g++-14",
-            "cc": "gcc-14",
-            "gcov": "gcov-14",
+            "name": "clang",
+            "cxx": "clang++-19",
+            "cc": "clang-19",
             "linker": "mold",
-            "cache-prefix": "gcc-build",
+            "cache-prefix": "clang-build",
         }
     ],
 }

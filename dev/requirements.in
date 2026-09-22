@@ -2,6 +2,5 @@
 # Use this file to generate `requirements.txt` when updating.
 
 click
-fastcov
 PyYAML
 requests

@@ -46,6 +46,8 @@ RUN apt-get update -y && \
     libgraphviz-dev \
     # Coverage deps
     lcov \
+    # clang's profile runtime, linked into coverage builds
+    libclang-rt-19-dev \
     # Libraries
     libzstd-dev \
     zlib1g-dev \

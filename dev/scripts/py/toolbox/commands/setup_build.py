@@ -9,7 +9,6 @@ from ..impl.helpers import (
     PromptForCoverageIfBuildNotOptimised,
     default_compiler_from_ctx,
     default_linker_from_ctx,
-    default_gcov_from_ctx,
 )
 from ...jit.llvm_tools import (LLVM_TOOLS, llvm_tools_version_options)
 from click import Choice, option, command, prompt
@@ -113,7 +112,8 @@ def configure_presets(ctx, param, value):
 @option(
     "--coverage/--no-coverage",
     prompt="Enable coverage",
-    help="Whether or not to enable coverage",
+    help="Whether or not to enable coverage. Uses clang source-based coverage, "
+    "so it requires a clang compiler.",
     type=bool,
     default=False,
     is_flag=True,
@@ -127,12 +127,6 @@ def configure_presets(ctx, param, value):
     type=bool,
     default=False,
     is_flag=True,
-)
-@option(
-    "--gcov-version",
-    help="GCOV version that will be passed to find_program in CMAKE. If not specified, inferred from the C++ compiler.",
-    default=None,
-    cls=default_gcov_from_ctx(),
 )
 @option(
     "--linker",

@@ -10,7 +10,8 @@
 - **CMake** and **Ninja** are used for building the project.
 - **g++** with version 14 or higher is required for building the project.
 - [alternatively to g++] **clang++** with version 19 or higher is required for building the project.
-- **lcov** is used for generating coverage reports.
+- **lcov 2.0 or newer** renders coverage reports (`genhtml`) and filters them (`lcov --filter`).
+- **libclang-rt** (the clang profile runtime, e.g. `libclang-rt-19-dev`) is required for coverage builds.
 - **LLVM** with version 19 is required for building the project.
 - **pkg-config** and **libffi** (development headers) are required for the dynamic foreign function interface.
 
@@ -22,7 +23,7 @@ Note that the dependencies listed below are listed without versions. Update the 
 
 ```bash
 sudo apt update -y && \
-sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev pkg-config libffi-dev -y
+sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 lcov llvm-dev clang-tidy libclang-rt-19-dev libzstd-dev zlib1g-dev pkg-config libffi-dev -y
 ```
 
 
@@ -299,10 +300,36 @@ ctest -L compiler
 
 ## Testing coverage
 
-Before running this command make sure you build folder has enabled coverage.
+Coverage uses clang's source-based instrumentation, so the build folder has to be
+configured with a clang compiler and `--coverage`. It also needs the clang profile
+runtime (`libclang-rt-19-dev` on Debian/Ubuntu) and lcov 2.0 or newer; without
+either, the configure step fails with a message saying so.
 
-```bash	
+```bash
 # This is only needed if build folder was not prepared for coverage.
-./toolbox.py setup-build --coverage
-./toolbox.py coverage
+./toolbox.py setup-build -b build-cov --coverage -x clang++-19 -c clang-19
+./toolbox.py coverage -b build-cov
 ```
+
+This builds the tests, clears any stale profiles, runs the unit tests, renders the
+report into `<build>/coverage/` and opens it.
+
+The tracefile is written twice: `coverage-raw.info` straight from llvm-cov, and
+`coverage.info` after `lcov --filter blank,range`. The filter drops lines that hold
+no code but that llvm-cov reports anyway - blank lines and comments caught in the
+skipped region clang emits around `#if` directives, and the occasional line past the
+end of a file ([llvm/llvm-project#120071](https://github.com/llvm/llvm-project/issues/120071)).
+`coverage.info` is the one the HTML report and the CI percentage come from.
+
+Coverage from the integration tests is collected separately, because those run the
+real `duckc` and `VM` binaries rather than the test executables:
+
+```bash
+cmake --build build-cov -- coverage_reset
+./toolbox.py itest -b build-cov
+cmake --build build-cov -- coverage_itests   # report in <build>/coverage-itests/
+```
+
+`coverage_reset` matters because the binaries write into a shared merge pool: a
+second run merges into the first rather than replacing it, so without a reset the
+report covers both runs. `./toolbox.py coverage` does this for you.

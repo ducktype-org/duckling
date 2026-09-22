@@ -12,7 +12,6 @@ import sys
 
 
 # Regex patterns for compiler version detection
-CLANG_VERSION_PATTERN = re.compile(r"(?:^|/)clang\+\+-(\d+)$")
 GCC_VERSION_PATTERN = re.compile(r"(?:^|/)g\+\+-(\d+)$")
 
 
@@ -427,64 +426,3 @@ def default_linker_from_ctx():
     return OptionDefaultLinkerFromCtx
 
 
-def infer_gcov_from_compiler(cxx_compiler):
-    """Infer GCOV version from C++ compiler"""
-    if cxx_compiler is None:
-        return "gcov"
-
-    # Get the compiler basename
-    compiler_name = cxx_compiler.split("/")[-1]
-
-    # Determine compiler type and extract version if present
-    is_clang = compiler_name.startswith("clang++")
-    is_gcc = compiler_name.startswith("g++")
-
-    if not is_clang and not is_gcc:
-        # Unknown compiler type, default to gcov
-        return "gcov"
-
-    # Try to extract version from compiler name (e.g., clang++-19, g++-14)
-    if is_clang:
-        match = CLANG_VERSION_PATTERN.search(cxx_compiler)
-        if match:
-            return f"llvm-cov-{match.group(1)}"
-    else:  # is_gcc
-        match = GCC_VERSION_PATTERN.search(cxx_compiler)
-        if match:
-            return f"gcov-{match.group(1)}"
-
-    # Check if it's an unversioned compiler (exact match)
-    if compiler_name == "clang++":
-        return "llvm-cov"
-    elif compiler_name == "g++":
-        return "gcov"
-
-    # No version in name, try to get it by running the compiler
-    try:
-        version = get_program_version(cxx_compiler)
-        if version:
-            major_version = version.split(".")[0]
-            return f"llvm-cov-{major_version}" if is_clang else f"gcov-{major_version}"
-    except (FileNotFoundError, sp.SubprocessError, OSError):
-        # If compiler doesn't exist or can't get version, fall through
-        pass
-
-    # Final fallback
-    return "llvm-cov" if is_clang else "gcov"
-
-
-def default_gcov_from_ctx():
-    """Create a click.Option class that infers the default GCOV from compiler"""
-
-    class OptionDefaultGcovFromCtx(click.Option):
-
-        def get_default(self, ctx, call=True):
-            gcov_version = ctx.params.get("gcov_version")
-            if gcov_version is None:
-                cxx_compiler = ctx.params.get("cxx_compiler")
-                self.default = infer_gcov_from_compiler(cxx_compiler)
-            else:
-                self.default = gcov_version
-            return super(OptionDefaultGcovFromCtx, self).get_default(ctx, call)
-
-    return OptionDefaultGcovFromCtx

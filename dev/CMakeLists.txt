@@ -71,3 +71,15 @@ add_subdirectory(src/playground)
 add_subdirectory(scripts/cmake)
 
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureDocs.cmake)
+
+# `coverage_itests` reads the profiles duckc and the VM leave behind, so both have
+# to exist. `coverage` does not run them, but it has to see the same object files,
+# or the two reports end up with different denominators: the integration tests build
+# duckc themselves, so without this the unit test report - which runs first - would
+# be missing every source only duckc and the VM link (main.cpp, the debugger UI, the
+# CLI), and the two percentages would not be comparable. They are declared below
+# ConfigureTests.cmake, hence the dependency here rather than next to the targets.
+if(ENABLE_COVERAGE)
+	add_dependencies(coverage duckc VM)
+	add_dependencies(coverage_itests duckc VM)
+endif()

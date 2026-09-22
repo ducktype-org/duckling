@@ -20,7 +20,6 @@ def setup_build_impl(
     docs,
     cxx_compiler,
     cc_compiler,
-    gcov_version,
     ccache,
     coverage,
     linker,
@@ -40,6 +39,15 @@ def setup_build_impl(
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
+
+    # Coverage is clang source-based; CMake refuses gcc too, but it only gets to
+    # say so after a full configure, which is a slow way to learn this.
+    if coverage and "clang++" not in cxx_compiler:
+        exit_with_error(
+            f"Coverage requires a Clang compiler. "
+            f"Current compiler: {cxx_compiler}. "
+            f"Please use --cxx-compiler to specify a Clang compiler (e.g., clang++-19)."
+        )
 
     # If LTO is enabled, ensure we're using Clang and LLD
     if enable_link_time_optimization:
@@ -94,8 +102,6 @@ def setup_build_impl(
     ]
     if sanitizer:
         cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")
-    if coverage:
-        cmd_parts.append(f"-D GCOV_VERSION={gcov_version}")
     if clang_for_builtins:
         cmd_parts.append(f"-D CLANG_BIN={clang_for_builtins}")
 
