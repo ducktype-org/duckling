@@ -197,6 +197,34 @@ namespace vm::test {
 			return *this;
 		}
 
+		FlowSimulator& enforceFrameVarValue(u64 frame_index, base::StrID name, u64 expected) {
+			auto data = vm::api::debuggerGetStackFrameData(pid, thread_id, frame_index);
+			if (!data) assertTrue(false, vm::api::errorToString(data.error()));
+
+			for (const auto& var: data->frame_vars) {
+				if (!var.name.has_value() || *var.name != name) continue;
+
+				auto opt_data = var.value->readData();
+				assertTrue(
+					opt_data.has_value(), base::strConcat("Failed to read the value of '", name, "'")
+				);
+				auto* primitive
+					= std::get_if<vm::interpreted_data_variant::Primitive>(&opt_data.value());
+				assertTrue(
+					primitive != nullptr, base::strConcat("'", name, "' is not a primitive value")
+				);
+				assertEqual(
+					expected, primitive->value, base::strConcat("Value of '", name, "' mismatch")
+				);
+				return *this;
+			}
+
+			assertTrue(
+				false, base::strConcat("Frame ", frame_index, " has no variable named '", name, "'")
+			);
+			return *this;
+		}
+
 		FlowSimulator& evalExprNormal(const fs::File& file, const std::vector<u64>& expected_result) {
 			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
 			if (!response) assertTrue(false, vm::api::errorToString(response.error()));

@@ -577,7 +577,7 @@ namespace vm {
 					// through one, so it is created here exactly as the executor does.
 					Ref<Block> block = slot.block != nullptr
 					                     ? Ref(slot.block)
-					                     : createLocalSlotBlock(frame, memory, slot_index);
+					                     : createLocalSlotBlock(frame, memory, base_offset + slot_index);
 
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset = base::safeIntConv<u64>(slot.data - frame.local_stack),

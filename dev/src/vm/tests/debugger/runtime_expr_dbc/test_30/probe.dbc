@@ -1,0 +1,7 @@
+function probe { } -> { i64 } {
+	init_pany_type local, i64;
+	mov_p64_imm local, 123;
+	call_func pause_here;
+	mov_p64_p64 ret0, local;
+	ret_from_expr;
+}
