@@ -98,11 +98,12 @@ jobs:
     timeout-minutes: 60 # (Per matrix run)
     runs-on:
       group: SelfHostedRunners
-      labels: ${{ matrix.build-type == 'Dev' && 'debug' || 'release' }}
+      labels: ${{ matrix.compiler.platform == 'macos' && 'macOS' || (matrix.build-type == 'Dev' && 'debug' || 'release') }}
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' }}
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' && matrix.compiler.name == 'gcc' }}
+      PLATFORM: ${{ matrix.compiler.platform }}
 
     steps:
       - name: Set self-hosted placeholder
@@ -112,8 +113,13 @@ jobs:
       - name: Set number of threads
         id: set-jobs
         run: |
-          read -r quota period < /sys/fs/cgroup/cpu.max
-          cpus=$((quota / period + 1))
+          if [ -r /sys/fs/cgroup/cpu.max ]; then
+            read -r quota period < /sys/fs/cgroup/cpu.max
+            cpus=$((quota / period + 1))
+          else
+            # This branch will be taken on macOS
+            cpus=10
+          fi
           echo "jobs=$cpus" >> $GITHUB_OUTPUT
 
       - name: Clean workspace
@@ -127,52 +133,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Update apt
-        run: sudo apt update
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env/
+        with:
+          platform: ${{ env.PLATFORM }}
+          cc: ${{ matrix.compiler.cc }}
+          cxx: ${{ matrix.compiler.cxx }}
+          compiler-name: ${{ matrix.compiler.name }}
+          linker: ${{ matrix.compiler.linker }}
+          coverage-enabled: ${{ env.COVERAGE_ENABLED }}
+          build-deployables: ${{ env.BUILD_DEPLOYABLES }}
+          dev-dir: ${{ env.WORKSPACE }}
+          ccache-dir: ${{ env.CCACHE_DIR }}
 
-      - name: Install lcov
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov
-
-      - name: Install fastcov
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo pip install fastcov --break-system-packages --no-input
-
-      - name: Install graphviz
-        if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
-        run: sudo apt -y install libgraphviz-dev
-
-      - name: Install LLVM
-        run: sudo apt -y install llvm-19 llvm-19-dev
-
-      - name: Install clang
-        # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
-        # Must be the same version as llvm
-        run: sudo apt -y install clang-19 clang-tools-19
-
-      - name: Install xxd
-        # Necessary to embed LLVM bitcode into duckc source files.
-        run: sudo apt -y install xxd
-
-      - name: Install mold
-        if: ${{ matrix.compiler.linker == 'mold' }}
-        run: sudo apt -y install mold
-
-      - name: Install GCC 14 and gcov-14
-        if: ${{ matrix.compiler.name == 'gcc' }}
-        run: sudo apt install -y ${{ matrix.compiler.cc }} ${{ matrix.compiler.cxx }} # gcov is included in gcc package
-
-      - name: Install Ninja
-        run: sudo apt -y install ninja-build
-
-      - name: Install Valgrind
-        run: sudo apt -y install valgrind
-
-      - name: Install pkg-config + libffi
-        run: sudo apt -y install pkg-config libffi-dev
-
-      - name: Setup duck dependencies
-        uses: ./.github/actions/setup-duck-dependencies/
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust/
+        with:
+          platform: ${{ env.PLATFORM }}
+          sccache-dir: ${{ github.workspace }}/.cache/sccache
 
       - name: Check installations
         run: |
@@ -180,16 +158,14 @@ jobs:
           ${{ matrix.compiler.cc }} --version
           ${{ matrix.compiler.name == 'gcc' && format('{0} --version', matrix.compiler.gcov) || 'echo "No gcov for clang"' }}
 
-      - name: Install ccache
-        working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py download-binaries -s ccache
-
       # Generate a timestamp and save it to a variable.
       # Timestamp is appended to the key in caching, so each cache has a unique key.
       # This step is arbitrary, and has nothing to the order of choosing the most
       # recent hash.
       - name: Prepare cache timestamp
         id: cache-timestamp
+        # Only the actions/cache keys consume this, and those steps are Linux-only.
+        if: ${{ env.PLATFORM != 'macos' }}
         shell: cmake -P {0}
         run: |
           string(TIMESTAMP current_date "%Y-%m-%d-%H::%M::%S" UTC)
@@ -199,8 +175,14 @@ jobs:
       # main branch misses, fallback to any branch's cache.
       - name: Restore build cache
         id: restore-build-cache
+        # macOS keeps its ccache on the machine - see "Point caches at local storage".
+        if: ${{ env.PLATFORM != 'macos' }}
         uses: actions/cache/restore@v5
         with:
+          # main builds from an empty cache on purpose: the entry it saves is what every branch
+          # falls back to, so it holds one fresh build rather than every object ever compiled
+          # on main. Not downloading is what keeps it that way.
+          lookup-only: ${{ env.BRANCH_NAME == 'main' }}
           path: |
             ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
@@ -213,10 +195,13 @@ jobs:
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
 
+      # macOS keeps its sccache on the machine as well - see "Point caches at local storage".
       - name: Restore sccache cache
         id: restore-sccache-cache
+        if: ${{ env.PLATFORM != 'macos' }}
         uses: actions/cache/restore@v5
         with:
+          lookup-only: ${{ env.BRANCH_NAME == 'main' }}
           path: |
             ${{ env.SCCACHE_DIR }}
           key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
@@ -224,18 +209,6 @@ jobs:
             ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
             ${{ runner.os }}-sccache-main-
             ${{ runner.os }}-sccache-
-
-      # Remove ccache folder to prevent cache snowball growth
-      - name: Remove ccache on main
-        if: ${{ env.BRANCH_NAME == 'main' }}
-        id: ccache-main-rm
-        run: rm -rf ${CCACHE_DIR}
-
-      # Remove sccache folder to prevent cache snowball growth
-      - name: Remove sccache on main
-        if: ${{ env.BRANCH_NAME == 'main' }}
-        id: sccache-main-rm
-        run: rm -rf ${SCCACHE_DIR}
 
       - name: Initialize project
         working-directory: ${{ env.WORKSPACE }}
@@ -286,6 +259,9 @@ jobs:
       # Build all tests.
       # We additionally build coverage targets in case of coverage enabled,
       # so they are nicely parallelized and cached.
+      #
+      # duckc and VM are built here too, although no test links them: we build them just so their
+      # objects land in the ccache entry saved below.
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
         run: |
@@ -294,6 +270,8 @@ jobs:
           -j ${{ steps.set-jobs.outputs.jobs }} \
           --                                    \
           build_all_tests                       \
+          duckc                                 \
+          VM                                    \
           ${{ env.COVERAGE_ENABLED == 'true' && 'build_all_coverage_targets' || '' }}
 
       # Check against regressions in target applications.
@@ -323,39 +301,19 @@ jobs:
           du -hs ${{ env.CCACHE_DIR }}
 
           echo "sccache:"
-          du -hs ${{ env.SCCACHE_DIR }} || echo 0
+          [ -n "${SCCACHE_DIR:-}" ] && du -hs "$SCCACHE_DIR" || echo 0
 
-      # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
-      # This step deletes all the cache entries that are related to this branch,
-      # and it is done in this moment in the script, right after building, because
-      # upload of the current build happens after everything
-      # else has finished, so there will be a cache entry ready for pulling.
-      - name: Cleanup previous Cache entries for this branch
+      - name: Show ccache statistics
         run: |
-          gh extension install actions/gh-actions-cache
+          ccache_bin=$(command -v ccache || echo '${{ env.WORKSPACE }}/scripts/downloads/ccache')
+          "$ccache_bin" --show-stats --verbose | head -30
 
-          echo "Fetching list of cache key"
-          cacheKeysForPR=$(gh actions-cache list -R $REPO -L 100 | cut -f 1 )
-
-          ## Setting this to not fail the workflow while deleting cache keys.
-          set +e
-          echo "Deleting caches..."
-          for cacheKey in $cacheKeysForPR
-          do
-            if [[ $cacheKey == ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}* ||
-                  $cacheKey == ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}* ]]; then
-              echo "Deleting cache $cacheKey..."
-              gh actions-cache delete $cacheKey -R $REPO --confirm
-            fi
-          done
-          echo "Done"
-        env:
-          GH_TOKEN: ${{ secrets.CACHE_DEL_PAT }} # This env variable is used by the GH tool.
-          REPO: ${{ github.repository }}
-
-      # Manually cache the build before testing, but **after** cleaning.
+      # Uploaded in the BACKGROUND (GitHub shipped this 2026-06-25): the tests below start
+      # immediately instead of waiting out the upload.
       - name: Save build cache
         id: save-build-cache
+        if: ${{ env.PLATFORM != 'macos' }}
+        background: true
         uses: actions/cache/save@v5
         with:
           path: |
@@ -386,12 +344,23 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         # Coverage-instrumented binaries are much slower, and concurrent duckc
         # processes serialize on .gcda profile writes.
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }}
+        run: |
+          # One log directory per account.
+          log_dir="/tmp/dit-log-$(id -un)"
+          mkdir -p "$log_dir"
+          ITEST_LOG="$log_dir/dit.log"
+          rm -f "$ITEST_LOG"
+          echo "ITEST_LOG=$ITEST_LOG" >> "$GITHUB_ENV"
+          ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --log-file "$ITEST_LOG" --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }}
 
       # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
       # so we have to save sccache after that, otherwise we'd have nothing to save.
+      # Backgrounded for the same reason as the build cache above; the coverage and TODO steps
+      # that follow do not touch $SCCACHE_DIR.
       - name: Save sccache cache
         id: save-sccache-cache
+        if: ${{ env.PLATFORM != 'macos' }}
+        background: true
         uses: actions/cache/save@v5
         with:
           path: |
@@ -404,7 +373,7 @@ jobs:
       # runs when at least one of the integration test steps actually failed.
       - name: Cat itests log file on failure
         if: ${{ failure() && (steps.integration-tests.outcome == 'failure') }}
-        run: cat /tmp/dit.log
+        run: cat "${{ env.ITEST_LOG }}"
 
       - name: Test Coverage After Integration Tests
         id: test-coverage-itests
@@ -423,6 +392,31 @@ jobs:
       - name: Fail if deployables failed to build
         if: ${{ env.BUILD_DEPLOYABLES == 'true' && steps.build-deployables.outcome != 'success' }}
         run: exit 1
+
+  # Every run saves a new timestamped entry, so without pruning the branch's caches grow without
+  # bound.
+  #
+  # This groups the entries by the key they share and keeps the newest of each. It also collects entries
+  # left behind by runs that were cancelled mid-flight.
+  prune-caches:
+    needs: [build]
+    # Pruning is worth doing whether or not the build passed; `needs` already skips this when
+    # `build` never ran.
+    if: ${{ !cancelled() && needs.build.result != 'skipped' }}
+
+    runs-on: ubuntu-24.04 # github runner
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Delete superseded cache entries for this branch
+        env:
+          CACHE_DELETE_TOKEN: ${{ secrets.CACHE_DEL_PAT }}
+        run: |
+          python3 .github/workflows/prune-caches.py \
+            --repo "${{ github.repository }}" \
+            --branch "${{ env.BRANCH_NAME }}"
 
   code-statistics:
     needs: [build]
