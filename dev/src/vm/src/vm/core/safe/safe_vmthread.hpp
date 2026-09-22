@@ -100,6 +100,19 @@ namespace vm {
 		std::deque<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>>
 			runtime_expr_res_handler;
 
+		/**
+		 * @brief High-level representation of the synthetic `vm_start_function`, when this thread
+		 * has loaded one. Kept here rather than in `runtime_expr_high`, both so it is not mixed with
+		 * expressions and so `LowFuncData::high_func` stays valid.
+		 */
+		base::Optional<code::valid_function::ValidFunction> start_function_high;
+
+		/**
+		 * @brief Lowered bytecode of the synthetic `vm_start_function`, when this thread has loaded
+		 * one. The optionals mark whether a start function is currently loaded.
+		 */
+		base::Optional<low::LowFuncData> start_function_low;
+
 
 		RuntimeData runtime_data;
 
@@ -193,25 +206,22 @@ namespace vm {
 		) const;
 
 		/**
-		 * @brief Validates the high-level `vm_start_function` and lowers it to low bytecode.
-		 * @note Both the high and low representations are stored in `runtime_expr_high` /
-		 * `runtime_expr_low`, so the address kept in `LowFuncData::high_func` stays valid for the
-		 * lowered function's whole lifetime.
+		 * @brief Validates the high-level `vm_start_function` and lowers it to low bytecode,
+		 * loading both into `start_function_high` / `start_function_low`.
+		 * @note Both representations are stored in `start_function_high` / `start_function_low`,
+		 * so the address kept in `LowFuncData::high_func` stays valid for the lowered function's
+		 * whole lifetime. The optionals mark whether a start function is loaded.
 		 */
-		[[nodiscard]] low::LowFuncData compileStartFunction(code::Function&& start_function);
+		void compileAndLoadStartFunction(const code::Function& start_function);
 
 		/**
-		 * @brief This is the primary function to call to start execution on the VM.
-		 * It calls both the main function when running the program and single functions called by
-		 * the `runFunction` endpoint. It starts the execution beginning with the first instruction
-		 * in the start_function bytecode vector.
-		 * @param start_function - the code of the start function.
-		 * @param func - the function to execute.
-		 * @return Mutable references to the SafeVMValues returned by the program
+		 * @brief This is the primary function to call to start execution on the VM. It runs the
+		 * loaded `start_function_low`, which calls @p func.
+		 * @param func - the function the loaded start function was built for; its result signature
+		 * is what the exit values are extracted by.
+		 * @return Mutable references to the SafeVMValues returned by the program.
 		 */
-		std::vector<Ref<SafeVMValue>> executeFunction(
-			const low::LowFuncData& start_function, const low::LowFuncData& func
-		);
+		std::vector<Ref<SafeVMValue>> executeLoadedFunction(const low::LowFuncData& func);
 
 		void execGlobalDestructors() override;
 
@@ -341,7 +351,7 @@ namespace vm {
 
 	/**
 	 * @brief This is a low level function to run the interpreter, until the `exit` instruction
-	 * appears. Probably shouldn't be called directly, look into `executeFunction` first.
+	 * appears. Probably shouldn't be called directly, look into `executeLoadedFunction` first.
 	 *
 	 * @param instr - the first instruction that to be executed
 	 */

@@ -181,11 +181,10 @@ namespace vm {
 		return start_function;
 	}
 
-	low::LowFuncData SafeVMThread::compileStartFunction(code::Function&& start_function) {
-		runtime_expr_high.emplace_back(safe_process.validateStartFunction(this, start_function));
-		runtime_expr_low.emplace_back(safe_process.compileToLow(this, runtime_expr_high.back()));
-		runtime_expr_low.back().id = START_FUNCTION_ID;
-		return runtime_expr_low.back();
+	void SafeVMThread::compileAndLoadStartFunction(const code::Function& start_function) {
+		start_function_high.emplace(safe_process.validateStartFunction(this, start_function));
+		start_function_low.emplace(safe_process.compileToLow(this, *start_function_high));
+		start_function_low->id = START_FUNCTION_ID;
 	}
 
 	/**
@@ -384,10 +383,15 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
-	std::vector<Ref<SafeVMValue>> SafeVMThread::executeFunction(
-		const low::LowFuncData& start_function, const low::LowFuncData& func
-	) {
+	std::vector<Ref<SafeVMValue>> SafeVMThread::executeLoadedFunction(const low::LowFuncData& func) {
 		ScopedGilGuard gil_guard(*this);
+
+		CORE_ASSERT(start_function_low.has_value(), "No start function is loaded");
+		CORE_ASSERT(start_function_high.has_value(), "No start function is loaded");
+		CORE_ASSERT(
+			start_function_low->high_func.get() == &*start_function_high,
+			"High function is not a source for low function"
+		);
 
 		// Frame of the called function.
 		Frame* frame          = runtime_data.frame_stack_current;
@@ -398,11 +402,11 @@ namespace vm {
 		auto orig_slot_stack_size
 			= usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
 
-		frame->current_function      = &start_function;
+		frame->current_function      = &*start_function_low;
 		frame->local_slot_stack_base = runtime_data.slot_stack_base;
 		frame->local_slot_stack_end  = runtime_data.slot_stack_base;
 
-		const auto* instr = start_function.getBc().data();
+		const auto* instr = start_function_low->getBc().data();
 
 		// Make sure the frame will be moved back after the interpreter runs. Even if it throws a
 		// `KillProcessException` so the state stays valid.
@@ -464,7 +468,7 @@ namespace vm {
 		return exit_value_storage.value();
 	}
 
-	// executeFunction end
+	// executeLoadedFunction end
 
 	/**
 	 * @brief Starts the execution of a function with a given name and arguments.
@@ -480,9 +484,8 @@ namespace vm {
 							const auto& func = *process_program->getFunctions()
 							                        .atMaybe(ctor_dtor.ctor_name.value())
 							                        .value();
-							low::LowFuncData start_function
-								= compileStartFunction(createStartFunctionFor(func, {}));
-							executeFunction(start_function, func);
+							compileAndLoadStartFunction(createStartFunctionFor(func, {}));
+							executeLoadedFunction(func);
 						}
 					}
 					variant_case(low::GlobalInitialValue, value_init) {
@@ -503,21 +506,16 @@ namespace vm {
 		}
 		const auto& func = *maybe_func.value();
 
-		low::LowFuncData start_function = [&]() {
-			variant_match(run_arguments) {
-				variant_case(ProgramRunArguments, program_run_arguments) {
-					return compileStartFunction(
-						createProgramStartFunction(func, program_run_arguments)
-					);
-				}
-				variant_case(FunctionRunArguments, function_run_data) {
-					return compileStartFunction(createStartFunctionFor(func, function_run_data));
-				}
+		variant_match(run_arguments) {
+			variant_case(ProgramRunArguments, program_run_arguments) {
+				compileAndLoadStartFunction(createProgramStartFunction(func, program_run_arguments));
 			}
-			CORE_UNREACHABLE();
-		}();
+			variant_case(FunctionRunArguments, function_run_data) {
+				compileAndLoadStartFunction(createStartFunctionFor(func, function_run_data));
+			}
+		}
 
-		const auto exit_value = executeFunction(start_function, func);
+		const auto exit_value = executeLoadedFunction(func);
 		applyEvent(te::Finish{ std::vector<Ref<IVMValue>>(exit_value.begin(), exit_value.end()) });
 	}
 
@@ -542,9 +540,8 @@ namespace vm {
 			           .expect(
 						   "Called function does not exist: " + ctor_dtor->dtor_name.value().str()
 					   );
-			low::LowFuncData start_function
-				= compileStartFunction(createStartFunctionFor(func, {}));
-			executeFunction(start_function, func);
+			compileAndLoadStartFunction(createStartFunctionFor(func, {}));
+			executeLoadedFunction(func);
 		}
 	}
 
