@@ -1,0 +1,36 @@
+fun identity(values: i64[3]) -> i64[3] = {
+    return values;
+}
+
+fun last(values: i64[3]) -> i64 = {
+    return values[2];
+}
+
+fun forward(values: i64[3]) -> i64[3] = {
+    return identity(values);
+}
+
+fun main() -> i64 = {
+    var source: i64[3];
+    source[0] = 10;
+    source[1] = 20;
+    source[2] = 30;
+
+    var duplicate = source;
+    source[2] = 99;
+
+    # Assignment created an independent copy.
+    builtin_output_i64(duplicate[2]);
+
+    # "identity" returns through sret directly into "returned".
+    var returned = identity(source);
+    builtin_output_i64(returned[2]);
+
+    # The nested result is forwarded to "last" without becoming an aggregate SSA value.
+    builtin_output_i64(last(identity(duplicate)));
+
+    var forwarded = forward(duplicate);
+    builtin_output_i64(forwarded[2]);
+
+    return 0;
+}
