@@ -7,7 +7,7 @@
 //! Build graph uniqueness should __not__ be checked against [`FullIdentity`]. Use [`Identity`] for
 //! that.
 //!
-//! For differences between [`FullIdentity`] and [`Identity`], see the `readme.md` under the `core/` directory.
+//! For differences between [`FullIdentity`] and [`Identity`], see the `readme.md` under the `package_identifiers/` directory.
 
 use std::fmt::Display;
 use std::path::Path;
