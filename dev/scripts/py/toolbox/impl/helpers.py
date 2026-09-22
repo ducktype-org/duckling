@@ -399,11 +399,9 @@ def should_add_linker_flags(linker: str):
 
 def detect_available_linker():
     """Detect and return the best available linker (mold > lld > default)"""
-    # macOS links Mach-O objects, which mold and lld do not support; only the system linker
-    # (ld64, selected by "default") works there.
-    if platform.system() == "Darwin":
-        return "default"
-    if shutil.which("mold") is not None:
+    # mold has no Mach-O backend, so it is never a candidate on macOS. lld does (ld64.lld) and is
+    # both faster and quieter than Apple's ld.
+    if platform.system() != "Darwin" and shutil.which("mold") is not None:
         return "mold"
     # Check for LLD (can be named 'lld' or 'ld.lld' depending on the system)
     if shutil.which("lld") is not None or shutil.which("ld.lld") is not None:

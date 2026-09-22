@@ -1,0 +1,92 @@
+name: Setup Linux build environment
+description: >
+  Installs what the C++ build needs on Ubuntu runners, where the account has sudo.
+
+inputs:
+  cc:
+    description: C compiler from the build matrix; also the apt package name for gcc.
+    required: true
+  cxx:
+    description: C++ compiler from the build matrix; also the apt package name for gcc.
+    required: true
+  compiler-name:
+    description: "Compiler family. Only gcc needs its packages installed; clang comes from llvm-19."
+    required: true
+  linker:
+    description: Linker from the build matrix.
+    required: true
+  coverage-enabled:
+    description: '"true" to install the coverage tooling (lcov + fastcov).'
+    required: false
+    default: "false"
+  build-deployables:
+    description: '"true" to install graphviz, which only the deployables need.'
+    required: false
+    default: "false"
+  dev-dir:
+    description: Absolute path of the repository's dev/ directory.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Update apt
+      shell: bash
+      run: sudo apt update
+
+    - name: Install lcov
+      if: ${{ inputs.coverage-enabled == 'true' }}
+      shell: bash
+      run: sudo apt -y install lcov
+
+    - name: Install fastcov
+      if: ${{ inputs.coverage-enabled == 'true' }}
+      shell: bash
+      run: sudo pip install fastcov --break-system-packages --no-input
+
+    - name: Install graphviz
+      if: ${{ inputs.build-deployables == 'true' }}
+      shell: bash
+      run: sudo apt -y install libgraphviz-dev
+
+    - name: Install LLVM
+      shell: bash
+      run: sudo apt -y install llvm-19 llvm-19-dev
+
+    - name: Install clang
+      # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
+      # Must be the same version as llvm
+      shell: bash
+      run: sudo apt -y install clang-19 clang-tools-19
+
+    - name: Install xxd
+      # Necessary to embed LLVM bitcode into duckc source files.
+      shell: bash
+      run: sudo apt -y install xxd
+
+    - name: Install mold
+      if: ${{ inputs.linker == 'mold' }}
+      shell: bash
+      run: sudo apt -y install mold
+
+    - name: Install GCC 14 and gcov-14
+      if: ${{ inputs.compiler-name == 'gcc' }}
+      shell: bash
+      run: sudo apt install -y ${{ inputs.cc }} ${{ inputs.cxx }} # gcov is included in gcc package
+
+    - name: Install Ninja
+      shell: bash
+      run: sudo apt -y install ninja-build
+
+    - name: Install Valgrind
+      shell: bash
+      run: sudo apt -y install valgrind
+
+    - name: Install pkg-config + libffi
+      shell: bash
+      run: sudo apt -y install pkg-config libffi-dev
+
+    - name: Install ccache
+      shell: bash
+      working-directory: ${{ inputs.dev-dir }}
+      run: ./toolbox.py download-binaries -s ccache
