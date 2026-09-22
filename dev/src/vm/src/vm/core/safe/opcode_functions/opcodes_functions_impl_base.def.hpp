@@ -364,13 +364,16 @@ namespace vm {
 					MRef<jit::JitLLVMFunc> compiled = jit::compileLLVM(
 						my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
 					);
-					// Dev builds must never see a failed compilation; in prod we keep
-					// executing the CP-compiled code instead.
-					CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr.");
 					if (compiled) {
 						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
 						(*compiled)(&instr, &local_stack, &frame, &thread);
 					} else {
+						// Dev builds must never see a failed compilation; in prod we keep
+						// executing the CP-compiled code instead. The panic must stay
+						// dev-only: CORE_PANIC is std::unreachable() in other builds.
+#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("Compiled function pointer shouldn't be nullptr.");
+#endif
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
@@ -400,9 +403,6 @@ namespace vm {
 					// should be compiled with the first viable compiler
 	#if COMPILE_WITH_CNP
 					auto expected_compiled = jit::compileCP(my_data.cfgs[cfg_offset], original_bc);
-					// Dev builds must never see a failed compilation; in prod we fall back
-					// to the interpreter instead.
-					CORE_ASSERT(expected_compiled.has_value(), "C&P compilation failed");
 					if (expected_compiled) {
 						my_data.cp_memory = std::move(expected_compiled).value();
 						auto cp_compiled  = my_data.cp_memory.value().intoFunc<jit::JitCPFunc>();
@@ -412,6 +412,12 @@ namespace vm {
 						local_stack = frame->local_stack;
 						my_data.until_compilation[cfg_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;
 					} else {
+						// Dev builds must never see a failed compilation; in prod we fall back
+						// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
+						// is std::unreachable() in other builds.
+#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("C&P compilation failed");
+#endif
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
@@ -425,13 +431,16 @@ namespace vm {
 					auto compiled = jit::compileLLVM(
 						my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
 					);
-					// Dev builds must never see a failed compilation; in prod we fall back
-					// to the interpreter instead.
-					CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr.");
 					if (compiled) {
 						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
 						(*compiled)(&instr, &local_stack, &frame, &thread);
 					} else {
+						// Dev builds must never see a failed compilation; in prod we fall back
+						// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
+						// is std::unreachable() in other builds.
+#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("Compiled function pointer shouldn't be nullptr.");
+#endif
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
@@ -480,9 +489,6 @@ namespace vm {
 					MRef<jit::JitLLVMFunc> compiled    = jit::compileLLVM(
                         my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
                     );
-					// Dev builds must never see a failed compilation; in prod we fall back
-					// to the interpreter instead.
-					CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 					if (compiled) {
 						llvm_compiled_code_ptr              = compiled;
 						const MicroInstruction* saved_instr = instr;
@@ -491,6 +497,12 @@ namespace vm {
 							= (*llvm_compiled_code_ptr)(&instr, &local_stack, &frame, &thread);
 						if (saved_frame == frame) instr = saved_instr + offset;
 					} else {
+						// Dev builds must never see a failed compilation; in prod we fall back
+						// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
+						// is std::unreachable() in other builds.
+#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("Compiled function pointer shouldn't be nullptr");
+#endif
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,

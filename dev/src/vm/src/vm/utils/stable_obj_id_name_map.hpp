@@ -129,20 +129,14 @@ namespace vm {
 			 */
 			constexpr auto ids() const { return std::views::iota(size_t(0), id_to_name.size()); }
 
-			std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> dataSuffix(usize start) const {
+			std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> allData() const {
 				std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> data;
-				// Guard against unsigned wraparound in size() - start below.
-				if (start >= size()) return data;
-				data.reserve(size() - start);
-				for (usize id = start; id < size(); id++) {
+				data.reserve(size());
+				for (usize id = 0; id < size(); id++) {
 					ObjID tid = ObjID(id);
 					data.emplace_back(at(tid), tid, *nameOf(tid));
 				}
 				return data;
-			}
-
-			std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> allData() const {
-				return dataSuffix(0);
 			}
 
 			constexpr void clear() {
@@ -207,7 +201,7 @@ namespace vm {
 		ObjIdNameMap& operator=(const ObjIdNameMap&) & = default;
 
 		using Base::contains, Base::begin, Base::end, Base::size, Base::insert, Base::atMaybe,
-			Base::at, Base::nameOf, Base::idOf, Base::operator[], Base::ids, Base::dataSuffix,
-			Base::allData, Base::clear;
+			Base::at, Base::nameOf, Base::idOf, Base::operator[], Base::ids, Base::allData,
+			Base::clear;
 	};
 }

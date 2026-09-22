@@ -47,8 +47,9 @@ namespace vm::jit::helpers {
 			error,
 			". Falling back to the interpreter for it from now on.\n"
 		);
-		// The guarded decrement (0 < x) never reaches 0 from here, so compilation of this
-		// entrypoint is never retried.
+		// The caller keeps decrementing this, so compilation is retried once every 2^32
+		// executions of this entrypoint. That is rare enough to treat as "disabled", and a
+		// retry that fails again simply lands back here.
 		data.until_compilation[cfg_offset] = std::numeric_limits<uint>::max();
 	}
 }

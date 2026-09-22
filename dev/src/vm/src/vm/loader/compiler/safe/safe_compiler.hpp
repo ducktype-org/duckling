@@ -41,7 +41,9 @@ namespace vm::loader::compiler::safe {
 		friend struct detail::LowerArgumentImpl;
 
 	public:
-		SafeCompiler(const code::ValidProgram& high_program, bool enable_jit = true):
+		SafeCompiler(
+			const code::ValidProgram& high_program, [[maybe_unused]] bool enable_jit = true
+		):
 			  vm::loader::compiler::IVMCompiler(high_program)
 #ifdef ENABLE_JIT
 			  ,

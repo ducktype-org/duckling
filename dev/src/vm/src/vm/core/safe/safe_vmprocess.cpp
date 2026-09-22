@@ -66,6 +66,12 @@ namespace vm {
 		}();
 
 		if (code_result.has_value()) {
+			// Exec threads never take api_lock; the GIL is what excludes them. recompile()
+			// grows LowVMProgram::functions (a std::vector-backed map), which moves every
+			// LowFuncData — and with it every CRef<LowFuncData> held by running frames
+			// (frame->current_function) and every jit_data reference in the entrypoint
+			// opfuns — so it must run under the GIL.
+			GIL::ScopedLock gil_lock(gil);
 			compiler.recompile();
 			updateGlobalDataMemory(loaded_program);
 			return api::Response(api::response::Empty());
