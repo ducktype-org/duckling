@@ -2,7 +2,7 @@ use std::ops::ControlFlow;
 
 use super::graph::lower_early_graph;
 use super::unit_visitor::UnitVisitor;
-use super::{ArtifactsType, Unit};
+use super::{ArtifactsType, Unit, UnitId};
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::creating_graph::create_early_graph_from_bcx;
@@ -24,7 +24,7 @@ use crate::quackpack::core::storage::paths::Storage;
 // To de-duplicate some code, we reuse setup from early_graph/ tests.
 
 #[derive(Default)]
-struct IdOrder(Vec<u64>);
+struct IdOrder(Vec<UnitId>);
 
 impl UnitVisitor for IdOrder {
     type Break = ();
@@ -75,11 +75,13 @@ fn lowers_early_graph() {
     let baz_id = 3;
     assert_eq!(unit_graph.units_sorted_by_id().len(), 4);
 
+    let deps_for = |unit: &Unit| unit_graph.deps_for(unit.unit_id());
+
     let root_unit = unit_graph.unit_for(root_id);
     assert_eq!(root_unit, unit_graph.root_unit());
     assert_eq!(root_unit.artifacts_type(), ArtifactsType::Binary);
     assert_eq!(root_unit.unit_id(), root_id);
-    assert_eq!(root_unit.deps_sorted_by_unit_id(), [bar_id, foo_id]);
+    assert_eq!(deps_for(root_unit), [bar_id, foo_id]);
     assert_eq!(
         root_unit.identity(),
         mock_local_identity(root.path(), "root")
@@ -88,19 +90,19 @@ fn lowers_early_graph() {
     let foo = unit_graph.unit_for(foo_id);
     assert_eq!(foo.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(foo.unit_id(), foo_id);
-    assert_eq!(foo.deps_sorted_by_unit_id(), [baz_id]);
+    assert_eq!(deps_for(foo), [baz_id]);
     assert_eq!(foo.identity(), mock_registry_identity("foo"));
 
     let bar = unit_graph.unit_for(bar_id);
     assert_eq!(bar.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(bar.unit_id(), bar_id);
-    assert_eq!(bar.deps_sorted_by_unit_id(), [baz_id]);
+    assert_eq!(deps_for(bar), [baz_id]);
     assert_eq!(bar.identity(), mock_registry_identity("bar"));
 
     let baz = unit_graph.unit_for(baz_id);
     assert_eq!(baz.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(baz.unit_id(), baz_id);
-    assert_eq!(baz.deps_sorted_by_unit_id(), [0u64; 0]);
+    assert_eq!(deps_for(baz), [0u64; 0]);
     assert_eq!(baz.identity(), mock_registry_identity("baz"));
 }
 
@@ -153,27 +155,26 @@ fn lowers_early_graph_with_cycle() {
         root_unit.identity(),
         mock_local_identity(root.path(), "root")
     );
-    assert_eq!(
-        root_unit.deps_sorted_by_unit_id(),
-        [bar_id, cycle_id, foo_id]
-    );
+
+    let deps_for = |unit: &Unit| unit_graph.deps_for(unit.unit_id());
+    assert_eq!(deps_for(root_unit), [bar_id, cycle_id, foo_id]);
 
     let foo = unit_graph.unit_for(foo_id);
     assert_eq!(foo.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(foo.unit_id(), foo_id);
-    assert_eq!(foo.deps_sorted_by_unit_id(), [0u64; 0]);
+    assert_eq!(deps_for(foo), [0u64; 0]);
     assert_eq!(foo.identity(), mock_registry_identity("foo"));
 
     let bar = unit_graph.unit_for(bar_id);
     assert_eq!(bar.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(bar.unit_id(), bar_id);
-    assert_eq!(bar.deps_sorted_by_unit_id(), [0u64; 0]);
+    assert_eq!(deps_for(bar), [0u64; 0]);
     assert_eq!(bar.identity(), mock_registry_identity("bar"));
 
     let cycle = unit_graph.unit_for(cycle_id);
     assert_eq!(cycle.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(cycle.unit_id(), cycle_id);
-    assert_eq!(cycle.deps_sorted_by_unit_id(), [root_id]);
+    assert_eq!(deps_for(cycle), [root_id]);
     assert_eq!(cycle.identity(), mock_local_identity(root.path(), "cycle"));
 }
 
