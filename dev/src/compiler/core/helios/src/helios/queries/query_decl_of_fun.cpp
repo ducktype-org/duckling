@@ -661,10 +661,7 @@ namespace compiler::helios {
 						);
 					}
 					variant_case(defgen::BuiltinOperator, builtin_op) {
-						// Currently, all builtins *participating in lookup* are unary or binary
-						// operators.
-						// @TODO: #3092 Do not use BuiltinOperator for any other purposes, such as
-						// to denote C++-implemented builtin functions.
+						// All builtins are unary or binary operators.
 						return funDeclFromType(ctx, key, builtin_op.operatoriness);
 					}
 					variant_default {
