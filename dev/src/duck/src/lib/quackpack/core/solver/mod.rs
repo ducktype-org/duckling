@@ -123,6 +123,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
 
     /// Create the initial [`SolverFreeze`], which serves as an entry point to the solving process.
     /// It is used as apriori knowledge and is modified by later steps.
+    /// Returns a pair consisting of the freeze and information whether any well-formed previous freeze was supplied.
     fn get_initial_freeze(&self, root_pkg: PackageId) -> QuackResult<(SolverFreeze, bool)> {
         match self.previous_freeze {
             Some(freeze) => match SolverFreeze::try_from_venv_freeze(root_pkg, freeze) {
