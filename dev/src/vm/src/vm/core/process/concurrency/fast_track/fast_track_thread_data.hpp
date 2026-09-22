@@ -102,12 +102,19 @@ namespace vm {
 
 		/**
 		 * @brief Thread fork, on the child's side: C_u := C_t, with the child's own component
-		 * starting at 1.
+		 * past every clock this thread ID has used so far.
+		 *
+		 * Thread IDs are pool slots and get reused. This object outlives the thread that had the
+		 * slot before, so its own component is the last clock handed out for the ID; a new thread
+		 * starting at or below it would have its accesses ordered before accesses that only
+		 * happened-after the old thread's, and a real race would go unreported.
 		 */
 		void forkVC(const VectorClock& parent_vc, api::ThreadID my_tid) {
-			thread_id  = my_tid;
-			vc         = parent_vc;
-			vc[my_tid] = std::max<Epoch::Clock>(parent_vc[my_tid], 1);
+			const Epoch::Clock previous_own = vc[my_tid];
+			thread_id                       = my_tid;
+			vc                              = parent_vc;
+			vc[my_tid]                      = std::max(parent_vc[my_tid], previous_own);
+			vc.increment(my_tid);
 		}
 
 		[[nodiscard]] const VectorClock& getVC() const { return vc; }

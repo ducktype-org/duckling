@@ -90,7 +90,9 @@ namespace vm {
 			// `api::ThreadID{}` is the bad ID; `api::ThreadID::bad()` is not constexpr.
 			const u64 tid_bits
 				= tid.asInt() == api::ThreadID{}.asInt() ? BAD_TID_BITS : tid.asInt();
-			CORE_ASSERT(tid_bits <= BAD_TID_BITS, "Thread ID does not fit in an epoch");
+			CORE_ASSERT(
+				tid_bits <= MAX_TID || tid_bits == BAD_TID_BITS, "Thread ID does not fit in an epoch"
+			);
 			CORE_ASSERT(clock <= MAX_CLOCK, "Clock does not fit in an epoch");
 			return (tid_bits << CLOCK_BITS) | clock;
 		}

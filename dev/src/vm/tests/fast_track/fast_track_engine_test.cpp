@@ -4,6 +4,7 @@
 
 #include <vm/api/data/thread_id.hpp>
 #include <vm/core/process/concurrency/fast_track/epoch.hpp>
+#include <vm/core/process/concurrency/fast_track/fast_track_thread_data.hpp>
 #include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
 #include <vm/core/process/concurrency/fast_track/vc.hpp>
 #include <vm/core/safe/exceptions.hpp>
@@ -13,6 +14,7 @@
 #include <utility>
 
 using vm::Epoch;
+using vm::FastTrackThreadData;
 using vm::ShadowEntry;
 using vm::VectorClock;
 using vm::api::ThreadID;
@@ -112,6 +114,9 @@ public:
 		TESTER_ADD_TEST(testCopyDoesNotShareReadSet);
 		TESTER_ADD_TEST(testResetForgetsHistory);
 		TESTER_ADD_TEST(testRaceReportNamesBothEpochs);
+		TESTER_ADD_TEST(testForkAndJoinOrderChildAndParent);
+		TESTER_ADD_TEST(testReleaseAndAcquireOrderThreads);
+		TESTER_ADD_TEST(testForkStartsPastRecycledThreadIdClock);
 		TESTER_ADD_TEST(testShadowLayoutOfNestedDataTypes);
 		TESTER_ADD_TEST(testShadowLayoutOfVariants);
 	}
@@ -457,6 +462,78 @@ public:
 		ASSERT_TRUE(entry.last_read_epoch == Epoch());
 		ASSERT_TRUE(!entry.isShared());
 		ASSERT_TRUE(!races([&] { write(entry, t0); }));
+	}
+
+	// ---- Thread data: fork, join, acquire, release ----
+
+	/// A write by `thread` to `entry`, stamped with the thread's current epoch.
+	static void writeBy(ShadowEntry& entry, const FastTrackThreadData& thread) {
+		entry.processWrite(thread.thread_id, thread.getCurrentEpoch().clock(), thread.getVC());
+	}
+
+	void testForkAndJoinOrderChildAndParent() {
+		FastTrackThreadData main;
+		main.forkVC(VectorClock(), T0);  // The first thread starts from an empty clock.
+		ASSERT_EQUAL(Epoch::Clock(1), main.getCurrentEpoch().clock());
+
+		ShadowEntry before_fork;
+		writeBy(before_fork, main);
+		FastTrackThreadData child;
+		child.forkVC(main.getVC(), T1);
+		ASSERT_TRUE(!races([&] { writeBy(before_fork, child); }));  // ordered by the fork
+
+		ShadowEntry by_child;
+		writeBy(by_child, child);
+		ASSERT_TRUE(races([&] { writeBy(by_child, main); }));  // main has not joined yet
+
+		main.joinVC(child.getVC());
+		ShadowEntry by_child_too;
+		writeBy(by_child_too, child);
+		ASSERT_TRUE(!races([&] { writeBy(by_child_too, main); }));  // ordered by the join
+	}
+
+	void testReleaseAndAcquireOrderThreads() {
+		FastTrackThreadData t0;
+		FastTrackThreadData t1;
+		t0.forkVC(VectorClock(), T0);
+		t1.forkVC(VectorClock(), T1);
+		VectorClock lock;
+
+		ShadowEntry entry;
+		writeBy(entry, t0);
+		const Epoch::Clock before_release = t0.getCurrentEpoch().clock();
+		t0.onRelease(lock);
+		ASSERT_EQUAL(before_release + 1, t0.getCurrentEpoch().clock());  // a new epoch
+		t1.onAcquire(lock);
+		ASSERT_TRUE(!races([&] { writeBy(entry, t1); }));                // ordered by the lock
+
+		ShadowEntry unlocked;
+		writeBy(unlocked, t1);
+		ASSERT_TRUE(races([&] { writeBy(unlocked, t0); }));  // t0 learned nothing from t1
+	}
+
+	/**
+	 * Thread IDs are pool slots: after "spawn, join, spawn again" the second child gets the first
+	 * one's ID, and the thread data of that slot. It has to start past the clock the parent
+	 * already learned from the first child, or its accesses look ordered before the parent's.
+	 */
+	void testForkStartsPastRecycledThreadIdClock() {
+		FastTrackThreadData main;
+		main.forkVC(VectorClock(), T0);
+
+		FastTrackThreadData slot;  // reused for both children, as the thread pool does
+		slot.forkVC(main.getVC(), T1);
+		ShadowEntry by_first_child;
+		writeBy(by_first_child, slot);
+		main.joinVC(slot.getVC());
+		const Epoch::Clock known_to_main = main.getVC()[T1];
+
+		slot.forkVC(main.getVC(), T1);
+		ASSERT_TRUE(slot.getCurrentEpoch().clock() > known_to_main);
+
+		ShadowEntry by_second_child;
+		writeBy(by_second_child, slot);
+		ASSERT_TRUE(races([&] { writeBy(by_second_child, main); }));
 	}
 
 	// ---- Type shadow layout ----
