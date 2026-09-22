@@ -85,6 +85,10 @@ namespace vm::loader {
 			Ref<SafeVMThread> thread, const code::Function& expr
 		) const;
 
+		/**
+		 * @brief Validates the synthetic `vm_start_function` against the live thread in the start
+		 * function mode - it is generated at run time rather than loaded from bytecode.
+		 */
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateStartFunction(
 			Ref<SafeVMThread> thread, const code::Function& start_function
 		) const;

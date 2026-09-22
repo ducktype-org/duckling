@@ -262,12 +262,9 @@ namespace vm {
 			}
 
 			variant_case(api::request::SetBreakpointAtFrame, request) {
-				auto response = setBreakpointAtFrame(
+				return setBreakpointAtFrame(
 					request.thread_id, request.frame_idx, request.instruction_index, request.enable
 				);
-				if (!response)
-					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-				return api::Response(api::response::Empty());
 			}
 
 			variant_case(api::request::MapFileLineToCodeCollectionPosition, request) {

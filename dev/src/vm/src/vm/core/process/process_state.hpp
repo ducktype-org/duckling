@@ -172,6 +172,9 @@ namespace vm {
 
 			// Translate the new thread state into the API status and emit it on the thread's
 			// emitter. Callers interested in this thread's state changes subscribe to it.
+			//
+			// @warning This runs under `ProcessStateManager`'s table mutex (via
+			// `setThreadStateLocked`), so a listener that reads the manager back would deadlock.
 			if (new_state) entry.value()->status_emitter->emitEvent(entry.value()->state);
 		}
 

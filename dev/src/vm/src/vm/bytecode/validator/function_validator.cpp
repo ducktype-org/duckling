@@ -539,8 +539,6 @@ class FunctionValidator {
 					bool from_prev_frame = place->frame.has_value();
 					bool is_local        = current_stack.contains(*place);
 					bool is_global       = globals.contains(place->var_name) && !from_prev_frame;
-					if (from_prev_frame && !v_matches(mode, detail::Expr))
-						throw FrameSpecifierWithoutRuntimeThread(*place);
 					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
 					instr_match(instruction) {
 						instr_case_novalue(Op_init_pany_type, Op_initFromVMValue) {

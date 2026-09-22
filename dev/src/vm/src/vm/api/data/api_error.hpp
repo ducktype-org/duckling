@@ -79,6 +79,8 @@ namespace vm::api {
 	struct IncompleteExprEval final {
 		SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>> val;
 		std::string                                               why;
+
+		// emitter is not serializable
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(IncompleteExprEval, why);
 	};
 

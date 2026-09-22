@@ -15,7 +15,7 @@ namespace vm::loader {
 		NoFunction,
 	};
 
-	class ValidFuncPosition {
+	class ValidFuncPosition final {
 		CRef<code::valid_function::ValidFunction> valid_function;
 		u64                                       line;
 		code::StackStateID                        state;

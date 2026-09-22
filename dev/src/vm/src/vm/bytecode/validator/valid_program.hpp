@@ -65,6 +65,10 @@ namespace vm::code {
 			CRef<SafeVMThread> thread, const code::Function& expr
 		) const;
 
+		/**
+		 * @brief Validates the synthetic `vm_start_function` against the live thread in the start
+		 * function mode and extracts its reachable code.
+		 */
 		valid_function::ValidFunction validateStartFunction(
 			CRef<SafeVMThread> thread, const code::Function& start_function
 		) const;

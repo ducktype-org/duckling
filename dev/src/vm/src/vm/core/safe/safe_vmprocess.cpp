@@ -564,7 +564,7 @@ namespace vm {
 				CORE_ASSERT(
 					slot_count == expected,
 					"Compile metadata must always be consistent with runtime: "
-						+ std::to_string(slot_count) + " != " + std::to_string(*valid_pos.size())
+						+ std::to_string(slot_count) + " != " + std::to_string(expected)
 				);
 
 				auto relative_size = *valid_pos.size();

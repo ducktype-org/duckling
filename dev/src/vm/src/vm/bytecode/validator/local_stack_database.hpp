@@ -105,6 +105,10 @@ namespace vm::code {
 		 */
 		usize size(StackStateID state) const;
 
+		/**
+		 * @returns number of blocks the stack occupies at given state, counted from the bottom of
+		 * the thread's whole slot stack. Unlike `size`, which is the frame-relative.
+		 */
 		usize absoluteSize(StackStateID state) const;
 
 		/**
@@ -132,6 +136,11 @@ namespace vm::code {
 
 		LocalStackDb();
 
+		/**
+		 * @returns the `(blocks, bytes)` prefix the stack is built on top of - the variables that
+		 * belong to the outer frames. 
+		 * @note Usually (0, 0)
+		 */
 		std::pair<u64, valid_type::TypeSize> getBaseOffset() const;
 
 	private:

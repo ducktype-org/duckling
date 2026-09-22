@@ -687,10 +687,13 @@ namespace vm {
 		auto  local_stack = frame->local_stack;
 		auto& called_expr = runtime_expr_low.back();
 
-		u64 callee_stack_distance = getUpcommingHighPosition(getNumberOfCurrentStackFrames() - 1)
-		                                ->byteSize()
-		                                ->assumePointerSize(Bytes{ 16 })
-		                                .asInt();
+		auto maybe_position = getUpcommingHighPosition(getNumberOfCurrentStackFrames() - 1);
+		CORE_ASSERT(
+			maybe_position.has_value(), "A validated expression must have a mapped position"
+		);
+		auto maybe_stack_size = *maybe_position->byteSize();
+		u64  callee_stack_distance
+			= maybe_stack_size.assumePointerSize(vm::Type::POINTER_SIZE).asInt();
 
 		u64 prev_summed = 0;
 

@@ -119,7 +119,10 @@ namespace vm::low::opargs {
 	 * it keeps an offset apart from `Immediate`, which only accepts an `opargs::Immediate`.
 	 */
 	DEFINE_MICRO_ARG_TYPE(Offset, "off", u64);
-	/** @brief Stores relative instruction jump offset after label linking. */
+	/**
+	 * @brief Identifies the VM value an `initFromVMValue` reads from: either the id of a
+	 * process-registered value, or a direct `IVMValue*`.
+	 */
 	DEFINE_MICRO_ARG_TYPE(VMValPtr, "vm_val_ptr", vm::opargs::VMValueIdentifier);
 
 	/**
