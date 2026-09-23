@@ -155,8 +155,8 @@ private:
 		public:
 			/// Increments the counter and returns its previous value.
 			/// The extra argument is used only in the bad counter to introduce stutters.
-			virtual usize increment(u32 = 0)   = 0;
-			virtual ~CounterInterface() = default;
+			virtual usize increment(u32 = 0) = 0;
+			virtual ~CounterInterface()      = default;
 		};
 
 		/// A correct concurrent counter using atomic operations.
