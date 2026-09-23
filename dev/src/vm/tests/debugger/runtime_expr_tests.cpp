@@ -48,6 +48,7 @@ public:
 		TESTER_ADD_TEST(test24RuntimeExpr);
 		TESTER_ADD_TEST(test25RuntimeExpr);
 		TESTER_ADD_TEST(test26RuntimeExpr);
+		TESTER_ADD_TEST(test27RuntimeExpr);
 	}
 
 private:
@@ -868,6 +869,31 @@ private:
 			.awaitBreakpoint(base::StrID("main"), 2)
 			.evalExprExpectValues(make_table, { vm::test::ExpectedValue::table({ 10, 20, 30 }) })
 			.awaitBreakpoint(base::StrID("main"), 2)
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+	}
+
+	/// Stepping over `ret_from_expr` while already paused inside an expression must not trigger the
+	/// synthetic post-evaluation breakpoint: the caller resumes normally and the result is
+	/// delivered.
+	void test27RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_27/main.dbc"));
+		const fs::File stepped_expr(path("runtime_expr_dbc/test_27/stepped.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 4)
+			.putBreakpoint(base::StrID("pause_here"), 0)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.evalExprExpectBreakpoint(stepped_expr)
+			.awaitBreakpoint(base::StrID("pause_here"), 0)
+			.step()
+			.awaitBreakpoint(base::StrID("stepped"), 1)
+			.step()
+			.awaitBreakpoint(base::StrID("stepped"), 2)
+			.step()
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.awaitExprCompletion({ 42 })
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
 	}

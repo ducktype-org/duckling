@@ -652,7 +652,14 @@ namespace vm {
 			thread.runtime_expr_high.pop_back();
 		}
 
+#ifdef DEBUG_OPCODES
+		// Stepping over `ret_from_expr` runs inside `pausedLoop`'s step handling, which is about
+		// to pause the thread again; re-entering the breakpoint here would nest a pause. Resume
+		// from the caller instead.
+		FUNCTION_CONT(0);
+#else
 		MUST_TAIL return OPCODE_NAME(breakpoint)(instr, local_stack, frame, thread);
+#endif
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_off_type)(FUNCTION_ARGS) {
