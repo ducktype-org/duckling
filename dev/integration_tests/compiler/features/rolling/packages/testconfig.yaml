@@ -29,7 +29,7 @@ make_manifest: 'sed "s|\([\" ]\)build|\1$DIT_TMP_DIR/build|g" duck_modules/@{Nam
 # The manifest's linking options name the libraries by their path in @{case_build}, so the
 # check has to build there too - see its `--build-dir`.
 compile_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --manifest @{case_manifest} --duckc-worker-count @{duckc_worker_count} --build-dir @{case_build}; else true; fi"
-compile_only_cmd:  "@{duckc_path} compile_packages @{case_manifest} -w @{duckc_worker_count} -a @{case_build}"
+compile_only_cmd:  "@{duckc_path} compile_packages @{case_manifest} -w @{duckc_worker_count} -a @{case_build} @{std_artifacts_path_flag}"
 
 
 PreCase: "mkdir -p @{case_build} && mkdir -p @{case_build_c} && @{copy_std_artifacts} && @{compile_c_object} && @{compile_c_shared} && @{make_manifest} && @{compile_deterministically_cmd} && @{compile_only_cmd}"

@@ -3,9 +3,11 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use super::identity::{Identity, Origin};
-use super::valid_package_name::{normalise_package_name, validate_package_name};
-use super::{Dependencies, Manifest, Package, Profiles, Version, capture_frontmatter};
+use crate::quackpack::core::identity::{Identity, Origin};
+use crate::quackpack::core::valid_package_name::{normalise_package_name, validate_package_name};
+use crate::quackpack::core::{
+    Dependencies, Manifest, Package, Profiles, Version, capture_frontmatter,
+};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackResult, QuackResultContext, StrId};
