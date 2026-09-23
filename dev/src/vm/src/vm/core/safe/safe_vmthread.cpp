@@ -230,7 +230,6 @@ namespace vm {
 
 		auto add_instr = getBuilder(start_function);
 
-		CORE_ASSERT(func.getName() == StrID("main"), "called function has to be main");
 		const auto main = FunctionName{ func.getName() };
 
 		const auto ret_value      = Place64{ StrID("ret_value") };
