@@ -1,9 +1,13 @@
 function main { i64, ptr_argv } -> { i64 } {
-	init_pany_type tmp, i64;
-	mov_p64_imm tmp, 0;
-	# No breakpoints: the loop runs forever until the user stops or pauses it.
-label Loop;
-	cmpEq_p64_imm tmp, 0;
-	jmpIf_label Loop;
+	init_pany_type a, i64;
+	init_pany_type b, i64;
+	mov_p64_imm a, 4;
+	mov_p64_imm b, 2;
+	mov_p64_imm ret0, 2137;
+	ret;
+}
+
+# Breakpoint anchor: `level1` calls it to pause mid-evaluation.
+function pause_here { } -> { } {
 	ret;
 }

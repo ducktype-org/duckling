@@ -28,6 +28,7 @@ public:
 		TESTER_ADD_TEST(test6RuntimeExpr);
 		TESTER_ADD_TEST(test7RuntimeExpr);
 		TESTER_ADD_TEST(test8RuntimeExpr);
+		TESTER_ADD_TEST(testInvalidExpressions);
 		TESTER_ADD_TEST(test9RuntimeExpr);
 		TESTER_ADD_TEST(test10RuntimeExpr);
 		TESTER_ADD_TEST(test11RuntimeExpr);
@@ -50,15 +51,6 @@ public:
 		TESTER_ADD_TEST(test28RuntimeExpr);
 		TESTER_ADD_TEST(test29RuntimeExpr);
 		TESTER_ADD_TEST(test30RuntimeExpr);
-		TESTER_ADD_TEST(test31RuntimeExpr);
-		TESTER_ADD_TEST(test32RuntimeExpr);
-		TESTER_ADD_TEST(test33RuntimeExpr);
-		TESTER_ADD_TEST(test34RuntimeExpr);
-		TESTER_ADD_TEST(test35RuntimeExpr);
-		TESTER_ADD_TEST(test36RuntimeExpr);
-		TESTER_ADD_TEST(test37RuntimeExpr);
-		TESTER_ADD_TEST(test38RuntimeExpr);
-		TESTER_ADD_TEST(test39RuntimeExpr);
 	}
 
 private:
@@ -341,94 +333,7 @@ private:
 
 	void test9RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_9/main.dbc"));
-		const fs::File frame_global_expr(path("runtime_expr_dbc/test_9/frame_global.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 4)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprExpectLoadError(frame_global_expr, vm::code::UnknownLocalNameError::ERR_MSG)
-			.cleanup();
-	}
-
-	void test10RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_10/main.dbc"));
-		const fs::File frame_oob_expr(path("runtime_expr_dbc/test_10/frame_oob.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 4)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprExpectLoadError(frame_oob_expr, vm::code::UnknownLocalNameError::ERR_MSG)
-			.cleanup();
-	}
-
-	void test11RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_11/main.dbc"));
-		const fs::File tail_rec_expr(path("runtime_expr_dbc/test_11/tail_rec.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 4)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprExpectLoadError(tail_rec_expr, vm::code::ForbiddenOpcodePresent::ERR_MSG)
-			.cleanup();
-	}
-
-	void test12RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_11/main.dbc"));
-		const fs::File exit_expr(path("runtime_expr_dbc/test_12/exit.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 4)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprExpectLoadError(exit_expr, vm::code::ForbiddenOpcodePresent::ERR_MSG)
-			.cleanup();
-	}
-
-	void test13RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_11/main.dbc"));
-		const fs::File ret_expr(path("runtime_expr_dbc/test_13/ret.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 4)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprExpectLoadError(ret_expr, vm::code::ForbiddenOpcodePresent::ERR_MSG)
-			.cleanup();
-	}
-
-	void test14RuntimeExpr() {
-		loadInvalidDbc(
-			"runtime_expr_dbc/test_14/ret_from_expr.dbc",
-			{ vm::code::ForbiddenOpcodePresent::ERR_MSG }
-		);
-	}
-
-	void test15RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_15/main.dbc"));
-		const fs::File input_expr(path("runtime_expr_dbc/test_15/input.dbc"));
+		const fs::File input_expr(path("runtime_expr_dbc/test_9/input.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
@@ -442,9 +347,9 @@ private:
 			.cleanup();
 	}
 
-	void test16RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_16/main.dbc"));
-		const fs::File sleep_expr(path("runtime_expr_dbc/test_16/sleep.dbc"));
+	void test10RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_10/main.dbc"));
+		const fs::File sleep_expr(path("runtime_expr_dbc/test_10/sleep.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
@@ -466,10 +371,10 @@ private:
 			.cleanup();
 	}
 
-	void test17RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_17/main.dbc"));
-		const fs::File outer_expr(path("runtime_expr_dbc/test_17/expr_outer.dbc"));
-		const fs::File inner_expr(path("runtime_expr_dbc/test_17/expr_inner.dbc"));
+	void test11RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_11/main.dbc"));
+		const fs::File outer_expr(path("runtime_expr_dbc/test_11/expr_outer.dbc"));
+		const fs::File inner_expr(path("runtime_expr_dbc/test_11/expr_inner.dbc"));
 
 		const vm::test::FlowSimulator::FrameVars outer_vars{
 			{ base::StrID("ret0"), base::StrID("i64") },
@@ -512,12 +417,12 @@ private:
 			.cleanup();
 	}
 
-	void test18RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_18/main.dbc"));
-		const fs::File level1_expr(path("runtime_expr_dbc/test_18/expr_level1.dbc"));
-		const fs::File level2_expr(path("runtime_expr_dbc/test_18/expr_level2.dbc"));
-		const fs::File level3_expr(path("runtime_expr_dbc/test_18/expr_level3.dbc"));
-		const fs::File pause_too_file(path("runtime_expr_dbc/test_18/pause_here_too.dbc"));
+	void test12RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_12/main.dbc"));
+		const fs::File level1_expr(path("runtime_expr_dbc/test_12/expr_level1.dbc"));
+		const fs::File level2_expr(path("runtime_expr_dbc/test_12/expr_level2.dbc"));
+		const fs::File level3_expr(path("runtime_expr_dbc/test_12/expr_level3.dbc"));
+		const fs::File pause_too_file(path("runtime_expr_dbc/test_12/pause_here_too.dbc"));
 
 		const vm::test::FlowSimulator::FrameVars level1_vars{
 			{ base::StrID("ret0"), base::StrID("i64") },
@@ -587,9 +492,9 @@ private:
 			.cleanup();
 	}
 
-	void test19RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_19/main.dbc"));
-		const fs::File add_five_expr(path("runtime_expr_dbc/test_19/add_five.dbc"));
+	void test13RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_13/main.dbc"));
+		const fs::File add_five_expr(path("runtime_expr_dbc/test_13/add_five.dbc"));
 
 		createSimulator(main_file)
 			.runMain()
@@ -606,10 +511,10 @@ private:
 			.cleanup();
 	}
 
-	void test20RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_20/main.dbc"));
-		const fs::File spin_expr(path("runtime_expr_dbc/test_20/spin.dbc"));
-		const fs::File break_loop_expr(path("runtime_expr_dbc/test_20/break_loop.dbc"));
+	void test14RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_14/main.dbc"));
+		const fs::File spin_expr(path("runtime_expr_dbc/test_14/spin.dbc"));
+		const fs::File break_loop_expr(path("runtime_expr_dbc/test_14/break_loop.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
@@ -634,9 +539,9 @@ private:
 			.cleanup();
 	}
 
-	void test21RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_21/main.dbc"));
-		const fs::File reads_local_expr(path("runtime_expr_dbc/test_21/reads_local.dbc"));
+	void test15RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_15/main.dbc"));
+		const fs::File reads_local_expr(path("runtime_expr_dbc/test_15/reads_local.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 0)
@@ -664,11 +569,11 @@ private:
 			.cleanup();
 	}
 
-	void test22RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_22/main.dbc"));
-		const fs::File create_value_expr(path("runtime_expr_dbc/test_22/create_value.dbc"));
-		const fs::File use_value_expr(path("runtime_expr_dbc/test_22/use_value.dbc"));
-		const fs::File simple_expr(path("runtime_expr_dbc/test_22/simple.dbc"));
+	void test16RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_16/main.dbc"));
+		const fs::File create_value_expr(path("runtime_expr_dbc/test_16/create_value.dbc"));
+		const fs::File use_value_expr(path("runtime_expr_dbc/test_16/use_value.dbc"));
+		const fs::File simple_expr(path("runtime_expr_dbc/test_16/simple.dbc"));
 
 		const vm::test::FlowSimulator::FrameVars use_value_vars{
 			{ base::StrID("ret0"), base::StrID("i64") },
@@ -719,9 +624,9 @@ private:
 			.cleanup();
 	}
 
-	void test23RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_23/main.dbc"));
-		const fs::File multi_expr(path("runtime_expr_dbc/test_23/multi.dbc"));
+	void test17RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_17/main.dbc"));
+		const fs::File multi_expr(path("runtime_expr_dbc/test_17/multi.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 5)
@@ -741,12 +646,12 @@ private:
 			.cleanup();
 	}
 
-	void test24RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_24/main.dbc"));
-		const fs::File level1_expr(path("runtime_expr_dbc/test_24/expr_level1.dbc"));
-		const fs::File level2_expr(path("runtime_expr_dbc/test_24/expr_level2.dbc"));
-		const fs::File level3_expr(path("runtime_expr_dbc/test_24/expr_level3.dbc"));
-		const fs::File pause_too_file(path("runtime_expr_dbc/test_24/pause_here_too.dbc"));
+	void test18RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_18/main.dbc"));
+		const fs::File level1_expr(path("runtime_expr_dbc/test_18/expr_level1.dbc"));
+		const fs::File level2_expr(path("runtime_expr_dbc/test_18/expr_level2.dbc"));
+		const fs::File level3_expr(path("runtime_expr_dbc/test_18/expr_level3.dbc"));
+		const fs::File pause_too_file(path("runtime_expr_dbc/test_18/pause_here_too.dbc"));
 
 		const vm::test::FlowSimulator::FrameVars level1_vars{
 			{ base::StrID("ret0"), base::StrID("i64") },
@@ -803,8 +708,8 @@ private:
 			.cleanup();
 	}
 
-	void test25RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_25/main.dbc"));
+	void test19RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_19/main.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
@@ -824,9 +729,9 @@ private:
 			.cleanup();
 	}
 
-	void test26RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_26/main.dbc"));
-		const fs::File level1_expr(path("runtime_expr_dbc/test_26/expr_level1.dbc"));
+	void test20RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_20/main.dbc"));
+		const fs::File level1_expr(path("runtime_expr_dbc/test_20/expr_level1.dbc"));
 
 		const vm::test::FlowSimulator::FrameVars level1_vars{
 			{ base::StrID("ret0"), base::StrID("i64") },
@@ -870,10 +775,10 @@ private:
 			.cleanup();
 	}
 
-	void test27RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_27/main.dbc"));
-		const fs::File freed_expr(path("runtime_expr_dbc/test_27/freed.dbc"));
-		const fs::File leaky_expr(path("runtime_expr_dbc/test_27/leaky.dbc"));
+	void test21RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_21/main.dbc"));
+		const fs::File freed_expr(path("runtime_expr_dbc/test_21/freed.dbc"));
+		const fs::File leaky_expr(path("runtime_expr_dbc/test_21/leaky.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
@@ -885,9 +790,9 @@ private:
 			.cleanup();
 	}
 
-	void test28RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_28/main.dbc"));
-		const fs::File read_base_expr(path("runtime_expr_dbc/test_28/read_base.dbc"));
+	void test22RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_22/main.dbc"));
+		const fs::File read_base_expr(path("runtime_expr_dbc/test_22/read_base.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 1)
@@ -902,23 +807,9 @@ private:
 			.cleanup();
 	}
 
-	void test29RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_29/main.dbc"));
-		const fs::File cast_prev_expr(path("runtime_expr_dbc/test_29/cast_prev.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 1)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 1)
-			.evalExprExpectLoadError(
-				cast_prev_expr, vm::code::CannotCastPreviousFrameVariableError::ERR_MSG
-			)
-			.cleanup();
-	}
-
-	void test30RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_30/main.dbc"));
-		const fs::File probe_expr(path("runtime_expr_dbc/test_30/probe.dbc"));
+	void test23RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_23/main.dbc"));
+		const fs::File probe_expr(path("runtime_expr_dbc/test_23/probe.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 2)
@@ -931,9 +822,9 @@ private:
 			.cleanup();
 	}
 
-	void test31RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test31/main.dbc"));
-		const fs::File expr(path("runtime_expr_dbc/test31/expr.dbc"));
+	void test24RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_24/main.dbc"));
+		const fs::File expr(path("runtime_expr_dbc/test_24/expr.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
@@ -949,10 +840,10 @@ private:
 			.cleanup();
 	}
 
-	void test32RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_32/main.dbc"));
-		const fs::File ptr_to_main(path("runtime_expr_dbc/test_32/ptr_to_main.dbc"));
-		const fs::File set_through_ptr(path("runtime_expr_dbc/test_32/set_through_ptr.dbc"));
+	void test25RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_25/main.dbc"));
+		const fs::File ptr_to_main(path("runtime_expr_dbc/test_25/ptr_to_main.dbc"));
+		const fs::File set_through_ptr(path("runtime_expr_dbc/test_25/set_through_ptr.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 3)
@@ -968,11 +859,11 @@ private:
 			.cleanup();
 	}
 
-	void test33RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_33/main.dbc"));
-		const fs::File ptr_to_global(path("runtime_expr_dbc/test_33/ptr_to_global.dbc"));
-		const fs::File set_through_ptr(path("runtime_expr_dbc/test_33/set_through_ptr.dbc"));
-		const fs::File read_global(path("runtime_expr_dbc/test_33/read_global.dbc"));
+	void test26RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_26/main.dbc"));
+		const fs::File ptr_to_global(path("runtime_expr_dbc/test_26/ptr_to_global.dbc"));
+		const fs::File set_through_ptr(path("runtime_expr_dbc/test_26/set_through_ptr.dbc"));
+		const fs::File read_global(path("runtime_expr_dbc/test_26/read_global.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 1)
@@ -988,10 +879,10 @@ private:
 			.cleanup();
 	}
 
-	void test34RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_34/main.dbc"));
-		const fs::File ptr_to_local(path("runtime_expr_dbc/test_34/ptr_to_local.dbc"));
-		const fs::File load_local(path("runtime_expr_dbc/test_34/load_local.dbc"));
+	void test27RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_27/main.dbc"));
+		const fs::File ptr_to_local(path("runtime_expr_dbc/test_27/ptr_to_local.dbc"));
+		const fs::File load_local(path("runtime_expr_dbc/test_27/load_local.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 1)
@@ -1004,9 +895,9 @@ private:
 	}
 
 	/// An expression can return a struct value.
-	void test35RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_35/main.dbc"));
-		const fs::File make_pair(path("runtime_expr_dbc/test_35/make_pair.dbc"));
+	void test28RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_28/main.dbc"));
+		const fs::File make_pair(path("runtime_expr_dbc/test_28/make_pair.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 2)
@@ -1024,9 +915,9 @@ private:
 			.cleanup();
 	}
 
-	void test36RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_36/main.dbc"));
-		const fs::File make_variant(path("runtime_expr_dbc/test_36/make_variant.dbc"));
+	void test29RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_29/main.dbc"));
+		const fs::File make_variant(path("runtime_expr_dbc/test_29/make_variant.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 2)
@@ -1039,9 +930,9 @@ private:
 	}
 
 	/// An expression can return a table value.
-	void test37RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_37/main.dbc"));
-		const fs::File make_table(path("runtime_expr_dbc/test_37/make_table.dbc"));
+	void test30RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_30/main.dbc"));
+		const fs::File make_table(path("runtime_expr_dbc/test_30/make_table.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 2)
@@ -1053,17 +944,55 @@ private:
 			.cleanup();
 	}
 
-	void test38RuntimeExpr() {
+	void testInvalidExpressions() {
+		const fs::File main_file(path("runtime_expr_dbc/invalid_exprs/main.dbc"));
+
+		auto expr = [this](const char* name) {
+			return fs::File(path(std::string("runtime_expr_dbc/invalid_exprs/") + name));
+		};
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 2)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.evalExprExpectLoadError(
+				expr("frame_global.dbc"), vm::code::UnknownLocalNameError::ERR_MSG
+			)
+			.evalExprExpectLoadError(expr("frame_oob.dbc"), vm::code::UnknownLocalNameError::ERR_MSG)
+			.evalExprExpectLoadError(
+				expr("cast_prev.dbc"), vm::code::CannotCastPreviousFrameVariableError::ERR_MSG
+			)
+			.evalExprExpectLoadError(expr("tail_rec.dbc"), vm::code::ForbiddenOpcodePresent::ERR_MSG)
+			.evalExprExpectLoadError(expr("exit.dbc"), vm::code::ForbiddenOpcodePresent::ERR_MSG)
+			.evalExprExpectLoadError(expr("ret.dbc"), vm::code::ForbiddenOpcodePresent::ERR_MSG)
+			.evalExprExpectLoadError(
+				expr("sig_param.dbc"), vm::code::InvalidRuntimeExprSignature::ERR_MSG
+			)
+			.evalExprExpectLoadError(
+				expr("bad_vmval_id.dbc"), vm::code::InvalidVMValueIDError::ERR_MSG
+			)
+			.evalExprExpectLoadError(expr("no_function.dbc"), "No function defined in the file")
+			.evalExprExpectLoadError(expr("two_functions.dbc"), "More than one function in the file")
+			.evalExprExpectLoadError(expr("global.dbc"), "There is a global declaration in the file")
+			.evalExprExpectLoadError(expr("type.dbc"), "There is a type declaration in the file")
+			.cleanup();
+
+		// Normal-mode (program) functions reject the expression-only opcodes / places.
 		loadInvalidDbc(
-			"runtime_expr_dbc/test_38/init_vmval_in_normal.dbc",
+			"runtime_expr_dbc/invalid_exprs/ret_from_expr_in_normal.dbc",
+			{ vm::code::ForbiddenOpcodePresent::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"runtime_expr_dbc/invalid_exprs/init_vmval_in_normal.dbc",
 			{ vm::code::ForbiddenOpcodePresent::ERR_MSG, "init_pany_vmval" }
 		);
-	}
-
-	void test39RuntimeExpr() {
 		loadInvalidDbc(
-			"runtime_expr_dbc/test_39/exit_in_normal.dbc",
+			"runtime_expr_dbc/invalid_exprs/exit_in_normal.dbc",
 			{ vm::code::ForbiddenOpcodePresent::ERR_MSG, "exit" }
+		);
+		loadInvalidDbc(
+			"runtime_expr_dbc/invalid_exprs/frame_in_normal.dbc",
+			{ vm::code::FrameSpecifierWithoutRuntimeThread::ERR_MSG }
 		);
 	}
 };

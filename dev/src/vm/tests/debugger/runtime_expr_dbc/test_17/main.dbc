@@ -1,13 +1,18 @@
-function main { i64, ptr_argv } -> { i64 } {
-	init_pany_type a, i64;
-	init_pany_type b, i64;
-	mov_p64_imm a, 4;
-	mov_p64_imm b, 2;
-	mov_p64_imm ret0, 2137;
-	ret;
+type data: Pair {
+	a: i64,
+	b: i64
 }
 
-# Breakpoint anchor: the outer expression calls it to pause mid-evaluation.
-function pause_here { } -> { } {
+type pointer: PairPtr Pair
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type s, Pair;
+	init_pany_type sp, PairPtr;
+
+	ref_pptr_pany sp, s;
+
+	init_pany_type a, i64;
+	mov_p64_imm a, 4;
+	mov_p64_imm ret0, 2137;
 	ret;
 }

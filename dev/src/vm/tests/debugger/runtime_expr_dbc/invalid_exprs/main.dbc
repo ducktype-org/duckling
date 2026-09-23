@@ -1,0 +1,21 @@
+global_data g i64 {}
+
+type primitive: u64 8
+type primitive: my_64 8
+
+# A valid tail-call target whose signature matches the expression's, so an expression that
+# tail-calls it is rejected only because of the forbidden opcode.
+function tail_target { } -> { i64 } {
+	mov_p64_imm ret0, 7;
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type a, i64;
+	init_pany_type base, u64;
+	mov_p64_imm a, 7;
+	mov_p64_imm base, 4;
+	cast_p64_type base, my_64;
+	mov_p64_imm ret0, 2137;
+	ret;
+}
