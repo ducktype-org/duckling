@@ -33,6 +33,7 @@ namespace duck_ls {
 		/// The version the client last sent.
 		i32 version = 0;
 		/// Whether a file backed the document when it was opened, deciding what didClose restores.
+		/// Currently unused.
 		bool existed_on_disk = false;
 	};
 
