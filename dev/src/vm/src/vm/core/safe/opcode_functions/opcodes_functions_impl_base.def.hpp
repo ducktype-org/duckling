@@ -731,11 +731,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr)(FUNCTION_ARGS) {
 		{
-			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0)) {
-				if (Memory::isBlockDeallocated(ptr.getBlock()))
-					throw exceptions::VMDoubleFreeException();
-				thread.process_memory.freeBlockData(ptr.getBlock());
-			}
+			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0))
+				thread.process_memory.guardedFreeBlockData(ptr.getBlock());
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1224,9 +1221,7 @@ namespace vm {
 					auto tbl_block = tbl_pointer.getBlock();
 					if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
 						throw exceptions::VMDynTableReAllocTypeMismatch();
-					if (Memory::isBlockDeallocated(tbl_block))
-						throw exceptions::VMUseAfterFreeException();
-					thread.process_memory.freeBlockData(tbl_block);
+					thread.process_memory.guardedFreeBlockData(tbl_block);
 					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 						tbl_pointer, Pointer::null()
 					);
@@ -1239,12 +1234,9 @@ namespace vm {
 					= thread.process_memory.updatePointerAssignment(tbl_pointer, { new_block, 0 });
 				WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 			} else {
-				auto tbl_block = tbl_pointer.getBlock();
-				if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
-					throw exceptions::VMDynTableReAllocTypeMismatch();
-				if (Memory::isBlockDeallocated(tbl_block))
-					throw exceptions::VMUseAfterFreeException();
-				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
+				thread.process_memory.dynTableReallocateBlockDataN(
+					tbl_pointer.getBlock(), new_elem_count
+				);
 			}
 		}
 		FUNCTION_CONT(2);

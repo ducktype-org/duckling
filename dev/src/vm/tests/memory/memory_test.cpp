@@ -18,52 +18,67 @@ public:
 		TESTER_ADD_TEST(doubleFreeIsRefused);
 		TESTER_ADD_TEST(dynTableReAllocAfterFreeIsRefused);
 		TESTER_ADD_TEST(dynTableFreeAfterFreeIsRefused);
+		TESTER_ADD_TEST(freeingALocalIsRefused);
+		TESTER_ADD_TEST(readingANestedBlockAfterFreeIsRefused);
 	}
 
 private:
 	void localLeakTest() {
 		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("local_leak.dbc", "", ""),
+			runTestOnVmGetResult("local_leak.dbc"),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);
 	}
 
 	void globalLeakTest() {
-		const auto result = runTestOnVmGetResult("global_leak.dbc", "", "");
+		const auto result = runTestOnVmGetResult("global_leak.dbc");
 		ASSERT_HAS_VALUE(result.run_result);
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
 		ASSERT_HAS_VALUE(validation_result);
 		ASSERT_TRUE(validation_result.value() == false);
 	}
 
-	void noDoubleDestructorCalls() { runTestOnVm("no_double_destructor.dbc", "", ""); }
+	void noDoubleDestructorCalls() { runTestOnVm("no_double_destructor.dbc"); }
 
 	void nestedLeaks() {
 		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("nested_leaks.dbc", "", ""),
+			runTestOnVmGetResult("nested_leaks.dbc"),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);
 	}
 
-	void variantDestructor() { runTestOnVm("variant_destructor.dbc", "", ""); }
+	void variantDestructor() { runTestOnVm("variant_destructor.dbc"); }
 
 	void doubleFreeIsRefused() {
 		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("double_free.dbc", "", ""),
-			vm::exceptions::VMDoubleFreeException::ERR_MSG
+			runTestOnVmGetResult("double_free.dbc"), vm::exceptions::VMDoubleFreeException::ERR_MSG
 		);
 	}
 
 	void dynTableReAllocAfterFreeIsRefused() {
 		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("dyn_table_realloc_after_free.dbc", "", ""),
+			runTestOnVmGetResult("dyn_table_realloc_after_free.dbc"),
 			vm::exceptions::VMUseAfterFreeException::ERR_MSG
 		);
 	}
 
 	void dynTableFreeAfterFreeIsRefused() {
 		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("dyn_table_free_after_free.dbc", "", ""),
+			runTestOnVmGetResult("dyn_table_free_after_free.dbc"),
+			vm::exceptions::VMDoubleFreeException::ERR_MSG
+		);
+	}
+
+	void freeingALocalIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("free_local.dbc"), vm::exceptions::VMInvalidFree::ERR_MSG
+		);
+	}
+
+	/// A freed variant must not hand out its nested block, whose pool slot is already reusable.
+	void readingANestedBlockAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("read_nested_after_free.dbc"),
 			vm::exceptions::VMUseAfterFreeException::ERR_MSG
 		);
 	}

@@ -21,12 +21,12 @@ namespace vm::exceptions {
 	}
 
 	VM_RUNTIME_EXCEPTION(VMPanicException, "Program panicked");
-	VM_RUNTIME_EXCEPTION(VMNullPointerCopyException, "Copying to/from null pointer");
 	VM_RUNTIME_EXCEPTION(VMNullPointerAccessException, "Accessing null pointer");
 	VM_RUNTIME_EXCEPTION(VMVtableUnset, "Calling a virtual method with an unset vtable");
 	VM_RUNTIME_EXCEPTION(VMOutOfBlockBoundsException, "Accessing block out of bounds");
 	VM_RUNTIME_EXCEPTION(VMUseAfterFreeException, "Data was freed");
 	VM_RUNTIME_EXCEPTION(VMDoubleFreeException, "Data was already freed");
+	VM_RUNTIME_EXCEPTION(VMInvalidFree, "Memory cannot be freed (e.g. non-heap)");
 	VM_RUNTIME_EXCEPTION(VMStackOverflowException, "VM stack overflow");
 	VM_RUNTIME_EXCEPTION(VMResumedWithPausedStatusException, "Resumed with paused status");
 	VM_RUNTIME_EXCEPTION(VMZeroDivisionException, "Tried dividing by zero");

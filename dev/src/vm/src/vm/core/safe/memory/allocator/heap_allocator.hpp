@@ -11,9 +11,8 @@
 #include <vm/core/safe/type_metadata/type.hpp>
 
 namespace vm {
-
 	template<typename EntryT>
-	inline EntryT* heapAllocOrThrow(u64 size) {
+	EntryT* heapAllocOrThrow(u64 size) {
 		try {
 			return new EntryT[size];
 		} catch (const std::bad_alloc&) { throw exceptions::VMMemoryAllocationError(); }
