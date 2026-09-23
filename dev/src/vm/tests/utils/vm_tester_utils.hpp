@@ -203,6 +203,7 @@ protected:
 	}
 
 	vm::PID initProcess() { return initProcess(process_config, {}); }
+
 	vm::PID initProcess(
 		const vm::api::ProcessConfig& config, vm::api::ExecutionConfig execution_config = {}
 	);

@@ -368,12 +368,12 @@ namespace vm {
 						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
 						(*compiled)(&instr, &local_stack, &frame, &thread);
 					} else {
-						// Dev builds must never see a failed compilation; in prod we keep
-						// executing the CP-compiled code instead. The panic must stay
-						// dev-only: CORE_PANIC is std::unreachable() in other builds.
-#ifdef BUILD_TYPE_DEV
+							// Dev builds must never see a failed compilation; in prod we keep
+							// executing the CP-compiled code instead. The panic must stay
+							// dev-only: CORE_PANIC is std::unreachable() in other builds.
+		#ifdef BUILD_TYPE_DEV
 						CORE_PANIC("Compiled function pointer shouldn't be nullptr.");
-#endif
+		#endif
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
@@ -412,12 +412,12 @@ namespace vm {
 						local_stack = frame->local_stack;
 						my_data.until_compilation[cfg_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;
 					} else {
-						// Dev builds must never see a failed compilation; in prod we fall back
-						// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
-						// is std::unreachable() in other builds.
-#ifdef BUILD_TYPE_DEV
+							// Dev builds must never see a failed compilation; in prod we fall back
+							// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
+							// is std::unreachable() in other builds.
+		#ifdef BUILD_TYPE_DEV
 						CORE_PANIC("C&P compilation failed");
-#endif
+		#endif
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
@@ -435,12 +435,12 @@ namespace vm {
 						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
 						(*compiled)(&instr, &local_stack, &frame, &thread);
 					} else {
-						// Dev builds must never see a failed compilation; in prod we fall back
-						// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
-						// is std::unreachable() in other builds.
-#ifdef BUILD_TYPE_DEV
+							// Dev builds must never see a failed compilation; in prod we fall back
+							// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
+							// is std::unreachable() in other builds.
+		#ifdef BUILD_TYPE_DEV
 						CORE_PANIC("Compiled function pointer shouldn't be nullptr.");
-#endif
+		#endif
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
@@ -500,9 +500,9 @@ namespace vm {
 						// Dev builds must never see a failed compilation; in prod we fall back
 						// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
 						// is std::unreachable() in other builds.
-#ifdef BUILD_TYPE_DEV
+	#ifdef BUILD_TYPE_DEV
 						CORE_PANIC("Compiled function pointer shouldn't be nullptr");
-#endif
+	#endif
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,

@@ -259,8 +259,8 @@ void VmTestSuite::loadThenLoadInvalidDbc(
 void VmTestSuite::loadValidDbc(
 	const std::string& dbc_filename, const vm::api::ExecutionConfig config
 ) {
-	auto res =
-		vm::api::loadFiles(initProcess(process_config, config), { fs::File(path(dbc_filename)) });
+	auto res
+		= vm::api::loadFiles(initProcess(process_config, config), { fs::File(path(dbc_filename)) });
 	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
 	ASSERT_HAS_VALUE(res);
 }
