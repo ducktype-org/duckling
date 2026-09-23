@@ -234,9 +234,10 @@ namespace vm {
 	namespace {
 		base::Optional<ShadowOffset> tableShadowEntryIndex(TypeCRef element_type, u64 byte_offset) {
 			const u64 element_bytes = element_type->getSize().asInt();
-			CORE_ASSERT(
-				element_bytes != 0, "A table of zero-sized elements has no addressable byte"
-			);
+			// A table of zero-sized elements (a field-less structure) has no byte that belongs to
+			// any element, so every offset into it is padding. A check, not an assert: an assert
+			// vanishes outside dev builds and the division below would trap.
+			if (element_bytes == 0) return {};
 			const u64 element = byte_offset / element_bytes;
 			return element_type->shadowEntryIndexOrPadding(byte_offset % element_bytes)
 			    .map([&](ShadowOffset entry) {

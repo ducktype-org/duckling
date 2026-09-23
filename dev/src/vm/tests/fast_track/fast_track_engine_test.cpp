@@ -513,27 +513,35 @@ public:
 	}
 
 	/**
-	 * Thread IDs are pool slots: after "spawn, join, spawn again" the second child gets the first
-	 * one's ID, and the thread data of that slot. It has to start past the clock the parent
-	 * already learned from the first child, or its accesses look ordered before the parent's.
+	 * Thread IDs are pool slots: after "spawn, spawn again" the second child gets the first
+	 * one's ID and the thread data of that slot. It has to start past every clock the first
+	 * child handed out, or its accesses look ordered before what a third thread learned from
+	 * the first child through a lock. The parent never learns the first child's clock here, so
+	 * only the slot's own last clock can push the second child past it.
 	 */
 	void testForkStartsPastRecycledThreadIdClock() {
 		FastTrackThreadData main;
 		main.forkVC(VectorClock(), T0);
+		FastTrackThreadData other;
+		other.forkVC(VectorClock(), T2);
+		VectorClock lock;
 
 		FastTrackThreadData slot;  // reused for both children, as the thread pool does
 		slot.forkVC(main.getVC(), T1);
-		ShadowEntry by_first_child;
-		writeBy(by_first_child, slot);
-		main.joinVC(slot.getVC());
-		const Epoch::Clock known_to_main = main.getVC()[T1];
+		for (int i = 0; i < 3; ++i) slot.onRelease(lock);  // the first child reaches 4@t1
+		other.onAcquire(lock);                             // `other` knows t1 up to 3
+		const Epoch::Clock last_of_first_child = slot.getCurrentEpoch().clock();
+		ASSERT_EQUAL(Epoch::Clock(4), last_of_first_child);
+		ASSERT_EQUAL(Epoch::Clock(0), main.getVC()[T1]);  // main learned nothing of it
 
 		slot.forkVC(main.getVC(), T1);
-		ASSERT_TRUE(slot.getCurrentEpoch().clock() > known_to_main);
+		ASSERT_TRUE(slot.getCurrentEpoch().clock() > last_of_first_child);
 
+		// The second child's write is not ordered before `other`, which only knows the first
+		// child's clocks: a race. A second child restarted at 1@t1 would hide it.
 		ShadowEntry by_second_child;
 		writeBy(by_second_child, slot);
-		ASSERT_TRUE(races([&] { writeBy(by_second_child, main); }));
+		ASSERT_TRUE(races([&] { writeBy(by_second_child, other); }));
 	}
 
 	// ---- Type shadow layout ----

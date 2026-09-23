@@ -472,15 +472,16 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// because technically it's the maximum of the sizes of the alternatives, but we also
 			// need to take into account different pointer sizes. More info in TypeSize's doc-comment.
 			valid_type::TypeSize data_segment_size(Bytes(0), 0);
-			ShadowSize           max_shadow_size = 0;
+			u64                  max_shadow_size = 0;
 			for (auto& alternative: variant.alternatives) {
 				auto alternative_type = types.at(alternative);
 				alternative_type->finalize(types);
 				data_segment_size = data_segment_size.fieldMax(alternative_type->getSize());
-				max_shadow_size   = std::max(max_shadow_size, alternative_type->getShadowSize());
+				max_shadow_size = std::max<u64>(max_shadow_size, alternative_type->getShadowSize());
 			}
-			this->size        = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
-			this->shadow_size = 1 + max_shadow_size;
+			this->size = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
+			// Summed in 64 bits and narrowed once, like the fixed-size table's shadow size.
+			this->shadow_size           = base::safeIntConv<ShadowSize>(1 + max_shadow_size);
 			this->is_trivially_copyable = false;
 			// Whatever the active alternative holds is released through the variant's nested
 			// block, so the variant itself has nothing to run.
@@ -502,7 +503,8 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// these offsets (resolved for their pointer width) instead of computing their own.
 			valid_type::TypeSize offset(Bytes(0), 0);
 			valid_type::TypeSize struct_alignment(Bytes(1), Bytes(1));
-			ShadowOffset         shadow_offset = 0;
+			// Summed in 64 bits and narrowed per field, like the fixed-size table's shadow size.
+			u64 shadow_offset = 0;
 			for (auto& field: new_structure.fields) {
 				auto field_type = types.at(field.type);
 				field_type->finalize(types);
@@ -511,13 +513,13 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 					struct_alignment = struct_alignment.fieldMax(field_type->getAlignment());
 				}
 				field.offset        = offset;
-				field.shadow_offset = shadow_offset;
+				field.shadow_offset = base::safeIntConv<ShadowOffset>(shadow_offset);
 				offset += field_type->getSize();
 				shadow_offset += field_type->getShadowSize();
 			}
 			this->size        = offset.alignedTo(struct_alignment);
 			this->alignment   = struct_alignment;
-			this->shadow_size = shadow_offset;
+			this->shadow_size = base::safeIntConv<ShadowSize>(shadow_offset);
 			this->is_trivially_copyable
 				= std::ranges::all_of(new_structure.fields, [&](const auto& field) {
 					  auto field_type = types.at(field.type);
