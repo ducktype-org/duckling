@@ -19,12 +19,85 @@
 #include <condition_variable>
 #include <deque>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <string_view>
 #include <thread>
+#include <utility>
+#include <variant>
 #include <vector>
 
 namespace vm::test {
+	class ExpectedValue;
+
+	/**
+	 * @brief Expected shape of a value returned by an expression, mirroring the members of
+	 * `InterpretedDataVariant`. Defined outside `ExpectedValue` so the recursive alternatives can
+	 * refer back to it (collections and the pointee use indirection).
+	 */
+	struct Primitive final {
+		u64 value;
+	};
+
+	struct Ptr final {
+		/// Empty checks only that the pointer is non-null; set checks the pointee recursively.
+		std::shared_ptr<ExpectedValue> pointee;
+	};
+
+	struct Struct final {
+		std::vector<std::pair<base::StrID, ExpectedValue>> fields;
+	};
+
+	struct Variant final {
+		u64                            type_tag;
+		std::shared_ptr<ExpectedValue> inner;
+	};
+
+	struct Table final {
+		std::vector<ExpectedValue> elements;
+	};
+
+	class ExpectedValue {
+		std::variant<Primitive, Ptr, Struct, Variant, Table> value;
+
+	public:
+		ExpectedValue(Primitive expected): value(std::move(expected)) {}
+
+		ExpectedValue(Ptr expected): value(std::move(expected)) {}
+
+		ExpectedValue(Struct expected): value(std::move(expected)) {}
+
+		ExpectedValue(Variant expected): value(std::move(expected)) {}
+
+		ExpectedValue(Table expected): value(std::move(expected)) {}
+
+		ExpectedValue(u64 primitive): value(Primitive{ primitive }) {}
+
+		static ExpectedValue primitive(u64 value) { return Primitive{ value }; }
+
+		static ExpectedValue nonNullPtr() { return Ptr{}; }
+
+		static ExpectedValue ptrTo(ExpectedValue pointee) {
+			return Ptr{ std::make_shared<ExpectedValue>(std::move(pointee)) };
+		}
+
+		static ExpectedValue structure(std::vector<std::pair<base::StrID, ExpectedValue>> fields) {
+			return Struct{ std::move(fields) };
+		}
+
+		static ExpectedValue variant(u64 type_tag, ExpectedValue inner) {
+			return Variant{ type_tag, std::make_shared<ExpectedValue>(std::move(inner)) };
+		}
+
+		static ExpectedValue variant(u64 type_tag) { return Variant{ type_tag, nullptr }; }
+
+		static ExpectedValue table(std::vector<ExpectedValue> elements) {
+			return Table{ std::move(elements) };
+		}
+
+		[[nodiscard]] const auto& get() const { return value; }
+	};
+
 	class FlowSimulator {
 		using ResT = std::vector<Ref<SafeVMValue>>;
 
@@ -228,6 +301,16 @@ namespace vm::test {
 			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
 
 			assertExitValue(response.value(), expected_result);
+			return *this;
+		}
+
+		FlowSimulator& evalExprExpectValues(
+			const fs::File& file, const std::vector<ExpectedValue>& expected_result
+		) {
+			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
+
+			assertExitValues(response.value(), expected_result);
 			return *this;
 		}
 
@@ -548,6 +631,15 @@ namespace vm::test {
 		void assertExitValue(
 			const vm::api::ExitValue& exit_value, const std::vector<u64>& expected_result
 		) const {
+			std::vector<ExpectedValue> expected;
+			expected.reserve(expected_result.size());
+			for (auto value: expected_result) expected.emplace_back(value);
+			assertExitValues(exit_value, expected);
+		}
+
+		void assertExitValues(
+			const vm::api::ExitValue& exit_value, const std::vector<ExpectedValue>& expected_result
+		) const {
 			assertTrue(
 				std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_value),
 				"Expected vector of IVMValue from expression"
@@ -555,18 +647,57 @@ namespace vm::test {
 			auto& ret_vals = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value);
 			assertEqual(expected_result.size(), ret_vals.size(), "Return value count mismatch");
 
-			for (usize i = 0; i < expected_result.size(); ++i) {
-				auto opt_data = ret_vals[i]->readData();
-				assertTrue(opt_data.has_value(), "Failed to read data from return value");
-				auto* primitive
-					= std::get_if<vm::interpreted_data_variant::Primitive>(&opt_data.value());
-				assertTrue(primitive != nullptr, "Expected Primitive return value");
-				assertEqual(
-					expected_result[i],
-					primitive->value,
-					"Return value mismatch at index " + std::to_string(i)
-				);
-			}
+			for (usize i = 0; i < expected_result.size(); ++i)
+				assertValue(*ret_vals[i], expected_result[i]);
+		}
+
+		template<class Actual>
+		void assertValue(const Actual& actual, const ExpectedValue& expected) const {
+			std::visit(
+				[&](const auto& exp) {
+					using Exp = std::decay_t<decltype(exp)>;
+
+					if constexpr (std::is_same_v<Exp, Primitive>) {
+						auto data
+							= actual.template readData<vm::interpreted_data_variant::Primitive>();
+						assertTrue(data.has_value(), "Expected a primitive value");
+						assertEqual(exp.value, data->value, "Primitive value mismatch");
+					} else if constexpr (std::is_same_v<Exp, Ptr>) {
+						auto data
+							= actual.template readData<vm::interpreted_data_variant::Pointer>();
+						assertTrue(data.has_value(), "Expected a pointer value");
+						assertTrue(data->referenced.has_value(), "Expected a non-null pointer");
+						if (exp.pointee) assertValue(**data->referenced, *exp.pointee);
+					} else if constexpr (std::is_same_v<Exp, Struct>) {
+						auto data = actual.template readData<vm::interpreted_data_variant::Data>();
+						assertTrue(data.has_value(), "Expected a struct value");
+						assertEqual(
+							exp.fields.size(), data->fields.size(), "Struct field count mismatch"
+						);
+						for (const auto& [name, field_expected]: exp.fields) {
+							assertTrue(
+								data->field_name_map.contains(name),
+								base::strConcat("Missing struct field '", name, "'")
+							);
+							usize index = data->field_name_map.at(name);
+							assertValue(*data->fields.at(index).value, field_expected);
+						}
+					} else if constexpr (std::is_same_v<Exp, Variant>) {
+						auto data
+							= actual.template readData<vm::interpreted_data_variant::Variant>();
+						assertTrue(data.has_value(), "Expected a variant value");
+						assertEqual(exp.type_tag, data->type_tag, "Variant tag mismatch");
+						if (exp.inner) assertValue(*data->referenced, *exp.inner);
+					} else if constexpr (std::is_same_v<Exp, Table>) {
+						auto data = actual.template readData<vm::interpreted_data_variant::Table>();
+						assertTrue(data.has_value(), "Expected a table value");
+						assertEqual(exp.elements.size(), usize(data->size), "Table size mismatch");
+						for (usize i = 0; i < exp.elements.size(); i++)
+							assertValue(*data->get(i), exp.elements[i]);
+					}
+				},
+				expected.get()
+			);
 		}
 
 		void assertTrue(bool condition, std::string_view err) const {

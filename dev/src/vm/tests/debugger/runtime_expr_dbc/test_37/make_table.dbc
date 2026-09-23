@@ -1,0 +1,19 @@
+# Returns a fixed-size table of three i64 values.
+function make_table { } -> { Nums } {
+	init_pany_type value, i64;
+	init_pany_type index, i64;
+
+	mov_p64_imm index, 0;
+	mov_p64_imm value, 10;
+	fixedSizeTableStore_pfst_pany_p64 ret0, value, index;
+
+	mov_p64_imm index, 1;
+	mov_p64_imm value, 20;
+	fixedSizeTableStore_pfst_pany_p64 ret0, value, index;
+
+	mov_p64_imm index, 2;
+	mov_p64_imm value, 30;
+	fixedSizeTableStore_pfst_pany_p64 ret0, value, index;
+
+	ret_from_expr;
+}

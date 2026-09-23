@@ -51,6 +51,14 @@ public:
 		TESTER_ADD_TEST(test29RuntimeExpr);
 		TESTER_ADD_TEST(test30RuntimeExpr);
 		TESTER_ADD_TEST(test31RuntimeExpr);
+		TESTER_ADD_TEST(test32RuntimeExpr);
+		TESTER_ADD_TEST(test33RuntimeExpr);
+		TESTER_ADD_TEST(test34RuntimeExpr);
+		TESTER_ADD_TEST(test35RuntimeExpr);
+		TESTER_ADD_TEST(test36RuntimeExpr);
+		TESTER_ADD_TEST(test37RuntimeExpr);
+		TESTER_ADD_TEST(test38RuntimeExpr);
+		TESTER_ADD_TEST(test39RuntimeExpr);
 	}
 
 private:
@@ -939,6 +947,124 @@ private:
 			.assertStillPaused()
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
+	}
+
+	void test32RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_32/main.dbc"));
+		const fs::File ptr_to_main(path("runtime_expr_dbc/test_32/ptr_to_main.dbc"));
+		const fs::File set_through_ptr(path("runtime_expr_dbc/test_32/set_through_ptr.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 3)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 3)
+			.enforceFrameVarValue(1, base::StrID("a"), 4)
+			.evalExprExpectValues(ptr_to_main, { vm::test::ExpectedValue::nonNullPtr() })
+			.awaitBreakpoint(base::StrID("main"), 3)
+			.evalExprNormal(set_through_ptr, { 99 })
+			.awaitBreakpoint(base::StrID("main"), 3)
+			.enforceFrameVarValue(1, base::StrID("a"), 99)
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+	}
+
+	void test33RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_33/main.dbc"));
+		const fs::File ptr_to_global(path("runtime_expr_dbc/test_33/ptr_to_global.dbc"));
+		const fs::File set_through_ptr(path("runtime_expr_dbc/test_33/set_through_ptr.dbc"));
+		const fs::File read_global(path("runtime_expr_dbc/test_33/read_global.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 1)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 1)
+			.evalExprExpectValues(ptr_to_global, { vm::test::ExpectedValue::nonNullPtr() })
+			.awaitBreakpoint(base::StrID("main"), 1)
+			.evalExprNormal(set_through_ptr, { 99 })
+			.awaitBreakpoint(base::StrID("main"), 1)
+			.evalExprNormal(read_global, { 99 })
+			.awaitBreakpoint(base::StrID("main"), 1)
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+	}
+
+	void test34RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_34/main.dbc"));
+		const fs::File ptr_to_local(path("runtime_expr_dbc/test_34/ptr_to_local.dbc"));
+		const fs::File load_local(path("runtime_expr_dbc/test_34/load_local.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 1)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 1)
+			.evalExprExpectValues(ptr_to_local, { vm::test::ExpectedValue::nonNullPtr() })
+			.awaitBreakpoint(base::StrID("main"), 1)
+			.evalExprExpectPanic(load_local, "Data was freed")
+			.cleanup();
+	}
+
+	/// An expression can return a struct value.
+	void test35RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_35/main.dbc"));
+		const fs::File make_pair(path("runtime_expr_dbc/test_35/make_pair.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 2)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.evalExprExpectValues(
+				make_pair,
+				{ vm::test::ExpectedValue::structure({
+					{ base::StrID("a"), 1 },
+					{ base::StrID("b"), 2 },
+				}) }
+			)
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+	}
+
+	void test36RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_36/main.dbc"));
+		const fs::File make_variant(path("runtime_expr_dbc/test_36/make_variant.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 2)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.evalExprExpectValues(make_variant, { vm::test::ExpectedValue::variant(0, 5) })
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+	}
+
+	/// An expression can return a table value.
+	void test37RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_37/main.dbc"));
+		const fs::File make_table(path("runtime_expr_dbc/test_37/make_table.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 2)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.evalExprExpectValues(make_table, { vm::test::ExpectedValue::table({ 10, 20, 30 }) })
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+	}
+
+	void test38RuntimeExpr() {
+		loadInvalidDbc(
+			"runtime_expr_dbc/test_38/init_vmval_in_normal.dbc",
+			{ vm::code::ForbiddenOpcodePresent::ERR_MSG, "init_pany_vmval" }
+		);
+	}
+
+	void test39RuntimeExpr() {
+		loadInvalidDbc(
+			"runtime_expr_dbc/test_39/exit_in_normal.dbc",
+			{ vm::code::ForbiddenOpcodePresent::ERR_MSG, "exit" }
+		);
 	}
 };
 

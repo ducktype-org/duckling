@@ -1,0 +1,15 @@
+# Returns a struct value with both fields set.
+function make_pair { } -> { Pair } {
+	init_pany_type field, ptr_i64;
+	init_pany_type value, i64;
+
+	mov_p64_imm value, 1;
+	structLea_pptr_pste_field field, ret0, Pair.a;
+	store_pptr_pany field, value;
+
+	mov_p64_imm value, 2;
+	structLea_pptr_pste_field field, ret0, Pair.b;
+	store_pptr_pany field, value;
+
+	ret_from_expr;
+}

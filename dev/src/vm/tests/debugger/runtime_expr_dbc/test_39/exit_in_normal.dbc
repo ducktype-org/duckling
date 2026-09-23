@@ -1,0 +1,10 @@
+# `exit` is only legal in the synthetic start function; it must be rejected in a normal
+# (program) function.
+function offender { } -> { } {
+	exit;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	mov_p64_imm ret0, 0;
+	ret;
+}

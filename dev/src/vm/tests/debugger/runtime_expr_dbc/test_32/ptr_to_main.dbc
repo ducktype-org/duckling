@@ -1,0 +1,7 @@
+# Returns a pointer to `a`, a local owned by the caller's (`main`) frame.
+function ptr_to_main { } -> { ptr_i64 } {
+	init_pany_type p, ptr_i64;
+	ref_pptr_pany p, frame 1 a;
+	mov_pptr_pptr ret0, p;
+	ret_from_expr;
+}

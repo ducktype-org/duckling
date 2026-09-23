@@ -1,0 +1,12 @@
+# Returns a variant whose active alternative is `i64` holding 5.
+function make_variant { } -> { Choice } {
+	init_pany_type inner, ptr_i64;
+	init_pany_type value, i64;
+
+	variantSetInner_pvnt_type ret0, i64;
+	variantGetInner_pptr_pvnt_type inner, ret0, i64;
+	mov_p64_imm value, 5;
+	store_pptr_pany inner, value;
+
+	ret_from_expr;
+}
