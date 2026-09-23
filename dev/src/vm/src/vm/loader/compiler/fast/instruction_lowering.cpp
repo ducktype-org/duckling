@@ -169,6 +169,11 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 	for (usize i = 0; i < stack_ctx.function.body.size(); i++) {
 		const vm::code::Instruction& instruction = stack_ctx.function.body[i];
 		ctx.stack_sid                            = stack_ctx.function.stack_states[i];
+
+		if (instruction.opcode() == high::Op_init_pany_type::OPCODE) {
+			ctx.stack_sid = stack_ctx.function.stack_states.at(i + 1);
+		}
+
 		instr_match(instruction) {
 			instr_case(high::Op_init_pany_type, init) {
 				auto type      = high_program.types().at(init.type.type_name);

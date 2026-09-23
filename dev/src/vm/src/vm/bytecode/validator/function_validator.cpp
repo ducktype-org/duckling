@@ -2083,7 +2083,10 @@ class FunctionValidator {
 					OpCode::Op_ret_from_expr>(instr);
 			}
 			variant_case_novalue(detail::Normal) {
-				throwOnForbiddenOpcode<OpCode::Op_ret_from_expr, OpCode::Op_initFromVMValue>(instr);
+				throwOnForbiddenOpcode<
+					OpCode::Op_ret_from_expr,
+					OpCode::Op_initFromVMValue,
+					OpCode::Op_exit>(instr);
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}

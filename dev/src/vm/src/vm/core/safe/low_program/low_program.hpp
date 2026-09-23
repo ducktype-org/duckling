@@ -35,7 +35,6 @@ namespace vm::low {
 	 */
 	struct LowFuncData final {
 		friend class vm::loader::compiler::safe::SafeCompiler;
-		friend class vm::SafeVMThread;
 
 	private:
 		base::StrID name{};

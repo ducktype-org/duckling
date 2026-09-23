@@ -33,11 +33,7 @@ namespace vm::code {
 	std::string toString(opargs::VMValueIdentifier arg) {
 		variant_match(arg.id) {
 			variant_case(u64, id) { return base::strConcat("$", id); }
-			// Only the registered-id form round-trips through `.dbc`. A direct `IVMValue*` is a
-			// live in-process value and must never reach serialization.
-			variant_case_novalue(const IVMValue*) {
-				CORE_PANIC("A VMValueIdentifier holding a direct IVMValue* is not serializable");
-			}
+			variant_case_novalue(const IVMValue*) { return "$ <ptr>"; }
 		}
 		CORE_UNREACHABLE();
 	}
