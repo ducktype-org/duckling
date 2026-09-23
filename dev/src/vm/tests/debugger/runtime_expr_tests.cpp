@@ -583,17 +583,13 @@ private:
 		const fs::File main_file(path("runtime_expr_dbc/test_19/main.dbc"));
 		const fs::File add_five_expr(path("runtime_expr_dbc/test_19/add_five.dbc"));
 
-		auto simulator = createSimulator(main_file);
-		simulator.runMain();
-		simulator.evalExprExpectEvalError(
-			add_five_expr, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG
-		);
-
-		// Give the thread time to enter `main`'s infinite loop. Without this the pause request can
-		// be serviced while the thread is still in the synthetic start function.
-		std::this_thread::sleep_for(std::chrono::milliseconds(2));
-
-		simulator.pause(base::StrID("main"), 4)
+		createSimulator(main_file)
+			.runMain()
+			.evalExprExpectEvalError(
+				add_five_expr, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG
+			)
+			.sleep(20)
+			.pause(base::StrID("main"), 4)
 			.resume()
 			.evalExprExpectEvalError(
 				add_five_expr, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG

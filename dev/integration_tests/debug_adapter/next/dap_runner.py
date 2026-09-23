@@ -15,7 +15,7 @@ try:
 
     # Give the VM a moment to leave the synthetic `vm_start_function` and enter `main`'s loop,
     # so pausing stops inside `main` rather than in the start function.
-    time.sleep(0.01)
+    time.sleep(0.02)
 
     # Request Pause and wait for all interleaved facts
     pause_seq = client.send_pause()

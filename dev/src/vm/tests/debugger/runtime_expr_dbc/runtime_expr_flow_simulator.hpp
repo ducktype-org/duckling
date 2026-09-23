@@ -488,6 +488,11 @@ namespace vm::test {
 			return *this;
 		}
 
+		FlowSimulator& sleep(u64 milliseconds) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+			return *this;
+		}
+
 		FlowSimulator& assertStillPaused() {
 			auto status = vm::api::getExecutionStatus(pid);
 			if (!status)
