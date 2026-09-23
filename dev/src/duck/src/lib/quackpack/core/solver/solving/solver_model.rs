@@ -14,7 +14,19 @@ use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solving::input::SolverInput;
 use crate::quackpack::core::solver::solving::scip_ext::BinModelExt;
 use crate::quackpack::core::{FeatureName, PackageId, Version};
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail};
+
+// @TODO: #3544 store information about minimal unsolvable subprogram and display it here.
+#[derive(Debug)]
+pub struct NoSolutionError();
+
+impl std::fmt::Display for NoSolutionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "no dependency resolution found")
+    }
+}
+
+impl std::error::Error for NoSolutionError {}
 
 type PresentFeature = Option<FeatureName>;
 
@@ -382,7 +394,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     #[tracing::instrument(skip_all)]
     pub fn solve(self) -> QuackResult<FoundSolution> {
         let solve = self.model.minimize().solve();
-        let solution = solve.best_sol().context("failed to find a solution")?;
+        let Some(solution) = solve.best_sol() else {
+            qp_bail!(NoSolutionError())
+        };
         debug!(?solution);
         let preexisting_packages = self.input.all_preexisting_pkgs();
         let new_packages = new_packages(self.package_vars, &preexisting_packages, &solution);

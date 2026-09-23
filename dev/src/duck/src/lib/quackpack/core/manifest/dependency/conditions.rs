@@ -24,25 +24,17 @@ impl Conditions {
 
     /// Check, if conditions are met for the given enabled features.
     /// This checks `any(system) and any(arch) and any(flags)`.
-    // @TODO: #2705 Do we want to take an `impl IntoIterator`, or a `Vec`, or a `HashSet`?
     //  Connected with @TODO: #3384 in `are_features_enabled`.
-    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = FeatureName>) -> bool {
+    pub fn is_enabled_for(&self, enabled_features: &HashSet<FeatureName>) -> bool {
         self.are_features_enabled(enabled_features)
     }
 
     /// Check, if enabled features for this package enable this dependency.
-    fn are_features_enabled(
-        &self,
-        enabled_features: impl IntoIterator<Item = FeatureName>,
-    ) -> bool {
+    fn are_features_enabled(&self, enabled_features: &HashSet<FeatureName>) -> bool {
         let Some(ref features) = self.required_root_package_features else {
             return true;
         };
-        let enabled_features = enabled_features.into_iter().collect::<HashSet<_>>();
         let required_features = HashSet::from_iter(features.iter().copied());
-        // NOTE: Leaving this as-is, because it's easier to parse.
-        // @TODO: #2705 We could work with plain iterators and/or keep `required_root_package_features` as a HashSet,
-        //  but only if creating temporary HashSets becomes a bottleneck. Also connected with !TODO above, in `is_enabled_for`.
         !enabled_features.is_disjoint(&required_features)
     }
 
@@ -73,34 +65,29 @@ impl From<Conditions> for registry::DependencyCondition {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::StrId;
 
     #[test]
     // @TODO: #3384 When we begin to check host system, add also that.
     //  We will probably need to do some conditional logic (make sure it runs on CI!).
     fn enabled_conditions() {
         let empty_condition = Conditions::new(None);
-        assert!(empty_condition.is_enabled_for(vec![]));
-        assert!(empty_condition.is_enabled_for(vec![StrId::new("a")]));
+        assert!(empty_condition.is_enabled_for(&[].into()));
+        assert!(empty_condition.is_enabled_for(&["a".into()].into()));
 
-        let a_b_condition = Conditions::new(Some(vec![StrId::new("a"), StrId::new("b")]));
+        let a_b_condition = Conditions::new(Some(["a".into(), "b".into()].into()));
 
-        assert!(a_b_condition.is_enabled_for(vec![StrId::new("a"), StrId::new("c")]));
+        assert!(a_b_condition.is_enabled_for(&["a".into(), "c".into()].into()));
 
-        assert!(!a_b_condition.is_enabled_for(vec![StrId::new("c"), StrId::new("d")]));
+        assert!(!a_b_condition.is_enabled_for(&["c".into(), "d".into()].into()));
 
-        assert!(a_b_condition.is_enabled_for(vec![
-            StrId::new("a"),
-            StrId::new("b"),
-            StrId::new("c"),
-        ]));
+        assert!(a_b_condition.is_enabled_for(&["a".into(), "b".into(), "c".into()].into()));
 
-        let a_condition = Conditions::new(Some(vec![StrId::new("a")]));
+        let a_condition = Conditions::new(Some(["a".into()].into()));
 
-        assert!(!a_condition.is_enabled_for(vec![]));
+        assert!(!a_condition.is_enabled_for(&[].into()));
 
-        assert!(a_condition.is_enabled_for(vec![StrId::new("a")]));
+        assert!(a_condition.is_enabled_for(&["a".into()].into()));
 
-        assert!(!a_condition.is_enabled_for(vec![StrId::new("b")]));
+        assert!(!a_condition.is_enabled_for(&["b".into()].into()));
     }
 }
