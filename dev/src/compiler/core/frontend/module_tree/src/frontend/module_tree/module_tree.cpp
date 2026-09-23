@@ -92,7 +92,7 @@ namespace compiler::frontend {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
 
 		if (root.isDirectory())
-			builder->buildFromDirectory(root, package_id, file_reject, dir_reject, file_resolver);
+			builder->buildFromDirectory(root, package_id, file_resolver, file_reject, dir_reject);
 		else
 			builder->buildFromSingleFile(root, package_id);
 
@@ -315,9 +315,9 @@ namespace compiler::frontend {
 	void ModuleTreeBuilder::buildFromDirectory(
 		const fs::File&     directory,
 		base::StrID         package_id,
+		const FileResolver& file_resolver,
 		const std::regex&   file_reject,
-		const std::regex&   dir_reject,
-		const FileResolver& file_resolver
+		const std::regex&   dir_reject
 	) {
 		CORE_ASSERT(
 			directory.isDirectory(),
@@ -341,7 +341,7 @@ namespace compiler::frontend {
 				// build sub-module from directory
 				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
 				submodule_builder->buildFromDirectory(
-					file, package_id, file_reject, dir_reject, file_resolver
+					file, package_id, file_resolver, file_reject, dir_reject
 				);
 				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(

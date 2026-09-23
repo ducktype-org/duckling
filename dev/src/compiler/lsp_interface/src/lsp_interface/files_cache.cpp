@@ -29,7 +29,7 @@ namespace duck_ls {
 			}
 
 			const auto  newline  = text.find('\n', line_start);
-			const usize line_end = newline == std::string_view::npos ? text.size() : newline + 1;
+			const usize line_end = newline == std::string_view::npos ? text.size() : newline;
 
 			usize offset    = line_start;
 			u32   remaining = position.character;
@@ -41,7 +41,9 @@ namespace duck_ls {
 				offset += codepointBytesAt(text, offset);
 			}
 
-			if (remaining > 0) return {};
+			// "If the character value is greater than the line length it defaults back to the line
+			// length" (LSP specification), so an overlong character clamps to the end of the line
+			// rather than rejecting the whole notification.
 			return static_cast<u32>(offset);
 		}
 
@@ -182,6 +184,17 @@ namespace duck_ls {
 			return base::BAD;
 		}
 
+		// A change that could not be applied left the buffer behind the client's, and the client
+		// keeps counting versions, so every later edit would splice at offsets that no longer
+		// mean anything. Only a whole-document replacement resyncs it.
+		if (document.value()->out_of_sync && !std::ranges::any_of(changes, [](const auto& change) {
+				return std::holds_alternative<lsp::TextDocumentContentChangeWholeDocument>(change);
+			})) {
+			std::cerr << "duck_ls: change for an out of sync document: " << cache_path.strView()
+					  << ", waiting for a full resync\n";
+			return base::BAD;
+		}
+
 		// Versions only ever increase; anything else means the buffers have diverged and
 		// splicing at the client's offsets would silently corrupt the text.
 		if (version <= document.value()->version) {
@@ -203,11 +216,13 @@ namespace duck_ls {
 			if (!applyChange(text, change)) {
 				std::cerr << "duck_ls: change out of range for " << cache_path.strView()
 						  << ", the buffer is left as it was\n";
+				document.value()->out_of_sync = true;
 				return base::BAD;
 			}
 
 		file.writeToFile(text);
-		document.value()->version = version;
+		document.value()->version     = version;
+		document.value()->out_of_sync = false;
 		return base::OK;
 	}
 

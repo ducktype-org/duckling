@@ -81,7 +81,8 @@ namespace duck_ls {
 		endpoint->textDocumentPublishDiagnostics({ .uri = uri, .diagnostics = diagnostics });
 	}
 
-	// NOLINTBEGIN
+	// The handlers take their parameters by rvalue reference and hand them on without moving.
+	// NOLINTBEGIN(cppcoreguidelines-rvalue-reference-param-not-moved)
 	void ServerSession::registerHandlers(Compiler& compiler) {
 		endpoint
 			->onInitialize([this, &compiler](const lsp::InitializeParams& params) -> auto {
@@ -149,6 +150,6 @@ namespace duck_ls {
 			.onExit([]() {});
 	}
 
-	// NOLINTEND
+	// NOLINTEND(cppcoreguidelines-rvalue-reference-param-not-moved)
 
 }

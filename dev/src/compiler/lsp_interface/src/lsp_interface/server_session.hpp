@@ -39,7 +39,8 @@ namespace duck_ls {
 
 	private:
 		base::Ref<lsp::ServerEndpoint> endpoint;
-		/// The encoding positions are expressed in, as negotiated during initialize.
+		/// The encoding positions are expressed in. UTF-16 is the protocol default, so it is
+		/// what `initialize` reports back without looking at what the client offers.
 		lsp::PositionEncodingKind position_encoding = lsp::PositionEncodingKind::UTF16;
 	};
 

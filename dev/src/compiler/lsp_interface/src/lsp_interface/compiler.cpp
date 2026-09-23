@@ -144,10 +144,12 @@ namespace duck_ls {
 
 		base::Optional<fs::FilePath> package_root;
 
-		for (auto current = path.parentPath(); !current.empty(); current = current.parentPath()) {
+		for (auto current = path.parentPath();; current = current.parentPath()) {
 			if (!hasDirectoryMainModuleFile(current)) break;
 			package_root = current;
 			if (current == workspace_root.value()) break;
+			// The filesystem root is its own parent, so it has to end the walk explicitly.
+			if (current == current.parentPath()) break;
 		}
 
 		return package_root;
@@ -321,13 +323,16 @@ namespace duck_ls {
 
 		std::unordered_map<lsp::Uri, std::vector<lsp::Diagnostic>> published;
 
+		std::vector<CRef<dia::dia_args::Diagnostic>> collected;
+		base::Optional<fs::FilePath>                 main_path_opt;
+
 		for (auto root_module: modules) {
 			auto main_source_file
 				= getFileRef(root_module->getMainSourceFile().illegalAccess().getID());
-			auto main_path = main_source_file->getFileIllegalAccess().getFilePath();
+			if_opt_none(main_path_opt) main_path_opt
+				= main_source_file->getFileIllegalAccess().getFilePath();
 
-			std::vector<CRef<dia::dia_args::Diagnostic>> diagnostics;
-			collectErrorsFromModuleTree(root_module, diagnostics);
+			collectErrorsFromModuleTree(root_module, collected);
 
 			// Semantic analysis only runs once the whole package parses.
 			if (isModuleTreeParsedSuccessfully(root_module))
@@ -339,9 +344,11 @@ namespace duck_ls {
 					if (hout.hasValue())
 						for (const auto& item: hout.valueOrPanic()) mir::lowerToMIRUnit(ctx, item);
 				});
+		}
 
+		if_opt_some(main_path_opt, main_path) {
 			query::Context::collectAndUpdateAllDiagnostic(
-				diagnostics, updatePositionWithHashCodeLocation
+				collected, updatePositionWithHashCodeLocation
 			);
 
 			dia::lsp::EvaluationContext ctx(
@@ -353,7 +360,7 @@ namespace duck_ls {
 			// The queried file always gets an entry, so that fixing its last error clears it.
 			published.emplace(ctx.resolve(ctx.queried_file), std::vector<lsp::Diagnostic>{});
 
-			for (const auto& diagnostic: diagnostics) {
+			for (const auto& diagnostic: collected) {
 				dia::lsp::LSPDiagnosticResult result
 					= dia::lsp::evaluateToLanguageServerMessage(diagnostic, ctx);
 				published[result.uri].push_back(std::move(result.diagnostic));

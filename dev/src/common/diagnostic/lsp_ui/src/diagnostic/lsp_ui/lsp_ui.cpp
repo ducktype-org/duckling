@@ -21,12 +21,6 @@ namespace dia::lsp {
 	using ::lsp::Uint;
 
 	/**
-	 * @brief Normalizes a path a diagnostic carries to the file it names on disk.
-	 *
-	 * The path arrives as a bare string that has already lost its type, and can be empty, so
-	 * neither conversion may be applied blindly.
-	 */
-	/**
 	 * @brief A range together with the path of the file it lies in.
 	 *
 	 * The path only becomes a URI once the language server resolves it, so it is carried
@@ -37,6 +31,12 @@ namespace dia::lsp {
 		Range       range;
 	};
 
+	/**
+	 * @brief Normalizes a path a diagnostic carries to the file it names on disk.
+	 *
+	 * The path arrives as a bare string that has already lost its type, and can be empty, so
+	 * neither conversion may be applied blindly.
+	 */
 	std::string toPhysicalPathString(const std::string& file) {
 		if (file.empty()) return {};
 
@@ -147,7 +147,8 @@ namespace dia::lsp {
 		diag.severity = DiagnosticSeverity::Error;
 		diag.source   = "Duckling";
 		diag.message  = "Failed to evaluate diagnostic: " + error_msg;
-		return { std::move(diag), evaluation_ctx.resolve(evaluation_ctx.default_error_location) };
+		return { .diagnostic = std::move(diag),
+			     .uri        = evaluation_ctx.resolve(evaluation_ctx.default_error_location) };
 	}
 
 	LSPDiagnosticResult evaluateToLanguageServerMessage(
@@ -198,7 +199,7 @@ namespace dia::lsp {
 
 		if (!related_information.empty()) diag.relatedInformation = std::move(related_information);
 
-		return { std::move(diag), evaluation_ctx.resolve(loc.file) };
+		return { .diagnostic = std::move(diag), .uri = evaluation_ctx.resolve(loc.file) };
 	}
 
 }

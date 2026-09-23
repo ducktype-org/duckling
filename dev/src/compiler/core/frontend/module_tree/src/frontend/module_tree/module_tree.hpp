@@ -446,15 +446,17 @@ namespace compiler::frontend {
 		 * Builds the module tree from a directory structure.
 		 * This will recursively traverse the directory and build the module tree.
 		 * @param directory The root directory to build the module tree from.
+		 * @param file_resolver Lambda, given a regular file on disk, may open a different file
+		 * instead.
 		 * @param file_reject Regex for rejecting files.
 		 * @param dir_reject Regex for rejecting directories.
 		 */
 		void buildFromDirectory(
 			const fs::File&     directory,
 			base::StrID         package_id,
+			const FileResolver& file_resolver = identityFileResolver(),
 			const std::regex&   file_reject   = DEFAULT_REJECT_FILE_REGEX,
-			const std::regex&   dir_reject    = DEFAULT_REJECT_DIRECTORY_REGEX,
-			const FileResolver& file_resolver = identityFileResolver()
+			const std::regex&   dir_reject    = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
 
 		/**

@@ -44,7 +44,11 @@ async function startClient(): Promise<void> {
 		configuration.get<string>("executablePath", DEFAULT_EXECUTABLE_PATH)
 	);
 
-	if (!fs.existsSync(executable)) {
+	// A bare name is looked up on the PATH, where existsSync cannot find it; let the spawn
+	// report the failure in that case.
+	const isPath = executable.includes(path.sep) || executable.includes("/");
+
+	if (isPath && !fs.existsSync(executable)) {
 		window.showErrorMessage(
 			`Duckling: no duck_ls binary at ${executable}. Point ${SECTION}.executablePath at it, ` +
 			`or set ${SECTION}.enable to false to use the extension without a language server.`

@@ -79,8 +79,7 @@ namespace fs {
 		FilePath(T&& path_like, base::Optional<base::Ref<VFS>> vfs = {}):
 			  path(std::forward<T>(path_like)),
 			  type(determinePathType(path)),
-			  vfs(type == PathType::Virtual ? vfs.copyValueOr(VFS::getInstance())
-		                                    : base::Optional<base::Ref<VFS>>{}) {}
+			  vfs(type == PathType::Virtual && vfs.has_value() ? vfs : defaultVfsFor(type)) {}
 
 		/**
 		 * @brief Gets the VFS this path resolves against, empty for non-virtual paths.
