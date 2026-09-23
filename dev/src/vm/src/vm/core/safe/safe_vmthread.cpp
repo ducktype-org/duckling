@@ -64,6 +64,7 @@ namespace {
 	}
 
 	auto toAny(const auto& place) { return PlaceAny(place.var_name); }
+
 	auto imm(auto&& arg) { return Immediate{ static_cast<u64>(std::forward<decltype(arg)>(arg)) }; }
 };
 
