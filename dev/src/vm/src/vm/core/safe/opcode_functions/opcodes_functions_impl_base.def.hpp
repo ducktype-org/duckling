@@ -651,7 +651,8 @@ namespace vm {
 			thread.runtime_expr_low.pop_back();
 			thread.runtime_expr_high.pop_back();
 		}
-		FUNCTION_CONT(0);
+
+		MUST_TAIL return OPCODE_NAME(breakpoint)(instr, local_stack, frame, thread);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_off_type)(FUNCTION_ARGS) {

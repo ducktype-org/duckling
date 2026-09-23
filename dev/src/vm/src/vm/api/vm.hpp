@@ -310,10 +310,12 @@ namespace vm::api {
 		PID pid, fs::File file, usize line_number
 	);
 
+	// always pauses after completion
 	std::expected<ExitValue, ApiError> executeRuntimeExpr(
 		PID pid, ThreadID thread_id, const code::Function& function
 	);
 
+	// always pauses after completion
 	std::expected<ExitValue, ApiError> executeRuntimeExprFromFile(
 		PID pid, ThreadID thread_id, fs::File file
 	);

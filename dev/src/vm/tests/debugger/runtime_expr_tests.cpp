@@ -50,6 +50,7 @@ public:
 		TESTER_ADD_TEST(test28RuntimeExpr);
 		TESTER_ADD_TEST(test29RuntimeExpr);
 		TESTER_ADD_TEST(test30RuntimeExpr);
+		TESTER_ADD_TEST(test31RuntimeExpr);
 	}
 
 private:
@@ -617,6 +618,8 @@ private:
 			.evalExprExpectTimeout(spin_expr)
 			.pause()
 			.evalExprNormal(break_loop_expr, { 1 })
+			.assertStillPaused()
+			.resume()
 			.awaitExprCompletion({ 0 })
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
@@ -781,6 +784,10 @@ private:
 			.disableBreakpoint(base::StrID("pause_here"), 0)
 			.disableBreakpoint(base::StrID("pause_here_too"), 0)
 			.evalExprNormal(level3_expr, { 46 })
+			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
+			.resume()
+			.awaitBreakpoint(base::StrID("pause_here"), 0)
+			.resume()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
@@ -917,6 +924,24 @@ private:
 			.evalExprExpectBreakpoint(probe_expr)
 			.awaitBreakpoint(base::StrID("pause_here"), 0)
 			.enforceFrameVarValue(2, base::StrID("local"), 123)
+			.cleanup();
+	}
+
+	void test31RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test31/main.dbc"));
+		const fs::File expr(path("runtime_expr_dbc/test31/expr.dbc"));
+
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 4)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.evalExprNormal(expr, { 0, 0 })
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.step()
+			.step()
+			.evalExprNormal(expr, { 4, 2 })
+			.assertStillPaused()
+			.finishAndAssertExitValue(2'137)
 			.cleanup();
 	}
 };

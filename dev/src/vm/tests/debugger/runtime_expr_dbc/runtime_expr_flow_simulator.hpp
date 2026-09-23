@@ -479,6 +479,32 @@ namespace vm::test {
 			return *this;
 		}
 
+		FlowSimulator& step() {
+			auto step_res = vm::api::step(pid, thread_id);
+			if (!step_res)
+				assertTrue(
+					false, base::strConcat("Step failed: ", vm::api::errorToString(step_res.error()))
+				);
+			return *this;
+		}
+
+		FlowSimulator& assertStillPaused() {
+			auto status = vm::api::getExecutionStatus(pid);
+			if (!status)
+				assertTrue(
+					false,
+					base::strConcat(
+						"Failed to read the execution status: ",
+						vm::api::errorToString(status.error())
+					)
+				);
+			assertTrue(
+				v_matches(status.value(), vm::api::Paused),
+				"Expected the process to still be paused"
+			);
+			return *this;
+		}
+
 		FlowSimulator& finishAndAssertExitValue(i64 expected_exit_val) {
 			auto resume_res = vm::api::resume(pid, thread_id);
 			if (!resume_res)
