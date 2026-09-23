@@ -550,9 +550,10 @@ namespace vm {
 		}
 
 		/**
-		 * @brief Dynamically reallocates block data.
-		 * @note Assumes that type is a dynamic table type and reallocates it to
-		   a table of size n with elements of type equal to type's inner type.
+		 * @brief Dynamically reallocates block data to a table of size n with elements of type
+		 * equal to the block type's inner type.
+		 * @throws VMDynTableReAllocTypeMismatch if the block does not hold a dynamic table,
+		 * VMUseAfterFreeException if its data is already gone.
 		 */
 		auto dynTableReallocateBlockDataN(Ref<BlockT> block, u64 n) -> void {
 			if (getBlockType(block)->getKind() != Type::Kind::DynamicTable)
@@ -569,19 +570,37 @@ namespace vm {
 		}
 
 		/**
-		 * @brief Frees block data but additionally checks for correctness.
+		 * @brief Frees the data behind a pointer, refusing what a program must not free:
+		 * anything but a heap allocation, its interior, and data that is already gone.
 		 */
-		void guardedFreeBlockData(Ref<BlockT> block) {
-			if (!block->freeable) throw exceptions::VMInvalidFree();
+		void guardedFreeBlockData(Pointer pointer) requires std::is_same_v<EntryT, byte> {
+			Ref<BlockT> block = pointer.getBlock();
+			// Only the whole allocation can be freed, not a field or an element of it.
+			if (!block->freeable || pointer.getOffset() != 0)
+				throw exceptions::VMInvalidFreeException();
 			if (block->deallocated) throw exceptions::VMDoubleFreeException();
 			freeBlockData(block);
 		}
 
 		/**
-		 * @brief Frees block's data, and just maybe the block structure itself
-		 * if there are no more references to it.
+		 * @brief `guardedFreeBlockData` for the dynamic table a pointer points at.
+		 */
+		void guardedDynTableFreeBlockData(Pointer pointer) requires std::is_same_v<EntryT, byte> {
+			if (getBlockType(pointer.getBlock())->getKind() != Type::Kind::DynamicTable)
+				throw exceptions::VMDynTableReAllocTypeMismatch();
+			guardedFreeBlockData(pointer);
+		}
+
+		/**
+		 * @brief Frees the block's data and its children. A child block also drops the reference
+		 * its parent held, which may delete it; a root block stays in the pool until its refcount
+		 * hits 0.
+		 * @note The block must still hold its data - user frees go through
+		 * `guardedFreeBlockData`.
 		 */
 		void freeBlockData(Ref<BlockT> block) {
+			CORE_ASSERT(!block->deallocated, "Freeing a block that is already deallocated");
+
 			for (const auto child: block->children_blocks | std::views::values)
 				freeBlockData(child);
 

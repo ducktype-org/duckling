@@ -1,0 +1,18 @@
+type data: Foo {
+    a: i64,
+    b: i64
+}
+type pointer: ptr_Foo Foo
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type p, ptr_Foo;
+    alloc_pptr_type p, Foo;
+
+    init_pany_type field_ptr, ptr_i64;
+    structLea_pptr_pptr_field field_ptr, p, Foo.b;
+
+    # Freeing an interior pointer would free the whole allocation.
+    free_pptr field_ptr;
+
+    ret;
+}

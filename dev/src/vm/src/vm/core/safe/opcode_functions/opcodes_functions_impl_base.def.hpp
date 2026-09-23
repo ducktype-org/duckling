@@ -732,7 +732,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr)(FUNCTION_ARGS) {
 		{
 			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0))
-				thread.process_memory.guardedFreeBlockData(ptr.getBlock());
+				thread.process_memory.guardedFreeBlockData(ptr);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1218,10 +1218,7 @@ namespace vm {
 				// It might be desired to switch to second approach in the future, depending on the
 				// semantics of Duckling arrays.
 				if (!tbl_pointer.isNull()) {
-					auto tbl_block = tbl_pointer.getBlock();
-					if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
-						throw exceptions::VMDynTableReAllocTypeMismatch();
-					thread.process_memory.guardedFreeBlockData(tbl_block);
+					thread.process_memory.guardedDynTableFreeBlockData(tbl_pointer);
 					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 						tbl_pointer, Pointer::null()
 					);

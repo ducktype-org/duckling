@@ -19,6 +19,9 @@ public:
 		TESTER_ADD_TEST(dynTableReAllocAfterFreeIsRefused);
 		TESTER_ADD_TEST(dynTableFreeAfterFreeIsRefused);
 		TESTER_ADD_TEST(freeingALocalIsRefused);
+		TESTER_ADD_TEST(freeingAGlobalIsRefused);
+		TESTER_ADD_TEST(freeingAVariantPayloadIsRefused);
+		TESTER_ADD_TEST(freeingAStructFieldIsRefused);
 		TESTER_ADD_TEST(readingANestedBlockAfterFreeIsRefused);
 	}
 
@@ -71,7 +74,30 @@ private:
 
 	void freeingALocalIsRefused() {
 		assertExecutionPanickedWithAndKill(
-			runTestOnVmGetResult("free_local.dbc"), vm::exceptions::VMInvalidFree::ERR_MSG
+			runTestOnVmGetResult("free_local.dbc"), vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+	}
+
+	void freeingAGlobalIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("free_global.dbc"), vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+	}
+
+	/// A payload is a view into the variant, so freeing it would leave the parent holding a
+	/// deallocated child.
+	void freeingAVariantPayloadIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("free_variant_payload.dbc"),
+			vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+	}
+
+	/// Freeing an interior pointer would free the whole allocation behind it.
+	void freeingAStructFieldIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("free_struct_field.dbc"),
+			vm::exceptions::VMInvalidFreeException::ERR_MSG
 		);
 	}
 
