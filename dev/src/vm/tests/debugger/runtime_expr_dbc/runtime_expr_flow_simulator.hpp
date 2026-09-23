@@ -26,18 +26,7 @@
 
 namespace vm::test {
 	class FlowSimulator {
-		struct LateEvaluation;
-
-		std::deque<LateEvaluation> late_evals;
-
-		std::deque<LateEvaluation*> pending_late_evals;
-
 		using ResT = std::vector<Ref<SafeVMValue>>;
-
-		std::deque<std::pair<ResT, LateEvaluation*>> late_result;
-
-		std::condition_variable cv;
-		std::mutex              mt;
 
 		struct LateEvaluation {
 			events::Listener<ResT> listener;
@@ -53,6 +42,15 @@ namespace vm::test {
 				emitter->attachListener(this->listener);
 			}
 		};
+
+		std::deque<LateEvaluation> late_evals;
+
+		std::deque<LateEvaluation*> pending_late_evals;
+
+		std::deque<std::pair<ResT, LateEvaluation*>> late_result;
+
+		std::condition_variable cv;
+		std::mutex              mt;
 
 		void registerLateEvaluation(Ref<events::Emitter<ResT>> emitter) {
 			late_evals.emplace_back(*this, emitter);
