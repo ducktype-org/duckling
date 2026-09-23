@@ -255,7 +255,7 @@ namespace compiler::mir {
 					ending_scopes_per_succ.put(succ, std::move(succ_ending_scopes));
 				}
 
-		
+
 				// Opt: When every successor ends the same scopes and begins in the same scope,
 				// the destructors go directly into this block and the terminator takes that
 				// common scope - no intermediate blocks needed. Otherwise every edge is split
@@ -269,12 +269,12 @@ namespace compiler::mir {
 					add_destructors_to_instr_vec(
 						first_path_ending_scopes.value(), new_instructions, move_state_info
 					);
-					
+
 					// This pass establishes the invariant every later pass relies on: for each
 					// edge, the scope of the predecessor's terminator is the scope the successor's
-					// first instruction lives in. A scope change then always happens strictly inside
-					// a block, never across an edge, so `AddScopeFlagsPass` can put the flags of a
-					// scope change on the instructions around it.
+					// first instruction lives in. A scope change then always happens strictly
+					// inside a block, never across an edge, so `AddScopeFlagsPass` can put the
+					// flags of a scope change on the instructions around it.
 					terminator.scope = first_path_begin_scope.value();
 				} else {
 					// Paths are not identical or there would be a scope regression. Create a new
