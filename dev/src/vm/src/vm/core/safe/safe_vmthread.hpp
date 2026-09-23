@@ -100,8 +100,8 @@ namespace vm {
 
 		/**
 		 * @brief High-level representation of the synthetic `vm_start_function`, when this thread
-		 * has loaded one. Kept here rather than in `runtime_expr_high`, both so it is not mixed with
-		 * expressions and so `LowFuncData::high_func` stays valid.
+		 * has loaded one. Kept here rather than in `runtime_expr_high`, both so it is not mixed
+		 * with expressions and so `LowFuncData::high_func` stays valid.
 		 */
 		base::Optional<code::valid_function::ValidFunction> start_function_high;
 

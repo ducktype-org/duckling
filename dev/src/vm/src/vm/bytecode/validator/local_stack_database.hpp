@@ -138,7 +138,7 @@ namespace vm::code {
 
 		/**
 		 * @returns the `(blocks, bytes)` prefix the stack is built on top of - the variables that
-		 * belong to the outer frames. 
+		 * belong to the outer frames.
 		 * @note Usually (0, 0)
 		 */
 		std::pair<u64, valid_type::TypeSize> getBaseOffset() const;

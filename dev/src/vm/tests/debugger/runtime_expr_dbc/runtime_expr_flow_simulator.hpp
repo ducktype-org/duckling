@@ -502,8 +502,7 @@ namespace vm::test {
 					)
 				);
 			assertTrue(
-				v_matches(status.value(), vm::api::Paused),
-				"Expected the process to still be paused"
+				v_matches(status.value(), vm::api::Paused), "Expected the process to still be paused"
 			);
 			return *this;
 		}
