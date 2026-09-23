@@ -176,6 +176,17 @@ namespace compiler::mir {
 		};
 
 
+		// A block with no instructions takes its begin scope from its terminator, and this pass
+		// may move a terminator to the scope of its successor. Pinning the begin scope with a
+		// `Nop` first keeps `beginScope()` of every block stable while the pass rewrites
+		// terminators, no matter in which order the blocks are visited.
+		for (auto block_id: function.block_order) {
+			auto& block = function.blocks[block_id];
+			if (block.instructions.empty())
+				block.instructions.push_back(Instruction{
+					Operation::Nop, {}, {}, {}, block.terminator.scope });
+		}
+
 		for (auto& block_id: function.block_order) {
 			// Add THIS block to our new block order.
 			new_blocks_order.push_back(block_id);
@@ -222,60 +233,63 @@ namespace compiler::mir {
 				// Here we handle situations where a branch may cause two different sets of
 				// destructors being performed. For example breaking from a loop etc.
 				base::Optional<std::vector<ScopeRef>>         first_path_ending_scopes;
-				bool                                          paths_identical  = true;
-				bool                                          boundary_crossed = false;
+				base::Optional<ScopeRef>                      first_path_begin_scope;
+				bool                                          paths_identical = true;
 				base::HashMap<BlockID, std::vector<ScopeRef>> ending_scopes_per_succ;
 
 				for (auto succ: successors) {
 					auto succ_begin_scope   = function.blocks[succ].beginScope();
 					auto succ_ending_scopes = getEndingScopes(terminator.scope, succ_begin_scope);
 
-					if (!succ_ending_scopes.empty()) boundary_crossed = true;
-
-					// Opt: Check if all path lead to the same ending scope.
-					if (!first_path_ending_scopes.has_value())
+					// Check if all paths lead to the same ending scope and enter the same
+					// scope. We don't want to create intermediate blocks if we don't have to.
+					if (!first_path_ending_scopes.has_value()) {
 						first_path_ending_scopes = succ_ending_scopes;
-					else if (*first_path_ending_scopes != succ_ending_scopes)
+						first_path_begin_scope   = succ_begin_scope;
+					}
+					// We have to check that not only ending scopes are the same, but also
+					// starting scopes are the same -> meaning the begin scope of the successors match.
+					else if (*first_path_begin_scope != succ_begin_scope) {
 						paths_identical = false;
+					}
 					ending_scopes_per_succ.put(succ, std::move(succ_ending_scopes));
 				}
 
-				// Opt: Appending destructors directly to the current block, without creating an
-				// intermediate is only safe when:
-				// - all paths have the ending scopes
-				// - either no boundary is crossed at all, or the only scope that ends here is the
-				//   terminator's scope. The first element of `getEndingScopes(terminator.scope)`
-				//   is always terminator.scope itself, so checking size() == 1 && front() ==
-				//   terminator.scope is equivalent to "the only ending scope is the terminator's".
-				//
-				// If we instead appended destructors from deeper scopes directly before the
-				// terminator, the second pass would observe a scope transition between those
-				// destructors and the terminator and would emit unneeded ScopeStart/ScopeEnd flags
-				// around it.
-				bool safe_to_opt = paths_identical
-				                && (!boundary_crossed
-				                    || (first_path_ending_scopes->size() == 1
-				                        && first_path_ending_scopes->front() == terminator.scope));
+		
+				// Opt: When every successor ends the same scopes and begins in the same scope,
+				// the destructors go directly into this block and the terminator takes that
+				// common scope - no intermediate blocks needed. Otherwise every edge is split
+				// into a block of its own that ends the scopes of its own path and jumps in the
+				// scope of its successor.
+				bool safe_to_opt = paths_identical;
 
 				if (safe_to_opt) {
 					// Opt: If all paths require the same destructors we don't create a new block
 					// and insert them directly to the current block.
-					if (boundary_crossed) {
-						add_destructors_to_instr_vec(
-							first_path_ending_scopes.value(), new_instructions, move_state_info
-						);
-					}
+					add_destructors_to_instr_vec(
+						first_path_ending_scopes.value(), new_instructions, move_state_info
+					);
+					
+					// This pass establishes the invariant every later pass relies on: for each
+					// edge, the scope of the predecessor's terminator is the scope the successor's
+					// first instruction lives in. A scope change then always happens strictly inside
+					// a block, never across an edge, so `AddScopeFlagsPass` can put the flags of a
+					// scope change on the instructions around it.
+					terminator.scope = first_path_begin_scope.value();
 				} else {
 					// Paths are not identical or there would be a scope regression. Create a new
 					// block and insert destructors there.
 					for (auto succ: successors) {
 						auto& succ_ending_scopes = ending_scopes_per_succ.at(succ);
+						auto  succ_begin_scope   = function.blocks[succ].beginScope();
 
-						// If no scope boundary is crossed, the edge is clean.
-						if (succ_ending_scopes.empty()) continue;
+						// An edge that neither ends a scope nor enters another one already
+						// satisfies the invariant, so it needs no block of its own.
+						if (succ_ending_scopes.empty() && succ_begin_scope == terminator.scope)
+							continue;
 
-						// Otherwise we have crossed a scope boundary. We have to split the edge
-						// into an intermediate block.
+						// Otherwise the edge changes scope. We have to split it into an
+						// intermediate block.
 						BlockID                  new_block_id = get_new_block_id();
 						std::vector<Instruction> new_block_instructions;
 
@@ -289,21 +303,10 @@ namespace compiler::mir {
 							succ_ending_scopes, new_block_instructions, move_state_info
 						);
 
-						auto new_terminator_scope = [&]() {
-							// If there is only one succ_ending_scope and is equal to the
-							// terminator.scope the scope of the new terminator is the same as
-							// the original terminator scope (to match the optimization case).
-							// Otherwise, we want to have the new terminator scope to be scope
-							// of the succ_begin_scope.
-							if (succ_ending_scopes.size() == 1
-							    && succ_ending_scopes.front() == terminator.scope) {
-								return terminator.scope;
-							} else {
-								return function.blocks[succ].beginScope();
-							}
-						}();
+						// The jump out of the intermediate block carries the scope its
+						// successor begins in, so that edge does not change scope either.
 						Instruction new_block_terminator{
-							Operation::Jump, {}, { MIRValue(succ) }, {}, new_terminator_scope
+							Operation::Jump, {}, { MIRValue(succ) }, {}, succ_begin_scope
 						};
 
 						// Add the new block.
