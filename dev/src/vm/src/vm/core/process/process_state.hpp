@@ -146,9 +146,7 @@ namespace vm {
 				ThreadEntry{
 					.state                = thread_state::NotStarted{},
 					.state_change_counter = 0,
-					.status_emitter       = Box<events::Emitter<ThreadState>>::fromPointer(
-                        new events::Emitter<ThreadState>{}
-                    ),
+					.status_emitter       = makeBox<events::Emitter<ThreadState>>(),
 				}
 			);
 		}

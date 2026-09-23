@@ -103,7 +103,10 @@ namespace vm::low {
 		}
 
 #ifdef ENABLE_JIT
-		const cf::ControlFlowGraph& getCfg() const { return cfg; }
+		[[nodiscard]]
+		const cf::ControlFlowGraph& getCfg() const {
+			return cfg;
+		}
 #endif
 
 		[[nodiscard]]
