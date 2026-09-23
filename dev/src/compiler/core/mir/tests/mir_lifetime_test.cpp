@@ -866,23 +866,26 @@ private:
 	/**
 	 * @brief Blocks the destructor insertion added for a single outgoing edge - they hold only
 	 * destructors and jump to the original destination.
+	 *
+	 * They are recognised by the name the pass gives them. A structural check does not work:
+	 * the pass also pins the begin scope of every empty block with a `Nop`, so "a `Nop` followed
+	 * by a `Jump`" is the shape of an ordinary empty block as well.
 	 */
 	usize countIntermediateDestructorBlocks(CRef<compiler::mir::Function> func) {
 		usize intermediate_blocks_count = 0;
 		for (const auto& block_id: func->block_order) {
 			const auto& block = func->blocks.at(block_id);
-			if (!block->instructions.empty()
-			    && block->instructions[0].operation == compiler::mir::Operation::Nop
-			    && block->terminator.operation == compiler::mir::Operation::Jump)
+			if (block->debug_name.has_value()
+			    && block->debug_name.value() == base::StrID("scope_end.destructors"))
 				intermediate_blocks_count++;
 		}
 		return intermediate_blocks_count;
 	}
 
 	/**
-	 * @brief When the successors of a terminator end different scopes, the path-specific
-	 * destructors go into intermediate blocks. When all the outgoing edges need the same
-	 * destructors, they are appended to the current block instead.
+	 * @brief An edge gets an intermediate block whenever it changes scope, either because the
+	 * paths leave different scopes or because they enter different ones. Destructors are appended
+	 * to the current block only when every outgoing edge agrees on both.
 	 */
 	void intermediateDestructorBlocksTest() {
 		auto [module, scope] = getModule(fs::File(path("modules/intermediate_destructor_blocks")));
@@ -891,8 +894,9 @@ private:
 		ASSERT_EQUAL_PRINT(2, countIntermediateDestructorBlocks(getMIRFunctionByName(module, "A")));
 		// Two nested loops, so both of them need their own intermediate blocks.
 		ASSERT_EQUAL_PRINT(4, countIntermediateDestructorBlocks(getMIRFunctionByName(module, "B")));
-		// Both `if` branches end the same scope, so no intermediate block is needed.
-		ASSERT_EQUAL_PRINT(0, countIntermediateDestructorBlocks(getMIRFunctionByName(module, "C")));
+		// Both `if` branches end the same scope, but each one is a scope of its own, so the two
+		// edges still enter different scopes and get a block each.
+		ASSERT_EQUAL_PRINT(2, countIntermediateDestructorBlocks(getMIRFunctionByName(module, "C")));
 	}
 };
 
