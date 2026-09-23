@@ -154,9 +154,10 @@ namespace duck_ls {
 	}
 
 	void Compiler::loadPackage(const fs::FilePath& package_root) {
-		auto resolver = [this](const fs::FilePath& source_path) -> fs::File {
+		auto resolver = [this](const fs::File& source_file) -> fs::File {
+			auto source_path = source_file.getFilePath();
 			if (files->isOpened(source_path)) return { files->cachePath(source_path) };
-			return { source_path };
+			return source_file;
 		};
 
 		auto module_id = ModuleTreeBuilder::create(

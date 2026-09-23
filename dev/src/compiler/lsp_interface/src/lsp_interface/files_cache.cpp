@@ -117,7 +117,7 @@ namespace duck_ls {
 	}
 
 	bool FilesCache::isOpened(const fs::FilePath& source_file) {
-		return cachePath(source_file).exists();
+		return cachePath(source_file).isRegularFile();
 	}
 
 	bool FilesCache::isOpened(const lsp::Uri& uri) {

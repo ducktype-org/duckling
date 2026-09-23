@@ -38,12 +38,12 @@ namespace compiler::frontend {
 
 	// Regexes to reject files/directories starting with '.' or '$'
 	/**
-	 * @brief Turns a path found while walking the disk into the file the compiler should read.
+	 * @brief Turns a file found while walking the disk into the file the compiler should read.
 	 *
-	 * The default reads the path itself; the language server substitutes an editor buffer for
-	 * the files it holds open.
+	 * The default hands back the file itself; the language server substitutes an editor buffer
+	 * for the files it holds open.
 	 */
-	using FileResolver = std::function<fs::File(const fs::FilePath& disk_path)>;
+	using FileResolver = std::function<fs::File(const fs::File& disk_file)>;
 
 	/**
 	 * @brief The resolver that simply reads what is on disk.
@@ -345,8 +345,8 @@ namespace compiler::frontend {
 		/**
 		 * Factory method to create ModuleTree from filesystem tree.
 		 * @param root Pre-constructed fs::File with a module structure.
-		 * @param file_resolver Lambda, given a path to the file on disk, may open a different file
-		 * (useful in the LS)
+		 * @param file_resolver Lambda, given a regular file on disk, may open a different file
+		 * (useful in the LS). Never called for directories.
 		 * @param file_reject Regex for rejecting files.
 		 * @param dir_reject Regex for rejecting directories.
 		 * @return A valid pointer with the root.

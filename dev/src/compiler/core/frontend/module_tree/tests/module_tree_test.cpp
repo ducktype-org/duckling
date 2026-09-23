@@ -121,10 +121,10 @@ private:
 		);
 
 		std::vector<std::string> resolved;
-		auto                     resolver = [&](const fs::FilePath& disk_path) -> fs::File {
-            resolved.push_back(disk_path.name());
-            if (disk_path.name() == "awe.dk") return substitute;
-            return fs::File(disk_path);
+		auto                     resolver = [&](const fs::File& disk_file) -> fs::File {
+            resolved.push_back(disk_file.name());
+            if (disk_file.name() == "awe.dk") return substitute;
+            return disk_file;
 		};
 
 		auto module_id

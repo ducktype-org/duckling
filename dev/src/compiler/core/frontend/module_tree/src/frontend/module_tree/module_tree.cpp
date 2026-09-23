@@ -78,8 +78,7 @@ namespace compiler::frontend {
 	}
 
 	const FileResolver& identityFileResolver() {
-		static const FileResolver resolver
-			= [](const fs::FilePath& disk_path) { return fs::File(disk_path); };
+		static const FileResolver resolver = [](const fs::File& disk_file) { return disk_file; };
 		return resolver;
 	}
 
@@ -333,7 +332,7 @@ namespace compiler::frontend {
 			// Skip symlinks to avoid cycles
 			if (path.isSymlink()) continue;
 
-			fs::File file = file_resolver(path);
+			fs::File file(path);
 
 			if (file.isDirectory()) {
 				// Handle subdirectory
@@ -353,6 +352,12 @@ namespace compiler::frontend {
 				// @TODO: decide if this behavior is desirable
 				if (submodule->hasMainSourceFile()) addSubmodule(submodule);
 			} else {
+				file = file_resolver(file);
+				CORE_ASSERT(
+					file.isFile(),
+					base::strConcat("File resolver substituted a directory for: ", path.string())
+				);
+
 				// Handle regular file
 				if (!isFileNameValid(base::StrID(file.name()), file_reject)) continue;
 				handleNewFile(file);
