@@ -29,6 +29,7 @@ public:
 		TESTER_ADD_TEST(test7RuntimeExpr);
 		TESTER_ADD_TEST(test8RuntimeExpr);
 		TESTER_ADD_TEST(testInvalidExpressions);
+		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(test9RuntimeExpr);
 		TESTER_ADD_TEST(test10RuntimeExpr);
 		TESTER_ADD_TEST(test11RuntimeExpr);
@@ -47,10 +48,6 @@ public:
 		TESTER_ADD_TEST(test24RuntimeExpr);
 		TESTER_ADD_TEST(test25RuntimeExpr);
 		TESTER_ADD_TEST(test26RuntimeExpr);
-		TESTER_ADD_TEST(test27RuntimeExpr);
-		TESTER_ADD_TEST(test28RuntimeExpr);
-		TESTER_ADD_TEST(test29RuntimeExpr);
-		TESTER_ADD_TEST(test30RuntimeExpr);
 	}
 
 private:
@@ -777,22 +774,7 @@ private:
 
 	void test21RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_21/main.dbc"));
-		const fs::File freed_expr(path("runtime_expr_dbc/test_21/freed.dbc"));
-		const fs::File leaky_expr(path("runtime_expr_dbc/test_21/leaky.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 4)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.evalExprNormal(freed_expr, { 7 })
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.evalExprExpectPanic(leaky_expr, vm::exceptions::VMFoundMemoryLeakException::ERR_MSG)
-			.cleanup();
-	}
-
-	void test22RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_22/main.dbc"));
-		const fs::File read_base_expr(path("runtime_expr_dbc/test_22/read_base.dbc"));
+		const fs::File read_base_expr(path("runtime_expr_dbc/test_21/read_base.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 1)
@@ -807,9 +789,9 @@ private:
 			.cleanup();
 	}
 
-	void test23RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_23/main.dbc"));
-		const fs::File probe_expr(path("runtime_expr_dbc/test_23/probe.dbc"));
+	void test22RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_22/main.dbc"));
+		const fs::File probe_expr(path("runtime_expr_dbc/test_22/probe.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 2)
@@ -822,9 +804,9 @@ private:
 			.cleanup();
 	}
 
-	void test24RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_24/main.dbc"));
-		const fs::File expr(path("runtime_expr_dbc/test_24/expr.dbc"));
+	void test23RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_23/main.dbc"));
+		const fs::File expr(path("runtime_expr_dbc/test_23/expr.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
@@ -840,64 +822,10 @@ private:
 			.cleanup();
 	}
 
-	void test25RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_25/main.dbc"));
-		const fs::File ptr_to_main(path("runtime_expr_dbc/test_25/ptr_to_main.dbc"));
-		const fs::File set_through_ptr(path("runtime_expr_dbc/test_25/set_through_ptr.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 3)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 3)
-			.enforceFrameVarValue(1, base::StrID("a"), 4)
-			.evalExprExpectValues(ptr_to_main, { vm::test::ExpectedValue::nonNullPtr() })
-			.awaitBreakpoint(base::StrID("main"), 3)
-			.evalExprNormal(set_through_ptr, { 99 })
-			.awaitBreakpoint(base::StrID("main"), 3)
-			.enforceFrameVarValue(1, base::StrID("a"), 99)
-			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
-	void test26RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_26/main.dbc"));
-		const fs::File ptr_to_global(path("runtime_expr_dbc/test_26/ptr_to_global.dbc"));
-		const fs::File set_through_ptr(path("runtime_expr_dbc/test_26/set_through_ptr.dbc"));
-		const fs::File read_global(path("runtime_expr_dbc/test_26/read_global.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 1)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 1)
-			.evalExprExpectValues(ptr_to_global, { vm::test::ExpectedValue::nonNullPtr() })
-			.awaitBreakpoint(base::StrID("main"), 1)
-			.evalExprNormal(set_through_ptr, { 99 })
-			.awaitBreakpoint(base::StrID("main"), 1)
-			.evalExprNormal(read_global, { 99 })
-			.awaitBreakpoint(base::StrID("main"), 1)
-			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
-	void test27RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_27/main.dbc"));
-		const fs::File ptr_to_local(path("runtime_expr_dbc/test_27/ptr_to_local.dbc"));
-		const fs::File load_local(path("runtime_expr_dbc/test_27/load_local.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 1)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 1)
-			.evalExprExpectValues(ptr_to_local, { vm::test::ExpectedValue::nonNullPtr() })
-			.awaitBreakpoint(base::StrID("main"), 1)
-			.evalExprExpectPanic(load_local, "Data was freed")
-			.cleanup();
-	}
-
 	/// An expression can return a struct value.
-	void test28RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_28/main.dbc"));
-		const fs::File make_pair(path("runtime_expr_dbc/test_28/make_pair.dbc"));
+	void test24RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_24/main.dbc"));
+		const fs::File make_pair(path("runtime_expr_dbc/test_24/make_pair.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 2)
@@ -915,9 +843,9 @@ private:
 			.cleanup();
 	}
 
-	void test29RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_29/main.dbc"));
-		const fs::File make_variant(path("runtime_expr_dbc/test_29/make_variant.dbc"));
+	void test25RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_25/main.dbc"));
+		const fs::File make_variant(path("runtime_expr_dbc/test_25/make_variant.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 2)
@@ -930,9 +858,9 @@ private:
 	}
 
 	/// An expression can return a table value.
-	void test30RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_30/main.dbc"));
-		const fs::File make_table(path("runtime_expr_dbc/test_30/make_table.dbc"));
+	void test26RuntimeExpr() {
+		const fs::File main_file(path("runtime_expr_dbc/test_26/main.dbc"));
+		const fs::File make_table(path("runtime_expr_dbc/test_26/make_table.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 2)
@@ -994,6 +922,72 @@ private:
 			"runtime_expr_dbc/invalid_exprs/frame_in_normal.dbc",
 			{ vm::code::FrameSpecifierWithoutRuntimeThread::ERR_MSG }
 		);
+	}
+
+	void testPointers() {
+		const fs::File main_file(path("runtime_expr_dbc/pointers/main.dbc"));
+		const fs::File ptr_to_main(path("runtime_expr_dbc/pointers/ptr_to_main.dbc"));
+		const fs::File ptr_to_global(path("runtime_expr_dbc/pointers/ptr_to_global.dbc"));
+		const fs::File ptr_to_local(path("runtime_expr_dbc/pointers/ptr_to_local.dbc"));
+		const fs::File set_through_ptr(path("runtime_expr_dbc/pointers/set_through_ptr.dbc"));
+		const fs::File read_global(path("runtime_expr_dbc/pointers/read_global.dbc"));
+		const fs::File load_local(path("runtime_expr_dbc/pointers/load_local.dbc"));
+		const fs::File freed(path("runtime_expr_dbc/pointers/freed.dbc"));
+		const fs::File leaky(path("runtime_expr_dbc/pointers/leaky.dbc"));
+
+		auto fresh_main = [&] { return createSimulator(main_file); };
+
+		fresh_main()
+			.putBreakpoint(base::StrID("main"), 5)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.enforceFrameVarValue(1, base::StrID("a"), 4)
+			.evalExprExpectValues(ptr_to_main, { vm::test::ExpectedValue::nonNullPtr() })
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.evalExprNormal(set_through_ptr, { 99 })
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.enforceFrameVarValue(1, base::StrID("a"), 99)
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+
+		fresh_main()
+			.putBreakpoint(base::StrID("main"), 5)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.evalExprExpectValues(ptr_to_global, { vm::test::ExpectedValue::nonNullPtr() })
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.evalExprNormal(set_through_ptr, { 99 })
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.evalExprNormal(read_global, { 99 })
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+
+		fresh_main()
+			.putBreakpoint(base::StrID("main"), 5)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.evalExprExpectValues(ptr_to_local, { vm::test::ExpectedValue::nonNullPtr() })
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.evalExprExpectPanic(load_local, "Data was freed")
+			.cleanup();
+
+		// 4) Heap allocation followed by an explicit `free`: the data is released (no leak).
+		fresh_main()
+			.putBreakpoint(base::StrID("main"), 5)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.evalExprNormal(freed, { 7 })
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+
+		// 5) Heap allocation without a `free`: the process panics on the leaked block.
+		fresh_main()
+			.putBreakpoint(base::StrID("main"), 5)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 5)
+			.evalExprExpectPanic(leaky, vm::exceptions::VMFoundMemoryLeakException::ERR_MSG)
+			.cleanup();
 	}
 };
 

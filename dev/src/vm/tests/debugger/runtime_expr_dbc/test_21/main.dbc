@@ -1,8 +1,13 @@
+type primitive: u64 8
+type primitive: my_64 8
+
 function main { i64, ptr_argv } -> { i64 } {
-	init_pany_type a, i64;
-	init_pany_type b, i64;
-	mov_p64_imm a, 4;
-	mov_p64_imm b, 2;
+	init_pany_type base, u64;
+	mov_p64_imm base, 4;
+
+	# (2) `base` is still `u64` here; (3) after the cast below it is `my_64`.
+	cast_p64_type base, my_64;
+
 	mov_p64_imm ret0, 2137;
 	ret;
 }

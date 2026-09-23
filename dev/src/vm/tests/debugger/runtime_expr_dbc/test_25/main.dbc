@@ -1,4 +1,5 @@
 type pointer: ptr_i64 i64
+type variant: Choice { i64, byte }
 
 function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type a, i64;

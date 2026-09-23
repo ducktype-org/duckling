@@ -1,9 +1,0 @@
-# Reads the pointer produced by the previous expression (`$ 0`) and writes through it.
-function set_through_ptr { } -> { i64 } {
-	init_pany_vmval p, $ 0;
-	init_pany_type v, i64;
-	mov_p64_imm v, 99;
-	store_pptr_pany p, v;
-	mov_p64_p64 ret0, v;
-	ret_from_expr;
-}
