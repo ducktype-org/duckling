@@ -220,7 +220,7 @@ namespace vm::loader::compiler::safe {
 			// it already exists.
 			using namespace code::instructions;
 			const auto opcode = instruction.opcode();
-			if (opcode == Op_init_pany_type::OPCODE || opcode == Op_initFromVMValue::OPCODE) {
+			if (opcode == Op_init_pany_type::OPCODE || opcode == Op_init_pany_vmval::OPCODE) {
 				CORE_ASSERT(
 					i + 1 < ctx.function.stack_states.size(),
 					"function can't end with the initialization instruction"

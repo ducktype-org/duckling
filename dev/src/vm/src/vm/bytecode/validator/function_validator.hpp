@@ -18,7 +18,7 @@ namespace vm::code::detail {
 
 	/**
 	 * @brief Validation mode for the synthetic `vm_start_function` wrappers. Behaves like `Expr`
-	 * (needs the live thread to resolve `initFromVMValue` arguments) but additionally allows
+	 * (needs the live thread to resolve `init_pany_vmval` arguments) but additionally allows
 	 * `exit` and starts the local stack at the base of the frame instead of the current stack.
 	 */
 	struct StartFunction {

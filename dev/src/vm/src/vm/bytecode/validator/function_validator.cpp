@@ -541,7 +541,7 @@ class FunctionValidator {
 					bool is_global       = globals.contains(place->var_name) && !from_prev_frame;
 					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
 					instr_match(instruction) {
-						instr_case_novalue(Op_init_pany_type, Op_initFromVMValue) {
+						instr_case_novalue(Op_init_pany_type, Op_init_pany_vmval) {
 							if (is_local || is_global) throw DuplicatedLocalNameError(*place);
 						}
 						variant_default {
@@ -1744,7 +1744,7 @@ class FunctionValidator {
 				if (src_table->inner != dst_table->inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_nop, Op_exit, Op_initFromVMValue) {}
+			instr_case_novalue(Op_nop, Op_exit, Op_init_pany_vmval) {}
 		}
 		POP_DIAGNOSTIC
 	}
@@ -1899,7 +1899,7 @@ class FunctionValidator {
 					local_stack.push(instr.var, instr.type);
 					index++;
 				}
-				instr_case(Op_initFromVMValue, instr) {
+				instr_case(Op_init_pany_vmval, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
 					auto& thr                 = *validationThread();
 					auto  name                = thr.getVMValue(&instr.vm_val)->getType()->getName();
@@ -2085,7 +2085,7 @@ class FunctionValidator {
 			variant_case_novalue(detail::Normal) {
 				throwOnForbiddenOpcode<
 					OpCode::Op_ret_from_expr,
-					OpCode::Op_initFromVMValue,
+					OpCode::Op_init_pany_vmval,
 					OpCode::Op_exit>(instr);
 			}
 			variant_default { CORE_UNREACHABLE(); }

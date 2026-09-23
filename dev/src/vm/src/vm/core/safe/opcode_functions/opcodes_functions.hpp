@@ -254,7 +254,7 @@ namespace vm {
 		 *
 		 * Unlike `init_off_type`, which leaves the slot blockless until something asks for a
 		 * block, this creates one up front. Nothing the lowering emits takes this path any more;
-		 * the only caller left is `initFromVMValue`, i.e. the hand-built start functions.
+		 * the only caller left is `init_pany_vmval`, i.e. the hand-built start functions.
 		 */
 		static VM_OPFUN_INLINE void performInit(
 			byte*& local_stack, Frame*& frame, SafeVMThread& thread, u64 byte_offset, TypeCRef type

@@ -48,6 +48,25 @@
 #include <utility>
 #include <vector>
 
+// helpers for building fat-bytecode
+namespace {
+	using namespace vm::opargs;
+	using namespace vm::code::builders;
+	using base::StrID;
+
+	auto any(auto&& arg) { return PlaceAny{ StrID(arg) }; }
+
+	auto getBuilder(vm::code::Function& start_function) {
+		return [&start_function](OpKind kind, auto&&... op_args) {
+			auto instr = InstructionBuilder{ kind, std::forward<decltype(op_args)>(op_args)... };
+			start_function.body.push_back(instr.build());
+		};
+	}
+
+	auto toAny(const auto& place) { return PlaceAny(place.var_name); }
+	auto imm(auto&& arg) { return Immediate{ static_cast<u64>(std::forward<decltype(arg)>(arg)) }; }
+};
+
 namespace vm {
 	namespace ts = thread_state;
 	namespace te = thread_event;
@@ -143,39 +162,36 @@ namespace vm {
 	code::Function SafeVMThread::createStartFunctionFor(
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
-		auto high_func = func.getHighFunc();
+		using namespace opargs;
+		using namespace std::views;
+		using enum code::builders::OpKind;
+		using base::StrID, base::strConcat;
+
+		auto high_func            = func.getHighFunc();
+		auto called_function_name = FunctionName{ func.getName() };
 
 		code::Function start_function;
-		start_function.name      = code::Identifier{ base::StrID("vm_start_function") };
+
+		start_function.name      = code::Identifier{ StrID("vm_start_function") };
 		start_function.signature = code::FuncSignature{ .result_types = {}, .parameters = {} };
 
-		for (auto [idx, result_type]: std::views::enumerate(high_func->signature.result_types)) {
-			auto slot_name = base::StrID(base::strConcat("ret_value", idx).c_str());
-			start_function.body.push_back(code::builders::makeInstructionFromArgs(
-				base::StrID("init_pany_type"),
-				{ opargs::OpCodeArg{ opargs::PlaceAny{ slot_name } },
-			      opargs::OpCodeArg{ opargs::Type{ base::StrID(result_type.str) } } }
-			));
+		auto add_instr = getBuilder(start_function);
+
+		for (auto [idx, result_type]: enumerate(high_func->signature.result_types)) {
+			auto slot_type = opargs::Type{ StrID(result_type.str) };
+			auto slot_name = any(strConcat("ret", idx).c_str());
+			add_instr(init, slot_name, slot_type);
 		}
 
-		for (auto [idx, arg_value]: std::views::enumerate(func_args)) {
-			opargs::VMValueIdentifier val_id;
-			val_id.id = arg_value.get();
-
-			auto arg_name = base::StrID(base::strConcat("arg", idx).c_str());
-			start_function.body.push_back(code::builders::makeInstructionFromArgs(
-				base::StrID("initFromVMValue"),
-				{ opargs::OpCodeArg{ opargs::PlaceAny{ arg_name } }, opargs::OpCodeArg{ val_id } }
-			));
+		for (auto [idx, arg_value]: enumerate(func_args)) {
+			VMValueIdentifier val_id;
+			val_id.id     = arg_value.get();
+			auto arg_name = any(strConcat("arg", idx).c_str());
+			add_instr(init, arg_name, val_id);
 		}
 
-		start_function.body.push_back(code::builders::makeInstructionFromArgs(
-			base::StrID("call_func"), { opargs::OpCodeArg{ opargs::FunctionName{ func.getName() } } }
-		));
-
-		start_function.body.push_back(
-			code::builders::makeInstructionFromArgs(base::StrID("exit"), {})
-		);
+		add_instr(call, called_function_name);
+		add_instr(exit);
 
 		return start_function;
 	}
@@ -191,120 +207,113 @@ namespace vm {
 	 *
 	 * Just like in libc, the start function pushes the program arguments on to the stack and
 	 * performs the call to main. After the main returns, it deinitializes the argv memory and
-	 * exits, leaving one block on the block stack, which contains the return value of the program.
+	 * exits, leaving one block on the block stack, which contains the return value of the
+	 * program.
 	 *
 	 * @note This is done in VMThread, since it depends on the arguments passed during the call
-	 * which may vary from call to call and creating a generic start function using builders in the
-	 * loading phase is not possible. This also results in the need to create the function in the
-	 * micro-bytecode right away.
+	 * which may vary from call to call and creating a generic start function using builders in
+	 * the loading phase is not possible. This also results in the need to create the function
+	 * in the micro-bytecode right away.
 	 */
 	code::Function SafeVMThread::createProgramStartFunction(
 		const low::LowFuncData& func, const ProgramRunArguments& args
 	) const {
+		using namespace code::builders;
+		using namespace opargs;
+		using enum code::builders::OpKind;
+		using base::StrID;
+
 		code::Function start_function;
-		start_function.name      = code::Identifier{ base::StrID("vm_start_function") };
+		start_function.name      = code::Identifier{ StrID("vm_start_function") };
 		start_function.signature = code::FuncSignature{ .result_types = {}, .parameters = {} };
 
-		auto emit = [&](std::string_view opcode, std::vector<opargs::OpCodeArg> op_args) {
-			start_function.body.push_back(
-				code::builders::makeInstructionFromArgs(base::StrID(opcode.data()), op_args)
-			);
-		};
-		auto any  = [](base::StrID n) { return opargs::OpCodeArg{ opargs::PlaceAny{ n } }; };
-		auto p8   = [](base::StrID n) { return opargs::OpCodeArg{ opargs::Place8{ n } }; };
-		auto p64  = [](base::StrID n) { return opargs::OpCodeArg{ opargs::Place64{ n } }; };
-		auto ptr  = [](base::StrID n) { return opargs::OpCodeArg{ opargs::PlacePtr{ n } }; };
-		auto imm  = [](u64 v) { return opargs::OpCodeArg{ opargs::Immediate{ v } }; };
-		auto type = [](std::string_view t) {
-			return opargs::OpCodeArg{ opargs::Type{ base::StrID(t.data()) } };
-		};
+		auto add_instr = getBuilder(start_function);
 
-		const auto ret_value      = base::StrID("ret_value");
-		const auto argv_internal  = base::StrID("argv_internal");
-		const auto argc_internal  = base::StrID("argc_internal");
-		const auto ix             = base::StrID("ix");
-		const auto ptr_tmp_store  = base::StrID("ptr_tmp_store");
-		const auto char_tmp_store = base::StrID("char_tmp_store");
-		const auto main_ret_val   = base::StrID("main_ret_val");
+		CORE_ASSERT(func.getName() == StrID("main"), "called function has to be main");
+		const auto main = FunctionName{ func.getName() };
+
+		const auto ret_value      = Place64{ StrID("ret_value") };
+		const auto argv_internal  = PlacePtr{ StrID("argv_internal") };
+		const auto argc_internal  = Place64{ StrID("argc_internal") };
+		const auto ix             = Place64{ StrID("ix") };
+		const auto ptr_tmp_store  = PlacePtr{ StrID("ptr_tmp_store") };
+		const auto char_tmp_store = Place8{ StrID("char_tmp_store") };
+		const auto main_ret_val   = Place64{ StrID("main_ret_val") };
+
+		const auto type_i64        = opargs::Type{ StrID("i64") };
+		const auto type_ptr_argv   = opargs::Type{ StrID("ptr_argv") };
+		const auto type_argv       = opargs::Type{ StrID("argv") };
+		const auto type_ptr_string = opargs::Type{ StrID("ptr_string") };
+		const auto type_byte       = opargs::Type{ StrID("byte") };
+		const auto type_string     = opargs::Type{ StrID("string") };
 
 		const bool main_has_args = !func.getParameters().empty();
 
 		// Initialize the argc/argv bookkeeping. It is always materialized, so that the offsets
 		// do not depend on whether `main` takes arguments.
-		emit("init_pany_type", { any(ret_value), type("i64") });
-		emit("init_pany_type", { any(argv_internal), type("ptr_argv") });
-		emit("init_pany_type", { any(argc_internal), type("i64") });
-		emit("init_pany_type", { any(ix), type("i64") });
-		emit("mov_p64_imm", { p64(argc_internal), imm(args.size()) });
-		emit(
-			"dynTableReAlloc_pptr_type_p64", { ptr(argv_internal), type("argv"), p64(argc_internal) }
-		);
+		add_instr(init, toAny(ret_value), type_i64);
+		add_instr(init, toAny(argv_internal), type_ptr_argv);
+		add_instr(init, toAny(argc_internal), type_i64);
+		add_instr(init, toAny(ix), type_i64);
+		add_instr(mov, argc_internal, imm(args.size()));
+		add_instr(dynTableReAlloc, argv_internal, type_argv, argc_internal);
 
 		// Now fill in the argv table.
 		if (main_has_args) {
-			for (const auto& [argv_index, arg]:
-			     std::views::zip(std::ranges::views::iota(0u), args)) {
-				emit("init_pany_type", { any(ptr_tmp_store), type("ptr_string") });
-				emit("init_pany_type", { any(char_tmp_store), type("byte") });
+			using namespace std::views;
+			for (const auto& [argv_index, arg]: zip(iota(0u), args)) {
+				add_instr(init, toAny(ptr_tmp_store), type_ptr_string);
+				add_instr(init, toAny(char_tmp_store), type_byte);
+
 				// `arg.size() + 1` accounts for the terminating `\0`.
-				emit("mov_p64_imm", { p64(argc_internal), imm(arg.size() + 1) });
-				emit(
-					"dynTableReAlloc_pptr_type_p64",
-					{ ptr(ptr_tmp_store), type("string"), p64(argc_internal) }
-				);
-				emit("mov_p64_imm", { p64(ix), imm(0) });
+				add_instr(mov, argc_internal, imm(arg.size() + 1));
+				add_instr(dynTableReAlloc, ptr_tmp_store, type_string, argc_internal);
+				add_instr(mov, ix, imm(0));
+
 				for (auto c: arg) {
-					emit("mov_p8_imm", { p8(char_tmp_store), imm(static_cast<u64>(c)) });
-					emit(
-						"dynTableStore_pptr_pany_p64",
-						{ ptr(ptr_tmp_store), any(char_tmp_store), p64(ix) }
-					);
-					emit("add_p64_imm", { p64(ix), imm(1) });
+					add_instr(mov, char_tmp_store, imm(c));
+					add_instr(dynTableStore, ptr_tmp_store, toAny(char_tmp_store), ix);
+					add_instr(add, ix, imm(1));
 				}
+
 				// At this point `ix == arg.size()` - store the terminating `\0`.
-				emit("mov_p8_imm", { p8(char_tmp_store), imm(0) });
-				emit(
-					"dynTableStore_pptr_pany_p64",
-					{ ptr(ptr_tmp_store), any(char_tmp_store), p64(ix) }
-				);
-				emit("mov_p64_imm", { p64(ix), imm(argv_index) });
-				emit(
-					"dynTableStore_pptr_pany_p64",
-					{ ptr(argv_internal), any(ptr_tmp_store), p64(ix) }
-				);
-				emit("deinit", {});
-				emit("deinit", {});
+				add_instr(mov, char_tmp_store, imm(0));
+				add_instr(dynTableStore, ptr_tmp_store, toAny(char_tmp_store), ix);
+				add_instr(mov, ix, imm(argv_index));
+				add_instr(dynTableStore, argv_internal, toAny(ptr_tmp_store), ix);
+				add_instr(deinit);
+				add_instr(deinit);
 			}
 		}
 
 		// Now actually prepare to call 'main'. Its return value is the first shared slot.
-		emit("init_pany_type", { any(main_ret_val), type("i64") });
+		add_instr(init, toAny(main_ret_val), type_i64);
 		if (main_has_args) {
-			const auto argc = base::StrID("argc");
-			const auto argv = base::StrID("argv");
-			emit("init_pany_type", { any(argc), type("i64") });
-			emit("init_pany_type", { any(argv), type("ptr_argv") });
-			emit("mov_p64_imm", { p64(argc), imm(args.size()) });
-			emit("mov_pptr_pptr", { ptr(argv), ptr(argv_internal) });
+			const auto argc = Place64{ StrID("argc") };
+			const auto argv = PlacePtr{ StrID("argv") };
+			add_instr(init, toAny(argc), type_i64);
+			add_instr(init, toAny(argv), type_ptr_argv);
+			add_instr(mov, argc, imm(args.size()));
+			add_instr(mov, argv, argv_internal);
 		}
 
-		emit("call_func", { opargs::OpCodeArg{ opargs::FunctionName{ func.getName() } } });
-		emit("mov_p64_p64", { p64(ret_value), p64(main_ret_val) });
-		emit("mov_p64_imm", { p64(ix), imm(0) });
-		emit("init_pany_type", { any(ptr_tmp_store), type("ptr_string") });
+		add_instr(call, main);
+		add_instr(mov, ret_value, main_ret_val);
+		add_instr(mov, ix, imm(0));
+		add_instr(init, toAny(ptr_tmp_store), type_ptr_string);
 
 		// After 'main' returned, free all the allocated strings in the argv table.
 		for ([[maybe_unused]] const auto& arg: args) {
-			emit("dynTableLoad_pany_pptr_p64", { any(ptr_tmp_store), ptr(argv_internal), p64(ix) });
-			emit("free_pptr", { ptr(ptr_tmp_store) });
-			emit("add_p64_imm", { p64(ix), imm(1) });
+			add_instr(dynTableLoad, toAny(ptr_tmp_store), argv_internal, ix);
+			add_instr(free, ptr_tmp_store);
+			add_instr(add, ix, imm(1));
 		}
 
-		// Lastly, free all the data allocated by the start function and pop the remaining locals,
-		// leaving only the program's return value on the stack.
-		emit("free_pptr", { ptr(argv_internal) });
-		for (usize i = 0; i < 5; i++) emit("deinit", {});
-		emit("exit", {});
+		// Lastly, free all the data allocated by the start function and pop the remaining
+		// locals, leaving only the program's return value on the stack.
+		add_instr(free, argv_internal);
+		for (usize i = 0; i < 5; i++) add_instr(deinit);
+		add_instr(exit);
 
 		return start_function;
 	}
@@ -403,8 +412,8 @@ namespace vm {
 
 		const auto* instr = start_function_low->getBc().data();
 
-		// Make sure the frame will be moved back after the interpreter runs. Even if it throws a
-		// `KillProcessException` so the state stays valid.
+		// Make sure the frame will be moved back after the interpreter runs. Even if it throws
+		// a `KillProcessException` so the state stays valid.
 		defer({
 			*orig_frame_ptr                  = orig_frame_cpy;
 			runtime_data.frame_stack_current = orig_frame_ptr;
@@ -517,8 +526,8 @@ namespace vm {
 	void SafeVMThread::execGlobalDestructors() {
 		const auto& executing_program = process_program;
 		auto        globals           = executing_program->getGlobals().allData();
-		// Destructors should run in reverse order of construction so that any object depending on
-		// earlier-created resources is destroyed first, preventing use-after-destruction and
+		// Destructors should run in reverse order of construction so that any object depending
+		// on earlier-created resources is destroyed first, preventing use-after-destruction and
 		// keeping teardown safe and logically consistent.
 		for (const auto& [global, id, name]: std::ranges::reverse_view(globals)) {
 			auto* ctor_dtor = std::get_if<low::GlobalCtorDtor>(&global->init);

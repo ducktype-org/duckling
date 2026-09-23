@@ -120,7 +120,7 @@ namespace vm::low::opargs {
 	 */
 	DEFINE_MICRO_ARG_TYPE(Offset, "off", u64);
 	/**
-	 * @brief Identifies the VM value an `initFromVMValue` reads from: either the id of a
+	 * @brief Identifies the VM value an `init_pany_vmval` reads from: either the id of a
 	 * process-registered value, or a direct `IVMValue*`.
 	 */
 	DEFINE_MICRO_ARG_TYPE(VMValPtr, "vm_val_ptr", vm::opargs::VMValueIdentifier);

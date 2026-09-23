@@ -770,7 +770,7 @@ DEF_INSTR(exit)
  * @arg0 - the place to store the value in.
  * @arg1 - identifier of the VMValue to read the value from.
  */
-DEF_INSTR(initFromVMValue, (vm::opargs::PlaceAny, var), (vm::opargs::VMValueIdentifier, vm_val))
+DEF_INSTR(init_pany_vmval, (vm::opargs::PlaceAny, var), (vm::opargs::VMValueIdentifier, vm_val))
 
 #ifdef DEFAULT_HANDLE_INSTR
 #undef DEFAULT_HANDLE_INSTR

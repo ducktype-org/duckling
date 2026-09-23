@@ -52,7 +52,7 @@ namespace vm::opargs {
 	};
 
 	struct VMValueIdentifier final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "vm_val";
+		static constexpr std::string_view OP_SHORT = "vmval";
 
 		VMValueIdentifier() = default;
 
