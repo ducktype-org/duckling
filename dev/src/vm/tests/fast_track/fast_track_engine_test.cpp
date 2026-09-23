@@ -1,3 +1,4 @@
+#include <base/except/exceptions.hpp>
 #include <base/types/ints.hpp>
 
 #include <tester/tester.hpp>
@@ -270,6 +271,14 @@ public:
 		ASSERT_TRUE(Epoch().tid().isBad());
 		ASSERT_EQUAL(Epoch::Clock(0), Epoch().clock());
 		ASSERT_TRUE(Epoch(ThreadID::bad(), 0) == Epoch());
+
+#if defined(BUILD_TYPE_DEV)
+		// The good ID that would pack as the bad one is refused, not silently turned into it.
+		assertThrows<base::Panic>(
+			[] { (void) Epoch(ThreadID{ Epoch::MAX_TID + 1 }, 0); },
+			"An ID past MAX_TID was packed into an epoch"
+		);
+#endif
 	}
 
 	// ---- ShadowEntry ----

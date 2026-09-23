@@ -87,12 +87,11 @@ namespace vm {
 		static constexpr u64 BAD_TID_BITS = (u64(1) << TID_BITS) - 1;
 
 		static constexpr u64 pack(api::ThreadID tid, Clock clock) {
-			// `api::ThreadID{}` is the bad ID; `api::ThreadID::bad()` is not constexpr.
-			const u64 tid_bits
-				= tid.asInt() == api::ThreadID{}.asInt() ? BAD_TID_BITS : tid.asInt();
-			CORE_ASSERT(
-				tid_bits <= MAX_TID || tid_bits == BAD_TID_BITS, "Thread ID does not fit in an epoch"
-			);
+			// `api::ThreadID{}` is the bad ID; `api::ThreadID::bad()` is not constexpr. The check
+			// looks at the ID itself: the good ID `2^TID_BITS - 1` would pack as the bad one.
+			const bool is_bad = tid.asInt() == api::ThreadID{}.asInt();
+			CORE_ASSERT(is_bad || tid.asInt() <= MAX_TID, "Thread ID does not fit in an epoch");
+			const u64 tid_bits = is_bad ? BAD_TID_BITS : tid.asInt();
 			CORE_ASSERT(clock <= MAX_CLOCK, "Clock does not fit in an epoch");
 			return (tid_bits << CLOCK_BITS) | clock;
 		}

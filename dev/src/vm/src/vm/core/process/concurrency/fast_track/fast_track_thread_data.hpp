@@ -108,6 +108,12 @@ namespace vm {
 		 * slot before, so its own component is the last clock handed out for the ID; a new thread
 		 * starting at or below it would have its accesses ordered before accesses that only
 		 * happened-after the old thread's, and a real race would go unreported.
+		 *
+		 * @warning One clock component cannot stand for two threads: starting past the old
+		 * thread's clock makes every access of the old thread look ordered before the new one.
+		 * That is sound only when the spawner has synchronized with the slot's previous thread
+		 * (`parent_vc[my_tid]` is that thread's last clock, e.g. the spawner joined it). Whoever
+		 * hands out thread IDs has to guarantee it, or give each spawn a fresh ID.
 		 */
 		void forkVC(const VectorClock& parent_vc, api::ThreadID my_tid) {
 			const Epoch::Clock previous_own = vc[my_tid];
