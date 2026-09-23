@@ -57,17 +57,6 @@ namespace compiler::helios::desugaring {
 			Box<code::Expr>       result;
 			dia::StablePosition   position;
 		};
-
-		/**
-		 * @brief Whether a case result never produces a value.
-		 *
-		 * Such a result has type `void`, which is uninhabited: control never reaches the point
-		 * where the value would exist. It therefore fits wherever a value is expected, and in
-		 * particular it agrees with whatever type the remaining cases carry.
-		 */
-		bool divergesToVoid(const tsh::SymbolType<>& type) {
-			return type.getType().getKind() == tsh::Kind::Void;
-		}
 	}
 
 	query::QResult<Box<code::Expr>> desugarMatch(
@@ -214,7 +203,7 @@ namespace compiler::helios::desugaring {
 			// A case that never produces a value is an exception: it carries no type of its own,
 			// so it is left out of the vote and coerced to whatever the others settle on.
 			const auto result_type = result->expression_type.getSymbolType();
-			if (!divergesToVoid(result_type)) {
+			if (result_type.getType().getKind() != tsh::Kind::Void) {
 				if (!common_type.has_value()) common_type = result_type;
 				if (common_type.value() != result_type) {
 					ctx.logInt(makeBox<dia::PlaceholderError>(
@@ -252,8 +241,7 @@ namespace compiler::helios::desugaring {
 		}
 
 		// Every case returns void, so the match itself never produces a value either.
-		if (!common_type.has_value() && !lowered_cases.empty())
-			common_type = lowered_cases.front().result->expression_type.getSymbolType();
+		if (common_type.empty()) common_type = tsh::SymbolType<>::withDefaults(tsh::getVoidType());
 
 		// The cases that never produce a value (`void`) are coerced to the type the others
 		// agreed on. Type `void` is uninhabited, so the coercion only reconciles the types:
@@ -265,7 +253,7 @@ namespace compiler::helios::desugaring {
 			if (result->expression_type.getSymbolType() != common_type.value()) {
 				auto coerced
 					= coerceFromBox(ctx, std::move(result), common_type.value(), lowered.position);
-				if (coerced.empty()) return query::Failed();
+				CORE_ASSERT(coerced.has_value(), "Coercion from void should always succeed.");
 				result = std::move(coerced.value());
 			}
 

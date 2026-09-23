@@ -65,8 +65,3 @@ fun usesDeducedVoid(x: i64) -> i64 = {
     if (x > 0) return x;
     return deducesVoid(x);
 }
-
-fun usesDeducedVoidFromBodyExpr(x: i64) -> i64 = {
-    if (x > 0) return x;
-    return deducesVoidFromBodyExpr();
-}

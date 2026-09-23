@@ -51,7 +51,7 @@ namespace compiler::helios {
 	namespace {
 		/**
 		 * @brief Whether every path through @p stmts ends in a `return`.
-		 * Uses EveryPathReturnsVisitor for what this does and does not recognise.
+		 * See EveryPathReturnsVisitor for what this does and does not recognise.
 		 */
 		template<class Stmts>
 		bool everyPathReturns(query::Context& ctx, const Stmts& stmts);
@@ -264,8 +264,10 @@ namespace compiler::helios {
 			auto                fun = stmt(ctx, key).value();
 			fun->acceptVisitor(return_collector);
 
-			// First, we check if the function never returns, i.e. it always returns `void` (which
-			// cannot actually happen) and there is no path to the end of the function's body.
+			// First, we check if the function never returns, i.e. it always returns `void`
+			// and there is no path to the end of the function's body.
+			// Note: returning `void` does not *actually* ever happen, because creating
+			// a `void` value is not possible. However, the typesystem handles it well.
 			const bool never_returns = !return_collector.out.empty()
 			                        && return_collector.body_always_returns
 			                        && std::ranges::all_of(return_collector.out, isVoid);

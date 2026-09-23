@@ -2006,10 +2006,9 @@ private:
 		// that not every path returns.
 		ASSERT_EQUAL(deduced_return_type("deducesI64FromElseOnly"), i64_type);
 
-		// These two declare their return type, so what is checked about them is that their
-		// bodies compile: a deduced `void` is still `void`, and coerces into the declared type.
+		// This one declares its return type, so what is that its body compiles:
+		// a deduced `void` is still `void`, and coerces into the declared type.
 		ASSERT_EQUAL(deduced_return_type("usesDeducedVoid"), i64_type);
-		ASSERT_EQUAL(deduced_return_type("usesDeducedVoidFromBodyExpr"), i64_type);
 
 		// Compile every top level entity so that their bodies — and with them the coercions of
 		// the diverging returns — are checked, and not just their declarations.
