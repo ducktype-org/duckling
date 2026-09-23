@@ -17,6 +17,7 @@
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#include <limits>
 #include <variant>
 
 namespace vm::loader::compiler::safe {
@@ -89,13 +90,15 @@ namespace vm::low {
 			return name;
 		}
 
+		static constexpr usize NO_FUNCTION_ID = std::numeric_limits<usize>::max();
+
 		[[nodiscard]]
 		usize getId() const {
 			return id;
 		}
 
 		[[nodiscard]]
-		MCRef<vm::code::valid_function::ValidFunction> getHighFunc() const {
+		CRef<vm::code::valid_function::ValidFunction> getHighFunc() const {
 			return high_func;
 		}
 

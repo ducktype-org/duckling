@@ -21,8 +21,6 @@
 #include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/loader/bytecode_pos.hpp>
 
-#include <limits>
-#include <mutex>
 #include <utility>
 
 #ifdef ENABLE_JIT
@@ -134,14 +132,6 @@ namespace vm {
 		 * @brief True if a thread currently occupies GIL.
 		 */
 		bool has_gil = false;
-
-		/**
-		 * @brief Mock ID of the VM program start function.
-		 * This has to be declared explicitly because the start function object is never
-		 * inserted into the `functions` collection, so it doesn't have a real ID; this ID should
-		 * never be assigned to a real function.
-		 */
-		static constexpr usize START_FUNCTION_ID = std::numeric_limits<usize>::max();
 
 		/**
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
@@ -328,7 +318,7 @@ namespace vm {
 		 */
 		std::expected<void, std::string> setBreakpointAtFrame(
 			usize frame_idx, usize idx, bool enable
-		) const;
+		);
 
 		[[nodiscard]]
 		CRef<IVMValue> getVMValue(CRef<opargs::VMValueIdentifier> vm_val) const;

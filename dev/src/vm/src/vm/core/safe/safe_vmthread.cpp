@@ -144,7 +144,6 @@ namespace vm {
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
 		auto high_func = func.getHighFunc();
-		CORE_ASSERT(high_func, "the start function can only wrap a compiled high-level function");
 
 		code::Function start_function;
 		start_function.name      = code::Identifier{ base::StrID("vm_start_function") };
@@ -184,7 +183,6 @@ namespace vm {
 	void SafeVMThread::compileAndLoadStartFunction(const code::Function& start_function) {
 		start_function_high.emplace(safe_process.validateStartFunction(this, start_function));
 		start_function_low.emplace(safe_process.compileToLow(this, *start_function_high));
-		start_function_low->id = START_FUNCTION_ID;
 	}
 
 	/**
@@ -203,9 +201,6 @@ namespace vm {
 	code::Function SafeVMThread::createProgramStartFunction(
 		const low::LowFuncData& func, const ProgramRunArguments& args
 	) const {
-		auto high_func = func.getHighFunc();
-		CORE_ASSERT(high_func, "the program start function can only wrap a high-level `main`");
-
 		code::Function start_function;
 		start_function.name      = code::Identifier{ base::StrID("vm_start_function") };
 		start_function.signature = code::FuncSignature{ .result_types = {}, .parameters = {} };
@@ -389,7 +384,7 @@ namespace vm {
 		CORE_ASSERT(start_function_low.has_value(), "No start function is loaded");
 		CORE_ASSERT(start_function_high.has_value(), "No start function is loaded");
 		CORE_ASSERT(
-			start_function_low->high_func.get() == &*start_function_high,
+			start_function_low->getHighFunc().get() == &*start_function_high,
 			"High function is not a source for low function"
 		);
 
@@ -621,7 +616,7 @@ namespace vm {
 	void SafeVMThread::setThreadCtx(std::string str) { thread_ctx = std::move(str); }
 
 	bool SafeVMThread::isCallableFunctionID(usize id) {
-		return id != SafeVMThread::START_FUNCTION_ID;
+		return id != low::LowFuncData::NO_FUNCTION_ID;
 	}
 
 	u64 SafeVMThread::getNumberOfCurrentStackFrames() const {
@@ -780,7 +775,7 @@ namespace vm {
 
 	std::expected<void, std::string> SafeVMThread::setBreakpointAtFrame(
 		usize frame_idx, usize idx, bool enable
-	) const {
+	) {
 		if (!v_matches(getThreadState(), vm::thread_state::Paused))
 			return std::unexpected{ "error: breakpoint can be set only when thread is paused" };
 		if (frame_idx >= getNumberOfCurrentStackFrames())
@@ -788,7 +783,7 @@ namespace vm {
 
 		auto func_ref = runtime_data.frame_stack_base[frame_idx].current_function;
 		CORE_ASSERT(
-			func_ref, "When we access the stack frame it has to yield non-nulL function ref"
+			func_ref, "When we access the stack frame it has to yield non-null function ref"
 		);
 
 		auto& func = const_cast<low::LowFuncData&>(*func_ref);  // NOLINT
@@ -825,6 +820,6 @@ namespace vm {
 		if (frame_idx >= getNumberOfCurrentStackFrames()) return std::nullopt;
 
 		auto& frame = getStackFrame(frame_idx);
-		return frame.current_function->getHighFunc().toOpt();
+		return frame.current_function->getHighFunc();
 	}
 }
