@@ -525,7 +525,12 @@ private:
 			.evalExprExpectTimeout(spin_expr)
 			.pause()
 			.evalExprNormal(break_loop_expr, { 1 })
-			.assertStillPaused()
+			.sleep(20)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("spin"), std::nullopt },
+			})
 			.resume()
 			.awaitExprCompletion({ 0 })
 			.awaitBreakpoint(base::StrID("main"), 4)
@@ -786,6 +791,7 @@ private:
 			.resume()
 			.awaitBreakpoint(base::StrID("main"), 3)
 			.evalExprNormal(read_base_expr, { 7 })
+			.awaitBreakpoint(base::StrID("main"), 3)
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
 	}
@@ -818,7 +824,7 @@ private:
 			.step()
 			.step()
 			.evalExprNormal(expr, { 4, 2 })
-			.assertStillPaused()
+			.awaitBreakpoint(base::StrID("main"), 6)
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
 	}
@@ -1004,6 +1010,7 @@ private:
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 5)
 			.evalExprNormal(freed, { 7 })
+			.awaitBreakpoint(base::StrID("main"), 5)
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
 

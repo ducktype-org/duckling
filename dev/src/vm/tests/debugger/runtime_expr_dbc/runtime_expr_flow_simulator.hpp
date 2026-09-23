@@ -61,7 +61,7 @@ namespace vm::test {
 		std::variant<Primitive, Ptr, Struct, Variant, Table> value;
 
 	public:
-		ExpectedValue(Primitive expected): value(std::move(expected)) {}
+		ExpectedValue(Primitive expected): value(expected) {}
 
 		ExpectedValue(Ptr expected): value(std::move(expected)) {}
 
@@ -86,10 +86,18 @@ namespace vm::test {
 		}
 
 		static ExpectedValue variant(u64 type_tag, ExpectedValue inner) {
-			return Variant{ type_tag, std::make_shared<ExpectedValue>(std::move(inner)) };
+			return Variant{
+				.type_tag = type_tag,
+				.inner    = std::make_shared<ExpectedValue>(std::move(inner)),
+			};
 		}
 
-		static ExpectedValue variant(u64 type_tag) { return Variant{ type_tag, nullptr }; }
+		static ExpectedValue variant(u64 type_tag) {
+			return Variant{
+				.type_tag = type_tag,
+				.inner    = nullptr,
+			};
+		}
 
 		static ExpectedValue table(std::vector<ExpectedValue> elements) {
 			return Table{ std::move(elements) };
@@ -571,22 +579,6 @@ namespace vm::test {
 
 		FlowSimulator& sleep(u64 milliseconds) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
-			return *this;
-		}
-
-		FlowSimulator& assertStillPaused() {
-			auto status = vm::api::getExecutionStatus(pid);
-			if (!status)
-				assertTrue(
-					false,
-					base::strConcat(
-						"Failed to read the execution status: ",
-						vm::api::errorToString(status.error())
-					)
-				);
-			assertTrue(
-				v_matches(status.value(), vm::api::Paused), "Expected the process to still be paused"
-			);
 			return *this;
 		}
 
