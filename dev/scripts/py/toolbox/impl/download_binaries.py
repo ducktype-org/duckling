@@ -15,17 +15,6 @@ from .internet_file import (
 
 CCACHE_VERSION = "4.9.1"
 
-"""
-The upstream release asset for each platform we can build on, keyed by
-(platform.system(), platform.machine()).
-macOS ships one universal asset, hence the two entries pointing at it.
-"""
-CCACHE_ASSETS: dict[tuple[str, str], str] = {
-    ("Linux", "x86_64"): f"ccache-{CCACHE_VERSION}-linux-x86_64.tar.xz",
-    ("Darwin", "arm64"): f"ccache-{CCACHE_VERSION}-darwin.tar.gz",
-    ("Darwin", "x86_64"): f"ccache-{CCACHE_VERSION}-darwin.tar.gz",
-}
-
 
 def ccache_file() -> InternetFile | None:
     """
@@ -33,7 +22,16 @@ def ccache_file() -> InternetFile | None:
     upstream publishes no binary for it (Linux aarch64, for instance) -- in
     which case ccache has to come from the system package manager.
     """
-    asset = CCACHE_ASSETS.get((platform.system(), platform.machine()))
+    # The upstream release asset for each platform we can build on, keyed by
+    # (platform.system(), platform.machine()).
+    # macOS ships one universal asset, hence the two entries pointing at it.
+    assets: dict[tuple[str, str], str] = {
+        ("Linux", "x86_64"): f"ccache-{CCACHE_VERSION}-linux-x86_64.tar.xz",
+        ("Darwin", "arm64"): f"ccache-{CCACHE_VERSION}-darwin.tar.gz",
+        ("Darwin", "x86_64"): f"ccache-{CCACHE_VERSION}-darwin.tar.gz",
+    }
+
+    asset = assets.get((platform.system(), platform.machine()))
     if asset is None:
         return None
 
@@ -63,9 +61,9 @@ def download_binaries_impl(force=False, single=False):
 
     if not FILES_TO_DOWNLOAD:
         log_warning(
-            f"No prebuilt binaries are published for {platform.system()} "
-            f"{platform.machine()}; install them from your package manager instead "
-            "(the build finds ccache on PATH). Nothing to download."
+            f"No prebuilt ccache binary is published for {platform.system()} "
+            f"{platform.machine()}; install ccache from your package manager "
+            "instead (the build finds it on PATH). Nothing to download."
         )
         return
 

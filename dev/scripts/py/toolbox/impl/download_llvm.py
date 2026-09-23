@@ -11,11 +11,7 @@ from .internet_file import (
 )
 
 
-def download_llvm_impl(llvm_version, os, arch, confirm=True):
-    if not confirm:
-        log_info("Download cancelled.")
-        return
-
+def download_llvm_impl(llvm_version, os, arch):
     log_info("==========================")
     log_warning(
         "Downloading LLVM may or may not work, depending on a presence of compiled binaries listed here: https://github.com/llvm/llvm-project/releases/"
