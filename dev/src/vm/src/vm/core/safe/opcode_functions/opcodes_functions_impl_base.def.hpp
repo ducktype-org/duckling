@@ -1218,7 +1218,10 @@ namespace vm {
 				// It might be desired to switch to second approach in the future, depending on the
 				// semantics of Duckling arrays.
 				if (!tbl_pointer.isNull()) {
-					thread.process_memory.guardedDynTableFreeBlockData(tbl_pointer);
+					if (Memory::getBlockType(tbl_pointer.getBlock())->getKind()
+					    != Type::Kind::DynamicTable)
+						throw exceptions::VMDynTableReAllocTypeMismatch();
+					thread.process_memory.guardedFreeBlockData(tbl_pointer);
 					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 						tbl_pointer, Pointer::null()
 					);

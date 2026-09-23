@@ -583,15 +583,6 @@ namespace vm {
 		}
 
 		/**
-		 * @brief `guardedFreeBlockData` for the dynamic table a pointer points at.
-		 */
-		void guardedDynTableFreeBlockData(Pointer pointer) requires std::is_same_v<EntryT, byte> {
-			if (getBlockType(pointer.getBlock())->getKind() != Type::Kind::DynamicTable)
-				throw exceptions::VMDynTableReAllocTypeMismatch();
-			guardedFreeBlockData(pointer);
-		}
-
-		/**
 		 * @brief Frees the block's data and its children. A child block also drops the reference
 		 * its parent held, which may delete it; a root block stays in the pool until its refcount
 		 * hits 0.
