@@ -1,0 +1,105 @@
+name: Setup macOS build environment
+description: >
+  Points the build at what the mac mini already has.
+  Nothing to install.
+
+inputs:
+  dev-dir:
+    description: Absolute path of the repository's dev/ directory.
+    required: true
+  ccache-dir:
+    description: >
+      Where the workflow expects the ccache directory. Replaced with a symlink to the machine's
+      shared cache, because ConfigureCCache.cmake hardcodes this path into the compiler launcher.
+    required: true
+  shared-dir:
+    description: Directory on the machine holding the caches that outlive a job.
+    required: false
+    default: /Users/Shared/duckling-ci
+
+runs:
+  using: composite
+  steps:
+    # Everything below points at things the mac is expected to already have. Checked here.
+    - name: Check the machine's toolchain
+      shell: bash
+      run: |
+        # The macOS runner is an Apple Silicon, so Homebrew's prefix is /opt/homebrew.
+        # setup-build-matrix.py hardcodes that same prefix into the matrix's compiler paths, so an
+        # Intel mac (prefix /usr/local) is not a supported runner - said plainly here, because
+        # otherwise a missing brew leaves HOMEBREW_PREFIX empty and the loop below complains about
+        # paths like "/opt/llvm@19" instead.
+        brew=/opt/homebrew/bin/brew
+        if [ ! -x "$brew" ]; then
+          echo "::error::$brew not found - the macOS runner must be an Apple Silicon mac with Homebrew"
+          exit 1
+        fi
+        eval "$("$brew" shellenv)"
+        # llvm@23 is checked even though nothing here points at it: setup-build-matrix.py
+        # hardcodes its compiler paths straight into the matrix.
+        for p in "$HOMEBREW_PREFIX/opt/llvm@19" "$HOMEBREW_PREFIX/opt/llvm@23" \
+                 "$HOMEBREW_PREFIX/opt/icu4c" "$HOMEBREW_PREFIX/bin/ccache" \
+                 "$HOMEBREW_PREFIX/bin/ld64.lld"; do
+          if [ ! -e "$p" ]; then
+            echo "::error::missing $p - install it on the runner with brew"
+            exit 1
+          fi
+        done
+
+    # The choices follow dev/docs/developer-guides/building-the-repo.md, "MacOS (clang)"
+    # Homebrew goes on the FRONT of PATH deliberately this ensures that python resolves
+    # to the correct version.
+    - name: Setup toolchain
+      shell: bash
+      run: |
+        # add brew to path (HOMEBREW_PREFIX)
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+        echo "CMAKE_PREFIX_PATH=$HOMEBREW_PREFIX/opt/llvm@19" >> "$GITHUB_ENV"
+        # The ICU bundled with the macOS SDK is a C-only subset, so CMake must be pointed at
+        # the Homebrew one.
+        echo "ICU_ROOT=$HOMEBREW_PREFIX/opt/icu4c" >> "$GITHUB_ENV"
+        echo "$HOMEBREW_PREFIX/bin" >> "$GITHUB_PATH"
+
+    # On mac the caches are kept on the machine, not in the workspace. This is a symlink to the machine's
+    # shared cache, because ConfigureCCache.cmake hardcodes the path into the compiler launcher.
+    - name: Point caches at local storage
+      shell: bash
+      run: |
+        shared='${{ inputs.shared-dir }}'
+        mkdir -p "$shared/ccache"
+        # replace the workspace's ccache dir with a link to the shared one
+        ln -sfn "$shared/ccache" '${{ inputs.ccache-dir }}'
+        # group-writable, so the other runner account can update entries this one wrote.
+        echo "CCACHE_UMASK=002" >> "$GITHUB_ENV"
+        # paths under the workspace are hashed relative to it, so a different checkout path still hits
+        echo "CCACHE_BASEDIR=${{ github.workspace }}" >> "$GITHUB_ENV"
+        # keep the compiler's absolute CWD out of the hash (it is hashed for -g builds), so a
+        # workspace checked out at a different path still hits
+        echo "CCACHE_NOHASHDIR=1" >> "$GITHUB_ENV"
+
+    # install the python venv, so that the build can run the python scripts it needs
+    - name: Bootstrap python venv
+      shell: bash
+      working-directory: ${{ inputs.dev-dir }}
+      run: |
+        venv="$HOME/duckling-ci/venv"
+        stamp="$HOME/duckling-ci/venv.requirements.sha256"
+        want=$(shasum -a 256 requirements.txt | cut -d' ' -f1)
+
+        if [ ! -x "$venv/bin/python3" ] || [ "$(cat "$stamp" 2>/dev/null)" != "$want" ]; then
+          echo "building the venv: missing, or requirements.txt changed"
+          rm -rf "$venv"
+          mkdir -p "$(dirname "$venv")"
+          base_python=$(command -v python3.14 || command -v python3.13 || command -v python3.12)
+          "$base_python" -m venv "$venv"
+          "$venv/bin/python3" -m pip install --quiet --upgrade pip
+          "$venv/bin/python3" -m pip install --quiet -r requirements.txt
+          # Written only after the install succeeds, so a failed run rebuilds next time instead
+          # of being remembered as good.
+          printf '%s' "$want" > "$stamp"
+        else
+          echo "reusing the venv at $venv"
+        fi
+
+        ln -sfn "$venv" .venv
+        echo "$venv/bin" >> "$GITHUB_PATH"

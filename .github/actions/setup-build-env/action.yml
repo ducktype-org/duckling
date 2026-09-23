@@ -1,0 +1,77 @@
+name: Setup build environment
+description: >
+  Prepares the C++ build for the platform the job runs on, by picking the per-platform action
+  below. Workflows call this one and stay platform-agnostic: a new platform is added here, not
+  in every `if:` of every job.
+
+inputs:
+  platform:
+    description: Platform from the build matrix - "linux" or "macos".
+    required: true
+  cc:
+    description: C compiler from the build matrix; also the apt package name for gcc.
+    required: true
+  cxx:
+    description: C++ compiler from the build matrix; also the apt package name for gcc.
+    required: true
+  compiler-name:
+    description: "Compiler family. Only gcc needs its packages installed; clang comes from llvm-19."
+    required: true
+  linker:
+    description: Linker from the build matrix.
+    required: true
+  coverage-enabled:
+    description: '"true" to install the coverage tooling (lcov + fastcov).'
+    required: false
+    default: "false"
+  build-deployables:
+    description: '"true" to install graphviz, which only the deployables need.'
+    required: false
+    default: "false"
+  dev-dir:
+    description: Absolute path of the repository's dev/ directory.
+    required: true
+  ccache-dir:
+    description: >
+      Where the workflow expects the ccache directory. macOS only - there it is replaced with a
+      symlink to the machine's shared cache. On Linux the directory is carried by actions/cache
+      and this input is ignored.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    # A platform nobody handles would otherwise skip every step below and fail much later, in the
+    # build, with no hint that its environment was never set up.
+    - name: Check the platform
+      shell: bash
+      run: |
+        case '${{ inputs.platform }}' in
+          linux|macos) ;;
+          *)
+            echo "::error::unknown platform '${{ inputs.platform }}' - add it to .github/actions/setup-build-env"
+            exit 1
+            ;;
+        esac
+
+    - name: Setup Linux build environment
+      if: ${{ inputs.platform == 'linux' }}
+      uses: ./.github/actions/setup-linux-build-env/
+      with:
+        cc: ${{ inputs.cc }}
+        cxx: ${{ inputs.cxx }}
+        compiler-name: ${{ inputs.compiler-name }}
+        linker: ${{ inputs.linker }}
+        coverage-enabled: ${{ inputs.coverage-enabled }}
+        build-deployables: ${{ inputs.build-deployables }}
+        dev-dir: ${{ inputs.dev-dir }}
+
+    # The compiler inputs are not passed on: the mac's toolchain is whatever the machine has, and
+    # setup-build-matrix.py hardcodes the matching absolute compiler paths into the matrix.
+    - name: Setup macOS build environment
+      if: ${{ inputs.platform == 'macos' }}
+      uses: ./.github/actions/setup-macos-build-env/
+      with:
+        dev-dir: ${{ inputs.dev-dir }}
+        ccache-dir: ${{ inputs.ccache-dir }}
