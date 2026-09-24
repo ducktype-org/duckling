@@ -12,6 +12,14 @@ class xxx extends aaa implements bbb, cccc {
 		return y;
 	}
 
+	fun hoo() const -> i64 = {
+		return y;
+	}
+
+	private fun ioo(z: i64) const = {
+		goo(z);
+	}
+
 	using std.math;
 
 	public {
