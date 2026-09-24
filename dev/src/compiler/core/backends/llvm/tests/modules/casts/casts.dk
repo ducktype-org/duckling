@@ -27,7 +27,7 @@ fun widen_implicit() -> i64 = {
 
 fun bool_implicit() -> i64 = {
     var a: i64 = 10;
-    # @TODO: #3632 Temporarily explicit
+    # @TODO: #3631 Temporarily explicit
     var b: bool = a as bool;
     var c: i64 = b;
     return 0i64;

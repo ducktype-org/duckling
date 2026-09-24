@@ -1,6 +1,6 @@
 fun main() -> i64 = {
     # Implicit coercion: integer to boolean
-    # @TODO: #3632 Temporarily explicit
+    # @TODO: #3631 Temporarily explicit
     if (1 as bool) {
         builtin_output_i64(1); # Should execute
     }
