@@ -22,8 +22,6 @@ namespace compiler::helios::defgen {
 			using std::ranges::to;
 			using std::views::transform;
 
-			// Construct the constructor's type.
-			// @TODO: #1328 Properly handle value categories in class constructors.
 			const std::vector<tsh::InterfaceElement> fields
 				= class_interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();

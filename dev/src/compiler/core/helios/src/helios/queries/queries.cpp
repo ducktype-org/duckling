@@ -7,7 +7,6 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/symbols/attributes.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -280,7 +279,9 @@ namespace compiler::helios {
 
 				base::HashMap<base::StrID, dia::StablePosition> seen_fields;
 
-				for (SymID field_sym: class_data->valueOrPanic().members) {
+				for (const auto& field:
+				     class_data->valueOrPanic().declared_interface.getAnyFieldsView()) {
+					const SymID field_sym = field.getSymbol();
 					if_opt_some(maybeSymbolPst(field_sym), pst) {
 						if (reportIfNameTaken(
 								ctx,
@@ -353,26 +354,28 @@ namespace compiler::helios {
 		 * Append the methods and static variables of a class.
 		 */
 		static base::OkBad appendClassTasks(
-			std::vector<query::TaskHandle>&                  out_function_code_tasks,
-			[[maybe_unused]] std::vector<query::TaskHandle>& out_global_data_tasks,
-			const SymID                                      class_sym,
-			Context&                                         ctx
+			std::vector<query::TaskHandle>& out_function_code_tasks,
+			std::vector<query::TaskHandle>& out_global_data_tasks,
+			const SymID                     class_sym,
+			Context&                        ctx
 		) {
 			CORE_ASSERT(
 				kind(class_sym) == SymbolKind::Class,
 				"Invalid argument exception: expected class symbol"
 			);
 
-			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
+			const auto class_type = ctx.query<tsh::QueryClassType>(class_sym);
+			// The interface of a class we could not resolve is already diagnosed by the query
+			// that builds it, and `provide` must not let its failure escape as an exception.
+			Ref interface_result = class_type.getInterfaceResult(ctx);
+			if (interface_result->hasFailed()) return base::BAD;
+			Ref interface = &interface_result->valueOrPanic();
 
 
-			auto methods = class_type.getInterface(ctx)->getMethodsView();
-
-			for (const auto& method: methods) {
+			for (const auto& method: interface->getAnyMethodsView()) {
 				auto method_sym = method.getSymbol();
+				// We only here add the methods that are owner only.
+				if (emissionPolicy(ctx, method_sym) != EmissionPolicy::OwnerOnly) continue;
 
 				// @TODO: #1956 remove this if when ZST refs are supported
 				// we fail here, because otherwise we try to lower a self pointer to a ZST type and
@@ -388,10 +391,13 @@ namespace compiler::helios {
 					));
 					return base::BAD;
 				}
-				// We only here add the methods that are owner only.
-				if (emissionPolicy(ctx, method_sym) != EmissionPolicy::OwnerOnly) continue;
 
 				out_function_code_tasks.push_back(ctx.schedule<QueryCodeOfFun>(method_sym));
+			}
+
+			for (const auto& field: interface->getStaticFieldsView()) {
+				auto sym = field.getSymbol();
+				out_global_data_tasks.push_back(ctx.schedule<QueryHOUTGlobalData>(sym));
 			}
 			return base::OK;
 		}

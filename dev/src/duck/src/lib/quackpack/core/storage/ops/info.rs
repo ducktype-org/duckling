@@ -58,7 +58,7 @@ pub fn display_venv_info(ctx: &DuckContext, venv: Venv) -> QuackResult<()> {
     let last_synchronization_string = last_synchronization_date
         .format("%Y-%m-%d %H:%M:%S")
         .to_string();
-    ctx.console().print(format!(
+    ctx.print(format!(
         "{}:
   last-location: {}
   last-access: {}

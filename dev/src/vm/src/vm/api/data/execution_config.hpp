@@ -6,7 +6,7 @@ namespace vm::api {
 	 * execution-related operations such as loading and validation. Not all operations use all
 	 * flags. Default-initialized (all flags false) describes an unrestricted run.
 	 */
-	struct ExecutionConfig {
+	struct ExecutionConfig final {
 		/// Code execution cannot perform any IO, e.g. when performing compile-time evaluation.
 		bool no_io = false;
 

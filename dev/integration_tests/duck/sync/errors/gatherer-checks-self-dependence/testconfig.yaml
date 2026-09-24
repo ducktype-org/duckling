@@ -1,0 +1,18 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "dependencies:
+    foo:
+      source:
+        path: ." >> foo/quackconfig.yaml
+
+Tests:
+  manual-self-dependence:
+    Description: gatherer checks self dependence
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          String: |+
+            error: root package depends on itself

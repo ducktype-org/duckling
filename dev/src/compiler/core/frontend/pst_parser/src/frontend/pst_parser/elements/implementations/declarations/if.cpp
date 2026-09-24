@@ -52,7 +52,13 @@ namespace pst {
 		return partial_hash;
 	}
 
-	AccessLocked<ExprHolder> If::getCondition() const { return condition.internal()->getExpr(); }
+	base::Optional<AccessLocked<ExprHolder>> If::getCondition() const {
+		const auto condition_group = condition.internal().toOpt();
+
+		if (!condition_group.has_value()) return {};
+
+		return condition_group.value()->getExpr();
+	}
 
 	void If::acceptVisitor(PstVisitor& visitor) const { visitor.visitIf(*this); }
 }

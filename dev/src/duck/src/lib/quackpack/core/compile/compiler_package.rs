@@ -121,4 +121,9 @@ impl CompilerPackage {
     pub fn package_type(&self) -> PackageType {
         self.pkg_type
     }
+
+    /// Decompose this [`CompilerPackage`] into parts.
+    pub fn decompose(self) -> (AnyPackage, HashSet<FeatureName>, PackageType) {
+        (self.package, self.enabled_features, self.pkg_type)
+    }
 }

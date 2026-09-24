@@ -1,0 +1,65 @@
+# Tests for statements
+
+Tests:
+  blocks:
+    Cases:
+      all:
+        Output:
+          String: "42\n42\n42\n"
+        ExitCode: 0
+  conditional: # if, if-else
+    Cases:
+      all:
+        ExitCode: 99
+
+  declaration_coercions:
+    Cases:
+      all:
+        Output:
+          String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
+        ExitCode: 0
+
+  default_initialization:
+    Cases:
+      all:
+        Output:
+          String: "=================\n0\n0\n0\nA0\n3\n+++++\n0\n0\n0\nA0\n3\n+++++\n1\n1\n1\nACkajak\n+++++\n=================\n0\n1\n0\n=================\n1\n1\n0\n=================\n0\n0\n0\nA0\n=================\n999\n0\n999\n999\n=================\n1\n=================\n1\n123\n"
+        ExitCode: 0
+
+  for_static:
+    Cases:
+      all:
+        Output:
+          String: "888\n1\n2\n888\n123\n123\n888\n1\n2\n888\n100\n200\n888\n1\n2\n888\n1\n1\n2\n2\n1\n2\n888\n1\n2\n3\n4\n888\n1\n0\n888\n1\n3\n1\n2\n"
+        ExitCode: 0
+
+  generated_local_names: # user variables named like the desugared `for` locals
+    Cases:
+      all:
+        Output:
+          String: "60\n3\n9\n"
+        ExitCode: 0
+
+  # Native only: the case measures the throughput of a 10^8-iteration loop against a
+  # tight timeout, which the DVM interpreter cannot meet.
+  loops-performance: # while
+    Cases:
+      llvm:
+        Output:
+          String: "20\n100000001\n"
+        ExitCode: 0
+        TimeOut: 1 # 10^8/3 loops should definitely be done in this time.
+
+  destructor_insertion:
+    Cases:
+      all:
+        Output:
+          String: "0\n1\n2\n0\n1\n0\n1\n"
+        ExitCode: 0
+
+  named_statements:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0

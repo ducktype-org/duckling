@@ -4,6 +4,7 @@
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
 #include <base/collections/optional.hpp>
+#include <base/config/target_info.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -20,6 +21,7 @@
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/opcodes.hpp>
+#include <vm/core/safe/memory/local_slot_block.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
@@ -90,15 +92,9 @@ namespace vm {
 		const low::MicroOpcode opcode = getInstructionOpcode(*frame->instr);
 		if (opcode != low::MicroOpcode::breakpoint) return opcode;
 
-		const auto* program_copy
-			= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
-		CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
-
-		const auto original_instr
-			= program_copy->getOriginalProgram()
-		          ->getFunctions()
-		          .at(frame->current_function->name)
-		          ->bc[static_cast<usize>(frame->instr - &frame->current_function->bc[0])];
+		auto&      micro_func     = *frame->current_function;
+		const auto low_instr_idx  = static_cast<usize>(frame->instr - micro_func.bc.data());
+		const auto original_instr = micro_func.orig_bc[low_instr_idx];
 
 		return getInstructionOpcode(original_instr);
 	}
@@ -111,9 +107,9 @@ namespace vm {
 	 * @brief Main debug function that executes one step of the program.
 	 */
 	void SafeVMThread::executeOneStep() {
-		Frame*     frame       = runtime_data.frame_stack_current;
-		auto*      instr       = frame->instr;
-		std::byte* local_stack = frame->local_stack;
+		Frame* frame       = runtime_data.frame_stack_current;
+		auto*  instr       = frame->instr;
+		byte*  local_stack = frame->local_stack;
 
 		const low::MicroOpcode opcode = getCurrentOpcode();
 
@@ -142,8 +138,9 @@ namespace vm {
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
 #endif
 			.bc                  = {},
+			.orig_bc             = {},
 			.local_stack_size    = 0,
-			.local_block_count   = func.result_types.size() + func.parameters.size(),
+			.local_slot_count    = func.result_types.size() + func.parameters.size(),
 			.arg_size            = 0,
 			.ret_size            = func.ret_size,
 			.parameters          = {},
@@ -153,13 +150,17 @@ namespace vm {
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
-		for (auto [idx, res]: std::views::enumerate(func.result_types)) {
+		// Byte offset of the next variable initialized on the start function's local stack.
+		u64 stack_offset = 0;
+
+		for (const auto& res: func.result_types) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
 			// exit_code is the return value of the function. Void functions always return with the
 			// exit_code = 0.
-			start_function.bc.push_back(
-				MAKE_BYTECODE_INSTRUCTION(init_bany_type, (u64) idx, safeReadObjectBytes<u64>(res))
-			);
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
+				init_off_type, stack_offset, safeReadObjectBytes<u64>(res)
+			));
+			stack_offset += res->getSize().asInt();
 		}
 
 		start_function.local_stack_size += func.ret_size;
@@ -169,8 +170,11 @@ namespace vm {
 			const auto& arg_type = func.parameters[i];
 
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				initFromVMValue, std::bit_cast<u64>(dynamic_cast<const SafeVMValue*>(&*arg_value)), 0
+				initFromVMValue,
+				std::bit_cast<u64>(dynamic_cast<const SafeVMValue*>(&*arg_value)),
+				stack_offset
 			));
+			stack_offset += arg_type->getSize().asInt();
 			start_function.local_stack_size += arg_type->getSize().asInt();
 			start_function.parameters.push_back(arg_type);
 			start_function.arg_size += arg_type->getSize().asInt();
@@ -181,6 +185,8 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
+				// The start function's whole local stack is the space shared with the callee,
+		        // so the callee's local stack starts at the very same address.
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
 				// @note: Only one block is left on the stack in this place, so there is no need for
 		        // any deinits. It's being deinitialized by the thread after obtaining the return
@@ -188,6 +194,8 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
+		start_function.orig_bc = start_function.bc;
+
 		return start_function;
 	}
 
@@ -228,8 +236,9 @@ namespace vm {
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
 #endif
 			.bc                  = {},
+			.orig_bc             = {},
 			.local_stack_size    = 72,
-			.local_block_count   = 7,
+			.local_slot_count    = 7,
 			.arg_size            = 0,
 			.ret_size            = func.ret_size,
 			.parameters          = {},
@@ -256,16 +265,16 @@ namespace vm {
 			{
 				// Program return value is fixes to return `i64`.
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type, 0, i64_type_arg
+					init_off_type, 0, i64_type_arg
 				),  // stack [0, 8), block idx 0 program ret_val
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type, 1, argv_ptr_type_arg
+					init_off_type, 8, argv_ptr_type_arg
 				),  // stack [8, 24) block idx 1 *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type, 2, i64_type_arg
+					init_off_type, 24, i64_type_arg
 				),  // stack  [24, 32) block idx 2 argc_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type, 3, i64_type_arg
+					init_off_type, 32, i64_type_arg
 				),  // stack [32, 40) block idx 3 ix
 				MAKE_BYTECODE_INSTRUCTION(
 					mov_p64_imm, 24, args.size()
@@ -285,10 +294,10 @@ namespace vm {
 					start_function.bc.end(),
 					{
 						MAKE_BYTECODE_INSTRUCTION(
-							init_bany_type, 4, str_ptr_type_arg
+							init_off_type, 40, str_ptr_type_arg
 						),  // stack [40, 56) block idx 4 ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
-							init_bany_type, 5, byte_type_arg
+							init_off_type, 56, byte_type_arg
 						),  // stack [56, 57) block idx 5 char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
 							mov_p64_imm, 24, arg.size() + 1
@@ -327,8 +336,8 @@ namespace vm {
 							anyArrayStore_pptr_bany, 8, 4
 						),  // argv_internal[ix] := ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
-						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ptr_tmp_store
+						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit char_tmp_store
+						MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit ptr_tmp_store
 					}
 				);
 			}
@@ -337,7 +346,7 @@ namespace vm {
 
 		// Now actually prepare to call 'main'.
 		start_function.bc.push_back(
-			MAKE_BYTECODE_INSTRUCTION(init_bany_type, 4, i64_type_arg)  // [40, 48) main ret_val
+			MAKE_BYTECODE_INSTRUCTION(init_off_type, 40, i64_type_arg)  // [40, 48) main ret_val
 		);
 
 		// Pass the command line arguments only if main signature specifies it.
@@ -345,9 +354,9 @@ namespace vm {
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
-					MAKE_BYTECODE_INSTRUCTION(init_bany_type, 5, i64_type_arg),  // [48, 56) argc
+					MAKE_BYTECODE_INSTRUCTION(init_off_type, 48, i64_type_arg),  // [48, 56) argc
 					MAKE_BYTECODE_INSTRUCTION(
-						init_bany_type, 6, argv_ptr_type_arg
+						init_off_type, 56, argv_ptr_type_arg
 					),                                                        // [56, 72) *argv
 					MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 48, args.size()),  // argc := args.size()
 					MAKE_BYTECODE_INSTRUCTION(mov_pptr_pptr, 56, 8),  // argv := argv_internal
@@ -359,11 +368,12 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),  // call main
+				// `main`'s frame begins at its return value, which the layout above puts at 40.
+				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 40),  // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type, 5, str_ptr_type_arg
+					init_off_type, 48, str_ptr_type_arg
 				),  // [48, 64) ptr_tmp_store
 			}
 		);
@@ -387,17 +397,20 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(free_pptr, 8, 0),  // free *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit ptr_tmp_store
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit main_ret_val
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit ix
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit argc_internal
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit *argv_internal
+				MAKE_BYTECODE_INSTRUCTION(free_pptr, 8, 0),   // free *argv_internal
+				MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit ptr_tmp_store
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit main_ret_val
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit ix
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit argc_internal
+				MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit *argv_internal
 				// At this point only the start function return value (which is the program exit
 		        // code) remains on the stack.
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
+
+		start_function.orig_bc = start_function.bc;
+
 		return start_function;
 	}
 
@@ -419,16 +432,16 @@ namespace vm {
 		thread.reportAsRunning();
 	}
 
-#if defined(__clang__)
+#if BASE_TARGET_COMPILER_CLANG
 // @TODO: #2582 suppress code deduplication in Clang
-#elif defined(__GNUG__)
+#elif BASE_TARGET_COMPILER_GCC
 	#pragma GCC push_options
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
 	void runInterpreter(
-		const MicroInstruction* instr, std::byte*& local_stack, Frame*& frame, SafeVMThread& thread
+		const MicroInstruction* instr, byte*& local_stack, Frame*& frame, SafeVMThread& thread
 	) {
 #ifdef USE_TAIL_CALLS
 		return instr->tc_opfun(instr, local_stack, frame, thread);
@@ -464,9 +477,9 @@ namespace vm {
 	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
 	// NOLINTEND(cppcoreguidelines-avoid-goto)
 
-#if defined(__clang__)
+#if BASE_TARGET_COMPILER_CLANG
 // @TODO: #2582 suppress code deduplication in Clang
-#elif defined(__GNUG__)
+#elif BASE_TARGET_COMPILER_GCC
 	#pragma GCC pop_options
 #endif
 
@@ -476,17 +489,17 @@ namespace vm {
 		ScopedGilGuard gil_guard(*this);
 
 		// Frame of the called function.
-		Frame*     frame          = runtime_data.frame_stack_current;
-		Frame*     orig_frame_ptr = frame;
-		Frame      orig_frame_cpy = *runtime_data.frame_stack_current;
-		std::byte* local_stack    = frame->local_stack;
+		Frame* frame          = runtime_data.frame_stack_current;
+		Frame* orig_frame_ptr = frame;
+		Frame  orig_frame_cpy = *runtime_data.frame_stack_current;
+		byte*  local_stack    = frame->local_stack;
 		if (local_stack == nullptr) local_stack = runtime_data.local_stack_base;
-		auto orig_block_stack_size
-			= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+		auto orig_slot_stack_size
+			= usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
 
-		frame->current_function           = &start_function;
-		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
-		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
+		frame->current_function      = &start_function;
+		frame->local_slot_stack_base = runtime_data.slot_stack_base;
+		frame->local_slot_stack_end  = runtime_data.slot_stack_base;
 
 		const auto* instr = start_function.bc.data();
 
@@ -503,28 +516,48 @@ namespace vm {
 			frame == orig_frame_ptr,
 			"After executing function we have to return to original place in call stack"
 		);
-		// @note: The return value is the only block left on the block stack.
+		// @note: The return value is the only slot left on the slot stack.
 		CORE_ASSERT(
-			frame->local_block_ref_stack_end - frame->local_block_ref_stack_base
-				>= orig_block_stack_size + func.result_types.size(),
-			"After function execution, there should be enough blocks on the stack to retrieve "
+			frame->local_slot_stack_end - frame->local_slot_stack_base
+				>= orig_slot_stack_size + func.result_types.size(),
+			"After function execution, there should be enough slots on the stack to retrieve "
 			"result."
 		);
 
+		// Copy the exit values
 		exit_value_storage = { std::vector<Ref<SafeVMValue>>{} };
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
-			exit_value_storage.value().emplace_back(safe_process.createVMValue(
-				func.result_types[idx],
-				Pointer(frame->local_block_ref_stack_base[orig_block_stack_size + idx], 0)
-			));
+			const usize slot_index = orig_slot_stack_size + idx;
+			// A result the callee never took a block for still has to be handed out as a
+			// pointer, so it gets one here. This is the common case, not a rare one -
+			// `vm_sc_unit_test` panics if the block is assumed to exist.
+			Block* block = frame->local_slot_stack_base[slot_index].block;
+			if (block == nullptr)
+				block = createLocalSlotBlock(*frame, process_memory, slot_index).get();
+
+			exit_value_storage.value().emplace_back(
+				safe_process.createVMValue(func.result_types[idx], Pointer(block, 0))
+			);
 		}
 
-		for (auto block_ptr = frame->local_block_ref_stack_base + orig_block_stack_size;
-		     block_ptr < frame->local_block_ref_stack_end;
-		     block_ptr++) {
-			auto& block = *block_ptr;
-			process_memory.freeBlockData(block);
-			process_memory.decreaseBlockRefcount(block);
+		// Free the remaining data on the stack. The start functions emit their own
+		// instructions, so they can leave locals live above the return values; asserting that
+		// nothing is left deadlocks `vm_sc_threads_test`.
+		for (usize idx = orig_slot_stack_size;
+		     idx < usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
+		     idx++) {
+			if (Block* block = frame->local_slot_stack_base[idx].block) {
+				process_memory.freeBlockData(block);
+				process_memory.decreaseBlockRefcount(block);
+				continue;
+			}
+
+			// A variable that never needed a block still has to release whatever it points at,
+			// which is what `freeBlockData` would have done for it.
+			const LocalSlot& slot = frame->local_slot_stack_base[idx];
+			process_memory.runDataDestructors(
+				{ slot.data, slot.type->getSize().asInt() }, slot.type
+			);
 		}
 
 		return exit_value_storage.value();
@@ -618,7 +651,9 @@ namespace vm {
 				auto frame = runtime_data.frame_stack_current;
 				// In caller frames, the instruction pointer rests on the return address (the
 				// instruction after the call). We must adjust it backward by 1 to point to the
-				// actual call site.
+				// actual call site. One word is enough even for a call lowered to several micro
+				// instructions - the adjustment only has to land inside the call's own range in
+				// `instruction_mapping`.
 				bool call_adjustment = false;
 				if_opt_some(frame_idx, frame_index) {
 					u64 frames = getNumberOfCurrentStackFrames();

@@ -230,16 +230,8 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QuerySymbolABI, QuerySymbolABI_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto sym_ref = getSymRef(key);
-
-			// Builtin functions are implemented in C/C++ and use the C ABI.
-			variant_match(sym_ref->other) {
-				variant_case_novalue(defgen::BuiltinOperator) { return CAbi{}; }
-				variant_default {}
-			}
-
 			// @TODO: #895 fix it when we add script based package targets
-			if (name(key) == "main" && isGlobalFun(key)) {
+			if (isGlobalMain(key)) {
 				// main is not mangled
 				return CAbi{};
 			}
