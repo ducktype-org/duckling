@@ -5,10 +5,10 @@ fun foo2() = { return 2; }
 const M: i64 = 123 + A_alias;
 
 fun foo3() -> i64 = {
-	if (0) {
+	if (false) {
 		return 0;
 	}
-	while (0) {
+	while (false) {
 		return 0;
 	}
 	return A;

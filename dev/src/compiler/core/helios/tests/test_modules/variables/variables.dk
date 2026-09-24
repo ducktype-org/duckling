@@ -9,14 +9,14 @@ fun foo() -> i32 = {
 	var d: T = T();
 	alias hmm = T;
 	using N.*;
-	if (0) {
+	if (false) {
 		var x: i32 = b;
 		var y: i32 | f32 = c;
 		b;
 	} else {
 		var z: i32 = b;
 	}
-	while (0) {
+	while (false) {
 		var a: i32 = 1 as i32;
 		var x: i32 = b;
 		var y: i32 | f32 = c;

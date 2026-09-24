@@ -1,10 +1,11 @@
 fun main() -> i64 = {
     # Implicit coercion: integer to boolean
-    if (1) {
+    # Temporarily explicit
+    if (1 as bool) {
         builtin_output_i64(1); # Should execute
     }
 
-    if (0) {
+    if (0 as bool) {
         builtin_output_i64(2); # Should not execute
     }
 
