@@ -1,0 +1,17 @@
+# Check that a match expression correctly returns `void` when all branches return `void`.
+
+import core.panicking;
+
+# The match is the whole function body, so its `void` has to coerce to the returned `i32`.
+fun asReturnedValue(v: i32|f64) -> void = match(v) {
+    case i: i32 = panicking.panic();
+    case f: f64 = panicking.panic();
+}
+
+fun main() -> i64 = {
+    var v: i32|f64 = 7;
+
+    print(1i64);                # reached, so the panic below is the match's doing
+    print(asReturnedValue(v) as i32);  # panics, so nothing past this point runs
+    return 0i64;
+}
