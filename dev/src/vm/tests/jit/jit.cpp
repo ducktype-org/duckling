@@ -88,8 +88,8 @@ private:
 		ASSERT_HAS_VALUE(process.doRequest(vm::api::request::LoadFiles{
 			{ fs::File(path("mega_test.dbc")) } }));
 		for (const auto& func: process.getLoadedProgram()->getFunctions()) {
-			ASSERT_TRUE(func.jit_data.cfgs.empty());
-			for (const auto& instr: func.bc) {
+			ASSERT_TRUE(func.getJitData().cfgs.empty());
+			for (const auto& instr: func.getBc()) {
 				const auto opcode = vm::getInstructionOpcode(instr);
 				ASSERT_TRUE(opcode != vm::low::MicroOpcode::jitFuncEntrypoint);
 				ASSERT_TRUE(opcode != vm::low::MicroOpcode::jitLoopEntrypoint);
