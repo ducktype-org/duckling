@@ -740,7 +740,6 @@ namespace compiler::mir {
 					                           tsh::ReferenceKind alternative_ref) -> MIRValue {
 						using tsh::ReferenceKind::Direct;
 						using tsh::ReferenceKind::Ref;
-						using tsh::ReferenceKind::Box;
 						if (binding_ref == Direct && alternative_ref == Direct)
 							return { MIRPlace(payload_ptr.value()).withDeref() };
 						if (binding_ref == Direct && alternative_ref != Direct)
@@ -833,10 +832,9 @@ namespace compiler::mir {
 			);
 			subject_local->lifetime_flags |= LifetimeFlag::NoDestructor;
 
-			// The subject goes into the block the chain starts at, which dominates every
-			// projection. Its instructions are added after the holes were reserved, so they end
-			// up ahead of them. It is a reference to the variant, which is what the projections
-			// take, so it is passed on without dereferencing.
+			// The subject goes into the block the chain starts at.
+			// Its instructions are added after the holes were reserved, so they end
+			// up ahead of them.
 			auto lowered_subject
 				= lowerExpr(*expr.subject, first_entry.value(), function, expr_scope);
 

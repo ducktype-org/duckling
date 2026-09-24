@@ -595,8 +595,6 @@ private:
 		const auto var_4 = query::entryPoint<QueryVariantType>({ { st(int_32), st(int_32) } });
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
-		// A boxed alternative owns its allocation, which is what decides whether a `match` over
-		// the variant by value takes its ownership.
 		const auto var_boxed = query::entryPoint<QueryVariantType>({
 			{ st(int_16), st(int_32).withReferenceKind(ReferenceKind::Box) },
 		});

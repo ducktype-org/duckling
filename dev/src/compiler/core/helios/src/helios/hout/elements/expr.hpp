@@ -527,7 +527,8 @@ namespace compiler::helios::code {
 	 *
 	 * Cases are tried in order. A case either tests one concrete alternative of the
 	 * subject's variant type or is a wildcard (empty alternative index) that always
-	 * matches. Every case yields a value, and they all have to be of the same type, which
+	 * matches. Every case returns and expression (<result>),
+	 * and they all have to be of the same type, which
 	 * becomes the type of the whole expression.
 	 *
 	 * Examples:
@@ -536,9 +537,9 @@ namespace compiler::helios::code {
 	 * `case _: <type> = <result>`
 	 *     - has alternative index, constraint type <type>, result <result>
 	 *     - no sym
-	 * `cast _ = <result>`
+	 * `case _ = <result>`
 	 *     - has result <result>
-	 *     - no alternative index, no constraint, no sym
+	 *     - no alternative index, no constraint type, no sym
 	 */
 	struct MatchExpr final: public Expr {
 		struct Case final {

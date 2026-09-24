@@ -1,5 +1,7 @@
 #include "match.hpp"
 
+#include "helios/tsh/mutability.hpp"
+
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/match_case.hpp>
@@ -78,8 +80,8 @@ namespace compiler::helios::desugaring {
 				return query::Failed();
 			}
 			// The coercion into the subject's own type looks like a no-op, but it is the check that
-			// makes `match (v)` on an owning variant report "use `copy` or `move`" - it is the
-			// implicit copy of a `Direct` place that is rejected in there.
+			// makes `match (v)` on an owning variant report "use `copy` or `move`" if the type is
+			// not trivially copyable.
 			UNPACK_QRESULT_MOVE(auto return_expr =, coerceFromBox(ctx, std::move(expr), type, pos));
 
 			bool moves_ownership                  = type.getRefKind() == tsh::ReferenceKind::Direct;
@@ -138,10 +140,11 @@ namespace compiler::helios::desugaring {
 						),
 						pos
 					);
-					error_msg->addAttachedMessage(makeBox<dia::PlaceholderNote>(
-						"You can also pass the expression by reference by adding `&` prefix.",
-						match_subject.expr->origin.getStablePosition()
-					));
+					if (match_subject.expr->expression_type.getValueCategory().addressable())
+						error_msg->addAttachedMessage(makeBox<dia::PlaceholderNote>(
+							"You can also pass the expression by reference by adding `&` prefix.",
+							match_subject.expr->origin.getStablePosition()
+						));
 					ctx.logInt(std::move(error_msg));
 				} else {
 					logError(
@@ -163,8 +166,10 @@ namespace compiler::helios::desugaring {
 			// valid, so we must construct a proxy expression type.
 			// @TODO: #1488 sorry Piotrek, we will have to check const-ness here someday, maybe
 			// it will be automatic by using a coercion.
-			auto source_type
-				= alternatives[index].withMutability(match_subject.whole_type.getMutability());
+			auto source_type = alternatives[index];
+			if (match_subject.whole_type.getMutability() == tsh::Mutability::Immutable)
+				source_type = source_type.withMutability(tsh::Mutability::Immutable);
+
 			// If the subject moves ownership we keep the original ref kind of the variant
 			// alternative. If not, then the cases coerce from ref type (subject is also a
 			// reference) and we check here if adding "deref" will be valid. The "derefs" are
