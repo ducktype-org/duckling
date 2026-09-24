@@ -19,12 +19,12 @@
 //! 2. All packages without manifest or not satisfying pt. 1 are removed (pt. 1 is satisfied).
 //! 3. All disabled or no longer working realizations are removed (pt. 2 is satisfied).
 //! 4. We find out which packages have all enabled dependencies realized.
-//! 5. We apply DFS, removing from the set above packages with realization outside of that set.
+//! 5. We apply DFS, recursively removing from the set above packages with realization outside of that set.
 //! 6. We remove:
 //!     - not-main packages outside the set constructed in steps 4-5;
 //!     - realizations of the main package outside that set.
-//!
-//! This does not break preperty 2, and makes property 3 satisfied.
+//! 
+//! The last step does not break property 2, and makes property 3 satisfied.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
