@@ -2145,7 +2145,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	new_function.bytecode_pos = function.bytecode_pos;
 	new_function.signature    = function.signature;
 
-	// TODO: #3633 Make the flags more robust
+	// @TODO: #3633 Make the flags more robust
 	new_function.flags = (v_matches(mode, Expr, StartFunction))
 	                       ? InstructionFlag{}
 	                       : flag_context.getFlagsForFunction(function.name.str);
