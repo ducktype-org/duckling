@@ -32,8 +32,14 @@ static auto stencils = Stencils{
 			.stencils_binary = std::bit_cast<std::array<byte, sizeof(binary)>>(binary),
 			.stencils_data =
 	#include <mock_stencils-cpp>
+#else
+			// Empty stand-ins so CTAD can deduce Stencils<1, 0>.
+			.stencils_binary = std::array<byte, 1>{},
+			.stencils_data = std::array<StencilData, 0>{},
 #endif
-		}.load().value();
+		}
+					  .load()
+					  .value();
 
 class JitMemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS

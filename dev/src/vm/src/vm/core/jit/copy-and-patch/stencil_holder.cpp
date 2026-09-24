@@ -30,6 +30,10 @@ namespace vm::jit::cnp {
 			.stencils_binary = std::bit_cast<std::array<byte, sizeof(binary)>>(binary),
 			.stencils_data =
 	#include <stencils-cpp>
+#else
+			// Empty stand-ins so CTAD can deduce Stencils<1, 0> (binary above is { 0 }).
+			.stencils_binary = std::array<byte, 1>{},
+			.stencils_data   = std::array<StencilData, 0>{},
 #endif
 		};
 
