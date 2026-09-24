@@ -38,6 +38,18 @@ namespace vm {
 
 	Memory& SafeVMProcess::getMemory() { return memory; }
 
+	std::string argumentCountMismatchMessage(const low::LowFuncData& func, usize provided) {
+		return base::strConcat(
+			"Function '",
+			func.name.str(),
+			"' expects ",
+			func.parameters.size(),
+			" arguments, but ",
+			provided,
+			" were provided."
+		);
+	}
+
 	std::expected<api::Response, api::LoadProgramError> SafeVMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
@@ -55,6 +67,12 @@ namespace vm {
 		}();
 
 		if (code_result.has_value()) {
+			// Exec threads never take api_lock; the GIL is what excludes them. recompile()
+			// grows LowVMProgram::functions (a std::vector-backed map), which moves every
+			// LowFuncData — and with it every CRef<LowFuncData> held by running frames
+			// (frame->current_function) and every jit_data reference in the entrypoint
+			// opfuns — so it must run under the GIL.
+			GIL::ScopedLock gil_lock(gil);
 			compiler.recompile();
 			updateGlobalDataMemory(loaded_program);
 			return api::Response(api::response::Empty());
@@ -85,16 +103,8 @@ namespace vm {
 		const auto& func      = *maybe_func.value();
 		const auto& func_args = v_get(run_arguments, FunctionRunArguments);
 
-		if (func_args.size() != func.getParameters().size())
-			return refuse(base::strConcat(
-				"Function '",
-				func.getName().str(),
-				"' expects ",
-				func.getParameters().size(),
-				" arguments, but ",
-				func_args.size(),
-				" were provided."
-			));
+		if (func_args.size() != func.parameters.size())
+			return refuse(argumentCountMismatchMessage(func, func_args.size()));
 
 		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {
 			if (arg_value->getPID() != getPID())
@@ -279,8 +289,11 @@ namespace vm {
 		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
+	SafeVMProcess::SafeVMProcess(
+		const PID my_pid, bool enable_deadlock_detection, [[maybe_unused]] bool enable_jit
+	):
 		  IVMProcess(my_pid),
+		  compiler(*loader.getHighProgram(), enable_jit),
 		  loaded_program(compiler.getLowProgram()) {
 		if (enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
@@ -660,6 +673,9 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::setBreakpoint(
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
+		// @TODO: #3585 In JIT builds this can clobber or incorrectly restore the
+		// jitFuncEntrypoint/jitLoopEntrypoint opcodes patched in by the compiler: disabling a
+		// breakpoint restores the opcode from the original program, losing the JIT entrypoint.
 		std::unique_lock lock(api_lock);
 		auto response = compiler.setBreakpoint(function_name, instruction_index, enable);
 		if (!response) return std::unexpected(api::OtherError{ response.error() });
@@ -783,4 +799,5 @@ namespace vm {
 	SynchronizationPrimitives& SafeVMProcess::getSynchronizationPrimitives() {
 		return synchronization_primitives;
 	}
+
 }

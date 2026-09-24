@@ -45,7 +45,7 @@ namespace vm {
 		 * representation which exists in this class.
 		 */
 		loader::Loader                       loader{};
-		loader::compiler::safe::SafeCompiler compiler{ *loader.getHighProgram() };
+		loader::compiler::safe::SafeCompiler compiler;
 
 		/**
 		 * @brief The program being executed by this process.
@@ -205,7 +205,7 @@ namespace vm {
 		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
 	public:
-		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
+		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false, bool enable_jit = true);
 
 		/**
 		 * @brief Frees what the blocks still hold.
@@ -295,4 +295,10 @@ namespace vm {
 			base::Ref<vm::SafeVMThread> thread, const code::Function& start_function
 		) const;
 	};
+
+	/**
+	 * @brief Shared wording for the function-argument-count mismatch error, used both when
+	 * validating a Run request and as a hard check when building the start function.
+	 */
+	std::string argumentCountMismatchMessage(const low::LowFuncData& func, usize provided);
 }

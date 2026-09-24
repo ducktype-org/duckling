@@ -4,39 +4,13 @@
  */
 #pragma once
 
-#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
+#include "cf_graph.hpp"
 
 #include <limits>
 #include <vector>
 
-namespace vm::jit::cf {
-	using vm::low::cf::BasicBlock;
-	using vm::low::cf::BasicBlockID;
-	using vm::low::cf::ControlFlowGraph;
-
+namespace vm::low::cf {
 	class LoopDetector;
-
-	/**
-	 * @brief Subgraph of a control-flow graph representing a natural loop.
-	 */
-	struct Loop final {
-		/**
-		 * @brief Constructs a loop subgraph from the original CFG and member block IDs.
-		 * @param start_block Loop header block ID.
-		 * @param cfg Original control-flow graph.
-		 * @param members Block IDs that are part of the loop.
-		 */
-		Loop(
-			BasicBlockID                     start_block,
-			const ControlFlowGraph&          cfg,
-			const std::vector<BasicBlockID>& members
-		):
-			  start_block(start_block),
-			  loop_cfg(cfg.subgraph(members)) {}
-
-		BasicBlockID     start_block;
-		ControlFlowGraph loop_cfg;
-	};
 
 	/**
 	 * @brief Detects loops in control-flow graphs using dominator relations.
@@ -46,12 +20,17 @@ namespace vm::jit::cf {
 		LoopDetector() = default;
 
 		/**
-		 * @brief Detects loops in function CFG via back edges.
-		 * @param cfg Control-flow graph.
-		 * @return Detected loops represented as subgraphs of the CFG.
+		 * @brief Detects natural loops in a function CFG using dominator relations.
+		 * @param bc Bytecode of the function to analyze.
+		 * @param function_entrypoint Instruction offset of the function entrypoint.
+		 * @return CFG for each instruction in function opcode.
+		 * @details For function entrypoint, full function CFG is returned. For loop headers,
+		 * CFG of the loop is returned. For other instructions, empty CFG is returned.
 		 */
-		std::vector<Loop> findLoops(const ControlFlowGraph& cfg) {
-			std::vector<Loop> loops;
+		std::vector<ControlFlowGraph> findLoops(const MicroBytecode& bc, usize function_entrypoint) {
+			std::vector<ControlFlowGraph> cfgs(bc.size());
+
+			ControlFlowGraph cfg(bc);
 
 			calcPredecessors(cfg);
 			calcDominators(cfg);
@@ -63,10 +42,10 @@ namespace vm::jit::cf {
 
 			for (BasicBlockID bid = 0; bid < cfg.size(); ++bid) {
 				stack.clear();
-				stack_ptr = 0;
-				++timestamp;
+				stack_ptr         = 0;
+				last_visited[bid] = ++timestamp;  // blocks before bid can't be part of loop
 
-				for (BasicBlockID pred: predecessors[bid]) {
+				for (auto pred: predecessors[bid]) {
 					if (isDominatedBy(pred, bid)) {
 						last_visited[pred] = timestamp;
 						stack.push_back(pred);
@@ -74,10 +53,13 @@ namespace vm::jit::cf {
 				}
 
 				while (stack_ptr < stack.size()) {
-					BasicBlockID current = stack[stack_ptr++];
-					if (current == bid) continue;
+					BasicBlockID curr = stack[stack_ptr++];
 
-					for (const auto& next: predecessors[current]) {
+					// If block is its own predecessor, that means we have found a loop. However,
+					// we don't want to look through its predecessors, as it doesn't dominate them.
+					if (curr == bid) continue;
+
+					for (auto next: predecessors[curr]) {
 						if (last_visited[next] < timestamp) {
 							stack.push_back(next);
 							last_visited[next] = timestamp;
@@ -85,10 +67,35 @@ namespace vm::jit::cf {
 					}
 				}
 
-				if (!stack.empty()) loops.emplace_back(bid, cfg, std::move(stack));
+				if (!stack.empty()) {
+					CORE_ASSERT(
+						cfg.getBlock(bid).start != function_entrypoint,
+						"Function entrypoint cannot be a loop header"
+					);
+					auto loop_cfg           = cfg.inducedSubgraph(bid, stack, true);
+					auto loop_start_offset  = cfg.getBlock(bid).start;
+					cfgs[loop_start_offset] = std::move(loop_cfg);
+				}
 			}
 
-			return loops;
+			// Move full function CFG here to avoid copying it before all the subgraphs are created.
+			cfgs[function_entrypoint] = std::move(cfg);
+			return cfgs;
+		}
+
+		/**
+		 * @brief Detects natural loops in a function CFG using dominator relations.
+		 * @param bc Bytecode of the function to analyze.
+		 * @param function_entrypoint Instruction offset of the function entrypoint.
+		 * @return CFG for each instruction in function opcode.
+		 * @details For function entrypoint, full function CFG is returned. For loop headers,
+		 * CFG of the loop is returned. For other instructions, empty CFG is returned.
+		 */
+		static std::vector<ControlFlowGraph> detectLoopsInFunction(
+			const MicroBytecode& bc, usize function_entrypoint
+		) {
+			LoopDetector detector;
+			return detector.findLoops(bc, function_entrypoint);
 		}
 
 	private:
@@ -171,7 +178,7 @@ namespace vm::jit::cf {
 		 * @brief Computes immediate dominator for each reachable block.
 		 * @param cfg Control-flow graph.
 		 * @note Assumes the only block without a predecessor is the entry block (id 0)
-		 * 		 and that every other block is reachable from it.
+		 * and that every other block is reachable from it.
 		 */
 		void calcImmediateDominators(const ControlFlowGraph& cfg) {
 			imm_dom.assign(cfg.size(), undefined);
@@ -181,7 +188,8 @@ namespace vm::jit::cf {
 			bool changed = true;
 			while (changed) {
 				changed = false;
-				for (usize i = cfg.size() - 1; i > 0; --i) {
+				// Start from size - 2 to skip the entry block (it has no predecessors)
+				for (int i = (int) cfg.size() - 2; i >= 0; --i) {
 					BasicBlockID b = inv_postorder_map[i];
 					CORE_ASSERT(
 						!predecessors[b].empty(), "All blocks except entry should have predecessors"
@@ -207,6 +215,10 @@ namespace vm::jit::cf {
 		 * @param time Running DFS timestamp.
 		 */
 		void domTreeTimestampDfs(BasicBlockID bid, u32& time) {
+			CORE_ASSERT(
+				dom_tree_timestamps[bid].second == 0,
+				"dominator tree is not a tree: revisited a block"
+			);
 			dom_tree_timestamps[bid].first = time++;
 			for (BasicBlockID child_id: dom_tree[bid]) domTreeTimestampDfs(child_id, time);
 			dom_tree_timestamps[bid].second = time++;
@@ -243,4 +255,4 @@ namespace vm::jit::cf {
 			    && dom_tree_timestamps[bid].second <= dom_tree_timestamps[domid].second;
 		}
 	};
-}  // namespace vm::jit::cf
+}  // namespace vm::low::cf

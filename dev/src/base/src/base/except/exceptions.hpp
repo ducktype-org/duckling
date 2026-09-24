@@ -12,6 +12,7 @@
 #pragma once
 
 #include <base/preproc/cat.hpp>
+#include <base/preproc/diagnostics.hpp>
 #include <base/preproc/stringify.hpp>
 #include <base/str/str_utils.hpp>  // IWYU pragma: export
 
@@ -103,7 +104,8 @@ namespace base {
 	/**
      * @brief base::Panic based assert that allows catching for testing purposes.
      */
-	#define CORE_ASSERT(cond, what, ...) [[assume(cond)]]
+	#define CORE_ASSERT(cond, what, ...) \
+		PUSH_DIAGNOSTIC IGNORE_ASSUME [[assume(cond)]] POP_DIAGNOSTIC
 #endif
 
 #if defined(BUILD_TYPE_DEV)

@@ -41,8 +41,13 @@ namespace vm::loader::compiler::safe {
 		friend struct detail::LowerArgumentImpl;
 
 	public:
-		SafeCompiler(const code::ValidProgram& high_program):
-			  vm::loader::compiler::IVMCompiler(high_program) {
+		SafeCompiler(const code::ValidProgram& high_program, [[maybe_unused]] bool enable_jit = true):
+			  vm::loader::compiler::IVMCompiler(high_program)
+#ifdef ENABLE_JIT
+			  ,
+			  jit_enabled(enable_jit)
+#endif
+		{
 			recompile();
 		}
 
@@ -87,6 +92,14 @@ namespace vm::loader::compiler::safe {
 		 * @brief The microbytecode program representation being built and managed by the compiler.
 		 */
 		vm::low::LowVMProgram low_program;
+
+#ifdef ENABLE_JIT
+		/**
+		 * @brief Whether to build JIT data (CFGs, loop detection) and patch in JIT entrypoint
+		 * opcodes for newly compiled functions. Disabled by `--jit off`.
+		 */
+		bool jit_enabled = true;
+#endif
 
 		detail::SafeProgramCompilationContext program_ctx;
 

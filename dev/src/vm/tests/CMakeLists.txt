@@ -36,6 +36,8 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_api_test api/api_test.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt(api_test ${test_set})
+        # api_test stays enabled in JIT builds: it spawns its processes with
+        # enable_jit = false (#3612), so the JIT never interferes with stop/pause.
         duck_add_test_custom(vm ${test_set}_functions_test functions/functions.cpp
                 USES ${libvm} Tester ${vmtester})
 

@@ -123,13 +123,24 @@ namespace vm {
 	low::MicroOpcode SafeVMThread::getCurrentOpcode() const {
 		const Frame*           frame  = runtime_data.frame_stack_current;
 		const low::MicroOpcode opcode = getInstructionOpcode(*frame->instr);
-		if (opcode != low::MicroOpcode::breakpoint) return opcode;
+		switch (opcode) {
+		case low::MicroOpcode::breakpoint:
+#ifdef ENABLE_JIT
+			[[fallthrough]];
+		case low::MicroOpcode::jitFuncEntrypoint:
+			[[fallthrough]];
+		case low::MicroOpcode::jitLoopEntrypoint:
+#endif
+		{
+			auto&      micro_func     = *frame->current_function;
+			const auto low_instr_idx  = static_cast<usize>(frame->instr - micro_func.bc.data());
+			const auto original_instr = micro_func.orig_bc[low_instr_idx];
 
-		auto&      micro_func     = *frame->current_function;
-		const auto low_instr_idx  = static_cast<usize>(frame->instr - micro_func.getBc().data());
-		const auto original_instr = micro_func.getOrigBc()[low_instr_idx];
-
-		return getInstructionOpcode(original_instr);
+			return getInstructionOpcode(original_instr);
+		}
+		default:
+			return opcode;
+		}
 	}
 
 	bool SafeVMThread::isAtExecutionEnd() const {
@@ -149,6 +160,7 @@ namespace vm {
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
 
+		OpFuns::save_execution_state(instr, local_stack, frame, *this);
 		runtime_data.frame_stack_current = frame;
 		frame->local_stack               = local_stack;
 		frame->instr                     = instr;
