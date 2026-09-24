@@ -7,7 +7,7 @@ from .helpers import (
     no_fix,
     thread_count,
 )
-from click import command
+from click import command, option
 
 
 @command()
@@ -21,9 +21,18 @@ from click import command
 )
 @auto_fix()
 @no_fix()
+@option(
+    "-q",
+    "--quiet",
+    is_flag=True,
+    default=False,
+    help="Run the integration test step with `itest --quiet`: report only "
+    "failing cases, failing hooks and the summary, instead of every passing "
+    "case. The other steps are unaffected.",
+)
 def pr_validate(*args, **kwargs):
     """Runs a set of actions to validate branch state before PR.
-    Actions include: building everything, running tests, linter, duck-linter, todo-validate, issue-checker.
-    In the future we might add integration tests.
+    Actions include: building everything, running tests, integration tests,
+    linter, duck-linter, todo-validate, issue-checker.
     """
     pr_validate_impl(*args, **kwargs)

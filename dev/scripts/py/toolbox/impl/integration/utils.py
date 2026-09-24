@@ -1,5 +1,7 @@
 import pathlib
+import sys
 
+from .progress import PausedStream
 from ..helpers import (
     exec_bash_command,
     exit_with_error,
@@ -71,4 +73,7 @@ def dit_exec_command(
         decode=False,
         env=env,
         timeout=timeout,
+        # The echo is written by this process, so it has to take the progress
+        # line down like any other writer.
+        log_to_file=PausedStream(sys.stdout),
     )

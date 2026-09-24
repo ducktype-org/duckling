@@ -1,11 +1,18 @@
 import json
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .context import RunContext
 from .keys import NEEDED_THREADS
-from .reporting import CompletionOutput, OrderedOutput, print_success
+from .progress import PROGRESS
+from .reporting import (
+    CompletionOutput,
+    OrderedOutput,
+    print_success,
+    short_path,
+)
 from .resource_manager import ResourceManager
 from .scheduler import TestGroup, run_groups, sweep
 from .test_loader import load_tests
@@ -34,6 +41,7 @@ def tester_impl(
     jobs: int = get_cpu_count(),
     sequential: bool = False,
     deterministic_output: bool = False,
+    quiet: bool = False,
     core_dumps: bool = False,
     timeout_scale: float = 1.0,
 ):
@@ -81,6 +89,7 @@ def tester_impl(
         sequential=sequential,
         core_dumps=core_dumps,
         timeout_scale=timeout_scale,
+        quiet=quiet,
         output=CompletionOutput(),
     )
 
@@ -97,27 +106,49 @@ def tester_impl(
         ctx.pool = ThreadPoolExecutor(max_workers=jobs, thread_name_prefix="dit-case")
         ctx.threads = ResourceManager(max_resources=jobs)
 
+    # Timed from here, so the reported span covers the work the run actually
+    # does: the node PreNodes (including the toolchain build) and the cases.
+    # Each selected test is one unit of progress.
+    PROGRESS.reset(len(normal) + len(deferred), quiet=quiet)
+    start = time.perf_counter()
     try:
         stats = run_groups(normal, deferred, ctx)
     finally:
         if ctx.pool is not None:
             ctx.pool.shutdown()
         ctx.output.drain()
+    elapsed = time.perf_counter() - start
+
+    PROGRESS.close()
 
     if dry:
         return
 
     succeeded, failed, disabled = stats
-    total_test_count = len(succeeded) + len(failed) + len(disabled)
-    print(f"Ran test count: {total_test_count}")
-    print(f" - Succeeded: {len(succeeded)}")
-    print(f" - Disabled:  {len(disabled)}")
-    print(f" - Failed:    {len(failed)}")
+    total_cases = len(succeeded) + len(failed) + len(disabled)
+    print(
+        f"Integration tests: {total_cases} case{'' if total_cases == 1 else 's'}"
+        f" — {len(succeeded)} passed, {len(disabled)} disabled, {len(failed)} failed"
+        f" — {elapsed:.1f} s"
+    )
 
-    if len(failed):
-        failed_tests = map(lambda x: " - " + x, failed)
+    if ctx.not_run:
+        total = ctx.not_run_total
+        by_reason = sorted(ctx.not_run.items())
+        if len(by_reason) == 1:
+            detail = by_reason[0][0]
+        else:
+            detail = ", ".join(f"{count} {reason}" for reason, count in by_reason)
+        print(f"Not run: {total} case{'' if total == 1 else 's'} — {detail}")
+
+    if failed or ctx.node_failures:
+        listing = [f" - {short_path(path)}" for path in failed]
+        listing += [
+            f" - {short_path(path)}  ({kind} failed)"
+            for path, kind in ctx.node_failures
+        ]
         exit_with_error(
-            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(failed_tests)}\n"
+            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(listing)}\n"
             + f"Please see log file '{log_file.absolute()}' for more info."
         )
     elif not clean:

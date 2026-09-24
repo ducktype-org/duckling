@@ -10,12 +10,15 @@ from .reporting import (
     OutputMismatch,
     Success,
     TestStatistics,
-    print_failure,
-    print_neutral,
-    print_success,
+    describe_exit_status,
+    print_case_failed,
+    print_case_passed,
+    print_case_skipped,
+    print_info,
+    print_warning,
 )
 from .utils import dit_exec_command
-from ..helpers import BashCommandError, log_info, log_warning
+from ..helpers import BashCommandError
 
 
 def resolve_timeout(timeout, cwd: Path) -> float:
@@ -62,24 +65,21 @@ def run_single_case(
     try:
         match run_case(test, case, case_path, ctx, clog):
             case OutputMismatch(error):
-                clog.emit(
-                    print_failure,
-                    f"Case `{case.name}` has failed because {error} {elapsed()}",
-                )
+                clog.emit(print_case_failed, f"{case.name} — {error} {elapsed()}")
                 stats.failed.append(case_path)
                 stop = ctx.fail_fast
             case Success():
                 if not ctx.dry:
                     stats.succeeded.append(case_path)
-                    clog.emit(print_success, f"Case `{case.name}` passed {elapsed()}")
+                    clog.emit_non_failure(print_case_passed, f"{case.name} {elapsed()}")
             case Disabled():
                 if not ctx.dry:
                     stats.disabled.append(case_path)
-                    clog.emit(print_neutral, f"Case `{case.name}` disabled")
+                    clog.emit_non_failure(print_case_skipped, case.name)
     except BashCommandError as e:
         clog.emit(
-            print_failure,
-            f"Case `{test.name}/{case.name}` has {e.reason_string}. {elapsed()}",
+            print_case_failed,
+            f"{case.name} — {describe_exit_status(e.exit_status)} {elapsed()}",
         )
         clog.log(f"{case_path} has failed:\n{''.join(e.args)}\n")
         stats.failed.append(case_path)
@@ -98,7 +98,7 @@ def log_test_out_differs(case_path, message, got, expected, clog: CaseLog, verbo
         f"[EXPECTED]:\n{expected.decode('UTF-8')}\n"
     )
     if verbose:
-        clog.emit(log_info, to_dump)
+        clog.emit(print_info, to_dump)
     clog.log(to_dump)
 
 
@@ -210,7 +210,7 @@ def run_case(
                 clog,
                 verbose,
             )
-            return OutputMismatch(f"Stdouts do not match.")
+            return OutputMismatch("Stdouts differ")
 
     # Compare test and expected err.
     if case.expected_err:
@@ -232,7 +232,7 @@ def run_case(
                 clog,
                 verbose,
             )
-            return OutputMismatch(f"Stderrs do not match.")
+            return OutputMismatch("Stderrs differ")
 
     # Post-case command
     if case.post_case:
@@ -255,7 +255,7 @@ def clean_test(test: Test, path: str, ctx: RunContext):
     """
     Performs cleaning on a test.
     """
-    log_info(f"Cleaning: {path}")
+    print_info(f"Cleaning: {path}")
     try:
         if test.clean:
             dit_exec_command(
@@ -267,4 +267,4 @@ def clean_test(test: Test, path: str, ctx: RunContext):
                 core_dumps=ctx.core_dumps,
             )
     except BashCommandError:
-        log_warning(f"Cleaning has (partially) failed on {test.name}.")
+        print_warning(f"Cleaning has (partially) failed on {test.name}.")

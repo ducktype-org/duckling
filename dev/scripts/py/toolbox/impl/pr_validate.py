@@ -19,6 +19,7 @@ def pr_validate_impl(
     thread_count: int,
     auto_fix: bool,
     no_fix: bool,
+    quiet: bool = False,
 ):
     """
     Perform PR validation steps.
@@ -78,6 +79,7 @@ def pr_validate_impl(
         log_file=DEFAULT_LOG_FILE_PATH,
         build_dir=build_dir,
         jobs=thread_count,
+        quiet=quiet,
     )
 
     # Step 9 - clang-tidy
