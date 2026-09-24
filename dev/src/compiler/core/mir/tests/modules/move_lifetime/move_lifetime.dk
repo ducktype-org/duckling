@@ -40,3 +40,10 @@ fun moveParamThenBlock(a: i64, c: i64) = {
         eat(1);
     }
 }
+
+fun makeR(a: i32) -> R = R(a);
+
+# The right-hand side of a lazily evaluated `or` runs on one path only, so the temporary it builds
+# is initialized on one path only. The temporary lives in the scope of the whole expression, so at
+# the merge it is `MaybeMoved` rather than dropped from the move-state map.
+fun condTemporary(c: bool) -> bool = c or makeR(1).a == 0;

@@ -13,6 +13,7 @@ namespace compiler::mir {
 		base::HashMap<base::StrID, std::vector<CRef<MIRLocal>>> named_locals;
 		for (auto& local: fun.local_list) {
 			if (local.helios_id.empty()) continue;
+			if (local.lifetime_flags.contains(LifetimeFlag::NoShadowingValidation)) continue;
 
 			// Generated locals cannot shadow user code and have no position of their own.
 			if (not helios::maybeSymbolPst(*local.helios_id).has_value()) continue;
@@ -21,6 +22,8 @@ namespace compiler::mir {
 			match_optional(named_locals.atMaybe(name)) {
 				opt_some(prev_defs) {
 					for (auto def: *prev_defs) {
+						if (def->lifetime_flags.contains(LifetimeFlag::NoShadowingValidation))
+							continue;
 						auto lc_scope = lca(*def->scope, *local.scope);
 						if (lc_scope == *def->scope || lc_scope == *local.scope) {
 							// Since the LCA is one of the scopes, the other has to be contained in it.

@@ -14,5 +14,5 @@ namespace vm {
 		virtual void deallocate(Ref<BlockData<EntryT>>) = 0;
 	};
 
-	using AllocatorABC = IAllocator<std::byte>;
+	using AllocatorABC = IAllocator<byte>;
 }

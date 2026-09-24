@@ -319,7 +319,7 @@ namespace vm {
 				SafeVMThread::isCallableFunctionID(function_id),
 				"Start function should not be called in the runtime!"
 			);
-			performFunctionCall(instr, local_stack, frame, thread, function_id);
+			performFunctionCall(instr, local_stack, frame, thread, function_id, instr->arg1, 1);
 		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
@@ -370,14 +370,14 @@ namespace vm {
 			auto arg_count          = function_signature->parameters.size();
 
 			std::vector<Box<SafeVMValue>> args;
-			auto                          block_ref_stack_count
-				= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-			u64 first_arg_idx = block_ref_stack_count - arg_count;
+			auto                          slot_stack_count
+				= usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
+			u64 first_arg_idx = slot_stack_count - arg_count;
 
 			// Create VMValue objects from local arguments. The argument's actual block type is
 			// used (verification guarantees it matches what the builtin expects).
 			for (u64 i = 0; i < arg_count; i++) {
-				auto     block     = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
+				auto     block     = OpFuns::readBlockRefFromArg(frame, thread, first_arg_idx + i);
 				TypeCRef real_type = Memory::getBlockType(block);
 				args.push_back(thread.safe_process.createOwnedVMValue(real_type, Pointer(block, 0)));
 			}
@@ -398,7 +398,7 @@ namespace vm {
 			if (return_value.has_value()) {
 				auto value = std::move(return_value.value());
 				value->exportData(
-					Pointer(Ref(frame->local_block_ref_stack_base[first_arg_idx - 1]), 0)
+					Pointer(OpFuns::readBlockRefFromArg(frame, thread, first_arg_idx - 1), 0)
 				);
 				value->freeData();
 			}
@@ -437,17 +437,11 @@ namespace vm {
 				// 		arg1
 				// 		...
 				// 		argN
-				u64 block_ref_stack_count
-					= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-				u64 result_value_idx = block_ref_stack_count - arg_count - (is_void ? 0 : 1);
+				u64 slot_stack_count
+					= u64(frame->local_slot_stack_end - frame->local_slot_stack_base);
+				u64        result_value_idx = slot_stack_count - arg_count - (is_void ? 0 : 1);
+				const auto result_pointer   = frame->local_slot_stack_base[result_value_idx].data;
 
-
-				auto ext_result_destination
-					= Ref(frame->local_block_ref_stack_base[result_value_idx]);
-				auto result_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
-
-				// Prepare arguments and call the function.
-				byte* result_pointer = result_view.getBegin();
 				byte* args_pointer
 					= result_pointer
 				    + (is_void ? 0 : ext_func->result_types.at(0)->getSize().asInt());
@@ -472,27 +466,23 @@ namespace vm {
 			);
 
 			// Local stack layout is the same as for call_cfunc:
-			// [..., result_value (if any), arg0, ..., argN], each in its own block.
-			u64 block_ref_stack_count
-				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-			u64 first_block_idx = block_ref_stack_count - arg_count - (is_void ? 0 : 1);
-			u64 first_arg_idx   = first_block_idx + (is_void ? 0 : 1);
+			// [..., result_value (if any), arg0, ..., argN]. Only the first byte of each is
+			// wanted, which the slot records, so none of them has to be given a block.
+			u64 slot_stack_count = u64(frame->local_slot_stack_end - frame->local_slot_stack_base);
+			u64 first_slot_idx   = slot_stack_count - arg_count - (is_void ? 0 : 1);
+			u64 first_arg_idx    = first_slot_idx + (is_void ? 0 : 1);
 
 			std::vector<void*> arg_values(arg_count);
-			for (u64 i = 0; i < arg_count; i++) {
-				auto block    = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
-				arg_values[i] = thread.process_memory.getBlockViewUnsafe(block).getBegin();
-			}
+			for (u64 i = 0; i < arg_count; i++)
+				arg_values[i] = frame->local_slot_stack_base[first_arg_idx + i].data;
 
 			auto* cif = &ffi_func->cif;
 
 			if (is_void) {
 				ffi_call(cif, ffi_func->symbol, nullptr, arg_values.data());
 			} else {
-				auto  result_block = Ref(frame->local_block_ref_stack_base[first_block_idx]);
-				byte* result_pointer
-					= thread.process_memory.getBlockViewUnsafe(result_block).getBegin();
-				usize result_size = ffi_func->result_types.at(0)->getSize().asInt();
+				byte* result_pointer = frame->local_slot_stack_base[first_slot_idx].data;
+				usize result_size    = ffi_func->result_types.at(0)->getSize().asInt();
 
 				if (result_size >= sizeof(ffi_arg)) {
 					ffi_call(cif, ffi_func->symbol, result_pointer, arg_values.data());
@@ -543,7 +533,7 @@ namespace vm {
 				"Start function should not be called in the runtime!"
 			);
 
-			performFunctionCall(instr, local_stack, frame, thread, function_id);
+			performFunctionCall(instr, local_stack, frame, thread, function_id, instr[1].arg0, 2);
 		}
 		FUNCTION_CONT(0);
 	}
@@ -569,33 +559,21 @@ namespace vm {
 		{
 			// Frame of the function we're returning from.
 			auto* callee_frame = frame;
-			u64   ret_count    = frame->current_function->result_types.size();
 
-			// We have to update values passed in arguments.
-			// Old `instr` and `local_stack` are stored on the previous frame.
+			// The function deinitialized its own locals, so the only entries left on its slot
+			// stack are its return values, which the caller took care of and keeps using.
+			CORE_ASSERT(
+				usize(callee_frame->local_slot_stack_end - callee_frame->local_slot_stack_base)
+					== callee_frame->current_function->result_types.size(),
+				"On return only the function's return values may be left on the slot stack"
+			);
+
 			// Previous frame is just before current frame in the array, so that
 			// substracting one from the pointer will give us the previous frame.
 			// The `instr`, `local_stack` and `frame` values should be restored from the previous
 			// call stack frame.
 			frame--;  // This is now the caller's frame.
 
-			while (callee_frame->local_block_ref_stack_end
-			       > callee_frame->local_block_ref_stack_base) {
-				auto block       = Ref(callee_frame->local_block_ref_stack_end[-1]);
-				u64  block_count = u64(
-                    callee_frame->local_block_ref_stack_end
-                    - callee_frame->local_block_ref_stack_base
-                );
-
-				// We're returning from a non-void function, so the last `ret_count` blocks on the
-				// stack are the return values. They are being used by the caller so we don't free them.
-				if (block_count > ret_count) {
-					thread.process_memory.freeBlockData(block);
-					thread.process_memory.decreaseBlockRefcount(block);
-				}
-
-				callee_frame->local_block_ref_stack_end--;
-			}
 			callee_frame->resetFrameData();
 
 			// Load previous frame.
@@ -606,17 +584,50 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init_bany_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_off_type)(FUNCTION_ARGS) {
 		{
-			performInit(
-				instr, local_stack, frame, thread, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1)
-			);
+			// No block: one is created only if something ends up needing it.
+			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			pushLocalSlot(frame, type, local_stack + instr->arg0, type->getSize().asInt(), nullptr);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(init64_off_type)(FUNCTION_ARGS) {
+		{
+			// A size known here zeroes with a plain store instead of a call to `memset`.
+			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			pushLocalSlot(frame, type, local_stack + instr->arg0, 8, nullptr);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(init128_off_type)(FUNCTION_ARGS) {
+		{
+			const auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			pushLocalSlot(frame, type, local_stack + instr->arg0, 16, nullptr);
 		}
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
 		{ performDeinit(frame, thread); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(deinitDtor)(FUNCTION_ARGS) {
+		{
+			if (frame->local_slot_stack_end[-1].block == nullptr) {
+				// Without a block there is nothing to run the destructors off, so they are run
+				// over the variable's bytes directly.
+				const LocalSlot& slot = topLocalSlot(frame);
+				thread.process_memory.runDataDestructors(
+					{ slot.data, slot.type->getSize().asInt() }, slot.type
+				);
+			}
+
+			performDeinit(frame, thread);
+		}
 		FUNCTION_CONT(1);
 	}
 
@@ -720,8 +731,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr)(FUNCTION_ARGS) {
 		{
-			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0))
+			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0)) {
+				if (Memory::isBlockDeallocated(ptr.getBlock()))
+					throw exceptions::VMDoubleFreeException();
 				thread.process_memory.freeBlockData(ptr.getBlock());
+			}
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1210,6 +1224,8 @@ namespace vm {
 					auto tbl_block = tbl_pointer.getBlock();
 					if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
 						throw exceptions::VMDynTableReAllocTypeMismatch();
+					if (Memory::isBlockDeallocated(tbl_block))
+						throw exceptions::VMUseAfterFreeException();
 					thread.process_memory.freeBlockData(tbl_block);
 					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 						tbl_pointer, Pointer::null()
@@ -1226,6 +1242,8 @@ namespace vm {
 				auto tbl_block = tbl_pointer.getBlock();
 				if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
 					throw exceptions::VMDynTableReAllocTypeMismatch();
+				if (Memory::isBlockDeallocated(tbl_block))
+					throw exceptions::VMUseAfterFreeException();
 				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
 			}
 		}
@@ -1370,8 +1388,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVMValue)(FUNCTION_ARGS) {
 		{
 			const auto& safe_vm_value = *std::bit_cast<const SafeVMValue*>(instr->arg0);
-			performInit(instr, local_stack, frame, thread, safe_vm_value.type);
-			safe_vm_value.exportData({ Ref(frame->local_block_ref_stack_end[-1]), 0 });
+			performInit(local_stack, frame, thread, instr->arg1, safe_vm_value.type);
+			safe_vm_value.exportData({ Ref(frame->local_slot_stack_end[-1].block), 0 });
 		}
 		FUNCTION_CONT(1);
 	}
