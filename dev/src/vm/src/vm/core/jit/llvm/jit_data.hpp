@@ -53,6 +53,7 @@ struct LlvmData final {
 		Ref<llvm::StructType>   microinstruction;
 		Ref<llvm::StructType>   vm_thread;
 		Ref<llvm::FunctionType> opfun;
+		Ref<llvm::FunctionType> compiled;
 	};
 
 	/**
