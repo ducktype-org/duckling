@@ -4,6 +4,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <base/config/target_info.hpp>
+
 #include <os_utils/dynamic_library.hpp>
 #include <os_utils/exec_self.hpp>
 #include <os_utils/executable_path.hpp>
@@ -14,6 +16,7 @@
 
 #include <array>
 #include <cstring>
+#include <expected>
 #include <fstream>
 #include <limits>
 #include <mutex>
@@ -21,8 +24,8 @@
 #include <string_view>
 #include <vector>
 
-#if !defined(_WIN32)
-	#if defined(__APPLE__)
+#if !BASE_TARGET_OS_WINDOWS
+	#if BASE_TARGET_OS_MACOS
 		#include <util.h>
 	#else
 		#include <pty.h>
@@ -109,7 +112,7 @@ public:
 		TESTER_ADD_TEST(findSymbolBadName);
 		TESTER_ADD_TEST(closeLibraryDefaultConstructed);
 		TESTER_ADD_TEST(freeNullPages);
-#if !defined(_WIN32)
+#if !BASE_TARGET_OS_WINDOWS
 		TESTER_ADD_TEST(writeStrWritesToStdout);
 		TESTER_ADD_TEST(writeCharWritesToStdout);
 		TESTER_ADD_TEST(readCharReadsFromStdin);
@@ -218,42 +221,78 @@ private:
 		os_utils::closeLibrary(*lib);
 	}
 
-	void openLibraryFromMemoryTest() {
-		// 1. Use dladdr to find the absolute path to libc on THIS platform.
-		//    strlen is in libc, which is loaded into every process.
+	// 1. Pick a library to feed to openLibraryFromMemory. Its bytes have to come from a plain
+	//    file that is also complete on its own, and the platforms disagree on where such a
+	//    library lives:
+	//
+	//    * Linux: libc is both, and every process has it mapped, so dladdr on `strlen` finds it.
+	//    * macOS: libc is neither. Homebrew's libzstd is a file with no dependencies, and
+	//      exports a C symbol whose name does not depend on the compiler. Its prefix is
+	//      architecture-specific: /opt/homebrew on Apple silicon, /usr/local on Intel.
+#if BASE_TARGET_OS_MACOS && BASE_TARGET_ARCH_ARM
+	static constexpr const char* MEMORY_LIB_SYMBOL = "ZSTD_versionNumber";
+	static constexpr const char* MEMORY_LIB_PATH   = "/opt/homebrew/lib/libzstd.dylib";
+#elif BASE_TARGET_OS_MACOS && BASE_TARGET_ARCH_X86
+	static constexpr const char* MEMORY_LIB_SYMBOL = "ZSTD_versionNumber";
+	static constexpr const char* MEMORY_LIB_PATH   = "/usr/local/lib/libzstd.dylib";
+#else
+	static constexpr const char* MEMORY_LIB_SYMBOL = "strlen";
+#endif
+
+	// Absolute path of the library named above, or an error explaining what could not be found.
+	std::expected<std::string, std::string> memoryLibPath() {
+#if BASE_TARGET_OS_MACOS
+		return std::string{ MEMORY_LIB_PATH };
+#else
 		auto main_handle = os_utils::openLibrary(nullptr);
-		assertTrue(main_handle.has_value(), "main program handle should be valid");
-		auto strlen_addr = os_utils::findSymbol(*main_handle, "strlen");
-		assertTrue(strlen_addr.has_value(), "strlen must be locatable in main program");
+		if (!main_handle) return std::unexpected(main_handle.error());
+		auto symbol_addr = os_utils::findSymbol(*main_handle, MEMORY_LIB_SYMBOL);
 		os_utils::closeLibrary(*main_handle);
+		if (!symbol_addr) return std::unexpected(symbol_addr.error());
 
 		Dl_info info{};
-		int     ret = dladdr(*strlen_addr, &info);
-		assertTrue(ret != 0, "dladdr must succeed for strlen");
-		const char* libc_path = info.dli_fname;
+		if (dladdr(*symbol_addr, &info) == 0)
+			return std::unexpected<std::string>("dladdr failed for the chosen symbol");
+		return std::string{ info.dli_fname };
+#endif
+	}
+
+	void openLibraryFromMemoryTest() {
+		auto lib_path = memoryLibPath();
+		assertTrue(
+			lib_path.has_value(),
+			lib_path ? std::string{}
+					 : "cannot locate the library to load from memory: " + lib_path.error()
+		);
 
 		// 2. Read the library file into memory.
-		std::ifstream file(libc_path, std::ios::binary | std::ios::ate);
-		assertTrue(file.is_open(), "must be able to open the detected libc");
+		std::ifstream file(*lib_path, std::ios::binary | std::ios::ate);
+		assertTrue(file.is_open(), "must be able to open the located library: " + *lib_path);
 		auto file_size = static_cast<usize>(file.tellg());
 		file.seekg(0, std::ios::beg);
 		std::vector<byte> buffer(file_size);
 		file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(file_size));
-		assertTrue(static_cast<usize>(file.gcount()) == file_size, "must read entire libc file");
+		assertTrue(static_cast<usize>(file.gcount()) == file_size, "must read the entire file");
 
 		// 3. Load the library from memory (the function under test).
 		auto lib = os_utils::openLibraryFromMemory(buffer);
 		assertTrue(lib.has_value(), "openLibraryFromMemory should succeed");
 
 		// 4. Look up a symbol; dlsym must work on memory-loaded libraries.
-		auto sym = os_utils::findSymbol(*lib, "strlen");
-		assertTrue(sym.has_value(), "strlen should be found in memory-loaded lib");
-		assertTrue(*sym != nullptr, "strlen symbol should not be null");
+		auto sym = os_utils::findSymbol(*lib, MEMORY_LIB_SYMBOL);
+		assertTrue(sym.has_value(), "the symbol should be found in the memory-loaded lib");
+		assertTrue(*sym != nullptr, "the symbol should not be null");
 
 		// 5. Call the symbol to prove the loaded code is executable.
+#if BASE_TARGET_OS_MACOS
+		using ZstdVersionFunc = unsigned (*)();
+		auto func             = reinterpret_cast<ZstdVersionFunc>(*sym);
+		assertTrue(func() > 0, "ZSTD_versionNumber should report a version");
+#else
 		using StrlenFunc = unsigned long (*)(const char*);
 		auto func        = reinterpret_cast<StrlenFunc>(*sym);
 		ASSERT_EQUAL(5UL, func("hello"));
+#endif
 
 		// 6. Close; cleanup must not crash.
 		os_utils::closeLibrary(*lib);
@@ -306,7 +345,7 @@ private:
 		os_utils::freePages(nullptr, 4'096);
 	}
 
-#if !defined(_WIN32)
+#if !BASE_TARGET_OS_WINDOWS
 	void writeStrWritesToStdout() {
 		auto pty = PtyPair::create();
 		assertTrue(pty.master != -1 && pty.slave != -1, "PTY creation should succeed");
@@ -525,9 +564,8 @@ private:
 		os_utils::clearAbandonedLock(mutex);  // unlocked; must not crash
 		mutex.lock();
 		os_utils::clearAbandonedLock(mutex);  // no-op on Linux, clears the lock on macOS
-#ifndef __APPLE__
-		mutex.unlock();                       // on Linux the lock is still held by us
-#endif
+		if constexpr (not base::IS_TARGET_OS_MACOS)
+			mutex.unlock();                   // on Linux the lock is still held by us
 	}
 };
 

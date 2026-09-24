@@ -26,6 +26,7 @@ use super::duckc::{Duckc, multipackage_schema, process_builder};
 use super::profiles::Profile;
 use super::unit::Unit;
 use super::unit::graph::UnitGraph;
+use crate::quackpack::core::compile::unit::BuildKind;
 use crate::util::file_locks::LockedFile;
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
@@ -49,15 +50,11 @@ pub trait UnitCompiler: Debug {
         bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<Vec<multipackage_schema::Task>>;
 
-    /// Get the list of [`Unit`]s to compile.
+    /// Whether the given [`Unit`] should be compiled.
     ///
-    /// [`Unit`]s will be compiled in order determined by the returned vector, starting from the
-    /// index 0.
-    fn units_to_compile<'a>(
-        &self,
-        graph: &'a UnitGraph,
-        bcx: &BuildContext<'_, '_>,
-    ) -> Vec<&'a Unit>;
+    /// Note that, in the future, some [`Unit`]s (mainly build scripts) will _always_ be compiled,
+    /// no matter what this function returns.
+    fn should_compile(&self, unit: &Unit, graph: &UnitGraph, bcx: &BuildContext<'_, '_>) -> bool;
 }
 
 #[derive(Debug)]
@@ -80,7 +77,7 @@ impl BuildContext<'_, '_> {
 
     /// Get an appropriate [`ArtifactsLayout`] implementation.
     pub fn artifacts_layout(&self, graph: &UnitGraph) -> Box<dyn ArtifactsLayout> {
-        let root_package = graph.root_unit().root_package().package().get_package();
+        let root_package = graph.root_unit().package().get_package();
         let root_package_artifacts = root_package.artifacts_directory().to_path_buf();
         debug!(uses_shared_artifacts = %self.shared);
         if self.shared {
@@ -113,13 +110,18 @@ fn compile_all_needed_units(
     layout: &dyn ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<()> {
-    for unit in compiler.units_to_compile(graph, bcx) {
-        compile_unit(compiler, unit, graph, layout, bcx)?;
+    for unit in graph.compilation_order() {
+        if !compiler.should_compile(unit, graph, bcx) {
+            continue;
+        }
+        match unit.build_kind() {
+            BuildKind::Compile => compile_unit(compiler, unit, graph, layout, bcx)?,
+        }
     }
     Ok(())
 }
 
-#[instrument(skip_all, fields(id = %unit.unit_id(), name = %unit.root_package().package().name(), version = %unit.root_package().package().version(), identity = %unit.identity()))]
+#[instrument(skip_all, fields(id = %unit.unit_id(), name = %unit.package().name(), version = %unit.package().version(), identity = %unit.identity()))]
 /// Compile a single [`Unit`].
 /// May panic, if this [`Unit`] is not in the [`units_to_compile`](Self::units_to_compile) list.
 fn compile_unit(
@@ -159,7 +161,7 @@ fn compile_unit_with_schema(
     bcx: &BuildContext<'_, '_>,
     schema: multipackage_schema::MultiPackage,
 ) -> QuackResult<()> {
-    let name = unit.root_package().package().name();
+    let name = unit.package().name();
     let status = (|| {
         let unit_layout = layout.for_dependency(unit, graph)?;
         let builder = finished_builder_for_layout_and_profile(bcx, &*unit_layout, bcx.profile);
@@ -233,13 +235,9 @@ fn compile_and_print(
     mut builder: process_builder::DuckcProcessBuilder,
     name: impl fmt::Display,
 ) -> QuackResult<ExitStatus> {
+    bcx.pcx.ctx().info(format!("compiling `{name}`..."))?;
     bcx.pcx
         .ctx()
-        .console()
-        .info(format!("compiling `{name}`..."))?;
-    bcx.pcx
-        .ctx()
-        .console()
         .info_verbose(format!("Running `{}`", builder))?;
     builder.execute()
 }

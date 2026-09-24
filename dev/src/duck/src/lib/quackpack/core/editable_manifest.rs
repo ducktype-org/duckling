@@ -233,7 +233,7 @@ impl<'duck> EditableManifest<'duck> {
                 self.manifest_path().display()
             )
         })?;
-        self.ctx.console().info(format!(
+        self.ctx.info(format!(
             "written new manifest to `{}`",
             self.manifest_path().display()
         ))

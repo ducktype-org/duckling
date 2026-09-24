@@ -149,14 +149,17 @@ namespace compiler::mir {
 			if (optional_local.has_value()) {
 				valueOutput(continuation, MIRValue{ optional_local.value() });
 			} else {
-				auto symbol_kind = helios::kind(expr.symbol);
+				auto& ctx         = function.getContext();
+				auto  symbol_kind = helios::kind(expr.symbol);
 				CORE_ASSERT(
 					symbol_kind == helios::SymbolKind::Variable
-						|| symbol_kind == helios::SymbolKind::Const,
-					"IdentifierExpr symbol should be either local variable or global variable or "
-					"constant."
+						|| symbol_kind == helios::SymbolKind::Const
+						|| helios::isStaticField(ctx, expr.symbol),
+					"IdentifierExpr symbol should be a local variable, a global variable, a "
+					"constant or a static field."
 				);
 
+				// A static field is stored the same way a global variable is.
 				MIRGlobal::Kind global_kind = (symbol_kind == helios::SymbolKind::Const)
 				                                ? MIRGlobal::Kind::Constant
 				                                : MIRGlobal::Kind::Variable;
@@ -197,6 +200,64 @@ namespace compiler::mir {
 			valueOutput(lowered_inner.begin, target_location);
 		}
 
+		// @TODO: #1333 The result is always materialized in a temporary, even when the expression
+		// only feeds a branch (`if a and b`). A jumping visitor would lower the operands straight
+		// into the terminators of the enclosing control flow instead.
+		void doLazyBinaryEvaluation(const hc::BinaryOperatorExpr& expr) {
+			CORE_ASSERT(
+				expr.operation == hc::BuiltinBinary::BooleanOr
+					or expr.operation == hc::BuiltinBinary::BooleanAnd,
+				"Invalid call."
+			);
+			bool        is_and       = expr.operation == hc::BuiltinBinary::BooleanAnd;
+			std::string debug_prefix = is_and ? "and" : "or";
+
+			auto boolean_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				boolean_type.getType().getKind() == tsh::Kind::Bool,
+				"Lazily evaluated binary operators are boolean."
+			);
+			const auto result = function.addTmp(boolean_type, expr_scope);
+
+			auto rhs_block = function.newBlock(debug_prefix + ".rhs");
+			rhs_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+			);
+			auto rhs_store_result_hole = rhs_block->addHole();
+			auto lowered_right         = lowerSubExpr(*expr.rhs, rhs_block);
+			lowered_right.storeResultInGivenPlace(
+				MIRPlace(result),
+				rhs_store_result_hole,
+				{ flagReinit(result) },
+				expr_scope,
+				{ expr.getPosition() }
+			);
+
+			auto lhs_block     = function.newBlock(debug_prefix + ".lhs");
+			auto rhs_entry     = lowered_right.begin->getID();
+			auto if_true_cont  = is_and ? rhs_entry : continuation->getID();
+			auto if_false_cont = is_and ? continuation->getID() : rhs_entry;
+			lhs_block->setTerminator({
+				Operation::Branch,
+				{},
+				{ MIRPlace(result), if_true_cont, if_false_cont },
+				{},
+				expr_scope,
+			});
+
+			auto lhs_store_result_hole = lhs_block->addHole();
+			auto lowered_left          = lowerSubExpr(*expr.lhs, lhs_block);
+			lowered_left.storeResultInGivenPlace(
+				MIRPlace(result),
+				lhs_store_result_hole,
+				{ flagConstruct(result) },
+				expr_scope,
+				{ expr.getPosition() }
+			);
+
+			valueOutput(lowered_left.begin, result);
+		}
+
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			IF_BUILD_TYPE_DEV({
 				const bool lhs_trivial
@@ -215,6 +276,10 @@ namespace compiler::mir {
 					"`getResultAndTakeOwnership()` to `getResult()`"
 				);
 			})
+
+			if (expr.operation == hc::BuiltinBinary::BooleanOr
+			    or expr.operation == hc::BuiltinBinary::BooleanAnd)
+				return doLazyBinaryEvaluation(expr);
 
 
 			// Construct the result of the expression in reverse.
@@ -676,7 +741,7 @@ namespace compiler::mir {
 				const bool is_last_case = !first_entry.has_value();
 
 				// Result block: evaluate the case's value into the shared result, then join.
-				auto case_scope = function.newScope(expr_scope);
+				auto case_scope = expr_scope;
 				auto body_end   = function.newBlock("match.case.result");
 				body_end->setTerminator(
 					{ Operation::Jump, {}, { continuation->getID() }, {}, case_scope }

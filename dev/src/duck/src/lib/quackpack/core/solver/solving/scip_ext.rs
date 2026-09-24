@@ -11,6 +11,8 @@ pub trait BinModelExt {
     fn all_implies_any(&mut self, when_all: Vec<Rc<Variable>>, then_any: Vec<Rc<Variable>>);
     /// An implication of form when => then_all_1 ∧ ... ∧ then_all_n.
     fn one_implies_all(&mut self, when: Rc<Variable>, then_all: Vec<Rc<Variable>>);
+    /// Allow at most one variable to be chosen.
+    fn at_most_one(&mut self, vars: Vec<Rc<Variable>>);
 }
 
 impl BinModelExt for Model<ProblemCreated> {
@@ -44,6 +46,17 @@ impl BinModelExt for Model<ProblemCreated> {
                 vec![-1.0; then_all_len],
             )
             .le(0.0);
+        self.add(constraint);
+    }
+
+    fn at_most_one(&mut self, vars: Vec<Rc<Variable>>) {
+        let vars_len = vars.len();
+        let constraint = cons()
+            .coefs(
+                vars.iter().map(|v| v.as_ref()).collect(),
+                vec![1.0; vars_len],
+            )
+            .le(1.0);
         self.add(constraint);
     }
 }

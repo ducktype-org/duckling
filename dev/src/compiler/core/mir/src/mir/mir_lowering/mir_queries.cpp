@@ -57,7 +57,10 @@ namespace compiler::mir {
 
 		void operator()(const hc::MatchExpr& expr) {
 			for (const auto& match_case: expr.cases)
-				if (match_case.binding.has_value()) function.addLocal(match_case.binding.value());
+				if (match_case.binding.has_value()) {
+					auto local_ref = function.addLocal(match_case.binding.value());
+					local_ref->lifetime_flags |= LifetimeFlag::NoShadowingValidation;
+				}
 		}
 
 		/** Everything else introduces no locals. */
@@ -186,6 +189,19 @@ namespace compiler::mir {
 		if (function.return_type.getType().getKind() == tsh::Kind::Unit) {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
+		} else if (function.return_type.getType().getKind() == tsh::Kind::Void) {
+			// If the return type is `void` despite reachability of the end of the function, then
+			// the user must have written it explicitly (deducing `void` in HELIoS is conservative).
+			ctx.logInt(makeBox<dia::PlaceholderError>(
+				base::strConcat(
+					"The function `",
+					function.name,
+					"` has return type `void`, so it must never return, but it can reach the end "
+					"of its body."
+				),
+				"Provide an explicit `-> ()` return type if it is meant to return."
+			));
+			return query::Failed();
 		} else {
 			ctx.logInt(makeBox<dia::PlaceholderError>(
 				base::strConcat(

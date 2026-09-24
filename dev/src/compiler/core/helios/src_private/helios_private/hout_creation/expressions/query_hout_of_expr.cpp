@@ -368,7 +368,8 @@ namespace compiler::helios::code {
 				const auto lookup_result
 					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
 				// @TODO: #1412 fix dealias
-				auto all_candidates = lookup_result->valueOrThrow().leaves;
+				auto               all_candidates = lookup_result->valueOrThrow().leaves;
+				std::vector<SymID> method_candidates;
 				for (const auto [builtin_operator_sym, _]:
 				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
 					if (name(builtin_operator_sym) == op->unwrap().value)
@@ -376,30 +377,26 @@ namespace compiler::helios::code {
 				}
 				filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
 
-				// Step 2b. — If nothing was found in the calling scope or among builtins, fall
-				// back to an operator method declared on the operand's own type.
-				// @TODO: #3133 This should be unified.
-				if (all_candidates.empty()) {
-					const auto inner_type = inner->expression_type.getType();
+				// Step 2b. — Look for operator methods declared on the operand's own type (classes only)
+				const auto inner_type = inner->expression_type.getType();
+				if (inner_type.getKind() == tsh::Kind::Class) {
 					const auto method_lookup_result
 						= HInterface::ofTypeInstance(inner_type).lookup(ctx, op->unwrap().value);
-					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
+					method_candidates = method_lookup_result->valueOrThrow().leaves;
 					filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
-					if (!method_candidates.empty()) {
-						auto self_expr = Shorthand{ ctx }.prepToPassSelf(std::move(inner));
-						return processUnaryOperatorCall(
-								   ctx,
-								   method_candidates,
-								   std::move(self_expr),
-								   pstOrigin(op),
-								   operatoriness
-						)
-						    .valueOrThrow();
-					}
+
+					for (const auto method_candidate: method_candidates)
+						if (not std::ranges::contains(all_candidates, method_candidate))
+							all_candidates.push_back(method_candidate);
 				}
 
 				return processUnaryOperatorCall(
-						   ctx, all_candidates, std::move(inner), pstOrigin(op), operatoriness
+						   ctx,
+						   all_candidates,
+						   method_candidates,
+						   std::move(inner),
+						   pstOrigin(op),
+						   operatoriness
 				)
 				    .valueOrThrow();
 			}
@@ -616,7 +613,6 @@ namespace compiler::helios::code {
 			) const {
 				const auto lhs_type = lhs->expression_type.getSymbolType();
 				const auto rhs_type = rhs->expression_type.getSymbolType();
-				Shorthand  s{ ctx };
 
 				// Binary operator resolution now happens in two steps:
 				// 1. If the arguments are both numeric (integral or float) and the operator is a
@@ -648,7 +644,8 @@ namespace compiler::helios::code {
 				const auto lookup_result
 					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
 				// @TODO: #1412 fix dealias
-				auto all_candidates = lookup_result->valueOrThrow().leaves;
+				auto               all_candidates = lookup_result->valueOrThrow().leaves;
+				std::vector<SymID> method_candidates;
 				for (const auto [builtin_operator_sym, _]:
 				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
 					if (name(builtin_operator_sym) == op->unwrap().value)
@@ -658,32 +655,29 @@ namespace compiler::helios::code {
 					ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 				);
 
-				// Step 2b. — if nothing was found in the calling scope or among builtins, fall
-				// back to an operator method declared on the left-hand side's own type.
-				// @TODO: #3133 This should be unified.
-				if (all_candidates.empty()) {
-					const auto lhs_abstract_type    = lhs_type.getType();
+				// Step 2b. — Look for operator methods declared on the left-hand side's type
+				// (classes only)
+				const auto lhs_abstract_type = lhs_type.getType();
+				if (lhs_abstract_type.getKind() == tsh::Kind::Class) {
 					const auto method_lookup_result = HInterface::ofTypeInstance(lhs_abstract_type)
 					                                      .lookup(ctx, op->unwrap().value);
-					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
+					method_candidates = method_lookup_result->valueOrThrow().leaves;
 					filterFunctionsByOperatoriness(
 						ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 					);
-					if (!method_candidates.empty()) {
-						auto self_expr = s.prepToPassSelf(std::move(lhs));
-						return processBinaryOperatorCall(
-								   ctx,
-								   method_candidates,
-								   std::move(self_expr),
-								   std::move(rhs),
-								   pstOrigin(op)
-						)
-						    .valueOrThrow();
-					}
+
+					for (const auto method_candidate: method_candidates)
+						if (not std::ranges::contains(all_candidates, method_candidate))
+							all_candidates.push_back(method_candidate);
 				}
 
 				return processBinaryOperatorCall(
-						   ctx, all_candidates, std::move(lhs), std::move(rhs), pstOrigin(op)
+						   ctx,
+						   all_candidates,
+						   method_candidates,
+						   std::move(lhs),
+						   std::move(rhs),
+						   pstOrigin(op)
 				)
 				    .valueOrThrow();
 			}

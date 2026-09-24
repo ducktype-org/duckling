@@ -1,5 +1,4 @@
-//! This module contains a [`SolverGathererData`] and [`SolverEngineData`] structs, which are designated
-//! to finding the dependency resolution of a given package.
+//! This module contains a [`Solver`] struct which is designated to finding the dependency resolution of a given package.
 //! By *dependency resolution* we mean a set of packages, each with a designated set of features,
 //! so that each package's dependencies are satisfied inside that set.
 //!
@@ -16,6 +15,13 @@
 //! 6. Creating the new freeze, based on the reused part of the previous freeze and the solver-engine output.
 //! 7. Trimming the new freeze, to remove dependencies of the root package which were present previously
 //!    but have been since removed from its manifest.
+//!
+//! Reusing previous freeze:
+//! ------------------------
+//! Packages from the previous freeze remaining after stage 3 are assumed to be part of the solution until stage 7.
+//! This sometimes can cause stage 5 to fail, because we prohibit same packages but in different versions from entering the solution.
+//! To circumvent this, if [`NoSolutionError`] is encountered, and the last known freeze was well-formed,
+//! we repeat the whole process, but without supplying the last known freeze.
 pub mod dependency_edge;
 pub mod gathering;
 pub mod git_access;
@@ -31,7 +37,7 @@ use core::fmt;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
@@ -40,12 +46,130 @@ use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::solver::solving::solver_engine::{SolverEngine, SolverInput};
+use crate::quackpack::core::solver::solving::NoSolutionError;
+use crate::quackpack::core::solver::solving::input::SolverInput;
+use crate::quackpack::core::solver::solving::solver_engine::SolverEngine;
+use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::{FeatureName, Manifest, PackageContext, PackageId};
-use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal};
 
-/// A struct designated to finding the full dependency graph of a given package.
-pub struct SolverGathererData<'duck, 'ctx> {
+/// Main entry point.
+/// Performs the whole solving process.
+pub struct Solver<'duck, 'ctx, Access: GitAccess> {
+    root_pcx: &'ctx PackageContext<'duck>,
+    previous_freeze: Option<&'ctx VenvFreeze>,
+    fetcher: &'ctx Fetcher<'duck>,
+    git_access: Access,
+    mode: SolverMode,
+}
+
+/// Dependency realization returned by the solving process.
+/// Contains the new, currently valid [`SolverFreeze`] and its packages' manifests.
+pub struct SolverAnswer {
+    pub new_freeze: SolverFreeze,
+    pub pkgs_manifests: HashMap<PackageId, Box<Manifest>>,
+}
+
+impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
+    /// Create a new [`Solver`].
+    pub fn new(
+        root_pcx: &'ctx PackageContext<'duck>,
+        previous_freeze: Option<&'ctx VenvFreeze>,
+        fetcher: &'ctx Fetcher<'duck>,
+        git_access: Access,
+        mode: SolverMode,
+    ) -> Self {
+        Self {
+            root_pcx,
+            previous_freeze,
+            fetcher,
+            git_access,
+            mode,
+        }
+    }
+
+    /// Perform the whole solving process.
+    pub async fn solve(self) -> QuackResult<SolverAnswer> {
+        self.root_pcx
+            .ctx()
+            .info("starting solving the dependency graph")?;
+        let root_pkg = self.root_pcx.local_package_id()?;
+
+        let (initial_freeze, empty_input) = self.get_initial_freeze(root_pkg)?;
+        let preparer = SolvingPreparer::new(self.root_pcx, initial_freeze, self.mode)
+            .context("failed to start gathering packages")?;
+
+        let fetcher_lock = self
+            .root_pcx
+            .ctx()
+            .duck_home()
+            .open_fetcher_lockfile(self.root_pcx.ctx())?;
+        let should_run_engine = preparer
+            .prepare_solving(self.fetcher, &self.git_access)
+            .await?;
+        drop(fetcher_lock);
+
+        let solver_engine = match should_run_engine {
+            ShouldRunSolverEngine::No(answer) => {
+                return Ok(answer);
+            }
+            ShouldRunSolverEngine::Yes(solver_engine) => solver_engine,
+        };
+        match solver_engine.solve(self.root_pcx.ctx()) {
+            Ok(answer) => Ok(answer),
+            Err(e) => Box::pin(self.rerun_if_nonempty_input(e, empty_input)).await,
+        }
+    }
+
+    /// Create the initial [`SolverFreeze`], which serves as an entry point to the solving process.
+    /// It is used as apriori knowledge and is modified by later steps.
+    /// Returns a pair consisting of the freeze and information whether any well-formed previous freeze was supplied.
+    fn get_initial_freeze(&self, root_pkg: PackageId) -> QuackResult<(SolverFreeze, bool)> {
+        match self.previous_freeze {
+            Some(freeze) => match SolverFreeze::try_from_venv_freeze(root_pkg, freeze) {
+                Ok(freeze) => Ok((freeze, false)),
+                Err(malformed) => {
+                    warn!(error = ?malformed, "previous storage freeze is malformed");
+                    self.root_pcx
+                        .ctx()
+                        .warning("previous freezefile was malformed, ignoring it")?;
+                    Ok((SolverFreeze::empty_with_root(root_pkg)?, true))
+                }
+            },
+            None => Ok((SolverFreeze::empty_with_root(root_pkg)?, true)),
+        }
+    }
+
+    /// If there was a (well-formed) previous freeze, and we got [`NoSolutionError`],
+    /// then it might be because because of the assumtpion that previous freeze packages must be present.
+    /// Thus we retry with no input freeze, hoping that it allows for an existence of a solution.
+    async fn rerun_if_nonempty_input(
+        mut self,
+        e: QuackError,
+        empty_input: bool,
+    ) -> QuackResult<SolverAnswer> {
+        if !e.has_in_chain::<NoSolutionError>() || empty_input {
+            return Err(e);
+        }
+        self.root_pcx
+            .ctx()
+            .info("no solution found, retrying without previous freeze")?;
+        self.remove_previous_freeze();
+        self.solve().await
+    }
+
+    /// Helper for [`Self::rerun_if_nonempty_input`].
+    /// Changes previous freeze to [`None`].
+    fn remove_previous_freeze(&mut self) {
+        self.previous_freeze = None;
+    }
+}
+
+/// Performs the initial part of the solving process, namely:
+/// 1. Gathers previous freeze manifests.
+/// 2. Diagnoses the previous freeze (finds out which dependencies described there are still satisfied).
+/// 3. Discovers the dependency graph for the unsatisfied root package dependencies and gathers manifests.
+struct SolvingPreparer<'duck, 'ctx> {
     root_pcx: &'ctx PackageContext<'duck>,
     root_pkg: PackageId,
     root_pkg_features: HashSet<FeatureName>,
@@ -53,17 +177,8 @@ pub struct SolverGathererData<'duck, 'ctx> {
     mode: SolverMode,
 }
 
-/// Dependency realization returned by [`solve`](SolverEngineData::solve).
-/// Contains the new, currently valid [`SolverFreeze`]
-/// and its packages manifests to generate a serializable freeze.
-pub struct SolverAnswer {
-    pub new_freeze: SolverFreeze,
-    pub pkgs_manifests: HashMap<PackageId, Box<Manifest>>,
-}
-
-/// [`prepare_solving`](SolverGathererData::prepare_solving) response describing whether we should
-/// run the rest of the solver engine.
-pub enum ShouldRunSolverEngine {
+/// [`prepare_solving`](SolvingPreparer::prepare_solving) response describing whether we should run the solver engine.
+enum ShouldRunSolverEngine {
     No(SolverAnswer),
     Yes(Box<SolverEngineData>),
 }
@@ -78,9 +193,9 @@ impl fmt::Display for ShouldRunSolverEngine {
     }
 }
 
-impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
-    /// Creates a new [`SolverGathererData`] instance.
-    pub fn new(
+impl<'duck, 'ctx> SolvingPreparer<'duck, 'ctx> {
+    /// Creates a new [`SolvingPreparer`] instance.
+    fn new(
         pcx: &'ctx PackageContext<'duck>,
         current_freeze: SolverFreeze,
         mode: SolverMode,
@@ -103,17 +218,17 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         })
     }
 
-    /// Determines if all the transitive dependencies of the root package are satisfied.
-    /// If not, prepares the [`SolverEngineData`] for running the engine by constructing [`SolverInput`].
+    /// Main entry point.
+    /// Determines if all the direct and transitive dependencies of the root package are satisfied.
+    /// If not, prepares the [`SolverEngineData`] for running the engine by running the gathering processs on unsatisfied dependencies.
     #[tracing::instrument(skip_all)]
-    pub async fn prepare_solving<Access: GitAccess>(
+    async fn prepare_solving<Access: GitAccess>(
         self,
         fetcher: &Fetcher<'_>,
         git_access: &Access,
     ) -> QuackResult<ShouldRunSolverEngine> {
         let ctx = fetcher.ctx();
-        ctx.console()
-            .info("starting gathering the dependency graph")?;
+        ctx.info("starting gathering the dependency graph")?;
         let gatherer = Gatherer::new(fetcher, git_access);
 
         let root_manifest = Box::new(self.root_pcx.package().manifest().clone());
@@ -137,8 +252,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             debug!("root has been satisfied");
             let trimmed = maximal_valid_freeze
                 .find_minimal_dep_solution(&prev_freeze_manifests, root_features)?;
-            ctx.console()
-                .info("no need to run the gathering or the solver engine")?;
+            ctx.info("no need to run the gathering or the solver engine")?;
             return Ok(ShouldRunSolverEngine::No(SolverAnswer {
                 new_freeze: trimmed,
                 pkgs_manifests: prev_freeze_manifests,
@@ -150,7 +264,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         }
 
         let root_path = self.root_pcx.package().root().into();
-        ctx.console().info("running gathering")?;
+        ctx.info("running gathering")?;
         let gathered_info = Self::run_solver_gatherer(
             &gatherer,
             root_manifest,
@@ -165,7 +279,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             &maximal_valid_freeze,
             prev_freeze_manifests,
             gathered_info,
-        );
+        )?;
         Ok(ShouldRunSolverEngine::Yes(Box::new(SolverEngineData {
             root_pkg: self.root_pkg,
             root_pkg_features: self.root_pkg_features,
@@ -213,10 +327,11 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
 }
 
 #[derive(Debug)]
-/// A struct designated to finding the dependency resolution of a given package.
+/// A struct designated to finding the dependency resolution of a given package by running [`SolverEngine`]
+/// (i.e. creating an integer linear program describing the problem and solving it).
 ///
-/// It can be created by [`prepare_solving`](SolverGathererData::prepare_solving).
-pub struct SolverEngineData {
+/// It can be created by [`prepare_solving`](SolvingPreparer::prepare_solving).
+struct SolverEngineData {
     input: SolverInput,
     root_pkg: PackageId,
     root_pkg_features: HashSet<FeatureName>,
@@ -227,13 +342,12 @@ impl SolverEngineData {
     /// Finds dependency resolution of a given package.
     /// Returns a [`SolverAnswer`].
     #[tracing::instrument(skip_all)]
-    pub fn solve(self, ctx: &DuckContext) -> QuackResult<SolverAnswer> {
-        ctx.console().info("starting the solver engine")?;
-        let manifests = self.input.gathered_manifests.clone();
-        let solver_output =
+    fn solve(self, ctx: &DuckContext) -> QuackResult<SolverAnswer> {
+        ctx.info("starting the solver engine")?;
+        let (solution, manifests) =
             SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
-        debug!(?solver_output);
-        let new_freeze = self.current_freeze.new_freeze(&manifests, solver_output)?;
+        debug!(?solution);
+        let new_freeze = self.current_freeze.new_freeze(&manifests, solution)?;
         Ok(SolverAnswer {
             new_freeze,
             pkgs_manifests: manifests,

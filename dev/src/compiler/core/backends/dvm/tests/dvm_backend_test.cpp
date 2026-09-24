@@ -5,13 +5,13 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
-#include <os_utils/system_libraries.hpp>
 #include <program_lowering_context.hpp>
 #include <tsl/queries.hpp>
 #include <vm_tester_utils.hpp>
 
 #include <base/extend_cpp/vector_utils.hpp>
 
+#include <os_utils/system_libraries.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
@@ -83,8 +83,8 @@ protected:
 
 private:
 	static inline const std::vector<std::string> ALL_CORE_MODULES{
-		"core/builtins", "core/io",        "core/containers",
-		"core/runtime",  "core/panicking", "core/clib",
+		"core/builtins", "core/primitive_io", "core/containers",
+		"core/runtime",  "core/panicking",    "core/clib",
 	};
 
 	auto getModuleFromPath(

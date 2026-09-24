@@ -1,0 +1,28 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} init bar2
+  @{duck-exe} -C foo add bar --local=../bar --alias=bar
+  @{duck-exe} -C foo add bar2 --dev --local=../bar2 --alias=bar2
+
+Tests:
+  alias_equals_name:
+    Description: checks "aliases equal to names" lint
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        Err:
+          String: |+
+            warning: normal dependency's alias \`bar\` is equal to its name specified at \`dependencies.bar.source.name\` [aliases_equal_to_names]
+            warning: dev dependency's alias \`bar2\` is equal to its name specified at \`dev-dependencies.bar2.source.name\` [aliases_equal_to_names]
+        Output:
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: running gathering
+            info: starting the solver engine
+            info: starting loading 3 packages
+            info: loaded source codes of 3 packages, 0 were downloaded, 3 were already present
+            info: successfully synchronized venv \`foo\`"   

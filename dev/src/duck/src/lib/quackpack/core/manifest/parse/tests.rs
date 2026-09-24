@@ -691,7 +691,7 @@ dependencies:
     assert!(feature_names.contains(&"a".to_string()));
     assert!(feature_names.contains(&"b".to_string()));
 
-    let enabled = dep.enabled_features(vec![]);
+    let enabled = dep.enabled_features(&[].into());
     assert_eq!(enabled.len(), 2);
 }
 
@@ -731,40 +731,9 @@ dependencies:
     assert!(feature_names.contains(&"b".to_string()));
     assert!(feature_names.contains(&"c".to_string()));
 
-    let enabled_features = dep.enabled_features(vec![]);
+    let enabled_features = dep.enabled_features(&[].into());
 
     assert!(enabled_features.contains(&StrId::new("a")));
-}
-
-#[test]
-fn empty_conditions_features() {
-    let (dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: xd
-  version: '0.1'
-
-dependencies:
-  a:
-    version: '0.1'
-    conditions:
-      package-features: []
-"#,
-    );
-    let ctx = DuckContext::default();
-    let result = parse_manifest(&manifest_path, &ctx);
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        make_errors_message(
-            &dir,
-            [
-                "when parsing the field `dependencies.a.conditions`",
-                "the field `package-features` is present but empty, if you don't want to specify it, remove it from the manifest"
-            ]
-        )
-    );
 }
 
 #[test]

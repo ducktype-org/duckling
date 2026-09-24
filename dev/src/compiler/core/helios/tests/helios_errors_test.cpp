@@ -2,12 +2,14 @@
 #include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/errors.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
@@ -37,6 +39,7 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testClassErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -51,7 +54,7 @@ public:
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
-
+		TESTER_ADD_TEST(testManglingErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
@@ -67,29 +70,17 @@ protected:
 private:
 	/**
 	 * @brief Helper function that check for HELIOS compilation
-	 * errors in a module with given content, when compiling it to HOUT module.
+	 * errors.
 	 *
-	 * It creates a virtual file from the `module_content` argument
-	 * and creates a module tree from it every function call.
 	 * The `present_phrases` are checked to be present in the logged
 	 * error messages in the given order.
 	 *
 	 * @TODO: #2213 Add PST errors handling here.
 	 *
-	 * @param module_content The content of the module main source file.
 	 * @param logged_msg_count Expected number of logged error messages.
 	 * @param present_phrases List of phrases that should be present in the logged errors in order.
 	 */
-	void checkForErrorOnCompileModule(
-		std::string_view                     module_content,
-		const std::vector<std::string_view>& present_phrases,
-		u64                                  logged_msg_count
-	) {
-		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
-
-		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
-
-		assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
+	void checkForError(const std::vector<std::string_view>& present_phrases, u64 logged_msg_count) {
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 
 		// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
@@ -116,6 +107,36 @@ private:
 			);
 			if (found_pos != std::string::npos) current_pos = found_pos + phrase.length();
 		}
+	}
+
+	/**
+	 * @brief Helper function that check for HELIOS compilation
+	 * errors in a module with given content, when compiling it to HOUT module.
+	 *
+	 * It creates a virtual file from the `module_content` argument
+	 * and creates a module tree from it every function call.
+	 * The `present_phrases` are checked to be present in the logged
+	 * error messages in the given order.
+	 *
+	 * @TODO: #2213 Add PST errors handling here.
+	 *
+	 * @param module_content The content of the module main source file.
+	 * @param logged_msg_count Expected number of logged error messages.
+	 * @param present_phrases List of phrases that should be present in the logged errors in order.
+	 */
+	void checkForErrorOnCompileModule(
+		std::string_view                     module_content,
+		const std::vector<std::string_view>& present_phrases,
+		u64                                  logged_msg_count,
+		bool                                 expect_failure = true
+	) {
+		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
+
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+
+		if (expect_failure)
+			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
+		checkForError(present_phrases, logged_msg_count);
 	}
 
 	/**
@@ -155,6 +176,51 @@ private:
 				}
 			)",
 				{ "Call failed because no matching functions were found." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+                class Number {
+                    val: i64;
+                    fun +(rhs: Number) -> Number = {
+                        return Number(self.val + rhs.val);
+                    }
+                }
+
+                fun +(lhs: Number, rhs: Number) -> Number = {
+                    return Number(lhs.val + rhs.val);
+                }
+
+                fun main() -> i64 = {
+                    let a = Number(10);
+                    let b = Number(20);
+                    let c = a + b;
+                    return c.val;
+                }
+            )",
+				{ "Call failed due to ambiguous overload resolution" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+                class Number {
+                    val: i64;
+                    fun -() -> Number = {
+                        return Number(-self.val);
+                    }
+                }
+
+                fun -(n: Number) -> Number = {
+                    return Number(-n.val);
+                }
+
+                fun main() -> i64 = {
+                    let a = Number(10);
+                    let c = -a;
+                    return c.val;
+                }
+            )",
+				{ "Call failed due to ambiguous overload resolution" },
 				1
 			);
 		}
@@ -423,21 +489,6 @@ private:
 			      "object being copied." },
 				1
 			);
-
-
-			checkForErrorOnCompileModule(
-				R"(
-				class MyClass {
-					x:i64 = 0;
-
-					MyClass.abc(a: i64) = {
-						return MyClass(1);
-					}
-				}
-			)",
-				{ "User-defined constructors are not yet supported" },
-				1
-			);
 		}
 
 		// ============================ Typecheck errors ============================
@@ -537,6 +588,23 @@ private:
 				}
 			)",
 				{ "inconsistent return statements" },
+				1
+			);
+
+			// `void` is uninhabited, so a function returning it must never return. Reaching the
+			// end of the body contradicts that, and the error says which annotation was meant.
+			checkForErrorOnCompileModule(
+				R"(
+				fun neverReturns() -> void = {
+					if (true) return neverReturns();
+				}
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+				{ "has return type `void`, so it must never return, "
+			      "but it can reach the end of its body" },
 				1
 			);
 
@@ -906,6 +974,21 @@ private:
 			check_ref_match_error(
 				"match (v) { case x = 0i64; };",
 				{ "Match pattern bindings without a type constraint" }
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var v: i32 | f32 = 1i32;
+					var r: i64 = match (v) {
+						case x : i32 = x;
+						case _ = 1i64;
+					};
+					return 0i64;
+				}
+			)",
+				{ "All `match` cases have to be of the same type,"
+			      " but this one is `i64` while an earlier one is `i32`." },
+				1
 			);
 		}
 
@@ -1306,6 +1389,162 @@ private:
 				}
 			)",
 				{ "Symbol", "not found" },
+				1
+			);
+		}
+	}
+
+	/**
+	 * @brief Errors of the members of a class: their specifiers, their visibility and the names
+	 * that a class does not declare at all.
+	 */
+	void testClassErrors() {
+		// ==================== Duplicated member specifiers ====================
+		{
+			// A member carries at most one visibility specifier.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public private x: i64 = 0;
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Class visibility specifier is duplicated with another one." },
+				1,
+				false
+			);
+
+			// A member is either static or not, so `static` cannot be repeated either.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public static static y: i64 = 0;
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Class static specifier is duplicated with another one." },
+				1,
+				false
+			);
+		}
+
+		// ==================== Members hidden by their visibility ====================
+		{
+			// Reached through the type, which is the path that reports the declaration as well.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						private static hidden: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.hidden;
+						return 0;
+					} )",
+				{ "Accessed value is not visible from here.", "Found declaration:" },
+				1
+			);
+
+			// Reached through a value of the type.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						private hidden: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var c: C = C(1, 2);
+						var x: i64 = c.hidden;
+						return 0;
+					} )",
+				// The access through a value does not point at the declaration yet.
+				{ "Accessed value is not visible from here." },
+				1
+			);
+
+			// A protected member is hidden from a class that does not inherit from the declaring
+			// one.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						protected shared: i64 = 2;
+					}
+					class Unrelated {
+						public other: i64 = 3;
+
+						public fun reach(c: const ref C) -> i64 = {
+							var x: i64 = c.shared;
+							return 0;
+						}
+					}
+					fun main() -> i64 = {
+						return 0;
+					} )",
+				{ "Accessed value is not visible from here." },
+				1
+			);
+		}
+
+		// ==================== Names a class does not declare ====================
+		{
+			// A field reached through a value of the class.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+					}
+					fun main() -> i64 = {
+						var c: C = C(1);
+						var x: i64 = c.nope;
+						return 0;
+					} )",
+				{ "Accessed value not found." },
+				1
+			);
+
+			// A static field reached through the class itself.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+						public static s: i64 = 2;
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.nope;
+						return 0;
+					} )",
+				{ "Symbol 'nope' not found in lookup" },
+				1
+			);
+
+			// A static method called on the class itself.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+
+						public static fun sm() -> i64 = {
+							return 2;
+						}
+					}
+					fun main() -> i64 = {
+						var x: i64 = C.nope();
+						return 0;
+					} )",
+				{ "Call failed because no matching functions were found." },
+				1
+			);
+
+			// A method called on a value of the class.
+			checkForErrorOnCompileModule(
+				R"( class C {
+						public v: i64 = 1;
+
+						public fun m() -> i64 = {
+							return v;
+						}
+					}
+					fun main() -> i64 = {
+						var c: C = C(1);
+						var x: i64 = c.nope();
+						return 0;
+					} )",
+				{ "Call failed because no matching functions were found." },
 				1
 			);
 		}
@@ -2031,6 +2270,41 @@ private:
 				1
 			);
 		}
+	}
+
+	void testManglingErrors() {
+		using namespace compiler::helios;
+		constexpr char PRINTABLE     = '@';
+		constexpr char NON_PRINTABLE = '\x07f';
+
+		const auto [_, root_scope_prt] = test_utils::getModule(fs::File(
+			path(base::strConcat("test_modules/error_generating/mod_w_prt_char_", PRINTABLE, "_"))
+		));
+		const auto id_prt              = test_utils::getChain("foo", root_scope_prt).back();
+
+		// note: `Delete` is not-printable on win/linux/mac but it's allowed in filenames
+		ASSERT_TRUE(not std::isprint(static_cast<unsigned char>(NON_PRINTABLE)));
+		const auto [dummy, root_scope_nprt] = test_utils::getModule(fs::File(path(
+			base::strConcat("test_modules/error_generating/mod_w_non_prt_char_", NON_PRINTABLE, "_")
+		)));
+		std::ignore                         = dummy;  // @todo: #761 replace `dummy` with `_`
+		const auto id_nprt                  = test_utils::getChain("foo", root_scope_nprt).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_prt });
+			checkForError(
+				{ "[Feature not implemented] Name of a module contains a character that is not "
+			      "allowed yet: '@' (int: 64)" },
+				1
+			);
+
+			ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = id_nprt });
+			checkForError(
+				{ "[Feature not implemented] Name of a module contains a character that is not "
+			      "allowed yet: [not-printable] (int: 127)" },
+				1
+			);
+		});
 	}
 
 	void testErrorBadExpr() {

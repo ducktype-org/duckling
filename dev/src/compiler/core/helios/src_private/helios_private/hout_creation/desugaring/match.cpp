@@ -188,6 +188,17 @@ namespace compiler::helios::desugaring {
 			}
 			return index;
 		}
+
+		/**
+		 * @brief A lowered case, kept until the type the cases agree on is known.
+		 */
+		struct LoweredCase final {
+			base::Optional<usize>             alternative_index;
+			base::Optional<tsh::SymbolType<>> constraint;
+			base::Optional<SymID>             binding;
+			Box<code::Expr>                   result;
+			dia::StablePosition               position;
+		};
 	}
 
 	query::QResult<Box<code::Expr>> desugarMatch(
@@ -203,8 +214,9 @@ namespace compiler::helios::desugaring {
 			validateMatchSubject(ctx, std::move(subject_hout), subject_pst->getStablePosition())
 		);
 
-		// Lower all cases.
-		std::vector<code::MatchExpr::Case>  cases;
+		// Lower all cases. The results are kept aside until every case has been lowered,
+		// because the type the cases agree on is only known once all of them are in.
+		std::vector<LoweredCase>            lowered_cases;
 		base::Optional<tsh::SymbolType<>>   common_type;
 		std::vector<bool>                   covered(subject.num_alternatives, false);
 		bool                                has_wildcard = false;
@@ -328,19 +340,23 @@ namespace compiler::helios::desugaring {
 
 			// A match yields one value, so every case has to agree on its type. There is no
 			// common-type inference, so anything else is an error the user has to resolve.
+			// A case that never produces a value is an exception: it carries no type of its own,
+			// so it is left out of the vote and coerced to whatever the others settle on.
 			const auto result_type = result->expression_type.getSymbolType();
-			if (!common_type.has_value()) common_type = result_type;
-			if (common_type.value() != result_type) {
-				logError(
-					ctx,
-					case_position,
-					"All `match` cases have to be of the same type, but this one is `",
-					result_type.toString(),
-					"` while an earlier one is `",
-					common_type.value().toString(),
-					"`."
-				);
-				return query::Failed();
+			if (result_type.getType().getKind() != tsh::Kind::Void) {
+				if (!common_type.has_value()) common_type = result_type;
+				if (common_type.value() != result_type) {
+					logError(
+						ctx,
+						case_position,
+						"All `match` cases have to be of the same type, but this one is `",
+						result_type.toString(),
+						"` while an earlier one is `",
+						common_type.value().toString(),
+						"`."
+					);
+					return query::Failed();
+				}
 			}
 
 			UNPACK_QRESULT_MOVE(
@@ -350,9 +366,13 @@ namespace compiler::helios::desugaring {
 				)
 			);
 
-			cases.emplace_back(Shorthand::matchCase(
-				alternative_index, constraint_type, binding_sym, std::move(result)
-			));
+			lowered_cases.push_back(
+				LoweredCase{ .alternative_index = alternative_index,
+			                 .constraint        = constraint_type,
+			                 .binding           = binding_sym,
+			                 .result            = std::move(result),
+			                 .position          = result_holder->getStablePosition() }
+			);
 		}
 
 		const auto covered_count = static_cast<usize>(std::ranges::count(covered, true));
@@ -368,6 +388,28 @@ namespace compiler::helios::desugaring {
 				match_position
 			));
 			return query::Failed();
+		}
+
+		// Every case returns void, so the match itself never produces a value either.
+		if (common_type.empty()) common_type = tsh::SymbolType<>::withDefaults(tsh::getVoidType());
+
+		// The cases that never produce a value (`void`) are coerced to the type the others
+		// agreed on. Type `void` is uninhabited, so the coercion only reconciles the types:
+		// it lowers to nothing at all, and control never reaches it.
+		std::vector<code::MatchExpr::Case> cases;
+		cases.reserve(lowered_cases.size());
+		for (auto& lowered: lowered_cases) {
+			auto result = std::move(lowered.result);
+			if (result->expression_type.getSymbolType() != common_type.value()) {
+				auto coerced
+					= coerceFromBox(ctx, std::move(result), common_type.value(), lowered.position);
+				CORE_ASSERT(coerced.hasValue(), "Coercion from void should always succeed.");
+				result = std::move(coerced).valueOrThrow();
+			}
+
+			cases.emplace_back(Shorthand::matchCase(
+				lowered.alternative_index, lowered.constraint, lowered.binding, std::move(result)
+			));
 		}
 
 		return Box<code::Expr>(withOrigin(

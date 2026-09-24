@@ -171,12 +171,6 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getImplementedInterfaceSymbols(ctx);
 	}
 
-	SymbolType<> ClassAbstractType::getMemberType(
-		const compiler::helios::SymID sym, query::Context& ctx
-	) const {
-		return toCPimpl(pimpl)->getMemberType(sym, ctx);
-	}
-
 	template<std::derived_from<AbstractType> TYPE_AbstractType>
 	typename TYPE_AbstractType::CPimpl checkDynamicCast(const AbstractType::CPimpl pimpl) {
 		auto result = dynamic_cast<const typename TYPE_AbstractType::Impl*>(pimpl.get());

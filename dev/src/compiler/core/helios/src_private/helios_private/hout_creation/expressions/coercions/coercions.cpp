@@ -235,6 +235,11 @@ namespace compiler::helios {
 		if (!coercible)
 			return Coercion::invalid(from_type, to, InvalidCoercionReason::IncompatibleTypes);
 
+		// A `void` value never comes into existence, so there is nothing to copy or hand over:
+		// the coercion only reconciles the types and lowers to nothing at all.
+		if (from_type.getType().getKind() == tsh::Kind::Void)
+			return Coercion::valid(from_type, to, false);
+
 		// Wrapping into a variant copies the value into one alternative, so that alternative is
 		// what the copy is analysed against.
 		const tsh::SymbolType<> copy_target = variantAlternativeFor(from_type, to)
