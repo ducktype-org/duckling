@@ -9,12 +9,11 @@ use load_deps::{LoadedFreezePackages, load_packages_in_freeze};
 use tracing::{debug, error, warn};
 
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::lints::emit_warnings_and_run_lint_passes;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverAnswer, SolverGathererData};
+use crate::quackpack::core::solver::{Solver, SolverAnswer};
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::git_access::StorageGitAccess;
 use crate::quackpack::core::storage::locks::TrySyncLock;
@@ -224,7 +223,7 @@ fn load_external_freezefile(
 }
 
 /// Helper for [`sync`].
-/// Prepares the input and runs [`SolverGathererData::prepare_solving`].
+/// Creates [`Solver`] and runs it.
 #[tracing::instrument(skip_all)]
 fn get_solver_answer(
     pcx: &PackageContext<'_>,
@@ -234,24 +233,8 @@ fn get_solver_answer(
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
     debug!(?mode);
-    pcx.ctx().info("starting solving the dependency graph")?;
-    let root_origin = FullOrigin::for_local(pcx.package().root())?;
-    let root_identity = FullIdentity::new(pcx.package().name(), root_origin);
-    let root_pkg = PackageId::new(root_identity, pcx.package().version());
-    let solver_freeze = match input_freeze {
-        Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
-        None => SolverFreeze::empty_with_root(root_pkg)?,
-    };
-    let solver = SolverGathererData::new(pcx, solver_freeze, mode)
-        .context("failed to start gathering packages")?;
-    let fetcher_lock = pcx.ctx().duck_home().open_fetcher_lockfile(pcx.ctx())?;
-    let should_run_engine = block_on(solver.prepare_solving(fetcher, &git_access))?;
-    drop(fetcher_lock);
-    debug!(%should_run_engine);
-    match should_run_engine {
-        ShouldRunSolverEngine::No(answer) => Ok(answer),
-        ShouldRunSolverEngine::Yes(solver) => solver.solve(pcx.ctx()),
-    }
+    let solver = Solver::new(pcx, input_freeze, fetcher, git_access, mode);
+    block_on(solver.solve())
 }
 
 fn make_after_fetch_message(

@@ -28,6 +28,7 @@ public:
 		TESTER_ADD_TEST(testMoveErrors);
 		TESTER_ADD_TEST(testUseBeforeInit);
 		TESTER_ADD_TEST(testShortCircuitMoveState);
+		TESTER_ADD_TEST(testMaybeUninitialized);
 	}
 
 private:
@@ -86,6 +87,25 @@ private:
                })",
 			{ "may have been moved out of on some", "Value moved here." },
 			1
+		);
+	}
+
+	/**
+	 * @brief A local that is initialized on one branch only is reported as uninitialized on some
+	 * paths, not as possibly moved: nothing ever moved it, so there is no move site to point at.
+	 */
+	void testMaybeUninitialized() {
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun maybeUninit(x: i64) -> i64 = {
+                   if (x > 0) { c = 1; }
+                   let y = c;
+                   var c: i64 = 20;
+                   return c + y;
+               })",
+			{ "is used before it is initialized",
+		      "is not initialized on some control-flow paths reaching this use.",
+		      "Variable declared here." },
+			2
 		);
 	}
 

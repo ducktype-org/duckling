@@ -1,8 +1,6 @@
 #include "symbol_data.hpp"
 
 #include <helios/scope_id.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -112,6 +110,12 @@ namespace compiler::helios {
 		return { std::move(common_data), pst_data };
 	}
 
+	SymbolData SymbolData::makeClassMemberSymbolData(
+		CommonSymbolData common_data, ClassMemberSemantics class_member_data
+	) {
+		return { std::move(common_data), class_member_data };
+	}
+
 	SymbolData SymbolData::makeGeneratedSymbolData(
 		const base::StrID name, defgen::GeneratedSymbolDataVariant generated_data
 	) {
@@ -164,6 +168,7 @@ namespace compiler::helios {
 		// @TODO: #3099 a lot of scopes could be removed from generated symbols.
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
+			variant_case(ClassMemberSemantics, member_data) { return member_data.scope; }
 			variant_case(BuiltinSemantics, data) { return data.scope; }
 			variant_case(defgen::SelfParameter, param) { return param.scope; }
 			variant_case(defgen::ControlFlowLocal, local) { return local.owning_scope; }
@@ -174,9 +179,15 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
+	bool SymbolData::isPstImplemented() const {
+		return std::holds_alternative<PstImplementedSemantics>(other)
+		    or std::holds_alternative<ClassMemberSemantics>(other);
+	}
+
 	base::Optional<pst::AccessLocked<pst::LangElement>> SymbolData::maybePstElement() const {
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, data) { return data.getElement(); }
+			variant_case(ClassMemberSemantics, data) { return data.getElement(); }
 			variant_case(BuiltinSemantics, data) { return data.getElement(); }
 			variant_default { return {}; }
 		}

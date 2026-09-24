@@ -811,7 +811,7 @@ namespace compiler::helios {
 		query::QResult<LookupResult> lookupImplicitPrelude(
 			query::Context& ctx, frontend::ModuleID module_id, base::StrID name, bool with_wildcards
 		) {
-			LookupResult result{ .leaves = {}, .children = {} };
+			LookupResult result{};
 			if (isStandardLibraryModule(ctx, module_id)) return result;
 
 			for (const auto& prelude_import: preludeImports()) {
@@ -828,7 +828,9 @@ namespace compiler::helios {
 				// The prelude re-exports the contents of the module, but not the modules it
 				// imports itself - otherwise every `import` written in a prelude module would
 				// collide with the same import written by the user.
-				LookupResult exported{ .leaves = {}, .children = prelude_result->children };
+				LookupResult exported{ .leaves       = {},
+					                   .inaccessible = {},
+					                   .children     = prelude_result->children };
 				for (const SymID sym: prelude_result->leaves)
 					if (kind(sym) != SymbolKind::Import) exported.leaves.push_back(sym);
 
@@ -842,7 +844,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			Ref symbol_list = &ctx.query<QuerySymbolsInScope>(key.scope)->valueOrThrow();
 
-			LookupResult result{ .leaves = {}, .children = {} };
+			LookupResult result{};
 
 			for (const auto& sym: *symbol_list) {
 				if (isIgnoredByLookup(sym)) continue;

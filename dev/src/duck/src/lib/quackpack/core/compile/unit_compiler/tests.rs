@@ -3,8 +3,9 @@ use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::creating_graph::create_early_graph_from_bcx;
 use crate::quackpack::core::compile::early_graph::tests::cycling::setup::*;
-use crate::quackpack::core::compile::early_graph::tests::mock_local_identity;
-use crate::quackpack::core::compile::early_graph::tests::{mock_local_pkg, mock_registry_pkg};
+use crate::quackpack::core::compile::early_graph::tests::{
+    mock_local_identity, mock_local_pkg, mock_registry_pkg,
+};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::Unit;
 use crate::quackpack::core::compile::unit::graph::{UnitGraph, lower_early_graph};
@@ -47,7 +48,7 @@ fn collects_packages() {
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
     for unit in unit_graph.units_sorted_by_id() {
-        let expected: &[&str] = match unit.root_package().package().name().as_str() {
+        let expected: &[&str] = match unit.package().name().as_str() {
             "root" => &["bar", "baz", "foo", "root"],
             "foo" => &["baz", "foo"],
             "bar" => &["bar", "baz"],
@@ -93,7 +94,7 @@ fn collects_packages_cycle() {
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
     for unit in unit_graph.units_sorted_by_id() {
-        let expected: &[&str] = match unit.root_package().package().name().as_str() {
+        let expected: &[&str] = match unit.package().name().as_str() {
             "root" | "cycle" => &["bar", "cycle", "foo", "root"],
             "foo" => &["foo"],
             "bar" => &["bar"],

@@ -225,6 +225,11 @@ class DAPTestClient:
                         if expected_out in output_text:
                             pending_outputs.remove(expected_out)
 
+    def get_frames(self):
+        st_seq = self.send_stack_trace(thread_id=0, start_frame=0, levels=1)
+        st_resp = self.wait_for_response(st_seq, "Getting stack trace", expect_success=True)
+        return st_resp.get("body", {}).get("stackFrames", [])
+
     def print_history(self):
         print("\n".join(self.full_output_history))
 

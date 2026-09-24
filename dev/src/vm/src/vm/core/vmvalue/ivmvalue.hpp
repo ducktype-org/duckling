@@ -116,7 +116,7 @@ JSON_REGISTER_TYPE_WITH_NAME(Ref<vm::IVMValue>, "Ref<VMValue>");
 
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
-struct nlohmann::adl_serializer<vm::IVMValue> {
+struct nlohmann::adl_serializer<vm::IVMValue> final {
 	static void to_json(json& j, const vm::IVMValue& v) {
 		j["type"]        = std::string(TypeParseTraits<vm::IVMValue>::NAME.data());
 		j["data_type"]   = v.getType()->getName().str();

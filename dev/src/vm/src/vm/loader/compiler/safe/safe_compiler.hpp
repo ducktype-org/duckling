@@ -16,7 +16,7 @@ namespace vm::loader::compiler::safe {
 		/**
 		 * @brief Stores the shared, global state required for the entire compilation process.
 		 */
-		struct SafeProgramCompilationContext {
+		struct SafeProgramCompilationContext final {
 			/**
 			 * @brief A mapping from a method's string name (`StrID`) to its unique numeric ID.
 			 * This is a crucial lookup table used during the instruction lowering phase to
@@ -98,13 +98,20 @@ namespace vm::loader::compiler::safe {
 		);
 
 		/**
+		 * @brief Everything `lowerInstructions` produces for a single function.
+		 */
+		struct LoweredFunction {
+			low::MicroBytecode                                  bytecode;
+			std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
+		};
+
+		/**
 		 * @brief Lowers instructions to micro-bytecode. Iterates through the instructions and
 		 * translates them into a sequence of `MicroInstruction`s.
-		 * @return The converted list of instructions as well as the mapping from instruction
-		 * indices to instruction ranges in micro-bytecode.
+		 * @return The converted list of instructions and the mapping from instruction indices to
+		 * instruction ranges in micro-bytecode.
 		 */
-
-		std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> lowerInstructions(
+		LoweredFunction lowerInstructions(
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		);
 

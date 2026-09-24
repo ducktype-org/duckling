@@ -1,2 +1,6 @@
 SubDirs:
+  - alias_equals_name
+  - always_false_conditions
+  - nonexistent_features
+  - self_implying_features
   - unused-keys

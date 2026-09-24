@@ -59,7 +59,7 @@ namespace vm {
 			const ProcessStateManager& table;
 		};
 
-		struct ApplyResult {
+		struct ApplyResult final {
 			/**
 			 * @brief true when this thread state change put the process into `Panicked` for the
 			 * first time. The caller must send a Stop request out to all threads.

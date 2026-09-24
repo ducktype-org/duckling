@@ -35,16 +35,16 @@ namespace vm::native {
 
 	DynamicLibrary::~DynamicLibrary() noexcept { os_utils::closeLibrary(lib); }
 
-	std::byte* DynamicLibrary::findSymbol(const char* name) const {
+	byte* DynamicLibrary::findSymbol(const char* name) const {
 		auto result = os_utils::findSymbol(lib, name);
 		CORE_ASSERT(result.has_value(), "dlsym failed: ", result.error());
-		return reinterpret_cast<std::byte*>(*result);
+		return reinterpret_cast<byte*>(*result);
 	}
 
-	base::Optional<std::byte*> DynamicLibrary::maybeFindSymbol(const char* name) const {
+	base::Optional<byte*> DynamicLibrary::maybeFindSymbol(const char* name) const {
 		auto result = os_utils::findSymbol(lib, name);
 		if (result.has_value())
-			return reinterpret_cast<std::byte*>(*result);
+			return reinterpret_cast<byte*>(*result);
 		else
 			return std::nullopt;
 	}

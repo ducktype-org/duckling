@@ -9,10 +9,10 @@ use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
 /// Struct containing all global duck options, adjustable from cli.
 #[derive(Debug)]
 pub struct GlobalOptions {
-    verbose: bool,
-    quiet: bool,
-    color: Color,
-    offline: bool,
+    pub(in crate::duck) verbose: bool,
+    pub(in crate::duck) quiet: bool,
+    pub(in crate::duck) color: Color,
+    pub(in crate::duck) offline: bool,
 }
 
 impl GlobalOptions {

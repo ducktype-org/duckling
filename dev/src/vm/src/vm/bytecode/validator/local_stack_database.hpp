@@ -32,13 +32,13 @@ namespace vm::code {
 		using NameStackID = u64;
 		using TypeStackID = persistent::VectorStateID;
 
-		struct Lifetime {
+		struct Lifetime final {
 			usize deinit_idx                         = 0;
 			usize init_idx                           = 0;
 			auto  operator<=>(const Lifetime&) const = default;
 		};
 
-		struct NameStackEntry {
+		struct NameStackEntry final {
 			Lifetime             lifetime{};
 			NameStackID          prev = 0;
 			valid_type::TypeSize size_in_bytes{};

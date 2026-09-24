@@ -52,7 +52,7 @@ namespace vm::fast::exec {
 #undef MAKE_MAKERS_JUST_DEF
 #undef MAKE_MAKERS_FULL
 
-	struct ExecFunction {
+	struct ExecFunction final {
 		std::vector<Instruction> data;
 		const FunctionInfo*      info;
 	};

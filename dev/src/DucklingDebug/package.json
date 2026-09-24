@@ -10,6 +10,7 @@
   "activationEvents": [
     "onStartupFinished",
     "onLanguage:fatbytecode",
+    "onLanguage:duckling",
     "onDebug:ducklingdebug",
     "onDebugDynamicConfigurations"
   ],
@@ -32,12 +33,12 @@
       "editor/title/run": [
         {
           "command": "ducklingdebug.runFile",
-          "when": "resourceLangId == fatbytecode",
+          "when": "resourceLangId == fatbytecode || resourceLangId == duckling",
           "group": "navigation@1"
         },
         {
           "command": "ducklingdebug.debugFile",
-          "when": "resourceLangId == fatbytecode",
+          "when": "resourceLangId == fatbytecode || resourceLangId == duckling",
           "group": "navigation@2"
         }
       ]
@@ -46,12 +47,19 @@
       {
         "id": "fatbytecode",
         "extensions": [".dbc"]
+      },
+      {
+        "id": "duckling",
+        "extensions": [".dk"]
       }
     ],
 
     "breakpoints": [
       {
         "language": "fatbytecode"
+      },
+      {
+        "language": "duckling"
       }
     ],
 
@@ -61,7 +69,7 @@
         "label": "Duckling Debugger",
         "program": "../../build/bin/VM",
         "args": ["debug_adapter"],
-        "languages": ["fatbytecode"],
+        "languages": ["fatbytecode", "duckling"],
 
         "configurationAttributes": {
           "launch": {

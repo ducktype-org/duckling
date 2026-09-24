@@ -15,6 +15,10 @@ copy_std_artifacts: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/nul
 
 Run: "@{duckc_path} @{run_args}"
 
+# `<tool> <major>.<minor>[.<patch>...][-<prerelease>]`, followed by the commit group when the
+# build came from a git worktree - so the regex must not be anchored at the end of the line.
+version_regex: "[0-9]+(\\.[0-9]+)+(-[a-z]+)?"
+
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
 PreNode: ""
 
@@ -63,3 +67,24 @@ Tests:
     Cases:
       dvm-backend:
         ExitCode: 0
+
+  cli-version:
+    # The shared rows are the Version module's job and are unit-tested there. What only the real
+    # binary can prove is that it names itself correctly and contributes its own extra rows.
+    Cases:
+      duckc-version:
+        Run: '@{expect_output} --out-regex "^duckc @{version_regex}" -- @{duckc_path} --version'
+
+      duckc-version-verbose:
+        Run: '@{expect_output} --out-regex "^duckc @{version_regex}"
+          --out-regex "LLVM: +[0-9]+\."
+          --out-regex "JIT: +(enabled|disabled)"
+          -- @{duckc_path} --version-verbose'
+
+      vm-version:
+        Run: '@{expect_output} --out-regex "^DVM @{version_regex}" -- @{dvm_path} --version'
+
+      vm-version-verbose:
+        Run: '@{expect_output} --out-regex "^DVM @{version_regex}"
+          --out-regex "dispatch: +[A-Za-z]"
+          -- @{dvm_path} --version-verbose'
