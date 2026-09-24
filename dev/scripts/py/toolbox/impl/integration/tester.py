@@ -28,6 +28,13 @@ from ..helpers import (
 DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
 
+def _cases(count: int) -> str:
+    """
+    `1 case` / `2 cases`.
+    """
+    return f"{count} case{'' if count == 1 else 's'}"
+
+
 def tester_impl(
     clean: bool,
     dry: bool,
@@ -109,7 +116,10 @@ def tester_impl(
     # Timed from here, so the reported span covers the work the run actually
     # does: the node PreNodes (including the toolchain build) and the cases.
     # Each selected test is one unit of progress.
-    PROGRESS.reset(len(normal) + len(deferred), quiet=quiet)
+    total_tests = len(normal) + len(deferred)
+    PROGRESS.reset(total_tests)
+    if quiet:
+        PROGRESS.attach()
     start = time.perf_counter()
     try:
         stats = run_groups(normal, deferred, ctx)
@@ -119,6 +129,10 @@ def tester_impl(
         ctx.output.drain()
     elapsed = time.perf_counter() - start
 
+    # Every selected test is counted exactly once, whichever path its group
+    # took; a schedule that missed one would otherwise only stop the line short.
+    assert PROGRESS.done == total_tests
+
     PROGRESS.close()
 
     if dry:
@@ -127,19 +141,20 @@ def tester_impl(
     succeeded, failed, disabled = stats
     total_cases = len(succeeded) + len(failed) + len(disabled)
     print(
-        f"Integration tests: {total_cases} case{'' if total_cases == 1 else 's'}"
+        f"Integration tests: {_cases(total_cases)}"
         f" — {len(succeeded)} passed, {len(disabled)} disabled, {len(failed)} failed"
         f" — {elapsed:.1f} s"
     )
 
     if ctx.not_run:
         total = ctx.not_run_total
-        by_reason = sorted(ctx.not_run.items())
+        # Most first: the reason that swallowed the most work is the story.
+        by_reason = sorted(ctx.not_run.items(), key=lambda item: (-item[1], item[0]))
         if len(by_reason) == 1:
             detail = by_reason[0][0]
         else:
             detail = ", ".join(f"{count} {reason}" for reason, count in by_reason)
-        print(f"Not run: {total} case{'' if total == 1 else 's'} — {detail}")
+        print(f"Not run: {_cases(total)} — {detail}")
 
     if failed or ctx.node_failures:
         listing = [f" - {short_path(path)}" for path in failed]
@@ -147,8 +162,10 @@ def tester_impl(
             f" - {short_path(path)}  ({kind} failed)"
             for path, kind in ctx.node_failures
         ]
+        heading = "(Fail fast) Failed tests:" if fail_fast else "Failed tests:"
+        listed = "\n".join(listing)
         exit_with_error(
-            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(listing)}\n"
+            f"{heading}\n{listed}\n"
             + f"Please see log file '{log_file.absolute()}' for more info."
         )
     elif not clean:

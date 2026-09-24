@@ -83,18 +83,6 @@ from click import command, option
     "completion order. Has no effect with --sequential.",
 )
 @option(
-    "-q",
-    "--quiet",
-    is_flag=True,
-    default=False,
-    help="Print only failures: failing cases, failing hooks, the summary and the "
-    "failed list. Passing and skipped cases are left out, and a test that shows "
-    "up carries a tally of its cases. Cases are then reported per test rather "
-    "than as they run, even with --sequential. A single status line reports the "
-    "progress on a terminal; when the output is redirected there is no line, so "
-    "a captured log holds exactly what a run without this flag would print.",
-)
-@option(
     "--core-dumps",
     is_flag=True,
     default=False,
@@ -115,6 +103,16 @@ from click import command, option
     default="{}",
     help="A json dict with configuration values that will override the test defaults. "
     "Note that boolean values should be of a string type, like \"true\" or \"false\"."
+)
+@option(
+    "-q",
+    "--quiet",
+    is_flag=True,
+    default=False,
+    help="Print only what went wrong: failing cases, failing hooks and the "
+    "summary, with a per-test tally for each test that shows up. Cases are "
+    "reported per test rather than as they run, even with --sequential; "
+    "`--verbose` and `--dry` output is unaffected.",
 )
 @verbose(help="Prints some debug information about test cases")
 def itest(*args, **kwargs):

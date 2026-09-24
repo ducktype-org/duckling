@@ -2,16 +2,28 @@ import threading
 from dataclasses import dataclass, field
 
 from .classes import Case, Test, TestNode
-from .context import RunContext
+from .context import (
+    HOOK_POSTNODE,
+    HOOK_POSTTEST,
+    HOOK_PRENODE,
+    HOOK_PRETEST,
+    HOOK_SETUP,
+    NOT_RUN_FAIL_FAST,
+    NOT_RUN_PRETEST,
+    NOT_RUN_PRENODE,
+    NOT_RUN_SETUP,
+    RunContext,
+)
 from .resource_manager import ResourceAcquirer
-from .progress import PROGRESS
 from .reporting import (
-    SUITE_ROOT,
     CaseLog,
     TestStatistics,
     first_line,
+    format_not_run,
     format_tally,
     log_info_if_needed,
+    note_preparing,
+    note_test_finished,
     print_case_failed,
     print_failure,
     print_section,
@@ -130,13 +142,8 @@ def _ensure_open(state: NodeState, ctx: RunContext):
             # long PreNode is itself running, so this cannot deadlock.
             _ensure_open(state.parent, ctx)
         if state.node.pre_node:
-            # This runs the toolchain build and the std warm-up, which is the
-            # longest silence in a run and the one that looks most like a hang.
-            PROGRESS.set(
-                "preparing the run"
-                if state.path == SUITE_ROOT
-                else f"preparing {short_path(state.path)}"
-            )
+            # The toolchain build and the std warm-up: the longest silence.
+            note_preparing(state.path)
             log_info_if_needed("Executing pre-node command...", ctx.dry, ctx.verbose)
             try:
                 dit_exec_command(
@@ -181,7 +188,7 @@ def _release(state: NodeState, ctx: RunContext):
                 [(print_failure, f"PostNode failed: {short_path(state.path)}")]
             )
             _log_failure(state.path, e, ctx)
-            ctx.record_node_failure(state.path, "PostNode")
+            ctx.record_node_failure(state.path, HOOK_POSTNODE)
     if state.parent is not None:
         _release(state.parent, ctx)
 
@@ -207,7 +214,7 @@ def _start_group(group: TestGroup, ctx: RunContext) -> bool:
     # An empty section still advances the ordered output, so skipped
     # groups do not stall the ones after them.
     if ctx.abort.is_set():
-        ctx.record_not_run("fail fast", len(group.cases))
+        ctx.record_not_run(NOT_RUN_FAIL_FAST, len(group.cases))
         ctx.output.submit(group.path, [])
         return False
 
@@ -221,8 +228,8 @@ def _start_group(group: TestGroup, ctx: RunContext) -> bool:
             ctx.output.emit_now(
                 [(print_failure, f"PreNode failed: {short_path(e.node.path)}")]
             )
-        ctx.record_node_failure(group.path, "PreNode")
-        ctx.record_not_run("PreNode failed", len(group.cases))
+        ctx.record_node_failure(group.path, HOOK_PRENODE)
+        ctx.record_not_run(NOT_RUN_PRENODE, len(group.cases))
         ctx.output.submit(group.path, [])
         return False
 
@@ -243,14 +250,14 @@ def _start_group(group: TestGroup, ctx: RunContext) -> bool:
                 core_dumps=ctx.core_dumps,
             )
         except Exception as e:
-            ctx.record_node_failure(group.path, "PreTest")
-            ctx.record_not_run("PreTest failed", len(group.cases))
+            ctx.record_node_failure(group.path, HOOK_PRETEST)
+            ctx.record_not_run(NOT_RUN_PRETEST, len(group.cases))
             _log_failure(group.path, e, ctx)
             failure = (print_failure, f"PreTest failed: {short_path(group.path)}")
             # No case ran, so the only thing a tally can say is how many did
             # not. The streamed header was already printed, before the failure
             # was known.
-            tally = f"{len(group.cases)} not run" if ctx.quiet else ""
+            tally = format_not_run(len(group.cases)) if ctx.quiet else ""
             section = (
                 [failure]
                 if ctx.streamed_sections
@@ -270,7 +277,7 @@ def _run_group_case(group: TestGroup, slot: int, ctx: RunContext):
     case instead of tearing down the run.
     """
     if ctx.abort.is_set():
-        ctx.record_not_run("fail fast", 1)
+        ctx.record_not_run(NOT_RUN_FAIL_FAST, 1)
         return
     index, case = group.cases[slot]
     clog = group.case_logs[slot]
@@ -311,7 +318,7 @@ def _finish_group(group: TestGroup, ctx: RunContext):
                 core_dumps=ctx.core_dumps,
             )
         except Exception as e:
-            ctx.record_node_failure(group.path, "PostTest")
+            ctx.record_node_failure(group.path, HOOK_POSTTEST)
             _log_failure(group.path, e, ctx)
             post_failure = (print_failure, f"PostTest failed: {short_path(group.path)}")
             if ctx.fail_fast:
@@ -334,7 +341,7 @@ def _finish_group(group: TestGroup, ctx: RunContext):
             section_for(group.path, section, len(group.cases) == 1, tally),
         )
 
-    PROGRESS.advance(short_path(group.path), len(group.stats.failed))
+    note_test_finished(group.path, len(group.stats.failed))
     _release(group.node, ctx)
 
 
@@ -350,17 +357,16 @@ def _execute_group_inline(group: TestGroup, ctx: RunContext):
             pass  # cleaning is best-effort; still try the Clean command
         clean_test(group.test, group.path, ctx)
         _release(group.node, ctx)
-        PROGRESS.advance(short_path(group.path))
+        note_test_finished(group.path)
         return
     if _start_group(group, ctx):
         for slot in range(len(group.cases)):
             _run_group_case(group, slot, ctx)
         _finish_group(group, ctx)
     else:
-        # A test that never ran is still a test the run got through, so the
-        # count finishes on the whole suite rather than stopping short.
+        # A test that never ran still counts, so the line reaches the end.
         _release(group.node, ctx)
-        PROGRESS.advance(short_path(group.path))
+        note_test_finished(group.path)
 
 
 def _launch_group(group: TestGroup, ctx: RunContext, on_done):
@@ -385,7 +391,7 @@ def _launch_group(group: TestGroup, ctx: RunContext, on_done):
                 with ResourceAcquirer(threads, group.cases[slot][1].needed_threads):
                     _run_group_case(group, slot, ctx)
             else:
-                ctx.record_not_run("fail fast", 1)
+                ctx.record_not_run(NOT_RUN_FAIL_FAST, 1)
         finally:
             with group.lock:
                 group.remaining -= 1
@@ -402,8 +408,8 @@ def _launch_group(group: TestGroup, ctx: RunContext, on_done):
         except Exception as e:
             # Defensive: _start_group handles the expected failures
             # itself; anything escaping it must not hang the phase.
-            ctx.record_node_failure(group.path, "setup")
-            ctx.record_not_run("setup failed", len(group.cases))
+            ctx.record_node_failure(group.path, HOOK_SETUP)
+            ctx.record_not_run(NOT_RUN_SETUP, len(group.cases))
             _log_failure(group.path, e, ctx)
             ctx.output.emit_now(
                 [(print_failure, f"Test failed: {short_path(group.path)}")]
@@ -416,7 +422,7 @@ def _launch_group(group: TestGroup, ctx: RunContext, on_done):
         else:
             try:
                 _release(group.node, ctx)
-                PROGRESS.advance(short_path(group.path))
+                note_test_finished(group.path)
             finally:
                 on_done()
 

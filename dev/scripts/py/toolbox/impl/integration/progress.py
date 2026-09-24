@@ -1,13 +1,10 @@
 """
-The run's progress line: one line, rewritten in place.
+The run's progress line: one line, rewritten in place, for `--quiet` runs
+(`itest --quiet`, or `pr-validate --quiet`, which passes the flag on).
 
-Used by the itest harness, and it draws only under `--quiet` - `itest --quiet`,
-or `pr-validate --quiet`, which hands the flag to its itest step. With no
-terminal there is nothing to draw on, so an ordinary run pays only a lock around
-each printed line. Every console writer in the package has to take the line down
-around its write: the printers do it themselves, and the paths that do not go
-through them - the `--dry`/`--verbose` command echo, the cleaning notices - go
-through `PausedStream`, or they are printed on top of the line.
+It needs a terminal: stdout when it is one, otherwise `/dev/tty`, so
+`itest | tee log` keeps the line out of the log. Writers that print on their own
+go through `PausedStream`, or they overwrite it.
 """
 
 import atexit
@@ -15,6 +12,9 @@ import os
 import sys
 import threading
 import time
+
+# Back to the start of the line, and erase what was on it.
+_CLEAR = "\r\x1b[K"
 
 
 def _elide_middle(text: str, room: int) -> str:
@@ -50,7 +50,8 @@ class ProgressLine:
         self.drawn = False
         self.redraw_after = 0.0
 
-    def reset(self, total: int, quiet: bool):
+    def reset(self, total: int):
+        """Starts the count for a run of `total` tests, with no terminal attached."""
         with self.lock:
             self._release_line()
             self.total = total
@@ -59,8 +60,12 @@ class ProgressLine:
             self.label = ""
             self.drawn = False
             self.redraw_after = 0.0
-            if quiet:
-                self._acquire_line()
+
+    def attach(self):
+        """Finds a terminal to draw on. Without one every draw is a no-op, so this
+        is what decides whether the run has a line at all."""
+        with self.lock:
+            self._acquire_line()
 
     def _acquire_line(self):
         """Picks a terminal to draw on, if the process has one."""
@@ -136,7 +141,7 @@ class ProgressLine:
             return
         if time.monotonic() < self.redraw_after:
             return
-        if self._emit("\r\x1b[K" + self._render(self._width())):
+        if self._emit(_CLEAR + self._render(self._width())):
             self.drawn = True
 
     def paused(self):
@@ -147,7 +152,7 @@ class ProgressLine:
         """Removes the line for good."""
         with self.lock:
             if self.drawn:
-                self._emit("\r\x1b[K")
+                self._emit(_CLEAR)
                 self.drawn = False
             self._release_line()
 
@@ -166,7 +171,7 @@ class _ProgressPause:
         # left held would block every other printer and hang the run.
         try:
             if self.progress.drawn:
-                self.progress._emit("\r\x1b[K")
+                self.progress._emit(_CLEAR)
                 self.progress.drawn = False
                 self.was_drawn = True
         except BaseException:
@@ -190,18 +195,10 @@ class _ProgressPause:
             self.progress.lock.release()
 
 
-PROGRESS = ProgressLine()
-
-# An interrupted run must not leave the line on the terminal.
-atexit.register(PROGRESS.close)
-
-
 class PausedStream:
-    """
-    A stream that takes the line down around every write. For output handed to
+    """A stream that takes the line down around every write. For output handed to
     something which prints on its own - the command echo `exec_bash_command`
-    emits under `--dry`/`--verbose` - and would otherwise overwrite the line.
-    """
+    emits under `--dry`/`--verbose` - and would otherwise overwrite the line."""
 
     def __init__(self, stream):
         self.stream = stream
@@ -215,3 +212,9 @@ class PausedStream:
 
     def isatty(self):
         return self.stream.isatty()
+
+
+PROGRESS = ProgressLine()
+
+# An interrupted run must not leave the line on the terminal.
+atexit.register(PROGRESS.close)

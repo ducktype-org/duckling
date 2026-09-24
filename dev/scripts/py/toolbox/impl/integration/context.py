@@ -7,6 +7,19 @@ from pathlib import Path
 from .resource_manager import ResourceManager
 from .reporting import CompletionOutput, OrderedOutput
 
+# What a run says about work that did not happen: why a case never ran, and
+# which hook failed. The summary prints both as they are.
+NOT_RUN_FAIL_FAST = "fail fast"
+NOT_RUN_PRENODE = "PreNode failed"
+NOT_RUN_PRETEST = "PreTest failed"
+NOT_RUN_SETUP = "setup failed"
+
+HOOK_POSTNODE = "PostNode"
+HOOK_PRENODE = "PreNode"
+HOOK_PRETEST = "PreTest"
+HOOK_POSTTEST = "PostTest"
+HOOK_SETUP = "setup"
+
 
 @dataclass
 class RunContext:
@@ -72,7 +85,8 @@ class RunContext:
 
     @property
     def not_run_total(self) -> int:
-        return sum(self.not_run.values())
+        with self.not_run_lock:
+            return sum(self.not_run.values())
 
     @property
     def parallel(self) -> bool:

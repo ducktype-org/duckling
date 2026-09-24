@@ -35,11 +35,6 @@ def print_failure(msg, file=sys.stdout):
         click_log("FAIL", msg, fg="red", file=file)
 
 
-def print_neutral(msg, file=sys.stdout):
-    with PROGRESS.paused():
-        click_log("INFO", msg, fg="white", file=file)
-
-
 def print_info(msg: str, file=sys.stdout):
     """`log_info`, with the line taken down first."""
     with PROGRESS.paused():
@@ -64,11 +59,26 @@ def short_path(path: str) -> str:
 
 def print_section(path: str):
     """
-    Prints a test's header. It gets a tag of its own rather than `[INFO]`
-    because it marks where one test ends and the next begins.
+    Prints a test's header, which marks where one test ends and the next begins.
     """
     with PROGRESS.paused():
         click_log("ITEST", short_path(path), fg="bright_blue", bold=True)
+
+
+def note_preparing(path: str):
+    """
+    Says what the run is doing while a node's `PreNode` runs.
+    """
+    PROGRESS.set(
+        "preparing the run" if path == SUITE_ROOT else f"preparing {short_path(path)}"
+    )
+
+
+def note_test_finished(path: str, failures: int = 0):
+    """
+    Counts one finished test on the line, however it finished.
+    """
+    PROGRESS.advance(short_path(path), failures)
 
 
 def first_line(msg: str) -> str:
@@ -82,8 +92,7 @@ def first_line(msg: str) -> str:
 def describe_exit_status(exit_status) -> str:
     """
     A short phrase for a command that failed, e.g. `exit code 3, expected 0`.
-    `BashCommandError.reason_string` is a full sentence and is shared with the
-    cpp linter, so it is left as it is.
+    `BashCommandError.reason_string` is a full sentence and stays as it is.
     """
     match exit_status:
         case WrongExitcode(expected, got):
@@ -93,73 +102,71 @@ def describe_exit_status(exit_status) -> str:
     return "command failed"
 
 
-def _case_line(prefix: str, msg: str, fg: str):
+def _case_line(prefix: str, msg: str, fg: str, file=sys.stdout):
     with PROGRESS.paused():
-        click.echo(CASE_INDENT + click.style(f"[{prefix}]: {msg}", fg=fg), color=True)
+        click.echo(
+            CASE_INDENT + click.style(f"[{prefix}]: {msg}", fg=fg), color=True, file=file
+        )
 
 
-def print_case_passed(msg: str):
-    _case_line("GOOD", msg, "green")
+def print_case_passed(msg: str, file=sys.stdout):
+    _case_line("GOOD", msg, "green", file)
 
 
-def print_case_failed(msg: str):
-    _case_line("FAIL", msg, "red")
+def print_case_failed(msg: str, file=sys.stdout):
+    _case_line("FAIL", msg, "red", file)
 
 
-def print_case_skipped(msg: str):
-    _case_line("SKIP", msg, "bright_black")
+def print_case_skipped(msg: str, file=sys.stdout):
+    _case_line("SKIP", msg, "bright_black", file)
 
 
-# The colour of a single-case test's header, taken from its only case.
-SECTION_STYLES = {"passed": "green", "failed": "red", "skipped": "bright_black"}
-
-# The outcome each case printer reports. Keyed by the printer object itself, so
-# a case line emitted through anything else - a `partial`, a lambda - would
-# quietly stop folding its single-case test into one line.
-CASE_STATUSES = {
-    print_case_passed: "passed",
-    print_case_failed: "failed",
-    print_case_skipped: "skipped",
+# How each outcome prints, the colour it lends a folded test, and its counter.
+CASE_OUTCOMES = {
+    "passed": (print_case_passed, "green", "succeeded"),
+    "disabled": (print_case_skipped, "bright_black", "disabled"),
+    "failed": (print_case_failed, "red", "failed"),
 }
+
+# Keyed by the printer itself: a case line emitted any other way is not folded.
+CASE_PRINTERS = {printer: status for status, (printer, _, _) in CASE_OUTCOMES.items()}
 
 
 def _print_folded_section(path: str, status: str, msg: str):
     with PROGRESS.paused():
         click_log(
-            "ITEST", f"{short_path(path)} — {msg}", fg=SECTION_STYLES[status], bold=True
+            "ITEST", f"{short_path(path)} — {msg}", fg=CASE_OUTCOMES[status][1], bold=True
         )
 
 
 def format_tally(stats: "TestStatistics") -> str:
     """
-    A test's case outcomes, e.g. `7 passed, 4 disabled, 1 failed`. Under
-    `--quiet` the case lines are gone, so this is the only per-test record of
-    how the test went; outcomes that did not occur are left out, and a test
-    whose cases never ran tallies to nothing.
+    A test's case outcomes, e.g. `7 passed, 4 disabled, 1 failed`.
     """
-    counts = (
-        (len(stats.succeeded), "passed"),
-        (len(stats.disabled), "disabled"),
-        (len(stats.failed), "failed"),
+    counted = (
+        (status, len(getattr(stats, counter)))
+        for status, (_, _, counter) in CASE_OUTCOMES.items()
     )
-    return ", ".join(f"{count} {name}" for count, name in counts if count)
+    return ", ".join(f"{count} {status}" for status, count in counted if count)
+
+
+def format_not_run(count: int) -> str:
+    """
+    The tally for a test whose cases never ran, which is all it can say.
+    """
+    return f"{count} not run"
 
 
 def section_for(path: str, section: list, single_case: bool, tally: str = "") -> list:
     """
-    Wraps a test's output section in its header.
-
-    Most tests in the suite have exactly one case, so the header and the case
-    line would repeat each other's only content; those are printed as one line.
-    Tests with more to say keep the header and their indented lines. A section
-    with nothing in it gets no header either, so a test whose cases all passed
-    under `--quiet` - or whose cases were all cut short by fail-fast - leaves no
-    trace rather than a header with nothing under it.
+    Wraps a test's output section in its header. A test with a single case is
+    printed as one line instead, since the header and the case line would repeat
+    each other, and a section with nothing in it gets no header either.
     """
-    if single_case and len(section) == 1 and section[0][0] in CASE_STATUSES:
+    if single_case and len(section) == 1 and section[0][0] in CASE_PRINTERS:
         print_fn, msg = section[0]
-        status = CASE_STATUSES[print_fn]
-        if status == "skipped":
+        status = CASE_PRINTERS[print_fn]
+        if status == "disabled":
             msg = f"{msg} (skipped)"
         return [(partial(_print_folded_section, path, status), msg)]
     if not section:
@@ -212,9 +219,8 @@ class CaseLog:
 
     def emit_non_failure(self, print_fn, msg: str):
         """
-        Emits a case that did not fail. Passing and skipped cases are the bulk
-        of a run's output and say the least, so `--quiet` drops both; failures
-        are printed either way.
+        Emits a case that did not fail; `--quiet` drops these, and failures are
+        printed either way.
         """
         if not self.quiet:
             self.emit(print_fn, msg)
