@@ -41,9 +41,9 @@ namespace vm {
 	std::string argumentCountMismatchMessage(const low::LowFuncData& func, usize provided) {
 		return base::strConcat(
 			"Function '",
-			func.name.str(),
+			func.getName().str(),
 			"' expects ",
-			func.parameters.size(),
+			func.getParameters().size(),
 			" arguments, but ",
 			provided,
 			" were provided."
@@ -103,7 +103,7 @@ namespace vm {
 		const auto& func      = *maybe_func.value();
 		const auto& func_args = v_get(run_arguments, FunctionRunArguments);
 
-		if (func_args.size() != func.parameters.size())
+		if (func_args.size() != func.getParameters().size())
 			return refuse(argumentCountMismatchMessage(func, func_args.size()));
 
 		for (const auto& [i, arg_value]: std::views::zip(std::views::iota(0u), func_args)) {

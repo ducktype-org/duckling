@@ -340,17 +340,17 @@ namespace vm {
 		{
 			// This function operates on the assumption that the operation "underneath" it is a nop.
 			const auto& current_func_obj = *frame->current_function;
-			auto        cfg_offset       = current_func_obj.jit_func_entrypoint_offset;
+			auto        cfg_offset       = current_func_obj.getJitFuncEntrypointOffset();
 			CORE_ASSERT(cfg_offset == 0, "Function entrypoint should be first");
 			// The pristine bytecode copy (used for compilation) lives on the function itself.
-			const auto& original_bc = current_func_obj.orig_bc;
+			const auto& original_bc = current_func_obj.getOrigBc();
 
 			// Entrypoint opcodes are only patched in by the compiler when JIT data was built,
 			// so it is guaranteed to be initialized here.
 			CORE_ASSERT(
-				!current_func_obj.jit_data.cfgs.empty(), "JIT data missing for compiled function"
+				!current_func_obj.getJitData().cfgs.empty(), "JIT data missing for compiled function"
 			);
-			jit::JitFuncData& my_data = current_func_obj.jit_data;
+			jit::JitFuncData& my_data = current_func_obj.getJitData();
 			if (my_data.llvm_compiled_code_ptrs[cfg_offset]) {
 				// is LLVM-compiled
 				(*my_data.llvm_compiled_code_ptrs[cfg_offset])(
@@ -365,7 +365,7 @@ namespace vm {
 				if (my_data.until_compilation[cfg_offset] == 0) {
 					// should be LLVM-compiled and executed now
 					MRef<jit::JitLLVMFunc> compiled = jit::compileLLVM(
-						my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
+						my_data.cfgs[cfg_offset], original_bc, current_func_obj.getName()
 					);
 					if (compiled) {
 						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
@@ -380,7 +380,7 @@ namespace vm {
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
-							current_func_obj.name.str(),
+							current_func_obj.getName().str(),
 							"LLVM compilation failed"
 						);
 						auto cp_compiled = my_data.cp_memory.value().intoFunc<jit::JitCPFunc>();
@@ -424,7 +424,7 @@ namespace vm {
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
-							current_func_obj.name.str(),
+							current_func_obj.getName().str(),
 							expected_compiled.error()
 						);
 						// The entrypoint replaced a nop; skip it and continue interpreting.
@@ -432,7 +432,7 @@ namespace vm {
 					}
 	#else
 					auto compiled = jit::compileLLVM(
-						my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
+						my_data.cfgs[cfg_offset], original_bc, current_func_obj.getName()
 					);
 					if (compiled) {
 						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
@@ -447,7 +447,7 @@ namespace vm {
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
-							current_func_obj.name.str(),
+							current_func_obj.getName().str(),
 							"LLVM compilation failed"
 						);
 						// The entrypoint replaced a nop; skip it and continue interpreting.
@@ -465,14 +465,14 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(jitLoopEntrypoint)(FUNCTION_ARGS) {
 		{
 			const auto& current_func_obj = *frame->current_function;
-			auto        cfg_offset       = instr - current_func_obj.bc.data();
+			auto        cfg_offset       = instr - current_func_obj.getBc().data();
 			CORE_ASSERT(cfg_offset, "loop cfg offset should never be null");
 			// Loop entrypoint opcodes are only patched in by the compiler when JIT data was
 			// built, so it is guaranteed to be initialized here.
 			CORE_ASSERT(
-				!current_func_obj.jit_data.cfgs.empty(), "JIT data missing for compiled loop"
+				!current_func_obj.getJitData().cfgs.empty(), "JIT data missing for compiled loop"
 			);
-			jit::JitFuncData& my_data = current_func_obj.jit_data;
+			jit::JitFuncData& my_data = current_func_obj.getJitData();
 
 			auto& llvm_compiled_code_ptr = my_data.llvm_compiled_code_ptrs[cfg_offset];
 			auto& until_compilation      = my_data.until_compilation[cfg_offset];
@@ -488,9 +488,9 @@ namespace vm {
 				if (until_compilation == 0) {
 					// should be LLVM-compiled and executed now
 					// The pristine bytecode copy (used for compilation) lives on the function.
-					const auto&            original_bc = current_func_obj.orig_bc;
+					const auto&            original_bc = current_func_obj.getOrigBc();
 					MRef<jit::JitLLVMFunc> compiled    = jit::compileLLVM(
-                        my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
+                        my_data.cfgs[cfg_offset], original_bc, current_func_obj.getName()
                     );
 					if (compiled) {
 						llvm_compiled_code_ptr              = compiled;
@@ -509,11 +509,11 @@ namespace vm {
 						jit::helpers::disableEntrypointAfterFailure(
 							my_data,
 							cfg_offset,
-							current_func_obj.name.str(),
+							current_func_obj.getName().str(),
 							"LLVM compilation failed"
 						);
 						save_execution_state(instr, local_stack, frame, thread);
-						thread.executeOneStep();
+						thread.executeOneStepAndCheckIfResume();
 						frame       = thread.runtime_data.frame_stack_current;
 						instr       = frame->instr;
 						local_stack = frame->local_stack;
@@ -521,7 +521,7 @@ namespace vm {
 				} else {
 					// should be LLVM-compiled later
 					save_execution_state(instr, local_stack, frame, thread);
-					thread.executeOneStep();
+					thread.executeOneStepAndCheckIfResume();
 					frame       = thread.runtime_data.frame_stack_current;
 					instr       = frame->instr;
 					local_stack = frame->local_stack;

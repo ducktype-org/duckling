@@ -147,10 +147,6 @@ namespace vm {
 
 		static constexpr u64 EXPR_EXECUTION_TIMEOUT_MS = 500;
 
-#ifdef ENABLE_JIT
-		jit::JitData jit_data;
-#endif
-
 		/**
 		 * @brief RAII object guaranteeing the release of the GIL lock.
 		 */

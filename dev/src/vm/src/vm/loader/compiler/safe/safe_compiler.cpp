@@ -483,11 +483,17 @@ namespace vm::loader::compiler::safe {
 			result_types.emplace_back(low_program.types->at(ret));
 		}
 
+	#ifdef ENABLE_JIT
+		// Keep the function entrypoint pristine until JIT compilation patches its bytecode.
+		const usize function_jit_entrypoint = low::cf::functionEntrypointOffset(bytecode);
+		bytecode[function_jit_entrypoint] = makeLowInstruction(low::MicroOpcode::nop, 0, 0);
+	#endif
+
 		low::LowFuncData func(&function);
 		func.name = function.name;
 		func.id   = low::LowFuncData::NO_FUNCTION_ID;
 #ifdef ENABLE_JIT
-		func.cfg = vm::low::cf::ControlFlowGraph(bytecode);
+		func.jit_func_entrypoint_offset = function_jit_entrypoint;
 #endif
 		// we need two copies of the bytecode
 		func.bc                  = bytecode;

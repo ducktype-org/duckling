@@ -113,8 +113,13 @@ namespace vm::low {
 
 #ifdef ENABLE_JIT
 		[[nodiscard]]
-		const cf::ControlFlowGraph& getCfg() const {
-			return cfg;
+		usize getJitFuncEntrypointOffset() const {
+			return jit_func_entrypoint_offset;
+		}
+
+		[[nodiscard]]
+		jit::JitFuncData& getJitData() const {
+			return jit_data;
 		}
 #endif
 

@@ -133,8 +133,8 @@ namespace vm {
 #endif
 		{
 			auto&      micro_func     = *frame->current_function;
-			const auto low_instr_idx  = static_cast<usize>(frame->instr - micro_func.bc.data());
-			const auto original_instr = micro_func.orig_bc[low_instr_idx];
+			const auto low_instr_idx  = static_cast<usize>(frame->instr - micro_func.getBc().data());
+			const auto original_instr = micro_func.getOrigBc()[low_instr_idx];
 
 			return getInstructionOpcode(original_instr);
 		}
