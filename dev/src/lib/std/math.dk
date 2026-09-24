@@ -483,7 +483,7 @@ namespace impl {
         if (k > n - k) k = n - k;
 
         var dp: containers.listType:{T}();
-        dp.reserve(n);
+        dp.reserve(k + 1);
         dp.push(1 as T);
 
         var i: T = 1;
