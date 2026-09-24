@@ -19,9 +19,10 @@
 namespace compiler::helios {
 	namespace code {
 		// Forward declaration for temporary friend declaration.
+		// @TODO: #3632 Remove the friend and this forward declaration.
 		Box<Expr> castAs(
 			query::Context&                        ctx,
-			Box<Expr>                        value,
+			Box<Expr>                              value,
 			tsh::SymbolType<>                      as_type,
 			pst::Access<pst::expr::BinaryOperator> stmt
 		);
@@ -135,6 +136,7 @@ namespace compiler::helios {
 			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 		);
 
+		// @TODO: #3632 Remove the friend
 		friend Box<code::Expr> code::castAs(
 			query::Context&                        ctx,
 			Box<code::Expr>                        value,

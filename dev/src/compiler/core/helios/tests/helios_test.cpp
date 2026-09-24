@@ -3146,7 +3146,7 @@ private:
 
 			// `bool` is one bit wide, so a numeric source must not be truncated into it. The
 			// coercion turns it into a `!= 0` comparison instead of a `CastExpr`.
-			// @note: Temporarily disabled.
+			// @TODO: #3632 Temporarily disabled.
 			// auto to_bool = cast(i64_t, bool_t);
 			// auto cmp_ptr = dynamic_cast<const BinaryOperatorExpr*>(to_bool.get());
 			// ASSERT_EQUAL(bool_t, to_bool->expression_type.getType());

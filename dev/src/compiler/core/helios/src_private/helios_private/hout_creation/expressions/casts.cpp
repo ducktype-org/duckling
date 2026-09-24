@@ -49,7 +49,8 @@ namespace compiler::helios::code {
 		auto coercion = canCoerce(ctx, value->expression_type, to).valueOrThrow();
 		if (coercion.isValid()) return coercion.coerce(ctx, std::move(value));
 
-		// Numeric coercions to bool are temporarily disabled. Casting to bool needs custom handling.
+		// @TODO: #3632 Numeric coercions to bool are temporarily disabled.
+		// Casting to bool needs custom handling.
 		if (auto value_type = value->expression_type.getType();
 		    (value_type.getKind() == Kind::Integral || value_type.getKind() == Kind::Float)
 		    && to.getType().getKind() == Kind::Bool) {

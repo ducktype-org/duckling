@@ -9,7 +9,7 @@ fun test_casts() -> i64 = {
 	var bool_as_int: i32 = true;
 
 	# integer to bool coercion (implicit)
-	# Temporarily explicit
+	# @TODO: #3632 Temporarily explicit
 	var int_as_bool: bool = 1 as bool;
 
 	return 0;
