@@ -2,14 +2,15 @@
 
 use tracing::instrument;
 
-use super::external_libs::validate_external_libraries;
-use super::{UnitCompiler, outputs};
+use super::UnitCompiler;
 use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
+use crate::quackpack::core::compile::unit_runner::external_libs::validate_external_libraries;
+use crate::quackpack::core::compile::unit_runner::outputs;
 
 #[derive(Debug, Clone, Copy)]
 pub struct DefaultUnitCompiler;

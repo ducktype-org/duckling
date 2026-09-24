@@ -3,8 +3,8 @@ use std::ffi::OsStr;
 use std::path::Path;
 use std::process::Command;
 
+use super::compile::unit_runner::CompilationOutput;
 use crate::quackpack::core::compile::unit::ArtifactsType;
-use crate::quackpack::core::compile::unit_compiler::CompilationOutput;
 use crate::util::command_ext::CommandExt;
 use crate::{QuackResult, QuackResultContext, qp_bail_internal};
 

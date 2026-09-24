@@ -3,13 +3,16 @@
 
 use tracing::instrument;
 
-use super::external_libs::{ExternalLibrariesFound, has_external_libraries};
-use super::{UnitCompiler, outputs};
+use super::UnitCompiler;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
+use crate::quackpack::core::compile::unit_runner::external_libs::{
+    ExternalLibrariesFound, has_external_libraries,
+};
+use crate::quackpack::core::compile::unit_runner::outputs;
 use crate::{QuackResult, qp_bail};
 
 #[derive(Debug, Clone, Copy)]
