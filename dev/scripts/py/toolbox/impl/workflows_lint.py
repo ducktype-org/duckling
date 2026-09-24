@@ -16,7 +16,9 @@ from .helpers import (
 )
 
 # impl/ -> toolbox/ -> py/ -> scripts/ -> dev/ -> repo root
-_WORKFLOWS_DIR = Path(__file__).resolve().parents[5] / ".github" / "workflows"
+_GITHUB_DIR = Path(__file__).resolve().parents[5] / ".github"
+_WORKFLOWS_DIR = _GITHUB_DIR / "workflows"
+_ACTIONS_DIR = _GITHUB_DIR / "actions"
 
 
 def workflows_lint_impl() -> bool:
@@ -35,6 +37,8 @@ def workflows_lint_impl() -> bool:
         for path in _WORKFLOWS_DIR.iterdir()
         if path.suffix in (".yml", ".yaml") and path.is_file()
     )
+    workflow_files += sorted(_ACTIONS_DIR.glob("*/action.yml"))
+    workflow_files += sorted(_ACTIONS_DIR.glob("*/action.yaml"))
 
     ok = True
     for path in workflow_files:
@@ -45,5 +49,5 @@ def workflows_lint_impl() -> bool:
             ok = False
 
     if ok:
-        log_good(f"All {len(workflow_files)} workflow file(s) parsed successfully")
+        log_good(f"All {len(workflow_files)} workflow/action file(s) parsed successfully")
     return ok

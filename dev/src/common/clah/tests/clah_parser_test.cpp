@@ -81,41 +81,31 @@ private:
 	}
 
 	void fileParserTest() {
-		auto                  initial_path = std::filesystem::current_path();
-		std::filesystem::path path         = __FILE__;
-		path.remove_filename();
-		std::filesystem::current_path(path);
-
 		ASSERT_EQUAL(
 			"awesome_content\n",
-			parseFile("test_file.txt", std::regex(".*\\.txt")).getContent().view().stdString()
+			parseFile(path("test_file.txt"), std::regex(".*\\.txt")).getContent().view().stdString()
 		);
 
 		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseFile("test_file.txt", std::regex(".*\\.cpp")); },
+			[&]() { parseFile(path("test_file.txt"), std::regex(".*\\.cpp")); },
 			"Regex should make it invalid"
 		);
-
-		std::filesystem::current_path(initial_path);
 	}
 
 	void filePathParserTest() {
-		std::filesystem::path path = __FILE__;
-		path.remove_filename();
-		std::string path_str = path.string();
-
 		ASSERT_EQUAL(
 			"awesome_content\n",
-			fs::File(parseFilePath(path_str + "test_file.txt", std::regex(".*\\.txt")))
+			fs::File(parseFilePath(path("test_file.txt"), std::regex(".*\\.txt")))
 				.getContent()
 				.view()
 				.stdString()
 		);
 
-		parseFilePath(path_str + "no_file.txt", std::regex(".*\\.txt"));
+		// The parser accepts a path that does not exist yet.
+		parseFilePath(path("no_file.txt"), std::regex(".*\\.txt"));
 
 		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseFilePath(path_str + "test_file.txt", std::regex(".*\\.cpp")); },
+			[&]() { parseFilePath(path("test_file.txt"), std::regex(".*\\.cpp")); },
 			"Regex should make it invalid"
 		);
 	}
