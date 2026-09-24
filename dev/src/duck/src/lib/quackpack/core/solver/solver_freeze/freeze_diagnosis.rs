@@ -112,7 +112,7 @@ impl SolverFreeze {
         manifests: &HashMap<PackageId, Box<Manifest>>,
     ) {
         self.package_freezes
-            .retain(|pkg, freeze| Self::check_manifest(*pkg, manifests, &freeze.features));
+            .retain(|pkg, freeze| Self::has_coherent_manifest(*pkg, manifests, &freeze.features));
     }
 
     /// Helper for [`Self::remove_immediatelly_flawed_packages`].
@@ -121,7 +121,7 @@ impl SolverFreeze {
     ///     * all its freeze-present features still appear in the manifest,
     ///     * freeze-present features are expansion-closed,
     ///     * freeze-present version equals manifest version.
-    fn check_manifest(
+    fn has_coherent_manifest(
         pkg: PackageId,
         manifests: &HashMap<PackageId, Box<Manifest>>,
         features: &HashSet<FeatureName>,
@@ -131,12 +131,13 @@ impl SolverFreeze {
         };
         manifest.name() == pkg.name()
             && manifest.version() == pkg.version()
-            && features.iter().all(|f| manifest.features().has_feature(*f))
             && manifest
                 .features()
                 .expand_features(features.iter().copied())
-                .expect("We checked that freeze features occur in manifest")
-                == *features
+                .is_ok_and(|expanded| {
+                    // Checks that all of `features` occur in the manifest.
+                    expanded == *features // Checks that `features` are expansion closed.
+                })
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`].
