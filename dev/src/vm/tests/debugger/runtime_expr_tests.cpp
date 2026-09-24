@@ -903,13 +903,13 @@ private:
 			.cleanup();
 	}
 
-	/// Stepping over `ret_from_expr` while already paused inside an expression must not trigger the
-	/// synthetic post-evaluation breakpoint: the caller resumes normally and the result is
-	/// delivered.
+	/// A user step over `ret_from_expr` must not re-enter the breakpoint, while resuming from it
+	/// must still pause afterwards.
 	void test27RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_27/main.dbc"));
 		const fs::File stepped_expr(path("runtime_expr_dbc/test_27/stepped.dbc"));
 
+		// Stepping over `ret_from_expr` must not re-enter the breakpoint.
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
 			.putBreakpoint(base::StrID("pause_here"), 0)
@@ -922,6 +922,27 @@ private:
 			.step()
 			.awaitBreakpoint(base::StrID("stepped"), 2)
 			.step()
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.awaitExprCompletion({ 42 })
+			.finishAndAssertExitValue(2'137)
+			.cleanup();
+
+		// Resuming from `ret_from_expr` must still pause afterwards. `main:4` carries no
+		// breakpoint, so the post-evaluation pause is the only thing that can stop the thread.
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 3)
+			.putBreakpoint(base::StrID("pause_here"), 0)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 3)
+			.step()
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.evalExprExpectBreakpoint(stepped_expr)
+			.awaitBreakpoint(base::StrID("pause_here"), 0)
+			.step()
+			.awaitBreakpoint(base::StrID("stepped"), 1)
+			.step()
+			.awaitBreakpoint(base::StrID("stepped"), 2)
+			.resume()
 			.awaitBreakpoint(base::StrID("main"), 4)
 			.awaitExprCompletion({ 42 })
 			.finishAndAssertExitValue(2'137)
