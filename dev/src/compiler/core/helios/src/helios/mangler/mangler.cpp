@@ -360,12 +360,16 @@ namespace compiler::helios::mangler {
 			return identifier(compiler::helios::name(symbol_id).strView());
 		}
 
+		/**
+		 * @brief Adds the identifier of the name for the ancestor unless it was already added
+		 * before which can happen for template identifiers
+		 */
 		template<typename ElemT>
 		auto checkAndAddElem(
 			const auto& it, const auto& ancestors, const auto& ancestor, auto& ret, auto& ctx
 		) {
-			for (auto it_cpy = it; it_cpy != ancestors.rbegin();)
-				if ((--it_cpy)->second == ancestor->getID()) return;
+			for (auto it_cpy = ancestors.rbegin(); it_cpy != it;)
+				if (it_cpy->second == ancestor->getID()) return;
 
 			const auto val = ancestor.template dynamicCast<ElemT>().value();
 
