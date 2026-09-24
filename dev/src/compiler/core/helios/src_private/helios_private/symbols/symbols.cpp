@@ -924,7 +924,8 @@ namespace compiler::helios {
 			case SymbolKind::Namespace:
 				return queryBodyCodeScopeFor(ctx, key.ref->stmtCast(ctx).value());
 
-				// Special cases for "wildcards":
+
+			// Special cases for "wildcards":
 			case SymbolKind::Using:
 			case SymbolKind::Import: {
 				QueryLinkedScopeVisitor visitor(ctx, key);
