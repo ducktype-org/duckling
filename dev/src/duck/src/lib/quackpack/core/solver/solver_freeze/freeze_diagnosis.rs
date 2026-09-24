@@ -23,7 +23,7 @@
 //! 6. We remove:
 //!     - not-main packages outside the set constructed in steps 4-5;
 //!     - realizations of the main package outside that set.
-//! 
+//!
 //! The last step does not break property 2, and makes property 3 satisfied.
 
 use std::cell::RefCell;
@@ -38,7 +38,7 @@ use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::{FeatureName, Manifest, PackageId, Selector};
 use crate::util::error::ErrorsLogger;
-use crate::{QuackResult, StrId, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 impl SolverFreeze {
     /// Fetches manifests of the packages mentioned in the freeze (but not the root package),
@@ -89,7 +89,7 @@ impl SolverFreeze {
         self.substitute_root_features(main_features)?;
         self.remove_immediatelly_flawed_packages(manifests);
         self.remove_bad_realizations(manifests, fetcher).await?;
-        let mut not_immediatelly_flawed = self.pkgs_with_all_deps_satisfied(manifests);
+        let mut not_immediatelly_flawed = self.pkgs_with_all_deps_satisfied(manifests)?;
         self.retain_not_flawed_pkgs(&mut not_immediatelly_flawed)?;
         let root_satisfied = not_immediatelly_flawed.contains(&self.main_pkg);
         Ok((self, root_satisfied))
@@ -154,7 +154,9 @@ impl SolverFreeze {
         // We do it this way instead of using `retain`, because of the borrow checker.
         let mut good_realizations = HashMap::new();
         for (pkg, freeze) in self.package_freezes.iter() {
-            let manifest = manifests.get(pkg).expect("todo");
+            let manifest = manifests
+                .get(pkg)
+                .with_context_internal(|| format!("package {pkg:?} without manifest"))?;
             let mut good_realizations_for_pkg = HashSet::new();
             for (name, realization) in freeze.dependencies_realization.iter() {
                 let Some(realization_freeze) = self.package_freezes.get(realization) else {
@@ -176,7 +178,9 @@ impl SolverFreeze {
             good_realizations.insert(*pkg, good_realizations_for_pkg);
         }
         for (pkg, freeze) in self.package_freezes.iter_mut() {
-            let good_realizations_for_pkg = good_realizations.remove(pkg).expect("todo");
+            let good_realizations_for_pkg = good_realizations
+                .remove(pkg)
+                .expect("we added a map for all packages");
             freeze
                 .dependencies_realization
                 .retain(|name, _| good_realizations_for_pkg.contains(name));
@@ -232,10 +236,12 @@ impl SolverFreeze {
     fn pkgs_with_all_deps_satisfied(
         &self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
-    ) -> HashSet<PackageId> {
+    ) -> QuackResult<HashSet<PackageId>> {
         let mut result = HashSet::new();
         for (pkg, freeze) in self.package_freezes.iter() {
-            let manifest = manifests.get(pkg).expect("todo");
+            let manifest = manifests
+                .get(pkg)
+                .with_context_internal(|| format!("package {pkg:?} without manifest"))?;
             let mut all_satisfied = true;
             for dep in manifest
                 .dependencies()
@@ -253,7 +259,7 @@ impl SolverFreeze {
                 result.insert(*pkg);
             }
         }
-        result
+        Ok(result)
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`].
