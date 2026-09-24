@@ -2146,9 +2146,9 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	new_function.signature    = function.signature;
 
 	// TODO: #3633 Make the flags more robust
-	new_function.flags        = (v_matches(mode, Expr, StartFunction))
-	                              ? InstructionFlag{}
-	                              : flag_context.getFlagsForFunction(function.name.str);
+	new_function.flags = (v_matches(mode, Expr, StartFunction))
+	                       ? InstructionFlag{}
+	                       : flag_context.getFlagsForFunction(function.name.str);
 
 	return new_function;
 }

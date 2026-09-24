@@ -296,8 +296,7 @@ namespace vm {
 		const Frame& getStackFrame(u64 frame_index) const;
 
 		[[nodiscard]]
-		base::Optional<vm::loader::ValidFuncPosition> getUpcomingHighPosition(u64 frame_index
-		) const;
+		base::Optional<vm::loader::ValidFuncPosition> getUpcomingHighPosition(u64 frame_index) const;
 
 		[[nodiscard]]
 		base::Optional<CRef<code::valid_function::ValidFunction>> getFatBytecodeFunction(u64 frame_idx
