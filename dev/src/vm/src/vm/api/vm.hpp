@@ -310,12 +310,20 @@ namespace vm::api {
 		PID pid, fs::File file, usize line_number
 	);
 
-	// always pauses after completion
+	/**
+	 * @brief  Loads and executes on specified thread expression
+	 * @return A complete value or the reference to emitter which should eventually deliver it
+	 * @note the thread pauses again shortly after; call waitForBreakpoint before resuming
+	 */
 	std::expected<ExitValue, ApiError> executeRuntimeExpr(
 		PID pid, ThreadID thread_id, const code::Function& function
 	);
 
-	// always pauses after completion
+	/**
+	 * @brief Loads and executes on specified thread expression from file
+	 * @return A complete value or the reference to emitter which should eventually deliver it
+	 * @note the thread pauses again shortly after; call waitForBreakpoint before resuming
+	 */
 	std::expected<ExitValue, ApiError> executeRuntimeExprFromFile(
 		PID pid, ThreadID thread_id, fs::File file
 	);

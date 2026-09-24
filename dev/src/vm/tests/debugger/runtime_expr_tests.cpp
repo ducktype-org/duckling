@@ -87,6 +87,7 @@ private:
 		return { [this](bool cond, std::string_view err) { assertTrue(cond, err); }, pid };
 	}
 
+	// Reads caller locals; result tracks their init state.
 	void test1RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_1/main.dbc"));
 		const fs::File get_values_expr(path("runtime_expr_dbc/test_1/get_values.dbc"));
@@ -135,6 +136,7 @@ private:
 			.cleanup();
 	}
 
+	// Arithmetic expressions evaluated repeatedly at main.
 	void test2RuntimeExpr() {
 		const fs::File   main_file(path("runtime_expr_dbc/test_2/main.dbc"));
 		const std::array expressions = {
@@ -174,6 +176,7 @@ private:
 		simulator.cleanup();
 	}
 
+	// Expression calling a program function returns its result.
 	void test3RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_3/main.dbc"));
 		const fs::File call_foo_expr(path("runtime_expr_dbc/test_3/call_foo.dbc"));
@@ -196,6 +199,7 @@ private:
 			.cleanup();
 	}
 
+	// Expression mutates a caller local as a side effect.
 	void test4RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_4/main.dbc"));
 		const fs::File modify_value_expr(path("runtime_expr_dbc/test_4/modify_value.dbc"));
@@ -218,6 +222,7 @@ private:
 			.cleanup();
 	}
 
+	// Expression reads a variable from a non-adjacent frame.
 	void test5RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_5/main.dbc"));
 		const fs::File access_frame_2_expr(path("runtime_expr_dbc/test_5/access_frame_2.dbc"));
@@ -242,6 +247,7 @@ private:
 			.cleanup();
 	}
 
+	// Expression compares locals across caller frames.
 	void test6RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_6/main.dbc"));
 		const fs::File compare_frames_expr(path("runtime_expr_dbc/test_6/compare_frames.dbc"));
@@ -266,6 +272,7 @@ private:
 			.cleanup();
 	}
 
+	// Expression produces a VM value reused by next expression,
 	void test7RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_7/main.dbc"));
 		const fs::File create_value_expr(path("runtime_expr_dbc/test_7/create_value.dbc"));
@@ -295,6 +302,7 @@ private:
 			.cleanup();
 	}
 
+	// Expression hits a breakpoint, resumes, then completes.
 	void test8RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_8/main.dbc"));
 		const fs::File expr(path("runtime_expr_dbc/test_8/expr.dbc"));
@@ -329,6 +337,7 @@ private:
 			.cleanup();
 	}
 
+	// Expression reads user input while evaluated.
 	void test9RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_9/main.dbc"));
 		const fs::File input_expr(path("runtime_expr_dbc/test_9/input.dbc"));
@@ -345,6 +354,7 @@ private:
 			.cleanup();
 	}
 
+	// Expression times out, input completes it.
 	void test10RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_10/main.dbc"));
 		const fs::File sleep_expr(path("runtime_expr_dbc/test_10/sleep.dbc"));
@@ -369,6 +379,7 @@ private:
 			.cleanup();
 	}
 
+	// Inner expression evaluated while outer paused.
 	void test11RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_11/main.dbc"));
 		const fs::File outer_expr(path("runtime_expr_dbc/test_11/expr_outer.dbc"));
@@ -415,6 +426,7 @@ private:
 			.cleanup();
 	}
 
+	// Three nested expressions complete in LIFO order.
 	void test12RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_12/main.dbc"));
 		const fs::File level1_expr(path("runtime_expr_dbc/test_12/expr_level1.dbc"));
@@ -490,6 +502,7 @@ private:
 			.cleanup();
 	}
 
+	// Evaluating on a running thread is rejected.
 	void test13RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_13/main.dbc"));
 		const fs::File add_five_expr(path("runtime_expr_dbc/test_13/add_five.dbc"));
@@ -509,6 +522,7 @@ private:
 			.cleanup();
 	}
 
+	// Break-loop expression stops a running spin expression.
 	void test14RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_14/main.dbc"));
 		const fs::File spin_expr(path("runtime_expr_dbc/test_14/spin.dbc"));
@@ -542,6 +556,7 @@ private:
 			.cleanup();
 	}
 
+	// Local unknown before init, readable afterwards.
 	void test15RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_15/main.dbc"));
 		const fs::File reads_local_expr(path("runtime_expr_dbc/test_15/reads_local.dbc"));
@@ -572,6 +587,7 @@ private:
 			.cleanup();
 	}
 
+	// VMValues remain valid (no memory relocation).
 	void test16RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_16/main.dbc"));
 		const fs::File create_value_expr(path("runtime_expr_dbc/test_16/create_value.dbc"));
@@ -627,6 +643,7 @@ private:
 			.cleanup();
 	}
 
+	// Legacy test: used to find the bug with the local's block access
 	void test17RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_17/main.dbc"));
 		const fs::File multi_expr(path("runtime_expr_dbc/test_17/multi.dbc"));
@@ -649,6 +666,7 @@ private:
 			.cleanup();
 	}
 
+	// Nested expressions unwind with breakpoints disabled - expressions still stop.
 	void test18RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_18/main.dbc"));
 		const fs::File level1_expr(path("runtime_expr_dbc/test_18/expr_level1.dbc"));
@@ -711,6 +729,7 @@ private:
 			.cleanup();
 	}
 
+	// Breakpoint can be put in start function
 	void test19RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_19/main.dbc"));
 
@@ -732,6 +751,7 @@ private:
 			.cleanup();
 	}
 
+	// Breakpoint can be put in expression
 	void test20RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_20/main.dbc"));
 		const fs::File level1_expr(path("runtime_expr_dbc/test_20/expr_level1.dbc"));
@@ -778,6 +798,7 @@ private:
 			.cleanup();
 	}
 
+	// Expression doesn't compile if type don't match (even with casting)
 	void test21RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_21/main.dbc"));
 		const fs::File read_base_expr(path("runtime_expr_dbc/test_21/read_base.dbc"));
@@ -796,6 +817,7 @@ private:
 			.cleanup();
 	}
 
+	// We can view and access locals of the expression.
 	void test22RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_22/main.dbc"));
 		const fs::File probe_expr(path("runtime_expr_dbc/test_22/probe.dbc"));
@@ -811,6 +833,7 @@ private:
 			.cleanup();
 	}
 
+	// After step, we still stop when the expression is evaluated.
 	void test23RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_23/main.dbc"));
 		const fs::File expr(path("runtime_expr_dbc/test_23/expr.dbc"));
@@ -850,6 +873,7 @@ private:
 			.cleanup();
 	}
 
+	// Expression can return a variant value.
 	void test25RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_25/main.dbc"));
 		const fs::File make_variant(path("runtime_expr_dbc/test_25/make_variant.dbc"));
@@ -904,6 +928,7 @@ private:
 			.cleanup();
 	}
 
+	// Every invalid runtime expression is rejected.
 	void testInvalidExpressions() {
 		const fs::File main_file(path("runtime_expr_dbc/invalid_exprs/main.dbc"));
 
@@ -956,6 +981,7 @@ private:
 		);
 	}
 
+	// Frame, global, dangling pointers; alloc, free, leak.
 	void testPointers() {
 		const fs::File main_file(path("runtime_expr_dbc/pointers/main.dbc"));
 		const fs::File ptr_to_main(path("runtime_expr_dbc/pointers/ptr_to_main.dbc"));
@@ -1004,7 +1030,7 @@ private:
 			.evalExprExpectPanic(load_local, "Data was freed")
 			.cleanup();
 
-		// 4) Heap allocation followed by an explicit `free`: the data is released (no leak).
+		// Heap allocation followed by an explicit `free`: the data is released (no leak).
 		fresh_main()
 			.putBreakpoint(base::StrID("main"), 5)
 			.runMain()
@@ -1014,7 +1040,7 @@ private:
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
 
-		// 5) Heap allocation without a `free`: the process panics on the leaked block.
+		//  Heap allocation without a `free`: the process panics on the leaked block.
 		fresh_main()
 			.putBreakpoint(base::StrID("main"), 5)
 			.runMain()
