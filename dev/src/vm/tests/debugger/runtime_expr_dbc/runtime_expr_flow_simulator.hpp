@@ -57,7 +57,7 @@ namespace vm::test {
 		std::vector<ExpectedValue> elements;
 	};
 
-	class ExpectedValue {
+	class ExpectedValue final {
 		std::variant<Primitive, Ptr, Struct, Variant, Table> value;
 
 	public:
