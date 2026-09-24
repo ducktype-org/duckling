@@ -7,7 +7,45 @@
 # float -> f32
 # double -> f64
 
-import core.panicking.*;
+import core.panicking;
+import core.containers;
+import core.builtins;
+
+# Integer type minimum causes overflow when negated, hence it is not suported.
+fun abs(x: i32) -> i32 = libm_forward.int_funcs.abs(x);
+fun abs(x: i64) -> i64 = libm_forward.int_funcs.labs(x);
+fun abs(x: f32) -> f32 = libm_forward.basic_ops.fabsf(x);
+fun abs(x: f64) -> f64 = libm_forward.basic_ops.fabs(x);
+
+fun max(x: i32, y: i32) -> i32 = impl.max:{i32}(x, y);
+fun max(x: i64, y: i64) -> i64 = impl.max:{i64}(x, y);
+fun max(x: f32, y: f32) -> f32 = libm_forward.basic_ops.fmaxf(x, y);
+fun max(x: f64, y: f64) -> f64 = libm_forward.basic_ops.fmax(x, y);
+
+fun min(x: i32, y: i32) -> i32 = impl.min:{i32}(x, y);
+fun min(x: i64, y: i64) -> i64 = impl.min:{i64}(x, y);
+fun min(x: f32, y: f32) -> f32 = libm_forward.basic_ops.fminf(x, y);
+fun min(x: f64, y: f64) -> f64 = libm_forward.basic_ops.fmin(x, y);
+
+fun exp(x: f32) -> f32 = libm_forward.exp_funcs.expf(x);
+fun exp(x: f64) -> f64 = libm_forward.exp_funcs.exp(x);
+
+fun log(x: f32) -> f32 = libm_forward.exp_funcs.logf(x);
+fun log(x: f64) -> f64 = libm_forward.exp_funcs.log(x);
+
+fun pow(x: i32, y: i32) -> i32 = impl.powi:{i32}(x, y);
+fun pow(x: i64, y: i64) -> i64 = impl.powi:{i64}(x, y);
+fun pow(x: f32, y: f32) -> f32 = libm_forward.pow_funcs.powf(x, y);
+fun pow(x: f64, y: f64) -> f64 = libm_forward.pow_funcs.pow(x, y);
+
+fun sqrt(x: f32) -> f32 = libm_forward.pow_funcs.sqrtf(x);
+fun sqrt(x: f64) -> f64 = libm_forward.pow_funcs.sqrt(x);
+
+fun sin(x: f32) -> f32 = libm_forward.trig_funcs.sinf(x);
+fun sin(x: f64) -> f64 = libm_forward.trig_funcs.sin(x);
+
+fun cos(x: f32) -> f32 = libm_forward.trig_funcs.cosf(x);
+fun cos(x: f64) -> f64 = libm_forward.trig_funcs.cos(x);
 
 namespace libm_forward {
     #{
@@ -34,6 +72,7 @@ namespace libm_forward {
         }
 
         # Computes absolute value of an integral value
+        # Note that it is undefined for the most negative value of the type (e.g. -2^31 for i32) since the positive value does not fit in the type.
         fundecl abs(x: i32) -> i32;
         fundecl labs(x: i64) -> i64;
 
@@ -299,6 +338,201 @@ namespace libm_forward {
         # Probably not needed, but we can add it later.
         # Note that these are macros, not functions, so external C implementation is needed.
     }}
+
+    # Bessel functions
+    namespace bessel_funcs { extern("C") {
+        # Computes the cylindrical Bessel function of the first kind
+        fundecl jnf(n: i32, x: f32) -> f32;
+        fundecl jn(n: i32, x: f64) -> f64;
+
+        # Computes the cylindrical Neumann function
+        # (also known as Bessel function of the second kind or Weber function)
+        fundecl ynf(n: i32, x: f32) -> f32;
+        fundecl yn(n: i32, x: f64) -> f64;
+    }}
+}
+
+namespace impl {
+    #{
+        These are the functions not provided by the C standard library.
+    #}
+
+    # Computes absolute value of an integral value
+    # Note that it returnes the same value for the most negative value of the type (e.g. -2^31 for i32)
+    template(T: type)
+    fun abs(x: T) -> T = {
+        if (x < 0 as T) return -x;
+        return x;
+    }
+
+    # Determines larger of two numbers
+    template(T: type)
+    fun max(x: T, y: T) -> T = {
+        if (x < y) return y;
+        return x;
+    }
+
+    # Determines smaller of two numbers
+    template(T: type)
+    fun min(x: T, y: T) -> T = {
+        if (x < y) return x;
+        return y;
+    }
+
+    # Computes an integer raised to the given integer power
+    # Panics on a negative exponent
+    # Wraps on overflow
+    template(T: type)
+    fun powi(x: T, y: T) -> T = {
+        if (y < 0 as T) panicking.panic();
+
+        var result: T = 1 as T;
+        var base: T = x;
+        while (y > 0 as T) {
+            if (y % 2 as T == 1) {
+                result = result * base;
+            }
+            y = y / (2 as T);
+            base = base * base;
+        }
+        return result;
+    }
+
+    # Computes the greatest common divisor of two integers
+    template(T: type)
+    fun gcd(x: T, y: T) -> T = {
+        var a: T = impl.abs:{T}(x);
+        var b: T = impl.abs:{T}(y);
+
+        while (b != 0 as T) {
+            var t: T = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
+    }
+
+    # Extended Euclidean algorithm
+    # Returns a and b such that ax + by = gcd(x, y)
+    template(T: type)
+    fun extended_euclid(x: T, y: T) -> (T, T) = {
+        var old_r: T = impl.abs:{T}(x);
+        var r: T = impl.abs:{T}(y);
+
+        var old_s: T = 1;
+        var s: T = 0;
+
+        var old_t: T = 0;
+        var t: T = 1;
+
+        while (r != 0 as T) {
+            var quotient: T = old_r / r;
+
+            var temp_r: T = r;
+            r = old_r - quotient * temp_r;
+            old_r = temp_r;
+
+            var temp_s: T = s;
+            s = old_s - quotient * temp_s;
+            old_s = temp_s;
+
+            var temp_t: T = t;
+            t = old_t - quotient * temp_t;
+            old_t = temp_t;
+        }
+
+        # Adjust coefficient signs based on original input signs
+        if (x < 0 as T) {
+            old_s = -old_s;
+        }
+        if (y < 0 as T) {
+            old_t = -old_t;
+        }
+
+        # Returns coefficients (a, b) corresponding to ax + by = gcd(x, y)
+        return (old_s, old_t);
+    }
+
+    # Computes the modulo inverse using the Extended Euclidean Algorithm
+    # Returns y such that (x * y) % m == 1, it assumes that x and m are coprime
+    template(T: type)
+    fun mod_inverse(x: T, m: T) -> T = {
+        var coefs = extended_euclid:{T}(x, m);
+        # a is the modular inverse of x modulo m
+        return (coefs._1 % m + m) % m;  # Ensure the result is positive
+    }
+
+    # Computes the least common multiple of two integers
+    template(T: type)
+    fun lcm(x: T, y: T) -> T = {
+        if ((x == 0 as T) or (y == 0 as T)) return 0 as T;
+        return impl.abs:{T}(x) / gcd:{T}(x, y) * impl.abs:{T}(y);
+    }
+
+    # Performs linear interpolation between a and b based on t.
+    fun lerpf(a: f32, b: f32, t: f32) -> f32 = a + (b - a) * t;
+    fun lerp(a: f64, b: f64, t: f64) -> f64 = a + (b - a) * t;
+
+    # Computes the number of ways to choose k items from n items without repetition and without order
+    # Uses Pascal's Triangle identity to compute the result - O(n*k) time but avoids overflows safely on big numbers
+    # Wraps on overflow
+    template(T: type)
+    fun comb(n: T, k: T) -> T = {
+        if (k > n or k < 0 as T) return 0 as T;
+        if ((k == 0 as T) or (k == n)) return 1 as T;
+        if (k > n - k) k = n - k;
+
+        var dp: containers.listType:{T}();
+        dp.reserve(k + 1);
+        dp.push(1 as T);
+
+        var i: T = 1;
+        while (i <= n) {
+            if (i <= k) {
+                dp.push(0 as T);
+            }
+            var j: T = impl.min:{T}(i, k);
+            while (j > 0) {
+                dp.at(j) = dp.at(j) + dp.at(j - 1);
+                j = j - 1;
+            }
+            i = i + 1;
+        }
+
+        return dp.at(k);
+    }
+
+    # Computes the factorial of a non-negative integer n
+    # Wraps on overflow
+    # Panics on negative n
+    template(T: type)
+    fun factorial(n: T) -> T = {
+        if (n < 0 as T) panicking.panic();
+        if (n == 0 as T) return 1 as T;
+
+        var result: T = 1 as T;
+        while (n > 1 as T) {
+            result = result * n;
+            n = n - 1 as T;
+        }
+        return result;
+    }
+
+    # Computes the number of ways to choose k items from n items without repetition and with order
+    # Wraps on overflow
+    template(T: type)
+    fun perm(n: T, k: T) -> T = {
+        if (k > n or k < 0 as T) return 0 as T;
+        if (k == 0 as T) return 1 as T;
+
+        var result: T = 1 as T;
+        while (k > 0 as T) {
+            result = result * (n - k + 1 as T);
+            k = k - 1 as T;
+        }
+
+        return result;
+    }
 }
 
 namespace impl {
