@@ -357,7 +357,7 @@ private:
 	// Expression times out, input completes it.
 	void test10RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_10/main.dbc"));
-		const fs::File sleep_expr(path("runtime_expr_dbc/test_10/sleep.dbc"));
+		const fs::File input_expr(path("runtime_expr_dbc/test_10/input_after_timeout.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
@@ -367,7 +367,7 @@ private:
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
 			})
-			.evalExprExpectTimeout(sleep_expr)
+			.evalExprExpectTimeout(input_expr)
 			.provideInput("42\n")
 			.awaitExprCompletion({ 42 })
 			.awaitBreakpoint(base::StrID("main"), 4)

@@ -1,0 +1,15 @@
+eval_main.dbc
+
+# Start the debugger and install a breakpoint before running main.
+> "Debugger has started"
+> "+\n"
+> "+\n"
+< "break set 2\n"
+> "Breakpoint in eval_main.dbc line 2 set"
+< "run\n"
+> "Paused"
+
+# Evaluate the simplest possible runtime expression while paused, then finish.
+< "eval eval_expr.dbc\n"
+< "continue\n"
+> "ExecutionCompleted (return value = 0)"
