@@ -368,8 +368,11 @@ namespace compiler::helios::mangler {
 		auto checkAndAddElem(
 			const auto& it, const auto& ancestors, const auto& ancestor, auto& ret, auto& ctx
 		) {
-			for (auto it_cpy = ancestors.rbegin(); it_cpy != it;)
-				if (it_cpy->second == ancestor->getID()) return;
+			if (std::ranges::any_of(
+					std::ranges::subrange(ancestors.rbegin(), it),
+					[&](const auto& elem) { return elem.second == ancestor->getID(); }
+				))
+				return;
 
 			const auto val = ancestor.template dynamicCast<ElemT>().value();
 
