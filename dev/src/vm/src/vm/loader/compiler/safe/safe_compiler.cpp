@@ -53,7 +53,7 @@ namespace vm::loader::compiler::safe {
 			if_opt_some (opcode_arg.frame, frame_idx) {
 				auto& thread = **stack_ctx.thread_evaluating_expr;
 
-				auto relative_offset = getIntTypeSize(*thread.getUpcommingHighPosition(frame_idx)->getByteOffset(opcode_arg.var_name));
+				auto relative_offset = getIntTypeSize(*thread.getUpcomingHighPosition(frame_idx)->getByteOffset(opcode_arg.var_name));
 				auto prev_frame_base = thread.getStackFrame(frame_idx).local_stack;
 				auto stack_base = thread.getRuntimeData().local_stack_base;
 				
@@ -77,7 +77,7 @@ namespace vm::loader::compiler::safe {
 			if_opt_some (opcode_arg.frame, frame_idx) {
 				auto& thread = **stack_ctx.thread_evaluating_expr;
 
-				auto relative_offset = *thread.getUpcommingHighPosition(frame_idx)->getBlockIdx(opcode_arg.var_name);
+				auto relative_offset = *thread.getUpcomingHighPosition(frame_idx)->getBlockIdx(opcode_arg.var_name);
 				auto prev_frame_base = thread.getStackFrame(frame_idx).local_slot_stack_base;
 				auto stack_base = thread.getRuntimeData().slot_stack_base;
 				

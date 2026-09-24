@@ -300,7 +300,7 @@ namespace vm {
 		const Frame& getStackFrame(u64 frame_index) const;
 
 		[[nodiscard]]
-		base::Optional<vm::loader::ValidFuncPosition> getUpcommingHighPosition(u64 frame_index
+		base::Optional<vm::loader::ValidFuncPosition> getUpcomingHighPosition(u64 frame_index
 		) const;
 
 		[[nodiscard]]

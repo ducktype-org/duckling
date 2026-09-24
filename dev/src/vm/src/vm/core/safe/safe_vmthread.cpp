@@ -688,7 +688,7 @@ namespace vm {
 		auto  local_stack = frame->local_stack;
 		auto& called_expr = runtime_expr_low.back();
 
-		auto maybe_position = getUpcommingHighPosition(getNumberOfCurrentStackFrames() - 1);
+		auto maybe_position = getUpcomingHighPosition(getNumberOfCurrentStackFrames() - 1);
 		CORE_ASSERT(
 			maybe_position.has_value(), "A validated expression must have a mapped position"
 		);
@@ -799,7 +799,7 @@ namespace vm {
 		return func.setBreakpoint(idx, enable);
 	}
 
-	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getUpcommingHighPosition(
+	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getUpcomingHighPosition(
 		u64 frame_index
 	) const {
 		if (frame_index >= getNumberOfCurrentStackFrames()) return std::nullopt;
