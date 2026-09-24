@@ -11,22 +11,17 @@
 #include <string_view>
 #include <variant>
 
-#define DEFINE_STR_ARG_TYPE(NAME, FIELD_NAME, OP_SHORT_VALUE, ...)    \
-	struct NAME final: code::ElementBase {                            \
-		static constexpr std::string_view OP_SHORT = OP_SHORT_VALUE;  \
-		__VA_ARGS__                                                   \
-		NAME() = default;                                             \
-		NAME(const base::StrID FIELD_NAME): FIELD_NAME(FIELD_NAME) {} \
-		base::StrID    FIELD_NAME;                                    \
-		constexpr bool operator==(const NAME& other) const noexcept { \
-			return FIELD_NAME == other.FIELD_NAME;                    \
-		}                                                             \
+#define DEFINE_PLACE(SUFFIX, OP_SHORT_VALUE)                                   \
+	struct Place##SUFFIX final: code::ElementBase {                            \
+		static constexpr std::string_view OP_SHORT = OP_SHORT_VALUE;           \
+		base::Optional<u64>               frame    = std::nullopt;             \
+		Place##SUFFIX()                            = default;                  \
+		Place##SUFFIX(const base::StrID var_name): var_name(var_name) {}       \
+		base::StrID    var_name;                                               \
+		constexpr bool operator==(const Place##SUFFIX& other) const noexcept { \
+			return var_name == other.var_name && frame == other.frame;         \
+		}                                                                      \
 	}
-
-#define DEFINE_PLACE(SUFFIX, OP_SHORT_VALUE)                                               \
-	DEFINE_STR_ARG_TYPE(                                                                   \
-		Place##SUFFIX, var_name, OP_SHORT_VALUE, base::Optional<u64> frame = std::nullopt; \
-	)
 
 /**
  * @brief This namespace encapsulates types of opcode arguments.
@@ -260,5 +255,4 @@ namespace vm::opargs {
 	concept PlaceArgumentType = base::IsVariantMember<T, OpCodePlaceArg>;
 }
 
-#undef DEFINE_STR_ARG_TYPE
 #undef DEFINE_PLACE
