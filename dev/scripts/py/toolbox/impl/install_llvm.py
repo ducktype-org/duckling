@@ -1,7 +1,8 @@
 from pathlib import Path
-from os import cpu_count, path as os_path
+from os import path as os_path
 from shutil import rmtree
 
+from ..commands.helpers import get_cpu_count
 from .helpers import (
     bash_command,
     get_llvm_source_strings,
@@ -118,7 +119,10 @@ def install_llvm_impl(
 
     # Build LLVM
     log_info("Building LLVM (this may take a while)...")
-    bash_command(f"cmake --build {build_dir} -- -j{cpu_count() - 1}")
+    # get_cpu_count() already carries the +1 that CI uses for build parallelism; the -1
+    # keeps this call's original intent of leaving the machine one core to breathe.
+    jobs = max(1, get_cpu_count() - 1)
+    bash_command(f"cmake --build {build_dir} -- -j{jobs}")
 
     # Install LLVM
     log_info("Installing LLVM...")

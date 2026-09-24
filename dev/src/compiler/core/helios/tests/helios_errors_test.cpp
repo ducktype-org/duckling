@@ -590,6 +590,23 @@ private:
 				1
 			);
 
+			// `void` is uninhabited, so a function returning it must never return. Reaching the
+			// end of the body contradicts that, and the error says which annotation was meant.
+			checkForErrorOnCompileModule(
+				R"(
+				fun neverReturns() -> void = {
+					if (true) return neverReturns();
+				}
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+				{ "has return type `void`, so it must never return, "
+			      "but it can reach the end of its body" },
+				1
+			);
+
 			checkForErrorOnCompileModule(
 				R"(
 					fun main() = {
@@ -863,6 +880,22 @@ private:
 				{ "Alternative `Class Holder` cannot be bound by value because it is not "
 			      "trivially copyable. Bind it by reference instead: `case x : ref Class "
 			      "Holder`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var v: i32 | f32 = 1i32;
+					var r: i64 = match (v) {
+						case x : i32 = x;
+						case _ = 1i64;
+					};
+					return 0i64;
+				}
+			)",
+				{ "All `match` cases have to be of the same type,"
+			      " but this one is `i64` while an earlier one is `i32`." },
 				1
 			);
 		}

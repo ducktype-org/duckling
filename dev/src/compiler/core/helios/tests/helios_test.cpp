@@ -96,6 +96,7 @@ public:
 		TESTER_ADD_TEST(testVoidReturnType);
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
+		TESTER_ADD_TEST(testVoidReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
 		TESTER_ADD_TEST(testMainReturnHandling);
 		TESTER_ADD_TEST(testTupleCoercion);
@@ -1969,6 +1970,65 @@ private:
 
 		for (auto& function: hout.functions)
 			ASSERT_EQUAL(function->declaration->return_type.getType(), i64_type);
+	}
+
+	/**
+	 * @brief Checks proper handling of `void` types in return type deduction.
+	 *
+	 * The `void` type should submit to all other types, including a `()` type inferred from
+	 * fallthrough to the end of the function's body. However, if there is obviously no fallthrough
+	 * and all return statements are `void`, then `void` should be deduced.
+	 */
+	void testVoidReturnTypeDeduction() {
+		const auto module_and_scope
+			= getModule(fs::File(path("test_modules/void_return_deduction")));
+		const auto module = module_and_scope.first;
+		const auto scope  = module_and_scope.second;
+
+		const auto deduced_return_type = [scope](const std::string_view function) {
+			return query::entryPoint<compiler::helios::QueryTypeOfSymbol>(
+					   getChain(function, scope).back()
+			)
+			    ->valueOrThrow()
+			    .getType()
+			    .as<compiler::tsh::FunctionAbstractType>()
+			    .getResultType()
+			    .getType();
+		};
+
+		const auto unit_type = compiler::tsh::getUnitType();
+		const auto void_type = compiler::tsh::getVoidType();
+		const auto i64_type  = getIntegralTypeNoContext(64, Signed);
+
+		// A return that names a type the value can actually have wins over the diverging one.
+		ASSERT_EQUAL(deduced_return_type("deducesUnit"), unit_type);
+		ASSERT_EQUAL(deduced_return_type("deducesI64"), i64_type);
+
+		// Nothing else names a type and no path falls off the end, so the function never returns.
+		ASSERT_EQUAL(deduced_return_type("deducesVoid"), void_type);
+		ASSERT_EQUAL(deduced_return_type("deducesVoidFromBodyExpr"), void_type);
+		ASSERT_EQUAL(deduced_return_type("deducesVoidThroughConstIf"), void_type);
+		ASSERT_EQUAL(deduced_return_type("deducesI64ThroughConstIf"), i64_type);
+
+		// The conservative check cannot see every path return here, so the `()` of falling off
+		// the end of the body joins in and wins. Losing precision this way is always sound.
+		ASSERT_EQUAL(deduced_return_type("deducesUnitOnFallThrough"), unit_type);
+		ASSERT_EQUAL(deduced_return_type("deducesUnitOnOneSidedIf"), unit_type);
+		ASSERT_EQUAL(deduced_return_type("deducesUnitOnLoop"), unit_type);
+
+		// Both branches of an `if` contribute the types they return, whichever of them decides
+		// that not every path returns.
+		ASSERT_EQUAL(deduced_return_type("deducesI64FromElseOnly"), i64_type);
+
+		// This one declares its return type, so what is that its body compiles:
+		// a deduced `void` is still `void`, and coerces into the declared type.
+		ASSERT_EQUAL(deduced_return_type("usesDeducedVoid"), i64_type);
+
+		// Compile every top level entity so that their bodies — and with them the coercions of
+		// the diverging returns — are checked, and not just their declarations.
+		// This comes last so that a possible wrongly deduced type is reported by the assertions
+		// above rather than as a compilation failure here.
+		ASSERT_HAS_VALUE(query::entryPoint<compiler::helios::QueryTopLevelEntities>(module));
 	}
 
 	void testMainReturnHandling() {

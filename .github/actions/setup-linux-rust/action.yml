@@ -1,0 +1,53 @@
+name: Setup Rust (Linux)
+description: >
+  Everything the Rust half of the repo (dev/src/duck) needs on a Linux runner: the toolchain on
+  PATH, the native libraries it links against, the sccache wrapper, and the cache directory
+  sccache writes to.
+inputs:
+  sccache-dir:
+    description: >
+      Where sccache caches. Inside the workspace, because here the cache is carried between runs
+      by actions/cache.
+    required: true
+  sccache-size:
+    description: Disk budget for the sccache cache.
+    required: false
+    default: 1G
+
+runs:
+  using: composite
+  steps:
+    - name: Put the toolchain on PATH
+      shell: bash
+      run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+    - name: Update apt
+      shell: bash
+      run: sudo apt update
+
+    # Pkg-config is required for finding OpenSSL on Linux.
+    - name: Download pkg-config
+      shell: bash
+      run: sudo apt -y install pkg-config
+
+    # We don't (yet) bundle SQLite with duck.
+    - name: Download libsqlite3-dev
+      shell: bash
+      run: sudo apt -y install libsqlite3-dev
+
+    # Russcip needs this
+    - name: Download libgfortran5
+      shell: bash
+      run: sudo apt -y install libgfortran5
+
+    - name: Download sccache
+      shell: bash
+      run: sudo apt -y install sccache
+
+    - name: Setup sccache environment
+      shell: bash
+      run: |
+        mkdir -p '${{ inputs.sccache-dir }}'
+        echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+        echo "SCCACHE_DIR=${{ inputs.sccache-dir }}" >> "$GITHUB_ENV"
+        echo "SCCACHE_CACHE_SIZE=${{ inputs.sccache-size }}" >> "$GITHUB_ENV"

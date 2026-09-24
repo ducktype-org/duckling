@@ -3,10 +3,11 @@ use std::path::{Path, PathBuf};
 
 use super::script::Script;
 use crate::duck::util::duck_home::DuckHome;
+use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::package_loader::PackageLoader;
 use crate::quackpack::core::script::StandaloneScript;
-use crate::quackpack::core::{self, AnyPackage};
+use crate::quackpack::core::{self, AnyPackage, PackageId};
 use crate::{DuckContext, QuackResult, qp_bail};
 
 #[derive(Debug)]
@@ -94,5 +95,12 @@ impl<'duck> PackageContext<'duck> {
     /// Emit collected warnings.
     pub fn emit_warnings(&self) -> QuackResult<()> {
         self.warnings.emit_warnings(self.ctx())
+    }
+
+    /// Returns the [`PackageId`] associated with this package treated as a local one.
+    pub fn local_package_id(&self) -> QuackResult<PackageId> {
+        let origin = FullOrigin::for_local(self.package().root())?;
+        let identity = FullIdentity::new(self.package().name(), origin);
+        Ok(PackageId::new(identity, self.package().version()))
     }
 }
