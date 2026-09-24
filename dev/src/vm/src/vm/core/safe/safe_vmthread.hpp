@@ -222,7 +222,7 @@ namespace vm {
 		[[nodiscard]] low::MicroOpcode getCurrentOpcode() const;
 
 	protected:
-		void executeOneStep() override;
+		bool executeOneStepAndCheckIfResume() override;
 
 		[[nodiscard]] bool isAtExecutionEnd() const override;
 

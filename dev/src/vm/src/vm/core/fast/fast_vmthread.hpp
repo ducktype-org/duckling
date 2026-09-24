@@ -30,7 +30,7 @@ namespace vm::fast {
 	protected:
 		void run(const std::string& func_name, const RunArguments& run_arguments) override;
 
-		void executeOneStep() override;
+		bool executeOneStepAndCheckIfResume() override;
 
 		[[nodiscard]] bool isAtExecutionEnd() const override;
 

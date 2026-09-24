@@ -1445,8 +1445,9 @@ namespace vm {
 		{
 			save_execution_state(instr, local_stack, frame, thread);
 
-			thread.handleBreakpoint();
-			thread.executeOneStep();
+			do {
+				thread.handleBreakpoint();
+			} while (thread.executeOneStepAndCheckIfResume() == false);
 
 			// Restore current flow.
 			// They can be changed when doing "step by step" execution.

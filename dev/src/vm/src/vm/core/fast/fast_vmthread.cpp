@@ -44,7 +44,7 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 	applyEvent(thread_event::Finish{ exit_value });
 }
 
-void vm::fast::FastVMThread::executeOneStep() {
+bool vm::fast::FastVMThread::executeOneStepAndCheckIfResume() {
 	throw vm::VMNotImplemented("Method `executeOneStep` is not implemented.");
 }
 

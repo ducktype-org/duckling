@@ -221,7 +221,7 @@ namespace vm {
 		/**
 		 * @brief Main debug function that executes one step of the program.
 		 */
-		virtual void executeOneStep() = 0;
+		virtual bool executeOneStepAndCheckIfResume() = 0;
 
 		/**
 		 * @brief Returns true if the instruction the thread is paused on ends the execution (is an

@@ -139,7 +139,7 @@ namespace vm {
 	/**
 	 * @brief Main debug function that executes one step of the program.
 	 */
-	void SafeVMThread::executeOneStep() {
+	bool SafeVMThread::executeOneStepAndCheckIfResume() {
 		Frame* frame       = runtime_data.frame_stack_current;
 		auto*  instr       = frame->instr;
 		byte*  local_stack = frame->local_stack;
@@ -152,6 +152,8 @@ namespace vm {
 		runtime_data.frame_stack_current = frame;
 		frame->local_stack               = local_stack;
 		frame->instr                     = instr;
+
+		return opcode != low::MicroOpcode::ret_from_expr;
 	}
 
 	/**

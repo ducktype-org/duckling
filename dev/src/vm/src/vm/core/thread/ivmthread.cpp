@@ -298,7 +298,7 @@ namespace vm {
 					return;
 				}
 
-				executeOneStep();
+				executeOneStepAndCheckIfResume();
 				// A Stop posted while the step ran must win over re-pausing.
 				if (isTerminateRequested()) throw KillProcessException{};
 				applyEvent(te::Pause{});
