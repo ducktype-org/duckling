@@ -50,22 +50,14 @@
 
 // helpers for building fat-bytecode
 namespace {
-	using namespace vm::opargs;
-	using namespace vm::code::builders;
-	using base::StrID;
-
-	auto any(auto&& arg) { return PlaceAny{ StrID(arg) }; }
-
 	auto getBuilder(vm::code::Function& start_function) {
-		return [&start_function](OpKind kind, auto&&... op_args) {
-			auto instr = InstructionBuilder{ kind, std::forward<decltype(op_args)>(op_args)... };
+		return [&start_function](vm::code::builders::OpKind kind, auto&&... op_args) {
+			auto instr = vm::code::builders::InstructionBuilder{
+				kind, std::forward<decltype(op_args)>(op_args)...
+			};
 			start_function.body.push_back(instr.build());
 		};
 	}
-
-	auto toAny(const auto& place) { return PlaceAny(place.var_name); }
-
-	auto imm(auto&& arg) { return Immediate{ static_cast<u64>(std::forward<decltype(arg)>(arg)) }; }
 };
 
 namespace vm {
@@ -191,6 +183,7 @@ namespace vm {
 		start_function.signature = code::FuncSignature{ .result_types = {}, .parameters = {} };
 
 		auto add_instr = getBuilder(start_function);
+		auto any = [](auto&& arg) { return PlaceAny{ StrID(arg) }; };
 
 		for (auto [idx, result_type]: enumerate(high_func->signature.result_types)) {
 			auto slot_type = opargs::Type{ StrID(result_type.str) };
@@ -263,12 +256,17 @@ namespace vm {
 
 		const bool main_has_args = !func.getParameters().empty();
 
+		auto to_any = [](const auto& place) { return PlaceAny(place.var_name); };
+		auto imm    = [](auto&& arg) {
+            return Immediate{ static_cast<u64>(std::forward<decltype(arg)>(arg)) };
+		};
+
 		// Initialize the argc/argv bookkeeping. It is always materialized, so that the offsets
 		// do not depend on whether `main` takes arguments.
-		add_instr(init, toAny(ret_value), type_i64);
-		add_instr(init, toAny(argv_internal), type_ptr_argv);
-		add_instr(init, toAny(argc_internal), type_i64);
-		add_instr(init, toAny(ix), type_i64);
+		add_instr(init, to_any(ret_value), type_i64);
+		add_instr(init, to_any(argv_internal), type_ptr_argv);
+		add_instr(init, to_any(argc_internal), type_i64);
+		add_instr(init, to_any(ix), type_i64);
 		add_instr(mov, argc_internal, imm(args.size()));
 		add_instr(dynTableReAlloc, argv_internal, type_argv, argc_internal);
 
@@ -276,8 +274,8 @@ namespace vm {
 		if (main_has_args) {
 			using namespace std::views;
 			for (const auto& [argv_index, arg]: zip(iota(0u), args)) {
-				add_instr(init, toAny(ptr_tmp_store), type_ptr_string);
-				add_instr(init, toAny(char_tmp_store), type_byte);
+				add_instr(init, to_any(ptr_tmp_store), type_ptr_string);
+				add_instr(init, to_any(char_tmp_store), type_byte);
 
 				// `arg.size() + 1` accounts for the terminating `\0`.
 				add_instr(mov, argc_internal, imm(arg.size() + 1));
@@ -286,27 +284,27 @@ namespace vm {
 
 				for (auto c: arg) {
 					add_instr(mov, char_tmp_store, imm(c));
-					add_instr(dynTableStore, ptr_tmp_store, toAny(char_tmp_store), ix);
+					add_instr(dynTableStore, ptr_tmp_store, to_any(char_tmp_store), ix);
 					add_instr(add, ix, imm(1));
 				}
 
 				// At this point `ix == arg.size()` - store the terminating `\0`.
 				add_instr(mov, char_tmp_store, imm(0));
-				add_instr(dynTableStore, ptr_tmp_store, toAny(char_tmp_store), ix);
+				add_instr(dynTableStore, ptr_tmp_store, to_any(char_tmp_store), ix);
 				add_instr(mov, ix, imm(argv_index));
-				add_instr(dynTableStore, argv_internal, toAny(ptr_tmp_store), ix);
-				add_instr(deinit);
-				add_instr(deinit);
+				add_instr(dynTableStore, argv_internal, to_any(ptr_tmp_store), ix);
+				add_instr(deinit);  // char_tmp_store
+				add_instr(deinit);  // ptr_tmp_store
 			}
 		}
 
 		// Now actually prepare to call 'main'. Its return value is the first shared slot.
-		add_instr(init, toAny(main_ret_val), type_i64);
+		add_instr(init, to_any(main_ret_val), type_i64);
 		if (main_has_args) {
 			const auto argc = Place64{ StrID("argc") };
 			const auto argv = PlacePtr{ StrID("argv") };
-			add_instr(init, toAny(argc), type_i64);
-			add_instr(init, toAny(argv), type_ptr_argv);
+			add_instr(init, to_any(argc), type_i64);
+			add_instr(init, to_any(argv), type_ptr_argv);
 			add_instr(mov, argc, imm(args.size()));
 			add_instr(mov, argv, argv_internal);
 		}
@@ -314,11 +312,11 @@ namespace vm {
 		add_instr(call, main);
 		add_instr(mov, ret_value, main_ret_val);
 		add_instr(mov, ix, imm(0));
-		add_instr(init, toAny(ptr_tmp_store), type_ptr_string);
+		add_instr(init, to_any(ptr_tmp_store), type_ptr_string);
 
 		// After 'main' returned, free all the allocated strings in the argv table.
 		for ([[maybe_unused]] const auto& arg: args) {
-			add_instr(dynTableLoad, toAny(ptr_tmp_store), argv_internal, ix);
+			add_instr(dynTableLoad, to_any(ptr_tmp_store), argv_internal, ix);
 			add_instr(free, ptr_tmp_store);
 			add_instr(add, ix, imm(1));
 		}
@@ -326,7 +324,11 @@ namespace vm {
 		// Lastly, free all the data allocated by the start function and pop the remaining
 		// locals, leaving only the program's return value on the stack.
 		add_instr(free, argv_internal);
-		for (usize i = 0; i < 5; i++) add_instr(deinit);
+		add_instr(deinit);  // ptr_tmp_store
+		add_instr(deinit);  // main_ret_val
+		add_instr(deinit);  // ix
+		add_instr(deinit);  // argc_internal
+		add_instr(deinit);  // argv_internal
 		add_instr(exit);
 
 		return start_function;
