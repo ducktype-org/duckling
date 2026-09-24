@@ -1,7 +1,5 @@
 #include "match.hpp"
 
-#include "helios/tsh/mutability.hpp"
-
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/match_case.hpp>
@@ -9,6 +7,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/tsh/mutability.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
@@ -366,13 +365,11 @@ namespace compiler::helios::desugaring {
 				)
 			);
 
-			lowered_cases.push_back(
-				LoweredCase{ .alternative_index = alternative_index,
-			                 .constraint        = constraint_type,
-			                 .binding           = binding_sym,
-			                 .result            = std::move(result),
-			                 .position          = result_holder->getStablePosition() }
-			);
+			lowered_cases.push_back(LoweredCase{ .alternative_index = alternative_index,
+			                                     .constraint        = constraint_type,
+			                                     .binding           = binding_sym,
+			                                     .result            = std::move(result),
+			                                     .position = result_holder->getStablePosition() });
 		}
 
 		const auto covered_count = static_cast<usize>(std::ranges::count(covered, true));
