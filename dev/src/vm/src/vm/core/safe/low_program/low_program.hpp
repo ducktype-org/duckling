@@ -48,7 +48,7 @@ namespace vm::low {
 		CRef<vm::code::valid_function::ValidFunction> high_func;
 #ifdef ENABLE_JIT
 		/// Offset of the JIT function entrypoint in the bytecode (guarded by a `nop` in `bc`).
-		usize jit_func_entrypoint_offset;
+		usize jit_func_entrypoint_offset{};
 		/// Per-function JIT state (CFGs, compilation thresholds, compiled code).
 		/// Default-constructed empty; filled in by the compiler only when the JIT is enabled.
 		/// Mutable because opcode functions only hold a const reference to the function

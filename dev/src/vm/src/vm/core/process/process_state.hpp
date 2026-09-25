@@ -140,6 +140,7 @@ namespace vm {
 		[[nodiscard]] bool isRegistered(api::ThreadID tid) const { return threads.contains(tid); }
 
 		/// Adds a thread in the `NotStarted` state with a zeroed counter.
+		// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 		void registerThread(api::ThreadID tid) {
 			threads.insert_or_assign(
 				tid,
@@ -150,6 +151,8 @@ namespace vm {
 				}
 			);
 		}
+
+		// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 
 		/**
 		 * @brief Overwrites a registered thread's state and bumps its version.
