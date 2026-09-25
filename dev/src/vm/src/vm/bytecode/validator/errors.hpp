@@ -122,23 +122,6 @@ namespace vm::code {
 			  )) {}
 	};
 
-	class InvalidConstructorDestructorSignature: public ValidationError {
-	public:
-		constexpr static std::string_view ERR_MSG = "Invalid signature for ";
-
-		InvalidConstructorDestructorSignature(
-			bool is_ctor, base::StrID func_name, base::StrID global_name
-		):
-			  ValidationError(base::strConcat(
-				  ERR_MSG,
-				  is_ctor ? "constructor '" : "destructor '",
-				  func_name,
-				  "' of global variable '",
-				  global_name,
-				  "' (expected () -> {})"
-			  )) {}
-	};
-
 	/**
 	 * @brief position-less error for function definitions.
 	 * For function name arguments, like in call instructions, use UnknownFunctionError.

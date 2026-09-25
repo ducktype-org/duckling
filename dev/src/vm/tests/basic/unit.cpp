@@ -32,7 +32,6 @@ public:
 		TESTER_ADD_TEST(globalDestructorTest);
 		TESTER_ADD_TEST(globalNoConstructorTest);
 		TESTER_ADD_TEST(globalNoDestructorTest);
-		//	TESTER_ADD_TEST(invalidGlobalConstructorSignatureTest);
 		TESTER_ADD_TEST(verySimpleUnsignedTest);
 		TESTER_ADD_TEST(verySimpleBooleanTest);
 		TESTER_ADD_TEST(literalsTest);
@@ -115,13 +114,6 @@ private:
 			{
 				vm::code::MissingGlobalCtorDtorError::ERR_MSG,
 			}
-		);
-	}
-
-	void invalidGlobalConstructorSignatureTest() {
-		loadInvalidDbc(
-			"global_invalid_constructor_signature.dbc",
-			{ vm::code::InvalidConstructorDestructorSignature::ERR_MSG }
 		);
 	}
 
