@@ -50,6 +50,7 @@
 
 // helpers for building fat-bytecode
 namespace {
+	// helper high-order function for creating a vm::code::Function
 	auto getBuilder(vm::code::Function& start_function) {
 		return [&start_function](vm::code::builders::OpKind kind, auto&&... op_args) {
 			auto instr = vm::code::builders::InstructionBuilder{
