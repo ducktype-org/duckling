@@ -272,6 +272,8 @@ namespace vm::debugger {
 					v_matches(expr_completed_vnt, std::vector<Ref<IVMValue>>),
 					"we receive vector values not single int"
 				);
+				auto breakpoint = api::waitForBreakpoint(pid, thread_id);
+				if (!breakpoint) return std::unexpected(breakpoint.error());
 				printExprResult(v_get(expr_completed_vnt, std::vector<Ref<IVMValue>>));
 				return {};
 			})
@@ -279,9 +281,8 @@ namespace vm::debugger {
 				auto* incomplete = std::get_if<api::IncompleteExprEval>(&error);
 				if (incomplete == nullptr) return std::unexpected(std::move(error));
 
-				std::cout
-					<< "expression paused on a breakpoint; its result will be printed when it "
-					   "completes.\n";
+				std::cout << "expression evaluation incomplete: " << incomplete->why
+				          << "; its result will be printed when it completes.\n";
 				pending_expr_result_listeners.emplace_back(
 					[](const std::vector<Ref<SafeVMValue>>& res) { printExprResult(res); }
 				);
