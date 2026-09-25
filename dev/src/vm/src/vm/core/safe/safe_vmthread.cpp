@@ -153,9 +153,6 @@ namespace vm {
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
 
 		OpFuns::save_execution_state(instr, local_stack, frame, *this);
-		runtime_data.frame_stack_current = frame;
-		frame->local_stack               = local_stack;
-		frame->instr                     = instr;
 
 		return opcode != low::MicroOpcode::ret_from_expr;
 	}
