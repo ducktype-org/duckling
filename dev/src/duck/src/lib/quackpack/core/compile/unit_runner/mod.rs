@@ -1,4 +1,5 @@
-//! [`UnitRunner`] takes a [`UnitGraph`] and [`UnitTaskGenerator`] and compilation using it.
+//! [`UnitRunner`] takes a [`UnitGraph`] and a [`UnitTaskGenerator`] and drives the compilation
+//! process using them.
 
 use std::fmt;
 use std::io::Write;
