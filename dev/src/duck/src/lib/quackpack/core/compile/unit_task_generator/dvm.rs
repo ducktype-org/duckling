@@ -50,7 +50,7 @@ impl UnitTaskGenerator for DvmTaskGenerator {
         Ok(vec![task])
     }
 
-    fn should_compile(&self, unit: &Unit, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> bool {
+    fn should_run(&self, unit: &Unit, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> bool {
         graph.is_root(unit)
     }
 }

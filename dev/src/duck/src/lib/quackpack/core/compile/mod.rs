@@ -70,5 +70,5 @@ pub fn compile(
     let graph = create_early_graph_from_bcx(&bcx, pkgs)?;
     let unit_graph = lower_early_graph(graph, &bcx);
     let runner = UnitRunner::new(unit_graph, &bcx);
-    runner.compile()
+    runner.run()
 }

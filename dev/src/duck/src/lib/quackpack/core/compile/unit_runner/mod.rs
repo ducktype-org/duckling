@@ -50,24 +50,21 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
 
     #[instrument(skip_all)]
     /// Drive the compilation with [`UnitRunner`].
-    pub fn compile(self) -> QuackResult<CompilationOutput> {
+    pub fn run(self) -> QuackResult<CompilationOutput> {
         self.task_generator.pre_compilation(&self.graph, self.bcx)?;
         let artifacts_layout = self.bcx.artifacts_layout(&self.graph);
         let profile_layout = artifacts_layout.for_profile(self.bcx.profile);
-        self.compile_all_needed_units(&*profile_layout)?;
+        self.run_all_needed_units(&*profile_layout)?;
         outputs::get_compiler_output(&self.graph, &*profile_layout)
     }
 
     #[instrument(skip_all)]
-    /// Compile all needed [`Unit`]s, as determined by [`should_compile`].
+    /// Compile all needed [`Unit`]s, as determined by [`should_run`].
     ///
-    /// [`should_compile`]: UnitTaskGenerator::should_compile
-    fn compile_all_needed_units(&self, layout: &dyn ProfileLayout) -> QuackResult<()> {
+    /// [`should_run`]: UnitTaskGenerator::should_run
+    fn run_all_needed_units(&self, layout: &dyn ProfileLayout) -> QuackResult<()> {
         for unit in self.graph.compilation_order() {
-            if !self
-                .task_generator
-                .should_compile(unit, &self.graph, self.bcx)
-            {
+            if !self.task_generator.should_run(unit, &self.graph, self.bcx) {
                 continue;
             }
             match unit.build_kind() {
@@ -79,9 +76,9 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
 
     #[instrument(skip_all, fields(id = %unit.unit_id(), name = %unit.package().name(), version = %unit.package().version(), identity = %unit.identity()))]
     /// Compile a single [`Unit`].
-    /// May panic, if this [`Unit`] shouldn't be compiled ([`should_compile`] returned `false`).
+    /// May panic, if this [`Unit`] shouldn't be compiled ([`should_run`] returned `false`).
     ///
-    /// [`should_compile`]: UnitTaskGenerator::should_compile
+    /// [`should_run`]: UnitTaskGenerator::should_run
     fn compile_unit(&self, unit: &Unit, layout: &dyn ProfileLayout) -> QuackResult<()> {
         info!("starting compilation of a unit");
         let tasks = self
@@ -195,9 +192,9 @@ impl BuildContext<'_, '_> {
 }
 
 #[derive(Debug)]
-/// Output of [`compile`].
+/// Output of [`run`].
 ///
-/// [`compile`]: UnitRunner::compile
+/// [`run`]: UnitRunner::run
 pub struct CompilationOutput {
     /// Root [`Unit`] and path to its output.
     pub root: (Unit, PathBuf),

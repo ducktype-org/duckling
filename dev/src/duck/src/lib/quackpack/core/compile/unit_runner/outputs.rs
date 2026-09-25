@@ -15,12 +15,12 @@ use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
 use crate::{QuackError, QuackResult};
 
 #[instrument(skip_all)]
-/// Get the output of this [`compile`] pass.
+/// Get the output of this [`run`] pass.
 ///
 /// Right now, this is deterministic (i.e. can be determined from the [`UnitGraph`] and
 /// [`ProfileLayout`]), but it may change in the future.
 ///
-/// [`compile`]: super::UnitRunner::compile
+/// [`run`]: super::UnitRunner::run
 pub fn get_compiler_output(
     graph: &UnitGraph,
     layout: &dyn ProfileLayout,

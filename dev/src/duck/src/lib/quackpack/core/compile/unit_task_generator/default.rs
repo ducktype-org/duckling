@@ -42,12 +42,7 @@ impl UnitTaskGenerator for DefaultTaskGenerator {
         Ok(vec![task])
     }
 
-    fn should_compile(
-        &self,
-        _unit: &Unit,
-        _graph: &UnitGraph,
-        _bcx: &BuildContext<'_, '_>,
-    ) -> bool {
+    fn should_run(&self, _unit: &Unit, _graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> bool {
         true
     }
 }
