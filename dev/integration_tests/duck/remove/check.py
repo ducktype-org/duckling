@@ -17,7 +17,7 @@ dependencies:
       path: ../a
 dev-dependencies:
   b:
-    source:
+    source: 
       path: ../b
 """
 
