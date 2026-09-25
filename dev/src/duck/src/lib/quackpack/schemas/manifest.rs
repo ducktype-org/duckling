@@ -110,8 +110,7 @@ impl From<Dependency> for Mapping {
                     result = result.pair("source", simple);
                 }
                 DependencySource::Detailed(detailed) => {
-                    result =
-                        result.insert_mapping("source", Into::<MappingBuilder>::into(detailed));
+                    result = result.insert_mapping("source", detailed.into());
                 }
             }
         }
@@ -123,8 +122,7 @@ impl From<Dependency> for Mapping {
                         features_sequence = features_sequence.item(simple);
                     }
                     DependencyFeature::Detailed(detailed) => {
-                        features_sequence = features_sequence
-                            .insert_mapping(Into::<MappingBuilder>::into(detailed));
+                        features_sequence = features_sequence.insert_mapping(detailed.into());
                     }
                 }
             }
@@ -134,7 +132,7 @@ impl From<Dependency> for Mapping {
             result = result.pair("pinned", pinned);
         }
         if let Some(conditions) = value.conditions {
-            result = result.insert_mapping("conditions", Into::<MappingBuilder>::into(conditions));
+            result = result.insert_mapping("conditions", conditions.into());
         }
         result
             .build_document()
@@ -346,7 +344,7 @@ pub struct DetailedFeature(pub OneEntryMap<String, DependencyCondition>);
 impl From<DetailedFeature> for MappingBuilder {
     fn from(value: DetailedFeature) -> Self {
         let result = MappingBuilder::new();
-        result.insert_mapping(value.0.key, Into::<MappingBuilder>::into(value.0.value))
+        result.insert_mapping(value.0.key, value.0.value.into())
     }
 }
 
