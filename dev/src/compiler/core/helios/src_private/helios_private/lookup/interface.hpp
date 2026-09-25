@@ -1,5 +1,6 @@
 #pragma once
 
+#include "frontend/module_tree/module_id.hpp"
 #include "lookup_result.hpp"
 
 #include <frontend/pst_parser/source_position_locked.hpp>
@@ -74,11 +75,30 @@ namespace compiler::helios {
 		};
 
 		/**
-		 * @brief The interface of the symbol.
-		 * The behavior depends on the symbol type, but usually it
-		 * represents what `symbol.abc` would do.
+		 * @brief Interface of a module.
 		 */
-		struct SymbolInterface {
+		struct ModuleInterface {
+			helios::SymID id;
+		};
+
+		/**
+		 * @brief Interface of a namespace.
+		 */
+		struct NamespaceInterface {
+			helios::SymID id;
+		};
+
+		/**
+		 * @brief Interface of an import.
+		 */
+		struct ImportInterface {
+			helios::SymID symbol;
+		};
+
+		/**
+		 * @brief Interface of a using.
+		 */
+		struct UsingInterface {
 			helios::SymID symbol;
 		};
 
@@ -110,7 +130,10 @@ namespace compiler::helios {
 		using VariantT = std::variant<
 			ScopeInterface,
 			ScopeWithParentsInterface,
-			SymbolInterface,
+			ModuleInterface,
+			NamespaceInterface,
+			ImportInterface,
+			UsingInterface,
 			TypeInstanceInterface,
 			TypeMetaInterface,
 			CustomInterface>;
@@ -159,8 +182,20 @@ namespace compiler::helios {
 			return HInterface{ ScopeWithParentsInterface{ scope } };
 		}
 
-		static HInterface ofSymbol(const SymID symbol) {
-			return HInterface{ SymbolInterface{ symbol } };
+		static HInterface ofModule( SymID symbol) {
+			return HInterface{ ModuleInterface{ symbol } };
+		}
+
+		static HInterface ofNamespace( SymID symbol) {
+			return HInterface{ NamespaceInterface{ symbol } };
+		}
+
+		static HInterface ofImport(SymID symbol) {
+			return HInterface{ ImportInterface{ symbol } };
+		}
+
+		static HInterface ofUsing(SymID symbol) {
+			return HInterface{ UsingInterface{ symbol } };
 		}
 
 		static HInterface ofTypeInstance(const tsh::AbstractType type) {
