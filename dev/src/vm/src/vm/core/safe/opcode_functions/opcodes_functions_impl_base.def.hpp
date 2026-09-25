@@ -37,6 +37,7 @@
 #include <cstring>
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
+	#include <vm/core/jit/jit_helper.hpp>
 #endif
 #include <base/types/floats.hpp>
 
@@ -54,7 +55,7 @@
 #include <cmath>
 #include <limits>
 
-// jitable_interface.py depends on the instructions exact, fully-qualified names
+// jittable_interface.py depends on the instructions exact, fully-qualified names
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)   op_debug_##name
 	#define FUNCTION_ARGS       OPFUN_REF_ARGS
@@ -329,34 +330,199 @@ namespace vm {
 		// restoring `instr` from frame.
 		FUNCTION_CONT(0);
 	}
+
 #ifdef ENABLE_JIT
-	RETURN_TYPE OpFuns::OPCODE_NAME(jitEntrypoint)(FUNCTION_ARGS) {
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(jitFuncEntrypoint)(FUNCTION_ARGS) {
 		{
-			auto& jit_data         = thread.jit_data;
-			auto& current_func_obj = *frame->current_function;
-			auto  current_func_id  = current_func_obj.id;
+			// This function operates on the assumption that the operation "underneath" it is a nop.
+			const auto& current_func_obj = *frame->current_function;
+			auto        cfg_offset       = current_func_obj.jit_func_entrypoint_offset;
+			CORE_ASSERT(cfg_offset == 0, "Function entrypoint should be first");
+			// The pristine bytecode copy (used for compilation) lives on the function itself.
+			const auto& original_bc = current_func_obj.orig_bc;
 
-			// @TODO: #2858 manage the size when inserting new code
-			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
-
-			jit::JitFuncData& my_data = jit_data[current_func_id];
-
-			if (my_data.func_ptr) {
-				// is already compiled
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
-			} else if (0 < my_data.until_compilation) {
-				// should be compiled later
-				--my_data.until_compilation;
-			} else {
-				// should be compiled now
-				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
-					current_func_obj.cfg, current_func_obj.bc, current_func_obj.name
+			// Entrypoint opcodes are only patched in by the compiler when JIT data was built,
+			// so it is guaranteed to be initialized here.
+			CORE_ASSERT(
+				!current_func_obj.jit_data.cfgs.empty(), "JIT data missing for compiled function"
+			);
+			jit::JitFuncData& my_data = current_func_obj.jit_data;
+			if (my_data.llvm_compiled_code_ptrs[cfg_offset]) {
+				// is LLVM-compiled
+				(*my_data.llvm_compiled_code_ptrs[cfg_offset])(
+					&instr, &local_stack, &frame, &thread
 				);
+			}
+	#if COMPILE_WITH_CNP
+			else if (my_data.cp_memory) {
+				// is CP-compiled
+				if (0 < my_data.until_compilation[cfg_offset])
+					--my_data.until_compilation[cfg_offset];
+				if (my_data.until_compilation[cfg_offset] == 0) {
+					// should be LLVM-compiled and executed now
+					MRef<jit::JitLLVMFunc> compiled = jit::compileLLVM(
+						my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
+					);
+					if (compiled) {
+						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
+						(*compiled)(&instr, &local_stack, &frame, &thread);
+					} else {
+							// Dev builds must never see a failed compilation; in prod we keep
+							// executing the CP-compiled code instead. The panic must stay
+							// dev-only: CORE_PANIC is std::unreachable() in other builds.
+		#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("Compiled function pointer shouldn't be nullptr.");
+		#endif
+						jit::helpers::disableEntrypointAfterFailure(
+							my_data,
+							cfg_offset,
+							current_func_obj.name.str(),
+							"LLVM compilation failed"
+						);
+						auto cp_compiled = my_data.cp_memory.value().intoFunc<jit::JitCPFunc>();
+						std::invoke(cp_compiled, CP_PASS_ARGS);
+						frame       = thread.runtime_data.frame_stack_current;
+						instr       = frame->instr;
+						local_stack = frame->local_stack;
+					}
+				} else {
+					// should be LLVM-compiled later, execute CP version
+					auto cp_compiled = my_data.cp_memory.value().intoFunc<jit::JitCPFunc>();
+					std::invoke(cp_compiled, CP_PASS_ARGS);
+					frame       = thread.runtime_data.frame_stack_current;
+					instr       = frame->instr;
+					local_stack = frame->local_stack;
+				}
+			}
+	#endif
+			else {
+				if (0 < my_data.until_compilation[cfg_offset])
+					--my_data.until_compilation[cfg_offset];
+				if (my_data.until_compilation[cfg_offset] == 0) {
+					// should be compiled with the first viable compiler
+	#if COMPILE_WITH_CNP
+					auto expected_compiled = jit::compileCP(my_data.cfgs[cfg_offset], original_bc);
+					if (expected_compiled) {
+						my_data.cp_memory = std::move(expected_compiled).value();
+						auto cp_compiled  = my_data.cp_memory.value().intoFunc<jit::JitCPFunc>();
+						std::invoke(cp_compiled, CP_PASS_ARGS);
+						frame       = thread.runtime_data.frame_stack_current;
+						instr       = frame->instr;
+						local_stack = frame->local_stack;
+						my_data.until_compilation[cfg_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;
+					} else {
+							// Dev builds must never see a failed compilation; in prod we fall back
+							// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
+							// is std::unreachable() in other builds.
+		#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("C&P compilation failed");
+		#endif
+						jit::helpers::disableEntrypointAfterFailure(
+							my_data,
+							cfg_offset,
+							current_func_obj.name.str(),
+							expected_compiled.error()
+						);
+						// The entrypoint replaced a nop; skip it and continue interpreting.
+						++instr;
+					}
+	#else
+					auto compiled = jit::compileLLVM(
+						my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
+					);
+					if (compiled) {
+						my_data.llvm_compiled_code_ptrs[cfg_offset] = compiled;
+						(*compiled)(&instr, &local_stack, &frame, &thread);
+					} else {
+							// Dev builds must never see a failed compilation; in prod we fall back
+							// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
+							// is std::unreachable() in other builds.
+		#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("Compiled function pointer shouldn't be nullptr.");
+		#endif
+						jit::helpers::disableEntrypointAfterFailure(
+							my_data,
+							cfg_offset,
+							current_func_obj.name.str(),
+							"LLVM compilation failed"
+						);
+						// The entrypoint replaced a nop; skip it and continue interpreting.
+						++instr;
+					}
+	#endif
+				} else {
+					++instr;
+				}
+			}
+		}
+		FUNCTION_CONT(0);
+	}
 
-				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
-				my_data.func_ptr = compiled;
+	RETURN_TYPE OpFuns::OPCODE_NAME(jitLoopEntrypoint)(FUNCTION_ARGS) {
+		{
+			const auto& current_func_obj = *frame->current_function;
+			auto        cfg_offset       = instr - current_func_obj.bc.data();
+			CORE_ASSERT(cfg_offset, "loop cfg offset should never be null");
+			// Loop entrypoint opcodes are only patched in by the compiler when JIT data was
+			// built, so it is guaranteed to be initialized here.
+			CORE_ASSERT(
+				!current_func_obj.jit_data.cfgs.empty(), "JIT data missing for compiled loop"
+			);
+			jit::JitFuncData& my_data = current_func_obj.jit_data;
 
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+			auto& llvm_compiled_code_ptr = my_data.llvm_compiled_code_ptrs[cfg_offset];
+			auto& until_compilation      = my_data.until_compilation[cfg_offset];
+
+			if (llvm_compiled_code_ptr) {
+				// is already LLVM-compiled
+				const MicroInstruction* saved_instr = instr;
+				const Frame*            saved_frame = frame;
+				i64 offset = (*llvm_compiled_code_ptr)(&instr, &local_stack, &frame, &thread);
+				if (saved_frame == frame) instr = saved_instr + offset;
+			} else {
+				if (0 < until_compilation) --until_compilation;
+				if (until_compilation == 0) {
+					// should be LLVM-compiled and executed now
+					// The pristine bytecode copy (used for compilation) lives on the function.
+					const auto&            original_bc = current_func_obj.orig_bc;
+					MRef<jit::JitLLVMFunc> compiled    = jit::compileLLVM(
+                        my_data.cfgs[cfg_offset], original_bc, current_func_obj.name
+                    );
+					if (compiled) {
+						llvm_compiled_code_ptr              = compiled;
+						const MicroInstruction* saved_instr = instr;
+						const Frame*            saved_frame = frame;
+						i64                     offset
+							= (*llvm_compiled_code_ptr)(&instr, &local_stack, &frame, &thread);
+						if (saved_frame == frame) instr = saved_instr + offset;
+					} else {
+						// Dev builds must never see a failed compilation; in prod we fall back
+						// to the interpreter instead. The panic must stay dev-only: CORE_PANIC
+						// is std::unreachable() in other builds.
+	#ifdef BUILD_TYPE_DEV
+						CORE_PANIC("Compiled function pointer shouldn't be nullptr");
+	#endif
+						jit::helpers::disableEntrypointAfterFailure(
+							my_data,
+							cfg_offset,
+							current_func_obj.name.str(),
+							"LLVM compilation failed"
+						);
+						save_execution_state(instr, local_stack, frame, thread);
+						thread.executeOneStep();
+						frame       = thread.runtime_data.frame_stack_current;
+						instr       = frame->instr;
+						local_stack = frame->local_stack;
+					}
+				} else {
+					// should be LLVM-compiled later
+					save_execution_state(instr, local_stack, frame, thread);
+					thread.executeOneStep();
+					frame       = thread.runtime_data.frame_stack_current;
+					instr       = frame->instr;
+					local_stack = frame->local_stack;
+				}
 			}
 		}
 		FUNCTION_CONT(0);

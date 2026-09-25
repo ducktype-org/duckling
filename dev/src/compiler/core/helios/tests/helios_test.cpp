@@ -2425,6 +2425,15 @@ private:
 
 		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub6subFunEFidEE$metadata_v5", mangled_sub_fun.str());
 		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
+
+		auto mangle = [&](compiler::helios::SymID sym) {
+			return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>({ .symbol_key
+			                                                                          = sym });
+		};
+
+		auto const_1   = getChain("GlobalConst", root_scope).back();
+		auto const_1_n = mangle(const_1).strView();
+		ASSERT_EQUAL("_Q_M8manglingG11GlobalConst", const_1_n);
 	}
 
 	void testManglerSpecialMembers() {
