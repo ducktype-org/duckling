@@ -307,14 +307,6 @@ namespace vm {
 			std::pair<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
 			loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
 
-		/**
-		 * @brief Enables or disables a breakpoint on instruction @p idx of the function running in
-		 * the frame @p frame_idx. Works with vm_start_function and expressions
-		 */
-		std::expected<void, std::string> setBreakpointAtFrame(
-			usize frame_idx, usize idx, bool enable
-		);
-
 		[[nodiscard]]
 		CRef<IVMValue> getVMValue(CRef<opargs::VMValueIdentifier> vm_val) const;
 

@@ -261,12 +261,6 @@ namespace vm {
 				);
 			}
 
-			variant_case(api::request::SetBreakpointAtFrame, request) {
-				return setBreakpointAtFrame(
-					request.thread_id, request.frame_idx, request.instruction_index, request.enable
-				);
-			}
-
 			variant_case(api::request::MapFileLineToCodeCollectionPosition, request) {
 				return mapFileLineToCodeCollectionPosition(request.file, request.line_number);
 			}

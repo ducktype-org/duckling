@@ -683,22 +683,6 @@ namespace vm {
 		return api::response::Empty{};
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMProcess::setBreakpointAtFrame(
-		api::ThreadID thread_id, usize frame_idx, usize instruction_index, bool enable
-	) {
-		std::unique_lock lock(api_lock);
-		auto             opt_thread = getVMThreadByID(thread_id);
-		if (!opt_thread)
-			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-
-		auto response
-			= opt_thread.value()->setBreakpointAtFrame(frame_idx, instruction_index, enable);
-		if (!response)
-			return std::unexpected(api::ApiError{ api::ResumeError{ response.error() } });
-
-		return api::response::Empty{};
-	}
-
 	std::expected<api::Response, api::ApiError> SafeVMProcess::mapFileLineToCodeCollectionPosition(
 		const fs::File& file, usize line_number
 	) {

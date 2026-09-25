@@ -8,10 +8,8 @@
 #include <vm/bytecode/validator/errors.hpp>
 
 #include <array>
-#include <chrono>
 #include <ranges>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 class VmRuntimeExprTest: public VmTestSuite {
@@ -729,28 +727,6 @@ private:
 			.cleanup();
 	}
 
-	// Breakpoint can be put in start function
-	void test19RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_19/main.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 4)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.putBreakpointAtFrame(0, 12)
-			.resume()
-			.awaitBreakpoint(base::StrID("vm_start_function"), 12)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-			})
-			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
 	// Breakpoint can be put in expression
 	void test20RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_20/main.dbc"));
@@ -778,15 +754,6 @@ private:
 				{ base::StrID("level1"), level1_vars },
 				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
 			})
-			.putBreakpointAtFrame(2, 3)
-			.resume()
-			.awaitBreakpoint(base::StrID("level1"), 3)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("level1"), level1_vars },
-			})
-			.disableBreakpointAtFrame(2, 3)
 			.resume()
 			.awaitExprCompletion({ 24 })
 			.awaitBreakpoint(base::StrID("main"), 4)

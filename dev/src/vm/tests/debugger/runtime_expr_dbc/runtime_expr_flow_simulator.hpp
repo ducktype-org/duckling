@@ -160,20 +160,6 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& putBreakpointAtFrame(u64 frame_index, u64 instr_index) {
-			auto bp_res
-				= vm::api::setBreakpointAtFrame(pid, thread_id, frame_index, instr_index, true);
-			if (!bp_res) assertTrue(false, vm::api::errorToString(bp_res.error()));
-			return *this;
-		}
-
-		FlowSimulator& disableBreakpointAtFrame(u64 frame_index, u64 instr_index) {
-			auto bp_res
-				= vm::api::setBreakpointAtFrame(pid, thread_id, frame_index, instr_index, false);
-			if (!bp_res) assertTrue(false, vm::api::errorToString(bp_res.error()));
-			return *this;
-		}
-
 		FlowSimulator& runMain() {
 			auto run_res = vm::api::run(pid);
 			if (!run_res)

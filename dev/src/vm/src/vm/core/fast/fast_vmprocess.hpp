@@ -59,10 +59,6 @@ namespace vm::fast {
 			base::StrID function_name, usize instruction_index, bool enable
 		) override;
 
-		std::expected<api::Response, api::ApiError> setBreakpointAtFrame(
-			api::ThreadID thread_id, usize frame_idx, usize instruction_index, bool enable
-		) override;
-
 		std::expected<api::Response, api::StateError> getExitCode() override;
 
 		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
