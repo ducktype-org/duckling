@@ -5,8 +5,6 @@
 namespace pst {
 	bool LangParserState::isSkipping() const { return skip_till_fallback; }
 
-	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
-
 	void LangParserState::goUp() {
 		CORE_ASSERT(
 			fallback_stack.size() && std::holds_alternative<Fallback>(fallback_stack.back())

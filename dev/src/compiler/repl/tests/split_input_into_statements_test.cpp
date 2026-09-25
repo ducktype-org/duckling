@@ -39,7 +39,9 @@ private:
 		check_single("namespace Foo {}");
 		check_single("import Foo as foo;");
 		check_single("using Foo;");
-		check_single("alias Bar = Foo;");
+		check_single("using Foo as Bar;");
+		check_single("using a.b.{c, d as e};");
+		check_single("import a.* hides {b, c};");
 		check_single("const LIMIT: i32 = 100;");
 	}
 
