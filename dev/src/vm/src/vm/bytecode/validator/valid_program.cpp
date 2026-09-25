@@ -135,12 +135,16 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 		if (global.ctor_name.has_value()) {
 			const auto& signature = *function_signatures.atMaybe(global.ctor_name.value()).value();
 			if (!signature.parameters.empty() || !signature.result_types.empty())
-				throw InvalidConstructorDestructorSignature(true, global.ctor_name.value(), global.name);
+				throw InvalidConstructorDestructorSignature(
+					true, global.ctor_name.value(), global.name
+				);
 		}
 		if (global.dtor_name.has_value()) {
 			const auto& signature = *function_signatures.atMaybe(global.dtor_name.value()).value();
 			if (!signature.parameters.empty() || !signature.result_types.empty())
-				throw InvalidConstructorDestructorSignature(false, global.dtor_name.value(), global.name);
+				throw InvalidConstructorDestructorSignature(
+					false, global.dtor_name.value(), global.name
+				);
 		}
 		if (global.initial_value.has_value()) {
 			auto type_it = types.at(global.type);

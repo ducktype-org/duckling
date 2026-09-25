@@ -282,7 +282,7 @@ namespace vm::debugger {
 				if (incomplete == nullptr) return std::unexpected(std::move(error));
 
 				std::cout << "expression evaluation incomplete: " << incomplete->why
-				          << "; its result will be printed when it completes.\n";
+						  << "; its result will be printed when it completes.\n";
 				pending_expr_result_listeners.emplace_back(
 					[](const std::vector<Ref<SafeVMValue>>& res) { printExprResult(res); }
 				);
