@@ -67,7 +67,9 @@ jobs:
       - name: Create compile_commands
         run: |
           cd dev
-          cmake -DCMAKE_CXX_COMPILER=${{ env.CLANGXX_COMPILER }} -DCMAKE_C_COMPILER=${{ env.CLANG_COMPILER }} -DJIT_ENABLED=ON -DBUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          # CNP_ENABLED=ON so the C&P stencil sources (only compiled with C&P) appear in
+          # compile_commands.json
+          cmake -DCMAKE_CXX_COMPILER=${{ env.CLANGXX_COMPILER }} -DCMAKE_C_COMPILER=${{ env.CLANG_COMPILER }} -DJIT_ENABLED=ON -DCNP_ENABLED=ON -DBUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
         env: # Hot fix for GH issues:
           GIT_CONFIG_COUNT: 2

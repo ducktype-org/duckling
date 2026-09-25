@@ -120,6 +120,7 @@ namespace compiler::helios {
 		const base::StrID name, defgen::GeneratedSymbolDataVariant generated_data
 	) {
 		SymbolKind kind{};
+		bool       ignored_by_lookup = false;
 		variant_match(generated_data) {
 			variant_case_novalue(defgen::BuiltinOperator) {
 				kind = SymbolKind::FunctionDeclaration;
@@ -141,11 +142,11 @@ namespace compiler::helios {
 				kind = SymbolKind::Parameter;
 			}
 			variant_case_novalue(defgen::Field) { kind = SymbolKind::Field; }
-			variant_case_novalue(
-				defgen::GeneratedFunctionVariable,
-				defgen::ControlFlowLocal,
-				defgen::ReplEmptyVariable
-			) {
+			variant_case_novalue(defgen::ControlFlowLocal) {
+				kind              = SymbolKind::Variable;
+				ignored_by_lookup = true;
+			}
+			variant_case_novalue(defgen::GeneratedFunctionVariable, defgen::ReplEmptyVariable) {
 				kind = SymbolKind::Variable;
 			}
 			variant_case_novalue(defgen::GeneratedConstant) { kind = SymbolKind::Const; }
@@ -154,8 +155,9 @@ namespace compiler::helios {
 
 		return {
 			{
-				.name = name,
-				.kind = kind,
+				.name                 = name,
+				.kind                 = kind,
+				.is_ignored_by_lookup = ignored_by_lookup,
 			},
 			std::visit(
 				[](auto&& x) -> SymbolData::SymbolSemantics { return std::forward<decltype(x)>(x); },
