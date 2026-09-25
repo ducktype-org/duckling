@@ -2,6 +2,8 @@
 #include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -56,6 +58,8 @@ public:
 		TESTER_ADD_TEST(testManglingErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
+		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
+		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
 	}
 
 protected:
@@ -590,6 +594,23 @@ private:
 				1
 			);
 
+			// `void` is uninhabited, so a function returning it must never return. Reaching the
+			// end of the body contradicts that, and the error says which annotation was meant.
+			checkForErrorOnCompileModule(
+				R"(
+				fun neverReturns() -> void = {
+					if (true) return neverReturns();
+				}
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+				{ "has return type `void`, so it must never return, "
+			      "but it can reach the end of its body" },
+				1
+			);
+
 			checkForErrorOnCompileModule(
 				R"(
 					fun main() = {
@@ -854,6 +875,22 @@ private:
 				{ "Alternative `Class Holder` cannot be bound by value because it is not "
 			      "trivially copyable. Bind it by reference instead: `case x : ref Class "
 			      "Holder`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var v: i32 | f32 = 1i32;
+					var r: i64 = match (v) {
+						case x : i32 = x;
+						case _ = 1i64;
+					};
+					return 0i64;
+				}
+			)",
+				{ "All `match` cases have to be of the same type,"
+			      " but this one is `i64` while an earlier one is `i32`." },
 				1
 			);
 		}
@@ -2297,6 +2334,88 @@ private:
 				ss, dia::StablePosition::fakePosition()
 			);
 		});
+	}
+
+	/**
+	 * An `InteractiveType` made from the PST of a type expression names the type the way the
+	 * user wrote it, here the `using ... as` alias `Q`, and not the class it resolves to.
+	 */
+	void testInteractiveTypeKeepsWrittenAliasName() {
+		using namespace helios;
+		using namespace helios::code;
+
+		auto module_id = frontend::createModuleTreeFromContents(R"(
+			namespace N {
+				class Point { x: i64; }
+			}
+			using N.Point as P;
+			using P as Q;
+			var v: Q;
+		)");
+		auto scope     = test_utils::getModuleScope(module_id);
+		auto v_sym     = test_utils::getChain("v", scope).back();
+		auto v_type    = test_utils::getSymbolTypeOf("v", scope);
+
+		std::stringstream written;
+		std::stringstream resolved;
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto variable = maybeSymbolPst(v_sym).value().unlock(ctx).dynamicCast<pst::Variable>();
+			assertTrue(variable.has_value(), "Expected `v` to be declared by a variable.");
+			auto type_expr = variable.value()->getType().value().unlock(ctx)->getExpr().unlock(ctx);
+
+			dia::testDiagnosticMessage<UndefinedUnaryOperatorError>(
+				written,
+				dia::StablePosition::fakePosition(),
+				"-",
+				makeBox<InteractiveType>(ctx, v_type, type_expr)
+			);
+			dia::testDiagnosticMessage<UndefinedUnaryOperatorError>(
+				resolved,
+				dia::StablePosition::fakePosition(),
+				"-",
+				makeBox<InteractiveType>(ctx, v_type)
+			);
+		});
+
+		assertTrue(
+			written.str().contains("for type `Q`"),
+			"Expected the written alias name `Q`:\n" + written.str()
+		);
+		assertTrue(
+			!resolved.str().contains("for type `Q`"),
+			"Expected the resolved type without a PST expression:\n" + resolved.str()
+		);
+	}
+
+	/**
+	 * `using` / `import` forms that already parse but are not compiled yet must say so, instead
+	 * of silently compiling only a part of the statement.
+	 */
+	void testUnsupportedSelectorErrors() {
+		// Drop what the earlier tests left in the logger, so each case counts only its own error.
+		query::Context::dumpToOneLoggerAndClear();
+
+		constexpr std::string_view NAMESPACE = R"(
+			namespace N {
+				const a = 1;
+				const b = 2;
+			}
+		)";
+
+		const std::vector<std::pair<std::string_view, std::string_view>> cases = {
+			{ "using N.* hides a;", "`hides` in `using` is not supported yet." },
+			{ "using N.* hides {a, b};", "`hides` in `using` is not supported yet." },
+			{ "using N.{a};", "A nested selector list in `using` is not supported yet." },
+			{ "using N.a, N.b;", "More than one selector in `using` is not supported yet." },
+			{ "import N.* hides a;", "`hides` in `import` is not supported yet." },
+			{ "import N.{a, b};", "A nested selector list in `import` is not supported yet." },
+			{ "import N.a, N.b;", "More than one selector in `import` is not supported yet." },
+		};
+
+		for (const auto& [statement, message]: cases)
+			checkForErrorOnCompileModule(
+				base::strConcat(NAMESPACE, statement), { message }, 1, false
+			);
 	}
 
 	void testDuplicatedDefinitions() {
