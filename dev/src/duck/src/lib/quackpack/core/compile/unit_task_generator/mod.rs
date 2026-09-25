@@ -1,11 +1,11 @@
-//! [`UnitCompiler`] describes which [`Unit`]s to compile and creates appropriate [`Task`]s for them.
+//! [`UnitTaskGenerator`] describes which [`Unit`]s to compile and creates appropriate [`Task`]s for them.
 //!
 //! [`Task`]: multipackage_schema::PackageCompilationTask
 
 use std::fmt::Debug;
 
-pub mod default_unit_compiler;
-pub mod dvm_unit_compiler;
+pub mod default;
+pub mod dvm;
 
 use super::BuildContext;
 use super::artifacts_layout::ProfileLayout;
@@ -15,14 +15,17 @@ use super::unit::graph::UnitGraph;
 use crate::QuackResult;
 
 /// A generic duckc driver.
-pub trait UnitCompiler: Debug {
+pub trait UnitTaskGenerator: Debug {
     /// Callback invoked at the very start of [`compile`].
     ///
     /// Right now, this function performs [`assert`]sions about the mode (f.e. that
-    /// [`DvmUnitCompiler`] actually tries to compile DVM packages).
+    /// [`DvmTaskGenerator`] actually tries to compile DVM packages).
     ///
     /// It's allowed that this function will return an [`Err`], which is not a logic error, but a
     /// normal _user_ error (f.e. linking against external libraries on DVM).
+    ///
+    /// [`compile`]: super::UnitRunner::compile
+    /// [`DvmTaskGenerator`]: dvm::DvmTaskGenerator
     fn pre_compilation(&self, graph: &UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<()>;
 
     /// Create tasks which will be used for compiling the given [`Unit`].

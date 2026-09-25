@@ -1,8 +1,8 @@
-//! An implementation of [`UnitCompiler`], which creates a single task per package.
+//! An implementation of [`UnitTaskGenerator`], which creates a single task per package.
 
 use tracing::instrument;
 
-use super::UnitCompiler;
+use super::UnitTaskGenerator;
 use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
@@ -13,9 +13,9 @@ use crate::quackpack::core::compile::unit_runner::external_libs::validate_extern
 use crate::quackpack::core::compile::unit_runner::outputs;
 
 #[derive(Debug, Clone, Copy)]
-pub struct DefaultUnitCompiler;
+pub struct DefaultTaskGenerator;
 
-impl UnitCompiler for DefaultUnitCompiler {
+impl UnitTaskGenerator for DefaultTaskGenerator {
     #[instrument(skip_all)]
     #[track_caller]
     fn pre_compilation(&self, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> QuackResult<()> {

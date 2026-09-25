@@ -1,9 +1,9 @@
-//! An implementation of [`UnitCompiler`], which invokes duckc only once, for a root package with
+//! An implementation of [`UnitTaskGenerator`], which invokes duckc only once, for a root package with
 //! `dvm` task.
 
 use tracing::instrument;
 
-use super::UnitCompiler;
+use super::UnitTaskGenerator;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::multipackage_schema;
@@ -16,9 +16,9 @@ use crate::quackpack::core::compile::unit_runner::outputs;
 use crate::{QuackResult, qp_bail};
 
 #[derive(Debug, Clone, Copy)]
-pub struct DvmUnitCompiler;
+pub struct DvmTaskGenerator;
 
-impl UnitCompiler for DvmUnitCompiler {
+impl UnitTaskGenerator for DvmTaskGenerator {
     #[instrument(skip_all)]
     #[track_caller]
     fn pre_compilation(&self, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> QuackResult<()> {

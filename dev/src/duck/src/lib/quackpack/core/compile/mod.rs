@@ -24,8 +24,8 @@ pub mod duckc;
 pub mod early_graph;
 pub mod profiles;
 pub mod unit;
-pub mod unit_compiler;
 pub mod unit_runner;
+pub mod unit_task_generator;
 
 /// A common message for panicking when a manifest is missing a dependency.
 pub fn missing_depenendcy_in_manifest(root_name: &str, dep: &str, context: &dyn fmt::Debug) -> ! {

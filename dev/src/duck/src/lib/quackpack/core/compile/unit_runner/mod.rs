@@ -1,4 +1,4 @@
-//! [`UnitRunner`] takes a [`UnitGraph`] and [`UnitCompiler`] and compilation using it.
+//! [`UnitRunner`] takes a [`UnitGraph`] and [`UnitTaskGenerator`] and compilation using it.
 
 use std::fmt;
 use std::io::Write;
@@ -16,9 +16,9 @@ use super::duckc::{Duckc, multipackage_schema};
 use super::profiles::Profile;
 use super::unit::Unit;
 use super::unit::graph::UnitGraph;
-use super::unit_compiler::UnitCompiler;
-use super::unit_compiler::default_unit_compiler::DefaultUnitCompiler;
-use super::unit_compiler::dvm_unit_compiler::DvmUnitCompiler;
+use super::unit_task_generator::UnitTaskGenerator;
+use super::unit_task_generator::default::DefaultTaskGenerator;
+use super::unit_task_generator::dvm::DvmTaskGenerator;
 use crate::quackpack::core::compile::unit::BuildKind;
 use crate::util::file_locks::LockedFile;
 use crate::{QuackResult, QuackResultContext, qp_bail};
@@ -33,17 +33,17 @@ mod tests;
 /// A runner of [`Unit`]s.
 pub struct UnitRunner<'duck, 'ctx> {
     graph: UnitGraph,
-    compiler: Box<dyn UnitCompiler>,
+    task_generator: Box<dyn UnitTaskGenerator>,
     bcx: &'ctx BuildContext<'duck, 'ctx>,
 }
 
 impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     /// Create a new [`UnitRunner`].
     pub fn new(graph: UnitGraph, bcx: &'ctx BuildContext<'duck, 'ctx>) -> Self {
-        let compiler = bcx.unit_compiler();
+        let task_generator = bcx.task_generator();
         Self {
             graph,
-            compiler,
+            task_generator,
             bcx,
         }
     }
@@ -51,7 +51,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     #[instrument(skip_all)]
     /// Drive the compilation with [`UnitRunner`].
     pub fn compile(self) -> QuackResult<CompilationOutput> {
-        self.compiler.pre_compilation(&self.graph, self.bcx)?;
+        self.task_generator.pre_compilation(&self.graph, self.bcx)?;
         let artifacts_layout = self.bcx.artifacts_layout(&self.graph);
         let profile_layout = artifacts_layout.for_profile(self.bcx.profile);
         self.compile_all_needed_units(&*profile_layout)?;
@@ -61,10 +61,13 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     #[instrument(skip_all)]
     /// Compile all needed [`Unit`]s, as determined by [`should_compile`].
     ///
-    /// [`should_compile`]: UnitCompiler::should_compile
+    /// [`should_compile`]: UnitTaskGenerator::should_compile
     fn compile_all_needed_units(&self, layout: &dyn ProfileLayout) -> QuackResult<()> {
         for unit in self.graph.compilation_order() {
-            if !self.compiler.should_compile(unit, &self.graph, self.bcx) {
+            if !self
+                .task_generator
+                .should_compile(unit, &self.graph, self.bcx)
+            {
                 continue;
             }
             match unit.build_kind() {
@@ -78,11 +81,11 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
     /// Compile a single [`Unit`].
     /// May panic, if this [`Unit`] shouldn't be compiled ([`should_compile`] returned `false`).
     ///
-    /// [`should_compile`]: UnitCompiler::should_compile
+    /// [`should_compile`]: UnitTaskGenerator::should_compile
     fn compile_unit(&self, unit: &Unit, layout: &dyn ProfileLayout) -> QuackResult<()> {
         info!("starting compilation of a unit");
         let tasks = self
-            .compiler
+            .task_generator
             .create_tasks(unit, &self.graph, layout, self.bcx)?;
         self.compile_unit_with_tasks(unit, layout, tasks)
     }
@@ -168,14 +171,14 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
 }
 
 impl BuildContext<'_, '_> {
-    /// Get an appropriate [`UnitCompiler`].
-    pub fn unit_compiler(&self) -> Box<dyn UnitCompiler> {
+    /// Get an appropriate [`UnitTaskGenerator`].
+    pub fn task_generator(&self) -> Box<dyn UnitTaskGenerator> {
         if self.profile.dvm_bytecode {
-            debug!("returning DvmUnitCompiler");
-            return Box::new(DvmUnitCompiler);
+            debug!("returning DvmTaskGenerator");
+            return Box::new(DvmTaskGenerator);
         }
-        debug!("returning DefaultUnitCompiler");
-        Box::new(DefaultUnitCompiler)
+        debug!("returning DefaultTaskGenerator");
+        Box::new(DefaultTaskGenerator)
     }
 
     /// Get an appropriate [`ArtifactsLayout`] implementation.
