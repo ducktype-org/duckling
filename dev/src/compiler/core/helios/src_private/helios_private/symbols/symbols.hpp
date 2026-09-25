@@ -33,7 +33,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, query::QResult<SymID>, ({}));
 
-	struct KeyOf_LookupInSymbol {
+	struct KeyOf_LookupInUsingOrImport {
 		/**
 		 * @brief Symbol to lookup in
 		 */
@@ -54,23 +54,40 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Query result of lookup of single name within the symbol.
-	 * It essentially implements "symbol.name" operation.
+	 * @brief Query result of lookup of single name within the using or import statement.
 	 *
 	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(
-		QueryLookupInUsingImport, KeyOf_LookupInSymbol, CRef<query::QResult<LookupResult>>, ({})
+		QueryLookupInUsingImport, KeyOf_LookupInUsingOrImport, CRef<query::QResult<LookupResult>>, ({})
 	);
 
-	using QueryConstValueOf_Result = query::QResult<ctv::CompileTimeValue>;
+	struct KeyOf_LookupInNamespaceOrModule {
+		/**
+		 * @brief Symbol of the module or the namespace.
+		 */
+		SymID symbol;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
+	};
+
+
+	/**
+	 * @brief Query result of lookup of single name within the using or import statement.
+	 *
+	 * \query_thread_safe_if_cache_and_struct
+	 */
+	DECLARE_QUERY(
+		QueryLookupInNamespaceOrModule, KeyOf_LookupInNamespaceOrModule, CRef<query::QResult<LookupResult>>, ({})
+	);
 
 	/**
 	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryConstValueOf, SymID, QueryConstValueOf_Result, ({}));
+	DECLARE_QUERY(QueryConstValueOf, SymID, query::QResult<ctv::CompileTimeValue>, ({}));
 
 
 	using QuerySpecifiersOfSymbol_Result = std::vector<pst::AccessLocked<pst::StmtSpecifier>>;
