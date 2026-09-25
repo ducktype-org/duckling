@@ -84,7 +84,7 @@ Tests:
           String: ""
         ExitCode: 0
 
-  # Numeric coercions to bool temporarily disabled
+  # @TODO: #3631 Numeric coercions to bool temporarily disabled
   #  coercions:
   #    Cases:
   #      all:
