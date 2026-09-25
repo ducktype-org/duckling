@@ -508,5 +508,4 @@ namespace vm::loader::compiler::safe {
 
 		return func;
 	}
-
 }
