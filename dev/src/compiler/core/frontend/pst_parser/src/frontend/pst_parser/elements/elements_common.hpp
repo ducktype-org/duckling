@@ -89,6 +89,8 @@ namespace pst::internal {
 		static std::string callList() { return "call"; }
 
 		static std::string templateList() { return "template"; }
+
+		static std::string arrayLiteralList() { return "array literal"; }
 	};
 
 	/**

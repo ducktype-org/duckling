@@ -12,6 +12,7 @@ namespace pst {
 	class CallList;
 	class FlowPatternList;
 	class NestedImportList;
+    class ArrayLiteralList;
 	// Not Statements
 	class Param;
 	class DottedName;
@@ -104,6 +105,7 @@ namespace pst {
 		class RoundExpr;
 		class UnitExpr;
 		class BlockExpr;
+		class ArrayLiteralExpr;
 		class MatchExpr;
 		class GeneralPrefix;
 		class GeneralSuffix;

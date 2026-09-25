@@ -25,6 +25,7 @@ namespace pst::expr {
 		RoundExpr,
 		UnitExpr,
 		BlockExpr,
+		ArrayLiteralExpr,
 		MatchExpr,
 		ComparisonChain,
 		Ternary,

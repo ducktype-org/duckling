@@ -8,6 +8,7 @@
 #include "../../hierarchy/expressions/match_expr.hpp"
 #include "../../hierarchy/expressions/numeric_value.hpp"
 #include "../../hierarchy/expressions/round_expr.hpp"
+#include "../../hierarchy/expressions/array_literal_expr.hpp"
 #include "../../hierarchy/expressions/string_value.hpp"
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
@@ -34,6 +35,8 @@ namespace pst::expr {
 			return RoundExpr::parse(state);
 		} else if (state[0].isBracketGroup(lexer::Token::Curly)) {
 			return BlockExpr::parse(state);
+		} else if (state[0].isBracketGroup(lexer::Token::Square)) {
+			return ArrayLiteralExpr::parse(state);
 		} else {
 			i64 length = base::safeIntConv<i64>(state.ctokens().size());
 

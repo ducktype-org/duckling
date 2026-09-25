@@ -989,6 +989,13 @@ namespace compiler::helios::code {
 					stmt->getStablePosition()
 				));
 			}
+
+			void visitArrayLiteralExpr(pst::Access<pst::expr::ArrayLiteralExpr> stmt) override {
+                // @TODOB
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					base::strConcat("Lowering of array literals to hout.\n It has ", stmt->getList().unlock(ctx)->size(), " elems tho."), stmt->getStablePosition()
+				));
+			}
 		};
 	}
 
