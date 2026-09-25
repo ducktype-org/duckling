@@ -58,7 +58,7 @@ namespace {
 			start_function.body.push_back(instr.build());
 		};
 	}
-};
+}
 
 namespace vm {
 	namespace ts = thread_state;
