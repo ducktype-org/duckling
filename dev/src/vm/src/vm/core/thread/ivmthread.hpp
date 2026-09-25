@@ -220,6 +220,8 @@ namespace vm {
 
 		/**
 		 * @brief Main debug function that executes one step of the program.
+		 * @return true if after performing the step, function can leave the paused state 
+		 * @note 25.09.2026: false is returned basically only for ret_from_expr
 		 */
 		virtual bool executeOneStepAndCheckIfResume() = 0;
 

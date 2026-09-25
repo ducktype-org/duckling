@@ -819,9 +819,8 @@ namespace vm {
 		}
 
 #ifdef DEBUG_OPCODES
-		// Stepping over `ret_from_expr` runs inside `pausedLoop`'s step handling, which is about
-		// to pause the thread again; re-entering the breakpoint here would nest a pause. Resume
-		// from the caller instead.
+		// A step over `ret_from_expr` is re-paused by `pausedLoop`; when the instruction is reached
+		// through `op_breakpoint`, that opcode's loop pauses again at the expression's caller.
 		FUNCTION_CONT(0);
 #else
 		MUST_TAIL return OPCODE_NAME(breakpoint)(instr, local_stack, frame, thread);

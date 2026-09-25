@@ -45,7 +45,7 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 }
 
 bool vm::fast::FastVMThread::executeOneStepAndCheckIfResume() {
-	throw vm::VMNotImplemented("Method `executeOneStep` is not implemented.");
+	throw vm::VMNotImplemented("Method `executeOneStepAndCheckIfResume` is not implemented.");
 }
 
 bool vm::fast::FastVMThread::isAtExecutionEnd() const {
