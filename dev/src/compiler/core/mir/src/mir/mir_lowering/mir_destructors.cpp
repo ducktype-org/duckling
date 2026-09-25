@@ -176,10 +176,10 @@ namespace compiler::mir {
 		};
 
 
-		// A block with no instructions takes its begin scope from its terminator, and this pass
-		// may move a terminator to the scope of its successor. Pinning the begin scope with a
-		// `Nop` first keeps `beginScope()` of every block stable while the pass rewrites
-		// terminators, no matter in which order the blocks are visited.
+		// If a block consists of only its terminator, we add a Nop instruction.
+		// This is because an instruction-less block takes its begin scope from its terminator,
+		// and a block's scope is propagated to the terminators of its predecessors.
+		// The Nop is used to stabilize the process and cut the propagation short.
 		for (auto block_id: function.block_order) {
 			auto& block = function.blocks[block_id];
 			if (block.instructions.empty())
@@ -247,8 +247,10 @@ namespace compiler::mir {
 						first_path_ending_scopes = succ_ending_scopes;
 						first_path_begin_scope   = succ_begin_scope;
 					}
-					// We have to check that not only ending scopes are the same, but also
-					// starting scopes are the same -> meaning the begin scope of the successors match.
+					// Originally this condition was first_path_begin_scope != succ_begin_scope
+					// or first_path_ending_scopes != succ_ending_scopes.
+					// But since different ending scopes indicate different begin scope, we only
+					// need begin scope to be different.
 					else if (*first_path_begin_scope != succ_begin_scope) {
 						paths_identical = false;
 					}

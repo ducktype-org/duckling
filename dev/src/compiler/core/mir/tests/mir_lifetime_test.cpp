@@ -866,10 +866,6 @@ private:
 	/**
 	 * @brief Blocks the destructor insertion added for a single outgoing edge - they hold only
 	 * destructors and jump to the original destination.
-	 *
-	 * They are recognised by the name the pass gives them. A structural check does not work:
-	 * the pass also pins the begin scope of every empty block with a `Nop`, so "a `Nop` followed
-	 * by a `Jump`" is the shape of an ordinary empty block as well.
 	 */
 	usize countIntermediateDestructorBlocks(CRef<compiler::mir::Function> func) {
 		usize intermediate_blocks_count = 0;
