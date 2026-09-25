@@ -30,7 +30,7 @@ namespace allocation {
     @native_only_impl
     fun alloc() -> ptr T = {
         let p = clib.malloc(LLVM_OBJECT_SIZE as u64) as ptr T;
-        if (p as u64 == 0) panicking.panic();
+        if (p as u64 == 0u64) panicking.panic();
         return p;
     }
 
@@ -341,7 +341,7 @@ namespace stringification {
 
         @native_only_impl
         fun stringifyPtr(pointer: ptr T) -> String = {
-            if (pointer as u64 == 0) return stringifyStr("ptr(null)");
+            if (pointer as u64 == 0u64) return stringifyStr("ptr(null)");
             let buffer_cap = 21;
             var address    = stringReserve(buffer_cap);
             let format     = builtins.ptr_from_slice:{char}("%p\0") as cptr char;

@@ -246,7 +246,7 @@ private:
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			// Test locals:
-			ASSERT_EQUAL(foo_mir.local_list.size(), 5);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 3);
 
 			auto i64_type = getIntegralType(ctx, 64, Signed);
 
@@ -343,7 +343,7 @@ private:
 
 			ASSERT_EQUAL_PRINT(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL_PRINT(foo_mir.block_order.size(), 7);
-			ASSERT_EQUAL_PRINT(foo_mir.local_list.size(), 5);
+			ASSERT_EQUAL_PRINT(foo_mir.local_list.size(), 3);
 
 			auto get_block_terminator
 				= [&](u64 block_id) { return foo_mir.blocks[BlockID(block_id)].terminator; };
