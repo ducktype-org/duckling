@@ -11,5 +11,6 @@ eval_main.dbc
 
 # Evaluate the simplest possible runtime expression while paused, then finish.
 < "eval eval_expr.dbc\n"
+> "primitive value : 42"
 < "continue\n"
 > "ExecutionCompleted (return value = 0)"
