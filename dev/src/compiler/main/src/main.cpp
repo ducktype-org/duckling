@@ -1317,6 +1317,9 @@ clah::Clah getClahForMain() {
 
 					bool bracketed = compiler::repl::FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED;
 					bool decorative_output = !options.isFlag("plain-output");
+
+					// Bracketed paste emits terminal-control sequences, which would violate plain
+		            // output.
 					if (options.isFlag("disable-bracketed-paste") || !decorative_output)
 						bracketed = false;
 
@@ -1367,6 +1370,7 @@ clah::Clah getClahForMain() {
 					}
 					compiler::driver::exit();
 					if (repl_result.status == compiler::repl::ReplResult::Status::Reset) {
+						// We need to flush stdout before execSelf to avoid losing any buffered output.
 						std::cout.flush();
 						setReplRestartArgs(reset_replay_count.copyValueOr(0), reset_replay_silent);
 						auto exec_result = os_utils::execSelf(g_argv);
