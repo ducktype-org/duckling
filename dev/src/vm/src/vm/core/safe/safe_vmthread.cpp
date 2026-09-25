@@ -180,7 +180,7 @@ namespace vm {
 		start_function.signature = code::FuncSignature{ .result_types = {}, .parameters = {} };
 
 		auto add_instr = getBuilder(start_function);
-		auto any = [](auto&& arg) { return PlaceAny{ StrID(arg) }; };
+		auto any       = [](auto&& arg) { return PlaceAny{ StrID(arg) }; };
 
 		for (auto [idx, result_type]: enumerate(high_func->signature.result_types)) {
 			auto slot_type = opargs::Type{ StrID(result_type.str) };
@@ -586,11 +586,12 @@ namespace vm {
 
 				auto& func = *frame->current_function;
 
-				return low::LowCodePosition{ .function          = &func,
-					                         .instruction_index = static_cast<u64>(
-												 frame->instr - func.getBc().data()
-												 - (call_adjustment ? 1 : 0)
-											 ) };
+				return low::LowCodePosition{
+					.function          = &func,
+					.instruction_index = static_cast<u64>(
+						frame->instr - func.getBc().data() - (call_adjustment ? 1 : 0)
+					),
+				};
 			}
 			variant_default {
 				return std::unexpected(api::ApiError{
