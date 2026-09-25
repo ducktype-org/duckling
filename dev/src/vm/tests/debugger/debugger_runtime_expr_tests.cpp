@@ -71,7 +71,7 @@ private:
 	}
 
 	vm::test::FlowSimulator createSimulator(const std::vector<fs::File>& files) {
-		auto process_pid_response = vm::api::spawn({ .enable_jit = false });
+		auto process_pid_response = vm::api::spawn();
 		if (!process_pid_response)
 			assertTrue(
 				false,

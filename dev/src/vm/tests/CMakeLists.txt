@@ -58,9 +58,9 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_mapper_test debugger/mapper_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_runtime_expr_test debugger/runtime_expr_tests.cpp
+        duck_add_test_custom(vm ${test_set}_debugger_runtime_expr_test debugger/debugger_runtime_expr_tests.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_disable_tc_when_not_opt("runtime_expr_test" ${test_set})
+        duck_disable_tc_when_not_opt("debugger_runtime_expr_test" ${test_set})
 
         duck_add_test_custom(vm ${test_set}_inheritance_loading_test inheritance/inheritance_loading.cpp
                 USES ${libvm} Tester ${vmtester})
