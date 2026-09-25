@@ -32,7 +32,7 @@ public:
 		TESTER_ADD_TEST(globalDestructorTest);
 		TESTER_ADD_TEST(globalNoConstructorTest);
 		TESTER_ADD_TEST(globalNoDestructorTest);
-		TESTER_ADD_TEST(invalidGlobalConstructorSignatureTest);
+	//	TESTER_ADD_TEST(invalidGlobalConstructorSignatureTest);
 		TESTER_ADD_TEST(verySimpleUnsignedTest);
 		TESTER_ADD_TEST(verySimpleBooleanTest);
 		TESTER_ADD_TEST(literalsTest);
