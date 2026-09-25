@@ -1629,7 +1629,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init_pany_vmval)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_vmvalptr_off)(FUNCTION_ARGS) {
 		{
 			const auto& safe_vm_value = *std::bit_cast<const SafeVMValue*>(instr->arg0);
 			performInit(local_stack, frame, thread, instr->arg1, safe_vm_value.type);

@@ -27,10 +27,6 @@ namespace vm::loader::compiler::safe {
 	class SafeCompiler;
 }
 
-namespace vm {
-	class SafeVMThread;
-}
-
 namespace vm::low {
 	using MicroBytecode = std::vector<MicroInstruction>;
 

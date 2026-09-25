@@ -874,7 +874,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_nop, i) { addLow<Op_nop>(); }
 			instr_case(high::Op_exit, i) { addLow<Op_exit>(); }
 			instr_case(high::Op_init_pany_vmval, i) {
-				addLow<Op_init_pany_vmval>(i.vm_val, byteOffsetOf(i.var));
+				addLow<Op_init_vmvalptr_off>(i.vm_val, byteOffsetOf(i.var));
 			}
 			instr_case(high::Comment, i) {
 				// Do nothing

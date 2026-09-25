@@ -123,7 +123,7 @@ namespace vm::low::opargs {
 	 * @brief Identifies the VM value an `init_pany_vmval` reads from: either the id of a
 	 * process-registered value, or a direct `IVMValue*`.
 	 */
-	DEFINE_MICRO_ARG_TYPE(VMValPtr, "vm_val_ptr", vm::opargs::VMValueIdentifier);
+	DEFINE_MICRO_ARG_TYPE(VMValPtr, "vmvalptr", vm::opargs::VMValueIdentifier);
 
 	/**
 	 * @brief Storage class for any kind of micro instruction argument.
