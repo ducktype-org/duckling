@@ -1,6 +1,6 @@
-# Destructor insertion when a terminator's successors leave different scopes: the pass has to put
-# the path-specific destructors into intermediate blocks. When every outgoing edge needs the exact
-# same destructors, no intermediate block is created.
+# Destructor insertion when the successors of a terminator do not all live in the same scope: the
+# pass has to put the path-specific destructors into intermediate blocks. Only when every outgoing
+# edge leaves the same scopes AND enters the same scope is no intermediate block created.
 
 class R {
     id: i32 = 0;
@@ -50,8 +50,8 @@ fun B() -> i64 = {
     return 0;
 }
 
-# Both branches of the `if` end the very same scope, so the destructors are appended to the current
-# block instead of new intermediate ones.
+# Both branches of the `if` end the very same scope, but each branch body is a scope of its own, so
+# the two edges still enter different scopes and each one is split into an intermediate block.
 fun C() -> i64 = {
     var x: i64 = 1;
     var r: R = R(7);

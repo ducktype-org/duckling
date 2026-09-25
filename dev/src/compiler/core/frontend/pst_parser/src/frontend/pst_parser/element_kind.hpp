@@ -14,10 +14,10 @@ namespace pst {
 		TopLevel,
 		Import,
 
-		// Import Chains
-		ImportIdentifierAs,
-		ImportStarHides,
-		ImportNested,
+		// Selectors of `using`/`import`:
+		Selector,
+		SelectorList,
+		NestedSelectorList,
 
 		StmtSpecifier,
 
@@ -36,7 +36,6 @@ namespace pst {
 		TemplateStmt,
 
 		Using,
-		Alias,
 
 		Const,
 
@@ -84,7 +83,6 @@ namespace pst {
 		FlowPatternList,
 		DottedName,
 		CallArgument,
-		NestedImportList,
 		AtrArgList,
 
 		TemplateDecl,

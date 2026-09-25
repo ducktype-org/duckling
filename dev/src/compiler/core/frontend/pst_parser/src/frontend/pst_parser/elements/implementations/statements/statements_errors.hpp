@@ -3,18 +3,6 @@
 #include <diagnostic/message.hpp>
 
 namespace pst {
-	class AliasStarError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "alias_star_error" };
-		}
-
-	public:
-		AliasStarError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
 	class BadSpecifierCallError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",

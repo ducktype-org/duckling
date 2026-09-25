@@ -9,3 +9,19 @@ using a.b.c.d;
 using ἄλφα.βῆτα.γάμμα;
 
 using ἄλφα.βῆτα.*;
+
+using a.b.{c, d};
+
+using a.b.c as d;
+
+using a as d;
+
+using a.b.{c as d, e};
+
+using a.* hides x;
+
+using a.* hides {x, y, z,};
+
+using a.a, b.b;
+
+export using a.b.*;
