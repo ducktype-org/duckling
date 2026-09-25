@@ -5,7 +5,7 @@
 #include "../hierarchy/expr_holders.hpp"                   // IWYU pragma: export
 #include "../hierarchy/lists/attribute_arg_list.hpp"       // IWYU pragma: export
 #include "../hierarchy/lists/call_list.hpp"                // IWYU pragma: export
-#include "../hierarchy/lists/nested_import_list.hpp"       // IWYU pragma: export
+#include "../hierarchy/lists/selector_list.hpp"            // IWYU pragma: export
 #include "../hierarchy/meta.hpp"                           // IWYU pragma: export
 #include "../hierarchy/not_statements/attribute.hpp"       // IWYU pragma: export
 #include "../hierarchy/not_statements/code_block.hpp"      // IWYU pragma: export

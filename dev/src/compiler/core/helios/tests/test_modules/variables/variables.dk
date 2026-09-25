@@ -7,7 +7,7 @@ fun foo() -> i32 = {
 	var b: i32 = 0 as i32;
 	var c: i32 | f32 = a;
 	var d: T = T();
-	alias hmm = T;
+	using T as hmm;
 	using N.*;
 	if (false) {
 		var x: i32 = b;

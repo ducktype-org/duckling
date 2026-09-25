@@ -1,5 +1,5 @@
 class Test {var value = 42; fun test() = { return value; };}
-class TestsRelative {var T = Test(); alias test = T.test;}
+class TestsRelative {var T = Test(); using T.test as test;}
 
 var t = TestsRelative();
 builtin_output_i64(t.test());
