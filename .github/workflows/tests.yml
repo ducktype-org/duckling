@@ -118,7 +118,7 @@ jobs:
             cpus=$((quota / period + 1))
           else
             # This branch will be taken on macOS
-            cpus=10
+            cpus=8
           fi
           echo "jobs=$cpus" >> $GITHUB_OUTPUT
 
@@ -351,7 +351,7 @@ jobs:
           ITEST_LOG="$log_dir/dit.log"
           rm -f "$ITEST_LOG"
           echo "ITEST_LOG=$ITEST_LOG" >> "$GITHUB_ENV"
-          ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --log-file "$ITEST_LOG" --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }}
+          ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --log-file "$ITEST_LOG" --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }} ${{ env.platform == 'macos' && '--timeout-scale 5' || '' }}
 
       # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
       # so we have to save sccache after that, otherwise we'd have nothing to save.
