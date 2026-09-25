@@ -92,16 +92,16 @@ namespace pst {
 		EmptyExprError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class BadImportChainError final: public dia::MessageWithCodeFragmentAndCause {
+	class BadSelectorError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
-				     .name          = "bad_import_chain_error" };
+				     .name          = "bad_selector_error" };
 		}
 
 	public:
-		BadImportChainError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+		BadSelectorError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	class NoExternArgumentError final: public dia::MessageWithCodeFragmentAndCause {

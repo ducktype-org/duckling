@@ -13,6 +13,7 @@
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/selector_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
@@ -148,7 +149,6 @@ namespace lsp {
 			switch (element->getElementKind()) {
 			case pst::ElementKind::Import:
 			case pst::ElementKind::Using:
-			case pst::ElementKind::Alias:
 			case pst::ElementKind::Namespace:
 			case pst::ElementKind::Fun:
 			case pst::ElementKind::FunDecl:
@@ -181,26 +181,33 @@ namespace lsp {
 			identified_tokens.push_back({ position, correct_type });
 		}
 
-		void visitImport(pst::Access<pst::Import> elem) override {
-			auto chain_locked = elem->getImportChain();
-			if_opt_none(chain_locked.illegalAccess()) return;
-			auto chain = chain_locked.illegalAccess().value();
-			for (usize idx = 0; idx < chain->numberOfNames(); idx++) {
-				out(chain->getNameByIndex(idx)
-				        .illegalAccess()
-				        .value()
-				        ->getSourcePosition()
-				        .illegalAccess(),
-				    StandardTokenType::Namespace);
+		/**
+		 * @brief Marks the dotted prefixes of @p list, nested lists included, as namespaces.
+		 */
+		template<typename ListType>
+		void outSelectorNames(pst::AccessLocked<ListType> list_locked) {
+			if_opt_none(list_locked.illegalAccess()) return;
+			for (const auto& selector_locked: *list_locked.illegalAccess().value()) {
+				if_opt_none(selector_locked.illegalAccess()) continue;
+				auto selector = selector_locked.illegalAccess().value();
+				for (usize idx = 0; idx < selector->numberOfNames(); idx++) {
+					out(selector->getNameByIndex(idx)
+					        .illegalAccess()
+					        .value()
+					        ->getSourcePosition()
+					        .illegalAccess(),
+					    StandardTokenType::Namespace);
+				}
+				if (auto nested = selector->getNested()) outSelectorNames(nested.value());
 			}
+		}
+
+		void visitImport(pst::Access<pst::Import> elem) override {
+			outSelectorNames(elem->getSelectors());
 		}
 
 		void visitUsing(pst::Access<pst::Using>) override {
 			// For now empty
-		}
-
-		void visitAlias(pst::Access<pst::Alias>) override {
-			// Same as using
 		}
 
 		void visitNamespace(pst::Access<pst::Namespace> elem) override {

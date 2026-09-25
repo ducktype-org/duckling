@@ -71,7 +71,7 @@ namespace pst {
 	 * returns `DeclKind::Symbol` or `DeclKind::Transparent`.
 	 *
 	 * This is the explicit REPL/script path for statements such as functions, variables,
-	 * constants, classes, namespaces, aliases, usings and imports.
+	 * constants, classes, namespaces, usings and imports.
 	 *
 	 * @param ctx  Query context for PST access
 	 * @param root The PST root element to examine
