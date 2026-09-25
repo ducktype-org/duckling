@@ -1,7 +1,7 @@
 metadata:
   type: "error"
   family: "parser"
-  name: "bad_import_chain_error"
+  name: "bad_selector_error"
   code: "0"
   active_from: "0.0.1"
   active_until: "now"
@@ -14,7 +14,7 @@ params:
     description: "The location of the code snippet."
 
 header_message:
-  - "Unexpected import chain continuation, expected identifier or round brackets."
+  - "Unexpected selector continuation, expected `.name`, `.*`, `.{ ... }` or `as name`."
 
 description:
   - codeblock:
