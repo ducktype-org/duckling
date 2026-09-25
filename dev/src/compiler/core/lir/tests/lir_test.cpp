@@ -113,11 +113,18 @@ private:
 		ASSERT_EQUAL_PRINT(2, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
-		// note: it might change where those branch operations are placed:
-		// if this happens, just see lir-output of tested module for lir block numbers
+		// The two `if`s are the only branches of the function. They are looked up by their
+		// terminator rather than by block index, because the number of blocks between them
+		// depends on how many edges the destructor pass had to split.
+		std::vector<CRef<compiler::lir::Instruction>> branches;
+		for (const auto& block: foo_lir->block_order)
+			if (block->terminator.operation == compiler::lir::Operation::Branch)
+				branches.emplace_back(&block->terminator);
 
-		auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
-		auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
+		ASSERT_EQUAL_PRINT(2, branches.size());
+
+		auto true_lir_value  = branches.at(0)->arguments.at(0);
+		auto false_lir_value = branches.at(1)->arguments.at(0);
 
 		auto true_lir_constant  = true_lir_value.get<compiler::lir::LIRConstant>().value;
 		auto false_lir_constant = false_lir_value.get<compiler::lir::LIRConstant>().value;

@@ -342,7 +342,7 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 
 			ASSERT_EQUAL_PRINT(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL_PRINT(foo_mir.block_order.size(), 7);
+			ASSERT_EQUAL_PRINT(foo_mir.block_order.size(), 11);
 			ASSERT_EQUAL_PRINT(foo_mir.local_list.size(), 3);
 
 			auto get_block_terminator
@@ -360,8 +360,16 @@ private:
 			// Here, the order does not matter.
 			// If it breaks because the order changes,
 			// the check has to be changed to an order-free assertion.
-			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 3 } COMMA BlockID{ 2 } });
-			ASSERT_EQUAL(get_block_successors(5), BlockList{ BlockID{ 6 } COMMA BlockID{ 4 } });
+			//
+			// Both branches enter a scope of their own, so the destructor pass splits every one
+			// of their edges into an intermediate block that jumps on to the original target.
+			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 11 } COMMA BlockID{ 12 } });
+			ASSERT_EQUAL(get_block_successors(11), BlockList{ BlockID{ 3 } });
+			ASSERT_EQUAL(get_block_successors(12), BlockList{ BlockID{ 2 } });
+
+			ASSERT_EQUAL(get_block_successors(5), BlockList{ BlockID{ 9 } COMMA BlockID{ 10 } });
+			ASSERT_EQUAL(get_block_successors(9), BlockList{ BlockID{ 6 } });
+			ASSERT_EQUAL(get_block_successors(10), BlockList{ BlockID{ 4 } });
 
 			ASSERT_EQUAL(get_block_successors(6), BlockList{ BlockID{ 5 } });
 			ASSERT_EQUAL(get_block_successors(7), BlockList{ BlockID{ 5 } });
@@ -658,7 +666,9 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
 			ASSERT_TRUE(unreachable_end_fun.validateBlockIDs().isOk());
 			unreachable_end_fun.debugPrint(foo_str);
-			ASSERT_EQUAL_PRINT(unreachable_end_fun.block_order.size(), 7);
+			// A `while` and an `if`, each of whose four edges enters a scope of its own and so
+			// gets an intermediate block from the destructor pass.
+			ASSERT_EQUAL_PRINT(unreachable_end_fun.block_order.size(), 11);
 
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->valueOrThrow();
