@@ -429,7 +429,7 @@ namespace compiler::tsh {
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
 			// Only allow promoting to greater sizes
 			// signed to unsigned coercions are not allowed
-			// Note: we may bring back coercions to bool in the future, but that requires
+			// @TODO: #3631 we may bring back coercions to bool in the future, but that requires
 			// solving an issue with overload resolution, e.g. with `1u64 == 2i64`.
 			auto int_coercion = (target.getKind() == Kind::Integral);
 			auto upsize_coercion
