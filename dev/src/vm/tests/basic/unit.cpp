@@ -25,6 +25,9 @@ public:
 		TESTER_ADD_TEST(checkMultipleRetVals);
 		TESTER_ADD_TEST(checkVoidTypeValid);
 		TESTER_ADD_TEST(pointerTest);
+		TESTER_ADD_TEST(referenceOnColdBranchTest);
+		TESTER_ADD_TEST(localSlotAddressingTest);
+		TESTER_ADD_TEST(localSlotAddressingInCalleeTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(globalDestructorTest);
 		TESTER_ADD_TEST(globalNoConstructorTest);
@@ -72,6 +75,18 @@ private:
 		runTestOnVm("pointer_to_global.dbc", {}, "429913371337", {}, 1'337);
 	}
 
+	/**
+	 * @brief A variable whose address is only taken on a path that is not executed never gets a
+	 * block, and the process must still validate its memory cleanly.
+	 */
+	void referenceOnColdBranchTest() { runTestOnVm("reference_on_cold_branch.dbc", "", "42"); }
+
+	void localSlotAddressingTest() { runTestOnVm("local_slot_addressing.dbc", "", "7724"); }
+
+	void localSlotAddressingInCalleeTest() {
+		runTestOnVm("local_slot_addressing_in_callee.dbc", "", "42422");
+	}
+
 	void commandLineArguments() {
 		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" }, 0);
 	}
@@ -112,11 +127,11 @@ private:
 	void verySimpleBooleanTest() { runTestOnVm("very_simple_boolean.dbc", "", "1", {}); }
 
 	void checkZeroDivision() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("zero_division_i64.dbc", "", "0"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("zero_division_i32.dbc", "", "0"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
@@ -162,7 +177,7 @@ private:
 		vm::PID pid = initProcess();
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
 		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
-		vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(vm::api::deinitAndValidate(pid));
 	}
 };
 

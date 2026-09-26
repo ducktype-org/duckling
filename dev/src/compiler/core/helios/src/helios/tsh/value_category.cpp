@@ -3,11 +3,19 @@
 #include <helios/symbols/symbol_kind.hpp>
 
 namespace compiler::tsh {
-	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol) {
+	PrimaryCategory primaryCategoryOfSymbol(query::Context& ctx, compiler::helios::SymID symbol) {
 		compiler::helios::SymbolKind symbol_kind = kind(symbol);
-		// @TODO Properly check whether the symbol is local or global.
-		bool is_symbol_local = symbol_kind == compiler::helios::SymbolKind::Variable;
-		return is_symbol_local ? PrimaryCategory::Local : PrimaryCategory::Global;
+
+		// Parameters are owned locals (the function owns them, so they can be moved from).
+		if (symbol_kind == compiler::helios::SymbolKind::Parameter) return PrimaryCategory::Local;
+
+		// A `Variable` may be either a local or a global variable.
+		if (symbol_kind == compiler::helios::SymbolKind::Variable)
+			return compiler::helios::isGlobalVar(ctx, symbol) ? PrimaryCategory::Global
+			                                                  : PrimaryCategory::Local;
+
+		// Everything else is a global.
+		return PrimaryCategory::Global;
 	}
 
 	/**
@@ -26,12 +34,21 @@ namespace compiler::tsh {
 		case PrimaryCategory::Local:
 			category        = PrimaryCategory::Local;
 			is_pure         = false;
-			allows_semantic = MOVE | COPY | REINIT | USE | DESTROY;  // All
+			allows_semantic = MOVE | COPY | REINIT | USE | DESTROY | REFERENCE;  // All
 			break;
 		case PrimaryCategory::Global:
 			category        = PrimaryCategory::Global;
 			is_pure         = false;
-			allows_semantic = COPY | REINIT | USE;  // All but MOVE and DESTROY
+			allows_semantic = COPY | REINIT | USE | REFERENCE;  // All but MOVE and DESTROY
+			break;
+		case PrimaryCategory::Dereferenced:
+			category = PrimaryCategory::Dereferenced;
+			// A dereferenced location may alias, so it is not pure. It is a non-owned lvalue. It
+			// can be read and assigned to, but not moved out of.
+			is_pure = false;
+			allows_semantic
+				= COPY | REINIT | USE
+			    | REFERENCE;  // Same as Global (but it's not a global) - non-owned lvalue.
 			break;
 		case PrimaryCategory::Literal:
 			category        = PrimaryCategory::Literal;

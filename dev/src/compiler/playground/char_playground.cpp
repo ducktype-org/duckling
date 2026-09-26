@@ -1,5 +1,4 @@
-#include <diagnostic_interactive/logger.hpp>
-
+#include <diagnostic/logger.hpp>
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
 #include <init/init.hpp>

@@ -1,11 +1,15 @@
+use std::collections::VecDeque;
+use std::ffi::OsStr;
 use std::fs::{
     File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
     read_to_string, remove_dir, remove_file, rename, write,
 };
 use std::io::{self, Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
-use crate::{QuackResult, QuackResultContext, qp_bail};
+use tracing::warn;
+
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 const BUFFER_SIZE: usize = 4096;
 
@@ -44,40 +48,39 @@ pub trait PathOpsExt {
     /// [`ErrorKind::AlreadyExists`](io::ErrorKind::AlreadyExists).
     fn mkdir(&self, opts: MkdirOptions) -> QuackResult<()>;
 
-    /// Resolve `self` fully, as best as possible.
+    /// Normalize `self` fully, as best as possible.
+    ///
+    /// __WARNING!__: this function does __not__ care for CWD. You should firstly manually join it,
+    /// like: `ctx.cwd().join(path).normalize();`.
     ///
     /// Unlike [`std::fs::canonicalize`], this function __doesn't__ fail, if `self` points to a
     /// non-existing file.
-    ///
-    /// This function requires the __full-resolve__ feature.
-    fn resolve(&self) -> QuackResult<PathBuf>;
+    fn normalize(&self) -> PathBuf;
 
-    /// Canonicalize `self` fully: expand `~` into the `$HOME`.
+    /// Normalize `self` fully, against `ctx.cwd()`.
     ///
-    /// Also, because of the current implementation, this function will fail, if `self` is not a
-    /// utf8 path.
-    ///
-    /// This function requires the __expand-user__ feature.
-    fn expand_user(&self) -> QuackResult<PathBuf>;
+    /// This is equivalent to:
+    /// ```rust,ignore (illustrative)
+    /// ctx.cwd().join(self).normalize()
+    /// ```
+    fn resolve(&self, ctx: &DuckContext) -> PathBuf;
 
-    /// Canonicalize `self` fully: expand `~` into a `home`.
+    /// Normalize expanded `self` fully, against `ctx.cwd()`.
     ///
-    /// Also, because of the current implementation, this function will fail, if `self` is not a
-    /// ut8 path.
-    ///
-    /// This function requires the __expand-user__ feature.
-    fn expand_user_with(&self, home: impl AsRef<str>) -> QuackResult<PathBuf>;
+    /// This is equivalent to:
+    /// ```rust,ignore (illustrative)
+    /// ctx.cwd().join(self.expand_tilde(ctx)).normalize()
+    /// ```
+    fn resolve_with_tilde(&self, ctx: &DuckContext) -> PathBuf;
 
-    /// Canonicalize `self` fully: expand `~` into a `home()`.
-    ///
-    /// Also, because of the current implementation, this function will fail, if `self` is not a
-    /// utf8 path.
-    ///
-    /// This function requires the __expand-user__ feature.
-    fn expand_user_with_fn<F, H>(&self, home: F) -> QuackResult<PathBuf>
-    where
-        H: AsRef<str>,
-        F: FnOnce() -> H;
+    /// Expand `~` into the `ctx.user_home()`.
+    fn expand_tilde(&self, ctx: &DuckContext) -> PathBuf;
+
+    /// Expand `~` into a `home`.
+    fn expand_tilde_with(&self, home: &Path) -> PathBuf;
+
+    /// Resolves both `self` and `other` and returns the relative path from `self` to `other`.
+    fn resolve_both_and_get_relative(&self, other: &Path, ctx: &DuckContext) -> PathBuf;
 
     /// Returns `true` if path exists on a disk and points to an executable file.
     ///
@@ -150,6 +153,7 @@ impl PathOpsExt for Path {
         Ok(())
     }
 
+    #[cfg(not(windows))]
     fn try_fsync_dir(&self) -> QuackResult<()> {
         let dir = {
             let mut opts = OpenOptions::new();
@@ -161,6 +165,12 @@ impl PathOpsExt for Path {
             Err(e) if matches!(e.kind(), io::ErrorKind::Unsupported) => Ok(()),
             Err(e) => Err(e).with_context(|| format!("failed to sync `{}", self.display())),
         }
+    }
+
+    #[cfg(windows)]
+    fn try_fsync_dir(&self) -> QuackResult<()> {
+        // sync_data and sync_all are unreliable on Windows and usually unneeded.
+        Ok(())
     }
 
     fn touch(&self) -> QuackResult<File> {
@@ -284,35 +294,99 @@ impl PathOpsExt for Path {
             .with_context(|| format!("failed to write to `{}`", self.display()))
     }
 
-    fn resolve(&self) -> QuackResult<PathBuf> {
-        use soft_canonicalize::soft_canonicalize;
-        soft_canonicalize(self).with_context(|| format!("failed to resolve `{}`", self.display()))
+    #[track_caller]
+    fn normalize(&self) -> PathBuf {
+        let mut result: Vec<Component> = vec![];
+        let components = self.components().peekable();
+
+        for component in components {
+            match component {
+                pref @ Component::Prefix(..) => result.push(pref),
+                root @ Component::RootDir => result.push(root),
+                normal @ Component::Normal(..) => result.push(normal),
+                parent @ Component::ParentDir => match result.last() {
+                    Some(Component::Prefix(_)) => {}
+                    Some(Component::RootDir) => {}
+                    Some(Component::ParentDir) => result.push(parent),
+                    Some(Component::Normal(_)) => {
+                        result.pop();
+                    }
+                    None => result.push(parent),
+                    Some(Component::CurDir) => {
+                        unreachable!("we removed all curdirs but the current path is `{result:?}`");
+                    }
+                },
+                Component::CurDir => {}
+            }
+        }
+        if result.is_empty() {
+            result.push(Component::CurDir);
+        }
+        PathBuf::from_iter(result)
     }
 
-    fn expand_user(&self) -> QuackResult<PathBuf> {
-        use shellexpand::tilde;
-        let Some(as_str) = self.to_str() else {
-            qp_bail!("path `{}` is not a utf8 string", self.display())
-        };
-        Ok(PathBuf::from(tilde(as_str).into_owned()))
+    fn expand_tilde(&self, ctx: &DuckContext) -> PathBuf {
+        self.expand_tilde_with(ctx.user_home())
     }
 
-    fn expand_user_with(&self, home: impl AsRef<str>) -> QuackResult<PathBuf> {
-        self.expand_user_with_fn(|| home)
+    fn expand_tilde_with(&self, home: &Path) -> PathBuf {
+        match self.strip_prefix("~") {
+            Ok(rest) => home.join(rest),
+            Err(_) => {
+                let os_str = self.as_os_str();
+                let tilde = OsStr::new("~");
+                if os_str
+                    .as_encoded_bytes()
+                    .starts_with(tilde.as_encoded_bytes())
+                {
+                    warn!(path = ?self, "path (likely) contains a shell syntax for a different user's home directory (like `~user`), which is not supported");
+                }
+                self.to_path_buf()
+            }
+        }
     }
 
-    fn expand_user_with_fn<F, H>(&self, home: F) -> QuackResult<PathBuf>
-    where
-        H: AsRef<str>,
-        F: FnOnce() -> H,
-    {
-        use shellexpand::tilde_with_context;
-        let Some(as_str) = self.to_str() else {
-            qp_bail!("path `{}` is not a utf8 string", self.display())
-        };
-        Ok(PathBuf::from(
-            tilde_with_context(as_str, || Some(home())).into_owned(),
-        ))
+    fn resolve(&self, ctx: &DuckContext) -> PathBuf {
+        ctx.cwd().join(self).normalize()
+    }
+
+    fn resolve_with_tilde(&self, ctx: &DuckContext) -> PathBuf {
+        ctx.cwd().join(self.expand_tilde(ctx)).normalize()
+    }
+
+    fn resolve_both_and_get_relative(&self, other: &Path, ctx: &DuckContext) -> PathBuf {
+        let source = self.resolve_with_tilde(ctx);
+        let target = other.resolve_with_tilde(ctx);
+        let mut src_components = source.components().fuse();
+        let mut tgt_components = target.components().fuse();
+
+        let mut result_components = VecDeque::new();
+        let mut common_prefix = true;
+        loop {
+            match (src_components.next(), tgt_components.next()) {
+                (None, None) => break,
+                (Some(src_comp), Some(tgt_comp)) => {
+                    if src_comp == tgt_comp && common_prefix {
+                        continue;
+                    }
+                    common_prefix = false;
+                    result_components.push_front(Component::ParentDir);
+                    result_components.push_back(tgt_comp);
+                }
+                (Some(_), None) => {
+                    common_prefix = false;
+                    result_components.push_front(Component::ParentDir)
+                }
+                (None, Some(tgt_comp)) => {
+                    common_prefix = false;
+                    result_components.push_back(tgt_comp)
+                }
+            }
+        }
+        result_components
+            .into_iter()
+            .map(|c| c.as_os_str())
+            .collect()
     }
 }
 
@@ -334,4 +408,92 @@ fn ignore_io_kind_error<T: Default>(
 
 fn ignore_not_found<T: Default>(err: io::Result<T>) -> io::Result<T> {
     ignore_io_kind_error(err, &[io::ErrorKind::NotFound])
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::*;
+
+    #[test]
+    fn resolve_tests() {
+        let path = Path::new("/../../../cfg");
+        assert_eq!(path.normalize(), Path::new("/cfg"));
+
+        let path = Path::new("/../../..");
+        assert_eq!(path.normalize(), Path::new("/"));
+
+        let path = Path::new("/home/../.");
+        assert_eq!(path.normalize(), Path::new("/"));
+
+        let path = Path::new("/home/duckling/./xd");
+        assert_eq!(path.normalize(), Path::new("/home/duckling/xd"));
+
+        let path = Path::new("/home/duckling/./xd/..");
+        assert_eq!(path.normalize(), Path::new("/home/duckling"));
+
+        let path = Path::new("../a/b/c/../../../../d");
+        assert_eq!(path.normalize(), Path::new("../../d"));
+    }
+
+    #[test]
+    fn home_tests() {
+        let home = Path::new("/home/duckling");
+        let path = Path::new("~");
+        assert_eq!(path.expand_tilde_with(home), home);
+
+        let path = Path::new("~/");
+        assert_eq!(path.expand_tilde_with(home), home);
+
+        let path = Path::new("~/foo");
+        assert_eq!(path.expand_tilde_with(home), home.join("foo"));
+
+        let path = Path::new("~/foo/../bar");
+        assert_eq!(
+            path.expand_tilde_with(home),
+            home.join("foo").join("..").join("bar")
+        );
+
+        let path = Path::new(".");
+        assert_eq!(path.expand_tilde_with(home), path,);
+
+        let path = Path::new("/duckling");
+        assert_eq!(path.expand_tilde_with(home), path,);
+
+        let path = Path::new("duckling/ducktype");
+        assert_eq!(path.expand_tilde_with(home), path,);
+
+        // Other users' syntax is not supported.
+        let path = Path::new("~duck/");
+        assert_eq!(path.expand_tilde_with(home), path,);
+
+        let path = Path::new("~duck");
+        assert_eq!(path.expand_tilde_with(home), path,);
+    }
+
+    #[test]
+    fn relative_tests() {
+        let ctx = DuckContext::default();
+
+        let source = Path::new("foo/bar");
+        let target = Path::new("x/y/z");
+        let expected = Path::new("../../x/y/z");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
+
+        let source = Path::new("");
+        let target = Path::new("x/y/z");
+        let expected = Path::new("x/y/z");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
+
+        let source = Path::new("foo/x");
+        let target = Path::new("foo/y");
+        let expected = Path::new("../y");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
+
+        let source = Path::new("foo/bar");
+        let target = Path::new("../x/../y/z");
+        let expected = Path::new("../../../y/z");
+        assert_eq!(source.resolve_both_and_get_relative(target, &ctx), expected);
+    }
 }

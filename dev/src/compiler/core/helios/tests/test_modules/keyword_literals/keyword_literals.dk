@@ -1,0 +1,35 @@
+# note: this will stop working, 
+# when type check is introduced.
+# We need to adjust it then.
+
+fun foo() = {
+    # Type literals:
+
+    var v_i8: i8 = 0;
+    var v_i16: i16 = 0;
+    var v_i32: i32 = 0;
+    var v_i64: i64 = 0;
+    var v_i128: i128 = 0;
+
+    var v_u8: u8 = 0;
+    var v_u16: u16 = 0;
+    var v_u32: u32 = 0;
+    var v_u64: u64 = 0;
+    var v_u128: u128 = 0;
+
+    var v_char: char = 0;
+
+    var v_f16: f16 = 0;
+    var v_f32: f32 = 0;
+    var v_f64: f64 = 0;
+    var v_f80: f80 = 0;
+    var v_f128: f128 = 0;
+    
+    var v_bool_t: bool = true;
+    var v_bool_f: bool = false;
+
+    # bool literals:
+    if (false) { }
+    if (true) { }
+    while (false) { }
+}

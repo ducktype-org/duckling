@@ -5,38 +5,46 @@ import urllib.request
 from typing import Any
 
 
+LINUX_GCC: dict[str, Any] = {
+    "name": "gcc",
+    "cxx": "g++-14",
+    "cc": "gcc-14",
+    "gcov": "gcov-14",
+    "linker": "mold",
+    "cache-prefix": "gcc-build",
+    "platform": "linux",
+}
+
+LINUX_CLANG: dict[str, Any] = {
+    "name": "clang",
+    "cxx": "clang++-19",
+    "cc": "clang-19",
+    "linker": "mold",
+    "cache-prefix": "clang-build",
+    "platform": "linux",
+}
+
+MACOS_CLANG: dict[str, Any] = {
+    "name": "clang-23-macos",
+    "cxx": "/opt/homebrew/opt/llvm@23/bin/clang++",
+    "cc": "/opt/homebrew/opt/llvm@23/bin/clang",
+    "linker": "lld",
+    "cache-prefix": "clang-build",
+    "platform": "macos",
+}
+
 FULL_MATRIX: dict[str, list[Any]] = {
-    "build-type": ["Dev", "DevOpt"],
-    "compiler": [
-        {
-            "name": "gcc",
-            "cxx": "g++-14",
-            "cc": "gcc-14",
-            "gcov": "gcov-14",
-            "linker": "mold",
-            "cache-prefix": "gcc-build",
-        },
-        {
-            "name": "clang",
-            "cxx": "clang++-19",
-            "cc": "clang-19",
-            "linker": "mold",
-            "cache-prefix": "clang-build",
-        },
+    "include": [
+        {"build-type": "Dev", "compiler": LINUX_GCC},
+        {"build-type": "Dev", "compiler": MACOS_CLANG},
+        {"build-type": "DevOpt", "compiler": LINUX_GCC},
+        {"build-type": "DevOpt", "compiler": LINUX_CLANG},
     ],
 }
 
 PR_MATRIX: dict[str, list[Any]] = {
-    "build-type": ["Dev"],
-    "compiler": [
-        {
-            "name": "gcc",
-            "cxx": "g++-14",
-            "cc": "gcc-14",
-            "gcov": "gcov-14",
-            "linker": "mold",
-            "cache-prefix": "gcc-build",
-        }
+    "include": [
+        {"build-type": "Dev", "compiler": LINUX_GCC},
     ],
 }
 

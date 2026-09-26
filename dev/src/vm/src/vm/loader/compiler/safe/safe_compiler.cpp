@@ -13,17 +13,18 @@
 #include <vm/loader/compiler/safe/type_builder.hpp>
 #include <vm/utils/interpret.hpp>
 
-namespace vm::loader::compiler::safe {
+#ifdef ENABLE_JIT
+	#include <vm/core/safe/low_program/cfg/cf_analysis.hpp>
+	#include <vm/core/safe/low_program/instruction.hpp>
+#endif
 
-	static usize getIntTypeSize(const code::valid_type::TypeSize& size) {
-		return static_cast<usize>(size.assumePointerSize(Bytes(16)));
-	}
+namespace vm::loader::compiler::safe {
 
 	namespace detail {
 
 #define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...)                                   \
 	template<FAMILY_CONCEPT ToType>                                                                  \
-	struct LowerArgumentImpl<ToType> {                                                               \
+	struct LowerArgumentImpl<ToType> final {                                                         \
 		template<opargs::ArgumentType FromType>                                                      \
 		static u64 lower(                                                                            \
 			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
@@ -38,7 +39,7 @@ namespace vm::loader::compiler::safe {
 
 #define DEFINE_LOWER_ARGUMENT_IMPL(LOW_TO_TYPE, HIGH_FROM_TYPE, ...)                                 \
 	template<>                                                                                       \
-	struct LowerArgumentImpl<LOW_TO_TYPE> {                                                          \
+	struct LowerArgumentImpl<LOW_TO_TYPE> final {                                                    \
 		static u64 lower(                                                                            \
 			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
@@ -148,6 +149,16 @@ namespace vm::loader::compiler::safe {
 		);
 	}
 
+	std::expected<void, std::string> SafeCompiler::setBreakpoint(
+		const base::StrID& func_name, usize idx, bool enable
+	) {
+		auto maybe_function = low_program.functions.atMaybe(func_name);
+		if (!maybe_function) return std::unexpected{ "setBreakpoint: Function does not exist" };
+		auto& function = **maybe_function;
+
+		return function.setBreakpoint(idx, enable);
+	}
+
 	void SafeCompiler::linkLabelArguments(
 		low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
 	) {
@@ -161,8 +172,9 @@ namespace vm::loader::compiler::safe {
 		}
 	}
 
-	std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> SafeCompiler::
-		lowerInstructions(const vm::loader::compiler::detail::FunctionStackContext& ctx) {
+	SafeCompiler::LoweredFunction SafeCompiler::lowerInstructions(
+		const vm::loader::compiler::detail::FunctionStackContext& ctx
+	) {
 		detail::SafeMicroBytecodeBuilder                    builder{ *this, ctx };
 		std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
 
@@ -175,7 +187,8 @@ namespace vm::loader::compiler::safe {
 		auto [micro_bytecode, label_map] = builder.build();
 		linkLabelArguments(micro_bytecode, label_map);
 
-		return { std::move(micro_bytecode), std::move(instruction_mapping) };
+		return { .bytecode            = std::move(micro_bytecode),
+			     .instruction_mapping = std::move(instruction_mapping) };
 	}
 
 	void SafeCompiler::compileNewFunctions(
@@ -207,15 +220,24 @@ namespace vm::loader::compiler::safe {
 				result_types.emplace_back(low_program.types->at(ret));
 			}
 
+#ifdef ENABLE_JIT
+			// Done before LowFuncData construction so both bc and orig_bc carry the guard:
+			// the function-level entrypoint is never jumped to, so it must be a nop until the
+			// JIT patches it (the patching below rewrites only bc, keeping orig_bc pristine).
+			usize function_jit_entrypoint     = low::cf::functionEntrypointOffset(bytecode);
+			bytecode[function_jit_entrypoint] = makeLowInstruction(low::MicroOpcode::nop, 0, 0);
+#endif
 			usize new_func_id = low_program.functions.insert(
 				low::LowFuncData{ .name = function.name,
 			                      .id   = 0,  // placeholder, replaced immediately
 #ifdef ENABLE_JIT
-			                      .cfg = vm::low::cf::ControlFlowGraph(bytecode),
+			                      .jit_func_entrypoint_offset = function_jit_entrypoint,
 #endif
-			                      .bc                  = std::move(bytecode),
+			                      // we need two copies of the bytecode
+			                      .bc                  = bytecode,
+			                      .orig_bc             = std::move(bytecode),
 			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
-			                      .local_block_count   = ctx.local_block_count,
+			                      .local_slot_count    = ctx.local_slot_count,
 			                      .arg_size            = getIntTypeSize(parameters_size),
 			                      .ret_size            = getIntTypeSize(ret_type_sum),
 			                      .parameters          = std::move(parameters),
@@ -226,6 +248,23 @@ namespace vm::loader::compiler::safe {
 			// This may look awkward, but it allows `LowFuncData` to know its own stable ID in the
 			// map, which makes it possible to avoid hashmap lookups on function calls with JIT.
 			low_program.functions[new_func_id].id = new_func_id;
+
+#ifdef ENABLE_JIT
+			if (jit_enabled) {
+				auto& func    = low_program.functions[new_func_id];
+				func.jit_data = jit::JitFuncData(func.bc, func.jit_func_entrypoint_offset);
+				// Patch entrypoint opcodes into bc; orig_bc stays pristine.
+				for (usize i = 0; i < func.jit_data.cfgs.size(); i++) {
+					if (func.jit_data.cfgs[i].empty()) continue;  // Not an entrypoint
+					auto maybe_old_opcode = func.replaceOpcode(
+						i,
+						i == func.jit_func_entrypoint_offset ? low::MicroOpcode::jitFuncEntrypoint
+															 : low::MicroOpcode::jitLoopEntrypoint
+					);
+					CORE_ASSERT(maybe_old_opcode.has_value(), "JIT entrypoint offset out of bounds");
+				}
+			}
+#endif
 		}
 	}
 

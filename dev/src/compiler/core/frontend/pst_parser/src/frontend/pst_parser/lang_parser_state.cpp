@@ -5,8 +5,6 @@
 namespace pst {
 	bool LangParserState::isSkipping() const { return skip_till_fallback; }
 
-	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
-
 	void LangParserState::goUp() {
 		CORE_ASSERT(
 			fallback_stack.size() && std::holds_alternative<Fallback>(fallback_stack.back())
@@ -150,8 +148,8 @@ namespace pst {
 			= type;
 	}
 
-	class NotAllParsedError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
+	class NotAllParsedError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -159,7 +157,7 @@ namespace pst {
 		}
 
 	public:
-		NotAllParsedError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		NotAllParsedError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 }

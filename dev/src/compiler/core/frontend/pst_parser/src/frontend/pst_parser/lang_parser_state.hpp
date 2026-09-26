@@ -19,8 +19,6 @@ namespace pst {
 	 * @brief State used for parsing Duckling to PST
 	 */
 	class LangParserState final: public tpc::ParserState {
-		std::vector<ImportType> imports;
-
 		bool skip_till_fallback = false;  ///< Tells whether parser is currently skipping the
 		                                  ///< parsing steps to get back to fallback.
 		u64 skipped_entries_depth = 0;    ///< Keeps balance of skipped entries to new fallbacks.
@@ -83,7 +81,7 @@ namespace pst {
 
 	public:
 		LangParserState(
-			tpc::TokenStream&& tokens, Box<LangParserContext>&& ctx, Ref<dia_int::Logger> int_err
+			tpc::TokenStream&& tokens, Box<LangParserContext>&& ctx, Ref<dia::Logger> int_err
 		):
 			  tpc::ParserState(std::move(tokens), std::move(ctx), int_err) {}
 
@@ -99,22 +97,6 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		bool isFinalized() const;
-
-		/**
-		 * @brief Adds import to the list of imports.
-		 */
-		void addImport(const CRef<pst::Import>& import);
-
-		/**
-		 * @brief Extracts imports from state.
-		 *
-		 * @note Leaves State in an `illegal` state.
-		 */
-		[[nodiscard]]
-		auto extractState() && -> std::vector<ImportType> {
-			CORE_ASSERT(isFinalized(), "Parsing was not finalized before extracting imports");
-			return std::move(imports);
-		}
 
 		/**
 		 * @brief Do final checks that everything is parsed.
@@ -159,7 +141,7 @@ namespace pst {
 		/**
 		 * @brief Logs an error.
 		 */
-		void logInt(Box<dia_int::MessageBase> message) override {
+		void logInt(Box<dia::MessageBase> message) override {
 			if (isSkipping()) {
 				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
 				return;
@@ -177,7 +159,7 @@ namespace pst {
 		 * @note This is for very specific usecases where behaviour is reliable.
 		 * Care needs to be taken so that each element has all the data needed for hashing.
 		 */
-		void logSafeError(Box<dia_int::MessageBase> message) {
+		void logSafeError(Box<dia::MessageBase> message) {
 			if (isSkipping()) {
 				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
 				return;

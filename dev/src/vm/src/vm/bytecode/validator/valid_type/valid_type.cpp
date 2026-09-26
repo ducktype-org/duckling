@@ -23,6 +23,18 @@ namespace {
 		if (value == 0) return Bytes(1);
 		return Bytes(std::min<usize>(value & -value, 8));
 	}
+
+	/**
+	 * @brief Whether a primitive maps to a C scalar in `buildFFIType`. Sizes 1/2/4/8 map to
+	 * integers, except the DVM backend's floating-point names `f32`/`f64`, which must have their
+	 * exact C sizes - any other size under these names would be silently misclassified.
+	 */
+	bool ffiCompliantPrimitive(const base::StrID name, const Bytes size) {
+		const auto value = usize(size);
+		if (name == base::StrID("f32")) return value == 4;
+		if (name == base::StrID("f64")) return value == 8;
+		return value == 1 || value == 2 || value == 4 || value == 8;
+	}
 }
 
 valid_type::ValidType valid_type::ValidType::declareType(base::StrID name, ValidTypeID id) {
@@ -42,6 +54,15 @@ void valid_type::ValidType::definePointer(ValidTypeID inner) {
 	variant_match(state) {
 		variant_case_novalue(ValidType::Declared) {
 			state = Defined{ .kind = defined::DefinedPointer{ inner } };
+		}
+		variant_default { CORE_PANIC("Bad type define: type already defined or finalized"); }
+	}
+}
+
+void valid_type::ValidType::defineCPointer(const base::Optional<ValidTypeID>& inner) {
+	variant_match(state) {
+		variant_case_novalue(ValidType::Declared) {
+			state = Defined{ .kind = defined::DefinedCPointer{ .inner = inner } };
 		}
 		variant_default { CORE_PANIC("Bad type define: type already defined or finalized"); }
 	}
@@ -353,13 +374,29 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->size                  = valid_type::TypeSize(primitive.size, 0);
 			this->alignment             = valid_type::TypeSize(naturalAlignment(primitive.size), 0);
 			this->is_trivially_copyable = true;
+			this->is_ffi_compliant      = ffiCompliantPrimitive(name, primitive.size);
+			// Plain bytes: nothing to release.
+			this->holds_pointer_references = false;
 			state = Finalized{ .kind = finalized::Primitive{ primitive.size } };
 		}
 		variant_case(defined::DefinedPointer, pointer) {
 			this->size                  = valid_type::TypeSize::pointer();
 			this->alignment             = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
-			state                       = Finalized{ .kind = finalized::Pointer{ pointer.inner } };
+			this->is_ffi_compliant      = false;
+			// A block reference whose refcount has to be dropped.
+			this->holds_pointer_references = true;
+			state = Finalized{ .kind = finalized::Pointer{ pointer.inner } };
+		}
+		variant_case(defined::DefinedCPointer, cpointer) {
+			// A raw native address: 8 bytes in both pointer modes (unlike `Pointer`, which is a
+			// fat block reference in the safe mode).
+			this->size = this->alignment = valid_type::TypeSize(Bytes(8), 0);
+			this->is_trivially_copyable  = true;
+			this->is_ffi_compliant       = true;
+			// A raw address owns nothing.
+			this->holds_pointer_references = false;
+			state = Finalized{ .kind = finalized::CPointer{ .inner = cpointer.inner } };
 		}
 		variant_case(defined::DefinedFixedSizeTable, fixed_size_table) {
 			auto inner_type = types.at(fixed_size_table.inner);
@@ -367,9 +404,14 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->size                  = inner_type->getSize() * fixed_size_table.element_count;
 			this->alignment             = inner_type->getAlignment();
 			this->is_trivially_copyable = inner_type->isTriviallyCopyable();
-			state                       = Finalized{ .kind = finalized::FixedSizeTable{
-														 .inner         = fixed_size_table.inner,
-														 .element_count = fixed_size_table.element_count } };
+			// A zero-length table would flatten to no libffi elements, breaking the FFI layout
+			// cross-check.
+			this->is_ffi_compliant
+				= fixed_size_table.element_count != 0 && inner_type->isFFICompliant();
+			this->holds_pointer_references = inner_type->holdsPointerReferences();
+			state                          = Finalized{ .kind = finalized::FixedSizeTable{
+															.inner         = fixed_size_table.inner,
+															.element_count = fixed_size_table.element_count } };
 		}
 		variant_case(defined::DefinedDynamicTable, dynamic_table) {
 			/// @note Size of dynamicTable is unknown at this point,
@@ -377,6 +419,9 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			/// through this object. Dynamic table is only accessed by a pointer.
 			this->size                  = valid_type::TypeSize(Bytes(0), 0);
 			this->is_trivially_copyable = false;
+			// Uninstantiable, so it never reaches a scope exit as a local; its elements are
+			// released through the block that holds them.
+			this->holds_pointer_references = false;
 			state = Finalized{ .kind = finalized::DynamicTable{ .inner = dynamic_table.inner } };
 		}
 		variant_case(defined::DefinedOpaque, opaque) {
@@ -384,16 +429,20 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->size                  = valid_type::TypeSize(opaque.size, 0);
 			this->alignment             = valid_type::TypeSize(naturalAlignment(opaque.size), 0);
 			this->is_trivially_copyable = true;
-			state                       = Finalized{ .kind = finalized::Opaque{ opaque.size } };
+			// The VM cannot see inside it, so it can hold nothing it would have to release.
+			this->holds_pointer_references = false;
+			state                          = Finalized{ .kind = finalized::Opaque{ opaque.size } };
 		}
 		variant_case(defined::DefinedFunction, function) {
 			// Function type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize::pointer();
 			this->alignment             = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
-			state                       = Finalized{ .kind = finalized::Function{
-														 .parameters   = std::move(function.parameters),
-														 .result_types = std::move(function.result_types) } };
+			// A code address, not a block reference.
+			this->holds_pointer_references = false;
+			state                          = Finalized{ .kind = finalized::Function{
+															.parameters   = std::move(function.parameters),
+															.result_types = std::move(function.result_types) } };
 		}
 		variant_case(defined::DefinedVariant, variant) {
 			CORE_ASSERT(
@@ -418,10 +467,13 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			}
 			this->size = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
 			this->is_trivially_copyable = false;
-			state                       = Finalized{ .kind = finalized::Variant{
-														 .type_tag_size        = type_tag_size,
-														 .alternatives_ordered = variant.alternatives,
-														 .alternatives_set
+			// Whatever the active alternative holds is released through the variant's nested
+			// block, so the variant itself has nothing to run.
+			this->holds_pointer_references = false;
+			state                          = Finalized{ .kind = finalized::Variant{
+															.type_tag_size        = type_tag_size,
+															.alternatives_ordered = variant.alternatives,
+															.alternatives_set
                                    = variant.alternatives | std::ranges::to<std::unordered_set>(),
                                } };
 		}
@@ -452,6 +504,20 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 					  auto field_type = types.at(field.type);
 					  return field_type->isTriviallyCopyable();
 				  });
+			// A packed structure never complies: libffi can only describe the C ABI layout, and a
+			// packed layout that happens to match it is identical to the non-packed one anyway.
+			// Classes and interfaces are not C-compatible either.
+			// A field-less structure has size 0, which libffi rejects as an aggregate.
+			this->is_ffi_compliant
+				= !new_structure.packed && !new_structure.inheritance_metadata.has_value()
+			   && new_structure.fields.size() != 0
+			   && std::ranges::all_of(new_structure.fields, [&](const auto& field) {
+					  return types.at(field.type)->isFFICompliant();
+				  });
+			this->holds_pointer_references
+				= std::ranges::any_of(new_structure.fields, [&](const auto& field) {
+					  return types.at(field.type)->holdsPointerReferences();
+				  });
 			state = Finalized{ .kind = std::move(new_structure) };
 		}
 		variant_default { CORE_PANIC("Finalization not implemented for this type kind"); }
@@ -481,6 +547,11 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 		variant_case_novalue(finalized::Primitive) { is_instantiable = true; }
 		variant_case_novalue(finalized::Pointer) {
 			// Any pointer is instantiable.
+			is_instantiable = true;
+		}
+		variant_case_novalue(finalized::CPointer) {
+			// A C pointer is a plain 8-byte value; the pointee (even a forward-declared one)
+			// never affects instantiability.
 			is_instantiable = true;
 		}
 		variant_case(finalized::FixedSizeTable, fixed_size_table) {
@@ -570,6 +641,24 @@ bool valid_type::ValidType::isInstantiable() const {
 		variant_case_novalue(Finalized) { return is_trivially_copyable; }
 		variant_default {
 			CORE_PANIC("Tried to query trivial copyability of a type that was not finalized");
+		}
+	}
+}
+
+[[nodiscard]] bool vm::code::valid_type::ValidType::isFFICompliant() const {
+	variant_match(state) {
+		variant_case_novalue(Finalized) { return is_ffi_compliant; }
+		variant_default {
+			CORE_PANIC("Tried to query FFI compliance of a type that was not finalized");
+		}
+	}
+}
+
+[[nodiscard]] bool vm::code::valid_type::ValidType::holdsPointerReferences() const {
+	variant_match(state) {
+		variant_case_novalue(Finalized) { return holds_pointer_references; }
+		variant_default {
+			CORE_PANIC("Tried to query pointer references of a type that was not finalized");
 		}
 	}
 }

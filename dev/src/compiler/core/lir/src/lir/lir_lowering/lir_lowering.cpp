@@ -15,16 +15,20 @@
 
 #include "../lir_structure/lir_structure.hpp"
 
+#include <abi/type_system/type.hpp>
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <tsl/c_abi_converter.hpp>
 #include <tsl/queries.hpp>
 #include <tsl/type_layout.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>
@@ -62,16 +66,60 @@ namespace compiler::lir {
 			            ->valueOrPanicMsg("layout query failed at LIR stage");
 	}
 
+	LIRAbi getLIRAbi(
+		query::Context&                           ctx,
+		helios::SymID                             sym,
+		CRef<tsl::TypeLayout>                     return_type,
+		const std::vector<CRef<tsl::TypeLayout>>& parameter_types
+	) {
+		auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)->valueOrPanicMsg(
+			"Handling errors in MIR is not supported yet"
+		);
+		if (v_matches(sym_abi, helios::DefaultAbi) or v_matches(sym_abi, helios::DVMAbi))
+			return { LIRAbi::DefaultAbi{} };
+
+		CORE_ASSERT(v_matches(sym_abi, helios::CAbi), "There are more than 3 abis.");
+		const auto& c_abi_info = v_get(sym_abi, helios::CAbi);
+
+		auto abi_type_or_panic = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
+			auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
+			                   ->valueOrPanicMsg("Query failure.");
+			if (not result.has_value())
+				CORE_PANIC(base::strConcat(
+					"Function type is not compatible with CABI: `",
+					result.error(),
+					"` in symbol `",
+					helios::name(sym),
+					"`."
+				));
+			return &result.value();
+		};
+
+		auto return_abi_or_empty
+			= [&](CRef<tsl::TypeLayout> type) -> base::Optional<abi::types::AbiTypeCRef> {
+			if (v_matches(type->getVariant(), tsl::EmptyTypeLayout)) return {};  // void return
+			return abi_type_or_panic(type);
+		};
+
+		abi::calling_conv::FunctionType abi_fun_type{
+			.return_type = return_abi_or_empty(return_type),
+			.param_types = parameter_types | std::views::transform(abi_type_or_panic)
+			             | std::ranges::to<std::vector>(),
+			.num_fixed_params = c_abi_info.fixed_params,
+		};
+		return { LIRAbi::CAbi{
+			.function_info
+			= abi::calling_conv::computeCallingConv(abi::hostTargetABI(), abi_fun_type) } };
+	}
+
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
 		tsh::FunctionAbstractType type
 			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
 		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
 		          .getType();
 
-		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
-			"Handling errors in MIR is not supported yet"
-		);
-		auto link_once    = helios::emissionPolicy(helios_id) == helios::EmissionPolicy::Replicated;
+		auto link_once
+			= helios::emissionPolicy(ctx, helios_id) == helios::EmissionPolicy::Replicated;
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 		base::Optional<BuiltinFunctionKind> builtin_kind_opt
 			= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);
@@ -87,10 +135,11 @@ namespace compiler::lir {
 						"layout query failed at LIR stage"
 					)
 				);
+		auto symbol_abi = getLIRAbi(ctx, helios_id, return_type, parameter_types);
 
 		return FunctionLiteral{
 			.mangled_name = mangled_name,
-			.abi          = symbol_abi,
+			.abi          = std::move(symbol_abi),
 			.link_once    = link_once,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
@@ -114,10 +163,6 @@ namespace compiler::lir {
 			return Operation::Assign;
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
-		case mir::Operation::ListPush:
-			return Operation::ListPush;
-		case mir::Operation::ListPop:
-			return Operation::ListPop;
 		case mir::Operation::ZeroInitialize:
 			return Operation::ZeroInitialize;
 
@@ -126,6 +171,8 @@ namespace compiler::lir {
 			return Operation::ReturnValue;
 		case mir::Operation::ReturnVoid:
 			return Operation::ReturnVoid;
+		case mir::Operation::Unreachable:
+			return Operation::Unreachable;
 		case mir::Operation::Jump:
 			return Operation::Jump;
 		case mir::Operation::Branch:
@@ -145,6 +192,18 @@ namespace compiler::lir {
 		case mir::Operation::IntegerNeg:
 			return Operation::IntegerNeg;
 
+		case mir::Operation::IntegerBitAnd:
+			return Operation::IntegerBitAnd;
+		case mir::Operation::IntegerBitOr:
+			return Operation::IntegerBitOr;
+		case mir::Operation::IntegerBitXor:
+			return Operation::IntegerBitXor;
+		case mir::Operation::IntegerBitNot:
+			return Operation::IntegerBitNot;
+		case mir::Operation::IntegerShl:
+			return Operation::IntegerShl;
+		case mir::Operation::IntegerShr:
+			return Operation::IntegerShr;
 		// Integer Comparison
 		case mir::Operation::IntegerLt:
 			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
@@ -186,20 +245,8 @@ namespace compiler::lir {
 			return Operation::FloatNeq;
 
 		/// Meta type operations ///
-		case mir::Operation::MetaCreateBox:
-			return Operation::MetaCreateBox;
-		case mir::Operation::MetaCreateRef:
-			return Operation::MetaCreateRef;
-		case mir::Operation::MetaCreateConst:
-			return Operation::MetaCreateConst;
-		case mir::Operation::MetaCreateTuple:
-			return Operation::MetaCreateTuple;
-		case mir::Operation::MetaCreateVariant:
-			return Operation::MetaCreateVariant;
-		case mir::Operation::MetaEq:
-			return Operation::MetaEq;
-		case mir::Operation::MetaNeq:
-			return Operation::MetaNeq;
+		case mir::Operation::MetaTypeOperation:
+			return Operation::MetaTypeOperation;
 
 		/// Logic ///
 		case mir::Operation::BooleanAnd:
@@ -208,12 +255,58 @@ namespace compiler::lir {
 			return Operation::BooleanOr;
 		case mir::Operation::BooleanNot:
 			return Operation::BooleanNot;
+
+		/// Variants ///
+		case mir::Operation::VariantConstruct:
+			return Operation::VariantConstruct;
+		case mir::Operation::VariantTryProject:
+			return Operation::VariantTryProject;
+		case mir::Operation::BranchIfNull:
+			return Operation::BranchIfNull;
 		// @TODO: add more cases
 		default:
 			CORE_PANIC(base::strConcat(
 				"Operation without direct counterpart", base::enumToStr(mir_operation)
 			));
 		}
+	}
+
+	/**
+	 * @brief Maps a MIR meta kind to its LIR counterpart (1:1).
+	 */
+	MetaKind mir2lirMetaKind(mir::MetaKind kind) {
+		using enum mir::MetaKind;
+		switch (kind) {
+		case CreateBox:
+			return lir::MetaKind::CreateBox;
+		case CreateRef:
+			return lir::MetaKind::CreateRef;
+		case CreateConst:
+			return lir::MetaKind::CreateConst;
+		case CreatePtr:
+			return lir::MetaKind::CreatePtr;
+		case CreateManyPtr:
+			return lir::MetaKind::CreateManyPtr;
+		case CreateCPtr:
+			return lir::MetaKind::CreateCPtr;
+		case CreateSlice:
+			return lir::MetaKind::CreateSlice;
+		case CreateTuple:
+			return lir::MetaKind::CreateTuple;
+		case CreateVariant:
+			return lir::MetaKind::CreateVariant;
+		case Eq:
+			return lir::MetaKind::Eq;
+		case Neq:
+			return lir::MetaKind::Neq;
+		case SizeOf:
+			return lir::MetaKind::SizeOf;
+		case AlignOf:
+			return lir::MetaKind::AlignOf;
+		case COUNT:
+			CORE_PANIC("Unknown meta type operation: ", base::enumToStr(kind));
+		}
+		CORE_UNREACHABLE();
 	}
 
 	struct IMPLEMENT_QUERY(LowerToLIRFunction, Function) {
@@ -235,7 +328,6 @@ namespace compiler::lir {
 
 			// locals mapping:
 			base::Map<mir::MIRLocalRef, LIRLocalRef> mir_to_lir_local;
-			base::Map<mir::MIRLocalRef, LIRLocalRef> mir_to_lifetime_flag;
 
 			base::StableVector<Block> blocks;
 
@@ -255,6 +347,23 @@ namespace compiler::lir {
 			[[nodiscard]]
 			LIRLocalRef getLocal(const mir::MIRLocalRef mir_local) const {
 				return mir_to_lir_local.at(mir_local);
+			}
+
+			[[nodiscard]]
+			LIRLocalRef insertNewLocal(lir::LIRLocal lir_local) {
+				locals.pushBack(lir_local);
+				return locals.last();
+			}
+
+			/**
+			 * @brief Adds an empty block to the function and puts it at the end of the block order.
+			 */
+			[[nodiscard]]
+			MutBlockRef insertNewBlock() {
+				blocks.pushBack({});
+				auto new_block = blocks.last();
+				block_order.emplace_back(new_block);
+				return new_block;
 			}
 
 			[[nodiscard]]
@@ -387,14 +496,6 @@ namespace compiler::lir {
 					locals.pushBack(lir_local);
 					auto local_index = locals.lastIndex();
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
-
-					// Only create lifetime flag if needed
-					if (!mir_local.type.hasNoOpDestructor(ctx)) {
-						auto lifetime_flag = LIRLocal::boolLocal(ctx);
-						locals.pushBack(lifetime_flag);
-						auto flag_index = locals.lastIndex();
-						mir_to_lifetime_flag.put(&mir_local, locals[flag_index]);
-					}
 				}
 			}
 
@@ -445,13 +546,67 @@ namespace compiler::lir {
 			}
 
 			/**
+			 * @brief Lowers a call to a builtin implemented in LIR into the instructions that
+			 * implement it, instead of an actual `Call`. Does nothing for any other callee.
+			 *
+			 * `move_out(pointer)` becomes a read of `*pointer` and `move_in(pointer, value)`
+			 * a store into `*pointer`. Both are plain assignments: no copy constructor runs, and
+			 * nothing under `pointer` is destroyed.
+			 *
+			 * @return Whether the call was a builtin and got lowered here.
+			 */
+			[[nodiscard]] bool lowerLIRBuiltinCall(
+				const mir::Instruction& mir_instruction, MutBlockRef curr_block
+			) const {
+				const auto& callee = mir_instruction.arguments.at(0).get<mir::MIRFunctionLiteral>();
+				const auto  builtin = helios::isBuiltin(callee.helios_id);
+				if (not builtin.has_value()
+				    or not helios::getBuiltinOrigins(builtin.value())
+				               .contains(helios::BuiltinOrigin::LIR))
+					return false;
+
+				// The first argument is the callee, the arguments of the builtin follow it.
+				switch (builtin.value()) {
+				case helios::BuiltinKind::MoveOut: {
+					const auto& pointer = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+					// Reading a value that carries no information is a no-op.
+					auto output = getOutput(mir_instruction.output);
+					if (output.has_value())
+						curr_block->instructions.emplace_back(
+							Operation::Assign,
+							output,
+							std::vector<LIRValue>{ getPlace(pointer.withDeref()) },
+							mir_instruction.metadata
+						);
+					return true;
+				}
+				case helios::BuiltinKind::MoveIn: {
+					const auto& pointer = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+					// Storing a value that carries no information is a no-op.
+					auto value = getLocation(mir_instruction.arguments.at(2));
+					if (value.has_value())
+						curr_block->instructions.emplace_back(
+							Operation::Assign,
+							getPlace(pointer.withDeref()),
+							std::vector<LIRValue>{ value.value() },
+							mir_instruction.metadata
+						);
+					return true;
+				}
+				default:
+					CORE_PANIC(base::strConcat(
+						"Builtin `",
+						helios::builtinKindToStr(builtin.value()),
+						"` is not implemented in LIR"
+					));
+				}
+			}
+
+			/**
 			 * @brief Lowers flags of the given operation into
 			 * LIR instruction flags.
-			 *
-			 * @note This function will not work correctly when one MIR instruction translates into
-			 * multiple LIR instructions, since the `ScopeStart` flags should only be applied to the
-			 * first of the LIR instructions and the `ScopeEnd` flags should only be applied to the
-			 * last of the LIR instructions.
 			 *
 			 * @param mir_instruction
 			 */
@@ -514,6 +669,164 @@ namespace compiler::lir {
 			}
 
 			/**
+			 * @brief Emits the destructor call of a `Destruct` / `DestructIf` into @p block.
+			 * Emits nothing for a place that carries no information (ex. Unit).
+			 */
+			void emitDestructorCall(MutBlockRef block, const mir::Instruction& mir_instruction) {
+				CORE_ASSERT(
+					mir_instruction.operation == mir::Operation::Destruct
+						or mir_instruction.operation == mir::Operation::DestructIf,
+					"Expected a `Destruct` or a `DestructIf`"
+				);
+
+				const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+				CORE_ASSERT(
+					to_destruct.carriesInformation(ctx),
+					"The destructred place does not carry information. This probably means a "
+					"Destruct of a ZST class got here. Adjust this code accordingly."
+				);
+
+				const auto  destructor = getLocation(mir_instruction.arguments.at(0)).value();
+				const auto  destructed = getPlace(to_destruct);
+				const auto& type       = to_destruct.type;
+
+				if (type.getRefKind() == tsh::ReferenceKind::Direct) {
+					// The destructor takes `self: ref T`, so the address of the destructed
+					// place is materialized first.
+					LIRLocalRef addr_local = insertNewLocal(LIRLocal::refLocal(ctx, type));
+					LIRPlace    addr_place{ addr_local, {} };
+
+					auto& address_instr = block->instructions.emplace_back(
+						Operation::AddressOf,
+						addr_place,
+						std::vector<LIRValue>{ LIRValue{ destructed } },
+						mir_instruction.metadata
+					);
+					address_instr.scope_flags.push_back(ScopeFlag{
+						.flag = ScopeFlag::Flag::ScopeStart, .local = addr_local });
+
+					auto& call_instr = block->instructions.emplace_back(
+						Operation::Call,
+						base::Optional<LIRPlace>{},
+						std::vector<LIRValue>{ destructor, LIRValue{ addr_place } },
+						mir_instruction.metadata
+					);
+					call_instr.scope_flags.push_back(ScopeFlag{ .flag  = ScopeFlag::Flag::ScopeEnd,
+					                                            .local = addr_local });
+				} else if (type.getRefKind() == tsh::ReferenceKind::Box) {
+					// Box — call the destructor on it directly. A box destructor is the `boxFree`
+					// primitive, which takes a `ptr T`, and box T == ptr T in lower representation.
+					block->instructions.emplace_back(
+						Operation::Call,
+						base::Optional<LIRPlace>{},
+						std::vector<LIRValue>{ destructor, LIRValue{ destructed } },
+						mir_instruction.metadata
+					);
+				} else {
+					CORE_PANIC("The reference types don't have destructors.");
+				}
+			}
+
+			/**
+			 * @brief Lowers a `DestructIf` into a branch on the lifetime flag (added by
+			 * `AddLifetimeFlags` pass in MIR) of the destructed local.
+			 *
+			 * ```
+			 * <curr>:          branch flag, <destruct>, <continuation>
+			 * <destruct>:      destructor(place); flag = false; jump <continuation>
+			 * <continuation>:  whatever followed the destruction
+			 * ```
+			 *
+			 * `ScopeEnd` flags of the destruction point are moved to the continuation block. They
+			 * have to be reached on every path, because DVM pairs `init`/`deinit` on a stack, so a
+			 * scope may not end inside the conditional block. `ScopeStart` flags are put before the
+			 * branch for the same reason.
+			 *
+			 * @return the block the instructions following the conditional destruct belong to
+			 */
+			MutBlockRef lowerConditionalDestruct(
+				MutBlockRef curr_block, const mir::Instruction& mir_instruction
+			) {
+				auto flags = lowerFlags(mir_instruction);
+
+				// Creates a `Nop` instruction at the end of @p instructions and moves @p held scope
+				// flags there.
+				auto hold_flags
+					= [&](std::vector<Instruction>& instructions, std::vector<ScopeFlag>&& held) {
+						  if (held.empty()) return;
+
+						  instructions
+							  .emplace_back(
+								  Operation::Nop,
+								  base::Optional<LIRPlace>{},
+								  std::vector<LIRValue>{},
+								  mir_instruction.metadata
+							  )
+							  .scope_flags
+							  = std::move(held);
+					  };
+
+				auto flags_of_kind = [&](ScopeFlag::Flag kind) -> std::vector<ScopeFlag> {
+					std::vector<ScopeFlag> result;
+					for (const auto& flag: flags)
+						if (flag.flag == kind) result.push_back(flag);
+					return result;
+				};
+
+				const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
+				// With nothing to destroy there is nothing to branch over either.
+				if (not to_destruct.carriesInformation(ctx)) {
+					hold_flags(curr_block->instructions, std::move(flags));
+					return curr_block;
+				}
+
+				CORE_ASSERT(
+					mir_instruction.arguments.size() == 3,
+					"A `DestructIf` needs the lifetime flag of the destructed local"
+				);
+				const auto lifetime_flag
+					= getPlace(mir_instruction.arguments.at(2).get<mir::MIRPlace>());
+
+				auto destruct_block     = insertNewBlock();
+				auto continuation_block = insertNewBlock();
+
+				hold_flags(curr_block->instructions, flags_of_kind(ScopeFlag::Flag::ScopeStart));
+				curr_block->terminator = Instruction{
+					Operation::Branch,
+					{},
+					std::vector<LIRValue>{ LIRValue{ lifetime_flag },
+					                       LIRValue{ BlockRef(destruct_block) },
+					                       LIRValue{ BlockRef(continuation_block) } },
+					mir_instruction.metadata,
+				};
+
+				emitDestructorCall(destruct_block, mir_instruction);
+				// Set the lifetime flag to false, after the destructor call.
+				destruct_block->instructions.emplace_back(
+					Operation::Assign,
+					lifetime_flag,
+					std::vector<LIRValue>{
+						getLocation(mir::MIRValue(mir::MIRConstant{ ctv::CompileTimeValue(false) }))
+							.value() },
+					mir_instruction.metadata
+				);
+				destruct_block->terminator = Instruction{
+					Operation::Jump,
+					{},
+					std::vector<LIRValue>{ LIRValue{ BlockRef(continuation_block) } },
+					mir_instruction.metadata,
+				};
+
+				hold_flags(
+					continuation_block->instructions, flags_of_kind(ScopeFlag::Flag::ScopeEnd)
+				);
+
+				return continuation_block;
+			}
+
+			/**
 			 * @brief Lowers instruction from MIR to LIR.
 			 * * Fills @p curr_block.
 			 * Legal to use only in lowerBlocks
@@ -566,29 +879,6 @@ namespace compiler::lir {
 					}
 					break;
 				}
-				case mir::Operation::ListPush:
-				case mir::Operation::ListPop: {
-					auto output = getOutput(mir_instruction.output);
-					auto args   = getLocations(mir_instruction.arguments);
-
-					const auto& list_place = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
-
-					auto dynamic_array_type
-						= list_place.type.getType().as<tsh::DynamicArrayAbstractType>();
-					auto element_layout = CRef<tsl::TypeLayout>(
-						&ctx.query<tsl::QuerySymbolTypeLayout>(dynamic_array_type.getElementType())
-							 ->valueOrPanicMsg("layout query failed at LIR stage")
-					);
-
-					curr_block->instructions.emplace_back(
-						mir2lirOperation(mir_instruction.operation, false),
-						output,
-						std::move(args),
-						InstructionMetadata{},
-						ListOperationParameters{ .element_layout = element_layout }
-					);
-					break;
-				}
 				case mir::Operation::AddressOf:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
@@ -596,6 +886,12 @@ namespace compiler::lir {
 				case mir::Operation::IntegerMul:
 				case mir::Operation::IntegerDiv:
 				case mir::Operation::IntegerMod:
+				case mir::Operation::IntegerBitAnd:
+				case mir::Operation::IntegerBitOr:
+				case mir::Operation::IntegerBitXor:
+				case mir::Operation::IntegerBitNot:
+				case mir::Operation::IntegerShl:
+				case mir::Operation::IntegerShr:
 				case mir::Operation::IntegerLt:
 				case mir::Operation::IntegerGt:
 				case mir::Operation::IntegerLteq:
@@ -616,13 +912,7 @@ namespace compiler::lir {
 				case mir::Operation::FloatEq:
 				case mir::Operation::FloatNeq:
 
-				case mir::Operation::MetaCreateBox:
-				case mir::Operation::MetaCreateRef:
-				case mir::Operation::MetaCreateConst:
-				case mir::Operation::MetaCreateTuple:
-				case mir::Operation::MetaCreateVariant:
-				case mir::Operation::MetaEq:
-				case mir::Operation::MetaNeq:
+				case mir::Operation::MetaTypeOperation:
 
 				case mir::Operation::BooleanAnd:
 				case mir::Operation::BooleanOr:
@@ -638,75 +928,31 @@ namespace compiler::lir {
 					// should have been handled by HELIoS.
 					// @TODO: Refine this check.
 					const auto use_signed_version = isArgSigned(mir_instruction.arguments.at(0));
+
+					// Meta operations carry their specific kind in `extra_params`; forward it.
+					InstrParameters extra_params = NoInstrParameters{};
+					if (const auto* meta_params
+					    = std::get_if<mir::MetaParameters>(&mir_instruction.extra_params))
+						extra_params = MetaParameters{ mir2lirMetaKind(meta_params->kind) };
+
 					curr_block->instructions.emplace_back(
 						mir2lirOperation(mir_instruction.operation, use_signed_version),
 						output,
 						std::move(args),
-						mir_instruction.metadata
+						mir_instruction.metadata,
+						extra_params
 					);
+					break;
+				}
+				case mir::Operation::Destruct: {
+					emitDestructorCall(curr_block, mir_instruction);
 					break;
 				}
 				case mir::Operation::DestructIf:
-				case mir::Operation::Destruct: {
-					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
-					const auto& type        = to_destruct.type;
-
-					// @TODO: #2825 The whole DestructIf implementation is a stub. Implement it once
-					// we know how to call destructors.
-
-					if (type.getRefKind() == tsh::ReferenceKind::Direct
-					    && type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto lir_place = getLocation(to_destruct);
-
-						if (lir_place.has_value()) {
-							curr_block->instructions.emplace_back(
-								Operation::ListFree,
-								base::Optional<LIRPlace>{},
-								std::vector{ lir_place.value() },
-								InstructionMetadata{}
-							);
-							break;
-						}
-					}
-
-					// @TODO: #1894 This is a stub just to test the overall box free'ing logic.
-					// Currently this approach generates a free on every DestructIf if it operates
-					// on a box type (even if the box was moved). This will cause double free's if
-					// the box was moved around between other box variables. In the future we should
-					// insert a proper destructor call here before the free.
-					if (type.getRefKind() == tsh::ReferenceKind::Box) {
-						auto lir_place = getLocation(to_destruct);
-
-						// The free is discarded if it operates on no information (ex. Unit).
-						if (lir_place.has_value()) {
-							// Emit a call to the `box_free(b: box T)` builtin, which will be
-							// lowered to deallocation by the backend.
-							const helios::SymID free_sym
-								= helios::boxFreeSymForType(ctx, type.getType());
-							std::vector<LIRValue> call_args;
-							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, free_sym));
-							call_args.emplace_back(lir_place.value());
-
-							curr_block->instructions.emplace_back(
-								Operation::Call,
-								base::Optional<LIRPlace>{},
-								std::move(call_args),
-								mir_instruction.metadata
-							);
-							break;
-						}
-					}
-
-					CORE_DEV_LOG(
-						Compiler,
-						"DestructIf not implemented for types with non-trivial "
-						"destructors, skipping",
-						"\n"
-					);
-
-					break;
-				}
+					return lowerConditionalDestruct(curr_block, mir_instruction);
 				case mir::Operation::Call: {
+					if (lowerLIRBuiltinCall(mir_instruction, curr_block)) break;
+
 					auto output = getOutput(mir_instruction.output);
 					auto args   = getLocations(mir_instruction.arguments);
 					curr_block->instructions.emplace_back(
@@ -739,6 +985,44 @@ namespace compiler::lir {
 					);
 					break;
 				}
+				case mir::Operation::VariantConstruct:
+				case mir::Operation::VariantTryProject: {
+					auto variant_parameters
+						= std::get_if<mir::VariantParameters>(&mir_instruction.extra_params);
+					if (not variant_parameters)
+						CORE_PANIC("Variant instruction without VariantParameters");
+
+					// `VariantConstruct` writes into the variant, while `VariantTryProject`
+					// reads through a reference to it.
+					const auto variant_type
+						= mir_instruction.operation == mir::Operation::VariantConstruct
+					        ? mir_instruction.output.value().type
+					        : mir_instruction.arguments.at(0)
+					              .get<mir::MIRPlace>()
+					              .type.getPointeeSymbolType();
+
+					auto args   = getLocations(mir_instruction.arguments);
+					auto output = getOutput(mir_instruction.output);
+					curr_block->instructions.emplace_back(
+						mir2lirOperation(mir_instruction.operation, false),
+						output,
+						std::move(args),
+						mir_instruction.metadata,
+						VariantParameters{
+							.alternative_index = variant_parameters->alternative_index,
+							.alternative_type  = variant_parameters->alternative_type,
+							.alternative_layout
+							= &ctx.query<tsl::QuerySymbolTypeLayout>(
+									  variant_parameters->alternative_type
+							)
+					               ->valueOrPanicMsg("layout query failed at LIR stage"),
+							.variant_layout
+							= &ctx.query<tsl::QuerySymbolTypeLayout>(variant_type)
+					               ->valueOrPanicMsg("layout query failed at LIR stage"),
+						}
+					);
+					break;
+				}
 				default:
 					throw base::NotYetImplemented(base::strConcat(
 						"instruction ",
@@ -749,29 +1033,28 @@ namespace compiler::lir {
 				usize after_instruction_count = curr_block->instructions.size();
 				auto  flags                   = lowerFlags(mir_instruction);
 				if (!flags.empty()) {
-					usize instructions_added = after_instruction_count - before_instruction_count;
-					// If this fails, then it's no problem, we just have to adjust the code.
-					// The `ScopeStart` flags should be added to the first of the LIR instructions
-					// and the `ScopeEnd` flags should be added to the last of the LIR instructions.
-					// Now they are added to both in one place.
-					CORE_ASSERT(
-						instructions_added <= 1,
-						base::strConcat(
-							"lowerFlags expected the increase to be less equal to 1, but it was ",
-							after_instruction_count - before_instruction_count
-						)
-					);
-					if (instructions_added == 0) {
+					// A `Destruct` of a direct value takes the address of the destructed
+					// place first and then calls the destructor on it.
+
+					// No instructions inserted means a Nop with two flags added.
+					if (after_instruction_count == before_instruction_count)
 						curr_block->instructions.emplace_back(
 							Operation::Nop,
 							base::Optional<LIRPlace>{},
 							std::vector<LIRValue>{},
 							mir_instruction.metadata
 						);
+
+					auto& first_instruction = curr_block->instructions.at(before_instruction_count);
+					auto& last_instruction  = curr_block->instructions.back();
+
+					// Otherwise insert `ScopeStart` to the first instr, `ScopeEnd` to the last
+					// instr. In case of one instr, the first and last one are the same instruction.
+					for (const auto& flag: flags) {
+						auto& target = flag.flag == ScopeFlag::Flag::ScopeStart ? first_instruction
+						                                                        : last_instruction;
+						target.scope_flags.push_back(flag);
 					}
-					curr_block->instructions.back().scope_flags.insert(
-						curr_block->instructions.back().scope_flags.end(), flags.begin(), flags.end()
-					);
 				}
 				return curr_block;
 			}
@@ -804,8 +1087,10 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::ReturnVoid:
+				case mir::Operation::Unreachable:
 				case mir::Operation::Jump:
-				case mir::Operation::Branch: {
+				case mir::Operation::Branch:
+				case mir::Operation::BranchIfNull: {
 					auto args = getLocations(mir_terminator.arguments);
 					curr_block->terminator
 						= Instruction{ mir2lirOperation(mir_terminator.operation, false),
@@ -845,14 +1130,14 @@ namespace compiler::lir {
 						);
 
 
-				auto abi = [&]() -> helios::SymbolABI {
+				auto abi = [&]() -> LIRAbi {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
-							return ctx.query<helios::QuerySymbolABI>(name.id)->valueOrPanicMsg(
-								"Handling errors in MIR is not supported yet"
-							);
+							return getLIRAbi(ctx, name.id, return_type, parameter_types);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) { return helios::DefaultAbi{}; }
+						variant_case(mir::GlobalVariableCtorDtor, name) {
+							return { LIRAbi::DefaultAbi{} };
+						}
 					}
 					CORE_UNREACHABLE();
 				}();
@@ -860,7 +1145,7 @@ namespace compiler::lir {
 				auto [link_once, ignore_on_dvm, ignore_on_llvm] = [&]() {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, sym) {
-							bool link_once_val = helios::emissionPolicy(sym.id)
+							bool link_once_val = helios::emissionPolicy(ctx, sym.id)
 							                  == helios::EmissionPolicy::Replicated;
 							bool ignore_on_dvm_val
 								= helios::hasAttribute<helios::attributes::NativeOnlyImpl>(sym.id);
@@ -870,7 +1155,7 @@ namespace compiler::lir {
 								link_once_val, ignore_on_dvm_val, ignore_on_llvm_val
 							);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) {
+						variant_case(mir::GlobalVariableCtorDtor, name) {
 							return std::make_tuple(false, false, false);
 						}
 					}
@@ -882,11 +1167,20 @@ namespace compiler::lir {
 						variant_case(mir::FunctionSymID, name) {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) {
-							return helios::mangler::getSpecialMangledName<
-								helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
-								ctx, name.global_var_id
-							);
+						variant_case(mir::GlobalVariableCtorDtor, name) {
+							switch (name.type) {
+							case mir::GlobalVariableCtorDtor::Type::Ctor:
+								return helios::mangler::getSpecialMangledName<
+									helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
+									ctx, name.global_var_id
+								);
+							case mir::GlobalVariableCtorDtor::Type::Dtor:
+								return helios::mangler::getSpecialMangledName<
+									helios::mangler::ManglingSymbolKind::GlobalVariableDestructor>(
+									ctx, name.global_var_id
+								);
+							}
+							CORE_UNREACHABLE();
 						}
 					}
 					CORE_UNREACHABLE();
@@ -983,7 +1277,7 @@ namespace compiler::lir {
 		BlockRef entry_block_ref = blocks.last();
 
 		return Function{ .mangled_name       = mangled_name,
-			             .abi                = helios::DefaultAbi{},
+			             .abi                = { LIRAbi::DefaultAbi{} },
 			             .link_once          = false,
 			             .ignore_on_dvm      = false,
 			             .ignore_on_llvm     = false,

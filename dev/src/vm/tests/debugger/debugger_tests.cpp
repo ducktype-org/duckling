@@ -20,6 +20,7 @@ public:
 		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
 		TESTER_ADD_TEST(notPausesOnRemovedBreakpoint);
 		TESTER_ADD_TEST(executesStepByStep);
+		TESTER_ADD_TEST(stepsUntilProgramTerminates);
 		TESTER_ADD_TEST(backMapTest);
 		TESTER_ADD_TEST(vmApiMemoryAllTypes);
 		TESTER_ADD_TEST(outputTest);
@@ -29,12 +30,12 @@ public:
 private:
 	vm::PID loadProgram(std::string_view path_name) {
 		auto process_pid_response = vm::api::spawn();
-		assertTrue(process_pid_response.has_value(), "Spawn failed (loadProgram)");
+		ASSERT_HAS_VALUE(process_pid_response, "Spawn failed (loadProgram)");
 		auto pid = process_pid_response.value().pid;
 
 		fs::File file(path(std::string(path_name)));
 		auto     loaded_file_response = vm::api::loadFiles(pid, { file });
-		assertTrue(loaded_file_response.has_value(), "Load failed (loadProgram)");
+		ASSERT_HAS_VALUE(loaded_file_response, "Load failed (loadProgram)");
 		return pid;
 	}
 
@@ -45,12 +46,12 @@ private:
 		auto pid = loadProgram("vm_api_tests.dbc");
 
 		auto run_response = vm::api::run(pid);
-		assertTrue(run_response.has_value(), "Run failed (1)");
+		ASSERT_HAS_VALUE(run_response, "Run failed (1)");
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 		auto stop_response = vm::api::stop(pid);
-		assertTrue(stop_response.has_value(), "Stop failed (1)");
+		ASSERT_HAS_VALUE(stop_response, "Stop failed (1)");
 	}
 
 	/**
@@ -60,12 +61,12 @@ private:
 		auto pid = loadProgram("vm_api_tests.dbc");
 
 		auto run_response = vm::api::run(pid);
-		assertTrue(run_response.has_value(), "Run failed (1)");
+		ASSERT_HAS_VALUE(run_response, "Run failed (1)");
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 		auto kill_response = vm::api::kill(pid);
-		assertTrue(kill_response.has_value(), "Kill failed (1)");
+		ASSERT_HAS_VALUE(kill_response, "Kill failed (1)");
 	}
 
 	/**
@@ -75,9 +76,7 @@ private:
 	void pausesOnBreakpointAndResumes() {
 		auto pid = loadProgram("breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
-			ASSERT_TRUE(
-				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true));
 
 		vm::api::run(pid).value();  // "Run failed (1)"
 
@@ -103,9 +102,7 @@ private:
 	void notPausesOnRemovedBreakpoint() {
 		auto pid = loadProgram("breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
-			ASSERT_TRUE(
-				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true));
 
 		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 5, false));
 
@@ -126,9 +123,7 @@ private:
 	void executesStepByStep() {
 		auto pid = loadProgram("breakpoint.dbc");
 		for (auto breakpoint: { 5ULL, 8ULL })
-			ASSERT_TRUE(
-				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
-			);
+			ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true));
 
 		vm::api::run(pid).value();  // "Run failed (1)"
 
@@ -153,6 +148,43 @@ private:
 		vm::api::stop(pid).value();    // "Stop failed (1)"
 	}
 
+	void stepsUntilProgramTerminates() {
+		auto pid = loadProgram("breakpoint.dbc");
+		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 2, true));
+		ASSERT_HAS_VALUE(vm::api::run(pid));
+		ASSERT_HAS_VALUE(vm::api::waitForBreakpoint(pid));
+		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 2, false));
+
+		constexpr u64 STEP_LIMIT = 100;
+
+		bool terminated = false;
+		for (u64 i = 0; i < STEP_LIMIT && !terminated; i++) {
+			ASSERT_HAS_VALUE(vm::api::step(pid));
+
+			auto status = vm::api::getExecutionStatus(pid);
+			ASSERT_HAS_VALUE(status);
+			terminated = vm::api::isStatusTerminal(status.value());
+		}
+		ASSERT_TRUE(terminated);
+
+		auto status = vm::api::getExecutionStatus(pid);
+		ASSERT_HAS_VALUE(status);
+		ASSERT_MATCHES(status.value(), vm::api::ExecutionCompleted);
+
+		ASSERT_HAS_VALUE(vm::api::join(pid));
+
+		auto exit_value = vm::api::getExitValue(pid);
+		ASSERT_HAS_VALUE(exit_value);
+		ASSERT_EQUAL_PRINT(
+			v_get(exit_value.value(), std::vector<Ref<vm::IVMValue>>).at(0)->readBytes<i64>(), 1
+		);
+
+		// Memory state should be intact.
+		auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_HAS_VALUE(validation_result);
+		ASSERT_TRUE(validation_result.value());
+	}
+
 	u64 stepAndGetLine(vm::PID pid) {
 		vm::api::step(pid).value();                      // "Step failed"
 		auto execution_position
@@ -161,25 +193,25 @@ private:
 		return execution_position.instr_number;
 	}
 
-	template<typename FiedDataType>
-	FiedDataType getVMValueRefData(vm::VMValueRef vmvalue_ref) {
-		auto data_opt = vmvalue_ref.readData();
-		assertTrue(data_opt.has_value(), "VMValueRef: Referenced memory is dead");
-		return std::get<FiedDataType>(data_opt.value());
+	template<typename FieldDataType>
+	FieldDataType getVMValueRefData(const SharedBox<vm::IVMValueRef>& vmvalue_ref) {
+		auto data_opt = vmvalue_ref->readData();
+		ASSERT_HAS_VALUE(data_opt, "VMValueRef: Referenced memory is dead");
+		return std::get<FieldDataType>(data_opt.value());
 	}
 
-	template<typename FiedDataType>
-	FiedDataType getStructField(
+	template<typename FieldDataType>
+	FieldDataType getStructField(
 		vm::interpreted_data_variant::Data data_data, base::StrID type_id, base::StrID field_name
 	) {
 		auto field_index = data_data.field_name_map[field_name];
 		auto field       = data_data.fields[field_index];
 		assertEqual(
-			field.value.getType()->getName(),
+			field.value->getType()->getName(),
 			type_id,
 			"Variable type is not correct for field " + field_name.str()
 		);
-		return getVMValueRefData<FiedDataType>(field.value);
+		return getVMValueRefData<FieldDataType>(field.value);
 	}
 
 	/**
@@ -251,8 +283,8 @@ private:
 			ASSERT_EQUAL_PRINT(stack_frame_data.function_name, "main");
 
 			for (const auto& var: stack_frame_data.frame_vars) {
-				if (var.value.getType()->getName() == base::StrID("ptr_struct")) {
-					auto struct_pointer_data_opt = var.value.readData();
+				if (var.value->getType()->getName() == base::StrID("ptr_struct")) {
+					auto struct_pointer_data_opt = var.value->readData();
 					ASSERT_HAS_VALUE(struct_pointer_data_opt);
 
 					auto struct_pointer_data
@@ -333,11 +365,9 @@ private:
 		{
 			auto exit_code_response = vm::api::getExitValue(pid);
 			ASSERT_HAS_VALUE(exit_code_response);
-			ASSERT_TRUE(
-				std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_code_response.value())
-			);
+			ASSERT_MATCHES(exit_code_response.value(), std::vector<Ref<vm::IVMValue>>);
 			auto& exit_value_vec
-				= std::get<std::vector<Ref<vm::VmValue>>>(exit_code_response.value());
+				= std::get<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value());
 			ASSERT_EQUAL(exit_value_vec.size(), 1);
 			ASSERT_EQUAL_PRINT(exit_value_vec.at(0)->readBytes<i64>(), 0);
 		}

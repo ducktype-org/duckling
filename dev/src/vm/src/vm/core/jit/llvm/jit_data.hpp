@@ -18,7 +18,7 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
-struct LlvmData {
+struct LlvmData final {
 	/**
 	 * @brief Context of llvmInit.
 	 * @note We need to use ThreadSafeContext instead of LLVMContext to be able to use a single
@@ -47,12 +47,13 @@ struct LlvmData {
 	 */
 	std::unordered_map<vm::low::MicroOpcode, std::string> opcode_name_map;
 
-	struct LlvmTypes {
+	struct LlvmTypes final {
 		Ref<llvm::StructType>   frame;
 		Ref<llvm::StructType>   flag_data;
 		Ref<llvm::StructType>   microinstruction;
 		Ref<llvm::StructType>   vm_thread;
 		Ref<llvm::FunctionType> opfun;
+		Ref<llvm::FunctionType> compiled;
 	};
 
 	/**

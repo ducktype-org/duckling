@@ -3,8 +3,8 @@
 use std::path::Path;
 
 use git2::build::RepoBuilder;
-use git2::{FetchOptions, Oid, Repository};
-use tracing::debug;
+use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks, Repository};
+use tracing::{debug, error};
 use url::Url;
 
 use crate::quackpack::core::fetcher::types::GitCloneResponse;
@@ -12,26 +12,38 @@ use crate::quackpack::core::{GitReference, PackageLoader};
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
+pub mod fast_path;
 #[cfg(test)]
 mod tests;
 
 #[derive(Debug)]
 /// Client implementing interaction with Git repositories.
 /// Currently it provides only static methods.
-pub struct GitClient {}
+pub struct GitClient<'duck> {
+    ctx: &'duck DuckContext,
+}
 
-impl GitClient {
+/// Maximal number of authentication attempts.
+const MAX_AUTHENTICATION_NUMBER: u32 = 3;
+
+impl<'duck> GitClient<'duck> {
+    pub fn new(ctx: &'duck DuckContext) -> Self {
+        Self { ctx }
+    }
+
     /// Clone a repository pointed by `source` into `destination`, and parse a package it contains.
-    #[tracing::instrument(skip(ctx, url) fields(url = url.as_str()))]
+    #[tracing::instrument(skip(self, url) fields(url = url.as_str(), ?reference, ?destination))]
+    #[track_caller]
     pub fn clone_blocking(
+        &self,
         url: &Url,
         reference: GitReference,
         destination: &Path,
-        ctx: &DuckContext,
     ) -> QuackResult<GitCloneResponse> {
+        self.ctx.info(format!("cloning a repository at `{url}`"))?;
         let mut builder = RepoBuilder::new();
 
-        builder.fetch_options(fetch_options_for(url, reference));
+        builder.fetch_options(self.fetch_options_for(url, reference));
         // git2-rs doesn't support cloning with a given tag :(.
         if let GitReference::Branch(branch) = reference {
             builder.branch(branch.as_str());
@@ -40,19 +52,29 @@ impl GitClient {
         let repository = match builder.clone(url.as_str(), destination) {
             Ok(repository) => repository,
             Err(e) => {
-                debug!("failed to clone: {e}");
+                error!(error = %e, "failed to clone the repository");
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
+                // @TODO: #3146 Change this to only retry clone if the error could be from unsupporting shallow clone.
+                if matches!(e.code(), git2::ErrorCode::Auth) {
+                    return Err(e.into());
+                }
                 if !can_shallow_clone(url, reference) {
                     return Err(e.into());
                 }
-                let mut fetch_options = fetch_options_for(url, reference);
+                debug!("will attempt a full clone");
+                // We print this only here because otherwise the user gets information from the error.
+                self.ctx.warning(format!(
+                    "failed to shallow clone the repository at `{url}`: {e}"
+                ))?;
+                self.ctx
+                    .info("retrying with a full clone instead of a shallow clone")?;
+                let mut fetch_options = self.fetch_options_for(url, reference);
+                // Here we always want to perform full clone, so set depth to 0.
                 fetch_options.depth(0);
                 builder.fetch_options(fetch_options);
                 builder.clone(url.as_str(), destination)?
             }
         };
-
-        debug!("will checkout to tag...");
 
         // Prefer specific commits over tags.
         if let GitReference::Rev(commit) = reference {
@@ -73,7 +95,7 @@ impl GitClient {
         }
 
         let commit = repository.head()?.peel_to_commit()?.id();
-        let package = PackageLoader::find_at_exact_directory(destination, ctx)
+        let package = PackageLoader::find_at_exact_directory(destination, self.ctx)
             .with_context(|| format!("git repository at `{}` is not a duckling package", url))?
             .into_package()
             .unwrap_package();
@@ -82,15 +104,57 @@ impl GitClient {
             package,
         })
     }
-}
 
-/// Get specific [`FetchOptions`] for cloning the given `url` with `reference`.
-fn fetch_options_for(url: &Url, reference: GitReference) -> FetchOptions<'static> {
-    let mut fetch_options = FetchOptions::new();
-    if can_shallow_clone(url, reference) {
-        fetch_options.depth(1);
+    /// Get specific [`FetchOptions`] for cloning the given `url` with `reference`.
+    fn fetch_options_for(&self, url: &Url, reference: GitReference) -> FetchOptions<'_> {
+        let mut fetch_options = FetchOptions::new();
+        if can_shallow_clone(url, reference) {
+            debug!("can shallow clone");
+            fetch_options.depth(1);
+        }
+
+        fetch_options.remote_callbacks(self.callbacks());
+        fetch_options
     }
-    fetch_options
+
+    /// Create callbacks for authentication.
+    fn callbacks(&self) -> RemoteCallbacks<'_> {
+        let attempts = std::cell::RefCell::new(0);
+        let mut callbacks = RemoteCallbacks::new();
+        callbacks.credentials(move |_url, username_from_url, cred_types| {
+            let mut attempts = attempts.borrow_mut();
+            *attempts += 1;
+            if *attempts > MAX_AUTHENTICATION_NUMBER {
+                let mut err = git2::Error::from_str("too many authentication attempts; make sure the repository supports chosen authentication method");
+                err.set_code(git2::ErrorCode::Auth);
+                err.set_class(git2::ErrorClass::Callback);
+                return Err(err);
+            }
+            if cred_types.contains(CredentialType::DEFAULT) {
+                Cred::default()
+            } else if cred_types.contains(CredentialType::SSH_KEY) {
+                ssh_callback(username_from_url)
+            } else if cred_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
+                self.username_and_password_callback()
+            } else {
+                Err(git2::Error::from_str("unsupported authentication method"))
+            }
+        });
+        callbacks
+    }
+
+    /// Callback for simple username + password authentication.
+    fn username_and_password_callback(&self) -> Result<Cred, git2::Error> {
+        let username = self
+            .ctx
+            .prompt_once("username")
+            .map_err(|_| git2::Error::from_str("failed to get username"))?;
+        let password = self
+            .ctx
+            .password_once("password")
+            .map_err(|_| git2::Error::from_str("failed to get password"))?;
+        Cred::userpass_plaintext(&username, &password)
+    }
 }
 
 /// Check, if we can shallow clone a `reference` from `url`.
@@ -100,6 +164,12 @@ fn fetch_options_for(url: &Url, reference: GitReference) -> FetchOptions<'static
 fn can_shallow_clone(url: &Url, reference: GitReference) -> bool {
     let is_local_repository_url = url.is_local_file();
     !is_local_repository_url && (reference.is_default() || reference.is_branch())
+}
+
+/// Callback for ssh authentication.
+fn ssh_callback(username_from_url: Option<&str>) -> Result<Cred, git2::Error> {
+    let username = username_from_url.unwrap_or("git");
+    Cred::ssh_key_from_agent(username)
 }
 
 /// A helper trait for repository methods.

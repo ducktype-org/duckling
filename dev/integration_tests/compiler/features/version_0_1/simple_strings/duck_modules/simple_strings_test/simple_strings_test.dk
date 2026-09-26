@@ -1,0 +1,44 @@
+fun main() -> i64 = {
+    # Test string literals with print
+    print("hello\n");
+
+    # Test string variable
+    var s: String = "world\n";
+    print(s);
+
+    # Test string with escape sequences
+    print("tab:\there\n");
+
+    # Test format strings (f-strings)
+    let x = 42;
+    print(f"value: {x}\n");
+
+    # Test format string with expressions
+    let a = 10;
+    let b = 20;
+    print(f"{a} + {b} = {a + b}\n");
+
+    # Test empty string
+    print("");
+
+    # Test string concatenation via print
+    print("line1\nline2\n");
+
+    # Test string concatenation via + operator
+    print(s+s);
+
+    # Test access to string elements at positions
+    print(s[0]);
+    print('\n');
+
+    # Test string mutability
+    s[0] = 'W';
+    print(s);
+
+    # Test .length method
+    builtin_output_i64(s.length());         # "6\n"
+    builtin_output_i64((s+s).length());     # "12\n"
+
+
+    return 0;
+}

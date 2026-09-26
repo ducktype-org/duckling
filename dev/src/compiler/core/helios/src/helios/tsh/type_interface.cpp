@@ -9,14 +9,26 @@
 
 namespace compiler::tsh {
 	namespace {
-		base::Map<base::StrID, std::vector<InterfaceElement>> groupElementsByName(
+		base::HashMap<base::StrID, std::vector<InterfaceElement>> groupElementsByName(
 			const std::vector<InterfaceElement>& elements
 		) {
-			base::Map<base::StrID, std::vector<InterfaceElement>> result{};
+			base::HashMap<base::StrID, std::vector<InterfaceElement>> result{};
 			for (const InterfaceElement& element: elements) {
 				base::StrID name = compiler::helios::name(element.getSymbol());
 				if (!result.contains(name)) result.put(name, {});
 				result.at(name).push_back(element);
+			}
+			return result;
+		}
+
+		base::HashMap<MemberSpecialKind, InterfaceElement> groupElementBySpecialKind(
+			const std::vector<InterfaceElement>& elements
+		) {
+			base::HashMap<MemberSpecialKind, InterfaceElement> result{};
+			for (const InterfaceElement& element: elements) {
+				auto special_kind = element.specialKind();
+				if (special_kind == MemberSpecialKind::None) continue;
+				result.put(special_kind, element);
 			}
 			return result;
 		}
@@ -30,20 +42,27 @@ namespace compiler::tsh {
 
 	TypeInterface::TypeInterface(const std::vector<InterfaceElement>& elements):
 		  elements(elements),
-		  elements_by_name(groupElementsByName(elements)) {
+		  elements_by_name(groupElementsByName(elements)),
+		  element_by_special_kind(groupElementBySpecialKind(elements)) {
 		CORE_ASSERT(checkForDuplicates().isOk(), "Duplicate elements in type interface");
 	}
 
-	TypeInterface TypeInterface::combine(const CRef<TypeInterface> other) const {
-		std::set<InterfaceElement>    my_element_set;
-		std::vector<InterfaceElement> new_elements = elements;
-		my_element_set.insert(elements.begin(), elements.end());
-		for (auto& other_element: other->elements)
-			if (!my_element_set.contains(other_element)) new_elements.push_back(other_element);
-		return TypeInterface(new_elements);
+	base::Optional<CRef<InterfaceElement>> TypeInterface::getSpecialElement(
+		const MemberSpecialKind special
+	) const {
+		if (not element_by_special_kind.contains(special)) return {};
+		return CRef(&element_by_special_kind.at(special));
 	}
 
-	const base::Map<base::StrID, std::vector<InterfaceElement>>& TypeInterface::getElementsByName(
+	base::Optional<CRef<InterfaceElement>> TypeInterface::getElementBySym(
+		const compiler::helios::SymID sym
+	) const {
+		for (const InterfaceElement& element: elements)
+			if (element.getSymbol() == sym) return CRef(&element);
+		return {};
+	}
+
+	const base::HashMap<base::StrID, std::vector<InterfaceElement>>& TypeInterface::getElementsByName(
 	) const {
 		return elements_by_name;
 	}
@@ -58,4 +77,16 @@ namespace compiler::tsh {
 	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {
 		return ctx.query<compiler::helios::QueryTypeOfSymbol>(symbol)->valueOrThrow();
 	}
+
+	void TypeInterfaceBuilder::push(
+		compiler::helios::SymID                symbol,
+		InterfaceElement::InterfaceElementKind kind,
+		MemberVisibility                       visibility,
+		MemberSpecialKind                      special
+	) {
+		interface_elements.emplace_back(symbol, owner, declaration_order, kind, visibility, special);
+		declaration_order++;
+	}
+
+	TypeInterface TypeInterfaceBuilder::build() const { return TypeInterface(interface_elements); }
 }

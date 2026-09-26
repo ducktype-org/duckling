@@ -23,6 +23,11 @@ namespace {
 			variant_case(vm::code::PointerType, pointer) {
 				tp.definePointer(types.at(pointer.inner)->getID());
 			}
+			variant_case(vm::code::CPointerType, cpointer) {
+				tp.defineCPointer(cpointer.inner.map([&](const base::StrID& inner) {
+					return types.at(inner)->getID();
+				}));
+			}
 			variant_case(vm::code::FixedSizeTableType, fixed_size_table) {
 				tp.defineFixedSizeTable(
 					types.at(fixed_size_table.inner)->getID(), fixed_size_table.table_size

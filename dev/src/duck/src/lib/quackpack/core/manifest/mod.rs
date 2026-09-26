@@ -3,24 +3,29 @@
 //! The most notable members are [`Manifest`] and [`Dependency`].
 //!
 //! Parsing is implemented in the [`parse`] module.
+mod build_options;
 mod dependency;
 mod features;
 mod metadata;
 mod parse;
 mod profiles;
 mod source;
+mod venv_config;
 
+pub use build_options::BuildOptions;
 pub use dependency::*;
 pub use features::*;
 pub use metadata::*;
 pub use parse::*;
 pub use profiles::*;
 pub use source::*;
+pub use venv_config::*;
 
+use super::valid_package_name::{normalise_package_name, validate_package_name};
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::registry;
-use crate::{QuackError, StrId};
+use crate::{DuckContext, QuackError, QuackResultContext, StrId};
 
 #[derive(Clone, Debug)]
 /// Machine friendly abstraction over a manifest.
@@ -30,20 +35,23 @@ pub struct Manifest {
     features: Features,
     metadata: PackageMetadata,
     dependencies: Dependencies,
-    dev_dependencies: Dependencies,
     profiles: Profiles,
+    venv: VenvConfig,
+    build_options: BuildOptions,
 }
 
 impl Manifest {
     /// Create a new [`Manifest`].
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: StrId,
         version: Version,
         features: Features,
         metadata: PackageMetadata,
         dependencies: Dependencies,
-        dev_dependencies: Dependencies,
         profiles: Profiles,
+        venv: VenvConfig,
+        build_options: BuildOptions,
     ) -> Self {
         Self {
             name,
@@ -51,14 +59,20 @@ impl Manifest {
             features,
             metadata,
             dependencies,
-            dev_dependencies,
             profiles,
+            venv,
+            build_options,
         }
     }
 
     /// Get the package name.
     pub fn name(&self) -> StrId {
         self.name
+    }
+
+    /// Get the normalised package name.
+    pub fn normalised_name(&self) -> String {
+        normalise_package_name(&self.name())
     }
 
     /// Get the package version.
@@ -86,11 +100,6 @@ impl Manifest {
         &mut self.dependencies
     }
 
-    /// Get the development dependencies.
-    pub fn dev_dependencies(&self) -> &Dependencies {
-        &self.dev_dependencies
-    }
-
     /// Get the compiler specific options for profile.
     pub fn profiles(&self) -> &Profiles {
         &self.profiles
@@ -100,16 +109,33 @@ impl Manifest {
     pub fn is_global(&self) -> bool {
         self.name == DuckHome::GLOBAL_PACKAGE_NAME
     }
+
+    /// Check if there are any local dependencies.
+    pub fn has_local_deps(&self) -> bool {
+        self.dependencies()
+            .all_dependencies()
+            .iter()
+            .any(|dep| dep.source().is_local())
+    }
+
+    /// Get the venv configuration.
+    pub fn venv(&self) -> &VenvConfig {
+        &self.venv
+    }
+
+    /// Get the [`BuildOptions`] of this manifest.
+    pub fn build_options(&self) -> &BuildOptions {
+        &self.build_options
+    }
 }
 
-impl TryFrom<registry::Manifest> for Manifest {
+impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
     type Error = QuackError;
 
-    fn try_from(value: registry::Manifest) -> Result<Self, Self::Error> {
+    fn try_from((value, ctx): (registry::Manifest, &DuckContext)) -> Result<Self, Self::Error> {
         let registry::Manifest {
             metadata,
             dependencies,
-            dev_dependencies,
             features,
             profiles,
         } = value;
@@ -119,17 +145,27 @@ impl TryFrom<registry::Manifest> for Manifest {
             license,
             name,
             description,
+            links,
         } = metadata;
         let authors = authors.into_iter().collect();
-        let metadata = PackageMetadata::new(authors, Some(license), Some(description));
+        let metadata = PackageMetadata {
+            authors,
+            license: Some(license),
+            description: Some(description),
+        };
+        validate_package_name(&name)
+            .context("registry responded with a package with an invalid name")?;
         Ok(Manifest::new(
             name.into(),
             version,
             features.try_into()?,
             metadata,
             dependencies.try_into()?,
-            dev_dependencies.try_into()?,
             profiles.into(),
+            VenvConfig::default_for_package(ctx),
+            BuildOptions {
+                links: links.map(Into::into),
+            },
         ))
     }
 }
@@ -144,23 +180,24 @@ impl TryFrom<Manifest> for registry::Manifest {
             features,
             metadata,
             dependencies,
-            dev_dependencies,
             profiles,
+            venv: _,
+            build_options,
         } = value;
-        let license = metadata.license().map(Into::into).unwrap_or_default();
-        let description = metadata.description().map(Into::into).unwrap_or_default();
-        let authors = metadata.into_authors().into_iter().collect();
+        let license = metadata.license.unwrap_or_default();
+        let description = metadata.description.unwrap_or_default();
+        let authors = metadata.authors.into_iter().collect();
         let metadata = registry::Metadata {
             version,
             authors,
             license,
             name: name.into(),
             description,
+            links: build_options.links.map(Into::into),
         };
         Ok(Self {
             metadata,
             dependencies: dependencies.try_into()?,
-            dev_dependencies: dev_dependencies.try_into()?,
             features: features.into(),
             profiles: profiles.into(),
         })

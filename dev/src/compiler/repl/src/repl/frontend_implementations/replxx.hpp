@@ -12,7 +12,9 @@ namespace compiler::repl {
 	class FrontendReplxxImplementation final {
 	public:
 		explicit FrontendReplxxImplementation(
-			bool completions_enabled = true, bool bracketed_paste_enabled = true
+			bool completions_enabled     = true,
+			bool bracketed_paste_enabled = true,
+			bool decorative_output       = true
 		);
 		~FrontendReplxxImplementation();
 
@@ -40,6 +42,7 @@ namespace compiler::repl {
 
 		replxx::Replxx m_replxx{};
 		bool           m_completions_enabled;
+		bool           m_decorative_output;
 
 		/// Set of user-defined identifiers collected from previous inputs (for completion).
 		std::set<std::string> m_user_words{};

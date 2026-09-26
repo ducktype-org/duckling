@@ -3,19 +3,10 @@ PreCase: |+
   @{duck-exe} init foo
   @{duck-exe} init bar
   @{duck-exe} init baz
-  echo "dependencies:
-    bar:
-      source:
-        path: ../bar" >> foo/quackconfig.yaml
-  echo "dependencies:
-    baz:
-      source:
-        path: ../baz" >> bar/quackconfig.yaml
+  @{duck-exe} -C foo add --local ../bar bar
+  @{duck-exe} -C bar add --local ../baz baz
+  @{duck-exe} -C baz add --local ../foo foo
 
-  echo "dependencies:
-    foo:
-      source:
-        path: ../foo" >> baz/quackconfig.yaml
 Tests:
   local-cycle:
     Description: can build a project with dependencies
@@ -23,8 +14,15 @@ Tests:
       build:
         test-cmd: duck -C foo build
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: running gathering
+            info: starting the solver engine
+            info: starting loading 3 packages
+            info: loaded source codes of 3 packages, 0 were downloaded, 3 were already present
             info: successfully synchronized venv \`foo\`
             info: compiling \`baz\`...
             info: compiling \`bar\`...
-            info: compiling \`foo\`...
+            info: compiling \`foo\`..."

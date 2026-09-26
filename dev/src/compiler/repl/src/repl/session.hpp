@@ -38,9 +38,12 @@ namespace compiler::repl {
 	class ReplSession final {
 	public:
 		explicit ReplSession(
-			bool completions_enabled     = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
-			bool bracketed_paste_enabled = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED
+			bool completions_enabled       = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
+			bool bracketed_paste_enabled   = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED,
+			bool decorative_output_enabled = FRONTEND_DEFAULT_DECORATIVE_OUTPUT
 		);
+
+		~ReplSession();
 
 		/**
 		 * @brief Load a script file and execute its statements in the current REPL session.
@@ -55,7 +58,7 @@ namespace compiler::repl {
 		 * @note Loading is non-transactional: execution stops at the first error and statements
 		 * that finished successfully before that error remain applied in the session.
 		 *
-		 * @param file_path Path to a .ds file
+		 * @param file_path Path to a .dks file
 		 * @return ReplResult indicating success or an error message
 		 */
 		ReplResult loadScriptFile(std::string_view file_path);
@@ -296,6 +299,7 @@ namespace compiler::repl {
 		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
 		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
 		ReplFrontend m_frontend;      ///< Frontend for user interaction
+		bool         m_decorative_output;
 		/**
 		 * @brief Persistent lowering context for REPL statement compilation.
 		 *

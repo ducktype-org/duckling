@@ -2,6 +2,8 @@
 
 #include <vm/loader/parser/parser.hpp>
 
+#include <sstream>
+
 using namespace vm::loader;
 
 class BCParsingTests: public VmTestSuite {
@@ -13,6 +15,7 @@ public:
 		TESTER_ADD_TEST(invalidOpcode);
 		TESTER_ADD_TEST(noSemicolon);
 		TESTER_ADD_TEST(invalidLocalName);
+		TESTER_ADD_TEST(cpointerBadPointee);
 		TESTER_ADD_TEST(opcodeSourcePositions);
 	}
 
@@ -63,6 +66,13 @@ private:
 		parseInvalidDbc("invalid_local_name.dbc", { "Expected an identifier here" });
 	}
 
+	void cpointerBadPointee() {
+		parseInvalidDbc(
+			"cpointer_bad_pointee.dbc",
+			{ "Expected an identifier (pointee type) or end of declaration." }
+		);
+	}
+
 	/**
 	 * @brief Asserts that opcode source positions span exactly the instruction text, i.e. that
 	 * the (inclusive) `.end` covers the last argument and nothing past it.
@@ -70,7 +80,7 @@ private:
 	void opcodeSourcePositions() {
 		fs::File file(path("source_positions.dbc"));
 		auto     parsing_result = parser::parse({ file });
-		assertTrue(parsing_result.has_value(), "Expected successful parse.");
+		ASSERT_HAS_VALUE(parsing_result, "Expected successful parse.");
 
 		const auto& opcodes = parsing_result->front().functions.front()->code->opcodes;
 

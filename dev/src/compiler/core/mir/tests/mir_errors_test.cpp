@@ -27,6 +27,8 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMoveErrors);
 		TESTER_ADD_TEST(testUseBeforeInit);
+		TESTER_ADD_TEST(testShortCircuitMoveState);
+		TESTER_ADD_TEST(testMaybeUninitialized);
 	}
 
 private:
@@ -66,19 +68,44 @@ private:
                    else { eat(move a); }
                    eat(a);
                })",
-			{ "Use of a moved value.", "value moved here" },
+			{ "is used after it has been moved out of.", "Value moved here." },
 			1
 		);
+	}
 
-		// ===================== Move from a non-local place (NYI) =====================
+	/**
+	 * @brief The right-hand side of a lazily evaluated `or` runs on only one of the paths, so a
+	 * move performed there reaches the later use on some paths only.
+	 */
+	void testShortCircuitMoveState() {
 		compiler::mir::test_utils::checkForErrorOnCompileModule(
-			R"(class Cls { x: i64; }
-               fun moveField() = {
-                   let a = Cls(10);
-                   move a.x;
+			R"(fun eat(x: i64) = x;
+               fun movedInRhs(a: bool, x: i64) -> bool = {
+                   let c = a or eat(move x) == 0;
+                   eat(x);
+                   return c;
                })",
-			{ "Moving from a non-local place is not supported yet." },
+			{ "may have been moved out of on some", "Value moved here." },
 			1
+		);
+	}
+
+	/**
+	 * @brief A local that is initialized on one branch only is reported as uninitialized on some
+	 * paths, not as possibly moved: nothing ever moved it, so there is no move site to point at.
+	 */
+	void testMaybeUninitialized() {
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun maybeUninit(x: i64) -> i64 = {
+                   if (x > 0) { c = 1; }
+                   let y = c;
+                   var c: i64 = 20;
+                   return c + y;
+               })",
+			{ "is used before it is initialized",
+		      "is not initialized on some control-flow paths reaching this use.",
+		      "Variable declared here." },
+			2
 		);
 	}
 
@@ -94,11 +121,13 @@ private:
                    }
                    return;
                })",
-			{ "Use of an uninitialized value.", "is used before it is initialized" },
+			{ "is used before it is initialized" },
 			1
 		);
 
-		// `c` is read before its declaration further down the function.
+		// `c` is read before its declaration further down the function, and is also assigned
+		// (`c = 1`) before that declaration — the read is reported as a use-before-init and the
+		// assignment as a write-before-init, so two diagnostics are emitted.
 		compiler::mir::test_utils::checkForErrorOnCompileModule(
 			R"(fun useBeforeInitBranch(x: i64) = {
                    c + 1;
@@ -108,7 +137,40 @@ private:
                    var c = 20;
                    return;
                })",
-			{ "Use of an uninitialized value.", "is used before it is initialized" },
+			{ "is used before it is initialized", "is used before it is initialized" },
+			2
+		);
+
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun writeBeforeInit() = {
+                   n = 5;
+                   var n: i64 = 0;
+                   return;
+               })",
+			{ "is used before it is initialized" },
+			1
+		);
+
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(class Cls { x: i64; }
+               fun writeBeforeInitField() = {
+                   a.x = 20;
+                   var a: Cls = Cls(0);
+                   return;
+               })",
+			{ "is used before it is initialized" },
+			1
+		);
+
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(class Cls { x: i64; }
+               fun writeBeforeInitField() = {
+					var a: Cls = Cls(0);
+					let b = move a;
+					a.x = 20;
+					return;
+               })",
+			{ "is used after it has been moved out of" },
 			1
 		);
 	}

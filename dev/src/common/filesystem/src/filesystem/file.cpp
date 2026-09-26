@@ -24,6 +24,7 @@ namespace {
 	}
 
 	void requirePhysicalPath(const fs::FilePath& path) {
+		// @TODO: #3398 make this work in tmp/
 		if (!path.isPhysical()) CORE_PANIC("Path is not a physical file: " + path.string());
 	}
 

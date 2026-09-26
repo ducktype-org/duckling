@@ -1,6 +1,6 @@
 #include "../../hierarchy/expressions/comma.hpp"
 
-#include "../../hierarchy/expressions/match_expr.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/expressions/ternary.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {

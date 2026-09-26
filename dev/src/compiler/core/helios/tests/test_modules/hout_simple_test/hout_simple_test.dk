@@ -1,0 +1,23 @@
+fun foo(a: i32) = {}
+
+fun foo2() = { return 2; }
+
+const M: i64 = 123 + A_alias;
+
+fun foo3() -> i64 = {
+	if (false) {
+		return 0;
+	}
+	while (false) {
+		return 0;
+	}
+	return A;
+}
+
+const A: i64 = 2;
+
+var B: i64 = 4;
+
+using foo2 as foo2_alias;
+using A as A_alias;
+

@@ -1,0 +1,5 @@
+before-cmd: export PATH="@{duckc_dir}:$PATH"
+
+# @TODO: #3023 Enable output in all tests; we don't check it, because it contains not-portable hashes
+SubDirs:
+  - basic

@@ -48,13 +48,45 @@ Tests:
     Cases:
       direct:
         mode: direct
-        Output: 
+        Output:
           String: "6\n5\n4\n3\n2\n1\n"
       vm:
         mode: vm
-        Output: 
+        Output:
           String: "6\n5\n4\n3\n2\n1\n"
       exe:
         mode: exe
-        Output: 
+        Output:
           String: "6\n5\n4\n3\n2\n1\n"
+
+  init_exec_order:
+    folder: "init_exec_order"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "2\n1\n3\n"
+      vm:
+        mode: vm
+        Output:
+          String: "2\n1\n3\n"
+      exe:
+        mode: exe
+        Output:
+          String: "2\n1\n3\n"
+
+  const_if:
+    folder: "const_if"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "1\n2\n"
+      vm:
+        mode: vm
+        Output:
+          String: "1\n2\n"
+      exe:
+        mode: exe
+        Output:
+          String: "1\n2\n"

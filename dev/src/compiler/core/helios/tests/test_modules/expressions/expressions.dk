@@ -1,0 +1,23 @@
+const V1: i32 = 1;
+const VM1: i32 = -1;
+const V256: i32 = (3 + 4 - 4 * 16 / 5 % 7) ** 8;
+namespace N {
+    const V3: i64 = 3;
+}
+using N.*;
+const V12: i64 = V3 + V3 * V3;
+
+const CMP: bool = V1 < 3 <= 4 == 5 != 6 >= 7 > VM1;
+
+const STR: str = "quack";
+
+const VREF: ref i32 = 0;
+const VBOX: box f32 = new 0f32;
+const VCONST: const bool = true;
+
+class A {
+    a: i32 = 10;
+}
+
+let aObj: A = A(42);
+let member_access = aObj.a;

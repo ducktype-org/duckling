@@ -19,6 +19,7 @@ import {
 	DidChangeWatchedFilesNotification
 } from 'vscode-languageserver/node';
 
+import { execFileSync } from 'child_process';
 import * as os from 'os';
 import * as path from 'path';
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -47,6 +48,31 @@ let initPromise: Promise<void> = Promise.resolve();
 
 // Storing LSP for documents
 
+/**
+ * Resolves the duck_ls binary path, expanding a leading ~ to the home directory.
+ * An empty or missing setting falls back to where comp-copy.py installs the daemon.
+ */
+function resolveDaemonPath(rawPath?: string): string {
+	if (!rawPath) {
+		return path.join(os.homedir(), '.local', 'bin', 'duck_ls');
+	}
+	return rawPath.replace(/^~(?=\/|$)/, os.homedir());
+}
+
+/**
+ * Asks the duck_ls binary which version it is, so the initialize response can tell the editor
+ * which compiler it is talking to. The editor itself never has to run duck_ls for this.
+ * Returns undefined when the binary is missing or does not answer - the version is nice to have,
+ * it must never stop the server from starting.
+ */
+function readDaemonVersion(daemonPath: string): string | undefined {
+	try {
+		return execFileSync(daemonPath, ['--version'], { encoding: 'utf8', timeout: 5000 }).trim();
+	} catch {
+		return undefined;
+	}
+}
+
 // Semantic tokens legend
 const semanticTokensLegend = {
 	tokenTypes: Object.values(SemanticTokenTypes),
@@ -66,7 +92,15 @@ connection.onInitialize(async (params: InitializeParams) => {
 		capabilities.workspace && !!capabilities.workspace.workspaceFolders
 	);
 
+	// The client sends the configured binary path along with `initialize`, because the
+	// `workspace/configuration` request is only allowed once initialization is finished.
+	const initOptions = params.initializationOptions as { executablePath?: string } | undefined;
+
 	const result: InitializeResult = {
+		serverInfo: {
+			name: 'duck_ls',
+			version: readDaemonVersion(resolveDaemonPath(initOptions?.executablePath))
+		},
 		capabilities: {
 			textDocumentSync: TextDocumentSyncKind.Incremental,
 			// Tell the client that this server supports those options
@@ -102,13 +136,8 @@ connection.onInitialized(() => {
 		}
 
 		// Resolve the duck_ls binary path from configuration, falling back to the default.
-		let executablePath = path.join(os.homedir(), '.local', 'bin', 'duck_ls');
 		const config = await connection.workspace.getConfiguration('DucklingLanguageSupport');
-		const rawPath: string = config?.executablePath;
-		if (rawPath) {
-			// Expand leading ~ to the home directory
-			executablePath = rawPath.replace(/^~(?=\/|$)/, os.homedir());
-		}
+		const executablePath = resolveDaemonPath(config?.executablePath);
 
 		compilerDaemonClient = new CompilerDaemonClient(connection, executablePath);
 		// Preload keywords for autocompletion
@@ -229,7 +258,7 @@ documents.onDidChangeContent(async change => {
 connection.onDidChangeWatchedFiles(async change => {
 	await initPromise;
 	let isDucklingFile = (uri: string) => {
-		return uri.endsWith(".duck") || uri.endsWith(".dmf")|| uri.endsWith(".ds") || uri.endsWith(".🦆");
+		return uri.endsWith(".duck") || uri.endsWith(".dk")|| uri.endsWith(".dks") || uri.endsWith(".🦆");
 	}
 	for (const fileEvent of change.changes) {
 		console.log("File change event received:", fileEvent.type);

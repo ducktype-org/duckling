@@ -81,7 +81,7 @@ private:
 		}
 		std::cerr << "Green nodes: " << green_count << ", Red nodes: " << red_count << '\n';
 		ASSERT_TRUE(green_count > 0);
-		// functions_1/functions_1.dmf there is a change in variable name a -> c in function main()
+		// functions_1/functions_1.dk there is a change in variable name a -> c in function main()
 		// this should result in only one red node in the previous graph
 		ASSERT_TRUE(red_count == 1);
 
@@ -95,9 +95,9 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ .module_id        = module,
-			                                          .backend_type     = driver::BackendType::LLVM,
-			                                          .build_debug_info = false });
+			ctx.query<driver::CompileModule>({ .module_id        = module,
+			                                   .backend_type     = driver::BackendType::LLVM,
+			                                   .build_debug_info = false });
 		});
 
 		// Build a NodeID for the CompileModule query with the exact key we used

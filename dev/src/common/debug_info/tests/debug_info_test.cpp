@@ -86,7 +86,7 @@ private:
 		assertTrue(info.functions.size() == 1, "Expected 1 function");
 
 		const auto& func = info.functions.at("_Zfoo");
-		assertTrue(func.function_name.has_value(), "Function name should be present");
+		ASSERT_HAS_VALUE(func.function_name, "Function name should be present");
 		assertTrue(*func.function_name == "foo", "Function name incorrect");
 		assertTrue(func.parameter_indexes_to_metadata.size() == 2, "Expected 2 parameters");
 		assertTrue(func.instr_offsets_to_metadata.size() == 2, "Expected 2 instructions");
@@ -113,12 +113,12 @@ private:
 		const auto& [var_offset, var_meta] = func.instr_offsets_to_variable_init.front();
 		assertTrue(var_offset == 0, "Variable init offset incorrect");
 		assertTrue(var_meta.name == "local_x", "Variable name incorrect");
-		assertTrue(var_meta.position.has_value(), "Variable position should be present");
+		ASSERT_HAS_VALUE(var_meta.position, "Variable position should be present");
 
 		const auto& [var_offset2, var_meta2] = func.instr_offsets_to_variable_init.at(1);
 		assertTrue(var_offset2 == 8, "Second variable init offset incorrect");
 		assertTrue(var_meta2.name == "local_y", "Second variable name incorrect");
-		assertFalse(var_meta2.position.has_value(), "Second variable position should be absent");
+		ASSERT_NO_VALUE(var_meta2.position, "Second variable position should be absent");
 	}
 
 	void serializationRoundTripTest() {
@@ -134,7 +134,7 @@ private:
 		// Deserialize
 		std::istringstream iss(first_json);
 		auto               result = debug_info::loadFromStream(iss);
-		assertTrue(result.has_value(), "Deserialization of valid JSON should succeed");
+		ASSERT_HAS_VALUE(result, "Deserialization of valid JSON should succeed");
 
 		// Serialize again and compare
 		std::ostringstream oss2;
@@ -161,21 +161,21 @@ private:
 			"Round-trip: wrong number of variable initializations"
 		);
 		const auto& round_trip_vars = result->functions.at("_Zfoo").instr_offsets_to_variable_init;
-		assertTrue(
-			round_trip_vars.at(0).second.position.has_value(),
+		ASSERT_HAS_VALUE(
+			round_trip_vars.at(0).second.position,
 			"Round-trip: first variable position should be present"
 		);
-		assertFalse(
-			round_trip_vars.at(1).second.position.has_value(),
+		ASSERT_NO_VALUE(
+			round_trip_vars.at(1).second.position,
 			"Round-trip: second variable position should be absent"
 		);
 		const auto& round_trip_params = result->functions.at("_Zfoo").parameter_indexes_to_metadata;
-		assertTrue(
-			round_trip_params.at(0).second.position.has_value(),
+		ASSERT_HAS_VALUE(
+			round_trip_params.at(0).second.position,
 			"Round-trip: first parameter position should be present"
 		);
-		assertFalse(
-			round_trip_params.at(1).second.position.has_value(),
+		ASSERT_NO_VALUE(
+			round_trip_params.at(1).second.position,
 			"Round-trip: second parameter position should be absent"
 		);
 	}
@@ -185,21 +185,21 @@ private:
 		{
 			std::istringstream iss("not valid json at all {{{");
 			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "Malformed JSON should fail to parse");
+			ASSERT_NO_VALUE(result, "Malformed JSON should fail to parse");
 		}
 
 		// Valid JSON but missing required field "target"
 		{
-			std::istringstream iss(R"({"module_path": "x.dmf", "source_positions_type": "DBC",
+			std::istringstream iss(R"({"module_path": "x.dk", "source_positions_type": "DBC",
                 "functions": {}, "types": {}})");
 			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "JSON missing 'target' field should fail");
+			ASSERT_NO_VALUE(result, "JSON missing 'target' field should fail");
 		}
 
 		// Valid JSON but wrong type for a field
 		{
 			std::istringstream iss(
-				R"({"target": 42, "module_path": "x.dmf", "source_positions_type": "LineColumn",
+				R"({"target": 42, "module_path": "x.dk", "source_positions_type": "LineColumn",
                 "functions": {}, "types": {}})"
 			);
 
@@ -212,14 +212,14 @@ private:
 		{
 			std::istringstream iss("");
 			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "Empty input should fail to parse");
+			ASSERT_NO_VALUE(result, "Empty input should fail to parse");
 		}
 
 		// Instructions not sorted by offset should fail
 		{
 			std::istringstream iss(R"({
     "target": "DBC",
-    "module_path": "x.dmf",
+    "module_path": "x.dk",
     "source_positions_type": "LineColumn",
     "functions": {
         "_Zx": {
@@ -234,14 +234,14 @@ private:
     "types": {}
 })");
 			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "Unsorted instr_offsets_to_metadata should fail");
+			ASSERT_NO_VALUE(result, "Unsorted instr_offsets_to_metadata should fail");
 		}
 
 		// Variable initializations not sorted by offset should fail
 		{
 			std::istringstream iss(R"({
 	"target": "DBC",
-	"module_path": "x.dmf",
+	"module_path": "x.dk",
 	"source_positions_type": "LineColumn",
 	"functions": {
 		"_Zx": {
@@ -257,7 +257,7 @@ private:
 	"types": {}
 })");
 			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "Unsorted instr_offsets_to_variable_init should fail");
+			ASSERT_NO_VALUE(result, "Unsorted instr_offsets_to_variable_init should fail");
 		}
 	}
 
@@ -314,9 +314,7 @@ private:
 
 		const auto& foo_var
 			= info.functions.at("_Zfoo").instr_offsets_to_variable_init.at(0).second;
-		assertTrue(
-			foo_var.position.has_value(), "Variable position should be present after resolve"
-		);
+		ASSERT_HAS_VALUE(foo_var.position, "Variable position should be present after resolve");
 		const auto& var_fp = std::get<FilePosition>(foo_var.position->line_col_position);
 		assertTrue(foo_var.name == "local_foo", "Variable name should be preserved");
 		assertTrue(var_fp.file_path == "resolved.duck", "Variable init: file_path incorrect");
@@ -326,7 +324,7 @@ private:
 		const auto& foo_param = info.functions.at("_Zfoo").parameter_indexes_to_metadata.at(0);
 		assertTrue(foo_param.first == 0, "Parameter index should be preserved");
 		assertTrue(foo_param.second.name == "arg_foo", "Parameter name should be preserved");
-		assertTrue(foo_param.second.position.has_value(), "Parameter position should be present");
+		ASSERT_HAS_VALUE(foo_param.second.position, "Parameter position should be present");
 		const auto& param_fp = std::get<FilePosition>(foo_param.second.position->line_col_position);
 		assertTrue(param_fp.file_path == "resolved.duck", "Parameter: file_path incorrect");
 		assertTrue(param_fp.start_line == 10, "Parameter: start_line incorrect");

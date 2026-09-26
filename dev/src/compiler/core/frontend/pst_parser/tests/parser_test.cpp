@@ -1,11 +1,11 @@
-﻿#include <diagnostic_interactive/stable_position.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+﻿#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/pst.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 
+#include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
@@ -31,7 +31,6 @@ public:
 
 	PSTVISITOR_METHOD(Import)
 	PSTVISITOR_METHOD(Using)
-	PSTVISITOR_METHOD(Alias)
 	PSTVISITOR_METHOD(ExprStmt)
 	PSTVISITOR_METHOD(Return)
 	PSTVISITOR_METHOD(Redo)
@@ -122,7 +121,7 @@ private:
 		}
 	}
 
-	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 18); }
+	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 17); }
 
 	void testVisitorAlternative() { testVisitorImpl("snippets/alternative_statements.txt", 1); }
 
@@ -272,7 +271,7 @@ private:
 	}
 
 	void testSimpleExpand() {
-		auto pos      = dia_int::StablePosition::fakePosition();
+		auto pos      = dia::StablePosition::fakePosition();
 		auto contents = "var a: T = 5;";
 		auto pst
 			= pst::PST<>::fromExpand(pos, contents, pst::LangParserContext::programBaseContext());

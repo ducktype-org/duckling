@@ -1,82 +1,42 @@
 #include "memory.hpp"
 
-#if __unix__
-	#include <sys/mman.h>
-	#include <unistd.h>
+#include <base/except/exceptions.hpp>
 
-	#include <base/except/exceptions.hpp>
+#include <os_utils/memory.hpp>
 
-	#include <cstddef>
-	#include <functional>
-	#include <iostream>
+#include <expected>
+#include <fstream>
+#include <utility>
 
 namespace vm::jit::cnp {
-	inline usize getPageSize() {
-		static usize page_size = std::invoke([]() {
-			long result = sysconf(_SC_PAGESIZE);
-			CORE_ASSERT_SYSCALL(result != -1, "couldn't get the page size");
-			return static_cast<usize>(result);
-		});
+	void JitFuncMemory::dump(const char* filename) {
+		std::ofstream file{ filename, std::ios::binary };
 
-		return page_size;
+		for (byte b: span()) file << std::to_underlying(b);
 	}
 
-	JitFuncMemory JitFuncMemory::allocate(usize size) {
-		// Aligns the size to page boundaries
-		// ceil(a / b) = floor((a + b - 1) / b)
-		size = (size + getPageSize() - 1) / getPageSize() * getPageSize();
-		CORE_ASSERT(size % getPageSize() == 0, "should be aligned to page size");
+	std::expected<JitFuncMemory, std::string> JitFuncMemory::allocate(usize size) {
+		return os_utils::getPageSize().and_then(
+			[&](usize page_size) -> std::expected<JitFuncMemory, std::string> {
+				// Aligns the size to page boundaries
+			    // ceil(a / b) = floor((a + b - 1) / b)
+				size = (size + page_size - 1) / page_size * page_size;
+				CORE_ASSERT(size % page_size == 0, "should be aligned to page size");
 
-		int  flags = MAP_ANONYMOUS | MAP_PRIVATE;
-		auto memory
-			= reinterpret_cast<byte*>(mmap(nullptr, size, PROT_READ | PROT_WRITE, flags, -1, 0));
-
-		CORE_ASSERT_SYSCALL(memory != MAP_FAILED, "unable to allocate memory");
-		return JitFuncMemory{ memory, size };
-	}
-
-	void JitFuncMemory::markExecutable() {
-		CORE_ASSERT_SYSCALL(
-			mprotect(addr, size, PROT_READ | PROT_EXEC) == 0, "unable to mark memory as executable"
+				return os_utils::allocatePages(size).and_then(
+					[&](byte* memory) -> std::expected<JitFuncMemory, std::string> {
+						return JitFuncMemory{ memory, size };
+					}
+				);
+			}
 		);
 	}
 
+	std::expected<void, std::string> JitFuncMemory::markExecutable() {
+		return os_utils::markExecutable(addr, size);
+	}
+
 	JitFuncMemory::~JitFuncMemory() noexcept {
-		CORE_ASSERT_SYSCALL_NOEXCEPT(munmap(addr, size) == 0, "unable to unmap memory");
+		if (addr != nullptr) os_utils::freePages(addr, size);
 	}
 }
-
-#elif _WIN32
-	#include <windows.h>
-
-	#include <cstddef>
-	#include <iostream>
-
-namespace vm::jit::cnp {
-	usize getPageSize() {
-		static SYSTEM_INFO system_info = []() {
-			SYSTEM_INFO system_info;
-			GetSystemInfo(&system_info);
-			return system_info;
-		};
-		return system_info.dwPageSize;
-	}
-
-	JitMemory JitMemory::allocate(usize size) {
-		CORE_ASSERT(size % getPageSize() == 0, "should be aligned to page size");
-		int   flags = MAP_ANONYMOUS | MAP_PRIVATE;
-		auto* memory
-			= reinterpret_cast<byte*>(VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_READWRITE););
-
-		return JitMemory{ .memory = memory, .size = size };
-	}
-
-	void JitMemory::mark_executable() {
-		DWORD dummy;
-		VirtualProtect(memory, size, PAGE_EXECUTE_READ, &dummy);
-	}
-
-	void JitMemory::free_jit_memory() { VirtualFree(memory, 0, MEM_RELEASE); }
-
-}
-#endif

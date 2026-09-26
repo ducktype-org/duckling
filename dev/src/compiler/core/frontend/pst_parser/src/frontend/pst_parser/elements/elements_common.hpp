@@ -40,17 +40,24 @@ namespace pst::internal {
 
 		static bool isComma(const TokenStream& state, i64 fwd);
 		static bool isSemicolon(const TokenStream& state, i64 fwd);
+		static bool isSemicolonOrSentinel(const TokenStream& state, i64 fwd);
 		static bool isSentinel(const TokenStream& state, i64 fwd);
 		static bool isCurlyGroup(const TokenStream& state, i64 fwd);
 		static bool isAssignOrSemicolon(const TokenStream& st, i64 fwd);
 		static bool isAssignOrCommaOrEnd(const TokenStream& st, i64 fwd);
-		static bool isAssign(const TokenStream& st, i64 fwd);
 
 		/**
 		 * @brief This is to differentiate blocks from template specification
 		 */
 		static bool isBlockGroup(const TokenStream& st, i64 fwd);
 		static bool isImplementsOrBlockGroup(const TokenStream& st, i64 fwd);
+
+		/**
+		 * @brief Whether the token at @p fwd is the case block of a `match` expression
+		 * (the `match ( ... ) { ... }` token triple). Such a block belongs to the expression
+		 * instead of ending it.
+		 */
+		static bool isMatchBodyBlock(const TokenStream& st, i64 fwd);
 
 		template<lang_def::Keyword key>
 		static bool is(const TokenStream& st, i64 fwd) {
@@ -70,7 +77,9 @@ namespace pst::internal {
 
 		static std::string parameterList() { return "function parameter"; }
 
-		static std::string nestedImportList() { return "nested import"; }
+		static std::string selectorList() { return "selector"; }
+
+		static std::string nestedSelectorList() { return "nested selector"; }
 
 		static std::string flowPatternList() { return "flow pattern"; }
 
@@ -79,8 +88,6 @@ namespace pst::internal {
 		static std::string inheritanceList() { return "inheritance"; }
 
 		static std::string attributeArgList() { return "attribute argument"; }
-
-		static std::string classInitList() { return "initialization"; }
 
 		static std::string callList() { return "call"; }
 

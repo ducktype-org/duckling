@@ -36,7 +36,6 @@ file(GLOB OtherElementsImplementationFiles CONFIGURE_DEPENDS
 	"${PST_SRC}/elements/implementations/expr_holders.cpp"
 	"${PST_SRC}/elements/implementations/meta/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/*.cpp"
-	"${PST_SRC}/elements/implementations/not_statements/import_chains/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/patterns/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/wrapper_elements/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/format_string_sub_elements/*.cpp"
@@ -74,7 +73,7 @@ else() # Unity compilation is disabled by default.
 	message("-- PstParser will NOT use UNITY compilation, compilation will be longer")
 endif()
 
-make_module(PstParser USES DiagnosticInteractive Hashing Lexer UnicodeClassification Printer TPC QueryFramework CompilerTimeStats)
+make_module(PstParser USES Diagnostic Hashing Lexer UnicodeClassification Printer TPC QueryFramework CompilerTimeStats)
 
 duck_add_test(compiler parser tests/parser_test.cpp USES PstParser)
 duck_add_test(compiler parser_builder tests/parser_builder_test.cpp USES PstParser)

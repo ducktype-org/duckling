@@ -13,7 +13,8 @@
 #include <helios/tsh/value_category.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/coercions/errors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -39,15 +40,15 @@ namespace compiler::helios::desugaring {
 			Box<code::Expr>   iterable_hout;
 		};
 
-		tsh::SymbolType<> getU64(query::Context& ctx) {
+		tsh::SymbolType<> getI64(query::Context& ctx) {
 			return tsh::SymbolType<>::withDefaults(
-				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
+				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 		}
 
-		tsh::SymbolType<> getConstU64(query::Context& ctx) {
+		tsh::SymbolType<> getConstI64(query::Context& ctx) {
 			return tsh::SymbolType<>::withDefaults(
-					   tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
+					   tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			)
 			    .withMutability(tsh::Mutability::Immutable);
 		}
@@ -60,16 +61,14 @@ namespace compiler::helios::desugaring {
 			auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst->getExpr() });
 			if (iterable_hout_res->hasFailed()) return {};
 
-			Box<code::Expr>      iterable_hout = iterable_hout_res->valueOrThrow()->clone();
-			tsh::SymbolType<>    iterable_type = iterable_hout->expression_type.getSymbolType();
-			tsh::Kind            kind          = iterable_type.getType().getKind();
-			tsh::PrimaryCategory value_category
-				= iterable_hout->expression_type.getValueCategory().getCategory();
-			bool iterable_is_r_value = value_category == tsh::PrimaryCategory::Literal
-			                        || value_category == tsh::PrimaryCategory::Temporary;
+			Box<code::Expr>   iterable_hout = iterable_hout_res->valueOrThrow()->clone();
+			tsh::SymbolType<> iterable_type = iterable_hout->expression_type.getSymbolType();
+			tsh::Kind         kind          = iterable_type.getType().getKind();
+			bool              iterable_is_r_value
+				= not iterable_hout->expression_type.getValueCategory().canBeAssignedTo();
 
-			if (kind != tsh::Kind::DynamicArray && kind != tsh::Kind::StaticArray) {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+			if (kind != tsh::Kind::StaticArray) {
+				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"`for` statements for non-array type: ", iterable_type.toString()
 					),
@@ -90,20 +89,20 @@ namespace compiler::helios::desugaring {
 			};
 		}
 
-		// var __idx: u64 = 0
+		// var __idx: i64 = 0
 		Box<code::Stmt> buildIndexVar(const ForDesugarCtx& ctx, SymID idx_sym) {
 			return makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
 				makeBox<code::DefaultValueExpr>(
-					ctx.ctx, code::generatedOrigin(), getU64(ctx.ctx).getType()
+					ctx.ctx, code::generatedOrigin(), getI64(ctx.ctx).getType()
 				),
-				getU64(ctx.ctx),
+				getI64(ctx.ctx),
 				idx_sym
 			);
 		}
 
 		// Length is calculated once before the loop.
-		// let __len: u64 = <len __collection> / <constant>
+		// let __len: i64 = <len __collection> / <constant>
 		Box<code::Stmt> buildLengthVar(
 			const ForDesugarCtx& ctx, SymID len_sym, Box<code::Expr> iterable_reusable_opt
 		) {
@@ -127,7 +126,7 @@ namespace compiler::helios::desugaring {
 			);
 
 			return makeBox<code::VariableStmt>(
-				gen, std::move(len_expr), getConstU64(ctx.ctx), len_sym
+				gen, std::move(len_expr), getConstI64(ctx.ctx), len_sym
 			);
 		}
 
@@ -178,17 +177,21 @@ namespace compiler::helios::desugaring {
                 std::move(raw_element),
                 iter_type,
                 iter_pst_pos,
-                [&](query::Context& error_ctx) {
-                    error_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-                        base::strConcat(
-                            "Cannot coerce collection element type '",
-                            element_sym_type.toString(),
-                            "' to iterator type '",
-                            iter_type.toString(),
-                            "'."
-                        ),
-                        iter_pst_pos
-                    ));
+                {},
+                CoercionErrorOverrides{
+						.incompatible_types =
+                        [&](query::Context& error_ctx) {
+                            error_ctx.logInt(makeBox<dia::PlaceholderError>(
+                                base::strConcat(
+                                    "Cannot coerce collection element type '",
+                                    element_sym_type.toString(),
+                                    "' to iterator type '",
+                                    iter_type.toString(),
+                                    "'."
+                                ),
+                                iter_pst_pos
+                            ));
+                        },
                 }
             );
 			if (!element_expr.has_value()) return {};
@@ -209,8 +212,8 @@ namespace compiler::helios::desugaring {
 			auto one = makeBox<code::LiteralNumericExpr>(
 				ctx.ctx,
 				gen,
-				compiler::numeric_value::NumericValue::createOfType<u64>(
-					getU64(ctx.ctx).getType(), 1
+				compiler::numeric_value::NumericValue::createOfType<i64>(
+					getI64(ctx.ctx).getType(), 1
 				)
 					.value()
 			);
@@ -230,10 +233,9 @@ namespace compiler::helios::desugaring {
 		ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
 		auto get_generated_local = [&](base::StrID role, tsh::SymbolType<> type) {
-			// Compose the name with the current scope hash, so we don't have naming collisions
-			// with nested loops.
-			auto unique = for_scope.queryUnstablePerfectHash();
-			auto name   = base::StrID(base::strConcat(role, unique));
+			// No discriminator in the name: it is part of the query key, so anything derived from
+			// the loop (scope id, position, hash) would differ per compilation or move on edits.
+			auto name = role;
 
 			// @TODO: #2799 Reconsider the generated symbols scope.
 			return ctx.query<defgen::QueryGeneratedSymbol>({
@@ -250,8 +252,8 @@ namespace compiler::helios::desugaring {
 		return {
 			.iterator
 			= ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow(),
-			.index  = get_generated_local(base::StrID("__index"), getU64(ctx)),
-			.length = get_generated_local(base::StrID("__len"), getConstU64(ctx)),
+			.index  = get_generated_local(base::StrID("__index"), getI64(ctx)),
+			.length = get_generated_local(base::StrID("__len"), getConstI64(ctx)),
 		};
 	}
 
@@ -291,8 +293,8 @@ namespace compiler::helios::desugaring {
 		if (!while_body.has_value()) return {};
 
 		// Desugar the loop.
-		// var __index : u64 = 0u64;
-		// var __len: const u64 = <constant> / len <iterable_reusable>;
+		// var __index : i64 = 0i64;
+		// var __len: const i64 = <constant> / len <iterable_reusable>;
 		// while(__idx < __len) {
 		// 		let <iter> = <iterable_reusable>[__idx];
 		// 		<body>;

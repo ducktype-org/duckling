@@ -30,9 +30,10 @@ namespace tokenizer {
 		content.emplace(path.getContent());
 	}
 
-	TokenSource::TokenSource(dia_int::StablePosition parent, const std::string_view contents):
+	TokenSource::TokenSource(dia::StablePosition parent, const std::string_view contents):
 		  location(makeBox<dia::MacroLocation>(parent, Ref<TokenSource>(this))) {
-		content.emplace(base::SharedView::copy(contents.data()));
+		content.emplace(base::SharedView::copy(base::RawView{
+			reinterpret_cast<const byte*>(contents.data()), contents.size() }));
 	}
 
 	void TokenSource::countLines() {

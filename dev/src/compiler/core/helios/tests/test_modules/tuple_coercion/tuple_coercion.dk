@@ -1,0 +1,30 @@
+# This test aims to verify that tuples are coerced element by element, and that a tuple written
+# as a literal is coerced in place instead of being materialised first. Coercing the elements of
+# an already materialised tuple cannot lift a value to a type, so the literal path is required for
+# tuples with `type` components.
+
+# A tuple literal returned directly. Only the second element needs a cast.
+fun literal(x: i32) -> (i32, i64) = {
+    return (x, x);
+}
+
+# A tuple literal wrapped in redundant parenthesis. Still coerced in place.
+fun parenthesised(x: i32) -> (i32, i64) = {
+    return ((x, x));
+}
+
+# A tuple literal whose first element is a unit value lifted to a type.
+fun lift_literal(x: i64) -> (type, i64) = {
+    return ((), x);
+}
+
+# A tuple literal whose first element is coerced to a bool with a zero-check.
+fun to_bool(x: i32) -> (bool, i64) = {
+    return (x as bool, x);
+}
+
+# An already built tuple, so the elements have to be read back out of it before being coerced.
+fun materialised(x: i32) -> (i32, i64) = {
+    var tmp = (x, x);
+    return tmp;
+}

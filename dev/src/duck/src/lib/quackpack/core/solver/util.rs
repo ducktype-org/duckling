@@ -1,11 +1,14 @@
 use std::collections::{HashMap, HashSet};
 
+use tracing::debug;
+
+use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
 use crate::quackpack::core::solver::gathering::fetch_types::{
     ManifestsRequest, NotPinnedRequest, PinnedRequest, RequestIdentifier,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{Dependency, Source, Version};
+use crate::quackpack::core::{Dependency, PackageId, Source, Version};
 use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, QuackResultContext};
 
@@ -16,8 +19,8 @@ pub fn get_possible_realizations(
     dependency_description: &Dependency,
     versions_for_identity: &HashMap<FullIdentity, HashSet<Version>>,
     source_to_origin_resolver: &HashMap<Source, FullOrigin>,
-) -> QuackResult<Vec<WithVersion<FullIdentity>>> {
-    let Some(origin) = source_to_origin_resolver.get(dependency_description.source()) else {
+) -> QuackResult<Vec<PackageId>> {
+    let Some(origin) = source_to_origin_resolver.get(&dependency_description.source()) else {
         return Ok(vec![]);
     };
     let identity = FullIdentity::new(dependency_description.name(), *origin);
@@ -28,7 +31,7 @@ pub fn get_possible_realizations(
             return Ok(vec![]);
         }
         let version = versions[0];
-        Ok(vec![WithVersion::new(identity, version)])
+        Ok(vec![PackageId::new(identity, version)])
     } else {
         // Baseline versions are the versions specified in the manifest,
         // with which we want to check the compatibility of the existing packages.
@@ -52,20 +55,19 @@ pub fn get_possible_realizations(
         };
         Ok(good_versions
             .into_iter()
-            .map(|version| WithVersion::new(identity, version))
+            .map(|version| PackageId::new(identity, version))
             .collect())
     }
 }
 
-impl WithVersion<FullIdentity> {
+impl PackageId {
     /// Creates a [`ManifestsRequest`] for a package.
     /// Used for requesting fetches of packages from the previous freeze.
     pub fn create_manifest_request(&self) -> QuackResult<ManifestsRequest> {
-        let identity = self.value();
-        let origin = identity.origin();
+        let origin = self.origin();
         let request_id = RequestIdentifier {
             source: Source::canonical_source_for_origin(origin),
-            name: identity.name(),
+            name: self.name(),
         };
         match origin.kind() {
             FullKind::Registry => Ok(ManifestsRequest::Pinned(PinnedRequest {
@@ -91,29 +93,35 @@ impl WithVersion<FullIdentity> {
     ///  * the packages origin satisfies the source requirements,
     ///  * version requirements are satisfied,
     ///  * package's name coincides with the required name.
-    pub fn still_satisfies_dep(&self, dependency: &Dependency) -> QuackResult<bool> {
+    pub async fn still_satisfies_dep(
+        &self,
+        dependency: &Dependency,
+        fetcher: &Fetcher<'_>,
+    ) -> QuackResult<bool> {
         if !self.check_satisfaction_of_versions(dependency)? {
+            debug!("doesn't satisfy versions");
             return Ok(false);
         }
         let source = dependency.source();
-        if self.value().origin().url() != source.url() || self.value().name() != dependency.name() {
+        if self.url() != source.url() || self.name() != dependency.name() {
+            debug!(other_source = ?source, source.url = %self.url(), source.name = ?self.name(), "sources are different");
             return Ok(false);
         }
-        Ok(self
-            .value()
-            .origin()
-            .kind()
-            .satisfies_source_kind(*source.kind()))
+        self.origin()
+            .satisfies_source(source)
+            .finish_check(fetcher)
+            .await
     }
 
     /// Helper for [`Self::still_satisfies_dep`].
     fn check_satisfaction_of_versions(&self, dependency: &Dependency) -> QuackResult<bool> {
         if dependency.is_pinned() {
-            let required_version = dependency
-                .versions()
-                .first()
-                .context_internal("pinned dependency without specified version")?;
+            let required_version = dependency.versions().first().with_context_internal(|| {
+                format!("pinned dependency without a specified version, {dependency:#?}")
+            })?;
             Ok(self.version() == *required_version)
+        } else if dependency.versions().is_empty() {
+            Ok(true)
         } else {
             Ok(dependency
                 .versions()
@@ -127,11 +135,11 @@ impl WithVersion<RequestIdentifier> {
     pub fn resolve(
         self,
         source_to_origin_resolver: &HashMap<Source, FullOrigin>,
-    ) -> Option<WithVersion<FullIdentity>> {
+    ) -> Option<PackageId> {
         source_to_origin_resolver
             .get(&self.value().source)
             .map(|origin| {
-                WithVersion::new(
+                PackageId::new(
                     FullIdentity::new(self.value().name, *origin),
                     self.version(),
                 )
@@ -148,9 +156,8 @@ mod test {
 
     use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
     use crate::quackpack::core::solver::util::get_possible_realizations;
-    use crate::quackpack::core::{Source, Version, parse_manifest};
+    use crate::quackpack::core::{PackageId, Source, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::quackpack::util::with_version::WithVersion;
     use crate::util::path_ops_ext::PathOpsExt;
     use crate::{DuckContext, StrId};
 
@@ -178,7 +185,7 @@ dependencies:
 "#,
         );
         let ctx = DuckContext::default();
-        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap().0;
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
@@ -205,10 +212,7 @@ dependencies:
             &source_to_origin_resolver,
         )
         .unwrap();
-        assert_eq!(
-            res,
-            vec![WithVersion::new(identity_b, Version::new(1, 0, 3))]
-        );
+        assert_eq!(res, vec![PackageId::new(identity_b, Version::new(1, 0, 3))]);
     }
 
     #[test]
@@ -225,7 +229,7 @@ dependencies:
 "#,
         );
         let ctx = DuckContext::default();
-        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap().0;
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
@@ -255,9 +259,9 @@ dependencies:
         assert_eq!(
             HashSet::from_iter(res),
             HashSet::from([
-                WithVersion::new(identity_b, Version::new(1, 0, 3)),
-                WithVersion::new(identity_b, Version::new(1, 0, 5)),
-                WithVersion::new(identity_b, Version::new(1, 3, 3)),
+                PackageId::new(identity_b, Version::new(1, 0, 3)),
+                PackageId::new(identity_b, Version::new(1, 0, 5)),
+                PackageId::new(identity_b, Version::new(1, 3, 3)),
             ])
         );
     }

@@ -4,12 +4,8 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
-  echo "dependencies:
-    bar:
-      source:
-        path: ../bar
-
-  profiles:
+  @{duck-exe} -C foo add --local ../bar bar
+  echo "profiles:
     dvm:
       dvm-bytecode: true" >> foo/quackconfig.yaml
 Tests:
@@ -19,6 +15,13 @@ Tests:
       build:
         test-cmd: duck -C foo build --profile=dvm
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: running gathering
+            info: starting the solver engine
+            info: starting loading 2 packages
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
-            info: compiling \`foo\`...
+            info: compiling \`foo\`..."

@@ -4,6 +4,7 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -15,7 +16,6 @@ namespace compiler::helios::defgen {
 			auto tuple_interface = tuple_type.getInterface(ctx);
 			// Preamble, get some basic data.
 			using defgen::Constructor;
-			using Variable = GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
 
@@ -37,45 +37,21 @@ namespace compiler::helios::defgen {
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
 
 			// Prepare the body of the constructor.
+			using namespace code::shorthands;
+			const Shorthand s{ ctx };
+
+			// Build the tuple value directly from its parameters, one per field in declaration
+			// order, and return it. Each parameter owns its value and is consumed here, so it is
+			// moved into the aggregate rather than copied.
+			std::vector<Box<code::Expr>> field_values;
+			field_values.reserve(num_fields);
+			for (usize i = 0; i < num_fields; i++)
+				field_values.emplace_back(s.move(s.ident(ctor_decl.parameters.at(i).helios_symbol)));
+
 			std::vector<Box<code::Stmt>> body{};
-
-			// - One declaration, one assignment per field, one return.
-			body.reserve(1 + num_fields + 1);
-
-			// - Declare result variable.
-			const auto  result_symbol_type = ctor_decl.return_type;
-			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
-					 .name                  = base::StrID("__result"),
-					 .generated_symbol_data = Variable{ ctor_symbol, 0, result_symbol_type },
-            });
-			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				result_symbol
-			)));
-
-			// - Assign each field from the corresponding parameter.
-			for (usize i = 0; i < num_fields; i++) {
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::AccessExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-						fields.at(i).getSymbol()
-					),
-					makeBox<code::IdentifierExpr>(
-						ctx, code::generatedOrigin(), ctor_decl.parameters.at(i).helios_symbol
-					)
-				));
-			}
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
-			));
+			body.emplace_back(
+				s.ret(s.createAggregate(ctor_decl.return_type.getType(), std::move(field_values)))
+			);
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(

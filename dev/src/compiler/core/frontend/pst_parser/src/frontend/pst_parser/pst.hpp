@@ -6,20 +6,18 @@
 #include "lang_parser_context.hpp"
 #include "pst_state_forward.hpp"
 
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/stable_position.hpp>
 #include <token_source/source.hpp>
 
 namespace pst {
 	// Used to not include full state definition
 	namespace internal {
 		Box<LangParserState> makeState(
-			tpc::TokenStream&&, Box<LangParserContext>&&, Ref<dia_int::Logger> int_logger
+			tpc::TokenStream&&, Box<LangParserContext>&&, Ref<dia::Logger> int_logger
 		);
-		std::vector<ImportType> extractState(Box<LangParserState>);
-
 		void finalizeParsing(Ref<LangParserState>);
 	}
 
@@ -87,11 +85,6 @@ namespace pst {
 		AccessInternalAnonymous<Element> element;
 
 		/**
-		 * Import entries collected during parsing.
-		 */
-		std::vector<ImportType> imports;
-
-		/**
 		 * Contextual component path/hash of this PST for hierarchical naming.
 		 */
 		hashing::ComponentHash hash_ctx_info;
@@ -122,7 +115,6 @@ namespace pst {
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			internal::finalizeParsing(state_box.refMut());
-			imports = internal::extractState(std::move(state_box));
 
 			// Note: hash calculation should work even on errors in PST.
 			// We let it be calculated to don't worry about hash being unavailable during the
@@ -173,15 +165,34 @@ namespace pst {
 		 */
 		template<typename... Args>
 		explicit PST(
-			dia_int::StablePosition pos,
-			std::string_view        content,
-			Box<LangParserContext>  parsing_ctx,
-			hashing::ComponentHash  hash_ctx = {},
+			dia::StablePosition    pos,
+			std::string_view       content,
+			Box<LangParserContext> parsing_ctx,
+			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
 		) requires PARSE_ABLE<Args...>
 			  : file(tokenizer::makeTokenSource(pos, content)), hash_ctx_info(std::move(hash_ctx)) {
 			if (!file->tokenize()) return;
 			parse(std::move(parsing_ctx), std::forward<Args>(args)...);
+		}
+
+		/**
+		 * @TODO: #3110 this constructor is totally hacked, change it.
+		 * We should somehow be able to share token_source between the original and cloned PST.
+		 *
+		 * Also: add clone dummy parameter here, to make it more explicit.
+		 */
+		explicit PST(
+			Box<Element>                cloned_element,
+			Box<tokenizer::TokenSource> token_source,
+			hashing::ComponentHash      hash_ctx = {}
+		):
+			  file(std::move(token_source)),
+			  element(AccessInternalAnonymous<Element>(std::move(cloned_element))),
+			  hash_ctx_info(std::move(hash_ctx)) {
+			calcElementPathHash();
+			calcHashes();
+			putInPSTHashHashMap();
 		}
 
 		/**
@@ -268,7 +279,7 @@ namespace pst {
 		/** @brief Create a PST from an expanded (macro) text, with correct query dependency
 		 * tracking via unlock(ctx). */
 		static PST fromExpand(
-			dia_int::StablePosition  pos,
+			dia::StablePosition      pos,
 			std::string_view         contents,
 			Box<LangParserContext>&& parsing_ctx,
 			hashing::ComponentHash   hash_ctx = {}
@@ -278,10 +289,10 @@ namespace pst {
 
 		template<typename... Args>
 		static PST fromExpandWithArgs(
-			dia_int::StablePosition pos,
-			std::string_view        contents,
-			Box<LangParserContext>  parsing_ctx,
-			hashing::ComponentHash  hash_ctx = {},
+			dia::StablePosition    pos,
+			std::string_view       contents,
+			Box<LangParserContext> parsing_ctx,
+			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
 		) requires PARSE_ABLE<Args...> {
 			auto out = PST(
@@ -298,25 +309,33 @@ namespace pst {
 			return out;
 		}
 
-		[[nodiscard]]
-		const std::vector<ImportType>& getImports() const {
-			return imports;
+		/**
+		 * @brief Create a PST from a cloned element.
+		 * @TODO: #3110 this constructor is totally hacked, change it.
+		 * We should somehow be able to share token_source between the original and cloned PST.
+		 */
+		static PST fromClone(
+			Box<Element>                cloned_element,
+			Box<tokenizer::TokenSource> token_source,
+			hashing::ComponentHash      hash_ctx
+		) {
+			return PST(std::move(cloned_element), std::move(token_source), std::move(hash_ctx));
 		}
 
 		[[nodiscard]]
-		CRef<dia_int::Logger> getLogger() const {
+		CRef<dia::Logger> getLogger() const {
 			return file->getIntLogger();
 		}
 
 		[[nodiscard]]
-		Ref<dia_int::Logger> getLoggerMut() {
+		Ref<dia::Logger> getLoggerMut() {
 			return file->getIntLogger();
 		}
 
 		[[nodiscard]] bool hasErrors() const { return file->getIntLogger()->hasErrors(); }
 
 		[[nodiscard]]
-		Ref<tokenizer::TokenSource> getFile() const {
+		CRef<tokenizer::TokenSource> getFile() const {
 			return file.ref();
 		}
 
@@ -328,7 +347,6 @@ namespace pst {
 		PST(PST&& other) noexcept:
 			  file(std::move(other.file)),
 			  element(std::move(other.element)),
-			  imports(std::move(other.imports)),
 			  hash_ctx_info(std::move(other.hash_ctx_info)) {}
 
 		/**

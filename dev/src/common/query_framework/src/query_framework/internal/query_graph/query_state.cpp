@@ -1,7 +1,6 @@
 #include "query_state.hpp"
 
 #include <concurrent/base/locks/assert_lock.hpp>
-#include <diagnostic_interactive/logger.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
@@ -13,7 +12,9 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
+#include <diagnostic/logger.hpp>
 #include <logger/logger.hpp>
+#include <query_framework/context/context.hpp>
 #include <query_framework/internal/query_data/query_data.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
@@ -332,12 +333,11 @@ namespace query::internal {
 		if (auto existing = old_to_new.atMaybe(node.q_id); existing.has_value())
 			return { **existing, node.hash };
 
-
 		QueryData dummy_query_data(
 			QueryKind::Dummy,
 			"Dummy from previous graph created during deserialization",
 			{},
-			{ .erase_function = dummyEraseFunction }
+			{ .erase_function = dummyEraseFunction, .disk_erase_function = panicUnwiredErase }
 		);
 		QueryID new_qid = registerQuery(dummy_query_data);
 		old_to_new.put(node.q_id, new_qid);
@@ -461,6 +461,31 @@ namespace query::internal {
 
 			for (const auto& child: *current_deps_holder) stack.push_back(Frame{ .node = child });
 		}
+	}
+
+	u64 QueryState::cleanupOrphanedDiskCaches() {
+		// This mutates on-disk state at shutdown and must not race with query execution.
+		CORE_ASSERT(
+			!Context::isAnyQueryCurrentlyRunning(),
+			"cleanupOrphanedDiskCaches must not run while a query is executing"
+		);
+
+		// If there is no previous compilation, nothing could have been orphaned.
+		if (!previous.has_value()) return 0;
+
+		// Nodes merged into the current graph were erased from the previous graph during merging.
+		// Whatever disk-cacheable nodes remain here were not merged, so they will be dropped from
+		// the serialized graph and their on-disk artifacts would leak. Delete those artifacts,
+		// unless a node with the same identity is still live in the current graph (its file is
+		// still valid — e.g. it was recomputed with an unchanged hash).
+		u64 deleted = 0;
+		for (const auto& [node, _]: *previous->graph.node_deps) {
+			if (!node.q_id.getData().tags.can_be_loaded_from_disk) continue;
+			if (query_graph.node_deps->contains(node)) continue;
+			bool was_deleted = node.q_id.getData().cache_data.disk_erase_function(node.hash.val);
+			deleted += was_deleted;
+		}
+		return deleted;
 	}
 
 	QueryGraph::ReducedGraphData QueryState::reduceOptimizeGraph(const QueryGraph& graph) const {
@@ -1002,21 +1027,21 @@ namespace query::internal {
 
 	Ref<MetadataStorage> QueryState::getMetadataStorageMutable() { return &metadata_storage; }
 
-	void QueryState::logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic) {
+	void QueryState::logDiagnosticForNode(NodeID node_id, Box<dia::MessageBase> diagnostic) {
 		diagnostic_loggers.maybePutAndUpdate(
 			node_id,
-			makeBox<dia_int::Logger>(),
-			[&](Ref<Box<dia_int::Logger>> logger) mutable {
+			makeBox<dia::Logger>(),
+			[&](Ref<Box<dia::Logger>> logger) mutable {
 				logger->refMut()->log(std::move(diagnostic));
 			}
 		);
 	}
 
-	void QueryState::logDiagnosticFromLoggerForNode(NodeID node_id, dia_int::Logger& src_logger) {
+	void QueryState::logDiagnosticFromLoggerForNode(NodeID node_id, dia::Logger& src_logger) {
 		diagnostic_loggers.maybePutAndUpdate(
 			node_id,
-			makeBox<dia_int::Logger>(),
-			[&](Ref<Box<dia_int::Logger>> dst_logger) {
+			makeBox<dia::Logger>(),
+			[&](Ref<Box<dia::Logger>> dst_logger) {
 				dst_logger->refMut()->logFromLogger(src_logger);
 			}
 		);
@@ -1024,12 +1049,11 @@ namespace query::internal {
 
 	void QueryState::clearDiagnosticForNode(NodeID node_id) { diagnostic_loggers.erase(node_id); }
 
-	CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> QueryState::getDiagnosticLoggers(
-	) const {
+	CRef<concurrent::ConHashMap<NodeID, Box<dia::Logger>>> QueryState::getDiagnosticLoggers() const {
 		return &diagnostic_loggers;
 	}
 
-	base::Optional<CRef<dia_int::Logger>> QueryState::getDiagnosticForNode(NodeID node_id) const {
+	base::Optional<CRef<dia::Logger>> QueryState::getDiagnosticForNode(NodeID node_id) const {
 		if (auto it = diagnostic_loggers.atMaybe(node_id); it.has_value()) return it.value()->ref();
 		return {};
 	}

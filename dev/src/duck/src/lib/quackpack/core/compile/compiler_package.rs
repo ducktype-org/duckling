@@ -16,11 +16,11 @@ pub enum PackageType {
 }
 
 impl PackageType {
-    /// *deepen* `self`, as in „get type for my dependencies”.
+    /// *deepen* `self`, as in “get type for my dependencies”.
     ///
     /// This is mainly used for printing errors, so we can distinguish between transitive and direct
     /// dependencies.
-    pub fn deepen(&self) -> Self {
+    pub fn deepen(self) -> Self {
         match self {
             Self::RootPackage => Self::DirectDependency,
             Self::DirectDependency => Self::TransitiveDependency,
@@ -120,5 +120,10 @@ impl CompilerPackage {
     /// Get the [`PackageType`] of this package.
     pub fn package_type(&self) -> PackageType {
         self.pkg_type
+    }
+
+    /// Decompose this [`CompilerPackage`] into parts.
+    pub fn decompose(self) -> (AnyPackage, HashSet<FeatureName>, PackageType) {
+        (self.package, self.enabled_features, self.pkg_type)
     }
 }

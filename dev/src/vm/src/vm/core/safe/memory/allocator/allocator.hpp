@@ -4,12 +4,15 @@
 #include <base/types/ints.hpp>
 
 namespace vm {
+	template<typename EntryT>
 	struct BlockData;
 
-	class AllocatorABC {
+	template<typename EntryT>
+	class IAllocator {
 	public:
-		virtual ~AllocatorABC()                 = default;
-		virtual void deallocate(Ref<BlockData>) = 0;
+		virtual ~IAllocator()                           = default;
+		virtual void deallocate(Ref<BlockData<EntryT>>) = 0;
 	};
 
+	using AllocatorABC = IAllocator<byte>;
 }

@@ -28,21 +28,21 @@
 namespace vm::low {
 	enum class MicroOpcode : u64 {
 #define HANDLE_MICRO_INSTR(opcode) opcode,
-#include "micro_instruction_definitions.hpp"
+#include "micro_instruction_definitions.def.hpp"
 #undef HANDLE_MICRO_INSTR
 	};
 
 	constexpr usize microInstrCount() {
 		usize count = 0;
 #define HANDLE_MICRO_INSTR(instr) ++count;
-#include "micro_instruction_definitions.hpp"
+#include "micro_instruction_definitions.def.hpp"
 #undef HANDLE_MICRO_INSTR
 		return count;
 	}
 
 	constexpr std::array<std::string_view, microInstrCount()> OPCODE_NAMES = {
 #define HANDLE_MICRO_INSTR(opcode) #opcode,
-#include "micro_instruction_definitions.hpp"
+#include "micro_instruction_definitions.def.hpp"
 #undef HANDLE_MICRO_INSTR
 	};
 
@@ -59,7 +59,7 @@ namespace vm::low {
 		usize count = 0;
 #define HANDLE_MICRO_INSTR(opcode) \
 	if constexpr ((std::string_view(#opcode).starts_with("ext_"))) { ++count; }
-#include "micro_instruction_definitions.hpp"
+#include "micro_instruction_definitions.def.hpp"
 #undef HANDLE_MICRO_INSTR
 		return count;
 	}
@@ -96,4 +96,8 @@ namespace vm::low {
 	constexpr bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode) {
 		return std::ranges::find(NON_EXEC_OPCODES, opcode) != NON_EXEC_OPCODES.end();
 	}
+
+	template<vm::low::MicroOpcode opcode>
+	constexpr bool IS_OPCODE_RETURNING
+		= opcode == MicroOpcode::ret || opcode == MicroOpcode::ret_tailcall_func;
 }

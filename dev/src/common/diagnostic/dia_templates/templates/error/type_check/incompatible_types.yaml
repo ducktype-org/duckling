@@ -1,0 +1,48 @@
+metadata:
+  type: "error"
+  family: "type_check"
+  name: "incompatible_types"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  given_type:
+    description: "The given type."
+  expected_type:
+    description: "The expected type."
+  code:
+    description: "The code snippet where the error occurred."
+  code_location:
+    description: "The location of the code snippet."
+
+header_message:
+  - "Type `"
+  - param: "given_type"
+  - "` cannot be converted to type `"
+  - param: "expected_type"
+  - "`."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+
+pointer_messages:
+  given:
+    priority: 1
+    type: "error"
+    content: 
+      - "Given `"
+      - param: "given_type"
+      - '`'
+  expected:
+    priority: 1
+    type: "error"
+    content: 
+      - "Expects `"
+      - param: "expected_type"
+      - '`'

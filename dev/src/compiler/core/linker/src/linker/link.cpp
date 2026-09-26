@@ -1,11 +1,11 @@
 
 #include "link.hpp"
 
-#include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
 #include <global_state/global_logger.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/placeholder.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <system_command/system_command.hpp>
@@ -49,7 +49,7 @@ namespace compiler::linker {
 
 		if (linking_result.isBad()) {
 			if ((not query::Context::areWeInsideQuery()) and global_state::hasGlobalLogger()) {
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+				global_state::getGlobalLogger()->log(makeBox<dia::PlaceholderError>(
 					"Linking of the final executable failed. See the linker output above. ",
 					"The common reasons for this error may include missing main function "
 					"(temporary "

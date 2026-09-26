@@ -1,4 +1,5 @@
 //! Serde schemas used to (de-)serialize manifests.
+pub mod config;
 pub mod manifest;
 pub mod registry;
 

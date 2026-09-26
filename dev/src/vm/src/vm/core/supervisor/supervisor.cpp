@@ -1,9 +1,14 @@
 #include "supervisor.hpp"
 
+#include <base/extend_cpp/variant_match.hpp>
+
+#include <vm/api/data/api_error.hpp>
+#include <vm/api/data/status.hpp>
 #include <vm/core/fast/fast_vmprocess.hpp>
 #include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 
+#include <iostream>
 #include <mutex>
 
 namespace vm {
@@ -19,39 +24,52 @@ namespace vm {
 	}
 
 	std::expected<PID, api::ApiError> Supervisor::newProcess(const api::ProcessConfig& options) {
-		std::unique_lock lock(rw_process_table);
-		PID              pid = PID::fromU64(next_pid++);
-		switch (options.mode) {
-		case api::ProcessMode::Safe:
-			process_table.emplace(
-				pid,
-				Box<IVMProcess>::fromPointer(
-					new SafeVMProcess(pid, options.enable_deadlock_detection)
-				)
-			);
-			break;
-		case api::ProcessMode::Fast:
-			process_table.emplace(pid, Box<IVMProcess>::fromPointer(new fast::FastVMProcess(pid)));
-			break;
+		// Reserve the PID under the lock, but build the process outside of it, since constructing a
+		// VMProcess is expensive (loader, compiler, memory, the main VMThread) and holding
+		// `rw_process_table` blocks every other API call.
+		const PID pid = [&] {
+			std::unique_lock lock(rw_process_table);
+			return PID::fromU64(next_pid++);
+		}();
+
+		Box<IVMProcess> process = [&] {
+			switch (options.mode) {
+			case api::ProcessMode::Safe:
+				return Box<IVMProcess>::fromPointer(
+					new SafeVMProcess(pid, options.enable_deadlock_detection, options.enable_jit)
+				);
+			case api::ProcessMode::Fast:
+				return Box<IVMProcess>::fromPointer(new fast::FastVMProcess(pid));
+			}
+			CORE_UNREACHABLE();
+		}();
+
+		{
+			std::unique_lock lock(rw_process_table);
+			process_table.emplace(pid, std::move(process));
 		}
 		return pid;
 	}
 
 	std::expected<api::Response, api::ApiError> Supervisor::doRequest(
-		const api::SupervisorRequest& request
+		const PID pid, const api::RequestVariant& request
 	) {
-		variant_match(request.request) {
+		variant_match(request) {
 			variant_case_novalue(api::request::DeinitAndValidate) {
-				auto res = getProcess(request.pid).and_then([](Ref<IVMProcess> process) {
+				auto res = getProcess(pid).and_then([](Ref<IVMProcess> process) {
 					return process->doRequest(api::request::DeinitAndValidate{});
 				});
-				std::unique_lock lock(rw_process_table);
-				process_table.erase(request.pid);
+
+				// If the deinit was successful or it ran but a global destructor panicked, we
+				// destroy the process here. Otherwise, if it was refused because the process is
+				// still executing, we leave it and let someone kill by hand.
+				if (res.has_value() || v_matches(res.error(), api::Panicked))
+					(void) killProcess(pid);
 				return res;
 			}
 			variant_default {
-				return getProcess(request.pid).and_then([&request](Ref<IVMProcess> process) {
-					return process->doRequest(request.request).transform_error([](const auto& x) {
+				return getProcess(pid).and_then([&request](Ref<IVMProcess> process) {
+					return process->doRequest(request).transform_error([](const auto& x) {
 						return api::ApiError{ x };
 					});
 				});
@@ -61,17 +79,33 @@ namespace vm {
 	}
 
 	std::expected<void, api::ApiError> Supervisor::killProcess(PID pid) {
-		std::unique_lock lock(rw_process_table);
-		if (!process_table.contains(pid)) return std::unexpected(api::ProcessNotFound{});
+		// We have to destroy the process after releasing `rw_process_table`, since
+		// destroying a process destroys its status Emitter (which takes the Emitter
+		// lock), and the event-emission takes the locks in the opposite order (Emitter
+		// lock -> listener -> API call -> rw_process_table), so destroying while holding
+		// `rw_process_table` can deadlock.
+		base::MBox<IVMProcess> dying_process;
+		{
+			std::unique_lock lock(rw_process_table);
+			auto             it = process_table.find(pid);
+			if (it == process_table.end()) return std::unexpected(api::ProcessNotFound{});
 
-		process_table.erase(pid);
+			dying_process = std::move(it->second);
+			process_table.erase(it);
+		}
 		return {};
 	}
 
 	Supervisor::~Supervisor() {
-		// @TODO: #1354 add asserts here, that the processes are stopped and if not then cerr the
-		// warnings about it.
-		for (auto& [pid, proc]: process_table)
-			(void) proc->doRequest(api::request::DeinitAndValidate{});
+		// Every process left here is force killed.
+		for (auto& [pid, proc]: process_table) {
+			auto status = proc->doRequest(api::request::StatusRequest{});
+			if (status)
+				std::cerr << "Supervisor destroyed while process " << pid
+						  << " still exists. Processes should be deinitialized before "
+							 "the Supervisor is destroyed.\n";
+			(void) proc->doRequest(api::request::Stop{});
+		}
+		process_table.clear();
 	}
 }

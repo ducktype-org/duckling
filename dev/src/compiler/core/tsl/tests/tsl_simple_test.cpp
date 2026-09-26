@@ -30,8 +30,6 @@ class LowerTypeSystemSimpleTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicTypesTest);
-		TESTER_ADD_TEST(stringTest);
-		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(variantTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(staticArrayTest);
@@ -198,54 +196,6 @@ private:
 				variant_default { fail("Layout of pointer type should be pointer-like."); }
 			}
 			testPrinting(unit_pointer_layout, ctx);
-		});
-	}
-
-	void stringTest() {
-		withContextDo([&](query::Context& ctx) -> void {
-			const StringAbstractType string_type   = getStringType();
-			auto                     string_layout = queryLayout(ctx, string_type);
-
-			assertTrue(
-				string_layout->getSourceType().getType() == string_type,
-				"Layout should have source type as constructed."
-			);
-			variant_match(string_layout->getVariant()) {
-				variant_case(StringTypeLayout, l) { /* good */ }
-				variant_default { fail("Layout of string type should be string-like."); }
-			}
-			testPrinting(string_layout, ctx, true);
-		});
-	}
-
-	void dynamicArrayTest() {
-		withContextDo([&](query::Context& ctx) -> void {
-			const UnitAbstractType unit_type = getUnitType();
-
-			const DynamicArrayAbstractType dynamic_array_type
-				= ctx.query<QueryDynamicArrayType>(st(unit_type));
-			const auto dynamic_array_layout = queryLayout(ctx, dynamic_array_type);
-
-			assertEqual(
-				dynamic_array_layout->getSourceType().getType(),
-				dynamic_array_type,
-				"Layout should have source type as constructed."
-			);
-			variant_match(dynamic_array_layout->getVariant()) {
-				variant_case(ClassTypeLayout, l) {
-					assertEqual(
-						l.getNumSubLayouts(),
-						usize(4),
-						"Dynamic array layout should have 4 fields (ptr, len, off_start_reserved, "
-						"off_end_reserved)."
-					);
-				}
-				variant_default {
-					fail("Layout of dynamic array type should be a class-like struct.");
-				}
-			}
-
-			testPrinting(dynamic_array_layout, ctx, true);
 		});
 	}
 

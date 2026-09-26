@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <utility>
 
@@ -44,7 +45,10 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 		stored_id          = content.view().stdString();
 	}
 
-	if (has_file && stored_id == BUILD_ID) return;
+	if (has_file && stored_id == BUILD_ID) {
+		flush_build_id = false;
+		return;
+	}
 
 	if (has_file) {
 		CORE_USER_LOG(
@@ -90,9 +94,11 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 }
 
 void artifacts::ArtifactCollection::writeBuildIdFile() {
-	const auto name     = base::StrID(std::string(BUILD_ID_FILE));
-	const auto artifact = fileArtifactAtOrNewNoLock(name);
-	artifact.file.writeToFile(BUILD_ID);
+	if (flush_build_id) {
+		const auto name     = base::StrID(std::string(BUILD_ID_FILE));
+		const auto artifact = fileArtifactAtOrNewNoLock(name);
+		artifact.file.writeToFile(BUILD_ID);
+	}
 }
 
 void artifacts::ArtifactCollection::flush() {

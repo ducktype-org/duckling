@@ -1,5 +1,7 @@
 #include "type_validator.hpp"
 
+#include <base/config/target_info.hpp>
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -27,7 +29,7 @@ namespace {
  * @note This function causes a dangling reference warning, which I strongly believe is a false
  * positive, thus the pragmas.
  */
-#if defined(__GNUG__) && !defined(__clang__)
+#if BASE_TARGET_COMPILER_GCC
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wdangling-reference"
 #endif
@@ -44,7 +46,7 @@ namespace {
 			return *specific_type;
 		throw error_factory();
 	}
-#if defined(__GNUG__) && !defined(__clang__)
+#if BASE_TARGET_COMPILER_GCC
 	#pragma GCC diagnostic pop
 #endif
 
@@ -316,6 +318,12 @@ namespace {
 				if (!tod_types.contains(pointer.inner))
 					throw UnknownSubtypeError(pointer, pointer.inner);
 			}
+			variant_case(CPointerType, cpointer) {
+				if (cpointer.inner.has_value()) {
+					if (!tod_types.contains(*cpointer.inner))
+						throw UnknownSubtypeError(cpointer, *cpointer.inner);
+				}
+			}
 			variant_case(FixedSizeTableType, fixed_table) {
 				if (!tod_types.contains(fixed_table.inner))
 					throw UnknownSubtypeError(fixed_table, fixed_table.inner);
@@ -432,6 +440,9 @@ namespace {
 			variant_match(type) {
 				variant_case(PrimitiveType, primitive) {}
 				variant_case(PointerType, pointer) {}
+				// A C pointer never recurses into its pointee: self-referential C structs and
+				// pointers to forward-declared (opaque) types are legal.
+				variant_case(CPointerType, cpointer) {}
 				variant_case(FixedSizeTableType, fixed_table) {
 					if (!tod_types.contains(fixed_table.inner))
 						throw UnknownSubtypeError(fixed_table, fixed_table.inner);

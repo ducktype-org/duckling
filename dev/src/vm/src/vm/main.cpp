@@ -1,6 +1,7 @@
 #include "cli.hpp"
 #include "server.hpp"
-#include "vm_repl.hpp"
+
+#include <version/version.hpp>
 
 #include <clah/clah.hpp>
 #include <clah/clah_class.hpp>
@@ -15,35 +16,51 @@
 #include <vm/debugger/UI/CLI/cli.hpp>
 #include <vm/debugger/UI/debug_adapter/debug_adapter.hpp>
 
+#include <array>
 #include <exception>
 #include <expected>
 
-void showVersion() {
-	std::cout << "VM version 0.0.\n";
-	std::cout << "Configuration: \n";
-	std::cout << vm::getInstructionConfig() << '\n';
-}
+/**
+ * @brief The version facts only duckc can report.
+ */
+const std::array<version::ExtraField, 2> EXTRA_VERSION_FIELDS{
+	version::ExtraField{ "dispatch", vm::getInstructionConfig() },
+#ifdef ENABLE_JIT
+	version::ExtraField{ "JIT", "enabled" },
+#else
+	version::ExtraField{ "JIT", "disabled" },
+#endif
+};
+
 
 clah::Clah getVmClah() {
 	return clah::Clah("VM", "The Duckling Virtual Machine.")
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
-	             .addShortDesc("Shows version and config")
+	             .addShortDesc("Print version and exit")
 	             .build())
-	    .setPreHandler([](const clah::ParsingResult& options) {
-			if (options.isFlag("version")) {
-				showVersion();
-				throw clah::exceptions::SuccessExitException(options);
-			}
-		})
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addLongName("version-verbose")
+	             .addShortDesc("Print version together with build information and exit")
+	             .build())
 #ifdef BUILD_TYPE_DEV_DEBUG
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('d')
 	             .addLongName("debug-logs")
 	             .addShortDesc("Enables DVM debug logs.")
 	             .build())
+#endif
 	    .setPreHandler([](const clah::ParsingResult& options) {
+			if (options.isFlag("version-verbose")) {
+				std::cout << version::renderVerbose("DVM", EXTRA_VERSION_FIELDS) << '\n';
+				throw clah::exceptions::SuccessExitException(options);
+			}
+			if (options.isFlag("version")) {
+				std::cout << version::renderShort("DVM") << '\n';
+				throw clah::exceptions::SuccessExitException(options);
+			}
+#ifdef BUILD_TYPE_DEV_DEBUG
 			if (options.isFlag("debug-logs")) {
 				std::cerr << "Debug logs enabled.\n";
 				logger::enable_dev_logs = true;
@@ -51,8 +68,8 @@ clah::Clah getVmClah() {
 				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
 				logger::setDevLogOutputStreamCurrentDate();
 			}
-		})
 #endif
+		})
 	    .addSubcommand(clah::Clah("server", "Launch DVM as a http server.")
 	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
 	                                .addShortName('p')
@@ -103,19 +120,35 @@ clah::Clah getVmClah() {
 							 "Fast mode for the VM, which does not perform certain runtime checks."
 						 )
 	                     .build())
+#ifndef ENABLE_JIT
+				// JIT and debugger are conflicting due to common in-place modification of the
+	            // executed bytecode (JIT entrypoint patching vs breakpoints), see #3585.
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addShortName('d')
 	                     .addLongName("debug")
 	                     .addShortDesc("Start the VM CLI debugger")
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("args"))
+#else
+				.add(clah::ParamBuilder::ofValue(clah::CategoryParser::make(
+													 "on|off",
+													 std::vector<std::string>{ "on", "off" }
+												 ))
+	                     .addLongName("jit")
+	                     .addShortDesc("Enable or disable the JIT at runtime (default: on).")
+	                     .build())
+#endif  // ENABLE_JIT
+				.add(clah::ParamBuilder::ofValue(
+						 clah::StringListParser::make("args", clah::StringParser::make())
+				)
 	                     .addShortDesc(
 							 R"(Program arguments. To pass arguments such as "hello -n 5", enter them as a comma-separated list: "hello,-n,5".)"
 						 )
 	                     .addShortName('c')
 	                     .addLongName("args")
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("libs"))
+				.add(clah::ParamBuilder::ofValue(
+						 clah::StringListParser::make("libs", clah::StringParser::make())
+				)
 	                     .addShortDesc(
 							 R"(Shared libraries for `ffi function` symbol resolution, as a comma-separated list. A bare name (e.g. "libm.so.6") is searched in the system library paths, a path is loaded as given.)"
 						 )
@@ -139,47 +172,61 @@ clah::Clah getVmClah() {
 					vm::api::ProcessConfig process_options{};
 					if (options.isFlag("fast-mode"))
 						process_options.mode = vm::api::ProcessMode::Fast;
+#ifdef ENABLE_JIT
+					process_options.enable_jit
+						= options.getValue<std::string>("jit").copyValueOr("on") == "on";
+#endif
 
 					if (options.isFlag("debug")) {
-						auto cli = vm::debugger::cli::CLIDebugger();
+						auto debugger = vm::debugger::cli::CLIDebugger();
 
-						auto result
-							= source_files.size() ? cli.load(source_files[0]) : cli.loadDefault();
+						auto result = source_files.size() ? debugger.load(source_files[0])
+			                                              : debugger.loadDefault();
 						if (!result) {
+							std::string error_string;
+							variant_match(result.error()) {
+								variant_case(vm::api::ApiError, error) {
+									error_string = vm::api::errorToString(error);
+								}
+								variant_case(std::string, error) { error_string = error; }
+							}
+
 							printer::StreamPrinter::print({
 								{ "[ERROR] ", printer::Color::Red },
 								{ "Loading file failed with message:\n", printer::Color::Default },
-								{ vm::api::errorToString(result.error()), printer::Color::Default },
+								{ error_string, printer::Color::Default },
 								{ "\nAborting\n", printer::Color::Default },
 							});
 
 							return 1;
 						}
 
-						cli.setProgramArguments(args);
+						debugger.setProgramArguments(args);
 
-						return cli.run();
+						return debugger.run();
 					} else
 						return cli(source_files, args, process_options, ffi_libs);
 				})
 		)
+#ifndef ENABLE_JIT
 	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();
 							   vm::debugger::debug_adapter::DebugAdapter::get().run();
 							   return 0;
 						   }))
-	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
-	                       .setHandler([](const clah::ParsingResult&) -> int {
-							   vm::Supervisor::get();
-							   DuckVMRepl::get().run();
-							   return 0;
-						   }));
+#endif  // ENABLE_JIT
+		;
 }
 
 int main(int argc, const char** argv) {
 	init::InitObject _;
 	auto             clah = getVmClah();
+
+	// NOLINTNEXTLINE(concurrency-mt-unsafe) - runs before any thread is spawned
+	if (const char* unbuffered = std::getenv("DUCK_VM_UNBUFFERED")) {
+		if (std::string_view(unbuffered) == "1") std::cout << std::unitbuf;
+	}
 
 	try {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);

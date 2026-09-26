@@ -2,15 +2,39 @@ import os
 import sys
 import json
 import subprocess
+from pathlib import Path
 
 class DAPTestClient:
-    def __init__(self, program_name: str):
-        if len(sys.argv) < 2:
-            sys.stderr.write("ERROR: Build directory path was not provided as an argument!\n")
+    def __init__(self):
+        if len(sys.argv) < 3:
+            sys.stderr.write(
+                "ERROR: usage: dap_runner.py <build_dir> <program> [scenario]\n"
+            )
             sys.exit(1)
 
-        build_dir = sys.argv[1]
+        build_dir    = sys.argv[1]
+        program_name = sys.argv[2]
+
         vm_binary_path = os.path.join(build_dir, "bin", "VM")
+        duckc_path = os.path.join(build_dir, "bin", "duckc")
+
+        if program_name.endswith(".dk"):
+            path_obj = Path(program_name)
+            package_dir = path_obj.parent
+
+            command = [
+                duckc_path,
+                "compile_package",
+                "-n", f"main",
+                ".",
+                "--dvm-backend"
+            ]
+
+            print(f"[TEST SETUP] Compiling {program_name} using duckc...")
+            result = subprocess.run(command, capture_output=True, text=True, cwd=str(package_dir))
+            if result.returncode != 0:
+                print(f"[TEST ERROR] Compilation failed:\n{result.stderr}")
+                sys.exit(1)
 
         self.current_seq = 1
         self.program_name = program_name
@@ -23,10 +47,19 @@ class DAPTestClient:
             text=False,  
             bufsize=0    
         )
+
     def start_session(self):
         self.send_initialize()
         self.send_configuration_done()
         self.send_launch()
+
+    @property
+    def scenario(self) -> str:
+        """The case's scenario name, for runners that branch on it."""
+        if len(sys.argv) < 4:
+            sys.stderr.write("ERROR: Missing scenario argument\n")
+            sys.exit(1)
+        return sys.argv[3]
 
     def send_request(self, command: str, arguments: dict = None) -> int:
         if arguments is None:
@@ -77,6 +110,15 @@ class DAPTestClient:
     
     def send_evaluate(self, number) -> int:
         return self.send_request("evaluate", {"expression": f"{number}", "context": "repl"})
+
+    def send_stack_trace(self, thread_id: int = 0, start_frame: int = 0, levels: int = 0) -> int:
+        return self.send_request("stackTrace", {"threadId": thread_id, "startFrame": start_frame, "levels": levels})
+
+    def send_scopes(self, frame_id: int) -> int:
+        return self.send_request("scopes", {"frameId": frame_id})
+
+    def send_variables(self, var_ref: int) -> int:
+        return self.send_request("variables", {"variablesReference": var_ref})
 
     def read_message(self) -> dict or None:
         content_length = 0
@@ -182,6 +224,11 @@ class DAPTestClient:
                     for expected_out in pending_outputs[:]:
                         if expected_out in output_text:
                             pending_outputs.remove(expected_out)
+
+    def get_frames(self):
+        st_seq = self.send_stack_trace(thread_id=0, start_frame=0, levels=1)
+        st_resp = self.wait_for_response(st_seq, "Getting stack trace", expect_success=True)
+        return st_resp.get("body", {}).get("stackFrames", [])
 
     def print_history(self):
         print("\n".join(self.full_output_history))

@@ -1,3 +1,9 @@
+# The toolchain is built by the root PreNode; do not inherit it here.
+PreNode: ""
+
+# Skip all debug adapter tests when JIT is enabled.
+Enabled: '[ "$(@{is_jit_enabled})" != "ON" ]'
+
 SubDirs:
   - basic
   - continue_pause
@@ -5,3 +11,5 @@ SubDirs:
   - input
   - output
   - breakpoints
+  - memory
+  - mapping

@@ -16,7 +16,7 @@ namespace vm::loader::compiler::safe {
 		/**
 		 * @brief Stores the shared, global state required for the entire compilation process.
 		 */
-		struct SafeProgramCompilationContext {
+		struct SafeProgramCompilationContext final {
 			/**
 			 * @brief A mapping from a method's string name (`StrID`) to its unique numeric ID.
 			 * This is a crucial lookup table used during the instruction lowering phase to
@@ -41,8 +41,13 @@ namespace vm::loader::compiler::safe {
 		friend struct detail::LowerArgumentImpl;
 
 	public:
-		SafeCompiler(const code::ValidProgram& high_program):
-			  vm::loader::compiler::IVMCompiler(high_program) {
+		SafeCompiler(const code::ValidProgram& high_program, [[maybe_unused]] bool enable_jit = true):
+			  vm::loader::compiler::IVMCompiler(high_program)
+#ifdef ENABLE_JIT
+			  ,
+			  jit_enabled(enable_jit)
+#endif
+		{
 			recompile();
 		}
 
@@ -54,6 +59,17 @@ namespace vm::loader::compiler::safe {
 
 		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
 			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
+
+		/**
+		 * @brief Sets breakpoint at given FatBytecode instruction
+		 * @note this has to be in compiler. Otherwise we couldn't modify the low program
+		 * @note microbytecode of the function doesn't have to be inside the compiler
+		 * @returns nothing on success, or a message describing why the breakpoint could not be set
+		 */
+		[[nodiscard]]
+		std::expected<void, std::string> setBreakpoint(
+			const base::StrID& func_name, usize idx, bool enable
+		);
 
 	protected:
 		[[nodiscard]] ProgramSize getCurrentProgramSize() const override;
@@ -72,6 +88,14 @@ namespace vm::loader::compiler::safe {
 		 */
 		vm::low::LowVMProgram low_program;
 
+#ifdef ENABLE_JIT
+		/**
+		 * @brief Whether to build JIT data (CFGs, loop detection) and patch in JIT entrypoint
+		 * opcodes for newly compiled functions. Disabled by `--jit off`.
+		 */
+		bool jit_enabled = true;
+#endif
+
 		detail::SafeProgramCompilationContext program_ctx;
 
 		/**
@@ -87,13 +111,20 @@ namespace vm::loader::compiler::safe {
 		);
 
 		/**
+		 * @brief Everything `lowerInstructions` produces for a single function.
+		 */
+		struct LoweredFunction {
+			low::MicroBytecode                                  bytecode;
+			std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
+		};
+
+		/**
 		 * @brief Lowers instructions to micro-bytecode. Iterates through the instructions and
 		 * translates them into a sequence of `MicroInstruction`s.
-		 * @return The converted list of instructions as well as the mapping from instruction
-		 * indices to instruction ranges in micro-bytecode.
+		 * @return The converted list of instructions and the mapping from instruction indices to
+		 * instruction ranges in micro-bytecode.
 		 */
-
-		std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> lowerInstructions(
+		LoweredFunction lowerInstructions(
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		);
 

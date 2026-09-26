@@ -2,300 +2,211 @@
 
 #include "../mir_structure/mir_structure.hpp"
 
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <mir/mir_lowering/mir_liveness.hpp>
+
+#include <algorithm>
+#include <set>
+
 namespace compiler::mir {
 
-	ScopeRef lca(ScopeRef a, ScopeRef b) {
-		auto depth_a = a->depth;
-		auto depth_b = b->depth;
+	namespace {
+		/**
+		 * @brief The new state of every lifetime flag local that @p instr changes. `true` means
+		 * the local owns a value from here on, `false` that it was moved out of.
+		 */
+		std::vector<std::pair<MIRLocalRef, bool>> lifetimeFlagWrites(
+			const Instruction& instr, const base::Map<MIRLocalRef, MIRLocalRef>& flag_of
+		) {
+			std::vector<std::pair<MIRLocalRef, bool>> writes;
 
-		while (depth_a > depth_b) {
-			a = a->parent.toOpt().value();
-			depth_a--;
-		}
-		while (depth_b > depth_a) {
-			b = b->parent.toOpt().value();
-			depth_b--;
-		}
-		while (a != b) {
-			a = a->parent.toOpt().value();
-			b = b->parent.toOpt().value();
-		}
+			for (const auto& flag: instr.flags) {
+				bool alive = false;
+				switch (flag.flag) {
+					using enum OperationFlag::Flag;
+				case Construct:
+				case Reinit:
+					alive = true;
+					break;
+				case Move:
+					alive = false;
+					break;
+				default:
+					continue;
+				}
 
-		return a;
-	}
+				auto flag_local = flag_of.atMaybe(flag.local);
+				if (flag_local.empty()) continue;
 
-	/**
-	 * @brief Returns list of scopes that lifetime ends between two consecutive instruction,
-	 * first from @p begin scope, second from @p end scope.
-	 * In general its the list of scopes between @p begin and lca(begin, end).
-	 *
-	 * @todo this is a general implementation that always works.
-	 * In the future we should find some invariant about two consecutive scopes
-	 * that we validate.
-	 *
-	 * @param begin
-	 * @param end
-	 * @return std::vector<ScopeRef>
-	 */
-	std::vector<ScopeRef> getEndingScopes(ScopeRef begin, ScopeRef end) {
-		std::vector<ScopeRef> result;
-
-		auto ancestor = lca(begin, end);
-		while (begin != ancestor) {
-			result.push_back(begin);
-			begin = begin->parent.toOpt().value();
-		}
-
-		return result;
-	}
-
-	/**
-	 * @brief Get the starting scopes between two consecutive instructions.
-	 *
-	 * The order of scopes is the same as the the order of variables they
-	 * would create (i.e. the first scope in the list is the one that creates variables that are
-	 * created first).
-	 */
-	std::vector<ScopeRef> getStartingScopes(ScopeRef begin, ScopeRef end) {
-		return getEndingScopes(end, begin) | std::views::reverse | std::ranges::to<std::vector>();
-	}
-
-	void AddDestructorsPass::run(query::Context&, Function& function, const LifetimePassArgs& args) {
-		// Idea of implementation:
-		// For each block we iterate over instructions and add destructors after each instruction
-		// (often 0 of them), based on scopes that ends there.
-		//
-		// The pass is divided into two steps:
-		// 1) Iterate through all instructions in the block. If moving from one instruction to the
-		// 	  next crosses a scope boundary, we insert the necessary destructors between them.
-		// 2) Handling terminators is more complex because they can have multiple successors with
-		//	  different ending scopes. The general logic is to insert a new intermediate block for
-		// 	  every path that crosses a scope boundary. This block contains only the destructors
-		//    specific to that path and a `Jump` to the actual destination.
-		//
-		// OPT: Additionally, a simple optimization to not create a lot of blocks and insert
-		// destructors into the current block in simple cases (like if-else with no ending scopes
-		// inside) is implemented. For more info look at the big comment below.
-		//
-		// Context is unused, but left since it might be useful in the future.
-		// No lifetime analysis here, since it is quite complex.
-		// See doc-comment of this function for details.
-
-		auto&                                 locals_by_scope = args.locals_by_scope;
-		std::vector<std::vector<Instruction>> new_blocks_instructions;
-		std::vector<BlockID>                  new_blocks_order;
-
-		// Util for getting a crispy fresh MIR block.
-		u64  next_id_val      = function.blocks.size() + 1;
-		auto get_new_block_id = [&]() {
-			while (function.blocks.contains(BlockID(next_id_val))) next_id_val++;
-			return BlockID(next_id_val++);
-		};
-
-		// lambdas used just to not duplicate code:
-		auto add_destructor_to_instr_vec = [&](ScopeRef                  instr_scope,
-		                                       MIRLocalRef               local,
-		                                       std::vector<Instruction>& out_instructions,
-		                                       const LocalLivenessMap&   liveness) {
-			if (local->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return;
-
-			// Liveness analysis
-			auto local_liveness = liveness.atMaybe(local->id);
-			if (local_liveness.empty()) return;  // Empty means that the local is uninitialized
-			if (local_liveness.value()->kind == LivenessStatus::Moved)
-				return;                          // When moved we also do not create destructor
-
-			Operation op = local_liveness.value()->kind == LivenessStatus::Alive
-			                 ? Operation::Destruct
-			                 : Operation::DestructIf;
-
-			out_instructions.push_back(Instruction{
-				op,
-				{},
-				{ local },
-				{
-					OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
-				},
-				instr_scope,
-			});
-		};
-
-		auto add_destructors_to_instr_vec = [&](const auto&               ending_scopes,
-		                                        std::vector<Instruction>& out_instructions,
-		                                        const LocalLivenessMap&   liveness) {
-			for (const auto& scope: ending_scopes) {
-				if (not locals_by_scope.contains(scope)) continue;
-				auto& locals = locals_by_scope.at(scope);
-				// Add destructors in reverse order.
-				for (auto& local: locals | std::views::reverse)
-					add_destructor_to_instr_vec(scope, local, out_instructions, liveness);
+				auto previous = std::ranges::find_if(writes, [&](const auto& write) {
+					return write.first == *flag_local.value();
+				});
+				if (previous == writes.end())
+					writes.emplace_back(*flag_local.value(), alive);
+				else if (alive)
+					previous->second = true;
 			}
+
+			return writes;
+		}
+	}
+
+	void AddLifetimeFlagsLocalsPass::run(query::Context&, Function& function, const LifetimePassArgs&) {
+		// Get the local that is destructed by a DestructIf.
+		auto conditionally_destructed_local
+			= [](const Instruction& instr) -> base::Optional<MIRLocalRef> {
+			if (instr.operation != Operation::DestructIf) return {};
+			if (instr.arguments.size() < 2) return {};
+
+			const auto& place = instr.arguments.at(1).get<MIRPlace>();
+			CORE_ASSERT(place.isLocal(), "A conditional destruction of a non-local place");
+			return place.getBase<MIRLocalRef>();
 		};
 
+		// Only locals that are destructed conditionally need a flag.
+		std::set<MIRLocalRef> conditionally_destructed;
+		for (auto block_id: function.block_order)
+			for (const auto& instr: function.blocks.at(block_id)->instructions)
+				if_opt_some(conditionally_destructed_local(instr), local)
+					conditionally_destructed.insert(local);
 
-		for (auto& block_id: function.block_order) {
-			// Add THIS block to our new block order.
-			new_blocks_order.push_back(block_id);
+		if (conditionally_destructed.empty()) return;
 
-			// each block is considered independently
-			auto& block = function.blocks[block_id];
+		// Collect all locals tracked by this pass.
+		std::vector<MIRLocalRef> tracked_locals;
+		for (const auto& local: function.local_list)
+			if (conditionally_destructed.contains(&local)) tracked_locals.emplace_back(&local);
 
-			// Liveness is only computed for blocks reachable from the entry. Unreachable blocks are
-			// still present here (they get pruned later by eliminateUnreachable), so default to an
-			// empty map for them instead of crashing.
-			LocalLivenessMap liveness_info;
-			if (auto found = args.liveness.block_in_liveness.atMaybe(block_id))
-				liveness_info = *found.value();
+		const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+
+		// Add lifetime flags for all of them.
+		base::Map<MIRLocalRef, MIRLocalRef> flag_of;
+		for (auto local: tracked_locals)
+			flag_of.put(
+				local,
+				function.addGeneratedLocal(
+					bool_type,
+					local->scope.value(),
+					LifetimeFlag::NoDestructor | LifetimeFlag::NoMoveStatusValidation
+				)
+			);
+
+		auto flag_write = [&](MIRLocalRef flag, bool alive, const Instruction& at) {
+			return Instruction{
+				Operation::Assign,
+				MIRPlace(flag),
+				{ MIRConstant{ ctv::CompileTimeValue(alive) } },
+				{},
+				at.scope,
+				NoInstrParameters{},
+				at.metadata,
+			};
+		};
+
+		// Flags of the parameters, in the order their scope is opened in the entry block.
+		std::vector<MIRLocalRef> parameter_flags;
+
+		for (auto block_id: function.block_order) {
+			auto& block = *function.blocks.at(block_id);
 
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
 
-
-			for (u64 i = 0; i < block.instructions.size(); i++) {
-				const auto& instr      = block.instructions.at(i);
-				const auto& next_instr = i < block.instructions.size() - 1
-				                           ? block.instructions.at(i + 1)
-				                           : block.terminator;
-
-				new_instructions.push_back(instr);
-				updateLivenessMapByInstr(liveness_info, instr);
-
-				auto ending_scopes = getEndingScopes(instr.scope, next_instr.scope);
-
-				add_destructors_to_instr_vec(ending_scopes, new_instructions, liveness_info);
+			// In the first block, set all parameter lifetime flags to true.
+			if (block_id == function.block_order.front()) {
+				for (auto local: tracked_locals)
+					if (local->parameter_index.has_value()) {
+						auto flag = flag_of.at(local);
+						new_instructions.push_back(flag_write(flag, true, block.firstInstruction()));
+						new_instructions.back().flags.push_back(OperationFlag{
+							.flag = OperationFlag::Flag::ScopeStart, .local = flag });
+						parameter_flags.push_back(flag);
+					}
 			}
 
-			// We handle terminator in special way, because its successors are a set, not a single
-			// object.
-			// We also assume that the block terminator never creates or moves any local variable.
-			auto& terminator = block.terminator;
-			auto  successors = getTerminatorSuccessors(terminator);
-			if (successors.empty()) {
-				// the function ends
-				auto ending_scopes
-					= getEndingScopes(terminator.scope, function.lifetime_scope_tree.root);
-				add_destructors_to_instr_vec(ending_scopes, new_instructions, liveness_info);
-			} else {
-				// Here we handle situations where a branch may cause two different sets of
-				// destructors being performed. For example breaking from a loop etc.
-				base::Optional<std::vector<ScopeRef>>         first_path_ending_scopes;
-				bool                                          paths_identical  = true;
-				bool                                          boundary_crossed = false;
-				base::HashMap<BlockID, std::vector<ScopeRef>> ending_scopes_per_succ;
+			auto append_flag_writes = [&](const Instruction& instr) {
+				for (auto [flag, alive]: lifetimeFlagWrites(instr, flag_of))
+					new_instructions.push_back(flag_write(flag, alive, instr));
+			};
 
-				for (auto succ: successors) {
-					auto succ_begin_scope   = function.blocks[succ].beginScope();
-					auto succ_ending_scopes = getEndingScopes(terminator.scope, succ_begin_scope);
+			// The flag locals are created after `AddScopeFlagsPass`, so they have no scope flags of
+			// their own yet. DVM pairs `init`/`deinit` on a stack, so a flag has to be opened and
+			// closed right next to the local it guards: its `ScopeStart` goes directly after the
+			// `ScopeStart` of that local, and its `ScopeEnd` directly before the `ScopeEnd` of it.
+			auto adjust_scopes = [&](Instruction& instr) {
+				std::vector<OperationFlag> scope_starts;
+				std::vector<OperationFlag> other_flags;
+				std::vector<Instruction>   flag_inits;
+				other_flags.reserve(instr.flags.size());
 
-					if (!succ_ending_scopes.empty()) boundary_crossed = true;
+				for (const auto& flag: instr.flags) {
+					auto flag_local = flag_of.atMaybe(flag.local);
 
-					// Opt: Check if all path lead to the same ending scope.
-					if (!first_path_ending_scopes.has_value())
-						first_path_ending_scopes = succ_ending_scopes;
-					else if (*first_path_ending_scopes != succ_ending_scopes)
-						paths_identical = false;
-					ending_scopes_per_succ.put(succ, std::move(succ_ending_scopes));
-				}
-
-				// Opt: Appending destructors directly to the current block, without creating an
-				// intermediate is only safe when:
-				// - all paths have the ending scopes
-				// - either no boundary is crossed at all, or the only scope that ends here is the
-				//   terminator's scope. The first element of `getEndingScopes(terminator.scope)`
-				//   is always terminator.scope itself, so checking size() == 1 && front() ==
-				//   terminator.scope is equivalent to "the only ending scope is the terminator's".
-				//
-				// If we instead appended destructors from deeper scopes directly before the
-				// terminator, the second pass would observe a scope transition between those
-				// destructors and the terminator and would emit unneeded ScopeStart/ScopeEnd flags
-				// around it.
-				bool safe_to_opt = paths_identical
-				                && (!boundary_crossed
-				                    || (first_path_ending_scopes->size() == 1
-				                        && first_path_ending_scopes->front() == terminator.scope));
-
-				if (safe_to_opt) {
-					// Opt: If all paths require the same destructors we don't create a new block
-					// and insert them directly to the current block.
-					if (boundary_crossed) {
-						add_destructors_to_instr_vec(
-							first_path_ending_scopes.value(), new_instructions, liveness_info
-						);
-					}
-				} else {
-					// Paths are not identical or there would be a scope regression. Create a new
-					// block and insert destructors there.
-					for (auto succ: successors) {
-						auto& succ_ending_scopes = ending_scopes_per_succ.at(succ);
-
-						// If no scope boundary is crossed, the edge is clean.
-						if (succ_ending_scopes.empty()) continue;
-
-						// Otherwise we have crossed a scope boundary. We have to split the edge
-						// into an intermediate block.
-						BlockID                  new_block_id = get_new_block_id();
-						std::vector<Instruction> new_block_instructions;
-
-						// Enter the block and preserve the caller scope to have a clear place where
-						// scope changes.
-						new_block_instructions.push_back(Instruction{
-							Operation::Nop, {}, {}, {}, terminator.scope });
-
-						// Add all needed destructors.
-						add_destructors_to_instr_vec(
-							succ_ending_scopes, new_block_instructions, liveness_info
-						);
-
-						auto new_terminator_scope = [&]() {
-							// If there is only one succ_ending_scope and is equal to the
-							// terminator.scope the scope of the new terminator is the same as
-							// the original terminator scope (to match the optimization case).
-							// Otherwise, we want to have the new terminator scope to be scope
-							// of the succ_begin_scope.
-							if (succ_ending_scopes.size() == 1
-							    && succ_ending_scopes.front() == terminator.scope) {
-								return terminator.scope;
-							} else {
-								return function.blocks[succ].beginScope();
-							}
-						}();
-						Instruction new_block_terminator{
-							Operation::Jump, {}, { MIRValue(succ) }, {}, new_terminator_scope
-						};
-
-						// Add the new block.
-						function.blocks.put(
-							new_block_id,
-							Block{
-								.id           = new_block_id,
-								.instructions = std::move(new_block_instructions),
-								.terminator   = std::move(new_block_terminator),
-							}
-						);
-
-						new_blocks_order.push_back(new_block_id);
-
-						// Modify the caller terminator to jump through the newly created block.
-						for (auto& arg: terminator.arguments) {
-							variant_match(arg.getVariant()) {
-								variant_case(BlockID, block) {
-									if (block == succ) arg = MIRValue(new_block_id);
-								}
-							}
+					switch (flag.flag) {
+						using enum OperationFlag::Flag;
+					case ScopeStart:
+						scope_starts.push_back(flag);
+						if (flag_local.has_value()) {
+							scope_starts.push_back(OperationFlag{ .flag  = ScopeStart,
+							                                      .local = *flag_local.value() });
+							flag_inits.push_back(flag_write(*flag_local.value(), false, instr));
 						}
+						break;
+					case ScopeEnd:
+						if (flag_local.has_value())
+							other_flags.push_back(OperationFlag{ .flag  = ScopeEnd,
+							                                     .local = *flag_local.value() });
+						other_flags.push_back(flag);
+						break;
+					default:
+						other_flags.push_back(flag);
+						break;
 					}
 				}
+
+				instr.flags = std::move(other_flags);
+
+				if (flag_inits.empty()) {
+					for (auto& flag: scope_starts) instr.flags.push_back(flag);
+					return;
+				}
+
+				// The first generated write takes over every scope that started on this
+				// instruction, so all of the locals are alive by the time any of the writes runs.
+				flag_inits.front().flags = std::move(scope_starts);
+				for (auto& init: flag_inits) new_instructions.push_back(std::move(init));
+			};
+
+			for (auto& instr: block.instructions) {
+				adjust_scopes(instr);
+				new_instructions.push_back(instr);
+
+				// The flag the LIR lowering branches on becomes the last argument of the drop.
+				if_opt_some(conditionally_destructed_local(instr), local) new_instructions.back()
+					.arguments.emplace_back(MIRPlace(flag_of.at(local)));
+
+				append_flag_writes(instr);
 			}
-			new_blocks_instructions.push_back(std::move(new_instructions));
+
+			adjust_scopes(block.terminator);
+
+			append_flag_writes(block.terminator);
+
+			block.instructions = std::move(new_instructions);
 		}
 
-		for (usize i = 0; i < function.block_order.size(); i++) {
-			auto block_id                          = function.block_order[i];
-			function.blocks[block_id].instructions = std::move(new_blocks_instructions[i]);
-		}
+		// The parameter flags are opened before anything else, so they are closed on every path
+		// leaving the function, after every other scope of that path has ended.
+		for (auto block_id: function.block_order) {
+			auto& terminator = function.blocks.at(block_id)->terminator;
+			if (not getTerminatorSuccessors(terminator).empty()) continue;
 
-		// Block order might have changed if new blocks where added.
-		function.block_order = std::move(new_blocks_order);
+			for (auto flag: parameter_flags | std::views::reverse)
+				terminator.flags.push_back(OperationFlag{ .flag  = OperationFlag::Flag::ScopeEnd,
+				                                          .local = flag });
+		}
 	}
 
 	template<OperationFlag::Flag scope_flag, bool reverse_local_order>
@@ -417,36 +328,46 @@ namespace compiler::mir {
 		}
 	}
 
+	LocalsByScopeMap collectLocalsByScope(const Function& function) {
+		LocalsByScopeMap locals_by_scope;
+		for (const auto& local: function.local_list)
+			if (local.scope.value() != function.no_lifetime_scope)
+				locals_by_scope.put(local.scope.value()).first->second.emplace_back(&local);
+		return locals_by_scope;
+	}
+
 	/**
 	 * @brief Constructs LifetimePassArgs for given function.
 	 */
 	LifetimePassArgs constructLifetimePassArgs(const Function& function) {
 		LifetimePassArgs args;
 
-		for (const auto& local: function.local_list)
-			if (local.scope.value() != function.no_lifetime_scope)
-				args.locals_by_scope.put(local.scope.value()).first->second.emplace_back(&local);
-
+		args.locals_by_scope = collectLocalsByScope(function);
 
 		// Predecessor lists.
+		for (auto block_id: function.block_order) args.block_predecessors.put(block_id);
+
 		for (auto block_id: function.block_order)
 			for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
 				args.block_predecessors.put(succ).first->second.push_back(block_id);
 
-		args.liveness = calculateGlobalInLivenessMap(function, args.block_predecessors);
+		args.move_states = MoveStateData::calculateGlobalInMoveStateMap(
+			function, args.block_predecessors, args.locals_by_scope
+		);
 
 		return args;
 	}
 
 	Function runAllLifetimePasses(query::Context& ctx, Function function) {
 		auto args = constructLifetimePassArgs(function);
-
 		// The order here does matter. AddDestructorsPass{} performs a transformation on the CFG
 		// which adds an important invariant that all successors of a block have the same ending
 		// scopes. This assumption is then used when adding ScopeFlags.
 		InvalidUseCheck{}.run(ctx, function, args);
+		AddAssignmentDestructorsPass{}.run(ctx, function, args);
 		AddDestructorsPass{}.run(ctx, function, args);
 		AddScopeFlagsPass{}.run(ctx, function, args);
+		AddLifetimeFlagsLocalsPass{}.run(ctx, function, args);
 
 		return function;
 	}

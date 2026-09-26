@@ -14,11 +14,15 @@ public:
 		TESTER_ADD_TEST(globalLeakTest);
 		TESTER_ADD_TEST(noDoubleDestructorCalls);
 		TESTER_ADD_TEST(nestedLeaks);
+		TESTER_ADD_TEST(variantDestructor);
+		TESTER_ADD_TEST(doubleFreeIsRefused);
+		TESTER_ADD_TEST(dynTableReAllocAfterFreeIsRefused);
+		TESTER_ADD_TEST(dynTableFreeAfterFreeIsRefused);
 	}
 
 private:
 	void localLeakTest() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("local_leak.dbc", "", ""),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);
@@ -35,9 +39,32 @@ private:
 	void noDoubleDestructorCalls() { runTestOnVm("no_double_destructor.dbc", "", ""); }
 
 	void nestedLeaks() {
-		assertExecutionPanickedWith(
+		assertExecutionPanickedWithAndKill(
 			runTestOnVmGetResult("nested_leaks.dbc", "", ""),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
+		);
+	}
+
+	void variantDestructor() { runTestOnVm("variant_destructor.dbc", "", ""); }
+
+	void doubleFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("double_free.dbc", "", ""),
+			vm::exceptions::VMDoubleFreeException::ERR_MSG
+		);
+	}
+
+	void dynTableReAllocAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("dyn_table_realloc_after_free.dbc", "", ""),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
+		);
+	}
+
+	void dynTableFreeAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("dyn_table_free_after_free.dbc", "", ""),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
 		);
 	}
 };

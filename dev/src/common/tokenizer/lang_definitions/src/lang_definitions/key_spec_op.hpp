@@ -37,7 +37,6 @@ namespace lang_def {
 		Import,
 		Hides,
 		Using,
-		Alias,
 		In,
 		Lambda,
 
@@ -59,7 +58,6 @@ namespace lang_def {
 		With,
 		Try,
 		Catch,
-		Test,
 		Debug,
 		Match,
 		Switch,
@@ -114,11 +112,10 @@ namespace lang_def {
 		Char,
 		Bool,
 		Str,
-		BigStr,
 		Type,  // ...
+		Void,
 
 		// @TODO: do we need all of them?
-		List,
 		Set,
 		Dict,
 		Array,
@@ -140,13 +137,16 @@ namespace lang_def {
 		// General text prefix operators (Not doesn't count)
 		Ref,
 		Box,
+		New,
 		Ptr,
 		CPtr,
 		ManyPtr,
 		Slice,
 		Copy,
+		Copyof,
 		Move,
 		Refof,
+		Ptrof,
 
 		Destroy,
 
@@ -161,6 +161,7 @@ namespace lang_def {
 
 		// Stmt specifiers:
 		Extern,
+		Export,
 
 		// Misc:
 
@@ -196,6 +197,7 @@ namespace lang_def {
 		BCIsConstant,
 		BCInitialValue,
 		BCPacked,
+		BCCPointer,
 		COUNT,
 	};
 
@@ -228,6 +230,7 @@ namespace lang_def {
 
 		Pipe,       // | for variants and bitwise or.
 		Ampersand,  // & for references and bitwise and.
+		BitNot,
 		BitXor,
 
 		LeftShift,
