@@ -43,7 +43,6 @@
 #include <condition_variable>
 #include <expected>
 #include <mutex>
-#include <optional>
 #include <ranges>
 #include <string>
 #include <utility>
@@ -216,13 +215,12 @@ namespace vm {
 	 *
 	 * Just like in libc, the start function pushes the program arguments on to the stack and
 	 * performs the call to main. After the main returns, it deinitializes the argv memory and
-	 * exits, leaving one block on the block stack, which contains the return value of the
-	 * program.
+	 * exits, leaving one block on the block stack, which contains the return value of the program.
 	 *
 	 * @note This is done in VMThread, since it depends on the arguments passed during the call
-	 * which may vary from call to call and creating a generic start function using builders in
-	 * the loading phase is not possible. This also results in the need to create the function
-	 * in the micro-bytecode right away.
+	 * which may vary from call to call and creating a generic start function using builders in the
+	 * loading phase is not possible. This also results in the need to create the function in the
+	 * micro-bytecode right away.
 	 */
 	code::Function SafeVMThread::createProgramStartFunction(
 		const low::LowFuncData& func, const ProgramRunArguments& args
@@ -543,8 +541,8 @@ namespace vm {
 	void SafeVMThread::execGlobalDestructors() {
 		const auto& executing_program = process_program;
 		auto        globals           = executing_program->getGlobals().allData();
-		// Destructors should run in reverse order of construction so that any object depending
-		// on earlier-created resources is destroyed first, preventing use-after-destruction and
+		// Destructors should run in reverse order of construction so that any object depending on
+		// earlier-created resources is destroyed first, preventing use-after-destruction and
 		// keeping teardown safe and logically consistent.
 		for (const auto& [global, id, name]: std::ranges::reverse_view(globals)) {
 			auto* ctor_dtor = std::get_if<low::GlobalCtorDtor>(&global->init);
