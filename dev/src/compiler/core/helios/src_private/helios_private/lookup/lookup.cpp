@@ -1,19 +1,19 @@
 #include "lookup.hpp"
 
-#include "frontend/module_tree/queries.hpp"
-#include "frontend/pst_parser/elements/hierarchy/not_statements/selector.hpp"
-#include "frontend/pst_parser/elements/hierarchy/statements/import.hpp"
-#include "frontend/pst_parser/elements/hierarchy/statements/using.hpp"
-#include "helios/symbols/symbol_kind.hpp"
-#include "helios_private/lookup/lookup_chain.hpp"
-#include "helios_private/scopes/scopes.hpp"
-#include "helios_private/symbols/symbol_data.hpp"
-#include "helios_private/symbols/symbols.hpp"
+#include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/selector.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/import.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
+#include <helios/symbols/symbol_kind.hpp>
+#include <helios_private/lookup/lookup_chain.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
-#include "diagnostic/placeholder.hpp"
-#include "hashing/hash.hpp"
-#include "query_framework/query_result.hpp"
-#include "query_framework/standard_query/query_impl.hpp"
+#include <diagnostic/placeholder.hpp>
+#include <hashing/hash.hpp>
+#include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 	base::Bit256 KeyOf_LookupInNamespaceOrModule::queryUnstablePerfectHash() const {

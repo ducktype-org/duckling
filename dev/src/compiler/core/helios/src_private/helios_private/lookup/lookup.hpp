@@ -1,7 +1,8 @@
 #pragma once
 
-#include "helios/symbols/symbol_id.hpp"
 #include "lookup_result.hpp"
+
+#include <helios/symbols/symbol_id.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
