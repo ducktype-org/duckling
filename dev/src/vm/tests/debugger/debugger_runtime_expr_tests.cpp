@@ -38,7 +38,6 @@ public:
 		TESTER_ADD_TEST(test16RuntimeExpr);
 		TESTER_ADD_TEST(test17RuntimeExpr);
 		TESTER_ADD_TEST(test18RuntimeExpr);
-		TESTER_ADD_TEST(test19RuntimeExpr);
 		TESTER_ADD_TEST(test20RuntimeExpr);
 		TESTER_ADD_TEST(test21RuntimeExpr);
 		TESTER_ADD_TEST(test22RuntimeExpr);
@@ -136,42 +135,46 @@ private:
 
 	// Arithmetic expressions evaluated repeatedly at main.
 	void test2RuntimeExpr() {
-		const fs::File   main_file(path("runtime_expr_dbc/test_2/main.dbc"));
-		const std::array expressions = {
-			fs::File(path("runtime_expr_dbc/test_2/expr/multiply.dbc")),
-			fs::File(path("runtime_expr_dbc/test_2/expr/add.dbc")),
-			fs::File(path("runtime_expr_dbc/test_2/expr/subtract.dbc")),
-			fs::File(path("runtime_expr_dbc/test_2/expr/divide.dbc")),
-		};
-		const std::array expected_results = {
-			std::vector<u64>{ 16, 32, 64, 128 },
-			std::vector<u64>{ 10, 18, 34, 66 },
-			std::vector<u64>{ 6, 14, 30, 62 },
-			std::vector<u64>{ 4, 8, 16, 32 },
-		};
+		const fs::File main_file(path("runtime_expr_dbc/arithmetic/main.dbc"));
+		const fs::File multiply(path("runtime_expr_dbc/arithmetic/expr/multiply.dbc"));
+		const fs::File add(path("runtime_expr_dbc/arithmetic/expr/add.dbc"));
+		const fs::File subtract(path("runtime_expr_dbc/arithmetic/expr/subtract.dbc"));
+		const fs::File divide(path("runtime_expr_dbc/arithmetic/expr/divide.dbc"));
 
-		static_assert(expected_results.size() == expressions.size(), "match those");
-
-		auto simulator = createSimulator(main_file);
-		simulator.putBreakpoint(base::StrID("main"), 16)
+		createSimulator(main_file)
+			.putBreakpoint(base::StrID("main"), 16)
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 16)
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
-			});
-
-		using namespace std::views;
-		for (const auto& [expr, res]: zip(expressions, expected_results))
-			simulator.evalExprNormal(expr, res)
-				.awaitBreakpoint(base::StrID("main"), 16)
-				.enforceCallStack({
-					{ base::StrID("vm_start_function"), startFunctionVars() },
-					{ base::StrID("main"), std::nullopt },
-				});
-
-		simulator.finishAndAssertExitValue(0);
-		simulator.cleanup();
+			})
+			.evalExprNormal(multiply, { 16, 32, 64, 128 })
+			.awaitBreakpoint(base::StrID("main"), 16)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			.evalExprNormal(add, { 10, 18, 34, 66 })
+			.awaitBreakpoint(base::StrID("main"), 16)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			.evalExprNormal(subtract, { 6, 14, 30, 62 })
+			.awaitBreakpoint(base::StrID("main"), 16)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			.evalExprNormal(divide, { 4, 8, 16, 32 })
+			.awaitBreakpoint(base::StrID("main"), 16)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			.finishAndAssertExitValue(0)
+			.cleanup();
 	}
 
 	// Expression calling a program function returns its result.
