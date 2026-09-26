@@ -1,3 +1,13 @@
+type primitive: u64 8
+type primitive: my_64 8
+
+function add { i64, i64 } -> { i64 } {
+	mov_p64_p64 ret0, arg0;
+	add_p64_p64 ret0, arg1;
+	add_p64_imm ret0, 1;
+	ret;
+}
+
 function bar { i64 } -> { i64 } {
 	mov_p64_p64 ret0, arg0;
 	add_p64_imm ret0, 7;
@@ -7,20 +17,26 @@ function bar { i64 } -> { i64 } {
 function foo { i64 } -> { i64 } {
 	init_pany_type bar_ret0, i64;
 	init_pany_type bar_arg0, i64;
-
 	mov_p64_p64 bar_arg0, arg0;
 	call_func bar;
-
 	mov_p64_p64 ret0, bar_ret0;
 	ret;
 }
 
 function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type a, i64;
+	init_pany_type b, i64;
+	mov_p64_imm a, 0;
+	mov_p64_imm b, 0;
+	mov_p64_imm a, 4;
+	mov_p64_imm b, 2;
+	init_pany_type base, u64;
+	mov_p64_imm base, 4;
+	cast_p64_type base, my_64;
 	init_pany_type foo_ret0, i64;
 	init_pany_type foo_arg0, i64;
 	mov_p64_imm foo_arg0, 3;
-
 	call_func foo;
-	mov_p64_imm ret0, 7;
-	ret;
+label Loop;
+	jmp_label Loop;
 }

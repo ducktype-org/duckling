@@ -18,29 +18,21 @@ class VmRuntimeExprTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(test1RuntimeExpr);
 		TESTER_ADD_TEST(test2RuntimeExpr);
-		TESTER_ADD_TEST(test3RuntimeExpr);
-		TESTER_ADD_TEST(test4RuntimeExpr);
-		TESTER_ADD_TEST(test5RuntimeExpr);
-		TESTER_ADD_TEST(test6RuntimeExpr);
-		TESTER_ADD_TEST(test7RuntimeExpr);
+		TESTER_ADD_TEST(testBasic);
+		TESTER_ADD_TEST(testVmValueReuse);
+		TESTER_ADD_TEST(test22RuntimeExpr);
 		TESTER_ADD_TEST(test8RuntimeExpr);
 		TESTER_ADD_TEST(testInvalidExpressions);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testInput);
 		TESTER_ADD_TEST(test11RuntimeExpr);
 		TESTER_ADD_TEST(test12RuntimeExpr);
-		TESTER_ADD_TEST(test13RuntimeExpr);
 		TESTER_ADD_TEST(test14RuntimeExpr);
-		TESTER_ADD_TEST(test15RuntimeExpr);
 		TESTER_ADD_TEST(test16RuntimeExpr);
 		TESTER_ADD_TEST(testReturnValues);
 		TESTER_ADD_TEST(test18RuntimeExpr);
 		TESTER_ADD_TEST(test20RuntimeExpr);
-		TESTER_ADD_TEST(test21RuntimeExpr);
-		TESTER_ADD_TEST(test22RuntimeExpr);
-		TESTER_ADD_TEST(test23RuntimeExpr);
 		TESTER_ADD_TEST(test27RuntimeExpr);
 	}
 
@@ -80,52 +72,80 @@ private:
 		return { [this](bool cond, std::string_view err) { assertTrue(cond, err); }, pid };
 	}
 
-	// Reads caller locals; result tracks their init state.
-	void test1RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_1/main.dbc"));
-		const fs::File get_values_expr(path("runtime_expr_dbc/test_1/get_values.dbc"));
+	void testBasic() {
+		const fs::File main_file(path("runtime_expr_dbc/basic/main.dbc"));
+		const fs::File get_values_expr(path("runtime_expr_dbc/basic/get_values.dbc"));
+		const fs::File call_foo_expr(path("runtime_expr_dbc/basic/call_foo.dbc"));
+		const fs::File modify_value_expr(path("runtime_expr_dbc/basic/modify_value.dbc"));
+		const fs::File access_frame_2_expr(path("runtime_expr_dbc/basic/access_frame_2.dbc"));
+		const fs::File compare_frames_expr(path("runtime_expr_dbc/basic/compare_frames.dbc"));
+		const fs::File ret_five(path("runtime_expr_dbc/basic/ret_five.dbc"));
+		const fs::File read_local(path("runtime_expr_dbc/basic/read_local.dbc"));
+
+		auto simulator = createSimulator(main_file);
+		simulator.putBreakpoint(base::StrID("main"), 0)
+			.putBreakpoint(base::StrID("foo"), 4)
+			.putBreakpoint(base::StrID("main"), 14)
+			.runMain()
+			.awaitBreakpoint(base::StrID("main"), 0)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			// `base` has not been initialized yet.
+			.evalExprExpectLoadError(read_local, vm::code::UnknownLocalNameError::ERR_MSG)
+			.step(2)
+			.evalExprNormal(get_values_expr, { 0, 0 })
+			.step(4)
+			.evalExprNormal(get_values_expr, { 4, 2 })
+			.step()
+			// `base` exists but is still `u64`.
+			.evalExprExpectLoadError(read_local, vm::code::ArgumentMismatchError::ERR_MSG)
+			.step()
+			// `base` has now been cast to `my_64`.
+			.evalExprNormal(read_local, { 7 })
+			.step(2)
+			.evalExprNormal(call_foo_expr, { 7 })
+			.resume()
+			.awaitBreakpoint(base::StrID("foo"), 4)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("foo"), std::nullopt },
+			})
+			.evalExprNormal(access_frame_2_expr, { 10 })
+			.evalExprNormal(compare_frames_expr, { 0 })
+			.resume()
+			.awaitBreakpoint(base::StrID("main"), 14)
+			.evalExprNormal(modify_value_expr, { 42 })
+			.awaitBreakpoint(base::StrID("main"), 14)
+			.evalExprNormal(get_values_expr, { 42, 2 })
+			.awaitBreakpoint(base::StrID("main"), 14)
+			.disableBreakpoint(base::StrID("main"), 14)
+			.resume()
+			.evalExprExpectEvalError(ret_five, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG)
+			.sleep(20)
+			.pause(base::StrID("main"), 14)
+			.resume()
+			.evalExprExpectEvalError(ret_five, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG)
+			.stop()
+			.cleanup();
+	}
+
+	void testVmValueReuse() {
+		const fs::File main_file(path("runtime_expr_dbc/vmvalue_reuse/main.dbc"));
+		const fs::File create_value(path("runtime_expr_dbc/vmvalue_reuse/create_value.dbc"));
+		const fs::File use_value(path("runtime_expr_dbc/vmvalue_reuse/use_value.dbc"));
 
 		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 4)
-			.putBreakpoint(base::StrID("main"), 5)
-			.putBreakpoint(base::StrID("main"), 7)
+			.putBreakpoint(base::StrID("main"), 2)
 			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprNormal(get_values_expr, { 0, 0 })
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.resume()
-			.awaitBreakpoint(base::StrID("main"), 5)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprNormal(get_values_expr, { 4, 0 })
-			.awaitBreakpoint(base::StrID("main"), 5)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.resume()
-			.awaitBreakpoint(base::StrID("main"), 7)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprNormal(get_values_expr, { 4, 2 })
-			.awaitBreakpoint(base::StrID("main"), 7)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.finishAndAssertExitValue(2'137)
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.evalExprNormal(create_value, { 42 })
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.evalExprNormal(use_value, { 42 })
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.finishAndAssertExitValue(10)
 			.cleanup();
 	}
 
@@ -139,6 +159,7 @@ private:
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 16)
+			.putBreakpoint(base::StrID("main"), 20)
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 16)
 			.enforceCallStack({
@@ -146,156 +167,20 @@ private:
 				{ base::StrID("main"), std::nullopt },
 			})
 			.evalExprNormal(multiply, { 16, 32, 64, 128 })
-			.awaitBreakpoint(base::StrID("main"), 16)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
 			.evalExprNormal(add, { 10, 18, 34, 66 })
-			.awaitBreakpoint(base::StrID("main"), 16)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
 			.evalExprNormal(subtract, { 6, 14, 30, 62 })
-			.awaitBreakpoint(base::StrID("main"), 16)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
 			.evalExprNormal(divide, { 4, 8, 16, 32 })
-			.awaitBreakpoint(base::StrID("main"), 16)
+			.resume()
+			.awaitBreakpoint(base::StrID("main"), 20)
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
 			})
+			.evalExprNormal(multiply, { 32, 64, 128, 256 })
+			.evalExprNormal(add, { 12, 20, 36, 68 })
+			.evalExprNormal(subtract, { 4, 12, 28, 60 })
+			.evalExprNormal(divide, { 2, 4, 8, 16 })
 			.finishAndAssertExitValue(0)
-			.cleanup();
-	}
-
-	// Expression calling a program function returns its result.
-	void test3RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_3/main.dbc"));
-		const fs::File call_foo_expr(path("runtime_expr_dbc/test_3/call_foo.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 5)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 5)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprNormal(call_foo_expr, { 7 })
-			.awaitBreakpoint(base::StrID("main"), 5)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.finishAndAssertExitValue(0)
-			.cleanup();
-	}
-
-	// Expression mutates a caller local as a side effect.
-	void test4RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_4/main.dbc"));
-		const fs::File modify_value_expr(path("runtime_expr_dbc/test_4/modify_value.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 2)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprNormal(modify_value_expr, { 42 })
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.finishAndAssertExitValue(42)
-			.cleanup();
-	}
-
-	// Expression reads a variable from a non-adjacent frame.
-	void test5RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_5/main.dbc"));
-		const fs::File access_frame_2_expr(path("runtime_expr_dbc/test_5/access_frame_2.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("foo"), 4)
-			.runMain()
-			.awaitBreakpoint(base::StrID("foo"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("foo"), std::nullopt },
-			})
-			.evalExprNormal(access_frame_2_expr, { 10 })
-			.awaitBreakpoint(base::StrID("foo"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("foo"), std::nullopt },
-			})
-			.finishAndAssertExitValue(7)
-			.cleanup();
-	}
-
-	// Expression compares locals across caller frames.
-	void test6RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_6/main.dbc"));
-		const fs::File compare_frames_expr(path("runtime_expr_dbc/test_6/compare_frames.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("foo"), 4)
-			.runMain()
-			.awaitBreakpoint(base::StrID("foo"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("foo"), std::nullopt },
-			})
-			.evalExprNormal(compare_frames_expr, { 0 })
-			.awaitBreakpoint(base::StrID("foo"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("foo"), std::nullopt },
-			})
-			.finishAndAssertExitValue(7)
-			.cleanup();
-	}
-
-	// Expression produces a VM value reused by next expression,
-	void test7RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_7/main.dbc"));
-		const fs::File create_value_expr(path("runtime_expr_dbc/test_7/create_value.dbc"));
-		const fs::File use_value_expr(path("runtime_expr_dbc/test_7/use_value.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 2)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprNormal(create_value_expr, { 42 })
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprNormal(use_value_expr, { 42 })
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.finishAndAssertExitValue(10)
 			.cleanup();
 	}
 
@@ -493,26 +378,6 @@ private:
 			.cleanup();
 	}
 
-	// Evaluating on a running thread is rejected.
-	void test13RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_13/main.dbc"));
-		const fs::File add_five_expr(path("runtime_expr_dbc/test_13/add_five.dbc"));
-
-		createSimulator(main_file)
-			.runMain()
-			.evalExprExpectEvalError(
-				add_five_expr, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG
-			)
-			.sleep(20)
-			.pause(base::StrID("main"), 4)
-			.resume()
-			.evalExprExpectEvalError(
-				add_five_expr, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG
-			)
-			.stop()
-			.cleanup();
-	}
-
 	// Break-loop expression stops a running spin expression.
 	void test14RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_14/main.dbc"));
@@ -539,37 +404,6 @@ private:
 			.resume()
 			.awaitExprCompletion({ 0 })
 			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
-	// Local unknown before init, readable afterwards.
-	void test15RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_15/main.dbc"));
-		const fs::File reads_local_expr(path("runtime_expr_dbc/test_15/reads_local.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 0)
-			.putBreakpoint(base::StrID("main"), 2)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 0)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprExpectLoadError(reads_local_expr, vm::code::UnknownLocalNameError::ERR_MSG)
-			.resume()
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprNormal(reads_local_expr, { 7 })
-			.awaitBreakpoint(base::StrID("main"), 2)
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
@@ -784,25 +618,6 @@ private:
 			.cleanup();
 	}
 
-	// Expression doesn't compile if type don't match (even with casting)
-	void test21RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_21/main.dbc"));
-		const fs::File read_base_expr(path("runtime_expr_dbc/test_21/read_base.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 1)
-			.putBreakpoint(base::StrID("main"), 3)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 1)
-			.evalExprExpectLoadError(read_base_expr, vm::code::ArgumentMismatchError::ERR_MSG)
-			.resume()
-			.awaitBreakpoint(base::StrID("main"), 3)
-			.evalExprNormal(read_base_expr, { 7 })
-			.awaitBreakpoint(base::StrID("main"), 3)
-			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
 	// We can view and access locals of the expression.
 	void test22RuntimeExpr() {
 		const fs::File main_file(path("runtime_expr_dbc/test_22/main.dbc"));
@@ -816,25 +631,6 @@ private:
 			.evalExprExpectBreakpoint(probe_expr)
 			.awaitBreakpoint(base::StrID("pause_here"), 0)
 			.enforceFrameVarValue(2, base::StrID("local"), 123)
-			.cleanup();
-	}
-
-	// After step, we still stop when the expression is evaluated.
-	void test23RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_23/main.dbc"));
-		const fs::File expr(path("runtime_expr_dbc/test_23/expr.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 4)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.evalExprNormal(expr, { 0, 0 })
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.step()
-			.step()
-			.evalExprNormal(expr, { 4, 2 })
-			.awaitBreakpoint(base::StrID("main"), 6)
-			.finishAndAssertExitValue(2'137)
 			.cleanup();
 	}
 

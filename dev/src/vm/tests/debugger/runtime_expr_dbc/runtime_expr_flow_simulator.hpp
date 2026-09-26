@@ -554,12 +554,15 @@ namespace vm::test {
 			return *this;
 		}
 
-		FlowSimulator& step() {
-			auto step_res = vm::api::step(pid, thread_id);
-			if (!step_res)
-				assertTrue(
-					false, base::strConcat("Step failed: ", vm::api::errorToString(step_res.error()))
-				);
+		FlowSimulator& step(u64 count = 1) {
+			for (u64 i = 0; i < count; i++) {
+				auto step_res = vm::api::step(pid, thread_id);
+				if (!step_res)
+					assertTrue(
+						false,
+						base::strConcat("Step failed: ", vm::api::errorToString(step_res.error()))
+					);
+			}
 			return *this;
 		}
 

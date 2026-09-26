@@ -5,7 +5,6 @@ function main { i64, ptr_argv } -> { i64 } {
 	ret;
 }
 
-# Breakpoint anchor: the probe expression calls it so it can pause with its locals alive.
 function pause_here { } -> { } {
 	ret;
 }

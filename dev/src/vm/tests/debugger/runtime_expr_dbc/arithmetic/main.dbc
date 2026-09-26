@@ -15,6 +15,11 @@ function main { i64, ptr_argv } -> { i64 } {
 	mov_p16_imm b16, 2;
 	mov_p32_imm b32, 2;
 	mov_p64_imm b64, 2;
+
+	mov_p8_imm b8, 4;
+	mov_p16_imm b16, 4;
+	mov_p32_imm b32, 4;
+	mov_p64_imm b64, 4;
 	mov_p64_imm ret0, 0;
 	ret;
 }

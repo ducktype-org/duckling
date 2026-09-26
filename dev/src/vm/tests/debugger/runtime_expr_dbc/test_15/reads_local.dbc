@@ -1,7 +1,0 @@
-# Reads `a` from `main`'s frame. The test evaluates it twice:
-# - while `main` is paused on `init_pany_type a`, i.e. before `a` is on the frame's stack, and
-# - after `a` has been initialized, where it must be readable again.
-function reads_local { } -> { i64 } {
-	mov_p64_p64 ret0, frame 1 a;
-	ret_from_expr;
-}

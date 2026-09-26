@@ -1,5 +1,0 @@
-function print { } -> { i64, i64 } {
-    mov_p64_p64 ret0, frame 1 a;
-	add_p64_p64 ret1, frame 1 b;
-	ret_from_expr;
-}
