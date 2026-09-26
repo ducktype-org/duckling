@@ -60,6 +60,7 @@ public:
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
+		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 	}
 
 protected:
@@ -2438,6 +2439,30 @@ private:
 			checkForErrorOnCompileModule(
 				base::strConcat(NAMESPACE, statement), { message }, 1, false
 			);
+	}
+
+	void testWildcardNamesInSelectorPaths() {
+		checkForErrorOnCompileModule(
+			R"(
+				namespace N {
+					namespace M {
+						const C: i64 = 7;
+					}
+				}
+
+				using N.*;
+
+				# `M` is in scope here, so ordinary code may name it.
+				const DIRECT: i64 = M.C;
+
+				# ...but the path of a selector may not, so this one cannot be resolved.
+				using M.C;
+
+				const VIA_USING: i64 = C;
+			)",
+			{ "Symbol 'M' not found in lookup" },
+			1
+		);
 	}
 
 	void testDuplicatedDefinitions() {
