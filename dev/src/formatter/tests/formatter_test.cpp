@@ -128,7 +128,7 @@ public:
 		TESTER_ADD_TEST(testMultiLineBlockComment);
 
 		// Column measurement and robustness.
-		TESTER_ADD_TEST(testUnicodeColumnsMeasuredVisually);
+		TESTER_ADD_TEST(testUnicodeColumnsCountCodePoints);
 		TESTER_ADD_TEST(testInvalidIndentStyleRejected);
 		TESTER_ADD_TEST(testNestingTooDeep);
 
@@ -625,7 +625,7 @@ foo(
 	// ===== Column measurement =====
 
 	/** Columns count characters, not bytes, so non-ASCII text wraps where an editor shows it. */
-	void testUnicodeColumnsMeasuredVisually() {
+	void testUnicodeColumnsCountCodePoints() {
 		const auto config = narrowConfig(40);
 		// 36 visual columns, but 60 bytes.
 		check(

@@ -38,10 +38,12 @@ namespace formatter {
 	char32_t closingBracket(lexer::Token::BracketType open);
 
 	/**
-	 * @brief Number of columns @p text occupies on screen.
+	 * @brief Number of columns @p text occupies.
 	 *
-	 * Counts UTF-8 code points, not bytes, so a non-ASCII identifier is measured the way an
-	 * editor shows it. Text spanning several lines is measured from its last newline on.
+	 * Counts UTF-8 code points, not bytes, so a non-ASCII identifier is not measured as longer
+	 * than it looks. Wide characters (CJK and friends) are not special-cased: every code point
+	 * counts as one column, while an editor shows those as two. Text spanning several lines is
+	 * measured from its last newline on.
 	 */
 	[[nodiscard]]
 	u32 visualWidth(std::string_view text);

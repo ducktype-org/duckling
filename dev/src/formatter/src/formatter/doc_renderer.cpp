@@ -12,7 +12,7 @@ namespace formatter {
 		/**
 		 * @brief Walks a Doc making every line-breaking decision.
 		 *
-		 * Tracks the current visual column incrementally: indentation contributes
+		 * Tracks the current column incrementally: indentation contributes
 		 * `indent levels * indent_width` columns (whether rendered as tabs or spaces),
 		 * everything else one column per UTF-8 code point.
 		 */

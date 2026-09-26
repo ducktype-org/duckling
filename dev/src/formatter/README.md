@@ -127,9 +127,10 @@ positions, which reference the `TokenSource` the tokens came from.
 3. **Render** (`doc_renderer`) — walks the document once, tracking the current
    column, and makes every breaking decision against `max_line_length`. Every
    node caches the width of its single-line rendering, so each fits-check is
-   O(1). Columns are measured **visually**: a tab counts as `indent_width`
-   columns and a character counts as one column whatever its UTF-8 length, so
-   wrapping matches what an editor shows. Over-long line comments
+   O(1). Columns are counted in **UTF-8 code points**: a tab counts as
+   `indent_width` columns and every character counts as one column whatever its
+   byte length. Wide characters (CJK and friends) are not special-cased, so a
+   line of those is measured narrower than an editor shows it. Over-long line comments
    re-flow at word boundaries here, repeating the full `#`/`##` prefix on each
    continuation line.
 
