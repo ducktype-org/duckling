@@ -3342,7 +3342,7 @@ private:
 		// The same wildcard also carries `using a as b;` out of `N2`, and that alias points at
 		// `using x as a;`, which points at the constant itself.
 		ASSERT_EQUAL(getChain("x", root_scope).back(), getChain("b", root_scope).back());
-		ASSERT_EQUAL(1235, getConstValueAs<i32>("b", root_scope));
+		ASSERT_EQUAL(1'235, getConstValueAs<i32>("b", root_scope));
 	}
 
 	void testBackendDependentCompTime() {
