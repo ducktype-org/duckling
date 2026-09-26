@@ -1,0 +1,9 @@
+# What should work once i128 and the wider floats are supported (#1498).
+import core.builtins.*;
+import us.unsupported.*;
+
+fun main() -> i64 = {
+    if (us_int128(1i128) != 2i128) { return 1i64; }
+    if (us_long_double(1.0f128) != 2.0f128) { return 2i64; }
+    return 0i64;
+}

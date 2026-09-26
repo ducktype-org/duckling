@@ -226,13 +226,15 @@ namespace c_import {
 			representative[name] = chosen;
 		}
 
-		std::vector<std::string>                            merged_order;
-		std::unordered_map<std::string, std::vector<CDecl>> merged;
+		std::vector<std::string>                                  merged_order;
+		std::unordered_map<std::string, std::vector<CDecl>>       merged;
+		std::unordered_map<std::string, std::vector<std::string>> absorbed;
 		for (const auto& name: order) {
 			const std::string& into = representative[name];
 			if (!merged.contains(into)) merged_order.push_back(into);
 			auto& target = merged[into];
 			target.insert(target.end(), grouped[name].begin(), grouped[name].end());
+			if (into != name) absorbed[into].push_back(name);
 		}
 
 		for (auto& [record, owner]: owner_of_record) owner = representative[owner];
@@ -255,6 +257,18 @@ namespace c_import {
 
 			std::ostringstream out;
 			emitBanner(out, input);
+
+			// Without this the missing module is a mystery: `import <pkg>.<header>;` fails with
+			// a lookup error and nothing says where those declarations went.
+			if (const auto merged_in = absorbed.find(name); merged_in != absorbed.end()) {
+				out << "# Also holds the declarations of ";
+				for (std::size_t i = 0; i < merged_in->second.size(); i++) {
+					if (i != 0) out << ", ";
+					out << merged_in->second[i];
+				}
+				out << ", merged because they depend on each other.\n\n";
+			}
+
 			if (!dependencies.empty()) {
 				for (const auto& dependency: dependencies)
 					out << "import " << package_name << '.' << dependency << ";\n";

@@ -1,5 +1,7 @@
 #include "verify.hpp"
 
+#include <sys/wait.h>
+
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
@@ -76,6 +78,10 @@ namespace c_import {
 
 		result.output = lastLines(readAll(log), 40);
 		result.ok     = status == 0;
+
+		// The shell reports a command it could not find as 127, which says nothing about the
+		// package: it was written fine and is perfectly usable.
+		result.compiler_missing = status != -1 && WIFEXITED(status) && WEXITSTATUS(status) == 127;
 
 		std::filesystem::remove_all(artifacts, error_code);
 

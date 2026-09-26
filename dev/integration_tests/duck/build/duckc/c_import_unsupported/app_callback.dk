@@ -1,0 +1,11 @@
+# What should work once C function pointers are callable values (#3650).
+import core.builtins.*;
+import us.unsupported.*;
+
+extern("C") fun double_it(a: i32) -> i32 = { return a * 2i32; }
+
+fun main() -> i64 = {
+    # Passing a Duckling function to C as a callback.
+    if (us_apply(double_it, 21i32) != 42i32) { return 1i64; }
+    return 0i64;
+}

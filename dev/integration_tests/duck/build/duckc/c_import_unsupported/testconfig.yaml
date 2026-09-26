@@ -1,0 +1,99 @@
+# Every C construct `duck_c_import` cannot translate yet, in one place.
+#
+# The enabled case locks in that each one is *reported* rather than approximated: every one of
+# them would otherwise produce a program that links and then reads the wrong memory, so a
+# regression that starts emitting one silently has to fail here.
+#
+# The disabled cases next to it are what should pass once the gap behind each construct is
+# closed. Enable one when its issue is fixed.
+
+build-c: "$DIT_TMP_DIR/build_c"
+c-compiler: "$(command -v clang-19 || command -v clang || command -v cc)"
+
+PreCase: |+
+  # `duck translate-c` resolves the translator through $PATH, and PreCase does not go
+  # through the Run template that sets it up for the cases.
+  export PATH="@{duckc_dir}:$PATH"
+  @{cd-tmp-dir}
+  mkdir -p @{build-c}
+  @{c-compiler} -O2 -c -o @{build-c}/unsupported.o @{ConfigDir}/unsupported.c
+  @{duck-exe} translate-c us \
+    --header @{ConfigDir}/unsupported.h \
+    --library @{build-c}/unsupported.o
+  @{duck-exe} init app
+  @{duck-exe} -C app add --local ../us us
+
+Tests:
+  c_import_unsupported:
+    Description: reports every C construct that cannot be translated yet
+    Cases:
+      everything-unsupported-is-reported:
+        CaseName: "Each untranslatable construct is skipped with a reason"
+        test-cmd: >
+          grep -q 'skipped record `union_us_union`: unions' src/us.dk
+          && grep -q 'skipped record `struct_us_bitfield`: contains the bitfield' src/us.dk
+          && grep -q 'skipped record `struct_us_packed`: field `b` does not sit at its natural offset' src/us.dk
+          && grep -q 'skipped record `struct_us_overaligned`: is packed or over-aligned' src/us.dk
+          && grep -q 'skipped record `struct_us_flexible`: field `rest` is not C ABI compatible' src/us.dk
+          && grep -q 'skipped record `struct_us_holds_union`: holds `union_us_union`' src/us.dk
+          && grep -q 'skipped record `struct_us_anonymous`: contains an anonymous struct or union member' src/us.dk
+          && grep -q 'skipped function `match`: `match` is a Duckling keyword' src/us.dk
+          && grep -q 'skipped function `in`: `in` is a Duckling keyword' src/us.dk
+          && grep -q 'skipped function `us_sum_varargs`: variadic' src/us.dk
+          && grep -q 'skipped function `us_int128`: parameter 0 is not C ABI compatible: 128-bit' src/us.dk
+          && grep -q 'skipped function `us_long_double`: parameter 0 is not C ABI compatible: `long double`' src/us.dk
+        before-cmd: 'cd us'
+
+      pointers-to-unsupported-records-still-work:
+        CaseName: "A pointer to an untranslatable record is still a usable address"
+        # `cptr u8` is ABI-correct for any pointer, so these declarations survive.
+        test-cmd: >
+          grep -q 'fundecl us_flexible_count(f: cptr u8) -> i32;' us/src/us.dk
+          && grep -q 'fundecl us_apply(fn: cptr u8, value: i32) -> i32;' us/src/us.dk
+
+      # @TODO: #3647 Enable once unions, bitfields, packed and over-aligned records can be
+      # expressed; today each one is skipped because approximating it changes the layout.
+      records-the-abi-cannot-express:
+        Enabled: false
+        CaseName: "Unions, bitfields, packed and over-aligned records round-trip by value"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && cp @{ConfigDir}/app_records.dk app/src/src.dk'
+        test-cmd: "duck -C app run"
+
+      # @TODO: #3648 Enable once anonymous struct and union members have an equivalent; libclang
+      # does not report them as fields, so dropping one silently changes the record's size.
+      anonymous-members:
+        Enabled: false
+        CaseName: "An anonymous member's fields are reached through the outer record"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && cp @{ConfigDir}/app_anonymous.dk app/src/src.dk'
+        test-cmd: "duck -C app run"
+
+      # @TODO: #3649 Enable once the linked symbol name can be set separately from the Duckling
+      # name; a function name is the symbol, so renaming it today would link the wrong thing.
+      keyword-named-c-functions:
+        Enabled: false
+        CaseName: "A C function whose name is a Duckling keyword is still callable"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && cp @{ConfigDir}/app_keyword.dk app/src/src.dk'
+        test-cmd: "duck -C app run"
+
+      # @TODO: #3650 Enable once C function pointers are callable values; they translate as
+      # `cptr u8` today, which can be passed around but not called.
+      function-pointer-callbacks:
+        Enabled: false
+        CaseName: "A Duckling function can be passed to C as a callback"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && cp @{ConfigDir}/app_callback.dk app/src/src.dk'
+        test-cmd: "duck -C app run"
+
+      # @TODO: #3271 Enable once variadic functions work in the frontend; one declaration per
+      # concrete call signature is needed today, which a generator cannot guess.
+      variadic-functions:
+        Enabled: false
+        CaseName: "A variadic C function is callable"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && cp @{ConfigDir}/app_variadic.dk app/src/src.dk'
+        test-cmd: "duck -C app run"
+
+      # @TODO: #1498 Enable once i128 and the wider floats are supported across the C ABI.
+      wide-scalars:
+        Enabled: false
+        CaseName: "`__int128` and `long double` cross the C boundary"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && cp @{ConfigDir}/app_wide.dk app/src/src.dk'
+        test-cmd: "duck -C app run"

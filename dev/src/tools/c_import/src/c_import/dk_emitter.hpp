@@ -34,8 +34,6 @@ namespace c_import {
 	 * Headers whose records point at each other depend on each other, since a record only has
 	 * to be complete somewhere in the translation unit to be named. Duckling has no cyclic
 	 * imports, so mutually dependent modules are merged into one.
-	 * The dependencies cannot form a cycle: a record has to be complete to be named, and an
-	 * incomplete one degrades to `cptr u8` instead of being named at all.
 	 */
 	std::vector<SplitModule> emitSplitBindings(
 		const EmitterInput& input, const std::string& package_name

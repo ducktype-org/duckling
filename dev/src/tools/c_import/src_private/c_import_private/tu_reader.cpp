@@ -263,6 +263,10 @@ namespace c_import {
 				Context*          context   = nullptr;
 				DiscoveredRecord* record    = nullptr;
 				bool              has_field = false;
+				/** Offset the next field would sit at if nothing changed the layout. */
+				long long natural_offset = 0;
+				/** Alignment the record would have if nothing changed it. */
+				long long natural_align = 1;
 			};
 
 			Inspector inspector{ .context = &context, .record = &record };
@@ -270,7 +274,7 @@ namespace c_import {
 			clang_visitChildren(
 				record.cursor,
 				[](CXCursor child, CXCursor, CXClientData data) {
-					auto& [inspected_context, inspected, has_field]
+					auto& [inspected_context, inspected, has_field, natural_offset, natural_align]
 						= *static_cast<Inspector*>(data);
 
 					// libclang reports an anonymous member as a nested record declaration rather
@@ -303,6 +307,26 @@ namespace c_import {
 						return CXChildVisit_Continue;
 					}
 
+					// Duckling has no way to spell a packed or over-aligned record, so a layout
+				    // that is not the natural one cannot be reproduced. Letting it through would
+				    // place every following field wrong, with nothing to catch it.
+					const long long field_size  = clang_Type_getSizeOf(clang_getCursorType(child));
+					const long long field_align = clang_Type_getAlignOf(clang_getCursorType(child));
+					if (field_size > 0 && field_align > 0) {
+						const long long aligned
+							= ((natural_offset + field_align - 1) / field_align) * field_align;
+						const long long actual = clang_Cursor_getOffsetOfField(child) / 8;
+
+						if (actual >= 0 && actual != aligned && inspected->rejection.empty())
+							inspected->rejection
+								= "field `" + spellingOf(child)
+						        + "` does not sit at its natural offset, so the record is packed "
+						          "or over-aligned";
+
+						natural_offset = aligned + field_size;
+						natural_align  = natural_align < field_align ? field_align : natural_align;
+					}
+
 					CXType field_type = clang_getCanonicalType(clang_getCursorType(child));
 
 					// An array of records carries the same by-value dependency as the record.
@@ -322,6 +346,20 @@ namespace c_import {
 			// An `extern("C")` class with no fields is rejected by the compiler.
 			if (record.rejection.empty() && !inspector.has_field)
 				record.rejection = "has no fields";
+
+			if (record.rejection.empty()) {
+				const CXType    type  = clang_getCursorType(record.cursor);
+				const long long size  = clang_Type_getSizeOf(type);
+				const long long align = clang_Type_getAlignOf(type);
+
+				const long long natural_align = inspector.natural_align;
+				const long long natural_size
+					= ((inspector.natural_offset + natural_align - 1) / natural_align)
+				    * natural_align;
+
+				if (size > 0 && align > 0 && (size != natural_size || align != natural_align))
+					record.rejection = "is packed or over-aligned, which has no Duckling spelling";
+			}
 		}
 
 		/**
@@ -389,13 +427,16 @@ namespace c_import {
 				}
 			}
 
-			for (const auto& record: context.records) {
+			for (auto& record: context.records) {
 				if (!record.rejection.empty()) continue;
 
-				// A name that is a Duckling keyword cannot be renamed, because it is the linked
-				// identifier, so the record has to go.
-				if (context.registry.claim(record.name).accepted)
+				// The tag prefix means this practically never fires, but a name that cannot be
+				// claimed has to be reported rather than quietly left out.
+				auto verdict = context.registry.claim(record.name);
+				if (verdict.accepted)
 					context.emitted_records.insert(record.name);
+				else
+					record.rejection = std::move(verdict.reason);
 			}
 		}
 

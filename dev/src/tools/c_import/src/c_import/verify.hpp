@@ -7,6 +7,8 @@ namespace c_import {
 
 	struct VerifyResult final {
 		bool ok = false;
+		/** The compiler could not be run at all, so nothing is known about the package. */
+		bool compiler_missing = false;
 		/** The command that was run, so a failure can be reproduced by hand. */
 		std::string command;
 		/** Whatever the compiler wrote, trimmed to something readable. */

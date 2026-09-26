@@ -1,0 +1,20 @@
+# What should work once records the C ABI cannot express are supported (#3647).
+import core.builtins.*;
+import us.unsupported.*;
+
+fun main() -> i64 = {
+    var u = union_us_union();
+    u.i = 7i32;
+    if (us_union_get_i(u) != 7i32) { return 1i64; }
+
+    if (us_bitfield_sum(struct_us_bitfield(3u32, 5u32)) != 8i32) { return 2i64; }
+
+    # The packed record is 5 bytes in C, so the natural layout would read `b` wrong.
+    if (us_packed_get_b(struct_us_packed(1i8, 42i32)) != 42i32) { return 3i64; }
+
+    if (us_overaligned_get_a(struct_us_overaligned(9i32)) != 9i32) { return 4i64; }
+
+    if (us_holds_union_tag(struct_us_holds_union(5i32, u)) != 5i32) { return 5i64; }
+
+    return 0i64;
+}

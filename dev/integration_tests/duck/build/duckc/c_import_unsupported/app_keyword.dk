@@ -1,0 +1,10 @@
+# What should work once the linked symbol name can be set separately from the Duckling name
+# (#3649). `match` and `in` are Duckling keywords, so the C symbols need different local names.
+import core.builtins.*;
+import us.unsupported.*;
+
+fun main() -> i64 = {
+    if (c_match(1i32) != 2i32) { return 1i64; }
+    if (c_in(1i32) != 3i32) { return 2i64; }
+    return 0i64;
+}

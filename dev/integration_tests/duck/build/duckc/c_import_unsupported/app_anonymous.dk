@@ -1,0 +1,13 @@
+# What should work once anonymous struct and union members are supported (#3648).
+import core.builtins.*;
+import us.unsupported.*;
+
+fun main() -> i64 = {
+    var a = struct_us_anonymous();
+    a.tag = 3i32;
+    # The anonymous member's fields are reached through the outer record, as in C.
+    a.i = 11i32;
+
+    if (us_anonymous_tag(a) != 3i32) { return 1i64; }
+    return 0i64;
+}

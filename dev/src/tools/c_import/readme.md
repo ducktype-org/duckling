@@ -76,6 +76,12 @@ Three mappings are worth knowing about:
   An opaque record gets no class of its own, because an `extern("C")` class with no fields is
   rejected by the compiler.
 
+Every one of these has a fixture in `integration_tests/duck/build/duckc/c_import_unsupported/`,
+where one case asserts it is reported and a disabled case next to it is what should pass once the
+gap behind it closes: unions, bitfields and packed records (#3647), anonymous members (#3648),
+keyword-named symbols (#3649), callable function pointers (#3650), variadics (#3271) and the wide
+scalars (#1498).
+
 A field name is not linked - the C ABI places fields by position - so a field called `type` is
 renamed to `type_` rather than costing the whole record. A *function* name is the linked symbol,
 so a keyword there means the declaration has to be skipped instead.
@@ -105,6 +111,11 @@ through the package name, and the import binds its last segment:
 import shapes.mylib;
 using mylib.*;
 ```
+
+Headers whose records point at each other depend on each other, and Duckling has no cyclic
+imports, so mutually dependent modules are merged into one named after the first of them. The
+generated module says which headers it absorbed, because otherwise `import shapes.b;` fails with
+a lookup error and nothing explains where those declarations went.
 
 The aggregate module (`shapes.dk`) gathers every split module, but `using` binds locally rather
 than re-exporting, so for now each module has to be imported individually. It is dropped when a

@@ -227,6 +227,13 @@ private:
 		ASSERT_EQUAL(std::string("type_"), keyword_field->fields.at(0).name);
 		ASSERT_EQUAL(std::string("normal"), keyword_field->fields.at(1).name);
 
+		// A packed or over-aligned record cannot be reproduced, and emitting the natural
+		// layout would be wrong with no diagnostic anywhere.
+		ASSERT_TRUE(findSkipped(model, "struct_hostile_packed") != nullptr);
+		ASSERT_TRUE(findRecord(model, "struct_hostile_packed") == nullptr);
+		ASSERT_TRUE(findSkipped(model, "struct_hostile_overaligned") != nullptr);
+		ASSERT_TRUE(findRecord(model, "struct_hostile_overaligned") == nullptr);
+
 		// A keyword parameter name is replaced positionally; the function survives.
 		const auto* keyword_param = findFunction(model, "hostile_keyword_param");
 		ASSERT_TRUE(keyword_param != nullptr);

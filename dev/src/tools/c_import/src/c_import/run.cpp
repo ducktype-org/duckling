@@ -111,6 +111,15 @@ namespace c_import {
 
 		if (options.verify) {
 			const auto verified = verifyPackage(out_dir, options.package_name, options.duckc);
+			if (!verified.ok && verified.compiler_missing) {
+				std::cerr << "error: cannot run `" << options.duckc << "` to check the package\n"
+						  << "  package: " << out_dir.string() << '\n'
+						  << "\nThe package was written and is usable; it just could not be "
+							 "checked.\nPass --duckc <path> to point at the compiler, or "
+							 "--no-verify to skip the check.\n";
+				return 1;
+			}
+
 			if (!verified.ok) {
 				std::cerr << "error: the generated package does not compile\n"
 						  << "  package: " << out_dir.string() << '\n'

@@ -77,3 +77,14 @@ struct hostile_keyword_field {
 	int type;
 	int normal;
 };
+
+/* Duckling has no way to spell either of these, and emitting the natural layout would place
+   every following field wrong with nothing to catch it. */
+struct __attribute__((packed)) hostile_packed {
+	char a;
+	int  b;
+};
+
+struct __attribute__((aligned(16))) hostile_overaligned {
+	int a;
+};

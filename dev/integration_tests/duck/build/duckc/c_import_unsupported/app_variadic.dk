@@ -1,0 +1,8 @@
+# What should work once variadic functions are supported in the frontend (#3271).
+import core.builtins.*;
+import us.unsupported.*;
+
+fun main() -> i64 = {
+    if (us_sum_varargs(3i32, 1i32, 2i32, 3i32) != 6i32) { return 1i64; }
+    return 0i64;
+}

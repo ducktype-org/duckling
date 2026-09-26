@@ -11,6 +11,7 @@ SubDirs:
   - basic-deps-and-conds
   - basic-deps-but-with-normalisation
   - c_import
+  - c_import_unsupported
   - diamond
   - dvm-deps
   - errors
