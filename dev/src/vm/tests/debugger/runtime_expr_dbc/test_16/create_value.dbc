@@ -1,5 +1,0 @@
-# Creates the process's VM value number 0 (value 42), which `use_value` later reads back.
-function create_value { } -> { i64 } {
-	mov_p64_imm ret0, 42;
-	ret_from_expr;
-}

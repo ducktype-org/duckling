@@ -1,12 +1,9 @@
 function spin { } -> { i64 } {
 	init_pany_type x, i64;
 	mov_p64_imm x, 1;
-
-	# Loops as long as `x == 1`; only another expression overwriting `x` can break it.
 	label Loop;
 	cmpEq_p64_imm x, 1;
 	jmpIf_label Loop;
-	
 	mov_p64_p64 ret0, x;
 	ret_from_expr;
 }
