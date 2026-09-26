@@ -63,3 +63,10 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+
+  selectors: # `using ... as`, `export using`, `export { ... }`
+    Cases:
+      all:
+        Output:
+          String: "7\n7\n3\n8\n12\n"
+        ExitCode: 0

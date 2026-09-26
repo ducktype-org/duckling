@@ -41,7 +41,6 @@ namespace lang_def {
 			{ Keyword::Namespace, "namespace", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Import, "import", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Using, "using", KeywordFlagsOptions::IsStmtStart },
-			{ Keyword::Alias, "alias", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Var, "var", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Let, "let", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::While, "while", KeywordFlagsOptions::IsStmtStart },
@@ -84,6 +83,7 @@ namespace lang_def {
 			{ Keyword::Extern, "extern", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Debug, "debug", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Static, "static", KeywordFlagsOptions::IsSpecifier },
+			{ Keyword::Export, "export", KeywordFlagsOptions::IsSpecifier },
 
 			// If doesn't always indicate statement start.
 			{ Keyword::If, "if", KeywordFlags() },
