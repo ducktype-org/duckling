@@ -184,6 +184,19 @@ namespace vm::test {
 			return *this;
 		}
 
+		FlowSimulator& awaitExprPause() {
+			auto response = vm::api::waitForBreakpoint(pid, thread_id);
+			if (!response)
+				assertTrue(
+					false,
+					base::strConcat(
+						"Wait for expression pause failed: ",
+						vm::api::errorToString(response.error())
+					)
+				);
+			return *this;
+		}
+
 		using FrameVar         = std::pair<base::StrID, base::StrID>;
 		using FrameVars        = std::vector<FrameVar>;
 		using FrameExpectation = std::pair<base::StrID, base::Optional<FrameVars>>;
@@ -295,6 +308,7 @@ namespace vm::test {
 			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
 
 			assertExitValue(response.value(), expected_result);
+			awaitExprPause();
 			return *this;
 		}
 
@@ -305,6 +319,7 @@ namespace vm::test {
 			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
 
 			assertExitValues(response.value(), expected_result);
+			awaitExprPause();
 			return *this;
 		}
 
@@ -370,6 +385,7 @@ namespace vm::test {
 					)
 				);
 			assertExitValue(response.value(), expected_result);
+			awaitExprPause();
 			return *this;
 		}
 

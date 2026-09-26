@@ -176,6 +176,7 @@ private:
 			.evalExprNormal(add, { 10, 18, 34, 66 })
 			.evalExprNormal(subtract, { 6, 14, 30, 62 })
 			.evalExprNormal(divide, { 4, 8, 16, 32 })
+			.awaitBreakpoint(base::StrID("main"), 16)
 			.resume()
 			.awaitBreakpoint(base::StrID("main"), 20)
 			.enforceCallStack({
@@ -186,6 +187,7 @@ private:
 			.evalExprNormal(add, { 12, 20, 36, 68 })
 			.evalExprNormal(subtract, { 4, 12, 28, 60 })
 			.evalExprNormal(divide, { 2, 4, 8, 16 })
+			.awaitBreakpoint(base::StrID("main"), 20)
 			.finishAndAssertExitValue(0)
 			.cleanup();
 	}
