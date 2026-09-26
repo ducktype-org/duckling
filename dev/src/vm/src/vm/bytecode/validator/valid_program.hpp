@@ -4,6 +4,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/core/native/dynamic_library.hpp>
@@ -61,16 +62,12 @@ namespace vm::code {
 
 		const ObjIdNameMap<ExternalCFunction>& extCFunctions() const;
 
-		valid_function::ValidFunction validateExpr(
-			CRef<SafeVMThread> thread, const code::Function& expr
-		) const;
-
 		/**
-		 * @brief Validates the synthetic `vm_start_function` against the live thread in the start
-		 * function mode and extracts its reachable code.
+		 * @brief Validates a function in the given mode and extracts its reachable code. The mode
+		 * defaults to `Normal`, i.e. a regular program function.
 		 */
-		valid_function::ValidFunction validateStartFunction(
-			CRef<SafeVMThread> thread, const code::Function& start_function
+		valid_function::ValidFunction validateFunction(
+			const code::Function& function, detail::ValidationMode mode = detail::Normal{}
 		) const;
 
 		const ObjIdNameMap<FFIFunction>& ffiFunctions() const;

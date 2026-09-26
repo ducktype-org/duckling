@@ -24,18 +24,14 @@ namespace {
 
 	void printProcStatus(printer::PrinterOStream& os, const vm::api::ProcStatus& status) {
 		os.add(printer::PrinterContent(typeToString(status)));
-
-		variant_match(status) {
-			variant_case(vm::api::ExecutionCompleted, completed) {
-				const auto& exit_value = completed.exit_value;
-				if (v_matches(exit_value, std::vector<Ref<vm::IVMValue>>)) {
-					for (auto val: std::get<std::vector<Ref<vm::IVMValue>>>(exit_value)) {
-						if_opt_some(val->readData(), data) {
-							variant_match(data) {
-								variant_case(vm::interpreted_data_variant::Primitive, primitive) {
-									os << " (return value = " << std::to_string(primitive.value)
-									   << ")";
-								}
+		if (v_matches(status, vm::api::ExecutionCompleted)) {
+			const auto& exit_value = std::get<vm::api::ExecutionCompleted>(status).exit_value;
+			if (v_matches(exit_value, std::vector<Ref<vm::IVMValue>>)) {
+				for (auto val: std::get<std::vector<Ref<vm::IVMValue>>>(exit_value)) {
+					if_opt_some(val->readData(), data) {
+						variant_match(data) {
+							variant_case(vm::interpreted_data_variant::Primitive, primitive) {
+								os << " (return value = " << std::to_string(primitive.value) << ")";
 							}
 						}
 					}

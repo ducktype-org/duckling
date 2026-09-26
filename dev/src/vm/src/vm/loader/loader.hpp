@@ -81,16 +81,15 @@ namespace vm::loader {
 			Ref<SafeVMThread> thread, fs::File file
 		) const;
 
-		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateExpr(
-			Ref<SafeVMThread> thread, const code::Function& expr
-		) const;
-
 		/**
-		 * @brief Validates the synthetic `vm_start_function` against the live thread in the start
-		 * function mode - it is generated at run time rather than loaded from bytecode.
+		 * @brief Validates a function in the given mode - used for runtime expressions (which
+		 * need the live thread) and the synthetic `vm_start_function` (generated at run time
+		 * rather than loaded from bytecode). The mode defaults to `Normal`, i.e. a regular program
+		 * function.
 		 */
-		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateStartFunction(
-			Ref<SafeVMThread> thread, const code::Function& start_function
+		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateFunction(
+			const code::Function&        function,
+			code::detail::ValidationMode mode = code::detail::Normal{}
 		) const;
 	};
 }

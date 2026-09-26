@@ -21,6 +21,7 @@
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
@@ -203,7 +204,9 @@ namespace vm {
 	}
 
 	void SafeVMThread::compileAndLoadStartFunction(const code::Function& start_function) {
-		start_function_high.emplace(safe_process.validateStartFunction(this, start_function));
+		auto valid = safe_process.validateFunction(start_function, code::detail::StartFunction{});
+		CORE_ASSERT(valid.has_value(), "the synthetic start function must always pass validation");
+		start_function_high.emplace(std::move(*valid));
 		start_function_low.emplace(safe_process.compileToLow(this, *start_function_high));
 	}
 

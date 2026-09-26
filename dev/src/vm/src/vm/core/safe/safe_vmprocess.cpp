@@ -716,7 +716,9 @@ namespace vm {
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> valid_expr = [&] {
 			variant_match(source) {
 				variant_case(fs::File, files) { return loader.validateExpr(thread_ref, files); }
-				variant_case(code::Function, func) { return loader.validateExpr(thread_ref, func); }
+				variant_case(code::Function, func) {
+					return validateFunction(func, code::detail::Expr{ thread_ref });
+				}
 			}
 			CORE_UNREACHABLE();
 		}();
@@ -744,12 +746,10 @@ namespace vm {
 		return compiler.lowerExpr(expr, thread);
 	}
 
-	code::valid_function::ValidFunction SafeVMProcess::validateStartFunction(
-		Ref<SafeVMThread> thread, const code::Function& start_function
+	std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> SafeVMProcess::validateFunction(
+		const code::Function& function, code::detail::ValidationMode mode
 	) const {
-		auto valid = loader.validateStartFunction(thread, start_function);
-		CORE_ASSERT(valid.has_value(), "the synthetic start function must always pass validation");
-		return std::move(*valid);
+		return loader.validateFunction(function, mode);
 	}
 
 	void SafeVMProcess::updateGlobalDataMemory(CRef<low::ILowVMProgram> program) {

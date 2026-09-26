@@ -40,13 +40,14 @@ namespace {
 
 	// The synthetic start functions never return normally - they end the program with `exit`.
 	constexpr std::array VALID_LAST_OPCODES_FOR_START = { OpCode::Op_exit, OpCode::Op_jmp_label };
-	using DeinitializingInstructions                  = std::tuple<
-						 Op_deinit,
-						 Op_call_func,
-						 Op_call_builtinfunc,
-						 Op_call_cfunc,
-						 Op_call_ffifunc,
-						 Op_virtual_call_pptr_method>;
+
+	using DeinitializingInstructions = std::tuple<
+		Op_deinit,
+		Op_call_func,
+		Op_call_builtinfunc,
+		Op_call_cfunc,
+		Op_call_ffifunc,
+		Op_virtual_call_pptr_method>;
 	using CallingInstructions
 		= std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc>;
 
@@ -310,17 +311,15 @@ class FunctionValidator {
 	base::HashMap<base::StrID, usize>                    index_of_label;
 	base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
 
-	/// Whether the mode carries a live thread (`Expr` or `StartFunction`).
-	bool hasValidationThread() const {
-		return v_matches(mode, detail::Expr, detail::StartFunction);
-	}
-
-	/// The live thread the mode validates against. Precondition: `hasValidationThread()`.
-	CRef<SafeVMThread> validationThread() const {
-		variant_match(mode) {
-			variant_case(detail::Expr, expr) { return expr.thread; }
-			variant_case(detail::StartFunction, start) { return start.thread; }
-			variant_default { CORE_UNREACHABLE(); }
+	CRef<IVMValue> vmValueOf(CRef<opargs::VMValueIdentifier> vm_val) const {
+		variant_match(vm_val->id) {
+			variant_case(u64, id) {
+				CORE_ASSERT(v_matches(mode, detail::Expr), "indexed VM values only in expresssions");
+				auto thr = v_get(mode, detail::Expr).thread;
+				if (!thr->isValidVMValueID(vm_val)) throw InvalidVMValueIDError(*vm_val);
+				return thr->getVMValue(vm_val);
+			}
+			variant_case(const IVMValue*, ptr) { return ptr; }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -654,13 +653,11 @@ class FunctionValidator {
 
 				variant_case(CRef<opargs::VMValueIdentifier>, vm_val) {
 					CORE_ASSERT(
-						hasValidationThread(),
+						v_matches(mode, detail::Expr, detail::StartFunction),
 						"validator has to check that we are compiling expr or start function"
 					);
-					auto thr = validationThread();
 
-					if (!thr->isValidVMValueID(vm_val)) throw InvalidVMValueIDError(*vm_val);
-					CRef<valid_type::ValidType> type = thr->getVMValue(vm_val)->getType();
+					CRef<valid_type::ValidType> type = vmValueOf(vm_val)->getType();
 					if (!types_ctx.contains(type->getName()))
 						throw UnknownTypeOfVMValueError(*vm_val);
 				}
@@ -1901,8 +1898,7 @@ class FunctionValidator {
 				}
 				instr_case(Op_init_pany_vmval, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
-					auto& thr                 = *validationThread();
-					auto  name                = thr.getVMValue(&instr.vm_val)->getType()->getName();
+					auto name                 = vmValueOf(&instr.vm_val)->getType()->getName();
 					local_stack.push(instr.var, opargs::Type(name));
 					index++;
 				}

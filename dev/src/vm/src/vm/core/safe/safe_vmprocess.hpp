@@ -282,13 +282,15 @@ namespace vm {
 		) const;
 
 		/**
-		 * @brief Validates a synthetic `vm_start_function`.
+		 * @brief Validates a function in the given mode (defaults to `Normal`) and returns it, or
+		 * the loader diagnostics on failure.
 		 * @note The caller must keep the returned `ValidFunction` alive (at a stable address) for
 		 * as long as any `LowFuncData` lowered from it is used - `LowFuncData` stores a pointer to
 		 * it in `high_func`.
 		 */
-		code::valid_function::ValidFunction validateStartFunction(
-			base::Ref<vm::SafeVMThread> thread, const code::Function& start_function
+		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateFunction(
+			const code::Function&        function,
+			code::detail::ValidationMode mode = code::detail::Normal{}
 		) const;
 	};
 

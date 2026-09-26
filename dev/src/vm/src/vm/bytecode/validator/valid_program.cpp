@@ -42,8 +42,8 @@ vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
 	return copy;
 }
 
-vm::code::valid_function::ValidFunction vm::code::ValidProgram::validateExpr(
-	CRef<SafeVMThread> thread, const code::Function& expr
+vm::code::valid_function::ValidFunction vm::code::ValidProgram::validateFunction(
+	const code::Function& function, detail::ValidationMode mode
 ) const {
 	return detail::validateAndExtractReachableCode(
 		type_context.getCurrentTypes(),
@@ -52,23 +52,8 @@ vm::code::valid_function::ValidFunction vm::code::ValidProgram::validateExpr(
 		ext_c_function_map,
 		flag_context,
 		ffi_function_map,
-		expr,
-		detail::Expr{ thread }
-	);
-}
-
-vm::code::valid_function::ValidFunction vm::code::ValidProgram::validateStartFunction(
-	CRef<SafeVMThread> thread, const code::Function& start_function
-) const {
-	return detail::validateAndExtractReachableCode(
-		type_context.getCurrentTypes(),
-		globals_map,
-		function_signatures,
-		ext_c_function_map,
-		flag_context,
-		ffi_function_map,
-		start_function,
-		detail::StartFunction{ thread }
+		function,
+		mode
 	);
 }
 
@@ -151,15 +136,7 @@ void vm::code::ValidProgram::insertFunctions(
 		if (function_map.contains(func.name))
 			throw DuplicatedFunctionError(func, (*function_map.at(func.name))->toNormal());
 
-		auto validated_function = detail::validateAndExtractReachableCode(
-			type_context.getCurrentTypes(),
-			globals_map,
-			function_signatures,
-			ext_c_function_map,
-			flag_context,
-			ffi_function_map,
-			func
-		);
+		auto validated_function = validateFunction(func);
 		function_map.insert(
 			makeSharedBox<vm::code::valid_function::ValidFunction>(validated_function),
 			validated_function.name

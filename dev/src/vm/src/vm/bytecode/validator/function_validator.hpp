@@ -16,14 +16,7 @@ namespace vm::code::detail {
 		CRef<SafeVMThread> thread;
 	};
 
-	/**
-	 * @brief Validation mode for the synthetic `vm_start_function` wrappers. Behaves like `Expr`
-	 * (needs the live thread to resolve `init_pany_vmval` arguments) but additionally allows
-	 * `exit` and starts the local stack at the base of the frame instead of the current stack.
-	 */
-	struct StartFunction {
-		CRef<SafeVMThread> thread;
-	};
+	struct StartFunction {};
 
 	using ValidationMode = std::variant<Normal, Expr, StartFunction>;
 
