@@ -31,3 +31,4 @@ duck_add_test(compiler c_import_identifiers tests/c_import_identifiers_test.cpp 
 duck_add_test(compiler c_import_types tests/c_import_types_test.cpp USES Base Tester CImport)
 duck_add_test(compiler c_import_emitter tests/c_import_emitter_test.cpp USES Base Tester CImport)
 duck_add_test(compiler c_import_tu tests/c_import_tu_test.cpp USES Base Tester CImport)
+duck_add_test(compiler c_import_package tests/c_import_package_test.cpp USES Base Tester CImport)
