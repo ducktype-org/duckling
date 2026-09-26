@@ -111,23 +111,41 @@ namespace compiler::repl {
 	}
 
 	FrontendMinImplementation::FrontendMinImplementation(
-		bool completions_enabled, bool bracketed_paste_enabled
+		bool completions_enabled, bool bracketed_paste_enabled, bool decorative_output
 	):
 		  m_hist_idx(0),
 		  m_sequence_to_align_cursor_to_multiline_start(
 			  std::format("{}[{}C", ESC, ReplConfig::CONTINUATION.size())
 		  ),
-		  m_bracketed_paste_enabled(bracketed_paste_enabled) {
+		  m_bracketed_paste_enabled(bracketed_paste_enabled),
+		  m_decorative_output(decorative_output) {
 		if (completions_enabled)
 			std::cerr << "Warning: minimal REPL frontend does not support completions.\n";
 	}
 
 	void FrontendMinImplementation::printWelcome() const {
+		if (!m_decorative_output) return;
 		std::cout << "Duckling REPL (minimal mode)\n";
 		std::cout << "Type /help for available commands, /exit to quit.\n\n";
 	}
 
 	std::string FrontendMinImplementation::readLine() {
+		if (!m_decorative_output) {
+			// Bypass terminal editing so it emits no redraw or cursor-control sequences.
+			std::string line;
+			char        c = 0;
+			while (os_utils::readChar(c)) {
+				if (c == NEWLINE_CHAR) {
+					addHistoryEntry(line);
+					return line;
+				}
+				if (c != CARRIAGE_RETURN_CHAR) line += c;
+			}
+			std::cin.setstate(std::ios::eofbit);
+			if (!line.empty()) addHistoryEntry(line);
+			return line;
+		}
+
 		std::cout << ReplConfig::PROMPT;
 		std::cout.flush();
 
@@ -186,6 +204,10 @@ namespace compiler::repl {
 		std::cout << "  Alt + Up / Down     - Navigate input history\n";
 		std::cout << "  Ctrl+D              - Exit (on empty line)\n";
 		std::cout << '\n';
+	}
+
+	void FrontendMinImplementation::printCompletions(std::string_view) const {
+		std::cerr << "Completions are not supported by the minimal REPL frontend.\n";
 	}
 
 	void FrontendMinImplementation::moveCursorLeft() const { os_utils::writeStr(CURSOR_LEFT_SEQ); }

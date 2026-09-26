@@ -53,9 +53,10 @@ namespace compiler::repl {
 	// ─── Construction / destruction ──────────────────────────────────────────────
 
 	FrontendReplxxImplementation::FrontendReplxxImplementation(
-		bool completions_enabled, bool bracketed_paste_enabled
+		bool completions_enabled, bool bracketed_paste_enabled, bool decorative_output
 	):
-		  m_completions_enabled(completions_enabled) {
+		  m_completions_enabled(completions_enabled),
+		  m_decorative_output(decorative_output) {
 		m_replxx.set_max_history_size(1'000);
 		m_replxx.set_word_break_characters(" \t\n;,+-/*%^&|~<>=!?@#$:(){}[]");
 		m_replxx.set_indent_multiline(true);
@@ -364,13 +365,16 @@ namespace compiler::repl {
 	// ─── Welcome / prompt / help / history ──────────────────────────────────────
 
 	void FrontendReplxxImplementation::printWelcome() const {
-		std::cout << "Duckling REPL\n";
-		std::cout << "Type /help for available commands, /exit to quit.\n";
-		std::cout << "Press Enter to submit. Press Alt+Enter for new line.\n\n";
+		if (m_decorative_output) {
+			std::cout << "Duckling REPL\n";
+			std::cout << "Type /help for available commands, /exit to quit.\n";
+			std::cout << "Press Enter to submit. Press Alt+Enter for new line.\n\n";
+		}
 	}
 
 	std::string FrontendReplxxImplementation::readLine() {
-		const char* input = m_replxx.input(ReplConfig::PROMPT);
+		const std::string prompt = m_decorative_output ? ReplConfig::PROMPT : "";
+		const char*       input  = m_replxx.input(prompt);
 
 		if (input == nullptr) {
 			// EOF (Ctrl-D) or error.
