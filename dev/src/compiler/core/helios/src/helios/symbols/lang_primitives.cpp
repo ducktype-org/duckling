@@ -120,7 +120,7 @@ namespace compiler::helios {
 
 			return lookupInterfaceOfNamespacePath(
 				ctx,
-				base::makeBox<HInterface>(HInterface::ofSymbol(next)),
+				base::makeBox<HInterface>(HInterface::ofNamespace(next)),
 				std::vector<std::string>(namespaces.begin() + 1, namespaces.end())
 			);
 		}

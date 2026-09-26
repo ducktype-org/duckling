@@ -8,6 +8,8 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -38,35 +40,37 @@ namespace compiler::helios::test_utils {
 	}
 
 	SymbolList getChain(const std::string_view chain, ScopeID scope) {
-		auto       symbols = base::strSplit(chain, ".");
-		SymbolList result;
-		bool       first_symbol = true;
-		for (auto&& sym: symbols) {
-			auto symbol_qresult = first_symbol
-			                        ? query::entryPoint<QueryLookupInScopeAndParents>(
-										  { scope, base::StrID(sym.c_str()), true }
-									  )
-			                        : query::entryPoint<QueryLookupInSymbol>(
-										  { result.back(), base::StrID(sym.c_str()), false }
+		auto symbols = base::strSplit(chain, ".");
 
-									  );
+		auto computed = query::utils::withContextCompute([&](query::Context& ctx) {
+			SymbolList result;
+			bool       first_symbol = true;
+			for (auto&& sym: symbols) {
+				auto name = base::StrID(sym.c_str());
 
-			CRef<LookupResult> symbol = &symbol_qresult->valueOrThrow();
-			CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
+				auto lookup_qresult = first_symbol
+				                        ? HInterface::ofScopeWithParents(scope).lookup(
+											  ctx, name, { .with_wildcards = true }
+										  )
+				                        : getSymbolInterface(ctx, result.back())
+				                              .lookup(ctx, name, { .with_wildcards = false });
 
-			auto symbol_path_variant = symbol->getAsSingle().valueOrPanic();
-			CORE_ASSERT(
-				v_matches(symbol_path_variant, SymbolList), "Expected single symbol in chain lookup"
-			);
-			auto symbol_path = std::get<SymbolList>(symbol_path_variant);
+				CRef<LookupResult> symbol = &lookup_qresult->valueOrThrow();
+				CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
 
-			for (auto&& elem: symbol_path) {
-				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrPanic();
-				result.appendList(dealiased);
+				auto symbol_path_variant = symbol->getAsSingle().valueOrPanic();
+				CORE_ASSERT(
+					v_matches(symbol_path_variant, SymbolList),
+					"Expected single symbol in chain lookup"
+				);
+
+				result.appendList(std::get<SymbolList>(symbol_path_variant));
+				first_symbol = false;
 			}
-			first_symbol = false;
-		}
-		return result;
+			return result;
+		});
+
+		return base::anyCast<SymbolList>(computed);
 	}
 
 	ctv::CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope) {

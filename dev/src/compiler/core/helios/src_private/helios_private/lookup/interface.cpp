@@ -2,6 +2,7 @@
 
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/lookup/errors.hpp>
+#include <helios_private/lookup/lookup.hpp>
 #include <helios_private/lookup/lookup_in_type_interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -27,8 +28,20 @@ namespace compiler::helios {
 					{ scope.scope, name, params.with_wildcards }
 				);
 			}
-			variant_case(SymbolInterface, symbol) {
-				return ctx.query<QueryLookupInSymbol>({ symbol.symbol, name, params.with_wildcards }
+			variant_case(ModuleInterface, symbol) {
+				return ctx.query<QueryLookupInNamespaceOrModule>({ symbol.id, name });
+			}
+			variant_case(NamespaceInterface, symbol) {
+				return ctx.query<QueryLookupInNamespaceOrModule>({ symbol.id, name });
+			}
+			variant_case(UsingInterface, symbol) {
+				return ctx.query<QueryLookupInUsingImport>(
+					{ symbol.symbol, name, params.with_wildcards }
+				);
+			}
+			variant_case(ImportInterface, symbol) {
+				return ctx.query<QueryLookupInUsingImport>(
+					{ symbol.symbol, name, params.with_wildcards }
 				);
 			}
 			variant_case(TypeInstanceInterface, type) {
@@ -61,16 +74,7 @@ namespace compiler::helios {
 		if (get_as_single.hasFailed()) return query::Failed();
 
 		variant_match(get_as_single.valueOrThrow()) {
-			variant_case(SymbolList, symbol_list) {
-				SymbolList dealiased_result;
-
-				for (auto path_symbol: symbol_list) {
-					UNPACK_QRESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
-					dealiased_result.appendList(dealiased);
-				}
-
-				return dealiased_result;
-			}
+			variant_case(SymbolList, symbol_list) { return symbol_list; }
 			variant_case(errors::Ambiguity, _) {
 				auto msg = makeBox<ShadowedVariableLookupError>(error_position);
 				for (auto& leaf: lookup_result->leaves) {

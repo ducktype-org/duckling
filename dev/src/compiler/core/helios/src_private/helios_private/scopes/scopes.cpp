@@ -19,6 +19,7 @@
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
@@ -844,21 +845,17 @@ namespace compiler::helios {
 			for (const auto& sym: *symbol_list) {
 				if (isIgnoredByLookup(sym)) continue;
 
-				if (isWildcard(sym)) {
-					if (key.with_wildcards) {
-						auto wild_result_qresult
-							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
-						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result = &, wild_result_qresult);
-						// The correct code that works for using is commented out,
-						// to make the import a.*; work correctly.
-						// @TODO: #1412 fix this properly
-						// if (!wild_result->isEmpty())
-						// 	result.children.push_back(wild_result->toNode(sym));
-						if (!wild_result->isEmpty()) result.merge(*wild_result);
-					}
-				} else if (isAlias(sym) && name(sym) == key.name) {
-					// @TODO: #1412 fix dealias
-					result.leaves.push_back(sym);
+				if (kind(sym) == SymbolKind::Using or kind(sym) == SymbolKind::Import) {
+					UNPACK_QRESULT_CREF(
+						CRef<LookupResult> pointed_result = &,
+						ctx.query<QueryLookupInUsingImport>({ sym, key.name, key.with_wildcards })
+					);
+					// The correct code that works for using is commented out,
+					// to make the import a.*; work correctly.
+					// @TODO: #1412 fix this properly
+					// if (!pointed_result->isEmpty())
+					// 	result.children.push_back(pointed_result->toNode(sym));
+					if (!pointed_result->isEmpty()) result.merge(*pointed_result);
 				} else if (name(sym) == key.name) {
 					result.leaves.push_back(sym);
 				} else {

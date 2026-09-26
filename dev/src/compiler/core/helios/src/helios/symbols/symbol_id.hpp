@@ -54,8 +54,6 @@ namespace compiler::helios {
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
 		friend struct defgen::ImplementationOf_QueryGeneratedSymbol;
-		friend struct ImplementationOf_QueryLookupInSymbol;
-		friend struct ImplementationOf_QueryLinkedScope;
 		friend struct ImplementationOf_QueryClassSymbolData;
 	};
 }
@@ -74,13 +72,6 @@ namespace std {
 }
 
 namespace compiler::helios {
-	/**
-	 * @return is given symbol a wildcard symbol (e.g. using a.*)
-	 */
-	bool isWildcard(SymID);
-
-	bool isAlias(SymID);
-
 	/**
 	 * @return name of the symbol
 	 */

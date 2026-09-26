@@ -5,6 +5,8 @@
 
 #include "chain_expr.hpp"
 
+#include "helios_private/lookup/lookup_chain.hpp"
+
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
@@ -886,7 +888,7 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
-			const auto& lookup_result = HInterface::ofSymbol(namespace_like_symbol)
+			const auto& lookup_result = getSymbolInterface(query_ctx, namespace_like_symbol)
 			                                .lookupExpectUnique(
 												expr_access->getStablePosition(),
 												query_ctx,
@@ -988,7 +990,7 @@ namespace compiler::helios::code {
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
 				auto lookup_qresult
-					= HInterface::ofSymbol(namespace_like_symbol)
+					= getSymbolInterface(query_ctx, namespace_like_symbol)
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
@@ -1120,7 +1122,7 @@ namespace compiler::helios::code {
 		) -> query::QResult<ChainState> {
 			switch (kind(symbol)) {
 			case SymbolKind::Namespace:
-			case SymbolKind::Import: {
+			case SymbolKind::Module: {
 				return ChainState::ofNamespaceLike(symbol, pst_element_origin);
 			}
 			case SymbolKind::Variable:

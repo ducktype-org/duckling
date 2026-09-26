@@ -159,8 +159,7 @@ namespace compiler::helios {
 		 * hiding a lot of boilerplate associated with it. It performs the following steps:
 		 * 1. It looks-ups the interface.
 		 * 2. It reports error if more than one symbol is found.
-		 * 3. It performs dealiasing if needed.
-		 * 4. Return dealiased symbol list.
+		 * 3. Return the symbol list. Aliases are already resolved by the lookup itself.
 		 *
 		 * It some error occurs, it will report it in @p error_position.
 		 *
@@ -182,21 +181,15 @@ namespace compiler::helios {
 			return HInterface{ ScopeWithParentsInterface{ scope } };
 		}
 
-		static HInterface ofModule( SymID symbol) {
-			return HInterface{ ModuleInterface{ symbol } };
-		}
+		static HInterface ofModule(SymID symbol) { return HInterface{ ModuleInterface{ symbol } }; }
 
-		static HInterface ofNamespace( SymID symbol) {
+		static HInterface ofNamespace(SymID symbol) {
 			return HInterface{ NamespaceInterface{ symbol } };
 		}
 
-		static HInterface ofImport(SymID symbol) {
-			return HInterface{ ImportInterface{ symbol } };
-		}
+		static HInterface ofImport(SymID symbol) { return HInterface{ ImportInterface{ symbol } }; }
 
-		static HInterface ofUsing(SymID symbol) {
-			return HInterface{ UsingInterface{ symbol } };
-		}
+		static HInterface ofUsing(SymID symbol) { return HInterface{ UsingInterface{ symbol } }; }
 
 		static HInterface ofTypeInstance(const tsh::AbstractType type) {
 			return HInterface{ TypeInstanceInterface{ type } };

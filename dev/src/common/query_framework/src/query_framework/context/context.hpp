@@ -338,6 +338,11 @@ namespace query {
 		 */
 		void logInt(Box<dia::MessageBase> diagnostic);
 
+		template<std::derived_from<dia::MessageBase> Msg, typename... Args>
+		void log(Args&&... args) {
+			logInt(makeBox<Msg>(std::forward<Args>(args)...));
+		}
+
 		/**
 		 * @brief Logs and moves all messages from a provided logger
 		 * into current query node logger.

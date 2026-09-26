@@ -1,5 +1,7 @@
 #pragma once
 
+#include "frontend/module_tree/module_id.hpp"
+
 #include <ctv/ctv.hpp>
 #include <frontend/pst_parser/pst_config.hpp>
 #include <helios/attributes/builtins.hpp>
@@ -292,11 +294,19 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
+	struct Module final {
+		frontend::ModuleID module_id;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
+	};
+
 #define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
 	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::BuiltinTemplatedSymbol, \
 		defgen::Parameter, defgen::SelfParameter, defgen::Field,                                  \
 		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal, defgen::ReplInputWrapper,    \
-		defgen::ReplEmptyVariable, defgen::ScriptMainWrapper, defgen::GeneratedConstant
+		defgen::ReplEmptyVariable, defgen::ScriptMainWrapper, defgen::GeneratedConstant,          \
+		defgen::Module
 
 	using GeneratedSymbolDataVariant = std::variant<GENERATED_SYMBOL_SEMANTICS_LIST>;
 

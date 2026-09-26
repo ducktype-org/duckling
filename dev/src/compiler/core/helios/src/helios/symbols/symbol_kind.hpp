@@ -11,11 +11,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, int, SymbolKind
 		FunctionDeclaration,
 		Const,
 		Class,
-		Alias,
 		Using,
 		Variable,
 		Import,
 		Parameter,
+		Module,
 
 		Template,
 
