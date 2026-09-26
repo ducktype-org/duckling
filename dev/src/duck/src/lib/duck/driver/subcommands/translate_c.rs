@@ -20,7 +20,13 @@ pub fn get_parser() -> Command {
                 .required(true)
                 .action(ArgAction::Set),
         )
-        .arg(multi("header", "C header to translate. May be given more than once").required(true))
+        .arg(
+            multi(
+                "header",
+                "C header to translate. May be given more than once",
+            )
+            .required(true),
+        )
         .arg(optional(
             "out-dir",
             "Directory to write the package to. Defaults to the package name",

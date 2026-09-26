@@ -79,9 +79,8 @@ fn create_task(
                 .collect();
             multipackage_schema::PackageCompilationStrategy::DvmExe {
                 output_file: outputs::unit_output(unit, graph, layout)?,
-                dvm_linking_options: (!shared_libraries.is_empty()).then(|| {
-                    multipackage_schema::DvmLinkingOptions { shared_libraries }
-                }),
+                dvm_linking_options: (!shared_libraries.is_empty())
+                    .then_some(multipackage_schema::DvmLinkingOptions { shared_libraries }),
             }
         }
         task => unreachable!(

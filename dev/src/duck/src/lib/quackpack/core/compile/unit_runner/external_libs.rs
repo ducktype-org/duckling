@@ -70,8 +70,14 @@ pub fn gather_dvm_shared_libs(unit: &Unit, graph: &UnitGraph) -> Vec<StrId> {
         type Break = Infallible;
 
         fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
-            self.0
-                .extend(unit.package().manifest().build_options().dvm_shared_libs.iter().copied());
+            self.0.extend(
+                unit.package()
+                    .manifest()
+                    .build_options()
+                    .dvm_shared_libs
+                    .iter()
+                    .copied(),
+            );
             ControlFlow::Continue(())
         }
     }

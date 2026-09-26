@@ -798,24 +798,28 @@ mod tests {
                 package_id: "app1".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app1_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app2".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app2_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app3".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app3_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app3_alias".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app3_alias_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
