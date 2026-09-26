@@ -1,0 +1,89 @@
+# `duck translate-c` turns mylib.h plus a C artifact into a source-only Duckling package, which
+# `duck` then builds and links like any other dependency. The C artifacts are built in their own
+# directory so the duckc artifact cache clean cannot remove them.
+
+build-c: "$DIT_TMP_DIR/build_c"
+c-compiler: "$(command -v clang-19 || command -v clang || command -v cc)"
+
+# The native backend links the object, the DVM `dlopen`s the shared object.
+compile-c-object: "@{c-compiler} -O2 -c -o @{build-c}/mylib.o @{ConfigDir}/mylib.c"
+compile-c-shared: "@{c-compiler} -O2 -shared -fPIC -o @{build-c}/libmylib.so @{ConfigDir}/mylib.c"
+
+PreCase: |+
+  # `duck translate-c` resolves the translator through $PATH, and PreCase does not go
+  # through the Run template that sets it up for the cases.
+  export PATH="@{duckc_dir}:$PATH"
+  @{cd-tmp-dir}
+  mkdir -p @{build-c}
+  @{compile-c-object}
+  @{compile-c-shared}
+  @{duck-exe} translate-c mylib \
+    --header @{ConfigDir}/mylib.h \
+    --library @{build-c}/mylib.o \
+    --dvm-shared-lib @{build-c}/libmylib.so
+  @{duck-exe} translate-c shapes --split \
+    --header @{ConfigDir}/mylib.h \
+    --header @{ConfigDir}/mylib_extra.h \
+    --library @{build-c}/mylib.o
+  @{duck-exe} init app
+  echo "profiles:
+    dvm:
+      dvm-bytecode: true" >> app/quackconfig.yaml
+
+Tests:
+  c_import:
+    Description: generates a package from a C header that duck can build and call into
+    Cases:
+      native:
+        CaseName: "The generated package builds and runs on the native backend"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && @{duck-exe} -C app add --local ../mylib mylib && cp @{ConfigDir}/app_native.dk app/src/src.dk'
+        test-cmd: "duck -C app run"
+
+      dvm:
+        CaseName: "The generated package builds and runs on the DVM backend"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && @{duck-exe} -C app add --local ../mylib mylib && cp @{ConfigDir}/app_dvm.dk app/src/src.dk'
+        test-cmd: "duck -C app run --profile=dvm"
+
+      deterministic:
+        CaseName: "Regenerating the package produces byte-identical output"
+        test-cmd: >
+          @{duck-exe} translate-c mylib --out-dir mylib_again
+          --header @{ConfigDir}/mylib.h
+          --library @{build-c}/mylib.o
+          --dvm-shared-lib @{build-c}/libmylib.so
+          && diff -r mylib mylib_again
+
+      split:
+        CaseName: "--split puts each header in its own module, importing across them as needed"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && @{duck-exe} -C app add --local ../shapes shapes && cp @{ConfigDir}/app_split.dk app/src/src.dk'
+        test-cmd: "duck -C app run"
+
+      split-cross-header-import:
+        CaseName: "A split module that names another header's record imports it"
+        test-cmd: >
+          grep -q 'import shapes.mylib;' shapes/src/mylib_extra.dk
+          && grep -q 'using mylib.*;' shapes/src/mylib_extra.dk
+
+      # @TODO: #3367 Enable once re-exports are supported; `using` binds locally, so the
+      # aggregate module cannot yet present the split modules under one import.
+      split-flat-import-site:
+        Enabled: false
+        CaseName: "The aggregate module presents every split module under one import"
+        before-cmd: 'export PATH="@{duckc_dir}:$PATH" && @{duck-exe} -C app add --local ../shapes shapes && cp @{ConfigDir}/app_split_flat.dk app/src/src.dk'
+        test-cmd: "duck -C app run"
+
+      # @TODO: #3367 Enable once optionals land; a C pointer that may be null should map to
+      # `?cptr T` rather than losing the nullability.
+      nullable-pointer-is-optional:
+        Enabled: false
+        CaseName: "A C pointer that may be null maps to an optional"
+        test-cmd: "grep -q '?cptr' mylib/src/mylib.dk"
+
+      skips-are-reported:
+        CaseName: "Declarations without a C ABI mapping are reported, not silently dropped"
+        # A regression that starts emitting one of these should fail here rather than at link time.
+        test-cmd: >
+          grep -q 'skipped union `union_mylib_bad`' mylib/src/mylib.dk
+          && grep -q 'skipped record `struct_mylib_bits`' mylib/src/mylib.dk
+          && grep -q 'skipped function `mylib_printf`' mylib/src/mylib.dk
+          && grep -q 'skipped function `mylib_inline`' mylib/src/mylib.dk

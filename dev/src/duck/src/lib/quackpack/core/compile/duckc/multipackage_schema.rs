@@ -81,6 +81,9 @@ pub enum PackageCompilationStrategy {
     DvmExe {
         /// Path to the output file.
         output_file: PathBuf,
+        /// Shared objects the DVM loads at runtime.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        dvm_linking_options: Option<DvmLinkingOptions>,
     },
     /// Compile this task into a DVM library.
     // Serializes to "dvm_lib" (see the note on `DvmExe`).
@@ -142,6 +145,14 @@ impl<'de> de::Deserialize<'de> for LinkerOptions {
             .map(|map| map.deserialize().map(Self::Complex))
             .deserialize(deserializer)
     }
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+/// Linking options specific to the DVM backend.
+pub struct DvmLinkingOptions {
+    /// Shared objects the DVM `dlopen`s at runtime.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shared_libraries: Vec<String>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]

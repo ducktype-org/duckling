@@ -1,0 +1,10 @@
+# The flat import site that split output should present once re-exports are supported: the
+# aggregate module gathers every split module, so one import reaches symbols from both headers.
+import core.builtins.*;
+import shapes.shapes.*;
+
+fun main() -> i64 = {
+    if (mylib_add(2i32, 3i32) != 5i32) { return 1i64; }
+    if (mylib_extra_scaled_sum(struct_mylib_point(3i32, 4i32), 2i32) != 14i32) { return 2i64; }
+    return 0i64;
+}

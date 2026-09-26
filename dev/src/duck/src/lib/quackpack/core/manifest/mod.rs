@@ -165,6 +165,8 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             VenvConfig::default_for_package(ctx),
             BuildOptions {
                 links: links.map(Into::into),
+                // The registry schema carries no DVM shared libraries yet.
+                dvm_shared_libs: Vec::new(),
             },
         ))
     }

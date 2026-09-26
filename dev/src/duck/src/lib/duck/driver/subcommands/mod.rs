@@ -15,6 +15,7 @@ mod repl;
 mod run;
 pub mod run_script;
 mod sync;
+mod translate_c;
 
 /// Get parsers for all the builtin subcommands.
 pub fn subcommands() -> Vec<Command> {
@@ -32,6 +33,7 @@ pub fn subcommands() -> Vec<Command> {
         list::get_parser(),
         info::get_parser(),
         clean_storage::get_parser(),
+        translate_c::get_parser(),
     ]
 }
 
@@ -56,6 +58,7 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         "run" => run::execute,
         "run-script" => run_script::execute,
         "sync" => sync::execute,
+        "translate-c" => translate_c::execute,
         _ => return None,
     };
     Some(f)

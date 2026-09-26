@@ -74,6 +74,7 @@ add_subdirectory(src/base)
 add_subdirectory(src/common)
 add_subdirectory(src/compiler)
 add_subdirectory(src/vm)
+add_subdirectory(src/tools)
 add_subdirectory(src/playground)
 
 # Scripts:

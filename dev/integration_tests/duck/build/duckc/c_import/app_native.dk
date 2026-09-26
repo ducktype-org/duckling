@@ -1,0 +1,18 @@
+# Asserts through the exit code: `duck run` mixes its own progress output into stdout.
+import core.builtins.*;
+import mylib.mylib.*;
+
+fun main() -> i64 = {
+    if (mylib_add(2i32, 3i32) != 5i32) { return 1i64; }
+    if (mylib_point_sum(struct_mylib_point(3i32, 4i32)) != 7i32) { return 2i64; }
+
+    let p = mylib_point_make(5i32, 6i32);
+    if (p.x != 5i32 or p.y != 6i32) { return 3i64; }
+
+    if (mylib_neg_char(3i8) != -3i8) { return 4i64; }
+
+    if (MYLIB_MAX != 128i64) { return 5i64; }
+    if (MYLIB_BLUE != 7u32) { return 6i64; }
+
+    return 0i64;
+}

@@ -80,6 +80,8 @@ pub struct Metadata {
     pub description: Option<String>,
     /// External library to link against.
     pub links: Option<String>,
+    /// Shared objects the DVM loads at runtime.
+    pub dvm_shared_libs: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

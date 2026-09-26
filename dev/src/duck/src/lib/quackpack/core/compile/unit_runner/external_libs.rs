@@ -31,29 +31,53 @@ pub struct ExternalLibrariesFound {
 }
 
 #[instrument(skip_all)]
-/// Check whether subtree rooted at `unit` links against external libraries.
+/// Find a [`Unit`] whose external library has no DVM counterpart.
 ///
-/// This function returns _any_ [`Unit`] with external library, if there is one.
-///
-/// In case there are multiple such [`Unit`]s, it's not guaranteed which one is returned.
-pub fn has_external_libraries(unit: &Unit, graph: &UnitGraph) -> Option<ExternalLibrariesFound> {
-    struct ExternalLibsVisitor;
+/// A package that declares `dvm-shared-libs` alongside `links` provides the same library for both
+/// backends, so only a package offering nothing to the DVM is a problem.
+pub fn has_dvm_incompatible_libraries(
+    unit: &Unit,
+    graph: &UnitGraph,
+) -> Option<ExternalLibrariesFound> {
+    struct DvmIncompatibleVisitor;
 
-    impl UnitVisitor for ExternalLibsVisitor {
+    impl UnitVisitor for DvmIncompatibleVisitor {
         type Break = ExternalLibrariesFound;
 
         fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
-            let links = &unit.package().manifest().build_options().links;
-            match links {
-                Some(links) => ControlFlow::Break(ExternalLibrariesFound {
-                    unit: unit.clone(),
-                    links: *links,
-                }),
-                None => ControlFlow::Continue(()),
+            let build_options = unit.package().manifest().build_options();
+            match build_options.links {
+                Some(links) if build_options.dvm_shared_libs.is_empty() => {
+                    ControlFlow::Break(ExternalLibrariesFound {
+                        unit: unit.clone(),
+                        links,
+                    })
+                }
+                _ => ControlFlow::Continue(()),
             }
         }
     }
-    unit.accept(&mut ExternalLibsVisitor {}, graph)
+    unit.accept(&mut DvmIncompatibleVisitor {}, graph)
+}
+
+#[instrument(skip_all)]
+/// Collect the DVM shared objects declared by `unit` and everything it depends on.
+pub fn gather_dvm_shared_libs(unit: &Unit, graph: &UnitGraph) -> Vec<StrId> {
+    #[derive(Default)]
+    struct DvmSharedLibsCollector(Vec<StrId>);
+
+    impl UnitVisitor for DvmSharedLibsCollector {
+        type Break = Infallible;
+
+        fn visit(&mut self, unit: &Unit) -> ControlFlow<Self::Break> {
+            self.0
+                .extend(unit.package().manifest().build_options().dvm_shared_libs.iter().copied());
+            ControlFlow::Continue(())
+        }
+    }
+    let mut visitor = DvmSharedLibsCollector::default();
+    unit.accept(&mut visitor, graph);
+    visitor.0
 }
 
 #[instrument(skip_all)]

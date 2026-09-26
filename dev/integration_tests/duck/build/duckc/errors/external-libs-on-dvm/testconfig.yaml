@@ -23,4 +23,4 @@ Tests:
             info: successfully synchronized venv \`foo\`"
         Err:
           String: |+
-            error: package foo version 1.0.0 links against \`sqlite\`, which is not supported on the DVM
+            error: package foo version 1.0.0 links against \`sqlite\`, which is not supported on the DVM; declare \`metadata.dvm-shared-libs\` to provide a shared object instead

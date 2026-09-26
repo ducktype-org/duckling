@@ -1,0 +1,11 @@
+int           scalars_int(int a);
+unsigned int  scalars_uint(unsigned int a);
+short         scalars_short(short a);
+long long     scalars_longlong(long long a);
+float         scalars_float(float a);
+double        scalars_double(double a);
+_Bool         scalars_bool(_Bool a);
+signed char   scalars_schar(signed char a);
+unsigned char scalars_uchar(unsigned char a);
+long          scalars_strlen(const char* text);
+void          scalars_nothing(void);
