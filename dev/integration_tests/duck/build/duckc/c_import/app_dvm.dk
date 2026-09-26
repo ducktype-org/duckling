@@ -1,6 +1,6 @@
-# Same checks as app_native.dk minus the constants: reading a `const` from another package does
-# not work on the DVM backend yet, which has nothing to do with the generated bindings (a
-# hand-written package with a single `const` fails the same way).
+# Same checks as app_native.dk minus the constants: the DVM backend does not link package
+# dependencies, so any symbol from another package is unresolved at load (#3645). That is
+# unrelated to the generated bindings, whose `extern("C")` declarations are resolved by dlopen.
 import core.builtins.*;
 import mylib.mylib.*;
 
