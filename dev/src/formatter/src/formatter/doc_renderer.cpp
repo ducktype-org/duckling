@@ -1,5 +1,7 @@
 #include "doc_renderer.hpp"
 
+#include "source_text.hpp"
+
 #include <base/types/ints.hpp>
 
 #include <string_view>
@@ -12,7 +14,7 @@ namespace formatter {
 		 *
 		 * Tracks the current visual column incrementally: indentation contributes
 		 * `indent levels * indent_width` columns (whether rendered as tabs or spaces),
-		 * everything else one column per byte.
+		 * everything else one column per UTF-8 code point.
 		 */
 		class Renderer final {
 		public:
@@ -41,7 +43,8 @@ namespace formatter {
 
 			void write(std::string_view text) {
 				out += text;
-				column += static_cast<u32>(text.size());
+				// Text carrying newlines (a multi-line block comment) restarts the column.
+				column = text.contains('\n') ? visualWidth(text) : column + visualWidth(text);
 			}
 
 			void breakLine(u32 blanks = 0) {
@@ -150,7 +153,7 @@ namespace formatter {
 			 * becomes several with the same combined text.
 			 */
 			void renderLineComment(std::string_view text) {
-				if (column + text.size() <= config.max_line_length) {
+				if (column + visualWidth(text) <= config.max_line_length) {
 					write(text);
 					return;
 				}
@@ -170,7 +173,7 @@ namespace formatter {
 					const auto word = text.substr(pos, end - pos);
 					pos             = end;
 
-					if (line_has_word && column + 1 + word.size() > config.max_line_length) {
+					if (line_has_word && column + 1 + visualWidth(word) > config.max_line_length) {
 						breakLine();
 						write(prefix);
 					}

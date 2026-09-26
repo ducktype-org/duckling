@@ -11,7 +11,9 @@ namespace formatter {
 		bool isStr(const Token& t, std::string_view s) { return sv(t) == s; }
 	}
 
-	bool needSpace(const FormatConfig& config, const Token* prev, const Token& cur) {
+	bool needSpace(
+		const FormatConfig& config, const Token* prev, const Token& cur, const Token* prev2
+	) {
 		if (prev == nullptr) return false;
 
 		// Two adjacent operator tokens must stay separated: the lexer greedily merges
@@ -39,8 +41,16 @@ namespace formatter {
 		// Call and index groups bind to the preceding value: `foo(x)`, `arr[i]`.
 		if (isBracketGroup(cur)) {
 			const Bracket b = cur.getBracketType();
+			// Generic arguments bind to the `:` of the instantiation: `max:{i32}(x, y)`.
+			if (b == Bracket::Curly && isOperator(*prev) && isStr(*prev, ":")) return false;
 			if (b == Bracket::Round || b == Bracket::Square) {
-				if (isTypeKeyword(*prev)) return false;  // `i32[5]`, `List[i32]`
+				if (isTypeKeyword(*prev)) return false;  // `i32[5]`, `Array[i32]`
+				// The template header binds to its parameter list: `template(T: type)`.
+				if (isKeyword(*prev) && isStr(*prev, "template")) return false;
+				// A custom operator used as the declared name: `fun +*(a, b)`.
+				if (isOperator(*prev) && prev2 != nullptr && isKeyword(*prev2)
+				    && isStr(*prev2, "fun"))
+					return false;
 				if (isKeyword(*prev)) return true;       // `if (...)`, `return [...]`
 				if (isValueCloser(*prev)) return false;  // `foo(...)`, `a[...]`
 			}

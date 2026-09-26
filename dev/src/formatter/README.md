@@ -98,8 +98,11 @@ positions, which reference the `TokenSource` the tokens came from.
 
 1. **Structure** (`statement_tree`) — splits the token stream into statements.
    A statement ends at a `;`, at a line comment, at a `case` keyword (match
-   arms), or after a `{...}` code block — unless `else` follows, so an
-   `if/else if/else` chain stays one statement. A curly group is a *code block*
+   arms), after a `template(...)` header (which always gets its own line), or
+   after a `{...}` code block — unless `else` follows, so an
+   `if/else if/else` chain stays one statement. A comment trailing the last
+   token on its source line (`x = 1; # note`, `} # done`) stays attached to that
+   statement. A curly group is a *code block*
    (as opposed to an inline literal like `{1, 2, 3}`) when it contains a `;`, a
    nested curly block, a comment, a `case` arm, or a statement-opening keyword.
 
@@ -108,7 +111,10 @@ positions, which reference the `TokenSource` the tokens came from.
    - all spacing is decided here through `needSpace` (`spacing.hpp`), the oracle
      answering whether two adjacent tokens need a space (member access binds
      tightly, adjacent operators must stay separated so the lexer cannot merge
-     them back differently, and so on);
+     them back differently, generic arguments bind to their `:`
+     (`impl.max:{i32}(x, y)`), a custom operator declared as a name binds to its
+     parameter list (`fun +*(a, b)`), and so on). Text operators such as `not`
+     never glue to their operand — that would merge them into one identifier;
    - every bracket group becomes a **Group** node, which renders flat when it
      fits and otherwise *explodes* one comma-separated element per line;
    - over-long expressions become **Fill** nodes that break greedily, preferring
@@ -122,7 +128,8 @@ positions, which reference the `TokenSource` the tokens came from.
    column, and makes every breaking decision against `max_line_length`. Every
    node caches the width of its single-line rendering, so each fits-check is
    O(1). Columns are measured **visually**: a tab counts as `indent_width`
-   columns, so wrapping matches what an editor shows. Over-long line comments
+   columns and a character counts as one column whatever its UTF-8 length, so
+   wrapping matches what an editor shows. Over-long line comments
    re-flow at word boundaries here, repeating the full `#`/`##` prefix on each
    continuation line.
 
@@ -158,11 +165,12 @@ ignored, missing keys keep their default:
 duckfmt <file> [options]
   -c, --config <path>   JSON formatter config file
   -i, --in-place        write the result back to the file instead of stdout
-  -k, --check           print nothing; exit non-zero if the file is not formatted
+  -k, --check           report on stderr; exit non-zero if the file is not formatted
 ```
 
 By default it prints the formatted file to stdout. `--check` is the CI-friendly
-mode (exit code reports whether the file is already formatted). Unlike `duckc`,
+mode: stdout stays empty, the name of an unformatted file goes to stderr, and the
+exit code reports whether the file is already formatted. Unlike `duckc`,
 `duckfmt` does not initialize the compiler driver — it only tokenizes and
 formats.
 
@@ -191,3 +199,7 @@ handled conservatively to stay round-trip safe. For example, `while (a) {b}`
 keeps `{b}` inline: a one-expression block with no keyword or `;` is
 indistinguishable, at the token level, from a single-element set literal. When in
 doubt the formatter changes nothing rather than risk altering meaning.
+
+Both the structure pass and the builder recurse once per bracket level, so
+sources nested deeper than 512 brackets are rejected with a `base::LogicError`
+instead of overflowing the stack.

@@ -70,7 +70,8 @@ namespace formatter {
 		 *   - "maxEmptyLines": u32
 		 *   - "spaceAroundOperators": bool
 		 *
-		 * @throws nlohmann::json::exception if a present key has the wrong type.
+		 * @throws nlohmann::json::exception if a present key has the wrong type, or if
+		 *         "indentStyle" is neither "tab" nor "space".
 		 */
 		[[nodiscard]]
 		static FormatConfig fromJson(const nlohmann::json& json);

@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
 #include <lexer/token.hpp>
@@ -44,17 +45,18 @@ namespace formatter {
 		/** Whether a `;` terminates the statement. */
 		bool semicolon = false;
 
-		/** A line comment ending the statement, or trailing it on the `;` source line. */
-		const lexer::Token* end_comment = nullptr;
+		/** A comment ending the statement, or trailing it on its last source line. */
+		base::Optional<const lexer::Token*> end_comment;
 	};
 
 	/**
 	 * @brief Splits @p tokens into statements.
 	 *
 	 * A statement ends at a `;`, at a line comment (which consumes the rest of its line), at a
-	 * `case` keyword opening the next match arm, or after a `{...}` code block — unless the
-	 * block is followed by `else` (the chain continues) or by `;` (absorbed as the terminator).
-	 * A comment trailing the `;` on the same source line is attached as `end_comment`.
+	 * `case` keyword opening the next match arm, after a `template(...)` header, or after a
+	 * `{...}` code block — unless the block is followed by `else` (the chain continues) or by
+	 * `;` (absorbed as the terminator). A comment trailing the statement on its last source
+	 * line is attached as `end_comment`.
 	 */
 	[[nodiscard]]
 	std::vector<Statement> parseStatementList(std::span<const lexer::Token> tokens);

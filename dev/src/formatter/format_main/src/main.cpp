@@ -80,7 +80,8 @@ namespace {
 
 		if (options.isFlag("check")) {
 			if (formatted == source_view) return 0;
-			std::cout << file_to_format.getFilePath().strView() << ": not formatted\n";
+			// On stderr, so `duckfmt -k` stays usable in a pipeline.
+			std::cerr << file_to_format.getFilePath().strView() << ": not formatted\n";
 			return 1;
 		}
 
@@ -112,7 +113,8 @@ namespace {
 		             .addShortName('k')
 		             .addLongName("check")
 		             .addShortDesc(
-						 "Do not write output; exit non-zero if the file is not already formatted."
+						 "Do not rewrite the file; report on stderr and exit non-zero if it is "
+						 "not already formatted."
 					 )
 		             .build())
 		    .setHandler(formatFile);

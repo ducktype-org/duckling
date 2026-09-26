@@ -1,5 +1,7 @@
 #include "doc.hpp"
 
+#include "source_text.hpp"
+
 namespace formatter::doc {
 	namespace {
 
@@ -26,9 +28,11 @@ namespace formatter::doc {
 	}
 
 	Doc text(std::string content) {
-		Doc node        = make(DocKind::Text);
-		node.text       = std::move(content);
-		node.flat_width = static_cast<u32>(node.text.size());
+		Doc node  = make(DocKind::Text);
+		node.text = std::move(content);
+		// A multi-line block comment cannot render on one line, so no enclosing group can.
+		node.must_break = node.text.contains('\n');
+		node.flat_width = node.must_break ? WIDTH_INFINITE : visualWidth(node.text);
 		return node;
 	}
 

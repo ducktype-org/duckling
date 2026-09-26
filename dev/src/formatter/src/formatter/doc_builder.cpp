@@ -122,12 +122,19 @@ namespace formatter {
 					}
 				}
 				if (stmt.semicolon) docs.push_back(doc::text(";"));
-				if (stmt.end_comment != nullptr) {
-					if (stmt.semicolon || needSpace(config, prev, *stmt.end_comment))
+				if (stmt.end_comment.has_value()) {
+					const Token& comment = *stmt.end_comment.value();
+					if (stmt.semicolon || needSpace(config, prev, comment))
 						docs.push_back(doc::space());
-					docs.push_back(doc::lineComment(std::string(sv(*stmt.end_comment))));
+					docs.push_back(commentDoc(comment));
 				}
 				return doc::concat(std::move(docs));
+			}
+
+			/** A line comment re-flows when over-long; a block comment is reproduced verbatim. */
+			static Doc commentDoc(const Token& comment) {
+				if (isLineComment(comment)) return doc::lineComment(std::string(sv(comment)));
+				return doc::text(atomText(comment));
 			}
 
 			/**
@@ -264,16 +271,29 @@ namespace formatter {
 				const Token*&          prev,
 				bool                   suppress_leading
 			) {
-				bool suppress_space = suppress_leading;
+				bool         suppress_space = suppress_leading;
+				bool         unary_glue     = false;
+				const Token* prev2          = nullptr;
 				for (const auto& t: tokens) {
 					if (isSkippable(t)) continue;
-					const bool leading = suppress_space ? false : needSpace(config, prev, t);
+					// The operator-adjacency guard outranks the unary glue rule: `++ *` glued
+					// into `++*` would re-tokenize as one different operator.
+					const bool must_separate
+						= unary_glue && prev != nullptr && isOperator(*prev) && isOperator(t);
+					const bool leading = (suppress_space && !must_separate)
+					                       ? false
+					                       : needSpace(config, prev, t, prev2);
 					suppress_space     = false;
+					unary_glue         = false;
 					if (leading) docs.push_back(doc::space());
 					const bool unary = isSignOperator(t) && isPrefixContext(prev);
 					docs.push_back(atomDoc(t));
-					if (unary) suppress_space = true;
-					prev = &t;
+					if (unary) {
+						suppress_space = true;
+						unary_glue     = true;
+					}
+					prev2 = prev;
+					prev  = &t;
 				}
 			}
 
@@ -400,7 +420,10 @@ namespace formatter {
 					if (at_comment) {
 						if (needSpace(config, prev, body[i])) docs.push_back(doc::space());
 						docs.push_back(doc::lineComment(std::string(sv(body[i]))));
-						docs.push_back(doc::line());
+						// Only separate from what follows; a comment ending the body would
+						// otherwise leave a line holding nothing but indentation.
+						if (firstSignificant(body.subspan(i + 1)) != nullptr)
+							docs.push_back(doc::line());
 						prev = nullptr;
 					}
 					start = i + 1;

@@ -13,6 +13,7 @@
 #include <lexer/token.hpp>
 
 #include <string>
+#include <string_view>
 
 namespace formatter {
 
@@ -35,6 +36,15 @@ namespace formatter {
 	/** Returns the closing bracket code point that matches an opening bracket type. */
 	[[nodiscard]]
 	char32_t closingBracket(lexer::Token::BracketType open);
+
+	/**
+	 * @brief Number of columns @p text occupies on screen.
+	 *
+	 * Counts UTF-8 code points, not bytes, so a non-ASCII identifier is measured the way an
+	 * editor shows it. Text spanning several lines is measured from its last newline on.
+	 */
+	[[nodiscard]]
+	u32 visualWidth(std::string_view text);
 
 	/** Whether @p a and @p b sit on the same source line. */
 	[[nodiscard]]

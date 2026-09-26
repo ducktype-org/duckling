@@ -2,6 +2,8 @@
 
 #include "token_classes.hpp"
 
+#include <base/except/exceptions.hpp>
+
 namespace formatter {
 	namespace {
 
@@ -49,9 +51,20 @@ namespace formatter {
 			return '}';
 		case Bracket::Angle:
 			return 0x30'09;
-		default:
-			return static_cast<char32_t>(open);
+		case Bracket::None:
+			break;
 		}
+		CORE_PANIC("unknown bracket type in the formatter");
+	}
+
+	u32 visualWidth(std::string_view text) {
+		const auto last_line = text.rfind('\n');
+		if (last_line != std::string_view::npos) text.remove_prefix(last_line + 1);
+		u32 width = 0;
+		for (const char c: text)
+			// Continuation bytes (0b10xxxxxx) belong to the code point already counted.
+			if ((static_cast<unsigned char>(c) & 0xC0) != 0x80) width++;
+		return width;
 	}
 
 	bool onSameSourceLine(const Token& a, const Token& b) { return endLine(a) == startLine(b); }

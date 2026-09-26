@@ -2,9 +2,6 @@
 
 #include <lang_definitions/key_spec_op.hpp>
 
-#include <algorithm>
-#include <array>
-
 namespace formatter {
 	namespace {
 
@@ -51,7 +48,8 @@ namespace formatter {
 	}
 
 	bool isSignOperator(const Token& t) {
-		if (isKeyword(t) && isStr(t, "not")) return true;
+		// Only symbol operators glue to their operand: a text operator such as `not` would
+		// merge with the operand into a single identifier.
 		if (!isOperator(t)) return false;
 		return isStr(t, "-") || isStr(t, "+") || isStr(t, "!") || isStr(t, "~") || isStr(t, "&")
 		    || isStr(t, "?") || isStr(t, "++") || isStr(t, "--");
@@ -66,13 +64,8 @@ namespace formatter {
 	}
 
 	bool isTypeKeyword(const Token& t) {
-		if (!isKeyword(t)) return false;
-		constexpr auto TYPE_KEYWORDS = std::to_array<std::string_view>({
-			"i8",   "i16",  "i32",    "i64",  "i128", "u8",  "u16",  "u32",
-			"u64",  "u128", "f16",    "f32",  "f64",  "f80", "f128", "char",
-			"bool", "str",  "String", "type", "List", "Set", "Dict", "Array",
-		});
-		return std::ranges::find(TYPE_KEYWORDS, sv(t)) != TYPE_KEYWORDS.end();
+		return isKeyword(t)
+		    && lang_def::keywordFlags(t.asKeyword()).contains(lang_def::KeywordFlagsOptions::IsType);
 	}
 
 	bool isCaseKeyword(const Token& t) { return isKeyword(t) && isStr(t, "case"); }

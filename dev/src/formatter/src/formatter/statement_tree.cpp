@@ -9,12 +9,14 @@ namespace formatter {
 	namespace {
 
 		using lexer::Token;
+		using Bracket = Token::BracketType;
 
 		bool isStr(const Token& t, std::string_view s) { return sv(t) == s; }
 
 		/**
-		 * After the terminating `;` at @p i, absorbs a line comment trailing it on the same
-		 * source line (`x = 1; # note` keeps the note on the statement).
+		 * After the last token of a statement at @p i, absorbs a comment trailing it on the
+		 * same source line (`x = 1; # note` keeps the note on the statement, and so does
+		 * `} # done`).
 		 *
 		 * @return The index of the first token after the statement.
 		 */
@@ -22,7 +24,7 @@ namespace formatter {
 			const usize n = tokens.size();
 			usize       j = i + 1;
 			while (j < n && isSkippable(tokens[j])) j++;
-			if (j < n && isLineComment(tokens[j]) && onSameSourceLine(tokens[i], tokens[j])) {
+			if (j < n && isComment(tokens[j]) && onSameSourceLine(tokens[i], tokens[j])) {
 				stmt.end_comment = &tokens[j];
 				return j + 1;
 			}
@@ -61,6 +63,17 @@ namespace formatter {
 					flush_run(i);
 					return i;
 				}
+				// A `template(...)` header lives on its own line: it ends the statement it opens,
+				// so the declaration it applies to starts the next one.
+				if (at_start && isKeyword(t) && isStr(t, "template")) {
+					usize j = i + 1;
+					while (j < n && isSkippable(tokens[j])) j++;
+					if (j < n && isBracketGroup(tokens[j])
+					    && tokens[j].getBracketType() == Bracket::Round) {
+						flush_run(j + 1);
+						return j + 1;
+					}
+				}
 				at_start = false;
 
 				// Statement terminator.
@@ -97,7 +110,7 @@ namespace formatter {
 						stmt.semicolon = true;
 						return consumeTrailingComment(tokens, j, stmt);
 					}
-					return j;
+					return consumeTrailingComment(tokens, i, stmt);
 				}
 
 				i++;

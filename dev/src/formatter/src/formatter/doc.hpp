@@ -17,7 +17,11 @@
 namespace formatter {
 
 	enum class DocKind {
-		/** A literal piece of output (never contains a newline). */
+		/**
+		 * A literal piece of output. Normally a single line; a multi-line `#{ ... #}` block
+		 * comment is the one case that carries newlines, and it then forces enclosing groups
+		 * to break (`must_break`).
+		 */
 		Text,
 		/** Children rendered in order. */
 		Concat,

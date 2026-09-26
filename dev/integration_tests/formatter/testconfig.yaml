@@ -20,7 +20,17 @@ Tests:
         # --check fails (exit 1) on an unformatted file.
         run_args: "-k format_unformatted.duck"
         ExitCode: 1
+      format-check-stdout-quiet:
+        # --check reports on stderr, so stdout stays empty for pipelines.
+        run_args: "-k format_unformatted.duck"
+        ExitCode: 1
+        Output:
+          String: ""
       format-missing-config:
         # A non-existent config path errors cleanly instead of crashing.
         run_args: "-c does_not_exist.json format_unformatted.duck"
+        ExitCode: 1
+      format-bad-indent-style:
+        # A misspelled indentStyle is rejected instead of silently meaning tabs.
+        run_args: "-c bad_indent_style.json format_unformatted.duck"
         ExitCode: 1

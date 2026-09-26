@@ -32,7 +32,9 @@ namespace formatter {
 	 *
 	 * @param tokens Tokenization result of the source (see tokenizer::TokenSource).
 	 * @param config Formatting options.
-	 * @return The formatted source, terminated by a single trailing newline.
+	 * @return The formatted source, terminated by a single trailing newline; an empty string
+	 *         for input that holds no significant token.
+	 * @throws base::LogicError if brackets nest deeper than the formatter can recurse through.
 	 */
 	[[nodiscard]]
 	std::string formatTokens(const lexer::TokenData& tokens, const FormatConfig& config);

@@ -1,6 +1,7 @@
 #include <formatter/config.hpp>
 #include <formatter/formatter.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
@@ -9,6 +10,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
+#include <filesystem>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -109,6 +112,25 @@ public:
 		TESTER_ADD_TEST(testCommentsPreserved);
 		TESTER_ADD_TEST(testOperatorAdjacency);
 		TESTER_ADD_TEST(testRepoSnippets);
+
+		// New syntax.
+		TESTER_ADD_TEST(testTemplateHeader);
+		TESTER_ADD_TEST(testGenericInstantiation);
+		TESTER_ADD_TEST(testCustomOperatorDeclaration);
+		TESTER_ADD_TEST(testTextOperatorsKeepSpacing);
+		TESTER_ADD_TEST(testVariantTypeSpacing);
+		TESTER_ADD_TEST(testBitwiseOperatorSpacing);
+
+		// Comment placement.
+		TESTER_ADD_TEST(testCommentAfterBlock);
+		TESTER_ADD_TEST(testTrailingBlockComment);
+		TESTER_ADD_TEST(testCommentEndingGroupElement);
+		TESTER_ADD_TEST(testMultiLineBlockComment);
+
+		// Column measurement and robustness.
+		TESTER_ADD_TEST(testUnicodeColumnsMeasuredVisually);
+		TESTER_ADD_TEST(testInvalidIndentStyleRejected);
+		TESTER_ADD_TEST(testNestingTooDeep);
 
 		// Line-wrapping tests: bracket groups.
 		TESTER_ADD_TEST(testWrapLongCall);
@@ -470,6 +492,12 @@ fun f() = {
 			"x = a + + b;",
 			"x = a - -b;",
 			"x = * * .;",
+			// A sign operator asking to glue must not swallow the operator after it.
+			"x = ++ * y;",
+			"z = -- ++: w;",
+			// `not` is spelled with letters: gluing it would merge it into an identifier.
+			"x = not b;",
+			"if (not x) { y; }",
 		};
 		for (const auto& sample: samples) {
 			const auto before = signatureOf(sample);
@@ -495,47 +523,148 @@ fun f() = {
 
 	/** Real Duckling snippets copied from across the repository must round-trip and be idempotent. */
 	void testRepoSnippets() {
-		const std::vector<std::string_view> snippets = {
-			"actions",
-			"block",
-			"class",
-			"comments",
-			"docs_classes",
-			"docs_let_var",
-			"docs_operators",
-			"docs_patterns",
-			"expressions",
-			"ffi",
-			"for",
-			"fun",
-			"fun2",
-			"function_with_parameters",
-			"if",
-			"import",
-			"lists_ok",
-			"namespace",
-			"numeric_literals",
-			"pattern",
-			"using",
-			"while",
-			"repl_loops",
-			"playground_main",
-			"playground_mod",
-			"format_strings",
-		};
-		for (const auto& name: snippets) {
-			const auto source = readFile(path(base::strConcat("snippets/", name, ".duck")));
+		// Read the directory rather than a hand-written list, so a snippet added later is
+		// covered automatically.
+		std::vector<std::string> snippets;
+		for (const auto& entry: std::filesystem::directory_iterator(path("snippets")))
+			if (entry.path().extension() == ".duck") snippets.push_back(entry.path().string());
+		std::ranges::sort(snippets);
+		assertTrue(!snippets.empty(), "no snippets found");
+
+		for (const auto& snippet: snippets) {
+			const auto source = readFile(snippet);
 
 			const auto before = signatureOf(source);
 			const auto after  = signatureOf(fmt(source));
 			assertTrue(
 				before == after,
-				base::strConcat("formatting changed token stream of snippet: ", name)
+				base::strConcat("formatting changed token stream of snippet: ", snippet)
 			);
 
 			const auto once = fmt(source);
 			ASSERT_EQUAL_PRINT(once, fmt(once));
 		}
+	}
+
+	// ===== New syntax =====
+
+	void testTemplateHeader() {
+		check("template(T: type) fun pick() -> i64 = {return 1;}", golden(R"(
+template(T: type)
+fun pick() -> i64 = {
+	return 1;
+}
+)"));
+		// Also in front of a plain declaration.
+		check("template(a: i64) const C: i64 = a;", "template(a: i64)\nconst C: i64 = a;\n");
+	}
+
+	void testGenericInstantiation() {
+		check("x = impl.max : {i32}(a, b);", "x = impl.max:{i32}(a, b);\n");
+		check("x = pick:{char}();", "x = pick:{char}();\n");
+	}
+
+	void testCustomOperatorDeclaration() {
+		check("fun +* (a: i64, b: i64) -> i64 = a * b;", "fun +*(a: i64, b: i64) -> i64 = a * b;\n");
+		check("fun -*(a: i64) -> i64 = a;", "fun -*(a: i64) -> i64 = a;\n");
+		// A binary operator in an expression keeps its spaces.
+		check("x = a + (b);", "x = a + (b);\n");
+	}
+
+	void testTextOperatorsKeepSpacing() {
+		check("x = not b;", "x = not b;\n");
+		check("x = not (b);", "x = not (b);\n");
+		check("y = copyof x;", "y = copyof x;\n");
+		check("z = ptrof x;", "z = ptrof x;\n");
+	}
+
+	void testVariantTypeSpacing() {
+		check("fun f(v: i32 | f32) -> i64 = 0i64;", "fun f(v: i32 | f32) -> i64 = 0i64;\n");
+	}
+
+	void testBitwiseOperatorSpacing() {
+		check("x = ~a | b & 3 ^ 1 << 2 >> 1;", "x = ~a | b & 3 ^ 1 << 2 >> 1;\n");
+	}
+
+	// ===== Comment placement =====
+
+	void testCommentAfterBlock() {
+		check("fun f() = {\n\tx = 1;\n} # done\n", golden(R"(
+fun f() = {
+	x = 1;
+} # done
+)"));
+	}
+
+	void testTrailingBlockComment() { check("x = 1; #{ c #}\n", "x = 1; #{ c #}\n"); }
+
+	/** A comment closing a group element must not leave a line holding only indentation. */
+	void testCommentEndingGroupElement() {
+		check("foo(\n\taaa\n\t# why\n);\n", golden(R"(
+foo(
+	aaa # why
+);
+)"));
+		const auto once = fmt("foo(\n\taaa\n\t# why\n);\n");
+		ASSERT_EQUAL_PRINT(once, fmt(once));
+	}
+
+	/**
+	 * A multi-line block comment ends its own line: what follows is measured from the start of
+	 * a fresh line, not from the comment's total length.
+	 */
+	void testMultiLineBlockComment() {
+		const std::string comment = "#{ " + std::string(95, 'a') + "\nbb #}";
+		const auto        out     = fmt(comment + " f(1, 2, 3);");
+		assertTrue(
+			out.find("f(1, 2, 3)") != std::string::npos,
+			base::strConcat("group exploded after a multi-line block comment: ", out)
+		);
+	}
+
+	// ===== Column measurement =====
+
+	/** Columns count characters, not bytes, so non-ASCII text wraps where an editor shows it. */
+	void testUnicodeColumnsMeasuredVisually() {
+		const auto config = narrowConfig(40);
+		// 36 visual columns, but 60 bytes.
+		check(
+			"foo(\u1f04\u03bb\u03c6\u03b1\u1f04\u03bb\u03c6\u03b1, "
+			"\u03b2\u1fc6\u03c4\u03b1\u03b2\u1fc6\u03c4\u03b1, "
+			"\u03b3\u03ac\u03bc\u03bc\u03b1\u03b3\u03ac\u03bc\u03bc\u03b1);",
+			"foo(\u1f04\u03bb\u03c6\u03b1\u1f04\u03bb\u03c6\u03b1, "
+			"\u03b2\u1fc6\u03c4\u03b1\u03b2\u1fc6\u03c4\u03b1, "
+			"\u03b3\u03ac\u03bc\u03bc\u03b1\u03b3\u03ac\u03bc\u03bc\u03b1);\n",
+			config
+		);
+	}
+
+	// ===== Robustness =====
+
+	void testInvalidIndentStyleRejected() {
+		assertThrows<nlohmann::json::exception>(
+			[] {
+				const auto json = nlohmann::json::parse(R"({"indentStyle": "tabs"})");
+				return FormatConfig::fromJson(json);
+			},
+			"a misspelled indentStyle must be rejected, not silently defaulted"
+		);
+		assertThrows<nlohmann::json::exception>(
+			[] {
+				const auto json = nlohmann::json::parse(R"({"indentStyle": 7})");
+				return FormatConfig::fromJson(json);
+			},
+			"a non-string indentStyle must be rejected"
+		);
+	}
+
+	/** Pathological nesting is reported, not crashed on. */
+	void testNestingTooDeep() {
+		const usize depth  = 5'000;
+		std::string source = "x = " + std::string(depth, '(') + "1" + std::string(depth, ')') + ";";
+		assertThrows<base::LogicError>(
+			[&source] { return fmt(source); }, "deep nesting must throw, not overflow the stack"
+		);
 	}
 
 	static FormatConfig narrowConfig(u32 width) {
