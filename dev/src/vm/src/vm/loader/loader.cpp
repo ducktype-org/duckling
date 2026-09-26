@@ -324,7 +324,7 @@ std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::val
 ) const {
 	LoaderLogger log;
 	try {
-		return validated_high_program.validateFunction(function, std::move(mode));
+		return validated_high_program.validateFunction(function, mode);
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
 			e.label,

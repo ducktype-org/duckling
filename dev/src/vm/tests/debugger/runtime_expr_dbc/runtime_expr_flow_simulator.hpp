@@ -580,6 +580,7 @@ namespace vm::test {
 				);
 			return *this;
 		}
+
 	private:
 		/// Registers the pending emitter of an incomplete evaluation for a later
 		/// `awaitExprCompletion` and returns the reported reason.

@@ -17,7 +17,7 @@ namespace vm::loader {
 
 	class ValidFuncPosition final {
 		CRef<code::valid_function::ValidFunction> valid_function;
-		u64                                       line;
+		[[maybe_unused]] u64                      line;
 		code::StackStateID                        state;
 
 	public:
@@ -29,11 +29,6 @@ namespace vm::loader {
 		[[nodiscard]]
 		bool contains(base::StrID name) const {
 			return valid_function->local_stack.contains(state, name);
-		}
-
-		[[nodiscard]]
-		base::Optional<usize> getIdx(base::StrID name) const {
-			return valid_function->local_stack.getIdx(state, name);
 		}
 
 		[[nodiscard]]
@@ -74,12 +69,6 @@ namespace vm::loader {
 		[[nodiscard]]
 		base::Optional<code::valid_type::TypeSize> byteSize() const {
 			return valid_function->local_stack.byteSize(state);
-		}
-
-		[[nodiscard]]
-		FatBytecodePosition toFatPos() const {
-			return FatBytecodePosition{ .function_name     = valid_function->name,
-				                        .instruction_index = line };
 		}
 
 		ValidFuncPosition(usize line, CRef<code::valid_function::ValidFunction> valid_function):
