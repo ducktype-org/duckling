@@ -266,7 +266,7 @@ namespace vm::debugger {
 					}
 				}
 			})
-		    .and_then([&] { return api::executeRuntimeExprFromFile(pid, thread_id, file); })
+		    .and_then([&] { return api::executeRuntimeExpr(pid, thread_id, file); })
 		    .and_then([&](auto&& expr_completed_vnt) -> std::expected<void, api::ApiError> {
 				CORE_ASSERT(
 					v_matches(expr_completed_vnt, std::vector<Ref<IVMValue>>),

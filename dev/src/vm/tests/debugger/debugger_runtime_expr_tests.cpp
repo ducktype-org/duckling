@@ -117,11 +117,15 @@ private:
 			.awaitBreakpoint(base::StrID("main"), 14)
 			.disableBreakpoint(base::StrID("main"), 14)
 			.resume()
-			.evalExprExpectEvalError(ret_five, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG)
+			.evalExprExpectLoadError(
+				ret_five, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG
+			)
 			.sleep(20)
 			.pause(base::StrID("main"), 14)
 			.resume()
-			.evalExprExpectEvalError(ret_five, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG)
+			.evalExprExpectLoadError(
+				ret_five, vm::code::EvaluatingExprOnRunningThreadError::ERR_MSG
+			)
 			.stop()
 			.cleanup();
 	}

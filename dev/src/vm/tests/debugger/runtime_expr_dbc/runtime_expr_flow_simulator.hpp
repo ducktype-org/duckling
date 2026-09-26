@@ -291,7 +291,7 @@ namespace vm::test {
 		}
 
 		FlowSimulator& evalExprNormal(const fs::File& file, const std::vector<u64>& expected_result) {
-			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
 			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
 
 			assertExitValue(response.value(), expected_result);
@@ -301,7 +301,7 @@ namespace vm::test {
 		FlowSimulator& evalExprExpectValues(
 			const fs::File& file, const std::vector<ExpectedValue>& expected_result
 		) {
-			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
 			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
 
 			assertExitValues(response.value(), expected_result);
@@ -309,28 +309,23 @@ namespace vm::test {
 		}
 
 		FlowSimulator& evalExprExpectBreakpoint(const fs::File& file) {
-			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
 			assertTrue(
 				!response.has_value(),
 				"Expected expression evaluation to pause on breakpoint, but it completed"
 			);
 
-			auto [ref, reason] = v_get(response.error(), vm::api::IncompleteExprEval);
-
-			CORE_ASSERT(ref, "we should get a valid ref to the eventual emitter of the response");
-
-			registerLateEvaluation(ref.get());
-
+			registerIncompleteEval(response.error());
 			return *this;
 		}
 
 		FlowSimulator& evalExprExpectLoadError(
 			const fs::File& file, std::string_view expected_error_piece = ""
 		) {
-			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
 			assertTrue(
 				!response.has_value(),
-				"Expected expression to be rejected at load time, but it evaluated successfully"
+				"Expected expression to be rejected, but it evaluated successfully"
 			);
 
 			const std::string message = vm::api::errorToString(response.error());
@@ -342,7 +337,10 @@ namespace vm::test {
 				expected_error_piece.empty()
 					|| message.find(expected_error_piece) != std::string::npos,
 				base::strConcat(
-					"Load error does not mention '", expected_error_piece, "'. The error was: ", message
+					"Expression error does not mention '",
+					expected_error_piece,
+					"'. The error was: ",
+					message
 				)
 			);
 			return *this;
@@ -356,17 +354,10 @@ namespace vm::test {
 		) {
 			std::thread poster([this, &input, delay_ms] {
 				std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
-				auto posted = vm::api::input(pid, input);
-				if (!posted)
-					assertTrue(
-						false,
-						base::strConcat(
-							"Posting input failed: ", vm::api::errorToString(posted.error())
-						)
-					);
+				provideInput(input);
 			});
 
-			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
 			poster.join();
 
 			if (!response)
@@ -384,14 +375,14 @@ namespace vm::test {
 
 		FlowSimulator& evalExprExpectTimeout(const fs::File& file) {
 			const auto start    = std::chrono::steady_clock::now();
-			auto       response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			auto       response = vm::api::executeRuntimeExpr(pid, thread_id, file);
 			const auto elapsed  = std::chrono::steady_clock::now() - start;
 
 			assertTrue(
 				!response.has_value(), "Expected the expression to time out, but it completed"
 			);
 
-			auto [ref, reason] = v_get(response.error(), vm::api::IncompleteExprEval);
+			const auto reason = registerIncompleteEval(response.error());
 			assertTrue(
 				reason.find("timeout") != std::string::npos,
 				base::strConcat("Expected a timeout error, got: ", reason)
@@ -404,9 +395,6 @@ namespace vm::test {
 				elapsed <= std::chrono::milliseconds(700),
 				"Evaluation took much longer than the 0,5 s budget"
 			);
-
-			CORE_ASSERT(ref, "we should get a valid ref to the eventual emitter of the response");
-			registerLateEvaluation(ref.get());
 			return *this;
 		}
 
@@ -420,42 +408,11 @@ namespace vm::test {
 			return *this;
 		}
 
-		/// Evaluates an expression that is expected to be rejected by the validator while
-		/// consulting the live state of the thread (e.g. evaluating on a running thread).
-		/// Such errors surface through the very same `LoadProgramError` channel as regular
-		/// load-time validation errors.
-		FlowSimulator& evalExprExpectEvalError(
-			const fs::File& file, std::string_view expected_error_piece = ""
-		) {
-			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
-			assertTrue(
-				!response.has_value(),
-				"Expected expression to be rejected by the validator, but it evaluated successfully"
-			);
-
-			const std::string message = vm::api::errorToString(response.error());
-			assertTrue(
-				std::holds_alternative<vm::api::LoadProgramError>(response.error()),
-				base::strConcat("Expected LoadProgramError, got: ", message)
-			);
-			assertTrue(
-				expected_error_piece.empty()
-					|| message.find(expected_error_piece) != std::string::npos,
-				base::strConcat(
-					"Evaluation error does not mention '",
-					expected_error_piece,
-					"'. The error was: ",
-					message
-				)
-			);
-			return *this;
-		}
-
 		/// Evaluates an expression that is expected to panic while it runs, and asserts the panic
 		/// message contains @p expected_piece. Unlike a load-time rejection, a runtime panic leaves
 		/// the process in the `Panicked` state, which is where the message is read from.
 		FlowSimulator& evalExprExpectPanic(const fs::File& file, std::string_view expected_piece) {
-			auto response = vm::api::executeRuntimeExprFromFile(pid, thread_id, file);
+			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
 			assertTrue(!response.has_value(), "Expected the expression to panic, but it completed");
 
 			auto status = vm::api::getExecutionStatus(pid);
@@ -607,8 +564,16 @@ namespace vm::test {
 				);
 			return *this;
 		}
-
 	private:
+		/// Registers the pending emitter of an incomplete evaluation for a later
+		/// `awaitExprCompletion` and returns the reported reason.
+		std::string registerIncompleteEval(const vm::api::ApiError& error) {
+			auto [ref, reason] = v_get(error, vm::api::IncompleteExprEval);
+			CORE_ASSERT(ref, "we should get a valid ref to the eventual emitter of the response");
+			registerLateEvaluation(ref.get());
+			return reason;
+		}
+
 		void assertExitValue(
 			const vm::api::ExitValue& exit_value, const std::vector<u64>& expected_result
 		) const {

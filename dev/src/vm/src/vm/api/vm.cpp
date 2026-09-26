@@ -65,17 +65,9 @@ namespace vm::api {
 	}
 
 	std::expected<ExitValue, ApiError> executeRuntimeExpr(
-		PID pid, ThreadID thread_id, const code::Function& function
+		PID pid, ThreadID thread_id, std::variant<fs::File, code::Function> source
 	) {
-		return REQUEST(ExecRuntimeExpr{ .thread_id = thread_id COMMA.expr = function })
-		    .and_then(mapOrWrongResponse<ExitValue>);
-	}
-
-	std::expected<ExitValue, ApiError> executeRuntimeExprFromFile(
-		PID pid, ThreadID thread_id, fs::File file
-	) {
-		return REQUEST(ExecRuntimeExprFromFile{ .thread_id = thread_id COMMA.file
-		                                        = std::move(file) })
+		return REQUEST(ExecRuntimeExpr{ .thread_id = thread_id COMMA.source = std::move(source) })
 		    .and_then(mapOrWrongResponse<ExitValue>);
 	}
 

@@ -57,13 +57,8 @@ namespace vm::api {
 		};
 
 		struct ExecRuntimeExpr final {
-			ThreadID       thread_id;
-			code::Function expr;
-		};
-
-		struct ExecRuntimeExprFromFile final {
-			ThreadID thread_id;
-			fs::File file;
+			ThreadID                               thread_id;
+			std::variant<fs::File, code::Function> source;
 		};
 
 		struct Join final {
@@ -175,6 +170,5 @@ namespace vm::api {
 		request::AttachOutputListener,
 		request::SetBreakpoint,
 		request::MapFileLineToCodeCollectionPosition,
-		request::ExecRuntimeExpr,
-		request::ExecRuntimeExprFromFile>;
+		request::ExecRuntimeExpr>;
 }

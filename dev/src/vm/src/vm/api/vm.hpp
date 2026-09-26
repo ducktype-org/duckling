@@ -299,20 +299,12 @@ namespace vm::api {
 	);
 
 	/**
-	 * @brief  Loads and executes on specified thread expression
+	 * @brief Loads and executes a runtime expression on the specified thread, either parsed
+	 * already or read from a file.
 	 * @return A complete value or the reference to emitter which should eventually deliver it
 	 * @note the thread pauses again shortly after; call waitForBreakpoint before resuming
 	 */
 	std::expected<ExitValue, ApiError> executeRuntimeExpr(
-		PID pid, ThreadID thread_id, const code::Function& function
-	);
-
-	/**
-	 * @brief Loads and executes on specified thread expression from file
-	 * @return A complete value or the reference to emitter which should eventually deliver it
-	 * @note the thread pauses again shortly after; call waitForBreakpoint before resuming
-	 */
-	std::expected<ExitValue, ApiError> executeRuntimeExprFromFile(
-		PID pid, ThreadID thread_id, fs::File file
+		PID pid, ThreadID thread_id, std::variant<fs::File, code::Function> source
 	);
 }
