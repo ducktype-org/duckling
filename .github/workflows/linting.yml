@@ -88,8 +88,9 @@ jobs:
           version: ${{ env.TIDY_VERSION }}
           lines-changed-only: true
           database: "dev"
-          # The c_import fixtures are C headers, so linting them as C++ fails on `_Bool`.
-          ignore: "**/*.c|dev/src/tools/c_import/tests/headers"
+          # The c_import fixtures are C headers deliberately full of constructs the
+          # translator has to cope with, so linting them as C++ is meaningless.
+          ignore: "**/*.c|dev/src/tools/c_import/tests/headers|dev/integration_tests/duck/build/duckc/c_import|dev/integration_tests/duck/build/duckc/c_import_unsupported"
 
           # Note that tidy-checks: '', means it uses .clang-tidy file
           # according to the cpp-linter action docs.
