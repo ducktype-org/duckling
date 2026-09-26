@@ -2,6 +2,10 @@
 # `duck` then builds and links like any other dependency. The C artifacts are built in their own
 # directory so the duckc artifact cache clean cannot remove them.
 
+# Nothing here can run without the translator, which is only built when libclang was
+# found at configure time.
+Enabled: '$([ "@{has_c_import}" = ON ] && echo true || echo false)'
+
 build-c: "$DIT_TMP_DIR/build_c"
 c-compiler: "$(command -v clang-19 || command -v clang || command -v cc)"
 

@@ -7,6 +7,10 @@
 # The disabled cases next to it are what should pass once the gap behind each construct is
 # closed. Enable one when its issue is fixed.
 
+# Nothing here can run without the translator, which is only built when libclang was
+# found at configure time.
+Enabled: '$([ "@{has_c_import}" = ON ] && echo true || echo false)'
+
 build-c: "$DIT_TMP_DIR/build_c"
 c-compiler: "$(command -v clang-19 || command -v clang || command -v cc)"
 

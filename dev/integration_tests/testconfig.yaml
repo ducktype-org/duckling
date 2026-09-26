@@ -5,7 +5,10 @@ dvm_path: "@{dvm_dir}/VM"
 
 compile_duckc: "cmake --build @{build_dir} -j -- duckc"
 compile_dvm: "cmake --build @{build_dir} -j -- VM"
-compile_c_import: "cmake --build @{build_dir} -j -- duck_c_import"
+# duck_c_import only exists when libclang was found, so the build is asked rather than
+# assumed - mirrors how is_jit_enabled is read below.
+has_c_import: "$(cmake -L -N @{build_dir} | grep DUCK_HAS_LIBCLANG | cut -d \"=\" -f 2)"
+compile_c_import: "if [ \"@{has_c_import}\" = ON ]; then cmake --build @{build_dir} -j -- duck_c_import; fi"
 
 # The toolchain is built once, before any subtree runs. Subtree PreNodes
 # must not invoke cmake themselves: with -j > 1 subtrees run concurrently

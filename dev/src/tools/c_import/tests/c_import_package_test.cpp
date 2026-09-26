@@ -14,12 +14,28 @@ using namespace c_import;
 
 namespace {
 
-	std::vector<const char*> argv(const std::vector<std::string>& arguments) {
-		std::vector<const char*> out;
-		out.reserve(arguments.size());
-		for (const auto& argument: arguments) out.push_back(argument.c_str());
-		return out;
-	}
+	/**
+	 * @brief Owns the argument strings for the lifetime of the pointers handed out.
+	 *
+	 * Returning the pointers from a function taking the strings by reference leaves them
+	 * dangling the moment the caller's temporary dies, which reads as working on one platform
+	 * and not on another.
+	 */
+	class Args final {
+	public:
+		explicit Args(std::vector<std::string> arguments): m_storage(std::move(arguments)) {
+			m_pointers.reserve(m_storage.size());
+			for (const auto& argument: m_storage) m_pointers.push_back(argument.c_str());
+		}
+
+		[[nodiscard]] int argc() const { return static_cast<int>(m_pointers.size()); }
+
+		[[nodiscard]] const char* const* argv() const { return m_pointers.data(); }
+
+	private:
+		std::vector<std::string> m_storage;
+		std::vector<const char*> m_pointers;
+	};
 
 	bool fileHolds(const std::filesystem::path& path, const std::string& expected) {
 		std::ifstream file(path, std::ios::binary);
@@ -90,9 +106,8 @@ private:
 
 	void splitArgumentsTest() {
 		// Everything after the first bare `--` belongs to clang.
-		const auto arguments
-			= argv({ "duck_c_import", "--header", "a.h", "--", "-I/inc", "-DFOO=1" });
-		const auto split = splitArguments(static_cast<int>(arguments.size()), arguments.data());
+		const Args arguments({ "duck_c_import", "--header", "a.h", "--", "-I/inc", "-DFOO=1" });
+		const auto split = splitArguments(arguments.argc(), arguments.argv());
 
 		ASSERT_EQUAL(std::size_t{ 3 }, split.own.size());
 		ASSERT_EQUAL(std::string("--header"), split.own.at(1));
@@ -100,14 +115,14 @@ private:
 		ASSERT_EQUAL(std::string("-I/inc"), split.clang.at(0));
 
 		// A later `--` is a clang argument, not another separator.
-		const auto nested = argv({ "duck_c_import", "--", "-Xclang", "--", "-v" });
-		const auto second = splitArguments(static_cast<int>(nested.size()), nested.data());
+		const Args nested({ "duck_c_import", "--", "-Xclang", "--", "-v" });
+		const auto second = splitArguments(nested.argc(), nested.argv());
 		ASSERT_EQUAL(std::size_t{ 1 }, second.own.size());
 		ASSERT_EQUAL(std::size_t{ 3 }, second.clang.size());
 
 		// No separator at all means no clang arguments.
-		const auto plain = argv({ "duck_c_import", "--header", "a.h" });
-		const auto third = splitArguments(static_cast<int>(plain.size()), plain.data());
+		const Args plain({ "duck_c_import", "--header", "a.h" });
+		const auto third = splitArguments(plain.argc(), plain.argv());
 		ASSERT_EQUAL(std::size_t{ 3 }, third.own.size());
 		ASSERT_TRUE(third.clang.empty());
 	}

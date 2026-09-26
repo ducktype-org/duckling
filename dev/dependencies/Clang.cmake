@@ -19,13 +19,13 @@ endif ()
 # libclang is needed only by duck_c_import, so a missing one disables that tool instead of
 # blocking every other build.
 if (Clang_FOUND AND TARGET libclang)
-	set(DUCK_HAS_LIBCLANG ON)
+	set(DUCK_HAS_LIBCLANG ON CACHE BOOL "libclang was found, so duck_c_import is built" FORCE)
 	message(STATUS "Using ClangConfig.cmake in: ${Clang_DIR}")
 	# libclang resolves its builtin headers (stddef.h, stdarg.h, ...) relative to its own
 	# location, which does not work when it is loaded as a library, so the path is baked in.
 	set(DUCK_CLANG_RESOURCE_DIR "${LLVM_LIBRARY_DIR}/clang/${LLVM_VERSION_MAJOR}")
 else ()
-	set(DUCK_HAS_LIBCLANG OFF)
+	set(DUCK_HAS_LIBCLANG OFF CACHE BOOL "libclang was found, so duck_c_import is built" FORCE)
 	message(STATUS
 		"libclang not found - duck_c_import will not be built. "
 		"On Debian/Ubuntu install `libclang-19-dev`."
