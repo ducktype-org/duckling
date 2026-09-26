@@ -19,7 +19,6 @@
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/vmvalue/ivmvalue.hpp>
-#include <vm/loader/bytecode_pos.hpp>
 
 #include <utility>
 
@@ -35,6 +34,13 @@ namespace vm {
 	namespace builtins {
 		class FunctionHandlers;
 	}
+
+	namespace code::detail {
+		struct Expr;
+	}
+
+	class SafeVMProcess;
+	class SafeVMValue;
 
 	class SafeVMProcess;
 	class SafeVMValue;
@@ -288,30 +294,13 @@ namespace vm {
 
 		[[nodiscard]] u64 getNumberOfCurrentStackFrames() const override;
 
-		[[nodiscard]] Bytes getCurrentStackBytesSize() const;
-
-		[[nodiscard]] u64 getCurrentStackBlockSize() const;
-
 		[[nodiscard]]
 		const Frame& getStackFrame(u64 frame_index) const;
-
-		[[nodiscard]]
-		base::Optional<vm::loader::ValidFuncPosition> getUpcomingHighPosition(u64 frame_index) const;
-
-		[[nodiscard]]
-		base::Optional<CRef<code::valid_function::ValidFunction>> getFatBytecodeFunction(u64 frame_idx
-		) const;
 
 		std::expected<
 			std::vector<Ref<SafeVMValue>>,
 			std::pair<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
-			loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
-
-		[[nodiscard]]
-		CRef<IVMValue> getVMValue(CRef<opargs::VMValueIdentifier> vm_val) const;
-
-		[[nodiscard]]
-		bool isValidVMValueID(CRef<opargs::VMValueIdentifier> vm_val) const;
+			loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr, vm::code::detail::Expr const& exp_mode);
 
 		[[nodiscard]]
 		const RuntimeData& getRuntimeData() const {

@@ -206,7 +206,7 @@ namespace vm {
 		auto valid = safe_process.validateFunction(start_function, code::detail::StartFunction{});
 		CORE_ASSERT(valid.has_value(), "the synthetic start function must always pass validation");
 		start_function_high.emplace(std::move(*valid));
-		start_function_low.emplace(safe_process.compileToLow(this, *start_function_high));
+		start_function_low.emplace(safe_process.compileToLow(*start_function_high, vm::code::detail::StartFunction{}));
 	}
 
 	/**
@@ -649,31 +649,6 @@ namespace vm {
 		return u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
 	}
 
-	Bytes SafeVMThread::getCurrentStackBytesSize() const {
-		Frame* frame = runtime_data.frame_stack_current;
-		byte*  top   = frame->local_stack;
-		if (frame->local_slot_stack_end != frame->local_slot_stack_base) {
-			const LocalSlot& slot = frame->local_slot_stack_end[-1];
-			top                   = slot.data + slot.type->getSize().asInt();
-		}
-		return Bytes{ u64(top - runtime_data.local_stack_base) };
-	}
-
-	u64 SafeVMThread::getCurrentStackBlockSize() const {
-		Frame* frame = runtime_data.frame_stack_current;
-		return u64(frame->local_slot_stack_end - runtime_data.slot_stack_base);
-	}
-
-	CRef<IVMValue> SafeVMThread::getVMValue(CRef<opargs::VMValueIdentifier> vm_val) const {
-		v_if_matches(vm_val->id, u64, id) return safe_process.accessVMValue(*id);
-		return std::get<const IVMValue*>(vm_val->id);
-	}
-
-	bool SafeVMThread::isValidVMValueID(CRef<opargs::VMValueIdentifier> vm_val) const {
-		v_if_matches(vm_val->id, u64, id) return *id < safe_process.numberOfOwnedVMValues();
-		return true;  // we need to trust that the pointer is valid
-	}
-
 	const Frame& SafeVMThread::getStackFrame(u64 frame_index) const {
 		return runtime_data.frame_stack_base[frame_index];
 	}
@@ -687,13 +662,15 @@ namespace vm {
 	std::expected<
 		std::vector<Ref<SafeVMValue>>,
 		std::pair<SharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>, std::string>>
-		SafeVMThread::loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& high_expr) {
+		SafeVMThread::loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& high_expr, vm::code::detail::Expr const& exp_mode) {
 		CORE_ASSERT(
 			v_matches(getThreadState(), thread_state::Paused),
 			"To load and evaluate expr we need the thread to be paused"
 		);
 		runtime_expr_high.emplace_back(std::move(high_expr));
-		runtime_expr_low.emplace_back(safe_process.compileToLow(this, runtime_expr_high.back()));
+		runtime_expr_low.emplace_back(
+			safe_process.compileToLow(runtime_expr_high.back(), exp_mode)
+		);
 		runtime_expr_res_handler.emplace_back(
 			makeSharedBox<events::Emitter<std::vector<Ref<SafeVMValue>>>>()
 		);
@@ -704,7 +681,7 @@ namespace vm {
 		auto  local_stack = frame->local_stack;
 		auto& called_expr = runtime_expr_low.back();
 
-		auto maybe_position = getUpcomingHighPosition(getNumberOfCurrentStackFrames() - 1);
+		auto maybe_position = exp_mode.getUpcomingHighPosition(getNumberOfCurrentStackFrames() - 1);
 		CORE_ASSERT(
 			maybe_position.has_value(), "A validated expression must have a mapped position"
 		);
@@ -796,38 +773,5 @@ namespace vm {
 		}
 
 		return std::unexpected{ std::make_pair(res_handler, err_msg) };
-	}
-
-	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getUpcomingHighPosition(
-		u64 frame_index
-	) const {
-		if (frame_index >= getNumberOfCurrentStackFrames()) return std::nullopt;
-		const Frame& frame = getStackFrame(frame_index);
-
-		// we don't use getCurrentPosition on purpose
-		// we aren't interested from where the function was called
-		// we want to know where thread will be once it continue
-		auto& func = *frame.current_function;
-		auto  low_pos
-			= low::LowCodePosition{ .function = &func,
-			                        .instruction_index
-			                        = static_cast<u64>(frame.instr - func.getBc().data()) };
-
-		auto fat_pos
-			= safe_process.getCompiler()->mapLowVMProgramPositionToCodeCollectionPosition(low_pos);
-		if_opt_none(fat_pos) return std::nullopt;
-
-		return loader::ValidFuncPosition(
-			fat_pos->instruction_index, *getFatBytecodeFunction(frame_index)
-		);
-	}
-
-	base::Optional<CRef<code::valid_function::ValidFunction>> SafeVMThread::getFatBytecodeFunction(
-		u64 frame_idx
-	) const {
-		if (frame_idx >= getNumberOfCurrentStackFrames()) return std::nullopt;
-
-		auto& frame = getStackFrame(frame_idx);
-		return frame.current_function->getHighFunc();
 	}
 }

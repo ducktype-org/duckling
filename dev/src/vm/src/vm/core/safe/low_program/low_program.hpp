@@ -15,6 +15,7 @@
 #include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
+#include <vm/loader/bytecode_pos.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #ifdef ENABLE_JIT
@@ -29,6 +30,11 @@ namespace vm::loader::compiler::safe {
 
 namespace vm::low {
 	using MicroBytecode = std::vector<MicroInstruction>;
+
+	struct LowCodePosition final {
+		CRef<LowFuncData> function;
+		usize             instruction_index;
+	};
 
 	/**
 	 * @brief Micro bytecode representation of function data.
@@ -164,6 +170,34 @@ namespace vm::low {
 			return instruction_mapping;
 		}
 
+		[[nodiscard]] std::expected<vm::loader::FatBytecodePosition, vm::loader::MappingException>
+			mapLowVMProgramPositionToCodeCollectionPosition(usize index
+		    ) const {
+			using namespace loader;
+
+			// We need to find the first instruction range that starts after the given instruction
+			// index, then check if the previous one contains it
+			auto it = std::ranges::upper_bound(
+				instruction_mapping,
+				vm::low::LowFuncData::InstructionRange{
+					.begin = index,
+					.end   = std::numeric_limits<usize>::max(),
+				}
+			);
+
+			if (it == instruction_mapping.begin())
+				return std::unexpected(MappingException::MissingMapping);
+
+			auto candidate = it - 1;
+			if (!candidate->contains(index))
+				return std::unexpected(MappingException::MissingMapping);
+
+			return FatBytecodePosition{
+				.function_name     = name,
+				.instruction_index = usize(candidate - instruction_mapping.begin()),
+			};
+		}
+
 		/**
 		 * @brief method for setting the breakpoint in microbytecode
 		 * @note this is a fundamental property of the microbytecode representation
@@ -206,11 +240,6 @@ namespace vm::low {
 			return original_opcode;
 		}
 #endif
-	};
-
-	struct LowCodePosition final {
-		CRef<LowFuncData> function;
-		usize             instruction_index;
 	};
 
 	/**

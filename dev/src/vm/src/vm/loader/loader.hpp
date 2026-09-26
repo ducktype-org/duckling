@@ -7,7 +7,6 @@
 #include <vm/api/data/execution_config.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/loader/bytecode_pos.hpp>
 
 #include <expected>
@@ -78,7 +77,7 @@ namespace vm::loader {
 		) const;
 
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateExpr(
-			Ref<SafeVMThread> thread, fs::File file
+			vm::code::detail::Expr metadata, fs::File file
 		) const;
 
 		/**

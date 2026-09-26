@@ -19,6 +19,7 @@
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/builtin_functions.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
@@ -114,6 +115,27 @@ struct LocalStackEntry final {
 		return local_name == other.local_name && *type == *other.type;
 	}
 };
+
+Bytes getCurrentStackBytesSize(detail::Expr comp_metadata) {
+	const Frame* callstack_base = comp_metadata.call_stack_base;
+	auto         size           = comp_metadata.call_stack_size;
+	const Frame* frame          = &callstack_base[size - 1];
+	byte*        top            = frame->local_stack;
+
+	if (frame->local_slot_stack_end != frame->local_slot_stack_base) {
+		const LocalSlot& slot = frame->local_slot_stack_end[-1];
+		top                   = slot.data + slot.type->getSize().asInt();
+	}
+	byte* bottom = callstack_base->local_stack;
+	return Bytes{ u64(top - bottom) };
+}
+
+u64 getCurrentStackBlockSize(detail::Expr comp_metadata) {
+	const Frame* callstack_base = comp_metadata.call_stack_base;
+	auto         size           = comp_metadata.call_stack_size;
+	const Frame* frame          = &callstack_base[size - 1];
+	return u64(frame->local_slot_stack_end - callstack_base->local_slot_stack_base);
+}
 
 /**
  * @brief A wrapper class for both factory for local stack and the local stack database itself.
@@ -246,7 +268,8 @@ public:
 				v_matches(mode, detail::Expr),
 				"we should be checking that there is a thread beforehand"
 			);
-			auto pos = v_get(mode, detail::Expr).thread->getUpcomingHighPosition(frame_idx);
+			auto& exp_mode = std::get<detail::Expr>(mode);
+			auto  pos      = exp_mode.getUpcomingHighPosition(frame_idx);
 			if_opt_none(pos) return false;
 
 			return pos->contains(place.var_name);
@@ -266,9 +289,8 @@ public:
 					v_matches(mode, detail::Expr),
 					"we should be checking that there is a thread beforehand"
 				);
-				name_of_type = *v_get(mode, detail::Expr)
-				                    .thread->getUpcomingHighPosition(frame_idx)
-				                    ->getTypeName(name);
+				auto& exp_mode = std::get<detail::Expr>(mode);
+				name_of_type = *exp_mode.getUpcomingHighPosition(frame_idx)->getTypeName(name);
 			}
 
 			opt_none { VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, name)); }
@@ -315,9 +337,9 @@ class FunctionValidator {
 		variant_match(vm_val->id) {
 			variant_case(u64, id) {
 				CORE_ASSERT(v_matches(mode, detail::Expr), "indexed VM values only in expresssions");
-				auto thr = v_get(mode, detail::Expr).thread;
-				if (!thr->isValidVMValueID(vm_val)) throw InvalidVMValueIDError(*vm_val);
-				return thr->getVMValue(vm_val);
+				auto& exp_mode = std::get<detail::Expr>(mode);
+				if (id >= exp_mode.vm_values->size()) throw InvalidVMValueIDError(*vm_val);
+				return exp_mode.vm_values->at(id).ref();
 			}
 			variant_case(const IVMValue*, ptr) { return ptr; }
 		}
@@ -2001,8 +2023,8 @@ class FunctionValidator {
 
 		variant_match(mode) {
 			variant_case(detail::Expr, expr) {
-				bytes_offset = expr.thread->getCurrentStackBytesSize();
-				block_offset = expr.thread->getCurrentStackBlockSize();
+				bytes_offset = getCurrentStackBytesSize(expr);
+				block_offset = getCurrentStackBlockSize(expr);
 			}
 			variant_case_novalue(detail::Normal, detail::StartFunction) {
 				bytes_offset = Bytes{ 0 };
@@ -2058,13 +2080,6 @@ class FunctionValidator {
 		return { body, stack_states };
 	}
 
-	void validateThreadStatus() {
-		v_if_matches(mode, detail::Expr, expr) {
-			if (!std::holds_alternative<thread_state::Paused>((expr->thread->getThreadState())))
-				throw EvaluatingExprOnRunningThreadError();
-		}
-	}
-
 	void validateIllegalInstructions(const Instruction& instr) {
 		variant_match(mode) {
 			variant_case_novalue(detail::Expr) {
@@ -2108,7 +2123,6 @@ public:
 
 	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb> validateAndExtractReachableCode(
 	) {
-		validateThreadStatus();
 		validateSignature();
 		preprocessLabels();
 		LocalStackDb db = traverseControlFlowGraph();

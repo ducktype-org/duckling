@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/local_stack_database.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
@@ -23,7 +24,7 @@ namespace vm::loader::compiler {
 			code::valid_type::TypeSize local_stack_size{};
 			usize                      local_slot_count = 0;
 
-			base::Optional<CRef<SafeVMThread>> thread_evaluating_expr = std::nullopt;
+			code::detail::ValidationMode mode = code::detail::Normal{};
 		};
 	}
 

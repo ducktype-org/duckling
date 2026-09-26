@@ -64,7 +64,7 @@ namespace vm {
 		 * @note Lifetime of these VMValues is controlled by this process. They will be destructed
 		 * when process is deinitialized.
 		 */
-		std::vector<Box<SafeVMValue>> owned_vm_values;
+		std::deque<Box<SafeVMValue>> owned_vm_values;
 
 		/**
 		 * @brief Protects the thread pool which can be modified by `builtin_start_thread` and has
@@ -278,7 +278,8 @@ namespace vm {
 		SynchronizationPrimitives& getSynchronizationPrimitives();
 
 		low::LowFuncData compileToLow(
-			base::CRef<vm::SafeVMThread> thread, const code::valid_function::ValidFunction& func
+			const code::valid_function::ValidFunction& func,
+			const vm::code::detail::ValidationMode&    mode = vm::code::detail::Normal{}
 		) const;
 
 		/**

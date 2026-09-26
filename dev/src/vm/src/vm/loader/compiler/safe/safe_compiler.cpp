@@ -56,11 +56,12 @@ namespace vm::loader::compiler::safe {
 			low::opargs::PlaceDataArgumentType,
 
 			if_opt_some (opcode_arg.frame, frame_idx) {
-				auto& thread = **stack_ctx.thread_evaluating_expr;
+				auto& expr_mode = std::get<vm::code::detail::Expr>(stack_ctx.mode);
+				auto& frame = expr_mode.call_stack_base[frame_idx];
 
-				auto relative_offset = getIntTypeSize(*thread.getUpcomingHighPosition(frame_idx)->getByteOffset(opcode_arg.var_name));
-				auto prev_frame_base = thread.getStackFrame(frame_idx).local_stack;
-				auto stack_base = thread.getRuntimeData().local_stack_base;
+				auto relative_offset = getIntTypeSize(*expr_mode.getUpcomingHighPosition(frame_idx)->getByteOffset(opcode_arg.var_name));
+				auto prev_frame_base = frame.local_stack;
+				auto stack_base = expr_mode.call_stack_base->local_stack;
 				
 				usize frame_offset = usize(prev_frame_base - stack_base);
 
@@ -80,11 +81,12 @@ namespace vm::loader::compiler::safe {
 			low::opargs::PlaceBlockArgumentType,
 
 			if_opt_some (opcode_arg.frame, frame_idx) {
-				auto& thread = **stack_ctx.thread_evaluating_expr;
+				auto& expr_mode = std::get<vm::code::detail::Expr>(stack_ctx.mode);
+				auto& frame = expr_mode.call_stack_base[frame_idx];
 
-				auto relative_offset = *thread.getUpcomingHighPosition(frame_idx)->getBlockIdx(opcode_arg.var_name);
-				auto prev_frame_base = thread.getStackFrame(frame_idx).local_slot_stack_base;
-				auto stack_base = thread.getRuntimeData().slot_stack_base;
+				auto relative_offset = *expr_mode.getUpcomingHighPosition(frame_idx)->getBlockIdx(opcode_arg.var_name);
+				auto prev_frame_base = frame.local_slot_stack_base;
+				auto stack_base = expr_mode.call_stack_base->local_slot_stack_base;
 				
 				usize frame_offset = usize(prev_frame_base - stack_base);
 
@@ -166,7 +168,16 @@ namespace vm::loader::compiler::safe {
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::VMValPtr,
 			opargs::VMValueIdentifier,
-			return std::bit_cast<u64>((**stack_ctx.thread_evaluating_expr).getVMValue(&opcode_arg).get());
+			variant_match(opcode_arg.id) {
+				variant_case(u64, num) {
+					auto& expr_mode = std::get<vm::code::detail::Expr>(stack_ctx.mode);
+					return std::bit_cast<u64>(expr_mode.vm_values->at(num).get());
+				}
+				variant_case(const IVMValue *, ptr) {
+					return std::bit_cast<u64>(ptr);
+				}
+			}
+			CORE_UNREACHABLE();
 		);
 		// clang-format on
 
@@ -420,37 +431,12 @@ namespace vm::loader::compiler::safe {
 		}
 	}
 
-	std::expected<vm::loader::FatBytecodePosition, vm::loader::MappingException> SafeCompiler::
-		mapLowVMProgramPositionToCodeCollectionPosition(vm::low::LowCodePosition position) const {
-		auto& mapping = position.function->getInstructionMapping();
-
-		// We need to find the first instruction range that starts after the given instruction
-		// index, then check if the previous one contains it
-		auto it = std::ranges::upper_bound(
-			mapping,
-			vm::low::LowFuncData::InstructionRange{
-				.begin = position.instruction_index,
-				.end   = std::numeric_limits<usize>::max(),
-			}
-		);
-
-		if (it == mapping.begin()) return std::unexpected(MappingException::MissingMapping);
-
-		auto candidate = it - 1;
-		if (!candidate->contains(position.instruction_index))
-			return std::unexpected(MappingException::MissingMapping);
-
-		return FatBytecodePosition{
-			.function_name     = position.function->getName(),
-			.instruction_index = usize(candidate - mapping.begin()),
-		};
-	}
-
 	vm::low::LowFuncData SafeCompiler::lowerExpr(
-		const code::valid_function::ValidFunction& function, CRef<SafeVMThread> thread
+		const code::valid_function::ValidFunction& function,
+		const vm::code::detail::ValidationMode&    mode
 	) const {
 		vm::loader::compiler::detail::FunctionStackContext ctx = calculateStackContext(function);
-		ctx.thread_evaluating_expr                             = thread;
+		ctx.mode                                               = mode;
 
 		return lowerFunction(function, ctx);
 	}

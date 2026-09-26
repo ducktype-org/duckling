@@ -277,7 +277,7 @@ base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollect
 }
 
 std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::validateExpr(
-	Ref<SafeVMThread> thread, fs::File file
+	vm::code::detail::Expr compile_runtime_data, fs::File file
 ) const {
 	auto opt_code_collection = parseFiles({ std::move(file) });
 	if (!opt_code_collection.has_value())
@@ -316,7 +316,7 @@ std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::val
 		return std::unexpected(std::move(log));
 	}
 
-	return validateFunction(funcs.at(0), code::detail::Expr{ thread });
+	return validateFunction(funcs.at(0), compile_runtime_data);
 }
 
 std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::validateFunction(

@@ -10,7 +10,7 @@
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/bytecode/validator/valid_function.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/process_state.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/low_program/instruction.hpp>
@@ -427,8 +427,8 @@ namespace vm {
 		if (!maybe_lp) return std::unexpected(maybe_lp.error());
 		auto low_position = maybe_lp.value();
 
-		auto function = low_position.function;
-		auto mapping  = function->getInstructionMapping();
+		auto [function, low_instr_index] = low_position;
+		auto mapping                     = function->getInstructionMapping();
 
 		// Default instruction range to step over is the whole function, in case we fail to obtain
 		// high position
@@ -438,7 +438,7 @@ namespace vm {
 		};
 
 		// Try to obtain high position and optimize instruction range to step over
-		auto maybe_hp = compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		auto maybe_hp = function->mapLowVMProgramPositionToCodeCollectionPosition(low_instr_index);
 		if (maybe_hp) instr_range = mapping[maybe_hp->instruction_index];
 
 		// We do one step, then we go until we're outside the exclusive range (begin, end).
@@ -480,16 +480,16 @@ namespace vm {
 		// Try to obtain low position
 		auto maybe_lp = thread->getCurrentPosition(frame_idx);
 		if (!maybe_lp) return std::unexpected(maybe_lp.error());
-		auto low_position = maybe_lp.value();
+		auto [low_func, low_instr_idx] = maybe_lp.value();
 
 		api::response::CodePosition code_position = {
-			.function_name   = low_position.function->getName(),
+			.function_name   = low_func->getName(),
 			.instr_number    = 0,
 			.source_position = std::nullopt,
 		};
 
 		// Try to obtain high position
-		auto maybe_hp = compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		auto maybe_hp = low_func->mapLowVMProgramPositionToCodeCollectionPosition(low_instr_idx);
 		if (!maybe_hp) return code_position;
 		auto high_position = maybe_hp.value();
 
@@ -562,18 +562,24 @@ namespace vm {
 				auto opt_thread = getVMThreadByID(thread_id);
 				if (!opt_thread)
 					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-				auto thread    = opt_thread.value();
-				auto maybe_pos = thread->getUpcomingHighPosition(frame_index);
-				if (!maybe_pos) return std::unexpected(api::OtherError{ "Frame not found" });
+				auto thread = opt_thread.value();
+				if (frame_index >= thread->getNumberOfCurrentStackFrames())
+					return std::unexpected(api::OtherError{ "Frame not found" });
 
 				const Frame& frame = thread->getStackFrame(frame_index);
+
+				auto& func          = *frame.current_function;
+				auto  low_instr_idx = static_cast<u64>(frame.instr - func.getBc().data());
+				auto  fat_pos = func.mapLowVMProgramPositionToCodeCollectionPosition(low_instr_idx);
+				if (!fat_pos) return std::unexpected(api::OtherError{ "Frame not found" });
+
+				auto valid_pos
+					= vm::loader::ValidFuncPosition(fat_pos->instruction_index, func.getHighFunc());
 
 				const u64 slot_count = base::safeIntConv<u64>(
 					frame.local_slot_stack_end - frame.local_slot_stack_base
 				);
-
-				auto& valid_pos = *maybe_pos;
-				auto  expected  = *valid_pos.absoluteSize();
+				auto expected = *valid_pos.absoluteSize();
 				CORE_ASSERT(
 					slot_count == expected,
 					"Compile metadata must always be consistent with runtime: "
@@ -711,14 +717,21 @@ namespace vm {
 			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
 
 		auto thread_ref = *opt_thread;
+		if (!std::holds_alternative<thread_state::Paused>(thread_ref->getThreadState()))
+			return std::unexpected(api::ApiError{ api::LoadProgramError{
+				std::string(code::EvaluatingExprOnRunningThreadError::ERR_MSG) } });
+
+		auto comp_details = code::detail::Expr{
+			.vm_values       = &owned_vm_values,
+			.call_stack_base = thread_ref->getRuntimeData().frame_stack_base,
+			.call_stack_size = thread_ref->getNumberOfCurrentStackFrames(),
+		};
 
 		std::unique_lock                                                         lock(api_lock);
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> valid_expr = [&] {
 			variant_match(source) {
-				variant_case(fs::File, files) { return loader.validateExpr(thread_ref, files); }
-				variant_case(code::Function, func) {
-					return validateFunction(func, code::detail::Expr{ thread_ref });
-				}
+				variant_case(fs::File, files) { return loader.validateExpr(comp_details, files); }
+				variant_case(code::Function, func) { return validateFunction(func, comp_details); }
 			}
 			CORE_UNREACHABLE();
 		}();
@@ -729,7 +742,8 @@ namespace vm {
 			return std::unexpected(api::LoadProgramError{ ss.str() });
 		}
 
-		auto returned_value = thread_ref->loadAndExecRuntimeExpr(*std::move(valid_expr));
+		auto returned_value
+			= thread_ref->loadAndExecRuntimeExpr(*std::move(valid_expr), comp_details);
 		if (!returned_value.has_value()) {
 			auto [ref, msg] = returned_value.error();
 			return std::unexpected(api::ApiError{
@@ -741,9 +755,9 @@ namespace vm {
 	}
 
 	low::LowFuncData SafeVMProcess::compileToLow(
-		CRef<SafeVMThread> thread, const code::valid_function::ValidFunction& expr
+		const code::valid_function::ValidFunction& expr, const vm::code::detail::ValidationMode& mode
 	) const {
-		return compiler.lowerExpr(expr, thread);
+		return compiler.lowerExpr(expr, mode);
 	}
 
 	std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> SafeVMProcess::validateFunction(

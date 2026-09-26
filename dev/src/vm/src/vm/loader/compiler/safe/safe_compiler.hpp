@@ -58,11 +58,10 @@ namespace vm::loader::compiler::safe {
 		[[nodiscard]] CRef<vm::low::LowVMProgram> getLowProgram() const;
 
 		[[nodiscard]] vm::low::LowFuncData lowerExpr(
-			const code::valid_function::ValidFunction& expr, CRef<SafeVMThread> thread
+			const code::valid_function::ValidFunction& expr,
+			const vm::code::detail::ValidationMode&    mode = vm::code::detail::Normal{}
 		) const;
 
-		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
-			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
 
 		/**
 		 * @brief Sets breakpoint at given FatBytecode instruction
