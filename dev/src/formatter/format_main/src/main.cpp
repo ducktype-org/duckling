@@ -42,11 +42,10 @@ namespace {
 			return {};
 		}
 		auto config_content = fs::File(config_file_path).getContent();
-		auto content_view   = config_content.view();
+		// As chars, not raw bytes: libc++ has no std::char_traits<std::byte> for the parser.
+		const auto content_view = config_content.view().stringView();
 		try {
-			auto config_json = nlohmann::json::parse(
-				content_view.getBegin(), content_view.getBegin() + content_view.size()
-			);
+			auto config_json = nlohmann::json::parse(content_view.begin(), content_view.end());
 			return formatter::FormatConfig::fromJson(config_json);
 		} catch (const nlohmann::json::exception& e) {
 			std::cerr << "Error: failed to parse formatter config JSON: " << e.what() << "\n";
