@@ -362,7 +362,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Forbid more that one version of the package to be chosen.
     pub fn forbid_more_that_one_version(
         &mut self,
-        package_versions: HashSet<PackageId>,
+        package_versions: Vec<PackageId>,
     ) -> QuackResult<()> {
         let version_vars: QuackResult<Vec<Rc<Variable>>> = package_versions
             .into_iter()

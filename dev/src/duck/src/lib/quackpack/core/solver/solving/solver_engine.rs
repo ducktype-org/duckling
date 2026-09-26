@@ -282,7 +282,7 @@ impl<'a> SolverEngine<'a> {
     /// but even two packages with the same [`Identity`] are not chosen.
     /// Thus we have to create a mapping from (not full) identities to packages.
     fn force_singular_versions(&mut self) -> QuackResult<()> {
-        let mut packages_for_identity: HashMap<Identity, HashSet<PackageId>> = HashMap::new();
+        let mut packages_for_identity: HashMap<Identity, Vec<PackageId>> = HashMap::new();
         for (full_identity, versions) in self.input.versions_for_identity.iter() {
             packages_for_identity
                 .entry(full_identity.as_identity())
@@ -306,7 +306,7 @@ impl<'a> SolverEngine<'a> {
     /// This has a different workflow, depending on whether any version is preexisting.
     /// This is necessary, since for preexisting packages we do not care whether their variables will evaluate to 0 or 1,
     /// so we can't just always add a constraint that many versions are prohibited.
-    fn force_singular_version(&mut self, package_versions: HashSet<PackageId>) -> QuackResult<()> {
+    fn force_singular_version(&mut self, package_versions: Vec<PackageId>) -> QuackResult<()> {
         let mut preexistent_version = None;
         for pkg in package_versions.iter() {
             if self.input.preexists(*pkg) {
@@ -324,7 +324,7 @@ impl<'a> SolverEngine<'a> {
     /// Forbid a package being chosen in more than one version.
     fn forbid_more_than_one_version(
         &mut self,
-        package_versions: HashSet<PackageId>,
+        package_versions: Vec<PackageId>,
     ) -> QuackResult<()> {
         self.model.forbid_more_that_one_version(package_versions)
     }
@@ -332,7 +332,7 @@ impl<'a> SolverEngine<'a> {
     /// Forbid a package in all versions except a single preexisting one.
     fn forbid_versions_not_preexisting(
         &mut self,
-        package_versions: HashSet<PackageId>,
+        package_versions: Vec<PackageId>,
         preexistent_version: PackageId,
     ) -> QuackResult<()> {
         for pkg in package_versions {
