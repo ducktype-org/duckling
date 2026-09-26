@@ -28,8 +28,7 @@ public:
 		TESTER_ADD_TEST(test8RuntimeExpr);
 		TESTER_ADD_TEST(testInvalidExpressions);
 		TESTER_ADD_TEST(testPointers);
-		TESTER_ADD_TEST(test9RuntimeExpr);
-		TESTER_ADD_TEST(test10RuntimeExpr);
+		TESTER_ADD_TEST(testInput);
 		TESTER_ADD_TEST(test11RuntimeExpr);
 		TESTER_ADD_TEST(test12RuntimeExpr);
 		TESTER_ADD_TEST(test13RuntimeExpr);
@@ -335,10 +334,10 @@ private:
 			.cleanup();
 	}
 
-	// Expression reads user input while evaluated.
-	void test9RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_9/main.dbc"));
-		const fs::File input_expr(path("runtime_expr_dbc/test_9/input.dbc"));
+	void testInput() {
+		const fs::File main_file(path("runtime_expr_dbc/input/main.dbc"));
+		const fs::File immediate_input(path("runtime_expr_dbc/input/immediate.dbc"));
+		const fs::File timeout_input(path("runtime_expr_dbc/input/timeout.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
@@ -348,14 +347,8 @@ private:
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
 			})
-			.evalExprProvideInputAfter(input_expr, "42\n", 10, { 42 })
+			.evalExprProvideInputAfter(immediate_input, "42\n", 10, { 42 })
 			.cleanup();
-	}
-
-	// Expression times out, input completes it.
-	void test10RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_10/main.dbc"));
-		const fs::File input_expr(path("runtime_expr_dbc/test_10/input_after_timeout.dbc"));
 
 		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
@@ -365,7 +358,7 @@ private:
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
 			})
-			.evalExprExpectTimeout(input_expr)
+			.evalExprExpectTimeout(timeout_input)
 			.provideInput("42\n")
 			.awaitExprCompletion({ 42 })
 			.awaitBreakpoint(base::StrID("main"), 4)
