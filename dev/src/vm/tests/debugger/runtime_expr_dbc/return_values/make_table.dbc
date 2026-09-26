@@ -1,4 +1,3 @@
-# Returns a fixed-size table of three i64 values.
 function make_table { } -> { Nums } {
 	init_pany_type value, i64;
 	init_pany_type index, i64;

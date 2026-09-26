@@ -36,15 +36,12 @@ public:
 		TESTER_ADD_TEST(test14RuntimeExpr);
 		TESTER_ADD_TEST(test15RuntimeExpr);
 		TESTER_ADD_TEST(test16RuntimeExpr);
-		TESTER_ADD_TEST(test17RuntimeExpr);
+		TESTER_ADD_TEST(testReturnValues);
 		TESTER_ADD_TEST(test18RuntimeExpr);
 		TESTER_ADD_TEST(test20RuntimeExpr);
 		TESTER_ADD_TEST(test21RuntimeExpr);
 		TESTER_ADD_TEST(test22RuntimeExpr);
 		TESTER_ADD_TEST(test23RuntimeExpr);
-		TESTER_ADD_TEST(test24RuntimeExpr);
-		TESTER_ADD_TEST(test25RuntimeExpr);
-		TESTER_ADD_TEST(test26RuntimeExpr);
 		TESTER_ADD_TEST(test27RuntimeExpr);
 	}
 
@@ -644,21 +641,47 @@ private:
 			.cleanup();
 	}
 
-	// Legacy test: used to find the bug with the local's block access
-	void test17RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_17/main.dbc"));
-		const fs::File multi_expr(path("runtime_expr_dbc/test_17/multi.dbc"));
+	void testReturnValues() {
+		const fs::File main_file(path("runtime_expr_dbc/return_values/main.dbc"));
+		const fs::File multi(path("runtime_expr_dbc/return_values/multi.dbc"));
+		const fs::File make_pair(path("runtime_expr_dbc/return_values/make_pair.dbc"));
+		const fs::File make_variant(path("runtime_expr_dbc/return_values/make_variant.dbc"));
+		const fs::File make_table(path("runtime_expr_dbc/return_values/make_table.dbc"));
 
 		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 5)
+			.putBreakpoint(base::StrID("main"), 2)
 			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 5)
+			.awaitBreakpoint(base::StrID("main"), 2)
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
 			})
-			.evalExprNormal(multi_expr, { 11, 22, 33, 44 })
-			.awaitBreakpoint(base::StrID("main"), 5)
+			.evalExprNormal(multi, { 11, 22, 33, 44 })
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			.evalExprExpectValues(
+				make_pair,
+				{ vm::test::ExpectedValue::structure({
+					{ base::StrID("a"), 1 },
+					{ base::StrID("b"), 2 },
+				}) }
+			)
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			.evalExprExpectValues(make_variant, { vm::test::ExpectedValue::variant(0, 5) })
+			.awaitBreakpoint(base::StrID("main"), 2)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+			})
+			.evalExprExpectValues(make_table, { vm::test::ExpectedValue::table({ 10, 20, 30 }) })
+			.awaitBreakpoint(base::StrID("main"), 2)
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
@@ -818,57 +841,6 @@ private:
 			.step()
 			.evalExprNormal(expr, { 4, 2 })
 			.awaitBreakpoint(base::StrID("main"), 6)
-			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
-	/// An expression can return a struct value.
-	void test24RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_24/main.dbc"));
-		const fs::File make_pair(path("runtime_expr_dbc/test_24/make_pair.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 2)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.evalExprExpectValues(
-				make_pair,
-				{ vm::test::ExpectedValue::structure({
-					{ base::StrID("a"), 1 },
-					{ base::StrID("b"), 2 },
-				}) }
-			)
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
-	// Expression can return a variant value.
-	void test25RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_25/main.dbc"));
-		const fs::File make_variant(path("runtime_expr_dbc/test_25/make_variant.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 2)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.evalExprExpectValues(make_variant, { vm::test::ExpectedValue::variant(0, 5) })
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
-	/// An expression can return a table value.
-	void test26RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_26/main.dbc"));
-		const fs::File make_table(path("runtime_expr_dbc/test_26/make_table.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 2)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.evalExprExpectValues(make_table, { vm::test::ExpectedValue::table({ 10, 20, 30 }) })
-			.awaitBreakpoint(base::StrID("main"), 2)
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
 	}

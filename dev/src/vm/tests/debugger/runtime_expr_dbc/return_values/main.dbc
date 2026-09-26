@@ -1,3 +1,6 @@
+type pointer: ptr_i64 i64
+type data: Pair { a: i64, b: i64 }
+type variant: Choice { i64, byte }
 type fixed_size_table: Nums i64 3
 
 function main { i64, ptr_argv } -> { i64 } {

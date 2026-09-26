@@ -1,4 +1,3 @@
-# Returns a struct value with both fields set.
 function make_pair { } -> { Pair } {
 	init_pany_type field, ptr_i64;
 	init_pany_type value, i64;

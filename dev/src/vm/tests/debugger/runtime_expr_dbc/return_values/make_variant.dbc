@@ -1,4 +1,3 @@
-# Returns a variant whose active alternative is `i64` holding 5.
 function make_variant { } -> { Choice } {
 	init_pany_type inner, ptr_i64;
 	init_pany_type value, i64;
