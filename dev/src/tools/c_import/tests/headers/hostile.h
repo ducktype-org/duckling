@@ -33,3 +33,47 @@ int match(int a);
 
 /* `type` is a Duckling keyword, so the parameter gets a positional name instead. */
 int hostile_keyword_param(int type);
+
+/* libclang reports an anonymous member as a nested record, not a field. Dropping it would
+   silently change the record's size and offsets, so the whole record has to go. */
+struct hostile_anon_member {
+	int tag;
+	union {
+		int   i;
+		float f;
+	};
+};
+
+/* A nested definition is not a top-level cursor, so it has to be discovered separately. */
+struct hostile_outer {
+	struct hostile_inner {
+		int a;
+	} inner;
+};
+
+/* An unnamed record used as a named field still needs a class of its own. */
+struct hostile_named_anon {
+	struct {
+		int p;
+		int q;
+	} pos;
+};
+
+/* `holder` is declared before `later` is known to be unsupported. */
+struct hostile_later;
+
+struct hostile_holder {
+	struct hostile_later* l;
+	int                   x;
+};
+
+struct hostile_later {
+	int bits: 3;
+};
+
+/* `type` is a Duckling keyword, but a field name is positional in the C ABI and never linked,
+   so it can be renamed instead of costing the whole record. */
+struct hostile_keyword_field {
+	int type;
+	int normal;
+};

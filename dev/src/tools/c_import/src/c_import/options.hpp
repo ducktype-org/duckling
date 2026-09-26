@@ -10,14 +10,20 @@ namespace c_import {
 		std::string              package_name;
 		std::string              out_dir;
 		/** Passed to the linker verbatim on the native backend. */
-		std::string              links;
+		std::string links;
+		/** Set when --library (rather than --links-raw) held a space. */
+		bool                     library_has_space = false;
 		std::vector<std::string> dvm_shared_libs;
 		std::string              version;
 		std::string              std_flag;
 		/** Emit one module per translated header instead of a single one. */
-		bool split               = false;
-		bool force               = false;
-		bool ignore_parse_errors = false;
+		/** Compile the generated package to prove it is valid before reporting success. */
+		bool verify = true;
+		/** Compiler used for that check, resolved through $PATH by default. */
+		std::string duckc               = "duckc";
+		bool        split               = false;
+		bool        force               = false;
+		bool        ignore_parse_errors = false;
 		/** Everything after a bare `--`, handed to clang untouched. */
 		std::vector<std::string> clang_args;
 	};

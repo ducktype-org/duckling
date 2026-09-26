@@ -58,6 +58,15 @@ namespace {
 				.addShortDesc("Emit one module per translated header instead of a single one.")
 				.build(),
 			clah::ParamBuilder::ofFlag()
+				.addLongName("no-verify")
+				.addShortDesc("Skip compiling the generated package to check that it is valid.")
+				.build(),
+			clah::ParamBuilder::ofValue(clah::StringParser::make("path"))
+				.addLongName("duckc")
+				.addShortDesc("Compiler used for that check. Defaults to `duckc` on the PATH.")
+				.optional()
+				.build(),
+			clah::ParamBuilder::ofFlag()
 				.addLongName("force")
 				.addShortDesc("Overwrite the output directory when it is not empty.")
 				.build(),
@@ -74,12 +83,16 @@ namespace {
 		options.headers      = parsed.getValue<std::vector<std::string>>("header").copyValueOr({});
 		options.package_name = parsed.getValue<std::string>("package-name").copyValueOr("");
 		options.out_dir      = parsed.getValue<std::string>("out-dir").copyValueOr("");
-		options.links        = parsed.getValue<std::string>("links-raw")
-		                    .copyValueOr(parsed.getValue<std::string>("library").copyValueOr(""));
+		const auto library   = parsed.getValue<std::string>("library").copyValueOr("");
+		options.links        = parsed.getValue<std::string>("links-raw").copyValueOr(library);
+		options.library_has_space = parsed.getValue<std::string>("links-raw").has_value() == false
+		                         && library.find(' ') != std::string::npos;
 		options.dvm_shared_libs
 			= parsed.getValue<std::vector<std::string>>("dvm-shared-lib").copyValueOr({});
 		options.version  = parsed.getValue<std::string>("version").copyValueOr("1.0.0");
 		options.std_flag = "-std=" + parsed.getValue<std::string>("std").copyValueOr("c17");
+		options.verify   = parsed.isFlag("no-verify") == false;
+		options.duckc    = parsed.getValue<std::string>("duckc").copyValueOr("duckc");
 		options.split    = parsed.isFlag("split");
 		options.force    = parsed.isFlag("force");
 		options.ignore_parse_errors = parsed.isFlag("ignore-parse-errors");

@@ -13,5 +13,10 @@ fun main() -> i64 = {
 
     if (mylib_neg_char(3i8) != -3i8) { return 4i64; }
 
+    # A void-returning C function has to be callable without crashing.
+    mylib_reset();
+    mylib_reset();
+    if (mylib_reset_count() != 2i32) { return 7i64; }
+
     return 0i64;
 }

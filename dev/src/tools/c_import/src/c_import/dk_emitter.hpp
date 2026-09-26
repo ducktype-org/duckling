@@ -30,6 +30,10 @@ namespace c_import {
 	 * A module that names a record belonging to another one imports it. A sibling module has
 	 * to be reached through the package name; the import then binds its last segment, which is
 	 * what the `using` names.
+	 *
+	 * Headers whose records point at each other depend on each other, since a record only has
+	 * to be complete somewhere in the translation unit to be named. Duckling has no cyclic
+	 * imports, so mutually dependent modules are merged into one.
 	 * The dependencies cannot form a cycle: a record has to be complete to be named, and an
 	 * incomplete one degrades to `cptr u8` instead of being named at all.
 	 */

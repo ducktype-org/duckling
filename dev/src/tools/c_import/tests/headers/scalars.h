@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 int           scalars_int(int a);
 unsigned int  scalars_uint(unsigned int a);
 short         scalars_short(short a);
@@ -9,3 +11,5 @@ signed char   scalars_schar(signed char a);
 unsigned char scalars_uchar(unsigned char a);
 long          scalars_strlen(const char* text);
 void          scalars_nothing(void);
+
+size_t scalars_size(size_t a);

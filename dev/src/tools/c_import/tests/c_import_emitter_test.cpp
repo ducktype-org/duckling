@@ -94,7 +94,9 @@ private:
 
 		const std::string emitted = emitBindings(EmitterInput{
 			.model = std::move(model), .headers = {}, .clang_args = {} });
-		ASSERT_TRUE(emitted.contains("\tfundecl mylib_free(p: cptr u8) -> void;\n"));
+		// An explicit `-> void` miscompiles, so a void return is written as no return type.
+		ASSERT_TRUE(emitted.contains("\tfundecl mylib_free(p: cptr u8);\n"));
+		ASSERT_EQUAL(false, emitted.contains("-> void"));
 	}
 
 	void splitTest() {
@@ -147,12 +149,28 @@ private:
 		ASSERT_TRUE(result.yaml.contains("  links: '/abs/mylib.o'\n"));
 		ASSERT_TRUE(result.yaml.contains("    - '/abs/libmylib.so'\n"));
 
-		// A space would be split into separate linker arguments.
+		// A DVM entry becomes a quoted `ffi object "<path>"`, so a space in it is fine.
 		const auto spaced = emitManifest(ManifestInput{ .package_name    = "mylib",
 		                                                .version         = "1.0.0",
 		                                                .links           = {},
 		                                                .dvm_shared_libs = { "/abs/my lib.so" } });
-		ASSERT_EQUAL(false, spaced.error.empty());
+		ASSERT_TRUE(spaced.error.empty());
+		ASSERT_TRUE(spaced.yaml.contains("    - '/abs/my lib.so'\n"));
+
+		// `links` may legitimately hold several linker arguments.
+		const auto multiple = emitManifest(ManifestInput{ .package_name    = "mylib",
+		                                                  .version         = "1.0.0",
+		                                                  .links           = "-L/opt/foo -lfoo",
+		                                                  .dvm_shared_libs = {} });
+		ASSERT_TRUE(multiple.error.empty());
+		ASSERT_TRUE(multiple.yaml.contains("  links: '-L/opt/foo -lfoo'\n"));
+
+		// A single quote has to be doubled or it ends the YAML scalar early.
+		const auto quote = emitManifest(ManifestInput{ .package_name    = "mylib",
+		                                               .version         = "1.0.0",
+		                                               .links           = "/abs/it's.o",
+		                                               .dvm_shared_libs = {} });
+		ASSERT_TRUE(quote.yaml.contains("  links: '/abs/it''s.o'\n"));
 	}
 };
 

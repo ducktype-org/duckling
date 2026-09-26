@@ -28,6 +28,14 @@ duck -C app add --local ../mylib mylib
 import mylib.mylib.*;
 ```
 
+## Checking the output
+
+After writing the package, the translator compiles it (as a static library, since bindings have
+no `main`) and refuses to report success if it does not build. A failure prints the compiler's
+diagnostics and the exact command to reproduce them, and leaves the package in place to inspect:
+that combination is a bug in the translator, not in the user's code. `--no-verify` skips the
+check and `--duckc <path>` picks the compiler, which otherwise comes from `$PATH`.
+
 ## How it works
 
 Every requested header is `#include`d from one synthesized translation unit, so clang owns the
@@ -56,7 +64,10 @@ rather than a mis-linked call. Anything else is skipped with a `#` comment namin
 | C identifiers that are Duckling keywords | the symbol name *is* the linked identifier, so renaming would break the link |
 | macros that are not a single numeric literal | no general C expression evaluation |
 
-Two mappings are worth knowing about:
+Three mappings are worth knowing about:
+
+- A C function returning `void` is emitted without a return type. An explicit `-> void` on an
+  `extern("C") fundecl` miscompiles and crashes when called (#3646).
 
 - C `char` becomes `i8`/`u8` rather than Duckling `char`, which lowers to an unsigned 8-bit
   integer — a signed `char` argument would otherwise be zero-extended instead of sign-extended.
@@ -64,6 +75,15 @@ Two mappings are worth knowing about:
 - `void *`, function pointers and pointers to opaque or skipped records all become `cptr u8`.
   An opaque record gets no class of its own, because an `extern("C")` class with no fields is
   rejected by the compiler.
+
+A field name is not linked - the C ABI places fields by position - so a field called `type` is
+renamed to `type_` rather than costing the whole record. A *function* name is the linked symbol,
+so a keyword there means the declaration has to be skipped instead.
+
+Which records get a class is decided before anything is written. That is what lets a type
+reference be trusted: nested and anonymous definitions are found even though they are not
+top-level declarations, and a record skipped later in the file is already known to be skipped
+when an earlier declaration points at it.
 
 ## One module or many
 

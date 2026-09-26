@@ -33,6 +33,10 @@ struct mylib_point mylib_point_make(int x, int y);
 int                mylib_node_value(const struct mylib_node* n);
 signed char        mylib_neg_char(signed char c);
 
+/* A void return has to be written without a return type, or the call crashes (#3646). */
+void mylib_reset(void);
+int  mylib_reset_count(void);
+
 /* Variadic and `static` declarations are skipped too. */
 int mylib_printf(const char* fmt, ...);
 

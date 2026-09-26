@@ -64,7 +64,7 @@ Tests:
           grep -q 'import shapes.mylib;' shapes/src/mylib_extra.dk
           && grep -q 'using mylib.*;' shapes/src/mylib_extra.dk
 
-      # @TODO: #3367 Enable once re-exports are supported; `using` binds locally, so the
+      # @TODO: #2125 Enable once export statements land; `using` binds locally, so the
       # aggregate module cannot yet present the split modules under one import.
       split-flat-import-site:
         Enabled: false
@@ -72,8 +72,14 @@ Tests:
         before-cmd: 'export PATH="@{duckc_dir}:$PATH" && @{duck-exe} -C app add --local ../shapes shapes && cp @{ConfigDir}/app_split_flat.dk app/src/src.dk'
         test-cmd: "duck -C app run"
 
-      # @TODO: #3367 Enable once optionals land; a C pointer that may be null should map to
-      # `?cptr T` rather than losing the nullability.
+      void-return-has-no-return-type:
+        CaseName: "A void-returning C function is emitted without an explicit return type"
+        test-cmd: >
+          grep -q 'fundecl mylib_reset();' mylib/src/mylib.dk
+          && ! grep -q -- '-> void' mylib/src/mylib.dk
+
+      # @TODO: #1950 Enable once optional types land; a C pointer that may be null should
+      # map to `?cptr T` rather than losing the nullability.
       nullable-pointer-is-optional:
         Enabled: false
         CaseName: "A C pointer that may be null maps to an optional"
@@ -83,7 +89,7 @@ Tests:
         CaseName: "Declarations without a C ABI mapping are reported, not silently dropped"
         # A regression that starts emitting one of these should fail here rather than at link time.
         test-cmd: >
-          grep -q 'skipped union `union_mylib_bad`' mylib/src/mylib.dk
+          grep -q 'skipped record `union_mylib_bad`' mylib/src/mylib.dk
           && grep -q 'skipped record `struct_mylib_bits`' mylib/src/mylib.dk
           && grep -q 'skipped function `mylib_printf`' mylib/src/mylib.dk
           && grep -q 'skipped function `mylib_inline`' mylib/src/mylib.dk

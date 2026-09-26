@@ -29,16 +29,28 @@ pub fn get_parser() -> Command {
             "library",
             "Object or archive to link against. Should be an absolute path",
         ))
-        .arg(optional(
-            "links-raw",
-            "Linker arguments to use verbatim instead of `--library`",
-        ))
+        .arg(
+            // The value is linker arguments, so it starts with a hyphen more often than not.
+            Arg::new("links-raw")
+                .help("Linker arguments to use verbatim instead of `--library`")
+                .long("links-raw")
+                .allow_hyphen_values(true)
+                .action(ArgAction::Set),
+        )
         .arg(multi(
             "dvm-shared-lib",
             "Shared object the DVM loads at runtime",
         ))
         .arg(optional("version", "Version written to the manifest"))
         .arg(optional("std", "C standard passed to clang"))
+        .arg(flag(
+            "no-verify",
+            "Skip compiling the generated package to check that it is valid",
+        ))
+        .arg(optional(
+            "duckc",
+            "Compiler used for that check. Defaults to `duckc` on the PATH",
+        ))
         .arg(flag(
             "split",
             "Emit one module per translated header instead of a single one",
@@ -83,6 +95,7 @@ pub fn execute(_ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         ("--links-raw", "links-raw"),
         ("--version", "version"),
         ("--std", "std"),
+        ("--duckc", "duckc"),
     ] {
         if let Some(value) = matches.get_one::<String>(key) {
             process.arg(name).arg(value);
@@ -94,7 +107,7 @@ pub fn execute(_ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         process.arg("--dvm-shared-lib").arg(libraries.join(","));
     }
 
-    for name in ["split", "force", "ignore-parse-errors"] {
+    for name in ["split", "force", "ignore-parse-errors", "no-verify"] {
         if matches.get_flag(name) {
             process.arg(format!("--{name}"));
         }

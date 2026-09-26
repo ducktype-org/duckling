@@ -98,6 +98,10 @@ private:
 		);
 
 		ASSERT_EQUAL(std::string("void"), renderReturn(*findFunction(model, "scalars_nothing")));
+
+		// scalars.h includes <stddef.h>, which only resolves when libclang is given its own
+		// builtin header directory.
+		ASSERT_EQUAL(std::string("u64"), renderParam(*findFunction(model, "scalars_size"), 0));
 	}
 
 	void recordsTest() {
@@ -144,6 +148,11 @@ private:
 		ASSERT_EQUAL(std::string("16i64"), findConst(model, "EM_HEX")->literal);
 		ASSERT_EQUAL(std::string("3.5f64"), findConst(model, "EM_PI")->literal);
 
+		// A leading zero means octal in C, so this is 448 rather than 700.
+		const auto* octal = findConst(model, "EM_OCTAL");
+		ASSERT_TRUE(octal != nullptr);
+		ASSERT_EQUAL(std::string("448i64"), octal->literal);
+
 		ASSERT_TRUE(findSkipped(model, "EM_NOT_A_NUMBER") != nullptr);
 		// A function-like macro is dropped without a comment.
 		ASSERT_TRUE(findConst(model, "EM_FUNCTION_LIKE") == nullptr);
@@ -186,6 +195,37 @@ private:
 		ASSERT_TRUE(void_pointer != nullptr);
 		ASSERT_EQUAL(std::string("cptr u8"), renderParam(*void_pointer, 0));
 		ASSERT_EQUAL(std::string("cptr u8"), renderReturn(*void_pointer));
+
+		// Dropping an anonymous member would leave a class of the wrong size with no error at
+		// all, so the whole record has to go.
+		ASSERT_TRUE(findSkipped(model, "struct_hostile_anon_member") != nullptr);
+		ASSERT_TRUE(findRecord(model, "struct_hostile_anon_member") == nullptr);
+
+		// A nested definition is not a top-level cursor, but it still needs a class.
+		ASSERT_TRUE(findRecord(model, "struct_hostile_inner") != nullptr);
+		ASSERT_EQUAL(
+			std::string("struct_hostile_inner"),
+			renderType(findRecord(model, "struct_hostile_outer")->fields.at(0).type)
+		);
+
+		// An unnamed record used as a named field gets a class of its own too.
+		const auto* named_anon = findRecord(model, "struct_hostile_named_anon");
+		ASSERT_TRUE(named_anon != nullptr);
+		ASSERT_TRUE(findRecord(model, renderType(named_anon->fields.at(0).type)) != nullptr);
+
+		// `hostile_holder` is declared before `hostile_later` is known to be unsupported, so the
+		// pointer has to degrade rather than name a class that is never emitted.
+		ASSERT_EQUAL(
+			std::string("cptr u8"),
+			renderType(findRecord(model, "struct_hostile_holder")->fields.at(0).type)
+		);
+
+		// A field name is positional in the C ABI, so a keyword is renamed instead of costing
+		// the whole record.
+		const auto* keyword_field = findRecord(model, "struct_hostile_keyword_field");
+		ASSERT_TRUE(keyword_field != nullptr);
+		ASSERT_EQUAL(std::string("type_"), keyword_field->fields.at(0).name);
+		ASSERT_EQUAL(std::string("normal"), keyword_field->fields.at(1).name);
 
 		// A keyword parameter name is replaced positionally; the function survives.
 		const auto* keyword_param = findFunction(model, "hostile_keyword_param");

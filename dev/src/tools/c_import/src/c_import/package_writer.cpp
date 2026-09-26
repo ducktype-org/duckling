@@ -27,6 +27,14 @@ namespace c_import {
 			return { out_dir.string() + " is not empty, pass --force to overwrite" };
 
 		const std::filesystem::path source_dir = out_dir / "src";
+
+		// Regenerating with fewer headers, or going from --split back to a single module, would
+		// otherwise leave modules behind that still get compiled.
+		if (force && std::filesystem::is_directory(source_dir, error_code))
+			for (const auto& entry: std::filesystem::directory_iterator(source_dir, error_code))
+				if (entry.is_regular_file() && entry.path().extension() == ".dk")
+					std::filesystem::remove(entry.path(), error_code);
+
 		std::filesystem::create_directories(source_dir, error_code);
 		if (error_code)
 			return { "cannot create " + source_dir.string() + ": " + error_code.message() };

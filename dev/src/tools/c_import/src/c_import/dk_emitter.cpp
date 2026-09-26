@@ -42,10 +42,9 @@ namespace c_import {
 				out << function.params[i].name << ": " << renderType(function.params[i].type);
 			}
 			out << ')';
-			if (function.return_type != nullptr)
-				out << " -> " << renderType(*function.return_type);
-			else
-				out << " -> void";
+			// A C function returning void is written without a return type: an explicit
+			// `-> void` on an `extern("C") fundecl` miscompiles and crashes when called (#3646).
+			if (function.return_type != nullptr) out << " -> " << renderType(*function.return_type);
 			out << ";\n";
 		}
 
@@ -178,11 +177,71 @@ namespace c_import {
 				owner_of_record.emplace(record->emitted_name, origin);
 		}
 
-		std::vector<SplitModule> modules;
-		modules.reserve(order.size());
+		const auto direct_dependencies = [&](const std::string& name) {
+			std::vector<std::string> dependencies;
+			for (const auto& decl: grouped.at(name))
+				for (const auto& referenced: referencedRecords(decl)) {
+					const auto owner = owner_of_record.find(referenced);
+					if (owner == owner_of_record.end() || owner->second == name) continue;
+					if (std::ranges::find(dependencies, owner->second) == dependencies.end())
+						dependencies.push_back(owner->second);
+				}
+			return dependencies;
+		};
 
+		// Two headers whose records point at each other depend on each other, because a record
+		// only has to be complete *somewhere* in the translation unit to be named. Duckling has
+		// no cyclic imports, so every group of mutually dependent modules is merged into one.
+		std::unordered_map<std::string, std::vector<std::string>> reachable;
+		for (const auto& name: order) reachable[name] = direct_dependencies(name);
+
+		bool grew = true;
+		while (grew) {
+			grew = false;
+			for (const auto& name: order) {
+				auto& from = reachable[name];
+				for (std::size_t i = 0; i < from.size(); i++)
+					for (const auto& next: reachable[from[i]])
+						if (std::ranges::find(from, next) == from.end()) {
+							from.push_back(next);
+							grew = true;
+						}
+			}
+		}
+
+		// Component representative for each module: the first member in discovery order.
+		std::unordered_map<std::string, std::string> representative;
 		for (const auto& name: order) {
-			const auto& decls = grouped.at(name);
+			std::string chosen = name;
+			for (const auto& other: order) {
+				if (other == name) break;
+				const bool mutually_dependent
+					= std::ranges::find(reachable[name], other) != reachable[name].end()
+				   && std::ranges::find(reachable[other], name) != reachable[other].end();
+				if (mutually_dependent) {
+					chosen = representative[other];
+					break;
+				}
+			}
+			representative[name] = chosen;
+		}
+
+		std::vector<std::string>                            merged_order;
+		std::unordered_map<std::string, std::vector<CDecl>> merged;
+		for (const auto& name: order) {
+			const std::string& into = representative[name];
+			if (!merged.contains(into)) merged_order.push_back(into);
+			auto& target = merged[into];
+			target.insert(target.end(), grouped[name].begin(), grouped[name].end());
+		}
+
+		for (auto& [record, owner]: owner_of_record) owner = representative[owner];
+
+		std::vector<SplitModule> modules;
+		modules.reserve(merged_order.size());
+
+		for (const auto& name: merged_order) {
+			const auto& decls = merged.at(name);
 
 			std::vector<std::string> dependencies;
 			for (const auto& decl: decls)

@@ -4,12 +4,14 @@
 #include <c_import/tu_reader.hpp>
 #include <c_import/type_mapper.hpp>
 
+#include <algorithm>
 #include <cctype>
 #include <cstdint>
 #include <exception>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -23,11 +25,32 @@ namespace c_import {
 
 	namespace {
 
+		/** A record definition found anywhere in the translation unit, nested ones included. */
+		struct DiscoveredRecord final {
+			CXCursor    cursor;
+			std::string name;
+			/** Non-empty when the record cannot be translated. */
+			std::string rejection;
+			/** Records named by value, which carry their rejection over to this one. */
+			std::vector<std::string> by_value_deps;
+		};
+
 		struct Context final {
 			TranslationUnitModel model;
 			NameRegistry         registry;
-			/** Emitted names of records that could not be translated. */
-			std::unordered_set<std::string> unsupported_records;
+			/** Every record definition, in discovery order. */
+			std::vector<DiscoveredRecord> records;
+			/**
+			 * Records that actually get a class. Decided before anything is emitted, so a type
+			 * can never name a class that is missing or that is skipped later in the file.
+			 */
+			std::unordered_set<std::string> emitted_records;
+			/**
+			 * Set while records are being discovered, when it is not yet known which ones get a
+			 * class. Record references are then assumed fine and settled by the fixpoint, so
+			 * everything else about a field type is still checked.
+			 */
+			bool discovering = false;
 			/** USR of an anonymous record to the name chosen for it. */
 			std::unordered_map<std::string, std::string> anonymous_names;
 			std::uint32_t                                anonymous_counter = 0;
@@ -159,13 +182,9 @@ namespace c_import {
 				    || clang_getCanonicalType(pointee).kind == CXType_FunctionNoProto)
 					return makeOpaquePointer();
 
+				// A pointer to something that gets no class is still a usable address.
 				CType mapped = mapPointee(context, pointee);
 				if (!isSupported(mapped)) return makeOpaquePointer();
-
-				// A pointer to a record that was skipped is still a usable address.
-				if (const auto* record = std::get_if<RecordType>(&mapped.kind);
-				    record != nullptr && context.unsupported_records.contains(record->emitted_name))
-					return makeOpaquePointer();
 
 				return makePointer(std::move(mapped));
 			}
@@ -173,13 +192,13 @@ namespace c_import {
 			case CXType_Record: {
 				std::string name = recordNameOf(context, canonical);
 
-				// A record that is only forward declared gets no class of its own, so
-				// naming it here would produce a reference to a type that does not exist.
-				if (clang_isCursorDefinition(clang_getTypeDeclaration(canonical)) == 0)
-					return makeUnsupported("`" + name + "` is an opaque record");
+				// Naming a record that gets no class would dangle. That covers opaque records,
+				// records skipped for their contents, and ones that are never emitted at all
+				// such as nested definitions or clang's implicit builtins. A pointer to any of
+				// them degrades to `cptr u8` through the caller's isSupported check.
+				if (!context.discovering && !context.emitted_records.contains(name))
+					return makeUnsupported("`" + name + "` has no generated class");
 
-				if (context.unsupported_records.contains(name))
-					return makeUnsupported("`" + name + "` could not be translated");
 				return makeRecord(std::move(name));
 			}
 
@@ -210,83 +229,219 @@ namespace c_import {
 				.kind = std::move(kind), .name = std::move(name), .reason = std::move(reason) });
 		}
 
-		void collectRecord(Context& context, CXCursor cursor) {
-			const CXType type = clang_getCursorType(cursor);
-			std::string  name = recordNameOf(context, type);
+		/**
+		 * @brief Makes a C field name usable as a Duckling identifier.
+		 *
+		 * Unlike a function name, a field name is never linked - the C ABI places fields by
+		 * position - so a name that collides with a keyword can be renamed instead of costing
+		 * the whole record. Trailing underscores are added until the name is free.
+		 */
+		std::string usableFieldName(
+			std::string name, const std::vector<CField>& taken, std::size_t index
+		) {
+			if (name.empty()) name = "field" + std::to_string(index);
 
-			if (cursor.kind == CXCursor_UnionDecl) {
-				context.unsupported_records.insert(name);
-				skip(context, "union", std::move(name), "unions have no C ABI mapping");
+			const auto is_taken = [&taken](const std::string& candidate) {
+				return std::ranges::any_of(taken, [&candidate](const CField& field) {
+					return field.name == candidate;
+				});
+			};
+
+			while (isDucklingKeyword(name) || is_taken(name)) name.push_back('_');
+
+			return name;
+		}
+
+		/** Records named by value by @p cursor's fields, plus any local reason to reject it. */
+		void inspectRecord(Context& context, DiscoveredRecord& record) {
+			if (record.cursor.kind == CXCursor_UnionDecl) {
+				record.rejection = "unions have no C ABI mapping";
 				return;
 			}
 
-			struct FieldCollector final {
-				Context*            context;
-				std::vector<CField> fields;
-				std::string         rejection;
+			struct Inspector final {
+				Context*          context   = nullptr;
+				DiscoveredRecord* record    = nullptr;
+				bool              has_field = false;
 			};
 
-			FieldCollector collector{ .context = &context, .fields = {}, .rejection = {} };
+			Inspector inspector{ .context = &context, .record = &record };
 
 			clang_visitChildren(
-				cursor,
+				record.cursor,
 				[](CXCursor child, CXCursor, CXClientData data) {
-					auto& collected = *static_cast<FieldCollector*>(data);
+					auto& [inspected_context, inspected, has_field]
+						= *static_cast<Inspector*>(data);
+
+					// libclang reports an anonymous member as a nested record declaration rather
+				    // than a field. Duckling has no anonymous members, so dropping it would
+				    // silently change the record's size and field offsets.
+					if ((child.kind == CXCursor_StructDecl || child.kind == CXCursor_UnionDecl)
+				        && clang_Cursor_isAnonymousRecordDecl(child) != 0) {
+						if (inspected->rejection.empty())
+							inspected->rejection = "contains an anonymous struct or union member";
+						return CXChildVisit_Continue;
+					}
 
 					if (child.kind != CXCursor_FieldDecl) return CXChildVisit_Continue;
 
+					has_field = true;
+
 					if (clang_Cursor_isBitField(child) != 0) {
-						if (collected.rejection.empty())
-							collected.rejection
+						if (inspected->rejection.empty())
+							inspected->rejection
 								= "contains the bitfield `" + spellingOf(child) + "`";
 						return CXChildVisit_Continue;
 					}
 
-					CType mapped = mapType(*collected.context, clang_getCursorType(child));
+					const CType mapped = mapType(*inspected_context, clang_getCursorType(child));
 					if (!isSupported(mapped)) {
-						if (collected.rejection.empty())
-							collected.rejection
+						if (inspected->rejection.empty())
+							inspected->rejection
 								= "field `" + spellingOf(child)
 						        + "` is not C ABI compatible: " + unsupportedReason(mapped);
 						return CXChildVisit_Continue;
 					}
 
-					std::string field_name = spellingOf(child);
-					if (field_name.empty())
-						field_name = "__anon_" + std::to_string(collected.fields.size());
+					CXType field_type = clang_getCanonicalType(clang_getCursorType(child));
 
-					collected.fields.emplace_back(CField{ .name = std::move(field_name),
-				                                          .type = std::move(mapped) });
+					// An array of records carries the same by-value dependency as the record.
+					while (field_type.kind == CXType_ConstantArray)
+						field_type = clang_getCanonicalType(clang_getArrayElementType(field_type));
+
+					if (field_type.kind == CXType_Record)
+						inspected->by_value_deps.push_back(
+							recordNameOf(*inspected_context, field_type)
+						);
+
 					return CXChildVisit_Continue;
 				},
-				&collector
+				&inspector
 			);
 
-			std::vector<CField> fields    = std::move(collector.fields);
-			std::string         rejection = std::move(collector.rejection);
+			// An `extern("C")` class with no fields is rejected by the compiler.
+			if (record.rejection.empty() && !inspector.has_field)
+				record.rejection = "has no fields";
+		}
 
-			if (!rejection.empty()) {
-				context.unsupported_records.insert(name);
-				skip(context, "record", std::move(name), std::move(rejection));
-				return;
+		/**
+		 * @brief Finds every record definition in the translation unit and decides which ones
+		 *        can be emitted, before anything is written.
+		 *
+		 * Doing this up front is what lets a type reference be trusted: nested and anonymous
+		 * definitions are found (the main visitor only walks top-level cursors), and a record
+		 * skipped later in the file is already known to be skipped when an earlier declaration
+		 * points at it.
+		 */
+		void discoverRecords(Context& context, CXCursor translation_unit) {
+			clang_visitChildren(
+				translation_unit,
+				[](CXCursor cursor, CXCursor, CXClientData data) {
+					auto& discovered = *static_cast<Context*>(data);
+
+					if ((cursor.kind == CXCursor_StructDecl || cursor.kind == CXCursor_UnionDecl)
+				        && clang_isCursorDefinition(cursor) != 0) {
+						std::string name = recordNameOf(discovered, clang_getCursorType(cursor));
+						if (!std::ranges::any_of(
+								discovered.records,
+								[&name](const DiscoveredRecord& seen) { return seen.name == name; }
+							))
+							discovered.records.push_back(DiscoveredRecord{ .cursor = cursor,
+						                                                   .name = std::move(name),
+						                                                   .rejection     = {},
+						                                                   .by_value_deps = {} });
+					}
+
+					return CXChildVisit_Recurse;
+				},
+				&context
+			);
+
+			context.discovering = true;
+			for (auto& record: context.records) inspectRecord(context, record);
+			context.discovering = false;
+
+			// A record is unsupported when anything it holds by value is, so the rejection has
+			// to be propagated to a fixpoint.
+			bool changed = true;
+			while (changed) {
+				changed = false;
+				for (auto& record: context.records) {
+					if (!record.rejection.empty()) continue;
+
+					for (const auto& dependency: record.by_value_deps) {
+						const auto found = std::ranges::find_if(
+							context.records,
+							[&dependency](const DiscoveredRecord& other) {
+								return other.name == dependency;
+							}
+						);
+
+						const bool dependency_rejected
+							= found == context.records.end() || !found->rejection.empty();
+
+						if (dependency_rejected) {
+							record.rejection = "holds `" + dependency + "`, which was skipped";
+							changed          = true;
+							break;
+						}
+					}
+				}
 			}
 
-			// An `extern("C")` class with no fields is rejected by the compiler, so an opaque
-			// record contributes no declaration and every use of it becomes `cptr u8`.
-			if (fields.empty()) {
-				context.unsupported_records.insert(name);
-				return;
-			}
+			for (const auto& record: context.records) {
+				if (!record.rejection.empty()) continue;
 
-			auto verdict = context.registry.claim(name);
-			if (!verdict.accepted) {
-				context.unsupported_records.insert(name);
-				skip(context, "record", std::move(name), std::move(verdict.reason));
-				return;
+				// A name that is a Duckling keyword cannot be renamed, because it is the linked
+				// identifier, so the record has to go.
+				if (context.registry.claim(record.name).accepted)
+					context.emitted_records.insert(record.name);
 			}
+		}
 
-			context.model.decls.emplace_back(CRecord{ .emitted_name = std::move(name),
-			                                          .fields       = std::move(fields) });
+		/** Writes the classes and the skip comments for everything discoverRecords found. */
+		void emitRecords(Context& context) {
+			for (const auto& record: context.records) {
+				const std::string origin = originOf(record.cursor);
+
+				if (!context.emitted_records.contains(record.name)) {
+					// A record that is merely opaque or unnamed is not worth a comment; only an
+					// actual rejection is.
+					if (!record.rejection.empty()) {
+						skip(context, "record", record.name, record.rejection);
+						std::get<CSkipped>(context.model.decls.back()).origin = origin;
+					}
+					continue;
+				}
+
+				struct FieldCollector final {
+					Context*            context;
+					std::vector<CField> fields;
+				};
+
+				FieldCollector collector{ .context = &context, .fields = {} };
+
+				clang_visitChildren(
+					record.cursor,
+					[](CXCursor child, CXCursor, CXClientData data) {
+						auto& collected = *static_cast<FieldCollector*>(data);
+						if (child.kind != CXCursor_FieldDecl) return CXChildVisit_Continue;
+
+						collected.fields.emplace_back(CField{
+							.name = usableFieldName(
+								spellingOf(child), collected.fields, collected.fields.size()
+							),
+							.type = mapType(*collected.context, clang_getCursorType(child)) });
+
+						return CXChildVisit_Continue;
+					},
+					&collector
+				);
+
+				context.model.decls.emplace_back(CRecord{ .emitted_name = record.name,
+				                                          .fields = std::move(collector.fields),
+				                                          .origin = origin });
+			}
 		}
 
 		void collectFunction(Context& context, CXCursor cursor) {
@@ -497,15 +652,14 @@ namespace c_import {
 		}
 
 		bool parseIntegerLiteral(const std::string& digits, bool is_unsigned, NumericLiteral& out) {
-			const bool is_hex = digits.starts_with("0x") || digits.starts_with("0X");
-
-			// Duckling has no hexadecimal literals, so the value is re-rendered in decimal.
+			// Base 0 makes the C prefix authoritative: `0x10` is 16 and `0700` is 448, not 700.
+			// Duckling has neither spelling, so the value is re-rendered in decimal.
 			try {
 				if (is_unsigned) {
-					const unsigned long long value = std::stoull(digits, nullptr, is_hex ? 16 : 10);
+					const unsigned long long value = std::stoull(digits, nullptr, 0);
 					out = { .type = "u64", .literal = std::to_string(value) + "u64" };
 				} else {
-					const long long value = std::stoll(digits, nullptr, is_hex ? 16 : 10);
+					const long long value = std::stoll(digits, nullptr, 0);
 					out = { .type = "i64", .literal = std::to_string(value) + "i64" };
 				}
 			} catch (const std::exception&) { return false; }
@@ -610,6 +764,18 @@ namespace c_import {
 		const std::string root_source = root.str();
 
 		std::vector<std::string> argument_storage = { "-x", "c", request.std_flag };
+
+		// Baked in at configure time: libclang works out a relative `lib/clang/<major>` from its
+		// own location, which does not resolve when it is loaded as a library, so every header
+		// including <stddef.h>, <stdarg.h> or <float.h> would fail. User arguments come after,
+		// so an explicit -resource-dir still wins.
+#ifdef DUCK_CLANG_RESOURCE_DIR
+		if (std::string_view(DUCK_CLANG_RESOURCE_DIR).empty() == false) {
+			argument_storage.emplace_back("-resource-dir");
+			argument_storage.emplace_back(DUCK_CLANG_RESOURCE_DIR);
+		}
+#endif
+
 		argument_storage.insert(
 			argument_storage.end(), request.clang_args.begin(), request.clang_args.end()
 		);
@@ -659,7 +825,7 @@ namespace c_import {
 		Context context;
 
 		// An anonymous record behind a typedef takes the typedef's name, so those pairings are
-		// registered before anything is emitted.
+		// registered before any record is named.
 		clang_visitChildren(
 			clang_getTranslationUnitCursor(unit.get()),
 			[](CXCursor cursor, CXCursor, CXClientData data) {
@@ -679,6 +845,9 @@ namespace c_import {
 			&context
 		);
 
+		discoverRecords(context, clang_getTranslationUnitCursor(unit.get()));
+		emitRecords(context);
+
 		struct Visit final {
 			Context*          context;
 			CXTranslationUnit unit;
@@ -696,10 +865,6 @@ namespace c_import {
 				const std::size_t before = ctx->model.decls.size();
 
 				switch (cursor.kind) {
-				case CXCursor_StructDecl:
-				case CXCursor_UnionDecl:
-					if (clang_isCursorDefinition(cursor) != 0) collectRecord(*ctx, cursor);
-					break;
 				case CXCursor_EnumDecl:
 					if (clang_isCursorDefinition(cursor) != 0) collectEnum(*ctx, cursor);
 					break;

@@ -2,6 +2,7 @@
 #define EM_UNSIGNED         7u
 #define EM_NEGATIVE         -3
 #define EM_HEX              0x10
+#define EM_OCTAL            0700
 #define EM_PI               3.5
 #define EM_NOT_A_NUMBER     ((void*) 0)
 #define EM_FUNCTION_LIKE(x) ((x) + 1)

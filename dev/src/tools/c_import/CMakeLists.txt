@@ -7,6 +7,7 @@ add_library(CImport
 	src/c_import/package_writer.cpp
 	src/c_import/options.cpp
 	src/c_import/run.cpp
+	src/c_import/verify.cpp
 	src_private/c_import_private/tu_reader.cpp
 )
 
@@ -16,6 +17,9 @@ target_include_directories(CImport SYSTEM PRIVATE ${CLANG_INCLUDE_DIRS})
 # make_module links with the plain signature, so every link here must stay plain too:
 # CMake forbids mixing plain and keyword signatures on one target.
 target_link_libraries(CImport libclang)
+
+# libclang cannot locate its own builtin headers when loaded as a library.
+target_compile_definitions(CImport PRIVATE DUCK_CLANG_RESOURCE_DIR="${DUCK_CLANG_RESOURCE_DIR}")
 
 make_module(CImport USES Base)
 

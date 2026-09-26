@@ -3,6 +3,7 @@
 #include "dk_emitter.hpp"
 #include "manifest_emitter.hpp"
 #include "package_writer.hpp"
+#include "verify.hpp"
 
 #include <c_import/tu_reader.hpp>
 
@@ -22,6 +23,14 @@ namespace c_import {
 
 		if (options.package_name.empty()) {
 			std::cerr << "error: --package-name is required\n";
+			return 1;
+		}
+
+		// A single library path reaches the linker inside one shell string, so a space in it
+		// would be read as an argument separator. --links-raw is several arguments by design.
+		if (options.library_has_space) {
+			std::cerr << "error: --library path contains a space; use --links-raw to pass "
+						 "several linker arguments\n";
 			return 1;
 		}
 
@@ -98,6 +107,21 @@ namespace c_import {
 		    !written.error.empty()) {
 			std::cerr << "error: " << written.error << '\n';
 			return 1;
+		}
+
+		if (options.verify) {
+			const auto verified = verifyPackage(out_dir, options.package_name, options.duckc);
+			if (!verified.ok) {
+				std::cerr << "error: the generated package does not compile\n"
+						  << "  package: " << out_dir.string() << '\n'
+						  << "  command: " << verified.command << '\n'
+						  << "\nThe compiler reported:\n"
+						  << verified.output
+						  << "\nThis is a bug in duck_c_import: it emitted a declaration that is "
+							 "not valid Duckling.\nThe package was left in place so it can be "
+							 "inspected. Pass --no-verify to skip this check.\n";
+				return 1;
+			}
 		}
 
 		std::cout << "Wrote package `" << options.package_name << "` to " << out_dir.string()
