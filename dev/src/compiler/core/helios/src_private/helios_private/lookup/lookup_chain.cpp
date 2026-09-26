@@ -5,34 +5,21 @@
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/str/str_utils.hpp>
 
 namespace compiler::helios {
 
-	HInterface getSymbolInterface(query::Context& ctx, SymID sym) {
-		switch (kind(sym)) {
-		case SymbolKind::Module:
-			return HInterface::ofModule(sym);
-		case SymbolKind::Namespace:
-			return HInterface::ofNamespace(sym);
-		default:
-			ctx.log<dia::NotYetImplementedCodeError>(
-				"Interface of the ", base::enumToStr(kind(sym))
-			);
-			query::throwFailed();
-		}
-	}
-
 	query::QResult<SymbolList> lookupChain(query::Context& ctx, const LookupChainKey& key) {
-		CORE_ASSERT(!key.names.empty(), "lookupChain received zero names");
+		SymbolList result;
+		if (v_matches(key.start, SymID)) result.pushBack(v_get(key.start, SymID));
 
-		SymbolList                   result;
 		std::variant<ScopeID, SymID> last = key.start;
 
 		for (auto pointed_locked: key.names) {
 			auto lookup_interface = VARIANT_VISIT(
 				last,
 				VISIT_CASE_VAL(ScopeID, id, HInterface::ofScopeWithParents(id)),
-				VISIT_CASE_VAL(SymID, id, getSymbolInterface(ctx, id))
+				VISIT_CASE_VAL(SymID, id, HInterface::ofSymbol(ctx, id))
 			);
 
 			auto pointed = pointed_locked.unlock(ctx);

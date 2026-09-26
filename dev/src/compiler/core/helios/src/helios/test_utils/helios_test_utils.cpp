@@ -9,7 +9,6 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
-#include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -52,7 +51,7 @@ namespace compiler::helios::test_utils {
 				                        ? HInterface::ofScopeWithParents(scope).lookup(
 											  ctx, name, { .with_wildcards = true }
 										  )
-				                        : getSymbolInterface(ctx, result.back())
+				                        : HInterface::ofSymbol(ctx, result.back())
 				                              .lookup(ctx, name, { .with_wildcards = false });
 
 				CRef<LookupResult> symbol = &lookup_qresult->valueOrThrow();

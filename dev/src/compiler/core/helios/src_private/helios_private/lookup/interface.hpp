@@ -5,6 +5,7 @@
 
 #include <frontend/pst_parser/source_position_locked.hpp>
 #include <helios/scope_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
 
 #include <base/collections/optional.hpp>
@@ -172,6 +173,17 @@ namespace compiler::helios {
 			base::StrID         name,
 			AdditionalLookupParameters = {}
 		) const;
+
+		/**
+		 * @brief The interface of a symbol, i.e. what `sym.something` looks into.
+		 *
+		 * Namespace-like symbols (modules, namespaces, usings, imports) look into their own
+		 * contents, a class looks into its statics (`MyClass.CONST`) and a symbol that holds a
+		 * value looks into the members of its type (`my_var.field`).
+		 *
+		 * @note Fails, with a logged error, for symbol kinds that have no interface.
+		 */
+		static HInterface ofSymbol(query::Context& ctx, SymID symbol);
 
 		static HInterface ofScope(const ScopeID scope) {
 			return HInterface{ ScopeInterface{ scope } };

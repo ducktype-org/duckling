@@ -26,10 +26,4 @@ namespace compiler::helios {
 	 * It is currently used for looking up symbols in usings/imports.
 	 */
 	query::QResult<SymbolList> lookupChain(query::Context& ctx, const LookupChainKey& key);
-
-	/**
-	 * @brief Gets interface of a symbol.
-	 * If we have a symbol "a" and we want to perform "a.b".
-	 */
-	HInterface getSymbolInterface(query::Context& ctx, SymID sym);
 }

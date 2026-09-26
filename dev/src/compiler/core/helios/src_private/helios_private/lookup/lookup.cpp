@@ -39,7 +39,7 @@ namespace compiler::helios {
 				return queryRootScopeOfMainModuleFile(ctx, module_id);
 			} else {
 				CORE_ASSERT(kind(id) == SymbolKind::Namespace, "Invalid call");
-				return scope(id);
+				return queryBodyCodeScopeFor(ctx, getSymRef(id)->stmtCast(ctx).value());
 			}
 		}
 
@@ -87,6 +87,39 @@ namespace compiler::helios {
 			return path;
 		}
 
+		/**
+		 * @brief Can this selector provide @p name, judging by the selector alone?
+		 *
+		 * The name a selector introduces is written in the selector itself: the `as` name for an
+		 * alias, the last name of the path for a bare selector. A `.*` is the one tail that
+		 * cannot be answered without looking inside what it points at, so it is taken as a yes
+		 * whenever wildcards are being followed at all.
+		 */
+		query::QResult<bool> selectorValidForName(
+			query::Context&            ctx,
+			pst::Access<pst::Selector> selector,
+			base::StrID                name,
+			bool                       with_wildcards
+		) {
+			switch (selector->getTailKind()) {
+			case pst::SelectorTail::As:
+				return selector->getAsName().value().unlock(ctx)->unwrap() == name;
+			case pst::SelectorTail::None: {
+				if (selector->numberOfNames() == 0) return false;
+				auto last_name = selector->getNameByIndex(selector->numberOfNames() - 1);
+				return last_name.unlock(ctx)->unwrap() == name;
+			}
+			case pst::SelectorTail::Star:
+				return with_wildcards;
+			case pst::SelectorTail::Nested:
+				ctx.log<dia::NotYetImplementedCodeError>(
+					"Nested selector in usings and imports.", selector->getStablePosition()
+				);
+				return query::Failed();
+			}
+			CORE_PANIC("Unhandled selector tail kind");
+		}
+
 		SymID symOfModule(query::Context& ctx, frontend::ModuleID id) {
 			return ctx.query<defgen::QueryGeneratedSymbol>({
 				.name                  = frontend::moduleName(id),
@@ -109,52 +142,45 @@ namespace compiler::helios {
 		static query::QResult<LookupResult> lookupInSelector(
 			Context&                   ctx,
 			const QKey&                key,
-			pst::Access<pst::Selector> tail_of_selector,
-			const LookupChainKey&      lookup_chain_key
+			pst::Access<pst::Selector> selector,
+			const LookupChainKey&      pointed_chain
 		) {
-			UNPACK_QRESULT_MOVE(auto pointed =, lookupChain(ctx, lookup_chain_key));
+			UNPACK_QRESULT_MOVE(auto sym_chain =, lookupChain(ctx, pointed_chain));
+			auto pointed = sym_chain.back();
 
 			LookupResult result;
-			switch (tail_of_selector->getTailKind()) {
-			case pst::SelectorTail::None:
-				if (name(pointed.back()) == key.name) result.leaves.push_back(pointed.back());
-				break;
-			case pst::SelectorTail::As: {
-				auto name = tail_of_selector->getAsName().value().unlock(ctx)->unwrap();
-				if (name == key.name) result.leaves.push_back(pointed.back());
-				break;
-			}
-			case pst::SelectorTail::Star: {
-				// `using a.*;` / `import a.*;` only contribute names when wildcards are followed.
-				if (not key.follow_wildcards) break;
-				auto sym_interface = getSymbolInterface(ctx, pointed.back());
-				UNPACK_QRESULT_CREF(result =, sym_interface.lookup(ctx, key.name));
-				break;
-			}
-			case pst::SelectorTail::Nested: {
-				ctx.log<dia::NotYetImplementedCodeError>(
-					"Nested selector in usings and imports.", tail_of_selector->getStablePosition()
+			if (selector->getTailKind() == pst::SelectorTail::Star) {
+				UNPACK_QRESULT_CREF(
+					result =, HInterface::ofSymbol(ctx, pointed).lookup(ctx, key.name)
 				);
-			}
+			} else {
+				result.leaves.push_back(pointed);
 			}
 
 			return result;
 		}
 
+		/**
+		 * @brief Lookup @p key.name through a single `using` selector.
+		 *
+		 * The path is an ordinary chain of names, looked up from the scope the `using` is in.
+		 */
 		static query::QResult<LookupResult> lookupInUsingSelector(
 			Context& ctx, const QKey& key, pst::Access<pst::Selector> selector
 		) {
-			auto           begin_scope = scope(key.symbol);
-			auto           names       = selectorPath(selector);
-			LookupChainKey chain_key{ .names  = std::move(names),
-				                      .start  = begin_scope,
-				                      .params = { .with_wildcards = key.follow_wildcards } };
+			// The path of a `using` is resolved without wildcards: a wildcard cannot be part of
+			// what another wildcard points at, and following them here would make resolving a
+			// `using N.*;` ask the very scope it lives in for `N` again.
+			LookupChainKey chain_key{ .names  = selectorPath(selector),
+				                      .start  = scope(key.symbol),
+				                      .params = { .with_wildcards = false } };
+
 			UNPACK_QRESULT(auto result =, lookupInSelector(ctx, key, selector, chain_key));
 			return result;
 		}
 
 		/**
-		 * @brief Lookup @p name through a single `import` selector.
+		 * @brief Lookup @p key.name through a single `import` selector.
 		 *
 		 * The prefix of the selector is a module path, so the lookup continues in the root scope
 		 * of that module.
@@ -164,33 +190,34 @@ namespace compiler::helios {
 		) {
 			auto path_idents = selectorPath(selector);
 
-			// Phase 1: try to find the modules from the chain until we don't.
-			int  i{ 0 };
-			auto current_module = module(scope(key.symbol));
-			for (; i < path_idents.size(); i++) {
-				auto lookup_name = path_idents.at(0).unlock(ctx)->unwrap();
+			// Phase 1: follow the path through the module tree while it names modules.
+			usize names_taken    = 0;
+			auto  current_module = module(scope(key.symbol));
+			for (; names_taken < path_idents.size(); names_taken++) {
+				auto lookup_name = path_idents.at(names_taken).unlock(ctx)->unwrap();
 				auto maybe_imported_module
 					= frontend::getRelativeModule(ctx, current_module, { lookup_name });
 				if (not maybe_imported_module) {
-					// If this is the first name in the chain, we throw an error.
-					if (i == 0) {
+					// The first name has to be a module, the rest may already be its contents.
+					if (names_taken == 0) {
 						ctx.log<dia::PlaceholderError>(
-							"Import didn't find any modules.", selector->getStablePosition()
+							"Module not found.", selector->getStablePosition()
 						);
 						return query::Failed();
 					}
-					// If not, we continue with the second phase.
 					break;
 				}
 				current_module = maybe_imported_module.value();
 			}
 
-			// Phase 2: we look at the items in the imported module with the remaining chain..
-			std::vector    rest_of_the_path(path_idents.begin() + i, path_idents.end());
+			// Phase 2: what is left of the path names items inside the module found above.
+			// Nothing left means the selector points at the module itself, which is an empty chain.
 			LookupChainKey chain_key{
-				.names  = std::move(rest_of_the_path),
+				.names = std::vector(
+					path_idents.begin() + base::safeIntConv<int>(names_taken), path_idents.end()
+				),
 				.start  = symOfModule(ctx, current_module),
-				.params = { .with_wildcards = key.follow_wildcards },
+				.params = { .with_wildcards = false },
 			};
 
 			UNPACK_QRESULT(auto result =, lookupInSelector(ctx, key, selector, chain_key));
@@ -209,7 +236,17 @@ namespace compiler::helios {
 			bool         failed = false;
 
 			for (const auto& selector_access: *selectors) {
-				auto selector        = selector_access.unlock(ctx);
+				auto selector = selector_access.unlock(ctx);
+
+				// This is needed to avoid query cycle in non-wildcard usings and imports.
+				auto matches_result
+					= selectorValidForName(ctx, selector, key.name, key.follow_wildcards);
+				if (matches_result.hasFailed()) {
+					failed = true;
+					continue;
+				}
+				if (not matches_result.valueOrPanic()) continue;
+
 				auto selector_result = symbol_kind == SymbolKind::Using
 				                         ? lookupInUsingSelector(ctx, key, selector)
 				                         : lookupInImportSelector(ctx, key, selector);
@@ -218,7 +255,7 @@ namespace compiler::helios {
 					continue;
 				}
 
-				result.merge(std::move(selector_result.valueOrThrow()));
+				result.merge(std::move(selector_result.valueOrPanic()));
 			}
 
 			if (failed) return query::Failed();

@@ -888,7 +888,7 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
-			const auto& lookup_result = getSymbolInterface(query_ctx, namespace_like_symbol)
+			const auto& lookup_result = HInterface::ofSymbol(query_ctx, namespace_like_symbol)
 			                                .lookupExpectUnique(
 												expr_access->getStablePosition(),
 												query_ctx,
@@ -990,7 +990,7 @@ namespace compiler::helios::code {
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
 				auto lookup_qresult
-					= getSymbolInterface(query_ctx, namespace_like_symbol)
+					= HInterface::ofSymbol(query_ctx, namespace_like_symbol)
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 

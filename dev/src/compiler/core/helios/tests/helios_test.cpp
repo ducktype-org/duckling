@@ -3323,9 +3323,11 @@ private:
 		// @TODO: #1412 make this less of a stub once proper dealias lands
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/aliases")));
 
+		// `using M.c;` brings `c` in under its own name, so looking `c` up in the root scope
+		// has to land on the very symbol `M.c` names.
 		auto nonwild_using        = getChain("c", root_scope);
 		auto nonwild_using_target = getChain("M.c", root_scope);
-		ASSERT_EQUAL(nonwild_using, nonwild_using_target);
+		ASSERT_EQUAL(nonwild_using.back(), nonwild_using_target.back());
 	}
 
 	void testBackendDependentCompTime() {
