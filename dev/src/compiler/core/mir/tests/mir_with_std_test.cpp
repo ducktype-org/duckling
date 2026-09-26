@@ -36,6 +36,7 @@ public:
 		TESTER_ADD_TEST(sliceTest);
 		TESTER_ADD_TEST(listsTest);
 		TESTER_ADD_TEST(staticArraysTest);
+		TESTER_ADD_TEST(forContinueTargetTest);
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(testErrorLogging);
@@ -139,6 +140,34 @@ private:
 			ASSERT_TRUE(found_zero_init_pts);
 			ASSERT_TRUE(found_index_projection);
 			ASSERT_TRUE(found_complex_pts_projection);
+		});
+	}
+
+	void forContinueTargetTest() {
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("static_arrays");
+		withContextDo([&](query::Context& ctx) {
+			auto& unit
+				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
+			ASSERT_EQUAL(2u, unit.functions.size());
+			auto function = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(1));
+			base::Optional<BlockID> continue_target;
+			for (auto id: function.block_order) {
+				const auto& block = function.blocks[id];
+				if (!block.debug_name.has_value()) continue;
+				if (block.debug_name.value() == base::StrID("continue"))
+					continue_target = block.terminator.arguments.at(0).get<BlockID>();
+			}
+			ASSERT_HAS_VALUE(continue_target);
+			const auto& target_block     = function.blocks[continue_target.value()];
+			bool        increments_index = false;
+			for (const auto& instr: target_block.instructions) {
+				if (instr.operation != compiler::mir::Operation::IntegerAdd
+				    || !instr.output.has_value())
+					continue;
+				auto local = instr.output->getBase<compiler::mir::MIRLocalRef>();
+				if (local->getName().strView().starts_with("__index")) increments_index = true;
+			}
+			ASSERT_TRUE(increments_index);
 		});
 	}
 

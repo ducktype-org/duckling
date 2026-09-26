@@ -96,6 +96,17 @@ namespace pst {
 			}
 		};
 
+		template<>
+		struct StmtFinder<Action> {
+			static u64 findStatementLength(LangParserState& state) {
+				if ((state[0].is(Keyword::Break) || state[0].is(Keyword::Continue))
+				    && state.ctokens().size() >= 3 && state[2].is(Special::Semicolon)
+				    && isControlFlowTargetKeyword(state[1].asKeyword()))
+					return 3;
+				return 1 + state.ctokens().countUntil<StmtClassifiers<Action>::isStmtEnd>(1);
+			}
+		};
+
 		template<class T>
 		concept FunctionLike = std::same_as<T, Fun> || std::same_as<T, Pattern>;
 

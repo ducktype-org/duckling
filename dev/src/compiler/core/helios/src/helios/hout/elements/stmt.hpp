@@ -19,6 +19,8 @@ namespace compiler::helios::defgen {
 namespace compiler::helios::code {
 	class HoutStmtVisitor;
 
+	enum class ControlFlowKind { If, While, For, Block };
+
 	/**
 	 * @brief Base class for all HOUT statements
 	 */
@@ -155,23 +157,35 @@ namespace compiler::helios::code {
 	 * @brief Represents if statement in HOUT
 	 */
 	struct IfStmt final: public Stmt {
-		BoxOrCRef<Expr> condition;
-		CodeBlock       then_body;
-		CodeBlock       else_body;
+		BoxOrCRef<Expr>       condition;
+		CodeBlock             then_body;
+		CodeBlock             else_body;
+		base::Optional<SymID> control_flow_id;
 
 		IfStmt(
-			ElementOrigin origin, BoxOrCRef<Expr> condition, CodeBlock then_body, CodeBlock else_body
+			ElementOrigin         origin,
+			BoxOrCRef<Expr>       condition,
+			CodeBlock             then_body,
+			CodeBlock             else_body,
+			base::Optional<SymID> control_flow_id = {}
 		):
 			  Stmt(origin),
 			  condition(std::move(condition)),
 			  then_body(std::move(then_body)),
-			  else_body(std::move(else_body)) {}
+			  else_body(std::move(else_body)),
+			  control_flow_id(control_flow_id) {}
 
-		IfStmt(ElementOrigin origin, BoxOrCRef<Expr> condition, CodeBlock then_body):
+		IfStmt(
+			ElementOrigin         origin,
+			BoxOrCRef<Expr>       condition,
+			CodeBlock             then_body,
+			base::Optional<SymID> control_flow_id = {}
+		):
 			  Stmt(origin),
 			  condition(std::move(condition)),
 			  then_body(std::move(then_body)),
-			  else_body({}) {}
+			  else_body({}),
+			  control_flow_id(control_flow_id) {}
 
 		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
 		void                    acceptVisitor(HoutStmtVisitor&) const override;
@@ -182,13 +196,65 @@ namespace compiler::helios::code {
 	 * @brief Represents While statement in HOUT
 	 */
 	struct WhileStmt final: public Stmt {
-		BoxOrCRef<Expr> condition;
-		CodeBlock       body;
+		BoxOrCRef<Expr>       condition;
+		CodeBlock             body;
+		base::Optional<SymID> control_flow_id;
+		ControlFlowKind       control_flow_kind;
 
-		WhileStmt(ElementOrigin origin, BoxOrCRef<Expr> condition, CodeBlock body):
+		WhileStmt(
+			ElementOrigin         origin,
+			BoxOrCRef<Expr>       condition,
+			CodeBlock             body,
+			base::Optional<SymID> control_flow_id   = {},
+			ControlFlowKind       control_flow_kind = ControlFlowKind::While
+		):
 			  Stmt(origin),
 			  condition(std::move(condition)),
-			  body(std::move(body)) {}
+			  body(std::move(body)),
+			  control_flow_id(control_flow_id),
+			  control_flow_kind(control_flow_kind) {}
+
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
+	};
+
+	/**
+	 * @brief Represents break statement in HOUT
+	 */
+	struct BreakStmt final: public Stmt {
+		base::Optional<SymID>           target;
+		base::Optional<ControlFlowKind> target_kind;
+
+		BreakStmt(
+			ElementOrigin                   origin,
+			base::Optional<SymID>           target      = {},
+			base::Optional<ControlFlowKind> target_kind = {}
+		):
+			  Stmt(origin),
+			  target(target),
+			  target_kind(target_kind) {}
+
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
+	};
+
+	/**
+	 * @brief Represents continue statement in HOUT
+	 */
+	struct ContinueStmt final: public Stmt {
+		base::Optional<SymID>           target;
+		base::Optional<ControlFlowKind> target_kind;
+
+		ContinueStmt(
+			ElementOrigin                   origin,
+			base::Optional<SymID>           target      = {},
+			base::Optional<ControlFlowKind> target_kind = {}
+		):
+			  Stmt(origin),
+			  target(target),
+			  target_kind(target_kind) {}
 
 		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
 		void                    acceptVisitor(HoutStmtVisitor&) const override;
@@ -196,9 +262,20 @@ namespace compiler::helios::code {
 	};
 
 	struct BlockStmt final: public Stmt {
-		CodeBlock body;
+		CodeBlock                       body;
+		base::Optional<SymID>           control_flow_id;
+		base::Optional<ControlFlowKind> control_flow_kind;
 
-		BlockStmt(ElementOrigin origin, CodeBlock body): Stmt(origin), body(std::move(body)) {}
+		BlockStmt(
+			ElementOrigin                   origin,
+			CodeBlock                       body,
+			base::Optional<SymID>           control_flow_id   = {},
+			base::Optional<ControlFlowKind> control_flow_kind = {}
+		):
+			  Stmt(origin),
+			  body(std::move(body)),
+			  control_flow_id(control_flow_id),
+			  control_flow_kind(control_flow_kind) {}
 
 		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
 		void                    acceptVisitor(HoutStmtVisitor&) const override;

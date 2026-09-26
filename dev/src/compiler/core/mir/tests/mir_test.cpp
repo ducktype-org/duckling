@@ -5,6 +5,7 @@
 #include "utils/test_utils.hpp"
 
 #include <ctv/ctv.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -26,6 +27,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <vector>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -41,6 +43,8 @@ public:
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
+		TESTER_ADD_TEST(controlFlowTargetsTest);
+		TESTER_ADD_TEST(controlFlowContinueTargetsTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(blockDebugNamesTest);
 		TESTER_ADD_TEST(simpleFunctionCalls);
@@ -64,6 +68,184 @@ protected:
 
 private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
+
+	/**
+	 * Named actions retain their enclosing targets through nested statements. A kind-selected
+	 * break can cross a named if to exit the nearest while.
+	 */
+	void controlFlowTargetsTest() {
+		auto module = compiler::frontend::createModuleTreeFromContents(
+			R"(
+				fun nested(c: bool) -> i64 = {
+					while outer(c) {
+						while inner(c) {
+							if (c) break outer;
+						}
+					}
+					return 1;
+				}
+				fun nestedElse(c: bool) -> i64 = {
+					while outer(c) {
+						while inner(c) {
+							if (not c) {
+								break outer;
+							} else {
+								continue outer;
+							}
+						}
+					}
+					return 1;
+				}
+				fun namedIf(c: bool) -> i64 = {
+					if region(c) { break region; }
+					return 2;
+				}
+				fun namedBlock() -> i64 = {
+					block region { break region; }
+					return 3;
+				}
+				fun kindInIf(c: bool) -> i64 = {
+					while target(c) {
+						if region(c) { break while; }
+					}
+					return 4;
+				}
+				fun unnamedInBlock(c: bool) -> i64 = {
+					while (c) {
+						block { if (c) break; }
+					}
+					return 5;
+				}
+			)",
+			"test_package"
+		);
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			ASSERT_EQUAL(6u, unit.functions.size());
+
+			auto getJumpTarget
+				= [this](const compiler::mir::Function& function, std::string_view block_name) {
+					  base::Optional<BlockID> result;
+					  for (auto id: function.block_order) {
+						  const auto& block = function.blocks[id];
+						  if (not block.debug_name.has_value()
+					          || block.debug_name.value().strView() != block_name)
+							  continue;
+						  ASSERT_NO_VALUE(result);
+						  ASSERT_EQUAL(compiler::mir::Operation::Jump, block.terminator.operation);
+						  result = block.terminator.arguments.at(0).get<BlockID>();
+					  }
+					  ASSERT_HAS_VALUE(result);
+					  return result.value();
+				  };
+
+			for (usize i = 0; i < unit.functions.size(); i++) {
+				auto function     = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(i));
+				auto break_target = getJumpTarget(function, "break");
+				ASSERT_HAS_VALUE(function.blocks[break_target].debug_name);
+				ASSERT_EQUAL(
+					base::StrID("return"), function.blocks[break_target].debug_name.value()
+				);
+
+				if (i != 1) continue;
+				auto        continue_target = getJumpTarget(function, "continue");
+				const auto& latch           = function.blocks[continue_target];
+				ASSERT_HAS_VALUE(latch.debug_name);
+				ASSERT_EQUAL(base::StrID("while.body.end"), latch.debug_name.value());
+				auto        condition_id = latch.terminator.arguments.at(0).get<BlockID>();
+				const auto& condition    = function.blocks[condition_id];
+				ASSERT_HAS_VALUE(condition.debug_name);
+				ASSERT_EQUAL(base::StrID("while.cond"), condition.debug_name.value());
+				auto exit_id = condition.terminator.arguments.at(2).get<BlockID>();
+				ASSERT_HAS_VALUE(function.blocks[exit_id].debug_name);
+				ASSERT_EQUAL(base::StrID("return"), function.blocks[exit_id].debug_name.value());
+			}
+		});
+	}
+
+	void controlFlowContinueTargetsTest() {
+		auto module = compiler::frontend::createModuleTreeFromContents(
+			R"(
+				fun implicit(c: bool) -> i64 = {
+					while (c) {
+						block { if (c) continue; }
+					}
+					return 1;
+				}
+				fun ifTargets(c: bool) -> i64 = {
+					if region(c) { continue if; }
+					else { continue region; }
+					return 2;
+				}
+				fun breakFromElse(c: bool) -> i64 = {
+					if (c) {} else { break if; }
+					return 3;
+				}
+				fun blockTargets(c: bool) -> i64 = {
+					block region {
+						if (c) continue block;
+						continue region;
+					}
+					return 4;
+				}
+				fun constIfTarget() -> i64 = {
+					if const (true) { continue if; }
+					return 5;
+				}
+			)",
+			"test_package"
+		);
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			ASSERT_EQUAL(5u, unit.functions.size());
+
+			auto jumpTargets
+				= [this](const compiler::mir::Function& function, std::string_view block_name) {
+					  std::vector<BlockID> result;
+					  for (auto id: function.block_order) {
+						  const auto& block = function.blocks[id];
+						  if (!block.debug_name.has_value()
+					          || block.debug_name.value().strView() != block_name)
+							  continue;
+						  ASSERT_EQUAL(compiler::mir::Operation::Jump, block.terminator.operation);
+						  result.push_back(block.terminator.arguments.at(0).get<BlockID>());
+					  }
+					  return result;
+				  };
+
+			for (usize i = 0; i < unit.functions.size(); i++) {
+				auto function = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(i));
+				auto targets  = jumpTargets(function, i == 2 ? "break" : "continue");
+				ASSERT_EQUAL(i == 1 || i == 3 ? 2u : 1u, targets.size());
+				base::StrID expected_name = [&] {
+					switch (i) {
+					case 0:
+						return base::StrID("while.body.end");
+					case 1:
+						return base::StrID("if.cond");
+					case 2:
+						return base::StrID("return");
+					case 3:
+						return base::StrID("block.entry");
+					default:
+						return base::StrID("const.if.entry");
+					}
+				}();
+				for (auto target: targets) {
+					ASSERT_HAS_VALUE(function.blocks[target].debug_name);
+					ASSERT_EQUAL(expected_name, function.blocks[target].debug_name.value());
+				}
+				if (targets.size() == 2) ASSERT_EQUAL(targets[0], targets[1]);
+
+				auto& lowered
+					= ctx.query<compiler::mir::LowerToMIRFunction>({ unit.functions.at(i) })
+				          ->valueOrThrow();
+				ASSERT_TRUE(lowered.validateBlockIDs().isOk());
+			}
+		});
+	}
 
 	/**
 	 * @brief Unit test for the global in-move-state map produced by `calculateGlobalInMoveStateMap`.
@@ -291,11 +473,11 @@ private:
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].terminator.operation, Jump);
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(5)].terminator.operation, Branch);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].terminator.operation, Branch);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(2)].terminator.operation, Branch);
 
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.size(), 2);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.at(0).operation, Cast);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].terminator.operation, Jump);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.size(), 2);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.at(0).operation, Cast);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].terminator.operation, Jump);
 
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
@@ -353,15 +535,15 @@ private:
 
 			using BlockList = std::vector<BlockID>;
 			ASSERT_EQUAL(get_block_successors(1), BlockList{});
-			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
+			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 4 } COMMA BlockID{ 3 } });
 
 			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
 
 			// Here, the order does not matter.
 			// If it breaks because the order changes,
 			// the check has to be changed to an order-free assertion.
-			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 3 } COMMA BlockID{ 2 } });
-			ASSERT_EQUAL(get_block_successors(5), BlockList{ BlockID{ 6 } COMMA BlockID{ 4 } });
+			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 1 } });
+			ASSERT_EQUAL(get_block_successors(5), BlockList{ BlockID{ 6 } COMMA BlockID{ 2 } });
 
 			ASSERT_EQUAL(get_block_successors(6), BlockList{ BlockID{ 5 } });
 			ASSERT_EQUAL(get_block_successors(7), BlockList{ BlockID{ 5 } });
@@ -380,16 +562,23 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
-			// note: it might change where those branch operations are placed:
-			// if this happens, just see mir-output of tested module for mir block numbers
-			auto true_mir_value  = foo_mir.blocks[BlockID(6)].terminator.arguments.at(0);
-			auto false_mir_value = foo_mir.blocks[BlockID(3)].terminator.arguments.at(0);
-
-			const auto& true_mir_const  = true_mir_value.get<compiler::mir::MIRConstant>();
-			const auto& false_mir_const = false_mir_value.get<compiler::mir::MIRConstant>();
-
-			ASSERT_EQUAL(true_mir_const.value.get<bool>().value(), true);
-			ASSERT_EQUAL(false_mir_const.value.get<bool>().value(), false);
+			bool  saw_true     = false;
+			bool  saw_false    = false;
+			usize branch_count = 0;
+			for (auto id: foo_mir.block_order) {
+				const auto& terminator = foo_mir.blocks[id].terminator;
+				if (terminator.operation != compiler::mir::Operation::Branch) continue;
+				auto condition
+					= terminator.arguments.at(0).get<compiler::mir::MIRConstant>().value.get<bool>();
+				if (condition.value())
+					saw_true = true;
+				else
+					saw_false = true;
+				branch_count++;
+			}
+			ASSERT_EQUAL(2u, branch_count);
+			ASSERT_TRUE(saw_true);
+			ASSERT_TRUE(saw_false);
 
 			// Don't go into details of the second function. Just validate block IDs.
 			auto& goo_mir

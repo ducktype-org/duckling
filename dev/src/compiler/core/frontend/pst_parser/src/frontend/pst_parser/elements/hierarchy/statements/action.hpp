@@ -2,9 +2,24 @@
 
 #include "../meta.hpp"
 
+#include <lang_definitions/key_spec_op.hpp>
+
 namespace pst {
+	[[nodiscard]]
+	constexpr bool isControlFlowTargetKeyword(lang_def::Keyword keyword) {
+		switch (keyword) {
+		case lang_def::Keyword::If:
+		case lang_def::Keyword::While:
+		case lang_def::Keyword::For:
+		case lang_def::Keyword::Block:
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	/**
-	 * @note Action assumes optional expression before the semicolon.
+	 * @note Action may contain an expression or a block-kind target before the semicolon.
 	 */
 	class Action: public Stmt {
 		PARENT_CLASS(Stmt);
@@ -13,6 +28,7 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD_OPT(expr, CommaExprHolder);
+		base::Optional<lang_def::Keyword> target_keyword;
 
 	public:
 		ELEMENT_CLONE_DECL(Action);
@@ -33,5 +49,10 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		base::Optional<AccessLocked<ExprHolder>> getValue() const;
+
+		[[nodiscard]]
+		base::Optional<lang_def::Keyword> getTargetKeyword() const {
+			return target_keyword;
+		}
 	};
 }

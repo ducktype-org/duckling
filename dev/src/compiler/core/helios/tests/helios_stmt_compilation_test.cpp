@@ -181,6 +181,131 @@ private:
 				ASSERT_EQUAL(c.if_count, 1u);
 			});
 		}
+
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(
+				fun foo() = {
+					while target (true) {
+						break target;
+						continue target;
+					}
+				}
+			)",
+				"test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto block = compileSingleStatementOfFirstFun(ctx, module_id);
+				ASSERT_EQUAL(block.statements.size(), 1u);
+
+				auto* while_stmt
+					= dynamic_cast<const code::WhileStmt*>(block.statements.at(0).get());
+				ASSERT_TRUE(while_stmt != nullptr);
+				ASSERT_HAS_VALUE(while_stmt->control_flow_id);
+				ASSERT_EQUAL(while_stmt->body.statements.size(), 2u);
+
+				auto* break_stmt
+					= dynamic_cast<const code::BreakStmt*>(while_stmt->body.statements.at(0).get());
+				auto* continue_stmt = dynamic_cast<const code::ContinueStmt*>(
+					while_stmt->body.statements.at(1).get()
+				);
+				ASSERT_TRUE(break_stmt != nullptr);
+				ASSERT_TRUE(continue_stmt != nullptr);
+				ASSERT_HAS_VALUE(break_stmt->target);
+				ASSERT_HAS_VALUE(continue_stmt->target);
+				ASSERT_TRUE(break_stmt->target.value() == while_stmt->control_flow_id.value());
+				ASSERT_TRUE(continue_stmt->target.value() == while_stmt->control_flow_id.value());
+			});
+		}
+
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(
+				fun foo() = {
+					while target (true) {
+						while target (true) {
+							break target;
+						}
+					}
+				}
+			)",
+				"test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto  block = compileSingleStatementOfFirstFun(ctx, module_id);
+				auto* outer = dynamic_cast<const code::WhileStmt*>(block.statements.at(0).get());
+				ASSERT_TRUE(outer != nullptr);
+				ASSERT_HAS_VALUE(outer->control_flow_id);
+
+				auto* inner
+					= dynamic_cast<const code::WhileStmt*>(outer->body.statements.at(0).get());
+				ASSERT_TRUE(inner != nullptr);
+				ASSERT_HAS_VALUE(inner->control_flow_id);
+				ASSERT_TRUE(inner->control_flow_id.value() != outer->control_flow_id.value());
+
+				auto* break_stmt
+					= dynamic_cast<const code::BreakStmt*>(inner->body.statements.at(0).get());
+				ASSERT_TRUE(break_stmt != nullptr);
+				ASSERT_HAS_VALUE(break_stmt->target);
+				ASSERT_TRUE(break_stmt->target.value() == inner->control_flow_id.value());
+			});
+		}
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(
+				fun foo() = {
+					while target (true) {
+						if region (true) {
+							break while;
+							continue while;
+							break if;
+						}
+					}
+				}
+			)",
+				"test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto  block = compileSingleStatementOfFirstFun(ctx, module_id);
+				auto* loop  = dynamic_cast<const code::WhileStmt*>(block.statements.at(0).get());
+				ASSERT_TRUE(loop != nullptr);
+				auto* branch = dynamic_cast<const code::IfStmt*>(loop->body.statements.at(0).get());
+				ASSERT_TRUE(branch != nullptr);
+				auto* break_loop
+					= dynamic_cast<const code::BreakStmt*>(branch->then_body.statements.at(0).get());
+				auto* continue_loop = dynamic_cast<const code::ContinueStmt*>(
+					branch->then_body.statements.at(1).get()
+				);
+				auto* break_if
+					= dynamic_cast<const code::BreakStmt*>(branch->then_body.statements.at(2).get());
+				ASSERT_TRUE(break_loop != nullptr);
+				ASSERT_TRUE(continue_loop != nullptr);
+				ASSERT_TRUE(break_if != nullptr);
+				ASSERT_NO_VALUE(break_loop->target);
+				ASSERT_NO_VALUE(continue_loop->target);
+				ASSERT_HAS_VALUE(break_loop->target_kind);
+				ASSERT_HAS_VALUE(continue_loop->target_kind);
+				ASSERT_HAS_VALUE(break_if->target_kind);
+				ASSERT_EQUAL(code::ControlFlowKind::While, break_loop->target_kind.value());
+				ASSERT_EQUAL(code::ControlFlowKind::While, continue_loop->target_kind.value());
+				ASSERT_EQUAL(code::ControlFlowKind::If, break_if->target_kind.value());
+			});
+		}
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(fun foo() = { block { break block; } })", "test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto  block  = compileSingleStatementOfFirstFun(ctx, module_id);
+				auto* region = dynamic_cast<const code::BlockStmt*>(block.statements.at(0).get());
+				ASSERT_TRUE(region != nullptr);
+				auto* break_stmt
+					= dynamic_cast<const code::BreakStmt*>(region->body.statements.at(0).get());
+				ASSERT_TRUE(break_stmt != nullptr);
+				ASSERT_HAS_VALUE(break_stmt->target_kind);
+				ASSERT_EQUAL(code::ControlFlowKind::Block, break_stmt->target_kind.value());
+			});
+		}
 	}
 
 	/**

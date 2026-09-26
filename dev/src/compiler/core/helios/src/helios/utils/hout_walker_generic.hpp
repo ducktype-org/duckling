@@ -91,6 +91,10 @@ namespace compiler::helios::code {
 			walkBlock(s.body);
 		}
 
+		void visitBreakStmt(const BreakStmt& s) override { handler(s); }
+
+		void visitContinueStmt(const ContinueStmt& s) override { handler(s); }
+
 		void visitBlockStmt(const BlockStmt& s) override {
 			handler(s);
 			walkBlock(s.body);

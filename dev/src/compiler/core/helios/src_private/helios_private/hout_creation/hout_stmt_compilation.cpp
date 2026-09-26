@@ -5,6 +5,8 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/block_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/keyword_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
@@ -24,6 +26,7 @@
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/coercions/passing.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -32,6 +35,8 @@
 
 #include <diagnostic/placeholder.hpp>
 #include <query_framework/query_errors.hpp>
+
+#include <string_view>
 
 namespace compiler::helios {
 
@@ -42,6 +47,149 @@ namespace compiler::helios {
 	static code::CodeBlock processBlock(
 		query::Context& ctx, pst::AccessLocked<Container> container, tsh::SymbolType<> return_type
 	);
+
+	template<std::derived_from<pst::Stmt> T>
+	static base::Optional<SymID> getControlFlowID(query::Context& ctx, pst::Access<T> stmt) {
+		if (!stmt->getDeclSymbolIdentifier().has_value()) return {};
+
+		return ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
+	}
+
+	struct ControlFlowTargetSelection {
+		base::Optional<SymID>                 id;
+		base::Optional<code::ControlFlowKind> kind;
+	};
+
+	template<class Kind>
+	requires(std::same_as<Kind, pst::ElementKind> || std::same_as<Kind, lang_def::Keyword>)
+	static base::Optional<code::ControlFlowKind> controlFlowKind(Kind kind) {
+		switch (kind) {
+		case Kind::If:
+			return code::ControlFlowKind::If;
+		case Kind::While:
+			return code::ControlFlowKind::While;
+		case Kind::For:
+			return code::ControlFlowKind::For;
+		case Kind::Block:
+			return code::ControlFlowKind::Block;
+		default:
+			return {};
+		}
+	}
+
+	template<std::derived_from<pst::Action> T>
+	static ControlFlowTargetSelection getControlFlowTarget(
+		query::Context& ctx, pst::Access<T> stmt, std::string_view action_name
+	) {
+		ControlFlowTargetSelection  selection;
+		base::Optional<base::StrID> target_name;
+		auto                        target_position = stmt->getStablePosition();
+		auto                        target_holder   = stmt->getValue();
+		if (auto keyword = stmt->getTargetKeyword()) {
+			selection.kind = controlFlowKind(keyword.value());
+			CORE_ASSERT(selection.kind.has_value(), "Invalid parsed control-flow target keyword.");
+		}
+
+		if (target_holder.has_value()) {
+			auto target_expr = target_holder.value().unlock(ctx)->getExpr().unlock(ctx);
+			target_position  = target_expr->getStablePosition();
+
+			if (auto identifier = target_expr.template dynamicCast<pst::expr::IdentifierLiteral>()) {
+				if (identifier.value()->getTemplateSpecifier().has_value()) {
+					ctx.logInt(makeBox<dia::PlaceholderError>(
+						base::strConcat(
+							"`", action_name, "` target cannot have a template specifier."
+						),
+						target_position
+					));
+					query::throwFailed();
+				}
+				target_name = identifier.value()->getName().unlock(ctx)->unwrap();
+			} else if (auto keyword
+			           = target_expr.template dynamicCast<pst::expr::KeywordLiteral>()) {
+				if (keyword.value()->getTemplateSpecifier().has_value()) {
+					ctx.logInt(makeBox<dia::PlaceholderError>(
+						base::strConcat(
+							"`", action_name, "` target cannot have a template specifier."
+						),
+						target_position
+					));
+					query::throwFailed();
+				}
+				selection.kind
+					= controlFlowKind(keyword.value()->getKeyword().unlock(ctx)->unwrap());
+				if (!selection.kind.has_value()) {
+					ctx.logInt(makeBox<dia::PlaceholderError>(
+						base::strConcat("`", action_name, "` target must be a block kind or a name."),
+						target_position
+					));
+					query::throwFailed();
+				}
+			} else {
+				ctx.logInt(makeBox<dia::PlaceholderError>(
+					base::strConcat("`", action_name, "` target must be a block kind or a name."),
+					target_position
+				));
+				query::throwFailed();
+			}
+		}
+
+		auto ancestor = getPSTElementParent(ctx, stmt);
+		while (ancestor.isLangElement()) {
+			auto element                   = ancestor.getAsLangElement().unlock(ctx);
+			bool crossed_callable_boundary = false;
+			switch (element->getElementKind()) {
+			case pst::ElementKind::Fun:
+			case pst::ElementKind::FunDecl:
+			case pst::ElementKind::ClassMethod:
+			case pst::ElementKind::ClassSpecial:
+			case pst::ElementKind::ClassConstructor:
+			case pst::ElementKind::ClassDestructor:
+				crossed_callable_boundary = true;
+				break;
+			default:
+				break;
+			}
+			if (crossed_callable_boundary) break;
+			auto candidate_kind = controlFlowKind(element->getElementKind());
+			if (candidate_kind.has_value()) {
+				auto ancestor_stmt = element.template dynamicCast<pst::Stmt>().value();
+				if (target_name.has_value()) {
+					auto identifier = ancestor_stmt->getDeclSymbolIdentifier();
+					if (!identifier.has_value()
+					    || identifier.value().unlock(ctx)->unwrap() != target_name.value()) {
+						ancestor = getPSTElementParent(ctx, element);
+						continue;
+					}
+				} else if (selection.kind.has_value() && candidate_kind != selection.kind) {
+					ancestor = getPSTElementParent(ctx, element);
+					continue;
+				}
+
+				// Without an explicit name or kind, break and continue target the nearest loop.
+				if (!target_name.has_value() && !selection.kind.has_value()
+				    && candidate_kind != code::ControlFlowKind::While
+				    && candidate_kind != code::ControlFlowKind::For) {
+					ancestor = getPSTElementParent(ctx, element);
+					continue;
+				}
+				if (target_name.has_value()) {
+					selection.id = ctx.query<QuerySymbolOfSTMT>(ancestor_stmt).valueOrThrow();
+					CORE_ASSERT(
+						kind(selection.id.value()) == SymbolKind::NamedCodeElement,
+						"Named control-flow PST element must create a NamedCodeElement symbol."
+					);
+				}
+				return selection;
+			}
+			ancestor = getPSTElementParent(ctx, element);
+		}
+
+		ctx.logInt(makeBox<dia::PlaceholderError>(
+			base::strConcat("`", action_name, "` has no enclosing matching target."), target_position
+		));
+		query::throwFailed();
+	}
 
 	/**
 	 * @brief Visitor that creates HOUT statements from PST statements.
@@ -274,7 +422,10 @@ namespace compiler::helios {
 
 			if (taken.valueOrThrow()) {
 				output(code::BlockStmt(
-					code::pstOrigin(stmt), processBlock(ctx, stmt->getThenBody(), return_type)
+					code::pstOrigin(stmt),
+					processBlock(ctx, stmt->getThenBody(), return_type),
+					getControlFlowID(ctx, stmt),
+					code::ControlFlowKind::If
 				));
 				return;
 			}
@@ -282,7 +433,10 @@ namespace compiler::helios {
 			match_optional(stmt->getElseBody()) {
 				opt_some(else_body) {
 					output(code::BlockStmt(
-						code::pstOrigin(stmt), processBlock(ctx, else_body, return_type)
+						code::pstOrigin(stmt),
+						processBlock(ctx, else_body, return_type),
+						getControlFlowID(ctx, stmt),
+						code::ControlFlowKind::If
 					));
 				}
 				opt_none {
@@ -315,7 +469,8 @@ namespace compiler::helios {
 			)
 			                     .valueOrThrow();
 
-			auto then_body = processBlock(ctx, stmt->getThenBody(), return_type);
+			auto control_flow_id = getControlFlowID(ctx, stmt);
+			auto then_body       = processBlock(ctx, stmt->getThenBody(), return_type);
 
 			match_optional(stmt->getElseBody()) {
 				opt_some(else_body) {
@@ -323,12 +478,16 @@ namespace compiler::helios {
 						code::pstOrigin(stmt),
 						std::move(condition),
 						std::move(then_body),
-						processBlock(ctx, else_body, return_type)
+						processBlock(ctx, else_body, return_type),
+						control_flow_id
 					));
 				}
 				opt_none {
 					output(code::IfStmt(
-						code::pstOrigin(stmt), std::move(condition), std::move(then_body)
+						code::pstOrigin(stmt),
+						std::move(condition),
+						std::move(then_body),
+						control_flow_id
 					));
 				}
 			}
@@ -340,6 +499,7 @@ namespace compiler::helios {
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};
+			auto control_flow_id  = getControlFlowID(ctx, stmt);
 			auto condition_holder = stmt->getCondition();
 			if (!condition_holder.has_value()) {
 				is_failed = true;
@@ -353,7 +513,9 @@ namespace compiler::helios {
 
 			auto body = processBlock(ctx, stmt->getBody(), return_type);
 
-			output(code::WhileStmt(code::pstOrigin(stmt), std::move(condition), std::move(body)));
+			output(code::WhileStmt(
+				code::pstOrigin(stmt), std::move(condition), std::move(body), control_flow_id
+			));
 		}
 
 		void visitVariable(pst::Access<pst::Variable> stmt) override {
@@ -398,8 +560,14 @@ namespace compiler::helios {
 		}
 
 		void visitBlock(pst::Access<pst::Block> stmt) override {
-			auto block_body = processBlock(ctx, stmt->getCodeBlock(), return_type);
-			output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
+			auto control_flow_id = getControlFlowID(ctx, stmt);
+			auto block_body      = processBlock(ctx, stmt->getCodeBlock(), return_type);
+			output(code::BlockStmt(
+				code::pstOrigin(stmt),
+				std::move(block_body),
+				control_flow_id,
+				code::ControlFlowKind::Block
+			));
 		}
 
 		void visitConst(pst::Access<pst::Const>) override {
@@ -408,17 +576,13 @@ namespace compiler::helios {
 		}
 
 		void visitContinue(pst::Access<pst::Continue> stmt) override {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-				"`continue` statements are not supported yet.", stmt->getStablePosition()
-			));
-			is_failed = true;
+			auto target = getControlFlowTarget(ctx, stmt, "continue");
+			output(code::ContinueStmt(code::pstOrigin(stmt), target.id, target.kind));
 		}
 
 		void visitBreak(pst::Access<pst::Break> stmt) override {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-				"`break` statements are not supported yet.", stmt->getStablePosition()
-			));
-			is_failed = true;
+			auto target = getControlFlowTarget(ctx, stmt, "break");
+			output(code::BreakStmt(code::pstOrigin(stmt), target.id, target.kind));
 		}
 
 		void visitRedo(pst::Access<pst::Redo> stmt) override {
@@ -453,6 +617,7 @@ namespace compiler::helios {
 			auto result = desugaring::desugarFor(
 				ctx,
 				stmt,
+				getControlFlowID(ctx, stmt),
 				[&](pst::AccessLocked<pst::CodeBlockOrStmt> body_pst) -> code::CodeBlock {
 					return processBlock(ctx, body_pst, return_type);
 				}

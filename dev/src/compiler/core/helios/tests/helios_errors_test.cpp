@@ -36,6 +36,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testControlFlowTargetErrors);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
 		TESTER_ADD_TEST(testClassErrors);
@@ -136,6 +137,27 @@ private:
 		if (expect_failure)
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		checkForError(present_phrases, logged_msg_count);
+	}
+
+	void testControlFlowTargetErrors() {
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { if (true) break; })", { "`break` has no enclosing matching target." }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { block { continue; } })",
+			{ "`continue` has no enclosing matching target." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { while (true) { break missing; } })",
+			{ "`break` has no enclosing matching target." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo() = { if (true) { continue while; } })",
+			{ "`continue` has no enclosing matching target." },
+			1
+		);
 	}
 
 	/**
@@ -920,30 +942,6 @@ private:
 
 		// ========================= Not-yet-implemented errors =========================
 		{
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					while (true) {
-						break;
-					}
-				}
-			)",
-				{ "Feature not implemented", "break" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					while (true) {
-						continue;
-					}
-				}
-			)",
-				{ "Feature not implemented", "continue" },
-				1
-			);
-
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {

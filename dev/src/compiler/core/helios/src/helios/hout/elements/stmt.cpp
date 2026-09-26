@@ -13,6 +13,8 @@ namespace compiler::helios::code {
 	STMT_VISITOR(ExprStmt)
 	STMT_VISITOR(IfStmt)
 	STMT_VISITOR(WhileStmt)
+	STMT_VISITOR(BreakStmt)
+	STMT_VISITOR(ContinueStmt)
 	STMT_VISITOR(VariableStmt)
 	STMT_VISITOR(AssignmentStmt)
 	STMT_VISITOR(BlockStmt)
@@ -22,6 +24,20 @@ namespace compiler::helios::code {
 
 		void addIndent(std::ostream& out, usize indent) {
 			out << std::string().append(indent * INDENT_SIZE, ' ');
+		}
+
+		const char* controlFlowKindName(ControlFlowKind kind) {
+			switch (kind) {
+			case ControlFlowKind::If:
+				return "if";
+			case ControlFlowKind::While:
+				return "while";
+			case ControlFlowKind::For:
+				return "for";
+			case ControlFlowKind::Block:
+				return "block";
+			}
+			return "unknown";
 		}
 	}
 
@@ -82,7 +98,11 @@ namespace compiler::helios::code {
 
 	Box<Stmt> IfStmt::clone() const {
 		return makeBox<IfStmt>(
-			origin, condition->clone(), std::move(*then_body.clone()), std::move(*else_body.clone())
+			origin,
+			condition->clone(),
+			std::move(*then_body.clone()),
+			std::move(*else_body.clone()),
+			control_flow_id
 		);
 	}
 
@@ -97,7 +117,31 @@ namespace compiler::helios::code {
 	}
 
 	Box<Stmt> WhileStmt::clone() const {
-		return makeBox<WhileStmt>(origin, condition->clone(), std::move(*body.clone()));
+		return makeBox<WhileStmt>(
+			origin, condition->clone(), std::move(*body.clone()), control_flow_id, control_flow_kind
+		);
+	}
+
+	void BreakStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "break";
+		if (target.has_value()) out << " " << name(target.value()).strView();
+		if (target_kind.has_value()) out << " " << controlFlowKindName(target_kind.value());
+		out << ";\n";
+	}
+
+	Box<Stmt> BreakStmt::clone() const { return makeBox<BreakStmt>(origin, target, target_kind); }
+
+	void ContinueStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "continue";
+		if (target.has_value()) out << " " << name(target.value()).strView();
+		if (target_kind.has_value()) out << " " << controlFlowKindName(target_kind.value());
+		out << ";\n";
+	}
+
+	Box<Stmt> ContinueStmt::clone() const {
+		return makeBox<ContinueStmt>(origin, target, target_kind);
 	}
 
 	void VariableStmt::debugPrint(std::ostream& out, usize indent) const {
@@ -140,7 +184,9 @@ namespace compiler::helios::code {
 	}
 
 	Box<Stmt> BlockStmt::clone() const {
-		return makeBox<BlockStmt>(origin, std::move(*body.clone()));
+		return makeBox<BlockStmt>(
+			origin, std::move(*body.clone()), control_flow_id, control_flow_kind
+		);
 	}
 
 }
