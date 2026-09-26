@@ -1,11 +1,7 @@
 function level1 { } -> { i64 } {
 	init_pany_type l1_local, i64;
 	mov_p64_imm l1_local, 10;
-	
-	# The breakpoint set on `pause_here` instruction 0 lands here; while paused, `level2`
-	# is evaluated and sees `l1_local` = 10.
 	call_func pause_here;
-
 	mov_p64_p64 ret0, frame 1 a;
 	add_p64_p64 ret0, l1_local;
 	add_p64_p64 ret0, l1_local;

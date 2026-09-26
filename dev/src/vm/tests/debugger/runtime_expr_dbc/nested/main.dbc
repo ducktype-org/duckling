@@ -7,7 +7,10 @@ function main { i64, ptr_argv } -> { i64 } {
 	ret;
 }
 
-# Breakpoint anchor: `level1` calls it to pause mid-evaluation.
 function pause_here { } -> { } {
+	ret;
+}
+
+function pause_here_too { } -> { } {
 	ret;
 }

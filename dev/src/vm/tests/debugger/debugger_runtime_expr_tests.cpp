@@ -21,18 +21,14 @@ public:
 		TESTER_ADD_TEST(test2RuntimeExpr);
 		TESTER_ADD_TEST(testBasic);
 		TESTER_ADD_TEST(testVmValueReuse);
-		TESTER_ADD_TEST(test22RuntimeExpr);
+		TESTER_ADD_TEST(testNestedExpressions);
 		TESTER_ADD_TEST(test8RuntimeExpr);
 		TESTER_ADD_TEST(testInvalidExpressions);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testInput);
-		TESTER_ADD_TEST(test11RuntimeExpr);
-		TESTER_ADD_TEST(test12RuntimeExpr);
 		TESTER_ADD_TEST(test14RuntimeExpr);
 		TESTER_ADD_TEST(test16RuntimeExpr);
 		TESTER_ADD_TEST(testReturnValues);
-		TESTER_ADD_TEST(test18RuntimeExpr);
-		TESTER_ADD_TEST(test20RuntimeExpr);
 		TESTER_ADD_TEST(test27RuntimeExpr);
 	}
 
@@ -255,60 +251,15 @@ private:
 			.cleanup();
 	}
 
-	// Inner expression evaluated while outer paused.
-	void test11RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_11/main.dbc"));
-		const fs::File outer_expr(path("runtime_expr_dbc/test_11/expr_outer.dbc"));
-		const fs::File inner_expr(path("runtime_expr_dbc/test_11/expr_inner.dbc"));
-
-		const vm::test::FlowSimulator::FrameVars outer_vars{
-			{ base::StrID("ret0"), base::StrID("i64") },
-			{ base::StrID("outer_local"), base::StrID("i64") },
-		};
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 4)
-			.putBreakpoint(base::StrID("pause_here"), 0)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprExpectBreakpoint(outer_expr)
-			.awaitBreakpoint(base::StrID("pause_here"), 0)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("outer"), outer_vars },
-				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
-			})
-			.evalExprNormal(inner_expr, { 106 })
-			.awaitBreakpoint(base::StrID("pause_here"), 0)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("outer"), outer_vars },
-				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
-			})
-			.resume()
-			.awaitExprCompletion({ 204 })
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
-	// Three nested expressions complete in LIFO order.
-	void test12RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_12/main.dbc"));
-		const fs::File level1_expr(path("runtime_expr_dbc/test_12/expr_level1.dbc"));
-		const fs::File level2_expr(path("runtime_expr_dbc/test_12/expr_level2.dbc"));
-		const fs::File level3_expr(path("runtime_expr_dbc/test_12/expr_level3.dbc"));
-		const fs::File pause_too_file(path("runtime_expr_dbc/test_12/pause_here_too.dbc"));
+	// Runtime expressions nested inside runtime expressions: nested evaluation while the outer
+	// pauses, LIFO unwinding, expression-frame inspection, and unwinding with anchors disabled.
+	void testNestedExpressions() {
+		const fs::File main_file(path("runtime_expr_dbc/nested/main.dbc"));
+		const fs::File change_l1_local(path("runtime_expr_dbc/nested/change_l1_local.dbc"));
+		const fs::File level1_expr(path("runtime_expr_dbc/nested/level1.dbc"));
+		const fs::File level2_expr(path("runtime_expr_dbc/nested/level2.dbc"));
+		const fs::File level3_expr(path("runtime_expr_dbc/nested/level3.dbc"));
+		const fs::File probe_expr(path("runtime_expr_dbc/nested/probe.dbc"));
 
 		const vm::test::FlowSimulator::FrameVars level1_vars{
 			{ base::StrID("ret0"), base::StrID("i64") },
@@ -318,17 +269,25 @@ private:
 			{ base::StrID("ret0"), base::StrID("i64") },
 			{ base::StrID("l2_local"), base::StrID("i64") },
 		};
+		const vm::test::FlowSimulator::FrameVars probe_vars{
+			{ base::StrID("ret0"), base::StrID("i64") },
+			{ base::StrID("local"), base::StrID("i64") },
+		};
 
-		createSimulator({ main_file, pause_too_file })
+		const std::vector<vm::test::FlowSimulator::FrameExpectation> main_stack{
+			{ base::StrID("vm_start_function"), startFunctionVars() },
+			{ base::StrID("main"), std::nullopt },
+		};
+		
+		createSimulator(main_file)
 			.putBreakpoint(base::StrID("main"), 4)
 			.putBreakpoint(base::StrID("pause_here"), 0)
 			.putBreakpoint(base::StrID("pause_here_too"), 0)
 			.runMain()
 			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
+			.enforceCallStack(main_stack)
+
+			// Two levels: a nested expression runs while `level1` is paused and mutates its frame.
 			.evalExprExpectBreakpoint(level1_expr)
 			.awaitBreakpoint(base::StrID("pause_here"), 0)
 			.enforceCallStack({
@@ -337,6 +296,31 @@ private:
 				{ base::StrID("level1"), level1_vars },
 				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
 			})
+			.enforceFrameVarValue(2, base::StrID("l1_local"), 10)
+			.evalExprNormal(change_l1_local, { 106 })
+			.awaitBreakpoint(base::StrID("pause_here"), 0)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("level1"), level1_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
+			})
+			.enforceFrameVarValue(2, base::StrID("l1_local"), 100)
+			.resume()
+			.awaitExprCompletion({ 204 })
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.enforceCallStack(main_stack)
+
+			// Three levels: the first level's frame is inspected, then completions arrive LIFO.
+			.evalExprExpectBreakpoint(level1_expr)
+			.awaitBreakpoint(base::StrID("pause_here"), 0)
+			.enforceCallStack({
+				{ base::StrID("vm_start_function"), startFunctionVars() },
+				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("level1"), level1_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
+			})
+			.enforceFrameVarValue(2, base::StrID("l1_local"), 10)
 			.evalExprExpectBreakpoint(level2_expr)
 			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
 			.enforceCallStack({
@@ -370,10 +354,39 @@ private:
 			.resume()
 			.awaitExprCompletion({ 24 })
 			.awaitBreakpoint(base::StrID("main"), 4)
+			.enforceCallStack(main_stack)
+
+			// The expression's own frame is inspectable while it is paused.
+			.evalExprExpectBreakpoint(probe_expr)
+			.awaitBreakpoint(base::StrID("pause_here"), 0)
 			.enforceCallStack({
 				{ base::StrID("vm_start_function"), startFunctionVars() },
 				{ base::StrID("main"), std::nullopt },
+				{ base::StrID("probe"), probe_vars },
+				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
 			})
+			.enforceFrameVarValue(2, base::StrID("local"), 123)
+			.resume()
+			.awaitExprCompletion({ 123 })
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.enforceCallStack(main_stack)
+
+			// Disabling the anchors does not stop nested expressions from unwinding.
+			.evalExprExpectBreakpoint(level1_expr)
+			.awaitBreakpoint(base::StrID("pause_here"), 0)
+			.evalExprExpectBreakpoint(level2_expr)
+			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
+			.disableBreakpoint(base::StrID("pause_here"), 0)
+			.disableBreakpoint(base::StrID("pause_here_too"), 0)
+			.evalExprNormal(level3_expr, { 46 })
+			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
+			.resume()
+			.awaitBreakpoint(base::StrID("pause_here"), 0)
+			.resume()
+			.awaitBreakpoint(base::StrID("main"), 4)
+			.enforceCallStack(main_stack)
+			.awaitExprCompletion({ 70 })
+			.awaitExprCompletion({ 24 })
 			.finishAndAssertExitValue(2'137)
 			.cleanup();
 	}
@@ -514,123 +527,6 @@ private:
 				{ base::StrID("main"), std::nullopt },
 			})
 			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
-	// Nested expressions unwind with breakpoints disabled - expressions still stop.
-	void test18RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_18/main.dbc"));
-		const fs::File level1_expr(path("runtime_expr_dbc/test_18/expr_level1.dbc"));
-		const fs::File level2_expr(path("runtime_expr_dbc/test_18/expr_level2.dbc"));
-		const fs::File level3_expr(path("runtime_expr_dbc/test_18/expr_level3.dbc"));
-		const fs::File pause_too_file(path("runtime_expr_dbc/test_18/pause_here_too.dbc"));
-
-		const vm::test::FlowSimulator::FrameVars level1_vars{
-			{ base::StrID("ret0"), base::StrID("i64") },
-			{ base::StrID("l1_local"), base::StrID("i64") },
-		};
-		const vm::test::FlowSimulator::FrameVars level2_vars{
-			{ base::StrID("ret0"), base::StrID("i64") },
-			{ base::StrID("l2_local"), base::StrID("i64") },
-		};
-
-		createSimulator({ main_file, pause_too_file })
-			.putBreakpoint(base::StrID("main"), 4)
-			.putBreakpoint(base::StrID("pause_here"), 0)
-			.putBreakpoint(base::StrID("pause_here_too"), 0)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprExpectBreakpoint(level1_expr)
-			.awaitBreakpoint(base::StrID("pause_here"), 0)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("level1"), level1_vars },
-				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
-			})
-			.evalExprExpectBreakpoint(level2_expr)
-			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("level1"), level1_vars },
-				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
-				{ base::StrID("level2"), level2_vars },
-				{ base::StrID("pause_here_too"), vm::test::FlowSimulator::FrameVars{} },
-			})
-			.disableBreakpoint(base::StrID("pause_here"), 0)
-			.disableBreakpoint(base::StrID("pause_here_too"), 0)
-			.evalExprNormal(level3_expr, { 46 })
-			.awaitBreakpoint(base::StrID("pause_here_too"), 0)
-			.resume()
-			.awaitBreakpoint(base::StrID("pause_here"), 0)
-			.resume()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.awaitExprCompletion({ 70 })
-			.awaitExprCompletion({ 24 })
-			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
-	// Breakpoint can be put in expression
-	void test20RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_20/main.dbc"));
-		const fs::File level1_expr(path("runtime_expr_dbc/test_20/expr_level1.dbc"));
-
-		const vm::test::FlowSimulator::FrameVars level1_vars{
-			{ base::StrID("ret0"), base::StrID("i64") },
-			{ base::StrID("l1_local"), base::StrID("i64") },
-		};
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 4)
-			.putBreakpoint(base::StrID("pause_here"), 0)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.evalExprExpectBreakpoint(level1_expr)
-			.awaitBreakpoint(base::StrID("pause_here"), 0)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-				{ base::StrID("level1"), level1_vars },
-				{ base::StrID("pause_here"), vm::test::FlowSimulator::FrameVars{} },
-			})
-			.resume()
-			.awaitExprCompletion({ 24 })
-			.awaitBreakpoint(base::StrID("main"), 4)
-			.enforceCallStack({
-				{ base::StrID("vm_start_function"), startFunctionVars() },
-				{ base::StrID("main"), std::nullopt },
-			})
-			.finishAndAssertExitValue(2'137)
-			.cleanup();
-	}
-
-	// We can view and access locals of the expression.
-	void test22RuntimeExpr() {
-		const fs::File main_file(path("runtime_expr_dbc/test_22/main.dbc"));
-		const fs::File probe_expr(path("runtime_expr_dbc/test_22/probe.dbc"));
-
-		createSimulator(main_file)
-			.putBreakpoint(base::StrID("main"), 2)
-			.putBreakpoint(base::StrID("pause_here"), 0)
-			.runMain()
-			.awaitBreakpoint(base::StrID("main"), 2)
-			.evalExprExpectBreakpoint(probe_expr)
-			.awaitBreakpoint(base::StrID("pause_here"), 0)
-			.enforceFrameVarValue(2, base::StrID("local"), 123)
 			.cleanup();
 	}
 

@@ -1,0 +1,8 @@
+function level3 { } -> { i64 } {
+	mov_p64_imm frame 4 l2_local, 30;
+	mov_p64_p64 ret0, frame 4 l2_local;
+	add_p64_p64 ret0, frame 2 l1_local;
+	add_p64_p64 ret0, frame 1 a;
+	add_p64_p64 ret0, frame 1 b;
+	ret_from_expr;
+}

@@ -1,0 +1,7 @@
+function change_l1_local { } -> { i64 } {
+	mov_p64_imm frame 2 l1_local, 100;
+	mov_p64_p64 ret0, frame 2 l1_local;
+	add_p64_p64 ret0, frame 1 a;
+	add_p64_p64 ret0, frame 1 b;
+	ret_from_expr;
+}
