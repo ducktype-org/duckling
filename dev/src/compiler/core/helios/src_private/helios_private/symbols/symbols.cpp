@@ -3,6 +3,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/selector_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
@@ -407,6 +408,52 @@ namespace compiler::helios {
 		);
 	}
 
+	namespace {
+		/**
+		 * @brief Logs that a `using`/`import` form parses but is not compiled yet.
+		 */
+		void logSelectorNotSupported(
+			query::Context& ctx, pst::Access<pst::Selector> selector, std::string_view what
+		) {
+			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				base::strConcat(what, " is not supported yet."), selector->getStablePosition()
+			));
+		}
+
+		/**
+		 * @brief The dotted prefix (`a.b` of `a.b.*` / `a.b as c`) of the first selector.
+		 */
+		std::vector<pst::AccessLocked<pst::IdentifierWrapper>> selectorPath(
+			query::Context& ctx, pst::AccessLocked<pst::SelectorList> list
+		) {
+			auto selectors = list.unlock(ctx);
+			auto selector  = (*selectors->begin()).unlock(ctx);
+			std::vector<pst::AccessLocked<pst::IdentifierWrapper>> path;
+			path.reserve(selector->numberOfNames());
+			for (usize i = 0; i < selector->numberOfNames(); i++)
+				path.push_back(selector->getNameByIndex(i));
+			return path;
+		}
+
+		/**
+		 * @brief The first selector of a `using`/`import`, which is the one the symbol is made of.
+		 *
+		 * @TODO: #2791 One statement should give one symbol per selector. Until then a list of
+		 * several selectors is reported as not supported and only the first one is used.
+		 */
+		pst::Access<pst::Selector> firstSelector(
+			query::Context& ctx, pst::AccessLocked<pst::SelectorList> list, std::string_view keyword
+		) {
+			auto selectors = list.unlock(ctx);
+			auto first     = (*selectors->begin()).unlock(ctx);
+			if (selectors->size() > 1)
+				logSelectorNotSupported(
+					ctx, first, base::strConcat("More than one selector in `", keyword, "`")
+				);
+			return first;
+		}
+	}
+
 	/**
 	 * @brief Return the name, kind and lookup flags of the symbol declared by the given statement,
 	 * that is everything about the symbol that depends on the kind of the statement.
@@ -451,33 +498,41 @@ namespace compiler::helios {
 				.kind = SymbolKind::Class,
 			};
 		}
-		case pst::StmtKind::Alias: {
-			auto alias = stmt.dynamicCast<pst::Alias>().value();
-			return CommonSymbolData{
-				.name     = alias->getName().unlock(ctx)->unwrap(),
-				.kind     = SymbolKind::Alias,
-				.is_alias = true,
-			};
-		}
 		case pst::StmtKind::Using: {
-			auto  using_stmt  = stmt.dynamicCast<pst::Using>().value();
-			auto  pointed     = using_stmt->getPointed().unlock(ctx);
-			bool  is_wildcard = pointed->getStar();
-			usize size        = pointed->numberOfNames();
+			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
+			auto selector   = firstSelector(ctx, using_stmt->getSelectors(), "using");
+			auto first_name = selector->getNameByIndex(0).unlock(ctx)->unwrap();
+			auto last_name
+				= selector->getNameByIndex(selector->numberOfNames() - 1).unlock(ctx)->unwrap();
 
-			std::vector<tpc::Identifier> target(size);
-			for (usize i = 0; i < size; i++)
-				target[i] = { .value = pointed->getNameByIndex(i).unlock(ctx)->unwrap() };
-
-			return CommonSymbolData{
-				.name
-				= is_wildcard
-				    ? base::StrID(base::strConcat("<WILDCARD USING> ", target.front().value).c_str())
-				    : target.back().value,
-				.kind        = SymbolKind::Using,
-				.is_wildcard = is_wildcard,
-				.is_alias    = true,
-			};
+			switch (selector->getTailKind()) {
+			case pst::SelectorTail::Star:
+				if (selector->numberOfHides() > 0)
+					logSelectorNotSupported(ctx, selector, "`hides` in `using`");
+				return CommonSymbolData{
+					.name = base::StrID(base::strConcat("<WILDCARD USING> ", first_name).c_str()),
+					.kind = SymbolKind::Using,
+					.is_wildcard = true,
+					.is_alias    = true,
+				};
+			case pst::SelectorTail::As:
+				// `using a.b as c;` gives `a.b` a new name.
+				return CommonSymbolData{
+					.name     = selector->getAsName().value().unlock(ctx)->unwrap(),
+					.kind     = SymbolKind::Alias,
+					.is_alias = true,
+				};
+			case pst::SelectorTail::Nested:
+				logSelectorNotSupported(ctx, selector, "A nested selector list in `using`");
+				[[fallthrough]];
+			case pst::SelectorTail::None:
+				return CommonSymbolData{
+					.name     = last_name,
+					.kind     = SymbolKind::Using,
+					.is_alias = true,
+				};
+			}
+			CORE_PANIC("Unhandled selector tail kind");
 		}
 		case pst::StmtKind::Variable: {
 			auto variable = stmt.dynamicCast<pst::Variable>().value();
@@ -493,60 +548,41 @@ namespace compiler::helios {
 			// logic with other similar constructs (e.g. usings), and because imports may introduce
 			// multiple names now. We could extend wildcard machinery to keep the general assumption
 			// of one-stmt=one-symbol while handling the above.
-			auto import       = stmt.dynamicCast<pst::Import>().value();
-			auto import_chain = import->getImportChain().unlock(ctx);
-			if (auto import_as = import_chain.dynamicCast<pst::ImportIdentifierAs>()) {
-				base::StrID name;
-				if (import_as.value()->isImportAs())
-					name = import_as.value()->asWhat().value().unlock(ctx)->unwrap();
-				else {
-					usize count = import_as.value()->numberOfNames();
-					name = import_as.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
-				}
+			auto import   = stmt.dynamicCast<pst::Import>().value();
+			auto selector = firstSelector(ctx, import->getSelectors(), "import");
+			auto last_name
+				= selector->getNameByIndex(selector->numberOfNames() - 1).unlock(ctx)->unwrap();
 
+			switch (selector->getTailKind()) {
+			case pst::SelectorTail::None:
+			case pst::SelectorTail::As:
 				return CommonSymbolData{
-					.name        = name,
+					.name        = selector->getDeclaredName().value().unlock(ctx)->unwrap(),
 					.kind        = SymbolKind::Import,
 					.is_wildcard = false,
 					.is_alias    = false,
 				};
-			} else if (auto import_star = import_chain.dynamicCast<pst::ImportStarHides>()) {
+			case pst::SelectorTail::Star:
 				// import a.b.c.*;
-				usize count = import_star.value()->numberOfNames();
-				auto  name  = import_star.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
-				if (import_star.value()->isImportHides()) {
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-						"Import chains of type `ImportStarHides` are not yet supported in "
-						"makeSymbolFromStatement",
-						import_star.value()->getStablePosition()
-					));
-				}
+				if (selector->numberOfHides() > 0)
+					logSelectorNotSupported(ctx, selector, "`hides` in `import`");
 				return CommonSymbolData{
-					.name        = name,
+					.name        = last_name,
 					.kind        = SymbolKind::Import,
 					.is_wildcard = true,
 					.is_alias    = false,
 				};
-			} else if (auto import_nested = import_chain.dynamicCast<pst::ImportNested>()) {
-				// import a.b.c(...);
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Import chains of type `ImportNested` are not yet supported in "
-					"makeSymbolFromStatement",
-					import_nested.value()->getStablePosition()
-				));
-				usize count = import_nested.value()->numberOfNames();
-				auto  name = import_nested.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
+			case pst::SelectorTail::Nested:
+				// import a.b.c.{...};
+				logSelectorNotSupported(ctx, selector, "A nested selector list in `import`");
 				return CommonSymbolData{
-					.name        = name,
+					.name        = last_name,
 					.kind        = SymbolKind::Import,
 					.is_wildcard = false,
 					.is_alias    = false,
 				};
-			} else {
-				throw base::NotYetImplemented(
-					"Not handled type of import chain in makeSymbolFromStatement"
-				);
 			}
+			CORE_PANIC("Unhandled selector tail kind");
 		}
 		case pst::StmtKind::Method: {
 			auto method = stmt.dynamicCast<pst::Method>().value();
@@ -848,12 +884,7 @@ namespace compiler::helios {
 			}
 
 			void visitUsing(pst::Access<pst::Using> using_stmt) final {
-				auto  pointed = using_stmt->getPointed().unlock(ctx);
-				usize size    = pointed->numberOfNames();
-				std::vector<pst::AccessLocked<pst::IdentifierWrapper>> pointed_to_names;
-				pointed_to_names.reserve(size);
-				for (usize i = 0; i < size; i++)
-					pointed_to_names.push_back(pointed->getNameByIndex(i));
+				auto pointed_to_names = selectorPath(ctx, using_stmt->getSelectors());
 
 				auto lookup_res = lookupChain(
 					ctx,
@@ -872,33 +903,19 @@ namespace compiler::helios {
 			void visitImport(pst::Access<pst::Import> import_stmt) final {
 				// @TODO: proper error handling
 
-				auto import_stmt_ptr = import_stmt.dynamicCast<pst::Import>().value();
-				auto import_chain    = import_stmt_ptr->getImportChain().unlock(ctx);
+				auto selectors = import_stmt->getSelectors().unlock(ctx);
+				auto selector  = (*selectors->begin()).unlock(ctx);
 
-				std::vector<base::StrID> module_path;
-
-				auto unlock_all_names = [&](auto import_chain_casted) {
-					usize                    size = import_chain_casted->numberOfNames();
-					std::vector<base::StrID> names(size);
-					for (usize i = 0; i < size; i++)
-						names[i] = import_chain_casted->getNameByIndex(i).unlock(ctx)->unwrap();
-					return names;
-				};
-
-				// Handle different import chain types
-				if (auto import_as = import_chain.dynamicCast<pst::ImportIdentifierAs>()) {
-					auto names  = unlock_all_names(import_as.value());
-					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
-				} else if (auto import_star = import_chain.dynamicCast<pst::ImportStarHides>()) {
-					auto names  = unlock_all_names(import_star.value());
-					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
-				} else {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
-						"Unknown import chain type.", import_stmt->getStablePosition()
-					));
+				if (selector->getTailKind() == pst::SelectorTail::Nested) {
+					// Already reported as not supported when the symbol was made.
 					output(query::Failed());
 					return;
 				}
+
+				std::vector<base::StrID> module_path;
+				module_path.reserve(selector->numberOfNames());
+				for (usize i = 0; i < selector->numberOfNames(); i++)
+					module_path.push_back(selector->getNameByIndex(i).unlock(ctx)->unwrap());
 
 				auto maybe_imported_module
 					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
@@ -959,34 +976,20 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryDealias, QueryDealias_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<pst::AccessLocked<pst::IdentifierWrapper>> pointed_chain;
-			if (kind(key) == SymbolKind::Using) {
-				auto dotted = getSymRef(key)
-				                  ->maybePstElement()
-				                  .value()
-				                  .unlock(ctx)
-				                  .dynamicCast<pst::Using>()
-				                  .value()
-				                  ->getPointed()
-				                  .unlock(ctx);
-				pointed_chain.reserve(dotted->numberOfNames());
-				for (usize i = 0; i < dotted->numberOfNames(); i++)
-					pointed_chain.push_back(dotted->getNameByIndex(i));
-			} else if (kind(key) == SymbolKind::Alias) {
-				auto dotted = getSymRef(key)
-				                  ->maybePstElement()
-				                  .value()
-				                  .unlock(ctx)
-				                  .dynamicCast<pst::Alias>()
-				                  .value()
-				                  ->getPointed()
-				                  .unlock(ctx);
-				pointed_chain.reserve(dotted->numberOfNames());
-				for (usize i = 0; i < dotted->numberOfNames(); i++)
-					pointed_chain.push_back(dotted->getNameByIndex(i));
-			} else {
+			// Both `using a.b;` (Using) and `using a.b as c;` (Alias) point to `a.b`.
+			if (kind(key) != SymbolKind::Using && kind(key) != SymbolKind::Alias)
 				return SymbolList{ { key } };
-			}
+
+			auto pointed_chain = selectorPath(
+				ctx,
+				getSymRef(key)
+					->maybePstElement()
+					.value()
+					.unlock(ctx)
+					.dynamicCast<pst::Using>()
+					.value()
+					->getSelectors()
+			);
 
 			UNPACK_QRESULT_MOVE(
 				auto lookup_chain =,

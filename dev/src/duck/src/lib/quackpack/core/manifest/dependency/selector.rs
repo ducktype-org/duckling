@@ -3,7 +3,8 @@
 use std::collections::HashSet;
 
 use super::{Dependency, DependencyKind};
-use crate::{StrId, quackpack::core::FeatureName};
+use crate::StrId;
+use crate::quackpack::core::FeatureName;
 
 #[derive(Clone, Eq, PartialEq)]
 /// A selector allows to easily filter the dependencies vector.

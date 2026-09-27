@@ -60,4 +60,13 @@ namespace vm::low::cf {
 		}
 		return block_beginnings;
 	}
+
+#ifdef ENABLE_JIT
+	usize functionEntrypointOffset(const MicroBytecode& bc) {
+		for (usize i = 0; i < bc.size(); ++i)
+			if (getInstructionOpcode(bc[i]) == MicroOpcode::jitFuncEntrypoint) return i;
+		// A missing entrypoint means the lowering and this scan have drifted apart.
+		CORE_PANIC("No jitFuncEntrypoint instruction found in the bytecode");
+	}
+#endif
 }  // namespace vm::low::cf

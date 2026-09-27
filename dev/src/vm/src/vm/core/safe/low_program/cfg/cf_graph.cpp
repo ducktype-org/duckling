@@ -7,36 +7,33 @@
 #include "cf_analysis.hpp"
 
 namespace vm::low::cf {
-
-	OutEdges::OutEdges(): to{ 0, 0 } {}
-
 	usize OutEdges::size() const { return no_edges; }
 
-	OutEdges::Kind OutEdges::kind() const { return op_type; }
+	OutEdges::Kind OutEdges::kind() const { return edge_kind; }
 
 	void OutEdges::setCond(Kind kind, BasicBlockID target1, BasicBlockID target2) {
 		CORE_ASSERT(no_edges == 0, "Outgoing edges already set for this basic block");
-		this->op_type = kind;
-		to[0]         = target1;
-		to[1]         = target2;
-		no_edges      = 2;
+		this->edge_kind = kind;
+		to[0]           = target1;
+		to[1]           = target2;
+		no_edges        = 2;
 	}
 
 	void OutEdges::setDefault(BasicBlockID target) {
 		CORE_ASSERT(no_edges == 0, "Outgoing edges already set for this basic block");
-		this->op_type = Kind::Default;
-		to[0]         = target;
-		no_edges      = 1;
+		this->edge_kind = Kind::Default;
+		to[0]           = target;
+		no_edges        = 1;
 	}
 
 	BasicBlockID OutEdges::next() const {
-		CORE_ASSERT(op_type == Kind::Default, "This block has no default outgoing edge.");
+		CORE_ASSERT(edge_kind == Kind::Default, "This block has no default outgoing edge.");
 		return to[0];
 	}
 
 	BasicBlockID OutEdges::successTarget() const {
 		CORE_ASSERT(
-			op_type == Kind::JmpIf || op_type == Kind::JmpIfNot,
+			edge_kind == Kind::JmpIf || edge_kind == Kind::JmpIfNot,
 			"This block does not have conditional outgoing edges."
 		);
 		return to[0];
@@ -44,7 +41,7 @@ namespace vm::low::cf {
 
 	BasicBlockID OutEdges::failTarget() const {
 		CORE_ASSERT(
-			op_type == Kind::JmpIf || op_type == Kind::JmpIfNot,
+			edge_kind == Kind::JmpIf || edge_kind == Kind::JmpIfNot,
 			"This block does not have conditional outgoing edges."
 		);
 		return to[1];
@@ -63,10 +60,13 @@ namespace vm::low::cf {
 	}
 
 	BasicBlock::BasicBlock(BasicBlockID id, usize start, usize end):
-		  succ(),
 		  id(id),
 		  start(start),
-		  end(end) {}
+		  end(end),
+		  succ(),
+		  ret_value(0) {}
+
+	void BasicBlock::setRetValue(i64 value) { ret_value = value; }
 
 	OutEdges::Kind BasicBlock::edgeKind() const { return succ.kind(); }
 
@@ -87,8 +87,10 @@ namespace vm::low::cf {
 	usize BasicBlock::edgeCount() const { return succ.size(); }
 
 	ControlFlowGraph::ControlFlowGraph(const low::MicroBytecode& bc) {
-		createCFG(bc, basicBlockBeginnings(bc));
+		createFuncCFG(bc, basicBlockBeginnings(bc));
 	}
+
+	bool ControlFlowGraph::empty() const { return blocks.empty(); }
 
 	usize ControlFlowGraph::size() const { return blocks.size(); }
 
@@ -97,7 +99,7 @@ namespace vm::low::cf {
 		return blocks[id];
 	}
 
-	void ControlFlowGraph::createCFG(
+	void ControlFlowGraph::createFuncCFG(
 		const low::MicroBytecode& bc, const std::vector<usize>& block_beginnings
 	) {
 		blocks.clear();
@@ -166,46 +168,127 @@ namespace vm::low::cf {
 			}
 			}
 		}
+
+		// Remove unreachable blocks
+		std::vector<BasicBlockID> reachable{ 0 };
+		std::vector<bool>         visited(blocks.size(), false);
+		visited[0]      = true;
+		usize stack_ptr = 0;
+
+		while (stack_ptr < reachable.size()) {
+			const auto curr = reachable[stack_ptr++];
+
+			for (usize i = 0; i < blocks[curr].edgeCount(); ++i) {
+				BasicBlockID v = blocks[curr].edge(i);
+				if (!visited[v]) {
+					visited[v] = true;
+					reachable.push_back(v);
+				}
+			}
+		}
+
+		*this = inducedSubgraph(0, reachable, false);
 	}
 
-	ControlFlowGraph ControlFlowGraph::subgraph(const std::vector<BasicBlockID>& block_ids) const {
+	ControlFlowGraph ControlFlowGraph::inducedSubgraph(
+		BasicBlockID                     entry_block_id,
+		const std::vector<BasicBlockID>& other_block_ids,
+		bool                             dummy_exit_blocks
+	) const {
 		ControlFlowGraph subgraph;
-		subgraph.blocks.reserve(block_ids.size());
+		subgraph.blocks.emplace_back(0, blocks[entry_block_id].start, blocks[entry_block_id].end);
 
-		auto dummy_block_id = static_cast<BasicBlockID>(subgraph.blocks.size());
+		const auto undefined_id = static_cast<BasicBlockID>(-1);
 
-		std::vector<BasicBlockID> old_to_new(blocks.size() + 1, dummy_block_id);
+		std::vector<BasicBlockID> old_block_ids = { entry_block_id };
+		std::vector<BasicBlockID> old_to_new_id(blocks.size(), undefined_id);
+		old_to_new_id[entry_block_id] = 0;
 
-		for (BasicBlockID old_id: block_ids) {
+		for (BasicBlockID old_id: other_block_ids) {
 			CORE_ASSERT(old_id < blocks.size(), "Invalid block ID in subgraph request");
-			CORE_ASSERT(
-				old_to_new[old_id] == dummy_block_id, "Duplicate block ID in subgraph request"
-			);
+			if (old_to_new_id[old_id] != undefined_id) continue;
 
-			const auto new_id  = static_cast<BasicBlockID>(subgraph.blocks.size());
-			old_to_new[old_id] = new_id;
+			const auto new_id     = static_cast<BasicBlockID>(subgraph.blocks.size());
+			old_to_new_id[old_id] = new_id;
 
-			const BasicBlock& src = blocks[old_id];
-			subgraph.blocks.emplace_back(new_id, src.start, src.end);
+			subgraph.blocks.emplace_back(new_id, blocks[old_id].start, blocks[old_id].end);
+			old_block_ids.push_back(old_id);
 		}
-		// Add dummy block to redirect edges that go outside the selected subset
-		// PLACEHOLDER: replace with logic which creates a different dummy for each jmp or smth
-		auto ret_instr_pos = blocks.back().end - 1;
-		subgraph.blocks.emplace_back(dummy_block_id, ret_instr_pos, ret_instr_pos + 1);
 
-		for (BasicBlockID old_id: block_ids) {
-			const BasicBlockID new_id = old_to_new[old_id];
-			const BasicBlock&  src    = blocks[old_id];
-			BasicBlock&        dst    = subgraph.blocks[new_id];
+		const auto entry_pos = static_cast<i64>(subgraph.blocks[0].start);
 
-			dst.succ = src.succ;
-			for (usize i = 0; i < src.edgeCount(); ++i) {
-				BasicBlockID old_target_id = src.edge(i);
-				BasicBlockID new_target_id = old_to_new[old_target_id];
-				dst.succ[i]                = new_target_id;
+		for (BasicBlockID old_id: old_block_ids) {
+			const BasicBlockID new_id = old_to_new_id[old_id];
+			const BasicBlock*  src    = &blocks[old_id];
+			BasicBlock*        dst    = &subgraph.blocks[new_id];
+
+			dst->succ = src->succ;
+			for (usize i = 0; i < src->edgeCount(); ++i) {
+				BasicBlockID old_target_id = src->edge(i);
+				BasicBlockID new_target_id = old_to_new_id[old_target_id];
+				if (new_target_id == undefined_id) {
+					CORE_ASSERT(
+						dummy_exit_blocks,
+						"Induced subgraph contains an edge to a block not in the subgraph "
+						"while dummy exit blocks are disabled"
+					);
+					auto jmp_dest_pos = static_cast<i64>(blocks[old_target_id].start);
+
+					// Create empty exit block representing this outgoing edge
+					new_target_id = static_cast<BasicBlockID>(subgraph.blocks.size());
+					subgraph.blocks.emplace_back(new_target_id, jmp_dest_pos, jmp_dest_pos);
+					subgraph.blocks.back().setRetValue(jmp_dest_pos - entry_pos);
+
+					// Update mapping to avoid creating multiple identical dummy blocks
+					old_to_new_id[old_target_id] = new_target_id;
+
+					// We must refresh the pointer, as emplace_back invalidates all references
+					dst = &subgraph.blocks[new_id];
+				}
+				dst->succ[i] = new_target_id;
 			}
 		}
 
 		return subgraph;
+	}
+
+	/* Debug printing */
+
+	void OutEdges::deprint(std::ostream& os) const {
+		switch (edge_kind) {
+		case Kind::End:
+			os << "End{}";
+			break;
+		case Kind::Default:
+			os << "Default{next -> " << to[0] << "}";
+			break;
+		case Kind::JmpIf:
+			os << "JmpIf{condition: T -> " << to[0] << ", F -> " << to[1] << "}";
+			break;
+		case Kind::JmpIfNot:
+			os << "JmpIfNot{condition: T -> " << to[1] << ", F -> " << to[0] << "}";
+			break;
+		}
+	}
+
+	bool BasicBlock::isFallthrough() const {
+		return edgeKind() == OutEdges::Kind::Default && next() == id + 1;
+	}
+
+	void BasicBlock::deprint(std::ostream& os) const {
+		os << "Block{bid = " << id << ", range = [" << start << ", " << end
+		   << "), ret = " << ret_value << ", edge = ";
+		succ.deprint(os);
+		os << "}";
+	}
+
+	void ControlFlowGraph::deprint(std::ostream& os) const {
+		os << "ControlFlowGraph{blocks = [\n";
+		for (usize i = 0; i < blocks.size(); ++i) {
+			os << "  ";
+			blocks[i].deprint(os);
+			if (i + 1 < blocks.size()) os << ",\n";
+		}
+		os << "\n]}";
 	}
 }  // namespace vm::low::cf
