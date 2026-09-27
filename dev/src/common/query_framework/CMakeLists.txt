@@ -38,3 +38,4 @@ duck_add_test(common query_disk_cache tests/query_disk_cache_test.cpp USES Query
 duck_add_test(common task_pool tests/task_pool_test.cpp USES QueryFramework)
 duck_add_test(common cycle_detection_race tests/cycle_detection_race_test.cpp USES QueryFramework)
 duck_add_test(common graph_json tests/graph_json_test.cpp USES QueryFramework)
+duck_add_test(common q_stats tests/q_stats_test.cpp USES QueryFramework)

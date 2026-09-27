@@ -10,7 +10,13 @@
 #include <tester/tester.hpp>
 
 #include <algorithm>
+#include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <random>
+#include <span>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 struct KeyOf_JsonSideInput {
@@ -80,6 +86,11 @@ public:
 		TESTER_ADD_TEST(testHandWrittenGraph);
 		TESTER_ADD_TEST(testEmptyGraph);
 		TESTER_ADD_TEST(testPreAndPostOptimization);
+		TESTER_ADD_TEST(testDummyNode);
+		TESTER_ADD_TEST(testDumpToDirectory);
+		TESTER_ADD_TEST(testDumpToDirectoryErrors);
+		TESTER_ADD_TEST(testReducedGraphRoundTrip);
+		TESTER_ADD_TEST(testDeserializeRejectsBrokenData);
 	}
 
 private:
@@ -87,6 +98,33 @@ private:
 		std::ostringstream out;
 		query::external::dumpQueryGraphAsJson(stage, out);
 		return out.str();
+	}
+
+	static std::string readFile(const std::filesystem::path& path) {
+		std::ifstream      in(path);
+		std::ostringstream content;
+		content << in.rdbuf();
+		return content.str();
+	}
+
+	/**
+	 * @brief A fresh, not yet existing directory under the system temp directory.
+	 */
+	static std::filesystem::path uniqueTempPath() {
+		return std::filesystem::temp_directory_path()
+		     / ("graph_json_test_" + std::to_string(std::random_device{}()));
+	}
+
+	/**
+	 * @brief Three nodes (stable -> side input, stable -> unstable), not in NodeID order.
+	 */
+	static query::internal::QueryGraph::ReducedGraphData makeSmallGraph() {
+		return {
+			.nodes     = { query::internal::makeNodeID<JsonStableQuery>(KeyOf_JsonStable{ 5 }),
+			               query::internal::makeNodeID<JsonUnstableQuery>(query::U64Key{ 5 }),
+			               query::internal::makeNodeID<JsonSideInput>(KeyOf_JsonSideInput{ 5 }) },
+			.adjacency = { { 2, 1 }, {}, {} },
+		};
 	}
 
 	/**
@@ -172,6 +210,130 @@ private:
 		ASSERT_TRUE(post.contains("\"name\": \"JsonStableQuery\""));
 		ASSERT_TRUE(post.contains("\"name\": \"JsonSideInput\""));
 		ASSERT_TRUE(not post.contains("\"name\": \"JsonUnstableQuery\""));
+	}
+
+	/**
+	 * @brief A node remapped to a dummy while loading a previous graph is reported as such.
+	 */
+	void testDummyNode() {
+		query::entryPoint<JsonStableQuery>({ 1 });
+
+		const auto unstable = query::internal::makeNodeID<JsonUnstableQuery>(query::U64Key{ 9 });
+		auto       state    = query::internal::ContextAccess::getState();
+		const auto dummy    = state->remapUnstableOrUnregisteredNodes(unstable);
+
+		std::ostringstream out;
+		query::internal::writeReducedGraphAsJson(
+			{ .nodes = { dummy }, .adjacency = { {} } }, "dummy", out
+		);
+		ASSERT_TRUE(out.str().contains(
+			"\"kind\": \"Dummy\", \"category\": \"unstable\", \"preserved\": false"
+		));
+	}
+
+	/**
+	 * @brief Both stages land in their own file, and the directory is created on the way.
+	 */
+	void testDumpToDirectory() {
+		query::entryPoint<JsonStableQuery>({ 1 });
+
+		const auto dir    = uniqueTempPath() / "nested";
+		const auto result = query::external::dumpQueryGraphsToDirectory(dir);
+		ASSERT_TRUE(result.has_value());
+		ASSERT_EQUAL(usize{ 2 }, result->size());
+		ASSERT_EQUAL(dir / "query_graph_pre_opt.json", result->at(0));
+		ASSERT_EQUAL(dir / "query_graph_post_opt.json", result->at(1));
+
+		const auto pre  = readFile(result->at(0));
+		const auto post = readFile(result->at(1));
+		ASSERT_EQUAL(dump(query::external::QueryGraphDumpStage::PreOptimization), pre);
+		ASSERT_EQUAL(dump(query::external::QueryGraphDumpStage::PostOptimization), post);
+		ASSERT_TRUE(pre.contains("\"name\": \"JsonUnstableQuery\""));
+		ASSERT_TRUE(not post.contains("\"name\": \"JsonUnstableQuery\""));
+
+		std::filesystem::remove_all(dir.parent_path());
+	}
+
+	/**
+	 * @brief A directory that cannot be created, or a file that cannot be written, is an error
+	 * naming the offending path instead of a silent partial dump.
+	 */
+	void testDumpToDirectoryErrors() {
+		query::entryPoint<JsonStableQuery>({ 1 });
+
+		const auto root = uniqueTempPath();
+		std::filesystem::create_directories(root);
+
+		// The output "directory" is an existing regular file.
+		const auto not_a_dir = root / "file";
+		std::ofstream(not_a_dir) << "x";
+		const auto dir_error = query::external::dumpQueryGraphsToDirectory(not_a_dir);
+		ASSERT_TRUE(not dir_error.has_value());
+		ASSERT_TRUE(dir_error.error().contains("cannot create directory"));
+		ASSERT_TRUE(dir_error.error().contains(not_a_dir.string()));
+
+		// A directory sits where the first dump file should go.
+		const auto blocked = root / "blocked";
+		std::filesystem::create_directories(blocked / "query_graph_pre_opt.json");
+		const auto write_error = query::external::dumpQueryGraphsToDirectory(blocked);
+		ASSERT_TRUE(not write_error.has_value());
+		ASSERT_TRUE(write_error.error().contains("cannot write query graph"));
+		ASSERT_TRUE(write_error.error().contains("query_graph_pre_opt.json"));
+		ASSERT_TRUE(not std::filesystem::exists(blocked / "query_graph_post_opt.json"));
+
+		std::filesystem::remove_all(root);
+	}
+
+	/**
+	 * @brief toReducedGraphData() and serializeReducedGraph() round-trip through deserialize().
+	 */
+	void testReducedGraphRoundTrip() {
+		query::entryPoint<JsonStableQuery>({ 1 });
+
+		const auto data  = makeSmallGraph();
+		const auto bytes = query::internal::QueryGraph::serializeReducedGraph(data);
+		const auto graph = query::internal::QueryGraph::deserialize(bytes);
+
+		ASSERT_TRUE(graph.hasDependencies(data.nodes[0]));
+		ASSERT_TRUE(not graph.hasDependencies(data.nodes[1]));
+		ASSERT_TRUE(not graph.hasDependencies(
+			query::internal::makeNodeID<JsonUnstableQuery>(query::U64Key{ 1'234 })
+		));
+		ASSERT_EQUAL(usize{ 2 }, graph.getDirectDependencies(data.nodes[0]).size());
+
+		// Serializing the deserialized graph again gives the same JSON document.
+		std::ostringstream original;
+		std::ostringstream round_tripped;
+		query::internal::writeReducedGraphAsJson(data, "s", original);
+		query::internal::writeReducedGraphAsJson(graph.toReducedGraphData(), "s", round_tripped);
+		ASSERT_EQUAL(original.str(), round_tripped.str());
+	}
+
+	/**
+	 * @brief A truncated buffer or a dependency index past the node list throws instead of
+	 * reading out of bounds.
+	 */
+	void testDeserializeRejectsBrokenData() {
+		query::entryPoint<JsonStableQuery>({ 1 });
+
+		auto throws_out_of_range = [](std::span<const byte> bytes) {
+			try {
+				(void) query::internal::QueryGraph::deserialize(bytes);
+			} catch (const std::out_of_range&) { return true; }
+			return false;
+		};
+
+		auto truncated = query::internal::QueryGraph::serializeReducedGraph(makeSmallGraph());
+		truncated.pop_back();
+		ASSERT_TRUE(throws_out_of_range(truncated));
+
+		// The last usize of the buffer is the only dependency index of the last node.
+		auto data             = makeSmallGraph();
+		data.adjacency        = { {}, {}, { 0 } };
+		auto        bad_index = query::internal::QueryGraph::serializeReducedGraph(data);
+		const usize too_high  = 7;
+		std::memcpy(bad_index.data() + bad_index.size() - sizeof(usize), &too_high, sizeof(usize));
+		ASSERT_TRUE(throws_out_of_range(bad_index));
 	}
 };
 

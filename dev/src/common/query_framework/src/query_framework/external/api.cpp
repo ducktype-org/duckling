@@ -14,6 +14,10 @@
 #include <query_framework/internal/query_graph/query_state.hpp>
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
 
+#include <array>
+#include <fstream>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 namespace query::external {
@@ -63,6 +67,33 @@ namespace query::external {
 			);
 			return;
 		}
+	}
+
+	std::expected<std::vector<std::filesystem::path>, std::string> dumpQueryGraphsToDirectory(
+		const std::filesystem::path& output_dir
+	) {
+		std::error_code error;
+		std::filesystem::create_directories(output_dir, error);
+		if (error) {
+			return std::unexpected(
+				"cannot create directory '" + output_dir.string() + "': " + error.message()
+			);
+		}
+
+		const std::array<std::pair<const char*, QueryGraphDumpStage>, 2> dumps{ {
+			{ "query_graph_pre_opt.json", QueryGraphDumpStage::PreOptimization },
+			{ "query_graph_post_opt.json", QueryGraphDumpStage::PostOptimization },
+		} };
+		std::vector<std::filesystem::path>                               written;
+		for (const auto& [file_name, stage]: dumps) {
+			auto          path = output_dir / file_name;
+			std::ofstream out(path);
+			dumpQueryGraphAsJson(stage, out);
+			out.close();
+			if (!out) return std::unexpected("cannot write query graph to '" + path.string() + "'");
+			written.push_back(std::move(path));
+		}
+		return written;
 	}
 
 	u64 deleteOrphanedDiskCaches() {

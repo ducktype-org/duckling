@@ -54,8 +54,6 @@
 #include <algorithm>
 #include <array>
 #include <cstdio>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <ranges>
 #include <string>
@@ -399,40 +397,6 @@ namespace debug_options {
 }
 
 /**
- * @brief Write the query graph before and after the graph optimization as JSON files into
- * @p output_dir (`query_graph_pre_opt.json` and `query_graph_post_opt.json`).
- * @return false if a file could not be written.
- */
-bool dumpQueryGraphs(const fs::FilePath& output_dir) {
-	const std::filesystem::path dir(output_dir.strView());
-	std::error_code             error;
-	std::filesystem::create_directories(dir, error);
-	if (error) {
-		CORE_USER_LOG(
-			"Error: cannot create directory '", dir.string(), "': ", error.message(), "\n"
-		);
-		return false;
-	}
-
-	const std::array<std::pair<const char*, query::external::QueryGraphDumpStage>, 2> dumps{ {
-		{ "query_graph_pre_opt.json", query::external::QueryGraphDumpStage::PreOptimization },
-		{ "query_graph_post_opt.json", query::external::QueryGraphDumpStage::PostOptimization },
-	} };
-	for (const auto& [file_name, stage]: dumps) {
-		const auto    path = dir / file_name;
-		std::ofstream out(path);
-		query::external::dumpQueryGraphAsJson(stage, out);
-		out.close();
-		if (!out) {
-			CORE_USER_LOG("Error: cannot write query graph to '", path.string(), "'\n");
-			return false;
-		}
-		CORE_USER_LOG("Query graph written to '", path.string(), "'\n");
-	}
-	return true;
-}
-
-/**
  * @brief Generate the `compile_package` subcommand.
  * @param dump_query_graph If true, the command additionally takes a required `--graph-output`
  * directory and writes the query graph before and after optimization into it.
@@ -664,9 +628,17 @@ clah::Clah getClahForCompilePackage(
 		if (options.isFlag("print-graph"))
 			query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 
-		if (dump_query_graph
-		    && !dumpQueryGraphs(options.getValue<fs::FilePath>("graph-output").value()))
-			return 1;
+		if (dump_query_graph) {
+			auto dumped = query::external::dumpQueryGraphsToDirectory(
+				options.getValue<fs::FilePath>("graph-output").value().strView()
+			);
+			if (!dumped) {
+				CORE_USER_LOG("Error: ", dumped.error(), "\n");
+				return 1;
+			}
+			for (const auto& path: *dumped)
+				CORE_USER_LOG("Query graph written to '", path.string(), "'\n");
+		}
 
 
 		return result.isOk() ? 0 : 1;

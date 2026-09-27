@@ -11,8 +11,11 @@
 #include <query_framework/utils/query_hash.hpp>
 
 #include <cstddef>
+#include <expected>
+#include <filesystem>
 #include <ostream>
 #include <span>
+#include <string>
 #include <vector>
 
 /**
@@ -115,6 +118,21 @@ namespace query::external {
 	 * @warning Must not be called while queries are executing.
 	 */
 	void dumpQueryGraphAsJson(QueryGraphDumpStage stage, std::ostream& out);
+
+	/**
+	 * @brief Paths of the files dumpQueryGraphsToDirectory() wrote, or why it could not write them.
+	 */
+	using QueryGraphDumpResult = std::expected<std::vector<std::filesystem::path>, std::string>;
+
+	/**
+	 * @brief Write both dumpQueryGraphAsJson() stages into @p output_dir, as
+	 * `query_graph_pre_opt.json` and `query_graph_post_opt.json`, creating the directory if needed.
+	 * @return The paths of the written files, or a message saying what could not be written.
+	 * @warning Must not be called while queries are executing.
+	 */
+	[[nodiscard]] QueryGraphDumpResult dumpQueryGraphsToDirectory(
+		const std::filesystem::path& output_dir
+	);
 
 	/**
 	 * @brief Delete on-disk caches of previous-graph nodes that were not merged into the current
