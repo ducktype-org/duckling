@@ -1,0 +1,12 @@
+# `initFromVMValue_pany_immvmval` (a raw VMValue pointer) is start-function-only: it must be
+# rejected in a normal (program) function.
+function offender { } -> { i64 } {
+	initFromVMValue_pany_immvmval value, 0;
+	mov_p64_p64 ret0, value;
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	mov_p64_imm ret0, 0;
+	ret;
+}

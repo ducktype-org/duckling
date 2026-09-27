@@ -190,10 +190,9 @@ namespace vm {
 		}
 
 		for (auto [idx, arg_value]: enumerate(func_args)) {
-			VMValueIdentifier val_id;
-			val_id.id     = arg_value.get();
-			auto arg_name = any(strConcat("arg", idx).c_str());
-			add_instr(init, arg_name, val_id);
+			VMValueImm val_imm{ arg_value.get() };
+			auto       arg_name = any(strConcat("arg", idx).c_str());
+			add_instr(initFromVMValue, arg_name, val_imm);
 		}
 
 		add_instr(call, called_function_name);

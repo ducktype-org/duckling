@@ -334,16 +334,17 @@ class FunctionValidator {
 	base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
 
 	CRef<IVMValue> vmValueOf(CRef<opargs::VMValueIdentifier> vm_val) const {
-		variant_match(vm_val->id) {
-			variant_case(u64, id) {
-				CORE_ASSERT(v_matches(mode, detail::Expr), "indexed VM values only in expresssions");
-				auto& exp_mode = std::get<detail::Expr>(mode);
-				if (id >= exp_mode.vm_values->size()) throw InvalidVMValueIDError(*vm_val);
-				return exp_mode.vm_values->at(id).ref();
-			}
-			variant_case(const IVMValue*, ptr) { return ptr; }
-		}
-		CORE_UNREACHABLE();
+		CORE_ASSERT(v_matches(mode, detail::Expr), "indexed VM values only in expressions");
+		auto& exp_mode = std::get<detail::Expr>(mode);
+		if (vm_val->id >= exp_mode.vm_values->size()) throw InvalidVMValueIDError(*vm_val);
+		return exp_mode.vm_values->at(vm_val->id).ref();
+	}
+
+	CRef<IVMValue> vmValueOf(CRef<opargs::VMValueImm> vm_val) const {
+		CORE_ASSERT(
+			v_matches(mode, detail::StartFunction), "immediate VM values only in the start function"
+		);
+		return vm_val->ptr;
 	}
 
 	template<CallingInstruction CallInstructionType>
@@ -562,7 +563,11 @@ class FunctionValidator {
 					bool is_global       = globals.contains(place->var_name) && !from_prev_frame;
 					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
 					instr_match(instruction) {
-						instr_case_novalue(Op_init_pany_type, Op_init_pany_vmval) {
+						instr_case_novalue(
+							Op_init_pany_type,
+							Op_initFromVMValue_pany_idvmval,
+							Op_initFromVMValue_pany_immvmval
+						) {
 							if (is_local || is_global) throw DuplicatedLocalNameError(*place);
 						}
 						variant_default {
@@ -674,11 +679,17 @@ class FunctionValidator {
 				}
 
 				variant_case(CRef<opargs::VMValueIdentifier>, vm_val) {
-					CORE_ASSERT(
-						v_matches(mode, detail::Expr, detail::StartFunction),
-						"validator has to check that we are compiling expr or start function"
-					);
+					CORE_ASSERT(v_matches(mode, detail::Expr), "indexed VM values are expr-only");
+					CRef<valid_type::ValidType> type = vmValueOf(vm_val)->getType();
+					if (!types_ctx.contains(type->getName()))
+						throw UnknownTypeOfVMValueError(*vm_val);
+				}
 
+				variant_case(CRef<opargs::VMValueImm>, vm_val) {
+					CORE_ASSERT(
+						v_matches(mode, detail::StartFunction),
+						"immediate VM values are start-function-only"
+					);
 					CRef<valid_type::ValidType> type = vmValueOf(vm_val)->getType();
 					if (!types_ctx.contains(type->getName()))
 						throw UnknownTypeOfVMValueError(*vm_val);
@@ -1763,7 +1774,12 @@ class FunctionValidator {
 				if (src_table->inner != dst_table->inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_nop, Op_exit, Op_init_pany_vmval) {}
+			instr_case_novalue(
+				Op_nop,
+				Op_exit,
+				Op_initFromVMValue_pany_idvmval,
+				Op_initFromVMValue_pany_immvmval
+			) {}
 		}
 		POP_DIAGNOSTIC
 	}
@@ -1918,7 +1934,13 @@ class FunctionValidator {
 					local_stack.push(instr.var, instr.type);
 					index++;
 				}
-				instr_case(Op_init_pany_vmval, instr) {
+				instr_case(Op_initFromVMValue_pany_idvmval, instr) {
+					stack_before_instr[index] = local_stack.getStateID();
+					auto name                 = vmValueOf(&instr.vm_val)->getType()->getName();
+					local_stack.push(instr.var, opargs::Type(name));
+					index++;
+				}
+				instr_case(Op_initFromVMValue_pany_immvmval, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
 					auto name                 = vmValueOf(&instr.vm_val)->getType()->getName();
 					local_stack.push(instr.var, opargs::Type(name));
@@ -2077,13 +2099,20 @@ class FunctionValidator {
 	void validateIllegalInstructions(const Instruction& instr) {
 		variant_match(mode) {
 			variant_case_novalue(detail::Expr) {
-				throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_exit>(instr);
+				// Expressions identify VM values by id only; the immediate form is start-only.
+				throwOnForbiddenOpcode<
+					OpCode::Op_ret_tailcall_func,
+					OpCode::Op_exit,
+					OpCode::Op_initFromVMValue_pany_immvmval>(instr);
 			}
 			variant_case_novalue(detail::StartFunction) {
 				throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(instr);
 			}
 			variant_case_novalue(detail::Normal) {
-				throwOnForbiddenOpcode<OpCode::Op_init_pany_vmval, OpCode::Op_exit>(instr);
+				throwOnForbiddenOpcode<
+					OpCode::Op_initFromVMValue_pany_idvmval,
+					OpCode::Op_initFromVMValue_pany_immvmval,
+					OpCode::Op_exit>(instr);
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}

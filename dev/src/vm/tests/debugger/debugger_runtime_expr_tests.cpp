@@ -517,6 +517,9 @@ private:
 			.evalExprExpectLoadError(expr("tail_rec.dbc"), vm::code::ForbiddenOpcodePresent::ERR_MSG)
 			.evalExprExpectLoadError(expr("exit.dbc"), vm::code::ForbiddenOpcodePresent::ERR_MSG)
 			.evalExprExpectLoadError(
+				expr("init_vmval_imm_in_expr.dbc"), vm::code::ForbiddenOpcodePresent::ERR_MSG
+			)
+			.evalExprExpectLoadError(
 				expr("sig_param.dbc"), vm::code::InvalidRuntimeExprSignature::ERR_MSG
 			)
 			.evalExprExpectLoadError(
@@ -531,7 +534,11 @@ private:
 		// Normal-mode (program) functions reject the expression-only opcodes / places.
 		loadInvalidDbc(
 			"runtime_expr_dbc/invalid_exprs/init_vmval_in_normal.dbc",
-			{ vm::code::ForbiddenOpcodePresent::ERR_MSG, "init_pany_vmval" }
+			{ vm::code::ForbiddenOpcodePresent::ERR_MSG, "initFromVMValue_pany_idvmval" }
+		);
+		loadInvalidDbc(
+			"runtime_expr_dbc/invalid_exprs/init_vmval_imm_in_normal.dbc",
+			{ vm::code::ForbiddenOpcodePresent::ERR_MSG, "initFromVMValue_pany_immvmval" }
 		);
 		loadInvalidDbc(
 			"runtime_expr_dbc/invalid_exprs/exit_in_normal.dbc",

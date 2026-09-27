@@ -1,7 +1,7 @@
-# `init_pany_vmval` is only legal in runtime expressions and the synthetic start function; it
+# `initFromVMValue_pany_idvmval` is only legal in runtime expressions and the synthetic start function; it
 # must be rejected in a normal (program) function.
 function offender { } -> { i64 } {
-	init_pany_vmval value, $ 0;
+	initFromVMValue_pany_idvmval value, $ 0;
 	mov_p64_p64 ret0, value;
 	ret;
 }

@@ -764,12 +764,20 @@ DEF_INSTR(nop)
 DEF_INSTR(exit)
 
 /**
- * @brief This is a very internal instruction, that should not be used in regular bytecode.
- * It is a helper for start functions.
+ * @brief Very internal instructions, not to be used in regular bytecode. They initialize a local
+ * from a process-registered VM value.
  * @arg0 - the place to store the value in.
- * @arg1 - identifier of the VMValue to read the value from.
+ * @arg1 - how to identify the value: by its id (expressions only) or by an immediate pointer
+ *         (start function only).
  */
-DEF_INSTR(init_pany_vmval, (vm::opargs::PlaceAny, var), (vm::opargs::VMValueIdentifier, vm_val))
+DEF_INSTR(
+	initFromVMValue_pany_idvmval,
+	(vm::opargs::PlaceAny, var),
+	(vm::opargs::VMValueIdentifier, vm_val)
+)
+DEF_INSTR(
+	initFromVMValue_pany_immvmval, (vm::opargs::PlaceAny, var), (vm::opargs::VMValueImm, vm_val)
+)
 
 #ifdef DEFAULT_HANDLE_INSTR
 #undef DEFAULT_HANDLE_INSTR

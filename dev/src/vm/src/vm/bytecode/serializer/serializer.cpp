@@ -31,11 +31,13 @@ namespace vm::code {
 #undef LOCAL_TO_STRING
 
 	std::string toString(opargs::VMValueIdentifier arg) {
-		variant_match(arg.id) {
-			variant_case(u64, id) { return base::strConcat("$", id); }
-			variant_case_novalue(const IVMValue*) { return "$ <ptr>"; }
-		}
-		CORE_UNREACHABLE();
+		return base::strConcat("$ ", arg.id);
+	}
+
+	std::string toString(opargs::VMValueImm arg) {
+		std::stringstream ss;
+		ss << "0x" << std::hex << reinterpret_cast<uintptr_t>(arg.ptr);
+		return ss.str();
 	}
 
 	std::string toString(opargs::Type arg) { return arg.type_name.str(); }

@@ -1,0 +1,7 @@
+# `initFromVMValue_pany_immvmval` (a raw VMValue pointer) is start-function-only and must be
+# rejected inside a runtime expression.
+function use_imm_in_expr { } -> { i64 } {
+	initFromVMValue_pany_immvmval value, 0;
+	mov_p64_p64 ret0, value;
+	ret;
+}

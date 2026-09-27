@@ -46,27 +46,33 @@ namespace vm::opargs {
 		}
 	};
 
+	/// Index of a process-registered VM value (`SafeVMProcess::owned_vm_values`). Used by the
+	/// expression-only `initFromVMValue_pany_idvmval`.
 	struct VMValueIdentifier final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "vmval";
+		static constexpr std::string_view OP_SHORT = "idvmval";
 
 		VMValueIdentifier() = default;
 
 		VMValueIdentifier(const u64 id): id(id) {}
 
-		std::variant<u64, const IVMValue*> id;
+		u64 id{};
 
 		constexpr bool operator==(const VMValueIdentifier& other) const noexcept {
-			if (id.index() != other.id.index()) return false;
+			return id == other.id;
+		}
+	};
 
-			variant_match(id) {
-				variant_case(u64, my_id) { return std::get<u64>(other.id) == my_id; }
+	struct VMValueImm final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "immvmval";
 
-				variant_case(const IVMValue*, ptr) {
-					return std::get<const IVMValue*>(other.id) == ptr;
-				}
-			}
-			// cannot use CORE_UNREACHABLE because this is noexcept function
-			return false;
+		VMValueImm() = default;
+
+		VMValueImm(const IVMValue* ptr): ptr(ptr) {}
+
+		const IVMValue* ptr = nullptr;
+
+		constexpr bool operator==(const VMValueImm& other) const noexcept {
+			return ptr == other.ptr;
 		}
 	};
 
@@ -234,6 +240,7 @@ namespace vm::opargs {
 		VM_OPARG_PLACE_TYPES,
 		Immediate,
 		VMValueIdentifier,
+		VMValueImm,
 		Type,
 		Field,
 		FunctionName,

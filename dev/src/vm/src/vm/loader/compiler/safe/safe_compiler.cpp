@@ -31,7 +31,7 @@ namespace vm::loader::compiler::safe {
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
 			[[maybe_unused]] base::HashMap<base::StrID, usize>&                        label_id_map, \
 			const FromType&                                                            opcode_arg,   \
-			code::StackStateID stack_state_id                                                        \
+			[[maybe_unused]] code::StackStateID stack_state_id                                                        \
 		) {                                                                                          \
 			__VA_ARGS__                                                                              \
 		}                                                                                            \
@@ -165,19 +165,15 @@ namespace vm::loader::compiler::safe {
 			return label_id_map.at(opcode_arg.label_name);
 		);
 
-		DEFINE_LOWER_ARGUMENT_IMPL(
-			low::opargs::VMValPtr,
-			opargs::VMValueIdentifier,
-			variant_match(opcode_arg.id) {
-				variant_case(u64, num) {
-					auto& expr_mode = std::get<vm::code::detail::Expr>(stack_ctx.mode);
-					return std::bit_cast<u64>(expr_mode.vm_values->at(num).get());
-				}
-				variant_case(const IVMValue *, ptr) {
-					return std::bit_cast<u64>(ptr);
-				}
+		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
+			std::same_as<low::opargs::VMValPtr>,
+
+			if constexpr (std::same_as<FromType, opargs::VMValueIdentifier>) {
+				auto& expr_mode = std::get<vm::code::detail::Expr>(stack_ctx.mode);
+				return std::bit_cast<u64>(expr_mode.vm_values->at(opcode_arg.id).get());
+			} else {
+				return std::bit_cast<u64>(opcode_arg.ptr);
 			}
-			CORE_UNREACHABLE();
 		);
 		// clang-format on
 
@@ -236,7 +232,9 @@ namespace vm::loader::compiler::safe {
 			// it already exists.
 			using namespace code::instructions;
 			const auto opcode = instruction.opcode();
-			if (opcode == Op_init_pany_type::OPCODE || opcode == Op_init_pany_vmval::OPCODE) {
+			if (opcode == Op_init_pany_type::OPCODE
+			    || opcode == Op_initFromVMValue_pany_idvmval::OPCODE
+			    || opcode == Op_initFromVMValue_pany_immvmval::OPCODE) {
 				CORE_ASSERT(
 					i + 1 < ctx.function.stack_states.size(),
 					"function can't end with the initialization instruction"

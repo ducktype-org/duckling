@@ -869,7 +869,10 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_fpext_p64_p32, i) { addLow<Op_fpext_p64_p32>(i.dst, i.src); }
 			instr_case(high::Op_nop, i) { addLow<Op_nop>(); }
 			instr_case(high::Op_exit, i) { addLow<Op_exit>(); }
-			instr_case(high::Op_init_pany_vmval, i) {
+			instr_case(high::Op_initFromVMValue_pany_idvmval, i) {
+				addLow<Op_init_vmvalptr_off>(i.vm_val, byteOffsetOf(i.var));
+			}
+			instr_case(high::Op_initFromVMValue_pany_immvmval, i) {
 				addLow<Op_init_vmvalptr_off>(i.vm_val, byteOffsetOf(i.var));
 			}
 			instr_case(high::Comment, i) {

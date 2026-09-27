@@ -120,10 +120,12 @@ namespace vm::low::opargs {
 	 */
 	DEFINE_MICRO_ARG_TYPE(Offset, "off", u64);
 	/**
-	 * @brief Identifies the VM value an `init_pany_vmval` reads from: either the id of a
-	 * process-registered value, or a direct `IVMValue*`.
+	 * @brief Identifies the VM value an `initFromVMValue_*` reads from: either the id of a
+	 * process-registered value, or a direct `IVMValue*` immediate.
 	 */
-	DEFINE_MICRO_ARG_TYPE(VMValPtr, "vmvalptr", vm::opargs::VMValueIdentifier);
+	DEFINE_MICRO_ARG_TYPE(
+		VMValPtr, "vmvalptr", vm::opargs::VMValueIdentifier, vm::opargs::VMValueImm
+	);
 
 	/**
 	 * @brief Storage class for any kind of micro instruction argument.

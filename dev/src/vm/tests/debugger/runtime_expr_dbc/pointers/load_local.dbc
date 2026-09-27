@@ -1,7 +1,7 @@
 # Accesses the dangling pointer from the previous expression (`$ 0`); the memory layer must
 # reject the access because the pointed-to block was deinitialized.
 function load_local { } -> { i64 } {
-	init_pany_vmval p, $ 0;
+	initFromVMValue_pany_idvmval p, $ 0;
 	init_pany_type v, i64;
 	load_pany_pptr v, p;
 	mov_p64_p64 ret0, v;
