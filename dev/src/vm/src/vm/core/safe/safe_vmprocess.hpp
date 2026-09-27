@@ -233,10 +233,6 @@ namespace vm {
 
 		Box<IVMValue> createOwnedVMValue(code::valid_type::ValidTypeID type_id) override;
 
-		u64 numberOfOwnedVMValues() const;
-
-		Ref<SafeVMValue> accessVMValue(u64 id);
-
 		/**
 		 * @brief Creates an empty, process-owned SafeVMValue from safe type metadata.
 		 * Safe-VM-internal counterpart of the interface factory.
@@ -262,10 +258,6 @@ namespace vm {
 		Box<SafeVMValue> createOwnedVMValue(TypeCRef type, Pointer src);
 
 		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
-
-		CRef<loader::compiler::safe::SafeCompiler> getCompiler() const { return &compiler; }
-
-		CRef<loader::Loader> getLoader() const { return &loader; }
 
 		/**
 		 * @brief Get the GIL of the process.

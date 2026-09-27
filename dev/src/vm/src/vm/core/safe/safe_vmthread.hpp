@@ -39,9 +39,6 @@ namespace vm {
 	class SafeVMProcess;
 	class SafeVMValue;
 
-	class SafeVMProcess;
-	class SafeVMValue;
-
 	/**
 	 * @brief Frames are on stack, this is the maximum number of frame pointers available.
 	 */
@@ -146,8 +143,6 @@ namespace vm {
 		 * builtin spawn thread.
 		 */
 		std::string thread_ctx;
-
-		static constexpr u64 EXPR_EXECUTION_TIMEOUT_MS = 500;
 
 		/**
 		 * @brief RAII object guaranteeing the release of the GIL lock.

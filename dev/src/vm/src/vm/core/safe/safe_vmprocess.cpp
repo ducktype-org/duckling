@@ -252,12 +252,6 @@ namespace vm {
 		return {};
 	}
 
-	u64 SafeVMProcess::numberOfOwnedVMValues() const { return owned_vm_values.size(); }
-
-	Ref<SafeVMValue> SafeVMProcess::accessVMValue(u64 id) {
-		return owned_vm_values.at(id).refMut();
-	}
-
 	Ref<IVMValue> SafeVMProcess::createVMValue(code::valid_type::ValidTypeID type_id) {
 		// Safe TypeIDs are asserted (in the type builder) to be numerically equal to ValidTypeIDs.
 		return createVMValue(loaded_program->getTypes().at(TypeID(type_id.asInt())));
@@ -270,14 +264,12 @@ namespace vm {
 	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type) {
 		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
 		owned_vm_values.emplace_back(std::move(value));
-		owned_vm_values.back()->id = numberOfOwnedVMValues() - 1;
 		return owned_vm_values.back().refMut();
 	}
 
 	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type, Pointer src) {
 		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
 		owned_vm_values.emplace_back(std::move(value));
-		owned_vm_values.back()->id = numberOfOwnedVMValues() - 1;
 		return owned_vm_values.back().refMut();
 	}
 

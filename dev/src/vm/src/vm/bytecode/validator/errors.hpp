@@ -54,7 +54,7 @@ namespace vm::code {
 			  return_instr(return_instr) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return CRef<ElementBase>{ &return_instr };
+			return &return_instr;
 		}
 	};
 

@@ -7,7 +7,6 @@
 #include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <limits>
 #include <ostream>
 
 namespace vm {
@@ -45,9 +44,6 @@ namespace vm {
 		std::vector<byte>  data;        /// data.size() == type.getSize()
 		Ref<SafeVMProcess> my_process;  /// The process for which the SafeVMValue exists.
 		Ref<Memory>        memory;
-		u64                id;
-
-		static constexpr u64 UNREGISTERED_ID = std::numeric_limits<u64>::max();
 
 	public:
 		SafeVMValue(const SafeVMValue&)            = delete;
@@ -88,8 +84,6 @@ namespace vm {
 		[[nodiscard]] base::Optional<InterpretedDataVariant> readData() const override;
 
 		[[nodiscard]] PID getPID() const override;
-
-		[[nodiscard]] u64 getValueID() const;
 
 		/// Safe VM runtime type metadata of the stored value.
 		TypeCRef type;

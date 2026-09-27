@@ -439,9 +439,8 @@ class FunctionValidator {
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
-	template<typename RetInstr>
 	void validateRet(
-		const LocalStack& local_stack, const RetInstr& instr, const FuncSignature& current_signature
+		const LocalStack& local_stack, const Op_ret& instr, const FuncSignature& current_signature
 	) {
 		auto& returns    = current_signature.result_types;
 		usize ret_amount = returns.size();

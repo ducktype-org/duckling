@@ -33,7 +33,6 @@ vm::SafeVMValue::SafeVMValue(SafeVMProcess& process, TypeCRef type):
 	  data(type->getSize()),
 	  my_process(&process),
 	  memory(&process.getMemory()),
-	  id(UNREGISTERED_ID),
 	  type(type),
 	  pointer(memory->allocateDummy(type, data.data()), 0) {
 	memory->increaseBlockRefcount(pointer.getBlock());
@@ -70,8 +69,6 @@ void vm::SafeVMValue::freeData() {
 }
 
 vm::PID vm::SafeVMValue::getPID() const { return my_process->getPID(); }
-
-u64 vm::SafeVMValue::getValueID() const { return id; }
 
 base::CRef<vm::code::valid_type::ValidType> vm::SafeVMValue::getType() const {
 	const auto& types = my_process->loader.getHighProgram()->types();

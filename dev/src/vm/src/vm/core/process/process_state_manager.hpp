@@ -1,7 +1,5 @@
 #pragma once
 
-#include <events/emitter.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
@@ -184,23 +182,6 @@ namespace vm {
 			});
 			return snapshot.threadState(tid);
 		}
-
-		/**
-		 * @brief Attaches a listener to the per-thread status emitter of the given thread.
-		 * The emitter emits the thread's new `ThreadState` on every state change.
-		 * @return Nothing on success, an error if the thread is unknown.
-		 */
-		std::expected<void, std::string> attachThreadStatusListener(
-			api::ThreadID tid, events::Listener<ThreadState>& listener
-		);
-
-		/**
-		 * @brief Detaches a listener from the per-thread status emitter of the given thread.
-		 * @return Nothing on success, an error if the thread is unknown.
-		 */
-		std::expected<void, std::string> detachThreadStatusListener(
-			api::ThreadID tid, events::Listener<ThreadState>& listener
-		);
 
 	private:
 		/**

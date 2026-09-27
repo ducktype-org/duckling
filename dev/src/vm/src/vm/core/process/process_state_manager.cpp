@@ -197,26 +197,4 @@ namespace vm {
 		std::lock_guard lock(table_mutex);
 		return threadEntryOrAbort(agg_state, tid).state_change_counter;
 	}
-
-	std::expected<void, std::string> ProcessStateManager::attachThreadStatusListener(
-		api::ThreadID tid, events::Listener<ThreadState>& listener
-	) {
-		std::lock_guard                        lock(table_mutex);
-		const base::Optional<Ref<ThreadEntry>> entry = agg_state.threads.atMaybe(tid);
-		if (!entry.has_value())
-			return std::unexpected(base::strConcat("Unknown ThreadID: ", tid.asInt()));
-		entry.value()->status_emitter->attachListener(listener);
-		return {};
-	}
-
-	std::expected<void, std::string> ProcessStateManager::detachThreadStatusListener(
-		api::ThreadID tid, events::Listener<ThreadState>& listener
-	) {
-		std::lock_guard                        lock(table_mutex);
-		const base::Optional<Ref<ThreadEntry>> entry = agg_state.threads.atMaybe(tid);
-		if (!entry.has_value())
-			return std::unexpected(base::strConcat("Unknown ThreadID: ", tid.asInt()));
-		entry.value()->status_emitter->detachListener(listener);
-		return {};
-	}
 }

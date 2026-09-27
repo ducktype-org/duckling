@@ -3,8 +3,6 @@
 #include "opcode_functions/opcodes_functions.hpp"
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
-#include <events/emitter.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/config/target_info.hpp>
 #include <base/except/exceptions.hpp>
@@ -38,11 +36,7 @@
 #include <vm/module_flags/module_flags.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
 #include <expected>
-#include <mutex>
 #include <ranges>
 #include <string>
 #include <utility>
@@ -428,8 +422,8 @@ namespace vm {
 
 		const auto* instr = start_function_low->getBc().data();
 
-		// Make sure the frame will be moved back after the interpreter runs. Even if it throws
-		// a `KillProcessException` so the state stays valid.
+		// Make sure the frame will be moved back after the interpreter runs. Even if it throws a
+		// `KillProcessException` so the state stays valid.
 		defer({
 			*orig_frame_ptr                  = orig_frame_cpy;
 			runtime_data.frame_stack_current = orig_frame_ptr;

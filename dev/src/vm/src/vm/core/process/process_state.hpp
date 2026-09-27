@@ -11,13 +11,10 @@
  */
 #pragma once
 
-#include <events/emitter.hpp>
-
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
-#include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <vm/api/data/status.hpp>
@@ -117,9 +114,6 @@ namespace vm {
 			/// Incremented on every state change of this thread. Enables to distinguish two
 			/// identical looking states apart (e.g. a fast Paused -> Running -> Paused).
 			u64 state_change_counter{ 0 };
-
-			/// Emits the thread's status on every state change of this thread.
-			Box<events::Emitter<ThreadState>> status_emitter;
 		};
 
 		/// State and the change counter of every VMThread registered in the process.
@@ -140,24 +134,19 @@ namespace vm {
 		[[nodiscard]] bool isRegistered(api::ThreadID tid) const { return threads.contains(tid); }
 
 		/// Adds a thread in the `NotStarted` state with a zeroed counter.
-		// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 		void registerThread(api::ThreadID tid) {
 			threads.insert_or_assign(
 				tid,
 				ThreadEntry{
 					.state                = thread_state::NotStarted{},
 					.state_change_counter = 0,
-					.status_emitter       = makeBox<events::Emitter<ThreadState>>(),
 				}
 			);
 		}
 
-		// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
-
 		/**
 		 * @brief Overwrites a registered thread's state and bumps its version.
-		 * Saves the panic message on the first panic of the process and emits the thread-level
-		 * status event.
+		 * Saves the panic message on the first panic of the process.
 		 */
 		void setThreadState(api::ThreadID tid, ThreadState state) {
 			// The first panic is the one the aggregate reports, so we save it here.
@@ -167,16 +156,8 @@ namespace vm {
 
 			const auto entry = threads.atMaybe(tid);
 			if (!entry.has_value()) CORE_PANIC(base::strConcat("Unknown ThreadID: ", tid.asInt()));
-			bool new_state       = entry.value()->state.index() != state.index();
 			entry.value()->state = std::move(state);
 			entry.value()->state_change_counter++;
-
-			// Translate the new thread state into the API status and emit it on the thread's
-			// emitter. Callers interested in this thread's state changes subscribe to it.
-			//
-			// @warning This runs under `ProcessStateManager`'s table mutex (via
-			// `setThreadStateLocked`), so a listener that reads the manager back would deadlock.
-			if (new_state) entry.value()->status_emitter->emitEvent(entry.value()->state);
 		}
 
 		/**
