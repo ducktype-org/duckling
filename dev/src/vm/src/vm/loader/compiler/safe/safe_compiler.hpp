@@ -57,9 +57,7 @@ namespace vm::loader::compiler::safe {
 		 */
 		[[nodiscard]] CRef<vm::low::LowVMProgram> getLowProgram() const;
 
-		[[nodiscard]] vm::low::LowFuncData lowerExpr(
-			const code::valid_function::ValidFunction& expr,
-			const vm::code::CompilationMode&           mode = vm::code::NormalFunction{}
+		[[nodiscard]] vm::low::LowFuncData lowerExpr(const code::valid_function::ValidFunction& expr
 		) const;
 
 

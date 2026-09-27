@@ -199,9 +199,7 @@ namespace vm {
 		auto valid = safe_process.validateFunction(start_function, code::StartFunction{});
 		CORE_ASSERT(valid.has_value(), "the synthetic start function must always pass validation");
 		start_function_high.emplace(std::move(*valid));
-		start_function_low.emplace(
-			safe_process.compileToLow(*start_function_high, vm::code::StartFunction{})
-		);
+		start_function_low.emplace(safe_process.compileToLow(*start_function_high));
 	}
 
 	/**
@@ -655,14 +653,15 @@ namespace vm {
 	}
 
 	std::expected<std::future<std::vector<Ref<IVMValue>>>, std::string> SafeVMThread::loadAndExecRuntimeExpr(
-		code::valid_function::ValidFunction&& high_expr, const vm::code::Expression& exp_mode
+		code::valid_function::ValidFunction&& high_expr
 	) {
 		CORE_ASSERT(
 			v_matches(getThreadState(), thread_state::Paused),
 			"To load and evaluate expr we need the thread to be paused"
 		);
 		runtime_expr_high.emplace_back(std::move(high_expr));
-		runtime_expr_low.emplace_back(safe_process.compileToLow(runtime_expr_high.back(), exp_mode));
+		auto& expr_mode = std::get<code::Expression>(runtime_expr_high.back().mode);
+		runtime_expr_low.emplace_back(safe_process.compileToLow(runtime_expr_high.back()));
 		runtime_expr_completion.emplace_back();
 		auto expr_future = runtime_expr_completion.back().get_future();
 
@@ -672,7 +671,8 @@ namespace vm {
 		auto  local_stack = frame->local_stack;
 		auto& called_expr = runtime_expr_low.back();
 
-		auto maybe_position = exp_mode.getUpcomingHighPosition(getNumberOfCurrentStackFrames() - 1);
+		auto maybe_position
+			= code::getUpcomingHighPosition(expr_mode, getNumberOfCurrentStackFrames() - 1);
 		CORE_ASSERT(
 			maybe_position.has_value(), "A validated expression must have a mapped position"
 		);

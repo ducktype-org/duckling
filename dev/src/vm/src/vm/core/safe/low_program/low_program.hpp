@@ -414,3 +414,25 @@ namespace vm::low {
 		base::HashMap<u64, base::StrID> method_name_pool{};
 	};
 }
+
+namespace vm::code {
+	/**
+	 * @brief The high-level position the expression's `frame_idx` frame will resume at.
+	 * @note Uses the frame's upcoming instruction on purpose: the position is the one that holds
+	 *       once the thread continues, not the one it was called from.
+	 */
+	[[nodiscard]] inline base::Optional<vm::loader::ValidFuncPosition> getUpcomingHighPosition(
+		const Expression& expr, usize frame_idx
+	) {
+		if (frame_idx >= expr.call_stack_size) return std::nullopt;
+		const Frame& frame = expr.call_stack_base[frame_idx];
+
+		auto& func          = *frame.current_function;
+		auto  low_instr_idx = static_cast<u64>(frame.instr - func.getBc().data());
+
+		auto fat_pos = func.mapLowVMProgramPositionToCodeCollectionPosition(low_instr_idx);
+		if (!fat_pos) return std::nullopt;
+
+		return loader::ValidFuncPosition(fat_pos->instruction_index, func.getHighFunc());
+	}
+}

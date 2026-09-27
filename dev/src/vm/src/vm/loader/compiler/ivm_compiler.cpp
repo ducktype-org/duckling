@@ -41,6 +41,7 @@ namespace vm::loader::compiler {
 
 		ctx.local_stack_size = max_stack_size;
 		ctx.local_slot_count = max_slot_count;
+		ctx.mode             = function.mode;
 
 		return ctx;
 	}

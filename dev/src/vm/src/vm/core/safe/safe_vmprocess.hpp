@@ -269,10 +269,7 @@ namespace vm {
 		 */
 		SynchronizationPrimitives& getSynchronizationPrimitives();
 
-		low::LowFuncData compileToLow(
-			const code::valid_function::ValidFunction& func,
-			const vm::code::CompilationMode&           mode = vm::code::NormalFunction{}
-		) const;
+		low::LowFuncData compileToLow(const code::valid_function::ValidFunction& func) const;
 
 		/**
 		 * @brief Validates a function in the given mode (defaults to `NormalFunction`) and returns

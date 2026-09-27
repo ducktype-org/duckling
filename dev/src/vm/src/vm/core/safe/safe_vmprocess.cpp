@@ -734,17 +734,16 @@ namespace vm {
 			return std::unexpected(api::LoadProgramError{ ss.str() });
 		}
 
-		auto started = thread_ref->loadAndExecRuntimeExpr(*std::move(valid_expr), comp_details);
+		auto started = thread_ref->loadAndExecRuntimeExpr(*std::move(valid_expr));
 		if (!started.has_value())
 			return std::unexpected(api::ApiError{ api::OtherError{ started.error() } });
 
 		return api::Response(std::move(*started));
 	}
 
-	low::LowFuncData SafeVMProcess::compileToLow(
-		const code::valid_function::ValidFunction& expr, const vm::code::CompilationMode& mode
+	low::LowFuncData SafeVMProcess::compileToLow(const code::valid_function::ValidFunction& expr
 	) const {
-		return compiler.lowerExpr(expr, mode);
+		return compiler.lowerExpr(expr);
 	}
 
 	std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> SafeVMProcess::validateFunction(

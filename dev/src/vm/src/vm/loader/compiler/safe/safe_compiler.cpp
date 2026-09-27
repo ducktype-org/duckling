@@ -59,7 +59,7 @@ namespace vm::loader::compiler::safe {
 				auto& expr_mode = std::get<vm::code::Expression>(stack_ctx.mode);
 				auto& frame = expr_mode.call_stack_base[frame_idx];
 
-				auto relative_offset = getIntTypeSize(*expr_mode.getUpcomingHighPosition(frame_idx)->getByteOffset(opcode_arg.var_name));
+				auto relative_offset = getIntTypeSize(*code::getUpcomingHighPosition(expr_mode, frame_idx)->getByteOffset(opcode_arg.var_name));
 				auto prev_frame_base = frame.local_stack;
 				auto stack_base = expr_mode.call_stack_base->local_stack;
 				
@@ -84,7 +84,7 @@ namespace vm::loader::compiler::safe {
 				auto& expr_mode = std::get<vm::code::Expression>(stack_ctx.mode);
 				auto& frame = expr_mode.call_stack_base[frame_idx];
 
-				auto relative_offset = *expr_mode.getUpcomingHighPosition(frame_idx)->getBlockIdx(opcode_arg.var_name);
+				auto relative_offset = *code::getUpcomingHighPosition(expr_mode, frame_idx)->getBlockIdx(opcode_arg.var_name);
 				auto prev_frame_base = frame.local_slot_stack_base;
 				auto stack_base = expr_mode.call_stack_base->local_slot_stack_base;
 				
@@ -429,13 +429,9 @@ namespace vm::loader::compiler::safe {
 		}
 	}
 
-	vm::low::LowFuncData SafeCompiler::lowerExpr(
-		const code::valid_function::ValidFunction& function, const vm::code::CompilationMode& mode
+	vm::low::LowFuncData SafeCompiler::lowerExpr(const code::valid_function::ValidFunction& function
 	) const {
-		vm::loader::compiler::detail::FunctionStackContext ctx = calculateStackContext(function);
-		ctx.mode                                               = mode;
-
-		return lowerFunction(function, ctx);
+		return lowerFunction(function, calculateStackContext(function));
 	}
 
 	vm::low::LowFuncData SafeCompiler::lowerFunction(

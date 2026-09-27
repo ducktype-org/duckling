@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/compilation_mode.hpp>
 #include <vm/bytecode/flags.hpp>
 #include <vm/bytecode/validator/local_stack_database.hpp>
 
@@ -12,6 +13,7 @@ namespace vm::code::valid_function {
 		FuncSignature             signature;
 		LocalStackDb              local_stack;
 		InstructionFlag           flags;
+		CompilationMode           mode = NormalFunction{};
 
 		/**
 		 * @brief constructs a normal (not validated) function, which from a valid function

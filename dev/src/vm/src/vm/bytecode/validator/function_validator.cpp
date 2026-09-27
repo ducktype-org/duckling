@@ -268,7 +268,7 @@ public:
 				"we should be checking that there is a thread beforehand"
 			);
 			auto& exp_mode = std::get<Expression>(mode);
-			auto  pos      = exp_mode.getUpcomingHighPosition(frame_idx);
+			auto  pos      = getUpcomingHighPosition(exp_mode, frame_idx);
 			if_opt_none(pos) return false;
 
 			return pos->contains(place.var_name);
@@ -289,7 +289,7 @@ public:
 					"we should be checking that there is a thread beforehand"
 				);
 				auto& exp_mode = std::get<Expression>(mode);
-				name_of_type   = *exp_mode.getUpcomingHighPosition(frame_idx)->getTypeName(name);
+				name_of_type   = *getUpcomingHighPosition(exp_mode, frame_idx)->getTypeName(name);
 			}
 
 			opt_none { VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, name)); }
@@ -2163,6 +2163,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
 	new_function.signature    = function.signature;
+	new_function.mode         = mode;
 
 	// @TODO: #3633 Make the flags more robust
 	new_function.flags = (v_matches(mode, Expression, StartFunction))
