@@ -283,8 +283,9 @@ fn infer_compilation_order(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::BTreeSet;
+
+    use super::*;
 
     type N = usize;
 
