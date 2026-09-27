@@ -106,7 +106,7 @@ namespace vm::test {
 		/// Upper bound for waiting on an expression result, in milliseconds.
 		static constexpr u64 DEFAULT_EXPR_TIMEOUT = 500;
 
-		/// A pending expression together with the position it was called from. `ret_from_expr`
+		/// A pending expression together with the position it was called from. `ret`
 		/// returns the thread to that exact position, so the result can enforce it on completion.
 		struct PendingExpr {
 			api::ExprResult future;
@@ -294,7 +294,7 @@ namespace vm::test {
 
 		/// Starts evaluating @p file and keeps its pending result (LIFO) for `awaitExprResult`.
 		FlowSimulator& loadRuntimeExpr(const fs::File& file) {
-			// Capture the caller position while still paused; `ret_from_expr` returns here.
+			// Capture the caller position while still paused; `ret` returns here.
 			auto position = vm::api::getCurrentPosition(pid);
 			if (!position) assertTrue(false, vm::api::errorToString(position.error()));
 
@@ -417,7 +417,7 @@ namespace vm::test {
 			auto response = vm::api::executeRuntimeExpr(pid, thread_id, file);
 			if (!response) assertTrue(false, vm::api::errorToString(response.error()));
 
-			// The expression panics before `ret_from_expr`, so its future never completes; wait for
+			// The expression panics before `ret`, so its future never completes; wait for
 			// the process to report the panic instead.
 			base::Optional<vm::api::ExecutionPanicked> panicked_status;
 			for (usize attempt = 0; attempt < 200 && !panicked_status.has_value(); attempt++) {

@@ -6,5 +6,5 @@ function ptr_to_local { } -> { ptr_i64 } {
 	init_pany_type p, ptr_i64;
 	ref_pptr_pany p, local;
 	mov_pptr_pptr ret0, p;
-	ret_from_expr;
+	ret;
 }

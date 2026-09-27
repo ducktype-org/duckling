@@ -2,5 +2,5 @@
 function use_bad_id { } -> { i64 } {
 	init_pany_vmval value, $ 999999;
 	mov_p64_p64 ret0, value;
-	ret_from_expr;
+	ret;
 }

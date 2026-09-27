@@ -1,5 +1,5 @@
 function break_loop { } -> { i64 } {
 	mov_p64_imm frame 2 x, 0;
 	mov_p64_imm ret0, 1;
-	ret_from_expr;
+	ret;
 }

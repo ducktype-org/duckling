@@ -1,5 +1,5 @@
 # A runtime expression must not take any parameters.
 function expr_with_param { i64 } -> { i64 } {
 	mov_p64_imm ret0, 0;
-	ret_from_expr;
+	ret;
 }

@@ -1,5 +1,5 @@
 function modify_value { } -> { i64 } {
 	mov_p64_imm frame 1 a, 42;
 	mov_p64_p64 ret0, frame 1 a;
-	ret_from_expr;
+	ret;
 }

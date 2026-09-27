@@ -6,5 +6,5 @@ function freed { } -> { i64 } {
 	store_pptr_pany ptr, value;
 	free_pptr ptr;
 	mov_p64_imm ret0, 7;
-	ret_from_expr;
+	ret;
 }

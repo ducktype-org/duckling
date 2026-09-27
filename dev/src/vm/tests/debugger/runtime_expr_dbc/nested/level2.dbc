@@ -5,5 +5,5 @@ function level2 { } -> { i64 } {
 	mov_p64_p64 ret0, frame 2 l1_local;
 	add_p64_p64 ret0, l2_local;
 	add_p64_p64 ret0, l2_local;
-	ret_from_expr;
+	ret;
 }

@@ -3,5 +3,5 @@ function multi { } -> { i64, i64, i64, i64 } {
 	mov_p64_imm ret1, 22;
 	mov_p64_imm ret2, 33;
 	mov_p64_imm ret3, 44;
-	ret_from_expr;
+	ret;
 }

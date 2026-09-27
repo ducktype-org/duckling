@@ -7,5 +7,5 @@ function subtract { } -> { byte, i16, i32, i64 } {
 	sub_p16_p16 ret1, frame 1 b16;
 	sub_p32_p32 ret2, frame 1 b32;
 	sub_p64_p64 ret3, frame 1 b64;
-	ret_from_expr;
+	ret;
 }

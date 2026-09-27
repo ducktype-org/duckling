@@ -663,15 +663,11 @@ namespace vm::loader::compiler::safe::detail {
 				     live--)
 					addDeinitOfVariable(live - 1);
 
-				addLow<Op_ret>();
-			}
-			instr_case(high::Op_ret_from_expr, i) {
-				const usize ret_count = ctx.function.signature.result_types.size();
-				for (usize live = ctx.function.local_stack.size(curr_state); live > ret_count;
-				     live--)
-					addDeinitOfVariable(live - 1);
-
-				addLow<Op_ret_from_expr>();
+				// An expression return hands its values back through a dedicated micro opcode.
+				if (std::holds_alternative<vm::code::detail::Expr>(ctx.mode))
+					addLow<Op_ret_from_expr>();
+				else
+					addLow<Op_ret>();
 			}
 			instr_case(high::Op_init_pany_type, i) {
 				const TypeCRef type    = getPlaceType(i.var);

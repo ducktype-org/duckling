@@ -4,5 +4,5 @@ function call_foo { } -> { i64 } {
 	mov_p64_p64 arg0, frame 1 a;
 	mov_p64_p64 arg1, frame 1 b;
 	call_func add;
-	ret_from_expr;
+	ret;
 }

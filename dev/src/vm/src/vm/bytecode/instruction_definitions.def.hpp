@@ -427,7 +427,6 @@ DEF_INSTR(set_threadctx, (vm::opargs::FunctionName, function))
 DEF_INSTR(ret_tailcall_func, (vm::opargs::FunctionName, function))
 // return
 DEF_INSTR(ret)
-DEF_INSTR(ret_from_expr)
 
 // ========= STACK OPERATIONS ========
 

@@ -1,4 +1,4 @@
 function access_frame_2 { } -> { i64 } {
 	mov_p64_p64 ret0, frame 2 bar_ret0;
-	ret_from_expr;
+	ret;
 }

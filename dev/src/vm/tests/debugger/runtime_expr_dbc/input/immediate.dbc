@@ -2,5 +2,5 @@ function input_in_expr { } -> { i64 } {
 	init_pany_type x, i64;
 	call_builtinfunc builtin_input_i64;
 	mov_p64_p64 ret0, x;
-	ret_from_expr;
+	ret;
 }

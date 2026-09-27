@@ -5,5 +5,5 @@ function spin { } -> { i64 } {
 	cmpEq_p64_imm x, 1;
 	jmpIf_label Loop;
 	mov_p64_p64 ret0, x;
-	ret_from_expr;
+	ret;
 }

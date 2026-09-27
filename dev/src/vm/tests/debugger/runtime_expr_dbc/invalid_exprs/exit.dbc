@@ -1,5 +1,5 @@
 function exit_in_expr { } -> { i64 } {
 	mov_p64_imm ret0, 1;
 	exit;
-	ret_from_expr;
+	ret;
 }

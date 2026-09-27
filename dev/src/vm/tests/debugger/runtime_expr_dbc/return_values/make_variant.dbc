@@ -7,5 +7,5 @@ function make_variant { } -> { Choice } {
 	mov_p64_imm value, 5;
 	store_pptr_pany inner, value;
 
-	ret_from_expr;
+	ret;
 }

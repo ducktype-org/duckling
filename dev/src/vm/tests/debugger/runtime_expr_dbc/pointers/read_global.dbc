@@ -1,4 +1,4 @@
 function read_global { } -> { i64 } {
 	mov_p64_p64 ret0, counter;
-	ret_from_expr;
+	ret;
 }

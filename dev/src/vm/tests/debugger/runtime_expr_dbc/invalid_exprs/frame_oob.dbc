@@ -1,4 +1,4 @@
 function frame_oob { } -> { i64 } {
 	mov_p64_p64 ret0, frame 99 a;
-	ret_from_expr;
+	ret;
 }

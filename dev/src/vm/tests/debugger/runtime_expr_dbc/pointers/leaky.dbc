@@ -5,5 +5,5 @@ function leaky { } -> { i64 } {
 	mov_p64_imm value, 5;
 	store_pptr_pany ptr, value;
 	mov_p64_imm ret0, 7;
-	ret_from_expr;
+	ret;
 }

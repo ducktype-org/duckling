@@ -5,5 +5,5 @@ function set_through_ptr { } -> { i64 } {
 	mov_p64_imm v, 99;
 	store_pptr_pany p, v;
 	mov_p64_p64 ret0, v;
-	ret_from_expr;
+	ret;
 }

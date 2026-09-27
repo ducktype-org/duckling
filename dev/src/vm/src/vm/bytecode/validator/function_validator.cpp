@@ -37,7 +37,7 @@ namespace {
 		= { OpCode::Op_ret, OpCode::Op_ret_tailcall_func, OpCode::Op_jmp_label };
 
 	constexpr std::array VALID_LAST_OPCODES_FOR_EXPR
-		= { OpCode::Op_ret_from_expr, OpCode::Op_jmp_label };
+		= { OpCode::Op_ret, OpCode::Op_jmp_label };
 
 	// The synthetic start functions never return normally - they end the program with `exit`.
 	constexpr std::array VALID_LAST_OPCODES_FOR_START = { OpCode::Op_exit, OpCode::Op_jmp_label };
@@ -1503,7 +1503,7 @@ class FunctionValidator {
 				if (!inh_meta.available_methods.contains(instr.method.method_name))
 					throw InvalidVirtualCallError(instr);
 			}
-			instr_case_novalue(Op_ret_tailcall_func, Op_ret, Op_ret_from_expr, Op_deinit) {}
+			instr_case_novalue(Op_ret_tailcall_func, Op_ret, Op_deinit) {}
 			instr_case_novalue(Op_input_p64, Op_output_p64, Op_input_p32, Op_output_p32) {}
 			instr_case(Op_setVTable_pptr_type, instr) {
 				const auto pointer_type = getPlaceType(instr.object_ptr, current_stack)
@@ -1965,12 +1965,6 @@ class FunctionValidator {
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
-				instr_case(Op_ret_from_expr, instr) {
-					stack_before_instr[index] = local_stack.getStateID();
-					validateRet(local_stack, instr, function.signature);
-					std::tie(index, local_stack) = dfs_stack.back();
-					dfs_stack.pop_back();
-				}
 				instr_case(Op_call_func, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
 					validateCallAndPop(local_stack, instr);
@@ -2083,21 +2077,13 @@ class FunctionValidator {
 	void validateIllegalInstructions(const Instruction& instr) {
 		variant_match(mode) {
 			variant_case_novalue(detail::Expr) {
-				throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_ret, OpCode::Op_exit>(
-					instr
-				);
+				throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_exit>(instr);
 			}
 			variant_case_novalue(detail::StartFunction) {
-				throwOnForbiddenOpcode<
-					OpCode::Op_ret_tailcall_func,
-					OpCode::Op_ret,
-					OpCode::Op_ret_from_expr>(instr);
+				throwOnForbiddenOpcode<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(instr);
 			}
 			variant_case_novalue(detail::Normal) {
-				throwOnForbiddenOpcode<
-					OpCode::Op_ret_from_expr,
-					OpCode::Op_init_pany_vmval,
-					OpCode::Op_exit>(instr);
+				throwOnForbiddenOpcode<OpCode::Op_init_pany_vmval, OpCode::Op_exit>(instr);
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}

@@ -14,5 +14,5 @@ function make_table { } -> { Nums } {
 	mov_p64_imm value, 30;
 	fixedSizeTableStore_pfst_pany_p64 ret0, value, index;
 
-	ret_from_expr;
+	ret;
 }

@@ -483,7 +483,6 @@ namespace vm::code {
 				flags |= Call | InstructionFlag(ControlFlowModifying);
 			}
 			instr_case(ins::Op_ret, i) { flags |= ControlFlowModifying; }
-			instr_case(ins::Op_ret_from_expr, i) { flags |= ControlFlowModifying; }
 
 			// ===== Stack lifecycle =====
 			instr_case(ins::Op_init_pany_type, i) { wr(i.var); }

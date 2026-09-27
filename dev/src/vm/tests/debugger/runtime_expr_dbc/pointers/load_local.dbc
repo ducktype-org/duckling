@@ -5,5 +5,5 @@ function load_local { } -> { i64 } {
 	init_pany_type v, i64;
 	load_pany_pptr v, p;
 	mov_p64_p64 ret0, v;
-	ret_from_expr;
+	ret;
 }
